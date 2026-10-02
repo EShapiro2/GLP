@@ -31,7 +31,7 @@ library;
 
 import 'dart:io';
 
-import 'package:glp_runtime/bytecode/opcodes_v2.dart' as opv2;
+import 'package:glp_runtime/bytecode/opcodes.dart' as bc;
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/runtime/scheduler.dart' show ExecutionStatus;
 import 'package:glp_runtime/runtime/terms.dart';
@@ -79,8 +79,8 @@ GlpEngine _fresh({bool headVariable = false}) {
     var replaced = 0;
     for (var i = 0; i < ops.length; i++) {
       final op = ops[i];
-      if (op is opv2.UnifyVariable) {
-        ops[i] = opv2.HeadVariable(op.varIndex, isReader: op.isReader);
+      if (op is bc.UnifyVariable) {
+        ops[i] = bc.HeadVariable(op.varIndex, isReader: op.isReader);
         replaced++;
       }
     }

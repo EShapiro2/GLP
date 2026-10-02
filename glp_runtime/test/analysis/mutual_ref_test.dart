@@ -180,16 +180,36 @@ twice(R) :- is_mutual_ref(R?) | take(R?), take(R?).
     test('is_mutual_ref grounds nothing: a repeated WRITER is refused', () {
       // The grounding mark licensed both X and X? (TGLP glp.tex, Remark "Guards
       // and SRSW"); the type licence is the reader's alone.  `ground/1`, which
-      // is "Ground: yes", still licenses the writer.
+      // is "Ground: yes", still licenses the writer --- in the head and again
+      // in the body.  A writer twice in the HEAD is refused whatever the guards
+      // (GLP-Spec glp.tex, Definition "GLP Program"; GLP #3 Cowork, 2026-10-02
+      // 08:40 UTC, G), so until 2026-10-02 the two guards were told apart by
+      // two(R, R), and now by a writer in the head and at a produced position
+      // of the body.
+      expect(refusal('''
+-mode(system).
+procedure sink_w(_).
+sink_w(X?) :- X = done.
+procedure two(MutualRef?).
+two(R) :- is_mutual_ref(R?) | sink_w(R).
+'''), contains(
+          'Writer variable "R" occurs 2 times without a groundness-implying guard'));
+      expect(refusal('''
+procedure sink_w(_).
+sink_w(X?) :- X = done.
+procedure two(_?).
+two(R) :- ground(R?) | sink_w(R).
+'''), isEmpty);
+      // Twice in the head, under either guard: refused.
       expect(refusal('''
 -mode(system).
 procedure two(MutualRef?, MutualRef?).
 two(R, R) :- is_mutual_ref(R?) | true.
-'''), contains('Writer variable "R" occurs 2 times'));
+'''), contains('Writer variable "R" occurs 2 times in the head'));
       expect(refusal('''
 procedure two(_?, _?).
 two(R, R) :- ground(R?) | true.
-'''), isEmpty);
+'''), contains('Writer variable "R" occurs 2 times in the head'));
     });
 
     test("the root's mwm/2 runs, its Ref declared MutualRef?", () async {

@@ -1,9 +1,14 @@
 /// Boot Loader for maGLP Isolate Spawning
 ///
-/// Parses GLP files with `boot/0` clauses containing `@` spawn directives.
-/// Extracts spawn configuration without modifying the GLP parser.
-///
-/// See: docs/ma/isolate-boot-spec.md (v0.4)
+/// Reads a GLP file's `boot/0` procedure, whose body goals `G@p` are its spawn
+/// directives (IGLP app:in-execution, Boot), with the GLP lexer and parser.
+library;
+
+import 'package:glp_runtime/compiler/ast.dart';
+import 'package:glp_runtime/compiler/error.dart';
+import 'package:glp_runtime/compiler/lexer.dart';
+import 'package:glp_runtime/compiler/parser.dart';
+import 'package:glp_runtime/compiler/token.dart';
 
 /// A single spawn directive extracted from the boot clause.
 ///
@@ -53,11 +58,6 @@ class BootConfig {
   /// The boot clause contains @ which the GLP parser doesn't understand.
   final String source;
 
-  /// Optional shared source files to load before the boot file
-  /// (e.g., social_agent.glp containing agent/4, actors, helpers).
-  /// Each entry is loaded separately to preserve per-file -mode() directives.
-  List<String>? sharedSources;
-
   /// Optional program directory for static linking.
   /// When set, each isolate loads the program via loadProgram() instead of
   /// loading individual shared sources. The boot source is loaded on top.
@@ -78,7 +78,6 @@ class BootConfig {
     required this.directives,
     required this.fullSource,
     required this.source,
-    this.sharedSources,
     this.programDir,
     this.rootSelfGlpPath = '',
     this.bootPath,
@@ -87,23 +86,45 @@ class BootConfig {
 
 /// Loader for GLP files with isolate boot clauses.
 ///
-/// Parses the boot clause to extract spawn directives, then provides
-/// the source for compilation.
+/// The GLP lexer and parser read the boot procedure --- the declaration
+/// `procedure boot.` and the clause `boot :- G1@p1, ..., Gn@pn.` --- and the
+/// spawn directives are taken from the clause's spawn goals; the declaration
+/// and the clause are then blanked out of the source, their lines kept, so the
+/// rest of the file compiles as an ordinary module with the line numbers it
+/// has (IGLP app:in-execution, Boot).
 class BootLoader {
   /// Load a GLP file and extract boot configuration.
   ///
   /// Throws [BootLoaderException] if:
-  /// - File doesn't start with `procedure boot.`
-  /// - Boot clause is malformed
+  /// - File doesn't declare `procedure boot.`
+  /// - Boot clause is missing or malformed
   /// - Agent IDs don't match between goal and @target
   /// - Duplicate agent IDs
   BootConfig load(String source) {
-    final directives = _parseBootClause(source);
-    final compilableSource = _stripBootClause(source);
+    final List<Token> tokens;
+    try {
+      tokens = Lexer(source).tokenize();
+    } on CompileError catch (e) {
+      throw BootLoaderException(
+          'Boot file: ${e.message} at line ${e.line}, column ${e.column}');
+    }
+
+    final declaration = _bootDeclaration(tokens);
+    if (declaration == null) {
+      throw BootLoaderException('First procedure must be boot/0. '
+          'Expected "procedure boot." declaration.');
+    }
+    final clause = _bootClause(tokens);
+    if (clause == null) {
+      throw BootLoaderException('Could not find boot clause. '
+          'Expected "boot :- ... ."');
+    }
+
+    final directives = _spawnDirectives(tokens, declaration, clause);
     return BootConfig(
       directives: directives,
       fullSource: source,
-      source: compilableSource,
+      source: _blankOut(source, tokens, [declaration, clause]),
     );
   }
 
@@ -113,189 +134,150 @@ class BootLoader {
     return load(file)..bootPath = filePath;
   }
 
-  /// Parse the boot clause and extract spawn directives.
-  List<SpawnDirective> _parseBootClause(String source) {
-    // Remove comments for parsing
-    final noComments = _removeComments(source);
-
-    // Check for procedure boot declaration
-    if (!_hasProcedureBoot(noComments)) {
-      throw BootLoaderException('First procedure must be boot/0. '
-          'Expected "procedure boot." declaration.');
-    }
-
-    // Find boot clause
-    final bootClause = _extractBootClause(noComments);
-    if (bootClause == null) {
-      throw BootLoaderException('Could not find boot clause. '
-          'Expected "boot :- ... ."');
-    }
-
-    // Parse spawn directives from boot clause body
-    final directives = _parseSpawnDirectives(bootClause);
-    if (directives.isEmpty) {
-      throw BootLoaderException('Boot clause contains no spawn directives. '
-          'Expected "goal(agent, _)@agent"');
-    }
-
-    // Validate no duplicate agent IDs
-    final agentIds = <String>{};
-    for (final d in directives) {
-      if (agentIds.contains(d.agentId)) {
-        throw BootLoaderException('Duplicate agent ID: ${d.agentId}');
+  /// The tokens `procedure boot .`, as (first, last) indices.
+  (int, int)? _bootDeclaration(List<Token> tokens) {
+    for (var i = 0; i + 2 < tokens.length; i++) {
+      if (tokens[i].type == TokenType.PROCEDURE &&
+          tokens[i + 1].type == TokenType.ATOM &&
+          tokens[i + 1].lexeme == 'boot' &&
+          tokens[i + 2].type == TokenType.DOT) {
+        return (i, i + 2);
       }
-      agentIds.add(d.agentId);
     }
-
-    return directives;
+    return null;
   }
 
-  /// Remove GLP comments (lines starting with %%)
-  String _removeComments(String source) {
-    return source
-        .split('\n')
-        .where((line) => !line.trimLeft().startsWith('%'))
-        .join('\n');
+  /// The clause `boot :- ... .`, as (first, last) indices: an item beginning
+  /// `boot :-` and ending at the next full stop outside brackets.
+  (int, int)? _bootClause(List<Token> tokens) {
+    var depth = 0;
+    var atItemStart = true;
+    int? start;
+    for (var i = 0; i < tokens.length; i++) {
+      final t = tokens[i];
+      if (t.type == TokenType.EOF) break;
+      if (atItemStart && depth == 0 && start == null &&
+          t.type == TokenType.ATOM &&
+          t.lexeme == 'boot' &&
+          i + 1 < tokens.length &&
+          tokens[i + 1].type == TokenType.IMPLIES) {
+        start = i;
+      }
+      atItemStart = false;
+      if (t.type == TokenType.LPAREN || t.type == TokenType.LBRACKET) {
+        depth++;
+      } else if (t.type == TokenType.RPAREN || t.type == TokenType.RBRACKET) {
+        if (depth > 0) depth--;
+      } else if (t.type == TokenType.DOT && depth == 0) {
+        if (start != null) return (start, i);
+        atItemStart = true;
+      }
+    }
+    return null;
   }
 
-  /// Check if source has "procedure boot." declaration
-  bool _hasProcedureBoot(String source) {
-    // Match "procedure boot." with flexible whitespace
-    final pattern = RegExp(r'procedure\s+boot\s*\.', multiLine: true);
-    return pattern.hasMatch(source);
-  }
+  /// The spawn directives of the boot clause: each spawn goal `G@p` whose goal
+  /// takes the agent ID `p` first and the network input last, the arguments
+  /// between them constants.
+  List<SpawnDirective> _spawnDirectives(
+      List<Token> tokens, (int, int) declaration, (int, int) clause) {
+    final Module module;
+    try {
+      module = Parser([
+        ...tokens.sublist(declaration.$1, declaration.$2 + 1),
+        ...tokens.sublist(clause.$1, clause.$2 + 1),
+        Token(TokenType.EOF, '', tokens[clause.$2].line,
+            tokens[clause.$2].column + 1),
+      ]).parseModule();
+    } on CompileError catch (e) {
+      throw BootLoaderException(
+          'Boot clause: ${e.message} at line ${e.line}, column ${e.column}');
+    }
+    final body = module.procedures.single.clauses.single.body ?? const <Goal>[];
 
-  /// Extract the boot clause body (between "boot :-" and ".")
-  String? _extractBootClause(String source) {
-    // Match "boot :- ... ." capturing the body
-    // This handles multi-line boot clauses
-    final pattern = RegExp(
-      r'boot\s*:-\s*(.*?)\.\s*(?=\n|procedure|$)',
-      multiLine: true,
-      dotAll: true,
-    );
-    final match = pattern.firstMatch(source);
-    return match?.group(1)?.trim();
-  }
-
-  /// Parse spawn directives from boot clause body.
-  ///
-  /// Looks for patterns like:
-  /// `functor(agentId, ...)@agentId`
-  ///
-  /// The first argument must be the agent ID (an atom).
-  /// Remaining arguments can be arbitrary terms (e.g., ch(_?,_)).
-  /// The @target must match the first argument.
-  List<SpawnDirective> _parseSpawnDirectives(String clauseBody) {
     final directives = <SpawnDirective>[];
+    final agentIds = <String>{};
+    for (final goal in body) {
+      if (goal is! SpawnGoal) continue;
+      final inner = goal.innerGoal;
+      if (inner.args.isEmpty) continue;
 
-    // Strategy: find each @target, then work backwards to find the matching
-    // goal(agentId, ...) by balancing parentheses.
-    final atPattern = RegExp(r'@\s*(\w+)');
-
-    for (final atMatch in atPattern.allMatches(clauseBody)) {
-      final targetAgentId = atMatch.group(1)!;
-      final beforeAt = clauseBody.substring(0, atMatch.start).trimRight();
-
-      // The character before @ should be ')' (end of goal arguments)
-      if (beforeAt.isEmpty || beforeAt[beforeAt.length - 1] != ')') {
-        continue; // Not a goal@target pattern
-      }
-
-      // Walk backwards from ')' to find matching '('
-      var depth = 0;
-      var parenStart = -1;
-      for (var i = beforeAt.length - 1; i >= 0; i--) {
-        if (beforeAt[i] == ')') depth++;
-        if (beforeAt[i] == '(') depth--;
-        if (depth == 0) {
-          parenStart = i;
-          break;
-        }
-      }
-
-      if (parenStart < 0) continue;
-
-      // Extract functor name before '('
-      final beforeParen = beforeAt.substring(0, parenStart).trimRight();
-      final functorMatch = RegExp(r'(\w+)$').firstMatch(beforeParen);
-      if (functorMatch == null) continue;
-      final functor = functorMatch.group(1)!;
-
-      // Extract all arguments from inside the parentheses, splitting at depth-0 commas.
-      final argsStr = beforeAt.substring(parenStart + 1, beforeAt.length - 1);
-      final allArgs = _splitArgs(argsStr);
-
-      if (allArgs.isEmpty) continue;
-
-      // First arg is the agent ID (must be a simple atom)
-      final goalAgentId = allArgs[0].trim();
-      if (!RegExp(r'^\w+$').hasMatch(goalAgentId)) {
+      final goalAgentId = _agentIdText(inner.args.first);
+      if (goalAgentId == null) {
         throw BootLoaderException(
             'First argument of spawn goal must be an agent ID (atom), '
-            'got "$goalAgentId"');
+            'got "${inner.args.first}"');
       }
-
-      // Validate agent IDs match
-      if (goalAgentId != targetAgentId) {
+      if (goalAgentId != goal.agentId) {
         throw BootLoaderException(
-            'Agent ID mismatch: goal has "$goalAgentId" but @target is "$targetAgentId". '
-            'They must match.');
+            'Agent ID mismatch: goal has "$goalAgentId" but @target is '
+            '"${goal.agentId}". They must match.');
+      }
+      if (!agentIds.add(goalAgentId)) {
+        throw BootLoaderException('Duplicate agent ID: $goalAgentId');
       }
 
-      // Middle args (between agentId and last arg which is netIn) are constants.
-      // For parent_init(alice, carol, 4, _)@alice: constantArgs = ['carol', '4']
-      // For agent_init(alice, _)@alice: constantArgs = []
+      // Middle args (between agentId and last arg which is netIn) are
+      // constants. For parent_init(alice, carol, 4, _)@alice: ['carol', '4'].
       final constantArgs = <String>[];
-      for (var i = 1; i < allArgs.length - 1; i++) {
-        constantArgs.add(allArgs[i].trim());
+      for (var i = 1; i < inner.args.length - 1; i++) {
+        final arg = inner.args[i];
+        if (arg is! ConstTerm) {
+          throw BootLoaderException(
+              'Argument ${i + 1} of spawn goal ${inner.functor} must be a '
+              'constant, got "$arg"');
+        }
+        constantArgs.add('${arg.value}');
       }
 
       directives.add(SpawnDirective(
         agentId: goalAgentId,
-        goalFunctor: functor,
-        goalArity: allArgs.length,
+        goalFunctor: inner.functor,
+        goalArity: inner.args.length,
         constantArgs: constantArgs,
       ));
     }
 
+    if (directives.isEmpty) {
+      throw BootLoaderException('Boot clause contains no spawn directives. '
+          'Expected "goal(agent, _)@agent"');
+    }
     return directives;
   }
 
-  /// Split argument string at depth-0 commas, respecting nested parens/brackets.
-  List<String> _splitArgs(String argsStr) {
-    final args = <String>[];
-    var depth = 0;
-    var start = 0;
-    for (var i = 0; i < argsStr.length; i++) {
-      if (argsStr[i] == '(' || argsStr[i] == '[') depth++;
-      if (argsStr[i] == ')' || argsStr[i] == ']') depth--;
-      if (argsStr[i] == ',' && depth == 0) {
-        args.add(argsStr.substring(start, i));
-        start = i + 1;
-      }
-    }
-    args.add(argsStr.substring(start));
-    return args;
+  /// An agent ID, the name of an atom or a numeral; null for anything else.
+  String? _agentIdText(Term term) {
+    if (term is! ConstTerm) return null;
+    final value = term.value;
+    if (value is! String && value is! int) return null;
+    final text = '$value';
+    return RegExp(r'^\w+$').hasMatch(text) ? text : null;
   }
 
-  /// Strip the boot clause and procedure declaration from source.
-  /// Returns source that can be compiled by the GLP compiler.
-  String _stripBootClause(String source) {
-    // Remove "procedure boot." line
-    var result = source.replaceFirst(
-      RegExp(r'procedure\s+boot\s*\.\s*\n?', multiLine: true),
-      '',
-    );
+  /// [source] with the token spans [spans] blanked out: each replaced by the
+  /// line breaks it held, so every other line keeps its number.
+  String _blankOut(
+      String source, List<Token> tokens, List<(int, int)> spans) {
+    final lineStarts = <int>[0];
+    for (var i = 0; i < source.length; i++) {
+      if (source[i] == '\n') lineStarts.add(i + 1);
+    }
+    int offsetOf(Token t) => lineStarts[t.line - 1] + t.column - 1;
 
-    // Remove "boot :- ... ." clause (possibly multi-line)
-    // Match from "boot :-" to the closing "." before next procedure or end
-    result = result.replaceFirst(
-      RegExp(r'boot\s*:-\s*.*?\.\s*\n?', multiLine: true, dotAll: true),
-      '',
-    );
+    final cuts = [
+      for (final (first, last) in spans)
+        (offsetOf(tokens[first]), offsetOf(tokens[last]) + tokens[last].lexeme.length),
+    ]..sort((a, b) => a.$1.compareTo(b.$1));
 
-    return result.trim() + '\n';
+    final out = StringBuffer();
+    var at = 0;
+    for (final (from, to) in cuts) {
+      out.write(source.substring(at, from));
+      out.write('\n' * '\n'.allMatches(source.substring(from, to)).length);
+      at = to;
+    }
+    out.write(source.substring(at));
+    return out.toString();
   }
 
   /// Read file contents (platform-specific)

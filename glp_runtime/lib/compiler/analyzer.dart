@@ -19,6 +19,10 @@ class VariableInfo {
   int writerOccurrencesHeadBody = 0;
   int readerOccurrencesHeadBody = 0;
 
+  // Writer occurrences in the clause head alone.  A writer occurring twice in
+  // the head is refused whatever the guards ([VariableTable.collectSRSWViolations]).
+  int writerOccurrencesHead = 0;
+
   // First occurrence location
   AstNode? firstOccurrence;
 
@@ -77,17 +81,26 @@ class VariableTable {
   // the clause, ITS PAIRED WRITER OCCURRING ONCE.
   final Set<String> _typeLicensedVars = {};
 
+  /// The head of the clause this table was built from, which a diagnostic
+  /// names.
+  Atom? head;
+
   /// Record a writer occurrence.
   /// [inHeadOrBody]: true if in head or body (counts toward SRSW), false if in guard
+  /// [inHead]: true if in the clause head
   /// Anonymous variables (names starting with '_') are not tracked for SRSW.
-  void recordWriterOccurrence(String name, AstNode node, {bool inHeadOrBody = true}) {
+  void recordWriterOccurrence(String name, AstNode node,
+      {bool inHeadOrBody = true, bool inHead = false}) {
     // Skip anonymous variables - they don't participate in SRSW
     if (name.startsWith('_')) return;
-    
+
     final info = _vars.putIfAbsent(name, () => VariableInfo(name, true));
     info.writerOccurrences++;
     if (inHeadOrBody) {
       info.writerOccurrencesHeadBody++;
+    }
+    if (inHead) {
+      info.writerOccurrencesHead++;
     }
     info.firstOccurrence ??= node;
   }
@@ -142,7 +155,10 @@ class VariableTable {
   /// permission, its paired writer occurring once" (typed-glp.tex, before
   /// Proposition "Readers of Constant Types"), and of `MutualRef` it is "a
   /// reader of type MutualRef may also occur more than once" --- so it does not
-  /// reach this one.
+  /// reach this one.  Nor does the guard license a second occurrence in the
+  /// HEAD: the head is matched before the guard is tried, and a writer
+  /// occurring twice there is refused whatever the guards (GLP-Spec glp.tex,
+  /// Definition "GLP Program"; [collectSRSWViolations]).
   bool allowsMultipleWriters(String varName) => isGrounded(varName);
 
   /// Verify SRSW constraints and return list of violations (empty if valid)
@@ -161,9 +177,25 @@ class VariableTable {
       // Each occurrence denotes a fresh writer with no paired reader
       if (info.isAnonymous) continue;
 
-      // Check writer occurrences: only a groundness-implying guard licenses
-      // more than one (TGLP glp.tex rem:guards-srsw).
-      if (info.writerOccurrences > 1 && !allowsMultipleWriters(info.name)) {
+      // Check writer occurrences.  A writer occurring twice in the HEAD is an
+      // SRSW violation whatever the guards: SRSW requires SO, "every variable
+      // occurs in it at most once" (GLP-Spec glp.tex, Definitions
+      // "Single-Occurrence (SO) Invariant" and "GLP Program"), and the guard
+      // is tried only after the head is matched, by term matching, which is
+      // defined for terms that jointly satisfy SO (appendix-term-matching.tex).
+      // GLP's ruling (GLP #3 Cowork, 2026-10-02 08:40 UTC, G).  Until
+      // 2026-10-02 a groundness-implying guard licensed it, and the second
+      // occurrence's get_variable overwrote the first: h1(same(To), To) :-
+      // ground(To?) | true reduced h1(same(4), 3).  Elsewhere in the clause
+      // only a groundness-implying guard licenses more than one (TGLP glp.tex
+      // rem:guards-srsw).
+      if (info.writerOccurrencesHead > 1) {
+        final line = head?.line ?? info.firstOccurrence?.line ?? 0;
+        final clause = head != null ? ' of the clause $head' : '';
+        violations.add(
+          'Line $line: Writer variable "${info.name}" occurs ${info.writerOccurrencesHead} times in the head$clause'
+        );
+      } else if (info.writerOccurrences > 1 && !allowsMultipleWriters(info.name)) {
         final line = info.firstOccurrence?.line ?? 0;
         violations.add(
           'Line $line: Writer variable "${info.name}" occurs ${info.writerOccurrences} times without a groundness-implying guard'
@@ -331,7 +363,7 @@ class Analyzer {
     final transformed = _partialEvaluator.transformDefinedGuards(program);
 
     // STEP 3: Auto-generate reduce/2 clauses for metainterpretation
-    // Generated for all files by default, except those with -stdlib. declaration
+    // Generated for all files by default, except those declaring -mode(system)
     final withReduce = generateReduce
         ? _generateReduceClauses(transformed)
         : transformed;
@@ -604,9 +636,11 @@ class Analyzer {
     return (AnnotatedClause(clause, varTable, hasGuards: hasGuards, hasBody: hasBody), contextViolations);
   }
 
+  /// Analyze a clause head.
   void _analyzeAtom(Atom atom, VariableTable varTable) {
+    varTable.head = atom;
     for (final arg in atom.args) {
-      _analyzeTerm(arg, varTable);
+      _analyzeTerm(arg, varTable, inHead: true);
     }
   }
 
@@ -619,8 +653,6 @@ class Analyzer {
   // Body-only constructs that are NOT valid guards
   static const _invalidInGuardPosition = {
     'true',   // true is body-only, not a guard
-    'false',  // false is body-only
-    'fail',   // fail is body-only
   };
 
   void _analyzeGuard(Guard guard, VariableTable varTable) {
@@ -726,8 +758,8 @@ class Analyzer {
     }
 
     // valid_attestation/4 guard marks all four inputs as grounded: it suspends
-    // until every input is ground, so a holding clause has them all ground
-    // (seam spec §4). Allows multiple reader occurrences of the key/sig inputs.
+    // until every input is ground, so a holding clause has them all ground.
+    // Allows multiple reader occurrences of the key/sig inputs.
     if (guard.predicate == 'valid_attestation' && guard.args.length == 4) {
       for (final arg in guard.args) {
         if (arg is VarTerm) {
@@ -770,7 +802,9 @@ class Analyzer {
   /// Analyze a term, recording variable occurrences.
   /// [inHeadOrBody]: true if analyzing head or body (counts for SRSW),
   ///                 false if analyzing guards (does not count for SRSW)
-  void _analyzeTerm(Term term, VariableTable varTable, {bool inHeadOrBody = true}) {
+  /// [inHead]: true if analyzing the clause head
+  void _analyzeTerm(Term term, VariableTable varTable,
+      {bool inHeadOrBody = true, bool inHead = false}) {
     if (term is VarTerm) {
       // Skip anonymous variables (names starting with '_') - exempt from SRSW
       // Each occurrence denotes a fresh writer with no paired reader
@@ -779,18 +813,21 @@ class Analyzer {
       if (term.isReader) {
         varTable.recordReaderOccurrence(term.name, term, inHeadOrBody: inHeadOrBody);
       } else {
-        varTable.recordWriterOccurrence(term.name, term, inHeadOrBody: inHeadOrBody);
+        varTable.recordWriterOccurrence(term.name, term,
+            inHeadOrBody: inHeadOrBody, inHead: inHead);
       }
     } else if (term is StructTerm) {
       for (final arg in term.args) {
-        _analyzeTerm(arg, varTable, inHeadOrBody: inHeadOrBody);
+        _analyzeTerm(arg, varTable, inHeadOrBody: inHeadOrBody, inHead: inHead);
       }
     } else if (term is ListTerm) {
       if (term.head != null) {
-        _analyzeTerm(term.head!, varTable, inHeadOrBody: inHeadOrBody);
+        _analyzeTerm(term.head!, varTable,
+            inHeadOrBody: inHeadOrBody, inHead: inHead);
       }
       if (term.tail != null) {
-        _analyzeTerm(term.tail!, varTable, inHeadOrBody: inHeadOrBody);
+        _analyzeTerm(term.tail!, varTable,
+            inHeadOrBody: inHeadOrBody, inHead: inHead);
       }
     }
     // A ConstTerm reached here is in argument position, and therefore data.
@@ -1187,16 +1224,40 @@ class PartialEvaluator {
     Map<String, Term> subst,
     Set<String> suspSet
   ) {
+    // A unit clause's `_?` (or `_X?`) is a head reader of a variable of its
+    // own: at a produced head position it "denotes an output the clause never
+    // produces" (TGLP typed-glp.tex, "Anonymous variables").  The table's
+    // column "Reader X2?" matches it as the named head readers below: a call
+    // writer is assigned it, and the unfolding names it nowhere; a call reader
+    // or term fails.  It was passed over as `_` is, so pick(A?, 2) reduced
+    // against pick(1, _?).
+    if (_isAnonymousReader(unitArg)) {
+      return _isWriterTerm(callArg)
+          ? null
+          : UnifyFail(_anonymousReaderMismatch(callArg));
+    }
+
     // Handle underscore on either side - always succeeds, no binding
     if (_isAnonymous(callArg) || _isAnonymous(unitArg)) {
+      // Except a writer against a writer: an anonymous variable is a writer
+      // of its own (GLP-Spec glp.tex, Remark "Anonymous Variables"), and a
+      // call writer against a head writer fails (appendix-term-matching.tex,
+      // row "Writer X1", column "Writer X2").  Until 2026-10-02 it was passed
+      // over.
+      if (_isWriterTerm(callArg) && _isWriterTerm(unitArg)) {
+        return UnifyFail('Writer $callArg cannot match the head writer $unitArg');
+      }
       return null; // success, continue
     }
 
     // Case: call arg is writer (VarTerm, not reader)
     if (callArg is VarTerm && !callArg.isReader) {
       if (unitArg is VarTerm && !unitArg.isReader) {
-        // Writer vs Writer: alias unit writer to call writer
-        subst[unitArg.name] = callArg;
+        // Call writer vs head writer: FAIL.  GLP-Spec appendix-term-matching.tex,
+        // Definition "Term Matching": row "Writer X1", column "Writer X2".
+        // Until 2026-10-02 the unit writer was aliased to the call writer.
+        return UnifyFail(
+            'Writer ${callArg.name} cannot match the head writer ${unitArg.name}');
       } else if (unitArg is VarTerm && unitArg.isReader) {
         // Writer vs Reader in unit clause - unusual but handle it
         // The reader refers to a writer that should be aliased
@@ -1353,6 +1414,27 @@ class PartialEvaluator {
   bool _isAnonymous(Term term) {
     return term is UnderscoreTerm || (term is VarTerm && term.name.startsWith('_'));
   }
+
+  /// An anonymous variable at a reader occurrence, `_?` or `_X?`.
+  bool _isAnonymousReader(Term term) =>
+      (term is UnderscoreTerm && term.isReader) ||
+      (term is VarTerm && term.isReader && term.name.startsWith('_'));
+
+  /// A writer occurrence, named or anonymous.
+  bool _isWriterTerm(Term term) =>
+      (term is UnderscoreTerm && !term.isReader) ||
+      (term is VarTerm && !term.isReader);
+
+  /// Why [callArg], a call reader or term, cannot match a unit clause's `_?`.
+  String _anonymousReaderMismatch(Term callArg) => switch (callArg) {
+        ConstTerm(:final value) =>
+          'Constant $value cannot match the head reader _?',
+        StructTerm(:final functor) =>
+          'Structure $functor cannot match the head reader _?',
+        ListTerm() => 'List cannot match the head reader _?',
+        VarTerm(:final name) => 'Reader $name? cannot match the head reader _?',
+        _ => 'Reader _? cannot match the head reader _?',
+      };
 
   /// Resolve substitution chains.
   /// If σ = {X → Y, Y → f(Z)}, result is {X → f(Z), Y → f(Z)}

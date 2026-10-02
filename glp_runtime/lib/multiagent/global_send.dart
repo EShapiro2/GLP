@@ -3,7 +3,7 @@
 /// Implements the `global_send` goal that watches a reader and sends
 /// its value to a remote agent when it becomes known.
 ///
-/// See: madGLP-spec.md Section 4 (The global_send Predicate)
+/// See: IGLP Definition global_send Predicate (app:global-send)
 library;
 
 import 'mad_helpers.dart';
@@ -16,7 +16,7 @@ import 'imported_writer_records.dart';
 /// - Globalizing a reader Y?: watches Y?, sends to destination
 /// - Localizing _w(p,i): watches Y_q?, sends back to p
 ///
-/// See: madGLP-spec.md Section 4
+/// See: IGLP Definition global_send Predicate
 class GlobalSendGoal {
   /// Address of the reader to watch
   final int readerAddr;
@@ -87,7 +87,8 @@ class GlobalSendFiredResult {
 /// Maps reader addresses to goals waiting for those readers to become known.
 /// When a writer is bound, call onWriterBound() to fire any matching goals.
 ///
-/// See: madGLP-spec.md Section 4, Implementation Plan Section 3.2
+/// See: IGLP app:in-heap, The global_send goal: registered as a callback,
+/// fired at the end of a commit.
 class GlobalSendRegistry {
   /// Agent ID for this registry (used when globalizing values)
   final String agentId;

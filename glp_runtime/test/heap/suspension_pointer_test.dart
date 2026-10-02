@@ -1,7 +1,8 @@
 /// Tests for suspension and reactivation with Pointer Architecture Heap
 ///
 /// Adapted from: test/conformance/restart_clause1_test.dart
-/// For spec: docs/heap-pointer-architecture-spec.md v3.0
+/// For spec: IGLP app:in-heap (Heap: Variables, Dereferencing,
+/// Binding, Suspension)
 ///
 /// Key changes from original:
 /// - Suspensions now live on WRITER cells (not reader cells)

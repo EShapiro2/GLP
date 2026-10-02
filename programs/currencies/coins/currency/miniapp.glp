@@ -22,7 +22,7 @@ coins(Id, ch(Answers, Events?), Convs) :-
     ground(Id?) |
     coins_agent # agent(ch([], Asks), Id?, [], [], Convs?, [user_output(Screen)], [], 1,
                         none, none, none, none),
-    coins_agent # med(ch(Answers?, Cards), ch(Asks?, []), [], 0),
+    coins_agent # med(ch(Answers?, Cards), ch(Asks?, _), [], 0),
     merge_events(Cards?, Screen?, Events).
 
 %% The cards and the screen, as one stream of events.  A pair carries one type,

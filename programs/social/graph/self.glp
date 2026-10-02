@@ -490,10 +490,10 @@ OutputsList ::= [] ; [OutputEntry | OutputsList].
 ReqId ::= req(Constant).
 
 %% User -> Mediator
-UserCmd ::= decision(Decision, Constant, ReqId)
+UserCmd ::= decision(Decision, Key, ReqId)
           ; accept_intro(Constant, ReqId)
           ; reject_intro(Constant, ReqId)
-          ; connect(Constant)
+          ; connect(Key)
           ; send(Constant, Constant)
           ; introduce(Constant, Constant)
           ; unfriend(Constant).

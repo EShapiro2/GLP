@@ -1,12 +1,12 @@
-/// S2 — serializer alignment, canonical path (appendix §wf-terms).
+/// S2 — serializer alignment, canonical path (appendix §cf-terms).
 ///
 /// Variables travel as global names per Definition Globalize: tag-2 variables,
 /// not `_w`/`_r` structures. No original-creator ids, no paired-reader field,
 /// no serializer string marker — the serializer tail is the variable `_w(q,0)`.
 ///
-/// These exercise the canonical codec path (`PayloadCodec`) directly. The
-/// switched-on multiagent/isolate suites are run separately with
-/// GLP_WIRE_CANONICAL=1.
+/// These exercise the canonical codec (`PayloadCodec`) directly; it is the
+/// one encoding of madGLP payloads, which the multiagent and isolate suites run
+/// over.
 library;
 
 import 'dart:typed_data';
@@ -97,7 +97,7 @@ void main() {
     });
   });
 
-  group('module constant (§wf-terms tag 6)', () {
+  group('module constant (§cf-terms tag 6)', () {
     Artefact artefact() => Artefact.fromCompiled(
           ops: const [],
           hM: Uint8List(32),

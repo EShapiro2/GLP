@@ -1,7 +1,8 @@
-/// Canonical madGLP payload path over the wire codec (D3, behind the switch).
+/// The madGLP payloads over the wire codec: an assignment message in the
+/// canonical encoding (IGLP app:in-networking, "Payloads").
 ///
-/// Normative source: the IGLP paper appendix `app:wire-format`, §§wf-primitives,
-/// wf-terms. Variables travel as global names per Definition Globalize: a tag-2
+/// Normative source: the IGLP paper appendix `app:code-format`, §§cf-primitives,
+/// cf-terms. Variables travel as global names per Definition Globalize: a tag-2
 /// variable with a u8 polarity (0 writer `_w(p,i)`, 1 reader `_r(p,i)`), the
 /// agent, and a clen index. There is no original-creator identifier, no
 /// paired-reader field, and no serializer string marker — the serializer
@@ -12,9 +13,6 @@
 /// This codec maps those structures to the codec's tag-2 variable form, and
 /// maps them back on receipt, so the localize machinery (extractGlobalNames /
 /// localizeTermWithResult) is unchanged.
-///
-/// This path is selected by [WireFlags.canonical]; the legacy serializer
-/// remains the live default until the S7 cutover.
 library;
 
 import 'dart:convert';
@@ -53,8 +51,7 @@ class PayloadCodec {
   }
 
   /// Encode a request `req(_r(p,i))` (kind 1): u8 kind, polarity (1), agent,
-  /// clen index — no term. The encoding is flag-independent: request and
-  /// acknowledgement bytes are identical on the legacy and canonical paths.
+  /// clen index — no term.
   static List<int> createRequestPayload(GlobalName globalName) {
     assert(globalName.isReader, 'a request carries a reader name');
     return encodeMessageToBytes(WireRequestMessage.symbolic(

@@ -64,7 +64,7 @@ imported procedure frank#frank_p12(ActorChannel?, Stream(NarrativeItem)).
 %% TEE — Stream splitter
 %% =============================================================================
 
-procedure tee(Stream(X)?, Stream(X), Stream(X)).
+procedure(X) tee(Stream(X)?, Stream(X), Stream(X)).
 tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
 tee([], [], []).
 
@@ -72,7 +72,7 @@ tee([], [], []).
 %% SINK — Dummy consumer (discards stream)
 %% =============================================================================
 
-procedure sink(Stream(X)?).
+procedure(X) sink(Stream(X)?).
 sink([_|Xs]) :- sink(Xs?).
 sink([]).
 

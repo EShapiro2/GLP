@@ -3,14 +3,13 @@
 /// Provides agent-level context for multiagent GLP communication.
 /// Each agent has W_p (global writers table) and M_p (message queue).
 ///
-/// Specification: /docs/ma/madGLP-spec.md
+/// Specification: IGLP app:madglp-spec (madGLP Specification).
 library;
 
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/multiagent/message_queue.dart';
-import 'package:glp_runtime/multiagent/payload_serializer.dart';
 import 'package:glp_runtime/multiagent/global_send.dart';
 import 'package:glp_runtime/multiagent/global_writers_table.dart';
 import 'package:glp_runtime/multiagent/imported_writer_records.dart';
@@ -49,31 +48,27 @@ class MadContext {
   /// Registry for pending global_send goals (watches readers, sends when known)
   final GlobalSendRegistry globalSendRegistry;
 
-  /// Payload serializer for message encoding
-  late final PayloadSerializer _serializer;
-
   /// Optional callback for message delivery (set by coordinator)
   MessageDeliveryCallback? onMessageReady;
 
   /// The agent's networking layer (set at boot). Backs the `sign/2` body kernel
-  /// and the `valid_attestation/4` guard (seam spec §4): the layer holds the
+  /// and the `valid_attestation/4` guard: the layer holds the
   /// private key and provides real Ed25519 `sign`/`verify`.
   GlpNetwork? network;
 
-  /// Canonical serialization of a ground term for signing/verifying (seam spec
-  /// §4): the madGLP payload serialization. Address-free and deterministic for
-  /// ground terms — `serializeAgentMessage` throws if any `VarRef` is present,
-  /// and the encoding is agentId-independent, so canonical bytes match across
-  /// agents.
+  /// The canonical bytes e(T) of a ground term T, which a signature signs and
+  /// a verifier checks (IGLP code-format-fragment.tex, "Signed and Hashed
+  /// Content"). It throws on a variable, and the bytes are agent-independent,
+  /// so they match across agents.
   List<int> canonicalSerialize(Term groundTerm) =>
-      _serializer.serializeAgentMessage(groundTerm);
+      PayloadCodec.serializeAgentMessage(groundTerm);
 
   /// Optional trace sink for MAD infrastructure output.
   /// When set, MAD debug output goes through this callback instead of print().
   void Function(String)? traceSink;
 
-  /// Hold table for early `_r(p, i)` assignments (Issue 7 / madGLP-spec §8.3,
-  /// Early Messages). An assignment `_r(p, i) := T` arriving before its
+  /// Hold table for early `_r(p, i)` assignments (IGLP app:in-networking,
+  /// Early messages). An assignment `_r(p, i) := T` arriving before its
   /// `LocalizeEntry` exists — possible under any non-FIFO transport — is stored
   /// here keyed by (remoteAgent, remoteIndex) and delivered when `localize()`
   /// creates the matching entry. Only the `_r` case needs holding: `_w(p, i)`
@@ -142,9 +137,7 @@ class MadContext {
   })  : wp = GlobalWritersTable(agentId),
         up = ImportedWriterRecords(agentId),
         mp = MessageQueue(),
-        globalSendRegistry = GlobalSendRegistry(agentId) {
-    _serializer = PayloadSerializer(agentId);
-  }
+        globalSendRegistry = GlobalSendRegistry(agentId);
 
   // =========================================================================
   // Writer Binding Observation
@@ -153,7 +146,7 @@ class MadContext {
   /// Called when a writer is bound to a value
   ///
   /// Checks for global_send goals watching this writer's reader and fires
-  /// them if found (per madGLP-spec.md Section 4).
+  /// them if found (IGLP Definition global_send Predicate).
   void onWriterBound(int writerId, Term value) {
     _trace('[MAD $agentId] onWriterBound: writerId=$writerId, value=$value');
     _fireGlobalSendGoalIfExists(writerId, value);
@@ -250,12 +243,8 @@ class MadContext {
     );
 
     // Queue the assignment message
-    final payload = _serializer.createGlobalSendPayload(
-      result.globalName,
-      globalizedValue,
-      runtime.heap.isReader,
-      lookupVariable: _lookupVariableForSerialization,
-    );
+    final payload =
+        PayloadCodec.createGlobalSendPayload(result.globalName, globalizedValue);
 
     mp.add(OutboundMessage(
       destination: result.destination,
@@ -299,13 +288,6 @@ class MadContext {
         onWriterBound(newGoal.readerAddr, value);
       });
     }
-  }
-
-  /// Lookup variable info for serialization
-  ({String creator, int creatorLocalId, bool isReader}) _lookupVariableForSerialization(int addr) {
-    // For local variables, use the current agent as creator
-    // This is a simplified version - extend as needed for imported vars
-    return (creator: agentId, creatorLocalId: addr, isReader: runtime.heap.isReader(addr));
   }
 
   /// Extract TermVars from a term for globalization
@@ -444,12 +426,11 @@ class MadContext {
     }
     _trace('[MAD $agentId] _handleSerializerAssignment: current serializer writer=$currentWriter');
 
-    // The value should be [T | serializer_marker] - extract the content T
-    // The serializer marker is a special constant we recognize
+    // The value is [T | _w(p,0)] - extract the content T
     Term content;
     if (value is StructTerm && value.functor == '.' && value.args.length == 2) {
       content = value.args[0];  // Head is the actual content
-      // Tail (value.args[1]) should be the serializer marker, we ignore it
+      // The tail (value.args[1]) is the serializer variable _w(p,0), ignored
       _trace('[MAD $agentId] _handleSerializerAssignment: extracted content from list cell');
     } else {
       // If not wrapped in list cell, use the value directly (for compatibility)
@@ -948,13 +929,8 @@ class MadContext {
     }
     switch (payload[0]) {
       case wireMsgKindValue:
-        final (globalName, value) = _serializer.deserializeGlobalSendPayload(
-          payload,
-          (isReader) {
-            final (w, r) = runtime.heap.allocateVariable();
-            return isReader ? r : w;
-          },
-        );
+        final (globalName, value) =
+            PayloadCodec.deserializeGlobalSendPayload(payload);
         handleMadAssignment(
             globalName: globalName, value: value, fromAgent: fromAgent);
       case wireMsgKindRequest:
@@ -1281,21 +1257,11 @@ class MadContext {
     if (isWriter && gnIndex == 0) {
       // Serializer case: wrap in list cell [T↑ | _w(q,0)]
       _trace('[MAD $agentId] send: serializer case, wrapping in list cell');
-      payload = _serializer.createSerializerPayload(
-        globalName,
-        globalizedTerm,
-        runtime.heap.isReader,
-        lookupVariable: _lookupVariableForSerialization,
-      );
+      payload = PayloadCodec.createSerializerPayload(globalName, globalizedTerm);
     } else {
       // Normal case: send directly
       _trace('[MAD $agentId] send: normal case, sending directly');
-      payload = _serializer.createGlobalSendPayload(
-        globalName,
-        globalizedTerm,
-        runtime.heap.isReader,
-        lookupVariable: _lookupVariableForSerialization,
-      );
+      payload = PayloadCodec.createGlobalSendPayload(globalName, globalizedTerm);
     }
 
     // Queue the message for delivery

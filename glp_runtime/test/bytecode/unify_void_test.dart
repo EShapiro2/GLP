@@ -16,7 +16,11 @@
 /// The program is ../programs/tests/anon_void.glp, whose four drivers are the
 /// two controls (a genuinely unbound tail, and a closed list) and the two
 /// shapes under test (`_?` at a produced head position, and `_` inside a term
-/// the body constructs).
+/// the body constructs).  Since 2026-10-02 a head `_?` is compiled as the head
+/// reader it is, by `unify_variable` in reader mode and not by `unify_void`
+/// (test/engine/anonymous_head_reader_test.dart), so anon_head now checks that
+/// the slot it leaves, the reader of a variable nothing assigns, is unknown
+/// all the same.
 library;
 
 import 'dart:io';

@@ -148,16 +148,6 @@ w(a, _).
   });
 
   group('the goals run, by id, for a caller that asks for them', () {
-    test('drain returns them in the order they ran', () {
-      final (sched, _) = loops(2);
-      expect(sched.drain(maxCycles: 2), [1, 2]);
-    });
-
-    test('drainAsync too', () async {
-      final (sched, _) = loops(3);
-      expect(await sched.drainAsync(maxCycles: 5), [1, 2, 3, 1, 2]);
-    });
-
     test('drainWithStatus appends them to the list it is given', () {
       final (sched, _) = queued(3);
       final ids = <int>[];

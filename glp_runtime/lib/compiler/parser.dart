@@ -67,10 +67,9 @@ class Parser {
     final exposes = <String>[];  // `-expose(M).` module paths
 
     // Parse declarations at the start of the file
+    declarations:
     while (!_isAtEnd() && _check(TokenType.MINUS)) {
       final startPos = _current;
-      final startLine = _peek().line;
-      final startCol = _peek().column;
       _advance(); // consume '-'
 
       if (!_check(TokenType.ATOM)) {
@@ -81,45 +80,30 @@ class Parser {
       final keyword = _advance();
 
       switch (keyword.lexeme) {
-        case 'module':
-          throw CompileError(
-            'The -module() declaration is no longer supported. A module\'s name '
-            'is its file or directory path from the program root.',
-            startLine,
-            startCol,
-            phase: 'parser'
-          );
-
-        case 'stdlib':
-          // -stdlib. is deprecated — treated as -mode(system).
-          _consume(TokenType.DOT, 'Expected "." after stdlib declaration');
-          compileMode = CompileMode.system;
-          break;
-
         case 'mode':
-          // -mode(user). or -mode(system). declaration
+          // -mode(system). declaration (GLP-Spec appendix-guards.tex, Naming and
+          // admission of body kernels; TGLP app:system-mode), the one mode
+          // declaration: a module without it is a user module.
           _consume(TokenType.LPAREN, 'Expected "(" after mode');
           if (!_check(TokenType.ATOM)) {
             throw CompileError(
-              'Expected "user" or "system" in mode declaration',
+              'Expected "system" in mode declaration',
               _peek().line,
               _peek().column,
               phase: 'parser'
             );
           }
           final modeToken = _advance();
-          if (modeToken.lexeme == 'user') {
-            compileMode = CompileMode.user;
-          } else if (modeToken.lexeme == 'system') {
-            compileMode = CompileMode.system;
-          } else {
+          if (modeToken.lexeme != 'system') {
             throw CompileError(
-              'Invalid mode "${modeToken.lexeme}". Expected "user" or "system".',
+              'Invalid mode "${modeToken.lexeme}". The mode declaration is '
+              '-mode(system); a module without it is a user module.',
               modeToken.line,
               modeToken.column,
               phase: 'parser'
             );
           }
+          compileMode = CompileMode.system;
           _consume(TokenType.RPAREN, 'Expected ")" after mode');
           _consume(TokenType.DOT, 'Expected "." after mode declaration');
           break;
@@ -146,26 +130,13 @@ class Parser {
           exposes.add(exposeParts.join('#'));
           break;
 
-        case 'export':
-          throw CompileError(
-            'The -export() declaration is no longer supported. Use \'exported procedure\' instead.',
-            startLine,
-            startCol,
-            phase: 'parser'
-          );
-
-        case 'import':
-          throw CompileError(
-            'The -import() declaration is no longer supported. Use \'imported procedure\' instead.',
-            startLine,
-            startCol,
-            phase: 'parser'
-          );
-
         default:
-          // Unknown declaration, back up to the '-'
+          // Not a directive: back up to the '-' and leave the directives, and
+          // the loop below refuses it as an unexpected token.  A bare `break`
+          // here left the switch and not the loop, which met the same '-'
+          // again and never ended.
           _current = startPos;
-          break;
+          break declarations;
       }
     }
 
@@ -423,7 +394,7 @@ class Parser {
 
       final keyword = _peek().lexeme;
 
-      if (['module', 'stdlib', 'mode', 'expose'].contains(keyword)) {
+      if (['module', 'mode', 'expose'].contains(keyword)) {
         // Skip to the next DOT
         while (!_isAtEnd() && !_check(TokenType.DOT)) {
           _advance();
@@ -835,12 +806,7 @@ class Parser {
         final term = _parseTerm();
         return Goal('=', [varTerm, term], varToken.line, varToken.column);
       } else if (tokens.length > _current + 1 && tokens[_current + 1].type == TokenType.HASH) {
-        // Dynamic remote goal: Var # Goal (e.g., M? # factorial(5, R))
-        _advance(); // consume variable
-        _advance(); // consume #
-        final moduleTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
-        final innerGoal = _parseGoal();
-        return RemoteGoal(moduleTerm, innerGoal, varToken.line, varToken.column);
+        throw _variableModuleError(varToken);
       }
     }
 
@@ -1002,20 +968,35 @@ class Parser {
     return Atom(functorToken.lexeme, args, functorToken.line, functorToken.column);
   }
 
+  /// The refusal of a cross-module call whose module is a variable, `M # G` or
+  /// `M? # G`.  The qualifier of a cross-module call is a child directory or
+  /// module file of the caller's directory (TGLP modules.tex, "Cross-module
+  /// type checking"), and a module value is run with run/2 or run/3 (GLP-Spec
+  /// appendix-guards.tex, "Dynamic activation"); the dynamic dispatch that took
+  /// a variable cannot be typed and is gone (TGLP modules.tex, Implementation).
+  CompileError _variableModuleError(Token varToken) {
+    final mark = varToken.type == TokenType.READER ? '?' : '';
+    return CompileError(
+      'A cross-module call names its module: "${varToken.lexeme}$mark # ..." '
+      'has a variable there. The module of M # G is a child directory or '
+      'module file of the caller\'s directory; a module value is run with '
+      'run/2 or run/3.',
+      varToken.line,
+      varToken.column,
+      phase: 'parser',
+    );
+  }
+
   // Goal: same as Atom, or assignment (Var := Expr) or univ (Var =.. Expr)
   // Also handles remote goals: Module # Goal
   Goal _parseGoal() {
     // Check for assignment or univ: Var := Expr or Var =.. Expr
-    // Also check for dynamic remote goal: Var # Goal
     if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
       final varToken = _advance();
       final isReader = varToken.type == TokenType.READER;
 
-      // Check for dynamic remote goal: Var # Goal (e.g., M # factorial(5, R))
-      if (_match(TokenType.HASH)) {
-        final moduleTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
-        final innerGoal = _parseGoal();
-        return RemoteGoal(moduleTerm, innerGoal, varToken.line, varToken.column);
+      if (_check(TokenType.HASH)) {
+        throw _variableModuleError(varToken);
       } else if (_match(TokenType.ASSIGN)) {
         // Parse as ':='(Var, Expr)
         final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);

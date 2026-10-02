@@ -31,7 +31,7 @@ imported procedure custodian#custodian(Stream(IssuerBlock)?, Stream(AckMsg)).
 %% Uses ground(X?) relaxation to allow two reader occurrences
 %% of X? in the output streams.
 
-procedure tee(Stream(X)?, Stream(X), Stream(X)).
+procedure(X) tee(Stream(X)?, Stream(X), Stream(X)).
 
 tee([X|Xs], [X?|Ys?], [X?|Zs?]) :-
     ground(X?) |

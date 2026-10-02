@@ -1,9 +1,9 @@
 /// GLP wire-format codec — primitives, terms, and assignment/serializer
 /// messages.
 ///
-/// Normative source: the IGLP paper appendix `app:wire-format`
-/// (`/Users/udi/Grassroots/IGLP/sections/wire-format-fragment.tex`),
-/// §§wf-primitives and wf-terms. This library is the byte-level realisation of
+/// Normative source: the IGLP paper appendix `app:code-format`
+/// (`/Users/udi/Grassroots/IGLP/sections/code-format-fragment.tex`),
+/// §§cf-primitives and cf-terms. This library is the byte-level realisation of
 /// the canonical encoding e: an injective function from globalized terms and
 /// assignment messages to byte strings.
 ///
@@ -17,10 +17,10 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 // ============================================================================
-// Wire term model (§wf-terms)
+// Wire term model (§cf-terms)
 // ============================================================================
 
-/// A constant payload (§wf-terms, the constant node's u8 subtag and payload).
+/// A constant payload (§cf-terms, the constant node's u8 subtag and payload).
 sealed class WireConst {
   const WireConst();
 }
@@ -99,7 +99,7 @@ class WModule extends WireConst {
   int get hashCode => Object.hashAll(artefactBytes);
 }
 
-/// A globalized term (§wf-terms).
+/// A globalized term (§cf-terms).
 sealed class WireTerm {
   const WireTerm();
 }
@@ -157,7 +157,7 @@ class WStruct extends WireTerm {
   int get hashCode => Object.hash(functor, Object.hashAll(args));
 }
 
-/// An assignment message `G := T↑` (§wf-terms, Messages). G is a global name;
+/// An assignment message `G := T↑` (§cf-terms, Messages). G is a global name;
 /// the message carries G's polarity, agent, and index, then the encoding of T.
 class WireAssignment {
   /// Polarity of G: false = writer `_w`, true = reader `_r`.
@@ -198,7 +198,7 @@ class WireAssignment {
 }
 
 // ============================================================================
-// Message kinds (§wf-terms, Messages) — code-format version 2
+// Message kinds (§cf-terms, Messages) — code-format version 2
 // ============================================================================
 
 /// Message kind byte: every message opens with a u8 kind.
@@ -206,7 +206,7 @@ const int wireMsgKindValue = 0;
 const int wireMsgKindRequest = 1;
 const int wireMsgKindAcknowledgement = 2;
 
-/// A madGLP message (§wf-terms, Messages). Opens with a u8 kind: 0 value,
+/// A madGLP message (§cf-terms, Messages). Opens with a u8 kind: 0 value,
 /// 1 request, 2 acknowledgement. The kind byte is new in code-format
 /// version 2.
 sealed class WireMessage {
@@ -275,7 +275,7 @@ class WireFormatException implements Exception {
 }
 
 // ============================================================================
-// Primitive writer (§wf-primitives)
+// Primitive writer (§cf-primitives)
 // ============================================================================
 
 /// Big-endian, shortest-form primitive encoder.
@@ -342,7 +342,7 @@ class WireWriter {
 }
 
 // ============================================================================
-// Primitive reader (§wf-primitives)
+// Primitive reader (§cf-primitives)
 // ============================================================================
 
 /// Big-endian primitive decoder. Rejects longer-than-necessary clen forms
@@ -444,7 +444,7 @@ class WireReader {
 }
 
 // ============================================================================
-// Constant payload (§wf-terms) — reused by instruction operands (§4.1)
+// Constant payload (§cf-terms) — reused by instruction operands (§4.1)
 // ============================================================================
 
 /// Write a constant payload: u8 constant tag, then its payload. No leading
@@ -538,7 +538,7 @@ WireConst decodeConstantPayload(WireReader r) {
 }
 
 // ============================================================================
-// Term encoding (§wf-terms)
+// Term encoding (§cf-terms)
 // ============================================================================
 
 void encodeTerm(WireWriter w, WireTerm t) {
@@ -601,7 +601,7 @@ WireTerm decodeTermFromBytes(Uint8List b) {
 }
 
 // ============================================================================
-// Message encoding (§wf-terms, Messages)
+// Message encoding (§cf-terms, Messages)
 // ============================================================================
 
 void encodeAssignment(WireWriter w, WireAssignment a) {
@@ -636,7 +636,7 @@ WireAssignment decodeAssignmentFromBytes(Uint8List b) {
   return a;
 }
 
-/// Encode a message with its opening u8 kind (§wf-terms, Messages; code-format
+/// Encode a message with its opening u8 kind (§cf-terms, Messages; code-format
 /// version 2): 0 value, then the assignment; 1 request / 2 acknowledgement,
 /// then polarity (1, a reader name), agent, clen index — no term.
 void encodeMessage(WireWriter w, WireMessage m) {

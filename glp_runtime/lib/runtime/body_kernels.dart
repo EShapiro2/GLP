@@ -6,7 +6,7 @@
 /// - Are only accessible to system predicates (assign.glp)
 /// - Expect all preconditions met (guards should verify before calling)
 ///
-/// Per heap-pointer-architecture-spec.md v3.0:
+/// Per IGLP app:in-heap, Variable pairs (the cell's tag gives its polarity):
 /// - VarRef has only addr field
 /// - Use heap.isWriter/isReader to check cell type
 
@@ -729,7 +729,9 @@ BodyKernelResult mutualRefCloseKernel(GlpRuntime rt, List<Object?> args) {
 /// '_send'(T, G, Q) - sends term T via global name G to agent Q.
 /// This is called by the GLP `global_send/3` predicate.
 ///
-/// Per madGLP-spec.md Section 11.5:
+/// Per IGLP Definition global_send Predicate (the '_send' builtin) and
+/// code-format-fragment.tex (a serializer message to q is
+/// _w(q,0) := [T↑ | _w(q,0)]):
 /// - Case G = _w(q, 0) (Serializer): wraps T in list [T↑ | _w(q,0)]
 /// - Case G = _w(p, i) or _r(p, i) with i > 0: sends T directly
 ///

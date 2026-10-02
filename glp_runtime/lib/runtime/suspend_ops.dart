@@ -6,8 +6,8 @@ import 'package:glp_runtime/multiagent/variable_table.dart' show VariableEntry;
 
 /// Suspension operations using FCP-exact shared suspension records
 /// 
-/// Per heap-pointer-architecture-spec.md v3.0:
-/// - Suspensions are stored on WRITER cells (not reader cells)
+/// - Suspensions are stored on WRITER cells, not reader cells (IGLP
+///   app:in-heap, Suspension)
 /// - For imported readers, suspensions are stored in VariableEntry
 class SuspendOps {
   /// FCP-exact suspension: create ONE shared record, add to each variable's writer
@@ -54,14 +54,5 @@ class SuspendOps {
 
     // Already bound to ground - no suspension needed
     // (This shouldn't normally happen if we're suspending on unbound vars)
-  }
-
-  /// Legacy version (deprecated)
-  static void suspendGoal({
-    required int goalId,
-    required int kappa,
-    required Set<int> readerVarIds,
-  }) {
-    throw UnimplementedError('Legacy suspendGoal deprecated - use suspendGoalFCP');
   }
 }

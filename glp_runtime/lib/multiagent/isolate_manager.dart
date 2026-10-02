@@ -6,7 +6,7 @@
 ///
 /// Termination is external: the caller shuts down isolates when done.
 ///
-/// See: docs/ma/agent-runtime-spec.md
+/// See: IGLP app:in-execution (Agent Execution and Boot).
 
 import 'dart:async';
 import 'dart:isolate';
@@ -19,7 +19,7 @@ import 'package:glp_runtime/engine_v2/interp.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
-import 'package:glp_runtime/multiagent/payload_serializer.dart';
+import 'package:glp_runtime/wire/payload_codec.dart' show PayloadCodec;
 import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
@@ -38,8 +38,8 @@ class Ready extends IsolateMessage {
 /// Signal to start execution
 class Start extends IsolateMessage {}
 
-/// Agent → router: an outbound send. Per seam spec v0.2 §4/§6 the wire carries
-/// opaque payload bytes only — no MessageType.
+/// Agent → router: an outbound send. The wire carries opaque payload bytes
+/// only, no MessageType (IGLP app:in-networking, The contract; Payloads).
 class RouterSend extends IsolateMessage {
   final String fromId;
   final String toId;
@@ -133,7 +133,6 @@ class AgentConfig {
   final int goalArity; // Arity of the goal (e.g., 2, 3, 4)
   final List<String> goalConstantArgs; // Constant args between agentId and netIn
   final String programSource;
-  final List<String>? sharedSources; // Optional shared code files (e.g., social_agent.glp)
   final String? programDir; // Optional program directory for static linking
   final String rootSelfGlpPath; // Absolute path to programs/self.glp
   final String? bootPath; // The boot file's path, for its own self.glp chain
@@ -141,8 +140,9 @@ class AgentConfig {
   final SendPort? uiPort; // null for headless
   final TraceConfig traceConfig;
 
-  /// This agent's Ed25519 key pair (seam spec §4). The agent installs it on its
-  /// GlpNetwork via putIdentity.
+  /// This agent's Ed25519 key pair: its identity is its public key, held with
+  /// its private key by the networking layer (IGLP app:in-networking, The
+  /// contract). The agent installs it on its GlpNetwork via putIdentity.
   final ({PubKey pub, Uint8List priv}) keyPair;
 
   /// The shared identifier–key directory, published to every adapter (§4).
@@ -154,7 +154,6 @@ class AgentConfig {
     this.goalArity = 2,
     this.goalConstantArgs = const [],
     required this.programSource,
-    this.sharedSources,
     this.programDir,
     required this.rootSelfGlpPath,
     this.bootPath,
@@ -175,7 +174,8 @@ class IsolateManager {
   final ReceivePort _mainPort = ReceivePort();
 
   /// The simulation router: owns the directory, adjacency, trust, queues, and
-  /// messageId assignment, and routes all inter-agent traffic (seam spec §3).
+  /// messageId assignment, and routes all inter-agent traffic (IGLP
+  /// app:in-networking, Simulation realisation).
   final SimulationRouter _router = SimulationRouter();
 
   /// Trace configuration (set via boot)
@@ -312,7 +312,8 @@ class IsolateManager {
     final expectedCount = config.directives.length;
 
     // 1. Generate an Ed25519 key pair per agent and populate the directory
-    //    (seam spec §3 Boot). The boot harness sets trust Open for the plays.
+    //    (IGLP app:in-networking, Simulation realisation). The boot harness
+    //    sets trust Open for the plays.
     final keyPairs = <String, ({PubKey pub, Uint8List priv})>{};
     for (final directive in config.directives) {
       final kp = generateKeyPair();
@@ -364,7 +365,6 @@ class IsolateManager {
         goalArity: directive.goalArity,
         goalConstantArgs: directive.constantArgs,
         programSource: config.source,
-        sharedSources: config.sharedSources,
         programDir: config.programDir,
         rootSelfGlpPath: config.rootSelfGlpPath,
         bootPath: config.bootPath,
@@ -396,13 +396,15 @@ class IsolateManager {
     await readyCompleter.future;
   }
 
-  /// Harness control: visible disconnection of a pair (seam spec §3, §7.2).
+  /// Harness control: visible disconnection of a pair (IGLP app:in-networking,
+  /// Simulation realisation).
   void cut(String a, String b) => _router.cut(a, b);
 
   /// Harness control: reverse a [cut], flushing queued messages in order.
   void restore(String a, String b) => _router.restore(a, b);
 
-  /// Harness control: invisible delay of a pair's delivery (seam spec §3).
+  /// Harness control: invisible delay of a pair's delivery (IGLP
+  /// app:in-networking, Simulation realisation).
   void holdDelivery(String a, String b) => _router.holdDelivery(a, b);
 
   /// Harness control: release a [holdDelivery], flushing in reverse order.
@@ -425,8 +427,7 @@ class IsolateManager {
     }
 
     // Serialize the message
-    final serializer = PayloadSerializer(agentId);
-    final payload = serializer.serializeAgentMessage(message);
+    final payload = PayloadCodec.serializeAgentMessage(message);
     port.send(UIEvent(agentId, payload));
   }
 
@@ -528,14 +529,8 @@ void _agentIsolateEntry(AgentConfig config) async {
           filename: 'program', scope: bootScope());
       log('Program loaded via program linking (${config.programDir}) + boot source');
     } else {
-      // Legacy mode: load shared source files and boot program sequentially.
-      // Each file is loaded separately to preserve per-file -mode() directives.
-      if (config.sharedSources != null) {
-        for (var i = 0; i < config.sharedSources!.length; i++) {
-          engine.loadSource(config.sharedSources![i],
-              filename: 'shared_$i', scope: engine.scope);
-        }
-      }
+      // No program directory: the boot source, its boot clause stripped, is
+      // the program.
       engine.loadSource(config.programSource,
           filename: 'program', scope: bootScope());
       log('Program loaded via GlpEngine (stdlib + madPredicates + user code)');
@@ -568,7 +563,8 @@ void _agentIsolateEntry(AgentConfig config) async {
         config.mainPort.send(RouterSend(agentId, toId, payload)),
   );
   network.putIdentity(config.keyPair.pub, config.keyPair.priv);
-  // Back the seam predicates and the valid_attestation/4 guard (seam spec §4).
+  // Back the seam predicates (IGLP Definition Seam Predicates) and the
+  // valid_attestation/4 guard.
   ctx.network = network;
 
   // Outgoing (spec §4): ctx.onMessageReady(destId, msg) → network.send.

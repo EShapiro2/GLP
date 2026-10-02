@@ -674,7 +674,6 @@ Set<String> _declKnownTypes(Map<String, TypeDef> templates,
       ...templates.keys,
       ...monoTypeDefs.map((td) => td.name),
       ...TypeRef.builtins,
-      ...TypeRef.systemTypes,
       ...externalKnownTypes,
     };
 

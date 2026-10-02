@@ -36,7 +36,7 @@ w(a, _).
   // passes the three places a reduction formatted a goal for the trace: the
   // spawn, the tail call and the proceed.
   BytecodeProgram compiled() {
-    final ops = List<dynamic>.of(GlpCompiler().compile(source).ops);
+    final ops = List<Op>.of(GlpCompiler().compile(source).ops);
     final proceed = ops.indexWhere((op) => op is Proceed);
     final last = ops[proceed - 1] as Spawn;
     ops[proceed - 1] = Requeue(last.procedureLabel, last.arity);

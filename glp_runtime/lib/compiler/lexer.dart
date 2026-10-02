@@ -37,8 +37,6 @@ class Lexer {
       case ')': return _makeToken(TokenType.RPAREN, startLine, startColumn);
       case '[': return _makeToken(TokenType.LBRACKET, startLine, startColumn);
       case ']': return _makeToken(TokenType.RBRACKET, startLine, startColumn);
-      case '{': return _makeToken(TokenType.LBRACE, startLine, startColumn);
-      case '}': return _makeToken(TokenType.RBRACE, startLine, startColumn);
       case '.':
         if (_match('.')) {
           if (_match('=')) {

@@ -1,6 +1,6 @@
 /// Deterministic flattening + source identity h(M) (D3 wire format, §6).
 ///
-/// Normative source: the IGLP paper appendix `app:wire-format`, §wf-flattening.
+/// Normative source: the IGLP paper appendix `app:code-format`, §cf-flattening.
 /// The flattened source of a project — the preimage of h(M) — is the canonical
 /// print of the linked, pruned program: discovered, type-checked, renamed,
 /// resolved, and pruned to the procedures reachable from the root's exported

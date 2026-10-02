@@ -12,8 +12,8 @@ enum TokenType {
   RPAREN,         // )
   LBRACKET,       // [
   RBRACKET,       // ]
-  LBRACE,         // { (future: sets)
-  RBRACE,         // } (future: sets)
+  LBRACE,         // { --- the lexer makes none: braces are not GLP syntax;
+  RBRACE,         // }     vglp/canonical.dart still names both kinds
 
   // Punctuation
   DOT,            // .

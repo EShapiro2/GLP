@@ -5,18 +5,14 @@ import 'dart:typed_data' show Uint8List;
 import 'package:glp_runtime/multiagent/mad_context.dart' show MadContext;
 import 'package:glp_runtime/multiagent/glp_network.dart' show PubKey;
 import 'package:glp_runtime/runtime/runtime.dart';
-import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/commit.dart';
-import 'package:glp_runtime/runtime/cells.dart';
-import 'package:glp_runtime/runtime/system_predicates.dart';
 import 'package:glp_runtime/runtime/body_kernels.dart';
 import 'package:glp_runtime/multiagent/variable_table.dart' show VariableEntry;
 import 'opcodes.dart';
-import 'opcodes_v2.dart' as opv2;
 import 'package:glp_runtime/engine_v2/step_outcome.dart';
 
-enum RunResult { terminated, suspended, yielded, outOfReductions }
+enum RunResult { terminated, suspended, yielded }
 
 /// A runner that executes one goal's [RunnerContext] to a [RunResult]. The
 /// scheduler holds runners behind this interface so a goal can be driven by the
@@ -32,28 +28,6 @@ abstract interface class GoalRunner {
   String? procNameForPc(int pc);
 }
 
-/// Module target for REPL imports
-class ReplModuleTarget {
-  final String name;
-  final BytecodeProgram program;
-  ReplModuleTarget(this.name, this.program);
-}
-
-/// Simple module context for REPL (synchronous goal spawning)
-class ReplModuleContext {
-  final String moduleName;
-  final Map<int, ReplModuleTarget> imports;  // importIndex (1-based) -> target
-  final BytecodeProgram? combinedProgram;    // Combined program for entry point lookup
-  final String programKey;                    // Key for scheduler's runners map
-
-  ReplModuleContext({
-    required this.moduleName,
-    required this.imports,
-    this.combinedProgram,
-    this.programKey = 'main',
-  });
-}
-
 /// Unification mode for structure traversal (WAM-style)
 enum UnifyMode { read, write }
 
@@ -61,16 +35,16 @@ enum UnifyMode { read, write }
 enum GuardResult {
   success,  // Guard succeeded, continue with clause
   failure,  // Guard failed, try next clause
-  suspend,  // Guard blocked on unbound readers (already added to cx.U)
+  suspend,  // Guard blocked on unbound readers (already added to cx.Si)
 }
 
 typedef LabelName = String;
 
 class BytecodeProgram {
-  final List<dynamic> ops;  // Can hold both v1 (Op) and v2 (OpV2) instructions
+  final List<Op> ops;  // The instruction objects (opcodes.dart), labels among them
   final Map<LabelName, int> labels;
   BytecodeProgram(this.ops) : labels = _indexLabels(ops);
-  static Map<LabelName, int> _indexLabels(List<dynamic> ops) {
+  static Map<LabelName, int> _indexLabels(List<Op> ops) {
     final m = <LabelName,int>{};
     for (var i = 0; i < ops.length; i++) {
       final op = ops[i];
@@ -99,22 +73,22 @@ class BytecodeProgram {
   }
 
   String _instructionToString(dynamic op) {
-    // Handle v2 PutVariable (the critical one for debugging)
-    if (op is opv2.PutVariable) {
+    // PutVariable (the critical one for debugging)
+    if (op is PutVariable) {
       final mode = op.isReader ? 'reader' : 'writer';
       return 'PutVariable(X${op.varIndex} → A${op.argSlot}, $mode)';
     }
 
-    // Handle other v2 instructions
-    if (op is opv2.HeadVariable) {
+    // The other variable instructions
+    if (op is HeadVariable) {
       final mode = op.isReader ? 'reader' : 'writer';
       return 'HeadVariable(X${op.varIndex}, $mode)';
     }
-    if (op is opv2.UnifyVariable) {
+    if (op is UnifyVariable) {
       final mode = op.isReader ? 'reader' : 'writer';
       return 'UnifyVariable(X${op.varIndex}, $mode)';
     }
-    if (op is opv2.SetVariable) {
+    if (op is SetVariable) {
       final mode = op.isReader ? 'reader' : 'writer';
       return 'SetVariable(X${op.varIndex}, $mode)';
     }
@@ -181,8 +155,10 @@ class _ParentContext {
 /// clause selects it (IGLP Implementation Notes, "Clause try").  It notes
 /// whether the current clause attempt added to it, [touched], and that is how
 /// a clause that suspended is told from one that failed: a reader is added here
-/// where a guard or the commit suspends, and never where a match fails.  A
-/// clause that meets a mismatch fails, whatever it suspended on before
+/// where the commit suspends, and never where a match or a guard fails --- a
+/// guard member that suspends puts its readers in Si, as a head match does
+/// ([_guardSuspends]).  A clause that meets a mismatch fails, whatever it
+/// suspended on before
 /// (GLP-Spec appendix-term-matching.tex, Definition "Term Matching": "The writer
 /// mgu is the union of all writer assignments if no fail was encountered and
 /// the suspension set is empty"), so its own suspension set Si reaches U only
@@ -298,15 +274,9 @@ class RunnerContext {
   // Guard argument building mode (for pre-commit structure building)
   int? guardArgSlot;  // Target argSlot when building structure for guard argument
 
-  // Reduction budget (null = unlimited)
-  int? reductionBudget;
-  int reductionsUsed = 0;
-
   // Environment frames for permanent variables (Y registers)
   EnvironmentFrame? E;  // Current environment pointer
   int? CP;              // Continuation pointer (return address)
-
-  final void Function(GoalRef)? onActivation; // host log hook
 
   // Track spawned goals for display
   final List<String> spawnedGoals = [];
@@ -352,23 +322,17 @@ class RunnerContext {
   // Custom term formatter for consistent variable naming
   final String Function(Term, {bool markReaders})? termFormatter;
 
-  // Module context for distribute/transmit handlers (Phase 5 integration)
-  final Object? moduleContext;
-
   RunnerContext({
     required this.rt,
     required this.goalId,
     required this.kappa,
     CallEnv? env,
-    this.onActivation,
-    this.reductionBudget,
     this.goalHead,
     this.goalProcName,
     this.onReduction,
     this.showBindings = true,
     this.debugOutput = false,
     this.termFormatter,
-    this.moduleContext,
   }) : env = env ?? CallEnv();
 
   void clearClause() {
@@ -556,6 +520,22 @@ VarRef _unknownPlaceholder(RunnerContext cx, bool isReader) {
   return (result, unboundReaders);
 }
 
+/// A guard member that suspends on [readers]: they go to the clause's
+/// suspension set Si, and the next member is tried.  "A guard conjunction
+/// succeeds if all members succeed; it suspends if any member suspends and none
+/// fail; it fails if any member fails" (GLP-Spec glp.tex, Guards), whatever the
+/// order of its members: a member that fails leaves the clause, its Si with it
+/// (the drivers' next clause, [SuspensionSet.touched] unset), and a clause whose
+/// Si is non-empty at commit suspends ([OpExecutors.execCommit]).  Until
+/// 2026-10-02 a member that suspended added its readers to the goal's U and
+/// left the clause, so a later member that fails was never tried:
+/// c1(N, M) :- N? > 5, M? > 5 suspended c1(X?, 3), where the same guards
+/// swapped failed it (GLP #3 Cowork, 2026-10-02 08:40 UTC, G).
+StepOutcome _guardSuspends(RunnerContext cx, Iterable<int> readers) {
+  cx.Si.addAll(readers);
+  return StepOutcome.advance;
+}
+
 GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerContext cx) {
   // Extract values from any remaining ConstTerms
   Object? getValue(Object? v) {
@@ -663,7 +643,7 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
   // operands), fail otherwise (bound but non-numeric — a type error).
   GuardResult blockedOrFail() {
     if (blockedReaders.isNotEmpty) {
-      cx.U.addAll(blockedReaders);
+      cx.Si.addAll(blockedReaders);
       return GuardResult.suspend;
     }
     return GuardResult.failure;
@@ -861,21 +841,6 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       }
       return GuardResult.failure;
 
-    case 'list':
-      // Succeeds if X is a list ([] or [H|T])
-      // Per spec: list(X?) - Succeeds if X is a list
-      if (args.isEmpty) return GuardResult.failure;
-      final val = getValue(args[0]);
-      // Empty list: ConstTerm with 'nil' or null
-      if (val is ConstTerm && (val.value == 'nil' || val.value == null)) {
-        return GuardResult.success;
-      }
-      // Cons cell: StructTerm with functor '.'
-      if (val is StructTerm && val.functor == '.') {
-        return GuardResult.success;
-      }
-      return GuardResult.failure;
-
     case 'module':
       // Succeeds if X is a ModuleTerm (ground module reference)
       if (args.isEmpty) return GuardResult.failure;
@@ -972,8 +937,8 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
           return GuardResult.success;
         } else {
           // Timer hasn't fired yet - keep suspending on same reader
-          cx.U.add(existingReader);
-          return GuardResult.failure;
+          cx.Si.add(existingReader);
+          return GuardResult.suspend;
         }
       }
 
@@ -998,9 +963,11 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
         cx.rt.decrementPendingTimers();
       });
 
-      // Add reader to suspension set U and fail → triggers normal suspension
-      cx.U.add(readerAddr);
-      return GuardResult.failure;
+      // Suspend on the timer's reader ([_guardSuspends]).  Until 2026-10-02
+      // the reader went to U and the guard reported failure, U telling the
+      // clause's suspension from a failure.
+      cx.Si.add(readerAddr);
+      return GuardResult.suspend;
 
     case 'wait_until':
       // wait_until(Timestamp) - Suspend until absolute time has passed
@@ -1025,8 +992,8 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
           cx.rt.clearWaitState(cx.goalId);
           return GuardResult.success;
         } else {
-          cx.U.add(existingReaderWU);
-          return GuardResult.failure;
+          cx.Si.add(existingReaderWU);
+          return GuardResult.suspend;
         }
       }
 
@@ -1043,8 +1010,8 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
         cx.rt.decrementPendingTimers();
       });
 
-      cx.U.add(readerAddrWU);
-      return GuardResult.failure;
+      cx.Si.add(readerAddrWU);
+      return GuardResult.suspend;
 
     case 'when_idle':
       // GLP-Spec appendix-guards.tex (e3a8d52), the time guards: "when_idle
@@ -1059,7 +1026,7 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
         cx.rt.clearIdleWait(cx.goalId);
         return GuardResult.success;
       }
-      cx.U.add(cx.rt.idleReader(cx.goalId));
+      cx.Si.add(cx.rt.idleReader(cx.goalId));
       return GuardResult.suspend;
 
     case '=?=':
@@ -1074,7 +1041,7 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       return _groundEqualityGuard(predicateName, _equalityOperand(args[0]),
           _equalityOperand(args[1]), cx);
 
-    // Attestation guard (madGLP, seam spec §4).
+    // Attestation guard (madGLP).
     // valid_attestation(Signer?, PkA?, PkB?, Sig?) holds iff Sig is Signer's
     // valid Ed25519 signature over the canonical serialization of attest(PkA,
     // PkB). Inputs are lowercase-hex string constants (keys 64 chars, signature
@@ -1324,7 +1291,7 @@ Object? _equalityOperand(Object? value) =>
 
 /// [guard], `=?=` or `=?\=`, on [left] and [right], as [_decideGroundEquality]
 /// decides them: success, failure, or suspension on the readers it adds to the
-/// goal's suspension set.
+/// clause's suspension set Si, the next member tried ([_guardSuspends]).
 GuardResult _groundEqualityGuard(
     String guard, Object? left, Object? right, RunnerContext cx) {
   final (decision, readers) = _decideGroundEquality(left, right, cx);
@@ -1335,7 +1302,7 @@ GuardResult _groundEqualityGuard(
     case _GroundEquality.differ:
       return negated ? GuardResult.success : GuardResult.failure;
     case _GroundEquality.undecided:
-      cx.U.addAll(readers);
+      cx.Si.addAll(readers);
       return GuardResult.suspend;
     case _GroundEquality.writer:
       return GuardResult.failure;
@@ -1556,11 +1523,13 @@ mixin OpExecutors {
   /// at [count] structure positions.
   ///
   /// An anonymous variable is a fresh writer with no paired reader (TGLP
-  /// typed-glp.tex, "Anonymous variables"), and at a produced position of a
-  /// clause head complementation (def:moded-head) makes `_?` exactly that. So
-  /// WRITE puts a fresh writer in the slot, as `glp_engine.dart`'s
-  /// `_anonymousWriter` does for `_` in a goal argument. It used to leave the
-  /// slot `null`, which `_convertTentativeToStruct` turned into
+  /// typed-glp.tex, "Anonymous variables"), so WRITE puts a fresh writer in
+  /// the slot, as `glp_engine.dart`'s `_anonymousWriter` does for `_` in a
+  /// goal argument.  This is `_`'s instruction alone: a head `_?`, "an output
+  /// the clause never produces", is a head reader of a variable of its own and
+  /// compiles to `unify_variable` in reader mode, which fails on a goal term
+  /// or reader and in WRITE places a reader (codegen, 2026-10-02).  It used
+  /// to leave the slot `null`, which `_convertTentativeToStruct` turned into
   /// `ConstTerm(null)`: that closes a stream the clause left open, and the
   /// payload serializer refuses it across a link.
   ///
@@ -1663,6 +1632,8 @@ mixin OpExecutors {
   /// commit --- its readers go to U and [StepOutcome.nextClause] is returned ---
   /// and otherwise the tentative structures are converted to terms, the writer
   /// bindings applied to the heap (waking suspended goals), and BODY entered.
+  /// Si holds the readers the head match suspended on and those of the guard
+  /// members that suspended, no member having failed ([_guardSuspends]).
   ///
   /// GLP-Spec appendix-term-matching.tex, Definition "Term Matching": a goal
   /// reader against a head term is "suspend on X1?", and "the writer mgu is the
@@ -1745,7 +1716,6 @@ mixin OpExecutors {
     );
     for (final a in acts) {
       cx.rt.gq.enqueue(a);
-      if (cx.onActivation != null) cx.onActivation!(a);
     }
     cx.sigmaHat.clear();
     cx.argSlots.clear();
@@ -1759,8 +1729,8 @@ mixin OpExecutors {
 
   /// `ground` (0x41): three-valued. Collect the term's unbound readers and note
   /// any unbound writer. ground(X): ground→advance; unbound readers (no
-  /// writer)→suspend on them (nextClause with readers added to U); unbound
-  /// writer→fail (nextClause).
+  /// writer)→suspend on them (readers to Si, and the next member is tried:
+  /// [_guardSuspends]); unbound writer→fail (nextClause).
   StepOutcome execGround(RunnerContext cx, int varIndex) {
     // An unknown variable ([RunnerContext.unknownVars]): undecided, passed by.
     if (cx.isUnknown(varIndex)) return StepOutcome.advance;
@@ -1830,8 +1800,7 @@ mixin OpExecutors {
 
     if (hasUnboundWriter) return StepOutcome.nextClause; // fail
     if (unboundReaders.isNotEmpty) {
-      cx.U.addAll(unboundReaders);
-      return StepOutcome.nextClause; // suspend
+      return _guardSuspends(cx, unboundReaders); // suspend
     }
     return StepOutcome.advance; // ground → succeed
   }
@@ -1892,8 +1861,7 @@ mixin OpExecutors {
 
     if (isKnown) return StepOutcome.advance;
     if (unboundReader != null) {
-      cx.U.add(unboundReader);
-      return StepOutcome.nextClause; // suspend
+      return _guardSuspends(cx, [unboundReader]); // suspend
     }
     return StepOutcome.nextClause; // unbound writer → fail
   }
@@ -1966,8 +1934,7 @@ mixin OpExecutors {
     }
 
     if (readers.isEmpty) return StepOutcome.advance;
-    cx.U.addAll(readers);
-    return StepOutcome.nextClause; // suspend (never fails)
+    return _guardSuspends(cx, readers); // suspend (never fails)
   }
 
   /// `ground_equal` (0x45): X =?= Y, decided as every ground equality guard is
@@ -1983,11 +1950,12 @@ mixin OpExecutors {
     final leftValue = cx.clauseVars[leftVarIndex];
     final rightValue = cx.clauseVars[rightVarIndex];
     if (leftValue == null || rightValue == null) return StepOutcome.nextClause;
-    // A suspension's readers are already in cx.U ([_groundEqualityGuard]).
+    // A suspension's readers are in cx.Si ([_groundEqualityGuard]), and the
+    // next member is tried as after a success ([_guardSuspends]).
     return _groundEqualityGuard('=?=', leftValue, rightValue, cx) ==
-            GuardResult.success
-        ? StepOutcome.advance
-        : StepOutcome.nextClause;
+            GuardResult.failure
+        ? StepOutcome.nextClause
+        : StepOutcome.advance;
   }
 
   /// `unknown` (0x43): succeed iff the clause variable is currently unbound (no
@@ -2007,8 +1975,8 @@ mixin OpExecutors {
   /// `guard` (0x40): a generic guard-predicate call. Gather the [arity] args from
   /// argSlots/clauseVars, dereferencing and tracking unbound readers; if any are
   /// unbound (except for `unknown`, `=?=` and `=?\=`), suspend on them. Otherwise
-  /// evaluate via the runtime guard table. success→advance, anything
-  /// else→nextClause (suspension already handled).
+  /// evaluate via the runtime guard table. success→advance; suspension→advance,
+  /// its readers in Si ([_guardSuspends]); failure→nextClause.
   StepOutcome execGuard(RunnerContext cx, String predicateName, int arity) {
     // A generic guard call of `otherwise` --- hand-assembled bytecode, or an
     // artefact whose encoder did not use 0x46 --- takes 0x46's rule and no
@@ -2054,14 +2022,14 @@ mixin OpExecutors {
         predicateName != 'unknown' &&
         predicateName != '=?=' &&
         predicateName != '=?\\=') {
-      cx.U.addAll(unboundReaders);
-      return StepOutcome.nextClause; // suspend
+      return _guardSuspends(cx, unboundReaders); // suspend
     }
 
-    // A suspension's readers are already in cx.U (_evaluateGuard added them).
-    return _evaluateGuard(predicateName, args, cx) == GuardResult.success
-        ? StepOutcome.advance
-        : StepOutcome.nextClause;
+    // A suspension's readers are already in cx.Si (_evaluateGuard added them),
+    // and the next member is tried as after a success ([_guardSuspends]).
+    return _evaluateGuard(predicateName, args, cx) == GuardResult.failure
+        ? StepOutcome.nextClause
+        : StepOutcome.advance;
   }
 
   /// `head_nil` (0x11): match `[]` against the arg (or a clause var when
@@ -2825,7 +2793,6 @@ mixin OpExecutors {
                   final acts = cx.rt.heap.bindWriterStruct(targetWriterAddr, struct.functor, struct.args);
                   for (final a in acts) {
                     cx.rt.gq.enqueue(a);
-                    if (cx.onActivation != null) cx.onActivation!(a);
                   }
                 }
 
@@ -2856,7 +2823,6 @@ mixin OpExecutors {
                       final acts = cx.rt.heap.bindWriterStruct(currentWriterAddrInt, parentStruct.functor, parentStruct.args);
                       for (final a in acts) {
                         cx.rt.gq.enqueue(a);
-                        if (cx.onActivation != null) cx.onActivation!(a);
                       }
 
                       // Check for more ancestors
@@ -3480,7 +3446,6 @@ mixin OpExecutors {
               final acts = cx.rt.heap.bindWriterStruct(targetWriterAddr, struct.functor, struct.args);
               for (final a in acts) {
                 cx.rt.gq.enqueue(a);
-                if (cx.onActivation != null) cx.onActivation!(a);
               }
 
               // SetWriter-specific: Store VarRef in argSlots ONLY if no parent
@@ -3524,7 +3489,6 @@ mixin OpExecutors {
                   final acts = cx.rt.heap.bindWriterStruct(currentWriterAddrInt, parentStruct.functor, parentStruct.args);
                   for (final a in acts) {
                     cx.rt.gq.enqueue(a);
-                    if (cx.onActivation != null) cx.onActivation!(a);
                   }
 
                   // Check for more ancestors
@@ -3676,7 +3640,6 @@ mixin OpExecutors {
               final acts = cx.rt.heap.bindWriterStruct(targetWriterAddrInt, struct.functor, struct.args);
               for (final a in acts) {
                 cx.rt.gq.enqueue(a);
-                if (cx.onActivation != null) cx.onActivation!(a);
               }
             }
 
@@ -3710,7 +3673,6 @@ mixin OpExecutors {
                   final acts = cx.rt.heap.bindWriterStruct(currentWriterAddrInt, parentStruct.functor, parentStruct.args);
                   for (final a in acts) {
                     cx.rt.gq.enqueue(a);
-                    if (cx.onActivation != null) cx.onActivation!(a);
                   }
 
                   // Check for more ancestors

@@ -682,9 +682,9 @@ broadcast(Msg, [Msg?, Msg?, Msg?]) :- ground(Msg?) | true.
 
 ## Implementation Checklist
 
-**For Adding New Guards**:
+**For Adding New Guards** (a language change: the guard enters GLP-Spec's guard catalogue, with Udi's approval, before any code; its declaration goes in the root `programs/self.glp`):
 
-1. **Runtime** (`system_predicates_impl.dart`):
+1. **Runtime** (`runner.dart`, `_evaluateGuard`):
    - [ ] Implement guard predicate with three-valued return
    - [ ] Handle unbound readers (return suspend)
    - [ ] Handle bound values (return success/fail)

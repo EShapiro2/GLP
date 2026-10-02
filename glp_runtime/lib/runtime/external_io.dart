@@ -14,9 +14,8 @@ import 'machine_state.dart'; // For GoalRef
 /// - Input stream: Dart injects terms, GLP reads them
 /// - Output stream: GLP writes terms, Dart observes them
 ///
-/// Per heap-pointer-architecture-spec.md Section 1.1:
-/// "Heap navigation follows pointers explicitly rather than computing addresses
-/// via arithmetic. There is no implicit relationship between adjacent heap addresses."
+/// Per IGLP app:in-heap, Variable pairs: either end of a pair reaches its
+/// counterpart by following a pointer, and no address arithmetic relates them.
 ///
 /// Therefore we store BOTH writer and reader addresses explicitly.
 class ExternalChannel {
@@ -79,8 +78,8 @@ ExternalChannel createExternalChannel(HeapFCP heap, String name) {
 /// where _? is reader and _ is writer.
 Term buildChannelTerm(ExternalChannel channel) {
   // Use explicit reader/writer addresses - NO address arithmetic
-  // Per heap-pointer-architecture-spec.md: "There is no implicit relationship
-  // between adjacent heap addresses"
+  // No address arithmetic relates the two ends of a pair (IGLP app:in-heap,
+  // Variable pairs).
   return StructTerm('ch', [
     VarRef(channel.inputReaderAddr),   // In - READER (for writer-mode HEAD position)
     VarRef(channel.outputWriterAddr),  // Out - WRITER (for reader-mode HEAD position)

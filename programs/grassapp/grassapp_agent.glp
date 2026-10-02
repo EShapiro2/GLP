@@ -296,13 +296,6 @@ handle_trade_fill(fail, Id, From, trade_decline(OfferedBonds?), OfferedBonds, Se
 procedure trade_dispatch(Constant?, Constant?, Constant?, Lot?, Stream(Bond)?, TradeResponse,
     Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
 
-%% Payment — auto-accept (proposer gives, wants nothing).
-trade_dispatch(payment, Id, From, _, OfferedBonds, trade_accept([]),
-    Holdings, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
-    append(Holdings?, OfferedBonds?, NewHoldings),
-    send_person(msg(agent, person, trade_completed(From?)), Outs?, Outs1),
-    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?, DateW).
-
 %% Redemption — the issuer must fulfil: auto-accept with the requested bonds,
 %% or decline with a menu of what it does hold.
 trade_dispatch(redemption, Id, From, WantSpec, OfferedBonds, TradeResp?,

@@ -33,7 +33,7 @@ sovereign(Id, ch(Answers, Events?), Convs, Cal) :-
     ground(Id?) |
     sovereign_agent # agent(ch([], Asks), Id?, [], [], Convs?, Cal?, [user_output(Screen)], [], 0, [], [], 1,
                         none, none, none, none, none, none, none, none, none, none, none, none),
-    sovereign_agent # med(ch(Answers?, Cards), ch(Asks?, []), [], 0),
+    sovereign_agent # med(ch(Answers?, Cards), ch(Asks?, _), [], 0),
     merge_events(Cards?, Screen?, Events).
 
 %% The cards and the screen, as one stream of events.  A pair carries one type,
