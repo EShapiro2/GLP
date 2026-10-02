@@ -33,7 +33,7 @@
 %% CREATE_BONDS — Create K bonds with given issuer and maturity (Mint)
 %% =============================================================================
 
-exported procedure create_bonds(Key?, Constant?, Constant?, Constant?, Stream(Bond)).
+exported procedure create_bonds(Key?, Constant?, Constant?, Integer?, Stream(Bond)).
 create_bonds(Issuer, Maturity, K, Serial,
              [bond(Issuer?, Maturity?, Serial?)|Rest?]) :-
     K? > 0 |
@@ -131,7 +131,7 @@ build_menu_acc(Id, [bond(I, M, S)|Rest], Acc, Menu?) :-
     build_menu_acc(Id?, Rest?, Acc1?, Menu).
 build_menu_acc(_, [], Acc, Acc?).
 
-procedure menu_update(Key?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)).
+procedure menu_update(Key?, Constant?, Integer?, Stream(Bond)?, Stream(Bond)).
 menu_update(I, M, S, [bond(I2, M2, _)|Rest],
     [bond(I2?, M?, S?)|Rest?]) :-
     I? =?= I2?, M? < M2? | true.

@@ -25,11 +25,11 @@ PendingValue ::= response(Response?) ; channel(IntroChannel) ; error.
 %% Content carried inside user-to-agent messages (msg(person, Id, Content))
 UserContent ::= connect(Key)
               ; decision(Decision, Key, PendingValue)
-              ; send(Constant, Constant)
-              ; introduce(Constant, Constant)
-              ; accept_intro(Constant, PendingValue)
+              ; send(Key, Constant)
+              ; introduce(Key, Key)
+              ; accept_intro(Key, PendingValue)
               ; reject_intro(Constant, PendingValue)
-              ; unfriend(Constant)
+              ; unfriend(Key)
               ; response(Response)
               %% The super-app (SGSG paper, Section 3).  install: the person
               %% installs a certified mini-app --- its module value, its
@@ -43,9 +43,9 @@ UserContent ::= connect(Key)
               ; install_coins(Constant, Content, String, Channel(Stream(UserAnswer), Stream(Event)))
               ; install_cssn(Constant, Content, String, Channel(Stream(CsAppCmd), Stream(CsAppNotify)))
               ; install_sovereign(Constant, Content, String, Channel(Stream(SvUserAnswer), Stream(SvEvent)))
-              ; invite(Constant, Constant)
+              ; invite(Constant, Key)
               ; accept_invite(Constant, Key)
-              ; decline_invite(Constant, Constant)
+              ; decline_invite(Constant, Key)
               ; attestation(Constant, String?)
               %% trust: the person trusts a compiler's key (Section 6.4); the
               %% bundled compiler's, trusted by installing the super-app.
@@ -55,17 +55,17 @@ UserContent ::= connect(Key)
               %% The warm call's volitions (Section 5.2): the person consents to
               %% a warm call with an agent (as holder, or as its anchor); the
               %% person consents to introduce a requester to an anchor.
-              ; accept_warm_call(Constant)
-              ; allow_intro(Constant, Constant).
+              ; accept_warm_call(Key)
+              ; allow_intro(Key, Key).
 
 %% Content carried inside agent-to-user messages (msg(agent, person, Content))
 AgentContent ::= befriend(Key, Response?)
-               ; befriend_intro(Constant, Constant, IntroChannel)
+               ; befriend_intro(Constant, Key, IntroChannel)
                ; connected(Constant)
                ; rejected
                ; rejected(Constant)
                ; unfriended(Constant)
-               ; received(Constant, Constant).
+               ; received(Key, Constant).
 
 %% Network content (2-arg cold-call: msg(Dest, Content))
 NetColdCall ::= intro(Key, Response?).
@@ -74,7 +74,7 @@ NetColdCall ::= intro(Key, Response?).
 FriendContent ::= response(Response)
                 ; text(Constant)
                 ; unfriend
-                ; intro(Constant, IntroChannel)
+                ; intro(Key, IntroChannel)
                 %% Distribution with an invitation and the handshake (SGSG
                 %% paper, Section 3): the offer carries the mini-app's source
                 %% identity, the root channel's type identity and the social
@@ -94,7 +94,7 @@ FriendContent ::= response(Response)
                 %% not cross as data (IGLP, madglp-spec, Global Variable
                 %% Names), and the anchor identifies the call by the friend it
                 %% comes from, which is who its person consented to.
-                ; request_intro(Constant)
+                ; request_intro(Key)
                 ; warm_call(Constant).
 
 %% Setup channel content: ack/nack handshake plus the fresh-friend-channel
@@ -143,9 +143,9 @@ RootChannel ::= ch(PingStream, PingStream?).
 %% (Section 5.2: an end that reached this agent under another anchor, named,
 %% and the friend that forwarded it); up it the mini-app asks for a warm call
 %% to the link's anchor through that friend.
-SgToApp       ::= conversation(Constant, RootChannel) ; pending_link(GlobalName, Constant).
+SgToApp       ::= conversation(Constant, RootChannel) ; pending_link(GlobalName, Key).
 SgToAppStream ::= [] ; [SgToApp | SgToAppStream].
-AppToSg       ::= warm_call(GlobalName, Constant).
+AppToSg       ::= warm_call(GlobalName, Key).
 AppToSgStream ::= [] ; [AppToSg | AppToSgStream].
 SgChannel     ::= ch(SgToAppStream, AppToSgStream?).
 
@@ -157,13 +157,13 @@ ConvEnd  ::= conv(Constant, PingStream?).
 ConvList ::= [] ; [ConvEnd | ConvList].
 HeldProbe ::= held(String?).
 HeldList  ::= [] ; [HeldProbe | HeldList].
-WarmWait  ::= none ; wait(Constant, GlobalName, Constant).
-AnchorFriend ::= none ; found(Constant).
+WarmWait  ::= none ; wait(Constant, GlobalName, Key).
+AnchorFriend ::= none ; found(Key).
 
 %% (ii) The channel to the super-app user interface: what the mini-app shows
 %% its person.
 AppUi       ::= opened(Constant) ; greeted(Constant) ; got(String)
-              ; probed(Constant) ; forwarded(Constant) ; answered ; held_link(Constant)
+              ; probed(Constant) ; forwarded(Constant) ; answered ; held_link(Key)
               ; no_conv(Constant).
 AppUiStream ::= [] ; [AppUi | AppUiStream].
 
@@ -190,7 +190,7 @@ AppStatus ::= idle(AppUiStream?) ; running(SgToAppStream?)
             ; idle_sovereign(Channel(Stream(SvUserAnswer), Stream(SvEvent))) ; running_sovereign(Stream(SvConversation)?).
 App       ::= app(Constant, Module, String, AppStatus).
 AppList   ::= [] ; [App | AppList].
-Attest     ::= att(Constant, String).
+Attest     ::= att(Key, String).
 AttestList ::= [] ; [Attest | AttestList].
 %% A pending invitation at the invitee: from whom, which mini-app, the offered
 %% identities and the signed invitation; or the person's consent given before
@@ -207,13 +207,13 @@ Pending      ::= offered(Constant, Constant, String, Constant, String)
                %% waiting for it.  A name is never taken apart into an agent:
                %% its anchor is only ever compared with an agent at hand.
                ; warm(Constant, GlobalName)
-               ; warm_wait(Constant, GlobalName, Constant)
-               ; warm_consent(Constant)
-               ; warm_ok(Constant)
+               ; warm_wait(Constant, GlobalName, Key)
+               ; warm_consent(Key)
+               ; warm_ok(Key)
                ; intro_consent(Constant, Constant)
                ; intro_wait(Constant, Constant)
-               ; intro_ok(Constant)
-               ; intro_via(Constant, Constant)
+               ; intro_ok(Key)
+               ; intro_via(Key, Key)
                ; held(GlobalName, Constant).
 PendingInv   ::= [] ; [Pending | PendingInv].
 Host ::= host(AppList, AttestList, PendingInv, Stream(String)).
@@ -466,7 +466,7 @@ CsAppNotify ::= befriend_intro(Constant, Constant, ReqId)
               ; release_asked(Constant)
               ; released(Constant).
 %% The person's consent to a warm call, and the anchor it names.
-WarmConsent ::= no ; yes(Constant).
+WarmConsent ::= no ; yes(Key).
 
 %% One end of a root channel, of the test mini-app's protocol, of the
 %% currency's or of the child-safe platform's, as the friend channel conveys it
@@ -480,7 +480,7 @@ RootEnd ::= ping_end(RootChannel) ; coins_end(PeerChannel) ; cssn_end(CsChannel)
 %% against the mediator's AgentToUserStream channel.
 OutputEntry ::= user_output(AgentToUserStream?)
               ; net_output(NetOutStream?)
-              ; friend_output(Constant, FriendStream?).
+              ; friend_output(Key, FriendStream?).
 OutputsList ::= [] ; [OutputEntry | OutputsList].
 
 %% =============================================================================
@@ -491,20 +491,20 @@ ReqId ::= req(Constant).
 
 %% User -> Mediator
 UserCmd ::= decision(Decision, Key, ReqId)
-          ; accept_intro(Constant, ReqId)
+          ; accept_intro(Key, ReqId)
           ; reject_intro(Constant, ReqId)
           ; connect(Key)
-          ; send(Constant, Constant)
-          ; introduce(Constant, Constant)
-          ; unfriend(Constant).
+          ; send(Key, Constant)
+          ; introduce(Key, Key)
+          ; unfriend(Key).
 
 %% Mediator -> User
 UserNotify ::= befriend(Key, ReqId)
-             ; befriend_intro(Constant, Constant, ReqId)
+             ; befriend_intro(Constant, Key, ReqId)
              ; connected(Constant)
              ; rejected
              ; rejected(Constant)
-             ; received(Constant, Constant)
+             ; received(Key, Constant)
              ; unfriended(Constant).
 
 %% User ↔ mediator streams and channels
@@ -518,13 +518,13 @@ ActorChannel ::= ch(UserNotifyStream, UserCmdStream?).
 %% Agent ↔ mediator precise streams
 AgentToUserMsg        ::= msg(Constant, Constant, AgentContent).
 AgentToUserStream     ::= [] ; [AgentToUserMsg | AgentToUserStream].
-MediatorToAgentMsg    ::= msg(Constant, Constant, UserContent).
+MediatorToAgentMsg    ::= msg(Constant, Key, UserContent).
 MediatorToAgentStream ::= [] ; [MediatorToAgentMsg | MediatorToAgentStream].
 AgentChannel          ::= ch(AgentToUserStream, MediatorToAgentStream?).
 
 %% Agent input types
 UserInMsg    ::= msg(Constant, Key, UserContent)
-               ; intro_result(Constant, IntroChannel)
+               ; intro_result(Key, IntroChannel)
                ; intro_rejected(Constant)
                %% A running mini-app's request up its social-graph channel.
                ; app_request(Constant, AppToSg)
@@ -537,7 +537,7 @@ UserInStream ::= [] ; [UserInMsg | UserInStream].
 NetInMsg     ::= msg(Key, NetColdCall)
                ; msg(Key, Key, FriendContent)
                %% The runtime's report of a held link (Section 5.2; madGLP).
-               ; pending_link(GlobalName, Constant).
+               ; pending_link(GlobalName, Key).
 NetInStream  ::= [] ; [NetInMsg | NetInStream].
 
 %% Pending entries

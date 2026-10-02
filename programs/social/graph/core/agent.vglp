@@ -66,13 +66,13 @@ AgentContent ::= connected(Constant)
                ; rejected
                ; rejected(Constant)
                ; unfriended(Constant)
-               ; received(Constant, Constant).
+               ; received(Key, Constant).
 AgentToUserMsg    ::= msg(Constant, Constant, AgentContent).
 AgentToUserStream ::= [] ; [AgentToUserMsg | AgentToUserStream].
 
 OutputEntry ::= user_output(AgentToUserStream?)
               ; net_output(NetOutStream?)
-              ; friend_output(Constant, FriendStream?).
+              ; friend_output(Key, FriendStream?).
 OutputsList ::= [] ; [OutputEntry | OutputsList].
 
 %% UserIn — under vGLP the person's commands are grants, not messages; UserIn
@@ -82,7 +82,7 @@ UserContent    ::= response(Response).
 ColdCallAnswer ::= response(Response?).
 UserInMsg      ::= msg(Constant, Key, UserContent)
                  ; decision(Decision, Key, ColdCallAnswer)
-                 ; intro_result(Constant, IntroChannel)
+                 ; intro_result(Key, IntroChannel)
                  ; intro_rejected(Constant).
 UserInStream   ::= [] ; [UserInMsg | UserInStream].
 
