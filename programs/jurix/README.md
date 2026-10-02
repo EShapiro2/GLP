@@ -7,7 +7,7 @@ printed as the LaTeX of Section 5.2.
 
 The specification is the paper — *Formal Grassroots Social Contracts*
 (`/Grassroots/Jurix`, `main.tex`), Section 3 for a contract whose roles are all
-party roles and Appendix B, `sections/13-community-roles.tex`, for one with
+party roles and Section 8, `sections/13-community-roles.tex`, for one with
 community roles.  Nothing of either is restated here or in the code: every
 procedure names the definition it decides, and the definition is read in the
 paper.  A contract is syntactically grassroots
@@ -24,14 +24,14 @@ contracts, so the compiler runs the checker first and compiles nothing for a
 contract that fails.
 
 A contract with community roles is decided by the conditions on the text of
-Appendix B: which predicates are rooted (`definition:rooted`), which have
+Section 8: which predicates are rooted (`definition:rooted`), which have
 traceable provenance (`definition:provenance`), volition
 (`definition:volition`) and cohesion (`definition:cohesive`).  The first two
 are sets, given by `rooted_of` and `traceable_of`; the last two the contract
 meets or fails.  Openness and closure are proved of a contract in the paper,
 are not conditions on the text, and are neither decided nor claimed here.  The
 compiled form of a schema of such a contract is Definition Compilation of
-Appendix B (`definition:compile`), and its worked box, the display for
+Section 8 (`definition:compile`), and its worked box, the display for
 `federate`, is the form printed.
 
 ## Running it
@@ -121,8 +121,11 @@ seven broken contracts `sg_unguarded`, `sg_imposed`, `sg_gossip`,
 (`/Grassroots/GFWC`, `sections/schemas.tex`), whose roles are one party role
 and seated roles, none of them a constituent role; `gf_unrooted`,
 `gf_untraceable`, `gf_uncohesive` and `gf_novolition` are it broken in one place
-each, one per condition the checker decides.  Any other name is the empty
-contract.
+each, one per condition the checker decides.  `sv_signed`, `sv_loose`,
+`sv_in_name_loose` and `sv_in_name_carried` are small contracts on the
+speech-act variables of `definition:provenance`, and `sg_relay` is the social
+graph with two schemas on volition by connected component, all in the language
+of Section 8.  Any other name is the empty contract.
 
 A verdict on a contract of Section 3 is `syntactically_grassroots` or
 `not_grassroots(Faults)`, where each fault is one of
@@ -150,7 +153,7 @@ Role)` or a
     cohesion(Schema, Role, Atom)
 
 naming the role and the added atom.  A `volition` fault there is raised only
-when the role graph is disconnected and some role of the schema is joined to no
+when the role graph is disconnected and some connected component of it holds no
 guarding role, and names the first role that role one does not reach.
 
 ## Writing a contract
@@ -205,9 +208,9 @@ and not both empty).
 | `unobstructed.glp` | `def:introduction` and `def:unobstructed` |
 | `prov.glp` | `def:grounded`, as a greatest fixpoint |
 | `volition.glp` | `def:volition` |
-| `community.glp` | the four conditions of Appendix B |
-| `check.glp` | `def:syntactically-grassroots`, the two halves together, and the conditions of Appendix B for a contract with community roles |
-| `compile.glp` | `def:compile`, printed as the LaTeX of Section 5.2, and `definition:compile`, printed as the worked box of Appendix B |
+| `community.glp` | the four conditions of Section 8 |
+| `check.glp` | `def:syntactically-grassroots`, the two halves together, and the conditions of Section 8 for a contract with community roles |
+| `compile.glp` | `def:compile`, printed as the LaTeX of Section 5.2, and `definition:compile`, printed as the worked box of Section 8 |
 | `contracts.glp` | the contracts to run on |
 
 ## Why it terminates

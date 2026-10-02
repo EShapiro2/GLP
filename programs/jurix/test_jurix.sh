@@ -10,7 +10,9 @@
 # compilation of Section 5, against the two displays of Section 5.2; then the
 # contract of a grassroots federation, /Grassroots/GFWC sections/schemas.tex,
 # against the conditions of Section 8 of /Grassroots/Jurix, and four contracts
-# broken in one place each against those; then the compilation of Section 8,
+# broken in one place each against those; then small contracts on the
+# speech-act variables of traceable provenance and on volition by connected
+# component, in the language of Section 8; then the compilation of Section 8,
 # against its worked box.  Exits non-zero if any check fails.
 
 set -u
@@ -264,6 +266,48 @@ check "a seat atom of no role of the schema fails cohesion" \
 out=$(run 'check_named(gf_novolition, V).')
 check "a join with no guarding role fails volition" \
       "V = conditions_failed([volition(join, 1, 2)])" "$out"
+
+# The speech-act variables of definition:provenance.  The first clause asks
+# after the arguments of an added atom outside Y, the second after every
+# speech-act variable that is an argument of it or occurs in a name term among
+# its arguments.  sv_signed is the smallest case on which it matters that the
+# first clause leaves Y out: a speech act signed and required nowhere.
+out=$(run 'check_named(sv_signed, V).' 'traceable_of(sv_signed, E).')
+check "a signed speech act required nowhere: item has traceable provenance" \
+      "E = [item, got, mark]" "$out"
+check "and the item take requires joins its role graph" \
+      "V = conditions_met" "$out"
+
+# The case of sg_svar_loose in the language of Section 8: the same speech act
+# carried from an untraceable record.
+out=$(run 'check_named(sv_loose, V).' 'traceable_of(sv_loose, E).')
+check "a speech act from an untraceable record: item loses traceable provenance" \
+      "E = [got, mark]" "$out"
+check "and take, resting on it, fails volition" \
+      "V = conditions_failed([volition(take, 1, 2)])" "$out"
+
+# The name-term case of the second clause, on the side of the added atom and
+# on the side of the required one.
+out=$(run 'traceable_of(sv_in_name_loose, E).')
+check "a speech act in a name term, from an untraceable record: club loses it" \
+      "E = []" "$out"
+
+out=$(run 'traceable_of(sv_in_name_carried, E).')
+check "a speech act carried from a name term of a required atom: cited keeps it" \
+      "E = [club, cited]" "$out"
+
+# Volition by connected component (definition:volition): relay's role graph
+# is the path 1-2-3 and its seated role alone, each holding a guarding role,
+# and role 3 has no edge to one; relay_unguarded is relay with its seated role
+# unguarded.  Over the social graph, whose predicates keep in the language of
+# Section 8 the traceable provenance Section 3 gives them.
+out=$(run 'check_named(sg_relay, V).' 'traceable_of(sg_relay, E).')
+check_not "a guarding role in every connected component meets volition" \
+      "volition(relay," "$out"
+check "and a component holding none fails it" \
+      "V = conditions_failed([volition(relay_unguarded, 1, 4)])" "$out"
+check "the social graph keeps its traceable provenance in Section 8" \
+      "E = [friend, item, sent, chained, noted]" "$out"
 
 # Rootedness is a notion of Section 8; a contract of Section 3 is not asked
 # about it, and keeps the verdict of def:syntactically-grassroots.

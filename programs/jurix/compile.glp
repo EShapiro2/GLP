@@ -1,18 +1,18 @@
 % ---------------------------------------------------------------------------
 % The compilation, as LaTeX: def:compile of /Grassroots/Jurix, Section 5, for
 % a contract whose roles are all party roles, and definition:compile of
-% Appendix B for a contract with community roles.
+% Section 8 for a contract with community roles.
 %
 % A schema of Section 3 compiles to the assignment, the proviso and the guard
 % of def:compile, and Section 5.2 is the form printed.  A schema of a contract
 % with community roles compiles to the lines of definition:compile, and the
-% worked box of Appendix B is the form printed, for every schema of such a
+% worked box of Section 8 is the form printed, for every schema of such a
 % contract, its party roles included.  The paper is the specification and
 % neither definition is restated in this file.  Section 5 opens by saying that
 % the compilation is defined for syntactically grassroots contracts, so
 % compile_named runs the checker first and compiles nothing otherwise; a
 % contract with community roles is compiled when it meets the conditions on
-% the text of Appendix B.
+% the text of Section 8.
 %
 % GLP has no string concatenation, so a display is emitted as its tokens, one
 % to a line.  A newline is whitespace to LaTeX, so the lines are the display
@@ -131,7 +131,7 @@ latex_set(As, Sep, T, ['\\{'|R?]) :- ground(As?), ground(Sep?), ground(T?) |
 % --- The roles as the paper writes them (definition:role, definition:extent)
 % A party role by its name, a seated role sigma^{mu} and a constituent role
 % sigma^{rho*}; ext_c(pi_i) is the extent of the role in c, and a line of
-% Appendix B's display ranges over the agents p in it.
+% Section 8's display ranges over the agents p in it.
 
 procedure latex_role_term(RoleSpec?, Integer?, Chunks?, Chunks).
 latex_role_term(rs(_, _, _, _, _), I, T, R?) :- integer(I?), ground(T?) |
@@ -158,7 +158,7 @@ latex_over(RS, I, T, ['&& (p \\in '|R?]) :-
 % --- The assignment of one role (def:compile, definition:compile) ----------
 % c'_S := (c_S \ -(i)) u +(i), with an empty half left out; S is the
 % subscript, {\Alice} for a role of Section 5.2 and p, ranging over the
-% extent, for a role of Appendix B.
+% extent, for a role of Section 8.
 
 procedure update_body(Ans?, Ans?, Atoms?, Atoms?, Constant?, Chunks?, Chunks?,
                       Chunks).
@@ -318,7 +318,7 @@ latex_s3_roles(Rs, T, R?) :- ground(Rs?), ground(T?) |
 % Theta, where the schema carries reach conditions; then, for every name term
 % sigma.y of the schema, that it is an argument of no atom of c; then the
 % guard.  Each line is a Chunks; every line opens with & and ,\\ separates
-% them.  The worked box of Appendix B is the display for federate.
+% them.  The worked box of Section 8 is the display for federate.
 
 procedure assign_lines(RoleSpecs?, Integer?, ChunkLists?, ChunkLists).
 assign_lines([], _, T, T?).
@@ -434,7 +434,7 @@ fresh_lines([S|Ss], T, [['\\text{provided } '|L?]|R?]) :-
     latex_nt(S?, [' \\text{ is an argument of no atom of } c'], L),
     fresh_lines(Ss?, T?, R).
 
-% --- The guard of Appendix B (definition:compile) --------------------------
+% --- The guard of Section 8 (definition:compile) ---------------------------
 % guarded by G_{i_1} u ... u G_{i_n}, with G_{i_j} a part of ext_c(pi_{i_j})
 % larger than theta_{i_j} of it, the parts joined as the conjuncts of a
 % proviso are; G alone where one role guards, as the worked box writes it,
@@ -517,7 +517,7 @@ latex_app_roles(Rs, Th, Es, T, R?) :- ground(Rs?), ground(Th?), ground(Es?), gro
 
 % --- The display of one schema, in the form of its contract ----------------
 % A contract has one form: Section 5.2's where its roles are all party roles
-% and Appendix B's where it has community roles, its party roles included.
+% and Section 8's where it has community roles, its party roles included.
 
 procedure latex_schema(Ans?, Schema?, Chunks?, Chunks).
 latex_schema(no, Sc, T, R?) :- ground(Sc?), ground(T?) | latex_schema_s3(Sc?, T?, R).
@@ -535,7 +535,7 @@ latex_contract(K, [S|Ss], T, ['\\iffalse', Nm?, '\\fi'|R?]) :-
 
 % --- Entry points ----------------------------------------------------------
 % The checker first: a contract that is not syntactically grassroots, or that
-% fails the conditions on the text of Appendix B, is not compiled at all.
+% fails the conditions on the text of Section 8, is not compiled at all.
 
 procedure find_schema1(Constant?, Constant?, Schema?, Contract?, FoundS).
 find_schema1(Nm, Sn, S, _, found(S?)) :- Nm? =?= Sn? | true.
@@ -563,7 +563,7 @@ not_compiled(Nm) :- ground(Nm?) |
 procedure not_compiled_app(Constant?).
 not_compiled_app(Nm) :- ground(Nm?) |
     send_to_user(['% not compiled:', Nm?,
-                  'fails the conditions on the text of Appendix B;',
+                  'fails the conditions on the text of Section 8;',
                   'check_named gives the faults.']).
 
 procedure compile_on(Verdict?, Constant?, Contract?).
