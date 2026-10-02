@@ -129,7 +129,9 @@ class CodeImage {
   /// An instruction-set version not in [supportedIsaVersions] --- by default
   /// this runtime's, [runtimeIsaVersions] --- is refused (IGLP, Code Format
   /// appendix, "Loader" and "Format Versioning"): an older runtime refuses a
-  /// newer version rather than misexecute an instruction it does not know.
+  /// newer version rather than misexecute an instruction it does not know,
+  /// and this runtime refuses the versions before its own, an operand or an
+  /// opcode having been removed since (IGLP eadadcd).
   static CodeImage fromArtefactBytes(Uint8List bytes,
       {Set<String> supportedIsaVersions = runtimeIsaVersions}) {
     final r = WireReader(bytes);

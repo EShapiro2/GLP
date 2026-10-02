@@ -67,7 +67,7 @@ void main() {
       ops: prog.ops.cast<Object>(),
       hM: Uint8List.fromList(List<int>.generate(32, (i) => i)),
       moduleName: 'testmod',
-      isaVersion: 'glp-isa-1',
+      isaVersion: glpIsaVersion,
     );
 
     projectDir = _tempProject(_projectSource);

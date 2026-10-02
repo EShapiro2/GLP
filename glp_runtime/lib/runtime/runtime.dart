@@ -10,6 +10,7 @@ import 'fairness.dart';
 import 'system_predicates.dart';
 import 'body_kernels.dart';
 import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
+import 'package:glp_runtime/multiagent/mad_context.dart' show MadContext;
 import 'package:glp_runtime/bytecode/runner.dart'
     show CallEnv, GoalRunner;
 import 'package:glp_runtime/runtime/glp_activation.dart' show GlpChannelHandle;
@@ -128,11 +129,19 @@ class GlpRuntime {
   // Keyed by goal, in the order the goals first suspended on it.
   final Map<int, ({int writer, int reader})> _idleWaits = {};
 
-  /// The machine has no Reduce to make: nothing is in its queue.  The goal
-  /// whose guard asks has been taken from the queue, so its own reduction is
-  /// not counted.  This idleness is the engine's alone: the queued messages
-  /// of a madGLP agent, flushed after the drain, are not seen here.
-  bool get isIdle => gq.length == 0;
+  /// The machine has no Reduce and no Communicate to make (IGLP eadadcd,
+  /// Implementation Notes, "The when_idle Guard": "The guard succeeds when
+  /// the agent's run queue is empty and, in madGLP, its outbox too: a queued
+  /// outbound message is a Communicate still to make").  The goal whose guard
+  /// asks has been taken from the queue, so its own reduction is not counted.
+  /// A message in a madGLP agent's outbox counts while it is one the agent's
+  /// Send is enabled for, unsent and not held (Definition madGLP Send); a
+  /// held message waits on authorise_link/2, not on the machine.
+  bool get isIdle {
+    if (gq.length != 0) return false;
+    final ctx = madContext;
+    return ctx is! MadContext || !ctx.mp.hasSendable;
+  }
 
   /// The reader goal [goalId] suspends on while it waits on when_idle: the
   /// one it already waits on, or a fresh one, the goal then joining the end

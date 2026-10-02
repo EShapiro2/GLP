@@ -12,7 +12,7 @@ library;
 import 'dart:typed_data';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
-import 'package:glp_runtime/wire/artefact.dart' show Artefact;
+import 'package:glp_runtime/wire/artefact.dart' show Artefact, glpIsaVersion;
 import 'package:glp_runtime/wire/payload_codec.dart';
 import 'package:glp_runtime/wire/codec.dart';
 import 'package:test/test.dart';
@@ -102,7 +102,7 @@ void main() {
           ops: const [],
           hM: Uint8List(32),
           moduleName: 'shipped_probe',
-          isaVersion: 'glp-isa-1',
+          isaVersion: glpIsaVersion,
         );
 
     test('a ModuleTerm ships as constant tag 6 and decodes to a ModuleTerm',

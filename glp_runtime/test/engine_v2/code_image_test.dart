@@ -28,7 +28,7 @@ void main() {
     ops: ops,
     hM: hM,
     moduleName: 'demo',
-    isaVersion: 'glp-isa-1',
+    isaVersion: glpIsaVersion,
     typeDefsText: 'Foo ::= a ; b.',
     exports: const [ArtefactExport('p', 2, 'procedure p(_?, _).')],
   );
@@ -36,7 +36,7 @@ void main() {
 
   test('header / interface fields are preserved', () {
     final img = CodeImage.fromArtefactBytes(bytes);
-    expect(img.isaVersion, 'glp-isa-1');
+    expect(img.isaVersion, glpIsaVersion);
     expect(img.moduleName, 'demo');
     expect(img.typeDefsText, 'Foo ::= a ; b.');
     expect(img.hM, hM);
