@@ -122,8 +122,12 @@ class GlpPrinter {
       return term.isReader ? '${term.name}?' : term.name;
     }
 
+    // The anonymous variable as written: `_`, and `_?`, the output placeholder
+    // a head's produced position carries (TGLP typed-glp.tex, "Anonymous
+    // variables").  Until 2026-10-02 `_?` printed `_`, a writer at a produced
+    // position, which is another clause, and one the type checker refuses.
     if (term is UnderscoreTerm) {
-      return '_';
+      return term.isReader ? '_?' : '_';
     }
 
     if (term is ConstTerm) {
