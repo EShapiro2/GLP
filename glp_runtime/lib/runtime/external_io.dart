@@ -107,11 +107,17 @@ class InputInjector {
   /// Returns list of goals that were woken up by the injection (should be enqueued).
   List<GoalRef> inject(Term term) {
     // Allocate fresh variable for tail (returns (writerAddr, readerAddr))
-    final (tailWriterAddr, _) = heap.allocateVariable();
+    final (tailWriterAddr, tailReaderAddr) = heap.allocateVariable();
 
-    // Build list cell: [term | tail] using '.' functor (GLP cons convention)
-    // Tail is a writer (per FCP pattern, use readerForWriter() if reader needed)
-    final listCell = StructTerm('.', [term, VarRef(tailWriterAddr)]);
+    // Build list cell: [term | Tail?] using '.' functor (GLP cons convention).
+    // The cell holds the tail's READER and Dart keeps its writer, to bind at the
+    // next injection, so each variable has one writer and one reader (SO), and
+    // a stream reader's head writer at the tail is assigned the reader (GLP-Spec
+    // appendix-term-matching.tex, row "Reader X1?", column "Writer X2"), as
+    // mad_context.dart's network input already builds it.  Until 2026-10-02
+    // the cell held the writer too, which only a runtime matching a goal writer
+    // against a head writer let through (53f8c0b9 made that fail, by the table).
+    final listCell = StructTerm('.', [term, VarRef(tailReaderAddr)]);
 
     // Bind current writer to list cell - this may wake suspended goals
     final activations = heap.bindVariable(_currentWriterId, listCell);
