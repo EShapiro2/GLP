@@ -1,11 +1,15 @@
-%% play_grassapp_boot.glp — single-isolate GrassApp scenario (no MAD).
+%% play_grassapp/agents.glp — single-isolate GrassApp scenario (no MAD).
 %%
 %% Same real agent/4 + ui_mediator/5 as GSG (the mediator already carries
 %% one-to-one messaging: send out, received in). Bob is the live-UI agent; alice
 %% and charlie are actors that cold-call Bob and, once connected, send him a
 %% message — so Bob's chat list populates with conversations. In-heap crossbar.
 %%
-%% Requires: self.glp, typed_social_agent.glp, typed_ui_mediator.glp
+%% This directory is the one program the Flutter agent runtime loads
+%% (glp_multiagent/test/grassapp_single_isolate_test.dart); agent/4 and
+%% ui_mediator/5 come from the parent directory's -expose, not from copies.  It
+%% was the co-loaded play_grassapp_boot.glp until 2026-10-02, when the runtime
+%% stopped co-loading several sources into one engine.
 
 
 %% --- In-heap crossbar (route each `_net` output to the addressed agent) ---
@@ -52,6 +56,7 @@ chat_actor(Me, [_ | Ns], Cmds?) :- ground(Me?), otherwise | chat_actor(Me?, Ns?,
 chat_actor(_, [], []).
 
 %% --- Scenario boot (entered as Bob's agent_init) ---
+exported procedure agent_init(Key?, Stream(UserCmd)?, NetInStream?).
 agent_init(bob, UserIn, _) :-
     agent(bob, BAgentIn?, BNetIn?,
           [user_output(BA2U) | [net_output(BNetOut)]]),

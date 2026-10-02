@@ -1,4 +1,4 @@
-%% play_scenario_boot.glp — single-isolate UI scenario (no MAD).
+%% play_scenario/agents.glp — single-isolate UI scenario (no MAD).
 %%
 %% ONE heap, the REAL agent/4 + ui_mediator/5 clauses for all three agents.
 %% Only the transport is in-heap (a crossbar) instead of MAD, which sidesteps
@@ -12,7 +12,11 @@
 %% Entry: agent_init(bob, UserIn, _NetIn). The MAD NetIn arg is ignored; all
 %% networking is the in-heap crossbar.
 %%
-%% Requires: self.glp, typed_social_agent.glp, typed_ui_mediator.glp
+%% This directory is the one program the Flutter agent runtime loads
+%% (glp_multiagent/test/scenario_single_isolate_test.dart); agent/4 and
+%% ui_mediator/5 come from the parent directory's -expose, not from copies.  It
+%% was the co-loaded play_scenario_boot.glp until 2026-10-02, when the runtime
+%% stopped co-loading several sources into one engine.
 
 
 %% --- In-heap crossbar: route each agent's `_net` output to the addressed
@@ -67,6 +71,7 @@ auto_accept([], []).
 
 %% --- Scenario boot (entered as bob's agent_init) ---
 
+exported procedure agent_init(Key?, Stream(UserCmd)?, NetInStream?).
 agent_init(bob, UserIn, _) :-
     %% Bob: live-UI agent. UserIn is injected from Dart; notifies -> _output.
     agent(bob, BAgentIn?, BNetIn?,

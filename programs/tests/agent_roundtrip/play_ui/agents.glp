@@ -1,20 +1,23 @@
-%% play_ui_boot.glp - Interactive UI boot for madGLP
+%% play_ui/agents.glp - Interactive UI agent for madGLP
 %%
 %% Arity 3: agent_init(Id, UserIn, NetIn)
 %% - Id:      agent identifier (alice, bob, charlie)
-%% - UserIn:  ground command stream from Dart (via InputInjector)
-%% - NetIn:   network input stream (from IsolateManager)
+%% - UserIn:  the person's acts, ground terms injected by Dart (InputInjector)
+%% - NetIn:   network input stream (from the agent runtime)
 %%
 %% Dart provides ground-only I/O:
-%% - Input:  REPL-like parser produces ground terms, injected into UserIn
+%% - Input:  the person's acts arrive as ground terms, never as text
 %% - Output: send_to_user/1 calls _output/1 kernel to print ground terms
 %%
 %% The ui_mediator sits between agent/4 and Dart, using two channels:
 %% - AgentCh: ch(AgentToUser?, AgentIn) — agent's person output/input
 %% - UserCh:  ch(UserIn?, UserOut)      — Dart's input/output
 %%
-%% Requires: load typed_social_agent.glp first
-%% Requires: load typed_ui_mediator.glp first
+%% This directory is the one program the Flutter agent runtime loads
+%% (glp_multiagent/test/roundtrip_isolate_test.dart); agent/4 and
+%% ui_mediator/5 come from the parent directory's -expose, not from copies.
+%% It was the co-loaded play_ui_boot.glp until 2026-10-02, when the runtime
+%% stopped co-loading several sources into one engine.
 %%
 %% Date: 2026-02-11
 
@@ -23,6 +26,7 @@
 %% AGENT INITIALIZATION
 %% =============================================================================
 
+exported procedure agent_init(Key?, Stream(UserCmd)?, NetInStream?).
 agent_init(Id, UserIn, NetIn) :-
     ground(Id?) |
     send_to_net(NetOut?),

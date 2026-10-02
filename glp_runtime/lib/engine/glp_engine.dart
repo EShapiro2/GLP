@@ -344,11 +344,12 @@ class GlpEngine {
     // unresolved M#p without either. Composing several modules is by directory
     // program; composing several apps is by module values posted with run/2.
     //
-    // The test covers source text as well as a real file: the per-isolate
-    // loaders (multiagent/agent_runtime.dart, multiagent/isolate_manager.dart)
-    // hand boot sources to `loadSource` under a synthetic name, and a `#` call
-    // in one reached the run-time WireFormatException by exactly the route this
-    // rejection was written to close.
+    // The test covers source text as well as a real file: the multi-isolate
+    // loader (multiagent/isolate_manager.dart) hands a boot source to
+    // `loadSource` under a synthetic name --- as multiagent/agent_runtime.dart
+    // did until it came to load one program and no boot source beside it ---
+    // and a `#` call in one reached the run-time WireFormatException by exactly
+    // the route this rejection was written to close.
     if (!selfContained) {
       throw CompileError(
         "'$name' is not a program: it ${_notSelfContainedCause(module)}. By "

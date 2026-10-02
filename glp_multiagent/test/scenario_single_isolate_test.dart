@@ -8,23 +8,19 @@ import 'dart:isolate';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/isolate_protocol.dart';
+import 'package:glp_multiagent/ui_runtime/term.dart';
 
 import 'programs_dir.dart';
 
 final _programs = programsDir();
-final _fixture = '$_programs/tests/agent_roundtrip';
+
+/// The one program bob's agent runs: the scenario, with agent/4 and
+/// ui_mediator/5 reached through agent_roundtrip/self.glp.
+final _program = '$_programs/tests/agent_roundtrip/play_scenario';
 
 void main() {
   test('scenario auto-drives bob inbox; accept -> connected (single isolate)',
       () async {
-    final paths = [
-      '$_fixture/self.glp',
-      '$_fixture/typed_social_agent.glp',
-      '$_fixture/typed_ui_mediator.glp',
-      '$_fixture/play_scenario_boot.glp',
-    ];
-    final sources = paths.map((p) => File(p).readAsStringSync()).toList();
-
     final reply = ReceivePort();
     SendPort? bob;
     final out = <String>[];
@@ -34,10 +30,13 @@ void main() {
     // 2026-09-18 it went into `out`, which nothing inspected for it, and a load
     // refused by the type checker showed as a 30 s timeout.
     final errors = <String>[];
+    // Bob's first stats follow his initialisation, the initial run included.
+    var started = false;
     reply.listen((m) {
       if (m is AgentReady) bob = m.commandPort;
       else if (m is AgentOutput) out.add(m.line);
       else if (m is AgentLog) logs.add('[${m.tag}] ${m.message}');
+      else if (m is AgentStats) started = true;
       else if (m is AgentError) errors.add(m.error);
     });
 
@@ -45,10 +44,8 @@ void main() {
       agentIsolateEntry,
       InitAgent(
         agentId: 'bob',
-        glpSources: sources,
-        glpSourcePaths: paths,
+        program: _program,
         rootSelfGlpPath: '$_programs/self.glp',
-        friends: const ['alice', 'charlie'],
         replyPort: reply.sendPort,
         deferStart: false,
       ),
@@ -68,19 +65,28 @@ void main() {
       return out.any((l) => l.contains(needle));
     }
 
-    await waitFor('Ready! Commands');
+    final end = DateTime.now().add(const Duration(seconds: 12));
+    while (!started && errors.isEmpty && DateTime.now().isBefore(end)) {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
+    if (errors.isNotEmpty) fail('bob reported an error: ${errors.first}');
+    expect(started, isTrue, reason: 'bob initialised');
     // alice and charlie both cold-call bob -> two befriend cards.
     final gotAlice = await waitFor('befriend(alice, ');
     final gotCharlie = await waitFor('befriend(charlie, ');
 
     // Accept each card with its actual req id (assigned by bob's mediator in
     // arrival order, so parse it rather than assume).
-    final reqOf = RegExp(r'befriend\((\w+), (req\(\d+\))\)');
+    final reqOf = RegExp(r'befriend\((\w+), req\((\d+)\)\)');
     final accepted = <String>{};
     for (final l in out.where((l) => l.contains('befriend('))) {
       final m = reqOf.firstMatch(l);
       if (m != null && accepted.add(m.group(1)!)) {
-        bob?.send(UserInput('decision(yes, ${m.group(1)}, ${m.group(2)})'));
+        bob?.send(UserInput(GStruct('decision', [
+          const GAtom('yes'),
+          GAtom(m.group(1)!),
+          GStruct('req', [GInt(int.parse(m.group(2)!))]),
+        ])));
       }
     }
     final connAlice = await waitFor('connected(alice)');

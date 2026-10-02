@@ -25,7 +25,7 @@ void main() {
 
     final reply = ReceivePort();
     SendPort? commands;
-    final sends = <String>[];
+    final sends = <GTerm>[];
     final r = UiRuntime(manifest: coinsManifest, onSend: sends.add);
 
     reply.listen((m) {
@@ -43,11 +43,9 @@ void main() {
       agentIsolateEntry,
       InitAgent(
         agentId: 'alice',
-        glpSources: const [],
-        programDir: '$repo/currencies/coins',
+        program: '$repo/currencies/coins',
         goalLabel: 'coins_ui/3',
         rootSelfGlpPath: '$repo/self.glp',
-        friends: const ['bob'],
         replyPort: reply.sendPort,
         deferStart: false,
       ),

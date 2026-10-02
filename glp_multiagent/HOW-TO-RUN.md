@@ -46,18 +46,20 @@ Launch same path as above — the build replaces the binary.
 pkill -f glp_multiagent
 ```
 
-## Interactive SG — using the multi-window app
+## Interactive SG — the person's acts
 
-1. The **coordinator window** opens first.
-2. Click **"Alice↔Bob↔Charlie"** to spawn three agent windows.
-3. Each agent window has a text input field at the bottom for commands.
+There is no command line: the person acts through the inbox cards and the
+compose forms of the agent's screen, which the manifest derives, and each act
+reaches the agent as a ground term (`lib/isolate_protocol.dart`, `UserInput`),
+never as typed text --- the agent runtime parses nothing the person sends
+(2026-10-02).
 
 ### Full introduction script
 
 The protocol below matches the automated actor scripts in
 `typed_ui_actors.glp` (`alice_ui_actor`, `bob_ui_actor`, `charlie_ui_actor`).
-The ui_mediator replaces non-ground variables with `req(N)` identifiers,
-so the user types ground terms only.
+The ui_mediator replaces non-ground variables with `req(N)` identifiers, so
+each act below is a ground term, the one a card or form grants.
 
 **Step 1** — Alice: `connect(bob)` → wait for Bob to show `befriend(alice, req(1))`
 

@@ -20,11 +20,11 @@ others.
 
 ### Interactive SG (`main.dart`)
 
-Multi-window app.  Coordinator spawns one OS window per agent.  User types
-commands (`connect`, `decision`, `send`, `introduce`, `accept_intro`) in each
-agent's text field.  Uses `desktop_multi_window` plugin and `MadRouter` for
-cross-window message routing.  Full 10-step introduction protocol verified
-working.
+The person acts through the inbox cards and compose forms of the agent's
+screen, and each act (`connect`, `decision`, `send`, `introduce`,
+`accept_intro`, ...) reaches the agent as a ground term
+(`lib/isolate_protocol.dart`, `UserInput`), never as typed text: the agent
+runtime parses nothing the person sends (2026-10-02).
 
 ## Shared infrastructure
 
