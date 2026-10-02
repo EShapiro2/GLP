@@ -194,10 +194,15 @@ class Lexer {
       return Token(TokenType.PROCEDURE, text, line, column);
     }
 
-    // Check if this is a variable: starts with uppercase OR starts with _ followed by uppercase
-    // Named anonymous variables like _Out, _Result are variables, not atoms
-    final isVariable = _isUpper(text[0]) ||
-        (text[0] == '_' && text.length > 1 && _isUpper(text[1]));
+    // A variable starts with an upper-case letter or with `_`.  Any unquoted
+    // name beginning with an underscore is an anonymous variable --- `_Out`
+    // and `_x`, `_add`, `_1`, `__` alike (GLP-Spec appendix-guards.tex,
+    // "Naming and admission of body kernels": "Quoting is necessary: an
+    // unquoted name beginning with an underscore is an anonymous variable";
+    // glp.tex, Remark "Anonymous Variables"); a quoted one, '_add', is an
+    // atom (_string).  Until 2026-10-02 a name of `_` and a character not
+    // upper case was read as an atom.  `_` alone is the UNDERSCORE token.
+    final isVariable = _isUpper(text[0]) || text[0] == '_';
 
     // Check for reader syntax (Variable?)
     if (_peek() == '?' && isVariable) {

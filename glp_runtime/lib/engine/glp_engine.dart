@@ -764,7 +764,11 @@ class GlpEngine {
   String? _checkGoalWellTyped(String trimmed) {
     final List<Goal> atoms;
     try {
-      final parseInput = '_glp_query_ :- $trimmed.';
+      // The head's name is quoted: an unquoted name beginning with `_` is an
+      // anonymous variable (GLP-Spec appendix-guards.tex, "Naming and
+      // admission of body kernels"), and as one the clause did not parse and
+      // the check was passed by.
+      final parseInput = "'_glp_query_' :- $trimmed.";
       final lexer = Lexer(parseInput);
       final tokens = lexer.tokenize();
       final parser = Parser(tokens);
@@ -903,7 +907,9 @@ class GlpEngine {
   }
 
   Future<ExecutionResult> _runConjunction(String trimmed) async {
-    final parseInput = '_conj_wrapper_ :- $trimmed.';
+    // Quoted, as in _checkGoalWellTyped: unquoted, the head's name is an
+    // anonymous variable, and the conjunction does not parse.
+    final parseInput = "'_conj_wrapper_' :- $trimmed.";
     final lexer = Lexer(parseInput);
     final tokens = lexer.tokenize();
     final parser = Parser(tokens);
