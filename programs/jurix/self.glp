@@ -88,8 +88,9 @@ Missing ::= missing(Integer) ; all_reached.
 
 % --- What definition:provenance is decided against, for one schema --------
 % The bases of its roles, the bases of the arguments of the atoms of Phi_E it
-% requires, and the speech-act variables occurring in any atom it requires.
-PCtx ::= pctx(Bases, Bases, Args).
+% requires, the speech-act variables occurring in those atoms, and the
+% speech-act variables occurring in any atom it requires.
+PCtx ::= pctx(Bases, Bases, Args, Args).
 
 % --- The LaTeX of a compiled schema (def:compile, Section 5.2) -------------
 % GLP has no string concatenation, so a display is carried as its tokens and

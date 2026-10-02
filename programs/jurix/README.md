@@ -121,8 +121,11 @@ seven broken contracts `sg_unguarded`, `sg_imposed`, `sg_gossip`,
 (`/Grassroots/GFWC`, `sections/schemas.tex`), whose roles are one party role
 and seated roles, none of them a constituent role; `gf_unrooted`,
 `gf_untraceable`, `gf_uncohesive` and `gf_novolition` are it broken in one place
-each, one per condition the checker decides.  Any other name is the empty
-contract.
+each, one per condition the checker decides.  `sv_signed`, `sv_loose`,
+`sv_in_name_loose` and `sv_in_name_carried` are small contracts on the
+speech-act variables of `definition:provenance`, and `sg_relay` is the social
+graph with two schemas on volition by connected component, all in the language
+of Section 8.  Any other name is the empty contract.
 
 A verdict on a contract of Section 3 is `syntactically_grassroots` or
 `not_grassroots(Faults)`, where each fault is one of
@@ -150,7 +153,7 @@ Role)` or a
     cohesion(Schema, Role, Atom)
 
 naming the role and the added atom.  A `volition` fault there is raised only
-when the role graph is disconnected and some role of the schema is joined to no
+when the role graph is disconnected and some connected component of it holds no
 guarding role, and names the first role that role one does not reach.
 
 ## Writing a contract

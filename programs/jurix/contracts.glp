@@ -6,9 +6,9 @@
 % The paper writes the currency's predicate as the cent sign, which is not a
 % GLP constant; it is written coin here.
 %
-% The other four are those two broken in one place each, one per way of
-% failing def:syntactically-grassroots.  Each names in its comment what it
-% changes and which fault it is meant to raise.
+% The others are contracts broken in one place each, or small contracts that
+% exercise one clause of a condition.  Each names in its comment what it
+% changes and which fault, if any, it is meant to raise.
 %
 % rs(Guard, Add, Del, Keep, Forb) is the role's +(i), -(i), =(i), not(i); a
 % role is named by its index, so role(1) is the schema's first role.
@@ -313,6 +313,11 @@ contract(gf_unrooted, C?) :- gf_unrooted(C).
 contract(gf_untraceable, C?) :- gf_untraceable(C).
 contract(gf_uncohesive, C?) :- gf_uncohesive(C).
 contract(gf_novolition, C?) :- gf_novolition(C).
+contract(sv_signed, C?) :- sv_signed(C).
+contract(sv_loose, C?) :- sv_loose(C).
+contract(sv_in_name_loose, C?) :- sv_in_name_loose(C).
+contract(sv_in_name_carried, C?) :- sv_in_name_carried(C).
+contract(sg_relay, C?) :- sg_relay(C).
 contract(_, []) :- otherwise | true.
 
 % --- the contract of a grassroots federation -------------------------------
@@ -426,3 +431,96 @@ gf_novolition(C?) :-
           crs(seated(nvar(xi), seat), unguarded,
               [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], [],
               [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])])])], C).
+
+% --- the speech-act variables of definition:provenance (Section 8) ---------
+% Four small contracts of party roles, put in the language of Section 8 by a
+% cschema with no reach conditions.  The first clause of definition:provenance
+% asks after the arguments of an added atom outside Y, the second after every
+% speech-act variable that is an argument of it or occurs in a name term among
+% its arguments.
+%
+% sign(p?; x) : +item(x, p)        take(p?, q) : +got(q)    item(z, p), +mark(q)
+% x is a speech-act variable, so only the second clause asks after it, and it
+% occurs in no atom sign requires: item has traceable provenance, and the item
+% take's second role requires, naming the first, joins take's role graph.
+procedure sv_take(Contract).
+sv_take([schema(take,
+       [rs(guarded,   [atom(got, [role(2)])], [], [], []),
+        rs(unguarded, [atom(mark, [role(2)])], [],
+                      [atom(item, [svar(z), role(1)])], [])])]).
+
+procedure sv_signed(Contract).
+sv_signed(C?) :-
+    sv_take(T),
+    contract_app([cschema(sign, [],
+       [rs(guarded, [atom(item, [svar(x), role(1)])], [], [], [])])], T?, C).
+
+% --- negative: the same speech act carried from an untraceable record ------
+% note(p?; x, u) : +tagged(x, u)      tag(p?; x, u) : tagged(x, u), +item(x, p)
+% The case of sg_svar_loose, in the language of Section 8.  u is named by no
+% atom note requires, so tagged loses traceable provenance; the x of the item
+% tag adds occurs in tagged(x, u), which tag requires, and in no required atom
+% of traceable provenance, so the second clause drops item, and take loses the
+% edge it rested on.
+procedure sv_loose(Contract).
+sv_loose(C?) :-
+    sv_signed(S),
+    contract_app(S?,
+      [schema(note,
+         [rs(guarded, [atom(tagged, [svar(x), pvar(u)])], [], [], [])]),
+       schema(tag,
+         [rs(guarded, [atom(item, [svar(x), role(1)])], [],
+                      [atom(tagged, [svar(x), pvar(u)])], [])])], C).
+
+% --- negative: a speech act in a name term, from an untraceable record -----
+% note(p?; x, u) : +tagged(x, u)    found(p?; x, u) : tagged(x, u), +club(<p>.x)
+% The x in the name term of the club atom found adds occurs in tagged(x, u),
+% which found requires, and in no required atom of traceable provenance, so
+% the second clause drops club.
+procedure sv_in_name_loose(Contract).
+sv_in_name_loose([cschema(note, [],
+       [rs(guarded, [atom(tagged, [svar(x), pvar(u)])], [], [], [])]),
+     schema(found,
+       [rs(guarded, [atom(club, [nterm(ext(own(1), x))])], [],
+                    [atom(tagged, [svar(x), pvar(u)])], [])])]).
+
+% --- a speech act carried from a name term of a required atom --------------
+% found(p?; x) : +club(<p>.x)        cite(p?; x) : club(<p>.x), +cited(x)
+% The x that cite adds occurs in a name term among the arguments of
+% club(<p>.x), which cite requires and which has traceable provenance, so the
+% second clause keeps cited.
+procedure sv_in_name_carried(Contract).
+sv_in_name_carried([cschema(found, [],
+       [rs(guarded, [atom(club, [nterm(ext(own(1), x))])], [], [], [])]),
+     schema(cite,
+       [rs(guarded, [atom(cited, [svar(x)])], [],
+                    [atom(club, [nterm(ext(own(1), x))])], [])])]).
+
+% --- volition by connected component (definition:volition) ----------------
+% relay(p?, q, r, zeta^seat ?theta) :
+%     friend(q), +chained(q)    friend(r), +chained(r)    +chained(p)    +noted(zeta)
+% Over the social graph, put in the language of Section 8 by the seated role.
+% relay's role graph falls into the path p-q-r and the assembly of zeta, each
+% holding a guarding role, and r has no edge to a guarding role: relay meets
+% volition.  relay_unguarded is relay with the assembly unguarded, so that
+% the assembly's component holds no guarding role, and it fails.
+procedure sg_relay(Contract).
+sg_relay(C?) :-
+    sg(S),
+    contract_app(S?,
+      [schema(relay,
+         [rs(guarded,   [atom(chained, [role(2)])], [],
+                        [atom(friend, [role(2)])], []),
+          rs(unguarded, [atom(chained, [role(3)])], [],
+                        [atom(friend, [role(3)])], []),
+          rs(unguarded, [atom(chained, [role(1)])], [], [], []),
+          crs(seated(nvar(zeta), seat), guarded_at(theta),
+              [atom(noted, [nterm(nvar(zeta))])], [], [], [])]),
+       schema(relay_unguarded,
+         [rs(guarded,   [atom(chained, [role(2)])], [],
+                        [atom(friend, [role(2)])], []),
+          rs(unguarded, [atom(chained, [role(3)])], [],
+                        [atom(friend, [role(3)])], []),
+          rs(unguarded, [atom(chained, [role(1)])], [], [], []),
+          crs(seated(nvar(zeta), seat), unguarded,
+              [atom(noted, [nterm(nvar(zeta))])], [], [], [])])], C).
