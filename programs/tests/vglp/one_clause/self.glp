@@ -44,7 +44,7 @@ imported procedure responder#med(Channel(Stream(UserAnswer), Stream(Card))?, Cha
 exported procedure play_answer.
 play_answer :-
     responder # respond(ch([], Asks), offer(bob), D, none),
-    responder # med(ch(Answers?, Cards), ch(Asks?, []), [], 0),
+    responder # med(ch(Answers?, Cards), ch(Asks?, _), [], 0),
     person_answer(Cards?, Answers),
     report(answer, D?).
 
@@ -61,7 +61,7 @@ person_answer([], []).
 exported procedure play_decline.
 play_decline :-
     responder # respond(ch([], Asks), offer(bob), D, none),
-    responder # med(ch(Answers?, Cards), ch(Asks?, []), [], 0),
+    responder # med(ch(Answers?, Cards), ch(Asks?, _), [], 0),
     person_decline(Cards?, Answers),
     report(decline, D?).
 
@@ -77,7 +77,7 @@ person_decline([], []).
 exported procedure play_mismatch.
 play_mismatch :-
     responder # respond(ch([], Asks), offer(bob), D, none),
-    responder # med(ch(Answers?, Cards), ch(Asks?, []), [], 0),
+    responder # med(ch(Answers?, Cards), ch(Asks?, _), [], 0),
     person_mismatch(Cards?, Answers),
     report(mismatch, D?).
 
@@ -94,7 +94,7 @@ person_mismatch([], []).
 exported procedure play_abort.
 play_abort :-
     responder # pick(ch([], Asks), Go?, offer(bob), D, none),
-    responder # med(ch(Answers?, Cards), ch(Asks?, []), [], 0),
+    responder # med(ch(Answers?, Cards), ch(Asks?, _), [], 0),
     person_abort(Cards?, Answers, Go, D?).
 
 procedure person_abort(Stream(Card)?, Stream(UserAnswer), Stream(Constant), Stream(Decision)?).
