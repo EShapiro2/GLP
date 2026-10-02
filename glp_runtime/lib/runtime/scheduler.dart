@@ -250,6 +250,9 @@ class Scheduler {
       }
       final act = rt.gq.dequeue();
       if (act == null) break;
+      // The goal taken waits on nothing: it leaves the runtime's suspended
+      // map, whichever way it was woken (GlpRuntime.goalTaken).
+      rt.goalTaken(act);
       ran.add(act.id);
       final env = rt.getGoalEnv(act.id);
       final program = rt.getGoalProgram(act.id);
