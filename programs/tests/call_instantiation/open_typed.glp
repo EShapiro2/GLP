@@ -1,0 +1,26 @@
+%% The open check types every argument at its position.  TGLP
+%% appendix-implementation-notes.tex, "The instantiation of a call" (cc4a891):
+%% a parameter left open, "the call checked with it open and every argument
+%% typed at its position"; Definition "Well-Typed Clause", condition 2.  p/2
+%% and r/2 inspect no parameter and are parametrically well-typed, and no site
+%% of any call below supplies X, so each call is checked with X open.
+%%
+%% ok/0 and ok_pair/1 load: 5 is an Integer and p(N?, 1) a Pair with N's
+%% Integer in it.  bad_constant/0 hands foo where p/2 reads an Integer, and
+%% bad_inside/1 hands p(S?, 1) where r/2 reads a Pair, S's String where Pair
+%% has an Integer: both are refused, and until 2026-10-02 both loaded, the open
+%% check comparing the variables that are arguments alone
+%% (GLP #3 Cowork, 2026-10-02 15:46 UTC).
+Pair ::= p(Integer, Integer).
+
+procedure(X) q(Integer?, Stream(X)).
+q(_, []).
+
+procedure(X) r(Pair?, Stream(X)).
+r(_, []).
+
+procedure ok.
+ok :- q(5, _).
+
+procedure ok_pair(Integer?).
+ok_pair(N) :- r(p(N?, 1), _).

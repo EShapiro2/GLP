@@ -1483,11 +1483,17 @@ WellTypedResult _checkArgumentModes(
 /// Check moded term per argument against declared type automata
 ///
 /// Per spec v0.6: Each argument is checked against its declared type's automaton directly.
+///
+/// [open] names the open types standing for the parameters a call is checked
+/// with open ([_noInstantiationReason]): a path reaching one is consistent
+/// ([checkPathAgainstAutomaton]), and two occurrences one of which is typed by
+/// one are not compared, a map being free to bind the parameter as they need.
 WellTypedResult _checkModedTermPerArg(
   ModedTerm modedTerm,
   ProcDecl decl,
-  ProgramDFA dfa,
-) {
+  ProgramDFA dfa, {
+  Set<String> open = const {},
+}) {
   final errors = <WellTypedError>[];
   final variableTypes = <String, VariableTypeInfo>{};
 
@@ -1525,16 +1531,22 @@ WellTypedResult _checkModedTermPerArg(
     final argPaths = paths(argTerm);
 
     for (final path in argPaths) {
-      final result = checkPathAgainstAutomaton(path, argAutomaton, dfa);
+      final result =
+          checkPathAgainstAutomaton(path, argAutomaton, dfa, open: open);
 
       if (!result.isConsistent) {
         errors.add(InconsistentPathError(path, result.reason ?? 'Unknown'));
       } else if (result.variableAssignment != null) {
         final varKey = path.leaf.symbol;
         if (variableTypes.containsKey(varKey)) {
-          if (!sameOccurrenceType(
-              variableTypes[varKey]!, result.variableAssignment!, dfa)) {
-            errors.add(InconsistentVariableError(varKey, variableTypes[varKey]!, result.variableAssignment!));
+          final had = variableTypes[varKey]!;
+          final now = result.variableAssignment!;
+          if (open.contains(had.typeState.baseName) ||
+              open.contains(now.typeState.baseName)) {
+            continue;
+          }
+          if (!sameOccurrenceType(had, now, dfa)) {
+            errors.add(InconsistentVariableError(varKey, had, now));
           }
         } else {
           variableTypes[varKey] = result.variableAssignment!;
@@ -1544,7 +1556,7 @@ WellTypedResult _checkModedTermPerArg(
   }
 
   // Check duality within this term
-  final dualityErrors = _checkTermDuality(variableTypes, dfa);
+  final dualityErrors = _checkTermDuality(variableTypes, dfa, open);
   errors.addAll(dualityErrors);
 
   return WellTypedResult(
@@ -1554,9 +1566,12 @@ WellTypedResult _checkModedTermPerArg(
   );
 }
 
-/// Check duality within a term (same logic as well_typed_term.dart)
+/// Check duality within a term (same logic as well_typed_term.dart).  A pair
+/// one occurrence of which is typed by an open type of [open] is not compared
+/// ([_checkModedTermPerArg]).
 List<NonDualError> _checkTermDuality(
-    Map<String, VariableTypeInfo> variableTypes, ProgramDFA dfa) {
+    Map<String, VariableTypeInfo> variableTypes, ProgramDFA dfa,
+    [Set<String> open = const {}]) {
   final errors = <NonDualError>[];
 
   // Group by base name (X and X? share base "X")
@@ -1585,6 +1600,10 @@ List<NonDualError> _checkTermDuality(
     if (variants.containsKey(writerKey) && variants.containsKey(readerKey)) {
       final writerInfo = variants[writerKey]!;
       final readerInfo = variants[readerKey]!;
+      if (open.contains(writerInfo.typeState.baseName) ||
+          open.contains(readerInfo.typeState.baseName)) {
+        continue;
+      }
 
       if (!_areDualTypes(writerInfo, readerInfo, dfa)) {
         errors.add(NonDualError(baseName, writerInfo, readerInfo));
@@ -1943,42 +1962,50 @@ class NoInstantiationError extends WellTypedError {
 const String _openParamPrefix = r'$open_';
 
 /// Why no instantiation of [template]'s parameters can make [call] well-typed,
-/// or null where one may.
+/// or null where one may: the call checked with the callee's parameters open.
 ///
-/// TGLP parameterized-types.tex, Definition "Instantiation": a map $\theta$ is
-/// an instantiation of the call if the calling clause is well-typed (among
-/// other conditions) when the callee's declaration is replaced by its
-/// expansion under $\theta$; and well-typing.tex, Definition "Well-Typed
-/// Clause with Subtyping", condition 3, relates each argument variable to its
-/// other occurrence in the clause.  [partnersOf] gives, for a variable and the
-/// polarity it has in the call, those occurrences: a head occurrence (true),
-/// whose pair is 3(b) --- the head's type within the call's where the head
-/// occurrence is consumed, the call's within the head's where it is produced
-/// --- and the body occurrences of the other polarity (false), whose pair is
-/// 3(a), the writer's type within the reader's.
+/// TGLP appendix-implementation-notes.tex, "The instantiation of a call"
+/// (cc4a891): "A parameter for which no type is supplied or fixed is left open
+/// where the callee is parametrically well-typed
+/// (Section~\ref{sec:abstract-parameters}), the call checked with it open and
+/// every argument typed at its position".  [bound] binds some parameters to
+/// types --- those a call's sites supply or its callee's clauses fix
+/// ([_instantiateCalls]) --- and only the rest are left open; empty, every
+/// parameter is open.
 ///
-/// Each such relation is asked with every parameter of the declaration left
-/// open ([isSubtype]'s `open`): a comparison that reaches a parameter holds,
-/// since a map could bind it to whatever stands there.  So a relation that
-/// fails fails under every map, and the call has no instantiation: a
-/// `Stream(T)` handed where `OpenStream(X)?` is read carries `[]`, which no
-/// expansion of `OpenStream(X)` has.  A relation that holds leaves the call to
-/// the checks it has always had, its modes; that one map makes every relation
-/// hold at once is not asked here, so this refuses no call that has an
-/// instantiation and may pass one that has none.
+/// Definition "Instantiation" (parameterized-types.tex): a map $\theta$ is an
+/// instantiation of the call if the calling clause is well-typed (among other
+/// conditions) when the callee's declaration is replaced by its expansion
+/// under $\theta$.  So the call is asked the two conditions of Definition
+/// "Well-Typed Clause with Subtyping" that bear on it, each with the open
+/// parameters open: a comparison that reaches one holds, since a map could
+/// bind it to whatever stands there.
 ///
-/// [bound] binds some parameters to types --- those a call's sites supply or
-/// its callee's clauses fix ([_instantiateCalls]) --- and only the rest are
-/// left open: "A parameter for which no type is supplied or fixed is left open
-/// where the callee is parametrically well-typed, the call checked with it
-/// open" (TGLP appendix-implementation-notes.tex, "The instantiation of a
-/// call", cc4a891).  Empty, every parameter is open.
+/// * Condition 2: the produced moded term of the call is typed at every
+///   position, a constant or a constructed argument as a variable is: `foo`
+///   where `Integer?` is read has no well-typing under any map, and neither
+///   has `[a]` where `OpenStream(X)?`'s cons is to be read and `[]` stands.  A
+///   position an open parameter reaches holds whatever stands there
+///   ([checkPathAgainstAutomaton]'s `open`).
+/// * Condition 3: each variable occurrence the typing types --- a top-level
+///   argument or one inside a constructed term --- is related to its other
+///   occurrences in the clause.  [partnersOf] gives, for a variable and the
+///   polarity it has in the call, those occurrences: a head occurrence (true),
+///   whose pair is 3(b) --- the head's type within the call's where the head
+///   occurrence is consumed, the call's within the head's where it is
+///   produced --- and the body occurrences of the other polarity (false),
+///   whose pair is 3(a), the writer's type within the reader's.
 ///
-/// A bare open parameter of the declaration, `X` or `X?`, is skipped (any
-/// type, at either polarity, may stand there), as is a declaration reaching a
-/// template that has a parameter as an alternative: an open parameter there
-/// would hide alternatives a map adds, so the open relation would no longer be
-/// weaker than every expansion's.
+/// A relation that fails fails under every map, and the call has no
+/// instantiation.  That one map makes every relation hold at once is not
+/// asked, so this refuses no call that has an instantiation and may pass one
+/// that has none.  Until 2026-10-02 only the variables that are top-level
+/// arguments were compared, so `procedure(X) p(Integer?, Stream(X))` took
+/// `p(foo, _)`, `foo` at `Integer?` (GLP #3 Cowork, 2026-10-02 15:46 UTC).
+///
+/// A declaration reaching a template that has a parameter as an alternative
+/// is not asked: an open parameter there would hide alternatives a map adds,
+/// so the open relation would no longer be weaker than every expansion's.
 String? _noInstantiationReason(
   ast.Goal call,
   ProcDecl template,
@@ -1987,91 +2014,81 @@ String? _noInstantiationReason(
   Map<String, String> bound = const {},
 }) {
   if (paramUsedAsTypeAlternative(template, env.typeTemplates)) return null;
-  final open = [
+  final openOf = {
     for (final tp in template.typeParams)
-      if (!bound.containsKey(tp)) tp
-  ];
+      if (!bound.containsKey(tp)) tp: '$_openParamPrefix$tp'
+  };
+  final openNames = openOf.values.toSet();
+  final built = _declInAbstractTypes(
+      template, {...bound, ...openOf}, const {}, openNames, env);
+  if (built == null) return null; // a type the declaration names is not in scope
+  final (openDecl, openEnv, openDfa) = built;
 
-  // The argument positions there is anything to compare at.
-  final positions = <(int, List<(VariableTypeInfo, bool)>)>[];
+  // Condition 2, every argument typed at its position.
+  final ModedTerm moded;
+  final WellTypedResult typed;
+  try {
+    moded = producedTerm(call, openDecl, typeEnv: openEnv);
+    typed = _checkModedTermPerArg(moded, openDecl, openDfa, open: openNames);
+  } on ArityMismatchError {
+    return null; // the arity check's to report
+  } on UnknownTypeError {
+    return null;
+  } on StateError {
+    return null;
+  }
+  if (!typed.isWellTyped) {
+    // The first argument a path of which is consistent under no map.
+    if (moded is ModedCompound) {
+      for (var i = 0; i < openDecl.arity && i < moded.args.length; i++) {
+        final Automaton automaton;
+        try {
+          automaton = openDfa.getAutomaton(getFullTypeName(openDecl.argTypes[i]));
+        } on StateError {
+          continue;
+        }
+        for (final path in paths(moded.args[i])) {
+          final r = checkPathAgainstAutomaton(path, automaton, openDfa,
+              open: openNames);
+          if (r.isConsistent) continue;
+          return 'argument ${i + 1}, ${call.args[i]}, has no well-typing at '
+              'any expansion of ${template.argTypes[i]}: ${r.reason}';
+        }
+      }
+    }
+    return typed.errors.first.message;
+  }
+
+  // Condition 3, each typed occurrence against its pairs in the clause, in
+  // the order the arguments stand.
+  final asked = <String>{};
   for (var i = 0; i < template.arity && i < call.args.length; i++) {
     final arg = call.args[i];
-    if (arg is! ast.VarTerm) continue;
-    if (_isBareParameter(template.argTypes[i], open)) continue;
-    final partners = partnersOf(arg.name, arg.isReader);
-    if (partners.isNotEmpty) positions.add((i, partners));
-  }
-  if (positions.isEmpty) return null;
-
-  // The declaration with each bound parameter at its type and each other an
-  // open type, and the types it names.
-  final openOf = {for (final tp in open) tp: '$_openParamPrefix$tp'};
-  final openNames = openOf.values.toSet();
-  final openDecl = ProcDecl(
-    template.name,
-    [
-      for (final t in template.argTypes)
-        _substituteTypeParams(t, {...bound, ...openOf})
-    ],
-    template.line,
-    template.column,
-    exported: template.exported,
-    imported: template.imported,
-    modulePath: template.modulePath,
-  );
-  final openTypes = <String, TypeDef>{
-    for (final n in openNames) n: TypeDef(n, const [], 0, 0)
-  };
-  final needed = <String>{};
-  for (final t in openDecl.argTypes) {
-    var n = getFullTypeName(t);
-    if (n.endsWith('?')) n = n.substring(0, n.length - 1);
-    if (n.contains('<') && !env.types.containsKey(n)) needed.add(n);
-  }
-  if (needed.isNotEmpty) {
-    openTypes.addAll(materializeInstantiations(
-        needed, env.typeTemplates, {...env.types.keys, ...openNames}));
-  }
-  final ProgramDFA openDfa;
-  try {
-    openDfa = buildProgramDFA(TypeEnvironment(
-      {...env.types, ...openTypes},
-      {...env.procedures, openDecl.key: openDecl},
-      paramProcDecls: env.paramProcDecls,
-      typeTemplates: env.typeTemplates,
-      typeOrigins: env.typeOrigins,
-    ));
-  } on UnknownTypeError {
-    return null; // a type the declaration names is not in scope
-  }
-
-  for (final (i, partners) in positions) {
-    final arg = call.args[i] as ast.VarTerm;
-    final declared = openDecl.argTypes[i];
-    // The call's occurrence has the mode of its position: a reader where the
-    // declaration takes an input type, a writer where it takes an output one.
-    // Any other is the mode check's to report.
-    final declaredName = getFullTypeName(declared);
-    final declaredInput = declaredName.endsWith('?');
-    if (arg.isReader != declaredInput) continue;
-    final atCall = openDfa.states[declaredInput
-        ? declaredName.substring(0, declaredName.length - 1)
-        : declaredName];
-    if (atCall == null) continue;
-    for (final (partner, inHead) in partners) {
-      final other = openDfa.states[partner.typeState.baseName];
-      if (other == null) continue;
-      // 3(b): a consumed head occurrence within the call's, the call's within a
-      // produced one.  3(a): the writer's within the reader's.
-      final otherWithin = inHead ? partner.typeState.isDual : arg.isReader;
-      final (sub, sup) = otherWithin ? (other, atCall) : (atCall, other);
-      if (isSubtype(sub, sup, openDfa, open: openNames)) continue;
-      final shown = template.argTypes[i];
-      return otherWithin
-          ? 'argument ${i + 1}, $arg, holds ${other.name}, which no expansion '
-              'of $shown accepts'
-          : 'argument ${i + 1}, $arg, is to hold ${other.name}, and no '
-              'expansion of $shown is within it';
+    for (final key in _termVarKeys(arg)) {
+      if (!asked.add(key)) continue;
+      final own = typed.variableTypes[key];
+      if (own == null || openNames.contains(own.typeState.baseName)) continue;
+      final atCall = openDfa.states[own.typeState.baseName];
+      if (atCall == null) continue;
+      final reader = key.endsWith('?');
+      final name = reader ? key.substring(0, key.length - 1) : key;
+      for (final (partner, inHead) in partnersOf(name, reader)) {
+        final other = openDfa.states[partner.typeState.baseName];
+        if (other == null) continue;
+        // 3(b): a consumed head occurrence within the call's, the call's
+        // within a produced one.  3(a): the writer's within the reader's.
+        final otherWithin = inHead ? partner.typeState.isDual : reader;
+        final (sub, sup) = otherWithin ? (other, atCall) : (atCall, other);
+        if (isSubtype(sub, sup, openDfa, open: openNames)) continue;
+        final shown = template.argTypes[i];
+        final at = arg is ast.VarTerm
+            ? 'argument ${i + 1}, $arg,'
+            : 'argument ${i + 1}, $arg, at $key';
+        return otherWithin
+            ? '$at holds ${other.name}, which no expansion of $shown accepts'
+            : '$at is to hold ${other.name}, and no expansion of $shown is '
+                'within it';
+      }
     }
   }
   return null;
@@ -2232,8 +2249,10 @@ class ConflictingBindingsError extends WellTypedError {
 
   @override
   String get message {
+    // A parameter with no type tried is left open, as [reason] says.
     final shown = [
-      for (final e in tried.entries) '${e.key}: ${e.value.join(', ')}'
+      for (final e in tried.entries)
+        if (e.value.isNotEmpty) '${e.key}: ${e.value.join(', ')}'
     ].join('; ');
     final whence = calleeRead
         ? 'the types the sites supply and the clauses of ${callee.key} fix'
