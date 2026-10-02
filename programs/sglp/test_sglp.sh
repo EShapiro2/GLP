@@ -82,9 +82,9 @@ for r in a b s1; do
     [ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/$r.out"
     [ -s "$WORK/$r.log" ]; check "100 agents, 30 days, seed $seed ($r): the log is not empty" $?
 done
-cmp -s "$WORK/a.log" "$WORK/b.log"
+[ -s "$WORK/a.log" ] && cmp -s "$WORK/a.log" "$WORK/b.log"
 check "two runs from seed 20260927 write byte-identical logs" $?
-! cmp -s "$WORK/a.log" "$WORK/s1.log"
+[ -s "$WORK/a.log" ] && [ -s "$WORK/s1.log" ] && ! cmp -s "$WORK/a.log" "$WORK/s1.log"
 check "seeds 20260927 and 1 write different logs" $?
 
 echo "--- (iv) the social graph, 100 agents for one year"
