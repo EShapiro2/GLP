@@ -8,10 +8,10 @@
 # certifies by hand, and contracts broken in one place each, one per way of
 # failing the three conjuncts of def:syntactically-grassroots; then the
 # compilation of Section 5, against the two displays of Section 5.2; then the
-# contract of a grassroots federation, /Grassroots/GFWC sections/act-schemas.tex,
-# against the four conditions of Appendix B of /Grassroots/Jurix, and four
-# contracts broken in one place each against those; then the compilation of
-# Appendix B, against its worked box.  Exits non-zero if any check fails.
+# contract of a grassroots federation, /Grassroots/GFWC sections/schemas.tex,
+# against the conditions of Section 8 of /Grassroots/Jurix, and four contracts
+# broken in one place each against those; then the compilation of Section 8,
+# against its worked box.  Exits non-zero if any check fails.
 
 set -u
 GLP_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -221,12 +221,14 @@ check "a schema the contract does not hold is reported" \
       "% no schema named" "$(printf '%s' "$out" | tr '\n' ' ')"
 
 
-# --- the contract of a grassroots federation (Appendix B) ------------------
-# GFWC's five schemas over seat and child, certified in its Section 3.2 by
-# hand against the four conditions of Appendix B; the checker returns the same.
+# --- the contract of a grassroots federation (Section 8) -------------------
+# GFWC's five schemas over seat and child, /Grassroots/GFWC
+# sections/schemas.tex, every role of them a party role or a seated role,
+# certified in its Section 3.1 by hand against the conditions of Section 8 of
+# /Grassroots/Jurix; the checker returns the same.
 
 out=$(run 'check_named(federation, V).' 'rooted_of(federation, E).')
-check "the federation contract meets the conditions of Appendix B" \
+check "the federation contract meets the conditions of Section 8" \
       "V = conditions_met" "$out"
 check "seat is rooted" "E = [seat]" "$out"
 
@@ -248,20 +250,22 @@ check "a note nothing traces: seat and child keep traceable provenance" \
       "E = [seat, child]" "$out"
 check_not "and note does not have it" "note" "$out"
 
-# Recording the new community as a child of a community that is the name term
-# of no role of the schema.
+# Seating the assembly in a community that is the name term of no role of the
+# schema.  seat is the one role predicate of the contract, every role being a
+# party role or a seated role, so cohesion asks its question of seat atoms
+# (definition:cohesive), and this one is the contract's only fault.
 out=$(run 'check_named(gf_uncohesive, V).')
-check "a child atom of no role of the schema fails cohesion" \
-      "cohesion(federate, 1, atom(child, [nterm(nvar(eta)), nterm(nvar(zeta))]))" \
+check "a seat atom of no role of the schema fails cohesion" \
+      "V = conditions_failed([cohesion(federate, 1, atom(seat, [nterm(nvar(eta))]))])" \
       "$out"
 
-# A join no assembly decides: the roles fall into the two communities, and
-# neither part holds a guarding role.
+# A join no assembly decides: its two roles are the assemblies of the two
+# communities, nothing joins them, and neither guards.
 out=$(run 'check_named(gf_novolition, V).')
 check "a join with no guarding role fails volition" \
-      "V = conditions_failed([volition(join, 1, 3)])" "$out"
+      "V = conditions_failed([volition(join, 1, 2)])" "$out"
 
-# Rootedness is a notion of Appendix B; a contract of Section 3 is not asked
+# Rootedness is a notion of Section 8; a contract of Section 3 is not asked
 # about it, and keeps the verdict of def:syntactically-grassroots.
 out=$(run 'rooted_of(social_graph, E).' 'check_named(social_graph, V).')
 check "a contract of Section 3 is not asked which predicates are rooted" \
@@ -270,47 +274,54 @@ check "and keeps the verdict of Section 3" \
       "V = syntactically_grassroots" "$out"
 
 # The compiled form of a schema with community roles is Definition Compilation
-# of Appendix B, which the compiler prints for a contract that meets the
+# of Section 8, which the compiler prints for a contract that meets the
 # conditions on the text and for no other.
 out=$(run 'compile_named(federation).')
 check "a contract with community roles is compiled" \
       "begin{align" "$out"
 check_not "and not refused" "not compiled" "$out"
+check_not "no role of the federation is a constituent role" '\ast}' "$out"
 
 out=$(run 'compile_named(gf_novolition).')
-check "a contract that fails the conditions of Appendix B is not compiled" \
+check "a contract that fails the conditions of Section 8 is not compiled" \
       "% not compiled: gf_novolition" "$(printf '%s' "$out" | tr '\n' ' ')"
 check_not "and no display is printed for it" "begin{align" "$out"
 
-# --- the compilation of Appendix B (definition:compile) --------------------
-# The worked box of Appendix B, transcribed from
+# --- the compilation of Section 8 (definition:compile) ---------------------
+# The worked box of Section 8, transcribed from
 # /Grassroots/Jurix/sections/13-community-roles.tex, is the display for
-# federate; compared with the whitespace removed, as the two displays of
-# Section 5.2 are, and without the full stop that closes the box's sentence.
+# federate: the one assignment over the extent of its seated role, adding both
+# atoms, the line on freshness and the guard.  Compared with the whitespace
+# removed, as the two displays of Section 5.2 are, and without the full stop
+# that closes the box's sentence.  The box is read by read, not by a here
+# document inside $( ): its one c'_p is a lone quote, which bash 3.2, the
+# system shell of macOS, takes to open a string there and never close.
 
-federate_box=$(cat <<'EOF' | squash
+IFS= read -r -d '' federate_tex <<'EOF'
 \begin{align*}
-& c'_p := c_p \uplus \{\mathit{child}(\zeta\cdot y,\zeta)\} && (p\in\mathrm{ext}_c(\zeta^{\mathit{child}\ast})),\\
-& c'_p := c_p \uplus \{\mathit{seat}(\zeta\cdot y)\} && (p\in\mathrm{ext}_c(\zeta^{\mathit{seat}})),\\
+& c'_p := c_p \uplus \{\mathit{child}(\zeta\cdot y,\zeta),\ \mathit{seat}(\zeta\cdot y)\} && (p\in\mathrm{ext}_c(\zeta^{\mathit{seat}})),\\
 & \text{provided } \zeta\cdot y \text{ is an argument of no atom of } c,\\
 & \text{guarded by } G,\ G\subseteq\mathrm{ext}_c(\zeta^{\mathit{seat}}) \text{ with } |G|>\theta|\mathrm{ext}_c(\zeta^{\mathit{seat}})|
 \end{align*}
 EOF
-)
-check_eq "federate compiles to the worked box of Appendix B" \
+federate_box=$(printf '%s' "$federate_tex" | squash)
+check_eq "federate compiles to the worked box of Section 8" \
          "$federate_box" "$(compiled federation federate)"
 
-# The five schemas of the contract, in the one form of Appendix B.
+# The five schemas of the contract, in the one form of Section 8.
 out=$(run 'compile_named(federation).')
 check_eq "the federation compiles to five displays" "5" \
          "$(printf '%s' "$out" | grep -c 'begin{align')"
 
-# form: a party role in the form of Appendix B, over its extent, guarded by a
-# part of it larger than the threshold 0; no name term sigma.y, so no line on
-# freshness.
+# form: a party role in the form of Section 8, over its extent, with a proviso
+# line for the seat it forbids, guarded by a part of it larger than the
+# threshold 0; no name term sigma.y, so no line on freshness.
 form=$(compiled federation form)
 check "form ranges over the extent of its party role" \
       "(p\\in\\mathrm{ext}_c(\\Alice))" "$form"
+check "form forbids the seat it adds" \
+      "\\text{provided}\\mathit{seat}(\\langle\\Alice\\rangle)\\notinc_p&&(p\\in\\mathrm{ext}_c(\\Alice))" \
+      "$form"
 check "form's guard is a part of that extent larger than 0 of it" \
       "\\text{guardedby}G,\\G\\subseteq\\mathrm{ext}_c(\\Alice)\\text{with}|G|>0|\\mathrm{ext}_c(\\Alice)|" \
       "$form"
@@ -320,14 +331,14 @@ check_not "form forms no name and prints no freshness line" \
 # join: an assignment line and a proviso line per role, the reach condition,
 # and a guard that is the union of two parts, each at its own threshold.
 join=$(compiled federation join)
-check_eq "join prints an assignment line per role" "4" \
+check_eq "join prints an assignment line per role" "2" \
          "$(printf '%s' "$join" | grep -o "c'_p:=" | wc -l | tr -d ' ')"
-check_eq "join prints a proviso line per role" "4" \
+check_eq "join prints a proviso line per role" "2" \
          "$(printf '%s' "$join" | grep -o '\\notinc_p' | wc -l | tr -d ' ')"
 check "join prints its reach condition" \
       "\\text{provided}\\xi\\not\\rightsquigarrow_{\\mathit{child}}\\zeta" "$join"
 check "join's guard is the union of two parts" \
-      "\\text{guardedby}G_{2}\\cupG_{4},\\G_{2}\\subseteq\\mathrm{ext}_c(\\zeta^{\\mathit{seat}})\\text{with}|G_{2}|>\\theta|\\mathrm{ext}_c(\\zeta^{\\mathit{seat}})|\\text{and}G_{4}\\subseteq\\mathrm{ext}_c(\\xi^{\\mathit{seat}})\\text{with}|G_{4}|>\\theta|\\mathrm{ext}_c(\\xi^{\\mathit{seat}})|" \
+      "\\text{guardedby}G_{1}\\cupG_{2},\\G_{1}\\subseteq\\mathrm{ext}_c(\\zeta^{\\mathit{seat}})\\text{with}|G_{1}|>\\theta|\\mathrm{ext}_c(\\zeta^{\\mathit{seat}})|\\text{and}G_{2}\\subseteq\\mathrm{ext}_c(\\xi^{\\mathit{seat}})\\text{with}|G_{2}|>\\theta|\\mathrm{ext}_c(\\xi^{\\mathit{seat}})|" \
       "$join"
 
 # leave_1 and leave_2 differ only in which assembly guards.

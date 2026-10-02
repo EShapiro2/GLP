@@ -79,21 +79,23 @@ that the contract is not compiled and nothing else, and `check_named` gives
 the faults.
 
 A contract with community roles compiles to the lines of Definition
-Compilation of Appendix B, one form for the whole contract, its party roles
+Compilation of Section 8, one form for the whole contract, its party roles
 included: an assignment line per role and, where the role requires or forbids
 an atom, a proviso line, each over the agents `p` of the role's extent
 `ext_c(pi_i)`; `provided Theta` where the schema carries reach conditions;
 for every name term `sigma . y` of the schema, that it is an argument of no
 atom of the configuration; and the guard, the union of a part of each guarding
 role's extent larger than its threshold of it, which for a party role is `0`.
-`compile_schema(federation, federate).` prints the worked box of Appendix B
+`compile_schema(federation, federate).` prints the worked box of Section 8
 token for token, and `test_jurix.sh` compares them.  A name variable and a
 threshold are named by a Greek letter, `zeta`, `xi`, `theta`, and printed as
 that letter's command; one guarding role is written `G`, several `G_{i}` by
 role index; the conditions of `Theta`, and the parts of a guard, are joined by
-"and" as the conjuncts of a proviso are.  A contract that fails the conditions
-of Appendix B is not compiled, as one that is not syntactically grassroots is
-not.
+"and" as the conjuncts of a proviso are.  The atoms of a set are written apart
+by a comma and a control space, `,\ `, as the worked box writes the two atoms
+`federate` adds; Section 5.2 writes no set of two, and a display in its form
+keeps the comma alone.  A contract that fails the conditions of Section 8 is
+not compiled, as one that is not syntactically grassroots is not.
 
 Printing reaches the person, so the module's certificate is refused on load
 (`[CERTIFICATE REFUSED] jurix ... calls send_to_user/1`) and it carries no
@@ -116,9 +118,11 @@ The names are `social_graph` and `currency`, the two the paper works through;
 seven broken contracts `sg_unguarded`, `sg_imposed`, `sg_gossip`,
 `sg_chain_cut`, `sg_svar_loose`, `cur_no_mint`, `cur_loose_mint`.
 `federation` is GFWC's five schemas
-(`/Grassroots/GFWC`, `sections/act-schemas.tex`), and `gf_unrooted`,
+(`/Grassroots/GFWC`, `sections/schemas.tex`), whose roles are one party role
+and seated roles, none of them a constituent role; `gf_unrooted`,
 `gf_untraceable`, `gf_uncohesive` and `gf_novolition` are it broken in one place
-each, one per condition of Appendix B.  Any other name is the empty contract.
+each, one per condition the checker decides.  Any other name is the empty
+contract.
 
 A verdict on a contract of Section 3 is `syntactically_grassroots` or
 `not_grassroots(Faults)`, where each fault is one of
