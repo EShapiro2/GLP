@@ -65,6 +65,16 @@ Map<String, List<Term>> getRootScopeUnitClauses() {
   return _cachedRootScopeUnitClauses!;
 }
 
+/// The guard predicates ("name/arity") [program]'s guards unfold as defined
+/// guards: the root scope's unit clauses and the program's own, as
+/// [PartialEvaluator.transformDefinedGuards] takes them.  The type checker asks
+/// it of a clause as written, to check a defined guard's arguments as a
+/// built-in guard's are (TGLP typed-glp.tex, "Type checking of guards").
+Set<String> definedGuardKeys(Program program) => {
+      ...getRootScopeUnitClauses().keys,
+      ...PartialEvaluator()._collectUnitClauses(program).keys,
+    };
+
 // ============================================================================
 // UNIFICATION RESULTS
 // ============================================================================

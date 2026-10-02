@@ -561,6 +561,65 @@ ClauseCheckResult checkClauseFromAst(
       callee: callee);
 }
 
+/// The guard meet errors of [clause]'s DEFINED guards, the clause taken as
+/// written, before its defined guards are unfolded.
+///
+/// A defined guard is a guard atom: its argument is checked as a built-in
+/// guard's is.  "Let S be the type of the occurrence and T the type declared
+/// for the position it occupies in the guard.  The guard atom is well-typed if
+/// the meet of S and T ... is non-empty" (TGLP typed-glp.tex, "Type checking of
+/// guards").  The partial evaluator unfolds a defined guard into the clause
+/// before the clause is checked (GLP-Spec appendix-guards.tex, "Defined guard
+/// predicates"), so the atom is gone from the clause [checkClause] sees, and it
+/// is asked of the clause as written here.  [definedGuards] names the guard
+/// predicates (name/arity) the partial evaluator unfolds.  A guard over a type
+/// with no term in common with the occurrence's can never succeed: until
+/// 2026-10-02 `p(A) :- close(A?) | true.` with `A` at `Request?` was refused
+/// only for the head the unfolding wrote, `p(ch([], []))`, and not against
+/// `close(Channel(Closed, Closed)?)` (GLP 2026-10-01 23:58 UTC item 5).
+///
+/// A negated defined guard is left out: the partial evaluator refuses it.
+List<GuardMeetError> definedGuardMeetErrors(ast.Clause clause,
+    Set<String> definedGuards, ProgramDFA dfa, TypeEnvironment env) {
+  final guards = [
+    for (final g in clause.guards ?? const <ast.Guard>[])
+      if (!g.negated && definedGuards.contains('${g.predicate}/${g.args.length}'))
+        ast.Goal(g.predicate, g.args, g.line, g.column)
+  ];
+  if (guards.isEmpty) return const [];
+  final procDecl =
+      env.getProcedure(clause.head.functor, clause.head.args.length);
+  if (procDecl == null) return const [];
+  final head =
+      ast.Goal(clause.head.functor, clause.head.args, clause.line, clause.column);
+  final typed = TypedClause(head: head, bodyAtoms: guards, guardAtoms: guards);
+  final (headResult, _) = _checkHeadWithTerm(typed, procDecl, dfa, env);
+
+  // As [checkClause] meets a guard atom with the head occurrence it tests:
+  // the occurrence's type so far --- the head's, or what an earlier guard
+  // narrowed it to --- against the type the guard declares for its position.
+  final narrowed = <String, VariableTypeInfo>{};
+  final errors = <GuardMeetError>[];
+  for (var i = 0; i < guards.length; i++) {
+    final atom = guards[i];
+    final (atomResult, _) = _checkBodyAtomWithTerm(atom, i, dfa, env,
+        callerVarTypes: headResult.variableTypes);
+    for (final entry in atomResult.variableTypes.entries) {
+      final have = narrowed[entry.key] ?? headResult.variableTypes[entry.key];
+      if (have == null) continue; // not an occurrence the head carries
+      final met = meetOfTypes(have.typeState, entry.value.typeState, dfa, env);
+      if (met == null) {
+        errors.add(GuardMeetError(
+            entry.key, atom.functor, have.typeState, entry.value.typeState));
+      } else {
+        narrowed[entry.key] = VariableTypeInfo(
+            typeState: met, mode: have.mode, isReader: have.isReader);
+      }
+    }
+  }
+  return errors;
+}
+
 /// The base names of the variables of [clause] whose type at some occurrence
 /// is a CONSTANT TYPE (TGLP `typed-glp.tex`, \mypara{Readers of constant
 /// types}).  Proposition "Readers of Constant Types" licenses several
