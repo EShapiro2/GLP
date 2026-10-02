@@ -132,10 +132,17 @@ procedure(X) one_of(Stream(X)?, Integer?, X).
 one_of(Xs, S, X?) :- ground(Xs?) |
     length(Xs?, N), random(S?, N?, K, _), nth(K?, Xs?, X).
 
-%% length(Xs?, N): N is the number of elements of Xs.
+%% length(Xs?, N): N is the number of elements of Xs, counted by length/3 in
+%% an accumulator, tail-recursively, so that a list of n elements leaves no n
+%% additions suspended at once, each waiting on the count of the rest, as the
+%% count it replaces did (sGLP's code task of 2026-10-02 20:58 UTC, S2).
 procedure(X) length(Stream(X)?, Integer).
-length([], 0).
-length([_|Xs], N?) :- length(Xs?, N1), N := N1? + 1.
+length(Xs, N?) :- length(Xs?, 0, N).
+
+%% length(Xs?, A?, N): N is A plus the number of elements of Xs.
+procedure(X) length(Stream(X)?, Integer?, Integer).
+length([], A, A?).
+length([_|Xs], A, N?) :- A1 := A? + 1, length(Xs?, A1?, N).
 
 %% nth(K?, Xs?, X): X is the K-th element of Xs, counting from 1.  Past the
 %% end of Xs nothing is assigned to X.
