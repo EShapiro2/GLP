@@ -977,6 +977,19 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       if (args.isEmpty) return GuardResult.failure;
       return _groundGuard(cx, args[0]);
 
+    case 'no_readers':
+      // A term built in the guard, decided as no_readers (0x44) decides a
+      // variable: its unbound readers ([_termVariables]), none succeeding and
+      // some leaving it undecided ([_undecidedMember]).  GLP-Spec
+      // appendix-guards.tex: "no_readers(f(X?)) suspends but known(f(X?))
+      // succeeds."  Until 2026-10-02 no case evaluated it: the call failed
+      // the clause with a warning, an unknown guard (GLP #3 Cowork,
+      // 2026-10-02 15:31 UTC, item 5, B9).
+      if (args.isEmpty) return GuardResult.failure;
+      final readers = _termVariables(cx, _equalityOperand(args[0])).readers;
+      if (readers.isEmpty) return GuardResult.success;
+      return _undecidedMember(cx, readers);
+
     case 'known':
       // Check if argument is not a variable
       if (args.isEmpty) return GuardResult.failure;

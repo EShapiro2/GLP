@@ -162,6 +162,8 @@ run(Goal) :- otherwise | send_to_user(no_clauses(Goal?)).
 
 **Key Property**: This guard fails only on a reader the clause alone holds: any other term with readers will eventually either have those readers bound (at which point the guard is re-evaluated) or remain suspended indefinitely.  Until 2026-10-02 it read a variable fresh to the clause as its writer and succeeded: `hn(f(X), yes) :- no_readers(X?) | true` gave `hn(W, R)` `R = yes`.
 
+The argument may be a term built in the guard, `no_readers(f(X?))`, decided as a variable is: `p(X, Y?) :- no_readers(f(X?)) | Y = a.` suspends `p(Z?, Y)` and gives `Y = a` when `Z` is bound.  Until 2026-10-02 the runtime evaluated `no_readers/1` on a variable alone, and a term argument failed the clause with a warning.
+
 **Use Case**: Ensuring a term is safe for external output (e.g., to a UI). Terms sent to external systems should not contain readers, as the external system cannot wait for them to be instantiated.
 
 **Example**:
