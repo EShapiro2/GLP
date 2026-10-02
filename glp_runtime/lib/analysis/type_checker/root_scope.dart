@@ -104,9 +104,10 @@ const Set<String> builtinProcedures = {
   // The signatures are GLP-Spec's `appendix-guards.tex` body-kernel table, which
   // is the authority. Its Network group's four — `'_peer_address'`,
   // `'_punch_udp'`, `'_place_declare'` and `'_place_remove'` — were registered
-  // by `9d5e0dd9` and are listed here as of 2026-08-03; the comment that said
-  // the table was ahead of the code was true when written and stale by the time
-  // it was read. Until they were listed, root `programs/self.glp` could not
+  // by `9d5e0dd9` and are listed here as of 2026-08-03, and the fifth,
+  // `'_trust_declare'`, in weeding round three (B4, 2026-10-02); the comment
+  // that said the table was ahead of the code was true when written and stale
+  // by the time it was read. Until they were listed, root `programs/self.glp` could not
   // declare them at all: parser.dart admits a clause-less root declaration only
   // for a name in this set, so declaring them there took every load in the tree
   // with it. The declarations are GLP-Spec's and follow these entries.
@@ -156,6 +157,7 @@ const Set<String> builtinProcedures = {
   '_punch_udp/1',
   '_place_declare/3',
   '_place_remove/1',
+  '_trust_declare/2',
   // Signature
   '_self_key/1',
   '_sign/3',

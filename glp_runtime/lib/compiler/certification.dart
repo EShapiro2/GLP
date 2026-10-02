@@ -21,8 +21,6 @@ import 'parser.dart';
 
 /// The body kernels that reach the network or the person (IGLP Cowork,
 /// 2026-09-08; GLP-Spec appendix-guards, the Network and I/O kernel rows).
-/// `'_trust_declare'` is in the catalogue and not registered; it is named here
-/// so that it is refused once it exists.
 const Set<String> privilegedKernels = {
   '_send/3',
   '_output/1',
