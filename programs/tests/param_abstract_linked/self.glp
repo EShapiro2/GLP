@@ -3,13 +3,15 @@
 %% A program whose one parameterised procedure inspects none of its parameters:
 %% it is parametrically well-typed (TGLP parameterized-types.tex
 %% sec:abstract-parameters), certified once by its abstract instance, and no
-%% call need instantiate it --- run/1 is declared `_?` and supplies no element
-%% type, exactly as in param_unchecked/, whose tagger/1 inspects its parameter
-%% and is rejected.  The two together are the rule: an uninstantiated
+%% call need instantiate it --- run/1 is declared `Stream(_)?` and supplies no
+%% element type, exactly as in param_unchecked/, whose tagger/1 inspects its
+%% parameter and is rejected.  The two together are the rule: an uninstantiated
 %% parameterised procedure is rejected where it inspects a parameter and kept
-%% where it does not.
+%% where it does not.  Until 2026-10-02 run/1 was declared `_?`, which no
+%% expansion of pass/2's Stream(X)? accepts, so the call had no instantiation
+%% (TGLP parameterized-types.tex, Definition "Instantiation").
 
-imported procedure code#run(_?).
+imported procedure code#run(Stream(_)?).
 
-exported procedure run(_?).
+exported procedure run(Stream(_)?).
 run(Xs) :- code # run(Xs?).
