@@ -201,8 +201,9 @@ third([], none).
 exported procedure play_abort_waiting(Stream(Integer), Stream(Request)).
 play_abort_waiting(Out?, Rs?) :-
     open_three(Xs),
-    count(Xs?, 0, Out, 10, Rs, Cs?),
-    third(Out?, T),
+    count(Xs?, 0, Out0, 10, Rs, Cs?),
+    tee(Out0?, Out, Out1),
+    third(Out1?, T),
     abort_when(T?, Cs).
 
 %% open_three(Xs): three elements and a tail that is never written.
@@ -212,6 +213,12 @@ open_three([1, 2, 3 | Tail?]) :- hold(Tail).
 %% hold(X): hold a writer and never bind it.
 procedure hold(Stream(Integer)).
 hold(_?) :- true.
+
+%% tee(Xs, Ys, Zs): Ys and Zs are each Xs, so that a play returns the
+%% counter's output on one and reads it for the trigger on the other.
+procedure tee(Stream(Integer)?, Stream(Integer), Stream(Integer)).
+tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
+tee([], [], []).
 
 %% play_clean(Out, Rs): the residual counter on a closed stream under grants of
 %% 2, the control stream never written: clean termination, the request stream
@@ -231,10 +238,12 @@ grant_seen([], _, [], []).
 
 %% play_abort_interpreted(Out, Rs): the same abort under execute/4, where
 %% reduce/2 waits inside the committed reduce clause and abort cannot reach
-%% the waiting goal: the play SUSPENDS (Out = [1, 2, 3 | _], Rs unbound).
+%% the waiting goal: the play SUSPENDS (Out = [1, 2, 3 | _]; Rs = [], the
+%% abort clause ending the execute/4 goal and not the reduce/2 goal it waits on).
 exported procedure play_abort_interpreted(Stream(Integer), Stream(Request)).
 play_abort_interpreted(Out?, Rs?) :-
     open_three(Xs),
-    execute(count(Xs?, 0, Out), 10, Rs, Cs?),
-    third(Out?, T),
+    execute(count(Xs?, 0, Out0), 10, Rs, Cs?),
+    tee(Out0?, Out, Out1),
+    third(Out1?, T),
     abort_when(T?, Cs).
