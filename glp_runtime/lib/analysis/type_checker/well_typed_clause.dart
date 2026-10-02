@@ -389,6 +389,12 @@ ClauseCheckResult checkClause(
   // clause is typed (Step 5).
   final uninstantiated = <(int, ast.Goal, ProcDecl)>[];
 
+  // The variables of type Integer, for the type of each `:=` goal's writer
+  // ([_integerTypedVariables]), read from the whole clause once it is needed.
+  Set<String>? integers;
+  Set<String> integerVariables() => integers ??= _integerTypedVariables(
+      headResult.variableTypes, clause.bodyAtoms, dfa, env);
+
   // Step 2: Check each body atom
   for (int i = 0; i < clause.bodyAtoms.length; i++) {
     final atom = clause.bodyAtoms[i];
@@ -396,6 +402,7 @@ ClauseCheckResult checkClause(
         callerVarTypes: allVariableTypes, collector: collector,
         activeInstantiations: activeInstantiations,
         callee: callee,
+        assignsInteger: _assignsInteger(atom, integerVariables),
         onUninstantiated: (call, template) =>
             uninstantiated.add((i, call, template)));
 
@@ -706,6 +713,171 @@ Set<String> _variablesTypedAtSomeOccurrence(ast.Clause clause, ProgramDFA dfa,
   return licensed;
 }
 
+// =============================================================================
+// The result type of `:=` (TGLP typed-glp.tex, "Type checking of :=")
+// =============================================================================
+//
+// "The root declares the body kernel :=(Number, Exp?) ..., which assigns to its
+// writer the value of an arithmetic expression.  A goal X := E is checked with
+// the type of X taken as Integer where E is an integer expression --- an integer
+// literal, a reader of type Integer, one of +, -, *, //, mod, unary - or abs over
+// integer expressions, or integer, round, floor or ceil over any expression ---
+// and as Number otherwise, / and the remaining functions of Exp yielding a
+// Number whatever their operands" (TGLP dbb09f4, restated in 2e39edb; Udi's
+// ruling of 2026-10-02).  The declaration stays as it is; the goal is checked
+// against it with its first argument an `Integer` where the rule says so.
+
+/// Whether [atom] is an arithmetic assignment `X := E`.
+bool _isAssignment(ast.Goal atom) => atom.functor == ':=' && atom.arity == 2;
+
+/// [atom] with every `Goal@Agent` taken off: the goal that is checked.
+ast.Goal _unspawned(ast.Goal atom) {
+  var goal = atom;
+  while (goal is ast.SpawnGoal) {
+    goal = goal.innerGoal;
+  }
+  return goal;
+}
+
+/// The operators and functions of `Exp` that keep an integer expression one:
+/// "+, -, *, //, mod, unary - or abs over integer expressions".  Unary minus
+/// parses to `neg`, the functor the root's `Exp` names for it.
+const Set<String> _integerOperators = {'+', '-', '*', '//', 'mod'};
+const Set<String> _integerUnary = {'neg', 'abs'};
+
+/// The functions of `Exp` whose value is an integer over any expression:
+/// "integer, round, floor or ceil over any expression".
+const Set<String> _integerConversions = {'integer', 'round', 'floor', 'ceil'};
+
+/// Whether [e] is an INTEGER EXPRESSION (TGLP typed-glp.tex, "Type checking of
+/// :="): an integer literal, a reader of type Integer --- [integerReader]
+/// answers for one by its variable's name --- one of `+`, `-`, `*`, `//`, `mod`,
+/// unary `-` or `abs` over integer expressions, or `integer`, `round`, `floor`
+/// or `ceil` over any expression.  Anything else is not: a real literal, `/`,
+/// the other functions, a writer, a term outside `Exp`.
+bool isIntegerExpression(ast.Term e, bool Function(String name) integerReader) {
+  if (e is ast.ConstTerm) return e.value is int;
+  if (e is ast.VarTerm) return e.isReader && integerReader(e.name);
+  if (e is ast.StructTerm) {
+    if (e.args.length == 2 && _integerOperators.contains(e.functor)) {
+      return isIntegerExpression(e.args[0], integerReader) &&
+          isIntegerExpression(e.args[1], integerReader);
+    }
+    if (e.args.length == 1 && _integerUnary.contains(e.functor)) {
+      return isIntegerExpression(e.args[0], integerReader);
+    }
+    if (e.args.length == 1 && _integerConversions.contains(e.functor)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Whether [state] is the type `Integer`: `Integer` itself, or a type the
+/// checker finds structurally the same ([sameBaseType]), as `Count ::= Integer.`
+/// is.  A wildcard and a procedure state are not.
+bool _isIntegerState(DFAState state, ProgramDFA dfa) {
+  if (state.isWildcard || state.isProcedure) return false;
+  if (state.baseName == 'Integer') return true;
+  return sameBaseType(state.baseName, 'Integer', dfa);
+}
+
+/// The types the variable occurrences of a body goal [goal] have, as
+/// [checkClause] types them: a cross-module call's against its imported
+/// declaration, any other goal's against the declaration in scope
+/// ([_bodyAtomVariableTypes]).
+Map<String, VariableTypeInfo> _occurrenceTypes(
+    ast.Goal goal, ProgramDFA dfa, TypeEnvironment env) {
+  if (goal is ast.RemoteGoal) {
+    try {
+      return _checkRemoteGoal(goal, 0, dfa, env).$1.variableTypes;
+    } catch (_) {
+      return const {};
+    }
+  }
+  return _bodyAtomVariableTypes(goal, dfa, env);
+}
+
+/// The names of the variables of a clause or a goal whose type is Integer, for
+/// "a reader of type Integer" in [isIntegerExpression]: a variable is of type
+/// Integer where an occurrence of it, or of its pair, has that type --- in the
+/// head ([headTypes], the moded head's), in a guard, which narrows the head
+/// occurrence it tests to that type ("Type checking of guards"), or in a body
+/// goal --- or where it is the writer of a `:=` goal whose expression is an
+/// integer expression.  The last is read to a fixpoint, so that the goals of a
+/// body are read in no order: `Y := X? + 1, X := N? * 2` types `Y` as the
+/// reverse order does.  A variable that only the expressions of `:=` goals read
+/// has no type from them: their positions are typed `Exp`.
+Set<String> _integerTypedVariables(Map<String, VariableTypeInfo> headTypes,
+    List<ast.Goal> atoms, ProgramDFA dfa, TypeEnvironment env) {
+  final integers = <String>{};
+  void take(Map<String, VariableTypeInfo> types) {
+    for (final entry in types.entries) {
+      if (!_isIntegerState(entry.value.typeState, dfa)) continue;
+      final key = entry.key;
+      integers.add(key.endsWith('?') ? key.substring(0, key.length - 1) : key);
+    }
+  }
+
+  take(headTypes);
+  final assignments = <ast.Goal>[];
+  for (final atom in atoms) {
+    final goal = _unspawned(atom);
+    if (_isAssignment(goal)) {
+      assignments.add(goal);
+    } else {
+      take(_occurrenceTypes(goal, dfa, env));
+    }
+  }
+  for (var grew = true; grew;) {
+    grew = false;
+    for (final assignment in assignments) {
+      final result = assignment.args[0];
+      if (result is! ast.VarTerm ||
+          result.isReader ||
+          integers.contains(result.name)) {
+        continue;
+      }
+      if (isIntegerExpression(assignment.args[1], integers.contains)) {
+        integers.add(result.name);
+        grew = true;
+      }
+    }
+  }
+  return integers;
+}
+
+/// Whether the `:=` goal [atom] is checked with its writer an `Integer`, given
+/// the clause's or goal's [integers] ([_integerTypedVariables]); false for any
+/// other goal.
+bool _assignsInteger(ast.Goal atom, Set<String> Function() integers) {
+  final goal = _unspawned(atom);
+  return _isAssignment(goal) &&
+      isIntegerExpression(goal.args[1], integers().contains);
+}
+
+/// [decl], the declaration of `:=` in scope, with its first argument an
+/// `Integer` where the root declares it `Number`.  A declaration of another
+/// shape is left as it is: the rule types the root's kernel.
+ProcDecl _integerAssignment(ProcDecl decl) {
+  if (decl.arity != 2) return decl;
+  final result = decl.argTypes[0];
+  if (result is! TypeRef || result.name != 'Number' || result.isInput) {
+    return decl;
+  }
+  return ProcDecl(
+    decl.name,
+    [TypeRef('Integer', result.line, result.column), decl.argTypes[1]],
+    decl.line,
+    decl.column,
+    typeParams: decl.typeParams,
+    isBuiltin: decl.isBuiltin,
+    exported: decl.exported,
+    imported: decl.imported,
+    modulePath: decl.modulePath,
+  );
+}
+
 /// The types [atom]'s variable occurrences have, as a body unit goal: the
 /// produced moded term of the goal, checked per argument against the declaration
 /// in scope (Definition "Well-Typed Clause" condition 2).
@@ -779,6 +951,12 @@ ClauseCheckResult checkGoal(
   final bodyOccurrences = <String, List<(VariableTypeInfo, String)>>{};
   final uninstantiated = <(int, ast.Goal, ProcDecl)>[];
 
+  // The variables of type Integer, for each `:=` goal's writer, as in
+  // [checkClause]: a goal is a body with no head.
+  Set<String>? integers;
+  Set<String> integerVariables() =>
+      integers ??= _integerTypedVariables(const {}, goalAtoms, dfa, env);
+
   // Condition 2: each unit goal's produced moded term is well-typed by D.
   for (int i = 0; i < goalAtoms.length; i++) {
     final atom = goalAtoms[i];
@@ -786,6 +964,7 @@ ClauseCheckResult checkGoal(
         callerVarTypes: allVariableTypes, collector: collector,
         activeInstantiations: activeInstantiations,
         callee: callee,
+        assignsInteger: _assignsInteger(atom, integerVariables),
         onUninstantiated: (call, template) =>
             uninstantiated.add((i, call, template)));
 
@@ -967,6 +1146,11 @@ WellTypedResult _checkBodyAtom(
 /// no instantiation is inferred, with the callee's template; the caller asks of
 /// it, once the clause is typed, whether any instantiation can exist
 /// ([_noInstantiationReason]).
+///
+/// [assignsInteger] is set for a `:=` goal whose writer is an `Integer` by
+/// "Type checking of :=" ([_assignsInteger]): the goal is checked against the
+/// declaration of `:=` with its first argument an `Integer`
+/// ([_integerAssignment]).
 (WellTypedResult, ModedTerm?) _checkBodyAtomWithTerm(
   ast.Goal atom,
   int atomIndex,
@@ -976,6 +1160,7 @@ WellTypedResult _checkBodyAtom(
   InstantiationCollector? collector,
   Map<String, ProcDecl> activeInstantiations = const {},
   CalleeClauses? callee,
+  bool assignsInteger = false,
   void Function(ast.Goal call, ProcDecl template)? onUninstantiated,
 }) {
   // Handle SpawnGoal (Goal@Agent) - type-check the inner goal
@@ -985,6 +1170,7 @@ WellTypedResult _checkBodyAtom(
         callerVarTypes: callerVarTypes, collector: collector,
         activeInstantiations: activeInstantiations,
         callee: callee,
+        assignsInteger: assignsInteger,
         onUninstantiated: onUninstantiated);
   }
 
@@ -994,7 +1180,7 @@ WellTypedResult _checkBodyAtom(
         callerVarTypes: callerVarTypes);
   }
 
-  // Skip builtin goals (true, otherwise, :=)
+  // Skip builtin goals (true, otherwise)
   if (isBuiltinGoal(atom.functor)) {
     return (WellTypedResult.success({}), null);
   }
@@ -1012,6 +1198,13 @@ WellTypedResult _checkBodyAtom(
         'Undefined procedure: ${atom.functor}/${atom.arity}',
       ),
     ]), null);
+  }
+
+  // The writer of `X := E` is an `Integer` where E is an integer expression,
+  // and a `Number` otherwise, as the root declares it (TGLP typed-glp.tex,
+  // "Type checking of :=").
+  if (assignsInteger && _isAssignment(atom)) {
+    procDecl = _integerAssignment(procDecl);
   }
 
   // The environment the call's arguments are checked in: [env], unless the

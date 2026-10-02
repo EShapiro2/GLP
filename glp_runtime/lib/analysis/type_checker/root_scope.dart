@@ -33,13 +33,17 @@ const Set<String> predefinedTypeNames = {
 };
 
 /// Built-in goals that don't need type checking
-/// - true, otherwise: 0-arity control
-/// - :=: arithmetic assignment, handled specially
+/// - true, otherwise: 0-arity control, with no argument to check
 /// Note: # (remote module call) is handled as RemoteGoal before the builtin check
+///
+/// `:=` is not one of them.  A goal `X := E` is checked against the root's
+/// declaration `:=(Number, Exp?)`, its writer taken as an `Integer` where `E` is
+/// an integer expression (TGLP typed-glp.tex, "Type checking of :=";
+/// well_typed_clause.dart, [isIntegerExpression]).  Until 2026-10-02 it was
+/// skipped here and no `:=` goal was type-checked at all.
 const Set<String> builtinGoals = {
   'true',
   'otherwise',
-  ':=',
 };
 
 /// True builtins: procedures implemented in Dart runtime with NO GLP clauses,

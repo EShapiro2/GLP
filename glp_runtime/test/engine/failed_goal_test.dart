@@ -30,7 +30,7 @@ void main() {
       // One clause, two body goals: the first calls abort/1 through the
       // domain-error clause of sqrt, the second is ordinary arithmetic.
       engine.loadSource('''
-procedure probe(Integer, Integer).
+procedure probe(Number, Integer).
 probe(X?, Y?) :- X := sqrt(-1), Y := 2+2.
 ''');
 
@@ -47,7 +47,7 @@ probe(X?, Y?) :- X := sqrt(-1), Y := 2+2.
     test('joins the runtime failed set, carrying the call', () async {
       final engine = fresh();
       engine.loadSource('''
-procedure probe(Integer).
+procedure probe(Number).
 probe(X?) :- X := sqrt(-1).
 ''');
 
@@ -83,7 +83,7 @@ pick(b, two).
     test('a failed conjunct does not drop the conjuncts after it', () async {
       final engine = fresh();
       engine.loadSource('''
-procedure probe(Integer).
+procedure probe(Number).
 probe(X?) :- X := sqrt(-1).
 ''');
 
@@ -99,7 +99,7 @@ probe(X?) :- X := sqrt(-1).
     test('a later goal still runs after one has failed', () async {
       final engine = fresh();
       engine.loadSource('''
-procedure bad(Integer).
+procedure bad(Number).
 bad(X?) :- X := sqrt(-1).
 
 procedure good(Integer).
