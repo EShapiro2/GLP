@@ -1,7 +1,10 @@
 %% play_dglp_boot.glp - dGLP entry point
 %%
-%% network3 and play are untyped (no procedure declarations)
-%% since they call cross-file agent/4.
+%% network3 and play are declared, as every procedure is (TGLP Definition
+%% "Typed GLP Program", condition 1); the agent, the mediator and the actors
+%% they call are in scope through this directory's self.glp, which exposes
+%% their modules.  network3 reads every NetInMsg, the friend messages among
+%% them, though an agent's net_output carries the cold calls alone.
 %%
 %% Usage:
 %%   load typed_social_agent.glp
@@ -17,6 +20,9 @@
 %% =============================================================================
 
 %% --- Cold-call routing (2-arg msg) ---
+
+procedure network3(Channel(NetInStream, NetInStream)?, Channel(NetInStream, NetInStream)?,
+    Channel(NetInStream, NetInStream)?).
 
 network3(ch([msg(bob, X)|AliceIn], AliceOut?),
          ch(BobIn, [msg(bob, X?)|BobOut?]),
@@ -87,6 +93,7 @@ network3(ch([], []), ch([], []), ch([], [])).
 %% PLAY - dGLP entry point
 %% =============================================================================
 
+procedure play.
 play :-
     network3(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn),

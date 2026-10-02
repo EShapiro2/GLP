@@ -616,17 +616,18 @@ List<String> _ancestorSelfGlpFiles(String rootDir, String programsDir) {
 ///   single-file path (`GlpEngine.loadSource`): guard unfolding precedes type
 ///   checking, so input coverage is checked on the unfolded head.
 ///
-/// A module with no procedure declarations is not checked, matching the
-/// single-file path — a `self.glp` that carries only type definitions has
-/// nothing to check.
+/// Every module is checked, one with no procedure declarations included: a
+/// clause of it then defines a procedure with no declaration, which is an error
+/// (TGLP Definition "Typed GLP Program", condition 1), and a `self.glp` that
+/// carries only type definitions checks trivially.  Until 2026-10-02 a module
+/// with no declarations was skipped here and on the single-file path, so its
+/// clauses were compiled and run with no check.
 ///
 /// Throws on type errors, naming each offending module's file path.
 void checkModulesIndependently(List<DiscoveredModule> modules) {
   final failures = <String>[];
 
   for (final mod in modules) {
-    if (mod.ast.procDeclarations.isEmpty) continue;
-
     final pe = PartialEvaluator();
     final transformed = pe.transformDefinedGuards(
         Program(mod.ast.procedures, mod.ast.line, mod.ast.column));

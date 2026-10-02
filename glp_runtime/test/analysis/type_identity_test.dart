@@ -425,28 +425,6 @@ measure(_).
       expect(r.derived.exported, equals(r.compiled.exported));
     });
 
-    test('an export with no declaration is absent from every field', () {
-      if (!hasRootScope) return;
-      const target = '../programs/tests/interface_table_single.glp';
-      if (!File(target).existsSync()) return;
-      final r = bothPathsFor(target, single: true);
-
-      // `nudge/1` has clauses and no declaration, so its interface text is
-      // empty and it contributes no types.  The compiled path tables
-      // declarations, so an undeclared procedure is in none of the four fields;
-      // the derived path matches it.  `unresolved` is the narrower case of a
-      // declaration naming a type the scope does not define.
-      final texts = {
-        for (final e in r.art.exports) '${e.name}/${e.arity}': e.declarationText
-      };
-      expect(texts['nudge/1'], isEmpty);
-      for (final t in [r.derived, r.compiled]) {
-        expect(t.exported, isNot(contains('nudge/1')));
-        expect(t.parametric, isNot(contains('nudge/1')));
-        expect(t.unresolved, isNot(contains('nudge/1')));
-      }
-    });
-
     test('an empty interface derives an empty table', () {
       expect(
           interfaceTypeIdentityTables(

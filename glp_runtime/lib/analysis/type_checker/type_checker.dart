@@ -231,14 +231,22 @@ class TypeChecker {
       warnings.addAll(procResult.warnings);
     }
 
-    // Warn about undefined procedures (clauses without type declarations)
+    // A procedure with clauses and no declaration in scope is an error: "Every
+    // procedure in Cs has exactly one type declaration in D" (TGLP typed-glp.tex,
+    // Definition "Typed GLP Program", condition 1).  Until 2026-10-02 this was a
+    // warning every loader discarded, and the procedure's clauses were never
+    // checked.
     for (final entry in procedureClauses.entries) {
-      if (!typeEnv.procedures.containsKey(entry.key)) {
+      if (!typeEnv.procedures.containsKey(entry.key) &&
+          !typeEnv.paramProcDecls.containsKey(entry.key)) {
         final firstClause = entry.value.first;
-        warnings.add(TypeWarning(
-          'Procedure ${entry.key} has no type declaration',
+        errors.add(TypeError(
+          'Procedure ${entry.key} has no type declaration: every procedure of '
+          'a typed GLP program has exactly one (TGLP Definition "Typed GLP '
+          'Program", condition 1)',
           firstClause.line,
           firstClause.column,
+          _clauseToString(firstClause),
         ));
       }
     }

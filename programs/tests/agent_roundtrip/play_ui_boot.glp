@@ -23,6 +23,10 @@
 %% AGENT INITIALIZATION
 %% =============================================================================
 
+%% agent_init/3 is declared over the types its body hands its arguments to:
+%% the agent's Key, the mediator's user-side command stream and the agent's
+%% network input (TGLP Definition "Typed GLP Program", condition 1).
+procedure agent_init(Key?, Stream(UserCmd)?, NetInStream?).
 agent_init(Id, UserIn, NetIn) :-
     ground(Id?) |
     send_to_net(NetOut?),

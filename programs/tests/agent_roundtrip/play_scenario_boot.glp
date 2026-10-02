@@ -67,6 +67,10 @@ auto_accept([], []).
 
 %% --- Scenario boot (entered as bob's agent_init) ---
 
+%% agent_init/3 is declared over the types its body hands its arguments to:
+%% the agent's Key, the mediator's user-side command stream and the agent's
+%% network input (TGLP Definition "Typed GLP Program", condition 1).
+procedure agent_init(Key?, Stream(UserCmd)?, NetInStream?).
 agent_init(bob, UserIn, _) :-
     %% Bob: live-UI agent. UserIn is injected from Dart; notifies -> _output.
     agent(bob, BAgentIn?, BNetIn?,

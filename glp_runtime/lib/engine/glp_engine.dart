@@ -393,10 +393,13 @@ class GlpEngine {
           .ancestorScope;
     }
 
-    // Type check if program has procedure declarations. (Single-file/REPL
-    // semantics: a parametric procedure inspecting its parameter with no
-    // instantiation is rejected — checkModule's default.)
-    if (module.procDeclarations.isNotEmpty) {
+    // Type check, every source: a module with no procedure declarations is
+    // checked like any other, and a clause of it then defines a procedure with
+    // no declaration, which is an error (TGLP Definition "Typed GLP Program",
+    // condition 1).  Until 2026-10-02 such a module was compiled and run with
+    // no check.  (Single-file/REPL semantics: a parametric procedure inspecting
+    // its parameter with no instantiation is rejected — checkModule's default.)
+    {
       final ast = Program(module.procedures, module.line, module.column);
       final partialEvaluator = PartialEvaluator();
       final transformedAst = partialEvaluator.transformDefinedGuards(ast);
