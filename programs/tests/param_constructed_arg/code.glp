@@ -1,6 +1,6 @@
 %% See self.glp.  send_user/3 inspects its Ent parameter (its clauses match
-%% out/1), so it is not parametrically well-typed, and the call below, which
-%% supplies no type for M, is refused.
+%% out/1), so it is not parametrically well-typed; the call below supplies no
+%% type for M, and M is the type send_user/3's first clause fixes.
 
 exported procedure show(Constant?, Stream(Entry)?, Stream(Entry)).
 show(N, Outs, Outs1?) :- send_user(msg(agent, person, bye(N?)), Outs?, Outs1).

@@ -501,11 +501,28 @@ ClauseCheckResult checkClause(
     dfa,
   ));
 
-  // Step 5: a call to a parameterised procedure for which no instantiation is
-  // found, some parameter being supplied no type by any of its sites, "is
-  // refused unless its callee is parametrically well-typed (Section
-  // sec:abstract-parameters), in which case the call is checked with the
-  // callee's parameters open" (TGLP appendix-implementation-notes.tex, "The
+  // Step 5: a call whose bindings conflict --- types supplied or fixed for
+  // every parameter, and none serving --- is refused: "where types are
+  // supplied or fixed and none serves, the bindings conflict and the call is
+  // refused" (TGLP appendix-implementation-notes.tex, "The instantiation of a
+  // call", cc4a891).  It was checked above at the binding leaving the fewest
+  // sites ill-typed, so the clause check has named the sites that binding
+  // does not fit; this names the conflict.
+  for (final e in plans.entries) {
+    final plan = e.value;
+    if (plan.conflict == null) continue;
+    errors.add(BodyAtomError(plan.goal.functor, e.key, [
+      ConflictingBindingsError(
+          plan.goal, plan.template, plan.tried, plan.conflict!,
+          calleeRead: plan.calleeRead)
+    ]));
+  }
+
+  // A call to a parameterised procedure for which no instantiation is found,
+  // some parameter having no type supplied by a site or fixed by the callee's
+  // clauses, is refused unless its callee is parametrically well-typed
+  // (Section sec:abstract-parameters), in which case the call is checked with
+  // the callee's parameters open (TGLP appendix-implementation-notes.tex, "The
   // instantiation of a call").  Checked with the parameters open, it is
   // refused where no map of them can make it well-typed (TGLP
   // parameterized-types.tex, Definition "Instantiation"): its arguments are
@@ -1100,7 +1117,10 @@ WellTypedResult _checkBodyAtom(
       // callee's defining clauses are checked by it (Phase 2 / instantiation
       // closure), and the call's own arguments are checked by the declaration
       // it produces, its types built first (TGLP def:instantiation; see the
-      // inference below).
+      // inference below).  A call whose bindings conflict is refused
+      // ([checkClause], Step 5) and is checked at the nearest binding, so that
+      // the clause check names the sites that binding does not fit and the
+      // closure the callee's clauses that are not well-typed by it.
       collector?.record(CollectedInstantiation(decl.key, decl, env, dfa,
           bindsInputType: plan.bindsInputType));
       procDecl = decl;
@@ -2007,18 +2027,22 @@ String? _noInstantiationReason(
 // =============================================================================
 //
 // TGLP appendix-implementation-notes.tex, "The instantiation of a call"
-// (8a58729):
+// (cc4a891):
 //
 //   "Definition~\ref{def:instantiation} asks that an instantiation exist and
 //    orders nothing; the checker reads the sites of a call over the whole
-//    clause, the body goals in no order, and tries for each parameter the types
-//    those sites supply, taking one under which every site is well-typed with
-//    subtyping.  A type no site supplies is not tried, so a call whose
-//    instantiations all lie strictly between the types its sites supply is
-//    refused, and a site is to name the type.  A call for which no
-//    instantiation is found is refused unless its callee is parametrically
-//    well-typed (Section~\ref{sec:abstract-parameters}), in which case the call
-//    is checked with the callee's parameters open."
+//    clause, the body goals in no order, and a posted goal, checked as a body
+//    (Section~\ref{sec:runtime-boundary}), the same way.  For each parameter
+//    it tries the types the sites supply and the types the callee's clauses
+//    fix for it---a head occurrence of the parameter paired by condition~3
+//    with a body occurrence of a concrete type---and takes one under which the
+//    clause and the callee's clauses are well-typed with subtyping; where
+//    types are supplied or fixed and none serves, the bindings conflict and
+//    the call is refused.  A parameter for which no type is supplied or fixed
+//    is left open where the callee is parametrically well-typed
+//    (Section~\ref{sec:abstract-parameters}), the call checked with it open
+//    and every argument typed at its position; otherwise the call is
+//    refused."
 //
 // A SITE of a call is an occurrence of a variable in it at a position a
 // parameter of the callee reaches.  The type it SUPPLIES for a parameter is the
@@ -2035,43 +2059,64 @@ String? _noInstantiationReason(
 /// The checker's reading of one call to a parameterised procedure in a clause
 /// ([_instantiateCalls]).
 class _CallPlan {
+  /// The call itself, the inner goal of a spawn or a remote goal, and the
+  /// callee's template, for the diagnostics.
+  final ast.Goal goal;
+  final ProcDecl template;
+
   /// The declaration the call is checked by: the expansion under the
-  /// instantiation found, or --- where every parameter is supplied types and
-  /// none of them makes every site well-typed --- the expansion under the
-  /// supplied types leaving the fewest sites ill-typed, at which the call is
-  /// refused by the sites they do not fit.  Null where some parameter is
-  /// supplied no type.
+  /// instantiation found, or --- where types are supplied or fixed for every
+  /// parameter and none of the bindings they give serves --- the expansion
+  /// under the binding leaving the fewest sites ill-typed, at which the clause
+  /// check names the sites it does not fit.  Null where some parameter has no
+  /// type supplied or fixed for it.
   final ProcDecl? decl;
 
   /// Whether [decl] binds a parameter to an input type
   /// ([CollectedInstantiation.bindsInputType]).
   final bool bindsInputType;
 
-  /// Whether every parameter was supplied types and none of them made every
-  /// site well-typed ([decl] is then the expansion under the first).
-  final bool conflict;
+  /// Where types were supplied or fixed for every parameter and none of the
+  /// bindings serves: why the nearest, [decl], does not.  The bindings
+  /// conflict and the call is refused ([ConflictingBindingsError]).  Null
+  /// otherwise.
+  final String? conflict;
 
-  /// The parameters no site of the call supplies a type for, where [decl] is
-  /// null; empty where types were supplied and none gives a declaration this
-  /// scope can build.
+  /// The types tried for each parameter: those the sites of the call supply,
+  /// then those the callee's clauses fix for it ([_addCalleeFixed]).
+  final Map<String, List<String>> tried;
+
+  /// Whether the callee's clauses were read: they are where they are the
+  /// unit's own.
+  final bool calleeRead;
+
+  /// The parameters for which no type is supplied by a site of the call or
+  /// fixed by the callee's clauses, where [decl] is null; empty where types
+  /// were tried and none gives a declaration this scope can build.
   final List<String> unsupplied;
 
-  /// Where every parameter was supplied types, none of them making every site
-  /// well-typed, and no map of the parameters can make the call well-typed
-  /// either: the argument no expansion admits ([_noInstantiationReason]), by
-  /// which the call is refused; [decl] is then null.
+  /// Where no binding tried serves and no map of the parameters can make the
+  /// call well-typed either: the argument no expansion admits
+  /// ([_noInstantiationReason]), by which the call is refused; [decl] is then
+  /// null.
   final String? refutation;
 
-  const _CallPlan(this.decl, this.bindsInputType,
-      {this.conflict = false, this.unsupplied = const [], this.refutation});
+  const _CallPlan(this.goal, this.template, this.decl, this.bindsInputType,
+      {this.conflict,
+      this.tried = const {},
+      this.calleeRead = false,
+      this.unsupplied = const [],
+      this.refutation});
 }
 
 /// Error: a call to a parameterised procedure for which no instantiation is
 /// found, and whose callee is not parametrically well-typed.
 ///
-/// TGLP appendix-implementation-notes.tex, "The instantiation of a call": "A
-/// type no site supplies is not tried ... A call for which no instantiation is
-/// found is refused unless its callee is parametrically well-typed".
+/// TGLP appendix-implementation-notes.tex, "The instantiation of a call" (TGLP
+/// cc4a891): "For each parameter it tries the types the sites supply and the
+/// types the callee's clauses fix for it ... A parameter for which no type is
+/// supplied or fixed is left open where the callee is parametrically
+/// well-typed ...; otherwise the call is refused."
 class UninstantiatedCallError extends WellTypedError {
   final ast.Goal call;
   final ProcDecl callee;
@@ -2082,13 +2127,53 @@ class UninstantiatedCallError extends WellTypedError {
   @override
   String get message {
     final what = unsupplied.isEmpty
-        ? 'no type its sites supply gives a declaration this scope can build'
-        : 'no site of the call supplies a type for ${unsupplied.join(', ')}';
+        ? 'no type tried gives a declaration this scope can build'
+        : 'no site of the call supplies a type for ${unsupplied.join(', ')} '
+            'and the clauses of ${callee.key} fix none';
     return 'No instantiation of ${callee.key} is found for the call $call: '
-        '$what, and a type no site supplies is not tried; ${callee.key} is not '
-        'parametrically well-typed, so the call is refused (TGLP '
-        'appendix-implementation-notes.tex, "The instantiation of a call"; '
-        'parameterized-types.tex, Definition "Instantiation")';
+        '$what; ${callee.key} is not parametrically well-typed, so the call '
+        'is refused (TGLP appendix-implementation-notes.tex, "The '
+        'instantiation of a call"; parameterized-types.tex, Definition '
+        '"Instantiation")';
+  }
+
+  @override
+  String toString() => message;
+}
+
+/// Error: types were supplied or fixed for every parameter of a call and none
+/// of the bindings they give serves.
+///
+/// TGLP appendix-implementation-notes.tex, "The instantiation of a call"
+/// (cc4a891): the checker "takes one under which the clause and the callee's
+/// clauses are well-typed with subtyping; where types are supplied or fixed
+/// and none serves, the bindings conflict and the call is refused."
+class ConflictingBindingsError extends WellTypedError {
+  final ast.Goal call;
+  final ProcDecl callee;
+  final Map<String, List<String>> tried;
+  final String reason;
+
+  /// Whether the callee's clauses were read for the types they fix: they are
+  /// where they are the unit's own.
+  final bool calleeRead;
+
+  ConflictingBindingsError(this.call, this.callee, this.tried, this.reason,
+      {this.calleeRead = true});
+
+  @override
+  String get message {
+    final shown = [
+      for (final e in tried.entries) '${e.key}: ${e.value.join(', ')}'
+    ].join('; ');
+    final whence = calleeRead
+        ? 'the types the sites supply and the clauses of ${callee.key} fix'
+        : 'the types the sites supply';
+    return 'The bindings tried for the call $call conflict: $whence ($shown) '
+        'give no binding under which the clause and the callee\'s clauses are '
+        'well-typed with subtyping --- $reason --- so the call is refused '
+        '(TGLP appendix-implementation-notes.tex, "The instantiation of a '
+        'call"; parameterized-types.tex, Definition "Instantiation")';
   }
 
   @override
@@ -2366,58 +2451,89 @@ bool _pairHolds(String key, VariableTypeInfo own, VariableTypeInfo partner,
 }
 
 /// A binding of a call's parameters, with what it gives the call: the
-/// declaration it produces, the call's variable types by that declaration,
-/// how many of its sites are not well-typed with subtyping, and whether the
-/// call's goal is well-typed (condition 2).
+/// binding itself, the declaration it produces, the call's variable types by
+/// that declaration, how many of its sites are not well-typed with subtyping
+/// and the first of them, whether the call's goal is well-typed (condition 2)
+/// and the first error where it is not, and, once asked, whether the callee's
+/// clauses are ([_instantiateCalls]).
 class _Binding {
+  final Map<String, String> binding;
   final ProcDecl decl;
+  final TypeEnvironment checkEnv;
   final bool bindsInputType;
   final Map<String, VariableTypeInfo> types;
   final int failingSites;
+  final String? firstFailingSite;
   final bool goalHolds;
-  _Binding(this.decl, this.bindsInputType, this.types, this.failingSites,
-      this.goalHolds);
+  final String? goalError;
+  bool calleeFails = false;
+  _Binding(this.binding, this.decl, this.checkEnv, this.bindsInputType,
+      this.types, this.failingSites, this.firstFailingSite, this.goalHolds,
+      this.goalError);
 
   bool get sitesHold => failingSites == 0;
+
+  /// Why this binding does not serve, for [ConflictingBindingsError].
+  String get reason {
+    final under = [
+      for (final e in binding.entries) '${e.key} = ${e.value}'
+    ].join(', ');
+    if (failingSites > 0) {
+      return 'under $under the occurrence $firstFailingSite is not '
+          'well-typed with subtyping with its pair in the clause';
+    }
+    if (!goalHolds) return 'under $under the call is not well-typed: $goalError';
+    return 'under $under the clauses of ${decl.key} are not well-typed by '
+        '${decl.name}(${decl.argTypes.map(getFullTypeName).join(', ')}) or do '
+        'not accept its every input path';
+  }
 }
 
 /// What one round of [_instantiateCalls] reads for a call: the binding taken
-/// (every site well-typed), the binding under which the fewest sites are not
-/// --- the first such in the order the types are supplied ---, whether every
-/// site's partner is typed, and the parameters supplied no type.
+/// (the clause and the callee's clauses well-typed under it), the binding
+/// under which the fewest sites are not --- the first such in the order the
+/// types are tried ---, whether every site's partner is typed, the
+/// parameters for which no type is supplied or fixed, and the types tried.
 class _Reading {
   final _Binding? taken;
   final _Binding? nearest;
   final bool complete;
   final List<String> unsupplied;
-  _Reading(this.taken, this.nearest, this.complete, this.unsupplied);
+  final Map<String, List<String>> tried;
+  _Reading(this.taken, this.nearest, this.complete, this.unsupplied,
+      this.tried);
 }
 
 /// The instantiation of each call to a parameterised procedure in [clause],
 /// read over the whole clause, by body-atom index (TGLP
-/// appendix-implementation-notes.tex, "The instantiation of a call").
+/// appendix-implementation-notes.tex, "The instantiation of a call", cc4a891).
 ///
 /// The occurrences the rest of the clause types are read first, as the clause
 /// check types them: the moded head, a guard's narrowing of a head occurrence,
 /// and every body goal that is not such a call.  Then in rounds, each call
 /// read against the same occurrences, so that no goal's place in the body
-/// decides anything: a call whose every site's partner is typed, and which a
-/// binding of the types its sites supply makes well-typed at every site, takes
-/// that binding; failing any, a call some of whose sites' partners are still
-/// untyped --- they stand in another such call --- takes one making every
-/// typed site well-typed.  The variable types the binding gives the call are
-/// then typed occurrences for the rounds after.  Where several bindings serve,
-/// the first under which the call's goal is well-typed and --- where more than
-/// one is and the callee's clauses are this unit's --- the callee's clauses
-/// are well-typed and cover the declaration (Definition "Instantiation") is
-/// taken, in the order the sites supply the types.
+/// decides anything.  For each parameter the types tried are those the sites
+/// of the call supply and those the callee's clauses fix for it
+/// ([_addCalleeFixed]), and the binding taken is the first, in the order the
+/// types are tried, under which the clause and the callee's clauses are
+/// well-typed with subtyping: every site well-typed with its pair, the call's
+/// goal well-typed (condition 2), and --- where the callee's clauses are this
+/// unit's --- the callee's clauses well-typed by the declaration the binding
+/// produces and accepting its every input path ([CalleeClauses.verify],
+/// Definition "Instantiation").  A call whose every site's partner is typed
+/// and which a binding serves takes it first; failing any, a call some of
+/// whose sites' partners are still untyped --- they stand in another such call
+/// --- takes one serving its typed sites.  The variable types the binding
+/// gives the call are then typed occurrences for the rounds after.
 ///
-/// A call every parameter of which is supplied types, none of them making
-/// every site well-typed, is checked at the supplied types that leave the
-/// fewest sites ill-typed (the first such, in the order the types are
-/// supplied), and refused by the sites they do not fit --- the verdict the
-/// checker gave such a call before this reading, at the types its first site
-/// supplied.  A call some parameter of which is supplied no type gets no
+/// Where types are supplied or fixed for every parameter and none of the
+/// bindings serves, the bindings conflict and the call is refused: by the
+/// argument no expansion admits, where no map of the parameters can make the
+/// call well-typed ([_noInstantiationReason]); else at the binding leaving the
+/// fewest sites ill-typed (the first such, in the order the types are tried),
+/// which the clause check checks the call by, naming the sites it does not
+/// fit, and [ConflictingBindingsError] names why it does not serve.  A call
+/// some parameter of which has no type supplied or fixed for it gets no
 /// declaration, and [checkClause] refuses it unless its callee is
 /// parametrically well-typed.
 Map<int, _CallPlan> _instantiateCalls(
@@ -2492,6 +2608,15 @@ Map<int, _CallPlan> _instantiateCalls(
     ];
   }
 
+  // The callee's defining clauses, where they are this unit's: a remote
+  // goal's are another module's, and the linked program, where the call is
+  // local, asks them.
+  List<ast.Clause>? definingOf(_ParamCall call) {
+    if (call.remote || callee == null) return null;
+    final defining = callee.of(call.template.key);
+    return (defining == null || defining.isEmpty) ? null : defining;
+  }
+
   _Binding? bind(_ParamCall call, int i, Map<String, String> binding) {
     final decl = _concreteDecl(call.template, binding, const {});
     bool built() => decl.argTypes.every((t) {
@@ -2513,18 +2638,50 @@ Map<int, _CallPlan> _instantiateCalls(
       return null;
     }
     var failing = 0;
+    String? firstFailing;
     for (final key in sites[i]!.keys) {
       final own = result.variableTypes[key];
       if (own == null) continue; // untyped by this binding: the goal's to say
       for (final (partner, kind) in partnersOf(i, key)) {
         if (!_pairHolds(key, own, partner, kind, dfa)) {
           failing++;
+          firstFailing ??= key;
           break;
         }
       }
     }
-    return _Binding(decl, binding.values.any((t) => t.endsWith('?')),
-        result.variableTypes, failing, result.isWellTyped);
+    return _Binding(
+        binding,
+        decl,
+        checkEnv,
+        binding.values.any((t) => t.endsWith('?')),
+        result.variableTypes,
+        failing,
+        firstFailing,
+        result.isWellTyped,
+        result.errors.isEmpty ? null : result.errors.first.message);
+  }
+
+  // Whether the callee's clauses [defining] are well-typed by the declaration
+  // [b] produces and accept its every input path (Definition "Instantiation"),
+  // asked once per declaration in this environment, in the environment the
+  // call was checked in, which holds the types the declaration names.
+  bool calleeHolds(_Binding b, List<ast.Clause> defining) {
+    final byClauses = _verifiedCache[env] ??=
+        Map<Object, Map<String, bool>>.identity();
+    final verdicts = byClauses.putIfAbsent(defining, () => {});
+    final key = '${b.decl.key}|${b.decl.argTypes.map(getFullTypeName).join(',')}';
+    final at = b.checkEnv;
+    return verdicts[key] ??= callee!.verify(
+        b.decl,
+        TypeEnvironment(
+          {...at.types},
+          {...at.procedures, b.decl.key: b.decl},
+          paramProcDecls: at.paramProcDecls,
+          typeTemplates: at.typeTemplates,
+          typeOrigins: at.typeOrigins,
+        ),
+        defining);
   }
 
   _Reading read(int i, Set<int> pending) {
@@ -2544,9 +2701,9 @@ Map<int, _CallPlan> _instantiateCalls(
     // The types the sites supply, per parameter, in the order the sites
     // stand in the call: a site's head partner first, then its body partners,
     // whose supplies are ordered by name, so that no goal's place decides.
-    final supply = {for (final tp in params) tp: <String>[]};
+    final tried = {for (final tp in params) tp: <String>[]};
     void add(String param, String type) {
-      final have = supply[param];
+      final have = tried[param];
       if (have == null) return;
       if (have.any((t) => t == type || _sameBinding(t, type, dfa))) return;
       have.add(type);
@@ -2573,48 +2730,36 @@ Map<int, _CallPlan> _instantiateCalls(
         }
       }
     }
+    // Then the types the callee's clauses fix for each parameter.
+    final defining = definingOf(call);
+    if (defining != null) {
+      _addCalleeFixed(call.template, tried, defining, dfa, env);
+    }
     final unsupplied = [
       for (final tp in params)
-        if (supply[tp]!.isEmpty) tp
+        if (tried[tp]!.isEmpty) tp
     ];
     if (unsupplied.isNotEmpty) {
-      return _Reading(null, null, complete, unsupplied);
+      return _Reading(null, null, complete, unsupplied, tried);
     }
 
     _Binding? nearest;
-    final serving = <_Binding>[];
-    for (final binding in _bindingsOf(params, supply)) {
+    _Binding? taken;
+    for (final binding in _bindingsOf(params, tried)) {
       final b = bind(call, i, binding);
       if (b == null) continue;
       if (nearest == null || b.failingSites < nearest.failingSites) {
         nearest = b;
       }
-      if (b.sitesHold) serving.add(b);
-    }
-    _Binding? taken;
-    if (serving.isNotEmpty) {
-      final wellTyped = serving.where((b) => b.goalHolds).toList();
-      if (wellTyped.length > 1 && !call.remote && callee != null) {
-        final defining = callee.of(call.template.key);
-        if (defining != null && defining.isNotEmpty) {
-          for (final b in wellTyped) {
-            final verifyEnv = TypeEnvironment(
-              {...env.types},
-              {...env.procedures, b.decl.key: b.decl},
-              paramProcDecls: env.paramProcDecls,
-              typeTemplates: env.typeTemplates,
-              typeOrigins: env.typeOrigins,
-            );
-            if (callee.verify(b.decl, verifyEnv, defining)) {
-              taken = b;
-              break;
-            }
-          }
-        }
+      if (!b.sitesHold || !b.goalHolds) continue;
+      if (defining != null && !calleeHolds(b, defining)) {
+        b.calleeFails = true;
+        continue;
       }
-      taken ??= wellTyped.isNotEmpty ? wellTyped.first : serving.first;
+      taken = b;
+      break;
     }
-    return _Reading(taken, nearest, complete, const []);
+    return _Reading(taken, nearest, complete, const [], tried);
   }
 
   final plans = <int, _CallPlan>{};
@@ -2638,10 +2783,10 @@ Map<int, _CallPlan> _instantiateCalls(
       final r = readings[i]!;
       final call = calls[i]!;
       if (r.taken == null && !call.remote) {
-        // No supplied type makes every site well-typed.  Where no map of the
-        // parameters can make the call well-typed either, the call is refused
-        // by the argument no expansion admits, as a call with no instantiation
-        // is ([checkClause], Step 5).
+        // No binding tried serves.  Where no map of the parameters can make
+        // the call well-typed either, the call is refused by the argument no
+        // expansion admits, as a call with no instantiation is ([checkClause],
+        // Step 5).
         final refutation = _noInstantiationReason(
             call.goal,
             call.template,
@@ -2658,22 +2803,253 @@ Map<int, _CallPlan> _instantiateCalls(
             },
             env);
         if (refutation != null) {
-          plans[i] = _CallPlan(null, false, refutation: refutation);
+          plans[i] = _CallPlan(call.goal, call.template, null, false,
+              refutation: refutation, tried: r.tried);
           pending.remove(i);
           continue;
         }
       }
       final b = r.taken ?? r.nearest!;
-      plans[i] = _CallPlan(b.decl, b.bindsInputType, conflict: r.taken == null);
+      plans[i] = _CallPlan(call.goal, call.template, b.decl, b.bindsInputType,
+          conflict: r.taken == null ? b.reason : null,
+          tried: r.tried,
+          calleeRead: definingOf(call) != null);
       take(i, b.types);
       pending.remove(i);
     }
   }
   for (final i in pending) {
-    plans[i] =
-        _CallPlan(null, false, unsupplied: last[i]?.unsupplied ?? const []);
+    final call = calls[i]!;
+    plans[i] = _CallPlan(call.goal, call.template, null, false,
+        unsupplied: last[i]?.unsupplied ?? const [],
+        tried: last[i]?.tried ?? const {});
   }
   return plans;
+}
+
+/// Add to [tried], after the types the sites of a call supply, the types the
+/// callee's clauses [clauses] fix for each parameter of [template].
+///
+/// TGLP appendix-implementation-notes.tex, "The instantiation of a call"
+/// (cc4a891): "For each parameter it tries the types the sites supply and the
+/// types the callee's clauses fix for it---a head occurrence of the parameter
+/// paired by condition 3 with a body occurrence of a concrete type---".  A
+/// type a clause fixes for one parameter may rest on the binding of another
+/// --- `send_user(M?, Stream(Ent)?, Stream(Ent))`'s first clause fixes `M`
+/// only once `Ent` is bound, the type the message stands at being inside
+/// `Ent`'s alternatives --- so the types are read under each binding of the
+/// other parameters to the types tried for them so far, a parameter with none
+/// standing unbound, until no reading adds one ([_calleeFixedTypes]).
+void _addCalleeFixed(ProcDecl template, Map<String, List<String>> tried,
+    List<ast.Clause> clauses, ProgramDFA dfa, TypeEnvironment env) {
+  final params = template.typeParams;
+  final byClauses = _fixedCache[env] ??=
+      Map<Object, Map<String, Map<String, List<String>>>>.identity();
+  final cache = byClauses.putIfAbsent(clauses, () => {});
+  Map<String, List<String>> fixedUnder(Map<String, String> bound) {
+    final key = '${template.key}|${template.argTypes.join(',')}|'
+        '${[for (final p in params) bound[p] ?? '-'].join(',')}';
+    return cache[key] ??= _calleeFixedTypes(template, bound, clauses, env);
+  }
+
+  // The types are finitely many --- each is a type the callee's clauses
+  // carry --- so the readings end; the bound guards against a binding that
+  // keeps renaming one.
+  var changed = true;
+  for (var round = 0; changed && round < 8; round++) {
+    changed = false;
+    for (final p in params) {
+      final others = [
+        for (final q in params)
+          if (q != p) q
+      ];
+      for (final bound in _partialBindingsOf(others, tried)) {
+        for (final t in fixedUnder(bound)[p] ?? const <String>[]) {
+          final have = tried[p]!;
+          if (have.any((x) => x == t || _sameBinding(x, t, dfa))) continue;
+          have.add(t);
+          changed = true;
+        }
+      }
+    }
+  }
+}
+
+/// Whether a callee's clauses are well-typed by a declaration and accept its
+/// every input path ([CalleeClauses.verify]), by the environment, the clauses
+/// and the declaration.
+final Expando<Map<Object, Map<String, bool>>> _verifiedCache =
+    Expando('calleeVerified');
+
+/// The types [_calleeFixedTypes] read, by the environment, the callee's
+/// clauses and the binding they were read under.
+final Expando<Map<Object, Map<String, Map<String, List<String>>>>>
+    _fixedCache = Expando('calleeFixed');
+
+/// Every binding of [params] to the types [tried] holds for each, in order, a
+/// parameter with none left unbound.
+Iterable<Map<String, String>> _partialBindingsOf(
+    List<String> params, Map<String, List<String>> tried) sync* {
+  if (params.isEmpty) {
+    yield const {};
+    return;
+  }
+  final rest = params.sublist(1);
+  final types = tried[params.first] ?? const <String>[];
+  if (types.isEmpty) {
+    yield* _partialBindingsOf(rest, tried);
+    return;
+  }
+  for (final type in types) {
+    for (final more in _partialBindingsOf(rest, tried)) {
+      yield {params.first: type, ...more};
+    }
+  }
+}
+
+/// The types the clauses of [template]'s procedure fix for each parameter
+/// [bound] does not bind, the parameters it does bind standing at their
+/// types.
+///
+/// "A head occurrence of the parameter paired by condition 3 with a body
+/// occurrence of a concrete type" (TGLP appendix-implementation-notes.tex,
+/// cc4a891): each unbound parameter stands as an abstract type
+/// (def:abstract-type), the clause's head is typed by the declaration so
+/// formed (Definition "Moded Head") and each body goal by the declaration in
+/// scope (condition 2, [_bodyAtomVariableTypes]; a recursive call by the same
+/// declaration, recursion being monomorphic), and an occurrence in the head
+/// whose type reaches a parameter is read against its pair in the clause
+/// where that pair's type is concrete there: the type the pair has at the
+/// parameter's position is the type fixed for it, walking the two automata
+/// together as a site's supply is read ([_supplied]).  A body pair (condition
+/// 3(b)) is to have the head occurrence's type, a head pair (condition 3(a))
+/// its dual.  The head pair is read too: `send_user(Msg, [user_output([Msg?|
+/// Out1?])|Rest], ...)` relates `Msg`, at `M?`, to `Msg?`, at the element of
+/// the stream `user_output` carries, in its head and not its body, and the
+/// rule's sentence names what Currencies' and GSG's calls with a constructed
+/// message are to be loaded by (GLP #3 Cowork, 2026-10-02 15:46 UTC, item 1).
+/// Guards narrow and are not pairs; a body pair of two body occurrences is
+/// not a head occurrence of the parameter.
+///
+/// Each unbound parameter is read at its output type and again at its input
+/// type: an input type is a type (typed-glp.tex, "Type Declarations"), and an
+/// occurrence at a position whose mode is not its own is given no type
+/// (def:consistent-paths rows 2 and 3), so a clause that reads a parameter at
+/// its input type fixes it only so.
+Map<String, List<String>> _calleeFixedTypes(ProcDecl template,
+    Map<String, String> bound, List<ast.Clause> clauses, TypeEnvironment env) {
+  final unbound = [
+    for (final p in template.typeParams)
+      if (!bound.containsKey(p)) p
+  ];
+  final out = {for (final p in unbound) p: <String>[]};
+  if (unbound.isEmpty) return out;
+  final probeOf = {for (final p in unbound) p: '$_paramProbePrefix$p'};
+  final paramOf = {for (final e in probeOf.entries) e.value: e.key};
+
+  for (final flip in const [false, true]) {
+    final built = _declInAbstractTypes(template, {...bound, ...probeOf},
+        {for (final p in unbound) p: flip}, paramOf.keys.toSet(), env);
+    if (built == null) continue;
+    final (decl, probeEnv, probeDfa) = built;
+    final probe = _Probe(decl, probeDfa, paramOf);
+    void emit(String param, String type) {
+      // [_supplied] reads the polarity off a probe standing at the
+      // parameter's own polarity; at its input type, the other.
+      final t = flip
+          ? (type.endsWith('?') ? type.substring(0, type.length - 1) : '$type?')
+          : type;
+      final have = out[param];
+      if (have == null || have.contains(t)) return;
+      have.add(t);
+    }
+
+    for (final clause in clauses) {
+      final head =
+          ast.Goal(clause.head.functor, clause.head.args, clause.line, clause.column);
+      final Map<String, VariableTypeInfo> headTypes;
+      try {
+        final (result, _) =
+            _checkHeadWithTerm(TypedClause(head: head), decl, probeDfa, probeEnv);
+        headTypes = result.variableTypes;
+      } on Object {
+        continue; // a head this declaration cannot type fixes nothing
+      }
+      final bodyTypes = <String, List<VariableTypeInfo>>{};
+      for (final goal in clause.body ?? const <ast.Goal>[]) {
+        final Map<String, VariableTypeInfo> types;
+        try {
+          types = _bodyAtomVariableTypes(goal, probeDfa, probeEnv);
+        } on Object {
+          continue;
+        }
+        for (final e in types.entries) {
+          bodyTypes.putIfAbsent(e.key, () => []).add(e.value);
+        }
+      }
+      for (final e in headTypes.entries) {
+        final at = e.value.typeState;
+        if (!_reachesParam(at, probe)) continue;
+        final pair = headTypes[_otherKey(e.key)];
+        if (pair != null && !paramOf.containsKey(pair.typeState.baseName)) {
+          _supplied(at, pair.typeState.dual, probe, probeDfa, emit);
+        }
+        for (final b in bodyTypes[e.key] ?? const <VariableTypeInfo>[]) {
+          if (paramOf.containsKey(b.typeState.baseName)) continue;
+          _supplied(at, b.typeState, probe, probeDfa, emit);
+        }
+      }
+    }
+  }
+  return out;
+}
+
+/// [template] with each parameter replaced as [subst] says --- a type of the
+/// program, or one of [abstractNames], each an abstract type with no
+/// alternatives (def:abstract-type) --- a parameter named in [input] with
+/// `true` standing at the input type of its replacement; with the environment
+/// and DFA holding the abstract types and the template instantiations the
+/// declaration names.  Null where a type it names is not in scope.
+(ProcDecl, TypeEnvironment, ProgramDFA)? _declInAbstractTypes(
+    ProcDecl template,
+    Map<String, String> subst,
+    Map<String, bool> input,
+    Set<String> abstractNames,
+    TypeEnvironment env) {
+  final decl = ProcDecl(
+    template.name,
+    [for (final t in template.argTypes) _substituteTypeParams(t, subst, input)],
+    template.line,
+    template.column,
+    exported: template.exported,
+    imported: template.imported,
+    modulePath: template.modulePath,
+  );
+  final types = <String, TypeDef>{
+    for (final n in abstractNames) n: TypeDef(n, const [], 0, 0)
+  };
+  final needed = <String>{};
+  for (final t in decl.argTypes) {
+    var n = getFullTypeName(t);
+    if (n.endsWith('?')) n = n.substring(0, n.length - 1);
+    if (n.contains('<') && !env.types.containsKey(n)) needed.add(n);
+  }
+  try {
+    if (needed.isNotEmpty) {
+      types.addAll(materializeInstantiations(
+          needed, env.typeTemplates, {...env.types.keys, ...abstractNames}));
+    }
+    final declEnv = TypeEnvironment(
+      {...env.types, ...types},
+      {...env.procedures, decl.key: decl},
+      paramProcDecls: env.paramProcDecls,
+      typeTemplates: env.typeTemplates,
+      typeOrigins: env.typeOrigins,
+    );
+    return (decl, declEnv, buildProgramDFA(declEnv));
+  } on UnknownTypeError {
+    return null;
+  }
 }
 
 /// Infer a concrete proc decl by matching a parameterized template against
@@ -2889,8 +3265,9 @@ ProcDecl _concreteDecl(ProcDecl paramTemplate, Map<String, String> bindings,
       modulePath: paramTemplate.modulePath);
 }
 
-/// The name of the abstract type standing for an as-yet-unbound parameter while
-/// the callee's clauses are probed for the equation that fixes it.
+/// The name of the abstract type standing for a parameter while a call's sites
+/// are read ([_probeOf]) and while the callee's clauses are read for the types
+/// they fix for it ([_calleeFixedTypes]).
 const String _paramProbePrefix = r'$param_';
 
 /// Read from the clauses of [paramTemplate]'s procedure the equations that fix

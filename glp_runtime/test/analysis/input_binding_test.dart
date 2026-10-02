@@ -40,17 +40,23 @@ void main() {
     expect(r.bindings['D'].toString(), contains('no'));
   });
 
-  test('a reader at a bare parameter binds it to the input type: the call is '
-      'no longer refused, and the callee\'s clauses are checked at the '
-      'binding, where echo(X?, X) is not well-typed', () {
+  test('a reader at a bare parameter binds it to the input type, and the '
+      'callee\'s clauses are checked at the binding, where echo(X?, X) is not '
+      'well-typed: the call is refused, and echo\'s head named', () {
     final err = _refusal('echo_in.glp');
     expect(err, isNotEmpty, reason: 'echo_in.glp loaded');
-    // The refusal is echo's head at echo(Choice?, Choice), which Lemma
-    // "Parametricity" does not certify, the binding not being of the
-    // parameter's mode ...
+    // X = Choice? makes the call's own sites well-typed and not echo's
+    // clauses, which Lemma "Parametricity" does not certify at it, the binding
+    // not being of the parameter's mode, so no binding serves and the call is
+    // refused (TGLP appendix-implementation-notes.tex, "The instantiation of a
+    // call", cc4a891: the checker "takes one under which the clause and the
+    // callee's clauses are well-typed with subtyping") ...
+    expect(err,
+        contains('The bindings tried for the call echo(C?, D) conflict'));
+    expect(err,
+        contains('under X = Choice? the clauses of echo/2 are not well-typed'));
+    // ... and echo's head is named at echo(Choice?, Choice).
     expect(err, contains('Head of echo is not well-typed'));
-    // ... and not the call, which X = Choice? makes well-typed.
-    expect(err, isNot(contains('Body atom 0 (echo)')));
   });
 
   test('a template instantiated at an input type complements by the '

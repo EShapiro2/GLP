@@ -1,0 +1,28 @@
+%% A type the callee's clauses fix, by a head pair: put/3 relates X, at M?, to
+%% X?, at the element of the Stream(Msg) it produces, both in its head, the
+%% shape of GSG's send_user/3, send_net/3 and send_friend/4
+%% (social/graph/routing/output.glp) that Currencies and GSG call with a
+%% constructed message (GLP #3 Cowork, 2026-10-02 15:46 UTC, item 1).
+%% Condition 3(a) makes the pair dual, which fixes M = Msg.
+%%
+%% go/3: the call's m(N?) names no type, and M is the type put/3's clauses fix.
+%% go_sub/3: S supplies M = MOnly, under which put/3's head pair is not dual;
+%% M = Msg, the type the clauses fix, makes the clause and the callee's clauses
+%% well-typed, MOnly within Msg (TGLP appendix-implementation-notes.tex, "The
+%% instantiation of a call", cc4a891: "takes one under which the clause and
+%% the callee's clauses are well-typed with subtyping").  put/3 matches a and b
+%% at K, so it is not parametrically well-typed.  go(c, b, Out) gives
+%% Out = [m(c)], go_sub(m(d), a, Out) Out = [m(d)].
+Msg   ::= m(Constant) ; n(Constant).
+MOnly ::= m(Constant).
+Kind  ::= a ; b.
+
+procedure(M, K) put(M?, K?, Stream(Msg)).
+put(X, a, [X?]).
+put(X, b, [X?]).
+
+procedure go(Constant?, Kind?, Stream(Msg)).
+go(N, K, Out?) :- put(m(N?), K?, Out).
+
+procedure go_sub(MOnly?, Kind?, Stream(Msg)).
+go_sub(S, K, Out?) :- put(S?, K?, Out).

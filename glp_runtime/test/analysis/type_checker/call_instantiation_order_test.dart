@@ -3,7 +3,7 @@
 // The body goals in no order: a clause's verdict does not depend on the order
 // of its goals.
 //
-// Specification: TGLP (Moded-Types) 8a58729, appendix-implementation-notes.tex,
+// Specification: TGLP (Moded-Types) cc4a891, appendix-implementation-notes.tex,
 // "The instantiation of a call": "Definition~\ref{def:instantiation} asks that
 // an instantiation exist and orders nothing; the checker reads the sites of a
 // call over the whole clause, the body goals in no order, ...".  GLP's task of
@@ -59,7 +59,7 @@ void main() {
   });
 
   test('every order of a body is refused alike where copy\'s input is a '
-      'constructed term: no site supplies FM', () {
+      'constructed term: no site supplies FM and copy\'s clauses fix none', () {
     const goals = ['copy([msg(1)], T)', 'merge(T?, [], U)', 'snk(U?)'];
     final verdicts = <String>{};
     for (final order in _orders(goals)) {

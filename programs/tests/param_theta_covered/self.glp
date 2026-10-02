@@ -1,9 +1,12 @@
 %% A parameter reached only by a constructed argument, the callee inspecting
-%% it: refused (TGLP 8a58729, appendix-implementation-notes.tex, "The
-%% instantiation of a call": "A type no site supplies is not tried").  pick/3's
-%% heads match a/1 at R, so it is not parametrically well-typed; the call's
-%% a(one) names no type, so no site supplies R; the variable Xs supplies
-%% S = Kind.  The call is refused, naming R.  Negative fixture.
+%% it: refused (TGLP cc4a891, appendix-implementation-notes.tex, "The
+%% instantiation of a call": "A parameter for which no type is supplied or
+%% fixed is left open where the callee is parametrically well-typed ...;
+%% otherwise the call is refused").  pick/3's heads match a/1 at R, so it is
+%% not parametrically well-typed; the call's a(one) names no type, so no site
+%% supplies R, and pick/3's clauses fix none, a constructor at R being no
+%% occurrence of it; the variable Xs supplies S = Kind.  The call is refused,
+%% naming R.  Negative fixture.
 %%
 %% From 2026-09-20 (TGLP dddf684, coverage selecting the map) to 2026-10-02 the
 %% checker built R from pick/3's heads --- a(Constant), the field type from the

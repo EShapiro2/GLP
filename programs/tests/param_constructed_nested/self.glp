@@ -1,12 +1,14 @@
-%% A term inside a term at a parameter position: refused, as
-%% param_constructed_arg is (TGLP 8a58729, appendix-implementation-notes.tex,
-%% "The instantiation of a call").  The call passes w(i(N?)), which names no
-%% type, so no site supplies M, and send_user/3 is not parametrically
-%% well-typed.  Negative fixture.
+%% A term inside a term at a parameter position: loads, as param_constructed_arg
+%% does, by the type the callee's clauses fix (TGLP cc4a891,
+%% appendix-implementation-notes.tex, "The instantiation of a call").  The call
+%% passes w(i(N?)), which names no type, so no site supplies M; send_user/3's
+%% head pair (Msg, Msg?) fixes M = Wrap, the element type of the stream Entry
+%% carries, and w(i(N?)) is a Wrap.  run(x, [out(S)], O) gives
+%% S = [w(i(x)) | _].
 %%
-%% From 2026-09-20 to 2026-10-02 the callee's own head pair (Msg, Msg?) fixed M
-%% to Wrap, the element type of the stream Entry carries, and the program
-%% loaded.
+%% From 2026-09-20 to 2026-10-02 the same head pair fixed M and the program
+%% loaded; on 2026-10-02 (TGLP 8a58729) a type no site supplied was not tried
+%% and the call was refused.
 
 Inner ::= i(Constant).
 Wrap  ::= w(Inner).

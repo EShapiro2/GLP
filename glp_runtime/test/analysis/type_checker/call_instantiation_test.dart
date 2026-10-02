@@ -2,26 +2,32 @@
 //
 // The instantiation of a call, read over the whole clause.
 //
-// Specification: TGLP (Moded-Types) 8a58729, appendix-implementation-notes.tex,
+// Specification: TGLP (Moded-Types) cc4a891, appendix-implementation-notes.tex,
 // "The instantiation of a call":
 //
 //   "Definition~\ref{def:instantiation} asks that an instantiation exist and
 //    orders nothing; the checker reads the sites of a call over the whole
-//    clause, the body goals in no order, and tries for each parameter the types
-//    those sites supply, taking one under which every site is well-typed with
-//    subtyping.  A type no site supplies is not tried, so a call whose
-//    instantiations all lie strictly between the types its sites supply is
-//    refused, and a site is to name the type.  A call for which no
-//    instantiation is found is refused unless its callee is parametrically
-//    well-typed (Section~\ref{sec:abstract-parameters}), in which case the call
-//    is checked with the callee's parameters open."
+//    clause, the body goals in no order, and a posted goal, checked as a body
+//    (Section~\ref{sec:runtime-boundary}), the same way.  For each parameter
+//    it tries the types the sites supply and the types the callee's clauses
+//    fix for it---a head occurrence of the parameter paired by condition~3
+//    with a body occurrence of a concrete type---and takes one under which the
+//    clause and the callee's clauses are well-typed with subtyping; where
+//    types are supplied or fixed and none serves, the bindings conflict and
+//    the call is refused.  A parameter for which no type is supplied or fixed
+//    is left open where the callee is parametrically well-typed
+//    (Section~\ref{sec:abstract-parameters}), the call checked with it open
+//    and every argument typed at its position; otherwise the call is
+//    refused."
 //
 // with Definition "Instantiation" (parameterized-types.tex), its paragraph "The
 // bindings the sites of a call supply conflict exactly when no theta makes the
 // clause well-typed with subtyping; so a stream of a subtype merges into a
 // stream of its supertype ..., with X bound to the supertype", and Definition
 // "Well-Typed Clause with Subtyping", condition 3 (well-typing.tex).  GLP's task
-// of 2026-10-02 13:38 UTC.  Fixtures: programs/tests/call_instantiation/.
+// of 2026-10-02 13:38 UTC (TGLP 8a58729) and its ruling of 15:46 UTC (TGLP
+// cc4a891).  Fixtures: programs/tests/call_instantiation/; the types the
+// callee's clauses fix are callee_fixed_types_test.dart's.
 //
 // Until 2026-10-02 the checker inferred a call's instantiation from the
 // occurrences typed before the call, binding each parameter to the first type
@@ -162,9 +168,9 @@ void main() {
     });
   });
 
-  group('a type no site supplies is not tried', () {
+  group('no type supplied or fixed', () {
     test('no site supplies a parameter of a callee that is not parametrically '
-        'well-typed: the call is refused', () {
+        'well-typed, and its clauses fix none: the call is refused', () {
       final err = _refusal('unsupplied_refused.glp');
       expect(err, contains('No instantiation of copy/2 is found for the call'));
       expect(err, contains('no site of the call supplies a type for FM'));

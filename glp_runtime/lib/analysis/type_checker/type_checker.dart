@@ -128,10 +128,12 @@ class TypeChecker {
 
   /// The defining clauses of a procedure, by "name/arity", or null where the
   /// procedure is defined outside the unit being checked.  Call-site
-  /// instantiation asks them where more than one type the sites of a call
-  /// supply makes every site well-typed: the one under which the callee's
-  /// clauses are well-typed and cover the declaration is taken (TGLP
-  /// def:instantiation; well_typed_clause.dart, _instantiateCalls).
+  /// instantiation reads them twice: the types they fix for a parameter are
+  /// tried beside the types the sites of the call supply, and a binding is
+  /// taken only where they are well-typed by the declaration it produces and
+  /// accept its every input path (TGLP appendix-implementation-notes.tex, "The
+  /// instantiation of a call"; def:instantiation; well_typed_clause.dart,
+  /// _instantiateCalls).
   final wtc.CalleeClauses? callee;
 
   /// Whether the procedure of a "name/arity" key is parametrically well-typed
@@ -1097,11 +1099,19 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
 /// if it comes back clean.  No collector and no callee are supplied: this
 /// verifies the candidate, it does not pursue the instantiations the body
 /// induces, which the closure does once the candidate is adopted.
+///
+/// A recursive call in the clauses is checked at the candidate itself, as the
+/// closure checks it: "recursion is monomorphic: a call to a procedure already
+/// being instantiated on the current cycle is checked at that instantiation
+/// rather than inducing a new one" (TGLP parameterized-types.tex, after
+/// Definition "Instantiation").  Until 2026-10-02 the recursive call was read
+/// as a fresh call here and given an instantiation of its own.
 bool verifyInstantiation(
     ProcDecl decl, TypeEnvironment env, List<ast.Clause> clauses) {
   try {
     return TypeChecker(env)
-        .checkSingleProcedure(decl, clauses)
+        .checkSingleProcedure(decl, clauses,
+            activeInstantiations: {decl.key: decl})
         .errors
         .isEmpty;
   } on Object {
