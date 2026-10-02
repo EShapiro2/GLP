@@ -127,7 +127,7 @@ agent(Id, [msg(person, Id1, unfriend(Target))|UserIn], NetIn, Outs, Host) :-
 %% introduce_step/9 dispatches on its two answers; the setup channel is minted
 %% where the introduction proceeds.
 agent(Id, [msg(person, Id1, introduce(P, Q))|UserIn], NetIn, Outs, Host) :-
-    Id? =?= Id1?, ground(P?), ground(Q?), ~(P? =?= Q?) |
+    Id? =?= Id1?, ground(P?), ground(Q?), P? =?\= Q? |
     anchor_friend(P?, Outs?, Outs1, FP),
     anchor_friend(Q?, Outs1?, Outs2, FQ),
     introduce_step(FP?, FQ?, Id?, P?, Q?, UserIn?, NetIn?, Outs2?, Host?).
@@ -1010,12 +1010,12 @@ may_release(_, _, [], [], false).
 procedure mr_warm(Constant?, Constant?, Stream(_)?, PendingInv?, PendingInv, Constant).
 mr_warm(S, F, _, Rest, Rest?, true) :- S? =?= F? | true.
 mr_warm(S, F, Parts, Rest, Rest1?, B?) :-
-    ~(S? =?= F?) | may_release(Parts?, S?, Rest?, Rest1, B).
+    S? =?\= F? | may_release(Parts?, S?, Rest?, Rest1, B).
 
 procedure mr_intro(Stream(_)?, Constant?, Constant?, PendingInv?, PendingInv, Constant).
 mr_intro(_, S, W, Rest, Rest?, true) :- S? =?= W? | true.
 mr_intro(Parts, S, W, Rest, Rest1?, B?) :-
-    ~(S? =?= W?) |
+    S? =?\= W? |
     anchor_is(Parts?, W?, Hit),
     mr_anchor(Hit?, Parts?, S?, Rest?, Rest1, B).
 
