@@ -272,5 +272,63 @@ comp(T?) :- T =.. [].
             reason: e.key);
       }
     });
+
+    // '_idiv' and '_mod' take numbers and abort on an operand that is no
+    // integer (GLP-Spec appendix-guards.tex, 026515d), and the root's // and
+    // mod clauses guard number(), as the functions' have since stop 3 (GLP #3
+    // Cowork, 2026-10-02 20:58 UTC, "20:10" A).  Until 2026-10-02 they
+    // guarded integer(), so a real operand fell to the `otherwise` clause,
+    // which evaluates each operand to itself and posts the same := again, for
+    // ever: `X := 7.5 // 2` and `X := 7.5 mod 2` ran to the cycle limit.
+    test('a non-integer operand of // or mod aborts in its kernel, nothing '
+        're-posting', () async {
+      const cases = {
+        '7.5 // 2': '_idiv',
+        '7 // 2.5': '_idiv',
+        '8.0 // 2': '_idiv',
+        '7.5 mod 2': '_mod',
+        '7 mod 0.5': '_mod',
+        '8.0 mod 3': '_mod',
+      };
+      for (final e in cases.keys) {
+        final engine = fresh();
+        final result = await engine.runGoal('X := $e');
+        expect(result.status, ExecutionStatus.failed,
+            reason: '$e fails, and is not capped by a re-posting otherwise');
+        expect(result.bindings['X'], isNull, reason: e);
+        expect(engine.runtime.failedGoals, hasLength(1), reason: e);
+        expect(engine.runtime.failedGoals.single, startsWith(':='),
+            reason: '$e: the := whose kernel ${cases[e]} aborted');
+      }
+    });
+
+    test('an operand whose value is a real aborts once it is evaluated',
+        () async {
+      for (final e in ['(1 / 2) mod 2', '7 // (5 / 2)']) {
+        final engine = fresh();
+        final result = await engine.runGoal('X := $e');
+        expect(result.status, ExecutionStatus.failed, reason: e);
+        expect(result.bindings['X'], isNull, reason: e);
+        expect(engine.runtime.failedGoals, hasLength(1), reason: e);
+      }
+    });
+
+    test('integer operands of // and mod give their values', () async {
+      const cases = {
+        '7 // 2': 3,
+        '7 mod 3': 1,
+        '(3 + 4) // 2': 3,
+        '(2 * 5) mod 4': 2,
+        '7 // (1 + 1)': 3,
+      };
+      for (final e in cases.entries) {
+        final engine = fresh();
+        final result = await engine.runGoal('X := ${e.key}');
+        expect(result.succeeded, isTrue, reason: e.key);
+        final v = engine.runtime.heap.dereference(result.bindings['X']!);
+        expect(v, isA<ConstTerm>(), reason: e.key);
+        expect((v as ConstTerm).value, e.value, reason: e.key);
+      }
+    });
   });
 }
