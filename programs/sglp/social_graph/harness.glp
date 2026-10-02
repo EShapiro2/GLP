@@ -139,11 +139,18 @@ procedure add_response(Response?, Integer?, Integer?, Integer, Integer).
 add_response(wary, W, S, W1?, S?) :- W1 := W? + 1.
 add_response(sociable, W, S, W?, S1?) :- S1 := S? + 1.
 
-%% skip(J?, S?, S1): S1 is the seed J draws after S.
+%% skip(J?, S?, S1): S1 is the seed J draws after S, by J draws of random/4,
+%% each reduced before the next is spawned: the clause waits on its seed,
+%% integer(S?), so an agent's block of 4096 draws is drawn one draw at a time
+%% once the block's start is known, where the 4096 goals were spawned at once,
+%% each suspended on the last (sGLP's code task of 2026-10-02 20:58 UTC, S1).
+%% Not the closed form, the seed times 16807^4096 mod 2^31 - 1: that is the
+%% engine's generator, and GLP-Spec says only that the next seed is determined
+%% by the seed.
 procedure skip(Integer?, Integer?, Integer).
 skip(0, S, S?).
 skip(J, S, S1?) :-
-    J? > 0 |
+    J? > 0, integer(S?) |
     random(S?, 1, _, S2),
     J1 := J? - 1,
     skip(J1?, S2?, S1).
