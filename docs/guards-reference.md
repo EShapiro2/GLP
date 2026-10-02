@@ -571,8 +571,8 @@ When `channel(X?)` is unfolded, it becomes pattern matching against `ch(_, _)`.
 
 **Semantics**:
 - Success: Both X and Y bound to numbers AND condition holds
-- Suspend: Either X or Y is unbound reader
-- Fail: Both bound to numbers AND condition false
+- Suspend: Either X or Y is unbound reader, and some instance of the comparison succeeds
+- Fail: Both bound to numbers AND condition false; or an operand has no value under any readers substitution --- a zero divisor of `/`, `//` or `mod`, a bound term that is no number, an unbound writer --- whatever readers stand elsewhere in it: `X? / 0 > 1` and `X? > 1 / 0` fail with `X?` unbound, "A guard fails if no such instance exists" (GLP-Spec glp.tex, Guards).  Until 2026-10-02 they waited on `X?` (GLP #3 Cowork, 2026-10-02 17:12 UTC, S3).
 
 **Example**:
 ```prolog
@@ -590,8 +590,8 @@ factorial(N, 1) :- integer(N?), N? =< 0 | true.
 
 **Semantics**:
 - Success: Both bound and numerically equal
-- Suspend: Either operand is unbound reader
-- Fail: Both bound and not numerically equal
+- Suspend: Either operand is unbound reader, and some instance of the comparison succeeds
+- Fail: Both bound and not numerically equal; or an operand has no value under any readers substitution, as for `<` above
 
 **Note on `=\=`**: Arithmetic inequality is its own guard, `X =\= Y`, beside `=:=` in the catalogue (GLP-Spec appendix-guards.tex): success where both operands evaluate to numbers that differ.
 

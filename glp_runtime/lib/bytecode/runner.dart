@@ -801,6 +801,11 @@ const Set<String> runtimeGuards = {
   '=?=/2', '=?\\=/2', 'valid_attestation/4',
 };
 
+/// The arithmetic comparison guards (GLP-Spec appendix-guards.tex,
+/// "Arithmetic comparison guards"), by name: each evaluates both operands as
+/// arithmetic expressions in [_evaluateGuard] before it is decided.
+const Set<String> _arithmeticComparisons = {'<', '>', '=<', '>=', '=:=', '=\\='};
+
 GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerContext cx) {
   // Extract values from any remaining ConstTerms
   Object? getValue(Object? v) {
@@ -816,6 +821,21 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
   // comparison. When evaluation returns null AND this set is non-empty, the
   // guard suspends on these readers instead of failing.
   final blockedReaders = <int>{};
+
+  // Whether an operand evaluated has no value under any readers substitution:
+  // a bound term that is neither a number nor an arithmetic expression, an
+  // unbound writer, which no readers substitution assigns, or a quotient or
+  // remainder whose divisor is zero.  Every arithmetic operator needs a value
+  // of each of its operands, so then no instance of the comparison succeeds,
+  // and it fails, whatever readers blocked the rest of it: "A guard fails if
+  // no such instance exists" (GLP-Spec glp.tex, Guards).  Until 2026-10-02 it
+  // waited on those readers: cz(X, yes) :- X? / 0 > 1 | true held cz(Q?, R)
+  // (GLP #3 Cowork, 2026-10-02 17:12 UTC, S3).
+  var undefinedInEveryInstance = false;
+  num? undefined() {
+    undefinedInEveryInstance = true;
+    return null;
+  }
 
   // Evaluate arithmetic expressions to numeric values
   // Supports: X, X + Y, X - Y, X * Y, X / Y, X // Y, X mod Y, -X
@@ -843,7 +863,12 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
           return evaluateNumeric(cx.sigmaHat[v.addr]);
         }
         final deref = cx.rt.heap.getValue(v.addr);
-        if (deref == null) return null; // Unbound writer — cannot suspend on it
+        if (deref == null) {
+          // An unbound writer: no readers substitution assigns it.  One that
+          // stands for an unknown variable, any term, is left as it was.
+          if (cx.unknownKeys.contains(v.addr)) return null;
+          return undefined();
+        }
         return evaluateNumeric(deref);
       }
     }
@@ -851,7 +876,7 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       // Evaluate arithmetic expression
       switch (v.functor) {
         case '+':
-          if (v.args.length != 2) return null;
+          if (v.args.length != 2) return undefined();
           final a = evaluateNumeric(v.args[0]);
           final b = evaluateNumeric(v.args[1]);
           if (a == null || b == null) return null;
@@ -867,40 +892,46 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
             if (a == null || b == null) return null;
             return a - b;
           }
-          return null;
+          return undefined();
         case '*':
-          if (v.args.length != 2) return null;
+          if (v.args.length != 2) return undefined();
           final a = evaluateNumeric(v.args[0]);
           final b = evaluateNumeric(v.args[1]);
           if (a == null || b == null) return null;
           return a * b;
         case '/':
-          if (v.args.length != 2) return null;
+          if (v.args.length != 2) return undefined();
           final a = evaluateNumeric(v.args[0]);
           final b = evaluateNumeric(v.args[1]);
-          if (a == null || b == null || b == 0) return null;
+          // A zero divisor aborts whatever the dividend becomes.
+          if (b == 0) return undefined();
+          if (a == null || b == null) return null;
           return a / b;
         case '//':
-          if (v.args.length != 2) return null;
+          if (v.args.length != 2) return undefined();
           final a = evaluateNumeric(v.args[0]);
           final b = evaluateNumeric(v.args[1]);
-          if (a == null || b == null || b == 0) return null;
+          if (b == 0) return undefined();
+          if (a == null || b == null) return null;
           return a ~/ b;
         case 'mod':
-          if (v.args.length != 2) return null;
+          if (v.args.length != 2) return undefined();
           final a = evaluateNumeric(v.args[0]);
           final b = evaluateNumeric(v.args[1]);
-          if (a == null || b == null || b == 0) return null;
+          if (b == 0) return undefined();
+          if (a == null || b == null) return null;
           return a.toInt() % b.toInt();
         case 'neg':
-          if (v.args.length != 1) return null;
+          if (v.args.length != 1) return undefined();
           final a = evaluateNumeric(v.args[0]);
           return a == null ? null : -a;
         default:
-          return null; // Not an arithmetic functor
+          return undefined(); // Not an arithmetic functor
       }
     }
-    return null;
+    // A bound term that is not a number: a constant of another kind, a
+    // string, a module value.
+    return undefined();
   }
 
   // A guard operand failed to evaluate: undecided if unbound readers blocked
@@ -913,6 +944,12 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
     return GuardResult.failure;
   }
 
+  // A comparison whose operands did not both evaluate: it fails where one has
+  // no value under any readers substitution ([undefinedInEveryInstance]),
+  // whatever readers blocked the other, and is otherwise as above.
+  GuardResult comparisonBlockedOrFail() =>
+      undefinedInEveryInstance ? GuardResult.failure : blockedOrFail();
+
   switch (predicateName) {
     // Comparison guards (with arithmetic expression support)
     case '<':
@@ -922,7 +959,7 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       if (a != null && b != null) {
         return a < b ? GuardResult.success : GuardResult.failure;
       }
-      return blockedOrFail();
+      return comparisonBlockedOrFail();
 
     case '>':
       if (args.length < 2) return GuardResult.failure;
@@ -931,7 +968,7 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       if (a != null && b != null) {
         return a > b ? GuardResult.success : GuardResult.failure;
       }
-      return blockedOrFail();
+      return comparisonBlockedOrFail();
 
     case '=<':
       if (args.length < 2) return GuardResult.failure;
@@ -940,7 +977,7 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       if (a != null && b != null) {
         return a <= b ? GuardResult.success : GuardResult.failure;
       }
-      return blockedOrFail();
+      return comparisonBlockedOrFail();
 
     case '>=':
       if (args.length < 2) return GuardResult.failure;
@@ -949,7 +986,7 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       if (a != null && b != null) {
         return a >= b ? GuardResult.success : GuardResult.failure;
       }
-      return blockedOrFail();
+      return comparisonBlockedOrFail();
 
     case '=:=':
       if (args.length < 2) return GuardResult.failure;
@@ -958,7 +995,7 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       if (a != null && b != null) {
         return a == b ? GuardResult.success : GuardResult.failure;
       }
-      return blockedOrFail();
+      return comparisonBlockedOrFail();
 
     case '=\\=':
       if (args.length < 2) return GuardResult.failure;
@@ -967,7 +1004,7 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       if (a != null && b != null) {
         return a != b ? GuardResult.success : GuardResult.failure;
       }
-      return blockedOrFail();
+      return comparisonBlockedOrFail();
 
     // Lexicographic comparison of ground constants (atoms/strings/numbers)
     case '@<':
@@ -2375,11 +2412,16 @@ mixin OpExecutors {
 
     // The ground equality guards decide their unbound readers themselves, as
     // ground_equal (0x45) does ([_groundEqualityGuard]): a clash, or an unbound
-    // writer, decides them whatever readers stand beside it.
+    // writer, decides them whatever readers stand beside it.  So do the
+    // arithmetic comparisons, which evaluate both operands before they wait on
+    // one: `X? > 1 / 0` fails, its right operand having no value whatever X?
+    // becomes, where it waited on X? until 2026-10-02 (GLP #3 Cowork,
+    // 2026-10-02 17:12 UTC, S3).
     if (unboundReaders.isNotEmpty &&
         predicateName != 'unknown' &&
         predicateName != '=?=' &&
-        predicateName != '=?\\=') {
+        predicateName != '=?\\=' &&
+        !_arithmeticComparisons.contains(predicateName)) {
       return _guardUndecided(cx, unboundReaders);
     }
 
