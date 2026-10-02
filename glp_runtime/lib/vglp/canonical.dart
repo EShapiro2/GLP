@@ -560,7 +560,9 @@ void _checkNoAskedCall(Module m, Map<String, VolitionalProcedure> volitional) {
 /// output by dropping the question's reader and, where the type provides for
 /// it, by writing more of the output".  It is refused written `_`, and written
 /// `_?`, TGLP's anonymous output, the interactive term's position being a
-/// produced one in writer mode.
+/// produced one in writer mode; and written `_Name` or `_Name?`, an anonymous
+/// variable being any variable whose name begins with `_` (TGLP, "Anonymous
+/// variables"; vGLP's task of 2026-10-02 00:52 UTC, item 2).
 void _checkNoAnonymousOutput(
     Module m, Map<String, VolitionalProcedure> volitional) {
   for (final v in volitional.values) {
@@ -568,8 +570,7 @@ void _checkNoAnonymousOutput(
     for (final p in m.procedures) {
       if (p.signature != '${v.name}/${v.arity + 1}') continue;
       for (final c in p.clauses) {
-        final a = c.head.args.last;
-        if (a is! UnderscoreTerm) continue;
+        if (!_isAnonymous(c.head.args.last)) continue;
         throw CompileError(
             'The clause ${_asWritten(c, v)} has the anonymous variable as its '
             'interactive term, and the interactive type ${v.typeConstant} of '
@@ -864,11 +865,21 @@ Procedure _guardedProcedure(
 }
 
 /// The handle in the head of a clause whose interactive term is [a]: withdraw
-/// where [a] is `_`, and the anonymous variable in every other clause, written
-/// `_?`, TGLP's anonymous output, the handle's being a produced position.
-Term _handle(Term a) => a is UnderscoreTerm && !a.isReader
+/// where [a] is the anonymous variable, `_` or `_Name` (vGLP's task of
+/// 2026-10-02 00:52 UTC, item 2), and the anonymous variable in every other
+/// clause, written `_?`, TGLP's anonymous output, the handle's being a
+/// produced position.
+Term _handle(Term a) => _isAnonymous(a) && !_isReader(a)
     ? ConstTerm(withdrawHandle, a.line, a.column)
     : UnderscoreTerm(a.line, a.column, isReader: true);
+
+/// Whether [t] is an anonymous variable, in either mode: `_`, `_?`, or a
+/// variable whose name begins with `_` (TGLP, "Anonymous variables").
+bool _isAnonymous(Term t) =>
+    t is UnderscoreTerm || (t is VarTerm && t.name.startsWith('_'));
+
+bool _isReader(Term t) =>
+    (t is UnderscoreTerm && t.isReader) || (t is VarTerm && t.isReader);
 
 /// A clause of a procedure that reaches a question, named [name], its head's
 /// arguments [headArgs] and then its ask stream (Definition "Canonical

@@ -309,6 +309,40 @@ procedure (Note)*tell.
 (_)*tell :- true | true.
 '''), refusal('(_)*tell', 4));
       });
+
+      // _Name is the anonymous variable too: TGLP's "Anonymous variables",
+      // any variable whose name begins with _ (vGLP's task of 2026-10-02
+      // 00:52 UTC, item 2).
+      test('in reader mode, (_Name) compiles as (_) does, dropping the reader '
+          'and binding the handle to withdraw', () {
+        final s = compile('''
+YesNo ::= yes ; no.
+procedure (YesNo?)*ask(Integer?, Integer).
+(yes)*ask(N, N?).
+(_Answer)*ask(_, 0).
+''');
+        expect(s, contains('ask1(N, N?, yes, _?, []).'));
+        expect(s, contains('ask1(_, 0, _Answer, withdraw, []).'));
+      });
+
+      test('in writer mode, (_Name) is a compile error naming the clause', () {
+        expect(() => compile('''
+YesNo ::= yes ; no.
+Note ::= note(YesNo).
+procedure (Note)*tell(YesNo?).
+(note(A?))*tell(A).
+(_Note)*tell(no).
+'''), refusal('(_Note)*tell(no)', 5));
+      });
+
+      test('in writer mode, (_Name?) is refused as well', () {
+        expect(() => compile('''
+YesNo ::= yes ; no.
+Note ::= note(YesNo).
+procedure (Note)*tell(YesNo?).
+(_Note?)*tell(no).
+'''), refusal('(_Note?)*tell(no)', 4));
+      });
     });
 
     group('is refused', () {
