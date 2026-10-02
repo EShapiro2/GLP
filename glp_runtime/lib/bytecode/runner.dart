@@ -10,7 +10,6 @@ import 'package:glp_runtime/runtime/commit.dart';
 import 'package:glp_runtime/runtime/body_kernels.dart';
 import 'package:glp_runtime/multiagent/variable_table.dart' show VariableEntry;
 import 'opcodes.dart';
-import 'opcodes_v2.dart' as opv2;
 import 'package:glp_runtime/engine_v2/step_outcome.dart';
 
 enum RunResult { terminated, suspended, yielded }
@@ -42,10 +41,10 @@ enum GuardResult {
 typedef LabelName = String;
 
 class BytecodeProgram {
-  final List<dynamic> ops;  // Can hold both v1 (Op) and v2 (OpV2) instructions
+  final List<Op> ops;  // The instruction objects (opcodes.dart), labels among them
   final Map<LabelName, int> labels;
   BytecodeProgram(this.ops) : labels = _indexLabels(ops);
-  static Map<LabelName, int> _indexLabels(List<dynamic> ops) {
+  static Map<LabelName, int> _indexLabels(List<Op> ops) {
     final m = <LabelName,int>{};
     for (var i = 0; i < ops.length; i++) {
       final op = ops[i];
@@ -74,22 +73,22 @@ class BytecodeProgram {
   }
 
   String _instructionToString(dynamic op) {
-    // Handle v2 PutVariable (the critical one for debugging)
-    if (op is opv2.PutVariable) {
+    // PutVariable (the critical one for debugging)
+    if (op is PutVariable) {
       final mode = op.isReader ? 'reader' : 'writer';
       return 'PutVariable(X${op.varIndex} → A${op.argSlot}, $mode)';
     }
 
-    // Handle other v2 instructions
-    if (op is opv2.HeadVariable) {
+    // The other variable instructions
+    if (op is HeadVariable) {
       final mode = op.isReader ? 'reader' : 'writer';
       return 'HeadVariable(X${op.varIndex}, $mode)';
     }
-    if (op is opv2.UnifyVariable) {
+    if (op is UnifyVariable) {
       final mode = op.isReader ? 'reader' : 'writer';
       return 'UnifyVariable(X${op.varIndex}, $mode)';
     }
-    if (op is opv2.SetVariable) {
+    if (op is SetVariable) {
       final mode = op.isReader ? 'reader' : 'writer';
       return 'SetVariable(X${op.varIndex}, $mode)';
     }

@@ -17,6 +17,7 @@ import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/ast.dart';
 import 'package:glp_runtime/compiler/primitive_layer.dart';
 import 'package:glp_runtime/compiler/error.dart' show CompileError;
+import 'package:glp_runtime/bytecode/opcodes.dart' show Op;
 import 'package:glp_runtime/bytecode/runner.dart';
 import 'package:glp_runtime/engine_v2/interp.dart';
 import 'package:glp_runtime/engine_v2/module_kernels.dart';
@@ -669,7 +670,7 @@ class GlpEngine {
     // (e.g. its merge/3) shadows the root's primitive of the same name (manual
     // §19.6: a module's definition shadows every ancestor's; modules.tex
     // §Static Linking step 3). Other loaded programs keep their insertion order.
-    final allOps = <dynamic>[];
+    final allOps = <Op>[];
     for (final entry in _loadedPrograms.entries) {
       if (entry.key == '__root_self__') continue;
       allOps.addAll(entry.value.ops);

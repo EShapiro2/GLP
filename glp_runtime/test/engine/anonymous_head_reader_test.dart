@@ -30,7 +30,6 @@ library;
 import 'dart:io';
 
 import 'package:glp_runtime/bytecode/opcodes.dart' as op;
-import 'package:glp_runtime/bytecode/opcodes_v2.dart' as opv2;
 import 'package:glp_runtime/bytecode/runner.dart' show CallEnv;
 import 'package:glp_runtime/compiler/compiler.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
@@ -134,11 +133,11 @@ void main() {
         for (final sig in ['p/2', 'c/1', 'o/1', 'w/1', 'cons/2']) ...code(sig),
       ];
       final readerGets = ops
-          .whereType<opv2.GetVariable>()
+          .whereType<op.GetVariable>()
           .where((o) => o.isReader)
           .length;
       final readerUnifies = ops
-          .whereType<opv2.UnifyVariable>()
+          .whereType<op.UnifyVariable>()
           .where((o) => o.isReader)
           .length;
       final voids = ops.whereType<op.UnifyVoid>().length;
@@ -154,7 +153,7 @@ void main() {
       expect(
         code(
           'reduce/2',
-        ).whereType<opv2.UnifyVariable>().where((o) => o.isReader).length,
+        ).whereType<op.UnifyVariable>().where((o) => o.isReader).length,
         5,
       );
     });

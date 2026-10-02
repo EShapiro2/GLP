@@ -23,7 +23,6 @@ library;
 
 import 'dart:typed_data';
 import 'package:glp_runtime/bytecode/opcodes.dart';
-import 'package:glp_runtime/bytecode/opcodes_v2.dart' as opv2;
 import 'package:glp_runtime/wire/codec.dart';
 
 /// §4.2 opcode bytes.
@@ -123,21 +122,21 @@ void encodeInstruction(
   } else if (op is HeadList) {
     w.u8(Opcode.headList);
     w.clen(op.argSlot);
-  } else if (op is opv2.HeadVariable) {
+  } else if (op is HeadVariable) {
     w.u8(Opcode.headVariable);
     pol(op.isReader);
     w.clen(op.varIndex);
-  } else if (op is opv2.GetVariable) {
+  } else if (op is GetVariable) {
     w.u8(Opcode.getVariable);
     pol(op.isReader);
     w.clen(op.varIndex);
     w.clen(op.argSlot);
-  } else if (op is opv2.GetValue) {
+  } else if (op is GetValue) {
     w.u8(Opcode.getValue);
     pol(op.isReader);
     w.clen(op.varIndex);
     w.clen(op.argSlot);
-  } else if (op is opv2.UnifyVariable) {
+  } else if (op is UnifyVariable) {
     w.u8(Opcode.unifyVariable);
     pol(op.isReader);
     w.clen(op.varIndex);
@@ -157,7 +156,7 @@ void encodeInstruction(
   } else if (op is Pop) {
     w.u8(Opcode.pop);
     w.clen(op.regIndex);
-  } else if (op is opv2.PutVariable) {
+  } else if (op is PutVariable) {
     w.u8(Opcode.putVariable);
     pol(op.isReader);
     w.clen(op.varIndex);
@@ -177,7 +176,7 @@ void encodeInstruction(
     w.string(op.functor);
     w.clen(op.arity);
     w.clen(op.argSlot);
-  } else if (op is opv2.SetVariable) {
+  } else if (op is SetVariable) {
     w.u8(Opcode.setVariable);
     pol(op.isReader);
     w.clen(op.varIndex);
@@ -208,7 +207,7 @@ void encodeInstruction(
   } else if (op is Known) {
     w.u8(Opcode.known);
     w.clen(op.varIndex);
-  } else if (op is opv2.Unknown) {
+  } else if (op is Unknown) {
     w.u8(Opcode.unknown);
     w.clen(op.varIndex);
   } else if (op is NoReaders) {
@@ -236,8 +235,9 @@ void encodeInstruction(
   }
 }
 
-/// Decode one instruction. Polarity opcodes decode to the v2 classes; `proc`
-/// and `ctarget` indices are resolved back to labels via the supplied maps.
+/// Decode one instruction. A polarity opcode decodes to its variable
+/// instruction, the polarity its isReader flag; `proc` and `ctarget` indices are
+/// resolved back to labels via the supplied maps.
 Object decodeInstruction(
   WireReader r, {
   required ProcNameOf procNameOf,
@@ -279,18 +279,18 @@ Object decodeInstruction(
       return HeadList(r.clen());
     case Opcode.headVariable:
       final isReader = pol();
-      return opv2.HeadVariable(r.clen(), isReader: isReader);
+      return HeadVariable(r.clen(), isReader: isReader);
     case Opcode.getVariable:
       final isReader = pol();
       final varIndex = r.clen();
-      return opv2.GetVariable(varIndex, r.clen(), isReader: isReader);
+      return GetVariable(varIndex, r.clen(), isReader: isReader);
     case Opcode.getValue:
       final isReader = pol();
       final varIndex = r.clen();
-      return opv2.GetValue(varIndex, r.clen(), isReader: isReader);
+      return GetValue(varIndex, r.clen(), isReader: isReader);
     case Opcode.unifyVariable:
       final isReader = pol();
-      return opv2.UnifyVariable(r.clen(), isReader: isReader);
+      return UnifyVariable(r.clen(), isReader: isReader);
     case Opcode.unifyConstant:
       return UnifyConstant(constant());
     case Opcode.unifyVoid:
@@ -305,7 +305,7 @@ Object decodeInstruction(
     case Opcode.putVariable:
       final isReader = pol();
       final varIndex = r.clen();
-      return opv2.PutVariable(varIndex, r.clen(), isReader: isReader);
+      return PutVariable(varIndex, r.clen(), isReader: isReader);
     case Opcode.putConstant:
       final v = constant();
       return PutConstant(v, r.clen());
@@ -318,7 +318,7 @@ Object decodeInstruction(
       return PutStructure(f, r.clen(), r.clen());
     case Opcode.setVariable:
       final isReader = pol();
-      return opv2.SetVariable(r.clen(), isReader: isReader);
+      return SetVariable(r.clen(), isReader: isReader);
     case Opcode.setConstant:
       return SetConstant(constant());
     case Opcode.allocate:
@@ -341,7 +341,7 @@ Object decodeInstruction(
     case Opcode.known:
       return Known(r.clen());
     case Opcode.unknown:
-      return opv2.Unknown(r.clen());
+      return Unknown(r.clen());
     case Opcode.noReaders:
       return NoReaders(r.clen());
     case Opcode.groundEqual:

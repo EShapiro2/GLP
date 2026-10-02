@@ -1,5 +1,4 @@
 import 'package:glp_runtime/bytecode/opcodes.dart' as bc;
-import 'package:glp_runtime/bytecode/opcodes_v2.dart' as bcv2;
 import 'package:glp_runtime/bytecode/runner.dart' show BytecodeProgram;
 import 'ast.dart';
 import 'analyzer.dart';
@@ -8,8 +7,8 @@ import 'result.dart';
 
 /// Code generation context
 class CodeGenContext {
-  // Bytecode accumulator - can hold both v1 (Op) and v2 (OpV2) instructions
-  final List<dynamic> instructions = [];
+  // Bytecode accumulator: the instruction objects, labels among them
+  final List<bc.Op> instructions = [];
 
   // Label management
   final Map<String, int> labels = {};
@@ -33,7 +32,7 @@ class CodeGenContext {
 
   int get currentPC => instructions.length;
 
-  void emit(dynamic instruction) {
+  void emit(bc.Op instruction) {
     instructions.add(instruction);
   }
 
@@ -214,12 +213,12 @@ class CodeGenerator {
       final isFirstOccurrence = !ctx.seenHeadVars.contains(baseVarName);
 
       if (isFirstOccurrence) {
-        // First occurrence: emit V2 GetVariable
-        ctx.emit(bcv2.GetVariable(regIndex, argSlot, isReader: term.isReader));
+        // First occurrence: emit GetVariable
+        ctx.emit(bc.GetVariable(regIndex, argSlot, isReader: term.isReader));
         ctx.seenHeadVars.add(baseVarName);
       } else {
-        // Subsequent occurrence: emit V2 GetValue
-        ctx.emit(bcv2.GetValue(regIndex, argSlot, isReader: term.isReader));
+        // Subsequent occurrence: emit GetValue
+        ctx.emit(bc.GetValue(regIndex, argSlot, isReader: term.isReader));
       }
 
     } else if (term is ConstTerm) {
@@ -250,13 +249,11 @@ class CodeGenerator {
       // This avoids overlapping HeadStructure operations
 
       // Step 1: Extract the argument into a temp register.
-      // tempReg is freshly allocated (first occurrence), so the v2 get_variable
-      // captures the argument into clauseVars without sigmaHat binding — the
-      // same capture the legacy opcodes.dart GetVariable performed. Unified on
-      // the polarity-carrying v2 instruction so the emitted set matches §4.2
-      // get_variable (D3 wire format).
+      // tempReg is freshly allocated (first occurrence), so get_variable
+      // captures the argument into clauseVars without sigmaHat binding; it is
+      // the polarity-carrying get_variable of §4.2 (D3 wire format).
       final tempReg = ctx.allocateTemp();
-      ctx.emit(bcv2.GetVariable(tempReg, argSlot, isReader: false));
+      ctx.emit(bc.GetVariable(tempReg, argSlot, isReader: false));
 
       // Step 2: Match the structure at the temp register (not argSlot!)
       ctx.emit(bc.HeadStructure(term.functor, term.arity, tempReg));
@@ -276,7 +273,7 @@ class CodeGenerator {
         // (GLP-Spec appendix-term-matching.tex, Definition "Term Matching"):
         // a goal writer is assigned it, a goal reader and a goal term fail.
         // It was compiled as `_` is, to nothing, so `p(_, _?)` took `p(1, 2)`.
-        ctx.emit(bcv2.GetVariable(ctx.allocateTemp(), argSlot, isReader: true));
+        ctx.emit(bc.GetVariable(ctx.allocateTemp(), argSlot, isReader: true));
       }
       // `_`: a head writer whose value is discarded; the argument is simply
       // not extracted.
@@ -295,9 +292,8 @@ class CodeGenerator {
 
       final regIndex = varInfo.registerIndex!;
 
-      // Always emit v2 UnifyVariable based on syntactic mode
-      // Occurrence tracking was causing mixed v1/v2 opcode generation
-      ctx.emit(bcv2.UnifyVariable(regIndex, isReader: term.isReader));
+      // UnifyVariable in the occurrence's syntactic mode
+      ctx.emit(bc.UnifyVariable(regIndex, isReader: term.isReader));
 
     } else if (term is ConstTerm) {
       // Constant at position S
@@ -317,14 +313,14 @@ class CodeGenerator {
           if (term.tail != null) _generateStructureElement(term.tail!, varTable, ctx, inHead: true);
           ctx.emit(bc.Pop(saveReg));
           // FCP AM: After Pop, must place nested structure at S and increment
-          ctx.emit(bcv2.UnifyVariable(saveReg, isReader: false));
+          ctx.emit(bc.UnifyVariable(saveReg, isReader: false));
         } else {
           // WRITE mode (BODY): building nested structure within argument structure
           final tempReg = ctx.allocateTemp();
           ctx.emit(bc.PutStructure('.', 2, tempReg));
           if (term.head != null) _generateStructureElement(term.head!, varTable, ctx, inHead: inHead);
           if (term.tail != null) _generateStructureElement(term.tail!, varTable, ctx, inHead: inHead);
-          ctx.emit(bcv2.UnifyVariable(tempReg, isReader: false));
+          ctx.emit(bc.UnifyVariable(tempReg, isReader: false));
         }
       }
 
@@ -339,7 +335,7 @@ class CodeGenerator {
         }
         ctx.emit(bc.Pop(saveReg));
         // FCP AM: After Pop, must place nested structure at S and increment
-        ctx.emit(bcv2.UnifyVariable(saveReg, isReader: false));
+        ctx.emit(bc.UnifyVariable(saveReg, isReader: false));
       } else {
         // WRITE mode
         final tempReg = ctx.allocateTemp();
@@ -347,7 +343,7 @@ class CodeGenerator {
         for (final subArg in term.args) {
           _generateStructureElement(subArg, varTable, ctx, inHead: inHead);
         }
-        ctx.emit(bcv2.UnifyVariable(tempReg, isReader: false));
+        ctx.emit(bc.UnifyVariable(tempReg, isReader: false));
       }
 
     } else if (term is UnderscoreTerm) {
@@ -357,7 +353,7 @@ class CodeGenerator {
         // over whatever the goal holds here, and in a structure built for a
         // goal writer places a fresh writer where the clause's output
         // placeholder stands.
-        ctx.emit(bcv2.UnifyVariable(ctx.allocateTemp(), isReader: true));
+        ctx.emit(bc.UnifyVariable(ctx.allocateTemp(), isReader: true));
       } else {
         // `_` in a head structure: a fresh writer, its value discarded.
         ctx.emit(bc.UnifyVoid(count: 1));
@@ -492,8 +488,8 @@ class CodeGenerator {
 
       final regIndex = varInfo.registerIndex!;
 
-      // Use v2 unified instruction
-      ctx.emit(bcv2.PutVariable(regIndex, argSlot, isReader: term.isReader));
+      // PutVariable in the occurrence's mode
+      ctx.emit(bc.PutVariable(regIndex, argSlot, isReader: term.isReader));
 
     } else if (term is ConstTerm) {
       // Constant: put bound writer with reader
@@ -519,7 +515,7 @@ class CodeGenerator {
     } else if (term is UnderscoreTerm) {
       // Anonymous variable: create fresh unbound writer
       final tempReg = ctx.allocateTemp();
-      ctx.emit(bcv2.PutVariable(tempReg, argSlot, isReader: false));
+      ctx.emit(bc.PutVariable(tempReg, argSlot, isReader: false));
     }
   }
 
@@ -534,7 +530,7 @@ class CodeGenerator {
       }
       final regIndex = varInfo.registerIndex!;
       // Emit unify instruction to add variable to structure
-      ctx.emit(bcv2.UnifyVariable(regIndex, isReader: term.isReader));
+      ctx.emit(bc.UnifyVariable(regIndex, isReader: term.isReader));
 
     } else if (term is ConstTerm) {
       // Add constant to structure
@@ -591,8 +587,8 @@ class CodeGenerator {
 
       final regIndex = varInfo.registerIndex!;
 
-      // V2 SetVariable with isReader flag
-      ctx.emit(bcv2.SetVariable(regIndex, isReader: term.isReader));
+      // SetVariable with isReader flag
+      ctx.emit(bc.SetVariable(regIndex, isReader: term.isReader));
 
     } else if (term is ConstTerm) {
       ctx.emit(bc.SetConstant(term.value));  // set_constant c
@@ -628,7 +624,7 @@ class CodeGenerator {
     } else if (term is UnderscoreTerm) {
       // Anonymous variable in structure
       final tempReg = ctx.allocateTemp();
-      ctx.emit(bcv2.SetVariable(tempReg, isReader: false));  // Create fresh writer
+      ctx.emit(bc.SetVariable(tempReg, isReader: false));  // Create fresh writer
     }
   }
 

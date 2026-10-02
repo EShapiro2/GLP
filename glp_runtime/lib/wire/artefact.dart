@@ -568,11 +568,11 @@ class Artefact {
   /// no code — the runtime resolves their names to local kernels/guards (the
   /// `Spawn`/`Guard` handlers already fall back to kernel/guard lookup).
   BytecodeProgram toProgram() {
-    final ops = <Object>[];
+    final ops = <Op>[];
     for (final s in symbols) {
       if (!s.compiled) continue;
       ops.add(Label(s.signature));
-      ops.addAll(s.ops);
+      ops.addAll(s.ops.cast<Op>());
     }
     return BytecodeProgram(ops);
   }

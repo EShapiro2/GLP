@@ -1,6 +1,5 @@
 // ignore_for_file: non_constant_identifier_names
 import 'opcodes.dart';
-import 'opcodes_v2.dart' as opv2;
 import 'runner.dart';
 
 class BC {
@@ -16,8 +15,8 @@ class BC {
   static Proceed proceed() => Proceed();
   static HeadStructure headStruct(String functor, int arity, int argSlot)
     => HeadStructure(functor, arity, argSlot);
-  static opv2.HeadVariable headWriter(int varIndex) => opv2.HeadVariable(varIndex, isReader: false);
-  static opv2.HeadVariable headReader(int varIndex) => opv2.HeadVariable(varIndex, isReader: true);
+  static HeadVariable headWriter(int varIndex) => HeadVariable(varIndex, isReader: false);
+  static HeadVariable headReader(int varIndex) => HeadVariable(varIndex, isReader: true);
   static UnifyConstant unifyConst(Object? value) => UnifyConstant(value);
   static UnifyVoid unifyVoid({int count = 1}) => UnifyVoid(count: count);
   static HeadConstant headConst(Object? value, int argSlot) => HeadConstant(value, argSlot);
@@ -25,7 +24,7 @@ class BC {
   static PutStructure putStructure(String functor, int arity, int argSlot) => PutStructure(functor, arity, argSlot);
   static SetConstant setConst(Object? value) => SetConstant(value);
   static Otherwise otherwise() => Otherwise();
-  static opv2.Unknown unknown(int varIndex) => opv2.Unknown(varIndex);
+  static Unknown unknown(int varIndex) => Unknown(varIndex);
   static Spawn spawn(String label, int arity) => Spawn(label, arity);
   static Requeue requeue(String label, int arity) => Requeue(label, arity);
 
@@ -59,7 +58,7 @@ class BC {
 
   static Proceed PROCEED() => proceed();
   static Otherwise OTHERWISE() => otherwise();
-  static opv2.Unknown UNKNOWN(int varIndex) => unknown(varIndex);
+  static Unknown UNKNOWN(int varIndex) => unknown(varIndex);
 
   static BytecodeProgram prog(List<Op> ops) => BytecodeProgram(ops);
 }
