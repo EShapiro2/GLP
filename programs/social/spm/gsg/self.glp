@@ -62,18 +62,15 @@ GsgCargo ::= friend_request(Integer)         %% paper §6.2: friend_request(x), 
 %% =============================================================================
 
 %% Reply: a one-shot writer the agent binds to `ok` when a volition's
-%% protocol round-trip has completed.  Type is `Constant` (a primitive
-%% constant type) so SRSW relaxation (§3.1) permits the multi-occurrence
-%% pattern that arises when the same reply variable appears in both
-%% `will(V, R)` (writer) and `await(R)` (reader/writer) in the play body.
+%% protocol round-trip has completed.
 %%
 %% Binding the writer to `ok` is done by `bind_ok/1` (head-literal at the
 %% ↑ output position; rv_agent.glp complete_rendezvous pattern), called
 %% from the agent's clause body.
-GsgVolition ::= discover(Agent, Constant)
+GsgVolition ::= discover(Agent, Constant?)
               ; offer_friendship(Agent, Constant)
-              ; accept_offer(Agent, Constant)
-              ; end_friendship(Agent, Constant).
+              ; accept_offer(Agent, Constant?)
+              ; end_friendship(Agent, Constant?).
 
 %% =============================================================================
 %% READ-ONLY QUERIES (architecture §2.5)
@@ -87,7 +84,7 @@ GsgQuery ::= q_epoch(Agent)              %% paper notation: epoch_p(q)
            ; q_known(Agent)              %% q ∈ known_p ?
            ; q_fmap_dom.                 %% dom(FMap_p)
 
-GsgAnswer ::= a_epoch(Integer)
+GsgAnswer ::= a_epoch(Integer?)
             ; a_bool(Constant)           %% 'true' or 'false'
             ; a_keys(Stream(Agent)).
 

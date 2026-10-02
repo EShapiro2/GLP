@@ -1,0 +1,11 @@
+%% Negative SRSW fixture.  =?\= grounds nothing: the catalogue gives it Ground
+%% "no" (GLP-Spec appendix-guards.tex, bbff21d), as it "succeeds if no readers
+%% substitution makes them ground and equal", f(a, Z?) =?\= f(b, W?) among its
+%% successes with Z? and W? unbound.  So it licenses no repeated reader
+%% (glp.tex, Remark "Guards and SRSW"), and X? and Y? each twice in the head is
+%% an SRSW violation.  Until 2026-10-02 the analyzer licensed it, and
+%% neq_pair(f(a, Z?), f(b, W?), P) bound P to a term holding one unbound
+%% variable twice.  Under =?=, which grounds both, the same repetition loads
+%% (glp_runtime/test/engine/ground_not_equal_test.dart).
+procedure neq_pair(_?, _?, _).
+neq_pair(X, Y, pair(X?, X?, Y?, Y?)) :- X? =?\= Y? | true.

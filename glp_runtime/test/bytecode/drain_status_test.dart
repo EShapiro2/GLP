@@ -26,8 +26,9 @@ void main() {
     final sched = Scheduler(rt: rt, runner: ByteRunner(image));
     final entry = image.entryOffsetOf('p/0')!;
     for (var i = 1; i <= n; i++) {
-      rt.setGoalEnv(i, CallEnv());
-      rt.gq.enqueue(GoalRef(i, entry));
+      final id = rt.nextGoalId++;
+      rt.setGoalEnv(id, CallEnv());
+      rt.gq.enqueue(GoalRef(id, entry));
     }
     return (sched, rt);
   }
@@ -39,7 +40,7 @@ void main() {
         [Label('loop/0'), ClauseTry(), Commit(), Requeue('loop/0', 0)]));
     final sched = Scheduler(rt: rt, runner: ByteRunner(image));
     for (var i = 1; i <= n; i++) {
-      rt.gq.enqueue(GoalRef(i, image.entryOffsetOf('loop/0')!));
+      rt.gq.enqueue(GoalRef(rt.nextGoalId++, image.entryOffsetOf('loop/0')!));
     }
     return (sched, rt);
   }
@@ -61,7 +62,6 @@ r(_).
 w(a, _).
 '''));
     final sched = Scheduler(rt: rt, runner: ByteRunner(image));
-    var next = 1;
     Term bound(Object value) {
       final (writer, reader) = rt.heap.allocateVariable();
       rt.heap.bindWriter(writer, ConstTerm(value));
@@ -69,9 +69,10 @@ w(a, _).
     }
 
     void post(String proc, List<Term> args) {
-      rt.setGoalEnv(next,
+      final id = rt.nextGoalId++;
+      rt.setGoalEnv(id,
           CallEnv(args: {for (var i = 0; i < args.length; i++) i: args[i]}));
-      rt.gq.enqueue(GoalRef(next++, image.entryOffsetOf(proc)!));
+      rt.gq.enqueue(GoalRef(id, image.entryOffsetOf(proc)!));
     }
 
     return (sched: sched, rt: rt, bound: bound, post: post);

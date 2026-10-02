@@ -43,16 +43,12 @@ class VglpProgram {
   /// The image of the program's display declarations.
   final Manifest manifest;
 
-  /// The counterparties the harness scripts, for the runtime's own logging.
-  final List<String> friends;
-
   const VglpProgram({
     required this.title,
     required this.person,
     required this.directory,
     required this.goalLabel,
     required this.manifest,
-    this.friends = const [],
   });
 }
 
@@ -111,7 +107,7 @@ class _VglpScreenState extends State<VglpScreen> {
     final glp = await resolveGlpPaths();
     _ui = UiRuntime(
       manifest: _p.manifest,
-      onSend: (text) => _commands?.send(UserInput(text)),
+      onSend: (cmd) => _commands?.send(UserInput(cmd)),
     )..onChange = () {
         if (mounted) setState(() {});
       };
@@ -121,11 +117,9 @@ class _VglpScreenState extends State<VglpScreen> {
         agentIsolateEntry,
         InitAgent(
           agentId: _p.person,
-          glpSources: const [],
-          programDir: _p.directory(glp),
+          program: _p.directory(glp),
           goalLabel: _p.goalLabel,
           rootSelfGlpPath: glp.rootSelfGlp,
-          friends: _p.friends,
           replyPort: _replyPort.sendPort,
           deferStart: false,
         ),

@@ -1,11 +1,12 @@
 /// Ground-term model and boundary parser/formatter.
 ///
-/// The Dart/GLP boundary carries ground terms as GLP-syntax strings, both ways
-/// (paper §7.4): a `UserNotify` arrives as text via `_output/1`, and a
-/// `UserCmd` is sent as text and re-parsed by the agent runtime's `parseTerm`.
-/// This file gives the generic UI runtime its own self-contained model of those
-/// ground terms, so it never depends on GLP-runtime internals. It is the
-/// "parser at the boundary, still ground-terms-only in spirit".
+/// Everything crossing the Dart/GLP boundary is a ground term (vGLP, "One
+/// bridge").  A `UserNotify` arrives as GLP-syntax text via `_output/1` and is
+/// read here; a `UserCmd`, the person's act, is sent as a term and never as
+/// text, the agent isolate handing it to the agent runtime as the runtime's
+/// own term (isolate_protocol.dart, `runtimeTermOf`).  This file gives the
+/// generic UI runtime its own self-contained model of those ground terms, so it
+/// never depends on GLP-runtime internals.
 library;
 
 /// A ground GLP term.

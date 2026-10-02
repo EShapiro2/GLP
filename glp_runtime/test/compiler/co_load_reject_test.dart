@@ -85,9 +85,10 @@ void main() {
     });
   });
 
-  // The per-isolate loaders (multiagent/agent_runtime.dart,
-  // multiagent/isolate_manager.dart) hand boot sources to loadSource under a
-  // synthetic name, so the source never exists on disk. The rejection covers
+  // The multi-isolate loader (multiagent/isolate_manager.dart) hands a boot
+  // source to loadSource under a synthetic name, so the source never exists
+  // on disk; multiagent/agent_runtime.dart did too, until it came to load one
+  // program and no boot source beside it. The rejection covers
   // that arrival too — otherwise a `#` call in a boot source still reaches the
   // direct compile path, where the code generator refuses it without naming
   // the cause or the remedy.

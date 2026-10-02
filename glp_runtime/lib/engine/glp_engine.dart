@@ -155,8 +155,6 @@ class GlpEngine {
   /// not merged a second time over the program's own modules.
   final Set<String> _scopeSelfGlps = {};
 
-  int _goalId = 1;
-
   /// Max execution cycles (default 10000)
   int maxCycles = 10000;
 
@@ -346,11 +344,12 @@ class GlpEngine {
     // unresolved M#p without either. Composing several modules is by directory
     // program; composing several apps is by module values posted with run/2.
     //
-    // The test covers source text as well as a real file: the per-isolate
-    // loaders (multiagent/agent_runtime.dart, multiagent/isolate_manager.dart)
-    // hand boot sources to `loadSource` under a synthetic name, and a `#` call
-    // in one reached the run-time WireFormatException by exactly the route this
-    // rejection was written to close.
+    // The test covers source text as well as a real file: the multi-isolate
+    // loader (multiagent/isolate_manager.dart) hands a boot source to
+    // `loadSource` under a synthetic name --- as multiagent/agent_runtime.dart
+    // did until it came to load one program and no boot source beside it ---
+    // and a `#` call in one reached the run-time WireFormatException by exactly
+    // the route this rejection was written to close.
     if (!selfContained) {
       throw CompileError(
         "'$name' is not a program: it ${_notSelfContainedCause(module)}. By "
@@ -902,13 +901,15 @@ class GlpEngine {
           _runtime, args[i], i, argSlots, queryVarWriters, varNameToId);
     }
 
+    // The goal's id is the runtime's next, as every goal's is.
+    final goalId = _runtime.nextGoalId++;
     final env = CallEnv(args: argSlots);
-    _runtime.setGoalEnv(_goalId, env);
-    _runtime.setGoalProgram(_goalId, 'main');
+    _runtime.setGoalEnv(goalId, env);
+    _runtime.setGoalProgram(goalId, 'main');
     // The goal carries its module value — the loaded app's artefact (h(M) +
     // code) — read back by `self_module`.
     if (_appModule != null) {
-      _runtime.setGoalModule(_goalId, _appModule);
+      _runtime.setGoalModule(goalId, _appModule);
     }
 
     final (runner, goalEntry) =
@@ -917,8 +918,7 @@ class GlpEngine {
     scheduler.resetDisplayNumbering();
     scheduler.setQueryVarNames(queryVarWriters);
 
-    _runtime.gq.enqueue(GoalRef(_goalId, goalEntry));
-    _goalId++;
+    _runtime.gq.enqueue(GoalRef(goalId, goalEntry));
 
     final result = await scheduler.drainAsyncWithStatus(
       maxCycles: maxCycles,
@@ -1020,19 +1020,20 @@ class GlpEngine {
             _runtime, args[i], i, argSlots, queryVarWriters, varNameToId);
       }
 
+      // Each conjunct's id is the runtime's next, as every goal's is.
+      final goalId = _runtime.nextGoalId++;
       final env = CallEnv(args: argSlots);
-      _runtime.setGoalEnv(_goalId, env);
-      _runtime.setGoalProgram(_goalId, 'main');
+      _runtime.setGoalEnv(goalId, env);
+      _runtime.setGoalProgram(goalId, 'main');
       // The goal carries its module value — the loaded app's artefact (h(M) +
       // code) — read back by `self_module`.
       if (_appModule != null) {
-        _runtime.setGoalModule(_goalId, _appModule);
+        _runtime.setGoalModule(goalId, _appModule);
       }
 
       scheduler.setQueryVarNames(queryVarWriters);
       final goalEntry = image.entryOffsetOf(procedureLabel)!;
-      _runtime.gq.enqueue(GoalRef(_goalId, goalEntry));
-      _goalId++;
+      _runtime.gq.enqueue(GoalRef(goalId, goalEntry));
     }
 
     // One drain, to quiescence or the cycle limit, over the whole run.  Its

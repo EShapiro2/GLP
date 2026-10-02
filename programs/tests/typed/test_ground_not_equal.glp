@@ -1,6 +1,8 @@
-% test_ground_not_equal.glp - the guard =?\=, the negation of =?= (GLP-Spec
-% appendix-guards.tex, 9064202): "=?\= succeeds if both arguments are ground
-% and differ, and suspends where =?= suspends."  Ground: yes (both).
+% test_ground_not_equal.glp - the guard =?\= (GLP-Spec appendix-guards.tex,
+% bbff21d): "=?\= succeeds if no readers substitution makes them ground and
+% equal."  It suspends and fails by glp.tex, Guards: "A guard suspends if it
+% does not succeed but some instance of it under a readers substitution would
+% succeed.  A guard fails if no such instance exists."
 
 % Both operands variables: the generic guard call as well, the ground equality
 % instruction having no negated operand (IGLP, 9b45225).
@@ -17,6 +19,6 @@ test_neq_stop(_, stopped) :- otherwise | true.
 exported procedure neq_only(_?, _?, Constant).
 neq_only(X, Y, not_equal) :- X? =?\= Y? | true.
 
-% Ground: yes (both) --- each reader may occur more than once in the clause.
-exported procedure neq_pair(_?, _?, _).
-neq_pair(X, Y, pair(X?, X?, Y?, Y?)) :- X? =?\= Y? | true.
+% Ground: no, the catalogue's column: =?\= licenses no repeated reader, and the
+% clause that read each argument twice after it is refused,
+% programs/tests/srsw/neq_not_ground.glp (harness Section D).

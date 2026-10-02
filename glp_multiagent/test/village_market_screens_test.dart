@@ -198,14 +198,12 @@ void main() {
       final lines = <String>[];
       final agent = AgentRuntime(
         agentId: v.id,
-        glpSources: const [],
         // programs/currencies/coins is a program: currency/ is the certified
         // mini-app and this directory adds village.glp, which stands in for
         // the super-app and for the six persons.
-        programDir: '$repo/currencies/coins',
+        program: '$repo/currencies/coins',
         goalLabel: 'village_ui/3',
         rootSelfGlpPath: '$repo/self.glp',
-        friends: v.friends,
       )..maxQuiescenceCycles = 5000000;
       agent.onOutput = lines.add;
       agent.onLog = (_, __) {};

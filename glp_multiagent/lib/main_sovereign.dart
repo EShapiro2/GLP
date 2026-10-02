@@ -28,5 +28,4 @@ void main() => runVglpApp(VglpProgram(
       directory: (glp) => glp.sovereignDir,
       goalLabel: 'sovereign_ui/3',
       manifest: sovereignManifest,
-      friends: const ['diana', 'frank'],
     ));

@@ -8,7 +8,8 @@
 /// a time, the one that has waited longest first.
 ///
 /// Fixture: programs/tests/typed/when_idle.glp; the madGLP agents' program
-/// is [_mad] below.
+/// is [_mad] below, which each agent runs as its one program, a module file
+/// (TGLP, def:program).
 library;
 
 import 'dart:async';
@@ -31,6 +32,12 @@ import 'package:test/test.dart';
 /// which cold-calls b again when it passes, and waiter/1, which waits on
 /// sender/1's assignment and then on when_idle.  b_init/2 reads the first
 /// message on its network input and sends nothing back.
+/// The directory [_madFile] is written in, for the length of the run.
+late Directory _madDir;
+
+/// [_mad] as a module file.
+late String _madFile;
+
 const String _mad = r'''
 Go ::= go.
 
@@ -61,7 +68,7 @@ AgentRuntime _agent(String id, String goal, List<String> events,
     List<(String, Uint8List)> sent) {
   final agent = AgentRuntime(
     agentId: id,
-    glpSources: const [_mad],
+    program: _madFile,
     rootSelfGlpPath: File('../programs/self.glp').absolute.path,
     goalLabel: goal,
   );
@@ -102,6 +109,13 @@ Future<(ExecutionResult, List<String>)> _traced(
 }
 
 void main() {
+  setUpAll(() {
+    _madDir = Directory.systemTemp.createTempSync('glp_when_idle_');
+    _madFile = '${_madDir.path}/agents.glp';
+    File(_madFile).writeAsStringSync(_mad);
+  });
+  tearDownAll(() => _madDir.deleteSync(recursive: true));
+
   group('when_idle succeeds only when the machine has no Reduce to make', () {
     test('m/1 reduces after every other goal of its conjunction', () async {
       final r =

@@ -15,21 +15,18 @@ import 'dart:isolate';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/isolate_protocol.dart';
+import 'package:glp_multiagent/ui_runtime/term.dart';
 
 import 'programs_dir.dart';
 
 final _programs = programsDir();
-final _fixtureDir = '$_programs/tests/agent_roundtrip';
-final _sourceFiles = [
-  '$_fixtureDir/self.glp',
-  '$_fixtureDir/typed_social_agent.glp',
-  '$_fixtureDir/typed_ui_mediator.glp',
-  '$_fixtureDir/play_ui_boot.glp',
-];
+
+/// The one program each agent runs: agent/4, ui_mediator/5 and the
+/// interactive agent_init/3, reached through agent_roundtrip/self.glp.
+final _program = '$_programs/tests/agent_roundtrip/play_ui';
 
 void main() {
   test('connect → accept → connected round-trips on both sides', () async {
-    final sources = _sourceFiles.map((p) => File(p).readAsStringSync()).toList();
     final rootSelf = '$_programs/self.glp';
 
     final reply = ReceivePort();
@@ -37,6 +34,9 @@ void main() {
     final output = <String, List<String>>{'alice': [], 'bob': []};
     final logs = <String, List<String>>{'alice': [], 'bob': []};
     final ready = <String>{};
+    // An agent's first stats follow its initialisation, the initial run to
+    // quiescence included.
+    final started = <String>{};
 
     reply.listen((msg) {
       if (msg is AgentReady) {
@@ -49,19 +49,19 @@ void main() {
       } else if (msg is AgentSendMad) {
         // Route the opaque payload to the destination isolate.
         ports[msg.to]?.send(DeliverMad(msg.agentId, msg.payload));
+      } else if (msg is AgentStats) {
+        started.add(msg.agentId);
       } else if (msg is AgentError) {
         output[msg.agentId]?.add('[ERROR] ${msg.error}');
       }
     });
 
-    Future<void> spawn(String id, List<String> friends) => Isolate.spawn(
+    Future<void> spawn(String id) => Isolate.spawn(
           agentIsolateEntry,
           InitAgent(
             agentId: id,
-            glpSources: sources,
-            glpSourcePaths: _sourceFiles, // self.glp ancestor-scope discovery
+            program: _program,
             rootSelfGlpPath: rootSelf,
-            friends: friends,
             replyPort: reply.sendPort,
             deferStart: true,
           ),
@@ -80,8 +80,8 @@ void main() {
     bool has(String who, String needle) =>
         output[who]!.any((l) => l.contains(needle));
 
-    await spawn('alice', ['bob']);
-    await spawn('bob', ['alice']);
+    await spawn('alice');
+    await spawn('bob');
 
     // All ports registered (deferred-start), then release GLP init.
     expect(await waitUntil(() => ready.length == 2), isTrue,
@@ -90,18 +90,18 @@ void main() {
     ports['bob']!.send(StartAgent());
 
     expect(
-        await waitUntil(() =>
-            has('alice', 'Ready! Commands') && has('bob', 'Ready! Commands')),
+        await waitUntil(() => started.containsAll(['alice', 'bob'])),
         isTrue,
         reason: 'both initialized');
 
     // Alice cold-calls Bob.
-    ports['alice']!.send(UserInput('connect(bob)'));
+    ports['alice']!.send(UserInput(const GStruct('connect', [GAtom('bob')])));
     expect(await waitUntil(() => has('bob', 'befriend(alice, req(1))')), isTrue,
         reason: 'bob received the befriend notify');
 
     // Bob accepts.
-    ports['bob']!.send(UserInput('decision(yes, alice, req(1))'));
+    ports['bob']!.send(UserInput(const GStruct('decision',
+        [GAtom('yes'), GAtom('alice'), GStruct('req', [GInt(1)])])));
 
     final bobConnected =
         await waitUntil(() => has('bob', 'connected(alice)'));

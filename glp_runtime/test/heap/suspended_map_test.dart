@@ -258,11 +258,11 @@ s(a).
         return VarRef(r);
       }
 
-      var next = 1;
       void post(String proc, List<Term> args) {
-        rt.setGoalEnv(next,
+        final id = rt.nextGoalId++;
+        rt.setGoalEnv(id,
             CallEnv(args: {for (var i = 0; i < args.length; i++) i: args[i]}));
-        rt.gq.enqueue(GoalRef(next++, image.entryOffsetOf(proc)!));
+        rt.gq.enqueue(GoalRef(id, image.entryOffsetOf(proc)!));
       }
 
       final (wx, rx) = rt.heap.allocateVariable();

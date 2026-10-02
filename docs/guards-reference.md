@@ -30,7 +30,7 @@ Guards are pure tests with **three-valued semantics** (success/suspend/fail) tha
 
 ## No Guard Negation
 
-A guard is a conjunction of guard predicates (GLP-Spec glp.tex, Definition "Guarded Clause"), and GLP has no guard negation: it left the language on 2026-10-01 (GLP-Spec 98913b4), and the parser refuses `~G` as a syntax error.  A clause for the cases the clauses before it do not take is guarded by `otherwise` (see the `lookup` example under `X =?= Y`); two ground terms that differ are tested by `X =?\= Y`.
+A guard is a conjunction of guard predicates (GLP-Spec glp.tex, Definition "Guarded Clause"), and GLP has no guard negation: it left the language on 2026-10-01 (GLP-Spec 98913b4), and the parser refuses `~G` as a syntax error.  A clause for the cases the clauses before it do not take is guarded by `otherwise` (see the `lookup` example under `X =?= Y`); that no readers substitution makes two terms ground and equal is tested by `X =?\= Y`.
 
 ---
 
@@ -202,15 +202,15 @@ process(X, Y?) :- ground(X) | Y = computed(X?).  % Would fail, not suspend
 
 ## Ground Guards - SRSW Relaxation
 
-Per the formal definition, variables occur as reader/writer pairs with exactly one of each. The ONLY exception: when guards guarantee groundness, multiple occurrences of both the writer and reader are permitted because ground terms contain no unbound writers.
+Per the formal definition, variables occur as reader/writer pairs with exactly one of each. The exception: when a guard guarantees groundness, the reader may occur more than once, because a ground term contains no unbound writer; the writer occurs once, whatever the guard.
 
 ### The Rule
 
-When a guard ensures a variable is ground (contains no unbound variables), both the writer and its paired reader may appear **multiple times** in the clause without violating SRSW. This is fundamental to GLP's concurrent programming model.
+GLP-Spec glp.tex, Remark "Guards and SRSW" (bbff21d): "if the success of a guard implies that X? is bound to a ground term, then X? may occur multiple times in the clause; X occurs once, as ever."  Until 2026-10-02 the analyzer licensed the writer as well; it now refuses a writer occurring more than once in a clause, whatever the guards: `Writer variable "X" occurs 2 times; a writer occurs once, whatever the guards`, or, twice in the head, `... occurs 2 times in the head of the clause ...`.
 
 ### Why This Works
 
-Ground terms contain no unbound writers. Multiple occurrences of a ground variable's writer and reader do not create single-writer violations because there's no exposed writer that could be bound multiple times.
+Ground terms contain no unbound writers, so several readers of a ground value share nothing that could be bound twice.  The writer is the one place the value is produced, and a second occurrence would be a second producer.
 
 ### Guard Arguments Count as Reader Occurrences
 
@@ -222,11 +222,11 @@ check(X) :- known(X?) | true.
 
 is valid because X appears as writer in the head and X? appears as reader in the guard, satisfying SRSW with one writer and one reader.
 
-This is distinct from the multiple-occurrence relaxation below. Guard reader counting ensures guards participate in SRSW validation. The relaxation below determines which guards permit both the writer and reader of a variable to appear multiple times.
+This is distinct from the multiple-occurrence relaxation below. Guard reader counting ensures guards participate in SRSW validation. The relaxation below determines which guards permit the reader of a variable to appear multiple times.
 
 ### Guards That Imply Groundness
 
-| Guard | Implies Ground | Allows Multiple Occurrences |
+| Guard | Implies Ground | Allows Multiple Reader Occurrences |
 |-------|----------------|-------------------------|
 | ✅ `ground(X?)` | Yes | ✅ Yes |
 | ✅ `constant(X?)` | Yes | ✅ Yes |
@@ -240,6 +240,8 @@ This is distinct from the multiple-occurrence relaxation below. Guard reader cou
 | ✅ `X? >= Y?` | Yes (both operands, when succeeds) | ✅ Yes |
 | ✅ `X? =:= Y?` | Yes (both operands, when succeeds) | ✅ Yes |
 | ✅ `X? =\= Y?` | Yes (both operands, when succeeds) | ✅ Yes |
+| ✅ `X? =?= Y?` | Yes (both operands, when succeeds) | ✅ Yes |
+| ✅ `X? =?\= Y?` | **NO** | ❌ No |
 | ✅ `compound(X?)` | **NO** | ❌ No |
 | ✅ `known(X?)` | **NO** | ❌ No |
 | ✅ `no_readers(X?)` | **NO** | ❌ No |
@@ -297,7 +299,7 @@ The SRSW analyzer must:
    - Arithmetic comparisons: `<`, `=<`, `>`, `>=`, `=:=`, `=\=`
 3. For variables with ground-guaranteeing guards:
    - Mark variable as "ground-certified" for this clause
-   - Allow multiple occurrences of both writer and reader in clause
+   - Allow multiple occurrences of its reader in the clause; its writer occurs once
 4. For variables without such guards:
    - Enforce strict single-occurrence constraint
 
@@ -430,16 +432,15 @@ provide_default(X, _, Default?) :- unknown(X?) | true.
 
 Tests whether two terms are ground and equal.
 
-**Semantics** (three-valued):
+**Semantics** (three-valued; GLP-Spec appendix-guards.tex, bbff21d): "`=?=` succeeds if both arguments are ground and equal."  It suspends and fails by the guard semantics (glp.tex, Guards): "A guard suspends if it does not succeed but some instance of it under a readers substitution would succeed. A guard fails if no such instance exists."  The runtime decides whether some readers substitution makes the two ground and equal by unifying them with readers alone assigned (`runner.dart`, `_decideGroundEquality`): none does where they clash in a constant, a functor or an arity, where an unbound writer stands in either, which no readers substitution grounds, or where a reader would have to stand for two different terms or for a term containing itself, whatever readers stand elsewhere.
 
-| X | Y | Result |
-|---|---|--------|
-| ground | ground, X = Y | succeed |
-| ground | ground, X ≠ Y | fail |
-| unbound reader | any | suspend |
-| any | unbound reader | suspend |
-| unbound writer | any | fail |
-| any | unbound writer | fail |
+| X and Y | Result |
+|---|---|
+| both ground and equal | succeed |
+| not both ground, and some readers substitution makes them ground and equal | suspend on the unbound readers |
+| no readers substitution makes them ground and equal | fail |
+
+So `f(a, X?) =?= f(b, Z?)`, `f(X?) =?= g(Y?)`, `[a | T?] =?= []` and `f(W) =?= f(c)` fail, and `f(a, X?) =?= f(a, b)` suspends.
 
 **Usage**: Pattern matching where equality must be tested explicitly.
 
@@ -456,9 +457,9 @@ The guard `Key =?= K?` succeeds when `Key` and `K` are both ground and equal. If
 ### ✅ `X =?\= Y`
 **The negation of `=?=`**
 
-`procedure =?\=(_?, _?).` Ground: yes (both).
+`procedure =?\=(_?, _?).` Ground: no.  It succeeds where readers stand unbound --- `f(a, Z?) =?\= f(b, W?)` --- so its success grounds nothing, and it licenses no repeated reader (Remark "Guards and SRSW").
 
-`=?\=` succeeds if both arguments are ground and differ, and suspends where `=?=` suspends. (GLP-Spec appendix-guards.tex, 9064202.)
+**Semantics** (GLP-Spec appendix-guards.tex, bbff21d): "`=?\=` succeeds if no readers substitution makes them ground and equal."  It suspends and fails by the guard semantics, as `=?=` does (above): it fails where both are ground and equal, and suspends on the unbound readers where they are not but some readers substitution makes them so.  So `f(a, Z?) =?\= f(b, W?)`, `f(X?) =?\= g(Y?)`, `[a | T?] =?\= []` and `f(W) =?\= f(c)` succeed, and `f(X?) =?\= f(Y?)` suspends.
 
 ---
 

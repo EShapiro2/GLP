@@ -294,7 +294,7 @@ This is the default for ordinary captures and constructions.  For forwarding a r
 
 ### 3.1 The Rule
 
-When a variable's type is a **constant type** (`Integer`, `Real`, `Number`, `String`, `Constant`), both the writer and reader may appear multiple times in the clause without violating SRSW.
+When a variable's type is a **constant type** (`Integer`, `Real`, `Number`, `String`, `Constant`), its reader may appear multiple times in the clause without violating SRSW; its writer occurs once (TGLP, Definition "Constant Type" and SRSW*: "several occurrences of a reader of constant type permitted, ... its paired writer occurring once").
 
 This is because constant values contain no internal writers and can be safely duplicated.
 
@@ -311,7 +311,7 @@ Variable `V` has type `Integer`. The reader `V?` appears twice (arg 2 and arg 4)
 
 ### 3.3 Guard-Based Relaxation
 
-Alternatively, if a guard establishes that a variable is ground, multiple occurrences are also permitted:
+Alternatively, if a guard establishes that a variable is ground, its reader may occur multiple times; its writer occurs once (GLP-Spec glp.tex, Remark "Guards and SRSW": "then X? may occur multiple times in the clause; X occurs once, as ever"):
 
 ```prolog
 broadcast(Msg, Out1, Out2, Out3) :- ground(Msg?) |
@@ -320,15 +320,15 @@ broadcast(Msg, Out1, Out2, Out3) :- ground(Msg?) |
     send(Msg?, Out3).
 ```
 
-Guards that imply groundness include: `ground/1`, `integer/1`, `number/1`, `string/1`, `constant/1`, and arithmetic comparisons (`</2`, `>/2`, etc.).
+Guards that imply groundness include: `ground/1`, `integer/1`, `number/1`, `string/1`, `constant/1`, arithmetic comparisons (`</2`, `>/2`, etc.) and ground equality (`=?=`).  `=?\=` grounds nothing (the catalogue's Ground column "no"), and neither do `known/1` and `compound/1`.
 
 ---
 
 ### 3.4 Guard Occurrences and SRSW Counting
 
-A reader `X?` appearing in a guard does **not** count toward the single-reader limit in the head+body.  Specifically, if `X?` occurs in a guard, its paired writer `X` must occur in the head, and `X?` may additionally occur once in the head+body.
+A reader `X?` appearing in a guard does **not** count toward the single-reader limit in the body.  Specifically, if `X?` occurs in a guard, its paired writer `X` must occur in the head, and `X?` may additionally occur once in the body.
 
-This rule is stated in the Moded-Types paper (Remark on Guards and SRSW):
+This rule is stated in GLP-Spec, `glp.tex`, Remark "Guards and SRSW":
 
 > Guard occurrences count toward SRSW satisfaction: if X? occurs in a guard, its paired writer X must occur in the head and X? may additionally occur once in the body.
 
@@ -340,7 +340,7 @@ foo(X, Y?) :- known(X?) | bar(X?, Y).
 
 Here `X?` appears twice in the clause — once in the guard (`known(X?)`) and once in the body (`bar(X?, Y)`).  The guard occurrence does not consume the single-reader allowance, so the single body occurrence is valid.  Note that `known/1` does not imply groundness, so this is not the ground-guard relaxation of Section 3.3 — it is the guard-occurrence rule.
 
-Combined with Section 3.3: if a groundness-implying guard like `ground(X?)` is present, `X?` may appear multiple times in both guard and head+body positions.
+Combined with Section 3.3: if a groundness-implying guard like `ground(X?)` is present, `X?` may appear multiple times in the clause, in guard and body alike; `X` still occurs once.
 
 ---
 

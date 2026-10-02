@@ -1,5 +1,14 @@
-% test_ground_equal.glp - Ground equality guard
+% test_ground_equal.glp - Ground equality guard (GLP-Spec appendix-guards.tex,
+% bbff21d): "=?= succeeds if both arguments are ground and equal."  It suspends
+% and fails by glp.tex, Guards: "A guard suspends if it does not succeed but
+% some instance of it under a readers substitution would succeed.  A guard
+% fails if no such instance exists."
 
 exported procedure test(_?, _?, Constant).
 test(X, Y, equal) :- X? =?= Y? | true.
 test(_, _, not_equal) :- otherwise | true.
+
+% An operand that is not a variable: the generic guard call.
+exported procedure test_ab(_?, Constant).
+test_ab(X, equal) :- X? =?= f(a, b) | true.
+test_ab(_, not_equal) :- otherwise | true.

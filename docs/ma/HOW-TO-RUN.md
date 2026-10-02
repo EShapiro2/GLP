@@ -25,7 +25,7 @@
 | dGLP (with mediator) | `typed_social_agent.glp` + `typed_ui_mediator.glp` + `typed_ui_actors.glp` + `play_ui_dglp_boot.glp` | REPL: `play.` |
 | madGLP (headless, no UI) | `play_madglp_boot.glp` + program directory `play_madglp/` | `dart test test/multiagent/isolate_manager_test.dart -n "no UI"` |
 | madGLP (headless, with mediator) | `play_ui_madglp_boot.glp` + program directory `play_ui_madglp/` | `dart test test/multiagent/isolate_manager_test.dart -n "UI mediator"` |
-| madGLP (visual UI) | `typed_social_agent.glp` + `typed_ui_mediator.glp` + `play_ui_boot.glp` | `cd glp_multiagent && flutter build macos --release` |
+| madGLP (visual UI) | program directory `play_ui/` | `cd glp_multiagent && flutter build macos --release` |
 | Simulated plays (Flutter) | `cssg/` files via `ReplPlayRunner` | Build Flutter app, click Play 1/2/3 |
 | Simulated plays (REPL) | `cssg/` 4 files + `fplayN.` | See below |
 
@@ -120,7 +120,9 @@ programs/tests/agent_roundtrip/
 ├── play_madglp/              # program directory: agent_init/2 + actor dispatch
 ├── play_ui_madglp_boot.glp   # madGLP boot with mediator: boot/0 alone
 ├── play_ui_madglp/           # program directory: agent_init/2 (mediator stack)
-└── play_ui_boot.glp          # Flutter UI boot: agent_init/3 with send_to_user (for visual UI)
+├── play_ui/                  # program directory: agent_init/3 with send_to_user (the Flutter agent runtime's)
+├── play_scenario/            # program directory: one-heap scenario, bob live, alice and charlie scripted
+└── play_grassapp/            # program directory: the same with chat messages
 ```
 
 ### Boot file variants
@@ -131,7 +133,7 @@ programs/tests/agent_roundtrip/
 | `play_ui_dglp_boot.glp` | network3 → agent/4 → ui_mediator → ui_actor | Single-isolate REPL, with mediator |
 | `play_madglp_boot.glp` | agent/4 → actor + send_to_net (in `play_madglp/`) | Multi-isolate headless, no mediator |
 | `play_ui_madglp_boot.glp` | agent/4 → ui_mediator → ui_actor + send_to_net (in `play_ui_madglp/`) | Multi-isolate headless, with mediator |
-| `play_ui_boot.glp` | agent/4 → ui_mediator → send_to_user + send_to_net | Multi-isolate Flutter UI (human input) |
+| `play_ui/` | agent/4 → ui_mediator → send_to_user + send_to_net | Multi-isolate Flutter UI (human input) |
 
 ### Archived untyped originals
 
@@ -292,26 +294,27 @@ To kill a running instance:
 pkill -f glp_multiagent
 ```
 
-### GLP files loaded by Flutter app
+### The program the Flutter agent runtime loads
 
-The Flutter app (`main.dart`) loads these three files in order:
-1. `typed_social_agent.glp` — agent/4, channel ops, helpers
-2. `typed_ui_mediator.glp` — ground-term mediator
-3. `play_ui_boot.glp` — interactive boot: `agent_init(Id, UserIn, NetIn)`
+The agent runtime loads one program and co-loads no sources beside it
+(2026-10-02): here the program directory `play_ui/`, whose interactive boot
+`agent_init(Id, UserIn, NetIn)` reaches agent/4 (`typed_social_agent.glp`) and
+the ground-term mediator (`typed_ui_mediator.glp`) through the `-expose`
+directives of `agent_roundtrip/self.glp`.
 
 ### Spawning Agents
 
 1. The **coordinator window** opens first.
 2. Click **"Alice↔Bob↔Charlie"** to spawn three agent windows.
-3. Each agent window has a text input field at the bottom for commands.
+3. The person acts through each agent's screen; there is no command line.
 
 ### Interactive Protocol — The Full Introduction Script
 
-The protocol below matches the automated actor scripts in `typed_ui_actors.glp`. The ui_mediator replaces non-ground variables with `req(N)` identifiers, so the user types ground terms only.
+The protocol below matches the automated actor scripts in `typed_ui_actors.glp`. The ui_mediator replaces non-ground variables with `req(N)` identifiers, so each act is a ground term, and it reaches the agent as a term, never as typed text (2026-10-02).
 
 #### Step 1 — Alice: cold-call Bob
 
-Type in **Alice's** window:
+The act on **Alice's** screen:
 ```
 connect(bob)
 ```
@@ -319,7 +322,7 @@ connect(bob)
 
 #### Step 2 — Bob: accept Alice's friend request
 
-Type in **Bob's** window (use the req number from Bob's output):
+The act on **Bob's** screen (use the req number from Bob's output):
 ```
 decision(yes, alice, req(1))
 ```
@@ -327,7 +330,7 @@ decision(yes, alice, req(1))
 
 #### Step 3 — Alice: send message to Bob
 
-Type in **Alice's** window:
+The act on **Alice's** screen:
 ```
 send(bob, 'Hi Bob, this is Alice')
 ```
@@ -335,7 +338,7 @@ send(bob, 'Hi Bob, this is Alice')
 
 #### Step 4 — Bob: cold-call Charlie
 
-Type in **Bob's** window:
+The act on **Bob's** screen:
 ```
 connect(charlie)
 ```
@@ -343,7 +346,7 @@ connect(charlie)
 
 #### Step 5 — Charlie: accept Bob's friend request and greet
 
-Type in **Charlie's** window (use the req number from Charlie's output):
+The act on **Charlie's** screen (use the req number from Charlie's output):
 ```
 decision(yes, bob, req(1))
 ```
@@ -355,7 +358,7 @@ send(bob, 'Hi Bob, this is Charlie')
 
 #### Step 6 — Bob: introduce Alice to Charlie
 
-Type in **Bob's** window:
+The act on **Bob's** screen:
 ```
 introduce(alice, charlie)
 ```
@@ -367,14 +370,14 @@ Note the req numbers — they may differ between Alice and Charlie.
 
 #### Step 7 — Alice: accept introduction to Charlie
 
-Type in **Alice's** window (use Alice's req number from step 6):
+The act on **Alice's** screen (use Alice's req number from step 6):
 ```
 accept_intro(charlie, req(N))
 ```
 
 #### Step 8 — Charlie: accept introduction to Alice
 
-Type in **Charlie's** window (use Charlie's req number from step 6):
+The act on **Charlie's** screen (use Charlie's req number from step 6):
 ```
 accept_intro(alice, req(N))
 ```
@@ -382,7 +385,7 @@ accept_intro(alice, req(N))
 
 #### Step 9 — Alice sends to Charlie
 
-Type in **Alice's** window:
+The act on **Alice's** screen:
 ```
 send(charlie, 'Hi Charlie, this is Alice')
 ```
@@ -390,7 +393,7 @@ send(charlie, 'Hi Charlie, this is Alice')
 
 #### Step 10 — Charlie sends to Alice
 
-Type in **Charlie's** window:
+The act on **Charlie's** screen:
 ```
 send(alice, 'Hi Alice, this is Charlie')
 ```

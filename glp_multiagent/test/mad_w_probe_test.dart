@@ -15,7 +15,6 @@
 /// Each outcome is asserted singly. The old disjunction matched||otherwise was
 /// vacuous: one of bob_consumer's two clauses always fires.
 import 'dart:async';
-import 'dart:io';
 import 'dart:isolate';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -27,7 +26,8 @@ void main() {
   test('_w matches the nested head; the channel head commits with a writer at Out',
       () async {
     final programs = programsDir();
-    final probe = File('$programs/tests/mad_w_probe.glp').readAsStringSync();
+    // The one program each agent runs, a module file (TGLP, def:program).
+    final probe = '$programs/tests/mad_w_probe.glp';
     final rootSelf = '$programs/self.glp';
 
     final reply = ReceivePort();
@@ -52,9 +52,8 @@ void main() {
           agentIsolateEntry,
           InitAgent(
             agentId: id,
-            glpSources: [probe],
+            program: probe,
             rootSelfGlpPath: rootSelf,
-            friends: id == 'alice' ? ['bob'] : ['alice'],
             replyPort: reply.sendPort,
             deferStart: true,
           ),

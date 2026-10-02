@@ -28,8 +28,9 @@ void main() {
     final sched = Scheduler(rt: rt, runner: ByteRunner(image));
     final entry = image.entryOffsetOf('p/0')!;
     for (var i = 1; i <= n; i++) {
-      rt.setGoalEnv(i, CallEnv());
-      rt.gq.enqueue(GoalRef(i, entry));
+      final id = rt.nextGoalId++;
+      rt.setGoalEnv(id, CallEnv());
+      rt.gq.enqueue(GoalRef(id, entry));
     }
     return (sched, rt);
   }
@@ -64,7 +65,7 @@ void main() {
       Requeue('loop/0', 0),
     ]));
     final sched = Scheduler(rt: rt, runner: ByteRunner(image));
-    rt.gq.enqueue(GoalRef(1, image.entryOffsetOf('loop/0')!));
+    rt.gq.enqueue(GoalRef(rt.nextGoalId++, image.entryOffsetOf('loop/0')!));
 
     final result = sched.drainToQuiescence(maxCycles: 100);
     expect(result.goalsRun, 100, reason: 'the net, and not a step more');

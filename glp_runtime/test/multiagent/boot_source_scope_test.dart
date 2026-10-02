@@ -13,7 +13,9 @@
 /// `enableMadGLP` had loaded a moment earlier. The loaders now pass the
 /// engine's scope ([GlpEngine.scope], [GlpEngine.scopeFor]); these tests hold
 /// that a boot source calling a loaded kernel loads, and that one calling
-/// nothing that exists is still refused.
+/// nothing that exists is still refused.  AgentRuntime co-loads no boot source
+/// since 2026-10-02: it runs one program, and a module file given as that
+/// program is checked in the same scope, which its two tests below hold.
 library;
 
 import 'dart:io';
@@ -50,6 +52,14 @@ boot :- agent_init(alice, _)@alice.
 ''';
 
 String get _rootSelf => File('../programs/self.glp').absolute.path;
+
+/// [source] written as the module file [name].glp in [dir]: the one program an
+/// AgentRuntime runs (TGLP, def:program).
+String _moduleFile(Directory dir, String name, String source) {
+  final path = '${dir.path}/$name.glp';
+  File(path).writeAsStringSync(source);
+  return path;
+}
 
 /// A file under a directory whose self.glp the engine's scope does not carry.
 String get _chainFile =>
@@ -122,7 +132,10 @@ void main() {
 
   group('the multi-isolate loaders hand the boot source that scope', () {
     late IsolateManager manager;
+    late Directory dir;
 
+    setUpAll(() => dir = Directory.systemTemp.createTempSync('glp_boot_scope_'));
+    tearDownAll(() => dir.deleteSync(recursive: true));
     setUp(() => manager = IsolateManager());
     tearDown(() async => manager.shutdown());
 
@@ -155,7 +168,7 @@ void main() {
         () async {
       final agent = AgentRuntime(
         agentId: 'alice',
-        glpSources: const [_callsKernel],
+        program: _moduleFile(dir, 'calls_kernel', _callsKernel),
         rootSelfGlpPath: _rootSelf,
         goalLabel: 'agent_init/2',
       );
@@ -167,7 +180,7 @@ void main() {
         () async {
       final agent = AgentRuntime(
         agentId: 'alice',
-        glpSources: const [_callsNothing],
+        program: _moduleFile(dir, 'calls_nothing', _callsNothing),
         rootSelfGlpPath: _rootSelf,
         goalLabel: 'agent_init/2',
       );
