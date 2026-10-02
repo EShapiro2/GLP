@@ -71,7 +71,8 @@ FAIL=0
 
 # Known-red REPL checks: the counterpart, for check/check_not, of Section Q's
 # KNOWN_RED list of Dart tests.  An entry is a check's name exactly as it is
-# passed to check or check_not, with its owner in the comment above it.  A
+# passed to check or check_not (or to _check_pass and _check_fail, as Section
+# Q's asset step does), with its owner in the comment above it.  A
 # listed check that fails is reported KNOWN RED and does not fail the suite; a
 # listed check that passes fails it (the rot guard), so the entry is deleted in
 # the commit that turns it green.  Udi's rulings put a dormant project's
@@ -166,6 +167,10 @@ KNOWN_RED_CHECKS=(
     "SG child-safe platform on two smartphones: alice is connected to bob"
     "SG child-safe platform on two smartphones: bob is connected to alice"
     "SG child-safe platform on two smartphones: alice's message reaches bob"
+# CSSN, dormant (Udi, 2026-10-01, to Integration Code: "Ignore CSSN stuff till
+# I ask differently"): its childsafe artefact, refused at its source for the
+# guard negation GLP removed (15ba4b7e), measured at gap 80265f7c.
+    "Q asset step writes childsafe.glpw"
 )
 KR_CHECKS=0
 
@@ -5392,8 +5397,29 @@ echo ""
 # tree-change guard.
 if [ -f "$GLP_DIR/glp_multiagent/tool/sync_glp_assets.sh" ]; then
     SYNC_RESULT=$(cd "$GLP_DIR/glp_multiagent" && bash tool/sync_glp_assets.sh 2>&1) || true
+    # Each certified mini-app the script builds is a check of its own, so that
+    # an artefact its owner's source cannot yet give --- CSSN's, while CSSN is
+    # dormant --- is known red, not the whole step.  The script stops at the
+    # first artefact missing, so each is looked for on disc; its list is the
+    # script's own.
+    SYNC_ARTEFACTS=$(sed -n 's/^for a in \(.*\); do$/\1/p' "$GLP_DIR/glp_multiagent/tool/sync_glp_assets.sh")
+    SYNC_MISSING=0
+    if [ -z "$SYNC_ARTEFACTS" ]; then
+        echo "  FAIL: the artefact list of sync_glp_assets.sh cannot be read"
+        FAIL=$((FAIL + 1))
+    fi
+    for a in $SYNC_ARTEFACTS; do
+        if [ -s "$GLP_DIR/glp_multiagent/assets/glp/programs/social/graph/core/$a.glpw" ]; then
+            _check_pass "Q asset step writes $a.glpw"
+        else
+            _check_fail "Q asset step writes $a.glpw" "not written"
+            SYNC_MISSING=$((SYNC_MISSING + 1))
+        fi
+    done
     if printf '%s' "$SYNC_RESULT" | grep -q '^Synced GLP assets'; then
         echo "  (the bundled GLP assets are generated)"
+    elif [ "$SYNC_MISSING" -gt 0 ]; then
+        echo "  (the bundled GLP assets are generated but for the artefacts above)"
     else
         echo "  FAIL: sync_glp_assets.sh did not complete, so glp_multiagent's"
         echo "        assets are missing or stale and its tests cannot run:"
