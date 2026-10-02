@@ -6,8 +6,9 @@
 /// the two clash or an unbound writer stands in either, whatever readers stand
 /// elsewhere, fails where both are ground and equal, and suspends where they
 /// are not but some readers substitution makes them so.  The catalogue gives it
-/// Ground "yes (both)".  test/engine/ground_equality_test.dart takes =?= and
-/// =?\= case by case.
+/// Ground "no", so it licenses no repeated reader, where =?= keeps "yes
+/// (both)".  test/engine/ground_equality_test.dart takes =?= and =?\= case by
+/// case.
 ///
 /// Fixtures: programs/tests/typed/test_ground_not_equal.glp, and
 /// programs/tests/typed/test_ground_equal.glp for =?= beside it.
@@ -175,13 +176,81 @@ void main() {
     });
   });
 
-  group('Ground: yes (both) --- =?\\= grounds both arguments for SRSW', () {
-    test('each reader may occur twice in the body', () {
-      final program = GlpCompiler().compile(r'''
+  // The catalogue's Ground column (GLP-Spec appendix-guards.tex, bbff21d):
+  // "no" for =?\=, which succeeds where readers stand unbound, and "yes
+  // (both)" for =?=.  Until 2026-10-02 =?\= had "yes (both)" and the analyzer
+  // licensed a repeated reader after it, so the clause
+  // neq_pair(X, Y, pair(X?, X?, Y?, Y?)) :- X? =?\= Y? | true loaded, and its
+  // call neq_pair(f(a, Z?), f(b, W?), P) bound P to a term holding one unbound
+  // variable twice (Integration #4 Code, 2026-10-02 10:52 UTC).
+  group('Ground: no --- =?\\= grounds nothing, and licenses no repeated '
+      'reader', () {
+    test('a reader twice in the body after it is refused', () {
+      expect(
+          () => GlpCompiler().compile(r'''
 procedure quad(_?, _?, _?, _?, _).
 quad(_, _, _, _, done).
 procedure k(_?, _?, _).
 k(X, Y, Z?) :- X? =?\= Y? | quad(X?, X?, Y?, Y?, Z).
+'''),
+          throwsA(predicate(
+              (e) => e.toString().contains('Reader variable "X?" occurs 2 times'),
+              'an SRSW violation naming X?')));
+    });
+
+    test('a reader twice in the head after it is refused: neq_pair, the '
+        'clause of the breach', () {
+      expect(
+          () => GlpCompiler().compile(r'''
+procedure neq_pair(_?, _?, _).
+neq_pair(X, Y, pair(X?, X?, Y?, Y?)) :- X? =?\= Y? | true.
+'''),
+          throwsA(predicate(
+              (e) => e.toString().contains('Reader variable "X?" occurs 2 times'),
+              'an SRSW violation naming X?')));
+      final engine = GlpEngine(
+          rootSelfGlpPath: File('../programs/self.glp').absolute.path);
+      bool? loaded;
+      try {
+        loaded = engine.loadFile(
+            File('../programs/tests/srsw/neq_not_ground.glp').absolute.path);
+      } catch (_) {
+        loaded = false;
+      }
+      expect(loaded, isNot(isTrue),
+          reason: 'programs/tests/srsw/neq_not_ground.glp, the fixture');
+    });
+
+    test('each argument read once, the call of the breach commits with each '
+        'reader once', () async {
+      final engine = GlpEngine(
+          rootSelfGlpPath: File('../programs/self.glp').absolute.path);
+      expect(
+          engine.loadSource(r'''
+exported procedure neq_once(_?, _?, _).
+neq_once(X, Y, pair(X?, Y?)) :- X? =?\= Y? | true.
+''', filename: 'neq_once.glp'),
+          isTrue);
+      final r = await engine.runGoal('neq_once(f(a, Z?), f(b, W?), P)');
+      expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
+      final heap = engine.runtime.heap;
+      final p = heap.dereference(r.bindings['P']!);
+      expect(p, isA<StructTerm>());
+      expect((p as StructTerm).args, hasLength(2));
+      final left = heap.dereference(p.args[0]) as StructTerm;
+      final right = heap.dereference(p.args[1]) as StructTerm;
+      expect([left.functor, _v(heap.dereference(left.args[0]))], ['f', 'a']);
+      expect([right.functor, _v(heap.dereference(right.args[0]))], ['f', 'b']);
+      // Z? and W?, unbound, each once.
+      expect(left.args[1], isNot(right.args[1]));
+    });
+
+    test('=?= beside it grounds both: a reader twice after it loads', () {
+      final program = GlpCompiler().compile(r'''
+procedure quad(_?, _?, _?, _?, _).
+quad(_, _, _, _, done).
+procedure k(_?, _?, _).
+k(X, Y, Z?) :- X? =?= Y? | quad(X?, X?, Y?, Y?, Z).
 ''');
       expect(program, isNotNull);
     });
@@ -196,17 +265,6 @@ k(X, Y, Z?) :- known(X?), known(Y?) | quad(X?, X?, Y?, Y?, Z).
 '''),
           throwsA(predicate((e) => e.toString().contains('SRSW'),
               'an SRSW violation')));
-    });
-
-    test('the fixture\'s clause reads each argument twice, and runs', () async {
-      final engine = _engine();
-      final r = await engine.runGoal('neq_pair(a, b, P)');
-      expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
-      final p = r.bindings['P'];
-      expect(p, isA<StructTerm>());
-      expect((p as StructTerm).functor, 'pair');
-      expect(p.args.map((a) => _v(engine.runtime.heap.dereference(a))),
-          ['a', 'a', 'b', 'b']);
     });
   });
 

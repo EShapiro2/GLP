@@ -559,7 +559,6 @@ test_neq([1,2,3], [1,2,3], Rq5).
 test_neq([1,2], [1,3], Rq6).
 test_neq_stop(go, Rq7).
 test_neq_stop(stop, Rq8).
-neq_pair(a, b, Rq9).
 neq_only(f(a, Zq?), f(b, Wq?), Rq10).
 neq_only(f(a, Zq2?), f(a, b), Rq11).
 test(f(a, Ze1?), f(b, We1?), Re1).
@@ -593,7 +592,6 @@ check "=?\\= on equal lists fails" "Rq5 = equal" "$a13"
 check "=?\\= on differing lists" "Rq6 = not_equal" "$a13"
 check "=?\\= against a constant, differing" "Rq7 = go_on" "$a13"
 check "=?\\= against a constant, equal, fails" "Rq8 = stopped" "$a13"
-check "=?\\= grounds both readers" "Rq9 = pair(a, a, b, b)" "$a13"
 check "=?\\= succeeds at two constants that differ, readers beside them" "Rq10 = not_equal" "$a13"
 check "=?\\= suspends where a readers substitution makes them ground and equal" "Rq11 = <unbound>" "$a13"
 check "=?= fails at two constants that differ, readers beside them" "Re1 = not_equal" "$a13"
@@ -1694,6 +1692,9 @@ SRSW_FILES=(
     # known/1 does not imply groundness, so it licenses no multiple occurrence
     # (glp.tex Remark "Guards and SRSW").
     "$GLP_DIR/programs/tests/srsw/known_not_ground.glp"
+    # Nor does =?\=, Ground "no" (GLP-Spec appendix-guards.tex, bbff21d): A13's
+    # neq_pair, which read each argument twice after it, until 2026-10-02.
+    "$GLP_DIR/programs/tests/srsw/neq_not_ground.glp"
 )
 
 for f in "${SRSW_FILES[@]}"; do
@@ -1715,6 +1716,11 @@ check "SO: a writer occurring twice" "Writer variable \"X\" occurs 2 times" "$sr
 check "SO: a reader occurring twice" "Reader variable \"Y?\" occurs 2 times" "$srsw_multi"
 check "pairing: a variable with no reader" "Variable \"Z\" has no reader" "$srsw_multi"
 check "pairing: a variable with no writer" "Variable \"Y\" has no writer" "$srsw_multi"
+
+# =?\= grounds nothing (GLP-Spec appendix-guards.tex, bbff21d): a reader twice
+# after it is refused, and the diagnostic names it.
+srsw_neq=$(echo -e "$GLP_DIR/programs/tests/srsw/neq_not_ground.glp\n:quit" | "$REPL_RUN" 2>&1)
+check "=?\\= grounds nothing: a reader twice after it is refused" "Reader variable \"X?\" occurs 2 times" "$srsw_neq"
 
 # merge_with_reader: the one entry of this section that is rejected by the SRSW
 # pass rather than by the type checker, so it is the only test that speaks for

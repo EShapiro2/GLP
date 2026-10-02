@@ -744,12 +744,15 @@ class Analyzer {
       }
     }
 
-    // Ground equality guards mark both arguments as grounded
-    // =?= succeeds only if both arguments are ground and equal, and =?\= only
-    // if both are ground and differ: Ground "yes (both)" for each (GLP-Spec
-    // appendix-guards.tex, 9064202)
-    if ((guard.predicate == '=?=' || guard.predicate == '=?\\=') &&
-        guard.args.length == 2) {
+    // Ground equality.  =?= "succeeds if both arguments are ground and equal",
+    // Ground "yes (both)", and marks both (GLP-Spec appendix-guards.tex,
+    // bbff21d).  =?\= marks nothing, Ground "no": it "succeeds if no readers
+    // substitution makes them ground and equal", f(a, Z?) =?\= f(b, W?) with
+    // Z? and W? unbound among its successes.  Until 2026-10-02 it marked both,
+    // so neq_pair(X, Y, pair(X?, X?, Y?, Y?)) :- X? =?\= Y? | true loaded, and
+    // its call neq_pair(f(a, Z?), f(b, W?), P) bound P to a term holding one
+    // unbound variable twice (Integration #4 Code, 2026-10-02 10:52 UTC).
+    if (guard.predicate == '=?=' && guard.args.length == 2) {
       for (final arg in guard.args) {
         if (arg is VarTerm) {
           varTable.markGrounded(arg.name);

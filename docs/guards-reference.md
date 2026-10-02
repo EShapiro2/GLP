@@ -240,6 +240,8 @@ This is distinct from the multiple-occurrence relaxation below. Guard reader cou
 | ✅ `X? >= Y?` | Yes (both operands, when succeeds) | ✅ Yes |
 | ✅ `X? =:= Y?` | Yes (both operands, when succeeds) | ✅ Yes |
 | ✅ `X? =\= Y?` | Yes (both operands, when succeeds) | ✅ Yes |
+| ✅ `X? =?= Y?` | Yes (both operands, when succeeds) | ✅ Yes |
+| ✅ `X? =?\= Y?` | **NO** | ❌ No |
 | ✅ `compound(X?)` | **NO** | ❌ No |
 | ✅ `known(X?)` | **NO** | ❌ No |
 | ✅ `no_readers(X?)` | **NO** | ❌ No |
@@ -455,7 +457,7 @@ The guard `Key =?= K?` succeeds when `Key` and `K` are both ground and equal. If
 ### ✅ `X =?\= Y`
 **The negation of `=?=`**
 
-`procedure =?\=(_?, _?).` Ground: yes (both).
+`procedure =?\=(_?, _?).` Ground: no.  It succeeds where readers stand unbound --- `f(a, Z?) =?\= f(b, W?)` --- so its success grounds nothing, and it licenses no repeated reader (Remark "Guards and SRSW").
 
 **Semantics** (GLP-Spec appendix-guards.tex, bbff21d): "`=?\=` succeeds if no readers substitution makes them ground and equal."  It suspends and fails by the guard semantics, as `=?=` does (above): it fails where both are ground and equal, and suspends on the unbound readers where they are not but some readers substitution makes them so.  So `f(a, Z?) =?\= f(b, W?)`, `f(X?) =?\= g(Y?)`, `[a | T?] =?\= []` and `f(W) =?\= f(c)` succeed, and `f(X?) =?\= f(Y?)` suspends.
 
