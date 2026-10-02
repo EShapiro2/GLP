@@ -82,14 +82,12 @@ KNOWN_RED_CHECKS=(
 # files.  Section K entire, and the SG checks that need the `cssn` or
 # `childsafe` artefact, measured at gap 2c18023e.
     "CSSN mini-app loads as a program"
-    "CSSN mini-app no type errors"
     "CSSN mini-app: its certificate carries the compiler's key"
     "CSSN mini-app: run/3 activates it, and adopting the conversation is the friendship"
     "CSSN mini-app: the friend's execution sees it too, and the greeting crosses"
     "CSSN mini-app: becoming parent and child travels the conversation"
     "CSSN mini-app: and the child holds its parent"
     "CSSN v2 project loads"
-    "CSSN v2 no type errors"
     "CSSN v2 fplay1 succeeds"
     "CSSN v2 fplay2 succeeds"
     "CSSN v2 fplay3 succeeds"
