@@ -347,4 +347,93 @@ deal([]).
 '''), refused('whose elements hold questions'));
     });
   });
+
+  group('widget declarations, T =::= W', () {
+    test('are read from the source text, which GLP\'s lexer could not read '
+        'with them, and the source is in the paper\'s syntax', () {
+      const text = '''
+YesNo ::= yes ; no.
+YesNo? =::= toggle.
+procedure (YesNo?)*ask(Integer?).
+(yes)*ask(_).
+''';
+      expect(isPaperSyntaxSource(text), isTrue);
+      final w = extractWidgetDeclarations(text);
+      expect(w.byModedType, {'YesNo?': 'toggle'});
+      expect(w.stripped.split('\n'), hasLength(text.split('\n').length));
+      expect(w.stripped, isNot(contains('=::=')));
+    });
+
+    test('name the widget of a question of their moded type, in its mode, '
+        'at the interactive type and below it', () {
+      final c = compile('''
+Peer ::= Constant.
+YesNo ::= yes ; no.
+Card ::= card(Peer, YesNo?).
+Card =::= inbox_card.
+YesNo? =::= toggle.
+procedure (Card)*respond(YesNo).
+(card(bob, A))*respond(A?).
+procedure (Pair)*both(YesNo, YesNo).
+(pair(A, B))*both(A?, B?).
+Pair ::= pair(YesNo?, YesNo?).
+''');
+      expect(c.widgets['Card'], 'inbox_card');
+      expect(c.widgets['Pair'], 'form(pair, [toggle, toggle])');
+    });
+
+    test('a declaration for the other mode does not apply', () {
+      final c = compile('''
+YesNo ::= yes ; no.
+YesNo =::= lamp.
+procedure (YesNo?)*ask(Integer?).
+(yes)*ask(_).
+''');
+      expect(c.widgets['YesNo?'], 'buttons([yes, no])');
+    });
+
+    test('a quoted atom names a widget too', () {
+      final c = compile('''
+YesNo ::= yes ; no.
+YesNo? =::= 'Big buttons'.
+procedure (YesNo?)*ask(Integer?).
+(yes)*ask(_).
+''');
+      expect(c.widgets['YesNo?'], "'Big buttons'");
+    });
+
+    test('are refused where W is not an atom, T not a moded type, or two name '
+        'one moded type', () {
+      expect(() => compile('''
+YesNo ::= yes ; no.
+YesNo? =::= toggle(big).
+procedure (YesNo?)*ask(Integer?).
+(yes)*ask(_).
+'''), refused('is not an atom naming a widget'));
+      expect(() => compile('''
+YesNo ::= yes ; no.
+yes =::= toggle.
+procedure (YesNo?)*ask(Integer?).
+(yes)*ask(_).
+'''), refused('is not a moded type'));
+      expect(() => compile('''
+YesNo ::= yes ; no.
+YesNo? =::= toggle.
+YesNo? =::= lamp.
+procedure (YesNo?)*ask(Integer?).
+(yes)*ask(_).
+'''), refused('Two widget declarations'));
+    });
+
+    test('keep the lines of the source, so an error after one is reported '
+        'where it is', () {
+      expect(() => compile('''
+YesNo ::= yes ; no.
+YesNo? =::= toggle.
+procedure (YesNo?)*ask(Integer?).
+(yes)*ask(_).
+ask(1, t).
+'''), throwsA(isA<CompileError>().having((e) => e.line, 'line', 5)));
+    });
+  });
 }

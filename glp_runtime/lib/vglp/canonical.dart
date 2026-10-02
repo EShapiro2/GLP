@@ -82,6 +82,12 @@
 // `_w` in writer mode: menu_r, menu_w (questionFunctorStem); two moded types
 // giving the same t are told apart by `_2`, `_3`, ... in the order of their
 // declarations.
+//
+// WIDGET DECLARATIONS, T =::= W (Definition "Widget Declaration, Default
+// Widget"; W an atom, vGLP 2026-10-01 23:55 UTC, E, Q3), are read from the
+// source text before it is lexed, GLP's lexer having no token =::= (vGLP #4
+// Cowork, 2026-10-02 08:26 UTC, item 7).  A declaration in the source holds
+// in its module.
 
 import '../compiler/ast.dart';
 import '../compiler/error.dart';
@@ -231,8 +237,14 @@ bool isPaperSyntax(List<Token> tokens) {
   return false;
 }
 
-/// [isPaperSyntax] of a source's text.
-bool isPaperSyntaxSource(String text) => isPaperSyntax(Lexer(text).tokenize());
+/// [isPaperSyntax] of a source's text, its widget declarations set aside: a
+/// source with one is in the paper's syntax only if it is so without it.
+bool isPaperSyntaxSource(String text) {
+  final stripped = text.contains('=::=')
+      ? extractWidgetDeclarations(text).stripped
+      : text;
+  return isPaperSyntax(Lexer(stripped).tokenize());
+}
 
 /// Compile [text], a vGLP program in the paper's syntax, by the canonical
 /// compilation.
@@ -244,7 +256,8 @@ bool isPaperSyntaxSource(String text) => isPaperSyntax(Lexer(text).tokenize());
 /// it, the root's.
 CanonicalProgram compileCanonical(String text,
     {DispatcherSource? dispatcher, TypeEnvironment? scope}) {
-  final parsed = _parse(text);
+  final widgetDecls = extractWidgetDeclarations(text);
+  final parsed = _parse(widgetDecls.stripped);
   final m = parsed.module;
 
   _checkNoOldDesign(m);
@@ -367,10 +380,16 @@ CanonicalProgram compileCanonical(String text,
   ];
 
   // Part 2: the dispatcher and the construct processes.
-  final elicitation = dispatcher == null
-      ? null
-      : _elicitation(dispatcher, m, volitional.values.toList(), added,
-          typeNames, taken, scope);
+  _Elicitation? elicitation;
+  if (dispatcher != null) {
+    elicitation = _elicitation(dispatcher, m, volitional.values.toList(),
+        added, typeNames, taken, widgetDecls, scope);
+  } else if (widgetDecls.byModedType.isNotEmpty) {
+    final d = widgetDecls.positions.first;
+    throw CompileError(
+        'A widget declaration, and no dispatcher\'s generic source to build '
+        'the construct processes it serves', d.$1, d.$2, phase: 'analyzer');
+  }
 
   final source = _emit(m, added.typeDefs, out, bare, elicitation);
   final module = Parser(Lexer(source).tokenize()).parseModule();
@@ -409,6 +428,7 @@ _Elicitation _elicitation(
     _AddedTypes added,
     Set<String> typeNames,
     Set<String> taken,
+    WidgetDeclarations widgetDecls,
     TypeEnvironment? scope) {
   // Every name is fresh against the program's and against the names the
   // compilation has already given.
@@ -462,6 +482,9 @@ _Elicitation _elicitation(
     types.add(InteractiveType(v.interactiveType, v.readerMode, v.functor,
         v.typeParams, v.line, v.column));
   }
+  // A declaration names a moded type and holds wherever a position of an
+  // interactive variable is of it; one naming a type no position is of is
+  // unused, as an unused type definition is.
   final constructs = buildConstructs(
     types: types,
     constructName: constructName,
@@ -469,7 +492,7 @@ _Elicitation _elicitation(
     handleType: added.handle,
     generic: generic,
     resolve: resolve,
-    declared: const {},
+    declared: widgetDecls.byModedType,
     fresh: freshProc,
   );
 
@@ -493,6 +516,175 @@ _Elicitation _elicitation(
     constructName,
     constructs.widgets,
   );
+}
+
+// ---------------------------------------------------------------------------
+// Widget declarations: T =::= W, read from the source text
+// ---------------------------------------------------------------------------
+
+/// The widget declarations of a source, and its text with each blanked out,
+/// its lines kept, for GLP's lexer, which has no token =::=.
+class WidgetDeclarations {
+  final String stripped;
+
+  /// The widget each declaration names, an atom, by its moded type as
+  /// written: 'Card' inbox_card.
+  final Map<String, String> byModedType;
+
+  /// Where each declaration begins, line and column, in source order.
+  final List<(int, int)> positions;
+
+  WidgetDeclarations(this.stripped, this.byModedType, this.positions);
+}
+
+/// Read the widget declarations `T =::= W.` of [text]: T a moded type, W an
+/// atom naming a widget of the construct family (Definition "Widget
+/// Declaration, Default Widget"; vGLP 2026-10-01 23:55 UTC, E, Q3).
+WidgetDeclarations extractWidgetDeclarations(String text) {
+  if (!text.contains('=::=')) {
+    return WidgetDeclarations(text, const {}, const []);
+  }
+  final chars = text.split('');
+  final byType = <String, String>{};
+  final positions = <(int, int)>[];
+  var i = 0;
+  int? itemStart;
+  while (i < text.length) {
+    final c = text[i];
+    if (c == '%') {
+      while (i < text.length && text[i] != '\n') {
+        i++;
+      }
+      continue;
+    }
+    if (c == '\'' || c == '"') {
+      itemStart ??= i;
+      i = _skipQuoted(text, i);
+      continue;
+    }
+    if (c.trim().isEmpty) {
+      i++;
+      continue;
+    }
+    itemStart ??= i;
+    if (text.startsWith('=::=', i)) {
+      final start = itemStart;
+      final end = _itemEnd(text, i + 4);
+      final (line, column) = _lineColumn(text, start);
+      if (end < 0) {
+        throw CompileError(
+            'A widget declaration "T =::= W" with no full stop', line, column,
+            phase: 'parser');
+      }
+      final left = text.substring(start, i).trim();
+      final right = text.substring(i + 4, end).trim();
+      final key = _widgetType(left, line, column);
+      final widget = _widgetAtom(right, line, column);
+      if (byType.containsKey(key)) {
+        throw CompileError(
+            'Two widget declarations for the moded type $key', line, column,
+            phase: 'parser');
+      }
+      byType[key] = widget;
+      positions.add((line, column));
+      for (var k = start; k <= end; k++) {
+        if (chars[k] != '\n') chars[k] = ' ';
+      }
+      i = end + 1;
+      itemStart = null;
+      continue;
+    }
+    if (c == '.' && _isFullStop(text, i)) {
+      itemStart = null;
+    }
+    i++;
+  }
+  return WidgetDeclarations(chars.join(), byType, positions);
+}
+
+/// The index past the quoted atom or string literal opening at [i].
+int _skipQuoted(String text, int i) {
+  final q = text[i];
+  var j = i + 1;
+  while (j < text.length) {
+    if (text[j] == '\\') {
+      j += 2;
+      continue;
+    }
+    if (text[j] == q) return j + 1;
+    j++;
+  }
+  return j;
+}
+
+/// Whether the `.` at [i] ends an item: followed by whitespace, a comment or
+/// the end of the text.
+bool _isFullStop(String text, int i) =>
+    i + 1 >= text.length || text[i + 1].trim().isEmpty || text[i + 1] == '%';
+
+/// The index of the full stop ending the item that goes on at [from], or -1.
+int _itemEnd(String text, int from) {
+  var i = from;
+  while (i < text.length) {
+    final c = text[i];
+    if (c == '%') {
+      while (i < text.length && text[i] != '\n') {
+        i++;
+      }
+      continue;
+    }
+    if (c == '\'' || c == '"') {
+      i = _skipQuoted(text, i);
+      continue;
+    }
+    if (c == '.' && _isFullStop(text, i)) return i;
+    i++;
+  }
+  return -1;
+}
+
+(int, int) _lineColumn(String text, int offset) {
+  var line = 1, column = 1;
+  for (var k = 0; k < offset; k++) {
+    if (text[k] == '\n') {
+      line++;
+      column = 1;
+    } else {
+      column++;
+    }
+  }
+  return (line, column);
+}
+
+/// The moded type a widget declaration names, as written: parsed as the
+/// argument type of an imported declaration, which has no clauses.
+String _widgetType(String left, int line, int column) {
+  try {
+    final m = Parser(Lexer('imported procedure m#w($left).').tokenize())
+        .parseModule();
+    final d = m.procDeclarations.single;
+    if (d.argTypes.length == 1) return typeSource(d.argTypes.single);
+  } on Object {
+    // reported below
+  }
+  throw CompileError(
+      'A widget declaration "T =::= W" whose T, "$left", is not a moded type',
+      line, column, phase: 'parser');
+}
+
+/// The widget a declaration names: an atom (vGLP 2026-10-01 23:55 UTC, E,
+/// Q3), as its constant.
+String _widgetAtom(String right, int line, int column) {
+  if (RegExp(r'^[a-z][A-Za-z0-9_]*$').hasMatch(right)) return right;
+  if (right.length >= 2 && right.startsWith("'") && right.endsWith("'")) {
+    final toks = Lexer(right).tokenize();
+    if (toks.length == 2 && toks.first.type == TokenType.ATOM) {
+      return toks.first.lexeme;
+    }
+  }
+  throw CompileError(
+      'A widget declaration "T =::= W" whose W, "$right", is not an atom '
+      'naming a widget', line, column, phase: 'parser');
 }
 
 // ---------------------------------------------------------------------------
