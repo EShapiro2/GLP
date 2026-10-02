@@ -6,45 +6,6 @@ import 'analyzer.dart';
 import 'error.dart';
 import 'result.dart';
 
-// ============================================================================
-// Module System Support (Phase 2)
-// ============================================================================
-
-/// Import table: maps module names to 1-indexed positions
-/// Following FCP convention where imports are indexed 1, 2, 3, ...
-class ImportTable {
-  final Map<String, int> _indices = {};
-  int _nextIndex = 1;
-
-  /// Add a module to the import table
-  /// Returns the index assigned to this module
-  int addImport(String moduleName) {
-    if (!_indices.containsKey(moduleName)) {
-      _indices[moduleName] = _nextIndex++;
-    }
-    return _indices[moduleName]!;
-  }
-
-  /// Get the index for a module name, or null if not in imports
-  int? getIndex(String moduleName) => _indices[moduleName];
-
-  /// Get the number of imports
-  int get size => _indices.length;
-
-  /// Get all import names in index order
-  List<String> get orderedImports {
-    final entries = _indices.entries.toList();
-    entries.sort((a, b) => a.value.compareTo(b.value));
-    return entries.map((e) => e.key).toList();
-  }
-
-  /// Check if a module is in the import table
-  bool contains(String moduleName) => _indices.containsKey(moduleName);
-
-  @override
-  String toString() => 'ImportTable($_indices)';
-}
-
 /// Code generation context
 class CodeGenContext {
   // Bytecode accumulator - can hold both v1 (Op) and v2 (OpV2) instructions
@@ -69,9 +30,6 @@ class CodeGenContext {
 
   // Track variables seen in head (for GetVariable vs GetValue)
   final Set<String> seenHeadVars = {};
-
-  // Module system: import table for RPC transformation
-  final ImportTable importTable = ImportTable();
 
   int get currentPC => instructions.length;
 
@@ -507,10 +465,19 @@ class CodeGenerator {
     for (int i = 0; i < goals.length; i++) {
       final goal = goals[i];
 
-      // Special handling for RemoteGoal (Module # Goal)
+      // A cross-module call M # G is resolved to a local call when the
+      // program is linked (TGLP modules.tex, Compilation, fourth step), so one
+      // reaching the generator was never linked, and is refused.
       if (goal is RemoteGoal) {
-        _generateRemoteGoal(goal, varTable, ctx);
-        continue;
+        throw CompileError(
+          'Cross-module call "${goal.staticModuleName} # ${goal.goal}" reached '
+          'the code generator unresolved: a '
+          'cross-module call becomes a local call when its program is linked, '
+          'so the program that holds it is loaded as a directory program.',
+          goal.line,
+          goal.column,
+          phase: 'codegen'
+        );
       }
 
       // Special handling for SpawnGoal (Goal@AgentId)
@@ -539,44 +506,6 @@ class CodeGenerator {
 
     // After spawning all goals, emit proceed to terminate parent
     ctx.emit(bc.Proceed());
-  }
-
-  /// Generate code for a remote goal (Module # Goal)
-  /// Following FCP RPC transformation (rpc.cp:164-175):
-  /// - Static module: distribute # {Index, Goal}
-  /// - Dynamic module: transmit # {ModuleVar, Goal}
-  void _generateRemoteGoal(RemoteGoal remote, VariableTable varTable, CodeGenContext ctx) {
-    final innerGoal = remote.goal;
-
-    // First, set up arguments for the inner goal in A registers
-    for (int j = 0; j < innerGoal.args.length; j++) {
-      _generatePutArgument(innerGoal.args[j], j, varTable, ctx);
-    }
-
-    // Then emit the appropriate RPC opcode
-    if (remote.isDynamic) {
-      // Dynamic module: transmit # {ModuleVar, Goal}
-      // The module is a variable - need to resolve at runtime
-      final moduleTerm = remote.module as VarTerm;
-      final varInfo = varTable.getVar(moduleTerm.name);
-      if (varInfo == null || varInfo.registerIndex == null) {
-        throw CompileError(
-          'Unknown variable in dynamic RPC: ${moduleTerm.name}',
-          remote.line,
-          remote.column,
-          phase: 'codegen'
-        );
-      }
-      ctx.emit(bc.Transmit(varInfo.registerIndex!, innerGoal.functor, innerGoal.arity));
-    } else {
-      // Static module: distribute # {Index, Goal}
-      final moduleName = remote.staticModuleName!;
-
-      // Look up or add to import table
-      final index = ctx.importTable.addImport(moduleName);
-
-      ctx.emit(bc.Distribute(index, innerGoal.functor, innerGoal.arity));
-    }
   }
 
   void _generatePutArgument(Term term, int argSlot, VariableTable varTable, CodeGenContext ctx) {

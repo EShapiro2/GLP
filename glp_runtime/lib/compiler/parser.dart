@@ -835,12 +835,7 @@ class Parser {
         final term = _parseTerm();
         return Goal('=', [varTerm, term], varToken.line, varToken.column);
       } else if (tokens.length > _current + 1 && tokens[_current + 1].type == TokenType.HASH) {
-        // Dynamic remote goal: Var # Goal (e.g., M? # factorial(5, R))
-        _advance(); // consume variable
-        _advance(); // consume #
-        final moduleTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
-        final innerGoal = _parseGoal();
-        return RemoteGoal(moduleTerm, innerGoal, varToken.line, varToken.column);
+        throw _variableModuleError(varToken);
       }
     }
 
@@ -1002,20 +997,35 @@ class Parser {
     return Atom(functorToken.lexeme, args, functorToken.line, functorToken.column);
   }
 
+  /// The refusal of a cross-module call whose module is a variable, `M # G` or
+  /// `M? # G`.  The qualifier of a cross-module call is a child directory or
+  /// module file of the caller's directory (TGLP modules.tex, "Cross-module
+  /// type checking"), and a module value is run with run/2 or run/3 (GLP-Spec
+  /// appendix-guards.tex, "Dynamic activation"); the dynamic dispatch that took
+  /// a variable cannot be typed and is gone (TGLP modules.tex, Implementation).
+  CompileError _variableModuleError(Token varToken) {
+    final mark = varToken.type == TokenType.READER ? '?' : '';
+    return CompileError(
+      'A cross-module call names its module: "${varToken.lexeme}$mark # ..." '
+      'has a variable there. The module of M # G is a child directory or '
+      'module file of the caller\'s directory; a module value is run with '
+      'run/2 or run/3.',
+      varToken.line,
+      varToken.column,
+      phase: 'parser',
+    );
+  }
+
   // Goal: same as Atom, or assignment (Var := Expr) or univ (Var =.. Expr)
   // Also handles remote goals: Module # Goal
   Goal _parseGoal() {
     // Check for assignment or univ: Var := Expr or Var =.. Expr
-    // Also check for dynamic remote goal: Var # Goal
     if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
       final varToken = _advance();
       final isReader = varToken.type == TokenType.READER;
 
-      // Check for dynamic remote goal: Var # Goal (e.g., M # factorial(5, R))
-      if (_match(TokenType.HASH)) {
-        final moduleTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
-        final innerGoal = _parseGoal();
-        return RemoteGoal(moduleTerm, innerGoal, varToken.line, varToken.column);
+      if (_check(TokenType.HASH)) {
+        throw _variableModuleError(varToken);
       } else if (_match(TokenType.ASSIGN)) {
         // Parse as ':='(Var, Expr)
         final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);

@@ -106,13 +106,6 @@ void main() {
       expect(_enc(NoReaders(5)), [0x44, 0x05]);
       expect(_enc(GroundEqual(1, 2)), [0x45, 0x01, 0x02]);
     });
-
-    test('retired distribute/transmit are not in the wire ISA', () {
-      expect(() => _enc(Distribute(3, 'm', 2)),
-          throwsA(isA<WireFormatException>()));
-      expect(() => _enc(Transmit(1, 'm', 2)),
-          throwsA(isA<WireFormatException>()));
-    });
   });
 
   group('round-trip (byte idempotence) over every opcode', () {
@@ -160,8 +153,7 @@ void main() {
     ];
 
     test('corpus covers every wire opcode', () {
-      // 40 wire opcodes: 42 in the original table minus the retired
-      // distribute/transmit (0x52–0x53), now reserved.
+      // 40 wire opcodes, IGLP's opcode table (code-format-fragment.tex).
       expect(corpus.length, 40);
     });
 

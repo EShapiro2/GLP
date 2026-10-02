@@ -302,24 +302,18 @@ class UnderscoreTerm extends Term {
 // Visibility is now declared per-procedure via 'exported procedure'.
 
 /// Remote goal: Module # Goal
-/// Used for cross-module procedure calls
+/// Used for cross-module procedure calls.  The module is named, a child
+/// directory or module file of the caller's directory (TGLP modules.tex,
+/// "Cross-module type checking"); the parser refuses a variable there.
 class RemoteGoal extends Goal {
-  final Term module;  // Can be ConstTerm (atom) or VarTerm (variable)
+  final ConstTerm module;
   final Goal goal;
 
   RemoteGoal(this.module, this.goal, int line, int column)
       : super('#', [module, _goalToTerm(goal)], line, column);
 
-  /// Get module name if statically known, null if dynamic (variable)
-  String? get staticModuleName {
-    if (module is ConstTerm) {
-      return (module as ConstTerm).value as String;
-    }
-    return null;
-  }
-
-  /// Check if module is dynamically resolved (variable)
-  bool get isDynamic => module is VarTerm;
+  /// The module's name.
+  String get staticModuleName => module.value as String;
 
   @override
   String toString() => '$module # $goal';

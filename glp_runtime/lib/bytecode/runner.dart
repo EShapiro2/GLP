@@ -31,28 +31,6 @@ abstract interface class GoalRunner {
   String? procNameForPc(int pc);
 }
 
-/// Module target for REPL imports
-class ReplModuleTarget {
-  final String name;
-  final BytecodeProgram program;
-  ReplModuleTarget(this.name, this.program);
-}
-
-/// Simple module context for REPL (synchronous goal spawning)
-class ReplModuleContext {
-  final String moduleName;
-  final Map<int, ReplModuleTarget> imports;  // importIndex (1-based) -> target
-  final BytecodeProgram? combinedProgram;    // Combined program for entry point lookup
-  final String programKey;                    // Key for scheduler's runners map
-
-  ReplModuleContext({
-    required this.moduleName,
-    required this.imports,
-    this.combinedProgram,
-    this.programKey = 'main',
-  });
-}
-
 /// Unification mode for structure traversal (WAM-style)
 enum UnifyMode { read, write }
 
@@ -353,9 +331,6 @@ class RunnerContext {
   // Custom term formatter for consistent variable naming
   final String Function(Term, {bool markReaders})? termFormatter;
 
-  // Module context for distribute/transmit handlers (Phase 5 integration)
-  final Object? moduleContext;
-
   RunnerContext({
     required this.rt,
     required this.goalId,
@@ -369,7 +344,6 @@ class RunnerContext {
     this.showBindings = true,
     this.debugOutput = false,
     this.termFormatter,
-    this.moduleContext,
   }) : env = env ?? CallEnv();
 
   void clearClause() {

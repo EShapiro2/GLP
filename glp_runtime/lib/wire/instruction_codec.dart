@@ -18,8 +18,7 @@
 /// are procedure-relative instruction indices. Assembly `Label`s do not exist on
 /// the wire — [encodeCode] strips them and resolves the indices. The caller
 /// supplies the name<->index maps (the artefact's symbol table in S4; bijective
-/// stubs in tests). The retired dynamic-RPC opcodes distribute/transmit
-/// (0x52–0x53) are not part of the wire ISA.
+/// stubs in tests).
 library;
 
 import 'dart:typed_data';
@@ -69,10 +68,6 @@ class Opcode {
   static const int otherwise = 0x46;
   static const int spawn = 0x50;
   static const int requeue = 0x51;
-  // 0x52–0x53 reserved: the retired dynamic-RPC opcodes (distribute/transmit).
-  // Dynamic dispatch is retired in favour of static linking until attestations
-  // exist; flattened artefacts never contain them, so they are not part of the
-  // wire ISA. The runtime classes remain (retired-but-kept). Held, not reused.
 }
 
 /// Resolvers an encoder needs: a procedure label -> proc-table index, and a
@@ -234,9 +229,8 @@ void encodeInstruction(
     w.clen(procIndexOf(op.procedureLabel));
     w.clen(op.arity);
   } else {
-    // Distribute/Transmit (retired dynamic RPC) are not in the wire ISA; a
-    // flattened artefact never contains them. Reaching here on one signals a
-    // stale codegen path, to be reported (not silently encoded).
+    // An instruction object with no opcode in the wire ISA: reported, never
+    // silently encoded.
     throw WireFormatException(
         'instruction not in the wire ISA: ${op.runtimeType}');
   }

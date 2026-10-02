@@ -282,9 +282,6 @@ class Scheduler {
       // Check if this is a query wrapper goal (skip display)
       final isQueryWrapper = procName.startsWith('query__');
 
-      // Get module context if set for this goal
-      final moduleContext = rt.getGoalModuleContext(act.id);
-
       // Create context, with the reduction callback for the trace when the
       // drain is traced.  Whether the goal reduced is the context's [reduced],
       // set at each reduction traced or not: until 2026-10-02 it was the
@@ -300,7 +297,6 @@ class Scheduler {
         goalProcName: procName,
         showBindings: showBindings,
         debugOutput: debugOutput,
-        moduleContext: moduleContext,
         termFormatter: (term, {bool markReaders = true}) => _formatTerm(term, markReaders: markReaders),
         onReduction: debug
             ? (goalId, head, body) {

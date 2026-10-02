@@ -9,7 +9,6 @@ import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 import 'package:glp_runtime/multiagent/mad_context.dart' show MadContext;
 import 'package:glp_runtime/bytecode/runner.dart'
     show CallEnv, GoalRunner;
-import 'package:glp_runtime/runtime/glp_activation.dart' show GlpChannelHandle;
 
 class GlpRuntime {
   final HeapFCP heap;
@@ -19,22 +18,15 @@ class GlpRuntime {
   /// Shared runners map: program key → GoalRunner (object or byte loop).
   /// Used by the Scheduler to find the runner for a goal's program.
   /// Runtime-registered runners (extension point; used by `run/2` to route a
-  /// launched goal to its module's ByteRunner; also the seam the retired
-  /// dynamic-dispatch path once used).
+  /// launched goal to its module's ByteRunner).
   final Map<Object?, GoalRunner> runners = {};
-
-  /// GLP channel handles: module name → GlpChannelHandle. Read by the runner's
-  /// Distribute/Transmit opcodes to route RPCs via GLP channels. Currently
-  /// unpopulated — the dynamic-dispatch path that registered handles was retired.
-  final Map<String, GlpChannelHandle> glpChannels = {};
 
   final Map<GoalId, int> _budgets = <GoalId, int>{};
   final Map<GoalId, CallEnv> _goalEnvs = <GoalId, CallEnv>{};
   final Map<GoalId, Object?> _goalPrograms = <GoalId, Object?>{};
-  final Map<GoalId, Object?> _goalModuleContexts = <GoalId, Object?>{};  // Module context for RPC;
   /// Per-goal module VALUE — the ModuleTerm whose code the goal's PC indexes
   /// into. The `self_module`/`run` substrate: every goal carries its module,
-  /// spawned goals inherit it. Distinct from _goalModuleContexts (RPC routing).
+  /// spawned goals inherit it.
   final Map<GoalId, Object?> _goalModules = <GoalId, Object?>{};
 
   // Goal ID counter for spawn
@@ -259,14 +251,6 @@ class GlpRuntime {
   }
 
   Object? getGoalProgram(GoalId g) => _goalPrograms[g];
-
-  /// Set module context for a goal (for distribute/transmit handlers)
-  void setGoalModuleContext(GoalId g, Object? ctx) {
-    _goalModuleContexts[g] = ctx;
-  }
-
-  /// Get module context for a goal
-  Object? getGoalModuleContext(GoalId g) => _goalModuleContexts[g];
 
   /// Set the module VALUE a goal runs (its ModuleTerm) — read back by
   /// `self_module`, inherited by spawned children.

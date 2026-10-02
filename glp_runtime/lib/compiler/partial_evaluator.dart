@@ -751,11 +751,11 @@ class PartialEvaluator {
 
   /// Apply substitution to a Goal, preserving RemoteGoal and SpawnGoal types.
   Goal _applySubstitutionToGoal(Goal goal, Map<String, Term> subst) {
-    // Preserve RemoteGoal (M # proc(...))
+    // Preserve RemoteGoal (M # proc(...)); its module is a name, which no
+    // substitution touches.
     if (goal is RemoteGoal) {
-      final newModule = _applySubstitution(goal.module, subst);
       final newInnerGoal = _applySubstitutionToGoal(goal.goal, subst);
-      return RemoteGoal(newModule, newInnerGoal, goal.line, goal.column);
+      return RemoteGoal(goal.module, newInnerGoal, goal.line, goal.column);
     }
     // Preserve SpawnGoal (Goal@Agent)
     if (goal is SpawnGoal) {
