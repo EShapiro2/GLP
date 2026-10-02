@@ -129,13 +129,11 @@ AgentContent ::= befriend(Constant, Response?)
                ; group_received(GroupId, Constant, Constant).
 
 %% mediator -> agent (mediator's reply to a user action): the compose commands
-%% and the sibling choices, plus response(Response) — the injected-result
-%% vocabulary (inject_msg), which the mediator itself never sends.
+%% and the sibling choices.
 UserContent ::= connect(Key)
               ; unfriend(Constant)
               ; decision(Decision, Constant, PendingValue)
               ; send(Constant, Constant)
-              ; response(Response)
               ; balance
               ; mint(Constant, Constant)
               ; advance_date(Constant)
@@ -173,12 +171,14 @@ NetInMsg     ::= msg(Key, NetColdCall)
                ; msg(Key, Key, FriendContent).
 NetInStream  ::= [] ; [NetInMsg | NetInStream].
 
-%% The agent's person input: the mediator's vocabulary (UserMsg, including the
-%% injected response/1 of a cold call), and the results the agent's own
-%% concurrent goals inject into it --- a filled or declined trade, an escrow's
-%% outcome at either end, a group join.  The shape social/graph gives its
-%% UserInMsg.
+%% The agent's person input: the mediator's vocabulary (UserMsg), and the
+%% results the agent's own concurrent goals inject into it --- the response to
+%% its cold call, response(Target, Response), the agent called and its answer
+%% (inject_msg); a filled or declined trade, an escrow's outcome at either end,
+%% a group join.  The msg alternative has the shape social/graph gives its
+%% UserInMsg's.
 UserInMsg    ::= msg(Constant, Key, UserContent)
+               ; response(Key, Response)
                ; trade_complete(Constant, Stream(Bond))
                ; trade_returned_bonds(Constant, Stream(Bond))
                ; trade_returned_bonds_menu(Constant, Stream(Bond), Stream(Bond))

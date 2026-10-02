@@ -72,11 +72,11 @@ send_net(Msg, [E|Rest], [E?|Rest1?]) :-
     send_net(Msg?, Rest?, Rest1).
 send_net(_, [], []).
 
-procedure inject_msg(Response?, Key?, Key?, UserInStream?, UserInStream).
-inject_msg(Resp, Target, Id, Ys, [msg(Target?, Id?, response(Resp?))|Ys?]) :-
+procedure inject_msg(Response?, Key?, UserInStream?, UserInStream).
+inject_msg(Resp, Target, Ys, [response(Target?, Resp?)|Ys?]) :-
     known(Resp?) | true.
-inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
-    inject_msg(Resp?, Target?, Id?, Ys?, Ys1).
+inject_msg(Resp, Target, [Y|Ys], [Y?|Ys1?]) :-
+    inject_msg(Resp?, Target?, Ys?, Ys1).
 
 procedure add_output(Constant?, OutputStream, OutputsList?, OutputsList).
 add_output(Name, Out?, Outs, [output(Name?, Out)|Outs?]).
@@ -625,7 +625,7 @@ agent(Id, [escrow_ben_cancelled(From)|UserIn], NetIn, Outs, Holdings, NextSerial
 agent(Id, [msg(person, Id1, connect(Target))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(Target?) |
     send_net(msg(Target?, friend_request(Id?, Resp)), Outs?, Outs1),
-    inject_msg(Resp?, Target?, Id?, UserIn?, UserIn1),
+    inject_msg(Resp?, Target?, UserIn?, UserIn1),
     agent(Id?, UserIn1?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
 agent(Id, [msg(person, Id1, unfriend(Friend))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
@@ -644,8 +644,8 @@ agent(Id, [msg(person, Id1, send(Target, Text))|UserIn], NetIn, Outs, Holdings, 
     lookup_send(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
-agent(Id, [msg(From, Id1, response(Resp))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
-    Id? =?= Id1? |
+agent(Id, [response(From, Resp)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+    ground(Id?) |
     handle_response(Resp?, From?, Outs?, Outs1, NetIn?, NetIn1),
     agent(Id?, UserIn?, NetIn1?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 

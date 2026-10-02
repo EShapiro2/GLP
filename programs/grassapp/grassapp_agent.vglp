@@ -377,8 +377,8 @@ agent(Id, [accept_group(GroupId, ChRead)|UserIn], NetIn, Outs, Holdings, NextSer
     await_group_channel(Id?, GroupId?, ChRead?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% My cold call was answered (injected by inject_msg).
-agent(Id, [msg(From, Id1, response(Resp))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
-    Id? =?= Id1? |
+agent(Id, [response(From, Resp)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+    ground(Id?) |
     handle_response(Resp?, From?, Outs?, Outs1, NetIn?, NetIn1),
     agent(Id?, UserIn?, NetIn1?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
@@ -524,7 +524,7 @@ agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, []) :-
 agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(Target?) |
     send_net(msg(Target?, friend_request(Id?, Resp)), Outs?, Outs1),
-    inject_msg(Resp?, Target?, Id?, UserIn?, UserIn1),
+    inject_msg(Resp?, Target?, UserIn?, UserIn1),
     agent(Id?, UserIn1?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% Unfriend (End friend): tear down the friend channel, sending a final
