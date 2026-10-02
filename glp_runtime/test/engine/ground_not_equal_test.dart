@@ -1,11 +1,14 @@
-/// =?\= (GLP-Spec appendix-guards.tex at 9064202): "=?\= succeeds if both
-/// arguments are ground and differ, and suspends where =?= suspends", with
-/// Ground "yes (both)".  Its success needs both arguments ground, so it
-/// suspends where an unbound reader stands in either --- also where a
-/// difference is already in sight --- and fails where an unbound writer does,
-/// which no assignment to readers grounds (glp.tex, Guards: a guard suspends
-/// where an instance under a readers substitution would succeed, and fails
-/// where none would).
+/// =?\= by GLP-Spec at bbff21d: "=?\= succeeds if no readers substitution
+/// makes them ground and equal" (appendix-guards.tex), and it suspends and
+/// fails by the guard semantics (glp.tex, Guards): "A guard suspends if it does
+/// not succeed but some instance of it under a readers substitution would
+/// succeed.  A guard fails if no such instance exists."  So it succeeds where
+/// the two clash or an unbound writer stands in either, whatever readers stand
+/// elsewhere, fails where both are ground and equal, and suspends where they
+/// are not but some readers substitution makes them so.  The catalogue gives it
+/// Ground "no", so it licenses no repeated reader, where =?= keeps "yes
+/// (both)".  test/engine/ground_equality_test.dart takes =?= and =?\= case by
+/// case.
 ///
 /// Fixtures: programs/tests/typed/test_ground_not_equal.glp, and
 /// programs/tests/typed/test_ground_equal.glp for =?= beside it.
@@ -83,7 +86,7 @@ void main() {
     });
   });
 
-  group('=?\\= suspends where =?= suspends', () {
+  group('=?\\= suspends where some readers substitution makes them equal', () {
     test('an unbound reader on the left', () async {
       final r = await _run('neq_only(X?, a, R)');
       expect(r.status, ExecutionStatus.suspended);
@@ -103,56 +106,151 @@ void main() {
       final r = await _run('test_neq_stop(X?, R)');
       expect(r.status, ExecutionStatus.suspended);
     });
+
+    // "f(X?) =?\= f(Y?) suspends" (GLP #3 Cowork, 2026-10-02 13:09 UTC).
+    test('two unbound readers in structures that agree', () async {
+      final r = await _run('neq_only(f(X?), f(Y?), R)');
+      expect(r.status, ExecutionStatus.suspended);
+    });
   });
 
-  group('success needs both arguments ground', () {
-    test('a difference in sight does not decide it: an unbound reader '
-        'suspends it', () async {
-      final r = await _run('neq_only(f(a, Z?), f(b, W?), R)');
-      expect(r.status, ExecutionStatus.suspended);
-    });
-
-    test('nested in a structure against a constant, the generic guard call',
+  group('no readers substitution makes them ground and equal: it succeeds, '
+      'whatever readers stand elsewhere', () {
+    test('two constants that differ decide it, unbound readers beside them',
         () async {
-      final r = await _run('test_neq_stop(f(Z?), R)');
-      expect(r.status, ExecutionStatus.suspended);
+      final r = await _run('neq_only(f(a, Z?), f(b, W?), R)');
+      expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
+      expect(_v(r.bindings['R']), 'not_equal');
     });
 
-    test('once the readers are assigned, it succeeds', () async {
+    test('a structure with a reader in it against a constant, the generic '
+        'guard call: a clash', () async {
+      final r = await _run('test_neq_stop(f(Z?), R)');
+      expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
+      expect(_v(r.bindings['R']), 'go_on');
+    });
+
+    test('it succeeds as well where the readers beside the pair are assigned',
+        () async {
       final r = await _run(
           'neq_only(f(a, Z?), f(b, W?), R), test_neq(c, c, Z), test_neq(c, d, W)');
       expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
       expect(_v(r.bindings['R']), 'not_equal');
     });
 
-    test('an unbound writer fails it: no assignment to readers grounds it',
-        () async {
+    // An unbound writer, which no readers substitution grounds: "f(W) =?= f(c)
+    // fails ... and =?\= succeeds on it" (GLP #3 Cowork, 2026-10-02 13:09 UTC).
+    // Until bbff21d =?\= failed where no pair of ground subterms differed and
+    // a writer stood in either, held for the paper.
+    test('an unbound writer decides it, beside two constants that differ or '
+        'where the rest agrees', () async {
       final r = await _run('neq_only(f(a, W), f(b, c), R)');
-      expect(r.status, ExecutionStatus.failed);
+      expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
+      expect(_v(r.bindings['R']), 'not_equal');
+      final w = await _run('neq_only(f(W), f(c), R)');
+      expect(w.status, ExecutionStatus.succeeded, reason: '${w.error}');
+      expect(_v(w.bindings['R']), 'not_equal');
       final s = await _run('test_neq_stop(f(W), R)');
       expect(s.status, ExecutionStatus.succeeded, reason: '${s.error}');
-      expect(_v(s.bindings['R']), 'stopped');
+      expect(_v(s.bindings['R']), 'go_on');
     });
 
-    test('an unbound writer fails it beside an unbound reader, as ground_equal '
-        'takes the writer first', () async {
+    test('an unbound writer decides it beside an unbound reader', () async {
       final r = await _run('neq_only(X?, f(W), R)');
-      expect(r.status, ExecutionStatus.failed);
-      // =?= beside it, ground_equal (0x45): it fails too, and otherwise takes
-      // the call.
+      expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
+      expect(_v(r.bindings['R']), 'not_equal');
+      // =?= beside it, ground_equal (0x45): it fails, and otherwise takes the
+      // call.
       final eq = await _run('test(X?, f(W), R)');
       expect(eq.status, ExecutionStatus.succeeded, reason: '${eq.error}');
       expect(_v(eq.bindings['R']), 'not_equal');
     });
+
+    test('a clash where neither side is ground decides it', () async {
+      final r = await _run('neq_only(f(X?), g(Y?), R)');
+      expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
+      expect(_v(r.bindings['R']), 'not_equal');
+      final l = await _run('neq_only([a | T?], [], R)');
+      expect(l.status, ExecutionStatus.succeeded, reason: '${l.error}');
+      expect(_v(l.bindings['R']), 'not_equal');
+    });
   });
 
-  group('Ground: yes (both) --- =?\\= grounds both arguments for SRSW', () {
-    test('each reader may occur twice in the body', () {
-      final program = GlpCompiler().compile(r'''
+  // The catalogue's Ground column (GLP-Spec appendix-guards.tex, bbff21d):
+  // "no" for =?\=, which succeeds where readers stand unbound, and "yes
+  // (both)" for =?=.  Until 2026-10-02 =?\= had "yes (both)" and the analyzer
+  // licensed a repeated reader after it, so the clause
+  // neq_pair(X, Y, pair(X?, X?, Y?, Y?)) :- X? =?\= Y? | true loaded, and its
+  // call neq_pair(f(a, Z?), f(b, W?), P) bound P to a term holding one unbound
+  // variable twice (Integration #4 Code, 2026-10-02 10:52 UTC).
+  group('Ground: no --- =?\\= grounds nothing, and licenses no repeated '
+      'reader', () {
+    test('a reader twice in the body after it is refused', () {
+      expect(
+          () => GlpCompiler().compile(r'''
 procedure quad(_?, _?, _?, _?, _).
 quad(_, _, _, _, done).
 procedure k(_?, _?, _).
 k(X, Y, Z?) :- X? =?\= Y? | quad(X?, X?, Y?, Y?, Z).
+'''),
+          throwsA(predicate(
+              (e) => e.toString().contains('Reader variable "X?" occurs 2 times'),
+              'an SRSW violation naming X?')));
+    });
+
+    test('a reader twice in the head after it is refused: neq_pair, the '
+        'clause of the breach', () {
+      expect(
+          () => GlpCompiler().compile(r'''
+procedure neq_pair(_?, _?, _).
+neq_pair(X, Y, pair(X?, X?, Y?, Y?)) :- X? =?\= Y? | true.
+'''),
+          throwsA(predicate(
+              (e) => e.toString().contains('Reader variable "X?" occurs 2 times'),
+              'an SRSW violation naming X?')));
+      final engine = GlpEngine(
+          rootSelfGlpPath: File('../programs/self.glp').absolute.path);
+      bool? loaded;
+      try {
+        loaded = engine.loadFile(
+            File('../programs/tests/srsw/neq_not_ground.glp').absolute.path);
+      } catch (_) {
+        loaded = false;
+      }
+      expect(loaded, isNot(isTrue),
+          reason: 'programs/tests/srsw/neq_not_ground.glp, the fixture');
+    });
+
+    test('each argument read once, the call of the breach commits with each '
+        'reader once', () async {
+      final engine = GlpEngine(
+          rootSelfGlpPath: File('../programs/self.glp').absolute.path);
+      expect(
+          engine.loadSource(r'''
+exported procedure neq_once(_?, _?, _).
+neq_once(X, Y, pair(X?, Y?)) :- X? =?\= Y? | true.
+''', filename: 'neq_once.glp'),
+          isTrue);
+      final r = await engine.runGoal('neq_once(f(a, Z?), f(b, W?), P)');
+      expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
+      final heap = engine.runtime.heap;
+      final p = heap.dereference(r.bindings['P']!);
+      expect(p, isA<StructTerm>());
+      expect((p as StructTerm).args, hasLength(2));
+      final left = heap.dereference(p.args[0]) as StructTerm;
+      final right = heap.dereference(p.args[1]) as StructTerm;
+      expect([left.functor, _v(heap.dereference(left.args[0]))], ['f', 'a']);
+      expect([right.functor, _v(heap.dereference(right.args[0]))], ['f', 'b']);
+      // Z? and W?, unbound, each once.
+      expect(left.args[1], isNot(right.args[1]));
+    });
+
+    test('=?= beside it grounds both: a reader twice after it loads', () {
+      final program = GlpCompiler().compile(r'''
+procedure quad(_?, _?, _?, _?, _).
+quad(_, _, _, _, done).
+procedure k(_?, _?, _).
+k(X, Y, Z?) :- X? =?= Y? | quad(X?, X?, Y?, Y?, Z).
 ''');
       expect(program, isNotNull);
     });
@@ -167,17 +265,6 @@ k(X, Y, Z?) :- known(X?), known(Y?) | quad(X?, X?, Y?, Y?, Z).
 '''),
           throwsA(predicate((e) => e.toString().contains('SRSW'),
               'an SRSW violation')));
-    });
-
-    test('the fixture\'s clause reads each argument twice, and runs', () async {
-      final engine = _engine();
-      final r = await engine.runGoal('neq_pair(a, b, P)');
-      expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
-      final p = r.bindings['P'];
-      expect(p, isA<StructTerm>());
-      expect((p as StructTerm).functor, 'pair');
-      expect(p.args.map((a) => _v(engine.runtime.heap.dereference(a))),
-          ['a', 'a', 'b', 'b']);
     });
   });
 

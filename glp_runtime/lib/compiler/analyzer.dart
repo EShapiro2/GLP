@@ -148,19 +148,6 @@ class VariableTable {
   bool allowsMultipleReaders(String varName) =>
       isGrounded(varName) || isTypeLicensed(varName);
 
-  /// Whether the WRITER may occur more than once.  Only the guard does: "if the
-  /// success of a guard implies that X? is bound to a ground term, then both X
-  /// and X? may occur multiple times" (rem:guards-srsw).  The type-based
-  /// relaxation is of the reader alone --- SRSW* is SRSW "with that same
-  /// permission, its paired writer occurring once" (typed-glp.tex, before
-  /// Proposition "Readers of Constant Types"), and of `MutualRef` it is "a
-  /// reader of type MutualRef may also occur more than once" --- so it does not
-  /// reach this one.  Nor does the guard license a second occurrence in the
-  /// HEAD: the head is matched before the guard is tried, and a writer
-  /// occurring twice there is refused whatever the guards (GLP-Spec glp.tex,
-  /// Definition "GLP Program"; [collectSRSWViolations]).
-  bool allowsMultipleWriters(String varName) => isGrounded(varName);
-
   /// Verify SRSW constraints and return list of violations (empty if valid)
   /// 
   /// SRSW rules:
@@ -177,28 +164,32 @@ class VariableTable {
       // Each occurrence denotes a fresh writer with no paired reader
       if (info.isAnonymous) continue;
 
-      // Check writer occurrences.  A writer occurring twice in the HEAD is an
-      // SRSW violation whatever the guards: SRSW requires SO, "every variable
-      // occurs in it at most once" (GLP-Spec glp.tex, Definitions
-      // "Single-Occurrence (SO) Invariant" and "GLP Program"), and the guard
-      // is tried only after the head is matched, by term matching, which is
-      // defined for terms that jointly satisfy SO (appendix-term-matching.tex).
-      // GLP's ruling (GLP #3 Cowork, 2026-10-02 08:40 UTC, G).  Until
-      // 2026-10-02 a groundness-implying guard licensed it, and the second
-      // occurrence's get_variable overwrote the first: h1(same(To), To) :-
-      // ground(To?) | true reduced h1(same(4), 3).  Elsewhere in the clause
-      // only a groundness-implying guard licenses more than one (TGLP glp.tex
-      // rem:guards-srsw).
+      // Check writer occurrences.  A writer occurs once in a clause, whatever
+      // the guards: "if the success of a guard implies that X? is bound to a
+      // ground term, then X? may occur multiple times in the clause; X occurs
+      // once, as ever" (GLP-Spec glp.tex, Remark "Guards and SRSW", bbff21d),
+      // and the type-based relaxation is of the reader alone too, SRSW* being
+      // SRSW "with that same permission, its paired writer occurring once"
+      // (TGLP typed-glp.tex).  Twice in the HEAD the diagnostic names the
+      // clause: SRSW requires SO, "every variable occurs in it at most once"
+      // (glp.tex, Definitions "Single-Occurrence (SO) Invariant" and "GLP
+      // Program"), and the head is matched by term matching, defined for terms
+      // that jointly satisfy SO (appendix-term-matching.tex; GLP #3 Cowork,
+      // 2026-10-02 08:40 UTC, G).  Until 2026-10-02 a groundness-implying guard
+      // licensed a repeated writer: in the head, where the second occurrence's
+      // get_variable overwrote the first --- h1(same(To), To) :- ground(To?) |
+      // true reduced h1(same(4), 3) --- and in the head and again in the body,
+      // as two(R) :- ground(R?) | sink_w(R) did, until the Remark of bbff21d.
       if (info.writerOccurrencesHead > 1) {
         final line = head?.line ?? info.firstOccurrence?.line ?? 0;
         final clause = head != null ? ' of the clause $head' : '';
         violations.add(
           'Line $line: Writer variable "${info.name}" occurs ${info.writerOccurrencesHead} times in the head$clause'
         );
-      } else if (info.writerOccurrences > 1 && !allowsMultipleWriters(info.name)) {
+      } else if (info.writerOccurrences > 1) {
         final line = info.firstOccurrence?.line ?? 0;
         violations.add(
-          'Line $line: Writer variable "${info.name}" occurs ${info.writerOccurrences} times without a groundness-implying guard'
+          'Line $line: Writer variable "${info.name}" occurs ${info.writerOccurrences} times; a writer occurs once, whatever the guards'
         );
       }
 
@@ -688,7 +679,7 @@ class Analyzer {
     if (typeCheckOps.contains(guard.predicate) && guard.args.length == 1) {
       final arg = guard.args[0];
       if (arg is VarTerm) {
-        // Mark the writer as grounded (readers of X are allowed multiple times)
+        // Mark X grounded: X? may occur more than once, X once as ever.
         varTable.markGrounded(arg.name);
       }
     }
@@ -744,12 +735,15 @@ class Analyzer {
       }
     }
 
-    // Ground equality guards mark both arguments as grounded
-    // =?= succeeds only if both arguments are ground and equal, and =?\= only
-    // if both are ground and differ: Ground "yes (both)" for each (GLP-Spec
-    // appendix-guards.tex, 9064202)
-    if ((guard.predicate == '=?=' || guard.predicate == '=?\\=') &&
-        guard.args.length == 2) {
+    // Ground equality.  =?= "succeeds if both arguments are ground and equal",
+    // Ground "yes (both)", and marks both (GLP-Spec appendix-guards.tex,
+    // bbff21d).  =?\= marks nothing, Ground "no": it "succeeds if no readers
+    // substitution makes them ground and equal", f(a, Z?) =?\= f(b, W?) with
+    // Z? and W? unbound among its successes.  Until 2026-10-02 it marked both,
+    // so neq_pair(X, Y, pair(X?, X?, Y?, Y?)) :- X? =?\= Y? | true loaded, and
+    // its call neq_pair(f(a, Z?), f(b, W?), P) bound P to a term holding one
+    // unbound variable twice (Integration #4 Code, 2026-10-02 10:52 UTC).
+    if (guard.predicate == '=?=' && guard.args.length == 2) {
       for (final arg in guard.args) {
         if (arg is VarTerm) {
           varTable.markGrounded(arg.name);
@@ -781,7 +775,7 @@ class Analyzer {
   /// Used for arithmetic comparison guards where arguments may be complex expressions.
   void _extractAndMarkGroundedVars(Term term, VariableTable varTable) {
     if (term is VarTerm) {
-      // Mark the variable (reader or writer) as grounded
+      // Mark the variable grounded: its reader may occur more than once.
       varTable.markGrounded(term.name);
     } else if (term is StructTerm) {
       // Recurse into structure arguments (e.g., X? + 1 has args [X?, 1])
