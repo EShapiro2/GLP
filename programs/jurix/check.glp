@@ -11,7 +11,7 @@
 % which traceable_of gives: the fault names the predicates of the contract
 % outside it.
 %
-% A contract with community roles is a contract of Appendix B, and is decided
+% A contract with community roles is a contract of Section 8, and is decided
 % by the conditions on the text stated there: volition
 % (definition:volition) and cohesion (definition:cohesive), which it meets or
 % fails, together with the predicates that are rooted (definition:rooted) and
@@ -98,7 +98,7 @@ traceable_of(Nm, E?) :- ground(Nm?) |
     traceable_in(C?, E).
 
 % The predicates that are rooted (definition:rooted).  Rootedness is a notion
-% of Appendix B; a contract of Section 3 is not asked about it.
+% of Section 8; a contract of Section 3 is not asked about it.
 procedure rooted1(Ans?, Contract?, Preds).
 rooted1(no, _, []).
 rooted1(yes, C, E?) :- ground(C?) | community # rooted(C?, E).
