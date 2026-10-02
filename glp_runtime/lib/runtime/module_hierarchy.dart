@@ -138,7 +138,33 @@ TypeEnvironment mergeModuleIntoScope(TypeEnvironment env, ast.Module module,
   final moduleEnv = buildScopeFromModule(expanded);
   final layer = TypeEnvironment(moduleEnv.types, moduleEnv.procedures,
       paramProcDecls: moduleEnv.paramProcDecls, typeTemplates: templates);
-  if (!typesFillGapsOnly) return env.merge(layer, label: label);
+  if (!typesFillGapsOnly) {
+    // Innermost-first shadowing, as [buildTypeEnvironment] applies it to a
+    // module's own scope (modules.tex, "Scope construction": later
+    // definitions shadow earlier): a procedure the module declares
+    // monomorphic shadows an inherited parameterised template of the same
+    // key, which therefore does not survive in paramProcDecls, else a call
+    // the module's declaration types is read as a call to the template.
+    // Until 2026-10-02 the template survived here, beside the module's
+    // declaration, and a goal posted to book's merge_ordered.glp,
+    // merge([1,3,5], [2,4,6], Zop), was read as a call to the root's
+    // procedure(X) merge(Stream(X)?, Stream(X)?, Stream(X)).
+    final merged = env.merge(layer, label: label);
+    final shadowed = {
+      for (final key in layer.procedures.keys)
+        if (!layer.paramProcDecls.containsKey(key) &&
+            merged.paramProcDecls.containsKey(key))
+          key
+    };
+    if (shadowed.isEmpty) return merged;
+    return TypeEnvironment(merged.types, merged.procedures,
+        paramProcDecls: {
+          for (final e in merged.paramProcDecls.entries)
+            if (!shadowed.contains(e.key)) e.key: e.value
+        },
+        typeTemplates: merged.typeTemplates,
+        typeOrigins: merged.typeOrigins);
+  }
   // The module under the scope rather than over it: its types and its
   // declarations fill gaps, and a type the scope already defines survives
   // from the module under `<label>:T`, the module's own declarations meaning
@@ -152,10 +178,19 @@ TypeEnvironment mergeModuleIntoScope(TypeEnvironment env, ast.Module module,
   // declaration while its types were read as the root's, which passed a goal
   // against a declaration of the same shape and would have rejected any other.
   final under = layer.shadowedBy(env, ownLabel: label);
+  // The scope's own declaration of a key shadows the module's, so a template
+  // the module carries for a key the scope declares monomorphic does not
+  // survive either.
   return TypeEnvironment(
       {...under.types, ...env.types},
       {...under.procedures, ...env.procedures},
-      paramProcDecls: {...under.paramProcDecls, ...env.paramProcDecls},
+      paramProcDecls: {
+        for (final e in under.paramProcDecls.entries)
+          if (!env.procedures.containsKey(e.key) ||
+              env.paramProcDecls.containsKey(e.key))
+            e.key: e.value,
+        ...env.paramProcDecls
+      },
       typeTemplates: {...under.typeTemplates, ...env.typeTemplates},
       typeOrigins: {...under.originsUnder(label), ...env.typeOrigins});
 }

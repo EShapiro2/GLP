@@ -1525,8 +1525,8 @@ List<InstantiationCheckResult> checkInstantiationsClosed(
       }
 
       // A check adds to its focused environment the types it built for the
-      // parameters the callee's heads fix (well_typed_clause.dart
-      // _thetaFromHeads).  They are monomorphic definitions the closure
+      // instantiations its calls name (well_typed_clause.dart
+      // _buildDeclTypes).  They are monomorphic definitions the closure
       // discovered, like the ones materialized below, so they accumulate here
       // too: a later round rebuilds each focused environment from the
       // instantiation's own, which predates them, and a materialized type may
