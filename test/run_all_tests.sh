@@ -718,10 +718,15 @@ HEREDOC
 check "param bare typevar" "Rpbt1 = a" "$a18b"
 
 # --- A19: Defined guards ---
+# A goal writer at the guard's `_` fails it (appendix-term-matching.tex, row
+# "Writer X1", column "Writer X2"), so the channel holds readers or constants,
+# ch(A?, B?) and ch(a, b), and not ch(A?, B) (GLP #3 Cowork, 2026-10-02 17:12
+# UTC, 1(b)).
 echo "--- A19: Defined guards ---"
 a19=$("$REPL_RUN" <<HEREDOC
 $TYPED/test_defined_guards.glp
-test(ch(Adg?, Bdg), Rdg1).
+test(ch(Adg?, Bdg?), Rdg1).
+test(ch(a, b), Rdg4).
 test(foo, Rdg2).
 test(Xdg?, Rdg3).
 :quit
@@ -729,6 +734,7 @@ HEREDOC
 2>&1)
 
 check "defined guard match" "Rdg1 = ok" "$a19"
+check "defined guard match ground" "Rdg4 = ok" "$a19"
 check "defined guard fail" "Rdg2 = not_channel" "$a19"
 check "defined guard suspend" "suspended" "$a19"
 
@@ -802,20 +808,22 @@ check "no_readers anonymous writer inside term" "Rnr8 = ok" "$a20b"
 check "no_readers anonymous writer nested two deep" "Rnr9 = ok" "$a20b"
 
 # --- A21: Comprehensive defined guards ---
+# The goals that match a guard's `_` hold readers there: a goal writer against
+# the head's `_` fails (GLP #3 Cowork, 2026-10-02 17:12 UTC, 1(b); see A19).
 echo "--- A21: Comprehensive defined guards ---"
 a21=$("$REPL_RUN" <<HEREDOC
 $TYPED/test_defined_guards_all.glp
 make_pair(Call1, Call2).
 bind_response(yes, RespYes, LocalYes).
 bind_response(no, RespNo, LocalNo).
-test_channel(ch(TchA?, TchB), TchR1).
+test_channel(ch(TchA?, TchB?), TchR1).
 test_channel(foo, TchR2).
 test_channel(p(TpaA, TpaB), TchR3).
-test_pair(p(TprA, TprB), TprR1).
+test_pair(p(TprA?, TprB?), TprR1).
 test_pair(foo, TprR2).
-test_wrapper(w(TwrX), TwrR1).
+test_wrapper(w(TwrX?), TwrR1).
 test_wrapper(foo, TwrR2).
-test_nested(w(p(TnA, TnB)), TnR1).
+test_nested(w(p(TnA?, TnB?)), TnR1).
 test_nested(w(hello), TnR2).
 test_nested(foo, TnR3).
 test_wrap(hello, TwpR).

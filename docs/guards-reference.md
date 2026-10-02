@@ -545,7 +545,7 @@ When `channel(X?)` is unfolded, it becomes pattern matching against `ch(_, _)`.
 **Semantics** (three-valued, like all guards):
 - **Success**: Arguments unify with the clause head pattern
 - **Suspend**: Arguments contain unbound readers
-- **Fail**: Arguments don't match pattern
+- **Fail**: Arguments don't match pattern, a goal writer where the pattern has `_` among them: `_` is a head writer, and a goal writer against a head writer fails (GLP-Spec appendix-term-matching.tex, row "Writer X1", column "Writer X2").  So `channel(X?)` holds for `ch(A?, B?)` and `ch(a, b)` and fails `ch(A?, B)`; in typed GLP the type is the channel's warrant (GLP #3 Cowork, 2026-10-02 17:12 UTC, 1(b)).  Until 2026-10-02 the runtime took a goal writer at `_` and `ch(A?, B)` passed.
 
 **Requirements:**
 1. **Procedure declaration** — required for type checking

@@ -311,9 +311,16 @@ class ByteRunner with OpExecutors implements GoalRunner {
           }
 
         case Opcode.unifyVoid:
-          execUnifyVoid(cx, r.clen());
-          pc = after();
-          continue;
+          {
+            // A goal writer at a head `_` fails ([OpExecutors.execUnifyVoid]).
+            final o = execUnifyVoid(cx, r.clen());
+            if (o.kind == StepKind.nextClause) {
+              pc = _applyNextClauseByte(cx, opStart);
+              continue;
+            }
+            pc = after();
+            continue;
+          }
 
         case Opcode.unifyStructure:
           {

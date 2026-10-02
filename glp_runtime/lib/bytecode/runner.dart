@@ -236,13 +236,15 @@ class RunnerContext {
   /// writer occurrence elsewhere.  An unknown variable stays unknown for the
   /// rest of the clause attempt: a later occurrence never gives it a value,
   /// and fails only where the table fails whatever the variable --- a head
-  /// reader against a goal reader or a goal term (column "Reader X2?").  A
-  /// guard over it is decided by the guard's own decision, the variable
-  /// standing for any term, as the goal reader above it may be assigned any
-  /// term ([unknownPlaceholders], [_undecidedMember]): it fails where no term
-  /// makes it succeed, and is otherwise passed by (GLP #3 Cowork, 2026-10-02
-  /// 15:31 UTC, B).  The clause cannot commit, its suspension set being
-  /// non-empty; what is still asked of it is whether it fails.
+  /// reader against a goal reader or a goal term (column "Reader X2?"), and a
+  /// head writer against a goal writer (row "Writer X1", column "Writer X2";
+  /// [_isGoalWriter]).  A guard over it is decided by the guard's own
+  /// decision, the variable standing for any term, as the goal reader above
+  /// it may be assigned any term ([unknownPlaceholders], [_undecidedMember]):
+  /// it fails where no term makes it succeed, and is otherwise passed by (GLP
+  /// #3 Cowork, 2026-10-02 15:31 UTC, B).  The clause cannot commit, its
+  /// suspension set being non-empty; what is still asked of it is whether it
+  /// fails.
   final Set<int> unknownVars = <int>{};
 
   /// The variable that stands for each unknown variable ([unknownVars]),
@@ -424,6 +426,25 @@ bool _isUnboundWriterCell(RunnerContext cx, int addr) {
   final end = heap.derefAddr(addr);
   return end is VarRef && end.addr == addr;
 }
+
+/// Whether the goal subterm [t] is a goal writer, which a head writer fails:
+/// GLP-Spec appendix-term-matching.tex, Definition "Term Matching", row
+/// "Writer X1", column "Writer X2": "fail".  It does whatever the head writer
+/// is --- named, or `_`, a writer of its own (glp.tex, Remark "Anonymous
+/// Variables") --- and whatever the occurrence, first or later, and typed or
+/// not (GLP #3 Cowork, 2026-10-02 13:00 UTC, and 17:12 UTC, 1(a)).  A goal
+/// writer is a writer still unbound ([_isUnboundWriterCell]) that this clause
+/// attempt has not assigned: one it has assigned in σ̂w stands for what it was
+/// assigned, as a bound one stands for its value, so the placement of a nested
+/// structure after `pop`, which meets again the goal writer `unify_structure`
+/// assigned the structure, is not a vertex of its own.  Until 2026-10-02 the
+/// runtime took a goal writer at a head writer as the head's variable, and
+/// `s(_)`, `s(f(_))` and `s2(X) :- t(X?)` each succeeded with a goal writer
+/// there.
+bool _isGoalWriter(RunnerContext cx, Object? t) =>
+    t is VarRef &&
+    _isUnboundWriterCell(cx, t.addr) &&
+    !cx.sigmaHat.containsKey(t.addr);
 
 /// Whether clause variable [varIndex] has no value yet in this clause attempt,
 /// so that its writer occurrence met in a skipped subterm makes it unknown
@@ -1894,6 +1915,11 @@ mixin OpExecutors {
   /// `unify_void` (0x22): skip (READ) or create a fresh unbound writer (WRITE)
   /// at [count] structure positions.
   ///
+  /// READ passes over what the goal holds at each position but a goal writer,
+  /// which fails: `_` is a head writer, and a goal writer against a head
+  /// writer fails ([_isGoalWriter]).  It passed over a goal writer too until
+  /// 2026-10-02, and `s(f(_))` took `s(f(W))`.
+  ///
   /// An anonymous variable is a fresh writer with no paired reader (TGLP
   /// typed-glp.tex, "Anonymous variables"), so WRITE puts a fresh writer in
   /// the slot, as `glp_engine.dart`'s `_anonymousWriter` does for `_` in a
@@ -1914,6 +1940,14 @@ mixin OpExecutors {
   /// a `_` never completed.
   StepOutcome execUnifyVoid(RunnerContext cx, int count) {
     if (cx.mode != UnifyMode.write) {
+      final struct = cx.currentStructure;
+      if (struct is StructTerm) {
+        for (var i = 0; i < count && cx.S + i < struct.args.length; i++) {
+          if (_isGoalWriter(cx, struct.args[cx.S + i])) {
+            return StepOutcome.nextClause;
+          }
+        }
+      }
       cx.S += count;
       return StepOutcome.advance;
     }
@@ -2403,9 +2437,10 @@ mixin OpExecutors {
 
   /// `head_variable` (read/write): in WRITE mode place the clause var (new
   /// placeholder or existing binding) into the structure being built; in READ
-  /// mode extract the value at S and unify with the clause var (a writer: first
-  /// occurrence stores, later occurrence must match; a reader: an unbound goal
-  /// writer is assigned it, and anything else fails).  An unknown variable
+  /// mode extract the value at S and unify with the clause var (a writer: a
+  /// goal writer fails, and otherwise a first occurrence stores and a later
+  /// occurrence must match; a reader: an unbound goal writer is assigned it,
+  /// and anything else fails).  An unknown variable
   /// ([RunnerContext.unknownVars]) is given no value by any of these.
   StepOutcome execHeadVariable(RunnerContext cx, int varIndex, bool isReader) {
     if (cx.mode == UnifyMode.write) {
@@ -2478,6 +2513,10 @@ mixin OpExecutors {
               cx.clauseVars[varIndex] = VarRef(writerAddr);
               cx.sigmaHat[value.addr] = VarRef(readerAddr);
             }
+          } else if (_isGoalWriter(cx, value)) {
+            // A head writer at this subterm: a goal writer fails, whatever
+            // the variable ([_isGoalWriter]), as unify_variable has it.
+            return StepOutcome.nextClause;
           } else if (cx.isUnknown(varIndex)) {
             // A later writer occurrence of an unknown variable: what it meets
             // is matched against a value not yet there, so it is undecided,
@@ -3218,7 +3257,15 @@ mixin OpExecutors {
                   }
                 }
               } else {
-                // UnifyWriter READ mode logic
+                // UnifyWriter READ mode logic: the head has a writer at this
+                // subterm.  A goal writer fails, whatever the variable
+                // (appendix-term-matching.tex, row "Writer X1", column
+                // "Writer X2"; see _isGoalWriter).  The placement after `pop`
+                // of a structure built for a goal writer meets that writer
+                // assigned, and is passed.
+                if (_isGoalWriter(cx, value)) {
+                  return StepOutcome.nextClause;
+                }
                 if (cx.isUnknown(varIndex)) {
                   // A later writer occurrence of an unknown variable: what it
                   // meets is matched against a value not yet there, so it is
@@ -3359,9 +3406,10 @@ mixin OpExecutors {
     return StepOutcome.advance;
   }
 
-  /// `get_variable` (load goal arg argSlot into clause var). Writer mode binds
-  /// the goal writer/reader/term to the clause var (or to its earlier-occurrence
-  /// writer via σ̂w); reader mode has the clause reader observe an unbound goal
+  /// `get_variable` (load goal arg argSlot into clause var). Writer mode is a
+  /// head writer: a goal writer fails it ([_isGoalWriter]), and a goal reader
+  /// or term is bound to the clause var (or to its earlier-occurrence writer
+  /// via σ̂w); reader mode has the clause reader observe an unbound goal
   /// writer, failing on a goal reader or term. Null arg or fail → next clause.
   /// It is the first occurrence among the head's arguments, and may follow one
   /// inside a structure; an unknown variable ([RunnerContext.unknownVars]) met
@@ -3374,6 +3422,10 @@ mixin OpExecutors {
     }
 
         if (!isReaderMode) {
+          // A goal writer against a head writer fails, whatever the variable
+          // (appendix-term-matching.tex, row "Writer X1", column "Writer X2";
+          // see _isGoalWriter).
+          if (_isGoalWriter(cx, arg)) return StepOutcome.nextClause;
           // A later writer occurrence of an unknown variable: what it meets is
           // matched against a value not yet there, so it is undecided, and
           // gives the variable no value.
@@ -3502,7 +3554,8 @@ mixin OpExecutors {
   }
 
   /// `get_value` (unify goal arg argSlot with the already-bound clause var).
-  /// Writer mode unifies/binds via σ̂w; reader mode binds an unbound goal
+  /// Writer mode fails on a goal writer ([_isGoalWriter]) and otherwise
+  /// unifies/binds via σ̂w; reader mode binds an unbound goal
   /// writer to the stored value's reader (suspending (Si) on an unbound stored
   /// reader) and fails on a goal reader or term. An unknown variable
   /// ([RunnerContext.unknownVars]) is given no value and fails only where the
@@ -3516,11 +3569,19 @@ mixin OpExecutors {
           return StepOutcome.nextClause;
         }
 
+        // A goal writer against a head writer fails, whatever the variable,
+        // unknown or not (appendix-term-matching.tex, row "Writer X1",
+        // column "Writer X2"; see _isGoalWriter).
+        if (!isReaderMode && _isGoalWriter(cx, arg)) {
+          return StepOutcome.nextClause;
+        }
+
         if (cx.isUnknown(varIndex)) {
           // The variable is unknown: nothing to match it with, so this
           // occurrence fails only where the table fails it whatever the
           // variable --- a head reader against a goal reader or term
-          // (appendix-term-matching.tex, column "Reader X2?").
+          // (appendix-term-matching.tex, column "Reader X2?"), and a head
+          // writer against a goal writer, above.
           if (isReaderMode &&
               (arg is! VarRef || !_isUnboundWriterCell(cx, arg.addr))) {
             return StepOutcome.nextClause;
