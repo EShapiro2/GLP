@@ -2,13 +2,11 @@
 send(X, ch(In, [X?|Out?]), ch(In?, Out)).
 receive(X?, ch([X|In], Out?), ch(In?, Out)).
 
-med(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(msg(agent, person,
-                befriend_intro(From, Other, Ch?)),
-            AgentCh?, AgentCh1),
+med(Id, ch([msg(agent, person, befriend_intro(From, Other, Ch?))|In], Out?),
+    PersonCh, Ps, N) :-
     ground(From?), ground(Other?), ground(N?) |
     send(befriend_intro(From?, Other?, req(N?)),
          PersonCh?, PersonCh1),
     N1 := N? + 1,
-    med(Id?, AgentCh1?, PersonCh1?,
+    med(Id?, ch(In?, Out), PersonCh1?,
         [pending(req(N?), channel(Ch)) | Ps?], N1?).

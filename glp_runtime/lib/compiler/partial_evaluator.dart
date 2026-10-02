@@ -65,6 +65,16 @@ Map<String, List<Term>> getRootScopeUnitClauses() {
   return _cachedRootScopeUnitClauses!;
 }
 
+/// The guard predicates ("name/arity") [program]'s guards unfold as defined
+/// guards: the root scope's unit clauses and the program's own, as
+/// [PartialEvaluator.transformDefinedGuards] takes them.  The type checker asks
+/// it of a clause as written, to check a defined guard's arguments as a
+/// built-in guard's are (TGLP typed-glp.tex, "Type checking of guards").
+Set<String> definedGuardKeys(Program program) => {
+      ...getRootScopeUnitClauses().keys,
+      ...PartialEvaluator()._collectUnitClauses(program).keys,
+    };
+
 // ============================================================================
 // UNIFICATION RESULTS
 // ============================================================================
@@ -710,9 +720,11 @@ class PartialEvaluator {
         // Reader vs Writer: alias unit writer to call writer
         subst[unitArg.name] = VarTerm(writerName, false, callArg.line, callArg.column);
       } else if (unitArg is VarTerm && unitArg.isReader) {
-        // Reader vs Reader: both suspend on same thing, alias
-        subst[unitArg.name] = VarTerm(writerName, false, callArg.line, callArg.column);
-        suspSet.add(writerName);
+        // Goal reader vs head reader: FAIL.  GLP-Spec appendix-term-matching.tex,
+        // Definition "Term Matching": row "Reader X1?", column "Reader X2?".
+        // Until 2026-10-02 the two were aliased and the goal suspended.
+        return UnifyFail(
+            'Reader $writerName? cannot match the head reader ${unitArg.name}?');
       } else {
         // Reader vs constant/structure: add to suspension set
         // Record what it should match - bind the writer to the unit arg
@@ -742,9 +754,11 @@ class PartialEvaluator {
         _substSet(subst, unitArg.name, callArg);
         return null;
       } else if (unitArg is VarTerm && unitArg.isReader) {
-        // Constant vs Reader in unit clause - unusual
-        _substSet(subst, unitArg.name, callArg);
-        return null;
+        // Constant vs head reader: FAIL (appendix-term-matching.tex, row "Term
+        // f1/n1", column "Reader X2?"; a constant is f/0).  Until 2026-10-02 the
+        // head reader was bound to the constant.
+        return UnifyFail(
+            'Constant ${callArg.value} cannot match the head reader ${unitArg.name}?');
       } else {
         return UnifyFail('Constant ${callArg.value} cannot match structure $unitArg');
       }
@@ -766,8 +780,11 @@ class PartialEvaluator {
         _substSet(subst, unitArg.name, callArg);
         return null;
       } else if (unitArg is VarTerm && unitArg.isReader) {
-        _substSet(subst, unitArg.name, callArg);
-        return null;
+        // Structure vs head reader: FAIL (appendix-term-matching.tex, row "Term
+        // f1/n1", column "Reader X2?").  Until 2026-10-02 the head reader was
+        // bound to the structure.
+        return UnifyFail(
+            'Structure ${callArg.functor} cannot match the head reader ${unitArg.name}?');
       } else {
         return UnifyFail('Structure ${callArg.functor} cannot match $unitArg');
       }
@@ -798,8 +815,10 @@ class PartialEvaluator {
         _substSet(subst, unitArg.name, callArg);
         return null;
       } else if (unitArg is VarTerm && unitArg.isReader) {
-        _substSet(subst, unitArg.name, callArg);
-        return null;
+        // List vs head reader: FAIL (appendix-term-matching.tex, row "Term
+        // f1/n1", column "Reader X2?"; a list is '[]'/0 or '.'/2).  Until
+        // 2026-10-02 the head reader was bound to the list.
+        return UnifyFail('List cannot match the head reader ${unitArg.name}?');
       } else {
         return UnifyFail('List cannot match $unitArg');
       }

@@ -96,11 +96,19 @@ class ByteRunner with OpExecutors implements GoalRunner {
     return image.code.length;
   }
 
-  /// Byte-loop routing for `StepOutcome.nextClause`: soft-fail the clause (merge
-  /// Si into U, clear clause state — the public-API form of the object runner's
-  /// `_softFailToNextClause`) and return the next clause's byte offset.
+  /// Byte-loop routing for `StepOutcome.nextClause`: leave the clause (clear its
+  /// state) and return the next clause's byte offset.  A clause that SUSPENDED
+  /// --- a guard or the commit added readers to U ([SuspensionSet.touched]) ---
+  /// also gives U its own suspension set Si; one that FAILED gives nothing,
+  /// whatever it suspended on before failing: "The writer mgu is the union of
+  /// all writer assignments if no fail was encountered and the suspension set
+  /// is empty" (GLP-Spec appendix-term-matching.tex, Definition "Term
+  /// Matching"), so a fail anywhere is a fail.  Until 2026-10-02 Si was merged
+  /// on every next clause, and a goal whose every clause failed suspended if
+  /// one of them had met an unbound reader first (GLP 2026-10-01 23:58 UTC
+  /// item 4).
   int _applyNextClauseByte(RunnerContext cx, int opStart) {
-    cx.U.addAll(cx.Si);
+    if (cx.U.touched) cx.U.addAll(cx.Si);
     cx.clearClause();
     return _nextClauseByte(opStart);
   }

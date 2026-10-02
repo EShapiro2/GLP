@@ -20,6 +20,7 @@ import '../../compiler/ast.dart' as ast;
 import '../../compiler/lexer.dart';
 import '../../compiler/parser.dart';
 import '../../compiler/error.dart';
+import '../../compiler/partial_evaluator.dart' show definedGuardKeys;
 
 // =============================================================================
 // Result Types
@@ -243,6 +244,43 @@ class TypeChecker {
     }
 
     return TypeCheckResult(errors, warnings);
+  }
+
+  /// The guard meet errors of the DEFINED guards of [clauses], each clause
+  /// taken as written, before the partial evaluator unfolds its defined guards
+  /// ([wtc.definedGuardMeetErrors]): a defined guard's argument is checked as a
+  /// built-in guard's is (TGLP typed-glp.tex, "Type checking of guards").
+  /// [definedGuards] names the guard predicates the partial evaluator unfolds.
+  /// A clause of a parameterized procedure is checked at each instantiation
+  /// ([checkInstantiationsClosed]) and is passed by here unless
+  /// [includeParameterized].
+  List<TypeError> checkDefinedGuards(
+      Iterable<ast.Clause> clauses, Set<String> definedGuards,
+      {bool includeParameterized = false}) {
+    final errors = <TypeError>[];
+    for (final clause in clauses) {
+      if (clause.guards == null || clause.guards!.isEmpty) continue;
+      final key = '${clause.head.functor}/${clause.head.arity}';
+      if (!includeParameterized && typeEnv.paramProcDecls.containsKey(key)) {
+        continue;
+      }
+      if (!typeEnv.procedures.containsKey(key)) continue;
+      // A guard atom this check cannot type (a type it cannot resolve) is the
+      // clause check's to report: the unfolded clause is checked in full by
+      // [check], and this check refuses only an empty meet.
+      List<wtc.GuardMeetError> meetErrors;
+      try {
+        meetErrors =
+            wtc.definedGuardMeetErrors(clause, definedGuards, dfa, typeEnv);
+      } on Object {
+        continue;
+      }
+      for (final e in meetErrors) {
+        errors.add(TypeError(
+            e.message, clause.line, clause.column, _clauseToString(clause)));
+      }
+    }
+    return errors;
   }
 
   /// Check one procedure's clauses against a specific declaration, in this
@@ -820,6 +858,12 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
         collector: collector,
         callee: wtc.CalleeClauses((k) => byKey[k], verifyInstantiation));
     final result = checker.check(clauses);
+    final guardErrors = transformedProcedures == null
+        ? const <TypeError>[]
+        : checker.checkDefinedGuards(
+            module.procedures.expand((p) => p.clauses),
+            definedGuardKeys(
+                ast.Program(module.procedures, module.line, module.column)));
 
     // Phase A (modular checking via abstract parameters), per module: certify
     // each parametric procedure that takes the abstract route, against this
@@ -835,7 +879,7 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
         certifyParametricProcedures(typeEnv, (procKey) => clausesByKey[procKey]);
     certifiedKeys?.addAll(cert.certifiedKeys);
     return TypeCheckResult(
-      [...result.errors, ...cert.errors],
+      [...result.errors, ...guardErrors, ...cert.errors],
       [...result.warnings, ...cert.warnings],
     );
   }
@@ -858,6 +902,28 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
 
   final errors = <TypeError>[...result.errors];
   final warnings = <TypeWarning>[...result.warnings];
+
+  // The defined guards: the partial evaluator unfolded them before [check]
+  // saw the clauses, so they are checked on the clauses as written, a defined
+  // guard's argument as a built-in guard's is (TGLP typed-glp.tex, "Type
+  // checking of guards"; GLP 2026-10-01 23:58 UTC item 5) --- a monomorphic
+  // procedure's here, a parameterized one's at each instantiation below.
+  final definedGuards = transformedProcedures == null
+      ? const <String>{}
+      : definedGuardKeys(
+          ast.Program(module.procedures, module.line, module.column));
+  final writtenByKey = <String, List<ast.Clause>>{};
+  if (transformedProcedures != null) {
+    for (final proc in module.procedures) {
+      for (final c in proc.clauses) {
+        writtenByKey
+            .putIfAbsent('${c.head.functor}/${c.head.arity}', () => [])
+            .add(c);
+      }
+    }
+    errors.addAll(checker.checkDefinedGuards(
+        module.procedures.expand((p) => p.clauses), definedGuards));
+  }
 
   // Defining clauses for "name/arity" among this module's own clauses.
   final clausesByKey = <String, List<ast.Clause>>{};
@@ -890,6 +956,8 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
     localCollector,
     (procKey) => clausesByKey[procKey],
     certifiedKeys: cert.certifiedKeys,
+    writtenClauses: (procKey) => writtenByKey[procKey],
+    definedGuards: definedGuards,
   );
   for (final ir in instResults) {
     errors.addAll(ir.result.errors);
@@ -1151,6 +1219,8 @@ List<InstantiationCheckResult> checkInstantiationsClosed(
   wtc.InstantiationCollector seed,
   List<ast.Clause>? Function(String procKey) definingClauses, {
   Set<String> certifiedKeys = const {},
+  List<ast.Clause>? Function(String procKey)? writtenClauses,
+  Set<String> definedGuards = const {},
 }) {
   // Types that arise only through the closure (e.g. Stream<Box<Msg>> from a
   // type-changing procedure) are not produced by the initial declaration-driven
@@ -1222,12 +1292,25 @@ List<InstantiationCheckResult> checkInstantiationsClosed(
       // therefore records no new instantiation into [sub].
       final active = {...pending.active, inst.procKey: inst.monoDecl};
       final sub = wtc.InstantiationCollector();
-      final res = TypeChecker(focusedEnv,
+      var res = TypeChecker(focusedEnv,
               collector: sub,
               callee:
                   wtc.CalleeClauses(definingClauses, verifyInstantiation))
           .checkSingleProcedure(inst.monoDecl, defining,
               activeInstantiations: active);
+      // The defined guards of the clauses as written, at this instantiation
+      // ([TypeChecker.checkDefinedGuards]).
+      final written = writtenClauses?.call(inst.procKey);
+      if (written != null &&
+          definedGuards.isNotEmpty &&
+          written.any((c) => c.guards != null && c.guards!.isNotEmpty)) {
+        final guardErrors = TypeChecker(focusedEnv).checkDefinedGuards(
+            written, definedGuards,
+            includeParameterized: true);
+        if (guardErrors.isNotEmpty) {
+          res = TypeCheckResult([...res.errors, ...guardErrors], res.warnings);
+        }
+      }
       // A parametric procedure certified by Phase A (abstract-instance check) is
       // well-typed at every instantiation by lem:parametricity, so its concrete
       // instantiation is not re-reported here; its body is still traversed so the

@@ -746,7 +746,7 @@ mwm(In, Out?) :-
     '_allocate_mutual_reference'(Ref, Out),
     mwm_main(In?, Ref?).
 
-% Intermediate predicate whose guard admits the multiple Ref? occurrences below.
+% mwm_main: Ref? occurs more than once below, licensed by its type MutualRef? (TGLP, "A reader of type MutualRef may also occur more than once").
 procedure(X) mwm_main(MwmInput(X)?, MutualRef?).
 mwm_main(In, Ref) :-
     is_mutual_ref(Ref?) |

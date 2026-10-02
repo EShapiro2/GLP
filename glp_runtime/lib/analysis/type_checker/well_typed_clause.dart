@@ -559,6 +559,65 @@ ClauseCheckResult checkClauseFromAst(
       callee: callee);
 }
 
+/// The guard meet errors of [clause]'s DEFINED guards, the clause taken as
+/// written, before its defined guards are unfolded.
+///
+/// A defined guard is a guard atom: its argument is checked as a built-in
+/// guard's is.  "Let S be the type of the occurrence and T the type declared
+/// for the position it occupies in the guard.  The guard atom is well-typed if
+/// the meet of S and T ... is non-empty" (TGLP typed-glp.tex, "Type checking of
+/// guards").  The partial evaluator unfolds a defined guard into the clause
+/// before the clause is checked (GLP-Spec appendix-guards.tex, "Defined guard
+/// predicates"), so the atom is gone from the clause [checkClause] sees, and it
+/// is asked of the clause as written here.  [definedGuards] names the guard
+/// predicates (name/arity) the partial evaluator unfolds.  A guard over a type
+/// with no term in common with the occurrence's can never succeed: until
+/// 2026-10-02 `p(A) :- close(A?) | true.` with `A` at `Request?` was refused
+/// only for the head the unfolding wrote, `p(ch([], []))`, and not against
+/// `close(Channel(Closed, Closed)?)` (GLP 2026-10-01 23:58 UTC item 5).
+///
+/// A negated defined guard is left out: the partial evaluator refuses it.
+List<GuardMeetError> definedGuardMeetErrors(ast.Clause clause,
+    Set<String> definedGuards, ProgramDFA dfa, TypeEnvironment env) {
+  final guards = [
+    for (final g in clause.guards ?? const <ast.Guard>[])
+      if (!g.negated && definedGuards.contains('${g.predicate}/${g.args.length}'))
+        ast.Goal(g.predicate, g.args, g.line, g.column)
+  ];
+  if (guards.isEmpty) return const [];
+  final procDecl =
+      env.getProcedure(clause.head.functor, clause.head.args.length);
+  if (procDecl == null) return const [];
+  final head =
+      ast.Goal(clause.head.functor, clause.head.args, clause.line, clause.column);
+  final typed = TypedClause(head: head, bodyAtoms: guards, guardAtoms: guards);
+  final (headResult, _) = _checkHeadWithTerm(typed, procDecl, dfa, env);
+
+  // As [checkClause] meets a guard atom with the head occurrence it tests:
+  // the occurrence's type so far --- the head's, or what an earlier guard
+  // narrowed it to --- against the type the guard declares for its position.
+  final narrowed = <String, VariableTypeInfo>{};
+  final errors = <GuardMeetError>[];
+  for (var i = 0; i < guards.length; i++) {
+    final atom = guards[i];
+    final (atomResult, _) = _checkBodyAtomWithTerm(atom, i, dfa, env,
+        callerVarTypes: headResult.variableTypes);
+    for (final entry in atomResult.variableTypes.entries) {
+      final have = narrowed[entry.key] ?? headResult.variableTypes[entry.key];
+      if (have == null) continue; // not an occurrence the head carries
+      final met = meetOfTypes(have.typeState, entry.value.typeState, dfa, env);
+      if (met == null) {
+        errors.add(GuardMeetError(
+            entry.key, atom.functor, have.typeState, entry.value.typeState));
+      } else {
+        narrowed[entry.key] = VariableTypeInfo(
+            typeState: met, mode: have.mode, isReader: have.isReader);
+      }
+    }
+  }
+  return errors;
+}
+
 /// The base names of the variables of [clause] whose type at some occurrence
 /// is a CONSTANT TYPE (TGLP `typed-glp.tex`, \mypara{Readers of constant
 /// types}).  Proposition "Readers of Constant Types" licenses several
@@ -2490,15 +2549,21 @@ void _matchTypeForInference(
       var resolvedActual = actualTypeName;
       var ltIdx = resolvedActual.indexOf('<');
       if (ltIdx < 0) {
-        // Actual is a named type.  Honor structural type identity (typed-program
-        // §20.3): a named recursive list alias `T ::= [] ; [E | T]` IS Stream<E>,
-        // so resolve it to its structural parameterized form before matching.
-        // Without this a named alias binds no parameter, the call records no
-        // instantiation, and the parametric procedure is never checked at this
-        // element type — a soundness hole (e.g. graph's OutputsList cannot route
-        // through the shared parametric lib routers).  Resolution is a single
-        // lookup (terminating) and the element type is unique.
-        final structForm = _structuralFormOfNamedType(resolvedActual, env);
+        // Actual is a named type.  "Type identity is structural, so two types
+        // with the same automaton bind the parameter consistently whatever
+        // their names or defining modules" (TGLP parameterized-types.tex, after
+        // Definition "Instantiation"): a named type whose alternatives are the
+        // declared template's under some arguments IS that template's instance
+        // --- `T ::= [] ; [E | T]` is Stream<E>, and `IntroChannel ::=
+        // ch(IntroStream, IntroStream?)` is Channel<IntroStream,IntroStream> ---
+        // so it is read as its template form before matching.  Without this a
+        // named type binds no parameter, the call records no instantiation, and
+        // the parametric procedure is never checked at this type.  Until
+        // 2026-10-02 only the list shape was read so, and a named channel type
+        // fixed no parameter of a Channel(Stream(C), Stream(C)) declaration
+        // (GLP 2026-10-01 23:58 UTC item 3).
+        final structForm =
+            _structuralFormOfNamedType(resolvedActual, declaredType.name, env);
         if (structForm == null) return; // not structurally parameterized
         resolvedActual = structForm;
         ltIdx = resolvedActual.indexOf('<');
@@ -2543,36 +2608,162 @@ void _matchTypeForInference(
   }
 }
 
-/// Resolve a named (non-parameterized) type to its structural parameterized
-/// form, honoring structural type identity (typed-program §20.3).  Recognizes
-/// the canonical list shape `T ::= [] ; [E | T]`, whose structural form is
-/// `Stream<E>`; every list-typed alias (OutputsList, NetInStream, UserInStream,
-/// …) takes this shape.  Returns null when [typeName] is unknown, parameterized,
-/// or not structurally a self-recursive list.  A single lookup — no recursion,
-/// so it terminates — and the element type (the cons head) is unique.
-String? _structuralFormOfNamedType(String typeName, TypeEnvironment env) {
+/// The named (non-parameterized) type [typeName] read as an instance of the
+/// template [templateName]: `templateName<A1,...,Ak>`, the arguments under which
+/// the template's alternatives are the named type's, or null where there are
+/// none.  Type identity is structural (TGLP parameterized-types.tex, after
+/// Definition "Instantiation"), and the expansion of `T(S1, ..., Sk)` is the
+/// template's alternatives with each `Xi` replaced by `Si` (Section "Expansion",
+/// "Expansion rule"), so a named type whose alternatives are those of
+/// `T(S1, ..., Sk)` is that instance: `MsgStream ::= [] ; [Msg | MsgStream]` is
+/// `Stream<Msg>`, `IntroChannel ::= ch(IntroStream, IntroStream?)` is
+/// `Channel<IntroStream,IntroStream>`.
+///
+/// The alternatives are paired by their top-level functor, which identifies an
+/// alternative ("alternatives are distinguished by their top-level functor",
+/// TGLP typed-glp.tex), and matched position by position: a parameter takes the
+/// type at its position, its polarity included --- `Out?` against `S?` binds
+/// `Out` to `S`, against `S` to `S?`, complementation being an involution ---
+/// and binds consistently or not at all; the template's reference to itself
+/// stands for the named type; a reference to another template is read the same
+/// way, recursively.  A template with a parameter as an alternative is not
+/// matched (its alternatives are not determined by their functors).
+String? _structuralFormOfNamedType(
+    String typeName, String templateName, TypeEnvironment env,
+    [Set<String>? visiting]) {
   final def = env.getType(typeName);
   if (def == null || def.typeParams.isNotEmpty) return null;
-  if (def.alternatives.length != 2) return null;
-  var hasNil = false;
-  ListConsAlt? cons;
-  for (final alt in def.alternatives) {
-    if (alt is ListNilAlt) {
-      hasNil = true;
-    } else if (alt is ListConsAlt) {
-      cons = alt;
+  final template = env.typeTemplates[templateName];
+  if (template == null || template.typeParams.isEmpty) return null;
+  if (template.alternatives.length != def.alternatives.length) return null;
+  // A cycle through templates referring to one another reads nothing.
+  final key = '$typeName@$templateName';
+  final seen = visiting ?? <String>{};
+  if (!seen.add(key)) return null;
+  try {
+    final byShape = <String, TypeExpr>{};
+    for (final alt in def.alternatives) {
+      final k = _alternativeShape(alt);
+      if (k == null || byShape.containsKey(k)) return null;
+      byShape[k] = alt;
+    }
+    final theta = <String, String>{};
+    for (final talt in template.alternatives) {
+      final k = _alternativeShape(talt, template.typeParams);
+      if (k == null) return null;
+      final nalt = byShape[k];
+      if (nalt == null) return null;
+      if (!_bindTemplateAlt(talt, nalt, typeName, template, theta, env, seen)) {
+        return null;
+      }
+    }
+    if (!template.typeParams.every(theta.containsKey)) return null;
+    return '$templateName<${template.typeParams.map((p) => theta[p]).join(',')}>';
+  } finally {
+    seen.remove(key);
+  }
+}
+
+/// The top-level functor that identifies alternative [alt], or null for an
+/// alternative that is not identified by one: a parameter of [params], or a
+/// reference to a template instance.
+String? _alternativeShape(TypeExpr alt, [List<String> params = const []]) {
+  if (alt is ConstantAlt) return 'const:${alt.value}';
+  if (alt is StructAlt) return 'struct:${alt.functor}/${alt.args.length}';
+  if (alt is ListNilAlt) return 'nil';
+  if (alt is ListConsAlt) return 'cons';
+  if (alt is DiffListAlt) return 'difflist';
+  if (alt is PrimitiveModeAlt) return alt.isInput ? 'any?' : 'any';
+  if (alt is TypeRef) {
+    if (alt.typeArgs.isNotEmpty || params.contains(alt.name)) return null;
+    return 'ref:${alt.name}${alt.isInput ? '?' : ''}';
+  }
+  return null;
+}
+
+/// Match the template alternative (or position) [t] against the named type's
+/// [n], extending [theta]; false on a mismatch.
+bool _bindTemplateAlt(TypeExpr t, TypeExpr n, String typeName, TypeDef template,
+    Map<String, String> theta, TypeEnvironment env, Set<String> visiting) {
+  if (t is TypeRef) {
+    if (n is! TypeRef || n.typeArgs.isNotEmpty) return false;
+    final selfRef = t.name == template.name &&
+        t.typeArgs.length == template.typeParams.length &&
+        [
+          for (var i = 0; i < t.typeArgs.length; i++)
+            t.typeArgs[i] is TypeRef &&
+                (t.typeArgs[i] as TypeRef).name == template.typeParams[i] &&
+                (t.typeArgs[i] as TypeRef).typeArgs.isEmpty &&
+                !(t.typeArgs[i] as TypeRef).isInput
+        ].every((b) => b);
+    if (selfRef && n.name == typeName) return t.isInput == n.isInput;
+    return _bindTemplateRef(t, n.isInput ? '${n.name}?' : n.name,
+        template.typeParams, theta, env, visiting);
+  }
+  if (t is PrimitiveModeAlt) return n is PrimitiveModeAlt && n.isInput == t.isInput;
+  if (t is ConstantAlt) return n is ConstantAlt && n.value == t.value;
+  if (t is ListNilAlt) return n is ListNilAlt;
+  if (t is ListConsAlt) {
+    return n is ListConsAlt &&
+        _bindTemplateAlt(t.head, n.head, typeName, template, theta, env, visiting) &&
+        _bindTemplateAlt(t.tail, n.tail, typeName, template, theta, env, visiting);
+  }
+  if (t is StructAlt) {
+    if (n is! StructAlt || n.functor != t.functor || n.args.length != t.args.length) {
+      return false;
+    }
+    for (var i = 0; i < t.args.length; i++) {
+      if (!_bindTemplateAlt(t.args[i], n.args[i], typeName, template, theta, env, visiting)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  if (t is DiffListAlt) {
+    return n is DiffListAlt &&
+        _bindTemplateAlt(t.content, n.content, typeName, template, theta, env, visiting) &&
+        _bindTemplateAlt(t.hole, n.hole, typeName, template, theta, env, visiting);
+  }
+  return false;
+}
+
+/// Match the template reference [t] against the type named [actual] (a full
+/// name, `?` marking an input type), extending [theta]: a parameter is bound to
+/// it, a concrete type must be it, and a template instance `T(A1, ..., Ak)`
+/// must be `T<...>`, by name or as a named type read as its template form
+/// ([_structuralFormOfNamedType]), its arguments matched in turn.
+bool _bindTemplateRef(TypeExpr t, String actual, List<String> params,
+    Map<String, String> theta, TypeEnvironment env, Set<String> visiting) {
+  if (t is! TypeRef) return false;
+  final actualInput = actual.endsWith('?');
+  final actualBase =
+      actualInput ? actual.substring(0, actual.length - 1) : actual;
+  if (t.typeArgs.isEmpty && params.contains(t.name)) {
+    final value = t.isInput != actualInput ? '$actualBase?' : actualBase;
+    final have = theta[t.name];
+    if (have == null) {
+      theta[t.name] = value;
+      return true;
+    }
+    return have == value;
+  }
+  if (t.isInput != actualInput) return false;
+  if (t.typeArgs.isEmpty) return t.name == actualBase;
+  var form = actualBase;
+  if (!form.startsWith('${t.name}<')) {
+    if (form.contains('<')) return false;
+    final named = _structuralFormOfNamedType(form, t.name, env, visiting);
+    if (named == null) return false;
+    form = named;
+  }
+  final args = _splitTypeArgs(form.substring(t.name.length + 1, form.length - 1));
+  if (args.length != t.typeArgs.length) return false;
+  for (var i = 0; i < args.length; i++) {
+    if (!_bindTemplateRef(t.typeArgs[i], args[i], params, theta, env, visiting)) {
+      return false;
     }
   }
-  if (!hasNil || cons == null) return null;
-  // Tail must recurse on the type itself (the canonical Stream shape).
-  final tail = cons.tail;
-  if (tail is! TypeRef || tail.name != typeName || tail.typeArgs.isNotEmpty) {
-    return null;
-  }
-  // Element type is the cons head, a simple named/concrete type.
-  final head = cons.head;
-  if (head is! TypeRef || head.typeArgs.isNotEmpty) return null;
-  return 'Stream<${head.name}>';
+  return true;
 }
 
 /// Split comma-separated type args, respecting nested angle brackets.
