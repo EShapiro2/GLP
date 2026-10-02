@@ -1,5 +1,6 @@
 import 'machine_state.dart';
 import 'heap_fcp.dart';
+import 'terms.dart';
 import 'suspend_ops.dart';
 import 'commit.dart';
 import 'fairness.dart';
@@ -138,6 +139,72 @@ class GlpRuntime {
 
   /// Goal [goalId] has passed when_idle: it no longer waits on it.
   void clearIdleWait(int goalId) => _idleWaits.remove(goalId);
+
+  // Heap collection (a PROPOSAL, 2026-10-02; off unless [heapCollection] is
+  // set, as GlpEngine sets it when GLP_HEAP_GC=1).  IGLP's heap (app:in-heap)
+  // says nothing of reclaiming cells, and until now none was ever reclaimed.
+
+  /// Whether the scheduler collects the heap between goals ([maybeCollectHeap]).
+  bool heapCollection = false;
+
+  /// The least number of cells allocated between two collections; after a
+  /// collection the next waits for twice the cells it kept, if that is more.
+  int heapCollectionMinInterval = 1 << 22;
+  int _heapAtLastCollection = 0;
+  int? _heapCollectionInterval;
+
+  /// The collections made, and the last.
+  int heapCollections = 0;
+  HeapCollection? lastHeapCollection;
+
+  /// Addresses a caller holds outside every goal, kept by every collection:
+  /// the REPL goal's variables, read after the run.
+  final Set<int> pinnedAddrs = <int>{};
+
+  /// Whether the roots [collectHeap] gathers are all the addresses anything
+  /// live holds: not in madGLP, whose tables hold addresses; not while a
+  /// timer of wait/1 waits to bind its writer; not while an external
+  /// observer's callback waits on a writer.
+  bool get heapCollectable =>
+      madContext == null && _pendingTimers == 0 && !heap.hasBindCallbacks;
+
+  /// Collect the heap if collection is on, enough cells have been allocated
+  /// since the last, and the roots are complete ([heapCollectable]).  The
+  /// scheduler calls it between goals, where no goal is part way through a
+  /// reduction.
+  void maybeCollectHeap() {
+    if (!heapCollection) return;
+    final interval = _heapCollectionInterval ?? heapCollectionMinInterval;
+    if (heap.HP - _heapAtLastCollection < interval) return;
+    if (!heapCollectable) return;
+    collectHeap();
+  }
+
+  /// Collect the heap ([HeapFCP.collect]) from these roots: the argument
+  /// registers of every goal still in the configuration --- a goal that ended
+  /// left [_goalEnvs] ([goalEnded]), so every entry is a goal in the queue or
+  /// suspended --- the readers goals are suspended on, the readers and
+  /// writers of the waits on when_idle and wait/1, and [pinnedAddrs].
+  HeapCollection collectHeap() {
+    final rootTerms = <Term>[];
+    for (final env in _goalEnvs.values) {
+      rootTerms.addAll(env.argBySlot.values);
+    }
+    final rootAddrs = <int>[
+      ...suspended.keys,
+      ..._waitReaders.values,
+      for (final w in _idleWaits.values) ...[w.writer, w.reader],
+      ...pinnedAddrs,
+    ];
+    final c = heap.collect(rootAddrs: rootAddrs, rootTerms: rootTerms);
+    heapCollections++;
+    lastHeapCollection = c;
+    _heapAtLastCollection = heap.HP;
+    final next = 2 * c.liveCells;
+    _heapCollectionInterval =
+        next > heapCollectionMinInterval ? next : heapCollectionMinInterval;
+    return c;
+  }
 
   /// The number of goals whose state the runtime holds: those in the queue
   /// or suspended, once every goal that ended has left ([goalEnded]).

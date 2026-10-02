@@ -8,6 +8,8 @@
 /// - A writer bound to a value becomes a value cell (ValueTag)
 library;
 
+import 'dart:typed_data';
+
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/suspension.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
@@ -56,6 +58,83 @@ class WriterContent {
   String toString() => 'WriterContent(reader=$readerAddr, sus=$suspensions)';
 }
 
+/// The heap's cells by address, held in segments of [segmentSize] cells so
+/// that a collection ([HeapFCP.collect]) can drop each cell nothing live
+/// reaches, and each segment none of whose cells is reached, without moving a
+/// cell or reusing an address.  Addresses run from 0 up and are never handed
+/// out twice; reading a reclaimed one throws.  Until 2026-10-02 the heap was a
+/// growable list of cells that was never reclaimed, and a run kept every cell
+/// it ever allocated: 46 million cells and 5 GB at the end of a year of
+/// sGLP's 100-agent social graph, and out of memory 19 simulated days into
+/// its 1000-agent run.
+class HeapCells {
+  static const int segmentBits = 16;
+  static const int segmentSize = 1 << segmentBits;
+  static const int _offsetMask = segmentSize - 1;
+
+  final List<List<HeapCell?>?> _segments = [];
+  int _length = 0;
+
+  /// The number of addresses allocated: the next address is [length].
+  int get length => _length;
+
+  HeapCell operator [](int addr) {
+    if (addr < 0 || addr >= _length) {
+      throw RangeError.range(addr, 0, _length - 1, 'addr');
+    }
+    final cell = _segments[addr >> segmentBits]?[addr & _offsetMask];
+    if (cell == null) {
+      throw StateError('heap cell @$addr was reclaimed: no root reached it '
+          'at a collection');
+    }
+    return cell;
+  }
+
+  void add(HeapCell cell) {
+    final offset = _length & _offsetMask;
+    if (offset == 0) {
+      _segments.add(List<HeapCell?>.filled(segmentSize, null));
+    }
+    _segments[_length >> segmentBits]![offset] = cell;
+    _length++;
+  }
+
+  /// Whether [addr] was allocated and has not been reclaimed.
+  bool isHeld(int addr) =>
+      addr >= 0 &&
+      addr < _length &&
+      _segments[addr >> segmentBits]?[addr & _offsetMask] != null;
+
+  /// The number of segments whose cells are held, wholly or in part.
+  int get heldSegments => _segments.where((s) => s != null).length;
+}
+
+/// What one [HeapFCP.collect] did.
+class HeapCollection {
+  /// Cells kept: reachable from the roots.
+  final int liveCells;
+
+  /// Cells reclaimed.
+  final int reclaimedCells;
+
+  /// Segments dropped whole, and segments still held after the collection.
+  final int segmentsDropped;
+  final int segmentsHeld;
+
+  /// Entries of the writer-to-reader index dropped with their writers.
+  final int pairsDropped;
+
+  final Duration elapsed;
+
+  const HeapCollection(this.liveCells, this.reclaimedCells,
+      this.segmentsDropped, this.segmentsHeld, this.pairsDropped, this.elapsed);
+
+  @override
+  String toString() => 'HeapCollection(live $liveCells, reclaimed '
+      '$reclaimedCells, segments dropped $segmentsDropped held $segmentsHeld, '
+      'pairs dropped $pairsDropped, ${elapsed.inMilliseconds} ms)';
+}
+
 /// FCP Two-Cell Heap with Pointer-Based Variable Identity
 /// 
 /// Per IGLP app:in-heap:
@@ -64,8 +143,8 @@ class WriterContent {
 ///   to a reader holds a Pointer, extending the dereference chain
 /// - Suspensions are stored on writer cells
 class HeapFCP {
-  final List<HeapCell> cells = [];
-  
+  final HeapCells cells = HeapCells();
+
   int HP = 0;  // Heap pointer (next free address)
 
   /// Callbacks for external observation (Phase 0 I/O)
@@ -76,8 +155,110 @@ class HeapFCP {
   /// The writer cell's pointer to its reader is destroyed when the writer binds
   /// (single content slot), so this index preserves the link for bound writers
   /// — replacing the old `reader = writer + 1` arithmetic (known-issues Issue 9).
-  /// Grows with allocation like `cells` (no GC); a relocating GC must update it.
+  /// A collection ([collect]) keeps a writer's reader whenever it keeps the
+  /// writer, and drops the entry of every writer it reclaims.
   final Map<int, int> _readerForWriterIndex = {};
+
+  /// Whether an external observer waits on a writer ([onBind]): its callback
+  /// may hold addresses no goal does, so a collection is not made then.
+  bool get hasBindCallbacks => _bindCallbacks.isNotEmpty;
+
+  // ==========================================================================
+  // Collection
+  // ==========================================================================
+
+  /// Reclaim every cell that no root reaches.
+  ///
+  /// A cell is kept when it is reached from [rootAddrs], or from an address
+  /// inside one of [rootTerms]; and from a kept cell, by its pointer, by the
+  /// reader a writer cell keeps, by its paired reader in
+  /// [_readerForWriterIndex] (the runner asks for a bound writer's reader),
+  /// and by every address inside the term it holds --- a [VarRef]'s, the
+  /// arguments of a [StructTerm], a [MutualRefTerm]'s current tail writer.
+  /// Every other cell is reclaimed, every segment none of whose cells is kept
+  /// is dropped, and the index entry of every reclaimed writer goes.  No cell
+  /// moves and no address is reused, so an address a missed root still held
+  /// fails loudly when it is read, and never aliases a new variable.
+  ///
+  /// The caller guarantees that the roots are all the addresses anything
+  /// live can still reach: every goal in the queue or suspended, by its
+  /// argument registers, and every address the runtime or its caller holds
+  /// ([GlpRuntime.collectHeap]).
+  HeapCollection collect(
+      {required Iterable<int> rootAddrs, required Iterable<Term> rootTerms}) {
+    final sw = Stopwatch()..start();
+    final segs = cells._segments;
+    final nSeg = segs.length;
+    final marks = List<Uint32List?>.filled(nSeg, null);
+    final addrs = <int>[...rootAddrs];
+    final terms = <Term>[...rootTerms];
+    var live = 0;
+    while (true) {
+      while (terms.isNotEmpty) {
+        final t = terms.removeLast();
+        if (t is VarRef) {
+          addrs.add(t.addr);
+        } else if (t is StructTerm) {
+          terms.addAll(t.args);
+        } else if (t is MutualRefTerm) {
+          addrs.add(t.currentWriterAddr);
+        }
+      }
+      if (addrs.isEmpty) break;
+      final a = addrs.removeLast();
+      // A reclaimed or unallocated address reached from a root throws here:
+      // an earlier collection missed a root.
+      final cell = cells[a];
+      final s = a >> HeapCells.segmentBits;
+      final o = a & HeapCells._offsetMask;
+      final m = marks[s] ??= Uint32List(HeapCells.segmentSize >> 5);
+      final bit = 1 << (o & 31);
+      if (m[o >> 5] & bit != 0) continue;
+      m[o >> 5] |= bit;
+      live++;
+      final c = cell.content;
+      if (c is Pointer) {
+        addrs.add(c.targetAddr);
+      } else if (c is WriterContent) {
+        addrs.add(c.readerAddr);
+      } else if (c is Term) {
+        terms.add(c);
+      }
+      final r = _readerForWriterIndex[a];
+      if (r != null) addrs.add(r);
+    }
+
+    var reclaimed = 0, dropped = 0, held = 0;
+    // The segment allocation is filling is never dropped.
+    final filling = (cells._length - 1) >> HeapCells.segmentBits;
+    for (var s = 0; s < nSeg; s++) {
+      final seg = segs[s];
+      if (seg == null) continue;
+      final m = marks[s];
+      if (m == null && s != filling) {
+        for (final c in seg) {
+          if (c != null) reclaimed++;
+        }
+        segs[s] = null;
+        dropped++;
+        continue;
+      }
+      held++;
+      final end = s == filling
+          ? ((cells._length - 1) & HeapCells._offsetMask) + 1
+          : HeapCells.segmentSize;
+      for (var o = 0; o < end; o++) {
+        if (seg[o] == null) continue;
+        if (m != null && (m[o >> 5] & (1 << (o & 31))) != 0) continue;
+        seg[o] = null;
+        reclaimed++;
+      }
+    }
+    final pairsBefore = _readerForWriterIndex.length;
+    _readerForWriterIndex.removeWhere((w, _) => !cells.isHeld(w));
+    return HeapCollection(live, reclaimed, dropped, held,
+        pairsBefore - _readerForWriterIndex.length, sw.elapsed);
+  }
 
   // ==========================================================================
   // Variable Allocation (Section 3 of spec)

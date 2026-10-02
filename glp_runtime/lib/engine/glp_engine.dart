@@ -204,6 +204,9 @@ class GlpEngine {
   GlpEngine({required String rootSelfGlpPath, PersonIdentity? identity}) {
     _rootSelfGlpPath = rootSelfGlpPath;
     _runtime.identity = identity ?? PersonIdentity.generate();
+    // Heap collection, a PROPOSAL of 2026-10-02, is off unless GLP_HEAP_GC=1
+    // (GlpRuntime.heapCollection).
+    _runtime.heapCollection = Platform.environment['GLP_HEAP_GC'] == '1';
 
     // Set root scope sources from programs/self.glp for PE and type checker
     final rootSelfFile = File(_rootSelfGlpPath);
@@ -875,6 +878,12 @@ class GlpEngine {
     _runtime.gq.enqueue(GoalRef(_goalId, goalEntry));
     _goalId++;
 
+    // The goal's variables are read after the run: a heap collection keeps
+    // them (GlpRuntime.pinnedAddrs).
+    _runtime.pinnedAddrs
+      ..clear()
+      ..addAll(queryVarWriters.values);
+
     final result = await scheduler.drainAsyncWithStatus(
       maxCycles: maxCycles,
       debug: debugTrace,
@@ -995,6 +1004,12 @@ class GlpEngine {
     // the queue and the run continues, dGLP/madGLP Reduce), capped if the
     // limit stopped it with goals still queued, suspended if a goal of the run
     // waits at quiescence, and succeeded otherwise.
+    //
+    // The conjunction's variables are read after the run: a heap collection
+    // keeps them (GlpRuntime.pinnedAddrs).
+    _runtime.pinnedAddrs
+      ..clear()
+      ..addAll(queryVarWriters.values);
     final result = await scheduler.drainAsyncWithStatus(
       maxCycles: maxCycles,
       debug: debugTrace,

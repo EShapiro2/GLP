@@ -244,6 +244,9 @@ class Scheduler {
     final failedAtEntry = rt.failedGoals.length;
 
     while (cycles < maxCycles) {
+      // Between goals, where none is part way through a reduction, the heap
+      // may be collected (GlpRuntime.maybeCollectHeap; off unless asked for).
+      rt.maybeCollectHeap();
       // when_idle (GLP-Spec appendix-guards.tex, e3a8d52; IGLP eadadcd,
       // Implementation Notes, "The when_idle Guard"): whenever the machine is
       // idle --- its queue empty and, in madGLP, its outbox too --- the goal
