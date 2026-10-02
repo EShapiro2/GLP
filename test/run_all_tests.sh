@@ -1060,6 +1060,9 @@ med(charlie, ch([msg(agent, _user, befriend_intro(bob, alice, X?)) | Xs], Y), ch
 :quit
 HEREDOC
 2>&1)
+# The absence of req(2) means something only if the fixture loaded: refused, it
+# printed no req(2) either, a false pass.
+check "reader-to-reader fixture loads" "Loaded: .*test_befriend_intro_bug.glp" "$a27"
 check_not "reader-to-reader no reduction" "req(2)" "$a27"
 
 # --- A29: Struct terms inside lists in goal arguments (Issue 0b regression) ---
