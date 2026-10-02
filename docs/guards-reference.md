@@ -32,6 +32,8 @@ Guards are pure tests with **three-valued semantics** (success/suspend/fail) tha
 
 **A guard's argument may be a term of any depth** --- `Z? =?= g(f(c))`, `X? + Y? * 2 > 3`, `X? =?= [a, b]` --- built as a body goal's argument is, by `put_structure` and the `set_*` and `unify_*` instructions that fill it, a structure nested in it pushing the one it is nested in, into a structure held for the guard call alone, nothing bound on the heap (`runner.dart`, `execPutStructure`, `_completeGuardStructure`).  Until 2026-10-02 a nested structure overwrote the one it was nested in and `set_*` acted in the body alone, so the guard was decided on a term never completed: `t6(Z, Y?) :- Z? =?= g(f(c)) | Y = ok.` failed `t6(g(f(c)), Y)` (GLP #3 Cowork, 2026-10-02 17:12 UTC, S1).
 
+**Either side of an infix guard may be a structure or a constant**: `w(X?) =?= Y?` parses as `Y? =?= w(X?)` does, `f(X?) + 1 > 2` as `2 < f(X?) + 1` does, and `b @< X?` is `@<` of `b` and `X?`.  A name followed by a comparison or an arithmetic operator is the left operand, parsed as an expression as the right one is (`parser.dart`, `_continuesAsInfixGuard`); followed by anything else it is a predicate, and `foo(a) = X` the unification goal it was.  Until 2026-10-02 the name was taken for a predicate and the operator after it was a syntax error (GLP #3 Cowork, 2026-10-02 17:12 UTC, S2).
+
 ---
 
 ## No Guard Negation

@@ -812,6 +812,7 @@ class Parser {
 
     // Try to parse as regular predicate first
     if (_check(TokenType.ATOM)) {
+      final start = _current;
       final functorToken = _consume(TokenType.ATOM, 'Expected predicate name');
       final args = <Term>[];
 
@@ -827,41 +828,51 @@ class Parser {
         _consume(TokenType.RPAREN, 'Expected ")" after arguments');
       }
 
-      // Check for static remote goal: atom # goal (e.g., math # factorial(5, R))
-      if (_match(TokenType.HASH)) {
-        // Module name cannot have arguments
-        if (args.isNotEmpty) {
-          throw CompileError(
-            'Module name cannot have arguments: ${functorToken.lexeme}',
-            functorToken.line,
-            functorToken.column,
-            phase: 'parser'
-          );
+      // A structure or a constant on the left of an infix guard,
+      // `w(X?) =?= Y?` or `f(X?) + 1 > 2`: no predicate, but the left operand,
+      // parsed below as an expression, as the right one is.  Until 2026-10-02
+      // it was taken for a predicate, and the operator after it was a syntax
+      // error, where `[X?] =?= Y?` and `1 + X? > 3` parsed (GLP #3 Cowork,
+      // 2026-10-02 17:12 UTC, S2).
+      if (_continuesAsInfixGuard(_peek())) {
+        _current = start;
+      } else {
+        // Check for static remote goal: atom # goal (e.g., math # factorial(5, R))
+        if (_match(TokenType.HASH)) {
+          // Module name cannot have arguments
+          if (args.isNotEmpty) {
+            throw CompileError(
+              'Module name cannot have arguments: ${functorToken.lexeme}',
+              functorToken.line,
+              functorToken.column,
+              phase: 'parser'
+            );
+          }
+          final moduleTerm = ConstTerm(functorToken.lexeme, functorToken.line, functorToken.column);
+          final innerGoal = _parseGoal();
+          return RemoteGoal(moduleTerm, innerGoal, functorToken.line, functorToken.column);
         }
-        final moduleTerm = ConstTerm(functorToken.lexeme, functorToken.line, functorToken.column);
-        final innerGoal = _parseGoal();
-        return RemoteGoal(moduleTerm, innerGoal, functorToken.line, functorToken.column);
+
+        // Check if followed by = (e.g., foo = bar, or foo(a) = X)
+        if (_match(TokenType.EQUALS)) {
+          final leftTerm = args.isEmpty
+              ? ConstTerm(functorToken.lexeme, functorToken.line, functorToken.column)
+              : StructTerm(functorToken.lexeme, args, functorToken.line, functorToken.column);
+          final rightTerm = _parseTerm();
+          return Goal('=', [leftTerm, rightTerm], functorToken.line, functorToken.column);
+        }
+
+        // Return as Goal for now (will be cast to Guard if before |)
+        final goal = Goal(functorToken.lexeme, args, functorToken.line, functorToken.column);
+
+        // Check for spawn annotation: Goal@AgentId
+        if (_match(TokenType.AT)) {
+          final agentToken = _consume(TokenType.ATOM, 'Expected agent identifier after @');
+          return SpawnGoal(goal, agentToken.lexeme, functorToken.line, functorToken.column);
+        }
+
+        return goal;
       }
-
-      // Check if followed by = (e.g., foo = bar, or foo(a) = X)
-      if (_match(TokenType.EQUALS)) {
-        final leftTerm = args.isEmpty
-            ? ConstTerm(functorToken.lexeme, functorToken.line, functorToken.column)
-            : StructTerm(functorToken.lexeme, args, functorToken.line, functorToken.column);
-        final rightTerm = _parseTerm();
-        return Goal('=', [leftTerm, rightTerm], functorToken.line, functorToken.column);
-      }
-
-      // Return as Goal for now (will be cast to Guard if before |)
-      final goal = Goal(functorToken.lexeme, args, functorToken.line, functorToken.column);
-
-      // Check for spawn annotation: Goal@AgentId
-      if (_match(TokenType.AT)) {
-        final agentToken = _consume(TokenType.ATOM, 'Expected agent identifier after @');
-        return SpawnGoal(goal, agentToken.lexeme, functorToken.line, functorToken.column);
-      }
-
-      return goal;
     }
 
     // Otherwise, try to parse as infix comparison (e.g., X < Y, X? mod P? =:= 0)
@@ -1308,6 +1319,36 @@ class Parser {
            token.type == TokenType.ARITH_NOT_EQUAL ||
            token.type == TokenType.HASH ||
            token.type == TokenType.BACKSLASH;
+  }
+
+  /// Whether [t], after a term, makes the term the left operand of an infix
+  /// guard: a comparison, or an arithmetic operator of the expression
+  /// compared (`_parseExpression(6)`'s, whose precedence is above the
+  /// comparisons').  `=` is not among them: `foo(a) = X` is the unification
+  /// goal it was; nor `#` and `@`, of a remote goal and a spawn; nor a `*`
+  /// beginning a vGLP else branch.
+  bool _continuesAsInfixGuard(Token t) {
+    switch (t.type) {
+      case TokenType.LESS:
+      case TokenType.GREATER:
+      case TokenType.LESS_EQUAL:
+      case TokenType.GREATER_EQUAL:
+      case TokenType.ARITH_EQUAL:
+      case TokenType.ARITH_NOT_EQUAL:
+      case TokenType.GROUND_EQUAL:
+      case TokenType.GROUND_NOT_EQUAL:
+      case TokenType.AT_LESS:
+      case TokenType.PLUS:
+      case TokenType.MINUS:
+      case TokenType.SLASH:
+      case TokenType.SLASH_SLASH:
+      case TokenType.MOD:
+        return true;
+      case TokenType.STAR:
+        return !_isElseBranchStar();
+      default:
+        return false;
+    }
   }
 
   // Get operator precedence
