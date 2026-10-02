@@ -425,6 +425,22 @@ measure(_).
       expect(r.derived.exported, equals(r.compiled.exported));
     });
 
+    test('a single-file load of a self.glp tables the types it defines', () {
+      if (!hasRootScope) return;
+      const target = '../programs/tests/agent_roundtrip/self.glp';
+      if (!File(target).existsSync()) return;
+      // The modules it exposes name its types --- typed_social_agent's
+      // inject_msg/5 names Response --- and see them as a module of the
+      // directory sees its self.glp (modules.tex, Definition "Root, Scope").
+      // Until 2026-10-02 the loaded self.glp was no ancestor scope of the
+      // modules it exposes, Response stayed unrenamed and undefined in the
+      // flat module, and the tables were not built; a table that cannot be
+      // built now fails the load, so the load succeeding is the check.
+      final engine = GlpEngine(rootSelfGlpPath: rootSelfGlp.absolute.path);
+      expect(engine.loadFile(target), isTrue);
+      expect(engine.appModule!.declaredTypes, isA<TypeIdentityTables>());
+    });
+
     test('an empty interface derives an empty table', () {
       expect(
           interfaceTypeIdentityTables(

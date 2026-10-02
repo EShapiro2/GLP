@@ -1527,9 +1527,18 @@ Map<String, String> _visibleTypeOwners(
   }
 
   final modDir = File(mod.filePath).parent.absolute.path;
+  // A self.glp is an ancestor scope by its name and directory (modules.tex,
+  // Definition "Root, Scope"), whatever it was loaded as.  The module a
+  // single-file load names is not flagged [DiscoveredModule.isSelfGlp] even
+  // where it is a self.glp, so until 2026-10-02 the modules it exposes did not
+  // see its types: loading programs/tests/agent_roundtrip/self.glp left
+  // typed_social_agent:inject_msg/5's Response unrenamed and undefined in the
+  // flat module, and the type-identity tables were not built.
+  bool isSelfGlp(DiscoveredModule s) =>
+      s.isSelfGlp || ppath.basename(s.filePath) == 'self.glp';
   final ancestors = modules
       .where((s) {
-        if (!s.isSelfGlp || identical(s, mod)) return false;
+        if (!isSelfGlp(s) || identical(s, mod)) return false;
         final selfDir = File(s.filePath).parent.absolute.path;
         return modDir.startsWith(selfDir);
       })

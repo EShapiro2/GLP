@@ -536,6 +536,23 @@ StepOutcome _guardSuspends(RunnerContext cx, Iterable<int> readers) {
   return StepOutcome.advance;
 }
 
+/// The guards [_evaluateGuard] evaluates, by name and arity: the guard
+/// predicates of the catalogue (GLP-Spec appendix-guards.tex) the runtime
+/// implements and the generic guard instruction names.  `ground/1`, `known/1`,
+/// `otherwise/0` and `=?=/2` have instructions of their own besides (codegen.dart,
+/// _generateGuard); `no_readers/1` has only its instruction, which takes a
+/// variable.  The compiler refuses a guard instruction naming anything else, so
+/// an unknown guard is refused at compile time (codegen.dart) and never reaches
+/// the evaluator.  `valid_attestation/4` is held from round two's item 8 until
+/// GLP-Networking-API answers (GLP #3 Cowork, 2026-10-02 13:00 UTC).
+const Set<String> runtimeGuards = {
+  '</2', '>/2', '=</2', '>=/2', '=:=/2', '=\\=/2', '@</2',
+  'ground/1', 'known/1', 'integer/1', 'string/1', 'constant/1', 'number/1',
+  'list/1', 'compound/1', 'module/1', 'is_mutual_ref/1', 'unknown/1',
+  'otherwise/0', 'wait/1', 'wait_until/1', 'when_idle/0',
+  '=?=/2', '=?\\=/2', 'valid_attestation/4',
+};
+
 GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerContext cx) {
   // Extract values from any remaining ConstTerms
   Object? getValue(Object? v) {
@@ -1149,8 +1166,12 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       }
 
     default:
-      print('[WARN] Unknown guard predicate: $predicateName');
-      return GuardResult.failure;
+      // Unreachable: the compiler refuses a guard instruction that names no
+      // guard of [runtimeGuards] (codegen.dart, _generateGuard).  Until
+      // 2026-10-02 an unknown guard printed a [WARN] here and failed the
+      // clause at run time.
+      throw StateError('unknown guard predicate $predicateName/${args.length} '
+          'reached the guard evaluator; the compiler refuses an unknown guard');
   }
 }
 
@@ -1483,8 +1504,10 @@ mixin OpExecutors {
       final targetWriterAddr =
           (arg is VarRef && cx.rt.heap.isWriter(arg.addr)) ? arg.addr : null;
       if (targetWriterAddr == null) {
-        print('WARNING: PutList argSlot $argSlot has no writer in environment');
-        return StepOutcome.advance;
+        // The compiler places a writer in the slot a body list is built into;
+        // a slot without one is a fault of the compiled code, not of the
+        // program run.  Until 2026-10-02 it printed a warning and went on.
+        throw StateError('put_list: argument slot $argSlot holds no writer');
       }
       cx.clauseVars[-1] = targetWriterAddr; // -1 marks structure binding target
       final structArgs = List<Term>.filled(2, ConstTerm(null));
@@ -3626,7 +3649,10 @@ mixin OpExecutors {
           final heapAddr = cx.rt.heap.storeTermOnHeap(value);
           cx.argSlots[argSlot] = VarRef(heapAddr);
         } else {
-          print('WARNING: PutVariable got unexpected value: $value (isReader=$isReaderMode)');
+          // No case above places this value: a fault of the compiled code.
+          // Until 2026-10-02 it printed a warning and went on.
+          throw StateError('put_variable: unexpected clause value $value '
+              '(reader mode: $isReaderMode)');
         }
     return StepOutcome.advance;
   }

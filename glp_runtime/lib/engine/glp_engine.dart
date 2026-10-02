@@ -1131,15 +1131,17 @@ class GlpEngine {
     // Implementation Notes, "The tables"): every procedure declared in the
     // linked program's scope, root scope included, keyed as the compiled module
     // carries it. `find_type/2` reads it from the calling goal's module value.
-    // Built over the same flat module the program was type-checked as. The
-    // table is not part of the type check and its construction can fail on a
-    // program the checker passed, so a failure here leaves the module without a
-    // table (find_type then errs on every key) rather than failing the load.
-    TypeIdentityTables? declaredTypes;
+    // Built over the same flat module the program was type-checked as.  A
+    // table that cannot be built is an error and the module does not load:
+    // until 2026-10-02 the failure was a [TYPE WARNING] and the module loaded
+    // without a table, find_type then erring on every key.
+    final TypeIdentityTables declaredTypes;
     try {
       declaredTypes = linkedTypeIdentityTables(modules, linked);
     } catch (e) {
-      print('[TYPE WARNING] $moduleName: type-identity tables not built: $e');
+      throw CompileError(
+          '$moduleName: the type-identity tables cannot be built: $e', 0, 0,
+          phase: 'typecheck');
     }
     return rt.ModuleTerm(artefact,
         name: moduleName, declaredTypes: declaredTypes, directory: directory);
