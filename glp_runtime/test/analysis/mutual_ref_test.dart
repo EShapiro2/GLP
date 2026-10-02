@@ -177,29 +177,30 @@ twice(R) :- is_mutual_ref(R?) | take(R?), take(R?).
 '''), isEmpty);
     });
 
-    test('is_mutual_ref grounds nothing: a repeated WRITER is refused', () {
-      // The grounding mark licensed both X and X? (TGLP glp.tex, Remark "Guards
-      // and SRSW"); the type licence is the reader's alone.  `ground/1`, which
-      // is "Ground: yes", still licenses the writer --- in the head and again
-      // in the body.  A writer twice in the HEAD is refused whatever the guards
-      // (GLP-Spec glp.tex, Definition "GLP Program"; GLP #3 Cowork, 2026-10-02
-      // 08:40 UTC, G), so until 2026-10-02 the two guards were told apart by
-      // two(R, R), and now by a writer in the head and at a produced position
-      // of the body.
+    test('no guard licenses a repeated WRITER, is_mutual_ref nor ground', () {
+      // "If the success of a guard implies that X? is bound to a ground term,
+      // then X? may occur multiple times in the clause; X occurs once, as
+      // ever" (GLP-Spec glp.tex, Remark "Guards and SRSW", bbff21d), and the
+      // type licence is the reader's alone.  So a writer in the head and again
+      // at a produced position of the body is refused under is_mutual_ref,
+      // "Ground: no", and under ground/1, "Ground: yes", alike.  Until
+      // 2026-10-02 the grounding mark licensed both X and X?, and the clause
+      // under ground/1 loaded.  A writer twice in the HEAD is refused whatever
+      // the guards (GLP-Spec glp.tex, Definition "GLP Program"; GLP #3 Cowork,
+      // 2026-10-02 08:40 UTC, G).
       expect(refusal('''
 -mode(system).
 procedure sink_w(_).
 sink_w(X?) :- X = done.
 procedure two(MutualRef?).
 two(R) :- is_mutual_ref(R?) | sink_w(R).
-'''), contains(
-          'Writer variable "R" occurs 2 times without a groundness-implying guard'));
+'''), contains('Writer variable "R" occurs 2 times; a writer occurs once, whatever the guards'));
       expect(refusal('''
 procedure sink_w(_).
 sink_w(X?) :- X = done.
 procedure two(_?).
 two(R) :- ground(R?) | sink_w(R).
-'''), isEmpty);
+'''), contains('Writer variable "R" occurs 2 times; a writer occurs once, whatever the guards'));
       // Twice in the head, under either guard: refused.
       expect(refusal('''
 -mode(system).

@@ -1695,6 +1695,9 @@ SRSW_FILES=(
     # Nor does =?\=, Ground "no" (GLP-Spec appendix-guards.tex, bbff21d): A13's
     # neq_pair, which read each argument twice after it, until 2026-10-02.
     "$GLP_DIR/programs/tests/srsw/neq_not_ground.glp"
+    # And no guard licenses a repeated writer: "X occurs once, as ever" (glp.tex
+    # Remark "Guards and SRSW", bbff21d), integer/1 here.
+    "$GLP_DIR/programs/tests/srsw/ground_writer_once.glp"
 )
 
 for f in "${SRSW_FILES[@]}"; do
@@ -1721,6 +1724,12 @@ check "pairing: a variable with no writer" "Variable \"Y\" has no writer" "$srsw
 # after it is refused, and the diagnostic names it.
 srsw_neq=$(echo -e "$GLP_DIR/programs/tests/srsw/neq_not_ground.glp\n:quit" | "$REPL_RUN" 2>&1)
 check "=?\\= grounds nothing: a reader twice after it is refused" "Reader variable \"X?\" occurs 2 times" "$srsw_neq"
+
+# No guard licenses a repeated writer (glp.tex Remark "Guards and SRSW",
+# bbff21d): the writer twice under integer/1 is refused, and the diagnostic
+# says so.
+srsw_wonce=$(echo -e "$GLP_DIR/programs/tests/srsw/ground_writer_once.glp\n:quit" | "$REPL_RUN" 2>&1)
+check "a writer twice under a groundness-implying guard is refused" "Writer variable \"X\" occurs 2 times; a writer occurs once, whatever the guards" "$srsw_wonce"
 
 # merge_with_reader: the one entry of this section that is rejected by the SRSW
 # pass rather than by the type checker, so it is the only test that speaks for

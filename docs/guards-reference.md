@@ -202,15 +202,15 @@ process(X, Y?) :- ground(X) | Y = computed(X?).  % Would fail, not suspend
 
 ## Ground Guards - SRSW Relaxation
 
-Per the formal definition, variables occur as reader/writer pairs with exactly one of each. The ONLY exception: when guards guarantee groundness, multiple occurrences of both the writer and reader are permitted because ground terms contain no unbound writers.
+Per the formal definition, variables occur as reader/writer pairs with exactly one of each. The exception: when a guard guarantees groundness, the reader may occur more than once, because a ground term contains no unbound writer; the writer occurs once, whatever the guard.
 
 ### The Rule
 
-When a guard ensures a variable is ground (contains no unbound variables), both the writer and its paired reader may appear **multiple times** in the clause without violating SRSW. This is fundamental to GLP's concurrent programming model.
+GLP-Spec glp.tex, Remark "Guards and SRSW" (bbff21d): "if the success of a guard implies that X? is bound to a ground term, then X? may occur multiple times in the clause; X occurs once, as ever."  Until 2026-10-02 the analyzer licensed the writer as well; it now refuses a writer occurring more than once in a clause, whatever the guards: `Writer variable "X" occurs 2 times; a writer occurs once, whatever the guards`, or, twice in the head, `... occurs 2 times in the head of the clause ...`.
 
 ### Why This Works
 
-Ground terms contain no unbound writers. Multiple occurrences of a ground variable's writer and reader do not create single-writer violations because there's no exposed writer that could be bound multiple times.
+Ground terms contain no unbound writers, so several readers of a ground value share nothing that could be bound twice.  The writer is the one place the value is produced, and a second occurrence would be a second producer.
 
 ### Guard Arguments Count as Reader Occurrences
 
@@ -222,11 +222,11 @@ check(X) :- known(X?) | true.
 
 is valid because X appears as writer in the head and X? appears as reader in the guard, satisfying SRSW with one writer and one reader.
 
-This is distinct from the multiple-occurrence relaxation below. Guard reader counting ensures guards participate in SRSW validation. The relaxation below determines which guards permit both the writer and reader of a variable to appear multiple times.
+This is distinct from the multiple-occurrence relaxation below. Guard reader counting ensures guards participate in SRSW validation. The relaxation below determines which guards permit the reader of a variable to appear multiple times.
 
 ### Guards That Imply Groundness
 
-| Guard | Implies Ground | Allows Multiple Occurrences |
+| Guard | Implies Ground | Allows Multiple Reader Occurrences |
 |-------|----------------|-------------------------|
 | ✅ `ground(X?)` | Yes | ✅ Yes |
 | ✅ `constant(X?)` | Yes | ✅ Yes |
@@ -299,7 +299,7 @@ The SRSW analyzer must:
    - Arithmetic comparisons: `<`, `=<`, `>`, `>=`, `=:=`, `=\=`
 3. For variables with ground-guaranteeing guards:
    - Mark variable as "ground-certified" for this clause
-   - Allow multiple occurrences of both writer and reader in clause
+   - Allow multiple occurrences of its reader in the clause; its writer occurs once
 4. For variables without such guards:
    - Enforce strict single-occurrence constraint
 

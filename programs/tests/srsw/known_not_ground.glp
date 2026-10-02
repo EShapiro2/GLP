@@ -1,7 +1,7 @@
-%% Negative SRSW fixture.  glp.tex Remark "Guards and SRSW": a guard whose
-%% success implies its argument is ground lets both X and X? occur multiple
-%% times, and "guards such as known and compound do not imply groundness:
-%% known(X?) succeeds when X? is bound to f(Y?) with Y? unbound."
+%% Negative SRSW fixture.  glp.tex Remark "Guards and SRSW" (GLP-Spec
+%% bbff21d): a guard whose success implies its argument is ground lets X? occur
+%% multiple times, X occurring once, as ever.  "However, known and compound do
+%% not imply groundness."
 %%
 %% So known/1 licenses no multiple occurrence, and X? occurring twice in the
 %% body under it is an SRSW violation.  The positive counterpart, where the
