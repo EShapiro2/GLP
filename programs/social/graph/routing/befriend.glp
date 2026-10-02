@@ -88,3 +88,11 @@ await_friend_channel(Other, ch([friend_channel(ch(FIn, FOut?))|_], []), Outs, Ou
 
 %% Setup closed ([]): smaller-name side suppressed this offer.  Drop it.
 await_friend_channel(_, ch([], []), Outs, Outs?, NetIn, NetIn?).
+
+%% ack: a peer that did not follow the handshake, which sends no ack once the
+%% commit has begun.  End the attempt with no friendship; close the setup channel.
+await_friend_channel(_, ch([ack(_)|_], []), Outs, Outs?, NetIn, NetIn?).
+
+%% nack: the peer declines, and if either declines no friendship forms (GSG
+%% paper, Section 5.2).  End the attempt; close the setup channel.
+await_friend_channel(_, ch([nack|_], []), Outs, Outs?, NetIn, NetIn?).
