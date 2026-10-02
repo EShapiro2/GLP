@@ -160,6 +160,10 @@ class MessageQueue {
 
   /// Number of messages eligible for Send across all destinations.
   int get sendableLength => all.where((m) => !m.held).length;
+
+  /// Whether some message is eligible for Send: unsent and not held
+  /// (Definition madGLP Send).
+  bool get hasSendable => all.any((m) => !m.held);
   
   /// Peek at the next message for a destination without removing it
   /// 

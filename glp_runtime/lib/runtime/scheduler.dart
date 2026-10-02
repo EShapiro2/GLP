@@ -236,12 +236,16 @@ class Scheduler {
     final failedAtEntry = rt.failedGoals.length;
 
     while (cycles < maxCycles) {
-      // when_idle (GLP-Spec appendix-guards.tex, e3a8d52): whenever the queue
-      // empties, the goal that has waited longest on when_idle is re-tried,
-      // one at a time; its guard succeeds, the machine having no Reduce to
-      // make, and what it does may give the machine work before the next.
+      // when_idle (GLP-Spec appendix-guards.tex, e3a8d52; IGLP eadadcd,
+      // Implementation Notes, "The when_idle Guard"): whenever the machine is
+      // idle --- its queue empty and, in madGLP, its outbox too --- the goal
+      // that has waited longest on when_idle is re-tried, one at a time; its
+      // guard succeeds, the machine having no Reduce or Communicate to make,
+      // and what it does may give the machine work before the next.  While
+      // the outbox holds a message the drain ends with the goals waiting, and
+      // the agent drains again after its Sends ([drainAndSend]).
       if (rt.gq.length == 0) {
-        if (rt.wakeIdle()) continue;
+        if (rt.isIdle && rt.wakeIdle()) continue;
         break;
       }
       final act = rt.gq.dequeue();
@@ -365,10 +369,11 @@ class Scheduler {
     // It outranks the other outcomes here because it says the drain did not
     // end: F is recovered cumulatively by whoever drains again
     // ([drainToQuiescence], [drainAsyncWithStatus]), so a failure is not lost.
-    // A goal waiting on when_idle at the cap would be re-tried next: the drain
-    // stopped at its cap too.
+    // A goal waiting on when_idle at the cap, the machine idle, would be
+    // re-tried next: the drain stopped at its cap too.  One waiting while the
+    // outbox holds a message waits for the agent's Sends, not for this drain.
     final ExecutionStatus status;
-    if (rt.gq.length > 0 || rt.hasIdleWaits) {
+    if (rt.gq.length > 0 || (rt.hasIdleWaits && rt.isIdle)) {
       status = ExecutionStatus.capped;
     } else if (hasFailed) {
       status = ExecutionStatus.failed;
@@ -424,7 +429,48 @@ class Scheduler {
       if (result.goalsRan.isEmpty) break;
     }
 
-    final status = rt.gq.length > 0 || rt.hasIdleWaits
+    final status = rt.gq.length > 0 || (rt.hasIdleWaits && rt.isIdle)
+        ? ExecutionStatus.capped
+        : (rt.failedGoals.length > failedAtEntry
+            ? ExecutionStatus.failed
+            : last.status);
+    final lastResult = last;
+    return DrainResult.deferred(ran, status, () => lastResult.suspendedGoals,
+        lastResult.blockingReaders);
+  }
+
+  /// One event's cycle at a madGLP agent (IGLP, Implementation Notes,
+  /// "Event-driven execution"): reduce until quiescent, then perform the
+  /// Sends, which [send] makes.
+  ///
+  /// A goal waiting on when_idle is not re-tried while the outbox holds a
+  /// message to send --- "a queued outbound message is a Communicate still to
+  /// make" (IGLP eadadcd, Implementation Notes, "The when_idle Guard") --- so
+  /// the Sends may leave the machine idle with goals waiting.  The cycle then
+  /// reduces again, which re-tries them one at a time, and sends again, until
+  /// no goal waits on an idle machine.  A drain followed by a single flush, as
+  /// the agents ran an event until 2026-10-02, left such a goal waiting for
+  /// the agent's next incoming message.
+  ///
+  /// [maxCycles] bounds the goals the whole cycle runs, as it bounds
+  /// [drainToQuiescence]'s: a program that goes on idling and sending never
+  /// quiesces, and the cycle then returns `capped`.  F is cumulative across
+  /// the drains, so a goal that failed in any of them fails the whole.
+  DrainResult drainAndSend(void Function() send,
+      {int maxCycles = 1000000, bool debug = false}) {
+    final ran = <int>[];
+    final failedAtEntry = rt.failedGoals.length;
+    DrainResult last;
+    while (true) {
+      last = drainToQuiescence(maxCycles: maxCycles - ran.length, debug: debug);
+      ran.addAll(last.goalsRan);
+      send();
+      if (last.status == ExecutionStatus.capped) break;
+      if (!(rt.hasIdleWaits && rt.isIdle)) break;
+      if (ran.length >= maxCycles) break;
+    }
+
+    final status = rt.gq.length > 0 || (rt.hasIdleWaits && rt.isIdle)
         ? ExecutionStatus.capped
         : (rt.failedGoals.length > failedAtEntry
             ? ExecutionStatus.failed

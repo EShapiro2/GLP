@@ -683,8 +683,7 @@ void _agentIsolateEntry(AgentConfig config) async {
     try {
     if (msg is Start) {
       // Initial drain+flush: kicks off the agent's goal
-      _drain(scheduler, agentId, engine.debugTrace);
-      ctx.flushMessages();
+      _drainAndSend(scheduler, ctx.flushMessages, agentId, engine.debugTrace);
       config.mainPort.send(AgentIdle(agentId));
 
     } else if (msg is Deliver) {
@@ -702,8 +701,7 @@ void _agentIsolateEntry(AgentConfig config) async {
       }
 
       // Drain activated goals and flush any response messages
-      _drain(scheduler, agentId, engine.debugTrace);
-      ctx.flushMessages();
+      _drainAndSend(scheduler, ctx.flushMessages, agentId, engine.debugTrace);
       config.mainPort.send(AgentIdle(agentId));
 
     } else if (msg is UIEvent) {
@@ -724,15 +722,19 @@ void _agentIsolateEntry(AgentConfig config) async {
   }
 }
 
-/// One event's reduction in an agent isolate: reduce until quiescent, the
-/// queue empty and nothing runnable. One [Scheduler.drainWithStatus] stops at
-/// its cycle cap with goals still queued, so this agent's drain is
-/// [Scheduler.drainToQuiescence], as the single-isolate runtime's is. Its cap
-/// is a safety net against a program that never quiesces: reaching it is
-/// reported, never passed over, because everything after a half-run means
-/// something other than what it says.
-void _drain(Scheduler scheduler, String agentId, bool debug) {
-  final result = scheduler.drainToQuiescence(debug: debug);
+/// One event's work in an agent isolate: reduce until quiescent, the queue
+/// empty and nothing runnable, then perform the Sends, which [send] makes ---
+/// and again while a goal waits on when_idle with the machine idle after them
+/// (IGLP eadadcd, Implementation Notes, "The when_idle Guard";
+/// [Scheduler.drainAndSend], as the single-isolate runtime's is). One
+/// [Scheduler.drainWithStatus] stops at its cycle cap with goals still queued,
+/// so each drain is [Scheduler.drainToQuiescence]. Its cap is a safety net
+/// against a program that never quiesces: reaching it is reported, never
+/// passed over, because everything after a half-run means something other
+/// than what it says.
+void _drainAndSend(
+    Scheduler scheduler, void Function() send, String agentId, bool debug) {
+  final result = scheduler.drainAndSend(send, debug: debug);
   if (result.status == ExecutionStatus.capped) {
     print('[$agentId] ERROR: the program did not quiesce: stopped after '
         '${result.goalsRan.length} goals with ${scheduler.rt.gq.length} '

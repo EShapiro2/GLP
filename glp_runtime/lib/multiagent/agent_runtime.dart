@@ -456,13 +456,16 @@ class AgentRuntime {
   /// Returns the execution status name, or null if not initialized.
   ///
   /// Per agent-runtime-spec.md Section 3: one drain (run all runnable goals
-  /// until quiescent), one flush (send all queued outbound messages).
+  /// until quiescent), one flush (send all queued outbound messages) --- and
+  /// again while a goal waits on when_idle and the flush has left the machine
+  /// idle (IGLP eadadcd, Implementation Notes, "The when_idle Guard";
+  /// [Scheduler.drainAndSend]).
   ///
   /// Quiescent is the queue empty and nothing runnable. One
   /// [Scheduler.drainWithStatus] does not reach it — it stops at its cycle cap
   /// with goals still queued — so the drain is [Scheduler.drainToQuiescence],
   /// which repeats it until the queue is empty. The cap left behind is
-  /// [maxQuiescenceCycles], a net and not a budget.
+  /// [maxQuiescenceCycles], a net and not a budget, over the whole cycle.
   Future<String?> runUntilQuiescent() async {
     return _runUntilQuiescent();
   }
@@ -475,9 +478,13 @@ class AgentRuntime {
     }
 
     try {
-      // Per spec: drain all runnable goals, then flush outbound messages.
-      final result = _scheduler!.drainToQuiescence(
-          maxCycles: maxQuiescenceCycles, debug: glpTraceEnabled);
+      // Per spec: drain all runnable goals, then flush outbound messages, and
+      // again while a goal waits on when_idle.
+      var messagesFlushed = 0;
+      final result = _scheduler!.drainAndSend(
+          () => messagesFlushed += _ctx!.flushMessages(),
+          maxCycles: maxQuiescenceCycles,
+          debug: glpTraceEnabled);
       _log('RUN: status=${result.status}, goals=${result.goalsRan.length}');
       goalCount += result.goalsRan.length;
 
@@ -493,7 +500,6 @@ class AgentRuntime {
             'GQ=${_runtime!.gq.length}');
       }
 
-      final messagesFlushed = _ctx!.flushMessages();
       if (messagesFlushed > 0) {
         _log('RUN: flushed $messagesFlushed messages');
       }
