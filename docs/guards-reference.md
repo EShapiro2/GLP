@@ -30,6 +30,10 @@ Guards are pure tests with **three-valued semantics** (success/suspend/fail) tha
 
 **A guard over an unknown variable** --- one whose writer occurrence in the head lies under a goal reader the head suspends on, its value not yet given --- is decided by the same decision, the variable standing for any term: it fails the clause where no term makes it succeed, and is otherwise passed by, the clause waiting on the goal reader (GLP #3 Cowork, 2026-10-02 15:31 UTC, B).  With `pu(f(X), Y, yes) :- X? =?= Y? | true.` and `pu(_, _, no) :- otherwise | true.`, `pu(P?, g(W), R)` gives `R = no`, `g(W)` holding a writer; until 2026-10-02 it waited on `P?`.
 
+**A guard's argument may be a term of any depth** --- `Z? =?= g(f(c))`, `X? + Y? * 2 > 3`, `X? =?= [a, b]` --- built as a body goal's argument is, by `put_structure` and the `set_*` and `unify_*` instructions that fill it, a structure nested in it pushing the one it is nested in, into a structure held for the guard call alone, nothing bound on the heap (`runner.dart`, `execPutStructure`, `_completeGuardStructure`).  Until 2026-10-02 a nested structure overwrote the one it was nested in and `set_*` acted in the body alone, so the guard was decided on a term never completed: `t6(Z, Y?) :- Z? =?= g(f(c)) | Y = ok.` failed `t6(g(f(c)), Y)` (GLP #3 Cowork, 2026-10-02 17:12 UTC, S1).
+
+**Either side of an infix guard may be a structure or a constant**: `w(X?) =?= Y?` parses as `Y? =?= w(X?)` does, `f(X?) + 1 > 2` as `2 < f(X?) + 1` does, and `b @< X?` is `@<` of `b` and `X?`.  A name followed by a comparison or an arithmetic operator is the left operand, parsed as an expression as the right one is (`parser.dart`, `_continuesAsInfixGuard`); followed by anything else it is a predicate, and `foo(a) = X` the unification goal it was.  Until 2026-10-02 the name was taken for a predicate and the operator after it was a syntax error (GLP #3 Cowork, 2026-10-02 17:12 UTC, S2).
+
 ---
 
 ## No Guard Negation
@@ -545,7 +549,7 @@ When `channel(X?)` is unfolded, it becomes pattern matching against `ch(_, _)`.
 **Semantics** (three-valued, like all guards):
 - **Success**: Arguments unify with the clause head pattern
 - **Suspend**: Arguments contain unbound readers
-- **Fail**: Arguments don't match pattern
+- **Fail**: Arguments don't match pattern, a goal writer where the pattern has `_` among them: `_` is a head writer, and a goal writer against a head writer fails (GLP-Spec appendix-term-matching.tex, row "Writer X1", column "Writer X2").  So `channel(X?)` holds for `ch(A?, B?)` and `ch(a, b)` and fails `ch(A?, B)`; in typed GLP the type is the channel's warrant (GLP #3 Cowork, 2026-10-02 17:12 UTC, 1(b)).  Until 2026-10-02 the runtime took a goal writer at `_` and `ch(A?, B)` passed.
 
 **Requirements:**
 1. **Procedure declaration** — required for type checking
@@ -567,8 +571,8 @@ When `channel(X?)` is unfolded, it becomes pattern matching against `ch(_, _)`.
 
 **Semantics**:
 - Success: Both X and Y bound to numbers AND condition holds
-- Suspend: Either X or Y is unbound reader
-- Fail: Both bound to numbers AND condition false
+- Suspend: Either X or Y is unbound reader, and some instance of the comparison succeeds
+- Fail: Both bound to numbers AND condition false; or an operand has no value under any readers substitution --- a zero divisor of `/`, `//` or `mod`, a bound term that is no number, an unbound writer --- whatever readers stand elsewhere in it: `X? / 0 > 1` and `X? > 1 / 0` fail with `X?` unbound, "A guard fails if no such instance exists" (GLP-Spec glp.tex, Guards).  Until 2026-10-02 they waited on `X?` (GLP #3 Cowork, 2026-10-02 17:12 UTC, S3).
 
 **Example**:
 ```prolog
@@ -586,8 +590,8 @@ factorial(N, 1) :- integer(N?), N? =< 0 | true.
 
 **Semantics**:
 - Success: Both bound and numerically equal
-- Suspend: Either operand is unbound reader
-- Fail: Both bound and not numerically equal
+- Suspend: Either operand is unbound reader, and some instance of the comparison succeeds
+- Fail: Both bound and not numerically equal; or an operand has no value under any readers substitution, as for `<` above
 
 **Note on `=\=`**: Arithmetic inequality is its own guard, `X =\= Y`, beside `=:=` in the catalogue (GLP-Spec appendix-guards.tex): success where both operands evaluate to numbers that differ.
 

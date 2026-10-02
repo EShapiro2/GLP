@@ -246,18 +246,18 @@ class CodeGenerator {
       }
 
     } else if (term is StructTerm) {
-      // FIX: For structures as direct HEAD arguments, extract first then match
-      // This avoids overlapping HeadStructure operations
-
-      // Step 1: Extract the argument into a temp register.
-      // tempReg is freshly allocated (first occurrence), so get_variable
-      // captures the argument into clauseVars without sigmaHat binding; it is
-      // the polarity-carrying get_variable of §4.2 (D3 wire format).
-      final tempReg = ctx.allocateTemp();
-      ctx.emit(bc.GetVariable(tempReg, argSlot, isReader: false));
-
-      // Step 2: Match the structure at the temp register (not argSlot!)
-      ctx.emit(bc.HeadStructure(term.functor, term.arity, tempReg));
+      // A structure is matched at its argument, as a list is above: the
+      // table's column "Term f2/n2" (GLP-Spec appendix-term-matching.tex,
+      // Definition "Term Matching"), so a goal writer is assigned the
+      // structure.  Until 2026-10-02 the argument was first taken into a temp
+      // register by get_variable in writer mode and matched there; but
+      // get_variable in writer mode is a head writer, which a goal writer
+      // fails (row "Writer X1", column "Writer X2"), and the head has no
+      // writer here.  The extraction dated from a two-pass generator, whose
+      // second structure argument overlapped the first (e538e586); the
+      // elements are generated inline now, each structure finished before the
+      // next argument, as a list's always were.
+      ctx.emit(bc.HeadStructure(term.functor, term.arity, argSlot));
 
       // FCP AM: Process ALL arguments inline using Push/Pop for nested structures
       // _generateStructureElement already has correct Push/Pop logic (lines 335-361)
@@ -275,9 +275,16 @@ class CodeGenerator {
         // a goal writer is assigned it, a goal reader and a goal term fail.
         // It was compiled as `_` is, to nothing, so `p(_, _?)` took `p(1, 2)`.
         ctx.emit(bc.GetVariable(ctx.allocateTemp(), argSlot, isReader: true));
+      } else {
+        // `_`: a head writer of a variable of its own, its value discarded
+        // (glp.tex, Remark "Anonymous Variables": "each occurrence denotes a
+        // fresh writer with no paired reader ... an input a clause does not
+        // read is dropped").  So the table's column "Writer X2" matches it: a
+        // goal reader or term is assigned it, and a goal writer fails (row
+        // "Writer X1").  It was compiled to nothing, so `s(_)` took a goal
+        // writer.
+        ctx.emit(bc.GetVariable(ctx.allocateTemp(), argSlot, isReader: false));
       }
-      // `_`: a head writer whose value is discarded; the argument is simply
-      // not extracted.
     }
   }
 
