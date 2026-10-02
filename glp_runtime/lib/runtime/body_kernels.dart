@@ -446,25 +446,49 @@ Object? _deref(GlpRuntime rt, Object? term) {
 /// This is required for serialization/globalization where we need the actual
 /// heap structure, not VarRef placeholders. Without this, nested structures
 /// like `msg(bob, intro(alice, Resp))` would be seen as `msg(VarRef, VarRef)`.
+///
+/// The copy keeps a stack of its own, a frame for each structure being
+/// rebuilt, and takes the arguments of each left to right, as the recursion it
+/// replaces did: until 2026-10-02 it recursed once a list element, and
+/// `'_output'` of a list of some 10,000 elements and more overflowed the Dart
+/// stack.
 Term _deepDeref(GlpRuntime rt, Term term) {
-  // First, dereference the term itself if it's a VarRef
-  var current = term;
-  while (current is VarRef) {
-    final val = rt.heap.getValue(current.addr);
-    if (val == null || val is! Term) return current; // Unbound variable
-    current = val;
-  }
-
-  // Now recursively dereference structure arguments
-  if (current is StructTerm) {
-    final newArgs = <Term>[];
-    for (final arg in current.args) {
-      newArgs.add(_deepDeref(rt, arg));
+  // The term itself dereferenced: its value, or the unbound variable it is.
+  Term follow(Term t) {
+    var current = t;
+    while (current is VarRef) {
+      final val = rt.heap.getValue(current.addr);
+      if (val == null || val is! Term) return current; // Unbound variable
+      current = val;
     }
-    return StructTerm(current.functor, newArgs);
+    return current;
   }
 
-  return current; // ConstTerm or unbound VarRef
+  final root = follow(term);
+  if (root is! StructTerm) return root; // ConstTerm or unbound VarRef
+  // Each frame: a structure, and its arguments dereferenced so far.
+  final frames = <(StructTerm, List<Term>)>[(root, <Term>[])];
+  Term? built;
+  while (true) {
+    final (source, args) = frames.last;
+    if (built != null) {
+      args.add(built);
+      built = null;
+    }
+    if (args.length == source.args.length) {
+      frames.removeLast();
+      final copy = StructTerm(source.functor, args);
+      if (frames.isEmpty) return copy;
+      built = copy;
+      continue;
+    }
+    final next = follow(source.args[args.length]);
+    if (next is StructTerm) {
+      frames.add((next, <Term>[]));
+    } else {
+      args.add(next);
+    }
+  }
 }
 
 /// Helper to convert Dart list to GLP list structure

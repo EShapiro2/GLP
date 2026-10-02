@@ -1833,38 +1833,47 @@ mixin OpExecutors {
     final visited = <int>{};
     bool hasUnboundWriter = false;
 
-    void collectUnbound(Object? term) {
-      if (term is VarRef && cx.rt.heap.isWriter(term.addr)) {
-        final writerAddr = term.addr;
-        if (visited.contains(writerAddr)) return;
-        visited.add(writerAddr);
-        final sigmaBinding = cx.sigmaHat[writerAddr];
-        if (sigmaBinding != null) {
-          collectUnbound(sigmaBinding);
-        } else if (!cx.rt.heap.isFullyBound(writerAddr)) {
-          hasUnboundWriter = true;
-        } else {
-          collectUnbound(cx.rt.heap.getValue(writerAddr));
-        }
-      } else if (term is VarRef && cx.rt.heap.isReader(term.addr)) {
-        final readerAddr = term.addr;
-        if (visited.contains(readerAddr)) return;
-        visited.add(readerAddr);
-        final sigmaBinding = cx.sigmaHat[readerAddr];
-        if (sigmaBinding != null) {
-          collectUnbound(sigmaBinding);
-        } else if (!cx.rt.heap.isReaderBound(readerAddr)) {
-          unboundReaders.add(readerAddr);
-        } else {
-          collectUnbound(cx.rt.heap.getReaderValue(readerAddr));
-        }
-      } else if (term is StructTerm) {
-        for (final arg in term.args) {
-          collectUnbound(arg);
-        }
-      } else if (term is _TentativeStruct) {
-        for (final arg in term.args) {
-          collectUnbound(arg);
+    // The walk keeps its own stack, visiting the term depth first and each
+    // argument list left to right, as the recursion it replaces did.  Until
+    // 2026-10-02 it recursed, two frames to a list element, and on a ground
+    // list of 10,000 elements it overflowed the Dart stack: the goal failed
+    // with "Stack Overflow" where GLP-Spec has the guard succeed.
+    void collectUnbound(Object? root) {
+      final stack = <Object?>[root];
+      while (stack.isNotEmpty) {
+        final term = stack.removeLast();
+        if (term is VarRef && cx.rt.heap.isWriter(term.addr)) {
+          final writerAddr = term.addr;
+          if (visited.contains(writerAddr)) continue;
+          visited.add(writerAddr);
+          final sigmaBinding = cx.sigmaHat[writerAddr];
+          if (sigmaBinding != null) {
+            stack.add(sigmaBinding);
+          } else if (!cx.rt.heap.isFullyBound(writerAddr)) {
+            hasUnboundWriter = true;
+          } else {
+            stack.add(cx.rt.heap.getValue(writerAddr));
+          }
+        } else if (term is VarRef && cx.rt.heap.isReader(term.addr)) {
+          final readerAddr = term.addr;
+          if (visited.contains(readerAddr)) continue;
+          visited.add(readerAddr);
+          final sigmaBinding = cx.sigmaHat[readerAddr];
+          if (sigmaBinding != null) {
+            stack.add(sigmaBinding);
+          } else if (!cx.rt.heap.isReaderBound(readerAddr)) {
+            unboundReaders.add(readerAddr);
+          } else {
+            stack.add(cx.rt.heap.getReaderValue(readerAddr));
+          }
+        } else if (term is StructTerm) {
+          for (var i = term.args.length - 1; i >= 0; i--) {
+            stack.add(term.args[i]);
+          }
+        } else if (term is _TentativeStruct) {
+          for (var i = term.args.length - 1; i >= 0; i--) {
+            stack.add(term.args[i]);
+          }
         }
       }
     }
@@ -1970,36 +1979,43 @@ mixin OpExecutors {
     final readers = <int>{};
     final visited = <int>{};
 
-    void collectReaders(Object? term) {
-      if (term is VarRef && cx.rt.heap.isReader(term.addr)) {
-        final readerAddr = term.addr;
-        if (visited.contains(readerAddr)) return;
-        visited.add(readerAddr);
-        final sigmaBinding = cx.sigmaHat[readerAddr];
-        if (sigmaBinding != null) {
-          collectReaders(sigmaBinding);
-        } else if (cx.rt.heap.isReaderBound(readerAddr)) {
-          collectReaders(cx.rt.heap.getReaderValue(readerAddr));
-        } else {
-          readers.add(readerAddr);
-        }
-      } else if (term is VarRef && cx.rt.heap.isWriter(term.addr)) {
-        final writerAddr = term.addr;
-        if (visited.contains(writerAddr)) return;
-        visited.add(writerAddr);
-        final sigmaBinding = cx.sigmaHat[writerAddr];
-        if (sigmaBinding != null) {
-          collectReaders(sigmaBinding);
-        } else if (cx.rt.heap.isFullyBound(writerAddr)) {
-          collectReaders(cx.rt.heap.getValue(writerAddr));
-        }
-      } else if (term is StructTerm) {
-        for (final arg in term.args) {
-          collectReaders(arg);
-        }
-      } else if (term is _TentativeStruct) {
-        for (final arg in term.args) {
-          collectReaders(arg);
+    // Its own stack, depth first and left to right, as the recursion it
+    // replaces: until 2026-10-02 a list of 10,000 elements overflowed the
+    // Dart stack (execGround).
+    void collectReaders(Object? root) {
+      final stack = <Object?>[root];
+      while (stack.isNotEmpty) {
+        final term = stack.removeLast();
+        if (term is VarRef && cx.rt.heap.isReader(term.addr)) {
+          final readerAddr = term.addr;
+          if (visited.contains(readerAddr)) continue;
+          visited.add(readerAddr);
+          final sigmaBinding = cx.sigmaHat[readerAddr];
+          if (sigmaBinding != null) {
+            stack.add(sigmaBinding);
+          } else if (cx.rt.heap.isReaderBound(readerAddr)) {
+            stack.add(cx.rt.heap.getReaderValue(readerAddr));
+          } else {
+            readers.add(readerAddr);
+          }
+        } else if (term is VarRef && cx.rt.heap.isWriter(term.addr)) {
+          final writerAddr = term.addr;
+          if (visited.contains(writerAddr)) continue;
+          visited.add(writerAddr);
+          final sigmaBinding = cx.sigmaHat[writerAddr];
+          if (sigmaBinding != null) {
+            stack.add(sigmaBinding);
+          } else if (cx.rt.heap.isFullyBound(writerAddr)) {
+            stack.add(cx.rt.heap.getValue(writerAddr));
+          }
+        } else if (term is StructTerm) {
+          for (var i = term.args.length - 1; i >= 0; i--) {
+            stack.add(term.args[i]);
+          }
+        } else if (term is _TentativeStruct) {
+          for (var i = term.args.length - 1; i >= 0; i--) {
+            stack.add(term.args[i]);
+          }
         }
       }
     }
