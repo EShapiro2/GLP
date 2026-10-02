@@ -700,7 +700,7 @@ class PartialEvaluator {
       // glp.tex, Remark "Anonymous Variables"), and a call writer against a
       // head writer fails (appendix-term-matching.tex, row "Writer X1", column
       // "Writer X2").  Until 2026-10-02 it was passed over.
-      if (_isWriterOccurrence(callArg) && _isWriterOccurrence(unitArg)) {
+      if (_isWriterTerm(callArg) && _isWriterTerm(unitArg)) {
         return UnifyFail('Writer $callArg cannot match the head writer $unitArg');
       }
       return null; // success, continue
@@ -864,11 +864,6 @@ class PartialEvaluator {
     // For now, accept other combinations (variables get resolved later)
     return null;
   }
-
-  /// A writer occurrence, named or anonymous (`_`).
-  bool _isWriterOccurrence(Term term) =>
-      (term is VarTerm && !term.isReader) ||
-      (term is UnderscoreTerm && !term.isReader);
 
   bool _isUnderscore(Term term) {
     return term is UnderscoreTerm || (term is VarTerm && term.name == '_');
