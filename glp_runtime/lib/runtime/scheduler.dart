@@ -352,6 +352,8 @@ class Scheduler {
           // Goal terminated successfully (with reduction) - remove from suspended list
           suspendedGoals.remove(act.id);
         }
+        // Either way the goal has ended and its state goes with it.
+        rt.goalEnded(act.id);
       }
       cycles++;
     }
