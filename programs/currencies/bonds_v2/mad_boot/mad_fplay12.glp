@@ -16,7 +16,7 @@ boot :-
     frank_init(frank, _)@frank.
 
 %% Alice — alice_p12(0, Ch, Narr), 0 is dummy constant (T unused)
-procedure alice_init(Constant?, Stream(_)?).
+procedure alice_init(Key?, Stream(_)?).
 alice_init(Id, NetIn) :-
     ground(Id?) |
     alice_p12(0, ch(ActorIn?, ActorOut), Narr),
@@ -32,7 +32,7 @@ alice_init(Id, NetIn) :-
     send_to_person_tagged(Id?, DispCmd?, DispNotify?).
 
 %% Bob — bob_p12(Ch, Narr)
-procedure bob_init(Constant?, Stream(_)?).
+procedure bob_init(Key?, Stream(_)?).
 bob_init(Id, NetIn) :-
     ground(Id?) |
     bob_p12(ch(ActorIn?, ActorOut), Narr),
@@ -48,7 +48,7 @@ bob_init(Id, NetIn) :-
     send_to_person_tagged(Id?, DispCmd?, DispNotify?).
 
 %% Charlie — charlie_p12(T, Ch, Narr), T = 30, the escrow release date
-procedure charlie_init(Constant?, Stream(_)?).
+procedure charlie_init(Key?, Stream(_)?).
 charlie_init(Id, NetIn) :-
     ground(Id?) |
     T := 30,
@@ -65,7 +65,7 @@ charlie_init(Id, NetIn) :-
     send_to_person_tagged(Id?, DispCmd?, DispNotify?).
 
 %% Diana — diana_p12(Ch, Narr)
-procedure diana_init(Constant?, Stream(_)?).
+procedure diana_init(Key?, Stream(_)?).
 diana_init(Id, NetIn) :-
     ground(Id?) |
     diana_p12(ch(ActorIn?, ActorOut), Narr),
@@ -81,7 +81,7 @@ diana_init(Id, NetIn) :-
     send_to_person_tagged(Id?, DispCmd?, DispNotify?).
 
 %% Eve — eve_p12(Ch, Narr)
-procedure eve_init(Constant?, Stream(_)?).
+procedure eve_init(Key?, Stream(_)?).
 eve_init(Id, NetIn) :-
     ground(Id?) |
     eve_p12(ch(ActorIn?, ActorOut), Narr),
@@ -97,7 +97,7 @@ eve_init(Id, NetIn) :-
     send_to_person_tagged(Id?, DispCmd?, DispNotify?).
 
 %% Frank — frank_p12(Ch, Narr)
-procedure frank_init(Constant?, Stream(_)?).
+procedure frank_init(Key?, Stream(_)?).
 frank_init(Id, NetIn) :-
     ground(Id?) |
     frank_p12(ch(ActorIn?, ActorOut), Narr),
@@ -116,7 +116,7 @@ procedure tee(Stream(_)?, Stream(_), Stream(_)).
 tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
 tee([], [], []).
 
-procedure send_to_person_tagged(Constant?, Stream(_)?, Stream(_)?).
+procedure send_to_person_tagged(Key?, Stream(_)?, Stream(_)?).
 send_to_person_tagged(Id, [T|Cmds], Notifies) :-
     ground(Id?), ground(T?) |
     send_to_user([tagged(Id?, cmd(T?))]),
@@ -128,7 +128,7 @@ send_to_person_tagged(Id, Cmds, [T|Notifies]) :-
 send_to_person_tagged(_, [], []).
 send_to_person_tagged(_, Cmds, []) :- sink(Cmds?).
 
-procedure send_to_person_narrate(Constant?, Stream(_)?).
+procedure send_to_person_narrate(Key?, Stream(_)?).
 send_to_person_narrate(Id, [friend(X)|Ns]) :-
     ground(Id?), ground(X?) |
     send_to_user([tagged(Id?, friend(X?))]),

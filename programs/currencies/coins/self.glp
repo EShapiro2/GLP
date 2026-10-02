@@ -17,8 +17,8 @@
 %% multiset of coins, Stream(Coin).  A lot is k coins of one issuer,
 %% lot(Issuer, K): the cent^k_u of Section 3.2.
 
-Coin ::= coin(Constant, Integer).
-Lot  ::= lot(Constant, Integer).
+Coin ::= coin(Key, Integer).
+Lot  ::= lot(Key, Integer).
 
 %% The counterparty's answer to a swap: the coins it gives, or the offered coins
 %% returned.
@@ -29,7 +29,7 @@ SwapResponse ::= swap_accept(Stream(Coin)) ; swap_decline(Stream(Coin)).
 %% issuer, for the bearer to choose among; or the coin returned because it is
 %% not the issuer's.
 RedeemResponse ::= redeem_give(Coin)
-                 ; redeem_menu(Coin, Stream(Constant))
+                 ; redeem_menu(Coin, Stream(Key))
                  ; redeem_declined(Coin).
 
 %% What one agent sends another: the three bilateral acts of Definition 3.1, and
@@ -38,16 +38,16 @@ RedeemResponse ::= redeem_give(Coin)
 %% (typed-glp-manual, 15B).
 PeerContent ::= pay(Stream(Coin))
               ; swap(Lot, Stream(Coin), SwapResponse?)
-              ; redeem(Coin, Constant, RedeemResponse?)
+              ; redeem(Coin, Key, RedeemResponse?)
               ; return(Stream(Coin)).
-PeerMsg     ::= msg(Constant, Constant, PeerContent).
+PeerMsg     ::= msg(Key, Key, PeerContent).
 PeerChannel ::= ch(Stream(PeerMsg), Stream(PeerMsg)?).
 
 %% What the social graph hands the mini-app on its channel to the social graph
 %% (SGSG paper, Section 3): at each invitation, one end of the root channel of
 %% a conversation with a friend's execution of this program.  Two agents
 %% transact over that channel and over nothing else.
-Conversation ::= conversation(Constant, PeerChannel).
+Conversation ::= conversation(Key, PeerChannel).
 
 %% Whether a coin was found in the holdings.
 Found ::= found(Coin) ; not_found.
@@ -56,42 +56,42 @@ Found ::= found(Coin) ; not_found.
 %% its name.  The routers send_user, send_friend and add_friend_output are
 %% those of social/graph/routing, exposed from the root scope.
 OutputEntry ::= user_output(Stream(ScreenMsg)?)
-              ; friend_output(Constant, Stream(PeerMsg)?).
+              ; friend_output(Key, Stream(PeerMsg)?).
 
 %% The screen: the holdings, tallied by issuer, after every change, and what
 %% each act came to.
 ScreenContent ::= holdings(Stream(Lot))
-                ; opened(Constant)
+                ; opened(Key)
                 ; minted(Integer)
-                ; paid(Constant, Integer)
-                ; received(Constant, Integer)
-                ; returned(Constant, Integer)
-                ; swap_done(Constant)
-                ; swap_declined(Constant)
-                ; swap_failed(Constant)
-                ; declined(Constant)
-                ; redeemed(Constant, Constant)
-                ; menu(Constant, Stream(Constant))
-                ; presented(Constant, Constant)
-                ; unfulfilled(Constant, Constant)
-                ; refused(Constant)
-                ; lacking(Constant, Integer)
-                ; no_conversation(Constant).
+                ; paid(Key, Integer)
+                ; received(Key, Integer)
+                ; returned(Key, Integer)
+                ; swap_done(Key)
+                ; swap_declined(Key)
+                ; swap_failed(Key)
+                ; declined(Key)
+                ; redeemed(Key, Key)
+                ; menu(Key, Stream(Key))
+                ; presented(Key, Key)
+                ; unfulfilled(Key, Key)
+                ; refused(Key)
+                ; lacking(Key, Integer)
+                ; no_conversation(Key).
 ScreenMsg ::= msg(Constant, Constant, ScreenContent).
 
 %% The agent's own input: the answers its swap responders inject, and the
 %% results of the acts it proposed.
-UserInMsg ::= accept_swap(Constant, Lot, Stream(Coin), SwapResponse?)
-            ; decline_swap(Constant, Stream(Coin), SwapResponse?)
-            ; swap_accepted(Constant, Stream(Coin))
-            ; swap_declined_by(Constant, Stream(Coin))
-            ; redeem_given(Constant, Coin)
-            ; redeem_menu_from(Constant, Coin, Stream(Constant))
-            ; redeem_declined_by(Constant, Coin).
+UserInMsg ::= accept_swap(Key, Lot, Stream(Coin), SwapResponse?)
+            ; decline_swap(Key, Stream(Coin), SwapResponse?)
+            ; swap_accepted(Key, Stream(Coin))
+            ; swap_declined_by(Key, Stream(Coin))
+            ; redeem_given(Key, Coin)
+            ; redeem_menu_from(Key, Coin, Stream(Key))
+            ; redeem_declined_by(Key, Coin).
 
 %% The offer a swap responder carries: the proposer, the lot it wants, the
 %% coins it offers.
-SwapOffer ::= offer(Constant, Lot, Stream(Coin)).
+SwapOffer ::= offer(Key, Lot, Stream(Coin)).
 
 %% =============================================================================
 %% The vocabulary of the compiled agent's mediator, at this program's answer and
@@ -115,18 +115,18 @@ PendingList ::= [] ; [PendingEntry | PendingList].
 %% the alternatives written out, which the compiled module names.
 Xs_respond_swap_1 ::= xs_respond_swap_1(Constant).
 Reply_respond_swap_1 ::= then(Xs_respond_swap_1) ; else.
-Ctx_respond_swap_1 ::= ctx_respond_swap_1(Constant, Lot, Stream(Coin)).
+Ctx_respond_swap_1 ::= ctx_respond_swap_1(Key, Lot, Stream(Coin)).
 Xs_agent_1 ::= xs_agent_1(Integer).
 Reply_agent_1 ::= then(Xs_agent_1).
-Xs_agent_2 ::= xs_agent_2(Constant, Constant, Integer, Constant, Integer).
+Xs_agent_2 ::= xs_agent_2(Key, Key, Integer, Key, Integer).
 Reply_agent_2 ::= then(Xs_agent_2).
-Xs_agent_3 ::= xs_agent_3(Constant, Integer).
+Xs_agent_3 ::= xs_agent_3(Key, Integer).
 Reply_agent_3 ::= then(Xs_agent_3).
-Xs_agent_4 ::= xs_agent_4(Constant, Constant).
+Xs_agent_4 ::= xs_agent_4(Key, Key).
 Reply_agent_4 ::= then(Xs_agent_4).
-Answer ::= xs_respond_swap_1(Constant) ; xs_agent_1(Integer) ; xs_agent_2(Constant, Constant, Integer, Constant, Integer) ; xs_agent_3(Constant, Integer) ; xs_agent_4(Constant, Constant).
+Answer ::= xs_respond_swap_1(Constant) ; xs_agent_1(Integer) ; xs_agent_2(Key, Key, Integer, Key, Integer) ; xs_agent_3(Key, Integer) ; xs_agent_4(Key, Key).
 Escrow ::= esc_respond_swap_1(Reply_respond_swap_1?) ; esc_agent_1(Reply_agent_1?) ; esc_agent_2(Reply_agent_2?) ; esc_agent_3(Reply_agent_3?) ; esc_agent_4(Reply_agent_4?).
-Context ::= ctx_respond_swap_1(Constant, Lot, Stream(Coin)) ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4.
+Context ::= ctx_respond_swap_1(Key, Lot, Stream(Coin)) ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4.
 
 %% What the mini-app shows its person on its channel to the super-app user
 %% interface: the mediator's cards and their closing, and the screen.
@@ -139,10 +139,10 @@ Event ::= card(Constant, Context, ReqId)
 %% answer to one of the agent's four request cards, an acceptance of a swap the
 %% named party proposes, or a wait for a screen message.
 Step ::= mint(Integer)
-       ; swap(Constant, Constant, Integer, Constant, Integer)
-       ; pay(Constant, Integer)
-       ; redeem(Constant, Constant)
-       ; accept(Constant)
+       ; swap(Key, Key, Integer, Key, Integer)
+       ; pay(Key, Integer)
+       ; redeem(Key, Key)
+       ; accept(Key)
        ; await(ScreenContent).
 Script ::= [] ; [Step | Script].
 
@@ -151,7 +151,7 @@ Script ::= [] ; [Step | Script].
 %% =============================================================================
 
 %% K fresh coins of Issuer, serials from Serial up.
-procedure create_coins(Constant?, Integer?, Integer?, Stream(Coin)).
+procedure create_coins(Key?, Integer?, Integer?, Stream(Coin)).
 create_coins(Issuer, K, Serial, [coin(Issuer?, Serial?)|Rest?]) :-
     K? > 0 |
     K1 := K? - 1,
@@ -166,7 +166,7 @@ append_coins([], Ys, Ys?).
 %% K coins of Issuer out of the holdings: ok, with the coins and the rest; or
 %% fail --- the precondition cent^k_u in c_p of Definition 3.1 does not hold ---
 %% with the coins found and the rest, which the caller puts back together.
-procedure select_coins(Constant?, Integer?, Stream(Coin)?, Constant, Stream(Coin), Stream(Coin)).
+procedure select_coins(Key?, Integer?, Stream(Coin)?, Constant, Stream(Coin), Stream(Coin)).
 select_coins(_, 0, Hs, ok, [], Hs?).
 select_coins(Issuer, K, [coin(I, S)|Rest], Status?, [coin(I?, S?)|Sel?], Rem?) :-
     K? > 0, Issuer? =?= I? |
@@ -178,7 +178,7 @@ select_coins(Issuer, K, [C|Rest], Status?, Sel?, [C?|Rem?]) :-
 select_coins(_, K, [], fail, [], []) :- K? > 0 | true.
 
 %% One coin of Issuer out of the holdings, or not_found with the holdings intact.
-procedure take_coin(Constant?, Stream(Coin)?, Found, Stream(Coin)).
+procedure take_coin(Key?, Stream(Coin)?, Found, Stream(Coin)).
 take_coin(Issuer, [coin(I, S)|Rest], found(coin(I?, S?)), Rest?) :-
     Issuer? =?= I? | true.
 take_coin(Issuer, [C|Rest], Found?, [C?|Rem?]) :-
@@ -187,7 +187,7 @@ take_coin(Issuer, [C|Rest], Found?, [C?|Rem?]) :-
 take_coin(_, [], not_found, []).
 
 %% Whether every coin is the issuer's own.
-procedure own_coins(Constant?, Stream(Coin)?, Constant).
+procedure own_coins(Key?, Stream(Coin)?, Constant).
 own_coins(Id, [coin(I, _)|Rest], R?) :- Id? =?= I? | own_coins(Id?, Rest?, R).
 own_coins(_, [coin(_, _)|_], no) :- otherwise | true.
 own_coins(_, [], yes).
@@ -204,14 +204,14 @@ tally([coin(I, _)|Rest], Acc, Lots?) :-
     tally(Rest?, Acc1?, Lots).
 tally([], Acc, Acc?).
 
-procedure tally_add(Constant?, Stream(Lot)?, Stream(Lot)).
+procedure tally_add(Key?, Stream(Lot)?, Stream(Lot)).
 tally_add(I, [lot(I2, N)|Rest], [lot(I2?, N1?)|Rest?]) :- I? =?= I2? | N1 := N? + 1.
 tally_add(I, [L|Rest], [L?|Rest1?]) :- otherwise | tally_add(I?, Rest?, Rest1).
 tally_add(I, [], [lot(I?, 1)]).
 
 %% The issuers of the coins held, one each, the holder's own apart: what an
 %% issuer discloses to a bearer whose presentation it cannot fulfil as named.
-procedure menu_of(Constant?, Stream(Coin)?, Stream(Constant)?, Stream(Constant)).
+procedure menu_of(Key?, Stream(Coin)?, Stream(Key)?, Stream(Key)).
 menu_of(Id, [coin(I, _)|Rest], Acc, Menu?) :-
     Id? =?= I? |
     menu_of(Id?, Rest?, Acc?, Menu).
@@ -221,7 +221,7 @@ menu_of(Id, [coin(I, _)|Rest], Acc, Menu?) :-
     menu_of(Id?, Rest?, Acc1?, Menu).
 menu_of(_, [], Acc, Acc?).
 
-procedure menu_add(Constant?, Stream(Constant)?, Stream(Constant)).
+procedure menu_add(Key?, Stream(Key)?, Stream(Key)).
 menu_add(I, [I2|Rest], [I2?|Rest?]) :- I? =?= I2? | true.
 menu_add(I, [J|Rest], [J?|Rest1?]) :- otherwise | menu_add(I?, Rest?, Rest1).
 menu_add(I, [], [I?]).
@@ -231,7 +231,7 @@ menu_add(I, [], [I?]).
 %% =============================================================================
 
 %% Whether a conversation with Q is open: Q's output entry is among the outputs.
-procedure has_peer(Constant?, Stream(OutputEntry)?, Stream(OutputEntry), Constant).
+procedure has_peer(Key?, Stream(OutputEntry)?, Stream(OutputEntry), Constant).
 has_peer(Q, [friend_output(K, Out?)|Rest], [friend_output(K?, Out)|Rest?], yes) :-
     Q? =?= K? | true.
 has_peer(Q, [E|Rest], [E?|Rest1?], Known?) :-
@@ -241,7 +241,7 @@ has_peer(_, [], [], no).
 
 %% Adopt the channel of a conversation with Q: its write side becomes Q's
 %% output entry and its read side joins the input from counterparties.
-procedure adopt(Constant?, PeerChannel?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(PeerMsg)?, Stream(PeerMsg)).
+procedure adopt(Key?, PeerChannel?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(PeerMsg)?, Stream(PeerMsg)).
 adopt(Q, ch(In, Out?), Outs, Outs1?, PeerIn, PeerIn1?) :-
     ground(Q?) |
     add_friend_output(Q?, Out, Outs?, Outs1),
@@ -252,7 +252,7 @@ adopt(Q, ch(In, Out?), Outs, Outs1?, PeerIn, PeerIn1?) :-
 %% =============================================================================
 
 %% The counterparty's answer to a proposed swap, when it comes.
-procedure inject_swap_result(SwapResponse?, Constant?, Stream(UserInMsg)?, Stream(UserInMsg)).
+procedure inject_swap_result(SwapResponse?, Key?, Stream(UserInMsg)?, Stream(UserInMsg)).
 inject_swap_result(swap_accept(Coins), Q, Ys, [swap_accepted(Q?, Coins?)|Ys?]) :-
     ground(Q?), ground(Coins?) | true.
 inject_swap_result(swap_decline(Coins), Q, Ys, [swap_declined_by(Q?, Coins?)|Ys?]) :-
@@ -261,7 +261,7 @@ inject_swap_result(R, Q, [Y|Ys], [Y?|Ys1?]) :-
     inject_swap_result(R?, Q?, Ys?, Ys1).
 
 %% The issuer's answer to a presentation, when it comes.
-procedure inject_redeem_result(RedeemResponse?, Constant?, Stream(UserInMsg)?, Stream(UserInMsg)).
+procedure inject_redeem_result(RedeemResponse?, Key?, Stream(UserInMsg)?, Stream(UserInMsg)).
 inject_redeem_result(redeem_give(C), Q, Ys, [redeem_given(Q?, C?)|Ys?]) :-
     ground(Q?), ground(C?) | true.
 inject_redeem_result(redeem_menu(C, Issuers), Q, Ys, [redeem_menu_from(Q?, C?, Issuers?)|Ys?]) :-
@@ -274,10 +274,10 @@ inject_redeem_result(R, Q, [Y|Ys], [Y?|Ys1?]) :-
 %% The two bodies of the swap responder's accept clause: the acceptance, and
 %% the refusal the machine gives for a person who has not answered.  Each hands
 %% the agent the offer with the response writer.
-procedure accept_answer(Constant?, Lot?, Stream(Coin)?, SwapResponse, Stream(UserInMsg)).
+procedure accept_answer(Key?, Lot?, Stream(Coin)?, SwapResponse, Stream(UserInMsg)).
 accept_answer(From, Want, Offered, Resp?, [accept_swap(From?, Want?, Offered?, Resp)]).
 
-procedure decline_answer(Constant?, Stream(Coin)?, SwapResponse, Stream(UserInMsg)).
+procedure decline_answer(Key?, Stream(Coin)?, SwapResponse, Stream(UserInMsg)).
 decline_answer(From, Offered, Resp?, [decline_swap(From?, Offered?, Resp)]).
 
 %% Binding a declined swap's response: the offered coins go back.
@@ -308,8 +308,8 @@ village :- village # market.
 %% Entry point: the mini-app on a live person's screen (play_ui.glp)
 %% =============================================================================
 
-imported procedure play_ui#coins_ui(Constant?, Stream(UserAnswer)?, Stream(_)?).
-exported procedure coins_ui(Constant?, Stream(UserAnswer)?, Stream(_)?).
+imported procedure play_ui#coins_ui(Key?, Stream(UserAnswer)?, Stream(_)?).
+exported procedure coins_ui(Key?, Stream(UserAnswer)?, Stream(_)?).
 coins_ui(Id, Answers, NetIn) :- play_ui # coins_ui(Id?, Answers?, NetIn?).
 
 %% =============================================================================
@@ -321,6 +321,6 @@ coins_ui(Id, Answers, NetIn) :- play_ui # coins_ui(Id?, Answers?, NetIn?).
 %% answered by its scripted person, as in village/0.
 %% =============================================================================
 
-imported procedure village#market_ui(Constant?).
-exported procedure village_ui(Constant?, Stream(UserAnswer)?, Stream(_)?).
+imported procedure village#market_ui(Key?).
+exported procedure village_ui(Key?, Stream(UserAnswer)?, Stream(_)?).
 village_ui(Id, _, _) :- village # market_ui(Id?).

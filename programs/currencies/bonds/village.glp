@@ -41,9 +41,9 @@
 %%
 %% Entry point: market/0, exported by self.glp as village/0.
 
-imported procedure bonds_agent#agent(Channel(Closed, Stream(AgentMsg))?, Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Integer?, Slot(Reply_agent_1)?, Slot(Reply_agent_2)?, Slot(Reply_agent_3)?, Slot(Reply_agent_4)?, Slot(Reply_agent_5)?, Slot(Reply_agent_6)?, Slot(Reply_agent_7)?, Slot(Reply_agent_8)?, Slot(Reply_agent_9)?).
+imported procedure bonds_agent#agent(Channel(Closed, Stream(AgentMsg))?, Key?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Integer?, Slot(Reply_agent_1)?, Slot(Reply_agent_2)?, Slot(Reply_agent_3)?, Slot(Reply_agent_4)?, Slot(Reply_agent_5)?, Slot(Reply_agent_6)?, Slot(Reply_agent_7)?, Slot(Reply_agent_8)?, Slot(Reply_agent_9)?).
 imported procedure bonds_agent#med(Channel(Stream(UserAnswer), Stream(Card))?, Channel(Stream(AgentMsg), Closed)?, PendingList?, Integer?).
-imported procedure escrow#accepts(Agreement?, Kind?, Constant?, Stream(Lot)?, Constant, Agreement).
+imported procedure escrow#accepts(Agreement?, Kind?, Key?, Stream(Lot)?, Constant, Agreement).
 imported procedure escrow#react(Agreement?, ScreenContent?, Script, Agreement).
 
 %% The latest open card of each request clause --- mint coins, mint bonds,
@@ -51,9 +51,9 @@ imported procedure escrow#react(Agreement?, ScreenContent?, Script, Agreement).
 %% cards of proposed swaps and of proposed transfers, by proposer.
 OpenReq ::= no_card ; req(Integer).
 Open ::= open(OpenReq, OpenReq, OpenReq, OpenReq, OpenReq, OpenReq, OpenReq, OpenReq, OpenReq).
-OfferCard ::= offer_card(Constant, ReqId).
+OfferCard ::= offer_card(Key, ReqId).
 OfferCards ::= [] ; [OfferCard | OfferCards].
-TransferCard ::= transfer_card(Kind, Constant, Stream(Lot), ReqId).
+TransferCard ::= transfer_card(Kind, Key, Stream(Lot), ReqId).
 TransferCards ::= [] ; [TransferCard | TransferCards].
 
 %% The rest of the answer stream, handed back by answer_transfers after the
@@ -72,7 +72,7 @@ Choice ::= answer(ReqId, Answer) ; calendar(Integer) ; wait.
 %% The scripts
 %% =============================================================================
 
-procedure script(Constant?, Script).
+procedure script(Key?, Script).
 script(alice, [mint(15), swap(bob, alice, now, 15, bob, now, 15),
                mint(15), swap(charlie, alice, now, 15, charlie, now, 15),
                swap(eve, bob, now, 10, frank, now, 4)]).
@@ -119,14 +119,14 @@ market :-
 
 %% One villager: the compiled agent, its mediator, and the scripted person,
 %% under no agreement.
-exported procedure villager(Constant?, Script?, Stream(NetInMsg)?, Stream(NetOutMsg)).
+exported procedure villager(Key?, Script?, Stream(NetInMsg)?, Stream(NetOutMsg)).
 villager(Id, Script, NetIn, NetOut?) :-
     ground(Id?) |
     escrow_agent(Id?, Script?, none, NetIn?, NetOut).
 
 %% A party under an agreement: the same, with the escrow program answering its
 %% transfer cards and willing its releases and returns.
-exported procedure escrow_agent(Constant?, Script?, Agreement?, Stream(NetInMsg)?, Stream(NetOutMsg)).
+exported procedure escrow_agent(Key?, Script?, Agreement?, Stream(NetInMsg)?, Stream(NetOutMsg)).
 escrow_agent(Id, Script, Ag, NetIn, NetOut?) :-
     ground(Id?) |
     bonds_agent # agent(ch([], Asks), Id?, [], NetIn?, Cal?,
@@ -188,7 +188,7 @@ network7(AOut, BOut, COut, DOut, EOut, FOut, GOut, AIn?, BIn?, CIn?, DIn?, EIn?,
 %% and is over once the screen has shown its message, whatever else was in
 %% flight when it did.
 
-exported procedure person(Constant?, Stream(Event)?, Stream(UserAnswer), Stream(Integer), Script?, Script?, Open?, OfferCards?, TransferCards?, Pending?, Agreement?, Stream(ScreenContent)?).
+exported procedure person(Key?, Stream(Event)?, Stream(UserAnswer), Stream(Integer), Script?, Script?, Open?, OfferCards?, TransferCards?, Pending?, Agreement?, Stream(ScreenContent)?).
 
 %% The request cards, by clause: mint coins, mint bonds, swap, pay, redeem,
 %% mature, deposit, release, return.
@@ -284,7 +284,7 @@ answer_transfers(Ag, [transfer_card(Kind, From, Lots, R)|Ts], As?, Tail?, Ts1?, 
     on_offer(Verdict?, Kind?, From?, Lots?, R?, Ts?, As, Tail, Ts1, Ag1?, Ag2).
 answer_transfers(Ag, [], As?, tail(As), [], Ag?).
 
-procedure on_offer(Constant?, Kind?, Constant?, Stream(Lot)?, ReqId?, TransferCards?, Stream(UserAnswer), AnswerTail, TransferCards, Agreement?, Agreement).
+procedure on_offer(Constant?, Kind?, Key?, Stream(Lot)?, ReqId?, TransferCards?, Stream(UserAnswer), AnswerTail, TransferCards, Agreement?, Agreement).
 on_offer(yes, _, _, _, R, Ts, [answer(R?, xs_respond_transfer_1(yes))|As?], Tail?, Ts1?, Ag, Ag1?) :-
     ground(R?) |
     answer_transfers(Ag?, Ts?, As, Tail, Ts1, Ag1).
@@ -293,7 +293,7 @@ on_offer(_, Kind, From, Lots, R, Ts, As?, Tail?, [transfer_card(Kind?, From?, Lo
     answer_transfers(Ag?, Ts?, As, Tail, Ts1, Ag1).
 
 %% The person continues on the rest of its answer stream.
-procedure then_step(AnswerTail?, Constant?, Stream(Event)?, Stream(Integer), Script?, Script?, Open?, OfferCards?, TransferCards?, Pending?, Agreement?, Stream(ScreenContent)?).
+procedure then_step(AnswerTail?, Key?, Stream(Event)?, Stream(Integer), Script?, Script?, Open?, OfferCards?, TransferCards?, Pending?, Agreement?, Stream(ScreenContent)?).
 then_step(tail(As?), Id, Es, Cal?, Script, Todo, Open, Swaps, Ts, Pending, Ag, Seen) :-
     try_step(Id?, Es?, As, Cal, Script?, Todo?, Open?, Swaps?, Ts?, Pending?, Ag?, Seen?).
 
@@ -401,7 +401,7 @@ done(_, _, no) :- otherwise | true.
 %% Answer the current step's card, if it is open and no answer is out: the
 %% escrow program's queue first, then the script; a wait at the head of the
 %% script waits.
-procedure try_step(Constant?, Stream(Event)?, Stream(UserAnswer), Stream(Integer), Script?, Script?, Open?, OfferCards?, TransferCards?, Pending?, Agreement?, Stream(ScreenContent)?).
+procedure try_step(Key?, Stream(Event)?, Stream(UserAnswer), Stream(Integer), Script?, Script?, Open?, OfferCards?, TransferCards?, Pending?, Agreement?, Stream(ScreenContent)?).
 try_step(Id, Es, As?, Cal?, Script, Todo, Open, Swaps, Ts, sent(R, Src), Ag, Seen) :-
     person(Id?, Es?, As, Cal, Script?, Todo?, Open?, Swaps?, Ts?, sent(R?, Src?), Ag?, Seen?).
 try_step(Id, Es, As?, Cal?, Script, Todo, Open, Swaps, Ts, calendar_out, Ag, Seen) :-
@@ -436,7 +436,7 @@ pick(accept_transfer(From), _, Swaps, Ts, Choice?, Swaps?, Ts1?) :-
     find_transfer(From?, Ts?, Choice, Ts1).
 pick(_, _, Swaps, Ts, wait, Swaps?, Ts?) :- otherwise | true.
 
-procedure find_offer(Constant?, OfferCards?, Answer?, Choice, OfferCards).
+procedure find_offer(Key?, OfferCards?, Answer?, Choice, OfferCards).
 find_offer(From, [offer_card(F, R)|Rest], A, answer(R?, A?), Rest?) :-
     From? =?= F? | true.
 find_offer(From, [C|Rest], A, Ch?, [C?|Rest1?]) :-
@@ -444,7 +444,7 @@ find_offer(From, [C|Rest], A, Ch?, [C?|Rest1?]) :-
     find_offer(From?, Rest?, A?, Ch, Rest1).
 find_offer(_, [], _, wait, []).
 
-procedure find_transfer(Constant?, TransferCards?, Choice, TransferCards).
+procedure find_transfer(Key?, TransferCards?, Choice, TransferCards).
 find_transfer(From, [transfer_card(_, F, _, R)|Rest], answer(R?, xs_respond_transfer_1(yes)), Rest?) :-
     From? =?= F? | true.
 find_transfer(From, [C|Rest], Ch?, [C?|Rest1?]) :-
@@ -452,7 +452,7 @@ find_transfer(From, [C|Rest], Ch?, [C?|Rest1?]) :-
     find_transfer(From?, Rest?, Ch, Rest1).
 find_transfer(_, [], wait, []).
 
-procedure act(Choice?, Src?, Constant?, Stream(Event)?, Stream(UserAnswer), Stream(Integer), Script?, Script?, Open?, OfferCards?, TransferCards?, Agreement?, Stream(ScreenContent)?).
+procedure act(Choice?, Src?, Key?, Stream(Event)?, Stream(UserAnswer), Stream(Integer), Script?, Script?, Open?, OfferCards?, TransferCards?, Agreement?, Stream(ScreenContent)?).
 %% An answered card is consumed: it is no longer open.
 act(answer(R, X), Src, Id, Es, [answer(R?, X?)|As?], Cal?, Script, Todo, Open, Swaps, Ts, Ag, Seen) :-
     ground(R?) |

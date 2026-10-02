@@ -14,10 +14,10 @@
 %%   Channel(In, Out) ::= ch(In, Out?).
 
 %% Bond representation: bond(Issuer, Maturity, Serial)
-Bond ::= bond(Constant, Constant, Constant).
+Bond ::= bond(Key, Constant, Constant).
 
 %% Trade types
-Lot ::= lot(Constant, Constant, Constant).
+Lot ::= lot(Key, Constant, Constant).
 TradeResponse ::= trade_accept(Stream(Bond))
                ; trade_decline(Stream(Bond))
                ; trade_decline_menu(Stream(Bond), Stream(Bond)).
@@ -129,7 +129,7 @@ NetInStream  ::= [] ; [NetInMsg | NetInStream].
 %% readers (mediator AgentToPersonMsg, peer NetInStream).
 OutputEntry ::= user_output(Stream(AgentToPersonMsg)?)
               ; net_output(NetOutStream?)
-              ; friend_output(Constant, Stream(FriendMsg)?).
+              ; friend_output(Key, Stream(FriendMsg)?).
 OutputsList ::= [] ; [OutputEntry | OutputsList].
 
 %% =============================================================================

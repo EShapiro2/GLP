@@ -7,14 +7,14 @@
 %% --- the types the compilation adds ---
 Xs_respond_swap_1 ::= xs_respond_swap_1(Constant).
 Reply_respond_swap_1 ::= then(Xs_respond_swap_1) ; else.
-Ctx_respond_swap_1 ::= ctx_respond_swap_1(Constant, Lot, Stream(Coin)).
+Ctx_respond_swap_1 ::= ctx_respond_swap_1(Key, Lot, Stream(Coin)).
 Xs_agent_1 ::= xs_agent_1(Integer).
 Reply_agent_1 ::= then(Xs_agent_1).
-Xs_agent_2 ::= xs_agent_2(Constant, Constant, Integer, Constant, Integer).
+Xs_agent_2 ::= xs_agent_2(Key, Key, Integer, Key, Integer).
 Reply_agent_2 ::= then(Xs_agent_2).
-Xs_agent_3 ::= xs_agent_3(Constant, Integer).
+Xs_agent_3 ::= xs_agent_3(Key, Integer).
 Reply_agent_3 ::= then(Xs_agent_3).
-Xs_agent_4 ::= xs_agent_4(Constant, Constant).
+Xs_agent_4 ::= xs_agent_4(Key, Key).
 Reply_agent_4 ::= then(Xs_agent_4).
 Answer ::= Xs_respond_swap_1 ; Xs_agent_1 ; Xs_agent_2 ; Xs_agent_3 ; Xs_agent_4.
 Escrow ::= esc_respond_swap_1(Reply_respond_swap_1?) ; esc_agent_1(Reply_agent_1?) ; esc_agent_2(Reply_agent_2?) ; esc_agent_3(Reply_agent_3?) ; esc_agent_4(Reply_agent_4?).
@@ -43,7 +43,7 @@ respond_swap(_, offer(From, Want, Offered), Resp?, Ans?, ask(then(xs_respond_swa
 respond_swap(_, offer(From, Want, Offered), Resp?, Ans?, ask(else, _)) :- ground(From?), ground(Want?), ground(Offered?) | decline_answer(From?, Offered?, Resp, Ans).
 respond_swap(Med, offer(From, Want, Offered), A2?, A3?, none) :- ground(From?), ground(Want?), ground(Offered?) | send(ask(respond_swap_1, ctx_respond_swap_1(From?, Want?, Offered?), esc_respond_swap_1(R), Id), Med?, Med1), respond_swap(Med1?, offer(From?, Want?, Offered?), A2, A3, ask(R?, Id?)).
 
-exported procedure agent(Channel(Closed, Stream(AgentMsg))?, Constant?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?, Slot(Reply_agent_1)?, Slot(Reply_agent_2)?, Slot(Reply_agent_3)?, Slot(Reply_agent_4)?).
+exported procedure agent(Channel(Closed, Stream(AgentMsg))?, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?, Slot(Reply_agent_1)?, Slot(Reply_agent_2)?, Slot(Reply_agent_3)?, Slot(Reply_agent_4)?).
 agent(Med, Id, UserIn, [msg(From, Id1, Act) | PeerIn], Convs, Outs, Holdings, Serial, S1, S2, S3, S4) :- (Id? =?= Id1?), ground(From?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, Med1), on_act(Med1?, Act?, From?, Id?, UserIn?, PeerIn?, Convs?, Outs?, Holdings?, Serial?).
 agent(Med, Id, UserIn, [_ | PeerIn], Convs, Outs, Holdings, Serial, S1, S2, S3, S4) :- ground(Id?), otherwise | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, Med1), agent(Med1?, Id?, UserIn?, PeerIn?, Convs?, Outs?, Holdings?, Serial?, none, none, none, none).
 agent(Med, Id, UserIn, PeerIn, [conversation(Q, Ch) | Convs], Outs, Holdings, Serial, S1, S2, S3, S4) :- ground(Id?), ground(Q?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, Med1), adopt(Q?, Ch?, Outs?, Outs1, PeerIn?, PeerIn1), show(opened(Q?), Outs1?, Outs2), agent(Med1?, Id?, UserIn?, PeerIn1?, Convs?, Outs2?, Holdings?, Serial?, none, none, none, none).
@@ -64,53 +64,53 @@ agent(Med, Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial, S1, S2, none, S4) 
 agent(Med, Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial, S1, S2, S3, ask(then(xs_agent_4(Friend, WantCoin)), _)) :- ground(Id?), ground(Friend?), ground(WantCoin?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, Med1), take_coin(Friend?, Holdings?, Found, Rest), do_redeem(Med1?, Found?, Id?, Friend?, WantCoin?, Rest?, UserIn?, PeerIn?, Convs?, Outs?, Serial?).
 agent(Med, Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial, S1, S2, S3, none) :- ground(Id?) | send(ask(agent_4, ctx_agent_4, esc_agent_4(R), Id1), Med?, Med1), agent(Med1?, Id?, UserIn?, PeerIn?, Convs?, Outs?, Holdings?, Serial?, S1?, S2?, S3?, ask(R?, Id1?)).
 
-procedure on_act(Channel(Closed, Stream(AgentMsg))?, PeerContent?, Constant?, Constant?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
+procedure on_act(Channel(Closed, Stream(AgentMsg))?, PeerContent?, Key?, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
 on_act(Med, pay(Coins), From, Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :- ground(Coins?) | own_coins(Id?, Coins?, Own), take_payment(Med?, Own?, Id?, From?, Coins?, UserIn?, PeerIn?, Convs?, Outs?, Holdings?, Serial?).
 on_act(Med, redeem(Coin, R, Resp?), From, Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :- ground(Coin?), ground(R?) | fulfil(Med?, Coin?, R?, Resp, Id?, From?, UserIn?, PeerIn?, Convs?, Outs?, Holdings?, Serial?).
 on_act(Med, swap(Want, Offered, Resp?), From, Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :- ground(Want?), ground(Offered?) | med_split(Med?, Medb, Medr), respond_swap(Medb?, offer(From?, Want?, Offered?), Resp, Ans, none), merge(Ans?, UserIn?, UserIn1), agent(Medr?, Id?, UserIn1?, PeerIn?, Convs?, Outs?, Holdings?, Serial?, none, none, none, none).
 on_act(Med, return(Coins), From, Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :- ground(Coins?) | append_coins(Holdings?, Coins?, Holdings1), count_coins(Coins?, 0, K), show(returned(From?, K?), Outs?, Outs1), after_change(Med?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Holdings1?, Serial?).
 
-procedure take_payment(Channel(Closed, Stream(AgentMsg))?, Constant?, Constant?, Constant?, Stream(Coin)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
+procedure take_payment(Channel(Closed, Stream(AgentMsg))?, Constant?, Key?, Key?, Stream(Coin)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
 take_payment(Med, yes, Id, From, Coins, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :- ground(Coins?) | append_coins(Holdings?, Coins?, Holdings1), count_coins(Coins?, 0, K), show(received(From?, K?), Outs?, Outs1), after_change(Med?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Holdings1?, Serial?).
 take_payment(Med, no, Id, From, Coins, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :- send_friend(From?, msg(Id?, From?, return(Coins?)), Outs?, Outs1), agent(Med?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Holdings?, Serial?, none, none, none, none).
 
-procedure fulfil(Channel(Closed, Stream(AgentMsg))?, Coin?, Constant?, RedeemResponse, Constant?, Constant?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
+procedure fulfil(Channel(Closed, Stream(AgentMsg))?, Coin?, Key?, RedeemResponse, Key?, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
 fulfil(Med, coin(I, S), R, Resp?, Id, From, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :- (I? =?= Id?) | take_coin(R?, Holdings?, Found, Rest), give(Med?, Found?, coin(I?, S?), R?, Resp, Id?, From?, UserIn?, PeerIn?, Convs?, Outs?, Rest?, Serial?).
 fulfil(Med, coin(I, S), _, redeem_declined(coin(I?, S?)), Id, From, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :- otherwise | show(refused(From?), Outs?, Outs1), agent(Med?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Holdings?, Serial?, none, none, none, none).
 
-procedure give(Channel(Closed, Stream(AgentMsg))?, Found?, Coin?, Constant?, RedeemResponse, Constant?, Constant?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
+procedure give(Channel(Closed, Stream(AgentMsg))?, Found?, Coin?, Key?, RedeemResponse, Key?, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
 give(Med, found(C), Mine, R, redeem_give(C?), Id, From, UserIn, PeerIn, Convs, Outs, Rest, Serial) :- append_coins(Rest?, [Mine?], Holdings1), show(presented(From?, R?), Outs?, Outs1), after_change(Med?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Holdings1?, Serial?).
 give(Med, not_found, Mine, R, redeem_menu(Mine?, Menu?), Id, From, UserIn, PeerIn, Convs, Outs, Rest, Serial) :- ground(Rest?) | menu_of(Id?, Rest?, [], Menu), show(unfulfilled(From?, R?), Outs?, Outs1), agent(Med?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Rest?, Serial?, none, none, none, none).
 
-procedure fill_swap(Channel(Closed, Stream(AgentMsg))?, Constant?, Constant?, Constant?, SwapResponse, Stream(Coin)?, Stream(Coin)?, Stream(Coin)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Integer?).
+procedure fill_swap(Channel(Closed, Stream(AgentMsg))?, Constant?, Key?, Key?, SwapResponse, Stream(Coin)?, Stream(Coin)?, Stream(Coin)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Integer?).
 fill_swap(Med, ok, Id, From, swap_accept(Give?), Give, Offered, Rest, UserIn, PeerIn, Convs, Outs, Serial) :- append_coins(Rest?, Offered?, Holdings1), show(swap_done(From?), Outs?, Outs1), after_change(Med?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Holdings1?, Serial?).
 fill_swap(Med, fail, Id, From, swap_decline(Offered?), Give, Offered, Rest, UserIn, PeerIn, Convs, Outs, Serial) :- append_coins(Give?, Rest?, Orig), show(swap_failed(From?), Outs?, Outs1), agent(Med?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Orig?, Serial?, none, none, none, none).
 
-procedure propose_swap(Channel(Closed, Stream(AgentMsg))?, Constant?, Constant?, Constant?, Lot?, Lot?, Stream(Coin)?, Stream(Coin)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Integer?).
+procedure propose_swap(Channel(Closed, Stream(AgentMsg))?, Constant?, Key?, Key?, Lot?, Lot?, Stream(Coin)?, Stream(Coin)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Integer?).
 propose_swap(Med, ok, Id, Q, _, Want, Give, Rest, UserIn, PeerIn, Convs, Outs, Serial) :- ground(Q?), ground(Want?), ground(Give?) | has_peer(Q?, Outs?, Outs1, Known), send_swap(Med?, Known?, Id?, Q?, Want?, Give?, Rest?, UserIn?, PeerIn?, Convs?, Outs1?, Serial?).
 propose_swap(Med, fail, Id, _, lot(U, K), _, Give, Rest, UserIn, PeerIn, Convs, Outs, Serial) :- append_coins(Give?, Rest?, Orig), show(lacking(U?, K?), Outs?, Outs1), agent(Med?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Orig?, Serial?, none, none, none, none).
 
-procedure send_swap(Channel(Closed, Stream(AgentMsg))?, Constant?, Constant?, Constant?, Lot?, Stream(Coin)?, Stream(Coin)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Integer?).
+procedure send_swap(Channel(Closed, Stream(AgentMsg))?, Constant?, Key?, Key?, Lot?, Stream(Coin)?, Stream(Coin)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Integer?).
 send_swap(Med, yes, Id, Q, Want, Give, Rest, UserIn, PeerIn, Convs, Outs, Serial) :- ground(Q?) | send_friend(Q?, msg(Id?, Q?, swap(Want?, Give?, Resp)), Outs?, Outs1), inject_swap_result(Resp?, Q?, UserIn?, UserIn1), after_change(Med?, Id?, UserIn1?, PeerIn?, Convs?, Outs1?, Rest?, Serial?).
 send_swap(Med, no, Id, Q, _, Give, Rest, UserIn, PeerIn, Convs, Outs, Serial) :- append_coins(Give?, Rest?, Orig), show(no_conversation(Q?), Outs?, Outs1), agent(Med?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Orig?, Serial?, none, none, none, none).
 
-procedure do_pay(Channel(Closed, Stream(AgentMsg))?, Constant?, Constant?, Constant?, Integer?, Stream(Coin)?, Stream(Coin)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Integer?).
+procedure do_pay(Channel(Closed, Stream(AgentMsg))?, Constant?, Key?, Key?, Integer?, Stream(Coin)?, Stream(Coin)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Integer?).
 do_pay(Med, ok, Id, Q, K, Give, Rest, UserIn, PeerIn, Convs, Outs, Serial) :- ground(Q?) | has_peer(Q?, Outs?, Outs1, Known), send_pay(Med?, Known?, Id?, Q?, K?, Give?, Rest?, UserIn?, PeerIn?, Convs?, Outs1?, Serial?).
 do_pay(Med, fail, Id, Q, K, Give, Rest, UserIn, PeerIn, Convs, Outs, Serial) :- append_coins(Give?, Rest?, Orig), show(lacking(Q?, K?), Outs?, Outs1), agent(Med?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Orig?, Serial?, none, none, none, none).
 
-procedure send_pay(Channel(Closed, Stream(AgentMsg))?, Constant?, Constant?, Constant?, Integer?, Stream(Coin)?, Stream(Coin)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Integer?).
+procedure send_pay(Channel(Closed, Stream(AgentMsg))?, Constant?, Key?, Key?, Integer?, Stream(Coin)?, Stream(Coin)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Integer?).
 send_pay(Med, yes, Id, Q, K, Give, Rest, UserIn, PeerIn, Convs, Outs, Serial) :- ground(Q?) | send_friend(Q?, msg(Id?, Q?, pay(Give?)), Outs?, Outs1), show(paid(Q?, K?), Outs1?, Outs2), after_change(Med?, Id?, UserIn?, PeerIn?, Convs?, Outs2?, Rest?, Serial?).
 send_pay(Med, no, Id, Q, _, Give, Rest, UserIn, PeerIn, Convs, Outs, Serial) :- append_coins(Give?, Rest?, Orig), show(no_conversation(Q?), Outs?, Outs1), agent(Med?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Orig?, Serial?, none, none, none, none).
 
-procedure do_redeem(Channel(Closed, Stream(AgentMsg))?, Found?, Constant?, Constant?, Constant?, Stream(Coin)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Integer?).
+procedure do_redeem(Channel(Closed, Stream(AgentMsg))?, Found?, Key?, Key?, Key?, Stream(Coin)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Integer?).
 do_redeem(Med, found(C), Id, Q, R, Rest, UserIn, PeerIn, Convs, Outs, Serial) :- ground(Q?) | has_peer(Q?, Outs?, Outs1, Known), send_redeem(Med?, Known?, Id?, Q?, R?, C?, Rest?, UserIn?, PeerIn?, Convs?, Outs1?, Serial?).
 do_redeem(Med, not_found, Id, Q, _, Holdings, UserIn, PeerIn, Convs, Outs, Serial) :- show(lacking(Q?, 1), Outs?, Outs1), agent(Med?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Holdings?, Serial?, none, none, none, none).
 
-procedure send_redeem(Channel(Closed, Stream(AgentMsg))?, Constant?, Constant?, Constant?, Constant?, Coin?, Stream(Coin)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Integer?).
+procedure send_redeem(Channel(Closed, Stream(AgentMsg))?, Constant?, Key?, Key?, Key?, Coin?, Stream(Coin)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Integer?).
 send_redeem(Med, yes, Id, Q, R, C, Rest, UserIn, PeerIn, Convs, Outs, Serial) :- ground(Q?) | send_friend(Q?, msg(Id?, Q?, redeem(C?, R?, Resp)), Outs?, Outs1), inject_redeem_result(Resp?, Q?, UserIn?, UserIn1), after_change(Med?, Id?, UserIn1?, PeerIn?, Convs?, Outs1?, Rest?, Serial?).
 send_redeem(Med, no, Id, Q, _, C, Rest, UserIn, PeerIn, Convs, Outs, Serial) :- append_coins(Rest?, [C?], Orig), show(no_conversation(Q?), Outs?, Outs1), agent(Med?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Orig?, Serial?, none, none, none, none).
 
-procedure after_change(Channel(Closed, Stream(AgentMsg))?, Constant?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
+procedure after_change(Channel(Closed, Stream(AgentMsg))?, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
 after_change(Med, Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :- ground(Holdings?) | tally(Holdings?, [], Lots), show(holdings(Lots?), Outs?, Outs1), agent(Med?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Holdings?, Serial?, none, none, none, none).
 
 %% --- the mediator, and the pending table with the program's clauses ahead of the search clauses ---

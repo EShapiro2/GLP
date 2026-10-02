@@ -31,7 +31,7 @@
 %%
 %% Entry points: option_exercised/0 and option_expired/0, exported by self.glp.
 
-imported procedure village#villager(Constant?, Script?, Stream(NetInMsg)?, Stream(NetOutMsg)).
+imported procedure village#villager(Key?, Script?, Stream(NetInMsg)?, Stream(NetOutMsg)).
 
 exported procedure option_exercised.
 option_exercised :-

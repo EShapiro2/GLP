@@ -7,7 +7,7 @@
 %% screens.  A run does not end --- the agent's request clauses pend
 %% perpetually --- so a play's result is read off a partial stream.
 
-imported procedure person#person(Constant?, Stream(Event)?, Stream(UserAnswer), Script?, Stream(ScreenContent)).
+imported procedure person#person(Key?, Stream(Event)?, Stream(UserAnswer), Script?, Stream(ScreenContent)).
 
 %% play_mint(Screen): alice, alone, mints 3.
 %% Expected: Screen = [minted(3), holdings([lot(alice, 3)]) | _].

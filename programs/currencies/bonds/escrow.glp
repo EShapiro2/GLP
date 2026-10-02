@@ -30,7 +30,7 @@
 %% it by the machine on the card's deadline.
 %% =============================================================================
 
-exported procedure accepts(Agreement?, Kind?, Constant?, Stream(Lot)?, Constant, Agreement).
+exported procedure accepts(Agreement?, Kind?, Key?, Stream(Lot)?, Constant, Agreement).
 
 accepts(none, _, _, _, keep, none).
 
@@ -66,7 +66,7 @@ accepts(packaged(P, Q, Xs, Ys, Got, Ph, Date), _, _, _, no,
         packaged(P?, Q?, Xs?, Ys?, Got?, Ph?, Date?)) :-
     otherwise | true.
 
-procedure line_accepts(Constant?, Constant?, Integer?, Integer?, Integer?, Integer?, Integer?, Phase?, Constant?, Constant?, Constant?, Integer?, Constant).
+procedure line_accepts(Key?, Key?, Integer?, Integer?, Integer?, Integer?, Integer?, Phase?, Key?, Key?, Constant?, Integer?, Constant).
 line_accepts(P, _, K, _, _, _, _, opening, From, U, now, N, yes) :-
     P? =?= From?, P? =?= U?, K? =:= N? | true.
 line_accepts(P, _, _, _, _, Kd, _, open, From, U, now, N, yes) :-
@@ -123,14 +123,14 @@ react(packaged(P, Q, Xs, Ys, Got, Ph, Date), _, [],
       packaged(P?, Q?, Xs?, Ys?, Got?, Ph?, Date?)) :-
     otherwise | true.
 
-procedure dated_check(Integer?, Integer?, Constant?, Constant?, Lot?, Phase?, Script, Agreement).
+procedure dated_check(Integer?, Integer?, Key?, Key?, Lot?, Phase?, Script, Agreement).
 dated_check(Date, T, Dep, Ben, lot(U, D, K), deposited, [release(Ben?, U?, D?, K?)],
             dated_escrow(Dep?, Ben?, lot(U?, D?, K?), T?, released, Date?)) :-
     Date? >= T? | true.
 dated_check(Date, T, Dep, Ben, Lot, Ph, [], dated_escrow(Dep?, Ben?, Lot?, T?, Ph?, Date?)) :-
     otherwise | true.
 
-procedure line_deposited(Constant?, Constant?, Integer?, Integer?, Integer?, Integer?, Integer?, Phase?, Integer?, Constant?, Constant?, Constant?, Integer?, Script, Agreement).
+procedure line_deposited(Key?, Key?, Integer?, Integer?, Integer?, Integer?, Integer?, Phase?, Integer?, Key?, Key?, Constant?, Integer?, Script, Agreement).
 %% Establishment: the lender's k coins; the line is open, nothing drawn.
 line_deposited(P, Q, K, T, D1, _, _, opening, Date, From, U, now, N, [],
                credit_line(P?, Q?, K?, T?, D1?, 0, 0, open, Date?)) :-
@@ -161,12 +161,12 @@ line_deposited(P, Q, K, T, D1, Kd, Pd, Ph, Date, _, _, _, _, [],
 %% The releases of a draw: the principal, k' q-bonds maturing at the expiry
 %% T, and the coupon bonds, maturing at D1, to the lender, and k' of the
 %% lender's coins to the borrower.
-procedure draw_steps(Constant?, Constant?, Constant?, Constant?, Integer?, Integer?, Script).
+procedure draw_steps(Key?, Key?, Constant?, Constant?, Integer?, Integer?, Script).
 draw_steps(P, Q, T, D1, Pd, N, [release(P?, Q?, T?, Pd?), release(P?, Q?, D1?, N?), release(Q?, P?, now, Pd?)]).
 
 %% Expiry: the undrawn coins, k - k_d, go back to the lender, and the line is
 %% closed.
-procedure line_expire(Constant?, Constant?, Integer?, Integer?, Integer?, Integer?, Integer?, Integer?, Script, Agreement).
+procedure line_expire(Key?, Key?, Integer?, Integer?, Integer?, Integer?, Integer?, Integer?, Script, Agreement).
 line_expire(P, Q, K, T, D1, Kd, Pd, T1, [return(P?, P?, now, N?)],
             credit_line(P?, Q?, K?, T?, D1?, Kd?, Pd?, closed, T1?)) :-
     Kd? < K? |
@@ -179,7 +179,7 @@ line_expire(P, Q, K, T, D1, Kd, Pd, T1, [],
 %% The packaged exchange (Section 5, item 1)
 %% =============================================================================
 
-procedure packaged_accepts(Constant?, Constant?, Stream(Lot)?, Stream(Lot)?, Stream(Lot)?, Constant?, Lot?, Constant).
+procedure packaged_accepts(Key?, Key?, Stream(Lot)?, Stream(Lot)?, Stream(Lot)?, Key?, Lot?, Constant).
 packaged_accepts(P, _, Xs, _, Got, From, L, V?) :-
     P? =?= From?, ground(L?) |
     lot_member(L?, Xs?, In),
@@ -215,7 +215,7 @@ procedure add_lot(Lot?, Stream(Lot)?, Stream(Lot)).
 add_lot(L, [M|Rest], [M?|Rest1?]) :- add_lot(L?, Rest?, Rest1).
 add_lot(L, [], [L?]).
 
-procedure packaged_check(Constant?, Constant?, Stream(Lot)?, Stream(Lot)?, Stream(Lot)?, Phase?, Integer?, Script, Agreement).
+procedure packaged_check(Key?, Key?, Stream(Lot)?, Stream(Lot)?, Stream(Lot)?, Phase?, Integer?, Script, Agreement).
 packaged_check(P, Q, Xs, Ys, Got, Ph, Date, Steps?, Ag?) :-
     ground(Got?), ground(Xs?), ground(Ys?) |
     all_in(Xs?, Got?, HaveX),
@@ -230,7 +230,7 @@ procedure all_in_step(Constant?, Stream(Lot)?, Stream(Lot)?, Constant).
 all_in_step(no, _, _, no).
 all_in_step(yes, Rest, Got, V?) :- all_in(Rest?, Got?, V).
 
-procedure packaged_release(Constant?, Constant?, Constant?, Constant?, Stream(Lot)?, Stream(Lot)?, Stream(Lot)?, Phase?, Integer?, Script, Agreement).
+procedure packaged_release(Constant?, Constant?, Key?, Key?, Stream(Lot)?, Stream(Lot)?, Stream(Lot)?, Phase?, Integer?, Script, Agreement).
 packaged_release(yes, yes, P, Q, Xs, Ys, Got, _, Date, Steps?,
                  packaged(P?, Q?, Xs?, Ys?, Got?, released, Date?)) :-
     ground(Xs?), ground(Ys?) |
@@ -241,7 +241,7 @@ packaged_release(_, _, P, Q, Xs, Ys, Got, Ph, Date, [],
     otherwise | true.
 
 %% One release step per lot, to the named party, ending in the tail given.
-procedure release_all(Constant?, Stream(Lot)?, Script?, Script).
+procedure release_all(Key?, Stream(Lot)?, Script?, Script).
 release_all(R, [lot(U, D, K)|Rest], Tail, [release(R?, U?, D?, K?)|Steps?]) :-
     release_all(R?, Rest?, Tail?, Steps).
 release_all(_, [], Tail, Tail?).

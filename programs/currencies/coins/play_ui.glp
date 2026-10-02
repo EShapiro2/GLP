@@ -21,10 +21,10 @@
 %% This file is the harness of the app, not part of the currency: the certified
 %% program is currency/, which this directory is not (see self.glp).
 
-imported procedure miniapp#coins(Constant?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
-imported procedure person#person(Constant?, Stream(Event)?, Stream(UserAnswer), Script?, Stream(ScreenContent)).
+imported procedure miniapp#coins(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
+imported procedure person#person(Key?, Stream(Event)?, Stream(UserAnswer), Script?, Stream(ScreenContent)).
 
-exported procedure coins_ui(Constant?, Stream(UserAnswer)?, Stream(_)?).
+exported procedure coins_ui(Key?, Stream(UserAnswer)?, Stream(_)?).
 coins_ui(alice, Answers, _) :-
     miniapp # coins(alice, ch(Answers?, Events), [conversation(bob, ch(AB?, BA))]),
     send_to_user(Events?),
@@ -37,6 +37,6 @@ coins_ui(alice, Answers, _) :-
 %% Bob's screen, tagged, so the run is observable in the app's trace while
 %% nothing of his reaches alice's own screen: her manifest views the messages
 %% matching msg(agent, person, S) and nothing else.
-procedure log_peer(Constant?, Stream(ScreenContent)?).
+procedure log_peer(Key?, Stream(ScreenContent)?).
 log_peer(Id, [M|Ms]) :- ground(M?) | send_to_user([tagged(Id?, M?)]), log_peer(Id?, Ms?).
 log_peer(_, []).

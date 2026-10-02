@@ -11,7 +11,7 @@ boot :-
     agent_init(bob, 2, _)@bob.
 
 %% Adult agent — no children, no bonds
-procedure agent_init(Constant?, Constant?, Stream(_)?).
+procedure agent_init(Key?, Constant?, Stream(_)?).
 agent_init(Id, PlayNum, NetIn) :-
     ground(Id?), ground(PlayNum?) |
     actor_dispatch(Id?, PlayNum?, ch(ActorIn?, ActorOut)),
@@ -29,7 +29,7 @@ procedure tee(Stream(_)?, Stream(_), Stream(_)).
 tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
 tee([], [], []).
 
-procedure send_to_person_tagged(Constant?, Stream(_)?, Stream(_)?).
+procedure send_to_person_tagged(Key?, Stream(_)?, Stream(_)?).
 send_to_person_tagged(Id, [T|Cmds], Notifies) :-
     ground(Id?), ground(T?) |
     send_to_user([tagged(Id?, cmd(T?))]),
@@ -45,6 +45,6 @@ procedure sink(Stream(_)?).
 sink([_|Xs]) :- sink(Xs?).
 sink([]).
 
-procedure actor_dispatch(Constant?, Constant?, Channel(Stream(PersonNotify), Stream(PersonCmd))).
+procedure actor_dispatch(Key?, Constant?, Channel(Stream(PersonNotify), Stream(PersonCmd))).
 actor_dispatch(alice, 2, Ch) :- alice_p2(Ch?).
 actor_dispatch(bob, 2, Ch) :- bob_p2(Ch?).

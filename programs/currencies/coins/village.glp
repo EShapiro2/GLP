@@ -36,14 +36,14 @@
 %% play_ui.glp does for alice).  The app therefore shows that villager's screen
 %% as the market runs, while its scripted person answers the cards as before.
 
-imported procedure miniapp#coins(Constant?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
-imported procedure person#person(Constant?, Stream(Event)?, Stream(UserAnswer), Script?, Stream(ScreenContent)).
+imported procedure miniapp#coins(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
+imported procedure person#person(Key?, Stream(Event)?, Stream(UserAnswer), Script?, Stream(ScreenContent)).
 
 %% =============================================================================
 %% The scripts
 %% =============================================================================
 
-procedure script(Constant?, Script).
+procedure script(Key?, Script).
 script(alice, [mint(15), swap(bob, alice, 15, bob, 15),
                mint(15), swap(charlie, alice, 15, charlie, 15),
                swap(eve, bob, 10, frank, 4)]).
@@ -66,7 +66,7 @@ script(frank, [mint(18), accept(diana), mint(10), accept(eve), pay(diana, 3),
 exported procedure market.
 market :- market(none).
 
-exported procedure market_ui(Constant?).
+exported procedure market_ui(Key?).
 market_ui(V) :- market(V?).
 
 %% The market, with the villager named on the app's path, or none.
@@ -91,10 +91,10 @@ market(V) :-
 %% conversations, the scripted person on the other end of the channel, and its
 %% screen logged.  The villager on the app's path has its events sent to the
 %% user as well.
-exported procedure villager(Constant?, Script?, Stream(Conversation)?).
+exported procedure villager(Key?, Script?, Stream(Conversation)?).
 villager(Id, Script, Convs) :- villager(none, Id?, Script?, Convs?).
 
-procedure villager(Constant?, Constant?, Script?, Stream(Conversation)?).
+procedure villager(Constant?, Key?, Script?, Stream(Conversation)?).
 villager(V, Id, Script, Convs) :-
     V? =?= Id? |
     miniapp # coins(Id?, ch(Answers?, Events), Convs?),
@@ -114,6 +114,6 @@ tee([E|Es], [E?|Ps?], [E?|Us?]) :- ground(E?) | tee(Es?, Ps, Us).
 tee([], [], []).
 
 %% The screen messages, logged as tagged(Villager, Message).
-procedure log(Constant?, Stream(ScreenContent)?).
+procedure log(Key?, Stream(ScreenContent)?).
 log(Id, [M|Ms]) :- ground(M?) | send_to_user([tagged(Id?, M?)]), log(Id?, Ms?).
 log(_, []).

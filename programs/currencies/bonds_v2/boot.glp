@@ -19,10 +19,10 @@
 %% =============================================================================
 
 %% From agent.glp
-imported procedure agent#agent(Constant?, Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Stream(Bond)?, Constant?, Constant?).
+imported procedure agent#agent(Key?, Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Stream(Bond)?, Constant?, Constant?).
 
 %% From mediator.glp
-imported procedure mediator#ui_mediator(Constant?, AgentChannel?, PersonChannel?, Stream(PendingEntry)?, Constant?).
+imported procedure mediator#ui_mediator(Key?, AgentChannel?, PersonChannel?, Stream(PendingEntry)?, Constant?).
 
 %% From actors.glp — play actors
 imported procedure actors#alice_p1(ActorChannel?).
@@ -80,7 +80,7 @@ sink([]).
 %% SEND_TO_PERSON_TAGGED — Merge display streams, tag with agent ID
 %% =============================================================================
 
-procedure send_to_person_tagged(Constant?, Stream(PersonCmd)?, Stream(PersonNotify)?).
+procedure send_to_person_tagged(Key?, Stream(PersonCmd)?, Stream(PersonNotify)?).
 send_to_person_tagged(Id, [T|Cmds], Notifies) :-
     ground(Id?), ground(T?) |
     send_to_user([tagged(Id?, cmd(T?))]),
@@ -96,7 +96,7 @@ send_to_person_tagged(_, Cmds, []) :- sink(Cmds?).
 %% SEND_TO_PERSON_NARRATE — Emit narrative items as tagged output
 %% =============================================================================
 
-procedure send_to_person_narrate(Constant?, Stream(NarrativeItem)?).
+procedure send_to_person_narrate(Key?, Stream(NarrativeItem)?).
 
 send_to_person_narrate(Id, [friend(X)|Ns]) :-
     ground(Id?), ground(X?) |

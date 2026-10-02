@@ -18,17 +18,17 @@
 %% calendar: its date stands at 0, so a bond it mints matures on a date
 %% later than 0, and no bond of its own is mature by its date.
 
-imported procedure sovereign_agent#agent(Channel(Closed, Stream(AgentMsg))?, Constant?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?, Slot(Reply_agent_1)?, Slot(Reply_agent_2)?, Slot(Reply_agent_3)?, Slot(Reply_agent_4)?, Slot(Reply_agent_5)?, Slot(Reply_agent_6)?, Slot(Reply_agent_7)?, Slot(Reply_agent_8)?, Slot(Reply_agent_9)?, Slot(Reply_agent_10)?, Slot(Reply_agent_11)?, Slot(Reply_agent_12)?).
+imported procedure sovereign_agent#agent(Channel(Closed, Stream(AgentMsg))?, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?, Slot(Reply_agent_1)?, Slot(Reply_agent_2)?, Slot(Reply_agent_3)?, Slot(Reply_agent_4)?, Slot(Reply_agent_5)?, Slot(Reply_agent_6)?, Slot(Reply_agent_7)?, Slot(Reply_agent_8)?, Slot(Reply_agent_9)?, Slot(Reply_agent_10)?, Slot(Reply_agent_11)?, Slot(Reply_agent_12)?).
 imported procedure sovereign_agent#med(Channel(Stream(UserAnswer), Stream(Card))?, Channel(Stream(AgentMsg), Closed)?, PendingList?, Integer?).
 
 %% The mini-app the super-app activates: no clock, so no date ever advances.
-exported procedure sovereign(Constant?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
+exported procedure sovereign(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
 sovereign(Id, Ui, Convs) :- sovereign(Id?, Ui?, Convs?, []).
 
 %% The agent with its mediator: the agent starts with no holdings, date 0, no
 %% warranty, no acceptance, serial 1, no conversation and its screen; the
 %% mediator's cards and the screen go to the person as one stream of events.
-exported procedure sovereign(Constant?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?, Stream(Integer)?).
+exported procedure sovereign(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?, Stream(Integer)?).
 sovereign(Id, ch(Answers, Events?), Convs, Cal) :-
     ground(Id?) |
     sovereign_agent # agent(ch([], Asks), Id?, [], [], Convs?, Cal?, [user_output(Screen)], [], 0, [], [], 1,

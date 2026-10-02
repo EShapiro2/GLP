@@ -111,7 +111,7 @@ respond_transfer(offer_transfer(Kind, From, Given), Resp?, Ans?) :-
 %% counterparty; and its machine state --- holdings, date, warranties
 %% received, acceptances granted, and the serial its next instrument takes.
 
-exported procedure agent(Constant?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+exported procedure agent(Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
 
 %% --- Reactive: acts arriving from counterparties, on their conversations ---
 
@@ -399,7 +399,7 @@ agent(Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
 %% An arriving act, on the conversation it came on
 %% =============================================================================
 
-procedure on_act(PeerContent?, Constant?, Constant?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+procedure on_act(PeerContent?, Key?, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
 
 %% Pay at q, the issuer: q's own coins are taken, with no acceptance, and no
 %% date is read.
@@ -459,7 +459,7 @@ on_act(transfer(Kind, Given, Resp?), From, Id, UserIn, PeerIn, Convs, Cal, Outs,
 
 %% A payment of my own coins is taken; instruments that are not my coins are
 %% no payment of clause 5, and go back.
-procedure take_payment(Constant?, Constant?, Constant?, Stream(Instrument)?, PayResponse, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+procedure take_payment(Constant?, Key?, Key?, Stream(Instrument)?, PayResponse, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
 take_payment(yes, Id, From, Coins, pay_taken, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Coins?) |
     append_instruments(Holdings?, Coins?, Holdings1),
@@ -475,7 +475,7 @@ take_payment(no, Id, From, Coins, pay_returned(Coins?), UserIn, PeerIn, Convs, C
 %% A payout or a spend at its payee: the coins of issuer U in F, paid by P,
 %% are taken if every one is a U-coin in F and the payee holds as many of
 %% accepts(U, f), which that many are deleted; else they go back.
-procedure take_accepted(Constant?, Constant?, Constant?, Stream(Instrument)?, PayResponse, Constant?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+procedure take_accepted(Key?, Key?, Constant?, Stream(Instrument)?, PayResponse, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
 take_accepted(P, U, F, Coins, Resp?, Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Coins?), ground(As?) |
     issued_by(U?, F?, Coins?, Valid),
@@ -483,7 +483,7 @@ take_accepted(P, U, F, Coins, Resp?, Id, UserIn, PeerIn, Convs, Cal, Outs, Holdi
     count_acceptances(U?, F?, As?, 0, N),
     admit(Valid?, K?, N?, P?, U?, F?, Coins?, Resp, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, As?, Serial?).
 
-procedure admit(Constant?, Integer?, Integer?, Constant?, Constant?, Constant?, Stream(Instrument)?, PayResponse, Constant?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+procedure admit(Constant?, Integer?, Integer?, Key?, Key?, Constant?, Stream(Instrument)?, PayResponse, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
 admit(yes, K, N, P, U, F, Coins, pay_taken, Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     K? =< N? |
     delete_acceptances(U?, F?, K?, As?, As1),
@@ -499,7 +499,7 @@ admit(_, K, _, P, U, _, Coins, pay_returned(Coins?), Id, UserIn, PeerIn, Convs, 
 %% conversation with it, the payee's answer relayed to the payer and recorded
 %% in my log when it comes; with no conversation open, or coins not mine, it
 %% goes back.
-procedure countersign(Constant?, Constant?, Constant?, Constant?, Stream(Instrument)?, PayResponse, Constant?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+procedure countersign(Constant?, Key?, Key?, Constant?, Stream(Instrument)?, PayResponse, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
 countersign(yes, P, Q, F, Coins, Resp?, Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Q?) |
     has_peer(Q?, Outs?, Outs1, Known),
@@ -510,7 +510,7 @@ countersign(no, P, _, _, Coins, pay_returned(Coins?), Id, UserIn, PeerIn, Convs,
     show(refused_payment(P?, K?), Outs?, Outs1),
     agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
 
-procedure forward_spend(Constant?, Constant?, Constant?, Constant?, Stream(Instrument)?, PayResponse, Constant?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+procedure forward_spend(Constant?, Key?, Key?, Constant?, Stream(Instrument)?, PayResponse, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
 forward_spend(yes, P, Q, F, Coins, Resp?, Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Q?), ground(Coins?) |
     send_friend(Q?, msg(Id?, Q?, spent(P?, F?, Coins?, Resp1)), Outs?, Outs1),
@@ -524,7 +524,7 @@ forward_spend(no, _, Q, _, Coins, pay_returned(Coins?), Id, UserIn, PeerIn, Conv
 %% A presentation: my coin is taken back and the instrument named given, if
 %% held; else the coin goes back with the lots I hold; anything but my coin
 %% goes back.
-procedure fulfil(Instrument?, Constant?, Constant?, RedeemResponse, Constant?, Constant?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+procedure fulfil(Instrument?, Key?, Constant?, RedeemResponse, Key?, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
 fulfil(coin(I, F, S), R, D1, Resp?, Id, From, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     I? =?= Id? |
     take_instrument(R?, F?, D1?, Holdings?, Found, Rest),
@@ -534,7 +534,7 @@ fulfil(X, _, _, redeem_declined(X?), Id, From, UserIn, PeerIn, Convs, Cal, Outs,
     show(refused(From?), Outs?, Outs1),
     agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
 
-procedure give(Found?, Instrument?, Constant?, Constant?, RedeemResponse, Constant?, Constant?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+procedure give(Found?, Instrument?, Key?, Constant?, RedeemResponse, Key?, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
 give(found(X), Mine, R, D1, redeem_give(X?), Id, From, UserIn, PeerIn, Convs, Cal, Outs, Rest, Date, Ws, As, Serial) :-
     append_instruments(Rest?, [Mine?], Holdings1),
     show(presented(From?, R?, D1?), Outs?, Outs1),
@@ -552,7 +552,7 @@ give(not_found, Mine, R, D1, redeem_menu(Mine?, Menu?), Id, From, UserIn, PeerIn
 %% precede the response they are written into: a head output term must not
 %% read a variable a later head argument binds (engine defect, reported to
 %% IGLP 2026-09-03).
-procedure grant(Instrument?, Constant?, Integer?, Integer?, MatureResponse, Constant?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Stream(Warranty)?, Stream(Acceptance)?).
+procedure grant(Instrument?, Key?, Integer?, Integer?, MatureResponse, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Stream(Warranty)?, Stream(Acceptance)?).
 grant(bond(I, F, M, _), Id, Date, Serial, mature_give(coin(Id?, F?, Serial?), Date?), From, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Ws, As) :-
     I? =?= Id?, M? =< Date? |
     Serial1 := Serial? + 1,
@@ -568,7 +568,7 @@ grant(coin(I, F, S), Id, Date, Serial, mature_declined(coin(I?, F?, S?)), From, 
 
 %% An accepted swap is filled: the wanted instruments go and the offered ones
 %% come; wanted instruments not held decline it.
-procedure fill_swap(Constant?, Constant?, Constant?, SwapResponse, Stream(Instrument)?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+procedure fill_swap(Constant?, Key?, Key?, SwapResponse, Stream(Instrument)?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
 fill_swap(ok, Id, From, swap_accept(Give?), Give, Offered, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     append_instruments(Rest?, Offered?, Holdings1),
     show(swap_done(From?), Outs?, Outs1),
@@ -583,7 +583,7 @@ fill_swap(fail, Id, From, swap_decline(Offered?), Give, Offered, Rest, UserIn, P
 %% =============================================================================
 
 %% Accept: L acceptance atoms of U in F, if an instrument of U in F is held.
-procedure do_accept(Constant?, Constant?, Constant?, Constant?, Integer?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+procedure do_accept(Constant?, Key?, Key?, Constant?, Integer?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
 do_accept(yes, Id, U, F, L, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     add_acceptances(U?, F?, L?, As?, As1),
     show(accepted(U?, F?, L?), Outs?, Outs1),
@@ -593,7 +593,7 @@ do_accept(no, Id, U, F, _, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws,
     agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% Swap: the proposal, with the instruments given set aside until the answer.
-procedure propose_swap(Constant?, Constant?, Constant?, Lot?, Lot?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+procedure propose_swap(Constant?, Key?, Key?, Lot?, Lot?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
 propose_swap(ok, Id, Q, _, Want, Give, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     ground(Q?), ground(Want?), ground(Give?) |
     has_peer(Q?, Outs?, Outs1, Known),
@@ -605,7 +605,7 @@ propose_swap(fail, Id, _, lot(U, _, D, K), _, Give, Rest, UserIn, PeerIn, Convs,
 
 %% On the conversation with Q, holding the instruments given until Q answers;
 %% with no conversation open, the instruments stay.
-procedure send_swap(Constant?, Constant?, Constant?, Lot?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+procedure send_swap(Constant?, Key?, Key?, Lot?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
 send_swap(yes, Id, Q, Want, Give, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     ground(Q?) |
     send_friend(Q?, msg(Id?, Q?, swap(Want?, Give?, Resp)), Outs?, Outs1),
@@ -618,7 +618,7 @@ send_swap(no, Id, Q, _, Give, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, 
 
 %% A deposit, release or return: the proposal, with the instruments given set
 %% aside until the answer.
-procedure propose_transfer(Constant?, Kind?, Constant?, Constant?, Lot?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+procedure propose_transfer(Constant?, Kind?, Key?, Key?, Lot?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
 propose_transfer(ok, Kind, Id, Q, Lot, Give, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     ground(Kind?), ground(Q?), ground(Lot?), ground(Give?) |
     has_peer(Q?, Outs?, Outs1, Known),
@@ -630,7 +630,7 @@ propose_transfer(fail, _, Id, _, lot(U, _, D, K), Give, Rest, UserIn, PeerIn, Co
 
 %% On the conversation with Q; with no conversation open, the instruments
 %% stay.
-procedure send_transfer(Constant?, Kind?, Constant?, Constant?, Lot?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+procedure send_transfer(Constant?, Kind?, Key?, Key?, Lot?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
 send_transfer(yes, Kind, Id, Q, Lot, Give, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     ground(Kind?), ground(Q?) |
     send_friend(Q?, msg(Id?, Q?, transfer(Kind?, Give?, Resp)), Outs?, Outs1),
@@ -643,7 +643,7 @@ send_transfer(no, _, Id, Q, _, Give, Rest, UserIn, PeerIn, Convs, Cal, Outs, Dat
     agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Ws?, As?, Serial?).
 
 %% Pay: the coins go to Q, their issuer, set aside until Q answers.
-procedure do_pay(Constant?, Constant?, Constant?, Constant?, Integer?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+procedure do_pay(Constant?, Key?, Key?, Constant?, Integer?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
 do_pay(ok, Id, Q, _, K, Give, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     ground(Q?), ground(Give?) |
     has_peer(Q?, Outs?, Outs1, Known),
@@ -654,7 +654,7 @@ do_pay(fail, Id, Q, _, K, Give, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws
     agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Ws?, As?, Serial?).
 
 %% Payout: my own coins go to Q, set aside until Q answers.
-procedure do_payout(Constant?, Constant?, Constant?, Constant?, Integer?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+procedure do_payout(Constant?, Key?, Key?, Constant?, Integer?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
 do_payout(ok, Id, Q, F, K, Give, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     ground(Q?), ground(Give?) |
     has_peer(Q?, Outs?, Outs1, Known),
@@ -666,7 +666,7 @@ do_payout(fail, Id, _, _, K, Give, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date,
     agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Ws?, As?, Serial?).
 
 %% Spend: the coins of S go to Q through S, set aside until Q answers.
-procedure do_spend(Constant?, Constant?, Constant?, Constant?, Constant?, Integer?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+procedure do_spend(Constant?, Key?, Key?, Key?, Constant?, Integer?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
 do_spend(ok, Id, Q, S, F, K, Give, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     ground(Q?), ground(S?), ground(Give?) |
     has_peer(S?, Outs?, Outs1, Known),
@@ -680,7 +680,7 @@ do_spend(fail, Id, _, S, _, K, Give, Rest, UserIn, PeerIn, Convs, Cal, Outs, Dat
 %% --- the payee, or for a spend the issuer --- and its answer, when it comes,
 %% shows Taken or brings the coins back for payee Q; with no conversation
 %% open, the coins stay.
-procedure send_pay(Constant?, Constant?, Constant?, Constant?, PeerContent?, PayResponse?, ScreenContent?, ScreenContent?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+procedure send_pay(Constant?, Key?, Key?, Key?, PeerContent?, PayResponse?, ScreenContent?, ScreenContent?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
 send_pay(yes, Id, To, Q, Act, Resp, Paying, Taken, _, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     ground(To?) |
     send_friend(To?, msg(Id?, To?, Act?), Outs?, Outs1),
@@ -693,7 +693,7 @@ send_pay(no, Id, To, _, _, _, _, _, Give, Rest, UserIn, PeerIn, Convs, Cal, Outs
     agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Ws?, As?, Serial?).
 
 %% Redeem: the coin is presented to Q, with the issuer and due wanted.
-procedure do_redeem(Found?, Constant?, Constant?, Constant?, Constant?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+procedure do_redeem(Found?, Key?, Key?, Key?, Constant?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
 do_redeem(found(Coin), Id, Q, R, D1, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     ground(Q?) |
     has_peer(Q?, Outs?, Outs1, Known),
@@ -703,7 +703,7 @@ do_redeem(not_found, Id, Q, _, _, Holdings, UserIn, PeerIn, Convs, Cal, Outs, Da
     agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% On the conversation with Q; with no conversation open, the coin stays.
-procedure send_redeem(Constant?, Constant?, Constant?, Constant?, Constant?, Instrument?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+procedure send_redeem(Constant?, Key?, Key?, Key?, Constant?, Instrument?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
 send_redeem(yes, Id, Q, R, D1, Coin, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     ground(Q?) |
     send_friend(Q?, msg(Id?, Q?, redeem(Coin?, R?, D1?, Resp)), Outs?, Outs1),
@@ -715,7 +715,7 @@ send_redeem(no, Id, Q, _, _, Coin, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date,
     agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Ws?, As?, Serial?).
 
 %% Mature: the bond is presented to Q.
-procedure do_mature(Found?, Constant?, Constant?, Integer?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+procedure do_mature(Found?, Key?, Key?, Integer?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
 do_mature(found(Bond), Id, Q, D, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     ground(Q?) |
     has_peer(Q?, Outs?, Outs1, Known),
@@ -725,7 +725,7 @@ do_mature(not_found, Id, Q, D, Holdings, UserIn, PeerIn, Convs, Cal, Outs, Date,
     agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% On the conversation with Q; with no conversation open, the bond stays.
-procedure send_mature(Constant?, Constant?, Constant?, Integer?, Instrument?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+procedure send_mature(Constant?, Key?, Key?, Integer?, Instrument?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
 send_mature(yes, Id, Q, D, Bond, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     ground(Q?) |
     send_friend(Q?, msg(Id?, Q?, mature(Bond?, Resp)), Outs?, Outs1),
@@ -737,7 +737,7 @@ send_mature(no, Id, Q, _, Bond, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws
     agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Ws?, As?, Serial?).
 
 %% After a change of holdings: the screen shows them, and the agent continues.
-procedure after_change(Constant?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+procedure after_change(Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
 after_change(Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Holdings?) |
     tally(Holdings?, [], Lots),
@@ -746,7 +746,7 @@ after_change(Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Seria
 
 %% After a change of acceptances, and of holdings with it: the screen shows
 %% both, and the agent continues.
-procedure after_accepting(Constant?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+procedure after_accepting(Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
 after_accepting(Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(As?) |
     tally_acceptances(As?, [], Tally),
@@ -755,7 +755,7 @@ after_accepting(Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Se
 
 %% After a change of acceptances alone: the screen shows them, and the agent
 %% continues.
-procedure acceptances_changed(Constant?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+procedure acceptances_changed(Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
 acceptances_changed(Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(As?) |
     tally_acceptances(As?, [], Tally),

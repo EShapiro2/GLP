@@ -9,12 +9,12 @@
 %% =============================================================================
 
 %% Bond: bond(Issuer, Maturity, Serial)
-Bond     ::= bond(Constant, Constant, Constant).
+Bond     ::= bond(Key, Constant, Constant).
 BondList ::= [] ; [Bond | BondList].
 
 %% Transaction records in the issuer's log
 TxRecord ::= tx_mint(Constant, Constant)             %% tx_mint(K, Maturity)
-            ; tx_pay(Constant, Constant, Bond).       %% tx_pay(From, To, Coin)
+            ; tx_pay(Key, Key, Bond).       %% tx_pay(From, To, Coin)
 
 %% Issuer payload: numbered transaction
 IssuerPayload ::= tx(Constant, TxRecord).               %% tx(Counter, TxRecord)
@@ -47,7 +47,7 @@ AckStreams ::= [] ; [Stream(AckMsg) | AckStreams].
 %% Finality? positions carry reply variable references (unbound writers
 %% held by the requester; the issuer binds them upon custodian ack).
 ApprovalReq ::= approve_mint(Constant, Constant, Finality?)
-              ; approve_pay(Constant, Constant, Bond, Finality?, Finality?).
+              ; approve_pay(Key, Key, Bond, Finality?, Finality?).
 
 %% Pending finality: counter + reply variable references stripped from
 %% approval requests, awaiting custodian acknowledgment.

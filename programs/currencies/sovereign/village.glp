@@ -51,14 +51,14 @@
 %% Entry points: market/0, exported by self.glp as village/0; and
 %% sovereign_market/0, exported as sovereign_village/0.
 
-imported procedure miniapp#sovereign(Constant?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?, Stream(Integer)?).
-imported procedure person#person(Constant?, Stream(Event)?, Stream(UserAnswer), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
+imported procedure miniapp#sovereign(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?, Stream(Integer)?).
+imported procedure person#person(Key?, Stream(Event)?, Stream(UserAnswer), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
 
 %% =============================================================================
 %% The scripts
 %% =============================================================================
 
-procedure script(Constant?, Script).
+procedure script(Key?, Script).
 script(alice, [mint(usd, 15), swap(bob, usd, alice, now, 15, bob, now, 15),
                mint(usd, 15), swap(charlie, usd, alice, now, 15, charlie, now, 15),
                swap(eve, usd, bob, now, 10, frank, now, 4)]).
@@ -190,7 +190,7 @@ sovereign_market :-
 %% accepting them; the household taking one along the chain, accepting them,
 %% paying it to its issuer for a fiat unit, taking the payout and spending at
 %% Bob's; and the second escrow, deposited and returned.
-procedure sov_script(Constant?, Script).
+procedure sov_script(Key?, Script).
 sov_script(cb, [mint(usd, 30), swap(diana, usd, cb, now, 10, diana, now, 10),
                 await(received(frank, 1)), fiat(frank, 1),
                 payout(frank, usd, 4)]).
@@ -224,14 +224,14 @@ sov_script(P, S?) :- otherwise | script(P?, S).
 %% One villager: the mini-app, activated with its channel to the person, its
 %% conversations and its calendar; the scripted person on the other end of the
 %% channel, under no agreement; and its screen logged.
-exported procedure villager(Constant?, Script?, Stream(Conversation)?).
+exported procedure villager(Key?, Script?, Stream(Conversation)?).
 villager(Id, Script, Convs) :-
     ground(Id?) |
     escrow_agent(Id?, Script?, none, Convs?).
 
 %% A party under an agreement: the same, with the escrow program answering its
 %% transfer cards and willing its releases and returns.
-exported procedure escrow_agent(Constant?, Script?, Agreement?, Stream(Conversation)?).
+exported procedure escrow_agent(Key?, Script?, Agreement?, Stream(Conversation)?).
 escrow_agent(Id, Script, Ag, Convs) :-
     ground(Id?) |
     miniapp # sovereign(Id?, ch(Answers?, Events), Convs?, Cal?),
@@ -239,6 +239,6 @@ escrow_agent(Id, Script, Ag, Convs) :-
     log(Id?, Screen?).
 
 %% The screen messages, logged as tagged(Party, Message).
-procedure log(Constant?, Stream(ScreenContent)?).
+procedure log(Key?, Stream(ScreenContent)?).
 log(Id, [M|Ms]) :- ground(M?) | send_to_user([tagged(Id?, M?)]), log(Id?, Ms?).
 log(_, []).
