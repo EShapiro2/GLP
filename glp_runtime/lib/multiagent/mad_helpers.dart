@@ -400,49 +400,87 @@ Term globalizeTermWithResult(
   return _substituteGlobalNames(term, varToGlobalName);
 }
 
-Term _substituteGlobalNames(Term term, Map<int, GlobalName> mapping) {
-  if (term is VarRef) {
-    final gn = mapping[term.addr];
-    if (gn != null) {
-      final functor = gn.isWriter ? '_w' : '_r';
-      return StructTerm(functor, [ConstTerm(gn.agent), ConstTerm(gn.index)]);
+Term _substituteGlobalNames(Term term, Map<int, GlobalName> mapping) =>
+    _rebuild(term, (t) {
+      if (t is VarRef) {
+        final gn = mapping[t.addr];
+        if (gn != null) {
+          final functor = gn.isWriter ? '_w' : '_r';
+          return StructTerm(
+              functor, [ConstTerm(gn.agent), ConstTerm(gn.index)]);
+        }
+        return t;
+      }
+      return t is StructTerm ? null : t; // ConstTerm unchanged
+    });
+
+/// [term] rebuilt: each subterm for which [leafOf] gives a term replaced by
+/// it, and each other subterm, a structure, rebuilt over its arguments rebuilt
+/// left to right.  The walk keeps a stack of its own, a frame for each
+/// structure being rebuilt: until 2026-10-02 the substitutions recursed once
+/// a structure argument, and a cold call carrying a long list overflowed the
+/// Dart stack at its sender's globalization and its receiver's localization.
+Term _rebuild(Term term, Term? Function(Term) leafOf) {
+  final first = leafOf(term);
+  if (first != null) return first;
+  // Each frame: a structure, and its arguments rebuilt so far.
+  final frames = <(StructTerm, List<Term>)>[(term as StructTerm, <Term>[])];
+  Term? built; // the structure just rebuilt, for its parent
+  while (true) {
+    final (source, args) = frames.last;
+    if (built != null) {
+      args.add(built);
+      built = null;
     }
-    return term;
-  } else if (term is StructTerm) {
-    final newArgs = term.args.map((a) => _substituteGlobalNames(a, mapping)).toList();
-    return StructTerm(term.functor, newArgs);
+    if (args.length == source.args.length) {
+      frames.removeLast();
+      final s = StructTerm(source.functor, args);
+      if (frames.isEmpty) return s;
+      built = s;
+      continue;
+    }
+    final arg = source.args[args.length];
+    final leaf = leafOf(arg);
+    if (leaf != null) {
+      args.add(leaf);
+    } else {
+      frames.add((arg as StructTerm, <Term>[]));
+    }
   }
-  return term; // ConstTerm unchanged
 }
 
 /// Extract global name structures from a term
 ///
 /// Finds all _w(agent, index) and _r(agent, index) structures in the term.
-/// Returns the list of GlobalNames in order of occurrence.
+/// Returns the list of GlobalNames in order of occurrence: depth first and
+/// left to right, the order Localize takes them in (Definition Localize: "For
+/// each global name in T_p↑").  The walk keeps a stack of its own; until
+/// 2026-10-02 it recursed once a structure argument and overflowed the Dart
+/// stack on a long list.
 List<GlobalName> extractGlobalNames(Term term) {
   final result = <GlobalName>[];
-  _extractGlobalNamesRecursive(term, result);
-  return result;
-}
-
-void _extractGlobalNamesRecursive(Term term, List<GlobalName> result) {
-  if (term is StructTerm) {
-    if ((term.functor == '_w' || term.functor == '_r') && term.args.length == 2) {
-      final agentArg = term.args[0];
-      final indexArg = term.args[1];
+  final pending = <Term>[term];
+  while (pending.isNotEmpty) {
+    final t = pending.removeLast();
+    if (t is! StructTerm) continue;
+    if ((t.functor == '_w' || t.functor == '_r') && t.args.length == 2) {
+      final agentArg = t.args[0];
+      final indexArg = t.args[1];
       if (agentArg is ConstTerm && indexArg is ConstTerm) {
         final agent = agentArg.value as String;
         final index = (indexArg.value as num).toInt();
-        result.add(term.functor == '_w'
+        result.add(t.functor == '_w'
             ? GlobalName.writer(agent, index)
             : GlobalName.reader(agent, index));
       }
     } else {
-      for (final arg in term.args) {
-        _extractGlobalNamesRecursive(arg, result);
+      // The first argument is met next, so it goes on the stack last.
+      for (var i = t.args.length - 1; i >= 0; i--) {
+        pending.add(t.args[i]);
       }
     }
   }
+  return result;
 }
 
 /// Transform a term by replacing global names with local variables
@@ -465,22 +503,20 @@ Term localizeTermWithResult(
   return _substituteLocalVars(term, globalNameToLocal);
 }
 
-Term _substituteLocalVars(Term term, Map<String, int> mapping) {
-  if (term is StructTerm) {
-    if ((term.functor == '_w' || term.functor == '_r') && term.args.length == 2) {
-      final agentArg = term.args[0];
-      final indexArg = term.args[1];
-      if (agentArg is ConstTerm && indexArg is ConstTerm) {
-        final type = term.functor == '_w' ? 'writer' : 'reader';
-        final key = '$type:${agentArg.value}:${indexArg.value}';
-        final localAddr = mapping[key];
-        if (localAddr != null) {
-          return VarRef(localAddr);
+Term _substituteLocalVars(Term term, Map<String, int> mapping) =>
+    _rebuild(term, (t) {
+      if (t is! StructTerm) return t;
+      if ((t.functor == '_w' || t.functor == '_r') && t.args.length == 2) {
+        final agentArg = t.args[0];
+        final indexArg = t.args[1];
+        if (agentArg is ConstTerm && indexArg is ConstTerm) {
+          final type = t.functor == '_w' ? 'writer' : 'reader';
+          final key = '$type:${agentArg.value}:${indexArg.value}';
+          final localAddr = mapping[key];
+          if (localAddr != null) {
+            return VarRef(localAddr);
+          }
         }
       }
-    }
-    final newArgs = term.args.map((a) => _substituteLocalVars(a, mapping)).toList();
-    return StructTerm(term.functor, newArgs);
-  }
-  return term;
-}
+      return null; // a structure, rebuilt over its arguments
+    });

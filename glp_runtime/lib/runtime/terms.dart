@@ -11,8 +11,43 @@ class StructTerm implements Term {
   final String functor;
   final List<Term> args;
   StructTerm(this.functor, this.args);
+
+  /// `functor(arg,...)`, each argument as its own toString gives it.  The
+  /// text is written with a stack of its own, a frame for each structure
+  /// being written, piece by piece in the order `'$functor(${args.join(",")})'`
+  /// wrote it: until 2026-10-02 that recursed once a structure argument, and
+  /// the madGLP traces, whose text is made of every term a message carries
+  /// whether a trace is on or not, overflowed the Dart stack on a long list.
   @override
-  String toString() => '$functor(${args.join(",")})';
+  String toString() {
+    final out = StringBuffer();
+    // Each frame: a structure being written, and its next argument's index.
+    final frames = <(StructTerm, int)>[];
+    void open(StructTerm s) {
+      out
+        ..write(s.functor)
+        ..write('(');
+      frames.add((s, 0));
+    }
+
+    open(this);
+    while (frames.isNotEmpty) {
+      final (s, i) = frames.removeLast();
+      if (i == s.args.length) {
+        out.write(')');
+        continue;
+      }
+      if (i > 0) out.write(',');
+      frames.add((s, i + 1));
+      final a = s.args[i];
+      if (a is StructTerm) {
+        open(a);
+      } else {
+        out.write(a);
+      }
+    }
+    return out.toString();
+  }
 }
 
 /// Variable reference - holds heap address only

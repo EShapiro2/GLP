@@ -198,7 +198,7 @@ class MadContext {
       extractVariables: (val) {
         final vars = <TermVar>[];
         if (val is Term) {
-          _extractTermVarsRecursive(val, vars);
+          _extractTermVars(val, vars);
         }
         return vars;
       },
@@ -293,23 +293,34 @@ class MadContext {
   /// Extract TermVars from a term for globalization
   ///
   /// Each TermVar carries both the writer and reader addresses of its pair,
-  /// looked up via the heap's cross-pointers.
-  void _extractTermVarsRecursive(Term term, List<TermVar> result) {
-    if (term is VarRef) {
-      final isReader = runtime.heap.isReader(term.addr);
-      if (isReader) {
-        final writerAddr = runtime.heap.tryWriterForReader(term.addr);
-        result.add(TermVar.reader(term.addr, writerAddr: writerAddr ?? term.addr));
-      } else {
-        final readerAddr = runtime.heap.pairedReaderAddr(term.addr);
-        result.add(TermVar.writer(term.addr, readerAddr: readerAddr ?? term.addr));
+  /// looked up via the heap's cross-pointers.  The variables are met in the
+  /// order the recursion this replaces met them, depth first and left to
+  /// right, which is the order Globalize allocates their indices in
+  /// (Definition Globalize: "For each variable Y occurring in T ... allocate
+  /// the next index i"); the walk keeps a stack of its own, as until
+  /// 2026-10-02 it recursed once a structure argument, and a cold call
+  /// carrying a long list overflowed the Dart stack.
+  void _extractTermVars(Term term, List<TermVar> result) {
+    final pending = <Term>[term];
+    while (pending.isNotEmpty) {
+      final t = pending.removeLast();
+      if (t is VarRef) {
+        final isReader = runtime.heap.isReader(t.addr);
+        if (isReader) {
+          final writerAddr = runtime.heap.tryWriterForReader(t.addr);
+          result.add(TermVar.reader(t.addr, writerAddr: writerAddr ?? t.addr));
+        } else {
+          result.add(TermVar.writer(t.addr,
+              readerAddr: runtime.heap.pairedReaderAddr(t.addr)));
+        }
+      } else if (t is StructTerm) {
+        // The first argument is met next, so it goes on the stack last.
+        for (var i = t.args.length - 1; i >= 0; i--) {
+          pending.add(t.args[i]);
+        }
       }
-    } else if (term is StructTerm) {
-      for (final arg in term.args) {
-        _extractTermVarsRecursive(arg, result);
-      }
+      // ConstTerm has no variables
     }
-    // ConstTerm has no variables
   }
 
   /// Register global_send goals from GlobalSendSpawn info
@@ -1165,7 +1176,7 @@ class MadContext {
   /// onBind callbacks for writers so assignments can be routed.
   void exportTerm(Term term) {
     final vars = <TermVar>[];
-    _extractTermVarsRecursive(term, vars);
+    _extractTermVars(term, vars);
 
     // Register onBind callbacks for any writers in the term
     for (final v in vars) {
@@ -1214,7 +1225,7 @@ class MadContext {
 
     // Extract variables from the term for globalization
     final vars = <TermVar>[];
-    _extractTermVarsRecursive(term, vars);
+    _extractTermVars(term, vars);
     _trace('[MAD $agentId] send: found ${vars.length} variables in term');
 
     // Globalize the term for the destination agent

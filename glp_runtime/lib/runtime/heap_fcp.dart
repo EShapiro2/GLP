@@ -926,10 +926,51 @@ class HeapFCP {
   /// This helper converts any Term to a heap-stored VarRef:
   /// - VarRef: already on heap, return the address
   /// - ConstTerm: allocate a ValueTag cell containing the constant
-  /// - StructTerm: recursively store args, allocate ValueTag cell with VarRef args
+  /// - StructTerm: store its args, then allocate a ValueTag cell with VarRef
+  ///   args
+  ///
+  /// The walk keeps a stack of its own, a frame for each structure being
+  /// stored, and allocates in the order the recursion it replaces did: each
+  /// argument's cells, left to right, before its structure's own cell.  Until
+  /// 2026-10-02 it recursed once a structure argument, and a list of 50,000
+  /// elements overflowed the Dart stack (long_list_walks_test; GLP #3 Cowork,
+  /// 2026-10-02 20:58 UTC, answering Integration's 19:05 UTC Q3:
+  /// "storeTermOnHeap and termToWire walk with a stack of their own").
   ///
   /// Returns the heap address suitable for use in CallEnv via VarRef(addr).
   int storeTermOnHeap(Term term) {
+    if (term is! StructTerm) return _storeLeafOnHeap(term);
+    // Each frame: a structure, and the addresses of its arguments stored so
+    // far, as VarRefs.
+    final frames = <(StructTerm, List<Term>)>[(term, <Term>[])];
+    int? stored; // the address of the structure just stored, for its parent
+    while (true) {
+      final (source, heapArgs) = frames.last;
+      if (stored != null) {
+        heapArgs.add(VarRef(stored));
+        stored = null;
+      }
+      if (heapArgs.length == source.args.length) {
+        frames.removeLast();
+        // Allocate a ValueTag cell containing the StructTerm with VarRef args
+        final addr = HP++;
+        cells.add(
+            HeapCell(StructTerm(source.functor, heapArgs), CellTag.ValueTag));
+        if (frames.isEmpty) return addr;
+        stored = addr;
+        continue;
+      }
+      final arg = source.args[heapArgs.length];
+      if (arg is StructTerm) {
+        frames.add((arg, <Term>[]));
+      } else {
+        heapArgs.add(VarRef(_storeLeafOnHeap(arg)));
+      }
+    }
+  }
+
+  /// [storeTermOnHeap] of a term that is not a structure.
+  int _storeLeafOnHeap(Term term) {
     if (term is VarRef) {
       // Already on heap
       return term.addr;
@@ -939,19 +980,6 @@ class HeapFCP {
       // Allocate a ValueTag cell containing the constant
       final addr = HP++;
       cells.add(HeapCell(term, CellTag.ValueTag));
-      return addr;
-    }
-
-    if (term is StructTerm) {
-      // Recursively store all args on heap, creating VarRef args
-      final heapArgs = <Term>[];
-      for (final arg in term.args) {
-        final argAddr = storeTermOnHeap(arg);
-        heapArgs.add(VarRef(argAddr));
-      }
-      // Allocate a ValueTag cell containing the StructTerm with VarRef args
-      final addr = HP++;
-      cells.add(HeapCell(StructTerm(term.functor, heapArgs), CellTag.ValueTag));
       return addr;
     }
 

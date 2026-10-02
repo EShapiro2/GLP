@@ -109,7 +109,51 @@ class PayloadCodec {
 
   /// Map a runtime [Term] to a [WireTerm]. Global-name structures `_w(p,i)` /
   /// `_r(p,i)` become tag-2 variables; all other structures stay structures.
+  ///
+  /// The walk keeps a stack of its own, a frame for each structure being
+  /// mapped, and takes each structure's arguments left to right, as the
+  /// recursion it replaces did, so a term's encoding is the same byte for
+  /// byte.  Until 2026-10-02 it recursed once a structure argument, and a
+  /// nesting 2,000 deep overflowed the Dart stack (dart run, at f69ae04b), a
+  /// list being as deep as it is long (GLP #3 Cowork, 2026-10-02 20:58 UTC,
+  /// answering Integration's 19:05 UTC Q3: "storeTermOnHeap and termToWire
+  /// walk with a stack of their own").
   static WireTerm termToWire(Term term) {
+    final leaf = _leafToWire(term);
+    if (leaf != null) return leaf;
+    // Each frame: a structure, and its arguments mapped so far.
+    final frames = <(StructTerm, List<WireTerm>)>[
+      (term as StructTerm, <WireTerm>[])
+    ];
+    WireTerm? mapped; // the structure just mapped, for its parent
+    while (true) {
+      final (source, args) = frames.last;
+      if (mapped != null) {
+        args.add(mapped);
+        mapped = null;
+      }
+      if (args.length == source.args.length) {
+        frames.removeLast();
+        final w = WStruct(source.functor, args);
+        if (frames.isEmpty) return w;
+        mapped = w;
+        continue;
+      }
+      final arg = source.args[args.length];
+      final l = _leafToWire(arg);
+      if (l != null) {
+        args.add(l);
+      } else {
+        frames.add((arg as StructTerm, <WireTerm>[]));
+      }
+    }
+  }
+
+  /// [termToWire] of [term] where it maps without descending: a constant, a
+  /// module, or a global-name structure; null for any other structure, whose
+  /// arguments are mapped in turn.  A variable, or a term of any other kind,
+  /// is refused.
+  static WireTerm? _leafToWire(Term term) {
     if (term is ConstTerm) {
       return WConst(_constToWire(term.value));
     } else if (term is ModuleTerm) {
@@ -117,9 +161,7 @@ class PayloadCodec {
       // bytes — the form in which compiled programs ship.
       return WConst(WModule((term.artefact as Artefact).toBytes()));
     } else if (term is StructTerm) {
-      final gn = _asGlobalName(term);
-      if (gn != null) return gn;
-      return WStruct(term.functor, term.args.map(termToWire).toList());
+      return _asGlobalName(term);
     } else if (term is VarRef) {
       throw WireFormatException(
           'non-globalized VarRef on the wire: @${term.addr} '
@@ -132,7 +174,40 @@ class PayloadCodec {
 
   /// Map a [WireTerm] back to a runtime [Term]. Tag-2 variables become
   /// `_w(p,i)` / `_r(p,i)` structures.
+  ///
+  /// The walk keeps a stack of its own, as [termToWire] does, and builds each
+  /// structure over its arguments mapped left to right; until 2026-10-02 it
+  /// recursed once a structure argument and overflowed the Dart stack on a
+  /// long list.
   static Term wireToTerm(WireTerm w) {
+    if (w is! WStruct) return _leafToTerm(w);
+    // Each frame: a structure, and its arguments mapped so far.
+    final frames = <(WStruct, List<Term>)>[(w, <Term>[])];
+    Term? mapped; // the structure just mapped, for its parent
+    while (true) {
+      final (source, args) = frames.last;
+      if (mapped != null) {
+        args.add(mapped);
+        mapped = null;
+      }
+      if (args.length == source.args.length) {
+        frames.removeLast();
+        final t = StructTerm(source.functor, args);
+        if (frames.isEmpty) return t;
+        mapped = t;
+        continue;
+      }
+      final arg = source.args[args.length];
+      if (arg is WStruct) {
+        frames.add((arg, <Term>[]));
+      } else {
+        args.add(_leafToTerm(arg));
+      }
+    }
+  }
+
+  /// [wireToTerm] of a constant or a variable.
+  static Term _leafToTerm(WireTerm w) {
     switch (w) {
       case WConst(:final constant):
         if (constant is WModule) {
@@ -145,8 +220,8 @@ class PayloadCodec {
         final functor = isReader ? '_r' : '_w';
         return StructTerm(
             functor, [ConstTerm(w.agentString), ConstTerm(index)]);
-      case WStruct(:final functor, :final args):
-        return StructTerm(functor, args.map(wireToTerm).toList());
+      case WStruct():
+        throw ArgumentError('a structure is mapped by wireToTerm, not here');
     }
   }
 
