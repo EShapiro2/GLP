@@ -16,6 +16,7 @@
 import 'dart:io';
 
 import 'package:test/test.dart';
+import 'package:glp_runtime/compiler/ast.dart' show UnderscoreTerm;
 import 'package:glp_runtime/compiler/error.dart';
 import 'package:glp_runtime/vglp/canonical.dart';
 import 'package:glp_runtime/vglp/program_compilation.dart'
@@ -146,6 +147,33 @@ ask1(_).
       expect(c.volitional.single.guardedName, 'ask1_1');
       expect(c.source, contains("ask(S1) :- construct('T?', X), ask1_1(S1?, X?)."));
       expect(c.source, contains('ask1_1(N, t) :- ground(N?) | ask1(N?).'));
+    });
+
+    test('_? at a produced head position is emitted _?, TGLP\'s anonymous '
+        'output, in a clause of a volitional procedure and in an ordinary '
+        'one', () {
+      final c = compileCanonical('''
+T ::= t.
+procedure (T?)*p(Integer?, Integer).
+(t)*p(_, _?).
+procedure q(Integer?, Integer).
+q(_, _?).
+''');
+      expect(c.source, contains('p1(_, _?, t).'));
+      expect(c.source, contains('q(_, _?).'));
+      for (final name in ['p1', 'q']) {
+        final head = c.module.procedures
+            .firstWhere((p) => p.name == name)
+            .clauses
+            .single
+            .head;
+        expect(head.args[0],
+            isA<UnderscoreTerm>().having((u) => u.isReader, 'isReader', isFalse),
+            reason: name);
+        expect(head.args[1],
+            isA<UnderscoreTerm>().having((u) => u.isReader, 'isReader', isTrue),
+            reason: name);
+      }
     });
 
     group('the anonymous variable as the interactive term, by the mode of '

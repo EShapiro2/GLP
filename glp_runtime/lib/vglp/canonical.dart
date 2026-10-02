@@ -537,10 +537,7 @@ void _checkNoAnonymousOutput(
 String _asWritten(Clause c, VolitionalProcedure v) {
   final printer = SourcePrinter();
   final args = c.head.args;
-  final a = args.last;
-  final term = a is UnderscoreTerm
-      ? (a.isReader ? '_?' : '_')
-      : printer.printTerm(a);
+  final term = printer.printTerm(args.last);
   final rest = args.sublist(0, args.length - 1).map(printer.printTerm);
   return '($term)*${v.name}${rest.isEmpty ? '' : '(${rest.join(', ')})'}';
 }
@@ -738,13 +735,17 @@ String printDeclaration(ProcDecl d) {
 
 /// GLP source from the AST, a constant as the lexer reads it back: an atom
 /// bare where it can be, else in single quotes (`'Menu?'`), and a string
-/// literal, whose value carries its double quotes, as it was written.
+/// literal, whose value carries its double quotes, as it was written; and the
+/// anonymous variable as it was written, `_`, or `_?` at a produced head
+/// position, TGLP's anonymous output (TGLP, "Anonymous variables"), which
+/// GlpPrinter prints `_`.
 class SourcePrinter extends GlpPrinter {
   @override
   String printTerm(Term term) {
     if (term is ConstTerm && term.value is String) {
       return constantSource(term.value as String);
     }
+    if (term is UnderscoreTerm) return term.isReader ? '_?' : '_';
     return super.printTerm(term);
   }
 }
