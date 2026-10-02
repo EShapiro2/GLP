@@ -132,7 +132,7 @@ escrow_agent(Id, Script, Ag, NetIn, NetOut?) :-
     bonds_agent # agent(ch([], Asks), Id?, [], NetIn?, Cal?,
                         [user_output(Screen), net_output(NetOut)], [], 0, [], 1,
                         none, none, none, none, none, none, none, none, none),
-    bonds_agent # med(ch(Answers?, Cards), ch(Asks?, []), [], 0),
+    bonds_agent # med(ch(Answers?, Cards), ch(Asks?, _), [], 0),
     merge_events(Cards?, Screen?, Events),
     person(Id?, Events?, Answers, Cal, Script?, [],
            open(no_card, no_card, no_card, no_card, no_card, no_card, no_card, no_card, no_card),
