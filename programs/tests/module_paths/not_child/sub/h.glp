@@ -1,0 +1,2 @@
+exported procedure run(Integer).
+run(1).

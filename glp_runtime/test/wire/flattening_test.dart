@@ -4,6 +4,11 @@
 /// Determinism (two builds equal), stability (editing unreachable code does not
 /// change h(M) — it is pruned by DCE before printing), sensitivity (editing a
 /// reachable clause does).
+///
+/// The print names every procedure by its module's path from the root (TGLP
+/// modules.tex, Compilation, third step), so the flattens compared are of one
+/// project, edited in place between them: the same source at another path is
+/// another print.
 library;
 
 import 'dart:io';
@@ -26,9 +31,13 @@ dead(X, Y?) :- $deadBody.
 
 Directory _project(String source) {
   final dir = Directory.systemTemp.createTempSync('glp_flatten_');
-  File('${dir.path}/main.glp').writeAsStringSync(source);
+  _edit(dir, source);
   return dir;
 }
+
+/// [dir]'s main.glp rewritten to [source].
+void _edit(Directory dir, String source) =>
+    File('${dir.path}/main.glp').writeAsStringSync(source);
 
 void main() {
   group('deterministic flattening + h(M)', () {
@@ -48,28 +57,26 @@ void main() {
     });
 
     test('stability: editing unreachable code does not change h(M)', () {
-      final d1 = _project(_src(helperBody: 'Y := X? + 1', deadBody: 'Y := X? + 99'));
-      final d2 = _project(_src(helperBody: 'Y := X? + 1', deadBody: 'Y := X? + 12345'));
+      final d = _project(_src(helperBody: 'Y := X? + 1', deadBody: 'Y := X? + 99'));
       try {
-        final h1 = flattenProject(d1.path, rootSelfGlpPath: _rootSelf).hM;
-        final h2 = flattenProject(d2.path, rootSelfGlpPath: _rootSelf).hM;
+        final h1 = flattenProject(d.path, rootSelfGlpPath: _rootSelf).hM;
+        _edit(d, _src(helperBody: 'Y := X? + 1', deadBody: 'Y := X? + 12345'));
+        final h2 = flattenProject(d.path, rootSelfGlpPath: _rootSelf).hM;
         expect(h2, h1, reason: 'dead/2 is pruned, so its edit is invisible to h(M)');
       } finally {
-        d1.deleteSync(recursive: true);
-        d2.deleteSync(recursive: true);
+        d.deleteSync(recursive: true);
       }
     });
 
     test('sensitivity: editing a reachable clause changes h(M)', () {
-      final d1 = _project(_src(helperBody: 'Y := X? + 1', deadBody: 'Y := X? + 99'));
-      final d2 = _project(_src(helperBody: 'Y := X? + 2', deadBody: 'Y := X? + 99'));
+      final d = _project(_src(helperBody: 'Y := X? + 1', deadBody: 'Y := X? + 99'));
       try {
-        final h1 = flattenProject(d1.path, rootSelfGlpPath: _rootSelf).hM;
-        final h2 = flattenProject(d2.path, rootSelfGlpPath: _rootSelf).hM;
+        final h1 = flattenProject(d.path, rootSelfGlpPath: _rootSelf).hM;
+        _edit(d, _src(helperBody: 'Y := X? + 2', deadBody: 'Y := X? + 99'));
+        final h2 = flattenProject(d.path, rootSelfGlpPath: _rootSelf).hM;
         expect(h2, isNot(h1), reason: 'helper/2 is reachable, so its edit moves h(M)');
       } finally {
-        d1.deleteSync(recursive: true);
-        d2.deleteSync(recursive: true);
+        d.deleteSync(recursive: true);
       }
     });
   });

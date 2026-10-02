@@ -180,6 +180,10 @@ class GlpEngine {
   /// Path to the root self.glp (programs/self.glp) for the type scope chain.
   late final String _rootSelfGlpPath;
 
+  /// The root: the directory of the root self.glp, which every module is
+  /// named from (TGLP modules.tex, Compilation, third step; [modulePathName]).
+  String get _rootDir => File(_rootSelfGlpPath).parent.absolute.path;
+
   /// For madGLP: the MadContext for this engine
   MadContext? madContext;
 
@@ -484,7 +488,8 @@ class GlpEngine {
     if (isRealFile) {
       var goalEnv = _ensureGoalCheckBaseEnv();
       for (final selfGlpPath in chain) {
-        goalEnv = mergeSelfGlpFileIntoScope(goalEnv, selfGlpPath);
+        goalEnv = mergeSelfGlpFileIntoScope(goalEnv, selfGlpPath,
+            root: _rootDir);
         _scopeSelfGlps.add(File(selfGlpPath).absolute.path);
       }
       _goalCheckEnv = goalEnv;
@@ -594,7 +599,7 @@ class GlpEngine {
         programsDir: File(_rootSelfGlpPath).parent.absolute.path);
     for (final selfGlpPath in chain) {
       if (_scopeSelfGlps.contains(File(selfGlpPath).absolute.path)) continue;
-      env = mergeSelfGlpFileIntoScope(env, selfGlpPath);
+      env = mergeSelfGlpFileIntoScope(env, selfGlpPath, root: _rootDir);
     }
     return env;
   }
@@ -651,7 +656,8 @@ class GlpEngine {
         targetFile: '$programRoot${Platform.pathSeparator}self.glp',
         rootDir: programRoot,
         programsDir: File(_rootSelfGlpPath).parent.absolute.path)) {
-      goalEnv = mergeSelfGlpFileIntoScope(goalEnv, selfGlpPath);
+      goalEnv = mergeSelfGlpFileIntoScope(goalEnv, selfGlpPath,
+            root: _rootDir);
       _scopeSelfGlps.add(File(selfGlpPath).absolute.path);
     }
     _goalCheckEnv = goalEnv;
@@ -1264,17 +1270,14 @@ class GlpEngine {
 
   ModuleInfo _extractModuleInfo(
       String source, BytecodeProgram program, String filename) {
-    // -module removed: a module's name is its file (or, for self.glp, its
-    // directory). Every loaded module is top-level — a single-module program
-    // exports all its procedures (modules.tex sec:static-linking).
-    final baseName = filename.split('/').last;
-    final String name;
-    if (baseName == 'self.glp') {
-      final segs = filename.split('/');
-      name = segs.length >= 2 ? segs[segs.length - 2] : 'self';
-    } else {
-      name = _moduleNameFromFilename(filename);
-    }
+    // A module's name is its path from the root (TGLP modules.tex,
+    // Compilation, third step; [modulePathName]): a self.glp's is its
+    // directory's.  A source with no file keeps the name it was loaded under.
+    // Every loaded module is top-level — a single-module program exports all
+    // its procedures (modules.tex sec:static-linking).
+    final String name = File(filename).existsSync()
+        ? modulePathName(filename, _rootDir)
+        : _moduleNameFromFilename(filename);
     const isTopLevel = true;
 
     // Detect exported procedures from `exported procedure` declarations.

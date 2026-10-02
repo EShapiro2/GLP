@@ -1,0 +1,10 @@
+%% A directory's self.glp and a module of the directory's name are two modules
+%% (TGLP modules.tex, Compilation, third step: M is the module's path from the
+%% root): this self.glp is tests/module_paths/d and d.glp is
+%% tests/module_paths/d/d, so d # p reaches d.glp's p and its local call q
+%% reaches d.glp's q, and p(1, Y) gives Y = 2.  Until 2026-10-02 both were the
+%% module "d", and the load was refused, "Undefined procedure: q/2" (found by
+%% sGLP's coins program, 2026-10-02).
+imported procedure d#p(Integer?, Integer).
+exported procedure p(Integer?, Integer).
+p(X, Y?) :- d # p(X?, Y).

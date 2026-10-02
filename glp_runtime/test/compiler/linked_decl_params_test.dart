@@ -46,11 +46,13 @@ void main() {
       expect(paramsOf(linked.checkedDeclarations, 'worker:tie/2'), ['Y']);
     });
 
+    // The importing module is the fixture's self.glp, which is the root's own
+    // self.glp here, the fixture being its own root: its path from the root is
+    // the empty path, so it is renamed `:tie/2` (TGLP modules.tex,
+    // Compilation, third step).
     test('the renamed declaration of the importing module keeps it', () {
-      expect(
-          paramsOf(linked.scopeDeclarations, 'param_import_linked:tie/2'), ['Y']);
-      expect(paramsOf(linked.checkedDeclarations, 'param_import_linked:tie/2'),
-          ['Y']);
+      expect(paramsOf(linked.scopeDeclarations, ':tie/2'), ['Y']);
+      expect(paramsOf(linked.checkedDeclarations, ':tie/2'), ['Y']);
     });
 
     test('the entry-point alias keeps it', () {

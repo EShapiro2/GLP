@@ -1,0 +1,4 @@
+exported procedure run(Integer).
+run(X?) :- two(X).
+procedure two(Integer).
+two(2).

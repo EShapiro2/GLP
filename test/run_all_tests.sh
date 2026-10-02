@@ -3262,7 +3262,9 @@ $GLP_DIR/programs/tests/cross_module_inspect_neg/
 :quit
 HEREDOC
 2>&1)
-check "cross-module param-inspect project rejected" "Head of lib:relay" "$output"
+# lib.glp's procedures are renamed by its path from the root (TGLP modules.tex,
+# Compilation, third step).
+check "cross-module param-inspect project rejected" "Head of tests/cross_module_inspect_neg/lib:relay" "$output"
 check_not "cross-module project not loaded green" "Loaded program: .*cross_module_inspect_neg" "$output"
 
 echo ""
@@ -3582,8 +3584,10 @@ HEREDOC
 2>&1)
 check "X4 collision rejected" "collision" "$x4"
 check_not "X4 not loaded" "Loaded program" "$x4"
-check "X4 names module one" "\"one\"" "$x4"
-check "X4 names module two" "\"two\"" "$x4"
+# Each module is named by its path from the root (TGLP modules.tex,
+# Compilation, third step): a/one.glp is tests/expose/collide/a/one.
+check "X4 names module one" "\"tests/expose/collide/a/one\"" "$x4"
+check "X4 names module two" "\"tests/expose/collide/b/two\"" "$x4"
 
 # --- X5: exposed module lies outside the loaded subtree — still resolves ---
 # basic/util/strutil.glp is a sibling of basic/leaf/ (outside leaf/'s subtree),
@@ -4115,7 +4119,9 @@ self_module(M), decompose_module(M?, K, S, C).
 :quit
 HEREDOC
 2>&1)
-check "SK6 a mini-app calling send_to_net/1 is refused a certificate naming the call" "CERTIFICATE REFUSED.*app:leak/1 calls mad_predicates:send_to_net/1" "$sk6"
+# The calls are named by their procedures' renamed names, each module's path
+# from the root (TGLP modules.tex, Compilation, third step).
+check "SK6 a mini-app calling send_to_net/1 is refused a certificate naming the call" "CERTIFICATE REFUSED.*tests/cert_refused/app:leak/1 calls system/mad_predicates:send_to_net/1" "$sk6"
 check "SK6 a wrapper reaching send_to_user/1 does not pass" "app:wrapper/1 calls send_to_user/1" "$sk6"
 check "SK6 the refused module has no compiler's key" "_decompose_module/4: module cert_refused carries no certificate" "$sk6"
 

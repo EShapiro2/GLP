@@ -1,0 +1,13 @@
+%% Two modules of one file name in two directories are two modules (TGLP
+%% modules.tex, Compilation, third step): a/h.glp is tests/module_paths/top/a/h
+%% and b/h.glp tests/module_paths/top/b/h, and each self.glp's h # run reaches
+%% its own directory's h.glp (Cross-module type checking: the qualifier is
+%% relative to the caller's directory), so ra(X) gives 1 and rb(Y) gives 2.
+%% Until 2026-10-02 both were the module "h", and the load was refused,
+%% "Undefined procedure: one/1" (found by sGLP's coins program, 2026-10-02).
+imported procedure a#run(Integer).
+imported procedure b#run(Integer).
+exported procedure ra(Integer).
+ra(X?) :- a # run(X).
+exported procedure rb(Integer).
+rb(X?) :- b # run(X).
