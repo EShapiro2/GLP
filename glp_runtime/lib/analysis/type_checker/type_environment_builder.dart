@@ -14,18 +14,6 @@ import '../../compiler/ast.dart' as ast;
 import '../../compiler/lexer.dart';
 import '../../compiler/parser.dart';
 
-/// Error for illegal type redefinition
-class RedefinitionError implements Exception {
-  final String message;
-  final int line;
-  final int column;
-
-  RedefinitionError(this.message, this.line, this.column);
-
-  @override
-  String toString() => '$message at line $line, column $column';
-}
-
 /// Error for circular alias chain
 class CircularAliasError implements Exception {
   final String message;
@@ -107,7 +95,7 @@ TypeEnvironment buildRootScopeEnvironment() {
   // Templates (e.g., Stream(X)) are removed; only concrete expansions remain.
   final expandedModule = expandParameterizedTypes(module);
 
-  final env = _buildEnvironmentFromModule(expandedModule, checkRedefinitions: false, resolveAliasesNow: true);
+  final env = _buildEnvironmentFromModule(expandedModule, resolveAliasesNow: true);
   rootScopeTypeDefs = Map<String, TypeDef>.unmodifiable(env.types);
   // The root's types are defined in the root: the prefix one is kept under
   // once a descendant scope defines its name (TypeEnvironment.merge).
@@ -119,8 +107,11 @@ TypeEnvironment buildRootScopeEnvironment() {
 
 /// Build TypeEnvironment from a parsed Module
 ///
-/// Loads root scope first, then merges user definitions.
-/// Throws RedefinitionError if user redefines predefined types/procedures.
+/// Loads root scope first, then merges user definitions, which shadow it: the
+/// root self.glp is "the outermost ancestor scope, shadowable like any other"
+/// (TGLP appendix-root-self.tex).  Until 2026-10-02 a module checked with no
+/// ancestor scope could not redefine Integer ... Stream, OpenStream or the
+/// built-in guard names: a RedefinitionError no paper stated.
 ///
 /// If [ancestorScope] is provided, it is used as the base environment
 /// instead of just the root scope. The ancestor scope should already include
@@ -139,9 +130,9 @@ TypeEnvironment buildTypeEnvironment(ast.Module module,
   final baseEnv = ancestorScope ?? buildRootScopeEnvironment();
 
   // Build user environment WITHOUT resolving aliases yet
-  final userEnv = _buildEnvironmentFromModule(module, checkRedefinitions: ancestorScope == null, resolveAliasesNow: false);
+  final userEnv = _buildEnvironmentFromModule(module, resolveAliasesNow: false);
 
-  // Merge: base first, then user (user can shadow non-predefined)
+  // Merge: base first, then user, which shadows any definition of the base
   final merged = baseEnv.merge(userEnv);
 
   // Now resolve aliases on the merged environment (so user aliases can reference root scope types)
@@ -180,7 +171,6 @@ TypeEnvironment buildTypeEnvironment(ast.Module module,
 /// Build TypeEnvironment from Module's type definitions and procedure declarations
 TypeEnvironment _buildEnvironmentFromModule(
   ast.Module module, {
-  required bool checkRedefinitions,
   required bool resolveAliasesNow,
 }) {
   final types = <String, TypeDef>{};
@@ -189,13 +179,6 @@ TypeEnvironment _buildEnvironmentFromModule(
 
   // Add type definitions (including aliases - will be resolved later)
   for (final typeDef in module.typeDefs) {
-    if (checkRedefinitions && isPredefinedType(typeDef.name)) {
-      throw RedefinitionError(
-        'Cannot redefine predefined type: ${typeDef.name}',
-        typeDef.line,
-        typeDef.column,
-      );
-    }
     // Note: Aliases are allowed (v0.7) - determinism check skipped for them
     if (!_isTypeAlias(typeDef)) {
       _checkDeterminism(typeDef, types);
@@ -205,13 +188,6 @@ TypeEnvironment _buildEnvironmentFromModule(
 
   // Add procedure declarations
   for (final procDecl in module.procDeclarations) {
-    if (checkRedefinitions && isPredefinedProcedure(procDecl.name)) {
-      throw RedefinitionError(
-        'Cannot redefine predefined procedure: ${procDecl.name}/${procDecl.arity}',
-        procDecl.line,
-        procDecl.column,
-      );
-    }
     // Mark procedure as builtin if it's a true builtin (implemented in Dart)
     final isBuiltin = isBuiltinProcedure(procDecl.key);
     if (isBuiltin && !procDecl.isBuiltin) {
