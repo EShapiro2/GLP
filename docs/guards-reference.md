@@ -28,6 +28,8 @@ Guards are pure tests with **three-valued semantics** (success/suspend/fail) tha
 
 **A goal suspends on its own readers** (GLP-Spec glp.tex: "if a GLP goal A cannot be reduced now, but there is a readers substitution σ such that Aσ can be reduced, such readers are identified, the goal A suspends on these readers").  No readers substitution binds a variable the clause alone holds --- a fresh one of the head, in a structure the head gives a goal writer, or the clause's own output, a head reader matched against the goal's writer --- so a guard member left undecided with no reader of the goal to wait on fails the clause (GLP #3 Cowork, 2026-10-02 15:31 UTC, A).  Every guard but `=?\=` succeeds only where each reader it waits on is bound, and fails on a reader the clause alone holds, a reader of the goal beside it or not; `=?\=` waits on the goal's readers and fails where it has none.  `hq(f(X), Y, yes) :- X? =?= w(Y?) | true` fails `hq(W, b, R)`, and `hw(f(X), Y, yes) :- X? =?\= Y? | true` fails `hw(W, b, R)`: until 2026-10-02 each held the goal for ever.
 
+**A guard over an unknown variable** --- one whose writer occurrence in the head lies under a goal reader the head suspends on, its value not yet given --- is decided by the same decision, the variable standing for any term: it fails the clause where no term makes it succeed, and is otherwise passed by, the clause waiting on the goal reader (GLP #3 Cowork, 2026-10-02 15:31 UTC, B).  With `pu(f(X), Y, yes) :- X? =?= Y? | true.` and `pu(_, _, no) :- otherwise | true.`, `pu(P?, g(W), R)` gives `R = no`, `g(W)` holding a writer; until 2026-10-02 it waited on `P?`.
+
 ---
 
 ## No Guard Negation

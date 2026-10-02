@@ -236,21 +236,27 @@ class RunnerContext {
   /// writer occurrence elsewhere.  An unknown variable stays unknown for the
   /// rest of the clause attempt: a later occurrence never gives it a value,
   /// and fails only where the table fails whatever the variable --- a head
-  /// reader against a goal reader or a goal term (column "Reader X2?") ---
-  /// and a guard over it is undecided, neither success nor failure, and is
-  /// passed by.  The clause cannot commit, its suspension set being non-empty;
-  /// what is still asked of it is whether it fails.
+  /// reader against a goal reader or a goal term (column "Reader X2?").  A
+  /// guard over it is decided by the guard's own decision, the variable
+  /// standing for any term, as the goal reader above it may be assigned any
+  /// term ([unknownPlaceholders], [_undecidedMember]): it fails where no term
+  /// makes it succeed, and is otherwise passed by (GLP #3 Cowork, 2026-10-02
+  /// 15:31 UTC, B).  The clause cannot commit, its suspension set being
+  /// non-empty; what is still asked of it is whether it fails.
   final Set<int> unknownVars = <int>{};
 
-  /// The writer cells of the variables that stand for unknown variables
-  /// ([unknownVars]) where an occurrence is placed ([_unknownPlaceholder]): a
-  /// guard decision meeting one meets an unknown variable, which stands for
-  /// any term, and not a variable the clause alone holds ([_undecidedMember]).
-  final Set<int> unknownKeys = <int>{};
+  /// The variable that stands for each unknown variable ([unknownVars]),
+  /// by its clause-variable index, as its writer and reader cells: an
+  /// occurrence placed in a structure built for a goal writer or in a guard's
+  /// argument holds it ([_unknownPlaceholder]), one variable for every
+  /// occurrence of one unknown variable, so that a guard decision sees them as
+  /// one.
+  final Map<int, (int, int)> unknownPlaceholders = <int, (int, int)>{};
 
-  /// Set while a generic guard's arguments are built if one of them is an
-  /// unknown variable ([unknownVars]): the guard is undecided and is passed by.
-  bool guardUndecided = false;
+  /// The writer cells of [unknownPlaceholders]: a guard decision meeting one
+  /// meets an unknown variable, which stands for any term, and not a variable
+  /// the clause alone holds ([_undecidedMember]).
+  final Set<int> unknownKeys = <int>{};
 
   /// Whether clause variable [varIndex] is unknown ([unknownVars]).
   bool isUnknown(int varIndex) => unknownVars.contains(varIndex);
@@ -346,8 +352,8 @@ class RunnerContext {
     Si.clear();
     U.touched = false;
     unknownVars.clear();
+    unknownPlaceholders.clear();
     unknownKeys.clear();
-    guardUndecided = false;
     inBody = false;
     mode = UnifyMode.read;
     S = 0;
@@ -516,14 +522,20 @@ _TermVariables _termVariables(RunnerContext cx, Object? term) {
   return out;
 }
 
-/// What a structure slot holds for an occurrence of an unknown variable
-/// ([RunnerContext.unknownVars]) --- in a structure built for a goal writer, or
-/// for a guard's argument: a fresh variable, of the occurrence's polarity, that
-/// the clause does not keep, so the unknown variable stays unknown.  The
-/// structure is never committed, the clause's suspension set being non-empty.
-VarRef _unknownPlaceholder(RunnerContext cx, bool isReader) {
-  final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
-  cx.unknownKeys.add(writerAddr);
+/// What a structure slot holds for an occurrence of unknown variable
+/// [varIndex] ([RunnerContext.unknownVars]) --- in a structure built for a
+/// goal writer, or for a guard's argument: the variable that stands for it
+/// ([RunnerContext.unknownPlaceholders]), fresh at its first occurrence and
+/// the same at every other, of the occurrence's polarity, which the clause does
+/// not keep, so the unknown variable stays unknown.  The structure is never
+/// committed, the clause's suspension set being non-empty.
+VarRef _unknownPlaceholder(RunnerContext cx, int varIndex, bool isReader) {
+  final (writerAddr, readerAddr) =
+      cx.unknownPlaceholders.putIfAbsent(varIndex, () {
+    final cells = cx.rt.heap.allocateVariable();
+    cx.unknownKeys.add(cells.$1);
+    return cells;
+  });
   return VarRef(isReader ? readerAddr : writerAddr);
 }
 
@@ -1393,7 +1405,11 @@ Object? _equalityOperand(Object? value) =>
 /// assigned are scanned for the variables in them: a writer decides `never`,
 /// and so does a reader that would stand for a term containing itself (the
 /// occurs check).  Then no unbound reader met is `equal`, and some is
-/// `unifiable`.
+/// `unifiable`.  A variable that stands for an unknown variable
+/// ([RunnerContext.unknownKeys]) stands for any term, and is assigned as a
+/// reader is, whatever its polarity: so `X? =?= g(W)`, X unknown, is `never`,
+/// no term X stands for making the two ground and equal (GLP #3 Cowork,
+/// 2026-10-02 15:31 UTC, B).
 ///
 /// A value is a heap term, a tentative structure or a bare variable address
 /// (an int), as a clause variable may hold; a constant at the top of a generic
@@ -1470,6 +1486,12 @@ Object? _equalityOperand(Object? value) =>
   void noteReader(_UnboundVariable v) =>
       readers.putIfAbsent(v.key, () => v.readerAddr);
 
+  // Whether [v] may be assigned a term: a reader, or a variable that stands
+  // for an unknown variable, any term, of either polarity
+  // ([RunnerContext.unknownKeys]).
+  bool assignable(_UnboundVariable v) =>
+      v.isReader || cx.unknownKeys.contains(v.key);
+
   // Unify [a] with [b], readers alone assigned: false at a clash, an unbound
   // writer or a mutual reference, which decide `never`.
   bool unify(Object? a, Object? b) {
@@ -1483,7 +1505,7 @@ Object? _equalityOperand(Object? value) =>
       if (vx is _UnboundVariable || vy is _UnboundVariable) {
         for (final v in [vx, vy]) {
           if (v is! _UnboundVariable) continue;
-          if (!v.isReader) return false;
+          if (!assignable(v)) return false;
           noteReader(v);
         }
         if (vx is _UnboundVariable && vy is _UnboundVariable) {
@@ -1532,7 +1554,7 @@ Object? _equalityOperand(Object? value) =>
       final v = resolve(terms.removeLast());
       if (v is MutualRefTerm) return false;
       if (v is _UnboundVariable) {
-        if (!v.isReader) return false;
+        if (!assignable(v)) return false;
         noteReader(v);
         (contains[key] ??= <int>{}).add(v.key);
         continue;
@@ -2023,7 +2045,8 @@ mixin OpExecutors {
   /// them ([_guardUndecided]: suspended on the goal's, the next member tried,
   /// or failed on one the clause alone holds).
   StepOutcome execGround(RunnerContext cx, int varIndex) {
-    // An unknown variable ([RunnerContext.unknownVars]): undecided, passed by.
+    // An unknown variable ([RunnerContext.unknownVars]) stands for any term,
+    // some making the guard succeed and some not: undecided, passed by.
     if (cx.isUnknown(varIndex)) return StepOutcome.advance;
     final value = cx.clauseVars[varIndex];
     if (value == null) return StepOutcome.nextClause; // missing var → fail
@@ -2038,7 +2061,8 @@ mixin OpExecutors {
   /// reader→undecided ([_guardUndecided]); unbound writer→fail. Unlike ground,
   /// only X itself is inspected, not its sub-terms.
   StepOutcome execKnown(RunnerContext cx, int varIndex) {
-    // An unknown variable ([RunnerContext.unknownVars]): undecided, passed by.
+    // An unknown variable ([RunnerContext.unknownVars]) stands for any term,
+    // some making the guard succeed and some not: undecided, passed by.
     if (cx.isUnknown(varIndex)) return StepOutcome.advance;
     final raw = cx.clauseVars[varIndex];
     if (raw == null) return StepOutcome.nextClause; // missing var → fail
@@ -2101,7 +2125,8 @@ mixin OpExecutors {
   /// some→undecided on them ([_guardUndecided]: suspended on the goal's, or
   /// failed on one the clause alone holds).  Missing var counts as no readers.
   StepOutcome execNoReaders(RunnerContext cx, int varIndex) {
-    // An unknown variable ([RunnerContext.unknownVars]): undecided, passed by.
+    // An unknown variable ([RunnerContext.unknownVars]) stands for any term,
+    // some making the guard succeed and some not: undecided, passed by.
     if (cx.isUnknown(varIndex)) return StepOutcome.advance;
     final value = cx.clauseVars[varIndex];
     if (value == null) return StepOutcome.advance;
@@ -2121,12 +2146,16 @@ mixin OpExecutors {
   /// on the reader.
   StepOutcome execGroundEqual(
       RunnerContext cx, int leftVarIndex, int rightVarIndex) {
-    // An unknown variable ([RunnerContext.unknownVars]): undecided, passed by.
-    if (cx.isUnknown(leftVarIndex) || cx.isUnknown(rightVarIndex)) {
-      return StepOutcome.advance;
-    }
-    final leftValue = cx.clauseVars[leftVarIndex];
-    final rightValue = cx.clauseVars[rightVarIndex];
+    // An unknown variable ([RunnerContext.unknownVars]) is the variable that
+    // stands for it, any term, which the decision assigns as it does a reader
+    // and the member decision counts with the goal's ([_undecidedMember]).
+    // Until 2026-10-02 the guard was passed by, undecided, and pu(P?, g(W), R)
+    // waited on P? where no term makes X? =?= g(W) succeed.
+    Object? operand(int varIndex) => cx.isUnknown(varIndex)
+        ? _unknownPlaceholder(cx, varIndex, true)
+        : cx.clauseVars[varIndex];
+    final leftValue = operand(leftVarIndex);
+    final rightValue = operand(rightVarIndex);
     if (leftValue == null || rightValue == null) return StepOutcome.nextClause;
     // A suspension's readers are in cx.Si ([_groundEqualityGuard]), and the
     // next member is tried as after a success ([_guardUndecided]).
@@ -2140,7 +2169,8 @@ mixin OpExecutors {
   /// `unknown` (0x43): succeed iff the clause variable is currently unbound (no
   /// σ̂w tentative binding and not heap-bound). A dispatch test; never suspends.
   StepOutcome execUnknown(RunnerContext cx, int varIndex) {
-    // An unknown variable ([RunnerContext.unknownVars]): undecided, passed by.
+    // An unknown variable ([RunnerContext.unknownVars]) stands for any term,
+    // some making the guard succeed and some not: undecided, passed by.
     if (cx.isUnknown(varIndex)) return StepOutcome.advance;
     final term = cx.clauseVars[varIndex];
     if (term is VarRef) {
@@ -2165,14 +2195,11 @@ mixin OpExecutors {
     if (predicateName == 'otherwise' && arity == 0) {
       return execOtherwise(cx);
     }
-    // An argument built from an unknown variable ([RunnerContext.unknownVars]):
-    // the guard is undecided, and is passed by --- the clause, suspended on the
-    // reader its writer occurrence lay under, cannot commit, and what is still
-    // asked of it is whether a later match or guard fails.
-    if (cx.guardUndecided) {
-      cx.guardUndecided = false;
-      return StepOutcome.advance;
-    }
+    // An argument holding an unknown variable ([RunnerContext.unknownVars])
+    // holds the variable that stands for it, any term: the guard's own
+    // decision meets it ([_undecidedMember]), and fails where no term makes
+    // the guard succeed.  Until 2026-10-02 such a guard was passed by,
+    // undecided, whatever else stood in its arguments.
     final args = <Object?>[];
     final unboundReaders = <int>{};
     for (var i = 0; i < arity; i++) {
@@ -2323,9 +2350,10 @@ mixin OpExecutors {
         final existingValue = cx.clauseVars[varIndex];
         if (cx.isUnknown(varIndex)) {
           // An unknown variable placed in a structure built for a goal
-          // writer: it stays unknown, the slot holding a fresh variable the
-          // clause does not keep --- the clause cannot commit.
-          struct.args[cx.S] = _unknownPlaceholder(cx, isReader);
+          // writer: it stays unknown, the slot holding the variable that
+          // stands for it, which the clause does not keep --- the clause
+          // cannot commit.
+          struct.args[cx.S] = _unknownPlaceholder(cx, varIndex, isReader);
         } else if (existingValue != null) {
           if (isReader && existingValue is int) {
             struct.args[cx.S] =
@@ -2811,12 +2839,14 @@ mixin OpExecutors {
 
             if (cx.isUnknown(varIndex)) {
               // An unknown variable placed in a structure built for a goal
-              // writer: it stays unknown, the slot holding a fresh variable
-              // the clause does not keep --- the clause cannot commit.  It
-              // was given a fresh variable here as at a first occurrence,
-              // and a guard over it then failed on an unbound writer instead
-              // of being undecided (f1(same(To), out(To?)) :- ground(To?)).
-              struct.args[cx.S] = _unknownPlaceholder(cx, isReaderMode);
+              // writer: it stays unknown, the slot holding the variable that
+              // stands for it, which the clause does not keep --- the clause
+              // cannot commit.  It was given a fresh variable here as at a
+              // first occurrence, and a guard over it then failed on an
+              // unbound writer instead of being undecided (f1(same(To),
+              // out(To?)) :- ground(To?)).
+              struct.args[cx.S] =
+                  _unknownPlaceholder(cx, varIndex, isReaderMode);
             } else if (clauseVarValue is VarRef) {
               // Subsequent use: clauseVarValue holds an addr
               final addr = clauseVarValue.addr;
@@ -2888,10 +2918,11 @@ mixin OpExecutors {
 
             if (!cx.inBody && cx.isUnknown(varIndex)) {
               // A guard argument's structure holding an unknown variable
-              // ([RunnerContext.unknownVars]): the guard is undecided
-              // ([execGuard]), and the variable stays unknown.
-              cx.guardUndecided = true;
-              struct.args[cx.S] = _unknownPlaceholder(cx, isReaderMode);
+              // ([RunnerContext.unknownVars]): the variable that stands for
+              // it, any term, which the guard's decision meets
+              // ([_undecidedMember]); the variable stays unknown.
+              struct.args[cx.S] =
+                  _unknownPlaceholder(cx, varIndex, isReaderMode);
             } else if (clauseVarValue is VarRef) {
               // Subsequent use: clauseVarValue holds an addr
               final addr = clauseVarValue.addr;
@@ -3720,12 +3751,13 @@ mixin OpExecutors {
   StepOutcome execPutVariable(
       RunnerContext cx, int varIndex, int argSlot, bool isReaderMode) {
         // A guard's argument (before commit) that is an unknown variable
-        // ([RunnerContext.unknownVars]): the guard is undecided ([execGuard]),
-        // and the variable stays unknown --- the slot gets a fresh variable
-        // that the clause does not keep.
+        // ([RunnerContext.unknownVars]): the slot gets the variable that
+        // stands for it, any term, which the guard's decision meets
+        // ([_undecidedMember]) and the clause does not keep, so the variable
+        // stays unknown.
         if (!cx.inBody && cx.isUnknown(varIndex)) {
-          cx.guardUndecided = true;
-          cx.argSlots[argSlot] = _unknownPlaceholder(cx, isReaderMode);
+          cx.argSlots[argSlot] =
+              _unknownPlaceholder(cx, varIndex, isReaderMode);
           return StepOutcome.advance;
         }
         final value = cx.clauseVars[varIndex];
