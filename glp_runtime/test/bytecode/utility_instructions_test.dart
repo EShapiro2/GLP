@@ -1,6 +1,5 @@
 import 'package:test/test.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
-import 'package:glp_runtime/runtime/cells.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/bytecode/runner.dart';
@@ -36,7 +35,8 @@ void main() {
     rt.gq.enqueue(GoalRef(goalId, image.entryOffsetOf('p/0')!));
 
     print('Starting p with 3 nops');
-    final ran = sched.drain(maxCycles: 10);
+    final ran = <int>[];
+    sched.drainWithStatus(maxCycles: 10, goalIds: ran);
 
     print('Goals executed: ${ran.length}');
     expect(ran.length, 1, reason: 'Should execute through all nops and succeed');
@@ -67,7 +67,8 @@ void main() {
     rt.gq.enqueue(GoalRef(goalId, image.entryOffsetOf('p/0')!));
 
     print('Starting p with halt');
-    final ran = sched.drain(maxCycles: 10);
+    final ran = <int>[];
+    sched.drainWithStatus(maxCycles: 10, goalIds: ran);
 
     print('Goals executed: ${ran.length}');
     expect(ran.length, 1, reason: 'Should halt and terminate');
@@ -107,7 +108,8 @@ void main() {
     rt.gq.enqueue(GoalRef(goalId1, imageHalt.entryOffsetOf('p/0')!));
 
     print('Testing halt...');
-    final ranHalt = schedHalt.drain(maxCycles: 10);
+    final ranHalt = <int>[];
+    schedHalt.drainWithStatus(maxCycles: 10, goalIds: ranHalt);
     expect(ranHalt.length, 1);
     print('✓ Halt terminated after 1 execution');
 
@@ -120,7 +122,8 @@ void main() {
     rt2.gq.enqueue(GoalRef(goalId2, imageProceed.entryOffsetOf('p/0')!));
 
     print('Testing proceed...');
-    final ranProceed = schedProceed.drain(maxCycles: 10);
+    final ranProceed = <int>[];
+    schedProceed.drainWithStatus(maxCycles: 10, goalIds: ranProceed);
     expect(ranProceed.length, 1);
     print('✓ Proceed terminated after 1 execution');
 

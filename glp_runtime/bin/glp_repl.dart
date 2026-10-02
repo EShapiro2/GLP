@@ -19,7 +19,6 @@ import 'package:glp_runtime/runtime/terms.dart' as rt;
 
 void main() async {
   final gitCommit = await _getGitCommit();
-  final buildTime = '2026-02-01 (GlpEngine refactor)';
 
   print('╔════════════════════════════════════════╗');
   print('║  GLP REPL - With Type Checking         ║');
@@ -28,11 +27,10 @@ void main() async {
   if (gitCommit != null) {
     print('Build: $gitCommit');
   }
-  print('Compiled: $buildTime');
   print('Working directory: ${Directory.current.path}');
   print('');
   print('Input: filename.glp to load, or goal to execute');
-  print('Commands: :quit, :help, :trace, :debug, :limit, :activate, :mad, :boot');
+  print('Commands: :quit, :help, :trace, :debug, :limit, :mad, :boot');
   print('');
 
   // Resolve programs/self.glp relative to this script's location.

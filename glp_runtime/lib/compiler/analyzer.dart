@@ -363,7 +363,7 @@ class Analyzer {
     final transformed = _partialEvaluator.transformDefinedGuards(program);
 
     // STEP 3: Auto-generate reduce/2 clauses for metainterpretation
-    // Generated for all files by default, except those with -stdlib. declaration
+    // Generated for all files by default, except those declaring -mode(system)
     final withReduce = generateReduce
         ? _generateReduceClauses(transformed)
         : transformed;

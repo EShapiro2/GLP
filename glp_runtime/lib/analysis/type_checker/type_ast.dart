@@ -83,9 +83,6 @@ class TypeRef extends TypeExpr {
   /// not one of these.
   static const constantPrimitives = {'Integer', 'Real', 'String', 'Module'};
 
-  /// System types (defined via ::= but not redefinable by user)
-  static const systemTypes = {'Any', 'List'};
-
   bool get isBuiltin => builtins.contains(name);
 
   @override

@@ -5,17 +5,15 @@ import 'dart:typed_data' show Uint8List;
 import 'package:glp_runtime/multiagent/mad_context.dart' show MadContext;
 import 'package:glp_runtime/multiagent/glp_network.dart' show PubKey;
 import 'package:glp_runtime/runtime/runtime.dart';
-import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/commit.dart';
-import 'package:glp_runtime/runtime/cells.dart';
 import 'package:glp_runtime/runtime/body_kernels.dart';
 import 'package:glp_runtime/multiagent/variable_table.dart' show VariableEntry;
 import 'opcodes.dart';
 import 'opcodes_v2.dart' as opv2;
 import 'package:glp_runtime/engine_v2/step_outcome.dart';
 
-enum RunResult { terminated, suspended, yielded, outOfReductions }
+enum RunResult { terminated, suspended, yielded }
 
 /// A runner that executes one goal's [RunnerContext] to a [RunResult]. The
 /// scheduler holds runners behind this interface so a goal can be driven by the
@@ -277,15 +275,9 @@ class RunnerContext {
   // Guard argument building mode (for pre-commit structure building)
   int? guardArgSlot;  // Target argSlot when building structure for guard argument
 
-  // Reduction budget (null = unlimited)
-  int? reductionBudget;
-  int reductionsUsed = 0;
-
   // Environment frames for permanent variables (Y registers)
   EnvironmentFrame? E;  // Current environment pointer
   int? CP;              // Continuation pointer (return address)
-
-  final void Function(GoalRef)? onActivation; // host log hook
 
   // Track spawned goals for display
   final List<String> spawnedGoals = [];
@@ -336,8 +328,6 @@ class RunnerContext {
     required this.goalId,
     required this.kappa,
     CallEnv? env,
-    this.onActivation,
-    this.reductionBudget,
     this.goalHead,
     this.goalProcName,
     this.onReduction,
@@ -1745,7 +1735,6 @@ mixin OpExecutors {
     );
     for (final a in acts) {
       cx.rt.gq.enqueue(a);
-      if (cx.onActivation != null) cx.onActivation!(a);
     }
     cx.sigmaHat.clear();
     cx.argSlots.clear();
@@ -2832,7 +2821,6 @@ mixin OpExecutors {
                   final acts = cx.rt.heap.bindWriterStruct(targetWriterAddr, struct.functor, struct.args);
                   for (final a in acts) {
                     cx.rt.gq.enqueue(a);
-                    if (cx.onActivation != null) cx.onActivation!(a);
                   }
                 }
 
@@ -2863,7 +2851,6 @@ mixin OpExecutors {
                       final acts = cx.rt.heap.bindWriterStruct(currentWriterAddrInt, parentStruct.functor, parentStruct.args);
                       for (final a in acts) {
                         cx.rt.gq.enqueue(a);
-                        if (cx.onActivation != null) cx.onActivation!(a);
                       }
 
                       // Check for more ancestors
@@ -3487,7 +3474,6 @@ mixin OpExecutors {
               final acts = cx.rt.heap.bindWriterStruct(targetWriterAddr, struct.functor, struct.args);
               for (final a in acts) {
                 cx.rt.gq.enqueue(a);
-                if (cx.onActivation != null) cx.onActivation!(a);
               }
 
               // SetWriter-specific: Store VarRef in argSlots ONLY if no parent
@@ -3531,7 +3517,6 @@ mixin OpExecutors {
                   final acts = cx.rt.heap.bindWriterStruct(currentWriterAddrInt, parentStruct.functor, parentStruct.args);
                   for (final a in acts) {
                     cx.rt.gq.enqueue(a);
-                    if (cx.onActivation != null) cx.onActivation!(a);
                   }
 
                   // Check for more ancestors
@@ -3683,7 +3668,6 @@ mixin OpExecutors {
               final acts = cx.rt.heap.bindWriterStruct(targetWriterAddrInt, struct.functor, struct.args);
               for (final a in acts) {
                 cx.rt.gq.enqueue(a);
-                if (cx.onActivation != null) cx.onActivation!(a);
               }
             }
 
@@ -3717,7 +3701,6 @@ mixin OpExecutors {
                   final acts = cx.rt.heap.bindWriterStruct(currentWriterAddrInt, parentStruct.functor, parentStruct.args);
                   for (final a in acts) {
                     cx.rt.gq.enqueue(a);
-                    if (cx.onActivation != null) cx.onActivation!(a);
                   }
 
                   // Check for more ancestors

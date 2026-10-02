@@ -67,10 +67,9 @@ class Parser {
     final exposes = <String>[];  // `-expose(M).` module paths
 
     // Parse declarations at the start of the file
+    declarations:
     while (!_isAtEnd() && _check(TokenType.MINUS)) {
       final startPos = _current;
-      final startLine = _peek().line;
-      final startCol = _peek().column;
       _advance(); // consume '-'
 
       if (!_check(TokenType.ATOM)) {
@@ -81,45 +80,30 @@ class Parser {
       final keyword = _advance();
 
       switch (keyword.lexeme) {
-        case 'module':
-          throw CompileError(
-            'The -module() declaration is no longer supported. A module\'s name '
-            'is its file or directory path from the program root.',
-            startLine,
-            startCol,
-            phase: 'parser'
-          );
-
-        case 'stdlib':
-          // -stdlib. is deprecated — treated as -mode(system).
-          _consume(TokenType.DOT, 'Expected "." after stdlib declaration');
-          compileMode = CompileMode.system;
-          break;
-
         case 'mode':
-          // -mode(user). or -mode(system). declaration
+          // -mode(system). declaration (GLP-Spec appendix-guards.tex, Naming and
+          // admission of body kernels; TGLP app:system-mode), the one mode
+          // declaration: a module without it is a user module.
           _consume(TokenType.LPAREN, 'Expected "(" after mode');
           if (!_check(TokenType.ATOM)) {
             throw CompileError(
-              'Expected "user" or "system" in mode declaration',
+              'Expected "system" in mode declaration',
               _peek().line,
               _peek().column,
               phase: 'parser'
             );
           }
           final modeToken = _advance();
-          if (modeToken.lexeme == 'user') {
-            compileMode = CompileMode.user;
-          } else if (modeToken.lexeme == 'system') {
-            compileMode = CompileMode.system;
-          } else {
+          if (modeToken.lexeme != 'system') {
             throw CompileError(
-              'Invalid mode "${modeToken.lexeme}". Expected "user" or "system".',
+              'Invalid mode "${modeToken.lexeme}". The mode declaration is '
+              '-mode(system); a module without it is a user module.',
               modeToken.line,
               modeToken.column,
               phase: 'parser'
             );
           }
+          compileMode = CompileMode.system;
           _consume(TokenType.RPAREN, 'Expected ")" after mode');
           _consume(TokenType.DOT, 'Expected "." after mode declaration');
           break;
@@ -146,26 +130,13 @@ class Parser {
           exposes.add(exposeParts.join('#'));
           break;
 
-        case 'export':
-          throw CompileError(
-            'The -export() declaration is no longer supported. Use \'exported procedure\' instead.',
-            startLine,
-            startCol,
-            phase: 'parser'
-          );
-
-        case 'import':
-          throw CompileError(
-            'The -import() declaration is no longer supported. Use \'imported procedure\' instead.',
-            startLine,
-            startCol,
-            phase: 'parser'
-          );
-
         default:
-          // Unknown declaration, back up to the '-'
+          // Not a directive: back up to the '-' and leave the directives, and
+          // the loop below refuses it as an unexpected token.  A bare `break`
+          // here left the switch and not the loop, which met the same '-'
+          // again and never ended.
           _current = startPos;
-          break;
+          break declarations;
       }
     }
 
@@ -423,7 +394,7 @@ class Parser {
 
       final keyword = _peek().lexeme;
 
-      if (['module', 'stdlib', 'mode', 'expose'].contains(keyword)) {
+      if (['module', 'mode', 'expose'].contains(keyword)) {
         // Skip to the next DOT
         while (!_isAtEnd() && !_check(TokenType.DOT)) {
           _advance();

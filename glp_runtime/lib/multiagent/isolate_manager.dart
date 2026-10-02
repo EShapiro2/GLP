@@ -133,7 +133,6 @@ class AgentConfig {
   final int goalArity; // Arity of the goal (e.g., 2, 3, 4)
   final List<String> goalConstantArgs; // Constant args between agentId and netIn
   final String programSource;
-  final List<String>? sharedSources; // Optional shared code files (e.g., social_agent.glp)
   final String? programDir; // Optional program directory for static linking
   final String rootSelfGlpPath; // Absolute path to programs/self.glp
   final String? bootPath; // The boot file's path, for its own self.glp chain
@@ -154,7 +153,6 @@ class AgentConfig {
     this.goalArity = 2,
     this.goalConstantArgs = const [],
     required this.programSource,
-    this.sharedSources,
     this.programDir,
     required this.rootSelfGlpPath,
     this.bootPath,
@@ -364,7 +362,6 @@ class IsolateManager {
         goalArity: directive.goalArity,
         goalConstantArgs: directive.constantArgs,
         programSource: config.source,
-        sharedSources: config.sharedSources,
         programDir: config.programDir,
         rootSelfGlpPath: config.rootSelfGlpPath,
         bootPath: config.bootPath,
@@ -527,14 +524,8 @@ void _agentIsolateEntry(AgentConfig config) async {
           filename: 'program', scope: bootScope());
       log('Program loaded via program linking (${config.programDir}) + boot source');
     } else {
-      // Legacy mode: load shared source files and boot program sequentially.
-      // Each file is loaded separately to preserve per-file -mode() directives.
-      if (config.sharedSources != null) {
-        for (var i = 0; i < config.sharedSources!.length; i++) {
-          engine.loadSource(config.sharedSources![i],
-              filename: 'shared_$i', scope: engine.scope);
-        }
-      }
+      // No program directory: the boot source, its boot clause stripped, is
+      // the program.
       engine.loadSource(config.programSource,
           filename: 'program', scope: bootScope());
       log('Program loaded via GlpEngine (stdlib + madPredicates + user code)');

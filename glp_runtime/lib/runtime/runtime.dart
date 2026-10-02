@@ -2,7 +2,6 @@ import 'machine_state.dart';
 import 'heap_fcp.dart';
 import 'suspend_ops.dart';
 import 'commit.dart';
-import 'abandon.dart';
 import 'fairness.dart';
 import 'body_kernels.dart';
 import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
@@ -61,10 +60,6 @@ class GlpRuntime {
   // visit to every entry of [suspended], so a wakeup cost in the number of
   // goals suspended.
   final Map<GoalRef, Set<int>> _suspendedOn = <GoalRef, Set<int>>{};
-
-  // Infrastructure goal IDs (spec §3.4): serve goals spawned by auto-activation.
-  // Their suspension does not affect user goal status determination.
-  final Set<int> infrastructureGoalIds = {};
 
   // F — the failed goals of the dGLP and madGLP Reduce transactions. A reduction
   // has three outcomes; a goal that fails joins F and the agent goes on reducing
@@ -189,18 +184,6 @@ class GlpRuntime {
     );
     _enqueueAll(acts);
     return acts;
-  }
-
-  /// Legacy commit method (deprecated - for backward compatibility)
-  /// TODO: Remove after runner.dart updated to use commitSigmaHat
-  List<GoalRef> commitWriters(Iterable<int> writerIds) {
-    throw UnimplementedError('Legacy commitWriters deprecated - use commitSigmaHat');
-  }
-
-  /// Legacy abandon method (deprecated)
-  /// TODO: Remove after runner.dart updated
-  List<GoalRef> abandonWriter(int writerId) {
-    throw UnimplementedError('Legacy abandonWriter deprecated - FCP has no abandon');
   }
 
   /// Suspend goal using FCP-exact shared suspension records

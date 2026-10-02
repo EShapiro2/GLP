@@ -122,32 +122,6 @@ class CodeGenerator {
     // End of procedure
     ctx.emitLabel('${entryLabel}_end');
     ctx.emit(bc.NoMoreClauses());  // Suspend if U non-empty, else fail
-
-    // DEBUG: Print bytecode for this procedure
-    if (proc.signature == 'foo/1') {
-      print('\n=== BYTECODE FOR ${proc.signature} ===');
-      for (int i = 0; i < ctx.instructions.length; i++) {
-        final instr = ctx.instructions[i];
-        String details = '';
-        if (instr is bc.HeadStructure) {
-          details = ' HeadStructure("${instr.functor}", ${instr.arity}, argSlot: ${instr.argSlot})';
-        } else if (instr is bc.UnifyConstant) {
-          details = ' UnifyConstant(${instr.value})';
-        } else if (instr is bc.PutStructure) {
-          details = ' PutStructure("${instr.functor}", ${instr.arity}, ${instr.argSlot})';
-        } else if (instr is bcv2.PutVariable) {
-          details = ' PutVariable(reg=${instr.varIndex}, slot=${instr.argSlot}, reader=${instr.isReader})';
-        } else if (instr is bcv2.GetVariable) {
-          details = ' GetVariable(reg=${instr.varIndex}, slot=${instr.argSlot}, reader=${instr.isReader})';
-        } else if (instr is bcv2.UnifyVariable) {
-          details = ' UnifyVariable(reg=${instr.varIndex}, reader=${instr.isReader})';
-        } else if (instr is bc.Spawn) {
-          details = ' Spawn("${instr.procedureLabel}", arity=${instr.arity})';
-        }
-        print('  $i: ${instr.runtimeType}$details');
-      }
-      print('=== END BYTECODE ===\n');
-    }
   }
 
   void _generateClause(AnnotatedClause clause, CodeGenContext ctx, String nextLabel, bool isLastClause) {

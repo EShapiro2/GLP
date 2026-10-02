@@ -310,7 +310,9 @@ void main() {
       rt.gq.enqueue(GoalRef(goalId, entryPc!));
 
       print('\nRunning scheduler to drain all goals...');
-      final ran = sched.drain(maxCycles: 100, debug: true, debugOutput: true);
+      final ran = <int>[];
+      sched.drainWithStatus(
+          maxCycles: 100, debug: true, debugOutput: true, goalIds: ran);
       print('Goals executed: ${ran.length}');
 
       // Debug: show what goals were spawned

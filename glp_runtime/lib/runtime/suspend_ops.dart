@@ -55,13 +55,4 @@ class SuspendOps {
     // Already bound to ground - no suspension needed
     // (This shouldn't normally happen if we're suspending on unbound vars)
   }
-
-  /// Legacy version (deprecated)
-  static void suspendGoal({
-    required int goalId,
-    required int kappa,
-    required Set<int> readerVarIds,
-  }) {
-    throw UnimplementedError('Legacy suspendGoal deprecated - use suspendGoalFCP');
-  }
 }
