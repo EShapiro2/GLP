@@ -1,0 +1,129 @@
+%% self.glp --- the plays of questions.vglp, the fragments of Sections 1 and 3: its questions put to a scripted
+%% person through the dispatcher and the construct processes (vGLP,
+%% sections/elicitation.tex, Definition "Canonical Compilation" and the
+%% paragraph before it; vGLP's code task of 2026-10-01 16:30 UTC, tests (iv)
+%% and (v), the latter's second half: a construct withdraws when its handle is
+%% bound to withdraw).
+%%
+%% Each play spawns the compiled goal with its ask stream and the dispatcher
+%% on that stream and on the person channel, as whatever spawns an agent's
+%% initial goal does (vGLP #4 Cowork, 2026-10-02 08:26 UTC, item 5); none of
+%% these goals has a person channel of its own, so the program's end of one,
+%% the dispatcher's third argument, is dropped.  The person reads the
+%% dispatcher's draw(Id, W, V) and withdraw(Id) and grants input(Id, R), a
+%% grant only after the draw that gives it Id, and logs what it saw.
+%%
+%% The types of questions.vglp and those its compilation adds, written again
+%% for the declarations of the procedures imported from its compiled module;
+%% type identity is structural, and the module's own shadow these within it.
+
+Peer     ::= Constant.
+Request  ::= post(String) ; quit.
+Offer    ::= offer(Peer).
+Response ::= accept(Peer) ; refuse(Peer).
+YesNo    ::= yes ; no.
+Card     ::= card(Peer, YesNo?).
+Content  ::= friend_request(Peer, Response?).
+Msg      ::= msg(Peer, Content).
+Handle   ::= withdraw.
+Question ::= request_r(Request?) ; card_w(Card).
+Ask      ::= ask(Constant, Question, Handle).
+
+imported procedure questions#agent(Peer?, Stream(Msg)?, Stream(String),
+    Stream(Ask)).
+imported procedure questions#respond_coldcall(Offer?, Response, Stream(Ask)).
+imported procedure questions#dispatch(Stream(Ask)?,
+    Channel(Stream(_), Stream(_))?, Channel(Stream(_), Stream(_))).
+
+%% ---------------------------------------------------------------------------
+%% (iv) Section 3's responder: the card shows the offering peer before any
+%% input, and one grant of yes completes it.
+%% ---------------------------------------------------------------------------
+
+exported procedure play_card(Response, Stream(_)).
+play_card(Resp?, Log?) :-
+    questions # respond_coldcall(offer(bob), Resp, Asks),
+    questions # dispatch(Asks?, ch(Gs?, Ds), _),
+    card_person(Ds?, Gs, Log).
+
+%% The person sees the card, the peer shown and its own position input, and
+%% grants yes.
+procedure card_person(Stream(_)?, Stream(_), Stream(_)).
+card_person([draw(Id, W, card(P, input)) | Ds], [input(Id?, yes) | Gs?],
+            [drawn(Id?, W?, card(P?, input)) | Log?]) :-
+    ground(Id?), ground(W?), ground(P?) |
+    card_person(Ds?, Gs, Log).
+card_person([withdraw(Id) | _], [], [withdrawn(Id?)]) :-
+    ground(Id?) | true.
+card_person([], [], []).
+
+%% A grant that forms no term of the question's type answers nothing: the
+%% person grants maybe, and the card stays.
+exported procedure play_card_refused(Response, Stream(_)).
+play_card_refused(Resp?, Log?) :-
+    questions # respond_coldcall(offer(bob), Resp, Asks),
+    questions # dispatch(Asks?, ch(Gs?, Ds), _),
+    refusing_person(Ds?, Gs, Log).
+
+procedure refusing_person(Stream(_)?, Stream(_), Stream(_)).
+refusing_person([draw(Id, _, V) | Ds], [input(Id?, maybe) | Gs?],
+                [drawn(Id?, V?) | Log?]) :-
+    ground(Id?), ground(V?) |
+    refusing_person(Ds?, Gs, Log).
+refusing_person([withdraw(Id) | _], [], [withdrawn(Id?)]) :-
+    ground(Id?) | true.
+refusing_person([], [], []).
+
+%% ---------------------------------------------------------------------------
+%% (v), second half: the agent's message clause, (_), binds the handle of its
+%% request to withdraw, and the request's construct withdraws unanswered; the
+%% card of the offer it spawns and the request asked again are drawn.
+%% ---------------------------------------------------------------------------
+
+exported procedure play_withdraw(Stream(String), Stream(_)).
+play_withdraw(Outs?, Log?) :-
+    questions # agent(me, [msg(me, friend_request(carol, _))], Outs, Asks),
+    questions # dispatch(Asks?, ch([], Ds), _),
+    watching_person(Ds?, Log).
+
+%% The person grants nothing and logs every draw and withdrawal.
+procedure watching_person(Stream(_)?, Stream(_)).
+watching_person([draw(Id, W, V) | Ds], [drawn(Id?, W?, V?) | Log?]) :-
+    ground(Id?), ground(W?), ground(V?) |
+    watching_person(Ds?, Log).
+watching_person([withdraw(Id) | Ds], [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    watching_person(Ds?, Log).
+watching_person([], []).
+
+%% ---------------------------------------------------------------------------
+%% A reader-mode question, a menu of forms: the person posts a text, a post of
+%% a number refused on the way, and then quits.
+%% ---------------------------------------------------------------------------
+
+exported procedure play_request(Stream(String), Stream(_)).
+play_request(Outs?, Log?) :-
+    questions # agent(me, [], Outs, Asks),
+    questions # dispatch(Asks?, ch(Gs?, Ds), _),
+    posting_person(Ds?, Gs, Log).
+
+procedure posting_person(Stream(_)?, Stream(_), Stream(_)).
+posting_person([draw(Id, W, input) | Ds],
+               [input(Id?, post(5)), input(Id?, post("hi")) | Gs?],
+               [drawn(Id?, W?) | Log?]) :-
+    ground(Id?), ground(W?) |
+    quitting_person(Ds?, Gs, Log).
+posting_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    posting_person(Ds?, Gs, Log).
+posting_person([], [], []).
+
+procedure quitting_person(Stream(_)?, Stream(_), Stream(_)).
+quitting_person([draw(Id, W, input) | Ds], [input(Id?, quit) | Gs?],
+                [drawn(Id?, W?) | Log?]) :-
+    ground(Id?), ground(W?) |
+    quitting_person(Ds?, Gs, Log).
+quitting_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    quitting_person(Ds?, Gs, Log).
+quitting_person([], [], []).

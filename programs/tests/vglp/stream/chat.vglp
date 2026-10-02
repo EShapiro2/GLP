@@ -1,0 +1,19 @@
+%% The chat input of Section 3 (vGLP at db03e2d, sections/vglp.tex, after
+%% Definition "Guarded Clause, Volitional Procedure, ..."): one question whose
+%% answer is a stream, which the person gives one message at a time.  Its
+%% interactive term is a variable, so the clause reduces without waiting and
+%% passes the reader on, and the question stays open until the person answers
+%% it.  The procedure is exported for the play of self.glp (vGLP's code task
+%% of 2026-10-01 16:30 UTC, test (v), its first half: a reader-mode stream
+%% question takes one element per submission).
+
+Peer ::= Constant.
+Msg ::= msg(Peer, String).
+exported procedure (Stream(String)?)*chat(Peer?, Stream(Msg)).
+(Ms)*chat(Peer, Out?) :- ground(Peer?) |
+    send_all(Peer?, Ms?, Out).
+
+procedure send_all(Peer?, Stream(String)?, Stream(Msg)).
+send_all(Peer, [M|Ms], [msg(Peer?, M?)|Out?]) :-
+    ground(Peer?) | send_all(Peer?, Ms?, Out).
+send_all(_, [], []).

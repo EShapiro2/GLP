@@ -11,7 +11,10 @@
 %% texts it posts, and a request is to post a text or to quit.  The program
 %% has two interactive types: each asks inside its own functor in Question,
 %% request_r and card_w, under one ask/3 (vGLP #4 Cowork, 2026-10-02 08:26
-%% UTC, Q1), and the compiled program loads.
+%% UTC, Q1), and the compiled program loads.  The agent and the responder are
+%% exported for the plays of self.glp, which run them with the dispatcher and
+%% a scripted person (vGLP's code task of 2026-10-01 16:30 UTC, tests (iv)
+%% and (v)).
 
 Peer     ::= Constant.
 Request  ::= post(String) ; quit.
@@ -22,7 +25,7 @@ Card     ::= card(Peer, YesNo?).
 Content  ::= friend_request(Peer, Response?).
 Msg      ::= msg(Peer, Content).
 
-procedure (Request?)*agent(Peer?, Stream(Msg)?, Stream(String)).
+exported procedure (Request?)*agent(Peer?, Stream(Msg)?, Stream(String)).
 
 %% Post a text.
 (post(Text))*agent(Id, NetIn, [Text?|Outs?]) :-
@@ -38,7 +41,7 @@ procedure (Request?)*agent(Peer?, Stream(Msg)?, Stream(String)).
     respond_coldcall(offer(From?), Resp),
     agent(Id?, NetIn?, Outs).
 
-procedure (Card)*respond_coldcall(Offer?, Response).
+exported procedure (Card)*respond_coldcall(Offer?, Response).
 
 %% Show the person who offers, and pass their answer on.
 (card(From?, Answer))*respond_coldcall(offer(From), Resp?) :-

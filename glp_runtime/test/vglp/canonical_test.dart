@@ -30,8 +30,8 @@ import 'package:glp_runtime/vglp/program_compilation.dart'
 
 const _programs = '../programs';
 
-String _vglp(String name) =>
-    File('$_programs/tests/vglp/$name/$name.vglp').readAsStringSync();
+String _vglp(String dir, String name) =>
+    File('$_programs/tests/vglp/$dir/$name.vglp').readAsStringSync();
 
 /// The .vglp sources under [dir], walked one directory at a time.  Not the
 /// fixtures other tests write under programs/ and remove, `<stem>_<pid>_<time>/`,
@@ -62,7 +62,7 @@ List<File> _vglpSources(Directory dir) {
 void main() {
   group('(ii) a reader-mode question and a writer-mode one', () {
     late String q;
-    setUp(() => q = compileCanonical(_vglp('questions')).source);
+    setUp(() => q = compileCanonical(_vglp('fragments', 'questions')).source);
 
     test('a reader-mode question, (Request?), sends its ask with the writer of '
         'its interactive variable, and the asked goal gets the reader', () {
@@ -531,11 +531,11 @@ go(N) :- q(N?).
 
   group('(iii) the old syntax keeps its old compilation', () {
     final sources = _vglpSources(Directory(_programs));
-    final paper = {'questions.vglp'};
+    final paper = {'questions.vglp', 'chat.vglp'};
     String base(File f) => f.path.split(Platform.pathSeparator).last;
 
-    test('the nine old sources are not in the paper\'s syntax, the one new '
-        'one is', () {
+    test('the nine old sources are not in the paper\'s syntax, the two new '
+        'ones are', () {
       final old = sources.where((f) => !paper.contains(base(f))).toList();
       expect(old, hasLength(9), reason: old.map((f) => f.path).join('\n'));
       for (final f in old) {
@@ -543,7 +543,7 @@ go(N) :- q(N?).
             reason: f.path);
       }
       final fresh = sources.where((f) => paper.contains(base(f))).toList();
-      expect(fresh, hasLength(1));
+      expect(fresh, hasLength(2));
       for (final f in fresh) {
         expect(isPaperSyntaxSource(f.readAsStringSync()), isTrue,
             reason: f.path);
