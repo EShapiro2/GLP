@@ -262,6 +262,31 @@ class Artefact {
   /// The compiled identity: SHA-256 of the body.
   Uint8List get compiledIdentity => certificate.hBin;
 
+  /// Why this artefact is not a certified compiled program, or null where it
+  /// is: it carries a certificate, its body hashes to the compiled identity the
+  /// certificate names, and the certificate's signature verifies under the key
+  /// it carries --- the loader's step 1 without an adoption offer (§Loader), as
+  /// [certifiedFromBytes] asks it of bytes.  The body hashed is the one this
+  /// artefact holds and would run.  What run/2 and run/3 ask before they
+  /// activate a module (engine_v2/module_kernels.dart): the machine "activates
+  /// no program whose certificate does not verify" (GSG s6-security.tex, G1).
+  String? get certificateRefusal {
+    final cert = certificate;
+    if (cert.isRefused) {
+      return 'it carries no certificate (it was refused one, or no one '
+          'compiled it for a person)';
+    }
+    if (!_bytesEqual(compiledIdentityOfBody(bodyBytes()), cert.hBin)) {
+      return 'its body does not hash to the compiled identity its '
+          'certificate names';
+    }
+    if (!cert.verifies()) {
+      return "its certificate's signature does not verify under the key it "
+          'carries';
+    }
+    return null;
+  }
+
   int _indexOfSignature(String sig) {
     for (var i = 0; i < symbols.length; i++) {
       if (symbols[i].signature == sig) return i;
