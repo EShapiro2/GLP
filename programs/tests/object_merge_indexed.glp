@@ -1,5 +1,8 @@
 %% object_merge_indexed.glp - merge with clause indices for tracing
+%% The declaration is the one book/meta/enhanced/tracing_meta.glp gives the same
+%% object program: the goal consumed, its body and clause number produced.
 
+procedure reduce(_?, _, Integer).
 reduce(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs), 1).
 reduce(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs), 2).
 reduce(merge([], [], []), true, 3).

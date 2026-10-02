@@ -1,6 +1,0 @@
-% Minimal: inner computes value, outer waits for it
-test(R?) :-
-  inner(A),
-  R := A? + 0.
-
-inner(X?) :- X := 3 + 2.
