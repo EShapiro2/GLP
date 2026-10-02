@@ -57,7 +57,7 @@ loop(alice, _, [greeted(_, Who) | _], [greeted(Who?)], [], Convs) :-
 %% Greeted, at anyone else: report it and carry on, so that a second
 %% invitation has a live execution to reach.
 loop(Id, Down, [greeted(_, Who) | Ev], [greeted(Who?) | Ui?], Up?, Convs) :-
-    ~(Id? =?= alice), ground(Who?) |
+    Id? =?\= alice, ground(Who?) |
     loop(Id?, Down?, Ev?, Ui, Up, Convs?).
 
 %% The social graph closes the stream: close everything.

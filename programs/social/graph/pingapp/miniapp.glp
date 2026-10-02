@@ -60,10 +60,10 @@ loop(alice, Down, [greeted(carol, Who) | Ev], [greeted(Who?) | Ui1?], Up?, Convs
     merge(Ev?, EvW?, Ev1),
     loop(alice, Down?, Ev1?, Ui, Up, Convs1?, Held?).
 loop(alice, Down, [greeted(F, Who) | Ev], [greeted(Who?) | Ui?], Up?, Convs, Held) :-
-    ~(F? =?= carol), ground(Who?) |
+    F? =?\= carol, ground(Who?) |
     loop(alice, Down?, Ev?, Ui, Up, Convs?, Held?).
 loop(Id, Down, [greeted(_, Who) | Ev], [greeted(Who?) | Ui?], Up?, Convs, Held) :-
-    ~(Id? =?= alice), ground(Who?) |
+    Id? =?\= alice, ground(Who?) |
     loop(Id?, Down?, Ev?, Ui, Up, Convs?, Held?).
 
 %% A probe received: at carol, forward it to bob (or hold it); elsewhere,
@@ -72,7 +72,7 @@ loop(carol, Down, [probe_from(_, W?) | Ev], [forwarded(bob) | Ui?], Up?, Convs, 
     forward(W, Convs?, Convs1, Held?, Held1),
     loop(carol, Down?, Ev?, Ui, Up, Convs1?, Held1?).
 loop(Id, Down, [probe_from(_, W?) | Ev], [answered | Ui?], Up?, Convs, Held) :-
-    ~(Id? =?= carol) |
+    Id? =?\= carol |
     answer_probe(W),
     loop(Id?, Down?, Ev?, Ui, Up, Convs?, Held?).
 

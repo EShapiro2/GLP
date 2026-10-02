@@ -855,7 +855,7 @@ cp(Id, [card(respond_swap_1, ctx_respond_swap_1(From, _, _), R) | Es], As?, Scri
     ground(From?), ground(R?) |
     try_step(Id?, Es?, As, Script?, Open?, [swap_card(From?, R?) | Swaps?], P?, Screen).
 cp(Id, [card(L, _, _) | Es], As?, Script, Open, Swaps, P, Screen?) :-
-    ~(L? =?= agent_1), ~(L? =?= agent_2), ~(L? =?= respond_swap_1) |
+    L? =?\= agent_1, L? =?\= agent_2, L? =?\= respond_swap_1 |
     cp(Id?, Es?, As, Script?, Open?, Swaps?, P?, Screen).
 cp(Id, [closed(R) | Es], As?, Script, open(M, S), Swaps, P, Screen?) :-
     ground(R?) |
