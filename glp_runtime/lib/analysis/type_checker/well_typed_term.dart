@@ -314,15 +314,17 @@ PathCheckResult checkPathAgainstAutomaton(
 
 /// Build transition label from path steps
 TransitionLabel _buildTransitionLabel(PathStep currentStep, PathStep nextStep) {
-  // Parse functor/arity from current step symbol (e.g., "[|]/2" → "[|]", 2)
-  final parts = currentStep.symbol.split('/');
-  if (parts.length != 2) {
+  // Parse functor/arity from current step symbol (e.g., "[|]/2" → "[|]", 2).
+  // Split at the LAST '/': the functor itself may contain '/', as `/` and `//`
+  // do, whose symbols are "//2" and "///2".
+  final slash = currentStep.symbol.lastIndexOf('/');
+  final arity = slash > 0 ? int.tryParse(currentStep.symbol.substring(slash + 1)) : null;
+  if (arity == null) {
     // Leaf node (variable or constant) - shouldn't happen for non-leaf steps
     return TransitionLabel.functor(currentStep.symbol, 0, nextStep.argIndex, mode: nextStep.mode);
   }
 
-  final functor = parts[0];
-  final arity = int.tryParse(parts[1]) ?? 0;
+  final functor = currentStep.symbol.substring(0, slash);
 
   // Label encodes: functor(arity, argIndex) with mode from next step
   return TransitionLabel.functor(functor, arity, nextStep.argIndex, mode: nextStep.mode);
