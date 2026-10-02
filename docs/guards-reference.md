@@ -21,10 +21,14 @@ Guards are pure tests with **three-valued semantics** (success/suspend/fail) tha
 
 **Semantics**:
 - **Success**: Guard condition definitively true → continue to next guard or body
-- **Suspend**: Unbound variables present, success possible → add to suspension set Si
+- **Suspend**: Unbound readers present, success possible under a readers substitution → the goal's readers among them go to the suspension set Si
 - **Fail**: Guard condition definitively false → try next clause
 
 **Key Property**: Guards never have side effects and execute during HEAD/GUARDS phase (before commit).
+
+**A goal suspends on its own readers** (GLP-Spec glp.tex: "if a GLP goal A cannot be reduced now, but there is a readers substitution σ such that Aσ can be reduced, such readers are identified, the goal A suspends on these readers").  No readers substitution binds a variable the clause alone holds --- a fresh one of the head, in a structure the head gives a goal writer, or the clause's own output, a head reader matched against the goal's writer --- so a guard member left undecided with no reader of the goal to wait on fails the clause (GLP #3 Cowork, 2026-10-02 15:31 UTC, A).  Every guard but `=?\=` succeeds only where each reader it waits on is bound, and fails on a reader the clause alone holds, a reader of the goal beside it or not; `=?\=` waits on the goal's readers and fails where it has none.  `hq(f(X), Y, yes) :- X? =?= w(Y?) | true` fails `hq(W, b, R)`, and `hw(f(X), Y, yes) :- X? =?\= Y? | true` fails `hw(W, b, R)`: until 2026-10-02 each held the goal for ever.
+
+**A guard over an unknown variable** --- one whose writer occurrence in the head lies under a goal reader the head suspends on, its value not yet given --- is decided by the same decision, the variable standing for any term: it fails the clause where no term makes it succeed, and is otherwise passed by, the clause waiting on the goal reader (GLP #3 Cowork, 2026-10-02 15:31 UTC, B).  With `pu(f(X), Y, yes) :- X? =?= Y? | true.` and `pu(_, _, no) :- otherwise | true.`, `pu(P?, g(W), R)` gives `R = no`, `g(W)` holding a writer; until 2026-10-02 it waited on `P?`.
 
 ---
 
@@ -49,8 +53,8 @@ A guard is a conjunction of guard predicates (GLP-Spec glp.tex, Definition "Guar
 
 **Semantics**:
 - Success: X bound to constant (number/string) or compound term (may contain unbound subterms)
-- Suspend: X is unbound reader
-- Fail: X is unbound writer
+- Suspend: X is an unbound reader of the goal
+- Fail: X is unbound writer, or a reader the clause alone holds (see Overview)
 
 **Logical Definition**: `known(X)` ≡ `constant(X) ∨ compound(X)`
 
@@ -111,8 +115,10 @@ copy(X, Y, Z) :- compound(X?) |
 
 **Semantics**:
 - Success: X? is ground (no unbound variables anywhere)
-- Suspend: X? contains unbound readers (waiting for values)
-- Fail: X? contains unbound writers
+- Suspend: X? contains unbound readers of the goal (waiting for values)
+- Fail: X? contains unbound writers, or a mutual reference, which "holds the writer of a stream tail, so it is neither ground nor a constant type" (TGLP typed-glp.tex), or a reader the clause alone holds (see Overview)
+
+The argument may be a term built in the guard, `ground(h(X?))`, decided as a variable is.  Until 2026-10-02 the ground instruction passed a mutual reference as ground, where `=?=` fails on one, and a term argument succeeded whatever it held.
 
 **Why the argument must be a reader**: Guards use three-valued semantics where unbound variables cause suspension (waiting for a value). If the argument were a writer, an unbound variable would cause immediate failure rather than suspension, defeating the purpose of patient synchronization.
 
@@ -151,10 +157,12 @@ run(Goal) :- otherwise | send_to_user(no_clauses(Goal?)).
 
 **Semantics**:
 - Success: X? is bound to a term containing no readers (ground terms and/or writers only)
-- Suspend: X? contains any readers (waiting for them to be instantiated)
-- Fail: Never fails
+- Suspend: X? contains readers of the goal (waiting for them to be instantiated)
+- Fail: X? contains a reader the clause alone holds, which no readers substitution binds (see Overview)
 
-**Key Property**: This guard **never fails**—it either succeeds (no readers) or suspends (has readers). This is because any term with readers will eventually either have those readers bound (at which point the guard is re-evaluated) or remain suspended indefinitely.
+**Key Property**: This guard fails only on a reader the clause alone holds: any other term with readers will eventually either have those readers bound (at which point the guard is re-evaluated) or remain suspended indefinitely.  Until 2026-10-02 it read a variable fresh to the clause as its writer and succeeded: `hn(f(X), yes) :- no_readers(X?) | true` gave `hn(W, R)` `R = yes`.
+
+The argument may be a term built in the guard, `no_readers(f(X?))`, decided as a variable is: `p(X, Y?) :- no_readers(f(X?)) | Y = a.` suspends `p(Z?, Y)` and gives `Y = a` when `Z` is bound.  Until 2026-10-02 the runtime evaluated `no_readers/1` on a variable alone, and a term argument failed the clause with a warning.
 
 **Use Case**: Ensuring a term is safe for external output (e.g., to a UI). Terms sent to external systems should not contain readers, as the external system cannot wait for them to be instantiated.
 
@@ -437,7 +445,7 @@ Tests whether two terms are ground and equal.
 | X and Y | Result |
 |---|---|
 | both ground and equal | succeed |
-| not both ground, and some readers substitution makes them ground and equal | suspend on the unbound readers |
+| not both ground, and some readers substitution makes them ground and equal | suspend on the unbound readers of the goal; fail on a reader the clause alone holds (see Overview) |
 | no readers substitution makes them ground and equal | fail |
 
 So `f(a, X?) =?= f(b, Z?)`, `f(X?) =?= g(Y?)`, `[a | T?] =?= []` and `f(W) =?= f(c)` fail, and `f(a, X?) =?= f(a, b)` suspends.
@@ -459,7 +467,7 @@ The guard `Key =?= K?` succeeds when `Key` and `K` are both ground and equal. If
 
 `procedure =?\=(_?, _?).` Ground: no.  It succeeds where readers stand unbound --- `f(a, Z?) =?\= f(b, W?)` --- so its success grounds nothing, and it licenses no repeated reader (Remark "Guards and SRSW").
 
-**Semantics** (GLP-Spec appendix-guards.tex, bbff21d): "`=?\=` succeeds if no readers substitution makes them ground and equal."  It suspends and fails by the guard semantics, as `=?=` does (above): it fails where both are ground and equal, and suspends on the unbound readers where they are not but some readers substitution makes them so.  So `f(a, Z?) =?\= f(b, W?)`, `f(X?) =?\= g(Y?)`, `[a | T?] =?\= []` and `f(W) =?\= f(c)` succeed, and `f(X?) =?\= f(Y?)` suspends.
+**Semantics** (GLP-Spec appendix-guards.tex, bbff21d): "`=?\=` succeeds if no readers substitution makes them ground and equal."  It suspends and fails by the guard semantics, as `=?=` does (above): it fails where both are ground and equal, and where they are not but some readers substitution makes them so, it suspends on the unbound readers of the goal, and fails where it meets none (see Overview).  So `f(a, Z?) =?\= f(b, W?)`, `f(X?) =?\= g(Y?)`, `[a | T?] =?\= []` and `f(W) =?\= f(c)` succeed, and `f(X?) =?\= f(Y?)` suspends.
 
 ---
 
