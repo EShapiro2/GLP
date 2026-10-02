@@ -1,11 +1,10 @@
-%% Questions in both modes outside a population (vGLP at 16b3b54,
-%% sections/vglp.tex, the fragments of the currency agent after Definition
-%% "Guarded Clause, Volitional Procedure, ..."; sections/elicitation.tex,
-%% Definition "Canonical Compilation").  The program declares no population,
-%% so each asking clause calls construct(T, X), the construct process: the
-%% agent's question is Request in reader mode, the responder's Card in writer
-%% mode, and the agent's message clause, whose interactive term is `_`, closes
-%% the question it drops.
+%% Questions in both modes (vGLP at 16b3b54, sections/vglp.tex, the fragments
+%% of the currency agent after Definition "Guarded Clause, Volitional
+%% Procedure, ..."; sections/elicitation.tex, Definition "Canonical
+%% Compilation").  Each asking clause calls construct(T, X), the construct
+%% process: the agent's question is Request in reader mode, the responder's
+%% Card in writer mode, and the agent's message clause, whose interactive term
+%% is `_`, closes the question it drops.
 %%
 %% The paper elides the agent's other arguments and its other requests; here
 %% the agent carries its identifier, its network input and a stream of the

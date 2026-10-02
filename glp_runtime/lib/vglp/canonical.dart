@@ -1,7 +1,7 @@
 // glp_runtime/lib/vglp/canonical.dart
 //
 // The canonical compilation of a vGLP program written in the paper's syntax.
-// Spec: vGLP at 16b3b54 --- sections/vglp.tex, Definition "Guarded Clause,
+// Spec: vGLP at 4cab2ff --- sections/vglp.tex, Definition "Guarded Clause,
 // Volitional Procedure, Interactive Type, Interactive Term, Ordinary Clause,
 // Procedure, vGLP Program"; sections/elicitation.tex, Definition "Canonical
 // Compilation".
@@ -12,7 +12,9 @@
 //     (A)*p(S1, ..., Sn) :- G | B.
 //
 // T is the interactive type, in writer or reader mode as an argument type is;
-// A, the interactive term, is a term of type T, a variable or `_`.  The clause
+// A, the interactive term, is a term of type T, possibly a variable, or `_`,
+// the anonymous variable, if T is in reader mode; in writer mode, where the
+// program writes the output, the anonymous variable is refused.  The clause
 // "is the guarded clause p(S1, ..., Sn, A) :- G | B, of arity n+1" (Definition
 // "Guarded Clause, ..."), so the front end reads it as exactly that: a token
 // rewrite puts A after the last argument, and T after the last argument type,
@@ -25,7 +27,7 @@
 //   - for each volitional procedure q of interactive type T, its clauses as
 //     guarded clauses of arity n+1, their calls replaced likewise, a clause
 //     with the interactive term `_` given a fresh writer A in its place and the
-//     body goal close(A?);
+//     body goal withdraw(A?);
 //   - the asking clause
 //         q_a(S1, ..., Sn) :- construct(T, X), q(S1', ..., Sn', X?).
 //     S'_l the reader of S_l at an input position and the writer at an output
@@ -36,12 +38,10 @@
 // THE NAMES.  The asking clause takes the source name, q_a = q, so a call of
 // q in a body, and in an initial goal, is already the call of its asking
 // clause; the (n+1)-ary procedure takes `q1`, made fresh against every name the
-// program uses.  These are the names of Integration's hand-compiled fixtures,
-// programs/tests/sglp/person_asks*.glp.
+// program uses.
 //
 // THE CONSTRUCT.  T is passed as the constant naming the moded interactive
-// type as written, 'Menu' or 'Menu?', which is how sGLP's person declarations
-// name it (ast.dart, PersonDecl.typeKey).  construct(T, X) is the construct
+// type as written, 'Menu' or 'Menu?'.  construct(T, X) is the construct
 // process, which is Part 2's runtime and not declared here.
 
 import '../compiler/ast.dart';
@@ -60,8 +60,12 @@ import 'program_compilation.dart' show compiledHeader;
 const constructGoal = 'construct';
 
 /// The built-in that closes a question (vGLP, Definition "Guarded Clause,
-/// ...": "The built-in goal close(X?) succeeds on any argument").
-const closeGoal = 'close';
+/// ...": "The built-in goal withdraw(X?) succeeds on any argument; its use is
+/// to close a question").  It is vGLP's built-in, not the root's close/1,
+/// which stays.  The runtime implements it (sections/elicitation.tex, the
+/// paragraph before Definition "Canonical Compilation"), and that runtime is
+/// Part 2's, so withdraw/1 is not declared here.
+const withdrawGoal = 'withdraw';
 
 /// One volitional procedure of the source, and the names the compilation
 /// gives it.
@@ -179,6 +183,7 @@ CanonicalProgram compileCanonical(String text) {
     }
   }
   _checkNoAskedCall(m, volitional);
+  _checkNoAnonymousOutput(m, volitional);
 
   // The compiled procedures, each with its declaration, in source order; a
   // volitional procedure becomes its asking clause and its (n+1)-ary
@@ -190,17 +195,16 @@ CanonicalProgram compileCanonical(String text) {
   for (final p in m.procedures) {
     final v = askedProcs[p.signature];
     if (v == null) {
-      out.add(_Emitted(declsByKey[p.signature], p, p.signature));
+      out.add(_Emitted(declsByKey[p.signature], p));
       continue;
     }
     final decl = declsByKey[p.signature]!;
-    out.add(_Emitted(_askingDeclaration(decl, v),
-        _askingClause(decl, v, constructGoal), p.signature));
+    out.add(_Emitted(
+        _askingDeclaration(decl, v), _askingClause(decl, v, constructGoal)));
     out.add(_Emitted(
         ProcDecl(v.guardedName, decl.argTypes, decl.line, decl.column,
             typeParams: decl.typeParams),
-        _guardedProcedure(p, v),
-        p.signature));
+        _guardedProcedure(p, v)));
   }
   // Declarations with no clauses of their own: imported procedures, and
   // declarations of procedures the runtime implements.
@@ -498,6 +502,46 @@ void _checkNoAskedCall(Module m, Map<String, VolitionalProcedure> volitional) {
   }
 }
 
+/// The interactive term is "a term of type T, possibly a variable, or the
+/// anonymous variable if T is in reader mode" (Definition "Guarded Clause,
+/// ..."): "In writer mode the program writes the output, and a clause closes
+/// a question inside it by withdraw on the question's reader; the anonymous
+/// variable, which would leave the output unwritten, is not allowed there."
+/// It is refused written `_`, and written `_?`, TGLP's anonymous output, the
+/// interactive term's position being a produced one in writer mode.
+void _checkNoAnonymousOutput(
+    Module m, Map<String, VolitionalProcedure> volitional) {
+  for (final v in volitional.values) {
+    if (v.readerMode) continue;
+    for (final p in m.procedures) {
+      if (p.signature != '${v.name}/${v.arity + 1}') continue;
+      for (final c in p.clauses) {
+        final a = c.head.args.last;
+        if (a is! UnderscoreTerm) continue;
+        throw CompileError(
+            'The clause ${_asWritten(c, v)} has the anonymous variable as its '
+            'interactive term, and the interactive type ${v.typeConstant} of '
+            '${v.name}/${v.arity} is in writer mode: there the program writes '
+            'the output, and a clause closes a question inside it by '
+            'withdraw on the question\'s reader; the anonymous variable, which '
+            'would leave the output unwritten, is not allowed (vGLP, '
+            'Definition "Guarded Clause, ...")',
+            c.line, c.column, phase: 'analyzer');
+      }
+    }
+  }
+}
+
+/// The head of a clause of a volitional procedure as the source writes it,
+/// `(A)*p(S1, ..., Sn)`.
+String _asWritten(Clause c, VolitionalProcedure v) {
+  final printer = SourcePrinter();
+  final args = c.head.args;
+  final term = printer.printTerm(args.last);
+  final rest = args.sublist(0, args.length - 1).map(printer.printTerm);
+  return '($term)*${v.name}${rest.isEmpty ? '' : '(${rest.join(', ')})'}';
+}
+
 /// The calls a body makes, a rated or placed goal by its inner goal.
 Iterable<Goal> _calls(List<Goal> body) sync* {
   for (final g in body) {
@@ -529,11 +573,6 @@ Set<String> _namesUsed(Module m) {
       for (final g in _calls(c.body ?? const [])) {
         names.add(g.functor);
       }
-    }
-  }
-  for (final k in m.kinds) {
-    for (final d in k.personDecls) {
-      names.add(d.procedure);
     }
   }
   return names;
@@ -592,7 +631,7 @@ Procedure _askingClause(ProcDecl decl, VolitionalProcedure v, String goal) {
 
 /// The clauses of q as guarded clauses of arity n+1, named q1; a clause whose
 /// interactive term is `_` is given a fresh writer A in its place and the body
-/// goal close(A?).
+/// goal withdraw(A?).
 Procedure _guardedProcedure(Procedure p, VolitionalProcedure v) {
   final clauses = <Clause>[];
   for (final c in p.clauses) {
@@ -605,8 +644,8 @@ Procedure _guardedProcedure(Procedure p, VolitionalProcedure v) {
         ...args.sublist(0, args.length - 1),
         VarTerm(a, false, last.line, last.column),
       ];
-      final close = Goal(closeGoal, [VarTerm(a, true, last.line, last.column)],
-          last.line, last.column);
+      final withdraw = Goal(withdrawGoal,
+          [VarTerm(a, true, last.line, last.column)], last.line, last.column);
       // A body that is the single goal `true` is the guarded unit clause's
       // idiom, and is empty.
       final rest = (body == null ||
@@ -615,7 +654,7 @@ Procedure _guardedProcedure(Procedure p, VolitionalProcedure v) {
                   body.first.args.isEmpty))
           ? const <Goal>[]
           : body;
-      body = [...rest, close];
+      body = [...rest, withdraw];
     }
     clauses.add(Clause(Atom(v.guardedName, args, c.head.line, c.head.column),
         guards: c.guards, body: body, line: c.line, column: c.column));
@@ -657,11 +696,7 @@ String _freshVariable(String stem, Clause c) {
 class _Emitted {
   final ProcDecl? decl;
   final Procedure procedure;
-
-  /// The signature of the source procedure it compiles, by which its profile,
-  /// if any, is found.
-  final String sourceSig;
-  _Emitted(this.decl, this.procedure, this.sourceSig);
+  _Emitted(this.decl, this.procedure);
 }
 
 String _emit(Module m, List<_Emitted> procs, List<ProcDecl> bare) {
@@ -675,46 +710,16 @@ String _emit(Module m, List<_Emitted> procs, List<ProcDecl> bare) {
   }
   b.writeln();
 
-  bool inKind(String sig) => m.kinds.any((k) => k.procedureSigs.contains(sig));
-
-  void declaration(ProcDecl d) => b.writeln(printDeclaration(d));
-  void procedure(_Emitted e) {
-    if (e.decl != null) declaration(e.decl!);
+  for (final d in bare) {
+    b.writeln(printDeclaration(d));
+  }
+  if (bare.isNotEmpty) b.writeln();
+  for (final e in procs) {
+    if (e.decl != null) b.writeln(printDeclaration(e.decl!));
     for (final c in e.procedure.clauses) {
       b.writeln(printer.printClause(c));
     }
     b.writeln();
-  }
-
-  for (final d in bare) {
-    if (!inKind(d.key)) declaration(d);
-  }
-  if (bare.any((d) => !inKind(d.key))) b.writeln();
-  for (final e in procs) {
-    if (!inKind(e.sourceSig)) procedure(e);
-  }
-
-  for (final k in m.kinds) {
-    b.writeln('person ${k.name}.');
-    for (final d in k.personDecls) {
-      b.writeln('${d.typeKey} =::= ${d.procedure}.');
-    }
-    for (final d in bare) {
-      if (k.procedureSigs.contains(d.key)) declaration(d);
-    }
-    for (final e in procs) {
-      if (k.procedureSigs.contains(e.sourceSig)) procedure(e);
-    }
-  }
-
-  final r = m.runDecl;
-  if (r != null) {
-    final mixes = [
-      for (final x in r.mixes)
-        '${x.dimension} ~ (${x.entries.map((e) => '${e.kind} : ${e.probability}').join(' ; ')})'
-    ];
-    b.writeln('run ${r.agents} agents [ ${mixes.join(', ')} ] '
-        'until ${r.untilText} seed ${r.seed}.');
   }
   return b.toString();
 }
@@ -730,13 +735,17 @@ String printDeclaration(ProcDecl d) {
 
 /// GLP source from the AST, a constant as the lexer reads it back: an atom
 /// bare where it can be, else in single quotes (`'Menu?'`), and a string
-/// literal, whose value carries its double quotes, as it was written.
+/// literal, whose value carries its double quotes, as it was written; and the
+/// anonymous variable as it was written, `_`, or `_?` at a produced head
+/// position, TGLP's anonymous output (TGLP, "Anonymous variables"), which
+/// GlpPrinter prints `_`.
 class SourcePrinter extends GlpPrinter {
   @override
   String printTerm(Term term) {
     if (term is ConstTerm && term.value is String) {
       return constantSource(term.value as String);
     }
+    if (term is UnderscoreTerm) return term.isReader ? '_?' : '_';
     return super.printTerm(term);
   }
 }
