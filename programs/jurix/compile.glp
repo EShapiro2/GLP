@@ -111,16 +111,22 @@ latex_atom(atom(P, [A|As]), T, R?) :-
     latex_args([A?|As?], [')'|T?], R1),
     latex_pred(P?, ['('|R1?], R).
 
-procedure latex_atoms(Atoms?, Chunks?, Chunks).
-latex_atoms([], T, T?).
-latex_atoms([A], T, R?) :- ground(A?), ground(T?) | latex_atom(A?, T?, R).
-latex_atoms([A, B|As], T, R?) :- ground(A?), ground(B?), ground(As?), ground(T?) |
-    latex_atoms([B?|As?], T?, R1),
-    latex_atom(A?, [','|R1?], R).
+% The atoms of a set are written apart by Sep, which the form of the display
+% supplies: a comma in the form of Section 5.2, whose displays write no set of
+% two atoms, and a comma and a control space in the form of Section 8, as its
+% worked box writes the two atoms federate adds.  latex_update and all_conjs
+% supply the first, assign_lines and proviso_lines the second.
+procedure latex_atoms(Atoms?, Constant?, Chunks?, Chunks).
+latex_atoms([], _, T, T?).
+latex_atoms([A], _, T, R?) :- ground(A?), ground(T?) | latex_atom(A?, T?, R).
+latex_atoms([A, B|As], Sep, T, R?) :-
+    ground(A?), ground(B?), ground(As?), ground(Sep?), ground(T?) |
+    latex_atoms([B?|As?], Sep?, T?, R1),
+    latex_atom(A?, [Sep?|R1?], R).
 
-procedure latex_set(Atoms?, Chunks?, Chunks).
-latex_set(As, T, ['\\{'|R?]) :- ground(As?), ground(T?) |
-    latex_atoms(As?, ['\\}'|T?], R).
+procedure latex_set(Atoms?, Constant?, Chunks?, Chunks).
+latex_set(As, Sep, T, ['\\{'|R?]) :- ground(As?), ground(Sep?), ground(T?) |
+    latex_atoms(As?, Sep?, ['\\}'|T?], R).
 
 % --- The roles as the paper writes them (definition:role, definition:extent)
 % A party role by its name, a seated role sigma^{mu} and a constituent role
@@ -154,35 +160,38 @@ latex_over(RS, I, T, ['&& (p \\in '|R?]) :-
 % subscript, {\Alice} for a role of Section 5.2 and p, ranging over the
 % extent, for a role of Appendix B.
 
-procedure update_body(Ans?, Ans?, Atoms?, Atoms?, Chunks?, Chunks?, Chunks).
-update_body(yes, yes, _, _, S, T, ['c_'|R?]) :- ground(S?), ground(T?) |
+procedure update_body(Ans?, Ans?, Atoms?, Atoms?, Constant?, Chunks?, Chunks?,
+                      Chunks).
+update_body(yes, yes, _, _, _, S, T, ['c_'|R?]) :- ground(S?), ground(T?) |
     chunks_app(S?, T?, R).
-update_body(no, yes, Add, _, S, T, ['c_'|R?]) :-
-    ground(Add?), ground(S?), ground(T?) |
-    latex_set(Add?, T?, R1),
+update_body(no, yes, Add, _, Sep, S, T, ['c_'|R?]) :-
+    ground(Add?), ground(Sep?), ground(S?), ground(T?) |
+    latex_set(Add?, Sep?, T?, R1),
     chunks_app(S?, [' \\uplus '|R1?], R).
-update_body(yes, no, _, Del, S, T, ['c_'|R?]) :-
-    ground(Del?), ground(S?), ground(T?) |
-    latex_set(Del?, T?, R1),
+update_body(yes, no, _, Del, Sep, S, T, ['c_'|R?]) :-
+    ground(Del?), ground(Sep?), ground(S?), ground(T?) |
+    latex_set(Del?, Sep?, T?, R1),
     chunks_app(S?, [' \\setminus '|R1?], R).
-update_body(no, no, Add, Del, S, T, ['(c_'|R?]) :-
-    ground(Add?), ground(Del?), ground(S?), ground(T?) |
-    latex_set(Add?, T?, R1),
-    latex_set(Del?, [') \\uplus '|R1?], R2),
+update_body(no, no, Add, Del, Sep, S, T, ['(c_'|R?]) :-
+    ground(Add?), ground(Del?), ground(Sep?), ground(S?), ground(T?) |
+    latex_set(Add?, Sep?, T?, R1),
+    latex_set(Del?, Sep?, [') \\uplus '|R1?], R2),
     chunks_app(S?, [' \\setminus '|R2?], R).
 
-procedure latex_update_at(RoleSpec?, Chunks?, Chunks?, Chunks).
-latex_update_at(RS, S, T, ['c\'_'|R?]) :- ground(RS?), ground(S?), ground(T?) |
+procedure latex_update_at(RoleSpec?, Constant?, Chunks?, Chunks?, Chunks).
+latex_update_at(RS, Sep, S, T, ['c\'_'|R?]) :-
+    ground(RS?), ground(Sep?), ground(S?), ground(T?) |
     rs_add(RS?, Add),
     rs_del(RS?, Del),
-    update_rhs(Add?, Del?, S?, T?, R1),
+    update_rhs(Add?, Del?, Sep?, S?, T?, R1),
     chunks_app(S?, [' := '|R1?], R).
 
-procedure update_rhs(Atoms?, Atoms?, Chunks?, Chunks?, Chunks).
-update_rhs(Add, Del, S, T, R?) :- ground(Add?), ground(Del?), ground(S?), ground(T?) |
+procedure update_rhs(Atoms?, Atoms?, Constant?, Chunks?, Chunks?, Chunks).
+update_rhs(Add, Del, Sep, S, T, R?) :-
+    ground(Add?), ground(Del?), ground(Sep?), ground(S?), ground(T?) |
     is_empty(Add?, AE),
     is_empty(Del?, DE),
-    update_body(AE?, DE?, Add?, Del?, S?, T?, R).
+    update_body(AE?, DE?, Add?, Del?, Sep?, S?, T?, R).
 
 % The subscript of a party role in Section 5.2: {\Alice}.
 procedure latex_sub(Integer?, Chunks).
@@ -191,7 +200,7 @@ latex_sub(I, ['{'|R?]) :- integer(I?) | latex_role(I?, ['}'], R).
 procedure latex_update(RoleSpec?, Integer?, Chunks?, Chunks).
 latex_update(RS, I, T, R?) :- ground(RS?), integer(I?), ground(T?) |
     latex_sub(I?, S),
-    latex_update_at(RS?, S?, T?, R).
+    latex_update_at(RS?, ',', S?, T?, R).
 
 procedure latex_updates(RoleSpecs?, Integer?, Chunks?, Chunks).
 latex_updates([], _, T, T?).
@@ -208,29 +217,30 @@ latex_updates([RS, RS2|Rs], I, T, R?) :-
 % and left out when the multiset is empty; a singleton is written with \in and
 % \notin, as Section 5.2 writes it.
 
-procedure req_conj(Atoms?, Chunks?, ChunkLists?, ChunkLists).
-req_conj([], _, T, T?).
-req_conj([A], S, T, [C?|T?]) :- ground(A?), ground(S?), ground(T?) |
+procedure req_conj(Atoms?, Constant?, Chunks?, ChunkLists?, ChunkLists).
+req_conj([], _, _, T, T?).
+req_conj([A], _, S, T, [C?|T?]) :- ground(A?), ground(S?), ground(T?) |
     latex_atom(A?, [' \\in c_'|S?], C).
-req_conj([A, B|As], S, T, [C?|T?]) :-
-    ground(A?), ground(B?), ground(As?), ground(S?), ground(T?) |
-    latex_set([A?, B?|As?], [' \\subseteq c_'|S?], C).
+req_conj([A, B|As], Sep, S, T, [C?|T?]) :-
+    ground(A?), ground(B?), ground(As?), ground(Sep?), ground(S?), ground(T?) |
+    latex_set([A?, B?|As?], Sep?, [' \\subseteq c_'|S?], C).
 
-procedure forb_conj(Atoms?, Chunks?, ChunkLists?, ChunkLists).
-forb_conj([], _, T, T?).
-forb_conj([A], S, T, [C?|T?]) :- ground(A?), ground(S?), ground(T?) |
+procedure forb_conj(Atoms?, Constant?, Chunks?, ChunkLists?, ChunkLists).
+forb_conj([], _, _, T, T?).
+forb_conj([A], _, S, T, [C?|T?]) :- ground(A?), ground(S?), ground(T?) |
     latex_atom(A?, [' \\notin c_'|S?], C).
-forb_conj([A, B|As], S, T, [C?|T?]) :-
-    ground(A?), ground(B?), ground(As?), ground(S?), ground(T?) |
+forb_conj([A, B|As], Sep, S, T, [C?|T?]) :-
+    ground(A?), ground(B?), ground(As?), ground(Sep?), ground(S?), ground(T?) |
     chunks_app(S?, [' = \\emptyset'], S1),
-    latex_set([A?, B?|As?], [' \\cap c_'|S1?], C).
+    latex_set([A?, B?|As?], Sep?, [' \\cap c_'|S1?], C).
 
-procedure role_conjs(RoleSpec?, Chunks?, ChunkLists?, ChunkLists).
-role_conjs(RS, S, T, R?) :- ground(RS?), ground(S?), ground(T?) |
+procedure role_conjs(RoleSpec?, Constant?, Chunks?, ChunkLists?, ChunkLists).
+role_conjs(RS, Sep, S, T, R?) :-
+    ground(RS?), ground(Sep?), ground(S?), ground(T?) |
     rs_req(RS?, Req),
     rs_forb(RS?, Forb),
-    forb_conj(Forb?, S?, T?, T1),
-    req_conj(Req?, S?, T1?, R).
+    forb_conj(Forb?, Sep?, S?, T?, T1),
+    req_conj(Req?, Sep?, S?, T1?, R).
 
 procedure all_conjs(RoleSpecs?, Integer?, ChunkLists?, ChunkLists).
 all_conjs([], _, T, T?).
@@ -239,7 +249,7 @@ all_conjs([RS|Rs], I, T, R?) :-
     I1 := I? + 1,
     all_conjs(Rs?, I1?, T?, T1),
     latex_sub(I?, S),
-    role_conjs(RS?, S?, T1?, R).
+    role_conjs(RS?, ',', S?, T1?, R).
 
 procedure join_conjs(ChunkLists?, Chunks?, Chunks).
 join_conjs([], T, T?).
@@ -315,7 +325,7 @@ assign_lines([], _, T, T?).
 assign_lines([RS|Rs], I, T, [L?|R?]) :-
     ground(RS?), ground(Rs?), integer(I?), ground(T?) |
     latex_over(RS?, I?, [], O),
-    latex_update_at(RS?, ['p'], O?, L),
+    latex_update_at(RS?, ',\\ ', ['p'], O?, L),
     I1 := I? + 1,
     assign_lines(Rs?, I1?, T?, R).
 
@@ -330,7 +340,7 @@ procedure proviso_lines(RoleSpecs?, Integer?, ChunkLists?, ChunkLists).
 proviso_lines([], _, T, T?).
 proviso_lines([RS|Rs], I, T, R?) :-
     ground(RS?), ground(Rs?), integer(I?), ground(T?) |
-    role_conjs(RS?, ['p'], [], Cs),
+    role_conjs(RS?, ',\\ ', ['p'], [], Cs),
     I1 := I? + 1,
     proviso_lines(Rs?, I1?, T?, R1),
     proviso_line(Cs?, RS?, I?, R1?, R).
