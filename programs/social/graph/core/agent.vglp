@@ -80,8 +80,8 @@ OutputsList ::= [] ; [OutputEntry | OutputsList].
 %% inject_msg and inject_intro_result.
 UserContent    ::= response(Response).
 ColdCallAnswer ::= response(Response?).
-UserInMsg      ::= msg(Constant, Constant, UserContent)
-                 ; decision(Decision, Constant, ColdCallAnswer)
+UserInMsg      ::= msg(Constant, Key, UserContent)
+                 ; decision(Decision, Key, ColdCallAnswer)
                  ; intro_result(Constant, IntroChannel)
                  ; intro_rejected(Constant).
 UserInStream   ::= [] ; [UserInMsg | UserInStream].
@@ -105,7 +105,7 @@ respond_coldcall(offer(From), Resp?, [decision(Answer?, From?, response(Resp))])
     ground(From?) | true
  *(no) true.
 
-procedure respond_intro(Constant?, IntroOffer?, IntroChannel?, UserInStream).
+procedure respond_intro(Key?, IntroOffer?, IntroChannel?, UserInStream).
 
 %% Accept an introduction: ack on the setup channel, await the peer, inject
 %% the result.  The else-branch is the refusal, taken when the person wills
@@ -128,7 +128,7 @@ decline_intro(ch(_, [nack|[]]), []).
 %% AGENT/4
 %% =============================================================================
 
-procedure agent(Constant?, UserInStream?, NetInStream?, OutputsList?).
+procedure agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 
 %% --- Reactive: network messages ---
 

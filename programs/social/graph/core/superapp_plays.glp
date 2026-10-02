@@ -10,7 +10,7 @@
 %% the mini-apps' user-interface streams come back to the caller, or, under
 %% :boot, go to the person.
 
-imported procedure agent#agent(Constant?, UserInStream?, NetInStream?, OutputsList?).
+imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 
 procedure crossbar2(NetOutStream?, NetOutStream?, NetInStream, NetInStream).
 crossbar2(AOut, BOut, AIn?, BIn?) :-

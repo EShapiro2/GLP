@@ -51,14 +51,14 @@ close_outputs([]).
 %% attestation of SGSG paper Section 5.5, the signature of attest(Id, From)
 %% under the person's key, into which the runtime puts this program's source
 %% identity, so no mini-app can mint one.
-procedure bind_response(Constant?, Decision?, Constant?, Response, OutputsList?, OutputsList, NetInStream?, NetInStream, AttestList?, AttestList).
+procedure bind_response(Key?, Decision?, Key?, Response, OutputsList?, OutputsList, NetInStream?, NetInStream, AttestList?, AttestList).
 bind_response(Id, yes, From, accept(RetCh?), Outs, Outs1?, In, In1?, Atts, Atts1?) :-
     new_channel(RetCh, LocalCh) |
     handle_response(Id?, accept(LocalCh?), From?, Outs?, Outs1, In?, In1, Atts?, Atts1).
 bind_response(_, no, _, no, Outs, Outs1?, In, In?, Atts, Atts?) :-
     send_user(msg(agent, person, rejected), Outs?, Outs1).
 
-procedure handle_response(Constant?, Response?, Constant?, OutputsList?, OutputsList, NetInStream?, NetInStream, AttestList?, AttestList).
+procedure handle_response(Key?, Response?, Key?, OutputsList?, OutputsList, NetInStream?, NetInStream, AttestList?, AttestList).
 handle_response(Id, accept(Ch), From, Outs, Outs1?, In, In1?, Atts, [att(From?, S?) | Atts?]) :-
     ground(From?) |
     befriend_commit(Id?, From?, Ch?, Outs?, Outs1, In?, In1),
@@ -72,7 +72,7 @@ handle_response(_, no, From, Outs, Outs1?, In, In?, Atts, Atts?) :-
 %% AGENT/4
 %% =============================================================================
 
-exported procedure agent(Constant?, UserInStream?, NetInStream?, OutputsList?).
+exported procedure agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 
 %% The social graph as the super-app (SGSG paper, Section 3): agent/4 enters
 %% agent/5 with the host state --- no mini-app, no attestation, no pending
@@ -82,7 +82,7 @@ agent(Id, UserIn, NetIn, Outs) :-
     self_key(K),
     agent(Id?, UserIn?, NetIn?, Outs?, host([], [], [], [K?])).
 
-procedure agent(Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+procedure agent(Key?, UserInStream?, NetInStream?, OutputsList?, Host?).
 
 %% --- User messages ---
 
@@ -571,7 +571,7 @@ sovereign(_, _, _).
 
 %% --- The inviter ---
 
-procedure invite_step(AppLookup?, Constant?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+procedure invite_step(AppLookup?, Key?, Constant?, Key?, UserInStream?, NetInStream?, OutputsList?, Host?).
 invite_step(found(M), Id, App, Friend, UserIn, NetIn, Outs, Host) :-
     identities(App?, M?, Src, T),
     self_key(K),
@@ -601,13 +601,13 @@ take_consent(App, From, [P | Rest], [P? | Rest1?], C?) :-
     otherwise | take_consent(App?, From?, Rest?, Rest1, C).
 take_consent(_, _, [], [], false).
 
-procedure consent_step(Offer?, Constant?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+procedure consent_step(Offer?, Key?, Constant?, Key?, UserInStream?, NetInStream?, OutputsList?, Host?).
 consent_step(none, Id, App, From, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
     agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, [consented(App?, From?) | Pend?], Trusted?)).
 consent_step(offer(Src, T, _), Id, App, From, UserIn, NetIn, Outs, Host) :-
     do_join(Id?, App?, From?, Src?, T?, UserIn?, NetIn?, Outs?, Host?).
 
-procedure decline_step(Offer?, Constant?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+procedure decline_step(Offer?, Key?, Constant?, Key?, UserInStream?, NetInStream?, OutputsList?, Host?).
 decline_step(none, Id, _, _, UserIn, NetIn, Outs, Host) :-
     agent(Id?, UserIn?, NetIn?, Outs?, Host?).
 decline_step(offer(_, _, _), Id, App, From, UserIn, NetIn, Outs, Host) :-
@@ -618,7 +618,7 @@ decline_step(offer(_, _, _), Id, App, From, UserIn, NetIn, Outs, Host) :-
 %% is checked and the offer proceeds; where it is unsigned --- a forgery ---
 %% the offer is refused by the path an invitation that does not check takes,
 %% and nothing is delivered (Section 6.1).
-procedure invite_signed(Signature?, Constant?, Constant?, Constant?, String?, Constant?, String?, UserInStream?, NetInStream?, OutputsList?, Host?).
+procedure invite_signed(Signature?, Key?, Key?, Constant?, String?, Constant?, String?, UserInStream?, NetInStream?, OutputsList?, Host?).
 invite_signed(signed(_, _, Inv), Id, From, App, Src, T, InvSig, UserIn, NetIn, Outs, Host) :-
     invite_check(Inv?, Src?, Id?, Ok),
     offer_step(Ok?, Id?, From?, App?, Src?, T?, InvSig?, UserIn?, NetIn?, Outs?, Host?).
@@ -631,7 +631,7 @@ procedure invite_check(_?, String?, Constant?, Constant).
 invite_check(invitation(Src1, Me), Src, Id, true) :- Src? =?= Src1?, Me? =?= Id? | true.
 invite_check(_, _, _, false) :- otherwise | true.
 
-procedure offer_step(Constant?, Constant?, Constant?, Constant?, String?, Constant?, String?, UserInStream?, NetInStream?, OutputsList?, Host?).
+procedure offer_step(Constant?, Key?, Key?, Constant?, String?, Constant?, String?, UserInStream?, NetInStream?, OutputsList?, Host?).
 offer_step(true, Id, From, App, Src, T, InvSig, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
     take_consent(App?, From?, Pend?, Pend1, C),
     offer_consent(C?, Id?, From?, App?, Src?, T?, InvSig?, UserIn?, NetIn?, Outs?,
@@ -639,7 +639,7 @@ offer_step(true, Id, From, App, Src, T, InvSig, UserIn, NetIn, Outs, host(Apps, 
 offer_step(false, Id, _, _, _, _, _, UserIn, NetIn, Outs, Host) :-
     agent(Id?, UserIn?, NetIn?, Outs?, Host?).
 
-procedure offer_consent(Constant?, Constant?, Constant?, Constant?, String?, Constant?, String?, UserInStream?, NetInStream?, OutputsList?, Host?).
+procedure offer_consent(Constant?, Key?, Key?, Constant?, String?, Constant?, String?, UserInStream?, NetInStream?, OutputsList?, Host?).
 offer_consent(true, Id, From, App, Src, T, _, UserIn, NetIn, Outs, Host) :-
     do_join(Id?, App?, From?, Src?, T?, UserIn?, NetIn?, Outs?, Host?).
 offer_consent(false, Id, From, App, Src, T, InvSig, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
@@ -651,14 +651,14 @@ offer_consent(false, Id, From, App, Src, T, InvSig, UserIn, NetIn, Outs, host(Ap
 %% run its certified code, and send it; otherwise decline.  (Shipping the
 %% certified program to an invitee that lacks it is not implemented: such an
 %% invitee declines.)
-procedure do_join(Constant?, Constant?, Constant?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+procedure do_join(Key?, Constant?, Key?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
 do_join(Id, App, From, Src, T, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
     app_module(App?, Apps?, Apps1, L),
     join_verify(true, L?, App?, Src?, T?, Ok),
     join_step(Ok?, Id?, App?, From?, Src?, T?, UserIn?, NetIn?, Outs?,
               host(Apps1?, Atts?, Pend?, Trusted?)).
 
-procedure join_step(Verdict?, Constant?, Constant?, Constant?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+procedure join_step(Verdict?, Key?, Constant?, Key?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
 join_step(ok(_), Id, App, From, Src, T, UserIn, NetIn, Outs, Host) :-
     self_key(K),
     sign(undertaking(Src?), K?, U),
@@ -693,7 +693,7 @@ identity_match(_, _, _, _, _, refused) :- otherwise | true.
 %% verifies it is checked against the mini-app installed here and the root
 %% channel is created; where it is unsigned --- a forgery --- the join is
 %% refused and no root channel is created (Section 6.1).
-procedure join_signed(Signature?, Constant?, Constant?, Constant?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
+procedure join_signed(Signature?, Key?, Key?, Constant?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
 join_signed(signed(_, _, Und), Id, From, App, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
     undertaking_check(Und?, Src?, Ok0),
     app_module(App?, Apps?, Apps1, L),
@@ -704,7 +704,7 @@ join_signed(unsigned, Id, From, App, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pe
     root_step(refused, Id?, From?, App?, Src?, T?, UserIn?, NetIn?, Outs?,
               Apps?, Atts?, Pend?, Trusted?).
 
-procedure root_step(Verdict?, Constant?, Constant?, Constant?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
+procedure root_step(Verdict?, Key?, Key?, Constant?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
 root_step(ok(M), Id, From, App, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
     ground(App?) |
     app_kind(App?, Kind),
@@ -732,7 +732,7 @@ root_ends(sovereign, sovereign_end(Mine?), sovereign_end(Theirs?)) :- new_channe
 %% verifies it is checked against the mini-app installed here and the end is
 %% accepted; where it is unsigned --- a forgery --- no end is accepted and
 %% nothing is delivered (Section 6.1).
-procedure root_signed(Signature?, Constant?, Constant?, Constant?, String?, Constant?, RootEnd?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
+procedure root_signed(Signature?, Key?, Constant?, Constant?, String?, Constant?, RootEnd?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
 root_signed(signed(_, _, Und), Id, From, App, Src, T, End, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
     undertaking_check(Und?, Src?, Ok0),
     app_module(App?, Apps?, Apps1, L),
@@ -743,7 +743,7 @@ root_signed(unsigned, Id, From, App, _, T, End, UserIn, NetIn, Outs, Apps, Atts,
     accept_root_step(refused, Id?, From?, App?, T?, End?, UserIn?, NetIn?, Outs?,
                      Apps?, Atts?, Pend?, Trusted?).
 
-procedure accept_root_step(Verdict?, Constant?, Constant?, Constant?, Constant?, RootEnd?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
+procedure accept_root_step(Verdict?, Key?, Constant?, Constant?, Constant?, RootEnd?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
 accept_root_step(ok(M), Id, From, App, T, End, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
     deliver(App?, From?, End?, Id?, T?, M?, Apps?, Apps1, UserIn?, UserIn1),
     release_held(App?, From?, Pend?, Pend1),
@@ -902,7 +902,7 @@ twc_step(false, Parts, W, Rest, [warm_consent(W?) | Rest1?], C?) :-
 %% person consented to --- never by the held link's global name, which is a
 %% name of a variable and is not a term at the friend that receives it.  The
 %% name stays here, where authorise_link/2 will take it.
-procedure warm_step(WarmConsent?, Constant?, Constant?, GlobalName?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+procedure warm_step(WarmConsent?, Key?, Constant?, GlobalName?, Key?, UserInStream?, NetInStream?, OutputsList?, Host?).
 warm_step(yes(Anchor), Id, App, Name, Via, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
     send_friend(Via?, msg(Id?, Via?, request_intro(Anchor?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?,
@@ -927,7 +927,7 @@ tww_step(true, _, App, Name, Via, Rest, Rest?, wait(App?, Name?, Via?)).
 tww_step(false, Who, App, Name, Via, Rest, [warm_wait(App?, Name?, Via?) | Rest1?], W?) :-
     take_warm_wait(Who?, Rest?, Rest1, W).
 
-procedure warm_consent_step(WarmWait?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+procedure warm_consent_step(WarmWait?, Key?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
 warm_consent_step(none, Id, Who, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
     agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, [warm_consent(Who?) | Pend?], Trusted?)).
 warm_consent_step(wait(App, Name, Via), Id, Who, UserIn, NetIn, Outs, Host) :-
@@ -935,7 +935,7 @@ warm_consent_step(wait(App, Name, Via), Id, Who, UserIn, NetIn, Outs, Host) :-
 
 %% warm_after_commit(Id, Friend, Pend, Outs, Outs1): a friendship just made
 %% with the anchor of a warm call under way: send the warm call.
-procedure warm_after_commit(Constant?, Constant?, PendingInv?, OutputsList?, OutputsList).
+procedure warm_after_commit(Key?, Key?, PendingInv?, OutputsList?, OutputsList).
 warm_after_commit(Id, Friend, [warm(App, Name) | Rest], Outs, Outs1?) :-
     ground(Name?) |
     Parts ..= Name?,
@@ -945,7 +945,7 @@ warm_after_commit(Id, Friend, [_ | Rest], Outs, Outs1?) :-
     otherwise | warm_after_commit(Id?, Friend?, Rest?, Outs?, Outs1).
 warm_after_commit(_, _, [], Outs, Outs?).
 
-procedure wac_step(Constant?, Constant?, Constant?, Constant?, GlobalName?, PendingInv?, OutputsList?, OutputsList).
+procedure wac_step(Constant?, Key?, Key?, Constant?, GlobalName?, PendingInv?, OutputsList?, OutputsList).
 wac_step(true, Id, Friend, App, _, _, Outs, Outs1?) :-
     send_friend(Friend?, msg(Id?, Friend?, warm_call(App?)), Outs?, Outs1).
 wac_step(false, Id, Friend, _, _, Rest, Outs, Outs1?) :-
@@ -1059,7 +1059,7 @@ rbs(_, [], []).
 %% channel and each of the two it introduces receives its end FROM the
 %% introducer, so both ends are held; the consent to the introduction is what
 %% releases them, and it is kept, since one introduction holds several links.
-procedure pending_step(Constant?, GlobalName?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
+procedure pending_step(Constant?, GlobalName?, Constant?, Key?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
 pending_step(true, Name, _, Id, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
     authorise_link(Name?, authorise),
     agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, Pend?, Trusted?)).
@@ -1086,7 +1086,7 @@ forward_pending(_, _, [], []).
 procedure push_down(SgToApp?, SgToAppStream, SgToAppStream?).
 push_down(Msg, [Msg? | Sg1?], Sg1).
 
-procedure warm_call_step(Constant?, Constant?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+procedure warm_call_step(Constant?, Key?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
 warm_call_step(true, Id, From, App, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
     agent(Id?, [msg(person, Id?, invite(App?, From?)) | UserIn?], NetIn?, Outs?,
           host(Apps?, Atts?, [warm_ok(From?) | Pend?], Trusted?)).
@@ -1107,7 +1107,7 @@ anchor_friend(_, [], [], none).
 %% intro_request(Requester, Found, ...): the request proceeds only where the
 %% requester and the anchor are both friends of this agent (Section 5.2); where
 %% either is not, nothing is done beyond not introducing.
-procedure intro_request(AnchorFriend?, AnchorFriend?, Constant?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+procedure intro_request(AnchorFriend?, AnchorFriend?, Key?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
 intro_request(found(_), found(Anchor), Id, From, Anchor1, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
     take_intro_consent(From?, Anchor?, Pend?, Pend1, C),
     intro_request_step(C?, Id?, From?, Anchor?, Anchor1?, UserIn?, NetIn?, Outs?,
@@ -1121,7 +1121,7 @@ take_intro_consent(R, A, [intro_consent(R1, A1) | Rest], Rest?, true) :-
 take_intro_consent(R, A, [P | Rest], [P? | Rest1?], C?) :- otherwise | take_intro_consent(R?, A?, Rest?, Rest1, C).
 take_intro_consent(_, _, [], [], false).
 
-procedure intro_request_step(Constant?, Constant?, Constant?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+procedure intro_request_step(Constant?, Key?, Constant?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
 intro_request_step(true, Id, From, Anchor, _, UserIn, NetIn, Outs, Host) :-
     agent(Id?, [msg(person, Id?, introduce(From?, Anchor?)) | UserIn?], NetIn?, Outs?, Host?).
 intro_request_step(false, Id, From, _, Anchor1, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
@@ -1135,7 +1135,7 @@ take_intro_wait(R, A, [intro_wait(R1, A1) | Rest], Rest?, true) :-
 take_intro_wait(R, A, [P | Rest], [P? | Rest1?], W?) :- otherwise | take_intro_wait(R?, A?, Rest?, Rest1, W).
 take_intro_wait(_, _, [], [], false).
 
-procedure intro_consent_step(Constant?, Constant?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+procedure intro_consent_step(Constant?, Key?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
 intro_consent_step(true, Id, From, Anchor, UserIn, NetIn, Outs, Host) :-
     agent(Id?, [msg(person, Id?, introduce(From?, Anchor?)) | UserIn?], NetIn?, Outs?, Host?).
 intro_consent_step(false, Id, From, Anchor, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
@@ -1150,7 +1150,7 @@ intro_consent_step(false, Id, From, Anchor, UserIn, NetIn, Outs, host(Apps, Atts
 %% output entry the mutual friend mints the setup channel and sends one half to
 %% each, tagged with the other's identity; where either does not, it does
 %% nothing beyond not introducing.
-procedure introduce_step(AnchorFriend?, AnchorFriend?, Constant?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+procedure introduce_step(AnchorFriend?, AnchorFriend?, Key?, Key?, Key?, UserInStream?, NetInStream?, OutputsList?, Host?).
 introduce_step(found(_), found(_), Id, P, Q, UserIn, NetIn, Outs, Host) :-
     new_channel(PQCh, QPCh) |
     send_friend(P?, msg(Id?, P?, intro(Q?, QPCh?)), Outs?, Outs1),

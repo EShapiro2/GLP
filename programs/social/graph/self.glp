@@ -17,14 +17,14 @@
 %% commit by the shared lib befriend_commit (CSSN Issue 16).
 Response ::= accept(IntroChannel) ; no.
 Decision ::= yes ; no.
-Handshake ::= ack(Constant) ; nack.
+Handshake ::= ack(Key) ; nack.
 PendingValue ::= response(Response?) ; channel(IntroChannel) ; error.
 
 %% --- Content types for messages ---
 
 %% Content carried inside user-to-agent messages (msg(person, Id, Content))
 UserContent ::= connect(Key)
-              ; decision(Decision, Constant, PendingValue)
+              ; decision(Decision, Key, PendingValue)
               ; send(Constant, Constant)
               ; introduce(Constant, Constant)
               ; accept_intro(Constant, PendingValue)
@@ -44,7 +44,7 @@ UserContent ::= connect(Key)
               ; install_cssn(Constant, Content, String, Channel(Stream(CsAppCmd), Stream(CsAppNotify)))
               ; install_sovereign(Constant, Content, String, Channel(Stream(SvUserAnswer), Stream(SvEvent)))
               ; invite(Constant, Constant)
-              ; accept_invite(Constant, Constant)
+              ; accept_invite(Constant, Key)
               ; decline_invite(Constant, Constant)
               ; attestation(Constant, String?)
               %% trust: the person trusts a compiler's key (Section 6.4); the
@@ -59,7 +59,7 @@ UserContent ::= connect(Key)
               ; allow_intro(Constant, Constant).
 
 %% Content carried inside agent-to-user messages (msg(agent, person, Content))
-AgentContent ::= befriend(Constant, Response?)
+AgentContent ::= befriend(Key, Response?)
                ; befriend_intro(Constant, Constant, IntroChannel)
                ; connected(Constant)
                ; rejected
@@ -68,7 +68,7 @@ AgentContent ::= befriend(Constant, Response?)
                ; received(Constant, Constant).
 
 %% Network content (2-arg cold-call: msg(Dest, Content))
-NetColdCall ::= intro(Constant, Response?).
+NetColdCall ::= intro(Key, Response?).
 
 %% Friend-to-friend content (3-arg: msg(From, To, Content))
 FriendContent ::= response(Response)
@@ -99,14 +99,14 @@ FriendContent ::= response(Response)
 
 %% Setup channel content: ack/nack handshake plus the fresh-friend-channel
 %% conveyance the shared lib befriend_commit uses to install the friend channel.
-IntroContent ::= ack(Constant) ; nack ; friend_channel(FriendChannel).
+IntroContent ::= ack(Key) ; nack ; friend_channel(FriendChannel).
 
 %% Intro channel (handshake protocol)
 IntroStream  ::= [] ; [IntroContent | IntroStream].
 IntroChannel ::= ch(IntroStream, IntroStream?).
 
 %% Friend messages and channels
-FriendMsg     ::= msg(Constant, Constant, FriendContent).
+FriendMsg     ::= msg(Key, Key, FriendContent).
 FriendStream  ::= [] ; [FriendMsg | FriendStream].
 FriendChannel ::= ch(FriendStream, FriendStream?).
 
@@ -499,7 +499,7 @@ UserCmd ::= decision(Decision, Key, ReqId)
           ; unfriend(Constant).
 
 %% Mediator -> User
-UserNotify ::= befriend(Constant, ReqId)
+UserNotify ::= befriend(Key, ReqId)
              ; befriend_intro(Constant, Constant, ReqId)
              ; connected(Constant)
              ; rejected
@@ -523,7 +523,7 @@ MediatorToAgentStream ::= [] ; [MediatorToAgentMsg | MediatorToAgentStream].
 AgentChannel          ::= ch(AgentToUserStream, MediatorToAgentStream?).
 
 %% Agent input types
-UserInMsg    ::= msg(Constant, Constant, UserContent)
+UserInMsg    ::= msg(Constant, Key, UserContent)
                ; intro_result(Constant, IntroChannel)
                ; intro_rejected(Constant)
                %% A running mini-app's request up its social-graph channel.
@@ -535,7 +535,7 @@ UserInMsg    ::= msg(Constant, Constant, UserContent)
 UserInStream ::= [] ; [UserInMsg | UserInStream].
 
 NetInMsg     ::= msg(Key, NetColdCall)
-               ; msg(Key, Constant, FriendContent)
+               ; msg(Key, Key, FriendContent)
                %% The runtime's report of a held link (Section 5.2; madGLP).
                ; pending_link(GlobalName, Constant).
 NetInStream  ::= [] ; [NetInMsg | NetInStream].
