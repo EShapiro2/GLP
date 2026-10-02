@@ -232,20 +232,6 @@ class Spawn implements Op {
   Spawn(this.procedureLabel, this.arity);
 }
 
-/// Spawn a rated goal (sGLP, `Goal @ Rate`; svGLP, sections/sglp.tex,
-/// Definition "sGLP Transition System"): the goal is made as [Spawn] makes it,
-/// and is pending, with activation time the simulated clock plus a delay drawn
-/// from the exponential distribution with rate [ratePerSecond], until its
-/// Release.  A [Spawn] in every other respect --- its target is resolved as
-/// Spawn's is --- so it extends Spawn.
-class SpawnRated extends Spawn {
-  final double ratePerSecond;       // rate per simulated second
-  SpawnRated(super.procedureLabel, super.arity, this.ratePerSecond);
-
-  @override
-  String toString() => 'spawn_rated($procedureLabel, $ratePerSecond/s)';
-}
-
 /// Tail call to procedure P with arguments in A1-An
 /// Reuses current goal frame, implements fair scheduling via tail recursion budget
 class Requeue implements Op {

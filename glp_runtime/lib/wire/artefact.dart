@@ -57,17 +57,15 @@ const int wireFormatVersion = 2;
 
 /// The instruction-set version this implementation writes in an artefact's
 /// header (IGLP, Code Format appendix, "Format Versioning": new instructions
-/// enter by instruction-set version).  `glp-isa-2` adds opcode 0x54
-/// `spawn_rated` (proc, arity, rate), the instruction of the stochastic
-/// extension of GLP (svGLP, sections/sglp.tex), which a runtime that does not
-/// offer the extension never emits; `glp-isa-1` is the set before it.
-const String glpIsaVersion = 'glp-isa-2';
+/// enter by instruction-set version): the opcode table of the appendix at
+/// 8c1d5e2.  `glp-isa-2`, the version that added opcode 0x54 `spawn_rated`
+/// for sGLP's engine extension, went with the extension (IGLP 8c1d5e2).
+const String glpIsaVersion = 'glp-isa-1';
 
-/// The instruction-set versions this runtime loads: its own and every earlier
-/// one.  Opcode and name assignments are append-only, so a newer runtime runs
-/// older artefacts unchanged, and an older one refuses a newer version at
-/// adoption (a runtime at `glp-isa-1` loads `{'glp-isa-1'}` alone).
-const Set<String> runtimeIsaVersions = {'glp-isa-1', glpIsaVersion};
+/// The instruction-set versions this runtime loads: its own alone.  "A loader
+/// refuses an artefact whose ... instruction-set version it does not support"
+/// (IGLP, "Format Versioning"), so an artefact at `glp-isa-2` is refused.
+const Set<String> runtimeIsaVersions = {glpIsaVersion};
 
 /// An exported procedure recorded in the interface table.
 class ArtefactExport {

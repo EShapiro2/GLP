@@ -70,9 +70,6 @@ class Opcode {
   static const int otherwise = 0x46;
   static const int spawn = 0x50;
   static const int requeue = 0x51;
-  /// sGLP's rated spawn: proc, arity, and the rate per simulated second as an
-  /// f64 (svGLP, sections/sglp.tex).
-  static const int spawnRated = 0x54;
   // 0x52–0x53 reserved: the retired dynamic-RPC opcodes (distribute/transmit).
   // Dynamic dispatch is retired in favour of static linking until attestations
   // exist; flattened artefacts never contain them, so they are not part of the
@@ -235,11 +232,6 @@ void encodeInstruction(
     neg(op.negated);
   } else if (op is Otherwise) {
     w.u8(Opcode.otherwise);
-  } else if (op is SpawnRated) {
-    w.u8(Opcode.spawnRated);
-    w.clen(procIndexOf(op.procedureLabel));
-    w.clen(op.arity);
-    w.f64(op.ratePerSecond);
   } else if (op is Spawn) {
     w.u8(Opcode.spawn);
     w.clen(procIndexOf(op.procedureLabel));
@@ -386,10 +378,6 @@ Object decodeInstruction(
     case Opcode.requeue:
       final label = procNameOf(r.clen());
       return Requeue(label, r.clen());
-    case Opcode.spawnRated:
-      final label = procNameOf(r.clen());
-      final arity = r.clen();
-      return SpawnRated(label, arity, r.f64());
     default:
       throw WireFormatException(
           'unknown opcode: 0x${opcode.toRadixString(16)}');

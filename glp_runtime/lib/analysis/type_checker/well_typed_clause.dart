@@ -409,9 +409,7 @@ ClauseCheckResult checkClause(
     }
 
     if (!atomResult.isWellTyped) {
-      // A rated goal (sGLP) is named by its goal, whose type it has.
-      final name = atom is ast.RatedGoal ? atom.innerGoal.functor : atom.functor;
-      errors.add(BodyAtomError(name, i, atomResult.errors));
+      errors.add(BodyAtomError(atom.functor, i, atomResult.errors));
     }
 
     // A NEGATED guard narrows nothing.  "`~g` succeeds where g fails, which
@@ -730,9 +728,7 @@ ClauseCheckResult checkGoal(
     }
 
     if (!atomResult.isWellTyped) {
-      // A rated goal (sGLP) is named by its goal, whose type it has.
-      final name = atom is ast.RatedGoal ? atom.innerGoal.functor : atom.functor;
-      errors.add(BodyAtomError(name, i, atomResult.errors));
+      errors.add(BodyAtomError(atom.functor, i, atomResult.errors));
     }
 
     for (final entry in atomResult.variableTypes.entries) {
@@ -893,17 +889,6 @@ WellTypedResult _checkBodyAtom(
   Map<String, ProcDecl> activeInstantiations = const {},
   CalleeClauses? callee,
 }) {
-  // A rated goal (sGLP, Goal @ Rate) is typed as its goal: the rate is not an
-  // argument and adds nothing to the goal's type (svGLP, sections/sglp.tex).
-  // So it gets callee-clause solving as any goal does, and [callee] is passed
-  // on; until 2026-10-01 it was not (GLP, 2026-10-01).
-  if (atom is ast.RatedGoal) {
-    return _checkBodyAtomWithTerm(atom.innerGoal, atomIndex, dfa, env,
-        callerVarTypes: callerVarTypes, collector: collector,
-        activeInstantiations: activeInstantiations,
-        callee: callee);
-  }
-
   // Handle SpawnGoal (Goal@Agent) - type-check the inner goal
   if (atom is ast.SpawnGoal) {
     // Recursively type-check the inner goal

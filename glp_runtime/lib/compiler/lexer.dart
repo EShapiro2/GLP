@@ -101,16 +101,6 @@ class Lexer {
             final lexeme = source.substring(_current - 3, _current);
             return Token(TokenType.ARITH_EQUAL, lexeme, startLine, startColumn);
           }
-          // `=::=`, sGLP's person declaration T =::= p (svGLP, sections/
-          // sglp.tex, "Simulating a vGLP Program").  It was a lexer error
-          // before, so no existing source carries one.
-          if (_match(':')) {
-            if (_match('=')) {
-              final lexeme = source.substring(_current - 4, _current);
-              return Token(TokenType.EQCOLONCOLONEQ, lexeme, startLine, startColumn);
-            }
-            throw CompileError('Expected "=" after "=::"', startLine, startColumn, phase: 'lexer');
-          }
           throw CompileError('Expected "=" after "=:"', startLine, startColumn, phase: 'lexer');
         }
         if (_match('\\')) {

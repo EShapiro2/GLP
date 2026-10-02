@@ -1,6 +1,6 @@
 /// Abstract Syntax Tree nodes for GLP
 
-import '../analysis/type_checker/type_ast.dart' show TypeDef, ProcDecl, TypeRef;
+import '../analysis/type_checker/type_ast.dart' show TypeDef, ProcDecl;
 
 /// Compilation mode: controls compiler restrictions
 enum CompileMode {
@@ -351,127 +351,6 @@ class SpawnGoal extends Goal {
   }
 }
 
-/// Rated goal: Goal @ Rate --- sGLP (svGLP, sections/sglp.tex, Definition
-/// "Rated Goal"): a goal with a rate, a positive real per unit of time.
-///
-///   <rated_goal> ::= <goal> @ <rate>
-///   <rate>       ::= <positive_real> / <time_unit>
-///
-/// A rated goal is spawned as any body goal is and is pending until its
-/// Release (Definition "sGLP Transition System").  It is typed as the goal is:
-/// the rate is not an argument and adds nothing to the goal's type.  Like
-/// [SpawnGoal] it wraps its goal, with functor `@`, so a pass that does not
-/// know it sees a call of `@/2` and fails loudly instead of dropping the rate.
-class RatedGoal extends Goal {
-  final Goal innerGoal;
-
-  /// The rate as written, `1/week`.
-  final String rateText;
-
-  /// The rate per simulated second (lib/sglp/time_units.dart).
-  final double ratePerSecond;
-
-  RatedGoal(this.innerGoal, this.rateText, this.ratePerSecond, int line,
-      int column)
-      : super('@', [_goalToTerm(innerGoal), ConstTerm(rateText, line, column)],
-            line, column);
-
-  /// The same rated goal around another inner goal.
-  RatedGoal withInner(Goal inner) =>
-      RatedGoal(inner, rateText, ratePerSecond, line, column);
-
-  @override
-  String toString() => '$innerGoal @ $rateText';
-
-  static Term _goalToTerm(Goal g) {
-    return StructTerm(g.functor, g.args, g.line, g.column);
-  }
-}
-
-// ============================================================================
-// sGLP population declarations (svGLP, sections/sglp.tex, "Simulating a vGLP
-// Program"):
-//
-//   <person_declaration> ::= <type> =::= <procedure_name> .
-//   <kind>               ::= person <name> . <person_declarations> <program>
-//   <run>                ::= run <integer> agents [ <mix_list> ]
-//                            until <time> seed <integer> .
-//   <mix_list>           ::= <mix> | <mix> , <mix_list>
-//   <mix>                ::= <dimension> ~ ( <name> : <probability> ; ... )
-// ============================================================================
-
-/// A person declaration `T =::= p`: the person procedure p of the
-/// interactive type T (Definition "Dual, Person Procedure, Person Declaration,
-/// Kind, Dimension, Population").
-class PersonDecl extends AstNode {
-  /// The interactive type T, with its mode: `Menu` or `Menu?`.
-  final TypeRef type;
-
-  /// The person procedure p.
-  final String procedure;
-
-  PersonDecl(this.type, this.procedure, int line, int column)
-      : super(line, column);
-
-  /// The interactive type as written, which identifies it among a kind's.
-  String get typeKey => type.toString();
-
-  @override
-  String toString() => '$type =::= $procedure.';
-}
-
-/// A kind: `person <name>.`, its person declarations, and its program --- the
-/// procedures its section of the source declares and defines, the section
-/// running to the next `person`, the run declaration or the end of the file.
-class KindDecl extends AstNode {
-  final String name;
-  final List<PersonDecl> personDecls = [];
-
-  /// The name/arity of each procedure the kind's section declares or defines.
-  final Set<String> procedureSigs = {};
-
-  KindDecl(this.name, int line, int column) : super(line, column);
-
-  /// The interactive types the kind declares.
-  Set<String> get declaredTypes => {for (final d in personDecls) d.typeKey};
-
-  @override
-  String toString() => 'person $name.';
-}
-
-/// One kind of a dimension's distribution: `homophile : 0.6`.
-class MixEntry extends AstNode {
-  final String kind;
-  final double probability;
-  MixEntry(this.kind, this.probability, int line, int column)
-      : super(line, column);
-}
-
-/// A dimension and its distribution over kinds:
-/// `approach ~ (homophile : 0.6 ; indifferent : 0.4)`.
-class MixDecl extends AstNode {
-  final String dimension;
-  final List<MixEntry> entries;
-  MixDecl(this.dimension, this.entries, int line, int column)
-      : super(line, column);
-}
-
-/// The run declaration: `run N agents [ mixes ] until <time> seed <integer>.`
-class RunDecl extends AstNode {
-  final int agents;
-  final List<MixDecl> mixes;
-
-  /// The `until` time as written, `5 years`, and in simulated seconds.
-  final String untilText;
-  final double untilSeconds;
-
-  final int seed;
-
-  RunDecl(this.agents, this.mixes, this.untilText, this.untilSeconds,
-      this.seed, int line, int column)
-      : super(line, column);
-}
-
 // ============================================================================
 // Type Declarations (Yardeni-Shapiro syntax)
 // ============================================================================
@@ -490,8 +369,6 @@ class Module extends AstNode {
   final CompileMode compileMode;  // user (default) or system
   final List<String> exposes;     // `-expose(M).` module paths (e.g. "lib#streams")
   final List<DisplayDecl> displayDecls;  // `display ... : ... .` declarations
-  final List<KindDecl> kinds;            // sGLP `person <name>.` sections
-  final RunDecl? runDecl;                // sGLP `run ... .` declaration
 
   Module({
     this.typeDefs = const [],
@@ -501,8 +378,6 @@ class Module extends AstNode {
     this.compileMode = CompileMode.user,
     this.exposes = const [],
     this.displayDecls = const [],
-    this.kinds = const [],
-    this.runDecl,
     required int line,
     required int column,
   }) : super(line, column);

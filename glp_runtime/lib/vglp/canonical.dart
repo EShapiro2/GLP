@@ -542,12 +542,10 @@ String _asWritten(Clause c, VolitionalProcedure v) {
   return '($term)*${v.name}${rest.isEmpty ? '' : '(${rest.join(', ')})'}';
 }
 
-/// The calls a body makes, a rated or placed goal by its inner goal.
+/// The calls a body makes, a placed goal by its inner goal.
 Iterable<Goal> _calls(List<Goal> body) sync* {
   for (final g in body) {
-    if (g is RatedGoal) {
-      yield* _calls([g.innerGoal]);
-    } else if (g is SpawnGoal) {
+    if (g is SpawnGoal) {
       yield* _calls([g.innerGoal]);
     } else if (g is RemoteGoal) {
       continue;

@@ -357,16 +357,12 @@ class PartialEvaluator {
 
     List<Goal>? newBody;
     if (clause.body != null) {
-      Goal rename(Goal g) => g is RatedGoal
-          // A rated goal (sGLP) keeps its rate.
-          ? g.withInner(rename(g.innerGoal))
-          : Goal(
-              g.functor,
-              g.args.map((a) => _applyRenaming(a, renaming)).toList(),
-              g.line,
-              g.column,
-            );
-      newBody = clause.body!.map(rename).toList();
+      newBody = clause.body!.map((g) => Goal(
+        g.functor,
+        g.args.map((a) => _applyRenaming(a, renaming)).toList(),
+        g.line,
+        g.column,
+      )).toList();
     }
 
     return Clause(newHead, guards: newGuards, body: newBody, line: clause.line, column: clause.column);
@@ -960,10 +956,6 @@ class PartialEvaluator {
     if (goal is SpawnGoal) {
       final newInnerGoal = _applySubstitutionToGoal(goal.innerGoal, subst);
       return SpawnGoal(newInnerGoal, goal.agentId, goal.line, goal.column);
-    }
-    // Preserve RatedGoal (sGLP, Goal @ Rate)
-    if (goal is RatedGoal) {
-      return goal.withInner(_applySubstitutionToGoal(goal.innerGoal, subst));
     }
     return Goal(
       goal.functor,
