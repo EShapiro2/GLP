@@ -2411,7 +2411,10 @@ HEREDOC
 2>&1)
 
 check "Currencies fplay10 succeeds" "succeeds" "$n_fp10"
-check "Currencies fplay10 escrow" "escrow" "$n_fp10"
+# The escrow's release as the play prints it on main 76cf9059: a bare "escrow"
+# also matched the load's own refusal text (inject_escrow_dep_result), a false
+# pass while bonds_v2 was refused (Currencies #7 Cowork, 2026-10-02 13:40 UTC).
+check "Currencies fplay10 escrow" "notify(escrow_released(alice))" "$n_fp10"
 
 n_fp11=$("$REPL_RUN" <<HEREDOC
 $BONDS_V2
