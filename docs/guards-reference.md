@@ -570,10 +570,12 @@ When `channel(X?)` is unfolded, it becomes pattern matching against `ch(_, _)`.
 
 **Note**: Prolog uses `=<` (not `<=`) for "less than or equal"
 
+**Operands**: arithmetic expressions of type `Exp` (the root `self.glp`; GLP-Spec appendix-guards.tex, 026515d) --- numbers, `+`, `-`, `*`, `/`, `//`, `mod` and `pow`, unary negation, and the sixteen functions `abs`, `sqrt`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `exp`, `ln`, `log`, `integer`, `real`, `round`, `floor` and `ceil`, each as its body kernel computes it, `log` being `'_log10'`.  Until 2026-10-02 a function had no value in a guard, and `sqrt(X?) > 1` never succeeded (GLP #3 Cowork, 2026-10-02 20:58 UTC).
+
 **Semantics**:
 - Success: Both X and Y bound to numbers AND condition holds
 - Suspend: Either X or Y is unbound reader, and some instance of the comparison succeeds
-- Fail: Both bound to numbers AND condition false; or an operand has no value under any readers substitution --- a zero divisor of `/`, `//` or `mod`, a bound term that is no number, an unbound writer --- whatever readers stand elsewhere in it: `X? / 0 > 1` and `X? > 1 / 0` fail with `X?` unbound, "A guard fails if no such instance exists" (GLP-Spec glp.tex, Guards).  Until 2026-10-02 they waited on `X?` (GLP #3 Cowork, 2026-10-02 17:12 UTC, S3).
+- Fail: Both bound to numbers AND condition false; or an operand has no value under any readers substitution --- a zero divisor of `/`, `//` or `mod`, an operand of `//` or `mod` that is no integer, an argument outside a function's domain (`sqrt(-1)`, `ln(0)`, `asin(2)`, a NaN or infinite real under `integer`, `round`, `floor` or `ceil`), a bound term that is no number, an unbound writer --- whatever readers stand elsewhere in it: `X? / 0 > 1` and `X? > 1 / 0` fail with `X?` unbound, "A guard fails if no such instance exists" (GLP-Spec glp.tex, Guards).  Until 2026-10-02 they waited on `X?` (GLP #3 Cowork, 2026-10-02 17:12 UTC, S3).  `//` and `mod` take integers only, as `'_idiv'` and `'_mod'` do (GLP-Spec appendix-guards.tex, 026515d): `X? mod 0.5 =:= 1` fails with `X = 5`, and `X? // 2.5 > 1` fails whatever `X?` becomes.  Until 2026-10-02 the first threw IntegerDivisionByZeroException, 0.5 truncating to 0, and `//` divided reals (GLP #3 Cowork, 2026-10-02 20:58 UTC).
 
 **Example**:
 ```prolog

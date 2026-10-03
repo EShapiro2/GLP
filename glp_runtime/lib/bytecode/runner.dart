@@ -824,21 +824,28 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
 
   // Whether an operand evaluated has no value under any readers substitution:
   // a bound term that is neither a number nor an arithmetic expression, an
-  // unbound writer, which no readers substitution assigns, or a quotient or
-  // remainder whose divisor is zero.  Every arithmetic operator needs a value
-  // of each of its operands, so then no instance of the comparison succeeds,
-  // and it fails, whatever readers blocked the rest of it: "A guard fails if
-  // no such instance exists" (GLP-Spec glp.tex, Guards).  Until 2026-10-02 it
-  // waited on those readers: cz(X, yes) :- X? / 0 > 1 | true held cz(Q?, R)
-  // (GLP #3 Cowork, 2026-10-02 17:12 UTC, S3).
+  // unbound writer, which no readers substitution assigns, a quotient or
+  // remainder whose divisor is zero or, under `//` and `mod`, which take
+  // integers only, whose operand is no integer, or a function whose argument
+  // is outside its domain.  Every arithmetic operator and function needs a
+  // value of each of its operands, so then no instance of the comparison
+  // succeeds, and it fails, whatever readers blocked the rest of it: "A guard
+  // fails if no such instance exists" (GLP-Spec glp.tex, Guards).  Until
+  // 2026-10-02 it waited on those readers: cz(X, yes) :- X? / 0 > 1 | true
+  // held cz(Q?, R) (GLP #3 Cowork, 2026-10-02 17:12 UTC, S3).
   var undefinedInEveryInstance = false;
   num? undefined() {
     undefinedInEveryInstance = true;
     return null;
   }
 
-  // Evaluate arithmetic expressions to numeric values
-  // Supports: X, X + Y, X - Y, X * Y, X / Y, X // Y, X mod Y, -X
+  // The number an arithmetic expression of type Exp evaluates to (the root
+  // self.glp): numbers, +, -, *, /, // and mod, unary negation (neg, as -X
+  // parses), pow and the sixteen unary functions, each as its kernel computes
+  // it --- "Arithmetic comparison guards evaluate their arguments as
+  // arithmetic expressions of type Exp" (GLP-Spec appendix-guards.tex,
+  // 026515d).  Null where an unbound reader blocks it ([blockedReaders]) or it
+  // has no value ([undefined]).
   num? evaluateNumeric(Object? v) {
     if (v is num) return v;
     if (v is ConstTerm && v.value is num) return v.value as num;
@@ -908,25 +915,37 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
           if (a == null || b == null) return null;
           return a / b;
         case '//':
-          if (v.args.length != 2) return undefined();
-          final a = evaluateNumeric(v.args[0]);
-          final b = evaluateNumeric(v.args[1]);
-          if (b == 0) return undefined();
-          if (a == null || b == null) return null;
-          return a ~/ b;
         case 'mod':
+          // Integers only, as '_idiv' and '_mod' take them: an operand that
+          // is no integer has no value, nor has a zero divisor, whatever
+          // readers stand in the other (GLP-Spec appendix-guards.tex,
+          // 026515d; GLP #3 Cowork, 2026-10-02 20:58 UTC, "20:10" B).  Until
+          // 2026-10-02 `//` divided reals and `mod` truncated its operands, so
+          // X? mod 0.5 =:= 1 with X = 5 threw IntegerDivisionByZeroException.
           if (v.args.length != 2) return undefined();
           final a = evaluateNumeric(v.args[0]);
           final b = evaluateNumeric(v.args[1]);
-          if (b == 0) return undefined();
+          if (a != null && a is! int) return undefined();
+          if (b != null && (b is! int || b == 0)) return undefined();
           if (a == null || b == null) return null;
-          return a.toInt() % b.toInt();
+          return v.functor == '//' ? a ~/ b : a % b;
         case 'neg':
           if (v.args.length != 1) return undefined();
           final a = evaluateNumeric(v.args[0]);
           return a == null ? null : -a;
         default:
-          return undefined(); // Not an arithmetic functor
+          // pow and the sixteen unary functions of Exp, each as its kernel
+          // computes it ([expFunction]): an argument outside the function's
+          // domain has no value, whatever readers stand elsewhere (GLP-Spec
+          // appendix-guards.tex, 026515d; GLP #3 Cowork, 2026-10-02 20:58
+          // UTC, "20:10" C).  Any other functor is no arithmetic one and has
+          // no value either.  Until 2026-10-02 every function came here and
+          // had none, so sqrt(X?) > 1 never succeeded.
+          if (!isExpFunction(v.functor, v.args.length)) return undefined();
+          final xs = [for (final a in v.args) evaluateNumeric(a)];
+          if (xs.contains(null)) return null;
+          return expFunction(v.functor, [for (final x in xs) x!]) ??
+              undefined();
       }
     }
     // A bound term that is not a number: a constant of another kind, a

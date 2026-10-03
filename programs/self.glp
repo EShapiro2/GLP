@@ -186,8 +186,8 @@ procedure '_add'(Number?, Number?, Number).
 procedure '_sub'(Number?, Number?, Number).
 procedure '_mul'(Number?, Number?, Number).
 procedure '_div'(Number?, Number?, Number).
-procedure '_idiv'(Integer?, Integer?, Integer).
-procedure '_mod'(Integer?, Integer?, Integer).
+procedure '_idiv'(Number?, Number?, Integer).
+procedure '_mod'(Number?, Number?, Integer).
 procedure '_neg'(Number?, Number).
 
 % Math
@@ -356,9 +356,10 @@ Result? := X / Y :-
   Y1 := Y?,
   Result := X1? / Y1?.
 
-% Integer division.  A zero divisor is '_idiv''s to abort on.
+% Integer division.  A zero divisor or an operand that is no integer is
+% '_idiv''s to abort on (GLP-Spec appendix-guards.tex).
 Result? := X // Y :-
-  integer(X?), integer(Y?) |
+  number(X?), number(Y?) |
   '_idiv'(X?, Y?, Result).
 Result? := X // Y :-
   otherwise |
@@ -366,9 +367,10 @@ Result? := X // Y :-
   Y1 := Y?,
   Result := X1? // Y1?.
 
-% Modulo.  A zero divisor is '_mod''s to abort on.
+% Modulo.  A zero divisor or an operand that is no integer is '_mod''s to
+% abort on (GLP-Spec appendix-guards.tex).
 Result? := X mod Y :-
-  integer(X?), integer(Y?) |
+  number(X?), number(Y?) |
   '_mod'(X?, Y?, Result).
 Result? := X mod Y :-
   otherwise |
