@@ -17,6 +17,7 @@ import 'package:glp_runtime/multiagent/mad_helpers.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/wire/codec.dart'
     show wireMsgKindValue, wireMsgKindRequest, wireMsgKindAcknowledgement;
+import 'package:glp_runtime/wire/artefact.dart' show ModuleRefusal;
 import 'package:glp_runtime/wire/payload_codec.dart' show PayloadCodec;
 
 /// Callback for delivering messages to other agents
@@ -930,6 +931,23 @@ class MadContext {
   ///
   /// This is the single entry point for the receive path: both the isolate
   /// runner and the app runtime hand the opaque payload bytes here.
+  ///
+  /// A value message carrying a module whose certificate does not verify is
+  /// refused at receipt, with the reason (GLP #3 Cowork, 2026-10-02 20:58 UTC:
+  /// "a received module whose certificate does not verify is not a Module
+  /// value and the message carrying it is refused at receipt, with the reason,
+  /// as IGLP's loader refuses at adoption; nothing is delivered as text").
+  /// The refusal is the payload's decoding, before any Receive: "A payload is
+  /// one assignment message in the canonical encoding" (IGLP
+  /// app:in-networking, "Payloads"), a module constant decodes "to the Module
+  /// constant" (§cf-terms, constant tag 6), and a module that is no Module
+  /// value leaves the payload no message, so no Receive transaction
+  /// (Definition "madGLP Receive Transaction") takes it.  Nothing is assigned,
+  /// no entry is consumed, nothing is acknowledged, held or reported, and the
+  /// runtime prints the refusal and its reason, as it prints a kernel's abort.
+  /// The sender is told nothing, IGLP having no message for it: a reader-name
+  /// value stays pending there, unacknowledged (Definition "madGLP Local
+  /// State").
   void handleIncomingPayload({
     required List<int> payload,
     required String fromAgent,
@@ -940,8 +958,15 @@ class MadContext {
     }
     switch (payload[0]) {
       case wireMsgKindValue:
-        final (globalName, value) =
-            PayloadCodec.deserializeGlobalSendPayload(payload);
+        final (GlobalName, Term) received;
+        try {
+          received = PayloadCodec.deserializeGlobalSendPayload(payload);
+        } on ModuleRefusal catch (refusal) {
+          print('[REFUSED] $agentId: a message from $fromAgent is refused at '
+              'receipt: ${refusal.message}');
+          return;
+        }
+        final (globalName, value) = received;
         handleMadAssignment(
             globalName: globalName, value: value, fromAgent: fromAgent);
       case wireMsgKindRequest:

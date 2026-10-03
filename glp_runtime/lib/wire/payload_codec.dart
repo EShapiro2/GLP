@@ -19,7 +19,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
-import 'package:glp_runtime/wire/artefact.dart' show Artefact;
+import 'package:glp_runtime/wire/artefact.dart' show Artefact, ModuleRefusal;
 import 'package:glp_runtime/wire/codec.dart';
 
 class PayloadCodec {
@@ -83,6 +83,16 @@ class PayloadCodec {
   /// Decode a global-send (value) payload to (GlobalName, Term). Embedded
   /// variables return as `_w(p,i)` / `_r(p,i)` structures for the localize
   /// machinery. Throws on a request or acknowledgement message.
+  ///
+  /// This is the decoding of a received message, and a module constant it
+  /// carries decodes to a Module value only where the module's artefact is a
+  /// certified compiled program, as the loader's step 1 checks it
+  /// ([Artefact.certify]); where one is not, the payload is no message and
+  /// [ModuleRefusal] is thrown with the reason: "a received module whose
+  /// certificate does not verify is not a Module value and the message
+  /// carrying it is refused at receipt, with the reason ... nothing is
+  /// delivered as text" (GLP #3 Cowork, 2026-10-02 20:58 UTC).  Until
+  /// 2026-10-02 any module a message carried decoded to a Module value.
   static (GlobalName, Term) deserializeGlobalSendPayload(List<int> payload) {
     final m = decodeMessageFromBytes(_asUint8(payload));
     if (m is! WireValueMessage) {
@@ -93,7 +103,7 @@ class PayloadCodec {
     final globalName = a.gIsReader
         ? GlobalName.reader(agent, a.gIndex)
         : GlobalName.writer(agent, a.gIndex);
-    return (globalName, wireToTerm(a.value));
+    return (globalName, _wireToTerm(a.value, certify: true));
   }
 
   /// Serialize a ground term as a canonical agent-message payload. Throws if a
@@ -175,12 +185,23 @@ class PayloadCodec {
   /// Map a [WireTerm] back to a runtime [Term]. Tag-2 variables become
   /// `_w(p,i)` / `_r(p,i)` structures.
   ///
+  /// A module constant maps to the Module value its artefact parses to, its
+  /// certificate unchecked.  The decoding of a received message checks it
+  /// ([deserializeGlobalSendPayload]); this mapping's other users are
+  /// signature/2's reading of a signed term (body_kernels.dart) and the
+  /// adoption vocabulary's decodeMessage, which are no receipt of a message,
+  /// and whether a signed term's module is checked is put to GLP (2026-10-02).
+  ///
   /// The walk keeps a stack of its own, as [termToWire] does, and builds each
   /// structure over its arguments mapped left to right; until 2026-10-02 it
   /// recursed once a structure argument and overflowed the Dart stack on a
   /// long list.
-  static Term wireToTerm(WireTerm w) {
-    if (w is! WStruct) return _leafToTerm(w);
+  static Term wireToTerm(WireTerm w) => _wireToTerm(w, certify: false);
+
+  /// [wireToTerm], each module constant's artefact certified where [certify]
+  /// ([deserializeGlobalSendPayload]).
+  static Term _wireToTerm(WireTerm w, {required bool certify}) {
+    if (w is! WStruct) return _leafToTerm(w, certify: certify);
     // Each frame: a structure, and its arguments mapped so far.
     final frames = <(WStruct, List<Term>)>[(w, <Term>[])];
     Term? mapped; // the structure just mapped, for its parent
@@ -201,17 +222,27 @@ class PayloadCodec {
       if (arg is WStruct) {
         frames.add((arg, <Term>[]));
       } else {
-        args.add(_leafToTerm(arg));
+        args.add(_leafToTerm(arg, certify: certify));
       }
     }
   }
 
-  /// [wireToTerm] of a constant or a variable.
-  static Term _leafToTerm(WireTerm w) {
+  /// [wireToTerm] of a constant or a variable; a module's artefact certified
+  /// where [certify], and refused ([ModuleRefusal]) where it is no certified
+  /// compiled program.
+  static Term _leafToTerm(WireTerm w, {required bool certify}) {
     switch (w) {
       case WConst(:final constant):
         if (constant is WModule) {
           // §cf-terms constant tag 6 decodes to the Module constant itself.
+          if (certify) {
+            final (:artefact, :refusal) =
+                Artefact.certify(constant.artefactBytes);
+            if (refusal != null) {
+              throw ModuleRefusal(artefact?.moduleName, refusal);
+            }
+            return ModuleTerm(artefact!, name: artefact.moduleName);
+          }
           final artefact = Artefact.fromBytes(constant.artefactBytes);
           return ModuleTerm(artefact, name: artefact.moduleName);
         }
