@@ -95,49 +95,57 @@ procedure response(Integer?, Integer?, Response).
 response(K, Wary, wary) :- K? =< Wary? | true.
 response(K, Wary, sociable) :- K? > Wary? | true.
 
-%% The population's draw (sGLP's code task of 2026-10-02 15:44 UTC).
-%% draw(N?, Seed?, Hom?, Wary?, D): D is draw(Homophile, Indifferent, Wary,
-%% Sociable), the numbers of agents of 1..N of each profile in each dimension
-%% in the run of N agents from Seed with the mix Hom and Wary, without running
-%% it: each agent's two draws from its block, as agents/10 draws them, decided
-%% by approach/3 and response/3.  run.sh calls it in a REPL session of its own,
-%% so that the run's machine is the same with it as without, and its log the
-%% same.  tally/10 draws as agents/10 does, and a change to the one is a change
-%% to the other.
+%% The population's draw (sGLP's code tasks of 2026-10-02 15:44 UTC and
+%% 2026-10-03 08:58 UTC).  draw(N?, Seed?, Hom?, Wary?, D): D is
+%% draw(Homophile, Indifferent, Wary, Sociable, As), the numbers of agents of
+%% 1..N of each profile in each dimension in the run of N agents from Seed with
+%% the mix Hom and Wary, and As the list of agent(A, Approach, Response), A of
+%% 1..N in order, each agent's profiles, without running it: each agent's two
+%% draws from its block, as agents/10 draws them, decided by approach/3 and
+%% response/3, and counted as they are listed.  run.sh calls it in a REPL
+%% session of its own, so that the run's machine is the same with it as
+%% without, and its log the same.  tally/14 draws as agents/10 does, and a
+%% change to the one is a change to the other.
 exported procedure draw(Integer?, Integer?, Integer?, Integer?, Draw).
-draw(N, Seed, Hom, Wary, D?) :-
+draw(N, Seed, Hom, Wary, draw(H?, I?, W?, S?, As?)) :-
     N? >= 2, N? mod 2 =:= 0,
     Hom? >= 0, Hom? =< 100, Wary? >= 0, Wary? =< 100 |
     random(Seed?, 2147483646, Base, _),
-    tally(1, N?, Base?, Hom?, Wary?, 0, 0, 0, 0, D).
+    tally(1, N?, Base?, Hom?, Wary?, 0, 0, 0, 0, As, H, I, W, S).
 
-%% tally(A?, N?, Block?, Hom?, Wary?, H?, I?, W?, S?, D): agents A..N, Block
-%% the start of A's block, added to H homophile, I indifferent, W wary and S
-%% sociable agents before A.
+%% tally(A?, N?, Block?, Hom?, Wary?, H?, I?, W?, S?, As, H2, I2, W2, S2):
+%% agents A..N, Block the start of A's block, listed in As, and added to H
+%% homophile, I indifferent, W wary and S sociable agents before A, giving H2,
+%% I2, W2 and S2.
 procedure tally(Integer?, Integer?, Integer?, Integer?, Integer?, Integer?,
-                Integer?, Integer?, Integer?, Draw).
-tally(A, N, B, Hom, Wary, H, I, W, S, D?) :-
+                Integer?, Integer?, Integer?, Drawn, Integer, Integer,
+                Integer, Integer).
+tally(A, N, B, Hom, Wary, H, I, W, S, [agent(A?, Ap?, Re?)|As?],
+      H2?, I2?, W2?, S2?) :-
     A? =< N? |
     random(B?, 100, K1, B1),
     random(B1?, 100, K2, _),
-    approach(K1?, Hom?, Ap),
-    response(K2?, Wary?, Re),
-    add_approach(Ap?, H?, I?, H1, I1),
-    add_response(Re?, W?, S?, W1, S1),
+    approach(K1?, Hom?, Ap1),
+    response(K2?, Wary?, Re1),
+    add_approach(Ap1?, H?, I?, H1, I1, Ap),
+    add_response(Re1?, W?, S?, W1, S1, Re),
     skip(4096, B?, B2),
     A1 := A? + 1,
-    tally(A1?, N?, B2?, Hom?, Wary?, H1?, I1?, W1?, S1?, D).
-tally(A, N, _, _, _, H, I, W, S, draw(H?, I?, W?, S?)) :-
+    tally(A1?, N?, B2?, Hom?, Wary?, H1?, I1?, W1?, S1?, As, H2, I2, W2, S2).
+tally(A, N, _, _, _, H, I, W, S, [], H?, I?, W?, S?) :-
     A? > N? | true.
 
-%% add_approach(Ap?, H?, I?, H1, I1) and add_response(Re?, W?, S?, W1, S1):
-%% one agent of the profile added to its count.
-procedure add_approach(Approach?, Integer?, Integer?, Integer, Integer).
-add_approach(homophile, H, I, H1?, I?) :- H1 := H? + 1.
-add_approach(indifferent, H, I, H?, I1?) :- I1 := I? + 1.
-procedure add_response(Response?, Integer?, Integer?, Integer, Integer).
-add_response(wary, W, S, W1?, S?) :- W1 := W? + 1.
-add_response(sociable, W, S, W?, S1?) :- S1 := S? + 1.
+%% add_approach(Ap?, H?, I?, H1, I1, Ap1) and add_response(Re?, W?, S?, W1, S1,
+%% Re1): one agent of the profile added to its count, the profile given back
+%% for its line in the list.
+procedure add_approach(Approach?, Integer?, Integer?, Integer, Integer,
+                       Approach).
+add_approach(homophile, H, I, H1?, I?, homophile) :- H1 := H? + 1.
+add_approach(indifferent, H, I, H?, I1?, indifferent) :- I1 := I? + 1.
+procedure add_response(Response?, Integer?, Integer?, Integer, Integer,
+                       Response).
+add_response(wary, W, S, W1?, S?, wary) :- W1 := W? + 1.
+add_response(sociable, W, S, W?, S1?, sociable) :- S1 := S? + 1.
 
 %% skip(J?, S?, S1): S1 is the seed J draws after S, by J draws of random/4,
 %% each reduced before the next is spawned: the clause waits on its seed,

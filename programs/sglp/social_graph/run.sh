@@ -38,8 +38,14 @@
 # UTC), computed by social_graph_draw/5 in a REPL session of its own before the
 # run, so that the log is the same with it as without; the run's wall-clock
 # time; the REPL's status lines; the log's size; and friendship.awk's counts.
-# Exits 0 if the draw was computed and the run loaded, ran with no error and
-# its monitor stopped, 1 otherwise.
+# Writes the draw itself beside the log, to <log> with its .log replaced by
+# .draw, or with .draw added where it has none (sGLP's code task of 2026-10-03
+# 08:58 UTC): the line "draw homophile <h> indifferent <i> wary <w> sociable
+# <s>", then one line "agent <a> <approach> <response>" per agent, a of 1..N in
+# order, all from the one answer of social_graph_draw/5, whose counts are those
+# of its agents.  Exits 0 if the draw was computed, every agent of 1..N in its
+# list, and the run loaded, ran with no error and its monitor stopped, 1
+# otherwise.
 
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -74,12 +80,41 @@ trap 'rm -rf "$WORK"' EXIT
 
 # The population's draw, in a REPL session of its own before the run, so that
 # the run's machine and its log are the same with it as without: the program,
-# social_graph_draw/5 with the run's agents, seed and mix, its answer read.
+# social_graph_draw/5 with the run's agents, seed and mix, its answer read,
+# D = draw(H, I, W, S, [agent(1, Ap, Re), ...]).  The counts are DRAW, and the
+# counts line and the agents' lines go to the .draw file beside the log; with
+# an answer that does not list agents 1..N in order, DRAW is empty and the file
+# is not written.
+case "$LOG" in
+    *.log) DRAWF="${LOG%.log}.draw" ;;
+    *) DRAWF="$LOG.draw" ;;
+esac
+rm -f "$DRAWF"
 printf ':limit 1000000000000000\n%s\nsocial_graph_draw(%s, %s, %s, %s, D).\n:quit\n' \
     "$SGLP" "$N" "$SEED" "$HOM" "$WARY" > "$WORK/draw"
-DRAW=$( (cd "$RT" && bin/glpc < "$WORK/draw" 2>&1) |
-    sed -n 's/^\(GLP> \)*D = draw(\([0-9]*\), \([0-9]*\), \([0-9]*\), \([0-9]*\))$/homophile \2 indifferent \3 wary \4 sociable \5/p' |
-    head -n 1)
+DRAW=$( (cd "$RT" && bin/glpc < "$WORK/draw" 2>&1) | awk -v n="$N" -v drawf="$DRAWF" '
+    { sub(/^(GLP> )+/, "") }
+    /^D = draw\(/ && !done {
+        done = 1
+        s = substr($0, 10)
+        if (!match(s, /^[0-9]+, [0-9]+, [0-9]+, [0-9]+, \[/)) next
+        split(substr(s, 1, RLENGTH - 3), c, ", ")
+        s = substr(s, RLENGTH + 1)
+        k = 0
+        while (match(s, /^agent\([0-9]+, (homophile|indifferent), (wary|sociable)\)/)) {
+            split(substr(s, 7, RLENGTH - 7), f, ", ")
+            if (f[1] + 0 != k + 1) next
+            line[++k] = "agent " f[1] " " f[2] " " f[3]
+            s = substr(s, RLENGTH + 1)
+            sub(/^, /, "", s)
+        }
+        if (s != "])" || k != n + 0) next
+        counts = "homophile " c[1] " indifferent " c[2] " wary " c[3] " sociable " c[4]
+        print "draw " counts > drawf
+        for (i = 1; i <= k; i++) print line[i] > drawf
+        close(drawf)
+        print counts
+    }')
 
 # The REPL's input: no bound on reductions, the program, the goal.
 printf ':limit 1000000000000000\n%s\n%s.\n:quit\n' "$SGLP" "$GOAL" > "$WORK/input"
@@ -111,7 +146,8 @@ END=$(date +%s)
 touch "$LOG" "$WORK/status"
 
 echo "program $SGLP: $GOAL"
-echo "draw ${DRAW:-none: social_graph_draw/5 gave no answer}"
+echo "draw ${DRAW:-none: social_graph_draw/5 gave no answer listing agents 1..$N}"
+[ -n "$DRAW" ] && echo "draw $DRAWF: the counts and $N agents' profiles"
 echo "wall-clock $((END - START)) s; $(uptime | sed 's/.*load/load/')"
 cat "$WORK/status"
 echo "log $LOG: $(wc -l < "$LOG" | tr -d ' ') lines, $(wc -c < "$LOG" | tr -d ' ') bytes"

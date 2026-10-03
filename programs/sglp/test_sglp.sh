@@ -2,7 +2,7 @@
 # Tests of sGLP in GLP (programs/sglp) against sGLP's paper (the repository
 # svGLP-Stochastic-Volitional-GLP at d2f64b6) and its code tasks of 2026-10-02
 # 00:06 UTC, item 6, 15:23 UTC, items 1 and 3, 15:24 UTC, items 1 to 4, and
-# 15:44 UTC, and of 2026-10-03 08:44 UTC, item 2.
+# 15:44 UTC, and of 2026-10-03 08:44 UTC, item 2, and 08:58 UTC.
 #
 #   bash programs/sglp/test_sglp.sh
 #
@@ -32,10 +32,14 @@
 #       m * 2629800 s; the edges do not decrease and are those within a sex
 #       and across; month 1's are the pairs with a yes before 2629800 s,
 #       counted apart; month 12's graph is the year's.
-# (vii) the population's draw (the task of 15:44 UTC): the draw run.sh prints
-#       for (iv) is the profiles the log of (iv) shows, each agent's read from
-#       its menus' other-sex share and its cards' yes share; at 0 and 0 and at
-#       100 and 100, the draws of (v) are none and all.
+# (vii) the population's draw (the task of 15:44 UTC, and of 2026-10-03
+#       08:58 UTC for each agent's line): the draw run.sh prints for (iv) is
+#       the profiles the log of (iv) shows, each agent's read from its menus'
+#       other-sex share and its cards' yes share; the .draw file beside the
+#       log of (iv) is that counts line, then agents 1..100 in order, the
+#       counts line being their counts; each agent's line is its profiles as
+#       the log of (iv) shows them; at 0 and 0 and at 100 and 100, the draws
+#       of (v) are none and all, in their counts and in every agent's line.
 # (viii) circulation.awk (the task of 15:24 UTC, item 4, and of 2026-10-03
 #       08:44 UTC, item 2), checked by hand: on tests/circulation/four.log, a
 #       fixed log of four agents into its fourth simulated month --- seven
@@ -212,10 +216,47 @@ L=$(awk -F'\t' '
 echo "        run.sh: $D; the log: $L"
 [ -n "$D" ] && [ "$D" = "$L" ]
 check "the draw run.sh prints for (iv) is the profiles its log shows" $?
-grep -q '^draw homophile 0 indifferent 100 wary 0 sociable 100$' "$WORK/m0-0.out"
-check "at 0 and 0 the draw is no homophile and no wary agent" $?
-grep -q '^draw homophile 100 indifferent 0 wary 100 sociable 0$' "$WORK/m100-100.out"
-check "at 100 and 100 the draw is every agent homophile and wary" $?
+# draw_file_errors <draw> <n>: the number of ways the .draw file breaks its
+# form: its first line not a counts line, an agent line out of 1..n's order or
+# of another form, not n agent lines, the counts line not their counts.
+draw_file_errors() {
+    awk -v n="$2" '
+        NR == 1 { if ($0 !~ /^draw homophile [0-9]+ indifferent [0-9]+ wary [0-9]+ sociable [0-9]+$/) bad++
+                  ch = $3; ci = $5; cw = $7; cs = $9; next }
+        $0 ~ /^agent [0-9]+ (homophile|indifferent) (wary|sociable)$/ && $2 + 0 == k + 1 {
+            k++; if ($3 == "homophile") h++; else i++; if ($4 == "wary") w++; else s++; next }
+        { bad++ }
+        END { if (k != n || ch != h + 0 || ci != i + 0 || cw != w + 0 || cs != s + 0) bad++
+              print bad + 0 }' "$1"
+}
+[ -s "$WORK/y.draw" ] && [ "$(draw_file_errors "$WORK/y.draw" 100)" -eq 0 ] &&
+    [ "$(head -n 1 "$WORK/y.draw")" = "draw $D" ]
+check "the .draw file of (iv) is the counts line run.sh prints, then agents 1..100 in order, whose counts it is" $?
+# Each agent's line against its profiles as the log of (iv) shows them, by the
+# shares above; an agent with no menu or no card in the log is not shown.
+A=$(awk 'FNR == NR { if ($1 == "agent") line[$2] = $3 " " $4; next }
+    { split($0, f, "\t") }
+    f[3] == "Menu" { m[f[2]]++; if (f[4] ~ /other\([^()]*\)\)$/) o[f[2]]++ }
+    f[3] == "Card" { c[f[2]]++; if (f[4] ~ /, yes\)$/) y[f[2]]++ }
+    END {
+        for (a = 1; a <= 100; a++) {
+            if (!m[a] || !c[a]) { bad++; continue }
+            l = (o[a] / m[a] < 0.26 ? "homophile" : "indifferent") " " (y[a] / c[a] < 0.55 ? "wary" : "sociable")
+            if (l != line[a]) bad++
+        }
+        print bad + 0
+    }' "$WORK/y.draw" "$WORK/y.log")
+echo "        the .draw file of (iv): $A of 100 agents' lines not the profiles the log shows"
+[ "$A" -eq 0 ]
+check "each agent's line in the .draw file of (iv) is its profiles as the log of (iv) shows them" $?
+grep -q '^draw homophile 0 indifferent 100 wary 0 sociable 100$' "$WORK/m0-0.out" &&
+    [ "$(draw_file_errors "$WORK/m0-0.draw" 100)" -eq 0 ] &&
+    [ "$(grep -c '^agent [0-9]* indifferent sociable$' "$WORK/m0-0.draw")" -eq 100 ]
+check "at 0 and 0 the draw is no homophile and no wary agent, in its counts and in every agent's line" $?
+grep -q '^draw homophile 100 indifferent 0 wary 100 sociable 0$' "$WORK/m100-100.out" &&
+    [ "$(draw_file_errors "$WORK/m100-100.draw" 100)" -eq 0 ] &&
+    [ "$(grep -c '^agent [0-9]* homophile wary$' "$WORK/m100-100.draw")" -eq 100 ]
+check "at 100 and 100 the draw is every agent homophile and wary, in its counts and in every agent's line" $?
 
 echo "--- (viii) circulation.awk on a fixed four-agent log"
 awk -f "$HERE/coins/circulation.awk" "$HERE/tests/circulation/four.log" > "$WORK/four.out" 2>&1

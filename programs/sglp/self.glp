@@ -83,13 +83,19 @@ exported procedure social_graph(Integer?, Number?, Span?, Integer?, Integer?,
 social_graph(N, C, U, Seed, Hom, Wary) :-
     social_graph # run(N?, C?, U?, Seed?, Hom?, Wary?).
 
-%% The population's draw: how many agents of each profile in each dimension.
-Draw ::= draw(Integer, Integer, Integer, Integer).
+%% The population's draw: how many agents of each profile in each dimension,
+%% and each agent's profiles, agents 1..N in order.
+Draw    ::= draw(Integer, Integer, Integer, Integer, Drawn).
+Drawn   ::= [] ; [AgentIs | Drawn].
+AgentIs ::= agent(Integer, Approach, Response).
 
 %% social_graph_draw(Agents?, Seed?, Hom?, Wary?, D): D is draw(Homophile,
-%% Indifferent, Wary, Sociable), the numbers of agents of each profile in the
-%% run of social_graph/6 with those arguments, computed without running it
-%% (social_graph/harness.glp; sGLP's code task of 2026-10-02 15:44 UTC).
+%% Indifferent, Wary, Sociable, As), the numbers of agents of each profile in
+%% the run of social_graph/6 with those arguments, and As the list of
+%% agent(A, Approach, Response), each agent's profiles, A of 1..Agents in
+%% order, computed without running it, the counts those of As
+%% (social_graph/harness.glp; sGLP's code tasks of 2026-10-02 15:44 UTC and
+%% 2026-10-03 08:58 UTC).
 imported procedure social_graph#draw(Integer?, Integer?, Integer?, Integer?,
                                      Draw).
 exported procedure social_graph_draw(Integer?, Integer?, Integer?, Integer?,

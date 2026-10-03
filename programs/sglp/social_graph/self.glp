@@ -50,6 +50,6 @@ exported procedure run(Integer?, Number?, Span?, Integer?, Integer?, Integer?).
 run(N, C, U, Seed, Hom, Wary) :- harness # run(N?, C?, U?, Seed?, Hom?, Wary?).
 
 %% draw(Agents?, Seed?, Hom?, Wary?, D): the population's draw in that run,
-%% harness.glp, without running it.
+%% its counts and each agent's profiles, harness.glp, without running it.
 exported procedure draw(Integer?, Integer?, Integer?, Integer?, Draw).
 draw(N, Seed, Hom, Wary, D?) :- harness # draw(N?, Seed?, Hom?, Wary?, D).
