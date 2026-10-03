@@ -141,6 +141,10 @@ class GlpRuntime {
   /// Goal [goalId] has passed when_idle: it no longer waits on it.
   void clearIdleWait(int goalId) => _idleWaits.remove(goalId);
 
+  /// The number of goals whose state the runtime holds: those in the queue
+  /// or suspended, once every goal that ended has left ([goalEnded]).
+  int get goalsHeld => _goalEnvs.length;
+
   /// Some goal may be waiting on when_idle.  An entry whose goal has since
   /// been re-tried by another reader and gone on is counted until
   /// [wakeIdle] passes over it.
@@ -230,6 +234,21 @@ class GlpRuntime {
   }
 
   CallEnv? getGoalEnv(GoalId g) => _goalEnvs[g];
+
+  /// Goal [g] has ended: it reduced with no goal of its body continuing it, or
+  /// it failed.  It is no longer in the queue or the suspended set (dGLP
+  /// Transition System: a Reduce replaces the goal by its body, a Fail moves
+  /// it to F, which keeps its text), so its argument registers, its program
+  /// and module, its tail budget and any wait it began are dropped.  Until
+  /// 2026-10-02 they were kept for the whole run, some 500 bytes a goal: 1.6
+  /// of the 5 GB live at the end of a year of sGLP's 100-agent social graph.
+  void goalEnded(GoalId g) {
+    _goalEnvs.remove(g);
+    _goalPrograms.remove(g);
+    _goalModules.remove(g);
+    _budgets.remove(g);
+    _waitReaders.remove(g);
+  }
 
   void setGoalProgram(GoalId g, Object? program) {
     _goalPrograms[g] = program;
