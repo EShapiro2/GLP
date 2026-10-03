@@ -107,7 +107,7 @@ class LinkResult {
 
 /// Walk the program directory tree and discover all modules.
 ///
-/// For each `.glp` file (excluding `boot_direct.glp`):
+/// For each `.glp` file of the tree, none skipped:
 /// - Parse into Module AST
 /// - Name the module by its path from the root ([modulePathName]): the root is
 ///   the directory of [rootSelfGlpPath] where it is given --- the device's
@@ -161,17 +161,13 @@ List<DiscoveredModule> _discoverGlpModules(
       .where((f) => f.path.endsWith('.glp'))
       .toList();
 
+  // Every .glp file of the tree is a module of the program, and none is
+  // skipped (TGLP modules.tex, Compilation, first step: "the compiler collects
+  // every .glp file of the program's directory tree").  Until 2026-10-03 a
+  // file named boot_direct.glp or mad_boot.glp, and every file under a
+  // directory named mad_boot, was left out by its name.
   for (final file in glpFiles) {
     final filename = file.path.split(Platform.pathSeparator).last;
-
-    // Skip boot_direct.glp (copy of boot.glp with direct calls, not a module)
-    if (filename == 'boot_direct.glp') continue;
-
-    // Skip mad_boot.glp and files in mad_boot/ directory
-    // (madGLP boot procedures, loaded on top of linked program)
-    if (filename == 'mad_boot.glp') continue;
-    if (file.parent.path.endsWith('${Platform.pathSeparator}mad_boot') ||
-        file.parent.path.endsWith('/mad_boot')) continue;
 
     // Parse the module
     final source = file.readAsStringSync();

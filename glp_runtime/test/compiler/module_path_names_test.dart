@@ -26,6 +26,11 @@
 //
 // A directory with no self.glp is not a program ("Entry and the absence of a
 // boot module"): no_self/ is refused as one, its m.glp loading alone.
+//
+// Discovery skips nothing (Compilation, first step: "the compiler collects
+// every .glp file of the program's directory tree"): skips_nothing/'s
+// boot_direct.glp, mad_boot.glp and mad_boot/play.glp are modules, each
+// type-checked, which until 2026-10-03 were left out by their names.
 
 import 'dart:io';
 
@@ -115,6 +120,32 @@ void main() {
       engine.loadFile('${fixture('no_self')}/m.glp');
       final r = await engine.runGoal('run(X)');
       expect(r.bindings['X'], isInteger(1));
+    });
+  });
+
+  group('discovery skips nothing (skips_nothing/)', () {
+    test('boot_direct.glp, mad_boot.glp and mad_boot/ are modules', () {
+      final names = discoverProgram(fixture('skips_nothing'),
+              rootSelfGlpPath: rootSelf)
+          .map((m) => m.moduleName)
+          .toSet();
+      expect(names, contains('tests/module_paths/skips_nothing/boot_direct'));
+      expect(names, contains('tests/module_paths/skips_nothing/mad_boot'));
+      expect(names, contains('tests/module_paths/skips_nothing/mad_boot/play'));
+    });
+
+    test('each is type-checked, and the program is refused naming all three',
+        () {
+      for (final site in [
+        'skips_nothing/boot_direct.glp:2',
+        'skips_nothing/mad_boot.glp:2',
+        'skips_nothing/mad_boot/play.glp:3',
+      ]) {
+        expect(() => GlpEngine(rootSelfGlpPath: rootSelf)
+            .loadProgram(fixture('skips_nothing')),
+            throwsContaining('$site: Procedure stray/1 has no type '
+                'declaration'));
+      }
     });
   });
 
