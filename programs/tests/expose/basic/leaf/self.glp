@@ -1,0 +1,12 @@
+%% The program's interface (TGLP modules.tex, External access): run/1 and
+%% two_inst/2, forwarded to client.glp, which defines them.  A directory with
+%% no self.glp is not a program ("Entry and the absence of a boot module");
+%% until 2026-10-02 this one had none and took client.glp's exported
+%% procedures for its entry points.
+imported procedure client#run(Integer).
+exported procedure run(Integer).
+run(R?) :- client # run(R).
+
+imported procedure client#two_inst(Stream(Integer), Stream(Constant)).
+exported procedure two_inst(Stream(Integer), Stream(Constant)).
+two_inst(Zi?, Zc?) :- client # two_inst(Zi, Zc).

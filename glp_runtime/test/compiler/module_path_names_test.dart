@@ -23,6 +23,9 @@
 // And two refusals of the rule for the qualifier: not_child/ calls h # run
 // where h.glp lies in a subdirectory with no self.glp, and not_exported/ calls
 // m # helper where m.glp does not export helper/1.
+//
+// A directory with no self.glp is not a program ("Entry and the absence of a
+// boot module"): no_self/ is refused as one, its m.glp loading alone.
 
 import 'dart:io';
 
@@ -99,6 +102,19 @@ void main() {
       final b = await engine.runGoal('rb(Y)');
       expect(b.error, isNull);
       expect(b.bindings['Y'], isInteger(2));
+    });
+  });
+
+  group('a directory with no self.glp', () {
+    test('is not a program and is refused as one', () {
+      expect(() => engine.loadProgram(fixture('no_self')),
+          throwsContaining('has no self.glp'));
+    });
+
+    test('its module loads alone', () async {
+      engine.loadFile('${fixture('no_self')}/m.glp');
+      final r = await engine.runGoal('run(X)');
+      expect(r.bindings['X'], isInteger(1));
     });
   });
 

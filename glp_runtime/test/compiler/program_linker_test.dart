@@ -296,10 +296,11 @@ void main() {
   });
 
   group('Dead-code elimination (step 5, dedicated fixture)', () {
-    // boot exports `run`, which calls `helper`; `dead` is never called. The
-    // pure link transform keeps every renamed procedure; eliminateDeadCode
-    // (the step-5 hand-off to the compiler) keeps only the reachable ones.
-    // See ../programs/tests/linker_dce/.
+    // boot exports `run`, which calls `helper`; `dead` is never called; the
+    // directory's self.glp exports `run` by forwarding it to boot (a directory
+    // with no self.glp is not a program). The pure link transform keeps every
+    // renamed procedure; eliminateDeadCode (the step-5 hand-off to the
+    // compiler) keeps only the reachable ones. See ../programs/tests/linker_dce/.
     const dceRoot = '../programs/tests/linker_dce';
 
     // Each procedure is renamed by its module's path from the root
@@ -323,6 +324,8 @@ void main() {
       final pruned = linkProgram(modules, rootDir: dceRoot);
       final names = pruned.program.procedures.map((p) => p.name).toSet();
       expect(names, contains('run'), reason: 'entry-point alias kept');
+      expect(names, contains('tests/linker_dce:run'),
+          reason: "the self.glp's forwarder kept");
       expect(names, contains('$boot:run'), reason: 'root export kept');
       expect(names, contains('$boot:helper'),
           reason: 'reachable from run kept');

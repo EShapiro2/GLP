@@ -697,6 +697,10 @@ void checkModulesIndependently(List<DiscoveredModule> modules) {
 /// Throws on type errors with details.
 LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
     {required String rootDir}) {
+  // A directory with no self.glp is not a program, and is rejected before
+  // any of its modules is checked.
+  _requireProgramSelfGlp(modules, rootDir);
+
   // Step 2 (modules.tex §Static Linking): after discovery, before renaming,
   // each module is type-checked independently against its ancestor scope. The
   // linked check below is an addition to it, not a replacement.
@@ -878,16 +882,42 @@ void typeCheckProgram(List<DiscoveredModule> modules, {required String rootDir})
 /// procedures. This is the program of def:program that is type-checked and
 /// compiled.
 ///
-/// Between steps 4 and 5, a directory with no entry points is rejected
-/// ([_requireEntryPoints]).
+/// A directory with no self.glp is rejected before linking
+/// ([_requireProgramSelfGlp]), and between steps 4 and 5 a directory with no
+/// entry points is rejected ([_requireEntryPoints]).
 LinkResult linkProgram(List<DiscoveredModule> modules,
     {required String rootDir, String? singleModulePath}) {
+  if (singleModulePath == null) _requireProgramSelfGlp(modules, rootDir);
   final linked = linkAndResolveModules(modules,
       rootDir: rootDir, singleModulePath: singleModulePath);
   if (singleModulePath == null) {
     _requireEntryPoints(modules, linked, rootDir);
   }
   return eliminateDeadCode(linked);
+}
+
+/// A directory with no `self.glp` is not a program (modules.tex, "Entry and
+/// the absence of a boot module": "A directory with no self.glp at all is
+/// rejected for the prior reason: a program is a directory carrying a self.glp
+/// or a self-contained module (Section~\ref{sec:mod-design}), and such a
+/// directory is neither.  A directory of modules that is not a program---a
+/// library reached by ancestor scoping, or a collection of examples compiled
+/// one at a time---is used as those are used, and is not compiled as a program
+/// at all").  Until 2026-10-02 such a directory took the exported procedures
+/// of its root-level modules for its entry points.
+void _requireProgramSelfGlp(List<DiscoveredModule> modules, String rootDir) {
+  final rootNorm = _normPath(rootDir);
+  final hasSelf = modules.any((m) =>
+      m.isSelfGlp && _normPath(File(m.filePath).parent.path) == rootNorm);
+  if (hasSelf) return;
+  throw Exception(
+      'Not a program: $rootDir has no self.glp. A program is a directory '
+      'carrying a self.glp or a self-contained module (modules.tex, '
+      'Module-System Design), so a directory with no self.glp at all is '
+      'rejected (modules.tex, "Entry and the absence of a boot module"); a '
+      'directory of modules that is not a program --- a library, or a '
+      'collection of examples --- is used as those are used, its modules '
+      'loaded one at a time, and is not compiled as a program at all.');
 }
 
 /// A directory with no entry points is not a program (modules.tex §Static
@@ -922,15 +952,11 @@ void _requireEntryPoints(
   if (hasEntryPoint) return;
 
   final rootNorm = _normPath(rootDir);
-  final rootSelfPaths = modules
-      .where((m) =>
+  final rootSelfPath = modules
+      .firstWhere((m) =>
           m.isSelfGlp && _normPath(File(m.filePath).parent.path) == rootNorm)
-      .map((m) => m.filePath)
-      .toList();
-
-  final cause = rootSelfPaths.isEmpty
-      ? 'it has no root self.glp, and no module at its root exports a procedure'
-      : '${rootSelfPaths.first} exports no procedure';
+      .filePath;
+  final cause = '$rootSelfPath exports no procedure';
 
   throw Exception(
       'Not a program: $rootDir has no entry points — $cause. A procedure is an '
@@ -945,10 +971,9 @@ void _requireEntryPoints(
 /// dead-code elimination.
 ///
 /// Renames procedures (`p/n` → `M:p/n`), resolves all calls, and generates
-/// entry-point aliases for the exported procedures of root-level modules
-/// (project-compilation spec §3.4). [rootDir] is the loaded program root: a
-/// module is "root-level" when its nearest enclosing `self.glp` directory is
-/// that root, i.e. it is not contained in any descendant `self.glp` subtree.
+/// entry-point aliases for the exported procedures of the `self.glp` of
+/// [rootDir], the loaded program root; a directory with no `self.glp` gets
+/// none, and [linkProgram] rejects it.
 ///
 /// Returns a [LinkResult] with the renamed program and renamed proc declarations
 /// (needed for SRSW type-based relaxation during compilation). This is the stage
@@ -1116,8 +1141,8 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
   // §External access). For a DIRECTORY program, the entry points are the
   // EXPORTED procedures of the ROOT self.glp — the self.glp at the loaded
   // program root — each given an unqualified forwarding alias so an external
-  // goal calls it by plain name. (A directory with no root self.glp falls back
-  // to its root-level modules' exported procedures.)
+  // goal calls it by plain name.  A directory with no root self.glp is not a
+  // program and has none ([_requireProgramSelfGlp]).
   //
   // A SINGLE-MODULE program generates NO aliases: its own procedures are kept
   // bare above (keepBare), and those bare names ARE the entry points, a
@@ -1133,31 +1158,8 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
             m.isSelfGlp && _normPath(File(m.filePath).parent.path) == rootNorm)
         .toList();
 
-    Iterable<DiscoveredModule> aliasSourceModules;
-    if (rootSelfMods.isNotEmpty) {
-      aliasSourceModules = rootSelfMods;
-    } else {
-      final descendantSelfDirs = <String>{};
-      for (final s in selfGlpModules) {
-        final sDir = _normPath(File(s.filePath).parent.path);
-        if (sDir != rootNorm && _dirUnder(sDir, rootNorm)) {
-          descendantSelfDirs.add(sDir);
-        }
-      }
-      bool isRootLevel(DiscoveredModule mod) {
-        if (mod.exposingDir != null) return false; // exposed, not root surface
-        final modDir = _normPath(File(mod.filePath).parent.path);
-        if (!_dirUnder(modDir, rootNorm)) return false; // ancestor above root
-        for (final s in descendantSelfDirs) {
-          if (_dirUnder(modDir, s)) return false; // inside a nested sub-program
-        }
-        return true;
-      }
-      aliasSourceModules = modules.where(isRootLevel);
-    }
-
     final aliasedSigs = <String, String>{}; // sig → owning module (conflict check)
-    for (final mod in aliasSourceModules) {
+    for (final mod in rootSelfMods) {
       for (final proc in mod.ast.procedures) {
         final isExported = mod.ast.procDeclarations.any(
             (d) => d.exported && d.name == proc.name && d.arity == proc.arity);

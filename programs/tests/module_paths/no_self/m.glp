@@ -1,0 +1,6 @@
+%% A directory with no self.glp is not a program (TGLP modules.tex, "Entry and
+%% the absence of a boot module"), so this directory is refused as one though
+%% m.glp exports run/1; m.glp loaded alone is a single-module program.  Until
+%% 2026-10-02 the directory took m.glp's exported run/1 for its entry point.
+exported procedure run(Integer).
+run(1).

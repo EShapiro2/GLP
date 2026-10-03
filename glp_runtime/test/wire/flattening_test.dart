@@ -18,6 +18,9 @@ import 'package:test/test.dart';
 const _rootSelf = '../programs/self.glp';
 
 /// A project whose exported `go/2` reaches `helper/2`; `dead/2` is unreachable.
+/// Its self.glp exports go/2, forwarding it to main.glp: a directory with no
+/// self.glp is not a program (TGLP modules.tex, "Entry and the absence of a
+/// boot module").
 String _src({required String helperBody, required String deadBody}) => '''
 exported procedure go(Integer?, Integer).
 go(X, Y?) :- helper(X?, Y).
@@ -31,9 +34,16 @@ dead(X, Y?) :- $deadBody.
 
 Directory _project(String source) {
   final dir = Directory.systemTemp.createTempSync('glp_flatten_');
+  File('${dir.path}/self.glp').writeAsStringSync(_self);
   _edit(dir, source);
   return dir;
 }
+
+const _self = '''
+imported procedure main#go(Integer?, Integer).
+exported procedure go(Integer?, Integer).
+go(X, Y?) :- main # go(X?, Y).
+''';
 
 /// [dir]'s main.glp rewritten to [source].
 void _edit(Directory dir, String source) =>
