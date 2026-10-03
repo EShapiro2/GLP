@@ -4,8 +4,8 @@
 %% transformation"): this directory's interface and the vGLP program's types.
 %%
 %%   graph.glp    the compiled social-graph program with the person channel
-%%                threaded through it, its four profiles translated, one_of,
-%%                length and nth;
+%%                threaded through it, and its four profiles translated (their
+%%                one_of, length and nth in programs/sglp/self.glp);
 %%   harness.glp  the run: the initial goals of the run declaration;
 %%   run.sh       a run through the REPL, its log and its friendship graph;
 %%   friendship.awk  the friendship graph from a run's log, at its end and at

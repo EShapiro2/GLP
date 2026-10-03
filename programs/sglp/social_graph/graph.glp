@@ -19,9 +19,9 @@
 %%    a third argument; each rated goal G @ r becomes the request rated(r, Tok)
 %%    appended to the monitor's reference, followed by G with Tok? as an added
 %%    first argument, whose clauses take the goal when Tok is go.
-%% 3. one_of, length and nth, ordinary GLP: nth's clause for the end of the
-%%    list in the form that checks, nth(_, [], _?) (TGLP, "Anonymous
-%%    variables": an output the clause never produces).
+%%    one_of, length and nth, ordinary GLP, are in programs/sglp/self.glp,
+%%    shared with coins among friends' profiles since sGLP's code task of
+%%    2026-10-02 15:24 UTC.
 %%
 %% A trailing %+ marks a line the transformation adds or changes, and names what
 %% it adds: Ch, the person channel; Mon, the monitor's reference; @ r, the
@@ -122,31 +122,3 @@ sociable_card(C, S, Mon) :-                                             %+ Mon
 procedure sociable_answer(Token?, Integer?, Card?).                     %+ Token?
 sociable_answer(go, K, card(_, yes)) :- K? =< 90 | true.                %+ go
 sociable_answer(go, K, card(_, no))  :- K? > 90  | true.                %+ go
-
-%% ---------------------------------------------------------------------------
-%% 3. one_of, length, nth
-%% ---------------------------------------------------------------------------
-
-%% one_of(Xs?, S?, X): X is drawn uniformly from Xs by random from the seed S.
-procedure(X) one_of(Stream(X)?, Integer?, X).
-one_of(Xs, S, X?) :- ground(Xs?) |
-    length(Xs?, N), random(S?, N?, K, _), nth(K?, Xs?, X).
-
-%% length(Xs?, N): N is the number of elements of Xs, counted by length/3 in
-%% an accumulator, tail-recursively, so that a list of n elements leaves no n
-%% additions suspended at once, each waiting on the count of the rest, as the
-%% count it replaces did (sGLP's code task of 2026-10-02 20:58 UTC, S2).
-procedure(X) length(Stream(X)?, Integer).
-length(Xs, N?) :- length(Xs?, 0, N).
-
-%% length(Xs?, A?, N): N is A plus the number of elements of Xs.
-procedure(X) length(Stream(X)?, Integer?, Integer).
-length([], A, A?).
-length([_|Xs], A, N?) :- A1 := A? + 1, length(Xs?, A1?, N).
-
-%% nth(K?, Xs?, X): X is the K-th element of Xs, counting from 1.  Past the
-%% end of Xs nothing is assigned to X.
-procedure(X) nth(Integer?, Stream(X)?, X).
-nth(1, [X|_], X?).
-nth(K, [_|Xs], X?) :- K? > 1 | K1 := K? - 1, nth(K1?, Xs?, X).
-nth(_, [], _?).

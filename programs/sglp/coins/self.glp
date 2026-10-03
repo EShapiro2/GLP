@@ -1,0 +1,63 @@
+%% Coins among friends in sGLP, in the translated form, written by hand (sGLP's
+%% paper, the repository svGLP-Stochastic-Volitional-GLP at c7d0b2f, Section 6,
+%% "Example: Coins Among Friends"; Section 4, "The transformation"; sGLP's code
+%% task of 2026-10-02 15:24 UTC): this directory's interface and the vGLP
+%% program's types.
+%%
+%%   coins.glp    the compiled program with the person channel threaded through
+%%                it, the agent's clauses of the task's item 1, its four
+%%                profiles translated, issuer and the wallet's held, add and
+%%                take;
+%%   harness.glp  the run: the initial goals of the run declaration;
+%%   run.sh       a run through the REPL on a friendship graph, its log and its
+%%                circulation;
+%%   circulation.awk  the circulation from a run's log, at the end of each month.
+%%
+%% The run is a program of programs/sglp, the directory above, whose person
+%% process (person.glp, coins_person/6) calls the four person procedures
+%% exported here; load programs/sglp and call coins/7 there.
+
+%% The vGLP program's types: Peer, Peers and YesNo the social graph's
+%% (social_graph/self.glp); Holding, Wallet, Request, Menu and Offer the
+%% paper's (Section 6); Content and Msg this directory's own (the task, item 1):
+%% pay(From, K) is K of the recipient's own coins, which it redeems; coins(From,
+%% K) is K of From's own coins, which the recipient holds; propose(From, K) and
+%% decline(From) are a swap proposed and declined.
+Peer    ::= Constant.
+YesNo   ::= yes ; no.
+Peers   ::= [] ; [Peer | Peers].
+Holding ::= holding(Peer, Integer).
+Wallet  ::= [] ; [Holding | Wallet].
+Request ::= pay(Peer, Integer) ; swap(Peer, Integer).
+Menu    ::= menu(Peers, Wallet, Request?).
+Offer   ::= offer(Peer, Integer, Integer, YesNo?).
+Content ::= pay(Peer, Integer) ; coins(Peer, Integer) ; propose(Peer, Integer)
+          ; decline(Peer).
+Msg     ::= msg(Peer, Content).
+
+%% The friends of agents 1..N, agent a's the a-th list, in increasing order.
+Friends ::= [] ; [Peers | Friends].
+
+imported procedure coins#spender_menu(Menu?, Integer?, MutualRef?).
+imported procedure coins#saver_menu(Menu?, Integer?, MutualRef?).
+imported procedure coins#generous_offer(Offer?, Integer?, MutualRef?).
+imported procedure coins#cautious_offer(Offer?, Integer?, MutualRef?).
+imported procedure harness#run(Integer?, Friends?, Number?, Span?, Integer?,
+                               Integer?, Integer?).
+
+%% The person procedures of the four profiles, for the person process.
+exported procedure spender_menu(Menu?, Integer?, MutualRef?).
+spender_menu(M, S, Mon) :- coins # spender_menu(M?, S?, Mon?).
+exported procedure saver_menu(Menu?, Integer?, MutualRef?).
+saver_menu(M, S, Mon) :- coins # saver_menu(M?, S?, Mon?).
+exported procedure generous_offer(Offer?, Integer?, MutualRef?).
+generous_offer(O, S, Mon) :- coins # generous_offer(O?, S?, Mon?).
+exported procedure cautious_offer(Offer?, Integer?, MutualRef?).
+cautious_offer(O, S, Mon) :- coins # cautious_offer(O?, S?, Mon?).
+
+%% run(Agents?, Friends?, Count?, Unit?, Seed?, Spend?, Cred?): the run,
+%% harness.glp, with the mix given by Spend and Cred, integers 0..100.
+exported procedure run(Integer?, Friends?, Number?, Span?, Integer?, Integer?,
+                       Integer?).
+run(N, Fss, C, U, Seed, Spend, Cred) :-
+    harness # run(N?, Fss?, C?, U?, Seed?, Spend?, Cred?).

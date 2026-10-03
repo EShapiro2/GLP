@@ -1,0 +1,201 @@
+%% Coins among friends in the translated form, written by hand: what the
+%% transformation of sGLP's paper (the repository
+%% svGLP-Stochastic-Volitional-GLP at c7d0b2f, Section 4, "The transformation"
+%% and "The person process") will produce from the paper's program, Section 6,
+%% and the agent's clauses, which the paper leaves to the repository and sGLP's
+%% code task of 2026-10-02 15:24 UTC gives (item 1).  The types are the
+%% directory's (self.glp).
+%%
+%% 1. The compiled program: vGLP's canonical compilation as graph.glp has it
+%%    --- the asking clause of each volitional procedure spawns the construct
+%%    process with its question's interactive type and the person's end of the
+%%    variable, and calls the procedure's clause, renamed, with the program's
+%%    end; Menu and Offer are in writer mode, so the construct process takes
+%%    X? and the clause X --- with one argument added: the person channel, a
+%%    mutual reference that reaches the agent's person process, threaded
+%%    through start/5, agent/7, paid/6, settle/10, ask/4 and respond/5 to the
+%%    construct process (construct/3, programs/sglp/person.glp).
+%% 2. The wallet: held, add and take, ordinary GLP.
+%% 3. The four profiles: each person procedure takes the monitor's reference as
+%%    a third argument; each rated goal G @ r becomes the request rated(r, Tok)
+%%    appended to the monitor's reference, followed by G with Tok? as an added
+%%    first argument, whose clauses take the goal when Tok is go.  request/2's
+%%    goal is the rated goal of both spender_menu and saver_menu, so request
+%%    takes the token in both; issuer is ordinary GLP.  one_of is the social
+%%    graph's, in programs/sglp/self.glp.
+%%
+%% A trailing %+ marks a line the transformation adds or changes, and names what
+%% it adds: Ch, the person channel; Mon, the monitor's reference; @ r, the
+%% request that replaces the rate; Tok? and go, the token.  The rest is the
+%% source as vGLP's compilation gives it.
+
+%% ---------------------------------------------------------------------------
+%% 1. The compiled program
+%% ---------------------------------------------------------------------------
+
+%% (Menu)*ask(Peers?, Wallet?, Request): the asking clause and the clause.
+procedure ask(Peers?, Wallet?, Request, MutualRef?).                    %+ Ch
+ask(Fs, W, R?, Ch) :- construct('Menu', X?, Ch?), ask1(Fs?, W?, R, X).  %+ Ch
+procedure ask1(Peers?, Wallet?, Request, Menu).
+ask1(Fs, W, R?, menu(Fs?, W?, R)).
+
+%% (Offer)*respond(Peer?, Integer?, Integer?, YesNo): the asking clause and the
+%% clause.
+procedure respond(Peer?, Integer?, Integer?, YesNo, MutualRef?).        %+ Ch
+respond(From, K, Held, A?, Ch) :-                                       %+ Ch
+    construct('Offer', X?, Ch?), respond1(From?, K?, Held?, A, X).      %+ Ch?
+procedure respond1(Peer?, Integer?, Integer?, YesNo, Offer).
+respond1(From, K, Held, A?, offer(From?, K?, Held?, A)).
+
+%% The agent: its identifier, its friends, its wallet --- one holding per
+%% issuer, a holding removed when it reaches zero --- the open request, its
+%% input and output streams.  The request stays open while messages come and
+%% go.
+procedure agent(Peer?, Peers?, Wallet?, Request?,
+                Stream(Msg)?, Stream(Msg), MutualRef?).                 %+ Ch
+
+%% The person pays a friend: send them their own coins, as many as the wallet
+%% holds of them up to K, take those off the holding, and ask again.
+agent(Id, Fs, W, pay(F, K), NetIn, [msg(F?, pay(Id?, M?))|Outs?], Ch) :- %+ Ch
+    ground(Id?), ground(Fs?), ground(W?), ground(F?), ground(K?) |
+    take(F?, K?, W?, M, W1),
+    paid(Id?, Fs?, W1?, NetIn?, Outs, Ch?).                             %+ Ch?
+
+%% The person proposes a swap of K: send the friend the proposal, and ask
+%% again.
+agent(Id, Fs, W, swap(F, K), NetIn,
+      [msg(F?, propose(Id?, K?))|Outs?], Ch) :-                         %+ Ch
+    ground(Id?), ground(Fs?), ground(W?), ground(F?), ground(K?) |
+    ask(Fs?, W?, R, Ch?),                                               %+ Ch?
+    agent(Id?, Fs?, W?, R?, NetIn?, Outs, Ch?).                         %+ Ch?
+
+%% A proposal arrives: put it to the person, with what the wallet holds of the
+%% proposer's coins, and take no message until they answer.
+agent(Id, Fs, W, R, [msg(_, propose(From, K))|NetIn], Outs?, Ch) :-     %+ Ch
+    ground(Id?), ground(W?), ground(From?), ground(K?) |
+    held(From?, W?, Held),
+    respond(From?, K?, Held?, A, Ch?),                                  %+ Ch?
+    settle(A?, Id?, Fs?, W?, R?, From?, K?, NetIn?, Outs, Ch?).         %+ Ch?
+
+%% Coins of a friend's arrive: hold them.
+agent(Id, Fs, W, R, [msg(_, coins(From, K))|NetIn], Outs?, Ch) :-       %+ Ch
+    add(From?, K?, W?, W1),
+    agent(Id?, Fs?, W1?, R?, NetIn?, Outs, Ch?).                        %+ Ch?
+
+%% A friend pays me in my own coins, which redeems them: nothing enters the
+%% wallet.
+agent(Id, Fs, W, R, [msg(_, pay(_, _))|NetIn], Outs?, Ch) :-            %+ Ch
+    agent(Id?, Fs?, W?, R?, NetIn?, Outs, Ch?).                         %+ Ch?
+
+%% A friend declines my proposal.
+agent(Id, Fs, W, R, [msg(_, decline(_))|NetIn], Outs?, Ch) :-           %+ Ch
+    agent(Id?, Fs?, W?, R?, NetIn?, Outs, Ch?).                         %+ Ch?
+
+%% paid(Id?, Fs?, W?, NetIn?, Outs, Ch?): after a payment, ask again with the
+%% wallet it leaves, once that is known.
+procedure paid(Peer?, Peers?, Wallet?, Stream(Msg)?, Stream(Msg),
+               MutualRef?).                                             %+ Ch
+paid(Id, Fs, W, NetIn, Outs?, Ch) :-                                    %+ Ch
+    ground(Fs?), ground(W?) |
+    ask(Fs?, W?, R, Ch?),                                               %+ Ch?
+    agent(Id?, Fs?, W?, R?, NetIn?, Outs, Ch?).                         %+ Ch?
+
+%% settle(A?, Id?, Fs?, W?, R?, From?, K?, NetIn?, Outs, Ch?): the person's
+%% answer to From's proposal of K.  Yes: hold K of From's coins, and send From
+%% K of mine.  No: send From a decline.
+procedure settle(YesNo?, Peer?, Peers?, Wallet?, Request?, Peer?, Integer?,
+                 Stream(Msg)?, Stream(Msg), MutualRef?).                %+ Ch
+settle(yes, Id, Fs, W, R, From, K, NetIn,
+       [msg(From?, coins(Id?, K?))|Outs?], Ch) :-                       %+ Ch
+    ground(Id?), ground(From?), ground(K?) |
+    add(From?, K?, W?, W1),
+    agent(Id?, Fs?, W1?, R?, NetIn?, Outs, Ch?).                        %+ Ch?
+settle(no, Id, Fs, W, R, From, _, NetIn,
+       [msg(From?, decline(Id?))|Outs?], Ch) :-                         %+ Ch
+    ground(Id?) |
+    agent(Id?, Fs?, W?, R?, NetIn?, Outs, Ch?).                         %+ Ch?
+
+%% The initial goal of an agent: the wallet empty, ask the first menu.
+exported procedure start(Peer?, Peers?, Stream(Msg)?, Stream(Msg),
+                         MutualRef?).                                   %+ Ch
+start(Id, Fs, NetIn, Outs?, Ch) :- ground(Fs?) |                        %+ Ch
+    ask(Fs?, [], R, Ch?),                                               %+ Ch?
+    agent(Id?, Fs?, [], R?, NetIn?, Outs, Ch?).                         %+ Ch?
+
+%% ---------------------------------------------------------------------------
+%% 2. The wallet
+%% ---------------------------------------------------------------------------
+
+%% held(F?, W?, H): H is what the wallet W holds of F's coins, 0 with none.
+procedure held(Peer?, Wallet?, Integer).
+held(_, [], 0).
+held(F, [holding(G, H)|_], H?) :- F? =?= G? | true.
+held(F, [holding(G, _)|W], H?) :- F? =?\= G? | held(F?, W?, H).
+
+%% add(F?, K?, W?, W1): W1 is W with K added to its holding of F's coins; with
+%% none, a holding of K at the end of the wallet.
+procedure add(Peer?, Integer?, Wallet?, Wallet).
+add(F, K, [], [holding(F?, K?)]).
+add(F, K, [holding(G, H)|W], [holding(G?, H1?)|W?]) :-
+    F? =?= G? | H1 := H? + K?.
+add(F, K, [holding(G, H)|W], [holding(G?, H?)|W1?]) :-
+    F? =?\= G? | add(F?, K?, W?, W1).
+
+%% take(F?, K?, W?, M, W1): M is what W holds of F's coins up to K, and W1 is W
+%% with M taken off that holding, the holding removed when it reaches zero;
+%% with none, M is 0 and W1 is W.
+procedure take(Peer?, Integer?, Wallet?, Integer, Wallet).
+take(_, _, [], 0, []).
+take(F, K, [holding(G, H)|W], K?, [holding(G?, H1?)|W?]) :-
+    F? =?= G?, K? < H? | H1 := H? - K?.
+take(F, K, [holding(G, H)|W], H?, W?) :-
+    F? =?= G?, K? >= H? | true.
+take(F, K, [holding(G, H)|W], M?, [holding(G?, H?)|W1?]) :-
+    F? =?\= G? | take(F?, K?, W?, M, W1).
+
+%% ---------------------------------------------------------------------------
+%% 3. The profiles
+%% ---------------------------------------------------------------------------
+
+%% person spender.  Menu =::= spender_menu.
+exported procedure spender_menu(Menu?, Integer?, MutualRef?).           %+ Mon
+spender_menu(M, S, Mon) :-                                              %+ Mon
+    stream_append(rated(1/day, Tok), Mon?, _),                          %+ @ 1/day
+    request(Tok?, S?, M?).                                              %+ Tok?
+
+%% person saver.  Menu =::= saver_menu.
+exported procedure saver_menu(Menu?, Integer?, MutualRef?).             %+ Mon
+saver_menu(M, S, Mon) :-                                                %+ Mon
+    stream_append(rated(1/week, Tok), Mon?, _),                         %+ @ 1/week
+    request(Tok?, S?, M?).                                              %+ Tok?
+
+%% Pay a friend whose coins I hold one to five; holding none, propose a swap of
+%% ten to a friend.
+procedure request(Token?, Integer?, Menu?).                             %+ Token?
+request(go, S, menu(Fs, [], swap(F?, 10))) :-                           %+ go
+    ground(Fs?) | one_of(Fs?, S?, F).
+request(go, S, menu(_, [H|Hs], pay(F?, K?))) :-                         %+ go
+    ground(H?), ground(Hs?) |
+    random(S?, 5, K, S1), one_of([H?|Hs?], S1?, Hd),
+    issuer(Hd?, F).
+
+%% issuer(Hd?, F): F is the issuer of the holding Hd.
+procedure issuer(Holding?, Peer).
+issuer(holding(F, _), F?).
+
+%% person generous.  Offer =::= generous_offer.
+exported procedure generous_offer(Offer?, Integer?, MutualRef?).        %+ Mon
+generous_offer(O, _, Mon) :-                                            %+ Mon
+    stream_append(rated(1/hour, Tok), Mon?, _),                         %+ @ 1/hour
+    accept(Tok?, O?).                                                   %+ Tok?
+procedure accept(Token?, Offer?).                                       %+ Token?
+accept(go, offer(_, _, _, yes)).                                        %+ go
+
+%% person cautious.  Offer =::= cautious_offer.
+exported procedure cautious_offer(Offer?, Integer?, MutualRef?).        %+ Mon
+cautious_offer(O, _, Mon) :-                                            %+ Mon
+    stream_append(rated(1/hour, Tok), Mon?, _),                         %+ @ 1/hour
+    weigh(Tok?, O?).                                                    %+ Tok?
+procedure weigh(Token?, Offer?).                                        %+ Token?
+weigh(go, offer(_, _, Held, yes)) :- Held? =< 20 | true.                %+ go
+weigh(go, offer(_, _, Held, no))  :- Held? > 20  | true.                %+ go

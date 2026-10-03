@@ -1,0 +1,134 @@
+%% The run of coins among friends: the initial goals its run declaration
+%% becomes (sGLP's paper, the repository svGLP-Stochastic-Volitional-GLP at
+%% c7d0b2f: Section 4, "The run"; Section 6; Appendix B), written by hand:
+%%
+%%   run 100 agents
+%%       [ spending ~ (spender : 0.5 ; saver : 0.5),
+%%         credit ~ (generous : 0.5 ; cautious : 0.5) ]
+%%       until 1 year seed 20260927.
+%%
+%% run(N, Friends, C, U, Seed, Spend, Cred) runs it with N agents until C Us
+%% from Seed (sGLP's code task of 2026-10-02 15:24 UTC, item 3): Friends is a
+%% list of N lists, agent a's friends the a-th, in increasing order --- the
+%% friendship graph at one year of the run of Section 5 (Section 6), which
+%% run.sh reads from the social graph's .graph file; the mix is given by Spend
+%% and Cred, integers 0..100: an agent's first draw K, of 1..100, makes it a
+%% spender for K =< Spend and a saver otherwise, its second cautious for K =<
+%% Cred and generous otherwise, so 0 is none and 100 is all; the run
+%% declaration's mix is Spend 50 and Cred 50.  The whole population is in one
+%% machine, as the guard when_idle requires (Section 4, "The guard").  Its
+%% goals:
+%%
+%%   at each agent a of 1..N, its start goal --- the compiled start/5, with a,
+%%   its friends, its input and output streams and its person channel --- and
+%%   its person process, with its stochastic person and its seed, reading that
+%%   channel (programs/sglp/person.glp, coins_person/6);
+%%   at no agent, the network --- the root's mwm/2 merging the agents' output
+%%   streams, and a balanced tree of deliver/4 goals handing each message to the
+%%   input stream of the agent it names --- the monitor, with the run's seed and
+%%   the horizon in seconds, and the log's sink.
+%%
+%% In one machine a goal is at agent a by being one of a's: its start goal, its
+%% person process, and the goals they spawn; no goal carries a place.
+%%
+%% The network, the monitor, the log's sink and the seeds' blocks are the social
+%% graph's (social_graph/harness.glp), tree/5, deliver/4 and skip/3 copied with
+%% this directory's Msg.  The draws (Appendix B): the monitor draws from the
+%% run's seed; the population's draws are from a second generator, started at
+%% the first value drawn from the run's seed, split into blocks of 4096
+%% consecutive draws: agent a's block is the a-th.  Its first two draws pick a's
+%% profile in each dimension by the mix, and the seed they leave is its person
+%% process's seed, the start of its own generator, whatever the mix.
+%%
+%% The log's sink: the run's log is the output stream of a mutual reference that
+%% every person process and the monitor append to; the harness hands it to the
+%% root's send_to_user/1, which prints each entry, ground, on its own line, and
+%% run.sh writes those lines to the log file it is given, tab-separated.
+
+imported procedure coins#start(Peer?, Peers?, Stream(Msg)?, Stream(Msg),
+                               MutualRef?).
+
+exported procedure run(Integer?, Friends?, Number?, Span?, Integer?, Integer?,
+                       Integer?).
+run(N, Fss, C, U, Seed, Spend, Cred) :-
+    N? >= 1,
+    Spend? >= 0, Spend? =< 100, Cred? >= 0, Cred? =< 100 |
+    span(U?, Secs),
+    H := C? * Secs?,
+    allocate_mutual_reference(Mon, Requests),
+    allocate_mutual_reference(Log, Entries),
+    send_to_user(Entries?),
+    monitor(Requests?, Seed?, H?, Log?),
+    random(Seed?, 2147483646, Base, _),
+    tree(1, N?, Net?, Ins, []),
+    mwm(Merges?, Net),
+    agents(1, N?, Fss?, Base?, Spend?, Cred?, Ins?, Merges, Mon?, Log?).
+
+%% agents(A?, N?, Fss?, Block?, Spend?, Cred?, Ins?, Merges, Mon?, Log?): agents
+%% A..N, Fss their friends in order, Block the start of A's block, Spend and
+%% Cred the mix, Ins their input streams in order, Merges their output streams
+%% for mwm/2.
+procedure agents(Integer?, Integer?, Friends?, Integer?, Integer?, Integer?,
+                 Stream(Stream(Msg))?, MwmInput(Msg), MutualRef?, MutualRef?).
+agents(A, N, [Fs|Fss], B, Spend, Cred, [In|Ins], [merge(Out?)|Ms?], Mon,
+       Log) :-
+    A? =< N? |
+    random(B?, 100, K1, B1),
+    random(B1?, 100, K2, Seed),
+    spending(K1?, Spend?, Sp),
+    credit(K2?, Cred?, Cr),
+    allocate_mutual_reference(Ch, Questions),
+    coins # start(A?, Fs?, In?, Out, Ch?),
+    coins_person(A?, profiles(Sp?, Cr?), Mon?, Seed?, Log?, Questions?),
+    skip(4096, B?, B2),
+    A1 := A? + 1,
+    agents(A1?, N?, Fss?, B2?, Spend?, Cred?, Ins?, Ms, Mon?, Log?).
+agents(A, N, [], _, _, _, [], [], _, _) :-
+    A? > N? | true.
+
+%% The mixes: spending ~ (spender : Spend/100 ; saver : 1 - Spend/100), credit
+%% ~ (cautious : Cred/100 ; generous : 1 - Cred/100), K drawn from 1..100; the
+%% run declaration's are Spend 50 and Cred 50.
+procedure spending(Integer?, Integer?, Spending).
+spending(K, Spend, spender) :- K? =< Spend? | true.
+spending(K, Spend, saver) :- K? > Spend? | true.
+procedure credit(Integer?, Integer?, Credit).
+credit(K, Cred, cautious) :- K? =< Cred? | true.
+credit(K, Cred, generous) :- K? > Cred? | true.
+
+%% skip(J?, S?, S1): S1 is the seed J draws after S, by J draws of random/4,
+%% each reduced before the next is spawned: the clause waits on its seed,
+%% integer(S?), so an agent's block of 4096 draws is drawn one draw at a time
+%% once the block's start is known (social_graph/harness.glp, sGLP's code task
+%% of 2026-10-02 20:58 UTC, S1).
+procedure skip(Integer?, Integer?, Integer).
+skip(0, S, S?).
+skip(J, S, S1?) :-
+    J? > 0, integer(S?) |
+    random(S?, 1, _, S2),
+    J1 := J? - 1,
+    skip(J1?, S2?, S1).
+
+%% The network.  tree(Lo?, Hi?, Ms?, Ins, Rest?): a balanced tree of deliver/4
+%% goals over agents Lo..Hi routing the messages Ms, Ins being the input streams
+%% of agents Lo..Hi in order, followed by Rest.
+procedure tree(Integer?, Integer?, Stream(Msg)?, Stream(Stream(Msg)),
+               Stream(Stream(Msg))?).
+tree(Lo, Hi, Ms, [Ms?|Rest?], Rest) :-
+    Lo? =:= Hi? | true.
+tree(Lo, Hi, Ms, Ins?, Rest) :-
+    Lo? < Hi? |
+    Mid := (Lo? + Hi?) // 2,
+    Mid1 := Mid? + 1,
+    deliver(Ms?, Mid?, L, R),
+    tree(Lo?, Mid?, L?, Ins, Ins1?),
+    tree(Mid1?, Hi?, R?, Ins1, Rest?).
+
+%% deliver(Ms?, Mid?, Ls, Hs) sends each message of Ms addressed to an agent
+%% numbered Mid or less to Ls, and each other to Hs.
+procedure deliver(Stream(Msg)?, Integer?, Stream(Msg), Stream(Msg)).
+deliver([msg(To, C)|Ms], Mid, [msg(To?, C?)|Ls?], Hs?) :-
+    To? =< Mid? | deliver(Ms?, Mid?, Ls, Hs).
+deliver([msg(To, C)|Ms], Mid, Ls?, [msg(To?, C?)|Hs?]) :-
+    To? > Mid? | deliver(Ms?, Mid?, Ls, Hs).
+deliver([], _, [], []).

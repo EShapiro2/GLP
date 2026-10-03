@@ -7,7 +7,10 @@
 %% the compiled program's asking clause with the interactive type T, as a
 %% constant, and the person's end X of the question's interactive variable, it
 %% appends question(T, X) to the agent's person channel Ch, a mutual reference
-%% whose output stream the agent's person process reads.
+%% whose output stream the agent's person process reads.  It is the same for
+%% every program, so T and X are of any type: T the constant naming the
+%% program's interactive type, X of that type --- the social graph's Menu and
+%% Card, coins among friends' Menu and Offer.
 %%
 %% person(A, P, Mon, S, Log, Qs) is the person process of agent A: one goal per
 %% agent, holding A, its stochastic person P (one profile per dimension, drawn
@@ -20,6 +23,13 @@
 %% transformation will write them, and these are its output by hand, for the
 %% social graph's four profiles (programs/sglp/social_graph).
 %%
+%% coins_person(A, P, Mon, S, Log, Qs) is the person process of an agent of
+%% coins among friends (programs/sglp/coins), its clauses the person
+%% declarations of that program's four profiles, as person/6's are the social
+%% graph's.  It is a procedure of its own, since the two programs' interactive
+%% types cannot be one type: both Menus are menu/3, and the alternatives of a
+%% type have distinct functors (TGLP, "Type Union").
+%%
 %% The log.  The person process writes one line per answer: when the person
 %% procedure's goal has assigned the answer, it reads the clock from the monitor
 %% by time(T), answered at once, and appends entry(T, A, Type, Term) to the log,
@@ -27,12 +37,15 @@
 %% must hold it: the person goal is given the question's term with a fresh
 %% variable at the answer's position, and the person process waits on that
 %% variable being ground and then passes the answer on to the program's
-%% variable (answer_menu/7, answer_card/6).  Everything the log records crosses
-%% the person process (Section 4, "The log").
+%% variable (answer_menu/7 and answer_card/6, the social graph's;
+%% answer_request/7 and answer_offer/8, coins among friends').  Everything the
+%% log records crosses the person process (Section 4, "The log").
 %%
-%% The interactive types below are the social graph's, written again here for
-%% the declarations of its person procedures that this module imports; type
-%% identity is structural.
+%% The interactive types below are the social graph's and coins among friends',
+%% written again here for the declarations of their person procedures that
+%% this module imports; type identity is structural.  Coins among friends' Menu
+%% and Request are CoinsMenu and CoinsRequest here, the names Menu and Request
+%% being the social graph's and the monitor's.
 
 Peer        ::= Constant.
 YesNo       ::= yes ; no.
@@ -41,29 +54,49 @@ Choice      ::= same(Peer) ; other(Peer).
 Menu        ::= menu(Peers, Peers, Choice?).
 Card        ::= card(Peer, YesNo?).
 
+Holding      ::= holding(Peer, Integer).
+Wallet       ::= [] ; [Holding | Wallet].
+CoinsRequest ::= pay(Peer, Integer) ; swap(Peer, Integer).
+CoinsMenu    ::= menu(Peers, Wallet, CoinsRequest?).
+Offer        ::= offer(Peer, Integer, Integer, YesNo?).
+
 %% A question on the person channel: the interactive type as a constant, and
-%% the person's end of the variable.
+%% the person's end of the variable; each program's person process takes the
+%% questions of that program's interactive types.
 QType       ::= 'Menu' ; 'Card'.
 Interactive ::= Menu ; Card.
 Question    ::= question(QType, Interactive).
+CoinsQType       ::= 'Menu' ; 'Offer'.
+CoinsInteractive ::= CoinsMenu ; Offer.
+CoinsQuestion    ::= question(CoinsQType, CoinsInteractive).
 
 %% A stochastic person: one profile per dimension of the run declaration.
 Approach    ::= homophile ; indifferent.
 Response    ::= wary ; sociable.
 Profiles    ::= profiles(Approach, Response).
+Spending      ::= spender ; saver.
+Credit        ::= generous ; cautious.
+CoinsProfiles ::= profiles(Spending, Credit).
 
 %% What the person process sends the monitor, and what it writes to the log.
 Clocked     ::= time(Number?).
 Shown       ::= menu(Peers, Peers, Choice) ; card(Peer, YesNo).
 Entry       ::= entry(Number, Integer, QType, Shown).
+CoinsShown  ::= menu(Peers, Wallet, CoinsRequest)
+              ; offer(Peer, Integer, Integer, YesNo).
+CoinsEntry  ::= entry(Number, Integer, CoinsQType, CoinsShown).
 
 imported procedure social_graph#homophile_menu(Menu?, Integer?, MutualRef?).
 imported procedure social_graph#indifferent_menu(Menu?, Integer?, MutualRef?).
 imported procedure social_graph#wary_card(Card?, Integer?, MutualRef?).
 imported procedure social_graph#sociable_card(Card?, Integer?, MutualRef?).
+imported procedure coins#spender_menu(CoinsMenu?, Integer?, MutualRef?).
+imported procedure coins#saver_menu(CoinsMenu?, Integer?, MutualRef?).
+imported procedure coins#generous_offer(Offer?, Integer?, MutualRef?).
+imported procedure coins#cautious_offer(Offer?, Integer?, MutualRef?).
 
 %% construct(T?, X?, Ch?): hand the person process the question.
-exported procedure construct(QType?, Interactive?, MutualRef?).
+exported procedure(T, X) construct(T?, X?, MutualRef?).
 construct(T, X, Ch) :-
     stream_append(question(T?, X?), Ch?, _).
 
@@ -120,3 +153,59 @@ answer_card(A, From, Y1, Y1?, Mon, Log) :-
     ground(Y1?) |
     stream_append(time(T), Mon?, _),
     stream_append(entry(T?, A?, 'Card', card(From?, Y1?)), Log?, _).
+
+%% coins_person(Agent?, Profiles?, Mon?, Seed?, Log?, Questions?): the person
+%% process of an agent of coins among friends.
+exported procedure coins_person(Integer?, CoinsProfiles?, MutualRef?, Integer?,
+                                MutualRef?, Stream(CoinsQuestion)?).
+%% spender: Menu =::= spender_menu.
+coins_person(A, profiles(spender, Cr), Mon, Seed, Log,
+             [question('Menu', menu(Fs, W, R?))|Qs]) :-
+    ground(Fs?), ground(W?) |
+    random(Seed?, 1, _, S),
+    coins # spender_menu(menu(Fs?, W?, R1), S?, Mon?),
+    answer_request(A?, Fs?, W?, R1?, R, Mon?, Log?),
+    coins_person(A?, profiles(spender, Cr?), Mon?, S?, Log?, Qs?).
+%% saver: Menu =::= saver_menu.
+coins_person(A, profiles(saver, Cr), Mon, Seed, Log,
+             [question('Menu', menu(Fs, W, R?))|Qs]) :-
+    ground(Fs?), ground(W?) |
+    random(Seed?, 1, _, S),
+    coins # saver_menu(menu(Fs?, W?, R1), S?, Mon?),
+    answer_request(A?, Fs?, W?, R1?, R, Mon?, Log?),
+    coins_person(A?, profiles(saver, Cr?), Mon?, S?, Log?, Qs?).
+%% generous: Offer =::= generous_offer.
+coins_person(A, profiles(Sp, generous), Mon, Seed, Log,
+             [question('Offer', offer(From, K, Held, Y?))|Qs]) :-
+    ground(From?), ground(K?), ground(Held?) |
+    random(Seed?, 1, _, S),
+    coins # generous_offer(offer(From?, K?, Held?, Y1), S?, Mon?),
+    answer_offer(A?, From?, K?, Held?, Y1?, Y, Mon?, Log?),
+    coins_person(A?, profiles(Sp?, generous), Mon?, S?, Log?, Qs?).
+%% cautious: Offer =::= cautious_offer.
+coins_person(A, profiles(Sp, cautious), Mon, Seed, Log,
+             [question('Offer', offer(From, K, Held, Y?))|Qs]) :-
+    ground(From?), ground(K?), ground(Held?) |
+    random(Seed?, 1, _, S),
+    coins # cautious_offer(offer(From?, K?, Held?, Y1), S?, Mon?),
+    answer_offer(A?, From?, K?, Held?, Y1?, Y, Mon?, Log?),
+    coins_person(A?, profiles(Sp?, cautious), Mon?, S?, Log?, Qs?).
+coins_person(_, _, _, _, _, []).
+
+%% answer_request(A?, Fs?, W?, R1?, R, Mon?, Log?): once the person goal has
+%% assigned its request R1, pass it on to the program's R and log it.
+procedure answer_request(Integer?, Peers?, Wallet?, CoinsRequest?, CoinsRequest,
+                         MutualRef?, MutualRef?).
+answer_request(A, Fs, W, R1, R1?, Mon, Log) :-
+    ground(R1?) |
+    stream_append(time(T), Mon?, _),
+    stream_append(entry(T?, A?, 'Menu', menu(Fs?, W?, R1?)), Log?, _).
+
+%% answer_offer(A?, From?, K?, Held?, Y1?, Y, Mon?, Log?): once the person goal
+%% has assigned its answer Y1, pass it on to the program's Y and log it.
+procedure answer_offer(Integer?, Peer?, Integer?, Integer?, YesNo?, YesNo,
+                       MutualRef?, MutualRef?).
+answer_offer(A, From, K, Held, Y1, Y1?, Mon, Log) :-
+    ground(Y1?) |
+    stream_append(time(T), Mon?, _),
+    stream_append(entry(T?, A?, 'Offer', offer(From?, K?, Held?, Y1?)), Log?, _).

@@ -1,8 +1,8 @@
 #!/bin/bash
 # Tests of sGLP in GLP (programs/sglp) against sGLP's paper (the repository
 # svGLP-Stochastic-Volitional-GLP at d2f64b6) and its code tasks of 2026-10-02
-# 00:06 UTC, item 6, 15:23 UTC, items 1 and 3, 15:24 UTC, item 4, and 15:44
-# UTC.
+# 00:06 UTC, item 6, 15:23 UTC, items 1 and 3, 15:24 UTC, items 1 to 4, and
+# 15:44 UTC.
 #
 #   bash programs/sglp/test_sglp.sh
 #
@@ -43,6 +43,14 @@
 #       all of one and of coins not held; an answer at a month's end exactly;
 #       the clock --- it prints tests/circulation/four.expected, the twelve
 #       months and the totals computed by hand from the log.
+# (ix)  coins among friends (coins/run.sh; the task of 15:24 UTC, items 1 to
+#       3), four agents for a week on the hand-made graph
+#       tests/circulation/four.graph at the paper's mix, 50 and 50: two runs
+#       from seed 20260927 write byte-identical logs and seed 1 a different
+#       one; the run ends with no error at its clock, within the week;
+#       circulation.awk reads its log whole, menus and offers and their
+#       answers in the order of time; and every menu and offer is as the
+#       agent's clauses and request/2 give it.
 #
 # Prints one line per check and a summary line, "=== P passed, F failed ===";
 # exits non-zero if any check fails.  The runs of (iii) and (iv) take some
@@ -202,6 +210,74 @@ cmp -s "$WORK/four.out" "$HERE/tests/circulation/four.expected"
 st=$?
 check "circulation.awk on tests/circulation/four.log prints the months and totals computed by hand" $st
 [ "$st" -eq 0 ] || diff "$WORK/four.out" "$HERE/tests/circulation/four.expected" | sed 's/^/        /'
+
+echo "--- (ix) coins among friends, four agents for a week"
+# The hand-made graph tests/circulation/four.graph: 1-2, 1-3, 2-3, 3-4, so the
+# friends are 1: [2, 3], 2: [1, 3], 3: [1, 2, 4], 4: [3].  coins_log_errors
+# <log>: the number of the log's answers that break what the program's clauses
+# and request/2 say: a menu shows the agent's friends and a wallet of positive
+# holdings of friends' coins, one per issuer, and is answered pay(F, K) with K
+# of 1..5 and F an issuer the wallet shows, or swap(F, 10) with F a friend and
+# the wallet empty; an offer is of 10 from a friend.
+coins_log_errors() {
+    awk -F'\t' '
+        BEGIN {
+            F[1] = "[2, 3]"; F[2] = "[1, 3]"; F[3] = "[1, 2, 4]"; F[4] = "[3]"
+            split("1 2 1 3 2 3 3 4", e, " ")
+            for (i = 1; i < 8; i += 2) { isf[e[i], e[i + 1]] = 1; isf[e[i + 1], e[i]] = 1 }
+        }
+        $3 == "Menu" {
+            s = $4
+            if (substr(s, 1, 5) != "menu(") { bad++; next }
+            s = substr(s, 6)
+            i = index(s, "]"); if (substr(s, 1, i) != F[$2]) bad++
+            s = substr(s, i + 3)
+            i = index(s, "]"); w = substr(s, 2, i - 2); req = substr(s, i + 3)
+            req = substr(req, 1, length(req) - 1)
+            delete held; n = 0
+            while (match(w, /holding\([0-9]+, -?[0-9]+\)/)) {
+                split(substr(w, RSTART + 8, RLENGTH - 9), h, ", ")
+                if (h[2] + 0 <= 0 || !((($2 + 0), (h[1] + 0)) in isf) || ((h[1] + 0) in held)) bad++
+                held[h[1] + 0] = 1; n++
+                w = substr(w, RSTART + RLENGTH)
+            }
+            if (req ~ /^pay\([0-9]+, [0-9]+\)$/) {
+                split(substr(req, 5, length(req) - 5), r, ", ")
+                if (!((r[1] + 0) in held) || r[2] + 0 < 1 || r[2] + 0 > 5) bad++
+            } else if (req ~ /^swap\([0-9]+, [0-9]+\)$/) {
+                split(substr(req, 6, length(req) - 6), r, ", ")
+                if (n != 0 || !((($2 + 0), (r[1] + 0)) in isf) || r[2] + 0 != 10) bad++
+            } else bad++
+            next
+        }
+        $3 == "Offer" {
+            split(substr($4, 7, length($4) - 7), o, ", ")
+            if (!((($2 + 0), (o[1] + 0)) in isf) || o[2] + 0 != 10) bad++
+        }
+        END { print bad + 0 }' "$1"
+}
+COINS="$HERE/coins/run.sh"
+G4="$HERE/tests/circulation/four.graph"
+for r in a b s1; do
+    seed=20260927; [ "$r" = s1 ] && seed=1
+    bash "$COINS" 4 "$G4" '1 week' "$seed" "$WORK/c$r.log" > "$WORK/c$r.out" 2>&1
+    st=$?
+    check "4 agents, 1 week, seed $seed ($r): the run ends with no error" $st
+    [ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/c$r.out"
+done
+[ -s "$WORK/ca.log" ] && cmp -s "$WORK/ca.log" "$WORK/cb.log"
+check "two runs from seed 20260927 write byte-identical logs" $?
+[ -s "$WORK/ca.log" ] && [ -s "$WORK/cs1.log" ] && ! cmp -s "$WORK/ca.log" "$WORK/cs1.log"
+check "seeds 20260927 and 1 write different logs" $?
+awk '$1 == "clock" && $2 != "none" && $2 + 0 <= 604800 { ok = 1 } END { exit !ok }' "$WORK/ca.out"
+check "the run ends at its clock, within the week" $?
+grep -q '^unread 0$' "$WORK/ca.out" && grep -q '^unordered 0$' "$WORK/ca.out" &&
+    grep -q '^menu_answers [1-9]' "$WORK/ca.out" && grep -q '^offer_answers [1-9]' "$WORK/ca.out"
+check "the log is menus and offers and their answers, in the order of time, read whole by circulation.awk" $?
+E=$(coins_log_errors "$WORK/ca.log")
+[ "$E" -eq 0 ]
+check "every menu and offer of the log is as the agent's clauses and request/2 give it ($E not)" $?
+sed -n '/^wall-clock/p;/^month 1 /p;/^answers/,/^unordered/p' "$WORK/ca.out" | sed 's/^/        /'
 
 echo ""
 echo "=== $PASS passed, $FAIL failed ==="
