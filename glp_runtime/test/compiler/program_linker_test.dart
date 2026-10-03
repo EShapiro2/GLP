@@ -79,11 +79,26 @@ void main() {
       expect(names, isNot(contains('self')));
     });
 
-    test('excludes boot_direct.glp from modules', () {
+    // TGLP modules.tex, Compilation, first step: "the compiler collects every
+    // .glp file of the program's directory tree".  Until 2026-10-03 this test
+    // was "excludes boot_direct.glp from modules", asserting the skip the
+    // paper forbids --- of boot_direct.glp, mad_boot.glp and every file under
+    // a mad_boot/ directory --- which discovery no longer makes (b7923f9e);
+    // rewritten to the paper (GLP #3 Cowork, 2026-10-03 21:18 UTC, "16:01.
+    // 6").  cssn/mad_boot/'s boots are among the files it collects.
+    test('collects every .glp file of the tree, mad_boot/ among them', () {
       final modules = discoverProgram(cssnRoot, rootSelfGlpPath: rootSelfPath);
-      final filenames = modules.map((m) => m.filePath).toList();
-      expect(filenames.any((f) => f.contains('boot_direct')), isFalse,
-          reason: 'boot_direct.glp should be excluded');
+      final discovered =
+          modules.map((m) => File(m.filePath).absolute.path).toSet();
+      final files = Directory(cssnRoot)
+          .listSync(recursive: true)
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.glp'))
+          .map((f) => f.absolute.path)
+          .toList();
+      expect(files.where((f) => f.contains('/mad_boot/')), isNotEmpty);
+      expect(discovered, containsAll(files),
+          reason: 'every .glp file of the tree is a module');
     });
 
     test('modules have correct ancestor scopes', () {

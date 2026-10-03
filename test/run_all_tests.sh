@@ -5648,7 +5648,10 @@ KNOWN_RED=(
     # language has no ~G): twelve more, measured at gap 8b8cc800.
     "test/compiler/program_linker_test.dart: Program discovery discovers all modules in cssn"
     "test/compiler/program_linker_test.dart: Program discovery excludes self.glp from modules"
-    "test/compiler/program_linker_test.dart: Program discovery excludes boot_direct.glp from modules"
+    # Rewritten 2026-10-03 to TGLP modules.tex's first step (GLP #3 Cowork,
+    # 21:18 UTC, "16:01. 6"), it was "excludes boot_direct.glp from modules";
+    # still red on CSSN's guard negation, cssn/childsafe/child_agent.glp:169.
+    "test/compiler/program_linker_test.dart: Program discovery collects every .glp file of the tree, mad_boot/ among them"
     "test/compiler/program_linker_test.dart: Program discovery modules have correct ancestor scopes"
     "test/compiler/program_linker_test.dart: Linking procedures are renamed with module prefix"
     "test/compiler/program_linker_test.dart: Linking cross-module calls are resolved"
