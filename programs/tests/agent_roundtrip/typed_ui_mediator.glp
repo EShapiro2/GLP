@@ -40,7 +40,7 @@ PendingList  ::= [] ; [PendingEntry | PendingList].
 exported procedure ui_mediator(Key?,
                       Channel(Stream(AgentMsg), Stream(UserMsg))?,
                       Channel(Stream(UserCmd), Stream(UserNotify))?,
-                      PendingList?, Constant?).
+                      PendingList?, Integer?).
 
 %% --- Agent-to-user: non-ground (replace variable with req ID) ---
 

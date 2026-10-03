@@ -385,13 +385,15 @@ ClauseCheckResult checkClause(
   // The instantiation of each call to a parameterised procedure, read over the
   // whole clause before any goal is checked, the body goals in no order (TGLP
   // appendix-implementation-notes.tex, "The instantiation of a call";
-  // [_instantiateCalls]).  It types the head for itself, and Step 1 types it
-  // again, which numbers the clause's anonymous variables from the start as
-  // before.
-  final plans = _instantiateCalls(clause, procDecl, dfa, env,
+  // [_instantiateCalls]), and in the same reading the `:=` goals whose writer is
+  // an `Integer` (TGLP typed-glp.tex, "Type checking of :=").  It types the
+  // head for itself, and Step 1 types it again, which numbers the clause's
+  // anonymous variables from the start as before.
+  final reading = _instantiateCalls(clause, procDecl, dfa, env,
       activeInstantiations: activeInstantiations,
       callee: callee,
       isParametric: isParametric);
+  final plans = reading.plans;
 
   // Step 1: Check head well-typing
   final (headResult, modedHeadTerm) = _checkHeadWithTerm(clause, procDecl, dfa, env);
@@ -417,6 +419,7 @@ ClauseCheckResult checkClause(
         activeInstantiations: activeInstantiations,
         callee: callee,
         plan: plans[i],
+        assignsInteger: reading.integerAssignments.contains(i),
         onUninstantiated: (call, template) =>
             uninstantiated.add((i, call, template)));
 
@@ -794,6 +797,148 @@ Set<String> _variablesTypedAtSomeOccurrence(ast.Clause clause, ProgramDFA dfa,
   return licensed;
 }
 
+// =============================================================================
+// The result type of `:=` (TGLP typed-glp.tex, "Type checking of :=")
+// =============================================================================
+//
+// "The root declares the body kernel :=(Number, Exp?) ..., which assigns to its
+// writer the value of an arithmetic expression.  A goal X := E is checked with
+// the type of X taken as Integer where E is an integer expression --- an integer
+// literal, a reader of type Integer, one of +, -, *, //, mod, unary - or abs over
+// integer expressions, or integer, round, floor or ceil over any expression ---
+// and as Number otherwise, / and the remaining functions of Exp yielding a
+// Number whatever their operands" (TGLP dbb09f4, restated in 2e39edb; Udi's
+// ruling of 2026-10-02).  The declaration stays as it is; the goal is checked
+// against it with its first argument an `Integer` where the rule says so.
+
+/// Whether [atom] is an arithmetic assignment `X := E`.
+bool _isAssignment(ast.Goal atom) => atom.functor == ':=' && atom.arity == 2;
+
+/// [atom] with every `Goal@Agent` taken off: the goal that is checked.
+ast.Goal _unspawned(ast.Goal atom) {
+  var goal = atom;
+  while (goal is ast.SpawnGoal) {
+    goal = goal.innerGoal;
+  }
+  return goal;
+}
+
+/// The operators and functions of `Exp` that keep an integer expression one:
+/// "+, -, *, //, mod, unary - or abs over integer expressions".  Unary minus
+/// parses to `neg`, the functor the root's `Exp` names for it.
+const Set<String> _integerOperators = {'+', '-', '*', '//', 'mod'};
+const Set<String> _integerUnary = {'neg', 'abs'};
+
+/// The functions of `Exp` whose value is an integer over any expression:
+/// "integer, round, floor or ceil over any expression".
+const Set<String> _integerConversions = {'integer', 'round', 'floor', 'ceil'};
+
+/// Whether [e] is an INTEGER EXPRESSION (TGLP typed-glp.tex, "Type checking of
+/// :="): an integer literal, a reader of type Integer --- [integerReader]
+/// answers for one by its variable's name --- one of `+`, `-`, `*`, `//`, `mod`,
+/// unary `-` or `abs` over integer expressions, or `integer`, `round`, `floor`
+/// or `ceil` over any expression.  Anything else is not: a real literal, `/`,
+/// the other functions, a writer, a term outside `Exp`.
+bool isIntegerExpression(ast.Term e, bool Function(String name) integerReader) {
+  if (e is ast.ConstTerm) return e.value is int;
+  if (e is ast.VarTerm) return e.isReader && integerReader(e.name);
+  if (e is ast.StructTerm) {
+    if (e.args.length == 2 && _integerOperators.contains(e.functor)) {
+      return isIntegerExpression(e.args[0], integerReader) &&
+          isIntegerExpression(e.args[1], integerReader);
+    }
+    if (e.args.length == 1 && _integerUnary.contains(e.functor)) {
+      return isIntegerExpression(e.args[0], integerReader);
+    }
+    if (e.args.length == 1 && _integerConversions.contains(e.functor)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Whether [state] is the type `Integer`: `Integer` itself, or a type the
+/// checker finds structurally the same ([sameBaseType]), as `Count ::= Integer.`
+/// is.  A wildcard and a procedure state are not.
+bool _isIntegerState(DFAState state, ProgramDFA dfa) {
+  if (state.isWildcard || state.isProcedure) return false;
+  if (state.baseName == 'Integer') return true;
+  return sameBaseType(state.baseName, 'Integer', dfa);
+}
+
+/// What [_instantiateCalls] reads of a clause or a goal, each by body-atom
+/// index: the instantiation of each call to a parameterised procedure, and the
+/// `:=` goals whose writer is an `Integer` ("Type checking of :=").
+class _ClauseReading {
+  final Map<int, _CallPlan> plans;
+  final Set<int> integerAssignments;
+  const _ClauseReading(this.plans, this.integerAssignments);
+}
+
+/// The `:=` goals among [atoms], at the indices [assignments], whose writer is
+/// an `Integer` by "Type checking of :=", given the occurrences of the clause
+/// or goal typed so far, [typed], each by its key.  A variable is of type
+/// Integer where an occurrence of it, or of its pair, has that type --- in the
+/// head (the moded head's), in a guard, which narrows the head occurrence it
+/// tests to that type ("Type checking of guards"), or in a body goal, a call to
+/// a parameterised procedure at the binding taken for it --- or where it is the
+/// writer of a `:=` goal whose expression is an integer expression.  The last
+/// is read to a fixpoint, so that the goals of a body are read in no order:
+/// `Y := X? + 1, X := N? * 2` types `Y` as the reverse order does.  A variable
+/// that only the expressions of `:=` goals read has no type from them: their
+/// positions are typed `Exp`.
+Set<int> _integerAssignments(List<ast.Goal> atoms, List<int> assignments,
+    Iterable<(String, VariableTypeInfo)> typed, ProgramDFA dfa) {
+  final integers = <String>{};
+  for (final (key, info) in typed) {
+    if (!_isIntegerState(info.typeState, dfa)) continue;
+    integers.add(key.endsWith('?') ? key.substring(0, key.length - 1) : key);
+  }
+  for (var grew = true; grew;) {
+    grew = false;
+    for (final i in assignments) {
+      final assignment = _unspawned(atoms[i]);
+      final result = assignment.args[0];
+      if (result is! ast.VarTerm ||
+          result.isReader ||
+          integers.contains(result.name)) {
+        continue;
+      }
+      if (isIntegerExpression(assignment.args[1], integers.contains)) {
+        integers.add(result.name);
+        grew = true;
+      }
+    }
+  }
+  return {
+    for (final i in assignments)
+      if (isIntegerExpression(_unspawned(atoms[i]).args[1], integers.contains))
+        i
+  };
+}
+
+/// [decl], the declaration of `:=` in scope, with its first argument an
+/// `Integer` where the root declares it `Number`.  A declaration of another
+/// shape is left as it is: the rule types the root's kernel.
+ProcDecl _integerAssignment(ProcDecl decl) {
+  if (decl.arity != 2) return decl;
+  final result = decl.argTypes[0];
+  if (result is! TypeRef || result.name != 'Number' || result.isInput) {
+    return decl;
+  }
+  return ProcDecl(
+    decl.name,
+    [TypeRef('Integer', result.line, result.column), decl.argTypes[1]],
+    decl.line,
+    decl.column,
+    typeParams: decl.typeParams,
+    isBuiltin: decl.isBuiltin,
+    exported: decl.exported,
+    imported: decl.imported,
+    modulePath: decl.modulePath,
+  );
+}
+
 /// The types [atom]'s variable occurrences have, as a body unit goal: the
 /// produced moded term of the goal, checked per argument against the declaration
 /// in scope (Definition "Well-Typed Clause" condition 2).
@@ -879,8 +1024,10 @@ ClauseCheckResult checkGoal(
   final bodyOccurrences = <String, List<(VariableTypeInfo, String)>>{};
   final uninstantiated = <(int, ast.Goal, ProcDecl)>[];
 
-  // The instantiation of each call, read over the whole goal.
-  final plans = _instantiateCalls(
+  // The instantiation of each call, and the `:=` goals whose writer is an
+  // `Integer`, read over the whole goal, as for a clause ([checkClause]): a goal
+  // is a body with no head.
+  final reading = _instantiateCalls(
       TypedClause(
           head: ast.Goal("'_goal_'", const [], 0, 0), bodyAtoms: goalAtoms),
       null,
@@ -889,6 +1036,7 @@ ClauseCheckResult checkGoal(
       activeInstantiations: activeInstantiations,
       callee: callee,
       isParametric: isParametric);
+  final plans = reading.plans;
 
   // Condition 2: each unit goal's produced moded term is well-typed by D.
   for (int i = 0; i < goalAtoms.length; i++) {
@@ -898,6 +1046,7 @@ ClauseCheckResult checkGoal(
         activeInstantiations: activeInstantiations,
         callee: callee,
         plan: plans[i],
+        assignsInteger: reading.integerAssignments.contains(i),
         onUninstantiated: (call, template) =>
             uninstantiated.add((i, call, template)));
 
@@ -1079,6 +1228,11 @@ WellTypedResult _checkBodyAtom(
 /// procedure; with none --- a goal ([checkGoal]), a guard as written
 /// ([definedGuardMeetErrors]) --- the instantiation is inferred from
 /// [callerVarTypes], the occurrences typed before the call.
+///
+/// [assignsInteger] is set for a `:=` goal whose writer is an `Integer` by
+/// "Type checking of :=", as [_instantiateCalls] read the clause: the goal is
+/// checked against the declaration of `:=` with its first argument an
+/// `Integer` ([_integerAssignment]).
 (WellTypedResult, ModedTerm?) _checkBodyAtomWithTerm(
   ast.Goal atom,
   int atomIndex,
@@ -1089,6 +1243,7 @@ WellTypedResult _checkBodyAtom(
   Map<String, ProcDecl> activeInstantiations = const {},
   CalleeClauses? callee,
   _CallPlan? plan,
+  bool assignsInteger = false,
   void Function(ast.Goal call, ProcDecl template)? onUninstantiated,
 }) {
   // Handle SpawnGoal (Goal@Agent) - type-check the inner goal
@@ -1099,6 +1254,7 @@ WellTypedResult _checkBodyAtom(
         activeInstantiations: activeInstantiations,
         callee: callee,
         plan: plan,
+        assignsInteger: assignsInteger,
         onUninstantiated: onUninstantiated);
   }
 
@@ -1108,7 +1264,7 @@ WellTypedResult _checkBodyAtom(
         callerVarTypes: callerVarTypes, plan: plan);
   }
 
-  // Skip builtin goals (true, otherwise, :=)
+  // Skip builtin goals (true, otherwise)
   if (isBuiltinGoal(atom.functor)) {
     return (WellTypedResult.success({}), null);
   }
@@ -1126,6 +1282,13 @@ WellTypedResult _checkBodyAtom(
         'Undefined procedure: ${atom.functor}/${atom.arity}',
       ),
     ]), null);
+  }
+
+  // The writer of `X := E` is an `Integer` where E is an integer expression,
+  // and a `Number` otherwise, as the root declares it (TGLP typed-glp.tex,
+  // "Type checking of :=").
+  if (assignsInteger && _isAssignment(atom)) {
+    procDecl = _integerAssignment(procDecl);
   }
 
   // The environment the call's arguments are checked in: [env], unless the
@@ -2628,7 +2791,23 @@ class _Reading {
 /// some parameter of which has no type supplied or fixed for it gets no
 /// declaration, and [checkClause] refuses it unless its callee is
 /// parametrically well-typed.
-Map<int, _CallPlan> _instantiateCalls(
+///
+/// The `:=` goals are read in the same reading, since the type of a `:=` goal's
+/// writer is decided by the whole clause: "A goal X := E is checked with the
+/// type of X taken as Integer where E is an integer expression --- an integer
+/// literal, a reader of type Integer, ... --- and as Number otherwise" (TGLP
+/// typed-glp.tex, "Type checking of :=", dbb09f4 as 2e39edb restates it), and a
+/// reader's type is that of the variable's other occurrences, wherever they
+/// stand, a call's among them once its binding is taken.  So each `:=` goal is
+/// typed, before the first round and again after each, by the occurrences typed
+/// so far ([_integerAssignments]): its writer an `Integer` where its expression
+/// is an integer expression, and the occurrences it gives are read by the
+/// rounds as any goal's are.  The decision only grows, a reader typed
+/// `Integer` staying so, and the `:=` goals decided `Integer` at the end are
+/// the reading's [_ClauseReading.integerAssignments], which [checkClause] and
+/// [checkGoal] check them by.  Until 2026-10-02 the `:=` goals were skipped,
+/// and a writer the rule types `Integer` was read by no call's planning.
+_ClauseReading _instantiateCalls(
   TypedClause clause,
   ProcDecl? procDecl,
   ProgramDFA dfa,
@@ -2638,12 +2817,16 @@ Map<int, _CallPlan> _instantiateCalls(
   bool Function(String procKey)? isParametric,
 }) {
   final calls = <int, _ParamCall>{};
+  final assignments = <int>[];
   for (var i = 0; i < clause.bodyAtoms.length; i++) {
     final call =
         _parametricCall(clause.bodyAtoms[i], env, activeInstantiations);
     if (call != null) calls[i] = call;
+    if (_isAssignment(_unspawned(clause.bodyAtoms[i]))) assignments.add(i);
   }
-  if (calls.isEmpty) return const {};
+  if (calls.isEmpty && assignments.isEmpty) {
+    return const _ClauseReading({}, {});
+  }
 
   // The occurrences the rest of the clause types.  A body occurrence of a key
   // the head carries is the head's pair (3(b)), and a guard's narrows the
@@ -2671,11 +2854,45 @@ Map<int, _CallPlan> _instantiateCalls(
   }
 
   for (var i = 0; i < clause.bodyAtoms.length; i++) {
-    if (calls.containsKey(i)) continue;
+    if (calls.containsKey(i) || assignments.contains(i)) continue;
     final (result, _) = _checkBodyAtomWithTerm(clause.bodyAtoms[i], i, dfa, env,
         activeInstantiations: activeInstantiations);
     take(i, result.variableTypes);
   }
+
+  // The `:=` goals, typed by the occurrences typed so far, and typed again
+  // where a later reading decides one's writer an `Integer`: its earlier
+  // occurrences are dropped first, so that each body occurrence is read once.
+  final integerAssignments = <int>{};
+  final assignmentTyped = <int>{};
+  void typeAssignments() {
+    final decided = _integerAssignments(clause.bodyAtoms, assignments, [
+      for (final e in head.entries) (e.key, e.value),
+      for (final e in narrowed.entries) (e.key, e.value),
+      for (final e in body.entries)
+        for (final (info, _) in e.value) (e.key, info),
+    ], dfa);
+    for (final i in assignments) {
+      final integer = decided.contains(i);
+      if (assignmentTyped.contains(i) &&
+          integer == integerAssignments.contains(i)) {
+        continue;
+      }
+      if (integer) integerAssignments.add(i);
+      for (final occurrences in body.values) {
+        occurrences.removeWhere((o) => o.$2 == i);
+      }
+      final (result, _) = _checkBodyAtomWithTerm(clause.bodyAtoms[i], i, dfa,
+          env,
+          activeInstantiations: activeInstantiations,
+          assignsInteger: integer);
+      take(i, result.variableTypes);
+      assignmentTyped.add(i);
+    }
+  }
+
+  typeAssignments();
+  if (calls.isEmpty) return _ClauseReading(const {}, integerAssignments);
 
   final probes = <int, _Probe?>{
     for (final e in calls.entries) e.key: _probeOf(e.value.template, env)
@@ -2917,6 +3134,9 @@ Map<int, _CallPlan> _instantiateCalls(
       take(i, b.types);
       pending.remove(i);
     }
+    // The occurrences this round typed may make a `:=` goal's expression an
+    // integer expression.
+    typeAssignments();
   }
   // The calls some parameter of which has no type supplied or fixed for it,
   // read against every occurrence the rounds typed: "A parameter for which no
@@ -2980,7 +3200,7 @@ Map<int, _CallPlan> _instantiateCalls(
           calleeRead: definingOf(call) != null);
     }
   }
-  return plans;
+  return _ClauseReading(plans, integerAssignments);
 }
 
 /// Add to [tried], after the types the sites of a call supply, the types the
