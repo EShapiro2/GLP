@@ -1,11 +1,9 @@
-%% med.glp — the mediator of the canonical compilation, and its helpers.
+%% med.glp — the mediator of the deployed compilation, and its helpers.
 %%
-%% vGLP paper "Volition Elicitation", Section "Elicitation", Definition
-%% "Canonical Compilation": the mediator sits between the person channel and
-%% the compiled agent, renders each ask as the card of the manifest's
-%% construct, routes the person's answer to the clause that posed it, selects
-%% the else-branch on the person's decline, and closes an ask another clause
-%% aborted.
+%% The mediator sits between the person channel and the compiled agent,
+%% renders each ask as the card of the manifest's construct, routes the
+%% person's answer to the clause that posed it, selects the else-branch on
+%% the person's decline, and closes an ask another clause aborted.
 %%
 %% Generic in the compiled program's answer type A, escrow type E and context
 %% type X, and in nothing else: a compiled program instantiates the three at
