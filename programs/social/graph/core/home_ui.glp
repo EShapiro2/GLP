@@ -1,13 +1,7 @@
 %% home_ui.glp --- the super-app with a LIVE person.
 %%
-%% superapp(Id, Answers, NetIn) is the super-app (GSG paper, Section 5.1), the
-%% one goal the runtime posts, with the person's public key, the stream of the
-%% person's acts and the stream from the network, and nothing else: it runs
-%% agent/4, with the super-app's own person interface (home/8) and its
-%% mediator (med/4) between the person and the agent, and sends the two
-%% streams of the outputs list to the person by send_to_user/1 and to the
-%% network by send_to_net/1.  The person is sent, as by superapp_ui/3 below,
-%% what the agent tells her and the mediator's cards.
+%% superapp(Id, Answers, NetIn), the super-app (GSG paper, Section 5.1), is
+%% defined in self.glp, the entry of the super-app's contract.
 %%
 %% superapp_ui(alice, Answers, NetIn) is the same super-app as a play: the
 %% harness the Flutter agent runtime starts, as
@@ -36,17 +30,6 @@ imported procedure home#home(_?, Key?, AgentToUserStream?, Stream(UserInMsg), _?
 imported procedure home#med(_?, _?, _?, Integer?).
 imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 
-exported procedure superapp(Key?, Stream(HomeUserAnswer)?, NetInStream?).
-superapp(Id, Answers, NetIn) :-
-    ground(Id?) |
-    agent # agent(Id?, Cmds?, NetIn?, [user_output(Outs), net_output(NetOut)]),
-    send_to_net(NetOut?),
-    tee_out(Outs?, Shown, Seen),
-    send_to_user(Shown?),
-    home # home(ch([], Asks), Id?, Seen?, Cmds, none, none, none, none),
-    home # med(ch(Answers?, Cards), ch(Asks?, _), [], 0),
-    send_to_user(Cards?).
-
 exported procedure superapp_ui(Key?, Stream(HomeUserAnswer)?, NetInStream?).
 superapp_ui(alice, Answers, _) :-
     crossbar(AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
@@ -71,7 +54,8 @@ bob_answers([msg(agent, person, befriend(From, Resp?)) | Outs],
 bob_answers([_ | Outs], Cmds?) :- otherwise | bob_answers(Outs?, Cmds).
 bob_answers([], []).
 
-%% The network between the two, and the person's stream shown as well as read.
+%% The network between the two.  The person's stream is shown as well as read
+%% by tee_out/3, self.glp's.
 procedure crossbar(NetOutStream?, NetOutStream?, NetInStream, NetInStream).
 crossbar(AOut, BOut, AIn?, BIn?) :-
     merge(AOut?, BOut?, All),
@@ -81,7 +65,3 @@ procedure route(NetOutStream?, NetInStream, NetInStream).
 route([msg(alice, C) | Rest], [msg(alice, C?) | A?], B?) :- route(Rest?, A, B).
 route([msg(bob, C) | Rest], A?, [msg(bob, C?) | B?]) :- route(Rest?, A, B).
 route([], [], []).
-
-procedure tee_out(AgentToUserStream?, AgentToUserStream, AgentToUserStream).
-tee_out([X | Xs], [X? | Ys?], [X? | Zs?]) :- ground(X?) | tee_out(Xs?, Ys, Zs).
-tee_out([], [], []).

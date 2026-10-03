@@ -28,10 +28,34 @@ HomeUserAnswer ::= answer(HomeReqId, HomeAnswer) ; decline(HomeReqId).
 
 %% The super-app (GSG paper, Section 5.1): the one goal the runtime posts,
 %% with the person's public key, the stream of the person's acts and the
-%% stream from the network (home_ui.glp).
-imported procedure home_ui#superapp(Key?, Stream(HomeUserAnswer)?, NetInStream?).
+%% stream from the network, and nothing else.  It runs agent/4, with the
+%% super-app's own person interface (home/8) and its mediator (med/4) between
+%% the person and the agent, and sends the two streams of the outputs list to
+%% the person by send_to_user/1 and to the network by send_to_net/1.  The
+%% person is sent what the agent tells her and the mediator's cards.  The
+%% imported declarations of home/8 and med/4 type the person's answers and
+%% the positions the super-app reads, and leave the others untyped, since it
+%% only passes them along.
+imported procedure home#home(_?, Key?, AgentToUserStream?, Stream(UserInMsg), _?, _?, _?, _?).
+imported procedure home#med(_?, _?, _?, Integer?).
+imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 exported procedure superapp(Key?, Stream(HomeUserAnswer)?, NetInStream?).
-superapp(Id, Answers, NetIn) :- home_ui # superapp(Id?, Answers?, NetIn?).
+superapp(Id, Answers, NetIn) :-
+    ground(Id?) |
+    agent # agent(Id?, Cmds?, NetIn?, [user_output(Outs), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    tee_out(Outs?, Shown, Seen),
+    send_to_user(Shown?),
+    home # home(ch([], Asks), Id?, Seen?, Cmds, none, none, none, none),
+    home # med(ch(Answers?, Cards), ch(Asks?, _), [], 0),
+    send_to_user(Cards?).
+
+%% What the agent tells the person, shown to her and read by the person
+%% interface: superapp/3 above and superapp_ui/3 (home_ui.glp) reach it by
+%% scope.
+procedure tee_out(AgentToUserStream?, AgentToUserStream, AgentToUserStream).
+tee_out([X | Xs], [X? | Ys?], [X? | Zs?]) :- ground(X?) | tee_out(Xs?, Ys, Zs).
+tee_out([], [], []).
 
 %% The super-app as a play, alice with a scripted Bob: what the Flutter agent
 %% runtime starts (home_ui.glp).
