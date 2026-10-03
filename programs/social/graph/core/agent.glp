@@ -892,7 +892,7 @@ take_warm_consent_for(Parts, [P | Rest], [P? | Rest1?], C?) :-
     otherwise | take_warm_consent_for(Parts?, Rest?, Rest1, C).
 take_warm_consent_for(_, [], [], no).
 
-procedure twc_step(Constant?, Stream(_)?, Constant?, PendingInv?, PendingInv, WarmConsent).
+procedure twc_step(Constant?, Stream(_)?, Key?, PendingInv?, PendingInv, WarmConsent).
 twc_step(true, _, W, Rest, Rest?, yes(W?)).
 twc_step(false, Parts, W, Rest, [warm_consent(W?) | Rest1?], C?) :-
     take_warm_consent_for(Parts?, Rest?, Rest1, C).
@@ -922,12 +922,12 @@ take_warm_wait(Who, [warm_wait(App, Name, Via) | Rest], Pend1?, W?) :-
 take_warm_wait(Who, [P | Rest], [P? | Rest1?], W?) :- otherwise | take_warm_wait(Who?, Rest?, Rest1, W).
 take_warm_wait(_, [], [], none).
 
-procedure tww_step(Constant?, Constant?, Constant?, GlobalName?, Constant?, PendingInv?, PendingInv, WarmWait).
+procedure tww_step(Constant?, Constant?, Constant?, GlobalName?, Key?, PendingInv?, PendingInv, WarmWait).
 tww_step(true, _, App, Name, Via, Rest, Rest?, wait(App?, Name?, Via?)).
 tww_step(false, Who, App, Name, Via, Rest, [warm_wait(App?, Name?, Via?) | Rest1?], W?) :-
     take_warm_wait(Who?, Rest?, Rest1, W).
 
-procedure warm_consent_step(WarmWait?, Key?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+procedure warm_consent_step(WarmWait?, Key?, Key?, UserInStream?, NetInStream?, OutputsList?, Host?).
 warm_consent_step(none, Id, Who, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
     agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, [warm_consent(Who?) | Pend?], Trusted?)).
 warm_consent_step(wait(App, Name, Via), Id, Who, UserIn, NetIn, Outs, Host) :-
@@ -1033,7 +1033,7 @@ take_intro_via(_, [], [], none).
 
 %% accepted_intro(Via, Other, Pend, Pend1): the consent kept, so that a link of
 %% this introduction reported later is released in its turn.
-procedure accepted_intro(AnchorFriend?, Constant?, PendingInv?, PendingInv).
+procedure accepted_intro(AnchorFriend?, Key?, PendingInv?, PendingInv).
 accepted_intro(found(Via), Other, Pend, [intro_ok(Via?), intro_ok(Other?) | Pend?]).
 accepted_intro(none, Other, Pend, [intro_ok(Other?) | Pend?]).
 
@@ -1059,7 +1059,7 @@ rbs(_, [], []).
 %% channel and each of the two it introduces receives its end FROM the
 %% introducer, so both ends are held; the consent to the introduction is what
 %% releases them, and it is kept, since one introduction holds several links.
-procedure pending_step(Constant?, GlobalName?, Constant?, Key?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
+procedure pending_step(Constant?, GlobalName?, Key?, Key?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
 pending_step(true, Name, _, Id, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
     authorise_link(Name?, authorise),
     agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, Pend?, Trusted?)).
@@ -1074,7 +1074,7 @@ pending_step(false, Name, S, Id, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted)
           host(Apps1?, Atts?, [held(Name?, S?) | Pend?], Trusted?)).
 
 %% forward_pending(Name, S, Apps, Apps1): the report to every running mini-app.
-procedure forward_pending(GlobalName?, Constant?, AppList?, AppList).
+procedure forward_pending(GlobalName?, Key?, AppList?, AppList).
 forward_pending(Name, S, [app(A, M, C, running(Sg?)) | Rest], [app(A?, M?, C?, running(Sg1)) | Rest1?]) :-
     ground(Name?) |
     push_down(pending_link(Name?, S?), Sg, Sg1?),
@@ -1086,7 +1086,7 @@ forward_pending(_, _, [], []).
 procedure push_down(SgToApp?, SgToAppStream, SgToAppStream?).
 push_down(Msg, [Msg? | Sg1?], Sg1).
 
-procedure warm_call_step(Constant?, Key?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+procedure warm_call_step(Constant?, Key?, Key?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
 warm_call_step(true, Id, From, App, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
     agent(Id?, [msg(person, Id?, invite(App?, From?)) | UserIn?], NetIn?, Outs?,
           host(Apps?, Atts?, [warm_ok(From?) | Pend?], Trusted?)).
@@ -1107,7 +1107,7 @@ anchor_friend(_, [], [], none).
 %% intro_request(Requester, Found, ...): the request proceeds only where the
 %% requester and the anchor are both friends of this agent (Section 5.2); where
 %% either is not, nothing is done beyond not introducing.
-procedure intro_request(AnchorFriend?, AnchorFriend?, Key?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+procedure intro_request(AnchorFriend?, AnchorFriend?, Key?, Key?, Key?, UserInStream?, NetInStream?, OutputsList?, Host?).
 intro_request(found(_), found(Anchor), Id, From, Anchor1, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
     take_intro_consent(From?, Anchor?, Pend?, Pend1, C),
     intro_request_step(C?, Id?, From?, Anchor?, Anchor1?, UserIn?, NetIn?, Outs?,
@@ -1121,7 +1121,7 @@ take_intro_consent(R, A, [intro_consent(R1, A1) | Rest], Rest?, true) :-
 take_intro_consent(R, A, [P | Rest], [P? | Rest1?], C?) :- otherwise | take_intro_consent(R?, A?, Rest?, Rest1, C).
 take_intro_consent(_, _, [], [], false).
 
-procedure intro_request_step(Constant?, Key?, Constant?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+procedure intro_request_step(Constant?, Key?, Key?, Key?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
 intro_request_step(true, Id, From, Anchor, _, UserIn, NetIn, Outs, Host) :-
     agent(Id?, [msg(person, Id?, introduce(From?, Anchor?)) | UserIn?], NetIn?, Outs?, Host?).
 intro_request_step(false, Id, From, _, Anchor1, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
@@ -1135,7 +1135,7 @@ take_intro_wait(R, A, [intro_wait(R1, A1) | Rest], Rest?, true) :-
 take_intro_wait(R, A, [P | Rest], [P? | Rest1?], W?) :- otherwise | take_intro_wait(R?, A?, Rest?, Rest1, W).
 take_intro_wait(_, _, [], [], false).
 
-procedure intro_consent_step(Constant?, Key?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+procedure intro_consent_step(Constant?, Key?, Key?, Key?, UserInStream?, NetInStream?, OutputsList?, Host?).
 intro_consent_step(true, Id, From, Anchor, UserIn, NetIn, Outs, Host) :-
     agent(Id?, [msg(person, Id?, introduce(From?, Anchor?)) | UserIn?], NetIn?, Outs?, Host?).
 intro_consent_step(false, Id, From, Anchor, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-

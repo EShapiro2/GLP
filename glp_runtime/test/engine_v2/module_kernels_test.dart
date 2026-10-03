@@ -45,8 +45,16 @@ procedure helper(Integer?, Integer).
 helper(X, Y?) :- Y := X? + 1.
 ''';
 
+/// A project of [source] as main.glp, its self.glp exporting go/2 by
+/// forwarding it there: a directory with no self.glp is not a program (TGLP
+/// modules.tex, "Entry and the absence of a boot module").
 Directory _tempProject(String source) {
   final dir = Directory.systemTemp.createTempSync('glp_modvalue_');
+  File('${dir.path}/self.glp').writeAsStringSync('''
+imported procedure main#go(Integer?, Integer).
+exported procedure go(Integer?, Integer).
+go(X, Y?) :- main # go(X?, Y).
+''');
   File('${dir.path}/main.glp').writeAsStringSync(source);
   return dir;
 }
@@ -90,7 +98,8 @@ void main() {
   /// Compiled-ness alone is not enough — an internal procedure is compiled but
   /// is not runnable from outside (module_kernels.dart, export check), and the
   /// compiled symbol of an exported procedure carries its qualified name
-  /// (`main:go/2`) while the alias `run/2` matches is unqualified (`go/2`).
+  /// (`<the module's path from the root>:go/2`) while the alias `run/2`
+  /// matches is unqualified (`go/2`).
   (String, int) firstRunnableEntry(Artefact a) {
     final image = CodeImage.fromArtefactBytes(a.toBytes());
     for (final sig in image.exportAliases) {

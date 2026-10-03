@@ -15,7 +15,7 @@ Xs_home_1 ::= xs_home_1(String).
 Reply_home_1 ::= then(Xs_home_1).
 Xs_home_2 ::= xs_home_2(String, Constant).
 Reply_home_2 ::= then(Xs_home_2).
-Xs_home_3 ::= xs_home_3(Constant, Constant).
+Xs_home_3 ::= xs_home_3(Constant, Key).
 Reply_home_3 ::= then(Xs_home_3).
 Xs_home_4 ::= xs_home_4(Key).
 Reply_home_4 ::= then(Xs_home_4).
@@ -64,7 +64,7 @@ home(Med, _, [], [], S1, S2, S3, S4) :- abort(S1?, Med?, M1), abort(S2?, M1?, M2
 procedure trust_act(Channel(Closed, Stream(AgentMsg))?, String?, Key?, AgentToUserStream?, Stream(UserInMsg)).
 trust_act(Med, Key, Id, Outs, [msg(person, Id?, trust(Key?)) | Cmds?]) :- ground(Key?) | home(Med?, Id?, Outs?, Cmds, none, none, none, none).
 
-procedure invite_act(Channel(Closed, Stream(AgentMsg))?, Constant?, Constant?, Key?, AgentToUserStream?, Stream(UserInMsg)).
+procedure invite_act(Channel(Closed, Stream(AgentMsg))?, Constant?, Key?, Key?, AgentToUserStream?, Stream(UserInMsg)).
 invite_act(Med, App, Friend, Id, Outs, [msg(person, Id?, invite(App?, Friend?)) | Cmds?]) :- ground(App?), ground(Friend?) | home(Med?, Id?, Outs?, Cmds, none, none, none, none).
 
 procedure connect_act(Channel(Closed, Stream(AgentMsg))?, Key?, Key?, AgentToUserStream?, Stream(UserInMsg)).

@@ -3,10 +3,13 @@
 %
 % Section 8 of /Grassroots/Jurix, sections/13-community-roles.tex, is the
 % specification and no definition of it is restated here; each procedure names
-% the definition it decides.  The four are definition:rooted,
-% definition:provenance, definition:volition and definition:cohesive.
-% Openness and closure are proved of a contract in the paper and are not
-% conditions on the text; nothing here decides or claims them.
+% the definition it decides.  The three conditions are traceable provenance of
+% the set of predicates occurring in the contract (definition:provenance),
+% volition (definition:volition) and cohesion (definition:cohesive).
+% Rootedness (definition:rooted) is no condition: the predicates that are
+% rooted are given as a set.  Openness and closure are proved of a contract in
+% the paper and are not conditions on the text; nothing here decides or claims
+% them.
 % ---------------------------------------------------------------------------
 
 % ---------------------------------------------------------------------------
@@ -422,7 +425,10 @@ traceable(C, E?) :- ground(C?) |
 % two requires an atom of traceable provenance an argument of which has the
 % base of the other.  cv1 asks the definition's first disjunct, that the role
 % graph is connected; first_unguarded asks the second, that every connected
-% component of it holds a guarding role.
+% component of it holds a guarding role.  For a contract whose roles are all
+% party roles this is def:volition of Section 3 (Section 8, after its
+% Definition Volition), and check.glp decides Section 3's volition with
+% volition_faults too.
 
 procedure same_base(Base?, Base?, Ans).
 same_base(B, C, yes) :- B? =?= C? | true.
@@ -715,15 +721,33 @@ cohesion_faults(C, R?) :- ground(C?) |
     cohesion_on(C?, RP?, R).
 
 % ---------------------------------------------------------------------------
-% The two conditions a contract either meets or fails
+% The three conditions on the text
 % ---------------------------------------------------------------------------
-% Volition and cohesion are conditions on the text that a contract passes or
-% fails; which predicates are rooted and which have traceable provenance are
-% the two sets, given by rooted/2 and traceable/2.
+% Traceable provenance of the set of predicates occurring in the contract,
+% volition and cohesion are the conditions on the text a contract with
+% community roles is certified by, each passed or failed, and their faults are
+% reported together in that order.  The first is decided from the largest set
+% of predicates having traceable provenance, which traceable/2 gives: its
+% fault names the predicates of the contract outside that set, as the second
+% conjunct of def:syntactically-grassroots does for a contract of Section 3.
+% Rootedness is no condition; rooted/2 gives the predicates that are rooted.
+
+procedure untraceable_faults(Preds?, Faults).
+untraceable_faults([], []).
+untraceable_faults([P|Ps], [untraceable([P?|Ps?])]).
+
+% E is read by two conditions, so it is taken ground in a head of its own.
+procedure conditions_on(Contract?, Preds?, Faults).
+conditions_on(C, E, R?) :- ground(C?), ground(E?) |
+    all_preds(C?, Ps),
+    preds_diff(Ps?, E?, Missing),
+    untraceable_faults(Missing?, F0),
+    volition_faults(C?, E?, F1),
+    cohesion_faults(C?, F2),
+    faults_app(F1?, F2?, F12),
+    faults_app(F0?, F12?, R).
 
 exported procedure conditions(Contract?, Faults).
 conditions(C, R?) :- ground(C?) |
     traceable(C?, E),
-    volition_faults(C?, E?, F1),
-    cohesion_faults(C?, F2),
-    faults_app(F1?, F2?, R).
+    conditions_on(C?, E?, R).

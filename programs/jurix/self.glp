@@ -572,17 +572,6 @@ guard_marked(guarded, yes).
 guard_marked(guarded_at(_), yes).
 guard_marked(unguarded, no).
 
-procedure all_guarded(RoleSpecs?, Ans).
-all_guarded([], yes).
-all_guarded([RS|Rs], R?) :- ground(RS?), ground(Rs?) |
-    rs_guard(RS?, G),
-    guard_marked(G?, A),
-    all_guarded1(A?, Rs?, R).
-
-procedure all_guarded1(Ans?, RoleSpecs?, Ans).
-all_guarded1(no, _, no).
-all_guarded1(yes, Rs, R?) :- ground(Rs?) | all_guarded(Rs?, R).
-
 % ---------------------------------------------------------------------------
 % Roles, bases and name terms (definition:term, definition:role)
 % ---------------------------------------------------------------------------

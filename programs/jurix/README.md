@@ -23,13 +23,15 @@ printed.  Section 5 defines the compilation for syntactically grassroots
 contracts, so the compiler runs the checker first and compiles nothing for a
 contract that fails.
 
-A contract with community roles is decided by the conditions on the text of
-Section 8: which predicates are rooted (`definition:rooted`), which have
-traceable provenance (`definition:provenance`), volition
-(`definition:volition`) and cohesion (`definition:cohesive`).  The first two
-are sets, given by `rooted_of` and `traceable_of`; the last two the contract
-meets or fails.  Openness and closure are proved of a contract in the paper,
-are not conditions on the text, and are neither decided nor claimed here.  The
+A contract with community roles is decided by the three conditions on the
+text of Section 8, each of which it meets or fails: that the set of predicates
+occurring in it has traceable provenance (`definition:provenance`), volition
+(`definition:volition`) and cohesion (`definition:cohesive`).  The first rests
+on the largest set of predicates having traceable provenance, which
+`traceable_of` gives.  Rootedness (`definition:rooted`) is no condition on the
+text; `rooted_of` gives the predicates that are rooted.  Openness and closure
+are proved of a contract in the paper, are not conditions on the text, and are
+neither decided nor claimed here.  The
 compiled form of a schema of such a contract is Definition Compilation of
 Section 8 (`definition:compile`), and its worked box, the display for
 `federate`, is the form printed.
@@ -114,18 +116,23 @@ signature.  It loads and runs as before.
 | `compile_schema(Name, Schema)` | prints the compiled form of one schema |
 
 The names are `social_graph` and `currency`, the two the paper works through;
-`sg_chain`, which certifies and exercises volition above arity two; and the
+`sg_chain`, which certifies and exercises volition above arity two; `sg_tri`,
+which certifies with a role graph that is not connected and a guarding role in
+each connected component of it; and the
 seven broken contracts `sg_unguarded`, `sg_imposed`, `sg_gossip`,
 `sg_chain_cut`, `sg_svar_loose`, `cur_no_mint`, `cur_loose_mint`.
 `federation` is GFWC's five schemas
 (`/Grassroots/GFWC`, `sections/schemas.tex`), whose roles are one party role
-and seated roles, none of them a constituent role; `gf_unrooted`,
-`gf_untraceable`, `gf_uncohesive` and `gf_novolition` are it broken in one place
-each, one per condition the checker decides.  `sv_signed`, `sv_loose`,
+and seated roles, none of them a constituent role; `gf_untraceable`,
+`gf_uncohesive` and `gf_novolition` are it broken in one place each, one per
+condition, the one atom `gf_uncohesive` breaks costing `seat` its traceable
+provenance as well, and `gf_unrooted` is it with `seat` not rooted, which is
+no condition, so that it meets the three.  `sv_signed`, `sv_loose`,
 `sv_in_name_loose` and `sv_in_name_carried` are small contracts on the
-speech-act variables of `definition:provenance`, and `sg_relay` is the social
-graph with two schemas on volition by connected component, all in the language
-of Section 8.  Any other name is the empty contract.
+speech-act variables of `definition:provenance`, `sg_relay` is the social
+graph with two schemas on volition by connected component, and
+`sg_tri_cschema` is `sg_tri` with `tri` written as a cschema, all in the
+language of Section 8.  Any other name is the empty contract.
 
 A verdict on a contract of Section 3 is `syntactically_grassroots` or
 `not_grassroots(Faults)`, where each fault is one of
@@ -142,19 +149,23 @@ naming the schema, role and added atom that obstruct.  `untraceable` names the
 predicates of the contract outside the largest set having traceable provenance,
 the set `traceable_of` gives; the verdict is over the whole set and the faults
 both name what is missing and, through `traceable_of`, what has it.  A
-`volition` fault names two roles the role graph does not join — the first role
-and the first one it does not reach — so at arity two it names the pair that
-has no edge.
+`volition` fault is raised only when the role graph is disconnected and some
+connected component of it holds no guarding role, and names two roles the
+role graph does not join — the first role and the first one it does not reach
+— so at arity two it names the pair that has no edge.
 
 A verdict on a contract with community roles is `conditions_met` or
-`conditions_failed(Faults)`, where each fault is a `volition(Schema, Role,
-Role)` or a
+`conditions_failed(Faults)`, where each fault is an `untraceable(Predicates)`,
+a `volition(Schema, Role, Role)` or a
 
     cohesion(Schema, Role, Atom)
 
-naming the role and the added atom.  A `volition` fault there is raised only
-when the role graph is disconnected and some connected component of it holds no
-guarding role, and names the first role that role one does not reach.
+naming the role and the added atom, in the order of the three conditions.
+`untraceable` names the predicates of the contract outside the largest set
+having traceable provenance, as for a contract of Section 3.  A `volition`
+fault there is the same as for a contract of Section 3, volition being one
+condition in Sections 3 and 8, and one procedure, `community.glp`'s, decides
+it for both.
 
 ## Writing a contract
 
@@ -207,8 +218,7 @@ and not both empty).
 | `self.glp` | the representation of a contract, and the substitution, matching and transaction machinery |
 | `unobstructed.glp` | `def:introduction` and `def:unobstructed` |
 | `prov.glp` | `def:grounded`, as a greatest fixpoint |
-| `volition.glp` | `def:volition` |
-| `community.glp` | the four conditions of Section 8 |
+| `community.glp` | the three conditions of Section 8, and the rooted predicates; its volition is `def:volition` of Section 3 too |
 | `check.glp` | `def:syntactically-grassroots`, the two halves together, and the conditions of Section 8 for a contract with community roles |
 | `compile.glp` | `def:compile`, printed as the LaTeX of Section 5.2, and `definition:compile`, printed as the worked box of Section 8 |
 | `contracts.glp` | the contracts to run on |

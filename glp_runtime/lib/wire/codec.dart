@@ -541,49 +541,82 @@ WireConst decodeConstantPayload(WireReader r) {
 // Term encoding (§cf-terms)
 // ============================================================================
 
+/// Write the encoding of [t]: a tagged node, and after a structure's node its
+/// arguments' encodings in order (§cf-terms, "Terms").
+///
+/// The walk keeps a stack of its own and writes the nodes in the order the
+/// recursion it replaces wrote them, depth first and left to right, so the
+/// bytes are the same.  Until 2026-10-02 it recursed once a structure
+/// argument and overflowed the Dart stack on a long list.
 void encodeTerm(WireWriter w, WireTerm t) {
-  switch (t) {
-    case WConst(:final constant):
-      w.u8(1);
-      encodeConstantPayload(w, constant);
-    case WVar(:final isReader, :final agent, :final index):
-      w.u8(2);
-      w.u8(isReader ? 1 : 0);
-      w.bytes(agent);
-      w.clen(index);
-    case WStruct(:final functor, :final args):
-      w.u8(3);
-      w.string(functor);
-      w.clen(args.length);
-      for (final a in args) {
-        encodeTerm(w, a);
-      }
+  final pending = <WireTerm>[t];
+  while (pending.isNotEmpty) {
+    switch (pending.removeLast()) {
+      case WConst(:final constant):
+        w.u8(1);
+        encodeConstantPayload(w, constant);
+      case WVar(:final isReader, :final agent, :final index):
+        w.u8(2);
+        w.u8(isReader ? 1 : 0);
+        w.bytes(agent);
+        w.clen(index);
+      case WStruct(:final functor, :final args):
+        w.u8(3);
+        w.string(functor);
+        w.clen(args.length);
+        // The first argument is written next, so it goes on the stack last.
+        for (var i = args.length - 1; i >= 0; i--) {
+          pending.add(args[i]);
+        }
+    }
   }
 }
 
+/// Read one term's encoding (§cf-terms, "Terms").
+///
+/// The reading keeps a stack of its own, a frame for each structure whose
+/// arguments are still being read, and reads the nodes in the order the
+/// recursion it replaces read them; until 2026-10-02 it recursed once a
+/// structure argument and overflowed the Dart stack on a long list.
 WireTerm decodeTerm(WireReader r) {
-  final tag = r.u8();
-  switch (tag) {
-    case 1:
-      return WConst(decodeConstantPayload(r));
-    case 2:
-      final pol = r.u8();
-      if (pol != 0 && pol != 1) {
-        throw WireFormatException('variable polarity not 0/1: $pol');
-      }
-      final agent = r.bytes();
-      final index = r.clen();
-      return WVar(isReader: pol == 1, agent: agent, index: index);
-    case 3:
-      final functor = r.string();
-      final arity = r.clen();
-      final args = <WireTerm>[];
-      for (var i = 0; i < arity; i++) {
-        args.add(decodeTerm(r));
-      }
-      return WStruct(functor, args);
-    default:
-      throw WireFormatException('unknown term tag: $tag');
+  // Each frame: a structure being read --- its functor, its arity, and its
+  // arguments read so far.
+  final frames = <(String, int, List<WireTerm>)>[];
+  while (true) {
+    final tag = r.u8();
+    WireTerm node;
+    switch (tag) {
+      case 1:
+        node = WConst(decodeConstantPayload(r));
+      case 2:
+        final pol = r.u8();
+        if (pol != 0 && pol != 1) {
+          throw WireFormatException('variable polarity not 0/1: $pol');
+        }
+        final agent = r.bytes();
+        final index = r.clen();
+        node = WVar(isReader: pol == 1, agent: agent, index: index);
+      case 3:
+        final functor = r.string();
+        final arity = r.clen();
+        if (arity > 0) {
+          frames.add((functor, arity, <WireTerm>[]));
+          continue;
+        }
+        node = WStruct(functor, <WireTerm>[]);
+      default:
+        throw WireFormatException('unknown term tag: $tag');
+    }
+    // The node read is its parent's next argument, and completes the parent,
+    // and the parent's parent, as far as each is complete.
+    while (true) {
+      if (frames.isEmpty) return node;
+      final (functor, arity, args) = frames.last;
+      args.add(node);
+      if (args.length < arity) break;
+      frames.removeLast();
+      node = WStruct(functor, args);
+    }
   }
 }
 

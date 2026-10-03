@@ -27,6 +27,15 @@ import '../vglp/program_compilation.dart';
 /// A discovered module in the program tree.
 class DiscoveredModule {
   final String filePath;
+
+  /// The module's name: its path from the root ([modulePathName]; TGLP
+  /// modules.tex, Compilation, third step) --- `sglp/coins` for
+  /// `programs/sglp/coins/self.glp`, `sglp/coins/coins` for
+  /// `programs/sglp/coins/coins.glp`.  Every procedure `p/n` and type `T` of the
+  /// module is renamed `<moduleName>:p/n` and `<moduleName>:T`, and the
+  /// linker's registry is keyed by it.  Until 2026-10-02 it was the file's name
+  /// (a `self.glp`'s, its directory's last segment), so two modules of one name
+  /// shared a prefix and a registry entry, the second overwriting the first.
   final String moduleName;
   final Module ast;
   TypeEnvironment ancestorScope;
@@ -100,8 +109,9 @@ class LinkResult {
 ///
 /// For each `.glp` file (excluding `boot_direct.glp`):
 /// - Parse into Module AST
-/// - Extract module name (from `-module(M).` or filename; for `self.glp` without
-///   `-module()`, derives name from parent directory)
+/// - Name the module by its path from the root ([modulePathName]): the root is
+///   the directory of [rootSelfGlpPath] where it is given --- the device's
+///   root, `programs/` --- and the program's own directory otherwise
 /// - Build ancestor type scope chain
 ///
 /// `self.glp` files contribute both types AND procedures to the ancestor scope.
@@ -123,6 +133,12 @@ List<DiscoveredModule> discoverProgram(String rootDir,
   return modules;
 }
 
+/// The directory module names are paths from: the device's root, the directory
+/// of the root `self.glp` ([programsDir]), where it is known, and the program's
+/// own directory [programRoot] otherwise.
+String _nameRoot(String? programsDir, String programRoot) =>
+    programsDir ?? Directory(programRoot).absolute.path;
+
 /// The `.glp` modules of the tree, with their ancestor scopes and the exposes
 /// resolved: everything of [discoverProgram] but the compiled `.vglp` sources,
 /// which `:emit` compiles in this same scope and writes out instead.
@@ -133,6 +149,7 @@ List<DiscoveredModule> _discoverGlpModules(
   }
 
   final modules = <DiscoveredModule>[];
+  final nameRoot = _nameRoot(programsDir, root.path);
 
   // The root `programs/` directory bounds the ancestor scope chain. When known,
   // discovery extends above the program root up to (excluding) this directory.
@@ -166,11 +183,9 @@ List<DiscoveredModule> _discoverGlpModules(
     // Enforce "Admission to the Primitive Layer" (Rule A / Rule B) at load time.
     enforcePrimitiveLayer(file.path, module, rootSelfGlpPath);
 
-    // Module name is derived from the path: a self.glp takes its parent dir's
-    // name, any other module its file name (-module removed).
-    final moduleName = filename == 'self.glp'
-        ? _moduleNameFromDirPath(file.parent.path)
-        : _moduleNameFromFilename(filename);
+    // The module's name is its path from the root: a self.glp's is its
+    // directory's, any other module's its directory's and its file name.
+    final moduleName = modulePathName(file.path, nameRoot);
 
     // Build ancestor scope chain (extends up to programs/ when known)
     final chain = discoverSelfChain(
@@ -193,7 +208,7 @@ List<DiscoveredModule> _discoverGlpModules(
   // Add the program's filesystem context (ancestor self.glp above the root) and
   // resolve -expose directives.
   _addAncestorContextAndExposes(
-      modules, root.absolute.path, programsDir, rootSelfGlpPath);
+      modules, root.absolute.path, programsDir, rootSelfGlpPath, nameRoot);
   return modules;
 }
 
@@ -226,10 +241,9 @@ void _addVglpModules(List<DiscoveredModule> modules, Directory root,
 
   final mediator = _mediatorSource(programsDir);
   final texts = {for (final f in vglpFiles) f.path: f.readAsStringSync()};
+  final nameRoot = _nameRoot(programsDir, root.path);
 
   for (final file in vglpFiles) {
-    final filename = file.path.split(Platform.pathSeparator).last;
-    final stem = filename.substring(0, filename.length - '.vglp'.length);
     final text = texts[file.path]!;
     final paper = isPaperSyntaxSource(text);
     if (!paper && mediator == null) continue;
@@ -246,7 +260,7 @@ void _addVglpModules(List<DiscoveredModule> modules, Directory root,
 
     modules.add(DiscoveredModule(
       filePath: file.path,
-      moduleName: _moduleNameFromFilename('$stem.glp'),
+      moduleName: modulePathName(file.path, nameRoot),
       ast: compiledAst,
       ancestorScope: ancestorScope,
     ));
@@ -309,12 +323,12 @@ List<DiscoveredModule> discoverSingleModule(String filePath,
   final dir = file.parent.absolute.path;
   final chain = discoverSelfChain(
       targetFile: file.absolute.path, rootDir: dir, programsDir: programsDir);
+  final nameRoot = _nameRoot(programsDir, dir);
 
   final modules = <DiscoveredModule>[
     DiscoveredModule(
       filePath: file.path,
-      moduleName: _moduleNameFromFilename(
-          file.path.split(Platform.pathSeparator).last),
+      moduleName: modulePathName(file.path, nameRoot),
       ast: module,
       ancestorScope:
           buildAncestorScope(chain: chain, rootSelfGlpPath: rootSelfGlpPath),
@@ -334,7 +348,7 @@ List<DiscoveredModule> discoverSingleModule(String filePath,
         targetFile: ownSelf.absolute.path, rootDir: dir, programsDir: programsDir);
     modules.add(DiscoveredModule(
       filePath: ownSelf.path,
-      moduleName: _moduleNameFromDirPath(dir),
+      moduleName: modulePathName(ownSelf.path, nameRoot),
       ast: selfModule,
       ancestorScope:
           buildAncestorScope(chain: selfChain, rootSelfGlpPath: rootSelfGlpPath),
@@ -342,7 +356,8 @@ List<DiscoveredModule> discoverSingleModule(String filePath,
     ));
   }
 
-  _addAncestorContextAndExposes(modules, dir, programsDir, rootSelfGlpPath);
+  _addAncestorContextAndExposes(
+      modules, dir, programsDir, rootSelfGlpPath, nameRoot);
   return modules;
 }
 
@@ -351,8 +366,14 @@ List<DiscoveredModule> discoverSingleModule(String filePath,
 /// other module so their (multi-clause, parameterised) procedures resolve for
 /// descendants; then resolve `-expose` directives (including the root
 /// `programs/self.glp`'s, which is itself realised by the root-scope mechanism).
-void _addAncestorContextAndExposes(List<DiscoveredModule> modules,
-    String rootAbsPath, String? programsDir, String? rootSelfGlpPath) {
+///
+/// [nameRoot] is the directory every module is named from ([_nameRoot]).
+void _addAncestorContextAndExposes(
+    List<DiscoveredModule> modules,
+    String rootAbsPath,
+    String? programsDir,
+    String? rootSelfGlpPath,
+    String nameRoot) {
   if (programsDir != null) {
     for (final selfPath in _ancestorSelfGlpFiles(rootAbsPath, programsDir)) {
       final selfModule =
@@ -365,7 +386,7 @@ void _addAncestorContextAndExposes(List<DiscoveredModule> modules,
       );
       modules.add(DiscoveredModule(
         filePath: selfPath,
-        moduleName: _moduleNameFromDirPath(File(selfPath).parent.path),
+        moduleName: modulePathName(selfPath, nameRoot),
         ast: selfModule,
         ancestorScope:
             buildAncestorScope(chain: chain, rootSelfGlpPath: rootSelfGlpPath),
@@ -387,7 +408,7 @@ void _addAncestorContextAndExposes(List<DiscoveredModule> modules,
     if (rootModule.exposes.isNotEmpty) {
       extraExposers.add(DiscoveredModule(
         filePath: rootSelfGlpPath,
-        moduleName: _moduleNameFromDirPath(File(rootSelfGlpPath).parent.path),
+        moduleName: modulePathName(rootSelfGlpPath, nameRoot),
         ast: rootModule,
         ancestorScope: buildRootScopeEnvironment(),
         isSelfGlp: true,
@@ -395,7 +416,7 @@ void _addAncestorContextAndExposes(List<DiscoveredModule> modules,
     }
   }
 
-  _resolveExposes(modules, programsDir, rootSelfGlpPath,
+  _resolveExposes(modules, programsDir, rootSelfGlpPath, nameRoot,
       extraExposers: extraExposers);
 }
 
@@ -423,7 +444,7 @@ bool _dirUnder(String childDir, String ancestorDir) =>
 /// EXPORTED declarations and the types it defines are merged into the
 /// ancestorScope of every module in the exposing directory's subtree.
 void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
-    String? rootSelfGlpPath,
+    String? rootSelfGlpPath, String nameRoot,
     {List<DiscoveredModule> extraExposers = const []}) {
   // [extraExposers] are self.glp files that carry -expose directives but are not
   // themselves linkable modules — specifically root programs/self.glp, which is
@@ -466,8 +487,7 @@ void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
 
       final exposedAst =
           Parser(Lexer(file.readAsStringSync()).tokenize()).parseModule();
-      final exposedName =
-          _moduleNameFromFilename(file.path.split(Platform.pathSeparator).last);
+      final exposedName = modulePathName(file.path, nameRoot);
 
       // Collision: exported sigs unique among modules exposed at this level.
       for (final d in exposedAst.procDeclarations) {
@@ -677,6 +697,10 @@ void checkModulesIndependently(List<DiscoveredModule> modules) {
 /// Throws on type errors with details.
 LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
     {required String rootDir}) {
+  // A directory with no self.glp is not a program, and is rejected before
+  // any of its modules is checked.
+  _requireProgramSelfGlp(modules, rootDir);
+
   // Step 2 (modules.tex §Static Linking): after discovery, before renaming,
   // each module is type-checked independently against its ancestor scope. The
   // linked check below is an addition to it, not a replacement.
@@ -776,25 +800,18 @@ Module linkedFlatModule(List<DiscoveredModule> modules, LinkResult linked,
   // the renamed type of the nearest scope defining it (step 4,
   // [_renamedTypeDefs] / [renameDeclTypes]), so the union below cannot collide
   // and cannot depend on the order the filesystem lists the modules in.
+  //
+  // Every module is named by its path from the root, and two files of one
+  // name are rejected at linking ([_requireDistinctModuleNames]), so a renamed
+  // type is defined by one file; one file can appear twice in [modules] --- the
+  // walk's and an `-expose`'s --- and its definitions are taken once.  Until
+  // 2026-10-02 the name was the file's, and two modules of one name defining
+  // one type were refused here as a "Module-name collision".
   final owners = typeOwnersByModule(modules);
   final typeDefs = <String, TypeDef>{};
-  final definedIn = <String, String>{};
   for (final mod in modules) {
-    // One file can appear twice in [modules] under two spellings of its path —
-    // the walk's and an `-expose`'s — so the comparison is on the normalised
-    // path, not the string.
-    final modPath = _normPath(mod.filePath);
     for (final td in _renamedTypeDefs(mod, owners[mod.filePath]!)) {
       final key = '${td.name}/${td.typeParams.length}';
-      final prev = definedIn[key];
-      if (prev != null && prev != modPath) {
-        // Two modules of one name (the module name is a file's, not yet a path
-        // from the root) defining one type: the rename cannot separate them.
-        throw Exception(
-            'Module-name collision: "${mod.moduleName}" names both $prev and '
-            '${mod.filePath}, and both define the type ${td.name}.');
-      }
-      definedIn[key] = modPath;
       typeDefs.putIfAbsent(key, () => td);
     }
   }
@@ -865,16 +882,42 @@ void typeCheckProgram(List<DiscoveredModule> modules, {required String rootDir})
 /// procedures. This is the program of def:program that is type-checked and
 /// compiled.
 ///
-/// Between steps 4 and 5, a directory with no entry points is rejected
-/// ([_requireEntryPoints]).
+/// A directory with no self.glp is rejected before linking
+/// ([_requireProgramSelfGlp]), and between steps 4 and 5 a directory with no
+/// entry points is rejected ([_requireEntryPoints]).
 LinkResult linkProgram(List<DiscoveredModule> modules,
     {required String rootDir, String? singleModulePath}) {
+  if (singleModulePath == null) _requireProgramSelfGlp(modules, rootDir);
   final linked = linkAndResolveModules(modules,
       rootDir: rootDir, singleModulePath: singleModulePath);
   if (singleModulePath == null) {
     _requireEntryPoints(modules, linked, rootDir);
   }
   return eliminateDeadCode(linked);
+}
+
+/// A directory with no `self.glp` is not a program (modules.tex, "Entry and
+/// the absence of a boot module": "A directory with no self.glp at all is
+/// rejected for the prior reason: a program is a directory carrying a self.glp
+/// or a self-contained module (Section~\ref{sec:mod-design}), and such a
+/// directory is neither.  A directory of modules that is not a program---a
+/// library reached by ancestor scoping, or a collection of examples compiled
+/// one at a time---is used as those are used, and is not compiled as a program
+/// at all").  Until 2026-10-02 such a directory took the exported procedures
+/// of its root-level modules for its entry points.
+void _requireProgramSelfGlp(List<DiscoveredModule> modules, String rootDir) {
+  final rootNorm = _normPath(rootDir);
+  final hasSelf = modules.any((m) =>
+      m.isSelfGlp && _normPath(File(m.filePath).parent.path) == rootNorm);
+  if (hasSelf) return;
+  throw Exception(
+      'Not a program: $rootDir has no self.glp. A program is a directory '
+      'carrying a self.glp or a self-contained module (modules.tex, '
+      'Module-System Design), so a directory with no self.glp at all is '
+      'rejected (modules.tex, "Entry and the absence of a boot module"); a '
+      'directory of modules that is not a program --- a library, or a '
+      'collection of examples --- is used as those are used, its modules '
+      'loaded one at a time, and is not compiled as a program at all.');
 }
 
 /// A directory with no entry points is not a program (modules.tex §Static
@@ -909,15 +952,11 @@ void _requireEntryPoints(
   if (hasEntryPoint) return;
 
   final rootNorm = _normPath(rootDir);
-  final rootSelfPaths = modules
-      .where((m) =>
+  final rootSelfPath = modules
+      .firstWhere((m) =>
           m.isSelfGlp && _normPath(File(m.filePath).parent.path) == rootNorm)
-      .map((m) => m.filePath)
-      .toList();
-
-  final cause = rootSelfPaths.isEmpty
-      ? 'it has no root self.glp, and no module at its root exports a procedure'
-      : '${rootSelfPaths.first} exports no procedure';
+      .filePath;
+  final cause = '$rootSelfPath exports no procedure';
 
   throw Exception(
       'Not a program: $rootDir has no entry points — $cause. A procedure is an '
@@ -932,10 +971,9 @@ void _requireEntryPoints(
 /// dead-code elimination.
 ///
 /// Renames procedures (`p/n` → `M:p/n`), resolves all calls, and generates
-/// entry-point aliases for the exported procedures of root-level modules
-/// (project-compilation spec §3.4). [rootDir] is the loaded program root: a
-/// module is "root-level" when its nearest enclosing `self.glp` directory is
-/// that root, i.e. it is not contained in any descendant `self.glp` subtree.
+/// entry-point aliases for the exported procedures of the `self.glp` of
+/// [rootDir], the loaded program root; a directory with no `self.glp` gets
+/// none, and [linkProgram] rejects it.
 ///
 /// Returns a [LinkResult] with the renamed program and renamed proc declarations
 /// (needed for SRSW type-based relaxation during compilation). This is the stage
@@ -943,10 +981,15 @@ void _requireEntryPoints(
 /// program actually compiled is [linkProgram] (which also applies step 5).
 LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
     {required String rootDir, String? singleModulePath}) {
+  // Every module is named by its path from the root, so two files of one name
+  // are two modules the renaming cannot tell apart.
+  _requireDistinctModuleNames(modules);
+
   // Step 4 for types: the scope each module's type references resolve in.
   final typeOwners = typeOwnersByModule(modules);
 
-  // Build procedure registry: module name → set of procedure signatures
+  // The procedure registry: module name (its path from the root) → the
+  // signatures of the procedures it defines.
   final registry = <String, Set<String>>{};
   for (final mod in modules) {
     final sigs = <String>{};
@@ -962,20 +1005,12 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
   final ancestorSelfProcs = <String, Map<String, String>>{};
 
   for (final mod in modules) {
-    final modDir = File(mod.filePath).parent.absolute.path;
     final procs = <String, String>{}; // sig → ancestorModuleName
 
     // Walk self.glp modules from inner-most to outer-most.
     // Inner-most wins (first entry in putIfAbsent).
-    // Sort by path length descending (longer path = more nested = inner).
-    final ancestors = selfGlpModules
-        .where((s) {
-          if (identical(s, mod)) return false; // skip self
-          final selfDir = File(s.filePath).parent.absolute.path;
-          return modDir.startsWith(selfDir);
-        })
-        .toList()
-      ..sort((a, b) => b.filePath.length.compareTo(a.filePath.length));
+    final ancestors =
+        _ancestorSelfGlps(mod, selfGlpModules, flaggedOnly: true);
 
     for (final selfMod in ancestors) {
       for (final proc in selfMod.ast.procedures) {
@@ -1015,12 +1050,17 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
   final singleNorm =
       singleModulePath != null ? _normPath(singleModulePath) : null;
 
+  // Step 4's cross-module calls, resolved from the caller's directory, and
+  // the calls that resolve to nothing, every one of them reported together.
+  final resolver = _CrossModuleResolver(modules);
+
   // Process each module
   for (final mod in modules) {
     final localSigs = registry[mod.moduleName]!;
     final modAncestorProcs = ancestorSelfProcs[mod.moduleName] ?? {};
     final keepBare =
         singleNorm != null && _normPath(mod.filePath) == singleNorm;
+    String remote(RemoteGoal g) => resolver.resolve(mod, g);
 
     for (final proc in mod.ast.procedures) {
       // Step 3 (modules.tex §Static Linking): rename every procedure p/n to
@@ -1041,7 +1081,7 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
         // Distribute; manual §19.7).
         final resolvedBody = clause.body
             ?.map((g) => _resolveGoal(
-                g, mod.moduleName, localSigs, modAncestorProcs,
+                g, mod.moduleName, localSigs, modAncestorProcs, remote,
                 keepLocalBare: keepBare))
             .toList();
 
@@ -1075,6 +1115,11 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
     }
   }
 
+  // A cross-module call whose qualifier names no module of the caller's
+  // directory, or a procedure its module does not export, does not resolve,
+  // and the program is rejected (modules.tex, Compilation, fourth step).
+  resolver.throwIfUnresolved();
+
   // Build a program-wide procedure declaration index for mode-aware aliases.
   // Maps 'name/arity' → ProcDecl, collecting from all modules' non-imported decls.
   final declIndex = <String, ProcDecl>{};
@@ -1096,8 +1141,8 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
   // §External access). For a DIRECTORY program, the entry points are the
   // EXPORTED procedures of the ROOT self.glp — the self.glp at the loaded
   // program root — each given an unqualified forwarding alias so an external
-  // goal calls it by plain name. (A directory with no root self.glp falls back
-  // to its root-level modules' exported procedures.)
+  // goal calls it by plain name.  A directory with no root self.glp is not a
+  // program and has none ([_requireProgramSelfGlp]).
   //
   // A SINGLE-MODULE program generates NO aliases: its own procedures are kept
   // bare above (keepBare), and those bare names ARE the entry points, a
@@ -1113,31 +1158,8 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
             m.isSelfGlp && _normPath(File(m.filePath).parent.path) == rootNorm)
         .toList();
 
-    Iterable<DiscoveredModule> aliasSourceModules;
-    if (rootSelfMods.isNotEmpty) {
-      aliasSourceModules = rootSelfMods;
-    } else {
-      final descendantSelfDirs = <String>{};
-      for (final s in selfGlpModules) {
-        final sDir = _normPath(File(s.filePath).parent.path);
-        if (sDir != rootNorm && _dirUnder(sDir, rootNorm)) {
-          descendantSelfDirs.add(sDir);
-        }
-      }
-      bool isRootLevel(DiscoveredModule mod) {
-        if (mod.exposingDir != null) return false; // exposed, not root surface
-        final modDir = _normPath(File(mod.filePath).parent.path);
-        if (!_dirUnder(modDir, rootNorm)) return false; // ancestor above root
-        for (final s in descendantSelfDirs) {
-          if (_dirUnder(modDir, s)) return false; // inside a nested sub-program
-        }
-        return true;
-      }
-      aliasSourceModules = modules.where(isRootLevel);
-    }
-
     final aliasedSigs = <String, String>{}; // sig → owning module (conflict check)
-    for (final mod in aliasSourceModules) {
+    for (final mod in rootSelfMods) {
       for (final proc in mod.ast.procedures) {
         final isExported = mod.ast.procDeclarations.any(
             (d) => d.exported && d.name == proc.name && d.arity == proc.arity);
@@ -1356,16 +1378,141 @@ Guard _resolveGuard(Guard guard, String moduleName, Set<String> localSigs,
   return guard;
 }
 
+/// Every module of [modules] is named by its path from the root
+/// ([DiscoveredModule.moduleName]), and two files of one path name --- a
+/// directory's `self.glp` and a module file of the directory's name beside the
+/// directory --- are two modules step 3 would rename alike, so the program is
+/// rejected naming both.  One file listed twice, by the directory walk and by
+/// an `-expose`, is one module.
+void _requireDistinctModuleNames(List<DiscoveredModule> modules) {
+  final fileOfName = <String, String>{};
+  for (final m in modules) {
+    final path = _normPath(m.filePath);
+    final prev = fileOfName.putIfAbsent(m.moduleName, () => path);
+    if (prev != path) {
+      throw Exception(
+          'Two modules of one name: "${m.moduleName}" is the path from the '
+          'root of both $prev and $path, so the renaming of modules.tex, '
+          'Compilation, third step (every procedure and type renamed M:p and '
+          'M:T, M the module\'s path from the root) cannot tell them apart.');
+    }
+  }
+}
+
+/// The resolution of a cross-module call `M # p` (TGLP modules.tex, "Cross-
+/// module type checking": "The qualifier M is a single child directory or
+/// module file relative to the caller's directory: a directory is entered
+/// through its self.glp, a module file through its own exported
+/// declarations"; Compilation, fourth step: the call "resolves to the procedure
+/// p that the qualifier exports ... renamed to its prefix").
+///
+/// The qualifier names `<caller's directory>/M/self.glp` or
+/// `<caller's directory>/M.glp` (or the `.vglp` source compiled as that
+/// module), and the call resolves to the procedure of the module so named,
+/// `<its path from the root>:p`.  A qualifier naming neither, or both, and a
+/// call to a procedure the module it names does not export, do not resolve:
+/// each is recorded with its file and line, and [throwIfUnresolved] rejects the
+/// program naming them all.  Until 2026-10-02 the qualifier was taken for a
+/// module's name, which was its file's, so `M # p` reached whichever module of
+/// that name the program held, wherever it lay, and a directory's `self.glp`
+/// and a module of its directory's name were one module.
+///
+/// A qualifier naming a file that is not among the program's modules --- an
+/// ancestor `self.glp` above the program's directory calling into a sibling of
+/// it --- is renamed by the same path; the procedure is not in the program, and
+/// a call to it that the entry points reach is undefined in the linked program.
+class _CrossModuleResolver {
+  final Map<String, DiscoveredModule> _byPath = {};
+  final List<String> _unresolved = [];
+
+  _CrossModuleResolver(List<DiscoveredModule> modules) {
+    for (final m in modules) {
+      _byPath.putIfAbsent(_normPath(m.filePath), () => m);
+    }
+  }
+
+  /// The name of the module [call], made in [caller], calls: the prefix its
+  /// procedure is renamed to.
+  String resolve(DiscoveredModule caller, RemoteGoal call) {
+    final q = call.staticModuleName;
+    final inner = call.goal;
+    final where = '${caller.filePath}:${call.line}';
+    final sig = '${inner.functor}/${inner.arity}';
+    final callerDirName = moduleDirectoryName(caller.moduleName,
+        isSelfGlp: isSelfGlpFile(caller.filePath));
+    final name = callerDirName.isEmpty ? q : '$callerDirName/$q';
+    if (inner is RemoteGoal) {
+      _unresolved.add('  $where: $q # $inner: a qualifier of more than one '
+          'segment is future work (modules.tex, Cross-module type checking)');
+      return name;
+    }
+
+    final callerDir = _normPath(File(caller.filePath).parent.path);
+    final dirSelf = ppath.join(callerDir, q, 'self.glp');
+    final glpFile = ppath.join(callerDir, '$q.glp');
+    final vglpFile = ppath.join(callerDir, '$q.vglp');
+    final candidates = <String>[
+      if (File(dirSelf).existsSync()) dirSelf,
+      if (File(glpFile).existsSync())
+        glpFile
+      else if (File(vglpFile).existsSync())
+        vglpFile,
+    ];
+    if (candidates.isEmpty) {
+      final bareDir = Directory(ppath.join(callerDir, q)).existsSync()
+          ? ' (${ppath.join(callerDir, q)}/ has no self.glp, through which a '
+              'directory is entered)'
+          : '';
+      _unresolved.add('  $where: $q # $sig: $q is neither a child directory '
+          'with a self.glp nor a module file of $callerDir$bareDir');
+      return name;
+    }
+    if (candidates.length > 1) {
+      _unresolved.add('  $where: $q # $sig: $q names both ${candidates[0]} '
+          'and ${candidates[1]}');
+      return name;
+    }
+
+    final target = _byPath[_normPath(candidates.single)];
+    if (target == null) return name;
+    final exported = target.ast.procDeclarations.any((d) =>
+        d.exported &&
+        !d.imported &&
+        d.name == inner.functor &&
+        d.arity == inner.arity);
+    if (!exported) {
+      _unresolved.add('  $where: $q # $sig: ${target.filePath} does not '
+          'export $sig');
+    }
+    return target.moduleName;
+  }
+
+  /// Rejects the program if any call [resolve] was given does not resolve.
+  void throwIfUnresolved() {
+    if (_unresolved.isEmpty) return;
+    throw Exception(
+        'Cross-module calls that resolve to no exported procedure '
+        '(modules.tex, Compilation, fourth step: a call M # p, whose '
+        'qualifier is a single child directory or module file relative to '
+        'the caller\'s directory, resolves to the procedure p that the '
+        'qualifier exports --- a directory exports through its self.glp, a '
+        'module file through its own exported declarations):\n'
+        '${_unresolved.join('\n')}');
+  }
+}
+
 /// Resolve a single goal in a clause body.
 ///
 /// Resolution order: local procedure → ancestor self.glp chain → root scope/stdlib.
+/// A cross-module call `M' # p` is resolved by [remote], which gives the name
+/// of the module it calls ([_CrossModuleResolver.resolve]).
 Goal _resolveGoal(Goal goal, String moduleName, Set<String> localSigs,
-    Map<String, String> ancestorSelfProcs,
+    Map<String, String> ancestorSelfProcs, String Function(RemoteGoal) remote,
     {bool keepLocalBare = false}) {
-  // RemoteGoal: M' # p(...) → M':p(...)
+  // RemoteGoal: M' # p(...) → <the path of M'>:p(...)
   if (goal is RemoteGoal) {
     return Goal(
-      '${goal.staticModuleName}:${goal.goal.functor}',
+      '${remote(goal)}:${goal.goal.functor}',
       goal.goal.args,
       goal.line,
       goal.column,
@@ -1375,7 +1522,7 @@ Goal _resolveGoal(Goal goal, String moduleName, Set<String> localSigs,
   // SpawnGoal: resolve inner goal, keep wrapper
   if (goal is SpawnGoal) {
     final resolvedInner = _resolveGoal(
-        goal.innerGoal, moduleName, localSigs, ancestorSelfProcs,
+        goal.innerGoal, moduleName, localSigs, ancestorSelfProcs, remote,
         keepLocalBare: keepLocalBare);
     if (!identical(resolvedInner, goal.innerGoal)) {
       return SpawnGoal(resolvedInner, goal.agentId, goal.line, goal.column);
@@ -1509,7 +1656,6 @@ Clause _makeAliasClause(String name, int arity, String targetName,
   return Clause(head, body: body, line: 0, column: 0);
 }
 
-/// Extract module name from filename (without .glp extension).
 /// The module defining each type name visible to [mod], by the scope order of
 /// modules.tex §Scope construction: the module's own definitions, then the
 /// ancestor `self.glp` chain inner-most first, then whatever an ancestor
@@ -1526,7 +1672,6 @@ Map<String, String> _visibleTypeOwners(
     owners[td.name] = mod.moduleName;
   }
 
-  final modDir = File(mod.filePath).parent.absolute.path;
   // A self.glp is an ancestor scope by its name and directory (modules.tex,
   // Definition "Root, Scope"), whatever it was loaded as.  The module a
   // single-file load names is not flagged [DiscoveredModule.isSelfGlp] even
@@ -1534,17 +1679,7 @@ Map<String, String> _visibleTypeOwners(
   // see its types: loading programs/tests/agent_roundtrip/self.glp left
   // typed_social_agent:inject_msg/5's Response unrenamed and undefined in the
   // flat module, and the type-identity tables were not built.
-  bool isSelfGlp(DiscoveredModule s) =>
-      s.isSelfGlp || ppath.basename(s.filePath) == 'self.glp';
-  final ancestors = modules
-      .where((s) {
-        if (!isSelfGlp(s) || identical(s, mod)) return false;
-        final selfDir = File(s.filePath).parent.absolute.path;
-        return modDir.startsWith(selfDir);
-      })
-      .toList()
-    ..sort((a, b) => b.filePath.length.compareTo(a.filePath.length));
-  for (final s in ancestors) {
+  for (final s in _ancestorSelfGlps(mod, modules)) {
     for (final td in s.ast.typeDefs) {
       owners.putIfAbsent(td.name, () => s.moduleName);
     }
@@ -1561,6 +1696,38 @@ Map<String, String> _visibleTypeOwners(
 
   return owners;
 }
+
+/// The `self.glp` modules of [modules] whose directory is [mod]'s or above it
+/// --- the ancestor scopes of [mod] among the program's modules (modules.tex,
+/// Definition "Root, Scope") --- inner-most first; [mod] itself is not among
+/// them.  A `self.glp` is one by its file name ([isSelfGlpFile]) unless
+/// [flaggedOnly], which takes only the modules discovered as one
+/// ([DiscoveredModule.isSelfGlp]).  Directories are compared normalised and
+/// segment by segment: until 2026-10-02 a string prefix decided it, so
+/// `a/bc/` took `a/b/self.glp` for an ancestor.
+List<DiscoveredModule> _ancestorSelfGlps(
+    DiscoveredModule mod, List<DiscoveredModule> modules,
+    {bool flaggedOnly = false}) {
+  final modPath = _normPath(mod.filePath);
+  final modDir = _normPath(File(mod.filePath).parent.path);
+  final ancestors = <DiscoveredModule>[];
+  for (final s in modules) {
+    if (!(flaggedOnly ? s.isSelfGlp : (s.isSelfGlp || isSelfGlpFile(s.filePath)))) {
+      continue;
+    }
+    if (identical(s, mod) || _normPath(s.filePath) == modPath) continue;
+    if (_dirUnder(modDir, _normPath(File(s.filePath).parent.path))) {
+      ancestors.add(s);
+    }
+  }
+  int depth(DiscoveredModule s) =>
+      ppath.split(_normPath(File(s.filePath).parent.path)).length;
+  ancestors.sort((a, b) => depth(b).compareTo(depth(a)));
+  return ancestors;
+}
+
+/// Whether the file at [path] is a `self.glp`.
+bool isSelfGlpFile(String path) => ppath.basename(path) == 'self.glp';
 
 /// [_visibleTypeOwners] for every module of the program, keyed by file path —
 /// the one key that is unique whatever two files are named.
@@ -1629,19 +1796,6 @@ TypeExpr _renameTypeExpr(
         _renameTypeExpr(expr.hole, owners, typeParams), expr.line, expr.column);
   }
   return expr; // ConstantAlt, ListNilAlt, PrimitiveModeAlt: no type name
-}
-
-String _moduleNameFromFilename(String filename) {
-  if (filename.endsWith('.glp')) {
-    return filename.substring(0, filename.length - 4);
-  }
-  return filename;
-}
-
-/// Extract module name from directory path (last component).
-String _moduleNameFromDirPath(String dirPath) {
-  final parts = dirPath.split(Platform.pathSeparator);
-  return parts.last;
 }
 
 // Ancestor-scope assembly lives in module_hierarchy.dart (buildAncestorScope)

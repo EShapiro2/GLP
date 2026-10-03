@@ -7,8 +7,12 @@
 %% respond has an else-branch, so its reply type has else and the person can
 %% decline its card; greet has none, so its reply type has no else; pick also
 %% has an ordinary clause, which aborts the open ask when it reduces the goal.
+%%
+%% respond and pick are exported: the plays in self.glp call them, and a
+%% cross-module call resolves to a procedure its module exports (TGLP
+%% modules.tex, Compilation, fourth step).
 
-procedure respond(Offer?, Stream(Decision)).
+exported procedure respond(Offer?, Stream(Decision)).
 *(Answer=yes, From?)
 respond(offer(From), [decided(Answer?, From?)]) :-
     ground(From?) | true
@@ -19,7 +23,7 @@ procedure greet(Offer?, Stream(Decision)).
 greet(offer(From), [greeted(Name?, From?)]) :-
     ground(From?), ground(Name?) | true.
 
-procedure pick(Stream(Constant)?, Offer?, Stream(Decision)).
+exported procedure pick(Stream(Constant)?, Offer?, Stream(Decision)).
 pick([go | _], offer(From), [picked(From?)]) :-
     ground(From?) | true.
 *(Choice, From?)

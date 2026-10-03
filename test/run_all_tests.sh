@@ -536,6 +536,53 @@ check "guard_int" "succeeds" "$a12"
 check "guard_compare" "succeeds" "$a12"
 check "guard_known_valid" "Ygr = hello" "$a12"
 
+# --- A12b: The guard real/1, beside integer/1's ---
+# GLP-Spec appendix-guards.tex (12be29b), the guard table beside number:
+# procedure real(Real?), Ground yes --- it succeeds if its argument is a Real,
+# suspends on an unbound reader, fails otherwise (GLP #3 Cowork, 2026-10-02
+# 22:19 UTC).  A Real is a floating-point number: 2.0 and the quotient 4 / 2
+# are Reals and 2 is not, as integer(2.0) fails.  Its runtime cases are
+# glp_runtime/test/engine/real_guard_test.dart's too.
+echo "--- A12b: The guard real/1 ---"
+a12b=$("$REPL_RUN" <<HEREDOC
+$TYPED/real_guard.glp
+real_or_other(2.5, Rr1).
+real_or_other(2.0, Rr2).
+real_or_other(2, Rr3).
+real_or_other(hello, Rr4).
+real_or_other("text", Rr5).
+real_or_other(f(1.5), Rr6).
+kind_of(3, Rk1).
+kind_of(3.0, Rk2).
+half(4, Rh1).
+as_real(3, Ra1).
+in_f(f(W1), Rw1).
+real_or_other(Z1?, Rz1).
+real_or_other(Z2?, Rz2), Z2 = 1.5.
+twice(1.5, Rt1).
+narrow(2.5, Rn1).
+narrow(3, Rn2).
+:quit
+HEREDOC
+2>&1)
+
+check "real/1: a Real succeeds" "Rr1 = real" "$a12b"
+check "real/1: 2.0 is a Real" "Rr2 = real" "$a12b"
+check "real/1: 2, an Integer, fails" "Rr3 = other" "$a12b"
+check "real/1: an atom fails" "Rr4 = other" "$a12b"
+check "real/1: a string fails" "Rr5 = other" "$a12b"
+check "real/1: a structure fails" "Rr6 = other" "$a12b"
+check "real/1 beside integer/1: 3 is an Integer" "Rk1 = integer" "$a12b"
+check "real/1 beside integer/1: 3.0 is a Real" "Rk2 = real" "$a12b"
+check "real/1: the quotient 4 / 2 is a Real" "Rh1 = real" "$a12b"
+check "real/1: '_real' gives a Real" "Ra1 = real" "$a12b"
+check "real/1: an unbound writer fails" "Rw1 = no" "$a12b"
+check "real/1: an unbound reader suspends" "suspended" "$(echo "$a12b" | grep -A1 'Rz1 = ')"
+check "real/1: and resumes on a Real" "Rz2 = real" "$a12b"
+check "real/1 grounds its argument: X? twice after it" "Rt1 = p(1.5, 1.5)" "$a12b"
+check "real/1 narrows Number? to Real?" "Rn1 = ok" "$a12b"
+check "real/1 narrows: an Integer takes otherwise" "Rn2 = no" "$a12b"
+
 # --- A13: Ground equal, ground not-equal ---
 # GLP-Spec appendix-guards.tex (bbff21d): "=?= succeeds if both arguments are
 # ground and equal.  =?\= succeeds if no readers substitution makes them ground
@@ -3262,7 +3309,9 @@ $GLP_DIR/programs/tests/cross_module_inspect_neg/
 :quit
 HEREDOC
 2>&1)
-check "cross-module param-inspect project rejected" "Head of lib:relay" "$output"
+# lib.glp's procedures are renamed by its path from the root (TGLP modules.tex,
+# Compilation, third step).
+check "cross-module param-inspect project rejected" "Head of tests/cross_module_inspect_neg/lib:relay" "$output"
 check_not "cross-module project not loaded green" "Loaded program: .*cross_module_inspect_neg" "$output"
 
 echo ""
@@ -3582,8 +3631,10 @@ HEREDOC
 2>&1)
 check "X4 collision rejected" "collision" "$x4"
 check_not "X4 not loaded" "Loaded program" "$x4"
-check "X4 names module one" "\"one\"" "$x4"
-check "X4 names module two" "\"two\"" "$x4"
+# Each module is named by its path from the root (TGLP modules.tex,
+# Compilation, third step): a/one.glp is tests/expose/collide/a/one.
+check "X4 names module one" "\"tests/expose/collide/a/one\"" "$x4"
+check "X4 names module two" "\"tests/expose/collide/b/two\"" "$x4"
 
 # --- X5: exposed module lies outside the loaded subtree — still resolves ---
 # basic/util/strutil.glp is a sibling of basic/leaf/ (outside leaf/'s subtree),
@@ -4115,7 +4166,9 @@ self_module(M), decompose_module(M?, K, S, C).
 :quit
 HEREDOC
 2>&1)
-check "SK6 a mini-app calling send_to_net/1 is refused a certificate naming the call" "CERTIFICATE REFUSED.*app:leak/1 calls mad_predicates:send_to_net/1" "$sk6"
+# The calls are named by their procedures' renamed names, each module's path
+# from the root (TGLP modules.tex, Compilation, third step).
+check "SK6 a mini-app calling send_to_net/1 is refused a certificate naming the call" "CERTIFICATE REFUSED.*tests/cert_refused/app:leak/1 calls system/mad_predicates:send_to_net/1" "$sk6"
 check "SK6 a wrapper reaching send_to_user/1 does not pass" "app:wrapper/1 calls send_to_user/1" "$sk6"
 check "SK6 the refused module has no compiler's key" "_decompose_module/4: module cert_refused carries no certificate" "$sk6"
 
@@ -4131,7 +4184,11 @@ echo ""
 # end reports pending_link and authorises, and the value is delivered (IGLP
 # madglp-spec \S Held Links).  MB2: a module value shipped from one agent to
 # another is activated there by run/3 under the type identity find_type/2
-# gives (GLP-Spec appendix-guards, "Dynamic activation").
+# gives (GLP-Spec appendix-guards, "Dynamic activation"): a certified
+# mini-app, hello/1 alone (programs/tests/mad_ship_hello), which :artefact
+# writes beside alice's program and alice reads with load_file/2, since the
+# machine activates no program whose certificate does not verify (GSG
+# s6-security.tex, G1).
 echo "=== Section MB: multi-agent boot programs (:boot) ==="
 
 mb1=$("$REPL_RUN" <<HEREDOC
@@ -4144,11 +4201,21 @@ check "MB1 the holder's assignment is held and reported, from the forwarding fri
 check "MB1 the anchor's incoming assignment is held and reported, from the holder" "\[alice\] held(alice, _w(alice, [0-9]*), carol)" "$mb1"
 check "MB1 both ends authorised, the value is delivered at the anchor" "\[alice\] delivered(hello_from_carol)" "$mb1"
 
+# MB2's artefact is a build output, ignored by git, written before the boot and
+# removed after it, as Section SL's are.  Until 2026-10-02 alice shipped her
+# own program, which calls send_to_net/1 and send_to_user/1 and is refused a
+# certificate, and since B6 (e5da7ccb) bob's run/3 refused to activate it
+# (GLP #3 Cowork, 2026-10-02 20:58 UTC, "20:31" item 2).
+MB_SHIP="$GLP_DIR/programs/tests/mad_ship_module"
+rm -f "${MB_SHIP:?}"/*.glpw
 mb2=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/tests/mad_ship_hello $MB_SHIP
 :boot $GLP_DIR/programs/tests/mad_ship_module_boot.glp
 :quit
 HEREDOC
 2>&1)
+rm -f "${MB_SHIP:?}"/*.glpw
+check "MB2 :artefact writes the certified mini-app beside alice's program" "Wrote $MB_SHIP/mad_ship_hello.glpw --- certified under [0-9a-f]\{64\}" "$mb2"
 check "MB2 the boot settles with two agents" "Boot settled: 2 agents" "$mb2"
 check "MB2 a shipped module value is activated by run/3 under find_type's identity" "\[bob\] ran(\[done\])" "$mb2"
 
@@ -5365,8 +5432,8 @@ echo ""
 # =============================================================================
 # programs/sglp/test_sglp.sh holds sGLP's checks of its programs --- the monitor
 # over when_idle, the law of its releases, the social graph's runs, the
-# circulation's replay on a fixed log --- against sGLP's paper, and prints one
-# summary line; this section runs it and folds its
+# circulation's replay on a fixed log, coins among friends' runs --- against
+# sGLP's paper, and prints one summary line; this section runs it and folds its
 # two counts into the suite's, as Section JX does jurix's.  Its runs take some
 # minutes.
 echo "=== Section SGLP: sGLP in GLP ==="

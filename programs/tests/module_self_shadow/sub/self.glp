@@ -1,3 +1,8 @@
 
 procedure get_tag(Tag).
 get_tag(inner).
+
+%% The directory's interface: inner_tag/1, forwarded to inner.glp.
+imported procedure inner#inner_tag(Tag).
+exported procedure inner_tag(Tag).
+inner_tag(T?) :- inner # inner_tag(T).

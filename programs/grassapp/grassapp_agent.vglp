@@ -108,7 +108,7 @@ AgentContent ::= connected(Constant)
                ; unfriended(Constant)
                ; rejected
                ; rejected(Constant)
-               ; received(Constant, Constant)
+               ; received(Key, Constant)
                ; balance_report(Constant, Constant, Constant, Integer)
                ; balances_synced(Constant)
                ; date_advanced(Constant)
@@ -135,7 +135,7 @@ AgentMsg     ::= msg(Constant, Constant, AgentContent).
 %% carrying GroupMsg.
 OutputEntry ::= person_output(Stream(AgentMsg)?)
               ; net_output(NetOutStream?)
-              ; output(Constant, OutputStream?)
+              ; output(Key, OutputStream?)
               ; group_entry(GroupKey, Stream(GroupMsg)?).
 OutputsList ::= [] ; [OutputEntry|OutputsList].
 
@@ -210,8 +210,8 @@ respond_escrow_cancel(offer(Target), Answer?) :-
 %% Classify an incoming proposal.  A redemption is settled by the program;
 %% only the normal trade is a question for the person, and it spawns a
 %% responder rather than sending the offer to the mediator.
-procedure trade_dispatch(Constant?, Key?, Constant?, Lot?, Stream(Bond)?, TradeResponse,
-    Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Constant)).
+procedure trade_dispatch(Constant?, Key?, Key?, Lot?, Stream(Bond)?, TradeResponse,
+    Stream(Bond)?, Integer?, Constant?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Constant)).
 
 %% Redemption — the issuer must fulfil: auto-accept with the requested bonds,
 %% or decline with a menu of what it does hold.
@@ -230,7 +230,7 @@ trade_dispatch(normal, Id, From, WantSpec, OfferedBonds, TradeResp?,
 
 %% Open the escrow.  The cancel signal is the person's to bind, so it goes to a
 %% responder rather than to the mediator's pending table.
-procedure do_deposit_escrow_result(Constant?, Key?, Constant?, Constant?, Constant?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?).
+procedure do_deposit_escrow_result(Constant?, Key?, Key?, Constant?, Constant?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)?, Integer?, Constant?, UserInStream?, NetInStream?, OutputsList?).
 do_deposit_escrow_result(ok, Id, Target, ReleaseTime, Coin, Maturity, Amount, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs) :-
     ground(Coin?), ground(Maturity?), ground(Amount?) |
     escrow(ReleaseTime?, EscrowDates?, Selected?, CancelSignal?, BenResult, DepResult),
@@ -251,7 +251,7 @@ do_deposit_escrow_result(fail, Id, Target, _, _, _, _, Selected, Remaining, Next
 %% deposit path opens a fresh channel onto it.
 %% =============================================================================
 
-procedure agent(Key?, UserInStream?, NetInStream?, OutputsList?, Stream(Bond)?, Constant?, Constant?, Stream(Constant)).
+procedure agent(Key?, UserInStream?, NetInStream?, OutputsList?, Stream(Bond)?, Integer?, Constant?, Stream(Constant)).
 
 %% --- Reactive: network messages ---
 
@@ -377,8 +377,8 @@ agent(Id, [accept_group(GroupId, ChRead)|UserIn], NetIn, Outs, Holdings, NextSer
     await_group_channel(Id?, GroupId?, ChRead?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% My cold call was answered (injected by inject_msg).
-agent(Id, [msg(From, Id1, response(Resp))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
-    Id? =?= Id1? |
+agent(Id, [response(From, Resp)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+    ground(Id?) |
     handle_response(Resp?, From?, Outs?, Outs1, NetIn?, NetIn1),
     agent(Id?, UserIn?, NetIn1?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
@@ -524,7 +524,7 @@ agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, []) :-
 agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(Target?) |
     send_net(msg(Target?, friend_request(Id?, Resp)), Outs?, Outs1),
-    inject_msg(Resp?, Target?, Id?, UserIn?, UserIn1),
+    inject_msg(Resp?, Target?, UserIn?, UserIn1),
     agent(Id?, UserIn1?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% Unfriend (End friend): tear down the friend channel, sending a final

@@ -1,0 +1,4 @@
+exported procedure go(Integer).
+go(X?) :- helper(X).
+procedure helper(Integer).
+helper(1).

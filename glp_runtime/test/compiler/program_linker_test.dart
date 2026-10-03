@@ -251,8 +251,12 @@ void main() {
 
   group('Module name-collision (dedicated fixture)', () {
     // Sole coverage of module-local name-collision handling: mod_a and mod_b
-    // each define dup/1; linking must disambiguate into mod_a:dup and mod_b:dup
+    // each define dup/1; linking must disambiguate them, each renamed by its
+    // module's path from the root (modules.tex, Compilation, third step), into
+    // tests/linker_collision/mod_a:dup and tests/linker_collision/mod_b:dup
     // with no bare collision. See ../programs/tests/linker_collision/.
+    const a = 'tests/linker_collision/mod_a:dup';
+    const b = 'tests/linker_collision/mod_b:dup';
     late Program linked;
 
     setUp(() {
@@ -265,8 +269,8 @@ void main() {
 
     test('colliding procedures are disambiguated by module prefix', () {
       final procNames = linked.procedures.map((p) => p.name).toSet();
-      expect(procNames, contains('mod_a:dup'));
-      expect(procNames, contains('mod_b:dup'));
+      expect(procNames, contains(a));
+      expect(procNames, contains(b));
     });
 
     test('no bare collision; both prefixed names exist', () {
@@ -276,27 +280,32 @@ void main() {
           .toSet();
       // No bare 'dup' among prefixed procedures.
       expect(prefixedProcs.contains('dup'), isFalse);
-      expect(prefixedProcs, contains('mod_a:dup'));
-      expect(prefixedProcs, contains('mod_b:dup'));
+      expect(prefixedProcs, contains(a));
+      expect(prefixedProcs, contains(b));
     });
 
     test('both colliding definitions survive as distinct procedures', () {
       final dupProcs =
           linked.procedures.where((p) => p.name.endsWith(':dup')).toList();
       expect(dupProcs.length, greaterThanOrEqualTo(2),
-          reason: 'mod_a:dup and mod_b:dup should both exist');
+          reason: '$a and $b should both exist');
       final dupNames = dupProcs.map((p) => p.name).toSet();
-      expect(dupNames, contains('mod_a:dup'));
-      expect(dupNames, contains('mod_b:dup'));
+      expect(dupNames, contains(a));
+      expect(dupNames, contains(b));
     });
   });
 
   group('Dead-code elimination (step 5, dedicated fixture)', () {
-    // boot exports `run`, which calls `helper`; `dead` is never called. The
-    // pure link transform keeps every renamed procedure; eliminateDeadCode
-    // (the step-5 hand-off to the compiler) keeps only the reachable ones.
-    // See ../programs/tests/linker_dce/.
+    // boot exports `run`, which calls `helper`; `dead` is never called; the
+    // directory's self.glp exports `run` by forwarding it to boot (a directory
+    // with no self.glp is not a program). The pure link transform keeps every
+    // renamed procedure; eliminateDeadCode (the step-5 hand-off to the
+    // compiler) keeps only the reachable ones. See ../programs/tests/linker_dce/.
     const dceRoot = '../programs/tests/linker_dce';
+
+    // Each procedure is renamed by its module's path from the root
+    // (modules.tex, Compilation, third step).
+    const boot = 'tests/linker_dce/boot';
 
     test('pure link (linkAndResolveModules) keeps all renamed procedures, including dead ones', () {
       final modules = discoverProgram(dceRoot, rootSelfGlpPath: rootSelfPath);
@@ -305,9 +314,9 @@ void main() {
           .procedures
           .map((p) => p.name)
           .toSet();
-      expect(names, contains('boot:run'));
-      expect(names, contains('boot:helper'));
-      expect(names, contains('boot:dead'));
+      expect(names, contains('$boot:run'));
+      expect(names, contains('$boot:helper'));
+      expect(names, contains('$boot:dead'));
     });
 
     test('linkProgram (with step-5 DCE) keeps reachable procedures and prunes unreachable ones', () {
@@ -315,14 +324,16 @@ void main() {
       final pruned = linkProgram(modules, rootDir: dceRoot);
       final names = pruned.program.procedures.map((p) => p.name).toSet();
       expect(names, contains('run'), reason: 'entry-point alias kept');
-      expect(names, contains('boot:run'), reason: 'root export kept');
-      expect(names, contains('boot:helper'),
+      expect(names, contains('tests/linker_dce:run'),
+          reason: "the self.glp's forwarder kept");
+      expect(names, contains('$boot:run'), reason: 'root export kept');
+      expect(names, contains('$boot:helper'),
           reason: 'reachable from run kept');
-      expect(names, isNot(contains('boot:dead')),
+      expect(names, isNot(contains('$boot:dead')),
           reason: 'unreachable pruned');
       // Declarations are pruned in step with their procedures.
       final declNames = pruned.procDeclarations.map((d) => d.name).toSet();
-      expect(declNames, isNot(contains('boot:dead')));
+      expect(declNames, isNot(contains('$boot:dead')));
     });
   });
 
@@ -362,18 +373,20 @@ void main() {
     test('whole subtree links; nested module present by prefixed name', () {
       final modules =
           discoverProgram(nestedRoot, rootSelfGlpPath: rootSelfPath);
+      // Each module is named by its path from the root (modules.tex,
+      // Compilation, third step).
       final names = modules.map((m) => m.moduleName).toSet();
-      expect(names, contains('boot'));
-      expect(names, contains('leaf'));
+      expect(names, contains('tests/linker_nested/boot'));
+      expect(names, contains('tests/linker_nested/child/leaf'));
 
-      // Renaming is a pre-DCE concern: the nested leaf:greet is not reached
-      // from the root export boot:play, so linkProgram would prune it. Inspect
-      // the pure rename step.
+      // Renaming is a pre-DCE concern: the nested leaf's greet is not reached
+      // from the root export play, so linkProgram would prune it. Inspect the
+      // pure rename step.
       final linked = linkAndResolveModules(modules, rootDir: nestedRoot).program;
       final procNames = linked.procedures.map((p) => p.name).toSet();
       // Both modules' procedures are renamed and present.
-      expect(procNames, contains('boot:play'));
-      expect(procNames, contains('leaf:greet'));
+      expect(procNames, contains('tests/linker_nested/boot:play'));
+      expect(procNames, contains('tests/linker_nested/child/leaf:greet'));
     });
 
     test("root's exported play is aliased; nested export is not", () {
@@ -398,8 +411,8 @@ void main() {
           .where((p) => !p.name.contains(':'))
           .map((p) => p.name)
           .toSet();
-      // When child/ is the loaded root, leaf is root-level: greet is aliased.
-      expect(procNames, contains('leaf:greet'));
+      // When child/ is the loaded root, its self.glp exports greet: aliased.
+      expect(procNames, contains('tests/linker_nested/child/leaf:greet'));
       expect(bare, contains('greet'));
     });
   });

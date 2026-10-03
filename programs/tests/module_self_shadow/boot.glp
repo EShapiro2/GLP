@@ -1,7 +1,12 @@
 
-imported procedure inner#inner_tag(Tag).
+%% inner_tag/1 lives in sub/inner.glp and is exported by sub/self.glp, through
+%% which a directory is entered (TGLP modules.tex, Cross-module type checking:
+%% the qualifier of M # p is a child directory or module file of the caller's
+%% directory).  Until 2026-10-02 this called inner # inner_tag, which the
+%% linker resolved by the file name inner.glp, a directory below.
+imported procedure sub#inner_tag(Tag).
 
 exported procedure test_shadow(Tag, Tag).
 test_shadow(OuterT?, InnerT?) :-
     get_tag(OuterT),
-    inner # inner_tag(InnerT).
+    sub # inner_tag(InnerT).

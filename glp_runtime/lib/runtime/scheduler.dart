@@ -93,97 +93,139 @@ class Scheduler {
     _nextDisplayId = 1;
   }
 
+  /// [term] as the trace, a failed goal and the suspended list show it: a
+  /// binding's chain followed, a cell met again on [path] shown
+  /// `<circular>`; a list in brackets, its elements comma-separated and a tail
+  /// that is no further cell after ` | `; a conjunction in parentheses; a
+  /// variable by its display name, a reader marked `?` where [markReaders].
+  ///
+  /// The text is written with a stack of its own, piece by piece in the order
+  /// the recursion it replaces wrote it, the same cells added to [path]
+  /// and the same display names given out, in the same order, so the text is
+  /// the same.  Until 2026-10-02 that recursion took a Dart frame or more for
+  /// each element of a list whose tail is a variable, as every tail of a list
+  /// built on the heap is, and a failed goal holding a list of 50,000
+  /// elements overflowed the Dart stack in its own text (long_list_walks_test).
   String _formatTerm(Term term, {bool markReaders = true, Set<HeapCell>? path}) {
-    path ??= <HeapCell>{};
-
-    // Dereference in a loop to avoid recursive ? markers
-    var current = term;
-
-    // Follow VarRef chains with cycle detection
-    while (current is VarRef) {
-      final addr = current.addr;
-      
-      // Check for cycle
-      if (path.contains(addr)) {
-        return '<circular>';
+    final seen = path ?? <HeapCell>{};
+    final out = StringBuffer();
+    // What remains to be written, the next on top: a term to format, a piece
+    // of text, or the tail of a list cell whose head has just been written.
+    final pending = <Object>[term];
+    while (pending.isNotEmpty) {
+      final next = pending.removeLast();
+      if (next is String) {
+        out.write(next);
+        continue;
+      }
+      if (next is _ListTail) {
+        // What follows a list element is decided by its cell's tail, after the
+        // element, whose text may have added to [seen].
+        final tail = next.tail;
+        if (tail is ConstTerm && (tail.value == 'nil' || tail.value == null)) {
+          out.write(']'); // Proper list ending
+        } else if (tail is StructTerm && tail.functor == '.') {
+          // The next cell: its element after a comma.
+          final head = tail.args[0];
+          final rest = tail.args[1];
+          out.write(', ');
+          pending
+            ..add(_ListTail(rest))
+            ..add(head);
+        } else if (tail is VarRef && seen.contains(tail.addr)) {
+          out.write(' | <circular>]'); // Circular tail
+        } else {
+          // A variable tail, or a tail that is no list
+          out.write(' | ');
+          pending
+            ..add(']')
+            ..add(tail);
+        }
+        continue;
       }
 
-      // Try to dereference
-      final derefResult = rt.heap.derefAddr(addr);
-      
-      if (derefResult is VarRef) {
-        // Still unbound - stop here
-        break;
-      } else if (derefResult is Term) {
-        // Bound to a value - follow it
-        path.add(addr);
-        current = derefResult;
-      } else {
-        // VariableEntry or other - stop
-        break;
-      }
-    }
+      // Dereference in a loop to avoid recursive ? markers
+      var current = next as Term;
+      var circular = false;
 
-    // Format the dereferenced value
-    if (current is ConstTerm) {
-      if (current.value == 'nil') return '[]';
-      if (current.value == null) return '<null>';
-      return current.value.toString();
-    } else if (current is VarRef) {
-      final addr = current.addr;
-      final name = _getVarDisplayName(addr);
-      final isReader = rt.heap.isReader(addr);
-      return (markReaders && isReader) ? '$name?' : name;
-    } else if (current is StructTerm) {
-      // Special formatting for list structures
-      if (current.functor == '.' && current.args.length == 2) {
-        final elements = <String>[];
-        var listTerm = current;
+      // Follow VarRef chains with cycle detection
+      while (current is VarRef) {
+        final addr = current.addr;
 
-        while (true) {
-          if (listTerm is! StructTerm || listTerm.functor != '.') break;
-
-          final head = listTerm.args[0];
-          final tail = listTerm.args[1];
-
-          // Format head element with cycle detection
-          String headStr = _formatTerm(head, markReaders: markReaders, path: path);
-          elements.add(headStr);
-
-          // Process tail
-          if (tail is ConstTerm && (tail.value == 'nil' || tail.value == null)) {
-            break; // Proper list ending
-          } else if (tail is StructTerm && tail.functor == '.') {
-            listTerm = tail;
-          } else if (tail is VarRef) {
-            // Check for circular tail
-            if (path.contains(tail.addr)) {
-              return '[${elements.join(', ')} | <circular>]';
-            }
-            final tailStr = _formatTerm(tail, markReaders: markReaders, path: path);
-            return '[${elements.join(', ')} | $tailStr]';
-          } else {
-            // Non-list tail
-            final tailStr = _formatTerm(tail, markReaders: markReaders, path: path);
-            return '[${elements.join(', ')} | $tailStr]';
-          }
+        // Check for cycle
+        if (seen.contains(addr)) {
+          circular = true;
+          break;
         }
 
-        return '[${elements.join(', ')}]';
+        // Try to dereference
+        final derefResult = rt.heap.derefAddr(addr);
+
+        if (derefResult is VarRef) {
+          // Still unbound - stop here
+          break;
+        } else if (derefResult is Term) {
+          // Bound to a value - follow it
+          seen.add(addr);
+          current = derefResult;
+        } else {
+          // VariableEntry or other - stop
+          break;
+        }
+      }
+      if (circular) {
+        out.write('<circular>');
+        continue;
       }
 
-      // Special formatting for conjunction
-      if (current.functor == ',' && current.args.length == 2) {
-        final left = _formatTerm(current.args[0], markReaders: markReaders, path: path);
-        final right = _formatTerm(current.args[1], markReaders: markReaders, path: path);
-        return '($left, $right)';
+      // Format the dereferenced value
+      if (current is ConstTerm) {
+        if (current.value == 'nil') {
+          out.write('[]');
+        } else if (current.value == null) {
+          out.write('<null>');
+        } else {
+          out.write(current.value.toString());
+        }
+      } else if (current is VarRef) {
+        final addr = current.addr;
+        final name = _getVarDisplayName(addr);
+        final isReader = rt.heap.isReader(addr);
+        out.write((markReaders && isReader) ? '$name?' : name);
+      } else if (current is StructTerm) {
+        if (current.functor == '.' && current.args.length == 2) {
+          // Special formatting for list structures: the first element, and
+          // what follows it decided by the cell's tail ([_ListTail]).
+          final head = current.args[0];
+          final tail = current.args[1];
+          out.write('[');
+          pending
+            ..add(_ListTail(tail))
+            ..add(head);
+        } else if (current.functor == ',' && current.args.length == 2) {
+          // Special formatting for conjunction
+          out.write('(');
+          pending
+            ..add(')')
+            ..add(current.args[1])
+            ..add(', ')
+            ..add(current.args[0]);
+        } else {
+          // General structure formatting, the first argument on top
+          out
+            ..write(current.functor)
+            ..write('(');
+          pending.add(')');
+          for (var i = current.args.length - 1; i >= 0; i--) {
+            pending.add(current.args[i]);
+            if (i > 0) pending.add(', ');
+          }
+        }
+      } else {
+        out.write(current.toString());
       }
-
-      // General structure formatting with cycle detection
-      final args = current.args.map((a) => _formatTerm(a, markReaders: markReaders, path: path)).join(', ');
-      return '${current.functor}($args)';
     }
-    return current.toString();
+    return out.toString();
   }
 
   String _formatGoal(int goalId, String procName, CallEnv? env) {
@@ -555,4 +597,12 @@ class Scheduler {
         : lastStatus;
     return DrainResult.deferred(totalCycles, status, lastSuspended, lastBlockingReaders);
   }
+}
+
+/// The tail of a list cell whose element [Scheduler._formatTerm] has just
+/// written: what follows the element is decided by it once the element is
+/// written.
+class _ListTail {
+  final Term tail;
+  const _ListTail(this.tail);
 }

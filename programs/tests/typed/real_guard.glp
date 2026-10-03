@@ -1,0 +1,45 @@
+% real_guard.glp - The guard real/1, beside integer/1's guard_reader.glp and
+% otherwise_guard.glp.  GLP-Spec appendix-guards.tex (12be29b), the guard
+% table: procedure real(Real?), Ground yes --- it succeeds if its argument is a
+% Real, suspends on an unbound reader, fails otherwise.  A Real is a
+% floating-point number, so 2.0 and the quotient 4 / 2 are Reals and 2 is not.
+
+exported procedure real_or_other(_?, Constant).
+real_or_other(X, real) :- real(X?) | true.
+real_or_other(_, other) :- otherwise | true.
+
+exported procedure only_real(_?, Constant).
+only_real(X, yes) :- real(X?) | true.
+
+% integer/1 and real/1 between them tell every Number apart.
+exported procedure kind_of(Number?, Constant).
+kind_of(X, integer) :- integer(X?) | true.
+kind_of(X, real) :- real(X?) | true.
+
+exported procedure half(Number?, Constant).
+half(X, K?) :- Y := X? / 2, kind_of(Y?, K).
+
+exported procedure as_real(Number?, Constant).
+as_real(X, K?) :- Y := real(X?), kind_of(Y?, K).
+
+% A goal writer inside the argument: the guard reads an unbound writer.
+exported procedure in_f(_?, Constant).
+in_f(f(X), yes) :- real(X?) | true.
+in_f(_, no) :- otherwise | true.
+
+% A variable the clause alone holds, which no readers substitution binds.
+exported procedure held(_, Constant).
+held(f(X), yes) :- real(X?) | true.
+
+% Ground yes: X? may occur more than once after the guard.
+exported procedure twice(_?, _).
+twice(X, Y?) :- real(X?) | Y = p(X?, X?).
+
+% The guard narrows a Number? occurrence to Real? (TGLP typed-glp.tex, "Type
+% checking of guards").
+procedure takes_real(Real?, Constant).
+takes_real(_, ok).
+
+exported procedure narrow(Number?, Constant).
+narrow(X, R?) :- real(X?) | takes_real(X?, R).
+narrow(_, no) :- otherwise | true.

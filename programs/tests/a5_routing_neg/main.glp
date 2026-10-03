@@ -1,7 +1,7 @@
 
-% Entry union WITHOUT user_output (only net_output).
-Note ::= note(Constant).
-OutEntry ::= net_output(Stream(Note)?).
+% The entry union WITHOUT user_output (only net_output), OutEntry, and Note
+% are defined in the directory's self.glp, the program's interface, which
+% forwards go/3 here.
 
 % Routes a Note to the user via the lib send_user (resolved through the root
 % -expose).  OutEntry has no user_output, so send_user's user_output-destructuring

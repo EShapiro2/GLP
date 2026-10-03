@@ -9,11 +9,14 @@
 %%
 %% Generic in the compiled program's answer type A, escrow type E and context
 %% type X, and in nothing else: a compiled program instantiates the three at
-%% its own, and no line here is program-specific.  The clauses are the
-%% Definition's, letter for letter; a reader who diffs the emitted source
-%% against its listing finds them equal.  The pending table's answer/4 and
-%% close/3 are the program's: the compiler emits their clauses, one per
-%% volition-guarded clause, ahead of the search clauses given here.
+%% its own, and no line here is program-specific.  This is the mediator of the
+%% deployed compilation, which the paper no longer prints: the paper's
+%% canonical compilation (Definition "Canonical Compilation") has a dispatcher
+%% and construct processes in its place, `dispatcher.glp`.  This file stays
+%% until each owner ports its sources to the paper's syntax.  The pending
+%% table's answer/4 and close/3 are the program's: the compiler emits their
+%% clauses, one per volition-guarded clause, ahead of the search clauses given
+%% here.
 
 %% ---------------------------------------------------------------------------
 %% The mediator

@@ -2,16 +2,19 @@
 %% paper, the repository svGLP-Stochastic-Volitional-GLP at d2f64b6, Section 4).
 %%
 %%   monitor.glp    the monitor, over the guard when_idle;
-%%   person.glp     the person process, and the construct process of a compiled
-%%                  program in a simulation;
+%%   person.glp     the person processes, and the construct process of a
+%%                  compiled program in a simulation;
 %%   social_graph/  the Grassroots Social Graph in the translated form, its
 %%                  harness and its run script;
+%%   coins/         coins among friends in the translated form, its harness and
+%%                  its run script;
 %%   tests/         the tests of the suite's sGLP block (test_sglp.sh).
 %%
 %% Both modules are exposed to the subtree: the translated programs call
 %% construct/3, and their harnesses spawn the monitor and the person processes.
 %% A run of the social graph is a call of social_graph/4, or of social_graph/6
-%% for another mix, with this directory loaded (social_graph/run.sh).
+%% for another mix, with this directory loaded (social_graph/run.sh); a run of
+%% coins among friends is a call of coins/7 (coins/run.sh).
 -expose(monitor).
 -expose(person).
 
@@ -33,6 +36,36 @@ span(week, 604800).
 span(weeks, 604800).
 span(year, 31557600).
 span(years, 31557600).
+
+%% one_of, length and nth, ordinary GLP, shared by the examples' profiles (the
+%% social graph's, moved here from social_graph/graph.glp for coins among
+%% friends, sGLP's code task of 2026-10-02 15:24 UTC, item 2): nth's clause for
+%% the end of the list in the form that checks, nth(_, [], _?) (TGLP,
+%% "Anonymous variables": an output the clause never produces).
+
+%% one_of(Xs?, S?, X): X is drawn uniformly from Xs by random from the seed S.
+procedure(X) one_of(Stream(X)?, Integer?, X).
+one_of(Xs, S, X?) :- ground(Xs?) |
+    length(Xs?, N), random(S?, N?, K, _), nth(K?, Xs?, X).
+
+%% length(Xs?, N): N is the number of elements of Xs, counted by length/3 in
+%% an accumulator, tail-recursively, so that a list of n elements leaves no n
+%% additions suspended at once, each waiting on the count of the rest, as the
+%% count it replaces did (sGLP's code task of 2026-10-02 20:58 UTC, S2).
+procedure(X) length(Stream(X)?, Integer).
+length(Xs, N?) :- length(Xs?, 0, N).
+
+%% length(Xs?, A?, N): N is A plus the number of elements of Xs.
+procedure(X) length(Stream(X)?, Integer?, Integer).
+length([], A, A?).
+length([_|Xs], A, N?) :- A1 := A? + 1, length(Xs?, A1?, N).
+
+%% nth(K?, Xs?, X): X is the K-th element of Xs, counting from 1.  Past the
+%% end of Xs nothing is assigned to X.
+procedure(X) nth(Integer?, Stream(X)?, X).
+nth(1, [X|_], X?).
+nth(K, [_|Xs], X?) :- K? > 1 | K1 := K? - 1, nth(K1?, Xs?, X).
+nth(_, [], _?).
 
 %% social_graph(Agents?, Count?, Unit?, Seed?): the social graph's run with
 %% Agents agents until Count Units from seed Seed, with the run declaration's
@@ -63,3 +96,16 @@ exported procedure social_graph_draw(Integer?, Integer?, Integer?, Integer?,
                                      Draw).
 social_graph_draw(N, Seed, Hom, Wary, D?) :-
     social_graph # draw(N?, Seed?, Hom?, Wary?, D).
+
+%% coins(Agents?, Friends?, Count?, Unit?, Seed?, Spend?, Cred?): coins among
+%% friends with Agents agents until Count Units from seed Seed (coins/harness.glp;
+%% sGLP's code task of 2026-10-02 15:24 UTC, item 3): agent a's friends are the
+%% a-th list of Friends, in increasing order; an agent is a spender for its
+%% first draw K =< Spend and cautious for its second K =< Cred, K of 1..100, so
+%% the run declaration's mix is 50 and 50.
+imported procedure coins#run(Integer?, Stream(Peers)?, Number?, Span?, Integer?,
+                             Integer?, Integer?).
+exported procedure coins(Integer?, Stream(Peers)?, Number?, Span?, Integer?,
+                         Integer?, Integer?).
+coins(N, Fss, C, U, Seed, Spend, Cred) :-
+    coins # run(N?, Fss?, C?, U?, Seed?, Spend?, Cred?).

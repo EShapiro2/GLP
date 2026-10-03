@@ -93,7 +93,7 @@ procedure trust_act(String?, Key?, AgentToUserStream?, Stream(UserInMsg)).
 trust_act(Key, Id, Outs, [msg(person, Id?, trust(Key?)) | Cmds?]) :-
     ground(Key?) | home(Id?, Outs?, Cmds).
 
-procedure invite_act(Constant?, Constant?, Key?, AgentToUserStream?, Stream(UserInMsg)).
+procedure invite_act(Constant?, Key?, Key?, AgentToUserStream?, Stream(UserInMsg)).
 invite_act(App, Friend, Id, Outs, [msg(person, Id?, invite(App?, Friend?)) | Cmds?]) :-
     ground(App?), ground(Friend?) | home(Id?, Outs?, Cmds).
 

@@ -1,0 +1,6 @@
+# The graph of test (ix) (test_sglp.sh): four agents, whose friends are
+# 1: [2, 3], 2: [1, 3], 3: [1, 2, 4], 4: [3].  One edge per line, "p q".
+1 2
+1 3
+2 3
+3 4

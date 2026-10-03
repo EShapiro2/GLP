@@ -62,8 +62,16 @@ void main() {
   test('the canonical print carries the anonymous output', () {
     final dir = Directory.systemTemp.createTempSync('glp_printer_');
     try {
-      File('${dir.path}/main.glp').writeAsStringSync('''
+      // The program's self.glp exports go/3, forwarding it to main.glp: a
+      // directory with no self.glp is not a program (TGLP modules.tex, "Entry
+      // and the absence of a boot module").
+      File('${dir.path}/self.glp').writeAsStringSync('''
 $_handle
+imported procedure main#go(Integer?, Handle, Stream(Integer)).
+exported procedure go(Integer?, Handle, Stream(Integer)).
+go(N, H?, Out?) :- main # go(N?, H, Out).
+''');
+      File('${dir.path}/main.glp').writeAsStringSync('''
 exported procedure go(Integer?, Handle, Stream(Integer)).
 go(N, H?, Out?) :- p(N?, H, Out).
 
