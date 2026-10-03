@@ -115,3 +115,22 @@ exported procedure coins(Integer?, Stream(Peers)?, Number?, Span?, Integer?,
                          Integer?, Integer?).
 coins(N, Fss, C, U, Seed, Spend, Cred) :-
     coins # run(N?, Fss?, C?, U?, Seed?, Spend?, Cred?).
+
+%% The population's draw of coins among friends: how many agents of each
+%% profile in each dimension, and each agent's profiles, agents 1..N in order.
+CoinsDraw    ::= draw(Integer, Integer, Integer, Integer, CoinsDrawn).
+CoinsDrawn   ::= [] ; [CoinsAgentIs | CoinsDrawn].
+CoinsAgentIs ::= agent(Integer, Spending, Credit).
+
+%% coins_draw(Agents?, Seed?, Spend?, Cred?, D): D is draw(Spender, Saver,
+%% Generous, Cautious, As), the numbers of agents of each profile in the run of
+%% coins/7 with those arguments, whatever its friends, and As the list of
+%% agent(A, Spending, Credit), each agent's profiles, A of 1..Agents in order,
+%% computed without running it, the counts those of As (coins/harness.glp;
+%% sGLP's code task of 2026-10-03 09:45 UTC).
+imported procedure coins#draw(Integer?, Integer?, Integer?, Integer?,
+                              CoinsDraw).
+exported procedure coins_draw(Integer?, Integer?, Integer?, Integer?,
+                              CoinsDraw).
+coins_draw(N, Seed, Spend, Cred, D?) :-
+    coins # draw(N?, Seed?, Spend?, Cred?, D).

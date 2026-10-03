@@ -8,7 +8,8 @@
 %%                it, the agent's clauses of the task's item 1, its four
 %%                profiles translated, issuer and the wallet's held, add and
 %%                take;
-%%   harness.glp  the run: the initial goals of the run declaration;
+%%   harness.glp  the run: the initial goals of the run declaration; and the
+%%                population's draw, without running it;
 %%   run.sh       a run through the REPL on a friendship graph, its log and its
 %%                circulation;
 %%   circulation.awk  the circulation from a run's log, at the end of each month.
@@ -44,6 +45,8 @@ imported procedure coins#generous_offer(Offer?, Integer?, MutualRef?).
 imported procedure coins#cautious_offer(Offer?, Integer?, MutualRef?).
 imported procedure harness#run(Integer?, Friends?, Number?, Span?, Integer?,
                                Integer?, Integer?).
+imported procedure harness#draw(Integer?, Integer?, Integer?, Integer?,
+                                CoinsDraw).
 
 %% The person procedures of the four profiles, for the person process.
 exported procedure spender_menu(Menu?, Integer?, MutualRef?).
@@ -61,3 +64,8 @@ exported procedure run(Integer?, Friends?, Number?, Span?, Integer?, Integer?,
                        Integer?).
 run(N, Fss, C, U, Seed, Spend, Cred) :-
     harness # run(N?, Fss?, C?, U?, Seed?, Spend?, Cred?).
+
+%% draw(Agents?, Seed?, Spend?, Cred?, D): the population's draw in that run,
+%% its counts and each agent's profiles, harness.glp, without running it.
+exported procedure draw(Integer?, Integer?, Integer?, Integer?, CoinsDraw).
+draw(N, Seed, Spend, Cred, D?) :- harness # draw(N?, Seed?, Spend?, Cred?, D).

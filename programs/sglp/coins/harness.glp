@@ -96,6 +96,58 @@ procedure credit(Integer?, Integer?, Credit).
 credit(K, Cred, cautious) :- K? =< Cred? | true.
 credit(K, Cred, generous) :- K? > Cred? | true.
 
+%% The population's draw (sGLP's code task of 2026-10-03 09:45 UTC).
+%% draw(N?, Seed?, Spend?, Cred?, D): D is draw(Spender, Saver, Generous,
+%% Cautious, As), the numbers of agents of 1..N of each profile in each
+%% dimension in the run of N agents from Seed with the mix Spend and Cred, and
+%% As the list of agent(A, Spending, Credit), A of 1..N in order, each agent's
+%% profiles, without running it: each agent's two draws from its block, as
+%% agents/10 draws them, decided by spending/3 and credit/3, and counted as
+%% they are listed.  The draws do not depend on the friendship graph.  run.sh
+%% calls it in a REPL session of its own, so that the run's machine is the same
+%% with it as without, and its log the same.  tally/14 draws as agents/10
+%% does, and a change to the one is a change to the other.
+exported procedure draw(Integer?, Integer?, Integer?, Integer?, CoinsDraw).
+draw(N, Seed, Spend, Cred, draw(Sp?, Sv?, G?, C?, As?)) :-
+    N? >= 1,
+    Spend? >= 0, Spend? =< 100, Cred? >= 0, Cred? =< 100 |
+    random(Seed?, 2147483646, Base, _),
+    tally(1, N?, Base?, Spend?, Cred?, 0, 0, 0, 0, As, Sp, Sv, G, C).
+
+%% tally(A?, N?, Block?, Spend?, Cred?, Sp?, Sv?, G?, C?, As, Sp2, Sv2, G2,
+%% C2): agents A..N, Block the start of A's block, listed in As, and added to
+%% Sp spenders, Sv savers, G generous and C cautious agents before A, giving
+%% Sp2, Sv2, G2 and C2.
+procedure tally(Integer?, Integer?, Integer?, Integer?, Integer?, Integer?,
+                Integer?, Integer?, Integer?, CoinsDrawn, Integer, Integer,
+                Integer, Integer).
+tally(A, N, B, Spend, Cred, Sp, Sv, G, C, [agent(A?, Spg?, Crd?)|As?],
+      Sp2?, Sv2?, G2?, C2?) :-
+    A? =< N? |
+    random(B?, 100, K1, B1),
+    random(B1?, 100, K2, _),
+    spending(K1?, Spend?, Spg1),
+    credit(K2?, Cred?, Crd1),
+    add_spending(Spg1?, Sp?, Sv?, Sp1, Sv1, Spg),
+    add_credit(Crd1?, G?, C?, G1, C1, Crd),
+    skip(4096, B?, B2),
+    A1 := A? + 1,
+    tally(A1?, N?, B2?, Spend?, Cred?, Sp1?, Sv1?, G1?, C1?, As, Sp2, Sv2,
+          G2, C2).
+tally(A, N, _, _, _, Sp, Sv, G, C, [], Sp?, Sv?, G?, C?) :-
+    A? > N? | true.
+
+%% add_spending(Spg?, Sp?, Sv?, Sp1, Sv1, Spg1) and add_credit(Crd?, G?, C?,
+%% G1, C1, Crd1): one agent of the profile added to its count, the profile
+%% given back for its line in the list.
+procedure add_spending(Spending?, Integer?, Integer?, Integer, Integer,
+                       Spending).
+add_spending(spender, Sp, Sv, Sp1?, Sv?, spender) :- Sp1 := Sp? + 1.
+add_spending(saver, Sp, Sv, Sp?, Sv1?, saver) :- Sv1 := Sv? + 1.
+procedure add_credit(Credit?, Integer?, Integer?, Integer, Integer, Credit).
+add_credit(generous, G, C, G1?, C?, generous) :- G1 := G? + 1.
+add_credit(cautious, G, C, G?, C1?, cautious) :- C1 := C? + 1.
+
 %% skip(J?, S?, S1): S1 is the seed J draws after S, by J draws of random/4,
 %% each reduced before the next is spawned: the clause waits on its seed,
 %% integer(S?), so an agent's block of 4096 draws is drawn one draw at a time

@@ -2,7 +2,8 @@
 # Tests of sGLP in GLP (programs/sglp) against sGLP's paper (the repository
 # svGLP-Stochastic-Volitional-GLP at d2f64b6) and its code tasks of 2026-10-02
 # 00:06 UTC, item 6, 15:23 UTC, items 1 and 3, 15:24 UTC, items 1 to 4, and
-# 15:44 UTC, and of 2026-10-03 08:44 UTC, item 2, 08:58 UTC and 09:22 UTC.
+# 15:44 UTC, and of 2026-10-03 08:44 UTC, item 2, 08:58 UTC, 09:22 UTC and
+# 09:45 UTC.
 #
 #   bash programs/sglp/test_sglp.sh
 #
@@ -78,7 +79,17 @@
 #       circulation.awk reads its log whole, menus and offers and their
 #       answers in the order of time, each offer answered being the card
 #       waiting at its agent; and every menu and offer is as the agent's
-#       clauses and request/2 give it.
+#       clauses and request/2 give it.  The population's draw (the task of
+#       2026-10-03 09:45 UTC): the .draw file beside each log is the counts
+#       line run.sh prints, then agents 1..4 in order, whose counts it is; and,
+#       four agents for a year from seed 1 on the same graph, each agent's line
+#       is its profiles where the log shows them: its spending always, a
+#       spender's menus coming daily and a saver's weekly, so that an agent
+#       answering more menus than one every sqrt(7) days of the run, the rate
+#       half-way between the two on a log scale, is shown a spender and one
+#       answering fewer a saver; and its credit where it is shown an offer with
+#       Held above 20, which the cautious answer no and the generous yes, every
+#       such answer agreeing with its line.
 #
 # Prints one line per check and a summary line, "=== P passed, F failed ===";
 # exits non-zero if any check fails.  The runs of (iii) and (iv) take some
@@ -276,7 +287,7 @@ st=$?
 check "circulation.awk on tests/circulation/four.log prints the months and totals computed by hand" $st
 [ "$st" -eq 0 ] || diff "$WORK/four.out" "$HERE/tests/circulation/four.expected" | sed 's/^/        /'
 
-echo "--- (ix) coins among friends, four agents for a week"
+echo "--- (ix) coins among friends, four agents for a week, and the draw over a year"
 # The hand-made graph tests/circulation/four.graph: 1-2, 1-3, 2-3, 3-4, so the
 # friends are 1: [2, 3], 2: [1, 3], 3: [1, 2, 4], 4: [3].  coins_log_errors
 # <log>: the number of the log's answers that break what the program's clauses
@@ -344,6 +355,55 @@ E=$(coins_log_errors "$WORK/ca.log")
 [ "$E" -eq 0 ]
 check "every menu and offer of the log is as the agent's clauses and request/2 give it ($E not)" $?
 sed -n '/^wall-clock/p;/^month 1 /p;/^answers/,/^unmatched/p' "$WORK/ca.out" | sed 's/^/        /'
+# The population's draw.  coins_draw_errors <draw> <n>: the number of ways the
+# .draw file breaks its form: its first line not a counts line, an agent line
+# out of 1..n's order or of another form, not n agent lines, the counts line
+# not their counts.
+coins_draw_errors() {
+    awk -v n="$2" '
+        NR == 1 { if ($0 !~ /^draw spender [0-9]+ saver [0-9]+ generous [0-9]+ cautious [0-9]+$/) bad++
+                  csp = $3; csv = $5; cg = $7; cc = $9; next }
+        $0 ~ /^agent [0-9]+ (spender|saver) (generous|cautious)$/ && $2 + 0 == k + 1 {
+            k++; if ($3 == "spender") sp++; else sv++; if ($4 == "generous") g++; else c++; next }
+        { bad++ }
+        END { if (k != n || csp != sp + 0 || csv != sv + 0 || cg != g + 0 || cc != c + 0) bad++
+              print bad + 0 }' "$1"
+}
+bash "$COINS" 4 "$G4" '1 year' 1 "$WORK/cy.log" > "$WORK/cy.out" 2>&1
+st=$?
+check "4 agents, 1 year, seed 1 (cy): the run ends with no error" $st
+[ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/cy.out"
+DF=0
+for r in a s1 y; do
+    [ -s "$WORK/c$r.draw" ] && [ "$(coins_draw_errors "$WORK/c$r.draw" 4)" -eq 0 ] &&
+        [ "$(head -n 1 "$WORK/c$r.draw")" = "$(grep '^draw spender ' "$WORK/c$r.out")" ] || DF=1
+done
+check "the .draw files of (a), (s1) and (cy) are the counts line run.sh prints, then agents 1..4 in order, whose counts it is" $DF
+# Each agent's line of (cy) against its profiles where the log of (cy) shows
+# them: its spending by its menus' rate, a spender's daily and a saver's
+# weekly, against one menu every sqrt(7) days of the run's clock; its credit by
+# its answers to offers with Held above 20, no cautious and yes generous.
+read -r A C <<< "$(awk 'FNR == NR { if ($1 == "agent") { sp[$2] = $3; cr[$2] = $4 } next }
+    { n = split($0, f, "\t") }
+    n == 1 { clock = f[1] + 0 }
+    n == 4 && f[3] == "Menu" { m[f[2] + 0]++ }
+    n == 4 && f[3] == "Offer" {
+        split(substr(f[4], 7, length(f[4]) - 7), o, ", ")
+        if (o[3] + 0 > 20) { shown[f[2] + 0] = 1; if ((o[4] == "yes") != (cr[f[2] + 0] == "generous")) badcr[f[2] + 0] = 1 }
+    }
+    END {
+        lim = clock / 86400 / sqrt(7)
+        for (a = 1; a <= 4; a++) {
+            if ((m[a] > lim ? "spender" : "saver") != sp[a] || (a in badcr)) bad++
+            if (a in shown) c++
+        }
+        if (clock <= 0) bad++
+        print bad + 0, c + 0
+    }' "$WORK/cy.draw" "$WORK/cy.log")"
+echo "        the .draw file of (cy): $A of 4 agents' lines not the profiles the log shows; the log shows the credit of $C"
+[ "$A" -eq 0 ]
+check "each agent's line in the .draw file of (cy) is its profiles where the log of (cy) shows them" $?
+sed 's/^/        /' "$WORK/cy.draw"
 
 echo ""
 echo "=== $PASS passed, $FAIL failed ==="

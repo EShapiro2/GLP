@@ -1,8 +1,9 @@
 #!/bin/bash
 # A run of coins among friends in sGLP (programs/sglp, the translated form;
 # sGLP's paper, the repository svGLP-Stochastic-Volitional-GLP at c7d0b2f,
-# Section 4 and Section 6; sGLP's code task of 2026-10-02 15:24 UTC, item 3)
-# through the REPL, on a friendship graph: its log and its circulation.
+# Section 4 and Section 6; sGLP's code task of 2026-10-02 15:24 UTC, item 3,
+# and of 2026-10-03 09:45 UTC) through the REPL, on a friendship graph: its
+# log, its draw and its circulation.
 #
 #   bash programs/sglp/coins/run.sh <agents> <graph> <until> <seed> <log>
 #       [<spender%> [<cautious%>]]
@@ -34,13 +35,23 @@
 # or offer(From, K, Held, no); and, when the monitor stops, its last line, the
 # clock alone.  They are written to <log> as the run goes.
 #
-# Prints the goal, its friends abbreviated; the graph's edges; the run's
-# wall-clock and CPU time and the machine's load as it ends; the REPL
-# process's instructions retired and peak memory footprint (/usr/bin/time -l);
-# the REPL's status lines; the log's size; and circulation.awk's months and
-# totals on the log.
-# Exits 0 if the run loaded, ran with no error and its monitor stopped, 1
-# otherwise, and 2 on a bad argument or graph, before running.
+# Prints the goal, its friends abbreviated; the graph's edges; the
+# population's draw, "draw spender <s> saver <v> generous <g> cautious <c>",
+# the number of agents of each profile in each dimension, which the log does
+# not show, computed by coins_draw/5 in a REPL session of its own before the
+# run, so that the log is the same with it as without (sGLP's code task of
+# 2026-10-03 09:45 UTC); the run's wall-clock and CPU time and the machine's
+# load as it ends; the REPL process's instructions retired and peak memory
+# footprint (/usr/bin/time -l); the REPL's status lines; the log's size; and
+# circulation.awk's months and totals on the log.  Writes the draw itself
+# beside the log, to <log> with its .log replaced by .draw, or with .draw added
+# where it has none, as the social graph's run.sh does: the line "draw spender
+# <s> saver <v> generous <g> cautious <c>", then one line "agent <a>
+# <spending> <credit>" per agent, a of 1..N in order, all from the one answer
+# of coins_draw/5, whose counts are those of its agents.
+# Exits 0 if the draw was computed, every agent of 1..N in its list, and the
+# run loaded, ran with no error and its monitor stopped, 1 otherwise, and 2 on
+# a bad argument or graph, before running.
 
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -118,6 +129,44 @@ EDGES=$(cat "$WORK/edges")
 FRIENDS=$(cat "$WORK/friends")
 GOAL="coins($N, $FRIENDS, $COUNT, $UNIT, $SEED, $SPEND, $CRED)"
 
+# The population's draw, in a REPL session of its own before the run, so that
+# the run's machine and its log are the same with it as without: the program,
+# coins_draw/5 with the run's agents, seed and mix, its answer read,
+# D = draw(Sp, Sv, G, C, [agent(1, Spending, Credit), ...]).  The counts are
+# DRAW, and the counts line and the agents' lines go to the .draw file beside
+# the log; with an answer that does not list agents 1..N in order, DRAW is
+# empty and the file is not written.
+case "$LOG" in
+    *.log) DRAWF="${LOG%.log}.draw" ;;
+    *) DRAWF="$LOG.draw" ;;
+esac
+rm -f "$DRAWF"
+printf ':limit 1000000000000000\n%s\ncoins_draw(%s, %s, %s, %s, D).\n:quit\n' \
+    "$SGLP" "$N" "$SEED" "$SPEND" "$CRED" > "$WORK/draw"
+DRAW=$( (cd "$RT" && bin/glpc < "$WORK/draw" 2>&1) | awk -v n="$N" -v drawf="$DRAWF" '
+    { sub(/^(GLP> )+/, "") }
+    /^D = draw\(/ && !done {
+        done = 1
+        s = substr($0, 10)
+        if (!match(s, /^[0-9]+, [0-9]+, [0-9]+, [0-9]+, \[/)) next
+        split(substr(s, 1, RLENGTH - 3), c, ", ")
+        s = substr(s, RLENGTH + 1)
+        k = 0
+        while (match(s, /^agent\([0-9]+, (spender|saver), (generous|cautious)\)/)) {
+            split(substr(s, 7, RLENGTH - 7), f, ", ")
+            if (f[1] + 0 != k + 1) next
+            line[++k] = "agent " f[1] " " f[2] " " f[3]
+            s = substr(s, RLENGTH + 1)
+            sub(/^, /, "", s)
+        }
+        if (s != "])" || k != n + 0) next
+        counts = "spender " c[1] " saver " c[2] " generous " c[3] " cautious " c[4]
+        print "draw " counts > drawf
+        for (i = 1; i <= k; i++) print line[i] > drawf
+        close(drawf)
+        print counts
+    }')
+
 # The REPL's input: no bound on reductions, the program, the goal.
 printf ':limit 1000000000000000\n%s\n%s.\n:quit\n' "$SGLP" "$GOAL" > "$WORK/input"
 
@@ -151,12 +200,15 @@ touch "$LOG" "$WORK/status" "$WORK/time"
 
 echo "program $SGLP: coins($N, <the friends of $GRAPH>, $COUNT, $UNIT, $SEED, $SPEND, $CRED)"
 echo "graph $GRAPH: $EDGES edges, agents 1..$N each on one at least"
+echo "draw ${DRAW:-none: coins_draw/5 gave no answer listing agents 1..$N}"
+[ -n "$DRAW" ] && echo "draw $DRAWF: the counts and $N agents' profiles"
 echo "wall-clock $((END - START)) s; cpu $(awk '$1 == "user" { u = $2 } $1 == "sys" { s = $2 } END { printf "user %s s, sys %s s", u, s }' "$WORK/time"); $LOAD"
 echo "$(awk '$2 == "instructions" && $3 == "retired" { i = $1 } $2 == "peak" { p = $1 } END { printf "instructions retired %s; peak memory footprint %s bytes", i, p }' "$WORK/time")"
 cat "$WORK/status"
 echo "log $LOG: $(wc -l < "$LOG" | tr -d ' ') lines, $(wc -c < "$LOG" | tr -d ' ') bytes"
 
 OK=1
+[ -n "$DRAW" ] || OK=0
 grep -q '✓ Loaded program' "$WORK/status" || OK=0
 grep -q '^Error' "$WORK/status" && OK=0
 grep -q '^no clock' "$WORK/status" && OK=0
