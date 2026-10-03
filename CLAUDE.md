@@ -100,6 +100,8 @@ The repository holds no archive: `programs/archive/`, `programs/old-archive/`, `
 
 🔴 **No implementation without a spec.**  The spec is the owning paper.  Identify which paper covers the area you are touching and quote the section; if it is clear, implement to match without asking; if it is unclear or absent, STOP, report to the paper's Cowork session through Integration, and wait.  The code is never the source of truth when the paper is unclear.  When quoting a spec, quote exactly; if the spec is silent, say so.
 
+🔴 **What the reader, the checker or the engine accepts is never found by experiment** (Udi, 2026-10-03).  The paper's definition says it: GLP's term syntax is GLP-Spec's Definition "Logic Programs Syntax" (`GLP-Spec/sections/appendix-lp.tex`), and every other construct has its definition.  Write to the definition; never probe the implementation for "what does read" and build on that.  Where the implementation refuses what the definition admits, or admits what it refuses, that is a bug and a blocker (`claude.md`, "Working protocol"): stop and report the input, the error and the definition's sentence.
+
 ## Bug protocol — no workarounds
 
 When you hit a bug or unexpected behaviour: STOP; check the spec; report in this form, with no intervening prose — **Failing goal** (the goal that fails), **Type and procedure declarations** (the relevant type definitions and the procedure declaration), **Suspected clause(s)** — and wait.  A workaround is special-casing to dodge the bug, restructuring to route around it, commenting out or marking a failing test expected to fail, or adding checks for cases the spec does not address.
