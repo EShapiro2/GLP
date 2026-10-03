@@ -31,7 +31,13 @@ void main() {
     late Directory dir;
     late String play;
     setUpAll(() {
-      dir = Directory.systemTemp.createTempSync('glp_agent_runtime_');
+      // The program lies under the root, programs/ (TGLP modules.tex, "Scope
+      // construction": "A program lies at or below the root"): its scope then
+      // holds the root's -expose of system/mad_predicates, and send_to_net/1 with
+      // it, in the check of the linked program as in the module's.  Until
+      // 2026-10-03 it was written to the system's temporary directory, outside the
+      // root, and the single-file path checked the module alone.
+      dir = Directory('../programs/tests').createTempSync('glp_agent_runtime_');
       play = '${dir.path}/play.glp';
       File(play).writeAsStringSync(_play);
     });

@@ -1345,6 +1345,27 @@ check "channel_ops: loads" "Loaded: .*channel_ops.glp" "$a39"
 check "channel_ops: new_channel pairs two channels" "C39a = ch(" "$a39"
 check_not "channel_ops: no undeclared procedure" "declared only in an enclosing scope" "$a39"
 
+# --- A40: The single-file path checks the object it compiles ---
+# TGLP modules.tex, Compilation: "The flat program is the linked program of
+# def:program, and it is the object checked."  A file loaded alone is linked
+# as a one-module program, and its linked program is checked as a directory's
+# is, each module of it first.  Until 2026-10-03 the single-file path checked
+# the file's module alone and compiled the linked program unchecked (GLP #3
+# Cowork, 2026-10-03 21:18 UTC, "16:01. 4"): a5_routing_neg/main.glp, whose
+# call instantiates send_user/3 at an entry union with no user_output, loaded
+# as a file while its directory was refused (X7).
+echo "--- A40: Single-file loads check the linked program ---"
+a40=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/a5_routing_neg/main.glp
+$GLP_DIR/programs/tests/module_self_type_error/worker.glp
+:quit
+HEREDOC
+2>&1)
+check "single file: the linked program is checked" "a5_routing_neg/main.glp: Exception: Type checking failed for linked program" "$a40"
+check "single file: refused at send_user's instantiation" "No transition for user_output" "$a40"
+check "single file: its directory's self.glp checked as a module of it" "module_self_type_error/self.glp:3: Head of bad_proc is not well-typed" "$a40"
+check_not "single file: neither loads" "✓ Loaded" "$a40"
+
 SECTION_A_PASS=$PASS
 SECTION_A_FAIL=$FAIL
 

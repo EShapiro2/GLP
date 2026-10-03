@@ -714,12 +714,21 @@ void checkModulesIndependently(List<DiscoveredModule> modules) {
 /// there and nowhere else, since step-5 dead-code elimination drops it before
 /// the linked check.
 ///
+/// A single-module program ([singleModulePath], the single-file path of
+/// `GlpEngine.loadSource`) is checked by the same two steps: the flat program
+/// is the object checked and then compiled, whichever path reaches it (TGLP
+/// modules.tex, Compilation: "The flat program is the linked program of
+/// def:program, and it is the object checked").  Until 2026-10-03 the
+/// single-file path checked its module alone and compiled the linked program
+/// unchecked (GLP #3 Cowork, 2026-10-03 21:18 UTC, "16:01. 4": "faults, fix
+/// them").
+///
 /// Throws on type errors with details.
 LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
-    {required String rootDir}) {
+    {required String rootDir, String? singleModulePath}) {
   // A directory with no self.glp is not a program, and is rejected before
-  // any of its modules is checked.
-  _requireProgramSelfGlp(modules, rootDir);
+  // any of its modules is checked; a single-module program has none.
+  if (singleModulePath == null) _requireProgramSelfGlp(modules, rootDir);
 
   // Step 2 (modules.tex §Static Linking): after discovery, before renaming,
   // each module is type-checked independently against its ancestor scope. The
@@ -738,7 +747,8 @@ LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
   // no per-module environment juggling is needed.
   // linkProgram applies all five steps, including step-5 DCE, so the program
   // type-checked and compiled below is restricted to its reachable procedures.
-  final linked = linkProgram(modules, rootDir: rootDir);
+  final linked = linkProgram(modules,
+      rootDir: rootDir, singleModulePath: singleModulePath);
   final flat = linkedFlatModule(modules, linked);
 
   final pe = PartialEvaluator();

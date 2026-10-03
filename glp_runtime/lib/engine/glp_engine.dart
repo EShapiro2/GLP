@@ -465,15 +465,22 @@ class GlpEngine {
     rt.ModuleTerm? moduleValue;
     if (isRealFile) {
       final modules = discovered!;
-      final linked =
-          linkProgram(modules,
-              rootDir: File(name).parent.path, singleModulePath: name);
-      // The object compiled is the LINKED program, so the scope its SRSW
-      // relaxations are decided in is the flat module's, not the single
-      // module's: the two name their types differently (step-3 renaming).
+      // The object compiled is the LINKED program, and it is the object
+      // checked (TGLP modules.tex, Compilation: "The flat program is the
+      // linked program of def:program, and it is the object checked"):
+      // checkedLinkedProgram checks each module of the program against its
+      // scope and then the flat program, as on the directory path, and returns
+      // it only if it checks.  Until 2026-10-03 this path linked and compiled
+      // with no check of the linked program, and with none of a module the
+      // ancestors expose (GLP #3 Cowork, 2026-10-03 21:18 UTC, "16:01. 4").
+      // The scope its SRSW relaxations are decided in is the flat module's,
+      // not the single module's: the two name their types differently (step-3
+      // renaming).
+      final linked = checkedLinkedProgram(modules,
+          rootDir: File(name).parent.path, singleModulePath: name);
       program = _compiler.compileProgram(linked.program,
           procDeclarations: linked.procDeclarations,
-          typeEnv: linkedProgramEnvironment(linkedFlatModule(modules, linked)));
+          typeEnv: linked.checkedEnv);
       // This unit's module value — its artefact: h(M) + code.
       moduleValue = _moduleValueOf(_baseName(name), program, linked, modules,
           directory: File(name).parent.absolute.path);

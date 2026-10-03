@@ -134,7 +134,14 @@ void main() {
     late IsolateManager manager;
     late Directory dir;
 
-    setUpAll(() => dir = Directory.systemTemp.createTempSync('glp_boot_scope_'));
+    // The program lies under the root, programs/ (TGLP modules.tex, "Scope
+    // construction": "A program lies at or below the root"): its scope then
+    // holds the root's -expose of system/mad_predicates, and send_to_net/1 with
+    // it, in the check of the linked program as in the module's.  Until
+    // 2026-10-03 it was written to the system's temporary directory, outside the
+    // root, and the single-file path checked the module alone.
+    setUpAll(() =>
+        dir = Directory('../programs/tests').createTempSync('glp_boot_scope_'));
     tearDownAll(() => dir.deleteSync(recursive: true));
     setUp(() => manager = IsolateManager());
     tearDown(() async => manager.shutdown());
