@@ -1253,7 +1253,7 @@ class GlpEngine {
     final offending = privilegedCalls(linked.program, _privilegedRootNames,
         ownModules: {
           for (final m in modules)
-            if (m.exposingDir == null) m.moduleName
+            if (!m.collectedByExpose) m.moduleName
         });
     if (offending.isNotEmpty) {
       print('[CERTIFICATE REFUSED] $moduleName reaches the network or the '

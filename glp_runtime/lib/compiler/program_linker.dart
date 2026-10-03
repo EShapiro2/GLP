@@ -43,11 +43,18 @@ class DiscoveredModule {
   TypeEnvironment ancestorScope;
   final bool isSelfGlp;
 
-  /// If this module was collected because an ancestor `self.glp` `-expose`d it,
-  /// the normalized directory of that exposing `self.glp`. Its EXPORTED
-  /// procedures lift into that directory's subtree scope. Null for ordinary
-  /// modules.
-  final String? exposingDir;
+  /// If an ancestor `self.glp` `-expose`s this module, the normalized
+  /// directory of that exposing `self.glp`. Its EXPORTED procedures lift into
+  /// that directory's subtree scope. Null for a module nothing exposes.  Set
+  /// by [_resolveExposes] on a module the directory walk collected too, which
+  /// stays one module (TGLP modules.tex, Compilation).
+  String? exposingDir;
+
+  /// Whether the module is in the program only because an `-expose` names it
+  /// --- a module outside the directory walk, the root's
+  /// `-expose(system#mad_predicates)` among them --- as against one the walk
+  /// collected, which is the program's own whether or not it is exposed too.
+  final bool collectedByExpose;
 
   DiscoveredModule({
     required this.filePath,
@@ -56,6 +63,7 @@ class DiscoveredModule {
     required this.ancestorScope,
     this.isSelfGlp = false,
     this.exposingDir,
+    this.collectedByExpose = false,
   });
 }
 
@@ -513,6 +521,21 @@ void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
       if (collectedFiles.contains(_normPath(file.path))) continue;
       collectedFiles.add(_normPath(file.path));
 
+      // A file the program already holds --- one the directory walk collected,
+      // or the module a single-file load names --- is that one module, now
+      // exposed as well: each .glp file is one module, its procedures emitted
+      // once (TGLP modules.tex, Compilation, first and third steps).  Until
+      // 2026-10-03 a second module of the same file and name was added here,
+      // and the linker emitted the file's procedures twice (tests/expose/basic:
+      // util/strutil:twice/2, util/plist:pmerge/3; system/mad_predicates.glp
+      // loaded alone).  Its -expose directives are on the worklist already.
+      final held = modules.where(
+          (m) => _normPath(m.filePath) == _normPath(file.path));
+      if (held.isNotEmpty) {
+        held.first.exposingDir ??= exposingDirNorm;
+        continue;
+      }
+
       final chain = discoverSelfChain(
         targetFile: file.absolute.path,
         rootDir: file.parent.path,
@@ -526,6 +549,7 @@ void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
             buildAncestorScope(chain: chain, rootSelfGlpPath: rootSelfGlpPath),
         isSelfGlp: false,
         exposingDir: exposingDirNorm,
+        collectedByExpose: true,
       );
       modules.add(exposedDM);
       if (exposedAst.exposes.isNotEmpty) pending.add(exposedDM);
@@ -537,7 +561,9 @@ void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
   final exposed = modules.where((m) => m.exposingDir != null).toList();
   if (exposed.isEmpty) return;
   for (final m in modules) {
-    if (m.exposingDir != null) continue;
+    // A module only an -expose brings in keeps the scope of its own chain; one
+    // the walk collected gets the lift whether or not it is exposed too.
+    if (m.collectedByExpose) continue;
     final modDir = _normPath(File(m.filePath).parent.path);
     for (final e in exposed) {
       if (!_dirUnder(modDir, e.exposingDir!)) continue;
@@ -835,10 +861,10 @@ Module linkedFlatModule(List<DiscoveredModule> modules, LinkResult linked,
   //
   // Every module is named by its path from the root, and two files of one
   // name are rejected at linking ([_requireDistinctModuleNames]), so a renamed
-  // type is defined by one file; one file can appear twice in [modules] --- the
-  // walk's and an `-expose`'s --- and its definitions are taken once.  Until
-  // 2026-10-02 the name was the file's, and two modules of one name defining
-  // one type were refused here as a "Module-name collision".
+  // type is defined by one file, and a file is one module of [modules] however
+  // many routes reach it ([_resolveExposes]).  Until 2026-10-02 the name was
+  // the file's, and two modules of one name defining one type were refused
+  // here as a "Module-name collision".
   final owners = typeOwnersByModule(modules);
   final typeDefs = <String, TypeDef>{};
   for (final mod in modules) {
@@ -1386,8 +1412,8 @@ Guard _resolveGuard(Guard guard, String moduleName, Set<String> localSigs,
 /// ([DiscoveredModule.moduleName]), and two files of one path name --- a
 /// directory's `self.glp` and a module file of the directory's name beside the
 /// directory --- are two modules step 3 would rename alike, so the program is
-/// rejected naming both.  One file listed twice, by the directory walk and by
-/// an `-expose`, is one module.
+/// rejected naming both.  A file the directory walk collects and an
+/// `-expose` names is listed once ([_resolveExposes]).
 void _requireDistinctModuleNames(List<DiscoveredModule> modules) {
   final fileOfName = <String, String>{};
   for (final m in modules) {
