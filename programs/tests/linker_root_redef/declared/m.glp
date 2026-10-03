@@ -1,0 +1,7 @@
+exported procedure run(Stream(Integer)).
+run(Zs?) :- merge([1], [2], Zs).
+procedure merge(Stream(Integer)?, Stream(Integer)?, Stream(Integer)).
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], Ys, Ys?).
+merge(Xs, [], Xs?).

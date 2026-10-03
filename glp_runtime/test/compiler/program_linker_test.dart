@@ -377,6 +377,43 @@ void main() {
     });
   });
 
+  group('A redefined root operation needs a declaration (dedicated fixture)',
+      () {
+    // modules.tex, Definition "Typed Procedure, Module": a module is a sequence
+    // of type definitions and typed procedures, each a declaration followed by
+    // its procedure.  m.glp of undeclared/ redefines merge/3 by clauses with no
+    // declaration of its own; until 2026-10-03 the linker gave its renamed
+    // m:merge/3 a copy of the root's declaration.  declared/ carries the
+    // declaration.  See ../programs/tests/linker_root_redef/.
+    const redef = '../programs/tests/linker_root_redef';
+
+    test('a redefinition with no declaration is refused, naming M:p', () {
+      final dir = '$redef/undeclared';
+      final modules = discoverProgram(dir, rootSelfGlpPath: rootSelfPath);
+      expect(
+          () => checkedLinkedProgram(modules, rootDir: dir),
+          throwsA(predicate((e) => e.toString().contains(
+              'Procedure tests/linker_root_redef/undeclared/m:merge/3 has no '
+              'type declaration'))));
+    });
+
+    test('the linked program borrows no declaration from the root', () {
+      final dir = '$redef/undeclared';
+      final modules = discoverProgram(dir, rootSelfGlpPath: rootSelfPath);
+      final flat = linkedFlatModule(modules, linkProgram(modules, rootDir: dir));
+      expect(flat.procDeclarations.map((d) => d.name),
+          isNot(contains('tests/linker_root_redef/undeclared/m:merge')));
+    });
+
+    test('a redefinition with its own declaration links and checks', () {
+      final dir = '$redef/declared';
+      final modules = discoverProgram(dir, rootSelfGlpPath: rootSelfPath);
+      final linked = checkedLinkedProgram(modules, rootDir: dir);
+      expect(linked.checkedDeclarations.map((d) => d.name),
+          contains('tests/linker_root_redef/declared/m:merge'));
+    });
+  });
+
   group('Exposed procedures are not entry points (modules.tex §Design)', () {
     // An -exposed procedure is callable by name in the subtree but is NOT an
     // entry point unless the root self.glp exports it in its own right; entry

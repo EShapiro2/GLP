@@ -1,0 +1,6 @@
+%% undeclared/ with the declaration of m.glp's own merge/3, which shadows the
+%% root's (TGLP modules.tex, Definition "Root, Scope"): the program loads and
+%% run(Zs) gives [1, 2].
+imported procedure m#run(Stream(Integer)).
+exported procedure run(Stream(Integer)).
+run(Zs?) :- m # run(Zs).

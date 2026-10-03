@@ -772,16 +772,18 @@ TypeEnvironment linkedProgramEnvironment(Module flat) =>
 /// into every program, so `mad_predicates.glp:19`'s `NetStream` lost its element
 /// type. Fixture: `programs/tests/type_name_collision/` (Section X9).
 ///
-
-/// A module may redefine a root-scope operation (e.g. send/receive/new_channel/
-/// merge) with local clauses but no local declaration, relying on the root
-/// declaration. Linking renames those clauses to `M:p` while the root
-/// declaration stays bare, leaving the renamed procedure undeclared in the
-/// linked program. A renamed declaration is supplied from the root scope so the
-/// procedure is checked. (An unqualified entry-point alias carries its exporting
-/// module's declaration from linking — shadowing a root-scope declaration of the
-/// same name/arity; only an alias whose export has no declaration is left
-/// undeclared.)
+/// The declarations are the linked declarations and nothing else: each module's
+/// own, renamed with its procedures, and the entry-point aliases'.  A module
+/// that redefines a root-scope operation (send/receive/new_channel/merge) by
+/// clauses of its own defines a procedure of its own, `M:p` after the renaming,
+/// and declares it as every procedure of a module is declared (TGLP modules.tex,
+/// Definition "Typed Procedure, Module": "A typed procedure is a procedure
+/// declaration ... immediately followed by a procedure for p/n.  A module is a
+/// sequence of type definitions and typed procedures"); the linked program is a
+/// typed GLP program, every procedure in it with exactly one declaration (TGLP
+/// Definition "Typed GLP Program", condition 1), so a redefinition without one
+/// is refused by the linked check, naming `M:p`.  Until 2026-10-03 such a `M:p`
+/// borrowed a renamed copy of the root's declaration here.
 ///
 /// With [allDeclarations], the declarations are the whole scope's
 /// ([LinkResult.scopeDeclarations]) rather than the reachable subset — the
@@ -812,30 +814,9 @@ Module linkedFlatModule(List<DiscoveredModule> modules, LinkResult linked,
     }
   }
 
-  final rootEnv = buildRootScopeEnvironment();
   final procDecls = [
     ...(allDeclarations ? linked.scopeDeclarations : linked.checkedDeclarations)
   ];
-  final declKeys = {for (final d in procDecls) d.key};
-  for (final p in linked.program.procedures) {
-    final key = '${p.name}/${p.arity}';
-    if (declKeys.contains(key)) continue;
-    final colon = p.name.lastIndexOf(':');
-    if (colon < 0) continue; // unqualified entry-point alias
-    final bareKey = '${p.name.substring(colon + 1)}/${p.arity}';
-    // Prefer the parametric template over the wildcard-instantiated version in
-    // `procedures`: a redefined root op (send/receive/new_channel/merge) is
-    // parametric, and the renamed copy must carry the template so call-site
-    // inference (Case B) concretises it rather than leaving wildcard types.
-    final rd = rootEnv.paramProcDecls[bareKey] ?? rootEnv.procedures[bareKey];
-    if (rd != null) {
-      procDecls.add(ProcDecl(p.name, rd.argTypes, rd.line, rd.column,
-          typeParams: rd.typeParams,
-          exported: rd.exported,
-          isBuiltin: rd.isBuiltin));
-      declKeys.add(key);
-    }
-  }
 
   return Module(
     typeDefs: typeDefs.values.toList(),
