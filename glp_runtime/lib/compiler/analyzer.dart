@@ -554,9 +554,10 @@ class Analyzer {
     // `compound(f(X?))` and `list([X?])` succeed with X? unbound --- and mark
     // nothing (GLP, 2026-09-28).  `atom` and `tuple` are not in the catalogue
     // and are not guards: removed from the runtime on 2026-10-01 (GLP, approved
-    // by Udi), with this table and the partial evaluator.
+    // by Udi), with this table and the partial evaluator.  `real` is "Ground:
+    // yes" since GLP-Spec 12be29b (GLP #3 Cowork, 2026-10-02 22:19 UTC).
     // Note: var/nonvar removed (don't guarantee groundness), float removed (not implemented)
-    final typeCheckOps = ['number', 'integer', 'string', 'constant'];
+    final typeCheckOps = ['number', 'integer', 'real', 'string', 'constant'];
     if (typeCheckOps.contains(guard.predicate) && guard.args.length == 1) {
       final arg = guard.args[0];
       if (arg is VarTerm) {

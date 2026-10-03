@@ -796,7 +796,7 @@ Set<Object> _readersOfGoal(RunnerContext cx, Set<Object> variables) {
 const Set<String> runtimeGuards = {
   '</2', '>/2', '=</2', '>=/2', '=:=/2', '=\\=/2', '@</2',
   'ground/1', 'known/1', 'integer/1', 'string/1', 'constant/1', 'number/1',
-  'list/1', 'compound/1', 'module/1', 'is_mutual_ref/1', 'unknown/1',
+  'real/1', 'list/1', 'compound/1', 'module/1', 'is_mutual_ref/1', 'unknown/1',
   'otherwise/0', 'wait/1', 'wait_until/1', 'when_idle/0', 'no_readers/1',
   '=?=/2', '=?\\=/2', 'valid_attestation/4',
 };
@@ -1130,6 +1130,17 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       if (val is num) return GuardResult.success;
       if (val is ConstTerm && val.value is num) return GuardResult.success;
       return GuardResult.failure;
+
+    case 'real':
+      // Succeeds if X is a Real (GLP-Spec appendix-guards.tex, 12be29b:
+      // `procedure real(Real?).`, Ground yes), the runtime's floating-point
+      // number, a double: the lexer reads a literal with a decimal point as
+      // one, and `/` and '_real' give one.  So real(2.0) succeeds and real(2),
+      // an Integer, fails, as integer(2.0) does.  An unbound reader leaves it
+      // undecided before it is reached ([OpExecutors.execGuard]).
+      if (args.isEmpty) return GuardResult.failure;
+      final val = getValue(args[0]);
+      return (val is double) ? GuardResult.success : GuardResult.failure;
 
     case 'list':
       // Succeeds if X is a list ([] or [H|T])
