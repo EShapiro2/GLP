@@ -611,9 +611,13 @@ class GlpEngine {
   /// single flat program, and compiles it. The result is loaded as a single
   /// program accessible via `combinedProgram`.
   ///
-  /// [programDir] is the path to the program root directory. Entry-point
-  /// aliases are generated for the exported procedures of root-level modules
-  /// only (project-compilation spec §3.4).
+  /// [programDir] is the path to the program root directory, which carries a
+  /// self.glp or is refused (TGLP modules.tex, "Entry and the absence of a
+  /// boot module").  The entry points are the procedures that self.glp
+  /// exports, by definition or by forwarding, and an alias clause is
+  /// generated for each (Compilation, fifth step: "the exported procedures of
+  /// the program's self.glp ... These exports are the compiled module's entry
+  /// points").
   bool loadProgram(String programDir) {
     final modules = discoverProgram(programDir,
         rootSelfGlpPath: _rootSelfGlpPath);

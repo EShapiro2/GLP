@@ -854,7 +854,8 @@ void typeCheckProgram(List<DiscoveredModule> modules, {required String rootDir})
 /// sec:static-linking, all five steps).
 ///
 /// Steps 1–4 ([linkAndResolveModules]) rename procedures (`p/n` → `M:p/n`),
-/// resolve all calls, and generate entry-point aliases for root-level exports;
+/// resolve all calls, and generate entry-point aliases for the exports of the
+/// program's self.glp;
 /// step 5 ([eliminateDeadCode]) restricts the result to the reachable
 /// procedures. This is the program of def:program that is type-checked and
 /// compiled.
