@@ -13,8 +13,10 @@
 %% installs, invites and befriends as it does in every play.  Bob is scripted
 %% and shares the network with her through a crossbar, so her Connect and
 %% Invite have someone to reach.  The mediator's vocabulary is the compiled
-%% module's own and is not named here: the imported declarations leave those
-%% positions untyped, since this harness only passes them along.
+%% module's own: the person's answers are typed by core's copy of it under
+%% its own names (self.glp, HomeUserAnswer), and the imported declarations
+%% leave the other positions untyped, since this harness only passes them
+%% along.
 %%
 %% This file is the harness of the app, not part of the super-app's contract.
 
@@ -22,7 +24,7 @@ imported procedure home#home(_?, Key?, AgentToUserStream?, Stream(UserInMsg), _?
 imported procedure home#med(_?, _?, _?, Integer?).
 imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 
-exported procedure superapp_ui(Constant?, Stream(_)?, Stream(_)?).
+exported procedure superapp_ui(Key?, Stream(HomeUserAnswer)?, NetInStream?).
 superapp_ui(alice, Answers, _) :-
     crossbar(AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
     agent # agent(alice, Cmds?, AliceNetIn?, [user_output(Outs), net_output(AliceNetOut)]),

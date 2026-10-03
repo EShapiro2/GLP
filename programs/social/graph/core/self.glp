@@ -16,8 +16,18 @@
 procedure ping(Constant?, AppUiStream, SgChannel?).
 ping(_, [], _).
 
-imported procedure home_ui#superapp_ui(Constant?, Stream(_)?, Stream(_)?).
-exported procedure superapp_ui(Constant?, Stream(_)?, Stream(_)?).
+%% The person's answers to the super-app's own person interface (home.vglp),
+%% as the super-app receives them: home.glp:8--31's Answer, ReqId and
+%% UserAnswer written here again under core's own names.  Types are not
+%% exported: a caller declares what it passes in its own scope, and the linked
+%% check holds the two structurally compatible (TGLP, "Structural type
+%% compatibility").
+HomeAnswer ::= xs_respond_friend_1(Constant) ; xs_respond_friend_2(Constant) ; xs_home_1(String) ; xs_home_2(String, Constant) ; xs_home_3(Constant, Key) ; xs_home_4(Key).
+HomeReqId ::= req(Integer).
+HomeUserAnswer ::= answer(HomeReqId, HomeAnswer) ; decline(HomeReqId).
+
+imported procedure home_ui#superapp_ui(Key?, Stream(HomeUserAnswer)?, NetInStream?).
+exported procedure superapp_ui(Key?, Stream(HomeUserAnswer)?, NetInStream?).
 superapp_ui(Id, Answers, NetIn) :- home_ui # superapp_ui(Id?, Answers?, NetIn?).
 
 imported procedure superapp_plays#play_invite(AppUiStream, AppUiStream).
