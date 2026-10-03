@@ -19,7 +19,7 @@
 imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 
 %% From ui/mediator.glp
-imported procedure mediator#ui_mediator(Constant?, AgentChannel?, UserChannel?, PendingList?, Integer?).
+imported procedure mediator#ui_mediator(Key?, AgentChannel?, UserChannel?, PendingList?, Integer?).
 
 %% =============================================================================
 %% IN-HEAP CROSSBAR — route '_net' cold calls by addressee

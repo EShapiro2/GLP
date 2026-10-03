@@ -18,7 +18,7 @@
 imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 
 %% From ui/mediator.glp
-imported procedure mediator#ui_mediator(Constant?, AgentChannel?, UserChannel?, PendingList?, Integer?).
+imported procedure mediator#ui_mediator(Key?, AgentChannel?, UserChannel?, PendingList?, Integer?).
 
 %% From ui/actors.glp — plays 1-3
 imported procedure actors#alice1(ActorChannel?).
