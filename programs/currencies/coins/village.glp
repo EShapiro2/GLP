@@ -36,8 +36,8 @@
 %% play_ui.glp does for alice).  The app therefore shows that villager's screen
 %% as the market runs, while its scripted person answers the cards as before.
 
-imported procedure miniapp#coins(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
-imported procedure person#person(Key?, Stream(Event)?, Stream(UserAnswer), Script?, Stream(ScreenContent)).
+imported procedure currency#coins(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
+imported procedure currency#person(Key?, Stream(Event)?, Stream(UserAnswer), Script?, Stream(ScreenContent)).
 
 %% =============================================================================
 %% The scripts
@@ -97,15 +97,15 @@ villager(Id, Script, Convs) :- villager(none, Id?, Script?, Convs?).
 procedure villager(Constant?, Key?, Script?, Stream(Conversation)?).
 villager(V, Id, Script, Convs) :-
     V? =?= Id? |
-    miniapp # coins(Id?, ch(Answers?, Events), Convs?),
+    currency # coins(Id?, ch(Answers?, Events), Convs?),
     tee(Events?, ToPerson, ToUser),
     send_to_user(ToUser?),
-    person # person(Id?, ToPerson?, Answers, Script?, Screen),
+    currency # person(Id?, ToPerson?, Answers, Script?, Screen),
     log(Id?, Screen?).
 villager(_, Id, Script, Convs) :-
     otherwise |
-    miniapp # coins(Id?, ch(Answers?, Events), Convs?),
-    person # person(Id?, Events?, Answers, Script?, Screen),
+    currency # coins(Id?, ch(Answers?, Events), Convs?),
+    currency # person(Id?, Events?, Answers, Script?, Screen),
     log(Id?, Screen?).
 
 %% Each event to the person and to the user both.

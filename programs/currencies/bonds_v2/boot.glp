@@ -52,13 +52,13 @@ imported procedure actors#alice_cl(ActorChannel?).
 imported procedure actors#bob_cl(ActorChannel?).
 imported procedure actors#charlie_cl(ActorChannel?).
 
-%% From play12/*.glp — village actors
-imported procedure alice#alice_p12(Constant?, ActorChannel?, Stream(NarrativeItem)).
-imported procedure bob#bob_p12(ActorChannel?, Stream(NarrativeItem)).
-imported procedure charlie#charlie_p12(Constant?, ActorChannel?, Stream(NarrativeItem)).
-imported procedure diana#diana_p12(ActorChannel?, Stream(NarrativeItem)).
-imported procedure eve#eve_p12(ActorChannel?, Stream(NarrativeItem)).
-imported procedure frank#frank_p12(ActorChannel?, Stream(NarrativeItem)).
+%% From play12, the village actors its self.glp exports
+imported procedure play12#alice_p12(Constant?, ActorChannel?, Stream(NarrativeItem)).
+imported procedure play12#bob_p12(ActorChannel?, Stream(NarrativeItem)).
+imported procedure play12#charlie_p12(Constant?, ActorChannel?, Stream(NarrativeItem)).
+imported procedure play12#diana_p12(ActorChannel?, Stream(NarrativeItem)).
+imported procedure play12#eve_p12(ActorChannel?, Stream(NarrativeItem)).
+imported procedure play12#frank_p12(ActorChannel?, Stream(NarrativeItem)).
 
 %% =============================================================================
 %% TEE — Stream splitter
@@ -906,7 +906,7 @@ fplay12 :-
              ch(FrankNetOut?, FrankNetIn)),
 
     %% Alice (T unused by alice, pass dummy constant to avoid SRSW on T?)
-    alice # alice_p12(0, ch(AliceActorIn?, AliceActorOut), AliceNarr),
+    play12 # alice_p12(0, ch(AliceActorIn?, AliceActorOut), AliceNarr),
     send_to_person_narrate(alice, AliceNarr?),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
@@ -917,7 +917,7 @@ fplay12 :-
     send_to_person_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     %% Bob
-    bob # bob_p12(ch(BobActorIn?, BobActorOut), BobNarr),
+    play12 # bob_p12(ch(BobActorIn?, BobActorOut), BobNarr),
     send_to_person_narrate(bob, BobNarr?),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
@@ -928,7 +928,7 @@ fplay12 :-
     send_to_person_tagged(bob, BobDispCmd?, BobDispNotify?),
 
     %% Charlie
-    charlie # charlie_p12(T?, ch(CharlieActorIn?, CharlieActorOut), CharlieNarr),
+    play12 # charlie_p12(T?, ch(CharlieActorIn?, CharlieActorOut), CharlieNarr),
     send_to_person_narrate(charlie, CharlieNarr?),
     tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
     agent # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
@@ -939,7 +939,7 @@ fplay12 :-
     send_to_person_tagged(charlie, CharlieDispCmd?, CharlieDispNotify?),
 
     %% Diana
-    diana # diana_p12(ch(DianaActorIn?, DianaActorOut), DianaNarr),
+    play12 # diana_p12(ch(DianaActorIn?, DianaActorOut), DianaNarr),
     send_to_person_narrate(diana, DianaNarr?),
     tee(DianaActorOut?, DianaMedIn, DianaDispCmd),
     agent # agent(diana, DianaAgentIn?, DianaNetIn?,
@@ -950,7 +950,7 @@ fplay12 :-
     send_to_person_tagged(diana, DianaDispCmd?, DianaDispNotify?),
 
     %% Eve
-    eve # eve_p12(ch(EveActorIn?, EveActorOut), EveNarr),
+    play12 # eve_p12(ch(EveActorIn?, EveActorOut), EveNarr),
     send_to_person_narrate(eve, EveNarr?),
     tee(EveActorOut?, EveMedIn, EveDispCmd),
     agent # agent(eve, EveAgentIn?, EveNetIn?,
@@ -961,7 +961,7 @@ fplay12 :-
     send_to_person_tagged(eve, EveDispCmd?, EveDispNotify?),
 
     %% Frank
-    frank # frank_p12(ch(FrankActorIn?, FrankActorOut), FrankNarr),
+    play12 # frank_p12(ch(FrankActorIn?, FrankActorOut), FrankNarr),
     send_to_person_narrate(frank, FrankNarr?),
     tee(FrankActorOut?, FrankMedIn, FrankDispCmd),
     agent # agent(frank, FrankAgentIn?, FrankNetIn?,

@@ -21,15 +21,15 @@
 %% This file is the harness of the app, not part of the currency: the certified
 %% program is currency/, which this directory is not (see self.glp).
 
-imported procedure miniapp#coins(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
-imported procedure person#person(Key?, Stream(Event)?, Stream(UserAnswer), Script?, Stream(ScreenContent)).
+imported procedure currency#coins(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
+imported procedure currency#person(Key?, Stream(Event)?, Stream(UserAnswer), Script?, Stream(ScreenContent)).
 
 exported procedure coins_ui(Key?, Stream(UserAnswer)?, Stream(_)?).
 coins_ui(alice, Answers, _) :-
-    miniapp # coins(alice, ch(Answers?, Events), [conversation(bob, ch(AB?, BA))]),
+    currency # coins(alice, ch(Answers?, Events), [conversation(bob, ch(AB?, BA))]),
     send_to_user(Events?),
-    miniapp # coins(bob, ch(BobAnswers?, BobEvents), [conversation(alice, ch(BA?, AB))]),
-    person # person(bob, BobEvents?, BobAnswers,
+    currency # coins(bob, ch(BobAnswers?, BobEvents), [conversation(alice, ch(BA?, AB))]),
+    currency # person(bob, BobEvents?, BobAnswers,
                     [mint(2), accept(alice), swap(alice, alice, 2, bob, 2)],
                     BobScreen),
     log_peer(bob, BobScreen?).

@@ -51,8 +51,8 @@
 %% Entry points: market/0, exported by self.glp as village/0; and
 %% sovereign_market/0, exported as sovereign_village/0.
 
-imported procedure miniapp#sovereign(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?, Stream(Integer)?).
-imported procedure person#person(Key?, Stream(Event)?, Stream(UserAnswer), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
+imported procedure denominated#sovereign(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?, Stream(Integer)?).
+imported procedure denominated#person(Key?, Stream(Event)?, Stream(UserAnswer), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
 
 %% =============================================================================
 %% The scripts
@@ -234,8 +234,8 @@ villager(Id, Script, Convs) :-
 exported procedure escrow_agent(Key?, Script?, Agreement?, Stream(Conversation)?).
 escrow_agent(Id, Script, Ag, Convs) :-
     ground(Id?) |
-    miniapp # sovereign(Id?, ch(Answers?, Events), Convs?, Cal?),
-    person # person(Id?, Events?, Answers, Cal, Script?, Ag?, Screen),
+    denominated # sovereign(Id?, ch(Answers?, Events), Convs?, Cal?),
+    denominated # person(Id?, Events?, Answers, Cal, Script?, Ag?, Screen),
     log(Id?, Screen?).
 
 %% The screen messages, logged as tagged(Party, Message).

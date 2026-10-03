@@ -47,8 +47,8 @@
 %% certified program is denominated/, which this directory is not (see
 %% self.glp).
 
-imported procedure miniapp#sovereign(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?, Stream(Integer)?).
-imported procedure person#person(Key?, Stream(Event)?, Stream(UserAnswer), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
+imported procedure denominated#sovereign(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?, Stream(Integer)?).
+imported procedure denominated#person(Key?, Stream(Event)?, Stream(UserAnswer), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
 
 exported procedure sovereign_ui(Key?, Stream(UserAnswer)?, Stream(_)?).
 sovereign_ui(cb, Answers, _) :-
@@ -60,7 +60,7 @@ sovereign_ui(cb, Answers, _) :-
 %% conversations.
 procedure market(Channel(Stream(UserAnswer), Stream(Event))?).
 market(Ui) :-
-    miniapp # sovereign(cb, Ui?, [conversation(diana, ch(HD?, DH)), conversation(frank, ch(HF?, FH))], []),
+    denominated # sovereign(cb, Ui?, [conversation(diana, ch(HD?, DH)), conversation(frank, ch(HF?, FH))], []),
     peer(diana, [mint(usd, 10), accept(cb),
                  mint(usd, 15), swap(frank, usd, diana, now, 15, frank, 28, 18),
                  await(presented(frank, cb, now)),
@@ -84,8 +84,8 @@ market(Ui) :-
 procedure peer(Key?, Script?, Stream(Conversation)?).
 peer(Id, Script, Convs) :-
     ground(Id?) |
-    miniapp # sovereign(Id?, ch(Answers?, Events), Convs?, Cal?),
-    person # person(Id?, Events?, Answers, Cal, Script?, none, Screen),
+    denominated # sovereign(Id?, ch(Answers?, Events), Convs?, Cal?),
+    denominated # person(Id?, Events?, Answers, Cal, Script?, none, Screen),
     log_peer(Id?, Screen?).
 
 procedure log_peer(Key?, Stream(ScreenContent)?).
@@ -101,7 +101,7 @@ log_peer(_, []).
 exported procedure play_sovereign_ui.
 play_sovereign_ui :-
     market(ch(Answers?, Events)),
-    person # person(cb, Events?, Answers, _,
+    denominated # person(cb, Events?, Answers, _,
                     [mint(usd, 30), swap(diana, usd, cb, now, 10, diana, now, 10),
                      await(received(frank, 1)), fiat(frank, 1), accept(diana)],
                     none, Screen),
