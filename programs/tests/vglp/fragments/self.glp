@@ -15,6 +15,16 @@
 %% dispatcher's draw(Id, W, V) and withdraw(Id) and grants input(Id, R), a
 %% grant only after the draw that gives it Id, and logs what it saw.
 %%
+%% The person never closes its grants: the person channel never closes
+%% (vGLP at 7838827, Definition "Person Channel, Person Writer, GLP with
+%% Persons, Grant"; vGLP #5 Cowork, 2026-10-03 21:13 UTC, Q1), PersonIn having
+%% no [], so a person holds its writer for good and goes on watching after
+%% the last withdrawal, and its log stays open.  It reads what the dispatcher
+%% sends it as any term, _?, whose one input path its clauses accept (TGLP
+%% well-typing.tex, the table of Definition "Consistent Paths", row 10): a
+%% clause for a closed draw stream, which the dispatcher never closes, would
+%% have to write the person's writer, and has nothing to write.
+%%
 %% The types of questions.vglp and those its compilation adds, written again
 %% for the declarations of the procedures imported from its compiled module;
 %% type identity is structural, and the module's own shadow these within it.
@@ -29,13 +39,14 @@ Content  ::= friend_request(Peer, Response?).
 Msg      ::= msg(Peer, Content).
 Question ::= stream_request_r(Stream(Request)?) ; card_w(Card).
 Ask(Q)   ::= ask(Constant, Q).
+PersonIn ::= [_ | PersonIn].
 
 imported procedure questions#agent(Peer?, Stream(Msg)?, Stream(String),
     Stream(Ask(Question))).
 imported procedure questions#respond_coldcall(Offer?, Response,
     Stream(Ask(Question))).
 imported procedure questions#dispatch(Stream(Ask(Question))?,
-    Channel(Stream(_), Stream(_))?, Channel(Stream(_), Stream(_))).
+    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
 
 %% ---------------------------------------------------------------------------
 %% (iv) Section 3's responder: the card shows the offering peer before any
@@ -50,14 +61,14 @@ play_card(Resp?, Log?) :-
 
 %% The person sees the card, the peer shown and its own position input, and
 %% grants yes.
-procedure card_person(Stream(_)?, Stream(_), Stream(_)).
+procedure card_person(_?, PersonIn, Stream(_)).
 card_person([draw(Id, W, card(P, input)) | Ds], [input(Id?, yes) | Gs?],
             [drawn(Id?, W?, card(P?, input)) | Log?]) :-
     ground(Id?), ground(W?), ground(P?) |
     card_person(Ds?, Gs, Log).
-card_person([withdraw(Id) | _], [], [withdrawn(Id?)]) :-
-    ground(Id?) | true.
-card_person([], [], []).
+card_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    card_person(Ds?, Gs, Log).
 
 %% A grant that forms no term of the question's type answers nothing: the
 %% person grants maybe, and the card stays.
@@ -67,14 +78,14 @@ play_card_refused(Resp?, Log?) :-
     questions # dispatch(Asks?, ch(Gs?, Ds), _),
     refusing_person(Ds?, Gs, Log).
 
-procedure refusing_person(Stream(_)?, Stream(_), Stream(_)).
+procedure refusing_person(_?, PersonIn, Stream(_)).
 refusing_person([draw(Id, _, V) | Ds], [input(Id?, maybe) | Gs?],
                 [drawn(Id?, V?) | Log?]) :-
     ground(Id?), ground(V?) |
     refusing_person(Ds?, Gs, Log).
-refusing_person([withdraw(Id) | _], [], [withdrawn(Id?)]) :-
-    ground(Id?) | true.
-refusing_person([], [], []).
+refusing_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    refusing_person(Ds?, Gs, Log).
 
 %% A refused grant leaves its question open, and the next grant that forms a
 %% term of its type answers it: the person grants maybe and then yes, and the
@@ -85,14 +96,14 @@ play_card_refused_then_yes(Resp?, Log?) :-
     questions # dispatch(Asks?, ch(Gs?, Ds), _),
     second_try_person(Ds?, Gs, Log).
 
-procedure second_try_person(Stream(_)?, Stream(_), Stream(_)).
+procedure second_try_person(_?, PersonIn, Stream(_)).
 second_try_person([draw(Id, _, V) | Ds], [input(Id?, maybe), input(Id?, yes) | Gs?],
                   [drawn(Id?, V?) | Log?]) :-
     ground(Id?), ground(V?) |
     second_try_person(Ds?, Gs, Log).
-second_try_person([withdraw(Id) | _], [], [withdrawn(Id?)]) :-
-    ground(Id?) | true.
-second_try_person([], [], []).
+second_try_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    second_try_person(Ds?, Gs, Log).
 
 %% ---------------------------------------------------------------------------
 %% (v), second half: serve's message clause reads no request, so it reduces on
@@ -104,18 +115,17 @@ second_try_person([], [], []).
 exported procedure play_offer(Stream(String), Stream(_)).
 play_offer(Outs?, Log?) :-
     questions # agent(me, [msg(me, friend_request(carol, _))], Outs, Asks),
-    questions # dispatch(Asks?, ch([], Ds), _),
-    watching_person(Ds?, Log).
+    questions # dispatch(Asks?, ch(Gs?, Ds), _),
+    watching_person(Ds?, Gs, Log).
 
 %% The person grants nothing and logs every draw and withdrawal.
-procedure watching_person(Stream(_)?, Stream(_)).
-watching_person([draw(Id, W, V) | Ds], [drawn(Id?, W?, V?) | Log?]) :-
+procedure watching_person(_?, PersonIn, Stream(_)).
+watching_person([draw(Id, W, V) | Ds], Gs?, [drawn(Id?, W?, V?) | Log?]) :-
     ground(Id?), ground(W?), ground(V?) |
-    watching_person(Ds?, Log).
-watching_person([withdraw(Id) | Ds], [withdrawn(Id?) | Log?]) :-
+    watching_person(Ds?, Gs, Log).
+watching_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
-    watching_person(Ds?, Log).
-watching_person([], []).
+    watching_person(Ds?, Gs, Log).
 
 %% ---------------------------------------------------------------------------
 %% The agent's question, a stream of requests asked once, its element a menu
@@ -129,7 +139,7 @@ play_request(Outs?, Log?) :-
     questions # dispatch(Asks?, ch(Gs?, Ds), _),
     posting_person(Ds?, Gs, Log).
 
-procedure posting_person(Stream(_)?, Stream(_), Stream(_)).
+procedure posting_person(_?, PersonIn, Stream(_)).
 posting_person([draw(Id, W, input) | Ds],
                [input(Id?, post(5)), input(Id?, post("hi")), input(Id?, quit)
                 | Gs?],
@@ -139,4 +149,55 @@ posting_person([draw(Id, W, input) | Ds],
 posting_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
     posting_person(Ds?, Gs, Log).
-posting_person([], [], []).
+
+%% ---------------------------------------------------------------------------
+%% A construct withdrawn while a grant for it is in flight: the grant reaches
+%% no construct, and the next construct's grants are unaffected (vGLP #5
+%% Cowork, 2026-10-03 21:13 UTC, Q1: "A grant that reaches a dead route's
+%% identifier --- one in flight at the withdraw --- reaches no construct").
+%% The first card, bob's, is answered yes and withdraws; the second, carol's,
+%% is asked once the first is answered.  The person, its screen behind,
+%% grants no to the first card after its withdrawal, and then no to the
+%% second: the stale grant reaches the dispatcher after the withdrawal, when
+%% construct 0's route is dead and construct 1's live, and the grant to
+%% construct 1 answers it.
+%% ---------------------------------------------------------------------------
+
+exported procedure play_inflight(Response, Response, Stream(_)).
+play_inflight(R1?, R2?, Log?) :-
+    questions # respond_coldcall(offer(bob), R0, A1),
+    next_card(R0?, R1, R2, A2),
+    merge(A1?, A2?, Asks),
+    questions # dispatch(Asks?, ch(Gs?, Ds), _),
+    first_card_person(Ds?, Gs, Log).
+
+%% Once the first card is answered, put the second.
+procedure next_card(Response?, Response, Response, Stream(Ask(Question))).
+next_card(accept(P), accept(P?), R2?, A2?) :-
+    ground(P?) |
+    questions # respond_coldcall(offer(carol), R2, A2).
+next_card(refuse(P), refuse(P?), R2?, A2?) :-
+    ground(P?) |
+    questions # respond_coldcall(offer(carol), R2, A2).
+
+%% The person grants yes to the first card.
+procedure first_card_person(_?, PersonIn, Stream(_)).
+first_card_person([draw(0, _, card(bob, input)) | Ds], [input(0, yes) | Gs?],
+                  [drawn(0) | Log?]) :-
+    awaiting_person(Ds?, no, no, Gs, Log).
+
+%% awaiting_person(Ds?, Withdrawn?, Drawn?, Gs, Log): the person waits until
+%% the first card has withdrawn and the second is drawn, in either order, and
+%% then grants no to the first, now dead, and no to the second.
+procedure awaiting_person(_?, YesNo?, YesNo?, PersonIn, Stream(_)).
+awaiting_person([withdraw(0) | Ds], no, no, Gs?, [withdrawn(0) | Log?]) :-
+    awaiting_person(Ds?, yes, no, Gs, Log).
+awaiting_person([draw(1, _, card(carol, input)) | Ds], no, no, Gs?,
+                [drawn(1) | Log?]) :-
+    awaiting_person(Ds?, no, yes, Gs, Log).
+awaiting_person([withdraw(0) | Ds], no, yes, [input(0, no), input(1, no) | Gs?],
+                [withdrawn(0) | Log?]) :-
+    watching_person(Ds?, Gs, Log).
+awaiting_person([draw(1, _, card(carol, input)) | Ds], yes, no,
+                [input(0, no), input(1, no) | Gs?], [drawn(1) | Log?]) :-
+    watching_person(Ds?, Gs, Log).

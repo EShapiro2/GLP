@@ -30,10 +30,16 @@
 //     taking one element per grant, an input box;
 //   - the views are drawn as they change, draw(Id, W, V), W the widget of T;
 //   - the grants routed to the construct arrive whole, input(Id, R), and the
-//     construct reads the person's input R from each (inputs/2 in
-//     programs/vglp/dispatcher.glp); they go to its questions in the order of
-//     the view, the first question whose type the grant's term is of taking
-//     it; a grant that is of none reaches none;
+//     question reads the person's input R from each; they go to its questions
+//     in the order of the view, the first question whose type the grant's
+//     term is of taking it; a grant that is of none reaches none;
+//   - its grants never close: the person channel never closes (Definition
+//     "Person Channel, Person Writer, GLP with Persons, Grant", at 7838827),
+//     so neither does a construct's grant stream, Inputs ::= [Input |
+//     Inputs], which carries the person's grants on, and no clause reads a
+//     [] of it; a question whose grants never come stays open, its goal
+//     suspended, as the semantics has it (vGLP #5 Cowork, 2026-10-03 08:16
+//     UTC, item 3, and 21:13 UTC, Q1);
 //   - it withdraws when every question it holds is answered and none is
 //     still to come, and on nothing else (run/5 in
 //     programs/vglp/dispatcher.glp): "The construct process withdraws when
@@ -44,9 +50,14 @@
 //
 // THE FORMING CLAUSES form a term of a question's type from the person's
 // input, which is typed at _: a constant by matching it, a primitive by its
-// guard (string/1, integer/1, ...), a structure argument by argument.  They
-// are typed at the question's type, so a question is bound only with a term
-// of its type (vGLP, 2026-10-02 08:26 UTC, item 6).
+// guard (string/1, integer/1, ...), a structure argument by argument, the
+// children's results joined.  Their result carries the term, Formed(T) ::=
+// formed(T) ; refused, so every clause writes what it holds (vGLP #5 Cowork,
+// 2026-10-03 08:16 UTC, item 3; GLP-Spec's Remark "Anonymous Variables" at
+// c3d3fc6, no anonymous reader), the term written in the body where a guard
+// narrows the input to the type (21:13 UTC, Q2).  They are typed at the
+// question's type, so a question is bound only with a term of its type
+// (vGLP, 2026-10-02 08:26 UTC, item 6).
 //
 // WHAT IS NOT BUILT, each a compile error naming the type: a position the
 // program writes inside one the person writes (the Answer transition leaves
@@ -94,32 +105,31 @@ String _typeStem(TypeExpr t) {
 class GenericNames {
   final String dispatch;
   final String constructs;
-  final String inputs;
   final String run;
   final String shown;
   final String thread;
   final String allDone;
-  final String allFormed;
   final Map<_Leaf, String> _leafFormers;
   final String formedType;
   final String doneType;
   final String drawType;
   final String inputType;
+  final String inputsType;
+  final String personInType;
   final String spawnType;
   final String askType;
 
   GenericNames(
       {required this.dispatch,
       required this.constructs,
-      required this.inputs,
       required this.run,
       required this.shown,
       required this.thread,
       required this.allDone,
-      required this.allFormed,
       required String formString,
       required String formInteger,
       required String formNumber,
+      required String formReal,
       required String formConstant,
       required String formModule,
       required String formAny,
@@ -127,12 +137,14 @@ class GenericNames {
       required this.doneType,
       required this.drawType,
       required this.inputType,
+      required this.inputsType,
+      required this.personInType,
       required this.spawnType,
       required this.askType})
       : _leafFormers = {
           _Leaf.string: formString,
           _Leaf.integer: formInteger,
-          _Leaf.real: formNumber,
+          _Leaf.real: formReal,
           _Leaf.number: formNumber,
           _Leaf.constant: formConstant,
           _Leaf.module: formModule,
@@ -144,15 +156,14 @@ class GenericNames {
   /// generic names: the roots, with the dispatcher's entry point, of what the
   /// compilation emits of the generic source.
   static const used = [
-    'inputs',
     'run',
     'shown',
     'thread',
     'all_done',
-    'all_formed',
     'form_string',
     'form_integer',
     'form_number',
+    'form_real',
     'form_constant',
     'form_module',
     'form_any',
@@ -327,8 +338,8 @@ class _Generator {
     hook
       // dispatch/3: the dispatcher on the ask stream and the person channel,
       // and constructs/1 on the spawns it writes.
-      ..writeln('exported procedure$p $d(Stream(${gen.askType}($qt))?, $ch?, '
-          '$ch).')
+      ..writeln('exported procedure$p $d(Stream(${gen.askType}($qt))?, '
+          'Channel(${gen.personInType}, Stream(_))?, $ch).')
       ..writeln('$d(Asks, PCh, MCh?) :- $d(Asks?, PCh?, MCh, Ss), $cs(Ss?).')
       ..writeln()
       // constructs/1: the construct process of each spawn.
@@ -338,7 +349,7 @@ class _Generator {
       ..writeln('$cs([]).')
       ..writeln()
       ..writeln('procedure$p $constructName(Integer?, $qt?, '
-          'Stream(${gen.inputType})?, Stream(${gen.drawType})).');
+          '${gen.inputsType}?, Stream(${gen.drawType})).');
     final widgets = <String, String>{};
     for (final t in types) {
       final root = _Node(t.type, t.readerMode, t.params.toSet());
@@ -358,7 +369,7 @@ class _Generator {
       _checkPersonWritable(root, t);
       final answer = _answer(root);
       return '$constructName(Id, $f(X?), Gs, Ds?) :- '
-          '${gen.inputs}(Gs?, Rs), $answer(X, Rs?, _, Done), '
+          '$answer(X, Gs?, _, Done), '
           '${gen.run}(Id?, $w, [input], Done?, Ds).';
     }
     if (!_hasQuestion(root)) {
@@ -370,7 +381,7 @@ class _Generator {
     }
     final present = _present(root, t);
     return '$constructName(Id, $f(X), Gs, Ds?) :- '
-        '${gen.inputs}(Gs?, Rs), $present(X?, Rs?, _, Vs, Done), '
+        '$present(X?, Gs?, _, Vs, Done), '
         '${gen.run}(Id?, $w, Vs?, Done?, Ds).';
   }
 
@@ -623,9 +634,13 @@ class _Generator {
   // --- a question: the person writes the position -------------------------------
 
   /// answer_N(X, Gs?, Gs1, Done): the question X of node [n], taking from the
-  /// grants Gs the first that forms a term of its type --- each, for a stream
-  /// type, forming one element --- and passing on every other in Gs1; Done
-  /// once answered, never for a stream.
+  /// grants Gs the first whose input forms a term of its type --- each, for a
+  /// stream type, forming one element --- and passing on every other in Gs1;
+  /// Done once answered, never for a stream.  Its grants never close, so it
+  /// has no clause for []: a question whose grants never come stays open, its
+  /// goal suspended (vGLP #5 Cowork, 2026-10-03 08:16 UTC, item 3, and 21:13
+  /// UTC, Q1).  The grant reaches it whole, input(Id, R), and it forms the
+  /// term from R, passing a grant it does not take on whole.
   String _answer(_Node n) {
     final name = _name('answer', n);
     if (!_emitted.add('answer:${n.typeKey}')) return name;
@@ -634,43 +649,38 @@ class _Generator {
     final p = _declParams(n);
     final done = gen.doneType;
     final formed = gen.formedType;
+    final gs = gen.inputsType;
     final elem = _streamElement(n);
-    if (elem != null) {
-      final e = n.child(elem);
-      final form = _former(e);
-      _out
-        ..writeln('procedure$p $name($t, Stream(_)?, Stream(_), $done).')
-        ..writeln('$name(X?, [G | Gs], Gs1?, Done?) :- ground(G?) | '
-            '$form(G?, V, F), $take(F?, V?, X, G?, Gs?, Gs1, Done).')
-        ..writeln('$name(_?, [], [], _?).')
-        ..writeln()
-        ..writeln('procedure$p $take($formed?, ${e.typeKey}?, $t, _?, '
-            'Stream(_)?, Stream(_), $done).')
-        ..writeln('$take(formed, V, [V? | X1?], _, Gs, Gs1?, Done?) :- '
-            '$name(X1, Gs?, Gs1, Done).')
-        ..writeln('$take(refused, _, X?, G, Gs, [G? | Gs1?], Done?) :- '
-            '$name(X, Gs?, Gs1, Done).')
-        ..writeln();
-      return name;
-    }
-    final form = _former(n);
+    final e = elem == null ? null : n.child(elem);
+    final form = _former(e ?? n);
     _out
-      ..writeln('procedure$p $name($t, Stream(_)?, Stream(_), $done).')
-      ..writeln('$name(X?, [G | Gs], Gs1?, Done?) :- ground(G?) | '
-          '$form(G?, V, F), $take(F?, V?, X, G?, Gs?, Gs1, Done).')
-      ..writeln('$name(_?, [], [], _?).')
+      ..writeln('procedure$p $name($t, $gs?, $gs, $done).')
+      ..writeln('$name(X?, [input(Id, R) | Gs], Gs1?, Done?) :- ground(R?) | '
+          '$form(R?, F), $take(F?, X, input(Id?, R?), Gs?, Gs1, Done).')
       ..writeln()
-      ..writeln('procedure$p $take($formed?, $t?, $t, _?, Stream(_)?, '
-          'Stream(_), $done).')
-      ..writeln('$take(formed, V, V?, _, Gs, Gs?, done).')
-      ..writeln('$take(refused, _, X?, G, Gs, [G? | Gs1?], Done?) :- '
+      ..writeln('procedure$p $take($formed(${(e ?? n).typeKey})?, $t, '
+          '${gen.inputType}?, $gs?, $gs, $done).');
+    if (e != null) {
+      _out.writeln('$take(formed(V), [V? | X1?], _, Gs, Gs1?, Done?) :- '
+          '$name(X1, Gs?, Gs1, Done).');
+    } else {
+      _out.writeln('$take(formed(V), V?, _, Gs, Gs?, done).');
+    }
+    _out
+      ..writeln('$take(refused, X?, G, Gs, [G? | Gs1?], Done?) :- '
           '$name(X, Gs?, Gs1, Done).')
       ..writeln();
     return name;
   }
 
-  /// form_N(R?, X, F): X the person's input R as a term of node [n]'s type,
-  /// F formed; or F refused.  A primitive type's is the generic one.
+  /// form_N(R?, F): F formed(X), X the person's input R as a term of node
+  /// [n]'s type; or F refused.  A primitive type's is the generic one.  A
+  /// constant or nil alternative forms itself; a structure or cons
+  /// alternative calls its children's formers and joins their results
+  /// (join_N); a primitive alternative of a union is formed by its guard, the
+  /// term written in the body, where the guard narrows it (TGLP
+  /// typed-glp.tex, "Type checking of guards"; vGLP #5 Cowork, 2026-10-03
+  /// 21:13 UTC, Q2).
   String _former(_Node n) {
     final leaf = _soleLeaf(n);
     if (leaf != null) return gen._leafFormers[leaf]!;
@@ -685,39 +695,57 @@ class _Generator {
     for (final a in alts) {
       if (a is _ConstAlt) {
         final c = _constSource(a.value);
-        lines.add('$name($c, $c, formed).');
+        lines.add('$name($c, formed($c)).');
       } else if (a is _NilAlt) {
-        lines.add('$name([], [], formed).');
+        lines.add('$name([], formed([])).');
       } else if (a is _StructAlt || a is _ConsAlt) {
         final kids = _children(n, a);
-        final rs = [for (var i = 0; i < kids.length; i++) 'R${i + 1}'];
-        final xs = [for (var i = 0; i < kids.length; i++) 'X${i + 1}?'];
-        final calls = <String>[];
-        for (var i = 0; i < kids.length; i++) {
-          final f = kids.length == 1 ? 'F' : 'F${i + 1}';
-          calls.add('${_former(kids[i])}(R${i + 1}?, X${i + 1}, $f)');
-        }
-        if (kids.length > 1) {
-          calls.add('${gen.allFormed}('
-              '[${[for (var i = 0; i < kids.length; i++) 'F${i + 1}?'].join(', ')}], F)');
-        }
-        final pat = _apply(a, rs);
-        final out = _apply(a, xs);
-        lines.add(calls.isEmpty
-            ? '$name($pat, $out, formed).'
-            : '$name($pat, $out, F?) :- ${calls.join(', ')}.');
+        final k = kids.length;
+        final rs = [for (var i = 0; i < k; i++) 'R${i + 1}'];
+        final calls = [
+          for (var i = 0; i < k; i++)
+            '${_former(kids[i])}(R${i + 1}?, F${i + 1})',
+          '${_join(n, a, kids)}('
+              '${[for (var i = 0; i < k; i++) 'F${i + 1}?'].join(', ')}, F)',
+        ];
+        lines.add('$name(${_apply(a, rs)}, F?) :- ${calls.join(', ')}.');
       } else if (a is _LeafAlt) {
-        leaves.add('$name(R, X?, F?) :- ${_guard(a.leaf)}(R?) | '
-            '${gen._leafFormers[a.leaf]}(R?, X, F).');
+        leaves.add('$name(R, F?) :- ${_guard(a.leaf)}(R?) | '
+            'F = formed(R?).');
       }
     }
-    _out.writeln('procedure$p $name(_?, $t, $formed).');
+    _out.writeln('procedure$p $name(_?, $formed($t)).');
     for (final l in [...lines, ...leaves]) {
       _out.writeln(l);
     }
     _out
-      ..writeln('$name(_, _?, refused) :- otherwise | true.')
+      ..writeln('$name(_, refused) :- otherwise | true.')
       ..writeln();
+    return name;
+  }
+
+  /// join_N(F1?, ..., Fk?, F): the result of forming a structure or cons
+  /// alternative of node [n] from its children's, formed(f(X1?, ..., Xk?))
+  /// where each child formed, and refused where any was refused, one clause
+  /// per position (vGLP #5 Cowork, 2026-10-03 08:16 UTC, item 3).
+  String _join(_Node n, _Alt a, List<_Node> kids) {
+    final suffix = a is _StructAlt ? '${a.functor}_${a.args.length}' : 'cons';
+    final name = _name('join', n, suffix);
+    if (!_emitted.add('join:${n.typeKey}:$suffix')) return name;
+    final p = _declParams(n);
+    final formed = gen.formedType;
+    final k = kids.length;
+    final ins = [for (final c in kids) '$formed(${c.typeKey})?'];
+    _out
+      ..writeln('procedure$p $name(${ins.join(', ')}, $formed(${n.typeKey})).')
+      ..writeln('$name(${[for (var i = 0; i < k; i++) 'formed(X${i + 1})'].join(', ')}, '
+          'formed(${_apply(a, [for (var i = 0; i < k; i++) 'X${i + 1}?'])})).');
+    for (var i = 0; i < k; i++) {
+      _out.writeln('$name('
+          '${[for (var j = 0; j < k; j++) j == i ? 'refused' : '_'].join(', ')}, '
+          'refused).');
+    }
+    _out.writeln();
     return name;
   }
 
@@ -725,8 +753,9 @@ class _Generator {
 
   /// present_N(X?, Gs?, Gs1, Vs, Done): node [n], which the program writes
   /// and which holds a question: the views of X as it is written, its
-  /// questions answered from Gs in the order of the view, the grants they do
-  /// not take passed on in Gs1, Done once every one is answered.
+  /// questions answered from the grants Gs in the order of the view, the
+  /// grants they do not take passed on in Gs1, Done once every one is
+  /// answered.  The grants never close (Inputs).
   String _present(_Node n, InteractiveType it) {
     final name = _name('present', n);
     if (!_emitted.add('present:${n.typeKey}')) return name;
@@ -755,8 +784,8 @@ class _Generator {
         clauses.add(_presentStruct(n, a, name, later, it));
       }
     }
-    _out.writeln(
-        'procedure$p $name($t?, Stream(_)?, Stream(_), Stream(_), $done).');
+    _out.writeln('procedure$p $name($t?, ${gen.inputsType}?, '
+        '${gen.inputsType}, Stream(_), $done).');
     for (final c in clauses) {
       _out.writeln(c);
     }

@@ -32,7 +32,7 @@
 %% 2026-10-02 21:02 UTC, B; vGLP #5 Cowork, 2026-10-03 08:16 UTC, item 2):
 %%   Question  the union of the program's questions, one functor per moded
 %%             interactive type, the person's end of its variable inside: the
-%%             type parameter Q of Ask, Spawn, dispatch/4 and serve/8;
+%%             type parameter Q of Ask, Spawn, dispatch/4 and serve/9;
 %%   construct(Id?, Q?, Gs?, Ds), the construct process of each interactive
 %%             type, one clause per functor of Question, which reads the
 %%             person's input from its grants, forms the person's answers by
@@ -42,6 +42,19 @@
 %% writes spawn(Id, Q, Gs?, Ds) on the fourth argument of dispatch/4, and the
 %% compiled program's constructs/1 reads that stream and calls construct/4 on
 %% each, its dispatch/3 spawning both.
+%%
+%% THE PERSON CHANNEL NEVER CLOSES.  vGLP at 7838827, Definition "Person
+%% Channel, Person Writer, GLP with Persons, Grant": a grant takes the person
+%% writer U to [c | U1?], U1 the person writer after it, and no transition
+%% closes the channel.  So [] is not an input path of the person channel,
+%% PersonIn, nor of a construct's grant stream, Inputs, which carries the
+%% person's grants on; no clause here or in a construct process reads a []
+%% of either, and the dispatcher never terminates, reading a channel that
+%% never closes (vGLP #5 Cowork, 2026-10-03 21:13 UTC, Q1).  A withdrawn
+%% construct's grant writer can be neither closed nor dropped (GLP-Spec's
+%% Remark "Anonymous Variables", c3d3fc6: "a clause writes every writer it
+%% holds"): remove_route moves it to Deads, which serve carries and never
+%% reads, one entry per withdrawn construct.
 
 %% ---------------------------------------------------------------------------
 %% The vocabulary
@@ -51,16 +64,29 @@
 %% withdraw it.
 Draw ::= draw(Integer, _, _) ; withdraw(Integer).
 
+%% The person channel's input: the person's grants, which never close.
+PersonIn ::= [_ | PersonIn].
+
 %% A grant the dispatcher routes to a construct, whole: its identifier and the
 %% person's raw input.
 Input ::= input(_, _).
 
+%% A construct's grants, carried on from the person channel: never closed.
+Inputs ::= [Input | Inputs].
+
 %% A construct's identifier and the writer of its grant stream.
-Route ::= route(Integer, Stream(Input)?).
+Route ::= route(Integer, Inputs?).
 Routes ::= [] ; [Route | Routes].
 
-%% Whether a grant formed a term of a question's type.
-Formed ::= formed ; refused.
+%% The grant writers of the withdrawn constructs, which serve carries and
+%% never reads.
+Deads ::= [] ; [Inputs? | Deads].
+
+%% Whether a grant formed a term of a question's type: the term formed, or
+%% refused.  The result carries the term, so every clause writes what it holds
+%% (vGLP #5 Cowork, 2026-10-03 08:16 UTC, item 3; GLP-Spec's Remark
+%% "Anonymous Variables" at c3d3fc6, no anonymous reader).
+Formed(X) ::= formed(X) ; refused.
 
 %% Every question of a construct, or of a position of it, answered and none
 %% still to come.
@@ -73,7 +99,7 @@ Ask(Q) ::= ask(Constant, Q).
 %% A construct process for the program to spawn: its identifier, its
 %% question, its grant stream and its draw stream, the dispatcher keeping the
 %% writer of the grants and the reader of the draws.
-Spawn(Q) ::= spawn(Integer, Q, Stream(Input), Stream(Draw)?).
+Spawn(Q) ::= spawn(Integer, Q, Inputs, Stream(Draw)?).
 
 %% ---------------------------------------------------------------------------
 %% The dispatcher
@@ -86,69 +112,56 @@ Spawn(Q) ::= spawn(Integer, Q, Stream(Input), Stream(Draw)?).
 %% stream of the initial goal and holds the person channel; it gives the
 %% program, in MCh, its own end of a person channel, passes every grant that
 %% is not input(Id, R) to it, and merges the program's output to the person
-%% with the constructs' draws (vGLP, 2026-10-01 23:55 UTC, E, Q4).
+%% with the constructs' draws (vGLP, 2026-10-01 23:55 UTC, E, Q4).  The
+%% program's person input keeps its own type; the dispatcher writes it and
+%% never closes it.
 exported procedure(Q) dispatch(Stream(Ask(Q))?,
-    Channel(Stream(_), Stream(_))?, Channel(Stream(_), Stream(_)),
+    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_)),
     Stream(Spawn(Q))).
 dispatch(Asks, ch(PIn, POut?), ch(MIn?, MOut), Ss?) :-
     split_grants(PIn?, Inputs, MIn),
     merge(MOut?, DOut?, POut),
-    serve(Asks?, Inputs?, COut?, COut, DOut, [], 0, Ss).
+    serve(Asks?, Inputs?, COut?, COut, DOut, [], [], 0, Ss).
 
 %% split_grants(Grants?, Inputs, Others): the person's grants to a construct,
 %% and every other grant, for the program.
-procedure split_grants(Stream(_)?, Stream(Input), Stream(_)).
+procedure split_grants(PersonIn?, Inputs, Stream(_)).
 split_grants([input(Id, R) | Gs], [input(Id?, R?) | Is?], Ms?) :-
     split_grants(Gs?, Is, Ms).
 split_grants([G | Gs], Is?, [G? | Ms?]) :-
     otherwise |
     split_grants(Gs?, Is, Ms).
-split_grants([], [], []).
 
-%% serve(Asks?, Inputs?, COut?, CInto, DOut, Routes?, N?, Spawns): on an
-%% ask, have the construct process of its question spawned, writing on
+%% serve(Asks?, Inputs?, COut?, CInto, DOut, Routes?, Deads?, N?, Spawns): on
+%% an ask, have the construct process of its question spawned, writing on
 %% Spawns its next identifier N, its question, the reader of its own grant
 %% stream and the writer of its own output stream, merged into COut by CInto;
 %% route each grant, whole, by identifier; pass the constructs' output on to
-%% the person, and forget a construct's route once it has withdrawn, closing
-%% its grants.
-procedure(Q) serve(Stream(Ask(Q))?, Stream(Input)?, Stream(Draw)?,
-    Stream(Draw), Stream(_), Routes?, Integer?, Stream(Spawn(Q))).
-serve([ask(_, Q) | Asks], Is, COut, CInto?, DOut?, Rs, N,
+%% the person, and move a construct's route, once it has withdrawn, from the
+%% live routes to Deads.
+procedure(Q) serve(Stream(Ask(Q))?, Inputs?, Stream(Draw)?,
+    Stream(Draw), Stream(_), Routes?, Deads?, Integer?, Stream(Spawn(Q))).
+serve([ask(_, Q) | Asks], Is, COut, CInto?, DOut?, Rs, Xs, N,
       [spawn(N?, Q?, Gs?, Ds) | Ss?]) :-
     ground(N?) |
     merge(Ds?, CInto1?, CInto),
     N1 := N? + 1,
-    serve(Asks?, Is?, COut?, CInto1, DOut, [route(N?, Gs) | Rs?], N1?, Ss).
-serve(Asks, [G | Is], COut, CInto?, DOut?, Rs, N, Ss?) :-
+    serve(Asks?, Is?, COut?, CInto1, DOut, [route(N?, Gs) | Rs?], Xs?, N1?,
+          Ss).
+serve(Asks, [G | Is], COut, CInto?, DOut?, Rs, Xs, N, Ss?) :-
     route_grant(G?, Rs?, Rs1),
-    serve(Asks?, Is?, COut?, CInto, DOut, Rs1?, N?, Ss).
+    serve(Asks?, Is?, COut?, CInto, DOut, Rs1?, Xs?, N?, Ss).
 serve(Asks, Is, [draw(Id, W, V) | COut], CInto?, [draw(Id?, W?, V?) | DOut?],
-      Rs, N, Ss?) :-
-    serve(Asks?, Is?, COut?, CInto, DOut, Rs?, N?, Ss).
+      Rs, Xs, N, Ss?) :-
+    serve(Asks?, Is?, COut?, CInto, DOut, Rs?, Xs?, N?, Ss).
 serve(Asks, Is, [withdraw(Id) | COut], CInto?, [withdraw(Id?) | DOut?], Rs,
-      N, Ss?) :-
+      Xs, N, Ss?) :-
     ground(Id?) |
-    remove_route(Id?, Rs?, Rs1),
-    serve(Asks?, Is?, COut?, CInto, DOut, Rs1?, N?, Ss).
-serve([], [], COut, [], DOut?, Rs, _, []) :-
-    drain(COut?, Rs?, DOut).
-
-%% drain(COut?, Routes?, DOut): the ask stream and the person channel are
-%% closed; pass the constructs' output on until the last has withdrawn, and
-%% close the grants of any that has not.
-procedure drain(Stream(Draw)?, Routes?, Stream(_)).
-drain([draw(Id, W, V) | COut], Rs, [draw(Id?, W?, V?) | DOut?]) :-
-    drain(COut?, Rs?, DOut).
-drain([withdraw(Id) | COut], Rs, [withdraw(Id?) | DOut?]) :-
-    ground(Id?) |
-    remove_route(Id?, Rs?, Rs1),
-    drain(COut?, Rs1?, DOut).
-drain([], Rs, []) :-
-    close_routes(Rs?).
+    remove_route(Id?, Rs?, Rs1, Xs?, Xs1),
+    serve(Asks?, Is?, COut?, CInto, DOut, Rs1?, Xs1?, N?, Ss).
 
 %% route_grant(G?, Routes?, Routes1): send the grant G = input(Id, R), whole,
-%% on the grant stream of construct Id; a grant for no construct, one
+%% on the grant stream of construct Id; a grant for no live construct, one
 %% withdrawn, reaches none.
 procedure route_grant(Input?, Routes?, Routes).
 route_grant(input(Id, R), [route(Id1, [input(Id?, R?) | Gs1?]) | Rs],
@@ -159,21 +172,16 @@ route_grant(G, [route(Id1, Gs?) | Rs], [route(Id1?, Gs) | Rs1?]) :-
     route_grant(G?, Rs?, Rs1).
 route_grant(_, [], []).
 
-%% remove_route(Id?, Routes?, Routes1): close the grant stream of construct
-%% Id and forget its route.
-procedure remove_route(Integer?, Routes?, Routes).
-remove_route(Id, [route(Id1, []) | Rs], Rs?) :-
+%% remove_route(Id?, Routes?, Routes1, Deads?, Deads1): move the route of
+%% construct Id from the live routes to the dead, its grant writer with it.
+procedure remove_route(Integer?, Routes?, Routes, Deads?, Deads).
+remove_route(Id, [route(Id1, Gs?) | Rs], Rs?, Xs, [Gs | Xs?]) :-
     Id? =?= Id1? | true.
-remove_route(Id, [route(Id1, Gs?) | Rs], [route(Id1?, Gs) | Rs1?]) :-
+remove_route(Id, [route(Id1, Gs?) | Rs], [route(Id1?, Gs) | Rs1?], Xs,
+             Xs1?) :-
     otherwise |
-    remove_route(Id?, Rs?, Rs1).
-remove_route(_, [], []).
-
-%% close_routes(Routes?): close every grant stream.
-procedure close_routes(Routes?).
-close_routes([route(_, []) | Rs]) :-
-    close_routes(Rs?).
-close_routes([]).
+    remove_route(Id?, Rs?, Rs1, Xs?, Xs1).
+remove_route(_, [], [], Xs, Xs?).
 
 %% ---------------------------------------------------------------------------
 %% The construct process: what is common to every interactive type
@@ -195,26 +203,11 @@ run(Id, _, [], Done, Ds?) :-
 procedure run_end(Integer?, Done?, Stream(Draw)).
 run_end(Id, done, [withdraw(Id?)]).
 
-%% inputs(Gs?, Rs): the person's inputs R of a construct's grants input(Id, R),
-%% which the construct reads (vGLP #5 Cowork, 2026-10-03 08:16 UTC, item 2:
-%% each grant sent whole as Input, the construct reading R from it).
-procedure inputs(Stream(Input)?, Stream(_)).
-inputs([input(_, R) | Gs], [R? | Rs?]) :-
-    inputs(Gs?, Rs).
-inputs([], []).
-
 %% all_done(Dones?, Done): done when each is.
 procedure all_done(Stream(Done)?, Done).
 all_done([done | Ds], D?) :-
     all_done(Ds?, D).
 all_done([], done).
-
-%% all_formed(Fs?, F): formed when each is, refused as soon as one is.
-procedure all_formed(Stream(Formed)?, Formed).
-all_formed([formed | Fs], F?) :-
-    all_formed(Fs?, F).
-all_formed([refused | _], refused).
-all_formed([], formed).
 
 %% shown(X?, Views): the view of a position the program writes and the person
 %% does not, once it is written: the term itself.
@@ -250,42 +243,52 @@ append_one([], X, [X?]).
 %% Forming the primitive positions of an answer
 %% ---------------------------------------------------------------------------
 
-%% form_T(R?, X, F): X is the person's input R as a term of type T, and F is
-%% formed; or R is not one, X is left unwritten and F is refused.  The forming
-%% clauses of the program's own types are the compilation's; these are the
-%% primitive ones they call.
-procedure form_string(_?, String, Formed).
-form_string(R, X?, formed) :-
-    string(R?) | X = R?.
-form_string(_, _?, refused) :-
+%% form_T(R?, F): F is formed(X), X the person's input R as a term of type
+%% T, or refused where R is not one.  The forming clauses of the program's own
+%% types are the compilation's; these are the primitive ones they call.  The
+%% term is written in the body, F = formed(R?): the guard narrows R? to T only
+%% in the body (TGLP typed-glp.tex, "Type checking of guards": "the
+%% occurrence has that meet as its type in the body"; vGLP #5 Cowork,
+%% 2026-10-03 21:13 UTC, Q2).
+procedure form_string(_?, Formed(String)).
+form_string(R, F?) :-
+    string(R?) | F = formed(R?).
+form_string(_, refused) :-
     otherwise | true.
 
-procedure form_integer(_?, Integer, Formed).
-form_integer(R, X?, formed) :-
-    integer(R?) | X = R?.
-form_integer(_, _?, refused) :-
+procedure form_integer(_?, Formed(Integer)).
+form_integer(R, F?) :-
+    integer(R?) | F = formed(R?).
+form_integer(_, refused) :-
     otherwise | true.
 
-procedure form_number(_?, Number, Formed).
-form_number(R, X?, formed) :-
-    number(R?) | X = R?.
-form_number(_, _?, refused) :-
+procedure form_number(_?, Formed(Number)).
+form_number(R, F?) :-
+    number(R?) | F = formed(R?).
+form_number(_, refused) :-
     otherwise | true.
 
-procedure form_constant(_?, Constant, Formed).
-form_constant(R, X?, formed) :-
-    constant(R?) | X = R?.
-form_constant(_, _?, refused) :-
+%% By the guard real/1 (GLP-Spec 12be29b; on gap at 2af93777).
+procedure form_real(_?, Formed(Real)).
+form_real(R, F?) :-
+    real(R?) | F = formed(R?).
+form_real(_, refused) :-
     otherwise | true.
 
-procedure form_module(_?, Module, Formed).
-form_module(R, X?, formed) :-
-    module(R?) | X = R?.
-form_module(_, _?, refused) :-
+procedure form_constant(_?, Formed(Constant)).
+form_constant(R, F?) :-
+    constant(R?) | F = formed(R?).
+form_constant(_, refused) :-
     otherwise | true.
 
-procedure form_any(_?, _, Formed).
-form_any(R, X?, formed) :-
-    ground(R?) | X = R?.
-form_any(_, _?, refused) :-
+procedure form_module(_?, Formed(Module)).
+form_module(R, F?) :-
+    module(R?) | F = formed(R?).
+form_module(_, refused) :-
+    otherwise | true.
+
+procedure form_any(_?, Formed(_)).
+form_any(R, F?) :-
+    ground(R?) | F = formed(R?).
+form_any(_, refused) :-
     otherwise | true.

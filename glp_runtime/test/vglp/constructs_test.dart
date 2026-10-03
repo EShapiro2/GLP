@@ -9,7 +9,10 @@
 // code task of 2026-10-02 00:13 UTC, Part 2, with the answers of 2026-10-01
 // 23:55 UTC (E) and of 2026-10-02 08:26 UTC; the generic source's form of
 // 2026-10-02 21:02 UTC (B) without the handle (vGLP #5 Cowork, 2026-10-03
-// 08:16 UTC, item 2).  The runs are elicitation_test.
+// 08:16 UTC, item 2); the forming result carrying the term and the grants
+// that never close (item 3, with the answers of 21:13 UTC, Q1 and Q2, from
+// vGLP at 7838827, Definition "Person Channel, Person Writer, GLP with
+// Persons, Grant").  The runs are elicitation_test.
 
 import 'dart:io';
 
@@ -73,7 +76,8 @@ decide(no, From, refuse(From?)).
       };
       expect(calls, isNot(contains('construct')));
       expect(dispatcher.module.typeDefs.map((t) => t.name),
-          containsAll(['Ask', 'Spawn', 'Input', 'Draw']));
+          containsAll(['Ask', 'Spawn', 'Input', 'Draw', 'PersonIn', 'Inputs',
+              'Deads']));
       expect(dispatcher.module.typeDefs.map((t) => t.name),
           isNot(contains('Handle')));
     });
@@ -87,7 +91,7 @@ decide(no, From, refuse(From?)).
       expect(
           c.source,
           contains('exported procedure dispatch(Stream(Ask(Question))?, '
-              'Channel(Stream(_), Stream(_))?, Channel(Stream(_), '
+              'Channel(PersonIn, Stream(_))?, Channel(Stream(_), '
               'Stream(_))).'));
       expect(
           c.source,
@@ -97,36 +101,81 @@ decide(no, From, refuse(From?)).
       expect(
           c.source,
           contains('\nprocedure(Q) dispatch(Stream(Ask(Q))?, '
-              'Channel(Stream(_), Stream(_))?, Channel(Stream(_), Stream(_)), '
+              'Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_)), '
               'Stream(Spawn(Q))).'));
       expect(c.source, contains('Draw ::= draw(Integer, _, _) ; '
           'withdraw(Integer).'));
       expect(c.source, contains('Ask(Q) ::= ask(Constant, Q).'));
       expect(
           c.source,
-          contains('Spawn(Q) ::= spawn(Integer, Q, Stream(Input), '
+          contains('Spawn(Q) ::= spawn(Integer, Q, Inputs, '
               'Stream(Draw)?).'));
       // On an ask it writes the spawn of the construct process with the next
       // identifier, keeping the writer of its grants and the reader of its
       // draws; constructs/1 calls construct/4 on each spawn.
       expect(
           c.source,
-          contains('serve([ask(_, Q) | Asks], Is, COut, CInto?, DOut?, Rs, N, '
-              '[spawn(N?, Q?, Gs?, Ds) | Ss?]) :- ground(N?) | '
+          contains('serve([ask(_, Q) | Asks], Is, COut, CInto?, DOut?, Rs, Xs, '
+              'N, [spawn(N?, Q?, Gs?, Ds) | Ss?]) :- ground(N?) | '
               'merge(Ds?, CInto1?, CInto)'));
       expect(
           c.source,
           contains('constructs([spawn(Id, Q, Gs, Ds?) | Ss]) :- '
               'construct(Id?, Q?, Gs?, Ds), constructs(Ss?).'));
       expect(c.source, contains('constructs([]).'));
-      // A grant is routed whole, and the construct reads the input from it.
+      // A grant is routed whole, and the question reads the input from it.
       expect(
           c.source,
           contains('route_grant(input(Id, R), [route(Id1, [input(Id?, R?) | '
               'Gs1?]) | Rs], [route(Id1?, Gs1) | Rs?]) :- (Id? =?= Id1?) | '
               'true.'));
+      expect(
+          c.source,
+          contains('answer_yesNo(X?, [input(Id, R) | Gs], Gs1?, Done?) :- '
+              'ground(R?) | form_yesNo(R?, F), take_yesNo(F?, X, '
+              'input(Id?, R?), Gs?, Gs1, Done).'));
+    });
+
+    test('its person channel and a construct\'s grants never close: they are '
+        'typed without [], no clause reads a [] of them, and a withdrawn '
+        'construct\'s grant writer goes to Deads (Q1)', () {
+      final c = compile(card);
+      expect(c.source, contains('PersonIn ::= [_ | PersonIn].'));
+      expect(c.source, contains('Inputs ::= [Input | Inputs].'));
+      expect(c.source, contains('Route ::= route(Integer, Inputs?).'));
+      expect(c.source, contains('Deads ::= [] ; [Inputs? | Deads].'));
       expect(c.source,
-          contains('inputs([input(_, R) | Gs], [R? | Rs?]) :- inputs(Gs?, Rs).'));
+          contains('procedure split_grants(PersonIn?, Inputs, Stream(_)).'));
+      expect(
+          c.source,
+          contains('procedure(Q) serve(Stream(Ask(Q))?, Inputs?, '
+              'Stream(Draw)?, Stream(Draw), Stream(_), Routes?, Deads?, '
+              'Integer?, Stream(Spawn(Q))).'));
+      // No clause for a closed person channel or closed grants, and nothing
+      // that closes a construct's grants.
+      expect(c.source, isNot(contains('split_grants([], ')));
+      expect(c.source, isNot(contains('serve([], [], ')));
+      expect(c.source, isNot(contains('drain(')));
+      expect(c.source, isNot(contains('close_routes(')));
+      expect(c.source, isNot(contains('answer_yesNo(_?, [], ')));
+      expect(
+          c.source,
+          contains('remove_route(Id, [route(Id1, Gs?) | Rs], Rs?, Xs, '
+              '[Gs | Xs?]) :- (Id? =?= Id1?) | true.'));
+    });
+
+    test('no clause it emits has an anonymous reader (GLP-Spec\'s Remark '
+        '"Anonymous Variables", c3d3fc6)', () {
+      final c = compile(card);
+      final clauses = c.source.split('\n').where((l) =>
+          l.isNotEmpty &&
+          !l.startsWith('%') &&
+          !l.startsWith('procedure') &&
+          !l.startsWith('exported') &&
+          !l.contains('::='));
+      for (final l in clauses) {
+        expect(l, isNot(contains('_?')), reason: l);
+      }
     });
 
     test('its names, and the construct processes\', are fresh against the '
@@ -172,7 +221,7 @@ procedure (T?)*p.
 (t)*p.
 ''');
       expect(c.source, contains('procedure construct(Integer?, Question?, '
-          'Stream(Input)?, Stream(Draw)).'));
+          'Inputs?, Stream(Draw)).'));
       expect(c.source,
           contains('procedure constructs(Stream(Spawn(Question))?).'));
     });
@@ -197,8 +246,8 @@ procedure (T?)*p.
         'and draws it with the default widget, a form', () {
       expect(
           s,
-          contains('construct(Id, card_w(X), Gs, Ds?) :- inputs(Gs?, Rs), '
-              'present_card(X?, Rs?, _, Vs, Done), '
+          contains('construct(Id, card_w(X), Gs, Ds?) :- '
+              'present_card(X?, Gs?, _, Vs, Done), '
               'run(Id?, form(card, [shown, buttons([yes, no])]), Vs?, Done?, '
               'Ds).'));
       // The view waits for the peer, so the output comes before the input
@@ -210,16 +259,23 @@ procedure (T?)*p.
     });
 
     test('binds the question with the term the person\'s input forms, by '
-        'clauses typed at its type, a grant of no such term passed on', () {
-      expect(s, contains('procedure form_yesNo(_?, YesNo, Formed).'));
-      expect(s, contains('form_yesNo(yes, yes, formed).'));
-      expect(s, contains('form_yesNo(no, no, formed).'));
-      expect(s, contains('form_yesNo(_, _?, refused) :- otherwise | true.'));
-      expect(s, contains('take_yesNo(formed, V, V?, _, Gs, Gs?, done).'));
+        'clauses typed at its type, the result carrying the term, a grant of '
+        'no such term passed on', () {
+      expect(s, contains('procedure form_yesNo(_?, Formed(YesNo)).'));
+      expect(s, contains('form_yesNo(yes, formed(yes)).'));
+      expect(s, contains('form_yesNo(no, formed(no)).'));
+      expect(s, contains('form_yesNo(_, refused) :- otherwise | true.'));
       expect(
           s,
-          contains('take_yesNo(refused, _, X?, G, Gs, [G? | Gs1?], Done?) :- '
+          contains('procedure take_yesNo(Formed(YesNo)?, YesNo, Input?, '
+              'Inputs?, Inputs, Done).'));
+      expect(s, contains('take_yesNo(formed(V), V?, _, Gs, Gs?, done).'));
+      expect(
+          s,
+          contains('take_yesNo(refused, X?, G, Gs, [G? | Gs1?], Done?) :- '
               'answer_yesNo(X, Gs?, Gs1, Done).'));
+      expect(s,
+          contains('procedure answer_yesNo(YesNo, Inputs?, Inputs, Done).'));
     });
   });
 
@@ -234,15 +290,35 @@ procedure (Request?)*agent(Integer?).
 ''').source;
       expect(
           s,
-          contains('construct(Id, request_r(X?), Gs, Ds?) :- inputs(Gs?, Rs), '
-              'answer_request(X, Rs?, _, Done), run(Id?, menu([form(post, '
+          contains('construct(Id, request_r(X?), Gs, Ds?) :- '
+              'answer_request(X, Gs?, _, Done), run(Id?, menu([form(post, '
               '[text]), button(quit)]), [input], Done?, Ds).'));
       expect(s,
-          contains('form_request(post(R1), post(X1?), F?) :- '
-              'form_string(R1?, X1, F).'));
-      expect(s, contains('form_request(quit, quit, formed).'));
-      expect(s, contains('form_string(R, X?, formed) :- string(R?) | '
-          'X = R?.'));
+          contains('form_request(post(R1), F?) :- form_string(R1?, F1), '
+              'join_request_post_1(F1?, F).'));
+      expect(s,
+          contains('join_request_post_1(formed(X1), formed(post(X1?))).'));
+      expect(s, contains('join_request_post_1(refused, refused).'));
+      expect(s, contains('form_request(quit, formed(quit)).'));
+      // The term is written in the body, where the guard narrows the input
+      // (Q2).
+      expect(s, contains('form_string(R, F?) :- string(R?) | '
+          'F = formed(R?).'));
+    });
+
+    test('a union with a primitive alternative: the primitive formed by its '
+        'guard, the term written in the body (Q2)', () {
+      final s = compile('''
+Amount ::= Integer ; none.
+Bid ::= bid(Amount, String).
+procedure (Bid?)*offer(Bid).
+(B)*offer(B?).
+''').source;
+      expect(s, contains('procedure form_amount(_?, Formed(Amount)).'));
+      expect(s, contains('form_amount(none, formed(none)).'));
+      expect(s,
+          contains('form_amount(R, F?) :- integer(R?) | F = formed(R?).'));
+      expect(s, contains('form_amount(_, refused) :- otherwise | true.'));
     });
 
     test('a stream: an input box that stays open, one element per '
@@ -260,11 +336,11 @@ send_all(_, [], []).
       expect(
           s,
           contains('construct(Id, stream_string_r(X?), Gs, Ds?) :- '
-              'inputs(Gs?, Rs), answer_stream_string(X, Rs?, _, Done), '
+              'answer_stream_string(X, Gs?, _, Done), '
               'run(Id?, input_box(text), [input], Done?, Ds).'));
       expect(
           s,
-          contains('take_stream_string(formed, V, [V? | X1?], _, Gs, Gs1?, '
+          contains('take_stream_string(formed(V), [V? | X1?], _, Gs, Gs1?, '
               'Done?) :- answer_stream_string(X1, Gs?, Gs1, Done).'));
     });
 
@@ -283,9 +359,18 @@ procedure (Order?)*order(Order).
               'button(cancel)])'));
       expect(
           s,
-          contains('form_order(order(R1, R2), order(X1?, X2?), F?) :- '
-              'form_constant(R1?, X1, F1), form_lot(R2?, X2, F2), '
-              'all_formed([F1?, F2?], F).'));
+          contains('form_order(order(R1, R2), F?) :- '
+              'form_constant(R1?, F1), form_lot(R2?, F2), '
+              'join_order_order_2(F1?, F2?, F).'));
+      // Formed where both children formed, refused where either is, one
+      // clause per position (item 3).
+      expect(
+          s,
+          contains('join_order_order_2(formed(X1), formed(X2), '
+              'formed(order(X1?, X2?))).'));
+      expect(s, contains('join_order_order_2(refused, _, refused).'));
+      expect(s, contains('join_order_order_2(_, refused, refused).'));
+      expect(s, isNot(contains('all_formed')));
     });
   });
 

@@ -17,7 +17,7 @@
 //
 // The generic source is a module that loads and type-checks by itself: it is
 // parameterised in the program's questions, Q of Ask(Q), Spawn(Q),
-// dispatch/4 and serve/8, and calls no construct process, writing a spawn on
+// dispatch/4 and serve/9, and calls no construct process, writing a spawn on
 // dispatch/4's fourth argument instead.  The compilation supplies the
 // questions, Question, and the construct process of each interactive type,
 // construct/4, with constructs/1, which reads the spawns and calls
@@ -35,11 +35,15 @@ import '../compiler/parser.dart';
 import '../analysis/type_checker/type_ast.dart';
 
 /// The generic source's types the compilation names: the asks on the ask
-/// stream, Ask(Q); the spawns of the construct processes, Spawn(Q); and a
-/// grant, Input.
+/// stream, Ask(Q); the spawns of the construct processes, Spawn(Q); a grant,
+/// Input; a construct's grants, Inputs; and the person channel's input,
+/// PersonIn, the last two never closing (vGLP #5 Cowork, 2026-10-03 21:13
+/// UTC, Q1).
 const askTypeName = 'Ask';
 const spawnTypeName = 'Spawn';
 const inputTypeName = 'Input';
+const inputsTypeName = 'Inputs';
+const personInTypeName = 'PersonIn';
 
 /// The dispatcher's entry point, dispatch(Asks?, PersonCh?, MCh, Spawns); the
 /// compiled program's dispatch/3, which the bridge or a play spawns beside

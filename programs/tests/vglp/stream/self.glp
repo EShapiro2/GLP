@@ -10,6 +10,12 @@
 %% its own, so the program's end of one is dropped.  The person sees the
 %% input box and submits three times, a number among two texts.
 %%
+%% The person never closes its grants, the person channel never closing
+%% (vGLP at 7838827, Definition "Person Channel, Person Writer, GLP with
+%% Persons, Grant"; vGLP #5 Cowork, 2026-10-03 21:13 UTC, Q1): it holds its
+%% writer for good and goes on watching, and reads what the dispatcher sends
+%% it as any term, _?, as fragments/self.glp says.
+%%
 %% The types of chat.vglp and those its compilation adds, written again for
 %% the declarations of the procedures imported from its compiled module.
 
@@ -17,10 +23,11 @@ Peer     ::= Constant.
 Msg      ::= msg(Peer, String).
 Question ::= stream_string_r(Stream(String)?).
 Ask(Q)   ::= ask(Constant, Q).
+PersonIn ::= [_ | PersonIn].
 
 imported procedure chat#chat(Peer?, Stream(Msg), Stream(Ask(Question))).
 imported procedure chat#dispatch(Stream(Ask(Question))?,
-    Channel(Stream(_), Stream(_))?, Channel(Stream(_), Stream(_))).
+    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
 
 exported procedure play_chat(Stream(Msg), Stream(_)).
 play_chat(Out?, Log?) :-
@@ -28,15 +35,15 @@ play_chat(Out?, Log?) :-
     chat # dispatch(Asks?, ch(Gs?, Ds), _),
     chatting_person(Ds?, Gs, Log).
 
-procedure chatting_person(Stream(_)?, Stream(_), Stream(_)).
+procedure chatting_person(_?, PersonIn, Stream(_)).
 chatting_person([draw(Id, W, input) | Ds],
                 [input(Id?, "hello"), input(Id?, 7), input(Id?, "world") | Gs?],
                 [drawn(Id?, W?) | Log?]) :-
     ground(Id?), ground(W?) |
     chatting_person(Ds?, Gs, Log).
-chatting_person([withdraw(Id) | _], [], [withdrawn(Id?)]) :-
-    ground(Id?) | true.
-chatting_person([], [], []).
+chatting_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    chatting_person(Ds?, Gs, Log).
 
 %% A stream question takes two grants as two elements and stays open: the
 %% person submits two texts, the stream has two elements and an open tail,
@@ -47,12 +54,12 @@ play_chat_two(Out?, Log?) :-
     chat # dispatch(Asks?, ch(Gs?, Ds), _),
     two_texts_person(Ds?, Gs, Log).
 
-procedure two_texts_person(Stream(_)?, Stream(_), Stream(_)).
+procedure two_texts_person(_?, PersonIn, Stream(_)).
 two_texts_person([draw(Id, W, input) | Ds],
                  [input(Id?, "one"), input(Id?, "two") | Gs?],
                  [drawn(Id?, W?) | Log?]) :-
     ground(Id?), ground(W?) |
     two_texts_person(Ds?, Gs, Log).
-two_texts_person([withdraw(Id) | _], [], [withdrawn(Id?)]) :-
-    ground(Id?) | true.
-two_texts_person([], [], []).
+two_texts_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    two_texts_person(Ds?, Gs, Log).
