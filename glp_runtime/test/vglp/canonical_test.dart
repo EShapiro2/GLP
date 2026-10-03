@@ -76,11 +76,11 @@ void main() {
       expect(
           q,
           contains('exported procedure agent(Peer?, Stream(Msg)?, '
-              'Stream(String), Stream(Ask)).'));
+              'Stream(String), Stream(Ask(Question))).'));
       expect(
           q,
           contains('procedure agent1(Peer?, Stream(Msg)?, Stream(String), '
-              'Stream(Request)?, Stream(Ask)).'));
+              'Stream(Request)?, Stream(Ask(Question))).'));
       expect(
           q,
           contains('agent1(Id, NetIn, Outs?, Reqs, D?) :- '
@@ -96,7 +96,7 @@ void main() {
       expect(
           q,
           contains('procedure respond_coldcall1(Offer?, Response, Card, '
-              'Stream(Ask)).'));
+              'Stream(Ask(Question))).'));
       expect(
           q,
           contains('respond_coldcall1(offer(From), Resp?, card(From?, Answer), '
@@ -109,7 +109,7 @@ void main() {
       expect(
           q,
           contains('procedure serve(Stream(Request)?, Peer?, Stream(Msg)?, '
-              'Stream(String), Stream(Ask)).'));
+              'Stream(String), Stream(Ask(Question))).'));
       expect(
           q,
           contains('serve(Reqs, Id, [msg(Id1, friend_request(From, Resp?)) | '
@@ -128,13 +128,14 @@ void main() {
     });
 
     test('the types the compilation adds: the questions, one functor per '
-        'moded interactive type wrapping it as written, and one ask/2 over '
-        'their union; no handle', () {
+        'moded interactive type wrapping it as written, and, with no '
+        'dispatcher\'s generic source to define it, one ask/2 over their '
+        'union; no handle', () {
       expect(
           q,
           contains('Question ::= stream_request_r(Stream(Request)?) ; '
               'card_w(Card).'));
-      expect(q, contains('Ask ::= ask(Constant, Question).'));
+      expect(q, contains('Ask(Q) ::= ask(Constant, Q).'));
       expect(q, isNot(contains('Handle')));
     });
 
@@ -169,12 +170,12 @@ send_all(_, [], []).
       expect(
           s,
           contains('procedure chat1(Peer?, Stream(Msg), Stream(String)?, '
-              'Stream(Ask)).'));
+              'Stream(Ask(Question))).'));
       expect(s, contains('chat1(Peer, Out?, Ms, []) :- ground(Peer?) | '
           'send_all(Peer?, Ms?, Out).'));
       expect(s,
           contains('Question ::= stream_string_r(Stream(String)?).'));
-      expect(s, contains('Ask ::= ask(Constant, Question).'));
+      expect(s, contains('Ask(Q) ::= ask(Constant, Q).'));
     });
 
     test('a nullary volitional procedure, and exported, and a parameter '
@@ -187,20 +188,23 @@ exported procedure (T?)*go.
 procedure(X) (Box(X)?)*take(X).
 (box(V))*take(V?).
 ''');
-      // The ask type takes the parameter an interactive type names, and every
-      // declaration with an ask stream takes it with it.
-      expect(s, contains('exported procedure(X) go(Stream(Ask(X))).'));
+      // The questions take the parameter an interactive type names, and every
+      // declaration with an ask stream takes it with them.
+      expect(s,
+          contains('exported procedure(X) go(Stream(Ask(Question(X)))).'));
       expect(s, contains("go([ask('T?', t_r(X)) | D?]) :- go1(X?, D)."));
-      expect(s, contains('procedure(X) go1(T?, Stream(Ask(X))).'));
+      expect(s, contains('procedure(X) go1(T?, Stream(Ask(Question(X)))).'));
       expect(s, contains('go1(t, []).'));
-      expect(s, contains('procedure(X) take(X, Stream(Ask(X))).'));
-      expect(s, contains('procedure(X) take1(X, Box(X)?, Stream(Ask(X))).'));
+      expect(s, contains('procedure(X) take(X, Stream(Ask(Question(X)))).'));
+      expect(s,
+          contains('procedure(X) take1(X, Box(X)?, '
+              'Stream(Ask(Question(X)))).'));
       expect(
           s,
           contains("take(S1?, [ask('Box(X)?', box_x_r(X)) | D?]) :- "
               'take1(S1, X?, D).'));
       expect(s, contains('Question(X) ::= t_r(T?) ; box_x_r(Box(X)?).'));
-      expect(s, contains('Ask(X) ::= ask(Constant, Question(X)).'));
+      expect(s, contains('Ask(Q) ::= ask(Constant, Q).'));
     });
 
     test('the (n+1)-ary procedure\'s name is fresh against the program\'s', () {
@@ -451,10 +455,12 @@ procedure s1(Integer?).
 s1(_).
 ''');
       expect(c.reaching, {'q/1', 'r/1', 'p/1'});
-      expect(c.source, contains('procedure p(Integer?, Stream(Ask)).'));
+      expect(c.source,
+          contains('procedure p(Integer?, Stream(Ask(Question))).'));
       expect(c.source, contains('p(N, D?) :- r(N?, D).'));
       expect(c.source, contains('p(0, []).'));
-      expect(c.source, contains('procedure r(Integer?, Stream(Ask)).'));
+      expect(c.source,
+          contains('procedure r(Integer?, Stream(Ask(Question))).'));
       expect(c.source, contains('r(N, D?) :- q(N?, D).'));
       expect(c.source, contains('procedure s(Integer?).'));
       expect(c.source, contains('s(N) :- s1(N?).'));
@@ -522,7 +528,7 @@ procedure (T?)*q(Integer?).
 (t)*q(_).
 ''').source;
       expect(s, contains('Question ::= t_r(T?).'));
-      expect(s, contains('Ask ::= ask(Constant, Question).'));
+      expect(s, contains('Ask(Q) ::= ask(Constant, Q).'));
     });
 
     test('the types it adds are named fresh against the program\'s', () {
@@ -536,9 +542,9 @@ procedure (Ask?)*p(Handle?).
       expect(c.askType, 'Ask_1');
       expect(c.questionType, 'Question_1');
       expect(c.source, contains('Question_1 ::= ask_r(Ask?).'));
-      expect(c.source, contains('Ask_1 ::= ask(Constant, Question_1).'));
+      expect(c.source, contains('Ask_1(Q) ::= ask(Constant, Q).'));
       expect(c.source,
-          contains('procedure p1(Handle?, Ask?, Stream(Ask_1)).'));
+          contains('procedure p1(Handle?, Ask?, Stream(Ask_1(Question_1))).'));
       // The program's Handle is its own; the compilation adds none.
       expect(c.source, isNot(contains('Handle_1')));
     });
@@ -552,7 +558,8 @@ procedure (T?)*q(Integer?).
 exported procedure go(Integer?).
 go(N) :- q(N?).
 ''').source;
-      expect(s, contains('exported procedure go(Integer?, Stream(Ask)).'));
+      expect(s,
+          contains('exported procedure go(Integer?, Stream(Ask(Question))).'));
       expect(s, contains('go(N, D?) :- q(N?, D).'));
     });
   });

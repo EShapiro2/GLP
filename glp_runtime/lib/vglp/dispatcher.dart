@@ -4,7 +4,9 @@
 // programs/vglp/dispatcher.glp and instantiated into a compiled program.
 // Spec: vGLP, sections/elicitation.tex, Definition "Canonical Compilation" and
 // the paragraph before it; vGLP's code task of 2026-10-02 00:13 UTC, Part 2,
-// with the answers of 2026-10-01 23:55 UTC (E) and 2026-10-02 08:26 UTC.
+// with the answers of 2026-10-01 23:55 UTC (E) and 2026-10-02 08:26 UTC; the
+// generic source's form of 2026-10-02 21:02 UTC (B) without the handle (vGLP
+// #5 Cowork, 2026-10-03 08:16 UTC, item 2).
 //
 // The canonical compilation of M consists, besides M's clauses so extended
 // and the asking clauses, of "the construct process of T" for each interactive
@@ -13,12 +15,17 @@
 // was: a module path resolves from the program root downward, so a compiled
 // program cannot name programs/vglp/ (mediator.dart).
 //
-// The generic source names two types and one procedure it does not define,
-// which the compilation supplies: Ask, the asks on the ask stream; Question,
-// the union of the program's questions; and construct/4, the construct
-// process of each interactive type (constructs.dart).  Every
-// type and procedure the source does define is emitted under a name fresh
-// against the program's, so that no name of the program is taken.
+// The generic source is a module that loads and type-checks by itself: it is
+// parameterised in the program's questions, Q of Ask(Q), Spawn(Q),
+// dispatch/4 and serve/8, and calls no construct process, writing a spawn on
+// dispatch/4's fourth argument instead.  The compilation supplies the
+// questions, Question, and the construct process of each interactive type,
+// construct/4, with constructs/1, which reads the spawns and calls
+// construct/4 on each, and dispatch/3, which spawns dispatch/4 and
+// constructs/1 (constructs.dart).  Every type and procedure the source
+// defines is emitted under a name fresh against the program's, so that no
+// name of the program is taken, and no declaration of it exported: the
+// compiled program's entry point is its dispatch/3.
 
 import 'dart:io';
 
@@ -27,18 +34,24 @@ import '../compiler/lexer.dart';
 import '../compiler/parser.dart';
 import '../analysis/type_checker/type_ast.dart';
 
-/// The types the compilation supplies to the generic source, by the names
-/// the source uses for them.
-const askTypeRef = 'Ask';
-const questionTypeRef = 'Question';
+/// The generic source's types the compilation names: the asks on the ask
+/// stream, Ask(Q); the spawns of the construct processes, Spawn(Q); and a
+/// grant, Input.
+const askTypeName = 'Ask';
+const spawnTypeName = 'Spawn';
+const inputTypeName = 'Input';
 
-/// The procedure the compilation supplies: the construct process of each
-/// interactive type, construct(Id?, Q?, Gs?, Ds).
-const constructHook = 'construct';
-
-/// The dispatcher's entry point, dispatch(Asks?, PersonCh?, MCh), which the
-/// bridge or a play spawns beside the initial goal.
+/// The dispatcher's entry point, dispatch(Asks?, PersonCh?, MCh, Spawns); the
+/// compiled program's dispatch/3, which the bridge or a play spawns beside
+/// the initial goal, takes the same name.
 const dispatchEntry = 'dispatch';
+
+/// The procedures the compilation supplies, by the stems of their names: the
+/// construct process of each interactive type, construct(Id?, Q?, Gs?, Ds),
+/// and constructs(Spawns?), which reads the dispatcher's spawns and calls it
+/// on each.
+const constructHook = 'construct';
+const constructsHook = 'constructs';
 
 /// The generic source of the dispatcher and the construct processes.
 class DispatcherSource {
@@ -83,7 +96,7 @@ class InstantiatedDispatcher {
   final List<ast.Procedure> procedures;
 
   /// Generic name to emitted name, for the procedures and the types the
-  /// source defines, the construct hook included.
+  /// source defines.
   final Map<String, String> procNames;
   final Map<String, String> typeNames;
 
@@ -113,37 +126,27 @@ class InstantiatedDispatcher {
 
 /// Instantiate [source] into a program.
 ///
-/// [supplied] gives the emitted type of each of Ask and Question;
-/// [params] are the type parameters these carry, which every declaration
-/// mentioning them takes.  [freshType] and [freshProc] give a name fresh
-/// against the program's for a stem, and [constructName] is the name the
-/// construct hook is emitted under.  [used] are the generic procedures the
-/// construct processes call; with the dispatcher's entry point they are the
-/// roots from which the emitted procedures are reached.
+/// [freshType] and [freshProc] give a name fresh against the program's for a
+/// stem.  Every declaration is emitted unexported.
 InstantiatedDispatcher instantiateDispatcher(
   DispatcherSource source, {
-  required Map<String, TypeExpr> supplied,
-  required List<String> params,
   required String Function(String stem) freshType,
   required String Function(String stem) freshProc,
-  required String constructName,
 }) {
   final m = source.module;
 
-  // The types the source defines, renamed fresh; the supplied ones replaced.
+  // The types the source defines, renamed fresh.
   final typeNames = <String, String>{
     for (final td in m.typeDefs) td.name: freshType(td.name)
   };
 
-  // The procedures the source defines, renamed fresh; the hook named as the
-  // compilation names it.
+  // The procedures the source defines, renamed fresh.
   final defined = <String>{for (final p in m.procedures) p.name};
   final procNames = <String, String>{
     for (final name in defined) name: freshProc(name),
-    constructHook: constructName,
   };
 
-  TypeExpr retype(TypeExpr e) => _retype(e, typeNames, supplied);
+  TypeExpr retype(TypeExpr e) => _retype(e, typeNames);
 
   final typeDefs = [
     for (final td in m.typeDefs)
@@ -159,12 +162,7 @@ InstantiatedDispatcher instantiateDispatcher(
         [for (final t in d.argTypes) retype(t)],
         d.line,
         d.column,
-        typeParams: [
-          ...d.typeParams,
-          if (d.argTypes.any((t) => _mentionsSupplied(t, _parametrised)))
-            for (final p in params) if (!d.typeParams.contains(p)) p,
-        ],
-        exported: d.exported,
+        typeParams: d.typeParams,
       )
   ];
 
@@ -204,52 +202,25 @@ Set<String> reachableGeneric(DispatcherSource source, Iterable<String> roots) {
   return seen;
 }
 
-TypeExpr _retype(TypeExpr e, Map<String, String> typeNames,
-    Map<String, TypeExpr> supplied) {
+TypeExpr _retype(TypeExpr e, Map<String, String> typeNames) {
   if (e is TypeRef) {
-    final s = supplied[e.name];
-    if (s != null && e.typeArgs.isEmpty) {
-      if (s is TypeRef) {
-        return TypeRef(s.name, e.line, e.column,
-            isInput: e.isInput, typeArgs: s.typeArgs);
-      }
-      return s;
-    }
     return TypeRef(typeNames[e.name] ?? e.name, e.line, e.column,
         isInput: e.isInput,
-        typeArgs: [
-          for (final a in e.typeArgs) _retype(a, typeNames, supplied)
-        ]);
+        typeArgs: [for (final a in e.typeArgs) _retype(a, typeNames)]);
   }
   if (e is StructAlt) {
-    return StructAlt(e.functor,
-        [for (final a in e.args) _retype(a, typeNames, supplied)],
+    return StructAlt(e.functor, [for (final a in e.args) _retype(a, typeNames)],
         e.line, e.column);
   }
   if (e is ListConsAlt) {
-    return ListConsAlt(_retype(e.head, typeNames, supplied),
-        _retype(e.tail, typeNames, supplied), e.line, e.column);
+    return ListConsAlt(_retype(e.head, typeNames), _retype(e.tail, typeNames),
+        e.line, e.column);
   }
   if (e is DiffListAlt) {
-    return DiffListAlt(_retype(e.content, typeNames, supplied),
-        _retype(e.hole, typeNames, supplied), e.line, e.column);
+    return DiffListAlt(_retype(e.content, typeNames),
+        _retype(e.hole, typeNames), e.line, e.column);
   }
   return e;
-}
-
-/// The supplied types that carry the program's type parameters.
-const _parametrised = {askTypeRef, questionTypeRef};
-
-bool _mentionsSupplied(TypeExpr e, Set<String> names) {
-  if (e is TypeRef) {
-    return names.contains(e.name) ||
-        e.typeArgs.any((a) => _mentionsSupplied(a, names));
-  }
-  if (e is StructAlt) return e.args.any((a) => _mentionsSupplied(a, names));
-  if (e is ListConsAlt) {
-    return _mentionsSupplied(e.head, names) || _mentionsSupplied(e.tail, names);
-  }
-  return false;
 }
 
 ast.Clause _renameClause(ast.Clause c, Map<String, String> names) {

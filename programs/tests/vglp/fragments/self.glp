@@ -28,12 +28,13 @@ Card     ::= card(Peer, YesNo?).
 Content  ::= friend_request(Peer, Response?).
 Msg      ::= msg(Peer, Content).
 Question ::= stream_request_r(Stream(Request)?) ; card_w(Card).
-Ask      ::= ask(Constant, Question).
+Ask(Q)   ::= ask(Constant, Q).
 
 imported procedure questions#agent(Peer?, Stream(Msg)?, Stream(String),
-    Stream(Ask)).
-imported procedure questions#respond_coldcall(Offer?, Response, Stream(Ask)).
-imported procedure questions#dispatch(Stream(Ask)?,
+    Stream(Ask(Question))).
+imported procedure questions#respond_coldcall(Offer?, Response,
+    Stream(Ask(Question))).
+imported procedure questions#dispatch(Stream(Ask(Question))?,
     Channel(Stream(_), Stream(_))?, Channel(Stream(_), Stream(_))).
 
 %% ---------------------------------------------------------------------------

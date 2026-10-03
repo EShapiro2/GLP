@@ -1,8 +1,13 @@
 // glp_runtime/lib/vglp/constructs.dart
 //
 // The construct processes of the canonical compilation: for each interactive
-// type T of a program, the clause of construct/4 that the dispatcher spawns on
-// an ask of T, and the clauses it calls, typed at T.
+// type T of a program, the clause of construct/4 that is spawned on an ask of
+// T, and the clauses it calls, typed at T; and the two procedures by which the
+// compiled program spawns them, constructs/1, which reads the spawns the
+// dispatcher writes and calls construct/4 on each, and dispatch/3, the
+// program's entry point to the dispatcher, which spawns the dispatcher's
+// dispatch/4 and constructs/1 (vGLP #4 Cowork, 2026-10-02 21:02 UTC, B,
+// without the handle: vGLP #5 Cowork, 2026-10-03 08:16 UTC, item 2).
 // Spec: vGLP, sections/vglp.tex, Definition "vmaGLP Transition System" (Ask by
 // the mode of the interactive type, Answer, Present) and the paragraph after
 // it; sections/elicitation.tex, Definition "Construct, Submission, Complete
@@ -24,7 +29,9 @@
 //     input: a grant forms a term of its type and binds it, a stream type
 //     taking one element per grant, an input box;
 //   - the views are drawn as they change, draw(Id, W, V), W the widget of T;
-//   - the grants routed to the construct go to its questions in the order of
+//   - the grants routed to the construct arrive whole, input(Id, R), and the
+//     construct reads the person's input R from each (inputs/2 in
+//     programs/vglp/dispatcher.glp); they go to its questions in the order of
 //     the view, the first question whose type the grant's term is of taking
 //     it; a grant that is of none reaches none;
 //   - it withdraws when every question it holds is answered and none is
@@ -85,6 +92,9 @@ String _typeStem(TypeExpr t) {
 /// The names the construct processes call in the dispatcher's generic
 /// source, and the types they use from it, as the program emits them.
 class GenericNames {
+  final String dispatch;
+  final String constructs;
+  final String inputs;
   final String run;
   final String shown;
   final String thread;
@@ -94,9 +104,15 @@ class GenericNames {
   final String formedType;
   final String doneType;
   final String drawType;
+  final String inputType;
+  final String spawnType;
+  final String askType;
 
   GenericNames(
-      {required this.run,
+      {required this.dispatch,
+      required this.constructs,
+      required this.inputs,
+      required this.run,
       required this.shown,
       required this.thread,
       required this.allDone,
@@ -109,7 +125,10 @@ class GenericNames {
       required String formAny,
       required this.formedType,
       required this.doneType,
-      required this.drawType})
+      required this.drawType,
+      required this.inputType,
+      required this.spawnType,
+      required this.askType})
       : _leafFormers = {
           _Leaf.string: formString,
           _Leaf.integer: formInteger,
@@ -125,6 +144,7 @@ class GenericNames {
   /// generic names: the roots, with the dispatcher's entry point, of what the
   /// compilation emits of the generic source.
   static const used = [
+    'inputs',
     'run',
     'shown',
     'thread',
@@ -141,7 +161,8 @@ class GenericNames {
 
 /// The construct processes of a program.
 class ConstructProcesses {
-  /// The GLP text of their declarations and clauses: construct/5 first.
+  /// The GLP text of their declarations and clauses: dispatch/3,
+  /// constructs/1 and construct/4 first.
   final String source;
 
   /// The widget of each interactive type, by the moded type as written.
@@ -301,8 +322,23 @@ class _Generator {
         ? questionType
         : '$questionType(${params.join(', ')})';
     final p = params.isEmpty ? '' : '(${params.join(', ')})';
-    hook.writeln('procedure$p $constructName(Integer?, $qt?, Stream(_)?, '
-        'Stream(${gen.drawType})).');
+    const ch = 'Channel(Stream(_), Stream(_))';
+    final d = gen.dispatch, cs = gen.constructs;
+    hook
+      // dispatch/3: the dispatcher on the ask stream and the person channel,
+      // and constructs/1 on the spawns it writes.
+      ..writeln('exported procedure$p $d(Stream(${gen.askType}($qt))?, $ch?, '
+          '$ch).')
+      ..writeln('$d(Asks, PCh, MCh?) :- $d(Asks?, PCh?, MCh, Ss), $cs(Ss?).')
+      ..writeln()
+      // constructs/1: the construct process of each spawn.
+      ..writeln('procedure$p $cs(Stream(${gen.spawnType}($qt))?).')
+      ..writeln('$cs([spawn(Id, Q, Gs, Ds?) | Ss]) :- '
+          '$constructName(Id?, Q?, Gs?, Ds), $cs(Ss?).')
+      ..writeln('$cs([]).')
+      ..writeln()
+      ..writeln('procedure$p $constructName(Integer?, $qt?, '
+          'Stream(${gen.inputType})?, Stream(${gen.drawType})).');
     final widgets = <String, String>{};
     for (final t in types) {
       final root = _Node(t.type, t.readerMode, t.params.toSet());
@@ -322,7 +358,7 @@ class _Generator {
       _checkPersonWritable(root, t);
       final answer = _answer(root);
       return '$constructName(Id, $f(X?), Gs, Ds?) :- '
-          '$answer(X, Gs?, _, Done), '
+          '${gen.inputs}(Gs?, Rs), $answer(X, Rs?, _, Done), '
           '${gen.run}(Id?, $w, [input], Done?, Ds).';
     }
     if (!_hasQuestion(root)) {
@@ -334,7 +370,7 @@ class _Generator {
     }
     final present = _present(root, t);
     return '$constructName(Id, $f(X), Gs, Ds?) :- '
-        '$present(X?, Gs?, _, Vs, Done), '
+        '${gen.inputs}(Gs?, Rs), $present(X?, Rs?, _, Vs, Done), '
         '${gen.run}(Id?, $w, Vs?, Done?, Ds).';
   }
 

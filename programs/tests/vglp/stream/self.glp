@@ -16,10 +16,10 @@
 Peer     ::= Constant.
 Msg      ::= msg(Peer, String).
 Question ::= stream_string_r(Stream(String)?).
-Ask      ::= ask(Constant, Question).
+Ask(Q)   ::= ask(Constant, Q).
 
-imported procedure chat#chat(Peer?, Stream(Msg), Stream(Ask)).
-imported procedure chat#dispatch(Stream(Ask)?,
+imported procedure chat#chat(Peer?, Stream(Msg), Stream(Ask(Question))).
+imported procedure chat#dispatch(Stream(Ask(Question))?,
     Channel(Stream(_), Stream(_))?, Channel(Stream(_), Stream(_))).
 
 exported procedure play_chat(Stream(Msg), Stream(_)).

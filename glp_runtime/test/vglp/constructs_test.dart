@@ -7,13 +7,16 @@
 // Submission, Complete Widget", Definition "Widget Declaration, Default
 // Widget"; sections/vglp.tex, Definition "vmaGLP Transition System".  vGLP's
 // code task of 2026-10-02 00:13 UTC, Part 2, with the answers of 2026-10-01
-// 23:55 UTC (E) and of 2026-10-02 08:26 UTC.  The runs are elicitation_test.
+// 23:55 UTC (E) and of 2026-10-02 08:26 UTC; the generic source's form of
+// 2026-10-02 21:02 UTC (B) without the handle (vGLP #5 Cowork, 2026-10-03
+// 08:16 UTC, item 2).  The runs are elicitation_test.
 
 import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart'
     show setRootScopeEnvironmentSource;
+import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/compiler/error.dart';
 import 'package:glp_runtime/vglp/canonical.dart';
 import 'package:glp_runtime/vglp/dispatcher.dart';
@@ -52,22 +55,78 @@ decide(no, From, refuse(From?)).
 ''';
 
   group('the dispatcher', () {
-    test('is emitted from programs/vglp/dispatcher.glp, its entry point '
-        'exported, reading the ask stream and the person channel and giving '
-        'the program its end of one', () {
+    test('its generic source is a module that loads and type-checks by '
+        'itself, parameterised in the program\'s questions and naming no '
+        'construct process (B)', () {
+      final engine = GlpEngine(
+          rootSelfGlpPath: File('$_programs/self.glp').absolute.path);
+      expect(
+          engine.loadFile(
+              File('${dir.path}/${DispatcherSource.fileName}').absolute.path),
+          isTrue);
+      // No clause calls a construct process, and no type is left for the
+      // compilation to supply but the questions, the parameter Q.
+      final calls = {
+        for (final p in dispatcher.module.procedures)
+          for (final c in p.clauses)
+            for (final g in c.body ?? const []) g.functor
+      };
+      expect(calls, isNot(contains('construct')));
+      expect(dispatcher.module.typeDefs.map((t) => t.name),
+          containsAll(['Ask', 'Spawn', 'Input', 'Draw']));
+      expect(dispatcher.module.typeDefs.map((t) => t.name),
+          isNot(contains('Handle')));
+    });
+
+    test('is emitted from programs/vglp/dispatcher.glp: the program\'s '
+        'dispatch/3 exported, reading the ask stream and the person channel '
+        'and giving the program its end of one, and spawning the generic '
+        'dispatch/4 and constructs/1', () {
       final c = compile(card);
       expect(c.dispatchName, 'dispatch');
       expect(
           c.source,
-          contains('exported procedure dispatch(Stream(Ask)?, '
+          contains('exported procedure dispatch(Stream(Ask(Question))?, '
               'Channel(Stream(_), Stream(_))?, Channel(Stream(_), '
               'Stream(_))).'));
+      expect(
+          c.source,
+          contains('dispatch(Asks, PCh, MCh?) :- dispatch(Asks?, PCh?, MCh, '
+              'Ss), constructs(Ss?).'));
+      // The generic dispatch/4, parameterised in the questions, unexported.
+      expect(
+          c.source,
+          contains('\nprocedure(Q) dispatch(Stream(Ask(Q))?, '
+              'Channel(Stream(_), Stream(_))?, Channel(Stream(_), Stream(_)), '
+              'Stream(Spawn(Q))).'));
       expect(c.source, contains('Draw ::= draw(Integer, _, _) ; '
           'withdraw(Integer).'));
-      // On an ask it spawns the construct process with the next identifier.
+      expect(c.source, contains('Ask(Q) ::= ask(Constant, Q).'));
+      expect(
+          c.source,
+          contains('Spawn(Q) ::= spawn(Integer, Q, Stream(Input), '
+              'Stream(Draw)?).'));
+      // On an ask it writes the spawn of the construct process with the next
+      // identifier, keeping the writer of its grants and the reader of its
+      // draws; constructs/1 calls construct/4 on each spawn.
+      expect(
+          c.source,
+          contains('serve([ask(_, Q) | Asks], Is, COut, CInto?, DOut?, Rs, N, '
+              '[spawn(N?, Q?, Gs?, Ds) | Ss?]) :- ground(N?) | '
+              'merge(Ds?, CInto1?, CInto)'));
+      expect(
+          c.source,
+          contains('constructs([spawn(Id, Q, Gs, Ds?) | Ss]) :- '
+              'construct(Id?, Q?, Gs?, Ds), constructs(Ss?).'));
+      expect(c.source, contains('constructs([]).'));
+      // A grant is routed whole, and the construct reads the input from it.
+      expect(
+          c.source,
+          contains('route_grant(input(Id, R), [route(Id1, [input(Id?, R?) | '
+              'Gs1?]) | Rs], [route(Id1?, Gs1) | Rs?]) :- (Id? =?= Id1?) | '
+              'true.'));
       expect(c.source,
-          contains('serve([ask(_, Q) | Asks], Is, COut, CInto?, DOut?, Rs, '
-              'N) :- ground(N?) | construct(N?, Q?, Gs?, Ds)'));
+          contains('inputs([input(_, R) | Gs], [R? | Rs?]) :- inputs(Gs?, Rs).'));
     });
 
     test('its names, and the construct processes\', are fresh against the '
@@ -75,41 +134,57 @@ decide(no, From, refuse(From?)).
       final c = compile('''
 T ::= t.
 Draw ::= d.
+Ask ::= a.
 procedure (T?)*dispatch(Draw?).
 (t)*dispatch(_).
 procedure construct(Draw?).
 construct(_).
+procedure constructs(Draw?).
+constructs(_).
 procedure run(Draw?).
 run(_).
 ''');
       expect(c.dispatchName, 'dispatch_1');
       expect(c.constructName, 'construct_1');
+      expect(c.askType, 'Ask_1');
       expect(c.source, contains('exported procedure dispatch_1('));
+      expect(c.source, contains('procedure(Q) dispatch_1('));
       expect(c.source, contains('Draw_1 ::= draw(Integer, _, _) ; '
           'withdraw(Integer).'));
+      expect(c.source, contains('Ask_1(Q) ::= ask(Constant, Q).'));
       expect(c.source, contains('procedure run_1(Integer?, _?, Stream(_)?, '
           'Done?, Stream(Draw_1)).'));
+      expect(c.source, contains('constructs_1([spawn(Id, Q, Gs, Ds?) | Ss]) '
+          ':- construct_1(Id?, Q?, Gs?, Ds), constructs_1(Ss?).'));
       expect(c.source, contains('construct_1(Id, t_r(X?), Gs, Ds?) :- '));
       // The program's own are untouched.
       expect(c.source, contains('procedure construct(Draw?).'));
+      expect(c.source, contains('procedure constructs(Draw?).'));
       expect(c.source, contains('procedure run(Draw?).'));
+      expect(c.source, contains('Ask ::= a.'));
     });
 
-    test('construct/4 is declared over the program\'s questions', () {
+    test('construct/4 is declared over the program\'s questions and its '
+        'grants', () {
       final c = compile('''
 T ::= t.
 procedure (T?)*p.
 (t)*p.
 ''');
       expect(c.source, contains('procedure construct(Integer?, Question?, '
-          'Stream(_)?, Stream(Draw)).'));
+          'Stream(Input)?, Stream(Draw)).'));
+      expect(c.source,
+          contains('procedure constructs(Stream(Spawn(Question))?).'));
     });
 
-    test('is not emitted without the generic source', () {
+    test('is not emitted without the generic source, and the compilation '
+        'defines the asks itself', () {
       final c = compileCanonical(card);
       expect(c.dispatchName, isNull);
       expect(c.source, isNot(contains('procedure dispatch(')));
       expect(c.source, isNot(contains('construct(')));
+      expect(c.source, isNot(contains('constructs(')));
+      expect(c.source, contains('Ask(Q) ::= ask(Constant, Q).'));
     });
   });
 
@@ -122,8 +197,8 @@ procedure (T?)*p.
         'and draws it with the default widget, a form', () {
       expect(
           s,
-          contains('construct(Id, card_w(X), Gs, Ds?) :- '
-              'present_card(X?, Gs?, _, Vs, Done), '
+          contains('construct(Id, card_w(X), Gs, Ds?) :- inputs(Gs?, Rs), '
+              'present_card(X?, Rs?, _, Vs, Done), '
               'run(Id?, form(card, [shown, buttons([yes, no])]), Vs?, Done?, '
               'Ds).'));
       // The view waits for the peer, so the output comes before the input
@@ -159,8 +234,8 @@ procedure (Request?)*agent(Integer?).
 ''').source;
       expect(
           s,
-          contains('construct(Id, request_r(X?), Gs, Ds?) :- '
-              'answer_request(X, Gs?, _, Done), run(Id?, menu([form(post, '
+          contains('construct(Id, request_r(X?), Gs, Ds?) :- inputs(Gs?, Rs), '
+              'answer_request(X, Rs?, _, Done), run(Id?, menu([form(post, '
               '[text]), button(quit)]), [input], Done?, Ds).'));
       expect(s,
           contains('form_request(post(R1), post(X1?), F?) :- '
@@ -185,8 +260,8 @@ send_all(_, [], []).
       expect(
           s,
           contains('construct(Id, stream_string_r(X?), Gs, Ds?) :- '
-              'answer_stream_string(X, Gs?, _, Done), run(Id?, '
-              'input_box(text), [input], Done?, Ds).'));
+              'inputs(Gs?, Rs), answer_stream_string(X, Rs?, _, Done), '
+              'run(Id?, input_box(text), [input], Done?, Ds).'));
       expect(
           s,
           contains('take_stream_string(formed, V, [V? | X1?], _, Gs, Gs1?, '

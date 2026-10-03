@@ -18,24 +18,30 @@
 %% a construct sends draw(Id, W, V), W its widget and V the output so far with
 %% each position the person writes shown as the constant input, again as more
 %% arrives, and withdraw(Id); the person grants input(Id, R), R the ground
-%% term of the person's input.  Everything crossing to the bridge is a ground
-%% term or a construct identifier, typed at _ (vGLP, 2026-10-02 08:26 UTC,
-%% item 6): what the bridge sends and draws is a term of any of the program's
-%% interactive types.
+%% term of the person's input, which the dispatcher sends whole to construct
+%% Id and the construct reads R from.  Everything crossing to the bridge is a
+%% ground term or a construct identifier, typed at _ (vGLP, 2026-10-02 08:26
+%% UTC, item 6): what the bridge sends and draws is a term of any of the
+%% program's interactive types.
 %%
 %% The compilation emits this module's types and clauses into every compiled
 %% program, as it emitted the mediator before it: a module path resolves from
 %% the program root downward, so no compiled program can name this directory.
 %% It names each type and procedure here fresh against the program's, and
-%% supplies three things of its own, one per program:
-%%   Ask       the asks on the ask stream, ask(T, Q);
+%% supplies two things of its own, one per program (vGLP #4 Cowork,
+%% 2026-10-02 21:02 UTC, B; vGLP #5 Cowork, 2026-10-03 08:16 UTC, item 2):
 %%   Question  the union of the program's questions, one functor per moded
-%%             interactive type, the person's end of its variable inside;
+%%             interactive type, the person's end of its variable inside: the
+%%             type parameter Q of Ask, Spawn, dispatch/4 and serve/8;
 %%   construct(Id?, Q?, Gs?, Ds), the construct process of each interactive
-%%             type, one clause per functor of Question, which forms the
-%%             person's answers by clauses typed at the question's type and
-%%             calls run/5 below.
-%% So this module is not a program by itself, and is not loaded as one.
+%%             type, one clause per functor of Question, which reads the
+%%             person's input from its grants, forms the person's answers by
+%%             clauses typed at the question's type and calls run/5 below.
+%% Neither is named here, so this module loads and type-checks by itself
+%% (TGLP, "Declaration parameters"): the dispatcher calls no construct/4 but
+%% writes spawn(Id, Q, Gs?, Ds) on the fourth argument of dispatch/4, and the
+%% compiled program's constructs/1 reads that stream and calls construct/4 on
+%% each, its dispatch/3 spawning both.
 
 %% ---------------------------------------------------------------------------
 %% The vocabulary
@@ -45,12 +51,12 @@
 %% withdraw it.
 Draw ::= draw(Integer, _, _) ; withdraw(Integer).
 
-%% A grant the dispatcher routes to a construct: its identifier and the
+%% A grant the dispatcher routes to a construct, whole: its identifier and the
 %% person's raw input.
 Input ::= input(_, _).
 
 %% A construct's identifier and the writer of its grant stream.
-Route ::= route(Integer, Stream(_)?).
+Route ::= route(Integer, Stream(Input)?).
 Routes ::= [] ; [Route | Routes].
 
 %% Whether a grant formed a term of a question's type.
@@ -60,22 +66,34 @@ Formed ::= formed ; refused.
 %% still to come.
 Done ::= done.
 
+%% An ask on the ask stream: the moded interactive type as written, and the
+%% question; Q is the program's union of questions.
+Ask(Q) ::= ask(Constant, Q).
+
+%% A construct process for the program to spawn: its identifier, its
+%% question, its grant stream and its draw stream, the dispatcher keeping the
+%% writer of the grants and the reader of the draws.
+Spawn(Q) ::= spawn(Integer, Q, Stream(Input), Stream(Draw)?).
+
 %% ---------------------------------------------------------------------------
 %% The dispatcher
 %% ---------------------------------------------------------------------------
 
-%% dispatch(Asks?, PersonCh?, MCh): the dispatcher of one agent, spawned with
-%% the agent's initial goal by whatever spawns it --- the bridge, or a play.
-%% It reads the ask stream of the initial goal and holds the person channel;
-%% it gives the program, in MCh, its own end of a person channel, passes every
-%% grant that is not input(Id, R) to it, and merges the program's output to
-%% the person with the constructs' draws (vGLP, 2026-10-01 23:55 UTC, E, Q4).
-exported procedure dispatch(Stream(Ask)?, Channel(Stream(_), Stream(_))?,
-    Channel(Stream(_), Stream(_))).
-dispatch(Asks, ch(PIn, POut?), ch(MIn?, MOut)) :-
+%% dispatch(Asks?, PersonCh?, MCh, Spawns): the dispatcher of one agent,
+%% spawned with the agent's initial goal by whatever spawns it --- the
+%% bridge, or a play --- through the compiled program's dispatch/3, which
+%% spawns the program's constructs/1 on Spawns beside it.  It reads the ask
+%% stream of the initial goal and holds the person channel; it gives the
+%% program, in MCh, its own end of a person channel, passes every grant that
+%% is not input(Id, R) to it, and merges the program's output to the person
+%% with the constructs' draws (vGLP, 2026-10-01 23:55 UTC, E, Q4).
+exported procedure(Q) dispatch(Stream(Ask(Q))?,
+    Channel(Stream(_), Stream(_))?, Channel(Stream(_), Stream(_)),
+    Stream(Spawn(Q))).
+dispatch(Asks, ch(PIn, POut?), ch(MIn?, MOut), Ss?) :-
     split_grants(PIn?, Inputs, MIn),
     merge(MOut?, DOut?, POut),
-    serve(Asks?, Inputs?, COut?, COut, DOut, [], 0).
+    serve(Asks?, Inputs?, COut?, COut, DOut, [], 0, Ss).
 
 %% split_grants(Grants?, Inputs, Others): the person's grants to a construct,
 %% and every other grant, for the program.
@@ -87,31 +105,33 @@ split_grants([G | Gs], Is?, [G? | Ms?]) :-
     split_grants(Gs?, Is, Ms).
 split_grants([], [], []).
 
-%% serve(Asks?, Inputs?, COut?, CInto, DOut, Routes?, N?): on an ask, spawn
-%% the construct process of its question with the next identifier N, its own
-%% grant stream and its own output stream, merged into COut by CInto; route
-%% each grant by identifier; pass the constructs' output on to the person, and
-%% forget a construct's route once it has withdrawn, closing its grants.
-procedure serve(Stream(Ask)?, Stream(Input)?, Stream(Draw)?, Stream(Draw),
-    Stream(_), Routes?, Integer?).
-serve([ask(_, Q) | Asks], Is, COut, CInto?, DOut?, Rs, N) :-
+%% serve(Asks?, Inputs?, COut?, CInto, DOut, Routes?, N?, Spawns): on an
+%% ask, have the construct process of its question spawned, writing on
+%% Spawns its next identifier N, its question, the reader of its own grant
+%% stream and the writer of its own output stream, merged into COut by CInto;
+%% route each grant, whole, by identifier; pass the constructs' output on to
+%% the person, and forget a construct's route once it has withdrawn, closing
+%% its grants.
+procedure(Q) serve(Stream(Ask(Q))?, Stream(Input)?, Stream(Draw)?,
+    Stream(Draw), Stream(_), Routes?, Integer?, Stream(Spawn(Q))).
+serve([ask(_, Q) | Asks], Is, COut, CInto?, DOut?, Rs, N,
+      [spawn(N?, Q?, Gs?, Ds) | Ss?]) :-
     ground(N?) |
-    construct(N?, Q?, Gs?, Ds),
     merge(Ds?, CInto1?, CInto),
     N1 := N? + 1,
-    serve(Asks?, Is?, COut?, CInto1, DOut, [route(N?, Gs) | Rs?], N1?).
-serve(Asks, [input(Id, R) | Is], COut, CInto?, DOut?, Rs, N) :-
-    route_grant(Id?, R?, Rs?, Rs1),
-    serve(Asks?, Is?, COut?, CInto, DOut, Rs1?, N?).
+    serve(Asks?, Is?, COut?, CInto1, DOut, [route(N?, Gs) | Rs?], N1?, Ss).
+serve(Asks, [G | Is], COut, CInto?, DOut?, Rs, N, Ss?) :-
+    route_grant(G?, Rs?, Rs1),
+    serve(Asks?, Is?, COut?, CInto, DOut, Rs1?, N?, Ss).
 serve(Asks, Is, [draw(Id, W, V) | COut], CInto?, [draw(Id?, W?, V?) | DOut?],
-      Rs, N) :-
-    serve(Asks?, Is?, COut?, CInto, DOut, Rs?, N?).
+      Rs, N, Ss?) :-
+    serve(Asks?, Is?, COut?, CInto, DOut, Rs?, N?, Ss).
 serve(Asks, Is, [withdraw(Id) | COut], CInto?, [withdraw(Id?) | DOut?], Rs,
-      N) :-
+      N, Ss?) :-
     ground(Id?) |
     remove_route(Id?, Rs?, Rs1),
-    serve(Asks?, Is?, COut?, CInto, DOut, Rs1?, N?).
-serve([], [], COut, [], DOut?, Rs, _) :-
+    serve(Asks?, Is?, COut?, CInto, DOut, Rs1?, N?, Ss).
+serve([], [], COut, [], DOut?, Rs, _, []) :-
     drain(COut?, Rs?, DOut).
 
 %% drain(COut?, Routes?, DOut): the ask stream and the person channel are
@@ -127,15 +147,17 @@ drain([withdraw(Id) | COut], Rs, [withdraw(Id?) | DOut?]) :-
 drain([], Rs, []) :-
     close_routes(Rs?).
 
-%% route_grant(Id?, R?, Routes?, Routes1): send R on the grant stream of
-%% construct Id; a grant for no construct, one withdrawn, reaches none.
-procedure route_grant(_?, _?, Routes?, Routes).
-route_grant(Id, R, [route(Id1, [R? | Gs1?]) | Rs], [route(Id1?, Gs1) | Rs?]) :-
+%% route_grant(G?, Routes?, Routes1): send the grant G = input(Id, R), whole,
+%% on the grant stream of construct Id; a grant for no construct, one
+%% withdrawn, reaches none.
+procedure route_grant(Input?, Routes?, Routes).
+route_grant(input(Id, R), [route(Id1, [input(Id?, R?) | Gs1?]) | Rs],
+            [route(Id1?, Gs1) | Rs?]) :-
     Id? =?= Id1? | true.
-route_grant(Id, R, [route(Id1, Gs?) | Rs], [route(Id1?, Gs) | Rs1?]) :-
+route_grant(G, [route(Id1, Gs?) | Rs], [route(Id1?, Gs) | Rs1?]) :-
     otherwise |
-    route_grant(Id?, R?, Rs?, Rs1).
-route_grant(_, _, [], []).
+    route_grant(G?, Rs?, Rs1).
+route_grant(_, [], []).
 
 %% remove_route(Id?, Routes?, Routes1): close the grant stream of construct
 %% Id and forget its route.
@@ -172,6 +194,14 @@ run(Id, _, [], Done, Ds?) :-
 %% run_end(Id?, Done?, Ds): the view is final; wait to withdraw.
 procedure run_end(Integer?, Done?, Stream(Draw)).
 run_end(Id, done, [withdraw(Id?)]).
+
+%% inputs(Gs?, Rs): the person's inputs R of a construct's grants input(Id, R),
+%% which the construct reads (vGLP #5 Cowork, 2026-10-03 08:16 UTC, item 2:
+%% each grant sent whole as Input, the construct reading R from it).
+procedure inputs(Stream(Input)?, Stream(_)).
+inputs([input(_, R) | Gs], [R? | Rs?]) :-
+    inputs(Gs?, Rs).
+inputs([], []).
 
 %% all_done(Dones?, Done): done when each is.
 procedure all_done(Stream(Done)?, Done).

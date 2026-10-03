@@ -173,11 +173,12 @@ class CanonicalProgram {
   /// written: 'Request?' request_r.
   final Map<String, String> functors;
 
-  /// dispatch/3, the dispatcher's entry point, as emitted; null without the
-  /// generic source.
+  /// dispatch/3, the compiled program's entry point to the dispatcher, as
+  /// emitted; null without the generic source.
   final String? dispatchName;
 
-  /// construct/4, as emitted; null without the generic source.
+  /// construct/4, as emitted; null without the generic source.  The
+  /// dispatch/3 the compiled program exports takes [dispatchName].
   final String? constructName;
 
   /// The widget term of each interactive type, by the type as written.
@@ -328,11 +329,22 @@ CanonicalProgram compileCanonical(String text,
   };
   final reaching = _reaching(m, volitional, askedProcs);
 
-  // The types the compilation adds.
+  // The questions, named fresh against the program's types; the dispatcher's
+  // generic source, its names fresh against the program's and those, which
+  // defines the asks, Ask(Q) (vGLP #4 Cowork, 2026-10-02 21:02 UTC, B); and
+  // without the generic source, the compilation's own Ask(Q), the same.
   final typeNames = {for (final td in m.typeDefs) td.name};
+  final question = _freshType('Question', typeNames);
+  final procTaken = {...taken};
+  final inst = dispatcher == null
+      ? null
+      : instantiateDispatcher(dispatcher,
+          freshType: (stem) => _freshType(stem, typeNames),
+          freshProc: (stem) => _fresh(stem, procTaken));
   final added = _addedTypes(volitional.values, declsByKey,
-      ask: _freshType('Ask', typeNames),
-      question: _freshType('Question', typeNames));
+      ask: inst?.type(askTypeName) ?? _freshType('Ask', typeNames),
+      question: question,
+      emitAsk: inst == null);
 
   // The compiled procedures, each with its declaration, in source order; a
   // volitional procedure becomes its asking clause and its (n+2)-ary
@@ -370,8 +382,8 @@ CanonicalProgram compileCanonical(String text,
   // Part 2: the dispatcher and the construct processes.
   _Elicitation? elicitation;
   if (dispatcher != null) {
-    elicitation = _elicitation(dispatcher, m, volitional.values.toList(),
-        added, typeNames, taken, widgetDecls, scope);
+    elicitation = _elicitation(dispatcher, inst!, m,
+        volitional.values.toList(), added, procTaken, widgetDecls, scope);
   } else if (widgetDecls.byModedType.isNotEmpty) {
     final d = widgetDecls.positions.first;
     throw CompileError(
@@ -411,40 +423,28 @@ class _Elicitation {
 
 _Elicitation _elicitation(
     DispatcherSource dispatcher,
+    InstantiatedDispatcher inst,
     Module m,
     List<VolitionalProcedure> volitional,
     _AddedTypes added,
-    Set<String> typeNames,
-    Set<String> taken,
+    Set<String> procTaken,
     WidgetDeclarations widgetDecls,
     TypeEnvironment? scope) {
   // Every name is fresh against the program's and against the names the
   // compilation has already given.
-  final procTaken = {...taken};
-  final typeTaken = {...typeNames, added.ask, added.question};
   String freshProc(String stem) => _fresh(stem, procTaken);
-  String freshType(String stem) => _freshType(stem, typeTaken);
-
-  final params = added.params;
-  TypeRef ref(String name) =>
-      TypeRef(name, 0, 0, typeArgs: [for (final p in params) TypeRef(p, 0, 0)]);
   final constructName = freshProc(constructHook);
-  final inst = instantiateDispatcher(dispatcher,
-      supplied: {
-        askTypeRef: ref(added.ask),
-        questionTypeRef: ref(added.question),
-      },
-      params: params,
-      freshType: freshType,
-      freshProc: freshProc,
-      constructName: constructName);
+  final constructsName = freshProc(constructsHook);
 
   final generic = GenericNames(
+    dispatch: inst.proc(dispatchEntry),
+    constructs: constructsName,
     run: inst.proc('run'),
     shown: inst.proc('shown'),
     thread: inst.proc('thread'),
     allDone: inst.proc('all_done'),
     allFormed: inst.proc('all_formed'),
+    inputs: inst.proc('inputs'),
     formString: inst.proc('form_string'),
     formInteger: inst.proc('form_integer'),
     formNumber: inst.proc('form_number'),
@@ -454,6 +454,9 @@ _Elicitation _elicitation(
     formedType: inst.type('Formed'),
     doneType: inst.type('Done'),
     drawType: inst.type('Draw'),
+    inputType: inst.type(inputTypeName),
+    spawnType: inst.type(spawnTypeName),
+    askType: added.ask,
   );
 
   // The source's own types first, then its scope's, then the root's.
@@ -1109,29 +1112,39 @@ Goal _withStream(Goal g, Term stream) {
 
 /// The questions, [question], one alternative per moded interactive type, its
 /// functor wrapping the type as written in its mode, t(T); and the ask
-/// stream's element, [ask], ask(Constant, Question), one ask/2 over the union
-/// of the functors (vGLP #4 Cowork, 2026-10-02 08:26 UTC, Q1).  An interactive
-/// type that names a type parameter of its procedure gives Question and Ask
-/// that parameter, and each declaration with an ask stream takes it.
+/// stream's element, [ask] at Question, Ask(Q) ::= ask(Constant, Q), one
+/// ask/2 over the union of the functors (vGLP #4 Cowork, 2026-10-02 08:26
+/// UTC, Q1), which the dispatcher's generic source defines (2026-10-02 21:02
+/// UTC, B) and the compilation defines only where it has no generic source
+/// ([emitAsk]).  An interactive type that names a type parameter of its
+/// procedure gives Question that parameter, and each declaration with an ask
+/// stream takes it.
 class _AddedTypes {
   final String ask;
   final String question;
+  final bool emitAsk;
   final List<String> params;
 
   /// Each moded interactive type, once, with its functor.
   final List<(TypeExpr, String)> interactiveTypes;
 
-  _AddedTypes(this.ask, this.question, this.params, this.interactiveTypes);
+  _AddedTypes(this.ask, this.question, this.emitAsk, this.params,
+      this.interactiveTypes);
 
   List<TypeRef> _paramRefs(int l, int c) =>
       [for (final p in params) TypeRef(p, l, c)];
 
-  /// Stream(Ask), the type of an ask stream.
+  /// Question, or Question(X, ...) where the interactive types name
+  /// parameters.
+  TypeRef questionRef(int l, int c) =>
+      TypeRef(question, l, c, typeArgs: _paramRefs(l, c));
+
+  /// Stream(Ask(Question)), the type of an ask stream.
   TypeRef stream(int l, int c) => TypeRef('Stream', l, c, typeArgs: [
-        TypeRef(ask, l, c, typeArgs: _paramRefs(l, c))
+        TypeRef(ask, l, c, typeArgs: [questionRef(l, c)])
       ]);
 
-  /// A declaration's type parameters with the ask type's added.
+  /// A declaration's type parameters with the questions' added.
   List<String> paramsFor(List<String> own) =>
       [...own, for (final p in params) if (!own.contains(p)) p];
 
@@ -1144,23 +1157,24 @@ class _AddedTypes {
             0,
             0,
             typeParams: params),
-        TypeDef(
-            ask,
-            [
-              StructAlt(askFunctor, [
-                TypeRef('Constant', 0, 0),
-                TypeRef(question, 0, 0, typeArgs: _paramRefs(0, 0)),
-              ], 0, 0)
-            ],
-            0,
-            0,
-            typeParams: params),
+        if (emitAsk)
+          TypeDef(
+              ask,
+              [
+                StructAlt(askFunctor, [
+                  TypeRef('Constant', 0, 0),
+                  TypeRef('Q', 0, 0),
+                ], 0, 0)
+              ],
+              0,
+              0,
+              typeParams: const ['Q']),
       ];
 }
 
 _AddedTypes _addedTypes(Iterable<VolitionalProcedure> volitional,
     Map<String, ProcDecl> declsByKey,
-    {required String ask, required String question}) {
+    {required String ask, required String question, required bool emitAsk}) {
   final types = <(TypeExpr, String)>[];
   final seen = <String>{};
   final params = <String>[];
@@ -1179,7 +1193,7 @@ _AddedTypes _addedTypes(Iterable<VolitionalProcedure> volitional,
     collect(t, decl.typeParams);
     if (seen.add(typeSource(t))) types.add((t, v.functor));
   }
-  return _AddedTypes(ask, question, params, types);
+  return _AddedTypes(ask, question, emitAsk, params, types);
 }
 
 // ---------------------------------------------------------------------------
