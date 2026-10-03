@@ -98,32 +98,49 @@ bool _isSubtype(DFAState stateA, DFAState stateB, ProgramDFA dfa,
     return automB != null && automB.acceptedPrimitives.contains(stateA.baseName);
   }
 
-  // A defined type against a primitive: below it exactly when its automaton is
-  // the primitive's — its bare type-name alternatives reach that primitive and
-  // no other, and its start state has no transition of its own, so that every
-  // transition it has is inherited from the primitive (TGLP appendix "Type
-  // Automaton Construction", type definition transitions: "If A_j references
-  // another type S ... transitions are inherited from S").  `Key ::= String.`
-  // is below `String`, as `String` is below it by the case above.  A type with
-  // alternatives of its own is below no primitive, which keeps the relation
-  // directional — `Constant` is not a subtype of `Integer`, and a constant
-  // alternative (`Ack ::= ok ; error.`) is not taken as a value of one here.
+  // A defined type against a primitive: below it exactly when every simple
+  // prefix of it is accepted by the primitive (TGLP well-typing.tex,
+  // Definitions "Prefix Acceptance" and "Subtyping"), which a primitive's
+  // automaton decides by its endpoint alone: every primitive the defined type's
+  // bare type-name alternatives reach is that primitive ("output type S matches
+  // S"), and every transition its start state has of its own is a constant of
+  // that primitive ("a constant matches String"), an integer or real literal
+  // alternative of `Integer` or `Real` as the defined-type case below reads it
+  // ([_primitiveOfConstant]).  So `Key ::= String.` is below `String`, as
+  // `String` is below it by the case above, and `Ack ::= ok ; error.` is below
+  // `String` as it is below `Key`: the two have one automaton, and the relation
+  // is decided by the automata, not by whether the supertype is named a
+  // primitive (TGLP well-typing.tex: "<: is checked by a finite simulation
+  // between the DFAs of A and B"; modules.tex, "Structural type
+  // compatibility").  A compound alternative, or a primitive other than this
+  // one, puts a type below no primitive: `Constant` is not below `Integer`.  A
+  // type accepting nothing --- an abstract type (parameterized-types.tex,
+  // Definition "Abstract Type") --- is below no primitive either.
   //
   // Until 2026-09-18 no defined type was below a primitive, which was
   // unobservable while `Key ::= String.` was erased as an alias (IGLP,
   // 2026-09-18: type_environment_builder.dart `_isSimpleAlias`); once it is a
   // type, a `Key` produced by `self_key/1` and consumed at a `String?`
-  // position (programs/social/graph/core/agent.glp:81) needs this case.
+  // position (programs/social/graph/core/agent.glp:81) needs this case.  Until
+  // 2026-10-02 a type with an alternative of its own was below no primitive,
+  // so `Ack` was below `Key` and not below `String`.
   if (stateB.isPrimitiveType) {
     final automA = dfa.getAutomaton(stateA.name);
-    if (automA.acceptedPrimitives.length != 1 ||
-        !automA.acceptedPrimitives.contains(stateB.baseName)) {
-      return false;
+    var accepts = false;
+    for (final p in automA.acceptedPrimitives) {
+      if (p != stateB.baseName) return false;
+      accepts = true;
     }
     for (final entry in automA.transitions.entries) {
-      if (entry.key.$1 == stateA) return false;
+      if (entry.key.$1 != stateA) continue;
+      final label = entry.key.$2;
+      if (label.arity != 0 ||
+          _primitiveOfConstant(label.symbol) != stateB.baseName) {
+        return false;
+      }
+      accepts = true;
     }
-    return true;
+    return accepts;
   }
 
   // User-defined types: check transitions (spec 4.1)
