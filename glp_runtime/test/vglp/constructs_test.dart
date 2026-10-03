@@ -374,6 +374,44 @@ procedure (Order?)*order(Order).
     });
   });
 
+  group('a position the person writes of type Real (item 6)', () {
+    test('is built: formed by real/1, its default widget the number field '
+        '(Definition "Widget Declaration, Default Widget" at c2e8b57)', () {
+      final c = compile('''
+Price ::= price(Real).
+procedure (Price?)*quote(Price).
+(P)*quote(P?).
+''');
+      expect(c.widgets['Price?'], 'form(price, [number])');
+      expect(
+          c.source,
+          contains('form_price(price(R1), F?) :- form_real(R1?, F1), '
+              'join_price_price_1(F1?, F).'));
+      expect(c.source, contains('procedure form_real(_?, Formed(Real)).'));
+      expect(c.source,
+          contains('form_real(R, F?) :- real(R?) | F = formed(R?).'));
+    });
+
+    test('a primitive alternative Real of a union is formed by real/1, and '
+        'the Real the program writes is shown on real/1', () {
+      final s = compile('''
+Amount ::= Real ; none.
+procedure (Amount?)*bid(Amount).
+(A)*bid(A?).
+''').source;
+      expect(s, contains('form_amount(R, F?) :- real(R?) | F = formed(R?).'));
+      expect(s, isNot(contains('form_amount(R, F?) :- number(')));
+      final w = compile('''
+YesNo ::= yes ; no.
+Val ::= Real ; ask(YesNo?).
+procedure (Val)*show(YesNo).
+(ask(A))*show(A?).
+''').source;
+      expect(w,
+          contains('present_val(X, Gs, Gs?, [X?], done) :- real(X?) | true.'));
+    });
+  });
+
   group('views that change', () {
     test('a stream the program writes beside one the person writes: a thread '
         'drawn as it grows, and an input box', () {
@@ -487,14 +525,6 @@ procedure(X) (Box(X)?)*take(X).
 '''), refused('of a type parameter'));
     });
 
-    test('a position the person writes of type Real, which no guard tells '
-        'from an integer', () {
-      expect(() => compile('''
-Price ::= price(Real).
-procedure (Price?)*quote(Price).
-(P)*quote(P?).
-'''), refused('of type Real'));
-    });
 
     test('a stream the program writes whose elements hold questions', () {
       expect(() => compile('''

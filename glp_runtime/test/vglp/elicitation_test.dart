@@ -277,4 +277,62 @@ void main() {
       expect(_elements(s3[5]), hasLength(2), reason: s3[5]);
     });
   });
+
+  group('a question the person writes of type Real (item 6)', () {
+    // vGLP #5 Cowork, 2026-10-03 08:16 UTC, item 6: formed by real/1, its
+    // default widget the number field (Definition "Widget Declaration,
+    // Default Widget" at c2e8b57, "a number (Integer or Real)").  The program
+    // is written under programs/tests/vglp/ for the run and removed after, a
+    // program having to live under programs/ for its scope.
+    late Directory fixture;
+    setUp(() {
+      fixture = Directory('../programs/tests/vglp/real_fixture_${pid}_'
+          '${DateTime.now().microsecondsSinceEpoch}')
+        ..createSync();
+      File('${fixture.path}/quote.vglp').writeAsStringSync('''
+Price ::= price(Real).
+exported procedure (Price?)*quote(Price).
+(P)*quote(P?).
+''');
+      File('${fixture.path}/self.glp').writeAsStringSync('''
+Price    ::= price(Real).
+Question ::= price_r(Price?).
+Ask(Q)   ::= ask(Constant, Q).
+PersonIn ::= [_ | PersonIn].
+
+imported procedure quote#quote(Price, Stream(Ask(Question))).
+imported procedure quote#dispatch(Stream(Ask(Question))?,
+    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+
+exported procedure play_quote(Price, Stream(_)).
+play_quote(P?, Log?) :-
+    quote # quote(P, Asks),
+    quote # dispatch(Asks?, ch(Gs?, Ds), _),
+    pricing_person(Ds?, Gs, Log).
+
+procedure pricing_person(_?, PersonIn, Stream(_)).
+pricing_person([draw(Id, W, input) | Ds],
+               [input(Id?, price(3)), input(Id?, price(2.5)) | Gs?],
+               [drawn(Id?, W?) | Log?]) :-
+    ground(Id?), ground(W?) |
+    pricing_person(Ds?, Gs, Log).
+pricing_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    pricing_person(Ds?, Gs, Log).
+''');
+    });
+    tearDown(() {
+      if (fixture.existsSync()) fixture.deleteSync(recursive: true);
+    });
+
+    test('a grant of an integer forms no Real and is refused; a grant of a '
+        'real answers it; the construct is a number field', () async {
+      final engine = GlpEngine(rootSelfGlpPath: _root);
+      expect(engine.loadProgram(fixture.absolute.path), isTrue);
+      final r = _Run(await engine.runGoal('play_quote(P, Log)'), engine);
+      expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
+      expect(r['P'], 'price(2.5)');
+      expect(r['Log'], '[drawn(0, form(price, [number])), withdrawn(0) | _]');
+    });
+  });
 }

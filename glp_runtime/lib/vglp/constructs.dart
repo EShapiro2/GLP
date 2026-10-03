@@ -62,9 +62,12 @@
 // WHAT IS NOT BUILT, each a compile error naming the type: a position the
 // program writes inside one the person writes (the Answer transition leaves
 // it to the program, and the construct has no output to show for it yet); a
-// position the person writes of a type parameter, or of type Real (no input
-// forms a term the checker can type at either); a stream the program writes
-// whose elements hold questions; a difference list or a mutual reference.
+// position the person writes of a type parameter (no input forms a term the
+// checker can type at it); a stream the program writes whose elements hold
+// questions; a difference list or a mutual reference.  A position the person
+// writes of type Real is built, formed by real/1 and drawn as a number field
+// (vGLP #5 Cowork, 2026-10-03 08:16 UTC, item 6; Definition "Widget
+// Declaration, Default Widget" at c2e8b57: "a number (Integer or Real)").
 
 import '../compiler/error.dart';
 import '../analysis/type_checker/type_ast.dart';
@@ -546,9 +549,7 @@ class _Generator {
   _Leaf? _unformable(_Node n, Set<String> seen) {
     if (!seen.add(n.key)) return null;
     for (final a in _nodeAlts(n)) {
-      if (a is _LeafAlt && (a.leaf == _Leaf.param || a.leaf == _Leaf.real)) {
-        return a.leaf;
-      }
+      if (a is _LeafAlt && a.leaf == _Leaf.param) return a.leaf;
       for (final c in _children(n, a)) {
         final l = _unformable(c, seen);
         if (l != null) return l;
@@ -558,11 +559,9 @@ class _Generator {
   }
 
   /// The construct forms every position the person writes: none is written by
-  /// the program; none is of a type parameter, of which no input forms a term
-  /// the checker can type (the paper is silent on parametrised interactive
-  /// types: vGLP #4 Cowork, 2026-10-02 08:26 UTC, item 2); and none is of type
-  /// Real, which no guard of GLP-Spec's tells from an integer (integer/1 and
-  /// number/1 are its guards of numbers).
+  /// the program; and none is of a type parameter, of which no input forms a
+  /// term the checker can type (the paper is silent on parametrised
+  /// interactive types: vGLP #4 Cowork, 2026-10-02 08:26 UTC, item 2).
   void _checkPersonWritable(_Node n, InteractiveType t) {
     if (_hasProgramInside(n, {})) {
       throw CompileError(
@@ -577,13 +576,6 @@ class _Generator {
             'The construct of the interactive type ${t.written} is not built: '
             'the person writes ${n.typeKey}, and a position of it is of a type '
             'parameter, of which no input forms a term of a known type',
-            t.line, t.column, phase: 'analyzer');
-      case _Leaf.real:
-        throw CompileError(
-            'The construct of the interactive type ${t.written} is not built: '
-            'the person writes ${n.typeKey}, and a position of it is of type '
-            'Real, which no guard tells from an integer, so no input forms a '
-            'term of it',
             t.line, t.column, phase: 'analyzer');
       default:
         return;
@@ -1030,6 +1022,7 @@ class _Generator {
       case _Leaf.integer:
         return 'integer';
       case _Leaf.real:
+        return 'real';
       case _Leaf.number:
         return 'number';
       case _Leaf.string:
