@@ -1267,11 +1267,17 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
 /// the root's exported procedures (the entry-point aliases — the bare,
 /// unprefixed procedures the linker generated — and the renamed procedures they
 /// call) and the transitive closure of procedures called in the body of a
-/// reachable one. Guards are followed too: a defined guard's call site is
-/// renamed to `M:g` in step with its procedure (so the partial evaluator unfolds
-/// it after linking), and a guard left bare is also followed by base name as a
-/// safeguard. Restricting the program to its reachable procedures is
-/// semantically equivalent to the whole; everything else is pruned.
+/// reachable one (TGLP modules.tex, Compilation, fifth step: "the compiler
+/// retains the reachable procedures: the exported procedures of the program's
+/// self.glp, and every procedure called in the body of a reachable one").
+/// Guards are followed too: a defined guard's call site is renamed to `M:g` in
+/// step with its procedure (so the partial evaluator unfolds it after
+/// linking), and is followed by that name exactly, as a body call is.  A name
+/// is followed only as step 4 resolved it: until 2026-10-03 a guard left bare
+/// was also followed by its base name, keeping every renamed `M:g` of that
+/// base name in any module, which nothing calls.  Restricting the program to
+/// its reachable procedures is semantically equivalent to the whole;
+/// everything else is pruned.
 /// The reachability seed is the bare (unprefixed) entry-point aliases the linker
 /// generated: a directory's are the root self.glp's exported procedures, a
 /// single module's are every one of its own procedures. Every other procedure
@@ -1284,24 +1290,11 @@ LinkResult eliminateDeadCode(LinkResult linked) {
   for (final p in procedures) {
     byFullName['${p.name}/${p.arity}'] = p;
   }
-  // base 'name/arity' → full keys, for resolving unqualified guard call sites.
-  final byBaseName = <String, List<String>>{};
-  for (final fk in byFullName.keys) {
-    final p = byFullName[fk]!;
-    final ci = p.name.lastIndexOf(':');
-    final base = ci < 0 ? p.name : p.name.substring(ci + 1);
-    byBaseName.putIfAbsent('$base/${p.arity}', () => <String>[]).add(fk);
-  }
 
   final reachable = <String>{};
   final work = <String>[];
   void markFull(String key) {
     if (byFullName.containsKey(key) && reachable.add(key)) work.add(key);
-  }
-  void markBase(String baseKey) {
-    for (final fk in byBaseName[baseKey] ?? const <String>[]) {
-      if (reachable.add(fk)) work.add(fk);
-    }
   }
 
   void collectFromGoal(Goal g) {
@@ -1326,11 +1319,10 @@ LinkResult eliminateDeadCode(LinkResult linked) {
         collectFromGoal(g);
       }
       for (final gd in clause.guards ?? const <Guard>[]) {
-        // A defined guard now carries its resolved name (M:g) — keep it exactly;
-        // markBase additionally covers any guard left bare that names a renamed
-        // procedure by base name (defensive; never under-keeps).
+        // A defined guard carries its resolved name (M:g), followed exactly;
+        // a guard left bare is a builtin or a root-scope guard, no procedure
+        // of the program's.
         markFull('${gd.predicate}/${gd.args.length}');
-        markBase('${gd.predicate}/${gd.args.length}');
       }
     }
   }

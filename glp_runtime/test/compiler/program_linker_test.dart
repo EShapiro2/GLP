@@ -335,6 +335,46 @@ void main() {
       final declNames = pruned.procDeclarations.map((d) => d.name).toSet();
       expect(declNames, isNot(contains('$boot:dead')));
     });
+
+    test('a name is followed only as step 4 resolved it, never by base name',
+        () {
+      // modules.tex, Compilation, fifth step: the reachable procedures are the
+      // exported procedures and "every procedure called in the body of a
+      // reachable one".  m:run's guards are the resolved defined guard
+      // m:ready/1 and the builtin known/1, left bare; n:known/1 is a procedure
+      // nothing calls.  Until 2026-10-03 the bare guard was also followed by
+      // its base name, and n:known/1 was kept.
+      VarTerm w(String n) => VarTerm(n, false, 0, 0);
+      VarTerm r(String n) => VarTerm(n, true, 0, 0);
+      Procedure proc(String name, Clause c) =>
+          Procedure(name, c.head.args.length, [c], 0, 0);
+      final program = Program([
+        proc('run',
+            Clause(Atom('run', [w('X')], 0, 0),
+                body: [Goal('m:run', [r('X')], 0, 0)], line: 0, column: 0)),
+        proc(
+            'm:run',
+            Clause(Atom('m:run', [w('X')], 0, 0),
+                guards: [
+                  Guard('m:ready', [r('X')], 0, 0),
+                  Guard('known', [r('X')], 0, 0),
+                ],
+                line: 0,
+                column: 0)),
+        proc('m:ready',
+            Clause(Atom('m:ready', [ConstTerm(1, 0, 0)], 0, 0),
+                line: 0, column: 0)),
+        proc('n:known',
+            Clause(Atom('n:known', [ConstTerm(1, 0, 0)], 0, 0),
+                line: 0, column: 0)),
+      ], 0, 0);
+      final kept = eliminateDeadCode(LinkResult(program, const []))
+          .program
+          .procedures
+          .map((p) => p.name)
+          .toSet();
+      expect(kept, {'run', 'm:run', 'm:ready'});
+    });
   });
 
   group('Exposed procedures are not entry points (modules.tex §Design)', () {
