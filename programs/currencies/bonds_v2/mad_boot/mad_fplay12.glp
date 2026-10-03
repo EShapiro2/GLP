@@ -16,7 +16,7 @@ boot :-
     frank_init(frank, _)@frank.
 
 %% Alice — alice_p12(0, Ch, Narr), 0 is dummy constant (T unused)
-procedure alice_init(Key?, Stream(_)?).
+procedure alice_init(Key?, Stream(NetInMsg)?).
 alice_init(Id, NetIn) :-
     ground(Id?) |
     alice_p12(0, ch(ActorIn?, ActorOut), Narr),
@@ -32,7 +32,7 @@ alice_init(Id, NetIn) :-
     send_to_person_tagged(Id?, DispCmd?, DispNotify?).
 
 %% Bob — bob_p12(Ch, Narr)
-procedure bob_init(Key?, Stream(_)?).
+procedure bob_init(Key?, Stream(NetInMsg)?).
 bob_init(Id, NetIn) :-
     ground(Id?) |
     bob_p12(ch(ActorIn?, ActorOut), Narr),
@@ -48,7 +48,7 @@ bob_init(Id, NetIn) :-
     send_to_person_tagged(Id?, DispCmd?, DispNotify?).
 
 %% Charlie — charlie_p12(T, Ch, Narr), T = 30, the escrow release date
-procedure charlie_init(Key?, Stream(_)?).
+procedure charlie_init(Key?, Stream(NetInMsg)?).
 charlie_init(Id, NetIn) :-
     ground(Id?) |
     T := 30,
@@ -65,7 +65,7 @@ charlie_init(Id, NetIn) :-
     send_to_person_tagged(Id?, DispCmd?, DispNotify?).
 
 %% Diana — diana_p12(Ch, Narr)
-procedure diana_init(Key?, Stream(_)?).
+procedure diana_init(Key?, Stream(NetInMsg)?).
 diana_init(Id, NetIn) :-
     ground(Id?) |
     diana_p12(ch(ActorIn?, ActorOut), Narr),
@@ -81,7 +81,7 @@ diana_init(Id, NetIn) :-
     send_to_person_tagged(Id?, DispCmd?, DispNotify?).
 
 %% Eve — eve_p12(Ch, Narr)
-procedure eve_init(Key?, Stream(_)?).
+procedure eve_init(Key?, Stream(NetInMsg)?).
 eve_init(Id, NetIn) :-
     ground(Id?) |
     eve_p12(ch(ActorIn?, ActorOut), Narr),
@@ -97,7 +97,7 @@ eve_init(Id, NetIn) :-
     send_to_person_tagged(Id?, DispCmd?, DispNotify?).
 
 %% Frank — frank_p12(Ch, Narr)
-procedure frank_init(Key?, Stream(_)?).
+procedure frank_init(Key?, Stream(NetInMsg)?).
 frank_init(Id, NetIn) :-
     ground(Id?) |
     frank_p12(ch(ActorIn?, ActorOut), Narr),

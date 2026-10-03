@@ -11,7 +11,7 @@ boot :-
     agent_init_4b(bob, _)@bob.
 
 %% Time-dependent agent — T = 30, the maturity of the dated bonds
-procedure agent_init_4b(Key?, Stream(_)?).
+procedure agent_init_4b(Key?, Stream(NetInMsg)?).
 agent_init_4b(Id, NetIn) :-
     ground(Id?) |
     T := 30,
@@ -46,6 +46,6 @@ procedure sink(Stream(_)?).
 sink([_|Xs]) :- sink(Xs?).
 sink([]).
 
-procedure actor_dispatch_4b(Key?, Constant?, Channel(Stream(PersonNotify), Stream(PersonCmd))).
+procedure actor_dispatch_4b(Key?, Constant?, Channel(Stream(PersonNotify), Stream(PersonCmd))?).
 actor_dispatch_4b(alice, T, Ch) :- alice_p4b(Ch?, T?).
 actor_dispatch_4b(bob, T, Ch) :- bob_p4b(Ch?, T?).

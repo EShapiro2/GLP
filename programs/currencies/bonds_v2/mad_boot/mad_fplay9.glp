@@ -11,7 +11,7 @@ boot :-
     agent_init(bob, 9, _)@bob.
 
 %% Adult agent — no children, no bonds
-procedure agent_init(Key?, Constant?, Stream(_)?).
+procedure agent_init(Key?, Constant?, Stream(NetInMsg)?).
 agent_init(Id, PlayNum, NetIn) :-
     ground(Id?), ground(PlayNum?) |
     actor_dispatch(Id?, PlayNum?, ch(ActorIn?, ActorOut)),
@@ -45,6 +45,6 @@ procedure sink(Stream(_)?).
 sink([_|Xs]) :- sink(Xs?).
 sink([]).
 
-procedure actor_dispatch(Key?, Constant?, Channel(Stream(PersonNotify), Stream(PersonCmd))).
+procedure actor_dispatch(Key?, Constant?, Channel(Stream(PersonNotify), Stream(PersonCmd))?).
 actor_dispatch(alice, 9, Ch) :- alice_p9(Ch?).
 actor_dispatch(bob, 9, Ch) :- bob_p9(Ch?).

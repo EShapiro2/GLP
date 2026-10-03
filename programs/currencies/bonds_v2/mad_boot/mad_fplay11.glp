@@ -11,7 +11,7 @@ boot :-
     agent_init(bob, 11, _)@bob.
 
 %% Alice — time-dependent escrow depositor (far future deadline)
-procedure alice_init_11(Key?, Stream(_)?).
+procedure alice_init_11(Key?, Stream(NetInMsg)?).
 alice_init_11(Id, NetIn) :-
     ground(Id?) |
     T := 30,
@@ -27,7 +27,7 @@ alice_init_11(Id, NetIn) :-
     send_to_person_tagged(Id?, DispCmd?, DispNotify?).
 
 %% Bob — standard agent (no time)
-procedure agent_init(Key?, Constant?, Stream(_)?).
+procedure agent_init(Key?, Constant?, Stream(NetInMsg)?).
 agent_init(Id, PlayNum, NetIn) :-
     ground(Id?), ground(PlayNum?) |
     actor_dispatch(Id?, PlayNum?, ch(ActorIn?, ActorOut)),
@@ -61,5 +61,5 @@ procedure sink(Stream(_)?).
 sink([_|Xs]) :- sink(Xs?).
 sink([]).
 
-procedure actor_dispatch(Key?, Constant?, Channel(Stream(PersonNotify), Stream(PersonCmd))).
+procedure actor_dispatch(Key?, Constant?, Channel(Stream(PersonNotify), Stream(PersonCmd))?).
 actor_dispatch(bob, 11, Ch) :- bob_p11(Ch?).
