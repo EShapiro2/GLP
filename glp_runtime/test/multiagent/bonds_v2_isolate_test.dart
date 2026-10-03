@@ -8,7 +8,7 @@ import 'package:glp_runtime/multiagent/isolate_manager.dart';
 /// goal, and a program directory carries no boot module (TGLP modules.tex,
 /// "Entry and the absence of a boot module").
 const _bondsV2Dir = '../programs/currencies/bonds_v2';
-const _madBootDir = '../programs/tests/multiagent/bonds_v2_boots';
+const _madBootDir = '../programs/tests/bonds_v2_boots';
 const _rootSelfGlp = '../programs/self.glp';
 
 /// Helper: load boot file, configure project dir, boot, run, and assert what
