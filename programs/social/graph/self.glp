@@ -117,12 +117,6 @@ NetOutStream ::= [] ; [NetOutMsg | NetOutStream].
 %% Intro result — written by intro_await_peer, injected into UserIn
 IntroResult ::= intro_result(Constant, IntroChannel) ; intro_rejected(Constant).
 
-%% NOTE (SGSG Code, 2026-09-08): the catalogue's Key, SignedTerm and Hash are
-%% root-scope aliases of String; they resolve in procedure declarations but
-%% not inside a descendant's type definitions ("Unresolved type: SignedTerm"),
-%% reported to IGLP.  The definitions below therefore say String where the
-%% catalogue says Key, SignedTerm or Hash; the declarations keep the names.
-
 %% =============================================================================
 %% THE SUPER-APP (SGSG paper, Section 3): what a mini-app is granted, and the
 %% host state the social graph keeps for it.
