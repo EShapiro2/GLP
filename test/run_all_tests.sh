@@ -245,7 +245,7 @@ run2(Xr2).
 HEREDOC
 2>&1)
 
-check "p(X) ill-typed: writer at input arg of p(Constant?)" "(p) is not well-typed" "$a1"
+check "p(X) ill-typed: writer at input arg of p(String?)" "(p) is not well-typed" "$a1"
 check "Merge [1,2,3]+[a,b]" "Xs = \[1, a, 2, b, 3\]" "$a1"
 check "Clause lookup" "B = true" "$a1"
 check "run(true)" "succeeds" "$a1"
