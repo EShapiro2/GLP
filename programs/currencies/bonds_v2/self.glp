@@ -14,7 +14,7 @@
 %%   Channel(In, Out) ::= ch(In, Out?).
 
 %% Bond representation: bond(Issuer, Maturity, Serial)
-Bond ::= bond(Key, Constant, Constant).
+Bond ::= bond(Key, Constant, Integer).
 
 %% Trade types
 Lot ::= lot(Key, Constant, Constant).
@@ -48,7 +48,7 @@ NetColdCall ::= intro(Key, Response?).
 %% =============================================================================
 
 %% Content carried inside person-to-agent messages (msg(person, Id, Content))
-PersonContent ::= mint(Constant, Constant)
+PersonContent ::= mint(Integer, Constant)
               ; balance
               ; done
               ; connect(Key)
@@ -145,7 +145,7 @@ AgentChannel ::= ch(Stream(AgentToPersonMsg), Stream(MediatorToAgentMsg)?).
 ReqId ::= req(Constant).
 
 %% Person -> Mediator commands
-PersonCmd ::= mint(Constant, Constant)
+PersonCmd ::= mint(Integer, Constant)
           ; balance
           ; done
           ; connect(Key)

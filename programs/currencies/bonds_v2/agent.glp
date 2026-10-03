@@ -27,7 +27,7 @@
 %% IMPORTED — reusable transaction core (txn.glp)
 %% =============================================================================
 
-imported procedure txn#create_bonds(Key?, Constant?, Constant?, Constant?, Stream(Bond)).
+imported procedure txn#create_bonds(Key?, Constant?, Constant?, Integer?, Stream(Bond)).
 imported procedure txn#append(Stream(Bond)?, Stream(Bond)?, Stream(Bond)).
 imported procedure txn#select_bonds_by_spec(Stream(Lot)?, Stream(Bond)?, Constant, Stream(Bond), Stream(Bond)).
 imported procedure txn#classify_trade(Key?, Constant?, Stream(Lot)?, Stream(Bond)?, Constant).
@@ -64,12 +64,12 @@ handle_response(no, From, Outs, Outs1?, In, In?) :-
 %% DO_TRADE — Select bonds matching GiveSpec, then send or fail
 %% =============================================================================
 
-procedure do_trade(Key?, Key?, Stream(Lot)?, Stream(Lot)?, Stream(Bond)?, Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Constant?, Constant?, Stream(Constant)).
+procedure do_trade(Key?, Key?, Stream(Lot)?, Stream(Lot)?, Stream(Bond)?, Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Integer?, Constant?, Stream(Constant)).
 do_trade(Id, Target, GiveSpec, WantSpec, Holdings, PersonIn, NetIn, Outs, NextSerial, Clock, DateW?) :-
     txn # select_bonds_by_spec(GiveSpec?, Holdings?, Status, Selected, Remaining),
     do_trade_result(Status?, Id?, Target?, WantSpec?, Selected?, Remaining?, PersonIn?, NetIn?, Outs?, NextSerial?, Clock?, DateW).
 
-procedure do_trade_result(Constant?, Key?, Key?, Stream(Lot)?, Stream(Bond)?, Stream(Bond)?, Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Constant?, Constant?, Stream(Constant)).
+procedure do_trade_result(Constant?, Key?, Key?, Stream(Lot)?, Stream(Bond)?, Stream(Bond)?, Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Integer?, Constant?, Stream(Constant)).
 do_trade_result(ok, Id, Target, WantSpec, Selected, Remaining, PersonIn, NetIn, Outs, NextSerial, Clock, DateW?) :-
     send_friend(Target?,
         msg(Id?, Target?, trade_propose(WantSpec?, Selected?, TradeResp)),
@@ -89,12 +89,12 @@ do_trade_result(fail, Id, Target, _, Selected, Remaining, PersonIn, NetIn, Outs,
 %% missing spec the selection fails and holdings are restored.
 %% =============================================================================
 
-procedure do_redeem(Key?, Key?, Stream(Lot)?, Stream(Lot)?, Stream(Bond)?, Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Constant?, Constant?, Stream(Constant)).
+procedure do_redeem(Key?, Key?, Stream(Lot)?, Stream(Lot)?, Stream(Bond)?, Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Integer?, Constant?, Stream(Constant)).
 do_redeem(Id, Target, GiveSpec, WantSpec, Holdings, PersonIn, NetIn, Outs, NextSerial, Clock, DateW?) :-
     txn # select_bonds_by_spec(GiveSpec?, Holdings?, Status, Selected, Remaining),
     do_redeem_result(Status?, Id?, Target?, WantSpec?, Selected?, Remaining?, PersonIn?, NetIn?, Outs?, NextSerial?, Clock?, DateW).
 
-procedure do_redeem_result(Constant?, Key?, Key?, Stream(Lot)?, Stream(Bond)?, Stream(Bond)?, Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Constant?, Constant?, Stream(Constant)).
+procedure do_redeem_result(Constant?, Key?, Key?, Stream(Lot)?, Stream(Bond)?, Stream(Bond)?, Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Integer?, Constant?, Stream(Constant)).
 do_redeem_result(ok, Id, Target, WantSpec, Selected, Remaining, PersonIn, NetIn, Outs, NextSerial, Clock, DateW?) :-
     send_friend(Target?,
         msg(Id?, Target?, trade_propose(WantSpec?, Selected?, TradeResp)),
@@ -110,7 +110,7 @@ do_redeem_result(fail, Id, Target, _, Selected, Remaining, PersonIn, NetIn, Outs
 %% HANDLE_TRADE_FILL — Bind TradeResponse after selection attempt
 %% =============================================================================
 
-procedure handle_trade_fill(Constant?, Key?, Key?, TradeResponse, Stream(Bond)?, Stream(Bond)?, Stream(Bond)?, Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Constant?, Constant?, Stream(Constant)).
+procedure handle_trade_fill(Constant?, Key?, Key?, TradeResponse, Stream(Bond)?, Stream(Bond)?, Stream(Bond)?, Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Integer?, Constant?, Stream(Constant)).
 %% Can fill: bind accept(our bonds), take offered bonds, notify person
 handle_trade_fill(ok, Id, From, trade_accept(Selected?), OfferedBonds, Selected, Remaining, PersonIn, NetIn, Outs, NextSerial, Clock, DateW?) :-
     txn # append(Remaining?, OfferedBonds?, NewHoldings),
@@ -127,7 +127,7 @@ handle_trade_fill(fail, Id, From, trade_decline(OfferedBonds?), OfferedBonds, Se
 %% =============================================================================
 
 procedure trade_dispatch(Constant?, Key?, Key?, Stream(Lot)?, Stream(Bond)?, TradeResponse,
-    Stream(Bond)?, Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Constant?, Constant?, Stream(Constant)).
+    Stream(Bond)?, Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Integer?, Constant?, Stream(Constant)).
 
 %% Payment — auto-accept (proposer gives coins, wants nothing)
 trade_dispatch(payment, Id, From, _, OfferedBonds, trade_accept([]),
@@ -158,7 +158,7 @@ trade_dispatch(normal, Id, From, WantSpec, OfferedBonds, TradeResp?,
 
 procedure redemption_result(Constant?, Key?, Key?, TradeResponse, Stream(Bond)?,
     Stream(Bond)?, Stream(Bond)?,
-    Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Constant?, Constant?, Stream(Constant)).
+    Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Integer?, Constant?, Stream(Constant)).
 
 %% Can fill — accept with requested bonds
 redemption_result(ok, Id, From, trade_accept(Selected?), OfferedBonds,
@@ -177,7 +177,7 @@ redemption_result(fail, Id, From, trade_decline_menu(OfferedBonds?, Menu?), Offe
         PersonIn?, NetIn?, Outs?, NextSerial?, Clock?, DateW).
 
 procedure redemption_reject(Key?, Key?, Stream(Bond)?, Stream(Bond),
-    Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Constant?, Constant?, Stream(Constant)).
+    Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Integer?, Constant?, Stream(Constant)).
 redemption_reject(Id, From, OrigHoldings, Menu?, PersonIn, NetIn, Outs, NextSerial, Clock, DateW?) :-
     ground(OrigHoldings?) |
     txn # build_menu(Id?, OrigHoldings?, Menu),
@@ -193,12 +193,12 @@ redemption_reject(Id, From, OrigHoldings, Menu?, PersonIn, NetIn, Outs, NextSeri
 %% from here on reach this escrow.  The agent clause closed the previous channel,
 %% which is what keeps the stream single-reader.
 
-procedure do_deposit_escrow(Key?, Key?, Stream(Lot)?, Constant?, Stream(Bond)?, Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Constant?, Constant?).
+procedure do_deposit_escrow(Key?, Key?, Stream(Lot)?, Constant?, Stream(Bond)?, Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Integer?, Constant?).
 do_deposit_escrow(Id, Target, GiveSpec, ReleaseTime, Holdings, PersonIn, NetIn, Outs, NextSerial, Clock) :-
     txn # select_bonds_by_spec(GiveSpec?, Holdings?, Status, Selected, Remaining),
     do_deposit_escrow_result(Status?, Id?, Target?, ReleaseTime?, Selected?, Remaining?, PersonIn?, NetIn?, Outs?, NextSerial?, Clock?).
 
-procedure do_deposit_escrow_result(Constant?, Key?, Key?, Constant?, Stream(Bond)?, Stream(Bond)?, Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Constant?, Constant?).
+procedure do_deposit_escrow_result(Constant?, Key?, Key?, Constant?, Stream(Bond)?, Stream(Bond)?, Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Integer?, Constant?).
 do_deposit_escrow_result(ok, Id, Target, ReleaseTime, Selected, Remaining, PersonIn, NetIn, Outs, NextSerial, Clock) :-
     ground(Selected?) |
     escrow(ReleaseTime?, EscrowDates?, Selected?, CancelSignal?, BenResult, DepResult),
@@ -231,7 +231,7 @@ do_deposit_escrow_result(fail, Id, Target, _, Selected, Remaining, PersonIn, Net
 %% It opens the date stream and discards its outward end: only an open escrow
 %% consumes it, and an agent with no escrow open has no reader for it.
 
-exported procedure agent(Key?, Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Stream(Bond)?, Constant?, Constant?).
+exported procedure agent(Key?, Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Stream(Bond)?, Integer?, Constant?).
 agent(Id, PersonIn, NetIn, Outs, Holdings, NextSerial, Clock) :-
     agent(Id?, PersonIn?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?, _).
 
@@ -241,7 +241,7 @@ agent(Id, PersonIn, NetIn, Outs, Holdings, NextSerial, Clock) :-
 %% opens the fresh channel the escrow reads (see do_deposit_escrow).
 %% =============================================================================
 
-procedure agent(Key?, Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Stream(Bond)?, Constant?, Constant?, Stream(Constant)).
+procedure agent(Key?, Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Stream(Bond)?, Integer?, Constant?, Stream(Constant)).
 
 %% --- Phase 1: Mint / Advance-date / Balance / Done ---
 

@@ -19,10 +19,10 @@
 %% =============================================================================
 
 %% From agent.glp
-imported procedure agent#agent(Key?, Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Stream(Bond)?, Constant?, Constant?).
+imported procedure agent#agent(Key?, Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Stream(Bond)?, Integer?, Constant?).
 
 %% From mediator.glp
-imported procedure mediator#ui_mediator(Key?, AgentChannel?, PersonChannel?, Stream(PendingEntry)?, Constant?).
+imported procedure mediator#ui_mediator(Key?, AgentChannel?, PersonChannel?, Stream(PendingEntry)?, Integer?).
 
 %% From actors.glp — play actors
 imported procedure actors#alice_p1(ActorChannel?).

@@ -17,7 +17,7 @@
 %% UI MEDIATOR — Main loop
 %% =============================================================================
 
-exported procedure ui_mediator(Key?, AgentChannel?, PersonChannel?, Stream(PendingEntry)?, Constant?).
+exported procedure ui_mediator(Key?, AgentChannel?, PersonChannel?, Stream(PendingEntry)?, Integer?).
 
 %% --- Agent-to-person: Phase 1 ground pass-through ---
 
