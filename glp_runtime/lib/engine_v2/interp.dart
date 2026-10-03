@@ -143,30 +143,134 @@ class ByteRunner with OpExecutors implements GoalRunner {
   @override
   String? procNameForPc(int pc) => _procNameByPc[pc];
 
-  RunResult runWithStatus(RunnerContext cx) {
-    final code = image.code;
-    var pc = cx.kappa; // byte offset of the goal's entry instruction
+  /// The decoded operands of each instruction executed, by its byte offset:
+  /// an instruction's operands are decoded at its first execution and kept,
+  /// the bytes being what is run, shipped and hashed.  Until 2026-10-02 each
+  /// execution decoded them again, a reader over a view of the code made
+  /// for it and a functor's or constant's bytes decoded afresh.
+  late final List<_Ins?> _decoded =
+      List<_Ins?>.filled(image.code.length, null);
 
-    bool pol(WireReader r) {
+  /// Decode the instruction at [pc], as the loop below once did at each
+  /// execution: the opcode, its operands in order, and the byte after them.
+  _Ins _decodeAt(int pc) {
+    final code = image.code;
+    final r = WireReader(Uint8List.sublistView(code, pc));
+    final opcode = r.u8();
+
+    bool pol() {
       final p = r.u8();
       if (p != 0 && p != 1) throw WireFormatException('polarity not 0/1: $p');
       return p == 1;
     }
 
-    Object? constant(WireReader r) => valueOfWireConst(decodeConstantPayload(r));
+    Object? constant() => valueOfWireConst(decodeConstantPayload(r));
+
+    switch (opcode) {
+      case Opcode.clauseTry:
+      case Opcode.clauseNext:
+      case Opcode.noMoreClauses:
+      case Opcode.commit:
+      case Opcode.proceed:
+      case Opcode.halt:
+      case Opcode.nop:
+      case Opcode.otherwise:
+      case Opcode.deallocate:
+        return _Ins(opcode, pc + r.offset);
+      case Opcode.push:
+      case Opcode.pop:
+      case Opcode.headNil:
+      case Opcode.headList:
+      case Opcode.unifyVoid:
+      case Opcode.putNil:
+      case Opcode.putList:
+      case Opcode.putBoundNil:
+      case Opcode.allocate:
+      case Opcode.ground:
+      case Opcode.known:
+      case Opcode.unknown:
+      case Opcode.noReaders:
+        final a = r.clen();
+        return _Ins(opcode, pc + r.offset, a: a);
+      case Opcode.headConstant:
+      case Opcode.putConstant:
+      case Opcode.putBoundConst:
+        final k = constant();
+        final a = r.clen();
+        return _Ins(opcode, pc + r.offset, k: k, a: a);
+      case Opcode.unifyConstant:
+      case Opcode.setConstant:
+        final k = constant();
+        return _Ins(opcode, pc + r.offset, k: k);
+      case Opcode.headStructure:
+      case Opcode.putStructure:
+        final f = r.string();
+        final a = r.clen();
+        final b = r.clen();
+        return _Ins(opcode, pc + r.offset, k: f, a: a, b: b);
+      case Opcode.unifyStructure:
+        final f = r.string();
+        final a = r.clen();
+        return _Ins(opcode, pc + r.offset, k: f, a: a);
+      case Opcode.headVariable:
+      case Opcode.unifyVariable:
+      case Opcode.setVariable:
+        final p = pol();
+        final a = r.clen();
+        return _Ins(opcode, pc + r.offset, pol: p, a: a);
+      case Opcode.getVariable:
+      case Opcode.getValue:
+      case Opcode.putVariable:
+        final p = pol();
+        final a = r.clen();
+        final b = r.clen();
+        return _Ins(opcode, pc + r.offset, pol: p, a: a, b: b);
+      case Opcode.guard:
+        final sig = image.symbolAt(r.clen()).signature;
+        final arity = r.clen();
+        final name = sig.substring(0, sig.lastIndexOf('/'));
+        return _Ins(opcode, pc + r.offset, k: name, a: arity);
+      case Opcode.groundEqual:
+      case Opcode.spawn:
+      case Opcode.requeue:
+        final a = r.clen();
+        final b = r.clen();
+        return _Ins(opcode, pc + r.offset, a: a, b: b);
+      default:
+        throw WireFormatException(
+            'unknown opcode 0x${opcode.toRadixString(16)} at byte $pc');
+    }
+  }
+
+  /// The operands kept for the instruction at [pc], decoded now if it has not
+  /// run yet: its opcode, the byte after its operands, its clen operands in
+  /// order, its polarity, and its constant, functor or guard name.
+  ({int op, int next, int a, int b, bool pol, Object? k}) decodedOperandsAt(
+      int pc) {
+    final ins = _decoded[pc] ??= _decodeAt(pc);
+    return (op: ins.op, next: ins.next, a: ins.a, b: ins.b, pol: ins.pol, k: ins.k);
+  }
+
+  /// A constant operand as the instruction carries it: a byte string copied,
+  /// as each decode once made it afresh, the rest shared, being immutable.
+  static Object? _k(Object? k) => k is Uint8List ? Uint8List.fromList(k) : k;
+
+  RunResult runWithStatus(RunnerContext cx) {
+    final code = image.code;
+    final decoded = _decoded;
+    var pc = cx.kappa; // byte offset of the goal's entry instruction
 
     while (pc < code.length) {
       final opStart = pc;
-      final r = WireReader(Uint8List.sublistView(code, pc));
-      final opcode = r.u8();
+      final ins = decoded[pc] ??= _decodeAt(pc);
       // Byte offset of the next instruction (after this opcode's operands).
-      int after() => opStart + r.offset;
+      final after = ins.next;
 
-      switch (opcode) {
+      switch (ins.op) {
         // ===== Clause control =====
         case Opcode.clauseTry:
           execClauseTry(cx); // advance
-          pc = after();
+          pc = after;
           continue;
 
         case Opcode.clauseNext:
@@ -185,7 +289,7 @@ class ByteRunner with OpExecutors implements GoalRunner {
             pc = _applyNextClauseByte(cx, opStart);
             continue;
           }
-          pc = after();
+          pc = after;
           continue;
 
         case Opcode.proceed:
@@ -197,7 +301,7 @@ class ByteRunner with OpExecutors implements GoalRunner {
           return RunResult.terminated;
 
         case Opcode.nop:
-          pc = after();
+          pc = after;
           continue;
 
         case Opcode.otherwise:
@@ -205,326 +309,288 @@ class ByteRunner with OpExecutors implements GoalRunner {
             pc = _applyNextClauseByte(cx, opStart);
             continue;
           }
-          pc = after();
+          pc = after;
           continue;
 
         // ===== Structure traversal control =====
         case Opcode.push:
-          execPush(cx, r.clen());
-          pc = after();
+          execPush(cx, ins.a);
+          pc = after;
           continue;
 
         case Opcode.pop:
-          execPop(cx, r.clen());
-          pc = after();
+          execPop(cx, ins.a);
+          pc = after;
           continue;
 
         // ===== HEAD matching =====
         case Opcode.headConstant:
           {
-            final v = constant(r);
-            final o = execHeadConstant(cx, v, r.clen());
+            final o = execHeadConstant(cx, _k(ins.k), ins.a);
             if (o.kind == StepKind.nextClause) {
               pc = _applyNextClauseByte(cx, opStart);
               continue;
             }
-            pc = after();
+            pc = after;
             continue;
           }
 
         case Opcode.headNil:
           {
-            final o = execHeadNil(cx, r.clen());
+            final o = execHeadNil(cx, ins.a);
             if (o.kind == StepKind.nextClause) {
               pc = _applyNextClauseByte(cx, opStart);
               continue;
             }
-            pc = after();
+            pc = after;
             continue;
           }
 
         case Opcode.headStructure:
           {
-            final f = r.string();
-            final o = execHeadStructure(cx, f, r.clen(), r.clen());
+            final o =
+                execHeadStructure(cx, ins.k as String, ins.a, ins.b);
             if (o.kind == StepKind.nextClause) {
               pc = _applyNextClauseByte(cx, opStart);
               continue;
             }
-            pc = after();
+            pc = after;
             continue;
           }
 
         case Opcode.headList:
           {
-            final o = execHeadList(cx, r.clen());
+            final o = execHeadList(cx, ins.a);
             if (o.kind == StepKind.nextClause) {
               pc = _applyNextClauseByte(cx, opStart);
               continue;
             }
-            pc = after();
+            pc = after;
             continue;
           }
 
         case Opcode.headVariable:
           {
-            final isReader = pol(r);
-            final o = execHeadVariable(cx, r.clen(), isReader);
+            final o = execHeadVariable(cx, ins.a, ins.pol);
             if (o.kind == StepKind.nextClause) {
               pc = _applyNextClauseByte(cx, opStart);
               continue;
             }
-            pc = after();
+            pc = after;
             continue;
           }
 
         case Opcode.getVariable:
           {
-            final isReader = pol(r);
-            final varIndex = r.clen();
-            final o = execGetVariable(cx, varIndex, r.clen(), isReader);
+            final o = execGetVariable(cx, ins.a, ins.b, ins.pol);
             if (o.kind == StepKind.nextClause) {
               pc = _applyNextClauseByte(cx, opStart);
               continue;
             }
-            pc = after();
+            pc = after;
             continue;
           }
 
         case Opcode.getValue:
           {
-            final isReader = pol(r);
-            final varIndex = r.clen();
-            final o = execGetValue(cx, varIndex, r.clen(), isReader);
+            final o = execGetValue(cx, ins.a, ins.b, ins.pol);
             if (o.kind == StepKind.nextClause) {
               pc = _applyNextClauseByte(cx, opStart);
               continue;
             }
-            pc = after();
+            pc = after;
             continue;
           }
 
         // ===== Structure subterm matching =====
         case Opcode.unifyVariable:
           {
-            final isReader = pol(r);
-            final o = execUnifyVariable(cx, r.clen(), isReader);
+            final o = execUnifyVariable(cx, ins.a, ins.pol);
             if (o.kind == StepKind.nextClause) {
               pc = _applyNextClauseByte(cx, opStart);
               continue;
             }
-            pc = after();
+            pc = after;
             continue;
           }
 
         case Opcode.unifyConstant:
           {
-            final o = execUnifyConstant(cx, constant(r));
+            final o = execUnifyConstant(cx, _k(ins.k));
             if (o.kind == StepKind.nextClause) {
               pc = _applyNextClauseByte(cx, opStart);
               continue;
             }
-            pc = after();
+            pc = after;
             continue;
           }
 
         case Opcode.unifyVoid:
           {
             // A goal writer at a head `_` fails ([OpExecutors.execUnifyVoid]).
-            final o = execUnifyVoid(cx, r.clen());
+            final o = execUnifyVoid(cx, ins.a);
             if (o.kind == StepKind.nextClause) {
               pc = _applyNextClauseByte(cx, opStart);
               continue;
             }
-            pc = after();
+            pc = after;
             continue;
           }
 
         case Opcode.unifyStructure:
           {
-            final f = r.string();
-            final o = execUnifyStructure(cx, f, r.clen());
+            final o = execUnifyStructure(cx, ins.k as String, ins.a);
             if (o.kind == StepKind.nextClause) {
               pc = _applyNextClauseByte(cx, opStart);
               continue;
             }
-            pc = after();
+            pc = after;
             continue;
           }
 
         // ===== BODY argument setup =====
         case Opcode.putVariable:
-          {
-            final isReader = pol(r);
-            final varIndex = r.clen();
-            execPutVariable(cx, varIndex, r.clen(), isReader);
-            pc = after();
-            continue;
-          }
+          execPutVariable(cx, ins.a, ins.b, ins.pol);
+          pc = after;
+          continue;
 
         case Opcode.putConstant:
-          {
-            final v = constant(r);
-            execPutConstant(cx, v, r.clen());
-            pc = after();
-            continue;
-          }
+          execPutConstant(cx, _k(ins.k), ins.a);
+          pc = after;
+          continue;
 
         case Opcode.putNil:
-          execPutNil(cx, r.clen());
-          pc = after();
+          execPutNil(cx, ins.a);
+          pc = after;
           continue;
 
         case Opcode.putList:
-          execPutList(cx, r.clen());
-          pc = after();
+          execPutList(cx, ins.a);
+          pc = after;
           continue;
 
         case Opcode.putStructure:
-          {
-            final f = r.string();
-            execPutStructure(cx, f, r.clen(), r.clen());
-            pc = after();
-            continue;
-          }
+          execPutStructure(cx, ins.k as String, ins.a, ins.b);
+          pc = after;
+          continue;
 
         case Opcode.putBoundConst:
-          {
-            final v = constant(r);
-            execPutBoundConst(cx, v, r.clen());
-            pc = after();
-            continue;
-          }
+          execPutBoundConst(cx, _k(ins.k), ins.a);
+          pc = after;
+          continue;
 
         case Opcode.putBoundNil:
-          execPutBoundNil(cx, r.clen());
-          pc = after();
+          execPutBoundNil(cx, ins.a);
+          pc = after;
           continue;
 
         case Opcode.setVariable:
-          {
-            final isReader = pol(r);
-            execSetVariable(cx, r.clen(), isReader);
-            pc = after();
-            continue;
-          }
+          execSetVariable(cx, ins.a, ins.pol);
+          pc = after;
+          continue;
 
         case Opcode.setConstant:
-          execSetConstant(cx, constant(r));
-          pc = after();
+          execSetConstant(cx, _k(ins.k));
+          pc = after;
           continue;
 
         case Opcode.allocate:
-          {
-            final slots = r.clen();
-            execAllocate(cx, slots, after()); // continuation = next instr byte
-            pc = after();
-            continue;
-          }
+          execAllocate(cx, ins.a, after); // continuation = next instr byte
+          pc = after;
+          continue;
 
         case Opcode.deallocate:
           execDeallocate(cx);
-          pc = after();
+          pc = after;
           continue;
 
         // ===== Guards =====
         case Opcode.guard:
           {
-            final sig = image.symbolAt(r.clen()).signature;
-            final arity = r.clen();
-            final name = sig.substring(0, sig.lastIndexOf('/'));
-            if (execGuard(cx, name, arity).kind == StepKind.nextClause) {
+            if (execGuard(cx, ins.k as String, ins.a).kind ==
+                StepKind.nextClause) {
               pc = _applyNextClauseByte(cx, opStart);
               continue;
             }
-            pc = after();
+            pc = after;
             continue;
           }
 
         case Opcode.ground:
           {
-            final varIndex = r.clen();
-            if (execGround(cx, varIndex).kind == StepKind.nextClause) {
+            if (execGround(cx, ins.a).kind == StepKind.nextClause) {
               pc = _applyNextClauseByte(cx, opStart);
               continue;
             }
-            pc = after();
+            pc = after;
             continue;
           }
 
         case Opcode.known:
           {
-            final varIndex = r.clen();
-            if (execKnown(cx, varIndex).kind == StepKind.nextClause) {
+            if (execKnown(cx, ins.a).kind == StepKind.nextClause) {
               pc = _applyNextClauseByte(cx, opStart);
               continue;
             }
-            pc = after();
+            pc = after;
             continue;
           }
 
         case Opcode.unknown:
           {
-            final o = execUnknown(cx, r.clen());
+            final o = execUnknown(cx, ins.a);
             if (o.kind == StepKind.nextClause) {
               pc = _applyNextClauseByte(cx, opStart);
               continue;
             }
-            pc = after();
+            pc = after;
             continue;
           }
 
         case Opcode.noReaders:
           {
-            final varIndex = r.clen();
-            if (execNoReaders(cx, varIndex).kind == StepKind.nextClause) {
+            if (execNoReaders(cx, ins.a).kind == StepKind.nextClause) {
               pc = _applyNextClauseByte(cx, opStart);
               continue;
             }
-            pc = after();
+            pc = after;
             continue;
           }
 
         case Opcode.groundEqual:
           {
-            final l = r.clen();
-            final rr = r.clen();
-            if (execGroundEqual(cx, l, rr).kind == StepKind.nextClause) {
+            if (execGroundEqual(cx, ins.a, ins.b).kind == StepKind.nextClause) {
               pc = _applyNextClauseByte(cx, opStart);
               continue;
             }
-            pc = after();
+            pc = after;
             continue;
           }
 
         // ===== Goal spawning / control =====
         case Opcode.spawn:
           {
-            final procIndex = r.clen();
-            final arity = r.clen();
-            final result = _spawn(cx, procIndex, arity);
+            final result = _spawn(cx, ins.a, ins.b);
             if (result != null) return result; // terminal (kernel abort / error)
-            pc = after();
+            pc = after;
             continue;
           }
 
         case Opcode.requeue:
           {
-            final procIndex = r.clen();
-            final arity = r.clen();
-            final (result, nextPc) = _requeue(cx, procIndex, arity);
+            final (result, nextPc) = _requeue(cx, ins.a, ins.b);
             if (result != null) return result;
             if (nextPc != null) {
               pc = nextPc;
               continue;
             }
-            pc = after();
+            pc = after;
             continue;
           }
 
         default:
           throw WireFormatException(
-              'unknown opcode 0x${opcode.toRadixString(16)} at byte $opStart');
+              'unknown opcode 0x${ins.op.toRadixString(16)} at byte $opStart');
       }
     }
     return RunResult.terminated;
@@ -755,4 +821,20 @@ class ByteRunner with OpExecutors implements GoalRunner {
 
     return (null, entryByte);
   }
+}
+
+
+/// An instruction's decoded operands ([ByteRunner._decodeAt]): its opcode,
+/// the byte offset after its operands, and the operands by kind --- clen
+/// operands in [a] and [b] in their order, a polarity in [pol], a constant, a
+/// functor or a guard's name in [k].
+final class _Ins {
+  final int op;
+  final int next;
+  final int a;
+  final int b;
+  final bool pol;
+  final Object? k;
+  const _Ins(this.op, this.next,
+      {this.a = 0, this.b = 0, this.pol = false, this.k});
 }
