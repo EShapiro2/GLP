@@ -16,10 +16,10 @@
 %% =============================================================================
 
 %% From agent.glp (sibling)
-imported procedure agent#agent(Constant?, UserInStream?, NetInStream?, OutputsList?).
+imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 
 %% From ui/mediator.glp
-imported procedure mediator#ui_mediator(Constant?, AgentChannel?, UserChannel?, PendingList?, Constant?).
+imported procedure mediator#ui_mediator(Constant?, AgentChannel?, UserChannel?, PendingList?, Integer?).
 
 %% =============================================================================
 %% IN-HEAP CROSSBAR — route '_net' cold calls by addressee
