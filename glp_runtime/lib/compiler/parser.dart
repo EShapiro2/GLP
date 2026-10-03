@@ -1130,27 +1130,87 @@ class Parser {
     return left;
   }
 
+  /// The operator names and keywords the lexer makes tokens of, punctuation
+  /// apart.  Each is a name: GLP-Spec reserves no word (appendix-lp.tex,
+  /// Definition "Logic Programs Syntax": a term is a variable, a constant or a
+  /// compound term f(T1, ..., Tn), in standard LP notions), so where a term is
+  /// expected the reader takes one as the constant of that name, and as the
+  /// functor of a compound term where "(" follows it, as Prolog does (GLP #3
+  /// Cowork, 2026-10-03 21:18 UTC, "11:58. 2": "`mod` and `procedure` are
+  /// constants ... compliance, fix it").  Until 2026-10-03 an unquoted `mod`
+  /// or `procedure` in a term was "Expected term, got TokenType.MOD", and
+  /// `f(=)`, `f(+)`, `[-]` likewise; a quoted name was the one way to write
+  /// them.  `,` and `|` stay punctuation, quoted when meant as names, as in
+  /// Prolog; `?` is the reader mark.
+  static const Set<TokenType> _operatorNames = {
+    TokenType.PLUS, TokenType.MINUS, TokenType.STAR, TokenType.SLASH,
+    TokenType.SLASH_SLASH, TokenType.MOD,
+    TokenType.LESS, TokenType.GREATER, TokenType.LESS_EQUAL,
+    TokenType.GREATER_EQUAL, TokenType.EQUALS, TokenType.ARITH_EQUAL,
+    TokenType.ARITH_NOT_EQUAL, TokenType.GROUND_EQUAL,
+    TokenType.GROUND_NOT_EQUAL, TokenType.AT_LESS, TokenType.UNIV,
+    TokenType.UNIV_DECOMPOSE,
+    TokenType.IMPLIES, TokenType.ASSIGN, TokenType.COLONCOLONEQ,
+    TokenType.SEMICOLON, TokenType.COLON,
+    TokenType.TILDE, TokenType.HASH, TokenType.BACKSLASH, TokenType.AT,
+    TokenType.PROCEDURE,
+  };
+
+  /// The tokens that end an operand: an operator name before one of them has
+  /// no operand of its own and is the constant of its name.
+  static const Set<TokenType> _endsOperand = {
+    TokenType.COMMA, TokenType.RPAREN, TokenType.RBRACKET, TokenType.PIPE,
+    TokenType.DOT, TokenType.SEMICOLON, TokenType.EOF,
+  };
+
+  /// Whether an operator name stands at the current position where a term is
+  /// expected, and how it reads there: 'functor' where "(" follows it,
+  /// 'constant' where it has no operand --- an operand-ending token follows,
+  /// or it is `mod` or `procedure`, a word that is no prefix operator ---
+  /// and null otherwise (a prefix minus, or no term at all).
+  String? _operatorNameAt() {
+    if (_isAtEnd() || !_operatorNames.contains(_peek().type)) return null;
+    final next = _current + 1 < tokens.length
+        ? tokens[_current + 1].type
+        : TokenType.EOF;
+    if (next == TokenType.LPAREN) return 'functor';
+    final t = _peek().type;
+    if (t == TokenType.MOD || t == TokenType.PROCEDURE) return 'constant';
+    if (_endsOperand.contains(next)) return 'constant';
+    return null;
+  }
+
   // Primary expression: variable, number, string, list, structure, parenthesized, unary minus
   Term _parsePrimary() {
-    // Operator as functor (for type definitions like Exp ::= +(Exp?, Exp?))
-    // Must check BEFORE unary minus so -(X,Y) is parsed as struct, not neg((X,Y))
-    if (_check(TokenType.PLUS) || _check(TokenType.MINUS) || _check(TokenType.STAR) ||
-        _check(TokenType.SLASH) || _check(TokenType.SLASH_SLASH) || _check(TokenType.MOD)) {
-      // Look ahead: if followed by (, treat as functor
-      if (_current + 1 < tokens.length && tokens[_current + 1].type == TokenType.LPAREN) {
-        final functorToken = _advance();
-        _advance();  // consume (
-        final args = <Term>[];
-        if (!_check(TokenType.RPAREN)) {
+    // An operator name where a term is expected (see [_operatorNames]): the
+    // functor of a compound term before "(", Exp ::= +(Exp?, Exp?) among them,
+    // checked before unary minus so -(X, Y) is a structure and not
+    // neg((X, Y)); otherwise, with no operand, the constant of its name.
+    final operatorName = _operatorNameAt();
+    if (operatorName == 'functor') {
+      final functorToken = _advance();
+      _advance();  // consume (
+      final args = <Term>[];
+      if (!_check(TokenType.RPAREN)) {
+        args.add(_parseExpression());
+        while (_match(TokenType.COMMA)) {
           args.add(_parseExpression());
-          while (_match(TokenType.COMMA)) {
-            args.add(_parseExpression());
-          }
         }
-        _consume(TokenType.RPAREN, 'Expected ")" after operator struct arguments');
-        return StructTerm(functorToken.lexeme, args, functorToken.line, functorToken.column);
       }
-      // Otherwise fall through - will be handled as unary minus or infix operator
+      _consume(TokenType.RPAREN, 'Expected ")" after operator struct arguments');
+      return StructTerm(functorToken.lexeme, args, functorToken.line, functorToken.column);
+    }
+    if (operatorName == 'constant') {
+      final nameToken = _advance();
+      if (_check(TokenType.QUESTION)) {
+        throw CompileError(
+          'Reader mark "?" can only be applied to variables, not constants like "${nameToken.lexeme}"',
+          _peek().line,
+          _peek().column,
+          phase: 'parser'
+        );
+      }
+      return ConstTerm(nameToken.lexeme, nameToken.line, nameToken.column);
     }
 
     // Unary minus: -X becomes neg(X)
@@ -1659,24 +1719,29 @@ class Parser {
   /// Parse primary term in type alternative context.
   /// Allows trailing `?` on structures (for explicit dual definitions).
   Term _parseTypeAltPrimary() {
-    // Operator as functor (for type definitions like Exp ::= +(Exp?, Exp?))
-    if (_check(TokenType.PLUS) || _check(TokenType.MINUS) || _check(TokenType.STAR) ||
-        _check(TokenType.SLASH) || _check(TokenType.SLASH_SLASH) || _check(TokenType.MOD)) {
-      if (_current + 1 < tokens.length && tokens[_current + 1].type == TokenType.LPAREN) {
-        final functorToken = _advance();
-        _advance();  // consume (
-        final args = <Term>[];
-        if (!_check(TokenType.RPAREN)) {
+    // An operator name in a type alternative is a name, as in a term
+    // ([_operatorNames]): the functor of a structure alternative before "(",
+    // Exp ::= +(Exp?, Exp?) among them, and otherwise, with no operand, a
+    // constant alternative, Op ::= + ; mod.
+    final operatorName = _operatorNameAt();
+    if (operatorName == 'functor') {
+      final functorToken = _advance();
+      _advance();  // consume (
+      final args = <Term>[];
+      if (!_check(TokenType.RPAREN)) {
+        args.add(_parseTypeAltExpression());
+        while (_match(TokenType.COMMA)) {
           args.add(_parseTypeAltExpression());
-          while (_match(TokenType.COMMA)) {
-            args.add(_parseTypeAltExpression());
-          }
         }
-        _consume(TokenType.RPAREN, 'Expected ")" after operator struct arguments');
-        // Allow trailing ? on structure in type definitions
-        _match(TokenType.QUESTION);
-        return StructTerm(functorToken.lexeme, args, functorToken.line, functorToken.column);
       }
+      _consume(TokenType.RPAREN, 'Expected ")" after operator struct arguments');
+      // Allow trailing ? on structure in type definitions
+      _match(TokenType.QUESTION);
+      return StructTerm(functorToken.lexeme, args, functorToken.line, functorToken.column);
+    }
+    if (operatorName == 'constant') {
+      final nameToken = _advance();
+      return ConstTerm(nameToken.lexeme, nameToken.line, nameToken.column);
     }
 
     // Parameterized type reference in type body: TypeName(Arg1, Arg2, ...)

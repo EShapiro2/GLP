@@ -1245,6 +1245,43 @@ HEREDOC
 check "Minimum of 2 and 1 is 1" "M21 = s(0)" "$a35"
 check "Minimum of 0 and 1 is 0" "M01 = 0" "$a35"
 
+# --- A36: An operator name where a term is expected is a name ---
+# GLP-Spec reserves no word (appendix-lp.tex, Definition "Logic Programs
+# Syntax"): the reader takes an operator name or keyword in a term as the
+# constant of that name, and as a functor before "(", as Prolog does (GLP #3
+# Cowork, 2026-10-03 21:18 UTC).  Until 2026-10-03 an unquoted mod in a term
+# was "Expected term, got TokenType.MOD" and procedure was read as the keyword.
+echo "--- A36: Operator names as constants ---"
+a36=$("$REPL_RUN" <<HEREDOC
+$TYPED/operator_names.glp
+names(N36).
+words(W36).
+functors(F36).
+op(mod, R36a).
+op(procedure, R36b).
+op(+, R36c).
+arith(A36, B36, C36).
+even(4, E36).
+X36 = mod.
+Y36 = procedure.
+:quit
+HEREDOC
+2>&1)
+check "operator names: the fixture loads" "Loaded: .*operator_names.glp" "$a36"
+check "operator names: every name a constant" 'N36 = \[mod, procedure, +, -, \*, /, //, <, >, =<, >=, =, =:=, =\\=, =?=, =?\\=, @<, =\.\., \.\.=, :-, :=, ::=, ;, :, ~, #, \\, @\]' "$a36"
+check "operator names: mod and procedure in a structure" "W36 = w(mod, procedure, " "$a36"
+check "operator names: procedure and = as functors" "F36 = f(procedure(a), =(b, c), mod(d, e))" "$a36"
+check "operator names: mod a type alternative" "R36a = is_mod" "$a36"
+check "operator names: procedure a type alternative" "R36b = is_procedure" "$a36"
+check "operator names: + a type alternative" "R36c = is_plus" "$a36"
+check "operator names: mod still infix" "A36 = 1" "$a36"
+check "operator names: unary minus still neg" "B36 = -3" "$a36"
+check "operator names: + and * by precedence" "C36 = 14" "$a36"
+check "operator names: mod in a guard expression" "E36 = even" "$a36"
+check "operator names: X = mod at the prompt" "X36 = mod" "$a36"
+check "operator names: Y = procedure at the prompt" "Y36 = procedure" "$a36"
+check_not "operator names: no syntax error" "Expected term" "$a36"
+
 SECTION_A_PASS=$PASS
 SECTION_A_FAIL=$FAIL
 

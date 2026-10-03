@@ -1,0 +1,39 @@
+%% An operator name where a term is expected is a name.  GLP-Spec reserves no
+%% word: appendix-lp.tex, Definition "Logic Programs Syntax", a term is a
+%% variable, a constant or a compound term f(T1, ..., Tn), in standard LP
+%% notions; so the reader takes an operator name or keyword there as the
+%% constant of that name, and as a functor where "(" follows it, as Prolog
+%% does (GLP #3 Cowork, 2026-10-03 21:18 UTC: "`mod` and `procedure` are
+%% constants ... compliance, fix it").  Until 2026-10-03 an unquoted `mod` in
+%% a term was "[syntax] Expected term, got TokenType.MOD", `procedure` was read
+%% as the keyword, and the other names were refused alike.
+
+%% Every operator name and keyword of the lexer, as a constant argument.
+procedure names(Stream(Constant)).
+names([mod, procedure, +, -, *, /, //, <, >, =<, >=, =, =:=, =\=, =?=, =?\=,
+       @<, =.., ..=, :-, :=, ::=, ;, :, ~, #, \, @]).
+
+%% mod and procedure in a structure, at the end of a list and on the right of =.
+procedure words(_).
+words(T?) :- T = w(mod, procedure, [mod|procedure]).
+
+%% procedure and an operator name as the functor of a compound term.
+procedure functors(_).
+functors(T?) :- T = f(procedure(a), =(b, c), mod(d, e)).
+
+%% A constant alternative of a type definition.
+Op ::= mod ; procedure ; = ; +.
+
+procedure op(Op?, Constant).
+op(mod, R?) :- R = is_mod.
+op(procedure, R?) :- R = is_procedure.
+op(+, R?) :- R = is_plus.
+op(=, R?) :- R = is_equals.
+
+%% The operators as before: mod infix, unary minus, + and * by precedence.
+procedure arith(Integer, Integer, Integer).
+arith(A?, B?, C?) :- A := 7 mod 3, B := - 5 + 2, C := 2 + 3 * 4.
+
+procedure even(Integer?, Constant).
+even(X, R?) :- X? mod 2 =:= 0 | R = even.
+even(_, R?) :- otherwise | R = odd.
