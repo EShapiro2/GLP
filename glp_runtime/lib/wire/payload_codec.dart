@@ -19,7 +19,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
-import 'package:glp_runtime/wire/artefact.dart' show Artefact;
+import 'package:glp_runtime/wire/artefact.dart' show Artefact, ModuleRefusal;
 import 'package:glp_runtime/wire/codec.dart';
 
 class PayloadCodec {
@@ -83,6 +83,16 @@ class PayloadCodec {
   /// Decode a global-send (value) payload to (GlobalName, Term). Embedded
   /// variables return as `_w(p,i)` / `_r(p,i)` structures for the localize
   /// machinery. Throws on a request or acknowledgement message.
+  ///
+  /// This is the decoding of a received message, and a module constant it
+  /// carries decodes to a Module value only where the module's artefact is a
+  /// certified compiled program, as the loader's step 1 checks it
+  /// ([Artefact.certify]); where one is not, the payload is no message and
+  /// [ModuleRefusal] is thrown with the reason: "a received module whose
+  /// certificate does not verify is not a Module value and the message
+  /// carrying it is refused at receipt, with the reason ... nothing is
+  /// delivered as text" (GLP #3 Cowork, 2026-10-02 20:58 UTC).  Until
+  /// 2026-10-02 any module a message carried decoded to a Module value.
   static (GlobalName, Term) deserializeGlobalSendPayload(List<int> payload) {
     final m = decodeMessageFromBytes(_asUint8(payload));
     if (m is! WireValueMessage) {
@@ -93,7 +103,7 @@ class PayloadCodec {
     final globalName = a.gIsReader
         ? GlobalName.reader(agent, a.gIndex)
         : GlobalName.writer(agent, a.gIndex);
-    return (globalName, wireToTerm(a.value));
+    return (globalName, _wireToTerm(a.value, certify: true));
   }
 
   /// Serialize a ground term as a canonical agent-message payload. Throws if a
@@ -109,7 +119,51 @@ class PayloadCodec {
 
   /// Map a runtime [Term] to a [WireTerm]. Global-name structures `_w(p,i)` /
   /// `_r(p,i)` become tag-2 variables; all other structures stay structures.
+  ///
+  /// The walk keeps a stack of its own, a frame for each structure being
+  /// mapped, and takes each structure's arguments left to right, as the
+  /// recursion it replaces did, so a term's encoding is the same byte for
+  /// byte.  Until 2026-10-02 it recursed once a structure argument, and a
+  /// nesting 2,000 deep overflowed the Dart stack (dart run, at f69ae04b), a
+  /// list being as deep as it is long (GLP #3 Cowork, 2026-10-02 20:58 UTC,
+  /// answering Integration's 19:05 UTC Q3: "storeTermOnHeap and termToWire
+  /// walk with a stack of their own").
   static WireTerm termToWire(Term term) {
+    final leaf = _leafToWire(term);
+    if (leaf != null) return leaf;
+    // Each frame: a structure, and its arguments mapped so far.
+    final frames = <(StructTerm, List<WireTerm>)>[
+      (term as StructTerm, <WireTerm>[])
+    ];
+    WireTerm? mapped; // the structure just mapped, for its parent
+    while (true) {
+      final (source, args) = frames.last;
+      if (mapped != null) {
+        args.add(mapped);
+        mapped = null;
+      }
+      if (args.length == source.args.length) {
+        frames.removeLast();
+        final w = WStruct(source.functor, args);
+        if (frames.isEmpty) return w;
+        mapped = w;
+        continue;
+      }
+      final arg = source.args[args.length];
+      final l = _leafToWire(arg);
+      if (l != null) {
+        args.add(l);
+      } else {
+        frames.add((arg as StructTerm, <WireTerm>[]));
+      }
+    }
+  }
+
+  /// [termToWire] of [term] where it maps without descending: a constant, a
+  /// module, or a global-name structure; null for any other structure, whose
+  /// arguments are mapped in turn.  A variable, or a term of any other kind,
+  /// is refused.
+  static WireTerm? _leafToWire(Term term) {
     if (term is ConstTerm) {
       return WConst(_constToWire(term.value));
     } else if (term is ModuleTerm) {
@@ -117,9 +171,7 @@ class PayloadCodec {
       // bytes — the form in which compiled programs ship.
       return WConst(WModule((term.artefact as Artefact).toBytes()));
     } else if (term is StructTerm) {
-      final gn = _asGlobalName(term);
-      if (gn != null) return gn;
-      return WStruct(term.functor, term.args.map(termToWire).toList());
+      return _asGlobalName(term);
     } else if (term is VarRef) {
       throw WireFormatException(
           'non-globalized VarRef on the wire: @${term.addr} '
@@ -132,11 +184,65 @@ class PayloadCodec {
 
   /// Map a [WireTerm] back to a runtime [Term]. Tag-2 variables become
   /// `_w(p,i)` / `_r(p,i)` structures.
-  static Term wireToTerm(WireTerm w) {
+  ///
+  /// A module constant maps to the Module value its artefact parses to, its
+  /// certificate unchecked.  The decoding of a received message checks it
+  /// ([deserializeGlobalSendPayload]); this mapping's other users are
+  /// signature/2's reading of a signed term (body_kernels.dart) and the
+  /// adoption vocabulary's decodeMessage, which are no receipt of a message,
+  /// and whether a signed term's module is checked is put to GLP (2026-10-02).
+  ///
+  /// The walk keeps a stack of its own, as [termToWire] does, and builds each
+  /// structure over its arguments mapped left to right; until 2026-10-02 it
+  /// recursed once a structure argument and overflowed the Dart stack on a
+  /// long list.
+  static Term wireToTerm(WireTerm w) => _wireToTerm(w, certify: false);
+
+  /// [wireToTerm], each module constant's artefact certified where [certify]
+  /// ([deserializeGlobalSendPayload]).
+  static Term _wireToTerm(WireTerm w, {required bool certify}) {
+    if (w is! WStruct) return _leafToTerm(w, certify: certify);
+    // Each frame: a structure, and its arguments mapped so far.
+    final frames = <(WStruct, List<Term>)>[(w, <Term>[])];
+    Term? mapped; // the structure just mapped, for its parent
+    while (true) {
+      final (source, args) = frames.last;
+      if (mapped != null) {
+        args.add(mapped);
+        mapped = null;
+      }
+      if (args.length == source.args.length) {
+        frames.removeLast();
+        final t = StructTerm(source.functor, args);
+        if (frames.isEmpty) return t;
+        mapped = t;
+        continue;
+      }
+      final arg = source.args[args.length];
+      if (arg is WStruct) {
+        frames.add((arg, <Term>[]));
+      } else {
+        args.add(_leafToTerm(arg, certify: certify));
+      }
+    }
+  }
+
+  /// [wireToTerm] of a constant or a variable; a module's artefact certified
+  /// where [certify], and refused ([ModuleRefusal]) where it is no certified
+  /// compiled program.
+  static Term _leafToTerm(WireTerm w, {required bool certify}) {
     switch (w) {
       case WConst(:final constant):
         if (constant is WModule) {
           // §cf-terms constant tag 6 decodes to the Module constant itself.
+          if (certify) {
+            final (:artefact, :refusal) =
+                Artefact.certify(constant.artefactBytes);
+            if (refusal != null) {
+              throw ModuleRefusal(artefact?.moduleName, refusal);
+            }
+            return ModuleTerm(artefact!, name: artefact.moduleName);
+          }
           final artefact = Artefact.fromBytes(constant.artefactBytes);
           return ModuleTerm(artefact, name: artefact.moduleName);
         }
@@ -145,8 +251,8 @@ class PayloadCodec {
         final functor = isReader ? '_r' : '_w';
         return StructTerm(
             functor, [ConstTerm(w.agentString), ConstTerm(index)]);
-      case WStruct(:final functor, :final args):
-        return StructTerm(functor, args.map(wireToTerm).toList());
+      case WStruct():
+        throw ArgumentError('a structure is mapped by wireToTerm, not here');
     }
   }
 

@@ -17,6 +17,7 @@ import 'package:glp_runtime/multiagent/mad_helpers.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/wire/codec.dart'
     show wireMsgKindValue, wireMsgKindRequest, wireMsgKindAcknowledgement;
+import 'package:glp_runtime/wire/artefact.dart' show ModuleRefusal;
 import 'package:glp_runtime/wire/payload_codec.dart' show PayloadCodec;
 
 /// Callback for delivering messages to other agents
@@ -198,7 +199,7 @@ class MadContext {
       extractVariables: (val) {
         final vars = <TermVar>[];
         if (val is Term) {
-          _extractTermVarsRecursive(val, vars);
+          _extractTermVars(val, vars);
         }
         return vars;
       },
@@ -293,23 +294,34 @@ class MadContext {
   /// Extract TermVars from a term for globalization
   ///
   /// Each TermVar carries both the writer and reader addresses of its pair,
-  /// looked up via the heap's cross-pointers.
-  void _extractTermVarsRecursive(Term term, List<TermVar> result) {
-    if (term is VarRef) {
-      final isReader = runtime.heap.isReader(term.addr);
-      if (isReader) {
-        final writerAddr = runtime.heap.tryWriterForReader(term.addr);
-        result.add(TermVar.reader(term.addr, writerAddr: writerAddr ?? term.addr));
-      } else {
-        final readerAddr = runtime.heap.pairedReaderAddr(term.addr);
-        result.add(TermVar.writer(term.addr, readerAddr: readerAddr ?? term.addr));
+  /// looked up via the heap's cross-pointers.  The variables are met in the
+  /// order the recursion this replaces met them, depth first and left to
+  /// right, which is the order Globalize allocates their indices in
+  /// (Definition Globalize: "For each variable Y occurring in T ... allocate
+  /// the next index i"); the walk keeps a stack of its own, as until
+  /// 2026-10-02 it recursed once a structure argument, and a cold call
+  /// carrying a long list overflowed the Dart stack.
+  void _extractTermVars(Term term, List<TermVar> result) {
+    final pending = <Term>[term];
+    while (pending.isNotEmpty) {
+      final t = pending.removeLast();
+      if (t is VarRef) {
+        final isReader = runtime.heap.isReader(t.addr);
+        if (isReader) {
+          final writerAddr = runtime.heap.tryWriterForReader(t.addr);
+          result.add(TermVar.reader(t.addr, writerAddr: writerAddr ?? t.addr));
+        } else {
+          result.add(TermVar.writer(t.addr,
+              readerAddr: runtime.heap.pairedReaderAddr(t.addr)));
+        }
+      } else if (t is StructTerm) {
+        // The first argument is met next, so it goes on the stack last.
+        for (var i = t.args.length - 1; i >= 0; i--) {
+          pending.add(t.args[i]);
+        }
       }
-    } else if (term is StructTerm) {
-      for (final arg in term.args) {
-        _extractTermVarsRecursive(arg, result);
-      }
+      // ConstTerm has no variables
     }
-    // ConstTerm has no variables
   }
 
   /// Register global_send goals from GlobalSendSpawn info
@@ -919,6 +931,23 @@ class MadContext {
   ///
   /// This is the single entry point for the receive path: both the isolate
   /// runner and the app runtime hand the opaque payload bytes here.
+  ///
+  /// A value message carrying a module whose certificate does not verify is
+  /// refused at receipt, with the reason (GLP #3 Cowork, 2026-10-02 20:58 UTC:
+  /// "a received module whose certificate does not verify is not a Module
+  /// value and the message carrying it is refused at receipt, with the reason,
+  /// as IGLP's loader refuses at adoption; nothing is delivered as text").
+  /// The refusal is the payload's decoding, before any Receive: "A payload is
+  /// one assignment message in the canonical encoding" (IGLP
+  /// app:in-networking, "Payloads"), a module constant decodes "to the Module
+  /// constant" (§cf-terms, constant tag 6), and a module that is no Module
+  /// value leaves the payload no message, so no Receive transaction
+  /// (Definition "madGLP Receive Transaction") takes it.  Nothing is assigned,
+  /// no entry is consumed, nothing is acknowledged, held or reported, and the
+  /// runtime prints the refusal and its reason, as it prints a kernel's abort.
+  /// The sender is told nothing, IGLP having no message for it: a reader-name
+  /// value stays pending there, unacknowledged (Definition "madGLP Local
+  /// State").
   void handleIncomingPayload({
     required List<int> payload,
     required String fromAgent,
@@ -929,8 +958,15 @@ class MadContext {
     }
     switch (payload[0]) {
       case wireMsgKindValue:
-        final (globalName, value) =
-            PayloadCodec.deserializeGlobalSendPayload(payload);
+        final (GlobalName, Term) received;
+        try {
+          received = PayloadCodec.deserializeGlobalSendPayload(payload);
+        } on ModuleRefusal catch (refusal) {
+          print('[REFUSED] $agentId: a message from $fromAgent is refused at '
+              'receipt: ${refusal.message}');
+          return;
+        }
+        final (globalName, value) = received;
         handleMadAssignment(
             globalName: globalName, value: value, fromAgent: fromAgent);
       case wireMsgKindRequest:
@@ -1165,7 +1201,7 @@ class MadContext {
   /// onBind callbacks for writers so assignments can be routed.
   void exportTerm(Term term) {
     final vars = <TermVar>[];
-    _extractTermVarsRecursive(term, vars);
+    _extractTermVars(term, vars);
 
     // Register onBind callbacks for any writers in the term
     for (final v in vars) {
@@ -1214,7 +1250,7 @@ class MadContext {
 
     // Extract variables from the term for globalization
     final vars = <TermVar>[];
-    _extractTermVarsRecursive(term, vars);
+    _extractTermVars(term, vars);
     _trace('[MAD $agentId] send: found ${vars.length} variables in term');
 
     // Globalize the term for the destination agent
