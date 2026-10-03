@@ -192,7 +192,7 @@ For example:
 
 ## Guard Arguments: Why Readers?
 
-Guards that test variable values (`ground`, `known`, `integer`, `number`, `string`) take **reader** arguments. This follows from GLP's three-valued guard semantics:
+Guards that test variable values (`ground`, `known`, `integer`, `real`, `number`, `string`) take **reader** arguments. This follows from GLP's three-valued guard semantics:
 
 | Argument Type | If Unbound | Behavior |
 |---------------|------------|----------|
@@ -243,6 +243,7 @@ This is distinct from the multiple-occurrence relaxation below. Guard reader cou
 | ✅ `ground(X?)` | Yes | ✅ Yes |
 | ✅ `constant(X?)` | Yes | ✅ Yes |
 | ✅ `integer(X?)` | Yes | ✅ Yes |
+| ✅ `real(X?)` | Yes | ✅ Yes |
 | ✅ `number(X?)` | Yes | ✅ Yes |
 | ✅ `string(X?)` | Yes | ✅ Yes |
 | ✅ `module(X?)` | Yes | ✅ Yes |
@@ -307,7 +308,7 @@ bad_example(X, Y1, Y2) :- known(X?) |
 The SRSW analyzer must:
 1. Track guards in HEAD/GUARDS phase
 2. Recognize guards that imply groundness:
-   - Type guards: `ground/1`, `integer/1`, `number/1`, `string/1`, `constant/1`
+   - Type guards: `ground/1`, `integer/1`, `real/1`, `number/1`, `string/1`, `constant/1`
    - Arithmetic comparisons: `<`, `=<`, `>`, `>=`, `=:=`, `=\=`
 3. For variables with ground-guaranteeing guards:
    - Mark variable as "ground-certified" for this clause
@@ -481,7 +482,7 @@ The guard `Key =?= K?` succeeds when `Key` and `K` are both ground and equal. If
 
 The partial evaluator validates all guards at compile time. Guards fall into exactly two categories:
 
-1. **Builtin guards** — Implemented in the Dart runtime with NO GLP clauses. These include type guards (`integer/1`, `number/1`, `ground/1`, etc.), comparison guards (`</2`, `>/2`, etc.), and equality guards (`=?=/2`, `=?\=/2`). Builtin guards are kept as-is by the partial evaluator.
+1. **Builtin guards** — Implemented in the Dart runtime with NO GLP clauses. These include type guards (`integer/1`, `real/1`, `number/1`, `ground/1`, etc.), comparison guards (`</2`, `>/2`, etc.), and equality guards (`=?=/2`, `=?\=/2`). Builtin guards are kept as-is by the partial evaluator.
 
 2. **Single-unit-clause procedures** — User-defined procedures with exactly one clause, no guards, and no body. These are unfolded at compile time by the partial evaluator.
 

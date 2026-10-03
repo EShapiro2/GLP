@@ -320,7 +320,7 @@ broadcast(Msg, Out1, Out2, Out3) :- ground(Msg?) |
     send(Msg?, Out3).
 ```
 
-Guards that imply groundness include: `ground/1`, `integer/1`, `number/1`, `string/1`, `constant/1`, arithmetic comparisons (`</2`, `>/2`, etc.) and ground equality (`=?=`).  `=?\=` grounds nothing (the catalogue's Ground column "no"), and neither do `known/1` and `compound/1`.
+Guards that imply groundness include: `ground/1`, `integer/1`, `real/1`, `number/1`, `string/1`, `constant/1`, arithmetic comparisons (`</2`, `>/2`, etc.) and ground equality (`=?=`).  `=?\=` grounds nothing (the catalogue's Ground column "no"), and neither do `known/1` and `compound/1`.
 
 ---
 
@@ -495,7 +495,7 @@ When consuming `Channel?` with pattern `ch(In, Out?)`:
 
 ### 8.1 The Guard Rule
 
-A guard expression must be **compile-time unfoldable**.  After partial evaluation, only the built-in three-valued operations may remain — `ground/1`, `known/1`, `=?=/2`, the arithmetic comparisons (`</2`, `>/2`, `=:=/2`, `=\=/2`, `=</2`, `>=/2`), the type tests (`integer/1`, `number/1`, `string/1`, `constant/1`, `compound/1`, `list/1`), and `otherwise`.  Anything else, the runtime cannot evaluate at guard time, and the guard is rejected at load with `Unknown guard predicate`.
+A guard expression must be **compile-time unfoldable**.  After partial evaluation, only the built-in three-valued operations may remain — `ground/1`, `known/1`, `=?=/2`, the arithmetic comparisons (`</2`, `>/2`, `=:=/2`, `=\=/2`, `=</2`, `>=/2`), the type tests (`integer/1`, `real/1`, `number/1`, `string/1`, `constant/1`, `compound/1`, `list/1`), and `otherwise`.  Anything else, the runtime cannot evaluate at guard time, and the guard is rejected at load with `Unknown guard predicate`.
 
 The partial evaluator unfolds a call by substituting its body for the call site.  **A call is unfoldable iff its full call graph terminates at the built-ins above.**  In particular:
 
