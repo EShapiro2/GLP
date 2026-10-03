@@ -1931,6 +1931,14 @@ mixin OpExecutors {
 
   /// `put_list` (0x33): in BODY, begin building a `[H|T]` structure into argSlot's
   /// writer; subsequent Set* instructions fill the two positions.
+  ///
+  /// The structure is a list cell, `'.'/2`: "Lists are structures: a cell is
+  /// the structure '.'/2; the empty list is the constant nil" (IGLP
+  /// code-format-fragment.tex, "Terms"; GLP #3 Cowork, 2026-10-02 20:58 UTC:
+  /// "yes, put_list builds '.'").  Until 2026-10-02 it built a `'[|]'` cell,
+  /// which no head matches as a list.  No compiler of this tree emits
+  /// put_list, a list in a body compiling to put_structure `'.'/2`; an
+  /// artefact may carry it.
   StepOutcome execPutList(RunnerContext cx, int argSlot) {
     if (cx.inBody) {
       final arg = cx.env.arg(argSlot);
@@ -1944,7 +1952,7 @@ mixin OpExecutors {
       }
       cx.clauseVars[-1] = targetWriterAddr; // -1 marks structure binding target
       final structArgs = List<Term>.filled(2, ConstTerm(null));
-      cx.currentStructure = StructTerm('[|]', structArgs);
+      cx.currentStructure = StructTerm('.', structArgs);
       cx.S = 0;
       cx.mode = UnifyMode.write;
     }
