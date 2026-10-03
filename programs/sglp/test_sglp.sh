@@ -2,7 +2,7 @@
 # Tests of sGLP in GLP (programs/sglp) against sGLP's paper (the repository
 # svGLP-Stochastic-Volitional-GLP at d2f64b6) and its code tasks of 2026-10-02
 # 00:06 UTC, item 6, 15:23 UTC, items 1 and 3, 15:24 UTC, items 1 to 4, and
-# 15:44 UTC, and of 2026-10-03 08:44 UTC, item 2, and 08:58 UTC.
+# 15:44 UTC, and of 2026-10-03 08:44 UTC, item 2, 08:58 UTC and 09:22 UTC.
 #
 #   bash programs/sglp/test_sglp.sh
 #
@@ -41,12 +41,13 @@
 #       the log of (iv) shows them; at 0 and 0 and at 100 and 100, the draws
 #       of (v) are none and all, in their counts and in every agent's line.
 # (viii) circulation.awk (the task of 15:24 UTC, item 4, and of 2026-10-03
-#       08:44 UTC, item 2), checked by hand: on tests/circulation/four.log, a
-#       fixed log of four agents into its fourth simulated month --- seven
-#       swaps proposed, five accepted and two declined; eight pays, taking part
-#       of a holding, more than a holding, all of one and of coins not held;
-#       an answer at a month's end exactly; a pay answered while a card waits;
-#       the clock --- it prints tests/circulation/four.expected, the twelve
+#       08:44 UTC, item 2, and 09:22 UTC), checked by hand: on
+#       tests/circulation/four.log, a fixed log of four agents into its fifth
+#       simulated month --- nine swaps proposed, seven accepted and two
+#       declined; nine pays, taking part of a holding, more than a holding, all
+#       of one and of coins not held; an answer at a month's end exactly; a pay
+#       answered while a card waits; coins arriving while a card waits; the
+#       clock --- it prints tests/circulation/four.expected, the twelve
 #       months and the totals computed by hand from the log.  The pay answered
 #       while a card waits: agent 4 pays 3 the ten of 3's coins it holds
 #       (6500000 s) and, its wallet empty, proposes 3 a swap of ten (6600000
@@ -55,10 +56,20 @@
 #       and the card yes in month 4 (8000000 s).  The pay is made when the card
 #       is answered, after the card's move: 3 holds 7 + 10 = 17 of 4's coins
 #       and pays 9, keeping 8, and 4 holds 10 of 3's; so month 3 ends at
-#       circulation 47, holdings 5, wallets 3, the pay not yet made, and months
-#       4 to 12 and the log at 58, 6 and 4.  A pay made at its answer would
-#       take min(9, 7) = 7 in month 3, leaving 40, 4 and 3 there, and 60 at the
-#       end.
+#       circulation 47, holdings 5, wallets 3, the pay not yet made, and
+#       8000000 s at 58, 6 and 4.  A pay made at its answer would take min(9,
+#       7) = 7 in month 3, leaving 40, 4 and 3 there, and 60 at 8000000
+#       s.  Coins arriving while a card waits (the task of 2026-10-03 09:22
+#       UTC): 2 pays 1 the ten of 1's coins it holds (8200000 s) and, its
+#       wallet empty, proposes 1 a swap of ten (8300000 s), whose card waits
+#       at 1; 3 proposes 2 a swap of ten (8400000 s), whose card waits at 2; 1
+#       answers yes (10000000 s, month 4), holding 20 of 2's coins, and sends
+#       2 ten of its own, which arrive while 2's card waits; 2 answers yes in
+#       month 5 (11000000 s), holding 10 of 3's and 3 10 of 2's, and then
+#       takes the ten of 1's coins.  So month 4 ends at circulation 58,
+#       holdings 5, wallets 3, 2's ten of 1's coins not yet held, and months 5
+#       to 12 and the log at 88, 8 and 4; coins held at the yes would give 68,
+#       6 and 4 in month 4.
 # (ix)  coins among friends (coins/run.sh; the task of 15:24 UTC, items 1 to
 #       3), four agents for a week on the hand-made graph
 #       tests/circulation/four.graph at the paper's mix, 50 and 50: two runs
