@@ -29,6 +29,7 @@ import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/simulation_network.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/terms.dart';
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 
 /// A GlpNetwork that provides the seam predicates and nothing else, so the
 /// kernels can be driven without a transport. Places are recorded rather than
@@ -122,7 +123,7 @@ class _SeamNetwork extends GlpNetwork {
 
 /// The events on the stream growing from [addr], and whether it is closed —
 /// as the program sees them.
-({List<String> events, bool closed}) _stream(GlpRuntime rt, int addr) {
+({List<String> events, bool closed}) _stream(GlpRuntime rt, HeapCell addr) {
   final events = <String>[];
   Object? cell = rt.heap.derefAddr(addr);
   while (cell is StructTerm && cell.functor == '.') {

@@ -25,6 +25,7 @@ import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 import 'package:glp_runtime/compiler/partial_evaluator.dart';
 import 'package:glp_runtime/analysis/type_checker/type_checker.dart';
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
@@ -968,8 +969,8 @@ class GlpEngine {
       );
     }
 
-    final queryVarWriters = <String, int>{};
-    final varNameToId = <String, int>{};
+    final queryVarWriters = <String, HeapCell>{};
+    final varNameToId = <String, HeapCell>{};
     final argSlots = <int, rt.Term>{};
 
     for (int i = 0; i < args.length; i++) {
@@ -1050,8 +1051,8 @@ class GlpEngine {
     final goals =
         clause.body!.map((g) => Atom(g.functor, g.args, g.line, g.column)).toList();
     final program = combinedProgram;
-    final queryVarWriters = <String, int>{};
-    final varNameToId = <String, int>{};
+    final queryVarWriters = <String, HeapCell>{};
+    final varNameToId = <String, HeapCell>{};
 
     // Build one CodeImage + ByteRunner for the whole conjunction; per-goal
     // entry PCs are byte offsets resolved below.
@@ -1342,8 +1343,8 @@ class GlpEngine {
     Term arg,
     int argSlot,
     Map<int, rt.Term> argSlots,
-    Map<String, int> queryVarWriters,
-    Map<String, int> varNameToId,
+    Map<String, HeapCell> queryVarWriters,
+    Map<String, HeapCell> varNameToId,
   ) {
     if (arg is VarTerm) {
       final baseName = arg.name;
@@ -1396,8 +1397,8 @@ class GlpEngine {
     Term arg,
     int argSlot,
     Map<int, rt.Term> argSlots,
-    Map<String, int> queryVarWriters,
-    Map<String, int> varNameToId,
+    Map<String, HeapCell> queryVarWriters,
+    Map<String, HeapCell> varNameToId,
   ) {
     if (arg is VarTerm) {
       final baseName = arg.name;
@@ -1448,8 +1449,8 @@ class GlpEngine {
   rt.Term _buildStructTerm(
     GlpRuntime runtime,
     StructTerm struct,
-    Map<String, int> queryVarWriters,
-    Map<String, int> varNameToId,
+    Map<String, HeapCell> queryVarWriters,
+    Map<String, HeapCell> varNameToId,
   ) {
     final argTerms = <rt.Term>[];
 
@@ -1522,8 +1523,8 @@ class GlpEngine {
   rt.Term _buildStructTermForConj(
     GlpRuntime runtime,
     StructTerm struct,
-    Map<String, int> queryVarWriters,
-    Map<String, int> varNameToId,
+    Map<String, HeapCell> queryVarWriters,
+    Map<String, HeapCell> varNameToId,
   ) {
     final argTerms = <rt.Term>[];
 
@@ -1580,8 +1581,8 @@ class GlpEngine {
   rt.Term _buildListTerm(
     GlpRuntime runtime,
     ListTerm list,
-    Map<String, int> queryVarWriters,
-    Map<String, int> varNameToId,
+    Map<String, HeapCell> queryVarWriters,
+    Map<String, HeapCell> varNameToId,
   ) {
     if (list.isNil) {
       return rt.ConstTerm('nil');
@@ -1642,8 +1643,8 @@ class GlpEngine {
   rt.Term _buildListTermForConj(
     GlpRuntime runtime,
     ListTerm list,
-    Map<String, int> queryVarWriters,
-    Map<String, int> varNameToId,
+    Map<String, HeapCell> queryVarWriters,
+    Map<String, HeapCell> varNameToId,
   ) {
     if (list.isNil) {
       return rt.ConstTerm('nil');

@@ -13,6 +13,8 @@
 /// both the record and the goal, so the exporting agent leaves the link.
 library;
 
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
+
 /// A record `(Y, o, k, s)` marking the local writer [writerAddr] as the sending
 /// end of the link anchored by `_w(anchor, index)`, received from agent [sender].
 ///
@@ -22,7 +24,7 @@ library;
 /// together — when the value is sent, or when `Y` is re-exported.
 class ImportedWriterRecord {
   /// Local writer `Y` — also the key of the `global_send` goal watching `Y?`.
-  final int writerAddr;
+  final HeapCell writerAddr;
 
   /// The link's anchor `o`: the agent that globalized the writer.
   final String anchor;
@@ -62,7 +64,7 @@ class ImportedWriterRecords {
   /// Agent ID that owns these records.
   final String agentId;
 
-  final Map<int, ImportedWriterRecord> _byWriter = {};
+  final Map<HeapCell, ImportedWriterRecord> _byWriter = {};
 
   ImportedWriterRecords(this.agentId);
 
@@ -71,7 +73,7 @@ class ImportedWriterRecords {
   /// Called by Localize case 1 alongside the spawned `global_send` goal.
   /// Localize allocates a fresh pair for every global name, so the writer is
   /// new; a repeat would mean two links sharing one sending end.
-  void add(int writerAddr, String anchor, int index, String sender) {
+  void add(HeapCell writerAddr, String anchor, int index, String sender) {
     final existing = _byWriter[writerAddr];
     if (existing != null) {
       throw ArgumentError(
@@ -101,13 +103,13 @@ class ImportedWriterRecords {
   /// The record of [writerAddr], or null when the writer is not imported.
   ///
   /// The presence of a record is the condition of Globalize case 4.
-  ImportedWriterRecord? lookup(int writerAddr) => _byWriter[writerAddr];
+  ImportedWriterRecord? lookup(HeapCell writerAddr) => _byWriter[writerAddr];
 
   /// Remove and return the record of [writerAddr], or null if there is none.
   ///
   /// Removed when the value is sent, and when the writer is re-exported and
   /// the name forwarded (Definition Imported-Writer Records).
-  ImportedWriterRecord? remove(int writerAddr) => _byWriter.remove(writerAddr);
+  ImportedWriterRecord? remove(HeapCell writerAddr) => _byWriter.remove(writerAddr);
 
   /// Number of records held.
   int get count => _byWriter.length;

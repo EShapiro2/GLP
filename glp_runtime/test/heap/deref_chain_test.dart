@@ -14,7 +14,7 @@ import 'package:test/test.dart';
 /// A chain of [n] variables: the writer of each bound to the reader of the
 /// next, the last writer left unbound.  The first pair's reader, and the last
 /// pair's writer.
-(int, int) _chain(HeapFCP heap, int n) {
+(HeapCell, HeapCell) _chain(HeapFCP heap, int n) {
   final pairs = [for (var i = 0; i < n; i++) heap.allocateVariable()];
   for (var i = 0; i + 1 < n; i++) {
     heap.bindWriterToReader(pairs[i].$1, pairs[i + 1].$2);
@@ -45,7 +45,7 @@ void main() {
       // Each writer points to the next pair's reader, the last to the first's:
       // a chain that never ends.
       for (var i = 0; i < n; i++) {
-        heap.cells[pairs[i].$1].content = Pointer(pairs[(i + 1) % n].$2);
+        pairs[i].$1.content = Pointer(pairs[(i + 1) % n].$2);
       }
       expect(
           () => heap.derefAddr(pairs.first.$2),
@@ -62,7 +62,7 @@ void main() {
       final (w, _) = heap.allocateVariable();
       // The chain's last writer made to point at a writer, which no binding
       // does: the SRSW invariant the dereference checks.
-      heap.cells[last].content = Pointer(w);
+      last.content = Pointer(w);
       expect(
           () => heap.derefAddr(first),
           throwsA(isA<StateError>().having((e) => e.message, 'message',

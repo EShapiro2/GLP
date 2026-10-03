@@ -10,6 +10,14 @@ import 'package:test/test.dart';
 import 'package:glp_runtime/multiagent/global_writers_table.dart';
 import 'package:glp_runtime/multiagent/imported_writer_records.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell, CellTag;
+
+/// A cell of serial number [id], the same cell for the same number: these
+/// tests name a variable by its cell's number, a variable occurrence being
+/// the cell itself (IGLP app:in-heap, Variable pairs).
+final _cells = <int, HeapCell>{};
+HeapCell _c(int id) =>
+    _cells.putIfAbsent(id, () => HeapCell(null, CellTag.WrtTag, id));
 
 void main() {
   group('Globalize', () {
@@ -17,7 +25,7 @@ void main() {
       // Given: term with writer variable Y at address 100
       final table = GlobalWritersTable('p');
       final records = ImportedWriterRecords('p');
-      final variables = [TermVar.writer(100, readerAddr: 101)];
+      final variables = [TermVar.writer(_c(100), readerAddr: _c(101))];
 
       // When: globalize(Y, 'q')
       final result = globalize(
@@ -38,7 +46,7 @@ void main() {
       expect(table.globalizeEntryCount, 1);
       final entry = table.lookupByIndex(1);
       expect(entry, isNotNull);
-      expect(entry!.writerAddr, 100); // writer address Y
+      expect(entry!.writerAddr, _c(100)); // writer address Y
       expect(entry.remoteAgent, 'q');
 
       //   - NO spawn info
@@ -50,7 +58,7 @@ void main() {
       // Given: term with reader variable Y? at address 201, writer at 200
       final table = GlobalWritersTable('p');
       final records = ImportedWriterRecords('p');
-      final variables = [TermVar.reader(201, writerAddr: 200)];
+      final variables = [TermVar.reader(_c(201), writerAddr: _c(200))];
 
       // When: globalize(Y?, 'q')
       final result = globalize(
@@ -69,7 +77,7 @@ void main() {
       //   - spawn info for global_send(Y?, _r(p,1), q)
       //   - readerAddr is actually the writer address (used as onBind key)
       expect(result.spawns.length, 1);
-      expect(result.spawns[0].readerAddr, 200); // writer addr for onBind
+      expect(result.spawns[0].readerAddr, _c(200)); // writer addr for onBind
       expect(result.spawns[0].globalName, GlobalName.reader('p', 1));
       expect(result.spawns[0].destAgent, 'q');
 
@@ -84,7 +92,7 @@ void main() {
       // Given: term [X, Y?] with writer X at 100 and reader Y? at 201
       final table = GlobalWritersTable('p');
       final records = ImportedWriterRecords('p');
-      final variables = [TermVar.writer(100, readerAddr: 101), TermVar.reader(201, writerAddr: 200)];
+      final variables = [TermVar.writer(_c(100), readerAddr: _c(101)), TermVar.reader(_c(201), writerAddr: _c(200))];
 
       // When: globalize([X, Y?], 'q')
       final result = globalize(
@@ -106,13 +114,13 @@ void main() {
       expect(table.globalizeEntryCount, 1);
       final entry = table.lookupByIndex(1);
       expect(entry, isNotNull);
-      expect(entry!.writerAddr, 100); // writer address X
+      expect(entry!.writerAddr, _c(100)); // writer address X
       expect(entry.remoteAgent, 'q');
 
       //   - spawn info for global_send(Y?, _r(p,2), q)
       // Spec Section 5.1: reader → spawn
       expect(result.spawns.length, 1);
-      expect(result.spawns[0].readerAddr, 200); // writer addr for onBind
+      expect(result.spawns[0].readerAddr, _c(200)); // writer addr for onBind
       expect(result.spawns[0].globalName, GlobalName.reader('p', 2));
 
       // Spec Section 5.3: "Writer globalized at p: creates entry.
@@ -124,7 +132,7 @@ void main() {
       // Variables in order of occurrence: X at 100, Y? at 201
       final table = GlobalWritersTable('p');
       final records = ImportedWriterRecords('p');
-      final variables = [TermVar.writer(100, readerAddr: 101), TermVar.reader(201, writerAddr: 200)];
+      final variables = [TermVar.writer(_c(100), readerAddr: _c(101)), TermVar.reader(_c(201), writerAddr: _c(200))];
 
       // When: globalize(foo(bar(X), Y?), 'q')
       final result = globalize(
@@ -151,9 +159,9 @@ void main() {
       final table = GlobalWritersTable('p');
       final records = ImportedWriterRecords('p');
       final variables = [
-        TermVar.writer(100, readerAddr: 101), // X
-        TermVar.writer(200, readerAddr: 201), // Y
-        TermVar.reader(301, writerAddr: 300), // Z?
+        TermVar.writer(_c(100), readerAddr: _c(101)), // X
+        TermVar.writer(_c(200), readerAddr: _c(201)), // Y
+        TermVar.reader(_c(301), writerAddr: _c(300)), // Z?
       ];
 
       // When: globalize([X, Y, Z?], 'q')

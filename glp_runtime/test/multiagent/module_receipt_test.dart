@@ -41,6 +41,7 @@ import 'package:glp_runtime/multiagent/identity.dart';
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/wire/artefact.dart';
@@ -179,7 +180,7 @@ void main() {
   group('a value on a link whose entry stands', () {
     late GlpRuntime rt;
     late MadContext bob;
-    late int writer;
+    late HeapCell writer;
     setUp(() {
       rt = GlpRuntime();
       bob = MadContext(agentId: 'bob', runtime: rt);

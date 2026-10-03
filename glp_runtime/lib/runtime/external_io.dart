@@ -23,13 +23,13 @@ class ExternalChannel {
 
   // Input: Dart → GLP
   // Dart holds the writer (to inject terms), GLP receives the reader
-  final int inputWriterAddr;
-  final int inputReaderAddr;
+  final HeapCell inputWriterAddr;
+  final HeapCell inputReaderAddr;
 
   // Output: GLP → Dart
   // GLP holds the writer (to produce terms), Dart holds the reader (to observe)
-  final int outputWriterAddr;
-  final int outputReaderAddr;
+  final HeapCell outputWriterAddr;
+  final HeapCell outputReaderAddr;
 
   ExternalChannel({
     required this.name,
@@ -93,13 +93,13 @@ Term buildChannelTerm(ExternalChannel channel) {
 class InputInjector {
   final HeapFCP heap;
   final String channelName;
-  int _currentWriterId;
+  HeapCell _currentWriterId;
 
-  InputInjector(this.heap, this.channelName, int initialWriterId)
+  InputInjector(this.heap, this.channelName, HeapCell initialWriterId)
       : _currentWriterId = initialWriterId;
 
   /// Current writer variable ID (for debugging)
-  int get currentWriterId => _currentWriterId;
+  HeapCell get currentWriterId => _currentWriterId;
 
   /// Inject a term into the input stream.
   ///
@@ -146,13 +146,13 @@ class OutputObserver {
   final String channelName;
   final void Function(Term) onTerm;
   final void Function() onClose;
-  int _currentReaderId;
+  HeapCell _currentReaderId;
   bool _closed = false;
 
   OutputObserver(
     this.heap,
     this.channelName,
-    int initialReaderId,
+    HeapCell initialReaderId,
     this.onTerm,
     this.onClose,
   ) : _currentReaderId = initialReaderId {
@@ -160,7 +160,7 @@ class OutputObserver {
   }
 
   /// Current reader variable ID (for debugging)
-  int get currentReaderId => _currentReaderId;
+  HeapCell get currentReaderId => _currentReaderId;
 
   /// Whether the stream has been closed
   bool get isClosed => _closed;

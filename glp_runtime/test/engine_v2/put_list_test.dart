@@ -20,6 +20,7 @@ import 'package:glp_runtime/bytecode/runner.dart'
 import 'package:glp_runtime/engine_v2/code_image.dart' show CodeImage;
 import 'package:glp_runtime/engine_v2/interp.dart'
     show ByteRunner, codeImageFromProgram;
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 import 'package:glp_runtime/runtime/machine_state.dart' show GoalRef;
 import 'package:glp_runtime/runtime/runtime.dart' show GlpRuntime;
 import 'package:glp_runtime/runtime/scheduler.dart';
@@ -97,7 +98,7 @@ void main() {
 
   test('the cell put_list builds is the list head_list matches: pl(W), '
       'hl(W?) succeeds', () {
-    late int reader;
+    late HeapCell reader;
     final (status, _, _) = _run([
       (
         'pl/1',

@@ -31,21 +31,22 @@ import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/runtime/terms.dart';
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 import 'package:test/test.dart';
 
 /// The map as the code before the change kept it: a goal leaves it by a visit
 /// to every entry.
 class _Reference {
-  final Map<int, Set<GoalRef>> map = {};
+  final Map<HeapCell, Set<GoalRef>> map = {};
 
-  void suspend(GoalRef goal, Set<int> readers) {
+  void suspend(GoalRef goal, Set<HeapCell> readers) {
     for (final r in readers) {
       map.putIfAbsent(r, () => <GoalRef>{}).add(goal);
     }
   }
 
   void remove(GoalRef goal) {
-    final empty = <int>[];
+    final empty = <HeapCell>[];
     for (final entry in map.entries) {
       entry.value.remove(goal);
       if (entry.value.isEmpty) empty.add(entry.key);
@@ -58,7 +59,7 @@ class _Reference {
 
 /// The map's readers in order, each with its goals in order, a goal written
 /// `id@pc`.
-List<List<Object>> _entries(Map<int, Set<GoalRef>> map) => [
+List<List<Object>> _entries(Map<HeapCell, Set<GoalRef>> map) => [
       for (final e in map.entries)
         [e.key, for (final g in e.value) '${g.id}@${g.pc}']
     ];
@@ -122,14 +123,14 @@ void main() {
     final refQueue = Queue<GoalRef>();
     final rnd = Random(20261002);
     // A pool of variables, some readers shared between goals.
-    final pool = <(int, int)>[
+    final pool = <(HeapCell, HeapCell)>[
       for (var i = 0; i < 24; i++) rt.heap.allocateVariable()
     ];
     var nextId = 1;
     var wakes = 0, commitWakes = 0, taken = 0;
 
     void suspend(GoalRef goal) {
-      final readers = <int>{
+      final readers = <HeapCell>{
         for (var k = 0; k <= rnd.nextInt(3); k++)
           pool[rnd.nextInt(pool.length)].$2
       };

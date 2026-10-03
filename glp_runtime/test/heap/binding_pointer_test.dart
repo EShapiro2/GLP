@@ -23,9 +23,9 @@ void main() {
 
       heap.bindWriter(writerAddr, ConstTerm(42));
 
-      expect(heap.cells[writerAddr].tag, equals(CellTag.ValueTag));
-      expect(heap.cells[writerAddr].content, isA<ConstTerm>());
-      expect((heap.cells[writerAddr].content as ConstTerm).value, equals(42));
+      expect(writerAddr.tag, equals(CellTag.ValueTag));
+      expect(writerAddr.content, isA<ConstTerm>());
+      expect((writerAddr.content as ConstTerm).value, equals(42));
     });
 
     test('bind to ConstTerm string', () {
@@ -120,9 +120,9 @@ void main() {
       heap.bindWriterToReader(w1, r2);
 
       // w1 should contain Pointer to r2
-      expect(heap.cells[w1].tag, equals(CellTag.WrtTag)); // Still WrtTag
-      expect(heap.cells[w1].content, isA<Pointer>());
-      expect((heap.cells[w1].content as Pointer).targetAddr, equals(r2));
+      expect(w1.tag, equals(CellTag.WrtTag)); // Still WrtTag
+      expect(w1.content, isA<Pointer>());
+      expect((w1.content as Pointer).targetAddr, equals(r2));
     });
 
     test('chain of bindings', () {
@@ -212,7 +212,7 @@ void main() {
       final (w2, _) = heap.allocateVariable();
 
       // Manually corrupt to create w1 -> w2 (simulates a bug that bypassed binding check)
-      heap.cells[w1].content = Pointer(w2);
+      w1.content = Pointer(w2);
 
       // Dereference should detect and report the WxW violation
       expect(
@@ -253,8 +253,8 @@ void main() {
       expect(acts1, isEmpty);
 
       // Suspension should be on w2 now (as WriterContent per spec)
-      expect(heap.cells[w2].content, isA<WriterContent>());
-      expect((heap.cells[w2].content as WriterContent).suspensions, isA<SuspensionListNode>());
+      expect(w2.content, isA<WriterContent>());
+      expect((w2.content as WriterContent).suspensions, isA<SuspensionListNode>());
 
       // Binding w2 activates
       final acts2 = heap.bindWriter(w2, ConstTerm('done'));
@@ -290,9 +290,9 @@ void main() {
       final heap = HeapFCP();
       final (writerAddr, readerAddr) = heap.allocateVariable();
 
-      expect(heap.cells[writerAddr].tag, equals(CellTag.WrtTag));
-      expect(heap.cells[writerAddr].content, isA<Pointer>());
-      expect((heap.cells[writerAddr].content as Pointer).targetAddr, equals(readerAddr));
+      expect(writerAddr.tag, equals(CellTag.WrtTag));
+      expect(writerAddr.content, isA<Pointer>());
+      expect((writerAddr.content as Pointer).targetAddr, equals(readerAddr));
     });
 
     test('writer with suspension has WriterContent with reader addr and suspensions', () {
@@ -302,9 +302,9 @@ void main() {
 
       heap.suspendOnWriter(writerAddr, SuspensionRecord(1, 100));
 
-      expect(heap.cells[writerAddr].tag, equals(CellTag.WrtTag));
-      expect(heap.cells[writerAddr].content, isA<WriterContent>());
-      final wc = heap.cells[writerAddr].content as WriterContent;
+      expect(writerAddr.tag, equals(CellTag.WrtTag));
+      expect(writerAddr.content, isA<WriterContent>());
+      final wc = writerAddr.content as WriterContent;
       expect(wc.readerAddr, equals(readerAddr));
       expect(wc.suspensions, isA<SuspensionListNode>());
     });
@@ -316,8 +316,8 @@ void main() {
 
       heap.bindWriterToReader(w1, r2);
 
-      expect(heap.cells[w1].tag, equals(CellTag.WrtTag));
-      expect(heap.cells[w1].content, isA<Pointer>());
+      expect(w1.tag, equals(CellTag.WrtTag));
+      expect(w1.content, isA<Pointer>());
     });
 
     test('writer bound to ground has ValueTag and Term content', () {
@@ -326,8 +326,8 @@ void main() {
 
       heap.bindWriter(writerAddr, ConstTerm(42));
 
-      expect(heap.cells[writerAddr].tag, equals(CellTag.ValueTag));
-      expect(heap.cells[writerAddr].content, isA<ConstTerm>());
+      expect(writerAddr.tag, equals(CellTag.ValueTag));
+      expect(writerAddr.content, isA<ConstTerm>());
     });
   });
 

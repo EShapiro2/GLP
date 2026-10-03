@@ -111,12 +111,14 @@ void main() {
         StructTerm('g', [ConstTerm('b'), ConstTerm('c')]),
         ConstTerm('d'),
       ]));
-      expect(addr, base + 5);
-      final f = heap.cells[addr].content as StructTerm;
-      expect(f.args.map((a) => (a as VarRef).addr), [base, base + 3, base + 4]);
-      final g = heap.cells[base + 3].content as StructTerm;
-      expect(g.args.map((a) => (a as VarRef).addr), [base + 1, base + 2]);
-      expect((heap.cells[base + 4].content as ConstTerm).value, 'd');
+      // A cell's serial number is its place in the order of allocation.
+      expect(addr.id, base + 5);
+      final f = addr.content as StructTerm;
+      expect(f.args.map((a) => (a as VarRef).addr.id),
+          [base, base + 3, base + 4]);
+      final g = (f.args[1] as VarRef).addr.content as StructTerm;
+      expect(g.args.map((a) => (a as VarRef).addr.id), [base + 1, base + 2]);
+      expect(((f.args[2] as VarRef).addr.content as ConstTerm).value, 'd');
     });
 
     test('stores a list of 50,000 elements', () {
@@ -124,14 +126,13 @@ void main() {
       final base = heap.HP;
       final addr = heap.storeTermOnHeap(_ints(_n));
       // The elements and the nil first, then the cells, the last one first.
-      expect(addr, base + 2 * _n);
+      expect(addr.id, base + 2 * _n);
       final values = <Object?>[];
-      Object cell = heap.cells[addr].content as Term;
+      Object cell = addr.content as Term;
       while (cell is StructTerm) {
-        values.add((heap.cells[(cell.args[0] as VarRef).addr].content
-                as ConstTerm)
-            .value);
-        cell = heap.cells[(cell.args[1] as VarRef).addr].content as Term;
+        values.add(
+            ((cell.args[0] as VarRef).addr.content as ConstTerm).value);
+        cell = (cell.args[1] as VarRef).addr.content as Term;
       }
       expect((cell as ConstTerm).value, 'nil');
       expect(values, [for (var k = 1; k <= _n; k++) k]);
@@ -139,11 +140,11 @@ void main() {
 
     test('stores a nesting 50,000 deep', () {
       final heap = HeapFCP();
-      var cell = heap.cells[heap.storeTermOnHeap(_nest(_n))].content as Term;
+      var cell = heap.storeTermOnHeap(_nest(_n)).content as Term;
       var depth = 0;
       while (cell is StructTerm) {
         depth++;
-        cell = heap.cells[(cell.args.single as VarRef).addr].content as Term;
+        cell = (cell.args.single as VarRef).addr.content as Term;
       }
       expect(depth, _n);
     });
@@ -228,7 +229,7 @@ void main() {
       final payloads = <List<int>>[];
       ctx.onMessageReady = (_, msg) => payloads.add(msg.payload);
       Term readers = ConstTerm('nil');
-      final addrs = <int>[];
+      final addrs = <HeapCell>[];
       for (var i = 0; i < _n; i++) {
         addrs.add(rt.heap.allocateVariable().$2);
       }
@@ -261,7 +262,10 @@ void main() {
       expect(StructTerm('f', []).toString(), 'f()');
       expect(
           StructTerm('f', [
-            StructTerm('g', [ConstTerm('x'), VarRef(3)]),
+            StructTerm('g', [
+              ConstTerm('x'),
+              VarRef(HeapCell(null, CellTag.WrtTag, 3))
+            ]),
             ConstTerm(2)
           ]).toString(),
           'f(g(Const(x),Var@3),Const(2))');

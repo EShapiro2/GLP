@@ -17,11 +17,12 @@ import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/wire/payload_codec.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/multiagent/simulation_network.dart';
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 
 /// One alice→bob cold-call carrying a reader, with the reply value [reply].
 /// Runs the pair through [router] under the given delivery regime and returns
 /// bob's network-input writer address plus bob's runtime for inspection.
-({GlpRuntime bobRt, int bobNetIn}) _runColdCall(
+({GlpRuntime bobRt, HeapCell bobNetIn}) _runColdCall(
   SimulationRouter router, {
   required bool reverse,
   required String reply,
@@ -88,7 +89,7 @@ SimulationRouter _router() {
 
 /// Extract the reply value bob received on its network-input stream:
 /// netIn := [ msg(Z?) | N'? ] with Z bound to the reply.
-Object _deliveredReply(GlpRuntime bobRt, int bobNetIn) {
+Object _deliveredReply(GlpRuntime bobRt, HeapCell bobNetIn) {
   final cell = bobRt.heap.derefAddr(bobNetIn);
   expect(cell, isA<StructTerm>());
   final head = (cell as StructTerm).args[0]; // msg(Z?)

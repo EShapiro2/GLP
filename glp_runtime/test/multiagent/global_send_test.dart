@@ -10,6 +10,14 @@ import 'package:glp_runtime/multiagent/global_send.dart';
 import 'package:glp_runtime/multiagent/global_writers_table.dart';
 import 'package:glp_runtime/multiagent/imported_writer_records.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell, CellTag;
+
+/// A cell of serial number [id], the same cell for the same number: these
+/// tests name a variable by its cell's number, a variable occurrence being
+/// the cell itself (IGLP app:in-heap, Variable pairs).
+final _cells = <int, HeapCell>{};
+HeapCell _c(int id) =>
+    _cells.putIfAbsent(id, () => HeapCell(null, CellTag.WrtTag, id));
 
 void main() {
   group('GlobalSendGoal', () {
@@ -20,18 +28,18 @@ void main() {
       final records = ImportedWriterRecords('p');
 
       final goal = GlobalSendGoal(
-        readerAddr: 100,
+        readerAddr: _c(100),
         globalName: GlobalName.writer('p', 0),
         destination: 'q',
       );
       registry.register(goal);
 
       // Verify goal is registered
-      expect(registry.hasGoalFor(100), isTrue);
+      expect(registry.hasGoalFor(_c(100)), isTrue);
 
       // When: writer (same address) is bound to value 42
       final result = registry.onWriterBound(
-        writerAddr: 100,
+        writerAddr: _c(100),
         value: 42,
         table: table,
         records: records,
@@ -55,14 +63,14 @@ void main() {
       final records = ImportedWriterRecords('p');
 
       registry.register(GlobalSendGoal(
-        readerAddr: 200,
+        readerAddr: _c(200),
         globalName: GlobalName.writer('p', 0),
         destination: 'q',
       ));
 
       // When: fires with value 'hello'
       final result = registry.onWriterBound(
-        writerAddr: 200,
+        writerAddr: _c(200),
         value: 'hello',
         table: table,
         records: records,
@@ -88,7 +96,7 @@ void main() {
       final records = ImportedWriterRecords('p');
 
       registry.register(GlobalSendGoal(
-        readerAddr: 300,
+        readerAddr: _c(300),
         globalName: GlobalName.writer('p', 0),
         destination: 'q',
       ));
@@ -96,18 +104,18 @@ void main() {
       // When: fires with value containing nested reader variable Y? at 401
       // Under corrected definitions, globalizing a reader spawns a goal
       final result = registry.onWriterBound(
-        writerAddr: 300,
+        writerAddr: _c(300),
         value: 'foo(Y?)', // Symbolic - actual term contains reader Y?
         table: table,
         records: records,
-        extractVariables: (_) => [TermVar.reader(401, writerAddr: 400)], // Y? is a reader at 401
+        extractVariables: (_) => [TermVar.reader(_c(401), writerAddr: _c(400))], // Y? is a reader at 401
       );
 
       // Then: value is globalized, spawning new goal for Y?
       // Corrected spec: reader → spawn global_send(Y?, _r(p,i), q)
       expect(result, isNotNull);
       expect(result!.newGoals.length, 1);
-      expect(result.newGoals[0].readerAddr, 400); // writer addr for onBind
+      expect(result.newGoals[0].readerAddr, _c(400)); // writer addr for onBind
       expect(result.newGoals[0].globalName.isReader, isTrue);
       expect(result.newGoals[0].destination, 'q');
 
@@ -123,16 +131,16 @@ void main() {
       final records = ImportedWriterRecords('p');
 
       registry.register(GlobalSendGoal(
-        readerAddr: 500,
+        readerAddr: _c(500),
         globalName: GlobalName.writer('p', 0),
         destination: 'q',
       ));
-      expect(registry.hasGoalFor(500), isTrue);
+      expect(registry.hasGoalFor(_c(500)), isTrue);
       expect(registry.pendingCount, 1);
 
       // When: fires
       registry.onWriterBound(
-        writerAddr: 500,
+        writerAddr: _c(500),
         value: 'done',
         table: table,
         records: records,
@@ -140,7 +148,7 @@ void main() {
       );
 
       // Then: goal no longer registered (one-shot)
-      expect(registry.hasGoalFor(500), isFalse);
+      expect(registry.hasGoalFor(_c(500)), isFalse);
       expect(registry.pendingCount, 0);
 
       // Implicit in spec: goals represent single global_send goal that
@@ -155,12 +163,12 @@ void main() {
       // Create spawns from globalize/localize
       final spawns = [
         GlobalSendSpawn(
-          readerAddr: 100,
+          readerAddr: _c(100),
           globalName: GlobalName.writer('p', 0),
           destAgent: 'q',
         ),
         GlobalSendSpawn(
-          readerAddr: 200,
+          readerAddr: _c(200),
           globalName: GlobalName.reader('r', 5),
           destAgent: 'r',
         ),
@@ -170,16 +178,16 @@ void main() {
       registry.registerSpawns(spawns);
 
       // Verify both are registered
-      expect(registry.hasGoalFor(100), isTrue);
-      expect(registry.hasGoalFor(200), isTrue);
+      expect(registry.hasGoalFor(_c(100)), isTrue);
+      expect(registry.hasGoalFor(_c(200)), isTrue);
       expect(registry.pendingCount, 2);
 
       // Verify goal details
-      final goal1 = registry.getGoalFor(100)!;
+      final goal1 = registry.getGoalFor(_c(100))!;
       expect(goal1.globalName.isWriter, isTrue);
       expect(goal1.destination, 'q');
 
-      final goal2 = registry.getGoalFor(200)!;
+      final goal2 = registry.getGoalFor(_c(200))!;
       expect(goal2.globalName.isReader, isTrue);
       expect(goal2.destination, 'r');
     });
@@ -191,7 +199,7 @@ void main() {
 
       // No goal registered for address 999
       final result = registry.onWriterBound(
-        writerAddr: 999,
+        writerAddr: _c(999),
         value: 'ignored',
         table: table,
         records: records,

@@ -14,7 +14,7 @@ import 'package:test/test.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/suspension.dart';
-import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapFCP, Pointer, SuspensionListNode, WriterContent;
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell, HeapFCP, Pointer, SuspensionListNode, WriterContent;
 import 'package:glp_runtime/runtime/terms.dart';
 
 void main() {
@@ -35,8 +35,8 @@ void main() {
       heap.suspendOnReader(readerAddr, record);
 
       // Verify suspension is on the WRITER cell (not reader)
-      expect(heap.cells[writerAddr].content, isA<WriterContent>());
-      expect(heap.cells[readerAddr].content, isA<Pointer>()); // Reader still points to writer
+      expect(writerAddr.content, isA<WriterContent>());
+      expect(readerAddr.content, isA<Pointer>()); // Reader still points to writer
 
       // Binding the writer should activate the goal
       final activations = heap.bindWriter(writerAddr, ConstTerm('ground'));
@@ -110,7 +110,7 @@ void main() {
       expect(acts1, isEmpty);
 
       // Suspension should now be on w2
-      expect(heap.cells[w2].content, isA<WriterContent>());
+      expect(w2.content, isA<WriterContent>());
 
       // Binding w2 should activate the forwarded suspension
       final acts2 = heap.bindWriter(w2, ConstTerm('final'));
@@ -137,7 +137,7 @@ void main() {
       heap.bindWriterToReader(w2, r3);
 
       // Suspension should have been forwarded to w3
-      expect(heap.cells[w3].content, isA<WriterContent>());
+      expect(w3.content, isA<WriterContent>());
 
       // Binding w3 activates the suspension
       final activations = heap.bindWriter(w3, ConstTerm('end'));
@@ -202,8 +202,8 @@ void main() {
       heap.suspendOnWriter(writerAddr, record);
 
       // Suspension should be on writer (via WriterContent)
-      expect(heap.cells[writerAddr].content, isA<WriterContent>());
-      final wc = heap.cells[writerAddr].content as WriterContent;
+      expect(writerAddr.content, isA<WriterContent>());
+      final wc = writerAddr.content as WriterContent;
       expect(wc.suspensions!.record.goalId, equals(55));
     });
 
@@ -214,18 +214,18 @@ void main() {
       final (writerAddr, readerAddr) = heap.allocateVariable();
 
       // Initially reader points to writer
-      expect((heap.cells[readerAddr].content as Pointer).targetAddr, equals(writerAddr));
+      expect((readerAddr.content as Pointer).targetAddr, equals(writerAddr));
 
       final record = SuspensionRecord(66, 660);
       heap.suspendOnReader(readerAddr, record);
 
       // Suspension should be on writer (found by following reader's pointer)
       // Per FCP pattern, suspensions are stored in WriterContent to preserve reader pointer
-      expect(heap.cells[writerAddr].content, isA<WriterContent>());
-      expect((heap.cells[writerAddr].content as WriterContent).suspensions, isNotNull);
+      expect(writerAddr.content, isA<WriterContent>());
+      expect((writerAddr.content as WriterContent).suspensions, isNotNull);
 
       // Reader should still point to writer
-      expect(heap.cells[readerAddr].content, isA<Pointer>());
+      expect(readerAddr.content, isA<Pointer>());
     });
   });
 
@@ -267,7 +267,7 @@ void main() {
       heap.suspendOnReader(r3, SuspensionRecord(3, 30));
 
       // Simulate σ̂ (tentative substitution) - map of writerAddr -> value
-      final sigmaHat = <int, Term>{
+      final sigmaHat = <HeapCell, Term>{
         w1: ConstTerm('a'),
         w2: ConstTerm('b'),
         w3: ConstTerm('c'),

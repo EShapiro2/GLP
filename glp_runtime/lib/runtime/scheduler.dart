@@ -2,6 +2,7 @@ import 'dart:async';
 import 'runtime.dart';
 import 'package:glp_runtime/bytecode/runner.dart';
 import 'terms.dart';
+import 'heap_fcp.dart' show HeapCell;
 
 /// Result of scheduler execution
 enum ExecutionStatus {
@@ -21,7 +22,7 @@ class DrainResult {
   /// wants the ids hands the drain a list for them ([Scheduler.drain]).
   final int goalsRun;
   final ExecutionStatus status;
-  final Set<int> blockingReaders;  // addresses of readers causing suspension (per spec 8.4)
+  final Set<HeapCell> blockingReaders;  // the readers causing suspension (per spec 8.4)
 
   final List<String> Function() _suspendedGoals;
 
@@ -50,15 +51,15 @@ class Scheduler {
       : runners = runners ?? (runner != null ? {null: runner} : {});
 
   /// Query variable names: maps writerAddr to original name from query (e.g., "X", "Xs")
-  Map<int, String> _queryVarNames = {};
+  Map<HeapCell, String> _queryVarNames = {};
 
   /// Variable display map: maps actual addr to display number (1, 2, 3...)
   /// Only used for fresh variables created during execution
-  Map<int, int> _varDisplayMap = {};
+  Map<HeapCell, int> _varDisplayMap = {};
   int _nextDisplayId = 1;
 
   /// Set query variable names (call before draining)
-  void setQueryVarNames(Map<String, int> varWriters) {
+  void setQueryVarNames(Map<String, HeapCell> varWriters) {
     _queryVarNames.clear();
     for (final entry in varWriters.entries) {
       _queryVarNames[entry.value] = entry.key;
@@ -67,7 +68,7 @@ class Scheduler {
 
   /// Get display name for a variable
   /// Uses original name if it's a query variable, otherwise X1, X2, etc.
-  String _getVarDisplayName(int addr) {
+  String _getVarDisplayName(HeapCell addr) {
     // For readers, try to find writer's name first
     if (rt.heap.isReader(addr)) {
       // Use tryWriterForReader for imported reader support (returns null instead of throwing)
@@ -93,20 +94,20 @@ class Scheduler {
   }
 
   /// [term] as the trace, a failed goal and the suspended list show it: a
-  /// binding's chain followed, an address met again on [path] shown
+  /// binding's chain followed, a cell met again on [path] shown
   /// `<circular>`; a list in brackets, its elements comma-separated and a tail
   /// that is no further cell after ` | `; a conjunction in parentheses; a
   /// variable by its display name, a reader marked `?` where [markReaders].
   ///
   /// The text is written with a stack of its own, piece by piece in the order
-  /// the recursion it replaces wrote it, the same addresses added to [path]
+  /// the recursion it replaces wrote it, the same cells added to [path]
   /// and the same display names given out, in the same order, so the text is
   /// the same.  Until 2026-10-02 that recursion took a Dart frame or more for
   /// each element of a list whose tail is a variable, as every tail of a list
   /// built on the heap is, and a failed goal holding a list of 50,000
   /// elements overflowed the Dart stack in its own text (long_list_walks_test).
-  String _formatTerm(Term term, {bool markReaders = true, Set<int>? path}) {
-    final seen = path ?? <int>{};
+  String _formatTerm(Term term, {bool markReaders = true, Set<HeapCell>? path}) {
+    final seen = path ?? <HeapCell>{};
     final out = StringBuffer();
     // What remains to be written, the next on top: a term to format, a piece
     // of text, or the tail of a list cell whose head has just been written.
@@ -246,7 +247,7 @@ class Scheduler {
   }
 
   /// Format a binding for display: "X = value" or "X1 = value"
-  String formatBinding(int varId, dynamic value) {
+  String formatBinding(HeapCell varId, dynamic value) {
     final name = _getVarDisplayName(varId);
     String valueStr;
     if (value is Term) {
@@ -438,7 +439,7 @@ class Scheduler {
     // rt.suspended maps reader addr -> Set<GoalRef> of goals blocked on that reader
     final blockingReaders = status == ExecutionStatus.suspended
         ? rt.suspended.keys.toSet()
-        : <int>{};
+        : <HeapCell>{};
 
     return DrainResult.deferred(cycles, status, suspendedList, blockingReaders);
   }
@@ -543,7 +544,7 @@ class Scheduler {
     var totalCycles = 0;
     ExecutionStatus lastStatus = ExecutionStatus.succeeded;
     List<String> Function() lastSuspended = () => [];
-    Set<int> lastBlockingReaders = {};
+    Set<HeapCell> lastBlockingReaders = {};
 
     while (totalCycles < maxCycles) {
       // Run synchronous drain until queue is empty

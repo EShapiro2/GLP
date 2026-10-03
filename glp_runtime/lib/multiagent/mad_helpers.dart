@@ -8,6 +8,7 @@
 library;
 
 import 'package:glp_runtime/runtime/terms.dart';
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 import 'global_writers_table.dart';
 import 'imported_writer_records.dart';
 
@@ -61,7 +62,7 @@ class GlobalName {
 /// See: IGLP Definition global_send Predicate (app:global-send)
 class GlobalSendSpawn {
   /// Address of the reader to watch (the ? end of the variable pair)
-  final int readerAddr;
+  final HeapCell readerAddr;
 
   /// Global name identifying the link
   final GlobalName globalName;
@@ -85,14 +86,14 @@ class GlobalSendSpawn {
 /// Represents either a writer (addr) or reader (addr with isReader=true).
 /// Always carries both writer and reader addresses of the pair.
 class TermVar {
-  final int addr;
+  final HeapCell addr;
   final bool isReader;
 
   /// Writer address of the variable pair
-  final int writerAddr;
+  final HeapCell writerAddr;
 
   /// Reader address of the variable pair
-  final int readerAddr;
+  final HeapCell readerAddr;
 
   /// Create a writer variable reference
   TermVar.writer(this.addr, {required this.readerAddr})
@@ -107,7 +108,7 @@ class TermVar {
   bool get isWriter => !isReader;
 
   /// Get the paired reader address
-  int get pairedReaderAddr => readerAddr;
+  HeapCell get pairedReaderAddr => readerAddr;
 
   @override
   String toString() => isReader
@@ -148,8 +149,8 @@ class GlobalizeResult {
 
 /// A fresh variable pair created during localization
 class FreshPair {
-  final int writerAddr;
-  final int readerAddr;
+  final HeapCell writerAddr;
+  final HeapCell readerAddr;
 
   FreshPair(this.writerAddr, this.readerAddr);
 
@@ -312,7 +313,7 @@ LocalizeResult localize({
   required String fromAgent,
   required GlobalWritersTable table,
   required ImportedWriterRecords records,
-  required (int, int) Function() freshAddrAllocator,
+  required (HeapCell, HeapCell) Function() freshAddrAllocator,
 }) {
   final freshPairs = <FreshPair>[];
   final useReader = <bool>[];
@@ -393,14 +394,14 @@ Term globalizeTermWithResult(
   List<TermVar> variables,
   GlobalizeResult result,
 ) {
-  final varToGlobalName = <int, GlobalName>{};
+  final varToGlobalName = <HeapCell, GlobalName>{};
   for (var i = 0; i < variables.length; i++) {
     varToGlobalName[variables[i].addr] = result.globalNames[i];
   }
   return _substituteGlobalNames(term, varToGlobalName);
 }
 
-Term _substituteGlobalNames(Term term, Map<int, GlobalName> mapping) =>
+Term _substituteGlobalNames(Term term, Map<HeapCell, GlobalName> mapping) =>
     _rebuild(term, (t) {
       if (t is VarRef) {
         final gn = mapping[t.addr];
@@ -492,7 +493,7 @@ Term localizeTermWithResult(
   List<GlobalName> globalNames,
   LocalizeResult result,
 ) {
-  final globalNameToLocal = <String, int>{};
+  final globalNameToLocal = <String, HeapCell>{};
   for (var i = 0; i < globalNames.length; i++) {
     final gn = globalNames[i];
     final pair = result.freshPairs[i];
@@ -503,7 +504,7 @@ Term localizeTermWithResult(
   return _substituteLocalVars(term, globalNameToLocal);
 }
 
-Term _substituteLocalVars(Term term, Map<String, int> mapping) =>
+Term _substituteLocalVars(Term term, Map<String, HeapCell> mapping) =>
     _rebuild(term, (t) {
       if (t is! StructTerm) return t;
       if ((t.functor == '_w' || t.functor == '_r') && t.args.length == 2) {

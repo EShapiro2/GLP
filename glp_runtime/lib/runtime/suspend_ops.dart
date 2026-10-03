@@ -21,7 +21,7 @@ class SuspendOps {
     required HeapFCP heap,
     required int goalId,
     required int kappa,
-    required Set<int> readerVarIds,
+    required Set<HeapCell> readerVarIds,
   }) {
     // Create ONE shared suspension record
     final sharedRecord = SuspensionRecord(goalId, kappa);
@@ -33,7 +33,7 @@ class SuspendOps {
   }
 
   /// Add suspension to a variable (follows chain to find final unbound writer)
-  static void _suspendOnVariable(HeapFCP heap, int addr, SuspensionRecord record) {
+  static void _suspendOnVariable(HeapFCP heap, HeapCell addr, SuspensionRecord record) {
     // Dereference to find the final target
     final result = heap.derefAddr(addr);
 
