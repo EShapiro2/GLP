@@ -302,132 +302,145 @@ BodyKernelResult negKernel(GlpRuntime rt, List<Object?> args) {
 }
 
 // ============================================================================
+// THE FUNCTIONS OF Exp
+// ============================================================================
+
+/// The sixteen unary functions of `Exp` (the root self.glp; TGLP
+/// appendix-root-self.tex, 2e39edb) by functor, each as its kernel computes
+/// it, `log` being `'_log10'`: its value at a number, or null where the number
+/// is outside its domain and the kernel aborts --- "A body kernel whose
+/// precondition fails --- a zero divisor, an argument out of its domain ---
+/// aborts" (GLP-Spec appendix-guards.tex).
+///
+/// A real that is NaN or infinite --- `'_pow'`, `'_exp'` and real arithmetic
+/// that overflows yield them --- has no integer, so it is outside the domain
+/// of `integer`, `round`, `floor` and `ceil`.  Until 2026-10-02 their kernels
+/// threw on one and the run ended, its other goals with it:
+/// `X := integer(pow(-8, 0.5)), Y := 2 + 2` printed "Unsupported operation:
+/// Infinity or NaN toInt" and bound neither.
+final Map<String, num? Function(num)> _expUnaryFunctions = {
+  'abs': (x) => x.abs(),
+  'sqrt': (x) => x < 0 ? null : math.sqrt(x),
+  'sin': math.sin,
+  'cos': math.cos,
+  'tan': math.tan,
+  'asin': (x) => x < -1 || x > 1 ? null : math.asin(x),
+  'acos': (x) => x < -1 || x > 1 ? null : math.acos(x),
+  'atan': math.atan,
+  'exp': math.exp,
+  'ln': (x) => x <= 0 ? null : math.log(x),
+  'log': (x) => x <= 0 ? null : math.log(x) / math.ln10,
+  'integer': (x) => x.isFinite ? x.toInt() : null,
+  'real': (x) => x.toDouble(),
+  'round': (x) => x.isFinite ? x.round() : null,
+  'floor': (x) => x.isFinite ? x.floor() : null,
+  'ceil': (x) => x.isFinite ? x.ceil() : null,
+};
+
+/// Whether [functor] of [arity] arguments is a function of `Exp`: `pow` of
+/// two, or one of the sixteen unary functions ([expFunction]).
+bool isExpFunction(String functor, int arity) => arity == 1
+    ? _expUnaryFunctions.containsKey(functor)
+    : arity == 2 && functor == 'pow';
+
+/// The value of the function [functor] of `Exp` at the numbers [args], one
+/// per argument, as its kernel computes it --- `pow` as `'_pow'` does, its
+/// domain every pair of numbers, and the unary functions as
+/// [_expUnaryFunctions] has them --- or null where an argument is outside the
+/// function's domain, and where [functor] of that many arguments is no
+/// function of `Exp` ([isExpFunction]).
+///
+/// The kernels compute through it ([_functionKernel]), and so does an
+/// arithmetic comparison guard evaluating an `Exp` (bytecode/runner.dart), in
+/// which an argument outside a function's domain has no value and fails the
+/// guard (GLP-Spec appendix-guards.tex, 026515d): one definition of each
+/// function and its domain, so that a comparison and `:=` cannot disagree on
+/// one.
+num? expFunction(String functor, List<num> args) {
+  if (args.length == 2) {
+    return functor == 'pow' ? math.pow(args[0], args[1]) : null;
+  }
+  if (args.length == 1) return _expUnaryFunctions[functor]?.call(args[0]);
+  return null;
+}
+
+/// The body kernel of the function [functor] of `Exp` of [arity] arguments,
+/// the output after them: it binds the output to the function's value at its
+/// arguments ([expFunction]), and aborts where it is not given [arity]
+/// arguments and the output, where an argument is no number, and where one is
+/// outside the function's domain.
+BodyKernelResult _functionKernel(
+    GlpRuntime rt, List<Object?> args, String functor, int arity) {
+  if (args.length != arity + 1) return BodyKernelResult.abort;
+  final xs = <num>[];
+  for (var i = 0; i < arity; i++) {
+    final x = _getNum(rt, args[i]);
+    if (x == null) return BodyKernelResult.abort;
+    xs.add(x);
+  }
+  final value = expFunction(functor, xs);
+  if (value == null) return BodyKernelResult.abort;
+  return _bindResult(rt, args[arity], value);
+}
+
+// ============================================================================
 // MATH FUNCTION KERNELS
 // ============================================================================
 
-BodyKernelResult absKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], x.abs());
-}
+BodyKernelResult absKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'abs', 1);
 
-BodyKernelResult sqrtKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null || x < 0) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], math.sqrt(x));
-}
+BodyKernelResult sqrtKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'sqrt', 1);
 
-BodyKernelResult sinKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], math.sin(x));
-}
+BodyKernelResult sinKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'sin', 1);
 
-BodyKernelResult cosKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], math.cos(x));
-}
+BodyKernelResult cosKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'cos', 1);
 
-BodyKernelResult tanKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], math.tan(x));
-}
+BodyKernelResult tanKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'tan', 1);
 
-BodyKernelResult expKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], math.exp(x));
-}
+BodyKernelResult expKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'exp', 1);
 
-BodyKernelResult lnKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null || x <= 0) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], math.log(x));
-}
+BodyKernelResult lnKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'ln', 1);
 
-BodyKernelResult log10Kernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null || x <= 0) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], math.log(x) / math.ln10);
-}
+BodyKernelResult log10Kernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'log', 1);
 
-BodyKernelResult powKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 3) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  final y = _getNum(rt, args[1]);
-  if (x == null || y == null) return BodyKernelResult.abort;
-  return _bindResult(rt, args[2], math.pow(x, y));
-}
+BodyKernelResult powKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'pow', 2);
 
-BodyKernelResult asinKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null || x < -1 || x > 1) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], math.asin(x));
-}
+BodyKernelResult asinKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'asin', 1);
 
-BodyKernelResult acosKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null || x < -1 || x > 1) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], math.acos(x));
-}
+BodyKernelResult acosKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'acos', 1);
 
-BodyKernelResult atanKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], math.atan(x));
-}
+BodyKernelResult atanKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'atan', 1);
 
 // ============================================================================
 // TYPE CONVERSION KERNELS
 // ============================================================================
 
-BodyKernelResult integerKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], x.toInt());
-}
+BodyKernelResult integerKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'integer', 1);
 
-BodyKernelResult realKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], x.toDouble());
-}
+BodyKernelResult realKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'real', 1);
 
-BodyKernelResult roundKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], x.round());
-}
+BodyKernelResult roundKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'round', 1);
 
-BodyKernelResult floorKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], x.floor());
-}
+BodyKernelResult floorKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'floor', 1);
 
-BodyKernelResult ceilKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], x.ceil());
-}
+BodyKernelResult ceilKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'ceil', 1);
 
 // ============================================================================
 // STRUCTURE MANIPULATION KERNELS

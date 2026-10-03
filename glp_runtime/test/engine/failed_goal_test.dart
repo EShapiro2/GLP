@@ -330,5 +330,31 @@ comp(T?) :- T =.. [].
         expect((v as ConstTerm).value, e.value, reason: e.key);
       }
     });
+
+    // A NaN or infinite real has no integer, so it is outside the domain of
+    // '_integer', '_round', '_floor' and '_ceil', which abort on one, as a
+    // kernel whose precondition fails does (GLP-Spec appendix-guards.tex):
+    // the domain a comparison evaluates them on, one definition serving both
+    // (body_kernels.dart expFunction; GLP #3 Cowork, 2026-10-02 20:58 UTC,
+    // "20:10" C).  Until 2026-10-02 each threw, and the run ended, its other
+    // goals with it: X := integer(pow(-8, 0.5)), Y := 2 + 2 printed
+    // "Unsupported operation: Infinity or NaN toInt" and bound neither.
+    test('a NaN or infinite real aborts the conversions, and the siblings run',
+        () async {
+      for (final f in ['integer', 'round', 'floor', 'ceil']) {
+        for (final x in ['pow(-8, 0.5)', 'exp(1000)']) {
+          final e = '$f($x)';
+          final engine = fresh();
+          final result = await engine.runGoal('X := $e, Y := 2 + 2');
+          expect(result.status, ExecutionStatus.failed, reason: e);
+          expect(result.bindings['X'], isNull, reason: e);
+          expect(result.bindings['Y'].toString(), contains('4'),
+              reason: '$e: the sibling goal kept reducing');
+          expect(engine.runtime.failedGoals, hasLength(1), reason: e);
+          expect(engine.runtime.failedGoals.single, startsWith(':='),
+              reason: '$e: the := whose kernel aborted');
+        }
+      }
+    });
   });
 }
