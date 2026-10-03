@@ -1,0 +1,6 @@
+%% See self.glp.  Mesage is a misspelt type name, and relay/2 names no
+%% parameters, so it is an undefined type, not a parameter.
+
+exported procedure relay(Stream(Mesage)?, Stream(Message)).
+relay([M|In], [M?|Out?]) :- relay(In?, Out).
+relay([], []).

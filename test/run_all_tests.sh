@@ -1309,6 +1309,24 @@ check "list tail display: a proper list as before" "T37e = \[a, b, c\]" "$a37"
 check "list tail display: send_to_user shows it alike" "^GLP> \[holding(G, H) | W\]" "$a37"
 check "list tail display: mod and procedure, the tail kept" "W37 = w(mod, procedure, \[mod | procedure\])" "$a37"
 
+# --- A38: An undefined type name in a declaration is refused, named ---
+# TGLP parameterized-types.tex, "Declaration parameters": "An undefined type
+# name occurring in a declaration and not in its parameter list is an error".
+# Until 2026-10-03 a declaration naming no parameters read such a name as a
+# parameter; the fallback went once sGLP's Peers was defined (GLP #3 Cowork,
+# 2026-10-03 21:18 UTC).  The refusal names the declaration, the file, the
+# line and the type name, on the single-file path and in a directory program.
+echo "--- A38: Undefined type names in declarations ---"
+a38=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/decl_undefined_neg.glp
+$GLP_DIR/programs/tests/decl_undefined_dir_neg
+:quit
+HEREDOC
+2>&1)
+check "undefined declaration type: single file refused, file and line named" "decl_undefined_neg.glp, line 16, column 16: undefined type \"M\" in the declaration of keep/2" "$a38"
+check "undefined declaration type: directory program refused, module file and line named" "decl_undefined_dir_neg/worker.glp:4: undefined type \"Mesage\" in the declaration of relay/2" "$a38"
+check_not "undefined declaration type: neither loads" "✓ Loaded" "$a38"
+
 SECTION_A_PASS=$PASS
 SECTION_A_FAIL=$FAIL
 
@@ -1722,6 +1740,10 @@ NEGATIVE_FILES=(
     # parameter (parameterized-types.tex, "Declaration parameters"). Positive
     # counterpart: param_decl_list.glp in POSITIVE_FILES.
     "$GLP_DIR/programs/tests/param_decl_typo_neg.glp"
+    # procedure keep(M?, M) — no list, so M is an undefined type, not a
+    # parameter (the fallback that read it as one went 2026-10-03, GLP #3
+    # Cowork 21:18 UTC).  Positive counterpart: toplevel_type_param.glp.
+    "$GLP_DIR/programs/tests/decl_undefined_neg.glp"
 
     # --- Monomorphic recursion: a recursive call at a different instantiation ---
     # wrap threads Stream(X) -> Stream(Box(X)); the recursive ploop is checked at
@@ -3660,17 +3682,19 @@ check "S9 ancestor-typed goal runs" "W = \[wrap(1), wrap(2), wrap(3)\]" "$s9"
 # The ancestor chain is anchored at the hierarchy root programs/ (modules.tex
 # §Implicit ancestor scoping); a module file loaded from OUTSIDE the hierarchy
 # gets no ancestor self.glp scope, even from its own directory. Foo is defined
-# only in the fixture's sibling self.glp, so p(Foo) reads as a parametric
-# declaration whose inspected parameter has no instantiation, and the load is
-# rejected. Guards loadSource sharing the linker's programsDir bound (the
-# legacy unbounded walk accepted this load).
+# only in the fixture's sibling self.glp, so p(Foo) names an undefined type
+# outside its parameter list, and the load is rejected (TGLP
+# parameterized-types.tex, "Declaration parameters"; until 2026-10-03 Foo was
+# read as a parameter and the load rejected as not parametrically well-typed).
+# Guards loadSource sharing the linker's programsDir bound (the legacy
+# unbounded walk accepted this load).
 echo "--- S10: no ancestor scope outside the hierarchy ---"
 s10=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/test/fixtures/outside_hierarchy/m.glp
 :quit
 HEREDOC
 2>&1)
-check "S10 outside-hierarchy file load rejected" "not parametrically well-typed and has no well-typing" "$s10"
+check "S10 outside-hierarchy file load rejected" 'undefined type "Foo" in the declaration of p/1' "$s10"
 
 echo ""
 

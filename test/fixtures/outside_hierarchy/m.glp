@@ -1,6 +1,9 @@
 %% S10 fixture: Foo is defined only in the sibling self.glp, which is outside
-%% the programs/ hierarchy and hence out of scope for a file load. Foo
-%% therefore reads as a type parameter, p/1 inspects it uninstantiated, and
-%% the load is rejected.
+%% the programs/ hierarchy and hence out of scope for a file load.  Foo is
+%% therefore an undefined type name in p/1's declaration and not in its
+%% parameter list, and the load is rejected (TGLP parameterized-types.tex,
+%% "Declaration parameters").  Until 2026-10-03 Foo was read as a type
+%% parameter, p/1 inspected it uninstantiated, and the load was rejected for
+%% that.
 procedure p(Foo).
 p(foo).

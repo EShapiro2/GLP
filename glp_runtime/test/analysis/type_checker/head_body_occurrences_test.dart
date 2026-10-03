@@ -14,8 +14,12 @@
 // (putIfAbsent), and a second at a type the head's is not within went
 // unchecked.
 
+import 'dart:io';
+
 import 'package:test/test.dart';
 import 'package:glp_runtime/analysis/type_checker/type_checker.dart';
+import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart'
+    show setRootScopeEnvironmentSource;
 
 const _decls = '''
 Colour ::= red ; green.
@@ -31,6 +35,13 @@ takes_constant(_).
 ''';
 
 void main() {
+  // The root self.glp is d_1 of every scope (TGLP modules.tex, Definition
+  // "Root, Scope"), and Constant is its.  Until 2026-10-03 these sources were
+  // checked in an empty root scope, Constant undefined, and passed only because
+  // an undefined name in a declaration was read as a type parameter.
+  setRootScopeEnvironmentSource(
+      File('../programs/self.glp').readAsStringSync());
+
   group('a head variable read twice in the body', () {
     test('is refused where the second body occurrence is not within the head\'s '
         'type', () {

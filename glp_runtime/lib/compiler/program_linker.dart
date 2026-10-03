@@ -18,6 +18,8 @@ import 'primitive_layer.dart';
 import '../analysis/type_checker/type_ast.dart';
 import '../analysis/type_checker/type_checker.dart';
 import '../analysis/type_checker/type_identity.dart';
+import '../analysis/type_checker/param_expansion.dart'
+    show UndefinedDeclarationTypeError;
 import '../runtime/module_hierarchy.dart';
 import '../analysis/type_checker/type_environment_builder.dart';
 import '../vglp/mediator.dart';
@@ -247,10 +249,15 @@ void _addVglpModules(List<DiscoveredModule> modules, Directory root,
     final ancestorScope =
         _vglpScope(file, modules, root, programsDir, rootSelfGlpPath);
 
-    final compiledSource = compileVglpSource(text,
-        mediator: mediator,
-        scope: ancestorScope,
-        path: file.path);
+    final String compiledSource;
+    try {
+      compiledSource = compileVglpSource(text,
+          mediator: mediator,
+          scope: ancestorScope,
+          path: file.path);
+    } on UndefinedDeclarationTypeError catch (e) {
+      throw e.inFile(file.path);
+    }
     final compiledAst =
         Parser(Lexer(compiledSource).tokenize()).parseModule();
 
@@ -280,8 +287,13 @@ TypeEnvironment _vglpScope(File file, List<DiscoveredModule> modules,
   final modDir = _normPath(file.parent.path);
   for (final e in modules.where((m) => m.exposingDir != null)) {
     if (!_dirUnder(modDir, e.exposingDir!)) continue;
-    scope = _mergeExposed(scope, exposedExportScope(e.ast, scope),
-        label: e.moduleName);
+    final TypeEnvironment lifted;
+    try {
+      lifted = exposedExportScope(e.ast, scope);
+    } on UndefinedDeclarationTypeError catch (err) {
+      throw err.inFile(e.filePath);
+    }
+    scope = _mergeExposed(scope, lifted, label: e.moduleName);
   }
   return scope;
 }
@@ -529,11 +541,15 @@ void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
     final modDir = _normPath(File(m.filePath).parent.path);
     for (final e in exposed) {
       if (!_dirUnder(modDir, e.exposingDir!)) continue;
-      m.ancestorScope = _mergeExposed(
-          m.ancestorScope,
-          exposedExportScope(e.ast, m.ancestorScope,
-              exposerTypeDefs: perDirExposerTypeDefs[e.exposingDir!] ?? const []),
-          label: e.moduleName);
+      final TypeEnvironment lifted;
+      try {
+        lifted = exposedExportScope(e.ast, m.ancestorScope,
+            exposerTypeDefs: perDirExposerTypeDefs[e.exposingDir!] ?? const []);
+      } on UndefinedDeclarationTypeError catch (err) {
+        throw err.inFile(e.filePath);
+      }
+      m.ancestorScope =
+          _mergeExposed(m.ancestorScope, lifted, label: e.moduleName);
     }
   }
 }
@@ -648,12 +664,20 @@ void checkModulesIndependently(List<DiscoveredModule> modules) {
     final transformed = pe.transformDefinedGuards(
         Program(mod.ast.procedures, mod.ast.line, mod.ast.column));
 
-    final result = checkModule(
-      mod.ast,
-      transformedProcedures: transformed.procedures,
-      ancestorScope: mod.ancestorScope,
-      rejectUninstantiatedInspecting: false,
-    );
+    final TypeCheckResult result;
+    try {
+      result = checkModule(
+        mod.ast,
+        transformedProcedures: transformed.procedures,
+        ancestorScope: mod.ancestorScope,
+        rejectUninstantiatedInspecting: false,
+      );
+    } on UndefinedDeclarationTypeError catch (e) {
+      // An undefined type name in one of the module's declarations
+      // (Moded-Types, "Declaration parameters"), named with its file.
+      failures.add('  ${mod.filePath}:${e.line}: ${e.message}');
+      continue;
+    }
     if (result.isWellTyped) continue;
 
     for (final e in result.errors) {

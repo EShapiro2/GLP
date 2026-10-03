@@ -28,6 +28,8 @@ import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 import 'package:glp_runtime/compiler/partial_evaluator.dart';
 import 'package:glp_runtime/analysis/type_checker/type_checker.dart';
+import 'package:glp_runtime/analysis/type_checker/param_expansion.dart'
+    show UndefinedDeclarationTypeError;
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
 import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart';
 import 'package:glp_runtime/analysis/type_checker/program_dfa.dart' as tdfa;
@@ -423,9 +425,16 @@ class GlpEngine {
       final transformedAst = partialEvaluator.transformDefinedGuards(ast);
       checkedProcedures = transformedAst.procedures;
 
-      final typeResult = checkModule(module,
-          transformedProcedures: transformedAst.procedures,
-          ancestorScope: ancestorScope);
+      final TypeCheckResult typeResult;
+      try {
+        typeResult = checkModule(module,
+            transformedProcedures: transformedAst.procedures,
+            ancestorScope: ancestorScope);
+      } on UndefinedDeclarationTypeError catch (e) {
+        // An undefined type name in a declaration of this source (Moded-Types,
+        // "Declaration parameters"), named with its file.
+        throw e.inFile(name);
+      }
       if (!typeResult.isWellTyped) {
         final errors = typeResult.errors
             .map((e) => '  ${e.message} at line ${e.line}')

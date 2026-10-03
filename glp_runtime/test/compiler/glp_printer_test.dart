@@ -60,7 +60,13 @@ void main() {
   });
 
   test('the canonical print carries the anonymous output', () {
-    final dir = Directory.systemTemp.createTempSync('glp_printer_');
+    // The program lies under the root, programs/ (TGLP modules.tex, "Scope
+    // construction": "A program lies at or below the root"), so its
+    // self.glp is in main.glp's scope and defines Handle there.  Until
+    // 2026-10-03 it was written to the system's temporary directory, where
+    // main.glp's scope had no self.glp and Handle loaded only because an
+    // undefined name in a declaration was read as a type parameter.
+    final dir = Directory('../programs/tests').createTempSync('glp_printer_');
     try {
       // The program's self.glp exports go/3, forwarding it to main.glp: a
       // directory with no self.glp is not a program (TGLP modules.tex, "Entry

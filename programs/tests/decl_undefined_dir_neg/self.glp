@@ -1,0 +1,11 @@
+%% NEGATIVE.  An undefined type name in a declaration that names no
+%% parameters is refused in a module of a directory program as in a single
+%% file, naming the module's file and line (TGLP parameterized-types.tex,
+%% "Declaration parameters").  worker.glp's relay/2 writes Mesage for Message.
+
+Message ::= hello ; bye.
+
+imported procedure worker#relay(Stream(Message)?, Stream(Message)).
+
+exported procedure go(Stream(Message)?, Stream(Message)).
+go(In, Out?) :- worker # relay(In?, Out).

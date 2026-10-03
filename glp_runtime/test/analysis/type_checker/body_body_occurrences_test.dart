@@ -15,8 +15,12 @@
 // unchecked; condition 3(b) had the same fault until 2026-09-27
 // (head_body_occurrences_test.dart).  A goal is a body, and is checked alike.
 
+import 'dart:io';
+
 import 'package:test/test.dart';
 import 'package:glp_runtime/analysis/type_checker/type_checker.dart';
+import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart'
+    show setRootScopeEnvironmentSource;
 
 const _decls = '''
 Colour ::= red ; green.
@@ -40,6 +44,13 @@ bool _refusesPair(List<String> messages, String v) => messages.any((m) =>
     m.contains('Integer'));
 
 void main() {
+  // The root self.glp is d_1 of every scope (TGLP modules.tex, Definition
+  // "Root, Scope"), and Constant is its.  Until 2026-10-03 these sources were
+  // checked in an empty root scope, Constant undefined, and passed only because
+  // an undefined name in a declaration was read as a type parameter.
+  setRootScopeEnvironmentSource(
+      File('../programs/self.glp').readAsStringSync());
+
   group('a body writer read twice in the body', () {
     test('is refused where the second reader occurrence is out of type', () {
       final result = checkSource('''

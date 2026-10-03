@@ -241,8 +241,14 @@ TypeEnvironment mergeSelfGlpFileIntoScope(TypeEnvironment env, String path,
   final module = Parser(Lexer(source).tokenize()).parseModule();
   final lifted =
       liftExposedTypes(env, module, File(path).parent.path, root: root);
-  return mergeModuleIntoScope(lifted, module,
-      label: root != null ? modulePathName(path, root) : _directoryLabel(path));
+  try {
+    return mergeModuleIntoScope(lifted, module,
+        label:
+            root != null ? modulePathName(path, root) : _directoryLabel(path));
+  } on UndefinedDeclarationTypeError catch (e) {
+    // The declaration is the self.glp's: the error names its file.
+    throw e.inFile(path);
+  }
 }
 
 /// [env] with the types that [exposer]'s `-expose` directives lift into the
@@ -279,12 +285,17 @@ TypeEnvironment liftExposedTypes(
     if (!file.existsSync()) continue;
     final exposed = Parser(Lexer(file.readAsStringSync()).tokenize())
         .parseModule();
-    final lifted = exposedExportScope(exposed,
-        TypeEnvironment(types, env.procedures,
-            paramProcDecls: env.paramProcDecls,
-            typeTemplates: env.typeTemplates,
-            typeOrigins: origins),
-        exposerTypeDefs: exposer.typeDefs);
+    final TypeEnvironment lifted;
+    try {
+      lifted = exposedExportScope(exposed,
+          TypeEnvironment(types, env.procedures,
+              paramProcDecls: env.paramProcDecls,
+              typeTemplates: env.typeTemplates,
+              typeOrigins: origins),
+          exposerTypeDefs: exposer.typeDefs);
+    } on UndefinedDeclarationTypeError catch (e) {
+      throw e.inFile(file.path);
+    }
     final label = root != null
         ? modulePathName(file.path, root)
         : ppath.basenameWithoutExtension(file.path);
