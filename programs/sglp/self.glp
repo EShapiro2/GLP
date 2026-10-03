@@ -147,6 +147,14 @@ social_graph_draw(N, Seed, Hom, Wary, D?) :-
 %% a-th list of Friends, in increasing order; an agent is a spender for its
 %% first draw K =< Spend and cautious for its second K =< Cred, K of 1..100, so
 %% the run declaration's mix is 50 and 50.
+%% Peer and Peers are the children's, social_graph/self.glp's and
+%% coins/self.glp's, structurally, defined here so that coins/7's declaration
+%% names a type in its scope, a module seeing its ancestors' types and not its
+%% children's (TGLP, "Declaration parameters" and Definition "Root, Scope";
+%% sGLP's code task of 2026-10-03 21:09 UTC).
+Peer  ::= Constant.
+Peers ::= [] ; [Peer | Peers].
+
 imported procedure coins#run(Integer?, Stream(Peers)?, Number?, Span?, Integer?,
                              Integer?, Integer?).
 exported procedure coins(Integer?, Stream(Peers)?, Number?, Span?, Integer?,
