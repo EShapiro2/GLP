@@ -114,8 +114,10 @@ void main() {
       final modules =
           discoverProgram(fixtureDir, rootSelfGlpPath: rootSelfPath);
       final linked = checkedLinkedProgram(modules, rootDir: fixtureDir);
+      // Renamed by its module's path from the root (TGLP modules.tex,
+      // Compilation, third step).
       expect(linked.program.procedures.map((p) => p.name),
-          contains('code:keys'));
+          contains('tests/primitive_named_type/code:keys'));
     });
 
     test('and the program loads and runs', () async {

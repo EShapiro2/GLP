@@ -39,6 +39,12 @@ void main() {
   void write(String name, String content) =>
       File('${fixture.path}/$name').writeAsStringSync(content);
 
+  // A module's name is its path from the root, programs/ (TGLP modules.tex,
+  // Compilation, third step): the fixture's module `responder` is
+  // `<the fixture's directory>/responder`.
+  String inFixture(String module) =>
+      '${fixture.path.split('/').last}/$module';
+
   const selfGlp = '''
 Decision      ::= yes ; no.
 Offer         ::= offer(Constant).
@@ -71,7 +77,7 @@ respond(offer(From), [answered(Answer?, From?)]) :-
       final modules =
           discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp);
       final responder =
-          modules.where((m) => m.moduleName == 'responder').toList();
+          modules.where((m) => m.moduleName == inFixture('responder')).toList();
       expect(responder, hasLength(1),
           reason: 'the .vglp source should be a module of the program');
       expect(responder.single.filePath, endsWith('.vglp'));
@@ -82,7 +88,7 @@ respond(offer(From), [answered(Answer?, From?)]) :-
       write('responder.vglp', responderVglp);
 
       final m = discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp)
-          .firstWhere((m) => m.moduleName == 'responder');
+          .firstWhere((m) => m.moduleName == inFixture('responder'));
 
       // No volition guard survives: GLP is vGLP without volition-guarded
       // clauses (Definition "GLP, maGLP, cGLP").
@@ -110,7 +116,7 @@ respond(offer(From), [answered(Answer?, From?)]) :-
 
       final modules =
           discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp);
-      final compiled = modules.firstWhere((m) => m.moduleName == 'responder');
+      final compiled = modules.firstWhere((m) => m.moduleName == inFixture('responder'));
       final sibling = modules.firstWhere((m) => m.isSelfGlp);
       bool declares(DiscoveredModule m, String sig) =>
           m.ancestorScope.procedures.containsKey(sig) ||
@@ -178,13 +184,13 @@ ping(a).
 
     test('compiles on load and is well-typed, input coverage included', () {
       final modules = discoverProgram(dir, rootSelfGlpPath: _rootSelfGlp);
-      expect(modules.map((m) => m.moduleName), contains('responder'));
+      expect(modules.map((m) => m.moduleName), contains('tests/vglp/one_clause/responder'));
       expect(() => typeCheckProgram(modules, rootDir: dir), returnsNormally);
     });
 
     test("a clause with no else-branch has a reply type with no else", () {
       final m = discoverProgram(dir, rootSelfGlpPath: _rootSelfGlp)
-          .firstWhere((m) => m.moduleName == 'responder');
+          .firstWhere((m) => m.moduleName == 'tests/vglp/one_clause/responder');
       String def(String name) =>
           m.ast.typeDefs.firstWhere((d) => d.name == name).toString();
       expect(def('Reply_greet_1'), 'Reply_greet_1 ::= then(Xs_greet_1).');
@@ -230,7 +236,7 @@ two(A, B, NA, NB, OA?, OB?) :- agent(A?, NA?, OA), agent(B?, NB?, OB).
 ''');
       final modules =
           discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp);
-      final agent = modules.firstWhere((m) => m.moduleName == 'agent');
+      final agent = modules.firstWhere((m) => m.moduleName == inFixture('agent'));
       expect(agent.ast.procedures.map((p) => '${p.name}/${p.arity}'),
           containsAll(['agent/4', 'agent1/6', 'two/7']));
       expect(() => typeCheckProgram(modules, rootDir: fixture.path),
@@ -269,7 +275,7 @@ decide(no, From, refuse(From?)).
 ''');
       final modules =
           discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp);
-      final agent = modules.firstWhere((m) => m.moduleName == 'agent');
+      final agent = modules.firstWhere((m) => m.moduleName == inFixture('agent'));
       expect(
           agent.ast.typeDefs.map((d) => d.toString()),
           contains('Question ::= request_r(Request?) ; card_w(Card).'));
@@ -314,7 +320,7 @@ respond(offer(From), [answered(no, From?)]) :- ground(From?) | true.
       final modules =
           discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp);
       final responder =
-          modules.where((m) => m.moduleName == 'responder').toList();
+          modules.where((m) => m.moduleName == inFixture('responder')).toList();
       expect(responder, hasLength(1));
       expect(responder.single.filePath, endsWith('.glp'),
           reason: 'switching a deployed program onto its compiled agent is its '
@@ -376,7 +382,7 @@ greet(offer(From), Outs, Outs1?) :-
       expect(emitted, contains('Xs_greet_1 ::= xs_greet_1(Key).'));
       // And the load compiles the same source.
       final m = discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp)
-          .firstWhere((m) => m.moduleName == 'greeter');
+          .firstWhere((m) => m.moduleName == inFixture('greeter'));
       expect(m.ast.procedures.map((p) => p.name), contains('greet'));
     });
 

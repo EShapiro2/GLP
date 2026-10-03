@@ -1,0 +1,16 @@
+%% The program's interface (TGLP modules.tex, External access): its three
+%% entry points, forwarded to client.glp, which defines them.  A directory with
+%% no self.glp is not a program ("Entry and the absence of a boot module");
+%% until 2026-10-02 this one had none and took client.glp's exported
+%% procedures for its entry points.
+imported procedure client#test_merge(Stream(Integer)).
+exported procedure test_merge(Stream(Integer)).
+test_merge(Z?) :- client # test_merge(Z).
+
+imported procedure client#test_both(Stream(Integer), Stream(Constant)).
+exported procedure test_both(Stream(Integer), Stream(Constant)).
+test_both(Zi?, Zc?) :- client # test_both(Zi, Zc).
+
+imported procedure client#wrap_all(Stream(Integer)?, Stream(Wrap(Integer))).
+exported procedure wrap_all(Stream(Integer)?, Stream(Wrap(Integer))).
+wrap_all(Xs, Ws?) :- client # wrap_all(Xs?, Ws).

@@ -1,0 +1,9 @@
+%% The program's interface (TGLP modules.tex, External access): go/2, its one
+%% entry point, forwarded to cons.glp, which defines it, and Item, the type its
+%% declaration names.  A directory with no self.glp is not a program ("Entry
+%% and the absence of a boot module"); until 2026-10-02 this one had none and
+%% took cons.glp's exported go/2 for its entry point.
+Item ::= a ; b.
+imported procedure cons#go(Stream(Item)?, Stream(Item)).
+exported procedure go(Stream(Item)?, Stream(Item)).
+go(In, Out?) :- cons # go(In?, Out).

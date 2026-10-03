@@ -17,6 +17,38 @@ import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
 import 'package:glp_runtime/analysis/type_checker/param_expansion.dart';
 import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart';
 
+/// The name of the module held by the file at [filePath]: its path from the
+/// root [rootDir] (TGLP modules.tex, Compilation, third step: every procedure
+/// and type is renamed `M:p/n` and `M:T`, "where M is the module's path from
+/// the root").  A directory's `self.glp` is named by the directory's path, any
+/// other module by its directory's path and its file name, the extension
+/// dropped: `secure/app.glp` is `secure/app`, `secure/self.glp` is `secure`.
+/// Segments are joined by `/`; the root's own `self.glp` is the empty path.
+///
+/// A file outside [rootDir] --- a program loaded from outside the root, which
+/// TGLP's Definition "Root, Scope" does not cover --- is named by its relative
+/// path from the root, `..` segments included, which no file under the root
+/// shares.
+String modulePathName(String filePath, String rootDir) {
+  final file = ppath.normalize(File(filePath).absolute.path);
+  final root = ppath.normalize(Directory(rootDir).absolute.path);
+  final target = ppath.basename(file) == 'self.glp'
+      ? ppath.dirname(file)
+      : ppath.withoutExtension(file);
+  final rel = ppath.relative(target, from: root);
+  if (rel == '.') return '';
+  return ppath.split(rel).join('/');
+}
+
+/// The path from the root of the directory holding the module named [name]:
+/// the module itself where it is a `self.glp` ([isSelfGlp]), otherwise its
+/// name without the last segment.  The root is the empty path.
+String moduleDirectoryName(String name, {required bool isSelfGlp}) {
+  if (isSelfGlp) return name;
+  final slash = name.lastIndexOf('/');
+  return slash < 0 ? '' : name.substring(0, slash);
+}
+
 /// Discover the self.glp chain from root to target file's directory.
 ///
 /// Walks up from the target file's directory to the root directory,
@@ -197,16 +229,20 @@ TypeEnvironment mergeModuleIntoScope(TypeEnvironment env, ast.Module module,
 
 /// Merge a self.glp file into a scope environment: parse, then
 /// [mergeModuleIntoScope], labelled by the directory the `self.glp` is the
-/// scope of --- the name the linker gives that module.
+/// scope of --- the name the linker gives that module, its path from [root]
+/// ([modulePathName]); with no [root] given, the directory's last segment.
 ///
 /// The types the `self.glp`'s `-expose` directives lift are in [env] before
 /// the `self.glp` is merged ([liftExposedTypes]), so its own declarations and
 /// every later layer resolve them.
-TypeEnvironment mergeSelfGlpFileIntoScope(TypeEnvironment env, String path) {
+TypeEnvironment mergeSelfGlpFileIntoScope(TypeEnvironment env, String path,
+    {String? root}) {
   final source = File(path).readAsStringSync();
   final module = Parser(Lexer(source).tokenize()).parseModule();
-  final lifted = liftExposedTypes(env, module, File(path).parent.path);
-  return mergeModuleIntoScope(lifted, module, label: _directoryLabel(path));
+  final lifted =
+      liftExposedTypes(env, module, File(path).parent.path, root: root);
+  return mergeModuleIntoScope(lifted, module,
+      label: root != null ? modulePathName(path, root) : _directoryLabel(path));
 }
 
 /// [env] with the types that [exposer]'s `-expose` directives lift into the
@@ -228,9 +264,12 @@ TypeEnvironment mergeSelfGlpFileIntoScope(TypeEnvironment env, String path) {
 /// subtree with the same [exposedExportScope], so the two agree on every type
 /// they share.  A type [env] already defines is not replaced: a definition
 /// nearer the use site shadows an exposed one.  A module path whose file is
-/// missing lifts nothing here; the linker reports it.
+/// missing lifts nothing here; the linker reports it.  The lifted types are
+/// labelled by the exposed module's name, its path from [root]
+/// ([modulePathName]); with no [root] given, its file name.
 TypeEnvironment liftExposedTypes(
-    TypeEnvironment env, ast.Module exposer, String exposerDir) {
+    TypeEnvironment env, ast.Module exposer, String exposerDir,
+    {String? root}) {
   if (exposer.exposes.isEmpty) return env;
   var types = env.types;
   var origins = env.typeOrigins;
@@ -246,7 +285,9 @@ TypeEnvironment liftExposedTypes(
             typeTemplates: env.typeTemplates,
             typeOrigins: origins),
         exposerTypeDefs: exposer.typeDefs);
-    final label = ppath.basenameWithoutExtension(file.path);
+    final label = root != null
+        ? modulePathName(file.path, root)
+        : ppath.basenameWithoutExtension(file.path);
     final added = <String, TypeDef>{
       for (final e in lifted.types.entries)
         if (!types.containsKey(e.key)) e.key: e.value,
@@ -356,7 +397,8 @@ TypeEnvironment buildAncestorScope({
         // its `-expose` directives, which are d_1's as much as its
         // definitions are (modules.tex, "The -expose directive").
         env = liftExposedTypes(
-            env, Parser(Lexer(source).tokenize()).parseModule(), f.parent.path);
+            env, Parser(Lexer(source).tokenize()).parseModule(), f.parent.path,
+            root: f.parent.path);
       }
     }
   }
@@ -365,7 +407,8 @@ TypeEnvironment buildAncestorScope({
         File(selfGlpPath).absolute.path == rootSelf.absolute.path) {
       continue;
     }
-    env = mergeSelfGlpFileIntoScope(env, selfGlpPath);
+    env = mergeSelfGlpFileIntoScope(env, selfGlpPath,
+        root: rootSelf?.parent.path);
   }
   return env;
 }

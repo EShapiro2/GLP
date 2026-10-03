@@ -5,7 +5,8 @@
 %% _seedCrossModuleInstantiations) must check lib's clauses at this instantiation
 %% and reject — otherwise the type error leaks across the `#` seam (the bug this
 %% guards against). Loading the project must FAIL type checking.
-Item ::= a ; b.
+%% Item is defined in the directory's self.glp, the program's interface, which
+%% forwards go/2 here.
 imported procedure lib#relay(Stream(Item)?, Stream(Item)).
 exported procedure go(Stream(Item)?, Stream(Item)).
 go(In, Out?) :- lib # relay(In?, Out).
