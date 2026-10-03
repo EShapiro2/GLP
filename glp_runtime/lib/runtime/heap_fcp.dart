@@ -63,6 +63,11 @@ class WriterContent {
 /// - Unbound, the writer and reader cells point to each other; a writer bound
 ///   to a reader holds a Pointer, extending the dereference chain
 /// - Suspensions are stored on writer cells
+/// The hops a dereference follows before it keeps the cells it passes to find
+/// a cycle ([HeapFCP.derefAddr]).  A chain this short needs no set; a cycle,
+/// which goes round for ever, is found within one lap of the set's start.
+const int _derefShortChain = 16;
+
 class HeapFCP {
   final List<HeapCell> cells = [];
   
@@ -275,21 +280,28 @@ class HeapFCP {
   /// Returns: Term (bound) | VarRef (unbound writer) | VariableEntry (imported unbound)
   Object derefAddr(int startAddr) {
     var current = startAddr;
-    final visited = <int>{};
+    // The cells passed, for the cycle check: kept from the [_derefShortChain]th
+    // hop on, a chain that long being the rare one.  Until 2026-10-02 every
+    // dereference made the set, most of them following one or two pointers.
+    Set<int>? visited;
+    var hops = 0;
+    var previous = -1;
     CellTag? previousTag;  // Track previous tag for WxW detection
 
     while (true) {
-      if (visited.contains(current)) {
-        throw StateError('Cycle detected at address $current - SRSW violation!');
+      if (++hops > _derefShortChain) {
+        visited ??= <int>{};
+        if (!visited.add(current)) {
+          throw StateError('Cycle detected at address $current - SRSW violation!');
+        }
       }
-      visited.add(current);
 
       final cell = cells[current];
 
       // Per spec Section 4.5: WxW detection during deref
       // If we followed a pointer from a writer and landed on another writer, that's a violation
       if (previousTag == CellTag.WrtTag && cell.tag == CellTag.WrtTag) {
-        throw StateError('SRSW violation: writer at ${visited.elementAt(visited.length - 2)} points to writer at $current');
+        throw StateError('SRSW violation: writer at $previous points to writer at $current');
       }
 
       switch (cell.tag) {
@@ -306,6 +318,7 @@ class HeapFCP {
           if (cell.content is Pointer) {
             // Follow pointer to writer
             previousTag = cell.tag;
+            previous = current;
             current = (cell.content as Pointer).targetAddr;
             continue;
           }
@@ -340,6 +353,7 @@ class HeapFCP {
             }
             // Bound to another cell - follow the pointer
             previousTag = cell.tag;
+            previous = current;
             current = target;
             continue;
           }
