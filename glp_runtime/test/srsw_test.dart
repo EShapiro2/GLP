@@ -202,4 +202,35 @@ k(X, Y?) :- integer(X?) | pair(X?, X?, Y).
 ''');
     expect(program, isNotNull);
   });
+
+  // ===========================================================================
+  // real/1, "Ground: yes" (GLP-Spec appendix-guards.tex, 12be29b; GLP #3
+  // Cowork, 2026-10-02 22:19 UTC).  No engine is built in this file, so the
+  // root scope is empty and the guard's declaration types nothing: the
+  // analyzer's mark alone licenses X? twice.  Its runtime cases are
+  // test/engine/real_guard_test.dart.
+  // ===========================================================================
+
+  test('real/1, "Ground: yes", licenses a reader twice', () {
+    final program = GlpCompiler().compile('''
+procedure pair(_?, _?, _).
+pair(_, _, done).
+procedure k(_?, _).
+k(X, Y?) :- real(X?) | pair(X?, X?, Y).
+''');
+    expect(program, isNotNull);
+  });
+
+  test('real/1 licenses no writer twice: X occurs once, as ever', () {
+    expect(
+        () => GlpCompiler().compile('''
+procedure w(_?, _).
+w(X, Y?) :- real(X?) | Y = s(X).
+'''),
+        throwsA(predicate(
+            (e) => '$e'.contains(
+                'Writer variable "X" occurs 2 times; a writer occurs once, '
+                'whatever the guards'),
+            'the writer twice refused')));
+  });
 }

@@ -107,6 +107,7 @@ Done ::= done.
 % Type guards
 procedure integer(Integer?).
 procedure number(Number?).
+procedure real(Real?).
 procedure string(String?).
 procedure constant(Constant?).
 procedure compound(_?).

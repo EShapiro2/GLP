@@ -536,6 +536,53 @@ check "guard_int" "succeeds" "$a12"
 check "guard_compare" "succeeds" "$a12"
 check "guard_known_valid" "Ygr = hello" "$a12"
 
+# --- A12b: The guard real/1, beside integer/1's ---
+# GLP-Spec appendix-guards.tex (12be29b), the guard table beside number:
+# procedure real(Real?), Ground yes --- it succeeds if its argument is a Real,
+# suspends on an unbound reader, fails otherwise (GLP #3 Cowork, 2026-10-02
+# 22:19 UTC).  A Real is a floating-point number: 2.0 and the quotient 4 / 2
+# are Reals and 2 is not, as integer(2.0) fails.  Its runtime cases are
+# glp_runtime/test/engine/real_guard_test.dart's too.
+echo "--- A12b: The guard real/1 ---"
+a12b=$("$REPL_RUN" <<HEREDOC
+$TYPED/real_guard.glp
+real_or_other(2.5, Rr1).
+real_or_other(2.0, Rr2).
+real_or_other(2, Rr3).
+real_or_other(hello, Rr4).
+real_or_other("text", Rr5).
+real_or_other(f(1.5), Rr6).
+kind_of(3, Rk1).
+kind_of(3.0, Rk2).
+half(4, Rh1).
+as_real(3, Ra1).
+in_f(f(W1), Rw1).
+real_or_other(Z1?, Rz1).
+real_or_other(Z2?, Rz2), Z2 = 1.5.
+twice(1.5, Rt1).
+narrow(2.5, Rn1).
+narrow(3, Rn2).
+:quit
+HEREDOC
+2>&1)
+
+check "real/1: a Real succeeds" "Rr1 = real" "$a12b"
+check "real/1: 2.0 is a Real" "Rr2 = real" "$a12b"
+check "real/1: 2, an Integer, fails" "Rr3 = other" "$a12b"
+check "real/1: an atom fails" "Rr4 = other" "$a12b"
+check "real/1: a string fails" "Rr5 = other" "$a12b"
+check "real/1: a structure fails" "Rr6 = other" "$a12b"
+check "real/1 beside integer/1: 3 is an Integer" "Rk1 = integer" "$a12b"
+check "real/1 beside integer/1: 3.0 is a Real" "Rk2 = real" "$a12b"
+check "real/1: the quotient 4 / 2 is a Real" "Rh1 = real" "$a12b"
+check "real/1: '_real' gives a Real" "Ra1 = real" "$a12b"
+check "real/1: an unbound writer fails" "Rw1 = no" "$a12b"
+check "real/1: an unbound reader suspends" "suspended" "$(echo "$a12b" | grep -A1 'Rz1 = ')"
+check "real/1: and resumes on a Real" "Rz2 = real" "$a12b"
+check "real/1 grounds its argument: X? twice after it" "Rt1 = p(1.5, 1.5)" "$a12b"
+check "real/1 narrows Number? to Real?" "Rn1 = ok" "$a12b"
+check "real/1 narrows: an Integer takes otherwise" "Rn2 = no" "$a12b"
+
 # --- A13: Ground equal, ground not-equal ---
 # GLP-Spec appendix-guards.tex (bbff21d): "=?= succeeds if both arguments are
 # ground and equal.  =?\= succeeds if no readers substitution makes them ground

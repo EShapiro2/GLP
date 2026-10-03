@@ -56,6 +56,7 @@ const Set<String> builtinProcedures = {
   // Type guards
   'integer/1',
   'number/1',
+  'real/1',
   'string/1',
   'constant/1',
   'compound/1',
