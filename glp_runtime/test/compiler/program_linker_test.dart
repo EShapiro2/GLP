@@ -15,6 +15,8 @@ import 'package:glp_runtime/compiler/compiler.dart';
 import 'package:glp_runtime/compiler/partial_evaluator.dart' show setRootScopeUnitClauseSource;
 import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart' show setRootScopeEnvironmentSource;
 import 'package:glp_runtime/compiler/ast.dart';
+import 'package:glp_runtime/analysis/type_checker/type_checker.dart'
+    show checkModule;
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
@@ -387,22 +389,39 @@ void main() {
     // declaration.  See ../programs/tests/linker_root_redef/.
     const redef = '../programs/tests/linker_root_redef';
 
-    test('a redefinition with no declaration is refused, naming M:p', () {
+    test('step 2 refuses a redefinition with no declaration of its own', () {
       final dir = '$redef/undeclared';
       final modules = discoverProgram(dir, rootSelfGlpPath: rootSelfPath);
       expect(
           () => checkedLinkedProgram(modules, rootDir: dir),
           throwsA(predicate((e) => e.toString().contains(
-              'Procedure tests/linker_root_redef/undeclared/m:merge/3 has no '
-              'type declaration'))));
+              'linker_root_redef/undeclared/m.glp:3: Procedure merge/3 is '
+              'defined in this module and declared only in an enclosing '
+              'scope'))));
     });
 
-    test('the linked program borrows no declaration from the root', () {
+    test('so does the module loaded alone, checked against its scope', () {
+      final m = '$redef/undeclared/m.glp';
+      expect(
+          () => checkModulesIndependently(
+              discoverSingleModule(m, rootSelfGlpPath: rootSelfPath)),
+          throwsA(predicate((e) => e.toString().contains(
+              'm.glp:3: Procedure merge/3 is defined in this module and '
+              'declared only in an enclosing scope'))));
+    });
+
+    test('the linked program borrows no declaration, and its check refuses M:p',
+        () {
       final dir = '$redef/undeclared';
       final modules = discoverProgram(dir, rootSelfGlpPath: rootSelfPath);
       final flat = linkedFlatModule(modules, linkProgram(modules, rootDir: dir));
       expect(flat.procDeclarations.map((d) => d.name),
           isNot(contains('tests/linker_root_redef/undeclared/m:merge')));
+      expect(
+          checkModule(flat).errors.map((e) => e.message),
+          contains(startsWith('Procedure '
+              'tests/linker_root_redef/undeclared/m:merge/3 has no type '
+              'declaration')));
     });
 
     test('a redefinition with its own declaration links and checks', () {

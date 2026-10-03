@@ -882,6 +882,44 @@ List<TypeError> declaredWithoutClauses(
   ];
 }
 
+/// The procedures of [module]'s own that carry no declaration of the module's
+/// own while a declaration of their name and arity is in the scope [typeEnv]
+/// --- the root's or an enclosing self.glp's --- each an error.  A module is
+/// "a sequence of type definitions and typed procedures", a typed procedure
+/// being "a procedure declaration ... immediately followed by a procedure for
+/// p/n" (TGLP modules.tex, Definition "Typed Procedure, Module"), so a
+/// procedure the module defines --- a redefinition of a root operation among
+/// them --- is a procedure of its own, renamed M:p at linking, and is declared
+/// in the module: an enclosing scope's declaration of the same name declares
+/// the enclosing scope's procedure, not this one.  A procedure with no
+/// declaration in scope at all is refused by [TypeChecker.check] (TGLP
+/// Definition "Typed GLP Program", condition 1).  Until 2026-10-03 such a
+/// procedure was checked against the enclosing declaration, and the linker
+/// gave its renamed copy the root's.
+List<TypeError> definedWithoutOwnDeclaration(
+    ast.Module module, TypeEnvironment typeEnv) {
+  final own = <String>{
+    for (final d in module.procDeclarations)
+      if (!d.imported) d.key
+  };
+  return [
+    for (final p in module.procedures)
+      if (!own.contains('${p.name}/${p.arity}') &&
+          (typeEnv.procedures.containsKey('${p.name}/${p.arity}') ||
+              typeEnv.paramProcDecls.containsKey('${p.name}/${p.arity}')))
+        TypeError(
+          'Procedure ${p.name}/${p.arity} is defined in this module and '
+          'declared only in an enclosing scope: a procedure a module defines '
+          'is its own and is declared in it (TGLP modules.tex, Definition '
+          '"Typed Procedure, Module"), an enclosing declaration of the same '
+          'name declaring the enclosing procedure',
+          p.clauses.isEmpty ? p.line : p.clauses.first.line,
+          p.clauses.isEmpty ? p.column : p.clauses.first.column,
+          '${p.name}/${p.arity}',
+        ),
+  ];
+}
+
 TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transformedProcedures, TypeEnvironment? ancestorScope, wtc.InstantiationCollector? collector, Set<String>? certifiedKeys, bool rejectUninstantiatedInspecting = true}) {
   final typeEnv = buildModuleTypeEnvironment(module, ancestorScope: ancestorScope);
 
@@ -891,7 +929,10 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
   for (final proc in procedures) {
     clauses.addAll(proc.clauses);
   }
-  final undefinedDeclarations = declaredWithoutClauses(module, clauses);
+  final undefinedDeclarations = [
+    ...declaredWithoutClauses(module, clauses),
+    ...definedWithoutOwnDeclaration(module, typeEnv),
+  ];
 
   // Program mode: the caller (program linker) supplies a collector and runs the
   // cross-module instantiation closure itself.

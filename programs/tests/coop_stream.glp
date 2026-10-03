@@ -25,7 +25,12 @@ producer1([1, 2, 3]).
 procedure producer2(Stream(Constant)).
 producer2([a, b, c]).
 
-% Merger: interleaves two streams
+% Merger: interleaves two streams.  It redefines the root's merge/3 and
+% declares it, as every procedure of a module is declared (TGLP modules.tex,
+% Definition "Typed Procedure, Module"); the declaration is the root
+% self.glp's, which typed these clauses until 2026-10-03.
+procedure(X) merge(Stream(X)?, Stream(X)?, Stream(X)).
+
 % When Xs has an element, take it
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
 

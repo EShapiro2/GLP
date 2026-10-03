@@ -1,8 +1,12 @@
 % Standalone merge with reader argument test
 %
-% p/1 and test/2 are declared, so the file is a typed program (TGLP
+% p/1, test/2 and merge/3 are declared, so the file is a typed program (TGLP
 % Definition "Typed GLP Program", condition 1) and is refused by the SRSW
-% pass, which is its subject; merge/3's clauses take the root's declaration.
+% pass, which is its subject.  merge/3 redefines the root's and is declared
+% here, as every procedure of a module is (TGLP modules.tex, Definition "Typed
+% Procedure, Module"), by the root self.glp's declaration, which until
+% 2026-10-03 its clauses took from the root's scope.
+procedure(X) merge(Stream(X)?, Stream(X)?, Stream(X)).
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge([], [], []).

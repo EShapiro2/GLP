@@ -1,12 +1,14 @@
 %% A module that redefines a root operation by clauses of its own declares it
 %% (TGLP modules.tex, Definition "Typed Procedure, Module": "A module is a
 %% sequence of type definitions and typed procedures"): m.glp defines merge/3
-%% with no declaration of its own, so the linked program holds the procedure
-%% tests/linker_root_redef/undeclared/m:merge/3 with no declaration, and the
-%% program is refused (TGLP Definition "Typed GLP Program", condition 1).
-%% Until 2026-10-03 the linker gave it a renamed copy of the root's merge/3
-%% declaration, and the program loaded.  declared/ is the same program with
-%% the declaration, and loads.
+%% with no declaration of its own, the root's declaring the root's merge/3, so
+%% m.glp is refused when it is checked against its scope (Compilation, second
+%% step), and the linked program, which holds the procedure
+%% tests/linker_root_redef/undeclared/m:merge/3 with no declaration, is
+%% refused by its check (TGLP Definition "Typed GLP Program", condition 1).
+%% Until 2026-10-03 m.glp was checked against the root's declaration, the
+%% linker gave m:merge/3 a renamed copy of it, and the program loaded.
+%% declared/ is the same program with the declaration, and loads.
 imported procedure m#run(Stream(Integer)).
 exported procedure run(Stream(Integer)).
 run(Zs?) :- m # run(Zs).
