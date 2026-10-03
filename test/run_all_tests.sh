@@ -1327,6 +1327,24 @@ check "undefined declaration type: single file refused, file and line named" "de
 check "undefined declaration type: directory program refused, module file and line named" "decl_undefined_dir_neg/worker.glp:4: undefined type \"Mesage\" in the declaration of relay/2" "$a38"
 check_not "undefined declaration type: neither loads" "✓ Loaded" "$a38"
 
+# --- A39: The standard library's channel operations declare what they define ---
+# programs/lib/channels/channel_ops.glp defines send/3, receive/3 and
+# new_channel/2, and a procedure a module defines is declared in it (TGLP
+# modules.tex, Definition "Typed Procedure, Module"); it declares them as the
+# root self.glp does (GLP #3 Cowork, 2026-10-03 21:18 UTC, "16:01. 3").  Until
+# 2026-10-03 it declared none, and was refused once the root's declaration no
+# longer stood for a module's own procedure (49b869f2, 80fcc1cb).
+echo "--- A39: lib/channels/channel_ops.glp ---"
+a39=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/lib/channels/channel_ops.glp
+new_channel(C39a, C39b).
+:quit
+HEREDOC
+2>&1)
+check "channel_ops: loads" "Loaded: .*channel_ops.glp" "$a39"
+check "channel_ops: new_channel pairs two channels" "C39a = ch(" "$a39"
+check_not "channel_ops: no undeclared procedure" "declared only in an enclosing scope" "$a39"
+
 SECTION_A_PASS=$PASS
 SECTION_A_FAIL=$FAIL
 

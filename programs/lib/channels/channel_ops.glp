@@ -7,8 +7,13 @@
 %%
 %% These predicates are defined as guard predicates through unit clauses.
 
+procedure(X, Y) send(X?, Channel(Y, Stream(X))?, Channel(Y, Stream(X))).
 send(X, ch(In,[X?|Out?]), ch(In?,Out)).
+
+procedure(X, Y) receive(X, Channel(OpenStream(X), Y)?, Channel(Stream(X), Y)).
 receive(X?, ch([X|In],Out?), ch(In?,Out)).
+
+procedure(X, Y) new_channel(Channel(X, Y), Channel(Y, X)).
 new_channel(ch(Xs?,Ys), ch(Ys?,Xs)).
 
 %% send - adds message to output stream
