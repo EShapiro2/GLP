@@ -1,15 +1,15 @@
 
-%% Response-injection router (A5 Stage B), lifted verbatim from the platform
-%% self.glp files (social/network, social/graph, bonds — all
-%% identical).  Generalised over the injected value type R and the agent input
+%% Response-injection router (A5 Stage B): the answer to an agent's own cold
+%% call, injected into its input stream as response(Target, Response), the
+%% agent called and its answer --- an alternative of the input message type in
+%% its own right, never a msg(person, Id, ...), whose first argument is the
+%% role tag.  Generalised over the injected value type R and the agent input
 %% stream type S, both inferred at each call.  The clause constructs
-%% msg(_, _, response(_)) into the S stream, so per-instantiation checking
-%% verifies that S carries that shape at each instantiation.
-%%
-%% Body is unchanged from the platform sources.
+%% response(_, _) into the S stream, so per-instantiation checking verifies
+%% that S carries that shape at each instantiation.
 
-exported procedure(R, S) inject_msg(R?, Key?, Key?, Stream(S)?, Stream(S)).
-inject_msg(Resp, Target, Id, Ys, [msg(Target?, Id?, response(Resp?))|Ys?]) :-
+exported procedure(R, S) inject_msg(R?, Key?, Stream(S)?, Stream(S)).
+inject_msg(Resp, Target, Ys, [response(Target?, Resp?)|Ys?]) :-
     known(Resp?) | true.
-inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
-    inject_msg(Resp?, Target?, Id?, Ys?, Ys1).
+inject_msg(Resp, Target, [Y|Ys], [Y?|Ys1?]) :-
+    inject_msg(Resp?, Target?, Ys?, Ys1).

@@ -78,9 +78,8 @@ OutputsList ::= [] ; [OutputEntry | OutputsList].
 %% UserIn — under vGLP the person's commands are grants, not messages; UserIn
 %% carries the answers the responders inject and the results injected by
 %% inject_msg and inject_intro_result.
-UserContent    ::= response(Response).
 ColdCallAnswer ::= response(Response?).
-UserInMsg      ::= msg(Constant, Key, UserContent)
+UserInMsg      ::= response(Key, Response)
                  ; decision(Decision, Key, ColdCallAnswer)
                  ; intro_result(Key, IntroChannel)
                  ; intro_rejected(Constant).
@@ -181,8 +180,8 @@ agent(Id, [decision(Dec, From, response(Resp?))|UserIn], NetIn, Outs) :-
     agent(Id?, UserIn?, NetIn1?, Outs1?).
 
 %% My cold call was answered (injected by inject_msg).
-agent(Id, [msg(From, Id1, response(Resp))|UserIn], NetIn, Outs) :-
-    Id? =?= Id1? |
+agent(Id, [response(From, Resp)|UserIn], NetIn, Outs) :-
+    ground(Id?) |
     handle_response(Id?, Resp?, From?, Outs?, Outs1, NetIn?, NetIn1),
     agent(Id?, UserIn?, NetIn1?, Outs1?).
 
@@ -213,7 +212,7 @@ agent(Id, [_|UserIn], NetIn, Outs) :-
 agent(Id, UserIn, NetIn, Outs) :-
     ground(Id?), ground(Target?) |
     send_net(msg(Target?, intro(Id?, Resp)), Outs?, Outs1),
-    inject_msg(Resp?, Target?, Id?, UserIn?, UserIn1),
+    inject_msg(Resp?, Target?, UserIn?, UserIn1),
     agent(Id?, UserIn1?, NetIn?, Outs1?).
 
 %% Unfriend (End friend): notify the peer on the friend channel, tear down,

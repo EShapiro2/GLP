@@ -30,7 +30,6 @@ UserContent ::= connect(Key)
               ; accept_intro(Key, PendingValue)
               ; reject_intro(Constant, PendingValue)
               ; unfriend(Key)
-              ; response(Response)
               %% The super-app (SGSG paper, Section 3).  install: the person
               %% installs a certified mini-app --- its module value, its
               %% creator's certification, and the mini-app's user-interface
@@ -518,6 +517,9 @@ AgentChannel          ::= ch(AgentToUserStream, MediatorToAgentStream?).
 
 %% Agent input types
 UserInMsg    ::= msg(Constant, Key, UserContent)
+               %% The answer to the agent's own cold call (inject_msg): the
+               %% agent called and its response.
+               ; response(Key, Response)
                ; intro_result(Key, IntroChannel)
                ; intro_rejected(Constant)
                %% A running mini-app's request up its social-graph channel.
