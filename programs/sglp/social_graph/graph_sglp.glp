@@ -1,0 +1,85 @@
+%% The Grassroots Social Graph's sGLP source, in the term form the
+%% transformation reads (programs/sglp/README.md, "The term form"): sGLP's
+%% paper (the repository svGLP-Stochastic-Volitional-GLP), Section 5, "Example:
+%% The Grassroots Social Graph", whose listings are this source's surface form.
+%%
+%% source(V, S): V is the vGLP program's interface as Section 5 prints it, its
+%% types and its two volitional procedure declarations, which the transformation
+%% reads for the person process (which argument of Menu and Card is the answer);
+%% S is the sGLP program, the four profiles of graph.vglp at GLP 723d1602 and the
+%% run declaration as Section 5 prints it.  Section 5 prints the homophile's and
+%% the wary profile, with the procedures named pick and answer; four profiles in
+%% one program need distinct names, so they are named as graph.vglp names them,
+%% homophile_pick, indifferent_pick, wary_answer and sociable_answer; the
+%% indifferent and the sociable profile are Section 5's prose ("the indifferent
+%% is the homophile at 2/week and 50", "the sociable is the wary at 1/hour and
+%% 90") as graph.vglp writes them.  The vGLP program itself, its clauses, is
+%% graph.glp, vGLP's compilation, and is not the transformation's.
+%%
+%% transform.sh prints from it profiles.glp and population.glp, beside it.
+
+exported procedure source(SglpTerms, SglpTerms).
+source(
+  %% The vGLP program's interface (Section 5).
+  [type('Peer', ['Constant']),
+   type('YesNo', [yes, no]),
+   type('Peers', [[], ['Peer' | 'Peers']]),
+   type('Choice', [same('Peer'), other('Peer')]),
+   type('Menu', [menu('Peers', 'Peers', dual('Choice'))]),
+   type('Card', [card('Peer', dual('YesNo'))]),
+   volitional('Menu', ask(dual('Peers'), dual('Peers'), 'Choice')),
+   volitional('Card', respond(dual('Peer'), 'YesNo'))],
+
+  %% The profiles and the run declaration.
+  [person(homophile),
+   binds('Menu', homophile_menu),
+   decl(homophile_menu(dual('Menu'), dual('Integer'))),
+   clause(homophile_menu(var('M'), var('S')), [],
+          [random(var('S?'), 100, var('K'), var('S1')),
+           rated(homophile_pick(var('K?'), var('S1?'), var('M?')), rate(1, week))]),
+   decl(homophile_pick(dual('Integer'), dual('Integer'), dual('Menu'))),
+   clause(homophile_pick(var('K'), var('S'), menu(var('Ss'), var('_'), same(var('P?')))),
+          ['=<'(var('K?'), 98), ground(var('Ss?'))],
+          [one_of(var('Ss?'), var('S?'), var('P'))]),
+   clause(homophile_pick(var('K'), var('S'), menu(var('_'), var('Os'), other(var('P?')))),
+          ['>'(var('K?'), 98), ground(var('Os?'))],
+          [one_of(var('Os?'), var('S?'), var('P'))]),
+
+   person(indifferent),
+   binds('Menu', indifferent_menu),
+   decl(indifferent_menu(dual('Menu'), dual('Integer'))),
+   clause(indifferent_menu(var('M'), var('S')), [],
+          [random(var('S?'), 100, var('K'), var('S1')),
+           rated(indifferent_pick(var('K?'), var('S1?'), var('M?')), rate(2, week))]),
+   decl(indifferent_pick(dual('Integer'), dual('Integer'), dual('Menu'))),
+   clause(indifferent_pick(var('K'), var('S'), menu(var('Ss'), var('_'), same(var('P?')))),
+          ['=<'(var('K?'), 50), ground(var('Ss?'))],
+          [one_of(var('Ss?'), var('S?'), var('P'))]),
+   clause(indifferent_pick(var('K'), var('S'), menu(var('_'), var('Os'), other(var('P?')))),
+          ['>'(var('K?'), 50), ground(var('Os?'))],
+          [one_of(var('Os?'), var('S?'), var('P'))]),
+
+   person(wary),
+   binds('Card', wary_card),
+   decl(wary_card(dual('Card'), dual('Integer'))),
+   clause(wary_card(var('C'), var('S')), [],
+          [random(var('S?'), 100, var('K'), var('_')),
+           rated(wary_answer(var('K?'), var('C?')), rate(1, day))]),
+   decl(wary_answer(dual('Integer'), dual('Card'))),
+   clause(wary_answer(var('K'), card(var('_'), yes)), ['=<'(var('K?'), 20)], [true]),
+   clause(wary_answer(var('K'), card(var('_'), no)), ['>'(var('K?'), 20)], [true]),
+
+   person(sociable),
+   binds('Card', sociable_card),
+   decl(sociable_card(dual('Card'), dual('Integer'))),
+   clause(sociable_card(var('C'), var('S')), [],
+          [random(var('S?'), 100, var('K'), var('_')),
+           rated(sociable_answer(var('K?'), var('C?')), rate(1, hour))]),
+   decl(sociable_answer(dual('Integer'), dual('Card'))),
+   clause(sociable_answer(var('K'), card(var('_'), yes)), ['=<'(var('K?'), 90)], [true]),
+   clause(sociable_answer(var('K'), card(var('_'), no)), ['>'(var('K?'), 90)], [true]),
+
+   run(100,
+       [mix(approach, [share(homophile, 0.6), share(indifferent, 0.4)]),
+        mix(response, [share(wary, 0.7), share(sociable, 0.3)])],
+       1, year, 20260927)]).

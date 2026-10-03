@@ -3,7 +3,7 @@
 # svGLP-Stochastic-Volitional-GLP at d2f64b6) and its code tasks of 2026-10-02
 # 00:06 UTC, item 6, 15:23 UTC, items 1 and 3, 15:24 UTC, items 1 to 4, and
 # 15:44 UTC, and of 2026-10-03 08:44 UTC, item 2, 08:58 UTC, 09:22 UTC and
-# 09:45 UTC.
+# 09:45 UTC, and the transformation of 2026-10-03 09:27 UTC.
 #
 #   bash programs/sglp/test_sglp.sh
 #
@@ -90,6 +90,17 @@
 #       answering fewer a saver; and its credit where it is shown an offer with
 #       Held above 20, which the cautious answer no and the generous yes, every
 #       such answer agreeing with its line.
+# (x)   the transformation (transform.glp, transform.sh; the task of 2026-10-03
+#       09:27 UTC): the printed modules in place, social_graph/profiles.glp and
+#       population.glp and coins/profiles.glp and population.glp, are what the
+#       transformation prints from the sGLP sources, graph_sglp.glp and
+#       coins_sglp.glp, byte for byte (transform.sh --check); a source with a
+#       dimension whose probabilities do not sum to one and a profile in no
+#       dimension is refused with those two faults and nothing printed; the
+#       same source with them mended is translated, the rated goal's procedure
+#       taking the token, the person procedure the monitor's reference, the
+#       person process a clause for its person declaration, and the run
+#       declaration its thresholds.
 #
 # Prints one line per check and a summary line, "=== P passed, F failed ===";
 # exits non-zero if any check fails.  The runs of (iii) and (iv) take some
@@ -404,6 +415,38 @@ echo "        the .draw file of (cy): $A of 4 agents' lines not the profiles the
 [ "$A" -eq 0 ]
 check "each agent's line in the .draw file of (cy) is its profiles where the log of (cy) shows them" $?
 sed 's/^/        /' "$WORK/cy.draw"
+
+echo "--- (x) the transformation"
+bash "$HERE/transform.sh" --check > "$WORK/tx.out" 2>&1
+st=$?
+check "the printed modules are what the transformation prints from the sGLP sources" $st
+[ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/tx.out"
+# A small source: one interactive type Q ::= q(A?), the person procedure p_q
+# of profile p answering it after a rated goal of ans; BAD has p's dimension at
+# 0.5 and a profile r in no dimension, GOOD neither.
+V="[type('A', [a]), type('Q', [q(dual('A'))]), volitional('Q', ask(dual('A')))]"
+P="person(p), binds('Q', p_q), decl(p_q(dual('Q'), dual('Integer'))), clause(p_q(var('X'), var('_')), [], [rated(ans(var('X?')), rate(1, day))]), decl(ans(dual('Q'))), clause(ans(q(a)), [], [])"
+repl "$WORK/txbad.out" ':limit 1000000000000' "$HERE" \
+    "transform_terms($V, [$P, person(r), run(2, [mix(d, [share(p, 0.5)])], 1, day, 1)], profiles)."
+repl "$WORK/txgood.out" ':limit 1000000000000' "$HERE" \
+    "transform_terms($V, [$P, run(2, [mix(d, [share(p, 1.0)])], 1, day, 1)], profiles)." \
+    "transform_terms($V, [$P, run(2, [mix(d, [share(p, 1.0)])], 1, day, 1)], population)."
+sed 's/^\(GLP> \)*//' "$WORK/txbad.out" > "$WORK/txbad.lines"
+sed 's/^\(GLP> \)*//' "$WORK/txgood.out" > "$WORK/txgood.lines"
+grep -q '^%% not transformed: the probabilities of a dimension (one to nine profiles, whole percentages, summing to one)(d)$' "$WORK/txbad.lines" &&
+    grep -q '^%% not transformed: a profile not in exactly one dimension(r)$' "$WORK/txbad.lines" &&
+    [ "$(grep -c '^%% not transformed' "$WORK/txbad.lines")" -eq 2 ] &&
+    ! grep -q '^p_q(' "$WORK/txbad.lines"
+check "a source with a dimension not summing to one and a profile in no dimension is refused with those faults, nothing printed" $?
+! grep -q '^%% not transformed' "$WORK/txgood.lines" &&
+    grep -q '^ans(go, q(a))$' "$WORK/txgood.lines" &&
+    grep -q '^p_q(X, _, Mon)$' "$WORK/txgood.lines" &&
+    grep -q "^stream_append(rated('/'(1, day), Tok), Mon?, _)$" "$WORK/txgood.lines" &&
+    grep -q '^ans(Tok?, X?)$' "$WORK/txgood.lines" &&
+    grep -q '^person(A, profiles(p), Mon, Seed, Log, \[question(Type, q(X1?)) | Qs\])$' "$WORK/txgood.lines" &&
+    grep -q '^declaration(2, 1, day, 1)$' "$WORK/txgood.lines" &&
+    grep -q '^d(_, p)$' "$WORK/txgood.lines"
+check "the mended source is translated: the token, the monitor's reference, the person process's clause, the declaration and the draw" $?
 
 echo ""
 echo "=== $PASS passed, $FAIL failed ==="

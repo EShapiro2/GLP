@@ -1,0 +1,317 @@
+%% Printed by programs/sglp/transform.glp from the sGLP source in the term form
+%% (README.md, "The term form"); edit the source and run transform.sh, not this file.
+%% transform(coins, population)
+
+%% The run declaration of the source:
+%% (run(100, [mix(spending, [share(spender, 0.5), share(saver, 0.5)]), mix(credit, [share(cautious, 0.5), share(generous, 0.5)])], 1, year, 20260927))
+
+Profiles
+::=
+profiles(Dimension1, Dimension2)
+.
+Dimension1
+::=
+spender
+;
+saver
+.
+Dimension2
+::=
+cautious
+;
+generous
+.
+Question ::= question(Constant, Interactive).
+Interactive
+::=
+Menu
+;
+Offer
+.
+
+%% The person procedures, in the profiles module.
+imported procedure
+profiles
+#
+spender_menu
+(
+Menu
+?
+,
+Integer?
+,
+MutualRef?
+)
+.
+imported procedure
+profiles
+#
+saver_menu
+(
+Menu
+?
+,
+Integer?
+,
+MutualRef?
+)
+.
+imported procedure
+profiles
+#
+cautious_offer
+(
+Offer
+?
+,
+Integer?
+,
+MutualRef?
+)
+.
+imported procedure
+profiles
+#
+generous_offer
+(
+Offer
+?
+,
+Integer?
+,
+MutualRef?
+)
+.
+
+%% The person process (sGLP's paper, Section 4, "The person process").
+exported procedure person(Integer?, Profiles?, MutualRef?, Integer?, MutualRef?, Stream(Question)?).
+person(A, profiles(spender, D2), Mon, Seed, Log, [question(Type, menu(X1, X2, X3?)) | Qs])
+:-
+ground(X1?)
+,
+ground(X2?)
+|
+random(Seed?, 1, _, S)
+,
+profiles
+#
+spender_menu(menu(X1?, X2?, Y3), S?, Mon?)
+,
+answer_1(A?, Type?, X1?, X2?, Y3?, X3, Mon?, Log?)
+,
+person(A?, profiles(spender, D2?), Mon?, S?, Log?, Qs?)
+.
+person(A, profiles(saver, D2), Mon, Seed, Log, [question(Type, menu(X1, X2, X3?)) | Qs])
+:-
+ground(X1?)
+,
+ground(X2?)
+|
+random(Seed?, 1, _, S)
+,
+profiles
+#
+saver_menu(menu(X1?, X2?, Y3), S?, Mon?)
+,
+answer_1(A?, Type?, X1?, X2?, Y3?, X3, Mon?, Log?)
+,
+person(A?, profiles(saver, D2?), Mon?, S?, Log?, Qs?)
+.
+person(A, profiles(D1, cautious), Mon, Seed, Log, [question(Type, offer(X1, X2, X3, X4?)) | Qs])
+:-
+ground(X1?)
+,
+ground(X2?)
+,
+ground(X3?)
+|
+random(Seed?, 1, _, S)
+,
+profiles
+#
+cautious_offer(offer(X1?, X2?, X3?, Y4), S?, Mon?)
+,
+answer_2(A?, Type?, X1?, X2?, X3?, Y4?, X4, Mon?, Log?)
+,
+person(A?, profiles(D1?, cautious), Mon?, S?, Log?, Qs?)
+.
+person(A, profiles(D1, generous), Mon, Seed, Log, [question(Type, offer(X1, X2, X3, X4?)) | Qs])
+:-
+ground(X1?)
+,
+ground(X2?)
+,
+ground(X3?)
+|
+random(Seed?, 1, _, S)
+,
+profiles
+#
+generous_offer(offer(X1?, X2?, X3?, Y4), S?, Mon?)
+,
+answer_2(A?, Type?, X1?, X2?, X3?, Y4?, X4, Mon?, Log?)
+,
+person(A?, profiles(D1?, generous), Mon?, S?, Log?, Qs?)
+.
+person(_, _, _, _, _, []).
+
+%% The answer, assigned and logged (Section 4, "The log").
+procedure
+answer_1
+(
+Integer?
+,
+Constant?
+,
+Peers
+?
+,
+Wallet
+?
+,
+Request
+?
+,
+Request
+,
+MutualRef?
+,
+MutualRef?
+)
+.
+answer_1(A, Type, X1, X2, Y3, Y3?, Mon, Log)
+:-
+ground(Y3?)
+|
+stream_append(time(Time), Mon?, _)
+,
+stream_append(entry(Time?, A?, Type?, menu(X1?, X2?, Y3?)), Log?, _)
+.
+
+%% The answer, assigned and logged (Section 4, "The log").
+procedure
+answer_2
+(
+Integer?
+,
+Constant?
+,
+Peer
+?
+,
+Integer?
+,
+Integer?
+,
+YesNo
+?
+,
+YesNo
+,
+MutualRef?
+,
+MutualRef?
+)
+.
+answer_2(A, Type, X1, X2, X3, Y4, Y4?, Mon, Log)
+:-
+ground(Y4?)
+|
+stream_append(time(Time), Mon?, _)
+,
+stream_append(entry(Time?, A?, Type?, offer(X1?, X2?, X3?, Y4?)), Log?, _)
+.
+
+%% The run declaration: its agents, horizon, seed and thresholds.
+exported procedure
+declaration
+(
+Integer
+,
+Number
+,
+Span
+,
+Integer
+,
+Integer
+,
+Integer
+)
+.
+declaration(100, 1, year, 20260927, 50, 50)
+.
+
+%% An agent's stochastic person, drawn from its block (Appendix B).
+exported procedure
+stochastic_person
+(
+Integer?
+,
+Integer?
+,
+Integer?
+,
+Profiles
+,
+Integer
+)
+.
+stochastic_person(B, T1, T2, profiles(P1?, P2?), S?)
+:-
+random(B?, 100, K1, B1)
+,
+random(B1?, 100, K2, S)
+,
+spending(K1?, T1?, P1)
+,
+credit(K2?, T2?, P2)
+.
+
+%% The draw of the dimension(spending)
+procedure
+spending
+(
+Integer?
+,
+Integer?
+,
+Dimension1
+)
+.
+spending(K, T1, spender)
+:-
+'=<'(K?, T1?)
+|
+true
+.
+spending(K, T1, saver)
+:-
+'>'(K?, T1?)
+|
+true
+.
+
+%% The draw of the dimension(credit)
+procedure
+credit
+(
+Integer?
+,
+Integer?
+,
+Dimension2
+)
+.
+credit(K, T1, cautious)
+:-
+'=<'(K?, T1?)
+|
+true
+.
+credit(K, T1, generous)
+:-
+'>'(K?, T1?)
+|
+true
+.

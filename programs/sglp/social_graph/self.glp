@@ -1,18 +1,25 @@
-%% The Grassroots Social Graph in sGLP, in the translated form, written by hand
-%% (sGLP's paper, the repository svGLP-Stochastic-Volitional-GLP at d2f64b6,
-%% Section 5, "Example: The Grassroots Social Graph"; Section 4, "The
-%% transformation"): this directory's interface and the vGLP program's types.
+%% The Grassroots Social Graph in sGLP (sGLP's paper, the repository
+%% svGLP-Stochastic-Volitional-GLP, Section 5, "Example: The Grassroots Social
+%% Graph"; Section 4, "The transformation"): this directory's interface and
+%% the vGLP program's types.
 %%
+%%   graph_sglp.glp  the sGLP source in the term form (programs/sglp/README.md),
+%%                its profiles and its run declaration, and the vGLP program's
+%%                interface the transformation reads;
 %%   graph.glp    the compiled social-graph program with the person channel
-%%                threaded through it, and its four profiles translated (their
-%%                one_of, length and nth in programs/sglp/self.glp);
-%%   harness.glp  the run: the initial goals of the run declaration;
+%%                threaded through it, written by hand, vGLP's compilation
+%%                being vGLP's and not the transformation's;
+%%   profiles.glp the four profiles translated, and
+%%   population.glp  the person process, the run declaration and each agent's
+%%                stochastic person: both printed by programs/sglp/transform.sh
+%%                from graph_sglp.glp, and not edited;
+%%   harness.glp  the run: the network, the monitor, the log's sink and each
+%%                agent's initial goal, the machine's setup, by hand;
 %%   run.sh       a run through the REPL, its log and its friendship graph;
 %%   friendship.awk  the friendship graph from a run's log, at its end and at
 %%                the end of each month.
 %%
-%% The run is a program of programs/sglp, the directory above, whose person
-%% process (person.glp) calls the four person procedures exported here; load
+%% The run is a program of programs/sglp, the directory above; load
 %% programs/sglp and call social_graph/4 there, or social_graph/6 for another
 %% mix.
 
@@ -26,23 +33,20 @@ Card    ::= card(Peer, YesNo?).
 Content ::= offer(Peer) ; reply(Peer, YesNo).
 Msg     ::= msg(Peer, Content).
 
-imported procedure graph#homophile_menu(Menu?, Integer?, MutualRef?).
-imported procedure graph#indifferent_menu(Menu?, Integer?, MutualRef?).
-imported procedure graph#wary_card(Card?, Integer?, MutualRef?).
-imported procedure graph#sociable_card(Card?, Integer?, MutualRef?).
+%% A question on the person channel, as the harness hands the channel's stream
+%% to the person process (population.glp): the interactive type as a
+%% constant, and the person's end of the variable.
+Interactive ::= Menu ; Card.
+Question    ::= question(Constant, Interactive).
+
+%% A stochastic person, one profile per dimension, as the harness hands it from
+%% the population's draw to the person process (population.glp): Approach and
+%% Response are programs/sglp/self.glp's.
+Profiles ::= profiles(Approach, Response).
+
 imported procedure harness#run(Integer?, Number?, Span?, Integer?, Integer?,
                                Integer?).
 imported procedure harness#draw(Integer?, Integer?, Integer?, Integer?, Draw).
-
-%% The person procedures of the four profiles, for the person process.
-exported procedure homophile_menu(Menu?, Integer?, MutualRef?).
-homophile_menu(M, S, Mon) :- graph # homophile_menu(M?, S?, Mon?).
-exported procedure indifferent_menu(Menu?, Integer?, MutualRef?).
-indifferent_menu(M, S, Mon) :- graph # indifferent_menu(M?, S?, Mon?).
-exported procedure wary_card(Card?, Integer?, MutualRef?).
-wary_card(C, S, Mon) :- graph # wary_card(C?, S?, Mon?).
-exported procedure sociable_card(Card?, Integer?, MutualRef?).
-sociable_card(C, S, Mon) :- graph # sociable_card(C?, S?, Mon?).
 
 %% run(Agents?, Count?, Unit?, Seed?, Hom?, Wary?): the run, harness.glp, with
 %% the mix given by Hom and Wary, integers 0..100.
@@ -53,3 +57,18 @@ run(N, C, U, Seed, Hom, Wary) :- harness # run(N?, C?, U?, Seed?, Hom?, Wary?).
 %% its counts and each agent's profiles, harness.glp, without running it.
 exported procedure draw(Integer?, Integer?, Integer?, Integer?, Draw).
 draw(N, Seed, Hom, Wary, D?) :- harness # draw(N?, Seed?, Hom?, Wary?, D).
+
+%% declaration(N, C, U, Seed, Hom, Wary): the run declaration, its agents, its
+%% horizon, its seed and its mix's thresholds (population.glp).
+imported procedure population#declaration(Integer, Number, Span, Integer,
+                                          Integer, Integer).
+exported procedure declaration(Integer, Number, Span, Integer, Integer,
+                               Integer).
+declaration(N?, C?, U?, Seed?, Hom?, Wary?) :-
+    population # declaration(N, C, U, Seed, Hom, Wary).
+
+%% The sGLP source of this program in the term form (README.md, "The term
+%% form"), graph_sglp.glp, for the transformation (programs/sglp/transform.glp).
+imported procedure graph_sglp#source(SglpTerms, SglpTerms).
+exported procedure source(SglpTerms, SglpTerms).
+source(V?, S?) :- graph_sglp # source(V, S).

@@ -1,0 +1,94 @@
+#!/bin/bash
+# The transformation of the two examples' sGLP sources into GLP (programs/sglp,
+# transform.glp; sGLP's paper, the repository svGLP-Stochastic-Volitional-GLP,
+# Section 4, "The transformation"), through the REPL.
+#
+#   bash programs/sglp/transform.sh            print into the examples' directories
+#   bash programs/sglp/transform.sh <dir>      print into <dir>/social_graph/ and <dir>/coins/
+#   bash programs/sglp/transform.sh --check    print into a scratch directory and compare
+#
+# In one REPL session it loads programs/sglp and calls transform(P, Part) for
+# P social_graph and coins and Part profiles and population, and writes what
+# each prints between its lines "%% transform begin" and "%% transform end" to
+# P/Part.glp: social_graph/profiles.glp and social_graph/population.glp, from
+# social_graph/graph_sglp.glp, and coins/profiles.glp and coins/population.glp,
+# from coins/coins_sglp.glp.  The program it loads includes the printed files,
+# which the examples' harnesses call, so they are printed by the program that
+# holds them, the files it prints being those it loaded where the sources are
+# unchanged; --check says whether they are.
+#
+# Prints one line per file.  Exits 0 if all four were printed, with no fault
+# of the checks (a line "%% not transformed: ..."), and, with --check, each is
+# byte for byte the file in place; 1 otherwise, the faults or the differing
+# files named; 2 on a bad argument.
+
+set -u
+HERE="$(cd "$(dirname "$0")" && pwd)"
+GLP_DIR="$(cd "$HERE/../.." && pwd)"
+RT="$GLP_DIR/glp_runtime"
+
+CHECK=0
+if [ $# -gt 1 ]; then
+    echo "usage: transform.sh [<dir> | --check]" >&2
+    exit 2
+fi
+WORK=$(mktemp -d)
+trap 'rm -rf "$WORK"' EXIT
+if [ $# -eq 0 ]; then
+    OUT="$HERE"
+elif [ "$1" = "--check" ]; then
+    CHECK=1
+    OUT="$WORK/out"
+else
+    OUT="$1"
+fi
+mkdir -p "$OUT/social_graph" "$OUT/coins" || exit 2
+
+PARTS="social_graph/profiles social_graph/population coins/profiles coins/population"
+{
+    echo ':limit 1000000000000000'
+    echo "$HERE"
+    for p in $PARTS; do
+        echo "transform(${p%/*}, ${p#*/})."
+    done
+    echo ':quit'
+} > "$WORK/input"
+
+(cd "$RT" && bin/glpc < "$WORK/input" > "$WORK/repl.out" 2>&1)
+
+# The REPL's output: the lines between each "%% transform begin" and its
+# "%% transform end", in the order of the goals, to the parts' files.  A line
+# may carry the prompt "GLP> ".
+awk -v out="$OUT" -v parts="$PARTS" '
+    BEGIN { n = split(parts, p, " "); k = 0 }
+    { sub(/^(GLP> )+/, "") }
+    $0 == "%% transform begin" { k++; f = out "/" p[k] ".glp"; printf "" > f; on = 1; next }
+    $0 == "%% transform end" && on { close(f); on = 0; done[k] = 1; next }
+    on { print > f; if ($0 ~ /^%% not transformed/) print "fault " p[k] ": " $0 }
+    END {
+        for (i = 1; i <= n; i++) if (!(i in done)) print "missing " p[i]
+    }
+' "$WORK/repl.out" > "$WORK/status"
+
+OK=1
+if [ -s "$WORK/status" ]; then
+    cat "$WORK/status"
+    grep -q '^✓ Loaded program' "$WORK/repl.out" || grep -E '^(GLP> )*Error' "$WORK/repl.out" | head -20
+    OK=0
+fi
+for p in $PARTS; do
+    f="$OUT/$p.glp"
+    if [ "$CHECK" = 1 ]; then
+        if [ -f "$f" ] && cmp -s "$f" "$HERE/$p.glp"; then
+            echo "$p.glp: as printed"
+        else
+            echo "$p.glp: NOT as printed"
+            [ -f "$f" ] && diff "$HERE/$p.glp" "$f" | head -20
+            OK=0
+        fi
+    elif [ -f "$f" ]; then
+        echo "$f: $(wc -l < "$f" | tr -d ' ') lines"
+    fi
+done
+
+[ "$OK" = 1 ] && exit 0 || exit 1

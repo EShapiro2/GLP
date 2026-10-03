@@ -1,7 +1,9 @@
-%% The run of the Grassroots Social Graph: the initial goals its run declaration
-%% becomes (sGLP's paper, the repository svGLP-Stochastic-Volitional-GLP at
-%% d2f64b6: Section 4, "The run"; Section 5; Appendix B), written by hand; the
-%% declaration as Section 5 has it at c7d0b2f:
+%% The run of the Grassroots Social Graph (sGLP's paper, the repository
+%% svGLP-Stochastic-Volitional-GLP: Section 4, "The run"; Section 5; Appendix
+%% B): the machine's setup, written by hand, the population's draw and its
+%% person processes being the transformation's (population.glp, printed from
+%% the run declaration of graph_sglp.glp; sGLP's ruling of 2026-10-03 12:10
+%% UTC).  The declaration, as Section 5 has it:
 %%
 %%   run 100 agents [ approach ~ (homophile : 0.6 ; indifferent : 0.4),
 %%                    response ~ (wary : 0.7 ; sociable : 0.3) ]
@@ -11,8 +13,10 @@
 %% mix given by Hom and Wary, integers 0..100 (sGLP's code task of 2026-10-02
 %% 15:23 UTC, item 1): an agent's first draw K, of 1..100, makes it homophile
 %% for K =< Hom and indifferent otherwise, its second wary for K =< Wary and
-%% sociable otherwise, so 0 is none and 100 is all; the run declaration's mix is
-%% Hom 60 and Wary 70, which programs/sglp/self.glp's social_graph/4 passes.  The
+%% sociable otherwise, so 0 is none and 100 is all: they are the thresholds of
+%% the population's draw, stochastic_person/5 of population.glp, and the run
+%% declaration's are 60 and 70, its declaration/6, which programs/sglp/self.glp's
+%% social_graph/4 passes.  The
 %% whole population is in one machine, as the guard when_idle requires (Section
 %% 4, "The guard").  Its goals:
 %%
@@ -21,7 +25,8 @@
 %%   rest of the other; the first list is the other agents of a's sex, the
 %%   second the agents of the other sex), its input and output streams and its
 %%   person channel, spawned once both lists are built --- and its person
-%%   process, with its stochastic person and its seed, reading that channel;
+%%   process (population.glp, person/6), with its stochastic person and its
+%%   seed, reading that channel;
 %%   at no agent, the network --- the root's mwm/2 merging the agents' output
 %%   streams, and a balanced tree of deliver/4 goals handing each message to the
 %%   input stream of the agent it names --- the monitor, with the run's seed and
@@ -34,9 +39,9 @@
 %% population's draws are from a second generator, started at the first value
 %% drawn from the run's seed, split into blocks of 4096 consecutive draws:
 %% agent a's block is the a-th.  Its first two draws pick a's profile in each
-%% dimension by the mix (K of 1..100: homophile for K =< Hom, wary for K =<
-%% Wary), and the seed they leave is its person process's seed, the start of its
-%% own generator, whatever the mix.  An agent's draws stay within its block
+%% dimension by the mix (population.glp, stochastic_person/5), and the seed
+%% they leave is its person process's seed, the start of its own generator,
+%% whatever the mix.  An agent's draws stay within its block
 %% while it answers fewer than about 4090 questions; past that they run into
 %% the next agent's.
 %%
@@ -47,6 +52,10 @@
 
 imported procedure graph#start(Peer?, Peers?, Peers?, Stream(Msg)?, Stream(Msg),
                                MutualRef?).
+imported procedure population#stochastic_person(Integer?, Integer?, Integer?,
+                                                Profiles, Integer).
+imported procedure population#person(Integer?, Profiles?, MutualRef?, Integer?,
+                                     MutualRef?, Stream(Question)?).
 
 exported procedure run(Integer?, Number?, Span?, Integer?, Integer?, Integer?).
 run(N, C, U, Seed, Hom, Wary) :-
@@ -72,37 +81,25 @@ procedure agents(Integer?, Integer?, Integer?, Integer?, Integer?, Integer?,
 agents(A, H, N, B, Hom, Wary, [In|Ins], [merge(Out?)|Ms?], Mon, Log) :-
     A? =< N? |
     peers(A?, H?, N?, Ss, Os, Done),
-    random(B?, 100, K1, B1),
-    random(B1?, 100, K2, Seed),
-    approach(K1?, Hom?, Ap),
-    response(K2?, Wary?, Re),
+    population # stochastic_person(B?, Hom?, Wary?, P, Seed),
     allocate_mutual_reference(Ch, Questions),
     start_when(Done?, A?, Ss?, Os?, In?, Out, Ch?),
-    person(A?, profiles(Ap?, Re?), Mon?, Seed?, Log?, Questions?),
+    population # person(A?, P?, Mon?, Seed?, Log?, Questions?),
     skip(4096, B?, B2),
     A1 := A? + 1,
     agents(A1?, H?, N?, B2?, Hom?, Wary?, Ins?, Ms, Mon?, Log?).
 agents(A, _, N, _, _, _, [], [], _, _) :-
     A? > N? | true.
 
-%% The mixes: approach ~ (homophile : Hom/100 ; indifferent : 1 - Hom/100),
-%% response ~ (wary : Wary/100 ; sociable : 1 - Wary/100), K drawn from 1..100;
-%% the run declaration's are Hom 60 and Wary 70.
-procedure approach(Integer?, Integer?, Approach).
-approach(K, Hom, homophile) :- K? =< Hom? | true.
-approach(K, Hom, indifferent) :- K? > Hom? | true.
-procedure response(Integer?, Integer?, Response).
-response(K, Wary, wary) :- K? =< Wary? | true.
-response(K, Wary, sociable) :- K? > Wary? | true.
-
 %% The population's draw (sGLP's code tasks of 2026-10-02 15:44 UTC and
 %% 2026-10-03 08:58 UTC).  draw(N?, Seed?, Hom?, Wary?, D): D is
 %% draw(Homophile, Indifferent, Wary, Sociable, As), the numbers of agents of
 %% 1..N of each profile in each dimension in the run of N agents from Seed with
 %% the mix Hom and Wary, and As the list of agent(A, Approach, Response), A of
-%% 1..N in order, each agent's profiles, without running it: each agent's two
-%% draws from its block, as agents/10 draws them, decided by approach/3 and
-%% response/3, and counted as they are listed.  run.sh calls it in a REPL
+%% 1..N in order, each agent's profiles, without running it: each agent's
+%% stochastic person drawn from its block by population.glp's
+%% stochastic_person/5, as agents/10 draws it, and counted as they are
+%% listed.  run.sh calls it in a REPL
 %% session of its own, so that the run's machine is the same with it as
 %% without, and its log the same.  tally/14 draws as agents/10 does, and a
 %% change to the one is a change to the other.
@@ -123,10 +120,8 @@ procedure tally(Integer?, Integer?, Integer?, Integer?, Integer?, Integer?,
 tally(A, N, B, Hom, Wary, H, I, W, S, [agent(A?, Ap?, Re?)|As?],
       H2?, I2?, W2?, S2?) :-
     A? =< N? |
-    random(B?, 100, K1, B1),
-    random(B1?, 100, K2, _),
-    approach(K1?, Hom?, Ap1),
-    response(K2?, Wary?, Re1),
+    population # stochastic_person(B?, Hom?, Wary?, P, _),
+    profiles_of(P?, Ap1, Re1),
     add_approach(Ap1?, H?, I?, H1, I1, Ap),
     add_response(Re1?, W?, S?, W1, S1, Re),
     skip(4096, B?, B2),
@@ -134,6 +129,10 @@ tally(A, N, B, Hom, Wary, H, I, W, S, [agent(A?, Ap?, Re?)|As?],
     tally(A1?, N?, B2?, Hom?, Wary?, H1?, I1?, W1?, S1?, As, H2, I2, W2, S2).
 tally(A, N, _, _, _, H, I, W, S, [], H?, I?, W?, S?) :-
     A? > N? | true.
+
+%% profiles_of(P?, Ap, Re): the profiles of the stochastic person P.
+procedure profiles_of(Profiles?, Approach, Response).
+profiles_of(profiles(Ap, Re), Ap?, Re?).
 
 %% add_approach(Ap?, H?, I?, H1, I1, Ap1) and add_response(Re?, W?, S?, W1, S1,
 %% Re1): one agent of the profile added to its count, the profile given back

@@ -1,0 +1,22 @@
+%% The construct process of a compiled program in a simulation (sGLP's paper,
+%% the repository svGLP-Stochastic-Volitional-GLP: Section 4, "The person
+%% process"; Section 3, Definition "Simulation Program"; Appendix B).
+%%
+%% construct(T, X, Ch) is sGLP's construct process in a simulation: called by
+%% the compiled program's asking clause with the interactive type T, as a
+%% constant, and the person's end X of the question's interactive variable, it
+%% appends question(T, X) to the agent's person channel Ch, a mutual reference
+%% whose output stream the agent's person process reads.  It is the same for
+%% every program, so T and X are of any type: T the constant naming the
+%% program's interactive type, X of that type --- the social graph's Menu and
+%% Card, coins among friends' Menu and Offer.
+%%
+%% The person process itself is the transformation's: each example's
+%% population.glp, printed by transform.glp from the example's sGLP source,
+%% one clause per person declaration (Section 4, "The transformation": "A
+%% person declaration T =::= p becomes a clause of the person process").
+
+%% construct(T?, X?, Ch?): hand the person process the question.
+exported procedure(T, X) construct(T?, X?, MutualRef?).
+construct(T, X, Ch) :-
+    stream_append(question(T?, X?), Ch?, _).

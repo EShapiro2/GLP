@@ -1,0 +1,1322 @@
+%% The transformation of sGLP programs into GLP: sGLP's paper (the repository
+%% svGLP-Stochastic-Volitional-GLP), Section 4, "The transformation", "The
+%% person process" and "The run"; Section 3, Definitions "Dual, Person
+%% Procedure, Person Declaration, Profile, Dimension, Population" and
+%% "Simulation Program", and the well-formedness of a population, whose checks
+%% are the transformation's; Appendix B.  The paper is the specification and is
+%% not restated here.
+%%
+%% It reads an sGLP program in the term form of README.md, "The term form" ---
+%% one GLP term per declaration and clause, in GLP-Spec's term syntax
+%% (Definition "Logic Programs Syntax") --- and prints GLP source, as the
+%% compiler of grassroots social contracts does (programs/jurix/compile.glp).
+%% transform(Program, Part) prints one module of the program's translation:
+%%
+%%   profiles    the profiles translated: each person procedure, and each
+%%               procedure that holds a rated goal or calls one that takes it,
+%%               takes the monitor's reference as an added last argument; a
+%%               rated goal G @ r becomes the request rated(r, Tok) appended to
+%%               that reference, followed by G with Tok? as an added first
+%%               argument, and G's procedure takes the token first, its clauses
+%%               go there;
+%%   population  the person process, one clause per person declaration, and
+%%               the answers it logs; and from the run declaration the
+%%               declaration itself and each agent's stochastic person, its
+%%               profile in each dimension drawn from its block.  The harness's
+%%               run/6 and run/7 --- the network, the monitor and the log's
+%%               reference, each agent's initial goal --- are the machine's
+%%               setup and are written once by hand (sGLP's ruling of
+%%               2026-10-03 12:10 UTC).
+%%
+%% Both parts check the program first (checks/3) and print, for one that
+%% fails, its faults and nothing else.  GLP has no string concatenation, so the
+%% source is printed as send_to_user/1 prints a term, on a line of its own: a
+%% term on one line, its variables var(X) as their texts X, an operator's term
+%% in prefix form with the operator quoted, '=<'(K?, 98), which is the term
+%% K? =< 98; and :-, |, the commas between goals, #, the full stop and a
+%% declaration's punctuation each on a line of their own.  A newline is
+%% whitespace to GLP, so the lines are the module and are loaded as they stand.
+%% A constant of the source is printed as its name, so the source's constants
+%% are those GLP reads unquoted, as the examples' are.
+%%
+%% The procedures here handle terms of any form, the source's heads, guards and
+%% goals, and are typed with _ and _? where they do, as a meta-interpreter's
+%% are (docs/typed-glp-manual.md, 18.3).
+
+imported procedure social_graph#source(SglpTerms, SglpTerms).
+imported procedure coins#source(SglpTerms, SglpTerms).
+
+Terms ::= [] ; [_ | Terms].
+Sets  ::= [] ; [Terms | Sets].
+Ans   ::= yes ; no.
+
+%% ===========================================================================
+%% The entry points
+%% ===========================================================================
+
+%% transform(Program?, Part?): print Part, profiles or population, of the
+%% translation of Program, social_graph or coins, between the lines
+%% %% transform begin and %% transform end, which transform.sh drops.
+exported procedure transform(Constant?, Constant?).
+transform(Prog, Part) :- Prog? =?= social_graph |
+    social_graph # source(V, S), part(social_graph, Part?, V?, S?).
+transform(Prog, Part) :- Prog? =?= coins |
+    coins # source(V, S), part(coins, Part?, V?, S?).
+transform(Prog, _) :- otherwise, ground(Prog?) |
+    C =.. ['%% not transformed: no sGLP source of', Prog?],
+    send_to_user(['%% transform begin', C?, '%% transform end']).
+
+%% transform_terms(V?, S?, Part?): the same for a source given as its terms.
+exported procedure transform_terms(SglpTerms?, SglpTerms?, Constant?).
+transform_terms(V, S, Part) :- part(given, Part?, V?, S?).
+
+procedure part(_?, Constant?, Terms?, Terms?).
+part(Prog, Part, V, S) :- ground(Prog?), ground(Part?), ground(V?), ground(S?) |
+    checks(V?, S?, Es),
+    part_lines(Es?, Part?, V?, S?, Ls),
+    H =.. ['%% transform', Prog?, Part?],
+    send_to_user(['%% transform begin',
+                  '%% Printed by programs/sglp/transform.glp from the sGLP source in the term form',
+                  '%% (README.md, "The term form"); edit the source and run transform.sh, not this file.',
+                  H?|Ls?]).
+
+procedure part_lines(Terms?, Constant?, Terms?, Terms?, Terms).
+part_lines([], Part, _, S, Ls?) :- Part? =?= profiles, ground(S?) |
+    profiles(S?, ['%% transform end'], Ls).
+part_lines([], Part, V, S, Ls?) :- Part? =?= population, ground(V?), ground(S?) |
+    population(V?, S?, ['%% transform end'], Ls).
+part_lines([], Part, _, _, [C?, '%% transform end']) :- otherwise, ground(Part?) |
+    C =.. ['%% not transformed: no part', Part?].
+part_lines([E|Es], _, _, _, [E?|Ls?]) :- append(Es?, ['%% transform end'], Ls).
+
+%% ===========================================================================
+%% Terms
+%% ===========================================================================
+
+procedure append(Terms?, Terms?, Terms).
+append([], Ys, Ys?).
+append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
+
+%% parts(T?, F, As): F is the functor and As the arguments of T; a constant is
+%% its own functor, with no arguments.
+procedure parts(_?, _, Terms).
+parts(T, F?, As?) :- compound(T?) | L ..= T?, split(L?, F, As).
+parts(T, T?, []) :- constant(T?) | true.
+
+procedure split(Terms?, _, Terms).
+split([F|As], F?, As?).
+split([], [], []).
+
+%% parts_n(T?, F, As, N): parts/3, and N the number of arguments.
+procedure parts_n(_?, _, Terms, Integer).
+parts_n(T, F?, As?, N?) :- ground(T?) | parts(T?, F, As1), counted(As1?, As, N).
+procedure counted(Terms?, Terms, Integer).
+counted(As, As?, N?) :- ground(As?) | length(As?, N).
+
+%% compose(F?, As?, T): T is the term of functor F and arguments As.
+procedure compose(_?, Terms?, _).
+compose(F, [], F?).
+compose(F, [A|As], T?) :- T =.. [F?, A?|As?].
+
+%% key(T?, K): K is key(F, N), the name and arity of the predicate of the goal
+%% or head T.
+procedure key(_?, _).
+key(T, key(F?, N?)) :- ground(T?) | parts_n(T?, F, _, N).
+
+%% args(T?, Front?, Back?, T1): T1 is T with Front before its arguments and
+%% Back after them.
+procedure args(_?, Terms?, Terms?, _).
+args(T, Fr, Bk, T1?) :- ground(T?) |
+    parts(T?, F, As), append(As?, Bk?, As1), append(Fr?, As1?, As2),
+    compose(F?, As2?, T1).
+
+procedure member(_?, Terms?, Ans).
+member(_, [], no).
+member(X, [Y|_], yes) :- X? =?= Y? | true.
+member(X, [Y|Ys], A?) :- X? =?\= Y? | member(X?, Ys?, A).
+
+%% count(X?, Ys?, N0?, N): N is N0 plus the number of occurrences of X in Ys.
+procedure count(_?, Terms?, Integer?, Integer).
+count(_, [], N, N?).
+count(X, [Y|Ys], N, M?) :- X? =?= Y? | N1 := N? + 1, count(X?, Ys?, N1?, M).
+count(X, [Y|Ys], N, M?) :- X? =?\= Y? | count(X?, Ys?, N?, M).
+
+%% subset(Xs?, Ys?, A): A is yes when every element of Xs is one of Ys.
+procedure subset(Terms?, Terms?, Ans).
+subset([], _, yes).
+subset([X|Xs], Ys, A?) :- ground(Ys?) | member(X?, Ys?, A1), subset1(A1?, Xs?, Ys?, A).
+procedure subset1(Ans?, Terms?, Terms?, Ans).
+subset1(yes, Xs, Ys, A?) :- subset(Xs?, Ys?, A).
+subset1(no, _, _, no).
+
+%% dedup(Xs?, Ys): Ys is Xs with each element once, at its first occurrence.
+procedure dedup(Terms?, Terms).
+dedup(Xs, Ys?) :- dedup(Xs?, [], Ys).
+procedure dedup(Terms?, Terms?, Terms).
+dedup([], _, []).
+dedup([X|Xs], Seen, Ys?) :- ground(X?), ground(Seen?) |
+    member(X?, Seen?, A), dedup1(A?, X?, Xs?, Seen?, Ys).
+procedure dedup1(Ans?, _?, Terms?, Terms?, Terms).
+dedup1(yes, _, Xs, Seen, Ys?) :- dedup(Xs?, Seen?, Ys).
+dedup1(no, X, Xs, Seen, [X?|Ys?]) :- ground(X?) | dedup(Xs?, [X?|Seen?], Ys).
+
+%% take(N?, Xs?, Ys): Ys is the first N elements of Xs, or all of them.
+procedure take(Integer?, Terms?, Terms).
+take(N, _, []) :- N? =< 0 | true.
+take(N, [], []) :- N? > 0 | true.
+take(N, [X|Xs], [X?|Ys?]) :- N? > 0 | N1 := N? - 1, take(N1?, Xs?, Ys).
+
+%% drop(N?, Xs?, Ys): Ys is Xs without its first N elements.
+procedure drop(Integer?, Terms?, Terms).
+drop(N, Xs, Xs?) :- N? =< 0 | true.
+drop(N, [], []) :- N? > 0 | true.
+drop(N, [_|Xs], Ys?) :- N? > 0 | N1 := N? - 1, drop(N1?, Xs?, Ys).
+
+procedure flatten(Sets?, Terms).
+flatten([], []).
+flatten([L|Ls], Xs?) :- flatten(Ls?, Xs1), append(L?, Xs1?, Xs).
+
+%% ===========================================================================
+%% Printing
+%% ===========================================================================
+
+%% The operators GLP writes infix, each with the text of its quoted name, as
+%% a line prints it: the functor of an operator's term printed in prefix form.
+procedure op_texts(Terms).
+op_texts([o('<', '\'<\''), o('>', '\'>\''), o('=<', '\'=<\''), o('>=', '\'>=\''),
+          o('=:=', '\'=:=\''), o('=\\=', '\'=\\\\=\''), o('=?=', '\'=?=\''),
+          o('=?\\=', '\'=?\\\\=\''), o('@<', '\'@<\''), o(':=', '\':=\''),
+          o('=', '\'=\''), o('=..', '\'=..\''), o('..=', '\'..=\''),
+          o('+', '\'+\''), o('-', '\'-\''), o('*', '\'*\''), o('/', '\'/\''),
+          o('//', '\'//\''), o('mod', '\'mod\''), o('\\', '\'\\\\\''),
+          o('#', '\'#\'')]).
+
+%% functor_text(F?, Q): Q is the text F is printed as in prefix form.
+procedure functor_text(_?, _).
+functor_text(F, Q?) :- ground(F?) | op_texts(Os), lookup(F?, Os?, Q).
+procedure lookup(_?, Terms?, _).
+lookup(F, [], F?).
+lookup(F, [o(G, Q)|_], Q?) :- F? =?= G? | true.
+lookup(F, [o(G, _)|Os], Q?) :- F? =?\= G? | lookup(F?, Os?, Q).
+
+%% plain(T?, P): P is T as a line prints it: each variable var(X) its text X,
+%% each operator's functor its quoted name.
+procedure plain(_?, _).
+plain(var(X), X?).
+plain([], []).
+plain([H|T], [P?|Ps?]) :- plain(H?, P), plain(T?, Ps).
+plain(T, P?) :- otherwise, compound(T?), ground(T?) |
+    parts(T?, F, As), functor_text(F?, Q), plain_list(As?, Ps), compose(Q?, Ps?, P).
+plain(T, T?) :- otherwise, constant(T?) | true.
+procedure plain_list(Terms?, Terms).
+plain_list([], []).
+plain_list([A|As], [P?|Ps?]) :- plain(A?, P), plain_list(As?, Ps).
+
+%% goal(G?, Tail?, Ls): the lines of a goal, a guard or a head: a remote goal
+%% M # G its module, # and its goal, each on a line; another on one line.
+procedure goal(_?, Terms?, Terms).
+goal('#'(M, G), Tl, [M?, '#'|Ls?]) :- goal(G?, Tl?, Ls).
+goal(G, Tl, [P?|Tl?]) :- otherwise, ground(G?) | plain(G?, P).
+
+%% goals(Gs?, Tail?, Ls): the lines of goals, a comma between them.
+procedure goals(Terms?, Terms?, Terms).
+goals([], Tl, Tl?).
+goals([G], Tl, Ls?) :- goal(G?, Tl?, Ls).
+goals([G, G1|Gs], Tl, Ls?) :- goals([G1?|Gs?], Tl?, Ls1), goal(G?, [','|Ls1?], Ls).
+
+%% clause(H?, Gs?, Bs?, Tail?, Ls): the lines of the clause H :- Gs | Bs, a
+%% unit clause where both are empty, true for an empty body after guards.
+procedure clause(_?, Terms?, Terms?, Terms?, Terms).
+clause(H, [], [], Tl, Ls?) :- goal(H?, ['.'|Tl?], Ls).
+clause(H, [], [B|Bs], Tl, Ls?) :-
+    goals([B?|Bs?], ['.'|Tl?], Ls1), goal(H?, [':-'|Ls1?], Ls).
+clause(H, [G|Gs], Bs, Tl, Ls?) :-
+    nonempty(Bs?, Bs1), goals(Bs1?, ['.'|Tl?], Ls2), goals([G?|Gs?], ['|'|Ls2?], Ls1),
+    goal(H?, [':-'|Ls1?], Ls).
+procedure nonempty(Terms?, Terms).
+nonempty([], [true]).
+nonempty([B|Bs], [B?|Bs?]).
+
+%% decl(Pre?, Name?, Ts?, Tail?, Ls): the lines of the declaration of the
+%% procedure Name with argument types Ts, after the lines Pre.  A type T? of
+%% the source, dual(T), is printed as T and the complementation operator ?, a
+%% line each, but for a primitive or predefined type, whose text T? is one.
+procedure decl(Terms?, _?, Terms?, Terms?, Terms).
+decl(Pre, Nm, Ts, Tl, Ls?) :- types_lines(Ts?, [')', '.'|Tl?], Ls1), append(Pre?, [Nm?, '('|Ls1?], Ls).
+procedure types_lines(Terms?, Terms?, Terms).
+types_lines([], Tl, Tl?).
+types_lines([T], Tl, Ls?) :- type_lines(T?, Tl?, Ls).
+types_lines([T, T1|Ts], Tl, Ls?) :- types_lines([T1?|Ts?], Tl?, Ls1), type_lines(T?, [','|Ls1?], Ls).
+procedure type_lines(_?, Terms?, Terms).
+type_lines(dual(T), Tl, Ls?) :- ground(T?) | dual_text(T?, D), dual_lines(D?, T?, Tl?, Ls).
+type_lines(T, Tl, [P?|Tl?]) :- otherwise, ground(T?) | plain(T?, P).
+procedure dual_lines(_?, _?, Terms?, Terms).
+dual_lines(none, T, Tl, Ls?) :- type_lines(T?, ['?'|Tl?], Ls).
+dual_lines(D, _, Tl, [D?|Tl?]) :- otherwise, ground(D?) | true.
+procedure dual_text(_?, _).
+dual_text(T, D?) :- ground(T?) |
+    lookup(T?, [o('Integer', 'Integer?'), o('Number', 'Number?'), o('Real', 'Real?'),
+                o('String', 'String?'), o('Constant', 'Constant?'), o('Module', 'Module?'),
+                o('MutualRef', 'MutualRef?'), o('Token', 'Token?')], D1),
+    dual_found(D1?, T?, D).
+procedure dual_found(_?, _?, _).
+dual_found(D1, T, none) :- D1? =?= T? | true.
+dual_found(D1, T, D1?) :- D1? =?\= T? | true.
+
+%% type_def(Name?, Alts?, Tail?, Ls): the lines of the type definition
+%% Name ::= Alt ; ... .
+procedure type_def(_?, Terms?, Terms?, Terms).
+type_def(Nm, As, Tl, [Nm?, '::='|Ls?]) :- alts(As?, ['.'|Tl?], Ls).
+procedure alts(Terms?, Terms?, Terms).
+alts([], Tl, Tl?).
+alts([A], Tl, [P?|Tl?]) :- plain(A?, P).
+alts([A, A1|As], Tl, [P?, ';'|Ls?]) :- plain(A?, P), alts([A1?|As?], Tl?, Ls).
+
+%% ===========================================================================
+%% The source
+%% ===========================================================================
+
+%% The items of a kind, in the order of the source.
+procedure persons(Terms?, Terms).
+persons([], []).
+persons([person(P)|Is], [P?|Ps?]) :- persons(Is?, Ps).
+persons([I|Is], Ps?) :- otherwise, ground(I?) | persons(Is?, Ps).
+
+procedure decls(Terms?, Terms).
+decls([], []).
+decls([decl(H)|Is], [H?|Hs?]) :- decls(Is?, Hs).
+decls([I|Is], Hs?) :- otherwise, ground(I?) | decls(Is?, Hs).
+
+procedure clauses(Terms?, Terms).
+clauses([], []).
+clauses([clause(H, Gs, Bs)|Is], [cl(H?, Gs?, Bs?)|Cs?]) :- clauses(Is?, Cs).
+clauses([I|Is], Cs?) :- otherwise, ground(I?) | clauses(Is?, Cs).
+
+procedure runs(Terms?, Terms).
+runs([], []).
+runs([run(N, Ms, C, U, S)|Is], [run(N?, Ms?, C?, U?, S?)|Rs?]) :- runs(Is?, Rs).
+runs([I|Is], Rs?) :- otherwise, ground(I?) | runs(Is?, Rs).
+
+procedure types(Terms?, Terms).
+types([], []).
+types([type(N, As)|Is], [type(N?, As?)|Ts?]) :- types(Is?, Ts).
+types([I|Is], Ts?) :- otherwise, ground(I?) | types(Is?, Ts).
+
+%% interactives(V?, Its): Its is it(T, M) for each volitional procedure
+%% declaration of V, its interactive type T and its mode M, output where T is
+%% written T and input where it is written T?.
+procedure interactives(Terms?, Terms).
+interactives([], []).
+interactives([volitional(dual(T), _)|Is], [it(T?, input)|Its?]) :- interactives(Is?, Its).
+interactives([volitional(T, _)|Is], [it(T?, output)|Its?]) :-
+    otherwise, constant(T?) | interactives(Is?, Its).
+interactives([I|Is], Its?) :- otherwise, ground(I?) | interactives(Is?, Its).
+
+%% binds(S?, Q?, Bs): Bs is b(Q, T, P) for each person declaration T =::= P of
+%% S, Q the profile it is in, none before the first profile.
+procedure binds(Terms?, _?, Terms).
+binds([], _, []).
+binds([person(Q)|Is], _, Bs?) :- binds(Is?, Q?, Bs).
+binds([binds(T, P)|Is], Q, [b(Q?, T?, P?)|Bs?]) :- ground(Q?) | binds(Is?, Q?, Bs).
+binds([I|Is], Q, Bs?) :- otherwise, ground(I?) | binds(Is?, Q?, Bs).
+
+%% The rated goals of a body: rated(G, R) for each.
+procedure rated(Terms?, Terms?, Terms).
+rated([], T, T?).
+rated([rated(G, R)|Bs], T, [rated(G?, R?)|Rs?]) :- rated(Bs?, T?, Rs).
+rated([B|Bs], T, Rs?) :- otherwise, ground(B?) | rated(Bs?, T?, Rs).
+
+%% The keys of the goals a body calls, a rated goal's G among them.
+procedure calls(Terms?, Terms?, Terms).
+calls([], T, T?).
+calls([rated(G, _)|Bs], T, [K?|Ks?]) :- key(G?, K), calls(Bs?, T?, Ks).
+calls([B|Bs], T, [K?|Ks?]) :- otherwise, ground(B?) | key(B?, K), calls(Bs?, T?, Ks).
+
+%% The keys of the goals a body calls unrated.
+procedure unrated(Terms?, Terms?, Terms).
+unrated([], T, T?).
+unrated([rated(_, _)|Bs], T, Ks?) :- unrated(Bs?, T?, Ks).
+unrated([B|Bs], T, [K?|Ks?]) :- otherwise, ground(B?) | key(B?, K), unrated(Bs?, T?, Ks).
+
+%% The keys of the goals the rated goals of the clauses Cs call.
+procedure rated_keys(Terms?, Terms).
+rated_keys([], []).
+rated_keys([cl(_, _, Bs)|Cs], Ks?) :- ground(Bs?) |
+    rated(Bs?, [], Rs), goal_keys(Rs?, Ks1), rated_keys(Cs?, Ks2),
+    append(Ks1?, Ks2?, Ks).
+procedure goal_keys(Terms?, Terms).
+goal_keys([], []).
+goal_keys([rated(G, _)|Rs], [K?|Ks?]) :- key(G?, K), goal_keys(Rs?, Ks).
+
+procedure unrated_keys(Terms?, Terms).
+unrated_keys([], []).
+unrated_keys([cl(_, _, Bs)|Cs], Ks?) :- unrated(Bs?, Ks2?, Ks), unrated_keys(Cs?, Ks2).
+
+%% The keys of the person procedures: P/2 for each person declaration.
+procedure person_keys(Terms?, Terms).
+person_keys([], []).
+person_keys([b(_, _, P)|Bs], [key(P?, 2)|Ks?]) :- person_keys(Bs?, Ks).
+
+%% mon_keys(Ps?, Cs?, Ms): Ms are the keys of the procedures that take the
+%% monitor's reference (Section 4, "The transformation"): the person
+%% procedures Ps, those whose clauses hold a rated goal, and those whose
+%% clauses call one of these, to pass it on.
+procedure mon_keys(Terms?, Terms?, Terms).
+mon_keys(Ps, Cs, Ms?) :- ground(Cs?) |
+    holders(Cs?, Hs), append(Ps?, Hs?, M0), edges(Cs?, Es), grow(M0?, Es?, Ms).
+
+procedure holders(Terms?, Terms).
+holders([], []).
+holders([cl(H, _, Bs)|Cs], Ks?) :- ground(H?) |
+    rated(Bs?, [], Rs), holder(Rs?, H?, Cs?, Ks).
+procedure holder(Terms?, _?, Terms?, Terms).
+holder([], _, Cs, Ks?) :- holders(Cs?, Ks).
+holder([_|_], H, Cs, [K?|Ks?]) :- key(H?, K), holders(Cs?, Ks).
+
+procedure edges(Terms?, Terms).
+edges([], []).
+edges([cl(H, _, Bs)|Cs], Es?) :-
+    key(H?, K), calls(Bs?, [], Ks), edges_from(K?, Ks?, Es1), edges(Cs?, Es2),
+    append(Es1?, Es2?, Es).
+procedure edges_from(_?, Terms?, Terms).
+edges_from(_, [], []).
+edges_from(K, [C|Cs], [e(K?, C?)|Es?]) :- ground(K?) | edges_from(K?, Cs?, Es).
+
+procedure grow(Terms?, Terms?, Terms).
+grow(M, Es, R?) :- ground(M?), ground(Es?) | grow1(Es?, M?, M1), grown(M?, M1?, Es?, R).
+procedure grown(Terms?, Terms?, Terms?, Terms).
+grown(M, M1, Es, R?) :- ground(M1?) |
+    length(M?, N), length(M1?, N1), grown1(N?, N1?, M1?, Es?, R).
+procedure grown1(Integer?, Integer?, Terms?, Terms?, Terms).
+grown1(N, N1, M1, _, M1?) :- N? =:= N1? | true.
+grown1(N, N1, M1, Es, R?) :- N? =\= N1? | grow(M1?, Es?, R).
+procedure grow1(Terms?, Terms?, Terms).
+grow1([], M, M?).
+grow1([e(H, C)|Es], M, R?) :- ground(H?), ground(M?) |
+    member(C?, M?, AC), member(H?, M?, AH), grow2(AC?, AH?, H?, M?, Es?, R).
+procedure grow2(Ans?, Ans?, _?, Terms?, Terms?, Terms).
+grow2(yes, no, H, M, Es, R?) :- grow1(Es?, [H?|M?], R).
+grow2(yes, yes, _, M, Es, R?) :- grow1(Es?, M?, R).
+grow2(no, _, _, M, Es, R?) :- grow1(Es?, M?, R).
+
+%% The analysis of the profiles: an(Ps, Rs, Ms), the keys of the person
+%% procedures, of the procedures a rated goal calls, and of those that take
+%% the monitor's reference.
+procedure analysis(Terms?, _).
+analysis(S, An?) :- ground(S?) |
+    binds(S?, none, Bs), clauses(S?, Cs), analysis1(Bs?, Cs?, An).
+procedure analysis1(Terms?, Terms?, _).
+analysis1(Bs, Cs, an(Ps?, Rs?, Ms?)) :- ground(Cs?) |
+    person_keys(Bs?, Ps0), dedup(Ps0?, Ps1), analysis2(Ps1?, Cs?, Ps, Ms),
+    rated_keys(Cs?, Rs0), dedup(Rs0?, Rs).
+procedure analysis2(Terms?, Terms?, Terms, Terms).
+analysis2(Ps, Cs, Ps?, Ms?) :- ground(Ps?) | mon_keys(Ps?, Cs?, Ms).
+
+%% ===========================================================================
+%% ===========================================================================
+%% Names
+%% ===========================================================================
+%% GLP has no string concatenation, so the names the transformation writes are
+%% drawn from these lists, each a writer and its reader: the monitor's
+%% reference and the tokens, the first not written in the clause; the person
+%% process's variables by argument position; the dimensions' types and the
+%% answer procedures by their order.  A source that needs more than they hold
+%% is refused (checks/3).
+
+procedure mon_names(Terms).
+mon_names([n('Mon', 'Mon?'), n('Mon1', 'Mon1?'), n('Mon2', 'Mon2?'),
+           n('Mon3', 'Mon3?'), n('Mon4', 'Mon4?'), n('Mon5', 'Mon5?'),
+           n('Mon6', 'Mon6?'), n('Mon7', 'Mon7?'), n('Mon8', 'Mon8?'),
+           n('Mon9', 'Mon9?')]).
+
+procedure tok_names(Terms).
+tok_names([n('Tok', 'Tok?'), n('Tok1', 'Tok1?'), n('Tok2', 'Tok2?'),
+           n('Tok3', 'Tok3?'), n('Tok4', 'Tok4?'), n('Tok5', 'Tok5?'),
+           n('Tok6', 'Tok6?'), n('Tok7', 'Tok7?'), n('Tok8', 'Tok8?'),
+           n('Tok9', 'Tok9?')]).
+
+procedure x_names(Terms).
+x_names([n('X1', 'X1?'), n('X2', 'X2?'), n('X3', 'X3?'), n('X4', 'X4?'),
+         n('X5', 'X5?'), n('X6', 'X6?'), n('X7', 'X7?'), n('X8', 'X8?'),
+         n('X9', 'X9?')]).
+
+procedure y_names(Terms).
+y_names([n('Y1', 'Y1?'), n('Y2', 'Y2?'), n('Y3', 'Y3?'), n('Y4', 'Y4?'),
+         n('Y5', 'Y5?'), n('Y6', 'Y6?'), n('Y7', 'Y7?'), n('Y8', 'Y8?'),
+         n('Y9', 'Y9?')]).
+
+procedure d_names(Terms).
+d_names([n('D1', 'D1?'), n('D2', 'D2?'), n('D3', 'D3?'), n('D4', 'D4?'),
+         n('D5', 'D5?'), n('D6', 'D6?'), n('D7', 'D7?'), n('D8', 'D8?'),
+         n('D9', 'D9?')]).
+
+procedure k_names(Terms).
+k_names([n('K1', 'K1?'), n('K2', 'K2?'), n('K3', 'K3?'), n('K4', 'K4?'),
+         n('K5', 'K5?'), n('K6', 'K6?'), n('K7', 'K7?'), n('K8', 'K8?'),
+         n('K9', 'K9?')]).
+
+procedure p_names(Terms).
+p_names([n('P1', 'P1?'), n('P2', 'P2?'), n('P3', 'P3?'), n('P4', 'P4?'),
+         n('P5', 'P5?'), n('P6', 'P6?'), n('P7', 'P7?'), n('P8', 'P8?'),
+         n('P9', 'P9?')]).
+
+procedure t_names(Terms).
+t_names([n('T1', 'T1?'), n('T2', 'T2?'), n('T3', 'T3?'), n('T4', 'T4?'),
+         n('T5', 'T5?'), n('T6', 'T6?'), n('T7', 'T7?'), n('T8', 'T8?'),
+         n('T9', 'T9?')]).
+
+%% The seeds of an agent's draws: B the start of its block, then one after
+%% each draw, S the last, its person process's.
+procedure b_names(Terms).
+b_names([n('B', 'B?'), n('B1', 'B1?'), n('B2', 'B2?'), n('B3', 'B3?'),
+         n('B4', 'B4?'), n('B5', 'B5?'), n('B6', 'B6?'), n('B7', 'B7?'),
+         n('B8', 'B8?')]).
+
+procedure dimension_names(Terms).
+dimension_names(['Dimension1', 'Dimension2', 'Dimension3', 'Dimension4',
+                 'Dimension5', 'Dimension6', 'Dimension7', 'Dimension8',
+                 'Dimension9']).
+
+procedure answer_names(Terms).
+answer_names([answer_1, answer_2, answer_3, answer_4, answer_5, answer_6,
+              answer_7, answer_8, answer_9]).
+
+
+%% var_names(Vs?, Ns): Ns are the texts of the variables var(X) of the terms Vs.
+procedure var_names(_?, Terms?, Terms).
+var_names(var(X), T, [X?|T?]).
+var_names(V, T, Ns?) :- otherwise, compound(V?) | parts(V?, _, As), var_names_list(As?, T?, Ns).
+var_names(V, T, T?) :- otherwise, constant(V?) | true.
+procedure var_names_list(Terms?, Terms?, Terms).
+var_names_list([], T, T?).
+var_names_list([A|As], T, Ns?) :- var_names_list(As?, T?, Ns1), var_names(A?, Ns1?, Ns).
+
+%% fresh(Cands?, Used?, N?, Ns): Ns are the first N names of Cands neither of
+%% whose texts is Used; fewer where Cands runs out.
+procedure fresh(Terms?, Terms?, Integer?, Terms).
+fresh(_, _, N, []) :- N? =< 0 | true.
+fresh([], _, N, []) :- N? > 0 | true.
+fresh([n(W, R)|Cs], U, N, Ns?) :- N? > 0, ground(W?), ground(R?), ground(U?) |
+    member(W?, U?, AW), member(R?, U?, AR), fresh1(AW?, AR?, W?, R?, Cs?, U?, N?, Ns).
+procedure fresh1(Ans?, Ans?, _?, _?, Terms?, Terms?, Integer?, Terms).
+fresh1(no, no, W, R, Cs, U, N, [n(W?, R?)|Ns?]) :-
+    N1 := N? - 1, fresh(Cs?, U?, N1?, Ns).
+fresh1(yes, _, _, _, Cs, U, N, Ns?) :- fresh(Cs?, U?, N?, Ns).
+fresh1(no, yes, _, _, Cs, U, N, Ns?) :- fresh(Cs?, U?, N?, Ns).
+
+%% ===========================================================================
+%% ===========================================================================
+%% The profiles (Section 4, "The transformation")
+%% ===========================================================================
+
+procedure profiles(Terms?, Terms?, Terms).
+profiles(S, Tl, Ls?) :- ground(S?) | analysis(S?, An), items(S?, An?, Tl?, Ls).
+
+%% items(S?, An?, Tail?, Ls): each item of S translated, in its order: a
+%% profile's name and its person declarations as comments, a procedure
+%% declaration and a clause translated; the run declaration is population's.
+procedure items(Terms?, _?, Terms?, Terms).
+items([], _, Tl, Tl?).
+items([person(P)|Is], An, Tl, ['', C?|Ls?]) :-
+    C =.. ['%% person', P?], items(Is?, An?, Tl?, Ls).
+items([binds(T, P)|Is], An, Tl, [C?|Ls?]) :-
+    C =.. ['%% binds', T?, P?], items(Is?, An?, Tl?, Ls).
+items([decl(H)|Is], An, Tl, Ls?) :- ground(An?) |
+    items(Is?, An?, Tl?, Ls1), tdecl(H?, An?, Ls1?, Ls).
+items([clause(H, Gs, Bs)|Is], An, Tl, Ls?) :- ground(An?) |
+    items(Is?, An?, Tl?, Ls1), tclause(H?, Gs?, Bs?, An?, Ls1?, Ls).
+items([I|Is], An, Tl, Ls?) :- otherwise, ground(I?) | items(Is?, An?, Tl?, Ls).
+
+%% tdecl(H?, An?, Tail?, Ls): a procedure declaration translated: Token? first
+%% for a procedure a rated goal calls, MutualRef? last for one that takes the
+%% monitor's reference, and exported for a person procedure, which the person
+%% process calls from the module beside.
+procedure tdecl(_?, _?, Terms?, Terms).
+tdecl(H, an(Ps, Rs, Ms), Tl, Ls?) :- ground(H?) |
+    key(H?, K), tdecl1(K?, H?, Ps?, Rs?, Ms?, Tl?, Ls).
+procedure tdecl1(_?, _?, Terms?, Terms?, Terms?, Terms?, Terms).
+tdecl1(K, H, Ps, Rs, Ms, Tl, Ls?) :- ground(K?) |
+    member(K?, Ps?, AP), member(K?, Rs?, AR), member(K?, Ms?, AM),
+    tdecl2(AP?, AR?, AM?, H?, Tl?, Ls).
+procedure tdecl2(Ans?, Ans?, Ans?, _?, Terms?, Terms).
+tdecl2(AP, AR, AM, H, Tl, Ls?) :-
+    prefix(AP?, Pre), front(AR?, [dual('Token')], Fr), back(AM?, [dual('MutualRef')], Bk),
+    parts(H?, Nm, Ts), append(Ts?, Bk?, Ts1), append(Fr?, Ts1?, Ts2),
+    decl(Pre?, Nm?, Ts2?, Tl?, Ls).
+procedure prefix(Ans?, Terms).
+prefix(yes, ['exported procedure']).
+prefix(no, ['procedure']).
+procedure front(Ans?, Terms?, Terms).
+front(yes, Xs, Xs?).
+front(no, _, []).
+procedure back(Ans?, Terms?, Terms).
+back(yes, Xs, Xs?).
+back(no, _, []).
+
+%% tclause(H?, Gs?, Bs?, An?, Tail?, Ls): a clause translated.  Its head takes
+%% go first where a rated goal calls its procedure, and the monitor's reference
+%% last where its procedure takes it, or _ where the clause passes it nowhere;
+%% each rated goal G @ r of its body becomes the request rated(r, Tok) on the
+%% monitor's reference, followed by G with Tok? first; each goal whose
+%% procedure takes the monitor's reference is given it last.  Mon and Tok are
+%% the first names of their lists that the clause does not write.
+procedure tclause(_?, Terms?, Terms?, _?, Terms?, Terms).
+tclause(H, Gs, Bs, An, Tl, Ls?) :- ground(H?), ground(Gs?), ground(Bs?) |
+    var_names(cl(H?, Gs?, Bs?), [], U), rated(Bs?, [], Rs), length(Rs?, NR),
+    key(H?, K), tclause1(K?, U?, NR?, H?, Gs?, Bs?, An?, Tl?, Ls).
+procedure tclause1(_?, Terms?, Integer?, _?, Terms?, Terms?, _?, Terms?, Terms).
+tclause1(K, U, NR, H, Gs, Bs, an(_, Rs, Ms), Tl, Ls?) :- ground(U?) |
+    mon_names(MN), tok_names(TN), fresh(MN?, U?, 1, Mon), fresh(TN?, U?, NR?, Toks),
+    tclause2(Mon?, Toks?, K?, NR?, H?, Gs?, Bs?, Rs?, Ms?, Tl?, Ls).
+procedure tclause2(Terms?, Terms?, _?, Integer?, _?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms).
+tclause2([n(MW, MR)], Toks, K, NR, H, Gs, Bs, Rs, Ms, Tl, Ls?) :-
+    ground(K?), ground(Bs?), ground(Ms?), ground(MR?) |
+    member(K?, Rs?, AR), member(K?, Ms?, AM),
+    calls(Bs?, [], Cs), any_member(Cs?, Ms?, AC), uses(NR?, AC?, AU),
+    tbody(Bs?, Toks?, MR?, Ms?, Bs1),
+    mon_arg(AM?, AU?, MW?, Bk), front(AR?, [go], Fr), args(H?, Fr?, Bk?, H1),
+    clause(H1?, Gs?, Bs1?, Tl?, Ls).
+tclause2(Mon, _, _, _, _, _, _, _, _, Tl, Tl?) :- otherwise, ground(Mon?) | true.
+procedure any_member(Terms?, Terms?, Ans).
+any_member([], _, no).
+any_member([X|Xs], Ys, A?) :- ground(Ys?) | member(X?, Ys?, A1), any_member1(A1?, Xs?, Ys?, A).
+procedure any_member1(Ans?, Terms?, Terms?, Ans).
+any_member1(yes, _, _, yes).
+any_member1(no, Xs, Ys, A?) :- any_member(Xs?, Ys?, A).
+procedure uses(Integer?, Ans?, Ans).
+uses(NR, _, yes) :- NR? > 0 | true.
+uses(NR, A, A?) :- NR? =< 0 | true.
+procedure mon_arg(Ans?, Ans?, _?, Terms).
+mon_arg(yes, yes, MW, [var(MW?)]).
+mon_arg(yes, no, _, [var('_')]).
+mon_arg(no, _, _, []).
+
+%% tbody(Bs?, Toks?, MR?, Ms?, Bs1): the body translated.
+procedure tbody(Terms?, Terms?, _?, Terms?, Terms).
+tbody([], _, _, _, []).
+tbody([rated(G, rate(R, U))|Bs], [n(TW, TR)|Ts], MR, Ms,
+      [stream_append(rated('/'(R?, U?), var(TW?)), var(MR?), var('_')), G1?|Bs1?]) :-
+    ground(G?), ground(MR?), ground(Ms?) |
+    key(G?, K), member(K?, Ms?, A), back(A?, [var(MR?)], Bk),
+    args(G?, [var(TR?)], Bk?, G1), tbody(Bs?, Ts?, MR?, Ms?, Bs1).
+tbody([B|Bs], Ts, MR, Ms, [B1?|Bs1?]) :- otherwise, ground(B?), ground(MR?), ground(Ms?) |
+    key(B?, K), member(K?, Ms?, A), back(A?, [var(MR?)], Bk),
+    args(B?, [], Bk?, B1), tbody(Bs?, Ts?, MR?, Ms?, Bs1).
+
+%% ===========================================================================
+%% The population (Section 4, "The person process" and "The run")
+%% ===========================================================================
+
+%% population(V?, S?, Tail?, Ls): the person process --- its types, the person
+%% procedures it calls, one clause per person declaration, and the answers it
+%% logs --- then the run declaration and each agent's stochastic person, its
+%% profile drawn in each dimension.
+procedure population(Terms?, Terms?, Terms?, Terms).
+population(V, S, Tl, Ls?) :- ground(V?), ground(S?) |
+    interactives(V?, Its0), types(V?, Tys), its(Its0?, Tys?, 1, Its),
+    binds(S?, none, Bs), runs(S?, Rs),
+    population0(Rs?, Its?, Bs?, Tl?, Ls).
+procedure population0(Terms?, Terms?, Terms?, Terms?, Terms).
+population0([run(N, Mixes, C, U, Seed)], Its, Bs, Tl, Ls?) :- ground(Mixes?) |
+    dims(Mixes?, 1, Ds),
+    population1(Its?, Bs?, Ds?, run(N?, Mixes?, C?, U?, Seed?), Tl?, Ls).
+population0(Rs, _, _, Tl, Tl?) :- otherwise, ground(Rs?) | true.
+
+%% its(Its0?, Tys?, K?, Its): Its is it(T, M, F, As, Nm) for each interactive
+%% type it(T, M) of Its0, F and As the functor and the argument types of its
+%% one alternative, Nm the name of the procedure that logs its answer, the
+%% K-th of answer_names.
+procedure its(Terms?, Terms?, Integer?, Terms).
+its([], _, _, []).
+its([it(T, M)|Its0], Tys, K, [It?|Its?]) :- ground(Tys?), integer(K?), ground(T?) |
+    type_alts(T?, Tys?, Alts), answer_names(ANs), nth(K?, ANs?, Nm),
+    it_record(Alts?, T?, M?, Nm?, It),
+    K1 := K? + 1, its(Its0?, Tys?, K1?, Its).
+procedure it_record(Terms?, _?, _?, _?, _).
+it_record([A], T, M, Nm, it(T?, M?, F?, As?, Nm?)) :- parts(A?, F, As).
+it_record(As, _, _, _, none) :- otherwise, ground(As?) | true.
+procedure type_alts(_?, Terms?, Terms).
+type_alts(_, [], []).
+type_alts(T, [type(N, As)|_], As?) :- T? =?= N? | true.
+type_alts(T, [type(N, _)|Tys], As?) :- T? =?\= N? | type_alts(T?, Tys?, As).
+
+%% dims(Mixes?, J?, Ds): Ds is dim(J, D, Qs, Ts, Nm) for each dimension D of
+%% the run declaration, J its position, Qs its profiles, Ts its thresholds ---
+%% the cumulative percentages of its profiles but the last --- and Nm the name
+%% of its type, the J-th of dimension_names.
+procedure dims(Terms?, Integer?, Terms).
+dims([], _, []).
+dims([mix(D, Ss)|Ms], J, [dim(J?, D?, Qs?, Ts?, Nm?)|Ds?]) :- integer(J?) |
+    shares(Ss?, Qs, Ps), thresholds(Ps?, 0, Ts),
+    dimension_names(DNs), nth(J?, DNs?, Nm),
+    J1 := J? + 1, dims(Ms?, J1?, Ds).
+procedure shares(Terms?, Terms, Stream(Integer)).
+shares([], [], []).
+shares([share(Q, P)|Ss], [Q?|Qs?], [N?|Ns?]) :- N := round(P? * 100), shares(Ss?, Qs, Ns).
+procedure thresholds(Stream(Integer)?, Integer?, Stream(Integer)).
+thresholds([], _, []).
+thresholds([_], _, []).
+thresholds([P, P1|Ps], A, [T?|Ts?]) :- T := A? + P?, thresholds([P1?|Ps?], T?, Ts).
+
+procedure population1(Terms?, Terms?, Terms?, _?, Terms?, Terms).
+population1(Its, Bs, Ds, Run, Tl, ['', '%% The run declaration of the source:', C?|L1?]) :-
+    ground(Its?), ground(Bs?), ground(Ds?), ground(Run?) |
+    plain(Run?, R), C =.. ['%% ', R?],
+    pp_types(Its?, Ds?, L2?, L1),
+    pp_imports(Its?, Bs?, L3?, L2),
+    pp_person(Its?, Bs?, Ds?, L4?, L3),
+    pp_answers(Its?, L5?, L4),
+    pp_run(Run?, Ds?, Tl?, L5).
+
+%% The types: the stochastic person, one profile per dimension; and the
+%% questions on the person channel, each the interactive type as a constant
+%% and the person's end of the variable.
+procedure pp_types(Terms?, Terms?, Terms?, Terms).
+pp_types(Its, Ds, Tl, ['', 'Profiles', '::=', P?, '.'|L1?]) :- ground(Its?), ground(Ds?) |
+    dim_types(Ds?, Nms), P =.. [profiles|Nms?],
+    dim_defs(Ds?, ['Question ::= question(Constant, Interactive).'|L2?], L1),
+    it_names(Its?, Ts),
+    type_def('Interactive', Ts?, Tl?, L2).
+procedure dim_types(Terms?, Terms).
+dim_types([], []).
+dim_types([dim(_, _, _, _, Nm)|Ds], [Nm?|Nms?]) :- dim_types(Ds?, Nms).
+procedure dim_defs(Terms?, Terms?, Terms).
+dim_defs([], Tl, Tl?).
+dim_defs([dim(_, _, Qs, _, Nm)|Ds], Tl, Ls?) :- dim_defs(Ds?, Tl?, Ls1), type_def(Nm?, Qs?, Ls1?, Ls).
+procedure it_names(Terms?, Terms).
+it_names([], []).
+it_names([it(T, _, _, _, _)|Its], [T?|Ts?]) :- it_names(Its?, Ts).
+it_names([none|Its], Ts?) :- it_names(Its?, Ts).
+
+%% The person procedures the person process calls, in the profiles module,
+%% each declared P(T', Integer?, MutualRef?), T' the dual of the mode the vGLP
+%% program gives T (Section 3, Definition "Dual, ...").
+procedure pp_imports(Terms?, Terms?, Terms?, Terms).
+pp_imports(Its, Bs, Tl, ['', '%% The person procedures, in the profiles module.'|Ls?]) :- ground(Its?) |
+    bind_procs(Bs?, Ps0), dedup(Ps0?, Ps), imports(Ps?, Its?, Tl?, Ls).
+procedure bind_procs(Terms?, Terms).
+bind_procs([], []).
+bind_procs([b(_, T, P)|Bs], [bp(T?, P?)|Ps?]) :- bind_procs(Bs?, Ps).
+procedure imports(Terms?, Terms?, Terms?, Terms).
+imports([], _, Tl, Tl?).
+imports([bp(T, P)|Ps], Its, Tl, Ls?) :- ground(Its?), ground(T?) |
+    imports(Ps?, Its?, Tl?, Ls1), it_of(T?, Its?, It), person_type(It?, PT),
+    decl(['imported procedure', profiles, '#'], P?, [PT?, dual('Integer'), dual('MutualRef')], Ls1?, Ls).
+procedure it_of(_?, Terms?, _).
+it_of(_, [], none).
+it_of(T, [it(T1, M, F, As, Nm)|_], it(T1?, M?, F?, As?, Nm?)) :- T? =?= T1? | true.
+it_of(T, [it(T1, _, _, _, _)|Its], It?) :- T? =?\= T1? | it_of(T?, Its?, It).
+it_of(T, [none|Its], It?) :- it_of(T?, Its?, It).
+procedure person_type(_?, _).
+person_type(it(T, output, _, _, _), dual(T?)).
+person_type(it(T, input, _, _, _), T?).
+person_type(none, none).
+
+%% The person process: one clause per person declaration T =::= P of a
+%% profile Q of the dimension J, in the order of the source, then the clause of
+%% the closed stream.  It selects a question by its term's functor, the one
+%% alternative of its interactive type: the questions are of the type union
+%% Interactive, whose alternatives have distinct functors (TGLP, "Type
+%% Declarations"), and the interactive type, the question's constant, it passes
+%% on to the log.
+procedure pp_person(Terms?, Terms?, Terms?, Terms?, Terms).
+pp_person(Its, Bs, Ds, Tl,
+          ['', '%% The person process (sGLP\'s paper, Section 4, "The person process").',
+           'exported procedure person(Integer?, Profiles?, MutualRef?, Integer?, MutualRef?, Stream(Question)?).'|Ls?]) :-
+    person_clauses(Bs?, Its?, Ds?, ['person(_, _, _, _, _, []).'|Tl?], Ls).
+procedure person_clauses(Terms?, Terms?, Terms?, Terms?, Terms).
+person_clauses([], _, _, Tl, Tl?).
+person_clauses([b(Q, T, P)|Bs], Its, Ds, Tl, Ls?) :-
+    ground(Its?), ground(Ds?), ground(T?), ground(Q?) |
+    person_clauses(Bs?, Its?, Ds?, Tl?, Ls1),
+    it_of(T?, Its?, It), dim_of(Q?, Ds?, J), length(Ds?, ND),
+    person_clause(It?, Q?, J?, ND?, P?, Ls1?, Ls).
+procedure dim_of(_?, Terms?, Integer).
+dim_of(_, [], 0).
+dim_of(Q, [dim(J, _, Qs, _, _)|Ds], K?) :- ground(Q?) | member(Q?, Qs?, A), dim_of1(A?, J?, Q?, Ds?, K).
+procedure dim_of1(Ans?, Integer?, _?, Terms?, Integer).
+dim_of1(yes, J, _, _, J?).
+dim_of1(no, _, Q, Ds, K?) :- dim_of(Q?, Ds?, K).
+
+%% person_clause(It?, Q?, J?, ND?, P?, Tail?, Ls): the clause of the person
+%% declaration T =::= P of the profile Q of the J-th of ND dimensions, T the
+%% interactive type It: on a question of T it draws the next seed of its own,
+%% spawns P on a copy of the question, with each answer a fresh variable, the
+%% seed and the monitor's reference, and the answer procedure of T, and goes on
+%% (Section 4, "The person process"; Appendix B).
+procedure person_clause(_?, _?, Integer?, Integer?, _?, Terms?, Terms).
+person_clause(it(_, _, F, As, Nm), Q, J, ND, P, Tl, Ls?) :- ground(As?) |
+    length(As?, NA), x_names(Xs0), y_names(Ys0), d_names(Dn0),
+    take(NA?, Xs0?, Xs), take(NA?, Ys0?, Ys), take(ND?, Dn0?, Dn),
+    person_clause1(Xs?, Ys?, Dn?, F?, As?, Nm?, Q?, J?, P?, Tl?, Ls).
+person_clause(none, _, _, _, _, Tl, Tl?).
+procedure person_clause1(Terms?, Terms?, Terms?, _?, Terms?, _?, _?, Integer?, _?, Terms?, Terms).
+person_clause1(Xs, Ys, Dn, F, As, Nm, Q, J, P, Tl, Ls?) :-
+    ground(Xs?), ground(Ys?), ground(F?), ground(As?) |
+    profiles_terms(Dn?, J?, Q?, 1, PW, PR),
+    question(As?, Xs?, Qa), compose(F?, Qa?, Qt),
+    guards(As?, Xs?, Gs),
+    copy(As?, Xs?, Ys?, Ca), compose(F?, Ca?, Ct),
+    answer_args(As?, Xs?, Ys?, AA), answers_of(As?, Xs?, Ws),
+    append(AA?, Ws?, AA1), append(AA1?, [var('Mon?'), var('Log?')], AA2),
+    compose(Nm?, [var('A?'), var('Type?')|AA2?], AG),
+    G =.. [P?, Ct?, var('S?'), var('Mon?')],
+    clause(person(var('A'), PW?, var('Mon'), var('Seed'), var('Log'),
+                  [question(var('Type'), Qt?) | var('Qs')]),
+           Gs?,
+           [random(var('Seed?'), 1, var('_'), var('S')),
+            '#'(profiles, G?),
+            AG?,
+            person(var('A?'), PR?, var('Mon?'), var('S?'), var('Log?'), var('Qs?'))],
+           Tl?, Ls).
+
+%% profiles_terms(Dn?, J?, Q?, I?, PW, PR): the stochastic person in the
+%% clause's head, Q in the J-th dimension and a variable of Dn in each other,
+%% and in its call, their readers.
+procedure profiles_terms(Terms?, Integer?, _?, Integer?, _, _).
+profiles_terms(Dn, J, Q, I, PW?, PR?) :-
+    profile_args(Dn?, J?, Q?, I?, Ws, Rs), PW =.. [profiles|Ws?], PR =.. [profiles|Rs?].
+procedure profile_args(Terms?, Integer?, _?, Integer?, Terms, Terms).
+profile_args([], _, _, _, [], []).
+profile_args([n(W, R)|Dn], J, Q, I, [A?|As?], [B?|Bs?]) :- integer(I?), integer(J?), ground(Q?) |
+    profile_arg(I?, J?, Q?, W?, R?, A, B), I1 := I? + 1, profile_args(Dn?, J?, Q?, I1?, As, Bs).
+procedure profile_arg(Integer?, Integer?, _?, _?, _?, _, _).
+profile_arg(I, J, Q, _, _, Q?, Q?) :- I? =:= J?, ground(Q?) | true.
+profile_arg(I, J, _, W, R, var(W?), var(R?)) :- I? =\= J? | true.
+
+%% The question in the head: a writer for each argument shown, a reader for
+%% each answer; the guards, each argument shown ground; the copy given the
+%% person procedure: each argument shown read, each answer a fresh writer.
+procedure question(Terms?, Terms?, Terms).
+question([], _, []).
+question([dual(_)|As], [n(_, R)|Xs], [var(R?)|Qs?]) :- question(As?, Xs?, Qs).
+question([A|As], [n(W, _)|Xs], [var(W?)|Qs?]) :- otherwise, ground(A?) | question(As?, Xs?, Qs).
+question([_|_], [], []).
+procedure guards(Terms?, Terms?, Terms).
+guards([], _, []).
+guards([dual(_)|As], [_|Xs], Gs?) :- guards(As?, Xs?, Gs).
+guards([A|As], [n(_, R)|Xs], [ground(var(R?))|Gs?]) :- otherwise, ground(A?) | guards(As?, Xs?, Gs).
+guards([_|_], [], []).
+procedure copy(Terms?, Terms?, Terms?, Terms).
+copy([], _, _, []).
+copy([dual(_)|As], [_|Xs], [n(W, _)|Ys], [var(W?)|Cs?]) :- copy(As?, Xs?, Ys?, Cs).
+copy([A|As], [n(_, R)|Xs], [_|Ys], [var(R?)|Cs?]) :- otherwise, ground(A?) | copy(As?, Xs?, Ys?, Cs).
+copy([_|_], [], _, []).
+copy([_|_], [_|_], [], []).
+
+%% The answer procedure's arguments: each argument shown read, each answer's
+%% copy read; then the program's answers, each a writer.
+procedure answer_args(Terms?, Terms?, Terms?, Terms).
+answer_args([], _, _, []).
+answer_args([dual(_)|As], [_|Xs], [n(_, R)|Ys], [var(R?)|Cs?]) :- answer_args(As?, Xs?, Ys?, Cs).
+answer_args([A|As], [n(_, R)|Xs], [_|Ys], [var(R?)|Cs?]) :- otherwise, ground(A?) | answer_args(As?, Xs?, Ys?, Cs).
+answer_args([_|_], [], _, []).
+answer_args([_|_], [_|_], [], []).
+procedure answers_of(Terms?, Terms?, Terms).
+answers_of([], _, []).
+answers_of([dual(_)|As], [n(W, _)|Xs], [var(W?)|Ws?]) :- answers_of(As?, Xs?, Ws).
+answers_of([A|As], [_|Xs], Ws?) :- otherwise, ground(A?) | answers_of(As?, Xs?, Ws).
+answers_of([_|_], [], []).
+
+%% The answer procedures, one per interactive type T: once each answer of the
+%% copy is ground, it assigns the program's answer with it, asks the monitor
+%% for the clock and logs entry(Time, Agent, Type, Term), Term the question's
+%% term with the answer in place (Section 4, "The log"; Appendix B).
+procedure pp_answers(Terms?, Terms?, Terms).
+pp_answers([], Tl, Tl?).
+pp_answers([it(_, _, F, As, Nm)|Its], Tl, ['', '%% The answer, assigned and logged (Section 4, "The log").'|Ls?]) :- ground(As?) |
+    pp_answers(Its?, Tl?, Ls2),
+    length(As?, NA), x_names(Xs0), y_names(Ys0), take(NA?, Xs0?, Xs), take(NA?, Ys0?, Ys),
+    pp_answer(Xs?, Ys?, F?, As?, Nm?, Ls2?, Ls).
+pp_answers([none|Its], Tl, Ls?) :- pp_answers(Its?, Tl?, Ls).
+procedure pp_answer(Terms?, Terms?, _?, Terms?, _?, Terms?, Terms).
+pp_answer(Xs, Ys, F, As, Nm, Ls2, Ls?) :- ground(Xs?), ground(Ys?), ground(As?), ground(Nm?) |
+    answer_types(As?, ATs), answer_writer_types(As?, AWs),
+    append(ATs?, AWs?, Ts1), append(Ts1?, [dual('MutualRef'), dual('MutualRef')], Ts2),
+    decl(['procedure'], Nm?, [dual('Integer'), dual('Constant')|Ts2?], Ls1?, Ls),
+    head_args(As?, Xs?, Ys?, HA), assigned(As?, Ys?, HW),
+    append(HA?, HW?, HA1), append(HA1?, [var('Mon'), var('Log')], HA2),
+    compose(Nm?, [var('A'), var('Type')|HA2?], H),
+    answer_guards(As?, Ys?, Gs),
+    copy_read(As?, Xs?, Ys?, Es), compose(F?, Es?, E),
+    clause(H?, Gs?,
+           [stream_append(time(var('Time')), var('Mon?'), var('_')),
+            stream_append(entry(var('Time?'), var('A?'), var('Type?'), E?), var('Log?'), var('_'))],
+           Ls2?, Ls1).
+procedure undual(_?, _).
+undual(dual(T), U?) :- undual(T?, U).
+undual([], []).
+undual([H|T], [U?|Us?]) :- undual(H?, U), undual(T?, Us).
+undual(T, U?) :- otherwise, compound(T?), ground(T?) | parts(T?, F, As), undual_list(As?, Us), compose(F?, Us?, U).
+undual(T, T?) :- otherwise, constant(T?) | true.
+procedure undual_list(Terms?, Terms).
+undual_list([], []).
+undual_list([A|As], [U?|Us?]) :- undual(A?, U), undual_list(As?, Us).
+procedure answer_types(Terms?, Terms).
+answer_types([], []).
+answer_types([A|As], [dual(U?)|Ts?]) :- undual(A?, U), answer_types(As?, Ts).
+procedure answer_writer_types(Terms?, Terms).
+answer_writer_types([], []).
+answer_writer_types([dual(T)|As], [U?|Ts?]) :- undual(T?, U), answer_writer_types(As?, Ts).
+answer_writer_types([A|As], Ts?) :- otherwise, ground(A?) | answer_writer_types(As?, Ts).
+procedure head_args(Terms?, Terms?, Terms?, Terms).
+head_args([], _, _, []).
+head_args([dual(_)|As], [_|Xs], [n(W, _)|Ys], [var(W?)|Hs?]) :- head_args(As?, Xs?, Ys?, Hs).
+head_args([A|As], [n(W, _)|Xs], [_|Ys], [var(W?)|Hs?]) :- otherwise, ground(A?) | head_args(As?, Xs?, Ys?, Hs).
+head_args([_|_], [], _, []).
+head_args([_|_], [_|_], [], []).
+procedure assigned(Terms?, Terms?, Terms).
+assigned([], _, []).
+assigned([dual(_)|As], [n(_, R)|Ys], [var(R?)|Ws?]) :- assigned(As?, Ys?, Ws).
+assigned([A|As], [_|Ys], Ws?) :- otherwise, ground(A?) | assigned(As?, Ys?, Ws).
+assigned([_|_], [], []).
+procedure answer_guards(Terms?, Terms?, Terms).
+answer_guards([], _, []).
+answer_guards([dual(_)|As], [n(_, R)|Ys], [ground(var(R?))|Gs?]) :- answer_guards(As?, Ys?, Gs).
+answer_guards([A|As], [_|Ys], Gs?) :- otherwise, ground(A?) | answer_guards(As?, Ys?, Gs).
+answer_guards([_|_], [], []).
+procedure copy_read(Terms?, Terms?, Terms?, Terms).
+copy_read([], _, _, []).
+copy_read([dual(_)|As], [_|Xs], [n(_, R)|Ys], [var(R?)|Cs?]) :- copy_read(As?, Xs?, Ys?, Cs).
+copy_read([A|As], [n(_, R)|Xs], [_|Ys], [var(R?)|Cs?]) :- otherwise, ground(A?) | copy_read(As?, Xs?, Ys?, Cs).
+copy_read([_|_], [], _, []).
+copy_read([_|_], [_|_], [], []).
+
+%% The run declaration (Section 3; Section 4, "The run"; Appendix B): the
+%% declaration itself, declaration/N, its agents, horizon, seed and the
+%% thresholds of its dimensions; the stochastic person of an agent,
+%% stochastic_person(B, T1, ..., Profiles, S), its profile in each dimension
+%% drawn in order from the start B of its block by random/4 of 1..100 against
+%% the dimension's thresholds T1, ..., and S the seed its draws leave, its
+%% person process's; and the draw of each dimension D, D(K, T1, ..., Q): the
+%% I-th profile Q for a draw above the threshold before it and up to its own,
+%% the first from 1, the last to 100.
+procedure pp_run(_?, Terms?, Terms?, Terms).
+pp_run(run(N, _, C, U, Seed), Ds, Tl, Ls?) :- ground(Ds?) |
+    all_thresholds(Ds?, Ts), length(Ds?, ND),
+    pp_run1(Ts?, ND?, N?, C?, U?, Seed?, Ds?, Tl?, Ls).
+procedure pp_run1(Terms?, Integer?, _?, _?, _?, _?, Terms?, Terms?, Terms).
+pp_run1(Ts, ND, N, C, U, Seed, Ds, Tl, Ls?) :- ground(Ts?) |
+    length(Ts?, NT), t_names(Tn0), take(NT?, Tn0?, Tn),
+    b_names(Bn0), k_names(Kn0), p_names(Pn0),
+    take(ND?, Bn0?, Bn), take(ND?, Kn0?, Kn), take(ND?, Pn0?, Pn),
+    pp_run2(Ts?, NT?, Tn?, Bn?, Kn?, Pn?, N?, C?, U?, Seed?, Ds?, Tl?, Ls).
+procedure pp_run2(Terms?, Integer?, Terms?, Terms?, Terms?, Terms?, _?, _?, _?, _?,
+                  Terms?, Terms?, Terms).
+pp_run2(Ts, NT, Tn, Bn, Kn, Pn, N, C, U, Seed, Ds, Tl,
+        ['', '%% The run declaration: its agents, horizon, seed and thresholds.'|Ls?]) :-
+    ground(Tn?), ground(Kn?), ground(Pn?), ground(Ds?) |
+    integers(NT?, ITs), dual_integers(NT?, DITs),
+    append([N?, C?, U?, Seed?], Ts?, DAs), compose(declaration, DAs?, DH),
+    reads(Pn?, PRs), SP =.. [profiles|PRs?],
+    writes(Tn?, TWs), compose(stochastic_person, [var('B')|TWs?], SH0),
+    args(SH0?, [], [SP?, var('S?')], SH),
+    draws(Bn?, Kn?, Dr),
+    picks(Ds?, Kn?, Tn?, Pn?, Pk), append(Dr?, Pk?, SB),
+    append(DITs?, ['Profiles', 'Integer'], STs),
+    decl(['exported procedure'], declaration, ['Integer', 'Number', 'Span', 'Integer'|ITs?], L2?, Ls),
+    clause(DH?, [], [], ['', '%% An agent\'s stochastic person, drawn from its block (Appendix B).'|L3?], L2),
+    decl(['exported procedure'], stochastic_person, [dual('Integer')|STs?], L4?, L3),
+    clause(SH?, [], SB?, L5?, L4),
+    dim_procs(Ds?, Tl?, L5).
+
+procedure all_thresholds(Terms?, Terms).
+all_thresholds([], []).
+all_thresholds([dim(_, _, _, Ts, _)|Ds], As?) :- all_thresholds(Ds?, As1), append(Ts?, As1?, As).
+procedure integers(Integer?, Terms).
+integers(N, []) :- N? =< 0 | true.
+integers(N, ['Integer'|Is?]) :- N? > 0 | N1 := N? - 1, integers(N1?, Is).
+procedure dual_integers(Integer?, Terms).
+dual_integers(N, []) :- N? =< 0 | true.
+dual_integers(N, [dual('Integer')|Is?]) :- N? > 0 | N1 := N? - 1, dual_integers(N1?, Is).
+procedure reads(Terms?, Terms).
+reads([], []).
+reads([n(_, R)|Ns], [var(R?)|Vs?]) :- reads(Ns?, Vs).
+procedure writes(Terms?, Terms).
+writes([], []).
+writes([n(W, _)|Ns], [var(W?)|Vs?]) :- writes(Ns?, Vs).
+
+%% draws(Bn?, Kn?, Gs): the draws random(B?, 100, K1, B1), ..., the last
+%% leaving S.
+procedure draws(Terms?, Terms?, Terms).
+draws([], _, []).
+draws([n(_, R)], [n(KW, _)|_], [random(var(R?), 100, var(KW?), var('S'))]).
+draws([n(_, R), n(W1, R1)|Bn], [n(KW, _)|Kn], [random(var(R?), 100, var(KW?), var(W1?))|Gs?]) :-
+    ground(W1?) | draws([n(W1?, R1?)|Bn?], Kn?, Gs).
+draws([_|_], [], []).
+
+%% picks(Ds?, Kn?, Tn?, Pn?, Gs): for each dimension D, D(Kj?, its thresholds,
+%% Pj), its thresholds the next of Tn.
+procedure picks(Terms?, Terms?, Terms?, Terms?, Terms).
+picks([], _, _, _, []).
+picks([dim(_, D, _, Ts, _)|Ds], [n(_, KR)|Kn], Tn, [n(PW, _)|Pn], [G?|Gs?]) :- ground(Tn?) |
+    length(Ts?, NT), take(NT?, Tn?, Tj), reads(Tj?, TRs),
+    drop(NT?, Tn?, Tn1),
+    append([var(KR?)|TRs?], [var(PW?)], As), compose(D?, As?, G),
+    picks(Ds?, Kn?, Tn1?, Pn?, Gs).
+picks([_|_], [], _, _, []).
+picks([_|_], [_|_], _, [], []).
+
+%% dim_procs(Ds?, Tail?, Ls): the draw of each dimension D, its procedure
+%% D(K?, T1?, ..., Nm), one clause per profile.
+procedure dim_procs(Terms?, Terms?, Terms).
+dim_procs([], Tl, Tl?).
+dim_procs([dim(_, D, Qs, Ts, Nm)|Ds], Tl, ['', C?|Ls?]) :- ground(Ts?), ground(D?) |
+    C =.. ['%% The draw of the dimension', D?],
+    dim_procs(Ds?, Tl?, Ls2),
+    length(Ts?, NT), dual_integers(NT?, DTs), append([dual('Integer')|DTs?], [Nm?], DT),
+    t_names(Tn0), take(NT?, Tn0?, Tn),
+    dim_clauses(Qs?, D?, Tn?, 1, Ls2?, Ls1),
+    decl(['procedure'], D?, DT?, Ls1?, Ls).
+procedure dim_clauses(Terms?, _?, Terms?, Integer?, Terms?, Terms).
+dim_clauses([], _, _, _, Tl, Tl?).
+dim_clauses([Q|Qs], D, Tn, I, Tl, Ls?) :- ground(D?), ground(Tn?), integer(I?) |
+    I1 := I? + 1, dim_clauses(Qs?, D?, Tn?, I1?, Tl?, Ls1),
+    length(Tn?, NT), dim_guards(I?, NT?, Tn?, Gs),
+    dim_clause(Gs?, Tn?, D?, Q?, Ls1?, Ls).
+procedure dim_clause(Terms?, Terms?, _?, _?, Terms?, Terms).
+dim_clause(Gs, Tn, D, Q, Tl, Ls?) :- ground(Gs?) |
+    var_names_list(Gs?, [], Used), head_thresholds(Tn?, Used?, Hs), k_var(Gs?, KV),
+    append([KV?|Hs?], [Q?], As), compose(D?, As?, H),
+    clause(H?, Gs?, [], Tl?, Ls).
+%% The guards of the I-th of NT + 1 profiles: K above the (I-1)-th threshold,
+%% and up to the I-th.
+procedure dim_guards(Integer?, Integer?, Terms?, Terms).
+dim_guards(I, NT, Tn, Gs?) :- ground(Tn?) | above(I?, Tn?, G1), upto(I?, NT?, Tn?, G2), append(G1?, G2?, Gs).
+procedure above(Integer?, Terms?, Terms).
+above(I, _, []) :- I? =< 1 | true.
+above(I, Tn, ['>'(var('K?'), var(R?))]) :- I? > 1 | I1 := I? - 1, nth(I1?, Tn?, N), reader_of(N?, R).
+procedure upto(Integer?, Integer?, Terms?, Terms).
+upto(I, NT, _, []) :- I? > NT? | true.
+upto(I, NT, Tn, ['=<'(var('K?'), var(R?))]) :- I? =< NT? | nth(I?, Tn?, N), reader_of(N?, R).
+procedure reader_of(_?, _).
+reader_of(n(_, R), R?).
+%% A threshold the clause's guards do not read is _ in its head, and so is K
+%% in a dimension of one profile.
+procedure head_thresholds(Terms?, Terms?, Terms).
+head_thresholds([], _, []).
+head_thresholds([n(W, R)|Tn], U, [V?|Vs?]) :- ground(U?) |
+    member(R?, U?, A), head_var(A?, W?, V), head_thresholds(Tn?, U?, Vs).
+procedure head_var(Ans?, _?, _).
+head_var(yes, W, var(W?)).
+head_var(no, _, var('_')).
+procedure k_var(Terms?, _).
+k_var([], var('_')).
+k_var([_|_], var('K')).
+
+%% ===========================================================================
+%% The checks (Section 3: "A population is well formed when the profiles of
+%% each dimension declare the same types, the dimensions' types are disjoint
+%% and cover M's, each person procedure has the type its declaration requires,
+%% and each dimension's probabilities sum to one; the checks are the
+%% transformation's")
+%% ===========================================================================
+%% checks(V?, S?, Es): Es are the faults of the program, each a comment line
+%% %% not transformed: ...(...): those four, and what the transformation needs
+%% to translate it at all.
+
+procedure checks(Terms?, Terms?, Terms).
+checks(V, S, Es?) :- ground(V?), ground(S?) |
+    runs(S?, Rs), interactives(V?, Its0), types(V?, Tys), binds(S?, none, Bs),
+    persons(S?, Ps), decls(S?, Hs), clauses(S?, Cs),
+    check_runs(Rs?, Its0?, Tys?, Bs?, Ps?, Hs?, Cs?, Es).
+
+procedure check_runs(Terms?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms).
+check_runs([run(N, Ms, C, U, Seed)], Its0, Tys, Bs, Ps, Hs, Cs, Es?) :-
+    ground(Ms?), ground(Its0?), ground(Tys?), ground(Bs?), ground(Ps?), ground(Hs?), ground(Cs?) |
+    check_run(N?, C?, U?, Seed?, E0),
+    check_mixes(Ms?, E1),
+    check_profiles(Ms?, Ps?, E2),
+    check_interactives(Its0?, Tys?, E3),
+    check_binds(Bs?, Ps?, Its0?, E4),
+    check_dimensions(Ms?, Bs?, Its0?, E5),
+    check_person_types(Bs?, Its0?, Hs?, E6),
+    check_rated(Cs?, Hs?, Bs?, E7),
+    check_names(Cs?, E8),
+    check_decls(Hs?, E9),
+    append(E0?, E1?, A1), append(A1?, E2?, A2), append(A2?, E3?, A3),
+    append(A3?, E4?, A4), append(A4?, E5?, A5), append(A5?, E6?, A6),
+    append(A6?, E7?, A7), append(A7?, E8?, A8), append(A8?, E9?, Es).
+check_runs([], _, _, _, _, _, _, ['%% not transformed: no run declaration']).
+check_runs([_, _|_], _, _, _, _, _, _, ['%% not transformed: more than one run declaration']).
+
+%% The run: a positive number of agents, a horizon of a unit of time, a seed.
+procedure check_run(_?, _?, _?, _?, Terms).
+check_run(N, C, U, Seed, Es?) :- ground(U?) |
+    member(U?, [second, seconds, minute, minutes, hour, hours, day, days, week, weeks,
+                year, years], A),
+    check_run1(A?, N?, C?, U?, Seed?, Es).
+procedure check_run1(Ans?, _?, _?, _?, _?, Terms).
+check_run1(yes, N, C, _, Seed, []) :-
+    integer(N?), N? > 0, number(C?), C? > 0, integer(Seed?) | true.
+check_run1(A, N, C, U, Seed, [E?]) :-
+    otherwise, ground(A?), ground(N?), ground(C?), ground(U?), ground(Seed?) |
+    E =.. ['%% not transformed: run declaration', N?, C?, U?, Seed?].
+
+%% The mixes: at most nine dimensions, named apart and not as a procedure of
+%% the population; each with one to nine profiles, its probabilities whole
+%% percentages, the draw being of 1..100 (Appendix B), summing to one; at most
+%% nine thresholds in all.
+procedure check_mixes(Terms?, Terms).
+check_mixes(Ms, Es?) :- ground(Ms?) |
+    length(Ms?, ND), mix_names(Ms?, Ds), check_mixes0(Ds?, ND?, Ms?, Es).
+procedure check_mixes0(Terms?, Integer?, Terms?, Terms).
+check_mixes0(Ds, ND, Ms, Es?) :- ground(Ds?), ground(Ms?) |
+    dedup(Ds?, Ds1), length(Ds1?, ND1), reserved(Ds?, R), all_mix_thresholds(Ms?, 0, NT),
+    check_mix_list(Ms?, E1), check_mixes1(ND?, ND1?, NT?, R?, Ds?, E2), append(E2?, E1?, Es).
+procedure check_mixes1(Integer?, Integer?, Integer?, Ans?, Terms?, Terms).
+check_mixes1(ND, ND1, NT, no, _, []) :- ND? >= 1, ND? =< 9, ND? =:= ND1?, NT? =< 9 | true.
+check_mixes1(ND, ND1, NT, R, Ds, [E?]) :-
+    otherwise, ground(ND?), ground(ND1?), ground(NT?), ground(R?), ground(Ds?) |
+    E =.. ['%% not transformed: dimensions (at most nine, named apart and not reserved, at most nine thresholds)', Ds?].
+procedure reserved(Terms?, Ans).
+reserved(Ds, A?) :- ground(Ds?) |
+    any_member(Ds?, [person, stochastic_person, declaration, answer_1, answer_2,
+                     answer_3, answer_4, answer_5, answer_6, answer_7, answer_8,
+                     answer_9, random, true], A).
+procedure mix_names(Terms?, Terms).
+mix_names([], []).
+mix_names([mix(D, _)|Ms], [D?|Ds?]) :- mix_names(Ms?, Ds).
+mix_names([M|Ms], [M?|Ds?]) :- otherwise, ground(M?) | mix_names(Ms?, Ds).
+procedure all_mix_thresholds(Terms?, Integer?, Integer).
+all_mix_thresholds([], N, N?).
+all_mix_thresholds([mix(_, Ss)|Ms], N, M?) :- length(Ss?, K), all_mix_thresholds1(K?, N?, Ms?, M).
+all_mix_thresholds([_|Ms], N, M?) :- otherwise | all_mix_thresholds(Ms?, N?, M).
+procedure all_mix_thresholds1(Integer?, Integer?, Terms?, Integer).
+all_mix_thresholds1(K, N, Ms, M?) :- K? > 0 | N1 := N? + K? - 1, all_mix_thresholds(Ms?, N1?, M).
+all_mix_thresholds1(K, N, Ms, M?) :- K? =< 0 | all_mix_thresholds(Ms?, N?, M).
+procedure check_mix_list(Terms?, Terms).
+check_mix_list([], []).
+check_mix_list([mix(D, Ss)|Ms], Es?) :- ground(D?), ground(Ss?) |
+    length(Ss?, K), share_sum(Ss?, 0, Sum, yes, W),
+    check_mix(D?, K?, Sum?, W?, E1), check_mix_list(Ms?, E2), append(E1?, E2?, Es).
+check_mix_list([M|Ms], [E?|Es?]) :- otherwise, ground(M?) |
+    E =.. ['%% not transformed: not a mix', M?], check_mix_list(Ms?, Es).
+procedure check_mix(_?, Integer?, Integer?, Ans?, Terms).
+check_mix(_, K, Sum, yes, []) :- K? >= 1, K? =< 9, Sum? =:= 100 | true.
+check_mix(D, K, Sum, W, [E?]) :- otherwise, ground(D?), ground(K?), ground(Sum?), ground(W?) |
+    E =.. ['%% not transformed: the probabilities of a dimension (one to nine profiles, whole percentages, summing to one)', D?].
+%% share_sum(Ss?, A?, Sum, W0?, W): Sum is A plus the percentages of the shares
+%% Ss, and W is no where one of them is not a profile and a whole percentage.
+procedure share_sum(Terms?, Integer?, Integer, Ans?, Ans).
+share_sum([], A, A?, W, W?).
+share_sum([share(Q, P)|Ss], A, Sum?, W, W1?) :- constant(Q?), number(P?), P? > 0 |
+    N := round(P? * 100), D := abs(P? * 100 - N?), share_sum1(D?, N?, A?, Ss?, Sum, W?, W1).
+share_sum([S|Ss], A, Sum?, _, W?) :- otherwise, ground(S?) | share_sum(Ss?, A?, Sum, no, W).
+procedure share_sum1(Number?, Integer?, Integer?, Terms?, Integer, Ans?, Ans).
+share_sum1(D, N, A, Ss, Sum?, W, W1?) :- D? < 0.000001 | A1 := A? + N?, share_sum(Ss?, A1?, Sum, W?, W1).
+share_sum1(D, N, A, Ss, Sum?, _, W1?) :- D? >= 0.000001 | A1 := A? + N?, share_sum(Ss?, A1?, Sum, no, W1).
+
+%% The profiles: each profile of the source in exactly one dimension, and each
+%% profile of a dimension one of the source's.
+procedure check_profiles(Terms?, Terms?, Terms).
+check_profiles(Ms, Ps, Es?) :- mix_profiles(Ms?, Qs), check_profiles1(Qs?, Ps?, Es).
+procedure check_profiles1(Terms?, Terms?, Terms).
+check_profiles1(Qs, Ps, Es?) :- ground(Qs?), ground(Ps?) |
+    check_in_one(Ps?, Qs?, E1), check_known(Qs?, Ps?, E2), append(E1?, E2?, Es).
+procedure mix_profiles(Terms?, Terms).
+mix_profiles([], []).
+mix_profiles([mix(_, Ss)|Ms], Qs?) :- share_profiles(Ss?, Q1), mix_profiles(Ms?, Q2), append(Q1?, Q2?, Qs).
+mix_profiles([_|Ms], Qs?) :- otherwise | mix_profiles(Ms?, Qs).
+procedure share_profiles(Terms?, Terms).
+share_profiles([], []).
+share_profiles([share(Q, _)|Ss], [Q?|Qs?]) :- share_profiles(Ss?, Qs).
+share_profiles([_|Ss], Qs?) :- otherwise | share_profiles(Ss?, Qs).
+procedure check_in_one(Terms?, Terms?, Terms).
+check_in_one([], _, []).
+check_in_one([P|Ps], Qs, Es?) :- ground(P?), ground(Qs?) |
+    count(P?, Qs?, 0, N), check_in_one1(N?, P?, Ps?, Qs?, Es).
+procedure check_in_one1(Integer?, _?, Terms?, Terms?, Terms).
+check_in_one1(N, _, Ps, Qs, Es?) :- N? =:= 1 | check_in_one(Ps?, Qs?, Es).
+check_in_one1(N, P, Ps, Qs, [E?|Es?]) :- N? =\= 1 |
+    E =.. ['%% not transformed: a profile not in exactly one dimension', P?], check_in_one(Ps?, Qs?, Es).
+procedure check_known(Terms?, Terms?, Terms).
+check_known([], _, []).
+check_known([Q|Qs], Ps, Es?) :- ground(Q?), ground(Ps?) | member(Q?, Ps?, A), check_known1(A?, Q?, Qs?, Ps?, Es).
+procedure check_known1(Ans?, _?, Terms?, Terms?, Terms).
+check_known1(yes, _, Qs, Ps, Es?) :- check_known(Qs?, Ps?, Es).
+check_known1(no, Q, Qs, Ps, [E?|Es?]) :- E =.. ['%% not transformed: no profile', Q?], check_known(Qs?, Ps?, Es).
+
+%% The interactive types: each defined, by one alternative, a compound term of
+%% one to nine arguments, one at least an answer, dual(T); at most nine; their
+%% functors distinct, the person process's questions being of their union
+%% (TGLP, "Type Declarations": type union is for types with disjoint
+%% top-level functors).
+procedure check_interactives(Terms?, Terms?, Terms).
+check_interactives(Its0, Tys, Es?) :- ground(Its0?), ground(Tys?) |
+    length(Its0?, N), check_its(Its0?, Tys?, E1), check_count(N?, 9, 'interactive types', E2),
+    it_functors(Its0?, Tys?, Fs), check_functors(Fs?, E3),
+    append(E2?, E1?, E12), append(E12?, E3?, Es).
+procedure it_functors(Terms?, Terms?, Terms).
+it_functors([], _, []).
+it_functors([it(T, _)|Its], Tys, Fs?) :- ground(T?), ground(Tys?) |
+    type_alts(T?, Tys?, As), alt_functors(As?, F1), it_functors(Its?, Tys?, F2), append(F1?, F2?, Fs).
+procedure alt_functors(Terms?, Terms).
+alt_functors([], []).
+alt_functors([A|As], [K?|Ks?]) :- key(A?, K), alt_functors(As?, Ks).
+procedure check_functors(Terms?, Terms).
+check_functors(Fs, Es?) :- ground(Fs?) |
+    length(Fs?, N), dedup(Fs?, Fs1), check_functors1(N?, Fs1?, Es).
+procedure check_functors1(Integer?, Terms?, Terms).
+check_functors1(N, Fs1, Es?) :- ground(Fs1?) | length(Fs1?, N1), check_functors2(N?, N1?, Es).
+procedure check_functors2(Integer?, Integer?, Terms).
+check_functors2(N, N1, []) :- N? =:= N1? | true.
+check_functors2(N, N1, ['%% not transformed: two interactive types of one functor']) :- N? =\= N1? | true.
+procedure check_count(Integer?, Integer?, _?, Terms).
+check_count(N, Max, _, []) :- N? =< Max? | true.
+check_count(N, Max, What, [E?]) :- N? > Max?, ground(What?) | E =.. ['%% not transformed: more than nine', What?].
+procedure check_its(Terms?, Terms?, Terms).
+check_its([], _, []).
+check_its([it(T, _)|Its], Tys, Es?) :- ground(T?), ground(Tys?) |
+    type_alts(T?, Tys?, As), check_it(As?, T?, E1), check_its(Its?, Tys?, E2), append(E1?, E2?, Es).
+procedure check_it(Terms?, _?, Terms).
+check_it([A], T, Es?) :- compound(A?) | parts_n(A?, _, As, N), duals(As?, 0, ND), check_it1(N?, ND?, T?, Es).
+check_it(As, T, [E?]) :- otherwise, ground(As?), ground(T?) |
+    E =.. ['%% not transformed: an interactive type not one compound alternative', T?].
+procedure check_it1(Integer?, Integer?, _?, Terms).
+check_it1(N, ND, _, []) :- N? >= 1, N? =< 9, ND? >= 1 | true.
+check_it1(N, ND, T, [E?]) :- otherwise, ground(N?), ground(ND?), ground(T?) |
+    E =.. ['%% not transformed: an interactive type of one to nine arguments, an answer among them', T?].
+procedure duals(Terms?, Integer?, Integer).
+duals([], N, N?).
+duals([dual(_)|As], N, M?) :- N1 := N? + 1, duals(As?, N1?, M).
+duals([A|As], N, M?) :- otherwise, ground(A?) | duals(As?, N?, M).
+
+%% The person declarations: each in a profile, of an interactive type, the
+%% type once in its profile.
+procedure check_binds(Terms?, Terms?, Terms?, Terms).
+check_binds(Bs, _, Its0, Es?) :- ground(Bs?), ground(Its0?) |
+    it_types(Its0?, Ts), check_binds1(Bs?, Bs?, Ts?, Es).
+procedure it_types(Terms?, Terms).
+it_types([], []).
+it_types([it(T, _)|Its], [T?|Ts?]) :- it_types(Its?, Ts).
+procedure check_binds1(Terms?, Terms?, Terms?, Terms).
+check_binds1([], _, _, []).
+check_binds1([b(Q, T, P)|Bs], All, Ts, Es?) :- ground(Q?), ground(T?), ground(P?), ground(All?), ground(Ts?) |
+    member(T?, Ts?, AT), same_type(All?, Q?, T?, 0, NQ),
+    check_bind(Q?, AT?, NQ?, b(Q?, T?, P?), E1), check_binds1(Bs?, All?, Ts?, E2), append(E1?, E2?, Es).
+procedure same_type(Terms?, _?, _?, Integer?, Integer).
+same_type([], _, _, N, N?).
+same_type([b(Q1, T1, _)|Bs], Q, T, N, M?) :- Q? =?= Q1?, T? =?= T1? | N1 := N? + 1, same_type(Bs?, Q?, T?, N1?, M).
+same_type([B|Bs], Q, T, N, M?) :- otherwise, ground(B?) | same_type(Bs?, Q?, T?, N?, M).
+procedure check_bind(_?, Ans?, Integer?, _?, Terms).
+check_bind(Q, yes, NQ, _, []) :- Q? =?\= none, NQ? =:= 1 | true.
+check_bind(_, _, _, B, [E?]) :- otherwise, ground(B?) |
+    E =.. ['%% not transformed: a person declaration outside a profile, of no interactive type, or twice in its profile', B?].
+
+%% The dimensions: the profiles of each declare the same types; the types of
+%% the dimensions are disjoint and cover the interactive types.
+procedure check_dimensions(Terms?, Terms?, Terms?, Terms).
+check_dimensions(Ms, Bs, Its0, Es?) :- ground(Bs?), ground(Its0?) |
+    dim_type_sets(Ms?, Bs?, Sets, E1), it_types(Its0?, Ts),
+    flatten(Sets?, All), check_cover0(All?, Ts?, E2), append(E1?, E2?, Es).
+procedure check_cover0(Terms?, Terms?, Terms).
+check_cover0(All, Ts, Es?) :- ground(All?) |
+    length(All?, NA), dedup(All?, All1), check_cover1(All1?, NA?, Ts?, Es).
+procedure check_cover1(Terms?, Integer?, Terms?, Terms).
+check_cover1(All1, NA, Ts, Es?) :- ground(All1?) |
+    length(All1?, NA1), subset(Ts?, All1?, Cover), check_cover(NA?, NA1?, Cover?, Es).
+procedure dim_type_sets(Terms?, Terms?, Sets, Terms).
+dim_type_sets([], _, [], []).
+dim_type_sets([mix(D, Ss)|Ms], Bs, [T0?|Sets?], Es?) :- ground(Bs?), ground(D?) |
+    share_profiles(Ss?, Qs), profile_type_sets(Qs?, Bs?, TSs),
+    dim_same(TSs?, D?, T0, E1), dim_type_sets(Ms?, Bs?, Sets, E2), append(E1?, E2?, Es).
+dim_type_sets([_|Ms], Bs, Sets?, Es?) :- otherwise | dim_type_sets(Ms?, Bs?, Sets, Es).
+procedure profile_type_sets(Terms?, Terms?, Sets).
+profile_type_sets([], _, []).
+profile_type_sets([Q|Qs], Bs, [Ts?|TSs?]) :- ground(Bs?) | profile_types(Bs?, Q?, Ts), profile_type_sets(Qs?, Bs?, TSs).
+procedure profile_types(Terms?, _?, Terms).
+profile_types([], _, []).
+profile_types([b(Q1, T, _)|Bs], Q, [T?|Ts?]) :- Q? =?= Q1? | profile_types(Bs?, Q?, Ts).
+profile_types([B|Bs], Q, Ts?) :- otherwise, ground(B?) | profile_types(Bs?, Q?, Ts).
+procedure dim_same(Sets?, _?, Terms, Terms).
+dim_same([], _, [], []).
+dim_same([T0|TSs], D, T0?, Es?) :- ground(T0?) | all_same(TSs?, T0?, A), dim_same1(A?, D?, Es).
+procedure dim_same1(Ans?, _?, Terms).
+dim_same1(yes, _, []).
+dim_same1(no, D, [E?]) :- E =.. ['%% not transformed: profiles of one dimension declaring different types', D?].
+procedure all_same(Sets?, Terms?, Ans).
+all_same([], _, yes).
+all_same([Ts|TSs], T0, A?) :- ground(T0?), ground(Ts?) |
+    subset(Ts?, T0?, A1), subset(T0?, Ts?, A2), all_same1(A1?, A2?, TSs?, T0?, A).
+procedure all_same1(Ans?, Ans?, Sets?, Terms?, Ans).
+all_same1(yes, yes, TSs, T0, A?) :- all_same(TSs?, T0?, A).
+all_same1(no, _, _, _, no).
+all_same1(yes, no, _, _, no).
+procedure check_cover(Integer?, Integer?, Ans?, Terms).
+check_cover(NA, NA1, yes, []) :- NA? =:= NA1? | true.
+check_cover(_, _, _, ['%% not transformed: the dimensions\' types not disjoint or not covering the interactive types']) :- otherwise | true.
+
+%% The person procedures: each declared, as P(T', Integer?), T' the dual of the
+%% mode the vGLP program gives T (Section 3, Definition "Dual, ...").
+procedure check_person_types(Terms?, Terms?, Terms?, Terms).
+check_person_types([], _, _, []).
+check_person_types([b(_, T, P)|Bs], Its0, Hs, Es?) :- ground(T?), ground(P?), ground(Its0?), ground(Hs?) |
+    it_mode(T?, Its0?, M), required(M?, T?, R), declared(P?, Hs?, D),
+    check_person_type(R?, D?, P?, E1), check_person_types(Bs?, Its0?, Hs?, E2), append(E1?, E2?, Es).
+procedure it_mode(_?, Terms?, _).
+it_mode(_, [], none).
+it_mode(T, [it(T1, M)|_], M?) :- T? =?= T1? | true.
+it_mode(T, [it(T1, _)|Its], M?) :- T? =?\= T1? | it_mode(T?, Its?, M).
+procedure required(_?, _?, _).
+required(output, T, P?) :- P =.. [p, dual(T?), dual('Integer')].
+required(input, T, P?) :- P =.. [p, T?, dual('Integer')].
+required(none, _, none).
+procedure declared(_?, Terms?, _).
+declared(_, [], none).
+declared(P, [H|Hs], D?) :- ground(H?) | parts(H?, F, As), declared1(F?, As?, P?, Hs?, D).
+procedure declared1(_?, Terms?, _?, Terms?, _).
+declared1(F, As, P, _, D?) :- F? =?= P? | D =.. [p|As?].
+declared1(F, _, P, Hs, D?) :- F? =?\= P? | declared(P?, Hs?, D).
+procedure check_person_type(_?, _?, _?, Terms).
+check_person_type(R, D, _, []) :- R? =?= D? | true.
+check_person_type(_, _, P, [E?]) :- otherwise, ground(P?) |
+    E =.. ['%% not transformed: a person procedure undeclared or not of the type its declaration requires', P?].
+
+%% The rated goals: each of a procedure the source declares, which no goal
+%% calls unrated and which is no person procedure, the person process calling
+%% those without a token.
+procedure check_rated(Terms?, Terms?, Terms?, Terms).
+check_rated(Cs, Hs, Bs, Es?) :- ground(Cs?) |
+    rated_keys(Cs?, Rs0), dedup(Rs0?, Rs), unrated_keys(Cs?, Us0), person_keys(Bs?, Ps),
+    append(Us0?, Ps?, Us), decl_keys(Hs?, Ds), check_rated1(Rs?, Us?, Ds?, Es).
+procedure decl_keys(Terms?, Terms).
+decl_keys([], []).
+decl_keys([H|Hs], [K?|Ks?]) :- key(H?, K), decl_keys(Hs?, Ks).
+procedure check_rated1(Terms?, Terms?, Terms?, Terms).
+check_rated1([], _, _, []).
+check_rated1([K|Ks], Us, Ds, Es?) :- ground(K?), ground(Us?), ground(Ds?) |
+    member(K?, Us?, AU), member(K?, Ds?, AD), check_rated2(AU?, AD?, K?, E1), check_rated1(Ks?, Us?, Ds?, E2), append(E1?, E2?, Es).
+procedure check_rated2(Ans?, Ans?, _?, Terms).
+check_rated2(no, yes, _, []).
+check_rated2(AU, AD, K, [E?]) :- otherwise, ground(AU?), ground(AD?), ground(K?) |
+    E =.. ['%% not transformed: a rated goal of an undeclared procedure, or of one also called unrated or a person procedure', K?].
+
+%% The names: the monitor's reference and a token for each rated goal of a
+%% clause, among the names the clause does not write.
+procedure check_names(Terms?, Terms).
+check_names([], []).
+check_names([cl(H, Gs, Bs)|Cs], Es?) :- ground(H?), ground(Gs?), ground(Bs?) |
+    var_names(cl(H?, Gs?, Bs?), [], U), rated(Bs?, [], Rs), length(Rs?, NR),
+    check_names0(U?, NR?, H?, E1), check_names(Cs?, E2), append(E1?, E2?, Es).
+procedure check_names0(Terms?, Integer?, _?, Terms).
+check_names0(U, NR, H, Es?) :- ground(U?) |
+    mon_names(MN), tok_names(TN), fresh(MN?, U?, 1, M), fresh(TN?, U?, NR?, T),
+    length(M?, NM), length(T?, NT), check_names1(NM?, NT?, NR?, H?, Es).
+procedure check_names1(Integer?, Integer?, Integer?, _?, Terms).
+check_names1(NM, NT, NR, _, []) :- NM? =:= 1, NT? =:= NR? | true.
+check_names1(_, _, _, H, [E?]) :- otherwise, ground(H?) |
+    E =.. ['%% not transformed: no names left for the monitor\'s reference or the tokens of the clause of', H?].
+
+%% Each procedure declared once.
+procedure check_decls(Terms?, Terms).
+check_decls(Hs, Es?) :- decl_keys(Hs?, Ks), check_decls1(Ks?, Es).
+procedure check_decls1(Terms?, Terms).
+check_decls1(Ks, Es?) :- ground(Ks?) | check_once(Ks?, Ks?, Es).
+procedure check_once(Terms?, Terms?, Terms).
+check_once([], _, []).
+check_once([K|Ks], All, Es?) :- ground(K?), ground(All?) |
+    count(K?, All?, 0, N), check_once1(N?, K?, Ks?, All?, Es).
+procedure check_once1(Integer?, _?, Terms?, Terms?, Terms).
+check_once1(N, _, Ks, All, Es?) :- N? =:= 1 | check_once(Ks?, All?, Es).
+check_once1(N, K, Ks, All, [E?|Es?]) :- N? =\= 1 | E =.. ['%% not transformed: a procedure declared more than once', K?], check_once(Ks?, All?, Es).

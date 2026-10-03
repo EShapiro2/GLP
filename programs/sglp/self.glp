@@ -2,21 +2,44 @@
 %% paper, the repository svGLP-Stochastic-Volitional-GLP at d2f64b6, Section 4).
 %%
 %%   monitor.glp    the monitor, over the guard when_idle;
-%%   person.glp     the person processes, and the construct process of a
-%%                  compiled program in a simulation;
-%%   social_graph/  the Grassroots Social Graph in the translated form, its
-%%                  harness and its run script;
-%%   coins/         coins among friends in the translated form, its harness and
-%%                  its run script;
+%%   construct.glp  the construct process of a compiled program in a
+%%                  simulation;
+%%   transform.glp  the transformation, from an example's sGLP source in the
+%%                  term form (README.md) to its profiles.glp and
+%%                  population.glp, which transform.sh writes;
+%%   social_graph/  the Grassroots Social Graph: its sGLP source, its compiled
+%%                  program, the printed profiles and population, its harness
+%%                  and its run script;
+%%   coins/         coins among friends, the same;
 %%   tests/         the tests of the suite's sGLP block (test_sglp.sh).
 %%
-%% Both modules are exposed to the subtree: the translated programs call
-%% construct/3, and their harnesses spawn the monitor and the person processes.
+%% Both modules are exposed to the subtree: the compiled programs call
+%% construct/3, and the harnesses spawn the monitor.
 %% A run of the social graph is a call of social_graph/4, or of social_graph/6
 %% for another mix, with this directory loaded (social_graph/run.sh); a run of
 %% coins among friends is a call of coins/7 (coins/run.sh).
 -expose(monitor).
--expose(person).
+-expose(construct).
+
+%% The term form of an sGLP program (README.md, "The term form"): a list of
+%% terms, one per declaration and clause, in GLP-Spec's term syntax; its
+%% elements are terms of any form, the source's heads and goals among them, so
+%% they are typed _, as a meta-interpreter's are (docs/typed-glp-manual.md,
+%% 18.3).
+SglpTerms ::= [] ; [_ | SglpTerms].
+
+%% transform(Program?, Part?): print Part, profiles or population, of the
+%% transformation of Program, social_graph or coins, from its sGLP source
+%% (transform.glp; transform.sh writes the printed modules).
+imported procedure transform#transform(Constant?, Constant?).
+exported procedure transform(Constant?, Constant?).
+transform(P, Part) :- transform # transform(P?, Part?).
+
+%% transform_terms(V?, S?, Part?): the same for an sGLP source given as its
+%% terms, V the vGLP program's interface and S the sGLP program.
+imported procedure transform#transform_terms(SglpTerms?, SglpTerms?, Constant?).
+exported procedure transform_terms(SglpTerms?, SglpTerms?, Constant?).
+transform_terms(V, S, Part) :- transform # transform_terms(V?, S?, Part?).
 
 %% The horizon of a run declaration, `until <number> <unit>`: the unit singular
 %% or plural (Appendix B).
@@ -69,22 +92,37 @@ nth(_, [], _?).
 
 %% social_graph(Agents?, Count?, Unit?, Seed?): the social graph's run with
 %% Agents agents until Count Units from seed Seed, with the run declaration's
-%% mix, homophile 0.6 and wary 0.7 (social_graph/harness.glp).
+%% mix, homophile 0.6 and wary 0.7, its thresholds read from the declaration
+%% the population prints (social_graph/population.glp, declaration/6).
 %% social_graph(Agents?, Count?, Unit?, Seed?, Hom?, Wary?): the same run with
 %% the mix given by Hom and Wary, integers 0..100: an agent is homophile for its
 %% first draw K =< Hom and wary for its second K =< Wary, K of 1..100, so 0 is
 %% none and 100 is all (sGLP's code task of 2026-10-02 15:23 UTC, item 1).
 imported procedure social_graph#run(Integer?, Number?, Span?, Integer?,
                                     Integer?, Integer?).
+imported procedure social_graph#declaration(Integer, Number, Span, Integer,
+                                            Integer, Integer).
 exported procedure social_graph(Integer?, Number?, Span?, Integer?).
-social_graph(N, C, U, Seed) :- social_graph # run(N?, C?, U?, Seed?, 60, 70).
+social_graph(N, C, U, Seed) :-
+    social_graph # declaration(_, _, _, _, Hom, Wary),
+    social_graph # run(N?, C?, U?, Seed?, Hom?, Wary?).
 exported procedure social_graph(Integer?, Number?, Span?, Integer?, Integer?,
                                 Integer?).
 social_graph(N, C, U, Seed, Hom, Wary) :-
     social_graph # run(N?, C?, U?, Seed?, Hom?, Wary?).
 
 %% The population's draw: how many agents of each profile in each dimension,
-%% and each agent's profiles, agents 1..N in order.
+%% and each agent's profiles, agents 1..N in order.  Approach and Response are
+%% the profiles of the social graph's two dimensions, and Spending and Credit
+%% those of coins among friends', as the draws report them: the types the
+%% population prints for the dimensions, Dimension1 and Dimension2 in each
+%% example's population.glp, structurally, and named here, where the reports'
+%% types are declared.
+Approach ::= homophile ; indifferent.
+Response ::= wary ; sociable.
+Spending ::= spender ; saver.
+Credit   ::= cautious ; generous.
+
 Draw    ::= draw(Integer, Integer, Integer, Integer, Drawn).
 Drawn   ::= [] ; [AgentIs | Drawn].
 AgentIs ::= agent(Integer, Approach, Response).

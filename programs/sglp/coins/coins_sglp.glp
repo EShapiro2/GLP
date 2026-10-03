@@ -1,0 +1,81 @@
+%% Coins among friends' sGLP source, in the term form the transformation reads
+%% (programs/sglp/README.md, "The term form"): sGLP's paper (the repository
+%% svGLP-Stochastic-Volitional-GLP), Section 6, "Example: Coins Among Friends",
+%% whose listing is this source's surface form.
+%%
+%% source(V, S): V is the vGLP program's interface, the types Section 6 prints
+%% and Peer, Peers and YesNo, which it takes from Section 5, and its two
+%% volitional procedure declarations, which the transformation reads for the
+%% person process (which argument of Menu and Offer is the answer); S is the
+%% sGLP program: request, as Section 6 prints it, and issuer, which Section 6
+%% describes ("issuer reads the issuer of a holding") and the hand translation
+%% wrote; the spender and the cautious profile as Section 6 prints them, and the
+%% saver and the generous as its prose gives them ("a saver weekly, with the
+%% same request"; "the generous accept one as it comes ... within an hour on
+%% average"), their procedures named as the hand translation named them,
+%% saver_menu, generous_offer and accept; and the run declaration as Section 6
+%% prints it.  The vGLP program itself, its clauses, is coins.glp, vGLP's
+%% compilation, and is not the transformation's.
+%%
+%% transform.sh prints from it profiles.glp and population.glp, beside it.
+
+exported procedure source(SglpTerms, SglpTerms).
+source(
+  %% The vGLP program's interface (Sections 5 and 6).
+  [type('Peer', ['Constant']),
+   type('YesNo', [yes, no]),
+   type('Peers', [[], ['Peer' | 'Peers']]),
+   type('Holding', [holding('Peer', 'Integer')]),
+   type('Wallet', [[], ['Holding' | 'Wallet']]),
+   type('Request', [pay('Peer', 'Integer'), swap('Peer', 'Integer')]),
+   type('Menu', [menu('Peers', 'Wallet', dual('Request'))]),
+   type('Offer', [offer('Peer', 'Integer', 'Integer', dual('YesNo'))]),
+   volitional('Menu', ask(dual('Peers'), dual('Wallet'), 'Request')),
+   volitional('Offer', respond(dual('Peer'), dual('Integer'), dual('Integer'), 'YesNo'))],
+
+  %% The profiles' shared program, the profiles and the run declaration.
+  [decl(request(dual('Integer'), dual('Menu'))),
+   clause(request(var('S'), menu(var('Fs'), [], swap(var('F?'), 10))),
+          [ground(var('Fs?'))],
+          [one_of(var('Fs?'), var('S?'), var('F'))]),
+   clause(request(var('S'), menu(var('_'), [var('H') | var('Hs')], pay(var('F?'), var('K?')))),
+          [ground(var('H?')), ground(var('Hs?'))],
+          [random(var('S?'), 5, var('K'), var('S1')),
+           one_of([var('H?') | var('Hs?')], var('S1?'), var('Hd')),
+           issuer(var('Hd?'), var('F'))]),
+   decl(issuer(dual('Holding'), 'Peer')),
+   clause(issuer(holding(var('F'), var('_')), var('F?')), [], []),
+
+   person(spender),
+   binds('Menu', spender_menu),
+   decl(spender_menu(dual('Menu'), dual('Integer'))),
+   clause(spender_menu(var('M'), var('S')), [],
+          [rated(request(var('S?'), var('M?')), rate(1, day))]),
+
+   person(saver),
+   binds('Menu', saver_menu),
+   decl(saver_menu(dual('Menu'), dual('Integer'))),
+   clause(saver_menu(var('M'), var('S')), [],
+          [rated(request(var('S?'), var('M?')), rate(1, week))]),
+
+   person(cautious),
+   binds('Offer', cautious_offer),
+   decl(cautious_offer(dual('Offer'), dual('Integer'))),
+   clause(cautious_offer(var('O'), var('_')), [],
+          [rated(weigh(var('O?')), rate(1, hour))]),
+   decl(weigh(dual('Offer'))),
+   clause(weigh(offer(var('_'), var('_'), var('Held'), yes)), ['=<'(var('Held?'), 20)], [true]),
+   clause(weigh(offer(var('_'), var('_'), var('Held'), no)), ['>'(var('Held?'), 20)], [true]),
+
+   person(generous),
+   binds('Offer', generous_offer),
+   decl(generous_offer(dual('Offer'), dual('Integer'))),
+   clause(generous_offer(var('O'), var('_')), [],
+          [rated(accept(var('O?')), rate(1, hour))]),
+   decl(accept(dual('Offer'))),
+   clause(accept(offer(var('_'), var('_'), var('_'), yes)), [], []),
+
+   run(100,
+       [mix(spending, [share(spender, 0.5), share(saver, 0.5)]),
+        mix(credit, [share(cautious, 0.5), share(generous, 0.5)])],
+       1, year, 20260927)]).

@@ -1,22 +1,28 @@
-%% Coins among friends in sGLP, in the translated form, written by hand (sGLP's
-%% paper, the repository svGLP-Stochastic-Volitional-GLP at c7d0b2f, Section 6,
-%% "Example: Coins Among Friends"; Section 4, "The transformation"; sGLP's code
-%% task of 2026-10-02 15:24 UTC): this directory's interface and the vGLP
-%% program's types.
+%% Coins among friends in sGLP (sGLP's paper, the repository
+%% svGLP-Stochastic-Volitional-GLP, Section 6, "Example: Coins Among Friends";
+%% Section 4, "The transformation"; sGLP's code task of 2026-10-02 15:24 UTC):
+%% this directory's interface and the vGLP program's types.
 %%
+%%   coins_sglp.glp  the sGLP source in the term form (programs/sglp/README.md),
+%%                request, issuer, its profiles and its run declaration, and the
+%%                vGLP program's interface the transformation reads;
 %%   coins.glp    the compiled program with the person channel threaded through
-%%                it, the agent's clauses of the task's item 1, its four
-%%                profiles translated, issuer and the wallet's held, add and
-%%                take;
-%%   harness.glp  the run: the initial goals of the run declaration; and the
+%%                it, the agent's clauses of the task's item 1 and the wallet's
+%%                held, add and take, written by hand, vGLP's compilation being
+%%                vGLP's and not the transformation's;
+%%   profiles.glp the four profiles translated, with request and issuer, and
+%%   population.glp  the person process, the run declaration and each agent's
+%%                stochastic person: both printed by programs/sglp/transform.sh
+%%                from coins_sglp.glp, and not edited;
+%%   harness.glp  the run: the network, the monitor, the log's sink and each
+%%                agent's initial goal, the machine's setup, by hand; and the
 %%                population's draw, without running it;
 %%   run.sh       a run through the REPL on a friendship graph, its log and its
 %%                circulation;
 %%   circulation.awk  the circulation from a run's log, at the end of each month.
 %%
-%% The run is a program of programs/sglp, the directory above, whose person
-%% process (person.glp, coins_person/6) calls the four person procedures
-%% exported here; load programs/sglp and call coins/7 there.
+%% The run is a program of programs/sglp, the directory above; load
+%% programs/sglp and call coins/7 there.
 
 %% The vGLP program's types: Peer, Peers and YesNo the social graph's
 %% (social_graph/self.glp); Holding, Wallet, Request, Menu and Offer the
@@ -39,24 +45,21 @@ Msg     ::= msg(Peer, Content).
 %% The friends of agents 1..N, agent a's the a-th list, in increasing order.
 Friends ::= [] ; [Peers | Friends].
 
-imported procedure coins#spender_menu(Menu?, Integer?, MutualRef?).
-imported procedure coins#saver_menu(Menu?, Integer?, MutualRef?).
-imported procedure coins#generous_offer(Offer?, Integer?, MutualRef?).
-imported procedure coins#cautious_offer(Offer?, Integer?, MutualRef?).
+%% A question on the person channel, as the harness hands the channel's stream
+%% to the person process (population.glp): the interactive type as a
+%% constant, and the person's end of the variable.
+Interactive ::= Menu ; Offer.
+Question    ::= question(Constant, Interactive).
+
+%% A stochastic person, one profile per dimension, as the harness hands it from
+%% the population's draw to the person process (population.glp): Spending and
+%% Credit are programs/sglp/self.glp's.
+Profiles ::= profiles(Spending, Credit).
+
 imported procedure harness#run(Integer?, Friends?, Number?, Span?, Integer?,
                                Integer?, Integer?).
 imported procedure harness#draw(Integer?, Integer?, Integer?, Integer?,
                                 CoinsDraw).
-
-%% The person procedures of the four profiles, for the person process.
-exported procedure spender_menu(Menu?, Integer?, MutualRef?).
-spender_menu(M, S, Mon) :- coins # spender_menu(M?, S?, Mon?).
-exported procedure saver_menu(Menu?, Integer?, MutualRef?).
-saver_menu(M, S, Mon) :- coins # saver_menu(M?, S?, Mon?).
-exported procedure generous_offer(Offer?, Integer?, MutualRef?).
-generous_offer(O, S, Mon) :- coins # generous_offer(O?, S?, Mon?).
-exported procedure cautious_offer(Offer?, Integer?, MutualRef?).
-cautious_offer(O, S, Mon) :- coins # cautious_offer(O?, S?, Mon?).
 
 %% run(Agents?, Friends?, Count?, Unit?, Seed?, Spend?, Cred?): the run,
 %% harness.glp, with the mix given by Spend and Cred, integers 0..100.
@@ -69,3 +72,9 @@ run(N, Fss, C, U, Seed, Spend, Cred) :-
 %% its counts and each agent's profiles, harness.glp, without running it.
 exported procedure draw(Integer?, Integer?, Integer?, Integer?, CoinsDraw).
 draw(N, Seed, Spend, Cred, D?) :- harness # draw(N?, Seed?, Spend?, Cred?, D).
+
+%% The sGLP source of this program in the term form (README.md, "The term
+%% form"), coins_sglp.glp, for the transformation (programs/sglp/transform.glp).
+imported procedure coins_sglp#source(SglpTerms, SglpTerms).
+exported procedure source(SglpTerms, SglpTerms).
+source(V?, S?) :- coins_sglp # source(V, S).
