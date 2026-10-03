@@ -62,8 +62,8 @@ class StructTerm implements Term {
 /// MUST NOT: Code must not assume reader_addr == writer_addr + 1 or
 /// derive reader/writer identity from address parity.
 class VarRef implements Term {
-  /// The cell of this variable occurrence: the cell itself, not an address
-  /// into an indexed heap (MEASUREMENT BUILD GLP-mem-obj).
+  /// The cell of this variable occurrence: the cell itself, a reference and
+  /// not an address (IGLP app:in-heap, Variable pairs).
   final HeapCell addr;
 
   VarRef(this.addr);

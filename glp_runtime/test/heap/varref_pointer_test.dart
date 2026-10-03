@@ -11,9 +11,9 @@ import 'package:test/test.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/heap_fcp.dart';
 
-/// A cell of serial number [id], the same cell for the same number: the
-/// indexed heap's address as a VarRef held it (MEASUREMENT BUILD GLP-mem-obj,
-/// where a VarRef holds its cell).
+/// A cell of serial number [id], the same cell for the same number: these
+/// tests name a variable by its cell's number, a VarRef holding the cell
+/// itself (IGLP app:in-heap, Variable pairs).
 final _cells = <int, HeapCell>{};
 HeapCell _c(int id) =>
     _cells.putIfAbsent(id, () => HeapCell(null, CellTag.WrtTag, id));

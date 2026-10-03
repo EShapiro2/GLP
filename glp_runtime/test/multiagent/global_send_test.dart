@@ -12,9 +12,9 @@ import 'package:glp_runtime/multiagent/imported_writer_records.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
 import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell, CellTag;
 
-/// A cell of serial number [id], the same cell for the same number: the
-/// indexed heap's address as these tests named it (MEASUREMENT BUILD
-/// GLP-mem-obj, where a variable is its cell).
+/// A cell of serial number [id], the same cell for the same number: these
+/// tests name a variable by its cell's number, a variable occurrence being
+/// the cell itself (IGLP app:in-heap, Variable pairs).
 final _cells = <int, HeapCell>{};
 HeapCell _c(int id) =>
     _cells.putIfAbsent(id, () => HeapCell(null, CellTag.WrtTag, id));

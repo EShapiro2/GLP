@@ -7,13 +7,14 @@
 /// - Suspensions live on writer cells, not reader cells
 /// - A writer bound to a value becomes a value cell (ValueTag)
 ///
-/// MEASUREMENT BUILD (GLP-mem-obj, GLP #3 Cowork 2026-10-02 21:03 UTC): a cell
-/// is a Dart object and a term holds the cell itself, not an address into an
-/// indexed array; the array is gone, so a cell that no goal, suspension, wait
-/// or table reaches is Dart's to reclaim.  The names `addr`, `readerAddr`,
-/// `targetAddr` and `writerAddr` are kept from the indexed heap and now hold
-/// cells; [HeapCell.id] is the address the indexed heap would have given the
-/// cell, kept for display and messages and as the hash, and indexes nothing.
+/// - A variable occurrence in a goal or term is the cell itself, a reference
+///   and not an address: the heap is no array, and a cell lives while a goal,
+///   a suspension, a wait or a table reaches it and is reclaimed by Dart's
+///   collector when none does (IGLP app:in-heap, Variable pairs)
+///
+/// The names `addr`, `readerAddr`, `targetAddr` and `writerAddr` hold cells;
+/// [HeapCell.id] is a cell's serial number, for display, messages and the
+/// hash, and indexes nothing.
 library;
 
 import 'package:glp_runtime/runtime/terms.dart';
@@ -33,14 +34,13 @@ class HeapCell {
   dynamic content;  // null | Pointer | SuspensionListNode | Term | VariableEntry
   CellTag tag;
 
-  /// The cell's serial number, from [HeapFCP.HP]: the address the indexed heap
-  /// gave it.  For display, messages and hashing; it indexes nothing.
+  /// The cell's serial number, from [HeapFCP.HP], in order of allocation.
+  /// For display, messages and hashing; it indexes nothing.
   final int id;
 
   /// A writer's paired reader, recorded at allocation and kept when the writer
-  /// binds, the writer's own pointer to it being overwritten then (what the
-  /// indexed heap's writer-to-reader index held).  Null for a reader, a value
-  /// cell and an imported writer.
+  /// binds, the writer's own pointer to it being overwritten then.  Null for a
+  /// reader, a value cell and an imported writer.
   HeapCell? pairedReader;
 
   HeapCell(this.content, this.tag, this.id);
@@ -52,8 +52,8 @@ class HeapCell {
   @override
   int get hashCode => id;
 
-  /// The cell's [id], as the indexed heap's address printed: a message or a
-  /// trace that interpolates a cell reads as it did.
+  /// The cell's [id]: a message or a trace that interpolates a cell names it
+  /// by its serial number.
   @override
   String toString() => '$id';
 
@@ -100,16 +100,12 @@ const int _derefShortChain = 16;
 
 class HeapFCP {
   /// The serial counter: the [HeapCell.id] the next cell gets, and the number
-  /// of cells allocated so far.  The indexed heap's heap pointer; no cell is
-  /// found by it.
+  /// of cells allocated so far.  No cell is found by it.
   int HP = 0;
 
   /// Callbacks for external observation (Phase 0 I/O)
   /// Keyed by the writer cell
   final Map<HeapCell, void Function(Term)> _bindCallbacks = {};
-
-  // The indexed heap's writer-to-reader index is the writer cell's
-  // [HeapCell.pairedReader].
 
   // ==========================================================================
   // Variable Allocation (Section 3 of spec)
@@ -148,8 +144,7 @@ class HeapFCP {
   /// The cell content will be set to a VariableEntry by the caller.
   HeapCell allocateImportedWriter() => HeapCell(null, CellTag.WrtTag, HP++);
 
-  /// A value cell holding [value]: what the indexed heap appended for a term
-  /// stored on it.
+  /// A value cell holding [value].
   HeapCell allocateValue(Term value) =>
       HeapCell(value, CellTag.ValueTag, HP++);
 
