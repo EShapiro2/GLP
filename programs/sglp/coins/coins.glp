@@ -79,16 +79,19 @@ agent(Id, Fs, W, R, [msg(_, propose(From, K))|NetIn], Outs?, Ch) :-     %+ Ch
 
 %% Coins of a friend's arrive: hold them.
 agent(Id, Fs, W, R, [msg(_, coins(From, K))|NetIn], Outs?, Ch) :-       %+ Ch
+    ground(W?) |
     add(From?, K?, W?, W1),
     agent(Id?, Fs?, W1?, R?, NetIn?, Outs, Ch?).                        %+ Ch?
 
 %% A friend pays me in my own coins, which redeems them: nothing enters the
 %% wallet.
 agent(Id, Fs, W, R, [msg(_, pay(_, _))|NetIn], Outs?, Ch) :-            %+ Ch
+    ground(W?) |
     agent(Id?, Fs?, W?, R?, NetIn?, Outs, Ch?).                         %+ Ch?
 
 %% A friend declines my proposal.
 agent(Id, Fs, W, R, [msg(_, decline(_))|NetIn], Outs?, Ch) :-           %+ Ch
+    ground(W?) |
     agent(Id?, Fs?, W?, R?, NetIn?, Outs, Ch?).                         %+ Ch?
 
 %% paid(Id?, Fs?, W?, NetIn?, Outs, Ch?): after a payment, ask again with the

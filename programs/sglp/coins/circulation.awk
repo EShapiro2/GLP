@@ -65,11 +65,10 @@
 # succeeds"): a request answered while the card waited is taken by the pay or
 # the swap clause, which come before the clauses of the messages (README,
 # choice 6); a pay takes what the wallet then holds, take/5.  After a yes the
-# wallet is add/4's to build, and the clauses of the coins, pay and decline
-# messages, unlike the request's and the proposal's, do not wait on it
-# (ground(W?)), so where a request and coins both wait at a card answered yes,
-# GLP-Spec's Reduce, of any goal of the resolvent, lets either be taken first;
-# the replay takes the request first, as choice 6 has it.  Then the agent
+# wallet is add/4's to build, and every clause of agent/7, the request's and
+# each message's alike, waits on it (ground(W?)), so where a request and coins
+# both wait at a card answered yes, the request is taken first once the wallet
+# is built, and the replay takes it first, as choice 6 has it.  Then the agent
 # takes the messages that waited, in their order, holding the coins among
 # them, until a proposal, whose card then waits, the messages behind it
 # waiting on.  The log shows when a card waits: the monitor releases one rated
