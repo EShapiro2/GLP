@@ -1130,6 +1130,34 @@ HEREDOC
 check "Body =.. compose foo" "T = foo(a, b)" "$a30"
 check "Body =.. compose greet" "G = greet(hello, world)" "$a30"
 
+# =.. waits for a list still being built (sGLP, 2026-10-03): the list is a
+# reader (GLP-Spec appendix-guards, procedure =..(_, Stream(_)?)) and the
+# '_list_to_tuple' kernel aborts on an incomplete one (appendix-guards, "Body
+# kernel predicates"), so the root's =.. waits until the spine is assigned down
+# to [] and the functor is assigned, and only then calls the kernel.  A list
+# never completed leaves =.. suspended; nothing aborts.  The elements are not
+# waited on.
+a30w=$("$REPL_RUN" <<HEREDOC
+$TYPED/univ_wait.glp
+late_tail(Tw1).
+late_spine(Tw2).
+late_functor(Tw3).
+Tw6 =.. [p, Yw6?].
+never_tail(Gw4?, Tw4).
+never_functor(Gw5?, Tw5).
+:quit
+HEREDOC
+2>&1)
+check "=.. waits: tail assigned after the call" "Tw1 = f(a, b)" "$a30w"
+check "=.. waits: spine built after the call" "Tw2 = g(a, b, c, d)" "$a30w"
+check "=.. waits: functor assigned after the call" "Tw3 = h(a)" "$a30w"
+check "=.. does not wait on an element" "Tw6 = p(" "$a30w"
+check "=.. waits: tail never assigned leaves it suspended" "Tw4 = <unbound>" "$a30w"
+check "=.. waits: functor never assigned leaves it suspended" "Tw5 = <unbound>" "$a30w"
+check "=.. waits: suspended, not failed" "→ suspended" "$a30w"
+check_not "=.. waits: no abort" "ABORT" "$a30w"
+check_not "=.. waits: no failure" "→ failed" "$a30w"
+
 # --- A31: Forwarded-writer reactivation (bug of 2026-07-04) ---
 # A consumer suspended on a reader must wake when its writer, forwarded down a
 # recursive lookup, is bound through a chain ending in an already-bound value.

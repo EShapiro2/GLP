@@ -565,10 +565,22 @@ random(Seed, N, Value?, NextSeed?) :-
 % UNIV (=../2, ..=/2)
 % =============================================================================
 
-% Composition: list → tuple.  The empty list composes no term, and
-% '_list_to_tuple' aborts on it.
-X? =.. [Y|Ys] :- list(Ys?) | '_list_to_tuple'([Y?|Ys?], X).
+% Composition: list → tuple.  The list is a reader (=..(_, Stream(_)?)), and
+% '_list_to_tuple' does not wait: it aborts on a list whose spine is not yet
+% assigned down to [] and on a functor not yet assigned (GLP-Spec
+% appendix-guards, "Body kernel predicates").  So =.. waits on the functor
+% with known/1, and '_univ_compose' walks the spine, copying it into a list of
+% its own, and calls the kernel on the copy when the walk reaches [].  The
+% helper is defined by clauses and is no kernel; its name is admitted only to
+% a system module (appendix-guards, "Naming and admission of body kernels"),
+% so no application module calls it or defines one of the same name.  The
+% empty list composes no term, and '_list_to_tuple' aborts on it.
+X? =.. [Y|Ys] :- known(Y?) | '_univ_compose'(Ys?, [Y?|Zs?], Zs, X).
 X? =.. [] :- '_list_to_tuple'([], X).
+
+procedure '_univ_compose'(Stream(_)?, Stream(_)?, Stream(_), _).
+'_univ_compose'([Y|Ys], L, [Y?|Zs?], X?) :- '_univ_compose'(Ys?, L?, Zs, X).
+'_univ_compose'([], L, [], X?) :- '_list_to_tuple'(L?, X).
 
 % Decomposition: compound → list
 Y? ..= X :- compound(X?) | '_tuple_to_list'(X?, Y).

@@ -252,7 +252,7 @@ Result? := X + Y :-
 
 **Examples**:
 - `:=/2` - Arithmetic evaluation and assignment (recursive GLP clauses calling arithmetic body kernels)
-- `=../2` - Term composition/decomposition (bidirectional, using `'_list_to_tuple'`/`'_tuple_to_list'` body kernels)
+- `=../2` - Term composition (list to term, using the `'_list_to_tuple'` body kernel); `..=/2` - Term decomposition (term to list, using `'_tuple_to_list'`)
 - `now/1` - Clock access (calls `'_now'` body kernel)
 
 **Safety Guarantee**: System predicates' own clauses contain guards that ensure body kernels are called safely.
@@ -293,29 +293,31 @@ compute(X, Y, Z?) :-
   Z := X? + Y?.    % Compiler can optimize: inline '_add'(X?, Y?, Z)
 ```
 
-**Example: `=..` Definition** (from paper, Appendix A):
+**Example: `=..` and `..=` Definitions** (the root `programs/self.glp` as it stands; two predicates, one per direction, GLP-Spec appendix-guards "Term composition and decomposition"):
 
 ```glp
-% =../2 - Bidirectional term composition/decomposition
+% Composition: list → compound term.  Waits for the functor and for the
+% list's spine down to [], then calls the kernel.
+X? =.. [Y|Ys] :- known(Y?) | '_univ_compose'(Ys?, [Y?|Zs?], Zs, X).
+X? =.. [] :- '_list_to_tuple'([], X).
 
-% Composition: list → compound term
-X? =.. [Y|Ys] :- list(Ys?) | '_list_to_tuple'([Y?|Ys?], X).
+procedure '_univ_compose'(Stream(_)?, Stream(_)?, Stream(_), _).
+'_univ_compose'([Y|Ys], L, [Y?|Zs?], X?) :- '_univ_compose'(Ys?, L?, Zs, X).
+'_univ_compose'([], L, [], X?) :- '_list_to_tuple'(L?, X).
 
 % Decomposition: compound term → list
-X =.. Y? :- compound(X?) | '_tuple_to_list'(X?, Y).
+Y? ..= X :- compound(X?) | '_tuple_to_list'(X?, Y).
 ```
 
 **Usage**:
 ```glp
 % Decompose a structure
-analyze(Term?, Functor?, Args?) :-
-  true |
-  Term =.. [Functor | Args].
+procedure parts(_?, Stream(_)).
+parts(T, L?) :- L ..= T?.
 
-% Compose a structure
-build(Functor?, Args?, Term?) :-
-  true |
-  Term =.. [Functor? | Args?].
+% Compose a structure from its functor and arguments
+procedure build(Constant?, Stream(_)?, _).
+build(F, Args, T?) :- T =.. [F?|Args?].
 ```
 
 ---
