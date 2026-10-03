@@ -487,7 +487,7 @@ OutputsList ::= [] ; [OutputEntry | OutputsList].
 %% MEDIATOR TYPES
 %% =============================================================================
 
-ReqId ::= req(Constant).
+ReqId ::= req(Integer).
 
 %% User -> Mediator
 UserCmd ::= decision(Decision, Key, ReqId)

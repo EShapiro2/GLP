@@ -238,7 +238,7 @@ OutputEntry ::= person_output(Stream(AgentMsg)?)
 OutputsList ::= [] ; [OutputEntry|OutputsList].
 
 %% --- Moved here from grassapp_mediator.glp, for the same reason. ---
-ReqId ::= req(Constant).
+ReqId ::= req(Integer).
 
 %% User -> Mediator (ground commands from Dart).
 UserCmd     ::= connect(Key)
