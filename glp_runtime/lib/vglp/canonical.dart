@@ -83,7 +83,12 @@
 // Widget"; W an atom, vGLP 2026-10-01 23:55 UTC, E, Q3), are read from the
 // source text before it is lexed, GLP's lexer having no token =::= (vGLP #4
 // Cowork, 2026-10-02 08:26 UTC, item 7).  A declaration in the source holds
-// in its module.
+// in its module; those of its scope, read from the self.vglp beside each
+// self.glp of its ancestor chain, the root's included, are given by the
+// caller, and the source's own override them (vGLP #5 Cowork, 2026-10-03
+// 08:16 UTC, item 7: "Widget declarations are scoped as type declarations
+// are: a declaration at the root holds for every program, one in a module
+// holds in that module, and a local declaration overrides a global one").
 
 import '../compiler/ast.dart';
 import '../compiler/error.dart';
@@ -245,9 +250,12 @@ bool isPaperSyntaxSource(String text) {
 /// processes, programs/vglp/dispatcher.glp; without it the compilation emits
 /// neither.  [scope] is the source's scope, whose types the construct
 /// processes are built from where the source does not define them; without
-/// it, the root's.
+/// it, the root's.  [scopeWidgets] are the widget declarations of that scope,
+/// by moded type, which the source's own override.
 CanonicalProgram compileCanonical(String text,
-    {DispatcherSource? dispatcher, TypeEnvironment? scope}) {
+    {DispatcherSource? dispatcher,
+    TypeEnvironment? scope,
+    Map<String, String> scopeWidgets = const {}}) {
   final widgetDecls = extractWidgetDeclarations(text);
   final parsed = _parse(widgetDecls.stripped);
   final m = parsed.module;
@@ -382,8 +390,15 @@ CanonicalProgram compileCanonical(String text,
   // Part 2: the dispatcher and the construct processes.
   _Elicitation? elicitation;
   if (dispatcher != null) {
-    elicitation = _elicitation(dispatcher, inst!, m,
-        volitional.values.toList(), added, procTaken, widgetDecls, scope);
+    elicitation = _elicitation(
+        dispatcher,
+        inst!,
+        m,
+        volitional.values.toList(),
+        added,
+        procTaken,
+        {...scopeWidgets, ...widgetDecls.byModedType},
+        scope);
   } else if (widgetDecls.byModedType.isNotEmpty) {
     final d = widgetDecls.positions.first;
     throw CompileError(
@@ -428,7 +443,7 @@ _Elicitation _elicitation(
     List<VolitionalProcedure> volitional,
     _AddedTypes added,
     Set<String> procTaken,
-    WidgetDeclarations widgetDecls,
+    Map<String, String> widgets,
     TypeEnvironment? scope) {
   // Every name is fresh against the program's and against the names the
   // compilation has already given.
@@ -482,7 +497,7 @@ _Elicitation _elicitation(
     questionType: added.question,
     generic: generic,
     resolve: resolve,
-    declared: widgetDecls.byModedType,
+    declared: widgets,
     fresh: freshProc,
   );
 

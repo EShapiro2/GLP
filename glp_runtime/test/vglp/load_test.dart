@@ -12,7 +12,9 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/compiler/program_linker.dart';
-import 'package:glp_runtime/vglp/program_compilation.dart' show compiledHeader;
+import 'package:glp_runtime/compiler/error.dart';
+import 'package:glp_runtime/vglp/program_compilation.dart'
+    show compiledHeader, readSelfVglp, scopeWidgetDeclarations;
 import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart'
     show setRootScopeEnvironmentSource;
 
@@ -427,6 +429,117 @@ ping(a).
           discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp);
       expect(modules.any((m) => m.filePath.endsWith('.vglp')), isFalse);
       expect(modules.any((m) => m.moduleName.isNotEmpty), isTrue);
+    });
+  });
+
+  group('widget declarations of a scope, in the self.vglp beside its self.glp',
+      () {
+    // vGLP #5 Cowork, 2026-10-03 08:16 UTC, item 7: the pre-pass reads them
+    // from self.vglp beside each self.glp, a file of =::= lines only, which
+    // the loader skips by the standing rule (a .vglp beside a .glp of its own
+    // name); a declaration there holds for the scope of that self.glp
+    // (Definition "Widget Declaration, Default Widget": "a declaration at the
+    // root holds for every program, one in a module holds in that module, and
+    // a local declaration overrides a global one").
+    const asker = '''
+YesNo ::= yes ; no.
+procedure (YesNo?)*ask(Integer?).
+(yes)*ask(_).
+(no)*ask(_).
+''';
+
+    void program() {
+      write('self.glp', '''
+exported procedure ping(Constant).
+ping(a).
+''');
+      write('self.vglp', '''
+%% The program's widget declarations.
+YesNo? =::= toggle.
+''');
+    }
+
+    String emitted(String name) =>
+        File('${fixture.path}/$name.glp').readAsStringSync();
+
+    test('a declaration in the program\'s self.vglp holds in its modules, and '
+        'the self.vglp is no module', () {
+      program();
+      write('asker.vglp', asker);
+      final skipped = <String>[];
+      final written = emitVglpSources(fixture.path,
+          rootSelfGlpPath: File(_rootSelfGlp).absolute.path,
+          onSkip: skipped.add);
+      expect(written.map((w) => w.split('/').last), ['asker.glp']);
+      expect(skipped, isEmpty);
+      expect(emitted('asker'), contains('run(Id?, toggle, [input], Done?, Ds)'));
+      final modules =
+          discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp);
+      expect(modules.any((m) => m.filePath.endsWith('self.vglp')), isFalse);
+      expect(() => typeCheckProgram(modules, rootDir: fixture.path),
+          returnsNormally);
+    });
+
+    test('a module\'s own declaration overrides its scope\'s', () {
+      program();
+      write('asker.vglp', 'YesNo? =::= lamp.\n$asker');
+      emitVglpSources(fixture.path,
+          rootSelfGlpPath: File(_rootSelfGlp).absolute.path);
+      expect(emitted('asker'), contains('run(Id?, lamp, [input], Done?, Ds)'));
+    });
+
+    test('a nested directory\'s self.vglp overrides its ancestor\'s, and holds '
+        'only below it', () {
+      program();
+      write('asker.vglp', asker);
+      Directory('${fixture.path}/sub').createSync();
+      write('sub/self.glp', '''
+exported procedure pong(Constant).
+pong(b).
+''');
+      write('sub/self.vglp', 'YesNo? =::= dial.\n');
+      write('sub/inner.vglp', asker);
+      emitVglpSources(fixture.path,
+          rootSelfGlpPath: File(_rootSelfGlp).absolute.path);
+      expect(emitted('sub/inner'), contains('run(Id?, dial, [input], Done?, Ds)'));
+      expect(emitted('asker'), contains('run(Id?, toggle, [input], Done?, Ds)'));
+    });
+
+    test('the root\'s self.vglp holds for every program, a directory with no '
+        'self.glp adds nothing, and a more local declaration overrides', () {
+      // A tree of its own, so that the root's self.vglp is not programs/'s.
+      final tmp = Directory.systemTemp.createTempSync('vglp_widget_scope_');
+      try {
+        void put(String rel, String text) =>
+            (File('${tmp.path}/$rel')..createSync(recursive: true))
+                .writeAsStringSync(text);
+        put('programs/self.glp', '');
+        put('programs/self.vglp', 'YesNo? =::= root_toggle.\nCard =::= root_card.\n');
+        put('programs/app/self.glp', '');
+        put('programs/app/self.vglp', 'YesNo? =::= app_toggle.\n');
+        put('programs/app/plain/self.vglp', 'Card =::= stray.\n');
+        put('programs/app/plain/m.vglp', '');
+        put('programs/other/m.vglp', '');
+        expect(
+            scopeWidgetDeclarations('${tmp.path}/programs/app/plain/m.vglp',
+                '${tmp.path}/programs'),
+            {'YesNo?': 'app_toggle', 'Card': 'root_card'});
+        expect(
+            scopeWidgetDeclarations(
+                '${tmp.path}/programs/other/m.vglp', '${tmp.path}/programs'),
+            {'YesNo?': 'root_toggle', 'Card': 'root_card'});
+      } finally {
+        tmp.deleteSync(recursive: true);
+      }
+    });
+
+    test('a self.vglp holding anything but widget declarations is refused, '
+        'naming it', () {
+      write('self.vglp', 'YesNo? =::= toggle.\nping(a).\n');
+      expect(
+          () => readSelfVglp('${fixture.path}/self.vglp'),
+          throwsA(isA<CompileError>().having((e) => e.message, 'message',
+              allOf(contains('self.vglp'), contains('and nothing else')))));
     });
   });
 }
