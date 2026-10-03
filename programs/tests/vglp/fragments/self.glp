@@ -2,8 +2,10 @@
 %% person through the dispatcher and the construct processes (vGLP,
 %% sections/elicitation.tex, Definition "Canonical Compilation" and the
 %% paragraph before it; vGLP's code task of 2026-10-01 16:30 UTC, tests (iv)
-%% and (v), the latter's second half: a construct withdraws when its handle is
-%% bound to withdraw).
+%% and (v); the latter's second half, once a construct withdrawing on its
+%% handle, is the agent's message clause reducing without a request, (_) and
+%% the handle being out of the language (Udi, 2026-10-03; vGLP c994328, as
+%% vGLP #5 Cowork reports it, 2026-10-03 08:16 UTC)).
 %%
 %% Each play spawns the compiled goal with its ask stream and the dispatcher
 %% on that stream and on the person channel, as whatever spawns an agent's
@@ -25,9 +27,8 @@ YesNo    ::= yes ; no.
 Card     ::= card(Peer, YesNo?).
 Content  ::= friend_request(Peer, Response?).
 Msg      ::= msg(Peer, Content).
-Handle   ::= withdraw.
-Question ::= request_r(Request?) ; card_w(Card).
-Ask      ::= ask(Constant, Question, Handle).
+Question ::= stream_request_r(Stream(Request)?) ; card_w(Card).
+Ask      ::= ask(Constant, Question).
 
 imported procedure questions#agent(Peer?, Stream(Msg)?, Stream(String),
     Stream(Ask)).
@@ -74,14 +75,33 @@ refusing_person([withdraw(Id) | _], [], [withdrawn(Id?)]) :-
     ground(Id?) | true.
 refusing_person([], [], []).
 
+%% A refused grant leaves its question open, and the next grant that forms a
+%% term of its type answers it: the person grants maybe and then yes, and the
+%% card withdraws once yes has answered it.
+exported procedure play_card_refused_then_yes(Response, Stream(_)).
+play_card_refused_then_yes(Resp?, Log?) :-
+    questions # respond_coldcall(offer(bob), Resp, Asks),
+    questions # dispatch(Asks?, ch(Gs?, Ds), _),
+    second_try_person(Ds?, Gs, Log).
+
+procedure second_try_person(Stream(_)?, Stream(_), Stream(_)).
+second_try_person([draw(Id, _, V) | Ds], [input(Id?, maybe), input(Id?, yes) | Gs?],
+                  [drawn(Id?, V?) | Log?]) :-
+    ground(Id?), ground(V?) |
+    second_try_person(Ds?, Gs, Log).
+second_try_person([withdraw(Id) | _], [], [withdrawn(Id?)]) :-
+    ground(Id?) | true.
+second_try_person([], [], []).
+
 %% ---------------------------------------------------------------------------
-%% (v), second half: the agent's message clause, (_), binds the handle of its
-%% request to withdraw, and the request's construct withdraws unanswered; the
-%% card of the offer it spawns and the request asked again are drawn.
+%% (v), second half: serve's message clause reads no request, so it reduces on
+%% an arriving friend offer without waiting; the card of the offer it spawns
+%% is drawn, and the agent's request form stays on screen, its stream question
+%% open (Remark "Persistence").
 %% ---------------------------------------------------------------------------
 
-exported procedure play_withdraw(Stream(String), Stream(_)).
-play_withdraw(Outs?, Log?) :-
+exported procedure play_offer(Stream(String), Stream(_)).
+play_offer(Outs?, Log?) :-
     questions # agent(me, [msg(me, friend_request(carol, _))], Outs, Asks),
     questions # dispatch(Asks?, ch([], Ds), _),
     watching_person(Ds?, Log).
@@ -97,8 +117,9 @@ watching_person([withdraw(Id) | Ds], [withdrawn(Id?) | Log?]) :-
 watching_person([], []).
 
 %% ---------------------------------------------------------------------------
-%% A reader-mode question, a menu of forms: the person posts a text, a post of
-%% a number refused on the way, and then quits.
+%% The agent's question, a stream of requests asked once, its element a menu
+%% of forms: the person posts a text, a post of a number refused on the way,
+%% and then quits, all on the one construct, which stays on screen.
 %% ---------------------------------------------------------------------------
 
 exported procedure play_request(Stream(String), Stream(_)).
@@ -109,21 +130,12 @@ play_request(Outs?, Log?) :-
 
 procedure posting_person(Stream(_)?, Stream(_), Stream(_)).
 posting_person([draw(Id, W, input) | Ds],
-               [input(Id?, post(5)), input(Id?, post("hi")) | Gs?],
+               [input(Id?, post(5)), input(Id?, post("hi")), input(Id?, quit)
+                | Gs?],
                [drawn(Id?, W?) | Log?]) :-
     ground(Id?), ground(W?) |
-    quitting_person(Ds?, Gs, Log).
+    posting_person(Ds?, Gs, Log).
 posting_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
     posting_person(Ds?, Gs, Log).
 posting_person([], [], []).
-
-procedure quitting_person(Stream(_)?, Stream(_), Stream(_)).
-quitting_person([draw(Id, W, input) | Ds], [input(Id?, quit) | Gs?],
-                [drawn(Id?, W?) | Log?]) :-
-    ground(Id?), ground(W?) |
-    quitting_person(Ds?, Gs, Log).
-quitting_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
-    ground(Id?) |
-    quitting_person(Ds?, Gs, Log).
-quitting_person([], [], []).

@@ -66,8 +66,8 @@ decide(no, From, refuse(From?)).
           'withdraw(Integer).'));
       // On an ask it spawns the construct process with the next identifier.
       expect(c.source,
-          contains('serve([ask(_, Q, W) | Asks], Is, COut, CInto?, DOut?, Rs, '
-              'N) :- ground(N?) | construct(N?, Q?, W?, Gs?, Ds)'));
+          contains('serve([ask(_, Q) | Asks], Is, COut, CInto?, DOut?, Rs, '
+              'N) :- ground(N?) | construct(N?, Q?, Gs?, Ds)'));
     });
 
     test('its names, and the construct processes\', are fresh against the '
@@ -88,21 +88,21 @@ run(_).
       expect(c.source, contains('Draw_1 ::= draw(Integer, _, _) ; '
           'withdraw(Integer).'));
       expect(c.source, contains('procedure run_1(Integer?, _?, Stream(_)?, '
-          'Done?, Handle?, Stream(Draw_1)).'));
-      expect(c.source, contains('construct_1(Id, t_r(X?), H, Gs, Ds?) :- '));
+          'Done?, Stream(Draw_1)).'));
+      expect(c.source, contains('construct_1(Id, t_r(X?), Gs, Ds?) :- '));
       // The program's own are untouched.
       expect(c.source, contains('procedure construct(Draw?).'));
       expect(c.source, contains('procedure run(Draw?).'));
     });
 
-    test('construct/5 is declared over the program\'s questions', () {
+    test('construct/4 is declared over the program\'s questions', () {
       final c = compile('''
 T ::= t.
 procedure (T?)*p.
 (t)*p.
 ''');
       expect(c.source, contains('procedure construct(Integer?, Question?, '
-          'Handle?, Stream(_)?, Stream(Draw)).'));
+          'Stream(_)?, Stream(Draw)).'));
     });
 
     test('is not emitted without the generic source', () {
@@ -122,10 +122,10 @@ procedure (T?)*p.
         'and draws it with the default widget, a form', () {
       expect(
           s,
-          contains('construct(Id, card_w(X), H, Gs, Ds?) :- '
+          contains('construct(Id, card_w(X), Gs, Ds?) :- '
               'present_card(X?, Gs?, _, Vs, Done), '
               'run(Id?, form(card, [shown, buttons([yes, no])]), Vs?, Done?, '
-              'H?, Ds).'));
+              'Ds).'));
       // The view waits for the peer, so the output comes before the input
       // inside it.
       expect(
@@ -159,9 +159,9 @@ procedure (Request?)*agent(Integer?).
 ''').source;
       expect(
           s,
-          contains('construct(Id, request_r(X?), H, Gs, Ds?) :- '
+          contains('construct(Id, request_r(X?), Gs, Ds?) :- '
               'answer_request(X, Gs?, _, Done), run(Id?, menu([form(post, '
-              '[text]), button(quit)]), [input], Done?, H?, Ds).'));
+              '[text]), button(quit)]), [input], Done?, Ds).'));
       expect(s,
           contains('form_request(post(R1), post(X1?), F?) :- '
               'form_string(R1?, X1, F).'));
@@ -184,9 +184,9 @@ send_all(_, [], []).
 ''').source;
       expect(
           s,
-          contains('construct(Id, stream_string_r(X?), H, Gs, Ds?) :- '
+          contains('construct(Id, stream_string_r(X?), Gs, Ds?) :- '
               'answer_stream_string(X, Gs?, _, Done), run(Id?, '
-              'input_box(text), [input], Done?, H?, Ds).'));
+              'input_box(text), [input], Done?, Ds).'));
       expect(
           s,
           contains('take_stream_string(formed, V, [V? | X1?], _, Gs, Gs1?, '
@@ -244,7 +244,7 @@ Pick ::= pick(Peers, Peer?).
 procedure (Pick)*choose(Peer).
 (pick([bob, carol], P))*choose(P?).
 ''').source;
-      expect(s, contains('run(Id?, picker, Vs?, Done?, H?, Ds)'));
+      expect(s, contains('run(Id?, picker, Vs?, Done?, Ds)'));
     });
 
     test('a structure the program writes holding one with a question', () {
@@ -275,7 +275,7 @@ Note ::= note(String).
 procedure (Note)*tell(String?).
 (note(T?))*tell(T).
 ''').source;
-      expect(s, contains('construct(Id, note_w(_), _, _, [withdraw(Id?)]).'));
+      expect(s, contains('construct(Id, note_w(_), _, [withdraw(Id?)]).'));
     });
   });
 

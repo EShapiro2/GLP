@@ -15,9 +15,8 @@
 
 Peer     ::= Constant.
 Msg      ::= msg(Peer, String).
-Handle   ::= withdraw.
 Question ::= stream_string_r(Stream(String)?).
-Ask      ::= ask(Constant, Question, Handle).
+Ask      ::= ask(Constant, Question).
 
 imported procedure chat#chat(Peer?, Stream(Msg), Stream(Ask)).
 imported procedure chat#dispatch(Stream(Ask)?,
@@ -38,3 +37,22 @@ chatting_person([draw(Id, W, input) | Ds],
 chatting_person([withdraw(Id) | _], [], [withdrawn(Id?)]) :-
     ground(Id?) | true.
 chatting_person([], [], []).
+
+%% A stream question takes two grants as two elements and stays open: the
+%% person submits two texts, the stream has two elements and an open tail,
+%% and the input box is not withdrawn.
+exported procedure play_chat_two(Stream(Msg), Stream(_)).
+play_chat_two(Out?, Log?) :-
+    chat # chat(carol, Out, Asks),
+    chat # dispatch(Asks?, ch(Gs?, Ds), _),
+    two_texts_person(Ds?, Gs, Log).
+
+procedure two_texts_person(Stream(_)?, Stream(_), Stream(_)).
+two_texts_person([draw(Id, W, input) | Ds],
+                 [input(Id?, "one"), input(Id?, "two") | Gs?],
+                 [drawn(Id?, W?) | Log?]) :-
+    ground(Id?), ground(W?) |
+    two_texts_person(Ds?, Gs, Log).
+two_texts_person([withdraw(Id) | _], [], [withdrawn(Id?)]) :-
+    ground(Id?) | true.
+two_texts_person([], [], []).

@@ -204,31 +204,38 @@ ping(a).
 
   group('a source in the paper\'s syntax, compiled with its ask streams', () {
     // vGLP's task of 2026-10-02 00:13 UTC, item F: the canonical compilation
-    // of db03e2d, typed.  The ask stream's element type is one ask/3 over the
-    // union of the questions, each moded interactive type inside a functor of
-    // its own, Ask ::= ask(Constant, Question, Handle) (vGLP #4 Cowork,
-    // 2026-10-02 08:26 UTC, Q1), so a program with two or more interactive
-    // types is typed as one with one is.
+    // of db03e2d, typed, and at c994328, with (_) and the handle out of the
+    // language (vGLP #5 Cowork 2026-10-03 08:16 UTC).  The ask stream's
+    // element type is one ask/2 over the union of the questions, each moded
+    // interactive type inside a functor of its own, ask(Constant, Question)
+    // (vGLP #4 Cowork, 2026-10-02 08:26 UTC, Q1), so a program with two or
+    // more interactive types is typed as one with one is.  The agent is that
+    // of Sections 1 and 3: its question is the stream of the person's
+    // requests, asked once and served by an ordinary procedure.
     const entrySelfGlp = '''
 exported procedure ping(Constant).
 ping(a).
 ''';
 
-    test('one interactive type in reader mode, a (_) clause and a merge: the '
-        'compiled program is well-typed, input coverage included', () {
+    test('one interactive type in reader mode, the stream of requests served '
+        'by an ordinary procedure, and a merge: the compiled program is '
+        'well-typed, input coverage included', () {
       write('self.glp', entrySelfGlp);
       write('agent.vglp', '''
 Peer     ::= Constant.
 Request  ::= post(String) ; quit.
 Msg      ::= msg(Peer, String).
 
-procedure (Request?)*agent(Peer?, Stream(Msg)?, Stream(String)).
-(post(Text))*agent(Id, NetIn, [Text?|Outs?]) :-
-    ground(Id?) | agent(Id?, NetIn?, Outs).
-(quit)*agent(_, _, []).
-(_)*agent(Id, [msg(Id1, T)|NetIn], [T?|Outs?]) :-
+procedure (Stream(Request)?)*agent(Peer?, Stream(Msg)?, Stream(String)).
+(Reqs)*agent(Id, NetIn, Outs?) :- serve(Reqs?, Id?, NetIn?, Outs).
+
+procedure serve(Stream(Request)?, Peer?, Stream(Msg)?, Stream(String)).
+serve([post(Text)|Reqs], Id, NetIn, [Text?|Outs?]) :-
+    ground(Id?) | serve(Reqs?, Id?, NetIn?, Outs).
+serve([quit|_], _, _, []).
+serve(Reqs, Id, [msg(Id1, T)|NetIn], [T?|Outs?]) :-
     Id? =?= Id1?, ground(T?) |
-    agent(Id?, NetIn?, Outs).
+    serve(Reqs?, Id?, NetIn?, Outs).
 
 procedure two(Peer?, Peer?, Stream(Msg)?, Stream(Msg)?, Stream(String),
     Stream(String)).
@@ -238,7 +245,7 @@ two(A, B, NA, NB, OA?, OB?) :- agent(A?, NA?, OA), agent(B?, NB?, OB).
           discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp);
       final agent = modules.firstWhere((m) => m.moduleName == inFixture('agent'));
       expect(agent.ast.procedures.map((p) => '${p.name}/${p.arity}'),
-          containsAll(['agent/4', 'agent1/6', 'two/7']));
+          containsAll(['agent/4', 'agent1/5', 'serve/4', 'two/7']));
       expect(() => typeCheckProgram(modules, rootDir: fixture.path),
           returnsNormally);
     });
@@ -256,14 +263,17 @@ Card     ::= card(Peer, YesNo?).
 Content  ::= friend_request(Peer, Response?).
 Msg      ::= msg(Peer, Content).
 
-procedure (Request?)*agent(Peer?, Stream(Msg)?, Stream(String)).
-(post(Text))*agent(Id, NetIn, [Text?|Outs?]) :-
-    ground(Id?) | agent(Id?, NetIn?, Outs).
-(quit)*agent(_, _, []).
-(_)*agent(Id, [msg(Id1, friend_request(From, Resp?))|NetIn], Outs?) :-
+procedure (Stream(Request)?)*agent(Peer?, Stream(Msg)?, Stream(String)).
+(Reqs)*agent(Id, NetIn, Outs?) :- serve(Reqs?, Id?, NetIn?, Outs).
+
+procedure serve(Stream(Request)?, Peer?, Stream(Msg)?, Stream(String)).
+serve([post(Text)|Reqs], Id, NetIn, [Text?|Outs?]) :-
+    ground(Id?) | serve(Reqs?, Id?, NetIn?, Outs).
+serve([quit|_], _, _, []).
+serve(Reqs, Id, [msg(Id1, friend_request(From, Resp?))|NetIn], Outs?) :-
     Id? =?= Id1?, ground(From?) |
     respond_coldcall(offer(From?), Resp),
-    agent(Id?, NetIn?, Outs).
+    serve(Reqs?, Id?, NetIn?, Outs).
 
 procedure (Card)*respond_coldcall(Offer?, Response).
 (card(From?, Answer))*respond_coldcall(offer(From), Resp?) :-
@@ -278,7 +288,8 @@ decide(no, From, refuse(From?)).
       final agent = modules.firstWhere((m) => m.moduleName == inFixture('agent'));
       expect(
           agent.ast.typeDefs.map((d) => d.toString()),
-          contains('Question ::= request_r(Request?) ; card_w(Card).'));
+          contains('Question ::= stream_request_r(Stream(Request)?) ; '
+              'card_w(Card).'));
       expect(() => typeCheckProgram(modules, rootDir: fixture.path),
           returnsNormally);
     });

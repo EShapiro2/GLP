@@ -1,10 +1,12 @@
 // glp_runtime/lib/vglp/canonical.dart
 //
 // The canonical compilation of a vGLP program written in the paper's syntax.
-// Spec: vGLP at db03e2d --- sections/vglp.tex, Definition "Guarded Clause,
+// Spec: vGLP at c994328 --- sections/vglp.tex, Definition "Guarded Clause,
 // Volitional Procedure, Interactive Type, Interactive Term, Ordinary Clause,
 // Procedure, vGLP Program"; sections/elicitation.tex, Definition "Canonical
-// Compilation".
+// Compilation" and the paragraph before it.  (_) and the handle are out of the
+// language (Udi, 2026-10-03; vGLP c994328, c2e8b57, as vGLP #5 Cowork reports
+// it, 2026-10-03 08:16 UTC).
 //
 // The syntax:
 //
@@ -12,16 +14,16 @@
 //     (A)*p(S1, ..., Sn) :- G | B.
 //
 // T is the interactive type, in writer or reader mode as an argument type is;
-// A, the interactive term, is a term of type T, possibly a variable, or `_`,
-// the anonymous variable, if T is in reader mode; in writer mode, which would
-// leave the output unwritten, the anonymous variable is refused.  The clause
-// "is the guarded clause p(S1, ..., Sn, A) :- G | B, of arity n+1" (Definition
+// A, the interactive term, "is a term of type T, possibly a variable but not
+// the anonymous variable": `_`, `_?`, `_Name` and `_Name?` are refused in
+// either mode, an anonymous variable being any variable whose name begins
+// with `_` (GLP-Spec, Remark "Anonymous Variables").  The clause "is the
+// guarded clause p(S1, ..., Sn, A) :- G | B, of arity n+1" (Definition
 // "Guarded Clause, ..."), so the front end reads it as exactly that: a token
 // rewrite puts A after the last argument, and T after the last argument type,
 // and the ordinary GLP parser reads the result.
 //
-// The compilation, by the Definition (vGLP's code task of 2026-10-02 00:13
-// UTC, item F):
+// The compilation, by the Definition:
 //
 //   - a procedure REACHES A QUESTION if it is volitional or a clause of it
 //     calls a procedure that does, the least fixpoint over the program's
@@ -34,33 +36,27 @@
 //   - every ordinary clause so extended, each call q(S1, ..., Sn) of a
 //     volitional procedure q in its body replaced by q_a(S1, ..., Sn);
 //   - for each volitional procedure q of interactive type T, its clauses as
-//     guarded clauses of arity n+1, with the HANDLE added after the
-//     interactive term --- withdraw in a clause whose interactive term is the
-//     anonymous variable, `_` or `_Name`, and the anonymous variable in every
-//     other --- then extended, and their calls replaced likewise.  The handle
-//     is at a produced head position, where TGLP writes the anonymous
-//     variable `_?` (TGLP, "Anonymous variables"); `_` is refused there.  A
-//     clause whose interactive term is the anonymous variable keeps it, and
-//     no goal is added: there is no built-in (item B');
+//     guarded clauses of arity n+1, extended and with their calls replaced
+//     likewise: a compiled clause of arity n+2, its ask stream and nothing
+//     else added;
 //   - the asking clause
-//         q_a(S1, ..., Sn, [ask(T, t(X), W?) | D?]) :- q(S1', ..., Sn', X?, W, D).
+//         q_a(S1, ..., Sn, [ask(T, t(X)) | D?]) :- q(S1', ..., Sn', X?, D).
 //     S'_l the reader of S_l at an input position and the writer at an output
 //     position, the head carrying the pair's other end; X and X? exchanged
 //     where T is in writer mode; t the functor of T in Question (below);
-//   - typed: the types of the source; the handle's, Handle ::= withdraw; the
-//     questions, Question ::= t1(T1) ; ... ; tk(Tk), one functor per moded
-//     interactive type, each type as written in its mode; the ask stream's
-//     element, Ask ::= ask(Constant, Question, Handle), one ask/3 over the
-//     union of those functors (vGLP #4 Cowork, 2026-10-02 08:26 UTC, Q1: TGLP
-//     refuses two alternatives of one functor, "Two alternatives with the
-//     same functor are not allowed", typed-glp.tex, so the asks of two types
-//     cannot each be an alternative of their own); each procedure that
-//     reaches a question declared with Stream(Ask) added, the asking clause
-//     with the source declaration's argument types and it, and q with the
-//     argument of T in its mode, the handle and it;
+//   - typed: the types of the source; the questions, Question ::= t1(T1) ;
+//     ... ; tk(Tk), one functor per moded interactive type, each type as
+//     written in its mode; the ask stream's element, Ask ::= ask(Constant,
+//     Question), one ask/2 over the union of those functors (vGLP #4 Cowork,
+//     2026-10-02 08:26 UTC, Q1: TGLP refuses two alternatives of one functor,
+//     "Two alternatives with the same functor are not allowed", typed-glp.tex,
+//     so the asks of two types cannot each be an alternative of their own);
+//     each procedure that reaches a question declared with Stream(Ask) added,
+//     the asking clause with the source declaration's argument types and it,
+//     and q with the argument of T in its mode and it;
 //   - the dispatcher and the construct processes (Part 2): the dispatcher's
 //     generic source, programs/vglp/dispatcher.glp, its names made fresh
-//     against the program's (dispatcher.dart), and the clause of construct/5
+//     against the program's (dispatcher.dart), and the clause of construct/4
 //     of each interactive type with the clauses it calls, typed at the type
 //     (constructs.dart).  Without the generic source the compilation emits
 //     neither, which only a test of the first half asks for.
@@ -71,10 +67,10 @@
 // the compiled program exports dispatch/3 for it.
 //
 // THE NAMES.  The asking clause takes the source name, q_a = q, so a call of
-// q in a body is already the call of its asking clause; the (n+3)-ary
+// q in a body is already the call of its asking clause; the (n+2)-ary
 // procedure takes `q1`, made fresh against every name the program uses, and
-// the three types the compilation adds take `Ask`, `Handle` and `Question`,
-// made fresh against the program's types.
+// the two types the compilation adds take `Ask` and `Question`, made fresh
+// against the program's types.
 //
 // THE ASK.  T is the constant naming the moded interactive type as written,
 // 'Menu' or 'Menu?'; t is the type as written, each name with its first
@@ -97,7 +93,6 @@ import '../compiler/parser.dart';
 import '../compiler/token.dart';
 import '../analysis/type_checker/type_ast.dart'
     show
-        ConstantAlt,
         ProcDecl,
         StructAlt,
         TypeDef,
@@ -112,12 +107,8 @@ import 'mediator.dart' show printTypeDef, typeSource;
 import 'program_compilation.dart' show compiledHeader;
 
 /// The functor of the ask a goal of a volitional procedure sends on its ask
-/// stream, ask(T, X, W?) (vGLP, Definition "Canonical Compilation").
+/// stream, ask(T, t(X)) (vGLP, Definition "Canonical Compilation").
 const askFunctor = 'ask';
-
-/// What a clause whose interactive term is the anonymous variable binds the
-/// handle to (vGLP, Definition "Canonical Compilation").
-const withdrawHandle = 'withdraw';
 
 /// The goal that merges two ask streams into one (vGLP, Definition "Canonical
 /// Compilation": "merge goals merge them"), the root's merge/3.
@@ -139,7 +130,8 @@ class VolitionalProcedure {
   /// asked goal receives its reader.
   final bool readerMode;
 
-  /// The name of the (n+1)-ary procedure, the clauses of q.
+  /// The name of the (n+2)-ary procedure, the clauses of q with the
+  /// interactive variable and the ask stream.
   final String guardedName;
 
   /// The type parameters of the procedure's declaration.
@@ -164,7 +156,7 @@ class VolitionalProcedure {
 
 /// The canonical compilation of one source: the GLP module's text, the module
 /// it parses to, the volitional procedures it compiled, the procedures that
-/// reach a question by their source signature p/n, the names of the three
+/// reach a question by their source signature p/n, the names of the two
 /// types it adds, the functor of each moded interactive type in Question, and
 /// --- where the dispatcher's generic source was given --- the names of the
 /// dispatcher's entry point and of the construct processes, and the widget of
@@ -175,7 +167,6 @@ class CanonicalProgram {
   final List<VolitionalProcedure> volitional;
   final Set<String> reaching;
   final String askType;
-  final String handleType;
   final String questionType;
 
   /// The functor of each moded interactive type in Question, by the type as
@@ -186,14 +177,14 @@ class CanonicalProgram {
   /// generic source.
   final String? dispatchName;
 
-  /// construct/5, as emitted; null without the generic source.
+  /// construct/4, as emitted; null without the generic source.
   final String? constructName;
 
   /// The widget term of each interactive type, by the type as written.
   final Map<String, String> widgets;
 
   CanonicalProgram(this.source, this.module, this.volitional, this.reaching,
-      this.askType, this.handleType,
+      this.askType,
       {required this.questionType,
       required this.functors,
       this.dispatchName,
@@ -328,7 +319,7 @@ CanonicalProgram compileCanonical(String text,
     }
   }
   _checkNoAskedCall(m, volitional);
-  _checkNoAnonymousOutput(m, volitional);
+  _checkNoAnonymousTerm(m, volitional);
 
   // The (n+1)-ary procedures of the volitional procedures, by their parsed
   // signature q/(n+1).
@@ -341,11 +332,10 @@ CanonicalProgram compileCanonical(String text,
   final typeNames = {for (final td in m.typeDefs) td.name};
   final added = _addedTypes(volitional.values, declsByKey,
       ask: _freshType('Ask', typeNames),
-      handle: _freshType('Handle', typeNames),
       question: _freshType('Question', typeNames));
 
   // The compiled procedures, each with its declaration, in source order; a
-  // volitional procedure becomes its asking clause and its (n+3)-ary
+  // volitional procedure becomes its asking clause and its (n+2)-ary
   // procedure, and a procedure that reaches a question is extended.
   final out = <_Emitted>[];
   for (final p in m.procedures) {
@@ -366,9 +356,7 @@ CanonicalProgram compileCanonical(String text,
     }
     final decl = declsByKey[p.signature]!;
     out.add(_Emitted(_askingDeclaration(decl, v, added), _askingClause(decl, v)));
-    out.add(_Emitted(
-        _withAskStream(decl, v.guardedName,
-            [TypeRef(added.handle, decl.line, decl.column)], added),
+    out.add(_Emitted(_withAskStream(decl, v.guardedName, const [], added),
         _guardedProcedure(p, v, reaching)));
   }
   // Declarations with no clauses of their own: imported procedures, and
@@ -394,7 +382,7 @@ CanonicalProgram compileCanonical(String text,
   final source = _emit(m, added.typeDefs, out, bare, elicitation);
   final module = Parser(Lexer(source).tokenize()).parseModule();
   return CanonicalProgram(source, module, volitional.values.toList(),
-      reaching, added.ask, added.handle,
+      reaching, added.ask,
       questionType: added.question,
       functors: functors,
       dispatchName: elicitation?.dispatchName,
@@ -433,7 +421,7 @@ _Elicitation _elicitation(
   // Every name is fresh against the program's and against the names the
   // compilation has already given.
   final procTaken = {...taken};
-  final typeTaken = {...typeNames, added.ask, added.handle, added.question};
+  final typeTaken = {...typeNames, added.ask, added.question};
   String freshProc(String stem) => _fresh(stem, procTaken);
   String freshType(String stem) => _freshType(stem, typeTaken);
 
@@ -445,7 +433,6 @@ _Elicitation _elicitation(
       supplied: {
         askTypeRef: ref(added.ask),
         questionTypeRef: ref(added.question),
-        handleTypeRef: TypeRef(added.handle, 0, 0),
       },
       params: params,
       freshType: freshType,
@@ -489,7 +476,6 @@ _Elicitation _elicitation(
     types: types,
     constructName: constructName,
     questionType: added.question,
-    handleType: added.handle,
     generic: generic,
     resolve: resolve,
     declared: widgetDecls.byModedType,
@@ -970,33 +956,26 @@ void _checkNoAskedCall(Module m, Map<String, VolitionalProcedure> volitional) {
   }
 }
 
-/// The interactive term is "a term of type T, possibly a variable, or the
-/// anonymous variable if T is in reader mode" (Definition "Guarded Clause,
-/// ..."): "In writer mode the anonymous variable, which would leave the output
-/// unwritten, is not allowed; there the program closes a question inside its
-/// output by dropping the question's reader and, where the type provides for
-/// it, by writing more of the output".  It is refused written `_`, and written
-/// `_?`, TGLP's anonymous output, the interactive term's position being a
-/// produced one in writer mode; and written `_Name` or `_Name?`, an anonymous
-/// variable being any variable whose name begins with `_` (TGLP, "Anonymous
-/// variables"; vGLP's task of 2026-10-02 00:52 UTC, item 2).
-void _checkNoAnonymousOutput(
+/// The interactive term "is a term of type T, possibly a variable but not the
+/// anonymous variable" (Definition "Guarded Clause, ..."), in either mode of
+/// T: written `_` or `_?`, or `_Name` or `_Name?`, an anonymous variable being
+/// any variable whose name begins with `_` (GLP-Spec, Remark "Anonymous
+/// Variables"), it is refused.  (_) and the handle are out of the language
+/// (Udi, 2026-10-03; vGLP c994328, c2e8b57, as vGLP #5 Cowork reports it).
+void _checkNoAnonymousTerm(
     Module m, Map<String, VolitionalProcedure> volitional) {
   for (final v in volitional.values) {
-    if (v.readerMode) continue;
     for (final p in m.procedures) {
       if (p.signature != '${v.name}/${v.arity + 1}') continue;
       for (final c in p.clauses) {
         if (!_isAnonymous(c.head.args.last)) continue;
         throw CompileError(
-            'The clause ${_asWritten(c, v)} has the anonymous variable as its '
-            'interactive term, and the interactive type ${v.typeConstant} of '
-            '${v.name}/${v.arity} is in writer mode, where the anonymous '
-            'variable, which would leave the output unwritten, is not allowed: '
-            'there the program closes a question inside its output by dropping '
-            'the question\'s reader and, where the type provides for it, by '
-            'writing more of the output (vGLP, Definition "Guarded Clause, '
-            '...")',
+            'The clause ${_asWritten(c, v)} of ${v.name}/${v.arity}, whose '
+            'interactive type ${v.typeConstant} is in '
+            '${v.readerMode ? 'reader' : 'writer'} mode, has the anonymous '
+            'variable as its interactive term: the interactive term is not '
+            'the anonymous variable (vGLP, Definition "Guarded Clause, '
+            'Volitional Procedure, ...")',
             c.line, c.column, phase: 'analyzer');
       }
     }
@@ -1128,24 +1107,21 @@ Goal _withStream(Goal g, Term stream) {
 // The types the compilation adds
 // ---------------------------------------------------------------------------
 
-/// The handle's type, [handle] ::= withdraw; the questions, [question], one
-/// alternative per moded interactive type, its functor wrapping the type as
-/// written in its mode, t(T); and the ask stream's element, [ask],
-/// ask(Constant, Question, Handle), one ask/3 over the union of the functors
-/// (vGLP #4 Cowork, 2026-10-02 08:26 UTC, Q1).  An interactive type that names
-/// a type parameter of its procedure gives Question and Ask that parameter,
-/// and each declaration with an ask stream takes it.
+/// The questions, [question], one alternative per moded interactive type, its
+/// functor wrapping the type as written in its mode, t(T); and the ask
+/// stream's element, [ask], ask(Constant, Question), one ask/2 over the union
+/// of the functors (vGLP #4 Cowork, 2026-10-02 08:26 UTC, Q1).  An interactive
+/// type that names a type parameter of its procedure gives Question and Ask
+/// that parameter, and each declaration with an ask stream takes it.
 class _AddedTypes {
   final String ask;
-  final String handle;
   final String question;
   final List<String> params;
 
   /// Each moded interactive type, once, with its functor.
   final List<(TypeExpr, String)> interactiveTypes;
 
-  _AddedTypes(this.ask, this.handle, this.question, this.params,
-      this.interactiveTypes);
+  _AddedTypes(this.ask, this.question, this.params, this.interactiveTypes);
 
   List<TypeRef> _paramRefs(int l, int c) =>
       [for (final p in params) TypeRef(p, l, c)];
@@ -1160,7 +1136,6 @@ class _AddedTypes {
       [...own, for (final p in params) if (!own.contains(p)) p];
 
   List<TypeDef> get typeDefs => [
-        TypeDef(handle, [ConstantAlt(withdrawHandle, 0, 0)], 0, 0),
         TypeDef(
             question,
             [
@@ -1175,7 +1150,6 @@ class _AddedTypes {
               StructAlt(askFunctor, [
                 TypeRef('Constant', 0, 0),
                 TypeRef(question, 0, 0, typeArgs: _paramRefs(0, 0)),
-                TypeRef(handle, 0, 0),
               ], 0, 0)
             ],
             0,
@@ -1186,7 +1160,7 @@ class _AddedTypes {
 
 _AddedTypes _addedTypes(Iterable<VolitionalProcedure> volitional,
     Map<String, ProcDecl> declsByKey,
-    {required String ask, required String handle, required String question}) {
+    {required String ask, required String question}) {
   final types = <(TypeExpr, String)>[];
   final seen = <String>{};
   final params = <String>[];
@@ -1205,7 +1179,7 @@ _AddedTypes _addedTypes(Iterable<VolitionalProcedure> volitional,
     collect(t, decl.typeParams);
     if (seen.add(typeSource(t))) types.add((t, v.functor));
   }
-  return _AddedTypes(ask, handle, question, params, types);
+  return _AddedTypes(ask, question, params, types);
 }
 
 // ---------------------------------------------------------------------------
@@ -1241,7 +1215,7 @@ ProcDecl _askingDeclaration(
 
 /// The asking clause
 ///
-///     q(S1, ..., Sn, [ask(T, t(X), W?) | D?]) :- q1(S1', ..., Sn', X?, W, D).
+///     q(S1, ..., Sn, [ask(T, t(X)) | D?]) :- q1(S1', ..., Sn', X?, D).
 ///
 /// S'_l the reader of S_l at an input position and the writer at an output
 /// position, the head carrying the pair's other end; X and X? exchanged where
@@ -1259,7 +1233,6 @@ Procedure _askingClause(ProcDecl decl, VolitionalProcedure v) {
   final ask = StructTerm(askFunctor, [
     ConstTerm(v.typeConstant, l, c),
     StructTerm(v.functor, [VarTerm('X', !v.readerMode, l, c)], l, c),
-    VarTerm('W', true, l, c),
   ], l, c);
   final clause = Clause(
       Atom(v.askingName, [...head, ListTerm(ask, VarTerm('D', true, l, c), l, c)],
@@ -1270,7 +1243,6 @@ Procedure _askingClause(ProcDecl decl, VolitionalProcedure v) {
             [
               ...passed,
               VarTerm('X', v.readerMode, l, c),
-              VarTerm('W', false, l, c),
               VarTerm('D', false, l, c),
             ],
             l,
@@ -1281,37 +1253,23 @@ Procedure _askingClause(ProcDecl decl, VolitionalProcedure v) {
   return Procedure(v.askingName, v.arity + 1, [clause], l, c);
 }
 
-/// The clauses of q as guarded clauses of arity n+1, named q1, with the handle
-/// added after the interactive term and then extended (Definition "Canonical
-/// Compilation").  A clause whose interactive term is the anonymous variable
-/// keeps it at the interactive position, where it drops the reader, and no
-/// goal is added (item B': no built-in).
+/// The clauses of q as guarded clauses of arity n+1, named q1, then extended
+/// (Definition "Canonical Compilation"): a compiled clause of arity n+2, its
+/// ask stream and nothing else added.
 Procedure _guardedProcedure(
     Procedure p, VolitionalProcedure v, Set<String> reaching) {
   final clauses = [
     for (final c in p.clauses)
-      _extended(c, v.guardedName, [...c.head.args, _handle(c.head.args.last)],
-          reaching)
+      _extended(c, v.guardedName, c.head.args, reaching)
   ];
-  return Procedure(v.guardedName, v.arity + 3, clauses, p.line, p.column);
+  return Procedure(v.guardedName, v.arity + 2, clauses, p.line, p.column);
 }
 
-/// The handle in the head of a clause whose interactive term is [a]: withdraw
-/// where [a] is the anonymous variable, `_` or `_Name` (vGLP's task of
-/// 2026-10-02 00:52 UTC, item 2), and the anonymous variable in every other
-/// clause, written `_?`, TGLP's anonymous output, the handle's being a
-/// produced position.
-Term _handle(Term a) => _isAnonymous(a) && !_isReader(a)
-    ? ConstTerm(withdrawHandle, a.line, a.column)
-    : UnderscoreTerm(a.line, a.column, isReader: true);
-
 /// Whether [t] is an anonymous variable, in either mode: `_`, `_?`, or a
-/// variable whose name begins with `_` (TGLP, "Anonymous variables").
+/// variable whose name begins with `_` (GLP-Spec, Remark "Anonymous
+/// Variables").
 bool _isAnonymous(Term t) =>
     t is UnderscoreTerm || (t is VarTerm && t.name.startsWith('_'));
-
-bool _isReader(Term t) =>
-    (t is UnderscoreTerm && t.isReader) || (t is VarTerm && t.isReader);
 
 /// A clause of a procedure that reaches a question, named [name], its head's
 /// arguments [headArgs] and then its ask stream (Definition "Canonical

@@ -8,10 +8,11 @@
 %% it by its identifier; it has the bridge draw the widget of T and the output
 %% the program writes into the variable; and it binds each question it holds
 %% with the term the person's input forms, one element per submission for a
-%% stream type.  The ask carries the reader of a handle whose writer the asked
-%% goal holds: a clause with the interactive term (_) binds the handle to
-%% withdraw, and the construct process withdraws when its handle is so bound
-%% or every question it holds is answered."
+%% stream type.  The construct process withdraws when every question it holds
+%% is answered.  A reader the program drops leaves its construct on screen,
+%% showing what the program writes into it."  (_) and the handle are out of
+%% the language (Udi, 2026-10-03; vGLP c994328, c2e8b57, as vGLP #5 Cowork
+%% reports it).
 %%
 %% The messages to and from the bridge are vGLP's (2026-10-01 23:55 UTC, E):
 %% a construct sends draw(Id, W, V), W its widget and V the output so far with
@@ -26,15 +27,14 @@
 %% program, as it emitted the mediator before it: a module path resolves from
 %% the program root downward, so no compiled program can name this directory.
 %% It names each type and procedure here fresh against the program's, and
-%% supplies four things of its own, one per program:
-%%   Ask       the asks on the ask stream, ask(T, Q, W?);
+%% supplies three things of its own, one per program:
+%%   Ask       the asks on the ask stream, ask(T, Q);
 %%   Question  the union of the program's questions, one functor per moded
 %%             interactive type, the person's end of its variable inside;
-%%   Handle    withdraw;
-%%   construct(Id?, Q?, W?, Gs?, Ds), the construct process of each interactive
+%%   construct(Id?, Q?, Gs?, Ds), the construct process of each interactive
 %%             type, one clause per functor of Question, which forms the
 %%             person's answers by clauses typed at the question's type and
-%%             calls run/6 below.
+%%             calls run/5 below.
 %% So this module is not a program by itself, and is not loaded as one.
 
 %% ---------------------------------------------------------------------------
@@ -94,9 +94,9 @@ split_grants([], [], []).
 %% forget a construct's route once it has withdrawn, closing its grants.
 procedure serve(Stream(Ask)?, Stream(Input)?, Stream(Draw)?, Stream(Draw),
     Stream(_), Routes?, Integer?).
-serve([ask(_, Q, W) | Asks], Is, COut, CInto?, DOut?, Rs, N) :-
+serve([ask(_, Q) | Asks], Is, COut, CInto?, DOut?, Rs, N) :-
     ground(N?) |
-    construct(N?, Q?, W?, Gs?, Ds),
+    construct(N?, Q?, Gs?, Ds),
     merge(Ds?, CInto1?, CInto),
     N1 := N? + 1,
     serve(Asks?, Is?, COut?, CInto1, DOut, [route(N?, Gs) | Rs?], N1?).
@@ -157,23 +157,21 @@ close_routes([]).
 %% The construct process: what is common to every interactive type
 %% ---------------------------------------------------------------------------
 
-%% run(Id?, W?, Views?, Done?, Handle?, Ds): draw each view of construct Id
-%% with its widget W as it arrives; withdraw when the handle is bound to
-%% withdraw, or when Done is bound, every question the construct holds
-%% answered and no question still to come.
-procedure run(Integer?, _?, Stream(_)?, Done?, Handle?, Stream(Draw)).
-run(Id, _, _, _, withdraw, [withdraw(Id?)]).
-run(Id, _, _, done, _, [withdraw(Id?)]).
-run(Id, W, [V | Vs], Done, H, [draw(Id?, W?, V?) | Ds?]) :-
+%% run(Id?, W?, Views?, Done?, Ds): draw each view of construct Id with its
+%% widget W as it arrives; withdraw when Done is bound, every question the
+%% construct holds answered and no question still to come, and on nothing
+%% else.
+procedure run(Integer?, _?, Stream(_)?, Done?, Stream(Draw)).
+run(Id, _, _, done, [withdraw(Id?)]).
+run(Id, W, [V | Vs], Done, [draw(Id?, W?, V?) | Ds?]) :-
     ground(W?), ground(V?) |
-    run(Id?, W?, Vs?, Done?, H?, Ds).
-run(Id, _, [], Done, H, Ds?) :-
-    run_end(Id?, Done?, H?, Ds).
+    run(Id?, W?, Vs?, Done?, Ds).
+run(Id, _, [], Done, Ds?) :-
+    run_end(Id?, Done?, Ds).
 
-%% run_end(Id?, Done?, Handle?, Ds): the view is final; wait to withdraw.
-procedure run_end(Integer?, Done?, Handle?, Stream(Draw)).
-run_end(Id, _, withdraw, [withdraw(Id?)]).
-run_end(Id, done, _, [withdraw(Id?)]).
+%% run_end(Id?, Done?, Ds): the view is final; wait to withdraw.
+procedure run_end(Integer?, Done?, Stream(Draw)).
+run_end(Id, done, [withdraw(Id?)]).
 
 %% all_done(Dones?, Done): done when each is.
 procedure all_done(Stream(Done)?, Done).

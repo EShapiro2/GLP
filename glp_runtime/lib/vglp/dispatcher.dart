@@ -13,10 +13,10 @@
 // was: a module path resolves from the program root downward, so a compiled
 // program cannot name programs/vglp/ (mediator.dart).
 //
-// The generic source names three types and one procedure it does not define,
+// The generic source names two types and one procedure it does not define,
 // which the compilation supplies: Ask, the asks on the ask stream; Question,
-// the union of the program's questions; Handle, withdraw; and construct/5,
-// the construct process of each interactive type (constructs.dart).  Every
+// the union of the program's questions; and construct/4, the construct
+// process of each interactive type (constructs.dart).  Every
 // type and procedure the source does define is emitted under a name fresh
 // against the program's, so that no name of the program is taken.
 
@@ -31,10 +31,9 @@ import '../analysis/type_checker/type_ast.dart';
 /// the source uses for them.
 const askTypeRef = 'Ask';
 const questionTypeRef = 'Question';
-const handleTypeRef = 'Handle';
 
 /// The procedure the compilation supplies: the construct process of each
-/// interactive type, construct(Id?, Q?, W?, Gs?, Ds).
+/// interactive type, construct(Id?, Q?, Gs?, Ds).
 const constructHook = 'construct';
 
 /// The dispatcher's entry point, dispatch(Asks?, PersonCh?, MCh), which the
@@ -114,7 +113,7 @@ class InstantiatedDispatcher {
 
 /// Instantiate [source] into a program.
 ///
-/// [supplied] gives the emitted type of each of Ask, Question and Handle;
+/// [supplied] gives the emitted type of each of Ask and Question;
 /// [params] are the type parameters these carry, which every declaration
 /// mentioning them takes.  [freshType] and [freshProc] give a name fresh
 /// against the program's for a stem, and [constructName] is the name the

@@ -2,20 +2,22 @@
 //
 // The canonical compilation of a vGLP program in the paper's syntax, in both
 // modes.
-// Spec: vGLP at db03e2d --- sections/vglp.tex, Definition "Guarded Clause,
+// Spec: vGLP at c994328 --- sections/vglp.tex, Definition "Guarded Clause,
 // Volitional Procedure, Interactive Type, Interactive Term, Ordinary Clause,
 // Procedure, vGLP Program"; sections/elicitation.tex, Definition "Canonical
 // Compilation".  vGLP's code task of 2026-10-01, Part 1, tests (ii) and (iii),
-// with their texts following the task of 2026-10-02 00:13 UTC, items B' and F.
+// with their texts following the task of 2026-10-02 00:13 UTC, items B' and F,
+// and vGLP #5 Cowork's of 2026-10-03 08:16 UTC, item 1: (_) and the handle
+// are out of the language (Udi, 2026-10-03, as vGLP reports it).
 //
 // (ii) A reader-mode question and a writer-mode one compile to their asking
-//     clauses, which send ask(T, X, W?) on the ask stream; a (_) clause keeps
-//     the anonymous variable at its interactive position, binds the handle to
-//     withdraw and adds no goal: no built-in, neither withdraw/1 nor the
-//     root's close/1; and every procedure that reaches a question carries an
-//     ask stream, the body's merged into the head's.
-// F   The ask streams: which procedures reach a question, the merges, the
-//     handle, and the types the compilation adds.
+//     clauses, which send ask(T, t(X)) on the ask stream, and to their
+//     clauses with the ask stream and nothing else added; every procedure
+//     that reaches a question carries an ask stream, the body's merged into
+//     the head's.  The anonymous variable as the interactive term is refused
+//     in either mode.
+// F   The ask streams: which procedures reach a question, the merges, and the
+//     types the compilation adds.
 // (iii) The nine .vglp sources in the old syntax are not in the paper's, and
 //     keep their old compilation.
 
@@ -64,54 +66,59 @@ void main() {
     late String q;
     setUp(() => q = compileCanonical(_vglp('fragments', 'questions')).source);
 
-    test('a reader-mode question, (Request?), sends its ask with the writer of '
-        'its interactive variable, and the asked goal gets the reader', () {
+    test('a reader-mode question, (Stream(Request)?), sends its ask with the '
+        'writer of its interactive variable, and the asked goal gets the '
+        'reader', () {
       expect(
           q,
-          contains("agent(S1, S2, S3?, [ask('Request?', request_r(X), W?) | "
-              'D?]) :- agent1(S1?, S2?, S3, X?, W, D).'));
+          contains("agent(S1, S2, S3?, [ask('Stream(Request)?', "
+              'stream_request_r(X)) | D?]) :- agent1(S1?, S2?, S3, X?, D).'));
       expect(
           q,
-          contains('procedure agent(Peer?, Stream(Msg)?, Stream(String), '
-              'Stream(Ask)).'));
+          contains('exported procedure agent(Peer?, Stream(Msg)?, '
+              'Stream(String), Stream(Ask)).'));
       expect(
           q,
           contains('procedure agent1(Peer?, Stream(Msg)?, Stream(String), '
-              'Request?, Handle, Stream(Ask)).'));
-      expect(q, contains('agent1(_, _, [], quit, _?, []).'));
+              'Stream(Request)?, Stream(Ask)).'));
       expect(
           q,
-          contains('agent1(Id, NetIn, [Text? | Outs?], post(Text), _?, D?) :- '
-              'ground(Id?) | agent(Id?, NetIn?, Outs, D).'));
+          contains('agent1(Id, NetIn, Outs?, Reqs, D?) :- '
+              'serve(Reqs?, Id?, NetIn?, Outs, D).'));
     });
 
     test('a writer-mode question, (Card), sends its ask with the reader, and '
         'the asked goal gets the writer', () {
       expect(
           q,
-          contains("respond_coldcall(S1, S2?, [ask('Card', card_w(X?), W?) | "
-              'D?]) :- respond_coldcall1(S1?, S2, X, W, D).'));
+          contains("respond_coldcall(S1, S2?, [ask('Card', card_w(X?)) | "
+              'D?]) :- respond_coldcall1(S1?, S2, X, D).'));
       expect(
           q,
           contains('procedure respond_coldcall1(Offer?, Response, Card, '
-              'Handle, Stream(Ask)).'));
+              'Stream(Ask)).'));
       expect(
           q,
           contains('respond_coldcall1(offer(From), Resp?, card(From?, Answer), '
-              '_?, []) :- ground(From?) | decide(Answer?, From?, Resp).'));
+              '[]) :- ground(From?) | decide(Answer?, From?, Resp).'));
     });
 
-    test('a (_) clause keeps the anonymous variable at its interactive '
-        'position, binds the handle to withdraw, adds no goal, and merges its '
-        'two calls\' ask streams into its own', () {
+    test('serve, ordinary GLP, reaches a question: its message clause, which '
+        'reads no request, merges its two calls\' ask streams into its own, '
+        'and a clause that calls none carries []', () {
       expect(
           q,
-          contains('agent1(Id, [msg(Id1, friend_request(From, Resp?)) | NetIn], '
-              'Outs?, _, withdraw, D?) :- (Id? =?= Id1?), ground(From?) | '
+          contains('procedure serve(Stream(Request)?, Peer?, Stream(Msg)?, '
+              'Stream(String), Stream(Ask)).'));
+      expect(
+          q,
+          contains('serve(Reqs, Id, [msg(Id1, friend_request(From, Resp?)) | '
+              'NetIn], Outs?, D?) :- (Id? =?= Id1?), ground(From?) | '
               'respond_coldcall(offer(From?), Resp, D1), '
-              'agent(Id?, NetIn?, Outs, D2), merge(D1?, D2?, D).'));
+              'serve(Reqs?, Id?, NetIn?, Outs, D2), merge(D1?, D2?, D).'));
+      expect(q, contains('serve([quit | _], _, _, [], []).'));
       expect(q, isNot(contains('close(')));
-      expect(q, isNot(contains('withdraw(')));
+      expect(q, isNot(contains('withdraw')));
     });
 
     test('a procedure that reaches no question is unchanged', () {
@@ -120,13 +127,15 @@ void main() {
       expect(q, contains('decide(no, From, refuse(From?)).'));
     });
 
-    test('the types the compilation adds: the handle\'s, the questions, one '
-        'functor per moded interactive type wrapping it as written, and one '
-        'ask/3 over their union', () {
-      expect(q, contains('Handle ::= withdraw.'));
-      expect(q,
-          contains('Question ::= request_r(Request?) ; card_w(Card).'));
-      expect(q, contains('Ask ::= ask(Constant, Question, Handle).'));
+    test('the types the compilation adds: the questions, one functor per '
+        'moded interactive type wrapping it as written, and one ask/2 over '
+        'their union; no handle', () {
+      expect(
+          q,
+          contains('Question ::= stream_request_r(Stream(Request)?) ; '
+              'card_w(Card).'));
+      expect(q, contains('Ask ::= ask(Constant, Question).'));
+      expect(q, isNot(contains('Handle')));
     });
 
     test('no construct goal, and no "true |" in an asking clause', () {
@@ -156,38 +165,16 @@ send_all(_, [], []).
       expect(
           s,
           contains("chat(S1, S2?, [ask('Stream(String)?', "
-              'stream_string_r(X), W?) | D?]) :- chat1(S1?, S2, X?, W, D).'));
+              'stream_string_r(X)) | D?]) :- chat1(S1?, S2, X?, D).'));
       expect(
           s,
           contains('procedure chat1(Peer?, Stream(Msg), Stream(String)?, '
-              'Handle, Stream(Ask)).'));
-      expect(s, contains('chat1(Peer, Out?, Ms, _?, []) :- ground(Peer?) | '
+              'Stream(Ask)).'));
+      expect(s, contains('chat1(Peer, Out?, Ms, []) :- ground(Peer?) | '
           'send_all(Peer?, Ms?, Out).'));
       expect(s,
           contains('Question ::= stream_string_r(Stream(String)?).'));
-      expect(s, contains('Ask ::= ask(Constant, Question, Handle).'));
-    });
-
-    test('a (_) unit clause, and a (_) clause whose body is true', () {
-      final s = compile('''
-T ::= t.
-procedure (T?)*p(Integer?).
-(_)*p(0).
-(_)*p(N) :- N? > 0 | true.
-''');
-      expect(s, contains('p1(0, _, withdraw, []).'));
-      expect(s, contains('p1(N, _, withdraw, []) :- (N? > 0) | true.'));
-      expect(s, isNot(contains('withdraw(')));
-    });
-
-    test('a (_) clause adds no variable to the clause', () {
-      final s = compile('''
-T ::= t.
-procedure (T?)*p(Integer?, Integer).
-(_)*p(A, A?).
-''');
-      expect(s, contains('p1(A, A?, _, withdraw, []).'));
-      expect(s, isNot(contains('A1')));
+      expect(s, contains('Ask ::= ask(Constant, Question).'));
     });
 
     test('a nullary volitional procedure, and exported, and a parameter '
@@ -203,18 +190,17 @@ procedure(X) (Box(X)?)*take(X).
       // The ask type takes the parameter an interactive type names, and every
       // declaration with an ask stream takes it with it.
       expect(s, contains('exported procedure(X) go(Stream(Ask(X))).'));
-      expect(s, contains("go([ask('T?', t_r(X), W?) | D?]) :- go1(X?, W, D)."));
-      expect(s, contains('procedure(X) go1(T?, Handle, Stream(Ask(X))).'));
-      expect(s, contains('go1(t, _?, []).'));
+      expect(s, contains("go([ask('T?', t_r(X)) | D?]) :- go1(X?, D)."));
+      expect(s, contains('procedure(X) go1(T?, Stream(Ask(X))).'));
+      expect(s, contains('go1(t, []).'));
       expect(s, contains('procedure(X) take(X, Stream(Ask(X))).'));
-      expect(s,
-          contains('procedure(X) take1(X, Box(X)?, Handle, Stream(Ask(X))).'));
+      expect(s, contains('procedure(X) take1(X, Box(X)?, Stream(Ask(X))).'));
       expect(
           s,
-          contains("take(S1?, [ask('Box(X)?', box_x_r(X), W?) | D?]) :- "
-              'take1(S1, X?, W, D).'));
+          contains("take(S1?, [ask('Box(X)?', box_x_r(X)) | D?]) :- "
+              'take1(S1, X?, D).'));
       expect(s, contains('Question(X) ::= t_r(T?) ; box_x_r(Box(X)?).'));
-      expect(s, contains('Ask(X) ::= ask(Constant, Question(X), Handle).'));
+      expect(s, contains('Ask(X) ::= ask(Constant, Question(X)).'));
     });
 
     test('the (n+1)-ary procedure\'s name is fresh against the program\'s', () {
@@ -228,10 +214,10 @@ ask1(_).
       expect(c.volitional.single.guardedName, 'ask1_1');
       expect(
           c.source,
-          contains("ask(S1, [ask('T?', t_r(X), W?) | D?]) :- "
-              'ask1_1(S1?, X?, W, D).'));
+          contains("ask(S1, [ask('T?', t_r(X)) | D?]) :- "
+              'ask1_1(S1?, X?, D).'));
       expect(c.source,
-          contains('ask1_1(N, t, _?, []) :- ground(N?) | ask1(N?).'));
+          contains('ask1_1(N, t, []) :- ground(N?) | ask1(N?).'));
       expect(c.source, contains('procedure ask1(Integer?).'));
     });
 
@@ -245,7 +231,7 @@ procedure (T?)*p(Integer?, Integer).
 procedure q(Integer?, Integer).
 q(_, _?).
 ''');
-      expect(c.source, contains('p1(_, _?, t, _?, []).'));
+      expect(c.source, contains('p1(_, _?, t, []).'));
       expect(c.source, contains('q(_, _?).'));
       for (final name in ['p1', 'q']) {
         final head = c.module.procedures
@@ -262,86 +248,129 @@ q(_, _?).
       }
     });
 
-    group('the anonymous variable as the interactive term, by the mode of '
-        'the interactive type', () {
-      Matcher refusal(String clause, int line) => throwsA(isA<CompileError>()
-          .having((e) => e.message, 'message',
-              allOf(contains('The clause $clause '), contains('writer mode')))
-          .having((e) => e.line, 'line', line));
+    group('the anonymous variable as the interactive term is refused, in '
+        'either mode, with the reason', () {
+      // "the interactive term A is a term of type T, possibly a variable but
+      // not the anonymous variable" (Definition "Guarded Clause, ..." at
+      // c994328); an anonymous variable is any variable whose name begins
+      // with _ (GLP-Spec, Remark "Anonymous Variables"), so _Name is refused
+      // as _ is.  vGLP #5 Cowork 2026-10-03 08:16 UTC, item 1: c641358a's
+      // writer-mode refusal widened to both modes, and 80953e04's treatment of
+      // _Name as the anonymous variable made the same refusal.
+      Matcher refusal(String clause, String mode, int line) =>
+          throwsA(isA<CompileError>()
+              .having(
+                  (e) => e.message,
+                  'message',
+                  allOf(
+                      contains('The clause $clause '),
+                      contains('is in $mode mode'),
+                      contains('the interactive term is not the anonymous '
+                          'variable (vGLP, Definition "Guarded Clause, '
+                          'Volitional Procedure, ...")')))
+              .having((e) => e.line, 'line', line));
 
-      test('in reader mode, (_) compiles, dropping the reader and binding the '
-          'handle to withdraw', () {
-        final s = compile('''
+      const reader = '''
 YesNo ::= yes ; no.
 procedure (YesNo?)*ask(Integer?, Integer).
 (yes)*ask(N, N?).
-(_)*ask(_, 0).
-''');
-        expect(s, contains('ask1(N, N?, yes, _?, []).'));
-        expect(s, contains('ask1(_, 0, _, withdraw, []).'));
-      });
-
-      test('in writer mode, (_) is a compile error naming the clause', () {
-        expect(() => compile('''
+''';
+      const writer = '''
 YesNo ::= yes ; no.
 Note ::= note(YesNo).
 procedure (Note)*tell(YesNo?).
 (note(A?))*tell(A).
-(_)*tell(no).
-'''), refusal('(_)*tell(no)', 5));
+''';
+
+      test('in reader mode, (_)', () {
+        expect(() => compile('$reader(_)*ask(_, 0).\n'),
+            refusal('(_)*ask(_, 0)', 'reader', 4));
       });
 
-      test('in writer mode, (_?), the anonymous output, is refused as well', () {
+      test('in reader mode, (_?)', () {
+        expect(() => compile('$reader(_?)*ask(_, 0).\n'),
+            refusal('(_?)*ask(_, 0)', 'reader', 4));
+      });
+
+      test('in reader mode, (_Name)', () {
+        expect(() => compile('$reader(_Answer)*ask(_, 0).\n'),
+            refusal('(_Answer)*ask(_, 0)', 'reader', 4));
+      });
+
+      test('in reader mode, (_Name?)', () {
+        expect(() => compile('$reader(_Answer?)*ask(_, 0).\n'),
+            refusal('(_Answer?)*ask(_, 0)', 'reader', 4));
+      });
+
+      test('in reader mode, a (_) unit clause, a (_) clause whose body is '
+          'true, and one whose head passes a pair', () {
         expect(() => compile('''
-YesNo ::= yes ; no.
-Note ::= note(YesNo).
-procedure (Note)*tell(YesNo?).
-(_?)*tell(no).
-'''), refusal('(_?)*tell(no)', 4));
+T ::= t.
+procedure (T?)*p(Integer?).
+(_)*p(0).
+'''), refusal('(_)*p(0)', 'reader', 3));
+        expect(() => compile('''
+T ::= t.
+procedure (T?)*p(Integer?).
+(t)*p(1).
+(_)*p(N) :- N? > 0 | true.
+'''), refusal('(_)*p(N)', 'reader', 4));
+        expect(() => compile('''
+T ::= t.
+procedure (T?)*p(Integer?, Integer).
+(_)*p(A, A?).
+'''), refusal('(_)*p(A, A?)', 'reader', 3));
       });
 
-      test('in writer mode, a nullary procedure\'s (_) clause is named too',
+      test('in writer mode, (_)', () {
+        expect(() => compile('$writer(_)*tell(no).\n'),
+            refusal('(_)*tell(no)', 'writer', 5));
+      });
+
+      test('in writer mode, (_?)', () {
+        expect(() => compile('$writer(_?)*tell(no).\n'),
+            refusal('(_?)*tell(no)', 'writer', 5));
+      });
+
+      test('in writer mode, (_Name)', () {
+        expect(() => compile('$writer(_Note)*tell(no).\n'),
+            refusal('(_Note)*tell(no)', 'writer', 5));
+      });
+
+      test('in writer mode, (_Name?)', () {
+        expect(() => compile('$writer(_Note?)*tell(no).\n'),
+            refusal('(_Note?)*tell(no)', 'writer', 5));
+      });
+
+      test('a nullary procedure\'s (_) clause is named too, in either mode',
           () {
         expect(() => compile('''
 Note ::= note.
 procedure (Note)*tell.
 (note)*tell.
 (_)*tell :- true | true.
-'''), refusal('(_)*tell', 4));
+'''), refusal('(_)*tell', 'writer', 4));
+        expect(() => compile('''
+Note ::= note.
+procedure (Note?)*hear.
+(_)*hear.
+'''), refusal('(_)*hear', 'reader', 3));
       });
 
-      // _Name is the anonymous variable too: TGLP's "Anonymous variables",
-      // any variable whose name begins with _ (vGLP's task of 2026-10-02
-      // 00:52 UTC, item 2).
-      test('in reader mode, (_Name) compiles as (_) does, dropping the reader '
-          'and binding the handle to withdraw', () {
+      test('the anonymous variable inside the interactive term is not the '
+          'interactive term, and is not refused: the clause drops the reader '
+          'of a question inside its output', () {
+        // "A reader the program drops leaves its construct on screen, showing
+        // what the program writes into it" (sections/elicitation.tex, the
+        // paragraph before Definition "Canonical Compilation").
         final s = compile('''
+Peer ::= Constant.
 YesNo ::= yes ; no.
-procedure (YesNo?)*ask(Integer?, Integer).
-(yes)*ask(N, N?).
-(_Answer)*ask(_, 0).
+Card ::= card(Peer, YesNo?).
+procedure (Card)*show(Peer?).
+(card(P?, _))*show(P).
 ''');
-        expect(s, contains('ask1(N, N?, yes, _?, []).'));
-        expect(s, contains('ask1(_, 0, _Answer, withdraw, []).'));
-      });
-
-      test('in writer mode, (_Name) is a compile error naming the clause', () {
-        expect(() => compile('''
-YesNo ::= yes ; no.
-Note ::= note(YesNo).
-procedure (Note)*tell(YesNo?).
-(note(A?))*tell(A).
-(_Note)*tell(no).
-'''), refusal('(_Note)*tell(no)', 5));
-      });
-
-      test('in writer mode, (_Name?) is refused as well', () {
-        expect(() => compile('''
-YesNo ::= yes ; no.
-Note ::= note(YesNo).
-procedure (Note)*tell(YesNo?).
-(_Note?)*tell(no).
-'''), refusal('(_Note?)*tell(no)', 4));
+        expect(s, contains('show1(P, card(P?, _), []).'));
       });
     });
 
@@ -493,7 +522,7 @@ procedure (T?)*q(Integer?).
 (t)*q(_).
 ''').source;
       expect(s, contains('Question ::= t_r(T?).'));
-      expect(s, contains('Ask ::= ask(Constant, Question, Handle).'));
+      expect(s, contains('Ask ::= ask(Constant, Question).'));
     });
 
     test('the types it adds are named fresh against the program\'s', () {
@@ -505,14 +534,13 @@ procedure (Ask?)*p(Handle?).
 (a)*p(_).
 ''');
       expect(c.askType, 'Ask_1');
-      expect(c.handleType, 'Handle_1');
       expect(c.questionType, 'Question_1');
-      expect(c.source, contains('Handle_1 ::= withdraw.'));
       expect(c.source, contains('Question_1 ::= ask_r(Ask?).'));
+      expect(c.source, contains('Ask_1 ::= ask(Constant, Question_1).'));
       expect(c.source,
-          contains('Ask_1 ::= ask(Constant, Question_1, Handle_1).'));
-      expect(c.source,
-          contains('procedure p1(Handle?, Ask?, Handle_1, Stream(Ask_1)).'));
+          contains('procedure p1(Handle?, Ask?, Stream(Ask_1)).'));
+      // The program's Handle is its own; the compilation adds none.
+      expect(c.source, isNot(contains('Handle_1')));
     });
 
     test('an exported procedure that reaches a question keeps exported, and its '

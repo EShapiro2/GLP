@@ -1,7 +1,7 @@
 // glp_runtime/lib/vglp/constructs.dart
 //
 // The construct processes of the canonical compilation: for each interactive
-// type T of a program, the clause of construct/5 that the dispatcher spawns on
+// type T of a program, the clause of construct/4 that the dispatcher spawns on
 // an ask of T, and the clauses it calls, typed at T.
 // Spec: vGLP, sections/vglp.tex, Definition "vmaGLP Transition System" (Ask by
 // the mode of the interactive type, Answer, Present) and the paragraph after
@@ -27,9 +27,13 @@
 //   - the grants routed to the construct go to its questions in the order of
 //     the view, the first question whose type the grant's term is of taking
 //     it; a grant that is of none reaches none;
-//   - it withdraws when the handle is bound to withdraw, or every question it
-//     holds is answered and none is still to come (run/6 in
-//     programs/vglp/dispatcher.glp).
+//   - it withdraws when every question it holds is answered and none is
+//     still to come, and on nothing else (run/5 in
+//     programs/vglp/dispatcher.glp): "The construct process withdraws when
+//     every question it holds is answered.  A reader the program drops leaves
+//     its construct on screen, showing what the program writes into it"
+//     (sections/elicitation.tex, the paragraph before Definition "Canonical
+//     Compilation", at c994328).
 //
 // THE FORMING CLAUSES form a term of a question's type from the person's
 // input, which is typed at _: a constant by matching it, a primitive by its
@@ -157,14 +161,13 @@ ConstructProcesses buildConstructs({
   required List<InteractiveType> types,
   required String constructName,
   required String questionType,
-  required String handleType,
   required GenericNames generic,
   required TypeDef? Function(String name) resolve,
   required Map<String, String> declared,
   required String Function(String stem) fresh,
 }) {
-  final g = _Generator(generic, resolve, declared, fresh, questionType,
-      handleType, constructName);
+  final g = _Generator(
+      generic, resolve, declared, fresh, questionType, constructName);
   return g.build(types);
 }
 
@@ -279,7 +282,6 @@ class _Generator {
   final Map<String, String> declared;
   final String Function(String) fresh;
   final String questionType;
-  final String handleType;
   final String constructName;
 
   final _out = StringBuffer();
@@ -290,7 +292,7 @@ class _Generator {
   final _multiMemo = <String, bool>{};
 
   _Generator(this.gen, this.resolve, this.declared, this.fresh,
-      this.questionType, this.handleType, this.constructName);
+      this.questionType, this.constructName);
 
   ConstructProcesses build(List<InteractiveType> types) {
     final hook = StringBuffer();
@@ -299,8 +301,8 @@ class _Generator {
         ? questionType
         : '$questionType(${params.join(', ')})';
     final p = params.isEmpty ? '' : '(${params.join(', ')})';
-    hook.writeln('procedure$p $constructName(Integer?, $qt?, $handleType?, '
-        'Stream(_)?, Stream(${gen.drawType})).');
+    hook.writeln('procedure$p $constructName(Integer?, $qt?, Stream(_)?, '
+        'Stream(${gen.drawType})).');
     final widgets = <String, String>{};
     for (final t in types) {
       final root = _Node(t.type, t.readerMode, t.params.toSet());
@@ -319,21 +321,21 @@ class _Generator {
     if (root.person) {
       _checkPersonWritable(root, t);
       final answer = _answer(root);
-      return '$constructName(Id, $f(X?), H, Gs, Ds?) :- '
+      return '$constructName(Id, $f(X?), Gs, Ds?) :- '
           '$answer(X, Gs?, _, Done), '
-          '${gen.run}(Id?, $w, [input], Done?, H?, Ds).';
+          '${gen.run}(Id?, $w, [input], Done?, Ds).';
     }
     if (!_hasQuestion(root)) {
       // A type the person writes nowhere holds no question, so its construct
       // has every question it holds answered at once, and withdraws (Definition
       // "Construct, Submission, Complete Widget": a construct is presented
       // while its question is open).
-      return '$constructName(Id, $f(_), _, _, [withdraw(Id?)]).';
+      return '$constructName(Id, $f(_), _, [withdraw(Id?)]).';
     }
     final present = _present(root, t);
-    return '$constructName(Id, $f(X), H, Gs, Ds?) :- '
+    return '$constructName(Id, $f(X), Gs, Ds?) :- '
         '$present(X?, Gs?, _, Vs, Done), '
-        '${gen.run}(Id?, $w, Vs?, Done?, H?, Ds).';
+        '${gen.run}(Id?, $w, Vs?, Done?, Ds).';
   }
 
   // --- types ------------------------------------------------------------------

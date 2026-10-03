@@ -4,12 +4,17 @@
 // load, its compiled initial goal spawned with the dispatcher on its ask
 // stream and on a person channel, and a person procedure that reads the draws
 // and grants input by construct identifier.
-// Spec: vGLP at db03e2d --- sections/elicitation.tex, from "GLP already
+// Spec: vGLP at c994328 --- sections/elicitation.tex, from "GLP already
 // connects the program to the person" to Definition "Implementation of vGLP
-// by GLP"; Definition "Construct, Submission, Complete Widget";
-// sections/vglp.tex, Definition "vmaGLP Transition System" (Present: every
-// output before the inputs inside it).  vGLP's code task of 2026-10-01 16:30
-// UTC, tests (iv) and (v); the messages of 2026-10-01 23:55 UTC (E).
+// by GLP"; Definition "Construct, Submission, Complete Widget"; Remark
+// "Persistence"; sections/vglp.tex, Definition "vmaGLP Transition System"
+// (Present: every output before the inputs inside it), and the agent of
+// Sections 1 and 3, whose question is the stream of the person's requests.
+// vGLP's code task of 2026-10-01 16:30 UTC, tests (iv) and (v); the messages
+// of 2026-10-01 23:55 UTC (E); vGLP #5 Cowork's task of 2026-10-03 08:16 UTC,
+// with (_) and the handle out of the language (Udi, 2026-10-03, as vGLP
+// reports it): (v)'s second half, once a construct withdrawing on its handle,
+// is the agent's message clause reducing without a request.
 // Programs: programs/tests/vglp/fragments (questions.vglp, the fragments of
 // Sections 1 and 3, and its plays) and programs/tests/vglp/stream (chat.vglp,
 // the chat input of Section 3, and its play).
@@ -104,9 +109,20 @@ void main() {
       expect(r['Resp'], '_');
       expect(r['Log'], '[drawn(0, card(bob, input)) | _]');
     });
+
+    test('a refused grant leaves its question open, and the next grant that '
+        'forms a term of its type answers it', () async {
+      final r =
+          await _play('fragments', 'play_card_refused_then_yes(Resp, Log)');
+      expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
+      // maybe answered nothing; yes, the next grant, answered the card.
+      expect(r['Resp'], 'accept(bob)');
+      expect(r['Log'], '[drawn(0, card(bob, input)), withdrawn(0)]');
+    });
   });
 
-  group('(v) a reader-mode stream question, and the handle', () {
+  group('(v) a reader-mode stream question, and the agent\'s message clause',
+      () {
     test('a stream question takes one element per submission, a submission '
         'of no element of its type taking none', () async {
       final r = await _play('stream', 'play_chat(Out, Log)');
@@ -118,35 +134,39 @@ void main() {
       expect(r['Log'], isNot(contains('withdrawn')));
     });
 
-    test('a construct withdraws when its handle is bound to withdraw: the '
-        'agent\'s message clause, (_), closes its request unanswered; the '
-        'card of the offer and the request asked again are drawn', () async {
-      final r = await _play('fragments', 'play_withdraw(Outs, Log)');
+    test('a stream question takes two grants as two elements and stays open',
+        () async {
+      final r = await _play('stream', 'play_chat_two(Out, Log)');
+      expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
+      expect(r['Out'], '[msg(carol, "one"), msg(carol, "two") | _]');
+      expect(r['Log'], '[drawn(0, input_box(text)) | _]');
+    });
+
+    test('the agent\'s message clause reads no request: it reduces on an '
+        'arriving friend offer without waiting, the card of the offer is '
+        'drawn, and the request form stays on screen', () async {
+      final r = await _play('fragments', 'play_offer(Outs, Log)');
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       final log = r['Log'];
-      expect(log, contains('withdrawn(0)'));
+      expect(
+          log,
+          contains('drawn(0, input_box(menu([form(post, [text]), '
+              'button(quit)])), input)'));
       expect(log,
           contains('drawn(1, form(card, [shown, buttons([yes, no])]), '
               'card(carol, input))'));
-      expect(log,
-          contains('drawn(2, menu([form(post, [text]), button(quit)]), '
-              'input)'));
-      expect(log, isNot(contains('withdrawn(1)')));
-      expect(log, isNot(contains('withdrawn(2)')));
+      expect(log, isNot(contains('withdrawn')));
     });
   });
 
-  group('a reader-mode menu of forms', () {
+  group('the agent\'s question, a stream of requests asked once', () {
     test('the person posts a text, a post of a number refused on the way, and '
-        'quits: each request withdrawn once answered', () async {
+        'quits, all on one construct, drawn once and kept open', () async {
       final r = await _play('fragments', 'play_request(Outs, Log)');
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       expect(r['Outs'], '["hi"]');
-      expect(
-          r['Log'],
-          startsWith('[drawn(0, menu([form(post, [text]), button(quit)])), '
-              'withdrawn(0), drawn(1, menu([form(post, [text]), '
-              'button(quit)])), withdrawn(1)'));
+      expect(r['Log'],
+          '[drawn(0, input_box(menu([form(post, [text]), button(quit)]))) | _]');
     });
   });
 }
