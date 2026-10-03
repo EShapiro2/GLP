@@ -1282,6 +1282,33 @@ check "operator names: X = mod at the prompt" "X36 = mod" "$a36"
 check "operator names: Y = procedure at the prompt" "Y36 = procedure" "$a36"
 check_not "operator names: no syntax error" "Expected term" "$a36"
 
+# --- A37: The answer display shows a list's tail ---
+# A list whose tail is not [] is shown with the tail after "|", as send_to_user
+# shows it.  Until 2026-10-03 the display dropped a constant or structure tail,
+# [holding('G','H')|'W'] shown as [holding(G, H)] (GLP #3 Cowork, 2026-10-03
+# 21:18 UTC: "a fault, fix it").
+echo "--- A37: List tails in the answer display ---"
+a37=$("$REPL_RUN" <<HEREDOC
+$TYPED/list_tail_display.glp
+holding_tail(T37a).
+two_and_constant(T37b).
+structure_tail(T37c).
+nested(T37d).
+proper(T37e).
+shown.
+$TYPED/operator_names.glp
+words(W37).
+:quit
+HEREDOC
+2>&1)
+check "list tail display: a constant tail" "T37a = \[holding(G, H) | W\]" "$a37"
+check "list tail display: two elements and a constant tail" "T37b = \[a, b | c\]" "$a37"
+check "list tail display: a structure tail" "T37c = \[a | f(b)\]" "$a37"
+check "list tail display: tails inside a structure and a list" "T37d = w(\[x | y\], \[\[p | q\] | r\])" "$a37"
+check "list tail display: a proper list as before" "T37e = \[a, b, c\]" "$a37"
+check "list tail display: send_to_user shows it alike" "^GLP> \[holding(G, H) | W\]" "$a37"
+check "list tail display: mod and procedure, the tail kept" "W37 = w(mod, procedure, \[mod | procedure\])" "$a37"
+
 SECTION_A_PASS=$PASS
 SECTION_A_FAIL=$FAIL
 

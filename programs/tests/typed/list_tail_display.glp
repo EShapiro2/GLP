@@ -1,0 +1,23 @@
+%% The REPL shows a list whose tail is not [] with that tail after "|", as
+%% send_to_user shows it.  Until 2026-10-03 the answer display dropped a
+%% constant or structure tail: [holding('G', 'H')|'W'] was shown as
+%% [holding(G, H)] (GLP #3 Cowork, 2026-10-03 21:18 UTC: "a fault, fix it").
+
+procedure holding_tail(_).
+holding_tail(T?) :- T = [holding('G', 'H')|'W'].
+
+procedure two_and_constant(_).
+two_and_constant(T?) :- T = [a, b|c].
+
+procedure structure_tail(_).
+structure_tail(T?) :- T = [a|f(b)].
+
+procedure nested(_).
+nested(T?) :- T = w([x|y], [[p|q]|r]).
+
+procedure proper(_).
+proper(T?) :- T = [a, b, c].
+
+%% send_to_user shows the same term, one element of its stream.
+procedure shown.
+shown :- send_to_user([[holding('G', 'H')|'W']]).

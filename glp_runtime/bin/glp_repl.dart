@@ -474,18 +474,22 @@ String _formatTerm(rt.Term? term, [GlpEngine? engine, Set<HeapCell>? path]) {
         }
         current = derefTail;
         path.remove(addr);
-        if (current is! rt.StructTerm) break;
-      } else if (tail is rt.ConstTerm &&
-          (tail.value == 'nil' || tail.value == null)) {
-        break;
-      } else if (tail is rt.StructTerm && tail.functor == '.') {
-        current = tail;
       } else {
-        break;
+        current = tail;
       }
     }
 
-    return '[${elements.join(', ')}]';
+    // The list ends at [] or at another tail, a constant or a structure, which
+    // is shown after "|" as send_to_user shows it (formatGroundTerm).  Until
+    // 2026-10-03 such a tail was dropped, [holding(G, H)|W] shown as
+    // [holding(G, H)] (GLP #3 Cowork, 2026-10-03 21:18 UTC, "11:58. 3": "a
+    // fault, fix it").
+    if (current == null ||
+        (current is rt.ConstTerm &&
+            (current.value == 'nil' || current.value == null))) {
+      return '[${elements.join(', ')}]';
+    }
+    return '[${elements.join(', ')} | ${_formatTerm(current, engine, path)}]';
   }
 
   if (term is rt.StructTerm) {
