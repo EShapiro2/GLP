@@ -126,7 +126,10 @@ IntroResult ::= intro_result(Constant, IntroChannel) ; intro_rejected(Constant).
 %% The root channel's message type is the mini-app's; the friend-channel
 %% message that conveys an end names it, this program being both the super-app
 %% and the mini-app in the plays.
-PingMsg     ::= hello(Constant) ; probe(String?).
+PingMsg     ::= hello(Constant) ; probe(ProbeValue?).
+%% The probe's value (pingapp/miniapp.glp): what the far side assigns, or
+%% unreachable, which the sender writes where the probe reaches nobody.
+ProbeValue  ::= value(String) ; unreachable.
 PingStream  ::= [] ; [PingMsg | PingStream].
 RootChannel ::= ch(PingStream, PingStream?).
 
@@ -144,11 +147,11 @@ SgChannel     ::= ch(SgToAppStream, AppToSgStream?).
 
 %% The relay's bookkeeping (pingapp/miniapp.glp): the events of its
 %% conversations, their write ends, and probes held for a conversation.
-EvMsg    ::= greeted(Constant, Constant) ; probe_from(Constant, String?) ; got(String).
+EvMsg    ::= greeted(Constant, Constant) ; probe_from(Constant, ProbeValue?) ; got(String).
 EvStream ::= [] ; [EvMsg | EvStream].
 ConvEnd  ::= conv(Constant, PingStream?).
 ConvList ::= [] ; [ConvEnd | ConvList].
-HeldProbe ::= held(String?).
+HeldProbe ::= held(ProbeValue?).
 HeldList  ::= [] ; [HeldProbe | HeldList].
 WarmWait  ::= none ; wait(Constant, GlobalName, Key).
 AnchorFriend ::= none ; found(Key).

@@ -590,19 +590,17 @@ play_coins(ScreenA?, ScreenB?) :-
     coin_person(bob, PersonEndB?, [mint(2), accept(alice)], ScreenB).
 
 %% The person's end of the cards-and-answers channel: the screen messages,
-%% read off the events; no card is answered here.
+%% read off the events.  The person answers no card here, and closes her
+%% answers when the events close.
 procedure screen_of(Channel(Stream(Event), Stream(UserAnswer))?, Stream(ScreenContent)).
-screen_of(ch(Events, Answers?), Screen?) :- hold_answers(Answers), screen_events(Events?, Screen).
+screen_of(ch(Events, Answers?), Screen?) :- screen_events(Events?, Screen, Answers).
 
-procedure hold_answers(Stream(UserAnswer)).
-hold_answers(_?) :- true.
-
-procedure screen_events(Stream(Event)?, Stream(ScreenContent)).
-screen_events([msg(_, _, X) | Es], [X? | Screen?]) :- ground(X?) | screen_events(Es?, Screen).
-screen_events([card(_, _, _) | Es], Screen?) :- screen_events(Es?, Screen).
-screen_events([closed(_) | Es], Screen?) :- screen_events(Es?, Screen).
-screen_events([aborted(_) | Es], Screen?) :- screen_events(Es?, Screen).
-screen_events([], []).
+procedure screen_events(Stream(Event)?, Stream(ScreenContent), Stream(UserAnswer)).
+screen_events([msg(_, _, X) | Es], [X? | Screen?], Answers?) :- ground(X?) | screen_events(Es?, Screen, Answers).
+screen_events([card(_, _, _) | Es], Screen?, Answers?) :- screen_events(Es?, Screen, Answers).
+screen_events([closed(_) | Es], Screen?, Answers?) :- screen_events(Es?, Screen, Answers).
+screen_events([aborted(_) | Es], Screen?, Answers?) :- screen_events(Es?, Screen, Answers).
+screen_events([], [], []).
 
 procedure alice_coins_person(Content?, String?, Channel(Stream(UserAnswer), Stream(Event))?, AgentToUserStream?, UserInStream).
 alice_coins_person(C, CSig, AppEnd, Outs,
@@ -753,16 +751,14 @@ procedure cg_rest(Stream(CsAppNotify)?, Stream(CsAppCmd), Stream(CsAppNotify)).
 cg_rest([N | Ns], Cmds?, [N? | Seen?]) :- ground(N?) | cg_rest(Ns?, Cmds, Seen).
 cg_rest([], [], []).
 
-%% The person who only watches, and commands nothing.
+%% The person who only watches, and commands nothing: her commands close when
+%% the notifications close.
 procedure cssn_onlooker(Channel(Stream(CsAppNotify), Stream(CsAppCmd))?, Stream(CsAppNotify)).
-cssn_onlooker(ch(Notify, Cmds?), Seen?) :- hold_cmds(Cmds), pass_notify(Notify?, Seen).
+cssn_onlooker(ch(Notify, Cmds?), Seen?) :- pass_notify(Notify?, Seen, Cmds).
 
-procedure hold_cmds(Stream(CsAppCmd)).
-hold_cmds(_?) :- true.
-
-procedure pass_notify(Stream(CsAppNotify)?, Stream(CsAppNotify)).
-pass_notify([N | Ns], [N? | Seen?]) :- ground(N?) | pass_notify(Ns?, Seen).
-pass_notify([], []).
+procedure pass_notify(Stream(CsAppNotify)?, Stream(CsAppNotify), Stream(CsAppCmd)).
+pass_notify([N | Ns], [N? | Seen?], Cmds?) :- ground(N?) | pass_notify(Ns?, Seen, Cmds).
+pass_notify([], [], []).
 
 %% =============================================================================
 %% play_both(ScreenA, ScreenB, SeenA, SeenB): ONE super-app hosting BOTH
@@ -1015,8 +1011,7 @@ bob_reinvite_wait([_ | Outs], Cmds?) :-
 bob_reinvite_wait([], []).
 
 %% A person stream left open: the play ends suspended rather than closing a
-%% super-app that still hosts a running mini-app.  (hold_cmds/1 above is the
-%% child-safe platform's command stream and is a different type.)
+%% super-app that still hosts a running mini-app.
 procedure hold_person(UserInStream).
 hold_person(_?) :- true.
 
@@ -1053,21 +1048,18 @@ play_sovereign(ScreenA?, ScreenB?) :-
     sv_screen_of(PersonEndB?, ScreenB).
 
 %% The person's end of the cards-and-answers channel, as screen_of/2 is for the
-%% currency: the screen messages read off the events, no card answered.
+%% currency: the screen messages read off the events, no card answered, and
+%% the answers closed when the events close.
 procedure sv_screen_of(Channel(Stream(SvEvent), Stream(SvUserAnswer))?, Stream(SvScreenContent)).
 sv_screen_of(ch(Events, Answers?), Screen?) :-
-    sv_hold_answers(Answers),
-    sv_screen_events(Events?, Screen).
+    sv_screen_events(Events?, Screen, Answers).
 
-procedure sv_hold_answers(Stream(SvUserAnswer)).
-sv_hold_answers(X?) :- true.
-
-procedure sv_screen_events(Stream(SvEvent)?, Stream(SvScreenContent)).
-sv_screen_events([msg(_, _, X) | Es], [X? | Screen?]) :- ground(X?) | sv_screen_events(Es?, Screen).
-sv_screen_events([card(_, _, _) | Es], Screen?) :- sv_screen_events(Es?, Screen).
-sv_screen_events([closed(_) | Es], Screen?) :- sv_screen_events(Es?, Screen).
-sv_screen_events([aborted(_) | Es], Screen?) :- sv_screen_events(Es?, Screen).
-sv_screen_events([], []).
+procedure sv_screen_events(Stream(SvEvent)?, Stream(SvScreenContent), Stream(SvUserAnswer)).
+sv_screen_events([msg(_, _, X) | Es], [X? | Screen?], Answers?) :- ground(X?) | sv_screen_events(Es?, Screen, Answers).
+sv_screen_events([card(_, _, _) | Es], Screen?, Answers?) :- sv_screen_events(Es?, Screen, Answers).
+sv_screen_events([closed(_) | Es], Screen?, Answers?) :- sv_screen_events(Es?, Screen, Answers).
+sv_screen_events([aborted(_) | Es], Screen?, Answers?) :- sv_screen_events(Es?, Screen, Answers).
+sv_screen_events([], [], []).
 
 procedure alice_sv_person(Content?, String?, Channel(Stream(SvUserAnswer), Stream(SvEvent))?, AgentToUserStream?, UserInStream).
 alice_sv_person(C, CSig, AppEnd, Outs,

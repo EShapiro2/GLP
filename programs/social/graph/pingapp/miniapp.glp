@@ -104,36 +104,36 @@ open_out(_, Id, Held, Held?, [hello(Id?) | Out2?], Out2) :- otherwise | true.
 %% and the caller is given its reader.  The element is built HERE, at an
 %% output position: a fresh writer passed into a goal's input argument does
 %% not carry an assignment back across a link (programs/tests/linkprobes/linkprobe
-%% beside programs/tests/linkprobes/linkprobe3).
-procedure probe_on(Constant?, ConvList?, ConvList, String, Constant).
+%% beside programs/tests/linkprobes/linkprobe3).  With no conversation with F
+%% the probe reaches nobody, and is answered unreachable rather than held.
+procedure probe_on(Constant?, ConvList?, ConvList, ProbeValue, Constant).
 probe_on(F, [conv(F1, [probe(W) | Out1?]) | Rest], [conv(F1?, Out1) | Rest?], W?, sent) :-
     F? =?= F1? | true.
 probe_on(F, [C | Rest], [C? | Rest1?], V?, St?) :- otherwise | probe_on(F?, Rest?, Rest1, V, St).
-probe_on(_, [], [], V?, none) :- hold_value(V).
+probe_on(_, [], [], unreachable, none).
 
 %% report(St, Ui, Ui2): what became of the probe, on the person's stream.
 procedure report(Constant?, AppUiStream, AppUiStream?).
 report(sent, [probed(carol) | Ui2?], Ui2).
 report(none, [no_conv(carol) | Ui2?], Ui2).
 
-procedure hold_value(String).
-hold_value(_?) :- true.
-
 %% forward(W, Convs, Convs1, Held, Held1): carol forwards the probe's end to bob
 %% where that conversation is open, else holds it.
-procedure forward(String, ConvList?, ConvList, HeldList?, HeldList).
+procedure forward(ProbeValue, ConvList?, ConvList, HeldList?, HeldList).
 forward(W?, [conv(bob, [probe(W) | Out1?]) | Rest], [conv(bob, Out1) | Rest?], Held, Held?).
 forward(W?, [C | Rest], [C? | Rest1?], Held, Held1?) :-
     otherwise | forward(W, Rest?, Rest1, Held?, Held1).
 forward(W?, [], [], Held, [held(W) | Held?]).
 
 %% answer_probe(W): bob assigns the probe's end.
-procedure answer_probe(String).
-answer_probe(hello_from_bob).
+procedure answer_probe(ProbeValue).
+answer_probe(value(hello_from_bob)).
 
-%% await_probe(W, Ev): the probe's answer as an event, once it arrives.
-procedure await_probe(String?, EvStream).
-await_probe(V, [got(V?)]) :- ground(V?) | true.
+%% await_probe(W, Ev): the probe's answer as an event, once it arrives; a probe
+%% that reached nobody gives none.
+procedure await_probe(ProbeValue?, EvStream).
+await_probe(value(V), [got(V?)]) :- ground(V?) | true.
+await_probe(unreachable, []).
 
 procedure close_convs(ConvList?).
 close_convs([conv(_, []) | Rest]) :- close_convs(Rest?).
