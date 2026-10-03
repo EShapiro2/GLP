@@ -22,7 +22,7 @@ lookup_pending(_, error, [], []).
 %% UI MEDIATOR — Main loop
 %% =============================================================================
 
-exported procedure ui_mediator(Constant?, AgentChannel?, UserChannel?, PendingList?, Integer?).
+exported procedure ui_mediator(Key?, AgentChannel?, UserChannel?, PendingList?, Integer?).
 
 %% --- Agent-to-user: non-ground (replace variable with req ID) ---
 
