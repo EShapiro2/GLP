@@ -32,7 +32,7 @@ Ownership is Coordination Appendix B, `/Grassroots/Coordination/sections/B-code-
 - When the branch is ready, Integration Code merges it into `main`, runs the full suite there, pushes, and answers the owner in its inbox.  A merge that fails the suite is not pushed.  On a merge conflict, STOP and report.
 - An owner may add its own test block to `test/run_all_tests.sh` on its branch (Udi, 2026-09-16).  The harness machinery is Integration's and changes only by request to it: the gates, Section Q, `KNOWN_RED`, the runner guards and the asset step.  Two owners adding blocks to that file will conflict, so merge `main` into your branch before you write one.
 - Never `git reset`, `git revert`, `git restore` or `git checkout -- <file>` on another session's work; never rewrite history on `main`.
-- Generated files are gitignored and rebuilt by their script, never committed.
+- Generated files are gitignored and rebuilt by their script, never committed --- except a program's own source printed by a generator in the tree, which the program needs in order to load: it is committed, and a test holds it to what its generator prints (sGLP's printed `profiles.glp` and `population.glp`, `programs/sglp/transform.sh --check` and test (x); vGLP's compiled modules).
 
 ## The tree
 
