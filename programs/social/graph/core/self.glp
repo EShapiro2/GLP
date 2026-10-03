@@ -26,6 +26,15 @@ HomeAnswer ::= xs_respond_friend_1(Constant) ; xs_respond_friend_2(Constant) ; x
 HomeReqId ::= req(Integer).
 HomeUserAnswer ::= answer(HomeReqId, HomeAnswer) ; decline(HomeReqId).
 
+%% The super-app (GSG paper, Section 5.1): the one goal the runtime posts,
+%% with the person's public key, the stream of the person's acts and the
+%% stream from the network (home_ui.glp).
+imported procedure home_ui#superapp(Key?, Stream(HomeUserAnswer)?, NetInStream?).
+exported procedure superapp(Key?, Stream(HomeUserAnswer)?, NetInStream?).
+superapp(Id, Answers, NetIn) :- home_ui # superapp(Id?, Answers?, NetIn?).
+
+%% The super-app as a play, alice with a scripted Bob: what the Flutter agent
+%% runtime starts (home_ui.glp).
 imported procedure home_ui#superapp_ui(Key?, Stream(HomeUserAnswer)?, NetInStream?).
 exported procedure superapp_ui(Key?, Stream(HomeUserAnswer)?, NetInStream?).
 superapp_ui(Id, Answers, NetIn) :- home_ui # superapp_ui(Id?, Answers?, NetIn?).
