@@ -30,8 +30,17 @@
 %% CHANNEL OPERATIONS (Defined Guards)
 %% =============================================================================
 
+%% Each redefines the root's operation of its name and declares it, as every
+%% procedure of a module is declared (TGLP modules.tex, Definition "Typed
+%% Procedure, Module"); the declarations are the root self.glp's.  Until
+%% 2026-10-03 they had none, and the linker gave the renamed procedures a copy
+%% of the root's.
+
+procedure(X, Y) send(X?, Channel(Y, Stream(X))?, Channel(Y, Stream(X))).
 send(X, ch(In, [X?|Out?]), ch(In?, Out)).
+procedure(X, Y) receive(X, Channel(OpenStream(X), Y)?, Channel(Stream(X), Y)).
 receive(X?, ch([X|In], Out?), ch(In?, Out)).
+procedure(X, Y) new_channel(Channel(X, Y), Channel(Y, X)).
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 
 %% =============================================================================
