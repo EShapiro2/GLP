@@ -16,4 +16,8 @@
 6000000	3	Menu	menu([1, 2, 4], [holding(1, 10), holding(4, 10)], pay(4, 3))
 6400000	2	Menu	menu([1, 3], [], swap(1, 10))
 6403600	1	Offer	offer(2, 10, 0, yes)
-7000000
+6500000	4	Menu	menu([3], [holding(3, 10)], pay(3, 10))
+6600000	4	Menu	menu([3], [], swap(3, 10))
+7800000	3	Menu	menu([1, 2, 4], [holding(1, 10), holding(4, 7)], pay(4, 9))
+8000000	3	Offer	offer(4, 10, 7, yes)
+8100000

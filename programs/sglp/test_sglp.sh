@@ -2,7 +2,7 @@
 # Tests of sGLP in GLP (programs/sglp) against sGLP's paper (the repository
 # svGLP-Stochastic-Volitional-GLP at d2f64b6) and its code tasks of 2026-10-02
 # 00:06 UTC, item 6, 15:23 UTC, items 1 and 3, 15:24 UTC, items 1 to 4, and
-# 15:44 UTC.
+# 15:44 UTC, and of 2026-10-03 08:44 UTC, item 2.
 #
 #   bash programs/sglp/test_sglp.sh
 #
@@ -36,21 +36,34 @@
 #       for (iv) is the profiles the log of (iv) shows, each agent's read from
 #       its menus' other-sex share and its cards' yes share; at 0 and 0 and at
 #       100 and 100, the draws of (v) are none and all.
-# (viii) circulation.awk (the task of 15:24 UTC, item 4), checked by hand: on
-#       tests/circulation/four.log, a fixed log of four agents over three
-#       simulated months --- six swaps proposed, four accepted and two
-#       declined; six pays, taking part of a holding, more than a holding,
-#       all of one and of coins not held; an answer at a month's end exactly;
+# (viii) circulation.awk (the task of 15:24 UTC, item 4, and of 2026-10-03
+#       08:44 UTC, item 2), checked by hand: on tests/circulation/four.log, a
+#       fixed log of four agents into its fourth simulated month --- seven
+#       swaps proposed, five accepted and two declined; eight pays, taking part
+#       of a holding, more than a holding, all of one and of coins not held;
+#       an answer at a month's end exactly; a pay answered while a card waits;
 #       the clock --- it prints tests/circulation/four.expected, the twelve
-#       months and the totals computed by hand from the log.
+#       months and the totals computed by hand from the log.  The pay answered
+#       while a card waits: agent 4 pays 3 the ten of 3's coins it holds
+#       (6500000 s) and, its wallet empty, proposes 3 a swap of ten (6600000
+#       s), whose card waits at 3 showing Held 7, the seven of 4's coins 3
+#       holds; 3's person answers pay(4, 9) while it waits (7800000 s, month 3)
+#       and the card yes in month 4 (8000000 s).  The pay is made when the card
+#       is answered, after the card's move: 3 holds 7 + 10 = 17 of 4's coins
+#       and pays 9, keeping 8, and 4 holds 10 of 3's; so month 3 ends at
+#       circulation 47, holdings 5, wallets 3, the pay not yet made, and months
+#       4 to 12 and the log at 58, 6 and 4.  A pay made at its answer would
+#       take min(9, 7) = 7 in month 3, leaving 40, 4 and 3 there, and 60 at the
+#       end.
 # (ix)  coins among friends (coins/run.sh; the task of 15:24 UTC, items 1 to
 #       3), four agents for a week on the hand-made graph
 #       tests/circulation/four.graph at the paper's mix, 50 and 50: two runs
 #       from seed 20260927 write byte-identical logs and seed 1 a different
 #       one; the run ends with no error at its clock, within the week;
 #       circulation.awk reads its log whole, menus and offers and their
-#       answers in the order of time; and every menu and offer is as the
-#       agent's clauses and request/2 give it.
+#       answers in the order of time, each offer answered being the card
+#       waiting at its agent; and every menu and offer is as the agent's
+#       clauses and request/2 give it.
 #
 # Prints one line per check and a summary line, "=== P passed, F failed ===";
 # exits non-zero if any check fails.  The runs of (iii) and (iv) take some
@@ -272,12 +285,13 @@ check "seeds 20260927 and 1 write different logs" $?
 awk '$1 == "clock" && $2 != "none" && $2 + 0 <= 604800 { ok = 1 } END { exit !ok }' "$WORK/ca.out"
 check "the run ends at its clock, within the week" $?
 grep -q '^unread 0$' "$WORK/ca.out" && grep -q '^unordered 0$' "$WORK/ca.out" &&
+    grep -q '^unmatched 0$' "$WORK/ca.out" &&
     grep -q '^menu_answers [1-9]' "$WORK/ca.out" && grep -q '^offer_answers [1-9]' "$WORK/ca.out"
-check "the log is menus and offers and their answers, in the order of time, read whole by circulation.awk" $?
+check "the log is menus and offers and their answers, in the order of time, each offer the card waiting at its agent, read whole by circulation.awk" $?
 E=$(coins_log_errors "$WORK/ca.log")
 [ "$E" -eq 0 ]
 check "every menu and offer of the log is as the agent's clauses and request/2 give it ($E not)" $?
-sed -n '/^wall-clock/p;/^month 1 /p;/^answers/,/^unordered/p' "$WORK/ca.out" | sed 's/^/        /'
+sed -n '/^wall-clock/p;/^month 1 /p;/^answers/,/^unmatched/p' "$WORK/ca.out" | sed 's/^/        /'
 
 echo ""
 echo "=== $PASS passed, $FAIL failed ==="
