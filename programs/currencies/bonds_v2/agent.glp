@@ -279,7 +279,7 @@ agent(Id, [msg(person, Id1, done)|_], _, Outs, _, _, _, []) :-
 agent(Id, [msg(person, Id1, connect(Target))|PersonIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(Target?) |
     send_net( msg(Target?, intro(Id?, Resp)), Outs?, Outs1),
-    inject_msg(Resp?, Target?, Id?, PersonIn?, PersonIn1),
+    inject_msg(Resp?, Target?, PersonIn?, PersonIn1),
     agent(Id?, PersonIn1?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% Person decision on cold-call
@@ -289,8 +289,8 @@ agent(Id, [msg(person, Id1, decision(Dec, From, response(Resp?)))|PersonIn], Net
     agent(Id?, PersonIn?, NetIn1?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% Response to cold-call (injected by inject_msg)
-agent(Id, [msg(From, Id1, response(Resp))|PersonIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
-    Id? =?= Id1? |
+agent(Id, [response(From, Resp)|PersonIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+    ground(Id?) |
     handle_response(Resp?, From?, Outs?, Outs1, NetIn?, NetIn1),
     agent(Id?, PersonIn?, NetIn1?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
