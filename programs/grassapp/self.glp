@@ -56,8 +56,8 @@ FriendContent ::= response(Response)
                 ; trade_propose(Lot, Stream(Bond), TradeResponse?)
                 ; escrow_offer(Constant, Constant, Constant, Constant, EscrowBenResult)
                 ; group_invite(GroupId, Channel(Stream(GroupSetupResponse), Stream(Handshake)))
-                ; group_msg(GroupId, Constant, Constant)
-                ; group_leave(GroupId, Constant)
+                ; group_msg(GroupId, Key, Constant)
+                ; group_leave(GroupId, Key)
                 ; group_removed(GroupId)
                 ; unfriend.
 FriendMsg     ::= msg(Key, Key, FriendContent).
@@ -68,25 +68,25 @@ FriendChannel ::= ch(FriendStream, FriendStream?).
 %% A group is hosted by its creator; a group identifier is (creator, name).  The
 %% invite conveys a fresh setup channel; the invitee acks and receives the group
 %% channel on it (the same handshake shape as befriending).
-GroupId   ::= group_id(Constant, Constant).
+GroupId   ::= group_id(Key, Constant).
 Handshake ::= ack(Key) ; nack.
 
 %% Group channel content — messages, a member leaving, a member removed.
-GroupContent ::= group_msg(GroupId, Constant, Constant)
-               ; group_leave(GroupId, Constant)
+GroupContent ::= group_msg(GroupId, Key, Constant)
+               ; group_leave(GroupId, Key)
                ; group_removed(GroupId).
-GroupMsg     ::= msg(Constant, Constant, GroupContent).
+GroupMsg     ::= msg(Key, Key, GroupContent).
 
 %% The setup channel conveys the group channel to a joining member.
 GroupSetupResponse ::= group_channel(Channel(Stream(GroupMsg), Stream(GroupMsg))).
 
 %% Group join result — written by group_await_join, injected into UserIn.
-GroupJoinResult ::= group_join_ack(GroupId, Constant, Channel(Stream(Handshake), Stream(GroupSetupResponse)))
-                  ; group_join_nack(GroupId, Constant).
+GroupJoinResult ::= group_join_ack(GroupId, Key, Channel(Stream(Handshake), Stream(GroupSetupResponse)))
+                  ; group_join_nack(GroupId, Key).
 
 %% Group output routing key: the member's own hub channel, or a member entry the
 %% creator keeps to distribute to.
-GroupKey ::= group(GroupId) ; group_member(GroupId, Constant).
+GroupKey ::= group(GroupId) ; group_member(GroupId, Key).
 
 %% Escrowed opaque values in the mediator's pending table — one constructor per
 %% ask.  `?` inside the constructor: the table forwards the writer back to the
@@ -123,10 +123,10 @@ AgentContent ::= befriend(Key, Response?)
                ; escrow_failed(Constant)
                ; group_invite(GroupId, Channel(Stream(GroupSetupResponse), Stream(Handshake)))
                ; group_joined(GroupId)
-               ; group_joined_member(GroupId, Constant)
+               ; group_joined_member(GroupId, Key)
                ; group_left(GroupId)
                ; group_removed(GroupId)
-               ; group_received(GroupId, Constant, Constant).
+               ; group_received(GroupId, Key, Constant).
 
 %% mediator -> agent (mediator's reply to a user action): the compose commands
 %% and the sibling choices.
@@ -150,7 +150,7 @@ UserContent ::= connect(Key)
               ; reject_group(GroupId, PendingValue)
               ; send_group(GroupId, Constant)
               ; leave_group(GroupId)
-              ; remove_from_group(GroupId, Constant).
+              ; remove_from_group(GroupId, Key).
 
 %% agent <-> network cold-call (2-arg msg(Dest, Content)): forwards the writer.
 NetColdCall ::= friend_request(Key, Response?).
@@ -186,8 +186,8 @@ UserInMsg    ::= msg(Constant, Key, UserContent)
                ; escrow_dep_returned(Constant, Stream(Bond))
                ; escrow_ben_released(Constant, Stream(Bond))
                ; escrow_ben_cancelled(Constant)
-               ; group_join_ack(GroupId, Constant, Channel(Stream(Handshake), Stream(GroupSetupResponse)))
-               ; group_join_nack(GroupId, Constant).
+               ; group_join_ack(GroupId, Key, Channel(Stream(Handshake), Stream(GroupSetupResponse)))
+               ; group_join_nack(GroupId, Key).
 UserInStream ::= [] ; [UserInMsg | UserInStream].
 
 %% Wrappers for the agent<->mediator channel (CONCRETE element types).
@@ -261,7 +261,7 @@ UserCmd     ::= connect(Key)
               ; reject_group(GroupId, ReqId)
               ; send_group(GroupId, Constant)
               ; leave_group(GroupId)
-              ; remove_from_group(GroupId, Constant).
+              ; remove_from_group(GroupId, Key).
 
 %% Mediator -> User (ground notifications to Dart).
 UserNotify  ::= befriend(Key, ReqId)
@@ -287,10 +287,10 @@ UserNotify  ::= befriend(Key, ReqId)
               ; escrow_failed(Constant)
               ; group_invite(GroupId, ReqId)
               ; group_joined(GroupId)
-              ; group_joined_member(GroupId, Constant)
+              ; group_joined_member(GroupId, Key)
               ; group_left(GroupId)
               ; group_removed(GroupId)
-              ; group_received(GroupId, Constant, Constant).
+              ; group_received(GroupId, Key, Constant).
 
 PendingEntry ::= pending(ReqId, PendingValue).
 PendingList  ::= [] ; [PendingEntry | PendingList].

@@ -418,7 +418,7 @@ setup_group_creator(GroupId, Outs, Outs1?, NetIn, NetIn1?) :-
     %% body, so the pair must carry one type (Stream(GroupMsg)).
     merge(MemberToHub?, NetIn?, NetIn1).
 
-procedure setup_group_hub_side(GroupId?, Constant?, OutputsList?, OutputsList, NetInStream?, NetInStream, Channel(Stream(GroupMsg), Stream(GroupMsg))).
+procedure setup_group_hub_side(GroupId?, Key?, OutputsList?, OutputsList, NetInStream?, NetInStream, Channel(Stream(GroupMsg), Stream(GroupMsg))).
 setup_group_hub_side(GroupId, Member, Outs, Outs1?, NetIn, NetIn1?,
         ch(HubToMember?, MemberToHub)) :-
     ground(GroupId?), ground(Member?) |
@@ -459,7 +459,7 @@ close_output(Key, [E|Rest], [E?|Rest1?]) :-
     otherwise |
     close_output(Key?, Rest?, Rest1).
 
-procedure group_await_join(GroupId?, Constant?, Channel(Stream(Handshake), Stream(GroupSetupResponse))?, GroupJoinResult).
+procedure group_await_join(GroupId?, Key?, Channel(Stream(Handshake), Stream(GroupSetupResponse))?, GroupJoinResult).
 group_await_join(GroupId, Invitee, ch([ack(_)|ChIn], ChOut?),
                  group_join_ack(GroupId?, Invitee?, ch(ChIn?, ChOut))).
 group_await_join(GroupId, Invitee, ch([nack|_], []),
