@@ -24,8 +24,11 @@
 // instantiation --- a fresh writer a later goal types, a subtype of the
 // declared stream --- is not refused.
 
+import 'dart:io';
+
 import 'package:test/test.dart';
 import 'package:glp_runtime/analysis/type_checker/type_checker.dart';
+import 'package:glp_runtime/engine/glp_engine.dart';
 
 // `checkSource` checks in the root scope's types alone, without the root
 // `self.glp`, so the stream types and `merge/3` are stated here as the root
@@ -156,18 +159,23 @@ join(Xs, Ys, Zs?) :- merge(Xs?, Ys?, Zs).
     test('an OpenStream(Integer) handed where Stream(X)? is read, X fixed by '
         'nothing else', () {
       // OpenStream<Integer> is within Stream<Integer>: X = Integer is an
-      // instantiation, although no equation of the call states it.
+      // instantiation, although no equation of the call states it.  Checked in
+      // the root's scope, as the engine checks a module: the clause that counts
+      // calls `:=`, which is type-checked against the root's declaration (TGLP
+      // typed-glp.tex, "Type checking of :="), and the root's `:=` has clauses,
+      // which a module cannot restate here without the root's kernels.
+      final engine = GlpEngine(
+          rootSelfGlpPath: File('../programs/self.glp').absolute.path);
       expect(
-          _messages('''
-$_streams
+          engine.loadSource('''
 procedure(X) len(Stream(X)?, Integer).
 len([], 0).
 len([_|Xs], N?) :- len(Xs?, M), N := M? + 1.
 
 procedure count(OpenStream(Integer)?, Integer).
 count(Xs, N?) :- len(Xs?, N).
-'''),
-          isEmpty);
+''', filename: 'probe'),
+          isTrue);
     });
 
     test('a fresh writer a later goal types', () {
