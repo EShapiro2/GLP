@@ -8,7 +8,7 @@
 % distribute_indexed([send(1,a), send(2,b), send(1,c), send(2,d)], Y, Z).
 
 %% Type definitions
-SendMsg(X) ::= send(Number, X).
+SendMsg(X) ::= send(Integer, X).
 SendStream(X) ::= [] ; [SendMsg(X) | SendStream(X)].
 
 %% Procedure type declarations

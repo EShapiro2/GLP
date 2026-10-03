@@ -12,7 +12,7 @@
 
 %% Type definitions
 %% Content (_) is generic — distribute_binary routes without inspecting content
-Req ::= req(Stream(Number), _).
+Req ::= req(Stream(Integer), _).
 ReqStream ::= [] ; [Req | ReqStream].
 
 %% Procedure type declarations

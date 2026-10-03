@@ -10,7 +10,7 @@
 %% R? is assigned the current resolvent of the run (empty if the run had
 %% already terminated).
 
-procedure run(_?, Stream(Constant)?, _?, _).
+procedure run(_?, Stream(String)?, _?, _).
 run(true, _, L, L?).                                           % halt
 run((A, B), Cs, L, R?) :-                                      % fork
     distribute(Cs?, Cs1, Cs2),
@@ -22,13 +22,13 @@ run(A, Cs, L, R?) :- known(A?), unknown(Cs?) |                 % reduce
 run(A, [], L, R?) :- known(A?) |                               % control closed: run freely
     reduce(A?, B), run(B?, [], L?, R).
 
-procedure suspended_run(_?, Stream(Constant)?, _?, _).
+procedure suspended_run(_?, Stream(String)?, _?, _).
 suspended_run(A, [resume|Cs], L, R?) :- run(A?, Cs?, L?, R).   % resume
 suspended_run(A, [abort|_], L, [A?|L?]).                       % abort: add goal to snapshot
 suspended_run(_, [], L, L?).                                   % control closed: drop goal, close circuit
 
 %% Ground-stream distribution (control messages are ground)
-procedure distribute(Stream(Constant)?, Stream(Constant), Stream(Constant)).
+procedure distribute(Stream(String)?, Stream(String), Stream(String)).
 distribute([X|Xs], [X?|Ys1?], [X?|Ys2?]) :- ground(X?) | distribute(Xs?, Ys1, Ys2).
 distribute([], [], []).
 

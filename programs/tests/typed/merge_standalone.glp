@@ -6,7 +6,7 @@ merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge(Xs, [], Xs?).
 merge([], Ys, Ys?).
 
-exported procedure p(Constant?).
+exported procedure p(String?).
 p(a).
 p(b).
 

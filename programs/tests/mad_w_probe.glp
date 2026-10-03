@@ -37,7 +37,7 @@ Probe    ::= w(Done?).
 ProbeMsg ::= msg(Constant, Probe).
 Carried  ::= wrapped(Done?).
 
-procedure agent_init(Constant?, Stream(_)?, Stream(ProbeMsg)?).
+procedure agent_init(String?, Stream(_)?, Stream(ProbeMsg)?).
 
 %% Alice: transmit a fresh writer to bob, wrapped in w/1.
 agent_init(alice, _, _) :-

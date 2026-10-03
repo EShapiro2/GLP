@@ -6,7 +6,7 @@
 %% output stream. The channel state threads through the recursive calls,
 %% maintaining the bidirectional communication link.
 
-procedure relay(Stream(Constant)?, Stream(Constant), Channel(Stream(Constant), Stream(Constant))?).
+procedure relay(Stream(String)?, Stream(String), Channel(Stream(String), Stream(String))?).
 relay([X|In1], Out?, Ch) :-
     send(X?, Ch?, Ch1) |
     relay(In1?, Out, Ch1?).
@@ -16,19 +16,19 @@ relay(In, [X?|Out1?], Ch) :-
 relay([], [], ch([], [])).      %% input and channel closed: close output and channel
 
 %% Play: the relay forwards a to the peer; the peer replies x, y and closes.
-procedure relay_play(Stream(Constant)).
+procedure relay_play(Stream(String)).
 relay_play(Out?) :-
     new_channel(Ch, Peer),
     relay([a], Out, Ch?),
     peer_echo(Peer?).
 
-procedure peer_echo(Channel(Stream(Constant), Stream(Constant))?).
+procedure peer_echo(Channel(Stream(String), Stream(String))?).
 peer_echo(Pch) :-
     receive(A, Pch?, P1), send(x, P1?, P2), send(y, P2?, P3) |
     peer_done(A?, P3?).
 peer_echo(Pch) :- close(Pch?) | true.
 
-procedure peer_done(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+procedure peer_done(String?, Channel(Stream(String), Stream(String))?).
 peer_done(a, ch(_, [])).
 
 %% Example initial goal:

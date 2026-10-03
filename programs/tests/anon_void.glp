@@ -18,13 +18,13 @@ probe([hello(_) | _], other) :- otherwise | true.
 
 % A control: the tail is a writer whose producer is suspended, so it is
 % genuinely unbound.
-procedure more(Constant?, Stream).
+procedure more(String?, Stream).
 more(go, []).
 
-procedure emit(Constant?, Stream).
+procedure emit(String?, Stream).
 emit(Go, [hello(me) | T?]) :- more(Go?, T).
 
-exported procedure unbound_tail(Constant?, Answer).
+exported procedure unbound_tail(String?, Answer).
 unbound_tail(Go, A?) :- emit(Go?, S), probe(S?, A).
 
 % A control: a closed list, whose tail is bound to [].
