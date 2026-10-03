@@ -24,9 +24,8 @@
 %% CHANNEL OPERATIONS / MERGE / ROUTING (holdings-agnostic)
 %% =============================================================================
 
-send(X, ch(In, [X?|Out?]), ch(In?, Out)).
-receive(X?, ch([X|In], Out?), ch(In?, Out)).
-new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
+%% send/3, receive/3 and new_channel/2 are the root's (programs/self.glp),
+%% reached by scope.
 
 procedure(X) merge(Stream(X)?, Stream(X)?, Stream(X)).
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
