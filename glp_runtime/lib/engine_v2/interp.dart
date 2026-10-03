@@ -26,6 +26,8 @@ library;
 import 'dart:typed_data';
 
 import 'package:glp_runtime/bytecode/runner.dart';
+import 'package:glp_runtime/bytecode/opcodes.dart'
+    show HeadStructure, HeadConstant, HeadNil, HeadList, GetVariable, GetValue;
 import 'package:glp_runtime/engine_v2/code_image.dart';
 import 'package:glp_runtime/engine_v2/step_outcome.dart';
 import 'package:glp_runtime/runtime/terms.dart';
@@ -143,6 +145,115 @@ class ByteRunner with OpExecutors implements GoalRunner {
   @override
   String? procNameForPc(int pc) => _procNameByPc[pc];
 
+  /// For each clause of an indexed procedure, by the byte offset of its
+  /// `clause_try`: the argument and the functor and arity of the
+  /// `head_structure` its head matches that argument against
+  /// ([_buildClauseIndex]).  A goal whose argument there is bound to anything
+  /// but such a structure fails the clause at that instruction, whatever the
+  /// rest of the head, and a failed clause leaves nothing behind, so the clause
+  /// is passed over without being tried (GLP-Spec appendix-term-matching.tex,
+  /// Definition "Term Matching": a mismatch fails the clause; IGLP
+  /// Implementation Notes, "Clause try": a failed clause leaves no trace).
+  /// Until 2026-10-02 every clause was tried: a goal of `:=/2`, whose some
+  /// forty clauses each match its second argument against an operator, tried
+  /// them all.
+  late final List<_ClauseKey?> _clauseKeys = _buildClauseIndex();
+
+  /// The procedures indexed: those of at least [_indexMinClauses] clauses
+  /// with some argument matched against a structure by at least
+  /// [_indexMinKeys] of them, on the argument so matched by the most.
+  static const int _indexMinClauses = 6;
+  static const int _indexMinKeys = 4;
+
+  List<_ClauseKey?> _buildClauseIndex() {
+    final code = image.code;
+    final keys = List<_ClauseKey?>.filled(code.length, null);
+    for (final sym in image.symbols) {
+      if (!sym.compiled || sym.arity == 0) continue;
+      final end = sym.codeOffset + sym.codeLength;
+      // Each clause's clause_try offset and, per argument, the functor and
+      // arity of the first head instruction for it, where that is a
+      // head_structure.
+      final clauses = <(int, Map<int, (String, int)>)>[];
+      Map<int, (String, int)>? current;
+      final firstSeen = <int>{};
+      var inHead = false;
+      var off = sym.codeOffset;
+      while (off < end) {
+        final opcode = code[off];
+        final rr = WireReader(Uint8List.sublistView(code, off));
+        final op = decodeInstruction(rr,
+            procNameOf: (i) => image.symbolAt(i).signature,
+            ctargetLabelOf: (i) => '#$i');
+        if (opcode == Opcode.clauseTry) {
+          current = <int, (String, int)>{};
+          clauses.add((off, current));
+          firstSeen.clear();
+          inHead = true;
+        } else if (inHead && current != null) {
+          final isHead = opcode >= Opcode.headConstant &&
+              opcode <= Opcode.pop;
+          if (!isHead) {
+            inHead = false;
+          } else {
+            int? slot;
+            if (op is HeadStructure) slot = op.argSlot;
+            if (op is HeadConstant) slot = op.argSlot;
+            if (op is HeadNil) slot = op.argSlot;
+            if (op is HeadList) slot = op.argSlot;
+            if (op is GetVariable) slot = op.argSlot;
+            if (op is GetValue) slot = op.argSlot;
+            if (slot != null && slot < sym.arity && firstSeen.add(slot)) {
+              if (op is HeadStructure) current[slot] = (op.functor, op.arity);
+            }
+          }
+        }
+        off += rr.offset;
+      }
+      if (clauses.length < _indexMinClauses) continue;
+      var best = -1, bestCount = 0;
+      for (var k = 0; k < sym.arity; k++) {
+        var n = 0;
+        for (final (_, m) in clauses) {
+          if (m.containsKey(k)) n++;
+        }
+        if (n > bestCount) {
+          best = k;
+          bestCount = n;
+        }
+      }
+      if (bestCount < _indexMinKeys) continue;
+      for (final (at, m) in clauses) {
+        final key = m[best];
+        if (key != null) keys[at] = _ClauseKey(best, key.$1, key.$2);
+      }
+    }
+    return keys;
+  }
+
+  /// Whether the goal's argument [key.slot] --- [value], as dereferenced ---
+  /// fails the clause [key] names at its head_structure: bound, and not a
+  /// structure of the functor and arity matched against (as
+  /// [OpExecutors.execHeadStructure] decides it).  An unbound variable, which
+  /// the clause may assign or suspend on, does not.
+  static bool _clauseFails(_ClauseKey key, Object? value) {
+    if (value == null || value is VarRef || value is! Term) return false;
+    if (value is StructTerm) {
+      return value.functor != key.functor || value.args.length != key.arity;
+    }
+    return true;
+  }
+
+  /// The goal's argument [slot] dereferenced, for [_clauseFails]: null where
+  /// the goal holds no variable there or it is unbound.
+  static Object? _indexedArg(RunnerContext cx, int slot) {
+    if (!cx.env.argBySlot.containsKey(slot)) return null;
+    final arg = cx.env.argBySlot[slot];
+    if (arg is! VarRef) return null;
+    final d = cx.rt.heap.derefAddr(arg.addr);
+    return d is Term && d is! VarRef ? d : null;
+  }
+
   /// The decoded operands of each instruction executed, by its byte offset:
   /// an instruction's operands are decoded at its first execution and kept,
   /// the bytes being what is run, shipped and hashed.  Until 2026-10-02 each
@@ -258,7 +369,13 @@ class ByteRunner with OpExecutors implements GoalRunner {
   RunResult runWithStatus(RunnerContext cx) {
     final code = image.code;
     final decoded = _decoded;
+    final clauseKeys = _clauseKeys;
     var pc = cx.kappa; // byte offset of the goal's entry instruction
+    // The indexed argument of the goal, dereferenced, for the procedure being
+    // tried: read at its first indexed clause, and again after a tail call,
+    // which gives the goal new arguments.
+    var indexedSlot = -1;
+    Object? indexedValue;
 
     while (pc < code.length) {
       final opStart = pc;
@@ -269,6 +386,17 @@ class ByteRunner with OpExecutors implements GoalRunner {
       switch (ins.op) {
         // ===== Clause control =====
         case Opcode.clauseTry:
+          final key = clauseKeys[opStart];
+          if (key != null) {
+            if (indexedSlot != key.slot) {
+              indexedSlot = key.slot;
+              indexedValue = _indexedArg(cx, key.slot);
+            }
+            if (_clauseFails(key, indexedValue)) {
+              pc = nextClauseByte(opStart);
+              continue;
+            }
+          }
           execClauseTry(cx); // advance
           pc = after;
           continue;
@@ -581,6 +709,7 @@ class ByteRunner with OpExecutors implements GoalRunner {
             final (result, nextPc) = _requeue(cx, ins.a, ins.b);
             if (result != null) return result;
             if (nextPc != null) {
+              indexedSlot = -1;
               pc = nextPc;
               continue;
             }
@@ -837,4 +966,13 @@ final class _Ins {
   final Object? k;
   const _Ins(this.op, this.next,
       {this.a = 0, this.b = 0, this.pol = false, this.k});
+}
+
+/// A clause's index key ([ByteRunner._clauseKeys]): the argument [slot] its
+/// head matches against the structure [functor]/[arity].
+final class _ClauseKey {
+  final int slot;
+  final String functor;
+  final int arity;
+  const _ClauseKey(this.slot, this.functor, this.arity);
 }
