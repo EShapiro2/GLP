@@ -98,7 +98,7 @@ play_residual(Out?) :-
 %% bench(Which, N, K, Last): count a stream of N integers, Which = plain (the
 %% mini-app unbudgeted), residual (the residual program under grants of K) or
 %% meta (under bounded/3 with grants of K); Last is the last count, N.
-exported procedure bench(Constant?, Integer?, Integer?, Integer).
+exported procedure bench(BenchKind?, Integer?, Integer?, Integer).
 bench(plain, N, _, Last?) :-
     iota(N?, Xs), count(Xs?, 0, Out), last(Out?, Last).
 bench(residual, N, K, Last?) :-
