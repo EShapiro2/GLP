@@ -38,11 +38,13 @@ const Set<String> privilegedKernels = {
 /// catalogue's seam rows), by the names the flat program calls them by. The
 /// closure over the root clauses below finds these again from the kernels; they
 /// are listed so the refusal is by specification and not only by the clauses
-/// that happen to stand in the root today.
+/// that happen to stand in the root today.  The person's is `send_to_user/1`,
+/// the catalogue's name (GLP-Spec 0c92c11; GLP #3 Cowork, 2026-10-04 09:14
+/// UTC); until 2026-10-04 the list also named `send_to_person/1`, which the
+/// root does not define.
 const Set<String> privilegedPredicates = {
   'send_to_net/1',
   'send_to_user/1',
-  'send_to_person/1',
   'peer_address/2',
   'punch_udp/1',
   'place_declare/3',
