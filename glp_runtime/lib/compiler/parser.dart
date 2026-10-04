@@ -156,10 +156,11 @@ class Parser {
     final seenProcedures = <String, Procedure>{};
 
     while (!_isAtEnd()) {
-      // Check for procedure declaration: 'procedure ...' or 'exported procedure ...' or 'imported procedure ...'
-      final isProcedureDecl = _check(TokenType.PROCEDURE) ||
-          (_check(TokenType.ATOM) && (_peek().lexeme == 'exported' || _peek().lexeme == 'imported') &&
-           _current + 1 < tokens.length && tokens[_current + 1].type == TokenType.PROCEDURE);
+      // A procedure declaration: 'procedure ...', 'exported procedure ...' or
+      // 'imported procedure ...', a name after the keyword and its parameter
+      // list ([_atProcDeclaration]); any other item beginning `procedure` is a
+      // clause of the procedure of that name.
+      final isProcedureDecl = _atProcDeclaration();
 
       if (_atDisplayDecl()) {
         // A display declaration is a declaration, not a clause, so it does not
@@ -255,9 +256,11 @@ class Parser {
           seenProcedures[sig] = proc;
           procedures.add(proc);
         }
-      } else if (_check(TokenType.ATOM) || (vglp && _check(TokenType.STAR))) {
-        // Clause starting with an atom (procedure name), or with the volition
-        // guard preceding one.
+      } else if (_check(TokenType.ATOM) || _check(TokenType.PROCEDURE) ||
+          (vglp && _check(TokenType.STAR))) {
+        // Clause starting with an atom (procedure name), `procedure` among
+        // them where no declaration begins there, or with the volition guard
+        // preceding one.
         final proc = _parseProcedure();
         final sig = '${proc.name}/${proc.arity}';
 
@@ -351,11 +354,7 @@ class Parser {
     final procDeclarations = <ProcDecl>[];
 
     while (!_isAtEnd()) {
-      final isProcedureDecl = _check(TokenType.PROCEDURE) ||
-          (_check(TokenType.ATOM) &&
-              (_peek().lexeme == 'exported' || _peek().lexeme == 'imported') &&
-              _current + 1 < tokens.length &&
-              tokens[_current + 1].type == TokenType.PROCEDURE);
+      final isProcedureDecl = _atProcDeclaration();
 
       if (isProcedureDecl) {
         procDeclarations.add(_parseProcDeclaration());
@@ -443,8 +442,10 @@ class Parser {
       // A volition guard precedes the head, so look past it for the name.
       final headIdx = vglp ? _indexAfterVolitionGuard(_current) : _current;
       if (headIdx < tokens.length &&
-          tokens[headIdx].type == TokenType.ATOM &&
-          tokens[headIdx].lexeme == name) {
+          (tokens[headIdx].type == TokenType.ATOM ||
+              tokens[headIdx].type == TokenType.PROCEDURE) &&
+          tokens[headIdx].lexeme == name &&
+          !_atProcDeclaration(headIdx)) {
         // Same predicate name
         couldBeSameProcedure = true;
       } else if (name == ':=' && (_peek().type == TokenType.VARIABLE || _peek().type == TokenType.READER || _peek().type == TokenType.UNDERSCORE)) {
@@ -811,9 +812,9 @@ class Parser {
     }
 
     // Try to parse as regular predicate first
-    if (_check(TokenType.ATOM)) {
+    if (_check(TokenType.ATOM) || _check(TokenType.PROCEDURE)) {
       final start = _current;
-      final functorToken = _consume(TokenType.ATOM, 'Expected predicate name');
+      final functorToken = _consumePredicateName();
       final args = <Term>[];
 
       if (_match(TokenType.LPAREN)) {
@@ -944,7 +945,7 @@ class Parser {
       }
     }
 
-    final functorToken = _consume(TokenType.ATOM, 'Expected predicate name');
+    final functorToken = _consumePredicateName();
     final args = <Term>[];
 
     if (_match(TokenType.LPAREN)) {
@@ -1039,7 +1040,7 @@ class Parser {
       }
     }
 
-    final functorToken = _consume(TokenType.ATOM, 'Expected predicate name');
+    final functorToken = _consumePredicateName();
     final args = <Term>[];
 
     if (_match(TokenType.LPAREN)) {
@@ -1594,26 +1595,6 @@ class Parser {
   // Yardeni-Shapiro Type Declaration Parser Methods
   // ============================================================================
 
-  /// Check if we're at a type definition or procedure declaration
-  bool _isTypeOrProcDeclaration() {
-    // procedure keyword
-    if (_check(TokenType.PROCEDURE)) return true;
-
-    // TypeName ::= ... (type names are capitalized, tokenized as VARIABLE)
-    if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
-      // Look ahead for ::=
-      final saved = _current;
-      _advance();  // consume type name
-
-      final isTypeDef = _check(TokenType.COLONCOLONEQ);
-
-      _current = saved;  // restore position
-      return isTypeDef;
-    }
-
-    return false;
-  }
-
   /// Check if we're at a type definition (TypeName ::= ... or TypeName(X) ::= ...)
   /// Used to distinguish type definitions from clause heads starting with capitalized variable.
   bool _isTypeDefinition() {
@@ -1901,6 +1882,67 @@ class Parser {
     return result;
   }
 
+  /// The token types a declared procedure's name may be
+  /// ([_parseProcDeclaration]).
+  static const Set<TokenType> _procedureNameTokens = {
+    TokenType.ATOM, TokenType.PROCEDURE, TokenType.LESS, TokenType.GREATER, TokenType.LESS_EQUAL,
+    TokenType.GREATER_EQUAL, TokenType.ARITH_EQUAL, TokenType.ARITH_NOT_EQUAL,
+    TokenType.GROUND_EQUAL, TokenType.GROUND_NOT_EQUAL, TokenType.AT_LESS,
+    TokenType.EQUALS, TokenType.UNIV, TokenType.UNIV_DECOMPOSE,
+    TokenType.ASSIGN,
+  };
+
+  /// Whether a procedure declaration begins at token [at], the current one
+  /// by default: `procedure`, after `exported` or `imported` or not, then its
+  /// parameter list or none, then a procedure name before "(", "." or "#" ---
+  /// `procedure p(X).`, `procedure(X) merge(...).` (TGLP
+  /// parameterized-types.tex, "Parameterised Procedure Declarations": the
+  /// parameters are named "in a list after the keyword").  No word is
+  /// reserved (GLP #3 Cowork, 2026-10-04 09:06 UTC, "23:49. Q2: `procedure`
+  /// immediately before "(" is a functor ...; `procedure p(X).` is a
+  /// declaration"): `procedure` with no name after it --- `procedure(a).`,
+  /// `procedure(X) :- q(X?).`, `procedure.` --- begins a clause of the
+  /// procedure named `procedure`.  Until 2026-10-04 every `procedure` there
+  /// began a declaration, and such a clause was a syntax error.
+  bool _atProcDeclaration([int? at]) {
+    var i = at ?? _current;
+    if (i < tokens.length &&
+        tokens[i].type == TokenType.ATOM &&
+        (tokens[i].lexeme == 'exported' || tokens[i].lexeme == 'imported')) {
+      i++;
+    }
+    if (i >= tokens.length || tokens[i].type != TokenType.PROCEDURE) {
+      return false;
+    }
+    i++;
+    if (i < tokens.length && tokens[i].type == TokenType.LPAREN) {
+      var depth = 0;
+      for (; i < tokens.length; i++) {
+        final t = tokens[i].type;
+        if (t == TokenType.EOF) return false;
+        if (t == TokenType.LPAREN) depth++;
+        if (t == TokenType.RPAREN && --depth == 0) break;
+      }
+      i++;
+    }
+    if (i + 1 >= tokens.length ||
+        !_procedureNameTokens.contains(tokens[i].type)) {
+      return false;
+    }
+    final after = tokens[i + 1].type;
+    return after == TokenType.LPAREN ||
+        after == TokenType.DOT ||
+        after == TokenType.HASH;
+  }
+
+  /// A predicate's name, in a clause head or a goal: a name, or `procedure`,
+  /// which reserves nothing there (GLP #3 Cowork, 2026-10-04 09:06 UTC,
+  /// "23:49. Q2"; [_atProcDeclaration]).
+  Token _consumePredicateName() {
+    if (_check(TokenType.PROCEDURE)) return _advance();
+    return _consume(TokenType.ATOM, 'Expected predicate name');
+  }
+
   /// Parse a procedure declaration: procedure name(Type?, Type).
   /// or: exported procedure name(Type?, Type).
   /// or: imported procedure [path#]name(Type?, Type).
@@ -1956,9 +1998,10 @@ class Parser {
     //              'merge' → modulePath=null, name='merge'
     String? modulePath;
 
-    // Procedure name can be atom or operator (<, >, =<, >=, =:=, =\=, =?=, =?\=, =, @<)
+    // Procedure name can be atom or operator (<, >, =<, >=, =:=, =\=, =?=, =?\=, =, @<),
+    // or `procedure`, a name after the keyword like any other.
     Token nameToken;
-    if (_check(TokenType.ATOM)) {
+    if (_check(TokenType.ATOM) || _check(TokenType.PROCEDURE)) {
       nameToken = _advance();
     } else if (_check(TokenType.LESS)) {
       nameToken = _advance();
@@ -2001,8 +2044,9 @@ class Parser {
     if (imported) {
       final parts = <String>[name];
       while (_match(TokenType.HASH)) {
-        // Next token should be an atom (next path component or procedure name)
-        if (!_check(TokenType.ATOM)) {
+        // Next token should be an atom (next path component or procedure
+        // name), `procedure` among them
+        if (!_check(TokenType.ATOM) && !_check(TokenType.PROCEDURE)) {
           throw CompileError(
             'Expected module path component or procedure name after "#"',
             _peek().line,
