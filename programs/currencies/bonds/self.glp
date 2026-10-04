@@ -82,6 +82,19 @@ Link ::= link(PeerChannel) ; linked.
 %% Whether an instrument was found in the holdings.
 Found ::= found(Instrument) ; not_found.
 
+%% The answer to a question the agent, the scripted person or the escrow
+%% program asks of its state: whether every instrument of a payment is a coin
+%% of the payee (own_coins), whether a channel to a counterparty is open
+%% (has_peer), whether the screen shows a step's effect, and whether a lot is
+%% one of a list, is owed, or every lot of a list is held (escrow.glp).  The
+%% name is the one bonds_v2 and the social graph give the same two constants.
+Decision ::= yes ; no.
+
+%% Whether k instruments of an issuer and due were selected out of the
+%% holdings: ok, or fail --- the precondition cent^k_{u,*} in c_p of Section
+%% 3.4 does not hold.
+Status ::= ok ; fail.
+
 %% The agent's outputs: the screen, the network, and a channel per
 %% counterparty, keyed by its name.  The routers send_user, send_net,
 %% send_friend and add_friend_output are those of lib/routing, exposed from the
@@ -279,7 +292,7 @@ append_instruments([], Ys, Ys?).
 %% rest; or fail --- the precondition cent^k_{u,*} in c_p of Section 3.4 does
 %% not hold --- with the instruments found and the rest, which the caller puts
 %% back together.
-procedure select_instruments(Key?, Constant?, Integer?, Stream(Instrument)?, Constant, Stream(Instrument), Stream(Instrument)).
+procedure select_instruments(Key?, Constant?, Integer?, Stream(Instrument)?, Status, Stream(Instrument), Stream(Instrument)).
 select_instruments(_, _, 0, Hs, ok, [], Hs?).
 select_instruments(Issuer, D, K, [coin(I, S)|Rest], Status?, [coin(I?, S?)|Sel?], Rem?) :-
     K? > 0, Issuer? =?= I?, D? =?= now |
@@ -318,7 +331,7 @@ take_bond(_, _, [], not_found, []).
 
 %% Whether every instrument is a coin of the holder: what a payee takes as a
 %% payment of its own coins.
-procedure own_coins(Key?, Stream(Instrument)?, Constant).
+procedure own_coins(Key?, Stream(Instrument)?, Decision).
 own_coins(Id, [coin(I, _)|Rest], R?) :-
     Id? =?= I? |
     own_coins(Id?, Rest?, R).
@@ -386,7 +399,7 @@ add_warranty(Q, T, [], [dated(Q?, T?)]).
 %% =============================================================================
 
 %% Whether a channel to Q is among the outputs.
-procedure has_peer(Key?, Stream(OutputEntry)?, Stream(OutputEntry), Constant).
+procedure has_peer(Key?, Stream(OutputEntry)?, Stream(OutputEntry), Decision).
 has_peer(Q, [friend_output(K, Out?)|Rest], [friend_output(K?, Out)|Rest?], yes) :-
     Q? =?= K? | true.
 has_peer(Q, [E|Rest], [E?|Rest1?], Known?) :-

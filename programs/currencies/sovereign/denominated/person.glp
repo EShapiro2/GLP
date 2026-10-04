@@ -234,11 +234,11 @@ settle_awaits([await(X)|Rest], Seen, Script?, Seen2?) :-
     settle_found(Found?, X?, Rest?, Seen1?, Script, Seen2).
 settle_awaits(S, Seen, S?, Seen?) :- otherwise | true.
 
-procedure settle_found(Constant?, ScreenContent?, Script?, Stream(ScreenContent)?, Script, Stream(ScreenContent)).
+procedure settle_found(Decision?, ScreenContent?, Script?, Stream(ScreenContent)?, Script, Stream(ScreenContent)).
 settle_found(yes, _, Rest, Seen, Script?, Seen1?) :- settle_awaits(Rest?, Seen?, Script, Seen1).
 settle_found(no, X, Rest, Seen, [await(X?)|Rest?], Seen?).
 
-procedure take_seen(ScreenContent?, Stream(ScreenContent)?, Constant, Stream(ScreenContent)).
+procedure take_seen(ScreenContent?, Stream(ScreenContent)?, Decision, Stream(ScreenContent)).
 take_seen(X, [S|Ss], yes, Ss?) :- X? =?= S? | true.
 take_seen(X, [S|Ss], F?, [S?|Rest?]) :- otherwise | take_seen(X?, Ss?, F, Rest).
 take_seen(_, [], no, []).
@@ -260,12 +260,12 @@ settle_pending(calendar_out, M, [Step|S], T, S1?, T?, P?) :-
     done(Step?, M?, Dn),
     pop(Dn?, Step?, S?, calendar_out, S1, P).
 
-procedure pop(Constant?, Step?, Script?, Pending?, Script, Pending).
+procedure pop(Decision?, Step?, Script?, Pending?, Script, Pending).
 pop(yes, _, Rest, _, Rest?, idle).
 pop(no, Step, Rest, P, [Step?|Rest?], P?).
 
 %% Whether the screen shows the step's effect.
-procedure done(Step?, ScreenContent?, Constant).
+procedure done(Step?, ScreenContent?, Decision).
 done(mint(_, K), minted(K1, D1), yes) :- K? =:= K1?, D1? =?= now | true.
 done(mint(_, K, D), minted(K1, D1), yes) :- K? =:= K1?, D? =?= D1? | true.
 done(advance(T), date_advanced(T1), yes) :- T? =:= T1? | true.

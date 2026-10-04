@@ -114,7 +114,7 @@ abort_pending(R, sent(R1), idle) :- R? =?= R1? | true.
 abort_pending(_, P, P?) :- otherwise | true.
 
 %% Whether the screen shows the step's effect.
-procedure done(Step?, ScreenContent?, Constant).
+procedure done(Step?, ScreenContent?, Decision).
 done(mint(K), minted(K1), yes) :- K? =:= K1? | true.
 done(swap(Q, _, _, _, _), swap_done(Q1), yes) :- Q? =?= Q1? | true.
 done(pay(Q, K), paid(Q1, K1), yes) :- Q? =?= Q1?, K? =:= K1? | true.
@@ -123,7 +123,7 @@ done(accept(Q), swap_done(Q1), yes) :- Q? =?= Q1? | true.
 done(await(M), M1, yes) :- M? =?= M1? | true.
 done(_, _, no) :- otherwise | true.
 
-procedure advance(Constant?, Key?, Stream(Event)?, Stream(UserAnswer), Step?, Script?, Open?, SwapCards?, Pending?, Stream(ScreenContent)).
+procedure advance(Decision?, Key?, Stream(Event)?, Stream(UserAnswer), Step?, Script?, Open?, SwapCards?, Pending?, Stream(ScreenContent)).
 advance(yes, Id, Es, As?, _, Script, Open, Swaps, _, Screen?) :-
     try_step(Id?, Es?, As, Script?, Open?, Swaps?, idle, Screen).
 advance(no, Id, Es, As?, Step, Script, Open, Swaps, Pending, Screen?) :-

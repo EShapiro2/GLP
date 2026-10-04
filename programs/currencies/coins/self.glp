@@ -52,6 +52,17 @@ Conversation ::= conversation(Key, PeerChannel).
 %% Whether a coin was found in the holdings.
 Found ::= found(Coin) ; not_found.
 
+%% The answer to a question the agent asks of its state: whether every coin of
+%% a payment is the payee's own (own_coins), whether a conversation with a
+%% counterparty is open (has_peer), whether the screen shows a step's effect
+%% (the scripted person's done).  The name is the one bonds_v2 and the social
+%% graph give the same two constants.
+Decision ::= yes ; no.
+
+%% Whether k coins of an issuer were selected out of the holdings: ok, or fail
+%% --- the precondition cent^k_u in c_p of Definition 3.1 does not hold.
+Status ::= ok ; fail.
+
 %% The agent's outputs: the screen, and a channel per counterparty, keyed by
 %% its name.  The routers send_user, send_friend and add_friend_output are
 %% those of social/graph/routing, exposed from the root scope.
@@ -166,7 +177,7 @@ append_coins([], Ys, Ys?).
 %% K coins of Issuer out of the holdings: ok, with the coins and the rest; or
 %% fail --- the precondition cent^k_u in c_p of Definition 3.1 does not hold ---
 %% with the coins found and the rest, which the caller puts back together.
-procedure select_coins(Key?, Integer?, Stream(Coin)?, Constant, Stream(Coin), Stream(Coin)).
+procedure select_coins(Key?, Integer?, Stream(Coin)?, Status, Stream(Coin), Stream(Coin)).
 select_coins(_, 0, Hs, ok, [], Hs?).
 select_coins(Issuer, K, [coin(I, S)|Rest], Status?, [coin(I?, S?)|Sel?], Rem?) :-
     K? > 0, Issuer? =?= I? |
@@ -187,7 +198,7 @@ take_coin(Issuer, [C|Rest], Found?, [C?|Rem?]) :-
 take_coin(_, [], not_found, []).
 
 %% Whether every coin is the issuer's own.
-procedure own_coins(Key?, Stream(Coin)?, Constant).
+procedure own_coins(Key?, Stream(Coin)?, Decision).
 own_coins(Id, [coin(I, _)|Rest], R?) :- Id? =?= I? | own_coins(Id?, Rest?, R).
 own_coins(_, [coin(_, _)|_], no) :- otherwise | true.
 own_coins(_, [], yes).
@@ -231,7 +242,7 @@ menu_add(I, [], [I?]).
 %% =============================================================================
 
 %% Whether a conversation with Q is open: Q's output entry is among the outputs.
-procedure has_peer(Key?, Stream(OutputEntry)?, Stream(OutputEntry), Constant).
+procedure has_peer(Key?, Stream(OutputEntry)?, Stream(OutputEntry), Decision).
 has_peer(Q, [friend_output(K, Out?)|Rest], [friend_output(K?, Out)|Rest?], yes) :-
     Q? =?= K? | true.
 has_peer(Q, [E|Rest], [E?|Rest1?], Known?) :-

@@ -40,6 +40,15 @@ FriendChannel ::= ch(Stream(FriendMsg), Stream(FriendMsg)?).
 Response ::= accept(FriendChannel) ; no.
 Decision ::= yes ; no.
 
+%% Whether the bonds of a lot list were selected out of the holdings: ok, or
+%% fail --- the holdings do not hold them (txn.glp, select_bonds_by_spec).
+Status ::= ok ; fail.
+
+%% What an incoming trade proposal is to the accepter (txn.glp, classify_trade):
+%% a payment or a redemption, both auto-accepted, or a normal swap, shown to
+%% the person.
+TradeClass ::= normal ; payment ; redemption.
+
 %% Network content (2-arg cold-call: msg(Dest, Content))
 NetColdCall ::= intro(Key, Response?).
 

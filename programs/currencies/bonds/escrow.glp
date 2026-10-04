@@ -191,23 +191,23 @@ packaged_accepts(_, Q, _, Ys, Got, From, L, V?) :-
 packaged_accepts(_, _, _, _, _, _, _, no) :- otherwise | true.
 
 %% A lot the party owes and has not deposited yet.
-procedure owed(Constant?, Lot?, Stream(Lot)?, Constant).
+procedure owed(Decision?, Lot?, Stream(Lot)?, Decision).
 owed(no, _, _, no).
 owed(yes, L, Got, V?) :- lot_member(L?, Got?, In), negate(In?, V).
 
-procedure negate(Constant?, Constant).
+procedure negate(Decision?, Decision).
 negate(yes, no).
 negate(no, yes).
 
-procedure same_lot(Lot?, Lot?, Constant).
+procedure same_lot(Lot?, Lot?, Decision).
 same_lot(lot(U, D, K), lot(U1, D1, K1), yes) :- U? =?= U1?, D? =?= D1?, K? =:= K1? | true.
 same_lot(lot(_, _, _), lot(_, _, _), no) :- otherwise | true.
 
-procedure lot_member(Lot?, Stream(Lot)?, Constant).
+procedure lot_member(Lot?, Stream(Lot)?, Decision).
 lot_member(L, [M|Rest], V?) :- ground(L?) | same_lot(L?, M?, Same), member_step(Same?, L?, Rest?, V).
 lot_member(_, [], no).
 
-procedure member_step(Constant?, Lot?, Stream(Lot)?, Constant).
+procedure member_step(Decision?, Lot?, Stream(Lot)?, Decision).
 member_step(yes, _, _, yes).
 member_step(no, L, Rest, V?) :- lot_member(L?, Rest?, V).
 
@@ -222,11 +222,11 @@ packaged_check(P, Q, Xs, Ys, Got, Ph, Date, Steps?, Ag?) :-
     all_in(Ys?, Got?, HaveY),
     packaged_release(HaveX?, HaveY?, P?, Q?, Xs?, Ys?, Got?, Ph?, Date?, Steps, Ag).
 
-procedure all_in(Stream(Lot)?, Stream(Lot)?, Constant).
+procedure all_in(Stream(Lot)?, Stream(Lot)?, Decision).
 all_in([L|Rest], Got, V?) :- ground(Got?) | lot_member(L?, Got?, In), all_in_step(In?, Rest?, Got?, V).
 all_in([], _, yes).
 
-procedure all_in_step(Constant?, Stream(Lot)?, Stream(Lot)?, Constant).
+procedure all_in_step(Decision?, Stream(Lot)?, Stream(Lot)?, Decision).
 all_in_step(no, _, _, no).
 all_in_step(yes, Rest, Got, V?) :- all_in(Rest?, Got?, V).
 

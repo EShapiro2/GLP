@@ -383,7 +383,7 @@ on_act(transfer(Kind, Given, Resp?), Link, From, Id, UserIn, NetIn, Cal, Outs, H
 
 %% A payment of my own coins is taken; instruments that are not my coins are
 %% no payment of clause 4, and go back.
-procedure take_payment(Constant?, Key?, Key?, Stream(Instrument)?, PayResponse, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Integer?).
+procedure take_payment(Decision?, Key?, Key?, Stream(Instrument)?, PayResponse, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Integer?).
 take_payment(yes, Id, From, Coins, pay_taken, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial) :-
     ground(Coins?) |
     append_instruments(Holdings?, Coins?, Holdings1),
@@ -443,7 +443,7 @@ grant(coin(I, S), Id, Date, Serial, mature_declined(coin(I?, S?)), From, UserIn,
 %% An accepted swap is filled: the wanted instruments go and the offered ones
 %% come, and the channel of a first contact is adopted; wanted instruments not
 %% held decline it, and the channel held for it closes.
-procedure fill_swap(Constant?, Key?, Key?, SwapResponse, Stream(Instrument)?, Stream(Instrument)?, Stream(Instrument)?, Link?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Integer?).
+procedure fill_swap(Status?, Key?, Key?, SwapResponse, Stream(Instrument)?, Stream(Instrument)?, Stream(Instrument)?, Link?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Integer?).
 fill_swap(ok, Id, From, swap_accept(Give?), Give, Offered, Rest, Link, UserIn, NetIn, Cal, Outs, Date, Ws, Serial) :-
     adopt(Link?, From?, Outs?, Outs1, NetIn?, NetIn1),
     append_instruments(Rest?, Offered?, Holdings1),
@@ -460,7 +460,7 @@ fill_swap(fail, Id, From, swap_decline(Offered?), Give, Offered, Rest, Link, Use
 %% =============================================================================
 
 %% Swap: the proposal, with the instruments given set aside until the answer.
-procedure propose_swap(Constant?, Key?, Key?, Lot?, Lot?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Integer?).
+procedure propose_swap(Status?, Key?, Key?, Lot?, Lot?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Integer?).
 propose_swap(ok, Id, Q, _, Want, Give, Rest, UserIn, NetIn, Cal, Outs, Date, Ws, Serial) :-
     ground(Q?), ground(Want?), ground(Give?) |
     has_peer(Q?, Outs?, Outs1, Known),
@@ -473,7 +473,7 @@ propose_swap(fail, Id, _, lot(U, D, K), _, Give, Rest, UserIn, NetIn, Cal, Outs,
 
 %% On the channel to Q, or as a first contact, holding my end of the channel
 %% until Q answers.
-procedure send_swap(Constant?, Key?, Key?, Lot?, Stream(Instrument)?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(UserInMsg)?, Stream(UserInMsg)).
+procedure send_swap(Decision?, Key?, Key?, Lot?, Stream(Instrument)?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(UserInMsg)?, Stream(UserInMsg)).
 send_swap(yes, Id, Q, Want, Give, Outs, Outs1?, UserIn, UserIn1?) :-
     ground(Q?) |
     send_friend(Q?, msg(Id?, Q?, swap(Want?, Give?, Resp)), Outs?, Outs1),
@@ -485,7 +485,7 @@ send_swap(no, Id, Q, Want, Give, Outs, Outs1?, UserIn, UserIn1?) :-
 
 %% A deposit, release or return: the proposal, with the instruments given set
 %% aside until the answer.
-procedure propose_transfer(Constant?, Kind?, Key?, Key?, Lot?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Integer?).
+procedure propose_transfer(Status?, Kind?, Key?, Key?, Lot?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Integer?).
 propose_transfer(ok, Kind, Id, Q, Lot, Give, Rest, UserIn, NetIn, Cal, Outs, Date, Ws, Serial) :-
     ground(Kind?), ground(Q?), ground(Lot?), ground(Give?) |
     has_peer(Q?, Outs?, Outs1, Known),
@@ -497,7 +497,7 @@ propose_transfer(fail, _, Id, _, lot(U, D, K), Give, Rest, UserIn, NetIn, Cal, O
     show(lacking(U?, D?, K?), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Cal?, Outs1?, Orig?, Date?, Ws?, Serial?).
 
-procedure send_transfer(Constant?, Kind?, Key?, Key?, Stream(Instrument)?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(UserInMsg)?, Stream(UserInMsg)).
+procedure send_transfer(Decision?, Kind?, Key?, Key?, Stream(Instrument)?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(UserInMsg)?, Stream(UserInMsg)).
 send_transfer(yes, Kind, Id, Q, Give, Outs, Outs1?, UserIn, UserIn1?) :-
     ground(Kind?), ground(Q?) |
     send_friend(Q?, msg(Id?, Q?, transfer(Kind?, Give?, Resp)), Outs?, Outs1),
@@ -508,7 +508,7 @@ send_transfer(no, Kind, Id, Q, Give, Outs, Outs1?, UserIn, UserIn1?) :-
     inject_transfer_result(Resp?, Kind?, Q?, link(MyEnd?), UserIn?, UserIn1).
 
 %% Pay: the coins go to Q, set aside until Q answers.
-procedure do_pay(Constant?, Key?, Key?, Integer?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Integer?).
+procedure do_pay(Status?, Key?, Key?, Integer?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Integer?).
 do_pay(ok, Id, Q, K, Give, Rest, UserIn, NetIn, Cal, Outs, Date, Ws, Serial) :-
     ground(Q?) |
     has_peer(Q?, Outs?, Outs1, Known),
@@ -547,7 +547,7 @@ do_mature(not_found, Id, Q, D, Holdings, UserIn, NetIn, Cal, Outs, Date, Ws, Ser
 
 %% An act Q owes: on the channel to Q, or as a first contact, adopting my end
 %% of the channel at once.
-procedure send_owed(Constant?, Key?, Key?, PeerContent?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg)).
+procedure send_owed(Decision?, Key?, Key?, PeerContent?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg)).
 send_owed(yes, Id, Q, Act, Outs, Outs1?, NetIn, NetIn?) :-
     send_friend(Q?, msg(Id?, Q?, Act?), Outs?, Outs1).
 send_owed(no, Id, Q, Act, Outs, Outs2?, NetIn, NetIn1?) :-

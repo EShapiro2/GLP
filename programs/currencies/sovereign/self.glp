@@ -99,6 +99,19 @@ Conversation ::= conversation(Key, PeerChannel).
 %% Whether an instrument was found in the holdings.
 Found ::= found(Instrument) ; not_found.
 
+%% The answer to a question the agent or the scripted person asks of its
+%% state: whether every instrument of a payment or a spend is a coin of the
+%% holder (own_coins), whether an instrument of an issuer in a denomination is
+%% held (holds), whether a conversation with a counterparty is open
+%% (has_peer), whether the screen shows a step's effect.  The name is the one
+%% bonds_v2 and the social graph give the same two constants.
+Decision ::= yes ; no.
+
+%% Whether k instruments of an issuer, denomination and due were selected out
+%% of the holdings: ok, or fail --- the precondition cent^k_{f,u,*} in c_p
+%% does not hold.
+Status ::= ok ; fail.
+
 %% The agent's outputs: the screen, and a channel per counterparty, keyed by
 %% its name.  The routers send_user, send_friend and add_friend_output are
 %% those of social/graph/routing, exposed from the root scope.
@@ -316,7 +329,7 @@ append_instruments([], Ys, Ys?).
 %% the rest; or fail --- the precondition cent^k_{f,u,*} in c_p does not hold
 %% --- with the instruments found and the rest, which the caller puts back
 %% together.
-procedure select_instruments(Key?, Constant?, Constant?, Integer?, Stream(Instrument)?, Constant, Stream(Instrument), Stream(Instrument)).
+procedure select_instruments(Key?, Constant?, Constant?, Integer?, Stream(Instrument)?, Status, Stream(Instrument), Stream(Instrument)).
 select_instruments(_, _, _, 0, Hs, ok, [], Hs?).
 select_instruments(Issuer, F, D, K, [coin(I, F1, S)|Rest], Status?, [coin(I?, F1?, S?)|Sel?], Rem?) :-
     K? > 0, Issuer? =?= I?, F? =?= F1?, D? =?= now |
@@ -355,7 +368,7 @@ take_bond(_, _, _, [], not_found, []).
 
 %% Whether a coin or a bond of U in F is held --- the precondition
 %% cent_{f,u,*} in c_p of Accept --- with the holdings passed on.
-procedure holds(Key?, Constant?, Stream(Instrument)?, Constant, Stream(Instrument)).
+procedure holds(Key?, Constant?, Stream(Instrument)?, Decision, Stream(Instrument)).
 holds(U, F, [coin(I, F1, S)|Rest], yes, [coin(I?, F1?, S?)|Rest?]) :-
     U? =?= I?, F? =?= F1? | true.
 holds(U, F, [bond(I, F1, M, S)|Rest], yes, [bond(I?, F1?, M?, S?)|Rest?]) :-
@@ -367,7 +380,7 @@ holds(_, _, [], no, []).
 
 %% Whether every instrument is a coin of the holder: what an issuer takes as a
 %% payment of its own coins, and what it countersigns as a spend of them.
-procedure own_coins(Key?, Stream(Instrument)?, Constant).
+procedure own_coins(Key?, Stream(Instrument)?, Decision).
 own_coins(Id, [coin(I, _, _)|Rest], R?) :-
     Id? =?= I? |
     own_coins(Id?, Rest?, R).
@@ -497,7 +510,7 @@ tally_accepting(U, F, [], [accepting(U?, F?, 1)]).
 %% =============================================================================
 
 %% Whether a conversation with Q is open: Q's output entry is among the outputs.
-procedure has_peer(Key?, Stream(OutputEntry)?, Stream(OutputEntry), Constant).
+procedure has_peer(Key?, Stream(OutputEntry)?, Stream(OutputEntry), Decision).
 has_peer(Q, [friend_output(K, Out?)|Rest], [friend_output(K?, Out)|Rest?], yes) :-
     Q? =?= K? | true.
 has_peer(Q, [E|Rest], [E?|Rest1?], Known?) :-
