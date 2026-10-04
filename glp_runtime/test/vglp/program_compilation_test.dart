@@ -11,21 +11,24 @@ import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/vglp/mediator.dart';
 import 'package:glp_runtime/vglp/program_compilation.dart';
-import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart'
-    show setRootScopeEnvironmentSource;
+import 'package:glp_runtime/analysis/type_checker/type_ast.dart'
+    show TypeEnvironment;
+import 'package:glp_runtime/runtime/module_hierarchy.dart' show rootScope;
 
 const _programs = '../programs';
 
 void main() {
+  // The scope of a module directly under the root, programs/self.glp its one
+  // layer, passed in.
   final rootSelfGlp = File('$_programs/self.glp');
-  if (rootSelfGlp.existsSync()) {
-    setRootScopeEnvironmentSource(rootSelfGlp.readAsStringSync());
-  }
+  final TypeEnvironment? scope =
+      rootSelfGlp.existsSync() ? rootScope(rootSelfGlp.absolute.path) : null;
 
   final mediator = MediatorSource.fromDirectory('$_programs/vglp');
 
   CompiledProgram compile(String source) => compileProgram(
-      Parser(Lexer(source).tokenize(), vglp: true).parseModule(), mediator);
+      Parser(Lexer(source).tokenize(), vglp: true).parseModule(), mediator,
+      scope: scope);
 
   group('one self-contained module', () {
     const src = '''

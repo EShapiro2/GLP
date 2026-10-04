@@ -3,6 +3,8 @@
 // AST nodes for GLP type declarations following Yardeni-Shapiro.
 // Types are first-class syntactic elements parsed alongside clauses.
 
+import '../../compiler/ast.dart' as ast show Clause;
+
 /// Classification of types by mode structure
 /// Per spec (type-environment.md): Types are classified based on internal complementation
 enum TypeClassification {
@@ -384,10 +386,25 @@ class TypeEnvironment {
   /// in unlabelled and is kept under `outer:`.
   final Map<String, String> typeOrigins;
 
+  /// The clauses, by "name/arity", of the procedures the scope's layers define
+  /// --- the root self.glp's and each enclosing self.glp's, a later layer's
+  /// shadowing an earlier one's of the same key (TGLP modules.tex, Definition
+  /// "Root, Scope": the scope of M is `Π ⊔ d_1.self ⊔ ... ⊔ d_k.self`).  They
+  /// are the scope's, carried with its types and declarations and passed in
+  /// with them: the partial evaluator unfolds a defined guard of the scope by
+  /// its unit clause (GLP-Spec appendix-guards.tex, "Defined guard
+  /// predicates"), and a call to a parameterised procedure of the scope is left
+  /// open only where that procedure is parametrically well-typed (TGLP
+  /// appendix-implementation-notes.tex, "The instantiation of a call"), which
+  /// its clauses decide.  Until 2026-10-04 the root self.glp's were read from a
+  /// source the engine set once for the whole process.
+  final Map<String, List<ast.Clause>> scopeClauses;
+
   TypeEnvironment(this.types, this.procedures, {
       Map<String, ProcDecl>? paramProcDecls,
       this.typeTemplates = const {},
       this.typeOrigins = const {},
+      this.scopeClauses = const {},
   }) : paramProcDecls = paramProcDecls ?? {};
 
   factory TypeEnvironment.empty() => TypeEnvironment({}, {});
@@ -418,6 +435,7 @@ class TypeEnvironment {
       paramProcDecls: {...kept.paramProcDecls, ...other.paramProcDecls},
       typeTemplates: {...kept.typeTemplates, ...other.typeTemplates},
       typeOrigins: {...kept.typeOrigins, ...other.originsUnder(label)},
+      scopeClauses: {...scopeClauses, ...other.scopeClauses},
     );
   }
 
@@ -481,6 +499,7 @@ class TypeEnvironment {
       typeOrigins: {
         for (final e in typeOrigins.entries) rename[e.key] ?? e.key: e.value
       },
+      scopeClauses: scopeClauses,
     );
   }
 

@@ -26,17 +26,15 @@ import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
 import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart';
 import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/parser.dart';
-import 'package:glp_runtime/compiler/partial_evaluator.dart'
-    show setRootScopeUnitClauseSource;
 import 'package:glp_runtime/compiler/program_linker.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
+import 'package:glp_runtime/runtime/module_hierarchy.dart' show rootScope;
 
 void main() {
   final rootSelfGlp = File('../programs/self.glp');
-  final rootSource = rootSelfGlp.readAsStringSync();
-  setRootScopeUnitClauseSource(rootSource);
-  setRootScopeEnvironmentSource(rootSource);
   final rootSelfPath = rootSelfGlp.absolute.path;
+  // The scope a module directly under the root is checked in, passed in.
+  final scope = rootScope(rootSelfPath);
   final fixtureDir =
       Directory('../programs/tests/primitive_named_type').absolute.path;
 
@@ -48,7 +46,7 @@ void main() {
               'p(_).\n')
           .tokenize())
           .parseModule();
-      final env = buildTypeEnvironment(module);
+      final env = buildTypeEnvironment(module, ancestorScope: scope);
       expect(env.types, contains('Tag'));
       final alt = env.types['Tag']!.alternatives.single;
       expect(alt, isA<TypeRef>().having((t) => t.name, 'name', 'String'));
@@ -64,7 +62,7 @@ void main() {
               'p(_).\n')
           .tokenize())
           .parseModule();
-      final env = buildTypeEnvironment(module);
+      final env = buildTypeEnvironment(module, ancestorScope: scope);
       expect(env.types, contains('In'));
       expect(env.procedures['p/1']!.argTypes.single,
           isA<TypeRef>().having((t) => t.name, 'name', 'In'));
@@ -76,7 +74,7 @@ void main() {
               'p(_).\n')
           .tokenize())
           .parseModule();
-      final env = buildTypeEnvironment(module);
+      final env = buildTypeEnvironment(module, ancestorScope: scope);
       expect(env.types, isNot(contains('Agent')));
       expect(env.procedures['p/1']!.argTypes.single,
           isA<TypeRef>().having((t) => t.name, 'name', 'Constant'));
@@ -94,7 +92,7 @@ void main() {
               'p(_, _, _, _, _).\n')
           .tokenize())
           .parseModule();
-      final dfa = buildProgramDFA(buildTypeEnvironment(module));
+      final dfa = buildProgramDFA(buildTypeEnvironment(module, ancestorScope: scope));
       bool sub(String a, String b) =>
           isSubtype(dfa.getState(a), dfa.getState(b), dfa);
       expect(sub('Tag', 'String'), isTrue);
@@ -127,7 +125,7 @@ pass(X, X?).
 
 procedure q(Ack?, String).
 q(A, B?) :- pass(A?, B).
-''');
+''', ancestorScope: scope);
       expect(result.isWellTyped, isTrue,
           reason: result.errors.map((e) => e.message).join('\n'));
       final refused = checkSource('''
@@ -138,15 +136,14 @@ pass(X, X?).
 
 procedure q(String?, Ack).
 q(A, B?) :- pass(A?, B).
-''');
+''', ancestorScope: scope);
       expect(refused.isWellTyped, isFalse,
           reason: 'a String is not an Ack');
     });
 
     test("the root self.glp's Key, SignedTerm and Hash are in the root scope",
         () {
-      final env = buildRootScopeEnvironment();
-      expect(env.types.keys, containsAll(['Key', 'SignedTerm', 'Hash']));
+      expect(scope.types.keys, containsAll(['Key', 'SignedTerm', 'Hash']));
     });
 
     test('a module naming a scope-level Key in its own type definition links',

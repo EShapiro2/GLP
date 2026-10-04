@@ -17,8 +17,7 @@
 import 'dart:io';
 
 import 'package:test/test.dart';
-import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart'
-    show setRootScopeEnvironmentSource;
+import 'package:glp_runtime/runtime/module_hierarchy.dart' show rootScope;
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/compiler/error.dart';
 import 'package:glp_runtime/vglp/canonical.dart';
@@ -33,12 +32,13 @@ void main() {
     // nothing to emit, and these tests would check nothing.
     return;
   }
-  setRootScopeEnvironmentSource(
-      File('$_programs/self.glp').readAsStringSync());
+  // The scope of a module directly under the root, programs/self.glp its one
+  // layer, passed in.
+  final scope = rootScope(File('$_programs/self.glp').absolute.path);
   final dispatcher = DispatcherSource.fromDirectory(dir.path);
 
   CanonicalProgram compile(String text) =>
-      compileCanonical(text, dispatcher: dispatcher);
+      compileCanonical(text, dispatcher: dispatcher, scope: scope);
 
   Matcher refused(String why) => throwsA(isA<CompileError>()
       .having((e) => e.message, 'message', contains(why)));
@@ -228,7 +228,7 @@ procedure (T?)*p.
 
     test('is not emitted without the generic source, and the compilation '
         'defines the asks itself', () {
-      final c = compileCanonical(card);
+      final c = compileCanonical(card, scope: scope);
       expect(c.dispatchName, isNull);
       expect(c.source, isNot(contains('procedure dispatch(')));
       expect(c.source, isNot(contains('construct(')));

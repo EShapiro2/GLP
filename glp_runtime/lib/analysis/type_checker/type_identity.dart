@@ -520,13 +520,13 @@ TypeIdentityTables buildTypeIdentityTables(TypeEnvironment env,
   );
 }
 
-/// Build the two tables for a parsed module, against [ancestorScope] (the root
-/// scope when none is given).  Parameterised types are expanded and aliases
-/// resolved first, exactly as type checking does, so the automata are built
-/// over the same monomorphic environment the checker uses.
+/// Build the two tables for a parsed module, against [ancestorScope] (the
+/// language primitives alone when none is given).  Parameterised types are
+/// expanded and aliases resolved first, exactly as type checking does, so the
+/// automata are built over the same monomorphic environment the checker uses.
 TypeIdentityTables typeIdentityTablesForModule(ast.Module module,
     {TypeEnvironment? ancestorScope}) {
-  final base = ancestorScope ?? buildRootScopeEnvironment();
+  final base = ancestorScope ?? TypeEnvironment.empty();
   final expanded = expandParameterizedTypes(module,
       knownTypeNames: base.types.keys.toSet(),
       externalTemplates: base.typeTemplates);
@@ -570,15 +570,19 @@ String artefactInterfaceText({
 ///
 /// The text is parsed by [Parser.parseInterface], the type environment is built
 /// over it, and the identity of each parsed declaration is taken — the same
-/// construction, over the same root scope, that [linkedTypeIdentityTables]
-/// applies to the compiled program, so the two agree key for key.
+/// construction, over the same language primitives, that
+/// [linkedTypeIdentityTables] applies to the compiled program, so the two agree
+/// key for key.
 ///
 /// Three things the text does not carry, each of which would otherwise give a
 /// different identity for the same program:
 ///
-///   - The primitives and the root-scope types are absent from it, deliberately:
-///     they are ambient at every runtime, as they are excluded from h(M).  They
-///     come from [buildRootScopeEnvironment], the source the compiled path uses.
+///   - The primitive types are absent from it: they are the language's, built
+///     into every runtime's checker, and the text is read over them alone.  The
+///     root self.glp's types an export reaches are in it, the root being a
+///     module of the program (TGLP modules.tex, Compilation, first step); until
+///     2026-10-04 they were left out as ambient and supplied by a root scope
+///     the engine set for the whole process.
 ///   - An export with no declaration carries empty declaration text and
 ///     contributes no types.  Its key is **absent** from every field, which is
 ///     what the compiled path does with a procedure that has no declaration:
@@ -607,7 +611,7 @@ TypeIdentityTables interfaceTypeIdentityTables({
 
   final iface = Parser(Lexer(text).tokenize()).parseInterface();
 
-  final base = buildRootScopeEnvironment();
+  final base = TypeEnvironment.empty();
   final expanded = expandParameterizedTypes(iface,
       knownTypeNames: base.types.keys.toSet(),
       externalTemplates: base.typeTemplates);

@@ -15,17 +15,11 @@ import 'package:glp_runtime/compiler/program_linker.dart';
 import 'package:glp_runtime/compiler/error.dart';
 import 'package:glp_runtime/vglp/program_compilation.dart'
     show compiledHeader, readSelfVglp, scopeWidgetDeclarations;
-import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart'
-    show setRootScopeEnvironmentSource;
 
 const _programs = '../programs';
 final _rootSelfGlp = '$_programs/self.glp';
 
 void main() {
-  if (File(_rootSelfGlp).existsSync()) {
-    setRootScopeEnvironmentSource(File(_rootSelfGlp).readAsStringSync());
-  }
-
   late Directory fixture;
 
   setUp(() {

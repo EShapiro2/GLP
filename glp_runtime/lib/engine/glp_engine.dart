@@ -31,7 +31,6 @@ import 'package:glp_runtime/analysis/type_checker/type_checker.dart';
 import 'package:glp_runtime/analysis/type_checker/param_expansion.dart'
     show UndefinedDeclarationTypeError;
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
-import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart';
 import 'package:glp_runtime/analysis/type_checker/program_dfa.dart' as tdfa;
 import 'package:glp_runtime/analysis/type_checker/well_typed_clause.dart' as wtc;
 import 'package:glp_runtime/runtime/module_hierarchy.dart';
@@ -178,17 +177,20 @@ class GlpEngine {
     _rootSelfGlpPath = rootSelfGlpPath;
     _runtime.identity = identity ?? PersonIdentity.generate();
 
-    // Set root scope sources from programs/self.glp for PE and type checker
-    final rootSelfFile = File(_rootSelfGlpPath);
-    if (rootSelfFile.existsSync()) {
-      final rootSource = rootSelfFile.readAsStringSync();
-      setRootScopeUnitClauseSource(rootSource);
-      setRootScopeEnvironmentSource(rootSource);
-    }
-
+    // Nothing is set for the process: every check, partial evaluation and
+    // compilation below is given its scope (module_hierarchy.dart,
+    // buildAncestorScope), the root self.glp its first layer.  Until
+    // 2026-10-04 the root's text was set here into two process-wide sources,
+    // the partial evaluator's and the type checker's, which every engine of
+    // the process then shared.
     registerModuleKernels(_runtime);
     _loadRootSelf();
   }
+
+  /// The scope a module directly under the root is checked in, `Π ⊔ d_1`
+  /// (module_hierarchy.dart, [rootScope]): a file-less source's, given no
+  /// other.
+  late final TypeEnvironment _rootScope = rootScope(_rootSelfGlpPath);
 
   /// Clear all loaded programs except root self.glp.
   ///
@@ -356,6 +358,11 @@ class GlpEngine {
       discovered = discoverSingleModule(name, rootSelfGlpPath: _rootSelfGlpPath);
     }
     TypeEnvironment? ancestorScope = scope;
+    if (ancestorScope == null && discovered == null) {
+      // A source with no file behind it and no scope given is checked
+      // directly under the root, `Π ⊔ d_1`.
+      ancestorScope = _rootScope;
+    }
     if (ancestorScope == null && discovered != null) {
       // Until 2026-09-18 this was buildAncestorScope(chain) — the self.glp
       // chain alone, without the exposes — so a module calling a procedure its
@@ -377,7 +384,8 @@ class GlpEngine {
     {
       final ast = Program(module.procedures, module.line, module.column);
       final partialEvaluator = PartialEvaluator();
-      final transformedAst = partialEvaluator.transformDefinedGuards(ast);
+      final transformedAst =
+          partialEvaluator.transformDefinedGuards(ast, scope: ancestorScope);
       checkedProcedures = transformedAst.procedures;
 
       final TypeCheckResult typeResult;
@@ -440,7 +448,11 @@ class GlpEngine {
       moduleValue = _moduleValueOf(_baseName(name), program, linked, modules,
           directory: File(name).parent.absolute.path);
     } else {
-      program = _compiler.compile(source);
+      // The source is compiled in the scope it was checked in, the scope its
+      // defined guards unfold in and its SRSW relaxations are decided in.
+      program = _compiler.compile(source,
+          typeEnv: buildModuleTypeEnvironment(module,
+              ancestorScope: ancestorScope));
     }
     _refuseRedefinitionByLaterLoad(name, program);
     _loadedPrograms[name] = program;
@@ -498,11 +510,12 @@ class GlpEngine {
   /// fixed for it is refused unless it is (appendix-implementation-notes.tex,
   /// "The instantiation of a call").  A loaded procedure is certified by its
   /// abstract instance against its own clauses in the goal-check environment;
-  /// any other is answered by [rootProcedureIsParametric].
+  /// any other by [scopeProcedureIsParametric] in the goal-check environment,
+  /// whose scope carries the root self.glp's clauses.
   bool _goalProcedureIsParametric(String key) {
     final clauses = _goalClauses[key];
     if (clauses == null || clauses.isEmpty) {
-      return rootProcedureIsParametric(key);
+      return scopeProcedureIsParametric(_ensureGoalCheckBaseEnv(), key);
     }
     return _goalParametric[key] ??= () {
       try {
@@ -672,7 +685,8 @@ class GlpEngine {
       _addGoalClauses(
           PartialEvaluator()
               .transformDefinedGuards(
-                  Program(m.ast.procedures, m.ast.line, m.ast.column))
+                  Program(m.ast.procedures, m.ast.line, m.ast.column),
+                  scope: m.ancestorScope)
               .procedures,
           fillGapsOnly: descendant);
     }

@@ -15,7 +15,6 @@ import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/compiler/ast.dart' as ast;
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
 import 'package:glp_runtime/analysis/type_checker/param_expansion.dart';
-import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart';
 
 /// The name of the module held by the file at [filePath]: its path from the
 /// root [rootDir] (TGLP modules.tex, Compilation, third step: every procedure
@@ -168,8 +167,21 @@ TypeEnvironment mergeModuleIntoScope(TypeEnvironment env, ast.Module module,
       knownTypeNames: env.types.keys.toSet(),
       externalTemplates: env.typeTemplates);
   final moduleEnv = buildScopeFromModule(expanded);
+  // The layer's clauses join the scope's, by key: a defined guard of the
+  // layer is unfolded, and its parameterised procedures certified, by them
+  // ([TypeEnvironment.scopeClauses]).
+  final clauses = <String, List<ast.Clause>>{};
+  for (final proc in module.procedures) {
+    for (final c in proc.clauses) {
+      clauses
+          .putIfAbsent('${c.head.functor}/${c.head.arity}', () => [])
+          .add(c);
+    }
+  }
   final layer = TypeEnvironment(moduleEnv.types, moduleEnv.procedures,
-      paramProcDecls: moduleEnv.paramProcDecls, typeTemplates: templates);
+      paramProcDecls: moduleEnv.paramProcDecls,
+      typeTemplates: templates,
+      scopeClauses: clauses);
   if (!typesFillGapsOnly) {
     // Innermost-first shadowing, as [buildTypeEnvironment] applies it to a
     // module's own scope (modules.tex, "Scope construction": later
@@ -195,7 +207,8 @@ TypeEnvironment mergeModuleIntoScope(TypeEnvironment env, ast.Module module,
             if (!shadowed.contains(e.key)) e.key: e.value
         },
         typeTemplates: merged.typeTemplates,
-        typeOrigins: merged.typeOrigins);
+        typeOrigins: merged.typeOrigins,
+        scopeClauses: merged.scopeClauses);
   }
   // The module under the scope rather than over it: its types and its
   // declarations fill gaps, and a type the scope already defines survives
@@ -224,7 +237,8 @@ TypeEnvironment mergeModuleIntoScope(TypeEnvironment env, ast.Module module,
         ...env.paramProcDecls
       },
       typeTemplates: {...under.typeTemplates, ...env.typeTemplates},
-      typeOrigins: {...under.originsUnder(label), ...env.typeOrigins});
+      typeOrigins: {...under.originsUnder(label), ...env.typeOrigins},
+      scopeClauses: {...layer.scopeClauses, ...env.scopeClauses});
 }
 
 /// Merge a self.glp file into a scope environment: parse, then
@@ -236,15 +250,15 @@ TypeEnvironment mergeModuleIntoScope(TypeEnvironment env, ast.Module module,
 /// the `self.glp` is merged ([liftExposedTypes]), so its own declarations and
 /// every later layer resolve them.
 TypeEnvironment mergeSelfGlpFileIntoScope(TypeEnvironment env, String path,
-    {String? root}) {
+    {String? root, String? label}) {
   final source = File(path).readAsStringSync();
   final module = Parser(Lexer(source).tokenize()).parseModule();
   final lifted =
       liftExposedTypes(env, module, File(path).parent.path, root: root);
   try {
     return mergeModuleIntoScope(lifted, module,
-        label:
-            root != null ? modulePathName(path, root) : _directoryLabel(path));
+        label: label ??
+            (root != null ? modulePathName(path, root) : _directoryLabel(path)));
   } on UndefinedDeclarationTypeError catch (e) {
     // The declaration is the self.glp's: the error names its file.
     throw e.inFile(path);
@@ -292,7 +306,8 @@ TypeEnvironment liftExposedTypes(
           TypeEnvironment(types, env.procedures,
               paramProcDecls: env.paramProcDecls,
               typeTemplates: env.typeTemplates,
-              typeOrigins: origins),
+              typeOrigins: origins,
+              scopeClauses: env.scopeClauses),
           exposerTypeDefs: exposer.typeDefs);
     } on UndefinedDeclarationTypeError catch (e) {
       throw e.inFile(file.path);
@@ -312,7 +327,8 @@ TypeEnvironment liftExposedTypes(
   return TypeEnvironment(types, env.procedures,
       paramProcDecls: env.paramProcDecls,
       typeTemplates: env.typeTemplates,
-      typeOrigins: origins);
+      typeOrigins: origins,
+      scopeClauses: env.scopeClauses);
 }
 
 /// A TypeEnvironment of a module's EXPORTED procedure declarations plus the
@@ -374,14 +390,36 @@ String _directoryLabel(String path) {
   return parts.isEmpty ? dir : parts.last;
 }
 
+/// The language primitives, `Π` of TGLP Definition "Root, Scope": the base of
+/// every scope, for every module of every program, and not an ancestor
+/// directory (modules.tex, "Two things are named self.glp and they enter a
+/// scope by different routes").  By GLP-Spec appendix-guards.tex, "Predefined
+/// types", they are the primitive types `Integer`, `Real`, `String`, `Module`
+/// and `MutualRef`, which the checker builds into every automaton
+/// (analysis/type_checker/program_dfa.dart), and the kernels and builtin
+/// guards the runtime implements (root_scope.dart, `builtinProcedures`), whose
+/// declarations the root self.glp states in GLP; everything else in the root
+/// is GLP and reaches a scope by the chain (GLP #3 Cowork, 2026-10-03 21:18
+/// UTC).  As an environment it therefore defines nothing: the empty scope.
+TypeEnvironment primitiveScope() => TypeEnvironment.empty();
+
+/// The scope a module directly under the root is checked in, `Π ⊔ d_1`, the
+/// root self.glp at [rootSelfGlpPath] its one layer: what a module of no
+/// further ancestor sees, a file-less source and a posted goal among them.
+/// [primitiveScope] where there is no root.
+TypeEnvironment rootScope(String? rootSelfGlpPath) =>
+    buildAncestorScope(chain: const [], rootSelfGlpPath: rootSelfGlpPath);
+
 /// Build the ancestor scope for a self.glp chain (root-first order).
 ///
-/// modules.tex §Scope construction: the scope begins with the GLP language
-/// primitives (root scope); if [rootSelfGlpPath] is given and exists, the root
-/// self.glp (programs/self.glp) is layered next, and chain entries equal to it
-/// are skipped; then each chain self.glp in order, later shadowing earlier.
-/// The target module itself is NOT merged here — [assembleTypeScope] adds it;
-/// on the engine path checkModule adds it.
+/// TGLP Definition "Root, Scope": the scope begins with the language
+/// primitives ([primitiveScope]); the root self.glp at [rootSelfGlpPath], d_1,
+/// is layered next like any self.glp, under the empty path its renaming gives
+/// it, and a chain entry equal to it is skipped; then each chain self.glp in
+/// order, later shadowing earlier.  The target module itself is NOT merged
+/// here — [assembleTypeScope] adds it; on the engine path checkModule adds it.
+/// Until 2026-10-04 the base was a root-scope environment built from a source
+/// the engine set once for the whole process.
 ///
 /// This is the ONE implementation of ancestor-scope assembly, shared by the
 /// linker, the engine's module check, and the engine's goal-check environment.
@@ -389,29 +427,14 @@ TypeEnvironment buildAncestorScope({
   required List<String> chain,
   String? rootSelfGlpPath,
 }) {
-  var env = buildRootScopeEnvironment();
+  var env = primitiveScope();
   File? rootSelf;
   if (rootSelfGlpPath != null) {
     final f = File(rootSelfGlpPath);
     if (f.existsSync()) {
       rootSelf = f;
-      // The root self.glp is one layer, d_1 of every scope (TGLP Definition
-      // "Root, Scope"), and the root-scope environment already is it when it
-      // was built from this file's text: layering the file again would make
-      // every type of the root a second definition of itself. It is layered
-      // here only when the root-scope environment was built from something
-      // else.
-      final source = f.readAsStringSync();
-      if (!isRootScopeEnvironmentSource(source)) {
-        env = mergeSelfGlpFileIntoScope(env, f.path);
-      } else {
-        // The root-scope environment realises the root's definitions but not
-        // its `-expose` directives, which are d_1's as much as its
-        // definitions are (modules.tex, "The -expose directive").
-        env = liftExposedTypes(
-            env, Parser(Lexer(source).tokenize()).parseModule(), f.parent.path,
-            root: f.parent.path);
-      }
+      env = mergeSelfGlpFileIntoScope(env, f.path,
+          root: f.parent.path, label: '');
     }
   }
   for (final selfGlpPath in chain) {
@@ -428,7 +451,8 @@ TypeEnvironment buildAncestorScope({
 /// Assemble the type scope for a module by layering ancestor definitions.
 ///
 /// Builds a TypeEnvironment by:
-/// 1. Starting with the root scope (root of all type chains)
+/// 1. Starting with the language primitives and the root self.glp at
+///    [rootSelfGlpPath], where one is given ([buildAncestorScope])
 /// 2. Merging each self.glp in the chain (root-first, so children shadow parents)
 /// 3. Merging the target module's own types and declarations (shadows all ancestors)
 ///
@@ -439,8 +463,11 @@ TypeEnvironment buildAncestorScope({
 TypeEnvironment assembleTypeScope({
   required List<String> chain,
   required ast.Module module,
+  String? rootSelfGlpPath,
 }) {
-  return mergeModuleIntoScope(buildAncestorScope(chain: chain), module);
+  return mergeModuleIntoScope(
+      buildAncestorScope(chain: chain, rootSelfGlpPath: rootSelfGlpPath),
+      module);
 }
 
 /// Build a TypeEnvironment from a Module's types and procedure declarations.

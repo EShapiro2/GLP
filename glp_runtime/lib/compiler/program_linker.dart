@@ -22,7 +22,6 @@ import '../analysis/type_checker/type_identity.dart';
 import '../analysis/type_checker/param_expansion.dart'
     show UndefinedDeclarationTypeError;
 import '../runtime/module_hierarchy.dart';
-import '../analysis/type_checker/type_environment_builder.dart';
 import '../vglp/mediator.dart';
 import '../vglp/canonical.dart' show isPaperSyntaxSource;
 import '../vglp/program_compilation.dart';
@@ -113,7 +112,7 @@ DiscoveredModule? rootModuleOf(String? rootSelfGlpPath) {
     filePath: file.path,
     moduleName: '',
     ast: module,
-    ancestorScope: TypeEnvironment.empty(),
+    ancestorScope: primitiveScope(),
     isSelfGlp: true,
     isRoot: true,
   );
@@ -665,7 +664,8 @@ TypeEnvironment _mergeExposed(TypeEnvironment base, TypeEnvironment exposed,
   return TypeEnvironment(types, procedures,
       paramProcDecls: paramProcDecls,
       typeTemplates: {...base.typeTemplates, ...ex.typeTemplates},
-      typeOrigins: {...ex.originsUnder(label), ...base.typeOrigins});
+      typeOrigins: {...ex.originsUnder(label), ...base.typeOrigins},
+      scopeClauses: base.scopeClauses);
 }
 
 /// Collect `self.glp` files in ancestor directories ABOVE [rootDir], walking up
@@ -737,7 +737,8 @@ void checkModulesIndependently(List<DiscoveredModule> modules) {
   for (final mod in modules) {
     final pe = PartialEvaluator();
     final transformed = pe.transformDefinedGuards(
-        Program(mod.ast.procedures, mod.ast.line, mod.ast.column));
+        Program(mod.ast.procedures, mod.ast.line, mod.ast.column),
+        scope: mod.ancestorScope);
 
     final TypeCheckResult result;
     try {
@@ -842,8 +843,8 @@ LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
   //
   // It is checked against the language primitives alone: the root self.glp
   // is one of its modules, its types and procedures renamed under the empty
-  // path with every other module's ([linkedBase]).
-  final base = linkedBase(modules);
+  // path with every other module's, and nothing else is in scope.
+  final base = primitiveScope();
   final result = checkModule(
     flat,
     transformedProcedures: transformed.procedures,
@@ -861,21 +862,12 @@ LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
   return linked.withCheckedEnv(linkedProgramEnvironment(flat, base: base));
 }
 
-/// The scope a linked program of [modules] is checked in, beneath the flat
-/// module's own definitions: the language primitives alone where the root
-/// self.glp is among [modules], the first link of every chain and renamed
-/// with them; the root scope otherwise, for a program linked with no root
-/// given.
-TypeEnvironment linkedBase(List<DiscoveredModule> modules) =>
-    modules.any((m) => m.isRoot)
-        ? TypeEnvironment.empty()
-        : buildRootScopeEnvironment();
-
 /// The scope the linked program is checked in: the flat module's own
-/// environment over [base], built exactly as [checkModule] builds it.
+/// environment over the language primitives ([primitiveScope]), built exactly
+/// as [checkModule] builds it.
 TypeEnvironment linkedProgramEnvironment(Module flat,
         {TypeEnvironment? base}) =>
-    buildModuleTypeEnvironment(flat, ancestorScope: base);
+    buildModuleTypeEnvironment(flat, ancestorScope: base ?? primitiveScope());
 
 /// The single flat Module the linked program is type-checked and compiled as:
 /// the linked program's procedures, every module's own type definitions, and the
@@ -967,7 +959,7 @@ TypeIdentityTables linkedTypeIdentityTables(
         List<DiscoveredModule> modules, LinkResult linked) =>
     typeIdentityTablesForModule(
         linkedFlatModule(modules, linked, allDeclarations: true),
-        ancestorScope: linkedBase(modules));
+        ancestorScope: primitiveScope());
 
 /// Whole-program type-check gate (paper: modules §Static Linking — "the unit of
 /// compilation and execution is a program ... only a well-typed program is

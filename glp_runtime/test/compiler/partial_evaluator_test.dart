@@ -16,13 +16,15 @@ import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/ast.dart';
 import 'package:glp_runtime/compiler/error.dart';
+import 'package:glp_runtime/runtime/module_hierarchy.dart' show rootScope;
 
 void main() {
-  // Set prelude unit clause source from programs/self.glp
+  // The scope the programs below are evaluated in, programs/self.glp its one
+  // layer, passed in: its unit clauses are defined guards of every module.
   final rootSelfGlp = File('../programs/self.glp');
-  if (rootSelfGlp.existsSync()) {
-    setRootScopeUnitClauseSource(rootSelfGlp.readAsStringSync());
-  }
+  final scope = rootSelfGlp.existsSync()
+      ? rootScope(rootSelfGlp.absolute.path)
+      : null;
   group('PartialEvaluator guard validation', () {
     late PartialEvaluator pe;
 
@@ -38,7 +40,7 @@ void main() {
       final parser = Parser(tokens);
       final module = parser.parseModule();
       final program = Program(module.procedures, module.line, module.column);
-      pe.transformDefinedGuards(program);
+      pe.transformDefinedGuards(program, scope: scope);
     }
 
     test('accepts single-unit-clause procedure in guard position', () {

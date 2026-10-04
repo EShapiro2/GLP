@@ -13,16 +13,21 @@ library;
 import 'dart:io';
 import 'package:test/test.dart';
 import 'package:glp_runtime/analysis/type_checker/type_identity.dart';
-import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart'
-    show setRootScopeEnvironmentSource;
+import 'package:glp_runtime/analysis/type_checker/type_ast.dart'
+    show TypeEnvironment;
 import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/compiler/program_linker.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
+import 'package:glp_runtime/runtime/module_hierarchy.dart' show rootScope;
 import 'package:glp_runtime/wire/artefact.dart' show Artefact;
 
-TypeIdentityTables tablesOf(String source) =>
-    typeIdentityTablesForModule(Parser(Lexer(source).tokenize()).parseModule());
+/// The scope the sources below are tabled in: the root self.glp's, passed in.
+TypeEnvironment? _scope;
+
+TypeIdentityTables tablesOf(String source) => typeIdentityTablesForModule(
+    Parser(Lexer(source).tokenize()).parseModule(),
+    ancestorScope: _scope);
 
 String identityIn(String source, String key) {
   final id = tablesOf(source).identityOf(key);
@@ -31,13 +36,13 @@ String identityIn(String source, String key) {
 }
 
 void main() {
-  // Root scope from programs/self.glp, as the engine sets it: the identities of
-  // declarations over Number, Stream(X) and the rest are built against the same
-  // scope the type checker uses.
+  // The scope of a module directly under the root, programs/self.glp its one
+  // layer: the identities of declarations over Number, Stream(X) and the rest
+  // are built against the same scope the type checker uses.
   final rootSelfGlp = File('../programs/self.glp');
   final hasRootScope = rootSelfGlp.existsSync();
   if (hasRootScope) {
-    setRootScopeEnvironmentSource(rootSelfGlp.readAsStringSync());
+    _scope = rootScope(rootSelfGlp.absolute.path);
   }
 
   group('canonical print', () {
@@ -48,9 +53,10 @@ procedure paint(Colour?).
 paint(_).
 ''';
       final module = Parser(Lexer(src).tokenize()).parseModule();
-      final first = typeIdentityTablesForModule(module);
+      final first = typeIdentityTablesForModule(module, ancestorScope: _scope);
       final second = typeIdentityTablesForModule(
-          Parser(Lexer(src).tokenize()).parseModule());
+          Parser(Lexer(src).tokenize()).parseModule(),
+          ancestorScope: _scope);
       expect(first.identityOf('paint/1'), second.identityOf('paint/1'));
       expect(typeAutomatonPrintVersion, 'type-automaton/1');
     });

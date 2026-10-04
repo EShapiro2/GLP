@@ -25,6 +25,7 @@ import 'dart:io';
 import 'package:glp_runtime/bytecode/opcodes.dart' as bc;
 import 'package:glp_runtime/compiler/compiler.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
+import 'package:glp_runtime/runtime/module_hierarchy.dart' show rootScope;
 import 'package:glp_runtime/runtime/scheduler.dart' show ExecutionStatus;
 import 'package:test/test.dart';
 
@@ -62,6 +63,10 @@ twice(X, Y, yes) :- Y? =?= f(X?, X?) | true.
 exported procedure ntwice(_?, _?, Constant).
 ntwice(X, Y, yes) :- Y? =?\= f(X?, X?) | true.
 ''';
+
+/// The scope a source directly under the root is compiled in, programs/self.glp
+/// its one layer, passed in: Constant is the root's.
+final _scope = rootScope(File('../programs/self.glp').absolute.path);
 
 const _ok = ExecutionStatus.succeeded;
 const _fails = ExecutionStatus.failed;
@@ -272,7 +277,7 @@ void main() {
       final program = GlpCompiler().compile(r'''
 procedure eq(_?, _?, Constant).
 eq(X, Y, yes) :- X? =?= Y? | true.
-''');
+''', ancestorScope: _scope);
       expect(program.ops.whereType<bc.GroundEqual>(), isNotEmpty);
       expect(program.ops.whereType<bc.Guard>(), isEmpty);
     });
@@ -282,7 +287,7 @@ eq(X, Y, yes) :- X? =?= Y? | true.
         'procedure e(_?, _?, Constant).\ne(X, Y, yes) :- X? =?= w(Y?) | true.\n',
         'procedure e(_?, Constant).\ne(X, yes) :- X? =?= f(a, b) | true.\n',
       ]) {
-        final program = GlpCompiler().compile(source);
+        final program = GlpCompiler().compile(source, ancestorScope: _scope);
         expect(program.ops.whereType<bc.GroundEqual>(), isEmpty);
         expect(program.ops.whereType<bc.Guard>().map((g) => g.procedureLabel),
             contains('=?='));

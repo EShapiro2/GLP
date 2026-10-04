@@ -228,7 +228,7 @@ TypeExpr medChannelType({required bool isInput}) => TypeRef('Channel', 0, 0,
 /// loader.
 TypeEnvironment _environmentOf(ast.Module module, List<ast.Module> ancestors,
     TypeEnvironment? scope) {
-  var base = scope ?? buildRootScopeEnvironment();
+  var base = scope ?? TypeEnvironment.empty();
   for (final a in ancestors) {
     final expandedAncestor = expandParameterizedTypes(a,
         knownTypeNames: base.types.keys.toSet(),

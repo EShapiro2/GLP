@@ -787,9 +787,10 @@ class TypeChecker {
 /// If transformedProcedures is provided, uses those instead of module.procedures.
 /// This allows running partial evaluation (defined guard expansion) before type checking.
 ///
-/// If [ancestorScope] is provided, it is used as the base type environment
-/// (root scope + ancestor self.glp definitions) instead of just the root scope.
-/// See module_hierarchy.dart for how ancestor scopes are assembled.
+/// [ancestorScope] is the scope the module is checked in, passed in: the
+/// language primitives, the root self.glp and the ancestor self.glp
+/// definitions (module_hierarchy.dart assembles it); with none, the language
+/// primitives alone.
 /// If [collector] is provided (program mode), call-site instantiations of
 /// parameterized procedures are recorded into it; the caller (program linker)
 /// runs the cross-module instantiation closure itself. With no [collector]
@@ -820,7 +821,8 @@ TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformed
 }
 
 /// The scope [module] is checked in: its own definitions on top of
-/// [ancestorScope] (the root scope where none is given), the parameterised types
+/// [ancestorScope] (the language primitives alone where none is given, TGLP
+/// Definition "Root, Scope", Π), the parameterised types
 /// expanded.  The environment [checkModule] builds, and the one the compiler
 /// asks the SRSW relaxations of a typed program from (analyzer.dart,
 /// [Analyzer.analyze]) --- one build, so the types the checker decides by and
@@ -829,7 +831,7 @@ TypeEnvironment buildModuleTypeEnvironment(ast.Module module,
     {TypeEnvironment? ancestorScope}) {
   // Build base environment first so we know all type names for expansion.
   // This avoids mistaking root scope type names for type parameters.
-  final baseEnv = ancestorScope ?? buildRootScopeEnvironment();
+  final baseEnv = ancestorScope ?? TypeEnvironment.empty();
 
   // Expand parameterized types to monomorphic equivalents before type checking.
   // Pass root scope/ancestor templates so downstream modules can expand references
@@ -956,14 +958,15 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
     final checker = TypeChecker(typeEnv,
         collector: collector,
         callee: wtc.CalleeClauses((k) => byKey[k], verifyInstantiation),
-        isParametric: _parametricIn(byKey, cert.certifiedKeys));
+        isParametric: _parametricIn(byKey, cert.certifiedKeys, typeEnv));
     final result = checker.check(clauses);
     final guardErrors = transformedProcedures == null
         ? const <TypeError>[]
         : checker.checkDefinedGuards(
             module.procedures.expand((p) => p.clauses),
             definedGuardKeys(
-                ast.Program(module.procedures, module.line, module.column)));
+                ast.Program(module.procedures, module.line, module.column),
+                scope: typeEnv));
     return TypeCheckResult(
       [
         ...undefinedDeclarations,
@@ -999,7 +1002,7 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
     typeEnv,
     (procKey) => byKey[procKey],
   );
-  final isParametric = _parametricIn(byKey, cert.certifiedKeys);
+  final isParametric = _parametricIn(byKey, cert.certifiedKeys, typeEnv);
 
   final checker = TypeChecker(typeEnv,
       collector: localCollector,
@@ -1018,7 +1021,8 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
   final definedGuards = transformedProcedures == null
       ? const <String>{}
       : definedGuardKeys(
-          ast.Program(module.procedures, module.line, module.column));
+          ast.Program(module.procedures, module.line, module.column),
+          scope: typeEnv);
   final writtenByKey = <String, List<ast.Clause>>{};
   if (transformedProcedures != null) {
     for (final proc in module.procedures) {
@@ -1241,7 +1245,7 @@ class ParametricCertification {
 /// they are checked again with it no longer presumed, until what is presumed
 /// of every procedure asked of is what is certified.  Presuming fewer refuses
 /// more, so the certified set only shrinks, and the rounds end.  A procedure
-/// outside the unit is answered by [rootProcedureIsParametric].
+/// outside the unit is answered by [scopeProcedureIsParametric] in [typeEnv].
 ParametricCertification certifyParametricProcedures(
   TypeEnvironment typeEnv,
   List<ast.Clause>? Function(String procKey) definingClauses,
@@ -1272,7 +1276,7 @@ ParametricCertification certifyParametricProcedures(
     bool isParametric(String key) {
       final clauses = definingClauses(key);
       if (clauses == null || clauses.isEmpty) {
-        return rootProcedureIsParametric(key);
+        return scopeProcedureIsParametric(typeEnv, key);
       }
       asked.add(key);
       return presumed.contains(key);
@@ -1354,83 +1358,64 @@ ParametricCertification _certifyAbstractRoute(
 
 /// Whether the procedure of a "name/arity" key is parametrically well-typed,
 /// for the clause checks of a unit whose defining clauses are [clausesByKey]
-/// and whose certified procedures are [certified]: one the unit defines is
-/// parametrically well-typed if it is certified; one it does not is answered
-/// by [rootProcedureIsParametric].
+/// and whose certified procedures are [certified], checked in [scope]: one the
+/// unit defines is parametrically well-typed if it is certified; one it does
+/// not is answered by [scopeProcedureIsParametric].
 bool Function(String procKey) _parametricIn(
-        Map<String, List<ast.Clause>> clausesByKey, Set<String> certified) =>
+        Map<String, List<ast.Clause>> clausesByKey,
+        Set<String> certified,
+        TypeEnvironment scope) =>
     (key) {
       final clauses = clausesByKey[key];
       if (clauses == null || clauses.isEmpty) {
-        return rootProcedureIsParametric(key);
+        return scopeProcedureIsParametric(scope, key);
       }
       return certified.contains(key);
     };
 
-/// The certification of the root `self.glp`'s parameterised procedures, by the
-/// source it was made from.
-class _RootCertification {
-  final String source;
-  final Set<String> defined; // the parameterised procedures it defines
-  final Set<String> certified; // those parametrically well-typed
-  _RootCertification(this.source, this.defined, this.certified);
-}
+/// The parameterised procedures of a scope certified parametrically
+/// well-typed, by the scope ([scopeProcedureIsParametric]).
+final Expando<Set<String>> _scopeCertification = Expando();
 
-_RootCertification? _rootCertification;
-bool _certifyingRoot = false;
-
-/// Whether the root `self.glp`'s parameterised procedure [procKey] is
+/// Whether [procKey], a procedure of [scope]'s layers --- the root self.glp's
+/// `merge/3`, `send/3`, `stream_append/3`, or an enclosing self.glp's --- is
 /// parametrically well-typed (TGLP parameterized-types.tex, Definition
 /// "Parametrically Well-Typed").
 ///
-/// A unit's calls to a root-scope procedure --- `merge/3`, `send/3`,
-/// `stream_append/3` --- reach clauses that are not the unit's, so the unit's
-/// own certification cannot answer for them.  The root's procedures are
-/// certified here once, by their abstract instances against the root's own
-/// clauses, in the root scope ([buildRootScopeEnvironment]), and the answer
-/// kept while the root's source stands.  A key the root does not define with
-/// clauses --- a kernel, a procedure of another module --- is not decided here
-/// and answers true: the call is then checked with the callee's parameters
-/// open, as a call is where the checked unit cannot see its callee's clauses,
-/// and the linked program, where every call but the root's is local, decides.
-bool rootProcedureIsParametric(String procKey) {
-  final source = rootScopeEnvironmentSource();
-  if (source == null || source.isEmpty) return true;
-  var cert = _rootCertification;
-  if (cert == null || !identical(cert.source, source)) {
-    if (_certifyingRoot) return true; // asked while the root itself is certified
-    _certifyingRoot = true;
+/// A unit's calls to a procedure of its scope reach clauses that are not the
+/// unit's, so the unit's own certification cannot answer for them: the scope
+/// carries them ([TypeEnvironment.scopeClauses]), and its parameterised
+/// procedures are certified here by their abstract instances against those
+/// clauses, in the scope itself, once per scope.  A key the scope does not
+/// define with clauses --- a kernel, a procedure of another module --- is not
+/// decided here and answers true: the call is then checked with the callee's
+/// parameters open, as a call is where the checked unit cannot see its
+/// callee's clauses, and the linked program, where every call is local,
+/// decides.  Until 2026-10-04 the root self.glp's procedures were certified
+/// once for the whole process, from the source the engine set, and an
+/// enclosing self.glp's were not certified at all.
+bool scopeProcedureIsParametric(TypeEnvironment scope, String procKey) {
+  final clauses = scope.scopeClauses[procKey];
+  if (clauses == null || clauses.isEmpty) return true;
+  if (!scope.paramProcDecls.containsKey(procKey)) return true;
+  var certified = _scopeCertification[scope];
+  if (certified == null) {
+    // Asked again while this scope is being certified: the procedures of the
+    // scope are their own unit then, so this is a key outside it.
+    _scopeCertification[scope] = const {'\u0000certifying'};
     try {
-      cert = _certifyRoot(source);
-    } finally {
-      _certifyingRoot = false;
+      certified = certifyParametricProcedures(
+              scope, (k) => scope.scopeClauses[k])
+          .certifiedKeys;
+    } on Object {
+      // A scope whose procedures cannot be certified decides nothing here.
+      certified = const {};
     }
-    _rootCertification = cert;
+    _scopeCertification[scope] = certified;
+  } else if (certified.contains('\u0000certifying')) {
+    return true;
   }
-  if (!cert.defined.contains(procKey)) return true;
-  return cert.certified.contains(procKey);
-}
-
-_RootCertification _certifyRoot(String source) {
-  try {
-    final module = Parser(Lexer(source).tokenize()).parseModule();
-    final env = buildRootScopeEnvironment();
-    final byKey = <String, List<ast.Clause>>{};
-    for (final proc in module.procedures) {
-      for (final c in proc.clauses) {
-        byKey.putIfAbsent('${c.head.functor}/${c.head.arity}', () => []).add(c);
-      }
-    }
-    final defined = {
-      for (final key in env.paramProcDecls.keys)
-        if (byKey[key]?.isNotEmpty ?? false) key
-    };
-    final cert = certifyParametricProcedures(env, (k) => byKey[k]);
-    return _RootCertification(source, defined, cert.certifiedKeys);
-  } on Object {
-    // A root that cannot be certified decides nothing here.
-    return _RootCertification(source, const {}, const {});
-  }
+  return certified.contains(procKey);
 }
 
 /// Close the parameterized-procedure instantiation set under calls and check
@@ -1602,8 +1587,10 @@ List<InstantiationCheckResult> checkInstantiationsClosed(
 
 /// Parse and type-check GLP source code
 ///
-/// Convenience function that parses source and runs type checker.
-TypeCheckResult checkSource(String source) {
+/// Convenience function that parses source and runs type checker, in
+/// [ancestorScope] where one is given and against the language primitives
+/// alone otherwise ([checkModule]).
+TypeCheckResult checkSource(String source, {TypeEnvironment? ancestorScope}) {
   // Parse using main parser
   final lexer = Lexer(source);
   final tokens = lexer.tokenize();
@@ -1611,5 +1598,5 @@ TypeCheckResult checkSource(String source) {
   final module = parser.parseModule();
 
   // Type check the module
-  return checkModule(module);
+  return checkModule(module, ancestorScope: ancestorScope);
 }

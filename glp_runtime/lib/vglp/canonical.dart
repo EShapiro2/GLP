@@ -104,8 +104,6 @@ import '../analysis/type_checker/type_ast.dart'
         TypeEnvironment,
         TypeExpr,
         TypeRef;
-import '../analysis/type_checker/type_environment_builder.dart'
-    show buildRootScopeEnvironment;
 import 'constructs.dart';
 import 'dispatcher.dart';
 import 'mediator.dart' show printTypeDef, typeSource;
@@ -477,7 +475,7 @@ _Elicitation _elicitation(
 
   // The source's own types first, then its scope's, then the root's.
   final own = {for (final td in m.typeDefs) td.name: td};
-  final outer = scope ?? buildRootScopeEnvironment();
+  final outer = scope ?? TypeEnvironment.empty();
   TypeDef? resolve(String name) =>
       own[name] ?? outer.typeTemplates[name] ?? outer.types[name];
 

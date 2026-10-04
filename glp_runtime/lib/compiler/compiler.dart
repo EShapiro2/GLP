@@ -44,8 +44,10 @@ class GlpCompiler {
         _createCodegen = createCodegen ?? (() => CodeGenerator());
 
   /// Compile GLP source to bytecode program
-  BytecodeProgram compile(String source, {TypeEnvironment? typeEnv}) {
-    final result = compileWithMetadata(source, typeEnv: typeEnv);
+  BytecodeProgram compile(String source,
+      {TypeEnvironment? typeEnv, TypeEnvironment? ancestorScope}) {
+    final result = compileWithMetadata(source,
+        typeEnv: typeEnv, ancestorScope: ancestorScope);
     return result.program;
   }
 
@@ -54,10 +56,14 @@ class GlpCompiler {
   /// [typeEnv] is the scope the source was type-checked in.  The SRSW
   /// relaxations of a typed program are decided on the type each occurrence has
   /// (TGLP typed-glp.tex, "Readers of ground types"), so the analyzer is given
-  /// the same scope the checker used.  With none, the source's own declarations
-  /// on the root scope are built here, which is what a source with no ancestor
-  /// chain --- REPL text, the root `self.glp` --- is checked in.
-  CompilationResult compileWithMetadata(String source, {TypeEnvironment? typeEnv}) {
+  /// the same scope the checker used, which is also the scope whose defined
+  /// guards it unfolds.  With none, the source's own declarations are built
+  /// here over [ancestorScope], the scope passed in, and over the language
+  /// primitives alone where none is (TGLP Definition "Root, Scope", Π): the
+  /// root self.glp, compiled on its own, is checked in that.  Until 2026-10-04
+  /// the default was a root scope set once for the whole process.
+  CompilationResult compileWithMetadata(String source,
+      {TypeEnvironment? typeEnv, TypeEnvironment? ancestorScope}) {
     try {
       // Phase 1: Lexical analysis
       // Note: Main lexer now handles type declarations (::= and procedure)
@@ -77,7 +83,8 @@ class GlpCompiler {
       final annotatedAst = analyzer.analyze(
         ast,
         procDeclarations: module.procDeclarations,
-        typeEnv: typeEnv ?? buildModuleTypeEnvironment(module),
+        typeEnv: typeEnv ??
+            buildModuleTypeEnvironment(module, ancestorScope: ancestorScope),
       );
 
       // Phase 4: Code generation

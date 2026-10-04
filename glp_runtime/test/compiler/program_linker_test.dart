@@ -12,8 +12,6 @@ import 'dart:io';
 import 'package:test/test.dart';
 import 'package:glp_runtime/compiler/program_linker.dart';
 import 'package:glp_runtime/compiler/compiler.dart';
-import 'package:glp_runtime/compiler/partial_evaluator.dart' show setRootScopeUnitClauseSource;
-import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart' show setRootScopeEnvironmentSource;
 import 'package:glp_runtime/compiler/ast.dart';
 import 'package:glp_runtime/analysis/type_checker/type_checker.dart'
     show checkModule;
@@ -24,13 +22,9 @@ import 'package:glp_runtime/bytecode/runner.dart';
 import 'package:glp_runtime/engine_v2/interp.dart';
 
 void main() {
-  // Set prelude sources from programs/self.glp (same as GlpEngine constructor)
+  // The root self.glp: every program below is discovered with it, its first
+  // module and the first layer of every module's scope.
   final rootSelfGlp = File('../programs/self.glp');
-  if (rootSelfGlp.existsSync()) {
-    final source = rootSelfGlp.readAsStringSync();
-    setRootScopeUnitClauseSource(source);
-    setRootScopeEnvironmentSource(source);
-  }
   final cssnRoot = '../programs/cssn';
   // Dedicated minimal fixture: sole coverage of module-local name-collision
   // handling (two sibling modules each defining dup/1).

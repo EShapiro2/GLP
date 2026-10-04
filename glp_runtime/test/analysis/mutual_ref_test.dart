@@ -23,23 +23,21 @@ import 'package:test/test.dart';
 import 'package:glp_runtime/analysis/type_checker/program_dfa.dart';
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
 import 'package:glp_runtime/analysis/type_checker/type_checker.dart';
-import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart';
-import 'package:glp_runtime/compiler/partial_evaluator.dart'
-    show setRootScopeUnitClauseSource;
 import 'package:glp_runtime/compiler/program_linker.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
+import 'package:glp_runtime/runtime/module_hierarchy.dart' show rootScope;
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 
 void main() {
   final rootSelfGlp = File('../programs/self.glp');
   final rootSource = rootSelfGlp.readAsStringSync();
-  setRootScopeUnitClauseSource(rootSource);
-  setRootScopeEnvironmentSource(rootSource);
   final rootSelfPath = rootSelfGlp.absolute.path;
+  // The scope a module directly under the root is checked in, passed in.
+  final scope = rootScope(rootSelfPath);
 
   group('MutualRef is a primitive type', () {
     test('it is a primitive leaf, outside Constant and no constant type', () {
-      final env = buildRootScopeEnvironment();
+      final env = scope;
       final dfa = buildProgramDFA(env);
 
       // A state of its own, in both modes, with no outgoing transition ---
@@ -98,7 +96,7 @@ void main() {
       final result = checkSource('''
 procedure hold(MutualRef?).
 hold(3).
-''');
+''', ancestorScope: scope);
       expect(result.errors, isNotEmpty);
       expect(
           result.errors
@@ -120,7 +118,7 @@ take_ref(R, R?).
 
 procedure use_held(Held?, MutualRef).
 use_held(H, R?) :- is_mutual_ref(H?) | take_ref(H?, R).
-''');
+''', ancestorScope: scope);
       expect(result.errors.map((e) => e.message).toList(), isEmpty);
     });
   });

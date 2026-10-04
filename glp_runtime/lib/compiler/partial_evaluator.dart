@@ -6,65 +6,39 @@
 
 import 'ast.dart';
 import 'error.dart';
-import 'lexer.dart';
-import 'parser.dart';
 import '../analysis/type_checker/root_scope.dart' show builtinProcedures;
+import '../analysis/type_checker/type_ast.dart' show TypeEnvironment;
 
 // ============================================================================
-// ROOT SCOPE UNIT CLAUSES
+// THE SCOPE'S UNIT CLAUSES
 // ============================================================================
 
-/// Source for root scope unit clauses (set by engine from programs/self.glp).
-String? _rootScopeUnitClauseSource;
-
-/// Set the source from which root scope unit clauses are extracted.
-/// Call this once during engine initialization with the content of programs/self.glp.
-void setRootScopeUnitClauseSource(String source) {
-  _rootScopeUnitClauseSource = source;
-  _cachedRootScopeUnitClauses = null; // invalidate cache
-}
-
-/// Cached root scope unit clauses (parsed once per process lifetime).
-Map<String, List<Term>>? _cachedRootScopeUnitClauses;
-
-/// Parse the root scope source and extract unit clauses (defined guards).
-/// Result is cached — parsing happens only on first call.
-/// Returns a map from "name/arity" to the head arguments of the unit clause.
-Map<String, List<Term>> getRootScopeUnitClauses() {
-  if (_cachedRootScopeUnitClauses != null) return _cachedRootScopeUnitClauses!;
-
-  final source = _rootScopeUnitClauseSource ?? '';
-  if (source.isEmpty) {
-    _cachedRootScopeUnitClauses = {};
-    return _cachedRootScopeUnitClauses!;
-  }
-
-  final lexer = Lexer(source);
-  final tokens = lexer.tokenize();
-  final parser = Parser(tokens);
-  final module = parser.parseModule();
-
+/// The defined guards of [clauses] --- the clauses of a scope's procedures by
+/// "name/arity" ([TypeEnvironment.scopeClauses]): each procedure of exactly one
+/// clause, with no guard and no body, by the head arguments of that unit
+/// clause (GLP-Spec appendix-guards.tex, "Defined guard predicates").  The
+/// scope is passed in: until 2026-10-04 the root self.glp's were parsed from a
+/// source the engine set once for the whole process.
+Map<String, List<Term>> unitClausesOf(Map<String, List<Clause>> clauses) {
   final Map<String, List<Term>> unitClauses = {};
-  for (final proc in module.procedures) {
-    if (proc.clauses.length != 1) continue;
-    final clause = proc.clauses.first;
+  for (final e in clauses.entries) {
+    if (e.value.length != 1) continue;
+    final clause = e.value.first;
     if (clause.guards != null && clause.guards!.isNotEmpty) continue;
     // A clause whose body is `true` is not a unit clause and defines no guard.
     if (clause.body != null && clause.body!.isNotEmpty) continue;
-    unitClauses['${proc.name}/${proc.arity}'] = clause.head.args;
+    unitClauses[e.key] = clause.head.args;
   }
-
-  _cachedRootScopeUnitClauses = unitClauses;
-  return _cachedRootScopeUnitClauses!;
+  return unitClauses;
 }
 
 /// The guard predicates ("name/arity") [program]'s guards unfold as defined
-/// guards: the root scope's unit clauses and the program's own, as
+/// guards: [scope]'s unit clauses and the program's own, as
 /// [PartialEvaluator.transformDefinedGuards] takes them.  The type checker asks
 /// it of a clause as written, to check a defined guard's arguments as a
 /// built-in guard's are (TGLP typed-glp.tex, "Type checking of guards").
-Set<String> definedGuardKeys(Program program) => {
-      ...getRootScopeUnitClauses().keys,
+Set<String> definedGuardKeys(Program program, {TypeEnvironment? scope}) => {
+      ...unitClausesOf(scope?.scopeClauses ?? const {}).keys,
       ...PartialEvaluator()._collectUnitClauses(program).keys,
     };
 
@@ -100,10 +74,16 @@ class PartialEvaluator {
 
   /// Transform all defined guards in a program.
   /// Call this before SRSW analysis.
-  Program transformDefinedGuards(Program program) {
-    // Merge root scope unit clauses with user unit clauses.
-    // User definitions override root scope (spread order: root scope first, user second).
-    final unitClauses = {...getRootScopeUnitClauses(), ..._collectUnitClauses(program)};
+  ///
+  /// The defined guards are [scope]'s unit clauses and the program's own, the
+  /// program's shadowing the scope's: the scope is the one the program is
+  /// checked in, passed in ([TypeEnvironment.scopeClauses]); a linked program
+  /// carries the root self.glp's among its own procedures and needs none.
+  Program transformDefinedGuards(Program program, {TypeEnvironment? scope}) {
+    final unitClauses = {
+      ...unitClausesOf(scope?.scopeClauses ?? const {}),
+      ..._collectUnitClauses(program)
+    };
     final allProcedures = _collectAllProcedures(program);
 
     List<Procedure> transformedProcedures = [];

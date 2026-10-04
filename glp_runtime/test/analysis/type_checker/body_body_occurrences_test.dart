@@ -19,8 +19,7 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/analysis/type_checker/type_checker.dart';
-import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart'
-    show setRootScopeEnvironmentSource;
+import 'package:glp_runtime/runtime/module_hierarchy.dart' show rootScope;
 
 const _decls = '''
 Colour ::= red ; green.
@@ -48,8 +47,7 @@ void main() {
   // "Root, Scope"), and Constant is its.  Until 2026-10-03 these sources were
   // checked in an empty root scope, Constant undefined, and passed only because
   // an undefined name in a declaration was read as a type parameter.
-  setRootScopeEnvironmentSource(
-      File('../programs/self.glp').readAsStringSync());
+  final scope = rootScope(File('../programs/self.glp').absolute.path);
 
   group('a body writer read twice in the body', () {
     test('is refused where the second reader occurrence is out of type', () {
@@ -57,7 +55,7 @@ void main() {
 $_decls
 procedure p.
 p :- gives_colour(C), takes_colour(C?), takes_int(C?).
-''');
+''', ancestorScope: scope);
       final messages = result.errors.map((e) => e.message).toList();
       expect(_refusesPair(messages, 'C'), isTrue,
           reason: 'the second reader, at takes_int/1, is compared with the '
@@ -69,7 +67,7 @@ p :- gives_colour(C), takes_colour(C?), takes_int(C?).
 $_decls
 procedure p.
 p :- gives_colour(C), takes_int(C?), takes_colour(C?).
-''');
+''', ancestorScope: scope);
       expect(
           _refusesPair(result.errors.map((e) => e.message).toList(), 'C'),
           isTrue);
@@ -81,7 +79,7 @@ p :- gives_colour(C), takes_int(C?), takes_colour(C?).
 $_decls
 procedure p.
 p :- gives_colour(C), takes_colour(C?), takes_constant(C?).
-''');
+''', ancestorScope: scope);
       expect(result.errors.map((e) => e.message).toList(), isEmpty);
     });
   });

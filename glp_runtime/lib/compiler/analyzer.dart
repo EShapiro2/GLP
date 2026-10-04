@@ -1,6 +1,6 @@
 import 'ast.dart';
 import 'error.dart';
-import 'partial_evaluator.dart' show getRootScopeUnitClauses;
+import 'partial_evaluator.dart' show unitClausesOf;
 import '../analysis/type_checker/type_ast.dart';
 import '../analysis/type_checker/program_dfa.dart' show ProgramDFA, buildProgramDFA, UnknownTypeError;
 import '../analysis/type_checker/well_typed_clause.dart' show repeatableReaderVariables;
@@ -350,7 +350,8 @@ class Analyzer {
 
     // STEP 2: Transform defined guards via partial evaluation
     // After SRSW validation passes, we can safely transform defined guards.
-    final transformed = _partialEvaluator.transformDefinedGuards(program);
+    final transformed =
+        _partialEvaluator.transformDefinedGuards(program, scope: _typeEnv);
 
     // No reduce/2 clauses are generated: a program that needs reduce/2 writes
     // it, as the book's meta-interpreters do.  Until 2026-10-02 every module
@@ -794,10 +795,16 @@ class PartialEvaluator {
 
   /// Entry point: transform all defined guards in a program.
   /// Call this before SRSW analysis.
-  Program transformDefinedGuards(Program program) {
-    // Merge root scope unit clauses with user unit clauses.
-    // User definitions override root scope (spread order: root scope first, user second).
-    final unitClauses = {...getRootScopeUnitClauses(), ..._collectUnitClauses(program)};
+  ///
+  /// The defined guards are [scope]'s unit clauses and the program's own, the
+  /// program's shadowing the scope's: the scope is the one the program was
+  /// checked in, passed in with it ([Analyzer.analyze]'s `typeEnv`); a linked
+  /// program carries the root self.glp's among its own procedures.
+  Program transformDefinedGuards(Program program, {TypeEnvironment? scope}) {
+    final unitClauses = {
+      ...unitClausesOf(scope?.scopeClauses ?? const {}),
+      ..._collectUnitClauses(program)
+    };
 
     if (unitClauses.isEmpty) {
       return program; // No unit clauses, nothing to transform
