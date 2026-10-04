@@ -379,14 +379,16 @@ measure(_).
       if (!Directory(root).existsSync()) return;
       final r = bothPathsFor(root, single: false);
 
-      // The primitives and the root-scope types are absent from the interface
-      // text by design — ambient at every runtime, as they are excluded from
-      // h(M).  `run_jobs/2` reaches Stream(X) and `serve/1` reaches
-      // Channel(In, Out); both must come out of buildRootScopeEnvironment() on
-      // the derived path exactly as they come out of the scope on the compiled
-      // one, or the same program has two identities.
-      expect(r.art.typeDefsText, isNot(contains('Stream')));
-      expect(r.art.typeDefsText, isNot(contains('Channel')));
+      // The root self.glp is a module of the program, the first link of every
+      // chain (TGLP modules.tex, Compilation, first step), so the root types
+      // an export reaches are the program's and travel in its interface text
+      // with its other types: nothing is ambient (GLP's round six, item 1).
+      // `run_jobs/2` reaches Stream(X) and `serve/1` reaches Channel(In, Out);
+      // both must come out the same on the derived path as on the compiled
+      // one, or the same program has two identities.  Until 2026-10-04 they
+      // were absent from the text and supplied by an ambient root scope.
+      expect(r.art.typeDefsText, contains('Stream(X) ::= '));
+      expect(r.art.typeDefsText, contains('Channel(In, Out) ::= '));
       expect(r.derived.exported['run_jobs/2'],
           equals(r.compiled.exported['run_jobs/2']));
       expect(r.derived.exported['serve/1'],

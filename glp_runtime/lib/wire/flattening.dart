@@ -14,10 +14,12 @@
 /// arity — within a procedure, clauses keep source order (semantic). Procedure
 /// order is not semantic and is fixed by sorting.
 ///
-/// Note: root-scope (`self.glp`) types and procedures are shared runtime
-/// infrastructure, not the contract's source, and are not part of h(M) — only
-/// the project's own definitions are printed. Type-definition reachability
-/// pruning is a refinement not yet applied: the project's type definitions are
+/// The root `self.glp` is a module of every program, the first link of its
+/// chain (TGLP modules.tex, Compilation, first step), so its procedures that the
+/// entry points reach and its type definitions are printed with the program's
+/// own, the procedures under the names the renaming gave them; until
+/// 2026-10-04 they were left out as ambient. Type-definition reachability
+/// pruning is a refinement not yet applied: the program's type definitions are
 /// all included (procedure reachability — the DCE — is applied).
 library;
 
@@ -103,8 +105,7 @@ Uint8List hashOfPrint(String canonical) =>
   // checkedLinkedProgram type-checks and applies the five linking steps,
   // including step-5 DCE, so program.procedures is the reachable set.
   final linked = checkedLinkedProgram(modules, rootDir: projectDir);
-  // The project's own type definitions (root-scope types are ambient and not
-  // part of h(M)).
+  // The program's type definitions, the root self.glp's among them.
   final typeDefs = <String, TypeDef>{};
   for (final mod in modules) {
     for (final td in mod.ast.typeDefs) {
@@ -165,10 +166,12 @@ String exportDeclarationText(ProcDecl d) {
 /// Reachability is the transitive closure over the exported declarations'
 /// argument types: a type named in an export, every type named in that type's
 /// alternatives, and so on. A name with no definition in [typeDefs] contributes
-/// nothing — the primitives (`Integer`, `Real`, `String`, `Module`) and the
-/// root-scope types (`Stream`, `Channel`, …) are ambient at every runtime and
-/// are not the program's own source, exactly as they are excluded from h(M).
-/// A parameterized definition's own parameters are names of that kind too.
+/// nothing: the primitive types (`Integer`, `Real`, `String`, `Module`,
+/// `MutualRef`), which are the language's and built into every runtime, and a
+/// parameterized definition's own parameters.  The root `self.glp`'s types
+/// (`Stream`, `Channel`, …) are the program's, the root being a module of it,
+/// and are carried where an export reaches them; until 2026-10-04 they were
+/// left out as ambient.
 String interfaceTypeDefsText({
   required Iterable<ProcDecl> exportDecls,
   required Map<String, TypeDef> typeDefs,
@@ -185,7 +188,7 @@ String interfaceTypeDefsText({
     final name = pending.removeLast();
     if (reached.containsKey(name)) continue;
     final td = typeDefs[name];
-    if (td == null) continue; // ambient (primitive or root-scope) or a parameter
+    if (td == null) continue; // a primitive type or a parameter
     reached[name] = td;
     for (final alt in td.alternatives) {
       _collectTypeNames(alt, pending);

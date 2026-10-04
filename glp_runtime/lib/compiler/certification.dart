@@ -8,16 +8,18 @@
 /// program restricted to the procedures reachable from its exported entry
 /// points — and not by names in source text, so that a wrapper does not pass:
 /// a procedure whose body names a privileged predicate or kernel is itself
-/// privileged, and so is any procedure that calls it. The root scope's own
-/// clauses (root `self.glp`, the seam predicates among them) are closed over the
-/// same way, once, so a root-scope predicate such as `send_to_user/1`, whose
-/// clauses are not part of any flat program, is refused by the name the flat
-/// program calls it by.
+/// privileged, and so is any procedure that calls it. The root `self.glp`'s
+/// own clauses, the seam predicates among them, are part of every flat
+/// program, renamed under the empty path, and are closed over with the rest;
+/// a root-scope predicate such as `send_to_user/1` is refused under the name
+/// the flat program calls it by, `:send_to_user/1`, and named as the source
+/// writes it.
 library;
 
 import 'ast.dart';
 import 'lexer.dart';
 import 'parser.dart';
+import '../analysis/type_checker/root_scope.dart' show rootRenamed;
 
 /// The body kernels that reach the network or the person (IGLP Cowork,
 /// 2026-09-08; GLP-Spec appendix-guards, the Network and I/O kernel rows).
@@ -103,6 +105,18 @@ Set<String> privilegedRootNames(Iterable<String> rootSources) {
   return _closure(procedures, {...privilegedKernels, ...privilegedPredicates});
 }
 
+/// The privileged names a linked program is refused for reaching: the
+/// kernels, which keep their names in it, and the predicates named above under
+/// the names the root self.glp's procedures carry there, renamed under the
+/// empty path (TGLP modules.tex, Compilation, third step; [rootRenamed]).  The
+/// root's own procedures are in the linked program since 2026-10-04, so
+/// [privilegedCalls] closes over them there, and a root procedure from which
+/// one of these is reachable is privileged by that closure.
+Set<String> privilegedRootSeed() => {
+      ...privilegedKernels,
+      for (final p in privilegedPredicates) rootRenamed(p),
+    };
+
 /// An offending call: [caller] names [callee], which reaches the network or
 /// the person.
 class PrivilegedCall {
@@ -110,8 +124,14 @@ class PrivilegedCall {
   final String callee;
   const PrivilegedCall(this.caller, this.callee);
 
+  /// The call as the mini-app's source writes it: a root procedure by the
+  /// name the source calls it by, not the one the linked program renamed it
+  /// to.
   @override
-  String toString() => '$caller calls $callee';
+  String toString() => '${_source(caller)} calls ${_source(callee)}';
+
+  static String _source(String sig) =>
+      sig.startsWith(':') ? sig.substring(1) : sig;
 }
 
 /// The calls for which [program] — a flat, pruned program — is refused a
@@ -128,14 +148,17 @@ List<PrivilegedCall> privilegedCalls(
     Program program, Set<String> privilegedRoot,
     {required Set<String> ownModules}) {
   final privileged = _closure(program.procedures, privilegedRoot);
+  // A module's path has no colon, so a renamed name's module is what precedes
+  // its first one: `M` of `M:p`, and the empty path of the root's `:p`,
+  // `::=` among them.
   bool own(String name) {
-    final colon = name.lastIndexOf(':');
+    final colon = name.indexOf(':');
     return colon < 0 || ownModules.contains(name.substring(0, colon));
   }
 
   // A boundary callee: a privileged root name (a kernel, or a root-scope
-  // predicate, which the flat program calls bare), or a privileged procedure
-  // of a module that is not the program's own.
+  // predicate, which the flat program calls renamed under the empty path), or
+  // a privileged procedure of a module that is not the program's own.
   bool boundary(String callee, String functor) =>
       privileged.contains(callee) &&
       (privilegedRoot.contains(callee) || !own(functor));

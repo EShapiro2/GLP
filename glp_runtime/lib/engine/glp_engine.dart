@@ -49,7 +49,7 @@ import 'package:glp_runtime/analysis/type_checker/type_identity.dart'
     show TypeIdentityTables;
 import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 import 'package:glp_runtime/compiler/certification.dart'
-    show privilegedRootNames, privilegedCalls;
+    show privilegedRootSeed, privilegedCalls;
 
 /// Result of running a goal
 class ExecutionResult {
@@ -159,12 +159,6 @@ class GlpEngine {
   /// otherwise (glpc, the suite), where the paper names no key.
   PersonIdentity get identity => _runtime.identity!;
 
-  /// The privileged names of the root scope — the kernels and predicates that
-  /// reach the network or the person, and every root-scope procedure from
-  /// which one is reachable — computed once from the root self.glp
-  /// (compiler/certification.dart).
-  late final Set<String> _privilegedRootNames;
-
   /// Access to the runtime (for madGLP integration)
   GlpRuntime get runtime => _runtime;
 
@@ -186,14 +180,11 @@ class GlpEngine {
 
     // Set root scope sources from programs/self.glp for PE and type checker
     final rootSelfFile = File(_rootSelfGlpPath);
-    final rootSources = <String>[];
     if (rootSelfFile.existsSync()) {
       final rootSource = rootSelfFile.readAsStringSync();
       setRootScopeUnitClauseSource(rootSource);
       setRootScopeEnvironmentSource(rootSource);
-      rootSources.add(rootSource);
     }
-    _privilegedRootNames = privilegedRootNames(rootSources);
 
     registerModuleKernels(_runtime);
     _loadRootSelf();
@@ -1215,10 +1206,10 @@ class GlpEngine {
     // loads and runs here, as the OS's own boot and play programs must: it
     // carries its two identities under no signature, no loader admits it, and
     // decompose_module/4 has no compiler's key to give for it.
-    final offending = privilegedCalls(linked.program, _privilegedRootNames,
+    final offending = privilegedCalls(linked.program, privilegedRootSeed(),
         ownModules: {
           for (final m in modules)
-            if (!m.collectedByExpose) m.moduleName
+            if (!m.collectedByExpose && !m.isRoot) m.moduleName
         });
     if (offending.isNotEmpty) {
       print('[CERTIFICATE REFUSED] $moduleName reaches the network or the '

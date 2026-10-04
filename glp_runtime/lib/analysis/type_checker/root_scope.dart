@@ -179,8 +179,24 @@ const Set<String> builtinProcedures = {
   '_output/1',
 };
 
-/// Check if a type name is predefined
-bool isPredefinedType(String name) => predefinedTypeNames.contains(name);
+/// The name a procedure or type of the root self.glp carries in a linked
+/// program: renamed under the empty path, the root's path from the root (TGLP
+/// modules.tex, Compilation, third step: every procedure p/n and every type T
+/// of every .glp file, the root self.glp included, "is renamed to M:p/n and
+/// M:T, where M is the module's path from the root").
+String rootRenamed(String name) => ':$name';
+
+/// Whether [name] is the root self.glp's [base] --- as a module writes it, or
+/// renamed under the empty path in a linked program ([rootRenamed]).
+bool namesRoot(String name, String base) =>
+    name == base || name == rootRenamed(base);
+
+/// Check if a type name is predefined: a primitive type, or one of the root
+/// self.glp's basic types as a module writes it or as a linked program names
+/// it ([namesRoot]).
+bool isPredefinedType(String name) =>
+    predefinedTypeNames.contains(name) ||
+    (name.startsWith(':') && predefinedTypeNames.contains(name.substring(1)));
 
 /// Check if a goal name is a builtin that doesn't need type checking
 bool isBuiltinGoal(String name) => builtinGoals.contains(name);

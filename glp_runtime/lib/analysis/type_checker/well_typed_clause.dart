@@ -812,7 +812,8 @@ Set<String> _variablesTypedAtSomeOccurrence(ast.Clause clause, ProgramDFA dfa,
 // against it with its first argument an `Integer` where the rule says so.
 
 /// Whether [atom] is an arithmetic assignment `X := E`.
-bool _isAssignment(ast.Goal atom) => atom.functor == ':=' && atom.arity == 2;
+bool _isAssignment(ast.Goal atom) =>
+    namesRoot(atom.functor, ':=') && atom.arity == 2;
 
 /// [atom] with every `Goal@Agent` taken off: the goal that is checked.
 ast.Goal _unspawned(ast.Goal atom) {
@@ -923,7 +924,7 @@ Set<int> _integerAssignments(List<ast.Goal> atoms, List<int> assignments,
 ProcDecl _integerAssignment(ProcDecl decl) {
   if (decl.arity != 2) return decl;
   final result = decl.argTypes[0];
-  if (result is! TypeRef || result.name != 'Number' || result.isInput) {
+  if (result is! TypeRef || !namesRoot(result.name, 'Number') || result.isInput) {
     return decl;
   }
   return ProcDecl(
