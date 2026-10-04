@@ -89,4 +89,93 @@ $_decl$_clauses''');
       dir.deleteSync(recursive: true);
     }
   });
+
+  // A printed term reads back as itself (GLP-Spec appendix-lp.tex, Definition
+  // "Logic Programs Syntax": the text denotes the term; GLP #3 Cowork,
+  // 2026-10-04 09:06 UTC, "23:49. Q1 and Q3"): a constant in single quotes
+  // where unquoted it would read as a variable, an operator or a number, or
+  // as no one name, escaped as the reader reads a quoted name; a functor bare
+  // before "(" where the reader takes it there.  Until 2026-10-04 'G' and '+'
+  // printed "G" and "+", string literals, and 'G'(a) printed G(a).
+  group('a printed term reads back as itself', () {
+    // Each source text, and the text it prints as.
+    const cases = <String, String>{
+      "'G'": "'G'",
+      "'+'": "'+'",
+      "'mod'": "'mod'",
+      "'procedure'": "'procedure'",
+      "'42'": "'42'",
+      "'a b'": "'a b'",
+      r"'it\'s'": r"'it\'s'",
+      "'_x'": "'_x'",
+      r"'back\\slash'": r"'back\\slash'",
+      "'[]'": "'[]'",
+      '[]': '[]',
+      '[a | b]': '[a | b]',
+      "[a, 'B' | 'C']": "[a, 'B' | 'C']",
+      '"str"': '"str"',
+      r'"say \"hi\""': r'"say \"hi\""',
+      "'G'(a)": "'G'(a)",
+      "f('=..', 'X')": "f('=..', 'X')",
+      '=?=(a, b)': '=?=(a, b)',
+      '+(1)': '+(1)',
+      '1 + 2': '(1 + 2)',
+      "'a b'(c)": "'a b'(c)",
+      'foo': 'foo',
+      'mod(a)': 'mod(a)',
+      'foo()': 'foo()',
+      "'G'()": "'G'()",
+      '42': '42',
+      '-3': '-3',
+    };
+    for (final c in cases.entries) {
+      test('${c.key} prints as ${c.value} and reads back', () {
+        final term = _readTerm(c.key);
+        final printed = GlpPrinter().printTerm(term);
+        expect(printed, c.value);
+        expect(_sameTerm(_readTerm(printed), term), isTrue,
+            reason: '$printed read back is not ${c.key}');
+      });
+    }
+
+    test("a quoted name and a string of the same text stay apart", () {
+      expect(GlpPrinter().printTerm(_readTerm("'G'")),
+          isNot(GlpPrinter().printTerm(_readTerm('"G"'))));
+    });
+
+    test('a clause with quoted predicate names reads back', () {
+      const source = "'G'(X) :- '_send'(X?), 'a b'.\n";
+      final printed = _printed(source).single;
+      expect(printed, "'G'(X) :- '_send'(X?), 'a b'.");
+      expect(_printed('$printed\n').single, printed);
+    });
+  });
+}
+
+/// The term [text] reads as, the argument of a unit clause.
+Term _readTerm(String text) =>
+    Parser(Lexer('t($text).').tokenize()).parse().procedures.single.clauses
+        .single.head.args.single;
+
+/// Whether [a] and [b] are the same term, node by node.
+bool _sameTerm(Term? a, Term? b) {
+  if (a == null || b == null) return a == b;
+  if (a is ConstTerm && b is ConstTerm) return a.value == b.value;
+  if (a is VarTerm && b is VarTerm) {
+    return a.name == b.name && a.isReader == b.isReader;
+  }
+  if (a is UnderscoreTerm && b is UnderscoreTerm) {
+    return a.isReader == b.isReader;
+  }
+  if (a is ListTerm && b is ListTerm) {
+    return _sameTerm(a.head, b.head) && _sameTerm(a.tail, b.tail);
+  }
+  if (a is StructTerm && b is StructTerm) {
+    if (a.functor != b.functor || a.args.length != b.args.length) return false;
+    for (var i = 0; i < a.args.length; i++) {
+      if (!_sameTerm(a.args[i], b.args[i])) return false;
+    }
+    return true;
+  }
+  return false;
 }

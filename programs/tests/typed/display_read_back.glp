@@ -1,0 +1,35 @@
+%% The REPL displays a term so that it reads back as itself: a constant in
+%% single quotes where unquoted it would read as a variable, an operator or a
+%% number, or as no one name, escaped as the reader reads a quoted name; a
+%% functor bare before "(" where the reader takes it there (GLP-Spec
+%% appendix-lp.tex, Definition "Logic Programs Syntax": the text denotes the
+%% term; GLP #3 Cowork, 2026-10-04 09:06 UTC, "23:49. Q1 and Q3").  Harness
+%% A41 shows each term and reads the shown text back in a goal, which the
+%% guard compares with the term.  Until 2026-10-04 'G' was shown G, a variable.
+%% A name holding a quote is shown and not typed back there, the harness
+%% feeding the REPL from a here-document inside a command substitution, where
+%% bash 3.2 pairs single quotes regardless of the backslash; GlpPrinter's test
+%% reads it back (glp_runtime/test/compiler/glp_printer_test.dart).
+
+procedure names(_).
+names(T?) :- T = ['G', '+', 'mod', '42', 'a b', '_x', procedure, [], "str"].
+
+procedure same_names(_?, Constant).
+same_names(T, R?) :-
+    T? =?= ['G', '+', 'mod', '42', 'a b', '_x', procedure, [], "str"] |
+    R = yes.
+same_names(_, R?) :- otherwise | R = no.
+
+procedure terms(_).
+terms(T?) :- T = w('G'(a), f('=..', 'X'), '+'(1), =?=(a, b)).
+
+procedure same_terms(_?, Constant).
+same_terms(T, R?) :- T? =?= w('G'(a), f('=..', 'X'), '+'(1), =?=(a, b)) | R = yes.
+same_terms(_, R?) :- otherwise | R = no.
+
+procedure apostrophe(_).
+apostrophe(T?) :- T = 'it\'s'.
+
+%% A list with a constant tail, shown with its tail.
+procedure tails(_).
+tails(T?) :- T = [[a | b], [a, 'B' | 'C']].

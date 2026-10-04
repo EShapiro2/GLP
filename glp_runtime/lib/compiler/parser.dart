@@ -1156,6 +1156,12 @@ class Parser {
     TokenType.PROCEDURE,
   };
 
+  /// Whether the reader takes a token of [type] where a term is expected as
+  /// a name ([_operatorNames]): the functor of a compound term where "("
+  /// follows it.  The printer asks it of a functor (glp_printer.dart,
+  /// `functorNameSource`).
+  static bool isOperatorName(TokenType type) => _operatorNames.contains(type);
+
   /// The tokens that end an operand: an operator name before one of them has
   /// no operand of its own and is the constant of its name.
   static const Set<TokenType> _endsOperand = {

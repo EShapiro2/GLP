@@ -2,6 +2,9 @@
 %% send_to_user shows it.  Until 2026-10-03 the answer display dropped a
 %% constant or structure tail: [holding('G', 'H')|'W'] was shown as
 %% [holding(G, H)] (GLP #3 Cowork, 2026-10-03 21:18 UTC: "a fault, fix it").
+%% Since 2026-10-04 the display quotes a constant that needs it, showing
+%% [holding('G', 'H') | 'W'], and send_to_user's output to the person stays
+%% [holding(G, H) | W] (GLP #3 Cowork, 2026-10-04 09:06 UTC, "23:49. Q1").
 
 procedure holding_tail(_).
 holding_tail(T?) :- T = [holding('G', 'H')|'W'].

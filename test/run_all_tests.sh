@@ -964,7 +964,7 @@ HEREDOC
 2>&1)
 
 check "double 5" "Rqb1 = 10" "$a25"
-check "struct bind via =" "X = _equator(" "$a25"
+check "struct bind via =" "X = '_equator'(" "$a25"
 
 # --- A26: Univ, assignment, MWM (stdlib, no file needed) ---
 echo "--- A26: Univ, assignment, MWM ---"
@@ -1251,6 +1251,9 @@ check "Minimum of 0 and 1 is 0" "M01 = 0" "$a35"
 # constant of that name, and as a functor before "(", as Prolog does (GLP #3
 # Cowork, 2026-10-03 21:18 UTC).  Until 2026-10-03 an unquoted mod in a term
 # was "Expected term, got TokenType.MOD" and procedure was read as the keyword.
+# The display shows each name as a constant in single quotes, its unquoted text
+# being an operator or a keyword, and a functor bare before "(" (GLP #3 Cowork,
+# 2026-10-04 09:06 UTC, "23:49. Q1 and Q3"; A40).
 echo "--- A36: Operator names as constants ---"
 a36=$("$REPL_RUN" <<HEREDOC
 $TYPED/operator_names.glp
@@ -1268,8 +1271,8 @@ Y36 = procedure.
 HEREDOC
 2>&1)
 check "operator names: the fixture loads" "Loaded: .*operator_names.glp" "$a36"
-check "operator names: every name a constant" 'N36 = \[mod, procedure, +, -, \*, /, //, <, >, =<, >=, =, =:=, =\\=, =?=, =?\\=, @<, =\.\., \.\.=, :-, :=, ::=, ;, :, ~, #, \\, @\]' "$a36"
-check "operator names: mod and procedure in a structure" "W36 = w(mod, procedure, " "$a36"
+check "operator names: every name a constant" 'N36 = \['\''mod'\'', '\''procedure'\'', '\''+'\'', '\''-'\'', '\''\*'\'', '\''/'\'', '\''//'\'', '\''<'\'', '\''>'\'', '\''=<'\'', '\''>='\'', '\''='\'', '\''=:='\'', '\''=\\\\='\'', '\''=?='\'', '\''=?\\\\='\'', '\''@<'\'', '\''=\.\.'\'', '\''\.\.='\'', '\'':-'\'', '\'':='\'', '\''::='\'', '\'';'\'', '\'':'\'', '\''~'\'', '\''#'\'', '\''\\\\'\'', '\''@'\''\]' "$a36"
+check "operator names: mod and procedure in a structure" "W36 = w('mod', 'procedure', " "$a36"
 check "operator names: procedure and = as functors" "F36 = f(procedure(a), =(b, c), mod(d, e))" "$a36"
 check "operator names: mod a type alternative" "R36a = is_mod" "$a36"
 check "operator names: procedure a type alternative" "R36b = is_procedure" "$a36"
@@ -1278,15 +1281,17 @@ check "operator names: mod still infix" "A36 = 1" "$a36"
 check "operator names: unary minus still neg" "B36 = -3" "$a36"
 check "operator names: + and * by precedence" "C36 = 14" "$a36"
 check "operator names: mod in a guard expression" "E36 = even" "$a36"
-check "operator names: X = mod at the prompt" "X36 = mod" "$a36"
-check "operator names: Y = procedure at the prompt" "Y36 = procedure" "$a36"
+check "operator names: X = mod at the prompt" "X36 = 'mod'" "$a36"
+check "operator names: Y = procedure at the prompt" "Y36 = 'procedure'" "$a36"
 check_not "operator names: no syntax error" "Expected term" "$a36"
 
 # --- A37: The answer display shows a list's tail ---
 # A list whose tail is not [] is shown with the tail after "|", as send_to_user
 # shows it.  Until 2026-10-03 the display dropped a constant or structure tail,
 # [holding('G','H')|'W'] shown as [holding(G, H)] (GLP #3 Cowork, 2026-10-03
-# 21:18 UTC: "a fault, fix it").
+# 21:18 UTC: "a fault, fix it").  Since 2026-10-04 the display quotes the
+# constants that need it, and send_to_user's output to the person stays as it
+# is (GLP #3 Cowork, 2026-10-04 09:06 UTC, "23:49. Q1 and Q3").
 echo "--- A37: List tails in the answer display ---"
 a37=$("$REPL_RUN" <<HEREDOC
 $TYPED/list_tail_display.glp
@@ -1301,13 +1306,13 @@ words(W37).
 :quit
 HEREDOC
 2>&1)
-check "list tail display: a constant tail" "T37a = \[holding(G, H) | W\]" "$a37"
+check "list tail display: a constant tail" "T37a = \[holding('G', 'H') | 'W'\]" "$a37"
 check "list tail display: two elements and a constant tail" "T37b = \[a, b | c\]" "$a37"
 check "list tail display: a structure tail" "T37c = \[a | f(b)\]" "$a37"
 check "list tail display: tails inside a structure and a list" "T37d = w(\[x | y\], \[\[p | q\] | r\])" "$a37"
 check "list tail display: a proper list as before" "T37e = \[a, b, c\]" "$a37"
-check "list tail display: send_to_user shows it alike" "^GLP> \[holding(G, H) | W\]" "$a37"
-check "list tail display: mod and procedure, the tail kept" "W37 = w(mod, procedure, \[mod | procedure\])" "$a37"
+check "list tail display: send_to_user shows it unquoted, as it stays" "^GLP> \[holding(G, H) | W\]" "$a37"
+check "list tail display: mod and procedure, the tail kept" "W37 = w('mod', 'procedure', \['mod' | 'procedure'\])" "$a37"
 
 # --- A38: An undefined type name in a declaration is refused, named ---
 # TGLP parameterized-types.tex, "Declaration parameters": "An undefined type
@@ -1365,6 +1370,41 @@ check "single file: the linked program is checked" "a5_routing_neg/main.glp: Exc
 check "single file: refused at send_user's instantiation" "No transition for user_output" "$a40"
 check "single file: its directory's self.glp checked as a module of it" "module_self_type_error/self.glp:3: Head of bad_proc is not well-typed" "$a40"
 check_not "single file: neither loads" "✓ Loaded" "$a40"
+
+# --- A41: The answer display reads back as the term ---
+# GLP-Spec appendix-lp.tex, Definition "Logic Programs Syntax": the text
+# denotes the term.  The display shows a constant in single quotes where
+# unquoted it would read as a variable, an operator or a number, or as no one
+# name, escaped as the reader reads a quoted name, and a functor bare before
+# "(" where the reader takes it there; the shown text, typed back in a goal,
+# is the term the guard compares it with (GLP #3 Cowork, 2026-10-04 09:06 UTC,
+# "23:49. Q1 and Q3").  Until 2026-10-04 'G' was shown G, a variable.  A list
+# with a constant tail is shown, not typed back: a goal's list tail that is
+# no list and no variable is posted as [] (glp_engine.dart, _buildListTerm),
+# a fault reported on 2026-10-04.  A name holding a quote is shown and not
+# typed back: in a here-document inside $(...) bash 3.2 pairs single quotes
+# regardless of the backslash; GlpPrinter's Dart test reads it back.
+echo "--- A41: The answer display reads back ---"
+a41=$("$REPL_RUN" <<HEREDOC
+$TYPED/display_read_back.glp
+names(N41).
+same_names(['G', '+', 'mod', '42', 'a b', '_x', 'procedure', [], "str"], R41).
+same_names(['G'], Q41).
+terms(T41).
+same_terms(w('G'(a), f('=..', 'X'), +(1), =?=(a, b)), S41).
+apostrophe(P41).
+tails(L41).
+:quit
+HEREDOC
+2>&1)
+check "display: the fixture loads" "Loaded: .*display_read_back.glp" "$a41"
+check "display: names quoted where they must be" "N41 = \['G', '+', 'mod', '42', 'a b', '_x', 'procedure', \[\], \"str\"\]" "$a41"
+check "display: the shown names read back as the term" "R41 = yes" "$a41"
+check "display: the comparison can fail" "Q41 = no" "$a41"
+check "display: functors quoted where they must be" "T41 = w('G'(a), f('=\.\.', 'X'), +(1), =?=(a, b))" "$a41"
+check "display: the shown structures read back as the term" "S41 = yes" "$a41"
+check "display: a quote in a name escaped as the reader reads it" "P41 = 'it\\\\'s'" "$a41"
+check "display: constant list tails shown" "L41 = \[\[a | b\], \[a, 'B' | 'C'\]\]" "$a41"
 
 SECTION_A_PASS=$PASS
 SECTION_A_FAIL=$FAIL
@@ -4263,7 +4303,7 @@ find_type(hello/1, T).
 :quit
 HEREDOC
 2>&1)
-check "RM4 find_type yields the type identity of a declared entry point" "T = [0-9a-f]\{64\}" "$rm4"
+check "RM4 find_type yields the type identity of a declared entry point" "T = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$rm4"
 
 rm5=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/tests/run_module_probe
@@ -4327,6 +4367,9 @@ echo ""
 # hash are 64 characters.  The probe runs in madGLP mode (:mad), as SGSG's
 # harness will.
 echo "=== Section SK: Identity, signature, certificate ==="
+# A key or an identity is 64 hex digits, shown in single quotes where it begins
+# with a digit, which unquoted would read as a number (GLP #3 Cowork,
+# 2026-10-04 09:06 UTC, "23:49. Q1 and Q3"; A41), and bare otherwise.
 
 sk1=$("$REPL_RUN" <<HEREDOC
 :mad alice
@@ -4337,8 +4380,8 @@ roundtrip(hello(world), R).
 HEREDOC
 2>&1)
 check "SK1 madGLP mode enters for a directory load" "madGLP mode on: agent alice" "$sk1"
-check "SK1 self_key assigns the person's key" "K = [0-9a-f]\{64\}" "$sk1"
-check "SK1 sign then signature round-trips the term as signed(K, H, T) under the signer's key and module identity" "R = signed([0-9a-f]\{64\}, [0-9a-f]\{64\}, hello(world))" "$sk1"
+check "SK1 self_key assigns the person's key" "K = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$sk1"
+check "SK1 sign then signature round-trips the term as signed(K, H, T) under the signer's key and module identity" "R = signed(\('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\), \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\), hello(world))" "$sk1"
 
 # The key the signed term carries is self_key's answer, and the module identity
 # is this program's source identity, which decompose_module also reports.
@@ -4351,9 +4394,9 @@ HEREDOC
 2>&1)
 sk2_keys=$(echo "$sk2" | grep "K1\{0,1\} = " | grep -o "[0-9a-f]\{64\}" | sort -u | wc -l | tr -d ' ')
 check "SK2 signature/2 matched as signed(K, _, _) gives the signer, and it is self_key's answer" "1" "$sk2_keys"
-check "SK2 decompose_module assigns the compiler's key" "K = [0-9a-f]\{64\}" "$sk2"
-check "SK2 decompose_module assigns the source identity" "S = [0-9a-f]\{64\}" "$sk2"
-check "SK2 decompose_module assigns the compiled identity" "C = [0-9a-f]\{64\}" "$sk2"
+check "SK2 decompose_module assigns the compiler's key" "K = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$sk2"
+check "SK2 decompose_module assigns the source identity" "S = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$sk2"
+check "SK2 decompose_module assigns the compiled identity" "C = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$sk2"
 
 # sign/3 signs only under a key whose private half the runtime holds (G2).
 sk3=$("$REPL_RUN" <<HEREDOC
@@ -4389,7 +4432,7 @@ double(21, Y).
 HEREDOC
 2>&1)
 check_not "SK5 a mini-app reaching neither the network nor the person is certified" "CERTIFICATE REFUSED" "$sk5"
-check "SK5 its certificate carries the compiler's key" "K = [0-9a-f]\{64\}" "$sk5"
+check "SK5 its certificate carries the compiler's key" "K = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$sk5"
 check "SK5 it runs" "Y = 42" "$sk5"
 
 sk6=$("$REPL_RUN" <<HEREDOC
@@ -4633,8 +4676,8 @@ HEREDOC
 2>&1 | tr -cd '\11\12\15\40-\176')
 check "SL1 a certified artefact loads as a Module" "C = Module(run_module_probe)" "$sl1"
 check "SL1 run/3 activates the loaded module under find_type's identity" "Z = \[done\]" "$sl1"
-check "SL1 a text file loads as its text" "T = hello world" "$sl1"
-check "SL1 an artefact whose certificate does not verify loads as text, not a Module" "F = GLPW" "$sl1"
+check "SL1 a text file loads as its text" "T = 'hello world\\\\n'" "$sl1"
+check "SL1 an artefact whose certificate does not verify loads as text, not a Module" "F = 'GLPW" "$sl1"
 check "SL1 a name that leaves the caller's directory is an error" "_load_file/2: ../cert_ok/self.glp is not resolved within the calling module's directory" "$sl1"
 check "SL1 an absolute name is an error" "_load_file/2: /etc/hosts is not resolved within the calling module's directory" "$sl1"
 

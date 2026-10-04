@@ -6,6 +6,8 @@ library;
 
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:glp_runtime/compiler/glp_printer.dart'
+    show constantSource, functorNameSource;
 import 'package:glp_runtime/compiler/program_linker.dart' show emitVglpSources;
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/multiagent/simulation_network.dart'
@@ -409,14 +411,23 @@ void _printHelp() {
   print('');
 }
 
+/// [term] as the REPL displays a binding: text that reads back as the term
+/// (GLP-Spec appendix-lp.tex, Definition "Logic Programs Syntax"; GLP #3
+/// Cowork, 2026-10-04 09:06 UTC, "23:49. Q1 and Q3"), each constant and
+/// functor as the printer writes it (glp_printer.dart, [constantSource],
+/// [functorNameSource]): `'G'`, `'+'`, `'42'` and `'a b'` in single quotes,
+/// a string literal in double quotes.  Until 2026-10-04 a constant was shown
+/// unquoted, as send_to_user/1 shows it to the person, which stays as it is
+/// (body_kernels.dart, `formatGroundTerm`): `'G'` was shown `G`, a variable.
 String _formatTerm(rt.Term? term, [GlpEngine? engine, Set<HeapCell>? path]) {
   if (term == null) return '[]';
 
   path ??= <HeapCell>{};
 
   if (term is rt.ConstTerm) {
-    if (term.value == null || term.value == 'nil') return '[]';
-    return term.value.toString();
+    final value = term.value;
+    if (value == null || value == 'nil') return '[]';
+    return constantSource(value);
   }
 
   if (term is rt.StructTerm && term.functor == '.' && term.args.length == 2) {
@@ -516,7 +527,7 @@ String _formatTerm(rt.Term? term, [GlpEngine? engine, Set<HeapCell>? path]) {
       }
       return _formatTerm(arg, engine, currentPath);
     }).join(', ');
-    return '${term.functor}($formattedArgs)';
+    return '${functorNameSource(term.functor)}($formattedArgs)';
   }
 
   return term.toString();
