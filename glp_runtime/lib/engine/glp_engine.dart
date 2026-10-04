@@ -1406,13 +1406,10 @@ class GlpEngine {
   /// Seed (once) and return the base goal-check environment: the root scope
   /// plus root self.glp (buildAncestorScope with an empty chain).
   TypeEnvironment _ensureGoalCheckBaseEnv() {
-    if (_goalCheckEnv == null) {
-      _goalCheckEnv = buildAncestorScope(
-          chain: const [],
-          rootSelfGlpPath: _rootSelfGlpPath,
-          rootScope: _rootScope);
-    }
-    return _goalCheckEnv!;
+    return _goalCheckEnv ??= buildAncestorScope(
+        chain: const [],
+        rootSelfGlpPath: _rootSelfGlpPath,
+        rootScope: _rootScope);
   }
 
   /// Extend the goal-check environment with a loaded module's declarations, so
