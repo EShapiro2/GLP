@@ -3717,23 +3717,31 @@ check "S9 file loads" "Loaded:" "$s9"
 check_not "S9 no unknown type error" "UnknownTypeError" "$s9"
 check "S9 ancestor-typed goal runs" "W = \[wrap(1), wrap(2), wrap(3)\]" "$s9"
 
-# --- S10: hierarchy bound — file load outside programs/ has no ancestor scope ---
-# The ancestor chain is anchored at the hierarchy root programs/ (modules.tex
-# §Implicit ancestor scoping); a module file loaded from OUTSIDE the hierarchy
-# gets no ancestor self.glp scope, even from its own directory. Foo is defined
-# only in the fixture's sibling self.glp, so p(Foo) names an undefined type
-# outside its parameter list, and the load is rejected (TGLP
-# parameterized-types.tex, "Declaration parameters"; until 2026-10-03 Foo was
-# read as a parameter and the load rejected as not parametrically well-typed).
-# Guards loadSource sharing the linker's programsDir bound (the legacy
-# unbounded walk accepted this load).
-echo "--- S10: no ancestor scope outside the hierarchy ---"
+# --- S10: a program outside the root is refused ---
+# TGLP modules.tex, "Scope construction": "A program lies at or below the
+# root, and the scope of each of its modules runs from the root down to that
+# module."  The fixture's directory is outside programs/, the root, so its file
+# and its directory are each refused as a program, naming the path and the
+# sentence, before anything of them is checked (GLP #3 Cowork, 2026-10-04 09:06
+# UTC, "23:49").  Until 2026-10-04 the file was compiled in a scope without its
+# own directory's self.glp and the root's exposes, and refused only for the
+# undefined type Foo that self.glp defines.
+echo "--- S10: a program outside the root is refused ---"
 s10=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/test/fixtures/outside_hierarchy/m.glp
 :quit
 HEREDOC
 2>&1)
-check "S10 outside-hierarchy file load rejected" 'undefined type "Foo" in the declaration of p/1' "$s10"
+check "S10 file outside the root refused, naming it" 'outside_hierarchy/m.glp lies outside the root' "$s10"
+check "S10 file refusal quotes the sentence" 'A program lies at or below the root' "$s10"
+check_not "S10 file not checked in a partial scope" 'undefined type "Foo"' "$s10"
+s10d=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/test/fixtures/outside_hierarchy
+:quit
+HEREDOC
+2>&1)
+check "S10 directory outside the root refused, naming it" 'test/fixtures/outside_hierarchy lies outside the root' "$s10d"
+check_not "S10 directory not taken for a program" 'has no entry points' "$s10d"
 
 echo ""
 
@@ -3829,8 +3837,9 @@ check "X7 names the missing user_output constructor" "user_output" "$x7"
 # code.glp names Para(C) from the directory's own self.glp; Plain, monomorphic
 # and from the same file, is the control.  Reported as broken by SGSG on
 # 2026-08-03 and it never was: their measurement ran from a program root OUTSIDE
-# programs/, where by S10's rule there is no ancestor scope at all, so NEITHER
-# type was in scope.  Only the asymmetry looked like a defect, and that is the
+# programs/, where there was then no ancestor scope at all, so NEITHER type was
+# in scope; such a program is refused since 2026-10-04 (S10).  Only the
+# asymmetry looked like a defect, and that is the
 # type-parameter rule: an unknown capitalised name in a declaration reads as a
 # type parameter, which Plain can be and Para(Constant) cannot, so Plain went
 # quiet and Para was reported unresolved.

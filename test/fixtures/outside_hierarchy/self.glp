@@ -1,4 +1,4 @@
-%% S10 fixture: this directory lies OUTSIDE the programs/ hierarchy, so this
-%% self.glp is NOT in scope for a file load of m.glp (the ancestor chain is
-%% anchored at programs/ — modules.tex §Implicit ancestor scoping).
+%% S10 fixture: this directory lies OUTSIDE programs/, the root, so it is
+%% refused as a program, and so is m.glp beside it (TGLP modules.tex, "Scope
+%% construction": "A program lies at or below the root").
 Foo ::= foo.

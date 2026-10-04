@@ -23,11 +23,8 @@ import 'package:glp_runtime/analysis/type_checker/param_expansion.dart';
 /// other module by its directory's path and its file name, the extension
 /// dropped: `secure/app.glp` is `secure/app`, `secure/self.glp` is `secure`.
 /// Segments are joined by `/`; the root's own `self.glp` is the empty path.
-///
-/// A file outside [rootDir] --- a program loaded from outside the root, which
-/// TGLP's Definition "Root, Scope" does not cover --- is named by its relative
-/// path from the root, `..` segments included, which no file under the root
-/// shares.
+/// No file outside the root is named: a program there is refused before any
+/// module of it is ([requireUnderRoot]).
 String modulePathName(String filePath, String rootDir) {
   final file = ppath.normalize(File(filePath).absolute.path);
   final root = ppath.normalize(Directory(rootDir).absolute.path);
@@ -37,6 +34,50 @@ String modulePathName(String filePath, String rootDir) {
   final rel = ppath.relative(target, from: root);
   if (rel == '.') return '';
   return ppath.split(rel).join('/');
+}
+
+/// Whether [path], a file or a directory, lies at or below the directory
+/// [root]: is [root] or lies under it, compared on normalised absolute paths.
+bool liesAtOrBelow(String path, String root) {
+  final p = ppath.normalize(File(path).absolute.path);
+  final r = ppath.normalize(Directory(root).absolute.path);
+  return ppath.equals(p, r) || ppath.isWithin(r, p);
+}
+
+/// The refusal of a program that does not lie at or below the root, or of a
+/// source compiled in a scope of the root that does not ([requireUnderRoot]).
+class OutsideRootError implements Exception {
+  /// The program, or the source, as it was given.
+  final String path;
+
+  /// The root: the directory of the root `self.glp`.
+  final String root;
+
+  OutsideRootError(this.path, this.root);
+
+  @override
+  String toString() =>
+      'Refused: $path lies outside the root $root.  "A device nominates one '
+      'directory as its root, and every compilation on that device is under '
+      'that root.  A program lies at or below the root, and the scope of each '
+      'of its modules runs from the root down to that module" (TGLP '
+      'modules.tex, "Scope construction").  Move it under $root.';
+}
+
+/// Refuse [path] --- a program's directory or file, or a source compiled in
+/// the scope of the root --- unless it lies at or below [root], the directory
+/// of the root `self.glp` (TGLP modules.tex, "Scope construction": "every
+/// compilation on that device is under that root.  A program lies at or below
+/// the root"; Definition "Root, Scope" defines the scope of a module M under
+/// the root r only where r is dir(M) or an ancestor of it).  Until 2026-10-04
+/// such a program was compiled in a scope that lacked its own directory's
+/// `self.glp` and the root's exposes, [discoverSelfChain] stopping at once
+/// outside the root.
+void requireUnderRoot(String path, String root) {
+  if (!liesAtOrBelow(path, root)) {
+    throw OutsideRootError(
+        path, ppath.normalize(Directory(root).absolute.path));
+  }
 }
 
 /// The path from the root of the directory holding the module named [name]:
@@ -64,7 +105,9 @@ String moduleDirectoryName(String name, {required bool isSelfGlp}) {
 ///   directory — so intermediate ancestor `self.glp` files between the load
 ///   point and `programs/` are included. The root `programs/self.glp` itself is
 ///   NOT collected here (it is realised by the root-scope mechanism). When null,
-///   the legacy bound applies: the walk stops at `rootDir` (inclusive).
+///   the legacy bound applies: the walk stops at `rootDir` (inclusive).  A
+///   target outside [programsDir] has an empty chain here; the program it
+///   belongs to is refused before its chain is asked for ([requireUnderRoot]).
 ///
 /// Returns: list of absolute paths to self.glp files, root-first order
 List<String> discoverSelfChain({
@@ -108,14 +151,19 @@ List<String> discoverSelfChain({
   while (true) {
     final currentNorm = norm(currentDir);
 
+    // A directory is inside a bound when it lies under it, by path segments:
+    // until 2026-10-04 this was a string prefix test, under which a sibling
+    // `programs_x` of `programs` lay inside it.
     if (programsNorm != null) {
       // Extended bound: stop at programsDir WITHOUT collecting its self.glp,
       // and never walk above it.
       if (currentNorm == programsNorm) break;
-      if (!currentNorm.startsWith(programsNorm)) break;
+      if (!ppath.isWithin(programsNorm, currentNorm)) break;
     } else {
       // Legacy bound: stop once we have gone above rootDir.
-      if (!currentNorm.startsWith(rootNorm)) break;
+      if (currentNorm != rootNorm && !ppath.isWithin(rootNorm, currentNorm)) {
+        break;
+      }
     }
 
     final selfGlp = File('$currentDir${Platform.pathSeparator}self.glp');

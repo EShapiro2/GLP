@@ -33,7 +33,10 @@ dead(X, Y?) :- $deadBody.
 ''';
 
 Directory _project(String source) {
-  final dir = Directory.systemTemp.createTempSync('glp_flatten_');
+  // Under the root, programs/ (TGLP modules.tex, "Scope construction": "A
+  // program lies at or below the root"): a program in the system's temporary
+  // directory, outside it, is refused since 2026-10-04.
+  final dir = Directory('../programs/tests').createTempSync('glp_flatten_');
   File('${dir.path}/self.glp').writeAsStringSync(_self);
   _edit(dir, source);
   return dir;

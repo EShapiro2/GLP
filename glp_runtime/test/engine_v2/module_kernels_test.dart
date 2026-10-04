@@ -49,7 +49,10 @@ helper(X, Y?) :- Y := X? + 1.
 /// forwarding it there: a directory with no self.glp is not a program (TGLP
 /// modules.tex, "Entry and the absence of a boot module").
 Directory _tempProject(String source) {
-  final dir = Directory.systemTemp.createTempSync('glp_modvalue_');
+  // Under the root, programs/ (TGLP modules.tex, "Scope construction": "A
+  // program lies at or below the root"): a program in the system's temporary
+  // directory, outside it, is refused since 2026-10-04.
+  final dir = Directory('../programs/tests').createTempSync('glp_modvalue_');
   File('${dir.path}/self.glp').writeAsStringSync('''
 imported procedure main#go(Integer?, Integer).
 exported procedure go(Integer?, Integer).

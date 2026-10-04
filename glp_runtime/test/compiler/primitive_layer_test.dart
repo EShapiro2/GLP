@@ -34,7 +34,10 @@ void main() {
   late GlpEngine engine;
 
   setUp(() {
-    tmp = Directory.systemTemp.createTempSync('pl_');
+    // Under the root, programs/ (TGLP modules.tex, "Scope construction": "A
+    // program lies at or below the root"): a program in the system's temporary
+    // directory, outside it, is refused since 2026-10-04.
+    tmp = Directory('../programs/tests').createTempSync('pl_');
     engine = GlpEngine(rootSelfGlpPath: rootSelf);
   });
   tearDown(() => tmp.deleteSync(recursive: true));

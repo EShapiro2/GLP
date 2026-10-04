@@ -319,7 +319,10 @@ empty(Xs) :- Xs? =?= [] | true.
       client.putIdentity(identity.pub, identity.priv);
       e.madContext!.network = client;
       e.maxCycles = 10000000;
-      final dir = Directory.systemTemp.createTempSync('glp_long_sign_');
+      // Under the root, programs/ (TGLP modules.tex, "Scope construction": "A
+      // program lies at or below the root"): a program in the system's temporary
+      // directory, outside it, is refused since 2026-10-04.
+      final dir = Directory('../programs/tests').createTempSync('glp_long_sign_');
       try {
         final f = File('${dir.path}/long_sign.glp')
           ..writeAsStringSync('''

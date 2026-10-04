@@ -413,17 +413,18 @@ class GlpEngine {
     List<String> chain = const [];
     List<DiscoveredModule>? discovered;
     if (isRealFile) {
-      chain = discoverSelfChain(
-          targetFile: name,
-          rootDir: File(name).parent.path,
-          programsDir: File(_rootSelfGlpPath).parent.absolute.path);
       // The module as the linker discovers it: its ancestor scope with the
       // `-expose`d modules of the directories on its chain merged in
       // (modules.tex, "The -expose directive": an exposed module's exported
       // procedures are in the directory's scope as if defined in its self.glp).
-      // The check below and the linker further down share this one discovery.
+      // The check below and the linker further down share this one discovery,
+      // which refuses a file outside the root first ([requireUnderRoot]).
       discovered = discoverSingleModule(name,
           rootSelfGlpPath: _rootSelfGlpPath, rootScope: _rootScope);
+      chain = discoverSelfChain(
+          targetFile: name,
+          rootDir: File(name).parent.path,
+          programsDir: File(_rootSelfGlpPath).parent.absolute.path);
     }
     TypeEnvironment? ancestorScope = scope;
     if (ancestorScope == null && discovered == null) {
@@ -719,10 +720,18 @@ class GlpEngine {
   /// with the boot file's chain layered on it: the program's whole self.glp
   /// chain and every module's declarations, so a boot source could call an
   /// unexported procedure, pass the check, and fail at run time.
-  TypeEnvironment scopeFor(String path) => _handOverScope(discoverSelfChain(
-      targetFile: path,
-      rootDir: File(path).parent.path,
-      programsDir: File(_rootSelfGlpPath).parent.absolute.path));
+  ///
+  /// A boot file outside the root is refused ([requireUnderRoot]): its
+  /// compilation is under the root as every compilation is, and its chain is
+  /// the one from the root down to its directory (TGLP modules.tex, "Scope
+  /// construction").
+  TypeEnvironment scopeFor(String path) {
+    requireUnderRoot(path, _rootDir);
+    return _handOverScope(discoverSelfChain(
+        targetFile: path,
+        rootDir: File(path).parent.path,
+        programsDir: File(_rootSelfGlpPath).parent.absolute.path));
+  }
 
   /// The primitives and the root self.glp, the self.glp files of [chain] in
   /// order, and the loaded units' entry points over them, a later unit's over

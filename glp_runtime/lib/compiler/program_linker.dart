@@ -250,6 +250,10 @@ List<DiscoveredModule> _discoverGlpModules(Directory root, String? programsDir,
   if (!root.existsSync()) {
     throw ArgumentError('Program root directory not found: ${root.path}');
   }
+  // A program lies at or below the root (TGLP modules.tex, "Scope
+  // construction"); one outside it is refused here, before any module of it is
+  // named or scoped.
+  if (programsDir != null) requireUnderRoot(root.path, programsDir);
 
   final modules = <DiscoveredModule>[];
   final nameRoot = _nameRoot(programsDir, root.path);
@@ -422,6 +426,9 @@ List<DiscoveredModule> discoverSingleModule(String filePath,
   final programsDir = rootSelfGlpPath != null
       ? File(rootSelfGlpPath).parent.absolute.path
       : null;
+  // A program lies at or below the root (TGLP modules.tex, "Scope
+  // construction"); one outside it is refused before it is read.
+  if (programsDir != null) requireUnderRoot(filePath, programsDir);
   final rs = rootScope ?? _rootScopeOf(rootSelfGlpPath);
 
   final module =

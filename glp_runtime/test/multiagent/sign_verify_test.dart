@@ -57,7 +57,10 @@ GlpEngine _agent(String id, PersonIdentity identity, List<String> out) {
 /// Load [source] as a program of its own, from a file: a goal then carries a
 /// module value, and sign/3 has a source identity to put into the signed term.
 Directory _load(GlpEngine engine, String source) {
-  final dir = Directory.systemTemp.createTempSync('glp_sign_');
+  // Under the root, programs/ (TGLP modules.tex, "Scope construction": "A
+  // program lies at or below the root"): a program in the system's temporary
+  // directory, outside it, is refused since 2026-10-04.
+  final dir = Directory('../programs/tests').createTempSync('glp_sign_');
   final f = File('${dir.path}/probe.glp')..writeAsStringSync(source);
   engine.loadFile(f.path);
   return dir;
