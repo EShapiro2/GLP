@@ -3971,6 +3971,71 @@ check_not "X14 no WxW violation" "WxW violation" "$x14"
 check "X14 output term carries the value" "A = r(0)" "$x14"
 check "X14 output argument carries the value" "B = 0" "$x14"
 
+# --- X15: -expose reads a signature in the exposed module's own scope ---
+# TGLP modules.tex, "The -expose directive": -expose(M) "lifts the exported
+# procedures of module M (and the types their signatures carry) into that
+# directory's scope, as if defined in its self.glp"; "Procedure declarations":
+# "A declaration carries the transitive closure of the types its signature
+# references".  rates.glp's rate/2 names Level, from lib/self.glp, which is on
+# rates.glp's chain and not on the exposing self.glp's or on app/'s: until
+# 2026-10-04 the lift read the signature in the receiving scope and refused
+# "undefined type Level" --- the root's -expose(social#graph#routing#intro)
+# and social/graph/self.glp's AcceptorConsent (Integration, 2026-10-04 11:28
+# UTC).  app/self.glp also names Level in a declaration of its own.
+echo "--- X15: a signature type from the exposed module's own chain ---"
+x15=$("$REPL_RUN" <<HEREDOC
+$EXPOSE/own_scope/app
+run(N).
+rate_of(low, M).
+:quit
+HEREDOC
+2>&1)
+check "X15 fixture loaded" "Loaded program" "$x15"
+check_not "X15 Level resolves" "undefined type \"Level\"" "$x15"
+check "X15 exposed rate/2 runs" "N = 2" "$x15"
+check "X15 a declaration over the lifted Level runs" "M = 1" "$x15"
+
+# --- X16: a type no exported signature carries is not lifted ---
+# clock.glp's scale/2 carries Unit; Tick is clock.glp's own.  Until 2026-10-04
+# every type of the exposed module was lifted (programs/sglp/self.glp's
+# -expose(monitor) lifted monitor.glp's Queue and Clock), so neg/ loaded
+# (GLP #3 Cowork, 2026-10-04 09:06 UTC, "21:20").
+echo "--- X16: an unlifted type is not in the exposing scope ---"
+x16p=$("$REPL_RUN" <<HEREDOC
+$EXPOSE/unlifted/pos
+run(min, N).
+:quit
+HEREDOC
+2>&1)
+check "X16 pos loads" "Loaded program" "$x16p"
+check "X16 pos runs over the lifted Unit" "N = 60" "$x16p"
+x16n=$("$REPL_RUN" <<HEREDOC
+$EXPOSE/unlifted/neg
+:quit
+HEREDOC
+2>&1)
+check_not "X16 neg not loaded" "Loaded program" "$x16n"
+check "X16 neg refused naming Tick" "undefined type \"Tick\" in the declaration of run/1" "$x16n"
+
+# --- X17: a program-root self.glp names the type its -expose lifts ---
+# The lifted types are in the exposing directory's scope "as if defined in its
+# self.glp", so its own declarations name them.  Until 2026-10-04 the goal-
+# check environment merged the program-root self.glp without its lift and the
+# program was refused: undefined type "T" in the declaration of p/1 (GLP #3
+# Cowork, 2026-10-04 09:06 UTC, "00:34", FAULT 1).
+echo "--- X17: the exposing program-root self.glp names a lifted type ---"
+x17=$("$REPL_RUN" <<HEREDOC
+$EXPOSE/names_lifted
+p(a).
+p(c).
+:quit
+HEREDOC
+2>&1)
+check "X17 fixture loaded" "Loaded program" "$x17"
+check_not "X17 T resolves" "undefined type \"T\"" "$x17"
+check "X17 goal over T succeeds" "succeeds" "$x17"
+check "X17 goal outside T refused" "not well-typed" "$x17"
+
 echo ""
 
 # =============================================================================

@@ -1,0 +1,8 @@
+%% The program: calls the exposed rate/2 by name, and names Level, which the
+%% lift carries into the scope of the self.glp one directory up and so into
+%% this one (modules.tex, "The -expose directive").
+exported procedure run(Integer).
+run(N?) :- rate(high, N).
+
+exported procedure rate_of(Level?, Integer).
+rate_of(L, N?) :- rate(L?, N).

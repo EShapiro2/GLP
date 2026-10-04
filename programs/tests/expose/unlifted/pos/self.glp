@@ -1,0 +1,4 @@
+%% Names Unit, which scale/2's signature carries into the scope one directory
+%% up: loads.
+exported procedure run(Unit?, Integer).
+run(U, N?) :- scale(U?, N).

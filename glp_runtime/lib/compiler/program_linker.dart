@@ -65,6 +65,22 @@ class DiscoveredModule {
   /// language primitives alone ([rootModuleOf]).
   final bool isRoot;
 
+  /// What the `-expose` that names this module lifts into [exposingDir]'s
+  /// scope: its exported declarations, read in its own scope, and the types
+  /// their signatures carry ([ExposedLift]).  Set by [_resolveExposes] with
+  /// [exposingDir]; null for a module nothing exposes.
+  ExposedLift? lift;
+
+  /// The `self.glp` files on this module's chain that are not modules of the
+  /// program, outermost first, each as a module of its type definitions
+  /// alone: the scope of a module that only an `-expose` brings in
+  /// ([collectedByExpose]) runs from the root down to its own directory
+  /// (Definition "Root, Scope"), and those of its directories outside the
+  /// program are in it.  Their types are its types, and the linked program
+  /// carries those its declarations and types reference ([linkedFlatModule]);
+  /// their procedures are not linked.  Empty for every other module.
+  final List<DiscoveredModule> outerScope;
+
   DiscoveredModule({
     required this.filePath,
     required this.moduleName,
@@ -74,6 +90,8 @@ class DiscoveredModule {
     this.exposingDir,
     this.collectedByExpose = false,
     this.isRoot = false,
+    this.lift,
+    this.outerScope = const [],
   });
 }
 
@@ -372,13 +390,7 @@ TypeEnvironment _vglpScope(File file, List<DiscoveredModule> modules,
   final modDir = _normPath(file.parent.path);
   for (final e in modules.where((m) => m.exposingDir != null)) {
     if (!_dirUnder(modDir, e.exposingDir!)) continue;
-    final TypeEnvironment lifted;
-    try {
-      lifted = exposedExportScope(e.ast, scope);
-    } on UndefinedDeclarationTypeError catch (err) {
-      throw err.inFile(e.filePath);
-    }
-    scope = _mergeExposed(scope, lifted, label: e.moduleName);
+    scope = _mergeExposed(scope, e.lift!.scope, label: e.moduleName);
   }
   return scope;
 }
@@ -527,9 +539,12 @@ bool _dirUnder(String childDir, String ancestorDir) =>
 /// `<exposing self.glp dir>/a/b/c.glp`. That file is parsed, added as a linkable
 /// module tagged with the exposing directory, and its `-expose` directives are
 /// followed transitively. Two modules exposed at one level that share an
-/// exported name/arity is a compile-time error. Finally, each exposed module's
-/// EXPORTED declarations and the types it defines are merged into the
-/// ancestorScope of every module in the exposing directory's subtree.
+/// exported name/arity is a compile-time error.  Each exposed module's lift ---
+/// its exported declarations read in its own scope, and the types their
+/// signatures carry ([ExposedLift]) --- is taken once, with the lifts of its
+/// exposer's other directives ([exposedLifts]), over the exposer's ancestor
+/// scope, and merged into the ancestorScope of every module in the exposing
+/// directory's subtree.
 void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
     String? rootSelfGlpPath, String nameRoot, TypeEnvironment? rs) {
   final pending = <DiscoveredModule>[
@@ -538,24 +553,48 @@ void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
   final collectedFiles = <String>{};
   // exposingDir(norm) -> exported sig -> exposed module name (collision check)
   final perDirSig = <String, Map<String, String>>{};
-  // exposingDir(norm) -> the type definitions of the modules exposing there.
-  // An exposed declaration is read "as if defined in its self.glp"
-  // (modules.tex, "The -expose directive"), so its type names resolve in the
-  // EXPOSING module's scope, which by Definition (Root, Scope) carries that
-  // module's own definitions. The lift below checks the exposed declarations
-  // against the scope of the module receiving them, and a self.glp's own
-  // ancestor scope excludes itself, so without this a type the exposing
-  // self.glp defines is undefined at the very declaration that names it.
-  final perDirExposerTypeDefs = <String, List<TypeDef>>{};
+  // Each exposed module, by its file, with the exposer whose directive set
+  // its exposing directory: the lift is that directive's.
+  final exposerOf = <DiscoveredModule, DiscoveredModule>{};
+  // The self.glp files on the chains of the modules only an -expose brings
+  // in that no module of the program holds, by file ([outerScopeOf]).
+  final outer = <String, DiscoveredModule>{};
+
+  // The self.glp files on the chain of the file at [path] that no module of
+  // the program holds, outermost first, each a module of its type
+  // definitions alone ([DiscoveredModule.outerScope]).
+  List<DiscoveredModule> outerScopeOf(String path) {
+    final scope = <DiscoveredModule>[];
+    for (final self in discoverSelfChain(
+        targetFile: File(path).absolute.path,
+        rootDir: File(path).parent.path,
+        programsDir: programsDir)) {
+      final norm = _normPath(self);
+      if (modules.any((m) => _normPath(m.filePath) == norm)) continue;
+      final above = [...scope];
+      scope.add(outer.putIfAbsent(norm, () {
+        final full = Parser(Lexer(File(self).readAsStringSync()).tokenize())
+            .parseModule();
+        return DiscoveredModule(
+          filePath: self,
+          moduleName: modulePathName(self, nameRoot),
+          ast: Module(
+              typeDefs: full.typeDefs, line: full.line, column: full.column),
+          ancestorScope: TypeEnvironment.empty(),
+          isSelfGlp: true,
+          collectedByExpose: true,
+          outerScope: above,
+        );
+      }));
+    }
+    return scope;
+  }
 
   while (pending.isNotEmpty) {
     final exposer = pending.removeLast();
     final exposerDir = File(exposer.filePath).parent.path;
     final exposingDirNorm = _normPath(exposerDir);
     final sigMap = perDirSig.putIfAbsent(exposingDirNorm, () => {});
-    perDirExposerTypeDefs
-        .putIfAbsent(exposingDirNorm, () => <TypeDef>[])
-        .addAll(exposer.ast.typeDefs);
 
     for (final path in exposer.ast.exposes) {
       final rel = path.split('#').join(Platform.pathSeparator);
@@ -596,7 +635,10 @@ void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
       final held = modules.where(
           (m) => _normPath(m.filePath) == _normPath(file.path));
       if (held.isNotEmpty) {
-        held.first.exposingDir ??= exposingDirNorm;
+        if (held.first.exposingDir == null) {
+          held.first.exposingDir = exposingDirNorm;
+          exposerOf[held.first] = exposer;
+        }
         continue;
       }
 
@@ -614,14 +656,38 @@ void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
         isSelfGlp: false,
         exposingDir: exposingDirNorm,
         collectedByExpose: true,
+        outerScope: outerScopeOf(file.path),
       );
+      exposerOf[exposedDM] = exposer;
       modules.add(exposedDM);
       if (exposedAst.exposes.isNotEmpty) pending.add(exposedDM);
     }
   }
 
-  // Type-env lift: merge exposed EXPORTED declarations/types into the scope of
-  // every module in the exposing subtree.
+  // The lifts, an exposer's together, over its ancestor scope, which no lift
+  // has been merged into yet: what -expose lifts is the exposed module's and
+  // is read in its own scope, the same for every module receiving it.
+  final byExposer = <DiscoveredModule, List<DiscoveredModule>>{};
+  for (final e in exposerOf.entries) {
+    byExposer.putIfAbsent(e.value, () => []).add(e.key);
+  }
+  for (final e in byExposer.entries) {
+    final exposer = e.key;
+    final lifts = exposedLifts(exposer.ast, exposer.filePath,
+        exposer.ancestorScope,
+        root: nameRoot);
+    final exposerDir = File(exposer.filePath).parent.path;
+    for (var i = 0; i < exposer.ast.exposes.length; i++) {
+      final rel = exposer.ast.exposes[i].split('#').join(Platform.pathSeparator);
+      final norm = _normPath('$exposerDir${Platform.pathSeparator}$rel.glp');
+      for (final m in e.value) {
+        if (m.lift == null && _normPath(m.filePath) == norm) m.lift = lifts[i];
+      }
+    }
+  }
+
+  // Type-env lift: merge each exposed module's lift into the scope of every
+  // module in the exposing subtree.
   final exposed = modules.where((m) => m.exposingDir != null).toList();
   if (exposed.isEmpty) return;
   for (final m in modules) {
@@ -633,20 +699,13 @@ void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
     final modDir = _normPath(File(m.filePath).parent.path);
     for (final e in exposed) {
       if (!_dirUnder(modDir, e.exposingDir!)) continue;
-      final TypeEnvironment lifted;
-      try {
-        lifted = exposedExportScope(e.ast, m.ancestorScope,
-            exposerTypeDefs: perDirExposerTypeDefs[e.exposingDir!] ?? const []);
-      } on UndefinedDeclarationTypeError catch (err) {
-        throw err.inFile(e.filePath);
-      }
       m.ancestorScope =
-          _mergeExposed(m.ancestorScope, lifted, label: e.moduleName);
+          _mergeExposed(m.ancestorScope, e.lift!.scope, label: e.moduleName);
     }
   }
 }
 
-/// Merge an exposed module's [exposed] scope into [base] WITHOUT overriding any
+/// Merge an exposed module's lift [exposed] into [base] WITHOUT overriding any
 /// name already present nearer the use site.  Innermost-first shadowing (spec
 /// §3.2/§3.3: "a definition nearer the use site shadows an exposed one"):
 /// exposed names only fill gaps.  A name defined nearer — whether as an ordinary
@@ -655,12 +714,14 @@ void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
 /// entirely and never drives call-site instantiation (Case B).  This is the
 /// behaviour the platform routers rely on before the per-platform copies are
 /// removed: the local monomorphic router shadows the exposed parameterised one.
+/// The lift's types and templates fill gaps the same way.
 ///
-/// An exposed declaration's types are the exposing module's own: a type [base]
-/// also defines survives from [exposed] under `<label>:T`, the exposed
-/// declarations rewritten to it (TypeEnvironment.shadowedBy) --- as the linked
-/// program resolves an exposed declaration's types in the exposing module's
-/// scope ([renameDeclTypes] over the declaring file's [typeOwnersByModule]).
+/// An exposed declaration's types are those of the scope it was declared in,
+/// the exposed module's own ([ExposedLift]): a type [base] also defines
+/// survives from [exposed] under `<origin>:T`, the exposed declarations
+/// rewritten to it (TypeEnvironment.shadowedBy) --- as the linked program
+/// resolves an exposed declaration's types in the exposed module's scope
+/// ([renameDeclTypes] over the declaring file's [typeOwnersByModule]).
 TypeEnvironment _mergeExposed(TypeEnvironment base, TypeEnvironment exposed,
     {String? label}) {
   bool definedNearer(String key) =>
@@ -681,7 +742,7 @@ TypeEnvironment _mergeExposed(TypeEnvironment base, TypeEnvironment exposed,
   }
   return TypeEnvironment(types, procedures,
       paramProcDecls: paramProcDecls,
-      typeTemplates: {...base.typeTemplates, ...ex.typeTemplates},
+      typeTemplates: {...ex.typeTemplates, ...base.typeTemplates},
       typeOrigins: {...ex.originsUnder(label), ...base.typeOrigins},
       scopeLayers: base.scopeLayers);
 }
@@ -1012,6 +1073,51 @@ Module linkedFlatModule(List<DiscoveredModule> modules, LinkResult linked,
   final procDecls = [
     ...(allDeclarations ? linked.scopeDeclarations : linked.checkedDeclarations)
   ];
+
+  // A module only an -expose brings in is checked in its own scope, which
+  // runs through the self.glp files of its chain that are not modules of the
+  // program ([DiscoveredModule.outerScope]), and what it lifts carries their
+  // types to the modules receiving it ([ExposedLift]): the linked program
+  // carries, renamed, each of their definitions its declarations and types
+  // reference, and each those reference in turn, and no other.
+  final outerDefs = <String, TypeDef>{};
+  for (final o in _outerModules(modules)) {
+    for (final td in _renamedTypeDefs(o, owners[o.filePath]!)) {
+      outerDefs.putIfAbsent('${td.name}/${td.typeParams.length}', () => td);
+    }
+  }
+  if (outerDefs.isNotEmpty) {
+    final pending = <String>[];
+    void refs(TypeExpr t) {
+      if (t is TypeRef) {
+        pending.add('${t.name}/${t.typeArgs.length}');
+        t.typeArgs.forEach(refs);
+      } else if (t is StructAlt) {
+        t.args.forEach(refs);
+      } else if (t is ListConsAlt) {
+        refs(t.head);
+        refs(t.tail);
+      } else if (t is DiffListAlt) {
+        refs(t.content);
+        refs(t.hole);
+      }
+    }
+
+    for (final td in typeDefs.values) {
+      td.alternatives.forEach(refs);
+    }
+    for (final d in procDecls) {
+      d.argTypes.forEach(refs);
+    }
+    while (pending.isNotEmpty) {
+      final key = pending.removeLast();
+      if (typeDefs.containsKey(key)) continue;
+      final td = outerDefs[key];
+      if (td == null) continue;
+      typeDefs[key] = td;
+      td.alternatives.forEach(refs);
+    }
+  }
 
   return Module(
     typeDefs: typeDefs.values.toList(),
@@ -1881,22 +1987,64 @@ Map<String, String> _visibleTypeOwners(
   // see its types: loading programs/tests/agent_roundtrip/self.glp left
   // typed_social_agent:inject_msg/5's Response unrenamed and undefined in the
   // flat module, and the type-identity tables were not built.
-  for (final s in _ancestorSelfGlps(mod, modules)) {
+  //
+  // A module only an -expose brings in has, besides, the self.glp files of
+  // its chain that are not modules of the program ([DiscoveredModule.outerScope]),
+  // taken in their places on the chain.
+  final ancestors = _ancestorSelfGlps(mod, modules);
+  for (final s in mod.outerScope.isEmpty
+      ? ancestors
+      : _innermostFirst([...ancestors, ...mod.outerScope])) {
     for (final td in s.ast.typeDefs) {
       owners.putIfAbsent(td.name, () => s.moduleName);
     }
   }
 
+  // What an exposer above lifts: the types the exposed signatures carry
+  // ([ExposedLift]), each owned by the module that defines it --- in the
+  // exposed module's own scope, which may be a self.glp the program does not
+  // hold --- and no other type of the exposed module.  Until 2026-10-04 every
+  // type the exposed module defined was visible here, and owned by it.
   final modDirNorm = _normPath(File(mod.filePath).parent.path);
   for (final em in modules) {
     if (em.exposingDir == null || identical(em, mod)) continue;
     if (!_dirUnder(modDirNorm, em.exposingDir!)) continue;
-    for (final td in em.ast.typeDefs) {
-      owners.putIfAbsent(td.name, () => em.moduleName);
+    final lift = em.lift;
+    if (lift == null) continue;
+    for (final t in lift.scope.types.keys) {
+      if (t.contains(':') || t.contains('<')) continue;
+      owners.putIfAbsent(t, () => lift.scope.typeOrigins[t] ?? em.moduleName);
+    }
+    for (final t in lift.scope.typeTemplates.keys) {
+      owners.putIfAbsent(t, () => lift.templateOrigins[t] ?? em.moduleName);
     }
   }
 
   return owners;
+}
+
+/// [selfGlps] inner-most first, the root self.glp last ([_ancestorSelfGlps]'s
+/// order).
+List<DiscoveredModule> _innermostFirst(List<DiscoveredModule> selfGlps) {
+  int depth(DiscoveredModule s) =>
+      ppath.split(_normPath(File(s.filePath).parent.path)).length;
+  final roots = selfGlps.where((s) => s.isRoot).toList();
+  final rest = selfGlps.where((s) => !s.isRoot).toList()
+    ..sort((a, b) => depth(b).compareTo(depth(a)));
+  return [...rest, ...roots];
+}
+
+/// The modules of the `self.glp` files that are on the chain of a module of
+/// [modules] and are not modules of the program, each once
+/// ([DiscoveredModule.outerScope]).
+List<DiscoveredModule> _outerModules(List<DiscoveredModule> modules) {
+  final byFile = <String, DiscoveredModule>{};
+  for (final m in modules) {
+    for (final o in m.outerScope) {
+      byFile.putIfAbsent(_normPath(o.filePath), () => o);
+    }
+  }
+  return byFile.values.toList();
 }
 
 /// The `self.glp` modules of [modules] whose directory is [mod]'s or above it
@@ -1941,12 +2089,14 @@ List<DiscoveredModule> _ancestorSelfGlps(
 /// Whether the file at [path] is a `self.glp`.
 bool isSelfGlpFile(String path) => ppath.basename(path) == 'self.glp';
 
-/// [_visibleTypeOwners] for every module of the program, keyed by file path —
-/// the one key that is unique whatever two files are named.
+/// [_visibleTypeOwners] for every module of the program, and for every
+/// `self.glp` on the chain of one that is not a module of it
+/// ([DiscoveredModule.outerScope]), keyed by file path — the one key that is
+/// unique whatever two files are named.
 Map<String, Map<String, String>> typeOwnersByModule(
     List<DiscoveredModule> modules) {
   final byFile = <String, Map<String, String>>{};
-  for (final mod in modules) {
+  for (final mod in [...modules, ..._outerModules(modules)]) {
     byFile[mod.filePath] = _visibleTypeOwners(mod, modules);
   }
   return byFile;

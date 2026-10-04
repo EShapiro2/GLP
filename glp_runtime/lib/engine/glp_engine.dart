@@ -578,7 +578,8 @@ class GlpEngine {
 
     // Make this module's declarations available to the REPL goal checker,
     // and its clauses to the reading of a goal's calls.
-    _extendGoalCheckEnv(module, label: moduleInfo.name);
+    _extendGoalCheckEnv(module,
+        label: moduleInfo.name, path: isRealFile ? name : null);
     _addGoalClauses(checkedProcedures);
 
     return true;
@@ -839,7 +840,7 @@ class GlpEngine {
       final descendant =
           _normDir(File(m.filePath).parent.path) != _normDir(programRoot);
       _extendGoalCheckEnv(m.ast,
-          typesFillGapsOnly: descendant, label: m.moduleName);
+          typesFillGapsOnly: descendant, label: m.moduleName, path: m.filePath);
       _addGoalClauses(
           PartialEvaluator()
               .transformDefinedGuards(
@@ -1414,9 +1415,22 @@ class GlpEngine {
 
   /// Extend the goal-check environment with a loaded module's declarations, so
   /// goals referencing its procedures can be type-checked.
+  ///
+  /// A module with `-expose` directives, the file at [path], is merged over the
+  /// types they lift ([liftExposedTypes]), as every `self.glp` of a chain is
+  /// ([mergeSelfGlpFileIntoScope]): they are in that directory's scope "as if
+  /// defined in its self.glp" (TGLP modules.tex, "The -expose directive"), and
+  /// its own declarations may name them.  Until 2026-10-04 they were not, and a
+  /// program-root self.glp declaring a procedure over a type its -expose lifts
+  /// was refused here after the linked program had checked
+  /// (programs/tests/expose/names_lifted; GLP #3 Cowork, 2026-10-04, FAULT 1).
   void _extendGoalCheckEnv(Module module,
-      {bool typesFillGapsOnly = false, String? label}) {
-    _goalCheckEnv = mergeModuleIntoScope(_ensureGoalCheckBaseEnv(), module,
+      {bool typesFillGapsOnly = false, String? label, String? path}) {
+    var env = _ensureGoalCheckBaseEnv();
+    if (path != null && module.exposes.isNotEmpty) {
+      env = liftExposedTypes(env, module, path, root: _rootDir);
+    }
+    _goalCheckEnv = mergeModuleIntoScope(env, module,
         typesFillGapsOnly: typesFillGapsOnly, label: label);
   }
 

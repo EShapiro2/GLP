@@ -1,0 +1,10 @@
+%% The exposed module: scale/2's signature carries Unit; Tick is its own.
+Unit ::= sec ; min.
+Tick ::= tick(Integer).
+
+exported procedure scale(Unit?, Integer).
+scale(sec, 1).
+scale(min, 60).
+
+procedure ticks(Tick?, Integer).
+ticks(tick(N), N?).

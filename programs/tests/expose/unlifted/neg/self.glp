@@ -1,0 +1,5 @@
+%% Names Tick, which no exported signature of lib/clock.glp carries, so it is
+%% not lifted and is undefined here: refused at the declaration.  Negative
+%% fixture.
+exported procedure run(Tick?).
+run(_).
