@@ -297,6 +297,13 @@ void main() {
     });
   });
 
+  // The sources below are application modules: they call the root self.glp's
+  // seam predicates and, to show what came back, its send_to_user/1.  A
+  // source with no file behind it is a module at the root, and -mode(system)
+  // is admitted only for the root self.glp and programs/system/ (TGLP
+  // appendix-root-self.tex, app:system-mode; GLP's round six, item 4), so
+  // none declares it: until 2026-10-04 each did, Rule A skipping a source
+  // with no file, and two called '_output' directly.
   group('seam kernels through their GLP wrappers', () {
     test("peer_address binds the layer's observed address", () async {
       final out = <String>[];
@@ -305,9 +312,8 @@ void main() {
       network.addresses[peer] = '203.0.113.7:41234';
       final engine = _engine(out, network);
       engine.loadSource('''
--mode(system).
 procedure emit(_?).
-emit(A) :- ground(A?) | '_output'(A?).
+emit(A) :- ground(A?) | send_to_user([A?]).
 procedure go.
 go :- peer_address('$peer', A), emit(A?).
 ''');
@@ -322,7 +328,6 @@ go :- peer_address('$peer', A), emit(A?).
       final network = _SeamNetwork();
       final engine = _engine(out, network);
       engine.loadSource('''
--mode(system).
 procedure go.
 go :- punch_udp('203.0.113.7:41234').
 ''');
@@ -336,9 +341,8 @@ go :- punch_udp('203.0.113.7:41234').
       final network = _SeamNetwork()..onDeclare = PlaceEvent.entered;
       final engine = _engine(out, network);
       engine.loadSource('''
--mode(system).
 procedure watch(_?).
-watch([E|_]) :- ground(E?) | '_output'(E?).
+watch([E|_]) :- ground(E?) | send_to_user([E?]).
 procedure go.
 go :- place_declare(home, 100, E), watch(E?).
 ''');
@@ -353,7 +357,6 @@ go :- place_declare(home, 100, E), watch(E?).
       final network = _SeamNetwork();
       final engine = _engine(out, network);
       engine.loadSource('''
--mode(system).
 procedure go.
 go :- place_declare(home, 100, _), place_remove(home).
 ''');
@@ -367,7 +370,6 @@ go :- place_declare(home, 100, _), place_remove(home).
       final network = _SeamNetwork();
       final engine = _engine(out, network);
       engine.loadSource('''
--mode(system).
 procedure go.
 go :- trust_declare(ble, open), trust_declare(lan, closed).
 ''');
@@ -386,7 +388,6 @@ go :- trust_declare(ble, open), trust_declare(lan, closed).
       final network = _SeamNetwork();
       final engine = _engine(out, network);
       engine.loadSource('''
--mode(system).
 procedure go.
 go :- trust_declare(wifi, open).
 ''');

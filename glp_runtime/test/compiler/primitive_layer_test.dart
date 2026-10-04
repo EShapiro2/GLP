@@ -61,9 +61,17 @@ void main() {
       // "global_send Predicate") --- so the test writes one there for its own
       // length.
       final systemDir = Directory('../programs/system');
-      final made = !systemDir.existsSync();
-      if (made) systemDir.createSync();
-      final dir = systemDir.createTempSync('pl_');
+      // Made again where the other test removed it between the two calls.
+      late final Directory dir;
+      for (var attempt = 0;; attempt++) {
+        try {
+          systemDir.createSync(recursive: true);
+          dir = systemDir.createTempSync('pl_');
+          break;
+        } on FileSystemException {
+          if (attempt >= 3) rethrow;
+        }
+      }
       try {
         final f = File('${dir.path}${Platform.pathSeparator}stamp.glp')
           ..writeAsStringSync('-mode(system).\n'
@@ -72,7 +80,14 @@ void main() {
         expect(engine.loadFile(f.path), isTrue);
       } finally {
         dir.deleteSync(recursive: true);
-        if (made) systemDir.deleteSync();
+        // output_kernel_test writes its system module there too, and may at
+        // the same time: the directory, which git does not hold, goes once
+        // empty, whichever test leaves it so.
+        try {
+          if (systemDir.listSync().isEmpty) systemDir.deleteSync();
+        } on FileSystemException {
+          // not empty, or removed already: the other test removes it
+        }
       }
     });
   });

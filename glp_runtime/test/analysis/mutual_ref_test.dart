@@ -165,9 +165,11 @@ twice(R) :- take(R?), take(R?).
       // A guard atom that tests a head occurrence narrows it to the meet, and
       // the occurrence has that type in the body (TGLP typed-glp.tex, "Type
       // checking of guards"); the meet of `_?` and `MutualRef?` is `MutualRef?`.
-      // This is the shape of p99/self.glp's mm_start/2 and mm_subs/4.
+      // This is the shape of p99/self.glp's mm_start/2 and mm_subs/4.  The
+      // source names no kernel and declares no -mode(system): a source with
+      // no file behind it may not (GLP's round six, item 4), and it did until
+      // 2026-10-04 for nothing it called.
       expect(refusal('''
--mode(system).
 procedure take(_?).
 take(_).
 procedure twice(_?).
@@ -187,7 +189,6 @@ twice(R) :- is_mutual_ref(R?) | take(R?), take(R?).
       // the guards (GLP-Spec glp.tex, Definition "GLP Program"; GLP #3 Cowork,
       // 2026-10-02 08:40 UTC, G).
       expect(refusal('''
--mode(system).
 procedure sink_w(_).
 sink_w(X?) :- X = done.
 procedure two(MutualRef?).
@@ -201,7 +202,6 @@ two(R) :- ground(R?) | sink_w(R).
 '''), contains('Writer variable "R" occurs 2 times; a writer occurs once, whatever the guards'));
       // Twice in the head, under either guard: refused.
       expect(refusal('''
--mode(system).
 procedure two(MutualRef?, MutualRef?).
 two(R, R) :- is_mutual_ref(R?) | true.
 '''), contains('Writer variable "R" occurs 2 times in the head'));
