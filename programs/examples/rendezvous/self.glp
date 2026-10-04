@@ -11,11 +11,11 @@
 
 SignalReply ::= punch(Constant) ; initiated ; rejected.
 
-SignalMsg ::= reconnect(Constant, Constant, Constant, Constant, SignalReply?)
-            ; available(Constant, Constant, SignalReply?).
+SignalMsg ::= reconnect(Key, Key, SignedTerm, SignalReply?)
+            ; available(Key, Key, SignalReply?).
 
-PendingEntry ::= needs(Constant, Constant, Constant, SignalReply?)
-               ; ready(Constant, Constant, SignalReply?).
+PendingEntry ::= needs(Key, Key, Constant, SignalReply?)
+               ; ready(Key, Key, SignalReply?).
 PendingList ::= [] ; [PendingEntry | PendingList].
 
 %% Friend-mediated rendezvous (fmrv) — a friend already reachable over BLE
@@ -105,6 +105,20 @@ exported procedure test12_rejected_does_not_block_stream(SignalReply, SignalRepl
                                                          SignalReply).
 test12_rejected_does_not_block_stream(R1?, R2?, RB?) :-
     rv_agent_test # test12_rejected_does_not_block_stream(R1, R2, RB).
+
+imported procedure rv_agent_test#test13_dispatch_refuses(SignalReply,
+                                                         SignalReply,
+                                                         SignalReply,
+                                                         SignalReply).
+exported procedure test13_dispatch_refuses(SignalReply, SignalReply,
+                                           SignalReply, SignalReply).
+test13_dispatch_refuses(R1?, R2?, R3?, R4?) :-
+    rv_agent_test # test13_dispatch_refuses(R1, R2, R3, R4).
+
+imported procedure rv_agent_test#test14_other_program_rejected(SignalReply).
+exported procedure test14_other_program_rejected(SignalReply).
+test14_other_program_rejected(R?) :-
+    rv_agent_test # test14_other_program_rejected(R).
 
 %% =============================================================================
 %% ENTRY POINTS — rv_client_test

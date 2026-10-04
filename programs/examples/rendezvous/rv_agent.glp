@@ -4,42 +4,47 @@
 %% that lost connectivity due to IP address changes.
 %%
 %% - Accepts cold-calls from any agent (no friends list, no social graph)
-%% - Verifies the reconnection attestation cryptographically, in a guard
+%% - Verifies the reconnection attestation with the language's signature/2
 %% - Learns A's current public address via peer_address (reading the
 %%   source address of the incoming cold-call packet)
 %% - Relays addresses to coordinate hole-punching
 %%
 %% Protocol:
 %%   1. A detects IP change, cold-calls:
-%%      reconnect(A_pk, B_pk, Signer, Sig, Reply)
+%%      reconnect(A_pk, B_pk, Sig, Reply)
 %%   2. B detects A went silent, cold-calls: available(B_pk, A_pk, Reply)
 %%   3. The RV agent reads A's source address from the networking layer
 %%      via peer_address(A?, AddrA), matches the requests, and tells B
 %%      to punch to AddrA via Reply
 %%
-%% Capability verification (paper §Rendezvous Server, §System Predicates):
-%%   the reconnection attestation is a signed binding of two public keys,
-%%   and the specification states its verification as Secure GLP's guard
-%%   verify(attest(PkA, PkB), Sig, Signer) under the social-graph module.
-%%   verify/3 is not in the runtime yet — it is Secure GLP's to land — so
-%%   this agent uses the guard that is, valid_attestation/4, which performs
-%%   the same Ed25519 verification over the canonical serialization of
-%%   attest(PkA, PkB) and differs only in taking the four arguments flat:
+%% Capability verification (GNA, Section "Rendezvous Server", items
+%% "Capability verification" and "Reconnection"; Section "System
+%% Predicates", paragraph "Signatures"):
+%%   on befriending, each friend signs attest(PkA, PkB) and gives the
+%%   signature to the other.  A reconnection request from A for B carries
+%%   B's signature over attest(A, B), and names no separate signer.  The
+%%   agent takes the signature apart with signature/2, which assigns
+%%   signed(Key, Hash, Term) --- the signer's key, the source identity of
+%%   the signing program and the term signed --- where it verifies, and
+%%   unsigned where it does not; admit_reconnect/7 dispatches on that:
 %%
-%%       valid_attestation(Signer?, PkA?, PkB?, Sig?)
+%%       signed(B, Graph, attest(A, B))   admits
 %%
-%%   When verify/3 lands, this guard becomes
-%%   verify(attest(A?, B?), Sig?, Signer?) and nothing else here changes.
+%%   the signer being the friend the request names and Graph the social
+%%   graph's source identity.  Anything else --- unsigned, another signer,
+%%   another term, or a Hash other than Graph --- is refused with rejected.
+%%   Graph is a Hash the agent is given at boot, the first argument of
+%%   rv_agent/3; it is never read from the attestation.
 %%
-%%   The guard is three-valued and never aborts: a malformed key or
-%%   signature, and equally the absence of a madGLP network on the context,
-%%   are guard FAILURE, so the otherwise clause rejects the request.  Under
-%%   the plain REPL there is no network, so every reconnect is rejected —
-%%   which is why the tests exercise the reject path alone.
+%%   Under the plain REPL the tests present no attestation signed under the
+%%   social graph, so they exercise the reject path alone.
 %%
-%% System predicates assumed:
-%%   peer_address(Pk?, Addr) — body predicate, reads the observed
-%%     source address for peer Pk from the networking layer.
+%% System predicates:
+%%   signature(Signed?, Signature) — root self.glp (GLP-Spec catalogue):
+%%     signed(Key, Hash, Term) or unsigned.
+%%   peer_address(Pk?, Addr) — body predicate, reads the observed source
+%%     address for peer Pk from the networking layer; the stub at the end
+%%     of this file stands in for it.
 
 
 %% =============================================================================
@@ -50,15 +55,16 @@
 SignalReply ::= punch(Constant) ; initiated ; rejected.
 
 %% Messages arriving via cold-call on the agent's input stream
-SignalMsg ::= reconnect(Constant, Constant, Constant, Constant, SignalReply?)
-              %% reconnect(A_pk, B_pk, Signer, Sig, Reply)
-            ; available(Constant, Constant, SignalReply?).
+SignalMsg ::= reconnect(Key, Key, SignedTerm, SignalReply?)
+              %% reconnect(A_pk, B_pk, Sig, Reply) — Sig is B's signature
+              %% over attest(A_pk, B_pk)
+            ; available(Key, Key, SignalReply?).
               %% available(B_pk, A_pk, Reply)
 
 %% Pending entries awaiting a match
-PendingEntry ::= needs(Constant, Constant, Constant, SignalReply?)
+PendingEntry ::= needs(Key, Key, Constant, SignalReply?)
                  %% needs(A_pk, B_pk, AddrA, ReplyA?) — A wants to reconnect to B
-               ; ready(Constant, Constant, SignalReply?).
+               ; ready(Key, Key, SignalReply?).
                  %% ready(B_pk, A_pk, ReplyB?) — B is available for A
 PendingList ::= [] ; [PendingEntry | PendingList].
 
@@ -66,39 +72,55 @@ PendingList ::= [] ; [PendingEntry | PendingList].
 %% MAIN LOOP
 %% =============================================================================
 
-exported procedure rv_agent(Stream(SignalMsg)?, PendingList?).
+exported procedure rv_agent(Hash?, Stream(SignalMsg)?, PendingList?).
 
-%% A requests reconnection to B, presenting the attestation Sig, which
-%% Signer made over attest(A, B).  The guard verifies it; only then does
-%% the RV agent read A's source address from the networking layer via
-%% peer_address (so A does not need to self-report its address) and look
-%% for a waiting B.  The guard grounds all four of its inputs.
-rv_agent([reconnect(A, B, Signer, Sig, ReplyA?)|In], Pending) :-
-    valid_attestation(Signer?, A?, B?, Sig?) |
-    peer_address(A?, AddrA),
-    find_ready(A?, B?, AddrA?, ReplyA, Pending?, Pending1),
-    rv_agent(In?, Pending1?).
-
-%% The attestation did not verify: the reply is bound to `rejected` and
-%% the request is not added to the pending list.  What the binding
-%% authorizes is this agent's logic; that it is a genuine signature is
-%% the guard's.
-rv_agent([reconnect(_, _, _, _, rejected)|In], Pending) :-
-    otherwise |
-    rv_agent(In?, Pending?).
+%% A requests reconnection to B, presenting Sig, B's signature over
+%% attest(A, B).  signature/2 takes it apart and admit_reconnect/7
+%% dispatches on what it reports, against the social graph's source
+%% identity Graph.  The guard grounds Graph, which is read twice.
+rv_agent(Graph, [reconnect(A, B, Sig, ReplyA?)|In], Pending) :-
+    ground(Graph?) |
+    signature(Sig?, S),
+    admit_reconnect(Graph?, A?, B?, S?, ReplyA, Pending?, Pending1),
+    rv_agent(Graph?, In?, Pending1?).
 
 %% B is available for reconnection from A
-rv_agent([available(B, A, ReplyB?)|In], Pending) :-
+rv_agent(Graph, [available(B, A, ReplyB?)|In], Pending) :-
     find_needs(A?, B?, ReplyB, Pending?, Pending1),
-    rv_agent(In?, Pending1?).
+    rv_agent(Graph?, In?, Pending1?).
 
-rv_agent([], _).
+rv_agent(_, [], _).
+
+%% =============================================================================
+%% admit_reconnect: dispatch on what signature/2 reports
+%% =============================================================================
+
+exported procedure admit_reconnect(Hash?, Key?, Key?, Signature?, SignalReply,
+                                   PendingList?, PendingList).
+
+%% B signed attest(A, B) under the social graph: admitted.  Only then does
+%% the RV agent read A's source address from the networking layer via
+%% peer_address (so A does not need to self-report its address) and look
+%% for a waiting B.  The guard grounds A and B.
+admit_reconnect(Graph, A, B, signed(K, H, attest(A1, B1)), ReplyA?,
+                Pending, Pending1?) :-
+    K? =?= B?, H? =?= Graph?, A1? =?= A?, B1? =?= B? |
+    peer_address(A?, AddrA),
+    find_ready(A?, B?, AddrA?, ReplyA, Pending?, Pending1).
+
+%% unsigned, another signer, another term, or another program's signature:
+%% the reply is bound to `rejected` and the request is not added to the
+%% pending list.  That the signature verifies, and who made it under which
+%% program, is signature/2's; what the binding authorizes is this agent's
+%% logic.
+admit_reconnect(_, _, _, _, rejected, Pending, Pending?) :-
+    otherwise | true.
 
 %% =============================================================================
 %% find_ready: A arrived, search pending for a matching ready(B, A, ReplyB)
 %% =============================================================================
 
-exported procedure find_ready(Constant?, Constant?, Constant?, SignalReply,
+exported procedure find_ready(Key?, Key?, Constant?, SignalReply,
                               PendingList?, PendingList).
 
 %% Match found: B was waiting — assign replies
@@ -118,7 +140,7 @@ find_ready(A, B, AddrA, ReplyA?, [], [needs(A?, B?, AddrA?, ReplyA)]).
 %% find_needs: B arrived, search pending for a matching needs(A, B, AddrA, ReplyA)
 %% =============================================================================
 
-exported procedure find_needs(Constant?, Constant?, SignalReply,
+exported procedure find_needs(Key?, Key?, SignalReply,
                               PendingList?, PendingList).
 
 %% Match found: A was waiting — assign replies

@@ -5,20 +5,23 @@
 %% Local type redeclarations (structural identity allows sharing across modules)
 SignalReply ::= punch(Constant) ; initiated ; rejected.
 
-PendingEntry ::= needs(Constant, Constant, Constant, SignalReply?)
-               ; ready(Constant, Constant, SignalReply?).
+PendingEntry ::= needs(Key, Key, Constant, SignalReply?)
+               ; ready(Key, Key, SignalReply?).
 PendingList ::= [] ; [PendingEntry | PendingList].
 
-SignalMsg ::= reconnect(Constant, Constant, Constant, Constant, SignalReply?)
-            ; available(Constant, Constant, SignalReply?).
+SignalMsg ::= reconnect(Key, Key, SignedTerm, SignalReply?)
+            ; available(Key, Key, SignalReply?).
 
-imported procedure rv_agent#find_ready(Constant?, Constant?, Constant?,
+imported procedure rv_agent#find_ready(Key?, Key?, Constant?,
                                         SignalReply,
                                         PendingList?, PendingList).
-imported procedure rv_agent#find_needs(Constant?, Constant?, SignalReply,
+imported procedure rv_agent#find_needs(Key?, Key?, SignalReply,
                                         PendingList?, PendingList).
-imported procedure rv_agent#rv_agent(Stream(SignalMsg)?,
+imported procedure rv_agent#rv_agent(Hash?, Stream(SignalMsg)?,
                                       PendingList?).
+imported procedure rv_agent#admit_reconnect(Hash?, Key?, Key?, Signature?,
+                                             SignalReply,
+                                             PendingList?, PendingList).
 
 %% =============================================================================
 %% Test 1: A arrives first, no B waiting → entry stored in pending
@@ -90,16 +93,16 @@ test6_find_ready_skip_then_match(ReplyA?, ReplyB?, Pending1?) :-
 %% Test 7: Run rv_agent on a single reconnect message
 %% =============================================================================
 %%
-%% Every reconnect below is rejected, and not because its attestation is
-%% forged: valid_attestation/4 fails outright when there is no madGLP network
-%% on the context, which is every REPL run.  The accept path is unreachable
-%% here by construction, so these tests exercise the reject path and the
-%% pending list around it.
+%% Every reconnect below is rejected: its Sig is no signed term, so
+%% signature/2 assigns unsigned and admit_reconnect/7 refuses it.  No test
+%% under the plain REPL presents B's signature over attest(A, B) made under
+%% the social graph (graph_hash stands for its source identity), so these
+%% tests exercise the reject path and the pending list around it.
 
 exported procedure test7_agent_single_reconnect(SignalReply).
 test7_agent_single_reconnect(ReplyA?) :-
     rv_agent # rv_agent(
-        [reconnect(alice, bob, bob, sig_ab, ReplyA)], []).
+        graph_hash, [reconnect(alice, bob, sig_ab, ReplyA)], []).
 
 %% Expected: ReplyA = rejected, agent terminates on empty stream
 
@@ -113,8 +116,8 @@ test7_agent_single_reconnect(ReplyA?) :-
 exported procedure test8_available_then_reconnect_rejected(SignalReply, SignalReply).
 test8_available_then_reconnect_rejected(ReplyA?, ReplyB?) :-
     rv_agent # rv_agent(
-        [available(bob, alice, ReplyB),
-         reconnect(alice, bob, bob, sig_ab, ReplyA)], []).
+        graph_hash, [available(bob, alice, ReplyB),
+                     reconnect(alice, bob, sig_ab, ReplyA)], []).
 
 %% Expected: ReplyA = rejected, ReplyB unbound (its ready entry is left pending)
 
@@ -127,8 +130,8 @@ test8_available_then_reconnect_rejected(ReplyA?, ReplyB?) :-
 exported procedure test9_two_reconnects_rejected(SignalReply, SignalReply).
 test9_two_reconnects_rejected(RA1?, RA2?) :-
     rv_agent # rv_agent(
-        [reconnect(alice, bob, bob, sig_ab, RA1),
-         reconnect(carol, dave, dave, sig_cd, RA2)], []).
+        graph_hash, [reconnect(alice, bob, sig_ab, RA1),
+                     reconnect(carol, dave, sig_cd, RA2)], []).
 
 %% Expected: RA1 = rejected, RA2 = rejected
 
@@ -142,8 +145,8 @@ test9_two_reconnects_rejected(RA1?, RA2?) :-
 exported procedure test10_reconnect_then_available(SignalReply, SignalReply).
 test10_reconnect_then_available(RA?, RB?) :-
     rv_agent # rv_agent(
-        [reconnect(alice, bob, bob, sig_ab, RA),
-         available(bob, alice, RB)], []).
+        graph_hash, [reconnect(alice, bob, sig_ab, RA),
+                     available(bob, alice, RB)], []).
 
 %% Expected: RA = rejected, RB unbound (stored as a ready entry)
 
@@ -151,15 +154,14 @@ test10_reconnect_then_available(RA?, RB?) :-
 %% Test 11: reconnect with an invalid signature → reply is rejected
 %% =============================================================================
 %%
-%% The guard is valid_attestation/4.  It fails here for either of two
-%% reasons — bad_sig is not Signer's signature over attest(alice, bob), and
-%% there is no network on the context to check it against — and the reject
-%% path is the same for both.
+%% bad_sig is not bob's signature over attest(alice, bob): it is no signed
+%% term at all, so signature/2 assigns unsigned and admit_reconnect/7
+%% refuses it.
 
 exported procedure test11_reconnect_rejected(SignalReply).
 test11_reconnect_rejected(RA?) :-
     rv_agent # rv_agent(
-        [reconnect(alice, bob, bob, bad_sig, RA)], []).
+        graph_hash, [reconnect(alice, bob, bad_sig, RA)], []).
 
 %% Expected: RA = rejected
 
@@ -169,14 +171,60 @@ test11_reconnect_rejected(RA?) :-
 %%
 %% The first reconnect is rejected; the available behind it is still
 %% consumed and stored; the third message is rejected in its turn.  Both
-%% signatures are rejected alike, the well-formed one included, because the
-%% guard has no network to check either against.
+%% are rejected alike: neither bad_sig nor good_sig is a signed term, so
+%% signature/2 assigns unsigned to each.
 
 exported procedure test12_rejected_does_not_block_stream(SignalReply, SignalReply, SignalReply).
 test12_rejected_does_not_block_stream(RA1?, RA2?, RB?) :-
     rv_agent # rv_agent(
-        [reconnect(alice, bob, bob, bad_sig, RA1),
-         available(bob, alice, RB),
-         reconnect(alice, bob, bob, good_sig, RA2)], []).
+        graph_hash, [reconnect(alice, bob, bad_sig, RA1),
+                     available(bob, alice, RB),
+                     reconnect(alice, bob, good_sig, RA2)], []).
 
 %% Expected: RA1 = rejected, RA2 = rejected, RB unbound (stored as ready)
+
+%% =============================================================================
+%% Test 13: admit_reconnect refuses every Signature but B's over attest(A, B)
+%% under the social graph
+%% =============================================================================
+%%
+%% The dispatch on what signature/2 reports, given each refused form
+%% directly: unsigned; carol's signature where the request names bob;
+%% bob's over another term; and bob's over attest(alice, bob) made under
+%% another program than the graph.
+
+exported procedure test13_dispatch_refuses(SignalReply, SignalReply,
+                                           SignalReply, SignalReply).
+test13_dispatch_refuses(R1?, R2?, R3?, R4?) :-
+    rv_agent # admit_reconnect(graph_hash, alice, bob, unsigned, R1, [], _),
+    rv_agent # admit_reconnect(graph_hash, alice, bob,
+        signed(carol, graph_hash, attest(alice, bob)), R2, [], _),
+    rv_agent # admit_reconnect(graph_hash, alice, bob,
+        signed(bob, graph_hash, attest(alice, carol)), R3, [], _),
+    rv_agent # admit_reconnect(graph_hash, alice, bob,
+        signed(bob, other_hash, attest(alice, bob)), R4, [], _).
+
+%% Expected: R1 = R2 = R3 = R4 = rejected
+
+%% =============================================================================
+%% Test 14: a signature that verifies, made under another program, is rejected
+%% =============================================================================
+%%
+%% This test program signs attest(alice, K) under the person's own key K and
+%% presents it as K's attestation for alice.  signature/2 verifies it and
+%% reports signed(K, H, attest(alice, K)), the signer and the term those the
+%% request names; but H is this test program's source identity and not the
+%% social graph's, so the request is refused.
+
+exported procedure test14_other_program_rejected(SignalReply).
+test14_other_program_rejected(RA?) :-
+    self_key(K),
+    present_own_attestation(alice, K?, RA).
+
+procedure present_own_attestation(Key?, Key?, SignalReply).
+present_own_attestation(A, B, RA?) :-
+    ground(A?), ground(B?) |
+    sign(attest(A?, B?), B?, Sig),
+    rv_agent # rv_agent(graph_hash, [reconnect(A?, B?, Sig?, RA)], []).
+
+%% Expected: RA = rejected
