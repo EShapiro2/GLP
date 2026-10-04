@@ -245,14 +245,26 @@ class HeapFCP {
   // Dereferencing (Section 4 of spec)
   // ==========================================================================
 
-  /// Dereference an address to its final value
+  /// Dereference a cell: follow its chain to the end, a value or an unbound
+  /// writer, checking it for a cycle and for a writer bound to a writer (IGLP
+  /// app:in-heap, "Dereferencing").
   ///
-  /// Per spec Section 4.2:
   /// - RoTag: follow Pointer to target
-  /// - WrtTag with null/SuspensionListNode: unbound, return VarRef
+  /// - WrtTag with WriterContent, or a Pointer to its own reader: unbound,
+  ///   return VarRef
   /// - WrtTag with Pointer: follow to target (variable chain)
   /// - ValueTag: return the Term content
   /// - VariableEntry: check state for value or return entry
+  ///
+  /// Then path compression ([_compress]): "Path compression then rewrites the
+  /// pointer of the starting cell when it is a writer, and never of a reader,
+  /// whose pointer names its paired writer: a writer whose chain ends at a
+  /// value is pointed at the value; a writer whose chain ends at an unbound
+  /// writer is pointed at that writer's reader, the last reader of the chain,
+  /// so the invariant holds after compression as before" (IGLP df254d9).  The
+  /// next dereference of that writer follows one pointer to the value, or two
+  /// to the unbound writer.  A chain ending at a VariableEntry is left as it
+  /// is: the paper's heap has no such cell, and no live code makes one.
   ///
   /// Returns: Term (bound) | VarRef (unbound writer) | VariableEntry (imported unbound)
   Object derefAddr(HeapCell startAddr) {
@@ -312,7 +324,9 @@ class HeapFCP {
           }
           // Case 1: WriterContent - unbound with suspensions (FCP pattern)
           if (content is WriterContent) {
-            // Unbound writer with suspensions - return VarRef to this address
+            // Unbound writer with suspensions - return VarRef to this address,
+            // the starting writer pointed at the last reader passed
+            _compress(startAddr, previous);
             return VarRef(current);
           }
           // Case 2: Pointer - check if bidirectional (unbound) or chain (bound)
@@ -323,7 +337,9 @@ class HeapFCP {
               final readerContent = target.content;
               if (readerContent is Pointer && identical(readerContent.targetAddr, current)) {
                 // Bidirectional - points to paired reader which points back
-                // This is an unbound variable
+                // This is an unbound variable; the starting writer is
+                // pointed at the last reader passed
+                _compress(startAddr, previous);
                 return VarRef(current);
               }
             }
@@ -336,9 +352,29 @@ class HeapFCP {
           throw StateError('Writer cell at $current has invalid content: $content');
 
         case CellTag.ValueTag:
-          // Bound to ground value
+          // Bound to ground value; the starting writer is pointed at it
+          _compress(startAddr, current);
           return content as Term;
       }
+    }
+  }
+
+  /// Path compression of a dereference that started at [start] and ended at
+  /// [target]'s side (IGLP app:in-heap, "Dereferencing"): [target] is the
+  /// value cell the chain ends at, or the last reader of a chain that ends at
+  /// an unbound writer --- the reader whose pointer led to that writer, its
+  /// paired reader, a reader's pointer naming its paired writer.  It is null
+  /// where [start] is that unbound writer itself.  Only a writer is rewritten,
+  /// and only when it does not point there already: a chain of one hop is
+  /// left as it is.  A writer that is not the end of its chain is bound to a
+  /// reader, or compressed before, and holds a [Pointer]; its suspensions went
+  /// along the chain when it was bound, so it holds none.
+  @pragma('vm:prefer-inline')
+  static void _compress(HeapCell start, HeapCell? target) {
+    if (target == null || start.tag != CellTag.WrtTag) return;
+    final c = start.content;
+    if (c is Pointer && !identical(c.targetAddr, target)) {
+      start.content = Pointer(target);
     }
   }
 
