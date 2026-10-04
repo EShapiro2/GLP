@@ -26,7 +26,7 @@ Lives in `/Users/udi/Grassroots/GLP/glp_runtime/lib/multiagent/`:
 | `mad_context.dart`, `mad_helpers.dart` | Globalise / localise / variable threading |
 | `global_send.dart`, `global_writers_table.dart` | Outgoing variable management |
 | `imported_writer_records.dart` | Imported-writer records |
-| `variable_table.dart`, `message_queue.dart` | Per-isolate state |
+| `message_queue.dart` | Message types |
 | `glp_network.dart`, `simulation_network.dart` | The networking interface and its simulation |
 | `identity.dart` | The person's signing key pair |
 

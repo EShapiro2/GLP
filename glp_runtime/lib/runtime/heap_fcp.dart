@@ -20,7 +20,6 @@ library;
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/suspension.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
-import 'package:glp_runtime/multiagent/variable_table.dart' show VariableEntry;
 
 /// Cell tags matching FCP design
 enum CellTag {
@@ -29,9 +28,9 @@ enum CellTag {
   ValueTag, // Bound to ground value
 }
 
-/// Heap cell - contains either Pointer, SuspensionListNode, Term, or VariableEntry
+/// Heap cell - contains either Pointer, SuspensionListNode, Term
 class HeapCell {
-  dynamic content;  // null | Pointer | SuspensionListNode | Term | VariableEntry
+  dynamic content;  // null | Pointer | SuspensionListNode | Term
   CellTag tag;
 
   /// The cell's serial number, from [HeapFCP.HP], in order of allocation.
@@ -40,7 +39,7 @@ class HeapCell {
 
   /// A writer's paired reader, recorded at allocation and kept when the writer
   /// binds, the writer's own pointer to it being overwritten then.  Null for a
-  /// reader, a value cell and an imported writer.
+  /// reader and a value cell.
   HeapCell? pairedReader;
 
   HeapCell(this.content, this.tag, this.id);
@@ -132,18 +131,6 @@ class HeapFCP {
     return (writer, reader);
   }
 
-  /// Allocate a single reader cell for an imported variable (no local writer)
-  ///
-  /// Per irmaGLP spec, imported readers have no local paired writer.
-  /// The cell content will be set to a VariableEntry by the caller.
-  HeapCell allocateImportedReader() => HeapCell(null, CellTag.RoTag, HP++);
-
-  /// Allocate a single writer cell for an imported variable (no local reader)
-  ///
-  /// Per irmaGLP spec, imported writers have no local paired reader.
-  /// The cell content will be set to a VariableEntry by the caller.
-  HeapCell allocateImportedWriter() => HeapCell(null, CellTag.WrtTag, HP++);
-
   /// A value cell holding [value].
   HeapCell allocateValue(Term value) =>
       HeapCell(value, CellTag.ValueTag, HP++);
@@ -171,8 +158,8 @@ class HeapFCP {
   /// Per spec Section 7.1: Follow the reader's pointer to get the writer.
   ///
   /// **Returns:**
-  /// - the writer for local readers (cell.content is Pointer)
-  /// - `null`: For imported readers (cell.content is VariableEntry) or non-readers
+  /// - the writer for a reader (cell.content is Pointer)
+  /// - `null` for a cell that is no reader
   HeapCell? tryWriterForReader(HeapCell readerAddr) {
     final cell = readerAddr;
     if (cell.tag != CellTag.RoTag) {
@@ -182,7 +169,7 @@ class HeapFCP {
     if (c is Pointer) {
       return c.targetAddr;
     }
-    return null; // Imported reader - no local writer
+    return null;
   }
 
   /// Find the paired reader for an unbound writer (FCP pattern).
@@ -254,7 +241,6 @@ class HeapFCP {
   ///   return VarRef
   /// - WrtTag with Pointer: follow to target (variable chain)
   /// - ValueTag: return the Term content
-  /// - VariableEntry: check state for value or return entry
   ///
   /// Then path compression ([_compress]): "Path compression then rewrites the
   /// pointer of the starting cell when it is a writer, and never of a reader,
@@ -263,10 +249,12 @@ class HeapFCP {
   /// writer is pointed at that writer's reader, the last reader of the chain,
   /// so the invariant holds after compression as before" (IGLP df254d9).  The
   /// next dereference of that writer follows one pointer to the value, or two
-  /// to the unbound writer.  A chain ending at a VariableEntry is left as it
-  /// is: the paper's heap has no such cell, and no live code makes one.
+  /// to the unbound writer.
   ///
-  /// Returns: Term (bound) | VarRef (unbound writer) | VariableEntry (imported unbound)
+  /// Returns: Term (bound) | VarRef (unbound writer).  Until 2026-10-04 a
+  /// chain could also end at a VariableEntry, an imported variable of the
+  /// irmaGLP heap, which no code made (GLP #3 Cowork, 2026-10-04 09:06 UTC,
+  /// "00:04. Task: `VariableEntry` removed").
   Object derefAddr(HeapCell startAddr) {
     var current = startAddr;
     // The cells passed, for the cycle check: kept from the [_derefShortChain]th
@@ -297,13 +285,6 @@ class HeapFCP {
       switch (cell.tag) {
         case CellTag.RoTag:
           // Reader cell
-          if (content is VariableEntry) {
-            // Imported reader - check for cached bound value in entry
-            if (content.boundValue != null) {
-              return content.boundValue!;
-            }
-            return content;  // Unbound imported
-          }
           if (content is Pointer) {
             // Follow pointer to writer
             previousTag = cell.tag;
@@ -315,13 +296,6 @@ class HeapFCP {
 
         case CellTag.WrtTag:
           // Writer cell
-          if (content is VariableEntry) {
-            // Imported writer - check for cached bound value in entry
-            if (content.boundValue != null) {
-              return content.boundValue!;
-            }
-            return content;  // Unbound imported
-          }
           // Case 1: WriterContent - unbound with suspensions (FCP pattern)
           if (content is WriterContent) {
             // Unbound writer with suspensions - return VarRef to this address,
@@ -483,8 +457,7 @@ class HeapFCP {
   /// - Stores Pointer(readerAddr) in writer cell
   /// - Suspensions go where dereferencing the reader leads: forwarded to the
   ///   final unbound writer of the chain; activated when the chain already
-  ///   ends in a bound value (the binding determines the value now); stored
-  ///   in the VariableEntry for an imported unbound writer
+  ///   ends in a bound value (the binding determines the value now)
   /// - Tag remains WrtTag (not bound to ground)
   ///
   /// Returns list of goals to reactivate (non-empty iff the chain already
@@ -500,17 +473,10 @@ class HeapFCP {
       throw StateError('bindWriterToReader target is not a reader at $readerAddr');
     }
 
-    // bindWriterToReader only works with LOCAL readers (must have paired writer)
-    // Imported readers cannot be targets of writer-to-reader binding
-    final targetWriterAddr = tryWriterForReader(readerAddr);
-    if (targetWriterAddr == null) {
-      throw StateError('bindWriterToReader target at $readerAddr is an imported reader (no local writer)');
-    }
-
     final activations = <GoalRef>[];
 
-    // Where the reader's dereference chain ends: an unbound local writer
-    // (VarRef), an unbound imported writer (VariableEntry), or a bound value.
+    // Where the reader's dereference chain ends: an unbound writer (VarRef)
+    // or a bound value.
     final chainEnd = derefAddr(readerAddr);
 
     // Route this writer's suspensions to wherever the chain leads
@@ -523,18 +489,6 @@ class HeapFCP {
       if (chainEnd is VarRef) {
         // Chain ends at an unbound local writer — move suspensions there
         _forwardSuspensions(wc.suspensions, chainEnd.addr);
-      } else if (chainEnd is VariableEntry) {
-        // Chain ends at an unbound imported writer — suspensions wait in its
-        // entry (as in suspendOnReader for imported readers)
-        var current = wc.suspensions;
-        while (current != null) {
-          if (current.armed) {
-            final newNode = SuspensionListNode(current.record);
-            newNode.next = chainEnd.suspensions;
-            chainEnd.suspensions = newNode;
-          }
-          current = current.next;
-        }
       } else {
         // Chain already ends in a bound value — this binding determines the
         // suspended goals' variable; activate them
@@ -551,8 +505,6 @@ class HeapFCP {
     if (callback != null) {
       if (chainEnd is VarRef) {
         _bindCallbacks[chainEnd.addr] = callback;
-      } else if (chainEnd is VariableEntry) {
-        _bindCallbacks[targetWriterAddr] = callback;
       } else {
         callback(chainEnd as Term);
       }
@@ -605,17 +557,6 @@ class HeapFCP {
     final cell = readerAddr;
     final c = cell.content;
 
-    if (c is VariableEntry) {
-      // Imported reader - store suspension in VariableEntry.suspensions
-      // Per spec Section 3.1.2: For imported readers, V_p serves as the
-      // "virtual writer" that holds suspensions. When an assignment arrives,
-      // goals are resumed from VariableEntry.suspensions.
-      final node = SuspensionListNode(record);
-      node.next = c.suspensions;
-      c.suspensions = node;
-      return;
-    }
-
     if (cell.tag != CellTag.RoTag || c is! Pointer) {
       throw StateError('suspendOnReader called on invalid reader at $readerAddr');
     }
@@ -667,10 +608,10 @@ class HeapFCP {
 
   /// Check if variable is fully bound to ground term
   ///
-  /// Returns false for VarRef (unbound) or VariableEntry (imported unbound)
+  /// Returns false for VarRef (unbound)
   bool isFullyBound(HeapCell writerAddr) {
     final result = derefAddr(writerAddr);
-    return result is! VarRef && result is! VariableEntry;
+    return result is! VarRef;
   }
 
   /// Get variable value (dereferenced)
@@ -678,7 +619,7 @@ class HeapFCP {
   /// Returns null if unbound
   Term? getValue(HeapCell writerAddr) {
     final result = derefAddr(writerAddr);
-    if (result is VarRef || result is VariableEntry) {
+    if (result is VarRef) {
       return null;
     }
     return result as Term;
@@ -690,9 +631,6 @@ class HeapFCP {
   Term dereference(Term term) {
     if (term is VarRef) {
       final result = derefAddr(term.addr);
-      if (result is VariableEntry) {
-        return term;  // Imported unbound - return original
-      }
       if (result is VarRef) {
         return result;  // Still unbound
       }
@@ -716,58 +654,6 @@ class HeapFCP {
   /// Remove a registered callback
   void removeBindCallback(HeapCell writerAddr) {
     _bindCallbacks.remove(writerAddr);
-  }
-
-  // ==========================================================================
-  // Imported Reader Binding (Multiagent)
-  // ==========================================================================
-
-  /// Bind an imported reader to a received value
-  ///
-  /// Per irmaGLP spec Section 5.3 (imported reader case):
-  /// - Imported readers have no local writer, just a reader cell with VariableEntry
-  /// - When assignment arrives, the reader cell is updated to point to the value
-  /// - Activations are extracted from VariableEntry.suspensions
-  ///
-  /// Heap structure transformation:
-  ///
-  /// BEFORE (unbound imported reader):
-  /// ```
-  /// readerAddr = HeapCell(VariableEntry(...), CellTag.RoTag)
-  /// ```
-  ///
-  /// AFTER (bound imported reader):
-  /// ```
-  /// readerAddr = HeapCell(Pointer(valueCell), CellTag.RoTag)
-  /// valueCell = HeapCell(value, CellTag.ValueTag)
-  /// ```
-  ///
-  /// Note: Unlike local readers (which point to their paired writer), imported
-  /// readers point directly to a ValueTag cell. This distinction is used by
-  /// isImportedReader() to detect bound imported readers.
-  ///
-  /// Returns list of goals to reactivate (from VariableEntry suspensions)
-  List<GoalRef> bindImportedReader(HeapCell readerAddr, Term value, VariableEntry entry) {
-    final cell = readerAddr;
-    if (cell.tag != CellTag.RoTag) {
-      throw StateError('bindImportedReader called on non-reader cell at $readerAddr (tag: ${cell.tag})');
-    }
-    if (cell.content is! VariableEntry) {
-      throw StateError('bindImportedReader called on reader without VariableEntry at $readerAddr');
-    }
-
-    final activations = <GoalRef>[];
-
-    // Extract activations from VariableEntry suspensions (linked list)
-    if (entry.suspensions != null) {
-      _walkAndActivate(entry.suspensions!, activations);
-    }
-
-    // Allocate a value cell for the term and point reader to it
-    final valueCell = allocateValue(value);
-    cell.content = Pointer(valueCell);
-
-    return activations;
   }
 
   // ==========================================================================
@@ -816,13 +702,11 @@ class HeapFCP {
   bool isBound(HeapCell varId) => isFullyBound(varId);
 
   // ==========================================================================
-  // Reader abstraction methods (work for local AND imported readers)
+  // Reader methods
   // ==========================================================================
 
-  /// Check if a reader is bound (local or imported)
-  ///
-  /// For local readers: checks if paired writer is fully bound
-  /// For imported readers: checks if cell content is Pointer (bound by bindImportedReader)
+  /// Check if a reader is bound: its paired writer is fully bound, or is a
+  /// value cell, its tag changed by the binding ([bindWriter]).
   bool isReaderBound(HeapCell readerAddr) {
     final cell = readerAddr;
     if (cell.tag != CellTag.RoTag) return false;
@@ -831,18 +715,17 @@ class HeapFCP {
     if (c is Pointer) {
       final targetCell = c.targetAddr;
       if (targetCell.tag == CellTag.WrtTag) {
-        // Local reader - check if writer is fully bound
+        // Its writer unbound, or bound to a reader: follow it
         return isFullyBound(targetCell);
       } else if (targetCell.tag == CellTag.ValueTag) {
-        // Imported reader, bound via bindImportedReader
+        // Its writer bound to a value
         return true;
       }
     }
-    // VariableEntry = unbound imported reader
     return false;
   }
 
-  /// Get value for a bound reader (local or imported)
+  /// Get value for a bound reader
   ///
   /// Returns null if reader is unbound
   Term? getReaderValue(HeapCell readerAddr) {
@@ -853,47 +736,15 @@ class HeapFCP {
     if (c is Pointer) {
       final targetCell = c.targetAddr;
       if (targetCell.tag == CellTag.WrtTag) {
-        // Local reader - get writer value
+        // Its writer unbound, or bound to a reader: follow it
         return getValue(targetCell);
       } else if (targetCell.tag == CellTag.ValueTag) {
-        // Imported reader, bound via bindImportedReader - value is in the cell
+        // Its writer bound to a value, which is in the cell
         return targetCell.content as Term;
       }
     }
     return null;
   }
-
-  /// Check if reader is an imported reader (no local writer)
-  ///
-  /// Returns true for both bound and unbound imported readers, identified by
-  /// cell structure rather than V_p presence:
-  /// | State | cell.content | Target cell |
-  /// |-------|--------------|-------------|
-  /// | Unbound imported | VariableEntry | N/A |
-  /// | Bound imported | Pointer | ValueTag |
-  /// | Local (any) | Pointer | RwTag (writer) |
-  bool isImportedReader(HeapCell readerAddr) {
-    final cell = readerAddr;
-    if (cell.tag != CellTag.RoTag) return false;
-
-    final c = cell.content;
-    if (c is VariableEntry) {
-      // Unbound imported reader
-      return true;
-    }
-    if (c is Pointer) {
-      // Could be local reader (points to writer) or bound imported reader (points to ValueTag)
-      // If target is ValueTag, it was bound via bindImportedReader
-      return c.targetAddr.tag == CellTag.ValueTag;
-    }
-    return false;
-  }
-
-  /// Get writer address for local reader, null for imported reader
-  ///
-  /// This is the safe version - use this instead of writerForReader when
-  /// the reader might be imported
-  HeapCell? getWriterForReader(HeapCell readerAddr) => tryWriterForReader(readerAddr);
 
   /// Legacy: Get suspension list (now on writer via WriterContent)
   SuspensionListNode? getSuspensions(HeapCell writerAddr) {

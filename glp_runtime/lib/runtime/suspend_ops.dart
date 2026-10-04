@@ -2,13 +2,11 @@ import 'machine_state.dart';
 import 'heap_fcp.dart';
 import 'suspension.dart';
 import 'terms.dart';
-import 'package:glp_runtime/multiagent/variable_table.dart' show VariableEntry;
 
 /// Suspension operations using FCP-exact shared suspension records
 /// 
 /// - Suspensions are stored on WRITER cells, not reader cells (IGLP
 ///   app:in-heap, Suspension)
-/// - For imported readers, suspensions are stored in VariableEntry
 class SuspendOps {
   /// FCP-exact suspension: create ONE shared record, add to each variable's writer
   /// 
@@ -36,14 +34,6 @@ class SuspendOps {
   static void _suspendOnVariable(HeapFCP heap, HeapCell addr, SuspensionRecord record) {
     // Dereference to find the final target
     final result = heap.derefAddr(addr);
-
-    if (result is VariableEntry) {
-      // Imported variable - store suspension in entry
-      final node = SuspensionListNode(record);
-      node.next = result.suspensions;
-      result.suspensions = node;
-      return;
-    }
 
     if (result is VarRef) {
       // Unbound local variable - result.addr is the writer address

@@ -153,7 +153,6 @@ glp_runtime/lib/multiagent/
 ├── mad_helpers.dart        # Globalise / localise helpers
 ├── boot_loader.dart        # BootLoader: parses @agent syntax
 ├── message_queue.dart      # Message types
-├── variable_table.dart     # Per-isolate variable table
 ├── global_send.dart        # Outgoing variables
 ├── global_writers_table.dart # GlobalWritersTable (W_p)
 ├── imported_writer_records.dart # Imported-writer records (U_p)

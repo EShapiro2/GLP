@@ -164,14 +164,10 @@ class Scheduler {
         if (derefResult is VarRef) {
           // Still unbound - stop here
           break;
-        } else if (derefResult is Term) {
-          // Bound to a value - follow it
-          seen.add(addr);
-          current = derefResult;
-        } else {
-          // VariableEntry or other - stop
-          break;
         }
+        // Bound to a value - follow it
+        seen.add(addr);
+        current = derefResult as Term;
       }
       if (circular) {
         out.write('<circular>');

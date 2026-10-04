@@ -9,7 +9,6 @@ import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 import 'package:glp_runtime/runtime/commit.dart';
 import 'package:glp_runtime/runtime/body_kernels.dart';
-import 'package:glp_runtime/multiagent/variable_table.dart' show VariableEntry;
 import 'opcodes.dart';
 import 'package:glp_runtime/engine_v2/step_outcome.dart';
 
@@ -421,9 +420,6 @@ bool _isGroundValue(Object? v) => v is Term && v is! VarRef;
 bool _isUnboundWriterCell(RunnerContext cx, HeapCell addr) {
   final heap = cx.rt.heap;
   if (!heap.isWriter(addr)) return false;
-  final content = addr.content;
-  // An imported writer: its cell holds the variable's entry until it is bound.
-  if (content is VariableEntry) return content.boundValue == null;
   final end = heap.derefAddr(addr);
   return end is VarRef && end.addr == addr;
 }
@@ -481,9 +477,8 @@ Object? _guardReaderOperand(RunnerContext cx, Object? value) {
   if (w == null || !heap.isWriter(w) || cx.sigmaHat.containsKey(w)) {
     return value;
   }
-  // A variable of another agent has no reader here; a bound writer stands
-  // for its value.
-  if (w.content is VariableEntry || heap.isFullyBound(w)) {
+  // A bound writer stands for its value.
+  if (heap.isFullyBound(w)) {
     return value;
   }
   return VarRef(heap.pairedReaderAddr(w));
@@ -736,12 +731,11 @@ GuardResult _undecidedMember(RunnerContext cx, Iterable<HeapCell> readers,
 }
 
 /// The variable the occurrence at [addr] stands for, its bindings on the heap
-/// followed: the address of the unbound writer cell its chain ends at, or the
-/// entry of a variable of another agent; null where the chain ends at a value.
+/// followed: the address of the unbound writer cell its chain ends at; null
+/// where the chain ends at a value.
 Object? _variableAt(RunnerContext cx, HeapCell addr) {
   final end = cx.rt.heap.derefAddr(addr);
   if (end is VarRef) return end.addr;
-  if (end is VariableEntry) return end;
   return null;
 }
 
@@ -771,10 +765,6 @@ Set<Object> _readersOfGoal(RunnerContext cx, Set<Object> variables) {
         if (end.addr != addr && variables.contains(end.addr)) {
           found.add(end.addr);
         }
-      } else if (end is VariableEntry) {
-        final isItsWriter = heap.isWriter(addr) &&
-            addr.content is VariableEntry;
-        if (!isItsWriter && variables.contains(end)) found.add(end);
       } else {
         pending.add(end);
       }
@@ -1504,8 +1494,8 @@ enum _GroundEquality {
 }
 
 /// An unbound variable met by [_decideGroundEquality]: [key], the variable ---
-/// the address of the writer cell its chain of bindings ends at, or its own
-/// cell's address for a variable of another agent ---; whether the occurrence
+/// the address of the writer cell its chain of bindings ends at ---; whether
+/// the occurrence
 /// met is a reader ([isReader]: a reader cell, or a bound writer whose chain
 /// ends at a reader); and [readerAddr], the reader a suspension waits on.
 class _UnboundVariable {
@@ -1609,10 +1599,6 @@ Object? _equalityOperand(Object? value) =>
         if (v == addr) return _UnboundVariable(v, false, addr);
         return _UnboundVariable(
             v, true, isReaderCell ? addr : heap.pairedReaderAddr(v));
-      }
-      // A variable of another agent, unbound here.
-      if (end is VariableEntry) {
-        return _UnboundVariable(addr, isReaderCell, addr);
       }
       return end;
     }
@@ -2721,7 +2707,7 @@ mixin OpExecutors {
       }
     } else if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
       final deref = cx.rt.heap.derefAddr(arg.addr);
-      if (deref is VariableEntry || deref is VarRef) {
+      if (deref is VarRef) {
         cx.Si.add(_finalUnboundVar(cx, arg.addr));
         return StepOutcome.advance;
       } else if (deref is Term) {
