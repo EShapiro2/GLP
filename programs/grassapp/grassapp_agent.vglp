@@ -237,7 +237,7 @@ trade_dispatch(normal, Id, From, WantSpec, OfferedBonds, TradeResp?,
 
 %% Open the escrow.  The cancel signal is the person's to bind, so it goes to a
 %% responder rather than to the mediator's pending table.
-procedure do_deposit_escrow_result(Constant?, Key?, Key?, Constant?, Constant?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)?, Integer?, Constant?, UserInStream?, NetInStream?, OutputsList?).
+procedure do_deposit_escrow_result(Status?, Key?, Key?, Constant?, Constant?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)?, Integer?, Constant?, UserInStream?, NetInStream?, OutputsList?).
 do_deposit_escrow_result(ok, Id, Target, ReleaseTime, Coin, Maturity, Amount, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs) :-
     ground(Coin?), ground(Maturity?), ground(Amount?) |
     escrow(ReleaseTime?, EscrowDates?, Selected?, CancelSignal?, BenResult, DepResult),

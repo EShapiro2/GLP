@@ -235,7 +235,7 @@ do_trade(Id, Target, GiveSpec, WantSpec, Holdings, NextSerial, Clock, UserIn, Ne
     select_bonds_by_spec([GiveSpec?], Holdings?, Status, Selected, Remaining),
     do_trade_result(Status?, Id?, Target?, WantSpec?, Selected?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
 
-procedure do_trade_result(Constant?, Key?, Key?, Lot?, Stream(Bond)?, Stream(Bond)?, Integer?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+procedure do_trade_result(Status?, Key?, Key?, Lot?, Stream(Bond)?, Stream(Bond)?, Integer?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
 do_trade_result(ok, Id, Target, WantSpec, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     lookup_send(Target?, msg(Id?, Target?, trade_propose(WantSpec?, Selected?, TradeResp)), Outs?, Outs1),
     inject_trade_result(TradeResp?, Target?, UserIn?, UserIn1),
@@ -257,7 +257,7 @@ do_redeem(Id, Target, GiveSpec, WantSpec, Holdings, NextSerial, Clock, UserIn, N
 
 %% --- Proposer: pay (mature coins of the payee, handed over unilaterally) ---
 
-procedure do_pay(Constant?, Key?, Key?, Stream(Bond)?, Stream(Bond)?, Integer?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+procedure do_pay(Status?, Key?, Key?, Stream(Bond)?, Stream(Bond)?, Integer?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
 do_pay(ok, Id, Friend, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     lookup_send(Friend?, msg(Id?, Friend?, coins(Selected?)), Outs?, Outs1),
     after_change(Id?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?, DateW).
@@ -270,7 +270,7 @@ do_pay(fail, Id, Friend, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, 
 %% own_coins says `yes` iff every offered bond is a coin of Id; then Id takes
 %% them.  Otherwise it is not a Pay (Pay carries only the recipient's own coins)
 %% but an unsolicited swap, so Id returns the whole lot to the payer unchanged.
-procedure take_payment(Constant?, Key?, Key?, Stream(Bond)?, Stream(Bond)?, Integer?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+procedure take_payment(Decision?, Key?, Key?, Stream(Bond)?, Stream(Bond)?, Integer?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
 take_payment(yes, Id, _, Bonds, Holdings, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     append(Holdings?, Bonds?, NewHoldings),
     after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
@@ -280,7 +280,7 @@ take_payment(no, Id, From, Bonds, Holdings, NextSerial, Clock, UserIn, NetIn, Ou
 
 %% --- Responder: fill an accepted trade ---
 
-procedure handle_trade_fill(Constant?, Key?, Key?, TradeResponse, Stream(Bond)?, Stream(Bond)?, Stream(Bond)?, Integer?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+procedure handle_trade_fill(Status?, Key?, Key?, TradeResponse, Stream(Bond)?, Stream(Bond)?, Stream(Bond)?, Integer?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
 handle_trade_fill(ok, Id, From, trade_accept(Selected?), OfferedBonds, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     append(Remaining?, OfferedBonds?, NewHoldings),
     send_person(msg(agent, person, trade_completed(From?)), Outs?, Outs1),
@@ -317,7 +317,7 @@ trade_dispatch(normal, Id, From, WantSpec, OfferedBonds, TradeResp?,
         Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
-procedure redemption_result(Constant?, Key?, Key?, TradeResponse, Stream(Bond)?,
+procedure redemption_result(Status?, Key?, Key?, TradeResponse, Stream(Bond)?,
     Stream(Bond)?, Stream(Bond)?, Integer?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
 redemption_result(ok, Id, From, trade_accept(Selected?), OfferedBonds, Selected, Remaining,
     NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
@@ -394,7 +394,7 @@ do_deposit_escrow(Id, Target, GiveSpec, ReleaseTime, Holdings, NextSerial, Clock
     select_bonds_by_spec([GiveSpec?], Holdings?, Status, Selected, Remaining),
     do_deposit_escrow_result(Status?, Id?, Target?, ReleaseTime?, Coin?, Maturity?, Amount?, Selected?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
 
-procedure do_deposit_escrow_result(Constant?, Key?, Key?, Constant?, Constant?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)?, Integer?, Constant?, UserInStream?, NetInStream?, OutputsList?).
+procedure do_deposit_escrow_result(Status?, Key?, Key?, Constant?, Constant?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)?, Integer?, Constant?, UserInStream?, NetInStream?, OutputsList?).
 do_deposit_escrow_result(ok, Id, Target, ReleaseTime, Coin, Maturity, Amount, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs) :-
     ground(Coin?), ground(Maturity?), ground(Amount?) |
     escrow(ReleaseTime?, EscrowDates?, Selected?, CancelSignal?, BenResult, DepResult),
