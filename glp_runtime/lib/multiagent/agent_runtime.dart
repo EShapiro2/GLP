@@ -8,7 +8,8 @@
 /// compiled value (GSG, Section 4, "Compiled programs as values"), and several
 /// sources are not co-loaded into one engine.  The entry goal [goalLabel] is
 /// then posted with the agent's id, the person's input stream where the entry
-/// takes one, and the network input stream.  The person's acts arrive as
+/// takes one, and the network input stream, by the engine's one posting call,
+/// which checks it ([GlpEngine.postGoal]).  The person's acts arrive as
 /// ground terms and never as text (GSG, Appendix "The Prototype's Screens",
 /// and Section 3, "What the super-app grants a mini-app", (ib)).  Network
 /// output goes through send_to_net → the _send/3 kernel → MadContext; output to
@@ -18,11 +19,8 @@ library;
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:glp_runtime/bytecode/runner.dart';
-import 'package:glp_runtime/engine_v2/interp.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
-import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:glp_runtime/runtime/external_io.dart';
@@ -244,88 +242,61 @@ class AgentRuntime {
       }
     };
 
-    // Initialize serializer entry for network input (index 0)
-    // Spec Section 4.1: permanent entry mapping _r(p, 0) to local writer
-    final (netInWriter, netInReader) = _runtime!.heap.allocateVariable();
-    _ctx!.wp.initializeSerializerEntry(netInWriter);
-    _log('INIT: Serializer entry initialized, netIn=($netInWriter,$netInReader)');
-
-    // Create user input stream (Dart injects ground terms)
-    final (userInWriter, userInReader) = _runtime!.heap.allocateVariable();
-    _userInput = InputInjector(_runtime!.heap, 'user', userInWriter);
-
-    // Create net input stream (receives from MadContext)
-    _netInput = InputInjector(_runtime!.heap, 'net', netInWriter);
-
     _output('[INIT] Loaded GLP program');
 
-    // Get combined program and create scheduler. Run the agent on the byte
-    // interpreter over a CodeImage of the program, entry as a byte offset.
-    final combined = engine.combinedProgram;
-    final image = codeImageFromProgram(combined);
-    final GoalRunner runner = ByteRunner(image);
-    _scheduler = Scheduler(rt: _runtime!, runners: {'main': runner},
-      traceSink: (line) => _log('GLP: $line'));
-    _scheduler!.resetDisplayNumbering();
-
-    // Start goal using configurable goalLabel and extraArgs.
-    // Args are always: [Id, ...extraArgs, NetIn].
-    // For backward compatibility, agent_init/3 also gets UserIn before NetIn.
-    final entryPC =
-        image != null ? image.entryOffsetOf(goalLabel) : combined.labels[goalLabel];
-    _log('INIT: $goalLabel entryPC=$entryPC');
-    if (entryPC == null) {
-      _output('[ERROR] Predicate $goalLabel not found');
-      return;
-    }
-
-    final heap = _runtime!.heap;
-    final args = <int, rt.Term>{};
-    var argIdx = 0;
-
-    // Arg 0: agent ID (always first)
-    final (arg0Writer, arg0Reader) = heap.allocateVariable();
-    heap.bindVariable(arg0Writer, rt.ConstTerm(agentIdLower));
-    args[argIdx++] = rt.VarRef(arg0Reader);
-
-    // Arg 1: the person's input stream, where the entry takes one --- an
-    // arity-3 entry with no extra constants (agent_init/3, scenario_init/3:
-    // Id, UserIn, NetIn). The plays' actors (actor_init/3: Id, Target, NetIn)
-    // and the parent/child entries take constants there instead. Decided by
-    // the goal's shape, not its name.
+    // The entry goal, posted by the engine's one posting call, which checks
+    // it as a body goal against the program's declarations before it runs
+    // (TGLP modules.tex, "Type-Compatible Attestation Between Agents": the
+    // initial goal posted to the runtime "is type-checked before execution
+    // as a body goal") and refuses it, throwing, where it does not check or
+    // names no entry point.  Until 2026-10-04 it was put on the queue here,
+    // by its label, unchecked.
+    //
+    // Its arguments: the agent's id first and the network input last
+    // (IGLP, Implementation Notes, "Boot": the runtime provides "only that
+    // reader"), the extra constants between them, and before them the
+    // person's input stream where the entry takes one --- an arity-3 entry
+    // with no extra constants (agent_init/3, scenario_init/3: Id, UserIn,
+    // NetIn).  The plays' actors (actor_init/3: Id, Target, NetIn) and the
+    // parent/child entries take constants there instead.  Decided by the
+    // goal's shape, not its name.  The goal holds the readers of the two
+    // input streams, and the host their writers: the person's, to inject
+    // the person's acts, and the network's, the index-0 serializer entry
+    // (Spec Section 4.1: permanent entry mapping _r(p, 0) to local writer).
+    final goalName = goalLabel.split('/').first;
     final goalArity = int.parse(goalLabel.split('/').last);
-    if (goalArity == extraArgs.length + 3) {
-      final (userWriter, userReader) = heap.allocateVariable();
-      heap.bindVariable(userWriter, rt.VarRef(userInReader));
-      args[argIdx++] = rt.VarRef(userReader);
+    final takesUserIn = goalArity == extraArgs.length + 3;
+    final goalArgs = [
+      glpConstantText(agentIdLower),
+      if (takesUserIn) 'UserIn?',
+      for (final extra in extraArgs)
+        int.tryParse(extra)?.toString() ?? glpConstantText(extra),
+      'NetIn?',
+    ];
+    if (goalArgs.length != goalArity) {
+      throw StateError('$goalLabel takes $goalArity arguments, and the agent '
+          'has ${goalArgs.length} for it: its id, '
+          '${extraArgs.length} extra and the network input');
     }
+    final goalText = '$goalName(${goalArgs.join(', ')})';
+    final posted = engine.postGoal(goalText,
+        inputs: [if (takesUserIn) 'UserIn', 'NetIn']);
+    _log('INIT: posted $goalText');
 
-    // Extra args (e.g. child name, play number) — inserted as constants
-    for (final extra in extraArgs) {
-      final (eWriter, eReader) = heap.allocateVariable();
-      // Try to parse as int, otherwise use as atom
-      final intVal = int.tryParse(extra);
-      heap.bindVariable(eWriter, rt.ConstTerm(intVal ?? extra));
-      args[argIdx++] = rt.VarRef(eReader);
-    }
+    final netInWriter = posted.inputs['NetIn']!.currentWriterId;
+    _ctx!.wp.initializeSerializerEntry(netInWriter);
+    _log('INIT: Serializer entry initialized, netIn=$netInWriter');
 
-    // Last arg: NetIn (always last)
-    final (netWriter, netReader) = heap.allocateVariable();
-    heap.bindVariable(netWriter, rt.VarRef(netInReader));
-    args[argIdx++] = rt.VarRef(netReader);
+    // The person's input stream (Dart injects ground terms), and the network
+    // input stream (receives from MadContext).  An entry that takes no person
+    // stream is given none, and the person's acts have nowhere to go.
+    _userInput = posted.inputs['UserIn'];
+    _netInput = posted.inputs['NetIn'];
 
-    // The goal's id is the runtime's next, as every goal's is.
-    final goalId = _runtime!.nextGoalId++;
-    final env = CallEnv(args: args);
-    _runtime!.setGoalEnv(goalId, env);
-    _runtime!.setGoalProgram(goalId, 'main');
-    // The goal carries the program's module value, as an isolate-booted goal
-    // and a REPL goal do: self_module/1 and sign/3 read it.
-    _runtime!.setGoalModule(goalId, engine.appModule);
-    _runtime!.gq.enqueue(GoalRef(goalId, entryPC));
+    // The scheduler over the code image the goal was posted on.
+    _scheduler = posted.scheduler..traceSink = (line) => _log('GLP: $line');
 
     final argsDesc = [agentIdLower, ...extraArgs, 'NetIn'].join(', ');
-    final goalName = goalLabel.split('/').first;
     _output('[GOAL] Started $goalName($argsDesc)');
     _log('INIT: GQ length before initial run: ${_runtime!.gq.length}');
 
@@ -348,8 +319,12 @@ class AgentRuntime {
   Future<void> injectUserInput(rt.Term act) async {
     final shown = formatTerm(act);
     _log('USER_INPUT: $shown');
-    if (_userInput == null || _runtime == null) {
+    if (_runtime == null) {
       _log('USER_INPUT: early return (not initialized)');
+      return;
+    }
+    if (_userInput == null) {
+      _log('USER_INPUT: $goalLabel takes no person stream; the act is dropped');
       return;
     }
 

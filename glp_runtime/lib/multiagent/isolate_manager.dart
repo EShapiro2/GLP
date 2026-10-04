@@ -14,11 +14,8 @@ import 'dart:typed_data';
 
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart' show TypeEnvironment;
-import 'package:glp_runtime/bytecode/runner.dart';
-import 'package:glp_runtime/engine_v2/interp.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
-import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/wire/payload_codec.dart' show PayloadCodec;
 import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
@@ -573,13 +570,53 @@ void _agentIsolateEntry(AgentConfig config) async {
   final ctx = engine.madContext!;
   final runtime = engine.runtime;
 
+  // The agent's goal G, posted with the network-input reader as its last
+  // argument (IGLP, Implementation Notes, "Boot"), the agent's id first and
+  // the spawn directive's constants between them:
+  //   Arity 2: agent_init(agentId, netIn)
+  //   Arity 3: child_init(agentId, playNum, netIn)
+  //   Arity 4: parent_init(agentId, childName, playNum, netIn)
+  // It is posted by the engine's one posting call, which checks it as a body
+  // goal before it runs (TGLP modules.tex, "Type-Compatible Attestation
+  // Between Agents": the initial goal posted to the runtime, "at boot or
+  // interactively", "is type-checked before execution as a body goal") and
+  // refuses it where it does not check or names no entry point; the agent
+  // then fails to initialise, naming the refusal.  Until 2026-10-04 it was
+  // put on the queue here, by its label, unchecked.  The goal carries the
+  // program's module value, as every posted goal does: self_module/1 returns
+  // it, sign/3 puts its source identity into a signed term, and every goal
+  // spawned from it inherits it.
+  final arity = config.goalArity;
+  final goalLabel = '${config.goalFunctor}/$arity';
+  final goalArgs = [
+    glpConstantText(agentId),
+    for (final c in config.goalConstantArgs)
+      int.tryParse(c)?.toString() ?? glpConstantText(c),
+    'NetIn?',
+  ];
+  final PostedGoal posted;
+  try {
+    if (goalArgs.length != arity) {
+      throw GoalRefused('$goalLabel takes $arity arguments, and the spawn '
+          'directive gives ${goalArgs.length}');
+    }
+    posted = engine.postGoal('${config.goalFunctor}(${goalArgs.join(', ')})',
+        inputs: const ['NetIn']);
+  } catch (e) {
+    print('[$agentId] ERROR: Goal $goalLabel refused: $e');  // Always print errors
+    config.mainPort.send(AgentInitFailed(agentId, 'Goal $goalLabel refused: $e'));
+    return;
+  }
+  log('Posted ${config.goalFunctor}/$arity');
+
   // Initialize the permanent index-0 serializer entry for network input
   // Spec Section 4.1: "At boot time, each agent p creates a permanent entry
   // at index 0 mapping `_r(p, 0)` to the local writer N_p for p's network
-  // input stream."
-  final (netInWriter, netInReader) = runtime.heap.allocateVariable();
+  // input stream." --- the writer of the goal's network input, whose reader
+  // the goal holds.
+  final netInWriter = posted.inputs['NetIn']!.currentWriterId;
   ctx.wp.initializeSerializerEntry(netInWriter);
-  log('Serializer entry initialized at index 0, netIn=($netInWriter,$netInReader)');
+  log('Serializer entry initialized at index 0, netIn=$netInWriter');
 
   // Networking seam (spec §3–4): the agent talks to a GlpNetwork, not the
   // mainPort directly. In simulation the client forwards sends to the router
@@ -624,51 +661,7 @@ void _agentIsolateEntry(AgentConfig config) async {
     }
   };
 
-  log('Network input ready: writer=$netInWriter, reader=$netInReader');
-
-  // Find goal entry point with the actual arity from the boot directive.
-  // Arity 2: agent_init(agentId, netIn)
-  // Arity 3: child_init(agentId, playNum, netIn)
-  // Arity 4: parent_init(agentId, childName, playNum, netIn)
-  final program = engine.combinedProgram;
-  final arity = config.goalArity;
-  final goalLabel = '${config.goalFunctor}/$arity';
-  // Run the isolate's agent on the byte interpreter over a CodeImage of the
-  // program, entry as a byte offset.
-  final image = codeImageFromProgram(program);
-  final goalPC = image.entryOffsetOf(goalLabel);
-  if (goalPC == null) {
-    print('[$agentId] ERROR: Goal $goalLabel not found');  // Always print errors
-    config.mainPort.send(AgentInitFailed(agentId, 'Goal $goalLabel not found'));
-    return;
-  }
-
-  // Build argument map: arg 0 = agent ID, args 1..n-2 = constants, arg n-1 = netIn
-  final args = <int, Term>{};
-
-  // Arg 0: agent ID (constant)
-  final (idArgWriter, idArgReader) = runtime.heap.allocateVariable();
-  runtime.heap.bindVariable(idArgWriter, ConstTerm(agentId));
-  args[0] = VarRef(idArgReader);
-
-  // Args 1..n-2: additional constant arguments from boot directive
-  for (var i = 0; i < config.goalConstantArgs.length; i++) {
-    final constVal = config.goalConstantArgs[i];
-    final (cw, cr) = runtime.heap.allocateVariable();
-    // Try to parse as integer, otherwise treat as atom
-    final intVal = int.tryParse(constVal);
-    if (intVal != null) {
-      runtime.heap.bindVariable(cw, ConstTerm(intVal));
-    } else {
-      runtime.heap.bindVariable(cw, ConstTerm(constVal));
-    }
-    args[i + 1] = VarRef(cr);
-  }
-
-  // Last arg: network input reader
-  final (netInArgWriter, netInArgReader) = runtime.heap.allocateVariable();
-  runtime.heap.bindVariable(netInArgWriter, VarRef(netInReader));
-  args[arity - 1] = VarRef(netInArgReader);
+  log('Network input ready: writer=$netInWriter');
 
   // What the agent sends to its person is printed under the agent's name, so
   // a harness reading the process's output can tell whose line it is, and is
@@ -678,20 +671,8 @@ void _agentIsolateEntry(AgentConfig config) async {
     config.mainPort.send(AgentOutput(agentId, text));
   };
 
-  // Spawn main goal, its id from the runtime's counter as every goal's is. It
-  // carries the program's module value, as a REPL goal does: self_module/1
-  // returns it, sign/3 puts its source identity into a signed term, and every
-  // goal spawned from it inherits it.
-  final goalId = runtime.nextGoalId++;
-  runtime.setGoalEnv(goalId, CallEnv(args: args));
-  runtime.setGoalProgram(goalId, 'main');
-  runtime.setGoalModule(goalId, engine.appModule);
-  runtime.gq.enqueue(GoalRef(goalId, goalPC));
-  log('Spawned ${config.goalFunctor}/$arity');
-
-  // Create scheduler for this engine
-  final GoalRunner runner = ByteRunner(image);
-  final scheduler = Scheduler(rt: runtime, runners: {'main': runner});
+  // The scheduler over the code image the goal was posted on.
+  final scheduler = posted.scheduler;
 
   // Set up tracing: lines print directly (no buffering needed without ticks)
   if (tc.glp) {

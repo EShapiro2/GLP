@@ -24,6 +24,7 @@ import 'package:glp_runtime/engine_v2/module_kernels.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
+import 'package:glp_runtime/runtime/external_io.dart' show InputInjector;
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 import 'package:glp_runtime/compiler/partial_evaluator.dart';
@@ -71,6 +72,55 @@ class ExecutionResult {
   /// The cycle limit stopped the run with goals still queued: the query did
   /// not finish, and none of the three above is what it did.
   bool get capped => status == ExecutionStatus.capped;
+}
+
+/// A goal posted to the engine ([GlpEngine.postGoal]): checked, its terms on
+/// the heap, and put on the machine's queue --- not yet run.
+class PostedGoal {
+  /// The scheduler over the code image the goal was posted on, which runs the
+  /// goal and every goal it spawns.
+  final Scheduler scheduler;
+
+  /// The input streams the caller holds, by the name of their variable in the
+  /// goal: the goal holds the variable's reader and the caller its writer,
+  /// through which the caller extends the stream ([InputInjector.inject]) or
+  /// closes it ([InputInjector.close]).  The goals an injection wakes are the
+  /// caller's to enqueue and run.
+  final Map<String, InputInjector> inputs;
+
+  /// The writer of each variable of the goal, by name, where the run's outcome
+  /// is read (GLP-Spec glp.tex, Definition "cGLP Proper Run, Outcome").
+  final Map<String, HeapCell> variables;
+
+  PostedGoal._(this.scheduler, this.inputs, this.variables);
+}
+
+/// The text of the constant [name] in a goal posted to the engine, read back
+/// as that constant (GLP-Spec Definition "Logic Programs Syntax": the text
+/// denotes the term): a name that unquoted would read as an atom stands as it
+/// is, and any other --- one that would read as a variable, a number, an
+/// operator or a keyword --- in single quotes, its quote and backslash
+/// escaped.  For the hosts, which post their entry goal with the agent's id
+/// and the constants of its spawn directive ([GlpEngine.postGoal]).
+String glpConstantText(String name) {
+  if (RegExp(r'^[a-z][a-zA-Z0-9_]*$').hasMatch(name) &&
+      name != 'mod' &&
+      name != 'procedure') {
+    return name;
+  }
+  return "'${name.replaceAll(r'\', r'\\').replaceAll("'", r"\'")}'";
+}
+
+/// A goal the engine refuses to post ([GlpEngine.postGoal]), the refusal its
+/// text: a goal that does not parse as a clause body or is not well-typed as
+/// one, that calls no entry point of a loaded unit and no procedure of the
+/// root, or that names an input it does not hold the reader of.
+class GoalRefused implements Exception {
+  final String message;
+  GoalRefused(this.message);
+
+  @override
+  String toString() => message;
 }
 
 /// Module info for tracking loaded modules
@@ -763,37 +813,243 @@ class GlpEngine {
 
   /// Run a goal and return the result
   ///
-  /// [goalText] is the goal to run, e.g., "merge([1,2],[a,b],X)"
+  /// [goalText] is the goal to run, e.g., "merge([1,2],[a,b],X)".  It is
+  /// posted by [postGoal]'s path, checked there, and run here to quiescence or
+  /// the cycle limit; a refused goal runs nothing and its refusal is the
+  /// result's error.
   Future<ExecutionResult> runGoal(String goalText) async {
     try {
-      // Parse the goal
-      var trimmed = goalText.trim();
-      if (trimmed.endsWith('.')) {
-        trimmed = trimmed.substring(0, trimmed.length - 1).trim();
+      final posted = _post(_goalText(goalText));
+
+      // One drain, to quiescence or the cycle limit, over the whole run.  Its
+      // status is the run's: failed if a goal of the run failed (Fail advances
+      // the queue and the run continues, dGLP/madGLP Reduce), capped if the
+      // limit stopped it with goals still queued, suspended if a goal of the
+      // run waits at quiescence, and succeeded otherwise.
+      final result = await posted.scheduler.drainAsyncWithStatus(
+        maxCycles: maxCycles,
+        debug: debugTrace,
+        showBindings: false,
+        debugOutput: debugOutput,
+        send: _sends,
+      );
+
+      // Collect bindings
+      final bindings = <String, rt.Term?>{};
+      for (final entry in posted.variables.entries) {
+        final varName = entry.key;
+        final writerId = entry.value;
+        if (_runtime.heap.isBound(writerId)) {
+          final varRef = rt.VarRef(writerId);
+          bindings[varName] = _runtime.heap.dereference(varRef);
+        } else {
+          bindings[varName] = null;
+        }
       }
 
-      // Reject an ill-typed goal before running it. Soundness of well-typing
-      // (TGLP glp-semantics, Theorem thm:soundness) holds for runs from a
-      // well-typed initial goal; a goal is well-typed iff well-typed as a body.
-      final typeError = _checkGoalWellTyped(trimmed);
-      if (typeError != null) {
-        return ExecutionResult(
-          status: ExecutionStatus.failed,
-          error: typeError,
-        );
-      }
-
-      // Check if this is a conjunction
-      if (_isConjunction(trimmed)) {
-        return await _runConjunction(trimmed);
-      }
-
-      return await _runSingleGoal(trimmed);
+      return ExecutionResult(
+        status: result.status,
+        bindings: bindings,
+      );
     } catch (e) {
       return ExecutionResult(
         status: ExecutionStatus.failed,
         error: e.toString(),
       );
+    }
+  }
+
+  /// Post a goal to the engine: check it, put it on the machine's queue, and
+  /// return it posted, not yet run.  The one path by which a goal reaches the
+  /// machine from outside it --- the REPL's ([runGoal]), a host's
+  /// (multiagent/agent_runtime.dart) and the isolate boot's
+  /// (multiagent/isolate_manager.dart): "The remaining producer of unchecked
+  /// terms is the initial goal posted to the runtime, at boot or
+  /// interactively; it is type-checked before execution as a body goal"
+  /// (TGLP modules.tex, "Type-Compatible Attestation Between Agents",
+  /// Definition def:well-typed-clause), and "the procedures that may be
+  /// posted are exactly the entry points" (modules.tex, "Entry and the absence
+  /// of a boot module"), with the root self.glp's ([_goalLabel]).
+  ///
+  /// [inputs] names the variables of the goal whose writers the caller holds:
+  /// each occurs in the goal as a reader only, the goal consuming the stream
+  /// the caller produces, and its writer is returned as an [InputInjector] in
+  /// [PostedGoal.inputs], through which the caller extends the stream with
+  /// the ground terms it is handed --- the person's acts (GSG, Appendix "The
+  /// Prototype's Screens") --- or closes it.  A variable the goal writes is
+  /// not the caller's to write, and one the goal does not hold is no input of
+  /// the goal: either is refused, as is a goal that does not check or calls
+  /// no entry point.  A refused goal puts nothing on the machine.
+  ///
+  /// Until 2026-10-04 a host posted its goal with an injector and no check
+  /// (agent_runtime.dart, isolate_manager.dart), and [runGoal], which
+  /// checked, handed the caller no writer.
+  PostedGoal postGoal(String goalText, {List<String> inputs = const []}) =>
+      _post(_goalText(goalText), inputs: inputs);
+
+  /// [goalText] trimmed, its full stop dropped.
+  static String _goalText(String goalText) {
+    var trimmed = goalText.trim();
+    if (trimmed.endsWith('.')) {
+      trimmed = trimmed.substring(0, trimmed.length - 1).trim();
+    }
+    return trimmed;
+  }
+
+  /// The posting of [trimmed] ([postGoal]).  Throws [GoalRefused], naming
+  /// the refusal, where the goal is not posted.
+  PostedGoal _post(String trimmed, {List<String> inputs = const []}) {
+    // Reject an ill-typed goal before running it. Soundness of well-typing
+    // (TGLP glp-semantics, Theorem thm:soundness) holds for runs from a
+    // well-typed initial goal; a goal is well-typed iff well-typed as a body.
+    final typeError = _checkGoalWellTyped(trimmed);
+    if (typeError != null) throw GoalRefused(typeError);
+
+    // The goal's atoms: a conjunction's conjuncts, read as a clause body, or
+    // the one goal, read as a clause.
+    final conjunction = _isConjunction(trimmed);
+    final List<Atom> goals;
+    if (conjunction) {
+      // Quoted, as in _checkGoalWellTyped: unquoted, the head's name is an
+      // anonymous variable, and the conjunction does not parse.
+      final ast =
+          Parser(Lexer("'_conj_wrapper_' :- $trimmed.").tokenize()).parse();
+      if (ast.procedures.isEmpty || ast.procedures[0].clauses.isEmpty) {
+        throw GoalRefused('Could not parse conjunction');
+      }
+      final clause = ast.procedures[0].clauses[0];
+      if (clause.body == null || clause.body!.isEmpty) {
+        throw GoalRefused('No goals in conjunction');
+      }
+      goals = [
+        for (final g in clause.body!) Atom(g.functor, g.args, g.line, g.column)
+      ];
+    } else {
+      final ast = Parser(Lexer('$trimmed.').tokenize()).parse();
+      if (ast.procedures.isEmpty) throw GoalRefused('No goal found');
+      if (ast.procedures[0].clauses.isEmpty) {
+        throw GoalRefused('No clauses in goal');
+      }
+      goals = [ast.procedures[0].clauses[0].head];
+    }
+
+    // Every conjunct is found, and every input is the goal's to read, before
+    // any is put to the machine, so a refused goal leaves nothing queued
+    // behind it.
+    final program = combinedProgram;
+    final labels = <String>[];
+    for (final goal in goals) {
+      final procedureLabel = _goalLabel(goal.functor, goal.args.length);
+      if (procedureLabel == null || program.labels[procedureLabel] == null) {
+        throw GoalRefused(
+            'Predicate ${goal.functor}/${goal.args.length} not found');
+      }
+      labels.add(procedureLabel);
+    }
+    _requireInputs(goals, inputs);
+
+    // One CodeImage + ByteRunner for the whole goal; each conjunct's entry is
+    // a byte offset into it.  The caller has the labels from the image's own
+    // program, so an unresolved offset is an internal invariant violation
+    // between the object labels and the image symbols, not a user error.
+    final image = codeImageFromProgram(program);
+    final entries = [
+      for (final l in labels)
+        image.entryOffsetOf(l) ??
+            (throw StateError('no compiled byte entry for $l'))
+    ];
+    final scheduler =
+        Scheduler(rt: _runtime, runners: {'main': ByteRunner(image)});
+    scheduler.resetDisplayNumbering();
+
+    final queryVarWriters = <String, HeapCell>{};
+    final varNameToId = <String, HeapCell>{};
+
+    // Each input's pair: the caller holds the writer, and the goal's reader
+    // occurrence is the pair's reader (_setupArgument).
+    final injectors = <String, InputInjector>{};
+    for (final name in inputs) {
+      final (writer, _) = _runtime.heap.allocateVariable();
+      varNameToId[name] = writer;
+      queryVarWriters[name] = writer;
+      injectors[name] = InputInjector(_runtime.heap, name, writer);
+    }
+
+    // The conjuncts together are the run's initial goal, its resolvent G_0
+    // (GLP-Spec glp.tex, Definition "Transition System ..."; IGLP dglp.tex,
+    // the dGLP configuration): they are put to the machine together and run
+    // by one drain to quiescence, and the conjunction's status is that of the
+    // whole run there, as madGLP reports it for an agent, which reduces its
+    // whole resolvent, FIFO, until quiescent (IGLP madglp.tex, "Each madGLP
+    // agent executes its local resolvent with FIFO scheduling").  Drained one
+    // conjunct at a time and the statuses aggregated, a conjunct that waits
+    // on a later one, p(X?) before q(X), was reported suspended although the
+    // run then completed it; and a conjunct that never quiesces starved every
+    // conjunct after it.
+    for (var g = 0; g < goals.length; g++) {
+      final args = goals[g].args;
+      final argSlots = <int, rt.Term>{};
+      for (int i = 0; i < args.length; i++) {
+        if (conjunction) {
+          _setupConjunctionArg(
+              _runtime, args[i], i, argSlots, queryVarWriters, varNameToId);
+        } else {
+          _setupArgument(
+              _runtime, args[i], i, argSlots, queryVarWriters, varNameToId);
+        }
+      }
+
+      // Each goal's id is the runtime's next, as every goal's is.
+      final goalId = _runtime.nextGoalId++;
+      _runtime.setGoalEnv(goalId, CallEnv(args: argSlots));
+      _runtime.setGoalProgram(goalId, 'main');
+      // The goal carries its module value — the loaded app's artefact (h(M) +
+      // code) — read back by `self_module`.
+      if (_appModule != null) {
+        _runtime.setGoalModule(goalId, _appModule);
+      }
+      _runtime.gq.enqueue(GoalRef(goalId, entries[g]));
+    }
+    scheduler.setQueryVarNames(queryVarWriters);
+
+    return PostedGoal._(scheduler, injectors, queryVarWriters);
+  }
+
+  /// Refuse [inputs] that are not the goal's to read: each must occur in
+  /// [goals], and only as a reader, its writer being the caller's
+  /// ([postGoal]).  An input named twice is one input.
+  void _requireInputs(List<Atom> goals, List<String> inputs) {
+    if (inputs.isEmpty) return;
+    if (inputs.toSet().length != inputs.length) {
+      throw GoalRefused('An input is named twice: ${inputs.join(', ')}');
+    }
+    final readers = <String>{};
+    final writers = <String>{};
+    void walk(Term? t) {
+      if (t is VarTerm) {
+        (t.isReader ? readers : writers).add(t.name);
+      } else if (t is StructTerm) {
+        t.args.forEach(walk);
+      } else if (t is ListTerm) {
+        walk(t.head);
+        walk(t.tail);
+      }
+    }
+
+    for (final goal in goals) {
+      goal.args.forEach(walk);
+    }
+    for (final name in inputs) {
+      if (writers.contains(name)) {
+        throw GoalRefused(
+            "Input $name occurs in the goal as a writer: its writer is the "
+            "caller's, and the goal holds its reader $name? only");
+      }
+      if (!readers.contains(name)) {
+        throw GoalRefused(
+            'Input $name does not occur in the goal: the goal holds the '
+            'reader $name? of each input');
+      }
     }
   }
 
@@ -944,236 +1200,6 @@ class GlpEngine {
 
     final detail = result.errors.map((e) => '  ${e.message}').join('\n');
     return 'Goal is not well-typed:\n$detail';
-  }
-
-  /// Build the [ByteRunner] and entry BYTE OFFSET for a query over a
-  /// [CodeImage] of the program. The caller has already verified the entry
-  /// exists (the REPL entry-point guard), so an unresolved offset here is an
-  /// internal invariant violation between the object labels and the image
-  /// symbols, not a user error.
-  (GoalRunner, int) _runnerForQuery(
-      BytecodeProgram program, String procedureLabel) {
-    final image = codeImageFromProgram(program);
-    final off = image.entryOffsetOf(procedureLabel);
-    if (off == null) {
-      throw StateError('no compiled byte entry for $procedureLabel');
-    }
-    return (ByteRunner(image), off);
-  }
-
-  Future<ExecutionResult> _runSingleGoal(String trimmed) async {
-    final parseInput = '$trimmed.';
-    final lexer = Lexer(parseInput);
-    final tokens = lexer.tokenize();
-    final parser = Parser(tokens);
-    final ast = parser.parse();
-
-    if (ast.procedures.isEmpty) {
-      return ExecutionResult(
-        status: ExecutionStatus.failed,
-        error: 'No goal found',
-      );
-    }
-
-    final proc = ast.procedures[0];
-    if (proc.clauses.isEmpty) {
-      return ExecutionResult(
-        status: ExecutionStatus.failed,
-        error: 'No clauses in goal',
-      );
-    }
-
-    final goalClause = proc.clauses[0];
-    final goalAtom = goalClause.head;
-    final functor = goalAtom.functor;
-    final arity = goalAtom.arity;
-    final args = goalAtom.args;
-
-    final program = combinedProgram;
-    final procedureLabel = _goalLabel(functor, arity);
-
-    if (procedureLabel == null || program.labels[procedureLabel] == null) {
-      return ExecutionResult(
-        status: ExecutionStatus.failed,
-        error: 'Predicate $functor/$arity not found',
-      );
-    }
-
-    final queryVarWriters = <String, HeapCell>{};
-    final varNameToId = <String, HeapCell>{};
-    final argSlots = <int, rt.Term>{};
-
-    for (int i = 0; i < args.length; i++) {
-      _setupArgument(
-          _runtime, args[i], i, argSlots, queryVarWriters, varNameToId);
-    }
-
-    // The goal's id is the runtime's next, as every goal's is.
-    final goalId = _runtime.nextGoalId++;
-    final env = CallEnv(args: argSlots);
-    _runtime.setGoalEnv(goalId, env);
-    _runtime.setGoalProgram(goalId, 'main');
-    // The goal carries its module value — the loaded app's artefact (h(M) +
-    // code) — read back by `self_module`.
-    if (_appModule != null) {
-      _runtime.setGoalModule(goalId, _appModule);
-    }
-
-    final (runner, goalEntry) =
-        _runnerForQuery(program, procedureLabel);
-    final scheduler = Scheduler(rt: _runtime, runners: {'main': runner});
-    scheduler.resetDisplayNumbering();
-    scheduler.setQueryVarNames(queryVarWriters);
-
-    _runtime.gq.enqueue(GoalRef(goalId, goalEntry));
-
-    final result = await scheduler.drainAsyncWithStatus(
-      maxCycles: maxCycles,
-      debug: debugTrace,
-      showBindings: false,
-      debugOutput: debugOutput,
-      send: _sends,
-    );
-
-    // Collect bindings
-    final bindings = <String, rt.Term?>{};
-    for (final entry in queryVarWriters.entries) {
-      final varName = entry.key;
-      final writerId = entry.value;
-      if (_runtime.heap.isBound(writerId)) {
-        final varRef = rt.VarRef(writerId);
-        bindings[varName] = _runtime.heap.dereference(varRef);
-      } else {
-        bindings[varName] = null;
-      }
-    }
-
-    return ExecutionResult(
-      status: result.status,
-      bindings: bindings,
-    );
-  }
-
-  Future<ExecutionResult> _runConjunction(String trimmed) async {
-    // Quoted, as in _checkGoalWellTyped: unquoted, the head's name is an
-    // anonymous variable, and the conjunction does not parse.
-    final parseInput = "'_conj_wrapper_' :- $trimmed.";
-    final lexer = Lexer(parseInput);
-    final tokens = lexer.tokenize();
-    final parser = Parser(tokens);
-    final ast = parser.parse();
-
-    if (ast.procedures.isEmpty || ast.procedures[0].clauses.isEmpty) {
-      return ExecutionResult(
-        status: ExecutionStatus.failed,
-        error: 'Could not parse conjunction',
-      );
-    }
-
-    final clause = ast.procedures[0].clauses[0];
-    if (clause.body == null || clause.body!.isEmpty) {
-      return ExecutionResult(
-        status: ExecutionStatus.failed,
-        error: 'No goals in conjunction',
-      );
-    }
-
-    final goals =
-        clause.body!.map((g) => Atom(g.functor, g.args, g.line, g.column)).toList();
-    final program = combinedProgram;
-    final queryVarWriters = <String, HeapCell>{};
-    final varNameToId = <String, HeapCell>{};
-
-    // Build one CodeImage + ByteRunner for the whole conjunction; per-goal
-    // entry PCs are byte offsets resolved below.
-    final image = codeImageFromProgram(program);
-    final GoalRunner runner = ByteRunner(image);
-    final scheduler = Scheduler(rt: _runtime, runners: {'main': runner});
-    scheduler.resetDisplayNumbering();
-
-    // The conjuncts together are the run's initial goal, its resolvent G_0
-    // (GLP-Spec glp.tex, Definition "Transition System ..."; IGLP dglp.tex,
-    // the dGLP configuration): they are put to the machine together and run
-    // by one drain to quiescence, and the conjunction's status is that of the
-    // whole run there, as madGLP reports it for an agent, which reduces its
-    // whole resolvent, FIFO, until quiescent (IGLP madglp.tex, "Each madGLP
-    // agent executes its local resolvent with FIFO scheduling").  Drained one
-    // conjunct at a time and the statuses aggregated, a conjunct that waits
-    // on a later one, p(X?) before q(X), was reported suspended although the
-    // run then completed it; and a conjunct that never quiesces starved every
-    // conjunct after it.
-
-    // Every conjunct is found before any is put to the machine, so a refused
-    // conjunction leaves nothing queued behind it.
-    final labels = <String>[];
-    for (final goal in goals) {
-      final procedureLabel = _goalLabel(goal.functor, goal.args.length);
-      if (procedureLabel == null || program.labels[procedureLabel] == null) {
-        return ExecutionResult(
-          status: ExecutionStatus.failed,
-          error: 'Predicate ${goal.functor}/${goal.args.length} not found',
-        );
-      }
-      labels.add(procedureLabel);
-    }
-
-    for (var g = 0; g < goals.length; g++) {
-      final goal = goals[g];
-      final args = goal.args;
-      final procedureLabel = labels[g];
-
-      final argSlots = <int, rt.Term>{};
-      for (int i = 0; i < args.length; i++) {
-        _setupConjunctionArg(
-            _runtime, args[i], i, argSlots, queryVarWriters, varNameToId);
-      }
-
-      // Each conjunct's id is the runtime's next, as every goal's is.
-      final goalId = _runtime.nextGoalId++;
-      final env = CallEnv(args: argSlots);
-      _runtime.setGoalEnv(goalId, env);
-      _runtime.setGoalProgram(goalId, 'main');
-      // The goal carries its module value — the loaded app's artefact (h(M) +
-      // code) — read back by `self_module`.
-      if (_appModule != null) {
-        _runtime.setGoalModule(goalId, _appModule);
-      }
-
-      scheduler.setQueryVarNames(queryVarWriters);
-      final goalEntry = image.entryOffsetOf(procedureLabel)!;
-      _runtime.gq.enqueue(GoalRef(goalId, goalEntry));
-    }
-
-    // One drain, to quiescence or the cycle limit, over the whole run.  Its
-    // status is the run's: failed if a goal of the run failed (Fail advances
-    // the queue and the run continues, dGLP/madGLP Reduce), capped if the
-    // limit stopped it with goals still queued, suspended if a goal of the run
-    // waits at quiescence, and succeeded otherwise.
-    final result = await scheduler.drainAsyncWithStatus(
-      maxCycles: maxCycles,
-      debug: debugTrace,
-      showBindings: false,
-      debugOutput: debugOutput,
-      send: _sends,
-    );
-
-    // Collect bindings
-    final bindings = <String, rt.Term?>{};
-    for (final entry in queryVarWriters.entries) {
-      final varName = entry.key;
-      final writerId = entry.value;
-      if (_runtime.heap.isBound(writerId)) {
-        final varRef = rt.VarRef(writerId);
-        bindings[varName] = _runtime.heap.dereference(varRef);
-      } else {
-        bindings[varName] = null;
-      }
-    }
-
-    return ExecutionResult(
-      status: result.status,
-      bindings: bindings,
-    );
   }
 
   bool _isConjunction(String query) {
