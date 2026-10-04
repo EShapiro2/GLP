@@ -2808,7 +2808,7 @@ HEREDOC
 check "Coins mini-app loads as a program" "Loaded program" "$n2_core"
 check_not "Coins mini-app no type errors" "Type checking failed" "$n2_core"
 check_not "Coins mini-app is certified" "CERTIFICATE REFUSED" "$n2_core"
-check "Coins mini-app: its certificate carries the compiler's key" "K = [0-9a-f]\{64\}" "$n2_core"
+check "Coins mini-app: its certificate carries the compiler's key" "K = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$n2_core"
 
 n2_load=$("$REPL_RUN" <<HEREDOC
 $COINS
@@ -3190,7 +3190,7 @@ HEREDOC
 check "Denominated mini-app loads as a program" "Loaded program" "$n4_core"
 check_not "Denominated mini-app no type errors" "Type checking failed" "$n4_core"
 check_not "Denominated mini-app is certified" "CERTIFICATE REFUSED" "$n4_core"
-check "Denominated mini-app: its certificate carries the compiler's key" "K = [0-9a-f]\{64\}" "$n4_core"
+check "Denominated mini-app: its certificate carries the compiler's key" "K = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$n4_core"
 
 n4_load=$("$REPL_RUN" <<HEREDOC
 $SOV
@@ -4849,7 +4849,7 @@ check "SG super-app refuses a forgery: an invitation that is not a signed term d
 check "SG super-app refuses a forgery: an undertaking that is not a signed term creates no root channel, and the next message arrives" "F2 = \[msg(agent, person, received(bob, hello))\]" "$sg_core"
 check "SG super-app refuses a forgery: a root channel under an undertaking that is not a signed term is not accepted, and the next message arrives" "F3 = \[msg(agent, person, received(alice, hello))\]" "$sg_core"
 check "SG super-app: the attestation minted at befriend_commit" "T = attest(alice, bob)" "$sg_core"
-check "SG super-app: signed under the person's key" "K = [0-9a-f]\{64\}" "$sg_core"
+check "SG super-app: signed under the person's key" "K = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$sg_core"
 check "SG super-app: invitation, handshake, activation: alice greeted" "A = \[opened(bob), greeted(bob)\]" "$sg_core"
 check "SG super-app: invitation, handshake, activation: bob greeted" "B = \[opened(alice), greeted(alice)\]" "$sg_core"
 check "SG super-app: a declined invitation opens nothing at alice" "A2 = \[\]" "$sg_core"
