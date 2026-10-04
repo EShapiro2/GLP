@@ -7,19 +7,21 @@
 %% him, so Bob's screen shows the Integrate-unfriend path.  An in-heap crossbar
 %% routes '_net' cold calls by addressee; friend channels are in-heap.
 %%
-%% The play wires the canonical compiled pair of this platform — agent.glp and
-%% ui/mediator.glp — to the Dart bridge: the code that runs under the live UI
+%% The play wires the canonical compiled pair of this platform — core/agent.glp
+%% and ui/mediator.glp — to the Dart bridge: the code that runs under the live UI
 %% is the code the fplays test.
 
 %% =============================================================================
 %% IMPORTED PROCEDURES — Cross-module dependencies
 %% =============================================================================
 
-%% From agent.glp (sibling)
-imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
+%% From core/, its self.glp forwarding to core/agent.glp (TGLP, Section
+%% "Module System": a qualifier names a child directory of the caller's,
+%% entered through its self.glp)
+imported procedure core#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 
-%% From ui/mediator.glp
-imported procedure mediator#ui_mediator(Key?, AgentChannel?, UserChannel?, PendingList?, Integer?).
+%% From ui/, its self.glp forwarding to ui/mediator.glp
+imported procedure ui#ui_mediator(Key?, AgentChannel?, UserChannel?, PendingList?, Integer?).
 
 %% =============================================================================
 %% IN-HEAP CROSSBAR — route '_net' cold calls by addressee
@@ -98,21 +100,21 @@ ui_drain(_, [], []).
 %% SCENARIO BOOT (entered as Bob's agent_init)
 %% =============================================================================
 
-procedure agent_init(Constant?, UserCmdStream?, NetInStream?).
+exported procedure agent_init(Constant?, UserCmdStream?, NetInStream?).
 agent_init(bob, UserIn, _) :-
-    agent # agent(bob, BAgentIn?, BNetIn?,
+    core # agent(bob, BAgentIn?, BNetIn?,
           [user_output(BA2U), net_output(BNetOut)]),
-    mediator # ui_mediator(bob, ch(BA2U?, BAgentIn),
+    ui # ui_mediator(bob, ch(BA2U?, BAgentIn),
                 ch(UserIn?, BUserOut), [], 1),
     send_to_user(BUserOut?),
-    agent # agent(alice, AAgentIn?, ANetIn?,
+    core # agent(alice, AAgentIn?, ANetIn?,
           [user_output(AA2U), net_output(ANetOut)]),
-    mediator # ui_mediator(alice, ch(AA2U?, AAgentIn),
+    ui # ui_mediator(alice, ch(AA2U?, AAgentIn),
                 ch(ACmds?, AUserOut), [], 1),
     ui_alice(AUserOut?, ACmds),
-    agent # agent(charlie, CAgentIn?, CNetIn?,
+    core # agent(charlie, CAgentIn?, CNetIn?,
           [user_output(CA2U), net_output(CNetOut)]),
-    mediator # ui_mediator(charlie, ch(CA2U?, CAgentIn),
+    ui # ui_mediator(charlie, ch(CA2U?, CAgentIn),
                 ch(CCmds?, CUserOut), [], 1),
     ui_charlie(CUserOut?, CCmds),
     crossbar(ANetOut?, BNetOut?, CNetOut?, ANetIn, BNetIn, CNetIn).

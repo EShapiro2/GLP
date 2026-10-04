@@ -1,0 +1,53 @@
+%% ui/self.glp --- the module ui: the simulated UI of the social graph's plays,
+%% the UI mediator (mediator.glp) and the scripted persons (actors.glp).
+%%
+%% The parent's plays (../boot.glp, ../play_ui_boot.glp) call into this
+%% directory as ui # p.  A qualifier names a single child directory or module
+%% file of the caller's directory, and a directory is entered through its
+%% self.glp, a call into it resolving only to a procedure its self.glp exports
+%% (TGLP, Section "Module System"): so this file exports what the plays call,
+%% each by a forwarder to the module that defines it.  The types are the
+%% parent's (../self.glp, an ancestor scope).
+
+%% The UI mediator (mediator.glp).
+imported procedure mediator#ui_mediator(Key?, AgentChannel?, UserChannel?, PendingList?, Integer?).
+exported procedure ui_mediator(Key?, AgentChannel?, UserChannel?, PendingList?, Integer?).
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    mediator # ui_mediator(Id?, AgentCh?, UserCh?, Ps?, N?).
+
+%% The scripted persons of plays 1 to 3 (actors.glp).
+imported procedure actors#alice1(ActorChannel?).
+exported procedure alice1(ActorChannel?).
+alice1(Ch) :- actors # alice1(Ch?).
+
+imported procedure actors#bob1(ActorChannel?).
+exported procedure bob1(ActorChannel?).
+bob1(Ch) :- actors # bob1(Ch?).
+
+imported procedure actors#charlie1(ActorChannel?).
+exported procedure charlie1(ActorChannel?).
+charlie1(Ch) :- actors # charlie1(Ch?).
+
+imported procedure actors#alice2(ActorChannel?).
+exported procedure alice2(ActorChannel?).
+alice2(Ch) :- actors # alice2(Ch?).
+
+imported procedure actors#bob2(ActorChannel?).
+exported procedure bob2(ActorChannel?).
+bob2(Ch) :- actors # bob2(Ch?).
+
+imported procedure actors#charlie2(ActorChannel?).
+exported procedure charlie2(ActorChannel?).
+charlie2(Ch) :- actors # charlie2(Ch?).
+
+imported procedure actors#alice3(ActorChannel?).
+exported procedure alice3(ActorChannel?).
+alice3(Ch) :- actors # alice3(Ch?).
+
+imported procedure actors#bob3(ActorChannel?).
+exported procedure bob3(ActorChannel?).
+bob3(Ch) :- actors # bob3(Ch?).
+
+imported procedure actors#charlie3(ActorChannel?).
+exported procedure charlie3(ActorChannel?).
+charlie3(Ch) :- actors # charlie3(Ch?).

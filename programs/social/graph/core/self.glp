@@ -5,8 +5,9 @@
 %% scope).  The certified mini-apps it hosts are programs of their own
 %% (../pingapp; programs/currencies/coins/currency), whose artefacts the REPL's :artefact
 %% writes here, the one place the agent's load_file/2 resolves a name.  Loaded
-%% as part of ../ (the UI boot plays), agent is found by module name; under
-%% :boot (../../superapp_boot.glp) sg_init/3 runs one super-app per isolate.
+%% as part of ../ (the UI boot plays), the agent is called as core # agent,
+%% through the forwarder below; under :boot (../../superapp_boot.glp)
+%% sg_init/3 runs one super-app per isolate.
 
 %% The super-app plays (superapp_plays.glp) and the test mini-app's entry,
 %% exported so that run/3 finds it among the program's exports.
@@ -56,6 +57,13 @@ superapp(Id, Answers, NetIn) :-
 procedure tee_out(AgentToUserStream?, AgentToUserStream, AgentToUserStream).
 tee_out([X | Xs], [X? | Ys?], [X? | Zs?]) :- ground(X?) | tee_out(Xs?, Ys, Zs).
 tee_out([], [], []).
+
+%% The agent, exported for the parent's UI boot plays (../boot.glp,
+%% ../play_ui_boot.glp), which call it as core # agent: a call into this
+%% directory resolves only to what this file exports (TGLP, Section "Module
+%% System", External access).
+exported procedure agent(Key?, UserInStream?, NetInStream?, OutputsList?).
+agent(Id, UserIn, NetIn, Outs) :- agent # agent(Id?, UserIn?, NetIn?, Outs?).
 
 %% The super-app as a play, alice with a scripted Bob: what the Flutter agent
 %% runtime starts (home_ui.glp).
