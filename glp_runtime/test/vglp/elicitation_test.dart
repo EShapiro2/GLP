@@ -20,10 +20,16 @@
 // the dispatcher never terminates, the scripted person holds its writer for
 // good and goes on watching, so every log stays open; a withdrawn construct's
 // grant writer goes to Deads, read here from the dispatcher's last suspension
-// in the trace.
+// in the trace.  The grant names its question (vGLP #5 Cowork, 2026-10-04
+// 09:05 UTC, C): a grant is input(Id, P, R), P the path of argument indices
+// from the root of the interactive variable's term to the position the
+// person writes, [] the root, a stream the person writes having the
+// stream's own path; the view marks each such position input(P), and the
+// scripted person sends back the P it reads there.
 // Programs: programs/tests/vglp/fragments (questions.vglp, the fragments of
 // Sections 1 and 3, and its plays) and programs/tests/vglp/stream (chat.vglp,
-// the chat input of Section 3, and its play).
+// the chat input of Section 3, and its play); the Real question and the card
+// of two questions are written under programs/tests/vglp/ for their runs.
 
 import 'dart:async';
 import 'dart:io';
@@ -158,7 +164,7 @@ void main() {
       expect(
           r['Log'],
           '[drawn(0, form(card, [shown, buttons([yes, no])]), '
-          'card(bob, input)), withdrawn(0) | _]');
+          'card(bob, input([2]))), withdrawn(0) | _]');
     });
 
     test('a grant that forms no term of the question\'s type answers nothing, '
@@ -166,7 +172,7 @@ void main() {
       final r = await _play('fragments', 'play_card_refused(Resp, Log)');
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       expect(r['Resp'], '_');
-      expect(r['Log'], '[drawn(0, card(bob, input)) | _]');
+      expect(r['Log'], '[drawn(0, card(bob, input([2]))) | _]');
     });
 
     test('a refused grant leaves its question open, and the next grant that '
@@ -176,7 +182,7 @@ void main() {
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       // maybe answered nothing; yes, the next grant, answered the card.
       expect(r['Resp'], 'accept(bob)');
-      expect(r['Log'], '[drawn(0, card(bob, input)), withdrawn(0) | _]');
+      expect(r['Log'], '[drawn(0, card(bob, input([2]))), withdrawn(0) | _]');
     });
   });
 
@@ -188,8 +194,9 @@ void main() {
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       expect(r['Out'],
           '[msg(bob, "hello"), msg(bob, "world") | _]');
-      // One construct, drawn once, an input box that stays open.
-      expect(r['Log'], '[drawn(0, input_box(text)) | _]');
+      // One construct, drawn once, an input box that stays open, the
+      // stream's own position the root, [].
+      expect(r['Log'], '[drawn(0, input_box(text), input([])) | _]');
       expect(r['Log'], isNot(contains('withdrawn')));
     });
 
@@ -198,7 +205,7 @@ void main() {
       final r = await _play('stream', 'play_chat_two(Out, Log)');
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       expect(r['Out'], '[msg(carol, "one"), msg(carol, "two") | _]');
-      expect(r['Log'], '[drawn(0, input_box(text)) | _]');
+      expect(r['Log'], '[drawn(0, input_box(text), input([])) | _]');
     });
 
     test('the agent\'s message clause reads no request: it reduces on an '
@@ -210,10 +217,10 @@ void main() {
       expect(
           log,
           contains('drawn(0, input_box(menu([form(post, [text]), '
-              'button(quit)])), input)'));
+              'button(quit)])), input([]))'));
       expect(log,
           contains('drawn(1, form(card, [shown, buttons([yes, no])]), '
-              'card(carol, input))'));
+              'card(carol, input([2])))'));
       expect(log, isNot(contains('withdrawn')));
     });
   });
@@ -225,7 +232,8 @@ void main() {
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       expect(r['Outs'], '["hi"]');
       expect(r['Log'],
-          '[drawn(0, input_box(menu([form(post, [text]), button(quit)]))) | _]');
+          '[drawn(0, input_box(menu([form(post, [text]), button(quit)])), '
+          'input([])) | _]');
     });
   });
 
@@ -311,10 +319,10 @@ play_quote(P?, Log?) :-
     pricing_person(Ds?, Gs, Log).
 
 procedure pricing_person(_?, PersonIn, Stream(_)).
-pricing_person([draw(Id, W, input) | Ds],
-               [input(Id?, price(3)), input(Id?, price(2.5)) | Gs?],
-               [drawn(Id?, W?) | Log?]) :-
-    ground(Id?), ground(W?) |
+pricing_person([draw(Id, W, input(Q)) | Ds],
+               [input(Id?, Q?, price(3)), input(Id?, Q?, price(2.5)) | Gs?],
+               [drawn(Id?, W?, input(Q?)) | Log?]) :-
+    ground(Id?), ground(W?), ground(Q?) |
     pricing_person(Ds?, Gs, Log).
 pricing_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
@@ -332,7 +340,182 @@ pricing_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       final r = _Run(await engine.runGoal('play_quote(P, Log)'), engine);
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       expect(r['P'], 'price(2.5)');
-      expect(r['Log'], '[drawn(0, form(price, [number])), withdrawn(0) | _]');
+      expect(r['Log'],
+          '[drawn(0, form(price, [number]), input([])), withdrawn(0) | _]');
+    });
+  });
+
+  group('the grant names its question (C)', () {
+    // vGLP #5 Cowork, 2026-10-04 09:05 UTC, C: a construct may hold two
+    // questions of one type, so a grant is input(Id, P, R), P the question's
+    // position, and answer_N guards on its own P, a grant for another P going
+    // on.  The card here holds two questions of one type, at [2] and [3].
+    // The program is written under programs/tests/vglp/ for the run and
+    // removed after, as the Real question's is.
+    late Directory fixture;
+    setUp(() {
+      fixture = Directory('../programs/tests/vglp/two_fixture_${pid}_'
+          '${DateTime.now().microsecondsSinceEpoch}')
+        ..createSync();
+      File('${fixture.path}/two.vglp').writeAsStringSync('''
+Peer  ::= Constant.
+YesNo ::= yes ; no.
+Offer ::= offer(Peer).
+Both  ::= both(Peer, YesNo, YesNo).
+Card  ::= card(Peer, YesNo?, YesNo?).
+
+%% Show the person who offers, and ask two questions of one type.
+exported procedure (Card)*respond(Offer?, Both).
+(card(From?, A, B))*respond(offer(From), Both?) :-
+    ground(From?) | both(From?, A?, B?, Both).
+
+procedure both(Peer?, YesNo?, YesNo?, Both).
+both(P, A, B, both(P?, A?, B?)).
+
+%% The same card one level down, its questions at [2, 2] and [2, 3].
+Nest  ::= nest(Peer, Card).
+exported procedure (Nest)*nested(Both).
+(nest(carol, card(carol, A, B)))*nested(both(carol, A?, B?)).
+''');
+      File('${fixture.path}/self.glp').writeAsStringSync('''
+Peer     ::= Constant.
+YesNo    ::= yes ; no.
+Offer    ::= offer(Peer).
+Both     ::= both(Peer, YesNo, YesNo).
+Card     ::= card(Peer, YesNo?, YesNo?).
+Nest     ::= nest(Peer, Card).
+Question ::= card_w(Card) ; nest_w(Nest).
+Ask(Q)   ::= ask(Constant, Q).
+PersonIn ::= [_ | PersonIn].
+
+imported procedure two#respond(Offer?, Both, Stream(Ask(Question))).
+imported procedure two#nested(Both, Stream(Ask(Question))).
+imported procedure two#dispatch(Stream(Ask(Question))?,
+    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+
+%% The person grants no at the second question and then yes at the first,
+%% each at the position the view marks.
+exported procedure play_each(Both, Stream(_)).
+play_each(B?, Log?) :-
+    two # respond(offer(bob), B, Asks),
+    two # dispatch(Asks?, ch(Gs?, Ds), _),
+    each_person(Ds?, Gs, Log).
+
+procedure each_person(_?, PersonIn, Stream(_)).
+each_person([draw(Id, W, card(P, input(Q2), input(Q3))) | Ds],
+            [input(Id?, Q3?, no), input(Id?, Q2?, yes) | Gs?],
+            [drawn(Id?, W?, card(P?, input(Q2?), input(Q3?))) | Log?]) :-
+    ground(Id?), ground(W?), ground(P?), ground(Q2?), ground(Q3?) |
+    each_person(Ds?, Gs, Log).
+each_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    each_person(Ds?, Gs, Log).
+
+%% The person grants no at the second question only.
+exported procedure play_second(Both, Stream(_)).
+play_second(B?, Log?) :-
+    two # respond(offer(bob), B, Asks),
+    two # dispatch(Asks?, ch(Gs?, Ds), _),
+    second_person(Ds?, Gs, Log).
+
+procedure second_person(_?, PersonIn, Stream(_)).
+second_person([draw(Id, _, card(P, input(Q2), input(Q3))) | Ds],
+              [input(Id?, Q3?, no) | Gs?],
+              [drawn(Id?, card(P?, input(Q2?), input(Q3?))) | Log?]) :-
+    ground(Id?), ground(P?), ground(Q2?), ground(Q3?) |
+    second_person(Ds?, Gs, Log).
+second_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    second_person(Ds?, Gs, Log).
+
+%% The person grants terms of the questions' type at positions at which the
+%% card holds no question: the peer's, [1]; past the card's arguments, [4];
+%% the root, []; and below a question, [2, 1].
+exported procedure play_nowhere(Both, Stream(_)).
+play_nowhere(B?, Log?) :-
+    two # respond(offer(bob), B, Asks),
+    two # dispatch(Asks?, ch(Gs?, Ds), _),
+    nowhere_person(Ds?, Gs, Log).
+
+procedure nowhere_person(_?, PersonIn, Stream(_)).
+nowhere_person([draw(Id, _, V) | Ds],
+               [input(Id?, [1], yes), input(Id?, [4], no), input(Id?, [], yes),
+                input(Id?, [2, 1], yes) | Gs?],
+               [drawn(Id?, V?) | Log?]) :-
+    ground(Id?), ground(V?) |
+    nowhere_person(Ds?, Gs, Log).
+nowhere_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    nowhere_person(Ds?, Gs, Log).
+
+%% The nested card: the person grants no at its second question and then yes
+%% at its first, each at the position the view marks.
+exported procedure play_nested(Both, Stream(_)).
+play_nested(B?, Log?) :-
+    two # nested(B, Asks),
+    two # dispatch(Asks?, ch(Gs?, Ds), _),
+    nest_person(Ds?, Gs, Log).
+
+procedure nest_person(_?, PersonIn, Stream(_)).
+nest_person([draw(Id, _, nest(P, card(P1, input(Q2), input(Q3)))) | Ds],
+            [input(Id?, Q3?, no), input(Id?, Q2?, yes) | Gs?],
+            [drawn(Id?, nest(P?, card(P1?, input(Q2?), input(Q3?)))) | Log?]) :-
+    ground(Id?), ground(P?), ground(P1?), ground(Q2?), ground(Q3?) |
+    nest_person(Ds?, Gs, Log).
+nest_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    nest_person(Ds?, Gs, Log).
+''');
+    });
+    tearDown(() {
+      if (fixture.existsSync()) fixture.deleteSync(recursive: true);
+    });
+
+    Future<_Run> play(String goal) async {
+      final engine = GlpEngine(rootSelfGlpPath: _root);
+      expect(engine.loadProgram(fixture.absolute.path), isTrue);
+      return _Run(await engine.runGoal(goal), engine);
+    }
+
+    test('a card with two questions of one type: each is answered by its own '
+        'grant and not by the other\'s', () async {
+      final r = await play('play_each(B, Log)');
+      expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
+      // The view marks the two questions input([2]) and input([3]).  The
+      // person granted no at [3] first and yes at [2] after: by the order of
+      // the view alone, the first grant would have answered [2].
+      expect(r['B'], 'both(bob, yes, no)');
+      expect(
+          r['Log'],
+          '[drawn(0, form(card, [shown, buttons([yes, no]), buttons([yes, '
+          'no])]), card(bob, input([2]), input([3]))), withdrawn(0) | _]');
+    });
+
+    test('a grant at the second question answers it and leaves the first, '
+        'before it in the view, open', () async {
+      final r = await play('play_second(B, Log)');
+      expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
+      expect(r['B'], 'both(bob, _, no)');
+      expect(r['Log'], '[drawn(0, card(bob, input([2]), input([3]))) | _]');
+    });
+
+    test('a grant with a position at which the construct has no question is '
+        'refused, and the questions stay open', () async {
+      final r = await play('play_nowhere(B, Log)');
+      expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
+      expect(r['B'], 'both(bob, _, _)');
+      expect(r['Log'], '[drawn(0, card(bob, input([2]), input([3]))) | _]');
+    });
+
+    test('a question below the root of a structure the program writes is at '
+        'the path down to it, and each is answered by its own grant', () async {
+      final r = await play('play_nested(B, Log)');
+      expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
+      expect(r['B'], 'both(carol, yes, no)');
+      expect(
+          r['Log'],
+          '[drawn(0, nest(carol, card(carol, input([2, 2]), '
+          'input([2, 3])))), withdrawn(0) | _]');
     });
   });
 }

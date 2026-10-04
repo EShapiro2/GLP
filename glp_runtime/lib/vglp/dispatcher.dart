@@ -36,12 +36,14 @@ import '../analysis/type_checker/type_ast.dart';
 
 /// The generic source's types the compilation names: the asks on the ask
 /// stream, Ask(Q); the spawns of the construct processes, Spawn(Q); a grant,
-/// Input; a construct's grants, Inputs; and the person channel's input,
-/// PersonIn, the last two never closing (vGLP #5 Cowork, 2026-10-03 21:13
-/// UTC, Q1).
+/// Input, input(Id, P, R); the position P of a question in its construct,
+/// Path (vGLP #5 Cowork, 2026-10-04 09:05 UTC, C); a construct's grants,
+/// Inputs; and the person channel's input, PersonIn, the last two never
+/// closing (vGLP #5 Cowork, 2026-10-03 21:13 UTC, Q1).
 const askTypeName = 'Ask';
 const spawnTypeName = 'Spawn';
 const inputTypeName = 'Input';
+const pathTypeName = 'Path';
 const inputsTypeName = 'Inputs';
 const personInTypeName = 'PersonIn';
 

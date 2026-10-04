@@ -8,7 +8,9 @@
 %% The play spawns the compiled goal with its ask stream and the dispatcher on
 %% that stream and on the person channel; the goal has no person channel of
 %% its own, so the program's end of one is dropped.  The person sees the
-%% input box and submits three times, a number among two texts.
+%% input box, its position marked input(Q), Q the stream's own path, [], and
+%% submits three times at Q, a number among two texts (vGLP #5 Cowork,
+%% 2026-10-04 09:05 UTC, C: a grant is input(Id, P, R)).
 %%
 %% The person never closes its grants, the person channel never closing
 %% (vGLP at 7838827, Definition "Person Channel, Person Writer, GLP with
@@ -36,10 +38,11 @@ play_chat(Out?, Log?) :-
     chatting_person(Ds?, Gs, Log).
 
 procedure chatting_person(_?, PersonIn, Stream(_)).
-chatting_person([draw(Id, W, input) | Ds],
-                [input(Id?, "hello"), input(Id?, 7), input(Id?, "world") | Gs?],
-                [drawn(Id?, W?) | Log?]) :-
-    ground(Id?), ground(W?) |
+chatting_person([draw(Id, W, input(Q)) | Ds],
+                [input(Id?, Q?, "hello"), input(Id?, Q?, 7),
+                 input(Id?, Q?, "world") | Gs?],
+                [drawn(Id?, W?, input(Q?)) | Log?]) :-
+    ground(Id?), ground(W?), ground(Q?) |
     chatting_person(Ds?, Gs, Log).
 chatting_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
@@ -55,10 +58,10 @@ play_chat_two(Out?, Log?) :-
     two_texts_person(Ds?, Gs, Log).
 
 procedure two_texts_person(_?, PersonIn, Stream(_)).
-two_texts_person([draw(Id, W, input) | Ds],
-                 [input(Id?, "one"), input(Id?, "two") | Gs?],
-                 [drawn(Id?, W?) | Log?]) :-
-    ground(Id?), ground(W?) |
+two_texts_person([draw(Id, W, input(Q)) | Ds],
+                 [input(Id?, Q?, "one"), input(Id?, Q?, "two") | Gs?],
+                 [drawn(Id?, W?, input(Q?)) | Log?]) :-
+    ground(Id?), ground(W?), ground(Q?) |
     two_texts_person(Ds?, Gs, Log).
 two_texts_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |

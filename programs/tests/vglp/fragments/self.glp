@@ -12,8 +12,9 @@
 %% initial goal does (vGLP #4 Cowork, 2026-10-02 08:26 UTC, item 5); none of
 %% these goals has a person channel of its own, so the program's end of one,
 %% the dispatcher's third argument, is dropped.  The person reads the
-%% dispatcher's draw(Id, W, V) and withdraw(Id) and grants input(Id, R), a
-%% grant only after the draw that gives it Id, and logs what it saw.
+%% dispatcher's draw(Id, W, V) and withdraw(Id) and grants input(Id, P, R), a
+%% grant only after the draw that gives it Id, P the position the view marks
+%% input(P) (vGLP #5 Cowork, 2026-10-04 09:05 UTC, C), and logs what it saw.
 %%
 %% The person never closes its grants: the person channel never closes
 %% (vGLP at 7838827, Definition "Person Channel, Person Writer, GLP with
@@ -59,12 +60,12 @@ play_card(Resp?, Log?) :-
     questions # dispatch(Asks?, ch(Gs?, Ds), _),
     card_person(Ds?, Gs, Log).
 
-%% The person sees the card, the peer shown and its own position input, and
-%% grants yes.
+%% The person sees the card, the peer shown and its own position marked
+%% input(Q), and grants yes at Q.
 procedure card_person(_?, PersonIn, Stream(_)).
-card_person([draw(Id, W, card(P, input)) | Ds], [input(Id?, yes) | Gs?],
-            [drawn(Id?, W?, card(P?, input)) | Log?]) :-
-    ground(Id?), ground(W?), ground(P?) |
+card_person([draw(Id, W, card(P, input(Q))) | Ds], [input(Id?, Q?, yes) | Gs?],
+            [drawn(Id?, W?, card(P?, input(Q?))) | Log?]) :-
+    ground(Id?), ground(W?), ground(P?), ground(Q?) |
     card_person(Ds?, Gs, Log).
 card_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
@@ -79,9 +80,10 @@ play_card_refused(Resp?, Log?) :-
     refusing_person(Ds?, Gs, Log).
 
 procedure refusing_person(_?, PersonIn, Stream(_)).
-refusing_person([draw(Id, _, V) | Ds], [input(Id?, maybe) | Gs?],
-                [drawn(Id?, V?) | Log?]) :-
-    ground(Id?), ground(V?) |
+refusing_person([draw(Id, _, card(P, input(Q))) | Ds],
+                [input(Id?, Q?, maybe) | Gs?],
+                [drawn(Id?, card(P?, input(Q?))) | Log?]) :-
+    ground(Id?), ground(P?), ground(Q?) |
     refusing_person(Ds?, Gs, Log).
 refusing_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
@@ -97,9 +99,10 @@ play_card_refused_then_yes(Resp?, Log?) :-
     second_try_person(Ds?, Gs, Log).
 
 procedure second_try_person(_?, PersonIn, Stream(_)).
-second_try_person([draw(Id, _, V) | Ds], [input(Id?, maybe), input(Id?, yes) | Gs?],
-                  [drawn(Id?, V?) | Log?]) :-
-    ground(Id?), ground(V?) |
+second_try_person([draw(Id, _, card(P, input(Q))) | Ds],
+                  [input(Id?, Q?, maybe), input(Id?, Q?, yes) | Gs?],
+                  [drawn(Id?, card(P?, input(Q?))) | Log?]) :-
+    ground(Id?), ground(P?), ground(Q?) |
     second_try_person(Ds?, Gs, Log).
 second_try_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
@@ -140,11 +143,11 @@ play_request(Outs?, Log?) :-
     posting_person(Ds?, Gs, Log).
 
 procedure posting_person(_?, PersonIn, Stream(_)).
-posting_person([draw(Id, W, input) | Ds],
-               [input(Id?, post(5)), input(Id?, post("hi")), input(Id?, quit)
-                | Gs?],
-               [drawn(Id?, W?) | Log?]) :-
-    ground(Id?), ground(W?) |
+posting_person([draw(Id, W, input(Q)) | Ds],
+               [input(Id?, Q?, post(5)), input(Id?, Q?, post("hi")),
+                input(Id?, Q?, quit) | Gs?],
+               [drawn(Id?, W?, input(Q?)) | Log?]) :-
+    ground(Id?), ground(W?), ground(Q?) |
     posting_person(Ds?, Gs, Log).
 posting_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
@@ -180,10 +183,10 @@ next_card(refuse(P), refuse(P?), R2?, A2?) :-
     ground(P?) |
     questions # respond_coldcall(offer(carol), R2, A2).
 
-%% The person grants yes to the first card.
+%% The person grants yes to the first card, at its question's position, [2].
 procedure first_card_person(_?, PersonIn, Stream(_)).
-first_card_person([draw(0, _, card(bob, input)) | Ds], [input(0, yes) | Gs?],
-                  [drawn(0) | Log?]) :-
+first_card_person([draw(0, _, card(bob, input([2]))) | Ds],
+                  [input(0, [2], yes) | Gs?], [drawn(0) | Log?]) :-
     awaiting_person(Ds?, no, no, Gs, Log).
 
 %% awaiting_person(Ds?, Withdrawn?, Drawn?, Gs, Log): the person waits until
@@ -192,12 +195,13 @@ first_card_person([draw(0, _, card(bob, input)) | Ds], [input(0, yes) | Gs?],
 procedure awaiting_person(_?, YesNo?, YesNo?, PersonIn, Stream(_)).
 awaiting_person([withdraw(0) | Ds], no, no, Gs?, [withdrawn(0) | Log?]) :-
     awaiting_person(Ds?, yes, no, Gs, Log).
-awaiting_person([draw(1, _, card(carol, input)) | Ds], no, no, Gs?,
+awaiting_person([draw(1, _, card(carol, input([2]))) | Ds], no, no, Gs?,
                 [drawn(1) | Log?]) :-
     awaiting_person(Ds?, no, yes, Gs, Log).
-awaiting_person([withdraw(0) | Ds], no, yes, [input(0, no), input(1, no) | Gs?],
+awaiting_person([withdraw(0) | Ds], no, yes,
+                [input(0, [2], no), input(1, [2], no) | Gs?],
                 [withdrawn(0) | Log?]) :-
     watching_person(Ds?, Gs, Log).
-awaiting_person([draw(1, _, card(carol, input)) | Ds], yes, no,
-                [input(0, no), input(1, no) | Gs?], [drawn(1) | Log?]) :-
+awaiting_person([draw(1, _, card(carol, input([2]))) | Ds], yes, no,
+                [input(0, [2], no), input(1, [2], no) | Gs?], [drawn(1) | Log?]) :-
     watching_person(Ds?, Gs, Log).

@@ -12,7 +12,9 @@
 // 08:16 UTC, item 2); the forming result carrying the term and the grants
 // that never close (item 3, with the answers of 21:13 UTC, Q1 and Q2, from
 // vGLP at 7838827, Definition "Person Channel, Person Writer, GLP with
-// Persons, Grant").  The runs are elicitation_test.
+// Persons, Grant"); the grant naming its question, input(Id, P, R), P the
+// question's position in its construct (vGLP #5 Cowork, 2026-10-04 09:05
+// UTC, C).  The runs are elicitation_test.
 
 import 'dart:io';
 
@@ -76,8 +78,8 @@ decide(no, From, refuse(From?)).
       };
       expect(calls, isNot(contains('construct')));
       expect(dispatcher.module.typeDefs.map((t) => t.name),
-          containsAll(['Ask', 'Spawn', 'Input', 'Draw', 'PersonIn', 'Inputs',
-              'Deads']));
+          containsAll(['Ask', 'Spawn', 'Input', 'Path', 'Draw', 'PersonIn',
+              'Inputs', 'Deads']));
       expect(dispatcher.module.typeDefs.map((t) => t.name),
           isNot(contains('Handle')));
     });
@@ -123,17 +125,25 @@ decide(no, From, refuse(From?)).
           contains('constructs([spawn(Id, Q, Gs, Ds?) | Ss]) :- '
               'construct(Id?, Q?, Gs?, Ds), constructs(Ss?).'));
       expect(c.source, contains('constructs([]).'));
-      // A grant is routed whole, and the question reads the input from it.
+      // A grant is input(Id, P, R), routed whole by Id, and the question at
+      // P reads the input from it (C).
+      expect(c.source, contains('Input ::= input(_, _, _).'));
+      expect(c.source, contains('Path ::= [] ; [Integer | Path].'));
       expect(
           c.source,
-          contains('route_grant(input(Id, R), [route(Id1, [input(Id?, R?) | '
-              'Gs1?]) | Rs], [route(Id1?, Gs1) | Rs?]) :- (Id? =?= Id1?) | '
-              'true.'));
+          contains('split_grants([input(Id, P, R) | Gs], '
+              '[input(Id?, P?, R?) | Is?], Ms?) :- split_grants(Gs?, Is, '
+              'Ms).'));
       expect(
           c.source,
-          contains('answer_yesNo(X?, [input(Id, R) | Gs], Gs1?, Done?) :- '
-              'ground(R?) | form_yesNo(R?, F), take_yesNo(F?, X, '
-              'input(Id?, R?), Gs?, Gs1, Done).'));
+          contains('route_grant(input(Id, P, R), [route(Id1, '
+              '[input(Id?, P?, R?) | Gs1?]) | Rs], [route(Id1?, Gs1) | '
+              'Rs?]) :- (Id? =?= Id1?) | true.'));
+      expect(
+          c.source,
+          contains('answer_yesNo(P, X?, [input(Id, P1, R) | Gs], Gs1?, '
+              'Done?) :- P1? =?= P?, ground(R?) | form_yesNo(R?, F), '
+              'take_yesNo(F?, P?, X, input(Id?, P1?, R?), Gs?, Gs1, Done).'));
     });
 
     test('its person channel and a construct\'s grants never close: they are '
@@ -247,15 +257,19 @@ procedure (T?)*p.
       expect(
           s,
           contains('construct(Id, card_w(X), Gs, Ds?) :- '
-              'present_card(X?, Gs?, _, Vs, Done), '
+              'present_card([], X?, Gs?, _, Vs, Done), '
               'run(Id?, form(card, [shown, buttons([yes, no])]), Vs?, Done?, '
               'Ds).'));
       // The view waits for the peer, so the output comes before the input
-      // inside it.
+      // inside it; the question is marked with its position, the card's at
+      // the root [] and the question its argument 2, [2] (C).
       expect(
           s,
-          contains('present_card(card(H1, H2?), Gs, Gs1?, [card(H1?, input)], '
-              'D2?) :- ground(H1?) | answer_yesNo(H2, Gs?, Gs1, D2).'));
+          contains('present_card(P, card(H1, H2?), Gs, Gs1?, '
+              '[card(H1?, input(M2?))], D2?) :- ground(P?), ground(H1?) | '
+              'path(P?, 2, M2), path(P?, 2, Q2), '
+              'answer_yesNo(Q2?, H2, Gs?, Gs1, D2).'));
+      expect(s, contains('procedure path(Path?, Integer?, Path).'));
     });
 
     test('binds the question with the term the person\'s input forms, by '
@@ -267,15 +281,24 @@ procedure (T?)*p.
       expect(s, contains('form_yesNo(_, refused) :- otherwise | true.'));
       expect(
           s,
-          contains('procedure take_yesNo(Formed(YesNo)?, YesNo, Input?, '
-              'Inputs?, Inputs, Done).'));
-      expect(s, contains('take_yesNo(formed(V), V?, _, Gs, Gs?, done).'));
+          contains('procedure take_yesNo(Formed(YesNo)?, Path?, YesNo, '
+              'Input?, Inputs?, Inputs, Done).'));
+      expect(s, contains('take_yesNo(formed(V), _, V?, _, Gs, Gs?, done).'));
       expect(
           s,
-          contains('take_yesNo(refused, X?, G, Gs, [G? | Gs1?], Done?) :- '
-              'answer_yesNo(X, Gs?, Gs1, Done).'));
-      expect(s,
-          contains('procedure answer_yesNo(YesNo, Inputs?, Inputs, Done).'));
+          contains('take_yesNo(refused, P, X?, G, Gs, [G? | Gs1?], Done?) :- '
+              'answer_yesNo(P?, X, Gs?, Gs1, Done).'));
+      expect(
+          s,
+          contains('procedure answer_yesNo(Path?, YesNo, Inputs?, Inputs, '
+              'Done).'));
+      // A grant for another position goes on through take_N's refused
+      // clause, rebuilt whole (C).
+      expect(
+          s,
+          contains('answer_yesNo(P, X?, [input(Id, P1, R) | Gs], Gs1?, '
+              'Done?) :- otherwise | take_yesNo(refused, P?, X, '
+              'input(Id?, P1?, R?), Gs?, Gs1, Done).'));
     });
   });
 
@@ -291,8 +314,8 @@ procedure (Request?)*agent(Integer?).
       expect(
           s,
           contains('construct(Id, request_r(X?), Gs, Ds?) :- '
-              'answer_request(X, Gs?, _, Done), run(Id?, menu([form(post, '
-              '[text]), button(quit)]), [input], Done?, Ds).'));
+              'answer_request([], X, Gs?, _, Done), run(Id?, menu([form(post, '
+              '[text]), button(quit)]), [input([])], Done?, Ds).'));
       expect(s,
           contains('form_request(post(R1), F?) :- form_string(R1?, F1), '
               'join_request_post_1(F1?, F).'));
@@ -333,15 +356,17 @@ send_all(Peer, [M|Ms], [msg(Peer?, M?)|Out?]) :-
     ground(Peer?) | send_all(Peer?, Ms?, Out).
 send_all(_, [], []).
 ''').source;
+      // The stream's own position, the root [], is that of every element
+      // the person submits (C).
       expect(
           s,
           contains('construct(Id, stream_string_r(X?), Gs, Ds?) :- '
-              'answer_stream_string(X, Gs?, _, Done), '
-              'run(Id?, input_box(text), [input], Done?, Ds).'));
+              'answer_stream_string([], X, Gs?, _, Done), '
+              'run(Id?, input_box(text), [input([])], Done?, Ds).'));
       expect(
           s,
-          contains('take_stream_string(formed(V), [V? | X1?], _, Gs, Gs1?, '
-              'Done?) :- answer_stream_string(X1, Gs?, Gs1, Done).'));
+          contains('take_stream_string(formed(V), P, [V? | X1?], _, Gs, Gs1?, '
+              'Done?) :- answer_stream_string(P?, X1, Gs?, Gs1, Done).'));
     });
 
     test('a structure with a date and a peer, and a nested structure', () {
@@ -408,7 +433,8 @@ procedure (Val)*show(YesNo).
 (ask(A))*show(A?).
 ''').source;
       expect(w,
-          contains('present_val(X, Gs, Gs?, [X?], done) :- real(X?) | true.'));
+          contains('present_val(_, X, Gs, Gs?, [X?], done) :- real(X?) | '
+              'true.'));
     });
   });
 
@@ -423,9 +449,10 @@ procedure (Board)*game(Stream(String)).
       expect(s, contains('form(board, [thread, input_box(text)])'));
       expect(
           s,
-          contains('present_board(board(H1, H2?), Gs, Gs1?, Vs?, D2?) :- '
-              'thread(H1?, V1), answer_stream_string(H2, Gs?, Gs1, D2), '
-              'start_board_board_2(V1?, [input], Vs).'));
+          contains('present_board(P, board(H1, H2?), Gs, Gs1?, Vs?, D2?) :- '
+              'ground(P?) | thread(H1?, V1), path(P?, 2, M2), '
+              'path(P?, 2, Q2), answer_stream_string(Q2?, H2, Gs?, Gs1, D2), '
+              'start_board_board_2(V1?, [input(M2?)], Vs).'));
       expect(
           s,
           contains('comb_board_board_2(_, V2, [V1 | S1], S2, '
@@ -458,12 +485,22 @@ procedure (Outer)*nested(YesNo, String).
           s,
           contains('form(outer, [shown, form(inner, [shown, buttons([yes, '
               'no])]), text])'));
+      // The nested structure's position is its argument's, [2], and its
+      // question's below it [2, 2]; the outer question's is [3] (C).
       expect(
           s,
-          contains('present_outer(outer(H1, H2, H3?), Gs, Gs2?, Vs?, Done?) '
-              ':- shown(H1?, V1), present_inner(H2?, Gs?, Gs1, V2, D2), '
-              'answer_string(H3, Gs1?, Gs2, D3), all_done([D2?, D3?], Done), '
-              'start_outer_outer_3(V1?, V2?, [input], Vs).'));
+          contains('present_outer(P, outer(H1, H2, H3?), Gs, Gs2?, Vs?, '
+              'Done?) :- ground(P?) | shown(H1?, V1), path(P?, 2, Q2), '
+              'present_inner(Q2?, H2?, Gs?, Gs1, V2, D2), path(P?, 3, M3), '
+              'path(P?, 3, Q3), answer_string(Q3?, H3, Gs1?, Gs2, D3), '
+              'all_done([D2?, D3?], Done), '
+              'start_outer_outer_3(V1?, V2?, [input(M3?)], Vs).'));
+      expect(
+          s,
+          contains('present_inner(P, inner(H1, H2?), Gs, Gs1?, '
+              '[inner(H1?, input(M2?))], D2?) :- ground(P?), ground(H1?) | '
+              'path(P?, 2, M2), path(P?, 2, Q2), '
+              'answer_yesNo(Q2?, H2, Gs?, Gs1, D2).'));
     });
 
     test('a writer-mode type the person writes nowhere holds no question, and '
@@ -474,6 +511,85 @@ procedure (Note)*tell(String?).
 (note(T?))*tell(T).
 ''').source;
       expect(s, contains('construct(Id, note_w(_), _, [withdraw(Id?)]).'));
+    });
+  });
+
+  group('the grant names its question: input(Id, P, R) (C)', () {
+    test('a construct holding two questions of one type marks each with its '
+        'own position, and one answer_N serves both, each called with its '
+        'own', () {
+      final s = compile('''
+Peer ::= Constant.
+YesNo ::= yes ; no.
+Both ::= both(Peer, YesNo, YesNo).
+Card ::= card(Peer, YesNo?, YesNo?).
+procedure (Card)*respond(Peer?, Both).
+(card(From?, A, B))*respond(From, Both?) :-
+    ground(From?) | both(From?, A?, B?, Both).
+procedure both(Peer?, YesNo?, YesNo?, Both).
+both(P, A, B, both(P?, A?, B?)).
+''').source;
+      expect(
+          s,
+          contains('present_card(P, card(H1, H2?, H3?), Gs, Gs2?, '
+              '[card(H1?, input(M2?), input(M3?))], Done?) :- ground(P?), '
+              'ground(H1?) | path(P?, 2, M2), path(P?, 2, Q2), '
+              'answer_yesNo(Q2?, H2, Gs?, Gs1, D2), path(P?, 3, M3), '
+              'path(P?, 3, Q3), answer_yesNo(Q3?, H3, Gs1?, Gs2, D3), '
+              'all_done([D2?, D3?], Done).'));
+      expect('procedure answer_yesNo('.allMatches(s), hasLength(1));
+      expect(
+          s,
+          contains('answer_yesNo(P, X?, [input(Id, P1, R) | Gs], Gs1?, '
+              'Done?) :- P1? =?= P?, ground(R?) | form_yesNo(R?, F), '
+              'take_yesNo(F?, P?, X, input(Id?, P1?, R?), Gs?, Gs1, Done).'));
+    });
+
+    test('the position is the path of argument indices from the root, a '
+        'list cell\'s head its argument 1 and its tail its argument 2', () {
+      final s = compile('''
+YesNo ::= yes ; no.
+Nil ::= [].
+Tail ::= [YesNo? | Nil].
+Two ::= [YesNo? | Tail].
+procedure (Two)*pair(YesNo, YesNo).
+([A, B])*pair(A?, B?).
+''').source;
+      // The first question is at [1]; the second, the head of the tail, at
+      // [2, 1], present_tail called at [2].
+      expect(
+          s,
+          contains('present_two(P, [H1? | H2], Gs, Gs2?, Vs?, Done?) :- '
+              'ground(P?) | path(P?, 1, M1), path(P?, 1, Q1), '
+              'answer_yesNo(Q1?, H1, Gs?, Gs1, D1), path(P?, 2, Q2), '
+              'present_tail(Q2?, H2?, Gs1?, Gs2, V2, D2)'));
+      expect(
+          s,
+          contains('present_tail(P, [H1? | H2], Gs, Gs1?, '
+              '[[input(M1?) | H2?]], D1?) :- ground(P?), ground(H2?) | '
+              'path(P?, 1, M1), path(P?, 1, Q1), '
+              'answer_yesNo(Q1?, H1, Gs?, Gs1, D1).'));
+      expect(s, contains('construct(Id, two_w(X), Gs, Ds?) :- '
+          'present_two([], X?, Gs?, _, Vs, Done)'));
+    });
+
+    test('an alternative holding no question does not read its position, '
+        'and one reading it once does not guard on it', () {
+      final s = compile('''
+Peer ::= Constant.
+YesNo ::= yes ; no.
+Inner ::= inner(Peer, YesNo?).
+T ::= a(Integer) ; b(Inner).
+procedure (T)*mixed(YesNo).
+(b(inner(bob, A)))*mixed(A?).
+''').source;
+      expect(s,
+          contains('present_t(_, a(H1), Gs, Gs?, [a(H1?)], done) :- '
+              'ground(H1?) | true.'));
+      expect(
+          s,
+          contains('present_t(P, b(H1), Gs, Gs1?, Vs?, D1?) :- '
+              'path(P?, 1, Q1), present_inner(Q1?, H1?, Gs?, Gs1, V1, D1), '));
     });
   });
 

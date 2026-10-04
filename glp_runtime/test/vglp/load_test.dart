@@ -466,7 +466,7 @@ YesNo? =::= toggle.
           onSkip: skipped.add);
       expect(written.map((w) => w.split('/').last), ['asker.glp']);
       expect(skipped, isEmpty);
-      expect(emitted('asker'), contains('run(Id?, toggle, [input], Done?, Ds)'));
+      expect(emitted('asker'), contains('run(Id?, toggle, [input([])], Done?, Ds)'));
       final modules =
           discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp);
       expect(modules.any((m) => m.filePath.endsWith('self.vglp')), isFalse);
@@ -479,7 +479,7 @@ YesNo? =::= toggle.
       write('asker.vglp', 'YesNo? =::= lamp.\n$asker');
       emitVglpSources(fixture.path,
           rootSelfGlpPath: File(_rootSelfGlp).absolute.path);
-      expect(emitted('asker'), contains('run(Id?, lamp, [input], Done?, Ds)'));
+      expect(emitted('asker'), contains('run(Id?, lamp, [input([])], Done?, Ds)'));
     });
 
     test('a nested directory\'s self.vglp overrides its ancestor\'s, and holds '
@@ -495,8 +495,8 @@ pong(b).
       write('sub/inner.vglp', asker);
       emitVglpSources(fixture.path,
           rootSelfGlpPath: File(_rootSelfGlp).absolute.path);
-      expect(emitted('sub/inner'), contains('run(Id?, dial, [input], Done?, Ds)'));
-      expect(emitted('asker'), contains('run(Id?, toggle, [input], Done?, Ds)'));
+      expect(emitted('sub/inner'), contains('run(Id?, dial, [input([])], Done?, Ds)'));
+      expect(emitted('asker'), contains('run(Id?, toggle, [input([])], Done?, Ds)'));
     });
 
     test('the root\'s self.vglp holds for every program, a directory with no '

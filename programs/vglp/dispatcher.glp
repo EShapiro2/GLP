@@ -14,12 +14,23 @@
 %% the language (Udi, 2026-10-03; vGLP c994328, c2e8b57, as vGLP #5 Cowork
 %% reports it).
 %%
-%% The messages to and from the bridge are vGLP's (2026-10-01 23:55 UTC, E):
+%% The messages to and from the bridge are vGLP's (2026-10-01 23:55 UTC, E;
+%% the grant naming its question, vGLP #5 Cowork, 2026-10-04 09:05 UTC, C):
 %% a construct sends draw(Id, W, V), W its widget and V the output so far with
-%% each position the person writes shown as the constant input, again as more
-%% arrives, and withdraw(Id); the person grants input(Id, R), R the ground
-%% term of the person's input, which the dispatcher sends whole to construct
-%% Id and the construct reads R from.  Everything crossing to the bridge is a
+%% each position the person writes shown as input(P), P that position's path,
+%% again as more arrives, and withdraw(Id).
+%%
+%% A GRANT is input(Id, P, R): Id the identifier of the construct, P the
+%% position of the question in it, and R the ground term of the person's
+%% input.  P is the path of argument indices from the root of the
+%% interactive variable's term to the position the person writes, [] the
+%% root: card(Peer, YesNo?)'s question is at [2], and a question that is the
+%% whole variable at [].  A stream the person writes has the stream's own
+%% path, each submission one element.  The bridge sends back the P the view
+%% marks, so a construct holding two questions of one type tells them apart.
+%% The dispatcher routes a grant whole by Id to construct Id, whose question
+%% at P forms its answer from R; a grant for a P at which the construct holds
+%% no open question answers none.  Everything crossing to the bridge is a
 %% ground term or a construct identifier, typed at _ (vGLP, 2026-10-02 08:26
 %% UTC, item 6): what the bridge sends and draws is a term of any of the
 %% program's interactive types.
@@ -67,9 +78,14 @@ Draw ::= draw(Integer, _, _) ; withdraw(Integer).
 %% The person channel's input: the person's grants, which never close.
 PersonIn ::= [_ | PersonIn].
 
-%% A grant the dispatcher routes to a construct, whole: its identifier and the
-%% person's raw input.
-Input ::= input(_, _).
+%% A grant the dispatcher routes to a construct, whole: the construct's
+%% identifier, the position of the question in it, and the person's raw
+%% input.
+Input ::= input(_, _, _).
+
+%% The position of a question in its construct: the path of argument indices
+%% from the root of the interactive variable's term, [] the root.
+Path ::= [] ; [Integer | Path].
 
 %% A construct's grants, carried on from the person channel: never closed.
 Inputs ::= [Input | Inputs].
@@ -111,7 +127,7 @@ Spawn(Q) ::= spawn(Integer, Q, Inputs, Stream(Draw)?).
 %% spawns the program's constructs/1 on Spawns beside it.  It reads the ask
 %% stream of the initial goal and holds the person channel; it gives the
 %% program, in MCh, its own end of a person channel, passes every grant that
-%% is not input(Id, R) to it, and merges the program's output to the person
+%% is not input(Id, P, R) to it, and merges the program's output to the person
 %% with the constructs' draws (vGLP, 2026-10-01 23:55 UTC, E, Q4).  The
 %% program's person input keeps its own type; the dispatcher writes it and
 %% never closes it.
@@ -126,7 +142,7 @@ dispatch(Asks, ch(PIn, POut?), ch(MIn?, MOut), Ss?) :-
 %% split_grants(Grants?, Inputs, Others): the person's grants to a construct,
 %% and every other grant, for the program.
 procedure split_grants(PersonIn?, Inputs, Stream(_)).
-split_grants([input(Id, R) | Gs], [input(Id?, R?) | Is?], Ms?) :-
+split_grants([input(Id, P, R) | Gs], [input(Id?, P?, R?) | Is?], Ms?) :-
     split_grants(Gs?, Is, Ms).
 split_grants([G | Gs], Is?, [G? | Ms?]) :-
     otherwise |
@@ -160,11 +176,11 @@ serve(Asks, Is, [withdraw(Id) | COut], CInto?, [withdraw(Id?) | DOut?], Rs,
     remove_route(Id?, Rs?, Rs1, Xs?, Xs1),
     serve(Asks?, Is?, COut?, CInto, DOut, Rs1?, Xs1?, N?, Ss).
 
-%% route_grant(G?, Routes?, Routes1): send the grant G = input(Id, R), whole,
-%% on the grant stream of construct Id; a grant for no live construct, one
-%% withdrawn, reaches none.
+%% route_grant(G?, Routes?, Routes1): send the grant G = input(Id, P, R),
+%% whole, on the grant stream of construct Id; a grant for no live construct,
+%% one withdrawn, reaches none.
 procedure route_grant(Input?, Routes?, Routes).
-route_grant(input(Id, R), [route(Id1, [input(Id?, R?) | Gs1?]) | Rs],
+route_grant(input(Id, P, R), [route(Id1, [input(Id?, P?, R?) | Gs1?]) | Rs],
             [route(Id1?, Gs1) | Rs?]) :-
     Id? =?= Id1? | true.
 route_grant(G, [route(Id1, Gs?) | Rs], [route(Id1?, Gs) | Rs1?]) :-
@@ -238,6 +254,13 @@ procedure append_one(Stream(_)?, _?, Stream(_)).
 append_one([Y | Ys], X, [Y? | Zs?]) :-
     append_one(Ys?, X?, Zs).
 append_one([], X, [X?]).
+
+%% path(P?, I?, Q): Q is the path of argument I of the position at path P,
+%% P with I at its end.
+procedure path(Path?, Integer?, Path).
+path([I | P], J, [I? | Q?]) :-
+    path(P?, J?, Q).
+path([], J, [J?]).
 
 %% ---------------------------------------------------------------------------
 %% Forming the primitive positions of an answer

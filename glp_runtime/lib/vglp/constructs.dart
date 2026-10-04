@@ -25,14 +25,22 @@
 //     view waits for it, as Present delivers every output before the inputs
 //     inside it; a stream the program writes and the person does not is
 //     shown element by element as it arrives, a thread;
-//   - a position the person writes is a QUESTION, shown as the constant
-//     input: a grant forms a term of its type and binds it, a stream type
-//     taking one element per grant, an input box;
+//   - a position the person writes is a QUESTION, shown as input(P), P its
+//     position: the path of argument indices from the root of the
+//     interactive variable's term to it, [] the root, a stream the person
+//     writes having the stream's own path, each submission one element
+//     (vGLP #5 Cowork, 2026-10-04 09:05 UTC, C); a grant forms a term of its
+//     type and binds it, a stream type taking one element per grant, an
+//     input box;
 //   - the views are drawn as they change, draw(Id, W, V), W the widget of T;
-//   - the grants routed to the construct arrive whole, input(Id, R), and the
-//     question reads the person's input R from each; they go to its questions
-//     in the order of the view, the first question whose type the grant's
-//     term is of taking it; a grant that is of none reaches none;
+//   - the grants routed to the construct arrive whole, input(Id, P, R), each
+//     naming its question by P, which the bridge sends back from the view; a
+//     construct may hold two questions of one type, and each takes only the
+//     grants with its own P, the question answer_N(P, ...) guarding on it and
+//     passing a grant for another P on; the question reads the person's
+//     input R from a grant it takes, and a grant whose R forms no term of its
+//     type, or whose P names no open question of the construct, answers
+//     none;
 //   - its grants never close: the person channel never closes (Definition
 //     "Person Channel, Person Writer, GLP with Persons, Grant", at 7838827),
 //     so neither does a construct's grant stream, Inputs ::= [Input |
@@ -112,12 +120,14 @@ class GenericNames {
   final String shown;
   final String thread;
   final String allDone;
+  final String path;
   final Map<_Leaf, String> _leafFormers;
   final String formedType;
   final String doneType;
   final String drawType;
   final String inputType;
   final String inputsType;
+  final String pathType;
   final String personInType;
   final String spawnType;
   final String askType;
@@ -129,6 +139,7 @@ class GenericNames {
       required this.shown,
       required this.thread,
       required this.allDone,
+      required this.path,
       required String formString,
       required String formInteger,
       required String formNumber,
@@ -141,6 +152,7 @@ class GenericNames {
       required this.drawType,
       required this.inputType,
       required this.inputsType,
+      required this.pathType,
       required this.personInType,
       required this.spawnType,
       required this.askType})
@@ -163,6 +175,7 @@ class GenericNames {
     'shown',
     'thread',
     'all_done',
+    'path',
     'form_string',
     'form_integer',
     'form_number',
@@ -366,14 +379,16 @@ class _Generator {
 
   // --- the construct clause -------------------------------------------------
 
+  /// The construct clause of [t]: the root of its interactive variable's term
+  /// is at the path [].
   String _constructClause(InteractiveType t, _Node root, String w) {
     final f = t.functor;
     if (root.person) {
       _checkPersonWritable(root, t);
       final answer = _answer(root);
       return '$constructName(Id, $f(X?), Gs, Ds?) :- '
-          '$answer(X, Gs?, _, Done), '
-          '${gen.run}(Id?, $w, [input], Done?, Ds).';
+          '$answer([], X, Gs?, _, Done), '
+          '${gen.run}(Id?, $w, [input([])], Done?, Ds).';
     }
     if (!_hasQuestion(root)) {
       // A type the person writes nowhere holds no question, so its construct
@@ -384,7 +399,7 @@ class _Generator {
     }
     final present = _present(root, t);
     return '$constructName(Id, $f(X), Gs, Ds?) :- '
-        '$present(X?, Gs?, _, Vs, Done), '
+        '$present([], X?, Gs?, _, Vs, Done), '
         '${gen.run}(Id?, $w, Vs?, Done?, Ds).';
   }
 
@@ -625,14 +640,17 @@ class _Generator {
 
   // --- a question: the person writes the position -------------------------------
 
-  /// answer_N(X, Gs?, Gs1, Done): the question X of node [n], taking from the
-  /// grants Gs the first whose input forms a term of its type --- each, for a
-  /// stream type, forming one element --- and passing on every other in Gs1;
-  /// Done once answered, never for a stream.  Its grants never close, so it
-  /// has no clause for []: a question whose grants never come stays open, its
-  /// goal suspended (vGLP #5 Cowork, 2026-10-03 08:16 UTC, item 3, and 21:13
-  /// UTC, Q1).  The grant reaches it whole, input(Id, R), and it forms the
-  /// term from R, passing a grant it does not take on whole.
+  /// answer_N(P, X, Gs?, Gs1, Done): the question X of node [n], at the
+  /// position P of its construct, taking from the grants Gs the first for P
+  /// whose input forms a term of its type --- each, for a stream type,
+  /// forming one element, the stream's tail keeping P --- and passing on
+  /// every other in Gs1; Done once answered, never for a stream.  Its grants
+  /// never close, so it has no clause for []: a question whose grants never
+  /// come stays open, its goal suspended (vGLP #5 Cowork, 2026-10-03 08:16
+  /// UTC, item 3, and 21:13 UTC, Q1).  The grant reaches it whole,
+  /// input(Id, P1, R); it guards on P1 being its own P and forms the term
+  /// from R, and a grant for another position goes on through take_N's
+  /// refused clause, rebuilt whole (2026-10-04 09:05 UTC, C).
   String _answer(_Node n) {
     final name = _name('answer', n);
     if (!_emitted.add('answer:${n.typeKey}')) return name;
@@ -642,25 +660,30 @@ class _Generator {
     final done = gen.doneType;
     final formed = gen.formedType;
     final gs = gen.inputsType;
+    final pt = gen.pathType;
     final elem = _streamElement(n);
     final e = elem == null ? null : n.child(elem);
     final form = _former(e ?? n);
     _out
-      ..writeln('procedure$p $name($t, $gs?, $gs, $done).')
-      ..writeln('$name(X?, [input(Id, R) | Gs], Gs1?, Done?) :- ground(R?) | '
-          '$form(R?, F), $take(F?, X, input(Id?, R?), Gs?, Gs1, Done).')
+      ..writeln('procedure$p $name($pt?, $t, $gs?, $gs, $done).')
+      ..writeln('$name(P, X?, [input(Id, P1, R) | Gs], Gs1?, Done?) :- '
+          'P1? =?= P?, ground(R?) | $form(R?, F), '
+          '$take(F?, P?, X, input(Id?, P1?, R?), Gs?, Gs1, Done).')
+      ..writeln('$name(P, X?, [input(Id, P1, R) | Gs], Gs1?, Done?) :- '
+          'otherwise | '
+          '$take(refused, P?, X, input(Id?, P1?, R?), Gs?, Gs1, Done).')
       ..writeln()
-      ..writeln('procedure$p $take($formed(${(e ?? n).typeKey})?, $t, '
+      ..writeln('procedure$p $take($formed(${(e ?? n).typeKey})?, $pt?, $t, '
           '${gen.inputType}?, $gs?, $gs, $done).');
     if (e != null) {
-      _out.writeln('$take(formed(V), [V? | X1?], _, Gs, Gs1?, Done?) :- '
-          '$name(X1, Gs?, Gs1, Done).');
+      _out.writeln('$take(formed(V), P, [V? | X1?], _, Gs, Gs1?, Done?) :- '
+          '$name(P?, X1, Gs?, Gs1, Done).');
     } else {
-      _out.writeln('$take(formed(V), V?, _, Gs, Gs?, done).');
+      _out.writeln('$take(formed(V), _, V?, _, Gs, Gs?, done).');
     }
     _out
-      ..writeln('$take(refused, X?, G, Gs, [G? | Gs1?], Done?) :- '
-          '$name(X, Gs?, Gs1, Done).')
+      ..writeln('$take(refused, P, X?, G, Gs, [G? | Gs1?], Done?) :- '
+          '$name(P?, X, Gs?, Gs1, Done).')
       ..writeln();
     return name;
   }
@@ -743,11 +766,13 @@ class _Generator {
 
   // --- output: the program writes the position ----------------------------------
 
-  /// present_N(X?, Gs?, Gs1, Vs, Done): node [n], which the program writes
-  /// and which holds a question: the views of X as it is written, its
-  /// questions answered from the grants Gs in the order of the view, the
-  /// grants they do not take passed on in Gs1, Done once every one is
-  /// answered.  The grants never close (Inputs).
+  /// present_N(P, X?, Gs?, Gs1, Vs, Done): node [n], at the position P of
+  /// its construct, which the program writes and which holds a question: the
+  /// views of X as it is written, each question in it marked input(Q), Q its
+  /// position, P extended by the argument index of each step down to it; its
+  /// questions answered from the grants Gs, each taking those for its own
+  /// position, the grants they do not take passed on in Gs1, Done once every
+  /// one is answered.  The grants never close (Inputs).
   String _present(_Node n, InteractiveType it) {
     final name = _name('present', n);
     if (!_emitted.add('present:${n.typeKey}')) return name;
@@ -766,18 +791,18 @@ class _Generator {
     for (final a in _nodeAlts(n)) {
       if (a is _ConstAlt) {
         final c = _constSource(a.value);
-        clauses.add('$name($c, Gs, Gs?, [$c], done).');
+        clauses.add('$name(_, $c, Gs, Gs?, [$c], done).');
       } else if (a is _NilAlt) {
-        clauses.add('$name([], Gs, Gs?, [[]], done).');
+        clauses.add('$name(_, [], Gs, Gs?, [[]], done).');
       } else if (a is _LeafAlt) {
-        clauses.add('$name(X, Gs, Gs?, [X?], done) :- ${_guard(a.leaf)}(X?) | '
-            'true.');
+        clauses.add('$name(_, X, Gs, Gs?, [X?], done) :- '
+            '${_guard(a.leaf)}(X?) | true.');
       } else {
         clauses.add(_presentStruct(n, a, name, later, it));
       }
     }
-    _out.writeln('procedure$p $name($t?, ${gen.inputsType}?, '
-        '${gen.inputsType}, Stream(_), $done).');
+    _out.writeln('procedure$p $name(${gen.pathType}?, $t?, '
+        '${gen.inputsType}?, ${gen.inputsType}, Stream(_), $done).');
     for (final c in clauses) {
       _out.writeln(c);
     }
@@ -798,20 +823,32 @@ class _Generator {
     final dones = <String>[];
     var gsIn = 'Gs';
     var g = 0;
+    // The position of the argument i of this alternative is the node's own,
+    // P, with i at its end: a question's is read twice, for its mark in the
+    // view and for its answer_N, and a structure's holding one once, for its
+    // present_N.  P is ground, so where it is read more than once the clause
+    // guards on it.
+    var pathReads = 0;
     final direct =
         kids.every((k) => k.person || (!_hasQuestion(k) && !_multi(k)));
     for (var i = 0; i < kids.length; i++) {
       final k = kids[i];
       final h = 'H${i + 1}';
+      final idx = i + 1;
       if (k.person) {
         _checkPersonWritable(k, it);
         head.add('$h?');
         final gsOut = 'Gs${++g}';
         final d = 'D${i + 1}';
-        goals.add('${_answer(k)}($h, $gsIn?, $gsOut, $d)');
+        final m = 'M$idx', q = 'Q$idx';
+        goals
+          ..add('${gen.path}(P?, $idx, $m)')
+          ..add('${gen.path}(P?, $idx, $q)')
+          ..add('${_answer(k)}($q?, $h, $gsIn?, $gsOut, $d)');
+        pathReads += 2;
         gsIn = gsOut;
         dones.add(d);
-        views.add(direct ? 'input' : '[input]');
+        views.add(direct ? 'input($m?)' : '[input($m?)]');
       } else if (!_hasQuestion(k)) {
         head.add(h);
         if (direct) {
@@ -828,12 +865,17 @@ class _Generator {
         head.add(h);
         final gsOut = 'Gs${++g}';
         final d = 'D${i + 1}';
-        goals.add('${_present(k, it)}($h?, $gsIn?, $gsOut, V${i + 1}, $d)');
+        final q = 'Q$idx';
+        goals
+          ..add('${gen.path}(P?, $idx, $q)')
+          ..add('${_present(k, it)}($q?, $h?, $gsIn?, $gsOut, V${i + 1}, $d)');
+        pathReads += 1;
         gsIn = gsOut;
         dones.add(d);
         views.add('V${i + 1}?');
       }
     }
+    if (pathReads > 1) guards.insert(0, 'ground(P?)');
     final pattern = _apply(a, head);
     final gsHead = gsIn == 'Gs' ? 'Gs?' : '$gsIn?';
     String doneHead;
@@ -857,7 +899,9 @@ class _Generator {
     final body = goals.isEmpty
         ? (guards.isEmpty ? '' : ' :- $g0' 'true')
         : ' :- $g0${goals.join(', ')}';
-    return '$name($pattern, Gs, $gsHead, $vsHead, $doneHead)$body.';
+    // An alternative holding no question does not read its position.
+    final at = pathReads == 0 ? '_' : 'P';
+    return '$name($at, $pattern, Gs, $gsHead, $vsHead, $doneHead)$body.';
   }
 
   /// start_N_f(V1s?, ..., Vns?, Vs): the views of a structure from the views
