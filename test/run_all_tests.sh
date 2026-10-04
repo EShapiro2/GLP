@@ -4328,7 +4328,7 @@ find_type(local/1, U).
 :quit
 HEREDOC
 2>&1)
-check "RM8 find_type resolves P/N in the calling module's scope" "T = [0-9a-f]\{64\}" "$rm8"
+check "RM8 find_type resolves P/N in the calling module's scope" "T = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$rm8"
 check "RM8 a module-local P/N is not declared at the root" "_find_type/2: local/1 is not declared in the caller's scope" "$rm8"
 
 # An activated module's body call to a root-scope procedure (merge/3)
