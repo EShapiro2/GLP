@@ -31,6 +31,8 @@ import 'package:glp_runtime/analysis/type_checker/type_checker.dart';
 import 'package:glp_runtime/analysis/type_checker/param_expansion.dart'
     show UndefinedDeclarationTypeError;
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
+import 'package:glp_runtime/analysis/type_checker/root_scope.dart'
+    show rootRenamed;
 import 'package:glp_runtime/analysis/type_checker/program_dfa.dart' as tdfa;
 import 'package:glp_runtime/analysis/type_checker/well_typed_clause.dart' as wtc;
 import 'package:glp_runtime/runtime/module_hierarchy.dart';
@@ -197,53 +199,54 @@ class GlpEngine {
   /// Useful for test scripts that need to reset state between tests
   /// without restarting the REPL process.
   void clear() {
-    // Remember root self.glp program
-    BytecodeProgram? rootSelf = _loadedPrograms['__root_self__'];
-
-    // Clear everything
+    // Clear everything but the root, linked once at construction.
     _loadedPrograms.clear();
     _loadedModules.clear();
     // Re-seed lazily to root scope + root self.glp on next goal check.
     _goalCheckEnv = null;
     _scopeSelfGlps.clear();
-
-    // Restore root self.glp
-    if (rootSelf != null) {
-      _loadedPrograms['__root_self__'] = rootSelf;
-    }
   }
 
-  /// Load root self.glp (private — called by constructor).
+  /// The root self.glp linked as a program of its own and compiled
+  /// ([checkedRootProgram]): its procedures under the names the renaming
+  /// gives them, `:p` (TGLP modules.tex, Compilation, third step), every one
+  /// kept.  A goal posted to the engine is a module at the root, linked with
+  /// the root self.glp (GLP #3 Cowork, 2026-10-03 21:18 UTC, "16:11"), and a
+  /// call of it that no loaded program's entry point answers resolves here
+  /// ([_goalLabel]).  It is no load: every program carries the root
+  /// procedures it reaches in its own compiled module.
+  late final BytecodeProgram _rootCode;
+
+  /// Link, check and compile the root self.glp (private — called by
+  /// constructor).
   ///
-  /// A failure here is fatal and is raised as one. Every program in the tree
-  /// resolves its predefined types and procedures through the root self.glp, so
-  /// an engine whose root scope failed to compile fails every subsequent load
-  /// for reasons that name nothing: the root scope comes back with no labels —
-  /// no merge, no sign — and no diagnostic anywhere. This was swallowed until
-  /// 2026-08-01, which made a broken root self.glp the least diagnosable failure
-  /// in the system.
+  /// A failure here is fatal and is raised as one, naming the root's file and
+  /// line: the root self.glp is checked in step 2 like any module (TGLP
+  /// modules.tex, Compilation, second step), against the language primitives,
+  /// and a root that does not check is refused.  Until 2026-10-04 it was
+  /// compiled here unchecked, and a type error in it loaded and ran
+  /// (programs/tests/root_check/univ_typing_root.glp); until 2026-08-01 a
+  /// failure to compile it was swallowed.  The `__root__` runner registered
+  /// here until 2026-10-04 goes: an activated module carries the root
+  /// procedures it reaches in its own artefact.
   void _loadRootSelf() {
-    final file = File(_rootSelfGlpPath);
-    if (!file.existsSync()) return;
-    final source = file.readAsStringSync();
-    final GlpCompiler compiler = GlpCompiler();
-    final BytecodeProgram prog;
+    final root = rootModuleOf(_rootSelfGlpPath);
+    if (root == null) {
+      _rootCode = BytecodeProgram(const []);
+      return;
+    }
     try {
-      prog = compiler.compile(source);
+      final linked = checkedRootProgram(root);
+      _rootCode = GlpCompiler().compileProgram(linked.program,
+          procDeclarations: linked.procDeclarations,
+          typeEnv: linked.checkedEnv);
     } catch (e) {
       throw StateError(
-          'root self.glp failed to compile: $_rootSelfGlpPath\n  $e\n'
-          'Loading the root self.glp is not optional — it is part of engine '
-          'initialization, and every program depends on the scope it defines.');
+          'root self.glp does not check and compile: $_rootSelfGlpPath\n  $e\n'
+          'The root self.glp is the first link of every program\'s chain and '
+          'is checked with every program, and every goal posted to the engine '
+          'is linked with it.');
     }
-    _loadedPrograms['__root_self__'] = prog;
-    // The root runner: the root self.glp's procedures as a runner of their
-    // own, which an activated module's goals reach for a body call to a
-    // root-scope procedure --- merge/3, send/3 --- absent from its artefact
-    // (engine_v2/interp.dart, _spawnInRoot). A REPL goal still runs on the
-    // combined program, where the root is the fallback in one image.
-    _runtime.runners['__root__'] =
-        ByteRunner(codeImageFromProgram(prog, moduleName: '__root__'));
   }
 
   /// Load a GLP file from path
@@ -278,8 +281,13 @@ class GlpEngine {
   /// was checked in the bare root scope and `send_to_net/1`, then loaded by
   /// [enableMadGLP], was undefined in it.  It is the root self.glp's since
   /// 2026-10-04 (GLP-Spec appendix-guards, "Output to the network").
-  /// [scope] decides what the source is checked against; whether [filename] is
-  /// a real file still decides how it is compiled (linker or direct).
+  /// [scope] decides what the source is checked against.  A source with a
+  /// real file behind it is linked as a single-module program with its
+  /// ancestors; one with none is a module at the root, linked with the root
+  /// self.glp as a one-module program, reaching a program the engine holds
+  /// only through its entry points (GLP #3 Cowork, 2026-10-03 21:18 UTC,
+  /// "16:11").  Either way the object compiled is the linked program, and it
+  /// is the object checked.
   bool loadSource(String source, {String? filename, TypeEnvironment? scope}) {
     final name = filename ?? '_source_';
 
@@ -303,15 +311,12 @@ class GlpEngine {
     // alias that shadows the root self.glp for a posted goal (see
     // combinedProgram).
     //
-    // The internal source — the root self.glp, under its internal name — is
-    // loaded by name rather than from the program hierarchy and cross-calls
-    // nothing, so the program test below does not apply to it.  The engine's
-    // embedded madGLP source, the other internal source, is gone: its
-    // send_to_net/1 and global_send/3 are the root self.glp's.
-    final isInternal = name == '__root_self__';
-    final isRealFile =
-        !isInternal && name != '_source_' && File(name).existsSync();
-    final selfContained = isInternal || _isSelfContained(module);
+    // There is no internal source: the root self.glp is linked once at
+    // construction ([_rootCode]) and with every program, and the engine's
+    // embedded madGLP source is gone, its send_to_net/1 and global_send/3
+    // being the root self.glp's.
+    final isRealFile = name != '_source_' && File(name).existsSync();
+    final selfContained = _isSelfContained(module);
 
     // A source that is not self-contained is not a program at all: def:program
     // (modules.tex) admits a self-contained module or a directory with a
@@ -422,8 +427,12 @@ class GlpEngine {
     // renaming, singleModulePath marks the loaded module so all its procedures
     // are entry points) and compileProgram — the same compiler entry as a
     // directory program — running the global SRSW pass it has no separate
-    // per-module pass for. Source text has no file for the linker to discover,
-    // so it keeps the direct compile path, as do the internal sources.
+    // per-module pass for.  Source text with no file behind it is a module at
+    // the root, linked with the root self.glp as a one-module program, and
+    // compiled the same way (GLP #3 Cowork, 2026-10-03 21:18 UTC, "16:11";
+    // GLP's round six, item 4, "without linking" going with it): until
+    // 2026-10-04 it was compiled directly, unlinked, its calls to the root
+    // reaching the root's procedures by their bare names at run time.
     final BytecodeProgram program;
     rt.ModuleTerm? moduleValue;
     if (isRealFile) {
@@ -448,11 +457,31 @@ class GlpEngine {
       moduleValue = _moduleValueOf(_baseName(name), program, linked, modules,
           directory: File(name).parent.absolute.path);
     } else {
-      // The source is compiled in the scope it was checked in, the scope its
-      // defined guards unfold in and its SRSW relaxations are decided in.
-      program = _compiler.compile(source,
-          typeEnv: buildModuleTypeEnvironment(module,
-              ancestorScope: ancestorScope));
+      // The source and the root: the source checked in step 2 in the scope it
+      // is handed over in, the root against the primitives; the source's
+      // procedures kept by their names, its entry points; a call to an entry
+      // point of a program the engine holds left to that program, which
+      // stands between the root and the source in the scope (IGLP
+      // Implementation Notes, "The scope a boot source is checked in"); and
+      // the linked program checked over that scope, which declares them.
+      final root = rootModuleOf(_rootSelfGlpPath);
+      final modules = <DiscoveredModule>[
+        DiscoveredModule(
+          filePath: name,
+          moduleName: _fileLessModuleName(name),
+          ast: module,
+          ancestorScope: ancestorScope!,
+        ),
+        if (root != null) root,
+      ];
+      final linked = checkedLinkedProgram(modules,
+          rootDir: File(_rootSelfGlpPath).parent.path,
+          singleModulePath: name,
+          outerScope: ancestorScope,
+          outerEntryPoints: _entryPoints());
+      program = _compiler.compileProgram(linked.program,
+          procDeclarations: linked.procDeclarations,
+          typeEnv: linked.checkedEnv);
     }
     _refuseRedefinitionByLaterLoad(name, program);
     _loadedPrograms[name] = program;
@@ -482,7 +511,7 @@ class GlpEngine {
     // Make this module's declarations available to the REPL goal checker,
     // and its clauses to the reading of a goal's calls.
     _extendGoalCheckEnv(module, label: moduleInfo.name);
-    if (!isInternal) _addGoalClauses(checkedProcedures);
+    _addGoalClauses(checkedProcedures);
 
     return true;
   }
@@ -540,19 +569,10 @@ class GlpEngine {
   /// appendix-root-self.tex) --- and a load under the name of an earlier one
   /// replaces it.
   void _refuseRedefinitionByLaterLoad(String name, BytecodeProgram program) {
-    final internal = RegExp(r'_c\d+$');
-    Set<String> plainProcedures(BytecodeProgram p) => {
-          for (final l in p.labels.keys)
-            if (l.contains('/') &&
-                !l.contains(':') &&
-                !l.endsWith('_end') &&
-                !internal.hasMatch(l))
-              l
-        };
-    final mine = plainProcedures(program);
+    final mine = _plainProcedures(program);
     for (final e in _loadedPrograms.entries) {
-      if (e.key == '__root_self__' || e.key == name) continue;
-      final clash = mine.intersection(plainProcedures(e.value));
+      if (e.key == name) continue;
+      final clash = mine.intersection(_plainProcedures(e.value));
       if (clash.isEmpty) continue;
       throw CompileError(
         "'$name' defines ${(clash.toList()..sort()).join(', ')}, which the "
@@ -563,6 +583,51 @@ class GlpEngine {
         phase: 'loader',
       );
     }
+  }
+
+  /// The procedures of [p] by their plain names, "name/arity": a loaded
+  /// unit's entry points, which a goal names (TGLP modules.tex, "Entry and the
+  /// absence of a boot module": "the procedures that may be posted are exactly
+  /// the entry points").  A renamed `M:p`, the root's `:p` among them, is a
+  /// module's own, and a clause's internal label is no procedure.
+  static Set<String> _plainProcedures(BytecodeProgram p) => {
+        for (final l in p.labels.keys)
+          if (l.contains('/') &&
+              !l.contains(':') &&
+              !l.endsWith('_end') &&
+              !_clauseLabel.hasMatch(l))
+            l
+      };
+
+  static final RegExp _clauseLabel = RegExp(r'_c\d+$');
+
+  /// The entry points of every unit the engine holds ([_plainProcedures]).
+  Set<String> _entryPoints() => {
+        for (final p in _loadedPrograms.values) ..._plainProcedures(p),
+      };
+
+  /// The label a goal's call to [functor]/[arity] runs at: an entry point of a
+  /// loaded unit, which a goal posted to it names by plain name (TGLP
+  /// modules.tex, "Entry and the absence of a boot module"), and otherwise the
+  /// root's procedure of that name, renamed under the empty path ([_rootCode]),
+  /// the goal being a module at the root, linked with the root self.glp (GLP
+  /// #3 Cowork, 2026-10-03 21:18 UTC, "16:11").  The loaded unit's entry point
+  /// stands nearer, as its declaration does in the goal-check environment
+  /// ([_checkGoalWellTyped]).  Null where neither has it.
+  String? _goalLabel(String functor, int arity) {
+    final plain = '$functor/$arity';
+    if (_entryPoints().contains(plain)) return plain;
+    final rooted = rootRenamed(plain);
+    if (_rootCode.labels.containsKey(rooted)) return rooted;
+    return null;
+  }
+
+  /// The name a file-less source is linked under: the name it was loaded
+  /// under, its extension dropped --- a module at the root, whose path from
+  /// the root is that name, never the root's own empty path.
+  String _fileLessModuleName(String name) {
+    final n = _moduleNameFromFilename(name);
+    return n.isEmpty ? '_source_' : n;
   }
 
   /// The scope the engine holds: the root scope, the root self.glp, every
@@ -760,50 +825,24 @@ class GlpEngine {
   /// same-module body calls (including calls to private helpers, spec §4.1)
   /// must resolve here.
   ///
-  /// Module export boundaries (spec §4.1: private procedures visible only
-  /// within their module and descendants) are enforced separately, at REPL
-  /// entry-point lookup sites, via [_replEntryPointLabels]. A cross-module
-  /// call is resolved by the linker, and only to a procedure its qualifier
-  /// exports (TGLP modules.tex, Compilation, fourth step), so the boundary is
-  /// not weakened by leaving `labels` unfiltered.
+  /// Each loaded unit is one compiled module, the root procedures it reaches
+  /// among its own under their renamed names, `:p` (TGLP modules.tex,
+  /// Compilation, third to fifth steps); the root linked alone ([_rootCode])
+  /// follows them, for a posted goal.  A root procedure two of them carry is
+  /// one procedure compiled from one clause set, and the label the first
+  /// carries is the one a call reaches.  A goal names a unit's entry point or
+  /// a root procedure ([_goalLabel]); a cross-module call is resolved by the
+  /// linker, and only to a procedure its qualifier exports (TGLP modules.tex,
+  /// Compilation, fourth step), so the boundary is not weakened by leaving
+  /// `labels` unfiltered.  Until 2026-10-04 the root self.glp was compiled
+  /// here, last, as a fallback for every bare name a unit left unresolved.
   BytecodeProgram get combinedProgram {
-    // Root self.glp goes LAST so its primitives are the FALLBACK: label
-    // indexing keeps the first occurrence, so a loaded module's own definition
-    // (e.g. its merge/3) shadows the root's primitive of the same name (manual
-    // §19.6: a module's definition shadows every ancestor's; modules.tex
-    // §Static Linking step 3). Other loaded programs keep their insertion order.
     final allOps = <Op>[];
     for (final entry in _loadedPrograms.entries) {
-      if (entry.key == '__root_self__') continue;
       allOps.addAll(entry.value.ops);
     }
-    final rootSelf = _loadedPrograms['__root_self__'];
-    if (rootSelf != null) allOps.addAll(rootSelf.ops);
+    allOps.addAll(_rootCode.ops);
     return BytecodeProgram(allOps);
-  }
-
-  /// Labels addressable as REPL entry points, per spec §4.1.
-  ///
-  /// The REPL is outside any module, so it can only invoke:
-  ///   - All labels in root self.glp (ancestor scoping)
-  ///   - All labels in a linked program (the linker has already encoded
-  ///     export boundaries via name mangling and alias clauses)
-  ///   - All labels of top-level programs (no `-module` directive)
-  ///   - Only `exportedLabels` of explicitly declared modules
-  Set<String> _replEntryPointLabels() {
-    final labels = <String>{};
-    final rootSelf = _loadedPrograms['__root_self__'];
-    if (rootSelf != null) labels.addAll(rootSelf.labels.keys);
-    final program = _loadedPrograms['__program__'];
-    if (program != null) labels.addAll(program.labels.keys);
-    for (final moduleInfo in _loadedModules.values) {
-      if (moduleInfo.isTopLevel) {
-        labels.addAll(moduleInfo.program.labels.keys);
-      } else {
-        labels.addAll(moduleInfo.exportedLabels);
-      }
-    }
-    return labels;
   }
 
   // ============ Private Methods ============
@@ -949,13 +988,12 @@ class GlpEngine {
     final args = goalAtom.args;
 
     final program = combinedProgram;
-    final procedureLabel = '$functor/$arity';
-    final entryPC = program.labels[procedureLabel];
+    final procedureLabel = _goalLabel(functor, arity);
 
-    if (entryPC == null || !_replEntryPointLabels().contains(procedureLabel)) {
+    if (procedureLabel == null || program.labels[procedureLabel] == null) {
       return ExecutionResult(
         status: ExecutionStatus.failed,
-        error: 'Predicate $procedureLabel not found',
+        error: 'Predicate $functor/$arity not found',
       );
     }
 
@@ -1065,23 +1103,22 @@ class GlpEngine {
 
     // Every conjunct is found before any is put to the machine, so a refused
     // conjunction leaves nothing queued behind it.
-    final entryLabels = _replEntryPointLabels();
+    final labels = <String>[];
     for (final goal in goals) {
-      final procedureLabel = '${goal.functor}/${goal.args.length}';
-      if (program.labels[procedureLabel] == null ||
-          !entryLabels.contains(procedureLabel)) {
+      final procedureLabel = _goalLabel(goal.functor, goal.args.length);
+      if (procedureLabel == null || program.labels[procedureLabel] == null) {
         return ExecutionResult(
           status: ExecutionStatus.failed,
-          error: 'Predicate $procedureLabel not found',
+          error: 'Predicate ${goal.functor}/${goal.args.length} not found',
         );
       }
+      labels.add(procedureLabel);
     }
 
-    for (final goal in goals) {
-      final functor = goal.functor;
-      final arity = goal.args.length;
+    for (var g = 0; g < goals.length; g++) {
+      final goal = goals[g];
       final args = goal.args;
-      final procedureLabel = '$functor/$arity';
+      final procedureLabel = labels[g];
 
       final argSlots = <int, rt.Term>{};
       for (int i = 0; i < args.length; i++) {

@@ -109,6 +109,33 @@ void main() {
       expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
       expect(_show(engine, r.bindings['O']), '[1, 2]');
     });
+
+    test('a goal posted beside it: mwm([merge([1, 2])], O) gives O = [1, 2]',
+        () async {
+      // The goal is a module at the root, linked with the root self.glp (GLP
+      // #3 Cowork, 2026-10-03 21:18 UTC, "16:11"): its mwm/2 is the root's,
+      // whose helpers are the root's own.
+      final engine = GlpEngine(rootSelfGlpPath: _root)..loadFile(fixture);
+      final r = await engine.runGoal('mwm([merge([1, 2])], O)');
+      expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
+      expect(_show(engine, r.bindings['O']), '[1, 2]');
+    });
+
+    test('a file-less source defining mwm1/4 does not take it over either',
+        () async {
+      // A file-less source is a module at the root, linked with the root
+      // self.glp as a one-module program (GLP's round six, item 4).
+      final engine = GlpEngine(rootSelfGlpPath: _root)
+        ..loadSource('''
+procedure(X) mwm1(MwmInput(X)?, MutualRef?, Done?, Done).
+mwm1(_, _, _, done).
+procedure u(Stream(Integer)).
+u(Out?) :- mwm([merge([1, 2])], Out).
+''', filename: 'hijack_text');
+      final r = await engine.runGoal('u(O)');
+      expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
+      expect(_show(engine, r.bindings['O']), '[1, 2]');
+    });
   });
 
   test('a call to a root procedure resolves to its renamed form: find_type/2, '
@@ -133,8 +160,8 @@ void main() {
     final program =
         File('../programs/tests/root_check/compose.glp').absolute.path;
 
-    test('a program under a root that does not check is refused, naming the '
-        'root', () {
+    test('an engine under a root that does not check is refused, or the '
+        'program loaded under it, naming the root', () {
       expect(
           () => GlpEngine(rootSelfGlpPath: mutant).loadFile(program),
           throwsA(predicate((e) =>

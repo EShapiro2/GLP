@@ -4228,9 +4228,11 @@ HEREDOC
 check "RM8 find_type resolves P/N in the calling module's scope" "T = [0-9a-f]\{64\}" "$rm8"
 check "RM8 a module-local P/N is not declared at the root" "_find_type/2: local/1 is not declared in the caller's scope" "$rm8"
 
-# An activated module's body call to a root-scope procedure (merge/3): the
-# root self.glp is not in the artefact, and the goal runs on the runtime's root
-# runner (Currencies Code's report of 2026-09-08 12:14 UTC).
+# An activated module's body call to a root-scope procedure (merge/3)
+# (Currencies Code's report of 2026-09-08 12:14 UTC): the root self.glp is the
+# first link of the program's chain, and the root procedures the program
+# reaches are compiled into its artefact, renamed :p (GLP's round six, item 1);
+# until 2026-10-04 they were not, and the goal ran on a root runner.
 rm9=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/tests/run_module_probe
 self_module(M), run(merged(Z), M?).

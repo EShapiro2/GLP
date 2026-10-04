@@ -800,8 +800,22 @@ void checkModulesIndependently(List<DiscoveredModule> modules) {
 /// them").
 ///
 /// Throws on type errors with details.
+///
+/// A file-less source --- a boot source, a source handed over as text --- is
+/// a module at the root, linked with the root self.glp as a one-module
+/// program (GLP #3 Cowork, 2026-10-03 21:18 UTC, "16:11"): it is checked in
+/// [outerScope], the scope the engine holds when it is handed over (IGLP
+/// Implementation Notes, "The scope a boot source is checked in": "the linked
+/// program, the kernels the runtime has loaded, and the boot file's own
+/// ancestor chain"), and reaches a loaded program only through its entry
+/// points, [outerEntryPoints], which stand between the root and the source in
+/// its scope: a call to one stays bare, the loaded program's alias, and the
+/// linked program is checked over [outerScope], which declares it.
 LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
-    {required String rootDir, String? singleModulePath}) {
+    {required String rootDir,
+    String? singleModulePath,
+    TypeEnvironment? outerScope,
+    Set<String> outerEntryPoints = const {}}) {
   // A directory with no self.glp is not a program, and is rejected before
   // any of its modules is checked; a single-module program has none.
   if (singleModulePath == null) _requireProgramSelfGlp(modules, rootDir);
@@ -824,11 +838,14 @@ LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
   // linkProgram applies all five steps, including step-5 DCE, so the program
   // type-checked and compiled below is restricted to its reachable procedures.
   final linked = linkProgram(modules,
-      rootDir: rootDir, singleModulePath: singleModulePath);
+      rootDir: rootDir,
+      singleModulePath: singleModulePath,
+      outerEntryPoints: outerEntryPoints);
   final flat = linkedFlatModule(modules, linked);
 
+  final base = outerScope ?? primitiveScope();
   final pe = PartialEvaluator();
-  final transformed = pe.transformDefinedGuards(linked.program);
+  final transformed = pe.transformDefinedGuards(linked.program, scope: base);
 
   // The flat program is the object checked, and every call in it is local, so
   // a parameterised procedure no call in it instantiates is one no call in the
@@ -843,8 +860,9 @@ LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
   //
   // It is checked against the language primitives alone: the root self.glp
   // is one of its modules, its types and procedures renamed under the empty
-  // path with every other module's, and nothing else is in scope.
-  final base = primitiveScope();
+  // path with every other module's, and nothing else is in scope --- save,
+  // for a file-less source, the scope it is handed over in, which declares
+  // the loaded program's entry points it calls.
   final result = checkModule(
     flat,
     transformedProcedures: transformed.procedures,
@@ -860,6 +878,44 @@ LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
   }
 
   return linked.withCheckedEnv(linkedProgramEnvironment(flat, base: base));
+}
+
+/// The root self.glp linked as a program of its own: what a goal posted at the
+/// root is linked with (GLP #3 Cowork, 2026-10-03 21:18 UTC, "16:11": "a
+/// posted goal or a file-less source is a module at the root, linked with the
+/// root self.glp as a one-module program; nothing ambient").  The root is
+/// checked in step 2 against the language primitives, its procedures and types
+/// renamed under the empty path and its calls resolved within it (TGLP
+/// modules.tex, Compilation, steps 2--4), and the linked program checked over
+/// the primitives alone.  Every procedure is kept: step 5 keeps what the
+/// posted goal reaches, and a goal may call any procedure of the root, so the
+/// engine links the root once and resolves each goal's calls into it, which is
+/// semantically the goal's linked program ("Restricting the program to its
+/// reachable procedures is semantically equivalent to the whole", fifth step).
+///
+/// Throws, naming the root's file and line, where the root does not check.
+LinkResult checkedRootProgram(DiscoveredModule root) {
+  final modules = [root];
+  checkModulesIndependently(modules);
+  final linked = linkAndResolveModules(modules,
+      rootDir: File(root.filePath).parent.path);
+  final flat = linkedFlatModule(modules, linked);
+  final transformed = PartialEvaluator().transformDefinedGuards(linked.program);
+  final result = checkModule(
+    flat,
+    transformedProcedures: transformed.procedures,
+    ancestorScope: primitiveScope(),
+    rejectUninstantiatedInspecting: true,
+  );
+  if (!result.isWellTyped) {
+    final errors = result.errors
+        .map((e) => '  ${e.message} at line ${e.line}')
+        .join('\n');
+    throw Exception(
+        'Type checking failed for the root self.glp linked alone '
+        '(${root.filePath}):\n$errors');
+  }
+  return linked.withCheckedEnv(linkedProgramEnvironment(flat));
 }
 
 /// The scope the linked program is checked in: the flat module's own
@@ -985,10 +1041,14 @@ void typeCheckProgram(List<DiscoveredModule> modules, {required String rootDir})
 /// ([_requireProgramSelfGlp]), and between steps 4 and 5 a directory with no
 /// entry points is rejected ([_requireEntryPoints]).
 LinkResult linkProgram(List<DiscoveredModule> modules,
-    {required String rootDir, String? singleModulePath}) {
+    {required String rootDir,
+    String? singleModulePath,
+    Set<String> outerEntryPoints = const {}}) {
   if (singleModulePath == null) _requireProgramSelfGlp(modules, rootDir);
   final linked = linkAndResolveModules(modules,
-      rootDir: rootDir, singleModulePath: singleModulePath);
+      rootDir: rootDir,
+      singleModulePath: singleModulePath,
+      outerEntryPoints: outerEntryPoints);
   if (singleModulePath == null) {
     _requireEntryPoints(modules, linked, rootDir);
   }
@@ -1078,8 +1138,15 @@ void _requireEntryPoints(
 /// (needed for SRSW type-based relaxation during compilation). This is the stage
 /// to inspect when checking renaming/resolution/aliasing in isolation; the
 /// program actually compiled is [linkProgram] (which also applies step 5).
+///
+/// [outerEntryPoints] are the entry points of a program the engine already
+/// holds, by "name/arity", which a file-less source reaches between the root
+/// and itself ([checkedLinkedProgram]): a call to one is left bare, where it
+/// would otherwise resolve to a root procedure of the same name.
 LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
-    {required String rootDir, String? singleModulePath}) {
+    {required String rootDir,
+    String? singleModulePath,
+    Set<String> outerEntryPoints = const {}}) {
   // Every module is named by its path from the root, so two files of one name
   // are two modules the renaming cannot tell apart.
   _requireDistinctModuleNames(modules);
@@ -1114,6 +1181,9 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
     for (final selfMod in ancestors) {
       for (final proc in selfMod.ast.procedures) {
         final sig = '${proc.name}/${proc.arity}';
+        // An entry point of a program the engine holds is nearer than the
+        // root for a file-less source, and its call stays bare.
+        if (selfMod.isRoot && outerEntryPoints.contains(sig)) continue;
         procs.putIfAbsent(sig, () => selfMod.moduleName);
       }
     }

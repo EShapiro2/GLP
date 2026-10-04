@@ -19,6 +19,8 @@ library;
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:glp_runtime/analysis/type_checker/root_scope.dart'
+    show rootRenamed;
 import 'package:glp_runtime/bytecode/opcodes.dart' as op;
 import 'package:glp_runtime/bytecode/runner.dart' show BytecodeProgram, CallEnv;
 import 'package:glp_runtime/engine/glp_engine.dart';
@@ -64,7 +66,11 @@ probe(X?) :- X := sqrt(-1).
       await engine.runGoal('probe(A)');
 
       expect(engine.runtime.failedGoals, hasLength(1));
-      expect(engine.runtime.failedGoals.single, startsWith(':='),
+      // The goal is the root's :=, which the program reaches under the name
+      // the linking gives it, renamed under the empty path (TGLP modules.tex,
+      // Compilation, third step): `::=`.  Until 2026-10-04 the root was
+      // reached by its bare names and the goal was `:=`.
+      expect(engine.runtime.failedGoals.single, startsWith(rootRenamed(':=')),
           reason: 'the goal that failed is the := whose kernel aborted');
       expect(engine.runtime.failedGoals.single, contains('sqrt(-1)'),
           reason: 'the call carries its arguments, the whole of the fault');
@@ -183,7 +189,7 @@ probe(A?, B?, C?, D?) :- A := 1/0, B := 7 // 0, C := 7 mod 0, D := 2+2.
       expect(engine.runtime.failedGoals.where((g) => g.startsWith('abort(')),
           isEmpty,
           reason: 'no domain-error clause calls abort/1 for a zero divisor');
-      expect(engine.runtime.failedGoals.every((g) => g.startsWith(':=')),
+      expect(engine.runtime.failedGoals.every((g) => g.startsWith(rootRenamed(':='))),
           isTrue,
           reason: 'the goal that failed is the := whose kernel aborted');
     });
@@ -199,7 +205,7 @@ comp(T?) :- T =.. [].
 
       expect(result.status, ExecutionStatus.failed);
       expect(result.bindings['T'], isNull);
-      expect(engine.runtime.failedGoals.single, startsWith('=..'),
+      expect(engine.runtime.failedGoals.single, startsWith(rootRenamed('=..')),
           reason: "=..'s [] clause hands [] to '_list_to_tuple', which aborts");
     });
 
@@ -233,7 +239,7 @@ comp(T?) :- T =.. [].
             reason: '$e fails, and is not capped by a re-posting otherwise');
         expect(result.bindings['X'], isNull, reason: e);
         expect(engine.runtime.failedGoals, hasLength(1), reason: e);
-        expect(engine.runtime.failedGoals.single, startsWith(':='),
+        expect(engine.runtime.failedGoals.single, startsWith(rootRenamed(':=')),
             reason: '$e: the := whose kernel ${cases[e]} aborted');
         expect(engine.runtime.failedGoals.single, contains(e), reason: e);
       }
@@ -297,7 +303,7 @@ comp(T?) :- T =.. [].
             reason: '$e fails, and is not capped by a re-posting otherwise');
         expect(result.bindings['X'], isNull, reason: e);
         expect(engine.runtime.failedGoals, hasLength(1), reason: e);
-        expect(engine.runtime.failedGoals.single, startsWith(':='),
+        expect(engine.runtime.failedGoals.single, startsWith(rootRenamed(':=')),
             reason: '$e: the := whose kernel ${cases[e]} aborted');
       }
     });
@@ -351,7 +357,7 @@ comp(T?) :- T =.. [].
           expect(result.bindings['Y'].toString(), contains('4'),
               reason: '$e: the sibling goal kept reducing');
           expect(engine.runtime.failedGoals, hasLength(1), reason: e);
-          expect(engine.runtime.failedGoals.single, startsWith(':='),
+          expect(engine.runtime.failedGoals.single, startsWith(rootRenamed(':=')),
               reason: '$e: the := whose kernel aborted');
         }
       }

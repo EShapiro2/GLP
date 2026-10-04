@@ -764,18 +764,15 @@ class ByteRunner with OpExecutors implements GoalRunner {
         cx.argSlots.clear();
         return null;
       }
-      // No kernel of that name. A root-scope procedure --- merge/3, send/3, the
-      // clauses of programs/self.glp --- is not in a module's artefact: the
-      // root scope is ambient at every runtime and excluded from h(M), so an
-      // activated module (run/2, run/3, a module read from a file) reaches it
-      // through the runtime's root runner, registered by the engine as
-      // `__root__`. The goal is spawned there, its PC in the root's code.
-      if (_spawnInRoot(cx, symbol.name, arity)) {
-        cx.argSlots.clear();
-        return null;
-      }
-      // Neither, so the spawned body goal has no procedure and
-      // FAILS. It does not end the parent's run: IGLP gives a reduction exactly
+      // No kernel of that name.  A root-scope procedure --- merge/3, send/3,
+      // the clauses of programs/self.glp --- is in the module's own code: the
+      // root self.glp is the first link of every program's chain, and the
+      // procedures of it the program reaches are compiled into the program's
+      // module, renamed `:p` (TGLP modules.tex, Compilation), an activated
+      // module's artefact among them.  Until 2026-10-04 they were not, and an
+      // activated module reached them through a root runner the engine
+      // registered as `__root__`.  So the spawned body goal has no procedure
+      // and FAILS. It does not end the parent's run: IGLP gives a reduction exactly
       // three outcomes — succeeds, suspends with a suspension set, or fails —
       // and the dGLP and madGLP Reduce transactions each put a failed goal in F
       // and continue with the remainder of the queue. No transaction ends a
@@ -832,40 +829,6 @@ class ByteRunner with OpExecutors implements GoalRunner {
     return null;
   }
 
-  /// Spawn `name/arity` as a goal of the runtime's root runner (`__root__`),
-  /// where the root self.glp's procedures are compiled, with this goal's
-  /// argument slots as its arguments and this goal's module value inherited.
-  /// True where the root runner has the procedure; false where it has not or
-  /// no root runner is registered, and nothing was spawned.
-  bool _spawnInRoot(RunnerContext cx, String name, int arity) {
-    final root = cx.rt.runners['__root__'];
-    if (root is! ByteRunner) return false;
-    final sig = '$name/$arity';
-    final entry = root.image.entryOffsetOf(sig);
-    if (entry == null) return false;
-
-    final newEnv = CallEnv(args: Map<int, Term>.from(cx.argSlots));
-    final newGoalId = cx.rt.nextGoalId++;
-
-    if (cx.tracing) {
-      final args = <String>[];
-      for (var i = 0; i < 10; i++) {
-        final term = newEnv.arg(i);
-        if (term == null) break;
-        args.add(cx.termFormatter != null
-            ? cx.termFormatter!(term)
-            : term.toString());
-      }
-      cx.spawnedGoals.add(args.isEmpty ? name : '$name(${args.join(', ')})');
-    }
-
-    cx.rt.setGoalEnv(newGoalId, newEnv);
-    cx.rt.setGoalProgram(newGoalId, '__root__');
-    cx.rt.setGoalModule(newGoalId, cx.rt.getGoalModule(cx.goalId));
-    cx.rt.gq.enqueue(GoalRef(newGoalId, entry));
-    return true;
-  }
-
   /// A goal's call text — `name(arg, ...)`, or `name/arity` when it has no
   /// arguments — formatted from the argument slots with the context's formatter,
   /// the same way a spawned goal is formatted for the reduction trace.
@@ -890,14 +853,8 @@ class ByteRunner with OpExecutors implements GoalRunner {
 
     final symbol = image.symbolAt(procIndex);
     if (!symbol.compiled) {
-      // A tail call to a root-scope procedure from an activated module: the
-      // callee's code is in the root runner, not this image, so the tail call
-      // becomes a spawn there and this goal proceeds.
-      if (_spawnInRoot(cx, symbol.name, arity)) {
-        cx.argSlots.clear();
-        execProceed(cx);
-        return (RunResult.terminated, null);
-      }
+      // The callee's code is in this image wherever the program reaches it,
+      // a root-scope procedure's included (see [_spawn]).
       print('ERROR: Requeue could not find procedure: ${symbol.signature}');
       return (RunResult.terminated, null);
     }
