@@ -8,6 +8,17 @@
 /// constructs going back as `answer(req(N), xs_C(...))`, and the agent's screen
 /// coming back to the balances view and the default display. Nothing is
 /// simulated and no term is hand-fed.
+///
+/// The play is run directly, as test code, with no host: the host posts
+/// `superapp/3` and nothing of Currencies' (GSG Section 5.1; Currencies #7
+/// Cowork, 2026-10-04 09:15 UTC, item 2).  The engine loads the coins program
+/// and posts `coins_ui(alice, Answers?, [])` through its posting call, which
+/// checks the goal as every posted goal is checked (TGLP modules.tex, "the
+/// initial goal posted to the runtime ... is type-checked before execution as
+/// a body goal"; GlpEngine.postGoal); alice's taps go into `Answers` through
+/// the injector the call returns, and what `send_to_user/1` sends her is read
+/// off the runtime's output.  Until 2026-10-04 the play ran under the host,
+/// AgentRuntime, which posted it unchecked.
 library;
 
 import 'dart:io';
@@ -21,8 +32,9 @@ import 'package:glp_multiagent/manifests/coins_ui.dart';
 import 'package:glp_multiagent/ui_runtime/agent_surface.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
-import 'package:glp_multiagent/isolate_protocol.dart';
-import 'package:glp_runtime/multiagent/agent_runtime.dart';
+import 'package:glp_multiagent/isolate_protocol.dart' show runtimeTermOf;
+import 'package:glp_runtime/engine/glp_engine.dart';
+import 'package:glp_runtime/runtime/scheduler.dart' show ExecutionStatus;
 
 Future<void> _loadFonts() async {
   Future<void> add(FontLoader l, String p) async =>
@@ -96,18 +108,27 @@ void main() {
     final repo = Directory('../programs').existsSync()
         ? Directory('../programs').absolute.path
         : '/Users/udi/Grassroots/GLP/programs';
+    // What send_to_user/1 sends alice, one term to a line.
     final lines = <String>[];
-    final agent = AgentRuntime(
-      agentId: 'alice',
-      // programs/currencies/coins is a program: currency/ is the certified mini-app and
-      // this directory adds the harness that runs it for a live person.
-      program: '$repo/currencies/coins',
-      goalLabel: 'coins_ui/3',
-      rootSelfGlpPath: '$repo/self.glp',
-    );
-    agent.onOutput = lines.add;
-    agent.onLog = (_, __) {};
-    agent.onSendMadMessage = (_, __) async {};
+    final engine = GlpEngine(rootSelfGlpPath: '$repo/self.glp');
+    engine.runtime.outputCallback = lines.add;
+    // programs/currencies/coins is a program: currency/ is the certified
+    // mini-app and this directory adds the harness that runs it for a live
+    // person, play_ui.glp's coins_ui/3, which reads alice's answers on its
+    // second argument and not its third.
+    expect(engine.loadProgram('$repo/currencies/coins'), isTrue);
+    final play = engine.postGoal('coins_ui(alice, Answers?, [])',
+        inputs: ['Answers']);
+    final answers = play.inputs['Answers']!;
+
+    /// The play run until quiescent, as one event of the agent's is: a run
+    /// stopped at the net is half a run, and nothing after it means what it
+    /// says.
+    void drain() {
+      final result = play.scheduler.drainToQuiescence(maxCycles: 200000);
+      expect(result.status, isNot(ExecutionStatus.capped),
+          reason: 'the play did not quiesce');
+    }
 
     final sends = <GTerm>[];
     final r = UiRuntime(manifest: coinsManifest, onSend: sends.add);
@@ -115,20 +136,23 @@ void main() {
     var fed = 0;
     void replay() {
       for (; fed < lines.length; fed++) {
-        final l = lines[fed];
-        if (l.startsWith('< ')) r.handleLine(l.substring(2));
+        r.handleLine(lines[fed]);
       }
     }
 
+    // Each of alice's taps, a ground term, into her answers stream.
     Future<void> settle() async {
       while (sends.isNotEmpty) {
-        await tester.runAsync(() => agent.injectUserInput(runtimeTermOf(sends.removeAt(0))));
+        answers
+            .inject(runtimeTermOf(sends.removeAt(0)))
+            .forEach(engine.runtime.gq.enqueue);
+        drain();
       }
       replay();
       await tester.pumpAndSettle();
     }
 
-    await tester.runAsync(() => agent.initialize());
+    drain();
     replay();
 
     // The compiled agent poses its four request clauses as soon as it runs, so
