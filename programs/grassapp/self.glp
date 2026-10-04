@@ -22,6 +22,16 @@
 
 
 Decision ::= yes ; no.
+
+%% Whether the bonds of a lot list were selected out of the holdings: ok, or
+%% fail --- the holdings do not hold them (currency_txn.glp, select_bonds_by_spec).
+Status ::= ok ; fail.
+
+%% What an incoming trade proposal is to the accepter (currency_txn.glp,
+%% classify_trade): a payment or a redemption, both auto-accepted, or a normal
+%% swap, shown to the person.
+TradeClass ::= normal ; payment ; redemption.
+
 Response ::= accept(FriendChannel) ; no.
 
 %% A currency unit: a bond issued by Issuer, maturing at Maturity, serial Serial.

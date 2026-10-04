@@ -207,11 +207,18 @@ respond_escrow_cancel(offer(Target), Answer?) :-
 %% THE TWO HELPERS THE PERSON'S WILL REACHES
 %% =============================================================================
 
-%% Classify an incoming proposal.  A redemption is settled by the program;
-%% only the normal trade is a question for the person, and it spawns a
+%% Classify an incoming proposal.  Payment and redemption are settled by the
+%% program; only the normal trade is a question for the person, and it spawns a
 %% responder rather than sending the offer to the mediator.
-procedure trade_dispatch(Constant?, Key?, Key?, Lot?, Stream(Bond)?, TradeResponse,
+procedure trade_dispatch(TradeClass?, Key?, Key?, Lot?, Stream(Bond)?, TradeResponse,
     Stream(Bond)?, Integer?, Constant?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Constant)).
+
+%% Payment — auto-accept (proposer gives, wants nothing).
+trade_dispatch(payment, Id, From, _, OfferedBonds, trade_accept([]),
+    Holdings, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
+    append(Holdings?, OfferedBonds?, NewHoldings),
+    send_person(msg(agent, person, trade_completed(From?)), Outs?, Outs1),
+    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?, DateW).
 
 %% Redemption — the issuer must fulfil: auto-accept with the requested bonds,
 %% or decline with a menu of what it does hold.

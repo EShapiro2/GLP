@@ -1,9 +1,9 @@
 %% currency_txn.glp — GrassApp's top-level lift of the currencies transaction core.
 %%
 %% A copy of programs/currencies/bonds_v2/txn.glp (Grassroots-Bonds owned, and still the
-%% canonical owner of this logic).  The exports are the canonical file's, plus
-%% own_coins/4, which the agent calls directly and the canonical file does not
-%% export.  The agent calls all of them BARE: this directory's self.glp carries
+%% canonical owner of this logic).  The exports are the canonical file's,
+%% own_coins/4 among them, which the agent calls directly.  The agent calls all
+%% of them BARE: this directory's self.glp carries
 %% -expose(currency_txn), which lifts a module's exports into the directory's
 %% scope (modules.tex, -expose), so no `#` qualifier appears at a call site.
 %% Loading the directory as a directory program resolves them at compile time,
@@ -12,13 +12,14 @@
 %% this lift can be replaced by importing currencies/txn.glp directly.
 %%
 %% KEEP IN SYNC with programs/currencies/bonds_v2/txn.glp (same author owns both); the
-%% own_coins export is the one deliberate divergence.
+%% code is the canonical file's, with no divergence.
 %%
 %% The pure, UI-agnostic bond-transaction predicates: maturity-aware holdings
 %% (bonds), lot selection, the redeem-side maturity gate, trade classification,
 %% and the redemption menu.  Data transforms over Stream(Bond) / Stream(Lot).
 %%
-%% Representation (Bond/Lot types come from grassapp self.glp):
+%% Representation (the Bond, Lot, Decision, Status and TradeClass types come
+%% from grassapp self.glp):
 %%   Bond ::= bond(Issuer, Maturity, Serial).   Lot ::= lot(Issuer, Maturity, Count).
 %% A bond of maturity d is a coin of its ISSUER q iff d =< d*_q, q's own date
 %% (Def 3.2); the holders' dates play no part, and a maturity-0 bond is a coin
@@ -55,7 +56,7 @@ append([], Ys, Ys?).
 %% SELECT_BONDS_EXACT — Select K bonds with exact Issuer+Maturity
 %% =============================================================================
 
-procedure select_bonds_exact(Key?, Constant?, Constant?, Stream(Bond)?, Constant, Stream(Bond), Stream(Bond)).
+procedure select_bonds_exact(Key?, Constant?, Constant?, Stream(Bond)?, Status, Stream(Bond), Stream(Bond)).
 select_bonds_exact(_, _, 0, Hs, ok, [], Hs?).
 select_bonds_exact(Issuer, Maturity, K, [bond(I, M, S)|Rest], Status?, [bond(I?, M?, S?)|Sel?], Rem?) :-
     K? > 0, Issuer? =?= I?, Maturity? =?= M? |
@@ -70,14 +71,14 @@ select_bonds_exact(_, _, K, [], fail, [], []) :- K? > 0 | true.
 %% SELECT_BONDS_BY_SPEC — Fold over a lot list (exact issuer+maturity match)
 %% =============================================================================
 
-exported procedure select_bonds_by_spec(Stream(Lot)?, Stream(Bond)?, Constant, Stream(Bond), Stream(Bond)).
+exported procedure select_bonds_by_spec(Stream(Lot)?, Stream(Bond)?, Status, Stream(Bond), Stream(Bond)).
 select_bonds_by_spec([lot(Issuer, Maturity, Count)|Rest], Holdings, Status?, AllSel?, FinalRem?) :-
     ground(Issuer?), ground(Maturity?), ground(Count?) |
     select_bonds_exact(Issuer?, Maturity?, Count?, Holdings?, LotStatus, LotSel, LotRem),
     select_by_spec_continue(LotStatus?, Rest?, LotSel?, LotRem?, Status, AllSel, FinalRem).
 select_bonds_by_spec([], Holdings, ok, [], Holdings?).
 
-procedure select_by_spec_continue(Constant?, Stream(Lot)?, Stream(Bond)?, Stream(Bond)?, Constant, Stream(Bond), Stream(Bond)).
+procedure select_by_spec_continue(Status?, Stream(Lot)?, Stream(Bond)?, Stream(Bond)?, Status, Stream(Bond), Stream(Bond)).
 select_by_spec_continue(ok, Rest, LotSel, LotRem, Status?, AllSel?, FinalRem?) :-
     select_bonds_by_spec(Rest?, LotRem?, Status, RestSel, FinalRem),
     append(LotSel?, RestSel?, AllSel).
@@ -93,14 +94,14 @@ select_by_spec_continue(fail, _, LotSel, LotRem, fail, LotSel?, LotRem?).
 %% Anything else is a normal swap, shown to the user, that Id may accept or decline.
 %% =============================================================================
 
-exported procedure classify_trade(Key?, Constant?, Stream(Lot)?, Stream(Bond)?, Constant).
+exported procedure classify_trade(Key?, Constant?, Stream(Lot)?, Stream(Bond)?, TradeClass).
 classify_trade(Id, Clock, WantSpec, OfferedBonds, Class?) :-
     own_coins(Id?, Clock?, OfferedBonds?, AllCoins),
     coin_trade(AllCoins?, WantSpec?, Class).
 
 %% own_coins: every offered bond is a coin of Id — issued by Id (I =?= Id) and
 %% mature at Id's own date (M =< Clock).
-exported procedure own_coins(Key?, Constant?, Stream(Bond)?, Constant).
+exported procedure own_coins(Key?, Constant?, Stream(Bond)?, Decision).
 own_coins(Id, Clock, [bond(I, M, _)|Rest], R?) :-
     Id? =?= I?, M? =< Clock? | own_coins(Id?, Clock?, Rest?, R).
 own_coins(_, _, [bond(_, _, _)|_], no) :-
@@ -108,7 +109,7 @@ own_coins(_, _, [bond(_, _, _)|_], no) :-
 own_coins(_, _, [], yes).
 
 %% One maturity test done; the want-list decides which obligation it is.
-procedure coin_trade(Constant?, Stream(Lot)?, Constant).
+procedure coin_trade(Decision?, Stream(Lot)?, TradeClass).
 coin_trade(no, _, normal).
 coin_trade(yes, [], payment).
 coin_trade(yes, [_|_], redemption).
