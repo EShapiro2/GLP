@@ -314,7 +314,7 @@ class GlpEngine {
     // loaded by name rather than from the program hierarchy and cross-calls
     // nothing, so the program test below does not apply to it.  The engine's
     // embedded madGLP source, the other internal source, is gone: its
-    // send_to_net/1 is the root self.glp's.
+    // send_to_net/1 and global_send/3 are the root self.glp's.
     final isInternal = name == '__root_self__';
     final isRealFile =
         !isInternal && name != '_source_' && File(name).existsSync();
@@ -727,9 +727,10 @@ class GlpEngine {
 
   /// Enable madGLP mode for this engine.
   ///
-  /// Creates the MadContext for message routing.  It loads no GLP:
-  /// send_to_net/1 (GLP-Spec appendix-guards, "Output to the network") is the
-  /// root self.glp's, loaded at construction.
+  /// Creates the MadContext for message routing.  It loads no GLP: the madGLP
+  /// system predicates --- send_to_net/1 (GLP-Spec appendix-guards, "Output
+  /// to the network") and global_send/3 (IGLP Definition "global_send
+  /// Predicate") --- are the root self.glp's, loaded at construction.
   void enableMadGLP({required String agentId}) {
     madContext = MadContext(agentId: agentId, runtime: _runtime);
     // Make madContext accessible from body kernels via runtime

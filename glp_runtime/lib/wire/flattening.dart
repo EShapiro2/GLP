@@ -88,8 +88,9 @@ Uint8List hashOfPrint(String canonical) =>
   // construction. Without this, buildRootScopeEnvironment() falls back to the
   // bare Dart rootScopeTypes, which NAMES the root self.glp's derived types but
   // does not DEFINE them, so a module using one in a type definition — as
-  // programs/system/mad_predicates.glp uses Constant in NetMsg — fails to check
-  // with "Unresolved type". The partial evaluator needs the same source.
+  // programs/tests/type_name_collision/net.glp uses Constant in NetMsg — fails
+  // to check with "Unresolved type". The partial evaluator needs the same
+  // source.
   final rootSelfFile = File(rootSelfGlpPath);
   if (rootSelfFile.existsSync()) {
     final rootSource = rootSelfFile.readAsStringSync();

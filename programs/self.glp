@@ -306,6 +306,18 @@ send_to_net([msg(Q, T) | In]) :- ground(Q?) |
     '_send'(msg(Q?, T?), '_w'(Q?, 0), Q?), send_to_net(In?).
 send_to_net([]).
 
+% global_send/3 — IGLP's system predicate (madglp-spec.tex, Definition
+% "global_send Predicate"): global_send(T, G, Q) sends the value of the reader T,
+% once known, on the link G, '_r'(P, I) or '_w'(P, I), to agent Q.  It is the
+% goal Globalize spawns for an exported reader and Localize for an imported
+% writer; the runtime registers that goal as a callback on the writer's cell
+% (IGLP Implementation Notes, "The global_send goal"), and these clauses are
+% its definition.  A root helper outside the catalogue, like mwm1/4 (GLP-Spec
+% appendix-guards: "a system module may define others for its own use"); its
+% declaration is the '_send' kernel's.
+procedure global_send(_?, GlobalName?, Key?).
+global_send(T, G, Q) :- known(T?) | '_send'(T?, G?, Q?).
+
 % =============================================================================
 % ARITHMETIC ASSIGNMENT (:=/2)
 % =============================================================================

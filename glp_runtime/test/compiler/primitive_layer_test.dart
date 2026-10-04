@@ -29,7 +29,6 @@ import 'package:glp_runtime/compiler/program_linker.dart';
 
 void main() {
   final rootSelf = File('../programs/self.glp').absolute.path;
-  final systemModule = File('../programs/system/mad_predicates.glp').absolute.path;
 
   late Directory tmp;
   late GlpEngine engine;
@@ -54,9 +53,27 @@ void main() {
     });
 
     test('admits a real module under programs/system/', () {
-      // mad_predicates.glp names the '_w'/'_send' kernels under -mode(system);
-      // it lives under programs/system/, so Rule A admits it and it loads.
-      expect(engine.loadFile(systemModule), isTrue);
+      // A module under programs/system/ names a kernel under -mode(system), so
+      // Rule A admits it and it loads.  The directory holds no module since
+      // 2026-10-04 --- system/mad_predicates.glp, the module this test loaded,
+      // went when send_to_net/1 and global_send/3 became the root self.glp's
+      // (GLP-Spec appendix-guards, "Output to the network"; IGLP Definition
+      // "global_send Predicate") --- so the test writes one there for its own
+      // length.
+      final systemDir = Directory('../programs/system');
+      final made = !systemDir.existsSync();
+      if (made) systemDir.createSync();
+      final dir = systemDir.createTempSync('pl_');
+      try {
+        final f = File('${dir.path}${Platform.pathSeparator}stamp.glp')
+          ..writeAsStringSync('-mode(system).\n'
+              'procedure stamp(Integer).\n'
+              "stamp(T?) :- '_now'(T).\n");
+        expect(engine.loadFile(f.path), isTrue);
+      } finally {
+        dir.deleteSync(recursive: true);
+        if (made) systemDir.deleteSync();
+      }
     });
   });
 
