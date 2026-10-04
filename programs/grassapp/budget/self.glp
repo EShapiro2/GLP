@@ -28,6 +28,6 @@ imported procedure bounded # play_clean(Stream(Integer), Stream(Request)).
 exported procedure play_clean(Stream(Integer), Stream(Request)).
 play_clean(Out?, Rs?) :- bounded # play_clean(Out, Rs).
 
-imported procedure bounded # play_abort_interpreted(Stream(Integer), Stream(Request)).
-exported procedure play_abort_interpreted(Stream(Integer), Stream(Request)).
-play_abort_interpreted(Out?, Rs?) :- bounded # play_abort_interpreted(Out, Rs).
+imported procedure bounded # play_abort_interpreted(Stream(Integer), Stream(Request), Constant).
+exported procedure play_abort_interpreted(Stream(Integer), Stream(Request), Constant).
+play_abort_interpreted(Out?, Rs?, W?) :- bounded # play_abort_interpreted(Out, Rs, W).

@@ -4994,6 +4994,7 @@ bench(residual, 100, 7, L).
 bench(meta, 100, 7, L2).
 play_clean(O5, R5).
 play_abort_waiting(O6, R6).
+play_abort_interpreted(O7, R7, Witness).
 :quit
 HEREDOC
 2>&1)
@@ -5001,6 +5002,9 @@ check "SG budget loads" "Loaded program" "$sg_budget"
 check "SG budget control: clean termination closes the request stream" "R5 = \[\]" "$sg_budget"
 check "SG budget control: a counter waiting on its stream is aborted" "O6 = \[1, 2, 3\]" "$sg_budget"
 check "SG budget control: the aborted goal's request stream closes" "R6 = \[\]" "$sg_budget"
+check "SG budget control interpreted: the abort closes execute/4's request stream" "R7 = \[\]" "$sg_budget"
+check "SG budget control interpreted: the waiting goal's output is unwritten after the abort" "Witness = waiting" "$sg_budget"
+check "SG budget control interpreted: the waiting goal ends when its input closes" "O7 = \[1, 2, 3\]" "$sg_budget"
 check "SG budget: the counter under bounded/3" "Out = \[1, 2, 3, 4, 5\]" "$sg_budget"
 check "SG budget: the residual program" "Out2 = \[1, 2, 3, 4, 5\]" "$sg_budget"
 check "SG budget: residual counter of 100 under grants of 7" "L = 100" "$sg_budget"

@@ -123,17 +123,18 @@ last([], 0).
 %% distributed to both conjuncts of a conjunction, read by unknown/1 in the
 %% guards, and an abort clause that ends a goal once abort is written on it.
 %%
-%% WHAT DOES NOT RUN OF THE PAPER'S INTENT, and why the residual program is the
-%% one that gives control: reduce/2 is a body goal (a guard may call only what
-%% the partial evaluator unfolds, never a multi-clause procedure), so execute/4
-%% commits to its reduce clause before reduce/2 waits for the goal's data; a
-%% goal waiting for data is then inside a suspended reduce/2, past the clause
-%% that would abort it, and abort does not end it (play_abort_interpreted
-%% suspends).  In the residual program the control test precedes each clause's
-%% own guard, so the abort clause takes a waiting goal as it takes a running
-%% one (play_abort_waiting succeeds).  Logix could put clause/2 in the guard;
-%% GLP cannot, and the paper's listing should say that the meta-interpreter
-%% states the semantics and the residual program realises it.
+%% WHY THE RESIDUAL PROGRAM IS THE ONE THAT GIVES CONTROL (Section 6.3: the
+%% listing states the semantics and the residual program realises it):
+%% reduce/2 is a body goal (a guard may call only what the partial evaluator
+%% unfolds, never a multi-clause procedure), so execute/4 commits to its
+%% reduce clause before reduce/2 waits for the goal's data; a goal waiting for
+%% data is then inside a suspended reduce/2, past the clause that would abort
+%% it, and abort does not end it: play_abort_interpreted records that the
+%% waiting goal's output is still unwritten once the abort has taken effect.
+%% In the residual program the control test precedes each clause's own guard,
+%% so the abort clause takes a waiting goal as it takes a running one
+%% (play_abort_waiting succeeds).  Logix could put clause/2 in the guard; GLP
+%% cannot.
 
 procedure execute(_?, Integer?, Stream(Request), Stream(Constant)?).
 execute(true, _, [], _).
@@ -194,29 +195,46 @@ third([], none).
 %% PLAYS OF CONTROL
 %% =============================================================================
 
-%% play_abort_waiting(Out, Rs): the residual counter on a stream that never
-%% closes, budget 10 (no request); after three counts the super-app writes
-%% abort; the counter, waiting on its stream, ends and its request stream
-%% closes.  Out = [1, 2, 3 | _], Rs = [], → succeeds.
+%% play_abort_waiting(Out, Rs): the residual counter on a stream that does not
+%% close until the abort has taken effect, budget 10 (no request); after three
+%% counts the super-app writes abort; the counter, waiting on its stream, ends
+%% and its request stream closes, and with it the counter's input stream.
+%% Out = [1, 2, 3], Rs = [], → succeeds.
 exported procedure play_abort_waiting(Stream(Integer), Stream(Request)).
 play_abort_waiting(Out?, Rs?) :-
-    open_three(Xs),
-    count(Xs?, 0, Out0, 10, Rs, Cs?),
+    open_three(Xs, Rs1?),
+    count(Xs?, 0, Out0, 10, Rs0, Cs?),
+    tee(Rs0?, Rs, Rs1),
     tee(Out0?, Out, Out1),
     third(Out1?, T),
     abort_when(T?, Cs).
 
-%% open_three(Xs): three elements and a tail that is never written.
-procedure open_three(Stream(Integer)).
-open_three([1, 2, 3 | Tail?]) :- hold(Tail).
+%% open_three(Xs, Rs): three elements and a tail that closes when the abort has
+%% taken effect, which the request stream Rs closing shows.
+procedure open_three(Stream(Integer), Stream(Request)?).
+open_three([1, 2, 3 | Tail?], Rs) :- close_when_done(Rs?, Tail).
 
-%% hold(X): hold a writer and never bind it.
-procedure hold(Stream(Integer)).
-hold(_?) :- true.
+%% close_when_done(Rs, Tail): Tail closes when Rs does.
+procedure close_when_done(Stream(Request)?, Stream(Integer)).
+close_when_done([_ | Rs], Tail?) :- close_when_done(Rs?, Tail).
+close_when_done([], []).
+
+%% open_three(Xs, Rs, Rest, W): as open_three/2, and before the tail closes it
+%% records in W whether Rest, the counter's output past its third element, is
+%% still unwritten when Rs closes: waiting where it is, ended otherwise.
+procedure open_three(Stream(Integer), Stream(Request)?, Stream(Integer)?, Constant).
+open_three([1, 2, 3 | Tail?], Rs, Rest, W?) :- witness_when_done(Rs?, Rest?, W, Tail).
+
+%% witness_when_done(Rs, Rest, W, Tail): when Rs closes, W is waiting if Rest
+%% is unwritten and ended otherwise, and only then Tail closes.
+procedure witness_when_done(Stream(Request)?, Stream(Integer)?, Constant, Stream(Integer)).
+witness_when_done([_ | Rs], Rest, W?, Tail?) :- witness_when_done(Rs?, Rest?, W, Tail).
+witness_when_done([], Rest, waiting, []) :- unknown(Rest?) | true.
+witness_when_done([], _, ended, []) :- otherwise | true.
 
 %% tee(Xs, Ys, Zs): Ys and Zs are each Xs, so that a play returns the
-%% counter's output on one and reads it for the trigger on the other.
-procedure tee(Stream(Integer)?, Stream(Integer), Stream(Integer)).
+%% counter's output, or its request stream, on one and reads it on the other.
+procedure(X) tee(Stream(X)?, Stream(X), Stream(X)).
 tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
 tee([], [], []).
 
@@ -236,14 +254,28 @@ procedure grant_seen(Stream(Request)?, Integer?, Stream(Request), Stream(Constan
 grant_seen([more(K?) | Rs0], K, Rs?, Cs?) :- grant_seen(Rs0?, K?, Rs, Cs).
 grant_seen([], _, [], []).
 
-%% play_abort_interpreted(Out, Rs): the same abort under execute/4, where
-%% reduce/2 waits inside the committed reduce clause and abort cannot reach
-%% the waiting goal: the play SUSPENDS (Out = [1, 2, 3 | _]; Rs = [], the
-%% abort clause ending the execute/4 goal and not the reduce/2 goal it waits on).
-exported procedure play_abort_interpreted(Stream(Integer), Stream(Request)).
-play_abort_interpreted(Out?, Rs?) :-
-    open_three(Xs),
-    execute(count(Xs?, 0, Out0), 10, Rs, Cs?),
+%% play_abort_interpreted(Out, Rs, W): the same abort under execute/4, and
+%% what it shows is Section 6.3's claim that the meta-interpreter as listed
+%% cannot end a goal waiting for data.  reduce/2 waits inside the committed
+%% reduce clause, so the abort clause ends the execute/4 goal --- its request
+%% stream Rs closes --- and not the reduce/2 goal it waits on, whose output
+%% past the third count is then still unwritten: the play records that in the
+%% witness W, waiting, and only then closes the counter's input, on which the
+%% waiting goal ends by count([], _, []) and its output closes.
+%% W = waiting, Out = [1, 2, 3], Rs = [], → succeeds.
+exported procedure play_abort_interpreted(Stream(Integer), Stream(Request), Constant).
+play_abort_interpreted(Out?, Rs?, W?) :-
+    open_three(Xs, Rs1?, Rest?, W),
+    execute(count(Xs?, 0, Out0), 10, Rs0, Cs?),
+    tee(Rs0?, Rs, Rs1),
     tee(Out0?, Out, Out1),
-    third(Out1?, T),
+    past_third(Out1?, T, Rest),
     abort_when(T?, Cs).
+
+%% past_third(Out, T, Rest): as third/2, and Rest is Out past its third
+%% element (closed if Out closes first).
+procedure past_third(Stream(Integer)?, Constant, Stream(Integer)).
+past_third([_, _, _ | Rest], ok, Rest?).
+past_third([_, _], none, []).
+past_third([_], none, []).
+past_third([], none, []).
