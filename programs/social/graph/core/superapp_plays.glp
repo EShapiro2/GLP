@@ -941,7 +941,8 @@ act(wait, Id, Es, As?, Script, Open, Swaps, Screen?) :-
 %% accord.  Her stream up to the social graph closes with it, her super-app
 %% returns her entry to idle, and she invites bob a second time: the mini-app
 %% is activated afresh by run/3, and the new conversation reaches bob's
-%% execution, which never ended.
+%% execution, which never ended.  Her person stream then closes, and her
+%% super-app ends with it (GSG Section 5.1).
 %%
 %% What the second pair of entries on bob's stream fences: without the return
 %% alice's entry would still say running, and the root channel of the second
@@ -951,7 +952,7 @@ act(wait, Id, Es, As?, Script, Open, Swaps, Screen?) :-
 %%
 %% Expected: A = [opened(bob), greeted(bob)], closed, her execution having
 %% ended; B = [opened(alice), greeted(alice), opened(alice), greeted(alice) | _],
-%% → suspended (bob's execution and both persons stand).
+%% → suspended (bob's execution and his person stand).
 %% =============================================================================
 exported procedure play_reinvite(AppUiStream, AppUiStream).
 play_reinvite(AliceUi?, BobUi?) :-
@@ -981,11 +982,12 @@ alice_reinvite_wait([_ | Outs], Seen, Cmds?) :-
 alice_reinvite_wait([], _, []).
 
 %% Her mini-app's person stream has closed: the execution ended, so her entry
-%% has returned to idle.  Invite bob again, and leave her own stream open ---
-%% closing it would close her super-app, and the second execution with it.
+%% has returned to idle.  Invite bob again, and close her own stream: her
+%% super-app then ends (GSG Section 5.1), her agent closing its friend
+%% channels and the channels of every mini-app it hosts, whose peers see a
+%% crash (agent.glp's termination clause, close_outputs/1, close_host/1).
 procedure alice_after_end(AppUiStream?, UserInStream).
-alice_after_end([], [msg(person, alice, invite(ping, bob)) | Cmds?]) :-
-    hold_person(Cmds).
+alice_after_end([], [msg(person, alice, invite(ping, bob))]).
 alice_after_end([_ | Seen], Cmds?) :-
     otherwise | alice_after_end(Seen?, Cmds).
 
