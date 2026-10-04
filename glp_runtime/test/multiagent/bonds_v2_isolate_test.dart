@@ -28,10 +28,7 @@ const _rootSelfGlp = '../programs/self.glp';
 /// `send_to_person_tagged/3` as `tagged(Id, cmd(_))` and `tagged(Id, notify(_))`,
 /// so a play that ran is one in which every agent the boot clause spawns
 /// produced at least one such line; that is asserted here, per agent, from
-/// [IsolateManager.outputOf]. The lines each play produces beyond that are to
-/// be pinned once the twelve load: on 2026-09-18 the type check refused all
-/// twelve on their own source (the `actor_dispatch` channel polarity, `tee`'s
-/// `Stream(_)` outputs), so nothing could be observed to pin.
+/// [IsolateManager.outputOf].
 Future<void> _runPlay(IsolateManager manager, String bootFilename) async {
   final bootFile = File('$_madBootDir/$bootFilename');
   if (!bootFile.existsSync()) {
