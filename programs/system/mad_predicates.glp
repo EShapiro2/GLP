@@ -17,23 +17,10 @@
 %% Network message: msg(Destination, Content), the destination an agent's Key.
 %% GlobalName is the root self.glp's (a predefined type since 2026-09-18).
 NetMsg ::= msg(Key, _).
-NetStream ::= [] ; [NetMsg|NetStream].
 
-%% =============================================================================
-%% send_to_net/1 - Process network output stream
-%% =============================================================================
-%%
-%% Iterates over a stream of msg(Q, T) terms and sends each to the
-%% destination agent Q via global_send with the serializer address _w(Q,0).
-%%
-%% Per madGLP-spec.md Section 12.2
-%%
-%% Note: Q is used multiple times, but this is safe because messages in the
-%% network output stream contain ground destination agents.
-
-exported procedure send_to_net(NetStream?).
-send_to_net([msg(Q, T) | In]) :- ground(Q?) | global_send(msg(Q?, T?), '_w'(Q?, 0), Q?), send_to_net(In?).
-send_to_net([]).
+%% send_to_net/1 is the root self.glp's (GLP-Spec appendix-guards, "Output to
+%% the network (send_to_net/1)"), over '_send' directly; the root no longer
+%% exposes this module.
 
 %% =============================================================================
 %% global_send/3 - Send via global link

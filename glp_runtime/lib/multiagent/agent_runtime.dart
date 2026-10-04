@@ -3,16 +3,16 @@
 /// Uses GlpEngine (the ONE way to run GLP programs) for compilation,
 /// MadContext for madGLP messaging, and Scheduler for execution.
 ///
-/// Boot: GlpEngine loads the root scope, enableMadGLP loads the madGLP
-/// predicates, and the agent's one program is loaded --- a program is one
+/// Boot: GlpEngine loads the root scope, enableMadGLP creates the MadContext,
+/// and the agent's one program is loaded --- a program is one
 /// compiled value (GSG, Section 4, "Compiled programs as values"), and several
 /// sources are not co-loaded into one engine.  The entry goal [goalLabel] is
 /// then posted with the agent's id, the person's input stream where the entry
 /// takes one, and the network input stream.  The person's acts arrive as
 /// ground terms and never as text (GSG, Appendix "The Prototype's Screens",
 /// and Section 3, "What the super-app grants a mini-app", (ib)).  Network
-/// output goes through send_to_net → global_send → MadContext; output to the
-/// person through send_to_user → the _output/1 kernel → [onOutput].
+/// output goes through send_to_net → the _send/3 kernel → MadContext; output to
+/// the person through send_to_user → the _output/1 kernel → [onOutput].
 library;
 
 import 'dart:io';
@@ -181,15 +181,13 @@ class AgentRuntime {
         rootSelfGlpPath: rootSelfGlpPath,
         identity: PersonIdentity(kp.pub, kp.priv));
 
-    // Enable madGLP mode (loads madPredicates + creates MadContext)
+    // Enable madGLP mode (creates the MadContext)
     engine.enableMadGLP(agentId: agentIdLower);
 
     // Load the one program (TGLP, def:program).  A directory with a self.glp
     // is linked whole.  A self-contained module file is checked in the scope
-    // the engine holds --- the kernels enableMadGLP loaded among it --- with
-    // the file's own ancestor self.glp chain (IGLP, Implementation Notes, "The
-    // scope a boot source is checked in"): the chain alone refuses
-    // send_to_net/1, which the engine resolves.
+    // the engine holds with the file's own ancestor self.glp chain (IGLP,
+    // Implementation Notes, "The scope a boot source is checked in").
     if (FileSystemEntity.isDirectorySync(program)) {
       _log('INIT: Loading program from $program');
       engine.loadProgram(program);

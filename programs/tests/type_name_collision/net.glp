@@ -1,0 +1,10 @@
+% NetMsg/0 and the stream over it, which self.glp exposes: the arity-0 NetMsg
+% beside self.glp's NetMsg/1, as the root self.glp's -expose(system#mad_predicates)
+% put one into every program until send_to_net/1 became the root's own.  drain/1
+% destructures msg/2, so its clauses check only against this NetMsg/0.
+NetMsg ::= msg(Constant, _).
+NetStream ::= [] ; [NetMsg | NetStream].
+
+exported procedure drain(NetStream?).
+drain([]).
+drain([msg(_, _) | S]) :- drain(S?).

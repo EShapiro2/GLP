@@ -87,38 +87,6 @@ class ModuleInfo {
   ModuleInfo({required this.name, required this.program, required this.hasExports, this.exportedLabels = const {}, this.isTopLevel = false});
 }
 
-/// madGLP system predicates (embedded).
-///
-/// Provides send_to_net/1 and global_send/3.
-/// Loaded by enableMadGLP().
-const String _madPredicatesSource = r'''
--mode(system).  %% Uses reserved constants like '_w' and '_send'
-
-%% madGLP System Predicates
-%% See: IGLP Definition global_send Predicate and Remark Network Output
-%% Processing
-
-%% send_to_net/1 - Process network output stream
-procedure send_to_net(Stream(_)?).
-send_to_net([msg(Q, T) | In]) :- ground(Q?) | global_send(msg(Q?, T?), '_w'(Q?, 0), Q?), send_to_net(In?).
-send_to_net([]).
-
-%% global_send/3 - Send via global link
-procedure global_send(_?, _?, _?).
-global_send(T, G, Q) :- known(T?) | '_send'(T?, G?, Q?).
-
-%% send_to_user/1 is defined in the root self.glp (always loaded), so it is not
-%% repeated here.  sign/2 and authorise_link/2 are likewise defined there, under
-%% the ATTESTATION AND HELD LINKS heading, and are no longer repeated here: the
-%% copies that stood here were a stale duplicate of the root definitions.  Both
-%% kernels abort outside madGLP mode, so a call to sign/2 with madGLP disabled is
-%% a runtime abort naming madGLP mode rather than a compile-time undefined
-%% procedure.
-
-%% valid_attestation/4 is a guard, not a wrapped body kernel — it is built into
-%% the runtime guard machinery; no GLP wrapper here.
-''';
-
 /// GLP Engine - the embeddable core for running GLP programs
 class GlpEngine {
   final GlpCompiler _compiler = GlpCompiler();
@@ -193,8 +161,8 @@ class GlpEngine {
 
   /// The privileged names of the root scope — the kernels and predicates that
   /// reach the network or the person, and every root-scope procedure from
-  /// which one is reachable — computed once from the root self.glp and the
-  /// madGLP system predicates (compiler/certification.dart).
+  /// which one is reachable — computed once from the root self.glp
+  /// (compiler/certification.dart).
   late final Set<String> _privilegedRootNames;
 
   /// Access to the runtime (for madGLP integration)
@@ -218,7 +186,7 @@ class GlpEngine {
 
     // Set root scope sources from programs/self.glp for PE and type checker
     final rootSelfFile = File(_rootSelfGlpPath);
-    final rootSources = <String>[_madPredicatesSource];
+    final rootSources = <String>[];
     if (rootSelfFile.existsSync()) {
       final rootSource = rootSelfFile.readAsStringSync();
       setRootScopeUnitClauseSource(rootSource);
@@ -312,9 +280,11 @@ class GlpEngine {
   /// linked program, the kernels the runtime has loaded, and the boot file's
   /// own ancestor chain --- which the loaders obtain from [scope] and
   /// [scopeFor]. A check that sees the ancestor chain alone refuses calls the
-  /// engine resolves, a kernel loaded a moment earlier among them; and under a
+  /// engine resolves, the linked program's exports among them; and under a
   /// synthetic name there is no chain at all, so until 2026-09-18 a boot source
-  /// was checked in the bare root scope and `send_to_net/1` was undefined in it.
+  /// was checked in the bare root scope and `send_to_net/1`, then loaded by
+  /// [enableMadGLP], was undefined in it.  It is the root self.glp's since
+  /// 2026-10-04 (GLP-Spec appendix-guards, "Output to the network").
   /// [scope] decides what the source is checked against; whether [filename] is
   /// a real file still decides how it is compiled (linker or direct).
   bool loadSource(String source, {String? filename, TypeEnvironment? scope}) {
@@ -340,11 +310,12 @@ class GlpEngine {
     // alias that shadows the root self.glp for a posted goal (see
     // combinedProgram).
     //
-    // The two internal sources — the madGLP prelude and the root self.glp — are
-    // loaded by name rather than from the program hierarchy and cross-call
-    // nothing, so the program test below does not apply to them.
-    final isInternal =
-        name == '__mad_predicates__' || name == '__root_self__';
+    // The internal source — the root self.glp, under its internal name — is
+    // loaded by name rather than from the program hierarchy and cross-calls
+    // nothing, so the program test below does not apply to it.  The engine's
+    // embedded madGLP source, the other internal source, is gone: its
+    // send_to_net/1 is the root self.glp's.
+    final isInternal = name == '__root_self__';
     final isRealFile =
         !isInternal && name != '_source_' && File(name).existsSync();
     final selfContained = isInternal || _isSelfContained(module);
@@ -398,8 +369,8 @@ class GlpEngine {
       // Until 2026-09-18 this was buildAncestorScope(chain) — the self.glp
       // chain alone, without the exposes — so a module calling a procedure its
       // directory's self.glp exposes (agent/4 of programs/tests/agent_roundtrip,
-      // send_to_net/1 of system/mad_predicates, exposed by the root) was
-      // refused as undefined by the check while the linker resolved it.
+      // and send_to_net/1 of system/mad_predicates while the root exposed it)
+      // was refused as undefined by the check while the linker resolved it.
       ancestorScope = discovered
           .firstWhere((m) => m.filePath == name, orElse: () => discovered!.first)
           .ancestorScope;
@@ -756,10 +727,10 @@ class GlpEngine {
 
   /// Enable madGLP mode for this engine.
   ///
-  /// Loads madGLP system predicates (send_to_net, global_send, send_to_user)
-  /// and creates MadContext for message routing.
+  /// Creates the MadContext for message routing.  It loads no GLP:
+  /// send_to_net/1 (GLP-Spec appendix-guards, "Output to the network") is the
+  /// root self.glp's, loaded at construction.
   void enableMadGLP({required String agentId}) {
-    loadSource(_madPredicatesSource, filename: '__mad_predicates__');
     madContext = MadContext(agentId: agentId, runtime: _runtime);
     // Make madContext accessible from body kernels via runtime
     _runtime.madContext = madContext;

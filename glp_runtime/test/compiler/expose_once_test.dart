@@ -8,9 +8,12 @@
 /// the walk and named by an ancestor's `-expose` was discovered twice, under
 /// one name, and the linker emitted its procedures twice: tests/expose/basic
 /// gave util/strutil:twice/2 and util/plist:pmerge/3 two procedures each, and
-/// system/mad_predicates.glp loaded alone, which the root self.glp exposes,
-/// all of its own (GLP #3 Cowork, 2026-10-03 21:18 UTC, "16:01. 5": "faults,
-/// fix them").
+/// system/mad_predicates.glp loaded alone, which the root self.glp then
+/// exposed, all of its own (GLP #3 Cowork, 2026-10-03 21:18 UTC, "16:01. 5":
+/// "faults, fix them").  The root exposes it no longer, send_to_net/1 being
+/// the root self.glp's own (GLP-Spec appendix-guards, "Output to the
+/// network"); the single-file case is held on tests/expose/basic/util/
+/// strutil.glp, which expose/basic/self.glp, on its ancestor chain, exposes.
 library;
 
 import 'dart:io';
@@ -82,14 +85,19 @@ void main() {
     });
   });
 
-  group('system/mad_predicates.glp loaded alone', () {
+  group('tests/expose/basic/util/strutil.glp loaded alone', () {
     final file =
-        File('../programs/system/mad_predicates.glp').absolute.path;
+        File('../programs/tests/expose/basic/util/strutil.glp').absolute.path;
 
-    test('is one module, though the root self.glp exposes it', () {
+    test('is one module, though an ancestor self.glp exposes it', () {
       final modules =
           discoverSingleModule(file, rootSelfGlpPath: _rootSelf);
       expect(_filesTwice(modules), isEmpty);
+      // The case is the one the group names: the module loaded alone is the
+      // module the ancestor's -expose reaches, marked exposed.
+      final strutil = modules.singleWhere(
+          (m) => File(m.filePath).absolute.path == File(file).absolute.path);
+      expect(strutil.exposingDir, isNotNull);
     });
 
     test('each of its procedures is emitted once', () {

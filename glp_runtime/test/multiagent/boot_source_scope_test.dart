@@ -12,10 +12,14 @@
 /// check saw the bare root scope and refused `send_to_net/1` --- the kernel
 /// `enableMadGLP` had loaded a moment earlier. The loaders now pass the
 /// engine's scope ([GlpEngine.scope], [GlpEngine.scopeFor]); these tests hold
-/// that a boot source calling a loaded kernel loads, and that one calling
-/// nothing that exists is still refused.  AgentRuntime co-loads no boot source
-/// since 2026-10-02: it runs one program, and a module file given as that
-/// program is checked in the same scope, which its two tests below hold.
+/// that a boot source calling what the engine holds loads, and that one
+/// calling nothing that exists is still refused.  Since 2026-10-04
+/// `send_to_net/1` is the root self.glp's (GLP-Spec appendix-guards, "Output
+/// to the network") and `enableMadGLP` loads nothing, so the procedure the
+/// engine holds and the bare root scope does not is the loaded program's
+/// export, `double/2` of programs/tests/cert_ok.  AgentRuntime co-loads no boot
+/// source since 2026-10-02: it runs one program, and a module file given as
+/// that program is checked in the same scope, which its two tests below hold.
 library;
 
 import 'dart:io';
@@ -25,12 +29,23 @@ import 'package:glp_runtime/multiagent/agent_runtime.dart';
 import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
 
-/// A boot source whose one body atom is the kernel `send_to_net/1`, loaded by
-/// `enableMadGLP` and declared in no self.glp chain.
-const _callsKernel = '''
+/// A boot source whose one body atom is the seam predicate `send_to_net/1`,
+/// the root self.glp's.
+const _callsSendToNet = '''
 procedure agent_init(_?, _?).
 agent_init(_, _) :- send_to_net([]).
 ''';
+
+/// A boot source calling `double/2`, the export of programs/tests/cert_ok:
+/// held by an engine that has loaded that program, declared in no self.glp
+/// chain of the boot source and not in the root scope.
+const _callsProgram = '''
+procedure agent_init(_?, _?).
+agent_init(_, _) :- double(1, _).
+''';
+
+/// The program [_callsProgram] calls.
+const _certOk = '../programs/tests/cert_ok';
 
 /// A boot source calling a procedure that exists nowhere.
 const _callsNothing = '''
@@ -67,12 +82,14 @@ String get _chainFile =>
 
 void main() {
   group('the scope a boot source is checked in (engine)', () {
-    test('a source calling a loaded kernel loads in the engine\'s scope', () {
+    test('a source calling the loaded program loads in the engine\'s scope',
+        () {
       final engine = GlpEngine(rootSelfGlpPath: _rootSelf);
       engine.enableMadGLP(agentId: 'alice');
+      expect(engine.loadProgram(_certOk), isTrue);
 
       expect(
-          engine.loadSource(_callsKernel,
+          engine.loadSource(_callsProgram,
               filename: 'program', scope: engine.scope),
           isTrue);
     });
@@ -81,15 +98,28 @@ void main() {
         () {
       final engine = GlpEngine(rootSelfGlpPath: _rootSelf);
       engine.enableMadGLP(agentId: 'alice');
+      expect(engine.loadProgram(_certOk), isTrue);
 
       expect(
-        () => engine.loadSource(_callsKernel, filename: 'program'),
+        () => engine.loadSource(_callsProgram, filename: 'program'),
         throwsA(predicate((e) {
           final s = e.toString();
           return s.contains('Type checking failed') &&
-              s.contains('send_to_net/1');
-        }, 'the bare chain scope does not carry the kernel')),
+              s.contains('double/2');
+        }, 'the bare chain scope does not carry the program\'s export')),
       );
+    });
+
+    test('a source calling send_to_net/1 loads in either scope: it is the root\'s',
+        () {
+      final engine = GlpEngine(rootSelfGlpPath: _rootSelf);
+      engine.enableMadGLP(agentId: 'alice');
+
+      expect(
+          engine.loadSource(_callsSendToNet,
+              filename: 'program', scope: engine.scope),
+          isTrue);
+      expect(engine.loadSource(_callsSendToNet, filename: 'program'), isTrue);
     });
 
     test('a source calling nothing that exists is refused in the engine\'s scope',
@@ -136,8 +166,8 @@ void main() {
 
     // The program lies under the root, programs/ (TGLP modules.tex, "Scope
     // construction": "A program lies at or below the root"): its scope then
-    // holds the root's -expose of system/mad_predicates, and send_to_net/1 with
-    // it, in the check of the linked program as in the module's.  Until
+    // holds the root self.glp, and send_to_net/1 with it, in the check of the
+    // linked program as in the module's.  Until
     // 2026-10-03 it was written to the system's temporary directory, outside the
     // root, and the single-file path checked the module alone.
     setUpAll(() =>
@@ -146,9 +176,9 @@ void main() {
     setUp(() => manager = IsolateManager());
     tearDown(() async => manager.shutdown());
 
-    test('IsolateManager boots an agent whose program calls a kernel',
+    test('IsolateManager boots an agent whose program calls send_to_net/1',
         () async {
-      final config = BootLoader().load(_bootClause + _callsKernel);
+      final config = BootLoader().load(_bootClause + _callsSendToNet);
       config.rootSelfGlpPath = _rootSelf;
 
       await manager.boot(config);
@@ -171,11 +201,11 @@ void main() {
       );
     }, timeout: Timeout(Duration(seconds: 30)));
 
-    test('AgentRuntime initialises an agent whose program calls a kernel',
+    test('AgentRuntime initialises an agent whose program calls send_to_net/1',
         () async {
       final agent = AgentRuntime(
         agentId: 'alice',
-        program: _moduleFile(dir, 'calls_kernel', _callsKernel),
+        program: _moduleFile(dir, 'calls_send_to_net', _callsSendToNet),
         rootSelfGlpPath: _rootSelf,
         goalLabel: 'agent_init/2',
       );

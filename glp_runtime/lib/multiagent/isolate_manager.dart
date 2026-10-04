@@ -533,7 +533,7 @@ void _agentIsolateEntry(AgentConfig config) async {
       rootSelfGlpPath: config.rootSelfGlpPath,
       identity: PersonIdentity(config.keyPair.pub, config.keyPair.priv));
 
-  // Enable madGLP mode (loads madPredicates + creates MadContext)
+  // Enable madGLP mode (creates the MadContext)
   engine.enableMadGLP(agentId: agentId);
 
   // Load program code: either via program linking or individual file loading.
@@ -541,11 +541,12 @@ void _agentIsolateEntry(AgentConfig config) async {
   // the manager, not left to kill the isolate silently — otherwise boot() hangs
   // forever waiting for Ready (Issue 19).
   // Every source handed over here is loaded on top of what the engine already
-  // holds and is checked in that scope --- the linked program, the kernels
-  // enableMadGLP loaded, and the boot file's own ancestor chain where its path
-  // is known (IGLP, Implementation Notes, "The scope a boot source is checked
-  // in"). Under the synthetic names alone the check saw the bare root scope and
-  // refused send_to_net/1, agent/7 and ui_mediator/5, which the engine resolves.
+  // holds and is checked in that scope --- the linked program, the root
+  // self.glp, and the boot file's own ancestor chain where its path is known
+  // (IGLP, Implementation Notes, "The scope a boot source is checked in").
+  // Under the synthetic names alone the check saw the bare root scope and
+  // refused agent/7 and ui_mediator/5, which the engine resolves, and
+  // send_to_net/1 while enableMadGLP loaded it.
   TypeEnvironment bootScope() => config.bootPath != null
       ? engine.scopeFor(config.bootPath!)
       : engine.scope;
@@ -561,7 +562,7 @@ void _agentIsolateEntry(AgentConfig config) async {
       // the program.
       engine.loadSource(config.programSource,
           filename: 'program', scope: bootScope());
-      log('Program loaded via GlpEngine (stdlib + madPredicates + user code)');
+      log('Program loaded via GlpEngine (root self.glp + user code)');
     }
   } catch (e, st) {
     print('[$agentId] ERROR: init failed during load: $e');

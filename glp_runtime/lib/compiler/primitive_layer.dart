@@ -28,10 +28,8 @@ import 'error.dart';
 /// runtime check on kernels taking a global name, which is IGLP's
 /// (GLP-Spec, 2026-07-31).
 ///
-/// [filePath] is the on-disk path of the module, or null/synthetic for
-/// in-memory or engine-embedded sources; Rule A is skipped when no real file
-/// backs the module (the embedded system predicates and the root self.glp load
-/// without an application path).
+/// [filePath] is the on-disk path of the module, or null/synthetic for an
+/// in-memory source; Rule A is skipped when no real file backs the module.
 void enforcePrimitiveLayer(
     String? filePath, Module module, String? rootSelfGlpPath) {
   if (module.compileMode == CompileMode.system) {
@@ -43,10 +41,10 @@ void enforcePrimitiveLayer(
 
 void _checkModeAdmission(
     String? filePath, Module module, String? rootSelfGlpPath) {
-  // Only real on-disk files are location-constrained. In-memory sources and the
-  // engine-embedded system predicates carry no application path and are part of
-  // the primitive layer by construction. Without the root self.glp path the
-  // location cannot be decided, so Rule A is not enforced.
+  // Only real on-disk files are location-constrained: an in-memory source
+  // carries no application path. The engine embeds no system source since
+  // 2026-10-04, its send_to_net/1 being the root self.glp's. Without the root
+  // self.glp path the location cannot be decided, so Rule A is not enforced.
   if (filePath == null || rootSelfGlpPath == null ||
       !File(filePath).existsSync()) {
     return;

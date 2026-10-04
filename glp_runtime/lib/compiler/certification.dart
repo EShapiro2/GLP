@@ -9,7 +9,7 @@
 /// points — and not by names in source text, so that a wrapper does not pass:
 /// a procedure whose body names a privileged predicate or kernel is itself
 /// privileged, and so is any procedure that calls it. The root scope's own
-/// clauses (root `self.glp`, the madGLP system predicates) are closed over the
+/// clauses (root `self.glp`, the seam predicates among them) are closed over the
 /// same way, once, so a root-scope predicate such as `send_to_user/1`, whose
 /// clauses are not part of any flat program, is refused by the name the flat
 /// program calls it by.
@@ -92,9 +92,8 @@ Set<String> _closure(List<Procedure> procedures, Set<String> seed) {
 }
 
 /// The privileged names of the root scope: the kernels, the predicates named
-/// above, and every procedure of [rootSources] (root `self.glp`, the madGLP
-/// system predicates) from which one of them is reachable. Computed once per
-/// engine.
+/// above, and every procedure of [rootSources] (root `self.glp`) from which one
+/// of them is reachable. Computed once per engine.
 Set<String> privilegedRootNames(Iterable<String> rootSources) {
   final procedures = <Procedure>[];
   for (final src in rootSources) {

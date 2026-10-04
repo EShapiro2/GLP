@@ -3846,12 +3846,13 @@ check_not "X8 Para resolves" "Unresolved type: Para" "$x8"
 check "X8 goal succeeds" "succeeds" "$x8"
 
 # --- X9: one type name, two arities, across an exposed module boundary ---
-# NetMsg/1 in the fixture and NetMsg/0 in programs/system/mad_predicates.glp,
-# which the root self.glp -expose's into EVERY program.  The linked program's
-# type definitions were keyed by bare name, so one arity was dropped and every
+# NetMsg/1 in the fixture's self.glp and NetMsg/0 in its net.glp, which that
+# self.glp -expose's --- as programs/system/mad_predicates.glp's NetMsg/0 was in
+# EVERY program while the root self.glp exposed it.  The linked program's type
+# definitions were keyed by bare name, so one arity was dropped and every
 # reference to it went unresolved: this is why programs/social/spm/{cva,gsg,secure_gsg}
-# would not load.  The negative check is on mad_predicates' own NetStream, whose
-# element type is the arity-0 NetMsg that used to be the one displaced.
+# would not load.  The negative check is on net.glp's NetStream, whose element
+# type is the arity-0 NetMsg that used to be the one displaced.
 echo "--- X9: one type name at two arities across an exposed boundary ---"
 x9=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/tests/type_name_collision
@@ -4323,7 +4324,7 @@ HEREDOC
 2>&1)
 # The calls are named by their procedures' renamed names, each module's path
 # from the root (TGLP modules.tex, Compilation, third step).
-check "SK6 a mini-app calling send_to_net/1 is refused a certificate naming the call" "CERTIFICATE REFUSED.*tests/cert_refused/app:leak/1 calls system/mad_predicates:send_to_net/1" "$sk6"
+check "SK6 a mini-app calling send_to_net/1 is refused a certificate naming the call" "CERTIFICATE REFUSED.*tests/cert_refused/app:leak/1 calls send_to_net/1" "$sk6"
 check "SK6 a wrapper reaching send_to_user/1 does not pass" "app:wrapper/1 calls send_to_user/1" "$sk6"
 check "SK6 the refused module has no compiler's key" "_decompose_module/4: module cert_refused carries no certificate" "$sk6"
 

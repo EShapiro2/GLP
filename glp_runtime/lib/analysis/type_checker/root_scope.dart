@@ -54,8 +54,9 @@ const Set<String> builtinProcedures = {
   // not admit a GLP-implemented name: that would make one set mean two things —
   // what the runtime implements, and what may be declared without clauses — and
   // a set meaning two things checks neither (GLP-Spec, 2026-08-02).
-  // send_to_net/1 was briefly here and is not; it reaches the tree through
-  // -expose(system#mad_predicates) in root programs/self.glp.
+  // send_to_net/1 was briefly here and is not; it is defined by clauses in root
+  // programs/self.glp, over the '_send' kernel (GLP-Spec appendix-guards,
+  // "Output to the network").
 
   // Type guards
   'integer/1',

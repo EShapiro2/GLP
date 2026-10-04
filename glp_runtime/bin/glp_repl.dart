@@ -186,10 +186,10 @@ void main() async {
     }
 
     if (trimmed.startsWith(':mad')) {
-      // :mad <agent> — enter madGLP mode for what follows: the madGLP system
-      // predicates are loaded and a MadContext is created for <agent>, backed
-      // by a single-agent simulation networking layer carrying the runtime's
-      // own identity, so that the seam predicates — send_to_net/1, the
+      // :mad <agent> — enter madGLP mode for what follows: a MadContext is
+      // created for <agent>, backed by a single-agent simulation networking
+      // layer carrying the runtime's own identity, so that the seam
+      // predicates — send_to_net/1, the
       // networking seam, authorise_link/2 — execute instead of aborting. A
       // directory program loaded afterwards runs under it (SGSG's harness
       // request of 2026-08-03 19:01; IGLP Cowork 2026-09-08 00:04, item 2).

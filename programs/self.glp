@@ -11,13 +11,6 @@
 -expose(social#graph#routing#intro).
 -expose(social#graph#routing#befriend).
 
-% send_to_net/1, on the same ground: it is called from forty-six modules across
-% the tree and the root is their only common ancestor.  Its clauses stay in
-% programs/system/mad_predicates.glp, which exports it and nothing else, so
-% resolution happens where the clauses live and global_send/3 stays confined to
-% that system module (GLP-Spec, 2026-08-02).
--expose(system#mad_predicates).
-
 % =============================================================================
 % TYPE DEFINITIONS
 % =============================================================================
@@ -225,7 +218,7 @@ procedure(X) '_stream_append'(MutualRef?, X?, MutualRef).
 procedure '_close_mutual_reference'(MutualRef?).
 
 % Network
-procedure '_send'(_?, _?, _?).
+procedure '_send'(_?, GlobalName?, Key?).
 procedure '_authorise_link'(_?, _?).
 procedure '_peer_address'(_?, _).
 procedure '_punch_udp'(_?).
@@ -300,11 +293,18 @@ procedure send_to_user(Stream(_)?).
 send_to_user([T | In]) :- ground(T?) | '_output'(T?), send_to_user(In?).
 send_to_user([]).
 
-% send_to_net/1 is not declared here. It reaches every module through
-% -expose(system#mad_predicates) at the top of this file, which carries its
-% declaration and its clauses together. No catalogue row accompanies it and none
-% is coming: its clauses are ordinary GLP and invoke no kernel, so it is not a
-% language construct (GLP-Spec, 2026-08-02).
+% send_to_net/1 — the seam predicate to the network (GLP-Spec appendix-guards,
+% the seam-predicate row and "Output to the network (send_to_net/1)"; IGLP
+% madglp-spec.tex, Remark "Network Output Processing"): each element msg(Q, T)
+% of the stream, Q the key of an agent, is sent to agent Q, in order, through
+% '_send' on the link '_w'(Q, 0), Q's index-0 serializer; it ends when the
+% stream ends.  The guard ground(Q?) licenses Q's several occurrences.  A module
+% reaches the network through this predicate, the '_send' call being admitted
+% only to a system module, which this file is.
+procedure send_to_net(Stream(_)?).
+send_to_net([msg(Q, T) | In]) :- ground(Q?) |
+    '_send'(msg(Q?, T?), '_w'(Q?, 0), Q?), send_to_net(In?).
+send_to_net([]).
 
 % =============================================================================
 % ARITHMETIC ASSIGNMENT (:=/2)

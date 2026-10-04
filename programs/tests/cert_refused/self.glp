@@ -4,10 +4,10 @@
 %% shout/1 reaches send_to_user/1 through a wrapper of its own, which the
 %% reachability decision does not let pass.
 
-imported procedure app#leak(NetStream?).
+imported procedure app#leak(Stream(_)?).
 imported procedure app#shout(Stream(_)?).
 
-exported procedure leak(NetStream?).
+exported procedure leak(Stream(_)?).
 leak(S) :- app # leak(S?).
 
 exported procedure shout(Stream(_)?).

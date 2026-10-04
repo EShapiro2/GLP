@@ -259,10 +259,11 @@ TypeEnvironment mergeSelfGlpFileIntoScope(TypeEnvironment env, String path,
 /// that directory's scope, as if defined in its self.glp".  A scope is layered
 /// one `self.glp` at a time (Definition (Root, Scope)), and a layer's
 /// declarations, and those of every layer after it, are expanded against the
-/// types known when it is merged; so a type an ancestor exposes --- the root's
-/// `-expose(system#mad_predicates)` gives every scope `NetStream` --- must be
-/// known then, or a declaration naming it is refused as naming an undefined
-/// type, or, naming no parameters, reads it as one.
+/// types known when it is merged; so a type an ancestor exposes must be known
+/// then, or a declaration naming it is refused as naming an undefined type, or,
+/// naming no parameters, reads it as one (`NetStream`, which the root's
+/// `-expose(system#mad_predicates)` gave every scope until 2026-10-04;
+/// programs/tests/expose/root_types_decl).
 ///
 /// Only the types are lifted here.  The exposed procedures, their collisions
 /// and their entry-point status are the linker's (program_linker.dart,

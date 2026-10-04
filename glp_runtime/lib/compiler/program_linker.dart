@@ -52,8 +52,9 @@ class DiscoveredModule {
 
   /// Whether the module is in the program only because an `-expose` names it
   /// --- a module outside the directory walk, the root's
-  /// `-expose(system#mad_predicates)` among them --- as against one the walk
-  /// collected, which is the program's own whether or not it is exposed too.
+  /// `-expose(social#graph#routing#output)` among them --- as against one the
+  /// walk collected, which is the program's own whether or not it is exposed
+  /// too.
   final bool collectedByExpose;
 
   DiscoveredModule({
@@ -828,9 +829,10 @@ TypeEnvironment linkedProgramEnvironment(Module flat) =>
 /// one then failed to resolve in the linked program while the per-module check
 /// passed. That is what made `programs/social/spm/{cva,gsg,secure_gsg}` unloadable:
 /// `cva/self.glp`'s `NetMsg(C)` displaced the arity-0 `NetMsg` of
-/// `programs/system/mad_predicates.glp`, which the root `self.glp` `-expose`s
-/// into every program, so `mad_predicates.glp:19`'s `NetStream` lost its element
-/// type. Fixture: `programs/tests/type_name_collision/` (Section X9).
+/// `programs/system/mad_predicates.glp`, which the root `self.glp` then
+/// `-expose`d into every program, so `mad_predicates.glp:19`'s `NetStream` lost
+/// its element type. Fixture: `programs/tests/type_name_collision/` (Section
+/// X9), which carries both arities itself.
 ///
 /// The declarations are the linked declarations and nothing else: each module's
 /// own, renamed with its procedures, and the entry-point aliases'.  A module

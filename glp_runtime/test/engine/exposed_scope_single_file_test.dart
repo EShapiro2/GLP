@@ -7,8 +7,8 @@
 /// of a real-file load built the self.glp chain alone, without the exposes,
 /// until 2026-09-18, and refused as undefined what the linker resolved ---
 /// `agent/4` of programs/tests/agent_roundtrip, `send_to_net/1` of
-/// system/mad_predicates, which the root self.glp exposes into every program.
-/// The check now uses the module's discovered scope.
+/// system/mad_predicates, which the root self.glp then exposed into every
+/// program. The check now uses the module's discovered scope.
 library;
 
 import 'dart:io';
