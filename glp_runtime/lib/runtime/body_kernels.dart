@@ -766,7 +766,9 @@ BodyKernelResult mutualRefCloseKernel(GlpRuntime rt, List<Object?> args) {
 /// Send kernel for madGLP
 ///
 /// '_send'(T, G, Q) - sends term T via global name G to agent Q.
-/// This is called by the GLP `global_send/3` predicate.
+/// It is called by the root self.glp's `send_to_net/1` (GLP-Spec
+/// appendix-guards, "Output to the network") and `global_send/3` (IGLP
+/// Definition "global_send Predicate").
 ///
 /// Per IGLP Definition global_send Predicate (the '_send' builtin) and
 /// code-format-fragment.tex (a serializer message to q is
