@@ -1032,8 +1032,10 @@ TypeEnvironment linkedProgramEnvironment(Module flat,
 /// `cva/self.glp`'s `NetMsg(C)` displaced the arity-0 `NetMsg` of
 /// `programs/system/mad_predicates.glp`, which the root `self.glp` then
 /// `-expose`d into every program, so `mad_predicates.glp:19`'s `NetStream` lost
-/// its element type. Fixture: `programs/tests/type_name_collision/` (Section
-/// X9), which carries both arities itself.
+/// its element type.  Its fixture, `programs/tests/type_name_collision/`, and
+/// harness check X9 were removed on 2026-10-04: with this key backed out the
+/// check no longer failed, each type being renamed by its module, and a check
+/// that cannot fail goes (GLP #3 Cowork, 2026-10-04 09:06 UTC, "00:34").
 ///
 /// The declarations are the linked declarations and nothing else: each module's
 /// own, renamed with its procedures, and the entry-point aliases'.  A module

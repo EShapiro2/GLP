@@ -3894,28 +3894,17 @@ check "X8 fixture loaded" "Loaded program" "$x8"
 check_not "X8 Para resolves" "Unresolved type: Para" "$x8"
 check "X8 goal succeeds" "succeeds" "$x8"
 
-# --- X9: one type name, two arities, across an exposed module boundary ---
-# NetMsg/1 in the fixture's self.glp and NetMsg/0 in its net.glp, which that
-# self.glp -expose's --- as programs/system/mad_predicates.glp's NetMsg/0 was in
-# EVERY program while the root self.glp exposed it.  The linked program's type
-# definitions were keyed by bare name, so one arity was dropped and every
-# reference to it went unresolved: this is why programs/social/spm/{cva,gsg,secure_gsg}
-# would not load.  The negative check is on net.glp's NetStream, whose element
-# type is the arity-0 NetMsg that used to be the one displaced.
-echo "--- X9: one type name at two arities across an exposed boundary ---"
-x9=$("$REPL_RUN" <<HEREDOC
-$GLP_DIR/programs/tests/type_name_collision
-go([wrap(a), wrap(b), wrap(c)]).
-:quit
-HEREDOC
-2>&1)
-check "X9 fixture loaded" "Loaded program" "$x9"
-check_not "X9 arity-0 NetMsg not displaced" "Unresolved type: NetMsg" "$x9"
-check "X9 goal succeeds" "succeeds" "$x9"
+# --- X9: removed 2026-10-04 ---
+# One type name at two arities across an exposed module boundary.  The check
+# could no longer fail with the linker's name/arity key backed out, the linker
+# renaming each type by its module, and a check that cannot fail goes (GLP #3
+# Cowork, 2026-10-04 09:06 UTC, "00:34 ... X9: a check that cannot fail goes");
+# its fixture, programs/tests/type_name_collision, went with it.
 
 # --- X10: the spm programs load and accept a goal ---
-# They are SGSG's since 2026-08-03 and were unloadable until X9's defect was
-# fixed; the goal is what X8's goal-check ordering fix made possible (every
+# They are SGSG's since 2026-08-03 and were unloadable until the linked
+# program's type definitions were keyed by name and arity (docs/known-issues.md,
+# Issue 21); the goal is what X8's goal-check ordering fix made possible (every
 # goal used to fail with UnknownTypeError: UserEvent, a gsg/self.glp template
 # named by a module one directory below it).  Since 2026-09-07 the program is
 # programs/social/spm: the platform plays reach the CVA mediator as `cva # network`,
