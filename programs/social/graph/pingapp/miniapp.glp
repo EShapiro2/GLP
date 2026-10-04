@@ -106,14 +106,14 @@ open_out(_, Id, Held, Held?, [hello(Id?) | Out2?], Out2) :- otherwise | true.
 %% not carry an assignment back across a link (programs/tests/linkprobes/linkprobe
 %% beside programs/tests/linkprobes/linkprobe3).  With no conversation with F
 %% the probe reaches nobody, and is answered unreachable rather than held.
-procedure probe_on(Constant?, ConvList?, ConvList, ProbeValue, Constant).
+procedure probe_on(Constant?, ConvList?, ConvList, ProbeValue, ProbeStatus).
 probe_on(F, [conv(F1, [probe(W) | Out1?]) | Rest], [conv(F1?, Out1) | Rest?], W?, sent) :-
     F? =?= F1? | true.
 probe_on(F, [C | Rest], [C? | Rest1?], V?, St?) :- otherwise | probe_on(F?, Rest?, Rest1, V, St).
 probe_on(_, [], [], unreachable, none).
 
 %% report(St, Ui, Ui2): what became of the probe, on the person's stream.
-procedure report(Constant?, AppUiStream, AppUiStream?).
+procedure report(ProbeStatus?, AppUiStream, AppUiStream?).
 report(sent, [probed(carol) | Ui2?], Ui2).
 report(none, [no_conv(carol) | Ui2?], Ui2).
 

@@ -5,6 +5,10 @@
 %% with load_file/2, verifies its two certifications, installs it, and
 %% activates it by run/3 (SGSG paper, Section 3).
 
+%% What became of a probe (miniapp.glp, probe_on/5 and report/3): sent on the
+%% conversation with the friend, or none, there being no such conversation.
+ProbeStatus ::= sent ; none.
+
 imported procedure miniapp#ping(Constant?, AppUiStream, SgChannel?).
 exported procedure ping(Constant?, AppUiStream, SgChannel?).
 ping(Id, Ui?, Sg) :- miniapp # ping(Id?, Ui, Sg?).
