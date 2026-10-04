@@ -313,14 +313,14 @@ exported procedure coins_ui(Key?, Stream(UserAnswer)?, Stream(_)?).
 coins_ui(Id, Answers, NetIn) :- play_ui # coins_ui(Id?, Answers?, NetIn?).
 
 %% =============================================================================
-%% Entry point: the village market with one villager on the app's screen
-%% (village.glp, market_ui/1) --- the app shows that villager's screen as the
-%% market runs, which is how the six balances views of the paper's Appendix
-%% C.2 are taken, one villager per run.  The second and third arguments are
-%% the app's, as for coins_ui/3, and are not read: the villager's cards are
-%% answered by its scripted person, as in village/0.
+%% Entry point: the village market with one villager's events on the user's
+%% stream as well (village.glp, market_ui/1), a play a test runs: the six
+%% balances views of the paper's Appendix C.2 are drawn from it, one villager
+%% per run, by the app's interface code.  The host posts superapp/3 and nothing
+%% of this program (GSG Section 5.1), so this is no host entry: the villager's
+%% cards are answered by its scripted person, as in village/0.
 %% =============================================================================
 
 imported procedure village#market_ui(Key?).
-exported procedure village_ui(Key?, Stream(UserAnswer)?, Stream(_)?).
-village_ui(Id, _, _) :- village # market_ui(Id?).
+exported procedure market_ui(Key?).
+market_ui(Id) :- village # market_ui(Id?).

@@ -29,12 +29,12 @@
 %% observable and the final holdings can be read off it.
 %%
 %% Entry points: market/0, exported by self.glp as village/0; and market_ui/1,
-%% exported as village_ui/3, which runs the same market with one villager,
-%% named, also on the app's own path: every event its mini-app shows it --- the
-%% cards, their closing and the screen --- goes as well to send_to_user/1, one
-%% term to a line, which is what the app's UI runtime reads and renders (as
-%% play_ui.glp does for alice).  The app therefore shows that villager's screen
-%% as the market runs, while its scripted person answers the cards as before.
+%% exported by self.glp under its own name, a play a test runs, which runs the
+%% same market with one villager, named, whose every event its mini-app shows
+%% it --- the cards, their closing and the screen --- goes as well to
+%% send_to_user/1, one term to a line, which is what the app's UI runtime reads
+%% and renders.  The app's interface code therefore draws that villager's
+%% screen from the run, while its scripted person answers the cards as before.
 
 imported procedure currency#coins(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
 imported procedure currency#person(Key?, Stream(Event)?, Stream(UserAnswer), Script?, Stream(ScreenContent)).
