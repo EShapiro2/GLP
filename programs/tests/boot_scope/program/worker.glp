@@ -1,0 +1,12 @@
+%% worker.glp --- the module of programs/tests/boot_scope/program: serve/2,
+%% which the program exports by forwarding, and helper/2, which it does not.
+
+exported procedure serve(Stream(Req)?, Integer).
+serve(Rs, N?) :- total(Rs?, 0, N).
+
+exported procedure helper(Secret?, Integer).
+helper(secret(X), X?).
+
+procedure total(Stream(Req)?, Integer?, Integer).
+total([req(X)|Rs], A, N?) :- A1 := A? + X?, total(Rs?, A1?, N).
+total([], A, A?).

@@ -1,0 +1,19 @@
+%% The program a boot source is loaded on top of, for the scope the boot source
+%% is checked in: "the linked program's entry points and the boot file's
+%% ancestor chain of self.glp declarations, the root among them ... A call to
+%% a procedure the program does not export is refused by the check, which
+%% names the call, and does not fail at run time" (IGLP, Implementation Notes,
+%% "The scope a boot source is checked in";
+%% glp_runtime/test/multiagent/boot_source_scope_test.dart).
+%%
+%% Its one entry point is serve/2, forwarded to worker.glp; its signature
+%% carries Req.  worker.glp's helper/2 is exported by worker.glp and not by
+%% this program, and Secret, which helper/2 carries, by no export of it.
+
+Req ::= req(Integer).
+Secret ::= secret(Integer).
+
+imported procedure worker#serve(Stream(Req)?, Integer).
+
+exported procedure serve(Stream(Req)?, Integer).
+serve(Rs, N?) :- worker # serve(Rs?, N).

@@ -1,19 +1,24 @@
 /// The scope a boot source is checked in.
 ///
-/// IGLP, Implementation Notes, "The scope a boot source is checked in": a boot
-/// source is loaded on top of a program already in the engine, so it is checked
-/// in the scope the engine holds when it is handed over --- the linked program,
-/// the kernels the runtime has loaded, and the boot file's own ancestor chain
-/// of self.glp declarations. A check that sees the ancestor chain alone refuses
-/// calls the engine resolves, a kernel loaded a moment earlier among them.
+/// IGLP, Implementation Notes, "The scope a boot source is checked in"
+/// (8aafd09): "A boot source is loaded on top of a program already in the
+/// engine, so it is checked in the scope the engine holds when it is handed
+/// over: the linked program's entry points and the boot file's ancestor chain
+/// of self.glp declarations, the root among them. ... A call to a procedure
+/// the program does not export is refused by the check, which names the call,
+/// and does not fail at run time."
 ///
 /// Until 2026-09-18 the multi-isolate loaders handed a boot source to
 /// `loadSource` under a synthetic name, which has no ancestor chain, so the
-/// check saw the bare root scope and refused `send_to_net/1` --- the kernel
-/// `enableMadGLP` had loaded a moment earlier. The loaders now pass the
-/// engine's scope ([GlpEngine.scope], [GlpEngine.scopeFor]); these tests hold
-/// that a boot source calling what the engine holds loads, and that one
-/// calling nothing that exists is still refused.  Since 2026-10-04
+/// check saw the bare root scope and refused what the engine held.  The
+/// loaders now pass the engine's scope ([GlpEngine.scope],
+/// [GlpEngine.scopeFor]); these tests hold that a boot source calling what the
+/// engine holds loads, and that one calling nothing that exists is still
+/// refused.  Until 2026-10-04 that scope was the goal-check environment,
+/// wider than the paper's: the program's whole self.glp chain and every
+/// module's declarations, so a boot source calling a procedure the program
+/// does not export, or naming a type no export carries, passed the check;
+/// the group on programs/tests/boot_scope/ holds the refusal.
 /// `send_to_net/1` is the root self.glp's (GLP-Spec appendix-guards, "Output
 /// to the network") and `enableMadGLP` loads nothing, so the procedure the
 /// engine holds and the bare root scope does not is the loaded program's
@@ -80,7 +85,111 @@ String _moduleFile(Directory dir, String name, String source) {
 String get _chainFile =>
     File('../programs/tests/module_self_procs/worker.glp').absolute.path;
 
+/// The program of programs/tests/boot_scope/ and its boot sources, which sit
+/// outside it as bonds_v2's do (programs/tests/bonds_v2_boots/).
+const _bootScopeProgram = '../programs/tests/boot_scope/program';
+String _bootScopeBoot(String name) =>
+    File('../programs/tests/boot_scope/boots/$name.glp').absolute.path;
+
 void main() {
+  group('the scope is the program\'s entry points and the boot file\'s chain',
+      () {
+    /// An engine holding the boot_scope program, and the boot source [name]
+    /// as its boot clause leaves it, with its path.
+    (GlpEngine, String, String) handOver(String name) {
+      final engine = GlpEngine(rootSelfGlpPath: _rootSelf);
+      engine.enableMadGLP(agentId: 'alice');
+      expect(engine.loadProgram(_bootScopeProgram), isTrue);
+      final path = _bootScopeBoot(name);
+      return (engine, BootLoader().load(File(path).readAsStringSync()).source,
+          path);
+    }
+
+    test('it holds the entry point and the types its signature carries, and '
+        'nothing else of the program', () {
+      final (engine, _, path) = handOver('boot_ok');
+      for (final scope in [engine.scope, engine.scopeFor(path)]) {
+        expect(scope.procedures.keys, contains('serve/2'));
+        expect(scope.procedures.keys, isNot(contains('helper/2')));
+        expect(scope.procedures.keys, isNot(contains('total/3')));
+        expect(scope.types.keys, contains('Req'));
+        expect(scope.types.keys, isNot(contains('Secret')));
+        // The root's, from the boot file's chain.
+        expect(scope.procedures.keys, contains('send_to_user/1'));
+      }
+    });
+
+    test('a boot source calling the entry point and naming its type loads',
+        () {
+      final (engine, source, path) = handOver('boot_ok');
+      expect(
+          engine.loadSource(source,
+              filename: 'program', scope: engine.scopeFor(path)),
+          isTrue);
+    });
+
+    test('a call to a procedure the program does not export is refused by the '
+        'check, naming the call', () {
+      final (engine, source, path) = handOver('boot_unexported');
+      expect(
+        () => engine.loadSource(source,
+            filename: 'program', scope: engine.scopeFor(path)),
+        throwsA(predicate((e) {
+          final s = e.toString();
+          return s.contains('Type checking failed') &&
+              s.contains('helper/2');
+        }, 'the check names the call to helper/2')),
+      );
+      expect(engine.loadedPrograms.containsKey('program'), isFalse);
+    });
+
+    test('a type no entry point carries is undefined in it', () {
+      final (engine, source, path) = handOver('boot_unexported_type');
+      expect(
+        () => engine.loadSource(source,
+            filename: 'program', scope: engine.scopeFor(path)),
+        throwsA(predicate((e) => e.toString().contains('Secret'),
+            'names the undefined type Secret')),
+      );
+      expect(engine.loadedPrograms.containsKey('program'), isFalse);
+    });
+
+    group('the multi-isolate loader', () {
+      late IsolateManager manager;
+      setUp(() => manager = IsolateManager());
+      tearDown(() async => manager.shutdown());
+
+      Future<void> boot(String name) {
+        final path = _bootScopeBoot(name);
+        final config = BootLoader().load(File(path).readAsStringSync());
+        config.programDir = _bootScopeProgram;
+        config.rootSelfGlpPath = _rootSelf;
+        config.bootPath = path;
+        return manager.boot(config);
+      }
+
+      test('boots and runs the boot source calling the entry point', () async {
+        await boot('boot_ok');
+        manager.start();
+        await manager.settle();
+        expect(manager.faults, isEmpty);
+        expect(manager.outputOf('alice'), contains('total(3)'));
+      }, timeout: Timeout(Duration(seconds: 30)));
+
+      test('refuses the one calling an unexported procedure before it runs',
+          () async {
+        await expectLater(
+          boot('boot_unexported'),
+          throwsA(predicate((e) {
+            final s = e.toString();
+            return s.contains('failed to initialize') &&
+                s.contains('helper/2');
+          }, 'the agent reports the refused call, so boot fails fast')),
+        );
+      }, timeout: Timeout(Duration(seconds: 30)));
+    });
+  });
+
   group('the scope a boot source is checked in (engine)', () {
     test('a source calling the loaded program loads in the engine\'s scope',
         () {

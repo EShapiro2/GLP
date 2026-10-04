@@ -67,11 +67,12 @@ class BootConfig {
   String rootSelfGlpPath;
 
   /// The boot file's path, where it was loaded from one ([BootLoader.loadFile])
-  /// or the caller knows it. The boot source is checked in the scope the engine
-  /// holds plus the boot file's own ancestor self.glp chain (IGLP,
-  /// Implementation Notes, "The scope a boot source is checked in"), and the
-  /// chain is discovered from this path; without it the boot source is checked
-  /// in the engine's scope alone.
+  /// or the caller knows it. The boot source is checked in the linked
+  /// program's entry points and the boot file's ancestor chain of self.glp
+  /// declarations (IGLP, Implementation Notes, "The scope a boot source is
+  /// checked in", 8aafd09), and the chain is discovered from this path;
+  /// without it the boot source is checked as a module at the root, its chain
+  /// the root self.glp alone.
   String? bootPath;
 
   BootConfig({

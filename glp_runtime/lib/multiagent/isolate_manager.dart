@@ -538,9 +538,11 @@ void _agentIsolateEntry(AgentConfig config) async {
   // the manager, not left to kill the isolate silently — otherwise boot() hangs
   // forever waiting for Ready (Issue 19).
   // Every source handed over here is loaded on top of what the engine already
-  // holds and is checked in that scope --- the linked program, the root
-  // self.glp, and the boot file's own ancestor chain where its path is known
-  // (IGLP, Implementation Notes, "The scope a boot source is checked in").
+  // holds and is checked in the scope it is handed over in --- the linked
+  // program's entry points and the boot file's ancestor chain, the root among
+  // them, the root alone where its path is not known (IGLP, Implementation
+  // Notes, "The scope a boot source is checked in", 8aafd09), so a call to a
+  // procedure the program does not export is refused here, naming the call.
   // Under the synthetic names alone the check saw the bare root scope and
   // refused agent/7 and ui_mediator/5, which the engine resolves, and
   // send_to_net/1 while enableMadGLP loaded it.

@@ -123,6 +123,17 @@ class GoalRefused implements Exception {
   String toString() => message;
 }
 
+/// The entry points of a unit the engine holds ([GlpEngine.scopeFor]): their
+/// keys, "name/arity", and the scope they were declared in, built when a
+/// source is first handed over and kept.
+class _UnitEntryPoints {
+  final Set<String> keys;
+  final TypeEnvironment Function() _declaringScope;
+  late final TypeEnvironment declaringScope = _declaringScope();
+
+  _UnitEntryPoints(this.keys, this._declaringScope);
+}
+
 /// Module info for tracking loaded modules
 class ModuleInfo {
   final String name;
@@ -177,11 +188,10 @@ class GlpEngine {
   /// once per key and load ([_goalProcedureIsParametric]).
   final Map<String, bool> _goalParametric = {};
 
-  /// The self.glp files [_goalCheckEnv] carries as scope-chain entries, by
-  /// absolute path. [scopeFor] layers a file's own ancestor chain on the scope
-  /// and skips these, so a self.glp the program's chain already contributed is
-  /// not merged a second time over the program's own modules.
-  final Set<String> _scopeSelfGlps = {};
+  /// The entry points of each unit the engine holds, by the name it was
+  /// loaded under, with the scope they were declared in: what a source handed
+  /// over to the engine sees of the units it holds ([scope], [scopeFor]).
+  final Map<String, _UnitEntryPoints> _unitEntryPoints = {};
 
   /// Max execution cycles (default 10000)
   int maxCycles = 10000;
@@ -255,7 +265,7 @@ class GlpEngine {
     _loadedModules.clear();
     // Re-seed lazily to root scope + root self.glp on next goal check.
     _goalCheckEnv = null;
-    _scopeSelfGlps.clear();
+    _unitEntryPoints.clear();
   }
 
   /// The root self.glp linked as a program of its own and compiled
@@ -323,11 +333,12 @@ class GlpEngine {
   /// ancestor self.glp chain of [filename]. This is the boot-source case
   /// (IGLP, Implementation Notes, "The scope a boot source is checked in"): a
   /// boot source is loaded on top of a program already in the engine, so it is
-  /// checked in the scope the engine holds when it is handed over --- the
-  /// linked program, the kernels the runtime has loaded, and the boot file's
-  /// own ancestor chain --- which the loaders obtain from [scope] and
-  /// [scopeFor]. A check that sees the ancestor chain alone refuses calls the
-  /// engine resolves, the linked program's exports among them; and under a
+  /// checked in the scope the engine holds when it is handed over --- "the
+  /// linked program's entry points and the boot file's ancestor chain of
+  /// self.glp declarations, the root among them" (8aafd09) --- which the
+  /// loaders obtain from [scope] and [scopeFor]. A check that sees the
+  /// ancestor chain alone refuses calls the engine resolves, the linked
+  /// program's exports among them; and under a
   /// synthetic name there is no chain at all, so until 2026-09-18 a boot source
   /// was checked in the bare root scope and `send_to_net/1`, then loaded by
   /// [enableMadGLP], was undefined in it.  It is the root self.glp's since
@@ -555,10 +566,15 @@ class GlpEngine {
       for (final selfGlpPath in chain) {
         goalEnv = mergeSelfGlpFileIntoScope(goalEnv, selfGlpPath,
             root: _rootDir);
-        _scopeSelfGlps.add(File(selfGlpPath).absolute.path);
       }
       _goalCheckEnv = goalEnv;
     }
+
+    // Its entry points, every procedure it defines, declared in the scope it
+    // was checked in ([scope]).
+    final declaredIn = ancestorScope!;
+    _unitEntryPoints[name] = _UnitEntryPoints(_plainProcedures(program),
+        () => mergeModuleIntoScope(declaredIn, module, label: moduleInfo.name));
 
     // Make this module's declarations available to the REPL goal checker,
     // and its clauses to the reading of a goal's calls.
@@ -682,26 +698,42 @@ class GlpEngine {
     return n.isEmpty ? '_source_' : n;
   }
 
-  /// The scope the engine holds: the root scope, the root self.glp, every
-  /// kernel and unit loaded so far, and the linked program with its ancestor
-  /// chain --- the environment a goal posted to the engine is checked in, and
-  /// the one a boot source is checked in (see [loadSource]).
-  TypeEnvironment get scope => _ensureGoalCheckBaseEnv();
+  /// The scope a source with no file behind it is checked in when it is
+  /// handed over to the engine: a module at the root, its ancestor chain the
+  /// root self.glp alone, with the entry points of every unit the engine
+  /// holds ([scopeFor]).
+  TypeEnvironment get scope => _handOverScope(const []);
 
-  /// [scope] with the ancestor self.glp chain of the file at [path] layered on
-  /// it: the boot file's own chain, per the Implementation Notes. A self.glp
-  /// the scope already carries as a chain entry is not merged again, so a boot
-  /// file under the program root adds nothing and one in a deeper directory
-  /// adds that directory's self.glp.
-  TypeEnvironment scopeFor(String path) {
-    var env = scope;
-    final chain = discoverSelfChain(
-        targetFile: path,
-        rootDir: File(path).parent.path,
-        programsDir: File(_rootSelfGlpPath).parent.absolute.path);
-    for (final selfGlpPath in chain) {
-      if (_scopeSelfGlps.contains(File(selfGlpPath).absolute.path)) continue;
-      env = mergeSelfGlpFileIntoScope(env, selfGlpPath, root: _rootDir);
+  /// The scope a boot source loaded from [path] is checked in, on top of the
+  /// units the engine holds: "the linked program's entry points and the boot
+  /// file's ancestor chain of self.glp declarations, the root among them"
+  /// (IGLP, Implementation Notes, "The scope a boot source is checked in",
+  /// 8aafd09) --- the language primitives, the self.glp of each directory from
+  /// the root down to the boot file's, and each loaded unit's entry points
+  /// with the types their signatures carry, and no other declaration or type
+  /// of the units ([mergeEntryPointsIntoScope]).  So "a call to a procedure
+  /// the program does not export is refused by the check, which names the
+  /// call, and does not fail at run time", and a type no export carries is
+  /// undefined in it.  Until 2026-10-04 this was the goal-check environment
+  /// with the boot file's chain layered on it: the program's whole self.glp
+  /// chain and every module's declarations, so a boot source could call an
+  /// unexported procedure, pass the check, and fail at run time.
+  TypeEnvironment scopeFor(String path) => _handOverScope(discoverSelfChain(
+      targetFile: path,
+      rootDir: File(path).parent.path,
+      programsDir: File(_rootSelfGlpPath).parent.absolute.path));
+
+  /// The primitives and the root self.glp, the self.glp files of [chain] in
+  /// order, and the loaded units' entry points over them, a later unit's over
+  /// an earlier one's: a source handed over stands on the units the engine
+  /// holds, and a call of it that an entry point answers is left to that
+  /// unit (program_linker.dart, `outerEntryPoints`).
+  TypeEnvironment _handOverScope(List<String> chain) {
+    var env = buildAncestorScope(
+        chain: chain, rootSelfGlpPath: _rootSelfGlpPath, rootScope: _rootScope);
+    for (final e in _unitEntryPoints.entries) {
+      env = mergeEntryPointsIntoScope(env, e.value.declaringScope, e.value.keys,
+          label: e.key);
     }
     return env;
   }
@@ -764,9 +796,18 @@ class GlpEngine {
         programsDir: File(_rootSelfGlpPath).parent.absolute.path)) {
       goalEnv = mergeSelfGlpFileIntoScope(goalEnv, selfGlpPath,
             root: _rootDir);
-      _scopeSelfGlps.add(File(selfGlpPath).absolute.path);
     }
     _goalCheckEnv = goalEnv;
+
+    // Its entry points, the exports of its self.glp, declared in the scope
+    // that self.glp was checked in, its own definitions merged ([scope]).
+    final programSelf = modules.firstWhere((m) =>
+        m.isSelfGlp &&
+        _normDir(File(m.filePath).parent.path) == _normDir(programRoot));
+    _unitEntryPoints['__program__'] = _UnitEntryPoints(
+        _plainProcedures(program),
+        () => mergeModuleIntoScope(programSelf.ancestorScope, programSelf.ast,
+            label: programSelf.moduleName));
 
     // Make the program's module declarations available to the REPL goal checker,
     // IN SCOPE ORDER (modules.tex §Scope construction: root-first, later
@@ -1370,8 +1411,6 @@ class GlpEngine {
           chain: const [],
           rootSelfGlpPath: _rootSelfGlpPath,
           rootScope: _rootScope);
-      final rootSelf = File(_rootSelfGlpPath);
-      if (rootSelf.existsSync()) _scopeSelfGlps.add(rootSelf.absolute.path);
     }
     return _goalCheckEnv!;
   }

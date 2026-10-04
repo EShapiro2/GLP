@@ -252,6 +252,96 @@ TypeEnvironment _mergeLayer(TypeEnvironment env, TypeEnvironment layer,
       scopeLayers: {...layer.scopeLayers, ...env.scopeLayers});
 }
 
+/// [env] with the entry points [keys] of a loaded program merged in, as a
+/// layer of their own: each entry point's declaration as [declaringScope],
+/// the scope it was declared in, holds it, and the transitive closure of the
+/// types its signature references --- "A declaration carries the transitive
+/// closure of the types its signature references, so types are not exported
+/// separately" (TGLP modules.tex, "Procedure declarations") --- and no other
+/// declaration or type of that scope.  An entry point's clauses come with it,
+/// as their layer of [declaringScope] holds them, so that its parametricity is
+/// decided in the scope it was declared in ([TypeEnvironment.scopeLayers]).
+///
+/// The scope a boot source is checked in is the boot file's ancestor chain
+/// with the linked program's entry points merged in by this: "the linked
+/// program's entry points and the boot file's ancestor chain of self.glp
+/// declarations, the root among them ... A call to a procedure the program
+/// does not export is refused by the check" (IGLP, Implementation Notes, "The
+/// scope a boot source is checked in", 8aafd09).  [label] is the scope the
+/// layer's types are recorded as defined in where [declaringScope] records
+/// none.
+TypeEnvironment mergeEntryPointsIntoScope(TypeEnvironment env,
+    TypeEnvironment declaringScope, Iterable<String> keys,
+    {String? label}) {
+  final procedures = <String, ProcDecl>{};
+  final paramProcDecls = <String, ProcDecl>{};
+  final layers = <String, ScopeLayer>{};
+  final pending = <String>[];
+  void collect(TypeExpr t) {
+    if (t is TypeRef) {
+      pending.add(t.name);
+      t.typeArgs.forEach(collect);
+    } else if (t is StructAlt) {
+      t.args.forEach(collect);
+    } else if (t is ListConsAlt) {
+      collect(t.head);
+      collect(t.tail);
+    } else if (t is DiffListAlt) {
+      collect(t.content);
+      collect(t.hole);
+    }
+    // ConstantAlt, ListNilAlt and PrimitiveModeAlt name no type.
+  }
+
+  for (final key in keys) {
+    final mono = declaringScope.procedures[key];
+    final param = declaringScope.paramProcDecls[key];
+    if (mono == null && param == null) continue;
+    if (mono != null) {
+      procedures[key] = mono;
+      mono.argTypes.forEach(collect);
+    }
+    if (param != null) {
+      paramProcDecls[key] = param;
+      param.argTypes.forEach(collect);
+    }
+    final layer = declaringScope.scopeLayers[key];
+    if (layer != null) layers[key] = layer;
+  }
+
+  // The closure: a monomorphic type, an expansion instance `T<A>` and the
+  // template `T` it instantiates, and a template a parameterised declaration
+  // names; a primitive type or a declaration's own parameter is in neither.
+  final types = <String, TypeDef>{};
+  final templates = <String, TypeDef>{};
+  while (pending.isNotEmpty) {
+    final name = pending.removeLast();
+    final td = declaringScope.types[name];
+    if (td != null && !types.containsKey(name)) {
+      types[name] = td;
+      td.alternatives.forEach(collect);
+    }
+    final lt = name.indexOf('<');
+    final templateName = lt < 0 ? name : name.substring(0, lt);
+    final tt = declaringScope.typeTemplates[templateName];
+    if (tt != null && !templates.containsKey(templateName)) {
+      templates[templateName] = tt;
+      tt.alternatives.forEach(collect);
+    }
+  }
+
+  final layer = TypeEnvironment(types, procedures,
+      paramProcDecls: paramProcDecls,
+      typeTemplates: templates,
+      typeOrigins: {
+        for (final t in types.keys)
+          if (declaringScope.typeOrigins[t] != null)
+            t: declaringScope.typeOrigins[t]!
+      },
+      scopeLayers: layers);
+  return _mergeLayer(env, layer, label: label);
+}
+
 /// Merge a self.glp file into a scope environment: parse, then
 /// [mergeModuleIntoScope], labelled by the directory the `self.glp` is the
 /// scope of --- the name the linker gives that module, its path from [root]

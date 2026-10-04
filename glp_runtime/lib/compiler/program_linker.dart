@@ -823,9 +823,10 @@ void checkModulesIndependently(List<DiscoveredModule> modules) {
 /// a module at the root, linked with the root self.glp as a one-module
 /// program (GLP #3 Cowork, 2026-10-03 21:18 UTC, "16:11"): it is checked in
 /// [outerScope], the scope the engine holds when it is handed over (IGLP
-/// Implementation Notes, "The scope a boot source is checked in": "the linked
-/// program, the kernels the runtime has loaded, and the boot file's own
-/// ancestor chain"), and reaches a loaded program only through its entry
+/// Implementation Notes, "The scope a boot source is checked in", 8aafd09:
+/// "the linked program's entry points and the boot file's ancestor chain of
+/// self.glp declarations, the root among them"), and reaches a loaded program
+/// only through its entry
 /// points, [outerEntryPoints], which stand between the root and the source in
 /// its scope: a call to one stays bare, the loaded program's alias, and the
 /// linked program is checked over [outerScope], which declares it.

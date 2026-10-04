@@ -1,0 +1,12 @@
+%% boot_unexported.glp --- a boot source loaded on
+%% programs/tests/boot_scope/program calling helper/2, which the program does
+%% not export: the check refuses the call, naming it, and nothing runs.
+
+procedure boot.
+boot :- client(alice, _)@alice.
+
+procedure client(Constant?, Stream(_)?).
+client(_, _) :- helper(secret(3), N), report(N?).
+
+procedure report(Integer?).
+report(N) :- send_to_user([total(N?)]).
