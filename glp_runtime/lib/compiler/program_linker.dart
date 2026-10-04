@@ -177,23 +177,35 @@ class LinkResult {
 ///
 /// `self.glp` files contribute both types AND procedures to the ancestor scope.
 /// Their procedures are compiled to bytecode and renamed like any other module.
+///
+/// [rootScope] is `Π ⊔ d_1` for the root at [rootSelfGlpPath], built once by
+/// the caller (module_hierarchy.dart, rootScope): every module's scope is built
+/// over it, so the root's layer is one (buildAncestorScope).  Where none is
+/// given it is built here, once for the program.
 List<DiscoveredModule> discoverProgram(String rootDir,
-    {String? rootSelfGlpPath}) {
+    {String? rootSelfGlpPath, TypeEnvironment? rootScope}) {
   final root = Directory(rootDir);
   final programsDir = rootSelfGlpPath != null
       ? File(rootSelfGlpPath).parent.absolute.path
       : null;
-  final modules = _discoverGlpModules(root, programsDir, rootSelfGlpPath);
+  final rs = rootScope ?? _rootScopeOf(rootSelfGlpPath);
+  final modules = _discoverGlpModules(root, programsDir, rootSelfGlpPath, rs);
 
   // A .vglp source is compiled and joins the program as the module of its own
   // name (vGLP, Definition "Canonical Compilation").  This runs AFTER the
   // exposes are resolved, because the compilation types an answer writer by the
   // position it occurs at and those positions are often arguments of an exposed
   // procedure — `send_net` and the rest of social/graph/routing.
-  _addVglpModules(modules, root, programsDir, rootSelfGlpPath);
+  _addVglpModules(modules, root, programsDir, rootSelfGlpPath, rs);
   _rootLast(modules);
   return modules;
 }
+
+/// `Π ⊔ d_1` for the root at [rootSelfGlpPath], or null where there is none.
+TypeEnvironment? _rootScopeOf(String? rootSelfGlpPath) =>
+    rootSelfGlpPath != null && File(rootSelfGlpPath).existsSync()
+        ? rootScope(rootSelfGlpPath)
+        : null;
 
 /// [modules] with the root `self.glp` moved to the end, the outermost scope
 /// last, so that where a lookup over the modules takes the first of a name ---
@@ -215,8 +227,8 @@ String _nameRoot(String? programsDir, String programRoot) =>
 /// The `.glp` modules of the tree, with their ancestor scopes and the exposes
 /// resolved: everything of [discoverProgram] but the compiled `.vglp` sources,
 /// which `:emit` compiles in this same scope and writes out instead.
-List<DiscoveredModule> _discoverGlpModules(
-    Directory root, String? programsDir, String? rootSelfGlpPath) {
+List<DiscoveredModule> _discoverGlpModules(Directory root, String? programsDir,
+    String? rootSelfGlpPath, TypeEnvironment? rs) {
   if (!root.existsSync()) {
     throw ArgumentError('Program root directory not found: ${root.path}');
   }
@@ -262,8 +274,8 @@ List<DiscoveredModule> _discoverGlpModules(
       rootDir: root.absolute.path,
       programsDir: programsDir,
     );
-    final ancestorScope =
-        buildAncestorScope(chain: chain, rootSelfGlpPath: rootSelfGlpPath);
+    final ancestorScope = buildAncestorScope(
+        chain: chain, rootSelfGlpPath: rootSelfGlpPath, rootScope: rs);
 
     modules.add(DiscoveredModule(
       filePath: file.path,
@@ -277,7 +289,7 @@ List<DiscoveredModule> _discoverGlpModules(
   // Add the program's filesystem context (ancestor self.glp above the root) and
   // resolve -expose directives.
   _addAncestorContextAndExposes(
-      modules, root.absolute.path, programsDir, rootSelfGlpPath, nameRoot);
+      modules, root.absolute.path, programsDir, rootSelfGlpPath, nameRoot, rs);
   return modules;
 }
 
@@ -294,7 +306,7 @@ List<DiscoveredModule> _discoverGlpModules(
 /// the generic mediator, and is not compiled where the mediator is missing, as
 /// before (compileVglpSource).
 void _addVglpModules(List<DiscoveredModule> modules, Directory root,
-    String? programsDir, String? rootSelfGlpPath) {
+    String? programsDir, String? rootSelfGlpPath, TypeEnvironment? rs) {
   final vglpFiles = root
       .listSync(recursive: true)
       .whereType<File>()
@@ -318,7 +330,7 @@ void _addVglpModules(List<DiscoveredModule> modules, Directory root,
     if (!paper && mediator == null) continue;
 
     final ancestorScope =
-        _vglpScope(file, modules, root, programsDir, rootSelfGlpPath);
+        _vglpScope(file, modules, root, programsDir, rootSelfGlpPath, rs);
 
     final String compiledSource;
     try {
@@ -348,13 +360,15 @@ void _addVglpModules(List<DiscoveredModule> modules, Directory root,
 /// sibling modules do.  The loader and `:emit` both compile in this scope, so
 /// the emitted text is what the load produces in memory.
 TypeEnvironment _vglpScope(File file, List<DiscoveredModule> modules,
-    Directory root, String? programsDir, String? rootSelfGlpPath) {
+    Directory root, String? programsDir, String? rootSelfGlpPath,
+    TypeEnvironment? rs) {
   final chain = discoverSelfChain(
     targetFile: file.absolute.path,
     rootDir: root.absolute.path,
     programsDir: programsDir,
   );
-  var scope = buildAncestorScope(chain: chain, rootSelfGlpPath: rootSelfGlpPath);
+  var scope = buildAncestorScope(
+      chain: chain, rootSelfGlpPath: rootSelfGlpPath, rootScope: rs);
   final modDir = _normPath(file.parent.path);
   for (final e in modules.where((m) => m.exposingDir != null)) {
     if (!_dirUnder(modDir, e.exposingDir!)) continue;
@@ -385,8 +399,10 @@ MediatorSource? _mediatorSource(String? programsDir) {
 /// entry point (§Static Linking). Its filesystem context (ancestor self.glp
 /// above its directory, up to programs/) is added, so it links and runs through
 /// the same pipeline as a directory program.
+///
+/// [rootScope] is as for [discoverProgram].
 List<DiscoveredModule> discoverSingleModule(String filePath,
-    {String? rootSelfGlpPath}) {
+    {String? rootSelfGlpPath, TypeEnvironment? rootScope}) {
   final file = File(filePath);
   if (!file.existsSync()) {
     throw ArgumentError('Module file not found: $filePath');
@@ -394,6 +410,7 @@ List<DiscoveredModule> discoverSingleModule(String filePath,
   final programsDir = rootSelfGlpPath != null
       ? File(rootSelfGlpPath).parent.absolute.path
       : null;
+  final rs = rootScope ?? _rootScopeOf(rootSelfGlpPath);
 
   final module =
       Parser(Lexer(file.readAsStringSync()).tokenize()).parseModule();
@@ -409,8 +426,8 @@ List<DiscoveredModule> discoverSingleModule(String filePath,
       filePath: file.path,
       moduleName: modulePathName(file.path, nameRoot),
       ast: module,
-      ancestorScope:
-          buildAncestorScope(chain: chain, rootSelfGlpPath: rootSelfGlpPath),
+      ancestorScope: buildAncestorScope(
+          chain: chain, rootSelfGlpPath: rootSelfGlpPath, rootScope: rs),
       isSelfGlp: false,
     ),
   ];
@@ -429,14 +446,14 @@ List<DiscoveredModule> discoverSingleModule(String filePath,
       filePath: ownSelf.path,
       moduleName: modulePathName(ownSelf.path, nameRoot),
       ast: selfModule,
-      ancestorScope:
-          buildAncestorScope(chain: selfChain, rootSelfGlpPath: rootSelfGlpPath),
+      ancestorScope: buildAncestorScope(
+          chain: selfChain, rootSelfGlpPath: rootSelfGlpPath, rootScope: rs),
       isSelfGlp: true,
     ));
   }
 
   _addAncestorContextAndExposes(
-      modules, dir, programsDir, rootSelfGlpPath, nameRoot);
+      modules, dir, programsDir, rootSelfGlpPath, nameRoot, rs);
   return modules;
 }
 
@@ -452,7 +469,8 @@ void _addAncestorContextAndExposes(
     String rootAbsPath,
     String? programsDir,
     String? rootSelfGlpPath,
-    String nameRoot) {
+    String nameRoot,
+    TypeEnvironment? rs) {
   if (programsDir != null) {
     for (final selfPath in _ancestorSelfGlpFiles(rootAbsPath, programsDir)) {
       final selfModule =
@@ -467,8 +485,8 @@ void _addAncestorContextAndExposes(
         filePath: selfPath,
         moduleName: modulePathName(selfPath, nameRoot),
         ast: selfModule,
-        ancestorScope:
-            buildAncestorScope(chain: chain, rootSelfGlpPath: rootSelfGlpPath),
+        ancestorScope: buildAncestorScope(
+            chain: chain, rootSelfGlpPath: rootSelfGlpPath, rootScope: rs),
         isSelfGlp: true,
       ));
     }
@@ -485,7 +503,7 @@ void _addAncestorContextAndExposes(
     modules.add(rootModule);
   }
 
-  _resolveExposes(modules, programsDir, rootSelfGlpPath, nameRoot);
+  _resolveExposes(modules, programsDir, rootSelfGlpPath, nameRoot, rs);
   _rootLast(modules);
 }
 
@@ -513,7 +531,7 @@ bool _dirUnder(String childDir, String ancestorDir) =>
 /// EXPORTED declarations and the types it defines are merged into the
 /// ancestorScope of every module in the exposing directory's subtree.
 void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
-    String? rootSelfGlpPath, String nameRoot) {
+    String? rootSelfGlpPath, String nameRoot, TypeEnvironment? rs) {
   final pending = <DiscoveredModule>[
     ...modules.where((m) => m.ast.exposes.isNotEmpty),
   ];
@@ -591,8 +609,8 @@ void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
         filePath: file.path,
         moduleName: exposedName,
         ast: exposedAst,
-        ancestorScope:
-            buildAncestorScope(chain: chain, rootSelfGlpPath: rootSelfGlpPath),
+        ancestorScope: buildAncestorScope(
+            chain: chain, rootSelfGlpPath: rootSelfGlpPath, rootScope: rs),
         isSelfGlp: false,
         exposingDir: exposingDirNorm,
         collectedByExpose: true,
@@ -665,7 +683,7 @@ TypeEnvironment _mergeExposed(TypeEnvironment base, TypeEnvironment exposed,
       paramProcDecls: paramProcDecls,
       typeTemplates: {...base.typeTemplates, ...ex.typeTemplates},
       typeOrigins: {...ex.originsUnder(label), ...base.typeOrigins},
-      scopeClauses: base.scopeClauses);
+      scopeLayers: base.scopeLayers);
 }
 
 /// Collect `self.glp` files in ancestor directories ABOVE [rootDir], walking up
@@ -2010,9 +2028,10 @@ List<String> emitVglpSources(String rootDir,
   // paper's syntax needs none.
   final mediator = _mediatorSource(programsDir);
 
-  final modules = _discoverGlpModules(root, programsDir, rootSelfGlpPath);
+  final rs = _rootScopeOf(rootSelfGlpPath);
+  final modules = _discoverGlpModules(root, programsDir, rootSelfGlpPath, rs);
   return emitCompiledVglp(root.path, mediator,
-      scopeFor: (vglpPath) =>
-          _vglpScope(File(vglpPath), modules, root, programsDir, rootSelfGlpPath),
+      scopeFor: (vglpPath) => _vglpScope(
+          File(vglpPath), modules, root, programsDir, rootSelfGlpPath, rs),
       onSkip: onSkip);
 }

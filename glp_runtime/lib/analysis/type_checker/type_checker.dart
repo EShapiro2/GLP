@@ -1373,10 +1373,6 @@ bool Function(String procKey) _parametricIn(
       return certified.contains(key);
     };
 
-/// The parameterised procedures of a scope certified parametrically
-/// well-typed, by the scope ([scopeProcedureIsParametric]).
-final Expando<Set<String>> _scopeCertification = Expando();
-
 /// Whether [procKey], a procedure of [scope]'s layers --- the root self.glp's
 /// `merge/3`, `send/3`, `stream_append/3`, or an enclosing self.glp's --- is
 /// parametrically well-typed (TGLP parameterized-types.tex, Definition
@@ -1384,36 +1380,44 @@ final Expando<Set<String>> _scopeCertification = Expando();
 ///
 /// A unit's calls to a procedure of its scope reach clauses that are not the
 /// unit's, so the unit's own certification cannot answer for them: the scope
-/// carries them ([TypeEnvironment.scopeClauses]), and its parameterised
-/// procedures are certified here by their abstract instances against those
-/// clauses, in the scope itself, once per scope.  A key the scope does not
-/// define with clauses --- a kernel, a procedure of another module --- is not
-/// decided here and answers true: the call is then checked with the callee's
-/// parameters open, as a call is where the checked unit cannot see its
-/// callee's clauses, and the linked program, where every call is local,
-/// decides.  Until 2026-10-04 the root self.glp's procedures were certified
-/// once for the whole process, from the source the engine set, and an
-/// enclosing self.glp's were not certified at all.
+/// carries the layer that defines it ([TypeEnvironment.scopeLayers]), and the
+/// layer's parameterised procedures are certified here by their abstract
+/// instances against its clauses, in the scope the layer was declared in,
+/// once for every scope built over it ([ScopeLayer.certified]).  A key the
+/// scope does not define with clauses --- a kernel, a procedure of another
+/// module --- is not decided here and answers true: the call is then checked
+/// with the callee's parameters open, as a call is where the checked unit
+/// cannot see its callee's clauses, and the linked program, where every call
+/// is local, decides.  Until 2026-10-04 the root self.glp's procedures were
+/// certified once for the whole process, from the source the engine set, and
+/// an enclosing self.glp's were not certified at all.
 bool scopeProcedureIsParametric(TypeEnvironment scope, String procKey) {
-  final clauses = scope.scopeClauses[procKey];
+  final layer = scope.scopeLayers[procKey];
+  if (layer == null) return true;
+  final clauses = layer.clauses[procKey];
   if (clauses == null || clauses.isEmpty) return true;
   if (!scope.paramProcDecls.containsKey(procKey)) return true;
-  var certified = _scopeCertification[scope];
+  // Asked again while the layer is being certified: its procedures are their
+  // own unit then, so this is a key outside it.
+  if (layer.certifying) return true;
+  var certified = layer.certified;
   if (certified == null) {
-    // Asked again while this scope is being certified: the procedures of the
-    // scope are their own unit then, so this is a key outside it.
-    _scopeCertification[scope] = const {'\u0000certifying'};
+    layer.certifying = true;
     try {
-      certified = certifyParametricProcedures(
-              scope, (k) => scope.scopeClauses[k])
-          .certifiedKeys;
+      // The layer's scope with its aliases resolved, as a module's is when
+      // it is checked ([buildTypeEnvironment]).
+      final env = buildTypeEnvironment(
+          ast.Module(line: 0, column: 0), ancestorScope: layer.env);
+      certified =
+          certifyParametricProcedures(env, (k) => layer.clauses[k])
+              .certifiedKeys;
     } on Object {
-      // A scope whose procedures cannot be certified decides nothing here.
+      // A layer whose procedures cannot be certified decides nothing here.
       certified = const {};
+    } finally {
+      layer.certifying = false;
     }
-    _scopeCertification[scope] = certified;
-  } else if (certified.contains('\u0000certifying')) {
-    return true;
+    layer.certified = certified;
   }
   return certified.contains(procKey);
 }

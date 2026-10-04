@@ -369,6 +369,26 @@ bool sameTypeExpr(TypeExpr a, TypeExpr b) {
   return false;
 }
 
+/// A layer of a scope: one self.glp, or one module, merged into it
+/// (module_hierarchy.dart, mergeModuleIntoScope), with the clauses of the
+/// procedures it defines, by "name/arity".  [env] is the scope as it stands
+/// with the layer merged, the scope its procedures were declared in, in which
+/// their parametricity is decided once ([certified], type_checker.dart,
+/// scopeProcedureIsParametric) for every scope built over the layer.
+class ScopeLayer {
+  final Map<String, List<ast.Clause>> clauses;
+  late final TypeEnvironment env;
+
+  /// The layer's parameterised procedures certified parametrically
+  /// well-typed, decided the first time one is asked about.
+  Set<String>? certified;
+
+  /// Whether the layer is being certified now.
+  bool certifying = false;
+
+  ScopeLayer(this.clauses);
+}
+
 /// The type environment: all type definitions and procedure declarations in a module
 class TypeEnvironment {
   final Map<String, TypeDef> types;
@@ -386,26 +406,47 @@ class TypeEnvironment {
   /// in unlabelled and is kept under `outer:`.
   final Map<String, String> typeOrigins;
 
-  /// The clauses, by "name/arity", of the procedures the scope's layers define
-  /// --- the root self.glp's and each enclosing self.glp's, a later layer's
-  /// shadowing an earlier one's of the same key (TGLP modules.tex, Definition
-  /// "Root, Scope": the scope of M is `Π ⊔ d_1.self ⊔ ... ⊔ d_k.self`).  They
-  /// are the scope's, carried with its types and declarations and passed in
-  /// with them: the partial evaluator unfolds a defined guard of the scope by
-  /// its unit clause (GLP-Spec appendix-guards.tex, "Defined guard
-  /// predicates"), and a call to a parameterised procedure of the scope is left
-  /// open only where that procedure is parametrically well-typed (TGLP
+  /// The layer of the scope that defines each procedure, by "name/arity" ---
+  /// the root self.glp, each enclosing self.glp, each module merged in --- a
+  /// later layer's shadowing an earlier one's of the same key (TGLP
+  /// modules.tex, Definition "Root, Scope": the scope of M is
+  /// `Π ⊔ d_1.self ⊔ ... ⊔ d_k.self`).  The layers are the scope's, carried
+  /// with its types and declarations and passed in with them: the partial
+  /// evaluator unfolds a defined guard of the scope by its unit clause
+  /// (GLP-Spec appendix-guards.tex, "Defined guard predicates"), and a call to
+  /// a parameterised procedure of the scope is left open only where that
+  /// procedure is parametrically well-typed (TGLP
   /// appendix-implementation-notes.tex, "The instantiation of a call"), which
-  /// its clauses decide.  Until 2026-10-04 the root self.glp's were read from a
-  /// source the engine set once for the whole process.
-  final Map<String, List<ast.Clause>> scopeClauses;
+  /// its clauses decide in the scope its layer was declared in
+  /// ([ScopeLayer]).  Until 2026-10-04 the root self.glp's clauses were read
+  /// from a source the engine set once for the whole process.
+  final Map<String, ScopeLayer> scopeLayers;
+
+  /// The clauses of the procedures the scope's layers define, by "name/arity"
+  /// ([scopeLayers]).
+  Map<String, List<ast.Clause>> get scopeClauses => {
+        for (final e in scopeLayers.entries)
+          if (e.value.clauses[e.key] != null) e.key: e.value.clauses[e.key]!
+      };
 
   TypeEnvironment(this.types, this.procedures, {
       Map<String, ProcDecl>? paramProcDecls,
       this.typeTemplates = const {},
       this.typeOrigins = const {},
-      this.scopeClauses = const {},
+      this.scopeLayers = const {},
   }) : paramProcDecls = paramProcDecls ?? {};
+
+  /// This environment with maps of its own, its layers shared: a scope one
+  /// check may add a type to (the meet of two types, meet.dart) without the
+  /// other scopes built over the same layers seeing it.
+  TypeEnvironment copy() => TypeEnvironment(
+        Map.of(types),
+        Map.of(procedures),
+        paramProcDecls: Map.of(paramProcDecls),
+        typeTemplates: Map.of(typeTemplates),
+        typeOrigins: Map.of(typeOrigins),
+        scopeLayers: scopeLayers,
+      );
 
   factory TypeEnvironment.empty() => TypeEnvironment({}, {});
 
@@ -435,7 +476,7 @@ class TypeEnvironment {
       paramProcDecls: {...kept.paramProcDecls, ...other.paramProcDecls},
       typeTemplates: {...kept.typeTemplates, ...other.typeTemplates},
       typeOrigins: {...kept.typeOrigins, ...other.originsUnder(label)},
-      scopeClauses: {...scopeClauses, ...other.scopeClauses},
+      scopeLayers: {...scopeLayers, ...other.scopeLayers},
     );
   }
 
@@ -499,7 +540,7 @@ class TypeEnvironment {
       typeOrigins: {
         for (final e in typeOrigins.entries) rename[e.key] ?? e.key: e.value
       },
-      scopeClauses: scopeClauses,
+      scopeLayers: scopeLayers,
     );
   }
 

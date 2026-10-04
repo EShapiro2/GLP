@@ -169,7 +169,7 @@ TypeEnvironment mergeModuleIntoScope(TypeEnvironment env, ast.Module module,
   final moduleEnv = buildScopeFromModule(expanded);
   // The layer's clauses join the scope's, by key: a defined guard of the
   // layer is unfolded, and its parameterised procedures certified, by them
-  // ([TypeEnvironment.scopeClauses]).
+  // ([TypeEnvironment.scopeLayers]).
   final clauses = <String, List<ast.Clause>>{};
   for (final proc in module.procedures) {
     for (final c in proc.clauses) {
@@ -178,10 +178,21 @@ TypeEnvironment mergeModuleIntoScope(TypeEnvironment env, ast.Module module,
           .add(c);
     }
   }
+  final scopeLayer = ScopeLayer(clauses);
   final layer = TypeEnvironment(moduleEnv.types, moduleEnv.procedures,
       paramProcDecls: moduleEnv.paramProcDecls,
       typeTemplates: templates,
-      scopeClauses: clauses);
+      scopeLayers: {for (final k in clauses.keys) k: scopeLayer});
+  final merged =
+      _mergeLayer(env, layer, typesFillGapsOnly: typesFillGapsOnly, label: label);
+  // The scope the layer's procedures were declared in.
+  scopeLayer.env = merged;
+  return merged;
+}
+
+/// [layer], a module's environment, merged into [env] ([mergeModuleIntoScope]).
+TypeEnvironment _mergeLayer(TypeEnvironment env, TypeEnvironment layer,
+    {bool typesFillGapsOnly = false, String? label}) {
   if (!typesFillGapsOnly) {
     // Innermost-first shadowing, as [buildTypeEnvironment] applies it to a
     // module's own scope (modules.tex, "Scope construction": later
@@ -208,7 +219,7 @@ TypeEnvironment mergeModuleIntoScope(TypeEnvironment env, ast.Module module,
         },
         typeTemplates: merged.typeTemplates,
         typeOrigins: merged.typeOrigins,
-        scopeClauses: merged.scopeClauses);
+        scopeLayers: merged.scopeLayers);
   }
   // The module under the scope rather than over it: its types and its
   // declarations fill gaps, and a type the scope already defines survives
@@ -238,7 +249,7 @@ TypeEnvironment mergeModuleIntoScope(TypeEnvironment env, ast.Module module,
       },
       typeTemplates: {...under.typeTemplates, ...env.typeTemplates},
       typeOrigins: {...under.originsUnder(label), ...env.typeOrigins},
-      scopeClauses: {...layer.scopeClauses, ...env.scopeClauses});
+      scopeLayers: {...layer.scopeLayers, ...env.scopeLayers});
 }
 
 /// Merge a self.glp file into a scope environment: parse, then
@@ -307,7 +318,7 @@ TypeEnvironment liftExposedTypes(
               paramProcDecls: env.paramProcDecls,
               typeTemplates: env.typeTemplates,
               typeOrigins: origins,
-              scopeClauses: env.scopeClauses),
+              scopeLayers: env.scopeLayers),
           exposerTypeDefs: exposer.typeDefs);
     } on UndefinedDeclarationTypeError catch (e) {
       throw e.inFile(file.path);
@@ -328,7 +339,7 @@ TypeEnvironment liftExposedTypes(
       paramProcDecls: env.paramProcDecls,
       typeTemplates: env.typeTemplates,
       typeOrigins: origins,
-      scopeClauses: env.scopeClauses);
+      scopeLayers: env.scopeLayers);
 }
 
 /// A TypeEnvironment of a module's EXPORTED procedure declarations plus the
@@ -423,9 +434,15 @@ TypeEnvironment rootScope(String? rootSelfGlpPath) =>
 ///
 /// This is the ONE implementation of ancestor-scope assembly, shared by the
 /// linker, the engine's module check, and the engine's goal-check environment.
+///
+/// [rootScope] is `Π ⊔ d_1` built already ([rootScope] of this file) for the
+/// same root: the scopes of one load, and of one engine, are built over it,
+/// so the root's layer is one and its procedures are certified once
+/// ([ScopeLayer]).  Each scope returned has maps of its own.
 TypeEnvironment buildAncestorScope({
   required List<String> chain,
   String? rootSelfGlpPath,
+  TypeEnvironment? rootScope,
 }) {
   var env = primitiveScope();
   File? rootSelf;
@@ -433,8 +450,10 @@ TypeEnvironment buildAncestorScope({
     final f = File(rootSelfGlpPath);
     if (f.existsSync()) {
       rootSelf = f;
-      env = mergeSelfGlpFileIntoScope(env, f.path,
-          root: f.parent.path, label: '');
+      env = rootScope != null
+          ? rootScope.copy()
+          : mergeSelfGlpFileIntoScope(env, f.path,
+              root: f.parent.path, label: '');
     }
   }
   for (final selfGlpPath in chain) {

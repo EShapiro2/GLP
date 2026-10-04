@@ -113,7 +113,7 @@ TypeEnvironment buildTypeEnvironment(ast.Module module,
         for (final e in merged.typeOrigins.entries)
           if (types.containsKey(e.key)) e.key: e.value
       },
-      scopeClauses: merged.scopeClauses);
+      scopeLayers: merged.scopeLayers);
 }
 
 /// Build TypeEnvironment from Module's type definitions and procedure declarations

@@ -191,7 +191,8 @@ class GlpEngine {
 
   /// The scope a module directly under the root is checked in, `Π ⊔ d_1`
   /// (module_hierarchy.dart, [rootScope]): a file-less source's, given no
-  /// other.
+  /// other, and the one every scope the engine builds is built over, so the
+  /// root's layer is one and its procedures are certified once per engine.
   late final TypeEnvironment _rootScope = rootScope(_rootSelfGlpPath);
 
   /// Clear all loaded programs except root self.glp.
@@ -360,13 +361,14 @@ class GlpEngine {
       // (modules.tex, "The -expose directive": an exposed module's exported
       // procedures are in the directory's scope as if defined in its self.glp).
       // The check below and the linker further down share this one discovery.
-      discovered = discoverSingleModule(name, rootSelfGlpPath: _rootSelfGlpPath);
+      discovered = discoverSingleModule(name,
+          rootSelfGlpPath: _rootSelfGlpPath, rootScope: _rootScope);
     }
     TypeEnvironment? ancestorScope = scope;
     if (ancestorScope == null && discovered == null) {
       // A source with no file behind it and no scope given is checked
       // directly under the root, `Π ⊔ d_1`.
-      ancestorScope = _rootScope;
+      ancestorScope = _rootScope.copy();
     }
     if (ancestorScope == null && discovered != null) {
       // Until 2026-09-18 this was buildAncestorScope(chain) — the self.glp
@@ -669,7 +671,7 @@ class GlpEngine {
   /// points").
   bool loadProgram(String programDir) {
     final modules = discoverProgram(programDir,
-        rootSelfGlpPath: _rootSelfGlpPath);
+        rootSelfGlpPath: _rootSelfGlpPath, rootScope: _rootScope);
     if (modules.isEmpty) {
       throw Exception('No modules found in $programDir');
     }
@@ -1339,7 +1341,9 @@ class GlpEngine {
   TypeEnvironment _ensureGoalCheckBaseEnv() {
     if (_goalCheckEnv == null) {
       _goalCheckEnv = buildAncestorScope(
-          chain: const [], rootSelfGlpPath: _rootSelfGlpPath);
+          chain: const [],
+          rootSelfGlpPath: _rootSelfGlpPath,
+          rootScope: _rootScope);
       final rootSelf = File(_rootSelfGlpPath);
       if (rootSelf.existsSync()) _scopeSelfGlps.add(rootSelf.absolute.path);
     }
