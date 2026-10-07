@@ -36,6 +36,17 @@ GlpEngine _engineWith(String file) {
   return engine;
 }
 
+/// [t] dereferenced through, as functor(args) and constants.
+String _shown(GlpEngine engine, rt.Term? t) {
+  if (t == null) return '_';
+  final d = engine.runtime.heap.dereference(t);
+  if (d is rt.ConstTerm) return '${d.value}';
+  if (d is rt.StructTerm) {
+    return '${d.functor}(${d.args.map((a) => _shown(engine, a)).join(', ')})';
+  }
+  return '_';
+}
+
 /// [run] refuses its goal, naming [reason], and leaves nothing on the queue.
 void _refused(GlpEngine engine, void Function() run, String reason) {
   final queued = engine.runtime.gq.length;
@@ -111,6 +122,55 @@ void main() {
       expect(ok.status, ExecutionStatus.succeeded);
       expect(ok.bindings['N'],
           isA<rt.ConstTerm>().having((c) => c.value, 'value', 2));
+    });
+  });
+
+  group('a posted goal is checked in the root and the entry points', () {
+    // TGLP modules.tex, "Entry and the absence of a boot module": "A compiled
+    // module is entered by posting a goal to it, and the goal calls an entry
+    // point by plain name ... the procedures that may be posted are exactly
+    // the entry points"; "Procedure declarations": "A declaration carries the
+    // transitive closure of the types its signature references".  Until
+    // 2026-10-07 the goal was checked in an environment of its own, every
+    // loaded unit's self.glp chain and every module's declarations over the
+    // root.
+
+    test('a procedure the program does not export is refused by the check',
+        () async {
+      final engine = GlpEngine(rootSelfGlpPath: _rootSelf);
+      expect(engine.loadProgram('../programs/tests/boot_scope/program'),
+          isTrue);
+      // helper/2 is worker.glp's, and the program does not export it: until
+      // 2026-10-07 the goal passed the check and was refused only when no
+      // entry point answered it ("Predicate helper/2 not found").
+      _refused(engine, () => engine.postGoal('helper(secret(3), N)'),
+          'Undefined procedure: helper/2');
+      final ok = await engine.runGoal('serve([req(1), req(2)], N)');
+      expect(ok.status, ExecutionStatus.succeeded, reason: '${ok.error}');
+      expect(ok.bindings['N'],
+          isA<rt.ConstTerm>().having((c) => c.value, 'value', 3));
+    });
+
+    test('a root procedure a self.glp redefines privately is the root\'s',
+        () async {
+      final engine = GlpEngine(rootSelfGlpPath: _rootSelf);
+      expect(engine.loadProgram('../programs/tests/post_goal/private_root'),
+          isTrue);
+      // The program's merge/3 is over integers and private; a posted merge/3
+      // is the root's, procedure(X) merge(Stream(X)?, Stream(X)?, Stream(X)),
+      // and is checked against it.  Until 2026-10-07 the check read the
+      // program's declaration while the root's procedure ran.
+      final merged = await engine.runGoal('merge([a], [b], Zs)');
+      expect(merged.status, ExecutionStatus.succeeded,
+          reason: '${merged.error}');
+      final zs = _shown(engine, merged.bindings['Zs']);
+      expect(zs, anyOf('.(a, .(b, nil))', '.(b, .(a, nil))'));
+      _refused(engine, () => engine.postGoal('merge(1, 2, N)'),
+          'Goal is not well-typed');
+      final run = await engine.runGoal('run(N)');
+      expect(run.status, ExecutionStatus.succeeded, reason: '${run.error}');
+      expect(run.bindings['N'],
+          isA<rt.ConstTerm>().having((c) => c.value, 'value', 3));
     });
   });
 

@@ -168,29 +168,10 @@ class GlpEngine {
   final Map<String, BytecodeProgram> _loadedPrograms = {};
   final Map<String, ModuleInfo> _loadedModules = {};
 
-  /// Cumulative type environment for checking REPL goals against the body part
-  /// of Definition def:well-typed-clause (TGLP glp-semantics: a goal is
-  /// well-typed iff well-typed as a body). Lazily seeded with the root scope +
-  /// root self.glp, then extended with every loaded module/program. A goal is
-  /// checked against this env before it runs; see [_checkGoalWellTyped].
-  TypeEnvironment? _goalCheckEnv;
-
-  /// The defining clauses, defined guards unfolded, of the procedures the units
-  /// loaded so far define, by the "name/arity" the goal-check environment
-  /// declares them under, the internal sources excepted: a posted goal's
-  /// calls read their callee's clauses as a clause's calls do --- the types
-  /// they fix for a parameter are tried, and a binding is to make them
-  /// well-typed (TGLP appendix-implementation-notes.tex, "The instantiation of
-  /// a call", cc4a891; [_checkGoalWellTyped]).
-  final Map<String, List<Clause>> _goalClauses = {};
-
-  /// Whether a procedure of [_goalClauses] is parametrically well-typed, asked
-  /// once per key and load ([_goalProcedureIsParametric]).
-  final Map<String, bool> _goalParametric = {};
-
   /// The entry points of each unit the engine holds, by the name it was
   /// loaded under, with the scope they were declared in: what a source handed
-  /// over to the engine sees of the units it holds ([scope], [scopeFor]).
+  /// over to the engine sees of the units it holds ([scope], [scopeFor]), and
+  /// what a goal posted to it is checked against ([_checkGoalWellTyped]).
   final Map<String, _UnitEntryPoints> _unitEntryPoints = {};
 
   /// Max execution cycles (default 10000)
@@ -263,8 +244,6 @@ class GlpEngine {
     // Clear everything but the root, linked once at construction.
     _loadedPrograms.clear();
     _loadedModules.clear();
-    // Re-seed lazily to root scope + root self.glp on next goal check.
-    _goalCheckEnv = null;
     _unitEntryPoints.clear();
   }
 
@@ -407,10 +386,6 @@ class GlpEngine {
       );
     }
 
-    // Ancestor self.glp chain per modules.tex §Scope construction, anchored at
-    // the hierarchy root (programs/) — the same discoverSelfChain bound as the
-    // linker and directory loads. Used below for the goal-check environment.
-    List<String> chain = const [];
     List<DiscoveredModule>? discovered;
     if (isRealFile) {
       // The module as the linker discovers it: its ancestor scope with the
@@ -421,10 +396,6 @@ class GlpEngine {
       // which refuses a file outside the root first ([requireUnderRoot]).
       discovered = discoverSingleModule(name,
           rootSelfGlpPath: _rootSelfGlpPath, rootScope: _rootScope);
-      chain = discoverSelfChain(
-          targetFile: name,
-          rootDir: File(name).parent.path,
-          programsDir: File(_rootSelfGlpPath).parent.absolute.path);
     }
     TypeEnvironment? ancestorScope = scope;
     if (ancestorScope == null && discovered == null) {
@@ -449,13 +420,11 @@ class GlpEngine {
     // condition 1).  Until 2026-10-02 such a module was compiled and run with
     // no check.  (Single-file/REPL semantics: a parametric procedure inspecting
     // its parameter with no instantiation is rejected — checkModule's default.)
-    final List<Procedure> checkedProcedures;
     {
       final ast = Program(module.procedures, module.line, module.column);
       final partialEvaluator = PartialEvaluator();
       final transformedAst =
           partialEvaluator.transformDefinedGuards(ast, scope: ancestorScope);
-      checkedProcedures = transformedAst.procedures;
 
       final TypeCheckResult typeResult;
       try {
@@ -557,75 +526,14 @@ class GlpEngine {
     final moduleInfo = _extractModuleInfo(source, program, name);
     _loadedModules[moduleInfo.name] = moduleInfo;
 
-    // Goal-check environment per modules.tex §Scope construction — the chain
-    // is anchored at the hierarchy root (programs/), not at the file loaded
-    // for execution (§Implicit ancestor scoping): layer every self.glp on the
-    // path from programs/ down to the module's directory (the chain computed
-    // above), later shadowing earlier, before the module's own definitions.
-    if (isRealFile) {
-      var goalEnv = _ensureGoalCheckBaseEnv();
-      for (final selfGlpPath in chain) {
-        goalEnv = mergeSelfGlpFileIntoScope(goalEnv, selfGlpPath,
-            root: _rootDir);
-      }
-      _goalCheckEnv = goalEnv;
-    }
-
     // Its entry points, every procedure it defines, declared in the scope it
-    // was checked in ([scope]).
+    // was checked in ([scope]), which is what a goal posted to it is checked
+    // against ([_checkGoalWellTyped]).
     final declaredIn = ancestorScope!;
     _unitEntryPoints[name] = _UnitEntryPoints(_plainProcedures(program),
         () => mergeModuleIntoScope(declaredIn, module, label: moduleInfo.name));
 
-    // Make this module's declarations available to the REPL goal checker,
-    // and its clauses to the reading of a goal's calls.
-    _extendGoalCheckEnv(module,
-        label: moduleInfo.name, path: isRealFile ? name : null);
-    _addGoalClauses(checkedProcedures);
-
     return true;
-  }
-
-  /// Add the clauses of [procedures] to [_goalClauses], over what an earlier
-  /// load gave a key unless [fillGapsOnly], as [_extendGoalCheckEnv] layers
-  /// the declarations.
-  void _addGoalClauses(List<Procedure> procedures, {bool fillGapsOnly = false}) {
-    final byKey = <String, List<Clause>>{};
-    for (final p in procedures) {
-      for (final c in p.clauses) {
-        byKey.putIfAbsent('${c.head.functor}/${c.head.arity}', () => []).add(c);
-      }
-    }
-    for (final e in byKey.entries) {
-      if (fillGapsOnly && _goalClauses.containsKey(e.key)) continue;
-      _goalClauses[e.key] = e.value;
-    }
-    _goalParametric.clear();
-  }
-
-  /// Whether the procedure a posted goal calls by [key] is parametrically
-  /// well-typed (TGLP parameterized-types.tex, Definition "Parametrically
-  /// Well-Typed"): a call some parameter of which has no type supplied or
-  /// fixed for it is refused unless it is (appendix-implementation-notes.tex,
-  /// "The instantiation of a call").  A loaded procedure is certified by its
-  /// abstract instance against its own clauses in the goal-check environment;
-  /// any other by [scopeProcedureIsParametric] in the goal-check environment,
-  /// whose scope carries the root self.glp's clauses.
-  bool _goalProcedureIsParametric(String key) {
-    final clauses = _goalClauses[key];
-    if (clauses == null || clauses.isEmpty) {
-      return scopeProcedureIsParametric(_ensureGoalCheckBaseEnv(), key);
-    }
-    return _goalParametric[key] ??= () {
-      try {
-        return certifyParametricProcedures(_ensureGoalCheckBaseEnv(),
-                (k) => k == key ? clauses : null)
-            .certifiedKeys
-            .contains(key);
-      } on Object {
-        return false;
-      }
-    }();
   }
 
   /// A later load that defines a procedure an earlier load defines is an
@@ -789,75 +697,21 @@ class GlpEngine {
     _loadedModuleValues['__program__'] = moduleValue;
     _appModule = moduleValue;
 
-    // Goal-check environment per modules.tex §Scope construction — the chain
-    // is anchored at the hierarchy root (programs/), not at the directory
-    // loaded for execution (§Implicit ancestor scoping). The base env carries
-    // the root scope + root self.glp; layer every self.glp on the path from
-    // programs/ down to the program root, later shadowing earlier — the same
-    // chain the linker uses — then the program's own modules (loop below).
-    var goalEnv = _ensureGoalCheckBaseEnv();
-    var programRoot = Directory(programDir).absolute.path;
-    while (programRoot.endsWith(Platform.pathSeparator)) {
-      programRoot = programRoot.substring(0, programRoot.length - 1);
-    }
-    for (final selfGlpPath in discoverSelfChain(
-        targetFile: '$programRoot${Platform.pathSeparator}self.glp',
-        rootDir: programRoot,
-        programsDir: File(_rootSelfGlpPath).parent.absolute.path)) {
-      goalEnv = mergeSelfGlpFileIntoScope(goalEnv, selfGlpPath,
-            root: _rootDir);
-    }
-    _goalCheckEnv = goalEnv;
-
     // Its entry points, the exports of its self.glp, declared in the scope
-    // that self.glp was checked in, its own definitions merged ([scope]).
+    // that self.glp was checked in, its own definitions merged ([scope]):
+    // what a goal posted to the program is checked against, with the root
+    // ([_checkGoalWellTyped]).  Until 2026-10-07 a goal was checked in an
+    // environment of its own, the program's whole self.glp chain and every
+    // module's declarations layered over the root, so a goal calling a
+    // procedure the program does not export passed the check and was refused
+    // only when no entry point answered it.
+    final programRoot = _normDir(programDir);
     final programSelf = modules.firstWhere((m) =>
-        m.isSelfGlp &&
-        _normDir(File(m.filePath).parent.path) == _normDir(programRoot));
+        m.isSelfGlp && _normDir(File(m.filePath).parent.path) == programRoot);
     _unitEntryPoints['__program__'] = _UnitEntryPoints(
         _plainProcedures(program),
         () => mergeModuleIntoScope(programSelf.ancestorScope, programSelf.ast,
             label: programSelf.moduleName));
-
-    // Make the program's module declarations available to the REPL goal checker,
-    // IN SCOPE ORDER (modules.tex §Scope construction: root-first, later
-    // definitions shadowing earlier). Each merge expands the module's
-    // parameterised type references against what the environment holds SO FAR,
-    // so a module merged before the `self.glp` that defines a template it names
-    // loses that template and its declaration keeps an unresolved type. In
-    // discovery order — the directory walk's — that is what happened to every
-    // module in a subdirectory: `programs/social/spm/gsg/plays/play_befriend.glp:24`
-    // names `UserEvent(V, Q, A)` from `gsg/self.glp` one level up, and the
-    // program loaded but every goal posted to it failed the goal check with
-    // `UnknownTypeError: UserEvent`. Shallower directories first, and a
-    // directory's `self.glp` before its siblings, is the order §Scope
-    // construction specifies and the order the linker's ancestor chain uses.
-    final ordered = [...modules]..sort((a, b) {
-        int depth(DiscoveredModule m) =>
-            File(m.filePath).absolute.parent.path.split(Platform.pathSeparator).length;
-        final byDepth = depth(a).compareTo(depth(b));
-        if (byDepth != 0) return byDepth;
-        // Within one directory, self.glp is the scope and comes first.
-        if (a.isSelfGlp != b.isSelfGlp) return a.isSelfGlp ? -1 : 1;
-        return a.filePath.compareTo(b.filePath);
-      });
-    // A module of a DESCENDANT directory contributes its declarations but must
-    // not shadow the program root's types: a goal is posted to the program's
-    // entry points, so it is checked in the ROOT's scope (Currencies Code,
-    // 2026-09-03 — the same shadowing that stopped the linked program loading).
-    for (final m in ordered) {
-      final descendant =
-          _normDir(File(m.filePath).parent.path) != _normDir(programRoot);
-      _extendGoalCheckEnv(m.ast,
-          typesFillGapsOnly: descendant, label: m.moduleName, path: m.filePath);
-      _addGoalClauses(
-          PartialEvaluator()
-              .transformDefinedGuards(
-                  Program(m.ast.procedures, m.ast.line, m.ast.column),
-                  scope: m.ancestorScope)
-              .procedures,
-          fillGapsOnly: descendant);
-    }
 
     return true;
   }
@@ -1242,15 +1096,59 @@ class GlpEngine {
       return 'Goal does not parse as a clause body: $trimmed';
     }
 
-    final env = _ensureGoalCheckBaseEnv();
+    // The goal is checked in the root and the loaded units' entry points
+    // ([scope]): "the procedures that may be posted are exactly the entry
+    // points" (TGLP modules.tex, "Entry and the absence of a boot module"),
+    // each with the transitive closure of the types its signature references
+    // ("Procedure declarations"), the goal being a module at the root, linked
+    // with the root self.glp (GLP #3 Cowork, 2026-10-03 21:18 UTC, "16:11").
+    // A callee's clauses are the ones its layer of that scope holds --- the
+    // root self.glp's, or the unit's that declares the entry point --- read
+    // in the scope they were declared in ([_verifyInLayer]), where its
+    // parametricity is decided too ([scopeProcedureIsParametric]).  Until
+    // 2026-10-07 the goal was checked in an environment of its own, every
+    // loaded unit's self.glp chain and every module's declarations over the
+    // root: a goal calling a procedure no entry point names passed the check
+    // and was refused only at [_goalLabel] (`helper(secret(3), N)` posted to
+    // programs/tests/boot_scope/program), and one calling a root procedure
+    // that a program's self.glp redefines privately was checked against that
+    // definition while the root's ran (programs/tests/post_goal/private_root).
+    final env = scope;
     final dfa = tdfa.buildProgramDFA(env);
     final result = wtc.checkGoal(atoms, dfa, env,
-        callee: wtc.CalleeClauses((k) => _goalClauses[k], verifyInstantiation),
-        isParametric: _goalProcedureIsParametric);
+        callee: wtc.CalleeClauses((k) => env.scopeLayers[k]?.clauses[k],
+            (decl, at, clauses) => _verifyInLayer(env, decl, at, clauses)),
+        isParametric: (k) => scopeProcedureIsParametric(env, k));
     if (result.isWellTyped) return null;
 
     final detail = result.errors.map((e) => '  ${e.message}').join('\n');
     return 'Goal is not well-typed:\n$detail';
+  }
+
+  /// Whether [clauses], the clauses of a procedure a posted goal calls, are
+  /// well-typed by the declaration [decl] the call instantiates and accept its
+  /// every input path ([verifyInstantiation]), read in the scope they were
+  /// declared in: that of the layer of [goalScope] holding them
+  /// ([ScopeLayer.env]), which declares their callees, with the types of
+  /// [at], the scope the call was read in, filling its gaps.  A clause is
+  /// well-typed in its own scope, and the goal's declares the root and the
+  /// entry points alone.
+  static bool _verifyInLayer(TypeEnvironment goalScope, ProcDecl decl,
+      TypeEnvironment at, List<Clause> clauses) {
+    final layer = goalScope.scopeLayers[decl.key];
+    if (layer == null) return verifyInstantiation(decl, at, clauses);
+    final own = layer.env;
+    return verifyInstantiation(
+        decl,
+        TypeEnvironment(
+          {...at.types, ...own.types},
+          {...own.procedures, decl.key: decl},
+          paramProcDecls: own.paramProcDecls,
+          typeTemplates: {...at.typeTemplates, ...own.typeTemplates},
+          typeOrigins: {...at.typeOrigins, ...own.typeOrigins},
+          scopeLayers: own.scopeLayers,
+        ),
+        clauses);
   }
 
   bool _isConjunction(String query) {
@@ -1411,36 +1309,6 @@ class GlpEngine {
       return baseName.substring(0, baseName.length - 4);
     }
     return baseName;
-  }
-
-  /// Seed (once) and return the base goal-check environment: the root scope
-  /// plus root self.glp (buildAncestorScope with an empty chain).
-  TypeEnvironment _ensureGoalCheckBaseEnv() {
-    return _goalCheckEnv ??= buildAncestorScope(
-        chain: const [],
-        rootSelfGlpPath: _rootSelfGlpPath,
-        rootScope: _rootScope);
-  }
-
-  /// Extend the goal-check environment with a loaded module's declarations, so
-  /// goals referencing its procedures can be type-checked.
-  ///
-  /// A module with `-expose` directives, the file at [path], is merged over the
-  /// types they lift ([liftExposedTypes]), as every `self.glp` of a chain is
-  /// ([mergeSelfGlpFileIntoScope]): they are in that directory's scope "as if
-  /// defined in its self.glp" (TGLP modules.tex, "The -expose directive"), and
-  /// its own declarations may name them.  Until 2026-10-04 they were not, and a
-  /// program-root self.glp declaring a procedure over a type its -expose lifts
-  /// was refused here after the linked program had checked
-  /// (programs/tests/expose/names_lifted; GLP #3 Cowork, 2026-10-04, FAULT 1).
-  void _extendGoalCheckEnv(Module module,
-      {bool typesFillGapsOnly = false, String? label, String? path}) {
-    var env = _ensureGoalCheckBaseEnv();
-    if (path != null && module.exposes.isNotEmpty) {
-      env = liftExposedTypes(env, module, path, root: _rootDir);
-    }
-    _goalCheckEnv = mergeModuleIntoScope(env, module,
-        typesFillGapsOnly: typesFillGapsOnly, label: label);
   }
 
   /// A directory path for comparison: absolute, `..` and `.` segments resolved

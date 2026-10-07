@@ -1,0 +1,15 @@
+%% private_root --- a program whose self.glp defines, privately, a procedure
+%% named like one of the root's: merge/3, here over integers.  A goal posted
+%% to a program calls its entry points and the root's procedures, "the
+%% procedures that may be posted are exactly the entry points" (TGLP
+%% modules.tex, "Entry and the absence of a boot module"), the goal a module
+%% at the root; so a posted merge/3 is the root's and is checked against the
+%% root's declaration: merge([a], [b], Zs) is accepted and runs the root's
+%% merge, and merge(1, 2, N) is refused.  run/1 calls this self.glp's own
+%% merge/3 (glp_runtime/test/engine/post_goal_test.dart).
+
+exported procedure run(Integer).
+run(N?) :- merge(1, 2, N).
+
+procedure merge(Integer?, Integer?, Integer).
+merge(A, B, C?) :- C := A? + B?.
