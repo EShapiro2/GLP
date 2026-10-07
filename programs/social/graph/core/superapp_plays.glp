@@ -981,8 +981,10 @@ act(wait, Id, Es, As?, Script, Open, Swaps, Screen?) :-
 %% accord.  Her stream up to the social graph closes with it, her super-app
 %% returns her entry to idle, and she invites bob a second time: the mini-app
 %% is activated afresh by run/3, and the new conversation reaches bob's
-%% execution, which never ended.  Her person stream then closes, and her
-%% super-app ends with it (GSG Section 5.1).
+%% execution, which never ended.  Her person stream closes after the play's
+%% last observation, bob's second opened(alice), greeted(alice), and her
+%% super-app ends with it (GSG Section 5.1); his closes when his agent's
+%% stream to him closes.
 %%
 %% What the second pair of entries on bob's stream fences: without the return
 %% alice's entry would still say running, and the root channel of the second
@@ -1001,35 +1003,46 @@ play_reinvite(AliceUi?, BobUi?) :-
     certified(C?, _, CSig),
     agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
     tee(AliceUiRaw?, AliceUi, AliceSeen),
-    alice_reinvite(C?, CSig?, AliceUiRaw, AliceOut?, AliceSeen?, AliceIn),
+    alice_reinvite(C?, CSig?, AliceUiRaw, AliceOut?, AliceSeen?, BobSeen?, AliceIn),
     agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
-    bob_reinvite(C?, CSig?, BobUi, BobOut?, BobIn).
+    tee(BobUiRaw?, BobUi, BobSeen),
+    bob_reinvite(C?, CSig?, BobUiRaw, BobOut?, BobIn).
 
 %% Alice's person: install the mini-app and cold-call bob.
-procedure alice_reinvite(Content?, String?, AppUiStream, AgentToUserStream?, AppUiStream?, UserInStream).
-alice_reinvite(M, CSig, Ui?, Outs, Seen,
+procedure alice_reinvite(Content?, String?, AppUiStream, AgentToUserStream?, AppUiStream?, AppUiStream?, UserInStream).
+alice_reinvite(M, CSig, Ui?, Outs, Seen, BobSeen,
                [msg(person, alice, install(ping, M?, CSig?, Ui)),
                 msg(person, alice, connect(bob)) | Cmds?]) :-
-    alice_reinvite_wait(Outs?, Seen?, Cmds).
+    alice_reinvite_wait(Outs?, Seen?, BobSeen?, Cmds).
 
 %% Once connected, invite bob.
-procedure alice_reinvite_wait(AgentToUserStream?, AppUiStream?, UserInStream).
-alice_reinvite_wait([msg(agent, person, connected(bob)) | _], Seen,
+procedure alice_reinvite_wait(AgentToUserStream?, AppUiStream?, AppUiStream?, UserInStream).
+alice_reinvite_wait([msg(agent, person, connected(bob)) | _], Seen, BobSeen,
                     [msg(person, alice, invite(ping, bob)) | Cmds?]) :-
-    alice_after_end(Seen?, Cmds).
-alice_reinvite_wait([_ | Outs], Seen, Cmds?) :-
-    otherwise | alice_reinvite_wait(Outs?, Seen?, Cmds).
-alice_reinvite_wait([], _, []).
+    alice_after_end(Seen?, BobSeen?, Cmds).
+alice_reinvite_wait([_ | Outs], Seen, BobSeen, Cmds?) :-
+    otherwise | alice_reinvite_wait(Outs?, Seen?, BobSeen?, Cmds).
+alice_reinvite_wait([], _, _, []).
 
 %% Her mini-app's person stream has closed: the execution ended, so her entry
-%% has returned to idle.  Invite bob again, and close her own stream: her
-%% super-app then ends (GSG Section 5.1), her agent closing its friend
-%% channels and the channels of every mini-app it hosts, whose peers see a
-%% crash (agent.glp's termination clause, close_outputs/1, close_host/1).
-procedure alice_after_end(AppUiStream?, UserInStream).
-alice_after_end([], [msg(person, alice, invite(ping, bob))]).
-alice_after_end([_ | Seen], Cmds?) :-
-    otherwise | alice_after_end(Seen?, Cmds).
+%% has returned to idle.  Invite bob again, and keep her own stream open until
+%% the play's last observation.
+procedure alice_after_end(AppUiStream?, AppUiStream?, UserInStream).
+alice_after_end([], BobSeen, [msg(person, alice, invite(ping, bob)) | Cmds?]) :-
+    alice_after_last(BobSeen?, Cmds).
+alice_after_end([_ | Seen], BobSeen, Cmds?) :-
+    otherwise | alice_after_end(Seen?, BobSeen?, Cmds).
+
+%% The play's last observation, bob's second opened(alice), greeted(alice):
+%% the second root channel has reached bob.  Her stream then closes and her
+%% super-app ends (GSG Section 5.1), her agent closing its friend channels and
+%% the channels of every mini-app it hosts, whose peers see a crash
+%% (agent.glp's termination clause, close_outputs/1, close_host/1); where his
+%% screen shows anything else, or closes first, the observation cannot come,
+%% and her stream closes all the same.
+procedure alice_after_last(AppUiStream?, UserInStream).
+alice_after_last([opened(alice), greeted(alice), opened(alice), greeted(alice) | _], []).
+alice_after_last(_, []) :- otherwise | true.
 
 %% Bob's person: install the mini-app and consent to BOTH invitations before
 %% either offer arrives, as bob_person consents once --- the two consents
@@ -1045,17 +1058,18 @@ bob_reinvite(M, CSig, Ui?, Outs,
 %% the one that must still be there when her second invitation arrives, and
 %% closing the stream would close his super-app and the execution with it.
 procedure bob_reinvite_wait(AgentToUserStream?, UserInStream).
-bob_reinvite_wait([msg(agent, person, befriend(alice, P)) | _],
+bob_reinvite_wait([msg(agent, person, befriend(alice, P)) | Outs],
                   [msg(person, bob, decision(yes, alice, P?)) | Cmds?]) :-
-    hold_person(Cmds).
+    bob_until_closed(Outs?, Cmds).
 bob_reinvite_wait([_ | Outs], Cmds?) :-
     otherwise | bob_reinvite_wait(Outs?, Cmds).
 bob_reinvite_wait([], []).
 
-%% A person stream left open: the play ends suspended rather than closing a
-%% super-app that still hosts a running mini-app.
-procedure hold_person(UserInStream).
-hold_person(_?) :- true.
+%% His person stream closes when his agent's stream to him closes, his agent
+%% having ended.
+procedure bob_until_closed(AgentToUserStream?, UserInStream).
+bob_until_closed([_ | Outs], Cmds?) :- bob_until_closed(Outs?, Cmds).
+bob_until_closed([], []).
 
 %% =============================================================================
 %% play_sovereign: the denominated currencies mini-app (programs/currencies/sovereign/
