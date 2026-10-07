@@ -36,6 +36,18 @@ late final PersistenceService persistenceService;
 // initialize their own Sodium handles independently.
 late final SodiumSumo appSodium;
 
+/// This app's attestation (spec §Session Establishment): the platform's
+/// native producer, and the core's verifier.
+///
+/// This app is development-signed by construction — it ships to no store — so
+/// an App Attest key it generates is attested in Apple's development sandbox,
+/// and a peer running it offers a sandbox attestation. It therefore accepts
+/// the sandbox from its peers. A production build accepts production
+/// attestations only, which is the verifier's default.
+PlatformAttestation _platformAttestation() => NativePlatformAttestation(
+      verifier: const AttestationVerifier(allowAppAttestDevelopment: true),
+    );
+
 Future<GrassrootsIdentity> _initIdentity() async {
   // Spec putIdentity/getIdentity (docs/GLP_Networking_API/sections/api.tex
   // §Identity): restore the persisted identity, or generate-and-persist one on
@@ -397,6 +409,9 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
         // The place predicates need the platform's location service, which
         // only the app embedding has (spec §System Predicates).
         placeGeofenceBackend: PlatformPlaceGeofenceBackend(),
+        // Attestation needs the platform's secure element, which only the
+        // app embedding has (spec §Session Establishment).
+        platformAttestation: _platformAttestation(),
       );
 
       grassroots.onMessageReceived =
@@ -2380,6 +2395,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
       store: appStore,
       sodium: appSodium,
       placeGeofenceBackend: PlatformPlaceGeofenceBackend(),
+      platformAttestation: _platformAttestation(),
     );
     newGrassroots.onMessageReceived =
         (messageId, senderPubkey, payload, transport) {

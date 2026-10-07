@@ -8,6 +8,11 @@ import UIKit
   /// it; releasing it releases them.
   private var placeGeofence: PlaceGeofencePlugin?
 
+  /// The attestation exchange's producer (spec §Session Establishment): App
+  /// Attest key generation, attestation over the identity key, and the
+  /// per-session assertion.
+  private var platformAttestation: PlatformAttestationPlugin?
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -22,6 +27,12 @@ import UIKit
       forPlugin: "PlaceGeofencePlugin")
     {
       placeGeofence = PlaceGeofencePlugin(messenger: registrar.messenger())
+    }
+
+    if let registrar = engineBridge.pluginRegistry.registrar(
+      forPlugin: "PlatformAttestationPlugin")
+    {
+      platformAttestation = PlatformAttestationPlugin(messenger: registrar.messenger())
     }
   }
 

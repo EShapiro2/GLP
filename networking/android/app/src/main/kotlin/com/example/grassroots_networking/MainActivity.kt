@@ -12,6 +12,13 @@ class MainActivity : FlutterActivity() {
      */
     private var placeGeofence: PlaceGeofencePlugin? = null
 
+    /**
+     * The attestation exchange's producer (spec §Session Establishment): the
+     * keystore's attested key over the identity key, and the per-session
+     * signature.
+     */
+    private var platformAttestation: PlatformAttestationPlugin? = null
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(
@@ -32,6 +39,11 @@ class MainActivity : FlutterActivity() {
         }
 
         placeGeofence = PlaceGeofencePlugin.attach(
+            this,
+            flutterEngine.dartExecutor.binaryMessenger,
+        )
+
+        platformAttestation = PlatformAttestationPlugin.attach(
             this,
             flutterEngine.dartExecutor.binaryMessenger,
         )
@@ -64,6 +76,8 @@ class MainActivity : FlutterActivity() {
         // with it, and the activity going away is one way of being done.
         placeGeofence?.detach()
         placeGeofence = null
+        platformAttestation?.detach()
+        platformAttestation = null
         super.onDestroy()
     }
 }
