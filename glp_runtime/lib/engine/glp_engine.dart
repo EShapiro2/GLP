@@ -1596,10 +1596,18 @@ class GlpEngine {
       headTerm = _buildListTerm(runtime, head, queryVarWriters, varNameToId);
     } else if (head is StructTerm) {
       headTerm = _buildStructTerm(runtime, head, queryVarWriters, varNameToId);
+    } else if (head is UnderscoreTerm) {
+      headTerm = _anonymousWriter(runtime, head);
     } else {
       throw Exception('Unsupported list head type: ${head.runtimeType}');
     }
 
+    // The tail as written, whatever term it is (GLP-Spec appendix-lp.tex,
+    // Definition "Logic Programs Syntax": `[X|Xs]` is a list cell, a compound
+    // term, and its subterms are terms).  Until 2026-10-07 a tail that was
+    // neither a list nor a variable was built as ConstTerm(null), which the
+    // display took for [], so `X = [a | b].` posted `[a]`; and a `_` head
+    // threw.
     rt.Term tailTerm;
     if (tail is ListTerm) {
       tailTerm = _buildListTerm(runtime, tail, queryVarWriters, varNameToId);
@@ -1617,8 +1625,14 @@ class GlpEngine {
         queryVarWriters[baseName] = writerId;
         tailTerm = rt.VarRef(tail.isReader ? readerId : writerId);
       }
+    } else if (tail is ConstTerm) {
+      tailTerm = rt.ConstTerm(tail.value);
+    } else if (tail is StructTerm) {
+      tailTerm = _buildStructTerm(runtime, tail, queryVarWriters, varNameToId);
+    } else if (tail is UnderscoreTerm) {
+      tailTerm = _anonymousWriter(runtime, tail);
     } else {
-      tailTerm = rt.ConstTerm(null);
+      throw Exception('Unsupported list tail type: ${tail.runtimeType}');
     }
 
     return rt.StructTerm('.', [headTerm, tailTerm]);
@@ -1659,10 +1673,13 @@ class GlpEngine {
     } else if (head is StructTerm) {
       headTerm =
           _buildStructTermForConj(runtime, head, queryVarWriters, varNameToId);
+    } else if (head is UnderscoreTerm) {
+      headTerm = _anonymousWriter(runtime, head);
     } else {
       throw Exception('Unsupported list head type: ${head.runtimeType}');
     }
 
+    // The tail as written ([_buildListTerm]).
     rt.Term tailTerm;
     if (tail is ListTerm) {
       tailTerm = _buildListTermForConj(runtime, tail, queryVarWriters, varNameToId);
@@ -1680,8 +1697,15 @@ class GlpEngine {
         queryVarWriters[baseName] = writerId;
         tailTerm = tail.isReader ? rt.VarRef(readerId) : rt.VarRef(writerId);
       }
+    } else if (tail is ConstTerm) {
+      tailTerm = rt.ConstTerm(tail.value);
+    } else if (tail is StructTerm) {
+      tailTerm =
+          _buildStructTermForConj(runtime, tail, queryVarWriters, varNameToId);
+    } else if (tail is UnderscoreTerm) {
+      tailTerm = _anonymousWriter(runtime, tail);
     } else {
-      tailTerm = rt.ConstTerm(null);
+      throw Exception('Unsupported list tail type: ${tail.runtimeType}');
     }
 
     return rt.StructTerm('.', [headTerm, tailTerm]);
