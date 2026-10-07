@@ -68,6 +68,7 @@ void main() {
       'coreDir': glp.coreDir,
       'pingappDir': glp.pingappDir,
       'coinsDir': glp.coinsDir,
+      'sovereignDir': glp.sovereignDir,
     };
     returned.forEach((name, p) {
       expect(p, startsWith('${docs.path}/'),
@@ -79,14 +80,80 @@ void main() {
     });
 
     // The bundle is the source, so everything it carries must have landed.
-    expect(bundledGlp, isNotEmpty, reason: 'the bundled list names nothing');
-    expect(bundledGlp, contains(_denominated),
-        reason: 'the denominated mini-app is not in the bundled list');
-    for (final a in bundledGlp) {
+    final bundled = await bundledGlp();
+    expect(bundled, isNotEmpty, reason: 'the bundle\'s manifest names nothing');
+    for (final a in bundled.keys) {
       final f = File('${docs.path}/glp/$a');
       expect(f.existsSync(), isTrue,
           reason: '$a was not written under the documents directory');
       expect(f.lengthSync(), greaterThan(0), reason: '$a landed empty');
+    }
+
+    // Its sources are every .glp of the trees the app loads --- the
+    // directories GlpPaths names --- read from the repository as discovery
+    // reads a program: every .glp of the tree, the self.glp of each directory
+    // from the root down to it (TGLP modules.tex, Compilation, first step),
+    // and a .vglp no .glp stands beside, with the vGLP mediator source; and
+    // nothing else.  Until 2026-10-07 the loader and the script each listed
+    // the files, and both lacked programs/social/graph/ui/self.glp (GSG,
+    // gap abe6081f).
+    final repo = await resolveGlpPaths(sandboxed: false);
+    final programs = File(repo.rootSelfGlp).parent.path;
+    String rel(String path) => 'programs/${path.substring(programs.length + 1)}';
+    final expected = <String>{'programs/self.glp'};
+    var vglp = false;
+    for (final tree in [
+      repo.graphDir,
+      repo.grassappDir,
+      repo.cssnDir,
+      repo.coinsDir,
+      repo.sovereignDir,
+    ]) {
+      expect(tree.startsWith('$programs/'), isTrue, reason: tree);
+      for (var d = Directory(tree).parent;
+          d.path.length > programs.length;
+          d = d.parent) {
+        if (File('${d.path}/self.glp').existsSync()) {
+          expected.add(rel('${d.path}/self.glp'));
+        }
+      }
+      for (final f in Directory(tree).listSync(recursive: true).whereType<File>()) {
+        if (f.path.endsWith('.glp')) {
+          expected.add(rel(f.path));
+        } else if (f.path.endsWith('.vglp') &&
+            !File('${f.path.substring(0, f.path.length - 5)}.glp').existsSync()) {
+          expected.add(rel(f.path));
+          vglp = true;
+        }
+      }
+    }
+    if (vglp) {
+      for (final m in ['self', 'med', 'dispatcher']) {
+        expected.add('programs/vglp/$m.glp');
+      }
+    }
+    final sources = bundled.keys.where((p) => !p.endsWith('.glpw')).toSet();
+    expect(sources, contains('programs/social/graph/ui/self.glp'));
+    expect(sources.difference(expected), isEmpty,
+        reason: 'the bundle holds sources no tree the app loads holds');
+    expect(expected.difference(sources), isEmpty,
+        reason: 'the bundle lacks sources of the trees the app loads');
+
+    // And every certified mini-app the asset sync builds: the
+    // `for a in` list of tool/sync_glp_assets.sh, which the suite's asset
+    // step reads too.
+    final script = File('tool/sync_glp_assets.sh').readAsStringSync();
+    final built = RegExp(r'^for a in (.*); do$', multiLine: true)
+        .firstMatch(script)!
+        .group(1)!
+        .trim()
+        .split(RegExp(r'\s+'));
+    expect(built, isNotEmpty);
+    expect(bundled.keys, contains(_denominated),
+        reason: 'the denominated mini-app is not in the bundle');
+    for (final a in built) {
+      expect(bundled.keys, contains('programs/social/graph/core/$a.glpw'),
+          reason: 'the $a mini-app is not in the bundle');
     }
   });
 

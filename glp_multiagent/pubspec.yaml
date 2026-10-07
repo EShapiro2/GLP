@@ -32,20 +32,16 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  # GLP scenario sources, bundled for sandboxed platforms (iOS) where the engine
-  # cannot read the repo from disk. Copied from programs/ — keep in sync via
-  # tool/sync_glp_assets.sh. On macOS the repo on disk is used instead.
-  # social/graph/core/ also carries the certified mini-apps' .glpw artefacts,
-  # which that script builds; they are gitignored build products, so run it
-  # before an iOS build or the directory ships without them.
+  # GLP sources, bundled for sandboxed platforms (iOS) where the engine cannot
+  # read the repo from disk; on macOS the repo on disk is used instead.
+  # tool/sync_glp_assets.sh generates both entries from the repository: every
+  # .glp of the trees the app loads and the certified mini-apps' .glpw
+  # artefacts, laid out flat under bundle/, and manifest.txt, which gives each
+  # file its path in the tree the engine reads.  They are gitignored build
+  # products, so run it before an iOS build.  Flutter bundles the files of a
+  # directory named here and not those of its subdirectories, which is why the
+  # tree is not named here directory by directory: that list drifted from the
+  # tree (GLP, 2026-10-04 13:21 UTC).
   assets:
-    - assets/glp/programs/self.glp
-    - assets/glp/programs/social/graph/routing/
-    - assets/glp/programs/grassapp/
-    - assets/glp/programs/social/graph/
-    - assets/glp/programs/social/graph/ui/
-    - assets/glp/programs/social/graph/core/
-    - assets/glp/programs/social/graph/pingapp/
-    - assets/glp/programs/cssn/
-    - assets/glp/programs/cssn/ui/
-    - assets/glp/programs/cssn/childsafe/
+    - assets/glp/manifest.txt
+    - assets/glp/bundle/
