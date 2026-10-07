@@ -190,6 +190,29 @@ void main() {
       expect(lines, contains('< heard(hello)'));
     });
 
+    test('AgentRuntime loads a module file as a program, with what its chain '
+        'exposes', () async {
+      // agent.glp calls double/2, which its directory's self.glp exposes.
+      // A module file is a program (TGLP modules.tex, "Hierarchy mirrors the
+      // file system"), linked with its chain and the modules the chain exposes
+      // (Compilation, first step; "The -expose directive"), not a boot source
+      // handed to the engine (IGLP, Implementation Notes, "The scope a boot
+      // source is checked in").  Until 2026-10-07 the host checked it in that
+      // scope, which holds the chain without the procedures it exposes, and
+      // refused the call.
+      final lines = <String>[];
+      final agent = AgentRuntime(
+        agentId: 'alice',
+        program: File('$_dir/exposed/agent.glp').absolute.path,
+        rootSelfGlpPath: _rootSelf,
+        goalLabel: 'agent_init/3',
+      )..onOutput = lines.add;
+      await agent.initialize();
+      expect(agent.initialized, isTrue);
+      await agent.injectUserInput(rt.ConstTerm(21));
+      expect(lines, contains('< doubled(42)'));
+    });
+
     test('AgentRuntime refuses an entry goal that is not well-typed', () async {
       final agent = AgentRuntime(
         agentId: 'alice',

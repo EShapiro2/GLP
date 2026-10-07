@@ -183,9 +183,15 @@ class AgentRuntime {
     engine.enableMadGLP(agentId: agentIdLower);
 
     // Load the one program (TGLP, def:program).  A directory with a self.glp
-    // is linked whole.  A self-contained module file is checked in the scope
-    // the engine holds with the file's own ancestor self.glp chain (IGLP,
-    // Implementation Notes, "The scope a boot source is checked in").
+    // is linked whole.  A self-contained module file is a program too (TGLP
+    // modules.tex, "Hierarchy mirrors the file system"), linked the same way:
+    // its scope is the one discovery gives it, the self.glp chain from the
+    // root with the modules the chain exposes (Compilation, first step; "The
+    // -expose directive").  It is no boot source, and is not checked in the
+    // scope a boot source handed to the engine is (IGLP, Implementation
+    // Notes, "The scope a boot source is checked in"): until 2026-10-07 it
+    // was, and on this fresh engine that scope holds the chain without the
+    // procedures it exposes (programs/tests/post_goal/exposed).
     if (FileSystemEntity.isDirectorySync(program)) {
       _log('INIT: Loading program from $program');
       engine.loadProgram(program);
@@ -198,8 +204,7 @@ class AgentRuntime {
       }
       _log('INIT: Program loaded via program linking ($program), ${linked.labels.length} labels');
     } else {
-      engine.loadSource(File(program).readAsStringSync(),
-          filename: program, scope: engine.scopeFor(program));
+      engine.loadFile(program);
       _log('INIT: Program loaded from the module $program');
     }
 

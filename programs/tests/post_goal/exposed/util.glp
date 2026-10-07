@@ -1,0 +1,3 @@
+%% util.glp --- the module exposed/self.glp exposes.
+exported procedure double(Integer?, Integer).
+double(N, D?) :- D := N? * 2.

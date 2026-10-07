@@ -1,0 +1,15 @@
+%% exposed --- a module file under a self.glp that exposes a module, run as an
+%% agent's one program (multiagent/agent_runtime.dart;
+%% glp_runtime/test/engine/post_goal_test.dart).  -expose(util) lifts
+%% double/2 "into that directory's scope, as if defined in its self.glp"
+%% (TGLP modules.tex, "The -expose directive"), so agent.glp calls it by name;
+%% agent.glp, self-contained, is a program (modules.tex, "Hierarchy mirrors
+%% the file system"), its scope the one discovery gives it, this self.glp's
+%% exposes with it (Compilation, first step).  Until 2026-10-07 the host
+%% checked a module file in the scope of a boot source handed to the engine,
+%% which holds the self.glp chain without the procedures it exposes, and the
+%% call was refused.  This self.glp is a program too: doubled/2.
+-expose(util).
+
+exported procedure doubled(Integer?, Integer).
+doubled(N, D?) :- double(N?, D).
