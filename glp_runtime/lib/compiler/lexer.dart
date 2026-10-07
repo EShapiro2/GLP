@@ -242,10 +242,24 @@ class Lexer {
   /// Scan string literal or quoted atom
   /// Single quotes produce ATOM (quoted atom, can be used as functor)
   /// Double quotes produce STRING (string literal)
+  ///
+  /// Inside a quoted name a quote is written doubled, `'it''s'`, or escaped,
+  /// `'it\'s'`, and both read as the one string `it's`: GLP-Spec
+  /// appendix-lp.tex, Definition "Logic Programs Syntax", "We employ standard
+  /// LP notions", standard LP syntax doubling the quote (GLP #3 Cowork,
+  /// 2026-10-04 15:19 UTC, NOTED).  Until 2026-10-07 `'it''s'` read as the
+  /// two names `it` and `s`.
   Token _string(String quote, int line, int column) {
     final buffer = StringBuffer();
 
-    while (!_isAtEnd() && _peek() != quote) {
+    while (!_isAtEnd()) {
+      if (_peek() == quote) {
+        if (quote != "'" || _peekNext() != "'") break;
+        // A doubled quote inside a quoted name: one quote.
+        _advance();
+        buffer.write(_advance());
+        continue;
+      }
       if (_peek() == '\\') {
         _advance();
         if (_isAtEnd()) break;
