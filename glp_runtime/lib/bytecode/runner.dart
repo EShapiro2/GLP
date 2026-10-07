@@ -3770,17 +3770,16 @@ mixin OpExecutors {
                 return StepOutcome.nextClause;
               }
             } else {
-              // Reader is unbound - alias storedValue to reader
-              // Use tryWriterForReader to get writer if available (local reader)
-              final wid = cx.rt.heap.tryWriterForReader(rid);
+              // Reader is unbound - alias storedValue to reader.  A reader
+              // cell always points to its writer (heap_fcp.dart: a reader is
+              // made with a Pointer and only a writer is rewritten), so the
+              // writer is there.  The null branch, for an "imported reader"
+              // with no local writer, which the heap has not represented
+              // since VariableEntry went (ae141816), went on 2026-10-07.
+              final wid = cx.rt.heap.tryWriterForReader(rid)!;
               if (storedValue is HeapCell) {
-                if (wid != null) {
-                  // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
-                  cx.sigmaHat[storedValue] = VarRef(cx.rt.heap.pairedReaderAddr(wid));  // reader addr
-                } else {
-                  // Imported reader - alias to reader directly
-                  cx.sigmaHat[storedValue] = VarRef(rid);
-                }
+                // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
+                cx.sigmaHat[storedValue] = VarRef(cx.rt.heap.pairedReaderAddr(wid));  // reader addr
               }
             }
           } else if (arg is ConstTerm) {
@@ -4035,16 +4034,11 @@ mixin OpExecutors {
               final writerAddr = addr;
               cx.argSlots[argSlot] = VarRef(isReaderMode ? cx.rt.heap.pairedReaderAddr(writerAddr) : writerAddr);
             } else {
-              // Reader - try to get writer (will be null for imported readers)
-              final writerAddr = cx.rt.heap.tryWriterForReader(addr);
-              if (writerAddr != null) {
-                // Local reader - use writer/reader based on mode
-                cx.argSlots[argSlot] = VarRef(isReaderMode ? cx.rt.heap.pairedReaderAddr(writerAddr) : writerAddr);
-              } else {
-                // Imported reader - no local writer
-                // Pass reader address directly (can only be used in reader mode)
-                cx.argSlots[argSlot] = VarRef(addr);
-              }
+              // A reader: its writer, which a reader cell always points to
+              // (the "imported reader" null branch went on 2026-10-07, as
+              // above), used by mode.
+              final writerAddr = cx.rt.heap.tryWriterForReader(addr)!;
+              cx.argSlots[argSlot] = VarRef(isReaderMode ? cx.rt.heap.pairedReaderAddr(writerAddr) : writerAddr);
             }
           }
         } else if (value is HeapCell) {

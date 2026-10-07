@@ -1090,26 +1090,6 @@ class Parser {
     return goal;
   }
 
-  // Guard: same as Goal but marked as guard
-  Guard _parseGuard() {
-    final functorToken = _consume(TokenType.ATOM, 'Expected guard predicate name');
-    final args = <Term>[];
-
-    if (_match(TokenType.LPAREN)) {
-      if (!_check(TokenType.RPAREN)) {
-        args.add(_parseTerm());
-
-        while (_match(TokenType.COMMA)) {
-          args.add(_parseTerm());
-        }
-      }
-
-      _consume(TokenType.RPAREN, 'Expected ")" after arguments');
-    }
-
-    return Guard(functorToken.lexeme, args, functorToken.line, functorToken.column);
-  }
-
   // Term: variable, structure, list, constant, underscore, tuple, or expression
   Term _parseTerm() {
     // Try to parse as expression (handles arithmetic operators)
