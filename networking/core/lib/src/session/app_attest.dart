@@ -4,8 +4,11 @@
 /// key in the Secure Enclave and has Apple attest it once, over a challenge
 /// naming the agent's identity public key. The attestation object is CBOR
 /// carrying a certificate chain, which this file validates against the pinned
-/// Apple App Attest root, and an `authData` blob binding the key to our
-/// application.
+/// Apple App Attest root, and an `authData` blob binding the key to the
+/// application. Per session the key then signs the session's digest, as an
+/// App Attest assertion, and this file verifies that against the key the
+/// attestation carries ([verifyAppAttestAssertion]); [verifyAppAttestEvidence]
+/// is the two together.
 ///
 /// The steps are Apple's, from "Validating apps that connect to your server"
 /// (developer.apple.com/documentation/devicecheck).
@@ -220,6 +223,130 @@ AppAttestResult verifyAppAttestAttestation({
     keyIdentifier: keyIdentifier,
     appId: expectedAppId,
   );
+}
+
+/// Verify the per-session half: an App Attest assertion over [digest] by the
+/// key [attestation] carries.
+///
+/// Spec §Session Establishment: "Per session each side sends that attestation
+/// together with a signature by the attestation key over the digest
+/// H("glp attest" | pk | h) ... and each side verifies both: the attestation
+/// against the platform's root, and the signature against the key the
+/// attestation carries."
+///
+/// An App Attest key signs nothing but assertions, so the signature is one:
+/// the device calls `generateAssertion` with the digest as its clientDataHash,
+/// and the Secure Enclave signs SHA-256(authenticatorData ‖ digest). The
+/// assertion is the CBOR map `{signature, authenticatorData}`, and the checks
+/// are Apple's ("Validating apps that connect to your server", assertion
+/// steps 1-5), with the digest standing for the clientDataHash:
+///
+///  - the signature is ECDSA P-256 with SHA-256, by the credential
+///    certificate's key, over nonce = SHA-256(authenticatorData ‖ digest);
+///  - authenticatorData's rpIdHash is SHA-256 of the attested App ID;
+///  - its counter is greater than zero, an assertion's counter starting at one
+///    where the attestation's is zero.
+///
+/// Apple's further step, a counter greater than the previous assertion's, is
+/// replay protection by state kept across sessions; here the digest binds the
+/// assertion to one handshake hash, which is unique per session, and nothing
+/// of the session is cached.
+///
+/// Throws [X509Exception] with the reason on any failure.
+void verifyAppAttestAssertion({
+  required AppAttestResult attestation,
+  required Uint8List assertion,
+  required Uint8List digest,
+}) {
+  final CborValue decoded;
+  try {
+    decoded = cborDecode(assertion);
+  } catch (e) {
+    throw X509Exception('Assertion is not CBOR: $e');
+  }
+  if (decoded is! CborMap) {
+    throw const X509Exception('Assertion is not a CBOR map');
+  }
+  final CborMap map = decoded;
+  Uint8List bytesAt(String key) {
+    for (final entry in map.entries) {
+      final k = entry.key;
+      if (k is CborString && k.toString() == key) {
+        final v = entry.value;
+        if (v is! CborBytes) {
+          throw X509Exception('Assertion $key is not a byte string');
+        }
+        return Uint8List.fromList(v.bytes);
+      }
+    }
+    throw X509Exception('Assertion carries no $key');
+  }
+
+  final signature = bytesAt('signature');
+  final authenticatorData = bytesAt('authenticatorData');
+
+  // rpIdHash(32) | flags(1) | counter(4).
+  if (authenticatorData.length < 37) {
+    throw X509Exception(
+      'Assertion authenticatorData is ${authenticatorData.length} bytes, too '
+      'short',
+    );
+  }
+  final rpIdHash = Uint8List.sublistView(authenticatorData, 0, 32);
+  if (!_sameBytes(rpIdHash, _sha256(_ascii(attestation.appId)))) {
+    throw X509Exception(
+      'The assertion names a different application than ${attestation.appId}',
+    );
+  }
+  final counter =
+      ByteData.sublistView(authenticatorData, 33, 37).getUint32(0);
+  if (counter == 0) {
+    throw const X509Exception(
+      'The assertion\'s counter is 0, which only an attestation carries',
+    );
+  }
+
+  final nonce = _sha256(
+    Uint8List.fromList([...authenticatorData, ...digest]),
+  );
+  if (!attestation.credCert.verifiesEcdsaSha256(nonce, signature)) {
+    throw const X509Exception(
+      'The assertion is not signed by the attested key over this session\'s '
+      'digest',
+    );
+  }
+}
+
+/// Verify an App Attest offer whole: the attestation against Apple's root,
+/// naming [expectedChallenge], under [appId]; and the assertion over [digest]
+/// by the key the attestation carries.
+///
+/// Either failing throws [X509Exception], and either failing is an
+/// attestation "offered and found invalid", which tears the session down.
+AppAttestResult verifyAppAttestEvidence({
+  required Uint8List attestationObject,
+  required String appId,
+  required Uint8List assertion,
+  required Uint8List digest,
+  required Uint8List expectedChallenge,
+  required DateTime at,
+  List<Uint8List>? pinnedRoots,
+  bool allowDevelopmentEnvironment = false,
+}) {
+  final result = verifyAppAttestAttestation(
+    attestationObject: attestationObject,
+    expectedAppId: appId,
+    expectedChallenge: expectedChallenge,
+    at: at,
+    pinnedRoots: pinnedRoots,
+    allowDevelopmentEnvironment: allowDevelopmentEnvironment,
+  );
+  verifyAppAttestAssertion(
+    attestation: result,
+    assertion: assertion,
+    digest: digest,
+  );
+  return result;
 }
 
 /// The nonce extension is `SEQUENCE { [1] EXPLICIT OCTET STRING }`.

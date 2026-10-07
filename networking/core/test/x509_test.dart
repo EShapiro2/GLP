@@ -195,5 +195,30 @@ void main() {
         throwsA(isA<X509Exception>()),
       );
     });
+
+    test('a certificate verifies an ECDSA signature by its own key only', () {
+      final key = TestEcKey('x509 signer');
+      final cert = X509Certificate.fromDer(rootCertificate('Signer', key));
+      final message = Uint8List.fromList([1, 2, 3, 4]);
+      expect(cert.verifiesEcdsaSha256(message, key.sign(message)), isTrue);
+      expect(
+        cert.verifiesEcdsaSha256(
+            Uint8List.fromList([1, 2, 3, 5]), key.sign(message)),
+        isFalse,
+        reason: 'another message',
+      );
+      expect(
+        cert.verifiesEcdsaSha256(message, TestEcKey('other').sign(message)),
+        isFalse,
+        reason: 'another key',
+      );
+      // The RSA root carries no EC key; that is a different fact from a
+      // forgery and is reported as one.
+      expect(
+        () => X509Certificate.fromDer(roots[0])
+            .verifiesEcdsaSha256(message, key.sign(message)),
+        throwsA(isA<X509Exception>()),
+      );
+    });
   });
 }

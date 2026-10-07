@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:grassroots_networking/src/grassroots_network.dart'
     show processReachabilityTransitions;
 import 'package:grassroots_networking_core/src/models/peer.dart';
+import 'package:grassroots_networking_core/src/session/application_identity.dart';
 import 'package:grassroots_networking_core/src/store/messages_actions.dart';
 import 'package:grassroots_networking_core/src/store/peers_state.dart';
 
@@ -75,7 +76,11 @@ void main() {
   late List<(String, MessageTransport)> disconnects;
   late Map<String, Set<MessageTransport>> tracker;
 
-  void onConnected(Uint8List pk, MessageTransport t, Uint8List? binaryHash) =>
+  void onConnected(
+    Uint8List pk,
+    MessageTransport t,
+    ApplicationIdentity? identity,
+  ) =>
       connects.add((pubkeyHex(pk), t));
   void onDisconnected(Uint8List pk, MessageTransport t) =>
       disconnects.add((pubkeyHex(pk), t));

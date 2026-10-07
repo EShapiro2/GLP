@@ -294,6 +294,32 @@ class X509Certificate {
     );
   }
 
+  /// Verify that [signature], a DER `SEQUENCE { r, s }`, is an ECDSA
+  /// signature with SHA-256 over [message] by this certificate's subject key.
+  ///
+  /// This is the per-session half of an attestation (spec §Session
+  /// Establishment): "a signature by the attestation key", verified "against
+  /// the key the attestation carries" — and the key the attestation carries is
+  /// this certificate's subject key. Both platforms' attestation keys are EC:
+  /// the Secure Enclave holds P-256 only, and the Android producer generates
+  /// P-256.
+  ///
+  /// Returns false on a signature that does not verify; throws
+  /// [X509Exception] where the subject key is not an EC key on a supported
+  /// curve.
+  bool verifiesEcdsaSha256(Uint8List message, Uint8List signature) {
+    final key = _ecPublicKey();
+    final ecSig = _decodeEcdsaSignature(signature);
+    if (ecSig == null) return false;
+    final signer = ECDSASigner(SHA256Digest(), null)
+      ..init(false, PublicKeyParameter<ECPublicKey>(key));
+    try {
+      return signer.verifySignature(message, ecSig);
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Digest _digestFor(String oid) {
     switch (oid) {
       case _oidSha256Rsa:

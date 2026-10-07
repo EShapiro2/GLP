@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import '../platform/compat.dart';
 import '../models/peer.dart';
+import '../session/application_identity.dart';
 import '../transport/address_utils.dart';
 import 'messages_actions.dart';
 
@@ -12,45 +13,36 @@ import 'messages_actions.dart';
 /// reachable on that medium until it is present. A failed verification never
 /// produces one: it tears the session down.
 ///
-/// [binaryHash] is the attested binary hash, carried to GLP on
+/// [identity] is the attested application identity, carried to GLP on
 /// `onPeerConnected`, and null where the peer's platform provides none —
 /// which is what an unattested peer looks like, absence and failure being
 /// distinct.
 @immutable
 class PeerAttestation {
-  final Uint8List? binaryHash;
+  final ApplicationIdentity? identity;
 
-  const PeerAttestation({this.binaryHash});
+  const PeerAttestation({this.identity});
 
   /// The peer's platform provides no attestation. A headless server profile
   /// has none, and the peer is reported unattested rather than refused.
   static const PeerAttestation unattested = PeerAttestation();
 
-  bool get isAttested => binaryHash != null;
+  bool get isAttested => identity != null;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is PeerAttestation &&
           runtimeType == other.runtimeType &&
-          _hashEquals(binaryHash, other.binaryHash);
+          identity == other.identity;
 
   @override
-  int get hashCode => Object.hashAll(binaryHash ?? const []);
+  int get hashCode => identity.hashCode;
 
   @override
-  String toString() => binaryHash == null
+  String toString() => identity == null
       ? 'PeerAttestation(unattested)'
-      : 'PeerAttestation(${binaryHash!.length} bytes)';
-
-  static bool _hashEquals(Uint8List? a, Uint8List? b) {
-    if (a == null || b == null) return a == null && b == null;
-    if (a.length != b.length) return false;
-    for (var i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) return false;
-    }
-    return true;
-  }
+      : 'PeerAttestation($identity)';
 }
 
 /// A discovered BLE peer before identity (ANNOUNCE) is exchanged.

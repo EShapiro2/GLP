@@ -92,6 +92,8 @@ void main() {
       final identity = kd.applicationIdentity;
       expect(identity, isNotNull);
       expect(identity!.packageNames, ['com.eshapiro.grassapp']);
+      expect(identity.packages.single.version, 7,
+          reason: 'the version is part of the application identity');
       expect(identity.signatureDigests, hasLength(1));
       expect(identity.signatureDigests.single, signingDigest);
     });
