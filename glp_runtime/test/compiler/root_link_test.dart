@@ -40,7 +40,7 @@ String _show(GlpEngine engine, rt.Term? term) {
   if (term == null) return '_';
   final t = engine.runtime.heap.dereference(term);
   if (t is rt.ConstTerm) {
-    if (t.value == null || t.value == 'nil') return '[]';
+    if (t.value == null || t.value == rt.nil) return '[]';
     return '${t.value}';
   }
   if (t is rt.StructTerm && t.functor == '.' && t.args.length == 2) {
@@ -53,7 +53,7 @@ String _show(GlpEngine engine, rt.Term? term) {
         cur = c.args[1];
         continue;
       }
-      if (c is rt.ConstTerm && (c.value == null || c.value == 'nil')) break;
+      if (c is rt.ConstTerm && (c.value == null || c.value == rt.nil)) break;
       items.add('| ${_show(engine, c)}');
       break;
     }

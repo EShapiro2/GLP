@@ -60,7 +60,7 @@ GlpEngine _fresh() {
 /// brackets, a structure by its functor and arguments.
 String _show(GlpEngine engine, Term? t) {
   final d = t == null ? null : engine.runtime.heap.dereference(t);
-  if (d is ConstTerm) return d.value == 'nil' ? '[]' : '${d.value}';
+  if (d is ConstTerm) return d.value == nil ? '[]' : '${d.value}';
   if (d is StructTerm) {
     if ((d.functor == '[|]' || d.functor == '.') && d.args.length == 2) {
       final items = <String>[];

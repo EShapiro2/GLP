@@ -2,6 +2,34 @@ import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 
 abstract class Term {}
 
+/// The empty list `[]`, a constant of its own and no string: GLP-Spec
+/// appendix-lp.tex, Definition "Logic Programs Syntax" ("a constant (numbers,
+/// strings, or the empty list `[]`)"), and IGLP's code format, which gives it
+/// a constant tag of its own (constant tag 0 nil; strings tag 3).  [nil] is
+/// the runtime's one value of it, held as a [ConstTerm]'s value.  Its type is
+/// `String` (TGLP appendix-root-self.tex: "The empty list is a String, hence
+/// a Constant"), so the `string` and `constant` guards hold of it; as a value
+/// it equals no string.  Until 2026-10-07 the runtime held `[]` as the string
+/// 'nil', so `X = nil.` showed `[]` and `nil =?= []` succeeded.
+final class Nil {
+  const Nil._();
+
+  /// Every [Nil] is the one empty list, a copy made in passing a term to
+  /// another isolate among them.
+  @override
+  bool operator ==(Object other) => other is Nil;
+
+  @override
+  int get hashCode => 0x5B5D; // "[]"
+
+  /// `[]`, as the reader reads it.
+  @override
+  String toString() => '[]';
+}
+
+/// The empty list, the one value of [Nil].
+const Nil nil = Nil._();
+
 class ConstTerm implements Term {
   final Object? value;
   ConstTerm(this.value);

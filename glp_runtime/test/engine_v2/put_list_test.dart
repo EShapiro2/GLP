@@ -39,7 +39,7 @@ final CodeImage _image = codeImageFromProgram(BytecodeProgram([
   op.Commit(),
   op.PutList(0),
   op.SetConstant(1),
-  op.SetConstant('nil'),
+  op.SetConstant(nil),
   op.Proceed(),
   op.Label('pl/1_end'),
   op.NoMoreClauses(),
@@ -47,7 +47,7 @@ final CodeImage _image = codeImageFromProgram(BytecodeProgram([
   op.ClauseTry(),
   op.HeadList(0),
   op.UnifyConstant(1),
-  op.UnifyConstant('nil'),
+  op.UnifyConstant(nil),
   op.Commit(),
   op.Proceed(),
   op.Label('hl/1_end'),
@@ -93,7 +93,7 @@ void main() {
     expect(cell.functor, '.');
     expect(cell.args, hasLength(2));
     expect((rt.heap.dereference(cell.args[0]) as ConstTerm).value, 1);
-    expect((rt.heap.dereference(cell.args[1]) as ConstTerm).value, 'nil');
+    expect((rt.heap.dereference(cell.args[1]) as ConstTerm).value, nil);
   });
 
   test('the cell put_list builds is the list head_list matches: pl(W), '
@@ -125,6 +125,6 @@ void main() {
     ]);
     expect(PayloadCodec.serializeAgentMessage(ground),
         PayloadCodec.serializeAgentMessage(
-            StructTerm('.', [ConstTerm(1), ConstTerm('nil')])));
+            StructTerm('.', [ConstTerm(1), ConstTerm(nil)])));
   });
 }

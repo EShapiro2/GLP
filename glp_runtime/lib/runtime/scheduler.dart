@@ -122,7 +122,7 @@ class Scheduler {
         // What follows a list element is decided by its cell's tail, after the
         // element, whose text may have added to [seen].
         final tail = next.tail;
-        if (tail is ConstTerm && (tail.value == 'nil' || tail.value == null)) {
+        if (tail is ConstTerm && (tail.value == nil || tail.value == null)) {
           out.write(']'); // Proper list ending
         } else if (tail is StructTerm && tail.functor == '.') {
           // The next cell: its element after a comma.
@@ -176,7 +176,7 @@ class Scheduler {
 
       // Format the dereferenced value
       if (current is ConstTerm) {
-        if (current.value == 'nil') {
+        if (current.value == nil) {
           out.write('[]');
         } else if (current.value == null) {
           out.write('<null>');
@@ -250,7 +250,7 @@ class Scheduler {
       valueStr = _formatTerm(value, markReaders: false);
     } else if (value is String) {
       valueStr = value;
-    } else if (value == null || value == 'nil') {
+    } else if (value == null || value == nil) {
       valueStr = '[]';
     } else {
       valueStr = value.toString();

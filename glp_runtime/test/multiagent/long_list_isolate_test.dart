@@ -55,7 +55,7 @@ report(R) :- send_to_user([R?]).
 
 /// The list [1, 2, ..., n] as a Dart term.
 Term _ints(int n) {
-  Term t = ConstTerm('nil');
+  Term t = ConstTerm(nil);
   for (var k = n; k >= 1; k--) {
     t = StructTerm('.', [ConstTerm(k), t]);
   }
@@ -94,7 +94,7 @@ void main() {
       values.add((cur.args[0] as ConstTerm).value);
       cur = cur.args[1];
     }
-    expect((cur as ConstTerm).value, 'nil');
+    expect((cur as ConstTerm).value, nil);
     expect(values, [for (var k = 1; k <= _n; k++) k]);
     expect(traces.any((t) => t.length > _n), isTrue,
         reason: 'a trace printed the list');

@@ -136,7 +136,7 @@ class _SeamNetwork extends GlpNetwork {
       cell = tail;
     }
   }
-  final closed = cell is ConstTerm && (cell.value == 'nil' || cell.value == null);
+  final closed = cell is ConstTerm && (cell.value == nil || cell.value == null);
   return (events: events, closed: closed);
 }
 

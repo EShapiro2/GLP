@@ -42,7 +42,7 @@ final String _root = File('../programs/self.glp').absolute.path;
 
 /// The list [1, 2, ..., n] as a Dart term, its cells '.'/2 and its end nil.
 Term _ints(int n) {
-  Term t = ConstTerm('nil');
+  Term t = ConstTerm(nil);
   for (var k = n; k >= 1; k--) {
     t = StructTerm('.', [ConstTerm(k), t]);
   }
@@ -67,7 +67,7 @@ List<Object?> _elements(Term t) {
     cur = cur.args[1];
   }
   expect(cur, isA<ConstTerm>());
-  expect((cur as ConstTerm).value, 'nil');
+  expect((cur as ConstTerm).value, nil);
   return out;
 }
 
@@ -134,7 +134,7 @@ void main() {
             ((cell.args[0] as VarRef).addr.content as ConstTerm).value);
         cell = (cell.args[1] as VarRef).addr.content as Term;
       }
-      expect((cell as ConstTerm).value, 'nil');
+      expect((cell as ConstTerm).value, nil);
       expect(values, [for (var k = 1; k <= _n; k++) k]);
     });
 
@@ -190,7 +190,7 @@ void main() {
   group('global names', () {
     test('50,000 global names in a term are met in order of occurrence, and '
         'each becomes its variable', () {
-      Term names = ConstTerm('nil');
+      Term names = ConstTerm(nil);
       for (var i = _n; i >= 1; i--) {
         names = StructTerm('.', [
           StructTerm('_r', [ConstTerm('alice'), ConstTerm(i)]),
@@ -220,7 +220,7 @@ void main() {
         expect((cell.args[0] as VarRef).addr, result.freshPairs[i].readerAddr);
         local = cell.args[1];
       }
-      expect((local as ConstTerm).value, 'nil');
+      expect((local as ConstTerm).value, nil);
     });
 
     test("50,000 variables of a term are globalized in order of occurrence", () {
@@ -228,7 +228,7 @@ void main() {
       final ctx = MadContext(agentId: 'alice', runtime: rt);
       final payloads = <List<int>>[];
       ctx.onMessageReady = (_, msg) => payloads.add(msg.payload);
-      Term readers = ConstTerm('nil');
+      Term readers = ConstTerm(nil);
       final addrs = <HeapCell>[];
       for (var i = 0; i < _n; i++) {
         addrs.add(rt.heap.allocateVariable().$2);
@@ -254,7 +254,7 @@ void main() {
       for (var k = 1; k <= _n; k++) {
         expected.write('.(Const($k),');
       }
-      expected.write('Const(nil)');
+      expected.write('Const([])');
       for (var k = 1; k <= _n; k++) {
         expected.write(')');
       }

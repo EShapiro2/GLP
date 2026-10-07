@@ -63,7 +63,7 @@ String _show(GlpEngine engine, rt.Term? term) {
   if (term == null) return '[]';
   final t = engine.runtime.heap.dereference(term);
   if (t is rt.ConstTerm) {
-    if (t.value == null || t.value == 'nil') return '[]';
+    if (t.value == null || t.value == rt.nil) return '[]';
     return '${t.value}';
   }
   if (t is rt.StructTerm && t.functor == '.' && t.args.length == 2) {

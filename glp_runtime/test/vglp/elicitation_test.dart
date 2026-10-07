@@ -63,7 +63,7 @@ class _Run {
       return d is rt.VarRef ? '_' : _show(d);
     }
     if (t is rt.ConstTerm) {
-      return t.value == null || t.value == 'nil' ? '[]' : '${t.value}';
+      return t.value == null || t.value == rt.nil ? '[]' : '${t.value}';
     }
     if (t is rt.StructTerm) {
       if (t.functor == '.' && t.args.length == 2) {
@@ -82,7 +82,7 @@ class _Run {
             cur = d;
             continue;
           }
-          if (c is rt.ConstTerm && (c.value == null || c.value == 'nil')) {
+          if (c is rt.ConstTerm && (c.value == null || c.value == rt.nil)) {
             return '[${items.join(', ')}]';
           }
           return '[${items.join(', ')} | ${_show(c)}]';

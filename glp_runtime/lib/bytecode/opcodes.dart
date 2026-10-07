@@ -70,7 +70,7 @@ class PutBoundConst implements Op {
   PutBoundConst(this.value, this.argSlot);
 }
 
-/// Put a reader pointing to a writer bound to 'nil'
+/// Put a reader pointing to a writer bound to [] (the runtime's nil)
 /// Used for passing empty lists as arguments in queries
 class PutBoundNil implements Op {
   final int argSlot;

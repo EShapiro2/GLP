@@ -278,8 +278,9 @@ class PayloadCodec {
   }
 
   static WireConst _constToWire(Object? v) {
-    // The runtime represents the empty list as ConstTerm('nil').
-    if (v == 'nil') return const WNil();
+    // The empty list, the runtime's [nil], is constant tag 0; a string,
+    // 'nil' among them, tag 3 ([wireConstFromValue]).
+    if (v is Nil) return const WNil();
     if (v is int) return WInt(v);
     if (v is double) return WFloat(v);
     if (v is String) return WString(v);
@@ -293,7 +294,7 @@ class PayloadCodec {
   static Object? _constFromWire(WireConst c) {
     switch (c) {
       case WNil():
-        return 'nil';
+        return nil;
       case WInt(:final value):
         return value;
       case WFloat(:final value):

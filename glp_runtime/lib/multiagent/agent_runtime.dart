@@ -482,7 +482,7 @@ class AgentRuntime {
 
   String formatTerm(rt.Term term) {
     if (term is rt.ConstTerm) {
-      if (term.value == 'nil' || term.value == null) return '[]';
+      if (term.value == rt.nil || term.value == null) return '[]';
       return term.value.toString();
     }
     if (term is rt.VarRef) {
@@ -497,7 +497,7 @@ class AgentRuntime {
           elements.add(formatTerm(current.args[0]));
           current = current.args[1];
         }
-        if (current is rt.ConstTerm && (current.value == 'nil' || current.value == null)) {
+        if (current is rt.ConstTerm && (current.value == rt.nil || current.value == null)) {
           return '[${elements.join(', ')}]';
         }
         return '[${elements.join(', ')} | ${formatTerm(current)}]';

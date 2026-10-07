@@ -8,6 +8,7 @@ library;
 
 import 'dart:typed_data';
 import 'package:glp_runtime/bytecode/opcodes.dart';
+import 'package:glp_runtime/runtime/terms.dart' show nil;
 import 'package:glp_runtime/wire/codec.dart';
 import 'package:glp_runtime/wire/instruction_codec.dart';
 import 'package:test/test.dart';
@@ -64,7 +65,18 @@ void main() {
     });
 
     test('unify_constant nil -> constant tag 0', () {
-      expect(_enc(UnifyConstant('nil')), [0x21, 0x00]);
+      expect(_enc(UnifyConstant(nil)), [0x21, 0x00]);
+    });
+
+    // The empty list and the string 'nil' are two constants, tag 0 and tag 3
+    // (IGLP code format, Terms: "0 nil (no payload, the empty list) ...
+    // 3 string").  Until 2026-10-07 the string 'nil' was encoded as tag 0
+    // and decoded as the runtime's empty list.
+    test('unify_constant of the string nil -> constant tag 3, and back', () {
+      expect(_enc(UnifyConstant('nil')), [0x21, 0x03, 0x03, 0x6E, 0x69, 0x6C]);
+      expect(valueOfWireConst(wireConstFromValue('nil')), 'nil');
+      expect(valueOfWireConst(wireConstFromValue(nil)), same(nil));
+      expect(valueOfWireConst(wireConstFromValue('nil')) == nil, isFalse);
     });
 
     test('unify_constant string', () {

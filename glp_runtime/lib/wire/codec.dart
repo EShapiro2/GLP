@@ -16,6 +16,8 @@ library;
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:glp_runtime/runtime/terms.dart' show Nil, nil;
+
 // ============================================================================
 // Wire term model (§cf-terms)
 // ============================================================================
@@ -475,10 +477,12 @@ void encodeConstantPayload(WireWriter w, WireConst c) {
 }
 
 /// Map a runtime constant value (the `Object?` an instruction or ConstTerm
-/// carries) to a [WireConst]. The runtime represents the empty list as the
-/// atom `'nil'`.
+/// carries) to a [WireConst]: the empty list, the runtime's [nil], to constant
+/// tag 0 nil, and a string, `'nil'` among them, to tag 3 (IGLP code format,
+/// Terms).  Until 2026-10-07 the runtime held [] as the string 'nil' and the
+/// string 'nil' went out as tag 0.
 WireConst wireConstFromValue(Object? v) {
-  if (v == 'nil') return const WNil();
+  if (v is Nil) return const WNil();
   if (v is int) return WInt(v);
   if (v is double) return WFloat(v);
   if (v is String) return WString(v);
@@ -492,7 +496,7 @@ WireConst wireConstFromValue(Object? v) {
 Object? valueOfWireConst(WireConst c) {
   switch (c) {
     case WNil():
-      return 'nil';
+      return nil;
     case WInt(:final value):
       return value;
     case WFloat(:final value):

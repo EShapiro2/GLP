@@ -164,7 +164,7 @@ void main() {
       expect(merged.status, ExecutionStatus.succeeded,
           reason: '${merged.error}');
       final zs = _shown(engine, merged.bindings['Zs']);
-      expect(zs, anyOf('.(a, .(b, nil))', '.(b, .(a, nil))'));
+      expect(zs, anyOf('.(a, .(b, []))', '.(b, .(a, []))'));
       _refused(engine, () => engine.postGoal('merge(1, 2, N)'),
           'Goal is not well-typed');
       final run = await engine.runGoal('run(N)');

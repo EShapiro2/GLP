@@ -65,8 +65,8 @@ final Map<String, String> _functorNames = {};
 /// A constant's [value] as the AST and the runtime hold it, as source: a
 /// number as written, a string literal --- whose value carries its double
 /// quotes --- in double quotes, escaped as the reader reads one, and a name by
-/// [constantNameSource].  The runtime's empty list, the value `nil`, is the
-/// caller's to print.
+/// [constantNameSource].  The runtime's empty list, its value `nil`
+/// (runtime/terms.dart), is the caller's to print.
 String constantSource(Object value) {
   if (value is String) {
     if (value.length >= 2 && value.startsWith('"') && value.endsWith('"')) {

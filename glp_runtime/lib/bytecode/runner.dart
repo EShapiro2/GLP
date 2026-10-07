@@ -1024,7 +1024,10 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
           final cv = v.value;
           return cv?.toString();
         }
-        if (v is String || v is num) return v.toString();
+        // The empty list compares by its text, `[]` ([Nil]): GLP-Spec gives
+        // @< its signature and no order, and the guard compares the text of
+        // its constants.  Until 2026-10-07 [] was the string 'nil' here.
+        if (v is String || v is num || v is Nil) return v.toString();
         if (v is VarRef) {
           if (cx.rt.heap.isReader(v.addr)) {
             final writerAddr = cx.rt.heap.tryWriterForReader(v.addr);
@@ -1091,33 +1094,33 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       return (val is int) ? GuardResult.success : GuardResult.failure;
 
     case 'string':
-      // Succeeds if X is a string. Per the root self.glp type definitions
-      // `Constant ::= Number ; String ; Module`, the empty list [] (held as the
-      // constant 'nil') is a constant that is neither a Number nor a Module, so
-      // it is a String: string([]) succeeds. The guard previously excluded
-      // 'nil', disagreeing with the types.
+      // Succeeds if X is a String: a string, or the empty list [], whose type
+      // is String (TGLP appendix-root-self.tex: "The empty list is a String,
+      // hence a Constant"), though as a value it is the constant [] and no
+      // string ([nil]).
       if (args.isEmpty) return GuardResult.failure;
       final val = getValue(args[0]);
-      if (val is ConstTerm && val.value is String) {
+      if (val is ConstTerm && (val.value is String || val.value is Nil)) {
         return GuardResult.success;
       }
-      if (val is String) {
+      if (val is String || val is Nil) {
         return GuardResult.success;
       }
       return GuardResult.failure;
 
     case 'constant':
       // Succeeds if X is a constant. Per the root self.glp type definitions
-      // `Constant ::= Number ; String ; Module` — a String (including 'nil',
-      // which holds []), a Number, or a Module term. The guard previously
-      // rejected module terms, disagreeing with the types.
+      // `Constant ::= Number ; String ; Module` — a String (the empty list []
+      // among them, by its type: TGLP appendix-root-self.tex), a Number, or a
+      // Module term. The guard previously rejected module terms, disagreeing
+      // with the types.
       if (args.isEmpty) return GuardResult.failure;
       final val = getValue(args[0]);
-      // String (including 'nil', which represents [])
-      if (val is ConstTerm && val.value is String) {
+      // String, or the empty list
+      if (val is ConstTerm && (val.value is String || val.value is Nil)) {
         return GuardResult.success;
       }
-      if (val is String) {
+      if (val is String || val is Nil) {
         return GuardResult.success;
       }
       // Number
@@ -1156,11 +1159,11 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       // Succeeds if X is a list ([] or [H|T])
       if (args.isEmpty) return GuardResult.failure;
       final val = getValue(args[0]);
-      // Empty list: ConstTerm('nil') or raw String 'nil'
-      if (val is ConstTerm && val.value == 'nil') {
+      // Empty list: ConstTerm(nil) or the raw value nil
+      if (val is ConstTerm && val.value == nil) {
         return GuardResult.success;
       }
-      if (val is String && val == 'nil') {
+      if (val is Nil) {
         return GuardResult.success;
       }
       // Non-empty list: StructTerm('.', [head, tail])
@@ -1923,7 +1926,7 @@ mixin OpExecutors {
   StepOutcome execPutNil(RunnerContext cx, int argSlot) {
     if (cx.inBody) {
       final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
-      cx.rt.heap.bindWriterConst(writerAddr, 'nil');
+      cx.rt.heap.bindWriterConst(writerAddr, nil);
       cx.argSlots[argSlot] = VarRef(readerAddr);
     }
     return StepOutcome.advance;
@@ -1941,7 +1944,7 @@ mixin OpExecutors {
   /// `put_bound_nil` (0x3A): place a fresh variable bound to `[]` in argSlot.
   StepOutcome execPutBoundNil(RunnerContext cx, int argSlot) {
     final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
-    cx.rt.heap.bindWriterConst(writerAddr, 'nil');
+    cx.rt.heap.bindWriterConst(writerAddr, nil);
     cx.argSlots[argSlot] = VarRef(readerAddr);
     return StepOutcome.advance;
   }
@@ -2474,7 +2477,7 @@ mixin OpExecutors {
       final clauseVarValue = cx.clauseVars[argSlot];
       if (clauseVarValue == null) return StepOutcome.nextClause;
       if (clauseVarValue is ConstTerm) {
-        return clauseVarValue.value == 'nil'
+        return clauseVarValue.value == nil
             ? StepOutcome.advance
             : StepOutcome.nextClause;
       } else if (clauseVarValue is StructTerm) {
@@ -2484,17 +2487,17 @@ mixin OpExecutors {
         if (cx.rt.heap.isWriter(addr)) {
           if (cx.rt.heap.isFullyBound(addr)) {
             final value = cx.rt.heap.getValue(addr);
-            return (value is ConstTerm && value.value == 'nil')
+            return (value is ConstTerm && value.value == nil)
                 ? StepOutcome.advance
                 : StepOutcome.nextClause;
           } else {
-            cx.sigmaHat[addr] = ConstTerm('nil');
+            cx.sigmaHat[addr] = ConstTerm(nil);
             return StepOutcome.advance;
           }
         } else {
           if (cx.rt.heap.isReaderBound(addr)) {
             final value = cx.rt.heap.getReaderValue(addr);
-            return (value is ConstTerm && value.value == 'nil')
+            return (value is ConstTerm && value.value == nil)
                 ? StepOutcome.advance
                 : StepOutcome.nextClause;
           } else {
@@ -2506,11 +2509,11 @@ mixin OpExecutors {
         final writerAddr = clauseVarValue;
         if (cx.rt.heap.isFullyBound(writerAddr)) {
           final value = cx.rt.heap.getValue(writerAddr);
-          return (value is ConstTerm && value.value == 'nil')
+          return (value is ConstTerm && value.value == nil)
               ? StepOutcome.advance
               : StepOutcome.nextClause;
         } else {
-          cx.sigmaHat[writerAddr] = ConstTerm('nil');
+          cx.sigmaHat[writerAddr] = ConstTerm(nil);
           return StepOutcome.advance;
         }
       }
@@ -2521,20 +2524,20 @@ mixin OpExecutors {
     if (arg == null) return StepOutcome.advance;
     if (arg is VarRef && cx.rt.heap.isValue(arg.addr)) {
       final value = cx.rt.heap.getValue(arg.addr);
-      return (value is ConstTerm && value.value == 'nil')
+      return (value is ConstTerm && value.value == nil)
           ? StepOutcome.advance
           : StepOutcome.nextClause;
     }
     if (arg is VarRef && cx.rt.heap.isWriter(arg.addr)) {
       if (cx.rt.heap.isFullyBound(arg.addr)) {
         final value = cx.rt.heap.getValue(arg.addr);
-        if (value is ConstTerm && value.value != 'nil') {
+        if (value is ConstTerm && value.value != nil) {
           return StepOutcome.nextClause;
         } else if (value is StructTerm) {
           return StepOutcome.nextClause;
         }
       } else {
-        cx.sigmaHat[arg.addr] = ConstTerm('nil');
+        cx.sigmaHat[arg.addr] = ConstTerm(nil);
       }
     } else if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
       final bound = cx.rt.heap.isReaderBound(arg.addr);
@@ -2543,7 +2546,7 @@ mixin OpExecutors {
         cx.Si.add(_finalUnboundVar(cx, arg.addr));
         return StepOutcome.advance;
       } else {
-        if (value is ConstTerm && value.value == 'nil') {
+        if (value is ConstTerm && value.value == nil) {
           // match
         } else if (value is StructTerm) {
           return StepOutcome.nextClause;

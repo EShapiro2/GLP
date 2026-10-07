@@ -92,7 +92,7 @@ void main() {
     test('the same ground term yields identical bytes regardless of agent', () {
       final ground = StructTerm('pair', [
         ConstTerm(42),
-        StructTerm('.', [ConstTerm('x'), ConstTerm('nil')]),
+        StructTerm('.', [ConstTerm('x'), ConstTerm(nil)]),
       ]);
       final a = PayloadCodec.serializeAgentMessage(ground);
       final b = PayloadCodec.serializeAgentMessage(ground);

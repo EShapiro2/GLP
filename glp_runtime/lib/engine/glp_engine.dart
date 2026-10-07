@@ -1461,7 +1461,7 @@ class GlpEngine {
       } else if (arg is ListTerm) {
         if (arg.isNil) {
           final (writerId, readerId) = runtime.heap.allocateVariable();
-          runtime.heap.bindWriterConst(writerId, 'nil');
+          runtime.heap.bindWriterConst(writerId, rt.nil);
           argTerms.add(rt.VarRef(readerId));
         } else {
           final (writerId, readerId) = runtime.heap.allocateVariable();
@@ -1535,7 +1535,7 @@ class GlpEngine {
       } else if (arg is ListTerm) {
         if (arg.isNil) {
           final (writerId, readerId) = runtime.heap.allocateVariable();
-          runtime.heap.bindWriterConst(writerId, 'nil');
+          runtime.heap.bindWriterConst(writerId, rt.nil);
           argTerms.add(rt.VarRef(readerId));
         } else {
           final (writerId, readerId) = runtime.heap.allocateVariable();
@@ -1569,7 +1569,7 @@ class GlpEngine {
     Map<String, HeapCell> varNameToId,
   ) {
     if (list.isNil) {
-      return rt.ConstTerm('nil');
+      return rt.ConstTerm(rt.nil);
     }
 
     final head = list.head;
@@ -1645,7 +1645,7 @@ class GlpEngine {
     Map<String, HeapCell> varNameToId,
   ) {
     if (list.isNil) {
-      return rt.ConstTerm('nil');
+      return rt.ConstTerm(rt.nil);
     }
 
     final head = list.head;

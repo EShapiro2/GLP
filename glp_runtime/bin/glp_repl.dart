@@ -426,7 +426,7 @@ String _formatTerm(rt.Term? term, [GlpEngine? engine, Set<HeapCell>? path]) {
 
   if (term is rt.ConstTerm) {
     final value = term.value;
-    if (value == null || value == 'nil') return '[]';
+    if (value == null || value == rt.nil) return '[]';
     return constantSource(value);
   }
 
@@ -497,7 +497,7 @@ String _formatTerm(rt.Term? term, [GlpEngine? engine, Set<HeapCell>? path]) {
     // fault, fix it").
     if (current == null ||
         (current is rt.ConstTerm &&
-            (current.value == 'nil' || current.value == null))) {
+            (current.value == rt.nil || current.value == null))) {
       return '[${elements.join(', ')}]';
     }
     return '[${elements.join(', ')} | ${_formatTerm(current, engine, path)}]';

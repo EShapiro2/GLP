@@ -133,7 +133,7 @@ class InputInjector {
   /// Binds current writer to empty list (nil).
   /// Returns list of goals that were woken up (should be enqueued).
   List<GoalRef> close() {
-    return heap.bindVariable(_currentWriterId, ConstTerm('nil'));
+    return heap.bindVariable(_currentWriterId, ConstTerm(nil));
   }
 }
 
@@ -193,7 +193,7 @@ class OutputObserver {
         if (tail is VarRef) {
           _currentReaderId = tail.addr;
           _observeNext();
-        } else if (tail is ConstTerm && tail.value == 'nil') {
+        } else if (tail is ConstTerm && tail.value == nil) {
           // Stream closed with []
           _closed = true;
           onClose();
@@ -201,7 +201,7 @@ class OutputObserver {
           // Nested cons - process recursively
           _processNestedCons(tail);
         }
-      } else if (value is ConstTerm && value.value == 'nil') {
+      } else if (value is ConstTerm && value.value == nil) {
         // Empty list - stream closed
         _closed = true;
         onClose();
@@ -222,7 +222,7 @@ class OutputObserver {
         _currentReaderId = tail.addr;
         _observeNext();
         break;
-      } else if (tail is ConstTerm && tail.value == 'nil') {
+      } else if (tail is ConstTerm && tail.value == nil) {
         _closed = true;
         onClose();
         break;

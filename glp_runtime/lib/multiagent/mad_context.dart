@@ -643,7 +643,7 @@ class MadContext {
   void _closePlaceStream(String place) {
     final writer = _placeStreamWriters.remove(place);
     if (writer == null) return;
-    final activations = runtime.heap.bindVariable(writer, ConstTerm('nil'));
+    final activations = runtime.heap.bindVariable(writer, ConstTerm(nil));
     for (final act in activations) {
       runtime.enqueueReactivatedGoal(act);
     }

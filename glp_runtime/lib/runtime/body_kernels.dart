@@ -508,7 +508,7 @@ Term _deepDeref(GlpRuntime rt, Term term) {
 
 /// Helper to convert Dart list to GLP list structure
 Term _dartListToGlpList(List<Object?> items) {
-  Term result = ConstTerm('nil');
+  Term result = ConstTerm(nil);
   for (var i = items.length - 1; i >= 0; i--) {
     final item = items[i];
     final termItem = item is Term ? item : ConstTerm(item);
@@ -523,7 +523,7 @@ List<Object?>? _glpListToDartList(GlpRuntime rt, Object? list) {
   var current = _deref(rt, list);
 
   while (current != null) {
-    if (current is ConstTerm && current.value == 'nil') {
+    if (current is ConstTerm && current.value == nil) {
       return result;
     }
     if (current is StructTerm && current.functor == '.' && current.args.length == 2) {
@@ -750,7 +750,7 @@ BodyKernelResult mutualRefCloseKernel(GlpRuntime rt, List<Object?> args) {
     return BodyKernelResult.abort;
   }
 
-  final activations = rt.heap.bindVariable(currentWriterAddr, ConstTerm('nil'));
+  final activations = rt.heap.bindVariable(currentWriterAddr, ConstTerm(nil));
 
   for (final act in activations) {
     rt.gq.enqueue(act);
@@ -1495,7 +1495,7 @@ BodyKernelResult outputKernel(GlpRuntime rt, List<Object?> args) {
 /// Lists are shown as [a, b, c], atoms as-is, structs as f(a, b).
 String formatGroundTerm(Term term) {
   if (term is ConstTerm) {
-    if (term.value == 'nil' || term.value == null) return '[]';
+    if (term.value == nil || term.value == null) return '[]';
     return term.value.toString();
   }
   if (term is StructTerm) {
@@ -1507,7 +1507,7 @@ String formatGroundTerm(Term term) {
         elements.add(formatGroundTerm(current.args[0]));
         current = current.args[1];
       }
-      if (current is ConstTerm && (current.value == 'nil' || current.value == null)) {
+      if (current is ConstTerm && (current.value == nil || current.value == null)) {
         return '[${elements.join(', ')}]';
       }
       return '[${elements.join(', ')} | ${formatGroundTerm(current)}]';

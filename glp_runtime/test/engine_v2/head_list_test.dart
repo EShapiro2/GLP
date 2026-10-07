@@ -38,7 +38,7 @@ final CodeImage _image = codeImageFromProgram(BytecodeProgram([
   op.ClauseTry(),
   op.HeadList(0),
   op.UnifyConstant(1),
-  op.UnifyConstant('nil'),
+  op.UnifyConstant(nil),
   op.Commit(),
   op.Proceed(),
   op.Label('hl/1_end'),
@@ -49,7 +49,7 @@ final CodeImage _image = codeImageFromProgram(BytecodeProgram([
   op.Push(10),
   op.UnifyStructure('.', 2),
   op.UnifyConstant(1),
-  op.UnifyConstant('nil'),
+  op.UnifyConstant(nil),
   op.Pop(10),
   op.UnifyVariable(10, isReader: false),
   op.UnifyVoid(count: 1),
@@ -109,7 +109,7 @@ void main() {
       expect(cell.functor, '.');
       expect(cell.args, hasLength(2));
       expect((rt.heap.dereference(cell.args[0]) as ConstTerm).value, 1);
-      expect((rt.heap.dereference(cell.args[1]) as ConstTerm).value, 'nil');
+      expect((rt.heap.dereference(cell.args[1]) as ConstTerm).value, nil);
     });
 
     test('hn(W) gives W = [[1]|_], the nested cell built in the first', () {
@@ -120,7 +120,7 @@ void main() {
       final inner = rt.heap.dereference(outer.args[0]) as StructTerm;
       expect(inner.functor, '.');
       expect((rt.heap.dereference(inner.args[0]) as ConstTerm).value, 1);
-      expect((rt.heap.dereference(inner.args[1]) as ConstTerm).value, 'nil');
+      expect((rt.heap.dereference(inner.args[1]) as ConstTerm).value, nil);
       final tail = outer.args[1] as VarRef;
       expect(rt.heap.isWriter(tail.addr), isTrue,
           reason: "the tail is `_`'s fresh writer");
@@ -129,24 +129,24 @@ void main() {
 
   group('a goal cell is matched as the structure \'.\'/2', () {
     test('hl([1]) succeeds', () {
-      expect(_run('hl/1', (rt) => [_cell(rt, '.', 1, 'nil')]).$1,
+      expect(_run('hl/1', (rt) => [_cell(rt, '.', 1, nil)]).$1,
           ExecutionStatus.succeeded);
     });
 
     test('hl([2]) fails: the element does not match', () {
-      expect(_run('hl/1', (rt) => [_cell(rt, '.', 2, 'nil')]).$1,
+      expect(_run('hl/1', (rt) => [_cell(rt, '.', 2, nil)]).$1,
           ExecutionStatus.failed);
     });
 
     test("hl('[|]'(1, nil)) fails: '[|]'/2 is no list cell", () {
-      expect(_run('hl/1', (rt) => [_cell(rt, '[|]', 1, 'nil')]).$1,
+      expect(_run('hl/1', (rt) => [_cell(rt, '[|]', 1, nil)]).$1,
           ExecutionStatus.failed);
     });
 
     test('hl(foo) and hl([]) fail', () {
       expect(_run('hl/1', (rt) => [_bound(rt, ConstTerm('foo'))]).$1,
           ExecutionStatus.failed);
-      expect(_run('hl/1', (rt) => [_bound(rt, ConstTerm('nil'))]).$1,
+      expect(_run('hl/1', (rt) => [_bound(rt, ConstTerm(nil))]).$1,
           ExecutionStatus.failed);
     });
   });

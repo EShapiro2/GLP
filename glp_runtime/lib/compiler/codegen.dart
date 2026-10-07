@@ -1,6 +1,7 @@
 import 'package:glp_runtime/bytecode/opcodes.dart' as bc;
 import 'package:glp_runtime/bytecode/runner.dart'
     show BytecodeProgram, runtimeGuards;
+import 'package:glp_runtime/runtime/terms.dart' as rt show nil;
 import 'ast.dart';
 import 'analyzer.dart';
 import 'error.dart';
@@ -310,7 +311,7 @@ class CodeGenerator {
     } else if (term is ListTerm) {
       if (term.isNil) {
         // Nil is atomic constant - same for HEAD and BODY modes
-        ctx.emit(bc.UnifyConstant('nil'));
+        ctx.emit(bc.UnifyConstant(rt.nil));
       } else {
         // Non-empty list: use Push/UnifyStructure/Pop pattern
         if (inHead) {
@@ -562,7 +563,7 @@ class CodeGenerator {
 
     } else if (term is ListTerm) {
       if (term.isNil) {
-        ctx.emit(bc.UnifyConstant('nil'));  // Empty list
+        ctx.emit(bc.UnifyConstant(rt.nil));  // Empty list
       } else {
         // Non-empty list: build structurally as a './2' cons cell, ground or
         // not. FCP builds compound terms with allocate_list_cell and never
@@ -620,7 +621,7 @@ class CodeGenerator {
     } else if (term is ListTerm) {
       // Nested list in structure
       if (term.isNil) {
-        ctx.emit(bc.SetConstant('nil'));
+        ctx.emit(bc.SetConstant(rt.nil));
       } else {
         // Non-empty nested list: build as cons cell '.'(head, tail)
         ctx.emit(bc.PutStructure('.', 2, ctx.allocateTemp())); // nested: temp register (FCP-style), not the unencodable -1 sentinel
@@ -658,7 +659,7 @@ class CodeGenerator {
     if (term is ListTerm) {
       if (term.isNil) {
         // Tail is nil: emit constant
-        ctx.emit(bc.SetConstant('nil'));
+        ctx.emit(bc.SetConstant(rt.nil));
       } else {
         // Tail is another list: build nested cons cell
         ctx.emit(bc.PutStructure('.', 2, ctx.allocateTemp())); // nested: temp register (FCP-style), not the unencodable -1 sentinel
