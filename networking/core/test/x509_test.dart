@@ -5,6 +5,8 @@ import 'package:test/test.dart';
 import 'package:grassroots_networking_core/src/session/attestation_roots.dart';
 import 'package:grassroots_networking_core/src/session/x509.dart';
 
+import 'helpers/attestation_fixtures.dart';
+
 /// The X.509 slice attestation verification rests on (spec §Session
 /// Establishment).
 ///
@@ -140,6 +142,57 @@ void main() {
           'message',
           contains('issuer'),
         )),
+      );
+    });
+
+    test('a certificate issued by one that is not a CA is refused', () {
+      // RFC 5280 §6.1.4(k). A leaf's key may sign, but not issue: without
+      // this an application's attestation key could issue a certificate of
+      // its own making that chains to the root through its genuine one.
+      final rootKey = TestEcKey('x509 root');
+      final leafKey = TestEcKey('x509 leaf');
+      final root = rootCertificate('X509 Test Root', rootKey);
+      final leaf = certificate(
+        subject: 'X509 Test Leaf',
+        subjectKey: leafKey,
+        issuer: 'X509 Test Root',
+        issuerKey: rootKey,
+        serial: 2,
+      );
+      final issuedByLeaf = certificate(
+        subject: 'X509 Test Forgery',
+        subjectKey: TestEcKey('x509 forgery'),
+        issuer: 'X509 Test Leaf',
+        issuerKey: leafKey,
+        serial: 3,
+      );
+      expect(
+        validateChain(chain: [leaf, root], pinnedRoots: [root], at: fixtureTime)
+            .subjectDer,
+        X509Certificate.fromDer(leaf).subjectDer,
+        reason: 'the leaf itself chains: its issuer is a CA',
+      );
+      expect(
+        () => validateChain(
+          chain: [issuedByLeaf, leaf, root],
+          pinnedRoots: [root],
+          at: fixtureTime,
+        ),
+        throwsA(isA<X509Exception>().having(
+          (e) => e.message,
+          'message',
+          contains('not a CA'),
+        )),
+      );
+      // Anchored by signature rather than by bytes, the same: a pinned
+      // certificate that is not a CA anchors nothing.
+      expect(
+        () => validateChain(
+          chain: [issuedByLeaf],
+          pinnedRoots: [leaf],
+          at: fixtureTime,
+        ),
+        throwsA(isA<X509Exception>()),
       );
     });
   });
