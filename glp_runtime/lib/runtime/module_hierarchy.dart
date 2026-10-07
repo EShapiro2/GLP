@@ -451,13 +451,18 @@ TypeEnvironment mergeSelfGlpFileIntoScope(TypeEnvironment env, String path,
 /// Only the types are lifted here: the exposed procedures, their collisions
 /// and their entry-point status are the linker's (program_linker.dart,
 /// `_resolveExposes`), which lifts them into each module of the exposing
-/// subtree from the same [exposedLifts].  A lifted type fills a gap: a type
-/// [env] already defines keeps its name, and a different lifted type of that
-/// name is kept under `<origin>:T` ([TypeEnvironment.shadowedBy]), the lifted
-/// types that reference it rewritten to that name.  A module path whose file
-/// is missing lifts nothing here; the linker reports it.  Each lifted type is
-/// recorded ([TypeEnvironment.typeOrigins]) as defined in the scope that
-/// defines it, its path from [root] ([modulePathName]).
+/// subtree from the same [exposedLifts].  The lifted types are a layer of
+/// the directory's scope, under the `self.glp`'s own definitions and over
+/// [env], "as if defined in its self.glp ... Shadowing applies as usual"
+/// ([_overLifts]): a lifted type shadows a different type of its name that
+/// [env] defines, an ancestor's, which is kept under `<origin>:T` and every
+/// reference to it in [env] rewritten ([TypeEnvironment.merge]).  Until
+/// 2026-10-07 a lifted type filled a gap only, and every type [env] already
+/// defined won (programs/tests/expose/lift_shadows; GLP, 2026-10-04 13:21
+/// UTC, "12:00", item 5).  A module path whose file is missing lifts nothing
+/// here; the linker reports it.  Each lifted type is recorded
+/// ([TypeEnvironment.typeOrigins]) as defined in the scope that defines it,
+/// its path from [root] ([modulePathName]).
 TypeEnvironment liftExposedTypes(
         TypeEnvironment env, ast.Module exposer, String exposerPath,
         {String? root}) =>
@@ -588,9 +593,8 @@ ExposedLift _exposedLift(String exposedPath, ast.Module exposed,
   }
 
   // The exposing self.glp's layer, over what its other directives lift.
-  var env = above;
+  var env = _overLifts(above, siblings);
   for (final s in siblings) {
-    env = _withLiftedTypes(env, s);
     templateOrigins.addAll(s.templateOrigins);
   }
   final exposerLabel = _scopeLabel(exposerPath, root);
@@ -647,20 +651,42 @@ ExposedLift _exposedLift(String exposedPath, ast.Module exposed,
   if (exposer.exposes.isEmpty) {
     return (scope: env, templateOrigins: const <String, String>{});
   }
-  var acc = env;
-  final templateOrigins = <String, String>{};
-  for (final lift in exposedLifts(exposer, exposerPath, env,
-      root: root, lifting: lifting)) {
-    if (lift == null) continue;
-    acc = _withLiftedTypes(acc, lift);
-    templateOrigins.addAll(lift.templateOrigins);
+  final lifts = [
+    for (final lift in exposedLifts(exposer, exposerPath, env,
+        root: root, lifting: lifting))
+      if (lift != null) lift
+  ];
+  final templateOrigins = <String, String>{
+    for (final lift in lifts) ...lift.templateOrigins
+  };
+  return (scope: _overLifts(env, lifts), templateOrigins: templateOrigins);
+}
+
+/// [env] with the types and templates [lifts] carry, what the `-expose`
+/// directives of one `self.glp` lift, layered over it as that `self.glp`'s
+/// own definitions are: "as if defined in its self.glp ... Shadowing applies
+/// as usual" (TGLP modules.tex, "The -expose directive"; Definition (Root,
+/// Scope), `E ⊔ E'`).  A lifted type shadows a different type of its name
+/// that [env], the scope of the directory's ancestors, defines, which is kept
+/// under `<origin>:T`, every reference to it in [env] rewritten
+/// ([TypeEnvironment.merge]); a lifted template shadows one of its name.  The
+/// lifts are one layer, at one level: among themselves no one shadows
+/// another, a type the first of them carries keeping its name and a different
+/// one of that name from a later one kept under `<origin>:T`
+/// ([_withLiftedTypes]).  The lifted declarations are not added here.
+TypeEnvironment _overLifts(TypeEnvironment env, Iterable<ExposedLift> lifts) {
+  var layer = TypeEnvironment.empty();
+  for (final lift in lifts) {
+    layer = _withLiftedTypes(layer, lift);
   }
-  return (scope: acc, templateOrigins: templateOrigins);
+  if (layer.types.isEmpty && layer.typeTemplates.isEmpty) return env;
+  return env.merge(layer);
 }
 
 /// [env] with the types and templates of [lift] filling its gaps: a lifted
 /// type [env] defines differently is kept under `<origin>:T`
 /// ([TypeEnvironment.shadowedBy]); the lifted declarations are not added.
+/// The lifts of one `self.glp` are gathered by it ([_overLifts]).
 TypeEnvironment _withLiftedTypes(TypeEnvironment env, ExposedLift lift) {
   final ex = lift.scope.shadowedBy(env, ownLabel: lift.label);
   final types = <String, TypeDef>{

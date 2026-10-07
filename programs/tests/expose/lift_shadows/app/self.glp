@@ -1,0 +1,10 @@
+%% The program: rate/2 and Level are what -expose(lib#rates) lifts, which
+%% shadow the ones of the self.glp one directory up.  run(N) gives 20, and
+%% rate_of(high, N) gives 30 where the ancestor's rate/2 would give 2.
+-expose(lib#rates).
+
+exported procedure run(Integer).
+run(N?) :- rate(mid, N).
+
+exported procedure rate_of(Level?, Integer).
+rate_of(L, N?) :- rate(L?, N).

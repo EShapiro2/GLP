@@ -1,0 +1,7 @@
+%% The exposed module: its own Level, with mid, and its own rate/2.
+Level ::= low ; mid ; high.
+
+exported procedure rate(Level?, Integer).
+rate(low, 10).
+rate(mid, 20).
+rate(high, 30).

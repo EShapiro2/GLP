@@ -17,6 +17,7 @@ library;
 
 import 'dart:io';
 
+import 'package:glp_runtime/analysis/type_checker/type_ast.dart' show TypeRef;
 import 'package:glp_runtime/compiler/program_linker.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/runtime/module_hierarchy.dart';
@@ -134,6 +135,52 @@ void main() {
       expect(engine.loadProgram(dir), isTrue);
       final r = await engine.runGoal('p(c)');
       expect(r.succeeded, isFalse);
+    });
+  });
+
+  group('tests/expose/lift_shadows: a lift shadows an ancestor\'s definition',
+      () {
+    // modules.tex, "The -expose directive": the lift is "as if defined in its
+    // self.glp ... Shadowing applies as usual".  The fixture's top self.glp
+    // defines Level ::= low ; high and rate/2 over it; app/self.glp exposes
+    // app/lib/rates.glp, whose Level has mid and whose rate/2 is its own.
+    // Until 2026-10-07 every definition already in scope won, and app/ was
+    // refused: "No alternative of Level? matches the constant mid".
+    const top = '../programs/tests/expose/lift_shadows';
+    const app = '$top/app';
+
+    test('in app/\'s scope rate/2 and Level are rates.glp\'s', () {
+      final self = module(discover(app), '/lift_shadows/app/self.glp');
+      final scope = self.ancestorScope;
+      expect(scope.types['Level']!.alternatives, hasLength(3));
+      expect(scope.typeOrigins['Level'],
+          'tests/expose/lift_shadows/app/lib/rates');
+      // The ancestor's Level is kept under its origin; its rate/2 is
+      // shadowed by the lifted one, declared over the lifted Level.
+      expect(scope.types['tests/expose/lift_shadows:Level']!.alternatives,
+          hasLength(2));
+      final rate = scope.procedures['rate/2']!;
+      expect(rate.exported, isTrue);
+      expect((rate.argTypes.first as TypeRef).name, 'Level');
+    });
+
+    test('a scope below app/self.glp has rates.glp\'s Level', () {
+      final scope = buildAncestorScope(chain: [
+        File('$top/self.glp').absolute.path,
+        File('$app/self.glp').absolute.path,
+      ], rootSelfGlpPath: rootSelf);
+      expect(scope.types['Level']!.alternatives, hasLength(3));
+    });
+
+    test('loads, and the lifted rate/2 runs', () async {
+      final engine = GlpEngine(rootSelfGlpPath: rootSelf);
+      expect(engine.loadProgram(app), isTrue);
+      final run = await engine.runGoal('run(N)');
+      expect(run.succeeded, isTrue, reason: 'Error: ${run.error}');
+      expect(run.bindings['N'].toString(), 'Const(20)');
+      final rateOf = await engine.runGoal('rate_of(high, M)');
+      expect(rateOf.succeeded, isTrue, reason: 'Error: ${rateOf.error}');
+      expect(rateOf.bindings['M'].toString(), 'Const(30)');
     });
   });
 }
