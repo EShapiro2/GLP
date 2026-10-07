@@ -12,13 +12,25 @@
 %%   Stream ::= [] ; [_|Stream].
 %%   Channel ::= ch(Stream, Stream?).
 
-%% A cold-call accept conveys a SETUP channel (IntroChannel), not the friend
-%% channel directly; the fresh friend channel is conveyed on the setup channel at
-%% commit by the shared lib befriend_commit (CSSN Issue 16).
-Response ::= accept(IntroChannel) ; no.
+%% Befriending (GSG paper, Sections 5.1 and 5.2, app:code): each of the two
+%% consents by binding a variable the other reads, and no setup channel is
+%% made.  The agent with the smaller identity proposes: its consent carries the
+%% reader of the conveyance it will write, the friend channel's end or, where
+%% the other is already a friend, already_friends, or, where the other
+%% declines, declined, which nobody reads (Section 5.1).  The agent with the
+%% larger identity accepts: its consent is yes or no.  The duality marks are
+%% TGLP's (Definition "Moded Head", "Well-Typed Clause with Subtyping"): a
+%% position marked ? is written by the term's receiver, so the sender places a
+%% writer there and keeps its reader.
+Conveyance ::= friend(FriendChannel) ; already_friends ; declined.
+ProposerConsent ::= yes(Conveyance) ; no.
+AcceptorConsent ::= yes ; no.
 Decision ::= yes ; no.
-Handshake ::= ack(Key) ; nack.
-PendingValue ::= response(Response?) ; channel(IntroChannel) ; error.
+%% The two ends an agent holds for a befriending its person has not yet
+%% answered, by role: its own consent, to write, and the other's, to read.
+PendingValue ::= propose(ProposerConsent?, AcceptorConsent)
+               ; accept(AcceptorConsent?, ProposerConsent)
+               ; error.
 
 %% --- Content types for messages ---
 
@@ -37,7 +49,7 @@ UserContent ::= connect(Key)
               %% a play, the play does).  invite: offer a friend the mini-app.
               %% accept_invite / decline_invite: the invitee's volition.
               %% attestation: read back the attestation minted at
-              %% befriend_commit (Section 5.5).
+              %% the befriending (Section 5.5).
               ; install(Constant, Content, String, AppUiStream?)
               ; install_coins(Constant, Content, String, Channel(Stream(UserAnswer), Stream(Event)))
               ; install_cssn(Constant, Content, String, Channel(Stream(CsAppCmd), Stream(CsAppNotify)))
@@ -57,23 +69,30 @@ UserContent ::= connect(Key)
               ; accept_warm_call(Key)
               ; allow_intro(Key, Key).
 
-%% Content carried inside agent-to-user messages (msg(agent, person, Content))
-AgentContent ::= befriend(Key, Response?)
-               ; befriend_intro(Constant, Key, IntroChannel)
+%% Content carried inside agent-to-user messages (msg(agent, person, Content)).
+%% befriend and befriend_intro carry the pending value, which the person's
+%% answer passes back as it came.
+AgentContent ::= befriend(Key, PendingValue)
+               ; befriend_intro(Constant, Key, PendingValue)
                ; connected(Constant)
                ; rejected
                ; rejected(Constant)
                ; unfriended(Constant)
                ; received(Key, Constant).
 
-%% Network content (2-arg cold-call: msg(Dest, Content))
-NetColdCall ::= intro(Key, Response?).
+%% Network content (2-arg cold-call: msg(Dest, Content)): the caller, the
+%% caller's consent, bound before sending, and the callee's consent, for the
+%% callee to write --- by the callee's role, the smaller identity proposing.
+NetColdCall ::= befriend_propose(Key, AcceptorConsent, ProposerConsent?)
+              ; befriend_accept(Key, ProposerConsent, AcceptorConsent?).
 
-%% Friend-to-friend content (3-arg: msg(From, To, Content))
-FriendContent ::= response(Response)
-                ; text(Constant)
+%% Friend-to-friend content (3-arg: msg(From, To, Content)).  An introduction
+%% from a mutual friend carries the other party, the recipient's own consent,
+%% for it to write, and the reader of the other's, by the recipient's role.
+FriendContent ::= text(Constant)
                 ; unfriend
-                ; intro(Key, IntroChannel)
+                ; introduce_propose(Key, ProposerConsent?, AcceptorConsent)
+                ; introduce_accept(Key, AcceptorConsent?, ProposerConsent)
                 %% Distribution with an invitation and the handshake (SGSG
                 %% paper, Section 3): the offer carries the mini-app's source
                 %% identity, the root channel's type identity and the social
@@ -96,14 +115,6 @@ FriendContent ::= response(Response)
                 ; request_intro(Key)
                 ; warm_call(Constant).
 
-%% Setup channel content: ack/nack handshake plus the fresh-friend-channel
-%% conveyance the shared lib befriend_commit uses to install the friend channel.
-IntroContent ::= ack(Key) ; nack ; friend_channel(FriendChannel).
-
-%% Intro channel (handshake protocol)
-IntroStream  ::= [] ; [IntroContent | IntroStream].
-IntroChannel ::= ch(IntroStream, IntroStream?).
-
 %% Friend messages and channels
 FriendMsg     ::= msg(Key, Key, FriendContent).
 FriendStream  ::= [] ; [FriendMsg | FriendStream].
@@ -112,9 +123,6 @@ FriendChannel ::= ch(FriendStream, FriendStream?).
 %% Network output stream — cold calls the agent emits on its '_net' entry.
 NetOutMsg    ::= msg(Key, NetColdCall).
 NetOutStream ::= [] ; [NetOutMsg | NetOutStream].
-
-%% Intro result — written by intro_await_peer, injected into UserIn
-IntroResult ::= intro_result(Constant, IntroChannel) ; intro_rejected(Constant).
 
 %% =============================================================================
 %% THE SUPER-APP (SGSG paper, Section 3): what a mini-app is granted, and the
@@ -172,8 +180,8 @@ Offer     ::= none ; offer(String, Constant, String).
 %% the contract's act schemas and the checker's verdict (Sections 3 and 6.4).
 CreatorCert ::= creator_cert(String, Stream(Constant), Constant).
 
-%% Host state: the installed mini-apps, the attestations minted at
-%% befriend_commit, the invitations pending a volition, and the keys of the
+%% Host state: the installed mini-apps, the attestations minted at the
+%% befriending, the invitations pending a volition, and the keys of the
 %% compilers the person trusts (the bundled compilers' by installation).
 %%   app(Name, Content, CreatorSig, Status), Content the module value load_file/2
 %%   gave (a Module where the certificate verified): Status is idle(Ui), holding the
@@ -373,7 +381,7 @@ SvEvent ::= card(Constant, SvContext, SvReqId)
 %% type identity in the caller's scope, and the goal that activates cssn/3 is
 %% written here.  Type identity is structural, so the names are the super-app's
 %% --- prefixed Cs where they clash with the social graph's own FriendMsg,
-%% FriendContent, IntroContent and Conversation, which are different types.
+%% FriendContent and Conversation, which are different types.
 %% Decision and ReqId are shared: theirs and ours are the same type.
 %% =============================================================================
 CsGroupId   ::= group_id(Constant, Constant).
@@ -520,11 +528,14 @@ AgentChannel          ::= ch(AgentToUserStream, MediatorToAgentStream?).
 
 %% Agent input types
 UserInMsg    ::= msg(Constant, Key, UserContent)
-               %% The answer to the agent's own cold call (inject_msg): the
-               %% agent called and its response.
-               ; response(Key, Response)
-               ; intro_result(Key, IntroChannel)
-               ; intro_rejected(Constant)
+               %% A befriending's outcome, injected by await_consent and
+               %% await_conveyance (routing/intro.glp): the other consented,
+               %% with the conveyance this agent, the proposer, is to write;
+               %% the friend channel conveyed to this agent, the acceptor;
+               %% the other declined.
+               ; consented(Key, Conveyance?)
+               ; adopt(Key, FriendChannel)
+               ; declined(Key)
                %% A running mini-app's request up its social-graph channel.
                ; app_request(Constant, AppToSg)
                %% A mini-app's execution has ended: the stream it writes up to

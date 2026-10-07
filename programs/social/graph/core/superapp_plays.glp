@@ -111,11 +111,11 @@ bob_person(M, CSig, no, Ui?, Outs, Seen,
     bob_wait(no, Outs?, Seen?, Cmds).
 
 procedure bob_wait(Decision?, AgentToUserStream?, AppUiStream?, UserInStream).
-bob_wait(yes, [msg(agent, person, befriend(alice, Resp?)) | _], Seen,
-         [msg(person, bob, decision(yes, alice, response(Resp))) | Cmds?]) :-
+bob_wait(yes, [msg(agent, person, befriend(alice, P)) | _], Seen,
+         [msg(person, bob, decision(yes, alice, P?)) | Cmds?]) :-
     person_done(Seen?, Cmds).
-bob_wait(no, [msg(agent, person, befriend(alice, Resp?)) | _], _,
-         [msg(person, bob, decision(yes, alice, response(Resp)))]).
+bob_wait(no, [msg(agent, person, befriend(alice, P)) | _], _,
+         [msg(person, bob, decision(yes, alice, P?))]).
 bob_wait(W, [_ | Outs], Seen, Cmds?) :- otherwise | bob_wait(W?, Outs?, Seen?, Cmds).
 bob_wait(_, [], _, []).
 
@@ -154,10 +154,50 @@ alice_attest_wait([_ | Outs], S?, Cmds?) :- otherwise | alice_attest_wait(Outs?,
 alice_attest_wait([], none, []).
 
 procedure bob_answer(AgentToUserStream?, UserInStream).
-bob_answer([msg(agent, person, befriend(alice, Resp?)) | _],
-           [msg(person, bob, decision(yes, alice, response(Resp)))]).
+bob_answer([msg(agent, person, befriend(alice, P)) | _],
+           [msg(person, bob, decision(yes, alice, P?))]).
 bob_answer([_ | Outs], Cmds?) :- otherwise | bob_answer(Outs?, Cmds).
 bob_answer([], []).
+
+%% =============================================================================
+%% play_both_ways: alice and bob cold-call each other at once, and each person
+%% consents to the other's call (GSG Section 5.1; 2026-10-02 task, item 5).
+%% Two befriendings of the same two people are under way at once, and alice,
+%% the smaller identity, proposes in both: she mints the friend channel for
+%% the first whose consent she reads and conveys already_friends for the
+%% other, so each agent ends with one friend channel --- and each person is
+%% told connected once, which convey/7 and adopt/6 tell where they install
+%% one.  The persons stand at the end, their streams open, so what each was
+%% told is the whole of it at quiescence.
+%% Expected: A = [connected(bob) | _], B = [connected(alice) | _],
+%% → suspended.
+%% =============================================================================
+exported procedure play_both_ways(Stream(AgentContent), Stream(AgentContent)).
+play_both_ways(A?, B?) :-
+    crossbar2(AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
+    agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
+    both_ways_person(alice, bob, AliceOut?, A, AliceIn),
+    agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
+    both_ways_person(bob, alice, BobOut?, B, BobIn).
+
+%% A person who cold-calls the other and consents to the other's call, the
+%% pending value passed back as it came; what the agent tells it of a
+%% befriending's outcome, connected or rejected, is what it saw.
+procedure both_ways_person(Key?, Key?, AgentToUserStream?, Stream(AgentContent), UserInStream).
+both_ways_person(Me, Other, Outs, Seen?, [msg(person, Me?, connect(Other?)) | Cmds?]) :-
+    both_ways_answer(Me?, Outs?, Seen, Cmds).
+
+procedure both_ways_answer(Key?, AgentToUserStream?, Stream(AgentContent), UserInStream).
+both_ways_answer(Me, [msg(agent, person, befriend(From, P)) | Outs], Seen?,
+                 [msg(person, Me?, decision(yes, From?, P?)) | Cmds?]) :-
+    both_ways_answer(Me?, Outs?, Seen, Cmds).
+both_ways_answer(Me, [msg(agent, person, connected(F)) | Outs], [connected(F?) | Seen?], Cmds?) :-
+    both_ways_answer(Me?, Outs?, Seen, Cmds).
+both_ways_answer(Me, [msg(agent, person, rejected(F)) | Outs], [rejected(F?) | Seen?], Cmds?) :-
+    both_ways_answer(Me?, Outs?, Seen, Cmds).
+both_ways_answer(Me, [_ | Outs], Seen?, Cmds?) :-
+    otherwise | both_ways_answer(Me?, Outs?, Seen, Cmds).
+both_ways_answer(_, [], [], []).
 
 %% =============================================================================
 %% play_invite_timed(Ms): play_invite, timed --- the milliseconds from the
@@ -500,8 +540,8 @@ alice_warm_run([msg(agent, person, connected(carol)) | Outs],
 alice_warm_run([msg(agent, person, connected(bob)) | Outs], Cmds?) :-
     send_to_user([sg(connected(bob))]),
     alice_warm_run(Outs?, Cmds).
-alice_warm_run([msg(agent, person, befriend_intro(carol, bob, Ch)) | Outs],
-               [msg(person, alice, accept_intro(bob, channel(Ch?))) | Cmds?]) :-
+alice_warm_run([msg(agent, person, befriend_intro(carol, bob, P)) | Outs],
+               [msg(person, alice, accept_intro(bob, P?)) | Cmds?]) :-
     send_to_user([sg(intro_from(carol, bob))]),
     alice_warm_run(Outs?, Cmds).
 alice_warm_run([_ | Outs], Cmds?) :- otherwise | alice_warm_run(Outs?, Cmds).
@@ -521,8 +561,8 @@ bob_warm(C, CK, CSig, Ui?, Outs,
     bob_warm_run(Outs?, Cmds).
 
 procedure bob_warm_run(AgentToUserStream?, UserInStream).
-bob_warm_run([msg(agent, person, befriend_intro(carol, alice, Ch)) | Outs],
-             [msg(person, bob, accept_intro(alice, channel(Ch?))) | Cmds?]) :-
+bob_warm_run([msg(agent, person, befriend_intro(carol, alice, P)) | Outs],
+             [msg(person, bob, accept_intro(alice, P?)) | Cmds?]) :-
     send_to_user([sg(intro_from(carol, alice))]),
     bob_warm_run(Outs?, Cmds).
 bob_warm_run([msg(agent, person, connected(Who)) | Outs], Cmds?) :-
@@ -544,8 +584,8 @@ carol_warm(C, CK, CSig, Ui?, Outs,
     carol_warm_run(Outs?, Cmds).
 
 procedure carol_warm_run(AgentToUserStream?, UserInStream).
-carol_warm_run([msg(agent, person, befriend(Who, Resp?)) | Outs],
-               [msg(person, carol, decision(yes, Who?, response(Resp))) | Cmds?]) :-
+carol_warm_run([msg(agent, person, befriend(Who, P)) | Outs],
+               [msg(person, carol, decision(yes, Who?, P?)) | Cmds?]) :-
     ground(Who?) |
     send_to_user([sg(cold_call(Who?))]),
     carol_warm_run(Outs?, Cmds).
@@ -622,8 +662,8 @@ bob_coins_person(C, CSig, AppEnd, Outs,
     bob_coins_run(Outs?, Cmds).
 
 procedure bob_coins_run(AgentToUserStream?, UserInStream).
-bob_coins_run([msg(agent, person, befriend(alice, Resp?)) | Outs],
-              [msg(person, bob, decision(yes, alice, response(Resp))) | Cmds?]) :-
+bob_coins_run([msg(agent, person, befriend(alice, P)) | Outs],
+              [msg(person, bob, decision(yes, alice, P?)) | Cmds?]) :-
     bob_coins_run(Outs?, Cmds).
 bob_coins_run([_ | Outs], Cmds?) :- otherwise | bob_coins_run(Outs?, Cmds).
 bob_coins_run([], []).
@@ -727,8 +767,8 @@ bob_cssn_person(C, CSig, AppEnd, Outs,
     bob_cssn_run(Outs?, Cmds).
 
 procedure bob_cssn_run(AgentToUserStream?, UserInStream).
-bob_cssn_run([msg(agent, person, befriend(alice, Resp?)) | Outs],
-             [msg(person, bob, decision(yes, alice, response(Resp))) | Cmds?]) :-
+bob_cssn_run([msg(agent, person, befriend(alice, P)) | Outs],
+             [msg(person, bob, decision(yes, alice, P?)) | Cmds?]) :-
     bob_cssn_run(Outs?, Cmds).
 bob_cssn_run([_ | Outs], Cmds?) :- otherwise | bob_cssn_run(Outs?, Cmds).
 bob_cssn_run([], []).
@@ -821,8 +861,8 @@ bob_both_person(CC, CCSig, CoinsEnd, CS, CSSig, CssnEnd, Outs,
     bob_both_run(Outs?, Cmds).
 
 procedure bob_both_run(AgentToUserStream?, UserInStream).
-bob_both_run([msg(agent, person, befriend(alice, Resp?)) | Outs],
-             [msg(person, bob, decision(yes, alice, response(Resp))) | Cmds?]) :-
+bob_both_run([msg(agent, person, befriend(alice, P)) | Outs],
+             [msg(person, bob, decision(yes, alice, P?)) | Cmds?]) :-
     bob_both_run(Outs?, Cmds).
 bob_both_run([_ | Outs], Cmds?) :- otherwise | bob_both_run(Outs?, Cmds).
 bob_both_run([], []).
@@ -1005,8 +1045,8 @@ bob_reinvite(M, CSig, Ui?, Outs,
 %% the one that must still be there when her second invitation arrives, and
 %% closing the stream would close his super-app and the execution with it.
 procedure bob_reinvite_wait(AgentToUserStream?, UserInStream).
-bob_reinvite_wait([msg(agent, person, befriend(alice, Resp?)) | _],
-                  [msg(person, bob, decision(yes, alice, response(Resp))) | Cmds?]) :-
+bob_reinvite_wait([msg(agent, person, befriend(alice, P)) | _],
+                  [msg(person, bob, decision(yes, alice, P?)) | Cmds?]) :-
     hold_person(Cmds).
 bob_reinvite_wait([_ | Outs], Cmds?) :-
     otherwise | bob_reinvite_wait(Outs?, Cmds).
@@ -1083,8 +1123,8 @@ bob_sv_person(C, CSig, AppEnd, Outs,
     bob_sv_run(Outs?, Cmds).
 
 procedure bob_sv_run(AgentToUserStream?, UserInStream).
-bob_sv_run([msg(agent, person, befriend(alice, Resp?)) | Outs],
-           [msg(person, bob, decision(yes, alice, response(Resp))) | Cmds?]) :-
+bob_sv_run([msg(agent, person, befriend(alice, P)) | Outs],
+           [msg(person, bob, decision(yes, alice, P?)) | Cmds?]) :-
     bob_sv_run(Outs?, Cmds).
 bob_sv_run([_ | Outs], Cmds?) :- otherwise | bob_sv_run(Outs?, Cmds).
 bob_sv_run([], []).

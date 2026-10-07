@@ -27,14 +27,15 @@ display msg(agent, person, connected(Friend)) : panel(apps), view(friends).
 %% so several pend at once and are answered in any order.
 %% =============================================================================
 
-procedure respond_friend(Key?, Key?, Response, Stream(UserInMsg)).
+%% The pending value of the befriending is passed back as it came.
+procedure respond_friend(Key?, Key?, PendingValue?, Stream(UserInMsg)).
 
 *(yes, From?)
-respond_friend(Id, From, Resp?, [msg(person, Id?, decision(yes, From?, response(Resp)))]) :-
+respond_friend(Id, From, P, [msg(person, Id?, decision(yes, From?, P?))]) :-
     ground(Id?), ground(From?) | true.
 
 *(no, From?)
-respond_friend(Id, From, Resp?, [msg(person, Id?, decision(no, From?, response(Resp)))]) :-
+respond_friend(Id, From, P, [msg(person, Id?, decision(no, From?, P?))]) :-
     ground(Id?), ground(From?) | true.
 
 %% =============================================================================
@@ -75,9 +76,9 @@ home(Id, Outs, Cmds?) :-
     connect_act(Friend?, Id?, Outs?, Cmds).
 
 %% A friend asks to connect: the person answers on a card of their own.
-home(Id, [msg(agent, person, befriend(From, Resp?)) | Outs], Cmds?) :-
+home(Id, [msg(agent, person, befriend(From, P)) | Outs], Cmds?) :-
     ground(Id?), ground(From?) |
-    respond_friend(Id?, From?, Resp, Answer),
+    respond_friend(Id?, From?, P?, Answer),
     merge(Answer?, Cmds1?, Cmds),
     home(Id?, Outs?, Cmds1).
 
@@ -122,7 +123,10 @@ creator_certification(M, CSig?) :-
     self_key(K),
     sign(creator_cert(Src?, [friendship, ending_a_friendship], grassroots), K?, CSig).
 
-%% The mini-app's user-interface stream: the super-app user interface holds it;
-%% here it is held until there is a screen to show it on.
+%% The mini-app's user-interface stream: the super-app user interface holds its
+%% reader; here it is held until there is a screen to show it on, and read to
+%% its close, which the mini-app's execution writes, or the super-app's
+%% close_apps/1 where the mini-app is never activated.
 procedure hold_ui(AppUiStream?).
-hold_ui(X) :- true.
+hold_ui([_ | Xs]) :- hold_ui(Xs?).
+hold_ui([]).

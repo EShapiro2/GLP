@@ -42,12 +42,12 @@ superapp_ui(alice, Answers, _) :-
     agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
     bob_answers(BobOut?, BobIn).
 
-%% Bob, scripted: he consents to alice's request to connect and accepts
-%% whatever mini-app she invites him to, so her Connect and Invite have
-%% someone to reach.
+%% Bob, scripted: he consents to alice's request to connect, passing the
+%% pending value back as it came, and accepts whatever mini-app she invites
+%% him to, so her Connect and Invite have someone to reach.
 procedure bob_answers(AgentToUserStream?, UserInStream).
-bob_answers([msg(agent, person, befriend(From, Resp?)) | Outs],
-            [msg(person, bob, decision(yes, From?, response(Resp))),
+bob_answers([msg(agent, person, befriend(From, P)) | Outs],
+            [msg(person, bob, decision(yes, From?, P?)),
              msg(person, bob, accept_invite(ping, From?)) | Cmds?]) :-
     ground(From?) |
     bob_answers(Outs?, Cmds).

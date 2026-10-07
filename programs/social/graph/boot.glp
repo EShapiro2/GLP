@@ -404,10 +404,13 @@ play_unfriend_absent :-
 %% =============================================================================
 
 %% report_intro(Tag, Stream): what reached a friend's channel, reported without
-%% the setup channel --- send_to_user prints a ground term and the channel the
-%% introducer mints is unbound at this end.
+%% the consents --- send_to_user prints a ground term and the consent variables
+%% the introducer mints are unbound at this end.  The recipient's own consent,
+%% which the clause holds, it binds to no, as a person who does not answer.
 procedure report_intro(Constant?, FriendStream?).
-report_intro(Tag, [msg(From, To, intro(Other, _)) | _]) :-
+report_intro(Tag, [msg(From, To, introduce_propose(Other, no, _)) | _]) :-
+    send_to_user([intro_sent(Tag?, From?, To?, Other?)]).
+report_intro(Tag, [msg(From, To, introduce_accept(Other, no, _)) | _]) :-
     send_to_user([intro_sent(Tag?, From?, To?, Other?)]).
 report_intro(Tag, [_ | _]) :-
     otherwise | send_to_user([other_msg(Tag?)]).
