@@ -163,7 +163,6 @@ KNOWN_RED_CHECKS=(
     "SG super-app hosts the child-safe platform: no failed play"
     "SG two mini-apps at once: alice connected under the child-safe platform"
     "SG two mini-apps on two smartphones: the child-safe friendship holds"
-    "SG child-safe platform on two smartphones: the boot settles"
     "SG child-safe platform on two smartphones: alice is connected to bob"
     "SG child-safe platform on two smartphones: bob is connected to alice"
     "SG child-safe platform on two smartphones: alice's message reaches bob"
@@ -1379,9 +1378,9 @@ check_not "single file: neither loads" "✓ Loaded" "$a40"
 # "(" where the reader takes it there; the shown text, typed back in a goal,
 # is the term the guard compares it with (GLP #3 Cowork, 2026-10-04 09:06 UTC,
 # "23:49. Q1 and Q3").  Until 2026-10-04 'G' was shown G, a variable.  A list
-# with a constant tail is shown, not typed back: a goal's list tail that is
-# no list and no variable is posted as [] (glp_engine.dart, _buildListTerm),
-# a fault reported on 2026-10-04.  A name holding a quote is shown and not
+# with a constant tail is shown, not typed back; until 5a2b463c a goal's list
+# tail that is no list and no variable was posted as [] (glp_engine.dart,
+# _buildListTerm), and it is now built as written.  A name holding a quote is shown and not
 # typed back: in a here-document inside $(...) bash 3.2 pairs single quotes
 # regardless of the backslash; GlpPrinter's Dart test reads it back.
 echo "--- A41: The answer display reads back ---"
@@ -3673,21 +3672,20 @@ HEREDOC
 check "S3 integer instantiation" "Zi = \[1, 4, 2, 5, 3, 6\]" "$s3"
 check "S3 constant instantiation" "Zc = \[\"a\", \"c\", \"b\", \"d\"\]" "$s3"
 
-# --- S4: restated — currencies/play12 is not a program (Coordination, 2026-08-02 10:20) ---
-# It asserted that play12 loads standalone. It does not and must not: play12/self.glp
-# exports no procedure, so the program has no entry points (modules.tex §Static
-# Linking, "Entry and the absence of a boot module"), and the play itself runs
-# from programs/currencies/bonds_v2. Coordination ruled the old assertion wrong rather
-# than Grassroots Currencies' to repair. What the check was FOR — the I-1
-# regression, an ancestor type failing to resolve through the directory load —
-# is kept: an UnknownType would still be wrong, and now so would a load.
-echo "--- S4: currencies/play12 is not a program (restated) ---"
+# --- S4: currencies/play12 is a program (TGLP Definition "Program") ---
+# TGLP Definition "Program" (parameterized-types.tex:164, TGLP 9b29563): "a directory
+# carrying a self.glp, or a self-contained module, with one or more concrete initial
+# goals".  play12 is a directory carrying a self.glp that exports six procedures, each
+# declared at concrete types, so it is a program, and it loads through its self.glp
+# (Coordination #3's ruling, 2026-10-04 16:05 UTC).  The I-1
+# regression, an ancestor type failing to resolve through the directory load, is kept.
+echo "--- S4: currencies/play12 is a program ---"
 s4=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/currencies/bonds_v2/play12
 :quit
 HEREDOC
 2>&1)
-check "S4 play12 rejected: no entry points" "has no entry points" "$s4"
+check "S4 play12 is a program: it loads" "Loaded program" "$s4"
 check_not "S4 no unknown type error" "UnknownType" "$s4"
 
 # --- S5: opaque pass-through walker ---
