@@ -417,6 +417,7 @@ contract(gf_unrooted, C?) :- gf_unrooted(C).
 contract(gf_untraceable, C?) :- gf_untraceable(C).
 contract(gf_uncohesive, C?) :- gf_uncohesive(C).
 contract(gf_novolition, C?) :- gf_novolition(C).
+contract(gf_cohesion_only, C?) :- gf_cohesion_only(C).
 contract(sv_signed, C?) :- sv_signed(C).
 contract(sv_loose, C?) :- sv_loose(C).
 contract(sv_in_name_loose, C?) :- sv_in_name_loose(C).
@@ -526,6 +527,26 @@ gf_uncohesive(C?) :-
          [crs(seated(nvar(zeta), seat), guarded_at(theta),
               [atom(child, [nterm(ext(nvar(zeta), y)), nterm(nvar(zeta))]),
                atom(seat, [nterm(nvar(eta))])], [], [], [])])], S?, C).
+
+% --- negative: cohesion alone ---------------------------------------------
+% The federation contract with one schema more,
+%     seat_child(zeta^seat ?theta ; ; zeta, eta) :
+%         zeta^seat:  child(zeta, eta), +seat(eta),
+% the assembly of zeta seating itself in a child eta of zeta.  eta is the name
+% term of no role of seat_child, and no <pi_i> of a party role or extension of
+% either, so cohesion fails at its role (definition:cohesive).  eta is an
+% argument of the child(zeta, eta) the role requires, child being in the set
+% {seat, child}, so seat keeps traceable provenance (definition:provenance);
+% the role graph is one role, so volition holds.  seat stops being rooted,
+% which is no condition (Legal 2026-10-09 18:31 UTC).
+procedure gf_cohesion_only(Contract).
+gf_cohesion_only(C?) :-
+    federation(F),
+    contract_app(F?,
+      [cschema(seat_child, [],
+         [crs(seated(nvar(zeta), seat), guarded_at(theta),
+              [atom(seat, [nterm(nvar(eta))])], [],
+              [atom(child, [nterm(nvar(zeta)), nterm(nvar(eta))])], [])])], C).
 
 % --- negative: a join no assembly decides ----------------------------------
 % The two roles of join are the assemblies of two communities, of different

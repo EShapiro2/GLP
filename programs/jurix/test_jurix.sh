@@ -6,11 +6,12 @@
 #
 # The two contracts of /Grassroots/Jurix Sections 3.3 and 3.4, which Section 7
 # certifies by hand, and contracts broken in one place each, one per way of
-# failing the three conjuncts of def:syntactically-grassroots; then the
+# failing the three conjuncts of def:syntactically-grassroots; then contracts
+# declaring a predicate reflexive (the paragraph after def:binding); then the
 # compilation of Section 5, against the two displays of Section 5.2; then the
 # contract of a grassroots federation, /Grassroots/GFWC sections/schemas.tex,
-# against the three conditions of Section 8 of /Grassroots/Jurix, and four
-# contracts broken in one place each, three against those and one against
+# against the three conditions of Section 8 of /Grassroots/Jurix, and five
+# contracts changing it in one place each, four against those and one against
 # rootedness, which is none of them; then small contracts on the
 # speech-act variables of traceable provenance and on volition by connected
 # component, in the language of Section 8; then the compilation of Section 8,
@@ -346,6 +347,20 @@ out=$(run 'check_named(gf_uncohesive, V).')
 check "a seat atom of no role of the schema fails cohesion, and seat traceable provenance" \
       "V = conditions_failed([untraceable([seat]), cohesion(federate, 1, atom(seat, [nterm(nvar(eta))]))])" \
       "$out"
+
+# Cohesion alone (Legal 2026-10-09 18:31 UTC): the federation with one schema
+# more, seat_child, whose seated role requires child(zeta, eta) and seats its
+# assembly in eta.  eta is the name term of no role of it, so cohesion fails;
+# it is an argument of the required child atom, so seat keeps traceable
+# provenance; the role graph is one role, so volition holds.  seat stops
+# being rooted, which is no condition.
+out=$(run 'check_named(gf_cohesion_only, V).' 'traceable_of(gf_cohesion_only, T).' \
+          'rooted_of(gf_cohesion_only, E).')
+check "a seat atom in a child the role requires fails cohesion alone" \
+      "V = conditions_failed([cohesion(seat_child, 1, atom(seat, [nterm(nvar(eta))]))])" \
+      "$out"
+check "and seat and child keep traceable provenance" "T = [seat, child]" "$out"
+check "and seat is not rooted, which is no condition" "E = []" "$out"
 
 # A join no assembly decides: its two roles are the assemblies of the two
 # communities, nothing joins them, and neither guards.

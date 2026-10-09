@@ -127,7 +127,9 @@ and seated roles, none of them a constituent role; `gf_untraceable`,
 `gf_uncohesive` and `gf_novolition` are it broken in one place each, one per
 condition, the one atom `gf_uncohesive` breaks costing `seat` its traceable
 provenance as well, and `gf_unrooted` is it with `seat` not rooted, which is
-no condition, so that it meets the three.  `sv_signed`, `sv_loose`,
+no condition, so that it meets the three; `gf_cohesion_only` is it with one
+schema more, `seat_child`, whose seated role requires `child(zeta, eta)` and
+adds `seat(eta)`, failing cohesion alone.  `sv_signed`, `sv_loose`,
 `sv_in_name_loose` and `sv_in_name_carried` are small contracts on the
 speech-act variables of `definition:provenance`, `sg_relay` is the social
 graph with two schemas on volition by connected component, and
