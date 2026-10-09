@@ -26,23 +26,23 @@ exported procedure ui_mediator(Key?, AgentChannel?, UserChannel?, PendingList?, 
 
 %% --- Agent-to-user: non-ground (replace variable with req ID) ---
 
-ui_mediator(Id, ch([msg(agent, person, befriend(From, Resp?))|AgentIn], AgentOut?),
+ui_mediator(Id, ch([msg(agent, person, befriend(From, P))|AgentIn], AgentOut?),
             UserCh, Ps, N) :-
     ground(From?) |
     send(befriend(From?, req(N?)), UserCh?, UserCh1),
     N1 := N? + 1,
     ui_mediator(Id?, ch(AgentIn?, AgentOut), UserCh1?,
-        [pending(req(N?), response(Resp)) | Ps?], N1?).
+        [pending(req(N?), P?) | Ps?], N1?).
 
 ui_mediator(Id, ch([msg(agent, person,
-                        befriend_intro(From, Other, Ch))|AgentIn], AgentOut?),
+                        befriend_intro(From, Other, P))|AgentIn], AgentOut?),
             UserCh, Ps, N) :-
     ground(From?), ground(Other?) |
     send(befriend_intro(From?, Other?, req(N?)),
          UserCh?, UserCh1),
     N1 := N? + 1,
     ui_mediator(Id?, ch(AgentIn?, AgentOut), UserCh1?,
-        [pending(req(N?), channel(Ch?)) | Ps?], N1?).
+        [pending(req(N?), P?) | Ps?], N1?).
 
 %% --- Agent-to-user: ground (pass through) ---
 
