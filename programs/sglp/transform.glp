@@ -740,10 +740,13 @@ dim_of1(no, _, Q, Ds, K?) :- dim_of(Q?, Ds?, K).
 
 %% person_clause(It?, Q?, J?, ND?, P?, Tail?, Ls): the clause of the person
 %% declaration T =::= P of the profile Q of the J-th of ND dimensions, T the
-%% interactive type It: on a question of T it draws the next seed of its own,
-%% spawns P on a copy of the question, with each answer a fresh variable, the
-%% seed and the monitor's reference, and the answer procedure of T, and goes on
-%% (Section 4, "The person process"; Appendix B).
+%% interactive type It: on a question of T it draws from its seed Seed a value K
+%% of 1..2147483646 and its next seed S, spawns P on a copy of the question,
+%% with each answer a fresh variable, K as the goal's seed and the monitor's
+%% reference, and the answer procedure of T, and goes on with S, so that the
+%% goal's draws and the process's are on different seed chains (Section 3,
+%% Definition "Person Process, Simulation Program, Stochastic Agent"; Section
+%% 4, "The person process"; Appendix B, "Seeds").
 procedure person_clause(_?, _?, Integer?, Integer?, _?, Terms?, Terms).
 person_clause(it(_, _, F, As, Nm), Q, J, ND, P, Tl, Ls?) :- ground(As?) |
     length(As?, NA), x_names(Xs0), y_names(Ys0), d_names(Dn0),
@@ -760,11 +763,11 @@ person_clause1(Xs, Ys, Dn, F, As, Nm, Q, J, P, Tl, Ls?) :-
     answer_args(As?, Xs?, Ys?, AA), answers_of(As?, Xs?, Ws),
     append(AA?, Ws?, AA1), append(AA1?, [var('Mon?'), var('Log?')], AA2),
     compose(Nm?, [var('A?'), var('Type?')|AA2?], AG),
-    G =.. [P?, Ct?, var('S?'), var('Mon?')],
+    G =.. [P?, Ct?, var('K?'), var('Mon?')],
     clause(person(var('A'), PW?, var('Mon'), var('Seed'), var('Log'),
                   [question(var('Type'), Qt?) | var('Qs')]),
            Gs?,
-           [random(var('Seed?'), 1, var('_'), var('S')),
+           [random(var('Seed?'), 2147483646, var('K'), var('S')),
             '#'(profiles, G?),
             AG?,
             person(var('A?'), PR?, var('Mon?'), var('S?'), var('Log?'), var('Qs?'))],
