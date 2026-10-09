@@ -1,15 +1,15 @@
 # Instructions for Claude Code (GLP)
 
-Read `/Grassroots/docs/claude.md` first; every rule there applies.  This file is Grassroots Integration's and carries what everyone who writes code in this repository needs: the startup sequence and every GLP and Dart rule.  Two read it: Integration Code, whose working directory is `/Users/udi/Grassroots/GLP`, and the subagent it spawns for a task, whose working directory is the `/Users/udi/Grassroots/GLP-worktrees/<project>` its brief names.
+Read `/Grassroots/docs/claude.md` first; every rule there applies.  This file is Grassroots Integration's and carries what everyone who writes code in this repository needs: the startup sequence and every GLP and Dart rule.  Two read it: Code, whose working directory is `/Users/udi/Grassroots/GLP`, and the subagent it spawns for a task, whose working directory is the `/Users/udi/Grassroots/GLP-worktrees/<project>` its brief names.
 
 ## Read at the start, and nothing more
 
-Integration Code, at session start:
+Code, at session start:
 
 1. `/Grassroots/docs/claude.md`.
 2. `/Grassroots/Integration/CLAUDE.md`.
 3. This file.
-4. `to_all_inbox.md`, then `Integration-Code_inbox.md` from its last receipt forward --- and again between tasks, being the one worker that does not wait to be told (`claude.md`, "Mail").
+4. `to_all_inbox.md`, then `Code_inbox.md` from its last receipt forward --- and again between tasks, being the one worker that does not wait to be told (`claude.md`, "Mail").
 
 A subagent, at the start of its task: the same 1 to 3 with the owning project's `CLAUDE.md` at 2, then the sections of the owning paper its task names.  It reads no inbox and leaves no receipt, having none.
 
@@ -21,22 +21,22 @@ Ownership is Coordination Appendix B, `/Grassroots/Coordination/sections/B-code-
 
 ## Branches, worktrees and merges
 
-🔴 **A task runs in its owner's worktree, on its owner's branch, carried out by a subagent of Integration Code** (Udi, 2026-09-17).  `claude.md` "Sessions" and "Code" define the arrangement; this section is how it is worked in this repository.  You are that subagent if your brief named a worktree; you are Integration Code if it did not.
+🔴 **A task runs in its owner's worktree, on its owner's branch, carried out by a subagent of Code** (Udi, 2026-09-17).  `claude.md` "Sessions" and "Code" define the arrangement; this section is how it is worked in this repository.  You are that subagent if your brief named a worktree; you are Code if it did not.
 
-- The clone at `/Users/udi/Grassroots/GLP` stays on `main` and is Integration Code's alone.  No subagent edits, commits or runs in it.
-- One worktree per task, made by Integration Code, named after its branch (`GSG-gap`, `GLP-unsglp`) and made off the branch its task names: `git -C /Users/udi/Grassroots/GLP worktree add /Users/udi/Grassroots/GLP-worktrees/<branch> -b <branch> <base>`.  A subagent works only in the one its brief names: `cd /Users/udi/Grassroots/GLP-worktrees/<branch>`.
-- 🔴 **The subagent reads the owning paper named in its task and codes from it.**  Integration Code does not summarise the paper for it and does not specify: the owner's Cowork wrote the task from the paper, and the paper is the specification.
+- The clone at `/Users/udi/Grassroots/GLP` stays on `main` and is Code's alone.  No subagent edits, commits or runs in it.
+- One worktree per task, made by Code, named after its branch (`GSG-gap`, `GLP-unsglp`) and made off the branch its task names: `git -C /Users/udi/Grassroots/GLP worktree add /Users/udi/Grassroots/GLP-worktrees/<branch> -b <branch> <base>`.  A subagent works only in the one its brief names: `cd /Users/udi/Grassroots/GLP-worktrees/<branch>`.
+- 🔴 **The subagent reads the owning paper named in its task and codes from it.**  Code does not summarise the paper for it and does not specify: the owner's Cowork wrote the task from the paper, and the paper is the specification.
 - 🔴 **It edits only what its owner owns** (Coordination Appendix B), commits path-limited on the branch --- `git add <files> && git commit -m "<message>" -- <files>` --- and never `git add -A`.  Single-line commit messages.  `git merge main` first, so the branch carries the current gate.
-- 🔴 **It runs the tests its task names, and not the full suite.**  The full suite is run only by Integration Code, on `main`, one run at a time: two suites at once contend on the Dart build lock and neither is a gate.
-- 🔴 **A question or a paper fault ends the subagent.**  It reports and stops; Integration Code posts the question in the owner's inbox and spawns again when the answer is there.  A workaround in code is never the answer to a fault in the paper.
-- When the branch is ready, Integration Code merges it into `main`, runs the full suite there, pushes, and answers the owner in its inbox.  A merge that fails the suite is not pushed.  On a merge conflict, STOP and report.
+- 🔴 **It runs the tests its task names, and not the full suite.**  The full suite is run only by Code, on `main`, one run at a time: two suites at once contend on the Dart build lock and neither is a gate.
+- 🔴 **A question or a paper fault ends the subagent.**  It reports and stops; Code posts the question in the owner's inbox and spawns again when the answer is there.  A workaround in code is never the answer to a fault in the paper.
+- When the branch is ready, Code merges it into `main`, runs the full suite there, pushes, and answers the owner in its inbox.  A merge that fails the suite is not pushed.  On a merge conflict, STOP and report.
 - An owner may add its own test block to `test/run_all_tests.sh` on its branch (Udi, 2026-09-16).  The harness machinery is Integration's and changes only by request to it: the gates, Section Q, `KNOWN_RED`, the runner guards and the asset step.  Two owners adding blocks to that file will conflict, so merge `main` into your branch before you write one.
 - Never `git reset`, `git revert`, `git restore` or `git checkout -- <file>` on another session's work; never rewrite history on `main`.
 - Generated files are gitignored and rebuilt by their script, never committed --- except a program's own source printed by a generator in the tree, which the program needs in order to load: it is committed, and a test holds it to what its generator prints (sGLP's printed `profiles.glp` and `population.glp`, `programs/sglp/transform.sh --check` and test (x); vGLP's compiled modules).
 
 ## The tree
 
-Reorganised 2026-09-16 (Udi).  `README.md` carries the directory map; what moved, and where a Code session must now look:
+Reorganised 2026-09-16 (Udi).  `README.md` carries the directory map; what moved, and where Code must now look:
 
 | Was | Is |
 |---|---|
@@ -52,7 +52,7 @@ Reorganised 2026-09-16 (Udi).  `README.md` carries the directory map; what moved
 
 ## Worktrees
 
-The list of worktrees is `git -C /Users/udi/Grassroots/GLP worktree list`.  A worktree is named after its branch, and the branch's task is in `Integration-Code_inbox.md`.
+The list of worktrees is `git -C /Users/udi/Grassroots/GLP worktree list`.  A worktree is named after its branch, and the branch's task is in `Code_inbox.md`.
 
 ## Operating GLP
 
