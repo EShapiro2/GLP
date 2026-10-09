@@ -24,9 +24,13 @@ enum Transport { ble, ip }
 /// from, agents it has never contacted. [open] accepts cold-calls from anyone.
 enum TrustLevel { open, closed }
 
-/// A proximity medium. "A level is held per ProximityMedium" (paper, Trust
-/// levels): each medium has its own cold-call [TrustLevel].
-enum ProximityMedium { ble, lan }
+/// A proximity underlay, PAN or LAN: "A level is held per ProximityUnderlay,
+/// and is set with setTrustLevel(underlay, level); both levels default to
+/// Closed" (GLP-Networking-API, Trust levels).  Each underlay has its own
+/// cold-call [TrustLevel], which `trust_declare/2` declares of `pan` or `lan`
+/// (GLP-Spec appendix-guards, "Proximity trust", e0b32d7).  Until 2026-10-09
+/// it was ProximityMedium, ble or lan.
+enum ProximityUnderlay { pan, lan }
 
 /// A 32-byte Ed25519 public key, with value equality and a hex string form.
 ///
@@ -174,11 +178,11 @@ abstract class GlpNetwork {
   /// Fires when a new peer is discovered.
   void Function(DiscoveredPeer p)? onPeerDiscovered;
 
-  /// Set the cold-call trust level of proximity medium [medium] to [level]:
-  /// "GLP sets one medium's level with setTrustLevel(medium, level); until set,
-  /// both levels are Closed" (paper, Trust levels). Backs `trust_declare/2`
-  /// (IGLP, Definition Seam Predicates).
-  void setTrustLevel(ProximityMedium medium, TrustLevel level);
+  /// Set the cold-call trust level of proximity underlay [underlay] to
+  /// [level]: "A level is held per ProximityUnderlay, and is set with
+  /// setTrustLevel(underlay, level); both levels default to Closed" (paper,
+  /// Trust levels). Backs `trust_declare/2` (IGLP, Definition Seam Predicates).
+  void setTrustLevel(ProximityUnderlay underlay, TrustLevel level);
 
   // --- IP (Section 4) — UnsupportedError in SimulationNetwork ---
 

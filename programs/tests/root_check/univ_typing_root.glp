@@ -742,14 +742,16 @@ procedure place_remove(_?).
 place_remove(P) :- ground(P?) | '_place_remove'(P?).
 
 %% trust_declare/2 - declare Level as the cold-call trust level of proximity
-%% medium Medium.  Medium is ble or lan and Level is open or closed; both media
-%% stand at closed until declared, a later declaration of a medium replaces the
-%% level then standing, and the two are declared independently.  The declaration
-%% is the catalogue's signature column verbatim.
+%% underlay Underlay.  Underlay is pan (Bluetooth Low Energy) or lan (the local
+%% network) and Level is open or closed; both underlays stand at closed until
+%% declared, a later declaration of an underlay replaces the level then
+%% standing, and the two are declared independently (GLP-Spec appendix-guards,
+%% "Proximity trust", e0b32d7; until 2026-10-09 a proximity medium, ble or lan).
+%% The declaration is the catalogue's signature column verbatim.
 procedure trust_declare(Constant?, Constant?).
-trust_declare(Medium, Level) :-
-    ground(Medium?), ground(Level?) |
-    '_trust_declare'(Medium?, Level?).
+trust_declare(Underlay, Level) :-
+    ground(Underlay?), ground(Level?) |
+    '_trust_declare'(Underlay?, Level?).
 
 % =============================================================================
 % MULTIWAY MERGE (mwm/2)

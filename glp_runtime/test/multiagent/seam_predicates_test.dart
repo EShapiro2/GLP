@@ -9,7 +9,8 @@
 /// agent's own entered, exited, unobservable and observable events, fed
 /// serializer-fashion so one declaration yields one stream however many events
 /// follow; place_remove ends the declaration; trust_declare sets a proximity
-/// medium's cold-call trust level. The stream is closed in exactly
+/// underlay's cold-call trust level, pan or lan (477c586; ble until
+/// 2026-10-09). The stream is closed in exactly
 /// two cases — place_remove and a superseding declaration — and an event for a
 /// place removed or superseded is dropped. A declaration the layer refuses is
 /// neither closing case: E receives unobservable, the declaration stands, and
@@ -17,8 +18,8 @@
 ///
 /// The layer functions are GLP-Networking-API's. The simulation realization
 /// provides none of the first four (their paper, §Not provided), and holds a
-/// trust level per medium (their paper, Simulation Realization, Discovery and
-/// trust).
+/// trust level per underlay (IGLP appendix-implementation-notes.tex,
+/// Simulation realisation).
 
 import 'dart:io';
 import 'dart:typed_data';
@@ -53,7 +54,7 @@ class _SeamNetwork extends GlpNetwork {
   final List<String> punched = [];
 
   /// Trust levels set, in order, with their media.
-  final List<(ProximityMedium, TrustLevel)> trusted = [];
+  final List<(ProximityUnderlay, TrustLevel)> trusted = [];
 
   /// Whether the platform accepts a declaration.
   bool accepts = true;
@@ -69,8 +70,8 @@ class _SeamNetwork extends GlpNetwork {
   void punchUdp(String address) => punched.add(address);
 
   @override
-  void setTrustLevel(ProximityMedium medium, TrustLevel level) =>
-      trusted.add((medium, level));
+  void setTrustLevel(ProximityUnderlay underlay, TrustLevel level) =>
+      trusted.add((underlay, level));
 
   @override
   Future<bool> declarePlace(String place, double radiusMetres) {
@@ -433,42 +434,46 @@ go :- place_declare(home, 100, _), place_remove(home).
       expect(network.removed, ['home']);
     });
 
-    test("trust_declare sets each medium's level at the layer", () async {
+    test("trust_declare sets each underlay's level at the layer", () async {
       final out = <String>[];
       final network = _SeamNetwork();
       final engine = _engine(out, network);
       engine.loadSource('''
 procedure go.
-go :- trust_declare(ble, open), trust_declare(lan, closed).
+go :- trust_declare(pan, open), trust_declare(lan, closed).
 ''');
       final result = await engine.runGoal('go');
       expect(result.succeeded, isTrue);
       expect(
           network.trusted,
           unorderedEquals([
-            (ProximityMedium.ble, TrustLevel.open),
-            (ProximityMedium.lan, TrustLevel.closed),
+            (ProximityUnderlay.pan, TrustLevel.open),
+            (ProximityUnderlay.lan, TrustLevel.closed),
           ]));
     });
 
-    test('trust_declare of a medium the layer does not have aborts', () async {
-      final out = <String>[];
-      final network = _SeamNetwork();
-      final engine = _engine(out, network);
-      engine.loadSource('''
+    test('trust_declare of an underlay the layer does not have aborts, ble '
+        'among them', () async {
+      for (final underlay in ['wifi', 'ble']) {
+        final out = <String>[];
+        final network = _SeamNetwork();
+        final engine = _engine(out, network);
+        engine.loadSource('''
 procedure go.
-go :- trust_declare(wifi, open).
+go :- trust_declare($underlay, open).
 ''');
-      final result = await engine.runGoal('go');
-      expect(result.succeeded, isFalse,
-          reason: "the kernel aborts, and the goal that called it fails");
-      expect(network.trusted, isEmpty);
+        final result = await engine.runGoal('go');
+        expect(result.succeeded, isFalse,
+            reason: "$underlay: the kernel aborts, and the goal that called it "
+                "fails");
+        expect(network.trusted, isEmpty);
+      }
     });
   });
 
   group(
       'simulation realization: none of the first four (§Not provided), '
-      'a trust level per medium (Discovery and trust)', () {
+      'a trust level per underlay (Simulation realisation)', () {
     SimulationNetworkClient client() => SimulationNetworkClient(
           selfId: 'alice',
           directory: NetworkDirectory(),
@@ -491,14 +496,15 @@ go :- trust_declare(wifi, open).
       expect(fired, 0);
     });
 
-    test("setTrustLevel holds each medium's level, both closed until set", () {
+    test("setTrustLevel holds each underlay's level, both closed until set",
+        () {
       final c = client();
-      expect(c.trustLevelOf(ProximityMedium.ble), TrustLevel.closed);
-      expect(c.trustLevelOf(ProximityMedium.lan), TrustLevel.closed);
-      c.setTrustLevel(ProximityMedium.ble, TrustLevel.open);
-      expect(c.trustLevelOf(ProximityMedium.ble), TrustLevel.open);
-      expect(c.trustLevelOf(ProximityMedium.lan), TrustLevel.closed,
-          reason: 'the two media are declared independently');
+      expect(c.trustLevelOf(ProximityUnderlay.pan), TrustLevel.closed);
+      expect(c.trustLevelOf(ProximityUnderlay.lan), TrustLevel.closed);
+      c.setTrustLevel(ProximityUnderlay.pan, TrustLevel.open);
+      expect(c.trustLevelOf(ProximityUnderlay.pan), TrustLevel.open);
+      expect(c.trustLevelOf(ProximityUnderlay.lan), TrustLevel.closed,
+          reason: 'the two underlays are declared independently');
     });
   });
 }

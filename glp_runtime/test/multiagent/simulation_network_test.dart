@@ -28,13 +28,13 @@ class _Conn {
   _Conn(this.toId, this.peerPk, this.event);
 }
 
-/// Build a router with three registered agents (alice, bob, carol), all Open over BLE,
+/// Build a router with three registered agents (alice, bob, carol), all Open over the PAN,
 /// recording deliveries and connectivity events into the given lists.
 SimulationRouter _router(List<_Delivered> delivered, List<_Conn> conn) {
   final r = SimulationRouter();
   for (final id in ['alice', 'bob', 'carol']) {
     r.register(id, generateKeyPair().pub);
-    r.setTrustLevel(id, ProximityMedium.ble, TrustLevel.open);
+    r.setTrustLevel(id, ProximityUnderlay.pan, TrustLevel.open);
   }
   r.onDeliver = (toId, fromPk, payload, messageId, t) =>
       delivered.add(_Delivered(toId, fromPk, payload, messageId));
@@ -109,7 +109,7 @@ void main() {
     test('Closed receiver drops a cold-call from an unknown agent', () {
       final delivered = <_Delivered>[];
       final r = _router(delivered, []);
-      r.setTrustLevel('bob', ProximityMedium.ble, TrustLevel.closed);
+      r.setTrustLevel('bob', ProximityUnderlay.pan, TrustLevel.closed);
       r.routeSend('alice', 'bob', _bytes([1])); // alice never contacted by bob
       expect(delivered, isEmpty);
     });
@@ -117,7 +117,7 @@ void main() {
     test('Open receiver accepts a cold-call', () {
       final delivered = <_Delivered>[];
       final r = _router(delivered, []);
-      r.setTrustLevel('bob', ProximityMedium.ble, TrustLevel.open);
+      r.setTrustLevel('bob', ProximityUnderlay.pan, TrustLevel.open);
       r.routeSend('alice', 'bob', _bytes([1]));
       expect(delivered.length, 1);
     });
@@ -125,18 +125,19 @@ void main() {
     test('Closed receiver accepts once it has contacted the sender', () {
       final delivered = <_Delivered>[];
       final r = _router(delivered, []);
-      r.setTrustLevel('bob', ProximityMedium.ble, TrustLevel.closed);
+      r.setTrustLevel('bob', ProximityUnderlay.pan, TrustLevel.closed);
       r.routeSend('bob', 'alice', _bytes([0])); // bob contacts alice first
       delivered.clear();
       r.routeSend('alice', 'bob', _bytes([1])); // no longer first contact
       expect(delivered.length, 1);
     });
 
-    // "A level is held per ProximityMedium ... until set, both levels are
-    // Closed" (GLP-Networking-API, Trust levels), and "setTrustLevel(medium,
-    // level) is enforced as specified for BLE: under Closed, first contact from
-    // an unknown agent is not answered" (Simulation Realization, Discovery and
-    // trust).  Every simulated encounter is a BLE one.
+    // "A level is held per ProximityUnderlay ... both levels default to
+    // Closed" (GLP-Networking-API, Trust levels), and "The PAN's cold-call
+    // trust level is enforced as trust_declare sets it" (IGLP
+    // appendix-implementation-notes.tex, Simulation realisation).  Every
+    // simulated encounter is a PAN one ("the reported underlay is the PAN
+    // throughout").
     test('an agent registers with both levels Closed, until set', () {
       final delivered = <_Delivered>[];
       final r = SimulationRouter()
@@ -144,27 +145,27 @@ void main() {
         ..register('bob', generateKeyPair().pub)
         ..onDeliver = (toId, fromPk, payload, messageId, t) =>
             delivered.add(_Delivered(toId, fromPk, payload, messageId));
-      for (final m in ProximityMedium.values) {
-        expect(r.trustLevelOf('bob', m), TrustLevel.closed);
+      for (final u in ProximityUnderlay.values) {
+        expect(r.trustLevelOf('bob', u), TrustLevel.closed);
       }
       r.routeSend('alice', 'bob', _bytes([1]));
       expect(delivered, isEmpty, reason: 'a first contact Closed bob ignores');
     });
 
-    test('the BLE level governs a first contact; the LAN level governs none',
+    test('the PAN level governs a first contact; the LAN level governs none',
         () {
       final delivered = <_Delivered>[];
       final r = _router(delivered, []);
-      r.setTrustLevel('bob', ProximityMedium.ble, TrustLevel.closed);
-      r.setTrustLevel('bob', ProximityMedium.lan, TrustLevel.open);
+      r.setTrustLevel('bob', ProximityUnderlay.pan, TrustLevel.closed);
+      r.setTrustLevel('bob', ProximityUnderlay.lan, TrustLevel.open);
       r.routeSend('alice', 'bob', _bytes([1]));
-      expect(delivered, isEmpty, reason: 'BLE closed: not answered');
+      expect(delivered, isEmpty, reason: 'PAN closed: not answered');
 
-      r.setTrustLevel('bob', ProximityMedium.ble, TrustLevel.open);
-      r.setTrustLevel('bob', ProximityMedium.lan, TrustLevel.closed);
+      r.setTrustLevel('bob', ProximityUnderlay.pan, TrustLevel.open);
+      r.setTrustLevel('bob', ProximityUnderlay.lan, TrustLevel.closed);
       r.routeSend('carol', 'bob', _bytes([2]));
       expect(delivered.map((d) => d.payload[0]), [2],
-          reason: 'BLE open: answered, the LAN level governing no BLE '
+          reason: 'PAN open: answered, the LAN level governing no PAN '
               'encounter');
     });
   });
@@ -177,18 +178,18 @@ void main() {
         selfId: 'bob',
         directory: r.directory,
         sendToRouter: (toId, payload) => r.routeSend('bob', toId, payload),
-        trustToRouter: (medium, level) =>
-            r.setTrustLevel('bob', medium, level),
+        trustToRouter: (underlay, level) =>
+            r.setTrustLevel('bob', underlay, level),
       );
-      bob.setTrustLevel(ProximityMedium.ble, TrustLevel.closed);
-      expect(bob.trustLevelOf(ProximityMedium.ble), TrustLevel.closed);
-      expect(r.trustLevelOf('bob', ProximityMedium.ble), TrustLevel.closed);
-      expect(r.trustLevelOf('bob', ProximityMedium.lan), TrustLevel.closed);
+      bob.setTrustLevel(ProximityUnderlay.pan, TrustLevel.closed);
+      expect(bob.trustLevelOf(ProximityUnderlay.pan), TrustLevel.closed);
+      expect(r.trustLevelOf('bob', ProximityUnderlay.pan), TrustLevel.closed);
+      expect(r.trustLevelOf('bob', ProximityUnderlay.lan), TrustLevel.closed);
 
       r.routeSend('alice', 'bob', _bytes([1]));
       expect(delivered, isEmpty, reason: 'the level bob declared is enforced');
 
-      bob.setTrustLevel(ProximityMedium.ble, TrustLevel.open);
+      bob.setTrustLevel(ProximityUnderlay.pan, TrustLevel.open);
       r.routeSend('alice', 'bob', _bytes([2]));
       expect(delivered.map((d) => d.payload[0]), [2]);
     });

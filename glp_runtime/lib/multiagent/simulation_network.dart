@@ -92,14 +92,13 @@ class SimulationRouter {
   bool _total = true;
   final Set<String> _adjacentPairs = {};
 
-  /// Each agent's cold-call trust level, per proximity medium: "A level is held
-  /// per ProximityMedium, and GLP sets one medium's level with
-  /// setTrustLevel(medium, level); until set, both levels are Closed"
-  /// (GLP-Networking-API, Trust levels).  An agent's layer sets its own when the
-  /// agent declares one with trust_declare/2
-  /// ([SimulationNetworkClient.setTrustLevel] forwards it here), and the boot
-  /// harness sets the BLE level Open for the plays.
-  final Map<String, Map<ProximityMedium, TrustLevel>> _trust = {};
+  /// Each agent's cold-call trust level, per proximity underlay: "A level is
+  /// held per ProximityUnderlay, and is set with setTrustLevel(underlay,
+  /// level); both levels default to Closed" (GLP-Networking-API, Trust
+  /// levels).  An agent's layer sets its own when the agent declares one with
+  /// trust_declare/2 ([SimulationNetworkClient.setTrustLevel] forwards it
+  /// here), and the boot harness sets the PAN level Open for the plays.
+  final Map<String, Map<ProximityUnderlay, TrustLevel>> _trust = {};
 
   /// Per-agent set of ids this agent has contacted (sent to). Used for the
   /// Closed first-contact rule.
@@ -135,20 +134,20 @@ class SimulationRouter {
     _contacted.putIfAbsent(id, () => <String>{});
   }
 
-  static Map<ProximityMedium, TrustLevel> _closed() =>
-      {for (final m in ProximityMedium.values) m: TrustLevel.closed};
+  static Map<ProximityUnderlay, TrustLevel> _closed() =>
+      {for (final u in ProximityUnderlay.values) u: TrustLevel.closed};
 
-  /// Set agent [id]'s cold-call trust level of [medium] to [level]: what its
-  /// layer does on setTrustLevel(medium, level), as trust_declare/2 asks (IGLP,
+  /// Set agent [id]'s cold-call trust level of [underlay] to [level]: what its
+  /// layer does on setTrustLevel(underlay, level), as trust_declare/2 asks (IGLP,
   /// Definition "Seam Predicates"), or what the boot harness sets.
-  void setTrustLevel(String id, ProximityMedium medium, TrustLevel level) {
-    _trust.putIfAbsent(id, _closed)[medium] = level;
+  void setTrustLevel(String id, ProximityUnderlay underlay, TrustLevel level) {
+    _trust.putIfAbsent(id, _closed)[underlay] = level;
   }
 
-  /// Agent [id]'s cold-call trust level of [medium]; Closed for an agent the
+  /// Agent [id]'s cold-call trust level of [underlay]; Closed for an agent the
   /// router does not hold.
-  TrustLevel trustLevelOf(String id, ProximityMedium medium) =>
-      _trust[id]?[medium] ?? TrustLevel.closed;
+  TrustLevel trustLevelOf(String id, ProximityUnderlay underlay) =>
+      _trust[id]?[underlay] ?? TrustLevel.closed;
 
   // --- Adjacency ---
 
@@ -243,16 +242,15 @@ class SimulationRouter {
     if (!isAdjacent(fromId, toId)) return; // unreachable: drop
 
     // The Closed first-contact rule --- a Closed agent receives no first contact
-    // from an agent it has never contacted --- under the level of the medium
-    // the encounter is on: "setTrustLevel(medium, level) is enforced as
-    // specified for BLE: under Closed, first contact from an unknown agent is
-    // not answered" (GLP-Networking-API, Simulation Realization, Discovery and
-    // trust).  Every encounter here is a BLE one ("The reported transport is
-    // BLE throughout"), so the BLE level governs it, and the LAN level, which
+    // from an agent it has never contacted --- under the level of the
+    // underlay the encounter is on.  Every encounter here is a PAN one (IGLP
+    // appendix-implementation-notes.tex, Simulation realisation: "every agent a
+    // PAN peer of every other", "the reported underlay is the PAN
+    // throughout"), so the PAN level governs it, and the LAN level, which
     // governs a LAN encounter alone, has none here to govern.  Until 2026-10-02
     // the router held one level per agent, the boot harness's, and a level an
-    // agent declared never reached it.
-    if (trustLevelOf(toId, ProximityMedium.ble) == TrustLevel.closed &&
+    // agent declared never reached it; until 2026-10-09 the PAN was BLE.
+    if (trustLevelOf(toId, ProximityUnderlay.pan) == TrustLevel.closed &&
         !(_contacted[toId]?.contains(fromId) ?? false)) {
       return;
     }
@@ -311,14 +309,16 @@ class SimulationNetworkClient extends GlpNetwork {
   /// Forwards this agent's trust declaration to the router, which enforces it
   /// ([SimulationRouter.setTrustLevel]); null where no router routes this
   /// client's traffic.
-  final void Function(ProximityMedium medium, TrustLevel level)? trustToRouter;
+  final void Function(ProximityUnderlay underlay, TrustLevel level)?
+      trustToRouter;
 
   PubKey? _pub;
   Uint8List? _priv;
 
-  /// The cold-call trust level of each proximity medium, both closed until set.
-  final Map<ProximityMedium, TrustLevel> _trust = {
-    for (final m in ProximityMedium.values) m: TrustLevel.closed,
+  /// The cold-call trust level of each proximity underlay, both closed until
+  /// set.
+  final Map<ProximityUnderlay, TrustLevel> _trust = {
+    for (final u in ProximityUnderlay.values) u: TrustLevel.closed,
   };
 
   SimulationNetworkClient({
@@ -386,18 +386,19 @@ class SimulationNetworkClient extends GlpNetwork {
       ];
 
   @override
-  void setTrustLevel(ProximityMedium medium, TrustLevel level) {
-    // Trust is enforced router-side in the simulation ("setTrustLevel(medium,
-    // level) is enforced as specified for BLE", GLP-Networking-API, Simulation
-    // Realization): the level is recorded here and handed to the router, which
-    // applies it to the first contacts it routes to this agent.  Until
-    // 2026-10-02 it was recorded here alone and governed nothing.
-    _trust[medium] = level;
-    trustToRouter?.call(medium, level);
+  void setTrustLevel(ProximityUnderlay underlay, TrustLevel level) {
+    // Trust is enforced router-side in the simulation ("The PAN's cold-call
+    // trust level is enforced as trust_declare sets it", IGLP
+    // appendix-implementation-notes.tex, Simulation realisation): the level is
+    // recorded here and handed to the router, which applies it to the first
+    // contacts it routes to this agent.  Until 2026-10-02 it was recorded here
+    // alone and governed nothing.
+    _trust[underlay] = level;
+    trustToRouter?.call(underlay, level);
   }
 
-  /// This client's locally-recorded trust level for [medium].
-  TrustLevel trustLevelOf(ProximityMedium medium) => _trust[medium]!;
+  /// This client's locally-recorded trust level for [underlay].
+  TrustLevel trustLevelOf(ProximityUnderlay underlay) => _trust[underlay]!;
 
   // --- IP (unsupported in simulation, spec §2/§8) ---
 

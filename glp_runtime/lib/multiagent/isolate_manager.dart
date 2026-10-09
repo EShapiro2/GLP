@@ -49,18 +49,19 @@ class RouterSend extends IsolateMessage {
 }
 
 /// Agent → router: the agent's layer sets the cold-call trust level of a
-/// proximity medium, as `trust_declare/2` asks (IGLP, Definition "Seam
-/// Predicates"); the router enforces it ("setTrustLevel(medium, level) is
-/// enforced as specified for BLE", GLP-Networking-API, Simulation Realization).
+/// proximity underlay, as `trust_declare/2` asks (IGLP, Definition "Seam
+/// Predicates"); the router enforces it ("The PAN's cold-call trust level is
+/// enforced as trust_declare sets it", IGLP appendix-implementation-notes.tex,
+/// Simulation realisation).
 class RouterTrust extends IsolateMessage {
   final String agentId;
-  final ProximityMedium medium;
+  final ProximityUnderlay underlay;
   final TrustLevel level;
 
-  RouterTrust(this.agentId, this.medium, this.level);
+  RouterTrust(this.agentId, this.underlay, this.level);
 
   @override
-  String toString() => 'RouterTrust($agentId, $medium, $level)';
+  String toString() => 'RouterTrust($agentId, $underlay, $level)';
 }
 
 /// Router → agent: a delivered message, with the authenticated sender id and the
@@ -325,7 +326,7 @@ class IsolateManager {
 
     // 1. Generate an Ed25519 key pair per agent and populate the directory
     //    (IGLP app:in-networking, Simulation realisation). The boot harness
-    //    sets the BLE level Open for the plays, the medium of every simulated
+    //    sets the PAN level Open for the plays, the underlay of every simulated
     //    encounter; an agent's own trust_declare/2 sets its levels after
     //    ([RouterTrust]).
     final keyPairs = <String, ({PubKey pub, Uint8List priv})>{};
@@ -334,7 +335,7 @@ class IsolateManager {
       keyPairs[directive.agentId] = kp;
       _router.register(directive.agentId, kp.pub);
       _router.setTrustLevel(
-          directive.agentId, ProximityMedium.ble, TrustLevel.open);
+          directive.agentId, ProximityUnderlay.pan, TrustLevel.open);
     }
 
     // 2. The router delivers to the destination agent's isolate port — the
@@ -425,11 +426,11 @@ class IsolateManager {
   /// Harness control: release a [holdDelivery], flushing in reverse order.
   void releaseDelivery(String a, String b) => _router.releaseDelivery(a, b);
 
-  /// The cold-call trust level of [medium] the router holds for [agentId] and
+  /// The cold-call trust level of [underlay] the router holds for [agentId] and
   /// enforces on the first contacts it routes to it: the boot harness's, or
   /// the one the agent declared with trust_declare/2.
-  TrustLevel trustLevelOf(String agentId, ProximityMedium medium) =>
-      _router.trustLevelOf(agentId, medium);
+  TrustLevel trustLevelOf(String agentId, ProximityUnderlay underlay) =>
+      _router.trustLevelOf(agentId, underlay);
 
   /// Start all agents.
   void start() {
@@ -489,8 +490,8 @@ class IsolateManager {
       _router.routeSend(msg.fromId, msg.toId, Uint8List.fromList(msg.payload));
 
     } else if (msg is RouterTrust) {
-      _log('${msg.agentId} sets trust ${msg.medium.name} ${msg.level.name}');
-      _router.setTrustLevel(msg.agentId, msg.medium, msg.level);
+      _log('${msg.agentId} sets trust ${msg.underlay.name} ${msg.level.name}');
+      _router.setTrustLevel(msg.agentId, msg.underlay, msg.level);
     }
   }
 
@@ -632,8 +633,8 @@ void _agentIsolateEntry(AgentConfig config) async {
     // The agent's trust declarations reach the router, which enforces them,
     // over the same port as its sends, so that a send after a declaration is
     // routed under it.
-    trustToRouter: (medium, level) =>
-        config.mainPort.send(RouterTrust(agentId, medium, level)),
+    trustToRouter: (underlay, level) =>
+        config.mainPort.send(RouterTrust(agentId, underlay, level)),
   );
   network.putIdentity(config.keyPair.pub, config.keyPair.priv);
   // Back the seam predicates (IGLP Definition Seam Predicates) and the

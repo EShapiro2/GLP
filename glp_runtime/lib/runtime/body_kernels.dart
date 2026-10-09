@@ -21,7 +21,7 @@ import 'machine_state.dart' show GoalRef;
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart' show GlobalName;
 import 'package:glp_runtime/multiagent/glp_network.dart'
-    show GlpNetwork, ProximityMedium, PubKey, TrustLevel;
+    show GlpNetwork, ProximityUnderlay, PubKey, TrustLevel;
 import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 import 'package:glp_runtime/wire/artefact.dart' show Artefact;
 import 'package:glp_runtime/wire/codec.dart';
@@ -1423,12 +1423,15 @@ BodyKernelResult placeRemoveKernel(GlpRuntime rt, List<Object?> args) {
   return BodyKernelResult.success;
 }
 
-/// '_trust_declare'(M?, L?) — set the cold-call trust level of proximity medium
-/// M, ble or lan, to L, open or closed, and assign nothing (IGLP, Definition
-/// Seam Predicates; GLP-Networking-API, System Predicates: "Both levels are
-/// closed until declared, and a further declaration of a medium replaces the
-/// level then standing"). A medium or level the layer does not have is a
-/// violated precondition, and so an abort.
+/// '_trust_declare'(U?, L?) — set the cold-call trust level of proximity
+/// underlay U, pan or lan, to L, open or closed, and assign nothing (IGLP,
+/// Definition Seam Predicates, 477c586; GLP-Spec appendix-guards, "Proximity
+/// trust", e0b32d7: "Underlay is pan (Bluetooth Low Energy) or lan (the local
+/// network) and Level is open or closed.  Both underlays stand at closed until
+/// declared, a later declaration of an underlay replaces the level then
+/// standing").  An underlay or level the layer does not have is a violated
+/// precondition, and so an abort.  Until 2026-10-09 the first argument was a
+/// proximity medium, ble or lan.
 BodyKernelResult trustDeclareKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
     print('[ABORT] \'_trust_declare\'/2: expected 2 arguments, got ${args.length}');
@@ -1437,13 +1440,13 @@ BodyKernelResult trustDeclareKernel(GlpRuntime rt, List<Object?> args) {
   final seam = _seamContext(rt, '\'_trust_declare\'/2');
   if (seam == null) return BodyKernelResult.abort;
 
-  final medium = switch (_groundString(rt, args[0])) {
-    'ble' => ProximityMedium.ble,
-    'lan' => ProximityMedium.lan,
+  final underlay = switch (_groundString(rt, args[0])) {
+    'pan' => ProximityUnderlay.pan,
+    'lan' => ProximityUnderlay.lan,
     _ => null,
   };
-  if (medium == null) {
-    print('[ABORT] \'_trust_declare\'/2: first argument (M) must be ble or '
+  if (underlay == null) {
+    print('[ABORT] \'_trust_declare\'/2: first argument (U) must be pan or '
         'lan, got ${_deref(rt, args[0])}');
     return BodyKernelResult.abort;
   }
@@ -1459,7 +1462,7 @@ BodyKernelResult trustDeclareKernel(GlpRuntime rt, List<Object?> args) {
   }
 
   try {
-    seam.network.setTrustLevel(medium, level);
+    seam.network.setTrustLevel(underlay, level);
   } on UnsupportedError catch (e) {
     print('[ABORT] \'_trust_declare\'/2: ${e.message}');
     return BodyKernelResult.abort;

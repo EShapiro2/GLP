@@ -1,12 +1,12 @@
-/// trust_declare/2 is enforced by the simulation's router, per medium.
+/// trust_declare/2 is enforced by the simulation's router, per underlay.
 ///
-/// GLP-Networking-API, Simulation Realization, "Discovery and trust":
-/// "setTrustLevel(medium, level) is enforced as specified for BLE: under Closed,
-/// first contact from an unknown agent is not answered"; Trust levels: "A level
-/// is held per ProximityMedium, and GLP sets one medium's level with
-/// setTrustLevel(medium, level); until set, both levels are Closed".  IGLP,
-/// Definition "Seam Predicates": trust_declare(M, L) "sets the cold-call trust
-/// level of the proximity medium M (ble or lan) to L (open or closed)".
+/// IGLP appendix-implementation-notes.tex, Simulation realisation: "The PAN's
+/// cold-call trust level is enforced as trust_declare sets it";
+/// GLP-Networking-API, Trust levels: "A level is held per ProximityUnderlay,
+/// and is set with setTrustLevel(underlay, level); both levels default to
+/// Closed".  IGLP, Definition "Seam Predicates" (477c586): trust_declare "sets
+/// the cold-call trust level of the proximity underlay U (pan or lan) to L
+/// (open or closed)".  Until 2026-10-09 the underlay was a medium, ble or lan.
 ///
 /// Until 2026-10-02 the agent's layer recorded the level it was given and the
 /// router never learnt of it: the router enforced one level per agent, the one
@@ -22,13 +22,13 @@ import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
 
-/// Two agents: bob declares BLE closed and LAN open, alice declares nothing.
+/// Two agents: bob declares PAN closed and LAN open, alice declares nothing.
 const _boot = '''
 procedure boot.
 boot :- agent_init(alice, _)@alice, agent_init(bob, _)@bob.
 
 procedure agent_init(_?, _?).
-agent_init(bob, _) :- trust_declare(ble, closed), trust_declare(lan, open).
+agent_init(bob, _) :- trust_declare(pan, closed), trust_declare(lan, open).
 agent_init(alice, _).
 ''';
 
@@ -45,22 +45,22 @@ void main() {
     config.rootSelfGlpPath = _rootSelf;
 
     await manager.boot(config);
-    // Before the agents run: the boot harness's BLE level Open for the plays,
+    // Before the agents run: the boot harness's PAN level Open for the plays,
     // and LAN Closed, as no level is set for it.
-    expect(manager.trustLevelOf('bob', ProximityMedium.ble), TrustLevel.open);
-    expect(manager.trustLevelOf('bob', ProximityMedium.lan), TrustLevel.closed);
+    expect(manager.trustLevelOf('bob', ProximityUnderlay.pan), TrustLevel.open);
+    expect(manager.trustLevelOf('bob', ProximityUnderlay.lan), TrustLevel.closed);
 
     manager.start();
     await manager.settle();
 
     expect(manager.faults, isEmpty);
-    expect(manager.trustLevelOf('bob', ProximityMedium.ble), TrustLevel.closed,
-        reason: 'bob declared ble closed');
-    expect(manager.trustLevelOf('bob', ProximityMedium.lan), TrustLevel.open,
-        reason: 'bob declared lan open, the two media independently');
-    expect(manager.trustLevelOf('alice', ProximityMedium.ble), TrustLevel.open,
+    expect(manager.trustLevelOf('bob', ProximityUnderlay.pan), TrustLevel.closed,
+        reason: 'bob declared pan closed');
+    expect(manager.trustLevelOf('bob', ProximityUnderlay.lan), TrustLevel.open,
+        reason: 'bob declared lan open, the two underlays independently');
+    expect(manager.trustLevelOf('alice', ProximityUnderlay.pan), TrustLevel.open,
         reason: 'alice declared nothing: the boot level stands');
-    expect(manager.trustLevelOf('alice', ProximityMedium.lan),
+    expect(manager.trustLevelOf('alice', ProximityUnderlay.lan),
         TrustLevel.closed);
   }, timeout: Timeout(Duration(seconds: 60)));
 }
