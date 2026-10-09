@@ -85,7 +85,7 @@ const Set<String> builtinProcedures = {
   '>=/2',
   '=:=/2',
   '=\\=/2',
-  // Lexicographic comparison of ground constants
+  // The standard order of constants (GLP-Spec appendix-guards.tex, 2bfb42b)
   '@</2',
   // Structural equality guard
   '=?=/2',

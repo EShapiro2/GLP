@@ -137,7 +137,9 @@ procedure >=(Exp?, Exp?).
 procedure =:=(Exp?, Exp?).
 procedure =\=(Exp?, Exp?).
 
-% Lexicographic comparison of ground constants
+% The standard order of constants (GLP-Spec appendix-guards, 2bfb42b): a number
+% precedes a string; numbers compare by value, and strings by the codes of
+% their characters, lexicographically.
 procedure @<(Constant?, Constant?).
 
 % Equality guard

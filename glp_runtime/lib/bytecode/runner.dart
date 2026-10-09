@@ -797,6 +797,38 @@ const Set<String> runtimeGuards = {
 /// arithmetic expressions in [_evaluateGuard] before it is decided.
 const Set<String> _arithmeticComparisons = {'<', '>', '=<', '>=', '=:=', '=\\='};
 
+/// Whether constant [a] precedes constant [b] in the standard order of
+/// constants, which `@<` decides (GLP-Spec appendix-guards.tex, 2bfb42b): "a
+/// number precedes a string; numbers compare by value, and strings by the codes
+/// of their characters, lexicographically".  Each is a [num], a [String] or the
+/// empty list [Nil].  No paper places the empty list in this order; it keeps
+/// the place it had before the order was written, by its text `[]`.
+bool _precedesInStandardOrder(Object a, Object b) {
+  final x = a is Nil ? a.toString() : a;
+  final y = b is Nil ? b.toString() : b;
+  if (x is num && y is num) return x < y;
+  if (x is num) return true; // a number precedes a string
+  if (y is num) return false;
+  return _compareCharacterCodes(x as String, y as String) < 0;
+}
+
+/// [a] against [b] by the codes of their characters, lexicographically: the
+/// first differing code decides, and a proper prefix precedes.  A character's
+/// code is its Unicode code point, so a character beyond U+FFFF, which Dart
+/// holds as two UTF-16 code units, is compared as the one character it is.
+int _compareCharacterCodes(String a, String b) {
+  final ia = a.runes.iterator;
+  final ib = b.runes.iterator;
+  while (true) {
+    final moreA = ia.moveNext();
+    final moreB = ib.moveNext();
+    if (!moreA) return moreB ? -1 : 0;
+    if (!moreB) return 1;
+    final d = ia.current - ib.current;
+    if (d != 0) return d;
+  }
+}
+
 GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerContext cx) {
   // Extract values from any remaining ConstTerms
   Object? getValue(Object? v) {
@@ -1016,18 +1048,27 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       }
       return comparisonBlockedOrFail();
 
-    // Lexicographic comparison of ground constants (atoms/strings/numbers)
+    // The standard order of constants (GLP-Spec appendix-guards.tex, 2bfb42b):
+    // "@< succeeds if both arguments are ground constants and the first
+    // precedes the second in the standard order of constants: a number
+    // precedes a string; numbers compare by value, and strings by the codes of
+    // their characters, lexicographically" ([_precedesInStandardOrder]).  An
+    // argument bound to a term that is no constant fails the guard, whatever
+    // the other is: no instance of it succeeds (glp.tex, Guards).  Until
+    // 2026-10-09 it compared the printed text of the two, so 10 @< 9 and
+    // -1 @< -2 succeeded, 9 @< 10 and 5 @< '!' failed, and f(a) @< X? waited
+    // on X?.
     case '@<':
       if (args.length < 2) return GuardResult.failure;
-      String? evalConst(dynamic v) {
-        if (v is ConstTerm) {
-          final cv = v.value;
-          return cv?.toString();
-        }
-        // The empty list compares by its text, `[]` ([Nil]): GLP-Spec gives
-        // @< its signature and no order, and the guard compares the text of
-        // its constants.  Until 2026-10-07 [] was the string 'nil' here.
-        if (v is String || v is num || v is Nil) return v.toString();
+      // Set where an argument is bound to a term that is no constant.
+      var noConstant = false;
+      // The constant an argument is, as the order takes it: a number (num), a
+      // string (String) or the empty list ([Nil]); null where it is not yet
+      // known (its reader recorded) or is no constant.
+      Object? evalConst(dynamic v) {
+        if (v == null) return null;
+        if (v is ConstTerm) return evalConst(v.value);
+        if (v is String || v is num || v is Nil) return v;
         if (v is VarRef) {
           if (cx.rt.heap.isReader(v.addr)) {
             final writerAddr = cx.rt.heap.tryWriterForReader(v.addr);
@@ -1046,13 +1087,17 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
           final deref = cx.rt.heap.getValue(v.addr);
           return deref == null ? null : evalConst(deref);
         }
+        noConstant = true;
         return null;
       }
       final lc = evalConst(args[0]);
       final rc = evalConst(args[1]);
       if (lc != null && rc != null) {
-        return lc.compareTo(rc) < 0 ? GuardResult.success : GuardResult.failure;
+        return _precedesInStandardOrder(lc, rc)
+            ? GuardResult.success
+            : GuardResult.failure;
       }
+      if (noConstant) return GuardResult.failure;
       return blockedOrFail();
 
     // Type guards
@@ -2444,11 +2489,14 @@ mixin OpExecutors {
     // arithmetic comparisons, which evaluate both operands before they wait on
     // one: `X? > 1 / 0` fails, its right operand having no value whatever X?
     // becomes, where it waited on X? until 2026-10-02 (GLP #3 Cowork,
-    // 2026-10-02 17:12 UTC, S3).
+    // 2026-10-02 17:12 UTC, S3).  So does @<, which fails on an argument
+    // that is no constant whatever readers stand beside it: f(a) @< X? has no
+    // instance that succeeds, where it waited on X? until 2026-10-09.
     if (unboundReaders.isNotEmpty &&
         predicateName != 'unknown' &&
         predicateName != '=?=' &&
         predicateName != '=?\\=' &&
+        predicateName != '@<' &&
         !_arithmeticComparisons.contains(predicateName)) {
       return _guardUndecided(cx, unboundReaders);
     }
