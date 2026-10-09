@@ -19,8 +19,8 @@
 % and are pasted as they stand.
 % ---------------------------------------------------------------------------
 
-imported procedure check#check(Contract?, Verdict).
-imported procedure contracts#contract(Constant?, Contract).
+imported procedure check#check(Declared?, Verdict).
+imported procedure contracts#contract(Constant?, Declared).
 
 procedure chunks_app(Chunks?, Chunks?, Chunks).
 chunks_app([], T, T?).
@@ -534,8 +534,10 @@ latex_contract(K, [S|Ss], T, ['\\iffalse', Nm?, '\\fi'|R?]) :-
     latex_schema(K?, S?, R1?, R).
 
 % --- Entry points ----------------------------------------------------------
-% The checker first: a contract that is not syntactically grassroots, or that
-% fails the conditions on the text of Section 8, is not compiled at all.
+% The checker first: a contract that is malformed, that is not syntactically
+% grassroots, or that fails the conditions on the text of Section 8, is not
+% compiled at all.  A contract's reflexive predicates are no part of its
+% compiled form, which is its schemas'.
 
 procedure find_schema1(Constant?, Constant?, Schema?, Contract?, FoundS).
 find_schema1(Nm, Sn, S, _, found(S?)) :- Nm? =?= Sn? | true.
@@ -566,6 +568,13 @@ not_compiled_app(Nm) :- ground(Nm?) |
                   'fails the conditions on the text of Section 8;',
                   'check_named gives the faults.']).
 
+procedure not_compiled_malformed(Constant?).
+not_compiled_malformed(Nm) :- ground(Nm?) |
+    send_to_user(['% not compiled:', Nm?,
+                  'is malformed, a schema adding or deleting at a role the atom',
+                  'of a reflexive predicate naming that role;',
+                  'check_named gives the faults.']).
+
 procedure compile_on(Verdict?, Constant?, Contract?).
 compile_on(syntactically_grassroots, _, C) :- ground(C?) |
     latex_contract(no, C?, [], L),
@@ -575,10 +584,12 @@ compile_on(conditions_met, _, C) :- ground(C?) |
     latex_contract(yes, C?, [], L),
     send_to_user(L?).
 compile_on(conditions_failed(_), Nm, _) :- ground(Nm?) | not_compiled_app(Nm?).
+compile_on(malformed(_), Nm, _) :- ground(Nm?) | not_compiled_malformed(Nm?).
 
-procedure compile_checked(Constant?, Contract?).
-compile_checked(Nm, C) :- ground(Nm?), ground(C?) |
-    check # check(C?, V),
+procedure compile_checked(Constant?, Declared?).
+compile_checked(Nm, D) :- ground(Nm?), ground(D?) |
+    check # check(D?, V),
+    decl_schemas(D?, C),
     compile_on(V?, Nm?, C?).
 
 exported procedure compile_named(Constant?).
@@ -595,10 +606,12 @@ compile_s_on(conditions_met, _, Sn, C) :- ground(Sn?), ground(C?) |
     find_schema(C?, Sn?, S),
     emit_schema(S?, yes, Sn?).
 compile_s_on(conditions_failed(_), Nm, _, _) :- ground(Nm?) | not_compiled_app(Nm?).
+compile_s_on(malformed(_), Nm, _, _) :- ground(Nm?) | not_compiled_malformed(Nm?).
 
-procedure compile_s_checked(Constant?, Constant?, Contract?).
-compile_s_checked(Nm, Sn, C) :- ground(Nm?), ground(Sn?), ground(C?) |
-    check # check(C?, V),
+procedure compile_s_checked(Constant?, Constant?, Declared?).
+compile_s_checked(Nm, Sn, D) :- ground(Nm?), ground(Sn?), ground(D?) |
+    check # check(D?, V),
+    decl_schemas(D?, C),
     compile_s_on(V?, Nm?, Sn?, C?).
 
 exported procedure compile_schema(Constant?, Constant?).

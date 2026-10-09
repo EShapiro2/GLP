@@ -168,7 +168,8 @@ check "and the verdict is the second conjunct alone" \
 
 # CSSN's child-safe contract, eighteen schemas, transcribed from their entries
 # of 2026-08-15 20:35 and 21:40 and 2026-08-16 12:37 UTC in
-# Coordination/mail/Legal_inbox.md.  Its introductory act is parent_child;
+# Coordination/mail/Legal_inbox.md, with send, parent_child and friend brought
+# to CSSN's paper on 2026-10-09.  Its introductory act is parent_child;
 # befriending is obstructed there by design.
 out=$(run 'check_named(cssn, V).' 'traceable_of(cssn, E).')
 check "CSSN's contract is syntactically grassroots" \
@@ -190,6 +191,59 @@ EOF
 )
 check_eq "CSSN's send requires at the sender the item it sends and nothing else" \
          "$send_cssn" "$(compiled cssn send)"
+
+# friend is reflexive, as CSSN's sections/schemas.tex declares it, and
+# parent_child forbids parent(r) at the parent's role, as its
+# sections/artefact-schemas.tex:8 writes it (Legal 2026-10-09 18:43 UTC).
+out=$(run 'contract_named(cssn, C).')
+check "CSSN's contract declares friend reflexive" \
+      "C = reflexive([friend], [schema(parent_child," "$out"
+parent_child_cssn=$(cat <<'EOF' | squash
+\begin{align*}
+& c'_{\Alice} := c_{\Alice} \uplus \{\mathit{parenting}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{parent}(\Alice),\mathit{child}\},\\
+& \text{provided } \mathit{parent}(\Bob) \notin c_{\Alice} \text{ and } \mathit{parent}(\Alice) \notin c_{\Bob}, \qquad \text{guarded by } \{\Alice,\Bob\}
+\end{align*}
+EOF
+)
+check_eq "CSSN's parent_child forbids parent(r) at the parent's role" \
+         "$parent_child_cssn" "$(compiled cssn parent_child)"
+
+# --- reflexive predicates (the paragraph after def:binding) ----------------
+# A contract may declare a predicate of arity one reflexive.  The social graph
+# with friend declared so certifies as it does without.
+out=$(run 'check_named(sg_reflexive, V).')
+check "the social graph with friend reflexive is syntactically grassroots" \
+      "V = syntactically_grassroots" "$out"
+
+# No schema adds or deletes, at a role, the atom of a reflexive predicate
+# naming that role: a contract in which one does is refused as malformed,
+# naming the schema, the role and the atom, and is not compiled.
+out=$(run 'check_named(sg_refl_malformed, V).')
+check "adding or deleting friend of its own role makes the contract malformed" \
+      "V = malformed([reflexive(self_befriend, 1, atom(friend, [role(1)])), reflexive(self_unfriend, 1, atom(friend, [role(1)]))])" \
+      "$out"
+out=$(run 'compile_named(sg_refl_malformed).')
+check "a malformed contract is not compiled" \
+      "% not compiled: sg_refl_malformed is malformed" "$(printf '%s' "$out" | tr '\n' ' ')"
+check_not "and no display is printed for it" "begin{align" "$out"
+
+# Clause 1 of def:unobstructed skips a required atom of a reflexive predicate
+# naming the role: befriend requiring friend of each party at its own role is
+# obstructed when friend is not reflexive and unobstructed when it is.
+out=$(run 'check_named(sg_self_required, V).')
+check "friend of its own role required, friend not reflexive: clause 1 fails" \
+      "V = not_grassroots([obstructed(befriend, 1, atom(friend, [role(1)]), unobtainable), obstructed(befriend, 2, atom(friend, [role(2)]), unobtainable)])" \
+      "$out"
+out=$(run 'check_named(sg_refl_required, V).')
+check "friend of its own role required, friend reflexive: clause 1 skips it" \
+      "V = syntactically_grassroots" "$out"
+
+# Clause 3 of def:unobstructed: the introductory act forbids at a role no atom
+# of a reflexive predicate naming that role.
+out=$(run 'check_named(sg_refl_forbidden, V).')
+check "friend of its own role forbidden, friend reflexive: clause 3 fails" \
+      "V = not_grassroots([obstructed(befriend, 1, atom(friend, [role(1)]), reflexive), obstructed(befriend, 2, atom(friend, [role(2)]), reflexive)])" \
+      "$out"
 
 # A contract with no schemas.
 out=$(run 'check_named(nonesuch, V).')

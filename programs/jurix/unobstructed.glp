@@ -104,7 +104,7 @@ intro_act_bindings(Sc, R?) :- ground(Sc?) |
 procedure unary_supplies(Schema?, GAtom?, Val?, Ans).
 unary_supplies(schema(_, [rs(guarded, P, [], [], [])]), G, V, R?) :-
     ground(P?), ground(G?), ground(V?) |
-    some_match(P?, G?, [bind(role(1), V?)], R).
+    some_match(P?, G?, [rs(guarded, P?, [], [], [])], [bind(role(1), V?)], R).
 unary_supplies(Sc, _, _, no) :- otherwise, ground(Sc?) | true.
 
 procedure obtainable1(Ans?, Contract?, GAtom?, Val?, Ans).
@@ -159,7 +159,8 @@ plus_blocks([], _, _, _, _, _, _, clear).
 plus_blocks([Psi|Ps], Plus, J, Sc, Cx, G, P, R?) :-
     ground(Psi?), ground(Ps?), ground(Plus?), integer(J?), ground(Sc?),
     ground(Cx?), ground(G?), ground(P?) |
-    match_atom(Psi?, G?, [bind(role(J?), P?)], M),
+    sch_roles(Sc?, Rs),
+    match_atom(Psi?, G?, Rs?, [bind(role(J?), P?)], M),
     psi_block(M?, Psi?, Ps?, Plus?, J?, Sc?, Cx?, G?, P?, R).
 
 procedure role_blocks1(Block?, RoleSpecs?, Integer?, Schema?, Ctx?, GAtom?, Val?, Block).
@@ -240,23 +241,38 @@ unob_forb([A|As], V, I, Nm, B, C, Cx, R?) :-
     blocker(C?, Cx?, G?, V?, Bl),
     unob_forb1(Bl?, A?, As?, V?, I?, Nm?, B?, C?, Cx?, R).
 
-% The person in the role is produced by the body, so the two clauses of
+% --- clause 3 of def:unobstructed -----------------------------------------
+% The introductory act forbids at a role no atom of a reflexive predicate
+% naming that role; each one it forbids is a fault.
+
+procedure refl_faults(Atoms?, Integer?, Constant?, Faults).
+refl_faults([], _, _, []).
+refl_faults([A|As], I, Nm, [obstructed(Nm?, I?, A?, reflexive)|R?]) :-
+    ground(As?), integer(I?), ground(Nm?) |
+    refl_faults(As?, I?, Nm?, R).
+
+% The person in the role is produced by the body, so the three clauses of
 % def:unobstructed are put to it through one call that can guard on it.
-procedure unob_role1(Val?, Atoms?, Atoms?, Integer?, Constant?, Subst?, Contract?, Ctx?, Faults).
-unob_role1(V, Req, Forb, I, Nm, B, C, Cx, R?) :-
+% Clause 1 skips a required atom of a reflexive predicate naming the role.
+procedure unob_role1(Val?, Atoms?, Atoms?, Integer?, Constant?, Subst?, Contract?, Ctx?, Preds?, Faults).
+unob_role1(V, Req, Forb, I, Nm, B, C, Cx, Rf, R?) :-
     ground(V?), ground(Req?), ground(Forb?), integer(I?), ground(Nm?),
-    ground(B?), ground(C?), ground(Cx?) |
-    unob_req(Req?, V?, I?, Nm?, B?, C?, F1),
+    ground(B?), ground(C?), ground(Cx?), ground(Rf?) |
+    refl_keep(Req?, I?, Rf?, no, Req1),
+    unob_req(Req1?, V?, I?, Nm?, B?, C?, F1),
     unob_forb(Forb?, V?, I?, Nm?, B?, C?, Cx?, F2),
-    faults_app(F1?, F2?, R).
+    refl_keep(Forb?, I?, Rf?, yes, Own),
+    refl_faults(Own?, I?, Nm?, F3),
+    faults_app(F2?, F3?, F23),
+    faults_app(F1?, F23?, R).
 
 % An introductory act has two roles (def:introduction), so the other role of
 % the one at I is 3 - I, and clause 2 is decided against the party there.
-procedure unob_roles(RoleSpecs?, Integer?, Constant?, Subst?, Contract?, Integer?, Faults).
-unob_roles([], _, _, _, _, _, []).
-unob_roles([RS|Rs], I, Nm, B, C, Fb, R?) :-
+procedure unob_roles(RoleSpecs?, Integer?, Constant?, Subst?, Contract?, Integer?, Preds?, Faults).
+unob_roles([], _, _, _, _, _, _, []).
+unob_roles([RS|Rs], I, Nm, B, C, Fb, Rf, R?) :-
     ground(RS?), ground(Rs?), integer(I?),
-    ground(Nm?), ground(B?), ground(C?), integer(Fb?) |
+    ground(Nm?), ground(B?), ground(C?), integer(Fb?), ground(Rf?) |
     rs_del(RS?, M),
     rs_keep(RS?, K),
     rs_forb(RS?, N),
@@ -264,19 +280,20 @@ unob_roles([RS|Rs], I, Nm, B, C, Fb, R?) :-
     O := 3 - I?,
     apply_arg(B?, role(O?), OV),
     atoms_app(K?, M?, Req),
-    unob_role1(V?, Req?, N?, I?, Nm?, B?, C?, ctx(OV?, Fb?), F1),
+    unob_role1(V?, Req?, N?, I?, Nm?, B?, C?, ctx(OV?, Fb?), Rf?, F1),
     I1 := I? + 1,
-    unob_roles(Rs?, I1?, Nm?, B?, C?, Fb?, F2),
+    unob_roles(Rs?, I1?, Nm?, B?, C?, Fb?, Rf?, F2),
     faults_app(F1?, F2?, R).
 
-% unobstructed(Sc, B, C, Faults): the faults of def:unobstructed at the
-% introduction B; empty when it satisfies both clauses at every role.
-procedure unobstructed(Schema?, Subst?, Contract?, Faults).
-unobstructed(Sc, B, C, R?) :- ground(Sc?), ground(B?), ground(C?) |
+% unobstructed(Sc, B, C, Rf, Faults): the faults of def:unobstructed at the
+% introduction B, Rf being the predicates the contract declares reflexive;
+% empty when it satisfies the three clauses at every role.
+procedure unobstructed(Schema?, Subst?, Contract?, Preds?, Faults).
+unobstructed(Sc, B, C, Rf, R?) :- ground(Sc?), ground(B?), ground(C?), ground(Rf?) |
     sch_name(Sc?, Nm),
     sch_roles(Sc?, Rs),
     fresh_base(Sc?, N),
-    unob_roles(Rs?, 1, Nm?, B?, C?, N?, R).
+    unob_roles(Rs?, 1, Nm?, B?, C?, N?, Rf?, R).
 
 % --- def:syntactically-grassroots, first half ------------------------------
 % Some schema is an introductory act unobstructed at some introduction.  The
@@ -287,28 +304,30 @@ procedure note_cand(Cand?, Faults?, Cand).
 note_cand(none, F, some(F?)).
 note_cand(some(F), _, some(F?)).
 
-procedure intro_try1(Faults?, Substs?, Schema?, Contract?, Contract?, Cand?, Faults).
-intro_try1([], _, _, _, _, _, []).
-intro_try1([F|Fs], Bs, S, Ss, C, Cd, R?) :-
-    ground(F?), ground(Fs?), ground(Bs?), ground(S?), ground(Ss?), ground(C?), ground(Cd?) |
+procedure intro_try1(Faults?, Substs?, Schema?, Contract?, Contract?, Preds?, Cand?, Faults).
+intro_try1([], _, _, _, _, _, _, []).
+intro_try1([F|Fs], Bs, S, Ss, C, Rf, Cd, R?) :-
+    ground(F?), ground(Fs?), ground(Bs?), ground(S?), ground(Ss?), ground(C?),
+    ground(Rf?), ground(Cd?) |
     note_cand(Cd?, [F?|Fs?], Cd1),
-    intro_try(Bs?, S?, Ss?, C?, Cd1?, R).
+    intro_try(Bs?, S?, Ss?, C?, Rf?, Cd1?, R).
 
-procedure intro_try(Substs?, Schema?, Contract?, Contract?, Cand?, Faults).
-intro_try([], _, Ss, C, Cd, R?) :- ground(Ss?), ground(C?), ground(Cd?) |
-    intro_scan(Ss?, C?, Cd?, R).
-intro_try([B|Bs], S, Ss, C, Cd, R?) :-
-    ground(B?), ground(Bs?), ground(S?), ground(Ss?), ground(C?), ground(Cd?) |
-    unobstructed(S?, B?, C?, F),
-    intro_try1(F?, Bs?, S?, Ss?, C?, Cd?, R).
+procedure intro_try(Substs?, Schema?, Contract?, Contract?, Preds?, Cand?, Faults).
+intro_try([], _, Ss, C, Rf, Cd, R?) :- ground(Ss?), ground(C?), ground(Rf?), ground(Cd?) |
+    intro_scan(Ss?, C?, Rf?, Cd?, R).
+intro_try([B|Bs], S, Ss, C, Rf, Cd, R?) :-
+    ground(B?), ground(Bs?), ground(S?), ground(Ss?), ground(C?), ground(Rf?), ground(Cd?) |
+    unobstructed(S?, B?, C?, Rf?, F),
+    intro_try1(F?, Bs?, S?, Ss?, C?, Rf?, Cd?, R).
 
-procedure intro_scan(Contract?, Contract?, Cand?, Faults).
-intro_scan([], _, none, [no_introductory_act]).
-intro_scan([], _, some(F), F?).
-intro_scan([S|Ss], C, Cd, R?) :-
-    ground(S?), ground(Ss?), ground(C?), ground(Cd?) |
+procedure intro_scan(Contract?, Contract?, Preds?, Cand?, Faults).
+intro_scan([], _, _, none, [no_introductory_act]).
+intro_scan([], _, _, some(F), F?).
+intro_scan([S|Ss], C, Rf, Cd, R?) :-
+    ground(S?), ground(Ss?), ground(C?), ground(Rf?), ground(Cd?) |
     intro_act_bindings(S?, Bs),
-    intro_try(Bs?, S?, Ss?, C?, Cd?, R).
+    intro_try(Bs?, S?, Ss?, C?, Rf?, Cd?, R).
 
-exported procedure intro_result(Contract?, Faults).
-intro_result(C, R?) :- ground(C?) | intro_scan(C?, C?, none, R).
+% intro_result(C, Rf, Faults): Rf is the predicates C declares reflexive.
+exported procedure intro_result(Contract?, Preds?, Faults).
+intro_result(C, Rf, R?) :- ground(C?), ground(Rf?) | intro_scan(C?, C?, Rf?, none, R).
