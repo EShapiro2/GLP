@@ -33,12 +33,12 @@
 AddrResult ::= found(Constant) ; not_found.
 
 %% Friend-mediated rendezvous message operations
-MsgOp ::= mediate(Constant)        %% mediate(C_pk) — A asks B to help reconnect to C
+MsgOp ::= mediate(Key)             %% mediate(C_pk) — A asks B to help reconnect to C
         ; punch_to(AddrResult)     %% punch_to(found(Addr)) or punch_to(not_found)
         ; addr_update(Constant).   %% addr_update(NewAddr) — notify friends of address change
 
 %% Protocol message: msg(From, To, Op)
-Msg ::= msg(Constant, Constant, MsgOp).
+Msg ::= msg(Key, Key, MsgOp).
 
 %% Input stream to the agent
 MsgStream ::= [] ; [Msg | MsgStream].
@@ -46,18 +46,18 @@ MsgStream ::= [] ; [Msg | MsgStream].
 %% Per-friend output stream
 FriendStream ::= [] ; [Msg | FriendStream].
 
-%% Extended friends list: fe(Name, OutputStream, Addr)
+%% Extended friends list: fe(Key, OutputStream, Addr)
 %% The `?` on FriendStream indicates the data carries a reader reference
 %% to the friend's output stream; the agent holds the paired writer and
 %% prepends messages by binding the writer.
-FriendEntry ::= fe(Constant, FriendStream?, Constant).
+FriendEntry ::= fe(Key, FriendStream?, Constant).
 FriendList ::= [] ; [FriendEntry | FriendList].
 
 %% =============================================================================
 %% MAIN LOOP
 %% =============================================================================
 
-exported procedure fmrv(Constant?, MsgStream?, FriendList?).
+exported procedure fmrv(Key?, MsgStream?, FriendList?).
 
 %% Address update: a friend tells us its new address — update friends list
 fmrv(Id, [msg(From, To, addr_update(Addr))|In], Fs) :-
@@ -106,7 +106,7 @@ fmrv(_, [], _).
 %% When Key is not found (end of list reached), KeyAddr is bound to
 %% not_found, no message is sent.
 
-procedure lookup_and_send(Constant?, Constant?, AddrResult?, AddrResult,
+procedure lookup_and_send(Key?, Key?, AddrResult?, AddrResult,
                           FriendList?, FriendList).
 
 %% Match: this is Key's entry.  Prepend punch_to message to the stream
@@ -129,7 +129,7 @@ lookup_and_send(_, _, _, not_found, [], []).
 %% update_addr: replace a friend's address in the friends list
 %% =============================================================================
 
-procedure update_addr(Constant?, Constant?, FriendList?, FriendList).
+procedure update_addr(Key?, Constant?, FriendList?, FriendList).
 update_addr(Key, NewAddr, [fe(K, Out?, _)|Fs], [fe(K?, Out, NewAddr?)|Fs?]) :-
     Key? =?= K? | true.
 update_addr(Key, NewAddr, [F|Fs], [F?|Fs1?]) :-

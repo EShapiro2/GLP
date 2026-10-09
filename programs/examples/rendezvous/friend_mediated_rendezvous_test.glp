@@ -5,19 +5,19 @@
 %% Local type redeclarations (structural identity across modules)
 AddrResult ::= found(Constant) ; not_found.
 
-MsgOp ::= mediate(Constant)
+MsgOp ::= mediate(Key)
         ; punch_to(AddrResult)
         ; addr_update(Constant).
 
-Msg ::= msg(Constant, Constant, MsgOp).
+Msg ::= msg(Key, Key, MsgOp).
 
 MsgStream ::= [] ; [Msg | MsgStream].
 FriendStream ::= [] ; [Msg | FriendStream].
 
-FriendEntry ::= fe(Constant, FriendStream?, Constant).
+FriendEntry ::= fe(Key, FriendStream?, Constant).
 FriendList ::= [] ; [FriendEntry | FriendList].
 
-imported procedure fmrv#fmrv(Constant?, MsgStream?, FriendList?).
+imported procedure fmrv#fmrv(Key?, MsgStream?, FriendList?).
 
 %% =============================================================================
 %% Test 1: A single addr_update message updates a friend's address
