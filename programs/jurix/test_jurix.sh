@@ -67,7 +67,7 @@ compiled() { # compiled <contract> <schema> ; the display, whitespace removed
 run() {     # run <goal> ... ; loads the program, then posts each goal
   local goals=""
   for g in "$@"; do goals="$goals$g\n"; done
-  # The REPL's default reduction limit is 10000, which CSSN's eighteen
+  # The REPL's default reduction limit is 10000, which CSSN's twenty-eight
   # schemas exceed; :limit is the REPL's knob for it.
   (cd "$GLP_DIR/glp_runtime" \
      && printf "%b" "$JURIX\n:limit 1000000\n$goals:quit\n" | bin/glpc 2>&1)
@@ -167,10 +167,10 @@ check "a speech act from an untraceable record: only friend keeps provenance" \
 check "and the verdict is the second conjunct alone" \
       "V = not_grassroots([untraceable([item, sent, tagged])])" "$out"
 
-# CSSN's child-safe contract, eighteen schemas, transcribed from their entries
-# of 2026-08-15 20:35 and 21:40 and 2026-08-16 12:37 UTC in
-# Coordination/mail/Legal_inbox.md, with send, parent_child and friend brought
-# to CSSN's paper on 2026-10-09.  Its introductory act is parent_child;
+# CSSN's child-safe contract, eighteen schemas, twenty-eight expanded,
+# transcribed from their entries of 2026-08-15 20:35 and 21:40 and 2026-08-16
+# 12:37 UTC in Coordination/mail/Legal_inbox.md, with send, parent_child,
+# friend and the five expanded schemas brought to CSSN's paper on 2026-10-09.  Its introductory act is parent_child;
 # befriending is obstructed there by design.
 out=$(run 'check_named(cssn, V).' 'traceable_of(cssn, E).')
 check "CSSN's contract is syntactically grassroots" \
@@ -208,6 +208,66 @@ EOF
 )
 check_eq "CSSN's parent_child forbids parent(r) at the parent's role" \
          "$parent_child_cssn" "$(compiled cssn parent_child)"
+
+# unfriend, child_unfriend, leave, child_leave and child_leave_2 each stand for
+# one schema per role, guarded at that role, so the contract is twenty-eight
+# schemas expanded (CSSN's sections/appendix-cascade.tex:24 and :32), every one
+# of them a willed act, where four of the five unexpanded were owed acts,
+# guarded by the empty set (Legal 2026-10-09 19:47 UTC).  The one guarded at
+# the role CSSN's table writes r is <schema>_r, and its display, in the form of
+# Section 5.2, is guarded by the person at that role alone; deliver is left the
+# one schema no party guards.
+out=$(run 'compile_named(cssn).')
+check_eq "CSSN's contract compiles to twenty-eight displays" "28" \
+         "$(printf '%s' "$out" | grep -c 'begin{align')"
+check_eq "and deliver's is the one guarded by the empty set" "1" \
+         "$(printf '%s' "$out" | grep -cF 'guarded by } \emptyset')"
+
+IFS= read -r -d '' unfriend_body <<'EOF'
+\begin{align*}
+& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{friend}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{friend}(\Alice)\},\\
+& \text{provided } \mathit{friend}(\Bob) \in c_{\Alice} \text{ and } \mathit{friend}(\Alice) \in c_{\Bob}, \qquad \text{guarded by }
+EOF
+IFS= read -r -d '' child_unfriend_body <<'EOF'
+\begin{align*}
+& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{friend}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{friend}(\Alice)\}, \qquad c'_{\mathit{Carol}} := c_{\mathit{Carol}} \uplus \{\mathit{withdrawal}\}, \qquad c'_{\mathit{Dave}} := c_{\mathit{Dave}} \uplus \{\mathit{withdrawal}\},\\
+& \text{provided } \{\mathit{parent}(\mathit{Carol}),\mathit{friend}(\Bob)\} \subseteq c_{\Alice} \text{ and } \{\mathit{parent}(\mathit{Dave}),\mathit{friend}(\Alice)\} \subseteq c_{\Bob} \text{ and } \mathit{parenting}(\Alice) \in c_{\mathit{Carol}} \text{ and } \mathit{parenting}(\Bob) \in c_{\mathit{Dave}}, \qquad \text{guarded by }
+EOF
+IFS= read -r -d '' leave_body <<'EOF'
+\begin{align*}
+& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{listed}(\Bob,n)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{member}(\Alice,n)\},\\
+& \text{provided } \mathit{listed}(\Bob,n) \in c_{\Alice} \text{ and } \mathit{member}(\Alice,n) \in c_{\Bob}, \qquad \text{guarded by }
+EOF
+IFS= read -r -d '' child_leave_body <<'EOF'
+\begin{align*}
+& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{listed}(\Bob,n)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{member}(\Alice,n)\}, \qquad c'_{\mathit{Carol}} := c_{\mathit{Carol}} \uplus \{\mathit{withdrawal}\},\\
+& \text{provided } \mathit{listed}(\Bob,n) \in c_{\Alice} \text{ and } \mathit{member}(\Alice,n) \in c_{\Bob} \text{ and } \mathit{parenting}(\Bob) \in c_{\mathit{Carol}}, \qquad \text{guarded by }
+EOF
+IFS= read -r -d '' child_leave_2_body <<'EOF'
+\begin{align*}
+& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{listed}(\Bob,n)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{member}(\Alice,n)\}, \qquad c'_{\mathit{Carol}} := c_{\mathit{Carol}} \uplus \{\mathit{withdrawal}\}, \qquad c'_{\mathit{Dave}} := c_{\mathit{Dave}} \uplus \{\mathit{withdrawal}\},\\
+& \text{provided } \mathit{listed}(\Bob,n) \in c_{\Alice} \text{ and } \mathit{member}(\Alice,n) \in c_{\Bob} \text{ and } \mathit{parenting}(\Alice) \in c_{\mathit{Carol}} \text{ and } \mathit{parenting}(\Bob) \in c_{\mathit{Dave}}, \qquad \text{guarded by }
+EOF
+
+expanded() { # expanded <schema> <role as CSSN writes it> <role's person> <body>
+  check_eq "CSSN's $1 is ${1%_*} guarded at $2 alone" \
+           "$(printf '%s' "$4\\{$3\\}\\end{align*}" | squash)" "$(compiled cssn "$1")"
+}
+expanded unfriend_p       p '\Alice'         "$unfriend_body"
+expanded unfriend_q       q '\Bob'           "$unfriend_body"
+expanded child_unfriend_r r '\Alice'         "$child_unfriend_body"
+expanded child_unfriend_s s '\Bob'           "$child_unfriend_body"
+expanded child_unfriend_p p '\mathit{Carol}' "$child_unfriend_body"
+expanded child_unfriend_q q '\mathit{Dave}'  "$child_unfriend_body"
+expanded leave_a          a '\Alice'         "$leave_body"
+expanded leave_q          q '\Bob'           "$leave_body"
+expanded child_leave_a    a '\Alice'         "$child_leave_body"
+expanded child_leave_s    s '\Bob'           "$child_leave_body"
+expanded child_leave_p    p '\mathit{Carol}' "$child_leave_body"
+expanded child_leave_2_r  r '\Alice'         "$child_leave_2_body"
+expanded child_leave_2_s  s '\Bob'           "$child_leave_2_body"
+expanded child_leave_2_p  p '\mathit{Carol}' "$child_leave_2_body"
+expanded child_leave_2_q  q '\mathit{Dave}'  "$child_leave_2_body"
 
 # --- reflexive predicates (the paragraph after def:binding) ----------------
 # A contract may declare a predicate of arity one reflexive.  The social graph

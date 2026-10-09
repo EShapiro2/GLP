@@ -52,7 +52,7 @@ and then a goal:
     V = syntactically_grassroots
 
 The REPL stops a goal at 10000 reductions unless told otherwise, and CSSN's
-eighteen schemas take more: enter `:limit 1000000` before the goal, as the
+twenty-eight schemas take more: enter `:limit 1000000` before the goal, as the
 test script does.
 
 The tests are `bash programs/jurix/test_jurix.sh` from the repository root.
@@ -142,7 +142,11 @@ social graph with `befriend` requiring `friend` of each party at its own role,
 without and with `friend` declared reflexive, on clause 1 of
 `def:unobstructed`; and `sg_refl_forbidden` is it with `friend` reflexive and
 `befriend` forbidding those atoms, on clause 3.  `cssn` declares `friend`
-reflexive, as CSSN's paper does.  Any other name is the empty contract.
+reflexive, as CSSN's paper does, and is its eighteen schemas expanded to
+twenty-eight, `unfriend`, `child_unfriend`, `leave`, `child_leave` and
+`child_leave_2` each written as one schema per role, guarded at that role and
+named by it: `unfriend_p` is `unfriend` guarded at `p`.  Any other name is the
+empty contract.
 
 A verdict on a contract of Section 3 is `syntactically_grassroots` or
 `not_grassroots(Faults)`, where each fault is one of
