@@ -6,9 +6,12 @@
 %%   graph_sglp.glp  the sGLP source in the term form (programs/sglp/README.md),
 %%                its profiles and its run declaration, and the vGLP program's
 %%                interface the transformation reads;
-%%   graph.glp    the compiled social-graph program with the person channel
-%%                threaded through it, written by hand, vGLP's compilation
-%%                being vGLP's and not the transformation's;
+%%   graph.vglp   the vGLP program of Section 5, its types and volitional
+%%                procedures as Section 5 prints them and the agent's clauses
+%%                as it describes them;
+%%   graph.glp    its canonical compilation (vGLP, Definition "Canonical
+%%                Compilation"), written by hand, vGLP's compilation being
+%%                vGLP's and not the transformation's;
 %%   profiles.glp the four profiles translated, and
 %%   population.glp  the person process, the run declaration and each agent's
 %%                stochastic person: both printed by programs/sglp/transform.sh
@@ -23,7 +26,7 @@
 %% programs/sglp and call social_graph/4 there, or social_graph/6 for another
 %% mix.
 
-%% The vGLP program's types, verbatim (graph.vglp at GLP 723d1602).
+%% The vGLP program's types, verbatim (graph.vglp; sGLP's paper, Section 5).
 Peer    ::= Constant.
 YesNo   ::= yes ; no.
 Peers   ::= [] ; [Peer | Peers].
@@ -33,11 +36,16 @@ Card    ::= card(Peer, YesNo?).
 Content ::= offer(Peer) ; reply(Peer, YesNo).
 Msg     ::= msg(Peer, Content).
 
-%% A question on the person channel, as the harness hands the channel's stream
-%% to the person process (population.glp): the interactive type as a
-%% constant, and the person's end of the variable.
-Interactive ::= Menu ; Card.
-Question    ::= question(Constant, Interactive).
+%% The type of the asks, which the canonical compilation adds (vGLP,
+%% Definition "Canonical Compilation"): an ask, ask(T, t(X)), is the
+%% interactive type T as a constant and, under the functor t the compilation
+%% gives T, the person's end X of the question's interactive variable;
+%% Question is the union over those functors, each type in its mode, Menu and
+%% Card being in writer mode.  t is the functor of T's one alternative
+%% (graph.glp).  The harness hands the ask stream of each agent's start goal
+%% to its person process (population.glp, person/6).
+Ask      ::= ask(Constant, Question).
+Question ::= menu(Menu) ; card(Card).
 
 %% A stochastic person, one profile per dimension, as the harness hands it from
 %% the population's draw to the person process (population.glp): Approach and

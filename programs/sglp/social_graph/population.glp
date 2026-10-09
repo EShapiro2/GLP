@@ -21,12 +21,12 @@ wary
 ;
 sociable
 .
-Question ::= question(Constant, Interactive).
-Interactive
+Ask ::= ask(Constant, Question).
+Question
 ::=
-Menu
+menu(Menu)
 ;
-Card
+card(Card)
 .
 
 %% The person procedures, in the profiles module.
@@ -84,8 +84,8 @@ MutualRef?
 .
 
 %% The person process (sGLP's paper, Section 4, "The person process").
-exported procedure person(Integer?, Profiles?, MutualRef?, Integer?, MutualRef?, Stream(Question)?).
-person(A, profiles(homophile, D2), Mon, Seed, Log, [question(Type, menu(X1, X2, X3?)) | Qs])
+exported procedure person(Integer?, Profiles?, MutualRef?, Integer?, MutualRef?, Stream(Ask)?).
+person(A, profiles(homophile, D2), Mon, Seed, Log, [ask(Type, menu(menu(X1, X2, X3?))) | As])
 :-
 ground(X1?)
 ,
@@ -99,9 +99,9 @@ homophile_menu(menu(X1?, X2?, Y3), K?, Mon?)
 ,
 answer_1(A?, Type?, X1?, X2?, Y3?, X3, Mon?, Log?)
 ,
-person(A?, profiles(homophile, D2?), Mon?, S?, Log?, Qs?)
+person(A?, profiles(homophile, D2?), Mon?, S?, Log?, As?)
 .
-person(A, profiles(indifferent, D2), Mon, Seed, Log, [question(Type, menu(X1, X2, X3?)) | Qs])
+person(A, profiles(indifferent, D2), Mon, Seed, Log, [ask(Type, menu(menu(X1, X2, X3?))) | As])
 :-
 ground(X1?)
 ,
@@ -115,9 +115,9 @@ indifferent_menu(menu(X1?, X2?, Y3), K?, Mon?)
 ,
 answer_1(A?, Type?, X1?, X2?, Y3?, X3, Mon?, Log?)
 ,
-person(A?, profiles(indifferent, D2?), Mon?, S?, Log?, Qs?)
+person(A?, profiles(indifferent, D2?), Mon?, S?, Log?, As?)
 .
-person(A, profiles(D1, wary), Mon, Seed, Log, [question(Type, card(X1, X2?)) | Qs])
+person(A, profiles(D1, wary), Mon, Seed, Log, [ask(Type, card(card(X1, X2?))) | As])
 :-
 ground(X1?)
 |
@@ -129,9 +129,9 @@ wary_card(card(X1?, Y2), K?, Mon?)
 ,
 answer_2(A?, Type?, X1?, Y2?, X2, Mon?, Log?)
 ,
-person(A?, profiles(D1?, wary), Mon?, S?, Log?, Qs?)
+person(A?, profiles(D1?, wary), Mon?, S?, Log?, As?)
 .
-person(A, profiles(D1, sociable), Mon, Seed, Log, [question(Type, card(X1, X2?)) | Qs])
+person(A, profiles(D1, sociable), Mon, Seed, Log, [ask(Type, card(card(X1, X2?))) | As])
 :-
 ground(X1?)
 |
@@ -143,7 +143,7 @@ sociable_card(card(X1?, Y2), K?, Mon?)
 ,
 answer_2(A?, Type?, X1?, Y2?, X2, Mon?, Log?)
 ,
-person(A?, profiles(D1?, sociable), Mon?, S?, Log?, Qs?)
+person(A?, profiles(D1?, sociable), Mon?, S?, Log?, As?)
 .
 person(_, _, _, _, _, []).
 

@@ -1,0 +1,143 @@
+%% Coins among friends' vGLP program (sGLP's paper, Section 6): Peer, YesNo and
+%% Peers as Section 5 prints them (the first three types of its first
+%% program, sections/example.tex), and the types and the volitional procedures
+%% as Section 6 prints them, verbatim (its first program,
+%% sections/currencies.tex); the messages' types, the agent's clauses and the
+%% wallet's, which Section 6 leaves to the repository, as it and Appendix B
+%% describe them (Section 6's first paragraph, the paragraph after that
+%% program and the paragraph after its second; Appendix B, the item "Coins
+%% among friends").
+%%
+%% Its canonical compilation (vGLP, Definition "Canonical Compilation") is
+%% coins.glp, written by hand, clause for clause (README.md, "The vGLP sources
+%% and their compilation").  The program loader skips a .vglp beside a .glp of
+%% its name, so this source is read by GLP's parser in its vGLP mode and is
+%% not loaded.
+
+Peer    ::= Constant.
+YesNo   ::= yes ; no.
+Peers   ::= [] ; [Peer | Peers].
+
+Holding ::= holding(Peer, Integer).
+Wallet  ::= [] ; [Holding | Wallet].
+Request ::= pay(Peer, Integer) ; swap(Peer, Integer).
+Menu    ::= menu(Peers, Wallet, Request?).
+Offer   ::= offer(Peer, Integer, Integer, YesNo?).
+
+%% Show the person their friends and wallet, and hand them
+%% the request.
+procedure (Menu)*ask(Peers?, Wallet?, Request).
+(menu(Fs?, W?, R))*ask(Fs, W, R?).
+
+%% Show the person who offers how many, and how many of
+%% theirs they hold; hand them yes or no.
+procedure (Offer)*respond(Peer?, Integer?, Integer?, YesNo).
+(offer(From?, K?, Held?, A))*respond(From, K, Held, A?).
+
+%% The messages between agents (Appendix B): pay, coins, propose and decline.
+Content ::= pay(Peer, Integer) ; coins(Peer, Integer) ; propose(Peer, Integer)
+          ; decline(Peer).
+Msg     ::= msg(Peer, Content).
+
+%% The agent: its identifier, its friends, its wallet --- one holding per
+%% issuer, a holding removed when it reaches zero --- the open request, its
+%% input and output streams.  The request stays open while messages come and
+%% go.
+procedure agent(Peer?, Peers?, Wallet?, Request?,
+                Stream(Msg)?, Stream(Msg)).
+
+%% The person pays a friend: send them their own coins, as many as the wallet
+%% holds of them up to K, take those off the holding, and ask again.
+agent(Id, Fs, W, pay(F, K), NetIn, [msg(F?, pay(Id?, M?))|Outs?]) :-
+    ground(Id?), ground(Fs?), ground(W?), ground(F?), ground(K?) |
+    take(F?, K?, W?, M, W1),
+    paid(Id?, Fs?, W1?, NetIn?, Outs).
+
+%% The person proposes a swap of K: send the friend the proposal, and ask
+%% again.
+agent(Id, Fs, W, swap(F, K), NetIn,
+      [msg(F?, propose(Id?, K?))|Outs?]) :-
+    ground(Id?), ground(Fs?), ground(W?), ground(F?), ground(K?) |
+    ask(Fs?, W?, R),
+    agent(Id?, Fs?, W?, R?, NetIn?, Outs).
+
+%% A proposal arrives: put it to the person, with what the wallet holds of the
+%% proposer's coins, and take no message until they answer.
+agent(Id, Fs, W, R, [msg(_, propose(From, K))|NetIn], Outs?) :-
+    ground(Id?), ground(W?), ground(From?), ground(K?) |
+    held(From?, W?, Held),
+    respond(From?, K?, Held?, A),
+    settle(A?, Id?, Fs?, W?, R?, From?, K?, NetIn?, Outs).
+
+%% Coins of a friend's arrive: hold them.
+agent(Id, Fs, W, R, [msg(_, coins(From, K))|NetIn], Outs?) :-
+    ground(W?) |
+    add(From?, K?, W?, W1),
+    agent(Id?, Fs?, W1?, R?, NetIn?, Outs).
+
+%% A friend pays me in my own coins, which redeems them: nothing enters the
+%% wallet.
+agent(Id, Fs, W, R, [msg(_, pay(_, _))|NetIn], Outs?) :-
+    ground(W?) |
+    agent(Id?, Fs?, W?, R?, NetIn?, Outs).
+
+%% A friend declines my proposal.
+agent(Id, Fs, W, R, [msg(_, decline(_))|NetIn], Outs?) :-
+    ground(W?) |
+    agent(Id?, Fs?, W?, R?, NetIn?, Outs).
+
+%% paid(Id?, Fs?, W?, NetIn?, Outs): after a payment, ask again with the
+%% wallet it leaves, once that is known.
+procedure paid(Peer?, Peers?, Wallet?, Stream(Msg)?, Stream(Msg)).
+paid(Id, Fs, W, NetIn, Outs?) :-
+    ground(Fs?), ground(W?) |
+    ask(Fs?, W?, R),
+    agent(Id?, Fs?, W?, R?, NetIn?, Outs).
+
+%% settle(A?, Id?, Fs?, W?, R?, From?, K?, NetIn?, Outs): the person's answer
+%% to From's proposal of K.  Yes: hold K of From's coins, and send From K of
+%% mine.  No: send From a decline.
+procedure settle(YesNo?, Peer?, Peers?, Wallet?, Request?, Peer?, Integer?,
+                 Stream(Msg)?, Stream(Msg)).
+settle(yes, Id, Fs, W, R, From, K, NetIn,
+       [msg(From?, coins(Id?, K?))|Outs?]) :-
+    ground(Id?), ground(From?), ground(K?) |
+    add(From?, K?, W?, W1),
+    agent(Id?, Fs?, W1?, R?, NetIn?, Outs).
+settle(no, Id, Fs, W, R, From, _, NetIn,
+       [msg(From?, decline(Id?))|Outs?]) :-
+    ground(Id?) |
+    agent(Id?, Fs?, W?, R?, NetIn?, Outs).
+
+%% The initial goal of an agent: the wallet empty, ask the first menu.
+exported procedure start(Peer?, Peers?, Stream(Msg)?, Stream(Msg)).
+start(Id, Fs, NetIn, Outs?) :- ground(Fs?) |
+    ask(Fs?, [], R),
+    agent(Id?, Fs?, [], R?, NetIn?, Outs).
+
+%% held(F?, W?, H): H is what the wallet W holds of F's coins, 0 with none.
+procedure held(Peer?, Wallet?, Integer).
+held(_, [], 0).
+held(F, [holding(G, H)|_], H?) :- F? =?= G? | true.
+held(F, [holding(G, _)|W], H?) :- F? =?\= G? | held(F?, W?, H).
+
+%% add(F?, K?, W?, W1): W1 is W with K added to its holding of F's coins; with
+%% none, a holding of K at the end of the wallet.
+procedure add(Peer?, Integer?, Wallet?, Wallet).
+add(F, K, [], [holding(F?, K?)]).
+add(F, K, [holding(G, H)|W], [holding(G?, H1?)|W?]) :-
+    F? =?= G? | H1 := H? + K?.
+add(F, K, [holding(G, H)|W], [holding(G?, H?)|W1?]) :-
+    F? =?\= G? | add(F?, K?, W?, W1).
+
+%% take(F?, K?, W?, M, W1): M is what W holds of F's coins up to K, and W1 is W
+%% with M taken off that holding, the holding removed when it reaches zero;
+%% with none, M is 0 and W1 is W.
+procedure take(Peer?, Integer?, Wallet?, Integer, Wallet).
+take(_, _, [], 0, []).
+take(F, K, [holding(G, H)|W], K?, [holding(G?, H1?)|W?]) :-
+    F? =?= G?, K? < H? | H1 := H? - K?.
+take(F, K, [holding(G, H)|W], H?, W?) :-
+    F? =?= G?, K? >= H? | true.
+take(F, K, [holding(G, H)|W], M?, [holding(G?, H?)|W1?]) :-
+    F? =?\= G? | take(F?, K?, W?, M, W1).

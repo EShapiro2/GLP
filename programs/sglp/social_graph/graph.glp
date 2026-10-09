@@ -1,65 +1,74 @@
-%% The Grassroots Social Graph's compiled program, written by hand: graph.vglp
-%% at GLP 723d1602 (sGLP's paper, Section 5) as vGLP's compilation gives it,
-%% with the person channel of sGLP's paper (the repository
-%% svGLP-Stochastic-Volitional-GLP, Section 4, "The person process").  The
-%% types are the directory's (self.glp).  The four profiles are not here: the
-%% transformation prints them, profiles.glp, from the sGLP source,
-%% graph_sglp.glp; vGLP's compilation is vGLP's, and not the transformation's.
+%% The Grassroots Social Graph's compiled program, written by hand: the
+%% canonical compilation of graph.vglp, the vGLP program of sGLP's paper,
+%% Section 5, by vGLP's Definition "Canonical Compilation"
+%% (sections/elicitation.tex), clause for clause (README.md, "The vGLP sources
+%% and their compilation").  The types, graph.vglp's and the type of the asks
+%% the compilation adds, are the directory's (self.glp).  The construct
+%% processes and the dispatcher are not here: in a simulation the person
+%% process reads the ask stream of the agent's initial goal in their place
+%% (sGLP's paper, Section 3, Definition "Simulation Program"; Section 4, "The
+%% person process"), population.glp's person/6, printed by the transformation.
 %%
-%% The compiled program: vGLP's canonical compilation as the fixture
-%%    programs/tests/sglp/person_asks_writer.glp had it at GLP 723d1602 --- the
-%%    asking clause of each volitional procedure spawns the construct process
-%%    with its question's interactive type and the person's end of the
-%%    variable, and calls the procedure's clause, renamed, with the program's
-%%    end; Menu and Card are in writer mode, so the construct process takes
-%%    X? and the clause X --- with construct in place of the fixture's person,
-%%    and one argument added: the person channel, a mutual reference that
-%%    reaches the agent's person process, threaded through start/5, agent/6,
-%%    ask/3 and respond/2 to the construct process (construct/3,
-%%    programs/sglp/construct.glp).
+%% Every procedure of graph.vglp reaches a question --- ask and respond are
+%% volitional, and agent and start call them --- so each has one more
+%% argument, last, its ask stream, which its goal writes: in a clause, each
+%% call of a procedure that reaches a question is given a fresh writer, D1,
+%% D2, as its ask stream, and the head carries D?, D the clause's ask stream,
+%% the call given D itself where there is one such call and merge(D1?, D2?, D)
+%% merging the two where there are two; the guarded clauses of ask and
+%% respond call none, and carry [] in place of D?.
 %%
-%% A trailing %+ marks a line the person channel adds or changes, Ch.  The rest
-%% is the source (graph.vglp) as vGLP's compilation gives it.
+%% Each call of a volitional procedure q is a call of its asking clause q_a,
+%% which writes the ask ask(T, t(X?)) on its ask stream, T the interactive
+%% type as a constant and t the functor the compilation gives it, and calls q,
+%% the guarded clause, with X and its own ask stream: Menu and Card are in
+%% writer mode, so the clause takes the writer X and the ask carries X?.  The
+%% functor t of an interactive type is that of its one alternative, menu and
+%% card (README.md, "The vGLP sources and their compilation").
 
-%% (Menu)*ask(Peers?, Peers?, Choice): the asking clause and the clause.
-procedure ask(Peers?, Peers?, Choice, MutualRef?).                      %+ Ch
-ask(Ss, Os, C?, Ch) :- construct('Menu', X?, Ch?), ask1(Ss?, Os?, C, X). %+ Ch
-procedure ask1(Peers?, Peers?, Choice, Menu).
-ask1(Ss, Os, C?, menu(Ss?, Os?, C)).
+%% (Menu)*ask(Ss, Os, C?): the asking clause and the guarded clause.
+procedure ask_a(Peers?, Peers?, Choice, Stream(Ask)).
+ask_a(Ss, Os, C?, [ask('Menu', menu(X?))|D?]) :- ask(Ss?, Os?, C, X, D).
+procedure ask(Peers?, Peers?, Choice, Menu, Stream(Ask)).
+ask(Ss, Os, C?, menu(Ss?, Os?, C), []).
 
-%% (Card)*respond(Peer?, YesNo): the asking clause and the clause.
-procedure respond(Peer?, YesNo, MutualRef?).                            %+ Ch
-respond(From, A?, Ch) :- construct('Card', X?, Ch?), respond1(From?, A, X). %+ Ch
-procedure respond1(Peer?, YesNo, Card).
-respond1(From, A?, card(From?, A)).
+%% (Card)*respond(From, A?): the asking clause and the guarded clause.
+procedure respond_a(Peer?, YesNo, Stream(Ask)).
+respond_a(From, A?, [ask('Card', card(X?))|D?]) :- respond(From?, A, X, D).
+procedure respond(Peer?, YesNo, Card, Stream(Ask)).
+respond(From, A?, card(From?, A), []).
 
 procedure agent(Peer?, Peers?, Peers?, Choice?,
-                Stream(Msg)?, Stream(Msg), MutualRef?).                 %+ Ch
+                Stream(Msg)?, Stream(Msg), Stream(Ask)).
 
 %% The person picked a peer: offer, and ask again.
-agent(Id, Ss, Os, same(To), NetIn, [msg(To?, offer(Id?))|Outs?], Ch) :-   %+ Ch
+agent(Id, Ss, Os, same(To), NetIn, [msg(To?, offer(Id?))|Outs?], D?) :-
     ground(Id?), ground(Ss?), ground(Os?), ground(To?) |
-    ask(Ss?, Os?, Pick, Ch?),                                           %+ Ch?
-    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs, Ch?).                     %+ Ch?
-agent(Id, Ss, Os, other(To), NetIn, [msg(To?, offer(Id?))|Outs?], Ch) :-  %+ Ch
+    ask_a(Ss?, Os?, Pick, D1),
+    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs, D2),
+    merge(D1?, D2?, D).
+agent(Id, Ss, Os, other(To), NetIn, [msg(To?, offer(Id?))|Outs?], D?) :-
     ground(Id?), ground(Ss?), ground(Os?), ground(To?) |
-    ask(Ss?, Os?, Pick, Ch?),                                           %+ Ch?
-    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs, Ch?).                     %+ Ch?
+    ask_a(Ss?, Os?, Pick, D1),
+    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs, D2),
+    merge(D1?, D2?, D).
 
 %% An offer arrives: put it to the person, and reply.
 agent(Id, Ss, Os, Pick, [msg(_, offer(From))|NetIn],
-      [msg(From?, reply(Id?, A?))|Outs?], Ch) :-                        %+ Ch
+      [msg(From?, reply(Id?, A?))|Outs?], D?) :-
     ground(Id?), ground(From?) |
-    respond(From?, A, Ch?),                                             %+ Ch?
-    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs, Ch?).                     %+ Ch?
+    respond_a(From?, A, D1),
+    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs, D2),
+    merge(D1?, D2?, D).
 
 %% A reply to my offer arrives.
-agent(Id, Ss, Os, Pick, [msg(_, reply(_, _))|NetIn], Outs?, Ch) :-       %+ Ch
-    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs, Ch?).                     %+ Ch?
+agent(Id, Ss, Os, Pick, [msg(_, reply(_, _))|NetIn], Outs?, D?) :-
+    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs, D).
 
 %% The initial goal of an agent: ask the first menu.
 exported procedure start(Peer?, Peers?, Peers?, Stream(Msg)?, Stream(Msg),
-                         MutualRef?).                                   %+ Ch
-start(Id, Ss, Os, NetIn, Outs?, Ch) :- ground(Ss?), ground(Os?) |        %+ Ch
-    ask(Ss?, Os?, Pick, Ch?),                                           %+ Ch?
-    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs, Ch?).                     %+ Ch?
+                         Stream(Ask)).
+start(Id, Ss, Os, NetIn, Outs?, D?) :- ground(Ss?), ground(Os?) |
+    ask_a(Ss?, Os?, Pick, D1),
+    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs, D2),
+    merge(D1?, D2?, D).
