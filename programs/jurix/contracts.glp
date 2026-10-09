@@ -216,6 +216,8 @@ cur_loose_mint([schema(mint,
 % decision, in their Section 3.2; post and deliver repaired at 21:40 UTC, which
 % ties an item delivered in a group to a posting of it there; and
 % child_leave_2 and post_own added at 2026-08-16 12:37 UTC, making eighteen.
+% send follows CSSN's paper, sections/artefact-schemas.tex:46--47, the sender
+% requiring the item it sends and nothing else (Legal 2026-10-09 18:46 UTC).
 %
 % n names a group.  A group is no person, so n is a speech-act variable here;
 % that is also the reading CSSN's own provenance set takes, member and listed
@@ -223,7 +225,8 @@ cur_loose_mint([schema(mint,
 %
 % DO NOT REMOVE OR ALTER THIS CONTRACT WITHOUT TELLING CSSN (their 2026-08-15
 % 22:00 UTC).  Their Section 3.3 cites the run over it, and its schemas are the
-% table printed in their Section 3.2; the two have to stay the same sixteen.
+% table of their Appendix A2, sections/artefact-schemas.tex; the two have to
+% stay the same eighteen.
 procedure cssn(Contract).
 cssn([schema(parent_child,
        [rs(guarded, [atom(parenting, [role(2)])], [], [], []),
@@ -291,8 +294,7 @@ cssn([schema(parent_child,
        [rs(guarded, [atom(item, [svar(x), role(1), role(1)])], [], [], [])]),
      schema(send,
        [rs(guarded,   [atom(sent, [svar(x), role(2)])], [],
-                      [atom(item, [svar(x), pvar(a), pvar(f)]),
-                       atom(friend, [pvar(f)])], []),
+                      [atom(item, [svar(x), pvar(a), pvar(f)])], []),
         rs(unguarded, [atom(item, [svar(x), pvar(a), role(1)])], [],
                       [atom(friend, [role(1)])], [])]),
      schema(post,

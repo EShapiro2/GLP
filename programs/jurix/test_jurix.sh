@@ -177,6 +177,20 @@ check "CSSN's predicates of traceable provenance" \
       "E = [parenting, parent, child, friend, approval, withdrawal, member, listed, item, sent, posted, delivered]" \
       "$out"
 
+# send is CSSN's paper's, sections/artefact-schemas.tex:46--47: the sender
+# requires the item it sends and nothing else, the recipient that the sender
+# is its friend (Legal 2026-10-09 18:46 UTC).  Its display in the form of
+# Section 5.2.
+send_cssn=$(cat <<'EOF' | squash
+\begin{align*}
+& c'_{\Alice} := c_{\Alice} \uplus \{\mathit{sent}(x,\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{item}(x,a,\Alice)\},\\
+& \text{provided } \mathit{item}(x,a,f) \in c_{\Alice} \text{ and } \mathit{friend}(\Alice) \in c_{\Bob}, \qquad \text{guarded by } \{\Alice\}
+\end{align*}
+EOF
+)
+check_eq "CSSN's send requires at the sender the item it sends and nothing else" \
+         "$send_cssn" "$(compiled cssn send)"
+
 # A contract with no schemas.
 out=$(run 'check_named(nonesuch, V).')
 check "the empty contract has no introductory act" \
