@@ -203,7 +203,8 @@ abstract class GlpNetwork {
   // each function performs only the mechanism.
 
   /// The address at which this layer observes peer [pk], or null if none is
-  /// observed. Backs `peer_address/2`.
+  /// observed. Backs `peer_address/2`, which reports the two as `address(S)`
+  /// and `none`.
   String? observedPeerAddress(PubKey pk);
 
   /// Open a path to [address] and return nothing. Backs `punch_udp/1`.

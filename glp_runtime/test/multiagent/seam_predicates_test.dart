@@ -2,9 +2,10 @@
 /// '_punch_udp'/1, '_place_declare'/3, '_place_remove'/1 and
 /// '_trust_declare'/2 — and the declared place's event stream.
 ///
-/// Covers IGLP Definition "Seam Predicates": peer_address assigns the address at
-/// which the layer observes a peer; punch_udp opens a path to an address and
-/// returns nothing; place_declare declares a place and assigns a stream of that
+/// Covers IGLP Definition "Seam Predicates": peer_address assigns address(S), S
+/// the address at which the layer observes a peer, or none where it observes
+/// none (72b5efa; GLP-Spec 090e647, peer_address(Key?, PeerAddress)); punch_udp
+/// opens a path to an address and returns nothing; place_declare declares a place and assigns a stream of that
 /// agent's own entered, exited, unobservable and observable events, fed
 /// serializer-fashion so one declaration yields one stream however many events
 /// follow; place_remove ends the declaration; trust_declare sets a proximity
@@ -23,6 +24,9 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
+import 'package:glp_runtime/compiler/error.dart' show CompileError;
+import 'package:glp_runtime/compiler/lexer.dart';
+import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
@@ -305,21 +309,85 @@ void main() {
   // none declares it: until 2026-10-04 each did, Rule A skipping a source
   // with no file, and two called '_output' directly.
   group('seam kernels through their GLP wrappers', () {
-    test("peer_address binds the layer's observed address", () async {
+    // What peer_address/2 assigns, taken apart by matching: address(S) or
+    // none (GLP-Spec appendix-guards, "Networking seam").
+    const emitAddress = '''
+procedure emit(PeerAddress?).
+emit(address(S)) :- ground(S?) | send_to_user([S?]).
+emit(none) :- send_to_user([none]).
+''';
+
+    test("peer_address assigns address(S), S the layer's observed address",
+        () async {
       final out = <String>[];
       final network = _SeamNetwork();
       final peer = _hex(1);
       network.addresses[peer] = '203.0.113.7:41234';
       final engine = _engine(out, network);
       engine.loadSource('''
-procedure emit(_?).
-emit(A) :- ground(A?) | send_to_user([A?]).
-procedure go.
+${emitAddress}procedure go.
 go :- peer_address('$peer', A), emit(A?).
 ''');
       final result = await engine.runGoal('go');
       expect(result.succeeded, isTrue);
       expect(out, ['203.0.113.7:41234']);
+    });
+
+    test('peer_address assigns none where the layer observes no address, and '
+        'does not abort', () async {
+      final out = <String>[];
+      final network = _SeamNetwork(); // observes no address for any peer
+      final engine = _engine(out, network);
+      engine.loadSource('''
+${emitAddress}procedure go.
+go :- peer_address('${_hex(1)}', A), emit(A?).
+''');
+      final result = await engine.runGoal('go');
+      expect(result.succeeded, isTrue,
+          reason: 'none is a value and not an abort');
+      expect(out, ['none']);
+    });
+
+    test('peer_address/2 and punch_udp/1 are typed: Key?, PeerAddress; String?',
+        () {
+      final root = Parser(
+              Lexer(File('../programs/self.glp').readAsStringSync()).tokenize())
+          .parseModule();
+      String decl(String name, int arity) => root.procDeclarations
+          .singleWhere((d) => d.name == name && d.arity == arity)
+          .toString();
+      expect(decl('peer_address', 2), 'procedure peer_address(Key?, PeerAddress).');
+      expect(decl('punch_udp', 1), 'procedure punch_udp(String?).');
+      expect(decl('_peer_address', 2),
+          'procedure _peer_address(Key?, PeerAddress).');
+      expect(decl('_punch_udp', 1), 'procedure _punch_udp(String?).');
+      final peerAddress =
+          root.typeDefs.singleWhere((t) => t.name == 'PeerAddress');
+      expect(peerAddress.alternatives.map((a) => '$a'),
+          ['address(String)', 'none']);
+
+      // The checker holds a program to them.
+      final engine = _engine(<String>[], _SeamNetwork());
+      Matcher refused(String why) => throwsA(isA<CompileError>().having(
+          (e) => e.message,
+          'message',
+          allOf(contains('Type checking failed'), contains(why))));
+      expect(() => engine.loadSource('''
+procedure take(String?).
+take(S) :- string(S?) | true.
+procedure go.
+go :- peer_address('${_hex(1)}', A), take(A?).
+'''), refused('writer type PeerAddress is not a subtype of String'));
+      expect(() => engine.loadSource('''
+procedure go.
+go :- punch_udp(41234).
+'''), refused('(punch_udp) is not well-typed'),
+          reason: 'an Integer is no String');
+      expect(() => engine.loadSource('''
+procedure go.
+go :- peer_address(7, _).
+'''), refused('(peer_address) is not well-typed'),
+          reason: 'an Integer is no Key');
     });
 
     test('punch_udp hands the address to the layer and returns nothing',

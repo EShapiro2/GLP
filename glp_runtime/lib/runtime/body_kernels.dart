@@ -1285,9 +1285,15 @@ String? _groundString(GlpRuntime rt, Object? arg) {
   return null;
 }
 
-/// '_peer_address'(P?, A) — bind A to the address at which the layer observes
-/// peer P. P is the peer's name, which over a real network is its public key
-/// (§Agent Names), presented as 64 lowercase hex characters.
+/// '_peer_address'(P?, A) — assign A `address(S)`, S the address at which the
+/// layer observes peer P, or `none` where it observes no address for P
+/// (GLP-Spec appendix-guards, "Networking seam", 090e647: `peer_address(Key?,
+/// PeerAddress)`, `PeerAddress ::= address(String) ; none`; IGLP, Definition
+/// "Seam Predicates", 72b5efa).  `none` is a value and not a failure, as
+/// signature/2's `unsigned` is.  Until 2026-10-09 the kernel bound the bare
+/// address and aborted where the layer observed none.  P is the peer's name,
+/// which over a real network is its public key (§Agent Names), presented as 64
+/// lowercase hex characters.
 BodyKernelResult peerAddressKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
     print('[ABORT] \'_peer_address\'/2: expected 2 arguments, got ${args.length}');
@@ -1318,12 +1324,12 @@ BodyKernelResult peerAddressKernel(GlpRuntime rt, List<Object?> args) {
     print('[ABORT] \'_peer_address\'/2: ${e.message}');
     return BodyKernelResult.abort;
   }
-  if (address == null) {
-    print('[ABORT] \'_peer_address\'/2: the layer observes no address for '
-        'peer $name');
-    return BodyKernelResult.abort;
-  }
-  return _bindResult(rt, args[1], ConstTerm(address));
+  return _bindResult(
+      rt,
+      args[1],
+      address == null
+          ? ConstTerm('none')
+          : StructTerm('address', [ConstTerm(address)]));
 }
 
 /// '_punch_udp'(A?) — open a path to address A and return nothing.

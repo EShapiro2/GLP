@@ -51,6 +51,12 @@ Hash ::= String.
 % The caller discriminates by matching.
 Signature ::= signed(Key, Hash, _) ; unsigned.
 
+% What peer_address/2 assigns (GLP-Spec appendix-guards, "Networking seam"):
+% address(S), S the address at which the networking layer observes the peer,
+% or none where it observes no address for it.  The caller discriminates by
+% matching, as it does a Signature.
+PeerAddress ::= address(String) ; none.
+
 % The global name of a link end, which the runtime reports when it holds a link
 % and authorise_link/2 answers (GLP-Spec appendix-guards, "Held links"): the
 % reader or writer end anchored at the agent named by Key, at an index.  Root
@@ -221,8 +227,8 @@ procedure '_close_mutual_reference'(MutualRef?).
 % Network
 procedure '_send'(_?, GlobalName?, Key?).
 procedure '_authorise_link'(_?, _?).
-procedure '_peer_address'(_?, _).
-procedure '_punch_udp'(_?).
+procedure '_peer_address'(Key?, PeerAddress).
+procedure '_punch_udp'(String?).
 procedure '_place_declare'(_?, _?, _).
 procedure '_place_remove'(_?).
 procedure '_trust_declare'(_?, _?).
@@ -694,14 +700,13 @@ authorise_link(L, A) :- known(A?) | '_authorise_link'(L?, A?).
 % IGLP's madglp-spec.tex, Definition "Seam Predicates"; the layer behind them is
 % GLP-Networking-API's.
 %
-% The four declarations mirror the appendix's body-kernel rows argument for
-% argument — '_peer_address'(_?, _), '_punch_udp'(_?), '_place_declare'(_?, _?, _),
-% '_place_remove'(_?) — which was all the catalogue settled when they were
-% written: its system-predicate table then gave a name and a description and
-% carried no signature column, so the arity was the catalogue's and the argument
-% types followed the kernel, as authorise_link/2's did until 2026-09-18.  The
-% table has carried a signature column since 2026-08-01, so trust_declare/2 below
-% takes its declaration from that column instead.
+% Each declaration is the catalogue's signature column: peer_address(Key?,
+% PeerAddress) and punch_udp(String?) since 2026-10-09 (GLP-Spec 43bf69b,
+% 090e647), with the kernels '_peer_address'(Key?, PeerAddress) and
+% '_punch_udp'(String?) in the block above.  Until then the two mirrored the
+% appendix's body-kernel rows, '_peer_address'(_?, _) and '_punch_udp'(_?), which
+% was all the catalogue settled when they were written, as place_declare/3 and
+% place_remove/1 still do, their signature column being the kernel rows' own.
 %
 % 🔴 Two clauses depart from the paper, and only where SRSW forces it.  The paper
 % writes peer_address(P, A) and place_declare(P, R, E) with the output variable a
@@ -714,12 +719,13 @@ authorise_link(L, A) :- known(A?) | '_authorise_link'(L?, A?).
 % The five kernels are registered --- four by 9d5e0dd9, '_trust_declare' in
 % weeding round three (B4) --- and are declared in the block above.
 
-%% peer_address/2 - assign A the address at which the layer observes peer P.
-procedure peer_address(_?, _).
+%% peer_address/2 - assign A address(S), S the address at which the layer
+%% observes peer P, or none where it observes no address for P.
+procedure peer_address(Key?, PeerAddress).
 peer_address(P, A?) :- ground(P?) | '_peer_address'(P?, A).
 
 %% punch_udp/1 - open a path to address A; assigns nothing.
-procedure punch_udp(_?).
+procedure punch_udp(String?).
 punch_udp(A) :- ground(A?) | '_punch_udp'(A?).
 
 %% place_declare/3 - declare place P of radius R about the declaring agent's
