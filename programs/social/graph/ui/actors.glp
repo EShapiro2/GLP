@@ -85,13 +85,20 @@ bob1_wait_charlie_msg([], []).
 
 exported procedure charlie1(ActorChannel?).
 charlie1(ch([befriend(bob, ReqId)|In],
-            [decision(yes, bob, ReqId?),
-             send(bob, hello)|Out?])) :-
+            [decision(yes, bob, ReqId?)|Out?])) :-
     ground(ReqId?) |
-    charlie1_wait_intro(In?, Out).
+    charlie1_wait_connected(In?, Out).
 charlie1(ch([_|In], Out?)) :-
     otherwise | charlie1(ch(In?, Out)).
 charlie1(ch([], [])).
+
+procedure charlie1_wait_connected(UserNotifyStream?, UserCmdStream).
+charlie1_wait_connected([connected(bob)|In],
+                        [send(bob, hello)|Out?]) :-
+    charlie1_wait_intro(In?, Out).
+charlie1_wait_connected([_|In], Out?) :-
+    otherwise | charlie1_wait_connected(In?, Out).
+charlie1_wait_connected([], []).
 
 procedure charlie1_wait_intro(UserNotifyStream?, UserCmdStream).
 charlie1_wait_intro([befriend_intro(bob, alice, ReqId)|In],
@@ -181,13 +188,20 @@ bob2_wait_charlie_msg([], []).
 
 exported procedure charlie2(ActorChannel?).
 charlie2(ch([befriend(bob, ReqId)|In],
-            [decision(yes, bob, ReqId?),
-             send(bob, hello)|Out?])) :-
+            [decision(yes, bob, ReqId?)|Out?])) :-
     ground(ReqId?) |
-    charlie2_wait_intro(In?, Out).
+    charlie2_wait_connected(In?, Out).
 charlie2(ch([_|In], Out?)) :-
     otherwise | charlie2(ch(In?, Out)).
 charlie2(ch([], [])).
+
+procedure charlie2_wait_connected(UserNotifyStream?, UserCmdStream).
+charlie2_wait_connected([connected(bob)|In],
+                        [send(bob, hello)|Out?]) :-
+    charlie2_wait_intro(In?, Out).
+charlie2_wait_connected([_|In], Out?) :-
+    otherwise | charlie2_wait_connected(In?, Out).
+charlie2_wait_connected([], []).
 
 procedure charlie2_wait_intro(UserNotifyStream?, UserCmdStream).
 charlie2_wait_intro([befriend_intro(bob, alice, ReqId)|_],
@@ -262,13 +276,20 @@ bob3_wait_charlie_msg([], []).
 
 exported procedure charlie3(ActorChannel?).
 charlie3(ch([befriend(bob, ReqId)|In],
-            [decision(yes, bob, ReqId?),
-             send(bob, hello)|Out?])) :-
+            [decision(yes, bob, ReqId?)|Out?])) :-
     ground(ReqId?) |
-    charlie3_wait_intro(In?, Out).
+    charlie3_wait_connected(In?, Out).
 charlie3(ch([_|In], Out?)) :-
     otherwise | charlie3(ch(In?, Out)).
 charlie3(ch([], [])).
+
+procedure charlie3_wait_connected(UserNotifyStream?, UserCmdStream).
+charlie3_wait_connected([connected(bob)|In],
+                        [send(bob, hello)|Out?]) :-
+    charlie3_wait_intro(In?, Out).
+charlie3_wait_connected([_|In], Out?) :-
+    otherwise | charlie3_wait_connected(In?, Out).
+charlie3_wait_connected([], []).
 
 procedure charlie3_wait_intro(UserNotifyStream?, UserCmdStream).
 charlie3_wait_intro([befriend_intro(bob, alice, ReqId)|_],
