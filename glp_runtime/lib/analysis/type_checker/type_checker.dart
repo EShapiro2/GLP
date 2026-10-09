@@ -213,6 +213,20 @@ class TypeChecker {
     for (final procDecl in typeEnv.procedures.values) {
       final key = procDecl.key;
 
+      // An imported declaration types the cross-module call it names and
+      // nothing else: "A cross-module call M # p(a1, ..., an) in module N is
+      // well-typed if N contains a declaration imported procedure M#p(T1, ...,
+      // Tn)" (TGLP modules.tex, "Cross-module type checking"), and it is
+      // checked there, at the call (well_typed_clause.dart, _checkRemoteGoal).
+      // It declares M#p, not p, so it never types this unit's own clauses for
+      // p.  Until 2026-10-09 its key without the qualifier matched them, and an
+      // import of other#q(Kind?) in a program's self.glp refused a module of
+      // that program defining its own q(String?), x and y uncovered (Code #6,
+      // 2026-10-07 09:34 UTC; GLP, 2026-10-09 18:38 UTC).  An imported
+      // declaration with no qualifier is no form modules.tex has, and is left
+      // as it was.
+      if (procDecl.imported && procDecl.modulePath != null) continue;
+
       // A parameterized procedure is syntactic sugar with no well-typing of its
       // own: it is checked only per concrete instantiation (the closure below /
       // checkInstantiationsClosed), never under the wildcard `_` declaration —
