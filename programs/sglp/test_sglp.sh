@@ -99,8 +99,11 @@
 #       dimension is refused with those two faults and nothing printed; the
 #       same source with them mended is translated, the rated goal's procedure
 #       taking the token, the person procedure the monitor's reference, the
-#       person process a clause for its person declaration, and the run
-#       declaration its thresholds.
+#       person process a clause for its person declaration, which draws a value
+#       of 1..2147483646 from its seed, hands it as the person goal's seed and
+#       goes on with its next seed (sGLP 9f57a43, Definition "Person Process,
+#       Simulation Program, Stochastic Agent"; sGLP's task 4 of 2026-10-09
+#       20:59 UTC), and the run declaration its thresholds.
 #
 # Prints one line per check and a summary line, "=== P passed, F failed ===";
 # exits non-zero if any check fails.  The runs of (iii) and (iv) take some
@@ -444,9 +447,13 @@ check "a source with a dimension not summing to one and a profile in no dimensio
     grep -q "^stream_append(rated('/'(1, day), Tok), Mon?, _)$" "$WORK/txgood.lines" &&
     grep -q '^ans(Tok?, X?)$' "$WORK/txgood.lines" &&
     grep -q '^person(A, profiles(p), Mon, Seed, Log, \[question(Type, q(X1?)) | Qs\])$' "$WORK/txgood.lines" &&
+    grep -q '^random(Seed?, 2147483646, K, S)$' "$WORK/txgood.lines" &&
+    grep -q '^p_q(q(Y1), K?, Mon?)$' "$WORK/txgood.lines" &&
+    grep -q '^person(A?, profiles(p), Mon?, S?, Log?, Qs?)$' "$WORK/txgood.lines" &&
+    ! grep -q '^random(Seed?, 1, _, S)$' "$WORK/txgood.lines" &&
     grep -q '^declaration(2, 1, day, 1)$' "$WORK/txgood.lines" &&
     grep -q '^d(_, p)$' "$WORK/txgood.lines"
-check "the mended source is translated: the token, the monitor's reference, the person process's clause, the declaration and the draw" $?
+check "the mended source is translated: the token, the monitor's reference, the person process's clause and its seeding, the declaration and the draw" $?
 
 echo ""
 echo "=== $PASS passed, $FAIL failed ==="
