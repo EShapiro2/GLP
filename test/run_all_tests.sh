@@ -4801,7 +4801,12 @@ echo ""
 # answering the load.  Under the plain REPL no signature over a pair is made
 # under the social graph, so every reconnect and available through the agent
 # is rejected; what peer_address/2 reports, address(S) or none, is given to
-# the agent's dispatch on it directly.
+# the agent's dispatch on it directly.  Test 22 alone has its test program
+# stand in for the graph, so an available is admitted and reaches
+# peer_address/2, which with no networking layer bound assigns none (IGLP,
+# "One interface").  punch_udp/1 is the root's, which there returns having
+# done nothing; rv_client.glp and fmrv.glp carried stubs of it until
+# 2026-10-10.
 echo "=== Section RV: Rendezvous example (GNA) ==="
 echo ""
 
@@ -4842,6 +4847,8 @@ fmrv4_empty.
 fmrv5_mediate_unknown(FA5).
 fmrv6_punch_to_not_found.
 fmrv7_mediate_unknown_from(FA7).
+:trace
+test22_available_admitted_no_layer(S22, RB22, RA22).
 :quit
 HEREDOC
 2>&1)
@@ -4949,6 +4956,20 @@ check "RV fmrv test5: mediation to an unknown peer sends alice not_found" "^FA5 
 check "RV fmrv test6: punch_to(not_found) is a no-op" "^→ succeeds$" "$(_rv_answer 34)"
 check "RV fmrv test7 succeeds" "^→ succeeds$" "$(_rv_answer 35)"
 check "RV fmrv test7: an unknown requester sends alice not_found" "^FA7 = \[msg(bob, alice, punch_to(not_found)) | X[0-9]*\]$" "$(_rv_answer 35)"
+
+# rv_agent_test.glp test 22, posted last and under :trace (answer 36 is the
+# :trace command's): the admitting path.  The test program signs the pair of
+# self_key's K and bob under K and gives the agent as Graph the identity
+# signature/2 reports, so bob's available for K verifies and is admitted; the
+# trace shows the agent's peer_address/2 call, which only an admitted request
+# makes, and with no layer bound it assigns none (IGLP, "One interface"), so
+# bob is rejected and K, waiting, is told nothing.
+rv_key="\('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)"
+check "RV agent test22 succeeds" "^→ succeeds$" "$(_rv_answer 37)"
+check "RV agent test22: the available's signature verifies, A's own over the pair in the fixed order" "^S22 = signed($rv_key, $rv_key, attest(\(\1, bob\|bob, \1\)))$" "$(_rv_answer 37)"
+check "RV agent test22: the admitted available reaches the layer, which observes no address for B" "^:peer_address(bob, none) :- true$" "$(_rv_answer 37)"
+check "RV agent test22: no address observed for B, the admitted available is rejected" "^RB22 = rejected$" "$(_rv_answer 37)"
+check "RV agent test22: no address observed for B, the waiting A is told nothing" "^RA22 = <unbound>$" "$(_rv_answer 37)"
 echo ""
 
 # =============================================================================
