@@ -191,9 +191,68 @@ procedure (YesNo)*ask(Peer?).
       expect(v.signature, 'take/1');
     });
 
-    test('an imported declaration carries no interactive type', () {
-      expect(() => parse('imported procedure (Card)*m#respond(Offer?).'),
-          refusedWith('An imported declaration carries no interactive type'));
+    // An import mirrors its export's declaration (TGLP modules.tex,
+    // "Self-contained type checking"), so a volitional export is imported as
+    // it is declared (GLP #3 Cowork, 2026-10-10 07:48 UTC, "19:55").  Until
+    // 2026-10-10 `imported procedure (T)*M#p(...)` was refused, "An imported
+    // declaration carries no interactive type".
+    for (final (mode, exportSource, importSource) in [
+      (
+        'T in writer mode',
+        'exported procedure (Card)*respond(Offer?).\n'
+            '(card(From?, A))*respond(offer(From)) :- ground(From?) | d(A?).',
+        'imported procedure (Card)*m#respond(Offer?).',
+      ),
+      (
+        'T in reader mode',
+        'exported procedure (Stream(Request)?)*agent(Peer?, Stream(String)).\n'
+            '(Reqs)*agent(Id, Outs?) :- serve(Reqs?, Id?, Outs).',
+        'imported procedure (Stream(Request)?)*m#agent(Peer?, Stream(String)).',
+      ),
+      (
+        'with a parameter list',
+        'exported procedure(X) (Stream(X)?)*take(X?).\n'
+            '(Xs)*take(Y) :- ground(Y?) | drop(Xs?).',
+        'imported procedure(X) (Stream(X)?)*m#take(X?).',
+      ),
+    ]) {
+      test('a volitional export is imported as it is declared, $mode', () {
+        final e = parse(exportSource).volitionalDeclarations.single;
+        final i = parse(importSource).volitionalDeclarations.single;
+        expect(e.decl.exported, isTrue);
+        expect(i.decl.imported, isTrue);
+        expect(i.decl.exported, isFalse);
+        expect(i.decl.modulePath, 'm');
+        expect(i.signature, e.signature);
+        expect(i.decl.key, e.decl.key);
+        expect('${i.interactiveType}', '${e.interactiveType}');
+        expect(i.readerMode, e.readerMode);
+        expect(i.decl.typeParams, e.decl.typeParams);
+        expect(i.decl.argTypes.map((t) => '$t'),
+            e.decl.argTypes.map((t) => '$t'));
+      });
+    }
+
+    test('a module importing a volitional export and calling it loads in '
+        'vGLP mode, the import with no clauses of its own', () {
+      final m = parse('''
+Peer ::= Constant.
+Offer ::= offer(Peer).
+YesNo ::= yes ; no.
+Card ::= card(Peer, YesNo?).
+imported procedure (Card)*m#respond(Offer?).
+procedure go(Peer?).
+go(P) :- m # respond(offer(P?)).
+''');
+      final v = m.volitionalDeclarations.single;
+      expect(v.decl.imported, isTrue);
+      expect('$v', 'procedure (Card)*respond(Offer?).');
+      expect(m.procDeclarations.map((d) => '$d'),
+          ['imported procedure m#respond(Offer?, Card).', 'procedure go(Peer?).']);
+      expect(m.procedures.map((p) => p.signature), ['go/1']);
+      final call = m.procedures.single.clauses.single.body!.single as RemoteGoal;
+      expect(call.staticModuleName, 'm');
+      expect('${call.goal}', 'respond(offer(P?))');
     });
 
     test('a clause (A)*p of no procedure declared (T)*p is refused', () {

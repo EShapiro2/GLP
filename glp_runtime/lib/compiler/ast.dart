@@ -64,7 +64,11 @@ class Procedure extends AstNode {
 /// A clause of the procedure "is the guarded clause p(S1, ..., Sn, A) :- G |
 /// B, of arity n+1", so [decl] declares those clauses: `p(T1, ..., Tn, T)`,
 /// the interactive type last.  It is among the module's procedure
-/// declarations as well, where it stands for the procedure's clauses.
+/// declarations as well, where it stands for the procedure's clauses.  An
+/// imported one, `imported procedure (T)*M#p(T1, ..., Tn).`, mirrors its
+/// export's declaration (TGLP modules.tex, "Self-contained type checking"):
+/// [decl] is `M#p(T1, ..., Tn, T)`, imported, and the module has no clauses
+/// of it.
 class VolitionalDeclaration extends AstNode {
   final ProcDecl decl;
 
@@ -430,7 +434,8 @@ class Module extends AstNode {
   /// The declarations `procedure (T)*p(T1, ..., Tn).` of the module's
   /// volitional procedures, in source order (vGLP, Definition "Guarded
   /// Clause, Volitional Procedure, ...").  Each one's [ProcDecl] is in
-  /// [procDeclarations] too, and its procedure in [procedures].
+  /// [procDeclarations] too, and its procedure in [procedures], save an
+  /// imported one's, whose procedure is its module's.
   final List<VolitionalDeclaration> volitionalDeclarations;
 
   Module({

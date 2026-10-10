@@ -25,8 +25,14 @@ class Parser {
   /// ([Clause.interactiveTerm]).  The declaration takes TGLP's `exported` and
   /// parameter list as any procedure declaration does ("vGLP is typed as GLP
   /// is, by the parameterised moded type system of [TGLP] ... not restated
-  /// here", vGLP Section "Volition-Guarded GLP"); an imported one declares the
-  /// procedure's goals, n-ary until asked, and carries no interactive type.
+  /// here", vGLP Section "Volition-Guarded GLP"), and `imported` as well: an
+  /// import mirrors its export's declaration (TGLP modules.tex, "Self-contained
+  /// type checking": "Every module declares the full moded type of every
+  /// cross-module procedure it calls, via imported procedure declarations"),
+  /// so `imported procedure (T)*M#p(T1, ..., Tn).` is read as its export is,
+  /// `M#p(T1, ..., Tn, T)` (GLP #3 Cowork, 2026-10-10 07:48 UTC, "19:55":
+  /// "a volitional export is imported as it is declared").  Until 2026-10-10
+  /// it was refused.
   ///
   /// It also admits the volition guards and else-branches of the Definition
   /// that one replaced ("Guarded Clause, Volition-Guarded Clause, ..."), in
@@ -2194,19 +2200,8 @@ class Parser {
     bool imported = false;
     final startLine = _peek().line;
     final startColumn = _peek().column;
-    if (interactive != null && _check(TokenType.ATOM) &&
-        _peek().lexeme == 'imported') {
-      // An imported declaration types a cross-module call (TGLP modules.tex,
-      // "Cross-module type checking"), and a goal of a volitional procedure
-      // of arity n is "n-ary until it is asked" (vGLP, Definition "Guarded
-      // Clause, Volitional Procedure, ...").
-      throw CompileError(
-        'An imported declaration carries no interactive type: it types the '
-        'call M#p(S1, ..., Sn), and a goal of a volitional procedure of arity '
-        'n is n-ary until it is asked (vGLP, Definition "Guarded Clause, '
-        'Volitional Procedure, ...")',
-        startLine, startColumn, phase: 'parser');
-    }
+    // An imported declaration of a volitional procedure, `imported procedure
+    // (T)*M#p(...)`, is read as its export is (see [vglp]).
     if (_check(TokenType.ATOM) && _peek().lexeme == 'exported') {
       _advance(); // consume 'exported'
       exported = true;
