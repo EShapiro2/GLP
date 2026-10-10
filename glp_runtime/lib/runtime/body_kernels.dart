@@ -1188,18 +1188,12 @@ BodyKernelResult loadFileKernel(GlpRuntime rt, List<Object?> args) {
     print('[ABORT] _load_file/2: expected 2 arguments, got ${args.length}');
     return BodyKernelResult.abort;
   }
-  var name = _groundString(rt, args[0]);
+  final name = _groundString(rt, args[0]);
   if (name == null) {
     print('[ABORT] _load_file/2: first argument (Name) must be a ground '
         'string, got ${_deref(rt, args[0])}');
     return BodyKernelResult.abort;
   }
-  // A string literal keeps its quotes in the runtime's constant; the file
-  // name is the text between them.
-  if (name.length >= 2 && name.startsWith('"') && name.endsWith('"')) {
-    name = name.substring(1, name.length - 1);
-  }
-
   final goalId = rt.currentGoalId;
   final module = goalId == null ? null : rt.getGoalModule(goalId);
   final dir = module is ModuleTerm ? module.directory : null;

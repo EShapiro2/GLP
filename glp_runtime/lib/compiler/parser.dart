@@ -1458,7 +1458,13 @@ class Parser {
       return ConstTerm(token.literal, token.line, token.column);
     }
 
-    // String - preserve quotes for type checking string detection
+    // A double-quoted string: the string of its characters, the one value a
+    // quoted name of the same characters is (GLP-Spec appendix-lp.tex,
+    // Definition "Logic Programs Syntax": one kind of constant besides
+    // numbers and [], the string, "also commonly referred to as an atom"),
+    // so "x" and 'x' are one value and '"x"' is the three-character string.
+    // Until 2026-10-10 the value kept the double quotes, so "x" and 'x' were
+    // two values and "x" and '"x"' one.
     if (_check(TokenType.STRING)) {
       final token = _advance();
       // Check for invalid reader mark on string
@@ -1470,8 +1476,7 @@ class Parser {
           phase: 'parser'
         );
       }
-      // Wrap in quotes so type checker can distinguish strings from atoms
-      return ConstTerm('"${token.literal}"', token.line, token.column);
+      return ConstTerm(token.literal, token.line, token.column);
     }
 
     // List
@@ -2088,10 +2093,10 @@ class Parser {
       return ConstTerm(token.literal, token.line, token.column);
     }
 
-    // String
+    // A double-quoted string, the string of its characters (as in a term).
     if (_check(TokenType.STRING)) {
       final token = _advance();
-      return ConstTerm('"${token.literal}"', token.line, token.column);
+      return ConstTerm(token.literal, token.line, token.column);
     }
 
     // List

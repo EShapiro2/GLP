@@ -113,8 +113,14 @@ $_decl$_clauses''');
       '[]': '[]',
       '[a | b]': '[a | b]',
       "[a, 'B' | 'C']": "[a, 'B' | 'C']",
-      '"str"': '"str"',
-      r'"say \"hi\""': r'"say \"hi\""',
+      // A double-quoted string is the string of its characters, printed as
+      // a quoted name is (GLP #3 Cowork, 2026-10-04 15:19 UTC, FAULT 2 (b));
+      // until 2026-10-10 these printed in double quotes.
+      '"str"': 'str',
+      '"Str"': "'Str'",
+      r'"say \"hi\""': '\'say "hi"\'',
+      // The three-character string, quotes and all, kept as written.
+      '\'"x"\'': '\'"x"\'',
       "'G'(a)": "'G'(a)",
       "f('=..', 'X')": "f('=..', 'X')",
       '=?=(a, b)': '=?=(a, b)',
@@ -138,9 +144,15 @@ $_decl$_clauses''');
       });
     }
 
-    test("a quoted name and a string of the same text stay apart", () {
+    // Until 2026-10-10 this held the two apart, "a quoted name and a string
+    // of the same text stay apart", against the Definition's one kind of
+    // constant besides numbers and [].
+    test('a quoted name and a double-quoted string of the same text are one '
+        'string, and print alike', () {
+      expect(_sameTerm(_readTerm("'G'"), _readTerm('"G"')), isTrue);
       expect(GlpPrinter().printTerm(_readTerm("'G'")),
-          isNot(GlpPrinter().printTerm(_readTerm('"G"'))));
+          GlpPrinter().printTerm(_readTerm('"G"')));
+      expect(_sameTerm(_readTerm('\'"G"\''), _readTerm('"G"')), isFalse);
     });
 
     test('a clause with quoted predicate names reads back', () {

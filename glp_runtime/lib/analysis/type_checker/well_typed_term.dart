@@ -416,14 +416,12 @@ LeafTerm _pathStepToLeafTerm(PathStep step) {
     // checkLeafConsistency — that is what keeps `Stream(X) ::= [] ; [X|...]`
     // enumerable for input coverage.
 
-    // Check for string (quoted)
-    if ((value.startsWith("'") && value.endsWith("'")) ||
-        (value.startsWith('"') && value.endsWith('"'))) {
-      return LeafTerm.stringConstant(value.substring(1, value.length - 1), mode: step.mode);
-    }
-
-    // An unquoted constant is a String: GLP has one representation for a quoted
-    // string and an unquoted constant, and `string/1` succeeds on either.
+    // Every other constant is a String, its characters as written: a quoted
+    // name and a double-quoted string are two spellings of one string
+    // (GLP-Spec appendix-lp.tex, Definition "Logic Programs Syntax"), and
+    // `string/1` succeeds on either.  Until 2026-10-10 the parser kept a
+    // double-quoted string's quotes in its value and this stripped a pair of
+    // quotes from any constant, '"x"' coming out the string x.
     return LeafTerm.stringConstant(value, mode: step.mode);
   }
 }
