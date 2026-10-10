@@ -964,8 +964,16 @@ class Parser {
       );
     }
 
-    // Check for parenthesized expression: (Goal) or (Goal1 ; Goal2)
-    if (_check(TokenType.LPAREN)) {
+    // Check for parenthesized expression: (Goal) or (Goal1 ; Goal2).  A
+    // parenthesised term followed by a comparison or an arithmetic operator
+    // is no goal but the left operand of an infix guard, parsed below as an
+    // expression, as the right one is: the arithmetic comparisons take
+    // `Exp?` (GLP-Spec appendix-guards.tex, "Arithmetic comparison guards":
+    // `procedure =:=(Exp?, Exp?).`), and `(I? + 3)` is one.  Until
+    // 2026-10-10 `(I? + 3) =:= 0` was "Expected predicate name or
+    // comparison" at its ")", where `I? + 3 =:= 0` and `I? =:= (3 mod 2)`
+    // parsed (GLP 2026-10-10 09:33 UTC).
+    if (_check(TokenType.LPAREN) && !_parenthesisedOperand()) {
       final startToken = _advance(); // consume '('
       final firstGoal = _parseGoalOrGuard();
 
@@ -1602,6 +1610,33 @@ class Parser {
       default:
         return false;
     }
+  }
+
+  /// Whether the "(" at the current position opens a parenthesised term that
+  /// is the left operand of an infix guard: the token after its matching ")"
+  /// continues it as one ([_continuesAsInfixGuard]), as in
+  /// `(I? + 3) =:= 0`, `((I? mod 3)) > 1` or `(X? * 2) + 1 < Y?`.  A
+  /// parenthesised goal, `(G)` or `(G1 ; G2)`, is followed by none of those.
+  bool _parenthesisedOperand() {
+    var depth = 0;
+    for (var i = _current; i < tokens.length; i++) {
+      final t = tokens[i].type;
+      if (t == TokenType.EOF) return false;
+      if (t == TokenType.LPAREN) {
+        depth++;
+      } else if (t == TokenType.RPAREN) {
+        depth--;
+        if (depth == 0) {
+          if (i + 1 >= tokens.length) return false;
+          final start = _current;
+          _current = i + 1;
+          final operand = _continuesAsInfixGuard(_peek());
+          _current = start;
+          return operand;
+        }
+      }
+    }
+    return false;
   }
 
   // Get operator precedence
