@@ -1,6 +1,6 @@
 %% actors.glp — Ground-term actors for the UI mediator
 %%
-%% Exports: alice1-3, bob1-3, charlie1-3
+%% Exports: alice1-3, bob1-3, charlie1-3, alice_naf
 %% Types: from ../self.glp (ancestor scoping)
 %% No cross-module imports — all helpers are local.
 
@@ -298,3 +298,30 @@ charlie3_wait_intro([befriend_intro(bob, alice, ReqId)|_],
 charlie3_wait_intro([_|In], Out?) :-
     otherwise | charlie3_wait_intro(In?, Out).
 charlie3_wait_intro([], []).
+
+%% =============================================================================
+%% NOT A FRIEND — a message to someone who is not a friend is not sent, and the
+%% person is told (GSG Section 5.1); what the person is told after it arrives
+%% =============================================================================
+
+%% --- Alice (play_not_a_friend_ui) ---
+
+%% Alice, bob's friend and not carol's, sends carol a message and is told
+%% not_a_friend(carol); she then sends bob one, and is told his reply.
+exported procedure alice_naf(ActorChannel?).
+alice_naf(ch(In, [send(carol, hello)|Out?])) :-
+    alice_naf_wait_told(In?, Out).
+
+procedure alice_naf_wait_told(UserNotifyStream?, UserCmdStream).
+alice_naf_wait_told([not_a_friend(carol)|In],
+                    [send(bob, hello)|Out?]) :-
+    alice_naf_wait_reply(In?, Out).
+alice_naf_wait_told([_|In], Out?) :-
+    otherwise | alice_naf_wait_told(In?, Out).
+alice_naf_wait_told([], []).
+
+procedure alice_naf_wait_reply(UserNotifyStream?, UserCmdStream).
+alice_naf_wait_reply([received(bob, _)|_], []).
+alice_naf_wait_reply([_|In], Out?) :-
+    otherwise | alice_naf_wait_reply(In?, Out).
+alice_naf_wait_reply([], []).

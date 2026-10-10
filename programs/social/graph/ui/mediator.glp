@@ -75,6 +75,12 @@ ui_mediator(Id, ch([msg(agent, person, unfriended(Who))|AgentIn], AgentOut?),
     send(unfriended(Who?), UserCh?, UserCh1),
     ui_mediator(Id?, ch(AgentIn?, AgentOut), UserCh1?, Ps?, N?).
 
+ui_mediator(Id, ch([msg(agent, person, not_a_friend(Who))|AgentIn], AgentOut?),
+            UserCh, Ps, N) :-
+    ground(Who?) |
+    send(not_a_friend(Who?), UserCh?, UserCh1),
+    ui_mediator(Id?, ch(AgentIn?, AgentOut), UserCh1?, Ps?, N?).
+
 %% --- User-to-agent: decision (cold-call response) ---
 
 ui_mediator(Id, AgentCh, ch([decision(Dec, From, ReqId)|UserIn], UserOut?),
