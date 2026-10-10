@@ -624,17 +624,6 @@ class Analyzer {
       }
     }
 
-    // valid_attestation/4 guard marks all four inputs as grounded: it suspends
-    // until every input is ground, so a holding clause has them all ground.
-    // Allows multiple reader occurrences of the key/sig inputs.
-    if (guard.predicate == 'valid_attestation' && guard.args.length == 4) {
-      for (final arg in guard.args) {
-        if (arg is VarTerm) {
-          varTable.markGrounded(arg.name);
-        }
-      }
-    }
-
     // Analyze guard arguments
     // Per spec: guard occurrences do NOT count toward SRSW validation.
     // A reader appearing only in guards does not satisfy the pairing requirement.

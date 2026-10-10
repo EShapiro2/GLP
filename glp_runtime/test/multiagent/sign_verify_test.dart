@@ -1,7 +1,6 @@
 /// Tests for the signature kernels — self_key/1, sign/3, signature/2
 /// (GLP-Spec appendix-guards, "Identity and signature"; IGLP code format
-/// §Offer and Handshake Messages, "Signed content") — and the
-/// valid_attestation/4 guard of the networking seam.
+/// §Offer and Handshake Messages, "Signed content").
 ///
 /// An agent signs attest(PkA, PkB) under its own key; signature/2 gives back
 /// signed(K, H, T) — the signer, the source identity of the signing module and
@@ -11,8 +10,12 @@
 /// that is no string each answer unsigned, and the kernel aborts only on a
 /// malformed call. sign signs under no key but the person's; sign suspends
 /// until its input is ground and resumes on binding; a signed term produced by
-/// one agent is read at another. The guard is fed a raw Ed25519 signature made
-/// in Dart over the canonical bytes, which is what it checks.
+/// one agent is read at another.
+///
+/// valid_attestation/4, a guard that held of a raw Ed25519 signature over
+/// attest(PkA, PkB), is gone from the root and the runtime (GLP, 2026-09-20
+/// 11:53 UTC): the catalogue's guard table does not carry it and signature/2
+/// does its work, so a clause guarded by it is refused.
 ///
 /// Keys and signed terms are lowercase-hex string constants. The runtime holds
 /// the person's identity from construction; the networking layer is given the
@@ -20,9 +23,13 @@
 library;
 
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:test/test.dart';
+import 'package:glp_runtime/analysis/type_checker/root_scope.dart'
+    show builtinProcedures;
+import 'package:glp_runtime/bytecode/runner.dart' show runtimeGuards;
+import 'package:glp_runtime/compiler/lexer.dart';
+import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/multiagent/identity.dart';
 import 'package:glp_runtime/multiagent/simulation_network.dart';
@@ -285,101 +292,43 @@ test_suspend :- self_key(K), sign(attest(A?, pkb), K?, S), emit(S?), A = pka.
     });
   });
 
-  group('valid_attestation/4 guard (networking seam)', () {
-    /// A raw Ed25519 signature by [engine]'s layer over the canonical bytes of
-    /// attest(PkA, PkB) — what the guard checks.
-    String attestation(GlpEngine engine, String pkA, String pkB) {
-      final ctx = engine.madContext!;
-      final canonical = ctx.canonicalSerialize(
-          StructTerm('attest', [ConstTerm(pkA), ConstTerm(pkB)]));
-      return _hex(ctx.network!.sign(Uint8List.fromList(canonical)));
-    }
+  // valid_attestation/4 is no guard (GLP, 2026-09-20 11:53 UTC): the
+  // catalogue's guard table (GLP-Spec appendix-guards.tex) does not carry it,
+  // and signature/2 does its work, above --- a program takes the signed term
+  // apart and refuses a forgery without failing.  Until 2026-10-10 the root
+  // declared it, the checker listed it, the analyzer grounded its four inputs
+  // and the runner evaluated it.
+  group('valid_attestation/4 is no guard', () {
+    test('the root declares it nowhere, and neither the checker nor the '
+        'runtime has it', () {
+      final root =
+          Parser(Lexer(File(_rootSelf).readAsStringSync()).tokenize())
+              .parseModule();
+      expect(
+          root.procDeclarations.where((d) => d.name == 'valid_attestation'),
+          isEmpty);
+      expect(builtinProcedures, isNot(contains('valid_attestation/4')));
+      expect(runtimeGuards, isNot(contains('valid_attestation/4')));
+    });
 
-    test('a valid signature selects the guarded clause', () async {
-      final out = <String>[];
+    test('a clause guarded by it is refused at load', () {
       final a = PersonIdentity.generate();
       final b = PersonIdentity.generate();
-      final engine = _agent('alice', a, out);
-      final sig = attestation(engine, a.pub.hex, b.pub.hex);
-      final dir = _load(engine, '''
+      final engine = _agent('alice', a, <String>[]);
+      final sig = '0' * 128;
+      final dir = Directory('../programs/tests').createTempSync('glp_sign_');
+      try {
+        final f = File('${dir.path}/probe.glp')
+          ..writeAsStringSync('''
 procedure check.
 check :-
     valid_attestation('${a.pub.hex}', '${a.pub.hex}', '${b.pub.hex}', '$sig') |
     send_to_user([verified]).
 check :- otherwise | send_to_user([rejected]).
 ''');
-      try {
-        final result = await engine.runGoal('check');
-        expect(result.succeeded, isTrue);
-        expect(out, ['verified']);
-      } finally {
-        dir.deleteSync(recursive: true);
-      }
-    });
-
-    test('cross-agent: alice attests, bob\'s guard verifies', () async {
-      final a = PersonIdentity.generate();
-      final b = PersonIdentity.generate();
-      final alice = _agent('alice', a, <String>[]);
-      final sig = attestation(alice, a.pub.hex, b.pub.hex);
-      final bobOut = <String>[];
-      final bob = _agent('bob', b, bobOut);
-      final dir = _load(bob, '''
-procedure check.
-check :-
-    valid_attestation('${a.pub.hex}', '${a.pub.hex}', '${b.pub.hex}', '$sig') |
-    send_to_user([verified]).
-check :- otherwise | send_to_user([rejected]).
-''');
-      try {
-        final result = await bob.runGoal('check');
-        expect(result.succeeded, isTrue);
-        expect(bobOut, ['verified']);
-      } finally {
-        dir.deleteSync(recursive: true);
-      }
-    });
-
-    test('tampered signature → guard fails, otherwise clause selected',
-        () async {
-      final out = <String>[];
-      final a = PersonIdentity.generate();
-      final b = PersonIdentity.generate();
-      final engine = _agent('alice', a, out);
-      final zeros = '0' * 128; // well-formed hex, not a valid signature
-      final dir = _load(engine, '''
-procedure check.
-check :-
-    valid_attestation('${a.pub.hex}', '${a.pub.hex}', '${b.pub.hex}', '$zeros') |
-    send_to_user([verified]).
-check :- otherwise | send_to_user([rejected]).
-''');
-      try {
-        final result = await engine.runGoal('check');
-        expect(result.succeeded, isTrue);
-        expect(out, ['rejected']);
-      } finally {
-        dir.deleteSync(recursive: true);
-      }
-    });
-
-    test('malformed hex signature → guard fails, otherwise clause selected',
-        () async {
-      final out = <String>[];
-      final a = PersonIdentity.generate();
-      final b = PersonIdentity.generate();
-      final engine = _agent('alice', a, out);
-      final dir = _load(engine, '''
-procedure check.
-check :-
-    valid_attestation('${a.pub.hex}', '${a.pub.hex}', '${b.pub.hex}', 'not_valid_hex') |
-    send_to_user([verified]).
-check :- otherwise | send_to_user([rejected]).
-''');
-      try {
-        final result = await engine.runGoal('check');
-        expect(result.succeeded, isTrue);
-        expect(out, ['rejected']);
+        expect(() => engine.loadFile(f.path),
+            throwsA(predicate((e) => '$e'.contains('valid_attestation'),
+                'a refusal naming valid_attestation')));
       } finally {
         dir.deleteSync(recursive: true);
       }

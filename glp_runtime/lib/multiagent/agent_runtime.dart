@@ -229,7 +229,7 @@ class AgentRuntime {
     );
     network.putIdentity(kp.pub, kp.priv);
     _network = network;
-    _ctx!.network = network; // backs the seam predicates and valid_attestation/4 (§4)
+    _ctx!.network = network; // backs the seam predicates (IGLP Definition Seam Predicates)
 
     // Outgoing (spec §4): ctx.onMessageReady(destId, msg) → network.send.
     _ctx!.onMessageReady = (destination, msg) async {

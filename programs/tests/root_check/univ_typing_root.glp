@@ -119,11 +119,6 @@ procedure known(_?).
 procedure unknown(_?).
 procedure no_readers(_?).
 
-% Attestation guard — holds iff the fourth argument is the first's signature
-% over the pair (PkA, PkB).  Implemented in the runtime guard machinery
-% (bytecode/runner.dart); Secure-GLP renames it verify/3.
-procedure valid_attestation(Constant?, Constant?, Constant?, Constant?).
-
 % Time guards
 procedure wait(Number?).
 procedure wait_until(Number?).

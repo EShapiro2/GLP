@@ -1,9 +1,6 @@
 import 'dart:async' show Timer;
 import 'dart:collection' show Queue, SetBase;
-import 'dart:typed_data' show Uint8List;
 
-import 'package:glp_runtime/multiagent/mad_context.dart' show MadContext;
-import 'package:glp_runtime/multiagent/glp_network.dart' show PubKey;
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
@@ -782,14 +779,15 @@ Set<Object> _readersOfGoal(RunnerContext cx, Set<Object> variables) {
 /// _generateGuard); `no_readers/1` has only its instruction, which takes a
 /// variable.  The compiler refuses a guard instruction naming anything else, so
 /// an unknown guard is refused at compile time (codegen.dart) and never reaches
-/// the evaluator.  `valid_attestation/4` is held from round two's item 8 until
-/// GLP-Networking-API answers (GLP #3 Cowork, 2026-10-02 13:00 UTC).
+/// the evaluator.  `valid_attestation/4` is no guard: the catalogue's guard
+/// table does not carry it and `signature/2` does its work (GLP, 2026-09-20
+/// 11:53 UTC); it was evaluated here until 2026-10-10.
 const Set<String> runtimeGuards = {
   '</2', '>/2', '=</2', '>=/2', '=:=/2', '=\\=/2', '@</2',
   'ground/1', 'known/1', 'integer/1', 'string/1', 'constant/1', 'number/1',
   'real/1', 'list/1', 'compound/1', 'module/1', 'is_mutual_ref/1', 'unknown/1',
   'otherwise/0', 'wait/1', 'wait_until/1', 'when_idle/0', 'no_readers/1',
-  '=?=/2', '=?\\=/2', 'valid_attestation/4',
+  '=?=/2', '=?\\=/2',
 };
 
 /// The arithmetic comparison guards (GLP-Spec appendix-guards.tex,
@@ -1429,70 +1427,6 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       if (args.length < 2) return GuardResult.failure;
       return _groundEqualityGuard(predicateName, _equalityOperand(args[0]),
           _equalityOperand(args[1]), cx);
-
-    // Attestation guard (madGLP).
-    // valid_attestation(Signer?, PkA?, PkB?, Sig?) holds iff Sig is Signer's
-    // valid Ed25519 signature over the canonical serialization of attest(PkA,
-    // PkB). Inputs are lowercase-hex string constants (keys 64 chars, signature
-    // 128 chars). Any invalid/malformed input, or absence of a network on the
-    // context, is guard failure — the guard never aborts. Unbound readers were
-    // already suspended by the caller.
-    case 'valid_attestation':
-      if (args.length != 4) return GuardResult.failure;
-      final ctx = cx.rt.madContext;
-      if (ctx is! MadContext) return GuardResult.failure;
-      final network = ctx.network;
-      if (network == null) return GuardResult.failure;
-
-      String? hexConst(dynamic v) {
-        if (v is ConstTerm) {
-          final cv = v.value;
-          return cv is String ? cv : null;
-        }
-        if (v is String) return v;
-        if (v is VarRef) {
-          if (cx.rt.heap.isReader(v.addr)) {
-            if (!cx.rt.heap.isReaderBound(v.addr)) return null;
-            return hexConst(cx.rt.heap.getReaderValue(v.addr));
-          }
-          final deref = cx.rt.heap.getValue(v.addr);
-          return deref == null ? null : hexConst(deref);
-        }
-        return null;
-      }
-
-      Uint8List? hexToBytes(String? hex, int expectedBytes) {
-        if (hex == null || hex.length != expectedBytes * 2) return null;
-        final out = Uint8List(expectedBytes);
-        for (var i = 0; i < expectedBytes; i++) {
-          final b = int.tryParse(hex.substring(i * 2, i * 2 + 2), radix: 16);
-          if (b == null) return null;
-          out[i] = b;
-        }
-        return out;
-      }
-
-      final signerBytes = hexToBytes(hexConst(args[0]), 32);
-      final pkAHex = hexConst(args[1]);
-      final pkBHex = hexConst(args[2]);
-      final sigBytes = hexToBytes(hexConst(args[3]), 64);
-      if (signerBytes == null ||
-          pkAHex == null ||
-          pkBHex == null ||
-          sigBytes == null) {
-        return GuardResult.failure;
-      }
-
-      try {
-        final attest =
-            StructTerm('attest', [ConstTerm(pkAHex), ConstTerm(pkBHex)]);
-        final canonical = ctx.canonicalSerialize(attest);
-        final ok = network.verify(
-            PubKey(signerBytes), Uint8List.fromList(canonical), sigBytes);
-        return ok ? GuardResult.success : GuardResult.failure;
-      } catch (_) {
-        return GuardResult.failure;
-      }
 
     default:
       // Unreachable: the compiler refuses a guard instruction that names no

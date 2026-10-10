@@ -72,8 +72,6 @@ const Set<String> builtinProcedures = {
   'known/1',
   'unknown/1',
   'no_readers/1',
-  // Attestation guard (madGLP)
-  'valid_attestation/4',
   // Time guards
   'wait/1',
   'wait_until/1',

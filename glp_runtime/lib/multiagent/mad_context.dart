@@ -53,9 +53,9 @@ class MadContext {
   /// Optional callback for message delivery (set by coordinator)
   MessageDeliveryCallback? onMessageReady;
 
-  /// The agent's networking layer (set at boot). Backs the `sign/2` body kernel
-  /// and the `valid_attestation/4` guard: the layer holds the
-  /// private key and provides real Ed25519 `sign`/`verify`.
+  /// The agent's networking layer (set at boot). Backs the seam predicates
+  /// (IGLP Definition "Seam Predicates"); `sign/3` and `signature/2` sign and
+  /// verify under the runtime's person identity, not through the layer.
   GlpNetwork? network;
 
   /// The canonical bytes e(T) of a ground term T, which a signature signs and

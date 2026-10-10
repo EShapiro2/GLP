@@ -637,8 +637,7 @@ void _agentIsolateEntry(AgentConfig config) async {
         config.mainPort.send(RouterTrust(agentId, underlay, level)),
   );
   network.putIdentity(config.keyPair.pub, config.keyPair.priv);
-  // Back the seam predicates (IGLP Definition Seam Predicates) and the
-  // valid_attestation/4 guard.
+  // Back the seam predicates (IGLP Definition Seam Predicates).
   ctx.network = network;
 
   // Outgoing (spec §4): ctx.onMessageReady(destId, msg) → network.send.
