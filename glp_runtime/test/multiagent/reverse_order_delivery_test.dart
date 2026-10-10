@@ -1,4 +1,4 @@
-/// Reverse-order delivery test (seam spec v0.2 §7.3 / Issue 7).
+/// Reverse-order delivery test (IGLP app:in-networking, Early messages).
 ///
 /// Wires two MadContexts (alice, bob) through one SimulationRouter with the real
 /// serialize-on-send / deserialize-on-deliver seam glue. alice cold-calls bob
@@ -14,14 +14,15 @@ import 'package:test/test.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
-import 'package:glp_runtime/multiagent/payload_serializer.dart';
+import 'package:glp_runtime/wire/payload_codec.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/multiagent/simulation_network.dart';
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 
 /// One alice→bob cold-call carrying a reader, with the reply value [reply].
 /// Runs the pair through [router] under the given delivery regime and returns
 /// bob's network-input writer address plus bob's runtime for inspection.
-({GlpRuntime bobRt, int bobNetIn}) _runColdCall(
+({GlpRuntime bobRt, HeapCell bobNetIn}) _runColdCall(
   SimulationRouter router, {
   required bool reverse,
   required String reply,
@@ -41,13 +42,7 @@ import 'package:glp_runtime/multiagent/simulation_network.dart';
     router.routeSend('alice', destId, Uint8List.fromList(msg.payload));
   };
   router.onDeliver = (toId, fromPk, payload, messageId, t) {
-    final (gn, value) = PayloadSerializer('bob').deserializeGlobalSendPayload(
-      payload,
-      (isReader) {
-        final (w, r) = bobRt.heap.allocateVariable();
-        return isReader ? r : w;
-      },
-    );
+    final (gn, value) = PayloadCodec.deserializeGlobalSendPayload(payload);
     ctxBob.handleMadAssignment(
       globalName: gn,
       value: value,
@@ -81,12 +76,12 @@ import 'package:glp_runtime/multiagent/simulation_network.dart';
   return (bobRt: bobRt, bobNetIn: bobNetIn);
 }
 
-/// Build a 2-agent router (alice, bob), both Open, recording nothing.
+/// Build a 2-agent router (alice, bob), both Open over the PAN, recording nothing.
 SimulationRouter _router() {
   final r = SimulationRouter();
   for (final id in ['alice', 'bob']) {
     r.register(id, generateKeyPair().pub);
-    r.setTrustLevel(id, TrustLevel.open);
+    r.setTrustLevel(id, ProximityUnderlay.pan, TrustLevel.open);
   }
   r.onConnectivity = (_, __, ___, ____) {};
   return r;
@@ -94,7 +89,7 @@ SimulationRouter _router() {
 
 /// Extract the reply value bob received on its network-input stream:
 /// netIn := [ msg(Z?) | N'? ] with Z bound to the reply.
-Object _deliveredReply(GlpRuntime bobRt, int bobNetIn) {
+Object _deliveredReply(GlpRuntime bobRt, HeapCell bobNetIn) {
   final cell = bobRt.heap.derefAddr(bobNetIn);
   expect(cell, isA<StructTerm>());
   final head = (cell as StructTerm).args[0]; // msg(Z?)

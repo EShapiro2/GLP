@@ -13,7 +13,7 @@
 
 Stream(X) ::= [] ; [X | Stream(X)].
 
-procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
+procedure(X) merge(Stream(X)?, Stream(X)?, Stream(X)).
 
 % WRONG: Zs? is reader at output position in body (should be writer Zs)
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs?).

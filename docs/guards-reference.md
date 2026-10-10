@@ -1,6 +1,6 @@
 # GLP Guards Quick Reference
 
-**Last Updated**: 2026-03-06
+**Last Updated**: 2026-10-02
 
 ---
 
@@ -21,76 +21,24 @@ Guards are pure tests with **three-valued semantics** (success/suspend/fail) tha
 
 **Semantics**:
 - **Success**: Guard condition definitively true → continue to next guard or body
-- **Suspend**: Unbound variables present, success possible → add to suspension set Si
+- **Suspend**: Unbound readers present, success possible under a readers substitution → the goal's readers among them go to the suspension set Si
 - **Fail**: Guard condition definitively false → try next clause
 
 **Key Property**: Guards never have side effects and execute during HEAD/GUARDS phase (before commit).
 
+**A goal suspends on its own readers** (GLP-Spec glp.tex: "if a GLP goal A cannot be reduced now, but there is a readers substitution σ such that Aσ can be reduced, such readers are identified, the goal A suspends on these readers").  No readers substitution binds a variable the clause alone holds --- a fresh one of the head, in a structure the head gives a goal writer, or the clause's own output, a head reader matched against the goal's writer --- so a guard member left undecided with no reader of the goal to wait on fails the clause (GLP #3 Cowork, 2026-10-02 15:31 UTC, A).  Every guard but `=?\=` succeeds only where each reader it waits on is bound, and fails on a reader the clause alone holds, a reader of the goal beside it or not; `=?\=` waits on the goal's readers and fails where it has none.  `hq(f(X), Y, yes) :- X? =?= w(Y?) | true` fails `hq(W, b, R)`, and `hw(f(X), Y, yes) :- X? =?\= Y? | true` fails `hw(W, b, R)`: until 2026-10-02 each held the goal for ever.
+
+**A guard over an unknown variable** --- one whose writer occurrence in the head lies under a goal reader the head suspends on, its value not yet given --- is decided by the same decision, the variable standing for any term: it fails the clause where no term makes it succeed, and is otherwise passed by, the clause waiting on the goal reader (GLP #3 Cowork, 2026-10-02 15:31 UTC, B).  With `pu(f(X), Y, yes) :- X? =?= Y? | true.` and `pu(_, _, no) :- otherwise | true.`, `pu(P?, g(W), R)` gives `R = no`, `g(W)` holding a writer; until 2026-10-02 it waited on `P?`.
+
+**A guard's argument may be a term of any depth** --- `Z? =?= g(f(c))`, `X? + Y? * 2 > 3`, `X? =?= [a, b]` --- built as a body goal's argument is, by `put_structure` and the `set_*` and `unify_*` instructions that fill it, a structure nested in it pushing the one it is nested in, into a structure held for the guard call alone, nothing bound on the heap (`runner.dart`, `execPutStructure`, `_completeGuardStructure`).  Until 2026-10-02 a nested structure overwrote the one it was nested in and `set_*` acted in the body alone, so the guard was decided on a term never completed: `t6(Z, Y?) :- Z? =?= g(f(c)) | Y = ok.` failed `t6(g(f(c)), Y)` (GLP #3 Cowork, 2026-10-02 17:12 UTC, S1).
+
+**Either side of an infix guard may be a structure or a constant**: `w(X?) =?= Y?` parses as `Y? =?= w(X?)` does, `f(X?) + 1 > 2` as `2 < f(X?) + 1` does, and `b @< X?` is `@<` of `b` and `X?`.  A name followed by a comparison or an arithmetic operator is the left operand, parsed as an expression as the right one is (`parser.dart`, `_continuesAsInfixGuard`); followed by anything else it is a predicate, and `foo(a) = X` the unification goal it was.  Until 2026-10-02 the name was taken for a predicate and the operator after it was a syntax error (GLP #3 Cowork, 2026-10-02 17:12 UTC, S2).
+
 ---
 
-## Guard Negation (`~G`)
+## No Guard Negation
 
-**Syntax**: `~G` where G is an atomic built-in guard
-
-**Semantics**: `~G` succeeds iff G fails. Suspension behavior follows from the standard guard definition (a guard suspends if there exists an assignment to its readers that makes it succeed).
-
-**Restrictions**:
-- Only atomic built-in guards can be negated
-- Defined guards (unit clauses) cannot be negated
-- Compound guards cannot be negated (no `~(A, B)`)
-- Double negation `~~G` is syntactically forbidden (formally equivalent to G, but forbidden in syntax)
-
-### Negatable Guards
-
-These guards can be negated with `~`:
-
-| Guard | Description | `~` Negation |
-|-------|-------------|--------------|
-| `ground(X?)` | Test if X contains no variables | `~ground(X?)` succeeds if X is not ground |
-| `known(X?)` | Test if X is bound | `~known(X?)` succeeds if X is unbound |
-| `unknown(X?)` | Test if X is unbound | `~unknown(X?)` succeeds if X is bound |
-| `integer(X?)` | Test for integer type | `~integer(X?)` succeeds if X is not an integer |
-| `number(X?)` | Test for numeric type | `~number(X?)` succeeds if X is not a number |
-| `string(X?)` | Test for string type | `~string(X?)` succeeds if X is not a string |
-| `constant(X?)` | Test for constant | `~constant(X?)` succeeds if X is not a constant |
-| `compound(X?)` | Test for compound term | `~compound(X?)` succeeds if X is not compound |
-| `list(X?)` | Test for list type | `~list(X?)` succeeds if X is not a list |
-| `module(X?)` | Test for module term | `~module(X?)` succeeds if X is not a module |
-| `is_mutual_ref(X?)` | Test for mutual reference | `~is_mutual_ref(X?)` succeeds if X is not a mutual ref |
-| `no_readers(X?)` | Test for no readers in term | `~no_readers(X?)` succeeds if X contains readers |
-| `X =?= Y` | Ground equality test | `~(X =?= Y)` succeeds if X and Y are not equal |
-
-### Non-Negatable Guards
-
-These guards cannot be negated (due to type-error semantics or special behavior):
-
-| Guard | Reason |
-|-------|--------|
-| `<`, `>`, `=<`, `>=` | Type error on non-numeric operands |
-| `=:=`, `=\=` | Type error on non-numeric operands |
-| `@<` | Type error on non-constant operands |
-| `otherwise` | Special clause-ordering semantics |
-| `wait`, `wait_until` | Time-based control flow |
-
-### Examples
-
-```prolog
-% Negation of type guards
-handle(X, Y) :- ~integer(X?) | handle_non_integer(X?, Y).
-handle(X, Y) :- integer(X?) | handle_integer(X?, Y).
-
-% Negation of ground
-process(X, Y) :- ~ground(X?) | wait_for_binding(X?, Y).
-process(X, Y) :- ground(X?) | process_ground(X?, Y).
-
-% Negation of equality
-lookup(Key, [(K,V)|_], V?) :- Key =?= K? | true.
-lookup(Key, [(K,_)|Rest], V?) :- ~(Key =?= K?) | lookup(Key?, Rest?, Value).
-```
-
-### Design Rationale
-
-In GLP, guards have **input-only variables** - they test but don't bind. This makes success and failure symmetric definitive outcomes. Neither produces bindings, both are final decisions. This symmetry enables clean negation semantics where `~G` simply inverts the success/fail outcome while preserving suspension behavior.
+A guard is a conjunction of guard predicates (GLP-Spec glp.tex, Definition "Guarded Clause"), and GLP has no guard negation: it left the language on 2026-10-01 (GLP-Spec 98913b4), and the parser refuses `~G` as a syntax error.  A clause for the cases the clauses before it do not take is guarded by `otherwise` (see the `lookup` example under `X =?= Y`); that no readers substitution makes two terms ground and equal is tested by `X =?\= Y`.
 
 ---
 
@@ -109,8 +57,8 @@ In GLP, guards have **input-only variables** - they test but don't bind. This ma
 
 **Semantics**:
 - Success: X bound to constant (number/string) or compound term (may contain unbound subterms)
-- Suspend: X is unbound reader
-- Fail: X is unbound writer
+- Suspend: X is an unbound reader of the goal
+- Fail: X is unbound writer, or a reader the clause alone holds (see Overview)
 
 **Logical Definition**: `known(X)` ≡ `constant(X) ∨ compound(X)`
 
@@ -171,8 +119,10 @@ copy(X, Y, Z) :- compound(X?) |
 
 **Semantics**:
 - Success: X? is ground (no unbound variables anywhere)
-- Suspend: X? contains unbound readers (waiting for values)
-- Fail: X? contains unbound writers
+- Suspend: X? contains unbound readers of the goal (waiting for values)
+- Fail: X? contains unbound writers, or a mutual reference, which "holds the writer of a stream tail, so it is neither ground nor a constant type" (TGLP typed-glp.tex), or a reader the clause alone holds (see Overview)
+
+The argument may be a term built in the guard, `ground(h(X?))`, decided as a variable is.  Until 2026-10-02 the ground instruction passed a mutual reference as ground, where `=?=` fails on one, and a term argument succeeded whatever it held.
 
 **Why the argument must be a reader**: Guards use three-valued semantics where unbound variables cause suspension (waiting for a value). If the argument were a writer, an unbound variable would cause immediate failure rather than suspension, defeating the purpose of patient synchronization.
 
@@ -211,10 +161,12 @@ run(Goal) :- otherwise | send_to_user(no_clauses(Goal?)).
 
 **Semantics**:
 - Success: X? is bound to a term containing no readers (ground terms and/or writers only)
-- Suspend: X? contains any readers (waiting for them to be instantiated)
-- Fail: Never fails
+- Suspend: X? contains readers of the goal (waiting for them to be instantiated)
+- Fail: X? contains a reader the clause alone holds, which no readers substitution binds (see Overview)
 
-**Key Property**: This guard **never fails**—it either succeeds (no readers) or suspends (has readers). This is because any term with readers will eventually either have those readers bound (at which point the guard is re-evaluated) or remain suspended indefinitely.
+**Key Property**: This guard fails only on a reader the clause alone holds: any other term with readers will eventually either have those readers bound (at which point the guard is re-evaluated) or remain suspended indefinitely.  Until 2026-10-02 it read a variable fresh to the clause as its writer and succeeded: `hn(f(X), yes) :- no_readers(X?) | true` gave `hn(W, R)` `R = yes`.
+
+The argument may be a term built in the guard, `no_readers(f(X?))`, decided as a variable is: `p(X, Y?) :- no_readers(f(X?)) | Y = a.` suspends `p(Z?, Y)` and gives `Y = a` when `Z` is bound.  Until 2026-10-02 the runtime evaluated `no_readers/1` on a variable alone, and a term argument failed the clause with a warning.
 
 **Use Case**: Ensuring a term is safe for external output (e.g., to a UI). Terms sent to external systems should not contain readers, as the external system cannot wait for them to be instantiated.
 
@@ -240,7 +192,7 @@ For example:
 
 ## Guard Arguments: Why Readers?
 
-Guards that test variable values (`ground`, `known`, `integer`, `number`, `string`) take **reader** arguments. This follows from GLP's three-valued guard semantics:
+Guards that test variable values (`ground`, `known`, `integer`, `real`, `number`, `string`) take **reader** arguments. This follows from GLP's three-valued guard semantics:
 
 | Argument Type | If Unbound | Behavior |
 |---------------|------------|----------|
@@ -262,15 +214,15 @@ process(X, Y?) :- ground(X) | Y = computed(X?).  % Would fail, not suspend
 
 ## Ground Guards - SRSW Relaxation
 
-Per the formal definition, variables occur as reader/writer pairs with exactly one of each. The ONLY exception: when guards guarantee groundness, multiple occurrences of both the writer and reader are permitted because ground terms contain no unbound writers.
+Per the formal definition, variables occur as reader/writer pairs with exactly one of each. The exception: when a guard guarantees groundness, the reader may occur more than once, because a ground term contains no unbound writer; the writer occurs once, whatever the guard.
 
 ### The Rule
 
-When a guard ensures a variable is ground (contains no unbound variables), both the writer and its paired reader may appear **multiple times** in the clause without violating SRSW. This is fundamental to GLP's concurrent programming model.
+GLP-Spec glp.tex, Remark "Guards and SRSW" (bbff21d): "if the success of a guard implies that X? is bound to a ground term, then X? may occur multiple times in the clause; X occurs once, as ever."  Until 2026-10-02 the analyzer licensed the writer as well; it now refuses a writer occurring more than once in a clause, whatever the guards: `Writer variable "X" occurs 2 times; a writer occurs once, whatever the guards`, or, twice in the head, `... occurs 2 times in the head of the clause ...`.
 
 ### Why This Works
 
-Ground terms contain no unbound writers. Multiple occurrences of a ground variable's writer and reader do not create single-writer violations because there's no exposed writer that could be bound multiple times.
+Ground terms contain no unbound writers, so several readers of a ground value share nothing that could be bound twice.  The writer is the one place the value is produced, and a second occurrence would be a second producer.
 
 ### Guard Arguments Count as Reader Occurrences
 
@@ -282,15 +234,16 @@ check(X) :- known(X?) | true.
 
 is valid because X appears as writer in the head and X? appears as reader in the guard, satisfying SRSW with one writer and one reader.
 
-This is distinct from the multiple-occurrence relaxation below. Guard reader counting ensures guards participate in SRSW validation. The relaxation below determines which guards permit both the writer and reader of a variable to appear multiple times.
+This is distinct from the multiple-occurrence relaxation below. Guard reader counting ensures guards participate in SRSW validation. The relaxation below determines which guards permit the reader of a variable to appear multiple times.
 
 ### Guards That Imply Groundness
 
-| Guard | Implies Ground | Allows Multiple Occurrences |
+| Guard | Implies Ground | Allows Multiple Reader Occurrences |
 |-------|----------------|-------------------------|
 | ✅ `ground(X?)` | Yes | ✅ Yes |
 | ✅ `constant(X?)` | Yes | ✅ Yes |
 | ✅ `integer(X?)` | Yes | ✅ Yes |
+| ✅ `real(X?)` | Yes | ✅ Yes |
 | ✅ `number(X?)` | Yes | ✅ Yes |
 | ✅ `string(X?)` | Yes | ✅ Yes |
 | ✅ `module(X?)` | Yes | ✅ Yes |
@@ -300,6 +253,8 @@ This is distinct from the multiple-occurrence relaxation below. Guard reader cou
 | ✅ `X? >= Y?` | Yes (both operands, when succeeds) | ✅ Yes |
 | ✅ `X? =:= Y?` | Yes (both operands, when succeeds) | ✅ Yes |
 | ✅ `X? =\= Y?` | Yes (both operands, when succeeds) | ✅ Yes |
+| ✅ `X? =?= Y?` | Yes (both operands, when succeeds) | ✅ Yes |
+| ✅ `X? =?\= Y?` | **NO** | ❌ No |
 | ✅ `compound(X?)` | **NO** | ❌ No |
 | ✅ `known(X?)` | **NO** | ❌ No |
 | ✅ `no_readers(X?)` | **NO** | ❌ No |
@@ -353,11 +308,11 @@ bad_example(X, Y1, Y2) :- known(X?) |
 The SRSW analyzer must:
 1. Track guards in HEAD/GUARDS phase
 2. Recognize guards that imply groundness:
-   - Type guards: `ground/1`, `integer/1`, `number/1`, `string/1`, `constant/1`
+   - Type guards: `ground/1`, `integer/1`, `real/1`, `number/1`, `string/1`, `constant/1`
    - Arithmetic comparisons: `<`, `=<`, `>`, `>=`, `=:=`, `=\=`
 3. For variables with ground-guaranteeing guards:
    - Mark variable as "ground-certified" for this clause
-   - Allow multiple occurrences of both writer and reader in clause
+   - Allow multiple occurrences of its reader in the clause; its writer occurs once
 4. For variables without such guards:
    - Enforce strict single-occurrence constraint
 
@@ -468,7 +423,7 @@ handle(X, Y) :- otherwise | process_other(X?, Y).
 - Success: X? is an unbound variable (reader or writer)
 - Fail: X? is bound to any value (constant, compound, list)
 
-**Logical Definition**: `unknown(X)` ≡ `~known(X)`. The guard succeeds when dereferencing X leads to an unbound variable.
+**Logical Definition**: The guard succeeds when dereferencing X leads to an unbound variable, reader or writer, and fails otherwise.
 
 **Note**: Unlike most guards, `unknown(X?)` does NOT suspend — it either succeeds (unbound) or fails (bound). An unbound reader succeeds immediately rather than suspending, because the purpose is to test for unboundness.
 
@@ -490,16 +445,15 @@ provide_default(X, _, Default?) :- unknown(X?) | true.
 
 Tests whether two terms are ground and equal.
 
-**Semantics** (three-valued):
+**Semantics** (three-valued; GLP-Spec appendix-guards.tex, bbff21d): "`=?=` succeeds if both arguments are ground and equal."  It suspends and fails by the guard semantics (glp.tex, Guards): "A guard suspends if it does not succeed but some instance of it under a readers substitution would succeed. A guard fails if no such instance exists."  The runtime decides whether some readers substitution makes the two ground and equal by unifying them with readers alone assigned (`runner.dart`, `_decideGroundEquality`): none does where they clash in a constant, a functor or an arity, where an unbound writer stands in either, which no readers substitution grounds, or where a reader would have to stand for two different terms or for a term containing itself, whatever readers stand elsewhere.
 
-| X | Y | Result |
-|---|---|--------|
-| ground | ground, X = Y | succeed |
-| ground | ground, X ≠ Y | fail |
-| unbound reader | any | suspend |
-| any | unbound reader | suspend |
-| unbound writer | any | fail |
-| any | unbound writer | fail |
+| X and Y | Result |
+|---|---|
+| both ground and equal | succeed |
+| not both ground, and some readers substitution makes them ground and equal | suspend on the unbound readers of the goal; fail on a reader the clause alone holds (see Overview) |
+| no readers substitution makes them ground and equal | fail |
+
+So `f(a, X?) =?= f(b, Z?)`, `f(X?) =?= g(Y?)`, `[a | T?] =?= []` and `f(W) =?= f(c)` fail, and `f(a, X?) =?= f(a, b)` suspends.
 
 **Usage**: Pattern matching where equality must be tested explicitly.
 
@@ -513,6 +467,13 @@ The guard `Key =?= K?` succeeds when `Key` and `K` are both ground and equal. If
 
 **Why not multiple head writers**: GLP maintains the SO invariant via SRSW syntactic restriction (one writer per variable). Instead of implicit equality via multiple head occurrences, use `=?=` for explicit, visible equality testing.
 
+### ✅ `X =?\= Y`
+**The negation of `=?=`**
+
+`procedure =?\=(_?, _?).` Ground: no.  It succeeds where readers stand unbound --- `f(a, Z?) =?\= f(b, W?)` --- so its success grounds nothing, and it licenses no repeated reader (Remark "Guards and SRSW").
+
+**Semantics** (GLP-Spec appendix-guards.tex, bbff21d): "`=?\=` succeeds if no readers substitution makes them ground and equal."  It suspends and fails by the guard semantics, as `=?=` does (above): it fails where both are ground and equal, and where they are not but some readers substitution makes them so, it suspends on the unbound readers of the goal, and fails where it meets none (see Overview).  So `f(a, Z?) =?\= f(b, W?)`, `f(X?) =?\= g(Y?)`, `[a | T?] =?\= []` and `f(W) =?\= f(c)` succeed, and `f(X?) =?\= f(Y?)` suspends.
+
 ---
 
 ## What Can Appear in Guard Position
@@ -521,7 +482,7 @@ The guard `Key =?= K?` succeeds when `Key` and `K` are both ground and equal. If
 
 The partial evaluator validates all guards at compile time. Guards fall into exactly two categories:
 
-1. **Builtin guards** — Implemented in the Dart runtime with NO GLP clauses. These include type guards (`integer/1`, `number/1`, `ground/1`, etc.), comparison guards (`</2`, `>/2`, etc.), and equality guards (`=?=/2`). Builtin guards are kept as-is by the partial evaluator.
+1. **Builtin guards** — Implemented in the Dart runtime with NO GLP clauses. These include type guards (`integer/1`, `real/1`, `number/1`, `ground/1`, etc.), comparison guards (`</2`, `>/2`, etc.), and equality guards (`=?=/2`, `=?\=/2`). Builtin guards are kept as-is by the partial evaluator.
 
 2. **Single-unit-clause procedures** — User-defined procedures with exactly one clause, no guards, and no body. These are unfolded at compile time by the partial evaluator.
 
@@ -589,7 +550,7 @@ When `channel(X?)` is unfolded, it becomes pattern matching against `ch(_, _)`.
 **Semantics** (three-valued, like all guards):
 - **Success**: Arguments unify with the clause head pattern
 - **Suspend**: Arguments contain unbound readers
-- **Fail**: Arguments don't match pattern
+- **Fail**: Arguments don't match pattern, a goal writer where the pattern has `_` among them: `_` is a head writer, and a goal writer against a head writer fails (GLP-Spec appendix-term-matching.tex, row "Writer X1", column "Writer X2").  So `channel(X?)` holds for `ch(A?, B?)` and `ch(a, b)` and fails `ch(A?, B)`; in typed GLP the type is the channel's warrant (GLP #3 Cowork, 2026-10-02 17:12 UTC, 1(b)).  Until 2026-10-02 the runtime took a goal writer at `_` and `ch(A?, B)` passed.
 
 **Requirements:**
 1. **Procedure declaration** — required for type checking
@@ -609,10 +570,12 @@ When `channel(X?)` is unfolded, it becomes pattern matching against `ch(_, _)`.
 
 **Note**: Prolog uses `=<` (not `<=`) for "less than or equal"
 
+**Operands**: arithmetic expressions of type `Exp` (the root `self.glp`; GLP-Spec appendix-guards.tex, 026515d) --- numbers, `+`, `-`, `*`, `/`, `//`, `mod` and `pow`, unary negation, and the sixteen functions `abs`, `sqrt`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `exp`, `ln`, `log`, `integer`, `real`, `round`, `floor` and `ceil`, each as its body kernel computes it, `log` being `'_log10'`.  Until 2026-10-02 a function had no value in a guard, and `sqrt(X?) > 1` never succeeded (GLP #3 Cowork, 2026-10-02 20:58 UTC).
+
 **Semantics**:
 - Success: Both X and Y bound to numbers AND condition holds
-- Suspend: Either X or Y is unbound reader
-- Fail: Both bound to numbers AND condition false
+- Suspend: Either X or Y is unbound reader, and some instance of the comparison succeeds
+- Fail: Both bound to numbers AND condition false; or an operand has no value under any readers substitution --- a zero divisor of `/`, `//` or `mod`, an operand of `//` or `mod` that is no integer, an argument outside a function's domain (`sqrt(-1)`, `ln(0)`, `asin(2)`, a NaN or infinite real under `integer`, `round`, `floor` or `ceil`), a bound term that is no number, an unbound writer --- whatever readers stand elsewhere in it: `X? / 0 > 1` and `X? > 1 / 0` fail with `X?` unbound, "A guard fails if no such instance exists" (GLP-Spec glp.tex, Guards).  Until 2026-10-02 they waited on `X?` (GLP #3 Cowork, 2026-10-02 17:12 UTC, S3).  `//` and `mod` take integers only, as `'_idiv'` and `'_mod'` do (GLP-Spec appendix-guards.tex, 026515d): `X? mod 0.5 =:= 1` fails with `X = 5`, and `X? // 2.5 > 1` fails whatever `X?` becomes.  Until 2026-10-02 the first threw IntegerDivisionByZeroException, 0.5 truncating to 0, and `//` divided reals (GLP #3 Cowork, 2026-10-02 20:58 UTC).
 
 **Example**:
 ```prolog
@@ -630,10 +593,10 @@ factorial(N, 1) :- integer(N?), N? =< 0 | true.
 
 **Semantics**:
 - Success: Both bound and numerically equal
-- Suspend: Either operand is unbound reader
-- Fail: Both bound and not numerically equal
+- Suspend: Either operand is unbound reader, and some instance of the comparison succeeds
+- Fail: Both bound and not numerically equal; or an operand has no value under any readers substitution, as for `<` above
 
-**Note on `=\=`**: The arithmetic inequality guard `=\=` is **redundant** once guard negation (`~`) is implemented. It becomes equivalent to `~(X =:= Y)`. Use `~(X? =:= Y?)` for arithmetic inequality.
+**Note on `=\=`**: Arithmetic inequality is its own guard, `X =\= Y`, beside `=:=` in the catalogue (GLP-Spec appendix-guards.tex): success where both operands evaluate to numbers that differ.
 
 ---
 
@@ -655,11 +618,8 @@ befriend_commit(Id, Other, ...) :- Id? @< Other? | ...   % smaller-named side
 befriend_commit(Id, Other, ...) :- otherwise | ...        % larger-named side
 ```
 
-**Negation**: Non-negatable (same rationale as arithmetic comparisons — `~(X @< Y)` would conflate "X is not lex-smaller" with "type error", so negation is forbidden).
-
 **Implementation in tables**:
-- `root_scope.dart`'s `predefinedProcedureNames` and `builtinProcedures` sets include `@<` and `@</2`.
-- `analyzer.dart`'s `_nonNegatableGuards` includes `@<`.
+- `root_scope.dart`'s `builtinProcedures` set includes `@</2` (the redefinition protection's `predefinedProcedureNames` went with weeding round three).
 - `analyzer.dart`'s `comparisonOps` (groundness inference) includes `@<`.
 - `runner.dart`'s guard switch implements the lex comparison via the local `evalConst` helper.
 - `lexer.dart` tokenizes `@<` as `TokenType.AT_LESS` (distinct from `@` followed by `<`).
@@ -738,9 +698,9 @@ broadcast(Msg, [Msg?, Msg?, Msg?]) :- ground(Msg?) | true.
 
 ## Implementation Checklist
 
-**For Adding New Guards**:
+**For Adding New Guards** (a language change: the guard enters GLP-Spec's guard catalogue, with Udi's approval, before any code; its declaration goes in the root `programs/self.glp`):
 
-1. **Runtime** (`system_predicates_impl.dart`):
+1. **Runtime** (`runner.dart`, `_evaluateGuard`):
    - [ ] Implement guard predicate with three-valued return
    - [ ] Handle unbound readers (return suspend)
    - [ ] Handle bound values (return success/fail)
@@ -819,8 +779,6 @@ test_known_fail :-
 
 **Mechanism**: On the first call, `wait` allocates a reader/writer pair, starts a timer, and adds the reader to the suspension set. When the timer fires, it binds the writer, which reactivates the goal via the ROQ. On resume, the guard checks if the timer has fired and succeeds.
 
-**Non-Negatable**: `wait` is a control flow guard, not a pure test. Negation is not meaningful.
-
 **Example**:
 ```prolog
 % Wait 100ms before proceeding
@@ -839,8 +797,6 @@ delayed_action(Result?) :- wait(100) | Result = done.
 - Timestamp is unbound reader: suspend (handled by caller)
 
 **Mechanism**: Like `wait`, uses a reader/writer pair and a Dart timer. Computes `remaining = timestamp - now`, starts a timer for that duration, and suspends the goal on the reader. When the timer fires, the writer is bound, reactivating the goal via the ROQ. On resume, the guard re-checks `now >= timestamp` and succeeds.
-
-**Non-Negatable**: Time-based control flow guard.
 
 **Example**:
 ```prolog

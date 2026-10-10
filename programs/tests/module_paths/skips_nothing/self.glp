@@ -1,0 +1,9 @@
+%% Discovery skips nothing (TGLP modules.tex, Compilation, first step: "the
+%% compiler collects every .glp file of the program's directory tree"), so
+%% boot_direct.glp, mad_boot.glp and mad_boot/play.glp are modules of this
+%% program like any other, and each is type-checked against its scope (second
+%% step).  Each defines stray/1 with no declaration, so the program is refused
+%% naming all three.  Until 2026-10-03 discovery left the three out by their
+%% names and the program loaded, run(X) giving 1.
+exported procedure run(Integer).
+run(1).

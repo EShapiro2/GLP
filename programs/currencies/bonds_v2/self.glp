@@ -14,10 +14,10 @@
 %%   Channel(In, Out) ::= ch(In, Out?).
 
 %% Bond representation: bond(Issuer, Maturity, Serial)
-Bond ::= bond(Constant, Constant, Constant).
+Bond ::= bond(Key, Constant, Integer).
 
 %% Trade types
-Lot ::= lot(Constant, Constant, Constant).
+Lot ::= lot(Key, Constant, Constant).
 TradeResponse ::= trade_accept(Stream(Bond))
                ; trade_decline(Stream(Bond))
                ; trade_decline_menu(Stream(Bond), Stream(Bond)).
@@ -40,6 +40,15 @@ FriendChannel ::= ch(Stream(FriendMsg), Stream(FriendMsg)?).
 Response ::= accept(FriendChannel) ; no.
 Decision ::= yes ; no.
 
+%% Whether the bonds of a lot list were selected out of the holdings: ok, or
+%% fail --- the holdings do not hold them (txn.glp, select_bonds_by_spec).
+Status ::= ok ; fail.
+
+%% What an incoming trade proposal is to the accepter (txn.glp, classify_trade):
+%% a payment or a redemption, both auto-accepted, or a normal swap, shown to
+%% the person.
+TradeClass ::= normal ; payment ; redemption.
+
 %% Network content (2-arg cold-call: msg(Dest, Content))
 NetColdCall ::= intro(Key, Response?).
 
@@ -48,12 +57,11 @@ NetColdCall ::= intro(Key, Response?).
 %% =============================================================================
 
 %% Content carried inside person-to-agent messages (msg(person, Id, Content))
-PersonContent ::= mint(Constant, Constant)
+PersonContent ::= mint(Integer, Constant)
               ; balance
               ; done
               ; connect(Key)
               ; decision(Decision, Key, PendingValue)
-              ; response(Response)
               ; trade(Key, Stream(Lot), Stream(Lot))
               ; redeem(Key, Stream(Lot), Stream(Lot))
               ; advance_date(Constant)
@@ -103,6 +111,7 @@ NetInMsg ::= msg(Key, NetColdCall)
 
 %% Agent input stream (from mediator + injected results)
 PersonInMsg ::= msg(Key, Key, PersonContent)
+            ; response(Key, Response)
             ; trade_complete(Key, Stream(Bond))
             ; trade_returned_bonds(Key, Stream(Bond))
             ; escrow_ben_released(Key, Stream(Bond))
@@ -129,7 +138,7 @@ NetInStream  ::= [] ; [NetInMsg | NetInStream].
 %% readers (mediator AgentToPersonMsg, peer NetInStream).
 OutputEntry ::= user_output(Stream(AgentToPersonMsg)?)
               ; net_output(NetOutStream?)
-              ; friend_output(Constant, Stream(FriendMsg)?).
+              ; friend_output(Key, Stream(FriendMsg)?).
 OutputsList ::= [] ; [OutputEntry | OutputsList].
 
 %% =============================================================================
@@ -145,7 +154,7 @@ AgentChannel ::= ch(Stream(AgentToPersonMsg), Stream(MediatorToAgentMsg)?).
 ReqId ::= req(Constant).
 
 %% Person -> Mediator commands
-PersonCmd ::= mint(Constant, Constant)
+PersonCmd ::= mint(Integer, Constant)
           ; balance
           ; done
           ; connect(Key)
@@ -389,3 +398,135 @@ fplay13 :- boot # fplay13.
 imported procedure boot#fplay_cl.
 exported procedure fplay_cl.
 fplay_cl :- boot # fplay_cl.
+
+%% =============================================================================
+%% WHAT A BOOT CALLS (IGLP Implementation Notes, "The scope a boot source is
+%% checked in": a boot source names "the linked program's exports"; TGLP
+%% modules.tex, "External access": "The program's self.glp exports a procedure
+%% by declaring it exported and either defining it directly or giving a
+%% forwarding clause whose body is the cross-module call M#p")
+%% The twelve boots of programs/tests/bonds_v2_boots/ call agent/7,
+%% ui_mediator/5 and twenty-seven actors; each is exported here by forwarding,
+%% each argument threaded at its declared polarity.  The types the boots name
+%% (NetInMsg, PersonNotify, PersonCmd) are those these signatures carry
+%% (TGLP modules.tex, "Procedure declarations": "A declaration carries the
+%% transitive closure of the types its signature references").
+%% =============================================================================
+
+imported procedure agent#agent(Key?, Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Stream(Bond)?, Integer?, Constant?).
+exported procedure agent(Key?, Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Stream(Bond)?, Integer?, Constant?).
+agent(Id, PersonIn, NetIn, Outs, Holdings, NextSerial, Clock) :-
+    agent # agent(Id?, PersonIn?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?).
+
+imported procedure mediator#ui_mediator(Key?, AgentChannel?, PersonChannel?, Stream(PendingEntry)?, Integer?).
+exported procedure ui_mediator(Key?, AgentChannel?, PersonChannel?, Stream(PendingEntry)?, Integer?).
+ui_mediator(Id, AgentCh, PersonCh, Pending, NextReq) :-
+    mediator # ui_mediator(Id?, AgentCh?, PersonCh?, Pending?, NextReq?).
+
+imported procedure actors#alice_p1(ActorChannel?).
+exported procedure alice_p1(ActorChannel?).
+alice_p1(Ch) :- actors # alice_p1(Ch?).
+
+imported procedure actors#alice_p2(ActorChannel?).
+exported procedure alice_p2(ActorChannel?).
+alice_p2(Ch) :- actors # alice_p2(Ch?).
+
+imported procedure actors#bob_p2(ActorChannel?).
+exported procedure bob_p2(ActorChannel?).
+bob_p2(Ch) :- actors # bob_p2(Ch?).
+
+imported procedure actors#alice_p3(ActorChannel?).
+exported procedure alice_p3(ActorChannel?).
+alice_p3(Ch) :- actors # alice_p3(Ch?).
+
+imported procedure actors#bob_p3(ActorChannel?).
+exported procedure bob_p3(ActorChannel?).
+bob_p3(Ch) :- actors # bob_p3(Ch?).
+
+imported procedure actors#alice_p4(ActorChannel?).
+exported procedure alice_p4(ActorChannel?).
+alice_p4(Ch) :- actors # alice_p4(Ch?).
+
+imported procedure actors#bob_p4(ActorChannel?).
+exported procedure bob_p4(ActorChannel?).
+bob_p4(Ch) :- actors # bob_p4(Ch?).
+
+imported procedure actors#alice_p4b(ActorChannel?, Constant?).
+exported procedure alice_p4b(ActorChannel?, Constant?).
+alice_p4b(Ch, T) :- actors # alice_p4b(Ch?, T?).
+
+imported procedure actors#bob_p4b(ActorChannel?, Constant?).
+exported procedure bob_p4b(ActorChannel?, Constant?).
+bob_p4b(Ch, T) :- actors # bob_p4b(Ch?, T?).
+
+imported procedure actors#alice_p5(ActorChannel?).
+exported procedure alice_p5(ActorChannel?).
+alice_p5(Ch) :- actors # alice_p5(Ch?).
+
+imported procedure actors#bob_p5(ActorChannel?).
+exported procedure bob_p5(ActorChannel?).
+bob_p5(Ch) :- actors # bob_p5(Ch?).
+
+imported procedure actors#alice_p6(ActorChannel?).
+exported procedure alice_p6(ActorChannel?).
+alice_p6(Ch) :- actors # alice_p6(Ch?).
+
+imported procedure actors#bob_p6(ActorChannel?).
+exported procedure bob_p6(ActorChannel?).
+bob_p6(Ch) :- actors # bob_p6(Ch?).
+
+imported procedure actors#alice_p8(ActorChannel?).
+exported procedure alice_p8(ActorChannel?).
+alice_p8(Ch) :- actors # alice_p8(Ch?).
+
+imported procedure actors#bob_p8(ActorChannel?).
+exported procedure bob_p8(ActorChannel?).
+bob_p8(Ch) :- actors # bob_p8(Ch?).
+
+imported procedure actors#alice_p9(ActorChannel?).
+exported procedure alice_p9(ActorChannel?).
+alice_p9(Ch) :- actors # alice_p9(Ch?).
+
+imported procedure actors#bob_p9(ActorChannel?).
+exported procedure bob_p9(ActorChannel?).
+bob_p9(Ch) :- actors # bob_p9(Ch?).
+
+imported procedure actors#alice_p10(Constant?, ActorChannel?).
+exported procedure alice_p10(Constant?, ActorChannel?).
+alice_p10(T, Ch) :- actors # alice_p10(T?, Ch?).
+
+imported procedure actors#bob_p10(ActorChannel?).
+exported procedure bob_p10(ActorChannel?).
+bob_p10(Ch) :- actors # bob_p10(Ch?).
+
+imported procedure actors#alice_p11(Constant?, ActorChannel?).
+exported procedure alice_p11(Constant?, ActorChannel?).
+alice_p11(T, Ch) :- actors # alice_p11(T?, Ch?).
+
+imported procedure actors#bob_p11(ActorChannel?).
+exported procedure bob_p11(ActorChannel?).
+bob_p11(Ch) :- actors # bob_p11(Ch?).
+
+imported procedure play12#alice_p12(Constant?, ActorChannel?, Stream(NarrativeItem)).
+exported procedure alice_p12(Constant?, ActorChannel?, Stream(NarrativeItem)).
+alice_p12(T, Ch, Narr?) :- play12 # alice_p12(T?, Ch?, Narr).
+
+imported procedure play12#bob_p12(ActorChannel?, Stream(NarrativeItem)).
+exported procedure bob_p12(ActorChannel?, Stream(NarrativeItem)).
+bob_p12(Ch, Narr?) :- play12 # bob_p12(Ch?, Narr).
+
+imported procedure play12#charlie_p12(Constant?, ActorChannel?, Stream(NarrativeItem)).
+exported procedure charlie_p12(Constant?, ActorChannel?, Stream(NarrativeItem)).
+charlie_p12(T, Ch, Narr?) :- play12 # charlie_p12(T?, Ch?, Narr).
+
+imported procedure play12#diana_p12(ActorChannel?, Stream(NarrativeItem)).
+exported procedure diana_p12(ActorChannel?, Stream(NarrativeItem)).
+diana_p12(Ch, Narr?) :- play12 # diana_p12(Ch?, Narr).
+
+imported procedure play12#eve_p12(ActorChannel?, Stream(NarrativeItem)).
+exported procedure eve_p12(ActorChannel?, Stream(NarrativeItem)).
+eve_p12(Ch, Narr?) :- play12 # eve_p12(Ch?, Narr).
+
+imported procedure play12#frank_p12(ActorChannel?, Stream(NarrativeItem)).
+exported procedure frank_p12(ActorChannel?, Stream(NarrativeItem)).
+frank_p12(Ch, Narr?) :- play12 # frank_p12(Ch?, Narr).

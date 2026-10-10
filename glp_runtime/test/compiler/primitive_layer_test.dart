@@ -29,13 +29,15 @@ import 'package:glp_runtime/compiler/program_linker.dart';
 
 void main() {
   final rootSelf = File('../programs/self.glp').absolute.path;
-  final systemModule = File('../programs/system/mad_predicates.glp').absolute.path;
 
   late Directory tmp;
   late GlpEngine engine;
 
   setUp(() {
-    tmp = Directory.systemTemp.createTempSync('pl_');
+    // Under the root, programs/ (TGLP modules.tex, "Scope construction": "A
+    // program lies at or below the root"): a program in the system's temporary
+    // directory, outside it, is refused since 2026-10-04.
+    tmp = Directory('../programs/tests').createTempSync('pl_');
     engine = GlpEngine(rootSelfGlpPath: rootSelf);
   });
   tearDown(() => tmp.deleteSync(recursive: true));
@@ -54,9 +56,42 @@ void main() {
     });
 
     test('admits a real module under programs/system/', () {
-      // mad_predicates.glp names the '_w'/'_send' kernels under -mode(system);
-      // it lives under programs/system/, so Rule A admits it and it loads.
-      expect(engine.loadFile(systemModule), isTrue);
+      // A module under programs/system/ names a kernel under -mode(system), so
+      // Rule A admits it and it loads.  The directory holds no module since
+      // 2026-10-04 --- system/mad_predicates.glp, the module this test loaded,
+      // went when send_to_net/1 and global_send/3 became the root self.glp's
+      // (GLP-Spec appendix-guards, "Output to the network"; IGLP Definition
+      // "global_send Predicate") --- so the test writes one there for its own
+      // length.
+      final systemDir = Directory('../programs/system');
+      // Made again where the other test removed it between the two calls.
+      late final Directory dir;
+      for (var attempt = 0;; attempt++) {
+        try {
+          systemDir.createSync(recursive: true);
+          dir = systemDir.createTempSync('pl_');
+          break;
+        } on FileSystemException {
+          if (attempt >= 3) rethrow;
+        }
+      }
+      try {
+        final f = File('${dir.path}${Platform.pathSeparator}stamp.glp')
+          ..writeAsStringSync('-mode(system).\n'
+              'procedure stamp(Integer).\n'
+              "stamp(T?) :- '_now'(T).\n");
+        expect(engine.loadFile(f.path), isTrue);
+      } finally {
+        dir.deleteSync(recursive: true);
+        // output_kernel_test writes its system module there too, and may at
+        // the same time: the directory, which git does not hold, goes once
+        // empty, whichever test leaves it so.
+        try {
+          if (systemDir.listSync().isEmpty) systemDir.deleteSync();
+        } on FileSystemException {
+          // not empty, or removed already: the other test removes it
+        }
+      }
     });
   });
 
@@ -89,8 +124,10 @@ void main() {
     });
 
     test('accepts a _-prefixed constant in argument position', () {
-      // '_user' in data position — a message tag, not a call.
-      final f = fixture('user.glp', "p('_user').\n");
+      // '_user' in data position — a message tag, not a call.  p/1 is
+      // declared: a procedure with no declaration is refused (TGLP Definition
+      // "Typed GLP Program", condition 1), which is not what this tests.
+      final f = fixture('user.glp', "procedure p(_).\np('_user').\n");
       expect(engine.loadFile(f.path), isTrue);
     });
 
@@ -99,7 +136,7 @@ void main() {
       // call-position rule `'_w'(a, b)` here builds a term and calls nothing,
       // so it is data and unrestricted — the same licence that keeps the 242
       // '_net' lines green.
-      final f = fixture('w.glp', "p(t('_w'(a, b))).\n");
+      final f = fixture('w.glp', "procedure p(_).\np(t('_w'(a, b))).\n");
       expect(engine.loadFile(f.path), isTrue);
     });
   });

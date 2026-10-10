@@ -1,6 +1,6 @@
 /// Adoption / handshake message vocabulary (D3 wire format, §8) — byte forms.
 ///
-/// Normative source: the IGLP paper appendix `app:wire-format`, §wf-handshake.
+/// Normative source: the IGLP paper appendix `app:code-format`, §cf-handshake.
 /// These are ground terms exchanged between runtimes on the attested channel,
 /// encoded per §3 (the term codec). Hash values inside terms are blob constants
 /// (32 bytes for identities); the shipped artefact is a blob of its bytes.

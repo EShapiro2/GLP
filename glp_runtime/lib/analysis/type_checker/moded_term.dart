@@ -102,19 +102,19 @@ class ModedConstant extends ModedTerm {
   /// True if value is numeric (integer or real)
   bool get isNumeric => value is num;
 
-  /// True if value is a quoted string
-  bool get isString {
-    if (value is! String) return false;
-    final s = value as String;
-    return (s.startsWith('"') && s.endsWith('"')) ||
-           (s.startsWith("'") && s.endsWith("'"));
-  }
-
-  /// True if value is an unquoted atom (includes nil)
-  bool get isAtom {
-    if (value is! String) return false;
-    return !isString;
-  }
+  /// True if value is a String leaf.
+  ///
+  /// Row 7 of the consistency table (TGLP def:consistent-paths) makes a term
+  /// constant `c` compatible with the type symbol `c`, with `String` and with
+  /// `_`, and says nothing of quoting; `Constant ::= Number ; String ; Module`
+  /// in the root carries the same reading, and `[]` is a `String` and hence a
+  /// `Constant` (TGLP sec:root-self).  So every constant that is not a number
+  /// is a String leaf, quoted or not — as `well_typed_term.dart` builds the
+  /// leaf and `subtyping.dart` reads a constant alternative.  Until 2026-09-23
+  /// this getter counted only a quoted constant, a distinction the type system
+  /// does not have; `isAtom`, which named the complementary half of that
+  /// distinction, went with it.
+  bool get isString => value is String;
 
   @override
   T accept<T>(ModedTermVisitor<T> visitor) => visitor.visitConstant(this);

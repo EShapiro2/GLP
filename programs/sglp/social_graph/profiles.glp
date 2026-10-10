@@ -1,0 +1,195 @@
+%% Printed by programs/sglp/transform.glp from the sGLP source in the term form
+%% (README.md, "The term form"); edit the source and run transform.sh, not this file.
+%% transform(social_graph, profiles)
+
+%% person(homophile)
+%% binds(Menu, homophile_menu)
+exported procedure
+homophile_menu
+(
+Menu
+?
+,
+Integer?
+,
+MutualRef?
+)
+.
+homophile_menu(M, S, Mon)
+:-
+random(S?, 100, K, S1)
+,
+stream_append(rated('/'(1, week), Tok), Mon?, _)
+,
+homophile_pick(Tok?, K?, S1?, M?)
+.
+procedure
+homophile_pick
+(
+Token?
+,
+Integer?
+,
+Integer?
+,
+Menu
+?
+)
+.
+homophile_pick(go, K, S, menu(Ss, _, same(P?)))
+:-
+'=<'(K?, 98)
+,
+ground(Ss?)
+|
+one_of(Ss?, S?, P)
+.
+homophile_pick(go, K, S, menu(_, Os, other(P?)))
+:-
+'>'(K?, 98)
+,
+ground(Os?)
+|
+one_of(Os?, S?, P)
+.
+
+%% person(indifferent)
+%% binds(Menu, indifferent_menu)
+exported procedure
+indifferent_menu
+(
+Menu
+?
+,
+Integer?
+,
+MutualRef?
+)
+.
+indifferent_menu(M, S, Mon)
+:-
+random(S?, 100, K, S1)
+,
+stream_append(rated('/'(2, week), Tok), Mon?, _)
+,
+indifferent_pick(Tok?, K?, S1?, M?)
+.
+procedure
+indifferent_pick
+(
+Token?
+,
+Integer?
+,
+Integer?
+,
+Menu
+?
+)
+.
+indifferent_pick(go, K, S, menu(Ss, _, same(P?)))
+:-
+'=<'(K?, 50)
+,
+ground(Ss?)
+|
+one_of(Ss?, S?, P)
+.
+indifferent_pick(go, K, S, menu(_, Os, other(P?)))
+:-
+'>'(K?, 50)
+,
+ground(Os?)
+|
+one_of(Os?, S?, P)
+.
+
+%% person(wary)
+%% binds(Card, wary_card)
+exported procedure
+wary_card
+(
+Card
+?
+,
+Integer?
+,
+MutualRef?
+)
+.
+wary_card(C, S, Mon)
+:-
+random(S?, 100, K, _)
+,
+stream_append(rated('/'(1, day), Tok), Mon?, _)
+,
+wary_answer(Tok?, K?, C?)
+.
+procedure
+wary_answer
+(
+Token?
+,
+Integer?
+,
+Card
+?
+)
+.
+wary_answer(go, K, card(_, yes))
+:-
+'=<'(K?, 20)
+|
+true
+.
+wary_answer(go, K, card(_, no))
+:-
+'>'(K?, 20)
+|
+true
+.
+
+%% person(sociable)
+%% binds(Card, sociable_card)
+exported procedure
+sociable_card
+(
+Card
+?
+,
+Integer?
+,
+MutualRef?
+)
+.
+sociable_card(C, S, Mon)
+:-
+random(S?, 100, K, _)
+,
+stream_append(rated('/'(1, hour), Tok), Mon?, _)
+,
+sociable_answer(Tok?, K?, C?)
+.
+procedure
+sociable_answer
+(
+Token?
+,
+Integer?
+,
+Card
+?
+)
+.
+sociable_answer(go, K, card(_, yes))
+:-
+'=<'(K?, 90)
+|
+true
+.
+sociable_answer(go, K, card(_, no))
+:-
+'>'(K?, 90)
+|
+true
+.

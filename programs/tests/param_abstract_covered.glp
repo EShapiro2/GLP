@@ -18,6 +18,6 @@
 %% Run (from /Users/udi/Grassroots/GLP/glp_runtime/):
 %%   printf 'load ../programs/tests/param_abstract_covered.glp\n:quit\n' | bin/glpc
 
-procedure pdrain(Stream(X)?).
+procedure(X) pdrain(Stream(X)?).
 pdrain([]).
 pdrain([_|Xs]) :- pdrain(Xs?).

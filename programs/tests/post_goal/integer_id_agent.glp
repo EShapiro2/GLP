@@ -1,0 +1,8 @@
+%% integer_id_agent.glp --- an agent's program whose entry takes an Integer
+%% where its host posts the agent's id, an atom (multiagent/agent_runtime.dart,
+%% multiagent/isolate_manager.dart; glp_runtime/test/engine/post_goal_test.dart):
+%% the posted goal agent_init(alice, NetIn?) is not well-typed and is refused
+%% before it runs.
+
+procedure agent_init(Integer?, Stream(_)?).
+agent_init(_, _).

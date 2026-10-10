@@ -26,6 +26,20 @@ void main() {
       expect(root, containsAll(privilegedPredicates));
     });
 
+    test('every privileged predicate is one the root self.glp defines', () {
+      // The list names the root's own procedures and no other: until
+      // 2026-10-04 it named send_to_person/1, which the root does not define,
+      // the catalogue's name being send_to_user/1 (GLP-Spec 0c92c11).
+      final module = Parser(Lexer(File(_rootSelf).readAsStringSync()).tokenize())
+          .parseModule();
+      final defined = {
+        for (final p in module.procedures) '${p.name}/${p.arity}'
+      };
+      expect(defined, containsAll(privilegedPredicates));
+      expect(privilegedPredicates, contains('send_to_user/1'));
+      expect(privilegedPredicates, isNot(contains('send_to_person/1')));
+    });
+
     test('a root-scope procedure that reaches a privileged kernel is '
         'privileged by closure', () {
       // send_to_user/1 names '_output'/1; the seam wrappers name their kernels.

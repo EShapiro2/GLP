@@ -1,0 +1,14 @@
+%% An exposing self.glp that defines a parameterised type its exposed
+%% declaration names.  lib/pairs.glp's swap/2 is declared over Pair(C), C a
+%% parameter; -expose lifts it as if defined here, so Pair resolves in this
+%% scope and C stays bare (TGLP modules.tex, "The -expose directive";
+%% parameterized-types.tex, "Declaration parameters").
+-expose(lib#pairs).
+
+Pair(X) ::= pair(X, X).
+Tag ::= a ; b.
+
+%% Entry point (modules.tex sec:static-linking step 5): this self.glp forwards.
+imported procedure app#run(Tag).
+exported procedure run(Tag).
+run(P?) :- app # run(P).

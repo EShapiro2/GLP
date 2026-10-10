@@ -11,21 +11,24 @@ import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/vglp/mediator.dart';
 import 'package:glp_runtime/vglp/program_compilation.dart';
-import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart'
-    show setRootScopeEnvironmentSource;
+import 'package:glp_runtime/analysis/type_checker/type_ast.dart'
+    show TypeEnvironment;
+import 'package:glp_runtime/runtime/module_hierarchy.dart' show rootScope;
 
 const _programs = '../programs';
 
 void main() {
+  // The scope of a module directly under the root, programs/self.glp its one
+  // layer, passed in.
   final rootSelfGlp = File('$_programs/self.glp');
-  if (rootSelfGlp.existsSync()) {
-    setRootScopeEnvironmentSource(rootSelfGlp.readAsStringSync());
-  }
+  final TypeEnvironment? scope =
+      rootSelfGlp.existsSync() ? rootScope(rootSelfGlp.absolute.path) : null;
 
   final mediator = MediatorSource.fromDirectory('$_programs/vglp');
 
   CompiledProgram compile(String source) => compileProgram(
-      Parser(Lexer(source).tokenize(), vglp: true).parseModule(), mediator);
+      Parser(Lexer(source).tokenize(), vglp: true).parseModule(), mediator,
+      scope: scope);
 
   group('one self-contained module', () {
     const src = '''
@@ -161,6 +164,26 @@ display respond *(Answer=yes, From?) : panel(inbox), label("Accept"), transient.
     // being with their owners — social/graph and grassapp SGSG's, the two cssn
     // sources CSSN's.  Each parse test becomes the compilation test as its
     // source is repaired.
+    //
+    // A currency source is asked what vGLP's Definition "Guarded Clause,
+    // Volitional Procedure, Interactive Type, Interactive Term, Ordinary
+    // Clause, Procedure, vGLP Program" says it holds: a volitional procedure,
+    // "declared `procedure (T)*p(T1, ..., Tn).`", whose clauses are written
+    // "(A)*p(S1, ..., Sn) :- G | B" (GLP #3 Cowork, 2026-10-09 19:15 UTC).
+    // The bonds source is asked it from its port; the coins and sovereign
+    // sources keep the old question until theirs.
+    for (final path in [
+      'currencies/bonds/bonds_agent.vglp',
+    ]) {
+      test('$path parses as vGLP and holds a volitional procedure', () {
+        final file = File('$_programs/$path');
+        expect(file.existsSync(), isTrue, reason: '$path is not on disc');
+        final m = Parser(Lexer(file.readAsStringSync()).tokenize(), vglp: true)
+            .parseModule();
+        expect(m.volitionalDeclarations, isNotEmpty);
+        expect(m.procedures.where((p) => p.isVolitional), isNotEmpty);
+      });
+    }
     for (final path in [
       'social/graph/core/agent.vglp',
       'social/graph/core/home.vglp',
@@ -168,7 +191,6 @@ display respond *(Answer=yes, From?) : panel(inbox), label("Accept"), transient.
       'cssn/childsafe/agent.vglp',
       'cssn/childsafe/child_agent.vglp',
       'currencies/coins/currency/coins_agent.vglp',
-      'currencies/bonds/bonds_agent.vglp',
       'currencies/sovereign/denominated/sovereign_agent.vglp',
     ]) {
       test('$path parses as vGLP', () {

@@ -8,10 +8,7 @@ InnerStream ::= [] ; [Inner | InnerStream].
 InnerChannel ::= ch(InnerStream, InnerStream?).
 
 exported procedure pa(InnerChannel?, String).
-pa(ch(In, Out?), W?) :- hold_in(In?), fill(Out, W).
-
-procedure hold_in(InnerStream?).
-hold_in(X) :- true.
+pa(ch(_, Out?), W?) :- fill(Out, W).
 
 procedure fill(InnerStream, String).
 fill([hello, probe(W) | []], W?).

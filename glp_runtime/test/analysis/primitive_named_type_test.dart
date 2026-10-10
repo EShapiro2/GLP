@@ -20,21 +20,21 @@ import 'dart:io';
 import 'package:test/test.dart';
 import 'package:glp_runtime/analysis/type_checker/program_dfa.dart';
 import 'package:glp_runtime/analysis/type_checker/subtyping.dart';
+import 'package:glp_runtime/analysis/type_checker/type_checker.dart'
+    show checkSource;
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
 import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart';
 import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/parser.dart';
-import 'package:glp_runtime/compiler/partial_evaluator.dart'
-    show setRootScopeUnitClauseSource;
 import 'package:glp_runtime/compiler/program_linker.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
+import 'package:glp_runtime/runtime/module_hierarchy.dart' show rootScope;
 
 void main() {
   final rootSelfGlp = File('../programs/self.glp');
-  final rootSource = rootSelfGlp.readAsStringSync();
-  setRootScopeUnitClauseSource(rootSource);
-  setRootScopeEnvironmentSource(rootSource);
   final rootSelfPath = rootSelfGlp.absolute.path;
+  // The scope a module directly under the root is checked in, passed in.
+  final scope = rootScope(rootSelfPath);
   final fixtureDir =
       Directory('../programs/tests/primitive_named_type').absolute.path;
 
@@ -46,7 +46,7 @@ void main() {
               'p(_).\n')
           .tokenize())
           .parseModule();
-      final env = buildTypeEnvironment(module);
+      final env = buildTypeEnvironment(module, ancestorScope: scope);
       expect(env.types, contains('Tag'));
       final alt = env.types['Tag']!.alternatives.single;
       expect(alt, isA<TypeRef>().having((t) => t.name, 'name', 'String'));
@@ -62,7 +62,7 @@ void main() {
               'p(_).\n')
           .tokenize())
           .parseModule();
-      final env = buildTypeEnvironment(module);
+      final env = buildTypeEnvironment(module, ancestorScope: scope);
       expect(env.types, contains('In'));
       expect(env.procedures['p/1']!.argTypes.single,
           isA<TypeRef>().having((t) => t.name, 'name', 'In'));
@@ -74,39 +74,76 @@ void main() {
               'p(_).\n')
           .tokenize())
           .parseModule();
-      final env = buildTypeEnvironment(module);
+      final env = buildTypeEnvironment(module, ancestorScope: scope);
       expect(env.types, isNot(contains('Agent')));
       expect(env.procedures['p/1']!.argTypes.single,
           isA<TypeRef>().having((t) => t.name, 'name', 'Constant'));
     });
 
     test('a definition inheriting a primitive is below it and it below the '
-        'definition; a type with alternatives of its own is below no primitive',
-        () {
+        'definition; a type is below a primitive where its automaton is, '
+        'whatever the supertype is named', () {
       final module = Parser(Lexer('Tag ::= String.\n'
               'Ack ::= ok ; error.\n'
-              'procedure p(Tag?, Ack?).\n'
-              'p(_, _).\n')
+              'Mixed ::= ok ; String.\n'
+              'Wrapped ::= w(String).\n'
+              'OkOrInt ::= ok ; Integer.\n'
+              'procedure p(Tag?, Ack?, Mixed?, Wrapped?, OkOrInt?).\n'
+              'p(_, _, _, _, _).\n')
           .tokenize())
           .parseModule();
-      final dfa = buildProgramDFA(buildTypeEnvironment(module));
-      expect(isSubtype(dfa.getState('Tag'), dfa.getState('String'), dfa),
-          isTrue);
-      expect(isSubtype(dfa.getState('String'), dfa.getState('Tag'), dfa),
-          isTrue);
+      final dfa = buildProgramDFA(buildTypeEnvironment(module, ancestorScope: scope));
+      bool sub(String a, String b) =>
+          isSubtype(dfa.getState(a), dfa.getState(b), dfa);
+      expect(sub('Tag', 'String'), isTrue);
+      expect(sub('String', 'Tag'), isTrue);
       expect(sameBaseType('Tag', 'String', dfa), isTrue);
-      expect(isSubtype(dfa.getState('Tag'), dfa.getState('Integer'), dfa),
-          isFalse);
-      expect(isSubtype(dfa.getState('Constant'), dfa.getState('String'), dfa),
-          isFalse);
-      expect(isSubtype(dfa.getState('Ack'), dfa.getState('String'), dfa),
-          isFalse);
+      expect(sub('Tag', 'Integer'), isFalse);
+      expect(sub('Constant', 'String'), isFalse);
+      // TGLP well-typing.tex, Definition "Prefix Acceptance": "a constant
+      // matches String".  Tag and String have one automaton, so a type below
+      // the one is below the other: until 2026-10-02 Ack was below Tag and
+      // Key and not below String.
+      expect(sub('Ack', 'Tag'), isTrue);
+      expect(sub('Ack', 'Key'), isTrue);
+      expect(sub('Ack', 'String'), isTrue);
+      expect(sub('Mixed', 'String'), isTrue);
+      expect(sub('String', 'Ack'), isFalse);
+      expect(sub('String', 'Mixed'), isTrue);
+      expect(sub('Ack', 'Integer'), isFalse);
+      expect(sub('Wrapped', 'String'), isFalse);
+      expect(sub('OkOrInt', 'String'), isFalse);
+      expect(sub('OkOrInt', 'Integer'), isFalse);
+    });
+
+    test('a writer of a constant type is read where a String is', () {
+      final result = checkSource('''
+Ack ::= ok ; error.
+
+procedure pass(String?, String).
+pass(X, X?).
+
+procedure q(Ack?, String).
+q(A, B?) :- pass(A?, B).
+''', ancestorScope: scope);
+      expect(result.isWellTyped, isTrue,
+          reason: result.errors.map((e) => e.message).join('\n'));
+      final refused = checkSource('''
+Ack ::= ok ; error.
+
+procedure pass(Ack?, Ack).
+pass(X, X?).
+
+procedure q(String?, Ack).
+q(A, B?) :- pass(A?, B).
+''', ancestorScope: scope);
+      expect(refused.isWellTyped, isFalse,
+          reason: 'a String is not an Ack');
     });
 
     test("the root self.glp's Key, SignedTerm and Hash are in the root scope",
         () {
-      final env = buildRootScopeEnvironment();
-      expect(env.types.keys, containsAll(['Key', 'SignedTerm', 'Hash']));
+      expect(scope.types.keys, containsAll(['Key', 'SignedTerm', 'Hash']));
     });
 
     test('a module naming a scope-level Key in its own type definition links',
@@ -114,8 +151,10 @@ void main() {
       final modules =
           discoverProgram(fixtureDir, rootSelfGlpPath: rootSelfPath);
       final linked = checkedLinkedProgram(modules, rootDir: fixtureDir);
+      // Renamed by its module's path from the root (TGLP modules.tex,
+      // Compilation, third step).
       expect(linked.program.procedures.map((p) => p.name),
-          contains('code:keys'));
+          contains('tests/primitive_named_type/code:keys'));
     });
 
     test('and the program loads and runs', () async {

@@ -1,0 +1,40 @@
+%% Test (xi)'s sGLP source, in the term form the transformation reads
+%% (programs/sglp/README.md, "The term form").  Its surface form:
+%%
+%%   person fair.
+%%   Rating =::= fair_rating.
+%%   procedure fair_rating(Rating, Integer?).
+%%   fair_rating(R?, S) :- random(S?, 5, K, _), give(K?, R) @ 1/day.
+%%   procedure give(Integer?, Rating).
+%%   give(K, rating(K?)).
+%%
+%%   run 1 agents [rater ~ (fair : 1.0)] until 30 days seed 20260927.
+%%
+%% Rating is in reader mode (procedure (Rating?)*rate(Integer), rating.vglp),
+%% so its person procedure is declared with its dual, Rating, in writer mode
+%% (Section 3, Definition "Dual, Person Procedure, Person Declaration"): the
+%% person writes the whole term, a rating of 1..5 drawn from its seed, a day
+%% after the ask on average.  The interface names the predicates of the
+%% compiled program, rating.glp.
+%%
+%% transform.sh prints from it profiles.glp and population.glp, beside it.
+
+exported procedure source(SglpTerms, SglpTerms).
+source(
+  %% The vGLP program's interface (rating.vglp) and its compiled program's
+  %% predicates (rating.glp).
+  [type('Rating', [rating('Integer')]),
+   volitional(dual('Rating'), rating_r, rate('Integer')),
+   compiled(rate, 2), compiled(rate1, 3), compiled(rates, 3)],
+
+  %% The profile and the run declaration.
+  [person(fair),
+   binds('Rating', fair_rating),
+   decl(fair_rating('Rating', dual('Integer'))),
+   clause(fair_rating(var('R?'), var('S')), [],
+          [random(var('S?'), 5, var('K'), var('_')),
+           rated(give(var('K?'), var('R')), rate(1, day))]),
+   decl(give(dual('Integer'), 'Rating')),
+   clause(give(var('K'), rating(var('K?'))), [], []),
+
+   run(1, [mix(rater, [share(fair, 1.0)])], 30, days, 20260927)]).

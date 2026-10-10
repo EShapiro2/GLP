@@ -4,7 +4,7 @@
 /// Holds the transport (send a ground `UserCmd`, receive ground `UserNotify`),
 /// an inbox of cards, and an activity store — the screen. It renders nothing
 /// itself; it turns notify text into structured state and turns the person's
-/// taps into ground command text. It names no app-specific constructor —
+/// taps into ground command terms. It names no app-specific constructor —
 /// everything specific comes from the [Manifest]. If a constructor name ever
 /// needs special-casing here, that logic belongs in the schema instead.
 library;
@@ -86,8 +86,9 @@ class ActivityStore {
 class UiRuntime {
   final Manifest manifest;
 
-  /// Transport: send a formatted ground `UserCmd` across the Dart/GLP boundary.
-  final void Function(String cmdText) onSend;
+  /// Transport: send the person's act, a ground `UserCmd`, across the
+  /// Dart/GLP boundary as a term and never as text.
+  final void Function(GTerm cmd) onSend;
 
   /// Called whenever observable state changes, so the surface can rebuild.
   void Function()? onChange;
@@ -334,10 +335,10 @@ class UiRuntime {
     if (cmd.isStanding) {
       final reqId = standing[cmd.clause];
       if (reqId == null) return;
-      onSend(formatTerm(GStruct(answerCtor, [
+      onSend(GStruct(answerCtor, [
         reqId,
         _answer(cmd.answerCtor!, [for (final f in cmd.args) values[f.name]!]),
-      ])));
+      ]));
       standing.remove(cmd.clause);
       onChange?.call();
       return;
@@ -345,7 +346,7 @@ class UiRuntime {
     final term = cmd.args.isEmpty
         ? GAtom(cmd.ctor)
         : GStruct(cmd.ctor, [for (final f in cmd.args) values[f.name]!]);
-    onSend(formatTerm(term));
+    onSend(term);
     onChange?.call();
   }
 
@@ -376,13 +377,13 @@ class UiRuntime {
       // A decline grants no answer: it closes the ask, which binds its reply
       // to `else` and selects the clause's else-branch. The reduction that
       // follows aborts the goal's other asks, so the card goes either way.
-      onSend(formatTerm(answer.decline
+      onSend(answer.decline
           ? GStruct(declineCtor, [reqId])
-          : GStruct(answerCtor, [reqId, _answer(answer.answerCtor!, filled)])));
+          : GStruct(answerCtor, [reqId, _answer(answer.answerCtor!, filled)]));
     } else {
       final term =
           filled.isEmpty ? GAtom(answer.cmdCtor) : GStruct(answer.cmdCtor, filled);
-      onSend(formatTerm(term));
+      onSend(term);
     }
     inbox.removeWhere((c) => c.id == card.id);
     onChange?.call();
@@ -532,7 +533,7 @@ class UiRuntime {
   /// through the hub, so the person's own post and others' arrive by one path.
   void sendGroup(GroupChatView view, GTerm groupId, String text) {
     final atom = chatAtom(text);
-    onSend(formatTerm(GStruct(view.sendCtor, [groupId, GAtom(atom)])));
+    onSend(GStruct(view.sendCtor, [groupId, GAtom(atom)]));
     onChange?.call();
   }
 
@@ -542,7 +543,7 @@ class UiRuntime {
     final atom = chatAtom(text);
     final t = store.threads.putIfAbsent(chat.threadKey, () => <String, List<GTerm>>{});
     t.putIfAbsent(peer, () => <GTerm>[]).add(GStruct('out', [GAtom(atom), GAtom('sent')]));
-    onSend(formatTerm(GStruct(chat.sendCtor, [GAtom(peer), GAtom(atom)])));
+    onSend(GStruct(chat.sendCtor, [GAtom(peer), GAtom(atom)]));
     onChange?.call();
   }
 }

@@ -24,6 +24,7 @@ import 'glp_sources.dart';
 import 'manifests/grassapp_ui.dart';
 import 'ui_runtime/agent_surface.dart';
 import 'ui_runtime/runtime.dart';
+import 'ui_runtime/term.dart';
 
 // =============================================================================
 // SHARED FILE LOGGER
@@ -164,7 +165,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
         // Currencies scenario: ask Bob for his opening balance so the Wallet shows
         // his starting coins immediately. (The graph agent has no balance.)
         if (msg.agentId == 'Bob') {
-          state.commandPort!.send(UserInput('balance'));
+          state.commandPort!.send(UserInput(const GAtom('balance')));
         }
       }
       setState(() {});
@@ -228,16 +229,14 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     final programDir = glp.grassappDir;
     bob.ui = UiRuntime(
       manifest: grassrootsManifest,
-      onSend: (text) => bob.commandPort?.send(UserInput(text)),
+      onSend: (cmd) => bob.commandPort?.send(UserInput(cmd)),
     );
     initMsg = InitAgent(
       agentId: 'Bob',
-      glpSources: const [],
-      programDir: programDir,
+      program: programDir,
       // The boot play's entry point (SGSG, 8412aae7); agent_init/3 is the duo's.
       goalLabel: 'scenario_init/3',
       rootSelfGlpPath: glp.rootSelfGlp,
-      friends: const ['alice', 'charlie'],
       replyPort: _replyPort.sendPort,
       deferStart: false,
     );

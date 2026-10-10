@@ -1,69 +1,46 @@
 // GLP Partial Evaluator
 //
-// Performs source-to-source transformation:
-//   Stage 1: Unfold defined guards (unit clauses in guard position)
-//   Stage 2: Unfold reduce/2 calls in body against reduce/2 facts
+// A source-to-source transformation: defined guards (unit clauses called in
+// guard position) are unfolded to the term matching of their arguments with the
+// unit clause's (GLP-Spec appendix-guards.tex, "Defined guard predicates").
 
 import 'ast.dart';
 import 'error.dart';
-import 'lexer.dart';
-import 'parser.dart';
 import '../analysis/type_checker/root_scope.dart' show builtinProcedures;
+import '../analysis/type_checker/type_ast.dart' show TypeEnvironment;
 
 // ============================================================================
-// ROOT SCOPE UNIT CLAUSES
+// THE SCOPE'S UNIT CLAUSES
 // ============================================================================
 
-/// Source for root scope unit clauses (set by engine from programs/self.glp).
-String? _rootScopeUnitClauseSource;
-
-/// Set the source from which root scope unit clauses are extracted.
-/// Call this once during engine initialization with the content of programs/self.glp.
-void setRootScopeUnitClauseSource(String source) {
-  _rootScopeUnitClauseSource = source;
-  _cachedRootScopeUnitClauses = null; // invalidate cache
-}
-
-/// Cached root scope unit clauses (parsed once per process lifetime).
-Map<String, List<Term>>? _cachedRootScopeUnitClauses;
-
-/// Parse the root scope source and extract unit clauses (defined guards).
-/// Result is cached — parsing happens only on first call.
-/// Returns a map from "name/arity" to the head arguments of the unit clause.
-Map<String, List<Term>> getRootScopeUnitClauses() {
-  if (_cachedRootScopeUnitClauses != null) return _cachedRootScopeUnitClauses!;
-
-  final source = _rootScopeUnitClauseSource ?? '';
-  if (source.isEmpty) {
-    _cachedRootScopeUnitClauses = {};
-    return _cachedRootScopeUnitClauses!;
-  }
-
-  final lexer = Lexer(source);
-  final tokens = lexer.tokenize();
-  final parser = Parser(tokens);
-  final module = parser.parseModule();
-
+/// The defined guards of [clauses] --- the clauses of a scope's procedures by
+/// "name/arity" ([TypeEnvironment.scopeClauses]): each procedure of exactly one
+/// clause, with no guard and no body, by the head arguments of that unit
+/// clause (GLP-Spec appendix-guards.tex, "Defined guard predicates").  The
+/// scope is passed in: until 2026-10-04 the root self.glp's were parsed from a
+/// source the engine set once for the whole process.
+Map<String, List<Term>> unitClausesOf(Map<String, List<Clause>> clauses) {
   final Map<String, List<Term>> unitClauses = {};
-  for (final proc in module.procedures) {
-    if (proc.clauses.length != 1) continue;
-    final clause = proc.clauses.first;
+  for (final e in clauses.entries) {
+    if (e.value.length != 1) continue;
+    final clause = e.value.first;
     if (clause.guards != null && clause.guards!.isNotEmpty) continue;
-    if (clause.body != null && clause.body!.isNotEmpty) {
-      if (clause.body!.length == 1 &&
-          clause.body![0].functor == 'true' &&
-          clause.body![0].args.isEmpty) {
-        // Body is just `true`
-      } else {
-        continue;
-      }
-    }
-    unitClauses['${proc.name}/${proc.arity}'] = clause.head.args;
+    // A clause whose body is `true` is not a unit clause and defines no guard.
+    if (clause.body != null && clause.body!.isNotEmpty) continue;
+    unitClauses[e.key] = clause.head.args;
   }
-
-  _cachedRootScopeUnitClauses = unitClauses;
-  return _cachedRootScopeUnitClauses!;
+  return unitClauses;
 }
+
+/// The guard predicates ("name/arity") [program]'s guards unfold as defined
+/// guards: [scope]'s unit clauses and the program's own, as
+/// [PartialEvaluator.transformDefinedGuards] takes them.  The type checker asks
+/// it of a clause as written, to check a defined guard's arguments as a
+/// built-in guard's are (TGLP typed-glp.tex, "Type checking of guards").
+Set<String> definedGuardKeys(Program program, {TypeEnvironment? scope}) => {
+      ...unitClausesOf(scope?.scopeClauses ?? const {}).keys,
+      ...PartialEvaluator()._collectUnitClauses(program).keys,
+    };
 
 // ============================================================================
 // UNIFICATION RESULTS
@@ -95,12 +72,18 @@ class UnifySuspend extends UnifyResult {
 class PartialEvaluator {
   int _varCounter = 0;
 
-  /// Stage 1: Transform all defined guards in a program.
+  /// Transform all defined guards in a program.
   /// Call this before SRSW analysis.
-  Program transformDefinedGuards(Program program) {
-    // Merge root scope unit clauses with user unit clauses.
-    // User definitions override root scope (spread order: root scope first, user second).
-    final unitClauses = {...getRootScopeUnitClauses(), ..._collectUnitClauses(program)};
+  ///
+  /// The defined guards are [scope]'s unit clauses and the program's own, the
+  /// program's shadowing the scope's: the scope is the one the program is
+  /// checked in, passed in ([TypeEnvironment.scopeClauses]); a linked program
+  /// carries the root self.glp's among its own procedures and needs none.
+  Program transformDefinedGuards(Program program, {TypeEnvironment? scope}) {
+    final unitClauses = {
+      ...unitClausesOf(scope?.scopeClauses ?? const {}),
+      ..._collectUnitClauses(program)
+    };
     final allProcedures = _collectAllProcedures(program);
 
     List<Procedure> transformedProcedures = [];
@@ -135,261 +118,13 @@ class PartialEvaluator {
     return procedures;
   }
 
-  /// Stage 2: Unfold reduce/2 calls in clause bodies
-  ///
-  /// For each clause with body containing reduce(A?, B):
-  ///   For each reduce/2 fact in the program:
-  ///     Try to unify A with the fact's first argument
-  ///     If success: create new clause with B bound and reduce call removed
-  Program unfoldReduceCalls(Program program) {
-    // 1. Collect all reduce/2 facts (unit clauses for reduce/2)
-    final reduceFacts = _collectReduceFacts(program);
-
-    if (reduceFacts.isEmpty) {
-      return program; // No reduce facts, nothing to unfold
-    }
-
-    List<Procedure> transformedProcedures = [];
-
-    for (final procedure in program.procedures) {
-      List<Clause> transformedClauses = [];
-
-      for (final clause in procedure.clauses) {
-        final expanded = _unfoldReduceInClause(clause, reduceFacts);
-        transformedClauses.addAll(expanded);
-      }
-
-      transformedProcedures.add(Procedure(
-        procedure.name,
-        procedure.arity,
-        transformedClauses,
-        procedure.line,
-        procedure.column,
-      ));
-    }
-
-    return Program(transformedProcedures, program.line, program.column);
-  }
-
-  /// Collect reduce/2 facts from the program
-  /// A reduce fact is a unit clause: reduce(Pattern, Replacement).
-  List<Clause> _collectReduceFacts(Program program) {
-    final List<Clause> facts = [];
-
-    for (final proc in program.procedures) {
-      if (proc.name != 'reduce' || proc.arity != 2) continue;
-
-      for (final clause in proc.clauses) {
-        // Must have no guards
-        if (clause.guards != null && clause.guards!.isNotEmpty) continue;
-
-        // Must have no body, or body is just `true`
-        if (clause.body != null && clause.body!.isNotEmpty) {
-          if (clause.body!.length == 1 &&
-              clause.body![0].functor == 'true' &&
-              clause.body![0].args.isEmpty) {
-            // Body is just `true`, this is a fact
-          } else {
-            continue; // Has real body goals
-          }
-        }
-
-        facts.add(clause);
-      }
-    }
-
-    return facts;
-  }
-
-  /// Unfold reduce/2 calls in a clause
-  /// Returns a list of clauses (may be 1 if no unfolding, or multiple if expanded)
-  List<Clause> _unfoldReduceInClause(Clause clause, List<Clause> reduceFacts) {
-    if (clause.body == null || clause.body!.isEmpty) {
-      return [clause]; // No body, nothing to unfold
-    }
-
-    // Find reduce/2 calls in the body
-    int reduceIndex = -1;
-    Goal? reduceCall;
-    for (int i = 0; i < clause.body!.length; i++) {
-      final goal = clause.body![i];
-      if (goal.functor == 'reduce' && goal.args.length == 2) {
-        reduceIndex = i;
-        reduceCall = goal;
-        break; // Process first reduce call found
-      }
-    }
-
-    if (reduceCall == null) {
-      return [clause]; // No reduce calls
-    }
-
-    // Try to unfold against each reduce fact
-    List<Clause> expanded = [];
-
-    for (final fact in reduceFacts) {
-      // Rename variables in fact to fresh names
-      final renamedFact = _renameClauseVars(fact);
-
-      // Get the pattern and replacement from the fact
-      final factPattern = renamedFact.head.args[0];
-      final factReplacement = renamedFact.head.args[1];
-
-      // Get the call's pattern and result variable
-      final callPattern = reduceCall.args[0]; // A?
-      final callResult = reduceCall.args[1];  // B
-
-      // Try to unify callPattern with factPattern
-      final result = _glpUnifyForPE([callPattern], [factPattern]);
-
-      switch (result) {
-        case UnifyFail():
-          // This fact doesn't match, try next
-          continue;
-
-        case UnifySuspend():
-          // Can't reduce at compile time, keep original
-          // But still try other facts
-          continue;
-
-        case UnifySuccess(:final substitution):
-          // Unification succeeded! Create expanded clause
-
-          // Also unify callResult with factReplacement
-          final resultUnify = _glpUnifyForPE([callResult], [factReplacement]);
-
-          Map<String, Term> fullSubst = {...substitution};
-          if (resultUnify is UnifySuccess) {
-            fullSubst.addAll(resultUnify.substitution);
-          }
-
-          // Apply substitution to head
-          var newHead = _applySubstitutionToAtom(clause.head, fullSubst);
-
-          // Apply substitution to guards
-          List<Guard>? newGuards;
-          if (clause.guards != null && clause.guards!.isNotEmpty) {
-            newGuards = clause.guards!
-                .map((g) => _applySubstitutionToGuard(g, fullSubst))
-                .toList();
-          }
-
-          // Build new body: replace reduce call with the bound result
-          // The reduce(A?, B) call is removed; B is now bound via substitution
-          List<Goal> newBody = [];
-          for (int i = 0; i < clause.body!.length; i++) {
-            if (i == reduceIndex) {
-              // Skip the reduce call - it's been resolved
-              // If factReplacement is a goal (not just `true`), we might need to add it
-              // But typically reduce facts bind B to a goal that run/1 will execute
-              continue;
-            }
-            newBody.add(_applySubstitutionToGoal(clause.body![i], fullSubst));
-          }
-
-          // If body is empty, make it null or [true]
-          if (newBody.isEmpty) {
-            newBody = [Goal('true', [], clause.line, clause.column)];
-          }
-
-          // Simplify guards - remove redundant ones
-          final simplifiedGuards = _simplifyGuards(newGuards, newHead);
-
-          expanded.add(Clause(
-            newHead,
-            guards: simplifiedGuards,
-            body: newBody,
-            line: clause.line,
-            column: clause.column,
-          ));
-      }
-    }
-
-    // If no expansions succeeded, keep original clause
-    if (expanded.isEmpty) {
-      return [clause];
-    }
-
-    return expanded;
-  }
-
-  /// Rename all variables in a clause to fresh names
-  Clause _renameClauseVars(Clause clause) {
-    // Collect all variable names
-    final varNames = <String>{};
-    _collectVarNamesFromAtom(clause.head, varNames);
-    if (clause.guards != null) {
-      for (final guard in clause.guards!) {
-        for (final arg in guard.args) {
-          _collectVarNames(arg, varNames);
-        }
-      }
-    }
-    if (clause.body != null) {
-      for (final goal in clause.body!) {
-        for (final arg in goal.args) {
-          _collectVarNames(arg, varNames);
-        }
-      }
-    }
-
-    // Build renaming map (skip underscores)
-    final Map<String, String> renaming = {};
-    for (final name in varNames) {
-      if (name != '_') {
-        renaming[name] = 'PE${_varCounter++}';
-      }
-    }
-
-    // Apply renaming
-    final newHead = _applyRenamingToAtom(clause.head, renaming);
-
-    List<Guard>? newGuards;
-    if (clause.guards != null) {
-      newGuards = clause.guards!.map((g) => Guard(
-        g.predicate,
-        g.args.map((a) => _applyRenaming(a, renaming)).toList(),
-        g.line,
-        g.column,
-        negated: g.negated,
-      )).toList();
-    }
-
-    List<Goal>? newBody;
-    if (clause.body != null) {
-      Goal rename(Goal g) => g is RatedGoal
-          // A rated goal (sGLP) keeps its rate.
-          ? g.withInner(rename(g.innerGoal))
-          : Goal(
-              g.functor,
-              g.args.map((a) => _applyRenaming(a, renaming)).toList(),
-              g.line,
-              g.column,
-            );
-      newBody = clause.body!.map(rename).toList();
-    }
-
-    return Clause(newHead, guards: newGuards, body: newBody, line: clause.line, column: clause.column);
-  }
-
-  void _collectVarNamesFromAtom(Atom atom, Set<String> names) {
-    for (final arg in atom.args) {
-      _collectVarNames(arg, names);
-    }
-  }
-
-  Atom _applyRenamingToAtom(Atom atom, Map<String, String> renaming) {
-    return Atom(
-      atom.functor,
-      atom.args.map((a) => _applyRenaming(a, renaming)).toList(),
-      atom.line,
-      atom.column,
-    );
-  }
-
   /// Collect unit clauses from program.
   /// Returns map from "name/arity" to list of head arguments.
-  /// A unit clause has exactly one clause, no guards, and no body (or body is just `true`).
+  /// A unit clause has exactly one clause, no guards and no body: "a unit
+  /// clause p(T1,...,Tn). defines a guard predicate" (GLP-Spec
+  /// appendix-guards.tex, Defined guard predicates).  A clause whose body is
+  /// `true` has a body, so it is not one and defines no guard; until
+  /// 2026-10-02 it counted as one.
   Map<String, List<Term>> _collectUnitClauses(Program program) {
     final Map<String, List<Term>> unitClauses = {};
 
@@ -402,17 +137,8 @@ class PartialEvaluator {
       // Must have no guards
       if (clause.guards != null && clause.guards!.isNotEmpty) continue;
 
-      // Must have no body, or body is empty, or body is just `true`
-      if (clause.body != null && clause.body!.isNotEmpty) {
-        // Check if body is just `true`
-        if (clause.body!.length == 1 &&
-            clause.body![0].functor == 'true' &&
-            clause.body![0].args.isEmpty) {
-          // Body is just `true`, this is a unit clause
-        } else {
-          continue; // Has real body goals
-        }
-      }
+      // Must have no body
+      if (clause.body != null && clause.body!.isNotEmpty) continue;
 
       // This is a unit clause
       final key = '${proc.name}/${proc.arity}';
@@ -452,15 +178,6 @@ class PartialEvaluator {
 
         if (unitClauses.containsKey(key)) {
           // This is a defined guard - reduce it
-          if (guard.negated) {
-            throw CompileError(
-              'Defined guard "${guard.predicate}" cannot be negated',
-              guard.line,
-              guard.column,
-              phase: 'analyzer'
-            );
-          }
-
           // Rename unit clause variables to fresh names
           final renamedArgs = _renameUnitClauseVars(unitClauses[key]!);
 
@@ -685,16 +402,39 @@ class PartialEvaluator {
     Map<String, Term> subst,
     Set<String> suspSet
   ) {
+    // A unit clause's `_?` is a head reader of a variable of its own: at a
+    // produced head position it "denotes an output the clause never produces"
+    // (TGLP typed-glp.tex, "Anonymous variables").  The table's column "Reader
+    // X2?" matches it as the named head readers below: a call writer is
+    // assigned it, and the unfolding names it nowhere; a call reader or term
+    // fails.  It was passed over as `_` is, so pick(A?, 2) reduced against
+    // pick(1, _?).
+    if (_isAnonymousReader(unitArg)) {
+      return _isWriterTerm(callArg)
+          ? null
+          : UnifyFail(_anonymousReaderMismatch(callArg));
+    }
+
     // Handle underscore on either side - always succeeds, no binding
     if (_isUnderscore(callArg) || _isUnderscore(unitArg)) {
+      // Except a writer against a writer: `_` is a writer of its own (GLP-Spec
+      // glp.tex, Remark "Anonymous Variables"), and a call writer against a
+      // head writer fails (appendix-term-matching.tex, row "Writer X1", column
+      // "Writer X2").  Until 2026-10-02 it was passed over.
+      if (_isWriterTerm(callArg) && _isWriterTerm(unitArg)) {
+        return UnifyFail('Writer $callArg cannot match the head writer $unitArg');
+      }
       return null; // success, continue
     }
 
     // Case: call arg is writer (VarTerm, not reader)
     if (callArg is VarTerm && !callArg.isReader) {
       if (unitArg is VarTerm && !unitArg.isReader) {
-        // Writer vs Writer: alias unit writer to call writer
-        subst[unitArg.name] = callArg;
+        // Call writer vs head writer: FAIL.  GLP-Spec appendix-term-matching.tex,
+        // Definition "Term Matching": row "Writer X1", column "Writer X2".
+        // Until 2026-10-02 the unit writer was aliased to the call writer.
+        return UnifyFail(
+            'Writer ${callArg.name} cannot match the head writer ${unitArg.name}');
       } else if (unitArg is VarTerm && unitArg.isReader) {
         // Writer vs Reader in unit clause - unusual but handle it
         // The reader refers to a writer that should be aliased
@@ -714,9 +454,11 @@ class PartialEvaluator {
         // Reader vs Writer: alias unit writer to call writer
         subst[unitArg.name] = VarTerm(writerName, false, callArg.line, callArg.column);
       } else if (unitArg is VarTerm && unitArg.isReader) {
-        // Reader vs Reader: both suspend on same thing, alias
-        subst[unitArg.name] = VarTerm(writerName, false, callArg.line, callArg.column);
-        suspSet.add(writerName);
+        // Goal reader vs head reader: FAIL.  GLP-Spec appendix-term-matching.tex,
+        // Definition "Term Matching": row "Reader X1?", column "Reader X2?".
+        // Until 2026-10-02 the two were aliased and the goal suspended.
+        return UnifyFail(
+            'Reader $writerName? cannot match the head reader ${unitArg.name}?');
       } else {
         // Reader vs constant/structure: add to suspension set
         // Record what it should match - bind the writer to the unit arg
@@ -746,9 +488,11 @@ class PartialEvaluator {
         _substSet(subst, unitArg.name, callArg);
         return null;
       } else if (unitArg is VarTerm && unitArg.isReader) {
-        // Constant vs Reader in unit clause - unusual
-        _substSet(subst, unitArg.name, callArg);
-        return null;
+        // Constant vs head reader: FAIL (appendix-term-matching.tex, row "Term
+        // f1/n1", column "Reader X2?"; a constant is f/0).  Until 2026-10-02 the
+        // head reader was bound to the constant.
+        return UnifyFail(
+            'Constant ${callArg.value} cannot match the head reader ${unitArg.name}?');
       } else {
         return UnifyFail('Constant ${callArg.value} cannot match structure $unitArg');
       }
@@ -770,8 +514,11 @@ class PartialEvaluator {
         _substSet(subst, unitArg.name, callArg);
         return null;
       } else if (unitArg is VarTerm && unitArg.isReader) {
-        _substSet(subst, unitArg.name, callArg);
-        return null;
+        // Structure vs head reader: FAIL (appendix-term-matching.tex, row "Term
+        // f1/n1", column "Reader X2?").  Until 2026-10-02 the head reader was
+        // bound to the structure.
+        return UnifyFail(
+            'Structure ${callArg.functor} cannot match the head reader ${unitArg.name}?');
       } else {
         return UnifyFail('Structure ${callArg.functor} cannot match $unitArg');
       }
@@ -802,8 +549,10 @@ class PartialEvaluator {
         _substSet(subst, unitArg.name, callArg);
         return null;
       } else if (unitArg is VarTerm && unitArg.isReader) {
-        _substSet(subst, unitArg.name, callArg);
-        return null;
+        // List vs head reader: FAIL (appendix-term-matching.tex, row "Term
+        // f1/n1", column "Reader X2?"; a list is '[]'/0 or '.'/2).  Until
+        // 2026-10-02 the head reader was bound to the list.
+        return UnifyFail('List cannot match the head reader ${unitArg.name}?');
       } else {
         return UnifyFail('List cannot match $unitArg');
       }
@@ -840,6 +589,27 @@ class PartialEvaluator {
   bool _isUnderscore(Term term) {
     return term is UnderscoreTerm || (term is VarTerm && term.name == '_');
   }
+
+  /// `_?`: the anonymous variable at a reader occurrence.
+  bool _isAnonymousReader(Term term) =>
+      (term is UnderscoreTerm && term.isReader) ||
+      (term is VarTerm && term.isReader && term.name == '_');
+
+  /// A writer occurrence, named or anonymous.
+  bool _isWriterTerm(Term term) =>
+      (term is UnderscoreTerm && !term.isReader) ||
+      (term is VarTerm && !term.isReader);
+
+  /// Why [callArg], a call reader or term, cannot match a unit clause's `_?`.
+  String _anonymousReaderMismatch(Term callArg) => switch (callArg) {
+        ConstTerm(:final value) =>
+          'Constant $value cannot match the head reader _?',
+        StructTerm(:final functor) =>
+          'Structure $functor cannot match the head reader _?',
+        ListTerm() => 'List cannot match the head reader _?',
+        VarTerm(:final name) => 'Reader $name? cannot match the head reader _?',
+        _ => 'Reader _? cannot match the head reader _?',
+      };
 
   /// Resolve substitution chains.
   /// If σ = {X → Y, Y → f(Z)}, result is {X → f(Z), Y → f(Z)}
@@ -944,26 +714,21 @@ class PartialEvaluator {
       guard.args.map((a) => _applySubstitution(a, subst)).toList(),
       guard.line,
       guard.column,
-      negated: guard.negated,
     );
   }
 
   /// Apply substitution to a Goal, preserving RemoteGoal and SpawnGoal types.
   Goal _applySubstitutionToGoal(Goal goal, Map<String, Term> subst) {
-    // Preserve RemoteGoal (M # proc(...))
+    // Preserve RemoteGoal (M # proc(...)); its module is a name, which no
+    // substitution touches.
     if (goal is RemoteGoal) {
-      final newModule = _applySubstitution(goal.module, subst);
       final newInnerGoal = _applySubstitutionToGoal(goal.goal, subst);
-      return RemoteGoal(newModule, newInnerGoal, goal.line, goal.column);
+      return RemoteGoal(goal.module, newInnerGoal, goal.line, goal.column);
     }
     // Preserve SpawnGoal (Goal@Agent)
     if (goal is SpawnGoal) {
       final newInnerGoal = _applySubstitutionToGoal(goal.innerGoal, subst);
       return SpawnGoal(newInnerGoal, goal.agentId, goal.line, goal.column);
-    }
-    // Preserve RatedGoal (sGLP, Goal @ Rate)
-    if (goal is RatedGoal) {
-      return goal.withInner(_applySubstitutionToGoal(goal.innerGoal, subst));
     }
     return Goal(
       goal.functor,
@@ -971,92 +736,5 @@ class PartialEvaluator {
       goal.line,
       goal.column,
     );
-  }
-
-  /// Simplify guards by removing redundant ones after specialization.
-  /// A guard is redundant if it always succeeds given the head pattern.
-  List<Guard>? _simplifyGuards(List<Guard>? guards, Atom head) {
-    if (guards == null || guards.isEmpty) return null;
-
-    final simplified = <Guard>[];
-
-    for (final guard in guards) {
-      if (_isRedundantGuard(guard, head)) {
-        // Skip this guard - it's always true
-        continue;
-      }
-      simplified.add(guard);
-    }
-
-    return simplified.isEmpty ? null : simplified;
-  }
-
-  /// Check if a guard is redundant (always succeeds) given the head.
-  bool _isRedundantGuard(Guard guard, Atom head) {
-    // Type guards with concrete argument are redundant
-    if (guard.args.length == 1) {
-      final arg = guard.args[0];
-      final concreteArg = _getConcreteArg(arg);
-
-      if (concreteArg != null) {
-        switch (guard.predicate) {
-          case 'tuple':
-          case 'compound':
-            // tuple(structure) always succeeds
-            return concreteArg is StructTerm;
-          case 'list':
-          case 'is_list':
-            // list([...]) always succeeds
-            return concreteArg is ListTerm;
-          case 'integer':
-            return concreteArg is ConstTerm && concreteArg.value is int;
-          case 'number':
-            return concreteArg is ConstTerm &&
-                (concreteArg.value is int || concreteArg.value is double);
-          case 'atom':
-            return concreteArg is ConstTerm && concreteArg.value is String;
-          case 'ground':
-            // If argument is fully concrete (no variables), ground succeeds
-            return _isGround(concreteArg);
-          case 'no_readers':
-            // If argument is fully concrete (no readers), no_readers succeeds
-            // At compile time, a concrete term has no variables (hence no readers)
-            return _isGround(concreteArg);
-        }
-      }
-    }
-
-    return false;
-  }
-
-  /// Get the concrete (non-variable) form of a term.
-  /// Returns null if the term contains unbound variables.
-  Term? _getConcreteArg(Term term) {
-    if (term is VarTerm) {
-      // A reader reference - try to find what it refers to
-      // For now, if it's a reader, we can't determine concreteness
-      return null;
-    }
-    if (term is ConstTerm || term is StructTerm || term is ListTerm) {
-      return term;
-    }
-    return null;
-  }
-
-  /// Check if a term is ground (contains no variables).
-  bool _isGround(Term term) {
-    if (term is VarTerm) return false;
-    if (term is UnderscoreTerm) return true;
-    if (term is ConstTerm) return true;
-    if (term is StructTerm) {
-      return term.args.every(_isGround);
-    }
-    if (term is ListTerm) {
-      if (term.isNil) return true;
-      final headGround = term.head == null || _isGround(term.head!);
-      final tailGround = term.tail == null || _isGround(term.tail!);
-      return headGround && tailGround;
-    }
-    return false;
   }
 }

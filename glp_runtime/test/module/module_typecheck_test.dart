@@ -88,16 +88,4 @@ void main() {
           reason: 'Multiple imported procedures should each be found');
     });
   });
-
-  group('Phase 3 - 2g: dynamic remote goal skipped', () {
-    test('M # goal(X) where M is a variable is not type-checked', () {
-      final result = checkSource('''
-        procedure dispatch(_, Integer?).
-        dispatch(M, X) :- true | M # compute(X?).
-      ''');
-
-      expect(bodyErrors(result), isEmpty,
-          reason: 'Dynamic module dispatch should skip type checking');
-    });
-  });
 }

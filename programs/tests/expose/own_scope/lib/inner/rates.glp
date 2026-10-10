@@ -1,0 +1,4 @@
+%% The exposed module: its exported signature names Level, from lib/self.glp.
+exported procedure rate(Level?, Integer).
+rate(low, 1).
+rate(high, 2).

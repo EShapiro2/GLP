@@ -1,0 +1,8 @@
+%% The program test/compiler/root_link_test.dart loads under the root
+%% univ_typing_root.glp beside it, whose '_univ_compose'/4 is not well-typed:
+%% the root self.glp is the first link of this module's chain, checked in step
+%% 2 with it (TGLP modules.tex, Compilation, second step), so the program is
+%% refused naming the root's file.  Under the root self.glp, compose(T) gives
+%% T = f(a).
+procedure compose(_).
+compose(T?) :- T =.. [f, a].

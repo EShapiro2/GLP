@@ -10,7 +10,7 @@
 /// - handleMadAssignment instead of handleAssignment
 /// - onWriterBound triggers message sending (push-based)
 ///
-/// Scenario (per madGLP-spec.md Section 10.2):
+/// Scenario:
 /// 1. Alice creates response variable Resp (writer) and Resp? (reader)
 /// 2. Alice globalizes Resp (writer) to send to Bob -> creates entry (Resp, bob) at index 1
 /// 3. Bob localizes _w(alice,1) -> gets writer, spawns global_send
@@ -28,6 +28,7 @@ import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/message_queue.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
 import 'package:glp_runtime/multiagent/global_send.dart';
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 
 /// Message types for inter-isolate communication
 sealed class IsolateMessage {}
@@ -89,7 +90,7 @@ void aliceIsolate(SendPort mainPort) async {
   final ctx = MadContext(agentId: 'alice', runtime: runtime);
 
   // Track the response variable for verification
-  late int respWriter;
+  late HeapCell respWriter;
 
   // Message routing to main isolate (which forwards to Bob)
   ctx.onMessageReady = (dest, msg) {
@@ -172,7 +173,7 @@ void bobIsolate(SendPort mainPort) async {
   final ctx = MadContext(agentId: 'bob', runtime: runtime);
 
   // Track imported writer address
-  int? importedWriterAddr;
+  HeapCell? importedWriterAddr;
   GlobalName? globalNameToSend;
 
   // Message routing to main isolate (which forwards to Alice)

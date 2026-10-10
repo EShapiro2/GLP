@@ -1,0 +1,14 @@
+%% Not every alternative of FriendMsg is an alternative of NetInMsg: its msg/3
+%% takes a Constant where NetInMsg's takes a Key.  No type the merge's sites
+%% supply, FriendMsg or NetInMsg, makes every site well-typed, so the call is
+%% refused, by the site the supertype does not fit: FIn's stream is not within
+%% Stream<NetInMsg>.
+FriendContent ::= text(String) ; ping.
+FriendMsg ::= msg(Constant, Constant, FriendContent).
+NetColdCall ::= intro(Constant).
+NetInMsg ::= msg(Key, NetColdCall)
+           ; msg(Key, Constant, FriendContent)
+           ; pending_link(Constant, Constant).
+
+procedure join(Stream(NetInMsg)?, Stream(FriendMsg)?, Stream(NetInMsg)).
+join(NetIn, FIn, NetIn1?) :- merge(FIn?, NetIn?, NetIn1).

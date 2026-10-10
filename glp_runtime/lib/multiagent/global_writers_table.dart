@@ -4,8 +4,10 @@
 /// Each entry maps a global name to the local writer that will be assigned
 /// when a message arrives.
 ///
-/// See: docs/ma/madGLP-spec.md Section 3
+/// See: IGLP Definitions Global Writers Table Entry and Global Writers Table (app:global-writers-table).
 library;
+
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 
 /// Entry created by Globalize (when exporting a writer)
 ///
@@ -14,7 +16,7 @@ library;
 /// identifies the local writer X that should be assigned.
 class GlobalizeEntry {
   /// Local writer address that will be assigned when callback arrives
-  final int writerAddr;
+  final HeapCell writerAddr;
 
   /// Agent who will send the callback
   final String remoteAgent;
@@ -34,7 +36,7 @@ class GlobalizeEntry {
 /// When message `_r(p, i) := T` arrives, search for entry matching (p, i).
 class LocalizeEntry {
   /// Local writer address that will be assigned
-  final int writerAddr;
+  final HeapCell writerAddr;
 
   /// Agent who created the global name (p in `_r(p, i)`)
   final String remoteAgent;
@@ -60,10 +62,11 @@ class LocalizeEntry {
 /// - GlobalizeEntry: created by Globalize, direct index lookup
 /// - LocalizeEntry: created by Localize, search by (agent, index)
 ///
-/// Index 0 is reserved for the network input serializer (spec Section 4.1).
+/// Index 0 is reserved for the network input serializer (IGLP Definition
+/// Index-0 Serializer).
 /// This entry is permanent and supports many-to-one cold-call reception.
 ///
-/// See: docs/ma/madGLP-spec.md Section 3
+/// See: IGLP Definitions Global Writers Table Entry and Global Writers Table (app:global-writers-table).
 class GlobalWritersTable {
   /// Agent ID that owns this table
   final String agentId;
@@ -77,7 +80,7 @@ class GlobalWritersTable {
   /// Serializer entry at index 0 (spec Section 4.1)
   /// Maps to the local writer for the network input stream.
   /// This entry is permanent - never removed.
-  int? _serializerWriterAddr;
+  HeapCell? _serializerWriterAddr;
 
   /// GlobalizeEntries: direct index lookup
   /// Key is the index i, value is the entry at that index.
@@ -103,7 +106,7 @@ class GlobalWritersTable {
   /// Spec Section 4.1: "At boot time, each agent p creates a permanent entry
   /// at index 0 mapping `_r(p, 0)` to the local writer N_p for p's network
   /// input stream."
-  void initializeSerializerEntry(int netInWriterAddr) {
+  void initializeSerializerEntry(HeapCell netInWriterAddr) {
     if (_serializerWriterAddr != null) {
       throw StateError('Serializer entry already initialized');
     }
@@ -113,7 +116,7 @@ class GlobalWritersTable {
   /// Get the current serializer writer address.
   ///
   /// Returns null if not yet initialized.
-  int? get serializerWriterAddr => _serializerWriterAddr;
+  HeapCell? get serializerWriterAddr => _serializerWriterAddr;
 
   /// Update the serializer writer to a fresh address.
   ///
@@ -122,7 +125,7 @@ class GlobalWritersTable {
   ///
   /// Spec Section 8.3: "Assign N_q := [T_q↓ | N'_q] where N'_q is a fresh
   /// writer. Update the entry to `(N'_q, *)` at index 0."
-  void updateSerializerWriter(int newWriterAddr) {
+  void updateSerializerWriter(HeapCell newWriterAddr) {
     if (_serializerWriterAddr == null) {
       throw StateError('Cannot update serializer: not initialized');
     }
@@ -144,7 +147,7 @@ class GlobalWritersTable {
   /// - Replace Y with `_w(p, i)` in globalized term
   ///
   /// Returns the allocated index.
-  int addGlobalizeEntry(int writerAddr, String remoteAgent) {
+  int addGlobalizeEntry(HeapCell writerAddr, String remoteAgent) {
     final index = _nextIndex++;
     _globalizeEntries[index] = GlobalizeEntry(
       writerAddr: writerAddr,
@@ -161,7 +164,7 @@ class GlobalWritersTable {
   /// - Replace `_r(p, i)` with Z? in localized term
   ///
   /// Throws [ArgumentError] if duplicate (remoteAgent, remoteIndex) exists.
-  void addLocalizeEntry(int writerAddr, String remoteAgent, int remoteIndex) {
+  void addLocalizeEntry(HeapCell writerAddr, String remoteAgent, int remoteIndex) {
     // Check for duplicates (spec Section 12: Entry Lifecycle invariant)
     final existing = findByRemote(remoteAgent, remoteIndex);
     if (existing != null) {
@@ -191,7 +194,7 @@ class GlobalWritersTable {
   /// Used by Globalize's forwarding case: an unbound imported reader is one
   /// whose paired writer carries a LocalizeEntry (X, o, k) — the entry's
   /// presence is the condition, since applying the incoming value removes it.
-  LocalizeEntry? findLocalizeEntryByWriter(int writerAddr) {
+  LocalizeEntry? findLocalizeEntryByWriter(HeapCell writerAddr) {
     for (final entry in _localizeEntries) {
       if (entry.writerAddr == writerAddr) {
         return entry;

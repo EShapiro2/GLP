@@ -9,16 +9,20 @@
 /// the proposal card of that appendix, in the same phone shell and at the same
 /// scale.
 ///
-/// `village_ui/3` runs the whole six-agent market and puts the villager it
-/// names on the app's own person channel (`programs/currencies/coins/self.glp`,
-/// "the app shows that villager's screen as the market runs, which is how the
-/// six balances views ... are taken, one villager per run").  The six agents
-/// run in one harness in every run; the app renders one of them, so the figure
-/// is six runs of the same market, each rendering its own villager's screen
-/// through the app's own path.  Nothing is fed to a surface that its agent did
+/// The play `market_ui/1` runs the whole six-agent market and sends the events
+/// of the villager it names to the user's stream as well
+/// (`programs/currencies/coins/self.glp`, "the six balances views of the
+/// paper's Appendix C.2 are drawn from it, one villager per run").  The test
+/// runs that play directly, as test code: the coins program loaded by the
+/// engine and `market_ui(V)` posted to it, type-checked as every posted goal
+/// is, with no host --- the host posts `superapp/3` and nothing of Currencies'
+/// (GSG Section 5.1; Currencies #7 Cowork, 2026-10-04 09:15 UTC, item 2).  The
+/// six agents run in one play in every run; the app's interface code renders
+/// one of them, so the figure is six runs of the same market, each rendering
+/// its own villager's screen.  Nothing is fed to a surface that its agent did
 /// not send, and no screen is copied from another.
 ///
-/// The image this test writes is the figure.  Under `village_ui/3` the app
+/// The image this test writes is the figure.  Under `market_ui/1` the app
 /// observes and does not answer: `village.glp`'s `villager/4` sends the named
 /// villager's events through `tee/3` to the app and to the scripted person,
 /// and the person's answers go to the mediator and not to the app.  The
@@ -58,7 +62,7 @@ import 'package:glp_multiagent/ui_runtime/agent_surface.dart';
 import 'package:glp_multiagent/ui_runtime/manifest.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
-import 'package:glp_runtime/multiagent/agent_runtime.dart';
+import 'package:glp_runtime/engine/glp_engine.dart';
 
 /// One villager: its name, and the friends it holds a conversation with in
 /// `village.glp`'s `market/1`.
@@ -196,34 +200,31 @@ void main() {
     final runtimes = <String, UiRuntime>{};
     for (final v in _villagers) {
       final lines = <String>[];
-      final agent = AgentRuntime(
-        agentId: v.id,
-        glpSources: const [],
-        // programs/currencies/coins is a program: currency/ is the certified
-        // mini-app and this directory adds village.glp, which stands in for
-        // the super-app and for the six persons.
-        programDir: '$repo/currencies/coins',
-        goalLabel: 'village_ui/3',
-        rootSelfGlpPath: '$repo/self.glp',
-        friends: v.friends,
-      )..maxQuiescenceCycles = 5000000;
-      agent.onOutput = lines.add;
-      agent.onLog = (_, __) {};
-      agent.onSendMadMessage = (_, __) async {};
+      // programs/currencies/coins is a program: currency/ is the certified
+      // mini-app and this directory adds village.glp, which stands in for the
+      // super-app and for the six persons.  The play is run directly: the
+      // engine loads the program and runs the posted goal market_ui(V), and
+      // what send_to_user/1 sends is read off the runtime's output.
+      final engine = GlpEngine(rootSelfGlpPath: '$repo/self.glp')
+        ..maxCycles = 50000000;
+      engine.runtime.outputCallback = lines.add;
 
       final r = UiRuntime(manifest: _balancesOnly, onSend: (_) {});
       // The same lines under the app's manifest, SCREEN view included, so that
       // the test shows that leaving the view out changes no holding and no card.
       final full = UiRuntime(manifest: coinsManifest, onSend: (_) {});
-      await tester.runAsync(() => agent.initialize());
-      // A run that did not quiesce is half a run and its screen means nothing.
-      expect(lines.where((l) => l.contains('[ERROR]')), isEmpty,
-          reason: '${v.id}: the market did not run to the end');
+      final result = (await tester.runAsync(() async {
+        engine.loadProgram('$repo/currencies/coins');
+        return engine.runGoal('market_ui(${v.id})');
+      }))!;
+      // A run that failed or did not quiesce is half a run and its screen
+      // means nothing.
+      expect(result.failed || result.capped, isFalse,
+          reason: '${v.id}: the market did not run to the end: '
+              '${result.status.name} ${result.error ?? ''}');
       for (final l in lines) {
-        if (l.startsWith('< ')) {
-          r.handleLine(l.substring(2));
-          full.handleLine(l.substring(2));
-        }
+        r.handleLine(l);
+        full.handleLine(l);
       }
       String state(UiRuntime x) => [
             x.store.balances.map((s, b) =>

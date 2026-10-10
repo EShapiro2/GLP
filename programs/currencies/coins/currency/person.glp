@@ -17,7 +17,7 @@
 %% and the open accept cards of proposed swaps, by proposer.
 OpenReq ::= no_card ; req(Integer).
 Open ::= open(OpenReq, OpenReq, OpenReq, OpenReq).
-SwapCard ::= swap_card(Constant, ReqId).
+SwapCard ::= swap_card(Key, ReqId).
 SwapCards ::= [] ; [SwapCard | SwapCards].
 
 %% Whether an answer is out for the current step.
@@ -28,12 +28,12 @@ Choice ::= answer(ReqId, Answer) ; wait.
 
 %% person(Id, Events, Answers, Script, Screen): the person's answers on the
 %% channel, and the screen messages as they come.
-exported procedure person(Constant?, Stream(Event)?, Stream(UserAnswer), Script?, Stream(ScreenContent)).
+exported procedure person(Key?, Stream(Event)?, Stream(UserAnswer), Script?, Stream(ScreenContent)).
 person(Id, Events, Answers?, Script, Screen?) :-
     ground(Id?) |
     person(Id?, Events?, Answers, Script?, open(no_card, no_card, no_card, no_card), [], idle, Screen).
 
-procedure person(Constant?, Stream(Event)?, Stream(UserAnswer), Script?, Open?, SwapCards?, Pending?, Stream(ScreenContent)).
+procedure person(Key?, Stream(Event)?, Stream(UserAnswer), Script?, Open?, SwapCards?, Pending?, Stream(ScreenContent)).
 
 %% The request cards, by clause: mint, swap, pay, redeem.
 person(Id, [card(agent_1, _, R)|Es], As?, Script, open(_, S, P, D), Swaps, Pending, Screen?) :-
@@ -114,7 +114,7 @@ abort_pending(R, sent(R1), idle) :- R? =?= R1? | true.
 abort_pending(_, P, P?) :- otherwise | true.
 
 %% Whether the screen shows the step's effect.
-procedure done(Step?, ScreenContent?, Constant).
+procedure done(Step?, ScreenContent?, Decision).
 done(mint(K), minted(K1), yes) :- K? =:= K1? | true.
 done(swap(Q, _, _, _, _), swap_done(Q1), yes) :- Q? =?= Q1? | true.
 done(pay(Q, K), paid(Q1, K1), yes) :- Q? =?= Q1?, K? =:= K1? | true.
@@ -123,14 +123,14 @@ done(accept(Q), swap_done(Q1), yes) :- Q? =?= Q1? | true.
 done(await(M), M1, yes) :- M? =?= M1? | true.
 done(_, _, no) :- otherwise | true.
 
-procedure advance(Constant?, Constant?, Stream(Event)?, Stream(UserAnswer), Step?, Script?, Open?, SwapCards?, Pending?, Stream(ScreenContent)).
+procedure advance(Decision?, Key?, Stream(Event)?, Stream(UserAnswer), Step?, Script?, Open?, SwapCards?, Pending?, Stream(ScreenContent)).
 advance(yes, Id, Es, As?, _, Script, Open, Swaps, _, Screen?) :-
     try_step(Id?, Es?, As, Script?, Open?, Swaps?, idle, Screen).
 advance(no, Id, Es, As?, Step, Script, Open, Swaps, Pending, Screen?) :-
     person(Id?, Es?, As, [Step?|Script?], Open?, Swaps?, Pending?, Screen).
 
 %% Answer the current step's card, if it is open and no answer is out.
-procedure try_step(Constant?, Stream(Event)?, Stream(UserAnswer), Script?, Open?, SwapCards?, Pending?, Stream(ScreenContent)).
+procedure try_step(Key?, Stream(Event)?, Stream(UserAnswer), Script?, Open?, SwapCards?, Pending?, Stream(ScreenContent)).
 try_step(Id, Es, As?, [], Open, Swaps, Pending, Screen?) :-
     person(Id?, Es?, As, [], Open?, Swaps?, Pending?, Screen).
 try_step(Id, Es, As?, [Step|Script], Open, Swaps, sent(R), Screen?) :-
@@ -150,7 +150,7 @@ pick(accept(From), _, Swaps, Choice?, Swaps1?) :-
     find_swap(From?, Swaps?, Choice, Swaps1).
 pick(_, _, Swaps, wait, Swaps?) :- otherwise | true.
 
-procedure find_swap(Constant?, SwapCards?, Choice, SwapCards).
+procedure find_swap(Key?, SwapCards?, Choice, SwapCards).
 find_swap(From, [swap_card(F, R)|Rest], answer(R?, xs_respond_swap_1(yes)), Rest?) :-
     From? =?= F? | true.
 find_swap(From, [S|Rest], C?, [S?|Rest1?]) :-
@@ -158,7 +158,7 @@ find_swap(From, [S|Rest], C?, [S?|Rest1?]) :-
     find_swap(From?, Rest?, C, Rest1).
 find_swap(_, [], wait, []).
 
-procedure act(Choice?, Constant?, Stream(Event)?, Stream(UserAnswer), Script?, Open?, SwapCards?, Stream(ScreenContent)).
+procedure act(Choice?, Key?, Stream(Event)?, Stream(UserAnswer), Script?, Open?, SwapCards?, Stream(ScreenContent)).
 %% An answered card is consumed: it is no longer open.
 act(answer(R, X), Id, Es, [answer(R?, X?)|As?], Script, Open, Swaps, Screen?) :-
     ground(R?) |

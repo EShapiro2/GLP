@@ -48,8 +48,8 @@ Object? _deref(GlpRuntime rt, Object? term) {
   return term;
 }
 
-/// Lowercase hex of a hash — used to key a module's runner by its source
-/// identity h(M), so equal modules share one runner.
+/// Lowercase hex of a hash — used to key a module's runner by its compiled
+/// identity, so equal compiled modules share one runner.
 String _hex(Uint8List bytes) =>
     bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
@@ -118,6 +118,24 @@ BodyKernelResult _activate(
     return BodyKernelResult.abort;
   }
 
+  // The certificate is verified before the code runs: the loader "computes
+  // SHA-256 of the body and verifies it equals the compiled identity in the
+  // certificate; verifies the certificate's signature under the key the
+  // certificate carries" (IGLP code-format-fragment.tex, Loader, step 1), and
+  // the machine "activates no program whose certificate does not verify" (GSG
+  // s6-security.tex, G1).  Activation is run/2 and run/3, an adopter's of a
+  // module it received included, which it runs by running its boot goal; the
+  // engine's local load of a program is not an activation and is not refused
+  // here (GLP #3 Cowork, 2026-10-02 15:46 UTC, B6).  A module refused a
+  // certificate --- it calls an OS-privileged predicate --- carries none, and
+  // is refused with the forged and the mismatched.  Until 2026-10-02 nothing
+  // here looked at the certificate.
+  final refusal = artefact.certificateRefusal;
+  if (refusal != null) {
+    print('[ABORT] $kernel: module ${module.name} is not activated: $refusal');
+    return BodyKernelResult.abort;
+  }
+
   // The boot goal: a term boot(A, ...) — or a bare constant for arity 0.
   final goal = _deref(rt, goalArg);
   final String functor;
@@ -133,11 +151,14 @@ BodyKernelResult _activate(
     return BodyKernelResult.abort;
   }
 
-  // One ByteRunner per distinct module, keyed by its source identity h(M), so
-  // the Scheduler routes this goal (and its children, which inherit the key) to
-  // the module's code via rt.runners — its documented per-goal-program fallback.
-  // Equal modules share a runner, so the image is decoded once per module.
-  final key = 'module:${_hex(artefact.hM)}';
+  // One ByteRunner per distinct compiled module, keyed by its compiled
+  // identity, the SHA-256 of the artefact's body: "artefacts are cached and
+  // deduplicated by compiled identity" (IGLP code-format-fragment.tex, Loader,
+  // step 4).  The Scheduler routes this goal (and its children, which inherit
+  // the key) to the module's code via rt.runners.  Until 2026-10-02 the key was
+  // the source identity h(M), so two compilations of one source --- two
+  // compilers, two instruction-set versions --- shared the first one's code.
+  final key = 'module:${_hex(artefact.compiledIdentity)}';
   final cached = rt.runners[key];
   final CodeImage image = cached is ByteRunner
       ? cached.image
@@ -184,8 +205,6 @@ BodyKernelResult _activate(
   rt.setGoalEnv(newGoalId, CallEnv(args: slots));
   rt.setGoalProgram(newGoalId, key);
   rt.setGoalModule(newGoalId, module);
-  // An sGLP run: the posted goal is at its poster's agent.
-  rt.sim?.inherit(rt.currentGoalId, newGoalId);
   rt.gq.enqueue(GoalRef(newGoalId, entry));
   return BodyKernelResult.success;
 }

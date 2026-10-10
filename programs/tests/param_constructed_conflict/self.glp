@@ -1,0 +1,20 @@
+%% Two constructed arguments at one parameter M, neither naming a type: no site
+%% supplies M, and send2/4's head pairs (A, A?) and (B, B?) fix M = Msg, the
+%% element type of the stream out/1 carries (TGLP cc4a891,
+%% appendix-implementation-notes.tex, "The instantiation of a call").  Msg does
+%% not admit bad(N?), and no other type is supplied or fixed, so the bindings
+%% conflict and the call is refused, naming bad(N?).  Negative fixture.
+%%
+%% From 2026-09-20 to 2026-10-02 the same head pair fixed M and the call was
+%% refused for bad(N?) at it; on 2026-10-02 (TGLP 8a58729) a type no site
+%% supplied was not tried and the call was refused naming M.  A constructed
+%% argument the binding its sites supply does not admit is
+%% programs/tests/call_instantiation/constructed_not_admitted.glp.
+
+Msg   ::= m(Constant).
+Entry ::= out(Stream(Msg)?) ; log(Stream(Constant)?).
+
+imported procedure code#go(Constant?, Stream(Entry)?, Stream(Entry)).
+
+exported procedure run(Constant?, Stream(Entry)?, Stream(Entry)).
+run(N, Outs, Outs1?) :- code # go(N?, Outs?, Outs1).

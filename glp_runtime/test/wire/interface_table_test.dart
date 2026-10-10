@@ -39,7 +39,10 @@ count(none, 0).
 ''';
 
 Directory _project(String source) {
-  final dir = Directory.systemTemp.createTempSync('glp_interface_');
+  // Under the root, programs/ (TGLP modules.tex, "Scope construction": "A
+  // program lies at or below the root"): a program in the system's temporary
+  // directory, outside it, is refused since 2026-10-04.
+  final dir = Directory('../programs/tests').createTempSync('glp_interface_');
   File('${dir.path}/self.glp').writeAsStringSync(source);
   return dir;
 }

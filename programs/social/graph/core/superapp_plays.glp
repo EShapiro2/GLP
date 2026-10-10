@@ -10,7 +10,7 @@
 %% the mini-apps' user-interface streams come back to the caller, or, under
 %% :boot, go to the person.
 
-imported procedure agent#agent(Constant?, UserInStream?, NetInStream?, OutputsList?).
+imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 
 procedure crossbar2(NetOutStream?, NetOutStream?, NetInStream, NetInStream).
 crossbar2(AOut, BOut, AIn?, BIn?) :-
@@ -22,7 +22,7 @@ route2([msg(alice, C) | Rest], [msg(alice, C?) | A?], B?) :- route2(Rest?, A, B)
 route2([msg(bob, C) | Rest], A?, [msg(bob, C?) | B?]) :- route2(Rest?, A, B).
 route2([], [], []).
 
-procedure tee(Stream(X)?, Stream(X), Stream(X)).
+procedure(X) tee(Stream(X)?, Stream(X), Stream(X)).
 tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
 tee([], [], []).
 
@@ -111,11 +111,11 @@ bob_person(M, CSig, no, Ui?, Outs, Seen,
     bob_wait(no, Outs?, Seen?, Cmds).
 
 procedure bob_wait(Decision?, AgentToUserStream?, AppUiStream?, UserInStream).
-bob_wait(yes, [msg(agent, person, befriend(alice, Resp?)) | _], Seen,
-         [msg(person, bob, decision(yes, alice, response(Resp))) | Cmds?]) :-
+bob_wait(yes, [msg(agent, person, befriend(alice, P)) | _], Seen,
+         [msg(person, bob, decision(yes, alice, P?)) | Cmds?]) :-
     person_done(Seen?, Cmds).
-bob_wait(no, [msg(agent, person, befriend(alice, Resp?)) | _], _,
-         [msg(person, bob, decision(yes, alice, response(Resp)))]).
+bob_wait(no, [msg(agent, person, befriend(alice, P)) | _], _,
+         [msg(person, bob, decision(yes, alice, P?))]).
 bob_wait(W, [_ | Outs], Seen, Cmds?) :- otherwise | bob_wait(W?, Outs?, Seen?, Cmds).
 bob_wait(_, [], _, []).
 
@@ -154,10 +154,50 @@ alice_attest_wait([_ | Outs], S?, Cmds?) :- otherwise | alice_attest_wait(Outs?,
 alice_attest_wait([], none, []).
 
 procedure bob_answer(AgentToUserStream?, UserInStream).
-bob_answer([msg(agent, person, befriend(alice, Resp?)) | _],
-           [msg(person, bob, decision(yes, alice, response(Resp)))]).
+bob_answer([msg(agent, person, befriend(alice, P)) | _],
+           [msg(person, bob, decision(yes, alice, P?))]).
 bob_answer([_ | Outs], Cmds?) :- otherwise | bob_answer(Outs?, Cmds).
 bob_answer([], []).
+
+%% =============================================================================
+%% play_both_ways: alice and bob cold-call each other at once, and each person
+%% consents to the other's call (GSG Section 5.1; 2026-10-02 task, item 5).
+%% Two befriendings of the same two people are under way at once, and alice,
+%% the smaller identity, proposes in both: she mints the friend channel for
+%% the first whose consent she reads and conveys already_friends for the
+%% other, so each agent ends with one friend channel --- and each person is
+%% told connected once, which convey/7 and adopt/6 tell where they install
+%% one.  The persons stand at the end, their streams open, so what each was
+%% told is the whole of it at quiescence.
+%% Expected: A = [connected(bob) | _], B = [connected(alice) | _],
+%% → suspended.
+%% =============================================================================
+exported procedure play_both_ways(Stream(AgentContent), Stream(AgentContent)).
+play_both_ways(A?, B?) :-
+    crossbar2(AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
+    agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
+    both_ways_person(alice, bob, AliceOut?, A, AliceIn),
+    agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
+    both_ways_person(bob, alice, BobOut?, B, BobIn).
+
+%% A person who cold-calls the other and consents to the other's call, the
+%% pending value passed back as it came; what the agent tells it of a
+%% befriending's outcome, connected or rejected, is what it saw.
+procedure both_ways_person(Key?, Key?, AgentToUserStream?, Stream(AgentContent), UserInStream).
+both_ways_person(Me, Other, Outs, Seen?, [msg(person, Me?, connect(Other?)) | Cmds?]) :-
+    both_ways_answer(Me?, Outs?, Seen, Cmds).
+
+procedure both_ways_answer(Key?, AgentToUserStream?, Stream(AgentContent), UserInStream).
+both_ways_answer(Me, [msg(agent, person, befriend(From, P)) | Outs], Seen?,
+                 [msg(person, Me?, decision(yes, From?, P?)) | Cmds?]) :-
+    both_ways_answer(Me?, Outs?, Seen, Cmds).
+both_ways_answer(Me, [msg(agent, person, connected(F)) | Outs], [connected(F?) | Seen?], Cmds?) :-
+    both_ways_answer(Me?, Outs?, Seen, Cmds).
+both_ways_answer(Me, [msg(agent, person, rejected(F)) | Outs], [rejected(F?) | Seen?], Cmds?) :-
+    both_ways_answer(Me?, Outs?, Seen, Cmds).
+both_ways_answer(Me, [_ | Outs], Seen?, Cmds?) :-
+    otherwise | both_ways_answer(Me?, Outs?, Seen, Cmds).
+both_ways_answer(_, [], [], []).
 
 %% =============================================================================
 %% play_invite_timed(Ms): play_invite, timed --- the milliseconds from the
@@ -179,7 +219,7 @@ play_invite_timed(Ms?) :-
     bob_person(C?, CSig?, yes, BobUiRaw, BobOut?, BobSeen?, BobIn),
     opened_at(BobUi?, T0?, Ms).
 
-procedure sink(Stream(X)?).
+procedure(X) sink(Stream(X)?).
 sink([_ | Xs]) :- sink(Xs?).
 sink([]).
 
@@ -500,8 +540,8 @@ alice_warm_run([msg(agent, person, connected(carol)) | Outs],
 alice_warm_run([msg(agent, person, connected(bob)) | Outs], Cmds?) :-
     send_to_user([sg(connected(bob))]),
     alice_warm_run(Outs?, Cmds).
-alice_warm_run([msg(agent, person, befriend_intro(carol, bob, Ch)) | Outs],
-               [msg(person, alice, accept_intro(bob, channel(Ch?))) | Cmds?]) :-
+alice_warm_run([msg(agent, person, befriend_intro(carol, bob, P)) | Outs],
+               [msg(person, alice, accept_intro(bob, P?)) | Cmds?]) :-
     send_to_user([sg(intro_from(carol, bob))]),
     alice_warm_run(Outs?, Cmds).
 alice_warm_run([_ | Outs], Cmds?) :- otherwise | alice_warm_run(Outs?, Cmds).
@@ -521,8 +561,8 @@ bob_warm(C, CK, CSig, Ui?, Outs,
     bob_warm_run(Outs?, Cmds).
 
 procedure bob_warm_run(AgentToUserStream?, UserInStream).
-bob_warm_run([msg(agent, person, befriend_intro(carol, alice, Ch)) | Outs],
-             [msg(person, bob, accept_intro(alice, channel(Ch?))) | Cmds?]) :-
+bob_warm_run([msg(agent, person, befriend_intro(carol, alice, P)) | Outs],
+             [msg(person, bob, accept_intro(alice, P?)) | Cmds?]) :-
     send_to_user([sg(intro_from(carol, alice))]),
     bob_warm_run(Outs?, Cmds).
 bob_warm_run([msg(agent, person, connected(Who)) | Outs], Cmds?) :-
@@ -544,8 +584,8 @@ carol_warm(C, CK, CSig, Ui?, Outs,
     carol_warm_run(Outs?, Cmds).
 
 procedure carol_warm_run(AgentToUserStream?, UserInStream).
-carol_warm_run([msg(agent, person, befriend(Who, Resp?)) | Outs],
-               [msg(person, carol, decision(yes, Who?, response(Resp))) | Cmds?]) :-
+carol_warm_run([msg(agent, person, befriend(Who, P)) | Outs],
+               [msg(person, carol, decision(yes, Who?, P?)) | Cmds?]) :-
     ground(Who?) |
     send_to_user([sg(cold_call(Who?))]),
     carol_warm_run(Outs?, Cmds).
@@ -590,19 +630,17 @@ play_coins(ScreenA?, ScreenB?) :-
     coin_person(bob, PersonEndB?, [mint(2), accept(alice)], ScreenB).
 
 %% The person's end of the cards-and-answers channel: the screen messages,
-%% read off the events; no card is answered here.
+%% read off the events.  The person answers no card here, and closes her
+%% answers when the events close.
 procedure screen_of(Channel(Stream(Event), Stream(UserAnswer))?, Stream(ScreenContent)).
-screen_of(ch(Events, Answers?), Screen?) :- hold_answers(Answers), screen_events(Events?, Screen).
+screen_of(ch(Events, Answers?), Screen?) :- screen_events(Events?, Screen, Answers).
 
-procedure hold_answers(Stream(UserAnswer)).
-hold_answers(X?) :- true.
-
-procedure screen_events(Stream(Event)?, Stream(ScreenContent)).
-screen_events([msg(_, _, X) | Es], [X? | Screen?]) :- ground(X?) | screen_events(Es?, Screen).
-screen_events([card(_, _, _) | Es], Screen?) :- screen_events(Es?, Screen).
-screen_events([closed(_) | Es], Screen?) :- screen_events(Es?, Screen).
-screen_events([aborted(_) | Es], Screen?) :- screen_events(Es?, Screen).
-screen_events([], []).
+procedure screen_events(Stream(Event)?, Stream(ScreenContent), Stream(UserAnswer)).
+screen_events([msg(_, _, X) | Es], [X? | Screen?], Answers?) :- ground(X?) | screen_events(Es?, Screen, Answers).
+screen_events([card(_, _, _) | Es], Screen?, Answers?) :- screen_events(Es?, Screen, Answers).
+screen_events([closed(_) | Es], Screen?, Answers?) :- screen_events(Es?, Screen, Answers).
+screen_events([aborted(_) | Es], Screen?, Answers?) :- screen_events(Es?, Screen, Answers).
+screen_events([], [], []).
 
 procedure alice_coins_person(Content?, String?, Channel(Stream(UserAnswer), Stream(Event))?, AgentToUserStream?, UserInStream).
 alice_coins_person(C, CSig, AppEnd, Outs,
@@ -624,8 +662,8 @@ bob_coins_person(C, CSig, AppEnd, Outs,
     bob_coins_run(Outs?, Cmds).
 
 procedure bob_coins_run(AgentToUserStream?, UserInStream).
-bob_coins_run([msg(agent, person, befriend(alice, Resp?)) | Outs],
-              [msg(person, bob, decision(yes, alice, response(Resp))) | Cmds?]) :-
+bob_coins_run([msg(agent, person, befriend(alice, P)) | Outs],
+              [msg(person, bob, decision(yes, alice, P?)) | Cmds?]) :-
     bob_coins_run(Outs?, Cmds).
 bob_coins_run([_ | Outs], Cmds?) :- otherwise | bob_coins_run(Outs?, Cmds).
 bob_coins_run([], []).
@@ -729,8 +767,8 @@ bob_cssn_person(C, CSig, AppEnd, Outs,
     bob_cssn_run(Outs?, Cmds).
 
 procedure bob_cssn_run(AgentToUserStream?, UserInStream).
-bob_cssn_run([msg(agent, person, befriend(alice, Resp?)) | Outs],
-             [msg(person, bob, decision(yes, alice, response(Resp))) | Cmds?]) :-
+bob_cssn_run([msg(agent, person, befriend(alice, P)) | Outs],
+             [msg(person, bob, decision(yes, alice, P?)) | Cmds?]) :-
     bob_cssn_run(Outs?, Cmds).
 bob_cssn_run([_ | Outs], Cmds?) :- otherwise | bob_cssn_run(Outs?, Cmds).
 bob_cssn_run([], []).
@@ -753,16 +791,14 @@ procedure cg_rest(Stream(CsAppNotify)?, Stream(CsAppCmd), Stream(CsAppNotify)).
 cg_rest([N | Ns], Cmds?, [N? | Seen?]) :- ground(N?) | cg_rest(Ns?, Cmds, Seen).
 cg_rest([], [], []).
 
-%% The person who only watches, and commands nothing.
+%% The person who only watches, and commands nothing: her commands close when
+%% the notifications close.
 procedure cssn_onlooker(Channel(Stream(CsAppNotify), Stream(CsAppCmd))?, Stream(CsAppNotify)).
-cssn_onlooker(ch(Notify, Cmds?), Seen?) :- hold_cmds(Cmds), pass_notify(Notify?, Seen).
+cssn_onlooker(ch(Notify, Cmds?), Seen?) :- pass_notify(Notify?, Seen, Cmds).
 
-procedure hold_cmds(Stream(CsAppCmd)).
-hold_cmds(X?) :- true.
-
-procedure pass_notify(Stream(CsAppNotify)?, Stream(CsAppNotify)).
-pass_notify([N | Ns], [N? | Seen?]) :- ground(N?) | pass_notify(Ns?, Seen).
-pass_notify([], []).
+procedure pass_notify(Stream(CsAppNotify)?, Stream(CsAppNotify), Stream(CsAppCmd)).
+pass_notify([N | Ns], [N? | Seen?], Cmds?) :- ground(N?) | pass_notify(Ns?, Seen, Cmds).
+pass_notify([], [], []).
 
 %% =============================================================================
 %% play_both(ScreenA, ScreenB, SeenA, SeenB): ONE super-app hosting BOTH
@@ -825,8 +861,8 @@ bob_both_person(CC, CCSig, CoinsEnd, CS, CSSig, CssnEnd, Outs,
     bob_both_run(Outs?, Cmds).
 
 procedure bob_both_run(AgentToUserStream?, UserInStream).
-bob_both_run([msg(agent, person, befriend(alice, Resp?)) | Outs],
-             [msg(person, bob, decision(yes, alice, response(Resp))) | Cmds?]) :-
+bob_both_run([msg(agent, person, befriend(alice, P)) | Outs],
+             [msg(person, bob, decision(yes, alice, P?)) | Cmds?]) :-
     bob_both_run(Outs?, Cmds).
 bob_both_run([_ | Outs], Cmds?) :- otherwise | bob_both_run(Outs?, Cmds).
 bob_both_run([], []).
@@ -855,7 +891,7 @@ cp(Id, [card(respond_swap_1, ctx_respond_swap_1(From, _, _), R) | Es], As?, Scri
     ground(From?), ground(R?) |
     try_step(Id?, Es?, As, Script?, Open?, [swap_card(From?, R?) | Swaps?], P?, Screen).
 cp(Id, [card(L, _, _) | Es], As?, Script, Open, Swaps, P, Screen?) :-
-    ~(L? =?= agent_1), ~(L? =?= agent_2), ~(L? =?= respond_swap_1) |
+    L? =?\= agent_1, L? =?\= agent_2, L? =?\= respond_swap_1 |
     cp(Id?, Es?, As, Script?, Open?, Swaps?, P?, Screen).
 cp(Id, [closed(R) | Es], As?, Script, open(M, S), Swaps, P, Screen?) :-
     ground(R?) |
@@ -945,7 +981,10 @@ act(wait, Id, Es, As?, Script, Open, Swaps, Screen?) :-
 %% accord.  Her stream up to the social graph closes with it, her super-app
 %% returns her entry to idle, and she invites bob a second time: the mini-app
 %% is activated afresh by run/3, and the new conversation reaches bob's
-%% execution, which never ended.
+%% execution, which never ended.  Her person stream closes after the play's
+%% last observation, bob's second opened(alice), greeted(alice), and her
+%% super-app ends with it (GSG Section 5.1); his closes when his agent's
+%% stream to him closes.
 %%
 %% What the second pair of entries on bob's stream fences: without the return
 %% alice's entry would still say running, and the root channel of the second
@@ -955,7 +994,7 @@ act(wait, Id, Es, As?, Script, Open, Swaps, Screen?) :-
 %%
 %% Expected: A = [opened(bob), greeted(bob)], closed, her execution having
 %% ended; B = [opened(alice), greeted(alice), opened(alice), greeted(alice) | _],
-%% → suspended (bob's execution and both persons stand).
+%% → suspended (bob's execution and his person stand).
 %% =============================================================================
 exported procedure play_reinvite(AppUiStream, AppUiStream).
 play_reinvite(AliceUi?, BobUi?) :-
@@ -964,34 +1003,46 @@ play_reinvite(AliceUi?, BobUi?) :-
     certified(C?, _, CSig),
     agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
     tee(AliceUiRaw?, AliceUi, AliceSeen),
-    alice_reinvite(C?, CSig?, AliceUiRaw, AliceOut?, AliceSeen?, AliceIn),
+    alice_reinvite(C?, CSig?, AliceUiRaw, AliceOut?, AliceSeen?, BobSeen?, AliceIn),
     agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
-    bob_reinvite(C?, CSig?, BobUi, BobOut?, BobIn).
+    tee(BobUiRaw?, BobUi, BobSeen),
+    bob_reinvite(C?, CSig?, BobUiRaw, BobOut?, BobIn).
 
 %% Alice's person: install the mini-app and cold-call bob.
-procedure alice_reinvite(Content?, String?, AppUiStream, AgentToUserStream?, AppUiStream?, UserInStream).
-alice_reinvite(M, CSig, Ui?, Outs, Seen,
+procedure alice_reinvite(Content?, String?, AppUiStream, AgentToUserStream?, AppUiStream?, AppUiStream?, UserInStream).
+alice_reinvite(M, CSig, Ui?, Outs, Seen, BobSeen,
                [msg(person, alice, install(ping, M?, CSig?, Ui)),
                 msg(person, alice, connect(bob)) | Cmds?]) :-
-    alice_reinvite_wait(Outs?, Seen?, Cmds).
+    alice_reinvite_wait(Outs?, Seen?, BobSeen?, Cmds).
 
 %% Once connected, invite bob.
-procedure alice_reinvite_wait(AgentToUserStream?, AppUiStream?, UserInStream).
-alice_reinvite_wait([msg(agent, person, connected(bob)) | _], Seen,
+procedure alice_reinvite_wait(AgentToUserStream?, AppUiStream?, AppUiStream?, UserInStream).
+alice_reinvite_wait([msg(agent, person, connected(bob)) | _], Seen, BobSeen,
                     [msg(person, alice, invite(ping, bob)) | Cmds?]) :-
-    alice_after_end(Seen?, Cmds).
-alice_reinvite_wait([_ | Outs], Seen, Cmds?) :-
-    otherwise | alice_reinvite_wait(Outs?, Seen?, Cmds).
-alice_reinvite_wait([], _, []).
+    alice_after_end(Seen?, BobSeen?, Cmds).
+alice_reinvite_wait([_ | Outs], Seen, BobSeen, Cmds?) :-
+    otherwise | alice_reinvite_wait(Outs?, Seen?, BobSeen?, Cmds).
+alice_reinvite_wait([], _, _, []).
 
 %% Her mini-app's person stream has closed: the execution ended, so her entry
-%% has returned to idle.  Invite bob again, and leave her own stream open ---
-%% closing it would close her super-app, and the second execution with it.
-procedure alice_after_end(AppUiStream?, UserInStream).
-alice_after_end([], [msg(person, alice, invite(ping, bob)) | Cmds?]) :-
-    hold_person(Cmds).
-alice_after_end([_ | Seen], Cmds?) :-
-    otherwise | alice_after_end(Seen?, Cmds).
+%% has returned to idle.  Invite bob again, and keep her own stream open until
+%% the play's last observation.
+procedure alice_after_end(AppUiStream?, AppUiStream?, UserInStream).
+alice_after_end([], BobSeen, [msg(person, alice, invite(ping, bob)) | Cmds?]) :-
+    alice_after_last(BobSeen?, Cmds).
+alice_after_end([_ | Seen], BobSeen, Cmds?) :-
+    otherwise | alice_after_end(Seen?, BobSeen?, Cmds).
+
+%% The play's last observation, bob's second opened(alice), greeted(alice):
+%% the second root channel has reached bob.  Her stream then closes and her
+%% super-app ends (GSG Section 5.1), her agent closing its friend channels and
+%% the channels of every mini-app it hosts, whose peers see a crash
+%% (agent.glp's termination clause, close_outputs/1, close_host/1); where his
+%% screen shows anything else, or closes first, the observation cannot come,
+%% and her stream closes all the same.
+procedure alice_after_last(AppUiStream?, UserInStream).
+alice_after_last([opened(alice), greeted(alice), opened(alice), greeted(alice) | _], []).
+alice_after_last(_, []) :- otherwise | true.
 
 %% Bob's person: install the mini-app and consent to BOTH invitations before
 %% either offer arrives, as bob_person consents once --- the two consents
@@ -1007,18 +1058,18 @@ bob_reinvite(M, CSig, Ui?, Outs,
 %% the one that must still be there when her second invitation arrives, and
 %% closing the stream would close his super-app and the execution with it.
 procedure bob_reinvite_wait(AgentToUserStream?, UserInStream).
-bob_reinvite_wait([msg(agent, person, befriend(alice, Resp?)) | _],
-                  [msg(person, bob, decision(yes, alice, response(Resp))) | Cmds?]) :-
-    hold_person(Cmds).
+bob_reinvite_wait([msg(agent, person, befriend(alice, P)) | Outs],
+                  [msg(person, bob, decision(yes, alice, P?)) | Cmds?]) :-
+    bob_until_closed(Outs?, Cmds).
 bob_reinvite_wait([_ | Outs], Cmds?) :-
     otherwise | bob_reinvite_wait(Outs?, Cmds).
 bob_reinvite_wait([], []).
 
-%% A person stream left open: the play ends suspended rather than closing a
-%% super-app that still hosts a running mini-app.  (hold_cmds/1 above is the
-%% child-safe platform's command stream and is a different type.)
-procedure hold_person(UserInStream).
-hold_person(X?) :- true.
+%% His person stream closes when his agent's stream to him closes, his agent
+%% having ended.
+procedure bob_until_closed(AgentToUserStream?, UserInStream).
+bob_until_closed([_ | Outs], Cmds?) :- bob_until_closed(Outs?, Cmds).
+bob_until_closed([], []).
 
 %% =============================================================================
 %% play_sovereign: the denominated currencies mini-app (programs/currencies/sovereign/
@@ -1053,21 +1104,18 @@ play_sovereign(ScreenA?, ScreenB?) :-
     sv_screen_of(PersonEndB?, ScreenB).
 
 %% The person's end of the cards-and-answers channel, as screen_of/2 is for the
-%% currency: the screen messages read off the events, no card answered.
+%% currency: the screen messages read off the events, no card answered, and
+%% the answers closed when the events close.
 procedure sv_screen_of(Channel(Stream(SvEvent), Stream(SvUserAnswer))?, Stream(SvScreenContent)).
 sv_screen_of(ch(Events, Answers?), Screen?) :-
-    sv_hold_answers(Answers),
-    sv_screen_events(Events?, Screen).
+    sv_screen_events(Events?, Screen, Answers).
 
-procedure sv_hold_answers(Stream(SvUserAnswer)).
-sv_hold_answers(X?) :- true.
-
-procedure sv_screen_events(Stream(SvEvent)?, Stream(SvScreenContent)).
-sv_screen_events([msg(_, _, X) | Es], [X? | Screen?]) :- ground(X?) | sv_screen_events(Es?, Screen).
-sv_screen_events([card(_, _, _) | Es], Screen?) :- sv_screen_events(Es?, Screen).
-sv_screen_events([closed(_) | Es], Screen?) :- sv_screen_events(Es?, Screen).
-sv_screen_events([aborted(_) | Es], Screen?) :- sv_screen_events(Es?, Screen).
-sv_screen_events([], []).
+procedure sv_screen_events(Stream(SvEvent)?, Stream(SvScreenContent), Stream(SvUserAnswer)).
+sv_screen_events([msg(_, _, X) | Es], [X? | Screen?], Answers?) :- ground(X?) | sv_screen_events(Es?, Screen, Answers).
+sv_screen_events([card(_, _, _) | Es], Screen?, Answers?) :- sv_screen_events(Es?, Screen, Answers).
+sv_screen_events([closed(_) | Es], Screen?, Answers?) :- sv_screen_events(Es?, Screen, Answers).
+sv_screen_events([aborted(_) | Es], Screen?, Answers?) :- sv_screen_events(Es?, Screen, Answers).
+sv_screen_events([], [], []).
 
 procedure alice_sv_person(Content?, String?, Channel(Stream(SvUserAnswer), Stream(SvEvent))?, AgentToUserStream?, UserInStream).
 alice_sv_person(C, CSig, AppEnd, Outs,
@@ -1089,8 +1137,8 @@ bob_sv_person(C, CSig, AppEnd, Outs,
     bob_sv_run(Outs?, Cmds).
 
 procedure bob_sv_run(AgentToUserStream?, UserInStream).
-bob_sv_run([msg(agent, person, befriend(alice, Resp?)) | Outs],
-           [msg(person, bob, decision(yes, alice, response(Resp))) | Cmds?]) :-
+bob_sv_run([msg(agent, person, befriend(alice, P)) | Outs],
+           [msg(person, bob, decision(yes, alice, P?)) | Cmds?]) :-
     bob_sv_run(Outs?, Cmds).
 bob_sv_run([_ | Outs], Cmds?) :- otherwise | bob_sv_run(Outs?, Cmds).
 bob_sv_run([], []).

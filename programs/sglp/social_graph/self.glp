@@ -1,0 +1,83 @@
+%% The Grassroots Social Graph in sGLP (sGLP's paper, the repository
+%% svGLP-Stochastic-Volitional-GLP, Section 5, "Example: The Grassroots Social
+%% Graph"; Section 4, "The transformation"): this directory's interface and
+%% the vGLP program's types.
+%%
+%%   graph_sglp.glp  the sGLP source in the term form (programs/sglp/README.md),
+%%                its profiles and its run declaration, and the vGLP program's
+%%                interface the transformation reads;
+%%   graph.vglp   the vGLP program of Section 5, its types and volitional
+%%                procedures as Section 5 prints them and the agent's clauses
+%%                as it describes them;
+%%   graph.glp    its canonical compilation (vGLP, Definition "Canonical
+%%                Compilation"), written by hand, vGLP's compilation being
+%%                vGLP's and not the transformation's;
+%%   profiles.glp the four profiles translated, and
+%%   population.glp  the person process, the run declaration and each agent's
+%%                stochastic person: both printed by programs/sglp/transform.sh
+%%                from graph_sglp.glp, and not edited;
+%%   harness.glp  the run: the network, the monitor, the log's sink and each
+%%                agent's initial goal, the machine's setup, by hand;
+%%   run.sh       a run through the REPL, its log and its friendship graph;
+%%   friendship.awk  the friendship graph from a run's log, at its end and at
+%%                the end of each month.
+%%
+%% The run is a program of programs/sglp, the directory above; load
+%% programs/sglp and call social_graph/4 there, or social_graph/6 for another
+%% mix.
+
+%% The vGLP program's types, verbatim (graph.vglp; sGLP's paper, Section 5).
+Peer    ::= Constant.
+YesNo   ::= yes ; no.
+Peers   ::= [] ; [Peer | Peers].
+Choice  ::= same(Peer) ; other(Peer).
+Menu    ::= menu(Peers, Peers, Choice?).
+Card    ::= card(Peer, YesNo?).
+Content ::= offer(Peer) ; reply(Peer, YesNo).
+Msg     ::= msg(Peer, Content).
+
+%% The type of the asks, which the canonical compilation adds (vGLP,
+%% Definition "Canonical Compilation"): an ask, ask(T, t(X)), is the
+%% interactive type T as a constant and, under the functor t the compilation
+%% gives T, the person's end X of the question's interactive variable;
+%% Question is the union over those functors, each type in its mode, Menu and
+%% Card being in writer mode.  t is the type's name in lowercase with _w for
+%% writer mode, menu_w and card_w (graph.glp).  The harness hands the ask
+%% stream of each agent's start goal to its person process (population.glp,
+%% person/6).
+Ask      ::= ask(Constant, Question).
+Question ::= menu_w(Menu) ; card_w(Card).
+
+%% A stochastic person, one profile per dimension, as the harness hands it from
+%% the population's draw to the person process (population.glp): Approach and
+%% Response are programs/sglp/self.glp's.
+Profiles ::= profiles(Approach, Response).
+
+imported procedure harness#run(Integer?, Number?, Span?, Integer?, Integer?,
+                               Integer?).
+imported procedure harness#draw(Integer?, Integer?, Integer?, Integer?, Draw).
+
+%% run(Agents?, Count?, Unit?, Seed?, Hom?, Wary?): the run, harness.glp, with
+%% the mix given by Hom and Wary, integers 0..100.
+exported procedure run(Integer?, Number?, Span?, Integer?, Integer?, Integer?).
+run(N, C, U, Seed, Hom, Wary) :- harness # run(N?, C?, U?, Seed?, Hom?, Wary?).
+
+%% draw(Agents?, Seed?, Hom?, Wary?, D): the population's draw in that run,
+%% its counts and each agent's profiles, harness.glp, without running it.
+exported procedure draw(Integer?, Integer?, Integer?, Integer?, Draw).
+draw(N, Seed, Hom, Wary, D?) :- harness # draw(N?, Seed?, Hom?, Wary?, D).
+
+%% declaration(N, C, U, Seed, Hom, Wary): the run declaration, its agents, its
+%% horizon, its seed and its mix's thresholds (population.glp).
+imported procedure population#declaration(Integer, Number, Span, Integer,
+                                          Integer, Integer).
+exported procedure declaration(Integer, Number, Span, Integer, Integer,
+                               Integer).
+declaration(N?, C?, U?, Seed?, Hom?, Wary?) :-
+    population # declaration(N, C, U, Seed, Hom, Wary).
+
+%% The sGLP source of this program in the term form (README.md, "The term
+%% form"), graph_sglp.glp, for the transformation (programs/sglp/transform.glp).
+imported procedure graph_sglp#source(SglpTerms, SglpTerms).
+exported procedure source(SglpTerms, SglpTerms).
+source(V?, S?) :- graph_sglp # source(V, S).

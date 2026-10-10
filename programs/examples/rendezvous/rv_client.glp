@@ -13,19 +13,26 @@
 %%     agent S.  When B detects that A went silent, B sends an available
 %%     cold-call to A's RV agent S (which B learned while connected).
 %%   - Both sides converge on the same RV agent S (A's own), which matches
-%%     them and binds their reply variables to `initiated` and `punch(addr)`.
+%%     them and binds each one's reply variable to `punch(Addr)`, Addr the
+%%     address S observes for the other: A's to B's address, B's to A's.
 %%
 %% This module provides the client-side building blocks used by a real
 %% agent loop:
 %%   make_reconnect/5 — build a reconnect cold-call message + reply
-%%   make_available/4 — build an available cold-call message + reply
+%%   make_available/5 — build an available cold-call message + reply
 %%   handle_reply/1   — dispatch on reply: punch(Addr) → punch_udp(Addr)
 %%
-%% Note: the reconnect cold-call no longer carries A's address.  The RV
-%% agent discovers A's current address from the incoming packet's source
-%% via peer_address (a body system predicate on the server side).  It
-%% carries the reconnection attestation instead: the signer's key and the
-%% signature over attest(A, B), which the RV agent verifies in a guard.
+%% Note: neither cold-call carries its sender's address.  The RV agent
+%% discovers each one's current address from the networking layer via
+%% peer_address (a system predicate on the server side).  Each carries a
+%% reconnection attestation instead, minted on befriending: on befriending
+%% each friend signs the one pair attest(PkA, PkB), PkA being the
+%% lexicographically smaller key (PkA @< PkB), and gives the signature to
+%% the other.  A's reconnect carries B's signature over the pair, B's
+%% available A's, and neither names a separate signer.  The RV agent takes
+%% each apart with signature/2 and admits it only where the signer is the
+%% other party, the signing program the social graph, and the term the
+%% pair in that order.
 %%
 %% The tests wire these together with rv_agent to show the full end-to-end
 %% scenario in a single process.
@@ -39,33 +46,37 @@
 %% =============================================================================
 
 %% Reply carried back from the RV agent via the shared reply variable
-SignalReply ::= punch(Constant) ; initiated ; rejected.
+SignalReply ::= punch(String) ; rejected.
 
 %% Messages sent to the RV agent as cold-calls
-SignalMsg ::= reconnect(Constant, Constant, Constant, Constant, SignalReply?)
-              %% reconnect(A_pk, B_pk, Signer, Sig, Reply)
-            ; available(Constant, Constant, SignalReply?).
-              %% available(B_pk, A_pk, Reply)
+SignalMsg ::= reconnect(Key, Key, SignedTerm, SignalReply?)
+              %% reconnect(A_pk, B_pk, SigB, Reply) — SigB is B's
+              %% signature over the pair attest(PkA, PkB), PkA @< PkB
+            ; available(Key, Key, SignedTerm, SignalReply?).
+              %% available(B_pk, A_pk, SigA, Reply) — SigA is A's
+              %% signature over the same pair
 
 %% =============================================================================
 %% make_reconnect: build a reconnect cold-call message
 %% =============================================================================
 %%
 %% Called by agent A when its own IP changes.  Produces (Msg, Reply):
-%%   Msg is a reconnect(A, B, Signer, Sig, _) message ready to be sent to
-%%   A's own RV agent, with a fresh reply variable embedded.  Sig is the
-%%   reconnection attestation — Signer's signature over attest(A, B) —
-%%   which the RV agent verifies in a guard before coordinating.  The RV
-%%   agent will read A's current address from the incoming packet's source.
+%%   Msg is a reconnect(A, B, Sig, _) message ready to be sent to A's own
+%%   RV agent, with a fresh reply variable embedded.  Sig is the
+%%   reconnection attestation — B's signature over the pair of A's and B's
+%%   keys in the fixed order, which B gave A on befriending — which the RV
+%%   agent takes apart with signature/2 before coordinating.  The RV agent
+%%   will read A's current address from the networking layer.
 %%   Reply is the paired reader that A uses to observe the RV agent's
 %%   response: punch(AddrB) means bob is waiting and A should hole-punch
-%%   to AddrB; initiated means A will wait for bob's punch; rejected means
-%%   the attestation did not verify.
+%%   to AddrB; rejected means the request was refused: the attestation
+%%   unsigned, or not B's signature over the pair under the social graph,
+%%   or no address observed for A.
 
-exported procedure make_reconnect(Constant?, Constant?, Constant?, Constant?,
+exported procedure make_reconnect(Key?, Key?, SignedTerm?,
                                   SignalMsg, SignalReply).
-make_reconnect(A, B, Signer, Sig,
-               reconnect(A?, B?, Signer?, Sig?, Reply),
+make_reconnect(A, B, Sig,
+               reconnect(A?, B?, Sig?, Reply),
                Reply?).
 
 %% =============================================================================
@@ -74,15 +85,19 @@ make_reconnect(A, B, Signer, Sig,
 %%
 %% Called by agent B when the networking layer reports that friend A went
 %% silent.  Produces (Msg, Reply):
-%%   Msg is an available(B, A, _) message ready to be sent to A's RV agent
-%%   (which B knows from its friends list entry for A).
+%%   Msg is an available(B, A, Sig, _) message ready to be sent to A's RV
+%%   agent (which B knows from its friends list entry for A).  Sig is A's
+%%   signature over the same pair, which A gave B on befriending; the RV
+%%   agent verifies it as it verifies the reconnect request.
 %%   Reply is the paired reader that B uses to observe the RV agent's
 %%   response: punch(AddrA) means A is reconnecting and B should
-%%   hole-punch to AddrA.
+%%   hole-punch to AddrA; rejected means the request was refused, as a
+%%   reconnect is.
 
-exported procedure make_available(Constant?, Constant?, SignalMsg, SignalReply).
-make_available(B, A,
-               available(B?, A?, Reply),
+exported procedure make_available(Key?, Key?, SignedTerm?,
+                                  SignalMsg, SignalReply).
+make_available(B, A, Sig,
+               available(B?, A?, Sig?, Reply),
                Reply?).
 
 %% =============================================================================
@@ -90,13 +105,13 @@ make_available(B, A,
 %% =============================================================================
 %%
 %% When the reply variable is bound by the RV agent, the agent should:
-%%   punch(Addr) → call punch_udp(Addr) to initiate UDP hole-punch
-%%   initiated   → no immediate action; wait for peer to hole-punch
-%%   rejected    → the attestation did not verify; give up
+%%   punch(Addr) → call punch_udp(Addr) to initiate UDP hole-punch to the
+%%                 other party's address; both parties get one, so both
+%%                 punch, and the deterministic initiator connects
+%%   rejected    → the request was refused; give up
 
 exported procedure handle_reply(SignalReply?).
 handle_reply(punch(Addr)) :- ground(Addr?) | punch_udp(Addr?).
-handle_reply(initiated).
 handle_reply(rejected).
 
 %% =============================================================================

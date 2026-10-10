@@ -5,12 +5,12 @@
 Cmd(X) ::= stream(Stream(X)) ; merge(Cmds(X)).
 Cmds(X) ::= [] ; [Cmd(X) | Cmds(X)].
 
-procedure pmwm(Cmds(X)?, Stream(X)).
+procedure(X) pmwm(Cmds(X)?, Stream(X)).
 pmwm(In, Out?) :-
     allocate_mutual_reference(Ref, Out),
     pmwm_main(In?, Ref?).
 
-procedure pmwm_main(Cmds(X)?, _?).
+procedure(X) pmwm_main(Cmds(X)?, _?).
 pmwm_main(In, Ref) :-
     is_mutual_ref(Ref?) |
     pmwm1(In?, Ref?, done, Done),
@@ -18,7 +18,7 @@ pmwm_main(In, Ref) :-
 
 Done ::= done.
 
-procedure pmwm1(Cmds(X)?, _?, Done?, Done).
+procedure(X) pmwm1(Cmds(X)?, _?, Done?, Done).
 pmwm1([stream(Xs)|Streams], Ref, L, R?) :-
     is_mutual_ref(Ref?) |
     pmwm_copy(Xs?, Ref?, L?, M),
@@ -29,7 +29,7 @@ pmwm1([merge(NewIn)|Streams], Ref, L, R?) :-
     pmwm1(Streams?, Ref?, M?, R).
 pmwm1([], _, L, L?).
 
-procedure pmwm_copy(Stream(X)?, _?, Done?, Done).
+procedure(X) pmwm_copy(Stream(X)?, _?, Done?, Done).
 pmwm_copy([X|Xs], Ref, L, R?) :-
     is_mutual_ref(Ref?) |
     stream_append(X?, Ref?, Ref1),

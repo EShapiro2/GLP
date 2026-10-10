@@ -1,0 +1,9 @@
+%% See open_typed.glp: p(S?, 1) where r/2 reads a Pair, S a String where Pair
+%% has an Integer, X open.  Refused.
+Pair ::= p(Integer, Integer).
+
+procedure(X) r(Pair?, Stream(X)).
+r(_, []).
+
+procedure bad_inside(String?).
+bad_inside(S) :- r(p(S?, 1), _).

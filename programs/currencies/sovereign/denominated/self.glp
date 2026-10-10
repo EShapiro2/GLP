@@ -8,12 +8,23 @@
 %% program is refused where any entry point reaches the person or the network,
 %% and the parent's village play does (send_to_user/1): loaded here, without
 %% it, the program is certified, and its module value is the mini-app the
-%% super-app installs and activates by run/3.  Loaded as part of ../ (the
-%% village and credit-line plays), its modules are found by name.
+%% super-app installs and activates by run/3.  The parent's plays
+%% (../village.glp, ../play_ui.glp) call sovereign/4, the mini-app with its
+%% calendar, and the scripted person/7 through this directory, which exports
+%% both (TGLP modules.tex: a qualifier is a single child directory, entered
+%% through its self.glp).
 
-imported procedure miniapp#sovereign(Constant?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
-exported procedure sovereign(Constant?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
+imported procedure miniapp#sovereign(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
+exported procedure sovereign(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
 sovereign(Id, Ui, Convs) :- miniapp # sovereign(Id?, Ui?, Convs?).
+
+imported procedure miniapp#sovereign(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?, Stream(Integer)?).
+exported procedure sovereign(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?, Stream(Integer)?).
+sovereign(Id, Ui, Convs, Cal) :- miniapp # sovereign(Id?, Ui?, Convs?, Cal?).
+
+imported procedure person#person(Key?, Stream(Event)?, Stream(UserAnswer), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
+exported procedure person(Key?, Stream(Event)?, Stream(UserAnswer), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
+person(Id, Events, Answers?, Cal?, Script, Ag, Screen?) :- person # person(Id?, Events?, Answers, Cal, Script?, Ag?, Screen).
 
 imported procedure plays#play_mint(Stream(ScreenContent)).
 exported procedure play_mint(Stream(ScreenContent)).

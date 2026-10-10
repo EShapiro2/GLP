@@ -26,6 +26,8 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>GrassrootsAppIdentifierPrefix</key>
+	<string>$(AppIdentifierPrefix)</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>This app needs Bluetooth to communicate with nearby devices in the mesh network</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>

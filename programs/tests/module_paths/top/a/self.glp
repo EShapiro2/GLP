@@ -1,0 +1,3 @@
+imported procedure h#run(Integer).
+exported procedure run(Integer).
+run(X?) :- h # run(X).

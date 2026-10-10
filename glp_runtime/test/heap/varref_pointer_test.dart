@@ -1,6 +1,7 @@
 /// Tests for VarRef structure with Pointer Architecture
 ///
-/// For spec: docs/heap-pointer-architecture-spec.md v3.0
+/// For spec: IGLP app:in-heap (Heap: Variables, Dereferencing,
+/// Binding, Suspension)
 ///
 /// In the new architecture, VarRef has only an addr field.
 /// The cell's tag determines whether it's a reader or writer.
@@ -10,25 +11,32 @@ import 'package:test/test.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/heap_fcp.dart';
 
+/// A cell of serial number [id], the same cell for the same number: these
+/// tests name a variable by its cell's number, a VarRef holding the cell
+/// itself (IGLP app:in-heap, Variable pairs).
+final _cells = <int, HeapCell>{};
+HeapCell _c(int id) =>
+    _cells.putIfAbsent(id, () => HeapCell(null, CellTag.WrtTag, id));
+
 void main() {
   group('VarRef Structure - Pointer Architecture', () {
     test('VarRef has only addr field', () {
-      final ref = VarRef(42);
-      expect(ref.addr, equals(42));
+      final ref = VarRef(_c(42));
+      expect(ref.addr.id, equals(42));
     });
 
     test('VarRef equality based on addr only', () {
-      final ref1 = VarRef(100);
-      final ref2 = VarRef(100);
-      final ref3 = VarRef(101);
+      final ref1 = VarRef(_c(100));
+      final ref2 = VarRef(_c(100));
+      final ref3 = VarRef(_c(101));
 
       expect(ref1, equals(ref2));
       expect(ref1, isNot(equals(ref3)));
     });
 
     test('VarRef hashCode consistent with equality', () {
-      final ref1 = VarRef(100);
-      final ref2 = VarRef(100);
+      final ref1 = VarRef(_c(100));
+      final ref2 = VarRef(_c(100));
 
       expect(ref1.hashCode, equals(ref2.hashCode));
     });
@@ -153,28 +161,28 @@ void main() {
 
   group('VarRef in Collections', () {
     test('VarRef can be used in Set', () {
-      final ref1 = VarRef(10);
-      final ref2 = VarRef(10);
-      final ref3 = VarRef(20);
+      final ref1 = VarRef(_c(10));
+      final ref2 = VarRef(_c(10));
+      final ref3 = VarRef(_c(20));
 
       final set = <VarRef>{ref1, ref2, ref3};
 
       // ref1 and ref2 are equal, so set should have 2 elements
       expect(set.length, equals(2));
-      expect(set.contains(VarRef(10)), isTrue);
-      expect(set.contains(VarRef(20)), isTrue);
+      expect(set.contains(VarRef(_c(10))), isTrue);
+      expect(set.contains(VarRef(_c(20))), isTrue);
     });
 
     test('VarRef can be used as Map key', () {
       final map = <VarRef, String>{};
 
-      map[VarRef(10)] = 'first';
-      map[VarRef(20)] = 'second';
-      map[VarRef(10)] = 'updated'; // Should update, not add
+      map[VarRef(_c(10))] = 'first';
+      map[VarRef(_c(20))] = 'second';
+      map[VarRef(_c(10))] = 'updated'; // Should update, not add
 
       expect(map.length, equals(2));
-      expect(map[VarRef(10)], equals('updated'));
-      expect(map[VarRef(20)], equals('second'));
+      expect(map[VarRef(_c(10))], equals('updated'));
+      expect(map[VarRef(_c(20))], equals('second'));
     });
   });
 }

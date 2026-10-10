@@ -14,32 +14,34 @@
 %% IMPORTED PROCEDURES — Cross-module dependencies
 %% =============================================================================
 
-%% From agent.glp (sibling)
-imported procedure agent#agent(Constant?, UserInStream?, NetInStream?, OutputsList?).
+%% From core/, its self.glp forwarding to core/agent.glp (TGLP, Section
+%% "Module System": a qualifier names a child directory of the caller's,
+%% entered through its self.glp)
+imported procedure core#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 
-%% From ui/mediator.glp
-imported procedure mediator#ui_mediator(Constant?, AgentChannel?, UserChannel?, PendingList?, Constant?).
+%% From ui/, its self.glp forwarding to ui/mediator.glp
+imported procedure ui#ui_mediator(Key?, AgentChannel?, UserChannel?, PendingList?, Integer?).
 
-%% From ui/actors.glp — plays 1-3
-imported procedure actors#alice1(ActorChannel?).
-imported procedure actors#bob1(ActorChannel?).
-imported procedure actors#charlie1(ActorChannel?).
-imported procedure actors#alice2(ActorChannel?).
-imported procedure actors#bob2(ActorChannel?).
-imported procedure actors#charlie2(ActorChannel?).
-imported procedure actors#alice3(ActorChannel?).
-imported procedure actors#bob3(ActorChannel?).
-imported procedure actors#charlie3(ActorChannel?).
+%% From ui/, its self.glp forwarding to ui/actors.glp — plays 1-3
+imported procedure ui#alice1(ActorChannel?).
+imported procedure ui#bob1(ActorChannel?).
+imported procedure ui#charlie1(ActorChannel?).
+imported procedure ui#alice2(ActorChannel?).
+imported procedure ui#bob2(ActorChannel?).
+imported procedure ui#charlie2(ActorChannel?).
+imported procedure ui#alice3(ActorChannel?).
+imported procedure ui#bob3(ActorChannel?).
+imported procedure ui#charlie3(ActorChannel?).
 
 %% =============================================================================
 %% LOCAL UTILITIES
 %% =============================================================================
 
-procedure tee(Stream(X)?, Stream(X), Stream(X)).
+procedure(X) tee(Stream(X)?, Stream(X), Stream(X)).
 tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
 tee([], [], []).
 
-procedure sink(Stream(X)?).
+procedure(X) sink(Stream(X)?).
 sink([_|Xs]) :- sink(Xs?).
 sink([]).
 
@@ -145,31 +147,31 @@ play1 :-
              ch(CharlieNetOut?, CharlieNetIn)),
 
     %% Alice
-    actors # alice1(ch(AliceActorIn?, AliceActorOut)),
+    ui # alice1(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+    core # agent(alice, AliceAgentIn?, AliceNetIn?,
           [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    ui # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
     sink(AliceDispCmd?), sink(AliceDispNotify?),
 
     %% Bob
-    actors # bob1(ch(BobActorIn?, BobActorOut)),
+    ui # bob1(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, BobAgentIn?, BobNetIn?,
+    core # agent(bob, BobAgentIn?, BobNetIn?,
           [user_output(BobAgentToUser), net_output(BobNetOut)]),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    ui # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
     sink(BobDispCmd?), sink(BobDispNotify?),
 
     %% Charlie
-    actors # charlie1(ch(CharlieActorIn?, CharlieActorOut)),
+    ui # charlie1(ch(CharlieActorIn?, CharlieActorOut)),
     tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
-    agent # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
+    core # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
           [user_output(CharlieAgentToUser), net_output(CharlieNetOut)]),
-    mediator # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
+    ui # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieMedIn?, CharlieMedOut), [], 1),
     tee(CharlieMedOut?, CharlieActorIn, CharlieDispNotify),
     sink(CharlieDispCmd?), sink(CharlieDispNotify?).
@@ -185,31 +187,31 @@ play2 :-
              ch(CharlieNetOut?, CharlieNetIn)),
 
     %% Alice
-    actors # alice2(ch(AliceActorIn?, AliceActorOut)),
+    ui # alice2(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+    core # agent(alice, AliceAgentIn?, AliceNetIn?,
           [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    ui # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
     sink(AliceDispCmd?), sink(AliceDispNotify?),
 
     %% Bob
-    actors # bob2(ch(BobActorIn?, BobActorOut)),
+    ui # bob2(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, BobAgentIn?, BobNetIn?,
+    core # agent(bob, BobAgentIn?, BobNetIn?,
           [user_output(BobAgentToUser), net_output(BobNetOut)]),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    ui # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
     sink(BobDispCmd?), sink(BobDispNotify?),
 
     %% Charlie
-    actors # charlie2(ch(CharlieActorIn?, CharlieActorOut)),
+    ui # charlie2(ch(CharlieActorIn?, CharlieActorOut)),
     tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
-    agent # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
+    core # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
           [user_output(CharlieAgentToUser), net_output(CharlieNetOut)]),
-    mediator # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
+    ui # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieMedIn?, CharlieMedOut), [], 1),
     tee(CharlieMedOut?, CharlieActorIn, CharlieDispNotify),
     sink(CharlieDispCmd?), sink(CharlieDispNotify?).
@@ -225,31 +227,31 @@ play3 :-
              ch(CharlieNetOut?, CharlieNetIn)),
 
     %% Alice
-    actors # alice3(ch(AliceActorIn?, AliceActorOut)),
+    ui # alice3(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+    core # agent(alice, AliceAgentIn?, AliceNetIn?,
           [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    ui # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
     sink(AliceDispCmd?), sink(AliceDispNotify?),
 
     %% Bob
-    actors # bob3(ch(BobActorIn?, BobActorOut)),
+    ui # bob3(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, BobAgentIn?, BobNetIn?,
+    core # agent(bob, BobAgentIn?, BobNetIn?,
           [user_output(BobAgentToUser), net_output(BobNetOut)]),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    ui # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
     sink(BobDispCmd?), sink(BobDispNotify?),
 
     %% Charlie
-    actors # charlie3(ch(CharlieActorIn?, CharlieActorOut)),
+    ui # charlie3(ch(CharlieActorIn?, CharlieActorOut)),
     tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
-    agent # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
+    core # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
           [user_output(CharlieAgentToUser), net_output(CharlieNetOut)]),
-    mediator # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
+    ui # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieMedIn?, CharlieMedOut), [], 1),
     tee(CharlieMedOut?, CharlieActorIn, CharlieDispNotify),
     sink(CharlieDispCmd?), sink(CharlieDispNotify?).
@@ -265,31 +267,31 @@ fplay1 :-
              ch(CharlieNetOut?, CharlieNetIn)),
 
     %% Alice
-    actors # alice1(ch(AliceActorIn?, AliceActorOut)),
+    ui # alice1(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+    core # agent(alice, AliceAgentIn?, AliceNetIn?,
           [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    ui # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
     send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     %% Bob
-    actors # bob1(ch(BobActorIn?, BobActorOut)),
+    ui # bob1(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, BobAgentIn?, BobNetIn?,
+    core # agent(bob, BobAgentIn?, BobNetIn?,
           [user_output(BobAgentToUser), net_output(BobNetOut)]),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    ui # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
     send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
 
     %% Charlie
-    actors # charlie1(ch(CharlieActorIn?, CharlieActorOut)),
+    ui # charlie1(ch(CharlieActorIn?, CharlieActorOut)),
     tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
-    agent # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
+    core # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
           [user_output(CharlieAgentToUser), net_output(CharlieNetOut)]),
-    mediator # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
+    ui # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieMedIn?, CharlieMedOut), [], 1),
     tee(CharlieMedOut?, CharlieActorIn, CharlieDispNotify),
     send_to_user_tagged(charlie, CharlieDispCmd?, CharlieDispNotify?).
@@ -301,31 +303,31 @@ fplay2 :-
              ch(CharlieNetOut?, CharlieNetIn)),
 
     %% Alice
-    actors # alice2(ch(AliceActorIn?, AliceActorOut)),
+    ui # alice2(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+    core # agent(alice, AliceAgentIn?, AliceNetIn?,
           [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    ui # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
     send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     %% Bob
-    actors # bob2(ch(BobActorIn?, BobActorOut)),
+    ui # bob2(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, BobAgentIn?, BobNetIn?,
+    core # agent(bob, BobAgentIn?, BobNetIn?,
           [user_output(BobAgentToUser), net_output(BobNetOut)]),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    ui # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
     send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
 
     %% Charlie
-    actors # charlie2(ch(CharlieActorIn?, CharlieActorOut)),
+    ui # charlie2(ch(CharlieActorIn?, CharlieActorOut)),
     tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
-    agent # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
+    core # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
           [user_output(CharlieAgentToUser), net_output(CharlieNetOut)]),
-    mediator # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
+    ui # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieMedIn?, CharlieMedOut), [], 1),
     tee(CharlieMedOut?, CharlieActorIn, CharlieDispNotify),
     send_to_user_tagged(charlie, CharlieDispCmd?, CharlieDispNotify?).
@@ -337,31 +339,31 @@ fplay3 :-
              ch(CharlieNetOut?, CharlieNetIn)),
 
     %% Alice
-    actors # alice3(ch(AliceActorIn?, AliceActorOut)),
+    ui # alice3(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+    core # agent(alice, AliceAgentIn?, AliceNetIn?,
           [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    ui # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
     send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     %% Bob
-    actors # bob3(ch(BobActorIn?, BobActorOut)),
+    ui # bob3(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, BobAgentIn?, BobNetIn?,
+    core # agent(bob, BobAgentIn?, BobNetIn?,
           [user_output(BobAgentToUser), net_output(BobNetOut)]),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    ui # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
     send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
 
     %% Charlie
-    actors # charlie3(ch(CharlieActorIn?, CharlieActorOut)),
+    ui # charlie3(ch(CharlieActorIn?, CharlieActorOut)),
     tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
-    agent # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
+    core # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
           [user_output(CharlieAgentToUser), net_output(CharlieNetOut)]),
-    mediator # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
+    ui # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieMedIn?, CharlieMedOut), [], 1),
     tee(CharlieMedOut?, CharlieActorIn, CharlieDispNotify),
     send_to_user_tagged(charlie, CharlieDispCmd?, CharlieDispNotify?).
@@ -375,7 +377,7 @@ fplay3 :-
 %% own user output (one-way: the initiator does not notify itself).
 exported procedure play_unfriend_send.
 play_unfriend_send :-
-    agent # agent(alice, [msg(person, alice, unfriend(bob))], [],
+    core # agent(alice, [msg(person, alice, unfriend(bob))], [],
                   [friend_output(bob, ToBob), user_output(AliceOut)]),
     send_to_user(ToBob?),
     send_to_user(AliceOut?).
@@ -384,7 +386,7 @@ play_unfriend_send :-
 %% his side and notify the user msg(agent, person, unfriended(alice)).
 exported procedure play_unfriend_recv.
 play_unfriend_recv :-
-    agent # agent(bob, [], [msg(alice, bob, unfriend)],
+    core # agent(bob, [], [msg(alice, bob, unfriend)],
                   [friend_output(alice, _), user_output(BobOut)]),
     send_to_user(BobOut?).
 
@@ -393,7 +395,7 @@ play_unfriend_recv :-
 %% untouched.  Covers simultaneous unfriend (the second arrival finds no edge).
 exported procedure play_unfriend_absent.
 play_unfriend_absent :-
-    agent # agent(alice, [msg(person, alice, unfriend(carol))], [],
+    core # agent(alice, [msg(person, alice, unfriend(carol))], [],
                   [friend_output(bob, _), user_output(AliceOut)]),
     send_to_user(AliceOut?).
 
@@ -402,10 +404,13 @@ play_unfriend_absent :-
 %% =============================================================================
 
 %% report_intro(Tag, Stream): what reached a friend's channel, reported without
-%% the setup channel --- send_to_user prints a ground term and the channel the
-%% introducer mints is unbound at this end.
+%% the consents --- send_to_user prints a ground term and the consent variables
+%% the introducer mints are unbound at this end.  The recipient's own consent,
+%% which the clause holds, it binds to no, as a person who does not answer.
 procedure report_intro(Constant?, FriendStream?).
-report_intro(Tag, [msg(From, To, intro(Other, _)) | _]) :-
+report_intro(Tag, [msg(From, To, introduce_propose(Other, no, _)) | _]) :-
+    send_to_user([intro_sent(Tag?, From?, To?, Other?)]).
+report_intro(Tag, [msg(From, To, introduce_accept(Other, no, _)) | _]) :-
     send_to_user([intro_sent(Tag?, From?, To?, Other?)]).
 report_intro(Tag, [_ | _]) :-
     otherwise | send_to_user([other_msg(Tag?)]).
@@ -416,7 +421,7 @@ report_intro(Tag, []) :-
 %% both friend channels, each tagged with the other's identity.
 exported procedure play_introduce_both.
 play_introduce_both :-
-    agent # agent(alice, [msg(person, alice, introduce(bob, carol))], [],
+    core # agent(alice, [msg(person, alice, introduce(bob, carol))], [],
                   [friend_output(bob, ToBob), friend_output(carol, ToCarol),
                    user_output(AliceOut)]),
     report_intro(to_bob, ToBob?),
@@ -428,7 +433,7 @@ play_introduce_both :-
 %% written on bob's channel.
 exported procedure play_introduce_one.
 play_introduce_one :-
-    agent # agent(alice, [msg(person, alice, introduce(bob, carol))], [],
+    core # agent(alice, [msg(person, alice, introduce(bob, carol))], [],
                   [friend_output(bob, ToBob), user_output(AliceOut)]),
     report_intro(to_bob, ToBob?),
     send_to_user(AliceOut?).
@@ -436,7 +441,7 @@ play_introduce_one :-
 %% Only carol is a friend: the same, and nothing is written on carol's channel.
 exported procedure play_introduce_other.
 play_introduce_other :-
-    agent # agent(alice, [msg(person, alice, introduce(bob, carol))], [],
+    core # agent(alice, [msg(person, alice, introduce(bob, carol))], [],
                   [friend_output(carol, ToCarol), user_output(AliceOut)]),
     report_intro(to_carol, ToCarol?),
     send_to_user(AliceOut?).
@@ -444,7 +449,7 @@ play_introduce_other :-
 %% Neither is a friend: no introduction, and dave's channel is untouched.
 exported procedure play_introduce_neither.
 play_introduce_neither :-
-    agent # agent(alice, [msg(person, alice, introduce(bob, carol))], [],
+    core # agent(alice, [msg(person, alice, introduce(bob, carol))], [],
                   [friend_output(dave, ToDave), user_output(AliceOut)]),
     report_intro(to_dave, ToDave?),
     send_to_user(AliceOut?).
@@ -454,7 +459,7 @@ play_introduce_neither :-
 %% anchor are both alice's friends, so the introduction goes out on both.
 exported procedure play_request_intro_both.
 play_request_intro_both :-
-    agent # agent(alice, [msg(person, alice, allow_intro(bob, carol))],
+    core # agent(alice, [msg(person, alice, allow_intro(bob, carol))],
                   [msg(bob, alice, request_intro(carol))],
                   [friend_output(bob, ToBob), friend_output(carol, ToCarol),
                    user_output(AliceOut)]),
@@ -466,7 +471,7 @@ play_request_intro_both :-
 %% the request is not taken up and the consent introduces nobody.
 exported procedure play_request_intro_stranger.
 play_request_intro_stranger :-
-    agent # agent(alice, [msg(person, alice, allow_intro(bob, carol))],
+    core # agent(alice, [msg(person, alice, allow_intro(bob, carol))],
                   [msg(bob, alice, request_intro(carol))],
                   [friend_output(carol, ToCarol), user_output(AliceOut)]),
     report_intro(req_to_carol, ToCarol?),
@@ -475,7 +480,7 @@ play_request_intro_stranger :-
 %% The anchor is not alice's friend: the same, from the other side.
 exported procedure play_request_intro_no_anchor.
 play_request_intro_no_anchor :-
-    agent # agent(alice, [msg(person, alice, allow_intro(bob, carol))],
+    core # agent(alice, [msg(person, alice, allow_intro(bob, carol))],
                   [msg(bob, alice, request_intro(carol))],
                   [friend_output(bob, ToBob), user_output(AliceOut)]),
     report_intro(req_to_bob, ToBob?),

@@ -1,0 +1,11 @@
+%% The order probe (Integration #4 Code to GLP, 2026-10-02 11:31 UTC), copy
+%% first: NIM is typed only by the merge after it.  TGLP
+%% appendix-implementation-notes.tex, "The instantiation of a call": the
+%% checker reads the sites of a call over the whole clause, the body goals in
+%% no order.  Loads; go([msg(a, b)], [], C) gives C = [msg(a, b)].
+Msg ::= msg(Constant, Constant).
+procedure(FM, NIM) copy(Stream(FM)?, Stream(NIM)).
+copy([msg(K, I)|Xs], [msg(K?, I?)|Ys?]) :- copy(Xs?, Ys).
+copy([], []).
+procedure go(Stream(Msg)?, Stream(Msg)?, Stream(Msg)).
+go(A, B, C?) :- copy(A?, A1), merge(B?, A1?, C).

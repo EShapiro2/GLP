@@ -1,6 +1,7 @@
 /// Abstract Syntax Tree nodes for GLP
 
-import '../analysis/type_checker/type_ast.dart' show TypeDef, ProcDecl, TypeRef;
+import '../analysis/type_checker/type_ast.dart'
+    show TypeDef, TypeExpr, ProcDecl;
 
 /// Compilation mode: controls compiler restrictions
 enum CompileMode {
@@ -39,8 +40,60 @@ class Procedure extends AstNode {
 
   String get signature => '$name/$arity';
 
+  /// Whether this is a volitional procedure (vGLP, Definition "Guarded
+  /// Clause, Volitional Procedure, Interactive Type, Interactive Term,
+  /// Ordinary Clause, Procedure, vGLP Program"): its clauses are written
+  /// `(A)*p(S1, ..., Sn) :- G | B`, each the guarded clause
+  /// `p(S1, ..., Sn, A) :- G | B` of arity n+1, so [arity] is n+1, the
+  /// volitional procedure's own arity n being one less.  The parser admits
+  /// such clauses only after the declaration `procedure (T)*p(T1, ..., Tn).`
+  /// and only such clauses there ([Module.volitionalDeclarations]).
+  bool get isVolitional =>
+      clauses.isNotEmpty && clauses.first.interactiveTerm != null;
+
   @override
   String toString() => 'Procedure($signature, ${clauses.length} clauses)';
+}
+
+/// The declaration of a volitional procedure p of arity n,
+/// `procedure (T)*p(T1, ..., Tn).`, T its interactive type, in writer or
+/// reader mode as an argument type is (vGLP, Definition "Guarded Clause,
+/// Volitional Procedure, Interactive Type, Interactive Term, Ordinary Clause,
+/// Procedure, vGLP Program").
+///
+/// A clause of the procedure "is the guarded clause p(S1, ..., Sn, A) :- G |
+/// B, of arity n+1", so [decl] declares those clauses: `p(T1, ..., Tn, T)`,
+/// the interactive type last.  It is among the module's procedure
+/// declarations as well, where it stands for the procedure's clauses.  An
+/// imported one, `imported procedure (T)*M#p(T1, ..., Tn).`, mirrors its
+/// export's declaration (TGLP modules.tex, "Self-contained type checking"):
+/// [decl] is `M#p(T1, ..., Tn, T)`, imported, and the module has no clauses
+/// of it.
+class VolitionalDeclaration extends AstNode {
+  final ProcDecl decl;
+
+  VolitionalDeclaration(this.decl) : super(decl.line, decl.column);
+
+  String get name => decl.name;
+
+  /// n, the arity of the volitional procedure; its clauses have n+1
+  /// arguments.
+  int get arity => decl.argTypes.length - 1;
+
+  /// p/n.
+  String get signature => '$name/$arity';
+
+  /// T, in its mode.
+  TypeExpr get interactiveType => decl.argTypes.last;
+
+  /// Whether T is in reader mode.
+  bool get readerMode => decl.isInputArg(arity);
+
+  @override
+  String toString() {
+    final types = decl.argTypes.sublist(0, arity).join(', ');
+    return 'procedure ($interactiveType)*$name($types).';
+  }
 }
 
 /// One position of a volition guard's question, `X_l = T_l` (vGLP,
@@ -150,10 +203,18 @@ class DisplayDecl extends AstNode {
 
 // Clause: Head :- Guards | Body.
 //
-// A vGLP clause may carry a volition guard before its head and, if it does, an
-// else-branch after its body.  Both are null in GLP, which is vGLP without
-// volition-guarded clauses (vGLP, Definition "GLP, maGLP, cGLP"), and the
-// parser only admits them for a .vglp source.
+// A clause of a volitional procedure is written (A)*p(S1, ..., Sn) :- G | B
+// and is the guarded clause p(S1, ..., Sn, A) :- G | B, of arity n+1 (vGLP,
+// Definition "Guarded Clause, Volitional Procedure, Interactive Type,
+// Interactive Term, Ordinary Clause, Procedure, vGLP Program"): its head is
+// that guarded clause's, and [interactiveTerm] is A, the head's last argument.
+// It is null for an ordinary clause, and always in GLP, which is vGLP without
+// volitional procedures; the parser admits the form only for a .vglp source.
+//
+// A .vglp source not yet in that syntax may carry the volition guard of the
+// Definition it replaced ("Guarded Clause, Volition-Guarded Clause, ...")
+// before its head and, if it does, an else-branch after its body; both are
+// null otherwise, and the parser admits them only for a .vglp source.
 class Clause extends AstNode {
   final Atom head;
   final List<Guard>? guards;  // Optional guard list before |
@@ -161,12 +222,19 @@ class Clause extends AstNode {
   final VolitionGuard? volitionGuard;
   final ElseBranch? elseBranch;
 
+  /// The interactive term A of a clause `(A)*p(S1, ..., Sn) :- G | B` of a
+  /// volitional procedure, the last argument of [head]; null for an ordinary
+  /// clause.
+  final Term? interactiveTerm;
+
   Clause(this.head, {this.guards, this.body, this.volitionGuard, this.elseBranch,
-      required int line, required int column})
+      this.interactiveTerm, required int line, required int column})
       : super(line, column);
 
-  /// Whether this is a volition-guarded clause (vGLP, Definition "Guarded
-  /// Clause, ...").
+  /// Whether this is a volition-guarded clause, of the Definition "Guarded
+  /// Clause, Volition-Guarded Clause, ..." that vGLP's Definition "Guarded
+  /// Clause, Volitional Procedure, ..." replaced.  A clause of a volitional
+  /// procedure is not one: it carries [interactiveTerm].
   bool get isVolitionGuarded => volitionGuard != null;
 
   @override
@@ -209,12 +277,11 @@ class Goal extends AstNode {
 class Guard extends AstNode {
   final String predicate;
   final List<Term> args;
-  final bool negated;  // true if ~G (guard negation)
 
-  Guard(this.predicate, this.args, int line, int column, {this.negated = false}) : super(line, column);
+  Guard(this.predicate, this.args, int line, int column) : super(line, column);
 
   @override
-  String toString() => negated ? '~$predicate(${args.join(", ")})' : '$predicate(${args.join(", ")})';
+  String toString() => '$predicate(${args.join(", ")})';
 }
 
 // Terms (expressions)
@@ -303,24 +370,18 @@ class UnderscoreTerm extends Term {
 // Visibility is now declared per-procedure via 'exported procedure'.
 
 /// Remote goal: Module # Goal
-/// Used for cross-module procedure calls
+/// Used for cross-module procedure calls.  The module is named, a child
+/// directory or module file of the caller's directory (TGLP modules.tex,
+/// "Cross-module type checking"); the parser refuses a variable there.
 class RemoteGoal extends Goal {
-  final Term module;  // Can be ConstTerm (atom) or VarTerm (variable)
+  final ConstTerm module;
   final Goal goal;
 
   RemoteGoal(this.module, this.goal, int line, int column)
       : super('#', [module, _goalToTerm(goal)], line, column);
 
-  /// Get module name if statically known, null if dynamic (variable)
-  String? get staticModuleName {
-    if (module is ConstTerm) {
-      return (module as ConstTerm).value as String;
-    }
-    return null;
-  }
-
-  /// Check if module is dynamically resolved (variable)
-  bool get isDynamic => module is VarTerm;
+  /// The module's name.
+  String get staticModuleName => module.value as String;
 
   @override
   String toString() => '$module # $goal';
@@ -351,127 +412,6 @@ class SpawnGoal extends Goal {
   }
 }
 
-/// Rated goal: Goal @ Rate --- sGLP (svGLP, sections/sglp.tex, Definition
-/// "Rated Goal"): a goal with a rate, a positive real per unit of time.
-///
-///   <rated_goal> ::= <goal> @ <rate>
-///   <rate>       ::= <positive_real> / <time_unit>
-///
-/// A rated goal is spawned as any body goal is and is pending until its
-/// Release (Definition "sGLP Transition System").  It is typed as the goal is:
-/// the rate is not an argument and adds nothing to the goal's type.  Like
-/// [SpawnGoal] it wraps its goal, with functor `@`, so a pass that does not
-/// know it sees a call of `@/2` and fails loudly instead of dropping the rate.
-class RatedGoal extends Goal {
-  final Goal innerGoal;
-
-  /// The rate as written, `1/week`.
-  final String rateText;
-
-  /// The rate per simulated second (lib/sglp/time_units.dart).
-  final double ratePerSecond;
-
-  RatedGoal(this.innerGoal, this.rateText, this.ratePerSecond, int line,
-      int column)
-      : super('@', [_goalToTerm(innerGoal), ConstTerm(rateText, line, column)],
-            line, column);
-
-  /// The same rated goal around another inner goal.
-  RatedGoal withInner(Goal inner) =>
-      RatedGoal(inner, rateText, ratePerSecond, line, column);
-
-  @override
-  String toString() => '$innerGoal @ $rateText';
-
-  static Term _goalToTerm(Goal g) {
-    return StructTerm(g.functor, g.args, g.line, g.column);
-  }
-}
-
-// ============================================================================
-// sGLP population declarations (svGLP, sections/sglp.tex, "Simulating a vGLP
-// Program"):
-//
-//   <person_declaration> ::= <type> =::= <procedure_name> .
-//   <kind>               ::= person <name> . <person_declarations> <program>
-//   <run>                ::= run <integer> agents [ <mix_list> ]
-//                            until <time> seed <integer> .
-//   <mix_list>           ::= <mix> | <mix> , <mix_list>
-//   <mix>                ::= <dimension> ~ ( <name> : <probability> ; ... )
-// ============================================================================
-
-/// A person declaration `T =::= p`: the person procedure p of the
-/// interactive type T (Definition "Dual, Person Procedure, Person Declaration,
-/// Kind, Dimension, Population").
-class PersonDecl extends AstNode {
-  /// The interactive type T, with its mode: `Menu` or `Menu?`.
-  final TypeRef type;
-
-  /// The person procedure p.
-  final String procedure;
-
-  PersonDecl(this.type, this.procedure, int line, int column)
-      : super(line, column);
-
-  /// The interactive type as written, which identifies it among a kind's.
-  String get typeKey => type.toString();
-
-  @override
-  String toString() => '$type =::= $procedure.';
-}
-
-/// A kind: `person <name>.`, its person declarations, and its program --- the
-/// procedures its section of the source declares and defines, the section
-/// running to the next `person`, the run declaration or the end of the file.
-class KindDecl extends AstNode {
-  final String name;
-  final List<PersonDecl> personDecls = [];
-
-  /// The name/arity of each procedure the kind's section declares or defines.
-  final Set<String> procedureSigs = {};
-
-  KindDecl(this.name, int line, int column) : super(line, column);
-
-  /// The interactive types the kind declares.
-  Set<String> get declaredTypes => {for (final d in personDecls) d.typeKey};
-
-  @override
-  String toString() => 'person $name.';
-}
-
-/// One kind of a dimension's distribution: `homophile : 0.6`.
-class MixEntry extends AstNode {
-  final String kind;
-  final double probability;
-  MixEntry(this.kind, this.probability, int line, int column)
-      : super(line, column);
-}
-
-/// A dimension and its distribution over kinds:
-/// `approach ~ (homophile : 0.6 ; indifferent : 0.4)`.
-class MixDecl extends AstNode {
-  final String dimension;
-  final List<MixEntry> entries;
-  MixDecl(this.dimension, this.entries, int line, int column)
-      : super(line, column);
-}
-
-/// The run declaration: `run N agents [ mixes ] until <time> seed <integer>.`
-class RunDecl extends AstNode {
-  final int agents;
-  final List<MixDecl> mixes;
-
-  /// The `until` time as written, `5 years`, and in simulated seconds.
-  final String untilText;
-  final double untilSeconds;
-
-  final int seed;
-
-  RunDecl(this.agents, this.mixes, this.untilText, this.untilSeconds,
-      this.seed, int line, int column)
-      : super(line, column);
-}
-
 // ============================================================================
 // Type Declarations (Yardeni-Shapiro syntax)
 // ============================================================================
@@ -490,8 +430,13 @@ class Module extends AstNode {
   final CompileMode compileMode;  // user (default) or system
   final List<String> exposes;     // `-expose(M).` module paths (e.g. "lib#streams")
   final List<DisplayDecl> displayDecls;  // `display ... : ... .` declarations
-  final List<KindDecl> kinds;            // sGLP `person <name>.` sections
-  final RunDecl? runDecl;                // sGLP `run ... .` declaration
+
+  /// The declarations `procedure (T)*p(T1, ..., Tn).` of the module's
+  /// volitional procedures, in source order (vGLP, Definition "Guarded
+  /// Clause, Volitional Procedure, ...").  Each one's [ProcDecl] is in
+  /// [procDeclarations] too, and its procedure in [procedures], save an
+  /// imported one's, whose procedure is its module's.
+  final List<VolitionalDeclaration> volitionalDeclarations;
 
   Module({
     this.typeDefs = const [],
@@ -501,8 +446,7 @@ class Module extends AstNode {
     this.compileMode = CompileMode.user,
     this.exposes = const [],
     this.displayDecls = const [],
-    this.kinds = const [],
-    this.runDecl,
+    this.volitionalDeclarations = const [],
     required int line,
     required int column,
   }) : super(line, column);

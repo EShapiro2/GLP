@@ -1,0 +1,36 @@
+%% when_idle (GLP-Spec appendix-guards.tex at e3a8d52, the time guards):
+%% "when_idle suspends while the machine has a Reduce or a Communicate to
+%% make, and succeeds when it has none."
+%%
+%%   m(X), count(1000, Z), probe(X?, Z?, O)    O = after
+%%   n(X), count(1000, Z), probe(X?, Z?, O)    O = before, the control
+%%   m(X), later(X?, O), count(10, W)          O = after
+%%
+%% m/1 is tried first and suspends, the machine having count/2 and probe/3 to
+%% reduce; it is re-tried when the queue empties, count/2 having run to rest
+%% and probe/3 waiting on X.  probe/3, woken by X, finds Z assigned: after.
+%% n/1, the same clause without the guard, assigns X at once, and probe/3
+%% finds Z unassigned: before.  Two goals waiting on when_idle are re-tried
+%% one at a time, the one that waited longest first: m/1 assigns X, and
+%% later/2, re-tried after it, finds X assigned.
+
+Idle ::= idle.
+Order ::= before ; after.
+
+procedure m(Idle).
+m(X?) :- when_idle | X = idle.
+
+procedure n(Idle).
+n(X?) :- X = idle.
+
+procedure count(Integer?, Integer).
+count(0, 0).
+count(N, Z?) :- N? > 0 | N1 := N? - 1, count(N1?, Z).
+
+procedure probe(Idle?, Integer?, Order).
+probe(idle, Z, before) :- unknown(Z?) | true.
+probe(idle, Z, after) :- known(Z?) | true.
+
+procedure later(Idle?, Order).
+later(X, after) :- when_idle, known(X?) | true.
+later(X, before) :- when_idle, unknown(X?) | true.

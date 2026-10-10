@@ -25,7 +25,7 @@
 /// The values booted are those of `main_sovereign.dart`, whose `VglpProgram`
 /// is built inside its `main`: `person: 'cb'`,
 /// `directory: (glp) => glp.sovereignDir`, `goalLabel: 'sovereign_ui/3'`,
-/// `manifest: sovereignManifest`, `friends: ['diana', 'frank']`. A person the
+/// `manifest: sovereignManifest`. A person the
 /// harness has no clause for boots and compiles as well as this one and
 /// stands no form, which is what this test tells apart.
 library;
@@ -37,6 +37,7 @@ import 'package:glp_multiagent/manifests/sovereign_ui.dart';
 import 'package:glp_multiagent/ui_runtime/agent_surface.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
+import 'package:glp_multiagent/isolate_protocol.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
 
 import 'programs_dir.dart';
@@ -61,20 +62,18 @@ void main() {
     final lines = <String>[];
     final agent = AgentRuntime(
       agentId: 'cb',
-      glpSources: const [],
       // programs/currencies/sovereign is a program: denominated/ is the
       // certified mini-app and this directory adds the harness that runs it
       // for a live person.
-      programDir: glp.sovereignDir,
+      program: glp.sovereignDir,
       goalLabel: 'sovereign_ui/3',
       rootSelfGlpPath: glp.rootSelfGlp,
-      friends: const ['diana', 'frank'],
     );
     agent.onOutput = lines.add;
     agent.onLog = (_, __) {};
     agent.onSendMadMessage = (_, __) async {};
 
-    final sends = <String>[];
+    final sends = <GTerm>[];
     final r = UiRuntime(manifest: sovereignManifest, onSend: sends.add);
 
     var fed = 0;
@@ -87,7 +86,7 @@ void main() {
 
     Future<void> settle() async {
       while (sends.isNotEmpty) {
-        await tester.runAsync(() => agent.injectUserInput(sends.removeAt(0)));
+        await tester.runAsync(() => agent.injectUserInput(runtimeTermOf(sends.removeAt(0))));
       }
       replay();
       await tester.pumpAndSettle();

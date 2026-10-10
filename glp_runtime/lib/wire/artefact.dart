@@ -57,17 +57,21 @@ const int wireFormatVersion = 2;
 
 /// The instruction-set version this implementation writes in an artefact's
 /// header (IGLP, Code Format appendix, "Format Versioning": new instructions
-/// enter by instruction-set version).  `glp-isa-2` adds opcode 0x54
-/// `spawn_rated` (proc, arity, rate), the instruction of the stochastic
-/// extension of GLP (svGLP, sections/sglp.tex), which a runtime that does not
-/// offer the extension never emits; `glp-isa-1` is the set before it.
-const String glpIsaVersion = 'glp-isa-2';
+/// enter by instruction-set version).  "Removing an operand from an assigned
+/// opcode, or an opcode, is an instruction-set version change after which the
+/// runtime refuses the versions before it; the current version is glp-isa-3"
+/// (IGLP eadadcd).  `glp-isa-2` added opcode 0x54 `spawn_rated` for sGLP's
+/// engine extension, and the opcode went with the extension (IGLP 8c1d5e2);
+/// the guard instructions 0x40, 0x41, 0x42, 0x44 and 0x45 lost their
+/// `negated` operand with guard negation (IGLP 9b45225).
+const String glpIsaVersion = 'glp-isa-3';
 
-/// The instruction-set versions this runtime loads: its own and every earlier
-/// one.  Opcode and name assignments are append-only, so a newer runtime runs
-/// older artefacts unchanged, and an older one refuses a newer version at
-/// adoption (a runtime at `glp-isa-1` loads `{'glp-isa-1'}` alone).
-const Set<String> runtimeIsaVersions = {'glp-isa-1', glpIsaVersion};
+/// The instruction-set versions this runtime loads: its own alone.  "A loader
+/// refuses an artefact whose ... instruction-set version it does not support"
+/// (IGLP, "Format Versioning"), and the runtime refuses the versions before
+/// the current one (IGLP eadadcd), so an artefact at `glp-isa-1` or
+/// `glp-isa-2` is refused.
+const Set<String> runtimeIsaVersions = {glpIsaVersion};
 
 /// An exported procedure recorded in the interface table.
 class ArtefactExport {
@@ -257,6 +261,34 @@ class Artefact {
 
   /// The compiled identity: SHA-256 of the body.
   Uint8List get compiledIdentity => certificate.hBin;
+
+  /// Why this artefact is not a certified compiled program, or null where it
+  /// is: it carries a certificate, its body hashes to the compiled identity the
+  /// certificate names, and the certificate's signature verifies under the key
+  /// it carries --- the loader's step 1 without an adoption offer (§Loader), as
+  /// [certifiedFromBytes] asks it of bytes.  The body hashed is the one this
+  /// artefact holds and would run.  What run/2 and run/3 ask before they
+  /// activate a module (engine_v2/module_kernels.dart): the machine "activates
+  /// no program whose certificate does not verify" (GSG s6-security.tex, G1).
+  String? get certificateRefusal {
+    final cert = certificate;
+    if (cert.isRefused) return _noCertificate;
+    if (!_bytesEqual(compiledIdentityOfBody(bodyBytes()), cert.hBin)) {
+      return _bodyMismatch;
+    }
+    if (!cert.verifies()) return _signatureFails;
+    return null;
+  }
+
+  /// Why a module is no certified compiled program: [certificateRefusal]'s
+  /// reasons and [certify]'s.
+  static const String _noCertificate =
+      'it carries no certificate (it was refused one, or no one compiled it '
+      'for a person)';
+  static const String _bodyMismatch =
+      'its body does not hash to the compiled identity its certificate names';
+  static const String _signatureFails =
+      "its certificate's signature does not verify under the key it carries";
 
   int _indexOfSignature(String sig) {
     for (var i = 0; i < symbols.length; i++) {
@@ -465,24 +497,43 @@ class Artefact {
   /// not check, is text and not a Module (GLP-Spec appendix-guards,
   /// "Compilation and file reading"), and a forged artefact is never a Module.
   static Artefact? certifiedFromBytes(Uint8List bytes) {
+    final (:artefact, :refusal) = certify(bytes);
+    return refusal == null ? artefact : null;
+  }
+
+  /// [certifiedFromBytes] with the reason: the artefact [bytes] parse to, null
+  /// where they do not, and why it is no certified compiled program, null where
+  /// it is one.  The loader's step 1 without an adoption offer: "Computes
+  /// SHA-256 of the body and verifies it equals the compiled identity in the
+  /// certificate; verifies the certificate's signature under the key the
+  /// certificate carries" (IGLP code-format-fragment.tex, Loader), over the
+  /// body as [bytes] hold it; a module refused a certificate carries none.
+  /// What load_file/2 asks of a file, and the decoding of a received message
+  /// of each module it carries ([ModuleRefusal]).
+  static ({Artefact? artefact, String? refusal}) certify(Uint8List bytes) {
     final Artefact art;
     try {
       art = fromBytes(bytes);
-    } catch (_) {
-      return null;
+    } catch (e) {
+      return (artefact: null, refusal: 'it is not an artefact: ${_why(e)}');
     }
     final cert = art.certificate;
-    if (cert.isRefused) return null;
+    if (cert.isRefused) return (artefact: art, refusal: _noCertificate);
     final Uint8List id;
     try {
       id = compiledIdentityOf(bytes);
-    } catch (_) {
-      return null;
+    } catch (e) {
+      return (artefact: art, refusal: 'it is not an artefact: ${_why(e)}');
     }
-    if (!_bytesEqual(id, cert.hBin)) return null;
-    if (!cert.verifies()) return null;
-    return art;
+    if (!_bytesEqual(id, cert.hBin)) {
+      return (artefact: art, refusal: _bodyMismatch);
+    }
+    if (!cert.verifies()) return (artefact: art, refusal: _signatureFails);
+    return (artefact: art, refusal: null);
   }
+
+  /// The message of what [fromBytes] or [compiledIdentityOf] threw.
+  static String _why(Object e) => e is WireFormatException ? e.message : '$e';
 
   /// Parse artefact bytes (§Program Artefact). Verifies the magic and
   /// code-format version, and the framing; not the certificate — that is the
@@ -564,14 +615,38 @@ class Artefact {
   /// no code — the runtime resolves their names to local kernels/guards (the
   /// `Spawn`/`Guard` handlers already fall back to kernel/guard lookup).
   BytecodeProgram toProgram() {
-    final ops = <Object>[];
+    final ops = <Op>[];
     for (final s in symbols) {
       if (!s.compiled) continue;
       ops.add(Label(s.signature));
-      ops.addAll(s.ops);
+      ops.addAll(s.ops.cast<Op>());
     }
     return BytecodeProgram(ops);
   }
+}
+
+/// A module constant of a received message that is no Module value: its
+/// artefact is no certified compiled program ([Artefact.certify]).  "A
+/// received module whose certificate does not verify is not a Module value
+/// and the message carrying it is refused at receipt, with the reason, as
+/// IGLP's loader refuses at adoption; nothing is delivered as text" (GLP #3
+/// Cowork, 2026-10-02 20:58 UTC).  The decoding of a received message throws
+/// it ([PayloadCodec.deserializeGlobalSendPayload]), and the receive path
+/// refuses the message ([MadContext.handleIncomingPayload]).
+class ModuleRefusal extends WireFormatException {
+  /// The module's name, where its artefact parses.
+  final String? moduleName;
+
+  /// Why it is no Module value, as [Artefact.certify] gives it.
+  final String reason;
+
+  ModuleRefusal(this.moduleName, this.reason)
+      : super(moduleName == null
+            ? 'the module it carries is not a Module value: $reason'
+            : 'module $moduleName is not a Module value: $reason');
+
+  @override
+  String toString() => 'ModuleRefusal: $message';
 }
 
 /// A module loaded from an artefact (§Loader).

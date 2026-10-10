@@ -15,7 +15,7 @@
 %% NETWORK: top-level wiring.
 %% =============================================================================
 
-exported procedure network(NetEndList(C)?).
+exported procedure(C) network(NetEndList(C)?).
 
 network(Endpoints) :-
     extract(Endpoints?, Outs, IdIns),
@@ -32,7 +32,7 @@ network(Endpoints) :-
 %%     puts a writer at the ↑ output position after the `?` flip).
 %% =============================================================================
 
-exported procedure extract(NetEndList(C)?, ReaderList(C), IdInList(C)).
+exported procedure(C) extract(NetEndList(C)?, ReaderList(C), IdInList(C)).
 
 extract([net_end(Id, Out, In?) | Rest],
         [Out? | Outs?],
@@ -45,7 +45,7 @@ extract([], [], []).
 %% loaded by root self.glp.
 %% =============================================================================
 
-exported procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
+exported procedure(X) merge(Stream(X)?, Stream(X)?, Stream(X)).
 
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
@@ -56,7 +56,7 @@ merge(Xs, [], Xs?).
 %% MERGE_ALL: chained binary merges over a list of stream readers.
 %% =============================================================================
 
-exported procedure merge_all(ReaderList(C)?, Stream(NetMsg(C))).
+exported procedure(C) merge_all(ReaderList(C)?, Stream(NetMsg(C))).
 
 merge_all([Out | Rest], Merged?) :-
     merge_all(Rest?, RestMerged),
@@ -67,7 +67,7 @@ merge_all([], []).
 %% DISPATCH: read merged stream, route each message.
 %% =============================================================================
 
-exported procedure dispatch(Stream(NetMsg(C))?, IdInList(C)?).
+exported procedure(C) dispatch(Stream(NetMsg(C))?, IdInList(C)?).
 
 dispatch([msg(S, R, Cargo) | Rest], Routes) :-
     route(R?, msg(S?, Cargo?), Routes?, Routes1),
@@ -86,7 +86,7 @@ dispatch([], Routes) :- close_all_routes(Routes?).
 %% NetIn stream and creating a fresh tail-writer NewIn for the next message.
 %% The updated entry in the output routing table carries NewIn.
 
-exported procedure route(Agent?, InMsg(C)?, IdInList(C)?, IdInList(C)).
+exported procedure(C) route(Agent?, InMsg(C)?, IdInList(C)?, IdInList(C)).
 
 route(R, Msg, [id_in(R1, [Msg?|NewIn?]) | Rest],
               [id_in(R1?, NewIn) | Rest?]) :-
@@ -105,7 +105,7 @@ route(_, _, [], []).
 %% CLOSE_ALL_ROUTES: bind each NetIn writer to [] when dispatch ends.
 %% =============================================================================
 
-exported procedure close_all_routes(IdInList(C)?).
+exported procedure(C) close_all_routes(IdInList(C)?).
 
 close_all_routes([id_in(_, []) | Rest]) :- close_all_routes(Rest?).
 close_all_routes([]).

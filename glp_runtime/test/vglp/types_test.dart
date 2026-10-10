@@ -10,8 +10,9 @@ import 'package:test/test.dart';
 import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/vglp/types.dart';
-import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart'
-    show setRootScopeEnvironmentSource;
+import 'package:glp_runtime/analysis/type_checker/type_ast.dart'
+    show TypeEnvironment;
+import 'package:glp_runtime/runtime/module_hierarchy.dart' show rootScope;
 
 // The vocabulary of programs/social/graph, cut to what these clauses need, so
 // that the clauses below are the deployed ones rather than invented shapes.
@@ -28,16 +29,21 @@ UserInStream   ::= [] ; [UserInMsg | UserInStream].
 ColdCallOffer  ::= offer(Constant).
 ''';
 
+/// The scope the sources below are compiled in: the root self.glp's, passed
+/// in.
+TypeEnvironment? _scope;
+
 CompiledTypes compile(String source) => compileTypes(
-    Parser(Lexer(_preamble + source).tokenize(), vglp: true).parseModule());
+    Parser(Lexer(_preamble + source).tokenize(), vglp: true).parseModule(),
+    scope: _scope);
 
 void main() {
-  // Root scope from programs/self.glp, as the engine sets it: without it the
-  // environment has no Constant and no Stream, and the answer writers' types
-  // cannot be read off the checker.
+  // The scope of a module directly under the root, programs/self.glp its one
+  // layer: without it the environment has no Constant and no Stream, and the
+  // answer writers' types cannot be read off the checker.
   final rootSelfGlp = File('../programs/self.glp');
   if (rootSelfGlp.existsSync()) {
-    setRootScopeEnvironmentSource(rootSelfGlp.readAsStringSync());
+    _scope = rootScope(rootSelfGlp.absolute.path);
   }
 
   group('the answer and context types of a clause', () {

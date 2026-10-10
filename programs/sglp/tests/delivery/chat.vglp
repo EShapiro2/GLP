@@ -1,0 +1,26 @@
+%% Test (xii)'s vGLP program: vGLP's delivery status (vGLP, Section 3, the chat
+%% input), the person's messages a question of type Stream(Msg)? in reader
+%% mode, each message one element, its text the person's to write and its
+%% status the program's, sent, delivered or read.  Its canonical compilation
+%% (vGLP, Definition "Canonical Compilation") is chat.glp, by hand; the
+%% program loader skips a .vglp beside a .glp of its name, so this source is
+%% not loaded.
+
+Status ::= sent ; delivered ; read.
+Msg    ::= msg(String, Status?).
+
+%% The person's messages, read one at a time: the texts read, in order.
+exported procedure (Stream(Msg)?)*chat(Stream(String)).
+(Ms)*chat(Ts?) :- deliver(Ms?, 0, Ts).
+
+%% deliver(Ms?, I?, Ts): each message's status written, the I-th's by I mod 3,
+%% and its text passed on.
+procedure deliver(Stream(Msg)?, Integer?, Stream(String)).
+deliver([msg(T, S?) | Ms], I, [T? | Ts?]) :- integer(I?) |
+    status(I?, S), I1 := I? + 1, deliver(Ms?, I1?, Ts).
+deliver([], _, []).
+
+procedure status(Integer?, Status).
+status(I, sent) :- I? mod 3 =:= 0 | true.
+status(I, delivered) :- I? mod 3 =:= 1 | true.
+status(I, read) :- I? mod 3 =:= 2 | true.

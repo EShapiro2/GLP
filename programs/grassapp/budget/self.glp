@@ -8,6 +8,10 @@
 %% therefore carries the writer (typed-glp-manual 15B).
 Request ::= more(Integer?).
 
+%% What bench/4 counts under: the mini-app unbudgeted (plain), the residual
+%% program under grants (residual), or bounded/3 under grants (meta).
+BenchKind ::= plain ; residual ; meta.
+
 imported procedure bounded # play_meta(Stream(Integer)).
 exported procedure play_meta(Stream(Integer)).
 play_meta(Out?) :- bounded # play_meta(Out).
@@ -16,8 +20,8 @@ imported procedure bounded # play_residual(Stream(Integer)).
 exported procedure play_residual(Stream(Integer)).
 play_residual(Out?) :- bounded # play_residual(Out).
 
-imported procedure bounded # bench(Constant?, Integer?, Integer?, Integer).
-exported procedure bench(Constant?, Integer?, Integer?, Integer).
+imported procedure bounded # bench(BenchKind?, Integer?, Integer?, Integer).
+exported procedure bench(BenchKind?, Integer?, Integer?, Integer).
 bench(Which, N, K, Last?) :- bounded # bench(Which?, N?, K?, Last).
 
 imported procedure bounded # play_abort_waiting(Stream(Integer), Stream(Request)).
@@ -28,6 +32,6 @@ imported procedure bounded # play_clean(Stream(Integer), Stream(Request)).
 exported procedure play_clean(Stream(Integer), Stream(Request)).
 play_clean(Out?, Rs?) :- bounded # play_clean(Out, Rs).
 
-imported procedure bounded # play_abort_interpreted(Stream(Integer), Stream(Request)).
-exported procedure play_abort_interpreted(Stream(Integer), Stream(Request)).
-play_abort_interpreted(Out?, Rs?) :- bounded # play_abort_interpreted(Out, Rs).
+imported procedure bounded # play_abort_interpreted(Stream(Integer), Stream(Request), Constant).
+exported procedure play_abort_interpreted(Stream(Integer), Stream(Request), Constant).
+play_abort_interpreted(Out?, Rs?, W?) :- bounded # play_abort_interpreted(Out, Rs, W).

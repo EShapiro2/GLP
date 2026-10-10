@@ -1,0 +1,21 @@
+%% Test (xiv)'s compiled program, written by hand: the canonical compilation
+%% of show.vglp by vGLP's Definition "Canonical Compilation", as the social
+%% graph's graph.glp is of graph.vglp.  show reaches a question, and has one
+%% more argument, last, its ask stream; cards reaches none and is as the
+%% source has it.  The asking clause keeps show's name and the guarded clause
+%% takes show1; the ask is ask('Panel', panel_w(X?)), Panel in writer mode,
+%% so X and X? are exchanged, the ask carrying the reader X? and the program
+%% writing X; show's argument As is at an output position, so the head carries
+%% As? and the call As.  The types are the directory's (self.glp).
+
+%% (panel(Cs?))*show(N, As?): the asking clause and the guarded clause.
+exported procedure show(Integer?, Stream(YesNo), Stream(Ask)).
+show(N, As?, [ask('Panel', panel_w(X?))|D?]) :- show1(N?, As, X, D).
+exported procedure show1(Integer?, Stream(YesNo), Panel, Stream(Ask)).
+show1(N, As?, panel(Cs?), []) :- cards(1, N?, Cs, As).
+
+%% cards(I?, N?, Cs, As): the cards I to N, and their answers.
+procedure cards(Integer?, Integer?, Cards, Stream(YesNo)).
+cards(I, N, [card(I?, A) | Cs?], [A? | As?]) :- integer(I?), integer(N?), I? =< N? |
+    I1 := I? + 1, cards(I1?, N?, Cs, As).
+cards(I, N, [], []) :- I? > N? | true.

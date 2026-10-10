@@ -1,4 +1,34 @@
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
+
 abstract class Term {}
+
+/// The empty list `[]`, a constant of its own and no string: GLP-Spec
+/// appendix-lp.tex, Definition "Logic Programs Syntax" ("a constant (numbers,
+/// strings, or the empty list `[]`)"), and IGLP's code format, which gives it
+/// a constant tag of its own (constant tag 0 nil; strings tag 3).  [nil] is
+/// the runtime's one value of it, held as a [ConstTerm]'s value.  Its type is
+/// `String` (TGLP appendix-root-self.tex: "The empty list is a String, hence
+/// a Constant"), so the `string` and `constant` guards hold of it; as a value
+/// it equals no string.  Until 2026-10-07 the runtime held `[]` as the string
+/// 'nil', so `X = nil.` showed `[]` and `nil =?= []` succeeded.
+final class Nil {
+  const Nil._();
+
+  /// Every [Nil] is the one empty list, a copy made in passing a term to
+  /// another isolate among them.
+  @override
+  bool operator ==(Object other) => other is Nil;
+
+  @override
+  int get hashCode => 0x5B5D; // "[]"
+
+  /// `[]`, as the reader reads it.
+  @override
+  String toString() => '[]';
+}
+
+/// The empty list, the one value of [Nil].
+const Nil nil = Nil._();
 
 class ConstTerm implements Term {
   final Object? value;
@@ -11,13 +41,48 @@ class StructTerm implements Term {
   final String functor;
   final List<Term> args;
   StructTerm(this.functor, this.args);
+
+  /// `functor(arg,...)`, each argument as its own toString gives it.  The
+  /// text is written with a stack of its own, a frame for each structure
+  /// being written, piece by piece in the order `'$functor(${args.join(",")})'`
+  /// wrote it: until 2026-10-02 that recursed once a structure argument, and
+  /// the madGLP traces, whose text is made of every term a message carries
+  /// whether a trace is on or not, overflowed the Dart stack on a long list.
   @override
-  String toString() => '$functor(${args.join(",")})';
+  String toString() {
+    final out = StringBuffer();
+    // Each frame: a structure being written, and its next argument's index.
+    final frames = <(StructTerm, int)>[];
+    void open(StructTerm s) {
+      out
+        ..write(s.functor)
+        ..write('(');
+      frames.add((s, 0));
+    }
+
+    open(this);
+    while (frames.isNotEmpty) {
+      final (s, i) = frames.removeLast();
+      if (i == s.args.length) {
+        out.write(')');
+        continue;
+      }
+      if (i > 0) out.write(',');
+      frames.add((s, i + 1));
+      final a = s.args[i];
+      if (a is StructTerm) {
+        open(a);
+      } else {
+        out.write(a);
+      }
+    }
+    return out.toString();
+  }
 }
 
 /// Variable reference - holds heap address only
 ///
-/// Per irmaGLP-spec.md Section 3.2.1:
+/// Per IGLP app:in-heap, Variable pairs:
 /// A variable's reader/writer identity is determined by its heap cell tag
 /// (RoTag or WrtTag), NOT by address arithmetic. Use heap.isWriter(addr)
 /// or heap.isReader(addr) to check.
@@ -25,24 +90,25 @@ class StructTerm implements Term {
 /// MUST NOT: Code must not assume reader_addr == writer_addr + 1 or
 /// derive reader/writer identity from address parity.
 class VarRef implements Term {
-  /// The heap address of this variable reference
-  final int addr;
+  /// The cell of this variable occurrence: the cell itself, a reference and
+  /// not an address (IGLP app:in-heap, Variable pairs).
+  final HeapCell addr;
 
   VarRef(this.addr);
 
-  // NOTE: isReader and varId computed properties have been REMOVED per
-  // irmaGLP-spec.md Section 3.2.1. Use heap.isReader(addr) to check type
-  // and raw addr as the identifier.
+  // NOTE: isReader and varId computed properties have been REMOVED: the
+  // cell's tag gives its polarity (IGLP app:in-heap, Variable pairs). Use
+  // heap.isReader(addr) to check type and the cell as the identifier.
 
   @override
   String toString() => 'Var@$addr';
 
   @override
   bool operator ==(Object other) =>
-      other is VarRef && other.addr == addr;
+      other is VarRef && identical(other.addr, addr);
 
   @override
-  int get hashCode => addr.hashCode;
+  int get hashCode => addr.id;
 }
 
 /// Mutable reference to an unbound writer - enables O(1) stream append
@@ -58,10 +124,9 @@ class VarRef implements Term {
 ///
 /// SRSW: MutualRefTerm is treated as ground (can be read multiple times)
 ///
-/// Per heap-pointer-architecture-spec.md v3.0:
 /// _currentWriterAddr holds the heap address of the current unbound tail writer.
 class MutualRefTerm implements Term {
-  int _currentWriterAddr;  // heap address of current unbound tail writer
+  HeapCell _currentWriterAddr;  // the cell of the current unbound tail writer
   final int id;            // unique ID for this MutualRef
 
   static int _nextId = 0;
@@ -69,8 +134,8 @@ class MutualRefTerm implements Term {
   MutualRefTerm(this._currentWriterAddr) : id = _nextId++;
 
   /// Get/set the current writer address
-  int get currentWriterAddr => _currentWriterAddr;
-  set currentWriterAddr(int addr) => _currentWriterAddr = addr;
+  HeapCell get currentWriterAddr => _currentWriterAddr;
+  set currentWriterAddr(HeapCell addr) => _currentWriterAddr = addr;
 
   @override
   String toString() => 'MutualRef#$id(@$_currentWriterAddr)';

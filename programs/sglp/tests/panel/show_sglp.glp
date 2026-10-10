@@ -1,0 +1,53 @@
+%% Test (xiv)'s sGLP source, in the term form the transformation reads
+%% (programs/sglp/README.md, "The term form").  Its surface form:
+%%
+%%   person judge.
+%%   Panel =::= judge_panel.
+%%   procedure judge_panel(Panel?, Integer?).
+%%   judge_panel(panel(Cs), S) :- judge(Cs?, S?).
+%%   procedure judge(Cards?, Integer?).
+%%   judge([card(_, A?) | Cs], S) :-
+%%       random(S?, 2, K, S1), verdict(K?, A) @ 1/hour, judge(Cs?, S1?).
+%%   judge([], _).
+%%   procedure verdict(Integer?, YesNo).
+%%   verdict(1, yes).
+%%   verdict(2, no).
+%%
+%%   run 1 agents [judging ~ (judge : 1.0)] until 1 week seed 20260927.
+%%
+%% Panel is in writer mode (procedure (Panel)*show(...), show.vglp), so its
+%% person procedure is declared with its dual, Panel? (Section 3, Definition
+%% "Dual, Person Procedure, Person Declaration"): the person is shown the
+%% panel, its cards as the person process shows them, and answers each card
+%% yes or no by a draw, an hour later on average, each card a question of its
+%% own.  Each clause answers at most one question: a card's.  The interface
+%% names the predicates of the compiled program, show.glp.
+%%
+%% transform.sh prints from it profiles.glp and population.glp, beside it.
+
+exported procedure source(SglpTerms, SglpTerms).
+source(
+  %% The vGLP program's interface (show.vglp) and its compiled program's
+  %% predicates (show.glp).
+  [type('YesNo', [yes, no]),
+   type('Card', [card('Integer', dual('YesNo'))]),
+   type('Cards', [[], ['Card' | 'Cards']]),
+   type('Panel', [panel('Cards')]),
+   volitional('Panel', panel_w, show(dual('Integer'), 'Stream'('YesNo'))),
+   compiled(show, 3), compiled(show1, 4), compiled(cards, 4)],
+
+  %% The profile and the run declaration.
+  [person(judge),
+   binds('Panel', judge_panel),
+   decl(judge_panel(dual('Panel'), dual('Integer'))),
+   clause(judge_panel(panel(var('Cs')), var('S')), [], [judge(var('Cs?'), var('S?'))]),
+   decl(judge(dual('Cards'), dual('Integer'))),
+   clause(judge([card(var('_'), var('A?')) | var('Cs')], var('S')), [],
+          [random(var('S?'), 2, var('K'), var('S1')), rated(verdict(var('K?'), var('A')), rate(1, hour)),
+           judge(var('Cs?'), var('S1?'))]),
+   clause(judge([], var('_')), [], []),
+   decl(verdict(dual('Integer'), 'YesNo')),
+   clause(verdict(1, yes), [], []),
+   clause(verdict(2, no), [], []),
+
+   run(1, [mix(judging, [share(judge, 1.0)])], 1, week, 20260927)]).

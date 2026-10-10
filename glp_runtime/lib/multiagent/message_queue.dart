@@ -3,7 +3,8 @@
 /// Manages outbound messages from an agent to other agents.
 /// Messages are queued per destination with FIFO ordering.
 ///
-/// Specification: /docs/ma/madGLP-spec.md Section 6.1
+/// Specification: IGLP Definition madGLP Local State (M_p, the outgoing
+/// messages).
 library;
 
 import 'dart:collection';
@@ -160,6 +161,10 @@ class MessageQueue {
 
   /// Number of messages eligible for Send across all destinations.
   int get sendableLength => all.where((m) => !m.held).length;
+
+  /// Whether some message is eligible for Send: unsent and not held
+  /// (Definition madGLP Send).
+  bool get hasSendable => all.any((m) => !m.held);
   
   /// Peek at the next message for a destination without removing it
   /// 

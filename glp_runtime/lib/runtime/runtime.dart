@@ -1,68 +1,43 @@
-import 'dart:io';
-import 'dart:ffi' as ffi;
-
 import 'machine_state.dart';
 import 'heap_fcp.dart';
 import 'suspend_ops.dart';
 import 'commit.dart';
-import 'abandon.dart';
 import 'fairness.dart';
-import 'system_predicates.dart';
 import 'body_kernels.dart';
 import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
+import 'package:glp_runtime/multiagent/mad_context.dart' show MadContext;
 import 'package:glp_runtime/bytecode/runner.dart'
     show CallEnv, GoalRunner;
-import 'package:glp_runtime/runtime/glp_activation.dart' show GlpChannelHandle;
-import 'package:glp_runtime/sglp/simulation.dart' show SimState;
 
 class GlpRuntime {
   final HeapFCP heap;
   final GoalQueue gq;
-  final SystemPredicateRegistry systemPredicates;
   final BodyKernelRegistry bodyKernels;
 
   /// Shared runners map: program key → GoalRunner (object or byte loop).
   /// Used by the Scheduler to find the runner for a goal's program.
   /// Runtime-registered runners (extension point; used by `run/2` to route a
-  /// launched goal to its module's ByteRunner; also the seam the retired
-  /// dynamic-dispatch path once used).
+  /// launched goal to its module's ByteRunner).
   final Map<Object?, GoalRunner> runners = {};
-
-  /// GLP channel handles: module name → GlpChannelHandle. Read by the runner's
-  /// Distribute/Transmit opcodes to route RPCs via GLP channels. Currently
-  /// unpopulated — the dynamic-dispatch path that registered handles was retired.
-  final Map<String, GlpChannelHandle> glpChannels = {};
 
   final Map<GoalId, int> _budgets = <GoalId, int>{};
   final Map<GoalId, CallEnv> _goalEnvs = <GoalId, CallEnv>{};
   final Map<GoalId, Object?> _goalPrograms = <GoalId, Object?>{};
-  final Map<GoalId, Object?> _goalModuleContexts = <GoalId, Object?>{};  // Module context for RPC;
   /// Per-goal module VALUE — the ModuleTerm whose code the goal's PC indexes
   /// into. The `self_module`/`run` substrate: every goal carries its module,
-  /// spawned goals inherit it. Distinct from _goalModuleContexts (RPC routing).
+  /// spawned goals inherit it.
   final Map<GoalId, Object?> _goalModules = <GoalId, Object?>{};
 
-  // File handle management
-  final Map<int, RandomAccessFile> _fileHandles = <int, RandomAccessFile>{};
-  int _nextFileHandle = 1;
-
-  // FFI/Dynamic library management
-  final Map<int, ffi.DynamicLibrary> _libraries = <int, ffi.DynamicLibrary>{};
-  int _nextLibraryHandle = 1;
-
-  // Goal ID counter for spawn
-  int nextGoalId = 10000;  // Start at 10000 to avoid collisions with test goal IDs
+  /// The goal-id counter.  Every goal takes its id from it --- a spawned goal,
+  /// a goal run/2 or run/3 activates, a REPL goal, the goal an agent's host
+  /// posts at boot --- so no two goals share one.
+  int nextGoalId = 1;
 
   /// The goal currently being reduced. The interpreter sets this immediately
   /// before invoking a body kernel, so a kernel (e.g. `self_module`) can reach
   /// its own goal's per-goal state through `rt` without the (rt, args) kernel
   /// signature carrying a goal handle.
   GoalId? currentGoalId;
-
-  /// The body position of the call a body kernel is running for, set with
-  /// [currentGoalId]: with the calling goal's identifier it names a goal the
-  /// kernel spawns in an sGLP run (person/2, lib/sglp/person.dart).
-  int? currentSpawnOrdinal;
 
   // Timer tracking for wait() guards
   int _pendingTimers = 0;
@@ -73,16 +48,20 @@ class GlpRuntime {
   // Wait state tracking for wait() guards
   // Maps goalId to the reader ID that the timer will signal
   // When goal resumes, we check if this reader is bound (timer fired)
-  final Map<int, int> _waitReaders = <int, int>{};
+  final Map<int, HeapCell> _waitReaders = <int, HeapCell>{};
 
   // Suspension tracking for scheduler-IRMA integration (spec section 8.4)
   // Maps reader varId -> Set<GoalRef> of goals blocked on that reader
   // Updated by suspendGoalFCP, cleared when goals reactivate
-  final Map<int, Set<GoalRef>> suspended = <int, Set<GoalRef>>{};
+  final Map<HeapCell, Set<GoalRef>> suspended = <HeapCell, Set<GoalRef>>{};
 
-  // Infrastructure goal IDs (spec §3.4): serve goals spawned by auto-activation.
-  // Their suspension does not affect user goal status determination.
-  final Set<int> infrastructureGoalIds = {};
+  // The readers each goal in [suspended] waits on, its suspension set W: the
+  // index by which a goal reactivated leaves [suspended] at the cost of its
+  // own readers (dGLP Reduce, S' = S \ {(G, W) : G ∈ R}; IGLP dglp.tex,
+  // Definition "dGLP Transition System").  Until 2026-10-02 it left by a
+  // visit to every entry of [suspended], so a wakeup cost in the number of
+  // goals suspended.
+  final Map<GoalRef, Set<HeapCell>> _suspendedOn = <GoalRef, Set<HeapCell>>{};
 
   // F — the failed goals of the dGLP and madGLP Reduce transactions. A reduction
   // has three outcomes; a goal that fails joins F and the agent goes on reducing
@@ -90,12 +69,6 @@ class GlpRuntime {
   // scheduler folds this into the run's status without stopping the drain.
   // Recorded as the text of the failed goal, which is what a diagnostic needs.
   final List<String> failedGoals = [];
-
-  /// The sGLP run this machine is in (svGLP, sections/sglp.tex): the
-  /// simulated clock, the pending goals and the seed.  Null outside one, and
-  /// a rated goal spawned there fails.  The engine installs it for each goal
-  /// it posts to a program with rated goals or a run declaration.
-  SimState? sim;
 
   // madGLP context (set when running in multiagent mode)
   // Used by '_cold_send' kernel to access globalization infrastructure
@@ -125,17 +98,80 @@ class GlpRuntime {
   }
 
   /// Set wait state for a goal
-  void setWaitReader(int goalId, int readerId) {
+  void setWaitReader(int goalId, HeapCell readerId) {
     _waitReaders[goalId] = readerId;
   }
 
   /// Get the wait reader for a goal (if any)
-  int? getWaitReader(int goalId) => _waitReaders[goalId];
+  HeapCell? getWaitReader(int goalId) => _waitReaders[goalId];
 
-  GlpRuntime({HeapFCP? heap, GoalQueue? gq, SystemPredicateRegistry? systemPredicates, BodyKernelRegistry? bodyKernels})
+  // when_idle (GLP-Spec appendix-guards.tex at e3a8d52, the time guards):
+  // "when_idle suspends while the machine has a Reduce or a Communicate to
+  // make, and succeeds when it has none."  A goal suspends on it as on wait/1:
+  // on the reader of a fresh variable, whose writer the scheduler binds when
+  // the machine is idle (Scheduler.drainWithStatus), which re-tries the goal.
+  // Keyed by goal, in the order the goals first suspended on it.
+  final Map<int, ({HeapCell writer, HeapCell reader})> _idleWaits = {};
+
+  /// The machine has no Reduce and no Communicate to make (IGLP eadadcd,
+  /// Implementation Notes, "The when_idle Guard": "The guard succeeds when
+  /// the agent's run queue is empty and, in madGLP, its outbox too: a queued
+  /// outbound message is a Communicate still to make").  The goal whose guard
+  /// asks has been taken from the queue, so its own reduction is not counted.
+  /// A message in a madGLP agent's outbox counts while it is one the agent's
+  /// Send is enabled for, unsent and not held (Definition madGLP Send); a
+  /// held message waits on authorise_link/2, not on the machine.
+  bool get isIdle {
+    if (gq.length != 0) return false;
+    final ctx = madContext;
+    return ctx is! MadContext || !ctx.mp.hasSendable;
+  }
+
+  /// The reader goal [goalId] suspends on while it waits on when_idle: the
+  /// one it already waits on, or a fresh one, the goal then joining the end
+  /// of the goals that wait.
+  HeapCell idleReader(int goalId) {
+    final w = _idleWaits[goalId];
+    if (w != null) return w.reader;
+    final (writer, reader) = heap.allocateVariable();
+    _idleWaits[goalId] = (writer: writer, reader: reader);
+    return reader;
+  }
+
+  /// Goal [goalId] has passed when_idle: it no longer waits on it.
+  void clearIdleWait(int goalId) => _idleWaits.remove(goalId);
+
+  /// The number of goals whose state the runtime holds: those in the queue
+  /// or suspended, once every goal that ended has left ([goalEnded]).
+  int get goalsHeld => _goalEnvs.length;
+
+  /// Some goal may be waiting on when_idle.  An entry whose goal has since
+  /// been re-tried by another reader and gone on is counted until
+  /// [wakeIdle] passes over it.
+  bool get hasIdleWaits => _idleWaits.isNotEmpty;
+
+  /// Re-try one goal that waits on when_idle, the one that has waited
+  /// longest: bind the writer of the reader it suspended on, which puts it
+  /// back in the queue.  One at a time, since the goal re-tried may make work
+  /// for the machine, and then the next is not idle.  An entry whose goal was
+  /// re-tried by another of its readers wakes nothing (its suspension record
+  /// is disarmed) and is passed over.  True if a goal was re-tried.
+  bool wakeIdle() {
+    while (_idleWaits.isNotEmpty) {
+      final goalId = _idleWaits.keys.first;
+      final w = _idleWaits.remove(goalId)!;
+      final reactivated = heap.bindWriterConst(w.writer, 0);
+      for (final goalRef in reactivated) {
+        enqueueReactivatedGoal(goalRef);
+      }
+      if (reactivated.isNotEmpty) return true;
+    }
+    return false;
+  }
+
+  GlpRuntime({HeapFCP? heap, GoalQueue? gq, BodyKernelRegistry? bodyKernels})
       : heap = heap ?? HeapFCP(),
         gq = gq ?? GoalQueue(),
-        systemPredicates = systemPredicates ?? SystemPredicateRegistry(),
         bodyKernels = bodyKernels ?? _createDefaultBodyKernels();
 
   /// Create body kernel registry with standard kernels registered
@@ -147,7 +183,7 @@ class GlpRuntime {
 
   /// Commit writer bindings using FCP-exact semantics
   /// sigmaHat: Map from varId to tentative value
-  List<GoalRef> commitSigmaHat(Map<int, Object?> sigmaHat) {
+  List<GoalRef> commitSigmaHat(Map<HeapCell, Object?> sigmaHat) {
     final acts = CommitOps.applySigmaHatFCP(
       heap: heap,
       sigmaHat: sigmaHat,
@@ -156,28 +192,19 @@ class GlpRuntime {
     return acts;
   }
 
-  /// Legacy commit method (deprecated - for backward compatibility)
-  /// TODO: Remove after runner.dart updated to use commitSigmaHat
-  List<GoalRef> commitWriters(Iterable<int> writerIds) {
-    throw UnimplementedError('Legacy commitWriters deprecated - use commitSigmaHat');
-  }
-
-  /// Legacy abandon method (deprecated)
-  /// TODO: Remove after runner.dart updated
-  List<GoalRef> abandonWriter(int writerId) {
-    throw UnimplementedError('Legacy abandonWriter deprecated - FCP has no abandon');
-  }
-
   /// Suspend goal using FCP-exact shared suspension records
   void suspendGoalFCP({
     required int goalId,
     required int kappa,
-    required Set<int> readerVarIds,
+    required Set<HeapCell> readerVarIds,
   }) {
     // Track which readers have this goal suspended (spec section 8.4)
     final goalRef = GoalRef(goalId, kappa);
     for (final readerId in readerVarIds) {
       suspended.putIfAbsent(readerId, () => <GoalRef>{}).add(goalRef);
+    }
+    if (readerVarIds.isNotEmpty) {
+      _suspendedOn.putIfAbsent(goalRef, () => <HeapCell>{}).addAll(readerVarIds);
     }
 
     SuspendOps.suspendGoalFCP(
@@ -208,19 +235,26 @@ class GlpRuntime {
 
   CallEnv? getGoalEnv(GoalId g) => _goalEnvs[g];
 
+  /// Goal [g] has ended: it reduced with no goal of its body continuing it, or
+  /// it failed.  It is no longer in the queue or the suspended set (dGLP
+  /// Transition System: a Reduce replaces the goal by its body, a Fail moves
+  /// it to F, which keeps its text), so its argument registers, its program
+  /// and module, its tail budget and any wait it began are dropped.  Until
+  /// 2026-10-02 they were kept for the whole run, some 500 bytes a goal: 1.6
+  /// of the 5 GB live at the end of a year of sGLP's 100-agent social graph.
+  void goalEnded(GoalId g) {
+    _goalEnvs.remove(g);
+    _goalPrograms.remove(g);
+    _goalModules.remove(g);
+    _budgets.remove(g);
+    _waitReaders.remove(g);
+  }
+
   void setGoalProgram(GoalId g, Object? program) {
     _goalPrograms[g] = program;
   }
 
   Object? getGoalProgram(GoalId g) => _goalPrograms[g];
-
-  /// Set module context for a goal (for distribute/transmit handlers)
-  void setGoalModuleContext(GoalId g, Object? ctx) {
-    _goalModuleContexts[g] = ctx;
-  }
-
-  /// Get module context for a goal
-  Object? getGoalModuleContext(GoalId g) => _goalModuleContexts[g];
 
   /// Set the module VALUE a goal runs (its ModuleTerm) — read back by
   /// `self_module`, inherited by spawned children.
@@ -245,86 +279,25 @@ class GlpRuntime {
     _removeFromSuspended(goal);
   }
 
-  /// Remove a goal from all entries in the suspended map
+  /// [goal] is taken from the queue to be tried, so it waits on nothing: it
+  /// leaves [suspended], as a goal reactivated does (dGLP Reduce, S' = S \
+  /// {(G, W) : G ∈ R}).  The goals a commit's bindings wake are put in the
+  /// queue by the runner itself and not through [enqueueReactivatedGoal], and
+  /// until 2026-10-02 such a goal stayed in [suspended] for the rest of the
+  /// run: after 30 days of sGLP's social graph the map held 464,267 goals, 631
+  /// of them suspended.
+  void goalTaken(GoalRef goal) => _removeFromSuspended(goal);
+
+  /// Remove a goal from every entry of [suspended] it is in: those of the
+  /// readers it waits on, which [_suspendedOn] holds.
   void _removeFromSuspended(GoalRef goal) {
-    final toRemove = <int>[];
-    for (final entry in suspended.entries) {
-      entry.value.remove(goal);
-      if (entry.value.isEmpty) {
-        toRemove.add(entry.key);
-      }
+    final readers = _suspendedOn.remove(goal);
+    if (readers == null) return;
+    for (final readerId in readers) {
+      final goals = suspended[readerId];
+      if (goals == null) continue;
+      goals.remove(goal);
+      if (goals.isEmpty) suspended.remove(readerId);
     }
-    for (final key in toRemove) {
-      suspended.remove(key);
-    }
-  }
-
-  // File handle management methods
-
-  /// Allocate a new file handle and register the file
-  int allocateFileHandle(RandomAccessFile file) {
-    final handle = _nextFileHandle++;
-    _fileHandles[handle] = file;
-    return handle;
-  }
-
-  /// Get file by handle
-  RandomAccessFile? getFile(int handle) => _fileHandles[handle];
-
-  /// Check if handle is valid
-  bool isValidHandle(int handle) => _fileHandles.containsKey(handle);
-
-  /// Close and remove file handle
-  void closeFileHandle(int handle) {
-    final file = _fileHandles.remove(handle);
-    if (file != null) {
-      try {
-        file.closeSync();
-      } catch (e) {
-        // Ignore close errors
-      }
-    }
-  }
-
-  /// Close all open file handles (cleanup)
-  void closeAllFiles() {
-    for (final file in _fileHandles.values) {
-      try {
-        file.closeSync();
-      } catch (e) {
-        // Ignore close errors
-      }
-    }
-    _fileHandles.clear();
-  }
-
-  // FFI/Dynamic library management methods
-
-  /// Load a dynamic library and allocate handle
-  int loadLibrary(String path) {
-    try {
-      final lib = ffi.DynamicLibrary.open(path);
-      final handle = _nextLibraryHandle++;
-      _libraries[handle] = lib;
-      return handle;
-    } catch (e) {
-      throw Exception('Failed to load library $path: $e');
-    }
-  }
-
-  /// Get library by handle
-  ffi.DynamicLibrary? getLibrary(int handle) => _libraries[handle];
-
-  /// Check if library handle is valid
-  bool isValidLibrary(int handle) => _libraries.containsKey(handle);
-
-  /// Close library handle (note: DynamicLibrary doesn't have close method)
-  void closeLibrary(int handle) {
-    _libraries.remove(handle);
-  }
-
-  /// Close all libraries
-  void closeAllLibraries() {
-    _libraries.clear();
   }
 }

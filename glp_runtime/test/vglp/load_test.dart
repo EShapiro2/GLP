@@ -12,18 +12,14 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/compiler/program_linker.dart';
-import 'package:glp_runtime/vglp/program_compilation.dart' show compiledHeader;
-import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart'
-    show setRootScopeEnvironmentSource;
+import 'package:glp_runtime/compiler/error.dart';
+import 'package:glp_runtime/vglp/program_compilation.dart'
+    show compiledHeader, readSelfVglp, scopeWidgetDeclarations;
 
 const _programs = '../programs';
 final _rootSelfGlp = '$_programs/self.glp';
 
 void main() {
-  if (File(_rootSelfGlp).existsSync()) {
-    setRootScopeEnvironmentSource(File(_rootSelfGlp).readAsStringSync());
-  }
-
   late Directory fixture;
 
   setUp(() {
@@ -38,6 +34,12 @@ void main() {
 
   void write(String name, String content) =>
       File('${fixture.path}/$name').writeAsStringSync(content);
+
+  // A module's name is its path from the root, programs/ (TGLP modules.tex,
+  // Compilation, third step): the fixture's module `responder` is
+  // `<the fixture's directory>/responder`.
+  String inFixture(String module) =>
+      '${fixture.path.split('/').last}/$module';
 
   const selfGlp = '''
 Decision      ::= yes ; no.
@@ -71,7 +73,7 @@ respond(offer(From), [answered(Answer?, From?)]) :-
       final modules =
           discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp);
       final responder =
-          modules.where((m) => m.moduleName == 'responder').toList();
+          modules.where((m) => m.moduleName == inFixture('responder')).toList();
       expect(responder, hasLength(1),
           reason: 'the .vglp source should be a module of the program');
       expect(responder.single.filePath, endsWith('.vglp'));
@@ -82,7 +84,7 @@ respond(offer(From), [answered(Answer?, From?)]) :-
       write('responder.vglp', responderVglp);
 
       final m = discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp)
-          .firstWhere((m) => m.moduleName == 'responder');
+          .firstWhere((m) => m.moduleName == inFixture('responder'));
 
       // No volition guard survives: GLP is vGLP without volition-guarded
       // clauses (Definition "GLP, maGLP, cGLP").
@@ -110,7 +112,7 @@ respond(offer(From), [answered(Answer?, From?)]) :-
 
       final modules =
           discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp);
-      final compiled = modules.firstWhere((m) => m.moduleName == 'responder');
+      final compiled = modules.firstWhere((m) => m.moduleName == inFixture('responder'));
       final sibling = modules.firstWhere((m) => m.isSelfGlp);
       bool declares(DiscoveredModule m, String sig) =>
           m.ancestorScope.procedures.containsKey(sig) ||
@@ -178,13 +180,13 @@ ping(a).
 
     test('compiles on load and is well-typed, input coverage included', () {
       final modules = discoverProgram(dir, rootSelfGlpPath: _rootSelfGlp);
-      expect(modules.map((m) => m.moduleName), contains('responder'));
+      expect(modules.map((m) => m.moduleName), contains('tests/vglp/one_clause/responder'));
       expect(() => typeCheckProgram(modules, rootDir: dir), returnsNormally);
     });
 
     test("a clause with no else-branch has a reply type with no else", () {
       final m = discoverProgram(dir, rootSelfGlpPath: _rootSelfGlp)
-          .firstWhere((m) => m.moduleName == 'responder');
+          .firstWhere((m) => m.moduleName == 'tests/vglp/one_clause/responder');
       String def(String name) =>
           m.ast.typeDefs.firstWhere((d) => d.name == name).toString();
       expect(def('Reply_greet_1'), 'Reply_greet_1 ::= then(Xs_greet_1).');
@@ -193,6 +195,123 @@ ping(a).
       expect(def('Escrow'),
           'Escrow ::= esc_respond_1(Reply_respond_1?) ; '
           'esc_greet_1(Reply_greet_1?) ; esc_pick_1(Reply_pick_1?).');
+    });
+  });
+
+  group('a source in the paper\'s syntax, compiled with its ask streams', () {
+    // vGLP's task of 2026-10-02 00:13 UTC, item F: the canonical compilation
+    // of db03e2d, typed, and at c994328, with (_) and the handle out of the
+    // language (vGLP #5 Cowork 2026-10-03 08:16 UTC).  The ask stream's
+    // element type is one ask/2 over the union of the questions, each moded
+    // interactive type inside a functor of its own, ask(Constant, Question)
+    // (vGLP #4 Cowork, 2026-10-02 08:26 UTC, Q1), so a program with two or
+    // more interactive types is typed as one with one is.  The agent is that
+    // of Sections 1 and 3: its question is the stream of the person's
+    // requests, asked once and served by an ordinary procedure.
+    const entrySelfGlp = '''
+exported procedure ping(Constant).
+ping(a).
+''';
+
+    test('one interactive type in reader mode, the stream of requests served '
+        'by an ordinary procedure, and a merge: the compiled program is '
+        'well-typed, input coverage included', () {
+      write('self.glp', entrySelfGlp);
+      write('agent.vglp', '''
+Peer     ::= Constant.
+Request  ::= post(String) ; quit.
+Msg      ::= msg(Peer, String).
+
+procedure (Stream(Request)?)*agent(Peer?, Stream(Msg)?, Stream(String)).
+(Reqs)*agent(Id, NetIn, Outs?) :- serve(Reqs?, Id?, NetIn?, Outs).
+
+procedure serve(Stream(Request)?, Peer?, Stream(Msg)?, Stream(String)).
+serve([post(Text)|Reqs], Id, NetIn, [Text?|Outs?]) :-
+    ground(Id?) | serve(Reqs?, Id?, NetIn?, Outs).
+serve([quit|_], _, _, []).
+serve(Reqs, Id, [msg(Id1, T)|NetIn], [T?|Outs?]) :-
+    Id? =?= Id1?, ground(T?) |
+    serve(Reqs?, Id?, NetIn?, Outs).
+
+procedure two(Peer?, Peer?, Stream(Msg)?, Stream(Msg)?, Stream(String),
+    Stream(String)).
+two(A, B, NA, NB, OA?, OB?) :- agent(A?, NA?, OA), agent(B?, NB?, OB).
+''');
+      final modules =
+          discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp);
+      final agent = modules.firstWhere((m) => m.moduleName == inFixture('agent'));
+      expect(agent.ast.procedures.map((p) => '${p.name}/${p.arity}'),
+          containsAll(['agent/4', 'agent1/5', 'serve/4', 'two/7']));
+      expect(() => typeCheckProgram(modules, rootDir: fixture.path),
+          returnsNormally);
+    });
+
+    test('two interactive types, one in each mode, the agent of Section 1 '
+        'and the responder of Section 3: well-typed', () {
+      write('self.glp', entrySelfGlp);
+      write('agent.vglp', '''
+Peer     ::= Constant.
+Request  ::= post(String) ; quit.
+Offer    ::= offer(Peer).
+Response ::= accept(Peer) ; refuse(Peer).
+YesNo    ::= yes ; no.
+Card     ::= card(Peer, YesNo?).
+Content  ::= friend_request(Peer, Response?).
+Msg      ::= msg(Peer, Content).
+
+procedure (Stream(Request)?)*agent(Peer?, Stream(Msg)?, Stream(String)).
+(Reqs)*agent(Id, NetIn, Outs?) :- serve(Reqs?, Id?, NetIn?, Outs).
+
+procedure serve(Stream(Request)?, Peer?, Stream(Msg)?, Stream(String)).
+serve([post(Text)|Reqs], Id, NetIn, [Text?|Outs?]) :-
+    ground(Id?) | serve(Reqs?, Id?, NetIn?, Outs).
+serve([quit|_], _, _, []).
+serve(Reqs, Id, [msg(Id1, friend_request(From, Resp?))|NetIn], Outs?) :-
+    Id? =?= Id1?, ground(From?) |
+    respond_coldcall(offer(From?), Resp),
+    serve(Reqs?, Id?, NetIn?, Outs).
+
+procedure (Card)*respond_coldcall(Offer?, Response).
+(card(From?, Answer))*respond_coldcall(offer(From), Resp?) :-
+    ground(From?) | decide(Answer?, From?, Resp).
+
+procedure decide(YesNo?, Peer?, Response).
+decide(yes, From, accept(From?)).
+decide(no, From, refuse(From?)).
+''');
+      final modules =
+          discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp);
+      final agent = modules.firstWhere((m) => m.moduleName == inFixture('agent'));
+      expect(
+          agent.ast.typeDefs.map((d) => d.toString()),
+          contains('Question ::= stream_request_r(Stream(Request)?) ; '
+              'card_w(Card).'));
+      expect(() => typeCheckProgram(modules, rootDir: fixture.path),
+          returnsNormally);
+    });
+
+    test('one interactive type in writer mode, the responder of Section 3: '
+        'well-typed', () {
+      write('self.glp', entrySelfGlp);
+      write('responder.vglp', '''
+Peer     ::= Constant.
+Offer    ::= offer(Peer).
+Response ::= accept(Peer) ; refuse(Peer).
+YesNo    ::= yes ; no.
+Card     ::= card(Peer, YesNo?).
+
+procedure (Card)*respond_coldcall(Offer?, Response).
+(card(From?, Answer))*respond_coldcall(offer(From), Resp?) :-
+    ground(From?) | decide(Answer?, From?, Resp).
+
+procedure decide(YesNo?, Peer?, Response).
+decide(yes, From, accept(From?)).
+decide(no, From, refuse(From?)).
+''');
+      final modules =
+          discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp);
+      expect(() => typeCheckProgram(modules, rootDir: fixture.path),
+          returnsNormally);
     });
   });
 
@@ -208,7 +327,7 @@ respond(offer(From), [answered(no, From?)]) :- ground(From?) | true.
       final modules =
           discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp);
       final responder =
-          modules.where((m) => m.moduleName == 'responder').toList();
+          modules.where((m) => m.moduleName == inFixture('responder')).toList();
       expect(responder, hasLength(1));
       expect(responder.single.filePath, endsWith('.glp'),
           reason: 'switching a deployed program onto its compiled agent is its '
@@ -270,7 +389,7 @@ greet(offer(From), Outs, Outs1?) :-
       expect(emitted, contains('Xs_greet_1 ::= xs_greet_1(Key).'));
       // And the load compiles the same source.
       final m = discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp)
-          .firstWhere((m) => m.moduleName == 'greeter');
+          .firstWhere((m) => m.moduleName == inFixture('greeter'));
       expect(m.ast.procedures.map((p) => p.name), contains('greet'));
     });
 
@@ -304,6 +423,117 @@ ping(a).
           discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp);
       expect(modules.any((m) => m.filePath.endsWith('.vglp')), isFalse);
       expect(modules.any((m) => m.moduleName.isNotEmpty), isTrue);
+    });
+  });
+
+  group('widget declarations of a scope, in the self.vglp beside its self.glp',
+      () {
+    // vGLP #5 Cowork, 2026-10-03 08:16 UTC, item 7: the pre-pass reads them
+    // from self.vglp beside each self.glp, a file of =::= lines only, which
+    // the loader skips by the standing rule (a .vglp beside a .glp of its own
+    // name); a declaration there holds for the scope of that self.glp
+    // (Definition "Widget Declaration, Default Widget": "a declaration at the
+    // root holds for every program, one in a module holds in that module, and
+    // a local declaration overrides a global one").
+    const asker = '''
+YesNo ::= yes ; no.
+procedure (YesNo?)*ask(Integer?).
+(yes)*ask(_).
+(no)*ask(_).
+''';
+
+    void program() {
+      write('self.glp', '''
+exported procedure ping(Constant).
+ping(a).
+''');
+      write('self.vglp', '''
+%% The program's widget declarations.
+YesNo? =::= toggle.
+''');
+    }
+
+    String emitted(String name) =>
+        File('${fixture.path}/$name.glp').readAsStringSync();
+
+    test('a declaration in the program\'s self.vglp holds in its modules, and '
+        'the self.vglp is no module', () {
+      program();
+      write('asker.vglp', asker);
+      final skipped = <String>[];
+      final written = emitVglpSources(fixture.path,
+          rootSelfGlpPath: File(_rootSelfGlp).absolute.path,
+          onSkip: skipped.add);
+      expect(written.map((w) => w.split('/').last), ['asker.glp']);
+      expect(skipped, isEmpty);
+      expect(emitted('asker'), contains('run(Id?, toggle, [input([])], Done?, Ds)'));
+      final modules =
+          discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp);
+      expect(modules.any((m) => m.filePath.endsWith('self.vglp')), isFalse);
+      expect(() => typeCheckProgram(modules, rootDir: fixture.path),
+          returnsNormally);
+    });
+
+    test('a module\'s own declaration overrides its scope\'s', () {
+      program();
+      write('asker.vglp', 'YesNo? =::= lamp.\n$asker');
+      emitVglpSources(fixture.path,
+          rootSelfGlpPath: File(_rootSelfGlp).absolute.path);
+      expect(emitted('asker'), contains('run(Id?, lamp, [input([])], Done?, Ds)'));
+    });
+
+    test('a nested directory\'s self.vglp overrides its ancestor\'s, and holds '
+        'only below it', () {
+      program();
+      write('asker.vglp', asker);
+      Directory('${fixture.path}/sub').createSync();
+      write('sub/self.glp', '''
+exported procedure pong(Constant).
+pong(b).
+''');
+      write('sub/self.vglp', 'YesNo? =::= dial.\n');
+      write('sub/inner.vglp', asker);
+      emitVglpSources(fixture.path,
+          rootSelfGlpPath: File(_rootSelfGlp).absolute.path);
+      expect(emitted('sub/inner'), contains('run(Id?, dial, [input([])], Done?, Ds)'));
+      expect(emitted('asker'), contains('run(Id?, toggle, [input([])], Done?, Ds)'));
+    });
+
+    test('the root\'s self.vglp holds for every program, a directory with no '
+        'self.glp adds nothing, and a more local declaration overrides', () {
+      // A tree of its own, so that the root's self.vglp is not programs/'s.
+      final tmp = Directory.systemTemp.createTempSync('vglp_widget_scope_');
+      try {
+        void put(String rel, String text) =>
+            (File('${tmp.path}/$rel')..createSync(recursive: true))
+                .writeAsStringSync(text);
+        put('programs/self.glp', '');
+        put('programs/self.vglp', 'YesNo? =::= root_toggle.\nCard =::= root_card.\n');
+        put('programs/app/self.glp', '');
+        put('programs/app/self.vglp', 'YesNo? =::= app_toggle.\n');
+        put('programs/app/plain/self.vglp', 'Card =::= stray.\n');
+        put('programs/app/plain/m.vglp', '');
+        put('programs/other/m.vglp', '');
+        expect(
+            scopeWidgetDeclarations('${tmp.path}/programs/app/plain/m.vglp',
+                '${tmp.path}/programs'),
+            {'YesNo?': 'app_toggle', 'Card': 'root_card'});
+        expect(
+            scopeWidgetDeclarations(
+                '${tmp.path}/programs/other/m.vglp', '${tmp.path}/programs'),
+            {'YesNo?': 'root_toggle', 'Card': 'root_card'});
+      } finally {
+        tmp.deleteSync(recursive: true);
+      }
+    });
+
+    test('a self.vglp holding anything but widget declarations is refused, '
+        'naming it', () {
+      write('self.vglp', 'YesNo? =::= toggle.\nping(a).\n');
+      expect(
+          () => readSelfVglp('${fixture.path}/self.vglp'),
+          throwsA(isA<CompileError>().having((e) => e.message, 'message',
+              allOf(contains('self.vglp'), contains('and nothing else')))));
     });
   });
 }

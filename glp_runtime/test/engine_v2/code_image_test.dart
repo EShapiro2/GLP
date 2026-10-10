@@ -5,7 +5,6 @@ library;
 import 'dart:typed_data';
 import 'package:test/test.dart';
 import 'package:glp_runtime/bytecode/opcodes.dart';
-import 'package:glp_runtime/bytecode/opcodes_v2.dart' as bcv2;
 import 'package:glp_runtime/wire/artefact.dart';
 import 'package:glp_runtime/wire/instruction_codec.dart' show decodeCode;
 import 'package:glp_runtime/engine_v2/code_image.dart';
@@ -16,8 +15,8 @@ void main() {
   // name at load).
   final ops = <Object>[
     Label('p/2'),
-    bcv2.GetVariable(0, 0, isReader: false),
-    bcv2.GetVariable(1, 1, isReader: false),
+    GetVariable(0, 0, isReader: false),
+    GetVariable(1, 1, isReader: false),
     Spawn('helper/1', 1),
     Proceed(),
     Label('r/1'),
@@ -28,7 +27,7 @@ void main() {
     ops: ops,
     hM: hM,
     moduleName: 'demo',
-    isaVersion: 'glp-isa-1',
+    isaVersion: glpIsaVersion,
     typeDefsText: 'Foo ::= a ; b.',
     exports: const [ArtefactExport('p', 2, 'procedure p(_?, _).')],
   );
@@ -36,7 +35,7 @@ void main() {
 
   test('header / interface fields are preserved', () {
     final img = CodeImage.fromArtefactBytes(bytes);
-    expect(img.isaVersion, 'glp-isa-1');
+    expect(img.isaVersion, glpIsaVersion);
     expect(img.moduleName, 'demo');
     expect(img.typeDefsText, 'Foo ::= a ; b.');
     expect(img.hM, hM);

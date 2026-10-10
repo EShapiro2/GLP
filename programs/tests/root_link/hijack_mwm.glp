@@ -1,0 +1,13 @@
+%% A module defining a procedure of a root helper's name and arity, mwm1/4, the
+%% helper the root self.glp's mwm/2 reaches through mwm_main/2.  The root
+%% self.glp is the first link of every module's chain, its procedures renamed
+%% under the empty path (TGLP modules.tex, Compilation, third and fourth
+%% steps), so this module's mwm1/4 is its own and the root's mwm/2 reaches the
+%% root's own helper: t(O) and mwm([merge([1, 2])], O) both give O = [1, 2].
+%% Until 2026-10-04 the root was compiled beside the program and reached by its
+%% bare names, and both gave O = [], this mwm1/4 standing in for the root's.
+procedure(X) mwm1(MwmInput(X)?, MutualRef?, Done?, Done).
+mwm1(_, _, _, done).
+
+procedure t(Stream(Integer)).
+t(Out?) :- mwm([merge([1, 2])], Out).

@@ -4,15 +4,12 @@ import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/compiler/ast.dart';
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
-import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart';
 import 'package:glp_runtime/runtime/module_hierarchy.dart';
 
 void main() {
-  // Set prelude sources from programs/self.glp (same as GlpEngine constructor)
+  // The root self.glp, d_1 of every scope, passed to each assembly.
   final rootSelfGlp = File('../programs/self.glp');
-  if (rootSelfGlp.existsSync()) {
-    setRootScopeEnvironmentSource(rootSelfGlp.readAsStringSync());
-  }
+  final rootPath = rootSelfGlp.existsSync() ? rootSelfGlp.absolute.path : null;
   // Helper: parse source into Module AST
   Module parseModule(String source) {
     final lexer = Lexer(source);
@@ -131,7 +128,7 @@ void main() {
         );
         final moduleSource = await File('${tempDir.path}/sub/module.glp').readAsString();
         final module = parseModule(moduleSource);
-        final env = assembleTypeScope(chain: chain, module: module);
+        final env = assembleTypeScope(chain: chain, module: module, rootSelfGlpPath: rootPath);
 
         // Response from root/self.glp should be visible
         expect(env.hasType('Response'), isTrue);
@@ -157,7 +154,7 @@ void main() {
         );
         final moduleSource = await File('${tempDir.path}/sub/module.glp').readAsString();
         final module = parseModule(moduleSource);
-        final env = assembleTypeScope(chain: chain, module: module);
+        final env = assembleTypeScope(chain: chain, module: module, rootSelfGlpPath: rootPath);
 
         // Both Response (from root) and AgentContent (from sub) should be visible
         expect(env.hasType('Response'), isTrue);
@@ -183,7 +180,7 @@ void main() {
         );
         final moduleSource = await File('${tempDir.path}/sub/module.glp').readAsString();
         final module = parseModule(moduleSource);
-        final env = assembleTypeScope(chain: chain, module: module);
+        final env = assembleTypeScope(chain: chain, module: module, rootSelfGlpPath: rootPath);
 
         // Should see child's 3-alternative Response, not parent's 2-alternative
         final responseDef = env.getType('Response');
@@ -207,7 +204,7 @@ void main() {
         );
         final moduleSource = await File('${tempDir.path}/module.glp').readAsString();
         final module = parseModule(moduleSource);
-        final env = assembleTypeScope(chain: chain, module: module);
+        final env = assembleTypeScope(chain: chain, module: module, rootSelfGlpPath: rootPath);
 
         // Module's own Foo (3 alternatives) should shadow ancestor's (2 alternatives)
         final fooDef = env.getType('Foo');
@@ -235,7 +232,7 @@ void main() {
         );
         final mediatorSource = await File('${tempDir.path}/mediator.glp').readAsString();
         final mediatorModule = parseModule(mediatorSource);
-        final mediatorEnv = assembleTypeScope(chain: mediatorChain, module: mediatorModule);
+        final mediatorEnv = assembleTypeScope(chain: mediatorChain, module: mediatorModule, rootSelfGlpPath: rootPath);
 
         // mediator.glp should see SharedType from self.glp
         expect(mediatorEnv.hasType('SharedType'), isTrue);
@@ -261,7 +258,7 @@ void main() {
         );
         final moduleSource = await File('${tempDir.path}/module.glp').readAsString();
         final module = parseModule(moduleSource);
-        final env = assembleTypeScope(chain: chain, module: module);
+        final env = assembleTypeScope(chain: chain, module: module, rootSelfGlpPath: rootPath);
 
         // Types from type-only self.glp should be visible
         expect(env.hasType('Response'), isTrue);
@@ -285,7 +282,7 @@ void main() {
         );
         final moduleSource = await File('${tempDir.path}/module.glp').readAsString();
         final module = parseModule(moduleSource);
-        final env = assembleTypeScope(chain: chain, module: module);
+        final env = assembleTypeScope(chain: chain, module: module, rootSelfGlpPath: rootPath);
 
         // Prelude types should always be available
         // Stream and Channel are now parametric: Stream(X), Channel(In, Out)
@@ -313,7 +310,7 @@ void main() {
         );
         final moduleSource = await File('${tempDir.path}/sub/module.glp').readAsString();
         final module = parseModule(moduleSource);
-        final env = assembleTypeScope(chain: chain, module: module);
+        final env = assembleTypeScope(chain: chain, module: module, rootSelfGlpPath: rootPath);
 
         // shared_proc from self.glp should be visible in descendant's scope
         expect(env.hasProcedure('shared_proc', 2), isTrue);
@@ -338,7 +335,7 @@ void main() {
         );
         final moduleSource = await File('${tempDir.path}/module.glp').readAsString();
         final module = parseModule(moduleSource);
-        final env = assembleTypeScope(chain: chain, module: module);
+        final env = assembleTypeScope(chain: chain, module: module, rootSelfGlpPath: rootPath);
 
         // plain procedures from self.glp are also visible (ancestor scoping)
         expect(env.hasProcedure('helper', 2), isTrue);

@@ -1,0 +1,4 @@
+exported procedure p(Integer?, Integer).
+p(X, Y?) :- q(X?, Y).
+procedure q(Integer?, Integer).
+q(X, Y?) :- Y := X? + 1.

@@ -1,0 +1,51 @@
+%% mad_fplay4b.glp — madGLP boot for bonds fplay4b (2 isolates: alice, bob)
+%%
+%% Derived from: bonds/boot.glp fplay4b clause
+%% Bonds: Time-dependent redemption (2 agents)
+%% T = 30 is the maturity of the dated bonds, the same in both isolates.
+
+
+procedure boot.
+boot :-
+    agent_init_4b(alice, _)@alice,
+    agent_init_4b(bob, _)@bob.
+
+%% Time-dependent agent — T = 30, the maturity of the dated bonds
+procedure agent_init_4b(Key?, Stream(NetInMsg)?).
+agent_init_4b(Id, NetIn) :-
+    ground(Id?) |
+    T := 30,
+    actor_dispatch_4b(Id?, T?, ch(ActorIn?, ActorOut)),
+    tee(ActorOut?, MedIn, DispCmd),
+    agent(Id?, AgentIn?, NetIn?,
+          [user_output(AgentToPerson), net_output(NetOut)],
+          [], 1, 0),
+    send_to_net(NetOut?),
+    ui_mediator(Id?, ch(AgentToPerson?, AgentIn),
+                ch(MedIn?, MedOut), [], 1),
+    tee(MedOut?, ActorIn, DispNotify),
+    send_to_person_tagged(Id?, DispCmd?, DispNotify?).
+
+procedure(X) tee(Stream(X)?, Stream(X), Stream(X)).
+tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
+tee([], [], []).
+
+procedure send_to_person_tagged(Key?, Stream(_)?, Stream(_)?).
+send_to_person_tagged(Id, [T|Cmds], Notifies) :-
+    ground(Id?), ground(T?) |
+    send_to_user([tagged(Id?, cmd(T?))]),
+    send_to_person_tagged(Id?, Cmds?, Notifies?).
+send_to_person_tagged(Id, Cmds, [T|Notifies]) :-
+    ground(Id?), ground(T?) |
+    send_to_user([tagged(Id?, notify(T?))]),
+    send_to_person_tagged(Id?, Cmds?, Notifies?).
+send_to_person_tagged(_, [], []).
+send_to_person_tagged(_, Cmds, []) :- sink(Cmds?).
+
+procedure sink(Stream(_)?).
+sink([_|Xs]) :- sink(Xs?).
+sink([]).
+
+procedure actor_dispatch_4b(Key?, Constant?, Channel(Stream(PersonNotify), Stream(PersonCmd))?).
+actor_dispatch_4b(alice, T, Ch) :- alice_p4b(Ch?, T?).
+actor_dispatch_4b(bob, T, Ch) :- bob_p4b(Ch?, T?).

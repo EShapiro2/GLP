@@ -120,7 +120,6 @@ class _VillageScreenState extends State<VillageScreen> {
     try {
       final glp = await resolveGlpPaths();
       final engine = GlpEngine(rootSelfGlpPath: glp.rootSelfGlp)
-        ..strictTypes = false
         ..maxCycles = 5000000;
       // programs/grassapp is a program (SGSG, d27e4d6a): loaded as one, its
       // self.glp exports play_village as an entry point.

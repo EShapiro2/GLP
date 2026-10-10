@@ -1,21 +1,22 @@
-/// S2 — serializer alignment, canonical path (appendix §wf-terms).
+/// S2 — serializer alignment, canonical path (appendix §cf-terms).
 ///
 /// Variables travel as global names per Definition Globalize: tag-2 variables,
 /// not `_w`/`_r` structures. No original-creator ids, no paired-reader field,
 /// no serializer string marker — the serializer tail is the variable `_w(q,0)`.
 ///
-/// These exercise the canonical codec path (`PayloadCodec`) directly. The
-/// switched-on multiagent/isolate suites are run separately with
-/// GLP_WIRE_CANONICAL=1.
+/// These exercise the canonical codec (`PayloadCodec`) directly; it is the
+/// one encoding of madGLP payloads, which the multiagent and isolate suites run
+/// over.
 library;
 
 import 'dart:typed_data';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
-import 'package:glp_runtime/wire/artefact.dart' show Artefact;
+import 'package:glp_runtime/wire/artefact.dart' show Artefact, glpIsaVersion;
 import 'package:glp_runtime/wire/payload_codec.dart';
 import 'package:glp_runtime/wire/codec.dart';
 import 'package:test/test.dart';
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell, CellTag;
 
 /// A globalized term: a structure carrying a writer and a reader global name.
 Term _globalized() => StructTerm('msg', [
@@ -23,6 +24,13 @@ Term _globalized() => StructTerm('msg', [
       StructTerm('_r', [ConstTerm('alice'), ConstTerm(4)]),
       ConstTerm('hello'),
     ]);
+
+/// A cell of serial number [id], the same cell for the same number: these
+/// tests name a variable by its cell's number, a variable occurrence being
+/// the cell itself (IGLP app:in-heap, Variable pairs).
+final _cells = <int, HeapCell>{};
+HeapCell _c(int id) =>
+    _cells.putIfAbsent(id, () => HeapCell(null, CellTag.WrtTag, id));
 
 void main() {
   group('global names ride as tag-2 variables', () {
@@ -84,7 +92,7 @@ void main() {
     test('the same ground term yields identical bytes regardless of agent', () {
       final ground = StructTerm('pair', [
         ConstTerm(42),
-        StructTerm('.', [ConstTerm('x'), ConstTerm('nil')]),
+        StructTerm('.', [ConstTerm('x'), ConstTerm(nil)]),
       ]);
       final a = PayloadCodec.serializeAgentMessage(ground);
       final b = PayloadCodec.serializeAgentMessage(ground);
@@ -92,17 +100,17 @@ void main() {
     });
 
     test('serializeAgentMessage rejects a non-ground term', () {
-      expect(() => PayloadCodec.serializeAgentMessage(StructTerm('m', [VarRef(5)])),
+      expect(() => PayloadCodec.serializeAgentMessage(StructTerm('m', [VarRef(_c(5))])),
           throwsA(isA<WireFormatException>()));
     });
   });
 
-  group('module constant (§wf-terms tag 6)', () {
+  group('module constant (§cf-terms tag 6)', () {
     Artefact artefact() => Artefact.fromCompiled(
           ops: const [],
           hM: Uint8List(32),
           moduleName: 'shipped_probe',
-          isaVersion: 'glp-isa-1',
+          isaVersion: glpIsaVersion,
         );
 
     test('a ModuleTerm ships as constant tag 6 and decodes to a ModuleTerm',

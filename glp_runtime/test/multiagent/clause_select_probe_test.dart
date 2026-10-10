@@ -1,6 +1,5 @@
 /// Does a committable later clause fire when an earlier clause's head suspends
-/// on an unbound argument? (strictTypes=false: we care about runtime selection,
-/// not the harness's mode annotations.)
+/// on an unbound argument?
 import 'dart:io';
 import 'package:test/test.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
@@ -10,8 +9,7 @@ void main() {
     final path =
         File('../programs/tests/clause_select_probe.glp').absolute.path;
     final engine = GlpEngine(
-        rootSelfGlpPath: File('../programs/self.glp').absolute.path)
-      ..strictTypes = false;
+        rootSelfGlpPath: File('../programs/self.glp').absolute.path);
     final out = <String>[];
     engine.runtime.outputCallback = out.add;
     engine.loadSource(File(path).readAsStringSync(), filename: path);

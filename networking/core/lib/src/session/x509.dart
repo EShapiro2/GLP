@@ -41,6 +41,9 @@ const String _oidEcPublicKey = '1.2.840.10045.2.1';
 const String _oidPrime256v1 = '1.2.840.10045.3.1.7';
 const String _oidSecp384r1 = '1.3.132.0.34';
 
+// Extensions.
+const String _oidBasicConstraints = '2.5.29.19';
+
 /// DER digest identifiers for RSA PKCS#1 v1.5, as pointycastle's [RSASigner]
 /// wants them.
 const Map<String, String> _rsaDigestIdentifier = {
@@ -224,6 +227,28 @@ class X509Certificate {
     throw const X509Exception('validity carries an unrecognised time type');
   }
 
+  /// True where this certificate's basicConstraints marks it a certificate
+  /// authority — the only kind of certificate whose key may issue another.
+  ///
+  /// Absent basicConstraints, or `cA` absent or FALSE, is not a CA (RFC 5280
+  /// §4.2.1.9: `cA BOOLEAN DEFAULT FALSE`).
+  bool get isCertificateAuthority {
+    final ext = extensions[_oidBasicConstraints];
+    if (ext == null) return false;
+    final ASN1Object top;
+    try {
+      top = ASN1Parser(ext).nextObject();
+    } catch (e) {
+      throw X509Exception('basicConstraints does not parse: $e');
+    }
+    if (top is! ASN1Sequence) {
+      throw const X509Exception('basicConstraints is not a SEQUENCE');
+    }
+    if (top.elements.isEmpty) return false;
+    final ca = top.elements.first;
+    return ca is ASN1Boolean && ca.booleanValue;
+  }
+
   /// True where [at] falls inside this certificate's validity window.
   bool isValidAt(DateTime at) {
     final t = at.toUtc();
@@ -267,6 +292,32 @@ class X509Certificate {
     throw X509Exception(
       'Unsupported signature algorithm ${signed.signatureAlgorithm}',
     );
+  }
+
+  /// Verify that [signature], a DER `SEQUENCE { r, s }`, is an ECDSA
+  /// signature with SHA-256 over [message] by this certificate's subject key.
+  ///
+  /// This is the per-session half of an attestation (spec §Session
+  /// Establishment): "a signature by the attestation key", verified "against
+  /// the key the attestation carries" — and the key the attestation carries is
+  /// this certificate's subject key. Both platforms' attestation keys are EC:
+  /// the Secure Enclave holds P-256 only, and the Android producer generates
+  /// P-256.
+  ///
+  /// Returns false on a signature that does not verify; throws
+  /// [X509Exception] where the subject key is not an EC key on a supported
+  /// curve.
+  bool verifiesEcdsaSha256(Uint8List message, Uint8List signature) {
+    final key = _ecPublicKey();
+    final ecSig = _decodeEcdsaSignature(signature);
+    if (ecSig == null) return false;
+    final signer = ECDSASigner(SHA256Digest(), null)
+      ..init(false, PublicKeyParameter<ECPublicKey>(key));
+    try {
+      return signer.verifySignature(message, ecSig);
+    } catch (_) {
+      return false;
+    }
   }
 
   static Digest _digestFor(String oid) {
@@ -385,6 +436,14 @@ class X509Certificate {
 /// Returns the leaf. Throws [X509Exception] with the reason on any failure,
 /// and the reason is what the session teardown reports.
 ///
+/// Every issuer must be a certificate authority (RFC 5280 §6.1.4(k)). This is
+/// not formality: an Android attestation key is a signing key the application
+/// holds, so without this check an application could sign a certificate of
+/// its own making — any challenge, any package — with its genuinely attested
+/// key, and the forgery would chain through the genuine certificate to
+/// Google's root. The genuine attestation certificate is not a CA, so the
+/// forgery stops there.
+///
 /// The anchor is either the last certificate being byte-identical to a pinned
 /// root, or the last certificate being signed by one. Both are accepted
 /// because a producer may or may not ship the root it chains to, and neither
@@ -424,6 +483,11 @@ X509Certificate validateChain({
         'Chain link $i does not name its issuer as the next subject',
       );
     }
+    if (!parent.isCertificateAuthority) {
+      throw X509Exception(
+        'Chain link $i is issued by a certificate that is not a CA',
+      );
+    }
     if (!parent.verifies(child)) {
       throw X509Exception('Chain link $i does not verify under its issuer');
     }
@@ -436,6 +500,7 @@ X509Certificate validateChain({
   for (final root in roots) {
     if (!_sameBytes(last.issuerDer, root.subjectDer)) continue;
     if (!root.isValidAt(at)) continue;
+    if (!root.isCertificateAuthority) continue;
     if (root.verifies(last)) return certs.first;
   }
   throw const X509Exception(

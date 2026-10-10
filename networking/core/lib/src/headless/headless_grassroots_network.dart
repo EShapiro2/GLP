@@ -14,6 +14,7 @@ import '../protocol/fragment_handler.dart';
 import '../protocol/message_transport.dart';
 import '../protocol/protocol_handler.dart';
 import '../routing/message_router.dart';
+import '../session/application_identity.dart';
 import '../session/noise_session_manager.dart';
 import '../session/platform_attestation.dart';
 import '../store/store.dart';
@@ -89,8 +90,9 @@ class HeadlessGrassrootsNetwork {
   final String? staticPublicAddress;
 
   /// This profile's platform attestation service. A headless server has none
-  /// (spec §Rendezvous Server: "Having no platform attestation to offer, a
-  /// rendezvous server is reported unattested"), which is the default.
+  /// to offer (spec §Rendezvous Server: "Having no platform attestation to
+  /// offer, a rendezvous server is reported unattested"), which is the
+  /// default; the default still verifies what a peer offers.
   final PlatformAttestation attestation;
 
   late final Store<AppState> store;
@@ -154,12 +156,12 @@ class HeadlessGrassrootsNetwork {
 
   /// Fired when a peer becomes reachable over IP (authenticated session up).
   /// Receives the peer's public key, the transport it connected over, and
-  /// the attested binary hash — null where the peer's platform provides none
-  /// (spec §Connection and Reachability).
+  /// the peer's attested application identity — null where the peer's
+  /// platform provides none (spec §Connection and Reachability).
   void Function(
     Uint8List pubkey,
     MessageTransport transport,
-    Uint8List? attestedBinaryHash,
+    ApplicationIdentity? identity,
   )? onPeerConnected;
 
   /// Fired when a peer stops being reachable over IP.
@@ -737,14 +739,14 @@ class HeadlessGrassrootsNetwork {
     ));
     // The handshake is followed by the mutual attestation exchange, and
     // neither peer is reported reachable until it succeeds (spec §Session
-    // Establishment). This profile has no platform attestation to offer, so
-    // it sends the absence — which the peer reports as unattested rather than
+    // Establishment). A profile with no platform attestation to offer sends
+    // the absence — which the peer reports as unattested rather than
     // refusing, absence and failure being distinct.
     unawaited(_sendAttestation(pubkey));
   }
 
-  /// Send this profile's attestation over the session's digest. It has none,
-  /// so what travels is the explicit absence.
+  /// Send this profile's attestation over the session's digest, or the
+  /// explicit absence where it has none.
   Future<void> _sendAttestation(Uint8List pubkey) async {
     final handshakeHash =
         _noiseSessions.handshakeHashFor(PeerTransport.udp, pubkey);
@@ -755,12 +757,25 @@ class HeadlessGrassrootsNetwork {
     );
     // Both halves or neither: a platform with no attestation key has neither
     // an attestation nor a signature to give, and sends the explicit absence.
-    final offered = await attestation.attestationFor(identity.publicKey);
-    final signature =
-        offered == null ? null : await attestation.signSessionDigest(digest);
-    final evidence = (offered == null || signature == null)
-        ? null
-        : AttestationEvidence(attestation: offered, signature: signature);
+    AttestationEvidence? evidence;
+    try {
+      final offered = await attestation.attestationFor(identity.publicKey);
+      final signature = offered == null
+          ? null
+          : await attestation.signSessionDigest(
+              identityPublicKey: identity.publicKey,
+              digest: digest,
+            );
+      if (offered != null && signature != null) {
+        evidence =
+            AttestationEvidence(attestation: offered, signature: signature);
+      }
+    } catch (e) {
+      // A platform that errs offers nothing; the peer reports us unattested
+      // rather than refusing us, as the Flutter profile does.
+      debugPrint('[headless][attest] Platform attestation failed: $e');
+      evidence = null;
+    }
     final bytes = await _sessionPacketBytes(
       GrassrootsPacket(
         type: PacketType.attestation,
@@ -796,6 +811,8 @@ class HeadlessGrassrootsNetwork {
       );
     } on FormatException catch (e) {
       verdict = InvalidAttestation('malformed payload: $e');
+    } catch (e) {
+      verdict = InvalidAttestation('verification threw: $e');
     }
 
     switch (verdict) {
@@ -808,8 +825,9 @@ class HeadlessGrassrootsNetwork {
           connected: false,
         ));
         unawaited(_udpService?.disconnectFromPeer(_hex(senderPubkey)));
-      case AttestedBinary(:final binaryHash):
-        _completeAttestation(senderPubkey, PeerAttestation(binaryHash: binaryHash));
+      case AttestedApplication(:final identity):
+        debugPrint('[headless][attest] $peerShort attested as $identity');
+        _completeAttestation(senderPubkey, PeerAttestation(identity: identity));
       case UnattestedPlatform(:final reason):
         debugPrint('[headless][attest] $peerShort unattested: $reason');
         _completeAttestation(senderPubkey, PeerAttestation.unattested);
@@ -823,7 +841,7 @@ class HeadlessGrassrootsNetwork {
       attestation: attestation,
     ));
     if (_reachablePeers.add(_hex(pubkey))) {
-      onPeerConnected?.call(pubkey, MessageTransport.udp, attestation.binaryHash);
+      onPeerConnected?.call(pubkey, MessageTransport.udp, attestation.identity);
     }
     _drainQueueFor(pubkey);
   }

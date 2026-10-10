@@ -32,8 +32,7 @@ int _nonInternalCount(List<Object> ops) =>
 
 void _checkProgram(String name, String source) {
   test('$name: artefact round-trips and reconstructs faithfully', () {
-    final engine = GlpEngine(rootSelfGlpPath: '../programs/self.glp')
-      ..strictTypes = false;
+    final engine = GlpEngine(rootSelfGlpPath: '../programs/self.glp');
     engine.loadSource(source, filename: name);
     final ops0 = engine.combinedProgram.ops.cast<Object>();
 
@@ -86,7 +85,7 @@ classify(N, nonpositive) :- N? =< 0 | true.
 
     _checkProgram('append', '''
 List(X) ::= [] ; [X | List(X)].
-procedure append(List(X)?, List(X)?, List(X)).
+procedure(X) append(List(X)?, List(X)?, List(X)).
 append([], Ys, Ys?).
 append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
 ''');

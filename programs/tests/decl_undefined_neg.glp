@@ -1,0 +1,17 @@
+%% decl_undefined_neg.glp --- NEGATIVE.  An undefined type name in a
+%% declaration that names no parameters is an error, not a parameter.
+%%
+%% Spec: Moded-Types, sections/parameterized-types.tex, paragraph "Declaration
+%% parameters" --- "The parameters of a procedure declaration are exactly those
+%% its parameter list names.  An undefined type name occurring in a declaration
+%% and not in its parameter list is an error, so a misspelt type name is
+%% rejected rather than read as a parameter."
+%%
+%% keep/2 names no parameters, so M is an undefined type and the load is
+%% refused, naming keep/2, this file, line 16 and M.  Until 2026-10-03 a
+%% declaration with no list fell back to reading such a name as a parameter,
+%% and this loaded; procedure(M) keep(M?, M) is the declaration that loads
+%% (typechecker/positive/toplevel_type_param.glp).
+
+procedure keep(M?, M).
+keep(X, X?).

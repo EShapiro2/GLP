@@ -15,6 +15,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/manifests/grassapp_ui.dart';
 import 'package:glp_multiagent/ui_runtime/agent_surface.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
+import 'package:glp_multiagent/ui_runtime/term.dart';
+import 'package:glp_multiagent/isolate_protocol.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
 
 Future<void> _loadFonts() async {
@@ -126,19 +128,17 @@ void main() {
       agentId: 'Bob',
       // programs/grassapp is a program (SGSG, d27e4d6a): loaded as one, its
       // self.glp exports agent_init/3 as an entry point.
-      glpSources: const [],
-      programDir: '$repo/grassapp',
+      program: '$repo/grassapp',
       // The boot play's entry point, exported by grassapp/self.glp under its
       // own name (SGSG, 8412aae7); agent_init/3 is the duo play's.
       goalLabel: 'scenario_init/3',
       rootSelfGlpPath: '$repo/self.glp',
-      friends: const ['alice', 'charlie', 'dana', 'eve'],
     );
     agent.onOutput = lines.add;
     agent.onLog = (_, __) {};
     agent.onSendMadMessage = (_, __) async {};
 
-    final sends = <String>[];
+    final sends = <GTerm>[];
     final r = UiRuntime(manifest: grassrootsManifest, onSend: sends.add);
     final chatView =
         grassrootsManifest.panels.firstWhere((p) => p.id == 'chats').chat!;
@@ -153,7 +153,7 @@ void main() {
 
     Future<void> flushSends() async {
       while (sends.isNotEmpty) {
-        await tester.runAsync(() => agent.injectUserInput(sends.removeAt(0)));
+        await tester.runAsync(() => agent.injectUserInput(runtimeTermOf(sends.removeAt(0))));
       }
       replay();
     }

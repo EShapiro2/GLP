@@ -6,9 +6,8 @@
 ///     writer-return is the fault (madGLP runtime).
 ///   strands (no connected)            => escrow polarity bug in the UI .glp.
 ///
-/// strictTypes=false: the harness loads the real clauses across sources (so
-/// agent/4 resolves at runtime) and tolerates the play's isolated-typecheck
-/// mode warnings. Runtime executes per the `?` annotations regardless.
+/// The harness loads the real clauses across sources, so agent/4 resolves at
+/// runtime.
 import 'dart:io';
 import 'package:test/test.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
@@ -18,8 +17,7 @@ void main() {
       () async {
     final dir = '../programs/tests/agent_roundtrip';
     final engine = GlpEngine(
-        rootSelfGlpPath: File('../programs/self.glp').absolute.path)
-      ..strictTypes = false;
+        rootSelfGlpPath: File('../programs/self.glp').absolute.path);
 
     final out = <String>[];
     engine.runtime.outputCallback = out.add;

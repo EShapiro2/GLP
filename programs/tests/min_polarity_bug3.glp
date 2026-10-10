@@ -40,7 +40,7 @@ procedure producer(Stream(ProdMsg)).
 producer([]).
 
 %% Polymorphic element type — message type is the variable X, never pinned here.
-procedure pconsumer(Stream(X)?).
+procedure(X) pconsumer(Stream(X)?).
 pconsumer([befriend(From, Resp?)|Rest]) :- known(From?) | bind(Resp), pconsumer(Rest?).
 pconsumer([]).
 

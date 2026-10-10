@@ -5,30 +5,30 @@
 BST ::= empty ; node(_, BST, BST).
 NonEmptyList(X) ::= [X | Stream(X)].
 
-procedure list_to_bst(Stream(X)?, BST).
+procedure(X) list_to_bst(Stream(X)?, BST).
 list_to_bst([], empty).
-list_to_bst(Xs, node(Mid?, L?, R?)) :-
-    ~(Xs? =?= []) |
-    length(Xs?, Len),
+list_to_bst([X|Xs], node(Mid?, L?, R?)) :-
+    length([X?|Xs?], Len, Ys),
     Half := Len? // 2,
-    split_at(Xs?, Half?, Left, Mid, Right),
+    split_at(Ys?, Half?, Left, Mid, Right),
     list_to_bst(Left?, L),
     list_to_bst(Right?, R).
 
 %% split_at(Stream, N, Left, Mid, Right) - split list at position N
-procedure split_at(NonEmptyList(X)?, Number?, Stream(X), X, Stream(X)).
+procedure(X) split_at(NonEmptyList(X)?, Number?, Stream(X), X, Stream(X)).
 split_at([X|Xs], 0, [], X?, Xs?).
-split_at([X|Xs], N, [X?|Left?], Mid?, Right?) :-
+split_at([X, Y|Xs], N, [X?|Left?], Mid?, Right?) :-
     N? > 0 |
     N1 := N? - 1,
-    split_at(Xs?, N1?, Left, Mid, Right).
+    split_at([Y?|Xs?], N1?, Left, Mid, Right).
 
-%% Helper: length with accumulator
-procedure length(Stream(X)?, Number).
-length(Xs, N?) :- length_acc(Xs?, 0, N).
+%% Helper: length with accumulator.  It hands back a copy of the list, which
+%% split_at consumes: the list's reader is read once.
+procedure(X) length(NonEmptyList(X)?, Number, NonEmptyList(X)).
+length([X|Xs], N?, [X?|Ys?]) :- length_acc(Xs?, 1, N, Ys).
 
-procedure length_acc(Stream(X)?, Number?, Number).
-length_acc([], Acc, Acc?).
-length_acc([_|Xs], Acc, N?) :-
+procedure(X) length_acc(Stream(X)?, Number?, Number, Stream(X)).
+length_acc([], Acc, Acc?, []).
+length_acc([X|Xs], Acc, N?, [X?|Ys?]) :-
     Acc1 := Acc? + 1,
-    length_acc(Xs?, Acc1?, N).
+    length_acc(Xs?, Acc1?, N, Ys).

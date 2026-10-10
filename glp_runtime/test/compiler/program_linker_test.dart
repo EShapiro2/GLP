@@ -12,9 +12,9 @@ import 'dart:io';
 import 'package:test/test.dart';
 import 'package:glp_runtime/compiler/program_linker.dart';
 import 'package:glp_runtime/compiler/compiler.dart';
-import 'package:glp_runtime/compiler/partial_evaluator.dart' show setRootScopeUnitClauseSource;
-import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart' show setRootScopeEnvironmentSource;
 import 'package:glp_runtime/compiler/ast.dart';
+import 'package:glp_runtime/analysis/type_checker/type_checker.dart'
+    show checkModule;
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
@@ -22,13 +22,9 @@ import 'package:glp_runtime/bytecode/runner.dart';
 import 'package:glp_runtime/engine_v2/interp.dart';
 
 void main() {
-  // Set prelude sources from programs/self.glp (same as GlpEngine constructor)
+  // The root self.glp: every program below is discovered with it, its first
+  // module and the first layer of every module's scope.
   final rootSelfGlp = File('../programs/self.glp');
-  if (rootSelfGlp.existsSync()) {
-    final source = rootSelfGlp.readAsStringSync();
-    setRootScopeUnitClauseSource(source);
-    setRootScopeEnvironmentSource(source);
-  }
   final cssnRoot = '../programs/cssn';
   // Dedicated minimal fixture: sole coverage of module-local name-collision
   // handling (two sibling modules each defining dup/1).
@@ -77,11 +73,26 @@ void main() {
       expect(names, isNot(contains('self')));
     });
 
-    test('excludes boot_direct.glp from modules', () {
+    // TGLP modules.tex, Compilation, first step: "the compiler collects every
+    // .glp file of the program's directory tree".  Until 2026-10-03 this test
+    // was "excludes boot_direct.glp from modules", asserting the skip the
+    // paper forbids --- of boot_direct.glp, mad_boot.glp and every file under
+    // a mad_boot/ directory --- which discovery no longer makes (b7923f9e);
+    // rewritten to the paper (GLP #3 Cowork, 2026-10-03 21:18 UTC, "16:01.
+    // 6").  cssn/mad_boot/'s boots are among the files it collects.
+    test('collects every .glp file of the tree, mad_boot/ among them', () {
       final modules = discoverProgram(cssnRoot, rootSelfGlpPath: rootSelfPath);
-      final filenames = modules.map((m) => m.filePath).toList();
-      expect(filenames.any((f) => f.contains('boot_direct')), isFalse,
-          reason: 'boot_direct.glp should be excluded');
+      final discovered =
+          modules.map((m) => File(m.filePath).absolute.path).toSet();
+      final files = Directory(cssnRoot)
+          .listSync(recursive: true)
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.glp'))
+          .map((f) => f.absolute.path)
+          .toList();
+      expect(files.where((f) => f.contains('/mad_boot/')), isNotEmpty);
+      expect(discovered, containsAll(files),
+          reason: 'every .glp file of the tree is a module');
     });
 
     test('modules have correct ancestor scopes', () {
@@ -251,8 +262,12 @@ void main() {
 
   group('Module name-collision (dedicated fixture)', () {
     // Sole coverage of module-local name-collision handling: mod_a and mod_b
-    // each define dup/1; linking must disambiguate into mod_a:dup and mod_b:dup
+    // each define dup/1; linking must disambiguate them, each renamed by its
+    // module's path from the root (modules.tex, Compilation, third step), into
+    // tests/linker_collision/mod_a:dup and tests/linker_collision/mod_b:dup
     // with no bare collision. See ../programs/tests/linker_collision/.
+    const a = 'tests/linker_collision/mod_a:dup';
+    const b = 'tests/linker_collision/mod_b:dup';
     late Program linked;
 
     setUp(() {
@@ -265,8 +280,8 @@ void main() {
 
     test('colliding procedures are disambiguated by module prefix', () {
       final procNames = linked.procedures.map((p) => p.name).toSet();
-      expect(procNames, contains('mod_a:dup'));
-      expect(procNames, contains('mod_b:dup'));
+      expect(procNames, contains(a));
+      expect(procNames, contains(b));
     });
 
     test('no bare collision; both prefixed names exist', () {
@@ -276,27 +291,32 @@ void main() {
           .toSet();
       // No bare 'dup' among prefixed procedures.
       expect(prefixedProcs.contains('dup'), isFalse);
-      expect(prefixedProcs, contains('mod_a:dup'));
-      expect(prefixedProcs, contains('mod_b:dup'));
+      expect(prefixedProcs, contains(a));
+      expect(prefixedProcs, contains(b));
     });
 
     test('both colliding definitions survive as distinct procedures', () {
       final dupProcs =
           linked.procedures.where((p) => p.name.endsWith(':dup')).toList();
       expect(dupProcs.length, greaterThanOrEqualTo(2),
-          reason: 'mod_a:dup and mod_b:dup should both exist');
+          reason: '$a and $b should both exist');
       final dupNames = dupProcs.map((p) => p.name).toSet();
-      expect(dupNames, contains('mod_a:dup'));
-      expect(dupNames, contains('mod_b:dup'));
+      expect(dupNames, contains(a));
+      expect(dupNames, contains(b));
     });
   });
 
   group('Dead-code elimination (step 5, dedicated fixture)', () {
-    // boot exports `run`, which calls `helper`; `dead` is never called. The
-    // pure link transform keeps every renamed procedure; eliminateDeadCode
-    // (the step-5 hand-off to the compiler) keeps only the reachable ones.
-    // See ../programs/tests/linker_dce/.
+    // boot exports `run`, which calls `helper`; `dead` is never called; the
+    // directory's self.glp exports `run` by forwarding it to boot (a directory
+    // with no self.glp is not a program). The pure link transform keeps every
+    // renamed procedure; eliminateDeadCode (the step-5 hand-off to the
+    // compiler) keeps only the reachable ones. See ../programs/tests/linker_dce/.
     const dceRoot = '../programs/tests/linker_dce';
+
+    // Each procedure is renamed by its module's path from the root
+    // (modules.tex, Compilation, third step).
+    const boot = 'tests/linker_dce/boot';
 
     test('pure link (linkAndResolveModules) keeps all renamed procedures, including dead ones', () {
       final modules = discoverProgram(dceRoot, rootSelfGlpPath: rootSelfPath);
@@ -305,9 +325,9 @@ void main() {
           .procedures
           .map((p) => p.name)
           .toSet();
-      expect(names, contains('boot:run'));
-      expect(names, contains('boot:helper'));
-      expect(names, contains('boot:dead'));
+      expect(names, contains('$boot:run'));
+      expect(names, contains('$boot:helper'));
+      expect(names, contains('$boot:dead'));
     });
 
     test('linkProgram (with step-5 DCE) keeps reachable procedures and prunes unreachable ones', () {
@@ -315,14 +335,110 @@ void main() {
       final pruned = linkProgram(modules, rootDir: dceRoot);
       final names = pruned.program.procedures.map((p) => p.name).toSet();
       expect(names, contains('run'), reason: 'entry-point alias kept');
-      expect(names, contains('boot:run'), reason: 'root export kept');
-      expect(names, contains('boot:helper'),
+      expect(names, contains('tests/linker_dce:run'),
+          reason: "the self.glp's forwarder kept");
+      expect(names, contains('$boot:run'), reason: 'root export kept');
+      expect(names, contains('$boot:helper'),
           reason: 'reachable from run kept');
-      expect(names, isNot(contains('boot:dead')),
+      expect(names, isNot(contains('$boot:dead')),
           reason: 'unreachable pruned');
       // Declarations are pruned in step with their procedures.
       final declNames = pruned.procDeclarations.map((d) => d.name).toSet();
-      expect(declNames, isNot(contains('boot:dead')));
+      expect(declNames, isNot(contains('$boot:dead')));
+    });
+
+    test('a name is followed only as step 4 resolved it, never by base name',
+        () {
+      // modules.tex, Compilation, fifth step: the reachable procedures are the
+      // exported procedures and "every procedure called in the body of a
+      // reachable one".  m:run's guards are the resolved defined guard
+      // m:ready/1 and the builtin known/1, left bare; n:known/1 is a procedure
+      // nothing calls.  Until 2026-10-03 the bare guard was also followed by
+      // its base name, and n:known/1 was kept.
+      VarTerm w(String n) => VarTerm(n, false, 0, 0);
+      VarTerm r(String n) => VarTerm(n, true, 0, 0);
+      Procedure proc(String name, Clause c) =>
+          Procedure(name, c.head.args.length, [c], 0, 0);
+      final program = Program([
+        proc('run',
+            Clause(Atom('run', [w('X')], 0, 0),
+                body: [Goal('m:run', [r('X')], 0, 0)], line: 0, column: 0)),
+        proc(
+            'm:run',
+            Clause(Atom('m:run', [w('X')], 0, 0),
+                guards: [
+                  Guard('m:ready', [r('X')], 0, 0),
+                  Guard('known', [r('X')], 0, 0),
+                ],
+                line: 0,
+                column: 0)),
+        proc('m:ready',
+            Clause(Atom('m:ready', [ConstTerm(1, 0, 0)], 0, 0),
+                line: 0, column: 0)),
+        proc('n:known',
+            Clause(Atom('n:known', [ConstTerm(1, 0, 0)], 0, 0),
+                line: 0, column: 0)),
+      ], 0, 0);
+      final kept = eliminateDeadCode(LinkResult(program, const []))
+          .program
+          .procedures
+          .map((p) => p.name)
+          .toSet();
+      expect(kept, {'run', 'm:run', 'm:ready'});
+    });
+  });
+
+  group('A redefined root operation needs a declaration (dedicated fixture)',
+      () {
+    // modules.tex, Definition "Typed Procedure, Module": a module is a sequence
+    // of type definitions and typed procedures, each a declaration followed by
+    // its procedure.  m.glp of undeclared/ redefines merge/3 by clauses with no
+    // declaration of its own; until 2026-10-03 the linker gave its renamed
+    // m:merge/3 a copy of the root's declaration.  declared/ carries the
+    // declaration.  See ../programs/tests/linker_root_redef/.
+    const redef = '../programs/tests/linker_root_redef';
+
+    test('step 2 refuses a redefinition with no declaration of its own', () {
+      final dir = '$redef/undeclared';
+      final modules = discoverProgram(dir, rootSelfGlpPath: rootSelfPath);
+      expect(
+          () => checkedLinkedProgram(modules, rootDir: dir),
+          throwsA(predicate((e) => e.toString().contains(
+              'linker_root_redef/undeclared/m.glp:3: Procedure merge/3 is '
+              'defined in this module and declared only in an enclosing '
+              'scope'))));
+    });
+
+    test('so does the module loaded alone, checked against its scope', () {
+      final m = '$redef/undeclared/m.glp';
+      expect(
+          () => checkModulesIndependently(
+              discoverSingleModule(m, rootSelfGlpPath: rootSelfPath)),
+          throwsA(predicate((e) => e.toString().contains(
+              'm.glp:3: Procedure merge/3 is defined in this module and '
+              'declared only in an enclosing scope'))));
+    });
+
+    test('the linked program borrows no declaration, and its check refuses M:p',
+        () {
+      final dir = '$redef/undeclared';
+      final modules = discoverProgram(dir, rootSelfGlpPath: rootSelfPath);
+      final flat = linkedFlatModule(modules, linkProgram(modules, rootDir: dir));
+      expect(flat.procDeclarations.map((d) => d.name),
+          isNot(contains('tests/linker_root_redef/undeclared/m:merge')));
+      expect(
+          checkModule(flat).errors.map((e) => e.message),
+          contains(startsWith('Procedure '
+              'tests/linker_root_redef/undeclared/m:merge/3 has no type '
+              'declaration')));
+    });
+
+    test('a redefinition with its own declaration links and checks', () {
+      final dir = '$redef/declared';
+      final modules = discoverProgram(dir, rootSelfGlpPath: rootSelfPath);
+      final linked = checkedLinkedProgram(modules, rootDir: dir);
+      expect(linked.checkedDeclarations.map((d) => d.name),
+          contains('tests/linker_root_redef/declared/m:merge'));
     });
   });
 
@@ -362,18 +478,20 @@ void main() {
     test('whole subtree links; nested module present by prefixed name', () {
       final modules =
           discoverProgram(nestedRoot, rootSelfGlpPath: rootSelfPath);
+      // Each module is named by its path from the root (modules.tex,
+      // Compilation, third step).
       final names = modules.map((m) => m.moduleName).toSet();
-      expect(names, contains('boot'));
-      expect(names, contains('leaf'));
+      expect(names, contains('tests/linker_nested/boot'));
+      expect(names, contains('tests/linker_nested/child/leaf'));
 
-      // Renaming is a pre-DCE concern: the nested leaf:greet is not reached
-      // from the root export boot:play, so linkProgram would prune it. Inspect
-      // the pure rename step.
+      // Renaming is a pre-DCE concern: the nested leaf's greet is not reached
+      // from the root export play, so linkProgram would prune it. Inspect the
+      // pure rename step.
       final linked = linkAndResolveModules(modules, rootDir: nestedRoot).program;
       final procNames = linked.procedures.map((p) => p.name).toSet();
       // Both modules' procedures are renamed and present.
-      expect(procNames, contains('boot:play'));
-      expect(procNames, contains('leaf:greet'));
+      expect(procNames, contains('tests/linker_nested/boot:play'));
+      expect(procNames, contains('tests/linker_nested/child/leaf:greet'));
     });
 
     test("root's exported play is aliased; nested export is not", () {
@@ -398,8 +516,8 @@ void main() {
           .where((p) => !p.name.contains(':'))
           .map((p) => p.name)
           .toSet();
-      // When child/ is the loaded root, leaf is root-level: greet is aliased.
-      expect(procNames, contains('leaf:greet'));
+      // When child/ is the loaded root, its self.glp exports greet: aliased.
+      expect(procNames, contains('tests/linker_nested/child/leaf:greet'));
       expect(bare, contains('greet'));
     });
   });

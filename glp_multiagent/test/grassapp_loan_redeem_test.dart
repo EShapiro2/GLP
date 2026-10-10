@@ -4,8 +4,8 @@
 /// the Milestone 1b rebuild (agent/7 + the currencies mediator + the lifted
 /// transaction core).
 ///
-/// It loads exactly the way the app does — GlpEngine with strictTypes = false
-/// and loadSource per file, no programDir (see glp_runtime
+/// It loads exactly the way the app does — GlpEngine and loadSource per file,
+/// no programDir (see glp_runtime
 /// lib/multiagent/agent_runtime.dart, the mode main_grassapp_duo.dart uses) — so
 /// a pass here also exercises the app's load path, not just the GLP logic.
 ///
@@ -31,8 +31,7 @@ void main() {
     final programs = programsDir();
     final dir = '$programs/grassapp';
 
-    final engine = GlpEngine(rootSelfGlpPath: '$programs/self.glp')
-      ..strictTypes = false;
+    final engine = GlpEngine(rootSelfGlpPath: '$programs/self.glp');
 
     // programs/grassapp is a program (SGSG, d27e4d6a): loaded as one, its
     // self.glp exports the play as an entry point.

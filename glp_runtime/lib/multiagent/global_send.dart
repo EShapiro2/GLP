@@ -3,8 +3,10 @@
 /// Implements the `global_send` goal that watches a reader and sends
 /// its value to a remote agent when it becomes known.
 ///
-/// See: madGLP-spec.md Section 4 (The global_send Predicate)
+/// See: IGLP Definition global_send Predicate (app:global-send)
 library;
+
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 
 import 'mad_helpers.dart';
 import 'global_writers_table.dart';
@@ -16,10 +18,10 @@ import 'imported_writer_records.dart';
 /// - Globalizing a reader Y?: watches Y?, sends to destination
 /// - Localizing _w(p,i): watches Y_q?, sends back to p
 ///
-/// See: madGLP-spec.md Section 4
+/// See: IGLP Definition global_send Predicate
 class GlobalSendGoal {
   /// Address of the reader to watch
-  final int readerAddr;
+  final HeapCell readerAddr;
 
   /// Global name identifying the link (_w(p,i) or _r(p,i))
   final GlobalName globalName;
@@ -87,13 +89,14 @@ class GlobalSendFiredResult {
 /// Maps reader addresses to goals waiting for those readers to become known.
 /// When a writer is bound, call onWriterBound() to fire any matching goals.
 ///
-/// See: madGLP-spec.md Section 4, Implementation Plan Section 3.2
+/// See: IGLP app:in-heap, The global_send goal: registered as a callback,
+/// fired at the end of a commit.
 class GlobalSendRegistry {
   /// Agent ID for this registry (used when globalizing values)
   final String agentId;
 
   /// Pending goals indexed by reader address
-  final Map<int, GlobalSendGoal> _goals = {};
+  final Map<HeapCell, GlobalSendGoal> _goals = {};
 
   GlobalSendRegistry(this.agentId);
 
@@ -113,7 +116,7 @@ class GlobalSendRegistry {
   }
 
   /// Check if there's a goal watching this reader address
-  bool hasGoalFor(int readerAddr) => _goals.containsKey(readerAddr);
+  bool hasGoalFor(HeapCell readerAddr) => _goals.containsKey(readerAddr);
 
   /// Record [newHolder] as the holder of the link [globalName]: if a not-yet-
   /// fired goal for the link exists, update its destination and return true.
@@ -134,7 +137,7 @@ class GlobalSendRegistry {
   }
 
   /// Get the goal watching this reader address (if any)
-  GlobalSendGoal? getGoalFor(int readerAddr) => _goals[readerAddr];
+  GlobalSendGoal? getGoalFor(HeapCell readerAddr) => _goals[readerAddr];
 
   /// Whether a not-yet-fired goal exists for the link [globalName].
   ///
@@ -161,7 +164,7 @@ class GlobalSendRegistry {
   /// Spec (Definition Globalize, case 4): re-exporting an imported writer
   /// "removes the record and the global_send goal watching Y?" — the exporting
   /// agent leaves the link, so its goal must not fire.
-  GlobalSendGoal? removeGoalFor(int readerAddr) => _goals.remove(readerAddr);
+  GlobalSendGoal? removeGoalFor(HeapCell readerAddr) => _goals.remove(readerAddr);
 
   /// Called when a writer is bound to a value.
   ///
@@ -180,7 +183,7 @@ class GlobalSendRegistry {
   /// must happen atomically. New goals for nested variables must be registered
   /// before the current operation completes.
   GlobalSendFiredResult? onWriterBound({
-    required int writerAddr,
+    required HeapCell writerAddr,
     required Object? value,
     required GlobalWritersTable table,
     required ImportedWriterRecords records,

@@ -17,28 +17,69 @@ import 'partial_evaluator.dart';
 import 'primitive_layer.dart';
 import '../analysis/type_checker/root_scope.dart' show isBuiltinProcedure;
 import '../analysis/type_checker/type_ast.dart';
-import '../analysis/type_checker/param_expansion.dart';
 import '../analysis/type_checker/type_checker.dart';
 import '../analysis/type_checker/type_identity.dart';
+import '../analysis/type_checker/param_expansion.dart'
+    show UndefinedDeclarationTypeError;
 import '../runtime/module_hierarchy.dart';
-import '../analysis/type_checker/type_environment_builder.dart';
 import '../vglp/mediator.dart';
-import '../vglp/canonical.dart' show isPaperSyntaxSource, declaresPopulation;
+import '../vglp/canonical.dart' show isPaperSyntaxSource;
 import '../vglp/program_compilation.dart';
 
 /// A discovered module in the program tree.
 class DiscoveredModule {
   final String filePath;
+
+  /// The module's name: its path from the root ([modulePathName]; TGLP
+  /// modules.tex, Compilation, third step) --- `sglp/coins` for
+  /// `programs/sglp/coins/self.glp`, `sglp/coins/coins` for
+  /// `programs/sglp/coins/coins.glp`.  Every procedure `p/n` and type `T` of the
+  /// module is renamed `<moduleName>:p/n` and `<moduleName>:T`, and the
+  /// linker's registry is keyed by it.  Until 2026-10-02 it was the file's name
+  /// (a `self.glp`'s, its directory's last segment), so two modules of one name
+  /// shared a prefix and a registry entry, the second overwriting the first.
   final String moduleName;
   final Module ast;
   TypeEnvironment ancestorScope;
   final bool isSelfGlp;
 
-  /// If this module was collected because an ancestor `self.glp` `-expose`d it,
-  /// the normalized directory of that exposing `self.glp`. Its EXPORTED
-  /// procedures lift into that directory's subtree scope. Null for ordinary
-  /// modules.
-  final String? exposingDir;
+  /// If an ancestor `self.glp` `-expose`s this module, the normalized
+  /// directory of that exposing `self.glp`. Its EXPORTED procedures lift into
+  /// that directory's subtree scope. Null for a module nothing exposes.  Set
+  /// by [_resolveExposes] on a module the directory walk collected too, which
+  /// stays one module (TGLP modules.tex, Compilation).
+  String? exposingDir;
+
+  /// Whether the module is in the program only because an `-expose` names it
+  /// --- a module outside the directory walk, the root's
+  /// `-expose(social#graph#routing#output)` among them --- as against one the
+  /// walk collected, which is the program's own whether or not it is exposed
+  /// too.
+  final bool collectedByExpose;
+
+  /// Whether the module is the root `self.glp`: the first link of every
+  /// module's chain, `d_1` (TGLP modules.tex, Definition "Root, Scope": "The
+  /// root self.glp is in the scope of every module compiled on the device,
+  /// wherever that module's program sits below the root: it is d_1"), named by
+  /// the empty path ([modulePathName]) and checked in step 2 against the
+  /// language primitives alone ([rootModuleOf]).
+  final bool isRoot;
+
+  /// What the `-expose` that names this module lifts into [exposingDir]'s
+  /// scope: its exported declarations, read in its own scope, and the types
+  /// their signatures carry ([ExposedLift]).  Set by [_resolveExposes] with
+  /// [exposingDir]; null for a module nothing exposes.
+  ExposedLift? lift;
+
+  /// The `self.glp` files on this module's chain that are not modules of the
+  /// program, outermost first, each as a module of its type definitions
+  /// alone: the scope of a module that only an `-expose` brings in
+  /// ([collectedByExpose]) runs from the root down to its own directory
+  /// (Definition "Root, Scope"), and those of its directories outside the
+  /// program are in it.  Their types are its types, and the linked program
+  /// carries those its declarations and types reference ([linkedFlatModule]);
+  /// their procedures are not linked.  Empty for every other module.
+  final List<DiscoveredModule> outerScope;
 
   DiscoveredModule({
     required this.filePath,
@@ -47,7 +88,52 @@ class DiscoveredModule {
     required this.ancestorScope,
     this.isSelfGlp = false,
     this.exposingDir,
+    this.collectedByExpose = false,
+    this.isRoot = false,
+    this.lift,
+    this.outerScope = const [],
   });
+}
+
+/// The root `self.glp` at [rootSelfGlpPath] as a module of a program, or null
+/// where there is none.
+///
+/// It joins every program as the first link of its chain (TGLP modules.tex,
+/// Compilation, first step: "the compiler collects every .glp file of the
+/// program's directory tree, together with the self.glp of each directory from
+/// the root down to the program"), and its scope is the language primitives
+/// alone, `Π ⊔ d_1` with `d_1` itself (Definition "Root, Scope"), against which
+/// it is checked in step 2 like any module.  Its procedures and types are
+/// renamed under the empty path in step 3, its name being "the module's path
+/// from the root", so a module's call to one of them resolves to the root's own
+/// procedure in step 4 and the root's internal calls stay inside it: no module
+/// takes over a root helper by defining a procedure of its name.  Until
+/// 2026-10-04 it was no module of any program: it was compiled once beside the
+/// program, unchecked, and reached at run time by its bare names, so a module
+/// defining `mwm1/4` hijacked the root's `mwm/2`, and a type error in it loaded
+/// and ran.
+///
+/// The language primitives are the base of every scope and are not the root's
+/// (modules.tex, "Two things are named self.glp and they enter a scope by
+/// different routes"): the primitive types are built into the checker, and a
+/// kernel or builtin guard the runtime implements is declared in the root by a
+/// clause-less declaration that keeps its name in the linked program, a name
+/// with no code binding only to the runtime's kernel or guard of that name
+/// (IGLP code-format-fragment.tex, Loader, step 3).
+DiscoveredModule? rootModuleOf(String? rootSelfGlpPath) {
+  if (rootSelfGlpPath == null) return null;
+  final file = File(rootSelfGlpPath);
+  if (!file.existsSync()) return null;
+  final module = Parser(Lexer(file.readAsStringSync()).tokenize()).parseModule();
+  enforcePrimitiveLayer(file.path, module, rootSelfGlpPath);
+  return DiscoveredModule(
+    filePath: file.path,
+    moduleName: '',
+    ast: module,
+    ancestorScope: primitiveScope(),
+    isSelfGlp: true,
+    isRoot: true,
+  );
 }
 
 /// Result of linking a program.
@@ -73,50 +159,104 @@ class LinkResult {
   /// that nothing calls is still declared.
   final List<ProcDecl> scopeDeclarations;
 
+  /// The scope the linked program was CHECKED in --- the flat module's
+  /// environment ([linkedProgramEnvironment]) --- where the result came from
+  /// [checkedLinkedProgram], and null where it came from [linkProgram] alone.
+  /// The compiler is given it so that the SRSW relaxations of a typed program
+  /// are decided on the same types the checker decided by (TGLP typed-glp.tex,
+  /// "Readers of ground types").
+  final TypeEnvironment? checkedEnv;
+
   LinkResult(this.program, this.procDeclarations,
-      {List<ProcDecl>? checkedDeclarations, List<ProcDecl>? scopeDeclarations})
+      {List<ProcDecl>? checkedDeclarations, List<ProcDecl>? scopeDeclarations,
+      this.checkedEnv})
       : checkedDeclarations = checkedDeclarations ?? procDeclarations,
         scopeDeclarations =
             scopeDeclarations ?? checkedDeclarations ?? procDeclarations;
+
+  /// This result with [checkedEnv] set.
+  LinkResult withCheckedEnv(TypeEnvironment env) => LinkResult(
+        program,
+        procDeclarations,
+        checkedDeclarations: checkedDeclarations,
+        scopeDeclarations: scopeDeclarations,
+        checkedEnv: env,
+      );
 }
 
 /// Walk the program directory tree and discover all modules.
 ///
-/// For each `.glp` file (excluding `boot_direct.glp`):
+/// For each `.glp` file of the tree, none skipped:
 /// - Parse into Module AST
-/// - Extract module name (from `-module(M).` or filename; for `self.glp` without
-///   `-module()`, derives name from parent directory)
+/// - Name the module by its path from the root ([modulePathName]): the root is
+///   the directory of [rootSelfGlpPath] where it is given --- the device's
+///   root, `programs/` --- and the program's own directory otherwise
 /// - Build ancestor type scope chain
 ///
 /// `self.glp` files contribute both types AND procedures to the ancestor scope.
 /// Their procedures are compiled to bytecode and renamed like any other module.
+///
+/// [rootScope] is `Π ⊔ d_1` for the root at [rootSelfGlpPath], built once by
+/// the caller (module_hierarchy.dart, rootScope): every module's scope is built
+/// over it, so the root's layer is one (buildAncestorScope).  Where none is
+/// given it is built here, once for the program.
 List<DiscoveredModule> discoverProgram(String rootDir,
-    {String? rootSelfGlpPath}) {
+    {String? rootSelfGlpPath, TypeEnvironment? rootScope}) {
   final root = Directory(rootDir);
   final programsDir = rootSelfGlpPath != null
       ? File(rootSelfGlpPath).parent.absolute.path
       : null;
-  final modules = _discoverGlpModules(root, programsDir, rootSelfGlpPath);
+  final rs = rootScope ?? _rootScopeOf(rootSelfGlpPath);
+  final modules = _discoverGlpModules(root, programsDir, rootSelfGlpPath, rs);
 
   // A .vglp source is compiled and joins the program as the module of its own
   // name (vGLP, Definition "Canonical Compilation").  This runs AFTER the
   // exposes are resolved, because the compilation types an answer writer by the
   // position it occurs at and those positions are often arguments of an exposed
   // procedure — `send_net` and the rest of social/graph/routing.
-  _addVglpModules(modules, root, programsDir, rootSelfGlpPath);
+  _addVglpModules(modules, root, programsDir, rootSelfGlpPath, rs);
+  _rootLast(modules);
   return modules;
 }
+
+/// `Π ⊔ d_1` for the root at [rootSelfGlpPath], or null where there is none.
+TypeEnvironment? _rootScopeOf(String? rootSelfGlpPath) =>
+    rootSelfGlpPath != null && File(rootSelfGlpPath).existsSync()
+        ? rootScope(rootSelfGlpPath)
+        : null;
+
+/// [modules] with the root `self.glp` moved to the end, the outermost scope
+/// last, so that where a lookup over the modules takes the first of a name ---
+/// a forwarding export's declaration, an artefact's type definitions --- a
+/// program module's is taken before the root's.
+void _rootLast(List<DiscoveredModule> modules) {
+  final roots = modules.where((m) => m.isRoot).toList();
+  if (roots.isEmpty) return;
+  modules.removeWhere((m) => m.isRoot);
+  modules.addAll(roots);
+}
+
+/// The directory module names are paths from: the device's root, the directory
+/// of the root `self.glp` ([programsDir]), where it is known, and the program's
+/// own directory [programRoot] otherwise.
+String _nameRoot(String? programsDir, String programRoot) =>
+    programsDir ?? Directory(programRoot).absolute.path;
 
 /// The `.glp` modules of the tree, with their ancestor scopes and the exposes
 /// resolved: everything of [discoverProgram] but the compiled `.vglp` sources,
 /// which `:emit` compiles in this same scope and writes out instead.
-List<DiscoveredModule> _discoverGlpModules(
-    Directory root, String? programsDir, String? rootSelfGlpPath) {
+List<DiscoveredModule> _discoverGlpModules(Directory root, String? programsDir,
+    String? rootSelfGlpPath, TypeEnvironment? rs) {
   if (!root.existsSync()) {
     throw ArgumentError('Program root directory not found: ${root.path}');
   }
+  // A program lies at or below the root (TGLP modules.tex, "Scope
+  // construction"); one outside it is refused here, before any module of it is
+  // named or scoped.
+  if (programsDir != null) requireUnderRoot(root.path, programsDir);
 
   final modules = <DiscoveredModule>[];
+  final nameRoot = _nameRoot(programsDir, root.path);
 
   // The root `programs/` directory bounds the ancestor scope chain. When known,
   // discovery extends above the program root up to (excluding) this directory.
@@ -128,17 +268,13 @@ List<DiscoveredModule> _discoverGlpModules(
       .where((f) => f.path.endsWith('.glp'))
       .toList();
 
+  // Every .glp file of the tree is a module of the program, and none is
+  // skipped (TGLP modules.tex, Compilation, first step: "the compiler collects
+  // every .glp file of the program's directory tree").  Until 2026-10-03 a
+  // file named boot_direct.glp or mad_boot.glp, and every file under a
+  // directory named mad_boot, was left out by its name.
   for (final file in glpFiles) {
     final filename = file.path.split(Platform.pathSeparator).last;
-
-    // Skip boot_direct.glp (copy of boot.glp with direct calls, not a module)
-    if (filename == 'boot_direct.glp') continue;
-
-    // Skip mad_boot.glp and files in mad_boot/ directory
-    // (madGLP boot procedures, loaded on top of linked program)
-    if (filename == 'mad_boot.glp') continue;
-    if (file.parent.path.endsWith('${Platform.pathSeparator}mad_boot') ||
-        file.parent.path.endsWith('/mad_boot')) continue;
 
     // Parse the module
     final source = file.readAsStringSync();
@@ -150,11 +286,9 @@ List<DiscoveredModule> _discoverGlpModules(
     // Enforce "Admission to the Primitive Layer" (Rule A / Rule B) at load time.
     enforcePrimitiveLayer(file.path, module, rootSelfGlpPath);
 
-    // Module name is derived from the path: a self.glp takes its parent dir's
-    // name, any other module its file name (-module removed).
-    final moduleName = filename == 'self.glp'
-        ? _moduleNameFromDirPath(file.parent.path)
-        : _moduleNameFromFilename(filename);
+    // The module's name is its path from the root: a self.glp's is its
+    // directory's, any other module's its directory's and its file name.
+    final moduleName = modulePathName(file.path, nameRoot);
 
     // Build ancestor scope chain (extends up to programs/ when known)
     final chain = discoverSelfChain(
@@ -162,8 +296,8 @@ List<DiscoveredModule> _discoverGlpModules(
       rootDir: root.absolute.path,
       programsDir: programsDir,
     );
-    final ancestorScope =
-        buildAncestorScope(chain: chain, rootSelfGlpPath: rootSelfGlpPath);
+    final ancestorScope = buildAncestorScope(
+        chain: chain, rootSelfGlpPath: rootSelfGlpPath, rootScope: rs);
 
     modules.add(DiscoveredModule(
       filePath: file.path,
@@ -177,7 +311,7 @@ List<DiscoveredModule> _discoverGlpModules(
   // Add the program's filesystem context (ancestor self.glp above the root) and
   // resolve -expose directives.
   _addAncestorContextAndExposes(
-      modules, root.absolute.path, programsDir, rootSelfGlpPath);
+      modules, root.absolute.path, programsDir, rootSelfGlpPath, nameRoot, rs);
   return modules;
 }
 
@@ -192,12 +326,9 @@ List<DiscoveredModule> _discoverGlpModules(
 /// A source in the paper's syntax compiles by the canonical compilation of
 /// vGLP at 16b3b54; one in the old syntax keeps its old compilation against
 /// the generic mediator, and is not compiled where the mediator is missing, as
-/// before (compileVglpSource).  Where the program declares a population, in a
-/// `.glp` module or in a `.vglp` source, the asking clauses call person(T, X)
-/// and sGLP's system module joins the program, as it does for a population a
-/// `.glp` module declares (_addSglpSystemModule).
+/// before (compileVglpSource).
 void _addVglpModules(List<DiscoveredModule> modules, Directory root,
-    String? programsDir, String? rootSelfGlpPath) {
+    String? programsDir, String? rootSelfGlpPath, TypeEnvironment? rs) {
   final vglpFiles = root
       .listSync(recursive: true)
       .whereType<File>()
@@ -213,35 +344,31 @@ void _addVglpModules(List<DiscoveredModule> modules, Directory root,
 
   final mediator = _mediatorSource(programsDir);
   final texts = {for (final f in vglpFiles) f.path: f.readAsStringSync()};
-  final vglpPopulation = texts.values
-      .any((t) => isPaperSyntaxSource(t) && declaresPopulation(t));
-  if (vglpPopulation) {
-    _addSglpSystemModule(modules, root.absolute.path, programsDir,
-        rootSelfGlpPath, declared: true);
-  }
-  final population = vglpPopulation || _declaresPopulation(modules);
+  final nameRoot = _nameRoot(programsDir, root.path);
 
   for (final file in vglpFiles) {
-    final filename = file.path.split(Platform.pathSeparator).last;
-    final stem = filename.substring(0, filename.length - '.vglp'.length);
     final text = texts[file.path]!;
     final paper = isPaperSyntaxSource(text);
     if (!paper && mediator == null) continue;
 
     final ancestorScope =
-        _vglpScope(file, modules, root, programsDir, rootSelfGlpPath);
+        _vglpScope(file, modules, root, programsDir, rootSelfGlpPath, rs);
 
-    final compiledSource = compileVglpSource(text,
-        mediator: mediator,
-        scope: ancestorScope,
-        populationDeclared: population,
-        path: file.path);
+    final String compiledSource;
+    try {
+      compiledSource = compileVglpSource(text,
+          mediator: mediator,
+          scope: ancestorScope,
+          path: file.path);
+    } on UndefinedDeclarationTypeError catch (e) {
+      throw e.inFile(file.path);
+    }
     final compiledAst =
         Parser(Lexer(compiledSource).tokenize()).parseModule();
 
     modules.add(DiscoveredModule(
       filePath: file.path,
-      moduleName: _moduleNameFromFilename('$stem.glp'),
+      moduleName: modulePathName(file.path, nameRoot),
       ast: compiledAst,
       ancestorScope: ancestorScope,
     ));
@@ -255,20 +382,17 @@ void _addVglpModules(List<DiscoveredModule> modules, Directory root,
 /// sibling modules do.  The loader and `:emit` both compile in this scope, so
 /// the emitted text is what the load produces in memory.
 TypeEnvironment _vglpScope(File file, List<DiscoveredModule> modules,
-    Directory root, String? programsDir, String? rootSelfGlpPath) {
+    Directory root, String? programsDir, String? rootSelfGlpPath,
+    TypeEnvironment? rs) {
   final chain = discoverSelfChain(
     targetFile: file.absolute.path,
     rootDir: root.absolute.path,
     programsDir: programsDir,
   );
-  var scope = buildAncestorScope(chain: chain, rootSelfGlpPath: rootSelfGlpPath);
-  final modDir = _normPath(file.parent.path);
-  for (final e in modules.where((m) => m.exposingDir != null)) {
-    if (!_dirUnder(modDir, e.exposingDir!)) continue;
-    scope = _mergeExposed(scope, _exposedExportScope(e.ast, scope),
-        label: e.moduleName);
-  }
-  return scope;
+  final scope = buildAncestorScope(
+      chain: chain, rootSelfGlpPath: rootSelfGlpPath, rootScope: rs);
+  return _withExposedProcedures(file.path, scope, modules,
+      modules.where((m) => m.exposingDir != null).toList());
 }
 
 /// The generic mediator source, `programs/vglp/`, which the compilation
@@ -287,8 +411,10 @@ MediatorSource? _mediatorSource(String? programsDir) {
 /// entry point (§Static Linking). Its filesystem context (ancestor self.glp
 /// above its directory, up to programs/) is added, so it links and runs through
 /// the same pipeline as a directory program.
+///
+/// [rootScope] is as for [discoverProgram].
 List<DiscoveredModule> discoverSingleModule(String filePath,
-    {String? rootSelfGlpPath}) {
+    {String? rootSelfGlpPath, TypeEnvironment? rootScope}) {
   final file = File(filePath);
   if (!file.existsSync()) {
     throw ArgumentError('Module file not found: $filePath');
@@ -296,6 +422,10 @@ List<DiscoveredModule> discoverSingleModule(String filePath,
   final programsDir = rootSelfGlpPath != null
       ? File(rootSelfGlpPath).parent.absolute.path
       : null;
+  // A program lies at or below the root (TGLP modules.tex, "Scope
+  // construction"); one outside it is refused before it is read.
+  if (programsDir != null) requireUnderRoot(filePath, programsDir);
+  final rs = rootScope ?? _rootScopeOf(rootSelfGlpPath);
 
   final module =
       Parser(Lexer(file.readAsStringSync()).tokenize()).parseModule();
@@ -304,15 +434,15 @@ List<DiscoveredModule> discoverSingleModule(String filePath,
   final dir = file.parent.absolute.path;
   final chain = discoverSelfChain(
       targetFile: file.absolute.path, rootDir: dir, programsDir: programsDir);
+  final nameRoot = _nameRoot(programsDir, dir);
 
   final modules = <DiscoveredModule>[
     DiscoveredModule(
       filePath: file.path,
-      moduleName: _moduleNameFromFilename(
-          file.path.split(Platform.pathSeparator).last),
+      moduleName: modulePathName(file.path, nameRoot),
       ast: module,
-      ancestorScope:
-          buildAncestorScope(chain: chain, rootSelfGlpPath: rootSelfGlpPath),
+      ancestorScope: buildAncestorScope(
+          chain: chain, rootSelfGlpPath: rootSelfGlpPath, rootScope: rs),
       isSelfGlp: false,
     ),
   ];
@@ -329,15 +459,16 @@ List<DiscoveredModule> discoverSingleModule(String filePath,
         targetFile: ownSelf.absolute.path, rootDir: dir, programsDir: programsDir);
     modules.add(DiscoveredModule(
       filePath: ownSelf.path,
-      moduleName: _moduleNameFromDirPath(dir),
+      moduleName: modulePathName(ownSelf.path, nameRoot),
       ast: selfModule,
-      ancestorScope:
-          buildAncestorScope(chain: selfChain, rootSelfGlpPath: rootSelfGlpPath),
+      ancestorScope: buildAncestorScope(
+          chain: selfChain, rootSelfGlpPath: rootSelfGlpPath, rootScope: rs),
       isSelfGlp: true,
     ));
   }
 
-  _addAncestorContextAndExposes(modules, dir, programsDir, rootSelfGlpPath);
+  _addAncestorContextAndExposes(
+      modules, dir, programsDir, rootSelfGlpPath, nameRoot, rs);
   return modules;
 }
 
@@ -346,8 +477,15 @@ List<DiscoveredModule> discoverSingleModule(String filePath,
 /// other module so their (multi-clause, parameterised) procedures resolve for
 /// descendants; then resolve `-expose` directives (including the root
 /// `programs/self.glp`'s, which is itself realised by the root-scope mechanism).
-void _addAncestorContextAndExposes(List<DiscoveredModule> modules,
-    String rootAbsPath, String? programsDir, String? rootSelfGlpPath) {
+///
+/// [nameRoot] is the directory every module is named from ([_nameRoot]).
+void _addAncestorContextAndExposes(
+    List<DiscoveredModule> modules,
+    String rootAbsPath,
+    String? programsDir,
+    String? rootSelfGlpPath,
+    String nameRoot,
+    TypeEnvironment? rs) {
   if (programsDir != null) {
     for (final selfPath in _ancestorSelfGlpFiles(rootAbsPath, programsDir)) {
       final selfModule =
@@ -360,131 +498,28 @@ void _addAncestorContextAndExposes(List<DiscoveredModule> modules,
       );
       modules.add(DiscoveredModule(
         filePath: selfPath,
-        moduleName: _moduleNameFromDirPath(File(selfPath).parent.path),
+        moduleName: modulePathName(selfPath, nameRoot),
         ast: selfModule,
-        ancestorScope:
-            buildAncestorScope(chain: chain, rootSelfGlpPath: rootSelfGlpPath),
+        ancestorScope: buildAncestorScope(
+            chain: chain, rootSelfGlpPath: rootSelfGlpPath, rootScope: rs),
         isSelfGlp: true,
       ));
     }
   }
 
-  // Root programs/self.glp is excluded from the linkable module list, but it is
-  // still a self.glp and may carry -expose directives (module-system spec §3.3).
-  // Parse it as an exposer-only seed so its exposures resolve like any other
-  // self.glp's — its exposing directory is programs/, whose subtree is every
-  // discovered module.
-  final extraExposers = <DiscoveredModule>[];
-  if (rootSelfGlpPath != null && File(rootSelfGlpPath).existsSync()) {
-    final rootModule =
-        Parser(Lexer(File(rootSelfGlpPath).readAsStringSync()).tokenize())
-            .parseModule();
-    if (rootModule.exposes.isNotEmpty) {
-      extraExposers.add(DiscoveredModule(
-        filePath: rootSelfGlpPath,
-        moduleName: _moduleNameFromDirPath(File(rootSelfGlpPath).parent.path),
-        ast: rootModule,
-        ancestorScope: buildRootScopeEnvironment(),
-        isSelfGlp: true,
-      ));
-    }
+  // The root self.glp is a module of every program, the first link of every
+  // module's chain ([rootModuleOf]), and its -expose directives resolve like
+  // any other self.glp's: its exposing directory is the root, whose subtree is
+  // every discovered module.  Until 2026-10-04 it was parsed here as an
+  // exposer-only seed and never linked.
+  final rootModule = rootModuleOf(rootSelfGlpPath);
+  if (rootModule != null &&
+      !modules.any((m) => _normPath(m.filePath) == _normPath(rootModule.filePath))) {
+    modules.add(rootModule);
   }
 
-  _addSglpSystemModule(modules, rootAbsPath, programsDir, rootSelfGlpPath);
-
-  _resolveExposes(modules, programsDir, rootSelfGlpPath,
-      extraExposers: extraExposers);
-}
-
-// ============================================================================
-// sGLP (svGLP, sections/sglp.tex): the stochastic extension's system module.
-// ============================================================================
-
-/// sGLP's system module, `programs/system/sglp.glp`: person/2, the entry point
-/// of a simulation's asking clause (GLP, 2026-09-27: one entry point, in
-/// `programs/system/`, not in the root and not in the catalogue).
-String sglpSystemModulePath(String programsDir) =>
-    '$programsDir${Platform.pathSeparator}system'
-    '${Platform.pathSeparator}sglp.glp';
-
-/// True if a module of [modules] declares a population: a kind or a run.
-bool _declaresPopulation(Iterable<DiscoveredModule> modules) =>
-    modules.any((m) => m.ast.kinds.isNotEmpty || m.ast.runDecl != null);
-
-/// A program that declares a population imports sGLP's system module: it
-/// joins the program as a module exposed at the program's root, so its
-/// exports are in the scope of every module of the program, as a root
-/// `self.glp`'s `-expose` would put them.  A program that declares none does
-/// not import it, and cannot call person/2.
-///
-/// [declared]: a `.vglp` source of the program declares the population, which
-/// [modules], the `.glp` modules, do not show (_addVglpModules).
-void _addSglpSystemModule(List<DiscoveredModule> modules, String rootAbsPath,
-    String? programsDir, String? rootSelfGlpPath, {bool declared = false}) {
-  if (programsDir == null || !(declared || _declaresPopulation(modules))) {
-    return;
-  }
-  final file = File(sglpSystemModulePath(programsDir));
-  if (modules.any((m) => _normPath(m.filePath) == _normPath(file.path))) {
-    return;  // already joined
-  }
-  if (!file.existsSync()) {
-    throw Exception('sGLP: the program declares a population, and sGLP\'s '
-        'system module ${file.path} is missing');
-  }
-  final ast = Parser(Lexer(file.readAsStringSync()).tokenize()).parseModule();
-  enforcePrimitiveLayer(file.path, ast, rootSelfGlpPath);
-  final chain = discoverSelfChain(
-    targetFile: file.absolute.path,
-    rootDir: file.parent.path,
-    programsDir: programsDir,
-  );
-  modules.add(DiscoveredModule(
-    filePath: file.path,
-    moduleName: _moduleNameFromFilename('sglp.glp'),
-    ast: ast,
-    ancestorScope:
-        buildAncestorScope(chain: chain, rootSelfGlpPath: rootSelfGlpPath),
-    exposingDir: _normPath(rootAbsPath),
-  ));
-}
-
-/// [scope] with sGLP's system module's exports added, for a module that
-/// declares a population and is checked on its own, before it is linked (the
-/// single-module load, GlpEngine.loadSource).
-TypeEnvironment withSglpSystemScope(TypeEnvironment scope, String programsDir) {
-  final file = File(sglpSystemModulePath(programsDir));
-  if (!file.existsSync()) return scope;
-  final ast = Parser(Lexer(file.readAsStringSync()).tokenize()).parseModule();
-  return _mergeExposed(scope, _exposedExportScope(ast, scope), label: 'sglp');
-}
-
-/// A declaration of [m] that names a runtime kernel and has no clauses in
-/// [m]: a codeless procedure, which a call reaches by its bare name, as it
-/// reaches a kernel the root `self.glp` declares.
-bool _isCodelessKernel(Module m, ProcDecl d) =>
-    isBuiltinProcedure('${d.name}/${d.arity}') &&
-    !m.procedures.any((p) => p.name == d.name && p.arity == d.arity);
-
-/// The person procedures a program's kinds declare, as the linked program
-/// names them (`M:p/2`, bare in the loaded module of a single-module
-/// program).  person/2 spawns them by name at run time, so no call reaches
-/// them in the program's text, and dead-code elimination keeps them as it
-/// keeps the entry points.
-Set<String> _personProcedureRoots(
-    List<DiscoveredModule> modules, String? singleModulePath) {
-  final singleNorm =
-      singleModulePath != null ? _normPath(singleModulePath) : null;
-  final roots = <String>{};
-  for (final m in modules) {
-    final bare = singleNorm != null && _normPath(m.filePath) == singleNorm;
-    for (final k in m.ast.kinds) {
-      for (final d in k.personDecls) {
-        roots.add(bare ? '${d.procedure}/2' : '${m.moduleName}:${d.procedure}/2');
-      }
-    }
-  }
-  return roots;
+  _resolveExposes(modules, programsDir, rootSelfGlpPath, nameRoot, rs);
+  _rootLast(modules);
 }
 
 /// Normalize a path: absolute, `..`/`.` resolved, no trailing slash.
@@ -507,24 +542,56 @@ bool _dirUnder(String childDir, String ancestorDir) =>
 /// `<exposing self.glp dir>/a/b/c.glp`. That file is parsed, added as a linkable
 /// module tagged with the exposing directory, and its `-expose` directives are
 /// followed transitively. Two modules exposed at one level that share an
-/// exported name/arity is a compile-time error. Finally, each exposed module's
-/// EXPORTED declarations and the types it defines are merged into the
-/// ancestorScope of every module in the exposing directory's subtree.
+/// exported name/arity is a compile-time error.  Each exposed module's lift ---
+/// its exported declarations read in its own scope, and the types their
+/// signatures carry ([ExposedLift]) --- is taken once, with the lifts of its
+/// exposer's other directives ([exposedLifts]), over the exposer's ancestor
+/// scope, and merged into the ancestorScope of every module in the exposing
+/// directory's subtree.
 void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
-    String? rootSelfGlpPath,
-    {List<DiscoveredModule> extraExposers = const []}) {
-  // [extraExposers] are self.glp files that carry -expose directives but are not
-  // themselves linkable modules — specifically root programs/self.glp, which is
-  // excluded from [modules] (realised by the root-scope mechanism) yet may
-  // expose like any other self.glp (module-system spec §3.3; root "is not
-  // otherwise special"). They seed the worklist but are never linked.
+    String? rootSelfGlpPath, String nameRoot, TypeEnvironment? rs) {
   final pending = <DiscoveredModule>[
     ...modules.where((m) => m.ast.exposes.isNotEmpty),
-    ...extraExposers.where((m) => m.ast.exposes.isNotEmpty),
   ];
   final collectedFiles = <String>{};
   // exposingDir(norm) -> exported sig -> exposed module name (collision check)
   final perDirSig = <String, Map<String, String>>{};
+  // Each exposed module, by its file, with the exposer whose directive set
+  // its exposing directory: the lift is that directive's.
+  final exposerOf = <DiscoveredModule, DiscoveredModule>{};
+  // The self.glp files on the chains of the modules only an -expose brings
+  // in that no module of the program holds, by file ([outerScopeOf]).
+  final outer = <String, DiscoveredModule>{};
+
+  // The self.glp files on the chain of the file at [path] that no module of
+  // the program holds, outermost first, each a module of its type
+  // definitions alone ([DiscoveredModule.outerScope]).
+  List<DiscoveredModule> outerScopeOf(String path) {
+    final scope = <DiscoveredModule>[];
+    for (final self in discoverSelfChain(
+        targetFile: File(path).absolute.path,
+        rootDir: File(path).parent.path,
+        programsDir: programsDir)) {
+      final norm = _normPath(self);
+      if (modules.any((m) => _normPath(m.filePath) == norm)) continue;
+      final above = [...scope];
+      scope.add(outer.putIfAbsent(norm, () {
+        final full = Parser(Lexer(File(self).readAsStringSync()).tokenize())
+            .parseModule();
+        return DiscoveredModule(
+          filePath: self,
+          moduleName: modulePathName(self, nameRoot),
+          ast: Module(
+              typeDefs: full.typeDefs, line: full.line, column: full.column),
+          ancestorScope: TypeEnvironment.empty(),
+          isSelfGlp: true,
+          collectedByExpose: true,
+          outerScope: above,
+        );
+      }));
+    }
+    return scope;
+  }
 
   while (pending.isNotEmpty) {
     final exposer = pending.removeLast();
@@ -542,8 +609,7 @@ void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
 
       final exposedAst =
           Parser(Lexer(file.readAsStringSync()).tokenize()).parseModule();
-      final exposedName =
-          _moduleNameFromFilename(file.path.split(Platform.pathSeparator).last);
+      final exposedName = modulePathName(file.path, nameRoot);
 
       // Collision: exported sigs unique among modules exposed at this level.
       for (final d in exposedAst.procDeclarations) {
@@ -561,6 +627,24 @@ void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
       if (collectedFiles.contains(_normPath(file.path))) continue;
       collectedFiles.add(_normPath(file.path));
 
+      // A file the program already holds --- one the directory walk collected,
+      // or the module a single-file load names --- is that one module, now
+      // exposed as well: each .glp file is one module, its procedures emitted
+      // once (TGLP modules.tex, Compilation, first and third steps).  Until
+      // 2026-10-03 a second module of the same file and name was added here,
+      // and the linker emitted the file's procedures twice (tests/expose/basic:
+      // util/strutil:twice/2, util/plist:pmerge/3; system/mad_predicates.glp
+      // loaded alone).  Its -expose directives are on the worklist already.
+      final held = modules.where(
+          (m) => _normPath(m.filePath) == _normPath(file.path));
+      if (held.isNotEmpty) {
+        if (held.first.exposingDir == null) {
+          held.first.exposingDir = exposingDirNorm;
+          exposerOf[held.first] = exposer;
+        }
+        continue;
+      }
+
       final chain = discoverSelfChain(
         targetFile: file.absolute.path,
         rootDir: file.parent.path,
@@ -570,60 +654,149 @@ void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
         filePath: file.path,
         moduleName: exposedName,
         ast: exposedAst,
-        ancestorScope:
-            buildAncestorScope(chain: chain, rootSelfGlpPath: rootSelfGlpPath),
+        ancestorScope: buildAncestorScope(
+            chain: chain, rootSelfGlpPath: rootSelfGlpPath, rootScope: rs),
         isSelfGlp: false,
         exposingDir: exposingDirNorm,
+        collectedByExpose: true,
+        outerScope: outerScopeOf(file.path),
       );
+      exposerOf[exposedDM] = exposer;
       modules.add(exposedDM);
       if (exposedAst.exposes.isNotEmpty) pending.add(exposedDM);
     }
   }
 
-  // Type-env lift: merge exposed EXPORTED declarations/types into the scope of
-  // every module in the exposing subtree.
+  // The lifts, an exposer's together, over its ancestor scope, which no lift
+  // has been merged into yet: what -expose lifts is the exposed module's and
+  // is read in its own scope, the same for every module receiving it.
+  final byExposer = <DiscoveredModule, List<DiscoveredModule>>{};
+  for (final e in exposerOf.entries) {
+    byExposer.putIfAbsent(e.value, () => []).add(e.key);
+  }
+  for (final e in byExposer.entries) {
+    final exposer = e.key;
+    final lifts = exposedLifts(exposer.ast, exposer.filePath,
+        exposer.ancestorScope,
+        root: nameRoot);
+    final exposerDir = File(exposer.filePath).parent.path;
+    for (var i = 0; i < exposer.ast.exposes.length; i++) {
+      final rel = exposer.ast.exposes[i].split('#').join(Platform.pathSeparator);
+      final norm = _normPath('$exposerDir${Platform.pathSeparator}$rel.glp');
+      for (final m in e.value) {
+        if (m.lift == null && _normPath(m.filePath) == norm) m.lift = lifts[i];
+      }
+    }
+  }
+
+  // Type-env lift: merge each exposed module's lift into the scope of every
+  // module in the exposing subtree.
   final exposed = modules.where((m) => m.exposingDir != null).toList();
   if (exposed.isEmpty) return;
   for (final m in modules) {
-    if (m.exposingDir != null) continue;
-    final modDir = _normPath(File(m.filePath).parent.path);
-    for (final e in exposed) {
-      if (!_dirUnder(modDir, e.exposingDir!)) continue;
-      m.ancestorScope = _mergeExposed(
-          m.ancestorScope, _exposedExportScope(e.ast, m.ancestorScope),
-          label: e.moduleName);
+    // A module only an -expose brings in keeps the scope of its own chain; one
+    // the walk collected gets the lift whether or not it is exposed too.  The
+    // root self.glp is checked against the language primitives alone: what it
+    // exposes is for the modules below it.
+    if (m.collectedByExpose || m.isRoot) continue;
+    // An exposing self.glp's scope is its ancestors' (discoverSelfChain), so
+    // the types its own directives lift are layered over it here, as every
+    // scope below it has them from its chain (mergeSelfGlpFileIntoScope): "as
+    // if defined in its self.glp", its own definitions over them, and over
+    // its ancestors' (liftExposedTypes).  Until 2026-10-07 they filled the
+    // gaps of the ancestors' scope ([_mergeExposed]).
+    if (m.ast.exposes.isNotEmpty) {
+      m.ancestorScope = liftExposedTypes(m.ancestorScope, m.ast, m.filePath,
+          root: nameRoot);
     }
+    m.ancestorScope =
+        _withExposedProcedures(m.filePath, m.ancestorScope, modules, exposed);
   }
 }
 
-/// Merge an exposed module's [exposed] scope into [base] WITHOUT overriding any
-/// name already present nearer the use site.  Innermost-first shadowing (spec
-/// §3.2/§3.3: "a definition nearer the use site shadows an exposed one"):
-/// exposed names only fill gaps.  A name defined nearer — whether as an ordinary
-/// procedure or as a parameterized template — shadows an exposed entry of the
-/// same key in BOTH maps, so a shadowed parameterized template is dropped
-/// entirely and never drives call-site instantiation (Case B).  This is the
-/// behaviour the platform routers rely on before the per-platform copies are
-/// removed: the local monomorphic router shadows the exposed parameterised one.
-///
-/// An exposed declaration's types are the exposing module's own: a type [base]
-/// also defines survives from [exposed] under `<label>:T`, the exposed
-/// declarations rewritten to it (TypeEnvironment.shadowedBy) --- as the linked
-/// program resolves an exposed declaration's types in the exposing module's
-/// scope ([renameDeclTypes] over the declaring file's [typeOwnersByModule]).
-TypeEnvironment _mergeExposed(TypeEnvironment base, TypeEnvironment exposed,
-    {String? label}) {
-  bool definedNearer(String key) =>
-      base.procedures.containsKey(key) || base.paramProcDecls.containsKey(key);
+/// [base], the scope of the module at [filePath] built over its chain
+/// ([buildAncestorScope]), with the procedures every `-expose` of [exposed]
+/// that reaches it lifts, each at the level of its exposing directory: "as if
+/// defined in its self.glp ... Shadowing applies as usual" (TGLP modules.tex,
+/// "The -expose directive"; Definition (Root, Scope)).  So a lifted procedure
+/// shadows a procedure of its name and arity that an ancestor of the exposing
+/// directory declares, and one that a `self.glp` of the exposing directory or
+/// of a directory between it and the module declares shadows it, the
+/// exposing `self.glp`'s own declaration included; the module's own are
+/// merged over the scope when it is checked.  The lifts are taken outermost
+/// exposing directory first, so that a nearer one shadows a farther one.
+/// Until 2026-10-07 a lifted procedure filled a gap only, and every
+/// declaration already in [base] won, an ancestor's included
+/// (programs/tests/expose/lift_shadows; GLP, 2026-10-04 13:21 UTC, "12:00",
+/// item 5).
+TypeEnvironment _withExposedProcedures(String filePath, TypeEnvironment base,
+    List<DiscoveredModule> modules, List<DiscoveredModule> exposed) {
+  final modDir = _normPath(File(filePath).parent.path);
+  final reaching = [
+    for (final e in exposed)
+      if (_dirUnder(modDir, e.exposingDir!)) e
+  ]..sort((a, b) => _depth(a.exposingDir!).compareTo(_depth(b.exposingDir!)));
+  if (reaching.isEmpty) return base;
+  // The procedures each self.glp of the module's chain declares, by its
+  // directory; the module itself is not on its chain.
+  final declaredAt = <String, Set<String>>{};
+  for (final s in modules) {
+    if (!(s.isRoot || s.isSelfGlp || isSelfGlpFile(s.filePath))) continue;
+    if (_normPath(s.filePath) == _normPath(filePath)) continue;
+    final sDir = _normPath(File(s.filePath).parent.path);
+    if (!_dirUnder(modDir, sDir)) continue;
+    declaredAt.putIfAbsent(sDir, () => {}).addAll([
+      for (final d in s.ast.procDeclarations) d.qualifiedKey,
+      for (final d in s.ast.paramProcDecls) d.qualifiedKey,
+    ]);
+  }
+  var scope = base;
+  for (final e in reaching) {
+    final nearer = <String>{
+      for (final at in declaredAt.entries)
+        if (_dirUnder(at.key, e.exposingDir!)) ...at.value
+    };
+    scope = _mergeExposed(scope, e.lift!.scope,
+        label: e.moduleName, nearer: nearer);
+  }
+  return scope;
+}
 
+/// The number of segments of the normalised directory [dir].
+int _depth(String dir) => ppath.split(dir).length;
+
+/// Merge an exposed module's lift [exposed] into [base], the scope it reaches
+/// ([_withExposedProcedures]): each lifted procedure shadows the declaration
+/// of its name and arity in [base], in both maps, so that a shadowed
+/// parameterised template is dropped entirely and never drives call-site
+/// instantiation (Case B), and the clauses of the shadowed one's layer go
+/// with it (a lift carries none) --- except one of [nearer], which a
+/// `self.glp` at or below the exposing directory declares, and which
+/// shadows the lifted one instead.  The lift's types and templates fill gaps:
+/// [base] holds them already, layered where they belong, where its chain
+/// runs through the exposing directory (liftExposedTypes).
+///
+/// An exposed declaration's types are those of the scope it was declared in,
+/// the exposed module's own ([ExposedLift]): a type [base] also defines
+/// survives from [exposed] under `<origin>:T`, the exposed declarations
+/// rewritten to it (TypeEnvironment.shadowedBy) --- as the linked program
+/// resolves an exposed declaration's types in the exposed module's scope
+/// ([renameDeclTypes] over the declaring file's [typeOwnersByModule]).
+TypeEnvironment _mergeExposed(TypeEnvironment base, TypeEnvironment exposed,
+    {String? label, Set<String> nearer = const {}}) {
   final ex = exposed.shadowedBy(base, ownLabel: label);
   final procedures = <String, ProcDecl>{...base.procedures};
-  for (final e in ex.procedures.entries) {
-    if (!definedNearer(e.key)) procedures[e.key] = e.value;
-  }
   final paramProcDecls = <String, ProcDecl>{...base.paramProcDecls};
-  for (final e in ex.paramProcDecls.entries) {
-    if (!definedNearer(e.key)) paramProcDecls[e.key] = e.value;
+  final scopeLayers = <String, ScopeLayer>{...base.scopeLayers};
+  for (final key in {...ex.procedures.keys, ...ex.paramProcDecls.keys}) {
+    if (nearer.contains(key)) continue;
+    procedures.remove(key);
+    paramProcDecls.remove(key);
+    scopeLayers.remove(key);
+    final mono = ex.procedures[key];
+    if (mono != null) procedures[key] = mono;
+    final param = ex.paramProcDecls[key];
+    if (param != null) paramProcDecls[key] = param;
   }
   final types = <String, TypeDef>{...base.types};
   for (final e in ex.types.entries) {
@@ -631,29 +804,9 @@ TypeEnvironment _mergeExposed(TypeEnvironment base, TypeEnvironment exposed,
   }
   return TypeEnvironment(types, procedures,
       paramProcDecls: paramProcDecls,
-      typeTemplates: {...base.typeTemplates, ...ex.typeTemplates},
-      typeOrigins: {...ex.originsUnder(label), ...base.typeOrigins});
-}
-
-/// A TypeEnvironment of a module's EXPORTED procedure declarations plus the
-/// types it defines, for type-checking exposed signatures in the subtree.
-///
-/// [base] supplies the exposing subtree's known type names and parameterised
-/// templates (`Stream`, `Channel`, …), so the exposed signatures' parameterised
-/// types are recognised and routed to `paramProcDecls` (exactly as an ordinary
-/// ancestor `self.glp` would be processed).
-TypeEnvironment _exposedExportScope(Module m, TypeEnvironment base) {
-  final exported = m.procDeclarations.where((d) => d.exported).toList();
-  final synthetic = Module(
-    typeDefs: m.typeDefs,
-    procDeclarations: exported,
-    line: m.line,
-    column: m.column,
-  );
-  final expanded = expandParameterizedTypes(synthetic,
-      knownTypeNames: base.types.keys.toSet(),
-      externalTemplates: base.typeTemplates);
-  return buildScopeFromModule(expanded);
+      typeTemplates: {...ex.typeTemplates, ...base.typeTemplates},
+      typeOrigins: {...ex.originsUnder(label), ...base.typeOrigins},
+      scopeLayers: scopeLayers);
 }
 
 /// Collect `self.glp` files in ancestor directories ABOVE [rootDir], walking up
@@ -699,37 +852,49 @@ List<String> _ancestorSelfGlpFiles(String rootDir, String programsDir) {
 ///
 /// - A parameterised procedure with no instantiation in its own module is not
 ///   rejected here — [checkModule] is called with
-///   `rejectUninstantiatedInspecting: false`. A procedure that never inspects a
+///   `rejectUninstantiatedInspecting: false`, since a call in another module of
+///   the program may instantiate it. A procedure that never inspects a
 ///   parameter is certified once for all instantiations by the abstract-
 ///   parameter route (parameterized-types.tex §Modular Checking via Abstract
 ///   Parameters), which [checkModule] runs regardless; one that does inspect a
 ///   parameter has no well-typing of its own and acquires one only per
-///   instantiation, which the linked check supplies.
+///   instantiation, which the linked check supplies — or, where no call in the
+///   program supplies one, the linked check rejects the program.
 /// - Defined guards are unfolded per module before checking, as on the
 ///   single-file path (`GlpEngine.loadSource`): guard unfolding precedes type
 ///   checking, so input coverage is checked on the unfolded head.
 ///
-/// A module with no procedure declarations is not checked, matching the
-/// single-file path — a `self.glp` that carries only type definitions has
-/// nothing to check.
+/// Every module is checked, one with no procedure declarations included: a
+/// clause of it then defines a procedure with no declaration, which is an error
+/// (TGLP Definition "Typed GLP Program", condition 1), and a `self.glp` that
+/// carries only type definitions checks trivially.  Until 2026-10-02 a module
+/// with no declarations was skipped here and on the single-file path, so its
+/// clauses were compiled and run with no check.
 ///
 /// Throws on type errors, naming each offending module's file path.
 void checkModulesIndependently(List<DiscoveredModule> modules) {
   final failures = <String>[];
 
   for (final mod in modules) {
-    if (mod.ast.procDeclarations.isEmpty) continue;
-
     final pe = PartialEvaluator();
     final transformed = pe.transformDefinedGuards(
-        Program(mod.ast.procedures, mod.ast.line, mod.ast.column));
+        Program(mod.ast.procedures, mod.ast.line, mod.ast.column),
+        scope: mod.ancestorScope);
 
-    final result = checkModule(
-      mod.ast,
-      transformedProcedures: transformed.procedures,
-      ancestorScope: mod.ancestorScope,
-      rejectUninstantiatedInspecting: false,
-    );
+    final TypeCheckResult result;
+    try {
+      result = checkModule(
+        mod.ast,
+        transformedProcedures: transformed.procedures,
+        ancestorScope: mod.ancestorScope,
+        rejectUninstantiatedInspecting: false,
+      );
+    } on UndefinedDeclarationTypeError catch (e) {
+      // An undefined type name in one of the module's declarations
+      // (Moded-Types, "Declaration parameters"), named with its file.
+      failures.add('  ${mod.filePath}:${e.line}: ${e.message}');
+      continue;
+    }
     if (result.isWellTyped) continue;
 
     for (final e in result.errors) {
@@ -754,8 +919,11 @@ void checkModulesIndependently(List<DiscoveredModule> modules) {
 /// through parametric intermediaries — which a per-module check, stopping at the
 /// `#` boundary, does not. Renaming makes procedure names unambiguous across
 /// modules and type identity is structural, so no merged-environment juggling is
-/// needed. A parameterised procedure with no instantiation goes unchecked, not
-/// rejected (typed-program.md "Programs and Modules").
+/// needed. A parameterised procedure that inspects a parameter and that no call
+/// in the program instantiates is not parametrically well-typed and has no
+/// well-typing, and the program is rejected (parameterized-types.tex
+/// sec:abstract-parameters); one that inspects none keeps its certificate from
+/// the abstract instance and is not.
 ///
 /// This is the SECOND of the two checks the paper specifies. Step 2 — each
 /// module against its ancestor scope — runs first, in
@@ -763,9 +931,37 @@ void checkModulesIndependently(List<DiscoveredModule> modules) {
 /// there and nowhere else, since step-5 dead-code elimination drops it before
 /// the linked check.
 ///
+/// A single-module program ([singleModulePath], the single-file path of
+/// `GlpEngine.loadSource`) is checked by the same two steps: the flat program
+/// is the object checked and then compiled, whichever path reaches it (TGLP
+/// modules.tex, Compilation: "The flat program is the linked program of
+/// def:program, and it is the object checked").  Until 2026-10-03 the
+/// single-file path checked its module alone and compiled the linked program
+/// unchecked (GLP #3 Cowork, 2026-10-03 21:18 UTC, "16:01. 4": "faults, fix
+/// them").
+///
 /// Throws on type errors with details.
+///
+/// A file-less source --- a boot source, a source handed over as text --- is
+/// a module at the root, linked with the root self.glp as a one-module
+/// program (GLP #3 Cowork, 2026-10-03 21:18 UTC, "16:11"): it is checked in
+/// [outerScope], the scope the engine holds when it is handed over (IGLP
+/// Implementation Notes, "The scope a boot source is checked in", 8aafd09:
+/// "the linked program's entry points and the boot file's ancestor chain of
+/// self.glp declarations, the root among them"), and reaches a loaded program
+/// only through its entry
+/// points, [outerEntryPoints], which stand between the root and the source in
+/// its scope: a call to one stays bare, the loaded program's alias, and the
+/// linked program is checked over [outerScope], which declares it.
 LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
-    {required String rootDir, bool rejectUninstantiated = false}) {
+    {required String rootDir,
+    String? singleModulePath,
+    TypeEnvironment? outerScope,
+    Set<String> outerEntryPoints = const {}}) {
+  // A directory with no self.glp is not a program, and is rejected before
+  // any of its modules is checked; a single-module program has none.
+  if (singleModulePath == null) _requireProgramSelfGlp(modules, rootDir);
+
   // Step 2 (modules.tex §Static Linking): after discovery, before renaming,
   // each module is type-checked independently against its ancestor scope. The
   // linked check below is an addition to it, not a replacement.
@@ -783,23 +979,37 @@ LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
   // no per-module environment juggling is needed.
   // linkProgram applies all five steps, including step-5 DCE, so the program
   // type-checked and compiled below is restricted to its reachable procedures.
-  final linked = linkProgram(modules, rootDir: rootDir);
+  final linked = linkProgram(modules,
+      rootDir: rootDir,
+      singleModulePath: singleModulePath,
+      outerEntryPoints: outerEntryPoints);
   final flat = linkedFlatModule(modules, linked);
 
+  final base = outerScope ?? primitiveScope();
   final pe = PartialEvaluator();
-  final transformed = pe.transformDefinedGuards(linked.program);
+  final transformed = pe.transformDefinedGuards(linked.program, scope: base);
 
-  // rejectUninstantiatedInspecting: false — at load time the program's concrete
-  // initial goals (def:program) are not yet known, and they are what instantiate
-  // the parametric entry procedures and routers. A parametric procedure left
-  // uninstantiated here is bound by the goal at run; rejecting it at load would
-  // refuse every program whose routers are instantiated only through its goals.
-  // The free-type-parameter (no-linked-program) check belongs where the goal
-  // completes the program, not here.
+  // The flat program is the object checked, and every call in it is local, so
+  // a parameterised procedure no call in it instantiates is one no call in the
+  // program instantiates: where it inspects a parameter it is not parametrically
+  // well-typed and the program is rejected (parameterized-types.tex
+  // sec:abstract-parameters). A goal posted at run time is not a call in the
+  // program. Until 2026-09-18 this passed false and printed a `[TYPE] N
+  // parameterized procedure(s) unchecked in this program` line instead, so a
+  // program pronounced well-typed carried clauses nothing had checked — which is
+  // how typed_actors.glp carried an untagged value at a tagged-union position
+  // for months (found 2026-08-03).
+  //
+  // It is checked against the language primitives alone: the root self.glp
+  // is one of its modules, its types and procedures renamed under the empty
+  // path with every other module's, and nothing else is in scope --- save,
+  // for a file-less source, the scope it is handed over in, which declares
+  // the loaded program's entry points it calls.
   final result = checkModule(
     flat,
     transformedProcedures: transformed.procedures,
-    rejectUninstantiatedInspecting: rejectUninstantiated,
+    ancestorScope: base,
+    rejectUninstantiatedInspecting: true,
   );
 
   if (!result.isWellTyped) {
@@ -809,40 +1019,62 @@ LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
     throw Exception('Type checking failed for linked program:\n$errors');
   }
 
-  // What the verdict above does NOT cover. A parameterised procedure that
-  // inspects a type parameter and that no call in this program instantiates is
-  // checked by nothing (parameterized-types.tex sec:programs-and-modules), and
-  // until 2026-08-03 a program said so nowhere: it printed a clean verdict and
-  // the unchecked clauses were indistinguishable from checked ones. That is how
-  // typed_actors.glp carried an untagged value at a tagged-union position for
-  // months. One line, naming them, so the gap is visible at the point the
-  // program is pronounced well-typed rather than only to whoever reads the
-  // checker.
-  //
-  // 🔴 A line printed, not a load refused, and that is INTERIM — see the
-  // downgrade note at the check itself in analysis/type_checker/type_checker.dart.
-  // It becomes a refusal when social/graph/routing carries concrete types.
-  // Runtime-posted goals stay unchecked either way until run(Goal, Type, Module)
-  // is implemented.
-  final unchecked = [
-    for (final w in result.warnings)
-      if (w.procedure != null) w.procedure!
-  ]..sort();
-  if (unchecked.isNotEmpty) {
-    print('[TYPE] ${unchecked.length} parameterized procedure(s) unchecked in '
-        'this program — no instantiation: ${unchecked.join(', ')}');
-  }
-
-  return linked;
+  return linked.withCheckedEnv(linkedProgramEnvironment(flat, base: base));
 }
+
+/// The root self.glp linked as a program of its own: what a goal posted at the
+/// root is linked with (GLP #3 Cowork, 2026-10-03 21:18 UTC, "16:11": "a
+/// posted goal or a file-less source is a module at the root, linked with the
+/// root self.glp as a one-module program; nothing ambient").  The root is
+/// checked in step 2 against the language primitives, its procedures and types
+/// renamed under the empty path and its calls resolved within it (TGLP
+/// modules.tex, Compilation, steps 2--4), and the linked program checked over
+/// the primitives alone.  Every procedure is kept: step 5 keeps what the
+/// posted goal reaches, and a goal may call any procedure of the root, so the
+/// engine links the root once and resolves each goal's calls into it, which is
+/// semantically the goal's linked program ("Restricting the program to its
+/// reachable procedures is semantically equivalent to the whole", fifth step).
+///
+/// Throws, naming the root's file and line, where the root does not check.
+LinkResult checkedRootProgram(DiscoveredModule root) {
+  final modules = [root];
+  checkModulesIndependently(modules);
+  final linked = linkAndResolveModules(modules,
+      rootDir: File(root.filePath).parent.path);
+  final flat = linkedFlatModule(modules, linked);
+  final transformed = PartialEvaluator().transformDefinedGuards(linked.program);
+  final result = checkModule(
+    flat,
+    transformedProcedures: transformed.procedures,
+    ancestorScope: primitiveScope(),
+    rejectUninstantiatedInspecting: true,
+  );
+  if (!result.isWellTyped) {
+    final errors = result.errors
+        .map((e) => '  ${e.message} at line ${e.line}')
+        .join('\n');
+    throw Exception(
+        'Type checking failed for the root self.glp linked alone '
+        '(${root.filePath}):\n$errors');
+  }
+  return linked.withCheckedEnv(linkedProgramEnvironment(flat));
+}
+
+/// The scope the linked program is checked in: the flat module's own
+/// environment over the language primitives ([primitiveScope]), built exactly
+/// as [checkModule] builds it.
+TypeEnvironment linkedProgramEnvironment(Module flat,
+        {TypeEnvironment? base}) =>
+    buildModuleTypeEnvironment(flat, ancestorScope: base ?? primitiveScope());
 
 /// The single flat Module the linked program is type-checked and compiled as:
 /// the linked program's procedures, every module's own type definitions, and the
 /// linked declarations.
 ///
 /// The type definitions are the union of every module's own, deduplicated by
-/// name AND ARITY (structural identity makes duplicates the same type).
-/// Root-scope types are supplied by the root scope, not here.
+/// name AND ARITY (structural identity makes duplicates the same type), the
+/// root self.glp's among them, renamed under the empty path; the primitive
+/// types are the language's and defined by no module.
 ///
 /// The arity is part of the key because it is part of the type constructor's
 /// identity, exactly as `p/n` is a procedure's: `NetMsg` and `NetMsg(C)` are two
@@ -853,20 +1085,25 @@ LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
 /// one then failed to resolve in the linked program while the per-module check
 /// passed. That is what made `programs/social/spm/{cva,gsg,secure_gsg}` unloadable:
 /// `cva/self.glp`'s `NetMsg(C)` displaced the arity-0 `NetMsg` of
-/// `programs/system/mad_predicates.glp`, which the root `self.glp` `-expose`s
-/// into every program, so `mad_predicates.glp:19`'s `NetStream` lost its element
-/// type. Fixture: `programs/tests/type_name_collision/` (Section X9).
+/// `programs/system/mad_predicates.glp`, which the root `self.glp` then
+/// `-expose`d into every program, so `mad_predicates.glp:19`'s `NetStream` lost
+/// its element type.  Its fixture, `programs/tests/type_name_collision/`, and
+/// harness check X9 were removed on 2026-10-04: with this key backed out the
+/// check no longer failed, each type being renamed by its module, and a check
+/// that cannot fail goes (GLP #3 Cowork, 2026-10-04 09:06 UTC, "00:34").
 ///
-
-/// A module may redefine a root-scope operation (e.g. send/receive/new_channel/
-/// merge) with local clauses but no local declaration, relying on the root
-/// declaration. Linking renames those clauses to `M:p` while the root
-/// declaration stays bare, leaving the renamed procedure undeclared in the
-/// linked program. A renamed declaration is supplied from the root scope so the
-/// procedure is checked. (An unqualified entry-point alias carries its exporting
-/// module's declaration from linking — shadowing a root-scope declaration of the
-/// same name/arity; only an alias whose export has no declaration is left
-/// undeclared.)
+/// The declarations are the linked declarations and nothing else: each module's
+/// own, renamed with its procedures, and the entry-point aliases'.  A module
+/// that redefines a root-scope operation (send/receive/new_channel/merge) by
+/// clauses of its own defines a procedure of its own, `M:p` after the renaming,
+/// and declares it as every procedure of a module is declared (TGLP modules.tex,
+/// Definition "Typed Procedure, Module": "A typed procedure is a procedure
+/// declaration ... immediately followed by a procedure for p/n.  A module is a
+/// sequence of type definitions and typed procedures"); the linked program is a
+/// typed GLP program, every procedure in it with exactly one declaration (TGLP
+/// Definition "Typed GLP Program", condition 1), so a redefinition without one
+/// is refused by the linked check, naming `M:p`.  Until 2026-10-03 such a `M:p`
+/// borrowed a renamed copy of the root's declaration here.
 ///
 /// With [allDeclarations], the declarations are the whole scope's
 /// ([LinkResult.scopeDeclarations]) rather than the reachable subset — the
@@ -881,59 +1118,68 @@ Module linkedFlatModule(List<DiscoveredModule> modules, LinkResult linked,
   // the renamed type of the nearest scope defining it (step 4,
   // [_renamedTypeDefs] / [renameDeclTypes]), so the union below cannot collide
   // and cannot depend on the order the filesystem lists the modules in.
+  //
+  // Every module is named by its path from the root, and two files of one
+  // name are rejected at linking ([_requireDistinctModuleNames]), so a renamed
+  // type is defined by one file, and a file is one module of [modules] however
+  // many routes reach it ([_resolveExposes]).  Until 2026-10-02 the name was
+  // the file's, and two modules of one name defining one type were refused
+  // here as a "Module-name collision".
   final owners = typeOwnersByModule(modules);
   final typeDefs = <String, TypeDef>{};
-  final definedIn = <String, String>{};
   for (final mod in modules) {
-    // One file can appear twice in [modules] under two spellings of its path —
-    // the walk's and an `-expose`'s — so the comparison is on the normalised
-    // path, not the string.
-    final modPath = _normPath(mod.filePath);
     for (final td in _renamedTypeDefs(mod, owners[mod.filePath]!)) {
       final key = '${td.name}/${td.typeParams.length}';
-      final prev = definedIn[key];
-      if (prev != null && prev != modPath) {
-        // Two modules of one name (the module name is a file's, not yet a path
-        // from the root) defining one type: the rename cannot separate them.
-        throw Exception(
-            'Module-name collision: "${mod.moduleName}" names both $prev and '
-            '${mod.filePath}, and both define the type ${td.name}.');
-      }
-      definedIn[key] = modPath;
       typeDefs.putIfAbsent(key, () => td);
     }
   }
 
-  final rootEnv = buildRootScopeEnvironment();
   final procDecls = [
     ...(allDeclarations ? linked.scopeDeclarations : linked.checkedDeclarations)
   ];
-  final declKeys = {for (final d in procDecls) d.key};
-  // A kernel an exposed module declares clause-less (sGLP's person/2) is
-  // called by its bare name in the linked program, and declared by that name,
-  // as a root-scope kernel is by the root scope.
-  for (final m in modules) {
-    if (m.exposingDir == null) continue;
-    for (final d in m.ast.procDeclarations) {
-      if (!d.exported || !_isCodelessKernel(m.ast, d)) continue;
-      if (declKeys.add(d.key)) procDecls.add(d);
+
+  // A module only an -expose brings in is checked in its own scope, which
+  // runs through the self.glp files of its chain that are not modules of the
+  // program ([DiscoveredModule.outerScope]), and what it lifts carries their
+  // types to the modules receiving it ([ExposedLift]): the linked program
+  // carries, renamed, each of their definitions its declarations and types
+  // reference, and each those reference in turn, and no other.
+  final outerDefs = <String, TypeDef>{};
+  for (final o in _outerModules(modules)) {
+    for (final td in _renamedTypeDefs(o, owners[o.filePath]!)) {
+      outerDefs.putIfAbsent('${td.name}/${td.typeParams.length}', () => td);
     }
   }
-  for (final p in linked.program.procedures) {
-    final key = '${p.name}/${p.arity}';
-    if (declKeys.contains(key)) continue;
-    final colon = p.name.lastIndexOf(':');
-    if (colon < 0) continue; // unqualified entry-point alias
-    final bareKey = '${p.name.substring(colon + 1)}/${p.arity}';
-    // Prefer the parametric template over the wildcard-instantiated version in
-    // `procedures`: a redefined root op (send/receive/new_channel/merge) is
-    // parametric, and the renamed copy must carry the template so call-site
-    // inference (Case B) concretises it rather than leaving wildcard types.
-    final rd = rootEnv.paramProcDecls[bareKey] ?? rootEnv.procedures[bareKey];
-    if (rd != null) {
-      procDecls.add(ProcDecl(p.name, rd.argTypes, rd.line, rd.column,
-          exported: rd.exported, isBuiltin: rd.isBuiltin));
-      declKeys.add(key);
+  if (outerDefs.isNotEmpty) {
+    final pending = <String>[];
+    void refs(TypeExpr t) {
+      if (t is TypeRef) {
+        pending.add('${t.name}/${t.typeArgs.length}');
+        t.typeArgs.forEach(refs);
+      } else if (t is StructAlt) {
+        t.args.forEach(refs);
+      } else if (t is ListConsAlt) {
+        refs(t.head);
+        refs(t.tail);
+      } else if (t is DiffListAlt) {
+        refs(t.content);
+        refs(t.hole);
+      }
+    }
+
+    for (final td in typeDefs.values) {
+      td.alternatives.forEach(refs);
+    }
+    for (final d in procDecls) {
+      d.argTypes.forEach(refs);
+    }
+    while (pending.isNotEmpty) {
+      final key = pending.removeLast();
+      if (typeDefs.containsKey(key)) continue;
+      final td = outerDefs[key];
+      if (td == null) continue;
+      typeDefs[key] = td;
+      td.alternatives.forEach(refs);
     }
   }
 
@@ -957,7 +1203,8 @@ Module linkedFlatModule(List<DiscoveredModule> modules, LinkResult linked,
 TypeIdentityTables linkedTypeIdentityTables(
         List<DiscoveredModule> modules, LinkResult linked) =>
     typeIdentityTablesForModule(
-        linkedFlatModule(modules, linked, allDeclarations: true));
+        linkedFlatModule(modules, linked, allDeclarations: true),
+        ancestorScope: primitiveScope());
 
 /// Whole-program type-check gate (paper: modules §Static Linking — "the unit of
 /// compilation and execution is a program ... only a well-typed program is
@@ -973,22 +1220,52 @@ void typeCheckProgram(List<DiscoveredModule> modules, {required String rootDir})
 /// sec:static-linking, all five steps).
 ///
 /// Steps 1–4 ([linkAndResolveModules]) rename procedures (`p/n` → `M:p/n`),
-/// resolve all calls, and generate entry-point aliases for root-level exports;
+/// resolve all calls, and generate entry-point aliases for the exports of the
+/// program's self.glp;
 /// step 5 ([eliminateDeadCode]) restricts the result to the reachable
 /// procedures. This is the program of def:program that is type-checked and
 /// compiled.
 ///
-/// Between steps 4 and 5, a directory with no entry points is rejected
-/// ([_requireEntryPoints]).
+/// A directory with no self.glp is rejected before linking
+/// ([_requireProgramSelfGlp]), and between steps 4 and 5 a directory with no
+/// entry points is rejected ([_requireEntryPoints]).
 LinkResult linkProgram(List<DiscoveredModule> modules,
-    {required String rootDir, String? singleModulePath}) {
+    {required String rootDir,
+    String? singleModulePath,
+    Set<String> outerEntryPoints = const {}}) {
+  if (singleModulePath == null) _requireProgramSelfGlp(modules, rootDir);
   final linked = linkAndResolveModules(modules,
-      rootDir: rootDir, singleModulePath: singleModulePath);
+      rootDir: rootDir,
+      singleModulePath: singleModulePath,
+      outerEntryPoints: outerEntryPoints);
   if (singleModulePath == null) {
     _requireEntryPoints(modules, linked, rootDir);
   }
-  return eliminateDeadCode(linked,
-      roots: _personProcedureRoots(modules, singleModulePath));
+  return eliminateDeadCode(linked);
+}
+
+/// A directory with no `self.glp` is not a program (modules.tex, "Entry and
+/// the absence of a boot module": "A directory with no self.glp at all is
+/// rejected for the prior reason: a program is a directory carrying a self.glp
+/// or a self-contained module (Section~\ref{sec:mod-design}), and such a
+/// directory is neither.  A directory of modules that is not a program---a
+/// library reached by ancestor scoping, or a collection of examples compiled
+/// one at a time---is used as those are used, and is not compiled as a program
+/// at all").  Until 2026-10-02 such a directory took the exported procedures
+/// of its root-level modules for its entry points.
+void _requireProgramSelfGlp(List<DiscoveredModule> modules, String rootDir) {
+  final rootNorm = _normPath(rootDir);
+  final hasSelf = modules.any((m) =>
+      m.isSelfGlp && _normPath(File(m.filePath).parent.path) == rootNorm);
+  if (hasSelf) return;
+  throw Exception(
+      'Not a program: $rootDir has no self.glp. A program is a directory '
+      'carrying a self.glp or a self-contained module (modules.tex, '
+      'Module-System Design), so a directory with no self.glp at all is '
+      'rejected (modules.tex, "Entry and the absence of a boot module"); a '
+      'directory of modules that is not a program --- a library, or a '
+      'collection of examples --- is used as those are used, its modules '
+      'loaded one at a time, and is not compiled as a program at all.');
 }
 
 /// A directory with no entry points is not a program (modules.tex §Static
@@ -1023,15 +1300,11 @@ void _requireEntryPoints(
   if (hasEntryPoint) return;
 
   final rootNorm = _normPath(rootDir);
-  final rootSelfPaths = modules
-      .where((m) =>
+  final rootSelfPath = modules
+      .firstWhere((m) =>
           m.isSelfGlp && _normPath(File(m.filePath).parent.path) == rootNorm)
-      .map((m) => m.filePath)
-      .toList();
-
-  final cause = rootSelfPaths.isEmpty
-      ? 'it has no root self.glp, and no module at its root exports a procedure'
-      : '${rootSelfPaths.first} exports no procedure';
+      .filePath;
+  final cause = '$rootSelfPath exports no procedure';
 
   throw Exception(
       'Not a program: $rootDir has no entry points — $cause. A procedure is an '
@@ -1046,21 +1319,32 @@ void _requireEntryPoints(
 /// dead-code elimination.
 ///
 /// Renames procedures (`p/n` → `M:p/n`), resolves all calls, and generates
-/// entry-point aliases for the exported procedures of root-level modules
-/// (project-compilation spec §3.4). [rootDir] is the loaded program root: a
-/// module is "root-level" when its nearest enclosing `self.glp` directory is
-/// that root, i.e. it is not contained in any descendant `self.glp` subtree.
+/// entry-point aliases for the exported procedures of the `self.glp` of
+/// [rootDir], the loaded program root; a directory with no `self.glp` gets
+/// none, and [linkProgram] rejects it.
 ///
 /// Returns a [LinkResult] with the renamed program and renamed proc declarations
 /// (needed for SRSW type-based relaxation during compilation). This is the stage
 /// to inspect when checking renaming/resolution/aliasing in isolation; the
 /// program actually compiled is [linkProgram] (which also applies step 5).
+///
+/// [outerEntryPoints] are the entry points of a program the engine already
+/// holds, by "name/arity", which a file-less source reaches between the root
+/// and itself ([checkedLinkedProgram]): a call to one is left bare, where it
+/// would otherwise resolve to a root procedure of the same name.
 LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
-    {required String rootDir, String? singleModulePath}) {
+    {required String rootDir,
+    String? singleModulePath,
+    Set<String> outerEntryPoints = const {}}) {
+  // Every module is named by its path from the root, so two files of one name
+  // are two modules the renaming cannot tell apart.
+  _requireDistinctModuleNames(modules);
+
   // Step 4 for types: the scope each module's type references resolve in.
   final typeOwners = typeOwnersByModule(modules);
 
-  // Build procedure registry: module name → set of procedure signatures
+  // The procedure registry: module name (its path from the root) → the
+  // signatures of the procedures it defines.
   final registry = <String, Set<String>>{};
   for (final mod in modules) {
     final sigs = <String>{};
@@ -1076,43 +1360,50 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
   final ancestorSelfProcs = <String, Map<String, String>>{};
 
   for (final mod in modules) {
-    final modDir = File(mod.filePath).parent.absolute.path;
     final procs = <String, String>{}; // sig → ancestorModuleName
 
-    // Walk self.glp modules from inner-most to outer-most.
-    // Inner-most wins (first entry in putIfAbsent).
-    // Sort by path length descending (longer path = more nested = inner).
-    final ancestors = selfGlpModules
-        .where((s) {
-          if (identical(s, mod)) return false; // skip self
-          final selfDir = File(s.filePath).parent.absolute.path;
-          return modDir.startsWith(selfDir);
-        })
-        .toList()
-      ..sort((a, b) => b.filePath.length.compareTo(a.filePath.length));
-
-    for (final selfMod in ancestors) {
-      for (final proc in selfMod.ast.procedures) {
-        final sig = '${proc.name}/${proc.arity}';
-        procs.putIfAbsent(sig, () => selfMod.moduleName);
-      }
-    }
-
-    // Exposed procedures: a `self.glp` that `-expose`s a module lifts that
-    // module's EXPORTED procedures into its subtree. Real ancestor `self.glp`
-    // definitions (added above) and local definitions (checked first in
-    // `_resolveGoal`) take precedence over exposed ones.
+    // The scope of the module walked from the root down, a nearer definition
+    // over a farther one (TGLP modules.tex, Definition "Root, Scope"): at each
+    // directory of its chain, the EXPORTED procedures of the modules that
+    // directory's `self.glp` `-expose`s, "as if defined in its self.glp ...
+    // Shadowing applies as usual" ("The -expose directive"), and over them the
+    // `self.glp`'s own procedures.  Local definitions are checked first in
+    // `_resolveGoal`.  Until 2026-10-07 an exposed procedure filled a gap
+    // only, every ancestor `self.glp`'s procedure of its name winning
+    // (programs/tests/expose/lift_shadows).
+    final ancestors =
+        _ancestorSelfGlps(mod, selfGlpModules, flaggedOnly: true);
     final modDirNorm = _normPath(File(mod.filePath).parent.path);
-    for (final em in modules) {
-      if (em.exposingDir == null) continue;
-      if (identical(em, mod)) continue;
-      if (!_dirUnder(modDirNorm, em.exposingDir!)) continue;
-      for (final d in em.ast.procDeclarations) {
-        if (!d.exported) continue;
-        // A kernel an exposed module declares clause-less (sGLP's person/2)
-        // is called by its bare name, as a root-scope kernel is.
-        if (_isCodelessKernel(em.ast, d)) continue;
-        procs.putIfAbsent('${d.name}/${d.arity}', () => em.moduleName);
+    final reaching = [
+      for (final em in modules)
+        if (em.exposingDir != null &&
+            !identical(em, mod) &&
+            _dirUnder(modDirNorm, em.exposingDir!))
+          em
+    ];
+    final levels = <String>{
+      for (final s in ancestors) _normPath(File(s.filePath).parent.path),
+      for (final em in reaching) em.exposingDir!,
+    }.toList()
+      ..sort((a, b) => _depth(a).compareTo(_depth(b)));
+
+    for (final dir in levels) {
+      for (final em in reaching) {
+        if (em.exposingDir != dir) continue;
+        for (final d in em.ast.procDeclarations) {
+          if (!d.exported) continue;
+          procs['${d.name}/${d.arity}'] = em.moduleName;
+        }
+      }
+      for (final selfMod in ancestors) {
+        if (_normPath(File(selfMod.filePath).parent.path) != dir) continue;
+        for (final proc in selfMod.ast.procedures) {
+          final sig = '${proc.name}/${proc.arity}';
+          // An entry point of a program the engine holds is nearer than the
+          // root for a file-less source, and its call stays bare.
+          if (selfMod.isRoot && outerEntryPoints.contains(sig)) continue;
+          procs[sig] = selfMod.moduleName;
+        }
       }
     }
 
@@ -1132,12 +1423,17 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
   final singleNorm =
       singleModulePath != null ? _normPath(singleModulePath) : null;
 
+  // Step 4's cross-module calls, resolved from the caller's directory, and
+  // the calls that resolve to nothing, every one of them reported together.
+  final resolver = _CrossModuleResolver(modules);
+
   // Process each module
   for (final mod in modules) {
     final localSigs = registry[mod.moduleName]!;
     final modAncestorProcs = ancestorSelfProcs[mod.moduleName] ?? {};
     final keepBare =
         singleNorm != null && _normPath(mod.filePath) == singleNorm;
+    String remote(RemoteGoal g) => resolver.resolve(mod, g);
 
     for (final proc in mod.ast.procedures) {
       // Step 3 (modules.tex §Static Linking): rename every procedure p/n to
@@ -1158,7 +1454,7 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
         // Distribute; manual §19.7).
         final resolvedBody = clause.body
             ?.map((g) => _resolveGoal(
-                g, mod.moduleName, localSigs, modAncestorProcs,
+                g, mod.moduleName, localSigs, modAncestorProcs, remote,
                 keepLocalBare: keepBare))
             .toList();
 
@@ -1192,6 +1488,11 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
     }
   }
 
+  // A cross-module call whose qualifier names no module of the caller's
+  // directory, or a procedure its module does not export, does not resolve,
+  // and the program is rejected (modules.tex, Compilation, fourth step).
+  resolver.throwIfUnresolved();
+
   // Build a program-wide procedure declaration index for mode-aware aliases.
   // Maps 'name/arity' → ProcDecl, collecting from all modules' non-imported decls.
   final declIndex = <String, ProcDecl>{};
@@ -1213,8 +1514,8 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
   // §External access). For a DIRECTORY program, the entry points are the
   // EXPORTED procedures of the ROOT self.glp — the self.glp at the loaded
   // program root — each given an unqualified forwarding alias so an external
-  // goal calls it by plain name. (A directory with no root self.glp falls back
-  // to its root-level modules' exported procedures.)
+  // goal calls it by plain name.  A directory with no root self.glp is not a
+  // program and has none ([_requireProgramSelfGlp]).
   //
   // A SINGLE-MODULE program generates NO aliases: its own procedures are kept
   // bare above (keepBare), and those bare names ARE the entry points, a
@@ -1230,31 +1531,8 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
             m.isSelfGlp && _normPath(File(m.filePath).parent.path) == rootNorm)
         .toList();
 
-    Iterable<DiscoveredModule> aliasSourceModules;
-    if (rootSelfMods.isNotEmpty) {
-      aliasSourceModules = rootSelfMods;
-    } else {
-      final descendantSelfDirs = <String>{};
-      for (final s in selfGlpModules) {
-        final sDir = _normPath(File(s.filePath).parent.path);
-        if (sDir != rootNorm && _dirUnder(sDir, rootNorm)) {
-          descendantSelfDirs.add(sDir);
-        }
-      }
-      bool isRootLevel(DiscoveredModule mod) {
-        if (mod.exposingDir != null) return false; // exposed, not root surface
-        final modDir = _normPath(File(mod.filePath).parent.path);
-        if (!_dirUnder(modDir, rootNorm)) return false; // ancestor above root
-        for (final s in descendantSelfDirs) {
-          if (_dirUnder(modDir, s)) return false; // inside a nested sub-program
-        }
-        return true;
-      }
-      aliasSourceModules = modules.where(isRootLevel);
-    }
-
     final aliasedSigs = <String, String>{}; // sig → owning module (conflict check)
-    for (final mod in aliasSourceModules) {
+    for (final mod in rootSelfMods) {
       for (final proc in mod.ast.procedures) {
         final isExported = mod.ast.procDeclarations.any(
             (d) => d.exported && d.name == proc.name && d.arity == proc.arity);
@@ -1284,12 +1562,16 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
         // it in the per-module check.
         if (decl != null) {
           aliasDecls.add(ProcDecl(proc.name, decl.argTypes, decl.line,
-              decl.column, exported: decl.exported, isBuiltin: decl.isBuiltin));
+              decl.column,
+              typeParams: decl.typeParams,
+              exported: decl.exported,
+              isBuiltin: decl.isBuiltin));
           aliasCheckedDecls.add(ProcDecl(
               proc.name,
               renameDeclTypes(decl, typeOwners[declFile ?? mod.filePath]!),
               decl.line,
               decl.column,
+              typeParams: decl.typeParams,
               exported: decl.exported,
               isBuiltin: decl.isBuiltin));
         }
@@ -1319,18 +1601,31 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
   // artefact's interface table records.
   final allDecls = <ProcDecl>[];
   final checkedDecls = <ProcDecl>[];
+  final codelessSeen = <String>{};
   for (final mod in modules) {
     final keepBare =
         singleNorm != null && _normPath(mod.filePath) == singleNorm;
     final owners = typeOwners[mod.filePath]!;
+    final defined = registry[mod.moduleName]!;
     for (final decl in mod.ast.procDeclarations) {
       if (decl.imported) continue; // Skip imported — they're in other modules
-      final name = keepBare ? decl.name : '${mod.moduleName}:${decl.name}';
+      // A clause-less declaration of a kernel or builtin guard the runtime
+      // implements --- the root self.glp's declarations of the language
+      // primitives --- keeps its name: a name with no code binds only to the
+      // runtime's kernel or guard of that name (IGLP code-format-fragment.tex,
+      // Loader, step 3), and every call to it was left bare in step 4.
+      final codeless =
+          !defined.contains(decl.key) && isBuiltinProcedure(decl.key);
+      if (codeless && !codelessSeen.add(decl.key)) continue;
+      final name = keepBare || codeless
+          ? decl.name
+          : '${mod.moduleName}:${decl.name}';
       allDecls.add(ProcDecl(
         name,
         decl.argTypes,
         decl.line,
         decl.column,
+        typeParams: decl.typeParams,
         isBuiltin: decl.isBuiltin,
         exported: keepBare,
       ));
@@ -1341,6 +1636,7 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
         renameDeclTypes(decl, owners),
         decl.line,
         decl.column,
+        typeParams: decl.typeParams,
         isBuiltin: decl.isBuiltin,
         exported: keepBare,
       ));
@@ -1360,34 +1656,28 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
 /// the root's exported procedures (the entry-point aliases — the bare,
 /// unprefixed procedures the linker generated — and the renamed procedures they
 /// call) and the transitive closure of procedures called in the body of a
-/// reachable one. Guards are followed too: a defined guard's call site is
-/// renamed to `M:g` in step with its procedure (so the partial evaluator unfolds
-/// it after linking), and a guard left bare is also followed by base name as a
-/// safeguard. Restricting the program to its reachable procedures is
-/// semantically equivalent to the whole; everything else is pruned.
+/// reachable one (TGLP modules.tex, Compilation, fifth step: "the compiler
+/// retains the reachable procedures: the exported procedures of the program's
+/// self.glp, and every procedure called in the body of a reachable one").
+/// Guards are followed too: a defined guard's call site is renamed to `M:g` in
+/// step with its procedure (so the partial evaluator unfolds it after
+/// linking), and is followed by that name exactly, as a body call is.  A name
+/// is followed only as step 4 resolved it: until 2026-10-03 a guard left bare
+/// was also followed by its base name, keeping every renamed `M:g` of that
+/// base name in any module, which nothing calls.  Restricting the program to
+/// its reachable procedures is semantically equivalent to the whole;
+/// everything else is pruned.
 /// The reachability seed is the bare (unprefixed) entry-point aliases the linker
 /// generated: a directory's are the root self.glp's exported procedures, a
 /// single module's are every one of its own procedures. Every other procedure
 /// carries a renamed `M:p` name, so the unprefixed aliases are exactly the
 /// entry points.
-///
-/// [roots] are further procedures to keep, with what they call: the person
-/// procedures of an sGLP program's kinds, which person/2 spawns by name.
-LinkResult eliminateDeadCode(LinkResult linked,
-    {Set<String> roots = const {}}) {
+LinkResult eliminateDeadCode(LinkResult linked) {
   final procedures = linked.program.procedures;
 
   final byFullName = <String, Procedure>{};
   for (final p in procedures) {
     byFullName['${p.name}/${p.arity}'] = p;
-  }
-  // base 'name/arity' → full keys, for resolving unqualified guard call sites.
-  final byBaseName = <String, List<String>>{};
-  for (final fk in byFullName.keys) {
-    final p = byFullName[fk]!;
-    final ci = p.name.lastIndexOf(':');
-    final base = ci < 0 ? p.name : p.name.substring(ci + 1);
-    byBaseName.putIfAbsent('$base/${p.arity}', () => <String>[]).add(fk);
   }
 
   final reachable = <String>{};
@@ -1395,24 +1685,9 @@ LinkResult eliminateDeadCode(LinkResult linked,
   void markFull(String key) {
     if (byFullName.containsKey(key) && reachable.add(key)) work.add(key);
   }
-  void markBase(String baseKey) {
-    for (final fk in byBaseName[baseKey] ?? const <String>[]) {
-      if (reachable.add(fk)) work.add(fk);
-    }
-  }
 
   void collectFromGoal(Goal g) {
-    if (g is RemoteGoal) {
-      // A static M' # p was already rewritten to a Goal by _resolveGoal; a
-      // residual RemoteGoal is dynamic — record its target by base name.
-      markBase('${g.goal.functor}/${g.goal.arity}');
-      return;
-    }
     if (g is SpawnGoal) {
-      collectFromGoal(g.innerGoal);
-      return;
-    }
-    if (g is RatedGoal) {
       collectFromGoal(g.innerGoal);
       return;
     }
@@ -1426,7 +1701,6 @@ LinkResult eliminateDeadCode(LinkResult linked,
   for (final p in procedures) {
     if (!p.name.contains(':')) markFull('${p.name}/${p.arity}');
   }
-  roots.forEach(markFull);
   while (work.isNotEmpty) {
     final proc = byFullName[work.removeLast()]!;
     for (final clause in proc.clauses) {
@@ -1434,11 +1708,10 @@ LinkResult eliminateDeadCode(LinkResult linked,
         collectFromGoal(g);
       }
       for (final gd in clause.guards ?? const <Guard>[]) {
-        // A defined guard now carries its resolved name (M:g) — keep it exactly;
-        // markBase additionally covers any guard left bare that names a renamed
-        // procedure by base name (defensive; never under-keeps).
+        // A defined guard carries its resolved name (M:g), followed exactly;
+        // a guard left bare is a builtin or a root-scope guard, no procedure
+        // of the program's.
         markFull('${gd.predicate}/${gd.args.length}');
-        markBase('${gd.predicate}/${gd.args.length}');
       }
     }
   }
@@ -1446,12 +1719,19 @@ LinkResult eliminateDeadCode(LinkResult linked,
   final keptProcedures = procedures
       .where((p) => reachable.contains('${p.name}/${p.arity}'))
       .toList();
-  final keptDecls = linked.procDeclarations
-      .where((d) => reachable.contains('${d.name}/${d.arity}'))
-      .toList();
-  final keptChecked = linked.checkedDeclarations
-      .where((d) => reachable.contains('${d.name}/${d.arity}'))
-      .toList();
+  // A declaration is kept with its procedure, and a clause-less declaration of
+  // a kernel or builtin guard the runtime implements --- which has no
+  // procedure, its name binding to the runtime's (IGLP code-format-fragment.tex,
+  // Loader, step 3) --- is kept as it stands: it types the calls to the
+  // primitive in the linked program, which is checked against the language
+  // primitives alone ([checkedLinkedProgram]).
+  bool kept(ProcDecl d) {
+    final key = '${d.name}/${d.arity}';
+    return reachable.contains(key) ||
+        (!byFullName.containsKey(key) && isBuiltinProcedure(key));
+  }
+  final keptDecls = linked.procDeclarations.where(kept).toList();
+  final keptChecked = linked.checkedDeclarations.where(kept).toList();
 
   return LinkResult(Program(keptProcedures, 0, 0), keptDecls,
       checkedDeclarations: keptChecked,
@@ -1472,55 +1752,161 @@ Guard _resolveGuard(Guard guard, String moduleName, Set<String> localSigs,
     // Loaded module keeps bare names: a local guard stays bare.
     if (keepLocalBare) return guard;
     return Guard('$moduleName:${guard.predicate}', guard.args,
-        guard.line, guard.column,
-        negated: guard.negated);
+        guard.line, guard.column);
   }
   final ancestorModule = ancestorSelfProcs[sig];
   if (ancestorModule != null) {
     return Guard('$ancestorModule:${guard.predicate}', guard.args,
-        guard.line, guard.column,
-        negated: guard.negated);
+        guard.line, guard.column);
   }
   return guard;
+}
+
+/// Every module of [modules] is named by its path from the root
+/// ([DiscoveredModule.moduleName]), and two files of one path name --- a
+/// directory's `self.glp` and a module file of the directory's name beside the
+/// directory --- are two modules step 3 would rename alike, so the program is
+/// rejected naming both.  A file the directory walk collects and an
+/// `-expose` names is listed once ([_resolveExposes]).
+void _requireDistinctModuleNames(List<DiscoveredModule> modules) {
+  final fileOfName = <String, String>{};
+  for (final m in modules) {
+    final path = _normPath(m.filePath);
+    final prev = fileOfName.putIfAbsent(m.moduleName, () => path);
+    if (prev != path) {
+      throw Exception(
+          'Two modules of one name: "${m.moduleName}" is the path from the '
+          'root of both $prev and $path, so the renaming of modules.tex, '
+          'Compilation, third step (every procedure and type renamed M:p and '
+          'M:T, M the module\'s path from the root) cannot tell them apart.');
+    }
+  }
+}
+
+/// The resolution of a cross-module call `M # p` (TGLP modules.tex, "Cross-
+/// module type checking": "The qualifier M is a single child directory or
+/// module file relative to the caller's directory: a directory is entered
+/// through its self.glp, a module file through its own exported
+/// declarations"; Compilation, fourth step: the call "resolves to the procedure
+/// p that the qualifier exports ... renamed to its prefix").
+///
+/// The qualifier names `<caller's directory>/M/self.glp` or
+/// `<caller's directory>/M.glp` (or the `.vglp` source compiled as that
+/// module), and the call resolves to the procedure of the module so named,
+/// `<its path from the root>:p`.  A qualifier naming neither, or both, and a
+/// call to a procedure the module it names does not export, do not resolve:
+/// each is recorded with its file and line, and [throwIfUnresolved] rejects the
+/// program naming them all.  Until 2026-10-02 the qualifier was taken for a
+/// module's name, which was its file's, so `M # p` reached whichever module of
+/// that name the program held, wherever it lay, and a directory's `self.glp`
+/// and a module of its directory's name were one module.
+///
+/// A qualifier naming a file that is not among the program's modules --- an
+/// ancestor `self.glp` above the program's directory calling into a sibling of
+/// it --- is renamed by the same path; the procedure is not in the program, and
+/// a call to it that the entry points reach is undefined in the linked program.
+class _CrossModuleResolver {
+  final Map<String, DiscoveredModule> _byPath = {};
+  final List<String> _unresolved = [];
+
+  _CrossModuleResolver(List<DiscoveredModule> modules) {
+    for (final m in modules) {
+      _byPath.putIfAbsent(_normPath(m.filePath), () => m);
+    }
+  }
+
+  /// The name of the module [call], made in [caller], calls: the prefix its
+  /// procedure is renamed to.
+  String resolve(DiscoveredModule caller, RemoteGoal call) {
+    final q = call.staticModuleName;
+    final inner = call.goal;
+    final where = '${caller.filePath}:${call.line}';
+    final sig = '${inner.functor}/${inner.arity}';
+    final callerDirName = moduleDirectoryName(caller.moduleName,
+        isSelfGlp: isSelfGlpFile(caller.filePath));
+    final name = callerDirName.isEmpty ? q : '$callerDirName/$q';
+    if (inner is RemoteGoal) {
+      _unresolved.add('  $where: $q # $inner: a qualifier of more than one '
+          'segment is future work (modules.tex, Cross-module type checking)');
+      return name;
+    }
+
+    final callerDir = _normPath(File(caller.filePath).parent.path);
+    final dirSelf = ppath.join(callerDir, q, 'self.glp');
+    final glpFile = ppath.join(callerDir, '$q.glp');
+    final vglpFile = ppath.join(callerDir, '$q.vglp');
+    final candidates = <String>[
+      if (File(dirSelf).existsSync()) dirSelf,
+      if (File(glpFile).existsSync())
+        glpFile
+      else if (File(vglpFile).existsSync())
+        vglpFile,
+    ];
+    if (candidates.isEmpty) {
+      final bareDir = Directory(ppath.join(callerDir, q)).existsSync()
+          ? ' (${ppath.join(callerDir, q)}/ has no self.glp, through which a '
+              'directory is entered)'
+          : '';
+      _unresolved.add('  $where: $q # $sig: $q is neither a child directory '
+          'with a self.glp nor a module file of $callerDir$bareDir');
+      return name;
+    }
+    if (candidates.length > 1) {
+      _unresolved.add('  $where: $q # $sig: $q names both ${candidates[0]} '
+          'and ${candidates[1]}');
+      return name;
+    }
+
+    final target = _byPath[_normPath(candidates.single)];
+    if (target == null) return name;
+    final exported = target.ast.procDeclarations.any((d) =>
+        d.exported &&
+        !d.imported &&
+        d.name == inner.functor &&
+        d.arity == inner.arity);
+    if (!exported) {
+      _unresolved.add('  $where: $q # $sig: ${target.filePath} does not '
+          'export $sig');
+    }
+    return target.moduleName;
+  }
+
+  /// Rejects the program if any call [resolve] was given does not resolve.
+  void throwIfUnresolved() {
+    if (_unresolved.isEmpty) return;
+    throw Exception(
+        'Cross-module calls that resolve to no exported procedure '
+        '(modules.tex, Compilation, fourth step: a call M # p, whose '
+        'qualifier is a single child directory or module file relative to '
+        'the caller\'s directory, resolves to the procedure p that the '
+        'qualifier exports --- a directory exports through its self.glp, a '
+        'module file through its own exported declarations):\n'
+        '${_unresolved.join('\n')}');
+  }
 }
 
 /// Resolve a single goal in a clause body.
 ///
 /// Resolution order: local procedure → ancestor self.glp chain → root scope/stdlib.
+/// A cross-module call `M' # p` is resolved by [remote], which gives the name
+/// of the module it calls ([_CrossModuleResolver.resolve]).
 Goal _resolveGoal(Goal goal, String moduleName, Set<String> localSigs,
-    Map<String, String> ancestorSelfProcs,
+    Map<String, String> ancestorSelfProcs, String Function(RemoteGoal) remote,
     {bool keepLocalBare = false}) {
-  // RemoteGoal: M' # p(...) → M':p(...)
+  // RemoteGoal: M' # p(...) → <the path of M'>:p(...)
   if (goal is RemoteGoal) {
-    final targetModule = goal.staticModuleName;
-    if (targetModule != null) {
-      // Static dispatch: replace with renamed goal
-      return Goal(
-        '$targetModule:${goal.goal.functor}',
-        goal.goal.args,
-        goal.line,
-        goal.column,
-      );
-    }
-    // Dynamic dispatch — can't resolve statically, leave as-is
-    return goal;
-  }
-
-  // RatedGoal (sGLP, Goal @ Rate): resolve the inner goal, keep the rate
-  if (goal is RatedGoal) {
-    final resolvedInner = _resolveGoal(
-        goal.innerGoal, moduleName, localSigs, ancestorSelfProcs,
-        keepLocalBare: keepLocalBare);
-    if (!identical(resolvedInner, goal.innerGoal)) {
-      return goal.withInner(resolvedInner);
-    }
-    return goal;
+    return Goal(
+      '${remote(goal)}:${goal.goal.functor}',
+      goal.goal.args,
+      goal.line,
+      goal.column,
+    );
   }
 
   // SpawnGoal: resolve inner goal, keep wrapper
   if (goal is SpawnGoal) {
     final resolvedInner = _resolveGoal(
-        goal.innerGoal, moduleName, localSigs, ancestorSelfProcs,
+        goal.innerGoal, moduleName, localSigs, ancestorSelfProcs, remote,
         keepLocalBare: keepLocalBare);
     if (!identical(resolvedInner, goal.innerGoal)) {
       return SpawnGoal(resolvedInner, goal.agentId, goal.line, goal.column);
@@ -1535,13 +1921,16 @@ Goal _resolveGoal(Goal goal, String moduleName, Set<String> localSigs,
   // compiled module carries (TGLP Implementation Notes, "The tables"): `M:p/n`
   // for the module's own procedure, `anc:p/n` for an ancestor self.glp's, bare
   // for an entry-point alias or a root-scope declaration.
+  // The call itself is then resolved as any call is: find_type/2 is the root
+  // self.glp's, and resolves to its renamed form; '_find_type' is the kernel
+  // and stays bare.
   if ((goal.functor == 'find_type' || goal.functor == '_find_type') &&
       goal.arity == 2) {
     final ref = _resolveProcedureRef(
         goal.args[0], moduleName, localSigs, ancestorSelfProcs,
         keepLocalBare: keepLocalBare);
     if (!identical(ref, goal.args[0])) {
-      return Goal(goal.functor, [ref, goal.args[1]], goal.line, goal.column);
+      goal = Goal(goal.functor, [ref, goal.args[1]], goal.line, goal.column);
     }
   }
 
@@ -1654,56 +2043,173 @@ Clause _makeAliasClause(String name, int arity, String targetName,
   return Clause(head, body: body, line: 0, column: 0);
 }
 
-/// Extract module name from filename (without .glp extension).
 /// The module defining each type name visible to [mod], by the scope order of
-/// modules.tex §Scope construction: the module's own definitions, then the
-/// ancestor `self.glp` chain inner-most first, then whatever an ancestor
-/// `-expose`s (which fills gaps only, as [_mergeExposed] does). A name absent
-/// from the map is defined by no module of the program — a root-scope,
-/// primitive or system type — and stays bare.
+/// modules.tex §Scope construction, walked from the root down, a nearer
+/// definition over a farther one: at each directory of the module's chain,
+/// the types what that directory's `self.glp` `-expose`s carries, "as if
+/// defined in its self.glp ... Shadowing applies as usual" ("The -expose
+/// directive"), and over them the `self.glp`'s own; then the module's own
+/// definitions over all.  A name absent from the map is defined by no module
+/// of the program --- a root-scope, primitive or system type --- and stays
+/// bare.  Until 2026-10-07 what an ancestor `-expose`d filled gaps only
+/// ([_mergeExposed] did the same), every `self.glp`'s type of its name
+/// winning (programs/tests/expose/lift_shadows).
 ///
 /// This is step 4 of §Compilation for types: "every type reference is resolved
 /// the same way, to the renamed type of the nearest scope defining it".
 Map<String, String> _visibleTypeOwners(
     DiscoveredModule mod, List<DiscoveredModule> modules) {
   final owners = <String, String>{};
+
+  // A self.glp is an ancestor scope by its name and directory (modules.tex,
+  // Definition "Root, Scope"), whatever it was loaded as.  The module a
+  // single-file load names is not flagged [DiscoveredModule.isSelfGlp] even
+  // where it is a self.glp, so until 2026-10-02 the modules it exposes did not
+  // see its types: loading programs/tests/agent_roundtrip/self.glp left
+  // typed_social_agent:inject_msg/5's Response unrenamed and undefined in the
+  // flat module, and the type-identity tables were not built.
+  //
+  // A module only an -expose brings in has, besides, the self.glp files of
+  // its chain that are not modules of the program ([DiscoveredModule.outerScope]),
+  // taken in their places on the chain.
+  final ancestors = _ancestorSelfGlps(mod, modules);
+  final chain = mod.outerScope.isEmpty
+      ? ancestors
+      : _innermostFirst([...ancestors, ...mod.outerScope]);
+
+  // What an exposer above lifts: the types the exposed signatures carry
+  // ([ExposedLift]), each owned by the module that defines it --- in the
+  // exposed module's own scope, which may be a self.glp the program does not
+  // hold --- and no other type of the exposed module.  Until 2026-10-04 every
+  // type the exposed module defined was visible here, and owned by it.
+  final modDirNorm = _normPath(File(mod.filePath).parent.path);
+  final reaching = [
+    for (final em in modules)
+      if (em.exposingDir != null &&
+          !identical(em, mod) &&
+          em.lift != null &&
+          _dirUnder(modDirNorm, em.exposingDir!))
+        em
+  ];
+  final levels = <String>{
+    for (final s in chain) _normPath(File(s.filePath).parent.path),
+    for (final em in reaching) em.exposingDir!,
+  }.toList()
+    ..sort((a, b) => _depth(a).compareTo(_depth(b)));
+
+  for (final dir in levels) {
+    for (final em in reaching) {
+      if (em.exposingDir != dir) continue;
+      // A type or template whose defining scope the lift does not record is
+      // one of a scope above the exposing directory, which the walk has
+      // given its owner already; it fills a gap only.
+      final lift = em.lift!;
+      for (final t in lift.scope.types.keys) {
+        if (t.contains(':') || t.contains('<')) continue;
+        final origin = lift.scope.typeOrigins[t];
+        if (origin != null) {
+          owners[t] = origin;
+        } else {
+          owners.putIfAbsent(t, () => em.moduleName);
+        }
+      }
+      for (final t in lift.scope.typeTemplates.keys) {
+        final origin = lift.templateOrigins[t];
+        if (origin != null) {
+          owners[t] = origin;
+        } else {
+          owners.putIfAbsent(t, () => em.moduleName);
+        }
+      }
+    }
+    for (final s in chain) {
+      if (_normPath(File(s.filePath).parent.path) != dir) continue;
+      for (final td in s.ast.typeDefs) {
+        owners[td.name] = s.moduleName;
+      }
+    }
+  }
+
   for (final td in mod.ast.typeDefs) {
     owners[td.name] = mod.moduleName;
   }
-
-  final modDir = File(mod.filePath).parent.absolute.path;
-  final ancestors = modules
-      .where((s) {
-        if (!s.isSelfGlp || identical(s, mod)) return false;
-        final selfDir = File(s.filePath).parent.absolute.path;
-        return modDir.startsWith(selfDir);
-      })
-      .toList()
-    ..sort((a, b) => b.filePath.length.compareTo(a.filePath.length));
-  for (final s in ancestors) {
-    for (final td in s.ast.typeDefs) {
-      owners.putIfAbsent(td.name, () => s.moduleName);
-    }
-  }
-
-  final modDirNorm = _normPath(File(mod.filePath).parent.path);
-  for (final em in modules) {
-    if (em.exposingDir == null || identical(em, mod)) continue;
-    if (!_dirUnder(modDirNorm, em.exposingDir!)) continue;
-    for (final td in em.ast.typeDefs) {
-      owners.putIfAbsent(td.name, () => em.moduleName);
-    }
-  }
-
   return owners;
 }
 
-/// [_visibleTypeOwners] for every module of the program, keyed by file path —
-/// the one key that is unique whatever two files are named.
+/// [selfGlps] inner-most first, the root self.glp last ([_ancestorSelfGlps]'s
+/// order).
+List<DiscoveredModule> _innermostFirst(List<DiscoveredModule> selfGlps) {
+  int depth(DiscoveredModule s) =>
+      ppath.split(_normPath(File(s.filePath).parent.path)).length;
+  final roots = selfGlps.where((s) => s.isRoot).toList();
+  final rest = selfGlps.where((s) => !s.isRoot).toList()
+    ..sort((a, b) => depth(b).compareTo(depth(a)));
+  return [...rest, ...roots];
+}
+
+/// The modules of the `self.glp` files that are on the chain of a module of
+/// [modules] and are not modules of the program, each once
+/// ([DiscoveredModule.outerScope]).
+List<DiscoveredModule> _outerModules(List<DiscoveredModule> modules) {
+  final byFile = <String, DiscoveredModule>{};
+  for (final m in modules) {
+    for (final o in m.outerScope) {
+      byFile.putIfAbsent(_normPath(o.filePath), () => o);
+    }
+  }
+  return byFile.values.toList();
+}
+
+/// The `self.glp` modules of [modules] whose directory is [mod]'s or above it
+/// --- the ancestor scopes of [mod] among the program's modules (modules.tex,
+/// Definition "Root, Scope") --- inner-most first; [mod] itself is not among
+/// them.  A `self.glp` is one by its file name ([isSelfGlpFile]) unless
+/// [flaggedOnly], which takes only the modules discovered as one
+/// ([DiscoveredModule.isSelfGlp]).  Directories are compared normalised and
+/// segment by segment: until 2026-10-02 a string prefix decided it, so
+/// `a/bc/` took `a/b/self.glp` for an ancestor.
+List<DiscoveredModule> _ancestorSelfGlps(
+    DiscoveredModule mod, List<DiscoveredModule> modules,
+    {bool flaggedOnly = false}) {
+  final modPath = _normPath(mod.filePath);
+  final modDir = _normPath(File(mod.filePath).parent.path);
+  final ancestors = <DiscoveredModule>[];
+  DiscoveredModule? root;
+  for (final s in modules) {
+    if (s.isRoot) {
+      if (!identical(s, mod)) root = s;
+      continue;
+    }
+    if (!(flaggedOnly ? s.isSelfGlp : (s.isSelfGlp || isSelfGlpFile(s.filePath)))) {
+      continue;
+    }
+    if (identical(s, mod) || _normPath(s.filePath) == modPath) continue;
+    if (_dirUnder(modDir, _normPath(File(s.filePath).parent.path))) {
+      ancestors.add(s);
+    }
+  }
+  int depth(DiscoveredModule s) =>
+      ppath.split(_normPath(File(s.filePath).parent.path)).length;
+  ancestors.sort((a, b) => depth(b).compareTo(depth(a)));
+  // The root self.glp is the outermost link of every module's chain, d_1,
+  // whatever directory the module's program sits in (TGLP modules.tex: "The
+  // root self.glp is in the scope of every module compiled on the device ...:
+  // it is d_1").
+  if (root != null && !mod.isRoot) ancestors.add(root);
+  return ancestors;
+}
+
+/// Whether the file at [path] is a `self.glp`.
+bool isSelfGlpFile(String path) => ppath.basename(path) == 'self.glp';
+
+/// [_visibleTypeOwners] for every module of the program, and for every
+/// `self.glp` on the chain of one that is not a module of it
+/// ([DiscoveredModule.outerScope]), keyed by file path — the one key that is
+/// unique whatever two files are named.
 Map<String, Map<String, String>> typeOwnersByModule(
     List<DiscoveredModule> modules) {
   final byFile = <String, Map<String, String>>{};
-  for (final mod in modules) {
+  for (final mod in [...modules, ..._outerModules(modules)]) {
     byFile[mod.filePath] = _visibleTypeOwners(mod, modules);
   }
   return byFile;
@@ -1767,19 +2273,6 @@ TypeExpr _renameTypeExpr(
   return expr; // ConstantAlt, ListNilAlt, PrimitiveModeAlt: no type name
 }
 
-String _moduleNameFromFilename(String filename) {
-  if (filename.endsWith('.glp')) {
-    return filename.substring(0, filename.length - 4);
-  }
-  return filename;
-}
-
-/// Extract module name from directory path (last component).
-String _moduleNameFromDirPath(String dirPath) {
-  final parts = dirPath.split(Platform.pathSeparator);
-  return parts.last;
-}
-
 // Ancestor-scope assembly lives in module_hierarchy.dart (buildAncestorScope)
 // — the one shared implementation; no linker-local copy.
 
@@ -1799,10 +2292,10 @@ List<String> emitVglpSources(String rootDir,
   // paper's syntax needs none.
   final mediator = _mediatorSource(programsDir);
 
-  final modules = _discoverGlpModules(root, programsDir, rootSelfGlpPath);
+  final rs = _rootScopeOf(rootSelfGlpPath);
+  final modules = _discoverGlpModules(root, programsDir, rootSelfGlpPath, rs);
   return emitCompiledVglp(root.path, mediator,
-      scopeFor: (vglpPath) =>
-          _vglpScope(File(vglpPath), modules, root, programsDir, rootSelfGlpPath),
-      populationDeclared: _declaresPopulation(modules),
+      scopeFor: (vglpPath) => _vglpScope(
+          File(vglpPath), modules, root, programsDir, rootSelfGlpPath, rs),
       onSkip: onSkip);
 }

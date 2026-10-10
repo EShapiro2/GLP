@@ -6,19 +6,17 @@
 ///
 /// Termination is external: the caller shuts down isolates when done.
 ///
-/// See: docs/ma/agent-runtime-spec.md
+/// See: IGLP app:in-execution (Agent Execution and Boot).
 
 import 'dart:async';
 import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:glp_runtime/engine/glp_engine.dart';
-import 'package:glp_runtime/bytecode/runner.dart';
-import 'package:glp_runtime/engine_v2/interp.dart';
+import 'package:glp_runtime/analysis/type_checker/type_ast.dart' show TypeEnvironment;
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
-import 'package:glp_runtime/runtime/machine_state.dart';
-import 'package:glp_runtime/multiagent/payload_serializer.dart';
+import 'package:glp_runtime/wire/payload_codec.dart' show PayloadCodec;
 import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
@@ -37,8 +35,8 @@ class Ready extends IsolateMessage {
 /// Signal to start execution
 class Start extends IsolateMessage {}
 
-/// Agent → router: an outbound send. Per seam spec v0.2 §4/§6 the wire carries
-/// opaque payload bytes only — no MessageType.
+/// Agent → router: an outbound send. The wire carries opaque payload bytes
+/// only, no MessageType (IGLP app:in-networking, The contract; Payloads).
 class RouterSend extends IsolateMessage {
   final String fromId;
   final String toId;
@@ -48,6 +46,22 @@ class RouterSend extends IsolateMessage {
 
   @override
   String toString() => 'RouterSend($fromId->$toId, ${payload.length}B)';
+}
+
+/// Agent → router: the agent's layer sets the cold-call trust level of a
+/// proximity underlay, as `trust_declare/2` asks (IGLP, Definition "Seam
+/// Predicates"); the router enforces it ("The PAN's cold-call trust level is
+/// enforced as trust_declare sets it", IGLP appendix-implementation-notes.tex,
+/// Simulation realisation).
+class RouterTrust extends IsolateMessage {
+  final String agentId;
+  final ProximityUnderlay underlay;
+  final TrustLevel level;
+
+  RouterTrust(this.agentId, this.underlay, this.level);
+
+  @override
+  String toString() => 'RouterTrust($agentId, $underlay, $level)';
 }
 
 /// Router → agent: a delivered message, with the authenticated sender id and the
@@ -79,6 +93,15 @@ class UIEvent extends IsolateMessage {
 class AgentIdle extends IsolateMessage {
   final String agentId;
   AgentIdle(this.agentId);
+}
+
+/// One line an agent sent to its person (`send_to_user/1`), forwarded to the
+/// manager so a harness can assert what a play produced rather than that it
+/// settled. Until 2026-09-18 the line was only printed inside the isolate.
+class AgentOutput extends IsolateMessage {
+  final String agentId;
+  final String line;
+  AgentOutput(this.agentId, this.line);
 }
 
 /// Sent by an agent isolate when handling a message throws.
@@ -123,15 +146,16 @@ class AgentConfig {
   final int goalArity; // Arity of the goal (e.g., 2, 3, 4)
   final List<String> goalConstantArgs; // Constant args between agentId and netIn
   final String programSource;
-  final List<String>? sharedSources; // Optional shared code files (e.g., social_agent.glp)
   final String? programDir; // Optional program directory for static linking
   final String rootSelfGlpPath; // Absolute path to programs/self.glp
+  final String? bootPath; // The boot file's path, for its own self.glp chain
   final SendPort mainPort;
   final SendPort? uiPort; // null for headless
   final TraceConfig traceConfig;
 
-  /// This agent's Ed25519 key pair (seam spec §4). The agent installs it on its
-  /// GlpNetwork via putIdentity.
+  /// This agent's Ed25519 key pair: its identity is its public key, held with
+  /// its private key by the networking layer (IGLP app:in-networking, The
+  /// contract). The agent installs it on its GlpNetwork via putIdentity.
   final ({PubKey pub, Uint8List priv}) keyPair;
 
   /// The shared identifier–key directory, published to every adapter (§4).
@@ -143,9 +167,9 @@ class AgentConfig {
     this.goalArity = 2,
     this.goalConstantArgs = const [],
     required this.programSource,
-    this.sharedSources,
     this.programDir,
     required this.rootSelfGlpPath,
+    this.bootPath,
     required this.mainPort,
     required this.keyPair,
     required this.directory,
@@ -163,7 +187,8 @@ class IsolateManager {
   final ReceivePort _mainPort = ReceivePort();
 
   /// The simulation router: owns the directory, adjacency, trust, queues, and
-  /// messageId assignment, and routes all inter-agent traffic (seam spec §3).
+  /// messageId assignment, and routes all inter-agent traffic (IGLP
+  /// app:in-networking, Simulation realisation).
   final SimulationRouter _router = SimulationRouter();
 
   /// Trace configuration (set via boot)
@@ -201,6 +226,13 @@ class IsolateManager {
 
   /// What the agents have thrown, if anything.
   List<String> get faults => List.unmodifiable(_faults);
+
+  /// What each agent has sent to its person, in order of arrival.
+  final Map<String, List<String>> _outputs = {};
+
+  /// The lines [agentId] sent to its person so far (see [AgentOutput]).
+  List<String> outputOf(String agentId) =>
+      List.unmodifiable(_outputs[agentId] ?? const []);
 
   /// Whether every agent has finished every unit of work handed to it.
   ///
@@ -293,13 +325,17 @@ class IsolateManager {
     final expectedCount = config.directives.length;
 
     // 1. Generate an Ed25519 key pair per agent and populate the directory
-    //    (seam spec §3 Boot). The boot harness sets trust Open for the plays.
+    //    (IGLP app:in-networking, Simulation realisation). The boot harness
+    //    sets the PAN level Open for the plays, the underlay of every simulated
+    //    encounter; an agent's own trust_declare/2 sets its levels after
+    //    ([RouterTrust]).
     final keyPairs = <String, ({PubKey pub, Uint8List priv})>{};
     for (final directive in config.directives) {
       final kp = generateKeyPair();
       keyPairs[directive.agentId] = kp;
       _router.register(directive.agentId, kp.pub);
-      _router.setTrustLevel(directive.agentId, TrustLevel.open);
+      _router.setTrustLevel(
+          directive.agentId, ProximityUnderlay.pan, TrustLevel.open);
     }
 
     // 2. The router delivers to the destination agent's isolate port — the
@@ -345,9 +381,9 @@ class IsolateManager {
         goalArity: directive.goalArity,
         goalConstantArgs: directive.constantArgs,
         programSource: config.source,
-        sharedSources: config.sharedSources,
         programDir: config.programDir,
         rootSelfGlpPath: config.rootSelfGlpPath,
+        bootPath: config.bootPath,
         mainPort: _mainPort.sendPort,
         keyPair: keyPairs[directive.agentId]!,
         directory: _router.directory,
@@ -376,17 +412,25 @@ class IsolateManager {
     await readyCompleter.future;
   }
 
-  /// Harness control: visible disconnection of a pair (seam spec §3, §7.2).
+  /// Harness control: visible disconnection of a pair (IGLP app:in-networking,
+  /// Simulation realisation).
   void cut(String a, String b) => _router.cut(a, b);
 
   /// Harness control: reverse a [cut], flushing queued messages in order.
   void restore(String a, String b) => _router.restore(a, b);
 
-  /// Harness control: invisible delay of a pair's delivery (seam spec §3).
+  /// Harness control: invisible delay of a pair's delivery (IGLP
+  /// app:in-networking, Simulation realisation).
   void holdDelivery(String a, String b) => _router.holdDelivery(a, b);
 
   /// Harness control: release a [holdDelivery], flushing in reverse order.
   void releaseDelivery(String a, String b) => _router.releaseDelivery(a, b);
+
+  /// The cold-call trust level of [underlay] the router holds for [agentId] and
+  /// enforces on the first contacts it routes to it: the boot harness's, or
+  /// the one the agent declared with trust_declare/2.
+  TrustLevel trustLevelOf(String agentId, ProximityUnderlay underlay) =>
+      _router.trustLevelOf(agentId, underlay);
 
   /// Start all agents.
   void start() {
@@ -405,8 +449,7 @@ class IsolateManager {
     }
 
     // Serialize the message
-    final serializer = PayloadSerializer(agentId);
-    final payload = serializer.serializeAgentMessage(message);
+    final payload = PayloadCodec.serializeAgentMessage(message);
     port.send(UIEvent(agentId, payload));
   }
 
@@ -437,11 +480,18 @@ class IsolateManager {
     } else if (msg is AgentFaulted) {
       _recordFault(msg.agentId, msg.error);
 
+    } else if (msg is AgentOutput) {
+      _outputs.putIfAbsent(msg.agentId, () => []).add(msg.line);
+
     } else if (msg is RouterSend) {
       if (_traceConfig.glp && _isTracingAgent(msg.fromId)) {
         print('[${msg.fromId}] → send to ${msg.toId}');
       }
       _router.routeSend(msg.fromId, msg.toId, Uint8List.fromList(msg.payload));
+
+    } else if (msg is RouterTrust) {
+      _log('${msg.agentId} sets trust ${msg.underlay.name} ${msg.level.name}');
+      _router.setTrustLevel(msg.agentId, msg.underlay, msg.level);
     }
   }
 
@@ -472,38 +522,47 @@ void _agentIsolateEntry(AgentConfig config) async {
   log('Starting isolate');
 
   // Create GlpEngine — the ONE way to run GLP programs.
-  // Non-strict types: actor code may have type warnings that shouldn't be fatal.
   // The engine holds the agent's key pair as the person's identity from
   // construction, so the certificate its compiler writes, self_key/1 and
   // sign/3 are under the key the networking layer below is given.
+  // The load refuses a program that does not typecheck: this isolate ran with
+  // the checker's errors printed as warnings until 2026-09-18.
   final engine = GlpEngine(
       rootSelfGlpPath: config.rootSelfGlpPath,
-      identity: PersonIdentity(config.keyPair.pub, config.keyPair.priv))
-    ..strictTypes = false;
+      identity: PersonIdentity(config.keyPair.pub, config.keyPair.priv));
 
-  // Enable madGLP mode (loads madPredicates + creates MadContext)
+  // Enable madGLP mode (creates the MadContext)
   engine.enableMadGLP(agentId: agentId);
 
   // Load program code: either via program linking or individual file loading.
   // A load/type-check failure here (e.g. UnknownTypeError) must be reported to
   // the manager, not left to kill the isolate silently — otherwise boot() hangs
   // forever waiting for Ready (Issue 19).
+  // Every source handed over here is loaded on top of what the engine already
+  // holds and is checked in the scope it is handed over in --- the linked
+  // program's entry points and the boot file's ancestor chain, the root among
+  // them, the root alone where its path is not known (IGLP, Implementation
+  // Notes, "The scope a boot source is checked in", 8aafd09), so a call to a
+  // procedure the program does not export is refused here, naming the call.
+  // Under the synthetic names alone the check saw the bare root scope and
+  // refused agent/7 and ui_mediator/5, which the engine resolves, and
+  // send_to_net/1 while enableMadGLP loaded it.
+  TypeEnvironment bootScope() => config.bootPath != null
+      ? engine.scopeFor(config.bootPath!)
+      : engine.scope;
   try {
     if (config.programDir != null) {
       // Program-directory mode: static-link the program, then load boot source on top.
       engine.loadProgram(config.programDir!);
-      engine.loadSource(config.programSource, filename: 'program');
+      engine.loadSource(config.programSource,
+          filename: 'program', scope: bootScope());
       log('Program loaded via program linking (${config.programDir}) + boot source');
     } else {
-      // Legacy mode: load shared source files and boot program sequentially.
-      // Each file is loaded separately to preserve per-file -mode() directives.
-      if (config.sharedSources != null) {
-        for (var i = 0; i < config.sharedSources!.length; i++) {
-          engine.loadSource(config.sharedSources![i], filename: 'shared_$i');
-        }
-      }
-      engine.loadSource(config.programSource, filename: 'program');
-      log('Program loaded via GlpEngine (stdlib + madPredicates + user code)');
+      // No program directory: the boot source, its boot clause stripped, is
+      // the program.
+      engine.loadSource(config.programSource,
+          filename: 'program', scope: bootScope());
+      log('Program loaded via GlpEngine (root self.glp + user code)');
     }
   } catch (e, st) {
     print('[$agentId] ERROR: init failed during load: $e');
@@ -514,13 +573,53 @@ void _agentIsolateEntry(AgentConfig config) async {
   final ctx = engine.madContext!;
   final runtime = engine.runtime;
 
+  // The agent's goal G, posted with the network-input reader as its last
+  // argument (IGLP, Implementation Notes, "Boot"), the agent's id first and
+  // the spawn directive's constants between them:
+  //   Arity 2: agent_init(agentId, netIn)
+  //   Arity 3: child_init(agentId, playNum, netIn)
+  //   Arity 4: parent_init(agentId, childName, playNum, netIn)
+  // It is posted by the engine's one posting call, which checks it as a body
+  // goal before it runs (TGLP modules.tex, "Type-Compatible Attestation
+  // Between Agents": the initial goal posted to the runtime, "at boot or
+  // interactively", "is type-checked before execution as a body goal") and
+  // refuses it where it does not check or names no entry point; the agent
+  // then fails to initialise, naming the refusal.  Until 2026-10-04 it was
+  // put on the queue here, by its label, unchecked.  The goal carries the
+  // program's module value, as every posted goal does: self_module/1 returns
+  // it, sign/3 puts its source identity into a signed term, and every goal
+  // spawned from it inherits it.
+  final arity = config.goalArity;
+  final goalLabel = '${config.goalFunctor}/$arity';
+  final goalArgs = [
+    glpConstantText(agentId),
+    for (final c in config.goalConstantArgs)
+      int.tryParse(c)?.toString() ?? glpConstantText(c),
+    'NetIn?',
+  ];
+  final PostedGoal posted;
+  try {
+    if (goalArgs.length != arity) {
+      throw GoalRefused('$goalLabel takes $arity arguments, and the spawn '
+          'directive gives ${goalArgs.length}');
+    }
+    posted = engine.postGoal('${config.goalFunctor}(${goalArgs.join(', ')})',
+        inputs: const ['NetIn']);
+  } catch (e) {
+    print('[$agentId] ERROR: Goal $goalLabel refused: $e');  // Always print errors
+    config.mainPort.send(AgentInitFailed(agentId, 'Goal $goalLabel refused: $e'));
+    return;
+  }
+  log('Posted ${config.goalFunctor}/$arity');
+
   // Initialize the permanent index-0 serializer entry for network input
   // Spec Section 4.1: "At boot time, each agent p creates a permanent entry
   // at index 0 mapping `_r(p, 0)` to the local writer N_p for p's network
-  // input stream."
-  final (netInWriter, netInReader) = runtime.heap.allocateVariable();
+  // input stream." --- the writer of the goal's network input, whose reader
+  // the goal holds.
+  final netInWriter = posted.inputs['NetIn']!.currentWriterId;
   ctx.wp.initializeSerializerEntry(netInWriter);
-  log('Serializer entry initialized at index 0, netIn=($netInWriter,$netInReader)');
+  log('Serializer entry initialized at index 0, netIn=$netInWriter');
 
   // Networking seam (spec §3–4): the agent talks to a GlpNetwork, not the
   // mainPort directly. In simulation the client forwards sends to the router
@@ -531,9 +630,14 @@ void _agentIsolateEntry(AgentConfig config) async {
     directory: config.directory,
     sendToRouter: (toId, payload) =>
         config.mainPort.send(RouterSend(agentId, toId, payload)),
+    // The agent's trust declarations reach the router, which enforces them,
+    // over the same port as its sends, so that a send after a declaration is
+    // routed under it.
+    trustToRouter: (underlay, level) =>
+        config.mainPort.send(RouterTrust(agentId, underlay, level)),
   );
   network.putIdentity(config.keyPair.pub, config.keyPair.priv);
-  // Back the seam predicates and the valid_attestation/4 guard (seam spec §4).
+  // Back the seam predicates (IGLP Definition Seam Predicates).
   ctx.network = network;
 
   // Outgoing (spec §4): ctx.onMessageReady(destId, msg) → network.send.
@@ -559,68 +663,18 @@ void _agentIsolateEntry(AgentConfig config) async {
     }
   };
 
-  log('Network input ready: writer=$netInWriter, reader=$netInReader');
-
-  // Find goal entry point with the actual arity from the boot directive.
-  // Arity 2: agent_init(agentId, netIn)
-  // Arity 3: child_init(agentId, playNum, netIn)
-  // Arity 4: parent_init(agentId, childName, playNum, netIn)
-  final program = engine.combinedProgram;
-  final arity = config.goalArity;
-  final goalLabel = '${config.goalFunctor}/$arity';
-  // Run the isolate's agent on the byte interpreter over a CodeImage of the
-  // program, entry as a byte offset.
-  final image = codeImageFromProgram(program);
-  final goalPC = image.entryOffsetOf(goalLabel);
-  if (goalPC == null) {
-    print('[$agentId] ERROR: Goal $goalLabel not found');  // Always print errors
-    config.mainPort.send(AgentInitFailed(agentId, 'Goal $goalLabel not found'));
-    return;
-  }
-
-  // Build argument map: arg 0 = agent ID, args 1..n-2 = constants, arg n-1 = netIn
-  final args = <int, Term>{};
-
-  // Arg 0: agent ID (constant)
-  final (idArgWriter, idArgReader) = runtime.heap.allocateVariable();
-  runtime.heap.bindVariable(idArgWriter, ConstTerm(agentId));
-  args[0] = VarRef(idArgReader);
-
-  // Args 1..n-2: additional constant arguments from boot directive
-  for (var i = 0; i < config.goalConstantArgs.length; i++) {
-    final constVal = config.goalConstantArgs[i];
-    final (cw, cr) = runtime.heap.allocateVariable();
-    // Try to parse as integer, otherwise treat as atom
-    final intVal = int.tryParse(constVal);
-    if (intVal != null) {
-      runtime.heap.bindVariable(cw, ConstTerm(intVal));
-    } else {
-      runtime.heap.bindVariable(cw, ConstTerm(constVal));
-    }
-    args[i + 1] = VarRef(cr);
-  }
-
-  // Last arg: network input reader
-  final (netInArgWriter, netInArgReader) = runtime.heap.allocateVariable();
-  runtime.heap.bindVariable(netInArgWriter, VarRef(netInReader));
-  args[arity - 1] = VarRef(netInArgReader);
+  log('Network input ready: writer=$netInWriter');
 
   // What the agent sends to its person is printed under the agent's name, so
-  // a harness reading the process's output can tell whose line it is.
-  runtime.outputCallback = (text) => print('[$agentId] $text');
+  // a harness reading the process's output can tell whose line it is, and is
+  // forwarded to the manager, so a harness can assert it (IsolateManager.outputOf).
+  runtime.outputCallback = (text) {
+    print('[$agentId] $text');
+    config.mainPort.send(AgentOutput(agentId, text));
+  };
 
-  // Spawn main goal. It carries the program's module value, as a REPL goal
-  // does: self_module/1 returns it, sign/3 puts its source identity into a
-  // signed term, and every goal spawned from it inherits it.
-  runtime.setGoalEnv(1, CallEnv(args: args));
-  runtime.setGoalProgram(1, 'main');
-  runtime.setGoalModule(1, engine.appModule);
-  runtime.gq.enqueue(GoalRef(1, goalPC));
-  log('Spawned ${config.goalFunctor}/$arity');
-
-  // Create scheduler for this engine
-  final GoalRunner runner = ByteRunner(image);
-  final scheduler = Scheduler(rt: runtime, runners: {'main': runner});
+  // The scheduler over the code image the goal was posted on.
+  final scheduler = posted.scheduler;
 
   // Set up tracing: lines print directly (no buffering needed without ticks)
   if (tc.glp) {
@@ -644,8 +698,7 @@ void _agentIsolateEntry(AgentConfig config) async {
     try {
     if (msg is Start) {
       // Initial drain+flush: kicks off the agent's goal
-      _drain(scheduler, agentId, engine.debugTrace);
-      ctx.flushMessages();
+      _drainAndSend(scheduler, ctx.flushMessages, agentId, engine.debugTrace);
       config.mainPort.send(AgentIdle(agentId));
 
     } else if (msg is Deliver) {
@@ -663,8 +716,7 @@ void _agentIsolateEntry(AgentConfig config) async {
       }
 
       // Drain activated goals and flush any response messages
-      _drain(scheduler, agentId, engine.debugTrace);
-      ctx.flushMessages();
+      _drainAndSend(scheduler, ctx.flushMessages, agentId, engine.debugTrace);
       config.mainPort.send(AgentIdle(agentId));
 
     } else if (msg is UIEvent) {
@@ -685,18 +737,22 @@ void _agentIsolateEntry(AgentConfig config) async {
   }
 }
 
-/// One event's reduction in an agent isolate: reduce until quiescent, the
-/// queue empty and nothing runnable. One [Scheduler.drainWithStatus] stops at
-/// its cycle cap with goals still queued, so this agent's drain is
-/// [Scheduler.drainToQuiescence], as the single-isolate runtime's is. Its cap
-/// is a safety net against a program that never quiesces: reaching it is
-/// reported, never passed over, because everything after a half-run means
-/// something other than what it says.
-void _drain(Scheduler scheduler, String agentId, bool debug) {
-  final result = scheduler.drainToQuiescence(debug: debug);
+/// One event's work in an agent isolate: reduce until quiescent, the queue
+/// empty and nothing runnable, then perform the Sends, which [send] makes ---
+/// and again while a goal waits on when_idle with the machine idle after them
+/// (IGLP eadadcd, Implementation Notes, "The when_idle Guard";
+/// [Scheduler.drainAndSend], as the single-isolate runtime's is). One
+/// [Scheduler.drainWithStatus] stops at its cycle cap with goals still queued,
+/// so each drain is [Scheduler.drainToQuiescence]. Its cap is a safety net
+/// against a program that never quiesces: reaching it is reported, never
+/// passed over, because everything after a half-run means something other
+/// than what it says.
+void _drainAndSend(
+    Scheduler scheduler, void Function() send, String agentId, bool debug) {
+  final result = scheduler.drainAndSend(send, debug: debug);
   if (result.status == ExecutionStatus.capped) {
     print('[$agentId] ERROR: the program did not quiesce: stopped after '
-        '${result.goalsRan.length} goals with ${scheduler.rt.gq.length} '
+        '${result.goalsRun} goals with ${scheduler.rt.gq.length} '
         'still queued');
   }
 }

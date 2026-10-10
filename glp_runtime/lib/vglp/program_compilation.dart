@@ -18,10 +18,13 @@
 import 'dart:io';
 
 import '../compiler/ast.dart' as ast;
+import '../compiler/error.dart';
 import '../compiler/lexer.dart';
 import '../compiler/parser.dart';
 import '../compiler/glp_printer.dart';
+import '../compiler/token.dart';
 import '../analysis/type_checker/type_ast.dart';
+import '../runtime/module_hierarchy.dart' show discoverSelfChain;
 import 'canonical.dart';
 import 'clause_compilation.dart';
 import 'mediator.dart';
@@ -171,20 +174,27 @@ String _emit(ast.Module module, CompiledTypes types, InstantiatedMediator med,
 /// Compile the text of a `.vglp` source to the text of its GLP module.
 ///
 /// A source in the paper's syntax --- `procedure (T)*p(...)`, `(A)*p(...)` ---
-/// compiles by the canonical compilation of vGLP at 16b3b54 (canonical.dart),
-/// with person(T, X) in the asking clause where the program declares a
-/// population, in this source or, by [populationDeclared], in another of its
-/// modules.  A source in the old syntax, with volition guards `*(...)`, keeps
-/// its old compilation, against the generic [mediator], until its owner ports
-/// it (vGLP's code task of 2026-10-01, item 6); it has none to compile against
-/// where [mediator] is null.
+/// compiles by the canonical compilation of vGLP at db03e2d (canonical.dart),
+/// against the dispatcher's generic source in the [mediator]'s directory and
+/// in its [scope].  A source in the old syntax, with volition guards `*(...)`,
+/// keeps its old compilation, against the generic [mediator], until its owner
+/// ports it (vGLP's code task of 2026-10-01, item 6); it has none to compile
+/// against where [mediator] is null.  A source in the paper's syntax at
+/// [path] is compiled with the widget declarations of its scope, read from
+/// the self.vglp beside each self.glp from the root down
+/// (scopeWidgetDeclarations), the root being the parent of the [mediator]'s
+/// directory, programs/.
 String compileVglpSource(String text,
-    {MediatorSource? mediator,
-    TypeEnvironment? scope,
-    bool populationDeclared = false,
-    String? path}) {
+    {MediatorSource? mediator, TypeEnvironment? scope, String? path}) {
   if (isPaperSyntaxSource(text)) {
-    return compileCanonical(text, population: populationDeclared).source;
+    final dir = mediator?.directory;
+    return compileCanonical(text,
+            dispatcher: mediator?.dispatcher,
+            scope: scope,
+            scopeWidgets: path != null && dir != null
+                ? scopeWidgetDeclarations(path, Directory(dir).parent.path)
+                : const {})
+        .source;
   }
   if (mediator == null) {
     throw StateError('${path ?? 'The source'} is in the old syntax, and the '
@@ -206,12 +216,8 @@ String compileVglpSource(String text,
 /// and a `<stem>.glp` that exists and does not carry the compiler's header is
 /// left alone and reported: switching a deployed program onto its compiled
 /// agent is its own change.
-///
-/// [populationDeclared]: the program declares a population in one of its
-/// `.glp` modules, so the asking clauses call person(T, X).
 List<String> emitCompiledVglp(String rootDir, MediatorSource? mediator,
     {required TypeEnvironment Function(String vglpPath) scopeFor,
-    bool populationDeclared = false,
     void Function(String message)? onSkip}) {
   final root = Directory(rootDir);
   if (!root.existsSync()) {
@@ -225,14 +231,10 @@ List<String> emitCompiledVglp(String rootDir, MediatorSource? mediator,
       .where((f) => f.path.endsWith('.vglp'))
       .toList();
 
-  // A population a source in the paper's syntax declares is the program's.
-  final population = populationDeclared ||
-      sources.any((f) {
-        final text = f.readAsStringSync();
-        return isPaperSyntaxSource(text) && declaresPopulation(text);
-      });
-
   for (final file in sources) {
+    // A self.vglp holds the widget declarations of its self.glp's scope and
+    // is no module (scopeWidgetDeclarations).
+    if (file.uri.pathSegments.last == selfVglp) continue;
     final target = '${file.path.substring(0, file.path.length - 5)}.glp';
     final existing = File(target);
     if (existing.existsSync() &&
@@ -245,11 +247,69 @@ List<String> emitCompiledVglp(String rootDir, MediatorSource? mediator,
     existing.writeAsStringSync(compileVglpSource(text,
         mediator: mediator,
         // The old compilation reads types off the checker in this scope; the
-        // canonical compilation is syntactic and needs none.
-        scope: isPaperSyntaxSource(text) ? null : scopeFor(file.path),
-        populationDeclared: population,
+        // canonical compilation builds the construct processes from it.
+        scope: scopeFor(file.path),
         path: file.path));
     written.add(target);
   }
   return written;
+}
+
+/// The file of a directory's widget declarations, beside its self.glp.
+const selfVglp = 'self.vglp';
+
+/// The widget declarations in scope of the `.vglp` source at [path]: those of
+/// the self.vglp beside each self.glp from the root, [programsDir], down to
+/// the source's own directory, each more local one overriding a more global
+/// one (Definition "Widget Declaration, Default Widget": "Widget declarations
+/// are scoped as type declarations are: a declaration at the root holds for
+/// every program, one in a module holds in that module, and a local
+/// declaration overrides a global one"; vGLP #5 Cowork, 2026-10-03 08:16 UTC,
+/// item 7).  The chain is the one the source's type scope is built from (TGLP
+/// modules.tex, Definition "Root, Scope"), a directory with no self.glp
+/// adding nothing; the source's own declarations override these in turn
+/// (compileCanonical).
+Map<String, String> scopeWidgetDeclarations(String path, String programsDir) {
+  final chain = [
+    '$programsDir${Platform.pathSeparator}self.glp',
+    ...discoverSelfChain(
+        targetFile: path,
+        rootDir: File(path).parent.path,
+        programsDir: programsDir),
+  ];
+  final out = <String, String>{};
+  for (final selfGlp in chain) {
+    final file = File(
+        '${File(selfGlp).parent.path}${Platform.pathSeparator}$selfVglp');
+    if (!File(selfGlp).existsSync() || !file.existsSync()) continue;
+    out.addAll(readSelfVglp(file.path));
+  }
+  return out;
+}
+
+/// The widget declarations of the self.vglp at [path], a file of `T =::= W.`
+/// declarations and comments only; anything else in it is refused, naming
+/// the file.
+Map<String, String> readSelfVglp(String path) {
+  final WidgetDeclarations w;
+  try {
+    w = extractWidgetDeclarations(File(path).readAsStringSync());
+  } on CompileError catch (e) {
+    throw CompileError('$path: ${e.message}', e.line, e.column,
+        category: e.category);
+  }
+  final rest = Lexer(w.stripped)
+      .tokenize()
+      .where((t) => t.type != TokenType.EOF)
+      .toList();
+  if (rest.isNotEmpty) {
+    throw CompileError(
+        '$path holds the widget declarations of its self.glp\'s scope, '
+        '"T =::= W.", and nothing else (vGLP #5 Cowork, 2026-10-03 08:16 UTC, '
+        'item 7)',
+        rest.first.line,
+        rest.first.column,
+        phase: 'parser');
+  }
+  return w.byModedType;
 }

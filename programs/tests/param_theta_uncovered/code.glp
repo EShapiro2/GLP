@@ -1,0 +1,8 @@
+%% See self.glp.
+
+exported procedure go(Stream(Kind)?, Constant).
+go(Xs, N?) :- pick(a(one), Xs?, N).
+
+procedure(R, S) pick(R?, Stream(S)?, Constant).
+pick(a(N), [p|_], N?).
+pick(a(N), [q|_], N?).

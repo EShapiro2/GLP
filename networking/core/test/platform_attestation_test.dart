@@ -2,7 +2,11 @@ import 'dart:typed_data';
 
 import 'package:test/test.dart';
 
+import 'package:grassroots_networking_core/src/session/application_identity.dart';
+import 'package:grassroots_networking_core/src/session/attestation_verifier.dart';
 import 'package:grassroots_networking_core/src/session/platform_attestation.dart';
+
+import 'helpers/attestation_fixtures.dart';
 
 /// The attestation digest and its wire framing (spec §Session Establishment).
 ///
@@ -187,7 +191,13 @@ void main() {
 
     test('offers neither an attestation nor a signature', () async {
       expect(await attestation.attestationFor(bytes(0x11)), isNull);
-      expect(await attestation.signSessionDigest(bytes(0x01)), isNull);
+      expect(
+        await attestation.signSessionDigest(
+          identityPublicKey: bytes(0x11),
+          digest: bytes(0x01),
+        ),
+        isNull,
+      );
     });
 
     test('a peer that offers nothing is unattested, which is not a failure',
@@ -200,10 +210,13 @@ void main() {
       expect(verdict, isA<UnattestedPlatform>());
     });
 
-    test('a peer that offers evidence is unattested, not invalid', () async {
-      // "Cannot determine" is not "found invalid". Reporting invalid would
-      // claim a verification that never ran and would tear down every session
-      // with an attesting peer.
+    test('a peer whose evidence does not verify is invalid, not unattested',
+        () async {
+      // It offers nothing of its own and still verifies what a peer offers:
+      // the verifiers are in the core, so "cannot determine" no longer
+      // arises, and an attestation "offered and found invalid" tears the
+      // session down (spec §Session Establishment). Reporting it unattested
+      // would let any bytes pass as an unattested peer's.
       final verdict = await attestation.verify(
         evidence: AttestationEvidence(
           attestation: bytes(0x55, 512),
@@ -212,8 +225,36 @@ void main() {
         digest: bytes(0x01),
         peerIdentityKey: bytes(0x11),
       );
-      expect(verdict, isA<UnattestedPlatform>());
-      expect(verdict, isNot(isA<InvalidAttestation>()));
+      expect(verdict, isA<InvalidAttestation>());
+    });
+
+    test('a peer whose evidence verifies is attested, with its identity',
+        () async {
+      final ios = AppAttestFixture();
+      final pk = bytes(0x11);
+      final digest = attestationDigest(
+        identityPublicKey: pk,
+        handshakeHash: bytes(0x22),
+      );
+      final verdict = await NoPlatformAttestation(
+        verifier: AttestationVerifier(
+          clock: () => fixtureTime,
+          appAttestRoots: [ios.root],
+        ),
+      ).verify(
+        evidence: AttestationEvidence(
+          attestation: encodePlatformAttestation(AppAttestContent(
+            appId: ios.appId,
+            attestationObject: ios.attestationObject(pk),
+          )),
+          signature: ios.assertion(digest),
+        ),
+        digest: digest,
+        peerIdentityKey: pk,
+      );
+      expect(verdict, isA<AttestedApplication>());
+      expect((verdict as AttestedApplication).identity,
+          IosApplicationIdentity(ios.appId));
     });
   });
 }

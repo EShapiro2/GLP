@@ -1,0 +1,60 @@
+%% Test (xii)'s sGLP source, in the term form the transformation reads
+%% (programs/sglp/README.md, "The term form").  Its surface form:
+%%
+%%   person talker.
+%%   Stream(Msg) =::= talk.
+%%   procedure talk(Stream(Msg), Integer?).
+%%   talk(Ms?, _) :- say(1, Ms) @ 1/hour.
+%%   procedure say(Integer?, Stream(Msg)).
+%%   say(I, [msg(T?, St) | Ms?]) :- I? =< 3 | text(I?, T), next(St?, I?, Ms).
+%%   say(I, []) :- I? > 3 | true.
+%%   procedure next(Status?, Integer?, Stream(Msg)).
+%%   next(St, I, Ms?) :- known(St?) | I1 := I? + 1, say(I1?, Ms) @ 1/hour.
+%%   procedure text(Integer?, String).
+%%   text(1, hello).  text(2, there).  text(3, bye).
+%%
+%%   run 1 agents [talking ~ (talker : 1.0)] until 1 week seed 20260927.
+%%
+%% Stream(Msg) is in reader mode (procedure (Stream(Msg)?)*chat(...),
+%% chat.vglp), so its person procedure is declared with its dual,
+%% Stream(Msg), in writer mode (Section 3, Definition "Dual, Person Procedure,
+%% Person Declaration"): the person writes three messages, an hour apart on
+%% average, each once the program has written the last one's status, which
+%% the person goal reads (Section 4, "The person process": the readers of the
+%% positions the program writes go to the person goal), and then closes the
+%% stream.  Each clause answers at most one question: the stream's next
+%% element, its text and the writer of its status, or its end.  The interface
+%% names the predicates of the compiled program, chat.glp, and Stream's
+%% definition, the root's.
+%%
+%% transform.sh prints from it profiles.glp and population.glp, beside it.
+
+exported procedure source(SglpTerms, SglpTerms).
+source(
+  %% The vGLP program's interface (chat.vglp; Stream, the root's) and its
+  %% compiled program's predicates (chat.glp).
+  [type('Status', [sent, delivered, read]),
+   type('Msg', [msg('String', dual('Status'))]),
+   type('Stream'('X'), [[], ['X' | 'Stream'('X')]]),
+   volitional(dual('Stream'('Msg')), stream_msg_r, chat('Stream'('String'))),
+   compiled(chat, 2), compiled(chat1, 3), compiled(deliver, 3), compiled(status, 2)],
+
+  %% The profile and the run declaration.
+  [person(talker),
+   binds('Stream'('Msg'), talk),
+   decl(talk('Stream'('Msg'), dual('Integer'))),
+   clause(talk(var('Ms?'), var('_')), [],
+          [rated(say(1, var('Ms')), rate(1, hour))]),
+   decl(say(dual('Integer'), 'Stream'('Msg'))),
+   clause(say(var('I'), [msg(var('T?'), var('St')) | var('Ms?')]), ['=<'(var('I?'), 3)],
+          [text(var('I?'), var('T')), next(var('St?'), var('I?'), var('Ms'))]),
+   clause(say(var('I'), []), ['>'(var('I?'), 3)], [true]),
+   decl(next(dual('Status'), dual('Integer'), 'Stream'('Msg'))),
+   clause(next(var('St'), var('I'), var('Ms?')), [known(var('St?'))],
+          [':='(var('I1'), '+'(var('I?'), 1)), rated(say(var('I1?'), var('Ms')), rate(1, hour))]),
+   decl(text(dual('Integer'), 'String')),
+   clause(text(1, hello), [], []),
+   clause(text(2, there), [], []),
+   clause(text(3, bye), [], []),
+
+   run(1, [mix(talking, [share(talker, 1.0)])], 1, week, 20260927)]).

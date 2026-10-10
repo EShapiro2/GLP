@@ -25,6 +25,7 @@ import 'package:grassroots_networking_core/src/protocol/protocol_handler.dart';
 import 'package:grassroots_networking_core/src/protocol/fragment_handler.dart';
 import 'package:grassroots_networking_core/src/protocol/message_transport.dart';
 import 'package:grassroots_networking_core/src/routing/message_router.dart';
+import 'package:grassroots_networking_core/src/session/application_identity.dart';
 import 'package:grassroots_networking_core/src/session/noise_session_manager.dart';
 import 'package:grassroots_networking_core/src/session/platform_attestation.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
@@ -697,14 +698,15 @@ class GrassrootsNetwork {
   /// per medium: a peer reachable over both BLE and IP fires twice (one BLE,
   /// one IP), and a medium that drops and later recovers fires again. Receives
   /// the peer's public key, the [MessageTransport] it connected over, and the
-  /// attested binary hash — null where the peer's platform provides no
-  /// attestation (spec §Connection and Reachability, §Session Establishment).
-  /// A peer is reachable only once its session is established, authenticated
-  /// AND attested, so this never fires before the attestation exchange.
+  /// peer's attested application identity — null where the peer's platform
+  /// provides no attestation (spec §Connection and Reachability, §Session
+  /// Establishment). A peer is reachable only once its session is
+  /// established, authenticated AND attested, so this never fires before the
+  /// attestation exchange.
   void Function(
     Uint8List publicKey,
     MessageTransport transport,
-    Uint8List? attestedBinaryHash,
+    ApplicationIdentity? identity,
   )? onPeerConnected;
 
   /// Called when an existing peer sends an ANNOUNCE update.
@@ -776,8 +778,9 @@ class GrassrootsNetwork {
   final PlaceRegistry? _places;
 
   /// The platform's attestation service (spec §Session Establishment). The
-  /// default offers none and reports every peer unattested, which is what a
-  /// platform with no attestation must report in any case.
+  /// default offers none and verifies what a peer offers against the pinned
+  /// roots; an app embedding supplies its platform's producer
+  /// (`NativePlatformAttestation`).
   final PlatformAttestation _attestation;
 
   GrassrootsNetwork({
@@ -3375,7 +3378,10 @@ class GrassrootsNetwork {
       final attestation = await _attestation.attestationFor(identity.publicKey);
       final signature = attestation == null
           ? null
-          : await _attestation.signSessionDigest(digest);
+          : await _attestation.signSessionDigest(
+              identityPublicKey: identity.publicKey,
+              digest: digest,
+            );
       if (attestation != null && signature != null) {
         evidence = AttestationEvidence(
           attestation: attestation,
@@ -3481,12 +3487,12 @@ class GrassrootsNetwork {
     }
 
     switch (verdict) {
-      case AttestedBinary(:final binaryHash):
-        debugPrint('[attest] $peerShort attested');
+      case AttestedApplication(:final identity):
+        debugPrint('[attest] $peerShort attested as $identity');
         store.dispatch(PeerAttestedAction(
           publicKey: senderPubkey,
           transport: medium,
-          attestation: PeerAttestation(binaryHash: binaryHash),
+          attestation: PeerAttestation(identity: identity),
         ));
         _drainQueuedMessagesForPeer(senderPubkey);
       case UnattestedPlatform(:final reason):
@@ -5661,7 +5667,7 @@ void processReachabilityTransitions({
   required void Function(
     Uint8List publicKey,
     MessageTransport transport,
-    Uint8List? attestedBinaryHash,
+    ApplicationIdentity? identity,
   )? onConnected,
   required void Function(Uint8List publicKey, MessageTransport transport)?
       onDisconnected,
@@ -5679,7 +5685,7 @@ void processReachabilityTransitions({
       onConnected?.call(
         peer.publicKey,
         t,
-        peer.attestationFor(t)?.binaryHash,
+        peer.attestationFor(t)?.identity,
       );
     }
     for (final t in previous.difference(current)) {

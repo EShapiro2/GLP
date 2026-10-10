@@ -1,0 +1,3 @@
+%% A module of skips_nothing/, whatever its directory's name: stray/1 has no
+%% declaration.
+stray(3).

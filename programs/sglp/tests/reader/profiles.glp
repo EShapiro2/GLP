@@ -1,0 +1,36 @@
+%% Printed by programs/sglp/transform.glp from the sGLP source in the term form
+%% (README.md, "The term form"); edit the source and run transform.sh, not this file.
+%% transform(reader, profiles)
+
+%% person(fair)
+%% binds(Rating, fair_rating)
+exported procedure
+fair_rating
+(
+Rating
+,
+Integer?
+,
+MutualRef?
+)
+.
+fair_rating(R?, S, Mon)
+:-
+random(S?, 5, K, _)
+,
+stream_append(rated('/'(1, day), Tok), Mon?, _)
+,
+give(Tok?, K?, R)
+.
+procedure
+give
+(
+Token?
+,
+Integer?
+,
+Rating
+)
+.
+give(go, K, rating(K?))
+.

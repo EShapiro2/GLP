@@ -14,17 +14,14 @@
 
 %% =============================================================================
 %% TERMINOLOGY ALIASES (paper notation → GLP types)
-%%   Agent : paper's Π-membership (also defined in cva/self.glp; redefined
-%%           here because sibling-directory types aren't transitively
-%%           visible to the type checker).
+%%   Agent : paper's Π-membership, defined once in ../self.glp, the lowest
+%%           common ancestor of cva/, gsg/ and secure_gsg/.
 %%
 %% Paper notation "epoch" maps to `Integer` directly throughout — the alias
 %% `Epoch ::= Integer` was tried but fails SRSW's constant-type relaxation
 %% (aliases don't inherit relaxation; see typed-glp-manual §3.5).  Using
 %% Integer directly preserves multi-reader use for body-bound epoch values.
 %% =============================================================================
-
-Agent ::= Constant.
 
 %% CVA substrate types redefined here.  Sibling-directory types from
 %% cva/self.glp are not transitively visible to the type checker when
@@ -40,7 +37,7 @@ InMsg(C) ::= msg(Agent, C).
 %% both (SRSW constant-type relaxation permits multi-occurrence).
 UserEvent(V, Q, A) ::= will(V) ; unwill(V) ; tick ; crash ; shutdown
                      ; query(Q, A) ; await(Constant).
-IdentityRecord ::= ir(Stream(Agent), Integer).
+%% IdentityRecord is defined once in ../self.glp.
 
 %% =============================================================================
 %% CARGO (paper §6.2 Messages)
@@ -65,18 +62,15 @@ GsgCargo ::= friend_request(Integer)         %% paper §6.2: friend_request(x), 
 %% =============================================================================
 
 %% Reply: a one-shot writer the agent binds to `ok` when a volition's
-%% protocol round-trip has completed.  Type is `Constant` (a primitive
-%% constant type) so SRSW relaxation (§3.1) permits the multi-occurrence
-%% pattern that arises when the same reply variable appears in both
-%% `will(V, R)` (writer) and `await(R)` (reader/writer) in the play body.
+%% protocol round-trip has completed.
 %%
 %% Binding the writer to `ok` is done by `bind_ok/1` (head-literal at the
 %% ↑ output position; rv_agent.glp complete_rendezvous pattern), called
 %% from the agent's clause body.
-GsgVolition ::= discover(Agent, Constant)
+GsgVolition ::= discover(Agent, Constant?)
               ; offer_friendship(Agent, Constant)
-              ; accept_offer(Agent, Constant)
-              ; end_friendship(Agent, Constant).
+              ; accept_offer(Agent, Constant?)
+              ; end_friendship(Agent, Constant?).
 
 %% =============================================================================
 %% READ-ONLY QUERIES (architecture §2.5)
@@ -90,7 +84,7 @@ GsgQuery ::= q_epoch(Agent)              %% paper notation: epoch_p(q)
            ; q_known(Agent)              %% q ∈ known_p ?
            ; q_fmap_dom.                 %% dom(FMap_p)
 
-GsgAnswer ::= a_epoch(Integer)
+GsgAnswer ::= a_epoch(Integer?)
             ; a_bool(Constant)           %% 'true' or 'false'
             ; a_keys(Stream(Agent)).
 

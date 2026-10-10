@@ -1,9 +1,9 @@
 /// GLP wire-format codec — primitives, terms, and assignment/serializer
 /// messages.
 ///
-/// Normative source: the IGLP paper appendix `app:wire-format`
-/// (`/Users/udi/Grassroots/IGLP/sections/wire-format-fragment.tex`),
-/// §§wf-primitives and wf-terms. This library is the byte-level realisation of
+/// Normative source: the IGLP paper appendix `app:code-format`
+/// (`/Users/udi/Grassroots/IGLP/sections/code-format-fragment.tex`),
+/// §§cf-primitives and cf-terms. This library is the byte-level realisation of
 /// the canonical encoding e: an injective function from globalized terms and
 /// assignment messages to byte strings.
 ///
@@ -16,11 +16,13 @@ library;
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:glp_runtime/runtime/terms.dart' show Nil, nil;
+
 // ============================================================================
-// Wire term model (§wf-terms)
+// Wire term model (§cf-terms)
 // ============================================================================
 
-/// A constant payload (§wf-terms, the constant node's u8 subtag and payload).
+/// A constant payload (§cf-terms, the constant node's u8 subtag and payload).
 sealed class WireConst {
   const WireConst();
 }
@@ -99,7 +101,7 @@ class WModule extends WireConst {
   int get hashCode => Object.hashAll(artefactBytes);
 }
 
-/// A globalized term (§wf-terms).
+/// A globalized term (§cf-terms).
 sealed class WireTerm {
   const WireTerm();
 }
@@ -157,7 +159,7 @@ class WStruct extends WireTerm {
   int get hashCode => Object.hash(functor, Object.hashAll(args));
 }
 
-/// An assignment message `G := T↑` (§wf-terms, Messages). G is a global name;
+/// An assignment message `G := T↑` (§cf-terms, Messages). G is a global name;
 /// the message carries G's polarity, agent, and index, then the encoding of T.
 class WireAssignment {
   /// Polarity of G: false = writer `_w`, true = reader `_r`.
@@ -198,7 +200,7 @@ class WireAssignment {
 }
 
 // ============================================================================
-// Message kinds (§wf-terms, Messages) — code-format version 2
+// Message kinds (§cf-terms, Messages) — code-format version 2
 // ============================================================================
 
 /// Message kind byte: every message opens with a u8 kind.
@@ -206,7 +208,7 @@ const int wireMsgKindValue = 0;
 const int wireMsgKindRequest = 1;
 const int wireMsgKindAcknowledgement = 2;
 
-/// A madGLP message (§wf-terms, Messages). Opens with a u8 kind: 0 value,
+/// A madGLP message (§cf-terms, Messages). Opens with a u8 kind: 0 value,
 /// 1 request, 2 acknowledgement. The kind byte is new in code-format
 /// version 2.
 sealed class WireMessage {
@@ -275,7 +277,7 @@ class WireFormatException implements Exception {
 }
 
 // ============================================================================
-// Primitive writer (§wf-primitives)
+// Primitive writer (§cf-primitives)
 // ============================================================================
 
 /// Big-endian, shortest-form primitive encoder.
@@ -342,7 +344,7 @@ class WireWriter {
 }
 
 // ============================================================================
-// Primitive reader (§wf-primitives)
+// Primitive reader (§cf-primitives)
 // ============================================================================
 
 /// Big-endian primitive decoder. Rejects longer-than-necessary clen forms
@@ -444,7 +446,7 @@ class WireReader {
 }
 
 // ============================================================================
-// Constant payload (§wf-terms) — reused by instruction operands (§4.1)
+// Constant payload (§cf-terms) — reused by instruction operands (§4.1)
 // ============================================================================
 
 /// Write a constant payload: u8 constant tag, then its payload. No leading
@@ -475,10 +477,12 @@ void encodeConstantPayload(WireWriter w, WireConst c) {
 }
 
 /// Map a runtime constant value (the `Object?` an instruction or ConstTerm
-/// carries) to a [WireConst]. The runtime represents the empty list as the
-/// atom `'nil'`.
+/// carries) to a [WireConst]: the empty list, the runtime's [nil], to constant
+/// tag 0 nil, and a string, `'nil'` among them, to tag 3 (IGLP code format,
+/// Terms).  Until 2026-10-07 the runtime held [] as the string 'nil' and the
+/// string 'nil' went out as tag 0.
 WireConst wireConstFromValue(Object? v) {
-  if (v == 'nil') return const WNil();
+  if (v is Nil) return const WNil();
   if (v is int) return WInt(v);
   if (v is double) return WFloat(v);
   if (v is String) return WString(v);
@@ -492,7 +496,7 @@ WireConst wireConstFromValue(Object? v) {
 Object? valueOfWireConst(WireConst c) {
   switch (c) {
     case WNil():
-      return 'nil';
+      return nil;
     case WInt(:final value):
       return value;
     case WFloat(:final value):
@@ -538,52 +542,85 @@ WireConst decodeConstantPayload(WireReader r) {
 }
 
 // ============================================================================
-// Term encoding (§wf-terms)
+// Term encoding (§cf-terms)
 // ============================================================================
 
+/// Write the encoding of [t]: a tagged node, and after a structure's node its
+/// arguments' encodings in order (§cf-terms, "Terms").
+///
+/// The walk keeps a stack of its own and writes the nodes in the order the
+/// recursion it replaces wrote them, depth first and left to right, so the
+/// bytes are the same.  Until 2026-10-02 it recursed once a structure
+/// argument and overflowed the Dart stack on a long list.
 void encodeTerm(WireWriter w, WireTerm t) {
-  switch (t) {
-    case WConst(:final constant):
-      w.u8(1);
-      encodeConstantPayload(w, constant);
-    case WVar(:final isReader, :final agent, :final index):
-      w.u8(2);
-      w.u8(isReader ? 1 : 0);
-      w.bytes(agent);
-      w.clen(index);
-    case WStruct(:final functor, :final args):
-      w.u8(3);
-      w.string(functor);
-      w.clen(args.length);
-      for (final a in args) {
-        encodeTerm(w, a);
-      }
+  final pending = <WireTerm>[t];
+  while (pending.isNotEmpty) {
+    switch (pending.removeLast()) {
+      case WConst(:final constant):
+        w.u8(1);
+        encodeConstantPayload(w, constant);
+      case WVar(:final isReader, :final agent, :final index):
+        w.u8(2);
+        w.u8(isReader ? 1 : 0);
+        w.bytes(agent);
+        w.clen(index);
+      case WStruct(:final functor, :final args):
+        w.u8(3);
+        w.string(functor);
+        w.clen(args.length);
+        // The first argument is written next, so it goes on the stack last.
+        for (var i = args.length - 1; i >= 0; i--) {
+          pending.add(args[i]);
+        }
+    }
   }
 }
 
+/// Read one term's encoding (§cf-terms, "Terms").
+///
+/// The reading keeps a stack of its own, a frame for each structure whose
+/// arguments are still being read, and reads the nodes in the order the
+/// recursion it replaces read them; until 2026-10-02 it recursed once a
+/// structure argument and overflowed the Dart stack on a long list.
 WireTerm decodeTerm(WireReader r) {
-  final tag = r.u8();
-  switch (tag) {
-    case 1:
-      return WConst(decodeConstantPayload(r));
-    case 2:
-      final pol = r.u8();
-      if (pol != 0 && pol != 1) {
-        throw WireFormatException('variable polarity not 0/1: $pol');
-      }
-      final agent = r.bytes();
-      final index = r.clen();
-      return WVar(isReader: pol == 1, agent: agent, index: index);
-    case 3:
-      final functor = r.string();
-      final arity = r.clen();
-      final args = <WireTerm>[];
-      for (var i = 0; i < arity; i++) {
-        args.add(decodeTerm(r));
-      }
-      return WStruct(functor, args);
-    default:
-      throw WireFormatException('unknown term tag: $tag');
+  // Each frame: a structure being read --- its functor, its arity, and its
+  // arguments read so far.
+  final frames = <(String, int, List<WireTerm>)>[];
+  while (true) {
+    final tag = r.u8();
+    WireTerm node;
+    switch (tag) {
+      case 1:
+        node = WConst(decodeConstantPayload(r));
+      case 2:
+        final pol = r.u8();
+        if (pol != 0 && pol != 1) {
+          throw WireFormatException('variable polarity not 0/1: $pol');
+        }
+        final agent = r.bytes();
+        final index = r.clen();
+        node = WVar(isReader: pol == 1, agent: agent, index: index);
+      case 3:
+        final functor = r.string();
+        final arity = r.clen();
+        if (arity > 0) {
+          frames.add((functor, arity, <WireTerm>[]));
+          continue;
+        }
+        node = WStruct(functor, <WireTerm>[]);
+      default:
+        throw WireFormatException('unknown term tag: $tag');
+    }
+    // The node read is its parent's next argument, and completes the parent,
+    // and the parent's parent, as far as each is complete.
+    while (true) {
+      if (frames.isEmpty) return node;
+      final (functor, arity, args) = frames.last;
+      args.add(node);
+      if (args.length < arity) break;
+      frames.removeLast();
+      node = WStruct(functor, args);
+    }
   }
 }
 
@@ -601,7 +638,7 @@ WireTerm decodeTermFromBytes(Uint8List b) {
 }
 
 // ============================================================================
-// Message encoding (§wf-terms, Messages)
+// Message encoding (§cf-terms, Messages)
 // ============================================================================
 
 void encodeAssignment(WireWriter w, WireAssignment a) {
@@ -636,7 +673,7 @@ WireAssignment decodeAssignmentFromBytes(Uint8List b) {
   return a;
 }
 
-/// Encode a message with its opening u8 kind (§wf-terms, Messages; code-format
+/// Encode a message with its opening u8 kind (§cf-terms, Messages; code-format
 /// version 2): 0 value, then the assignment; 1 request / 2 acknowledgement,
 /// then polarity (1, a reader name), agent, clen index — no term.
 void encodeMessage(WireWriter w, WireMessage m) {

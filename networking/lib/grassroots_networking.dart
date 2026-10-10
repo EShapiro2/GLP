@@ -74,6 +74,14 @@ export 'src/transport/transport.dart';
 export 'package:grassroots_networking_core/src/places/place_registry.dart';
 export 'src/places/platform_place_geofence_backend.dart';
 
+// Attestation: the seam, the attested application identity, the core's
+// verifier, and the binding to the platform's native producer (spec §Session
+// Establishment).
+export 'package:grassroots_networking_core/src/session/platform_attestation.dart';
+export 'package:grassroots_networking_core/src/session/application_identity.dart';
+export 'package:grassroots_networking_core/src/session/attestation_verifier.dart';
+export 'src/attestation/native_platform_attestation.dart';
+
 // Models
 export 'package:grassroots_networking_core/src/models/identity.dart';
 export 'src/identity_store.dart';

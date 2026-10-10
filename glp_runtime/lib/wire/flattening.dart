@@ -1,6 +1,6 @@
 /// Deterministic flattening + source identity h(M) (D3 wire format, §6).
 ///
-/// Normative source: the IGLP paper appendix `app:wire-format`, §wf-flattening.
+/// Normative source: the IGLP paper appendix `app:code-format`, §cf-flattening.
 /// The flattened source of a project — the preimage of h(M) — is the canonical
 /// print of the linked, pruned program: discovered, type-checked, renamed,
 /// resolved, and pruned to the procedures reachable from the root's exported
@@ -14,23 +14,22 @@
 /// arity — within a procedure, clauses keep source order (semantic). Procedure
 /// order is not semantic and is fixed by sorting.
 ///
-/// Note: root-scope (`self.glp`) types and procedures are shared runtime
-/// infrastructure, not the contract's source, and are not part of h(M) — only
-/// the project's own definitions are printed. Type-definition reachability
-/// pruning is a refinement not yet applied: the project's type definitions are
+/// The root `self.glp` is a module of every program, the first link of its
+/// chain (TGLP modules.tex, Compilation, first step), so its procedures that the
+/// entry points reach and its type definitions are printed with the program's
+/// own, the procedures under the names the renaming gave them; until
+/// 2026-10-04 they were left out as ambient. Type-definition reachability
+/// pruning is a refinement not yet applied: the program's type definitions are
 /// all included (procedure reachability — the DCE — is applied).
 library;
 
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:glp_runtime/compiler/ast.dart';
 import 'package:glp_runtime/compiler/glp_printer.dart';
-import 'package:glp_runtime/compiler/partial_evaluator.dart';
 import 'package:glp_runtime/compiler/program_linker.dart';
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
-import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart';
 
 /// The canonical print of a linked, pruned program (§6).
 String canonicalPrint({
@@ -84,26 +83,16 @@ Uint8List hashOfPrint(String canonical) =>
   String projectDir, {
   required String rootSelfGlpPath,
 }) {
-  // Install the root scope from the file we were given, as GlpEngine does at
-  // construction. Without this, buildRootScopeEnvironment() falls back to the
-  // bare Dart rootScopeTypes, which NAMES the root self.glp's derived types but
-  // does not DEFINE them, so a module using one in a type definition — as
-  // programs/system/mad_predicates.glp uses Constant in NetMsg — fails to check
-  // with "Unresolved type". The partial evaluator needs the same source.
-  final rootSelfFile = File(rootSelfGlpPath);
-  if (rootSelfFile.existsSync()) {
-    final rootSource = rootSelfFile.readAsStringSync();
-    setRootScopeUnitClauseSource(rootSource);
-    setRootScopeEnvironmentSource(rootSource);
-  }
-
+  // The root self.glp at [rootSelfGlpPath] is a module of the program and the
+  // first layer of every module's scope (program_linker.dart, rootModuleOf;
+  // module_hierarchy.dart, buildAncestorScope): nothing is installed for the
+  // process.
   final modules =
       discoverProgram(projectDir, rootSelfGlpPath: rootSelfGlpPath);
   // checkedLinkedProgram type-checks and applies the five linking steps,
   // including step-5 DCE, so program.procedures is the reachable set.
   final linked = checkedLinkedProgram(modules, rootDir: projectDir);
-  // The project's own type definitions (root-scope types are ambient and not
-  // part of h(M)).
+  // The program's type definitions, the root self.glp's among them.
   final typeDefs = <String, TypeDef>{};
   for (final mod in modules) {
     for (final td in mod.ast.typeDefs) {
@@ -128,8 +117,21 @@ String _printTypeDef(TypeDef td) {
 String _printProcDecl(ProcDecl d) {
   final args = d.argTypes.map((t) => t.toString()).join(', ');
   final prefix = d.exported ? 'exported ' : '';
-  return '${prefix}procedure ${d.name}($args).';
+  return '${prefix}procedure${_printTypeParams(d)} ${d.name}($args).';
 }
+
+/// A declaration's type-parameter list, as the source writes it after the
+/// keyword (parameterized-types.tex, "Parameterised Procedure Declarations"),
+/// and empty where it names none.
+///
+/// The print must denote the declaration it printed: `Parser.parseInterface`
+/// reads this text back, and a parameter dropped from it returns an undefined
+/// type name, which a declaration naming no parameters is refused for
+/// (parameterized-types.tex, "Declaration parameters"). No identity turns on
+/// it — the identity is the hash of the automaton, and a parameterised
+/// declaration carries none at all (Implementation Notes, "The tables").
+String _printTypeParams(ProcDecl d) =>
+    d.typeParams.isNotEmpty ? '(${d.typeParams.join(', ')})' : '';
 
 /// The declaration text an artefact's interface table carries for one export
 /// (§5, interface table: "per export a string name, clen arity, and string
@@ -141,7 +143,7 @@ String _printProcDecl(ProcDecl d) {
 /// not a reliable witness of what the table already asserts.
 String exportDeclarationText(ProcDecl d) {
   final args = d.argTypes.map((t) => t.toString()).join(', ');
-  return 'exported procedure ${d.name}($args).';
+  return 'exported procedure${_printTypeParams(d)} ${d.name}($args).';
 }
 
 /// The type-definition string an artefact's interface table carries: the type
@@ -151,10 +153,12 @@ String exportDeclarationText(ProcDecl d) {
 /// Reachability is the transitive closure over the exported declarations'
 /// argument types: a type named in an export, every type named in that type's
 /// alternatives, and so on. A name with no definition in [typeDefs] contributes
-/// nothing — the primitives (`Integer`, `Real`, `String`, `Module`) and the
-/// root-scope types (`Stream`, `Channel`, …) are ambient at every runtime and
-/// are not the program's own source, exactly as they are excluded from h(M).
-/// A parameterized definition's own parameters are names of that kind too.
+/// nothing: the primitive types (`Integer`, `Real`, `String`, `Module`,
+/// `MutualRef`), which are the language's and built into every runtime, and a
+/// parameterized definition's own parameters.  The root `self.glp`'s types
+/// (`Stream`, `Channel`, …) are the program's, the root being a module of it,
+/// and are carried where an export reaches them; until 2026-10-04 they were
+/// left out as ambient.
 String interfaceTypeDefsText({
   required Iterable<ProcDecl> exportDecls,
   required Map<String, TypeDef> typeDefs,
@@ -171,7 +175,7 @@ String interfaceTypeDefsText({
     final name = pending.removeLast();
     if (reached.containsKey(name)) continue;
     final td = typeDefs[name];
-    if (td == null) continue; // ambient (primitive or root-scope) or a parameter
+    if (td == null) continue; // a primitive type or a parameter
     reached[name] = td;
     for (final alt in td.alternatives) {
       _collectTypeNames(alt, pending);

@@ -6,20 +6,31 @@
 % Two independent producers generate elements, a merger combines them.
 % The merger reads from Xs and Ys as they become available,
 % producing Zs cooperatively.
+%
+% Every stream here is a Stream(Constant): the numbers and the letters of the
+% producers are elements of one merged stream.
 
 % Main entry: spawn two producers and a merger that combines their output
+procedure demo(Stream(Constant)).
 demo(Zs?) :-
     producer1(Xs),           % Xs written by producer1
     producer2(Ys),           % Ys written by producer2
     merge(Xs?, Ys?, Zs).     % merge reads from both, writes Zs
 
 % Producer 1: generates numbers
+procedure producer1(Stream(Constant)).
 producer1([1, 2, 3]).
 
 % Producer 2: generates letters
+procedure producer2(Stream(Constant)).
 producer2([a, b, c]).
 
-% Merger: interleaves two streams
+% Merger: interleaves two streams.  It redefines the root's merge/3 and
+% declares it, as every procedure of a module is declared (TGLP modules.tex,
+% Definition "Typed Procedure, Module"); the declaration is the root
+% self.glp's, which typed these clauses until 2026-10-03.
+procedure(X) merge(Stream(X)?, Stream(X)?, Stream(X)).
+
 % When Xs has an element, take it
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
 
@@ -30,6 +41,7 @@ merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge([], [], []).
 
 % Chained cooperative merge: 3 producers via 2 binary merges
+procedure chain_demo(Stream(Constant)).
 chain_demo(Zs?) :-
     gen1(As),           % Producer 1 -> As
     gen2(Bs),           % Producer 2 -> Bs
@@ -37,6 +49,9 @@ chain_demo(Zs?) :-
     merge(As?, Bs?, T), % Merge first two into T
     merge(T?, Cs?, Zs). % Merge result with third
 
+procedure gen1(Stream(Constant)).
 gen1([x, y]).
+procedure gen2(Stream(Constant)).
 gen2([1, 2]).
+procedure gen3(Stream(Constant)).
 gen3([p, q]).

@@ -1,0 +1,68 @@
+%% self.glp --- the play of chat.vglp: its stream question put to a scripted
+%% person through the dispatcher and the construct process (vGLP,
+%% sections/elicitation.tex, Definition "Construct, Submission, Complete
+%% Widget": "where X is of type Stream(T'), a submission gives one element and
+%% leaves the stream's tail an open question with the same construct"; vGLP's
+%% code task of 2026-10-01 16:30 UTC, test (v), its first half).
+%%
+%% The play spawns the compiled goal with its ask stream and the dispatcher on
+%% that stream and on the person channel; the goal has no person channel of
+%% its own, so the program's end of one is dropped.  The person sees the
+%% input box, its position marked input(Q), Q the stream's own path, [], and
+%% submits three times at Q, a number among two texts (vGLP #5 Cowork,
+%% 2026-10-04 09:05 UTC, C: a grant is input(Id, P, R)).
+%%
+%% The person never closes its grants, the person channel never closing
+%% (vGLP at 7838827, Definition "Person Channel, Person Writer, GLP with
+%% Persons, Grant"; vGLP #5 Cowork, 2026-10-03 21:13 UTC, Q1): it holds its
+%% writer for good and goes on watching, and reads what the dispatcher sends
+%% it as any term, _?, as fragments/self.glp says.
+%%
+%% The types of chat.vglp and those its compilation adds, written again for
+%% the declarations of the procedures imported from its compiled module.
+
+Peer     ::= Constant.
+Msg      ::= msg(Peer, String).
+Question ::= stream_string_r(Stream(String)?).
+Ask(Q)   ::= ask(Constant, Q).
+PersonIn ::= [_ | PersonIn].
+
+imported procedure chat#chat(Peer?, Stream(Msg), Stream(Ask(Question))).
+imported procedure chat#dispatch(Stream(Ask(Question))?,
+    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+
+exported procedure play_chat(Stream(Msg), Stream(_)).
+play_chat(Out?, Log?) :-
+    chat # chat(bob, Out, Asks),
+    chat # dispatch(Asks?, ch(Gs?, Ds), _),
+    chatting_person(Ds?, Gs, Log).
+
+procedure chatting_person(_?, PersonIn, Stream(_)).
+chatting_person([draw(Id, W, input(Q)) | Ds],
+                [input(Id?, Q?, "hello"), input(Id?, Q?, 7),
+                 input(Id?, Q?, "world") | Gs?],
+                [drawn(Id?, W?, input(Q?)) | Log?]) :-
+    ground(Id?), ground(W?), ground(Q?) |
+    chatting_person(Ds?, Gs, Log).
+chatting_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    chatting_person(Ds?, Gs, Log).
+
+%% A stream question takes two grants as two elements and stays open: the
+%% person submits two texts, the stream has two elements and an open tail,
+%% and the input box is not withdrawn.
+exported procedure play_chat_two(Stream(Msg), Stream(_)).
+play_chat_two(Out?, Log?) :-
+    chat # chat(carol, Out, Asks),
+    chat # dispatch(Asks?, ch(Gs?, Ds), _),
+    two_texts_person(Ds?, Gs, Log).
+
+procedure two_texts_person(_?, PersonIn, Stream(_)).
+two_texts_person([draw(Id, W, input(Q)) | Ds],
+                 [input(Id?, Q?, "one"), input(Id?, Q?, "two") | Gs?],
+                 [drawn(Id?, W?, input(Q?)) | Log?]) :-
+    ground(Id?), ground(W?), ground(Q?) |
+    two_texts_person(Ds?, Gs, Log).
+two_texts_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    two_texts_person(Ds?, Gs, Log).

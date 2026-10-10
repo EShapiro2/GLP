@@ -1,6 +1,6 @@
 % param_bare_typevar.glp - Bare type parameters in parameterized proc decls
 
-exported procedure gethead_param(Stream(X)?, X).
+exported procedure(X) gethead_param(Stream(X)?, X).
 gethead_param([H|_], H?).
 gethead_param([], none).
 

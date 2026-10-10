@@ -6,6 +6,6 @@
 
 % Uses predefined Channel(In, Out) from stdlib (Channel(In, Out) ::= ch(In, Out?))
 
-procedure my_new_channel(Channel(X, Y), Channel(Y, X)).
+procedure(X, Y) my_new_channel(Channel(X, Y), Channel(Y, X)).
 
 my_new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).

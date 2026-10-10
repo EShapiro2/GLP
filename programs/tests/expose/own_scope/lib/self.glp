@@ -1,0 +1,3 @@
+%% In the scope of lib/inner/rates.glp, and not in the scope of the self.glp
+%% that exposes it, nor of app/.
+Level ::= low ; high.

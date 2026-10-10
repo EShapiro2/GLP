@@ -8,7 +8,8 @@ import 'error.dart';
 ///
 ///   Rule A — a module that declares `-mode(system)` must be the root self.glp
 ///            or a module under `programs/system/`; any other location is
-///            rejected.
+///            rejected, and a source with no file behind it has none of the
+///            two.
 ///   Rule B — a module not in system mode may neither define nor call a
 ///            procedure whose name is a quoted underscore-prefixed constant.
 ///            The restriction is on names in CALL POSITION only: a constant
@@ -28,10 +29,11 @@ import 'error.dart';
 /// runtime check on kernels taking a global name, which is IGLP's
 /// (GLP-Spec, 2026-07-31).
 ///
-/// [filePath] is the on-disk path of the module, or null/synthetic for
-/// in-memory or engine-embedded sources; Rule A is skipped when no real file
-/// backs the module (the embedded system predicates and the root self.glp load
-/// without an application path).
+/// [filePath] is the on-disk path of the module, or null/synthetic for an
+/// in-memory source.  Rule A admits a source with no file behind it nowhere:
+/// it is neither the root self.glp nor a module under programs/system/ (GLP's
+/// round six, item 4: a file-less source gets "no exemption").  Until
+/// 2026-10-04 Rule A was skipped for it.
 void enforcePrimitiveLayer(
     String? filePath, Module module, String? rootSelfGlpPath) {
   if (module.compileMode == CompileMode.system) {
@@ -43,13 +45,30 @@ void enforcePrimitiveLayer(
 
 void _checkModeAdmission(
     String? filePath, Module module, String? rootSelfGlpPath) {
-  // Only real on-disk files are location-constrained. In-memory sources and the
-  // engine-embedded system predicates carry no application path and are part of
-  // the primitive layer by construction. Without the root self.glp path the
-  // location cannot be decided, so Rule A is not enforced.
-  if (filePath == null || rootSelfGlpPath == null ||
-      !File(filePath).existsSync()) {
-    return;
+  // Without the root self.glp path there is no root and no programs/system/
+  // to decide the location by, so Rule A is not enforced.
+  if (rootSelfGlpPath == null) return;
+
+  // A source with no file behind it is a module at the root, linked with the
+  // root self.glp (GLP #3 Cowork, 2026-10-03 21:18 UTC, "16:11"): it is not
+  // the root self.glp and lies under no programs/system/, so -mode(system) is
+  // not admitted for it (TGLP appendix-root-self.tex, app:system-mode: the
+  // compiler "rejects a module outside the root self.glp and programs/system/
+  // that declares -mode(system)").  The engine embeds no system source since
+  // 2026-10-04, its send_to_net/1 being the root self.glp's; until then, and
+  // for every in-memory source until 2026-10-04, Rule A was skipped here.
+  if (filePath == null || !File(filePath).existsSync()) {
+    throw CompileError(
+      "-mode(system) is confined to the primitive layer: only the root self.glp "
+      "and modules under programs/system/ may declare it, and a source with no "
+      "file behind it is neither — it is an application module at the root. "
+      "Remove the directive and reach runtime functionality by calling the root "
+      "self.glp's system predicates, or load the module from a file under "
+      "programs/system/.",
+      module.line,
+      module.column,
+      phase: 'loader',
+    );
   }
 
   final f = File(filePath).absolute.path;
@@ -112,10 +131,6 @@ void _checkGoal(Goal goal) {
     return;
   }
   if (goal is SpawnGoal) {
-    _checkGoal(goal.innerGoal);
-    return;
-  }
-  if (goal is RatedGoal) {
     _checkGoal(goal.innerGoal);
     return;
   }

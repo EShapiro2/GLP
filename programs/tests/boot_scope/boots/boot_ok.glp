@@ -1,0 +1,15 @@
+%% boot_ok.glp --- a boot source loaded on programs/tests/boot_scope/program,
+%% outside it: it calls the program's entry point serve/2 and names Req, the
+%% type serve/2's signature carries, and so is checked and runs.
+
+procedure boot.
+boot :- client(alice, _)@alice.
+
+procedure client(Constant?, Stream(_)?).
+client(_, _) :- requests(Rs), serve(Rs?, N), report(N?).
+
+procedure requests(Stream(Req)).
+requests([req(1), req(2)]).
+
+procedure report(Integer?).
+report(N) :- send_to_user([total(N?)]).

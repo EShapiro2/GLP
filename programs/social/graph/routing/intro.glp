@@ -1,25 +1,31 @@
 
-%% Introduction-handshake routers (A5 Stage B), lifted verbatim from the
-%% platform self.glp files (social/network, social/graph —
-%% all identical).  Generalised over the handshake content type C, the
-%% intro-result type IR, and the agent input stream type S, all inferred at each
-%% call.  intro_await_peer destructures the handshake stream (ack/nack) and
-%% constructs IR's constructors; inject_intro_result destructures IR and injects
-%% into the S stream — so per-instantiation checking validates C, IR and S at
-%% each instantiation.
-%%
-%% Bodies are unchanged from the platform sources.
+%% The two awaits of a befriending without a setup channel (GSG paper,
+%% Sections 5.1 and 5.2, app:code), each walking the agent's input stream and
+%% inserting the befriending's outcome into it as inject_msg (inject.glp)
+%% inserts a response, once the other party's consent is known.  Generalised
+%% over the agent input stream type S, inferred at each call: the clauses
+%% construct consented/2, adopt/2 and declined/1 into the S stream, so
+%% per-instantiation checking verifies that S carries those shapes.
 
-exported procedure intro_await_peer(Constant?, Channel(Stream(C), Stream(C))?, IR).
-intro_await_peer(Other, ch([ack(_)|ChIn], ChOut?),
-                 intro_result(Other?, ch(ChIn?, ChOut))).
-intro_await_peer(Other, ch([nack|_], []),
-                 intro_rejected(Other?)).
+%% The proposer's: the other's consent, and the conveyance the proposer is to
+%% write.  On yes, consented(Other, Conveyance), on which the agent tests
+%% already_friend and conveys (befriend.glp, convey/7); on no, declined(Other),
+%% and the conveyance written declined: a clause writes every writer it holds
+%% (GLP-Spec, Remark "Anonymous Variables"), and nobody reads it, the other
+%% having declined (GSG paper, Section 5.1).
+exported procedure(S) await_consent(Key?, AcceptorConsent?, Conveyance, Stream(S)?, Stream(S)).
+await_consent(Other, yes, C?, Ys, [consented(Other?, C)|Ys?]).
+await_consent(Other, no, declined, Ys, [declined(Other?)|Ys?]).
+await_consent(Other, Theirs, C?, [Y|Ys], [Y?|Ys1?]) :-
+    await_consent(Other?, Theirs?, C, Ys?, Ys1).
 
-exported procedure inject_intro_result(IR?, Stream(S)?, Stream(S)).
-inject_intro_result(intro_result(Other, Ch), Ys, [intro_result(Other?, Ch?)|Ys?]) :-
-    ground(Other?) | true.
-inject_intro_result(intro_rejected(Other), Ys, [intro_rejected(Other?)|Ys?]) :-
-    ground(Other?) | true.
-inject_intro_result(Res, [Y|Ys], [Y?|Ys1?]) :-
-    inject_intro_result(Res?, Ys?, Ys1).
+%% The acceptor's: the proposer's consent and, on yes, the conveyance in it.
+%% On friend(Ch), adopt(Other, Ch), on which the agent installs the channel
+%% (befriend.glp, adopt/6); on already_friends nothing, the stream passing
+%% through; on no, declined(Other).
+exported procedure(S) await_conveyance(Key?, ProposerConsent?, Stream(S)?, Stream(S)).
+await_conveyance(Other, yes(friend(Ch)), Ys, [adopt(Other?, Ch?)|Ys?]).
+await_conveyance(_, yes(already_friends), Ys, Ys?).
+await_conveyance(Other, no, Ys, [declined(Other?)|Ys?]).
+await_conveyance(Other, Theirs, [Y|Ys], [Y?|Ys1?]) :-
+    await_conveyance(Other?, Theirs?, Ys?, Ys1).

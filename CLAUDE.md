@@ -76,7 +76,7 @@ Loading a project: enter the directory path at the prompt; the project linker re
 | Dart unit tests alone | `cd glp_runtime && dart test` | glp_runtime only |
 | Flutter package alone | `cd glp_multiagent && flutter test` | glp_multiagent only |
 
-`run_all_tests.sh` covers the whole Dart tree (Section Q), so it is the canonical gate; the package runs are for a faster loop, not for coverage.  🔴 **Section Q gates on the known-red list, not on all-green**: a test named in `KNOWN_RED` may be red without failing the suite, any other red fails it, and a listed test that starts passing also fails it.  When you fix a listed test, delete its entry in the same commit.  A count is quotable only with the commit it was taken at.
+`run_all_tests.sh` covers the whole Dart tree (Section Q), so it is the canonical gate; the package runs are for a faster loop, not for coverage.  🔴 **Section Q gates on the known-red list, not on all-green**: a test named in `KNOWN_RED` may be red without failing the suite, any other red fails it, and a listed test that starts passing also fails it.  When you fix a listed test, delete its entry in the same commit.  REPL checks (`check`, `check_not`) have their own list, `KNOWN_RED_CHECKS`, entered by the check's name with the same rot guard and a separate count in the totals.  A count is quotable only with the commit it was taken at.
 
 Section SG's warm call failed intermittently from 2026-09-15 to 2026-09-18 on `anchor_friend/4`, whose first clause passed an unbound tail; a rule gave it one re-run, and the rule went with the fix at `11625f89`.
 
@@ -131,4 +131,4 @@ Dart binary `/opt/homebrew/bin/dart`.  Root `self.glp` is `programs/self.glp`, t
 
 ## Reference specifications (on demand)
 
-`docs/glp-bytecode-v216-complete.md` (instruction set), `docs/glp-runtime-spec.txt`, `docs/guards-reference.md`, `docs/body-kernels-reference.md`, `docs/glp-compiler-spec.md`, `docs/glp-arithmetic-spec.md`, `docs/glp-io-spec.md`, `docs/parser-spec.md`, `docs/naming-conventions.md`, `docs/mutual-ref-spec.md`, `docs/glp-predicate-taxonomy.md`, `docs/known-issues.md`, `docs/Mandatory protocol for debugging the GLP implementation with GLP programs.txt`, `/Grassroots/CSSN/docs/cssn-glp-implementation-spec.md`.  A spec that a paper has absorbed becomes a pointer to the paper or is deleted.
+`docs/glp-bytecode-v216-complete.md` (instruction set), `docs/glp-runtime-spec.txt`, `docs/guards-reference.md`, `docs/body-kernels-reference.md`, `docs/glp-compiler-spec.md`, `docs/glp-arithmetic-spec.md`, `docs/glp-io-spec.md`, `docs/parser-spec.md`, `docs/naming-conventions.md`, `docs/glp-predicate-taxonomy.md`, `docs/known-issues.md`, `docs/Mandatory protocol for debugging the GLP implementation with GLP programs.txt`, `/Grassroots/CSSN/docs/cssn-glp-implementation-spec.md`.  A spec that a paper has absorbed becomes a pointer to the paper or is deleted.

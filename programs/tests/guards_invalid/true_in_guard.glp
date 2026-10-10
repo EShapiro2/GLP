@@ -1,4 +1,7 @@
 %% Invalid-guard fixture.  glp.tex Definition "Guarded Clause": a guard is a
 %% conjunction of guard predicates, tests that determine clause applicability.
 %% true is a body construct and not a test, so it is rejected in guard position.
+%% The procedure is declared, so it is the guard that is refused and not the
+%% clause of an undeclared procedure (TGLP Definition "Typed GLP Program").
+procedure bad_guard(_).
 bad_guard(X?) :- true | X = done.

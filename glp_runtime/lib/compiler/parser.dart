@@ -4,7 +4,6 @@ import 'error.dart';
 import '../analysis/type_checker/type_ast.dart';
 import '../analysis/type_checker/type_conversion.dart';
 import '../analysis/type_checker/root_scope.dart' show builtinProcedures;
-import '../sglp/time_units.dart' show secondsOfUnit, timeUnitNames;
 
 /// Parser for GLP source code
 class Parser {
@@ -12,10 +11,36 @@ class Parser {
   int _current = 0;
   Clause? _pendingClause;  // Clause parsed but belongs to different procedure
 
-  /// Admit vGLP's volition guards and else-branches (vGLP, Definition "Guarded
-  /// Clause, Volition-Guarded Clause, ...").  False for a .glp source, which is
-  /// a vGLP program with no volition-guarded clauses (Definition "GLP, maGLP,
-  /// cGLP"): a volition guard in one is a parse error, not silently ignored.
+  /// Read a .vglp source (vGLP, sections/vglp.tex, Definition "Guarded
+  /// Clause, Volitional Procedure, Interactive Type, Interactive Term,
+  /// Ordinary Clause, Procedure, vGLP Program"): a volitional procedure p of
+  /// arity n "is declared `procedure (T)*p(T1, ..., Tn).`", T its interactive
+  /// type, in writer or reader mode as an argument type is, and "a clause of it
+  /// has the form `(A)*p(S1, ..., Sn) :- G | B`, where the interactive term A
+  /// is a term of type T, possibly a variable but not the anonymous variable,
+  /// and it is the guarded clause `p(S1, ..., Sn, A) :- G | B`, of arity n+1".
+  /// The parser reads each as what the Definition says it is: the declaration
+  /// as `p(T1, ..., Tn, T)`, listed in [Module.volitionalDeclarations], and the
+  /// clause as that guarded clause, its interactive term marked
+  /// ([Clause.interactiveTerm]).  The declaration takes TGLP's `exported` and
+  /// parameter list as any procedure declaration does ("vGLP is typed as GLP
+  /// is, by the parameterised moded type system of [TGLP] ... not restated
+  /// here", vGLP Section "Volition-Guarded GLP"), and `imported` as well: an
+  /// import mirrors its export's declaration (TGLP modules.tex, "Self-contained
+  /// type checking": "Every module declares the full moded type of every
+  /// cross-module procedure it calls, via imported procedure declarations"),
+  /// so `imported procedure (T)*M#p(T1, ..., Tn).` is read as its export is,
+  /// `M#p(T1, ..., Tn, T)` (GLP #3 Cowork, 2026-10-10 07:48 UTC, "19:55":
+  /// "a volitional export is imported as it is declared").  Until 2026-10-10
+  /// it was refused.
+  ///
+  /// It also admits the volition guards and else-branches of the Definition
+  /// that one replaced ("Guarded Clause, Volition-Guarded Clause, ..."), in
+  /// which the .vglp sources not yet in the Definition's syntax are written.
+  ///
+  /// False for a .glp source: "GLP is vGLP without volitional procedures"
+  /// (vGLP Section "Volition-Guarded GLP"), and either syntax in one is a parse
+  /// error, not silently ignored.
   final bool vglp;
 
   Parser(this.tokens, {this.vglp = false});
@@ -68,10 +93,9 @@ class Parser {
     final exposes = <String>[];  // `-expose(M).` module paths
 
     // Parse declarations at the start of the file
+    declarations:
     while (!_isAtEnd() && _check(TokenType.MINUS)) {
       final startPos = _current;
-      final startLine = _peek().line;
-      final startCol = _peek().column;
       _advance(); // consume '-'
 
       if (!_check(TokenType.ATOM)) {
@@ -82,45 +106,30 @@ class Parser {
       final keyword = _advance();
 
       switch (keyword.lexeme) {
-        case 'module':
-          throw CompileError(
-            'The -module() declaration is no longer supported. A module\'s name '
-            'is its file or directory path from the program root.',
-            startLine,
-            startCol,
-            phase: 'parser'
-          );
-
-        case 'stdlib':
-          // -stdlib. is deprecated — treated as -mode(system).
-          _consume(TokenType.DOT, 'Expected "." after stdlib declaration');
-          compileMode = CompileMode.system;
-          break;
-
         case 'mode':
-          // -mode(user). or -mode(system). declaration
+          // -mode(system). declaration (GLP-Spec appendix-guards.tex, Naming and
+          // admission of body kernels; TGLP app:system-mode), the one mode
+          // declaration: a module without it is a user module.
           _consume(TokenType.LPAREN, 'Expected "(" after mode');
           if (!_check(TokenType.ATOM)) {
             throw CompileError(
-              'Expected "user" or "system" in mode declaration',
+              'Expected "system" in mode declaration',
               _peek().line,
               _peek().column,
               phase: 'parser'
             );
           }
           final modeToken = _advance();
-          if (modeToken.lexeme == 'user') {
-            compileMode = CompileMode.user;
-          } else if (modeToken.lexeme == 'system') {
-            compileMode = CompileMode.system;
-          } else {
+          if (modeToken.lexeme != 'system') {
             throw CompileError(
-              'Invalid mode "${modeToken.lexeme}". Expected "user" or "system".',
+              'Invalid mode "${modeToken.lexeme}". The mode declaration is '
+              '-mode(system); a module without it is a user module.',
               modeToken.line,
               modeToken.column,
               phase: 'parser'
             );
           }
+          compileMode = CompileMode.system;
           _consume(TokenType.RPAREN, 'Expected ")" after mode');
           _consume(TokenType.DOT, 'Expected "." after mode declaration');
           break;
@@ -147,26 +156,13 @@ class Parser {
           exposes.add(exposeParts.join('#'));
           break;
 
-        case 'export':
-          throw CompileError(
-            'The -export() declaration is no longer supported. Use \'exported procedure\' instead.',
-            startLine,
-            startCol,
-            phase: 'parser'
-          );
-
-        case 'import':
-          throw CompileError(
-            'The -import() declaration is no longer supported. Use \'imported procedure\' instead.',
-            startLine,
-            startCol,
-            phase: 'parser'
-          );
-
         default:
-          // Unknown declaration, back up to the '-'
+          // Not a directive: back up to the '-' and leave the directives, and
+          // the loop below refuses it as an unexpected token.  A bare `break`
+          // here left the switch and not the loop, which met the same '-'
+          // again and never ended.
           _current = startPos;
-          break;
+          break declarations;
       }
     }
 
@@ -179,59 +175,25 @@ class Parser {
     final procDeclarations = <ProcDecl>[];
     final procedures = <Procedure>[];
     final displayDecls = <DisplayDecl>[];
+    final volitionalDecls = <VolitionalDeclaration>[];
 
     // Track pending procedure declaration (waiting for its first clause)
     ProcDecl? pendingProcDecl;
+    // Whether the pending declaration is a volitional procedure's.
+    var pendingVolitional = false;
     // Track which procedures we've seen clauses for (signature -> first Procedure)
     final seenProcedures = <String, Procedure>{};
 
-    // sGLP population declarations (svGLP, sections/sglp.tex, "Simulating a
-    // vGLP Program"): the kinds, each running from its `person <name>.` to the
-    // next kind, the run declaration or the end of the file, and the run.
-    final kinds = <KindDecl>[];
-    KindDecl? currentKind;
-    RunDecl? runDecl;
-
     while (!_isAtEnd()) {
-      // Check for procedure declaration: 'procedure ...' or 'exported procedure ...' or 'imported procedure ...'
-      final isProcedureDecl = _check(TokenType.PROCEDURE) ||
-          (_check(TokenType.ATOM) && (_peek().lexeme == 'exported' || _peek().lexeme == 'imported') &&
-           _current + 1 < tokens.length && tokens[_current + 1].type == TokenType.PROCEDURE);
+      if (!vglp) _refuseVolitionalSyntax();
 
-      if (_atKindDecl()) {
-        _noPendingBefore(pendingProcDecl, 'A kind declaration', _peek());
-        pendingProcDecl = null;
-        final kind = _parseKindDecl();
-        if (kinds.any((k) => k.name == kind.name)) {
-          throw CompileError('The kind "${kind.name}" is declared twice',
-              kind.line, kind.column, phase: 'parser');
-        }
-        kinds.add(kind);
-        currentKind = kind;
-      } else if (_atRunDecl()) {
-        _noPendingBefore(pendingProcDecl, 'A run declaration', _peek());
-        pendingProcDecl = null;
-        final run = _parseRunDecl();
-        if (runDecl != null) {
-          throw CompileError(
-              'A second run declaration; the first is at line ${runDecl.line}',
-              run.line, run.column, phase: 'parser');
-        }
-        runDecl = run;
-        currentKind = null;
-      } else if (_atPersonDecl()) {
-        _noPendingBefore(pendingProcDecl, 'A person declaration', _peek());
-        pendingProcDecl = null;
-        final at = _peek();
-        final decl = _parsePersonDecl();
-        if (currentKind == null) {
-          throw CompileError(
-            'The person declaration "$decl" stands outside a kind: it follows '
-            '"person <name>." and precedes the kind\'s program',
-            at.line, at.column, phase: 'parser');
-        }
-        currentKind.personDecls.add(decl);
-      } else if (_atDisplayDecl()) {
+      // A procedure declaration: 'procedure ...', 'exported procedure ...' or
+      // 'imported procedure ...', a name after the keyword and its parameter
+      // list ([_atProcDeclaration]); any other item beginning `procedure` is a
+      // clause of the procedure of that name.
+      final isProcedureDecl = _atProcDeclaration();
+
+      if (_atDisplayDecl()) {
         // A display declaration is a declaration, not a clause, so it does not
         // break the run of clauses a pending procedure declaration is waiting
         // for; it may stand anywhere a type definition may.
@@ -253,12 +215,14 @@ class Parser {
           // Builtin or imported - clear pending without error
           pendingProcDecl = null;
         }
+        final volitional = vglp && _interactiveDeclarationAt(_current) != null;
         final decl = _parseProcDeclaration();
         procDeclarations.add(decl);
-        currentKind?.procedureSigs.add(decl.key);
+        if (volitional) volitionalDecls.add(VolitionalDeclaration(decl));
         // Imported procedures are declaration-only — no clauses expected
         if (!decl.imported) {
           pendingProcDecl = decl;
+          pendingVolitional = volitional;
         }
       } else if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
         // Might be a type definition (TypeName ::= ...) or a clause head
@@ -289,6 +253,7 @@ class Parser {
           _current = startPos;
           final proc = _parseProcedure();
           final sig = '${proc.name}/${proc.arity}';
+          var declaredVolitional = false;
 
           // Check if this matches pending declaration
           if (pendingProcDecl != null) {
@@ -296,6 +261,7 @@ class Parser {
             if (sig == pendingSig) {
               // This clause matches the pending declaration - good
               pendingProcDecl = null;
+              declaredVolitional = pendingVolitional;
             } else if (builtinProcedures.contains(pendingSig)) {
               // Pending was a builtin (no clauses needed) - clear it
               pendingProcDecl = null;
@@ -309,6 +275,7 @@ class Parser {
               );
             }
           }
+          _checkInteractiveTerms(proc, declaredVolitional);
 
           // Check for non-contiguous clauses
           if (seenProcedures.containsKey(sig)) {
@@ -325,13 +292,16 @@ class Parser {
 
           seenProcedures[sig] = proc;
           procedures.add(proc);
-          currentKind?.procedureSigs.add(sig);
         }
-      } else if (_check(TokenType.ATOM) || (vglp && _check(TokenType.STAR))) {
-        // Clause starting with an atom (procedure name), or with the volition
-        // guard preceding one.
+      } else if (_check(TokenType.ATOM) || _check(TokenType.PROCEDURE) ||
+          (vglp && (_check(TokenType.STAR) || _check(TokenType.LPAREN)))) {
+        // Clause starting with an atom (procedure name), `procedure` among
+        // them where no declaration begins there, or, in a .vglp source, with
+        // the interactive term `(A)*` of a clause of a volitional procedure or
+        // the volition guard `*(...)` preceding one.
         final proc = _parseProcedure();
         final sig = '${proc.name}/${proc.arity}';
+        var declaredVolitional = false;
 
         // Check if this matches pending declaration
         if (pendingProcDecl != null) {
@@ -339,6 +309,7 @@ class Parser {
           if (sig == pendingSig) {
             // This clause matches the pending declaration - good
             pendingProcDecl = null;
+            declaredVolitional = pendingVolitional;
           } else if (builtinProcedures.contains(pendingSig)) {
             // Pending was a builtin (no clauses needed) - clear it
             pendingProcDecl = null;
@@ -352,6 +323,7 @@ class Parser {
             );
           }
         }
+        _checkInteractiveTerms(proc, declaredVolitional);
 
         // Check for non-contiguous clauses
         if (seenProcedures.containsKey(sig)) {
@@ -368,7 +340,6 @@ class Parser {
 
         seenProcedures[sig] = proc;
         procedures.add(proc);
-        currentKind?.procedureSigs.add(sig);
       } else {
         // Unexpected token
         throw CompileError(
@@ -401,175 +372,55 @@ class Parser {
       compileMode: compileMode,
       exposes: exposes,
       displayDecls: displayDecls,
-      kinds: kinds,
-      runDecl: runDecl,
+      volitionalDeclarations: volitionalDecls,
       line: 1,
       column: 1,
     );
   }
 
-  // ==========================================================================
-  // sGLP population declarations (svGLP, sections/sglp.tex, "Simulating a
-  // vGLP Program"):
-  //
-  //   <person_declaration> ::= <type> =::= <procedure_name> .
-  //   <kind>               ::= person <name> . <person_declarations> <program>
-  //   <run>                ::= run <integer> agents [ <mix_list> ]
-  //                            until <time> seed <integer> .
-  //   <mix_list>           ::= <mix> | <mix> , <mix_list>
-  //   <mix>                ::= <dimension> ~ ( <name> : <probability> ; ... )
-  //
-  // The paper writes <time> as `5 years`: a positive number and a time unit,
-  // singular or plural.
-  // ==========================================================================
-
-  /// A declaration that is not a clause may not stand between a procedure
-  /// declaration and its clauses, unless the declaration needs none.
-  void _noPendingBefore(ProcDecl? pending, String what, Token at) {
-    if (pending == null) return;
-    final pendingSig = '${pending.name}/${pending.argTypes.length}';
-    if (!builtinProcedures.contains(pendingSig) && !pending.imported) {
-      throw CompileError(
-        '$what cannot appear between procedure declaration and its clauses.\n'
-        '  Procedure "${pending.name}" declared at line ${pending.line} needs clauses.',
-        at.line,
-        at.column,
-        phase: 'parser'
-      );
-    }
-  }
-
-  /// `person <name> .` --- the head of a kind.  A clause of a procedure named
-  /// `person` has a parenthesis or a `:-` after the name, so the two differ.
-  bool _atKindDecl() {
-    if (!_check(TokenType.ATOM) || _peek().lexeme != 'person') return false;
-    return _current + 2 < tokens.length &&
-        tokens[_current + 1].type == TokenType.ATOM &&
-        tokens[_current + 2].type == TokenType.DOT;
-  }
-
-  /// `run <integer> agents ...` --- a clause of a procedure named `run` has a
-  /// parenthesis after the name, never a number.
-  bool _atRunDecl() {
-    if (!_check(TokenType.ATOM) || _peek().lexeme != 'run') return false;
-    return _current + 1 < tokens.length &&
-        tokens[_current + 1].type == TokenType.NUMBER;
-  }
-
-  /// `T =::= p .` --- a type, with its arguments and its mode, then `=::=`.
-  bool _atPersonDecl() {
-    if (!_check(TokenType.VARIABLE) && !_check(TokenType.READER)) return false;
-    var i = _current + 1;
-    if (i < tokens.length && tokens[i].type == TokenType.LPAREN) {
-      var depth = 0;
-      for (; i < tokens.length; i++) {
-        final t = tokens[i].type;
-        if (t == TokenType.LPAREN) depth++;
-        if (t == TokenType.RPAREN) {
-          depth--;
-          if (depth == 0) {
-            i++;
-            break;
-          }
-        }
-        if (t == TokenType.DOT || t == TokenType.EOF) return false;
+  /// The clauses of [proc] against its declaration, [volitional] where it is
+  /// `procedure (T)*p(T1, ..., Tn).` (vGLP, Definition "Guarded Clause,
+  /// Volitional Procedure, ..."): "a clause of it has the form
+  /// `(A)*p(S1, ..., Sn) :- G | B`", so there every clause is written so; and
+  /// a clause written so is of a procedure declared so, which "is declared
+  /// `procedure (T)*p(T1, ..., Tn).`", T the type of A, so elsewhere none is.
+  void _checkInteractiveTerms(Procedure proc, bool volitional) {
+    final n = proc.arity - 1;
+    for (final c in proc.clauses) {
+      if (volitional && c.interactiveTerm == null) {
+        throw CompileError(
+          'A clause of the volitional procedure ${proc.name}/$n is written '
+          '"(A)*${proc.name}(S1, ..., Sn) :- G | B", with its interactive '
+          'term (vGLP, Definition "Guarded Clause, Volitional Procedure, ...")',
+          c.line, c.column, phase: 'parser');
+      }
+      if (!volitional && c.interactiveTerm != null) {
+        throw CompileError(
+          'The clause (A)*${proc.name}/$n is of no procedure declared '
+          '"procedure (T)*${proc.name}(T1, ..., Tn)." immediately before its '
+          'clauses: a volitional procedure is declared with its interactive '
+          'type (vGLP, Definition "Guarded Clause, Volitional Procedure, ...")',
+          c.line, c.column, phase: 'parser');
       }
     }
-    if (i < tokens.length && tokens[i].type == TokenType.QUESTION) i++;
-    return i < tokens.length && tokens[i].type == TokenType.EQCOLONCOLONEQ;
   }
 
-  KindDecl _parseKindDecl() {
-    final start = _advance(); // 'person'
-    final name = _consume(TokenType.ATOM, 'Expected the kind\'s name after "person"');
-    _consume(TokenType.DOT, 'Expected "." after "person ${name.lexeme}"');
-    return KindDecl(name.lexeme, start.line, start.column);
-  }
-
-  PersonDecl _parsePersonDecl() {
-    final start = _peek();
-    final type = _parseProcArgType();
-    if (type is! TypeRef) {
-      throw CompileError(
-        'A person declaration names an interactive type, not "$type"',
-        start.line, start.column, phase: 'parser');
+  /// In a .glp source, the refusal of vGLP's syntax for a volitional
+  /// procedure where an item begins with it: "GLP is vGLP without volitional
+  /// procedures" (vGLP Section "Volition-Guarded GLP").  Neither form parses
+  /// as GLP, the declaration's interactive type standing where a name is
+  /// expected and the clause's interactive term where a head is.
+  void _refuseVolitionalSyntax() {
+    final declaration = _interactiveDeclarationAt(_current) != null;
+    if (!declaration && _indexAfterInteractiveTerm(_current) == _current) {
+      return;
     }
-    _consume(TokenType.EQCOLONCOLONEQ, 'Expected "=::=" in a person declaration');
-    final proc = _consume(TokenType.ATOM,
-        'Expected the person procedure\'s name after "=::="');
-    _consume(TokenType.DOT, 'Expected "." after a person declaration');
-    return PersonDecl(type, proc.lexeme, start.line, start.column);
-  }
-
-  RunDecl _parseRunDecl() {
-    final start = _advance(); // 'run'
-    final nToken = _consume(TokenType.NUMBER, 'Expected the number of agents after "run"');
-    if (nToken.literal is! int || (nToken.literal as int) < 1) {
-      throw CompileError(
-        'The number of agents of a run is a positive integer, not ${nToken.lexeme}',
-        nToken.line, nToken.column, phase: 'parser');
-    }
-    _expectWord('agents', 'after the number of agents of a run');
-    _consume(TokenType.LBRACKET, 'Expected "[" before the dimensions of a run');
-    final mixes = <MixDecl>[_parseMix()];
-    while (_match(TokenType.COMMA)) {
-      mixes.add(_parseMix());
-    }
-    _consume(TokenType.RBRACKET, 'Expected "]" after the dimensions of a run');
-    _expectWord('until', 'after the dimensions of a run');
-    final tToken = _consume(TokenType.NUMBER, 'Expected a time after "until"');
-    final tValue = (tToken.literal as num).toDouble();
-    final unitToken = _consume(TokenType.ATOM,
-        'Expected a time unit ($timeUnitNames) after "until ${tToken.lexeme}"');
-    final unitSeconds = secondsOfUnit(unitToken.lexeme, allowPlural: true);
-    if (unitSeconds == null) {
-      throw CompileError(
-        'Unknown time unit "${unitToken.lexeme}" after "until"; the units are '
-        '$timeUnitNames',
-        unitToken.line, unitToken.column, phase: 'parser');
-    }
-    if (!(tValue > 0) || tValue.isInfinite) {
-      throw CompileError('The time of a run is positive, not ${tToken.lexeme}',
-          tToken.line, tToken.column, phase: 'parser');
-    }
-    _expectWord('seed', 'after the time of a run');
-    final seedToken = _consume(TokenType.NUMBER, 'Expected an integer after "seed"');
-    if (seedToken.literal is! int) {
-      throw CompileError('The seed of a run is an integer, not ${seedToken.lexeme}',
-          seedToken.line, seedToken.column, phase: 'parser');
-    }
-    _consume(TokenType.DOT, 'Expected "." after a run declaration');
-    return RunDecl(
-        nToken.literal as int,
-        mixes,
-        '${tToken.lexeme} ${unitToken.lexeme}',
-        tValue * unitSeconds,
-        seedToken.literal as int,
-        start.line,
-        start.column);
-  }
-
-  MixDecl _parseMix() {
-    final dim = _consume(TokenType.ATOM, 'Expected a dimension\'s name in a run');
-    _consume(TokenType.TILDE, 'Expected "~" after the dimension "${dim.lexeme}"');
-    _consume(TokenType.LPAREN, 'Expected "(" before the kinds of "${dim.lexeme}"');
-    final entries = <MixEntry>[];
-    do {
-      final kind = _consume(TokenType.ATOM, 'Expected a kind\'s name in "${dim.lexeme}"');
-      _consume(TokenType.COLON, 'Expected ":" and a probability after "${kind.lexeme}"');
-      final p = _consume(TokenType.NUMBER, 'Expected a probability after "${kind.lexeme} :"');
-      entries.add(MixEntry(kind.lexeme, (p.literal as num).toDouble(), kind.line, kind.column));
-    } while (_match(TokenType.SEMICOLON));
-    _consume(TokenType.RPAREN, 'Expected ")" after the kinds of "${dim.lexeme}"');
-    return MixDecl(dim.lexeme, entries, dim.line, dim.column);
-  }
-
-  void _expectWord(String word, String where) {
-    if (!_check(TokenType.ATOM) || _peek().lexeme != word) {
-      throw CompileError('Expected "$word" $where', _peek().line, _peek().column,
-          phase: 'parser');
-    }
-    _advance();
+    throw CompileError(
+      '${declaration ? 'The declaration "procedure (T)*p(...)"' : 'The clause "(A)*p(...)"'} '
+      'of a volitional procedure may appear only in a .vglp source: GLP is '
+      'vGLP without volitional procedures (vGLP, Definition "Guarded Clause, '
+      'Volitional Procedure, ...")',
+      _peek().line, _peek().column, phase: 'parser');
   }
 
   /// Parse an interface section: type definitions and procedure declarations
@@ -590,11 +441,7 @@ class Parser {
     final procDeclarations = <ProcDecl>[];
 
     while (!_isAtEnd()) {
-      final isProcedureDecl = _check(TokenType.PROCEDURE) ||
-          (_check(TokenType.ATOM) &&
-              (_peek().lexeme == 'exported' || _peek().lexeme == 'imported') &&
-              _current + 1 < tokens.length &&
-              tokens[_current + 1].type == TokenType.PROCEDURE);
+      final isProcedureDecl = _atProcDeclaration();
 
       if (isProcedureDecl) {
         procDeclarations.add(_parseProcDeclaration());
@@ -633,7 +480,7 @@ class Parser {
 
       final keyword = _peek().lexeme;
 
-      if (['module', 'stdlib', 'mode', 'expose'].contains(keyword)) {
+      if (['module', 'mode', 'expose'].contains(keyword)) {
         // Skip to the next DOT
         while (!_isAtEnd() && !_check(TokenType.DOT)) {
           _advance();
@@ -679,11 +526,16 @@ class Parser {
       // Check if next clause could be part of this procedure
       bool couldBeSameProcedure = false;
 
-      // A volition guard precedes the head, so look past it for the name.
-      final headIdx = vglp ? _indexAfterVolitionGuard(_current) : _current;
+      // An interactive term or a volition guard precedes the head, so look
+      // past it for the name.
+      final headIdx = vglp
+          ? _indexAfterVolitionGuard(_indexAfterInteractiveTerm(_current))
+          : _current;
       if (headIdx < tokens.length &&
-          tokens[headIdx].type == TokenType.ATOM &&
-          tokens[headIdx].lexeme == name) {
+          (tokens[headIdx].type == TokenType.ATOM ||
+              tokens[headIdx].type == TokenType.PROCEDURE) &&
+          tokens[headIdx].lexeme == name &&
+          !_atProcDeclaration(headIdx)) {
         // Same predicate name
         couldBeSameProcedure = true;
       } else if (name == ':=' && (_peek().type == TokenType.VARIABLE || _peek().type == TokenType.READER || _peek().type == TokenType.UNDERSCORE)) {
@@ -737,6 +589,109 @@ class Parser {
     }
 
     return Procedure(name, arity, clauses, firstClause.line, firstClause.column);
+  }
+
+  /// The index of the parenthesis closing the one at [open], or -1 where none
+  /// does before the end.
+  int _closingParen(int open) {
+    var depth = 0;
+    for (var i = open; i < tokens.length; i++) {
+      final t = tokens[i].type;
+      if (t == TokenType.EOF) return -1;
+      if (t == TokenType.LPAREN) depth++;
+      if (t == TokenType.RPAREN && --depth == 0) return i;
+    }
+    return -1;
+  }
+
+  /// The index of the first token past the interactive term `(A)*` of a
+  /// clause of a volitional procedure beginning at [i], or [i] itself if none
+  /// begins there (vGLP, Definition "Guarded Clause, Volitional Procedure,
+  /// ...").  Used to look at the head of the clause without parsing it.
+  int _indexAfterInteractiveTerm(int i) {
+    if (i >= tokens.length || tokens[i].type != TokenType.LPAREN) return i;
+    final close = _closingParen(i);
+    if (close < 0 ||
+        close + 1 >= tokens.length ||
+        tokens[close + 1].type != TokenType.STAR) {
+      return i;
+    }
+    return close + 2;
+  }
+
+  /// Where a volitional procedure's declaration beginning at [at] carries its
+  /// interactive type, `(T)*` before the name (vGLP, Definition "Guarded
+  /// Clause, Volitional Procedure, ..."): [open], the index of the
+  /// parenthesis before T, and [name], that of the token after `*`.  The
+  /// declaration is `procedure (T)*p(...)`, or `procedure(X, ...) (T)*p(...)`
+  /// with TGLP's parameter list, either after `exported` or `imported`.  Null
+  /// where no such declaration begins at [at].
+  ({int open, int name})? _interactiveDeclarationAt(int at) {
+    var i = at;
+    if (i < tokens.length &&
+        tokens[i].type == TokenType.ATOM &&
+        (tokens[i].lexeme == 'exported' || tokens[i].lexeme == 'imported')) {
+      i++;
+    }
+    if (i >= tokens.length || tokens[i].type != TokenType.PROCEDURE) {
+      return null;
+    }
+    i++;
+    if (i >= tokens.length || tokens[i].type != TokenType.LPAREN) return null;
+    final close = _closingParen(i);
+    if (close < 0 || close + 1 >= tokens.length) return null;
+    if (tokens[close + 1].type == TokenType.STAR) {
+      return (open: i, name: close + 2);
+    }
+    // A parameter list, then the interactive type.
+    final open = close + 1;
+    if (tokens[open].type != TokenType.LPAREN) return null;
+    final close2 = _closingParen(open);
+    if (close2 < 0 ||
+        close2 + 1 >= tokens.length ||
+        tokens[close2 + 1].type != TokenType.STAR) {
+      return null;
+    }
+    return (open: open, name: close2 + 2);
+  }
+
+  /// Parse the interactive term `(A)*` of a clause of a volitional procedure
+  /// if one precedes the head, in a .vglp source; null where the clause is
+  /// ordinary (vGLP, Definition "Guarded Clause, Volitional Procedure, ...").
+  /// "The interactive term A is a term of type T, possibly a variable but not
+  /// the anonymous variable": `_`, `_?`, `_Name` and `_Name?` are refused, an
+  /// anonymous variable being any variable whose name begins with `_`
+  /// (GLP-Spec, Remark "Anonymous Variables").
+  Term? _parseInteractiveTermOpt() {
+    if (!vglp || !_check(TokenType.LPAREN)) return null;
+    final open = _advance();
+    if (_check(TokenType.RPAREN)) {
+      throw CompileError(
+        'An empty interactive term "()": a clause of a volitional procedure '
+        'is written "(A)*p(S1, ..., Sn) :- G | B", A a term (vGLP, Definition '
+        '"Guarded Clause, Volitional Procedure, ...")',
+        open.line, open.column, phase: 'parser');
+    }
+    final term = _parseTerm();
+    _consume(TokenType.RPAREN, 'Expected ")" after the interactive term');
+    _consume(TokenType.STAR,
+        'Expected "*" after the interactive term: a clause of a volitional '
+        'procedure is written "(A)*p(S1, ..., Sn) :- G | B"');
+    if (term is UnderscoreTerm ||
+        (term is VarTerm && term.name.startsWith('_'))) {
+      throw CompileError(
+        'The interactive term "$term" is the anonymous variable: "the '
+        'interactive term A is a term of type T, possibly a variable but not '
+        'the anonymous variable" (vGLP, Definition "Guarded Clause, '
+        'Volitional Procedure, ..."; GLP-Spec, Remark "Anonymous Variables")',
+        term.line, term.column, phase: 'parser');
+    }
+    if (!_check(TokenType.ATOM) && !_check(TokenType.PROCEDURE)) {
+      throw CompileError(
+        'Expected the volitional procedure\'s name after "(A)*"',
+        _peek().line, _peek().column, phase: 'parser');
+    }
+    return term;
   }
 
   /// The index of the first token past a volition guard beginning at [i], or
@@ -903,11 +858,23 @@ class Parser {
   //     or: Head :- Body.
   //     or: Head.
   //
-  // A vGLP clause may be preceded by a volition guard and, if it is, followed
-  // by an else-branch before the full stop.
+  // A clause of a volitional procedure, (A)*p(S1, ..., Sn) :- G | B, is read
+  // as the guarded clause p(S1, ..., Sn, A) :- G | B, of arity n+1, that it is
+  // (vGLP, Definition "Guarded Clause, Volitional Procedure, ..."), A marked
+  // as its interactive term.
+  //
+  // A vGLP clause of the Definition that one replaced may be preceded by a
+  // volition guard and, if it is, followed by an else-branch before the full
+  // stop.
   Clause _parseClause() {
     final volitionGuard = _parseVolitionGuardOpt();
-    final head = _parseAtom();
+    final interactiveTerm =
+        volitionGuard == null ? _parseInteractiveTermOpt() : null;
+    final written = _parseAtom();
+    final head = interactiveTerm == null
+        ? written
+        : Atom(written.functor, [...written.args, interactiveTerm],
+            written.line, written.column);
 
     List<Guard>? guards;
     List<Goal>? body;
@@ -926,17 +893,9 @@ class Parser {
       // Check for | separator
       if (_match(TokenType.PIPE)) {
         // Everything before | were guards - convert Goal to Guard
-        guards = predicates.map((g) {
-          if (g is RatedGoal) {
-            throw CompileError(
-              'A rated goal "$g" is a body goal and cannot stand before "|"',
-              g.line, g.column, phase: 'parser');
-          }
-          // Detect negated guards (functor starts with ~)
-          final isNegated = g.functor.startsWith('~');
-          final actualFunctor = isNegated ? g.functor.substring(1) : g.functor;
-          return Guard(actualFunctor, g.args, g.line, g.column, negated: isNegated);
-        }).toList();
+        guards = predicates
+            .map((g) => Guard(g.functor, g.args, g.line, g.column))
+            .toList();
 
         // Parse body after |
         body = <Goal>[];
@@ -985,46 +944,40 @@ class Parser {
 
     return Clause(head, guards: guards, body: body,
         volitionGuard: volitionGuard, elseBranch: elseBranch,
+        interactiveTerm: interactiveTerm,
         line: head.line, column: head.column);
   }
 
   // Parse a predicate that could be either a guard or a goal
   dynamic _parseGoalOrGuard() {
-    // Check for guard negation: ~G
-    bool negated = false;
-    int negLine = _peek().line;
-    int negColumn = _peek().column;
-    if (_match(TokenType.TILDE)) {
-      negated = true;
-      negLine = _previous().line;
-      negColumn = _previous().column;
-
-      // Check for double negation ~~G (syntactically forbidden)
-      if (_check(TokenType.TILDE)) {
-        throw CompileError(
-          'Double negation ~~G is not allowed',
-          _peek().line,
-          _peek().column,
-          phase: 'parser'
-        );
-      }
+    // `~` begins no GLP construct.  A guard is a conjunction of guard
+    // predicates (GLP-Spec glp.tex, Definition "Guarded Clause"), and guard
+    // negation is not part of the language (GLP-Spec 98913b4), so `~G` is
+    // refused here, as a syntax error.
+    if (_check(TokenType.TILDE)) {
+      throw CompileError(
+        '"~" is not GLP syntax: a guard is a conjunction of guard predicates, '
+        'and there is no guard negation',
+        _peek().line,
+        _peek().column,
+        phase: 'parser'
+      );
     }
 
-    // Check for parenthesized expression: (Goal) or (Goal1 ; Goal2)
-    if (_check(TokenType.LPAREN)) {
+    // Check for parenthesized expression: (Goal) or (Goal1 ; Goal2).  A
+    // parenthesised term followed by a comparison or an arithmetic operator
+    // is no goal but the left operand of an infix guard, parsed below as an
+    // expression, as the right one is: the arithmetic comparisons take
+    // `Exp?` (GLP-Spec appendix-guards.tex, "Arithmetic comparison guards":
+    // `procedure =:=(Exp?, Exp?).`), and `(I? + 3)` is one.  Until
+    // 2026-10-10 `(I? + 3) =:= 0` was "Expected predicate name or
+    // comparison" at its ")", where `I? + 3 =:= 0` and `I? =:= (3 mod 2)`
+    // parsed (GLP 2026-10-10 09:33 UTC).
+    if (_check(TokenType.LPAREN) && !_parenthesisedOperand()) {
       final startToken = _advance(); // consume '('
       final firstGoal = _parseGoalOrGuard();
 
       if (_match(TokenType.SEMICOLON)) {
-        // This is a disjunction - negation not allowed
-        if (negated) {
-          throw CompileError(
-            'Guard negation (~) cannot be applied to disjunction',
-            negLine,
-            negColumn,
-            phase: 'parser'
-          );
-        }
         final secondGoal = _parseGoalOrGuard();
         _consume(TokenType.RPAREN, 'Expected ")" after disjunction');
         // Return as ';'(Goal1, Goal2) - need to convert goals to terms
@@ -1032,13 +985,8 @@ class Parser {
         final secondTerm = _goalToTerm(secondGoal);
         return Goal(';', [firstTerm, secondTerm], startToken.line, startToken.column);
       } else {
-        // Parenthesized single goal - apply negation if present
+        // Parenthesized single goal
         _consume(TokenType.RPAREN, 'Expected ")" after guard');
-        if (negated) {
-          // Apply negation to the parsed goal
-          final functor = '~${firstGoal.functor}';
-          return Goal(functor, firstGoal.args, negLine, negColumn);
-        }
         return firstGoal;
       }
     }
@@ -1073,27 +1021,14 @@ class Parser {
         final term = _parseTerm();
         return Goal('=', [varTerm, term], varToken.line, varToken.column);
       } else if (tokens.length > _current + 1 && tokens[_current + 1].type == TokenType.HASH) {
-        // Dynamic remote goal: Var # Goal (e.g., M? # factorial(5, R))
-        _advance(); // consume variable
-        _advance(); // consume #
-        // Negation not allowed on remote goals
-        if (negated) {
-          throw CompileError(
-            'Guard negation (~) cannot be applied to remote goal',
-            negLine,
-            negColumn,
-            phase: 'parser'
-          );
-        }
-        final moduleTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
-        final innerGoal = _parseGoal();
-        return _remoteGoal(moduleTerm, innerGoal, varToken.line, varToken.column);
+        throw _variableModuleError(varToken);
       }
     }
 
     // Try to parse as regular predicate first
-    if (_check(TokenType.ATOM)) {
-      final functorToken = _consume(TokenType.ATOM, 'Expected predicate name');
+    if (_check(TokenType.ATOM) || _check(TokenType.PROCEDURE)) {
+      final start = _current;
+      final functorToken = _consumePredicateName();
       final args = <Term>[];
 
       if (_match(TokenType.LPAREN)) {
@@ -1108,60 +1043,51 @@ class Parser {
         _consume(TokenType.RPAREN, 'Expected ")" after arguments');
       }
 
-      // Check for static remote goal: atom # goal (e.g., math # factorial(5, R))
-      if (_match(TokenType.HASH)) {
-        // Module name cannot have arguments
-        if (args.isNotEmpty) {
-          throw CompileError(
-            'Module name cannot have arguments: ${functorToken.lexeme}',
-            functorToken.line,
-            functorToken.column,
-            phase: 'parser'
-          );
+      // A structure or a constant on the left of an infix guard,
+      // `w(X?) =?= Y?` or `f(X?) + 1 > 2`: no predicate, but the left operand,
+      // parsed below as an expression, as the right one is.  Until 2026-10-02
+      // it was taken for a predicate, and the operator after it was a syntax
+      // error, where `[X?] =?= Y?` and `1 + X? > 3` parsed (GLP #3 Cowork,
+      // 2026-10-02 17:12 UTC, S2).
+      if (_continuesAsInfixGuard(_peek())) {
+        _current = start;
+      } else {
+        // Check for static remote goal: atom # goal (e.g., math # factorial(5, R))
+        if (_match(TokenType.HASH)) {
+          // Module name cannot have arguments
+          if (args.isNotEmpty) {
+            throw CompileError(
+              'Module name cannot have arguments: ${functorToken.lexeme}',
+              functorToken.line,
+              functorToken.column,
+              phase: 'parser'
+            );
+          }
+          final moduleTerm = ConstTerm(functorToken.lexeme, functorToken.line, functorToken.column);
+          final innerGoal = _parseGoal();
+          return RemoteGoal(moduleTerm, innerGoal, functorToken.line, functorToken.column);
         }
-        // Negation not allowed on remote goals
-        if (negated) {
-          throw CompileError(
-            'Guard negation (~) cannot be applied to remote goal',
-            negLine,
-            negColumn,
-            phase: 'parser'
-          );
+
+        // Check if followed by = (e.g., foo = bar, or foo(a) = X)
+        if (_match(TokenType.EQUALS)) {
+          final leftTerm = args.isEmpty
+              ? ConstTerm(functorToken.lexeme, functorToken.line, functorToken.column)
+              : StructTerm(functorToken.lexeme, args, functorToken.line, functorToken.column);
+          final rightTerm = _parseTerm();
+          return Goal('=', [leftTerm, rightTerm], functorToken.line, functorToken.column);
         }
-        final moduleTerm = ConstTerm(functorToken.lexeme, functorToken.line, functorToken.column);
-        final innerGoal = _parseGoal();
-        return _remoteGoal(moduleTerm, innerGoal, functorToken.line, functorToken.column);
-      }
 
-      // Check if followed by = (e.g., foo = bar, or foo(a) = X)
-      if (_match(TokenType.EQUALS)) {
-        final leftTerm = args.isEmpty
-            ? ConstTerm(functorToken.lexeme, functorToken.line, functorToken.column)
-            : StructTerm(functorToken.lexeme, args, functorToken.line, functorToken.column);
-        final rightTerm = _parseTerm();
-        // Negation not allowed on unification goals
-        if (negated) {
-          throw CompileError(
-            'Guard negation (~) cannot be applied to unification',
-            negLine,
-            negColumn,
-            phase: 'parser'
-          );
+        // Return as Goal for now (will be cast to Guard if before |)
+        final goal = Goal(functorToken.lexeme, args, functorToken.line, functorToken.column);
+
+        // Check for spawn annotation: Goal@AgentId
+        if (_match(TokenType.AT)) {
+          final agentToken = _consume(TokenType.ATOM, 'Expected agent identifier after @');
+          return SpawnGoal(goal, agentToken.lexeme, functorToken.line, functorToken.column);
         }
-        return Goal('=', [leftTerm, rightTerm], functorToken.line, functorToken.column);
+
+        return goal;
       }
-
-      // Return as Goal for now (will be cast to Guard if before |)
-      // Use ~functor convention if negated (will be detected during Guard conversion)
-      final functor = negated ? '~${functorToken.lexeme}' : functorToken.lexeme;
-      final goal = Goal(functor, args, negated ? negLine : functorToken.line, negated ? negColumn : functorToken.column);
-
-      // Check for spawn annotation Goal@AgentId, or sGLP's rate Goal @ Rate
-      if (_match(TokenType.AT)) {
-        return _parseAtSuffix(goal, functorToken);
-      }
-
-      return goal;
     }
 
     // Otherwise, try to parse as infix comparison (e.g., X < Y, X? mod P? =:= 0)
@@ -1173,14 +1099,12 @@ class Parser {
         _check(TokenType.LESS_EQUAL) || _check(TokenType.GREATER_EQUAL) ||
         _check(TokenType.EQUALS) || _check(TokenType.ARITH_EQUAL) ||
         _check(TokenType.ARITH_NOT_EQUAL) || _check(TokenType.GROUND_EQUAL) ||
-        _check(TokenType.AT_LESS)) {
+        _check(TokenType.GROUND_NOT_EQUAL) || _check(TokenType.AT_LESS)) {
       final opToken = _advance();
       final right = _parseExpression(6);
 
       // Transform infix to prefix: X < Y → <(X, Y)
-      // For negation: ~(X =?= Y) → use ~=?= functor convention
-      final functor = negated ? '~${opToken.lexeme}' : opToken.lexeme;
-      return Goal(functor, [left, right], negated ? negLine : opToken.line, negated ? negColumn : opToken.column);
+      return Goal(opToken.lexeme, [left, right], opToken.line, opToken.column);
     }
 
     // Not a valid guard or goal
@@ -1235,7 +1159,7 @@ class Parser {
       }
     }
 
-    final functorToken = _consume(TokenType.ATOM, 'Expected predicate name');
+    final functorToken = _consumePredicateName();
     final args = <Term>[];
 
     if (_match(TokenType.LPAREN)) {
@@ -1270,20 +1194,35 @@ class Parser {
     return Atom(functorToken.lexeme, args, functorToken.line, functorToken.column);
   }
 
+  /// The refusal of a cross-module call whose module is a variable, `M # G` or
+  /// `M? # G`.  The qualifier of a cross-module call is a child directory or
+  /// module file of the caller's directory (TGLP modules.tex, "Cross-module
+  /// type checking"), and a module value is run with run/2 or run/3 (GLP-Spec
+  /// appendix-guards.tex, "Dynamic activation"); the dynamic dispatch that took
+  /// a variable cannot be typed and is gone (TGLP modules.tex, Implementation).
+  CompileError _variableModuleError(Token varToken) {
+    final mark = varToken.type == TokenType.READER ? '?' : '';
+    return CompileError(
+      'A cross-module call names its module: "${varToken.lexeme}$mark # ..." '
+      'has a variable there. The module of M # G is a child directory or '
+      'module file of the caller\'s directory; a module value is run with '
+      'run/2 or run/3.',
+      varToken.line,
+      varToken.column,
+      phase: 'parser',
+    );
+  }
+
   // Goal: same as Atom, or assignment (Var := Expr) or univ (Var =.. Expr)
   // Also handles remote goals: Module # Goal
   Goal _parseGoal() {
     // Check for assignment or univ: Var := Expr or Var =.. Expr
-    // Also check for dynamic remote goal: Var # Goal
     if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
       final varToken = _advance();
       final isReader = varToken.type == TokenType.READER;
 
-      // Check for dynamic remote goal: Var # Goal (e.g., M # factorial(5, R))
-      if (_match(TokenType.HASH)) {
-        final moduleTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
-        final innerGoal = _parseGoal();
-        return _remoteGoal(moduleTerm, innerGoal, varToken.line, varToken.column);
+      if (_check(TokenType.HASH)) {
+        throw _variableModuleError(varToken);
       } else if (_match(TokenType.ASSIGN)) {
         // Parse as ':='(Var, Expr)
         final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
@@ -1315,7 +1254,7 @@ class Parser {
       }
     }
 
-    final functorToken = _consume(TokenType.ATOM, 'Expected predicate name');
+    final functorToken = _consumePredicateName();
     final args = <Term>[];
 
     if (_match(TokenType.LPAREN)) {
@@ -1343,7 +1282,7 @@ class Parser {
       }
       final moduleTerm = ConstTerm(functorToken.lexeme, functorToken.line, functorToken.column);
       final innerGoal = _parseGoal();
-      return _remoteGoal(moduleTerm, innerGoal, functorToken.line, functorToken.column);
+      return RemoteGoal(moduleTerm, innerGoal, functorToken.line, functorToken.column);
     }
 
     // Check if this is followed by =.. (e.g., foo(a,b) =.. L)
@@ -1356,83 +1295,13 @@ class Parser {
 
     final goal = Goal(functorToken.lexeme, args, functorToken.line, functorToken.column);
 
-    // Check for spawn annotation Goal@AgentId, or sGLP's rate Goal @ Rate
+    // Check for spawn annotation: Goal@AgentId
     if (_match(TokenType.AT)) {
-      return _parseAtSuffix(goal, functorToken);
+      final agentToken = _consume(TokenType.ATOM, 'Expected agent identifier after @');
+      return SpawnGoal(goal, agentToken.lexeme, functorToken.line, functorToken.column);
     }
 
     return goal;
-  }
-
-  /// `M # G`.  Where G carries a rate, `M # p(...) @ r`, the rate is the
-  /// remote goal's: the result is the rated goal of `M # p(...)`.
-  Goal _remoteGoal(Term moduleTerm, Goal innerGoal, int line, int column) {
-    if (innerGoal is RatedGoal) {
-      return innerGoal.withInner(
-          RemoteGoal(moduleTerm, innerGoal.innerGoal, line, column));
-    }
-    return RemoteGoal(moduleTerm, innerGoal, line, column);
-  }
-
-  /// What follows `@` after a body goal: an agent identifier (`Goal@AgentId`,
-  /// the spawn annotation) or, where a number follows, sGLP's rate (svGLP,
-  /// sections/sglp.tex, Definition "Rated Goal"):
-  ///
-  ///   <rate>      ::= <positive_real> / <time_unit>
-  ///   <time_unit> ::= second | minute | hour | day | week | year
-  Goal _parseAtSuffix(Goal goal, Token functorToken) {
-    if (_check(TokenType.NUMBER) || _check(TokenType.MINUS)) {
-      final numToken = _peek();
-      if (_check(TokenType.MINUS)) {
-        throw CompileError(
-          'A rate is a positive real per unit of time, as in "@ 1/week"',
-          numToken.line, numToken.column, phase: 'parser');
-      }
-      _advance();
-      final value = (numToken.literal as num).toDouble();
-      if (!(value > 0) || value.isInfinite) {
-        throw CompileError(
-          'A rate is a positive real per unit of time, as in "@ 1/week"; '
-          'got ${numToken.lexeme}',
-          numToken.line, numToken.column, phase: 'parser');
-      }
-      _consume(TokenType.SLASH,
-          'Expected "/" and a time unit after the rate ${numToken.lexeme}');
-      final unitToken = _consume(TokenType.ATOM,
-          'Expected a time unit ($timeUnitNames) after "/" in a rate');
-      final seconds = secondsOfUnit(unitToken.lexeme);
-      if (seconds == null) {
-        throw CompileError(
-          'Unknown time unit "${unitToken.lexeme}" in a rate; the units are '
-          '$timeUnitNames',
-          unitToken.line, unitToken.column, phase: 'parser');
-      }
-      return RatedGoal(goal, '${numToken.lexeme}/${unitToken.lexeme}',
-          value / seconds, functorToken.line, functorToken.column);
-    }
-    final agentToken = _consume(
-        TokenType.ATOM, 'Expected agent identifier or a rate after @');
-    return SpawnGoal(goal, agentToken.lexeme, functorToken.line, functorToken.column);
-  }
-
-  // Guard: same as Goal but marked as guard
-  Guard _parseGuard() {
-    final functorToken = _consume(TokenType.ATOM, 'Expected guard predicate name');
-    final args = <Term>[];
-
-    if (_match(TokenType.LPAREN)) {
-      if (!_check(TokenType.RPAREN)) {
-        args.add(_parseTerm());
-
-        while (_match(TokenType.COMMA)) {
-          args.add(_parseTerm());
-        }
-      }
-
-      _consume(TokenType.RPAREN, 'Expected ")" after arguments');
-    }
-
-    return Guard(functorToken.lexeme, args, functorToken.line, functorToken.column);
   }
 
   // Term: variable, structure, list, constant, underscore, tuple, or expression
@@ -1456,27 +1325,93 @@ class Parser {
     return left;
   }
 
+  /// The operator names and keywords the lexer makes tokens of, punctuation
+  /// apart.  Each is a name: GLP-Spec reserves no word (appendix-lp.tex,
+  /// Definition "Logic Programs Syntax": a term is a variable, a constant or a
+  /// compound term f(T1, ..., Tn), in standard LP notions), so where a term is
+  /// expected the reader takes one as the constant of that name, and as the
+  /// functor of a compound term where "(" follows it, as Prolog does (GLP #3
+  /// Cowork, 2026-10-03 21:18 UTC, "11:58. 2": "`mod` and `procedure` are
+  /// constants ... compliance, fix it").  Until 2026-10-03 an unquoted `mod`
+  /// or `procedure` in a term was "Expected term, got TokenType.MOD", and
+  /// `f(=)`, `f(+)`, `[-]` likewise; a quoted name was the one way to write
+  /// them.  `,` and `|` stay punctuation, quoted when meant as names, as in
+  /// Prolog; `?` is the reader mark.
+  static const Set<TokenType> _operatorNames = {
+    TokenType.PLUS, TokenType.MINUS, TokenType.STAR, TokenType.SLASH,
+    TokenType.SLASH_SLASH, TokenType.MOD,
+    TokenType.LESS, TokenType.GREATER, TokenType.LESS_EQUAL,
+    TokenType.GREATER_EQUAL, TokenType.EQUALS, TokenType.ARITH_EQUAL,
+    TokenType.ARITH_NOT_EQUAL, TokenType.GROUND_EQUAL,
+    TokenType.GROUND_NOT_EQUAL, TokenType.AT_LESS, TokenType.UNIV,
+    TokenType.UNIV_DECOMPOSE,
+    TokenType.IMPLIES, TokenType.ASSIGN, TokenType.COLONCOLONEQ,
+    TokenType.SEMICOLON, TokenType.COLON,
+    TokenType.TILDE, TokenType.HASH, TokenType.BACKSLASH, TokenType.AT,
+    TokenType.PROCEDURE,
+  };
+
+  /// Whether the reader takes a token of [type] where a term is expected as
+  /// a name ([_operatorNames]): the functor of a compound term where "("
+  /// follows it.  The printer asks it of a functor (glp_printer.dart,
+  /// `functorNameSource`).
+  static bool isOperatorName(TokenType type) => _operatorNames.contains(type);
+
+  /// The tokens that end an operand: an operator name before one of them has
+  /// no operand of its own and is the constant of its name.
+  static const Set<TokenType> _endsOperand = {
+    TokenType.COMMA, TokenType.RPAREN, TokenType.RBRACKET, TokenType.PIPE,
+    TokenType.DOT, TokenType.SEMICOLON, TokenType.EOF,
+  };
+
+  /// Whether an operator name stands at the current position where a term is
+  /// expected, and how it reads there: 'functor' where "(" follows it,
+  /// 'constant' where it has no operand --- an operand-ending token follows,
+  /// or it is `mod` or `procedure`, a word that is no prefix operator ---
+  /// and null otherwise (a prefix minus, or no term at all).
+  String? _operatorNameAt() {
+    if (_isAtEnd() || !_operatorNames.contains(_peek().type)) return null;
+    final next = _current + 1 < tokens.length
+        ? tokens[_current + 1].type
+        : TokenType.EOF;
+    if (next == TokenType.LPAREN) return 'functor';
+    final t = _peek().type;
+    if (t == TokenType.MOD || t == TokenType.PROCEDURE) return 'constant';
+    if (_endsOperand.contains(next)) return 'constant';
+    return null;
+  }
+
   // Primary expression: variable, number, string, list, structure, parenthesized, unary minus
   Term _parsePrimary() {
-    // Operator as functor (for type definitions like Exp ::= +(Exp?, Exp?))
-    // Must check BEFORE unary minus so -(X,Y) is parsed as struct, not neg((X,Y))
-    if (_check(TokenType.PLUS) || _check(TokenType.MINUS) || _check(TokenType.STAR) ||
-        _check(TokenType.SLASH) || _check(TokenType.SLASH_SLASH) || _check(TokenType.MOD)) {
-      // Look ahead: if followed by (, treat as functor
-      if (_current + 1 < tokens.length && tokens[_current + 1].type == TokenType.LPAREN) {
-        final functorToken = _advance();
-        _advance();  // consume (
-        final args = <Term>[];
-        if (!_check(TokenType.RPAREN)) {
+    // An operator name where a term is expected (see [_operatorNames]): the
+    // functor of a compound term before "(", Exp ::= +(Exp?, Exp?) among them,
+    // checked before unary minus so -(X, Y) is a structure and not
+    // neg((X, Y)); otherwise, with no operand, the constant of its name.
+    final operatorName = _operatorNameAt();
+    if (operatorName == 'functor') {
+      final functorToken = _advance();
+      _advance();  // consume (
+      final args = <Term>[];
+      if (!_check(TokenType.RPAREN)) {
+        args.add(_parseExpression());
+        while (_match(TokenType.COMMA)) {
           args.add(_parseExpression());
-          while (_match(TokenType.COMMA)) {
-            args.add(_parseExpression());
-          }
         }
-        _consume(TokenType.RPAREN, 'Expected ")" after operator struct arguments');
-        return StructTerm(functorToken.lexeme, args, functorToken.line, functorToken.column);
       }
-      // Otherwise fall through - will be handled as unary minus or infix operator
+      _consume(TokenType.RPAREN, 'Expected ")" after operator struct arguments');
+      return StructTerm(functorToken.lexeme, args, functorToken.line, functorToken.column);
+    }
+    if (operatorName == 'constant') {
+      final nameToken = _advance();
+      if (_check(TokenType.QUESTION)) {
+        throw CompileError(
+          'Reader mark "?" can only be applied to variables, not constants like "${nameToken.lexeme}"',
+          _peek().line,
+          _peek().column,
+          phase: 'parser'
+        );
+      }
+      return ConstTerm(nameToken.lexeme, nameToken.line, nameToken.column);
     }
 
     // Unary minus: -X becomes neg(X)
@@ -1645,6 +1580,63 @@ class Parser {
            token.type == TokenType.ARITH_NOT_EQUAL ||
            token.type == TokenType.HASH ||
            token.type == TokenType.BACKSLASH;
+  }
+
+  /// Whether [t], after a term, makes the term the left operand of an infix
+  /// guard: a comparison, or an arithmetic operator of the expression
+  /// compared (`_parseExpression(6)`'s, whose precedence is above the
+  /// comparisons').  `=` is not among them: `foo(a) = X` is the unification
+  /// goal it was; nor `#` and `@`, of a remote goal and a spawn; nor a `*`
+  /// beginning a vGLP else branch.
+  bool _continuesAsInfixGuard(Token t) {
+    switch (t.type) {
+      case TokenType.LESS:
+      case TokenType.GREATER:
+      case TokenType.LESS_EQUAL:
+      case TokenType.GREATER_EQUAL:
+      case TokenType.ARITH_EQUAL:
+      case TokenType.ARITH_NOT_EQUAL:
+      case TokenType.GROUND_EQUAL:
+      case TokenType.GROUND_NOT_EQUAL:
+      case TokenType.AT_LESS:
+      case TokenType.PLUS:
+      case TokenType.MINUS:
+      case TokenType.SLASH:
+      case TokenType.SLASH_SLASH:
+      case TokenType.MOD:
+        return true;
+      case TokenType.STAR:
+        return !_isElseBranchStar();
+      default:
+        return false;
+    }
+  }
+
+  /// Whether the "(" at the current position opens a parenthesised term that
+  /// is the left operand of an infix guard: the token after its matching ")"
+  /// continues it as one ([_continuesAsInfixGuard]), as in
+  /// `(I? + 3) =:= 0`, `((I? mod 3)) > 1` or `(X? * 2) + 1 < Y?`.  A
+  /// parenthesised goal, `(G)` or `(G1 ; G2)`, is followed by none of those.
+  bool _parenthesisedOperand() {
+    var depth = 0;
+    for (var i = _current; i < tokens.length; i++) {
+      final t = tokens[i].type;
+      if (t == TokenType.EOF) return false;
+      if (t == TokenType.LPAREN) {
+        depth++;
+      } else if (t == TokenType.RPAREN) {
+        depth--;
+        if (depth == 0) {
+          if (i + 1 >= tokens.length) return false;
+          final start = _current;
+          _current = i + 1;
+          final operand = _continuesAsInfixGuard(_peek());
+          _current = start;
+          return operand;
+        }
+      }
+    }
+    return false;
   }
 
   // Get operator precedence
@@ -1824,26 +1816,6 @@ class Parser {
   // Yardeni-Shapiro Type Declaration Parser Methods
   // ============================================================================
 
-  /// Check if we're at a type definition or procedure declaration
-  bool _isTypeOrProcDeclaration() {
-    // procedure keyword
-    if (_check(TokenType.PROCEDURE)) return true;
-
-    // TypeName ::= ... (type names are capitalized, tokenized as VARIABLE)
-    if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
-      // Look ahead for ::=
-      final saved = _current;
-      _advance();  // consume type name
-
-      final isTypeDef = _check(TokenType.COLONCOLONEQ);
-
-      _current = saved;  // restore position
-      return isTypeDef;
-    }
-
-    return false;
-  }
-
   /// Check if we're at a type definition (TypeName ::= ... or TypeName(X) ::= ...)
   /// Used to distinguish type definitions from clause heads starting with capitalized variable.
   bool _isTypeDefinition() {
@@ -1918,18 +1890,17 @@ class Parser {
 
   /// Parse a single type alternative using unified term parsing.
   /// Per spec (type-conversion.md): Parse as Term, then convert to TypeExpr.
-  /// 
-  /// For explicit dual definitions like `Channel? ::= ch(Stream?, Stream)?.`,
-  /// the trailing `?` on the structure is allowed and consumed. The duality
-  /// is captured in the type name (Channel?), so the trailing `?` is
-  /// documentation that confirms the definition is for the dual form.
+  ///
+  /// A `?` marks a type name only ([_markedTypeAltPrimary]); after a
+  /// structure, a list or a parenthesised term it marks no type name and is
+  /// refused ([_refuseMarkAfter]).
   TypeExpr _parseTypeAlt() {
     final term = _parseTypeAltTerm();
     return termToTypeExpr(term);
   }
 
   /// Parse a term in type alternative context.
-  /// Similar to _parseTerm() but allows trailing `?` on structures.
+  /// Similar to _parseTerm(), with a `?` on a type name read as its dual.
   Term _parseTypeAltTerm() {
     return _parseTypeAltExpression();
   }
@@ -1937,7 +1908,7 @@ class Parser {
   /// Parse expression in type alternative context.
   /// Handles operators like \ for difference lists.
   Term _parseTypeAltExpression([int minPrecedence = 0]) {
-    var left = _parseTypeAltPrimary();
+    var left = _markedTypeAltPrimary(_parseTypeAltPrimary());
 
     while (_isOperator(_peek()) && _precedence(_peek()) >= minPrecedence) {
       final op = _advance();
@@ -1945,34 +1916,94 @@ class Parser {
       left = StructTerm(_operatorFunctor(op), [left, right], op.line, op.column);
     }
 
-    // Check for trailing ? on the whole expression (for explicit duals)
-    // This is allowed in type definitions and simply consumed
-    _match(TokenType.QUESTION);
-
     return left;
   }
 
-  /// Parse primary term in type alternative context.
-  /// Allows trailing `?` on structures (for explicit dual definitions).
-  Term _parseTypeAltPrimary() {
-    // Operator as functor (for type definitions like Exp ::= +(Exp?, Exp?))
-    if (_check(TokenType.PLUS) || _check(TokenType.MINUS) || _check(TokenType.STAR) ||
-        _check(TokenType.SLASH) || _check(TokenType.SLASH_SLASH) || _check(TokenType.MOD)) {
-      if (_current + 1 < tokens.length && tokens[_current + 1].type == TokenType.LPAREN) {
-        final functorToken = _advance();
-        _advance();  // consume (
-        final args = <Term>[];
-        if (!_check(TokenType.RPAREN)) {
-          args.add(_parseTypeAltExpression());
-          while (_match(TokenType.COMMA)) {
-            args.add(_parseTypeAltExpression());
-          }
-        }
-        _consume(TokenType.RPAREN, 'Expected ")" after operator struct arguments');
-        // Allow trailing ? on structure in type definitions
-        _match(TokenType.QUESTION);
-        return StructTerm(functorToken.lexeme, args, functorToken.line, functorToken.column);
+  /// [term], a primary of a type alternative, with the `?` standing apart
+  /// after it read: `T ?` is `T?`, the dual of the type T, as a procedure
+  /// declaration reads it ([_parseProcArgType]).  `?` is the complementation
+  /// operator on a type (TGLP typed-glp.tex, "Type Declarations": "GLP types
+  /// are specified using BNF rules with the complementation operator ?", and
+  /// "its dual (for example Stream?) is an input type"), so after anything
+  /// but a type name not yet complemented it marks nothing, and it is refused
+  /// rather than dropped (GLP #3 Cowork, 2026-10-10 07:48 UTC, "00:26": "A
+  /// parser that drops a mark silently is at fault whatever the syntax").
+  /// Until 2026-10-10 a `?` standing apart was consumed here and dropped, so
+  /// `Q ::= f(R ?).` was read as `f(R)`.
+  Term _markedTypeAltPrimary(Term term) {
+    while (_check(TokenType.QUESTION)) {
+      final q = _advance();
+      if (term is VarTerm && !term.isReader) {
+        term = VarTerm(term.name, true, term.line, term.column);
+        continue;
       }
+      // Shown as written: a constant by its name, and a parameterised type
+      // reference in reader mode, the structure whose functor carries the
+      // mark ([_parseTypeAltPrimary]), with the mark last.
+      final follows = term is ConstTerm
+          ? '${term.value}'
+          : term is StructTerm && term.functor.endsWith('?')
+              ? '${term.functor.substring(0, term.functor.length - 1)}'
+                  '(${term.args.join(", ")})?'
+              : '$term';
+      throw CompileError(
+        'A "?" in a type definition marks the type name before it, "T ?" '
+        'being "T?", the dual of T; here it follows "$follows", and marks '
+        'nothing',
+        q.line,
+        q.column,
+        phase: 'parser',
+      );
+    }
+    return term;
+  }
+
+  /// Refuses a `?` next, after [what]: a structure, a list or a parenthesised
+  /// term of a type alternative, which is no type name, so that the `?` marks
+  /// no type name.  TGLP gives `?` a meaning on a type name only, its dual
+  /// (typed-glp.tex, "Type Declarations"), and GLP-Spec on a variable only, a
+  /// reader (glp.tex, Definition "GLP Variables"); a `?` after anything else
+  /// is refused, not dropped (GLP, 2026-10-10 08:40 UTC).  Until 2026-10-10
+  /// such a `?` was consumed here and dropped, for an "explicit dual" written
+  /// `Channel? ::= ch(Stream?, Stream)?.`, which TGLP does not have.
+  void _refuseMarkAfter(String what) {
+    if (!_check(TokenType.QUESTION)) return;
+    final q = _peek();
+    throw CompileError(
+      'A "?" in a type definition marks the type name before it, "T ?" '
+      'being "T?", the dual of T; here it follows $what, which is not a type '
+      'name, and marks no type name',
+      q.line,
+      q.column,
+      phase: 'parser',
+    );
+  }
+
+  /// Parse primary term in type alternative context.  A `?` after a
+  /// structure, a list or a parenthesised term is refused ([_refuseMarkAfter]).
+  Term _parseTypeAltPrimary() {
+    // An operator name in a type alternative is a name, as in a term
+    // ([_operatorNames]): the functor of a structure alternative before "(",
+    // Exp ::= +(Exp?, Exp?) among them, and otherwise, with no operand, a
+    // constant alternative, Op ::= + ; mod.
+    final operatorName = _operatorNameAt();
+    if (operatorName == 'functor') {
+      final functorToken = _advance();
+      _advance();  // consume (
+      final args = <Term>[];
+      if (!_check(TokenType.RPAREN)) {
+        args.add(_parseTypeAltExpression());
+        while (_match(TokenType.COMMA)) {
+          args.add(_parseTypeAltExpression());
+        }
+      }
+      _consume(TokenType.RPAREN, 'Expected ")" after operator struct arguments');
+      _refuseMarkAfter('the structure "${functorToken.lexeme}(...)"');
+      return StructTerm(functorToken.lexeme, args, functorToken.line, functorToken.column);
+    }
+    if (operatorName == 'constant') {
+      final nameToken = _advance();
+      return ConstTerm(nameToken.lexeme, nameToken.line, nameToken.column);
     }
 
     // Parameterized type reference in type body: TypeName(Arg1, Arg2, ...)
@@ -2043,13 +2074,13 @@ class Parser {
         for (int i = terms.length - 2; i >= 0; i--) {
           result = StructTerm(',', [terms[i], result], startToken.line, startToken.column);
         }
-        // Allow trailing ? on parenthesized expression
-        _match(TokenType.QUESTION);
+        _refuseMarkAfter('the parenthesised term "(...)"');
         return result;
       } else {
         _consume(TokenType.RPAREN, 'Expected ")" after expression');
-        // Allow trailing ? on parenthesized expression
-        _match(TokenType.QUESTION);
+        // Refused here, and not left to [_markedTypeAltPrimary], which would
+        // read "(T) ?" as "T?": the "?" follows the parenthesised term.
+        _refuseMarkAfter('the parenthesised term "(...)"');
         return terms[0];
       }
     }
@@ -2067,8 +2098,7 @@ class Parser {
           }
         }
         _consume(TokenType.RPAREN, 'Expected ")" after structure arguments');
-        // Allow trailing ? on structure in type definitions (for explicit duals)
-        _match(TokenType.QUESTION);
+        _refuseMarkAfter('the structure "${functorToken.lexeme}(...)"');
         return StructTerm(functorToken.lexeme, args, functorToken.line, functorToken.column);
       } else {
         return ConstTerm(functorToken.lexeme, functorToken.line, functorToken.column);
@@ -2083,14 +2113,13 @@ class Parser {
     );
   }
 
-  /// Parse list in type alternative context.
-  /// Allows trailing ? on lists (for explicit duals).
+  /// Parse list in type alternative context.  A `?` after the list is
+  /// refused ([_refuseMarkAfter]).
   Term _parseTypeAltList() {
     final bracketToken = _consume(TokenType.LBRACKET, 'Expected "["');
 
     if (_match(TokenType.RBRACKET)) {
-      // Allow trailing ? on empty list in type definitions
-      _match(TokenType.QUESTION);
+      _refuseMarkAfter('the list "[]"');
       return ListTerm(null, null, bracketToken.line, bracketToken.column);
     }
 
@@ -2106,8 +2135,7 @@ class Parser {
     if (_match(TokenType.PIPE)) {
       tail = _parseTypeAltTerm();
       _consume(TokenType.RBRACKET, 'Expected "]" after list tail');
-      // Allow trailing ? on list in type definitions
-      _match(TokenType.QUESTION);
+      _refuseMarkAfter('the list "[...]"');
       Term result = tail;
       for (int i = elements.length - 1; i >= 0; i--) {
         result = ListTerm(elements[i], result, bracketToken.line, bracketToken.column);
@@ -2116,14 +2144,90 @@ class Parser {
     }
 
     _consume(TokenType.RBRACKET, 'Expected "]" after list elements');
-    // Allow trailing ? on list in type definitions
-    _match(TokenType.QUESTION);
+    _refuseMarkAfter('the list "[...]"');
 
     Term result = ListTerm(null, null, bracketToken.line, bracketToken.column);
     for (int i = elements.length - 1; i >= 0; i--) {
       result = ListTerm(elements[i], result, bracketToken.line, bracketToken.column);
     }
     return result;
+  }
+
+  /// The token types a declared procedure's name may be
+  /// ([_parseProcDeclaration]).
+  static const Set<TokenType> _procedureNameTokens = {
+    TokenType.ATOM, TokenType.PROCEDURE, TokenType.LESS, TokenType.GREATER, TokenType.LESS_EQUAL,
+    TokenType.GREATER_EQUAL, TokenType.ARITH_EQUAL, TokenType.ARITH_NOT_EQUAL,
+    TokenType.GROUND_EQUAL, TokenType.GROUND_NOT_EQUAL, TokenType.AT_LESS,
+    TokenType.EQUALS, TokenType.UNIV, TokenType.UNIV_DECOMPOSE,
+    TokenType.ASSIGN,
+  };
+
+  /// Whether a procedure declaration begins at token [at], the current one
+  /// by default: `procedure`, after `exported` or `imported` or not, then its
+  /// parameter list or none, then a procedure name before "(", "." or "#" ---
+  /// `procedure p(X).`, `procedure(X) merge(...).` (TGLP
+  /// parameterized-types.tex, "Parameterised Procedure Declarations": the
+  /// parameters are named "in a list after the keyword").  No word is
+  /// reserved (GLP #3 Cowork, 2026-10-04 09:06 UTC, "23:49. Q2: `procedure`
+  /// immediately before "(" is a functor ...; `procedure p(X).` is a
+  /// declaration"): `procedure` with no name after it --- `procedure(a).`,
+  /// `procedure(X) :- q(X?).`, `procedure.` --- begins a clause of the
+  /// procedure named `procedure`.  Until 2026-10-04 every `procedure` there
+  /// began a declaration, and such a clause was a syntax error.
+  ///
+  /// In a .vglp source the declaration of a volitional procedure carries its
+  /// interactive type before the name, `procedure (T)*p(...)`
+  /// ([_interactiveDeclarationAt]).
+  bool _atProcDeclaration([int? at]) {
+    var i = at ?? _current;
+    final interactive = vglp ? _interactiveDeclarationAt(i) : null;
+    if (interactive != null) {
+      i = interactive.name;
+      if (i + 1 >= tokens.length ||
+          !_procedureNameTokens.contains(tokens[i].type)) {
+        return false;
+      }
+      final after = tokens[i + 1].type;
+      return after == TokenType.LPAREN ||
+          after == TokenType.DOT ||
+          after == TokenType.HASH;
+    }
+    if (i < tokens.length &&
+        tokens[i].type == TokenType.ATOM &&
+        (tokens[i].lexeme == 'exported' || tokens[i].lexeme == 'imported')) {
+      i++;
+    }
+    if (i >= tokens.length || tokens[i].type != TokenType.PROCEDURE) {
+      return false;
+    }
+    i++;
+    if (i < tokens.length && tokens[i].type == TokenType.LPAREN) {
+      var depth = 0;
+      for (; i < tokens.length; i++) {
+        final t = tokens[i].type;
+        if (t == TokenType.EOF) return false;
+        if (t == TokenType.LPAREN) depth++;
+        if (t == TokenType.RPAREN && --depth == 0) break;
+      }
+      i++;
+    }
+    if (i + 1 >= tokens.length ||
+        !_procedureNameTokens.contains(tokens[i].type)) {
+      return false;
+    }
+    final after = tokens[i + 1].type;
+    return after == TokenType.LPAREN ||
+        after == TokenType.DOT ||
+        after == TokenType.HASH;
+  }
+
+  /// A predicate's name, in a clause head or a goal: a name, or `procedure`,
+  /// which reserves nothing there (GLP #3 Cowork, 2026-10-04 09:06 UTC,
+  /// "23:49. Q2"; [_atProcDeclaration]).
+  Token _consumePredicateName() {
+    if (_check(TokenType.PROCEDURE)) return _advance();
+    return _consume(TokenType.ATOM, 'Expected predicate name');
   }
 
   /// Parse a procedure declaration: procedure name(Type?, Type).
@@ -2137,11 +2241,17 @@ class Parser {
   /// Spec: Moded-Types, sections/parameterized-types.tex, Parameterised
   /// Procedure Declarations and the paragraph Declaration parameters.
   ProcDecl _parseProcDeclaration() {
+    // A volitional procedure's declaration, in a .vglp source: its interactive
+    // type stands before its name ([_interactiveDeclarationAt]).
+    final interactive = vglp ? _interactiveDeclarationAt(_current) : null;
+
     // Check for 'exported' or 'imported' keyword before 'procedure'
     bool exported = false;
     bool imported = false;
     final startLine = _peek().line;
     final startColumn = _peek().column;
+    // An imported declaration of a volitional procedure, `imported procedure
+    // (T)*M#p(...)`, is read as its export is (see [vglp]).
     if (_check(TokenType.ATOM) && _peek().lexeme == 'exported') {
       _advance(); // consume 'exported'
       exported = true;
@@ -2155,9 +2265,11 @@ class Parser {
 
     // Optional type-parameter list: procedure(X, Y) p(...).
     // No other declaration form has "(" directly after the keyword, so the
-    // list is unambiguous.
+    // list is unambiguous, save in a .vglp source, where "(" there may open
+    // the interactive type of a volitional procedure, `procedure (T)*p(...)`.
     final typeParams = <String>[];
-    if (_match(TokenType.LPAREN)) {
+    if ((interactive == null || _current != interactive.open) &&
+        _match(TokenType.LPAREN)) {
       typeParams.add(_consume(TokenType.VARIABLE, 'Expected type parameter name').lexeme);
       while (_match(TokenType.COMMA)) {
         typeParams.add(_consume(TokenType.VARIABLE, 'Expected type parameter name').lexeme);
@@ -2175,15 +2287,27 @@ class Parser {
       }
     }
 
+    // The interactive type T of a volitional procedure, `(T)*`, in writer or
+    // reader mode as an argument type is (vGLP, Definition "Guarded Clause,
+    // Volitional Procedure, ...").
+    TypeExpr? interactiveType;
+    if (interactive != null) {
+      _consume(TokenType.LPAREN, 'Expected "(" before the interactive type');
+      interactiveType = _parseProcArgType();
+      _consume(TokenType.RPAREN, 'Expected ")" after the interactive type');
+      _consume(TokenType.STAR, 'Expected "*" after the interactive type');
+    }
+
     // Parse procedure name, possibly with module path for imported procedures.
     // For imported: 'social#agent' → modulePath='social', name='agent'
     //              'ui#actors#render' → modulePath='ui#actors', name='render'
     //              'merge' → modulePath=null, name='merge'
     String? modulePath;
 
-    // Procedure name can be atom or operator (<, >, =<, >=, =:=, =\=, =?=, =, @<)
+    // Procedure name can be atom or operator (<, >, =<, >=, =:=, =\=, =?=, =?\=, =, @<),
+    // or `procedure`, a name after the keyword like any other.
     Token nameToken;
-    if (_check(TokenType.ATOM)) {
+    if (_check(TokenType.ATOM) || _check(TokenType.PROCEDURE)) {
       nameToken = _advance();
     } else if (_check(TokenType.LESS)) {
       nameToken = _advance();
@@ -2198,6 +2322,8 @@ class Parser {
     } else if (_check(TokenType.ARITH_NOT_EQUAL)) {
       nameToken = _advance();
     } else if (_check(TokenType.GROUND_EQUAL)) {
+      nameToken = _advance();
+    } else if (_check(TokenType.GROUND_NOT_EQUAL)) {
       nameToken = _advance();
     } else if (_check(TokenType.AT_LESS)) {
       nameToken = _advance();
@@ -2224,8 +2350,9 @@ class Parser {
     if (imported) {
       final parts = <String>[name];
       while (_match(TokenType.HASH)) {
-        // Next token should be an atom (next path component or procedure name)
-        if (!_check(TokenType.ATOM)) {
+        // Next token should be an atom (next path component or procedure
+        // name), `procedure` among them
+        if (!_check(TokenType.ATOM) && !_check(TokenType.PROCEDURE)) {
           throw CompileError(
             'Expected module path component or procedure name after "#"',
             _peek().line,
@@ -2258,6 +2385,12 @@ class Parser {
       _consume(TokenType.RPAREN, 'Expected ")" after procedure arguments');
     }
     // If no LPAREN, argTypes remains empty (nullary procedure)
+
+    // A volitional procedure's clauses are the guarded clauses
+    // p(S1, ..., Sn, A) of arity n+1, A of type T (vGLP, Definition "Guarded
+    // Clause, Volitional Procedure, ..."), so its declaration is theirs,
+    // p(T1, ..., Tn, T).
+    if (interactiveType != null) argTypes.add(interactiveType);
 
     _consume(TokenType.DOT, 'Expected "." after procedure declaration');
 

@@ -5,8 +5,9 @@
 %% scope).  The certified mini-apps it hosts are programs of their own
 %% (../pingapp; programs/currencies/coins/currency), whose artefacts the REPL's :artefact
 %% writes here, the one place the agent's load_file/2 resolves a name.  Loaded
-%% as part of ../ (the UI boot plays), agent is found by module name; under
-%% :boot (../../superapp_boot.glp) sg_init/3 runs one super-app per isolate.
+%% as part of ../ (the UI boot plays), the agent is called as core # agent,
+%% through the forwarder below; under :boot (../../superapp_boot.glp)
+%% sg_init/3 runs one super-app per isolate.
 
 %% The super-app plays (superapp_plays.glp) and the test mini-app's entry,
 %% exported so that run/3 finds it among the program's exports.
@@ -16,8 +17,58 @@
 procedure ping(Constant?, AppUiStream, SgChannel?).
 ping(_, [], _).
 
-imported procedure home_ui#superapp_ui(Constant?, Stream(_)?, Stream(_)?).
-exported procedure superapp_ui(Constant?, Stream(_)?, Stream(_)?).
+%% The person's answers to the super-app's own person interface (home.vglp),
+%% as the super-app receives them: home.glp:8--31's Answer, ReqId and
+%% UserAnswer written here again under core's own names.  Types are not
+%% exported: a caller declares what it passes in its own scope, and the linked
+%% check holds the two structurally compatible (TGLP, "Structural type
+%% compatibility").
+HomeAnswer ::= xs_respond_friend_1(Constant) ; xs_respond_friend_2(Constant) ; xs_home_1(String) ; xs_home_2(String, Constant) ; xs_home_3(Constant, Key) ; xs_home_4(Key).
+HomeReqId ::= req(Integer).
+HomeUserAnswer ::= answer(HomeReqId, HomeAnswer) ; decline(HomeReqId).
+
+%% The super-app (GSG paper, Section 5.1): the one goal the runtime posts,
+%% with the person's public key, the stream of the person's acts and the
+%% stream from the network, and nothing else.  It runs agent/4, with the
+%% super-app's own person interface (home/8) and its mediator (med/4) between
+%% the person and the agent, and sends the two streams of the outputs list to
+%% the person by send_to_user/1 and to the network by send_to_net/1.  The
+%% person is sent what the agent tells her and the mediator's cards.  The
+%% imported declarations of home/8 and med/4 type the person's answers and
+%% the positions the super-app reads, and leave the others untyped, since it
+%% only passes them along.
+imported procedure home#home(_?, Key?, AgentToUserStream?, Stream(UserInMsg), _?, _?, _?, _?).
+imported procedure home#med(_?, _?, _?, Integer?).
+imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
+exported procedure superapp(Key?, Stream(HomeUserAnswer)?, NetInStream?).
+superapp(Id, Answers, NetIn) :-
+    ground(Id?) |
+    agent # agent(Id?, Cmds?, NetIn?, [user_output(Outs), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    tee_out(Outs?, Shown, Seen),
+    send_to_user(Shown?),
+    home # home(ch([], Asks), Id?, Seen?, Cmds, none, none, none, none),
+    home # med(ch(Answers?, Cards), ch(Asks?, _), [], 0),
+    send_to_user(Cards?).
+
+%% What the agent tells the person, shown to her and read by the person
+%% interface: superapp/3 above and superapp_ui/3 (home_ui.glp) reach it by
+%% scope.
+procedure tee_out(AgentToUserStream?, AgentToUserStream, AgentToUserStream).
+tee_out([X | Xs], [X? | Ys?], [X? | Zs?]) :- ground(X?) | tee_out(Xs?, Ys, Zs).
+tee_out([], [], []).
+
+%% The agent, exported for the parent's UI boot plays (../boot.glp,
+%% ../play_ui_boot.glp), which call it as core # agent: a call into this
+%% directory resolves only to what this file exports (TGLP, Section "Module
+%% System", External access).
+exported procedure agent(Key?, UserInStream?, NetInStream?, OutputsList?).
+agent(Id, UserIn, NetIn, Outs) :- agent # agent(Id?, UserIn?, NetIn?, Outs?).
+
+%% The super-app as a play, alice with a scripted Bob: what the Flutter agent
+%% runtime starts (home_ui.glp).
+imported procedure home_ui#superapp_ui(Key?, Stream(HomeUserAnswer)?, NetInStream?).
+exported procedure superapp_ui(Key?, Stream(HomeUserAnswer)?, NetInStream?).
 superapp_ui(Id, Answers, NetIn) :- home_ui # superapp_ui(Id?, Answers?, NetIn?).
 
 imported procedure superapp_plays#play_invite(AppUiStream, AppUiStream).
@@ -32,13 +83,17 @@ imported procedure superapp_plays#play_attest(String, String, String, _).
 exported procedure play_attest(String, String, String, _).
 play_attest(S?, K?, H?, T?) :- superapp_plays # play_attest(S, K, H, T).
 
+imported procedure superapp_plays#play_both_ways(Stream(AgentContent), Stream(AgentContent)).
+exported procedure play_both_ways(Stream(AgentContent), Stream(AgentContent)).
+play_both_ways(A?, B?) :- superapp_plays # play_both_ways(A, B).
+
 
 imported procedure superapp_plays#play_invite_timed(Integer).
 exported procedure play_invite_timed(Integer).
 play_invite_timed(Ms?) :- superapp_plays # play_invite_timed(Ms).
 
-imported procedure superapp_plays#sg_init(Constant?, Constant?, NetInStream?).
-exported procedure sg_init(Constant?, Constant?, NetInStream?).
+imported procedure superapp_plays#sg_init(Key?, Constant?, NetInStream?).
+exported procedure sg_init(Key?, Constant?, NetInStream?).
 sg_init(Id, Role, NetIn) :- superapp_plays # sg_init(Id?, Role?, NetIn?).
 
 imported procedure superapp_plays#play_load(String?, Constant, String).

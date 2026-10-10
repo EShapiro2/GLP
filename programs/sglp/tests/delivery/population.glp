@@ -1,0 +1,162 @@
+%% Printed by programs/sglp/transform.glp from the sGLP source in the term form
+%% (README.md, "The term form"); edit the source and run transform.sh, not this file.
+%% transform(delivery, population)
+
+%% The run declaration of the source:
+%% (run(1, [mix(talking, [share(talker, 1.0)])], 1, week, 20260927))
+
+Profiles
+::=
+profiles(Dimension1)
+.
+Dimension1
+::=
+talker
+.
+Ask ::= ask(Constant, Question).
+Question
+::=
+stream_msg_r
+(
+Stream(Msg)
+?
+)
+.
+
+%% The person procedures, in the profiles module.
+imported procedure
+profiles
+#
+talk
+(
+Stream(Msg)
+,
+Integer?
+,
+MutualRef?
+)
+.
+
+%% The person process (sGLP's paper, Section 4, "The person process").
+exported procedure person(Integer?, Profiles?, MutualRef?, Integer?, MutualRef?, Stream(Ask)?).
+person(A, profiles(talker), Mon, Seed, Log, [ask(Type, stream_msg_r(X?)) | As])
+:-
+random(Seed?, 2147483646, K, S)
+,
+profiles
+#
+talk(Y, K?, Mon?)
+,
+answer_1(A?, Type?, Y?, X, Mon?, Log?)
+,
+person(A?, profiles(talker), Mon?, S?, Log?, As?)
+.
+person(_, _, _, _, _, []).
+
+%% The answer, handed over and logged (Section 4, "The person process" and "The log").
+procedure
+answer_1
+(
+Integer?
+,
+Constant?
+,
+Stream(Msg)
+?
+,
+Stream(Msg)
+,
+MutualRef?
+,
+MutualRef?
+)
+.
+answer_1(A, Type, [], [], Mon, Log)
+:-
+stream_append(time(Time), Mon?, _)
+,
+stream_append(entry(Time?, A?, Type?, []), Log?, _)
+.
+answer_1(A, Type, [msg(Z1, Z2?) | Z4], [msg(Z1?, Z3) | Z5?], Mon, Log)
+:-
+ground(Z1?)
+|
+stream_append(time(Time), Mon?, _)
+,
+stream_append(entry(Time?, A?, Type?, [msg(Z1?, '_') | '_']), Log?, _)
+,
+present_1(A?, Type?, Z3?, Z2, Mon?, Log?)
+,
+answer_1(A?, Type?, Z4?, Z5, Mon?, Log?)
+.
+
+%% The question shown, each position the person writes answered as a question of its own (Section 4, "The person process").
+procedure
+present_1
+(
+Integer?
+,
+Constant?
+,
+Status
+?
+,
+Status
+,
+MutualRef?
+,
+MutualRef?
+)
+.
+present_1(_, _, Y, Y?, _, _)
+:-
+ground(Y?)
+|
+true
+.
+
+%% The run declaration: its agents, horizon, seed and thresholds.
+exported procedure
+declaration
+(
+Integer
+,
+Number
+,
+Span
+,
+Integer
+)
+.
+declaration(1, 1, week, 20260927)
+.
+
+%% An agent's stochastic person, drawn from its block (Appendix B).
+exported procedure
+stochastic_person
+(
+Integer?
+,
+Profiles
+,
+Integer
+)
+.
+stochastic_person(B, profiles(P1?), S?)
+:-
+random(B?, 100, K1, S)
+,
+talking(K1?, P1)
+.
+
+%% The draw of the dimension(talking)
+procedure
+talking
+(
+Integer?
+,
+Dimension1
+)
+.
+talking(_, talker)
+.

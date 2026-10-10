@@ -75,9 +75,13 @@ NetColdCall ::= intro(Key, Response?).
 
 %% Wrappers for the agent<->mediator channel (gives ui_mediator's agent-facing
 %% channel a CONCRETE element type instead of polymorphic Channel(X,Y), so the
-%% checker enforces the agent/mediator polarity duality — §5(1)).
+%% checker enforces the agent/mediator polarity duality — §5(1)).  UserMsg
+%% holds agents: the mediator's msg(person, Id, ...) names the agent it serves,
+%% and the response inject_msg/5 puts back on the same stream is msg(From, Id,
+%% response(R)), whose From agent/4 hands to handle_response/6.  AgentMsg's
+%% msg(agent, person, ...) names roles only.
 AgentMsg ::= msg(Constant, Constant, AgentContent).   %% agent -> mediator
-UserMsg  ::= msg(Constant, Constant, UserContent).    %% mediator -> agent
+UserMsg  ::= msg(Key, Key, UserContent).              %% mediator -> agent
 
 %% The actor's two streams.  Here rather than in typed_actors.glp because a
 %% caller in another module has to be able to NAME them: an actor declared

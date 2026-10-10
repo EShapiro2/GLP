@@ -14,10 +14,11 @@
 %%
 %% pdrop has a COVERAGE GAP: no clause for the empty stream [].  The abstract-route
 %% check runs contravariance against Stream<$abstract_X>? and finds [] uncovered,
-%% so the file is REJECTED — even though pdrop is never instantiated.  This is the
-%% paper-backed consequence (Decision 1) of folding coverage into
-%% def:parametrically-well-typed: a clean parametric procedure is certified once at
-%% its abstract instance, gap and all.
+%% so pdrop is not parametrically well-typed and is left to be checked per
+%% instantiation.  No call instantiates it, so the file is REJECTED: "Where a
+%% program contains a parameterised procedure that no call in it instantiates and
+%% that is not parametrically well-typed, compilation rejects the program"
+%% (sec:abstract-parameters).  The refusal quotes the abstract instance's error.
 %%
 %% Contrast with the previous semantics, under which a free-parameter procedure was
 %% "not a program" and went unchecked (the old positive behaviour this file once
@@ -28,5 +29,5 @@
 %% Run (from /Users/udi/Grassroots/GLP/glp_runtime/):
 %%   printf 'load ../programs/tests/param_free_not_checked.glp\n:quit\n' | bin/glpc
 
-procedure pdrop(Stream(X)?).
+procedure(X) pdrop(Stream(X)?).
 pdrop([_|Xs]) :- pdrop(Xs?).

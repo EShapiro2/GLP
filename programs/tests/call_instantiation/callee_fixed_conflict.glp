@@ -1,0 +1,17 @@
+%% The site's type and the type the callee's clauses fix, and neither serves:
+%% N supplies M = Constant, under which put/3's head pair (X, X?) is not dual;
+%% put/3's clauses fix M = Msg, under which N's Constant is not within the
+%% Msg? the call reads.  The bindings conflict and the call is refused (TGLP
+%% appendix-implementation-notes.tex, "The instantiation of a call", cc4a891:
+%% "where types are supplied or fixed and none serves, the bindings conflict
+%% and the call is refused").  Until 2026-10-02 the call was instantiated at
+%% M = Constant, and put/3's clause was refused at that instantiation.
+Msg  ::= m(Constant).
+Kind ::= a ; b.
+
+procedure(M, K) put(M?, K?, Stream(Msg)).
+put(X, a, [X?]).
+put(X, b, [X?]).
+
+procedure go(Constant?, Kind?, Stream(Msg)).
+go(N, K, Out?) :- put(N?, K?, Out).

@@ -5,13 +5,10 @@
 /// verify that the runtime handles such terms gracefully:
 /// - ground/1 guard terminates and correctly identifies ground circular terms
 /// - =?= equality terminates and correctly compares circular terms
-/// - copy_term/2 preserves cyclic structure in copies
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/terms.dart';
-import 'package:glp_runtime/runtime/system_predicates.dart';
-import 'package:glp_runtime/runtime/system_predicates_impl.dart';
 
 void main() {
   group('Circular Term Handling', () {
@@ -107,74 +104,6 @@ void main() {
 
         // Different functors - should be detected as not equal
         expect(xValue.functor, isNot(equals(yValue.functor)));
-      });
-    });
-
-    group('Deep Copy with Circular Terms', () {
-      test('copy of circular term preserves structure', () {
-        // Create: X = f(a, X)
-        final (xWriter, xReader) = rt.heap.allocateVariable();
-        final circularStruct = StructTerm('f', [
-          ConstTerm('a'),
-          VarRef(xReader),
-        ]);
-        rt.heap.bindVariable(xWriter, circularStruct);
-
-        // Create a writer for the copy result
-        final (copyWriter, _) = rt.heap.allocateVariable();
-
-        // Set up the system call
-        final call = SystemCall('copy_term', [
-          VarRef(xReader),  // Original (reader)
-          VarRef(copyWriter),  // Copy (writer)
-        ]);
-
-        // Execute copy_term
-        final result = copyTermPredicate(rt, call);
-
-        // Copy should succeed
-        expect(result, equals(SystemResult.success));
-
-        // Copy should be bound
-        expect(rt.heap.isWriterBound(copyWriter), isTrue);
-
-        // Copy should be a StructTerm with same functor
-        final copyValue = rt.heap.getValue(copyWriter);
-        expect(copyValue, isA<StructTerm>());
-        final copyStruct = copyValue as StructTerm;
-        expect(copyStruct.functor, equals('f'));
-        expect(copyStruct.args.length, equals(2));
-        expect(copyStruct.args[0], isA<ConstTerm>());
-        expect((copyStruct.args[0] as ConstTerm).value, equals('a'));
-      });
-
-      test('copy of acyclic term creates independent copy', () {
-        // Create: X = f(a, b)
-        final (xWriter, xReader) = rt.heap.allocateVariable();
-        final struct = StructTerm('f', [ConstTerm('a'), ConstTerm('b')]);
-        rt.heap.bindVariable(xWriter, struct);
-
-        // Create a writer for the copy result
-        final (copyWriter, _) = rt.heap.allocateVariable();
-
-        // Set up the system call
-        final call = SystemCall('copy_term', [
-          VarRef(xReader),  // Reader
-          VarRef(copyWriter),  // Writer
-        ]);
-
-        // Execute copy_term
-        final result = copyTermPredicate(rt, call);
-        expect(result, equals(SystemResult.success));
-
-        // Copy should be a new StructTerm (not identical object)
-        final copyValue = rt.heap.getValue(copyWriter);
-        expect(copyValue, isA<StructTerm>());
-
-        // Verify structure is correct
-        final copyStruct = copyValue as StructTerm;
-        expect(copyStruct.functor, equals('f'));
-        expect(copyStruct.args.length, equals(2));
       });
     });
 

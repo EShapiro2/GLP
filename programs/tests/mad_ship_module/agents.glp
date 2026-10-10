@@ -1,10 +1,15 @@
 %% mad_ship_module/agents.glp — the two agents of ../mad_ship_module_boot.glp.
 
-%% alice ships her module value to bob.
+%% alice reads the certified mini-app beside her program, the artefact
+%% :artefact wrote of ../mad_ship_hello, and ships its module value to bob.
 exported procedure alice_init(_?, _?).
 alice_init(_, _) :-
-    self_module(M),
-    send_to_net([msg(bob, ship(M?))]).
+    load_file("mad_ship_hello.glpw", C),
+    ship(C?).
+
+procedure ship(Content?).
+ship(M) :- module(M?) | send_to_net([msg(bob, ship(M?))]).
+ship(S) :- string(S?) | send_to_user([not_a_module]).
 
 %% bob activates the shipped module under the type identity of hello/1 as
 %% declared in his own scope, and reports what the activated goal produced.
@@ -18,6 +23,7 @@ bob_init(_, [msg(_, ship(M)) | _]) :-
 procedure report(Stream(Constant)?).
 report(Z) :- ground(Z?) | send_to_user([ran(Z?)]).
 
-%% The entry point a shipped copy is activated on.
-exported procedure hello(Stream(Constant)).
-hello([done]).
+%% Declared so that find_type/2 has hello/1's identity in bob's scope; never
+%% run.  The mini-app's own hello/1 gives [done], this one [].
+procedure hello(Stream(Constant)).
+hello([]).

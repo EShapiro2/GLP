@@ -17,18 +17,23 @@ import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/ast.dart';
 import 'package:glp_runtime/compiler/primitive_layer.dart';
 import 'package:glp_runtime/compiler/error.dart' show CompileError;
+import 'package:glp_runtime/bytecode/opcodes.dart' show Op;
 import 'package:glp_runtime/bytecode/runner.dart';
 import 'package:glp_runtime/engine_v2/interp.dart';
 import 'package:glp_runtime/engine_v2/module_kernels.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
-import 'package:glp_runtime/runtime/system_predicates_impl.dart';
+import 'package:glp_runtime/runtime/external_io.dart' show InputInjector;
 import 'package:glp_runtime/runtime/terms.dart' as rt;
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 import 'package:glp_runtime/compiler/partial_evaluator.dart';
 import 'package:glp_runtime/analysis/type_checker/type_checker.dart';
+import 'package:glp_runtime/analysis/type_checker/param_expansion.dart'
+    show UndefinedDeclarationTypeError;
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
-import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart';
+import 'package:glp_runtime/analysis/type_checker/root_scope.dart'
+    show rootRenamed;
 import 'package:glp_runtime/analysis/type_checker/program_dfa.dart' as tdfa;
 import 'package:glp_runtime/analysis/type_checker/well_typed_clause.dart' as wtc;
 import 'package:glp_runtime/runtime/module_hierarchy.dart';
@@ -46,15 +51,7 @@ import 'package:glp_runtime/analysis/type_checker/type_identity.dart'
     show TypeIdentityTables;
 import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 import 'package:glp_runtime/compiler/certification.dart'
-    show privilegedRootNames, privilegedCalls;
-import 'package:glp_runtime/bytecode/opcodes.dart' show SpawnRated;
-import 'package:glp_runtime/sglp/simulation.dart' show SimState;
-import 'package:glp_runtime/sglp/population.dart'
-    show Population, PopulationModule, checkPopulation, declaresPopulation,
-        populationOf;
-import 'package:glp_runtime/sglp/draws.dart' show rootLineage;
-import 'package:glp_runtime/sglp/log.dart' show SimLog;
-import 'package:glp_runtime/sglp/person.dart' show registerSglpKernels;
+    show privilegedRootSeed, privilegedCalls;
 
 /// Result of running a goal
 class ExecutionResult {
@@ -77,11 +74,70 @@ class ExecutionResult {
   bool get capped => status == ExecutionStatus.capped;
 }
 
+/// A goal posted to the engine ([GlpEngine.postGoal]): checked, its terms on
+/// the heap, and put on the machine's queue --- not yet run.
+class PostedGoal {
+  /// The scheduler over the code image the goal was posted on, which runs the
+  /// goal and every goal it spawns.
+  final Scheduler scheduler;
+
+  /// The input streams the caller holds, by the name of their variable in the
+  /// goal: the goal holds the variable's reader and the caller its writer,
+  /// through which the caller extends the stream ([InputInjector.inject]) or
+  /// closes it ([InputInjector.close]).  The goals an injection wakes are the
+  /// caller's to enqueue and run.
+  final Map<String, InputInjector> inputs;
+
+  /// The writer of each variable of the goal, by name, where the run's outcome
+  /// is read (GLP-Spec glp.tex, Definition "cGLP Proper Run, Outcome").
+  final Map<String, HeapCell> variables;
+
+  PostedGoal._(this.scheduler, this.inputs, this.variables);
+}
+
+/// The text of the constant [name] in a goal posted to the engine, read back
+/// as that constant (GLP-Spec Definition "Logic Programs Syntax": the text
+/// denotes the term): a name that unquoted would read as an atom stands as it
+/// is, and any other --- one that would read as a variable, a number, an
+/// operator or a keyword --- in single quotes, its quote and backslash
+/// escaped.  For the hosts, which post their entry goal with the agent's id
+/// and the constants of its spawn directive ([GlpEngine.postGoal]).
+String glpConstantText(String name) {
+  if (RegExp(r'^[a-z][a-zA-Z0-9_]*$').hasMatch(name) &&
+      name != 'mod' &&
+      name != 'procedure') {
+    return name;
+  }
+  return "'${name.replaceAll(r'\', r'\\').replaceAll("'", r"\'")}'";
+}
+
+/// A goal the engine refuses to post ([GlpEngine.postGoal]), the refusal its
+/// text: a goal that does not parse as a clause body or is not well-typed as
+/// one, that calls no entry point of a loaded unit and no procedure of the
+/// root, or that names an input it does not hold the reader of.
+class GoalRefused implements Exception {
+  final String message;
+  GoalRefused(this.message);
+
+  @override
+  String toString() => message;
+}
+
+/// The entry points of a unit the engine holds ([GlpEngine.scopeFor]): their
+/// keys, "name/arity", and the scope they were declared in, built when a
+/// source is first handed over and kept.
+class _UnitEntryPoints {
+  final Set<String> keys;
+  final TypeEnvironment Function() _declaringScope;
+  late final TypeEnvironment declaringScope = _declaringScope();
+
+  _UnitEntryPoints(this.keys, this._declaringScope);
+}
+
 /// Module info for tracking loaded modules
 class ModuleInfo {
   final String name;
   final BytecodeProgram program;
-  final List<String> imports;
   final bool hasExports;
   final Set<String> exportedLabels;  // e.g., {'append/3', 'member/2'}
 
@@ -90,46 +146,8 @@ class ModuleInfo {
   /// Only explicitly declared modules have export-boundary filtering.
   final bool isTopLevel;
 
-  ModuleInfo({required this.name, required this.program, required this.imports, required this.hasExports, this.exportedLabels = const {}, this.isTopLevel = false});
+  ModuleInfo({required this.name, required this.program, required this.hasExports, this.exportedLabels = const {}, this.isTopLevel = false});
 }
-
-/// madGLP system predicates (embedded).
-///
-/// Provides send_to_net/1, send_to_remote/2, global_send/3, authorise_link/2,
-/// send_to_user/1.
-/// Loaded by enableMadGLP().
-const String _madPredicatesSource = r'''
--mode(system).  %% Uses reserved constants like '_w' and '_send'
-
-%% madGLP System Predicates
-%% See: madGLP-spec.md Section 4 and Section 12
-
-%% send_to_net/1 - Process network output stream
-procedure send_to_net(Stream(_)?).
-send_to_net([msg(Q, T) | In]) :- ground(Q?) | global_send(msg(Q?, T?), '_w'(Q?, 0), Q?), send_to_net(In?).
-send_to_net([]).
-
-%% send_to_remote/2 - Globalize any output stream to a specific remote agent
-%% Used for parent-child streams that cross isolate boundaries.
-procedure send_to_remote(Constant?, Stream(_)?).
-send_to_remote(Agent, [Msg | In]) :- ground(Agent?), ground(Msg?) | global_send(Msg?, '_w'(Agent?, 0), Agent?), send_to_remote(Agent?, In?).
-send_to_remote(_, []).
-
-%% global_send/3 - Send via global link
-procedure global_send(_?, _?, _?).
-global_send(T, G, Q) :- known(T?) | '_send'(T?, G?, Q?).
-
-%% send_to_user/1 is defined in the root self.glp (always loaded), so it is not
-%% repeated here.  sign/2 and authorise_link/2 are likewise defined there, under
-%% the ATTESTATION AND HELD LINKS heading, and are no longer repeated here: the
-%% copies that stood here were a stale duplicate of the root definitions.  Both
-%% kernels abort outside madGLP mode, so a call to sign/2 with madGLP disabled is
-%% a runtime abort naming madGLP mode rather than a compile-time undefined
-%% procedure.
-
-%% valid_attestation/4 is a guard, not a wrapped body kernel — it is built into
-%% the runtime guard machinery (seam spec §4 rework note); no GLP wrapper here.
-''';
 
 /// GLP Engine - the embeddable core for running GLP programs
 class GlpEngine {
@@ -150,14 +168,11 @@ class GlpEngine {
   final Map<String, BytecodeProgram> _loadedPrograms = {};
   final Map<String, ModuleInfo> _loadedModules = {};
 
-  /// Cumulative type environment for checking REPL goals against the body part
-  /// of Definition def:well-typed-clause (TGLP glp-semantics: a goal is
-  /// well-typed iff well-typed as a body). Lazily seeded with the root scope +
-  /// root self.glp, then extended with every loaded module/program. A goal is
-  /// checked against this env before it runs; see [_checkGoalWellTyped].
-  TypeEnvironment? _goalCheckEnv;
-
-  int _goalId = 1;
+  /// The entry points of each unit the engine holds, by the name it was
+  /// loaded under, with the scope they were declared in: what a source handed
+  /// over to the engine sees of the units it holds ([scope], [scopeFor]), and
+  /// what a goal posted to it is checked against ([_checkGoalWellTyped]).
+  final Map<String, _UnitEntryPoints> _unitEntryPoints = {};
 
   /// Max execution cycles (default 10000)
   int maxCycles = 10000;
@@ -168,51 +183,12 @@ class GlpEngine {
   /// Enable debug output
   bool debugOutput = false;
 
-  /// When true, type errors abort program loading (default: true)
-  bool strictTypes = true;
-
-  // ------------------------------------------------------------------ sGLP
-  // (svGLP, sections/sglp.tex).  A goal posted to a program with a rated goal
-  // or a run declaration starts an sGLP run: the engine installs a fresh
-  // [SimState] --- clock 0, no pending goal, the run's seed --- on the runtime
-  // before the goal is put to the machine, and the scheduler releases pending
-  // goals at quiescence.  A program with neither runs exactly as before.
-
-  /// A loaded program spawns a rated goal somewhere.
-  bool _hasRatedGoals = false;
-
-  /// The run declaration of the loaded program, checked; null if none.
-  Population? _population;
-  Population? get population => _population;
-
-  /// The seed of an sGLP run whose program declares no run.  A run
-  /// declaration's seed takes its place.
-  int simulationSeed = 0;
-
-  /// Called with each sGLP run's state as it is installed, before its goal
-  /// is put to the machine --- where a harness sets a bound on its Releases
-  /// or listens to them.
-  void Function(SimState)? onSimulationStart;
-
-  /// Where an sGLP run of a program with a run declaration writes its log
-  /// (svGLP, sections/sglp.tex, Definition "Interface Variable, Log"): each
-  /// entry, one line without its line end, in the order of the run
-  /// (lib/sglp/log.dart gives the format).  Null: no log is kept, and no
-  /// interface variable is tracked.
-  void Function(String line)? onSimulationLog;
-
-  /// The state of the current, or last, sGLP run: its clock is the simulated
-  /// time.  Null if no goal has started one.
-  SimState? get simulation => _runtime.sim;
-
-  /// The simulated time of the current, or last, sGLP run.
-  double? get simulatedTime => _runtime.sim?.clock;
-
-  /// True if a goal posted now starts an sGLP run.
-  bool get isSimulation => _hasRatedGoals || _population != null;
-
   /// Path to the root self.glp (programs/self.glp) for the type scope chain.
   late final String _rootSelfGlpPath;
+
+  /// The root: the directory of the root self.glp, which every module is
+  /// named from (TGLP modules.tex, Compilation, third step; [modulePathName]).
+  String get _rootDir => File(_rootSelfGlpPath).parent.absolute.path;
 
   /// For madGLP: the MadContext for this engine
   MadContext? madContext;
@@ -224,12 +200,6 @@ class GlpEngine {
   /// also installs it on the agent's networking layer; generated fresh
   /// otherwise (glpc, the suite), where the paper names no key.
   PersonIdentity get identity => _runtime.identity!;
-
-  /// The privileged names of the root scope — the kernels and predicates that
-  /// reach the network or the person, and every root-scope procedure from
-  /// which one is reachable — computed once from the root self.glp and the
-  /// madGLP system predicates (compiler/certification.dart).
-  late final Set<String> _privilegedRootNames;
 
   /// Access to the runtime (for madGLP integration)
   GlpRuntime get runtime => _runtime;
@@ -250,76 +220,73 @@ class GlpEngine {
     _rootSelfGlpPath = rootSelfGlpPath;
     _runtime.identity = identity ?? PersonIdentity.generate();
 
-    // Set root scope sources from programs/self.glp for PE and type checker
-    final rootSelfFile = File(_rootSelfGlpPath);
-    final rootSources = <String>[_madPredicatesSource];
-    if (rootSelfFile.existsSync()) {
-      final rootSource = rootSelfFile.readAsStringSync();
-      setRootScopeUnitClauseSource(rootSource);
-      setRootScopeEnvironmentSource(rootSource);
-      rootSources.add(rootSource);
-    }
-    _privilegedRootNames = privilegedRootNames(rootSources);
-
-    registerStandardPredicates(_runtime.systemPredicates);
+    // Nothing is set for the process: every check, partial evaluation and
+    // compilation below is given its scope (module_hierarchy.dart,
+    // buildAncestorScope), the root self.glp its first layer.  Until
+    // 2026-10-04 the root's text was set here into two process-wide sources,
+    // the partial evaluator's and the type checker's, which every engine of
+    // the process then shared.
     registerModuleKernels(_runtime);
-    registerSglpKernels(_runtime);
     _loadRootSelf();
   }
+
+  /// The scope a module directly under the root is checked in, `Π ⊔ d_1`
+  /// (module_hierarchy.dart, [rootScope]): a file-less source's, given no
+  /// other, and the one every scope the engine builds is built over, so the
+  /// root's layer is one and its procedures are certified once per engine.
+  late final TypeEnvironment _rootScope = rootScope(_rootSelfGlpPath);
 
   /// Clear all loaded programs except root self.glp.
   ///
   /// Useful for test scripts that need to reset state between tests
   /// without restarting the REPL process.
   void clear() {
-    // Remember root self.glp program
-    BytecodeProgram? rootSelf = _loadedPrograms['__root_self__'];
-
-    // Clear everything
+    // Clear everything but the root, linked once at construction.
     _loadedPrograms.clear();
     _loadedModules.clear();
-    _hasRatedGoals = false;
-    _population = null;
-    // Re-seed lazily to root scope + root self.glp on next goal check.
-    _goalCheckEnv = null;
-
-    // Restore root self.glp
-    if (rootSelf != null) {
-      _loadedPrograms['__root_self__'] = rootSelf;
-    }
+    _unitEntryPoints.clear();
   }
 
-  /// Load root self.glp (private — called by constructor).
+  /// The root self.glp linked as a program of its own and compiled
+  /// ([checkedRootProgram]): its procedures under the names the renaming
+  /// gives them, `:p` (TGLP modules.tex, Compilation, third step), every one
+  /// kept.  A goal posted to the engine is a module at the root, linked with
+  /// the root self.glp (GLP #3 Cowork, 2026-10-03 21:18 UTC, "16:11"), and a
+  /// call of it that no loaded program's entry point answers resolves here
+  /// ([_goalLabel]).  It is no load: every program carries the root
+  /// procedures it reaches in its own compiled module.
+  late final BytecodeProgram _rootCode;
+
+  /// Link, check and compile the root self.glp (private — called by
+  /// constructor).
   ///
-  /// A failure here is fatal and is raised as one. Every program in the tree
-  /// resolves its predefined types and procedures through the root self.glp, so
-  /// an engine whose root scope failed to compile fails every subsequent load
-  /// for reasons that name nothing: the root scope comes back with no labels —
-  /// no merge, no sign — and no diagnostic anywhere. This was swallowed until
-  /// 2026-08-01, which made a broken root self.glp the least diagnosable failure
-  /// in the system.
+  /// A failure here is fatal and is raised as one, naming the root's file and
+  /// line: the root self.glp is checked in step 2 like any module (TGLP
+  /// modules.tex, Compilation, second step), against the language primitives,
+  /// and a root that does not check is refused.  Until 2026-10-04 it was
+  /// compiled here unchecked, and a type error in it loaded and ran
+  /// (programs/tests/root_check/univ_typing_root.glp); until 2026-08-01 a
+  /// failure to compile it was swallowed.  The `__root__` runner registered
+  /// here until 2026-10-04 goes: an activated module carries the root
+  /// procedures it reaches in its own artefact.
   void _loadRootSelf() {
-    final file = File(_rootSelfGlpPath);
-    if (!file.existsSync()) return;
-    final source = file.readAsStringSync();
-    final GlpCompiler compiler = GlpCompiler();
-    final BytecodeProgram prog;
+    final root = rootModuleOf(_rootSelfGlpPath);
+    if (root == null) {
+      _rootCode = BytecodeProgram(const []);
+      return;
+    }
     try {
-      prog = compiler.compile(source);
+      final linked = checkedRootProgram(root);
+      _rootCode = GlpCompiler().compileProgram(linked.program,
+          procDeclarations: linked.procDeclarations,
+          typeEnv: linked.checkedEnv);
     } catch (e) {
       throw StateError(
-          'root self.glp failed to compile: $_rootSelfGlpPath\n  $e\n'
-          'Loading the root self.glp is not optional — it is part of engine '
-          'initialization, and every program depends on the scope it defines.');
+          'root self.glp does not check and compile: $_rootSelfGlpPath\n  $e\n'
+          'The root self.glp is the first link of every program\'s chain and '
+          'is checked with every program, and every goal posted to the engine '
+          'is linked with it.');
     }
-    _loadedPrograms['__root_self__'] = prog;
-    // The root runner: the root self.glp's procedures as a runner of their
-    // own, which an activated module's goals reach for a body call to a
-    // root-scope procedure --- merge/3, send/3 --- absent from its artefact
-    // (engine_v2/interp.dart, _spawnInRoot). A REPL goal still runs on the
-    // combined program, where the root is the fallback in one image.
-    _runtime.runners['__root__'] =
-        ByteRunner(codeImageFromProgram(prog, moduleName: '__root__'));
   }
 
   /// Load a GLP file from path
@@ -340,7 +307,29 @@ class GlpEngine {
   ///
   /// Returns true if successful.
   /// Throws on parse/compile errors.
-  bool loadSource(String source, {String? filename}) {
+  ///
+  /// With [scope], the module is type-checked in that scope instead of the
+  /// ancestor self.glp chain of [filename]. This is the boot-source case
+  /// (IGLP, Implementation Notes, "The scope a boot source is checked in"): a
+  /// boot source is loaded on top of a program already in the engine, so it is
+  /// checked in the scope the engine holds when it is handed over --- "the
+  /// linked program's entry points and the boot file's ancestor chain of
+  /// self.glp declarations, the root among them" (8aafd09) --- which the
+  /// loaders obtain from [scope] and [scopeFor]. A check that sees the
+  /// ancestor chain alone refuses calls the engine resolves, the linked
+  /// program's exports among them; and under a
+  /// synthetic name there is no chain at all, so until 2026-09-18 a boot source
+  /// was checked in the bare root scope and `send_to_net/1`, then loaded by
+  /// [enableMadGLP], was undefined in it.  It is the root self.glp's since
+  /// 2026-10-04 (GLP-Spec appendix-guards, "Output to the network").
+  /// [scope] decides what the source is checked against.  A source with a
+  /// real file behind it is linked as a single-module program with its
+  /// ancestors; one with none is a module at the root, linked with the root
+  /// self.glp as a one-module program, reaching a program the engine holds
+  /// only through its entry points (GLP #3 Cowork, 2026-10-03 21:18 UTC,
+  /// "16:11").  Either way the object compiled is the linked program, and it
+  /// is the object checked.
+  bool loadSource(String source, {String? filename, TypeEnvironment? scope}) {
     final name = filename ?? '_source_';
 
     // Parse to get Module AST for type checking
@@ -361,32 +350,29 @@ class GlpEngine {
     // self.glp's internal call to a same-named procedure. Every procedure of the
     // module is an entry point (§Static Linking), reached by an unqualified
     // alias that shadows the root self.glp for a posted goal (see
-    // combinedProgram). There is no dynamic-dispatch activation (path retired).
+    // combinedProgram).
     //
-    // The two internal sources — the madGLP prelude and the root self.glp — are
-    // loaded by name rather than from the program hierarchy and cross-call
-    // nothing, so the program test below does not apply to them.
-    final isInternal =
-        name == '__mad_predicates__' || name == '__root_self__';
-    final isRealFile =
-        !isInternal && name != '_source_' && File(name).existsSync();
-    final selfContained = isInternal || _isSelfContained(module);
+    // There is no internal source: the root self.glp is linked once at
+    // construction ([_rootCode]) and with every program, and the engine's
+    // embedded madGLP source is gone, its send_to_net/1 and global_send/3
+    // being the root self.glp's.
+    final isRealFile = name != '_source_' && File(name).existsSync();
+    final selfContained = _isSelfContained(module);
 
     // A source that is not self-contained is not a program at all: def:program
     // (modules.tex) admits a self-contained module or a directory with a
     // self.glp, and a loose source carrying an unresolved M#p is neither. Reject
-    // it here rather than let it fall through to the direct compile path below,
-    // which is what remains of the retired dynamic-dispatch path: that path
-    // emits the retired Distribute instruction and the load appears to succeed,
-    // failing only at run time as "WireFormatException: instruction not in the
-    // wire ISA: Distribute". Composing several modules is by directory program;
-    // composing several apps is by module values posted with run/2.
+    // it here, naming the cause and the remedy, rather than let it fall through
+    // to the direct compile path below, whose code generator refuses an
+    // unresolved M#p without either. Composing several modules is by directory
+    // program; composing several apps is by module values posted with run/2.
     //
-    // The test covers source text as well as a real file: the per-isolate
-    // loaders (multiagent/agent_runtime.dart, multiagent/isolate_manager.dart)
-    // hand boot sources to `loadSource` under a synthetic name, and a `#` call
-    // in one reached the run-time WireFormatException by exactly the route this
-    // rejection was written to close.
+    // The test covers source text as well as a real file: the multi-isolate
+    // loader (multiagent/isolate_manager.dart) hands a boot source to
+    // `loadSource` under a synthetic name --- as multiagent/agent_runtime.dart
+    // did until it came to load one program and no boot source beside it ---
+    // and a `#` call in one reached the run-time WireFormatException by exactly
+    // the route this rejection was written to close.
     if (!selfContained) {
       throw CompileError(
         "'$name' is not a program: it ${_notSelfContainedCause(module)}. By "
@@ -400,105 +386,274 @@ class GlpEngine {
       );
     }
 
-    // Ancestor self.glp chain per modules.tex §Scope construction, anchored at
-    // the hierarchy root (programs/) — the same discoverSelfChain bound as the
-    // linker and directory loads. Reused below for the goal-check environment.
-    List<String> chain = const [];
+    List<DiscoveredModule>? discovered;
     if (isRealFile) {
-      chain = discoverSelfChain(
-          targetFile: name,
-          rootDir: File(name).parent.path,
-          programsDir: File(_rootSelfGlpPath).parent.absolute.path);
+      // The module as the linker discovers it: its ancestor scope with the
+      // `-expose`d modules of the directories on its chain merged in
+      // (modules.tex, "The -expose directive": an exposed module's exported
+      // procedures are in the directory's scope as if defined in its self.glp).
+      // The check below and the linker further down share this one discovery,
+      // which refuses a file outside the root first ([requireUnderRoot]).
+      discovered = discoverSingleModule(name,
+          rootSelfGlpPath: _rootSelfGlpPath, rootScope: _rootScope);
     }
-    TypeEnvironment? ancestorScope;
-    if (chain.isNotEmpty) {
-      ancestorScope =
-          buildAncestorScope(chain: chain, rootSelfGlpPath: _rootSelfGlpPath);
+    TypeEnvironment? ancestorScope = scope;
+    if (ancestorScope == null && discovered == null) {
+      // A source with no file behind it and no scope given is checked
+      // directly under the root, `Π ⊔ d_1`.
+      ancestorScope = _rootScope.copy();
     }
-    // sGLP: a module that declares a population imports sGLP's system module
-    // (person/2), as the linker gives it to a program that does
-    // (program_linker.dart, _addSglpSystemModule).
-    if (module.kinds.isNotEmpty || module.runDecl != null) {
-      ancestorScope = withSglpSystemScope(
-          ancestorScope ?? buildRootScopeEnvironment(),
-          File(_rootSelfGlpPath).parent.absolute.path);
+    if (ancestorScope == null && discovered != null) {
+      // Until 2026-09-18 this was buildAncestorScope(chain) — the self.glp
+      // chain alone, without the exposes — so a module calling a procedure its
+      // directory's self.glp exposes (agent/4 of programs/tests/agent_roundtrip,
+      // and send_to_net/1 of system/mad_predicates while the root exposed it)
+      // was refused as undefined by the check while the linker resolved it.
+      ancestorScope = discovered
+          .firstWhere((m) => m.filePath == name, orElse: () => discovered!.first)
+          .ancestorScope;
     }
 
-    // Type check if program has procedure declarations. (Single-file/REPL
-    // semantics: a parametric procedure inspecting its parameter with no
-    // instantiation is rejected — checkModule's default.)
-    if (module.procDeclarations.isNotEmpty) {
+    // Type check, every source: a module with no procedure declarations is
+    // checked like any other, and a clause of it then defines a procedure with
+    // no declaration, which is an error (TGLP Definition "Typed GLP Program",
+    // condition 1).  Until 2026-10-02 such a module was compiled and run with
+    // no check.  (Single-file/REPL semantics: a parametric procedure inspecting
+    // its parameter with no instantiation is rejected — checkModule's default.)
+    {
       final ast = Program(module.procedures, module.line, module.column);
       final partialEvaluator = PartialEvaluator();
-      final transformedAst = partialEvaluator.transformDefinedGuards(ast);
+      final transformedAst =
+          partialEvaluator.transformDefinedGuards(ast, scope: ancestorScope);
 
-      final typeResult = checkModule(module,
-          transformedProcedures: transformedAst.procedures,
-          ancestorScope: ancestorScope);
+      final TypeCheckResult typeResult;
+      try {
+        typeResult = checkModule(module,
+            transformedProcedures: transformedAst.procedures,
+            ancestorScope: ancestorScope);
+      } on UndefinedDeclarationTypeError catch (e) {
+        // An undefined type name in a declaration of this source (Moded-Types,
+        // "Declaration parameters"), named with its file.
+        throw e.inFile(name);
+      }
       if (!typeResult.isWellTyped) {
-        final errors = typeResult.errors.map((e) => '  ${e.message} at line ${e.line}').join('\n');
-        if (strictTypes) {
-          throw Exception('Type checking failed:\n$errors');
-        }
-        // Non-strict mode: print warning and continue
-        print('[TYPE WARNING] Type errors found:\n$errors');
+        final errors = typeResult.errors
+            .map((e) => '  ${e.message} at line ${e.line}')
+            .join('\n');
+        // The object typechecked is the object compiled, and no diagnostic on a
+        // load path is a warning: a program that does not check does not run.
+        // This branch printed '[TYPE WARNING] Type errors found' and carried on
+        // whenever `strictTypes` was off, which is how the multi-isolate loaders
+        // (multiagent/isolate_manager.dart, multiagent/agent_runtime.dart) ran
+        // programs the checker had rejected. There is no flag now: the load
+        // fails here, naming the errors, and nothing runs.
+        throw CompileError(
+          'Type checking failed for \'$name\':\n$errors',
+          typeResult.errors.first.line,
+          typeResult.errors.first.column,
+          phase: 'typecheck',
+        );
       }
     }
-
-    // sGLP: the kinds and the run declaration, checked (svGLP, sections/
-    // sglp.tex, Definition "Dual, Person Procedure, ..., Population").
-    final population = _checkedPopulation(
-        [PopulationModule(_baseName(name), module)]);
 
     // Compile. A self-contained module on disk goes through the linker (step-3
     // renaming, singleModulePath marks the loaded module so all its procedures
     // are entry points) and compileProgram — the same compiler entry as a
     // directory program — running the global SRSW pass it has no separate
-    // per-module pass for. Source text has no file for the linker to discover,
-    // so it keeps the direct compile path, as do the internal sources.
+    // per-module pass for.  Source text with no file behind it is a module at
+    // the root, linked with the root self.glp as a one-module program, and
+    // compiled the same way (GLP #3 Cowork, 2026-10-03 21:18 UTC, "16:11";
+    // GLP's round six, item 4, "without linking" going with it): until
+    // 2026-10-04 it was compiled directly, unlinked, its calls to the root
+    // reaching the root's procedures by their bare names at run time.
     final BytecodeProgram program;
     rt.ModuleTerm? moduleValue;
     if (isRealFile) {
-      final modules =
-          discoverSingleModule(name, rootSelfGlpPath: _rootSelfGlpPath);
-      final linked =
-          linkProgram(modules,
-              rootDir: File(name).parent.path, singleModulePath: name);
+      final modules = discovered!;
+      // The object compiled is the LINKED program, and it is the object
+      // checked (TGLP modules.tex, Compilation: "The flat program is the
+      // linked program of def:program, and it is the object checked"):
+      // checkedLinkedProgram checks each module of the program against its
+      // scope and then the flat program, as on the directory path, and returns
+      // it only if it checks.  Until 2026-10-03 this path linked and compiled
+      // with no check of the linked program, and with none of a module the
+      // ancestors expose (GLP #3 Cowork, 2026-10-03 21:18 UTC, "16:01. 4").
+      // The scope its SRSW relaxations are decided in is the flat module's,
+      // not the single module's: the two name their types differently (step-3
+      // renaming).
+      final linked = checkedLinkedProgram(modules,
+          rootDir: File(name).parent.path, singleModulePath: name);
       program = _compiler.compileProgram(linked.program,
-          procDeclarations: linked.procDeclarations, skipGlobalSRSW: false);
+          procDeclarations: linked.procDeclarations,
+          typeEnv: linked.checkedEnv);
       // This unit's module value — its artefact: h(M) + code.
       moduleValue = _moduleValueOf(_baseName(name), program, linked, modules,
           directory: File(name).parent.absolute.path);
     } else {
-      program = _compiler.compile(source);
+      // The source and the root: the source checked in step 2 in the scope it
+      // is handed over in, the root against the primitives; the source's
+      // procedures kept by their names, its entry points; a call to an entry
+      // point of a program the engine holds left to that program, which
+      // stands between the root and the source in the scope (IGLP
+      // Implementation Notes, "The scope a boot source is checked in"); and
+      // the linked program checked over that scope, which declares them.
+      final root = rootModuleOf(_rootSelfGlpPath);
+      final modules = <DiscoveredModule>[
+        DiscoveredModule(
+          filePath: name,
+          moduleName: _fileLessModuleName(name),
+          ast: module,
+          ancestorScope: ancestorScope!,
+        ),
+        if (root != null) root,
+      ];
+      final linked = checkedLinkedProgram(modules,
+          rootDir: File(_rootSelfGlpPath).parent.path,
+          singleModulePath: name,
+          outerScope: ancestorScope,
+          outerEntryPoints: _entryPoints());
+      program = _compiler.compileProgram(linked.program,
+          procDeclarations: linked.procDeclarations,
+          typeEnv: linked.checkedEnv);
     }
+    _refuseRedefinitionByLaterLoad(name, program);
     _loadedPrograms[name] = program;
     if (moduleValue != null) {
       _loadedModuleValues[name] = moduleValue;
       _appModule = moduleValue;
     }
-    _noteSimulation(program, population);
 
     final moduleInfo = _extractModuleInfo(source, program, name);
     _loadedModules[moduleInfo.name] = moduleInfo;
 
-    // Goal-check environment per modules.tex §Scope construction — the chain
-    // is anchored at the hierarchy root (programs/), not at the file loaded
-    // for execution (§Implicit ancestor scoping): layer every self.glp on the
-    // path from programs/ down to the module's directory (the chain computed
-    // above), later shadowing earlier, before the module's own definitions.
-    if (isRealFile) {
-      var goalEnv = _ensureGoalCheckBaseEnv();
-      for (final selfGlpPath in chain) {
-        goalEnv = mergeSelfGlpFileIntoScope(goalEnv, selfGlpPath);
-      }
-      _goalCheckEnv = goalEnv;
-    }
-
-    // Make this module's declarations available to the REPL goal checker.
-    _extendGoalCheckEnv(module, label: moduleInfo.name);
+    // Its entry points, every procedure it defines, declared in the scope it
+    // was checked in ([scope]), which is what a goal posted to it is checked
+    // against ([_checkGoalWellTyped]).
+    final declaredIn = ancestorScope!;
+    _unitEntryPoints[name] = _UnitEntryPoints(_plainProcedures(program),
+        () => mergeModuleIntoScope(declaredIn, module, label: moduleInfo.name));
 
     return true;
+  }
+
+  /// A later load that defines a procedure an earlier load defines is an
+  /// error, not a definition the earlier one shadows: [combinedProgram] keeps
+  /// the first label of each name, so until 2026-10-02 the later load's
+  /// procedure of that name was never run and nothing said so.  A program is
+  /// one compiled module (TGLP modules.tex, Compilation), and a goal names its
+  /// procedure by the plain name an entry point carries, so it is the plain
+  /// names that clash; a renamed `M:p` is a module's own.  The root self.glp
+  /// is no earlier load --- every program may shadow it (TGLP
+  /// appendix-root-self.tex) --- and a load under the name of an earlier one
+  /// replaces it.
+  void _refuseRedefinitionByLaterLoad(String name, BytecodeProgram program) {
+    final mine = _plainProcedures(program);
+    for (final e in _loadedPrograms.entries) {
+      if (e.key == name) continue;
+      final clash = mine.intersection(_plainProcedures(e.value));
+      if (clash.isEmpty) continue;
+      throw CompileError(
+        "'$name' defines ${(clash.toList()..sort()).join(', ')}, which the "
+        "earlier load '${e.key}' defines: a later load of a same-named "
+        'procedure is an error, not shadowed by the earlier one',
+        0,
+        0,
+        phase: 'loader',
+      );
+    }
+  }
+
+  /// The procedures of [p] by their plain names, "name/arity": a loaded
+  /// unit's entry points, which a goal names (TGLP modules.tex, "Entry and the
+  /// absence of a boot module": "the procedures that may be posted are exactly
+  /// the entry points").  A renamed `M:p`, the root's `:p` among them, is a
+  /// module's own, and a clause's internal label is no procedure.
+  static Set<String> _plainProcedures(BytecodeProgram p) => {
+        for (final l in p.labels.keys)
+          if (l.contains('/') &&
+              !l.contains(':') &&
+              !l.endsWith('_end') &&
+              !_clauseLabel.hasMatch(l))
+            l
+      };
+
+  static final RegExp _clauseLabel = RegExp(r'_c\d+$');
+
+  /// The entry points of every unit the engine holds ([_plainProcedures]).
+  Set<String> _entryPoints() => {
+        for (final p in _loadedPrograms.values) ..._plainProcedures(p),
+      };
+
+  /// The label a goal's call to [functor]/[arity] runs at: an entry point of a
+  /// loaded unit, which a goal posted to it names by plain name (TGLP
+  /// modules.tex, "Entry and the absence of a boot module"), and otherwise the
+  /// root's procedure of that name, renamed under the empty path ([_rootCode]),
+  /// the goal being a module at the root, linked with the root self.glp (GLP
+  /// #3 Cowork, 2026-10-03 21:18 UTC, "16:11").  The loaded unit's entry point
+  /// stands nearer, as its declaration does in the goal-check environment
+  /// ([_checkGoalWellTyped]).  Null where neither has it.
+  String? _goalLabel(String functor, int arity) {
+    final plain = '$functor/$arity';
+    if (_entryPoints().contains(plain)) return plain;
+    final rooted = rootRenamed(plain);
+    if (_rootCode.labels.containsKey(rooted)) return rooted;
+    return null;
+  }
+
+  /// The name a file-less source is linked under: the name it was loaded
+  /// under, its extension dropped --- a module at the root, whose path from
+  /// the root is that name, never the root's own empty path.
+  String _fileLessModuleName(String name) {
+    final n = _moduleNameFromFilename(name);
+    return n.isEmpty ? '_source_' : n;
+  }
+
+  /// The scope a source with no file behind it is checked in when it is
+  /// handed over to the engine: a module at the root, its ancestor chain the
+  /// root self.glp alone, with the entry points of every unit the engine
+  /// holds ([scopeFor]).
+  TypeEnvironment get scope => _handOverScope(const []);
+
+  /// The scope a boot source loaded from [path] is checked in, on top of the
+  /// units the engine holds: "the linked program's entry points and the boot
+  /// file's ancestor chain of self.glp declarations, the root among them"
+  /// (IGLP, Implementation Notes, "The scope a boot source is checked in",
+  /// 8aafd09) --- the language primitives, the self.glp of each directory from
+  /// the root down to the boot file's, and each loaded unit's entry points
+  /// with the types their signatures carry, and no other declaration or type
+  /// of the units ([mergeEntryPointsIntoScope]).  So "a call to a procedure
+  /// the program does not export is refused by the check, which names the
+  /// call, and does not fail at run time", and a type no export carries is
+  /// undefined in it.  Until 2026-10-04 this was the goal-check environment
+  /// with the boot file's chain layered on it: the program's whole self.glp
+  /// chain and every module's declarations, so a boot source could call an
+  /// unexported procedure, pass the check, and fail at run time.
+  ///
+  /// A boot file outside the root is refused ([requireUnderRoot]): its
+  /// compilation is under the root as every compilation is, and its chain is
+  /// the one from the root down to its directory (TGLP modules.tex, "Scope
+  /// construction").
+  TypeEnvironment scopeFor(String path) {
+    requireUnderRoot(path, _rootDir);
+    return _handOverScope(discoverSelfChain(
+        targetFile: path,
+        rootDir: File(path).parent.path,
+        programsDir: File(_rootSelfGlpPath).parent.absolute.path));
+  }
+
+  /// The primitives and the root self.glp, the self.glp files of [chain] in
+  /// order, and the loaded units' entry points over them, a later unit's over
+  /// an earlier one's: a source handed over stands on the units the engine
+  /// holds, and a call of it that an entry point answers is left to that
+  /// unit (program_linker.dart, `outerEntryPoints`).
+  TypeEnvironment _handOverScope(List<String> chain) {
+    var env = buildAncestorScope(
+        chain: chain, rootSelfGlpPath: _rootSelfGlpPath, rootScope: _rootScope);
+    for (final e in _unitEntryPoints.entries) {
+      env = mergeEntryPointsIntoScope(env, e.value.declaringScope, e.value.keys,
+          label: e.key);
+    }
+    return env;
   }
 
   /// Load an entire program directory via static linking.
@@ -507,12 +662,16 @@ class GlpEngine {
   /// single flat program, and compiles it. The result is loaded as a single
   /// program accessible via `combinedProgram`.
   ///
-  /// [programDir] is the path to the program root directory. Entry-point
-  /// aliases are generated for the exported procedures of root-level modules
-  /// only (project-compilation spec §3.4).
+  /// [programDir] is the path to the program root directory, which carries a
+  /// self.glp or is refused (TGLP modules.tex, "Entry and the absence of a
+  /// boot module").  The entry points are the procedures that self.glp
+  /// exports, by definition or by forwarding, and an alias clause is
+  /// generated for each (Compilation, fifth step: "the exported procedures of
+  /// the program's self.glp ... These exports are the compiled module's entry
+  /// points").
   bool loadProgram(String programDir) {
     final modules = discoverProgram(programDir,
-        rootSelfGlpPath: _rootSelfGlpPath);
+        rootSelfGlpPath: _rootSelfGlpPath, rootScope: _rootScope);
     if (modules.isEmpty) {
       throw Exception('No modules found in $programDir');
     }
@@ -522,17 +681,13 @@ class GlpEngine {
     // returns it for compilation only if well-typed, else throws. There is no
     // other path to a compiled program.
     final linked = checkedLinkedProgram(modules, rootDir: programDir);
-    // sGLP: the kinds and the run declaration, checked across the program's
-    // modules, as a run declaration may name kinds another module declares.
-    final population = _checkedPopulation([
-      for (final m in modules) PopulationModule(m.moduleName, m.ast)
-    ]);
     final program = _compiler.compileProgram(
       linked.program,
       procDeclarations: linked.procDeclarations,
+      typeEnv: linked.checkedEnv,
     );
+    _refuseRedefinitionByLaterLoad('__program__', program);
     _loadedPrograms['__program__'] = program;
-    _noteSimulation(program, population);
 
     // The program's module value — its artefact (h(M) + code): the value
     // `self_module` returns and a friend adopts.
@@ -542,153 +697,65 @@ class GlpEngine {
     _loadedModuleValues['__program__'] = moduleValue;
     _appModule = moduleValue;
 
-    // Goal-check environment per modules.tex §Scope construction — the chain
-    // is anchored at the hierarchy root (programs/), not at the directory
-    // loaded for execution (§Implicit ancestor scoping). The base env carries
-    // the root scope + root self.glp; layer every self.glp on the path from
-    // programs/ down to the program root, later shadowing earlier — the same
-    // chain the linker uses — then the program's own modules (loop below).
-    var goalEnv = _ensureGoalCheckBaseEnv();
-    var programRoot = Directory(programDir).absolute.path;
-    while (programRoot.endsWith(Platform.pathSeparator)) {
-      programRoot = programRoot.substring(0, programRoot.length - 1);
-    }
-    for (final selfGlpPath in discoverSelfChain(
-        targetFile: '$programRoot${Platform.pathSeparator}self.glp',
-        rootDir: programRoot,
-        programsDir: File(_rootSelfGlpPath).parent.absolute.path)) {
-      goalEnv = mergeSelfGlpFileIntoScope(goalEnv, selfGlpPath);
-    }
-    _goalCheckEnv = goalEnv;
-
-    // Make the program's module declarations available to the REPL goal checker,
-    // IN SCOPE ORDER (modules.tex §Scope construction: root-first, later
-    // definitions shadowing earlier). Each merge expands the module's
-    // parameterised type references against what the environment holds SO FAR,
-    // so a module merged before the `self.glp` that defines a template it names
-    // loses that template and its declaration keeps an unresolved type. In
-    // discovery order — the directory walk's — that is what happened to every
-    // module in a subdirectory: `programs/social/spm/gsg/plays/play_befriend.glp:24`
-    // names `UserEvent(V, Q, A)` from `gsg/self.glp` one level up, and the
-    // program loaded but every goal posted to it failed the goal check with
-    // `UnknownTypeError: UserEvent`. Shallower directories first, and a
-    // directory's `self.glp` before its siblings, is the order §Scope
-    // construction specifies and the order the linker's ancestor chain uses.
-    final ordered = [...modules]..sort((a, b) {
-        int depth(DiscoveredModule m) =>
-            File(m.filePath).absolute.parent.path.split(Platform.pathSeparator).length;
-        final byDepth = depth(a).compareTo(depth(b));
-        if (byDepth != 0) return byDepth;
-        // Within one directory, self.glp is the scope and comes first.
-        if (a.isSelfGlp != b.isSelfGlp) return a.isSelfGlp ? -1 : 1;
-        return a.filePath.compareTo(b.filePath);
-      });
-    // A module of a DESCENDANT directory contributes its declarations but must
-    // not shadow the program root's types: a goal is posted to the program's
-    // entry points, so it is checked in the ROOT's scope (Currencies Code,
-    // 2026-09-03 — the same shadowing that stopped the linked program loading).
-    for (final m in ordered) {
-      _extendGoalCheckEnv(m.ast,
-          typesFillGapsOnly:
-              _normDir(File(m.filePath).parent.path) != _normDir(programRoot),
-          label: m.moduleName);
-    }
+    // Its entry points, the exports of its self.glp, declared in the scope
+    // that self.glp was checked in, its own definitions merged ([scope]):
+    // what a goal posted to the program is checked against, with the root
+    // ([_checkGoalWellTyped]).  Until 2026-10-07 a goal was checked in an
+    // environment of its own, the program's whole self.glp chain and every
+    // module's declarations layered over the root, so a goal calling a
+    // procedure the program does not export passed the check and was refused
+    // only when no entry point answered it.
+    final programRoot = _normDir(programDir);
+    final programSelf = modules.firstWhere((m) =>
+        m.isSelfGlp && _normDir(File(m.filePath).parent.path) == programRoot);
+    _unitEntryPoints['__program__'] = _UnitEntryPoints(
+        _plainProcedures(program),
+        () => mergeModuleIntoScope(programSelf.ancestorScope, programSelf.ast,
+            label: programSelf.moduleName));
 
     return true;
   }
 
-  /// The population [modules] declare, after the checks of its kinds and run
-  /// declaration; null where they declare none.  A failed check fails the
-  /// load, as a type error does.
-  Population? _checkedPopulation(List<PopulationModule> modules) {
-    if (!declaresPopulation(modules)) return null;
-    final errors = checkPopulation(modules);
-    if (errors.isNotEmpty) {
-      throw Exception('sGLP population check failed:\n'
-          '${errors.map((e) => '  $e').join('\n')}');
-    }
-    return populationOf(modules);
-  }
-
-  /// Record what a loaded program makes of a posted goal: an sGLP run if it
-  /// spawns a rated goal or declares a run.
-  void _noteSimulation(BytecodeProgram program, Population? population) {
-    if (program.ops.any((op) => op is SpawnRated)) _hasRatedGoals = true;
-    if (population != null) _population = population;
-  }
-
-  /// Start an sGLP run for a goal about to be posted, if the loaded program
-  /// makes one: a fresh clock and pending set, and the run's seed.
-  void _beginSimulation() {
-    if (!isSimulation) {
-      _runtime.sim = null;
-      _runtime.heap.onAssign = null;
-      return;
-    }
-    final pop = _population;
-    final sim = SimState(
-      seed: pop?.seed ?? simulationSeed,
-      horizon: pop?.untilSeconds,
-      population: pop,
-    );
-    // The log: of a run with a population, whose agents have interactive
-    // variables, where there is somewhere to write it.
-    final emit = onSimulationLog;
-    if (pop != null && emit != null) {
-      final log = SimLog(
-        heap: _runtime.heap,
-        emit: emit,
-        clock: () => sim.clock,
-      );
-      sim.log = log;
-      _runtime.heap.onAssign = log.onAssign;
-    } else {
-      _runtime.heap.onAssign = null;
-    }
-    _runtime.sim = sim;
-    onSimulationStart?.call(sim);
-  }
-
   /// Run a goal and return the result
   ///
-  /// [goalText] is the goal to run, e.g., "merge([1,2],[a,b],X)"
-  ///
-  /// [agents] places the goal's conjuncts at agents of an sGLP run (svGLP,
-  /// sections/sglp.tex, Definition "Simulation Program"): the loaded program
-  /// has a run declaration of N agents, [goalText] is a conjunction of as many
-  /// conjuncts as [agents] has entries, and the i-th conjunct is at agent
-  /// `agents[i]`, one of 1..N, or at no agent where it is null.  Every agent
-  /// 1..N has a conjunct: each agent's initial goal is placed at it, and every
-  /// goal a Reduce spawns is at its parent's agent.  A conjunct at no agent
-  /// --- the network, say --- is no agent's, and its reductions are not
-  /// logged.  The conjuncts share their variables, as any posted conjunction's
-  /// do.
-  Future<ExecutionResult> runGoal(String goalText, {List<int?>? agents}) async {
+  /// [goalText] is the goal to run, e.g., "merge([1,2],[a,b],X)".  It is
+  /// posted by [postGoal]'s path, checked there, and run here to quiescence or
+  /// the cycle limit; a refused goal runs nothing and its refusal is the
+  /// result's error.
+  Future<ExecutionResult> runGoal(String goalText) async {
     try {
-      // Parse the goal
-      var trimmed = goalText.trim();
-      if (trimmed.endsWith('.')) {
-        trimmed = trimmed.substring(0, trimmed.length - 1).trim();
+      final posted = _post(_goalText(goalText));
+
+      // One drain, to quiescence or the cycle limit, over the whole run.  Its
+      // status is the run's: failed if a goal of the run failed (Fail advances
+      // the queue and the run continues, dGLP/madGLP Reduce), capped if the
+      // limit stopped it with goals still queued, suspended if a goal of the
+      // run waits at quiescence, and succeeded otherwise.
+      final result = await posted.scheduler.drainAsyncWithStatus(
+        maxCycles: maxCycles,
+        debug: debugTrace,
+        showBindings: false,
+        debugOutput: debugOutput,
+        send: _sends,
+      );
+
+      // Collect bindings
+      final bindings = <String, rt.Term?>{};
+      for (final entry in posted.variables.entries) {
+        final varName = entry.key;
+        final writerId = entry.value;
+        if (_runtime.heap.isBound(writerId)) {
+          final varRef = rt.VarRef(writerId);
+          bindings[varName] = _runtime.heap.dereference(varRef);
+        } else {
+          bindings[varName] = null;
+        }
       }
 
-      // Reject an ill-typed goal before running it. Soundness of well-typing
-      // (TGLP glp-semantics, Theorem thm:soundness) holds for runs from a
-      // well-typed initial goal; a goal is well-typed iff well-typed as a body.
-      final typeError = _checkGoalWellTyped(trimmed);
-      if (typeError != null) {
-        return ExecutionResult(
-          status: ExecutionStatus.failed,
-          error: typeError,
-        );
-      }
-
-      // Check if this is a conjunction.  A placed goal is posted as one,
-      // whatever its number of conjuncts.
-      if (agents != null || _isConjunction(trimmed)) {
-        return await _runConjunction(trimmed, agents: agents);
-      }
-
-      return await _runSingleGoal(trimmed);
+      return ExecutionResult(
+        status: result.status,
+        bindings: bindings,
+      );
     } catch (e) {
       return ExecutionResult(
         status: ExecutionStatus.failed,
@@ -697,15 +764,220 @@ class GlpEngine {
     }
   }
 
+  /// Post a goal to the engine: check it, put it on the machine's queue, and
+  /// return it posted, not yet run.  The one path by which a goal reaches the
+  /// machine from outside it --- the REPL's ([runGoal]), a host's
+  /// (multiagent/agent_runtime.dart) and the isolate boot's
+  /// (multiagent/isolate_manager.dart): "The remaining producer of unchecked
+  /// terms is the initial goal posted to the runtime, at boot or
+  /// interactively; it is type-checked before execution as a body goal"
+  /// (TGLP modules.tex, "Type-Compatible Attestation Between Agents",
+  /// Definition def:well-typed-clause), and "the procedures that may be
+  /// posted are exactly the entry points" (modules.tex, "Entry and the absence
+  /// of a boot module"), with the root self.glp's ([_goalLabel]).
+  ///
+  /// [inputs] names the variables of the goal whose writers the caller holds:
+  /// each occurs in the goal as a reader only, the goal consuming the stream
+  /// the caller produces, and its writer is returned as an [InputInjector] in
+  /// [PostedGoal.inputs], through which the caller extends the stream with
+  /// the ground terms it is handed --- the person's acts (GSG, Appendix "The
+  /// Prototype's Screens") --- or closes it.  A variable the goal writes is
+  /// not the caller's to write, and one the goal does not hold is no input of
+  /// the goal: either is refused, as is a goal that does not check or calls
+  /// no entry point.  A refused goal puts nothing on the machine.
+  ///
+  /// Until 2026-10-04 a host posted its goal with an injector and no check
+  /// (agent_runtime.dart, isolate_manager.dart), and [runGoal], which
+  /// checked, handed the caller no writer.
+  PostedGoal postGoal(String goalText, {List<String> inputs = const []}) =>
+      _post(_goalText(goalText), inputs: inputs);
+
+  /// [goalText] trimmed, its full stop dropped.
+  static String _goalText(String goalText) {
+    var trimmed = goalText.trim();
+    if (trimmed.endsWith('.')) {
+      trimmed = trimmed.substring(0, trimmed.length - 1).trim();
+    }
+    return trimmed;
+  }
+
+  /// The posting of [trimmed] ([postGoal]).  Throws [GoalRefused], naming
+  /// the refusal, where the goal is not posted.
+  PostedGoal _post(String trimmed, {List<String> inputs = const []}) {
+    // Reject an ill-typed goal before running it. Soundness of well-typing
+    // (TGLP glp-semantics, Theorem thm:soundness) holds for runs from a
+    // well-typed initial goal; a goal is well-typed iff well-typed as a body.
+    final typeError = _checkGoalWellTyped(trimmed);
+    if (typeError != null) throw GoalRefused(typeError);
+
+    // The goal's atoms: a conjunction's conjuncts, read as a clause body, or
+    // the one goal, read as a clause.
+    final conjunction = _isConjunction(trimmed);
+    final List<Atom> goals;
+    if (conjunction) {
+      // Quoted, as in _checkGoalWellTyped: unquoted, the head's name is an
+      // anonymous variable, and the conjunction does not parse.
+      final ast =
+          Parser(Lexer("'_conj_wrapper_' :- $trimmed.").tokenize()).parse();
+      if (ast.procedures.isEmpty || ast.procedures[0].clauses.isEmpty) {
+        throw GoalRefused('Could not parse conjunction');
+      }
+      final clause = ast.procedures[0].clauses[0];
+      if (clause.body == null || clause.body!.isEmpty) {
+        throw GoalRefused('No goals in conjunction');
+      }
+      goals = [
+        for (final g in clause.body!) Atom(g.functor, g.args, g.line, g.column)
+      ];
+    } else {
+      final ast = Parser(Lexer('$trimmed.').tokenize()).parse();
+      if (ast.procedures.isEmpty) throw GoalRefused('No goal found');
+      if (ast.procedures[0].clauses.isEmpty) {
+        throw GoalRefused('No clauses in goal');
+      }
+      goals = [ast.procedures[0].clauses[0].head];
+    }
+
+    // Every conjunct is found, and every input is the goal's to read, before
+    // any is put to the machine, so a refused goal leaves nothing queued
+    // behind it.
+    final program = combinedProgram;
+    final labels = <String>[];
+    for (final goal in goals) {
+      final procedureLabel = _goalLabel(goal.functor, goal.args.length);
+      if (procedureLabel == null || program.labels[procedureLabel] == null) {
+        throw GoalRefused(
+            'Predicate ${goal.functor}/${goal.args.length} not found');
+      }
+      labels.add(procedureLabel);
+    }
+    _requireInputs(goals, inputs);
+
+    // One CodeImage + ByteRunner for the whole goal; each conjunct's entry is
+    // a byte offset into it.  The caller has the labels from the image's own
+    // program, so an unresolved offset is an internal invariant violation
+    // between the object labels and the image symbols, not a user error.
+    final image = codeImageFromProgram(program);
+    final entries = [
+      for (final l in labels)
+        image.entryOffsetOf(l) ??
+            (throw StateError('no compiled byte entry for $l'))
+    ];
+    final scheduler =
+        Scheduler(rt: _runtime, runners: {'main': ByteRunner(image)});
+    scheduler.resetDisplayNumbering();
+
+    final queryVarWriters = <String, HeapCell>{};
+    final varNameToId = <String, HeapCell>{};
+
+    // Each input's pair: the caller holds the writer, and the goal's reader
+    // occurrence is the pair's reader (_setupArgument).
+    final injectors = <String, InputInjector>{};
+    for (final name in inputs) {
+      final (writer, _) = _runtime.heap.allocateVariable();
+      varNameToId[name] = writer;
+      queryVarWriters[name] = writer;
+      injectors[name] = InputInjector(_runtime.heap, name, writer);
+    }
+
+    // The conjuncts together are the run's initial goal, its resolvent G_0
+    // (GLP-Spec glp.tex, Definition "Transition System ..."; IGLP dglp.tex,
+    // the dGLP configuration): they are put to the machine together and run
+    // by one drain to quiescence, and the conjunction's status is that of the
+    // whole run there, as madGLP reports it for an agent, which reduces its
+    // whole resolvent, FIFO, until quiescent (IGLP madglp.tex, "Each madGLP
+    // agent executes its local resolvent with FIFO scheduling").  Drained one
+    // conjunct at a time and the statuses aggregated, a conjunct that waits
+    // on a later one, p(X?) before q(X), was reported suspended although the
+    // run then completed it; and a conjunct that never quiesces starved every
+    // conjunct after it.
+    for (var g = 0; g < goals.length; g++) {
+      final args = goals[g].args;
+      final argSlots = <int, rt.Term>{};
+      for (int i = 0; i < args.length; i++) {
+        if (conjunction) {
+          _setupConjunctionArg(
+              _runtime, args[i], i, argSlots, queryVarWriters, varNameToId);
+        } else {
+          _setupArgument(
+              _runtime, args[i], i, argSlots, queryVarWriters, varNameToId);
+        }
+      }
+
+      // Each goal's id is the runtime's next, as every goal's is.
+      final goalId = _runtime.nextGoalId++;
+      _runtime.setGoalEnv(goalId, CallEnv(args: argSlots));
+      _runtime.setGoalProgram(goalId, 'main');
+      // The goal carries its module value — the loaded app's artefact (h(M) +
+      // code) — read back by `self_module`.
+      if (_appModule != null) {
+        _runtime.setGoalModule(goalId, _appModule);
+      }
+      _runtime.gq.enqueue(GoalRef(goalId, entries[g]));
+    }
+    scheduler.setQueryVarNames(queryVarWriters);
+
+    return PostedGoal._(scheduler, injectors, queryVarWriters);
+  }
+
+  /// Refuse [inputs] that are not the goal's to read: each must occur in
+  /// [goals], and only as a reader, its writer being the caller's
+  /// ([postGoal]).  An input named twice is one input.
+  void _requireInputs(List<Atom> goals, List<String> inputs) {
+    if (inputs.isEmpty) return;
+    if (inputs.toSet().length != inputs.length) {
+      throw GoalRefused('An input is named twice: ${inputs.join(', ')}');
+    }
+    final readers = <String>{};
+    final writers = <String>{};
+    void walk(Term? t) {
+      if (t is VarTerm) {
+        (t.isReader ? readers : writers).add(t.name);
+      } else if (t is StructTerm) {
+        t.args.forEach(walk);
+      } else if (t is ListTerm) {
+        walk(t.head);
+        walk(t.tail);
+      }
+    }
+
+    for (final goal in goals) {
+      goal.args.forEach(walk);
+    }
+    for (final name in inputs) {
+      if (writers.contains(name)) {
+        throw GoalRefused(
+            "Input $name occurs in the goal as a writer: its writer is the "
+            "caller's, and the goal holds its reader $name? only");
+      }
+      if (!readers.contains(name)) {
+        throw GoalRefused(
+            'Input $name does not occur in the goal: the goal holds the '
+            'reader $name? of each input');
+      }
+    }
+  }
+
   /// Enable madGLP mode for this engine.
   ///
-  /// Loads madGLP system predicates (send_to_net, global_send, send_to_user)
-  /// and creates MadContext for message routing.
+  /// Creates the MadContext for message routing.  It loads no GLP: the madGLP
+  /// system predicates --- send_to_net/1 (GLP-Spec appendix-guards, "Output
+  /// to the network") and global_send/3 (IGLP Definition "global_send
+  /// Predicate") --- are the root self.glp's, loaded at construction.
   void enableMadGLP({required String agentId}) {
-    loadSource(_madPredicatesSource, filename: '__mad_predicates__');
     madContext = MadContext(agentId: agentId, runtime: _runtime);
     // Make madContext accessible from body kernels via runtime
     _runtime.madContext = madContext;
+  }
+
+  /// In madGLP mode, the Sends that end a goal's run (IGLP, Definition madGLP
+  /// Send; Implementation Notes, "Event-driven execution"): the outbox's
+  /// messages placed on the channel [MadContext.onMessageReady] gives, which
+  /// whoever enters the mode provides (the REPL's `:mad`).  Null outside it.
+  void Function()? get _sends {
+    final ctx = madContext;
+    if (ctx == null) return null;
+    return () => ctx.flushMessages();
   }
 
   /// Get the combined bytecode program from all loaded sources.
@@ -716,49 +988,24 @@ class GlpEngine {
   /// same-module body calls (including calls to private helpers, spec §4.1)
   /// must resolve here.
   ///
-  /// Module export boundaries (spec §4.1: private procedures visible only
-  /// within their module and descendants) are enforced separately, at REPL
-  /// entry-point lookup sites, via [_replEntryPointLabels]. Cross-module
-  /// calls go through `Distribute`/`Transmit`, not `prog.labels`, so the
-  /// boundary is not weakened by leaving `labels` unfiltered.
+  /// Each loaded unit is one compiled module, the root procedures it reaches
+  /// among its own under their renamed names, `:p` (TGLP modules.tex,
+  /// Compilation, third to fifth steps); the root linked alone ([_rootCode])
+  /// follows them, for a posted goal.  A root procedure two of them carry is
+  /// one procedure compiled from one clause set, and the label the first
+  /// carries is the one a call reaches.  A goal names a unit's entry point or
+  /// a root procedure ([_goalLabel]); a cross-module call is resolved by the
+  /// linker, and only to a procedure its qualifier exports (TGLP modules.tex,
+  /// Compilation, fourth step), so the boundary is not weakened by leaving
+  /// `labels` unfiltered.  Until 2026-10-04 the root self.glp was compiled
+  /// here, last, as a fallback for every bare name a unit left unresolved.
   BytecodeProgram get combinedProgram {
-    // Root self.glp goes LAST so its primitives are the FALLBACK: label
-    // indexing keeps the first occurrence, so a loaded module's own definition
-    // (e.g. its merge/3) shadows the root's primitive of the same name (manual
-    // §19.6: a module's definition shadows every ancestor's; modules.tex
-    // §Static Linking step 3). Other loaded programs keep their insertion order.
-    final allOps = <dynamic>[];
+    final allOps = <Op>[];
     for (final entry in _loadedPrograms.entries) {
-      if (entry.key == '__root_self__') continue;
       allOps.addAll(entry.value.ops);
     }
-    final rootSelf = _loadedPrograms['__root_self__'];
-    if (rootSelf != null) allOps.addAll(rootSelf.ops);
+    allOps.addAll(_rootCode.ops);
     return BytecodeProgram(allOps);
-  }
-
-  /// Labels addressable as REPL entry points, per spec §4.1.
-  ///
-  /// The REPL is outside any module, so it can only invoke:
-  ///   - All labels in root self.glp (ancestor scoping)
-  ///   - All labels in a linked program (the linker has already encoded
-  ///     export boundaries via name mangling and alias clauses)
-  ///   - All labels of top-level programs (no `-module` directive)
-  ///   - Only `exportedLabels` of explicitly declared modules
-  Set<String> _replEntryPointLabels() {
-    final labels = <String>{};
-    final rootSelf = _loadedPrograms['__root_self__'];
-    if (rootSelf != null) labels.addAll(rootSelf.labels.keys);
-    final program = _loadedPrograms['__program__'];
-    if (program != null) labels.addAll(program.labels.keys);
-    for (final moduleInfo in _loadedModules.values) {
-      if (moduleInfo.isTopLevel) {
-        labels.addAll(moduleInfo.program.labels.keys);
-      } else {
-        labels.addAll(moduleInfo.exportedLabels);
-      }
-    }
-    return labels;
   }
 
   // ============ Private Methods ============
@@ -805,15 +1052,17 @@ class GlpEngine {
   bool _containsRemoteGoal(Goal g) {
     if (g is RemoteGoal) return true;
     if (g is SpawnGoal) return _containsRemoteGoal(g.innerGoal);
-    if (g is RatedGoal) return _containsRemoteGoal(g.innerGoal);
     return false;
   }
 
   /// Type-check a REPL goal against the loaded program's declarations.
   ///
-  /// Returns null if the goal is well-typed (or cannot be parsed/checked here,
-  /// in which case the execution path reports the parse problem). Returns a
-  /// specific error message if the goal is ill-typed.
+  /// Returns null if the goal is well-typed, and an error message if it is
+  /// ill-typed or does not parse as a clause body: the check is never skipped
+  /// (TGLP modules.tex, Type-Compatible Attestation Between Agents: the initial
+  /// goal "is type-checked before execution as a body goal").  Until
+  /// 2026-10-02 a goal that did not parse here passed the check, and the
+  /// execution path reported what it made of it.
   ///
   /// The goal is parsed as a clause body so single goals and conjunctions are
   /// handled uniformly; a guard (if the user wrote one) is a body goal for
@@ -822,13 +1071,17 @@ class GlpEngine {
   String? _checkGoalWellTyped(String trimmed) {
     final List<Goal> atoms;
     try {
-      final parseInput = '_glp_query_ :- $trimmed.';
+      // The head's name is quoted: an unquoted name beginning with `_` is an
+      // anonymous variable (GLP-Spec appendix-guards.tex, "Naming and
+      // admission of body kernels"), and as one the clause did not parse and
+      // the check was passed by.
+      final parseInput = "'_glp_query_' :- $trimmed.";
       final lexer = Lexer(parseInput);
       final tokens = lexer.tokenize();
       final parser = Parser(tokens);
       final parsed = parser.parse();
       if (parsed.procedures.isEmpty || parsed.procedures[0].clauses.isEmpty) {
-        return null;
+        return 'Goal does not parse as a clause body: $trimmed';
       }
       final clause = parsed.procedures[0].clauses[0];
       atoms = [
@@ -836,359 +1089,66 @@ class GlpEngine {
           Goal(g.predicate, g.args, g.line, g.column),
         ...?clause.body,
       ];
-    } catch (_) {
-      // A parse error surfaces in the execution path with its own message.
-      return null;
+    } on CompileError catch (e) {
+      return 'Goal does not parse as a clause body: ${e.message}';
     }
-    if (atoms.isEmpty) return null;
+    if (atoms.isEmpty) {
+      return 'Goal does not parse as a clause body: $trimmed';
+    }
 
-    final env = _ensureGoalCheckBaseEnv();
+    // The goal is checked in the root and the loaded units' entry points
+    // ([scope]): "the procedures that may be posted are exactly the entry
+    // points" (TGLP modules.tex, "Entry and the absence of a boot module"),
+    // each with the transitive closure of the types its signature references
+    // ("Procedure declarations"), the goal being a module at the root, linked
+    // with the root self.glp (GLP #3 Cowork, 2026-10-03 21:18 UTC, "16:11").
+    // A callee's clauses are the ones its layer of that scope holds --- the
+    // root self.glp's, or the unit's that declares the entry point --- read
+    // in the scope they were declared in ([_verifyInLayer]), where its
+    // parametricity is decided too ([scopeProcedureIsParametric]).  Until
+    // 2026-10-07 the goal was checked in an environment of its own, every
+    // loaded unit's self.glp chain and every module's declarations over the
+    // root: a goal calling a procedure no entry point names passed the check
+    // and was refused only at [_goalLabel] (`helper(secret(3), N)` posted to
+    // programs/tests/boot_scope/program), and one calling a root procedure
+    // that a program's self.glp redefines privately was checked against that
+    // definition while the root's ran (programs/tests/post_goal/private_root).
+    final env = scope;
     final dfa = tdfa.buildProgramDFA(env);
-    final result = wtc.checkGoal(atoms, dfa, env);
+    final result = wtc.checkGoal(atoms, dfa, env,
+        callee: wtc.CalleeClauses((k) => env.scopeLayers[k]?.clauses[k],
+            (decl, at, clauses) => _verifyInLayer(env, decl, at, clauses)),
+        isParametric: (k) => scopeProcedureIsParametric(env, k));
     if (result.isWellTyped) return null;
 
     final detail = result.errors.map((e) => '  ${e.message}').join('\n');
     return 'Goal is not well-typed:\n$detail';
   }
 
-  /// Build the [ByteRunner] and entry BYTE OFFSET for a query over a
-  /// [CodeImage] of the program. The caller has already verified the entry
-  /// exists (the REPL entry-point guard), so an unresolved offset here is an
-  /// internal invariant violation between the object labels and the image
-  /// symbols, not a user error.
-  (GoalRunner, int) _runnerForQuery(
-      BytecodeProgram program, String procedureLabel) {
-    final image = codeImageFromProgram(program);
-    final off = image.entryOffsetOf(procedureLabel);
-    if (off == null) {
-      throw StateError('no compiled byte entry for $procedureLabel');
-    }
-    return (ByteRunner(image), off);
-  }
-
-  Future<ExecutionResult> _runSingleGoal(String trimmed) async {
-    final parseInput = '$trimmed.';
-    final lexer = Lexer(parseInput);
-    final tokens = lexer.tokenize();
-    final parser = Parser(tokens);
-    final ast = parser.parse();
-
-    if (ast.procedures.isEmpty) {
-      return ExecutionResult(
-        status: ExecutionStatus.failed,
-        error: 'No goal found',
-      );
-    }
-
-    final proc = ast.procedures[0];
-    if (proc.clauses.isEmpty) {
-      return ExecutionResult(
-        status: ExecutionStatus.failed,
-        error: 'No clauses in goal',
-      );
-    }
-
-    final goalClause = proc.clauses[0];
-    final goalAtom = goalClause.head;
-    final functor = goalAtom.functor;
-    final arity = goalAtom.arity;
-    final args = goalAtom.args;
-
-    final program = combinedProgram;
-    final procedureLabel = '$functor/$arity';
-    final entryPC = program.labels[procedureLabel];
-
-    if (entryPC == null || !_replEntryPointLabels().contains(procedureLabel)) {
-      return ExecutionResult(
-        status: ExecutionStatus.failed,
-        error: 'Predicate $procedureLabel not found',
-      );
-    }
-
-    final queryVarWriters = <String, int>{};
-    final varNameToId = <String, int>{};
-    final argSlots = <int, rt.Term>{};
-
-    for (int i = 0; i < args.length; i++) {
-      _setupArgument(
-          _runtime, args[i], i, argSlots, queryVarWriters, varNameToId);
-    }
-
-    final env = CallEnv(args: argSlots);
-    _runtime.setGoalEnv(_goalId, env);
-    _runtime.setGoalProgram(_goalId, 'main');
-    // The goal carries its module value — the loaded app's artefact (h(M) +
-    // code) — read back by `self_module`.
-    if (_appModule != null) {
-      _runtime.setGoalModule(_goalId, _appModule);
-    }
-
-    final module = _findModuleForProcedure(procedureLabel);
-    if (module != null) {
-      final modCtx = _buildModuleContext(module, program);
-      if (modCtx != null) {
-        _runtime.setGoalModuleContext(_goalId, modCtx);
-      }
-    }
-
-    // sGLP: the posted goal is the run's initial goal.
-    _beginSimulation();
-    _runtime.sim?.setLineage(_goalId, rootLineage(0));
-
-    final (runner, goalEntry) =
-        _runnerForQuery(program, procedureLabel);
-    // person/2 finds the person procedures in the code of the asking goal's
-    // program, through the runtime's runners.
-    if (_runtime.sim != null) _runtime.runners['main'] = runner;
-    final scheduler = Scheduler(rt: _runtime, runners: {'main': runner});
-    scheduler.resetDisplayNumbering();
-    scheduler.setQueryVarNames(queryVarWriters);
-
-    _runtime.gq.enqueue(GoalRef(_goalId, goalEntry));
-    _goalId++;
-
-    final result = await scheduler.drainAsyncWithStatus(
-      maxCycles: maxCycles,
-      debug: debugTrace,
-      showBindings: false,
-      debugOutput: debugOutput,
-    );
-
-    // Collect bindings
-    final bindings = <String, rt.Term?>{};
-    for (final entry in queryVarWriters.entries) {
-      final varName = entry.key;
-      final writerId = entry.value;
-      if (_runtime.heap.isBound(writerId)) {
-        final varRef = rt.VarRef(writerId);
-        bindings[varName] = _runtime.heap.dereference(varRef);
-      } else {
-        bindings[varName] = null;
-      }
-    }
-
-    return ExecutionResult(
-      status: result.status,
-      bindings: bindings,
-    );
-  }
-
-  Future<ExecutionResult> _runConjunction(String trimmed,
-      {List<int?>? agents}) async {
-    final parseInput = '_conj_wrapper_ :- $trimmed.';
-    final lexer = Lexer(parseInput);
-    final tokens = lexer.tokenize();
-    final parser = Parser(tokens);
-    final ast = parser.parse();
-
-    if (ast.procedures.isEmpty || ast.procedures[0].clauses.isEmpty) {
-      return ExecutionResult(
-        status: ExecutionStatus.failed,
-        error: 'Could not parse conjunction',
-      );
-    }
-
-    final clause = ast.procedures[0].clauses[0];
-    if (clause.body == null || clause.body!.isEmpty) {
-      return ExecutionResult(
-        status: ExecutionStatus.failed,
-        error: 'No goals in conjunction',
-      );
-    }
-
-    final goals =
-        clause.body!.map((g) => Atom(g.functor, g.args, g.line, g.column)).toList();
-    if (agents != null) {
-      final refusal = _placementRefusal(agents, goals.length);
-      if (refusal != null) {
-        return ExecutionResult(status: ExecutionStatus.failed, error: refusal);
-      }
-    }
-    final program = combinedProgram;
-    final queryVarWriters = <String, int>{};
-    final varNameToId = <String, int>{};
-
-    // Build one CodeImage + ByteRunner for the whole conjunction; per-goal
-    // entry PCs are byte offsets resolved below.
-    final image = codeImageFromProgram(program);
-    final GoalRunner runner = ByteRunner(image);
-    final scheduler = Scheduler(rt: _runtime, runners: {'main': runner});
-    scheduler.resetDisplayNumbering();
-
-    // The conjuncts together are the run's initial goal, its resolvent G_0
-    // (GLP-Spec glp.tex, Definition "Transition System ..."; IGLP dglp.tex,
-    // the dGLP configuration): they are put to the machine together and run
-    // by one drain to quiescence, and the conjunction's status is that of the
-    // whole run there, as madGLP reports it for an agent, which reduces its
-    // whole resolvent, FIFO, until quiescent (IGLP madglp.tex, "Each madGLP
-    // agent executes its local resolvent with FIFO scheduling").  Drained one
-    // conjunct at a time and the statuses aggregated, a conjunct that waits
-    // on a later one, p(X?) before q(X), was reported suspended although the
-    // run then completed it; and a conjunct that never quiesces starved every
-    // conjunct after it.  sGLP: no Release is taken until the last conjunct
-    // is in, which one drain after all of them gives by construction.
-    _beginSimulation();
-    // person/2 finds the person procedures in the code of the asking goal's
-    // program, through the runtime's runners.
-    if (_runtime.sim != null) _runtime.runners['main'] = runner;
-    var conjunct = 0;
-
-    // Every conjunct is found before any is put to the machine, so a refused
-    // conjunction leaves nothing queued behind it.
-    final entryLabels = _replEntryPointLabels();
-    for (final goal in goals) {
-      final procedureLabel = '${goal.functor}/${goal.args.length}';
-      if (program.labels[procedureLabel] == null ||
-          !entryLabels.contains(procedureLabel)) {
-        return ExecutionResult(
-          status: ExecutionStatus.failed,
-          error: 'Predicate $procedureLabel not found',
-        );
-      }
-    }
-
-    for (final goal in goals) {
-      final functor = goal.functor;
-      final arity = goal.args.length;
-      final args = goal.args;
-      final procedureLabel = '$functor/$arity';
-
-      final argSlots = <int, rt.Term>{};
-      for (int i = 0; i < args.length; i++) {
-        _setupConjunctionArg(
-            _runtime, args[i], i, argSlots, queryVarWriters, varNameToId);
-      }
-
-      final env = CallEnv(args: argSlots);
-      _runtime.setGoalEnv(_goalId, env);
-      _runtime.setGoalProgram(_goalId, 'main');
-      // The goal carries its module value — the loaded app's artefact (h(M) +
-      // code) — read back by `self_module`.
-      if (_appModule != null) {
-        _runtime.setGoalModule(_goalId, _appModule);
-      }
-
-      final module = _findModuleForProcedure(procedureLabel);
-      if (module != null) {
-        final modCtx = _buildModuleContext(module, program);
-        if (modCtx != null) {
-          _runtime.setGoalModuleContext(_goalId, modCtx);
-        }
-      }
-
-      scheduler.setQueryVarNames(queryVarWriters);
-      final goalEntry = image.entryOffsetOf(procedureLabel)!;
-      final sim = _runtime.sim;
-      if (sim != null) {
-        sim.setLineage(_goalId, rootLineage(conjunct));
-        final agent = agents?[conjunct];
-        if (agent != null) sim.placeAt(_goalId, agent);
-      }
-      conjunct++;
-      _runtime.gq.enqueue(GoalRef(_goalId, goalEntry));
-      _goalId++;
-    }
-
-    // One drain, to quiescence or the cycle limit, over the whole run.  Its
-    // status is the run's: failed if a goal of the run failed (Fail advances
-    // the queue and the run continues, dGLP/madGLP Reduce), capped if the
-    // limit stopped it with goals still queued, suspended if a goal of the run
-    // waits at quiescence, and succeeded otherwise.
-    final result = await scheduler.drainAsyncWithStatus(
-      maxCycles: maxCycles,
-      debug: debugTrace,
-      showBindings: false,
-      debugOutput: debugOutput,
-    );
-
-    // Collect bindings
-    final bindings = <String, rt.Term?>{};
-    for (final entry in queryVarWriters.entries) {
-      final varName = entry.key;
-      final writerId = entry.value;
-      if (_runtime.heap.isBound(writerId)) {
-        final varRef = rt.VarRef(writerId);
-        bindings[varName] = _runtime.heap.dereference(varRef);
-      } else {
-        bindings[varName] = null;
-      }
-    }
-
-    return ExecutionResult(
-      status: result.status,
-      bindings: bindings,
-    );
-  }
-
-  /// Why [agents] cannot place a conjunction of [conjuncts] conjuncts, or null
-  /// if it can: the loaded program declares a run of N agents, [agents] has
-  /// one entry per conjunct, each an agent of 1..N or null, and every agent
-  /// has a conjunct.
-  String? _placementRefusal(List<int?> agents, int conjuncts) {
-    final pop = _population;
-    if (pop == null) {
-      return 'A goal is placed at agents only in a program with a run '
-          'declaration, which creates them; the loaded program has none';
-    }
-    if (agents.length != conjuncts) {
-      return 'The placement names ${agents.length} agent'
-          '${agents.length == 1 ? '' : 's'} for $conjuncts conjunct'
-          '${conjuncts == 1 ? '' : 's'}; it names one per conjunct';
-    }
-    final placed = <int>{};
-    for (final a in agents) {
-      if (a == null) continue;
-      if (a < 1 || a > pop.agents) {
-        return 'The placement names agent $a; the run declares agents 1 to '
-            '${pop.agents}';
-      }
-      placed.add(a);
-    }
-    if (placed.length != pop.agents) {
-      final missing = [
-        for (var a = 1; a <= pop.agents; a++)
-          if (!placed.contains(a)) a
-      ];
-      return 'The run declares ${pop.agents} agents, each with its initial '
-          'goal placed at it, and the placement places none at '
-          '${missing.length > 5 ? '${missing.take(5).join(', ')}, ...' : missing.join(', ')}';
-    }
-    return null;
-  }
-
-  /// The placement a caller writes: comma-separated entries without spaces,
-  /// each an agent `a`, a range `a..b` (one conjunct per agent, in order), or
-  /// `-` (a conjunct at no agent).  `1..3,-` places the first three conjuncts
-  /// at agents 1, 2 and 3 and the fourth at none.  Throws a [FormatException]
-  /// on anything else.
-  static List<int?> parsePlacement(String spec) {
-    final out = <int?>[];
-    for (final item in spec.split(',')) {
-      final e = item.trim();
-      if (e == '-') {
-        out.add(null);
-        continue;
-      }
-      final range = RegExp(r'^(\d+)\.\.(\d+)$').firstMatch(e);
-      if (range != null) {
-        final from = int.parse(range.group(1)!);
-        final to = int.parse(range.group(2)!);
-        if (from > to) {
-          throw FormatException('an empty range of agents: $e');
-        }
-        for (var a = from; a <= to; a++) {
-          out.add(a);
-        }
-        continue;
-      }
-      final a = int.tryParse(e);
-      if (a == null) {
-        throw FormatException(
-            'not an agent, a range a..b of agents or -: "$e"');
-      }
-      out.add(a);
-    }
-    return out;
+  /// Whether [clauses], the clauses of a procedure a posted goal calls, are
+  /// well-typed by the declaration [decl] the call instantiates and accept its
+  /// every input path ([verifyInstantiation]), read in the scope they were
+  /// declared in: that of the layer of [goalScope] holding them
+  /// ([ScopeLayer.env]), which declares their callees, with the types of
+  /// [at], the scope the call was read in, filling its gaps.  A clause is
+  /// well-typed in its own scope, and the goal's declares the root and the
+  /// entry points alone.
+  static bool _verifyInLayer(TypeEnvironment goalScope, ProcDecl decl,
+      TypeEnvironment at, List<Clause> clauses) {
+    final layer = goalScope.scopeLayers[decl.key];
+    if (layer == null) return verifyInstantiation(decl, at, clauses);
+    final own = layer.env;
+    return verifyInstantiation(
+        decl,
+        TypeEnvironment(
+          {...at.types, ...own.types},
+          {...own.procedures, decl.key: decl},
+          paramProcDecls: own.paramProcDecls,
+          typeTemplates: {...at.typeTemplates, ...own.typeTemplates},
+          typeOrigins: {...at.typeOrigins, ...own.typeOrigins},
+          scopeLayers: own.scopeLayers,
+        ),
+        clauses);
   }
 
   bool _isConjunction(String query) {
@@ -1274,10 +1234,10 @@ class GlpEngine {
     // loads and runs here, as the OS's own boot and play programs must: it
     // carries its two identities under no signature, no loader admits it, and
     // decompose_module/4 has no compiler's key to give for it.
-    final offending = privilegedCalls(linked.program, _privilegedRootNames,
+    final offending = privilegedCalls(linked.program, privilegedRootSeed(),
         ownModules: {
           for (final m in modules)
-            if (m.exposingDir == null) m.moduleName
+            if (!m.collectedByExpose && !m.isRoot) m.moduleName
         });
     if (offending.isNotEmpty) {
       print('[CERTIFICATE REFUSED] $moduleName reaches the network or the '
@@ -1297,16 +1257,17 @@ class GlpEngine {
     // Implementation Notes, "The tables"): every procedure declared in the
     // linked program's scope, root scope included, keyed as the compiled module
     // carries it. `find_type/2` reads it from the calling goal's module value.
-    // Built over the same flat module the program was type-checked as. A
-    // program loaded with strictTypes off may carry type errors the checker
-    // waved through; the table construction is not waved through, so a failure
-    // there leaves the module without a table (find_type then errs on every
-    // key) rather than failing a load that succeeded before.
-    TypeIdentityTables? declaredTypes;
+    // Built over the same flat module the program was type-checked as.  A
+    // table that cannot be built is an error and the module does not load:
+    // until 2026-10-02 the failure was a [TYPE WARNING] and the module loaded
+    // without a table, find_type then erring on every key.
+    final TypeIdentityTables declaredTypes;
     try {
       declaredTypes = linkedTypeIdentityTables(modules, linked);
     } catch (e) {
-      print('[TYPE WARNING] $moduleName: type-identity tables not built: $e');
+      throw CompileError(
+          '$moduleName: the type-identity tables cannot be built: $e', 0, 0,
+          phase: 'typecheck');
     }
     return rt.ModuleTerm(artefact,
         name: moduleName, declaredTypes: declaredTypes, directory: directory);
@@ -1314,30 +1275,15 @@ class GlpEngine {
 
   ModuleInfo _extractModuleInfo(
       String source, BytecodeProgram program, String filename) {
-    // -module removed: a module's name is its file (or, for self.glp, its
-    // directory). Every loaded module is top-level — a single-module program
-    // exports all its procedures (modules.tex sec:static-linking).
-    final baseName = filename.split('/').last;
-    final String name;
-    if (baseName == 'self.glp') {
-      final segs = filename.split('/');
-      name = segs.length >= 2 ? segs[segs.length - 2] : 'self';
-    } else {
-      name = _moduleNameFromFilename(filename);
-    }
+    // A module's name is its path from the root (TGLP modules.tex,
+    // Compilation, third step; [modulePathName]): a self.glp's is its
+    // directory's.  A source with no file keeps the name it was loaded under.
+    // Every loaded module is top-level — a single-module program exports all
+    // its procedures (modules.tex sec:static-linking).
+    final String name = File(filename).existsSync()
+        ? modulePathName(filename, _rootDir)
+        : _moduleNameFromFilename(filename);
     const isTopLevel = true;
-
-    // Extract imported module names from `imported procedure Module#Proc(...)` declarations.
-    // The order of unique module names determines the import index (1-based),
-    // matching the compiler's ImportTable.addImport() order.
-    final imports = <String>[];
-    final importPattern = RegExp(r'imported\s+procedure\s+(\w+)#');
-    for (final match in importPattern.allMatches(source)) {
-      final moduleName = match.group(1)!;
-      if (!imports.contains(moduleName)) {
-        imports.add(moduleName);
-      }
-    }
 
     // Detect exported procedures from `exported procedure` declarations.
     // Extract functor names, then find matching labels in the compiled program.
@@ -1354,7 +1300,7 @@ class GlpEngine {
     }
     final hasExports = exportedLabels.isNotEmpty;
 
-    return ModuleInfo(name: name, program: program, imports: imports, hasExports: hasExports, exportedLabels: exportedLabels, isTopLevel: isTopLevel);
+    return ModuleInfo(name: name, program: program, hasExports: hasExports, exportedLabels: exportedLabels, isTopLevel: isTopLevel);
   }
 
   String _moduleNameFromFilename(String filename) {
@@ -1363,22 +1309,6 @@ class GlpEngine {
       return baseName.substring(0, baseName.length - 4);
     }
     return baseName;
-  }
-
-  /// Seed (once) and return the base goal-check environment: the root scope
-  /// plus root self.glp (buildAncestorScope with an empty chain).
-  TypeEnvironment _ensureGoalCheckBaseEnv() {
-    _goalCheckEnv ??=
-        buildAncestorScope(chain: const [], rootSelfGlpPath: _rootSelfGlpPath);
-    return _goalCheckEnv!;
-  }
-
-  /// Extend the goal-check environment with a loaded module's declarations, so
-  /// goals referencing its procedures can be type-checked.
-  void _extendGoalCheckEnv(Module module,
-      {bool typesFillGapsOnly = false, String? label}) {
-    _goalCheckEnv = mergeModuleIntoScope(_ensureGoalCheckBaseEnv(), module,
-        typesFillGapsOnly: typesFillGapsOnly, label: label);
   }
 
   /// A directory path for comparison: absolute, `..` and `.` segments resolved
@@ -1392,45 +1322,13 @@ class GlpEngine {
     return n;
   }
 
-  ModuleInfo? _findModuleForProcedure(String procedureLabel) {
-    for (final module in _loadedModules.values) {
-      if (module.program.labels.containsKey(procedureLabel)) {
-        return module;
-      }
-    }
-    return null;
-  }
-
-  ReplModuleContext? _buildModuleContext(
-      ModuleInfo module, BytecodeProgram combinedProg) {
-    if (module.imports.isEmpty) {
-      return null;
-    }
-
-    final imports = <int, ReplModuleTarget>{};
-    for (int i = 0; i < module.imports.length; i++) {
-      final importName = module.imports[i];
-      final target = _loadedModules[importName];
-      if (target != null) {
-        imports[i + 1] = ReplModuleTarget(target.name, target.program);
-      }
-    }
-
-    return ReplModuleContext(
-      moduleName: module.name,
-      imports: imports,
-      combinedProgram: combinedProg,
-      programKey: 'main',
-    );
-  }
-
   void _setupArgument(
     GlpRuntime runtime,
     Term arg,
     int argSlot,
     Map<int, rt.Term> argSlots,
-    Map<String, int> queryVarWriters,
-    Map<String, int> varNameToId,
+    Map<String, HeapCell> queryVarWriters,
+    Map<String, HeapCell> varNameToId,
   ) {
     if (arg is VarTerm) {
       final baseName = arg.name;
@@ -1483,8 +1381,8 @@ class GlpEngine {
     Term arg,
     int argSlot,
     Map<int, rt.Term> argSlots,
-    Map<String, int> queryVarWriters,
-    Map<String, int> varNameToId,
+    Map<String, HeapCell> queryVarWriters,
+    Map<String, HeapCell> varNameToId,
   ) {
     if (arg is VarTerm) {
       final baseName = arg.name;
@@ -1535,8 +1433,8 @@ class GlpEngine {
   rt.Term _buildStructTerm(
     GlpRuntime runtime,
     StructTerm struct,
-    Map<String, int> queryVarWriters,
-    Map<String, int> varNameToId,
+    Map<String, HeapCell> queryVarWriters,
+    Map<String, HeapCell> varNameToId,
   ) {
     final argTerms = <rt.Term>[];
 
@@ -1563,7 +1461,7 @@ class GlpEngine {
       } else if (arg is ListTerm) {
         if (arg.isNil) {
           final (writerId, readerId) = runtime.heap.allocateVariable();
-          runtime.heap.bindWriterConst(writerId, 'nil');
+          runtime.heap.bindWriterConst(writerId, rt.nil);
           argTerms.add(rt.VarRef(readerId));
         } else {
           final (writerId, readerId) = runtime.heap.allocateVariable();
@@ -1609,8 +1507,8 @@ class GlpEngine {
   rt.Term _buildStructTermForConj(
     GlpRuntime runtime,
     StructTerm struct,
-    Map<String, int> queryVarWriters,
-    Map<String, int> varNameToId,
+    Map<String, HeapCell> queryVarWriters,
+    Map<String, HeapCell> varNameToId,
   ) {
     final argTerms = <rt.Term>[];
 
@@ -1637,7 +1535,7 @@ class GlpEngine {
       } else if (arg is ListTerm) {
         if (arg.isNil) {
           final (writerId, readerId) = runtime.heap.allocateVariable();
-          runtime.heap.bindWriterConst(writerId, 'nil');
+          runtime.heap.bindWriterConst(writerId, rt.nil);
           argTerms.add(rt.VarRef(readerId));
         } else {
           final (writerId, readerId) = runtime.heap.allocateVariable();
@@ -1667,11 +1565,11 @@ class GlpEngine {
   rt.Term _buildListTerm(
     GlpRuntime runtime,
     ListTerm list,
-    Map<String, int> queryVarWriters,
-    Map<String, int> varNameToId,
+    Map<String, HeapCell> queryVarWriters,
+    Map<String, HeapCell> varNameToId,
   ) {
     if (list.isNil) {
-      return rt.ConstTerm('nil');
+      return rt.ConstTerm(rt.nil);
     }
 
     final head = list.head;
@@ -1698,10 +1596,18 @@ class GlpEngine {
       headTerm = _buildListTerm(runtime, head, queryVarWriters, varNameToId);
     } else if (head is StructTerm) {
       headTerm = _buildStructTerm(runtime, head, queryVarWriters, varNameToId);
+    } else if (head is UnderscoreTerm) {
+      headTerm = _anonymousWriter(runtime, head);
     } else {
       throw Exception('Unsupported list head type: ${head.runtimeType}');
     }
 
+    // The tail as written, whatever term it is (GLP-Spec appendix-lp.tex,
+    // Definition "Logic Programs Syntax": `[X|Xs]` is a list cell, a compound
+    // term, and its subterms are terms).  Until 2026-10-07 a tail that was
+    // neither a list nor a variable was built as ConstTerm(null), which the
+    // display took for [], so `X = [a | b].` posted `[a]`; and a `_` head
+    // threw.
     rt.Term tailTerm;
     if (tail is ListTerm) {
       tailTerm = _buildListTerm(runtime, tail, queryVarWriters, varNameToId);
@@ -1719,8 +1625,14 @@ class GlpEngine {
         queryVarWriters[baseName] = writerId;
         tailTerm = rt.VarRef(tail.isReader ? readerId : writerId);
       }
+    } else if (tail is ConstTerm) {
+      tailTerm = rt.ConstTerm(tail.value);
+    } else if (tail is StructTerm) {
+      tailTerm = _buildStructTerm(runtime, tail, queryVarWriters, varNameToId);
+    } else if (tail is UnderscoreTerm) {
+      tailTerm = _anonymousWriter(runtime, tail);
     } else {
-      tailTerm = rt.ConstTerm(null);
+      throw Exception('Unsupported list tail type: ${tail.runtimeType}');
     }
 
     return rt.StructTerm('.', [headTerm, tailTerm]);
@@ -1729,11 +1641,11 @@ class GlpEngine {
   rt.Term _buildListTermForConj(
     GlpRuntime runtime,
     ListTerm list,
-    Map<String, int> queryVarWriters,
-    Map<String, int> varNameToId,
+    Map<String, HeapCell> queryVarWriters,
+    Map<String, HeapCell> varNameToId,
   ) {
     if (list.isNil) {
-      return rt.ConstTerm('nil');
+      return rt.ConstTerm(rt.nil);
     }
 
     final head = list.head;
@@ -1761,10 +1673,13 @@ class GlpEngine {
     } else if (head is StructTerm) {
       headTerm =
           _buildStructTermForConj(runtime, head, queryVarWriters, varNameToId);
+    } else if (head is UnderscoreTerm) {
+      headTerm = _anonymousWriter(runtime, head);
     } else {
       throw Exception('Unsupported list head type: ${head.runtimeType}');
     }
 
+    // The tail as written ([_buildListTerm]).
     rt.Term tailTerm;
     if (tail is ListTerm) {
       tailTerm = _buildListTermForConj(runtime, tail, queryVarWriters, varNameToId);
@@ -1782,8 +1697,15 @@ class GlpEngine {
         queryVarWriters[baseName] = writerId;
         tailTerm = tail.isReader ? rt.VarRef(readerId) : rt.VarRef(writerId);
       }
+    } else if (tail is ConstTerm) {
+      tailTerm = rt.ConstTerm(tail.value);
+    } else if (tail is StructTerm) {
+      tailTerm =
+          _buildStructTermForConj(runtime, tail, queryVarWriters, varNameToId);
+    } else if (tail is UnderscoreTerm) {
+      tailTerm = _anonymousWriter(runtime, tail);
     } else {
-      tailTerm = rt.ConstTerm(null);
+      throw Exception('Unsupported list tail type: ${tail.runtimeType}');
     }
 
     return rt.StructTerm('.', [headTerm, tailTerm]);

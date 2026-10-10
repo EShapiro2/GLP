@@ -12,40 +12,40 @@ NetMsg ::= msg(Constant, Constant).
 procedure network(_?, _?, _?).
 
 %% P to Q forwarding
-network((P,ChP),(Q,ChQ),(R,ChR)) :-
-    receive(msg(Dest,X), ChP?, ChP1), Dest? =?= Q? |
+network((P,ch([msg(Dest,X)|In], Out?)),(Q,ChQ),(R,ChR)) :-
+    Dest? =?= Q? |
     send(X?, ChQ?, ChQ1),
-    network((P?,ChP1?),(Q?,ChQ1?),(R?,ChR?)).
+    network((P?,ch(In?, Out)),(Q?,ChQ1?),(R?,ChR?)).
 
 %% P to R forwarding
-network((P,ChP),(Q,ChQ),(R,ChR)) :-
-    receive(msg(Dest,X), ChP?, ChP1), Dest? =?= R? |
+network((P,ch([msg(Dest,X)|In], Out?)),(Q,ChQ),(R,ChR)) :-
+    Dest? =?= R? |
     send(X?, ChR?, ChR1),
-    network((P?,ChP1?),(Q?,ChQ?),(R?,ChR1?)).
+    network((P?,ch(In?, Out)),(Q?,ChQ?),(R?,ChR1?)).
 
 %% Q to P forwarding
-network((P,ChP),(Q,ChQ),(R,ChR)) :-
-    receive(msg(Dest,X), ChQ?, ChQ1), Dest? =?= P? |
+network((P,ChP),(Q,ch([msg(Dest,X)|In], Out?)),(R,ChR)) :-
+    Dest? =?= P? |
     send(X?, ChP?, ChP1),
-    network((P?,ChP1?),(Q?,ChQ1?),(R?,ChR?)).
+    network((P?,ChP1?),(Q?,ch(In?, Out)),(R?,ChR?)).
 
 %% Q to R forwarding
-network((P,ChP),(Q,ChQ),(R,ChR)) :-
-    receive(msg(Dest,X), ChQ?, ChQ1), Dest? =?= R? |
+network((P,ChP),(Q,ch([msg(Dest,X)|In], Out?)),(R,ChR)) :-
+    Dest? =?= R? |
     send(X?, ChR?, ChR1),
-    network((P?,ChP?),(Q?,ChQ1?),(R?,ChR1?)).
+    network((P?,ChP?),(Q?,ch(In?, Out)),(R?,ChR1?)).
 
 %% R to P forwarding
-network((P,ChP),(Q,ChQ),(R,ChR)) :-
-    receive(msg(Dest,X), ChR?, ChR1), Dest? =?= P? |
+network((P,ChP),(Q,ChQ),(R,ch([msg(Dest,X)|In], Out?))) :-
+    Dest? =?= P? |
     send(X?, ChP?, ChP1),
-    network((P?,ChP1?),(Q?,ChQ?),(R?,ChR1?)).
+    network((P?,ChP1?),(Q?,ChQ?),(R?,ch(In?, Out))).
 
 %% R to Q forwarding
-network((P,ChP),(Q,ChQ),(R,ChR)) :-
-    receive(msg(Dest,X), ChR?, ChR1), Dest? =?= Q? |
+network((P,ChP),(Q,ChQ),(R,ch([msg(Dest,X)|In], Out?))) :-
+    Dest? =?= Q? |
     send(X?, ChQ?, ChQ1),
-    network((P?,ChP?),(Q?,ChQ1?),(R?,ChR1?)).
+    network((P?,ChP?),(Q?,ChQ1?),(R?,ch(In?, Out))).
 
 %% Termination: all incoming streams closed - close all outgoing streams.
 network((_, ch([], [])), (_, ch([], [])), (_, ch([], []))).

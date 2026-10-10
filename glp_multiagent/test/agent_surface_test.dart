@@ -4,6 +4,7 @@ import 'package:glp_multiagent/manifests/grassapp_ui.dart';
 import 'package:glp_multiagent/manifests/social_ui.dart';
 import 'package:glp_multiagent/ui_runtime/agent_surface.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
+import 'package:glp_multiagent/ui_runtime/term.dart';
 
 // Mirror the app: onChange triggers a setState that rebuilds AgentSurface.
 Widget _wrap(UiRuntime r) => MaterialApp(
@@ -23,7 +24,7 @@ void main() {
   testWidgets('a friend offer alerts a Friends row; tapping it accepts',
       (tester) async {
     final sent = <String>[];
-    final r = UiRuntime(manifest: grassrootsManifest, onSend: sent.add);
+    final r = UiRuntime(manifest: grassrootsManifest, onSend: (t) => sent.add(formatTerm(t)));
 
     await tester.pumpWidget(_wrap(r));
     // Friends is the default panel, empty.
@@ -58,7 +59,7 @@ void main() {
     // The introduction ask is the social-graph platform's (its mediator emits
     // befriend_intro and takes accept_intro/reject_intro), so it renders from
     // the social manifest; the grassapp mediator carries no such ask.
-    final r = UiRuntime(manifest: socialManifest, onSend: sent.add);
+    final r = UiRuntime(manifest: socialManifest, onSend: (t) => sent.add(formatTerm(t)));
     await tester.pumpWidget(_wrap(r));
 
     r.handleLine('befriend_intro(alice, charlie, req(5))');
@@ -92,7 +93,7 @@ void main() {
   testWidgets('a swap offer alerts a Currencies row; tapping it accepts',
       (tester) async {
     final sent = <String>[];
-    final r = UiRuntime(manifest: grassrootsManifest, onSend: sent.add);
+    final r = UiRuntime(manifest: grassrootsManifest, onSend: (t) => sent.add(formatTerm(t)));
     await tester.pumpWidget(_wrap(r));
 
     r.handleLine('connected(alice)');

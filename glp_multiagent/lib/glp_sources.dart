@@ -57,76 +57,36 @@ class GlpPaths {
       '${File(rootSelfGlp).parent.path}/currencies/sovereign';
 }
 
-/// The bundled assets (relative to `assets/glp/`), in the tree the engine's
-/// ancestor-scope walk expects. Keep in sync with tool/sync_glp_assets.sh and
-/// pubspec.yaml.
+/// The bundle's manifest, generated with the bundle by tool/sync_glp_assets.sh
+/// from the repository: one line per file, its name under `assets/glp/bundle/`
+/// and its path in the tree the engine reads, a tab between.  The bundle holds
+/// every `.glp` of the trees the app loads --- the directories [GlpPaths]
+/// names --- read from the repository as discovery reads a program (TGLP
+/// modules.tex, Compilation, first step), and the certified mini-apps'
+/// artefacts; no list of them is kept here.  Until 2026-10-07 one was, kept
+/// by hand beside the script's, and the two lacked what the trees had gained
+/// since: `programs/social/graph/ui/self.glp` (GSG, gap abe6081f), among
+/// others.
+const _manifest = 'assets/glp/manifest.txt';
+
+/// The files the bundle holds, by their paths in the tree the engine reads
+/// (`programs/...`, relative to `glp/` in the Documents directory), each with
+/// its asset key: read from the bundle's manifest ([_manifest]).
 ///
-/// Public so that the sandboxed-branch test asserts over the list the loader
+/// Public so that the sandboxed-branch test asserts over what the loader
 /// actually copies rather than over a transcription of it.
 @visibleForTesting
-const bundledGlp = [
-  'programs/self.glp',
-  // lib modules the root self.glp exposes (-expose(social#graph#routing#...)).
-  'programs/social/graph/routing/output.glp',
-  'programs/social/graph/routing/inject.glp',
-  'programs/social/graph/routing/intro.glp',
-  'programs/social/graph/routing/befriend.glp',
-  // GrassApp (coins among friends).
-  'programs/grassapp/self.glp',
-  'programs/grassapp/currency_txn.glp',
-  'programs/grassapp/grassapp_agent.glp',
-  'programs/grassapp/grassapp_mediator.glp',
-  'programs/grassapp/play_grassapp_boot.glp',
-  'programs/grassapp/play_village_headless.glp',
-  // Social graph (the canonical platform program).
-  'programs/social/graph/self.glp',
-  'programs/social/graph/boot.glp',
-  'programs/social/graph/play_ui_boot.glp',
-  'programs/social/graph/ui/mediator.glp',
-  'programs/social/graph/ui/actors.glp',
-  // The Grassroots Super-App. graph/core is the certified program --- the
-  // agent, its plays, and the person interface that installs a mini-app and
-  // invites a friend to it; graph/pingapp is the mini-app it installs by
-  // load_file/2. The agent moved here from graph/agent.glp (SGSG, 2026-09-08),
-  // which this list still named, so the asset sync failed at that copy and no
-  // iOS bundle could be built.
-  'programs/social/graph/core/self.glp',
-  'programs/social/graph/core/agent.glp',
-  'programs/social/graph/core/superapp_plays.glp',
-  // home_ui.glp is superapp_ui/3, what the Flutter agent runtime starts, and
-  // home.glp the compiled mediator it imports. Neither was listed, so
-  // superapp_ui/3 could not be found on iOS (GSG, 2026-09-15).
-  'programs/social/graph/core/home.glp',
-  'programs/social/graph/core/home_ui.glp',
-  'programs/social/graph/pingapp/self.glp',
-  'programs/social/graph/pingapp/miniapp.glp',
-  // CSSN social network (groups): the whole program is statically linked, so
-  // every module the root self.glp reaches must be bundled.  childsafe/ is the
-  // certified program --- the two agents, the mediator and the mini-app entry
-  // cssn/3 --- and programs/cssn adds the play glue and the stand-in for the
-  // Grassroots Super-App, which befriends and hands down the conversations.
-  'programs/cssn/self.glp',
-  'programs/cssn/superapp.glp',
-  'programs/cssn/boot.glp',
-  'programs/cssn/play_ui_boot.glp',
-  'programs/cssn/ui/actors.glp',
-  'programs/cssn/childsafe/self.glp',
-  'programs/cssn/childsafe/miniapp.glp',
-  'programs/cssn/childsafe/plays.glp',
-  'programs/cssn/childsafe/agent.glp',
-  'programs/cssn/childsafe/child_agent.glp',
-  'programs/cssn/childsafe/mediator.glp',
-  // The certified mini-apps the super-app installs. They reach the phone as
-  // artefacts rather than as sources: load_file/2 resolves a name only within
-  // the calling program's own directory, and what it reads there is a
-  // certified compiled program. Built into the bundle by
-  // tool/sync_glp_assets.sh; each is binary, which is why nothing below reads
-  // an asset as a string.
-  'programs/social/graph/core/pingapp.glpw',
-  'programs/social/graph/core/currency.glpw',
-  'programs/social/graph/core/childsafe.glpw',
-  'programs/social/graph/core/denominated.glpw',
-];
+Future<Map<String, String>> bundledGlp() async {
+  final manifest = await rootBundle.loadString(_manifest, cache: false);
+  final files = <String, String>{};
+  for (final line in manifest.split('\n')) {
+    final tab = line.indexOf('\t');
+    if (tab < 0) continue;
+    files[line.substring(tab + 1)] =
+        'assets/glp/bundle/${line.substring(0, tab)}';
+  }
+  return files;
+}
 
 /// The platforms whose filesystem is sandboxed away from the repo, so that the
 /// bundle is the only source there. It holds for the simulator as much as for
@@ -164,13 +124,13 @@ Future<GlpPaths> resolveGlpPaths({bool? sandboxed}) async {
 Future<GlpPaths> _fromBundle() async {
   final docs = await getApplicationDocumentsDirectory();
   final base = '${docs.path}/glp/programs';
-  for (final a in bundledGlp) {
+  for (final e in (await bundledGlp()).entries) {
     // Byte-for-byte, not as text: a `.glpw` opens with the magic `GLPW` and
     // fixed-width little-endian fields and is not UTF-8, so loadString fails
     // on it (currency.glpw at byte 24). Bytes carry the `.glp` sources
     // unchanged too, so one loop serves both.
-    final data = await rootBundle.load('assets/glp/$a');
-    final out = File('${docs.path}/glp/$a');
+    final data = await rootBundle.load(e.value);
+    final out = File('${docs.path}/glp/${e.key}');
     await out.parent.create(recursive: true);
     await out.writeAsBytes(data.buffer
         .asUint8List(data.offsetInBytes, data.lengthInBytes));

@@ -3,13 +3,16 @@
 %
 % Supersedes negative/type_def/merge_undefined_type.glp.
 %
-% Under the top-level-parameter rule (typed-program.md, clause-template
-% paragraph: "an argument position whose type is a parameter"), a bare name at
-% a top-level argument position that is not a defined type is a type parameter.
-% A carried value with no constructor wrapper and no common supertype — e.g. a
-% lib/ router's message argument — can only appear this way.  So a declaration
-% like keep(M?, M) is a valid parameterised procedure, NOT an undefined-type
-% error (the behaviour merge_undefined_type.glp used to assert).
+% A type parameter may occur bare at a top-level argument position (TGLP
+% parameterized-types.tex: "each may occur bare or within a template
+% instantiation anywhere in the argument types").  A carried value with no
+% constructor wrapper and no common supertype — e.g. a lib/ router's message
+% argument — can only appear this way.  The declaration names it in its
+% parameter list ("Declaration parameters": "The parameters of a procedure
+% declaration are exactly those its parameter list names"), so
+% procedure(M) keep(M?, M) is a valid parameterised procedure.  Until
+% 2026-09-27 it named none and M was inferred as a parameter, the transitional
+% reading the paper replaced.
 %
 % This pins two things:
 %   1. the top-level parameter M is accepted — the declaration loads;
@@ -19,7 +22,7 @@
 % declarations are unaffected.  Per-instantiation defining-clause checking
 % (Phase 2, project mode) is pinned by the negative routing fixture.
 
-procedure keep(M?, M).
+procedure(M) keep(M?, M).
 keep(X, X?).
 
 procedure use_keep(Stream(Integer)?, Stream(Integer)).

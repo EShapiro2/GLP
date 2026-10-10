@@ -1,0 +1,9 @@
+%% The program's interface (TGLP modules.tex, External access): run/2,
+%% forwarded to walker.glp, which defines it, and Entry, the type its
+%% declaration names.  A directory with no self.glp is not a program ("Entry
+%% and the absence of a boot module"); until 2026-10-02 this one had none and
+%% took walker.glp's exported run/2 for its entry point.
+Entry ::= output(Constant, Stream(Constant)?) ; extra(Constant).
+imported procedure walker#run(Stream(Entry), Stream(Constant)).
+exported procedure run(Stream(Entry), Stream(Constant)).
+run(Result?, S?) :- walker # run(Result, S).

@@ -1,0 +1,6 @@
+%% See open_typed.glp: foo where q/2 reads an Integer, X open.  Refused.
+procedure(X) q(Integer?, Stream(X)).
+q(_, []).
+
+procedure bad_constant.
+bad_constant :- q(foo, _).

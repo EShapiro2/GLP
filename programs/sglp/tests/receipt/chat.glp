@@ -1,0 +1,30 @@
+%% Test (xiii)'s compiled program, written by hand: the canonical compilation
+%% of chat.vglp by vGLP's Definition "Canonical Compilation", as test
+%% (xii)'s tests/delivery/chat.glp is of its chat.vglp.  chat reaches a question, and has one
+%% more argument, last, its ask stream; deliver and receipt reach none and are
+%% as the source has them.  The asking clause keeps chat's name and the
+%% guarded clause takes chat1; the ask is ask('Stream(Msg)?',
+%% stream_msg_r(X)), Stream(Msg) in reader mode, so X and X? are not
+%% exchanged, the ask carrying the writer X and the program holding the
+%% reader; chat's argument Rs is at an output position, so the head carries
+%% Rs? and the call Rs.  The types are the directory's (self.glp).
+
+%% (Ms)*chat(Rs?): the asking clause and the guarded clause.
+exported procedure chat(Stream(Receipt), Stream(Ask)).
+chat(Rs?, [ask('Stream(Msg)?', stream_msg_r(X))|D?]) :- chat1(Rs, X?, D).
+exported procedure chat1(Stream(Receipt), Stream(Msg)?, Stream(Ask)).
+chat1(Rs?, Ms, []) :- deliver(Ms?, 0, Rs).
+
+%% deliver(Ms?, I?, Rs): each message's status written, the I-th's by I mod 2,
+%% and its receipt output.
+procedure deliver(Stream(Msg)?, Integer?, Stream(Receipt)).
+deliver([msg(T, S?) | Ms], I, [R? | Rs?]) :- integer(I?) |
+    receipt(I?, T?, S, R), I1 := I? + 1, deliver(Ms?, I1?, Rs).
+deliver([], _, []).
+
+%% receipt(I?, T?, S, R): an even message is sent, its receipt its text; an
+%% odd one read, the person asked to acknowledge it, its receipt its text and
+%% the acknowledgement.
+procedure receipt(Integer?, String?, Status, Receipt).
+receipt(I, T, sent, plain(T?)) :- I? mod 2 =:= 0 | true.
+receipt(I, T, read(K), acked(T?, K?)) :- I? mod 2 =:= 1 | true.

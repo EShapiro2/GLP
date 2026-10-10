@@ -297,8 +297,8 @@ void main() {
         0: VarRef(resultWriter),  // Pass writer to head position Z
       });
 
-      // Set up goal
-      final goalId = 1;
+      // Set up goal, its id from the runtime's counter as every goal's is
+      final goalId = rt.nextGoalId++;
       rt.setGoalEnv(goalId, env);
 
       // Get entry point for compute_sum/1
@@ -310,12 +310,14 @@ void main() {
       rt.gq.enqueue(GoalRef(goalId, entryPc!));
 
       print('\nRunning scheduler to drain all goals...');
-      final ran = sched.drain(maxCycles: 100, debug: true, debugOutput: true);
+      final ran = <int>[];
+      sched.drainWithStatus(
+          maxCycles: 100, debug: true, debugOutput: true, goalIds: ran);
       print('Goals executed: ${ran.length}');
 
       // Debug: show what goals were spawned
       print('\nSpawned goals environments:');
-      for (var id = 10000; id < rt.nextGoalId; id++) {
+      for (var id = goalId + 1; id < rt.nextGoalId; id++) {
         final env = rt.getGoalEnv(id);
         if (env != null) {
           print('  Goal $id env: ${env.argBySlot}');

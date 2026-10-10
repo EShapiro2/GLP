@@ -1,0 +1,155 @@
+%% Printed by programs/sglp/transform.glp from the sGLP source in the term form
+%% (README.md, "The term form"); edit the source and run transform.sh, not this file.
+%% transform(coins, profiles)
+procedure
+request
+(
+Token?
+,
+Integer?
+,
+Menu
+?
+)
+.
+request(go, S, menu(Fs, [], swap(F?, 10)))
+:-
+ground(Fs?)
+|
+one_of(Fs?, S?, F)
+.
+request(go, S, menu(_, [H | Hs], pay(F?, K?)))
+:-
+ground(H?)
+,
+ground(Hs?)
+|
+random(S?, 5, K, S1)
+,
+one_of([H? | Hs?], S1?, Hd)
+,
+issuer(Hd?, F)
+.
+procedure
+issuer
+(
+Holding
+?
+,
+Peer
+)
+.
+issuer(holding(F, _), F?)
+.
+
+%% person(spender)
+%% binds(Menu, spender_menu)
+exported procedure
+spender_menu
+(
+Menu
+?
+,
+Integer?
+,
+MutualRef?
+)
+.
+spender_menu(M, S, Mon)
+:-
+stream_append(rated('/'(1, day), Tok), Mon?, _)
+,
+request(Tok?, S?, M?)
+.
+
+%% person(saver)
+%% binds(Menu, saver_menu)
+exported procedure
+saver_menu
+(
+Menu
+?
+,
+Integer?
+,
+MutualRef?
+)
+.
+saver_menu(M, S, Mon)
+:-
+stream_append(rated('/'(1, week), Tok), Mon?, _)
+,
+request(Tok?, S?, M?)
+.
+
+%% person(cautious)
+%% binds(Offer, cautious_offer)
+exported procedure
+cautious_offer
+(
+Offer
+?
+,
+Integer?
+,
+MutualRef?
+)
+.
+cautious_offer(O, _, Mon)
+:-
+stream_append(rated('/'(1, hour), Tok), Mon?, _)
+,
+weigh(Tok?, O?)
+.
+procedure
+weigh
+(
+Token?
+,
+Offer
+?
+)
+.
+weigh(go, offer(_, _, Held, yes))
+:-
+'=<'(Held?, 20)
+|
+true
+.
+weigh(go, offer(_, _, Held, no))
+:-
+'>'(Held?, 20)
+|
+true
+.
+
+%% person(generous)
+%% binds(Offer, generous_offer)
+exported procedure
+generous_offer
+(
+Offer
+?
+,
+Integer?
+,
+MutualRef?
+)
+.
+generous_offer(O, _, Mon)
+:-
+stream_append(rated('/'(1, hour), Tok), Mon?, _)
+,
+accept(Tok?, O?)
+.
+procedure
+accept
+(
+Token?
+,
+Offer
+?
+)
+.
+accept(go, offer(_, _, _, yes))
+.

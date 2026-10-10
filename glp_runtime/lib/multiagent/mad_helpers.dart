@@ -1,13 +1,14 @@
 /// Helper types and operations for madGLP
 ///
 /// Provides Globalize and Localize operations as specified in
-/// madGLP-spec.md Sections 5.1 and 5.2.
+/// IGLP Definitions Globalize and Localize.
 ///
 /// These operations transform terms between local and global representations
 /// for inter-agent communication.
 library;
 
 import 'package:glp_runtime/runtime/terms.dart';
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 import 'global_writers_table.dart';
 import 'imported_writer_records.dart';
 
@@ -22,7 +23,7 @@ enum GlobalNameType {
 
 /// Global variable name: `_w(p, i)` or `_r(p, i)`
 ///
-/// See: madGLP-spec.md Section 2
+/// See: IGLP Definition Global Variable Name (app:global-variable-names)
 class GlobalName {
   final GlobalNameType type;
   final String agent;
@@ -58,10 +59,10 @@ class GlobalName {
 ///
 /// Represents the goal: `global_send(readerAddr, globalName, destAgent)`
 ///
-/// See: madGLP-spec.md Section 4
+/// See: IGLP Definition global_send Predicate (app:global-send)
 class GlobalSendSpawn {
   /// Address of the reader to watch (the ? end of the variable pair)
-  final int readerAddr;
+  final HeapCell readerAddr;
 
   /// Global name identifying the link
   final GlobalName globalName;
@@ -85,14 +86,14 @@ class GlobalSendSpawn {
 /// Represents either a writer (addr) or reader (addr with isReader=true).
 /// Always carries both writer and reader addresses of the pair.
 class TermVar {
-  final int addr;
+  final HeapCell addr;
   final bool isReader;
 
   /// Writer address of the variable pair
-  final int writerAddr;
+  final HeapCell writerAddr;
 
   /// Reader address of the variable pair
-  final int readerAddr;
+  final HeapCell readerAddr;
 
   /// Create a writer variable reference
   TermVar.writer(this.addr, {required this.readerAddr})
@@ -107,7 +108,7 @@ class TermVar {
   bool get isWriter => !isReader;
 
   /// Get the paired reader address
-  int get pairedReaderAddr => readerAddr;
+  HeapCell get pairedReaderAddr => readerAddr;
 
   @override
   String toString() => isReader
@@ -117,7 +118,7 @@ class TermVar {
 
 /// Result of a Globalize operation
 ///
-/// See: madGLP-spec.md Section 5.1
+/// See: IGLP Definition Globalize
 class GlobalizeResult {
   /// Global names substituted for variables, in order of occurrence
   final List<GlobalName> globalNames;
@@ -148,8 +149,8 @@ class GlobalizeResult {
 
 /// A fresh variable pair created during localization
 class FreshPair {
-  final int writerAddr;
-  final int readerAddr;
+  final HeapCell writerAddr;
+  final HeapCell readerAddr;
 
   FreshPair(this.writerAddr, this.readerAddr);
 
@@ -159,7 +160,7 @@ class FreshPair {
 
 /// Result of a Localize operation
 ///
-/// See: madGLP-spec.md Section 5.2
+/// See: IGLP Definition Localize
 class LocalizeResult {
   /// Fresh variable pairs created, one per global name
   final List<FreshPair> freshPairs;
@@ -312,7 +313,7 @@ LocalizeResult localize({
   required String fromAgent,
   required GlobalWritersTable table,
   required ImportedWriterRecords records,
-  required (int, int) Function() freshAddrAllocator,
+  required (HeapCell, HeapCell) Function() freshAddrAllocator,
 }) {
   final freshPairs = <FreshPair>[];
   final useReader = <bool>[];
@@ -393,56 +394,94 @@ Term globalizeTermWithResult(
   List<TermVar> variables,
   GlobalizeResult result,
 ) {
-  final varToGlobalName = <int, GlobalName>{};
+  final varToGlobalName = <HeapCell, GlobalName>{};
   for (var i = 0; i < variables.length; i++) {
     varToGlobalName[variables[i].addr] = result.globalNames[i];
   }
   return _substituteGlobalNames(term, varToGlobalName);
 }
 
-Term _substituteGlobalNames(Term term, Map<int, GlobalName> mapping) {
-  if (term is VarRef) {
-    final gn = mapping[term.addr];
-    if (gn != null) {
-      final functor = gn.isWriter ? '_w' : '_r';
-      return StructTerm(functor, [ConstTerm(gn.agent), ConstTerm(gn.index)]);
+Term _substituteGlobalNames(Term term, Map<HeapCell, GlobalName> mapping) =>
+    _rebuild(term, (t) {
+      if (t is VarRef) {
+        final gn = mapping[t.addr];
+        if (gn != null) {
+          final functor = gn.isWriter ? '_w' : '_r';
+          return StructTerm(
+              functor, [ConstTerm(gn.agent), ConstTerm(gn.index)]);
+        }
+        return t;
+      }
+      return t is StructTerm ? null : t; // ConstTerm unchanged
+    });
+
+/// [term] rebuilt: each subterm for which [leafOf] gives a term replaced by
+/// it, and each other subterm, a structure, rebuilt over its arguments rebuilt
+/// left to right.  The walk keeps a stack of its own, a frame for each
+/// structure being rebuilt: until 2026-10-02 the substitutions recursed once
+/// a structure argument, and a cold call carrying a long list overflowed the
+/// Dart stack at its sender's globalization and its receiver's localization.
+Term _rebuild(Term term, Term? Function(Term) leafOf) {
+  final first = leafOf(term);
+  if (first != null) return first;
+  // Each frame: a structure, and its arguments rebuilt so far.
+  final frames = <(StructTerm, List<Term>)>[(term as StructTerm, <Term>[])];
+  Term? built; // the structure just rebuilt, for its parent
+  while (true) {
+    final (source, args) = frames.last;
+    if (built != null) {
+      args.add(built);
+      built = null;
     }
-    return term;
-  } else if (term is StructTerm) {
-    final newArgs = term.args.map((a) => _substituteGlobalNames(a, mapping)).toList();
-    return StructTerm(term.functor, newArgs);
+    if (args.length == source.args.length) {
+      frames.removeLast();
+      final s = StructTerm(source.functor, args);
+      if (frames.isEmpty) return s;
+      built = s;
+      continue;
+    }
+    final arg = source.args[args.length];
+    final leaf = leafOf(arg);
+    if (leaf != null) {
+      args.add(leaf);
+    } else {
+      frames.add((arg as StructTerm, <Term>[]));
+    }
   }
-  return term; // ConstTerm unchanged
 }
 
 /// Extract global name structures from a term
 ///
 /// Finds all _w(agent, index) and _r(agent, index) structures in the term.
-/// Returns the list of GlobalNames in order of occurrence.
+/// Returns the list of GlobalNames in order of occurrence: depth first and
+/// left to right, the order Localize takes them in (Definition Localize: "For
+/// each global name in T_p↑").  The walk keeps a stack of its own; until
+/// 2026-10-02 it recursed once a structure argument and overflowed the Dart
+/// stack on a long list.
 List<GlobalName> extractGlobalNames(Term term) {
   final result = <GlobalName>[];
-  _extractGlobalNamesRecursive(term, result);
-  return result;
-}
-
-void _extractGlobalNamesRecursive(Term term, List<GlobalName> result) {
-  if (term is StructTerm) {
-    if ((term.functor == '_w' || term.functor == '_r') && term.args.length == 2) {
-      final agentArg = term.args[0];
-      final indexArg = term.args[1];
+  final pending = <Term>[term];
+  while (pending.isNotEmpty) {
+    final t = pending.removeLast();
+    if (t is! StructTerm) continue;
+    if ((t.functor == '_w' || t.functor == '_r') && t.args.length == 2) {
+      final agentArg = t.args[0];
+      final indexArg = t.args[1];
       if (agentArg is ConstTerm && indexArg is ConstTerm) {
         final agent = agentArg.value as String;
         final index = (indexArg.value as num).toInt();
-        result.add(term.functor == '_w'
+        result.add(t.functor == '_w'
             ? GlobalName.writer(agent, index)
             : GlobalName.reader(agent, index));
       }
     } else {
-      for (final arg in term.args) {
-        _extractGlobalNamesRecursive(arg, result);
+      // The first argument is met next, so it goes on the stack last.
+      for (var i = t.args.length - 1; i >= 0; i--) {
+        pending.add(t.args[i]);
       }
     }
   }
+  return result;
 }
 
 /// Transform a term by replacing global names with local variables
@@ -454,7 +493,7 @@ Term localizeTermWithResult(
   List<GlobalName> globalNames,
   LocalizeResult result,
 ) {
-  final globalNameToLocal = <String, int>{};
+  final globalNameToLocal = <String, HeapCell>{};
   for (var i = 0; i < globalNames.length; i++) {
     final gn = globalNames[i];
     final pair = result.freshPairs[i];
@@ -465,22 +504,20 @@ Term localizeTermWithResult(
   return _substituteLocalVars(term, globalNameToLocal);
 }
 
-Term _substituteLocalVars(Term term, Map<String, int> mapping) {
-  if (term is StructTerm) {
-    if ((term.functor == '_w' || term.functor == '_r') && term.args.length == 2) {
-      final agentArg = term.args[0];
-      final indexArg = term.args[1];
-      if (agentArg is ConstTerm && indexArg is ConstTerm) {
-        final type = term.functor == '_w' ? 'writer' : 'reader';
-        final key = '$type:${agentArg.value}:${indexArg.value}';
-        final localAddr = mapping[key];
-        if (localAddr != null) {
-          return VarRef(localAddr);
+Term _substituteLocalVars(Term term, Map<String, HeapCell> mapping) =>
+    _rebuild(term, (t) {
+      if (t is! StructTerm) return t;
+      if ((t.functor == '_w' || t.functor == '_r') && t.args.length == 2) {
+        final agentArg = t.args[0];
+        final indexArg = t.args[1];
+        if (agentArg is ConstTerm && indexArg is ConstTerm) {
+          final type = t.functor == '_w' ? 'writer' : 'reader';
+          final key = '$type:${agentArg.value}:${indexArg.value}';
+          final localAddr = mapping[key];
+          if (localAddr != null) {
+            return VarRef(localAddr);
+          }
         }
       }
-    }
-    final newArgs = term.args.map((a) => _substituteLocalVars(a, mapping)).toList();
-    return StructTerm(term.functor, newArgs);
-  }
-  return term;
-}
+      return null; // a structure, rebuilt over its arguments
+    });

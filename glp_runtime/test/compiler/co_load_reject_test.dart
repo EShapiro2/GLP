@@ -7,10 +7,11 @@
 // remedy.
 //
 // Regression guard: before this check the second load fell through to the
-// direct compile path left from the retired dynamic-dispatch mechanism, which
-// emits the retired Distribute instruction. The load appeared to succeed and
-// the program died later and unreadably with
-// "WireFormatException: instruction not in the wire ISA: Distribute".
+// direct compile path left from the dynamic-dispatch mechanism, which then
+// emitted a distribute instruction no artefact can carry: the load appeared to
+// succeed and the program died later and unreadably at the wire format.  That
+// mechanism is gone (TGLP modules.tex, Implementation), and the code generator
+// now refuses an unresolved cross-module call itself.
 //
 // Fixture: programs/tests/co_load_neg/{self.glp, wallet.glp, top.glp}. It lives
 // under programs/ so the self.glp ancestor chain resolves Coin — the chain is
@@ -63,13 +64,6 @@ void main() {
           throwsContaining('imported procedure'));
     });
 
-    test('no Distribute instruction reaches the wire format', () {
-      // The old path compiled and failed only when the program was shipped.
-      expect(() => engine.loadFile(path('top.glp')),
-          throwsA(predicate((e) => !e.toString().contains('Distribute'),
-              'not a WireFormatException about Distribute')));
-    });
-
     // Reclassified 2026-08-02: this directory used to be the positive control
     // ("links cleanly"). Its self.glp exports no procedure, so the program has
     // no entry points and the loader now rejects it (modules.tex §Static
@@ -91,11 +85,13 @@ void main() {
     });
   });
 
-  // The per-isolate loaders (multiagent/agent_runtime.dart,
-  // multiagent/isolate_manager.dart) hand boot sources to loadSource under a
-  // synthetic name, so the source never exists on disk. The rejection covers
+  // The multi-isolate loader (multiagent/isolate_manager.dart) hands a boot
+  // source to loadSource under a synthetic name, so the source never exists
+  // on disk; multiagent/agent_runtime.dart did too, until it came to load one
+  // program and no boot source beside it. The rejection covers
   // that arrival too — otherwise a `#` call in a boot source still reaches the
-  // direct compile path and dies at run time on Distribute.
+  // direct compile path, where the code generator refuses it without naming
+  // the cause or the remedy.
   group('Co-loaded source text that cross-calls', () {
     final crossCalling = File(path('top.glp')).readAsStringSync();
     // Source text has no place in the hierarchy, so its types must be its own

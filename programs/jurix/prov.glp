@@ -112,6 +112,10 @@ procedure pred_ok(Constant?, Contract?, Preds?, Ans).
 pred_ok(_, [], _, yes).
 pred_ok(Pd, [S|Ss], E, R?) :- ground(S?), ground(Ss?), ground(Pd?), ground(E?) |
     sch_roles(S?, Rs),
+    pred_ok_roles(Rs?, Pd?, Ss?, E?, R).
+
+procedure pred_ok_roles(RoleSpecs?, Constant?, Contract?, Preds?, Ans).
+pred_ok_roles(Rs, Pd, Ss, E, R?) :- ground(Rs?), ground(Pd?), ground(Ss?), ground(E?) |
     roles_ok(Rs?, Pd?, Rs?, E?, A),
     pred_ok1(A?, Pd?, Ss?, E?, R).
 

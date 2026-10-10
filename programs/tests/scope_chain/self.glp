@@ -9,7 +9,7 @@
 %% (goal-check regression).
 Wrap(X) ::= wrap(X).
 
-procedure pmerge(Stream(X)?, Stream(X)?, Stream(X)).
+procedure(X) pmerge(Stream(X)?, Stream(X)?, Stream(X)).
 pmerge([X|Xs], Ys, [X?|Zs?]) :- pmerge(Ys?, Xs?, Zs).
 pmerge(Xs, [Y|Ys], [Y?|Zs?]) :- pmerge(Xs?, Ys?, Zs).
 pmerge([], Ys, Ys?).

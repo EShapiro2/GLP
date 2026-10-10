@@ -4,7 +4,7 @@
 %% No agent/4, no mediator, no UI. Alice MAD-sends a bare writer (wrapped in
 %% w/1) to Bob. Bob's producer matches it against the nested READER pattern
 %% w(W?) and forwards it onto a local channel stream; Bob's consumer pulls it
-%% back with receive/3 into the nested reader pattern wrapped(Y?).
+%% back off the channel into the nested reader pattern wrapped(Y?), in its head.
 %%
 %% What it reports, and what each report means:
 %%
@@ -12,49 +12,58 @@
 %%                        This is the `_w` admissibility the file was built to
 %%                        test, and it holds. The social-graph failure that
 %%                        prompted the probe is elsewhere.
-%%   bob_ch_otherwise  => receive/3 did not commit, so the second clause fired.
+%%   bob_ch_matched    => bob_consumer committed once S was bound.
 %%
-%% The second report is about the channel, not about `_w`. receive/3 is a
-%% defined guard whose unit clause is receive(X?, ch([X|In], Out?), ch(In?, Out)):
-%% the Out position is a READER there. This file supplies an unassigned writer
-%% at Out — ch(S?, _) — and the guard does not succeed. mad_w_clean.glp is this
-%% file with ch(S?, closed) at that one line, and it reports bob_ch_matched.
-%% That single line is the whole difference between them, and it is what these
-%% two fixtures distinguish.
-%%
-%% Whether receive/3 should suspend or fail on an unassigned writer at Out, and
-%% whether otherwise firing behind it is the specified outcome, is GLP-Spec's
-%% (receive/3's unit clause and otherwise's semantics). Nothing here waits on it.
+%% The second report is about the channel, not about `_w`. bob_consumer's head
+%% is ch([wrapped(Y?)|In], Out?), the form receive/3's unit clause
+%% receive(X?, ch([X|In], Out?), ch(In?, Out)) unfolds to. This file supplies an
+%% unassigned writer at Out --- ch(S?, _) --- and by GLP-Spec "Writer MGU" that
+%% writer is assigned Out?, so the clause commits once S is bound. Until then
+%% the first clause suspends on S?, and `otherwise` waits
+%% with it: it succeeds only if all previous clauses fail (GLP-Spec
+%% appendix-guards.tex). So bob_ch_otherwise is not an outcome of this file.
 %%
 %% Run via glp_multiagent/test/mad_w_probe_test.dart (two isolates).
 
 
-procedure agent_init(Constant?, Stream(X)?, Stream(X)?).
+%% What crosses: a bare writer of Done wrapped in w/1, addressed as msg/2; what
+%% bob forwards onto its channel: the same writer wrapped in wrapped/1.  A `?`
+%% at a type position is where a writer travels inside a value.  Typed
+%% concretely since 2026-09-18: over parameters, bob_producer/2 and
+%% bob_consumer/1 inspected them and no call instantiated them, so their
+%% clauses were checked by nothing (TGLP, sec:abstract-parameters).
+Done     ::= done.
+Probe    ::= w(Done?).
+ProbeMsg ::= msg(Constant, Probe).
+Carried  ::= wrapped(Done?).
+
+procedure agent_init(String?, Stream(_)?, Stream(ProbeMsg)?).
 
 %% Alice: transmit a fresh writer to bob, wrapped in w/1.
 agent_init(alice, _, _) :-
     send_to_net([msg(bob, w(_))]).
 
 %% Bob: receive w(W) from net; a "producer" process forwards W (writer) onto a
-%% local channel stream; a concurrent "consumer" process pulls it back off with
-%% the real receive/3 channel op into a nested reader pattern wrapped(Y?) — the
-%% exact mechanism the mediator uses (receive(msg(..,befriend(From,Resp?)),..)).
+%% local channel stream; a concurrent "consumer" process pulls it back off in its
+%% clause head, ch([wrapped(Y?)|In], Out?), into a nested reader pattern --- the
+%% form receive/3 unfolds to (GLP-Spec appendix-guards.tex, "Defined guard
+%% predicates").
 agent_init(bob, _, NetIn) :-
     bob_producer(NetIn?, S),
     bob_consumer(ch(S?, _)).
 
 %% Capture the _w reader, forward it as a writer onto the channel stream S.
-procedure bob_producer(Stream(X)?, Stream(Y)).
+procedure bob_producer(Stream(ProbeMsg)?, Stream(Carried)).
 bob_producer([msg(_, w(W?)) | _], [wrapped(W)]) :- send_to_user([bob_produced]).
 bob_producer([], []) :- send_to_user([bob_empty]).
 
-%% Pull it back with receive/3 into a nested reader pattern.
-procedure bob_consumer(Channel(Stream(Z), W)?).
-bob_consumer(Ch) :- receive(wrapped(Y?), Ch?, Ch1) | send_to_user([bob_ch_matched]), fill(Y), drop(Ch1?).
+%% Pull it back off the channel into a nested reader pattern, in the head.
+procedure bob_consumer(Channel(Stream(Carried), Constant)?).
+bob_consumer(ch([wrapped(Y?)|In], Out?)) :- send_to_user([bob_ch_matched]), fill(Y), drop(ch(In?, Out)).
 bob_consumer(_) :- otherwise | send_to_user([bob_ch_otherwise]).
 
 procedure drop(_?).
 drop(_).
 
-procedure fill(_).
+procedure fill(Done).
 fill(done).

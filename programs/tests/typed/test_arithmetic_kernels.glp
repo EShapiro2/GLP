@@ -25,7 +25,7 @@ exported procedure test_ln(Number?, Number).
 test_ln(X, R?) :- number(X?) | R := ln(X?).
 
 exported procedure test_log10(Number?, Number).
-test_log10(X, R?) :- number(X?) | R := log10(X?).
+test_log10(X, R?) :- number(X?) | R := log(X?).
 
 exported procedure test_pow(Number?, Number?, Number).
 test_pow(X, Y, R?) :- number(X?), number(Y?) | R := pow(X?, Y?).

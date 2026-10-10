@@ -29,16 +29,11 @@ import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
 import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart';
 import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/parser.dart';
-import 'package:glp_runtime/compiler/partial_evaluator.dart'
-    show setRootScopeUnitClauseSource;
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/runtime/module_hierarchy.dart';
 
 void main() {
   final rootSelfGlp = File('../programs/self.glp');
-  final rootSource = rootSelfGlp.readAsStringSync();
-  setRootScopeUnitClauseSource(rootSource);
-  setRootScopeEnvironmentSource(rootSource);
   final rootSelfPath = rootSelfGlp.absolute.path;
 
   TypeEnvironment layer(String source) => buildScopeFromModule(
@@ -180,7 +175,10 @@ void main() {
         err = e.toString();
       }
       expect(err, contains('keyed.glp'));
-      expect(err, contains('root:Key'));
+      // The root's Key, kept beside the module's under the root's path, the
+      // empty one (TGLP modules.tex, Compilation, third step): ':Key'.  It
+      // was 'root:Key' until 2026-10-04, the root's scope labelled 'root'.
+      expect(err, contains('writer type :Key is not a subtype of Key'));
     });
   });
 }

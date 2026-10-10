@@ -1,7 +1,9 @@
 import 'ast.dart';
 import 'error.dart';
-import 'partial_evaluator.dart' show getRootScopeUnitClauses;
+import 'partial_evaluator.dart' show unitClausesOf;
 import '../analysis/type_checker/type_ast.dart';
+import '../analysis/type_checker/program_dfa.dart' show ProgramDFA, buildProgramDFA, UnknownTypeError;
+import '../analysis/type_checker/well_typed_clause.dart' show repeatableReaderVariables;
 
 /// Variable information for semantic analysis
 class VariableInfo {
@@ -16,6 +18,10 @@ class VariableInfo {
   // Guard occurrences do NOT count toward SRSW satisfaction per spec
   int writerOccurrencesHeadBody = 0;
   int readerOccurrencesHeadBody = 0;
+
+  // Writer occurrences in the clause head alone.  A writer occurring twice in
+  // the head is refused whatever the guards ([VariableTable.collectSRSWViolations]).
+  int writerOccurrencesHead = 0;
 
   // First occurrence location
   AstNode? firstOccurrence;
@@ -68,22 +74,33 @@ class VariableTable {
   bool _hasGroundGuard = false;
   final Set<String> _groundedVars = {};
 
-  // Track variables with constant types (type-based SRSW relaxation)
-  // Per paper Section 5.2.1: If a variable's type is a constant type,
-  // multiple readers are allowed since constants contain no writers.
-  final Set<String> _typeGroundedVars = {};
+  // The variables an occurrence of which has a type licensing a repeated
+  // reader: a CONSTANT TYPE (TGLP typed-glp.tex, "Readers of constant types")
+  // or `MutualRef` ("A reader of type MutualRef may also occur more than
+  // once", typed-glp.tex, 350eb7d).  Such a reader may occur more than once in
+  // the clause, ITS PAIRED WRITER OCCURRING ONCE.
+  final Set<String> _typeLicensedVars = {};
+
+  /// The head of the clause this table was built from, which a diagnostic
+  /// names.
+  Atom? head;
 
   /// Record a writer occurrence.
   /// [inHeadOrBody]: true if in head or body (counts toward SRSW), false if in guard
+  /// [inHead]: true if in the clause head
   /// Anonymous variables (names starting with '_') are not tracked for SRSW.
-  void recordWriterOccurrence(String name, AstNode node, {bool inHeadOrBody = true}) {
+  void recordWriterOccurrence(String name, AstNode node,
+      {bool inHeadOrBody = true, bool inHead = false}) {
     // Skip anonymous variables - they don't participate in SRSW
     if (name.startsWith('_')) return;
-    
+
     final info = _vars.putIfAbsent(name, () => VariableInfo(name, true));
     info.writerOccurrences++;
     if (inHeadOrBody) {
       info.writerOccurrencesHeadBody++;
+    }
+    if (inHead) {
+      info.writerOccurrencesHead++;
     }
     info.firstOccurrence ??= node;
   }
@@ -114,18 +131,22 @@ class VariableTable {
 
   bool isGrounded(String varName) => _groundedVars.contains(varName);
 
-  /// Mark a variable as having a constant type (Integer, Real, Number, String, Constant).
-  /// This allows multiple reader occurrences per paper Section 5.2.1.
-  void markTypeGrounded(String varName) {
-    _typeGroundedVars.add(varName);
+  /// Mark a variable whose type at some occurrence licenses a repeated reader:
+  /// a constant type (TGLP typed-glp.tex, Definition "Constant Type") or
+  /// `MutualRef` (typed-glp.tex, 350eb7d).
+  void markTypeLicensed(String varName) {
+    _typeLicensedVars.add(varName);
   }
 
-  bool isTypeGrounded(String varName) => _typeGroundedVars.contains(varName);
+  bool isTypeLicensed(String varName) => _typeLicensedVars.contains(varName);
 
-  /// Check if variable allows multiple occurrences (either guard-grounded or type-grounded)
-  /// Per spec: both writer and reader may appear multiple times when grounded
-  bool allowsMultipleOccurrences(String varName) =>
-      isGrounded(varName) || isTypeGrounded(varName);
+  /// Whether the READER may occur more than once.  Two relaxations reach here
+  /// and both license it: a groundness-implying guard (TGLP glp.tex
+  /// rem:guards-srsw) and the type of an occurrence --- a constant type
+  /// (typed-glp.tex, Proposition "Readers of Constant Types") or `MutualRef`
+  /// ("A reader of type MutualRef may also occur more than once").
+  bool allowsMultipleReaders(String varName) =>
+      isGrounded(varName) || isTypeLicensed(varName);
 
   /// Verify SRSW constraints and return list of violations (empty if valid)
   /// 
@@ -143,24 +164,44 @@ class VariableTable {
       // Each occurrence denotes a fresh writer with no paired reader
       if (info.isAnonymous) continue;
 
-      // Check writer occurrences (multiple writers require grounded or constant type)
-      // Per spec: when grounded, both writer and reader may appear multiple times
-      if (info.writerOccurrences > 1 && !allowsMultipleOccurrences(info.name)) {
+      // Check writer occurrences.  A writer occurs once in a clause, whatever
+      // the guards: "if the success of a guard implies that X? is bound to a
+      // ground term, then X? may occur multiple times in the clause; X occurs
+      // once, as ever" (GLP-Spec glp.tex, Remark "Guards and SRSW", bbff21d),
+      // and the type-based relaxation is of the reader alone too, SRSW* being
+      // SRSW "with that same permission, its paired writer occurring once"
+      // (TGLP typed-glp.tex).  Twice in the HEAD the diagnostic names the
+      // clause: SRSW requires SO, "every variable occurs in it at most once"
+      // (glp.tex, Definitions "Single-Occurrence (SO) Invariant" and "GLP
+      // Program"), and the head is matched by term matching, defined for terms
+      // that jointly satisfy SO (appendix-term-matching.tex; GLP #3 Cowork,
+      // 2026-10-02 08:40 UTC, G).  Until 2026-10-02 a groundness-implying guard
+      // licensed a repeated writer: in the head, where the second occurrence's
+      // get_variable overwrote the first --- h1(same(To), To) :- ground(To?) |
+      // true reduced h1(same(4), 3) --- and in the head and again in the body,
+      // as two(R) :- ground(R?) | sink_w(R) did, until the Remark of bbff21d.
+      if (info.writerOccurrencesHead > 1) {
+        final line = head?.line ?? info.firstOccurrence?.line ?? 0;
+        final clause = head != null ? ' of the clause $head' : '';
+        violations.add(
+          'Line $line: Writer variable "${info.name}" occurs ${info.writerOccurrencesHead} times in the head$clause'
+        );
+      } else if (info.writerOccurrences > 1) {
         final line = info.firstOccurrence?.line ?? 0;
         violations.add(
-          'Line $line: Writer variable "${info.name}" occurs ${info.writerOccurrences} times without ground guard or constant type'
+          'Line $line: Writer variable "${info.name}" occurs ${info.writerOccurrences} times; a writer occurs once, whatever the guards'
         );
       }
 
-      // Check reader occurrences (multiple readers require grounded or constant type)
-      // Per SPEC_GUIDE.md: "Guard occurrences do not count toward SRSW satisfaction."
-      // Use readerOccurrencesHeadBody (not readerOccurrences) for SRSW validation.
-      // Per paper Section 5.2.1: constant types (Integer, Real, Number, String) allow
-      // multiple readers since they contain no writers.
-      if (info.readerOccurrencesHeadBody > 1 && !allowsMultipleOccurrences(info.name)) {
+      // Check reader occurrences.  Guard occurrences do not count toward SRSW
+      // satisfaction, so the count is readerOccurrencesHeadBody.  A reader may
+      // occur more than once under either relaxation: a groundness-implying
+      // guard, or the type of an occurrence --- a constant type or MutualRef
+      // (TGLP typed-glp.tex, "Readers of constant types").
+      if (info.readerOccurrencesHeadBody > 1 && !allowsMultipleReaders(info.name)) {
         final line = info.firstOccurrence?.line ?? 0;
         violations.add(
-          'Line $line: Reader variable "${info.name}?" occurs ${info.readerOccurrencesHeadBody} times without ground guard or constant type'
+          'Line $line: Reader variable "${info.name}?" occurs ${info.readerOccurrencesHeadBody} times without a groundness-implying guard or a constant or MutualRef type'
         );
       }
 
@@ -195,7 +236,7 @@ class VariableTable {
       final firstVar = _vars.values.firstWhere(
         (v) {
           if (v.writerOccurrences > 1) return true;
-          if (v.readerOccurrences > 1 && !allowsMultipleOccurrences(v.name)) return true;
+          if (v.readerOccurrences > 1 && !allowsMultipleReaders(v.name)) return true;
           if (v.writerOccurrences == 0) return true;
           if (v.readerOccurrences == 0 && v.writerOccurrences > 0) return true;
           return false;
@@ -259,45 +300,41 @@ class AnnotatedClause {
   String toString() => 'AnnotatedClause(guards=$hasGuards, body=$hasBody, vars=${varTable.getAllVars().length})';
 }
 
-/// Constant types that allow multiple reader occurrences (per paper Section 5.2.1)
-const _constantTypes = {'Integer', 'Real', 'Number', 'String', 'Constant'};
-
-/// Check if a type name is a constant type
-bool _isConstantType(String? typeName) {
-  return typeName != null && _constantTypes.contains(typeName);
-}
-
 /// Semantic analyzer for GLP programs
 class Analyzer {
   final PartialEvaluator _partialEvaluator = PartialEvaluator();
 
-  /// Procedure declarations for type-based SRSW relaxation (optional)
-  Map<String, ProcDecl> _procDecls = {};
+  /// The scope the program is checked in.  The SRSW relaxation of a typed
+  /// program is decided on the type each occurrence has (TGLP typed-glp.tex,
+  /// "Readers of ground types"), and a type has a definition only in a scope,
+  /// so without one no clause carries the relaxation.
+  TypeEnvironment? _typeEnv;
+  ProgramDFA? _dfa;
+  bool _dfaBuilt = false;
 
   Analyzer();
 
   AnnotatedProgram analyze(Program program, {
-    bool generateReduce = false,
     List<ProcDecl>? procDeclarations,
-    bool skipGlobalSRSW = false,
+    TypeEnvironment? typeEnv,
   }) {
-    // Build procedure declaration lookup map
-    _procDecls = {};
-    if (procDeclarations != null) {
-      for (final decl in procDeclarations) {
-        _procDecls[decl.key] = decl;
-      }
-    }
+    _typeEnv = typeEnv;
+    _dfa = null;
+    _dfaBuilt = false;
 
     // STEP 1: Run SRSW validation on the ORIGINAL program
     // This must happen BEFORE partial evaluation, because partial eval removes defined guards.
     // Guard readers (like X? in send(X?, Ch?, Ch1)) must be counted for SRSW pairing.
     //
-    // skipGlobalSRSW: Linked programs skip this check because each module was already
-    // type-checked independently, and the generated alias clauses use a forwarding
-    // pattern (writer pass-through for output args) that doesn't satisfy SRSW locally
-    // but is safe at the program level.
-    if (!skipGlobalSRSW) {
+    // Every program that reaches here is checked, a linked program included:
+    // it is the object checked (TGLP modules.tex §Compilation), and its alias
+    // clauses satisfy SRSW by construction — each argument threaded at its
+    // declared polarity, a writer in the head and its paired reader in the body
+    // at each consumed argument, a reader in the head and its paired writer in
+    // the body at each produced one (program_linker.dart, _makeAliasClause).
+    // Until 2026-09-18 a `skipGlobalSRSW` flag let a linked program bypass the
+    // pass on the claim that the aliases could not satisfy it.
+    {
       final allViolations = <String>[];
       for (final proc in program.procedures) {
         final violations = _collectSRSWViolationsForProcedure(proc);
@@ -313,23 +350,25 @@ class Analyzer {
 
     // STEP 2: Transform defined guards via partial evaluation
     // After SRSW validation passes, we can safely transform defined guards.
-    final transformed = _partialEvaluator.transformDefinedGuards(program);
+    final transformed =
+        _partialEvaluator.transformDefinedGuards(program, scope: _typeEnv);
 
-    // STEP 3: Auto-generate reduce/2 clauses for metainterpretation
-    // Generated for all files by default, except those with -stdlib. declaration
-    final withReduce = generateReduce
-        ? _generateReduceClauses(transformed)
-        : transformed;
+    // No reduce/2 clauses are generated: a program that needs reduce/2 writes
+    // it, as the book's meta-interpreters do.  Until 2026-10-02 every module
+    // but a system one, and every linked program, had reduce(H, B) clauses
+    // generated here for each of its clauses, after the SRSW pass and the type
+    // check, so neither saw them --- and the object compiled was not the object
+    // checked (Coordination #1, 2026-09-18).
 
-    // STEP 4: Annotate clauses (register assignment) on the transformed program
+    // STEP 3: Annotate clauses (register assignment) on the transformed program
     // SRSW already validated, so skip SRSW checking here
     final annotatedProcs = <AnnotatedProcedure>[];
-    for (final proc in withReduce.procedures) {
+    for (final proc in transformed.procedures) {
       final (annotatedProc, _) = _analyzeProcedureCollectingErrors(proc, skipSRSW: true);
       annotatedProcs.add(annotatedProc);
     }
 
-    return AnnotatedProgram(withReduce, annotatedProcs);
+    return AnnotatedProgram(transformed, annotatedProcs);
   }
 
   /// Collect SRSW violations for a procedure (for early validation before partial eval)
@@ -338,9 +377,6 @@ class Analyzer {
 
     for (final clause in proc.clauses) {
       final varTable = VariableTable();
-
-      // Type-based SRSW relaxation: mark head variables with constant types
-      _markConstantTypeVars(clause.head, proc.name, proc.arity, varTable);
 
       // Analyze head
       _analyzeAtom(clause.head, varTable);
@@ -360,7 +396,7 @@ class Analyzer {
       }
 
       // Collect SRSW violations
-      final violations = varTable.collectSRSWViolations();
+      final violations = _srswViolations(clause, varTable);
       final contextViolations = violations.map((v) => '${proc.name}/${proc.arity}: $v').toList();
       allViolations.addAll(contextViolations);
     }
@@ -368,124 +404,17 @@ class Analyzer {
     return allViolations;
   }
 
-  /// Generate reduce/2 clauses for all procedures in the program
-  /// Each source clause generates a corresponding reduce/2 clause:
-  /// - H.           -> reduce(H, true).
-  /// - H :- B.      -> reduce(H, B).
-  /// - H :- G | B.  -> reduce(H, B) :- G | true.
-  Program _generateReduceClauses(Program program) {
-    // Don't generate reduce for reduce/2 itself (avoid infinite recursion)
-    final sourceClauses = <Clause>[];
-    for (final proc in program.procedures) {
-      if (proc.name == 'reduce' && proc.arity == 2) continue;
-      sourceClauses.addAll(proc.clauses);
-    }
-
-    if (sourceClauses.isEmpty) {
-      return program; // Nothing to generate
-    }
-
-    // Generate reduce/2 clauses
-    final reduceClauses = <Clause>[];
-    for (final clause in sourceClauses) {
-      reduceClauses.add(_generateReduceClause(clause));
-    }
-
-    // Check if reduce/2 already exists (user-defined)
-    final existingReduceIdx = program.procedures.indexWhere(
-      (p) => p.name == 'reduce' && p.arity == 2
-    );
-
-    final newProcedures = List<Procedure>.from(program.procedures);
-
-    if (existingReduceIdx >= 0) {
-      // Append to existing reduce/2
-      final existing = newProcedures[existingReduceIdx];
-      final mergedClauses = [...existing.clauses, ...reduceClauses];
-      newProcedures[existingReduceIdx] = Procedure(
-        'reduce', 2, mergedClauses,
-        existing.line, existing.column
-      );
-    } else {
-      // Create new reduce/2 procedure
-      final firstClause = reduceClauses.first;
-      newProcedures.add(Procedure(
-        'reduce', 2, reduceClauses,
-        firstClause.line, firstClause.column
-      ));
-    }
-
-    return Program(newProcedures, program.line, program.column);
-  }
-
-  /// Generate a single reduce/2 clause from a source clause
-  Clause _generateReduceClause(Clause source) {
-    final head = source.head;
-    final guards = source.guards;
-    final body = source.body;
-    final line = head.line;
-    final col = head.column;
-
-    // Convert head atom to term for reduce/2
-    final headTerm = _atomToTerm(head);
-
-    // Body term for reduce/2: 'true' for facts, original body for rules
-    Term bodyTerm;
-    if (body == null || body.isEmpty) {
-      bodyTerm = ConstTerm('true', line, col);
-    } else {
-      bodyTerm = _goalsToTerm(body, line, col);
-    }
-
-    // reduce(Head, Body)
-    final reduceHead = Atom('reduce', [headTerm, bodyTerm], line, col);
-
-    // If original had guards, keep them with 'true' body
-    // reduce(H, B) :- G | true.
-    List<Goal>? reduceBody;
-    if (guards != null && guards.isNotEmpty) {
-      reduceBody = [Goal('true', [], line, col)];
-    }
-
-    return Clause(
-      reduceHead,
-      guards: guards,
-      body: reduceBody,
-      line: line,
-      column: col,
-    );
-  }
-
-  /// Convert an Atom to a Term (StructTerm or ConstTerm for 0-arity)
-  Term _atomToTerm(Atom atom) {
-    if (atom.args.isEmpty) {
-      return ConstTerm(atom.functor, atom.line, atom.column);
-    }
-    return StructTerm(atom.functor, atom.args, atom.line, atom.column);
-  }
-
-  /// Convert a list of goals to a single term (conjunction)
-  Term _goalsToTerm(List<Goal> goals, int line, int col) {
-    if (goals.isEmpty) {
-      return ConstTerm('true', line, col);
-    }
-    if (goals.length == 1) {
-      return _goalToTerm(goals.first);
-    }
-    // Right-associative conjunction: (A, (B, C))
-    var result = _goalToTerm(goals.last);
-    for (var i = goals.length - 2; i >= 0; i--) {
-      result = StructTerm(',', [_goalToTerm(goals[i]), result], line, col);
-    }
-    return result;
-  }
-
-  /// Convert a Goal to a Term
-  Term _goalToTerm(Goal goal) {
-    if (goal.args.isEmpty) {
-      return ConstTerm(goal.functor, goal.line, goal.column);
-    }
-    return StructTerm(goal.functor, goal.args, goal.line, goal.column);
+  /// The clause's SRSW violations, the relaxations of a typed program applied.
+  ///
+  /// The type-based relaxation is consulted only where the counts have
+  /// something to answer for: it costs a walk of the clause against the type
+  /// automaton, and a clause with no multiple occurrence has nothing to relax.
+  List<String> _srswViolations(Clause clause, VariableTable varTable) {
+    var violations = varTable.collectSRSWViolations();
+    if (violations.isEmpty) return violations;
+    if (!_markTypeLicensedVars(clause, varTable)) return violations;
+    violations = varTable.collectSRSWViolations();
+    return violations;
   }
 
   AnnotatedProcedure _analyzeProcedure(Procedure proc) {
@@ -545,15 +474,11 @@ class Analyzer {
   }
 
   /// Analyze clause and collect SRSW violations instead of throwing
-  /// [skipSRSW]: if true, skip SRSW validation (used for auto-generated reduce/2 clauses)
+  /// [skipSRSW]: if true, skip SRSW validation (the program's was validated
+  /// before partial evaluation)
   (AnnotatedClause, List<String>) _analyzeClauseCollectingErrors(
       Clause clause, String procName, int procArity, {bool skipSRSW = false}) {
     final varTable = VariableTable();
-
-    // Type-based SRSW relaxation: mark head variables with constant types
-    // Per paper Section 5.2.1: If a variable's type is a constant type,
-    // multiple readers are allowed since constants contain no writers.
-    _markConstantTypeVars(clause.head, procName, procArity, varTable);
 
     // Analyze head
     _analyzeAtom(clause.head, varTable);
@@ -575,7 +500,7 @@ class Analyzer {
     }
 
     // Collect SRSW violations (unless skipped for auto-generated clauses)
-    final violations = skipSRSW ? <String>[] : varTable.collectSRSWViolations();
+    final violations = skipSRSW ? <String>[] : _srswViolations(clause, varTable);
     final contextViolations = violations.map((v) => '$procName/$procArity: $v').toList();
 
     // Assign register indices (even if there are violations, for partial analysis)
@@ -584,9 +509,11 @@ class Analyzer {
     return (AnnotatedClause(clause, varTable, hasGuards: hasGuards, hasBody: hasBody), contextViolations);
   }
 
+  /// Analyze a clause head.
   void _analyzeAtom(Atom atom, VariableTable varTable) {
+    varTable.head = atom;
     for (final arg in atom.args) {
-      _analyzeTerm(arg, varTable);
+      _analyzeTerm(arg, varTable, inHead: true);
     }
   }
 
@@ -596,35 +523,9 @@ class Analyzer {
     }
   }
 
-  // Guards that can be negated with ~
-  static const _negatableGuards = {
-    // Type guards
-    'ground', 'known', 'unknown', 'integer', 'number', 'atom', 'string',
-    'constant', 'compound', 'tuple', 'list', 'is_list', 'module',
-    'is_mutual_ref', 'no_readers',
-    // Equality
-    '=?=',
-  };
-
-  // Guards that cannot be negated (due to type-error semantics or special behavior)
-  static const _nonNegatableGuards = {
-    // Arithmetic (type error on non-numeric)
-    '<', '>', '=<', '>=', '=:=', '=\\=',
-    // Lexicographic (type error on non-constant)
-    '@<',
-    // Control
-    'otherwise',
-    // Time
-    'wait', 'wait_until',
-    // Attestation guard (succeed/fail only; negation unspecified — seam spec §4)
-    'valid_attestation',
-  };
-
   // Body-only constructs that are NOT valid guards
   static const _invalidInGuardPosition = {
     'true',   // true is body-only, not a guard
-    'false',  // false is body-only
-    'fail',   // fail is body-only
   };
 
   void _analyzeGuard(Guard guard, VariableTable varTable) {
@@ -637,21 +538,6 @@ class Analyzer {
         phase: 'analyzer'
       );
     }
-    // Validate guard negation
-    if (guard.negated) {
-      // Check if guard is negatable
-      if (_nonNegatableGuards.contains(guard.predicate)) {
-        throw CompileError(
-          'Guard "${guard.predicate}" cannot be negated (type-error semantics)',
-          guard.line,
-          guard.column,
-          phase: 'analyzer'
-        );
-      }
-      // Note: defined guards (unit clauses) cannot be negated - this would require
-      // checking if the guard predicate is a user-defined unit clause, which we
-      // defer to runtime or codegen phase for now
-    }
 
     // Special handling for ground/1
     // ground(X?) implies the argument is fully ground (no unbound variables)
@@ -663,14 +549,20 @@ class Analyzer {
       }
     }
 
-    // Type-checking guards implicitly test groundness
-    // Per spec: type tests require bound values, which are ground by definition
+    // Type-checking guards whose success implies the argument is ground: the
+    // catalogue's "Ground: yes" (GLP-Spec appendix-guards.tex; TGLP glp.tex,
+    // Remark "Guards and SRSW").  `compound` and `list` are "Ground: no" ---
+    // `compound(f(X?))` and `list([X?])` succeed with X? unbound --- and mark
+    // nothing (GLP, 2026-09-28).  `atom` and `tuple` are not in the catalogue
+    // and are not guards: removed from the runtime on 2026-10-01 (GLP, approved
+    // by Udi), with this table and the partial evaluator.  `real` is "Ground:
+    // yes" since GLP-Spec 12be29b (GLP #3 Cowork, 2026-10-02 22:19 UTC).
     // Note: var/nonvar removed (don't guarantee groundness), float removed (not implemented)
-    final typeCheckOps = ['number', 'integer', 'atom', 'string', 'list', 'tuple', 'compound', 'constant'];
+    final typeCheckOps = ['number', 'integer', 'real', 'string', 'constant'];
     if (typeCheckOps.contains(guard.predicate) && guard.args.length == 1) {
       final arg = guard.args[0];
       if (arg is VarTerm) {
-        // Mark the writer as grounded (readers of X are allowed multiple times)
+        // Mark X grounded: X? may occur more than once, X once as ever.
         varTable.markGrounded(arg.name);
       }
     }
@@ -683,40 +575,27 @@ class Analyzer {
       }
     }
 
-    // is_mutual_ref/1 guard marks argument as ground (MutualRefTerm can be read multiple times)
-    if (guard.predicate == 'is_mutual_ref' && guard.args.length == 1) {
-      final arg = guard.args[0];
-      if (arg is VarTerm) {
-        varTable.markGrounded(arg.name);
-      }
-    }
+    // `is_mutual_ref` marks nothing: the catalogue gives it "Ground: no"
+    // (GLP-Spec appendix-guards.tex).  A repeated `Ref?` is licensed by the
+    // occurrence's TYPE --- "A reader of type MutualRef may also occur more than
+    // once" (TGLP typed-glp.tex, 350eb7d) --- in [_markTypeLicensedVars], where
+    // the guard's own occurrence has the `MutualRef?` it narrows `Ref?` to.
+    // Until 2026-10-01 it marked its argument grounded, which licensed a
+    // repeated WRITER as well, and the root self.glp's mwm_main/2 and mwm1/4
+    // read Ref? twice on that mark alone (GLP, 2026-10-01).
 
-    // unknown/1 guard marks argument as ground for SRSW purposes
-    // Unbound variables are safe to read multiple times (always return same reference)
-    if (guard.predicate == 'unknown' && guard.args.length == 1) {
-      final arg = guard.args[0];
-      if (arg is VarTerm) {
-        varTable.markGrounded(arg.name);
-      }
-    }
+    // `unknown` marks nothing: the catalogue gives it "Ground: no" (GLP-Spec
+    // appendix-guards.tex) --- it succeeds on an unbound variable --- so it
+    // licenses no repeated occurrence (TGLP glp.tex, Remark "Guards and SRSW";
+    // GLP, 2026-09-28).  Until 2026-09-29 it marked its argument grounded.
 
-    // wait_until/1 guard marks argument as ground (requires ground timestamp)
-    // wait_until(T?) succeeds only if T is a ground number (timestamp in ms)
-    if (guard.predicate == 'wait_until' && guard.args.length == 1) {
-      final arg = guard.args[0];
-      if (arg is VarTerm) {
-        varTable.markGrounded(arg.name);
-      }
-    }
-
-    // wait/1 guard marks argument as ground (requires ground duration)
-    // wait(D?) succeeds only if D is a ground number (duration in ms)
-    if (guard.predicate == 'wait' && guard.args.length == 1) {
-      final arg = guard.args[0];
-      if (arg is VarTerm) {
-        varTable.markGrounded(arg.name);
-      }
-    }
+    // `wait` and `wait_until` mark nothing: the catalogue's time-guard table
+    // has no Ground column (GLP-Spec appendix-guards.tex, Time guards), so
+    // neither licenses a repeated occurrence (TGLP glp.tex, Remark "Guards and
+    // SRSW").  A repeated `D?` of type Number is licensed by its type, a
+    // constant type, as any reader of one is (TGLP typed-glp.tex, "Readers of
+    // constant types").  Until 2026-10-02 each marked its argument grounded,
+    // which licensed a repeated writer as well.
 
     // Comparison guards implicitly test groundness of both operands
     // Per spec: comparison guards require both operands to be bound numeric values,
@@ -729,20 +608,15 @@ class Analyzer {
       }
     }
 
-    // Ground equality guard marks both arguments as grounded
-    // =?= succeeds only if both arguments are ground and equal
+    // Ground equality.  =?= "succeeds if both arguments are ground and equal",
+    // Ground "yes (both)", and marks both (GLP-Spec appendix-guards.tex,
+    // bbff21d).  =?\= marks nothing, Ground "no": it "succeeds if no readers
+    // substitution makes them ground and equal", f(a, Z?) =?\= f(b, W?) with
+    // Z? and W? unbound among its successes.  Until 2026-10-02 it marked both,
+    // so neq_pair(X, Y, pair(X?, X?, Y?, Y?)) :- X? =?\= Y? | true loaded, and
+    // its call neq_pair(f(a, Z?), f(b, W?), P) bound P to a term holding one
+    // unbound variable twice (Integration #4 Code, 2026-10-02 10:52 UTC).
     if (guard.predicate == '=?=' && guard.args.length == 2) {
-      for (final arg in guard.args) {
-        if (arg is VarTerm) {
-          varTable.markGrounded(arg.name);
-        }
-      }
-    }
-
-    // valid_attestation/4 guard marks all four inputs as grounded: it suspends
-    // until every input is ground, so a holding clause has them all ground
-    // (seam spec §4). Allows multiple reader occurrences of the key/sig inputs.
-    if (guard.predicate == 'valid_attestation' && guard.args.length == 4) {
       for (final arg in guard.args) {
         if (arg is VarTerm) {
           varTable.markGrounded(arg.name);
@@ -763,7 +637,7 @@ class Analyzer {
   /// Used for arithmetic comparison guards where arguments may be complex expressions.
   void _extractAndMarkGroundedVars(Term term, VariableTable varTable) {
     if (term is VarTerm) {
-      // Mark the variable (reader or writer) as grounded
+      // Mark the variable grounded: its reader may occur more than once.
       varTable.markGrounded(term.name);
     } else if (term is StructTerm) {
       // Recurse into structure arguments (e.g., X? + 1 has args [X?, 1])
@@ -784,7 +658,9 @@ class Analyzer {
   /// Analyze a term, recording variable occurrences.
   /// [inHeadOrBody]: true if analyzing head or body (counts for SRSW),
   ///                 false if analyzing guards (does not count for SRSW)
-  void _analyzeTerm(Term term, VariableTable varTable, {bool inHeadOrBody = true}) {
+  /// [inHead]: true if analyzing the clause head
+  void _analyzeTerm(Term term, VariableTable varTable,
+      {bool inHeadOrBody = true, bool inHead = false}) {
     if (term is VarTerm) {
       // Skip anonymous variables (names starting with '_') - exempt from SRSW
       // Each occurrence denotes a fresh writer with no paired reader
@@ -793,18 +669,21 @@ class Analyzer {
       if (term.isReader) {
         varTable.recordReaderOccurrence(term.name, term, inHeadOrBody: inHeadOrBody);
       } else {
-        varTable.recordWriterOccurrence(term.name, term, inHeadOrBody: inHeadOrBody);
+        varTable.recordWriterOccurrence(term.name, term,
+            inHeadOrBody: inHeadOrBody, inHead: inHead);
       }
     } else if (term is StructTerm) {
       for (final arg in term.args) {
-        _analyzeTerm(arg, varTable, inHeadOrBody: inHeadOrBody);
+        _analyzeTerm(arg, varTable, inHeadOrBody: inHeadOrBody, inHead: inHead);
       }
     } else if (term is ListTerm) {
       if (term.head != null) {
-        _analyzeTerm(term.head!, varTable, inHeadOrBody: inHeadOrBody);
+        _analyzeTerm(term.head!, varTable,
+            inHeadOrBody: inHeadOrBody, inHead: inHead);
       }
       if (term.tail != null) {
-        _analyzeTerm(term.tail!, varTable, inHeadOrBody: inHeadOrBody);
+        _analyzeTerm(term.tail!, varTable,
+            inHeadOrBody: inHeadOrBody, inHead: inHead);
       }
     }
     // A ConstTerm reached here is in argument position, and therefore data.
@@ -828,35 +707,52 @@ class Analyzer {
     }
   }
 
-  /// Mark head variables with constant types as type-grounded.
-  /// This implements type-based SRSW relaxation per paper Section 5.2.1.
-  void _markConstantTypeVars(Atom head, String procName, int procArity, VariableTable varTable) {
-    final key = '$procName/$procArity';
-    final procDecl = _procDecls[key];
-    if (procDecl == null) return;
-
-    // Walk through head arguments and check their types from procDecl
-    for (int i = 0; i < head.args.length && i < procDecl.argTypes.length; i++) {
-      final typeName = procDecl.getTypeName(i);
-      if (_isConstantType(typeName)) {
-        // Mark all variables at this position as type-grounded
-        _markVarsInTermAsTypeGrounded(head.args[i], varTable);
-      }
+  /// Mark the clause's variables an occurrence of which has a type licensing a
+  /// repeated reader --- a CONSTANT TYPE, or `MutualRef` ("A reader of type
+  /// MutualRef may also occur more than once", TGLP typed-glp.tex, 350eb7d) ---
+  /// and answer whether any was marked.
+  ///
+  /// The question is asked of the type each occurrence has, at every occurrence
+  /// (TGLP typed-glp.tex, "Readers of constant types": the relaxation "holds
+  /// wherever the occurrences sit --- in the head, nested within an argument, or
+  /// in the body --- since it rests on what the term is and not on where it is
+  /// read"), so a body variable read twice, a head variable at a nested
+  /// `Integer` position and a head argument whose type is a user-defined union
+  /// of constants are one case and not three.  Until 2026-09-23 the decision was
+  /// a fixed list of five type NAMES --- Integer, Real, Number, String, Constant
+  /// --- consulted at the top-level type name of a head argument alone, so
+  /// `Colour ::= red ; green ; blue.` did not qualify where `String` did, and
+  /// nothing nested and nothing in the body qualified at all.
+  bool _markTypeLicensedVars(Clause clause, VariableTable varTable) {
+    final env = _typeEnv;
+    if (env == null) return false;
+    final dfa = _programDfa(env);
+    if (dfa == null) return false;
+    final Set<String> licensed;
+    try {
+      licensed = repeatableReaderVariables(clause, dfa, env);
+    } on UnknownTypeError {
+      // A type the scope does not carry: the type checker reports it; nothing
+      // is relaxed on a type that cannot be resolved.
+      return false;
     }
+    if (licensed.isEmpty) return false;
+    for (final name in licensed) {
+      varTable.markTypeLicensed(name);
+    }
+    return true;
   }
 
-  /// Recursively mark all variables in a term as type-grounded.
-  void _markVarsInTermAsTypeGrounded(Term term, VariableTable varTable) {
-    if (term is VarTerm) {
-      varTable.markTypeGrounded(term.name);
-    } else if (term is StructTerm) {
-      for (final arg in term.args) {
-        _markVarsInTermAsTypeGrounded(arg, varTable);
-      }
-    } else if (term is ListTerm) {
-      if (term.head != null) _markVarsInTermAsTypeGrounded(term.head!, varTable);
-      if (term.tail != null) _markVarsInTermAsTypeGrounded(term.tail!, varTable);
+  /// The program DFA of [env], built once per [analyze].
+  ProgramDFA? _programDfa(TypeEnvironment env) {
+    if (_dfaBuilt) return _dfa;
+    _dfaBuilt = true;
+    try {
+      _dfa = buildProgramDFA(env);
+    } on UnknownTypeError {
+      _dfa = null;
     }
+    return _dfa;
   }
 }
 
@@ -888,10 +784,16 @@ class PartialEvaluator {
 
   /// Entry point: transform all defined guards in a program.
   /// Call this before SRSW analysis.
-  Program transformDefinedGuards(Program program) {
-    // Merge root scope unit clauses with user unit clauses.
-    // User definitions override root scope (spread order: root scope first, user second).
-    final unitClauses = {...getRootScopeUnitClauses(), ..._collectUnitClauses(program)};
+  ///
+  /// The defined guards are [scope]'s unit clauses and the program's own, the
+  /// program's shadowing the scope's: the scope is the one the program was
+  /// checked in, passed in with it ([Analyzer.analyze]'s `typeEnv`); a linked
+  /// program carries the root self.glp's among its own procedures.
+  Program transformDefinedGuards(Program program, {TypeEnvironment? scope}) {
+    final unitClauses = {
+      ...unitClausesOf(scope?.scopeClauses ?? const {}),
+      ..._collectUnitClauses(program)
+    };
 
     if (unitClauses.isEmpty) {
       return program; // No unit clauses, nothing to transform
@@ -921,7 +823,9 @@ class PartialEvaluator {
 
   /// Collect unit clauses from program.
   /// Returns map from "name/arity" to list of head arguments.
-  /// A unit clause has exactly one clause, no guards, and no body (or body is just `true`).
+  /// A unit clause has exactly one clause, no guards and no body (GLP-Spec
+  /// appendix-guards.tex, Defined guard predicates); a clause whose body is
+  /// `true` is not one and defines no guard (until 2026-10-02 it counted).
   Map<String, List<Term>> _collectUnitClauses(Program program) {
     final Map<String, List<Term>> unitClauses = {};
 
@@ -934,17 +838,8 @@ class PartialEvaluator {
       // Must have no guards
       if (clause.guards != null && clause.guards!.isNotEmpty) continue;
 
-      // Must have no body, or body is empty, or body is just `true`
-      if (clause.body != null && clause.body!.isNotEmpty) {
-        // Check if body is just `true`
-        if (clause.body!.length == 1 &&
-            clause.body![0].functor == 'true' &&
-            clause.body![0].args.isEmpty) {
-          // Body is just `true`, this is a unit clause
-        } else {
-          continue; // Has real body goals
-        }
-      }
+      // Must have no body
+      if (clause.body != null && clause.body!.isNotEmpty) continue;
 
       // This is a unit clause
       final key = '${proc.name}/${proc.arity}';
@@ -978,15 +873,6 @@ class PartialEvaluator {
 
         if (unitClauses.containsKey(key)) {
           // This is a defined guard - reduce it
-          if (guard.negated) {
-            throw CompileError(
-              'Defined guard "${guard.predicate}" cannot be negated',
-              guard.line,
-              guard.column,
-              phase: 'analyzer'
-            );
-          }
-
           // Rename unit clause variables to fresh names
           final renamedArgs = _renameUnitClauseVars(unitClauses[key]!);
 
@@ -1193,16 +1079,40 @@ class PartialEvaluator {
     Map<String, Term> subst,
     Set<String> suspSet
   ) {
+    // A unit clause's `_?` (or `_X?`) is a head reader of a variable of its
+    // own: at a produced head position it "denotes an output the clause never
+    // produces" (TGLP typed-glp.tex, "Anonymous variables").  The table's
+    // column "Reader X2?" matches it as the named head readers below: a call
+    // writer is assigned it, and the unfolding names it nowhere; a call reader
+    // or term fails.  It was passed over as `_` is, so pick(A?, 2) reduced
+    // against pick(1, _?).
+    if (_isAnonymousReader(unitArg)) {
+      return _isWriterTerm(callArg)
+          ? null
+          : UnifyFail(_anonymousReaderMismatch(callArg));
+    }
+
     // Handle underscore on either side - always succeeds, no binding
     if (_isAnonymous(callArg) || _isAnonymous(unitArg)) {
+      // Except a writer against a writer: an anonymous variable is a writer
+      // of its own (GLP-Spec glp.tex, Remark "Anonymous Variables"), and a
+      // call writer against a head writer fails (appendix-term-matching.tex,
+      // row "Writer X1", column "Writer X2").  Until 2026-10-02 it was passed
+      // over.
+      if (_isWriterTerm(callArg) && _isWriterTerm(unitArg)) {
+        return UnifyFail('Writer $callArg cannot match the head writer $unitArg');
+      }
       return null; // success, continue
     }
 
     // Case: call arg is writer (VarTerm, not reader)
     if (callArg is VarTerm && !callArg.isReader) {
       if (unitArg is VarTerm && !unitArg.isReader) {
-        // Writer vs Writer: alias unit writer to call writer
-        subst[unitArg.name] = callArg;
+        // Call writer vs head writer: FAIL.  GLP-Spec appendix-term-matching.tex,
+        // Definition "Term Matching": row "Writer X1", column "Writer X2".
+        // Until 2026-10-02 the unit writer was aliased to the call writer.
+        return UnifyFail(
+            'Writer ${callArg.name} cannot match the head writer ${unitArg.name}');
       } else if (unitArg is VarTerm && unitArg.isReader) {
         // Writer vs Reader in unit clause - unusual but handle it
         // The reader refers to a writer that should be aliased
@@ -1222,9 +1132,11 @@ class PartialEvaluator {
         // Reader vs Writer: alias unit writer to call writer
         subst[unitArg.name] = VarTerm(writerName, false, callArg.line, callArg.column);
       } else if (unitArg is VarTerm && unitArg.isReader) {
-        // Reader vs Reader: both suspend on same thing, alias
-        subst[unitArg.name] = VarTerm(writerName, false, callArg.line, callArg.column);
-        suspSet.add(writerName);
+        // Goal reader vs head reader: FAIL.  GLP-Spec appendix-term-matching.tex,
+        // Definition "Term Matching": row "Reader X1?", column "Reader X2?".
+        // Until 2026-10-02 the two were aliased and the goal suspended.
+        return UnifyFail(
+            'Reader $writerName? cannot match the head reader ${unitArg.name}?');
       } else {
         // Reader vs constant/structure: add to suspension set
         // Record what it should match - bind the writer to the unit arg
@@ -1254,9 +1166,11 @@ class PartialEvaluator {
         _substSet(subst, unitArg.name, callArg);
         return null;
       } else if (unitArg is VarTerm && unitArg.isReader) {
-        // Constant vs Reader in unit clause - unusual
-        _substSet(subst, unitArg.name, callArg);
-        return null;
+        // Constant vs head reader: FAIL (appendix-term-matching.tex, row "Term
+        // f1/n1", column "Reader X2?"; a constant is f/0).  Until 2026-10-02 the
+        // head reader was bound to the constant.
+        return UnifyFail(
+            'Constant ${callArg.value} cannot match the head reader ${unitArg.name}?');
       } else {
         return UnifyFail('Constant ${callArg.value} cannot match structure $unitArg');
       }
@@ -1278,8 +1192,11 @@ class PartialEvaluator {
         _substSet(subst, unitArg.name, callArg);
         return null;
       } else if (unitArg is VarTerm && unitArg.isReader) {
-        _substSet(subst, unitArg.name, callArg);
-        return null;
+        // Structure vs head reader: FAIL (appendix-term-matching.tex, row "Term
+        // f1/n1", column "Reader X2?").  Until 2026-10-02 the head reader was
+        // bound to the structure.
+        return UnifyFail(
+            'Structure ${callArg.functor} cannot match the head reader ${unitArg.name}?');
       } else {
         return UnifyFail('Structure ${callArg.functor} cannot match $unitArg');
       }
@@ -1310,8 +1227,10 @@ class PartialEvaluator {
         _substSet(subst, unitArg.name, callArg);
         return null;
       } else if (unitArg is VarTerm && unitArg.isReader) {
-        _substSet(subst, unitArg.name, callArg);
-        return null;
+        // List vs head reader: FAIL (appendix-term-matching.tex, row "Term
+        // f1/n1", column "Reader X2?"; a list is '[]'/0 or '.'/2).  Until
+        // 2026-10-02 the head reader was bound to the list.
+        return UnifyFail('List cannot match the head reader ${unitArg.name}?');
       } else {
         return UnifyFail('List cannot match $unitArg');
       }
@@ -1350,6 +1269,27 @@ class PartialEvaluator {
   bool _isAnonymous(Term term) {
     return term is UnderscoreTerm || (term is VarTerm && term.name.startsWith('_'));
   }
+
+  /// An anonymous variable at a reader occurrence, `_?` or `_X?`.
+  bool _isAnonymousReader(Term term) =>
+      (term is UnderscoreTerm && term.isReader) ||
+      (term is VarTerm && term.isReader && term.name.startsWith('_'));
+
+  /// A writer occurrence, named or anonymous.
+  bool _isWriterTerm(Term term) =>
+      (term is UnderscoreTerm && !term.isReader) ||
+      (term is VarTerm && !term.isReader);
+
+  /// Why [callArg], a call reader or term, cannot match a unit clause's `_?`.
+  String _anonymousReaderMismatch(Term callArg) => switch (callArg) {
+        ConstTerm(:final value) =>
+          'Constant $value cannot match the head reader _?',
+        StructTerm(:final functor) =>
+          'Structure $functor cannot match the head reader _?',
+        ListTerm() => 'List cannot match the head reader _?',
+        VarTerm(:final name) => 'Reader $name? cannot match the head reader _?',
+        _ => 'Reader _? cannot match the head reader _?',
+      };
 
   /// Resolve substitution chains.
   /// If σ = {X → Y, Y → f(Z)}, result is {X → f(Z), Y → f(Z)}
@@ -1454,16 +1394,11 @@ class PartialEvaluator {
       guard.args.map((a) => _applySubstitution(a, subst)).toList(),
       guard.line,
       guard.column,
-      negated: guard.negated,
     );
   }
 
   /// Apply substitution to a Goal
   Goal _applySubstitutionToGoal(Goal goal, Map<String, Term> subst) {
-    // A rated goal (sGLP, Goal @ Rate) keeps its rate.
-    if (goal is RatedGoal) {
-      return goal.withInner(_applySubstitutionToGoal(goal.innerGoal, subst));
-    }
     return Goal(
       goal.functor,
       goal.args.map((a) => _applySubstitution(a, subst)).toList(),

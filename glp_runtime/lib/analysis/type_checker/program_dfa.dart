@@ -60,17 +60,29 @@ class DFAState {
   /// root-`self.glp` type `Constant`.
   bool get isModuleType => baseName == 'Module';
 
+  /// True for the `MutualRef` type state (either complement or not).
+  /// A mutual reference is an opaque handle on the tail of a stream; `MutualRef`
+  /// is a primitive (TGLP sec:type-declarations) and, unlike `Module`, is NOT an
+  /// alternative of the root-`self.glp` type `Constant` --- it holds the writer
+  /// of a stream tail, so it is neither ground nor a constant type.
+  bool get isMutualRefType => baseName == 'MutualRef';
+
   /// True for `_FINAL_` (anonymous final for constant/literal matches)
   bool get isAnonymousFinal => baseName == '_FINAL_';
 
   // Fix 3.2: Computed properties for type classification
-  /// True for the primitive types: `_`, Integer, Real, String, Module.
+  /// True for the primitive types: `_`, Integer, Real, String, Module, MutualRef.
   /// `Number` and `Constant` are NOT primitive — they are unions defined in the
-  /// root `self.glp` (TGLP appendix "GLP Language Primitives"), so they behave
+  /// root `self.glp` (TGLP sec:type-declarations), so they behave
   /// as ordinary defined types here and their relation to the primitives comes
   /// out of their definitions.
   bool get isPrimitiveType =>
-      isWildcard || isIntegerType || isRealType || isStringType || isModuleType;
+      isWildcard ||
+      isIntegerType ||
+      isRealType ||
+      isStringType ||
+      isModuleType ||
+      isMutualRefType;
 
   /// True for user-defined types (not primitive, not procedure, not anonymous final)
   bool get isUserDefinedType =>
@@ -237,6 +249,8 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
   states['String?'] = DFAState('String', isDual: true, isFinal: false);
   states['Module'] = DFAState('Module', isDual: false, isFinal: false);
   states['Module?'] = DFAState('Module', isDual: true, isFinal: false);
+  states['MutualRef'] = DFAState('MutualRef', isDual: false, isFinal: false);
+  states['MutualRef?'] = DFAState('MutualRef', isDual: true, isFinal: false);
   states['_FINAL_'] = DFAState('_FINAL_', isDual: false, isFinal: true);
 
   // Create automata for system types
@@ -250,6 +264,8 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
   automata['String?'] = _primitiveTypeAutomaton(states['String?']!, states['_FINAL_']!);
   automata['Module'] = _primitiveTypeAutomaton(states['Module']!, states['_FINAL_']!);
   automata['Module?'] = _primitiveTypeAutomaton(states['Module?']!, states['_FINAL_']!);
+  automata['MutualRef'] = _primitiveTypeAutomaton(states['MutualRef']!, states['_FINAL_']!);
+  automata['MutualRef?'] = _primitiveTypeAutomaton(states['MutualRef?']!, states['_FINAL_']!);
 
   // Create states for ALL defined types FIRST
   // (Automata may reference other types, so all states must exist before building automata)
@@ -290,6 +306,60 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
   }
 
   return ProgramDFA(states, automata);
+}
+
+/// Add one monomorphic type definition to an existing [dfa], in place.
+///
+/// Parameterised-type expansion (TGLP parameterized-types.tex
+/// sec:param-expansion) generates a fresh monomorphic type definition for each
+/// instantiation and adds it to the environment.  The type a parameter is bound
+/// to by the constructors of the callee's heads (def:instantiation) is such a
+/// definition, and it is discovered while a clause is being checked rather than
+/// at the declaration-driven expansion, so it is added here instead of being
+/// built into the DFA from the start.
+///
+/// The addition is purely additive --- the two states `T` and `T?` and their two
+/// automata, under a name nothing else uses --- so every state and automaton
+/// already in [dfa] is left as it was, and a second call for the same name is a
+/// no-op.  [types] must already carry [typeDef] under its own name, so a
+/// self-referential alternative and [primitiveClosure] resolve.
+void addTypeToProgramDFA(
+    ProgramDFA dfa, TypeDef typeDef, Map<String, TypeDef> types) {
+  final typeName = typeDef.name;
+  if (dfa.automata.containsKey(typeName)) return;
+  dfa.states[typeName] = DFAState(typeName, isDual: false, isFinal: false);
+  dfa.states['$typeName?'] = DFAState(typeName, isDual: true, isFinal: false);
+  dfa.automata[typeName] =
+      _buildTypeAutomaton(typeDef, dfa.states, types, isDual: false);
+  dfa.automata['$typeName?'] =
+      _buildTypeAutomaton(typeDef, dfa.states, types, isDual: true);
+}
+
+/// Add several monomorphic type definitions to an existing [dfa], in place,
+/// where they may refer to one another --- `Stream<Box<Msg>>` and `Box<Msg>`,
+/// materialized together for one instantiation.  Every state is registered
+/// before any automaton is built, so an alternative naming another of [defs]
+/// resolves whichever is built first; a definition [dfa] already holds, and a
+/// state it already holds, are left as they are.  [types] must already carry
+/// every one of [defs] under its own name.
+void addTypesToProgramDFA(
+    ProgramDFA dfa, Iterable<TypeDef> defs, Map<String, TypeDef> types) {
+  final fresh = [
+    for (final d in defs)
+      if (!dfa.automata.containsKey(d.name)) d
+  ];
+  for (final d in fresh) {
+    dfa.states.putIfAbsent(
+        d.name, () => DFAState(d.name, isDual: false, isFinal: false));
+    dfa.states.putIfAbsent(
+        '${d.name}?', () => DFAState(d.name, isDual: true, isFinal: false));
+  }
+  for (final d in fresh) {
+    dfa.automata[d.name] =
+        _buildTypeAutomaton(d, dfa.states, types, isDual: false);
+    dfa.automata['${d.name}?'] =
+        _buildTypeAutomaton(d, dfa.states, types, isDual: true);
+  }
 }
 
 /// Create a final automaton (no transitions).
@@ -469,6 +539,9 @@ DFAState _resolveTypeExpr(
     if (typeExpr.name == 'Module') {
       return finalIsComplement ? states['Module?']! : states['Module']!;
     }
+    if (typeExpr.name == 'MutualRef') {
+      return finalIsComplement ? states['MutualRef?']! : states['MutualRef']!;
+    }
 
     final targetName = typeExpr.name;
     final targetState = finalIsComplement ? states['$targetName?'] : states[targetName];
@@ -528,6 +601,95 @@ String _getFullTypeName(TypeExpr typeExpr) {
     return typeExpr.isInput ? '${typeExpr.name}?' : typeExpr.name;
   }
   throw StateError('Cannot get type name from: $typeExpr');
+}
+
+// ============================================================================
+// Constant types (TGLP typed-glp.tex, "Readers of constant types")
+// ============================================================================
+
+/// Whether [state]'s type is a CONSTANT TYPE: TGLP `typed-glp.tex`,
+/// Definition (Constant Type) --- "A type is a constant type if each of its
+/// alternatives is a constant, one of the primitive types `Integer`, `Real`,
+/// `String` and `Module`, or a constant type."
+///
+/// This is the test the definition is, alternative by alternative, and not a
+/// condition on paths: "No alternative of a constant type carries a functor, so
+/// every term assigned to a variable of such a type is a constant, and a
+/// constant contains no variable" (Proposition "Readers of Constant Types").  So
+/// a structure alternative, a cons alternative and a difference-list alternative
+/// each disqualify outright, and no argument of them is examined --- a producer
+/// binds a functor before its arguments, so `point(3, X)` is a value of
+/// `point(Integer, Integer)` and carries a writer.
+///
+/// Until 2026-09-23 this was a path condition --- every path ending at a
+/// constant or a primitive, with no wildcard and no mode inversion --- under
+/// which `Stream(Integer)` qualified, since every path of it ends at `[]` or at
+/// `Integer`.  The paper replaced the sentence with the definition above on that
+/// measurement.
+///
+/// A WILDCARD alternative is none of the three the definition admits, so a type
+/// carrying one is not a constant type however it is written --- at the top
+/// level, where `_addTypeTransitions` records no transition for it
+/// (`Msg ::= started ; halted ; _.`), or inside a type a bare alternative names.
+/// [types] is where the alternatives are read, so both are seen.
+///
+/// The four primitive types are constant types themselves; the wildcard states
+/// `_` and `_?` are not, and neither is a procedure state, which is no type of a
+/// variable occurrence.  A bare alternative naming another type is followed, and
+/// a cycle among such alternatives adds no alternative of its own.
+bool isConstantType(DFAState state, Map<String, TypeDef> types) {
+  if (state.isWildcard) return false;
+  if (state.isProcedure) return false;
+  // `MutualRef` is a primitive and is NOT one of the four the definition names:
+  // "a mutual reference holds the writer of a stream tail, so it is neither
+  // ground nor a constant type" (TGLP sec:type-declarations).
+  if (state.isMutualRefType) return false;
+  // `_FINAL_` is where a constant alternative's path ends: a constant.
+  if (state.isAnonymousFinal) return true;
+  // Integer, Real, String, Module --- the wildcard and MutualRef are already out.
+  if (state.isPrimitiveType) return true;
+  return _isConstantTypeNamed(state.baseName, types, <String>{});
+}
+
+/// Whether a reader whose occurrence has [state]'s type may occur more than
+/// once in a clause, its paired writer occurring once.  Two types license it.
+/// A constant type ([isConstantType]; TGLP `typed-glp.tex`, Proposition
+/// "Readers of Constant Types").  And `MutualRef`: "A reader of type
+/// `MutualRef` may also occur more than once: the writer a mutual reference
+/// holds is the runtime's, no program can reach it, and every write through it
+/// is a kernel's, so no occurrence of the reader gives a program a second
+/// writer" (`typed-glp.tex`, TGLP 350eb7d).
+///
+/// `MutualRef` stays no constant type --- [isConstantType] answers no for it ---
+/// and the licence is the reader's alone, as the constant type's is.  Until
+/// 2026-10-01 the repeated `Ref?` of a mutual reference was licensed instead by
+/// a grounding mark on the guard `is_mutual_ref/1`, which the catalogue gives
+/// "Ground: no" (GLP-Spec `appendix-guards.tex`).
+bool licensesRepeatedReader(DFAState state, Map<String, TypeDef> types) {
+  if (state.isWildcard) return false;
+  if (state.isProcedure) return false;
+  if (state.isMutualRefType) return true;
+  return isConstantType(state, types);
+}
+
+bool _isConstantTypeNamed(
+    String name, Map<String, TypeDef> types, Set<String> assumed) {
+  if (TypeRef.constantPrimitives.contains(name)) return true;
+  if (TypeRef.builtins.contains(name)) return false; // MutualRef, and only it
+  if (!assumed.add(name)) return true; // already on the walk: no new alternative
+  final def = types[name];
+  if (def == null) return false; // a name with no definition answers for nothing
+  for (final alt in def.alternatives) {
+    if (alt is ConstantAlt || alt is ListNilAlt) continue; // a constant
+    if (alt is TypeRef && !alt.isParameterized) {
+      if (_isConstantTypeNamed(alt.name, types, assumed)) continue;
+      return false;
+    }
+    // A structure, a cons, a difference list, a wildcard, or a parameterised
+    // reference expansion left behind: none is one of the three.
+    return false;
+  }
+  return true;
 }
 
 // ============================================================================
@@ -663,6 +825,15 @@ LeafConsistencyResult checkLeafConsistency(
   // leaf reaches here.
   if (state.isModuleType) {
     return LeafConsistencyResult.inconsistent('Module type requires a module term');
+  }
+
+  // Row 9 of the consistency table: a mutual reference term matches MutualRef,
+  // and nothing else does.  Like a module term it is produced by the runtime and
+  // is never written as a literal, so no source leaf reaches here either; a
+  // literal at a `MutualRef` position is refused by this line.
+  if (state.isMutualRefType) {
+    return LeafConsistencyResult.inconsistent(
+        'MutualRef type requires a mutual reference term');
   }
 
   // Case 2c: At wildcard state

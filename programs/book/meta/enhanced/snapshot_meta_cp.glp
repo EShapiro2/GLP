@@ -14,9 +14,6 @@
 Chain ::= chain(Stream(_)?, Stream(_)).
 ShotList ::= [] ; [_ | ShotList].
 
-%% External procedure declarations (no clauses in this file)
-procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
-
 procedure run(_?, Chain).
 run(true, chain(Chain, Chain?)).                 %% halt - close circuit
 run((A, B), chain(Left, Right?)) :-              %% fork - split chain
@@ -24,7 +21,7 @@ run((A, B), chain(Left, Right?)) :-              %% fork - split chain
     run(B?, chain(Middle?, Right)).
 run(Goal, chain(Left, Right?)) :-                %% reduce
     ground(Goal?),
-    ~(Goal? =?= true), ~(Goal? =?= (_, _)),
+    Goal? =?\= true,
     unknown(Left?) |
     reduce(Goal?, Body),
     run(Body?, chain(Left?, Right)).

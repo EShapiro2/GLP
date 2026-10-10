@@ -4,6 +4,90 @@
 // preserving SRSW annotations (X vs X?) and all term types.
 
 import 'ast.dart';
+import 'lexer.dart';
+import 'parser.dart';
+import 'token.dart';
+
+// A term is printed so that it reads back as itself (GLP-Spec appendix-lp.tex,
+// Definition "Logic Programs Syntax": the text denotes the term; GLP #3
+// Cowork, 2026-10-04 09:06 UTC, "23:49. Q1 and Q3"): a constant in single
+// quotes exactly where unquoted it would read as a variable, an operator or a
+// number, or would not read as one name at all, escaped as the reader reads a
+// quoted name (lexer.dart, `_string`).  Until 2026-10-04 GlpPrinter printed a
+// constant that is not a lowercase identifier as a double-quoted string, which
+// reads back as a string literal --- `'G'` and `'+'` came out `"G"` and `"+"`
+// --- and every functor and predicate name bare, `'_send'(...)` as
+// `_send(...)`, which reads back as a variable.  The REPL's display prints its
+// constants and functors by the same functions (bin/glp_repl.dart).
+
+/// A name the lexer reads bare as that one name: a lower-case letter and then
+/// letters, digits and `_` (lexer.dart, `_identifier`), and not one of the two
+/// words it makes tokens of their own, `mod` and `procedure`.
+final RegExp _plainName = RegExp(r'^[a-z][A-Za-z0-9_]*$');
+const Set<String> _keywords = {'mod', 'procedure'};
+
+/// [name] as source that reads back as the constant of that name: bare where
+/// the lexer reads it bare as that one name, and in single quotes otherwise ---
+/// where unquoted it would read as a variable (`G`, `_x`), an operator or a
+/// keyword (`+`, `=..`, `mod`, `procedure`), a number (`42`), or as no one
+/// name (`a b`, `[]`, `it's`).  Also the name of a predicate, in a clause head
+/// or a goal, where the reader takes no operator name for one.
+String constantNameSource(String name) =>
+    _plainName.hasMatch(name) && !_keywords.contains(name)
+        ? name
+        : _singleQuoted(name);
+
+/// [name] as the functor of a compound term, written before "(": bare where
+/// the reader reads it there as that functor --- a name the lexer reads bare,
+/// `mod` among them, or an operator name or keyword, which where a term is
+/// expected the reader takes as a functor before "(" (parser.dart,
+/// [Parser.isOperatorName]) --- and in single quotes otherwise.
+String functorNameSource(String name) {
+  if (_plainName.hasMatch(name)) return name;
+  return _functorNames.putIfAbsent(name, () {
+    try {
+      final t = Lexer('$name(').tokenize();
+      if (t.length == 3 &&
+          t[0].lexeme == name &&
+          Parser.isOperatorName(t[0].type) &&
+          t[1].type == TokenType.LPAREN) {
+        return name;
+      }
+    } catch (_) {
+      // Text the lexer refuses is no name it reads bare.
+    }
+    return _singleQuoted(name);
+  });
+}
+
+final Map<String, String> _functorNames = {};
+
+/// A constant's [value] as the AST and the runtime hold it, as source: a
+/// number as written, a string literal --- whose value carries its double
+/// quotes --- in double quotes, escaped as the reader reads one, and a name by
+/// [constantNameSource].  The runtime's empty list, its value `nil`
+/// (runtime/terms.dart), is the caller's to print.
+String constantSource(Object value) {
+  if (value is String) {
+    if (value.length >= 2 && value.startsWith('"') && value.endsWith('"')) {
+      return '"${_escaped(value.substring(1, value.length - 1), '"')}"';
+    }
+    return constantNameSource(value);
+  }
+  return value.toString();
+}
+
+String _singleQuoted(String name) => "'${_escaped(name, "'")}'";
+
+/// [s] escaped inside [quote]s as the lexer reads a quoted name or string
+/// back: a backslash, the quote, newline, tab and carriage return by their
+/// escapes.
+String _escaped(String s, String quote) => s
+    .replaceAll('\\', '\\\\')
+    .replaceAll(quote, '\\$quote')
+    .replaceAll('\n', '\\n')
+    .replaceAll('\t', '\\t')
+    .replaceAll('\r', '\\r');
 
 /// Converts GLP AST back to source code
 class GlpPrinter {
@@ -65,7 +149,7 @@ class GlpPrinter {
   /// Print an atom (clause head)
   String printAtom(Atom atom) {
     if (atom.args.isEmpty) {
-      return atom.functor;
+      return constantNameSource(atom.functor);
     }
 
     // Handle special infix operators
@@ -73,7 +157,7 @@ class GlpPrinter {
       return '${printTerm(atom.args[0])} ${atom.functor} ${printTerm(atom.args[1])}';
     }
 
-    return '${atom.functor}(${atom.args.map(printTerm).join(', ')})';
+    return '${constantNameSource(atom.functor)}(${atom.args.map(printTerm).join(', ')})';
   }
 
   /// Print a goal (body call)
@@ -85,16 +169,11 @@ class GlpPrinter {
 
     // Handle spawn goals
     if (goal is SpawnGoal) {
-      return '${printGoal(goal.innerGoal)}@${goal.agentId}';
-    }
-
-    // Handle rated goals (sGLP, Goal @ Rate)
-    if (goal is RatedGoal) {
-      return '${printGoal(goal.innerGoal)} @ ${goal.rateText}';
+      return '${printGoal(goal.innerGoal)}@${constantNameSource(goal.agentId)}';
     }
 
     if (goal.args.isEmpty) {
-      return goal.functor;
+      return constantNameSource(goal.functor);
     }
 
     // Handle special infix operators
@@ -102,23 +181,21 @@ class GlpPrinter {
       return '${printTerm(goal.args[0])} ${goal.functor} ${printTerm(goal.args[1])}';
     }
 
-    return '${goal.functor}(${goal.args.map(printTerm).join(', ')})';
+    return '${constantNameSource(goal.functor)}(${goal.args.map(printTerm).join(', ')})';
   }
 
   /// Print a guard
   String printGuard(Guard guard) {
-    final prefix = guard.negated ? '~' : '';
-
     if (guard.args.isEmpty) {
-      return '$prefix${guard.predicate}';
+      return constantNameSource(guard.predicate);
     }
 
     // Handle special infix operators
     if (_isInfixGuardOperator(guard.predicate) && guard.args.length == 2) {
-      return '$prefix(${printTerm(guard.args[0])} ${guard.predicate} ${printTerm(guard.args[1])})';
+      return '(${printTerm(guard.args[0])} ${guard.predicate} ${printTerm(guard.args[1])})';
     }
 
-    return '$prefix${guard.predicate}(${guard.args.map(printTerm).join(', ')})';
+    return '${constantNameSource(guard.predicate)}(${guard.args.map(printTerm).join(', ')})';
   }
 
   /// Print a term
@@ -127,8 +204,12 @@ class GlpPrinter {
       return term.isReader ? '${term.name}?' : term.name;
     }
 
+    // The anonymous variable as written: `_`, and `_?`, the output placeholder
+    // a head's produced position carries (TGLP typed-glp.tex, "Anonymous
+    // variables").  Until 2026-10-02 `_?` printed `_`, a writer at a produced
+    // position, which is another clause, and one the type checker refuses.
     if (term is UnderscoreTerm) {
-      return '_';
+      return term.isReader ? '_?' : '_';
     }
 
     if (term is ConstTerm) {
@@ -147,23 +228,12 @@ class GlpPrinter {
     return term.toString();
   }
 
-  /// Print a constant value
+  /// Print a constant value ([constantSource]).
   String _printConstValue(Object? value) {
     if (value == null) {
       return 'null';
     }
-    if (value is String) {
-      // Check if it's an atom (no quotes needed) or a string (needs quotes)
-      if (_isAtom(value)) {
-        return value;
-      }
-      // Escape string properly
-      return '"${_escapeString(value)}"';
-    }
-    if (value is int || value is double) {
-      return value.toString();
-    }
-    return value.toString();
+    return constantSource(value);
   }
 
   /// Print a list term
@@ -209,16 +279,17 @@ class GlpPrinter {
       return '(${printTerm(struct.args[0])}, ${printTerm(struct.args[1])})';
     }
 
-    // Handle special infix operators
-    if (_isInfixOperator(struct.functor) && struct.args.length == 2) {
+    // An infix operator the term reader reads infix, in parentheses; any
+    // other operator name before "(", where the reader takes it as the
+    // functor ([functorNameSource]).
+    if (_termInfixOperators.contains(struct.functor) &&
+        struct.args.length == 2) {
       return '(${printTerm(struct.args[0])} ${struct.functor} ${printTerm(struct.args[1])})';
     }
 
-    if (struct.args.isEmpty) {
-      return struct.functor;
-    }
-
-    return '${struct.functor}(${struct.args.map(printTerm).join(', ')})';
+    // A structure of no arguments, `f()`, which the reader reads apart from
+    // the constant `f`: until 2026-10-04 it printed `f`, the constant.
+    return '${functorNameSource(struct.functor)}(${struct.args.map(printTerm).join(', ')})';
   }
 
   /// Check if a functor is an infix operator
@@ -227,34 +298,26 @@ class GlpPrinter {
       ':=', '=', '\\=', '=..',
       '+', '-', '*', '/', '//', 'mod',
       '<', '>', '=<', '>=', '=:=', '=\\=',
-      '=?=',
+      '=?=', '=?\\=',
     };
     return infixOps.contains(functor);
   }
 
+  /// The operators the reader reads infix where a term is expected
+  /// (parser.dart, `_isOperator`), `#` and the backslash apart, which print
+  /// before "(" as they did.  Until 2026-10-04 `:=`, `=..`, `=?=`, `=?\=` and
+  /// `\=`, which the lexer reads as no one token, were printed infix inside a
+  /// term too, where the reader does not read them so.
+  static const Set<String> _termInfixOperators = {
+    '=', '+', '-', '*', '/', '//', 'mod',
+    '<', '>', '=<', '>=', '=:=', '=\\=',
+  };
+
   /// Check if a guard predicate is infix
   bool _isInfixGuardOperator(String predicate) {
     const infixGuards = {
-      '<', '>', '=<', '>=', '=:=', '=\\=', '=?=',
+      '<', '>', '=<', '>=', '=:=', '=\\=', '=?=', '=?\\=',
     };
     return infixGuards.contains(predicate);
-  }
-
-  /// Check if a string is a valid atom (lowercase start, alphanumeric)
-  bool _isAtom(String s) {
-    if (s.isEmpty) return false;
-    // Atoms start with lowercase letter
-    if (!s[0].contains(RegExp(r'[a-z]'))) return false;
-    // Rest is alphanumeric or underscore
-    return s.substring(1).contains(RegExp(r'^[a-zA-Z0-9_]*$'));
-  }
-
-  /// Escape special characters in a string
-  String _escapeString(String s) {
-    return s
-        .replaceAll('\\', '\\\\')
-        .replaceAll('"', '\\"')
-        .replaceAll('\n', '\\n')
-        .replaceAll('\t', '\\t');
   }
 }

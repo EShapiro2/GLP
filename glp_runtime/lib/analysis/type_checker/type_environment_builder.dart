@@ -1,7 +1,7 @@
 // lib/analysis/type_checker/type_environment_builder.dart
 //
 // Builds TypeEnvironment from a parsed Module.
-// Loads root scope, merges with user definitions, validates.
+// Merges its definitions over the scope passed in, validates.
 // Resolves type aliases at preprocessing time.
 //
 // Specification: docs/modules/type-environment.md v0.8
@@ -11,20 +11,6 @@ import 'root_scope.dart';
 import 'param_expansion.dart';
 import 'program_dfa.dart' show primitiveClosure;
 import '../../compiler/ast.dart' as ast;
-import '../../compiler/lexer.dart';
-import '../../compiler/parser.dart';
-
-/// Error for illegal type redefinition
-class RedefinitionError implements Exception {
-  final String message;
-  final int line;
-  final int column;
-
-  RedefinitionError(this.message, this.line, this.column);
-
-  @override
-  String toString() => '$message at line $line, column $column';
-}
 
 /// Error for circular alias chain
 class CircularAliasError implements Exception {
@@ -62,71 +48,20 @@ class AliasExpansionError implements Exception {
   String toString() => '$message at line $line, column $column';
 }
 
-/// The root scope's type definitions, recorded when the root scope is built.
-/// The determinism check consults them so that a module writing
-/// `T ::= Number ; Integer.` is caught even though `Number` is defined in the
-/// root `self.glp` rather than in the module itself.
-Map<String, TypeDef> rootScopeTypeDefs = const {};
-
-/// Source for the root scope environment (set by engine from programs/self.glp).
-String? _rootScopeEnvironmentSource;
-
-/// Set the source from which the root scope environment is built.
-/// Call this once during engine initialization with the content of programs/self.glp.
-void setRootScopeEnvironmentSource(String source) {
-  _rootScopeEnvironmentSource = source;
-}
-
-/// Whether [source] is the text the root scope environment is built from.
-bool isRootScopeEnvironmentSource(String source) =>
-    source == (_rootScopeEnvironmentSource ?? rootScopeTypes);
-
-/// Build TypeEnvironment from root scope
-TypeEnvironment buildRootScopeEnvironment() {
-  final source = _rootScopeEnvironmentSource ?? rootScopeTypes;
-  if (source.isEmpty) {
-    return TypeEnvironment({}, {});
-  }
-
-  final lexer = Lexer(source);
-  final tokens = lexer.tokenize();
-  final parser = Parser(tokens);
-  final module = parser.parseModule();
-
-  // Extract templates before expansion removes them.
-  // These are passed to downstream modules so they can expand references
-  // to root scope-defined parameterized types (e.g., Stream(X), Channel(X,Y)).
-  final rootScopeTemplates = <String, TypeDef>{};
-  for (final td in module.typeDefs) {
-    if (td.isParameterized) {
-      rootScopeTemplates[td.name] = td;
-    }
-  }
-
-  // Expand parameterized types before building the environment.
-  // Templates (e.g., Stream(X)) are removed; only concrete expansions remain.
-  final expandedModule = expandParameterizedTypes(module);
-
-  final env = _buildEnvironmentFromModule(expandedModule, checkRedefinitions: false, resolveAliasesNow: true);
-  rootScopeTypeDefs = Map<String, TypeDef>.unmodifiable(env.types);
-  // The root's types are defined in the root: the prefix one is kept under
-  // once a descendant scope defines its name (TypeEnvironment.merge).
-  return TypeEnvironment(env.types, env.procedures,
-      paramProcDecls: env.paramProcDecls,
-      typeTemplates: rootScopeTemplates,
-      typeOrigins: {for (final t in env.types.keys) t: 'root'});
-}
-
 /// Build TypeEnvironment from a parsed Module
 ///
-/// Loads root scope first, then merges user definitions.
-/// Throws RedefinitionError if user redefines predefined types/procedures.
+/// Merges the module's definitions over [ancestorScope], which they shadow:
+/// the root self.glp is "the outermost ancestor scope, shadowable like any
+/// other" (TGLP appendix-root-self.tex).  Until 2026-10-02 a module checked
+/// with no ancestor scope could not redefine Integer ... Stream, OpenStream or
+/// the built-in guard names: a RedefinitionError no paper stated.
 ///
-/// If [ancestorScope] is provided, it is used as the base environment
-/// instead of just the root scope. The ancestor scope should already include
-/// the root scope and all ancestor self.glp definitions (built by
-/// assembleTypeScope in module_hierarchy.dart). The module's own
-/// definitions are then merged on top (shadowing ancestors).
+/// [ancestorScope] is the scope the module is checked in, passed in: the
+/// language primitives, the root self.glp and every ancestor self.glp (built
+/// by buildAncestorScope in module_hierarchy.dart).  With none, the module is
+/// checked against the language primitives alone (TGLP Definition "Root,
+/// Scope", Π): until 2026-10-04 the default was a root-scope environment built
+/// from a source the engine set once for the whole process.
 /// [typeTemplates] are the module's own parameterised type definitions, which
 /// [expandParameterizedTypes] removed from [module] and which survive this
 /// environment to be expanded later. They are merged over the base scope's and
@@ -135,13 +70,16 @@ TypeEnvironment buildRootScopeEnvironment() {
 TypeEnvironment buildTypeEnvironment(ast.Module module,
     {TypeEnvironment? ancestorScope,
     Map<String, TypeDef> typeTemplates = const {}}) {
-  // Base environment: ancestor scope if provided, otherwise just root scope
-  final baseEnv = ancestorScope ?? buildRootScopeEnvironment();
+  // Base environment: the scope passed in, otherwise the language primitives.
+  final baseEnv = ancestorScope ?? TypeEnvironment.empty();
 
-  // Build user environment WITHOUT resolving aliases yet
-  final userEnv = _buildEnvironmentFromModule(module, checkRedefinitions: ancestorScope == null, resolveAliasesNow: false);
+  // Build user environment WITHOUT resolving aliases yet.  A bare type-name
+  // alternative is checked for determinism against what it names in the
+  // module or in its scope.
+  final userEnv = _buildEnvironmentFromModule(module,
+      resolveAliasesNow: false, scopeTypes: baseEnv.types);
 
-  // Merge: base first, then user (user can shadow non-predefined)
+  // Merge: base first, then user, which shadows any definition of the base
   final merged = baseEnv.merge(userEnv);
 
   // Now resolve aliases on the merged environment (so user aliases can reference root scope types)
@@ -174,14 +112,15 @@ TypeEnvironment buildTypeEnvironment(ast.Module module,
       typeOrigins: {
         for (final e in merged.typeOrigins.entries)
           if (types.containsKey(e.key)) e.key: e.value
-      });
+      },
+      scopeLayers: merged.scopeLayers);
 }
 
 /// Build TypeEnvironment from Module's type definitions and procedure declarations
 TypeEnvironment _buildEnvironmentFromModule(
   ast.Module module, {
-  required bool checkRedefinitions,
   required bool resolveAliasesNow,
+  Map<String, TypeDef> scopeTypes = const {},
 }) {
   final types = <String, TypeDef>{};
   final procedures = <String, ProcDecl>{};
@@ -189,29 +128,15 @@ TypeEnvironment _buildEnvironmentFromModule(
 
   // Add type definitions (including aliases - will be resolved later)
   for (final typeDef in module.typeDefs) {
-    if (checkRedefinitions && isPredefinedType(typeDef.name)) {
-      throw RedefinitionError(
-        'Cannot redefine predefined type: ${typeDef.name}',
-        typeDef.line,
-        typeDef.column,
-      );
-    }
     // Note: Aliases are allowed (v0.7) - determinism check skipped for them
     if (!_isTypeAlias(typeDef)) {
-      _checkDeterminism(typeDef, types);
+      _checkDeterminism(typeDef, {...scopeTypes, ...types});
     }
     types[typeDef.name] = typeDef;
   }
 
   // Add procedure declarations
   for (final procDecl in module.procDeclarations) {
-    if (checkRedefinitions && isPredefinedProcedure(procDecl.name)) {
-      throw RedefinitionError(
-        'Cannot redefine predefined procedure: ${procDecl.name}/${procDecl.arity}',
-        procDecl.line,
-        procDecl.column,
-      );
-    }
     // Mark procedure as builtin if it's a true builtin (implemented in Dart)
     final isBuiltin = isBuiltinProcedure(procDecl.key);
     if (isBuiltin && !procDecl.isBuiltin) {
@@ -750,9 +675,9 @@ void _checkDeterminism(TypeDef def, [Map<String, TypeDef> scope = const {}]) {
 Set<String> _reachedPrimitives(TypeRef alt, Map<String, TypeDef> scope) {
   if (alt.isParameterized) return const {};
   if (TypeRef.builtins.contains(alt.name)) return {alt.name};
-  final def = scope[alt.name] ?? rootScopeTypeDefs[alt.name];
+  final def = scope[alt.name];
   if (def == null) return const {};
-  return primitiveClosure(def, {...rootScopeTypeDefs, ...scope});
+  return primitiveClosure(def, scope);
 }
 
 void _checkPrimitiveOverlap(String altName, Set<String> reached,

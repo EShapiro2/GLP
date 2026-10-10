@@ -1,6 +1,6 @@
 /// Tests for the simulation networking realization.
 ///
-/// Covers docs/ma/networking-seam-spec.md v0.2 Section 3 and the router-level
+/// Covers IGLP app:in-networking (Simulation realisation) and the router-level
 /// parts of Section 7: adjacency cut/restore (§7.2), reverse-order delivery
 /// (§7.3), and trust level (§7.4). The full-stack baseline (§7.1) and plays
 /// (§7.5) are exercised by the isolate test suites.
@@ -28,13 +28,13 @@ class _Conn {
   _Conn(this.toId, this.peerPk, this.event);
 }
 
-/// Build a router with three registered agents (alice, bob, carol), all Open,
+/// Build a router with three registered agents (alice, bob, carol), all Open over the PAN,
 /// recording deliveries and connectivity events into the given lists.
 SimulationRouter _router(List<_Delivered> delivered, List<_Conn> conn) {
   final r = SimulationRouter();
   for (final id in ['alice', 'bob', 'carol']) {
     r.register(id, generateKeyPair().pub);
-    r.setTrustLevel(id, TrustLevel.open);
+    r.setTrustLevel(id, ProximityUnderlay.pan, TrustLevel.open);
   }
   r.onDeliver = (toId, fromPk, payload, messageId, t) =>
       delivered.add(_Delivered(toId, fromPk, payload, messageId));
@@ -109,7 +109,7 @@ void main() {
     test('Closed receiver drops a cold-call from an unknown agent', () {
       final delivered = <_Delivered>[];
       final r = _router(delivered, []);
-      r.setTrustLevel('bob', TrustLevel.closed);
+      r.setTrustLevel('bob', ProximityUnderlay.pan, TrustLevel.closed);
       r.routeSend('alice', 'bob', _bytes([1])); // alice never contacted by bob
       expect(delivered, isEmpty);
     });
@@ -117,7 +117,7 @@ void main() {
     test('Open receiver accepts a cold-call', () {
       final delivered = <_Delivered>[];
       final r = _router(delivered, []);
-      r.setTrustLevel('bob', TrustLevel.open);
+      r.setTrustLevel('bob', ProximityUnderlay.pan, TrustLevel.open);
       r.routeSend('alice', 'bob', _bytes([1]));
       expect(delivered.length, 1);
     });
@@ -125,11 +125,73 @@ void main() {
     test('Closed receiver accepts once it has contacted the sender', () {
       final delivered = <_Delivered>[];
       final r = _router(delivered, []);
-      r.setTrustLevel('bob', TrustLevel.closed);
+      r.setTrustLevel('bob', ProximityUnderlay.pan, TrustLevel.closed);
       r.routeSend('bob', 'alice', _bytes([0])); // bob contacts alice first
       delivered.clear();
       r.routeSend('alice', 'bob', _bytes([1])); // no longer first contact
       expect(delivered.length, 1);
+    });
+
+    // "A level is held per ProximityUnderlay ... both levels default to
+    // Closed" (GLP-Networking-API, Trust levels), and "The PAN's cold-call
+    // trust level is enforced as trust_declare sets it" (IGLP
+    // appendix-implementation-notes.tex, Simulation realisation).  Every
+    // simulated encounter is a PAN one ("the reported underlay is the PAN
+    // throughout").
+    test('an agent registers with both levels Closed, until set', () {
+      final delivered = <_Delivered>[];
+      final r = SimulationRouter()
+        ..register('alice', generateKeyPair().pub)
+        ..register('bob', generateKeyPair().pub)
+        ..onDeliver = (toId, fromPk, payload, messageId, t) =>
+            delivered.add(_Delivered(toId, fromPk, payload, messageId));
+      for (final u in ProximityUnderlay.values) {
+        expect(r.trustLevelOf('bob', u), TrustLevel.closed);
+      }
+      r.routeSend('alice', 'bob', _bytes([1]));
+      expect(delivered, isEmpty, reason: 'a first contact Closed bob ignores');
+    });
+
+    test('the PAN level governs a first contact; the LAN level governs none',
+        () {
+      final delivered = <_Delivered>[];
+      final r = _router(delivered, []);
+      r.setTrustLevel('bob', ProximityUnderlay.pan, TrustLevel.closed);
+      r.setTrustLevel('bob', ProximityUnderlay.lan, TrustLevel.open);
+      r.routeSend('alice', 'bob', _bytes([1]));
+      expect(delivered, isEmpty, reason: 'PAN closed: not answered');
+
+      r.setTrustLevel('bob', ProximityUnderlay.pan, TrustLevel.open);
+      r.setTrustLevel('bob', ProximityUnderlay.lan, TrustLevel.closed);
+      r.routeSend('carol', 'bob', _bytes([2]));
+      expect(delivered.map((d) => d.payload[0]), [2],
+          reason: 'PAN open: answered, the LAN level governing no PAN '
+              'encounter');
+    });
+  });
+
+  group('SimulationNetworkClient trust (trust_declare/2)', () {
+    test("setTrustLevel reaches the router, which enforces it", () {
+      final delivered = <_Delivered>[];
+      final r = _router(delivered, []);
+      final bob = SimulationNetworkClient(
+        selfId: 'bob',
+        directory: r.directory,
+        sendToRouter: (toId, payload) => r.routeSend('bob', toId, payload),
+        trustToRouter: (underlay, level) =>
+            r.setTrustLevel('bob', underlay, level),
+      );
+      bob.setTrustLevel(ProximityUnderlay.pan, TrustLevel.closed);
+      expect(bob.trustLevelOf(ProximityUnderlay.pan), TrustLevel.closed);
+      expect(r.trustLevelOf('bob', ProximityUnderlay.pan), TrustLevel.closed);
+      expect(r.trustLevelOf('bob', ProximityUnderlay.lan), TrustLevel.closed);
+
+      r.routeSend('alice', 'bob', _bytes([1]));
+      expect(delivered, isEmpty, reason: 'the level bob declared is enforced');
+
+      bob.setTrustLevel(ProximityUnderlay.pan, TrustLevel.open);
+      r.routeSend('alice', 'bob', _bytes([2]));
+      expect(delivered.map((d) => d.payload[0]), [2]);
     });
   });
 

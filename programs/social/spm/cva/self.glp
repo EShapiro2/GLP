@@ -13,10 +13,9 @@
 
 %% =============================================================================
 %% TERMINOLOGY ALIASES (paper notation → GLP primitive types)
-%% Agent: a member of Π (paper §2 et seq.), here a Constant.
+%% Agent: a member of Π (paper §2 et seq.), here a Constant; defined once in
+%% ../self.glp, the lowest common ancestor of the three platforms.
 %% =============================================================================
-
-Agent ::= Constant.
 
 %% =============================================================================
 %% MESSAGES (paper §5.1: outbox and inbox messages are sender/recipient/cargo
@@ -52,10 +51,9 @@ UserEvent(V, Q, A) ::= will(V)
 %%   First arg: K, list of identity-custodian agent ids (K ⊆ F_p per §4.2).
 %%   Second arg: σ, supermajority threshold encoded as integer percentage in
 %%               51..100 (paper σ ∈ (1/2, 1]).
+%% Defined once in ../self.glp, the lowest common ancestor of the three
+%% platforms that carry it.
 %% =============================================================================
-
-IdentityRecord ::= ir(Stream(Agent), Integer).
-                  %%   ^K, custodian set  ^σ, supermajority threshold (51..100)
 
 %% =============================================================================
 %% NETWORK MEDIATOR (paper §5.2 Communicate, realised as one GLP process).
@@ -112,6 +110,6 @@ ReaderList(C) ::= [] ; [Stream(NetMsg(C)) | ReaderList(C)].
 %% network.glp; this self.glp forwards `network` so a caller's `cva # network`
 %% resolves by entering cva/ through its self.glp. network.glp is unchanged.
 %% =============================================================================
-imported procedure network#network(NetEndList(C)?).
-exported procedure network(NetEndList(C)?).
+imported procedure(C) network#network(NetEndList(C)?).
+exported procedure(C) network(NetEndList(C)?).
 network(N) :- network # network(N?).

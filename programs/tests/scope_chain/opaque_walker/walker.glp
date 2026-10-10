@@ -2,8 +2,8 @@
 %% The second clause captures a whole entry E (writer) at a consume position and
 %% re-emits E? (reader) at a produce position whose type carries an internal ?
 %% (Stream(Constant)? inside output/2), WITHOUT decomposing it.
-
-Entry ::= output(Constant, Stream(Constant)?) ; extra(Constant).
+%% Entry is defined in the directory's self.glp, the program's interface, which
+%% forwards run/2 here.
 
 procedure put(Constant?, Constant?, Stream(Entry)?, Stream(Entry)).
 put(Key, Msg, [output(K, [Msg?|Out1?])|Rest], [output(K?, Out1)|Rest?]) :-

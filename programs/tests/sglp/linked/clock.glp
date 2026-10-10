@@ -1,4 +1,0 @@
-%% The cross-module target of self.glp's rated goal.
-
-exported procedure tock(Integer).
-tock(2).

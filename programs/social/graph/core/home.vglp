@@ -27,14 +27,15 @@ display msg(agent, person, connected(Friend)) : panel(apps), view(friends).
 %% so several pend at once and are answered in any order.
 %% =============================================================================
 
-procedure respond_friend(Constant?, Constant?, Response, Stream(UserInMsg)).
+%% The pending value of the befriending is passed back as it came.
+procedure respond_friend(Key?, Key?, PendingValue?, Stream(UserInMsg)).
 
 *(yes, From?)
-respond_friend(Id, From, Resp?, [msg(person, Id?, decision(yes, From?, response(Resp)))]) :-
+respond_friend(Id, From, P, [msg(person, Id?, decision(yes, From?, P?))]) :-
     ground(Id?), ground(From?) | true.
 
 *(no, From?)
-respond_friend(Id, From, Resp?, [msg(person, Id?, decision(no, From?, response(Resp)))]) :-
+respond_friend(Id, From, P, [msg(person, Id?, decision(no, From?, P?))]) :-
     ground(Id?), ground(From?) | true.
 
 %% =============================================================================
@@ -44,7 +45,7 @@ respond_friend(Id, From, Resp?, [msg(person, Id?, decision(no, From?, response(R
 %% home(Id, Outs, Cmds): the person's commands to their super-app, willed
 %% through the constructs above; Outs is what the super-app tells the person,
 %% on which a friend's request to connect raises its card.
-exported procedure home(Constant?, AgentToUserStream?, Stream(UserInMsg)).
+exported procedure home(Key?, AgentToUserStream?, Stream(UserInMsg)).
 
 %% Trust a compiler's key: what its certificate signs is then installable.
 *(Key)
@@ -75,9 +76,9 @@ home(Id, Outs, Cmds?) :-
     connect_act(Friend?, Id?, Outs?, Cmds).
 
 %% A friend asks to connect: the person answers on a card of their own.
-home(Id, [msg(agent, person, befriend(From, Resp?)) | Outs], Cmds?) :-
+home(Id, [msg(agent, person, befriend(From, P)) | Outs], Cmds?) :-
     ground(Id?), ground(From?) |
-    respond_friend(Id?, From?, Resp, Answer),
+    respond_friend(Id?, From?, P?, Answer),
     merge(Answer?, Cmds1?, Cmds),
     home(Id?, Outs?, Cmds1).
 
@@ -89,22 +90,22 @@ home(Id, [_ | Outs], Cmds?) :-
 home(_, [], []).
 
 %% The willed acts, each the command it puts on the person's stream.
-procedure trust_act(String?, Constant?, AgentToUserStream?, Stream(UserInMsg)).
+procedure trust_act(String?, Key?, AgentToUserStream?, Stream(UserInMsg)).
 trust_act(Key, Id, Outs, [msg(person, Id?, trust(Key?)) | Cmds?]) :-
     ground(Key?) | home(Id?, Outs?, Cmds).
 
-procedure invite_act(Constant?, Constant?, Constant?, AgentToUserStream?, Stream(UserInMsg)).
+procedure invite_act(Constant?, Key?, Key?, AgentToUserStream?, Stream(UserInMsg)).
 invite_act(App, Friend, Id, Outs, [msg(person, Id?, invite(App?, Friend?)) | Cmds?]) :-
     ground(App?), ground(Friend?) | home(Id?, Outs?, Cmds).
 
-procedure connect_act(Constant?, Constant?, AgentToUserStream?, Stream(UserInMsg)).
+procedure connect_act(Key?, Key?, AgentToUserStream?, Stream(UserInMsg)).
 connect_act(Friend, Id, Outs, [msg(person, Id?, connect(Friend?)) | Cmds?]) :-
     ground(Friend?) | home(Id?, Outs?, Cmds).
 
 %% install_act(Content, App, Id, Outs, Cmds): a certified artefact is installed
 %% under the person's name for it; anything else is not installed, and the
 %% person's stream carries on.
-procedure install_act(Content?, Constant?, Constant?, AgentToUserStream?, Stream(UserInMsg)).
+procedure install_act(Content?, Constant?, Key?, AgentToUserStream?, Stream(UserInMsg)).
 install_act(M, App, Id, Outs, [msg(person, Id?, install(App?, M?, CSig?, Ui)) | Cmds?]) :-
     module(M?) |
     creator_certification(M?, CSig),
@@ -116,13 +117,16 @@ install_act(S, _, Id, Outs, Cmds?) :-
 
 %% The creator's certification, signed here over the mini-app's source identity
 %% and the acts of its contract, as the super-app's plays sign it.
-procedure creator_certification(Content?, String).
+procedure creator_certification(Module?, String).
 creator_certification(M, CSig?) :-
     decompose_module(M?, _, Src, _),
     self_key(K),
     sign(creator_cert(Src?, [friendship, ending_a_friendship], grassroots), K?, CSig).
 
-%% The mini-app's user-interface stream: the super-app user interface holds it;
-%% here it is held until there is a screen to show it on.
+%% The mini-app's user-interface stream: the super-app user interface holds its
+%% reader; here it is held until there is a screen to show it on, and read to
+%% its close, which the mini-app's execution writes, or the super-app's
+%% close_apps/1 where the mini-app is never activated.
 procedure hold_ui(AppUiStream?).
-hold_ui(X) :- true.
+hold_ui([_ | Xs]) :- hold_ui(Xs?).
+hold_ui([]).

@@ -6,7 +6,10 @@
 /// KeyDescription extension carries the challenge, the security level, and an
 /// attestationApplicationId naming the package and the SHA-256 digest of its
 /// signing certificate. This file validates that chain against the pinned
-/// roots and reads that extension.
+/// roots and reads that extension; and per session it verifies the signature
+/// the attested key makes over the session's digest
+/// ([verifyAndroidSessionSignature]), [verifyAndroidEvidence] being the two
+/// together.
 ///
 /// The schema is Google's, at
 /// `source.android.com/docs/security/features/keystore/attestation`.
@@ -24,6 +27,7 @@ import 'dart:typed_data';
 
 import 'package:asn1lib/asn1lib.dart';
 
+import 'application_identity.dart';
 import 'attestation_roots.dart';
 import 'x509.dart';
 
@@ -54,22 +58,6 @@ enum AndroidSecurityLevel {
     }
     return null;
   }
-}
-
-/// The application identity Android's certificate names — a package name and
-/// the SHA-256 digests of the certificates it is signed with.
-///
-/// This is what `onPeerConnected` carries as the attested application identity.
-/// No platform produces a hash of the running binary, and this file does not
-/// pretend one does.
-class AndroidApplicationIdentity {
-  final List<String> packageNames;
-  final List<Uint8List> signatureDigests;
-
-  const AndroidApplicationIdentity({
-    required this.packageNames,
-    required this.signatureDigests,
-  });
 }
 
 /// A parsed KeyDescription.
@@ -230,25 +218,36 @@ class AndroidKeyDescription {
   /// AttestationPackageInfo, signature_digests SET OF OCTET_STRING }`, with
   /// `AttestationPackageInfo ::= SEQUENCE { package_name OCTET_STRING,
   /// version INTEGER }`.
+  ///
+  /// The version is read as well as the name: Android's certificate "names the
+  /// package, its version and the digest of its signing certificate" (spec
+  /// §Session Establishment), and all three are the application identity.
   static AndroidApplicationIdentity _decodeApplicationId(Uint8List der) {
     final top = ASN1Parser(der).nextObject();
     if (top is! ASN1Sequence || top.elements.length < 2) {
       throw const X509Exception('AttestationApplicationId is malformed');
     }
-    final packages = <String>[];
+    final packages = <AndroidPackage>[];
     final infos = top.elements[0];
     if (infos is! ASN1Set) {
       throw const X509Exception('package_infos is not a SET');
     }
     for (final info in infos.elements) {
-      if (info is! ASN1Sequence || info.elements.isEmpty) {
+      if (info is! ASN1Sequence || info.elements.length != 2) {
         throw const X509Exception('AttestationPackageInfo is malformed');
       }
       final name = info.elements[0];
       if (name is! ASN1OctetString) {
         throw const X509Exception('package_name is not an OCTET STRING');
       }
-      packages.add(String.fromCharCodes(name.valueBytes()));
+      final version = info.elements[1];
+      if (version is! ASN1Integer) {
+        throw const X509Exception('package version is not an INTEGER');
+      }
+      packages.add(AndroidPackage(
+        name: String.fromCharCodes(name.valueBytes()),
+        version: version.valueAsBigInteger.toInt(),
+      ));
     }
 
     final digests = <Uint8List>[];
@@ -264,7 +263,7 @@ class AndroidKeyDescription {
     }
 
     return AndroidApplicationIdentity(
-      packageNames: packages,
+      packages: packages,
       signatureDigests: digests,
     );
   }
@@ -360,6 +359,63 @@ AndroidAttestationResult verifyAndroidAttestation({
   }
 
   return AndroidAttestationResult(leaf: leaf, keyDescription: description);
+}
+
+/// Verify the per-session half: [signature], ECDSA with SHA-256 over [digest],
+/// by the key the attestation's leaf carries.
+///
+/// Spec §Session Establishment: "Per session each side sends that attestation
+/// together with a signature by the attestation key over the digest
+/// H("glp attest" | pk | h) ... and each side verifies both: the attestation
+/// against the platform's root, and the signature against the key the
+/// attestation carries." An Android keystore key signs arbitrary bytes, so the
+/// signature is over the digest itself, `SHA256withECDSA`, DER-encoded as the
+/// keystore returns it.
+///
+/// Throws [X509Exception] with the reason on any failure.
+void verifyAndroidSessionSignature({
+  required AndroidAttestationResult attestation,
+  required Uint8List signature,
+  required Uint8List digest,
+}) {
+  if (!attestation.leaf.verifiesEcdsaSha256(digest, signature)) {
+    throw const X509Exception(
+      'The session signature is not by the attested key over this session\'s '
+      'digest',
+    );
+  }
+}
+
+/// Verify an Android key attestation offer whole: the chain against Google's
+/// roots, its challenge naming [expectedChallenge]; and [signature] over
+/// [digest] by the key the leaf carries.
+///
+/// Either failing throws [X509Exception], and either failing is an
+/// attestation "offered and found invalid", which tears the session down.
+AndroidAttestationResult verifyAndroidEvidence({
+  required List<Uint8List> chain,
+  required Uint8List signature,
+  required Uint8List digest,
+  required Uint8List expectedChallenge,
+  required DateTime at,
+  List<Uint8List>? pinnedRoots,
+  Set<String>? expectedPackageNames,
+  List<Uint8List>? expectedSignatureDigests,
+}) {
+  final result = verifyAndroidAttestation(
+    chain: chain,
+    expectedChallenge: expectedChallenge,
+    at: at,
+    pinnedRoots: pinnedRoots,
+    expectedPackageNames: expectedPackageNames,
+    expectedSignatureDigests: expectedSignatureDigests,
+  );
+  verifyAndroidSessionSignature(
+    attestation: result,
+    signature: signature,
+    digest: digest,
+  );
+  return result;
 }
 
 bool _sameBytes(Uint8List a, Uint8List b) {

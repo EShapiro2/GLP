@@ -1,0 +1,8 @@
+%% The qualifier of M # p names a child directory or a module file of the
+%% caller's directory (TGLP modules.tex, "Cross-module type checking"): h is
+%% neither here --- h.glp lies in sub/, which has no self.glp --- so the call
+%% does not resolve and the program is refused.  Until 2026-10-02 the linker
+%% took the qualifier for a module's file name and reached sub/h.glp.
+imported procedure h#run(Integer).
+exported procedure run(Integer).
+run(X?) :- h # run(X).

@@ -1,0 +1,4 @@
+%% The exposed module: q/1's signature carries T.
+T ::= a ; b.
+exported procedure q(T?).
+q(_).

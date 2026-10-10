@@ -1,0 +1,317 @@
+%% dispatcher.glp --- the dispatcher and the generic part of the construct
+%% processes of the canonical compilation.
+%%
+%% vGLP paper "Volition Elicitation", sections/elicitation.tex, Definition
+%% "Canonical Compilation" and the paragraph before it: "On an ask the
+%% dispatcher spawns the construct process of the question, which holds the
+%% person's end of the variable: the dispatcher routes the person's grants to
+%% it by its identifier; it has the bridge draw the widget of T and the output
+%% the program writes into the variable; and it binds each question it holds
+%% with the term the person's input forms, one element per submission for a
+%% stream type.  The construct process withdraws when every question it holds
+%% is answered.  A reader the program drops leaves its construct on screen,
+%% showing what the program writes into it."  (_) and the handle are out of
+%% the language (Udi, 2026-10-03; vGLP c994328, c2e8b57, as vGLP #5 Cowork
+%% reports it).
+%%
+%% The messages to and from the bridge are vGLP's (2026-10-01 23:55 UTC, E;
+%% the grant naming its question, vGLP #5 Cowork, 2026-10-04 09:05 UTC, C):
+%% a construct sends draw(Id, W, V), W its widget and V the output so far with
+%% each position the person writes shown as input(P), P that position's path,
+%% again as more arrives, and withdraw(Id).
+%%
+%% A GRANT is input(Id, P, R): Id the identifier of the construct, P the
+%% position of the question in it, and R the ground term of the person's
+%% input.  P is the path of argument indices from the root of the
+%% interactive variable's term to the position the person writes, [] the
+%% root: card(Peer, YesNo?)'s question is at [2], and a question that is the
+%% whole variable at [].  A stream the person writes has the stream's own
+%% path, each submission one element.  The bridge sends back the P the view
+%% marks, so a construct holding two questions of one type tells them apart.
+%% The dispatcher routes a grant whole by Id to construct Id, whose question
+%% at P forms its answer from R; a grant for a P at which the construct holds
+%% no open question answers none.  Everything crossing to the bridge is a
+%% ground term or a construct identifier, typed at _ (vGLP, 2026-10-02 08:26
+%% UTC, item 6): what the bridge sends and draws is a term of any of the
+%% program's interactive types.
+%%
+%% The compilation emits this module's types and clauses into every compiled
+%% program, as it emitted the mediator before it: a module path resolves from
+%% the program root downward, so no compiled program can name this directory.
+%% It names each type and procedure here fresh against the program's, and
+%% supplies two things of its own, one per program (vGLP #4 Cowork,
+%% 2026-10-02 21:02 UTC, B; vGLP #5 Cowork, 2026-10-03 08:16 UTC, item 2):
+%%   Question  the union of the program's questions, one functor per moded
+%%             interactive type, the person's end of its variable inside: the
+%%             type parameter Q of Ask, Spawn, dispatch/4 and serve/9;
+%%   construct(Id?, Q?, Gs?, Ds), the construct process of each interactive
+%%             type, one clause per functor of Question, which reads the
+%%             person's input from its grants, forms the person's answers by
+%%             clauses typed at the question's type and calls run/5 below.
+%% Neither is named here, so this module loads and type-checks by itself
+%% (TGLP, "Declaration parameters"): the dispatcher calls no construct/4 but
+%% writes spawn(Id, Q, Gs?, Ds) on the fourth argument of dispatch/4, and the
+%% compiled program's constructs/1 reads that stream and calls construct/4 on
+%% each, its dispatch/3 spawning both.
+%%
+%% THE PERSON CHANNEL NEVER CLOSES.  vGLP at 7838827, Definition "Person
+%% Channel, Person Writer, GLP with Persons, Grant": a grant takes the person
+%% writer U to [c | U1?], U1 the person writer after it, and no transition
+%% closes the channel.  So [] is not an input path of the person channel,
+%% PersonIn, nor of a construct's grant stream, Inputs, which carries the
+%% person's grants on; no clause here or in a construct process reads a []
+%% of either, and the dispatcher never terminates, reading a channel that
+%% never closes (vGLP #5 Cowork, 2026-10-03 21:13 UTC, Q1).  A withdrawn
+%% construct's grant writer can be neither closed nor dropped (GLP-Spec's
+%% Remark "Anonymous Variables", c3d3fc6: "a clause writes every writer it
+%% holds"): remove_route moves it to Deads, which serve carries and never
+%% reads, one entry per withdrawn construct.
+
+%% ---------------------------------------------------------------------------
+%% The vocabulary
+%% ---------------------------------------------------------------------------
+
+%% A construct to the bridge: draw construct Id with widget W and view V; or
+%% withdraw it.
+Draw ::= draw(Integer, _, _) ; withdraw(Integer).
+
+%% The person channel's input: the person's grants, which never close.
+PersonIn ::= [_ | PersonIn].
+
+%% A grant the dispatcher routes to a construct, whole: the construct's
+%% identifier, the position of the question in it, and the person's raw
+%% input.
+Input ::= input(_, _, _).
+
+%% The position of a question in its construct: the path of argument indices
+%% from the root of the interactive variable's term, [] the root.
+Path ::= [] ; [Integer | Path].
+
+%% A construct's grants, carried on from the person channel: never closed.
+Inputs ::= [Input | Inputs].
+
+%% A construct's identifier and the writer of its grant stream.
+Route ::= route(Integer, Inputs?).
+Routes ::= [] ; [Route | Routes].
+
+%% The grant writers of the withdrawn constructs, which serve carries and
+%% never reads.
+Deads ::= [] ; [Inputs? | Deads].
+
+%% Whether a grant formed a term of a question's type: the term formed, or
+%% refused.  The result carries the term, so every clause writes what it holds
+%% (vGLP #5 Cowork, 2026-10-03 08:16 UTC, item 3; GLP-Spec's Remark
+%% "Anonymous Variables" at c3d3fc6, no anonymous reader).
+Formed(X) ::= formed(X) ; refused.
+
+%% Every question of a construct, or of a position of it, answered and none
+%% still to come.
+Done ::= done.
+
+%% An ask on the ask stream: the moded interactive type as written, and the
+%% question; Q is the program's union of questions.
+Ask(Q) ::= ask(Constant, Q).
+
+%% A construct process for the program to spawn: its identifier, its
+%% question, its grant stream and its draw stream, the dispatcher keeping the
+%% writer of the grants and the reader of the draws.
+Spawn(Q) ::= spawn(Integer, Q, Inputs, Stream(Draw)?).
+
+%% ---------------------------------------------------------------------------
+%% The dispatcher
+%% ---------------------------------------------------------------------------
+
+%% dispatch(Asks?, PersonCh?, MCh, Spawns): the dispatcher of one agent,
+%% spawned with the agent's initial goal by whatever spawns it --- the
+%% bridge, or a play --- through the compiled program's dispatch/3, which
+%% spawns the program's constructs/1 on Spawns beside it.  It reads the ask
+%% stream of the initial goal and holds the person channel; it gives the
+%% program, in MCh, its own end of a person channel, passes every grant that
+%% is not input(Id, P, R) to it, and merges the program's output to the person
+%% with the constructs' draws (vGLP, 2026-10-01 23:55 UTC, E, Q4).  The
+%% program's person input keeps its own type; the dispatcher writes it and
+%% never closes it.
+exported procedure(Q) dispatch(Stream(Ask(Q))?,
+    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_)),
+    Stream(Spawn(Q))).
+dispatch(Asks, ch(PIn, POut?), ch(MIn?, MOut), Ss?) :-
+    split_grants(PIn?, Inputs, MIn),
+    merge(MOut?, DOut?, POut),
+    serve(Asks?, Inputs?, COut?, COut, DOut, [], [], 0, Ss).
+
+%% split_grants(Grants?, Inputs, Others): the person's grants to a construct,
+%% and every other grant, for the program.
+procedure split_grants(PersonIn?, Inputs, Stream(_)).
+split_grants([input(Id, P, R) | Gs], [input(Id?, P?, R?) | Is?], Ms?) :-
+    split_grants(Gs?, Is, Ms).
+split_grants([G | Gs], Is?, [G? | Ms?]) :-
+    otherwise |
+    split_grants(Gs?, Is, Ms).
+
+%% serve(Asks?, Inputs?, COut?, CInto, DOut, Routes?, Deads?, N?, Spawns): on
+%% an ask, have the construct process of its question spawned, writing on
+%% Spawns its next identifier N, its question, the reader of its own grant
+%% stream and the writer of its own output stream, merged into COut by CInto;
+%% route each grant, whole, by identifier; pass the constructs' output on to
+%% the person, and move a construct's route, once it has withdrawn, from the
+%% live routes to Deads.
+procedure(Q) serve(Stream(Ask(Q))?, Inputs?, Stream(Draw)?,
+    Stream(Draw), Stream(_), Routes?, Deads?, Integer?, Stream(Spawn(Q))).
+serve([ask(_, Q) | Asks], Is, COut, CInto?, DOut?, Rs, Xs, N,
+      [spawn(N?, Q?, Gs?, Ds) | Ss?]) :-
+    ground(N?) |
+    merge(Ds?, CInto1?, CInto),
+    N1 := N? + 1,
+    serve(Asks?, Is?, COut?, CInto1, DOut, [route(N?, Gs) | Rs?], Xs?, N1?,
+          Ss).
+serve(Asks, [G | Is], COut, CInto?, DOut?, Rs, Xs, N, Ss?) :-
+    route_grant(G?, Rs?, Rs1),
+    serve(Asks?, Is?, COut?, CInto, DOut, Rs1?, Xs?, N?, Ss).
+serve(Asks, Is, [draw(Id, W, V) | COut], CInto?, [draw(Id?, W?, V?) | DOut?],
+      Rs, Xs, N, Ss?) :-
+    serve(Asks?, Is?, COut?, CInto, DOut, Rs?, Xs?, N?, Ss).
+serve(Asks, Is, [withdraw(Id) | COut], CInto?, [withdraw(Id?) | DOut?], Rs,
+      Xs, N, Ss?) :-
+    ground(Id?) |
+    remove_route(Id?, Rs?, Rs1, Xs?, Xs1),
+    serve(Asks?, Is?, COut?, CInto, DOut, Rs1?, Xs1?, N?, Ss).
+
+%% route_grant(G?, Routes?, Routes1): send the grant G = input(Id, P, R),
+%% whole, on the grant stream of construct Id; a grant for no live construct,
+%% one withdrawn, reaches none.
+procedure route_grant(Input?, Routes?, Routes).
+route_grant(input(Id, P, R), [route(Id1, [input(Id?, P?, R?) | Gs1?]) | Rs],
+            [route(Id1?, Gs1) | Rs?]) :-
+    Id? =?= Id1? | true.
+route_grant(G, [route(Id1, Gs?) | Rs], [route(Id1?, Gs) | Rs1?]) :-
+    otherwise |
+    route_grant(G?, Rs?, Rs1).
+route_grant(_, [], []).
+
+%% remove_route(Id?, Routes?, Routes1, Deads?, Deads1): move the route of
+%% construct Id from the live routes to the dead, its grant writer with it.
+procedure remove_route(Integer?, Routes?, Routes, Deads?, Deads).
+remove_route(Id, [route(Id1, Gs?) | Rs], Rs?, Xs, [Gs | Xs?]) :-
+    Id? =?= Id1? | true.
+remove_route(Id, [route(Id1, Gs?) | Rs], [route(Id1?, Gs) | Rs1?], Xs,
+             Xs1?) :-
+    otherwise |
+    remove_route(Id?, Rs?, Rs1, Xs?, Xs1).
+remove_route(_, [], [], Xs, Xs?).
+
+%% ---------------------------------------------------------------------------
+%% The construct process: what is common to every interactive type
+%% ---------------------------------------------------------------------------
+
+%% run(Id?, W?, Views?, Done?, Ds): draw each view of construct Id with its
+%% widget W as it arrives; withdraw when Done is bound, every question the
+%% construct holds answered and no question still to come, and on nothing
+%% else.
+procedure run(Integer?, _?, Stream(_)?, Done?, Stream(Draw)).
+run(Id, _, _, done, [withdraw(Id?)]).
+run(Id, W, [V | Vs], Done, [draw(Id?, W?, V?) | Ds?]) :-
+    ground(W?), ground(V?) |
+    run(Id?, W?, Vs?, Done?, Ds).
+run(Id, _, [], Done, Ds?) :-
+    run_end(Id?, Done?, Ds).
+
+%% run_end(Id?, Done?, Ds): the view is final; wait to withdraw.
+procedure run_end(Integer?, Done?, Stream(Draw)).
+run_end(Id, done, [withdraw(Id?)]).
+
+%% all_done(Dones?, Done): done when each is.
+procedure all_done(Stream(Done)?, Done).
+all_done([done | Ds], D?) :-
+    all_done(Ds?, D).
+all_done([], done).
+
+%% shown(X?, Views): the view of a position the program writes and the person
+%% does not, once it is written: the term itself.
+procedure shown(_?, Stream(_)).
+shown(X, [X?]) :-
+    ground(X?) | true.
+
+%% thread(Xs?, Views): the view of a stream the program writes and the person
+%% does not: the elements so far, again as each arrives.
+procedure thread(Stream(_)?, Stream(Stream(_))).
+thread(Xs, [[] | Vs?]) :-
+    thread(Xs?, [], Vs).
+
+procedure thread(Stream(_)?, Stream(_)?, Stream(Stream(_))).
+thread([X | Xs], Prev, Vs?) :-
+    ground(X?), ground(Prev?) |
+    append_one(Prev?, X?, New),
+    thread_more(Xs?, New?, Vs).
+thread([], _, []).
+
+procedure thread_more(Stream(_)?, Stream(_)?, Stream(Stream(_))).
+thread_more(Xs, New, [New? | Vs?]) :-
+    ground(New?) |
+    thread(Xs?, New?, Vs).
+
+%% append_one(Xs?, X?, Ys): Ys is Xs with X at its end.
+procedure append_one(Stream(_)?, _?, Stream(_)).
+append_one([Y | Ys], X, [Y? | Zs?]) :-
+    append_one(Ys?, X?, Zs).
+append_one([], X, [X?]).
+
+%% path(P?, I?, Q): Q is the path of argument I of the position at path P,
+%% P with I at its end.
+procedure path(Path?, Integer?, Path).
+path([I | P], J, [I? | Q?]) :-
+    path(P?, J?, Q).
+path([], J, [J?]).
+
+%% ---------------------------------------------------------------------------
+%% Forming the primitive positions of an answer
+%% ---------------------------------------------------------------------------
+
+%% form_T(R?, F): F is formed(X), X the person's input R as a term of type
+%% T, or refused where R is not one.  The forming clauses of the program's own
+%% types are the compilation's; these are the primitive ones they call.  The
+%% term is written in the body, F = formed(R?): the guard narrows R? to T only
+%% in the body (TGLP typed-glp.tex, "Type checking of guards": "the
+%% occurrence has that meet as its type in the body"; vGLP #5 Cowork,
+%% 2026-10-03 21:13 UTC, Q2).
+procedure form_string(_?, Formed(String)).
+form_string(R, F?) :-
+    string(R?) | F = formed(R?).
+form_string(_, refused) :-
+    otherwise | true.
+
+procedure form_integer(_?, Formed(Integer)).
+form_integer(R, F?) :-
+    integer(R?) | F = formed(R?).
+form_integer(_, refused) :-
+    otherwise | true.
+
+procedure form_number(_?, Formed(Number)).
+form_number(R, F?) :-
+    number(R?) | F = formed(R?).
+form_number(_, refused) :-
+    otherwise | true.
+
+%% By the guard real/1 (GLP-Spec 12be29b; on gap at 2af93777).
+procedure form_real(_?, Formed(Real)).
+form_real(R, F?) :-
+    real(R?) | F = formed(R?).
+form_real(_, refused) :-
+    otherwise | true.
+
+procedure form_constant(_?, Formed(Constant)).
+form_constant(R, F?) :-
+    constant(R?) | F = formed(R?).
+form_constant(_, refused) :-
+    otherwise | true.
+
+procedure form_module(_?, Formed(Module)).
+form_module(R, F?) :-
+    module(R?) | F = formed(R?).
+form_module(_, refused) :-
+    otherwise | true.
+
+procedure form_any(_?, Formed(_)).
+form_any(R, F?) :-
+    ground(R?) | F = formed(R?).
+form_any(_, refused) :-
+    otherwise | true.

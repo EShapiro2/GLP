@@ -69,25 +69,153 @@ echo ""
 PASS=0
 FAIL=0
 
+# Known-red REPL checks: the counterpart, for check/check_not, of Section Q's
+# KNOWN_RED list of Dart tests.  An entry is a check's name exactly as it is
+# passed to check or check_not (or to _check_pass and _check_fail, as Section
+# Q's asset step does), with its owner in the comment above it.  A
+# listed check that fails is reported KNOWN RED and does not fail the suite; a
+# listed check that passes fails it (the rot guard), so the entry is deleted in
+# the commit that turns it green.  Udi's rulings put a dormant project's
+# failures here, since no session exists to repair them.
+KNOWN_RED_CHECKS=(
+# CSSN, dormant (Udi, 2026-09-28, through Integration Cowork 2026-09-28 19:08 UTC):
+# its failures on `gap` stand here until CSSN wakes, and nobody repairs its
+# files.  Section K entire, and the SG checks that need the `cssn` or
+# `childsafe` artefact, measured at gap 2c18023e.
+    "SG two mini-apps at once: bob connected and greeted under it"
+    "SG two mini-apps on two smartphones: and its message arrives"
+    "CSSN mini-app loads as a program"
+    "CSSN mini-app: its certificate carries the compiler's key"
+    "CSSN mini-app: run/3 activates it, and adopting the conversation is the friendship"
+    "CSSN mini-app: the friend's execution sees it too, and the greeting crosses"
+    "CSSN mini-app: becoming parent and child travels the conversation"
+    "CSSN mini-app: and the child holds its parent"
+    "CSSN v2 project loads"
+    "CSSN v2 fplay1 succeeds"
+    "CSSN v2 fplay2 succeeds"
+    "CSSN v2 fplay3 succeeds"
+    "CSSN v2 fplay4 succeeds"
+    "CSSN v2 fplay4 carol connected dave"
+    "CSSN v2 fplay5 succeeds"
+    "CSSN v2 fplay6 succeeds"
+    "CSSN v2 fplay7 succeeds"
+    "CSSN v2 fplay14 succeeds"
+    "CSSN v2 fplay14 alice issued two child_introduces"
+    "CSSN v2 fplay14 carol connected(dave) emitted exactly once"
+    "CSSN v2 fplay14 dave connected(carol) emitted exactly once"
+    "CSSN v2 fplay15 succeeds"
+    "CSSN v2 fplay15 both agents issued connect"
+    "CSSN v2 fplay15 alice connected(bob) emitted exactly once"
+    "CSSN v2 fplay15 bob connected(alice) emitted exactly once"
+    "CSSN v3 fplay13 act 1 every agent starts an adult and the act is the parenting"
+    "CSSN v3 fplay13 act 1 becoming parent and child is an act of both"
+    "CSSN v3 fplay13 act 1 the parent holds the child"
+    "CSSN v3 fplay13 act 2 adult friendship"
+    "CSSN v3 fplay13 act 3 child befriending"
+    "CSSN v3 fplay13 act 3 the sibling case"
+    "CSSN v3 fplay13 act 4 child-managed group"
+    "CSSN v3 fplay13 act 5 adult-managed group"
+    "CSSN v3 fplay13 act 6 child unfriending"
+    "CSSN v3 fplay13 act 6 parent-initiated removal"
+    "CSSN v3 fplay13 act 7 ending the parenting is owed and given"
+    "CSSN v3 fplay13 act 7 no parent on record is what being an adult is"
+    "CSSN v3 fplay13 act 5 a member joining late is owed what was posted before"
+    "CSSN v3 fplay13 act 7 befriending with no parent among the guards"
+    "CSSN v3 fplay13 narrative is 85 lines"
+    "CSSN v3 fplay16 succeeds"
+    "CSSN v3 fplay16 becoming a parent asks nothing of either party"
+    "CSSN v3 fplay16 enrol creates the parent-child channel"
+    "CSSN v3 fplay16 the child holds its parent"
+    "CSSN v3 fplay16 ending the parenting tears the channel down"
+    "CSSN v3 fplay16 an empty rho is what being an adult is"
+    "CSSN v3 fplay16 a released child takes up a conversation a child refuses"
+    "CSSN v3 fplay17 succeeds"
+    "CSSN v3 fplay17 the member on the list at the post receives it"
+    "CSSN v3 fplay17 the late joiner is owed it too"
+    "CSSN v3 fplay17 a member joining after two posts is owed the first"
+    "CSSN v3 fplay17 and the second"
+    "CSSN v3 fplay17 no member receives the post twice"
+    "CSSN v3 fplay17 the catch-up is in the order the posts were made"
+    "CSSN v3 fplay18 succeeds"
+    "CSSN v3 fplay18 bob becomes a child"
+    "CSSN v3 fplay18 a child offers to become a parent"
+    "CSSN v3 fplay18 and holds the child it gained"
+    "CSSN v3 fplay18 a child ends a parenting of its own"
+    "CSSN v3 fplay18 a child that is a parent ends the parenting"
+    "CSSN v3 fplay19 succeeds"
+    "CSSN v3 fplay19 the creator's parent wills the removal"
+    "CSSN v3 fplay19 and it reaches the removed child through the creator"
+    "CSSN v3 fplay19 the creator's own role still ends a membership"
+    "CSSN v3 fplay19 and reaches that member too"
+    "CSSN v2 fplay8 succeeds"
+    "CSSN v2 fplay8 group_joined"
+    "CSSN v2 fplay9 succeeds"
+    "CSSN v2 fplay10 succeeds"
+    "CSSN v2 fplay11 succeeds"
+    "CSSN v2 fplay11 tagged output"
+    "CSSN v2 fplay12 succeeds"
+    "CSSN v2 fplay12 tagged output"
+    "SG super-app: cssn's artefact is refused a certificate"
+    "SG super-app: load_file gives cssn's artefact as text"
+    "SG super-app: the child-safe platform's artefact is certified"
+    "SG super-app hosts the child-safe platform: alice connected to bob"
+    "SG super-app hosts the child-safe platform: bob connected and greeted"
+    "SG super-app hosts the child-safe platform: no failed play"
+    "SG two mini-apps at once: alice connected under the child-safe platform"
+    "SG two mini-apps on two smartphones: the child-safe friendship holds"
+    "SG child-safe platform on two smartphones: alice is connected to bob"
+    "SG child-safe platform on two smartphones: bob is connected to alice"
+    "SG child-safe platform on two smartphones: alice's message reaches bob"
+# CSSN, dormant (Udi, 2026-10-01, to Integration Code: "Ignore CSSN stuff till
+# I ask differently"): its childsafe artefact, refused at its source for the
+# guard negation GLP removed (15ba4b7e), measured at gap 80265f7c.
+    "Q asset step writes childsafe.glpw"
+)
+KR_CHECKS=0
+
+_known_red_check() {
+    local name="$1" known
+    for known in "${KNOWN_RED_CHECKS[@]}"; do
+        [ "$name" = "$known" ] && return 0
+    done
+    return 1
+}
+
+_check_pass() {
+    if _known_red_check "$1"; then
+        echo "  FAIL: known-red check now PASSES — remove it from KNOWN_RED_CHECKS: $1"
+        FAIL=$((FAIL + 1))
+    else
+        echo "  PASS: $1"
+        PASS=$((PASS + 1))
+    fi
+}
+
+_check_fail() {
+    if _known_red_check "$1"; then
+        echo "  KNOWN RED (not a new failure): $1 ($2)"
+        KR_CHECKS=$((KR_CHECKS + 1))
+    else
+        echo "  FAIL: $1 ($2)"
+        FAIL=$((FAIL + 1))
+    fi
+}
+
 check() {
     local name="$1" pattern="$2" source="$3"
     if echo "$source" | grep -q "$pattern"; then
-        echo "  PASS: $name"
-        PASS=$((PASS + 1))
+        _check_pass "$name"
     else
-        echo "  FAIL: $name (expected: $pattern)"
-        FAIL=$((FAIL + 1))
+        _check_fail "$name" "expected: $pattern"
     fi
 }
 
 check_not() {
     local name="$1" pattern="$2" source="$3"
     if echo "$source" | grep -q "$pattern"; then
-        echo "  FAIL: $name (should NOT match: $pattern)"
-        FAIL=$((FAIL + 1))
+        _check_fail "$name" "should NOT match: $pattern"
     else
-        echo "  PASS: $name"
-        PASS=$((PASS + 1))
+        _check_pass "$name"
     fi
 }
 
@@ -116,7 +244,7 @@ run2(Xr2).
 HEREDOC
 2>&1)
 
-check "p(X) ill-typed: writer at input arg of p(Constant?)" "(p) is not well-typed" "$a1"
+check "p(X) ill-typed: writer at input arg of p(String?)" "(p) is not well-typed" "$a1"
 check "Merge [1,2,3]+[a,b]" "Xs = \[1, a, 2, b, 3\]" "$a1"
 check "Clause lookup" "B = true" "$a1"
 check "run(true)" "succeeds" "$a1"
@@ -125,16 +253,21 @@ check "runA empty merge" "X2 = \[\]" "$a1"
 
 # --- A2: Append, Reverse, Copy ---
 echo "--- A2: Append, Reverse, Copy ---"
+# Each program runs its goals and is cleared before the next loads: the three
+# each define append/3 or reduce/2, and a later load of a name an earlier load
+# defines is refused (GLP weeding round three, item 14).
 a2=$("$REPL_RUN" <<HEREDOC
 $BOOK/recursive/list_processing/append.glp
-$BOOK/recursive/list_processing/reverse.glp
-$BOOK/recursive/list_processing/copy.glp
 append([a,b], [c,d], Zs).
 append([], [x,y], Zs2).
 append([a,b], [], Zs3).
+:clear
+$BOOK/recursive/list_processing/reverse.glp
 reverse([a,b,c], Ys).
 reverse([], Ys2).
 reverse([x], Ys3).
+:clear
+$BOOK/recursive/list_processing/copy.glp
 copy([a,b,c], Yc).
 copy([], Yc2).
 :quit
@@ -239,24 +372,29 @@ check "OR all zeros" "OutO2 = \[zero, zero\]" "$a8"
 
 # --- A9: Arithmetic (sum, fib, factorial, hanoi, primes, inner_product) ---
 echo "--- A9: Arithmetic programs ---"
+# Each program runs its goals and is cleared before the next loads, as in A2.
 a9=$("$REPL_RUN" <<HEREDOC
 $BOOK/recursive/list_processing/inner_product.glp
-$BOOK/recursive/arithmetic_trees/fibonacci.glp
-$BOOK/recursive/arithmetic_trees/factorial.glp
-$BOOK/recursive/arithmetic_trees/hanoi.glp
-$BOOK/recursive/arithmetic_trees/primes.glp
 inner_product([1,2,3], [4,5,6], Sipf).
+:clear
+$BOOK/recursive/arithmetic_trees/fibonacci.glp
 fib(0, Ff0).
 fib(1, Ff1).
 fib(3, Ff3).
 fib(10, Ff10).
+:clear
+$BOOK/recursive/arithmetic_trees/factorial.glp
 factorial(1, Fac1).
 factorial(2, Fac2).
 factorial(3, Fac3).
 factorial(5, Fac5).
+:clear
+$BOOK/recursive/arithmetic_trees/hanoi.glp
 hanoi(0, a, c, Mh0).
 hanoi(1, a, c, Mh1).
 hanoi(2, a, c, Mh2).
+:clear
+$BOOK/recursive/arithmetic_trees/primes.glp
 primes(20, Ps20).
 primes(10, Ps10).
 :quit
@@ -291,12 +429,11 @@ HEREDOC
 check "Multiply stream" "Ym1 = \[3, 6, 9, 12\]" "$a10"
 check "Multiply empty" "Ym2 = \[\]" "$a10"
 
-# --- A11: Struct demo, depth, paa, guards, misc ---
+# --- A11: Struct demo, depth, guards, misc ---
 echo "--- A11: Structure and pattern tests ---"
 a11=$("$REPL_RUN" <<HEREDOC
 $TYPED/struct_demo.glp
 $TYPED/depth_test.glp
-$TYPED/paa.glp
 $TYPED/no_guard.glp
 $TYPED/with_guard.glp
 $TYPED/two_struct_list.glp
@@ -308,7 +445,6 @@ bin_nest(val, Xbn).
 ter_all(a, b, c, Xta).
 tree3(val, Xtr3).
 multi_w(p, q, Xmw).
-p(Xpaa1, Xpaa1?).
 no_guard([5,x,y], Xng).
 with_guard([5,x,y], Xwg).
 test([foo(a), bar(b)]).
@@ -326,7 +462,6 @@ check "Nested binary" "Xbn = outer(inner(val, b), c)" "$a11"
 check "Ternary all vars" "Xta = triple(a, b, c)" "$a11"
 check "Deep binary tree" "Xtr3 = node(node(leaf(val), leaf(a)), leaf(b))" "$a11"
 check "Multiple writers" "Xmw = pair(wrap(p), wrap(q))" "$a11"
-check "p(X,X?) succeeds" "Xpaa1 = a" "$a11"
 check "No guard" "Xng = \[5, a, b" "$a11"
 check "With guard" "Xwg = \[5, a, b" "$a11"
 check "Two struct list" "succeeds" "$a11"
@@ -400,23 +535,101 @@ check "guard_int" "succeeds" "$a12"
 check "guard_compare" "succeeds" "$a12"
 check "guard_known_valid" "Ygr = hello" "$a12"
 
-# --- A13: Ground equal, guard negation ---
-echo "--- A13: Ground equal and guard negation ---"
+# --- A12b: The guard real/1, beside integer/1's ---
+# GLP-Spec appendix-guards.tex (12be29b), the guard table beside number:
+# procedure real(Real?), Ground yes --- it succeeds if its argument is a Real,
+# suspends on an unbound reader, fails otherwise (GLP #3 Cowork, 2026-10-02
+# 22:19 UTC).  A Real is a floating-point number: 2.0 and the quotient 4 / 2
+# are Reals and 2 is not, as integer(2.0) fails.  Its runtime cases are
+# glp_runtime/test/engine/real_guard_test.dart's too.
+echo "--- A12b: The guard real/1 ---"
+a12b=$("$REPL_RUN" <<HEREDOC
+$TYPED/real_guard.glp
+real_or_other(2.5, Rr1).
+real_or_other(2.0, Rr2).
+real_or_other(2, Rr3).
+real_or_other(hello, Rr4).
+real_or_other("text", Rr5).
+real_or_other(f(1.5), Rr6).
+kind_of(3, Rk1).
+kind_of(3.0, Rk2).
+half(4, Rh1).
+as_real(3, Ra1).
+in_f(f(W1), Rw1).
+real_or_other(Z1?, Rz1).
+real_or_other(Z2?, Rz2), Z2 = 1.5.
+twice(1.5, Rt1).
+narrow(2.5, Rn1).
+narrow(3, Rn2).
+:quit
+HEREDOC
+2>&1)
+
+check "real/1: a Real succeeds" "Rr1 = real" "$a12b"
+check "real/1: 2.0 is a Real" "Rr2 = real" "$a12b"
+check "real/1: 2, an Integer, fails" "Rr3 = other" "$a12b"
+check "real/1: an atom fails" "Rr4 = other" "$a12b"
+check "real/1: a string fails" "Rr5 = other" "$a12b"
+check "real/1: a structure fails" "Rr6 = other" "$a12b"
+check "real/1 beside integer/1: 3 is an Integer" "Rk1 = integer" "$a12b"
+check "real/1 beside integer/1: 3.0 is a Real" "Rk2 = real" "$a12b"
+check "real/1: the quotient 4 / 2 is a Real" "Rh1 = real" "$a12b"
+check "real/1: '_real' gives a Real" "Ra1 = real" "$a12b"
+check "real/1: an unbound writer fails" "Rw1 = no" "$a12b"
+check "real/1: an unbound reader suspends" "suspended" "$(echo "$a12b" | grep -A1 'Rz1 = ')"
+check "real/1: and resumes on a Real" "Rz2 = real" "$a12b"
+check "real/1 grounds its argument: X? twice after it" "Rt1 = p(1.5, 1.5)" "$a12b"
+check "real/1 narrows Number? to Real?" "Rn1 = ok" "$a12b"
+check "real/1 narrows: an Integer takes otherwise" "Rn2 = no" "$a12b"
+
+# --- A13: Ground equal, ground not-equal ---
+# GLP-Spec appendix-guards.tex (bbff21d): "=?= succeeds if both arguments are
+# ground and equal.  =?\= succeeds if no readers substitution makes them ground
+# and equal."  Each suspends and fails by glp.tex, Guards: "A guard suspends if
+# it does not succeed but some instance of it under a readers substitution
+# would succeed.  A guard fails if no such instance exists."  test (both
+# operands variables) takes the ground equality instruction; test_ab (a
+# structure operand), test_neq and test_neq_stop take the generic guard call,
+# the ground equality instruction having no negated operand (IGLP, 9b45225).
+# So where the two clash, or an unbound writer stands in either, =?= fails and
+# =?\= succeeds, whatever readers stand elsewhere --- f(a, Zq?) =?\= f(b, Wq?),
+# f(Wq3) =?\= f(c), f(Xq4?) =?\= g(Yq4?), [a | Tq6?] =?\= [] --- and where a
+# readers substitution makes them ground and equal but they are not both
+# ground, each suspends: f(Xq7?) =?\= f(Yq7?) (GLP #3 Cowork, 2026-10-02 13:09
+# UTC).
+echo "--- A13: Ground equal and ground not-equal ---"
 a13=$("$REPL_RUN" <<HEREDOC
 $TYPED/test_ground_equal.glp
-$TYPED/test_guard_negation.glp
+$TYPED/test_ground_not_equal.glp
 test(a, a, R1).
 test(a, b, R2).
 test(foo(1,2), foo(1,2), R3).
 test(foo(1,2), foo(1,3), R4).
 test([1,2,3], [1,2,3], R5).
 test([1,2], [1,3], R6).
-test_neg_int(5, Rn1).
-test_neg_int(hello, Rn2).
-test_neg_number(3.14, Rn3).
-test_neg_number(hello, Rn4).
-test_neg_eq(5, 5, Rn5).
-test_neg_eq(5, 3, Rn6).
+test_neq(a, a, Rq1).
+test_neq(a, b, Rq2).
+test_neq(foo(1,2), foo(1,2), Rq3).
+test_neq(foo(1,2), foo(1,3), Rq4).
+test_neq([1,2,3], [1,2,3], Rq5).
+test_neq([1,2], [1,3], Rq6).
+test_neq_stop(go, Rq7).
+test_neq_stop(stop, Rq8).
+neq_only(f(a, Zq?), f(b, Wq?), Rq10).
+neq_only(f(a, Zq2?), f(a, b), Rq11).
+test(f(a, Ze1?), f(b, We1?), Re1).
+test(f(a, Ze2?), f(a, b), Re2).
+test_ab(f(a, b), Re3).
+test_ab(f(Ze4?, c), Re4).
+test_ab(f(Ze5?, b), Re5).
+test(f(We6), f(c), Re6).
+test_neq(f(Wq3), f(c), Rq12).
+test(f(Xe7?), g(Ye7?), Re7).
+test_neq(f(Xq4?), g(Yq4?), Rq13).
+test([a|Te8?], [], Re8).
+test_neq([a|Tq6?], [], Rq14).
+neq_only(f(Xq7?), f(Yq7?), Rq15).
+test_ab(f(a, We9), Re9).
 :quit
 HEREDOC
 2>&1)
@@ -427,12 +640,29 @@ check "equal structs" "R3 = equal" "$a13"
 check "not equal structs" "R4 = not_equal" "$a13"
 check "equal lists" "R5 = equal" "$a13"
 check "not equal lists" "R6 = not_equal" "$a13"
-check "neg int is_int" "Rn1 = is_int" "$a13"
-check "neg int not_int" "Rn2 = not_int" "$a13"
-check "neg number is_num" "Rn3 = is_num" "$a13"
-check "neg number not_num" "Rn4 = not_num" "$a13"
-check "neg eq equal" "Rn5 = eq" "$a13"
-check "neg eq not equal" "Rn6 = neq" "$a13"
+check "=?\\= on equal atoms fails" "Rq1 = equal" "$a13"
+check "=?\\= on differing atoms" "Rq2 = not_equal" "$a13"
+check "=?\\= on equal structs fails" "Rq3 = equal" "$a13"
+check "=?\\= on differing structs" "Rq4 = not_equal" "$a13"
+check "=?\\= on equal lists fails" "Rq5 = equal" "$a13"
+check "=?\\= on differing lists" "Rq6 = not_equal" "$a13"
+check "=?\\= against a constant, differing" "Rq7 = go_on" "$a13"
+check "=?\\= against a constant, equal, fails" "Rq8 = stopped" "$a13"
+check "=?\\= succeeds at two constants that differ, readers beside them" "Rq10 = not_equal" "$a13"
+check "=?\\= suspends where a readers substitution makes them ground and equal" "Rq11 = <unbound>" "$a13"
+check "=?= fails at two constants that differ, readers beside them" "Re1 = not_equal" "$a13"
+check "=?= suspends where a readers substitution makes them ground and equal" "Re2 = <unbound>" "$a13"
+check "=?= against a structure, equal" "Re3 = equal" "$a13"
+check "=?= against a structure fails at two constants that differ beside a reader" "Re4 = not_equal" "$a13"
+check "=?= against a structure suspends on a nested reader" "Re5 = <unbound>" "$a13"
+check "=?= fails on an unbound writer, which no readers substitution grounds" "Re6 = not_equal" "$a13"
+check "=?\\= succeeds on an unbound writer" "Rq12 = not_equal" "$a13"
+check "=?= fails at a clash of functor, neither side ground" "Re7 = not_equal" "$a13"
+check "=?\\= succeeds at a clash of functor, neither side ground" "Rq13 = not_equal" "$a13"
+check "=?= fails on a list cell with an unbound tail against the empty list" "Re8 = not_equal" "$a13"
+check "=?\\= succeeds on a list cell with an unbound tail against the empty list" "Rq14 = not_equal" "$a13"
+check "=?\\= suspends on two readers in structures that agree" "Rq15 = <unbound>" "$a13"
+check "=?= against a structure fails on an unbound writer" "Re9 = not_equal" "$a13"
 
 # --- A14: Circular terms ---
 echo "--- A14: Circular term tests ---"
@@ -534,10 +764,15 @@ HEREDOC
 check "param bare typevar" "Rpbt1 = a" "$a18b"
 
 # --- A19: Defined guards ---
+# A goal writer at the guard's `_` fails it (appendix-term-matching.tex, row
+# "Writer X1", column "Writer X2"), so the channel holds readers or constants,
+# ch(A?, B?) and ch(a, b), and not ch(A?, B) (GLP #3 Cowork, 2026-10-02 17:12
+# UTC, 1(b)).
 echo "--- A19: Defined guards ---"
 a19=$("$REPL_RUN" <<HEREDOC
 $TYPED/test_defined_guards.glp
-test(ch(Adg?, Bdg), Rdg1).
+test(ch(Adg?, Bdg?), Rdg1).
+test(ch(a, b), Rdg4).
 test(foo, Rdg2).
 test(Xdg?, Rdg3).
 :quit
@@ -545,6 +780,7 @@ HEREDOC
 2>&1)
 
 check "defined guard match" "Rdg1 = ok" "$a19"
+check "defined guard match ground" "Rdg4 = ok" "$a19"
 check "defined guard fail" "Rdg2 = not_channel" "$a19"
 check "defined guard suspend" "suspended" "$a19"
 
@@ -600,8 +836,6 @@ test_no_readers(foo(1, bar(2)), Rnr2).
 test_no_readers(f(Wnr), Rnr3).
 test_no_readers([1,2|Tnr], Rnr4).
 test_no_readers(g(Ynr?), Rnr5).
-test_neg_no_readers(h(Znr?), Rnr6).
-test_neg_no_readers(7, Rnr7).
 test_no_readers(f(_), Rnr8).
 test_no_readers(foo(1, bar(_)), Rnr9).
 :quit
@@ -613,8 +847,6 @@ check "no_readers ground compound" "Rnr2 = ok" "$a20b"
 check "no_readers writer inside term" "Rnr3 = ok" "$a20b"
 check "no_readers writer tail" "Rnr4 = ok" "$a20b"
 check "no_readers reader suspends" "suspended" "$a20b"
-check "~no_readers finds reader" "Rnr6 = has_readers" "$a20b"
-check "~no_readers on ground falls through" "Rnr7 = none" "$a20b"
 # An anonymous writer inside a goal argument.  Until 2026-08-02 the REPL goal
 # path had no UnderscoreTerm branch and threw "Unsupported struct argument
 # type", while a NAMED writer in the same position (Rnr3 above) worked.
@@ -622,20 +854,22 @@ check "no_readers anonymous writer inside term" "Rnr8 = ok" "$a20b"
 check "no_readers anonymous writer nested two deep" "Rnr9 = ok" "$a20b"
 
 # --- A21: Comprehensive defined guards ---
+# The goals that match a guard's `_` hold readers there: a goal writer against
+# the head's `_` fails (GLP #3 Cowork, 2026-10-02 17:12 UTC, 1(b); see A19).
 echo "--- A21: Comprehensive defined guards ---"
 a21=$("$REPL_RUN" <<HEREDOC
 $TYPED/test_defined_guards_all.glp
 make_pair(Call1, Call2).
 bind_response(yes, RespYes, LocalYes).
 bind_response(no, RespNo, LocalNo).
-test_channel(ch(TchA?, TchB), TchR1).
+test_channel(ch(TchA?, TchB?), TchR1).
 test_channel(foo, TchR2).
 test_channel(p(TpaA, TpaB), TchR3).
-test_pair(p(TprA, TprB), TprR1).
+test_pair(p(TprA?, TprB?), TprR1).
 test_pair(foo, TprR2).
-test_wrapper(w(TwrX), TwrR1).
+test_wrapper(w(TwrX?), TwrR1).
 test_wrapper(foo, TwrR2).
-test_nested(w(p(TnA, TnB)), TnR1).
+test_nested(w(p(TnA?, TnB?)), TnR1).
 test_nested(w(hello), TnR2).
 test_nested(foo, TnR3).
 test_wrap(hello, TwpR).
@@ -729,7 +963,7 @@ HEREDOC
 2>&1)
 
 check "double 5" "Rqb1 = 10" "$a25"
-check "struct bind via =" "X = _equator(" "$a25"
+check "struct bind via =" "X = '_equator'(" "$a25"
 
 # --- A26: Univ, assignment, MWM (stdlib, no file needed) ---
 echo "--- A26: Univ, assignment, MWM ---"
@@ -872,26 +1106,6 @@ HEREDOC
 2>&1)
 check "single-module: -expose collision rejected at link time" "expose collision" "$a26f_col"
 
-# --- A27: Reader-to-reader bug (befriend_intro) ---
-echo "--- A27: Reader-to-reader fail ---"
-a27=$("$REPL_RUN" <<HEREDOC
-$TYPED/test_befriend_intro_bug.glp
-med(charlie, ch([msg(agent, _user, befriend_intro(bob, alice, X?)) | Xs], Y), ch(Us?, Vs), [], 2).
-:quit
-HEREDOC
-2>&1)
-check_not "reader-to-reader no reduction" "req(2)" "$a27"
-
-# --- A28: Module guard ---
-echo "--- A28: Module guard ---"
-a28=$("$REPL_RUN" <<HEREDOC
-$TYPED/module_guard.glp
-test_not_module(42, Rm1).
-:quit
-HEREDOC
-2>&1)
-check "module guard ~module(42)" "Rm1 = not_module" "$a28"
-
 # --- A29: Struct terms inside lists in goal arguments (Issue 0b regression) ---
 echo "--- A29: Structs in list goal args ---"
 a29=$("$REPL_RUN" <<HEREDOC
@@ -914,6 +1128,34 @@ HEREDOC
 2>&1)
 check "Body =.. compose foo" "T = foo(a, b)" "$a30"
 check "Body =.. compose greet" "G = greet(hello, world)" "$a30"
+
+# =.. waits for a list still being built (sGLP, 2026-10-03): the list is a
+# reader (GLP-Spec appendix-guards, procedure =..(_, Stream(_)?)) and the
+# '_list_to_tuple' kernel aborts on an incomplete one (appendix-guards, "Body
+# kernel predicates"), so the root's =.. waits until the spine is assigned down
+# to [] and the functor is assigned, and only then calls the kernel.  A list
+# never completed leaves =.. suspended; nothing aborts.  The elements are not
+# waited on.
+a30w=$("$REPL_RUN" <<HEREDOC
+$TYPED/univ_wait.glp
+late_tail(Tw1).
+late_spine(Tw2).
+late_functor(Tw3).
+Tw6 =.. [p, Yw6?].
+never_tail(Gw4?, Tw4).
+never_functor(Gw5?, Tw5).
+:quit
+HEREDOC
+2>&1)
+check "=.. waits: tail assigned after the call" "Tw1 = f(a, b)" "$a30w"
+check "=.. waits: spine built after the call" "Tw2 = g(a, b, c, d)" "$a30w"
+check "=.. waits: functor assigned after the call" "Tw3 = h(a)" "$a30w"
+check "=.. does not wait on an element" "Tw6 = p(" "$a30w"
+check "=.. waits: tail never assigned leaves it suspended" "Tw4 = <unbound>" "$a30w"
+check "=.. waits: functor never assigned leaves it suspended" "Tw5 = <unbound>" "$a30w"
+check "=.. waits: suspended, not failed" "→ suspended" "$a30w"
+check_not "=.. waits: no abort" "ABORT" "$a30w"
+check_not "=.. waits: no failure" "→ failed" "$a30w"
 
 # --- A31: Forwarded-writer reactivation (bug of 2026-07-04) ---
 # A consumer suspended on a reader must wake when its writer, forwarded down a
@@ -969,6 +1211,199 @@ check "random single draw value" "V = 1" "$a33"
 check "random single draw next seed" "NS = 705894" "$a33"
 check "random threaded triple reproduces" "R = rt(808, 250, 74)" "$a33"
 check "random N<1 fails at guard" "→ failed" "$a33"
+
+# --- A34: Ackermann on Peano numerals (book/recursive/arithmetic_trees) ---
+# Clause 3's guard was compound(M?), ground(M?): compound refused M = 0, so
+# ackermann(s(0), s(0), A) failed, and every goal that reaches it with it.
+# ground(M?) alone licenses the second read of M? (GLP-Spec glp.tex, Remark
+# "Guards and SRSW": compound does not imply groundness, ground does).
+echo "--- A34: Ackermann ---"
+a34=$("$REPL_RUN" <<HEREDOC
+$BOOK/recursive/arithmetic_trees/ackermann.glp
+ackermann(s(0), s(0), A11).
+ackermann(s(s(0)), s(0), A21).
+:quit
+HEREDOC
+2>&1)
+check "Ackermann A(1,1) = 3" "A11 = s(s(s(0)))" "$a34"
+check "Ackermann A(2,1) = 5" "A21 = s(s(s(s(s(0)))))" "$a34"
+
+# --- A35: Minimum on Peano numerals (book/recursive/arithmetic_trees) ---
+# The program committed to min_check's first clause and then failed in its body,
+# the lesseq test sitting in the body where Concurrent Prolog had it in a deep
+# guard GLP has not; minimum(s(s(0)), s(0), M) failed.  Now the flat standard
+# form, which decides by the head alone.
+echo "--- A35: Minimum ---"
+a35=$("$REPL_RUN" <<HEREDOC
+$BOOK/recursive/arithmetic_trees/min.glp
+minimum(s(s(0)), s(0), M21).
+minimum(0, s(0), M01).
+:quit
+HEREDOC
+2>&1)
+check "Minimum of 2 and 1 is 1" "M21 = s(0)" "$a35"
+check "Minimum of 0 and 1 is 0" "M01 = 0" "$a35"
+
+# --- A36: An operator name where a term is expected is a name ---
+# GLP-Spec reserves no word (appendix-lp.tex, Definition "Logic Programs
+# Syntax"): the reader takes an operator name or keyword in a term as the
+# constant of that name, and as a functor before "(", as Prolog does (GLP #3
+# Cowork, 2026-10-03 21:18 UTC).  Until 2026-10-03 an unquoted mod in a term
+# was "Expected term, got TokenType.MOD" and procedure was read as the keyword.
+# The display shows each name as a constant in single quotes, its unquoted text
+# being an operator or a keyword, and a functor bare before "(" (GLP #3 Cowork,
+# 2026-10-04 09:06 UTC, "23:49. Q1 and Q3"; A40).
+echo "--- A36: Operator names as constants ---"
+a36=$("$REPL_RUN" <<HEREDOC
+$TYPED/operator_names.glp
+names(N36).
+words(W36).
+functors(F36).
+op(mod, R36a).
+op(procedure, R36b).
+op(+, R36c).
+arith(A36, B36, C36).
+even(4, E36).
+X36 = mod.
+Y36 = procedure.
+:quit
+HEREDOC
+2>&1)
+check "operator names: the fixture loads" "Loaded: .*operator_names.glp" "$a36"
+check "operator names: every name a constant" 'N36 = \['\''mod'\'', '\''procedure'\'', '\''+'\'', '\''-'\'', '\''\*'\'', '\''/'\'', '\''//'\'', '\''<'\'', '\''>'\'', '\''=<'\'', '\''>='\'', '\''='\'', '\''=:='\'', '\''=\\\\='\'', '\''=?='\'', '\''=?\\\\='\'', '\''@<'\'', '\''=\.\.'\'', '\''\.\.='\'', '\'':-'\'', '\'':='\'', '\''::='\'', '\'';'\'', '\'':'\'', '\''~'\'', '\''#'\'', '\''\\\\'\'', '\''@'\''\]' "$a36"
+check "operator names: mod and procedure in a structure" "W36 = w('mod', 'procedure', " "$a36"
+check "operator names: procedure and = as functors" "F36 = f(procedure(a), =(b, c), mod(d, e))" "$a36"
+check "operator names: mod a type alternative" "R36a = is_mod" "$a36"
+check "operator names: procedure a type alternative" "R36b = is_procedure" "$a36"
+check "operator names: + a type alternative" "R36c = is_plus" "$a36"
+check "operator names: mod still infix" "A36 = 1" "$a36"
+check "operator names: unary minus still neg" "B36 = -3" "$a36"
+check "operator names: + and * by precedence" "C36 = 14" "$a36"
+check "operator names: mod in a guard expression" "E36 = even" "$a36"
+check "operator names: X = mod at the prompt" "X36 = 'mod'" "$a36"
+check "operator names: Y = procedure at the prompt" "Y36 = 'procedure'" "$a36"
+check_not "operator names: no syntax error" "Expected term" "$a36"
+
+# --- A37: The answer display shows a list's tail ---
+# A list whose tail is not [] is shown with the tail after "|", as send_to_user
+# shows it.  Until 2026-10-03 the display dropped a constant or structure tail,
+# [holding('G','H')|'W'] shown as [holding(G, H)] (GLP #3 Cowork, 2026-10-03
+# 21:18 UTC: "a fault, fix it").  Since 2026-10-04 the display quotes the
+# constants that need it, and send_to_user's output to the person stays as it
+# is (GLP #3 Cowork, 2026-10-04 09:06 UTC, "23:49. Q1 and Q3").
+echo "--- A37: List tails in the answer display ---"
+a37=$("$REPL_RUN" <<HEREDOC
+$TYPED/list_tail_display.glp
+holding_tail(T37a).
+two_and_constant(T37b).
+structure_tail(T37c).
+nested(T37d).
+proper(T37e).
+shown.
+$TYPED/operator_names.glp
+words(W37).
+:quit
+HEREDOC
+2>&1)
+check "list tail display: a constant tail" "T37a = \[holding('G', 'H') | 'W'\]" "$a37"
+check "list tail display: two elements and a constant tail" "T37b = \[a, b | c\]" "$a37"
+check "list tail display: a structure tail" "T37c = \[a | f(b)\]" "$a37"
+check "list tail display: tails inside a structure and a list" "T37d = w(\[x | y\], \[\[p | q\] | r\])" "$a37"
+check "list tail display: a proper list as before" "T37e = \[a, b, c\]" "$a37"
+check "list tail display: send_to_user shows it unquoted, as it stays" "^GLP> \[holding(G, H) | W\]" "$a37"
+check "list tail display: mod and procedure, the tail kept" "W37 = w('mod', 'procedure', \['mod' | 'procedure'\])" "$a37"
+
+# --- A38: An undefined type name in a declaration is refused, named ---
+# TGLP parameterized-types.tex, "Declaration parameters": "An undefined type
+# name occurring in a declaration and not in its parameter list is an error".
+# Until 2026-10-03 a declaration naming no parameters read such a name as a
+# parameter; the fallback went once sGLP's Peers was defined (GLP #3 Cowork,
+# 2026-10-03 21:18 UTC).  The refusal names the declaration, the file, the
+# line and the type name, on the single-file path and in a directory program.
+echo "--- A38: Undefined type names in declarations ---"
+a38=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/decl_undefined_neg.glp
+$GLP_DIR/programs/tests/decl_undefined_dir_neg
+:quit
+HEREDOC
+2>&1)
+check "undefined declaration type: single file refused, file and line named" "decl_undefined_neg.glp, line 16, column 16: undefined type \"M\" in the declaration of keep/2" "$a38"
+check "undefined declaration type: directory program refused, module file and line named" "decl_undefined_dir_neg/worker.glp:4: undefined type \"Mesage\" in the declaration of relay/2" "$a38"
+check_not "undefined declaration type: neither loads" "✓ Loaded" "$a38"
+
+# --- A39: The standard library's channel operations declare what they define ---
+# programs/lib/channels/channel_ops.glp defines send/3, receive/3 and
+# new_channel/2, and a procedure a module defines is declared in it (TGLP
+# modules.tex, Definition "Typed Procedure, Module"); it declares them as the
+# root self.glp does (GLP #3 Cowork, 2026-10-03 21:18 UTC, "16:01. 3").  Until
+# 2026-10-03 it declared none, and was refused once the root's declaration no
+# longer stood for a module's own procedure (49b869f2, 80fcc1cb).
+echo "--- A39: lib/channels/channel_ops.glp ---"
+a39=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/lib/channels/channel_ops.glp
+new_channel(C39a, C39b).
+:quit
+HEREDOC
+2>&1)
+check "channel_ops: loads" "Loaded: .*channel_ops.glp" "$a39"
+check "channel_ops: new_channel pairs two channels" "C39a = ch(" "$a39"
+check_not "channel_ops: no undeclared procedure" "declared only in an enclosing scope" "$a39"
+
+# --- A40: The single-file path checks the object it compiles ---
+# TGLP modules.tex, Compilation: "The flat program is the linked program of
+# def:program, and it is the object checked."  A file loaded alone is linked
+# as a one-module program, and its linked program is checked as a directory's
+# is, each module of it first.  Until 2026-10-03 the single-file path checked
+# the file's module alone and compiled the linked program unchecked (GLP #3
+# Cowork, 2026-10-03 21:18 UTC, "16:01. 4"): a5_routing_neg/main.glp, whose
+# call instantiates send_user/3 at an entry union with no user_output, loaded
+# as a file while its directory was refused (X7).
+echo "--- A40: Single-file loads check the linked program ---"
+a40=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/a5_routing_neg/main.glp
+$GLP_DIR/programs/tests/module_self_type_error/worker.glp
+:quit
+HEREDOC
+2>&1)
+check "single file: the linked program is checked" "a5_routing_neg/main.glp: Exception: Type checking failed for linked program" "$a40"
+check "single file: refused at send_user's instantiation" "No transition for user_output" "$a40"
+check "single file: its directory's self.glp checked as a module of it" "module_self_type_error/self.glp:3: Head of bad_proc is not well-typed" "$a40"
+check_not "single file: neither loads" "✓ Loaded" "$a40"
+
+# --- A41: The answer display reads back as the term ---
+# GLP-Spec appendix-lp.tex, Definition "Logic Programs Syntax": the text
+# denotes the term.  The display shows a constant in single quotes where
+# unquoted it would read as a variable, an operator or a number, or as no one
+# name, escaped as the reader reads a quoted name, and a functor bare before
+# "(" where the reader takes it there; the shown text, typed back in a goal,
+# is the term the guard compares it with (GLP #3 Cowork, 2026-10-04 09:06 UTC,
+# "23:49. Q1 and Q3").  Until 2026-10-04 'G' was shown G, a variable.  A list
+# with a constant tail is shown, not typed back; until 5a2b463c a goal's list
+# tail that is no list and no variable was posted as [] (glp_engine.dart,
+# _buildListTerm), and it is now built as written.  A name holding a quote is shown and not
+# typed back: in a here-document inside $(...) bash 3.2 pairs single quotes
+# regardless of the backslash; GlpPrinter's Dart test reads it back.
+echo "--- A41: The answer display reads back ---"
+a41=$("$REPL_RUN" <<HEREDOC
+$TYPED/display_read_back.glp
+names(N41).
+same_names(['G', '+', 'mod', '42', 'a b', '_x', 'procedure', [], "str"], R41).
+same_names(['G'], Q41).
+terms(T41).
+same_terms(w('G'(a), f('=..', 'X'), +(1), =?=(a, b)), S41).
+apostrophe(P41).
+tails(L41).
+:quit
+HEREDOC
+2>&1)
+check "display: the fixture loads" "Loaded: .*display_read_back.glp" "$a41"
+check "display: names quoted where they must be" "N41 = \['G', '+', 'mod', '42', 'a b', '_x', 'procedure', \[\], \"str\"\]" "$a41"
+check "display: the shown names read back as the term" "R41 = yes" "$a41"
+check "display: the comparison can fail" "Q41 = no" "$a41"
+check "display: functors quoted where they must be" "T41 = w('G'(a), f('=\.\.', 'X'), +(1), =?=(a, b))" "$a41"
+check "display: the shown structures read back as the term" "S41 = yes" "$a41"
+check "display: a quote in a name escaped as the reader reads it" "P41 = 'it\\\\'s'" "$a41"
+check "display: constant list tails shown" "L41 = \[\[a | b\], \[a, 'B' | 'C'\]\]" "$a41"
 
 SECTION_A_PASS=$PASS
 SECTION_A_FAIL=$FAIL
@@ -1142,9 +1577,6 @@ POSITIVE_FILES=(
     "$TC_DIR/positive/subtyping/integer_below_number_and_constant.glp"
     "$TC_DIR/positive/subtyping/int_list_to_constant_list.glp"
     "$TC_DIR/positive/subtyping/constant_union_to_constant.glp"
-
-    # --- module guard test ---
-    "$TYPED/module_guard.glp"
 
     # --- parameterized types ---
     "$TYPED/param_stream_integer.glp"
@@ -1386,23 +1818,27 @@ NEGATIVE_FILES=(
     # parameter (parameterized-types.tex, "Declaration parameters"). Positive
     # counterpart: param_decl_list.glp in POSITIVE_FILES.
     "$GLP_DIR/programs/tests/param_decl_typo_neg.glp"
+    # procedure keep(M?, M) — no list, so M is an undefined type, not a
+    # parameter (the fallback that read it as one went 2026-10-03, GLP #3
+    # Cowork 21:18 UTC).  Positive counterpart: toplevel_type_param.glp.
+    "$GLP_DIR/programs/tests/decl_undefined_neg.glp"
 
     # --- Monomorphic recursion: a recursive call at a different instantiation ---
     # wrap threads Stream(X) -> Stream(Box(X)); the recursive ploop is checked at
     # the enclosing instantiation, so the type-changing recursion is rejected.
     "$GLP_DIR/programs/tests/monomorphic_recursion.glp"
 
-    # --- Abstract-parameter routing matrix, case (ii): a clean parametric proc
-    # (no parameter inspection) with a COVERAGE GAP takes the abstract route and is
-    # rejected against its abstract instance pdrop(Stream<$abstract_X>?) — [] is
-    # uncovered — even though it is never instantiated. (Paper Decision 1: coverage
-    # is part of def:parametrically-well-typed.) Filename retained for continuity;
-    # see the file header.
+    # --- Abstract-parameter routing matrix, case (ii): a parametric proc (no
+    # parameter inspection) with a COVERAGE GAP fails its abstract instance
+    # pdrop(Stream<$abstract_X>?) — [] is uncovered — so it is not parametrically
+    # well-typed, and no call instantiates it, so it is rejected
+    # (sec:abstract-parameters). Filename retained for continuity; see the file
+    # header.
     "$GLP_DIR/programs/tests/param_free_not_checked.glp"
 
-    # --- Abstract-parameter routing: same clean pdrop gap, also instantiated by
-    # go/1. The abstract route catches the gap whether or not pdrop is instantiated;
-    # the instantiation does not mask it.
+    # --- Abstract-parameter routing: same pdrop gap, also instantiated by go/1.
+    # Failing its abstract instance, pdrop is checked per instantiation, and at
+    # X := Msg the gap is the same; the instantiation does not mask it.
     "$GLP_DIR/programs/tests/param_instantiated_coverage_gap.glp"
 
     # --- Abstract-parameter routing matrix, case (iii): a parametric proc that
@@ -1417,6 +1853,12 @@ NEGATIVE_FILES=(
     # top-level arguments are fixed by the template, so a transposed writer and
     # reader is rejected without waiting for the element type.
     "$GLP_DIR/programs/tests/param_call_mode_neg.glp"
+    # TGLP parameterized-types.tex "Multiple parameters": X cannot be both
+    # Integer and String.  The call fixes X = Integer and names
+    # Channel<Integer,Integer>, a type no declaration names; the calling clause
+    # is checked by that expansion (def:instantiation), which until 2026-09-27
+    # it was not, and the file loaded.
+    "$GLP_DIR/programs/tests/param_conflict_neg.glp"
 
     # Mis-declared with a bare type parameter where a concrete type belongs: a
     # constant/functor sits at the parameter position, so they inspect the
@@ -1440,6 +1882,13 @@ NEGATIVE_FILES=(
     "$AGENT_RT/channel.glp"
     "$BOOK/streams/producers_consumers/cooperative.glp"
     "$BOOK/streams/producers_consumers/merge_dynamic.glp"
+
+    # The recv2x2 probe directory reduced to one file, bodies and declarations
+    # unchanged: boot_b_outfed and boot_d_outfed hand-build ch(S?, OutW?), a
+    # reader at the Out position, and each is rejected with "Variable mode
+    # mismatch: reader requires ↓ (consume), got ↑ (produce)" on the path
+    # (ch/2, 0, input) → (OutW?, 2, output).
+    "$GLP_DIR/programs/tests/recv2x2_neg.glp"
 )
 
 # Build REPL input with :clear between each negative file
@@ -1490,6 +1939,12 @@ SRSW_FILES=(
     # known/1 does not imply groundness, so it licenses no multiple occurrence
     # (glp.tex Remark "Guards and SRSW").
     "$GLP_DIR/programs/tests/srsw/known_not_ground.glp"
+    # Nor does =?\=, Ground "no" (GLP-Spec appendix-guards.tex, bbff21d): A13's
+    # neq_pair, which read each argument twice after it, until 2026-10-02.
+    "$GLP_DIR/programs/tests/srsw/neq_not_ground.glp"
+    # And no guard licenses a repeated writer: "X occurs once, as ever" (glp.tex
+    # Remark "Guards and SRSW", bbff21d), integer/1 here.
+    "$GLP_DIR/programs/tests/srsw/ground_writer_once.glp"
 )
 
 for f in "${SRSW_FILES[@]}"; do
@@ -1511,6 +1966,17 @@ check "SO: a writer occurring twice" "Writer variable \"X\" occurs 2 times" "$sr
 check "SO: a reader occurring twice" "Reader variable \"Y?\" occurs 2 times" "$srsw_multi"
 check "pairing: a variable with no reader" "Variable \"Z\" has no reader" "$srsw_multi"
 check "pairing: a variable with no writer" "Variable \"Y\" has no writer" "$srsw_multi"
+
+# =?\= grounds nothing (GLP-Spec appendix-guards.tex, bbff21d): a reader twice
+# after it is refused, and the diagnostic names it.
+srsw_neq=$(echo -e "$GLP_DIR/programs/tests/srsw/neq_not_ground.glp\n:quit" | "$REPL_RUN" 2>&1)
+check "=?\\= grounds nothing: a reader twice after it is refused" "Reader variable \"X?\" occurs 2 times" "$srsw_neq"
+
+# No guard licenses a repeated writer (glp.tex Remark "Guards and SRSW",
+# bbff21d): the writer twice under integer/1 is refused, and the diagnostic
+# says so.
+srsw_wonce=$(echo -e "$GLP_DIR/programs/tests/srsw/ground_writer_once.glp\n:quit" | "$REPL_RUN" 2>&1)
+check "a writer twice under a groundness-implying guard is refused" "Writer variable \"X\" occurs 2 times; a writer occurs once, whatever the guards" "$srsw_wonce"
 
 # merge_with_reader: the one entry of this section that is rejected by the SRSW
 # pass rather than by the type checker, so it is the only test that speaks for
@@ -1548,10 +2014,13 @@ echo ""
 GUARD_NEG_DIR="$GLP_DIR/programs/tests/guards_invalid"
 guard_cases=(
     "true_in_guard.glp|\"true\" is not a guard"
-    "false_in_guard.glp|\"false\" is not a guard"
-    "fail_in_guard.glp|\"fail\" is not a guard"
-    "negated_arithmetic.glp|Guard \"<\" cannot be negated"
-    "negated_defined_guard.glp|Defined guard \"d\" cannot be negated"
+    # false and fail are defined nowhere, as a guard or in a body: each is an
+    # unknown guard predicate, refused at compile time, the type checker
+    # finding no declaration of it (weeding round three, item 11).
+    "false_in_guard.glp|Undefined procedure: false/0"
+    "fail_in_guard.glp|Undefined procedure: fail/0"
+    # GLP has no guard negation: the parser refuses ~d(X?) as a syntax error.
+    "negated_defined_guard.glp|[syntax] \"~\" is not GLP syntax"
 )
 
 for case in "${guard_cases[@]}"; do
@@ -1871,29 +2340,23 @@ fplay14.
 HEREDOC
 2>&1)
 check "CSSN v2 fplay14 succeeds" "succeeds\|suspended" "$k_fp14"
-fp14_alice_introduces=$(echo "$k_fp14" | grep -c "tagged(alice, cmd(child_introduce(carol, bob, dave))")
-fp14_carol_connected=$(echo "$k_fp14" | grep -c "tagged(carol, notify(connected(dave))")
-fp14_dave_connected=$(echo "$k_fp14" | grep -c "tagged(dave, notify(connected(carol))")
+fp14_alice_introduces=$(echo "$k_fp14" | grep -c "tagged(alice, cmd(child_introduce(carol, bob, dave))" || true)
+fp14_carol_connected=$(echo "$k_fp14" | grep -c "tagged(carol, notify(connected(dave))" || true)
+fp14_dave_connected=$(echo "$k_fp14" | grep -c "tagged(dave, notify(connected(carol))" || true)
 if [ "$fp14_alice_introduces" = "2" ]; then
-    echo "  PASS: CSSN v2 fplay14 alice issued two child_introduces"
-    PASS=$((PASS + 1))
+    _check_pass "CSSN v2 fplay14 alice issued two child_introduces"
 else
-    echo "  FAIL: CSSN v2 fplay14 alice issued $fp14_alice_introduces child_introduces (expected 2)"
-    FAIL=$((FAIL + 1))
+    _check_fail "CSSN v2 fplay14 alice issued two child_introduces" "CSSN v2 fplay14 alice issued $fp14_alice_introduces child_introduces (expected 2)"
 fi
 if [ "$fp14_carol_connected" = "1" ]; then
-    echo "  PASS: CSSN v2 fplay14 carol connected(dave) emitted exactly once"
-    PASS=$((PASS + 1))
+    _check_pass "CSSN v2 fplay14 carol connected(dave) emitted exactly once"
 else
-    echo "  FAIL: CSSN v2 fplay14 carol connected(dave) emitted $fp14_carol_connected times (expected 1)"
-    FAIL=$((FAIL + 1))
+    _check_fail "CSSN v2 fplay14 carol connected(dave) emitted exactly once" "CSSN v2 fplay14 carol connected(dave) emitted $fp14_carol_connected times (expected 1)"
 fi
 if [ "$fp14_dave_connected" = "1" ]; then
-    echo "  PASS: CSSN v2 fplay14 dave connected(carol) emitted exactly once"
-    PASS=$((PASS + 1))
+    _check_pass "CSSN v2 fplay14 dave connected(carol) emitted exactly once"
 else
-    echo "  FAIL: CSSN v2 fplay14 dave connected(carol) emitted $fp14_dave_connected times (expected 1)"
-    FAIL=$((FAIL + 1))
+    _check_fail "CSSN v2 fplay14 dave connected(carol) emitted exactly once" "CSSN v2 fplay14 dave connected(carol) emitted $fp14_dave_connected times (expected 1)"
 fi
 
 # fplay15: Idempotent befriend commit — simultaneous bilateral cold-call.
@@ -1908,30 +2371,24 @@ fplay15.
 HEREDOC
 2>&1)
 check "CSSN v2 fplay15 succeeds" "succeeds\|suspended" "$k_fp15"
-fp15_alice_connect=$(echo "$k_fp15" | grep -c "tagged(alice, cmd(connect(bob))")
-fp15_bob_connect=$(echo "$k_fp15" | grep -c "tagged(bob, cmd(connect(alice))")
-fp15_alice_connected=$(echo "$k_fp15" | grep -c "tagged(alice, notify(connected(bob))")
-fp15_bob_connected=$(echo "$k_fp15" | grep -c "tagged(bob, notify(connected(alice))")
+fp15_alice_connect=$(echo "$k_fp15" | grep -c "tagged(alice, cmd(connect(bob))" || true)
+fp15_bob_connect=$(echo "$k_fp15" | grep -c "tagged(bob, cmd(connect(alice))" || true)
+fp15_alice_connected=$(echo "$k_fp15" | grep -c "tagged(alice, notify(connected(bob))" || true)
+fp15_bob_connected=$(echo "$k_fp15" | grep -c "tagged(bob, notify(connected(alice))" || true)
 if [ "$fp15_alice_connect" = "1" ] && [ "$fp15_bob_connect" = "1" ]; then
-    echo "  PASS: CSSN v2 fplay15 both agents issued connect"
-    PASS=$((PASS + 1))
+    _check_pass "CSSN v2 fplay15 both agents issued connect"
 else
-    echo "  FAIL: CSSN v2 fplay15 connects: alice=$fp15_alice_connect bob=$fp15_bob_connect (expected 1 each)"
-    FAIL=$((FAIL + 1))
+    _check_fail "CSSN v2 fplay15 both agents issued connect" "CSSN v2 fplay15 connects: alice=$fp15_alice_connect bob=$fp15_bob_connect (expected 1 each)"
 fi
 if [ "$fp15_alice_connected" = "1" ]; then
-    echo "  PASS: CSSN v2 fplay15 alice connected(bob) emitted exactly once"
-    PASS=$((PASS + 1))
+    _check_pass "CSSN v2 fplay15 alice connected(bob) emitted exactly once"
 else
-    echo "  FAIL: CSSN v2 fplay15 alice connected(bob) emitted $fp15_alice_connected times (expected 1)"
-    FAIL=$((FAIL + 1))
+    _check_fail "CSSN v2 fplay15 alice connected(bob) emitted exactly once" "CSSN v2 fplay15 alice connected(bob) emitted $fp15_alice_connected times (expected 1)"
 fi
 if [ "$fp15_bob_connected" = "1" ]; then
-    echo "  PASS: CSSN v2 fplay15 bob connected(alice) emitted exactly once"
-    PASS=$((PASS + 1))
+    _check_pass "CSSN v2 fplay15 bob connected(alice) emitted exactly once"
 else
-    echo "  FAIL: CSSN v2 fplay15 bob connected(alice) emitted $fp15_bob_connected times (expected 1)"
-    FAIL=$((FAIL + 1))
+    _check_fail "CSSN v2 fplay15 bob connected(alice) emitted exactly once" "CSSN v2 fplay15 bob connected(alice) emitted $fp15_bob_connected times (expected 1)"
 fi
 
 # fplay13: the village scenario's seven acts.  The actors are order-independent —
@@ -1960,13 +2417,11 @@ check "CSSN v3 fplay13 act 7 ending the parenting is owed and given" "tagged(bob
 check "CSSN v3 fplay13 act 7 no parent on record is what being an adult is" "tagged(eve, event(No parent on record, so an adult))" "$k_fp13"
 check "CSSN v3 fplay13 act 5 a member joining late is owed what was posted before" "tagged(carol, notify(group_received(group_id(frank, study), dave, Hi from Dave!)))" "$k_fp13"
 check "CSSN v3 fplay13 act 7 befriending with no parent among the guards" "tagged(eve, friend(frank))" "$k_fp13"
-fp13_narr=$(echo "$k_fp13" | grep -cE "tagged\((alice|bob|frank|carol|dave|eve), (act|event|friend|say)\(")
+fp13_narr=$(echo "$k_fp13" | grep -cE "tagged\((alice|bob|frank|carol|dave|eve), (act|event|friend|say)\(" || true)
 if [ "$fp13_narr" = "85" ]; then
-    echo "  PASS: CSSN v3 fplay13 narrative is 85 lines"
-    PASS=$((PASS + 1))
+    _check_pass "CSSN v3 fplay13 narrative is 85 lines"
 else
-    echo "  FAIL: CSSN v3 fplay13 narrative is $fp13_narr lines (expected 85)"
-    FAIL=$((FAIL + 1))
+    _check_fail "CSSN v3 fplay13 narrative is 85 lines" "CSSN v3 fplay13 narrative is $fp13_narr lines (expected 85)"
 fi
 
 # fplay16: the two acts of the child-safe social graph — becoming parent and
@@ -2007,24 +2462,20 @@ check "CSSN v3 fplay17 the member on the list at the post receives it" "tagged(b
 check "CSSN v3 fplay17 the late joiner is owed it too" "tagged(carol, notify(group_received(group_id(alice, late_join), alice, Posted before Carol joined)))" "$k_fp17"
 check "CSSN v3 fplay17 a member joining after two posts is owed the first" "tagged(dave, notify(group_received(group_id(alice, late_join), alice, Posted before Carol joined)))" "$k_fp17"
 check "CSSN v3 fplay17 and the second" "tagged(dave, notify(group_received(group_id(alice, late_join), alice, Posted before Dave joined)))" "$k_fp17"
-fp17_bob=$(echo "$k_fp17" | grep -c "tagged(bob, notify(group_received(group_id(alice, late_join), alice, Posted before Carol joined)))")
+fp17_bob=$(echo "$k_fp17" | grep -c "tagged(bob, notify(group_received(group_id(alice, late_join), alice, Posted before Carol joined)))" || true)
 if [ "$fp17_bob" = "1" ]; then
-    echo "  PASS: CSSN v3 fplay17 no member receives the post twice"
-    PASS=$((PASS + 1))
+    _check_pass "CSSN v3 fplay17 no member receives the post twice"
 else
-    echo "  FAIL: CSSN v3 fplay17 bob received the post $fp17_bob times (expected 1)"
-    FAIL=$((FAIL + 1))
+    _check_fail "CSSN v3 fplay17 no member receives the post twice" "CSSN v3 fplay17 bob received the post $fp17_bob times (expected 1)"
 fi
 # The catch-up hands the posts over in the order they were made, so Dave's first
 # line is the earlier post and his second the later one.
 fp17_dave_order=$(echo "$k_fp17" | grep "tagged(dave, notify(group_received(group_id(alice, late_join)" | head -2 | tr '\n' '|')
 case "$fp17_dave_order" in
     *"Posted before Carol joined"*"Posted before Dave joined"*)
-        echo "  PASS: CSSN v3 fplay17 the catch-up is in the order the posts were made"
-        PASS=$((PASS + 1)) ;;
+        _check_pass "CSSN v3 fplay17 the catch-up is in the order the posts were made" ;;
     *)
-        echo "  FAIL: CSSN v3 fplay17 catch-up order was: $fp17_dave_order"
-        FAIL=$((FAIL + 1)) ;;
+        _check_fail "CSSN v3 fplay17 the catch-up is in the order the posts were made" "CSSN v3 fplay17 catch-up order was: $fp17_dave_order" ;;
 esac
 
 # fplay18: a child that is a parent.  Becoming a parent asks nothing of the party
@@ -2263,7 +2714,10 @@ HEREDOC
 2>&1)
 
 check "Currencies fplay10 succeeds" "succeeds" "$n_fp10"
-check "Currencies fplay10 escrow" "escrow" "$n_fp10"
+# The escrow's release as the play prints it on main 76cf9059: a bare "escrow"
+# also matched the load's own refusal text (inject_escrow_dep_result), a false
+# pass while bonds_v2 was refused (Currencies #7 Cowork, 2026-10-02 13:40 UTC).
+check "Currencies fplay10 escrow" "notify(escrow_released(alice))" "$n_fp10"
 
 n_fp11=$("$REPL_RUN" <<HEREDOC
 $BONDS_V2
@@ -2353,7 +2807,7 @@ HEREDOC
 check "Coins mini-app loads as a program" "Loaded program" "$n2_core"
 check_not "Coins mini-app no type errors" "Type checking failed" "$n2_core"
 check_not "Coins mini-app is certified" "CERTIFICATE REFUSED" "$n2_core"
-check "Coins mini-app: its certificate carries the compiler's key" "K = [0-9a-f]\{64\}" "$n2_core"
+check "Coins mini-app: its certificate carries the compiler's key" "K = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$n2_core"
 
 n2_load=$("$REPL_RUN" <<HEREDOC
 $COINS
@@ -2735,7 +3189,7 @@ HEREDOC
 check "Denominated mini-app loads as a program" "Loaded program" "$n4_core"
 check_not "Denominated mini-app no type errors" "Type checking failed" "$n4_core"
 check_not "Denominated mini-app is certified" "CERTIFICATE REFUSED" "$n4_core"
-check "Denominated mini-app: its certificate carries the compiler's key" "K = [0-9a-f]\{64\}" "$n4_core"
+check "Denominated mini-app: its certificate carries the compiler's key" "K = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$n4_core"
 
 n4_load=$("$REPL_RUN" <<HEREDOC
 $SOV
@@ -3047,30 +3501,36 @@ $GLP_DIR/programs/tests/cross_module_inspect_neg/
 :quit
 HEREDOC
 2>&1)
-check "cross-module param-inspect project rejected" "Head of lib:relay" "$output"
+# lib.glp's procedures are renamed by its path from the root (TGLP modules.tex,
+# Compilation, third step).
+check "cross-module param-inspect project rejected" "Head of tests/cross_module_inspect_neg/lib:relay" "$output"
 check_not "cross-module project not loaded green" "Loaded program: .*cross_module_inspect_neg" "$output"
 
 echo ""
 
-echo "--- A param-inspecting procedure no call instantiates is named at load ---"
+echo "--- A param-inspecting procedure no call instantiates is rejected at load ---"
 # The complement of the case above: there, an instantiation arises across the
 # seam and the callee's clauses are checked at it. Here run/1's declaration is
-# `_?`, so the call supplies no element type, no instantiation of tagger/1
-# arises, and its clauses are checked by nothing (parameterized-types.tex
-# sec:programs-and-modules). The program is still well-typed --- the paper
-# licenses an uninstantiated procedure going unchecked --- so the load succeeds;
-# what it must NOT do is stay silent, which until 2026-08-03 it did. That
-# silence is why typed_actors.glp carried an untagged value at a tagged-union
-# position for months (GLP 54dd7020); the same clause declared concretely is
-# rejected at once, which is tagged_union_untagged_neg.glp in NEGATIVE_FILES.
+# `Channel(_, _)?`, so the call supplies no element type and no instantiation
+# of tagger/1 arises; tagger/1 inspects its parameter, so it is not parametrically
+# well-typed and has no well-typing, and the program is rejected
+# (parameterized-types.tex sec:abstract-parameters, TGLP 4f7027b). From
+# 2026-08-03 to 2026-09-18 the load succeeded and printed a `[TYPE] ...
+# unchecked in this program` line instead: the silence that let typed_actors.glp
+# carry an untagged value at a tagged-union position for months (GLP 54dd7020)
+# had become a warning, and a warning is not a refusal. The same clause declared
+# concretely is tagged_union_untagged_neg.glp in NEGATIVE_FILES.
 output=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/tests/param_unchecked/
 :quit
 HEREDOC
 2>&1)
-check "uninstantiated param-inspect reported at load" "unchecked in this program" "$output"
-check "the report names the procedure" "code:tagger/1" "$output"
-check "program with an unchecked procedure still loads" "Loaded program: .*param_unchecked" "$output"
+# The refusal's words since the instantiation of a call by TGLP cc4a891
+# (GLP-inst, merged at b9e0bfb3): the call is refused, naming what no site
+# supplies and the callee that is not parametrically well-typed.
+check "uninstantiated param-inspect rejected at load" "no site of the call supplies a type for X, Y" "$output"
+check "the rejection names the procedure" "tagger/1 is not parametrically well-typed" "$output"
+check_not "program with an uninstantiated inspecting procedure does not load" "Loaded program: .*param_unchecked" "$output"
 
 echo ""
 
@@ -3212,21 +3672,20 @@ HEREDOC
 check "S3 integer instantiation" "Zi = \[1, 4, 2, 5, 3, 6\]" "$s3"
 check "S3 constant instantiation" "Zc = \[\"a\", \"c\", \"b\", \"d\"\]" "$s3"
 
-# --- S4: restated — currencies/play12 is not a program (Coordination, 2026-08-02 10:20) ---
-# It asserted that play12 loads standalone. It does not and must not: play12/self.glp
-# exports no procedure, so the program has no entry points (modules.tex §Static
-# Linking, "Entry and the absence of a boot module"), and the play itself runs
-# from programs/currencies/bonds_v2. Coordination ruled the old assertion wrong rather
-# than Grassroots Currencies' to repair. What the check was FOR — the I-1
-# regression, an ancestor type failing to resolve through the directory load —
-# is kept: an UnknownType would still be wrong, and now so would a load.
-echo "--- S4: currencies/play12 is not a program (restated) ---"
+# --- S4: currencies/play12 is a program (TGLP Definition "Program") ---
+# TGLP Definition "Program" (parameterized-types.tex:164, TGLP 9b29563): "a directory
+# carrying a self.glp, or a self-contained module, with one or more concrete initial
+# goals".  play12 is a directory carrying a self.glp that exports six procedures, each
+# declared at concrete types, so it is a program, and it loads through its self.glp
+# (Coordination #3's ruling, 2026-10-04 16:05 UTC).  The I-1
+# regression, an ancestor type failing to resolve through the directory load, is kept.
+echo "--- S4: currencies/play12 is a program ---"
 s4=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/currencies/bonds_v2/play12
 :quit
 HEREDOC
 2>&1)
-check "S4 play12 rejected: no entry points" "has no entry points" "$s4"
+check "S4 play12 is a program: it loads" "Loaded program" "$s4"
 check_not "S4 no unknown type error" "UnknownType" "$s4"
 
 # --- S5: opaque pass-through walker ---
@@ -3296,21 +3755,31 @@ check "S9 file loads" "Loaded:" "$s9"
 check_not "S9 no unknown type error" "UnknownTypeError" "$s9"
 check "S9 ancestor-typed goal runs" "W = \[wrap(1), wrap(2), wrap(3)\]" "$s9"
 
-# --- S10: hierarchy bound — file load outside programs/ has no ancestor scope ---
-# The ancestor chain is anchored at the hierarchy root programs/ (modules.tex
-# §Implicit ancestor scoping); a module file loaded from OUTSIDE the hierarchy
-# gets no ancestor self.glp scope, even from its own directory. Foo is defined
-# only in the fixture's sibling self.glp, so p(Foo) reads as a parametric
-# declaration whose inspected parameter has no instantiation, and the load is
-# rejected. Guards loadSource sharing the linker's programsDir bound (the
-# legacy unbounded walk accepted this load).
-echo "--- S10: no ancestor scope outside the hierarchy ---"
+# --- S10: a program outside the root is refused ---
+# TGLP modules.tex, "Scope construction": "A program lies at or below the
+# root, and the scope of each of its modules runs from the root down to that
+# module."  The fixture's directory is outside programs/, the root, so its file
+# and its directory are each refused as a program, naming the path and the
+# sentence, before anything of them is checked (GLP #3 Cowork, 2026-10-04 09:06
+# UTC, "23:49").  Until 2026-10-04 the file was compiled in a scope without its
+# own directory's self.glp and the root's exposes, and refused only for the
+# undefined type Foo that self.glp defines.
+echo "--- S10: a program outside the root is refused ---"
 s10=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/test/fixtures/outside_hierarchy/m.glp
 :quit
 HEREDOC
 2>&1)
-check "S10 outside-hierarchy file load rejected" "no standalone well-typing" "$s10"
+check "S10 file outside the root refused, naming it" 'outside_hierarchy/m.glp lies outside the root' "$s10"
+check "S10 file refusal quotes the sentence" 'A program lies at or below the root' "$s10"
+check_not "S10 file not checked in a partial scope" 'undefined type "Foo"' "$s10"
+s10d=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/test/fixtures/outside_hierarchy
+:quit
+HEREDOC
+2>&1)
+check "S10 directory outside the root refused, naming it" 'test/fixtures/outside_hierarchy lies outside the root' "$s10d"
+check_not "S10 directory not taken for a program" 'has no entry points' "$s10d"
 
 echo ""
 
@@ -3363,8 +3832,10 @@ HEREDOC
 2>&1)
 check "X4 collision rejected" "collision" "$x4"
 check_not "X4 not loaded" "Loaded program" "$x4"
-check "X4 names module one" "\"one\"" "$x4"
-check "X4 names module two" "\"two\"" "$x4"
+# Each module is named by its path from the root (TGLP modules.tex,
+# Compilation, third step): a/one.glp is tests/expose/collide/a/one.
+check "X4 names module one" "\"tests/expose/collide/a/one\"" "$x4"
+check "X4 names module two" "\"tests/expose/collide/b/two\"" "$x4"
 
 # --- X5: exposed module lies outside the loaded subtree — still resolves ---
 # basic/util/strutil.glp is a sibling of basic/leaf/ (outside leaf/'s subtree),
@@ -3404,8 +3875,9 @@ check "X7 names the missing user_output constructor" "user_output" "$x7"
 # code.glp names Para(C) from the directory's own self.glp; Plain, monomorphic
 # and from the same file, is the control.  Reported as broken by SGSG on
 # 2026-08-03 and it never was: their measurement ran from a program root OUTSIDE
-# programs/, where by S10's rule there is no ancestor scope at all, so NEITHER
-# type was in scope.  Only the asymmetry looked like a defect, and that is the
+# programs/, where there was then no ancestor scope at all, so NEITHER type was
+# in scope; such a program is refused since 2026-10-04 (S10).  Only the
+# asymmetry looked like a defect, and that is the
 # type-parameter rule: an unknown capitalised name in a declaration reads as a
 # type parameter, which Plain can be and Para(Constant) cannot, so Plain went
 # quiet and Para was reported unresolved.
@@ -3420,27 +3892,17 @@ check "X8 fixture loaded" "Loaded program" "$x8"
 check_not "X8 Para resolves" "Unresolved type: Para" "$x8"
 check "X8 goal succeeds" "succeeds" "$x8"
 
-# --- X9: one type name, two arities, across an exposed module boundary ---
-# NetMsg/1 in the fixture and NetMsg/0 in programs/system/mad_predicates.glp,
-# which the root self.glp -expose's into EVERY program.  The linked program's
-# type definitions were keyed by bare name, so one arity was dropped and every
-# reference to it went unresolved: this is why programs/social/spm/{cva,gsg,secure_gsg}
-# would not load.  The negative check is on mad_predicates' own NetStream, whose
-# element type is the arity-0 NetMsg that used to be the one displaced.
-echo "--- X9: one type name at two arities across an exposed boundary ---"
-x9=$("$REPL_RUN" <<HEREDOC
-$GLP_DIR/programs/tests/type_name_collision
-go([wrap(a), wrap(b), wrap(c)]).
-:quit
-HEREDOC
-2>&1)
-check "X9 fixture loaded" "Loaded program" "$x9"
-check_not "X9 arity-0 NetMsg not displaced" "Unresolved type: NetMsg" "$x9"
-check "X9 goal succeeds" "succeeds" "$x9"
+# --- X9: removed 2026-10-04 ---
+# One type name at two arities across an exposed module boundary.  The check
+# could no longer fail with the linker's name/arity key backed out, the linker
+# renaming each type by its module, and a check that cannot fail goes (GLP #3
+# Cowork, 2026-10-04 09:06 UTC, "00:34 ... X9: a check that cannot fail goes");
+# its fixture, programs/tests/type_name_collision, went with it.
 
 # --- X10: the spm programs load and accept a goal ---
-# They are SGSG's since 2026-08-03 and were unloadable until X9's defect was
-# fixed; the goal is what X8's goal-check ordering fix made possible (every
+# They are SGSG's since 2026-08-03 and were unloadable until the linked
+# program's type definitions were keyed by name and arity (docs/known-issues.md,
+# Issue 21); the goal is what X8's goal-check ordering fix made possible (every
 # goal used to fail with UnknownTypeError: UserEvent, a gsg/self.glp template
 # named by a module one directory below it).  Since 2026-09-07 the program is
 # programs/social/spm: the platform plays reach the CVA mediator as `cva # network`,
@@ -3544,6 +4006,71 @@ HEREDOC
 check_not "X14 no WxW violation" "WxW violation" "$x14"
 check "X14 output term carries the value" "A = r(0)" "$x14"
 check "X14 output argument carries the value" "B = 0" "$x14"
+
+# --- X15: -expose reads a signature in the exposed module's own scope ---
+# TGLP modules.tex, "The -expose directive": -expose(M) "lifts the exported
+# procedures of module M (and the types their signatures carry) into that
+# directory's scope, as if defined in its self.glp"; "Procedure declarations":
+# "A declaration carries the transitive closure of the types its signature
+# references".  rates.glp's rate/2 names Level, from lib/self.glp, which is on
+# rates.glp's chain and not on the exposing self.glp's or on app/'s: until
+# 2026-10-04 the lift read the signature in the receiving scope and refused
+# "undefined type Level" --- the root's -expose(social#graph#routing#intro)
+# and social/graph/self.glp's AcceptorConsent (Integration, 2026-10-04 11:28
+# UTC).  app/self.glp also names Level in a declaration of its own.
+echo "--- X15: a signature type from the exposed module's own chain ---"
+x15=$("$REPL_RUN" <<HEREDOC
+$EXPOSE/own_scope/app
+run(N).
+rate_of(low, M).
+:quit
+HEREDOC
+2>&1)
+check "X15 fixture loaded" "Loaded program" "$x15"
+check_not "X15 Level resolves" "undefined type \"Level\"" "$x15"
+check "X15 exposed rate/2 runs" "N = 2" "$x15"
+check "X15 a declaration over the lifted Level runs" "M = 1" "$x15"
+
+# --- X16: a type no exported signature carries is not lifted ---
+# clock.glp's scale/2 carries Unit; Tick is clock.glp's own.  Until 2026-10-04
+# every type of the exposed module was lifted (programs/sglp/self.glp's
+# -expose(monitor) lifted monitor.glp's Queue and Clock), so neg/ loaded
+# (GLP #3 Cowork, 2026-10-04 09:06 UTC, "21:20").
+echo "--- X16: an unlifted type is not in the exposing scope ---"
+x16p=$("$REPL_RUN" <<HEREDOC
+$EXPOSE/unlifted/pos
+run(min, N).
+:quit
+HEREDOC
+2>&1)
+check "X16 pos loads" "Loaded program" "$x16p"
+check "X16 pos runs over the lifted Unit" "N = 60" "$x16p"
+x16n=$("$REPL_RUN" <<HEREDOC
+$EXPOSE/unlifted/neg
+:quit
+HEREDOC
+2>&1)
+check_not "X16 neg not loaded" "Loaded program" "$x16n"
+check "X16 neg refused naming Tick" "undefined type \"Tick\" in the declaration of run/1" "$x16n"
+
+# --- X17: a program-root self.glp names the type its -expose lifts ---
+# The lifted types are in the exposing directory's scope "as if defined in its
+# self.glp", so its own declarations name them.  Until 2026-10-04 the goal-
+# check environment merged the program-root self.glp without its lift and the
+# program was refused: undefined type "T" in the declaration of p/1 (GLP #3
+# Cowork, 2026-10-04 09:06 UTC, "00:34", FAULT 1).
+echo "--- X17: the exposing program-root self.glp names a lifted type ---"
+x17=$("$REPL_RUN" <<HEREDOC
+$EXPOSE/names_lifted
+p(a).
+p(c).
+:quit
+HEREDOC
+2>&1)
+check "X17 fixture loaded" "Loaded program" "$x17"
+check_not "X17 T resolves" "undefined type \"T\"" "$x17"
+check "X17 goal over T succeeds" "succeeds" "$x17"
+check "X17 goal outside T refused" "not well-typed" "$x17"
 
 echo ""
 
@@ -3763,7 +4290,7 @@ find_type(hello/1, T).
 :quit
 HEREDOC
 2>&1)
-check "RM4 find_type yields the type identity of a declared entry point" "T = [0-9a-f]\{64\}" "$rm4"
+check "RM4 find_type yields the type identity of a declared entry point" "T = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$rm4"
 
 rm5=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/tests/run_module_probe
@@ -3799,12 +4326,14 @@ find_type(local/1, U).
 :quit
 HEREDOC
 2>&1)
-check "RM8 find_type resolves P/N in the calling module's scope" "T = [0-9a-f]\{64\}" "$rm8"
+check "RM8 find_type resolves P/N in the calling module's scope" "T = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$rm8"
 check "RM8 a module-local P/N is not declared at the root" "_find_type/2: local/1 is not declared in the caller's scope" "$rm8"
 
-# An activated module's body call to a root-scope procedure (merge/3): the
-# root self.glp is not in the artefact, and the goal runs on the runtime's root
-# runner (Currencies Code's report of 2026-09-08 12:14 UTC).
+# An activated module's body call to a root-scope procedure (merge/3)
+# (Currencies Code's report of 2026-09-08 12:14 UTC): the root self.glp is the
+# first link of the program's chain, and the root procedures the program
+# reaches are compiled into its artefact, renamed :p (GLP's round six, item 1);
+# until 2026-10-04 they were not, and the goal ran on a root runner.
 rm9=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/tests/run_module_probe
 self_module(M), run(merged(Z), M?).
@@ -3825,6 +4354,9 @@ echo ""
 # hash are 64 characters.  The probe runs in madGLP mode (:mad), as SGSG's
 # harness will.
 echo "=== Section SK: Identity, signature, certificate ==="
+# A key or an identity is 64 hex digits, shown in single quotes where it begins
+# with a digit, which unquoted would read as a number (GLP #3 Cowork,
+# 2026-10-04 09:06 UTC, "23:49. Q1 and Q3"; A41), and bare otherwise.
 
 sk1=$("$REPL_RUN" <<HEREDOC
 :mad alice
@@ -3835,8 +4367,8 @@ roundtrip(hello(world), R).
 HEREDOC
 2>&1)
 check "SK1 madGLP mode enters for a directory load" "madGLP mode on: agent alice" "$sk1"
-check "SK1 self_key assigns the person's key" "K = [0-9a-f]\{64\}" "$sk1"
-check "SK1 sign then signature round-trips the term as signed(K, H, T) under the signer's key and module identity" "R = signed([0-9a-f]\{64\}, [0-9a-f]\{64\}, hello(world))" "$sk1"
+check "SK1 self_key assigns the person's key" "K = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$sk1"
+check "SK1 sign then signature round-trips the term as signed(K, H, T) under the signer's key and module identity" "R = signed(\('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\), \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\), hello(world))" "$sk1"
 
 # The key the signed term carries is self_key's answer, and the module identity
 # is this program's source identity, which decompose_module also reports.
@@ -3849,9 +4381,9 @@ HEREDOC
 2>&1)
 sk2_keys=$(echo "$sk2" | grep "K1\{0,1\} = " | grep -o "[0-9a-f]\{64\}" | sort -u | wc -l | tr -d ' ')
 check "SK2 signature/2 matched as signed(K, _, _) gives the signer, and it is self_key's answer" "1" "$sk2_keys"
-check "SK2 decompose_module assigns the compiler's key" "K = [0-9a-f]\{64\}" "$sk2"
-check "SK2 decompose_module assigns the source identity" "S = [0-9a-f]\{64\}" "$sk2"
-check "SK2 decompose_module assigns the compiled identity" "C = [0-9a-f]\{64\}" "$sk2"
+check "SK2 decompose_module assigns the compiler's key" "K = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$sk2"
+check "SK2 decompose_module assigns the source identity" "S = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$sk2"
+check "SK2 decompose_module assigns the compiled identity" "C = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$sk2"
 
 # sign/3 signs only under a key whose private half the runtime holds (G2).
 sk3=$("$REPL_RUN" <<HEREDOC
@@ -3872,7 +4404,7 @@ signer(foo(bar), K).
 :quit
 HEREDOC
 2>&1)
-sk4_unsigned=$(echo "$sk4" | grep -c "K = unsigned" | tr -d ' ')
+sk4_unsigned=$(echo "$sk4" | grep -c "K = unsigned" | tr -d ' ' || true)
 check "SK4 signature/2 on a hex string that is no signed term, and on a term that is no string, answers unsigned" "2" "$sk4_unsigned"
 check_not "SK4 unsigned is a value, not a failure: neither goal fails" "→ failed" "$sk4"
 
@@ -3887,7 +4419,7 @@ double(21, Y).
 HEREDOC
 2>&1)
 check_not "SK5 a mini-app reaching neither the network nor the person is certified" "CERTIFICATE REFUSED" "$sk5"
-check "SK5 its certificate carries the compiler's key" "K = [0-9a-f]\{64\}" "$sk5"
+check "SK5 its certificate carries the compiler's key" "K = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$sk5"
 check "SK5 it runs" "Y = 42" "$sk5"
 
 sk6=$("$REPL_RUN" <<HEREDOC
@@ -3896,7 +4428,9 @@ self_module(M), decompose_module(M?, K, S, C).
 :quit
 HEREDOC
 2>&1)
-check "SK6 a mini-app calling send_to_net/1 is refused a certificate naming the call" "CERTIFICATE REFUSED.*app:leak/1 calls mad_predicates:send_to_net/1" "$sk6"
+# The calls are named by their procedures' renamed names, each module's path
+# from the root (TGLP modules.tex, Compilation, third step).
+check "SK6 a mini-app calling send_to_net/1 is refused a certificate naming the call" "CERTIFICATE REFUSED.*tests/cert_refused/app:leak/1 calls send_to_net/1" "$sk6"
 check "SK6 a wrapper reaching send_to_user/1 does not pass" "app:wrapper/1 calls send_to_user/1" "$sk6"
 check "SK6 the refused module has no compiler's key" "_decompose_module/4: module cert_refused carries no certificate" "$sk6"
 
@@ -3912,7 +4446,11 @@ echo ""
 # end reports pending_link and authorises, and the value is delivered (IGLP
 # madglp-spec \S Held Links).  MB2: a module value shipped from one agent to
 # another is activated there by run/3 under the type identity find_type/2
-# gives (GLP-Spec appendix-guards, "Dynamic activation").
+# gives (GLP-Spec appendix-guards, "Dynamic activation"): a certified
+# mini-app, hello/1 alone (programs/tests/mad_ship_hello), which :artefact
+# writes beside alice's program and alice reads with load_file/2, since the
+# machine activates no program whose certificate does not verify (GSG
+# s6-security.tex, G1).
 echo "=== Section MB: multi-agent boot programs (:boot) ==="
 
 mb1=$("$REPL_RUN" <<HEREDOC
@@ -3925,11 +4463,21 @@ check "MB1 the holder's assignment is held and reported, from the forwarding fri
 check "MB1 the anchor's incoming assignment is held and reported, from the holder" "\[alice\] held(alice, _w(alice, [0-9]*), carol)" "$mb1"
 check "MB1 both ends authorised, the value is delivered at the anchor" "\[alice\] delivered(hello_from_carol)" "$mb1"
 
+# MB2's artefact is a build output, ignored by git, written before the boot and
+# removed after it, as Section SL's are.  Until 2026-10-02 alice shipped her
+# own program, which calls send_to_net/1 and send_to_user/1 and is refused a
+# certificate, and since B6 (e5da7ccb) bob's run/3 refused to activate it
+# (GLP #3 Cowork, 2026-10-02 20:58 UTC, "20:31" item 2).
+MB_SHIP="$GLP_DIR/programs/tests/mad_ship_module"
+rm -f "${MB_SHIP:?}"/*.glpw
 mb2=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/tests/mad_ship_hello $MB_SHIP
 :boot $GLP_DIR/programs/tests/mad_ship_module_boot.glp
 :quit
 HEREDOC
 2>&1)
+rm -f "${MB_SHIP:?}"/*.glpw
+check "MB2 :artefact writes the certified mini-app beside alice's program" "Wrote $MB_SHIP/mad_ship_hello.glpw --- certified under [0-9a-f]\{64\}" "$mb2"
 check "MB2 the boot settles with two agents" "Boot settled: 2 agents" "$mb2"
 check "MB2 a shipped module value is activated by run/3 under find_type's identity" "\[bob\] ran(\[done\])" "$mb2"
 
@@ -4017,7 +4565,7 @@ lp11=$("$REPL_RUN" <<HEREDOC
 :quit
 HEREDOC
 2>&1)
-lp11_hellos=$(echo "$lp11" | grep -c "\[bob\] saw(hello)")
+lp11_hellos=$(echo "$lp11" | grep -c "\[bob\] saw(hello)" || true)
 check "MB5 linkprobe11 a ground later element crosses too: both greetings arrive" "^2$" "$lp11_hellos"
 
 # linkprobe12: the stream is left open after the probe, as a live
@@ -4115,8 +4663,8 @@ HEREDOC
 2>&1 | tr -cd '\11\12\15\40-\176')
 check "SL1 a certified artefact loads as a Module" "C = Module(run_module_probe)" "$sl1"
 check "SL1 run/3 activates the loaded module under find_type's identity" "Z = \[done\]" "$sl1"
-check "SL1 a text file loads as its text" "T = hello world" "$sl1"
-check "SL1 an artefact whose certificate does not verify loads as text, not a Module" "F = GLPW" "$sl1"
+check "SL1 a text file loads as its text" "T = 'hello world\\\\n'" "$sl1"
+check "SL1 an artefact whose certificate does not verify loads as text, not a Module" "F = 'GLPW" "$sl1"
 check "SL1 a name that leaves the caller's directory is an error" "_load_file/2: ../cert_ok/self.glp is not resolved within the calling module's directory" "$sl1"
 check "SL1 an absolute name is an error" "_load_file/2: /etc/hosts is not resolved within the calling module's directory" "$sl1"
 
@@ -4202,6 +4750,169 @@ HEREDOC
 2>&1)
     check "MA $ma_name loads as a program" "Loaded program" "$ma_out"
 done
+echo ""
+
+# =============================================================================
+# Section RV: the rendezvous example (GNA's, programs/examples/rendezvous)
+# =============================================================================
+# GNA Section "Rendezvous Server": the rendezvous agent, its clients and
+# friend-mediated rendezvous.  The directory is loaded as a program and each
+# test goal of rv_agent_test.glp, rv_client_test.glp and
+# friend_mediated_rendezvous_test.glp is posted through the directory's
+# self.glp, which exports it; each check holds the goal to the answer the
+# test's own comment states.  _rv_answer N is the REPL's answer to the Nth
+# goal posted: the text from the (N+1)th prompt to the next, the first prompt
+# answering the load.  Under the plain REPL no signature over a pair is made
+# under the social graph, so every reconnect and available through the agent
+# is rejected; what peer_address/2 reports, address(S) or none, is given to
+# the agent's dispatch on it directly.
+echo "=== Section RV: Rendezvous example (GNA) ==="
+echo ""
+
+rv_out=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/examples/rendezvous
+test1_needs_stored(P1).
+test2_ready_stored(P2).
+test3_match_find_ready(RA3, RB3, P3).
+test4_match_find_needs(RA4, RB4, P4).
+test5_find_ready_no_match(P5).
+test6_find_ready_skip_then_match(RA6, RB6, P6).
+test7_agent_single_reconnect(R7).
+test8_available_then_reconnect_rejected(RA8, RB8).
+test9_two_reconnects_rejected(R91, R92).
+test10_reconnect_then_available(RA10, RB10).
+test11_reconnect_rejected(R11).
+test12_rejected_does_not_block_stream(R121, R122, RB12).
+test13_dispatch_refuses(R131, R132, R133, R134).
+test14_other_program_rejected(R14).
+test15_match_on_none(R15, P15).
+test16_match_on_address(RA16, RB16, P16).
+test17_available_dispatch_refuses(R171, R172, R173, R174).
+test18_unverified_available_not_matched(RB18, RA18).
+test19_reconnect_pair_out_of_order(R19).
+test20_match_available_on_none(RB20, P20).
+test21_match_available_on_address(RA21, RB21, P21).
+client1_make_reconnect(M1, CR1).
+client2_make_available(M2, CR2).
+client3_full_scenario_a_first(CA3, CB3).
+client4_full_scenario_b_first(CA4, CB4).
+client5_full_scenario_with_handlers.
+client6_bad_signature(CA6, CB6).
+client7_handle_reply_punch.
+fmrv1_addr_update.
+fmrv2_mediate(FA2, FC2).
+fmrv3_punch_to.
+fmrv4_empty.
+fmrv5_mediate_unknown(FA5).
+fmrv6_punch_to_not_found.
+fmrv7_mediate_unknown_from(FA7).
+:quit
+HEREDOC
+2>&1)
+_rv_answer() {
+    printf '%s\n' "$rv_out" | awk -v n="$1" '/^GLP> /{k++; sub(/^GLP> /, "")} k==n+1'
+}
+check "RV rendezvous loads as a program" "Loaded program" "$(_rv_answer 0)"
+
+# rv_agent_test.glp
+check "RV agent test1 succeeds" "^→ succeeds$" "$(_rv_answer 1)"
+check "RV agent test1: A first, its needs entry is stored" "^P1 = \[needs(alice, bob, addr_a, X[0-9]*)\]$" "$(_rv_answer 1)"
+check "RV agent test2 succeeds" "^→ succeeds$" "$(_rv_answer 2)"
+check "RV agent test2: B first, its ready entry is stored with B's address" "^P2 = \[ready(bob, alice, addr_b, X[0-9]*)\]$" "$(_rv_answer 2)"
+check "RV agent test3 succeeds" "^→ succeeds$" "$(_rv_answer 3)"
+check "RV agent test3: A after B, A punches to B's address" "^RA3 = punch(addr_b)$" "$(_rv_answer 3)"
+check "RV agent test3: A after B, B punches to A's address" "^RB3 = punch(addr_a)$" "$(_rv_answer 3)"
+check "RV agent test3: A after B, nothing left pending" "^P3 = \[\]$" "$(_rv_answer 3)"
+check "RV agent test4 succeeds" "^→ succeeds$" "$(_rv_answer 4)"
+check "RV agent test4: B after A, A punches to B's address" "^RA4 = punch(addr_b)$" "$(_rv_answer 4)"
+check "RV agent test4: B after A, B punches to A's address" "^RB4 = punch(addr_a)$" "$(_rv_answer 4)"
+check "RV agent test4: B after A, nothing left pending" "^P4 = \[\]$" "$(_rv_answer 4)"
+check "RV agent test5 succeeds" "^→ succeeds$" "$(_rv_answer 5)"
+check "RV agent test5: another pair's entry passes, A's needs is stored after it" "^P5 = \[ready(carol, dave, addr_c, X[0-9]*), needs(alice, bob, addr_a, X[0-9]*)\]$" "$(_rv_answer 5)"
+check "RV agent test6 succeeds" "^→ succeeds$" "$(_rv_answer 6)"
+check "RV agent test6: past another pair's entry, A punches to B's address" "^RA6 = punch(addr_b)$" "$(_rv_answer 6)"
+check "RV agent test6: past another pair's entry, B punches to A's address" "^RB6 = punch(addr_a)$" "$(_rv_answer 6)"
+check "RV agent test6: the other pair's entry is left pending" "^P6 = \[ready(carol, dave, addr_c, X[0-9]*)\]$" "$(_rv_answer 6)"
+check "RV agent test7: the agent terminates on the empty stream" "^→ succeeds$" "$(_rv_answer 7)"
+check "RV agent test7: an unsigned reconnect is rejected" "^R7 = rejected$" "$(_rv_answer 7)"
+check "RV agent test8 succeeds" "^→ succeeds$" "$(_rv_answer 8)"
+check "RV agent test8: available then reconnect, the reconnect is rejected" "^RA8 = rejected$" "$(_rv_answer 8)"
+check "RV agent test8: available then reconnect, the unsigned available is rejected" "^RB8 = rejected$" "$(_rv_answer 8)"
+check "RV agent test9 succeeds" "^→ succeeds$" "$(_rv_answer 9)"
+check "RV agent test9: two reconnects, the first is rejected" "^R91 = rejected$" "$(_rv_answer 9)"
+check "RV agent test9: two reconnects, the second is rejected" "^R92 = rejected$" "$(_rv_answer 9)"
+check "RV agent test10 succeeds" "^→ succeeds$" "$(_rv_answer 10)"
+check "RV agent test10: reconnect then available, the reconnect is rejected" "^RA10 = rejected$" "$(_rv_answer 10)"
+check "RV agent test10: reconnect then available, the unsigned available is rejected" "^RB10 = rejected$" "$(_rv_answer 10)"
+check "RV agent test11 succeeds" "^→ succeeds$" "$(_rv_answer 11)"
+check "RV agent test11: an invalid signature is rejected" "^R11 = rejected$" "$(_rv_answer 11)"
+check "RV agent test12 succeeds" "^→ succeeds$" "$(_rv_answer 12)"
+check "RV agent test12: the first reconnect is rejected" "^R121 = rejected$" "$(_rv_answer 12)"
+check "RV agent test12: the reconnect behind the available is rejected" "^R122 = rejected$" "$(_rv_answer 12)"
+check "RV agent test12: the available behind a rejection is consumed and rejected" "^RB12 = rejected$" "$(_rv_answer 12)"
+check "RV agent test13 succeeds" "^→ succeeds$" "$(_rv_answer 13)"
+check "RV agent test13: unsigned is refused" "^R131 = rejected$" "$(_rv_answer 13)"
+check "RV agent test13: another signer is refused" "^R132 = rejected$" "$(_rv_answer 13)"
+check "RV agent test13: another term is refused" "^R133 = rejected$" "$(_rv_answer 13)"
+check "RV agent test13: another program's Hash is refused" "^R134 = rejected$" "$(_rv_answer 13)"
+check "RV agent test14 succeeds" "^→ succeeds$" "$(_rv_answer 14)"
+check "RV agent test14: a signature that verifies under another program is rejected" "^R14 = rejected$" "$(_rv_answer 14)"
+check "RV agent test15 succeeds" "^→ succeeds$" "$(_rv_answer 15)"
+check "RV agent test15: the layer observes no address for A, the reconnect is rejected" "^R15 = rejected$" "$(_rv_answer 15)"
+check "RV agent test15: the layer observes no address for A, B's entry is left pending" "^P15 = \[ready(bob, alice, addr_b, X[0-9]*)\]$" "$(_rv_answer 15)"
+check "RV agent test16 succeeds" "^→ succeeds$" "$(_rv_answer 16)"
+check "RV agent test16: the layer observes A's address, A punches to B's address" "^RA16 = punch(addr_b)$" "$(_rv_answer 16)"
+check "RV agent test16: the layer observes A's address, B punches to it" "^RB16 = punch(addr_a)$" "$(_rv_answer 16)"
+check "RV agent test16: the layer observes A's address, nothing left pending" "^P16 = \[\]$" "$(_rv_answer 16)"
+check "RV agent test17 succeeds" "^→ succeeds$" "$(_rv_answer 17)"
+check "RV agent test17: an unsigned available is refused" "^R171 = rejected$" "$(_rv_answer 17)"
+check "RV agent test17: an available signed by B itself is refused" "^R172 = rejected$" "$(_rv_answer 17)"
+check "RV agent test17: an available over the pair out of order is refused" "^R173 = rejected$" "$(_rv_answer 17)"
+check "RV agent test17: an available under another program's Hash is refused" "^R174 = rejected$" "$(_rv_answer 17)"
+check "RV agent test18 succeeds" "^→ succeeds$" "$(_rv_answer 18)"
+check "RV agent test18: an unverified available is rejected" "^RB18 = rejected$" "$(_rv_answer 18)"
+check "RV agent test18: an unverified available leaves the waiting A untold" "^RA18 = <unbound>$" "$(_rv_answer 18)"
+check "RV agent test19 succeeds" "^→ succeeds$" "$(_rv_answer 19)"
+check "RV agent test19: a reconnect over the pair out of order is refused" "^R19 = rejected$" "$(_rv_answer 19)"
+check "RV agent test20 succeeds" "^→ succeeds$" "$(_rv_answer 20)"
+check "RV agent test20: the layer observes no address for B, the available is rejected" "^RB20 = rejected$" "$(_rv_answer 20)"
+check "RV agent test20: the layer observes no address for B, A's entry is left pending" "^P20 = \[needs(alice, bob, addr_a, X[0-9]*)\]$" "$(_rv_answer 20)"
+check "RV agent test21 succeeds" "^→ succeeds$" "$(_rv_answer 21)"
+check "RV agent test21: the layer observes B's address, A punches to it" "^RA21 = punch(addr_b)$" "$(_rv_answer 21)"
+check "RV agent test21: the layer observes B's address, B punches to A's address" "^RB21 = punch(addr_a)$" "$(_rv_answer 21)"
+check "RV agent test21: the layer observes B's address, nothing left pending" "^P21 = \[\]$" "$(_rv_answer 21)"
+
+# rv_client_test.glp
+check "RV client test1 succeeds" "^→ succeeds$" "$(_rv_answer 22)"
+check "RV client test1: make_reconnect builds reconnect(A, B, Sig, Reply)" "^M1 = reconnect(alice, bob, sig_ab, X[0-9]*)$" "$(_rv_answer 22)"
+check "RV client test1: make_reconnect leaves the reply unbound" "^CR1 = <unbound>$" "$(_rv_answer 22)"
+check "RV client test2 succeeds" "^→ succeeds$" "$(_rv_answer 23)"
+check "RV client test2: make_available builds available(B, A, Sig, Reply)" "^M2 = available(bob, alice, sig_ba, X[0-9]*)$" "$(_rv_answer 23)"
+check "RV client test2: make_available leaves the reply unbound" "^CR2 = <unbound>$" "$(_rv_answer 23)"
+check "RV client test3 succeeds" "^→ succeeds$" "$(_rv_answer 24)"
+check "RV client test3: A first, A's reconnect is rejected" "^CA3 = rejected$" "$(_rv_answer 24)"
+check "RV client test3: A first, B's unsigned available is rejected" "^CB3 = rejected$" "$(_rv_answer 24)"
+check "RV client test4 succeeds" "^→ succeeds$" "$(_rv_answer 25)"
+check "RV client test4: B first, A's reconnect is rejected" "^CA4 = rejected$" "$(_rv_answer 25)"
+check "RV client test4: B first, B's unsigned available is rejected" "^CB4 = rejected$" "$(_rv_answer 25)"
+check "RV client test5: both rejected replies take handle_reply's rejected arm" "^→ succeeds$" "$(_rv_answer 26)"
+check "RV client test6 succeeds" "^→ succeeds$" "$(_rv_answer 27)"
+check "RV client test6: a bad signature is rejected" "^CA6 = rejected$" "$(_rv_answer 27)"
+check "RV client test6: B's unsigned available is rejected" "^CB6 = rejected$" "$(_rv_answer 27)"
+check "RV client test7: handle_reply dispatches punch(Addr) to punch_udp" "^→ succeeds$" "$(_rv_answer 28)"
+
+# friend_mediated_rendezvous_test.glp
+check "RV fmrv test1: an addr_update is consumed" "^→ succeeds$" "$(_rv_answer 29)"
+check "RV fmrv test2 succeeds" "^→ succeeds$" "$(_rv_answer 30)"
+check "RV fmrv test2: alice is sent carol's address" "^FA2 = \[msg(bob, alice, punch_to(found(addr_carol))) | X[0-9]*\]$" "$(_rv_answer 30)"
+check "RV fmrv test2: carol is sent alice's address" "^FC2 = \[msg(bob, carol, punch_to(found(addr_alice))) | X[0-9]*\]$" "$(_rv_answer 30)"
+check "RV fmrv test3: punch_to(found(Addr)) calls punch_udp" "^→ succeeds$" "$(_rv_answer 31)"
+check "RV fmrv test4: the empty stream terminates" "^→ succeeds$" "$(_rv_answer 32)"
+check "RV fmrv test5 succeeds" "^→ succeeds$" "$(_rv_answer 33)"
+check "RV fmrv test5: mediation to an unknown peer sends alice not_found" "^FA5 = \[msg(bob, alice, punch_to(not_found)) | X[0-9]*\]$" "$(_rv_answer 33)"
+check "RV fmrv test6: punch_to(not_found) is a no-op" "^→ succeeds$" "$(_rv_answer 34)"
+check "RV fmrv test7 succeeds" "^→ succeeds$" "$(_rv_answer 35)"
+check "RV fmrv test7: an unknown requester sends alice not_found" "^FA7 = \[msg(bob, alice, punch_to(not_found)) | X[0-9]*\]$" "$(_rv_answer 35)"
 echo ""
 
 # =============================================================================
@@ -4298,8 +5009,8 @@ check "SG super-app refuses a forgery: a certification that is not a signed term
 check "SG super-app refuses a forgery: an invitation that is not a signed term delivers nothing, and the next message arrives" "F1 = \[msg(agent, person, received(alice, hello))\]" "$sg_core"
 check "SG super-app refuses a forgery: an undertaking that is not a signed term creates no root channel, and the next message arrives" "F2 = \[msg(agent, person, received(bob, hello))\]" "$sg_core"
 check "SG super-app refuses a forgery: a root channel under an undertaking that is not a signed term is not accepted, and the next message arrives" "F3 = \[msg(agent, person, received(alice, hello))\]" "$sg_core"
-check "SG super-app: the attestation minted at befriend_commit" "T = attest(alice, bob)" "$sg_core"
-check "SG super-app: signed under the person's key" "K = [0-9a-f]\{64\}" "$sg_core"
+check "SG super-app: the attestation minted on consent" "T = attest(alice, bob)" "$sg_core"
+check "SG super-app: signed under the person's key" "K = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$sg_core"
 check "SG super-app: invitation, handshake, activation: alice greeted" "A = \[opened(bob), greeted(bob)\]" "$sg_core"
 check "SG super-app: invitation, handshake, activation: bob greeted" "B = \[opened(alice), greeted(alice)\]" "$sg_core"
 check "SG super-app: a declined invitation opens nothing at alice" "A2 = \[\]" "$sg_core"
@@ -4550,6 +5261,7 @@ bench(residual, 100, 7, L).
 bench(meta, 100, 7, L2).
 play_clean(O5, R5).
 play_abort_waiting(O6, R6).
+play_abort_interpreted(O7, R7, Witness).
 :quit
 HEREDOC
 2>&1)
@@ -4557,6 +5269,9 @@ check "SG budget loads" "Loaded program" "$sg_budget"
 check "SG budget control: clean termination closes the request stream" "R5 = \[\]" "$sg_budget"
 check "SG budget control: a counter waiting on its stream is aborted" "O6 = \[1, 2, 3\]" "$sg_budget"
 check "SG budget control: the aborted goal's request stream closes" "R6 = \[\]" "$sg_budget"
+check "SG budget control interpreted: the abort closes execute/4's request stream" "R7 = \[\]" "$sg_budget"
+check "SG budget control interpreted: the waiting goal's output is unwritten after the abort" "Witness = waiting" "$sg_budget"
+check "SG budget control interpreted: the waiting goal ends when its input closes" "O7 = \[1, 2, 3\]" "$sg_budget"
 check "SG budget: the counter under bounded/3" "Out = \[1, 2, 3, 4, 5\]" "$sg_budget"
 check "SG budget: the residual program" "Out2 = \[1, 2, 3, 4, 5\]" "$sg_budget"
 check "SG budget: residual counter of 100 under grants of 7" "L = 100" "$sg_budget"
@@ -5142,13 +5857,15 @@ fi
 echo ""
 
 # =============================================================================
-# Section SGLP: sGLP's programs (programs/sglp)
+# Section SGLP: sGLP in GLP (programs/sglp)
 # =============================================================================
-# programs/sglp/test_sglp.sh holds sGLP's checks of its programs against sGLP's
-# paper and prints one summary line; this section runs it and folds its two
-# counts into the suite's, as Section JX does jurix's.  Its runs take about a
-# minute and a half.
-echo "=== Section SGLP: sGLP's programs ==="
+# programs/sglp/test_sglp.sh holds sGLP's checks of its programs --- the monitor
+# over when_idle, the law of its releases, the social graph's runs, the
+# circulation's replay on a fixed log, coins among friends' runs --- against
+# sGLP's paper, and prints one summary line; this section runs it and folds its
+# two counts into the suite's, as Section JX does jurix's.  Its runs take some
+# minutes.
+echo "=== Section SGLP: sGLP in GLP ==="
 echo ""
 
 SGLP_RESULT=$(bash "$GLP_DIR/programs/sglp/test_sglp.sh" 2>&1) && SGLP_STATUS=0 || SGLP_STATUS=$?
@@ -5199,6 +5916,46 @@ echo ""
 # twelve forms and their labels are GLP's to write.  SGC shows no screen, so this
 # does not hold SGC.
 KNOWN_RED=(
+    # CSSN, dormant (Udi, 2026-09-28): program_linker_test's three, on CSSN's
+    # program, and cssn_v2_isolate_test's thirteen, measured at gap 2c18023e.
+    # CSSN's guard negation refused by the parser since GLP's 15ba4b7e (the
+    # language has no ~G): twelve more, measured at gap 8b8cc800.
+    "test/compiler/program_linker_test.dart: Program discovery discovers all modules in cssn"
+    "test/compiler/program_linker_test.dart: Program discovery excludes self.glp from modules"
+    # Rewritten 2026-10-03 to TGLP modules.tex's first step (GLP #3 Cowork,
+    # 21:18 UTC, "16:01. 6"), it was "excludes boot_direct.glp from modules";
+    # still red on CSSN's guard negation, cssn/childsafe/child_agent.glp:169.
+    "test/compiler/program_linker_test.dart: Program discovery collects every .glp file of the tree, mad_boot/ among them"
+    "test/compiler/program_linker_test.dart: Program discovery modules have correct ancestor scopes"
+    "test/compiler/program_linker_test.dart: Linking procedures are renamed with module prefix"
+    "test/compiler/program_linker_test.dart: Linking cross-module calls are resolved"
+    "test/compiler/program_linker_test.dart: Linking local calls are resolved"
+    "test/compiler/program_linker_test.dart: Linking prelude calls are preserved unprefixed"
+    "test/compiler/program_linker_test.dart: Linking entry-point aliases exist for the root self.glp forwarded entries"
+    "test/compiler/program_linker_test.dart: Linking entry point alias calls renamed procedure"
+    "test/vglp/program_compilation_test.dart: the deployed sources cssn/childsafe/agent.vglp parses as vGLP"
+    "test/vglp/program_compilation_test.dart: the deployed sources cssn/childsafe/child_agent.vglp parses as vGLP"
+    "test/compiler/program_linker_test.dart: End-to-end compilation fplay1 produces correct output"
+    "test/compiler/program_linker_test.dart: End-to-end compilation linked program compiles to bytecode"
+    "test/compiler/program_linker_test.dart: Type checking all modules type-check successfully"
+    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay1 runs across isolates (3 adults)"
+    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay10 runs across isolates (3 agents)"
+    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay11 runs across isolates (6 agents)"
+    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay12 runs across isolates (5 agents)"
+    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay13 runs across isolates (village, 6 agents)"
+    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay2 runs across isolates (3 adults)"
+    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay3 runs across isolates (3 adults)"
+    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay4 runs across isolates (4 agents)"
+    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay5 runs across isolates (4 agents)"
+    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay6 runs across isolates (4 agents)"
+    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay7 runs across isolates (4 agents)"
+    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay8 runs across isolates (2 adults)"
+    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay9 runs across isolates (3 agents)"
+    # CSSN, dormant (Udi, 2026-10-01, to Integration Code: "Ignore CSSN stuff
+    # till I ask differently"): the sandboxed-bundle test, which fails only on
+    # CSSN's childsafe.glpw, refused at its source and so not in the bundle
+    # ("Unable to load asset: .../core/childsafe.glpw"), measured at gap 5d39387f.
+    "glp_multiagent/test/glp_sources_platform_test.dart: a sandboxed build reads its bundle, never a desktop path"
     "glp_multiagent/test/sovereign_screen_test.dart: the sovereign mini-app: the central bank boots, its seven forms stand, it mints and opens the credit line through its screen, and the play runs on to the chain redemption and the fiat payment"
 )
 
@@ -5215,8 +5972,29 @@ echo ""
 # tree-change guard.
 if [ -f "$GLP_DIR/glp_multiagent/tool/sync_glp_assets.sh" ]; then
     SYNC_RESULT=$(cd "$GLP_DIR/glp_multiagent" && bash tool/sync_glp_assets.sh 2>&1) || true
+    # Each certified mini-app the script builds is a check of its own, so that
+    # an artefact its owner's source cannot yet give --- CSSN's, while CSSN is
+    # dormant --- is known red, not the whole step.  The script stops at the
+    # first artefact missing, so each is looked for on disc; its list is the
+    # script's own.
+    SYNC_ARTEFACTS=$(sed -n 's/^for a in \(.*\); do$/\1/p' "$GLP_DIR/glp_multiagent/tool/sync_glp_assets.sh")
+    SYNC_MISSING=0
+    if [ -z "$SYNC_ARTEFACTS" ]; then
+        echo "  FAIL: the artefact list of sync_glp_assets.sh cannot be read"
+        FAIL=$((FAIL + 1))
+    fi
+    for a in $SYNC_ARTEFACTS; do
+        if [ -s "$GLP_DIR/glp_multiagent/assets/glp/programs/social/graph/core/$a.glpw" ]; then
+            _check_pass "Q asset step writes $a.glpw"
+        else
+            _check_fail "Q asset step writes $a.glpw" "not written"
+            SYNC_MISSING=$((SYNC_MISSING + 1))
+        fi
+    done
     if printf '%s' "$SYNC_RESULT" | grep -q '^Synced GLP assets'; then
         echo "  (the bundled GLP assets are generated)"
+    elif [ "$SYNC_MISSING" -gt 0 ]; then
+        echo "  (the bundled GLP assets are generated but for the artefacts above)"
     else
         echo "  FAIL: sync_glp_assets.sh did not complete, so glp_multiagent's"
         echo "        assets are missing or stale and its tests cannot run:"
@@ -5369,6 +6147,9 @@ fi
 
 echo "======================================"
 echo "Total: $TOTAL | Passed: $PASS | Failed: $FAIL"
+if [ $KR_CHECKS -gt 0 ]; then
+    echo "Known red, REPL checks (KNOWN_RED_CHECKS, not counted above): $KR_CHECKS"
+fi
 echo "======================================"
 
 if [ $TREE_MOVED -eq 1 ]; then

@@ -162,19 +162,14 @@ compute(N, R?) :- true | math # factorial(N?, R).
   });
 
   group('Phase 1 - 2c: rejection of old syntax', () {
+    // Neither directive is GLP: each is refused as any text that is not GLP
+    // syntax is, with no message of its own.
     test('-export([...]) is rejected with parse error', () {
       final source = '''
 -export([factorial/2]).
 factorial(0, 1).
 ''';
-      expect(
-        () => parseModule(source),
-        throwsA(isA<CompileError>().having(
-          (e) => e.message,
-          'message',
-          contains('no longer supported'),
-        )),
-      );
+      expect(() => parseModule(source), throwsA(isA<CompileError>()));
     });
 
     test('-import([...]) is rejected with parse error', () {
@@ -182,14 +177,17 @@ factorial(0, 1).
 -import([math]).
 boot.
 ''';
-      expect(
-        () => parseModule(source),
-        throwsA(isA<CompileError>().having(
-          (e) => e.message,
-          'message',
-          contains('no longer supported'),
-        )),
-      );
+      expect(() => parseModule(source), throwsA(isA<CompileError>()));
+    });
+
+    // -stdlib, once an alias of -mode(system), is no directive either; until
+    // 2026-10-02 a directive the parser did not know looped forever.
+    test('-stdlib. is rejected with parse error', () {
+      final source = '''
+-stdlib.
+boot.
+''';
+      expect(() => parseModule(source), throwsA(isA<CompileError>()));
     });
   });
 

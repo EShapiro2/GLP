@@ -28,11 +28,23 @@ void resetAnonVarCounter() {
 }
 
 /// Generate a unique name for an anonymous variable.
-/// Returns names like "_#1", "_#2", etc.
-String _freshAnonVarName() {
+/// Returns names like "_#1", "_#2", etc.; a named anonymous variable gives its
+/// name as [stem], "_R#3", so that a diagnostic names what was written.
+String _freshAnonVarName([String stem = '_']) {
   _anonVarCounter++;
-  return '_#$_anonVarCounter';
+  return '$stem#$_anonVarCounter';
 }
+
+/// A clause variable as a moded variable.  A named anonymous variable, `_X` or
+/// `_X?`, is an anonymous variable (TGLP "Anonymous variables": "any variable
+/// whose name begins with `_` ... Each occurrence denotes a fresh writer with
+/// no paired reader"), so it takes a fresh name at each occurrence, as `_`
+/// does, and two occurrences of one name are two variables, as codegen
+/// compiles them.  Until 2026-10-02 they were typed as one variable.
+ModedVariable _modedVariable(ast.VarTerm term, Mode mode) => ModedVariable(
+    term.name.startsWith('_') ? _freshAnonVarName(term.name) : term.name,
+    isReader: term.isReader,
+    structuralMode: mode);
 
 /// Constructs a moded head H' from clause head H per Definition 5.5.
 ///
@@ -150,7 +162,7 @@ ModedTerm _buildModedSubterm(ast.Term term, Mode mode, TypeExpr? expectedType, T
 
   if (term is ast.VarTerm) {
     // Variable: pass structural mode from context (per moded-term v0.6)
-    return ModedVariable(term.name, isReader: term.isReader, structuralMode: mode);
+    return _modedVariable(term, mode);
   }
 
   if (term is ast.StructTerm) {
@@ -186,12 +198,15 @@ ModedTerm _buildModedSubterm(ast.Term term, Mode mode, TypeExpr? expectedType, T
   }
 
   if (term is ast.UnderscoreTerm) {
-    // Bug 4 fix: Each anonymous variable must be treated as a FRESH writer
-    // Paper Remark 3.1: "Each occurrence denotes a fresh writer with no paired reader,
-    // providing a controlled exception to the SRSW restriction."
-    // Generate unique name to ensure each _ is independent
+    // Each anonymous variable is fresh and independent, so it gets a unique
+    // name (TGLP "Anonymous variables": "Each occurrence denotes a fresh
+    // writer with no paired reader").  It keeps its source form: `_` is the
+    // writer, and `_?`, the output placeholder a clause head's produced
+    // position carries, is the reader that complementation (step 2) turns
+    // into that fresh writer.
     final uniqueName = _freshAnonVarName();
-    return ModedVariable(uniqueName, isReader: false, structuralMode: mode);
+    return ModedVariable(uniqueName,
+        isReader: term.isReader, structuralMode: mode);
   }
 
   throw InvalidHeadError('Unknown term type: ${term.runtimeType}');
@@ -372,7 +387,7 @@ TypeExpr _dualType(TypeExpr expr) {
 /// against any type definition.
 ModedTerm _buildOpaqueModedTerm(ast.Term term, Mode mode) {
   if (term is ast.VarTerm) {
-    return ModedVariable(term.name, isReader: term.isReader, structuralMode: mode);
+    return _modedVariable(term, mode);
   }
 
   if (term is ast.ConstTerm) {
@@ -380,9 +395,11 @@ ModedTerm _buildOpaqueModedTerm(ast.Term term, Mode mode) {
   }
 
   if (term is ast.UnderscoreTerm) {
-    // Each anonymous variable is a fresh writer (paper Remark 3.1)
+    // Each anonymous variable is fresh, and keeps its source form: `_` the
+    // writer, `_?` the output placeholder (TGLP "Anonymous variables").
     final uniqueName = _freshAnonVarName();
-    return ModedVariable(uniqueName, isReader: false, structuralMode: mode);
+    return ModedVariable(uniqueName,
+        isReader: term.isReader, structuralMode: mode);
   }
 
   if (term is ast.ListTerm) {

@@ -36,6 +36,9 @@ import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
+import 'package:glp_runtime/runtime/terms.dart' as rt;
+
+import 'ui_runtime/term.dart';
 
 // =============================================================================
 // Messages: Main isolate → Agent isolate
@@ -46,14 +49,14 @@ sealed class ToAgentMsg {}
 /// Initialization message — sent as the spawn argument.
 class InitAgent extends ToAgentMsg {
   final String agentId;
-  final List<String> glpSources;
 
-  /// Optional real paths for [glpSources] (same order), so the type checker's
-  /// self.glp ancestor-scope resolves shared types at load time.
-  final List<String> glpSourcePaths;
+  /// The path of the one program the agent runs: a directory with a
+  /// self.glp, linked whole, or a self-contained module file (TGLP,
+  /// def:program).  A program is one compiled value, and no sources are
+  /// co-loaded beside it.
+  final String program;
 
   final String rootSelfGlpPath;
-  final List<String> friends;
   final SendPort replyPort;
 
   /// Entry-point goal label, e.g. 'agent_init/3', 'agent_init_play/3'.
@@ -62,11 +65,6 @@ class InitAgent extends ToAgentMsg {
   /// Extra arguments inserted between Id and NetIn.
   final List<String> extraArgs;
 
-  /// Optional program directory for static linking.
-  /// When set, each isolate loads the program via loadProgram() before
-  /// loading glpSources (typically just the madGLP boot source) on top.
-  final String? programDir;
-
   /// If true, the isolate waits for a [StartAgent] command before running
   /// GLP initialization.  This allows the main isolate to register all agent
   /// ports first, eliminating message-routing race conditions.
@@ -74,22 +72,21 @@ class InitAgent extends ToAgentMsg {
 
   InitAgent({
     required this.agentId,
-    required this.glpSources,
-    this.glpSourcePaths = const [],
+    required this.program,
     required this.rootSelfGlpPath,
-    required this.friends,
     required this.replyPort,
     this.goalLabel = 'agent_init/3',
     this.extraArgs = const [],
-    this.programDir,
     this.deferStart = false,
   });
 }
 
-/// User typed input in the agent's text field.
+/// The person's act on the agent's screen: a ground term, never text (GSG,
+/// Appendix "The Prototype's Screens", and Section 3, "What the super-app
+/// grants a mini-app", (ib)).
 class UserInput extends ToAgentMsg {
-  final String text;
-  UserInput(this.text);
+  final GTerm act;
+  UserInput(this.act);
 }
 
 /// Incoming MAD message routed from another agent.
@@ -184,13 +181,10 @@ Future<void> _runAgent(InitAgent init) async {
 
   final agent = AgentRuntime(
     agentId: agentId,
-    glpSources: init.glpSources,
-    glpSourcePaths: init.glpSourcePaths,
+    program: init.program,
     rootSelfGlpPath: init.rootSelfGlpPath,
-    friends: init.friends,
     goalLabel: init.goalLabel,
     extraArgs: init.extraArgs,
-    programDir: init.programDir,
   );
 
   // Wire callbacks to send messages back to the main isolate.
@@ -235,7 +229,7 @@ Future<void> _runAgent(InitAgent init) async {
         break;
       }
     } else if (msg is UserInput) {
-      await agent.injectUserInput(msg.text);
+      await agent.injectUserInput(runtimeTermOf(msg.act));
       _sendStats(agent, init.replyPort);
     } else if (msg is DeliverMad) {
       await agent.onMadMessageReceived(msg.from, msg.payload);
@@ -247,6 +241,21 @@ Future<void> _runAgent(InitAgent init) async {
     }
   }
 }
+
+/// The runtime term of a ground term from the screen, as the agent's heap
+/// holds it: an atom or an integer a constant, a string the constant of its
+/// text in quotes (a string literal keeps its quotes in the runtime's
+/// constant), a compound a structure, and a list its '.' cells ending in [],
+/// the runtime's [rt.nil].
+rt.Term runtimeTermOf(GTerm t) => switch (t) {
+      GAtom(:final name) => rt.ConstTerm(name),
+      GInt(:final value) => rt.ConstTerm(value),
+      GString(:final value) => rt.ConstTerm('"$value"'),
+      GStruct(:final functor, :final args) =>
+        rt.StructTerm(functor, [for (final a in args) runtimeTermOf(a)]),
+      GList(:final items) => items.reversed.fold<rt.Term>(rt.ConstTerm(rt.nil),
+          (tail, item) => rt.StructTerm('.', [runtimeTermOf(item), tail])),
+    };
 
 void _sendStats(AgentRuntime agent, SendPort replyPort) {
   agent.updateStats();

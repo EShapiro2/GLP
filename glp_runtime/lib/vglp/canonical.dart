@@ -1,13 +1,12 @@
 // glp_runtime/lib/vglp/canonical.dart
 //
 // The canonical compilation of a vGLP program written in the paper's syntax.
-// Spec: vGLP at 16b3b54 --- sections/vglp.tex, Definition "Guarded Clause,
+// Spec: vGLP at c994328 --- sections/vglp.tex, Definition "Guarded Clause,
 // Volitional Procedure, Interactive Type, Interactive Term, Ordinary Clause,
 // Procedure, vGLP Program"; sections/elicitation.tex, Definition "Canonical
-// Compilation".  In a program that declares a population, sGLP's
-// sections/simulation.tex, Definition "Simulation Program", and
-// sections/implementation.tex: the asking clause calls person(T, X) where the
-// canonical compilation calls construct(T, X).
+// Compilation" and the paragraph before it.  (_) and the handle are out of the
+// language (Udi, 2026-10-03; vGLP c994328, c2e8b57, as vGLP #5 Cowork reports
+// it, 2026-10-03 08:16 UTC).
 //
 // The syntax:
 //
@@ -15,39 +14,92 @@
 //     (A)*p(S1, ..., Sn) :- G | B.
 //
 // T is the interactive type, in writer or reader mode as an argument type is;
-// A, the interactive term, is a term of type T, a variable or `_`.  The clause
-// "is the guarded clause p(S1, ..., Sn, A) :- G | B, of arity n+1" (Definition
+// A, the interactive term, "is a term of type T, possibly a variable but not
+// the anonymous variable": `_`, `_?`, `_Name` and `_Name?` are refused in
+// either mode, an anonymous variable being any variable whose name begins
+// with `_` (GLP-Spec, Remark "Anonymous Variables").  The clause "is the
+// guarded clause p(S1, ..., Sn, A) :- G | B, of arity n+1" (Definition
 // "Guarded Clause, ..."), so the front end reads it as exactly that: a token
 // rewrite puts A after the last argument, and T after the last argument type,
 // and the ordinary GLP parser reads the result.
 //
 // The compilation, by the Definition:
 //
-//   - every ordinary clause, each call q(S1, ..., Sn) of a volitional
-//     procedure q in its body replaced by q_a(S1, ..., Sn);
+//   - a procedure REACHES A QUESTION if it is volitional or a clause of it
+//     calls a procedure that does, the least fixpoint over the program's
+//     calls; each such procedure has one more argument, last, its ASK STREAM;
+//   - in a clause of such a procedure, each body call of a procedure that
+//     reaches a question is given a fresh writer as its ask stream and the
+//     head carries D?, D the clause's ask stream: one such call is given D
+//     itself, more are merged into D by merge goals, and with none the head
+//     carries [] in place of D?;
+//   - every ordinary clause so extended, each call q(S1, ..., Sn) of a
+//     volitional procedure q in its body replaced by q_a(S1, ..., Sn);
 //   - for each volitional procedure q of interactive type T, its clauses as
-//     guarded clauses of arity n+1, their calls replaced likewise, a clause
-//     with the interactive term `_` given a fresh writer A in its place and the
-//     body goal close(A?);
+//     guarded clauses of arity n+1, extended and with their calls replaced
+//     likewise: a compiled clause of arity n+2, its ask stream and nothing
+//     else added;
 //   - the asking clause
-//         q_a(S1, ..., Sn) :- construct(T, X), q(S1', ..., Sn', X?).
+//         q_a(S1, ..., Sn, [ask(T, t(X)) | D?]) :- q(S1', ..., Sn', X?, D).
 //     S'_l the reader of S_l at an input position and the writer at an output
-//     position, X and X? exchanged where T is in writer mode;
-//   - typed: the asking clause declared with the source declaration's argument
-//     types, q with the argument of T added in its mode.
+//     position, the head carrying the pair's other end; X and X? exchanged
+//     where T is in writer mode; t the functor of T in Question (below);
+//   - typed: the types of the source; the questions, Question ::= t1(T1) ;
+//     ... ; tk(Tk), one functor per moded interactive type, each type as
+//     written in its mode; the ask stream's element, Ask ::= ask(Constant,
+//     Question), one ask/2 over the union of those functors (vGLP #4 Cowork,
+//     2026-10-02 08:26 UTC, Q1: TGLP refuses two alternatives of one functor,
+//     "Two alternatives with the same functor are not allowed", typed-glp.tex,
+//     so the asks of two types cannot each be an alternative of their own);
+//     each procedure that reaches a question declared with Stream(Ask) added,
+//     the asking clause with the source declaration's argument types and it,
+//     and q with the argument of T in its mode and it;
+//   - a declaration imported procedure (T)*N#p(T1, ..., Tn) of a volitional
+//     procedure of another module N "is compiled as its export is, to the
+//     import of p with its ask stream added, and T joins the interactive
+//     types of M" (vGLP at 7bf50ee, the Definition's last sentence; vGLP's
+//     task of 2026-10-10 09:06 UTC): imported procedure N#p(T1, ..., Tn,
+//     Stream(Ask)) in the program's types, T's functor in Question the
+//     Definition's t --- the one N's asking clause writes, so an import
+//     takes its own and a type of the program's that coincides with it is
+//     told apart as above --- and T's construct process the program's; a
+//     call N#p(S1, ..., Sn) is a call of a procedure that reaches a question,
+//     given an ask stream as any such call is, and keeps p's name;
+//   - the dispatcher and the construct processes (Part 2): the dispatcher's
+//     generic source, programs/vglp/dispatcher.glp, its names made fresh
+//     against the program's (dispatcher.dart), and the clause of construct/4
+//     of each interactive type with the clauses it calls, typed at the type
+//     (constructs.dart).  Without the generic source the compilation emits
+//     neither, which only a test of the first half asks for.
+//
+// The initial goal and the dispatcher on its ask stream and the person channel
+// are spawned by whatever spawns the initial goal --- the bridge for the app, a
+// play or the REPL in a test (vGLP #4 Cowork, 2026-10-02 08:26 UTC, item 5):
+// the compiled program exports dispatch/3 for it.
 //
 // THE NAMES.  The asking clause takes the source name, q_a = q, so a call of
-// q in a body, and in an initial goal, is already the call of its asking
-// clause; the (n+1)-ary procedure takes `q1`, made fresh against every name the
-// program uses.  These are the names of Integration's hand-compiled fixtures,
-// programs/tests/sglp/person_asks*.glp.
+// q in a body is already the call of its asking clause; the (n+2)-ary
+// procedure takes `q1`, made fresh against every name the program uses, and
+// the two types the compilation adds take `Ask` and `Question`, made fresh
+// against the program's types.
 //
-// THE CONSTRUCT.  T is passed as the constant naming the moded interactive
-// type as written, 'Menu' or 'Menu?', which is how sGLP's person declarations
-// name it (ast.dart, PersonDecl.typeKey).  In a program that declares a
-// population the goal is person(T, X), sGLP's system module's entry point
-// (programs/system/sglp.glp); elsewhere construct(T, X), the construct
-// process, which is Part 2's runtime and not declared here.
+// THE ASK.  T is the constant naming the moded interactive type as written,
+// 'Menu' or 'Menu?'; t is the type as written, each name with its first
+// letter lowercased, the names joined by `_`, then `_r` in reader mode and
+// `_w` in writer mode: menu_r, menu_w (questionFunctorStem); two moded types
+// giving the same t are told apart by `_2`, `_3`, ... in the order of their
+// declarations.
+//
+// WIDGET DECLARATIONS, T =::= W (Definition "Widget Declaration, Default
+// Widget"; W an atom, vGLP 2026-10-01 23:55 UTC, E, Q3), are read from the
+// source text before it is lexed, GLP's lexer having no token =::= (vGLP #4
+// Cowork, 2026-10-02 08:26 UTC, item 7).  A declaration in the source holds
+// in its module; those of its scope, read from the self.vglp beside each
+// self.glp of its ancestor chain, the root's included, are given by the
+// caller, and the source's own override them (vGLP #5 Cowork, 2026-10-03
+// 08:16 UTC, item 7: "Widget declarations are scoped as type declarations
+// are: a declaration at the root holds for every program, one in a module
+// holds in that module, and a local declaration overrides a global one").
 
 import '../compiler/ast.dart';
 import '../compiler/error.dart';
@@ -56,21 +108,25 @@ import '../compiler/lexer.dart';
 import '../compiler/parser.dart';
 import '../compiler/token.dart';
 import '../analysis/type_checker/type_ast.dart'
-    show ProcDecl, TypeExpr;
+    show
+        ProcDecl,
+        StructAlt,
+        TypeDef,
+        TypeEnvironment,
+        TypeExpr,
+        TypeRef;
+import 'constructs.dart';
+import 'dispatcher.dart';
 import 'mediator.dart' show printTypeDef, typeSource;
 import 'program_compilation.dart' show compiledHeader;
 
-/// The goal the asking clause calls in place of the construct process, in a
-/// program that declares a population (sGLP, Definition "Simulation Program").
-const personGoal = 'person';
+/// The functor of the ask a goal of a volitional procedure sends on its ask
+/// stream, ask(T, t(X)) (vGLP, Definition "Canonical Compilation").
+const askFunctor = 'ask';
 
-/// The construct process of an interactive type (vGLP, Definition "Canonical
-/// Compilation").
-const constructGoal = 'construct';
-
-/// The built-in that closes a question (vGLP, Definition "Guarded Clause,
-/// ...": "The built-in goal close(X?) succeeds on any argument").
-const closeGoal = 'close';
+/// The goal that merges two ask streams into one (vGLP, Definition "Canonical
+/// Compilation": "merge goals merge them"), the root's merge/3.
+const mergeGoal = 'merge';
 
 /// One volitional procedure of the source, and the names the compilation
 /// gives it.
@@ -88,11 +144,22 @@ class VolitionalProcedure {
   /// asked goal receives its reader.
   final bool readerMode;
 
-  /// The name of the (n+1)-ary procedure, the clauses of q.
+  /// The name of the (n+2)-ary procedure, the clauses of q with the
+  /// interactive variable and the ask stream.
   final String guardedName;
 
+  /// The type parameters of the procedure's declaration.
+  final List<String> typeParams;
+
+  /// The functor of T in Question, set once every interactive type of the
+  /// program is known.
+  late final String functor;
+
+  final int line, column;
+
   VolitionalProcedure(this.name, this.arity, this.interactiveType,
-      this.readerMode, this.guardedName);
+      this.readerMode, this.guardedName, this.typeParams, this.line,
+      this.column);
 
   /// The name of the asking clause.
   String get askingName => name;
@@ -101,17 +168,100 @@ class VolitionalProcedure {
   String get typeConstant => interactiveType.toString();
 }
 
+/// A volitional procedure of another module N, imported by a declaration
+/// `imported procedure (T)*N#p(T1, ..., Tn).`: "compiled as its export is, to
+/// the import of p with its ask stream added, and T joins the interactive
+/// types of M: the type of the asks has its functor and ⌈M⌉ its construct
+/// process, so an ask of p on a caller's ask stream is served as any other"
+/// (vGLP, Definition "Canonical Compilation", its last sentence).  A call
+/// N#p(S1, ..., Sn) is a call of a procedure that reaches a question, and is
+/// given an ask stream as any such call is.
+class ImportedVolitional {
+  /// The module path N.
+  final String module;
+
+  /// The procedure's name p, which its asking clause in N keeps.
+  final String name;
+
+  /// The source arity n.
+  final int arity;
+
+  /// The interactive type T, in its mode.
+  final TypeExpr interactiveType;
+
+  /// Whether T is in reader mode.
+  final bool readerMode;
+
+  /// The parsed declaration, N#p(T1, ..., Tn, T).
+  final ProcDecl decl;
+
+  /// The functor of T in Question: the Definition's t, the functor N's
+  /// asking clause writes.
+  late final String functor;
+
+  final int line, column;
+
+  ImportedVolitional(this.module, this.name, this.arity, this.interactiveType,
+      this.readerMode, this.decl, this.line, this.column);
+
+  /// The type parameters of the declaration.
+  List<String> get typeParams => decl.typeParams;
+}
+
 /// The canonical compilation of one source: the GLP module's text, the module
-/// it parses to, and the volitional procedures it compiled.
+/// it parses to, the volitional procedures it compiled, the procedures that
+/// reach a question by their source signature p/n, the names of the two
+/// types it adds, the functor of each moded interactive type in Question, and
+/// --- where the dispatcher's generic source was given --- the names of the
+/// dispatcher's entry point and of the construct processes, and the widget of
+/// each interactive type.
 class CanonicalProgram {
   final String source;
   final Module module;
   final List<VolitionalProcedure> volitional;
+  final Set<String> reaching;
+  final String askType;
+  final String questionType;
 
-  /// Whether the asking clauses call person/2 rather than construct/2.
-  final bool population;
+  /// The functor of each moded interactive type in Question, by the type as
+  /// written: 'Request?' request_r.
+  final Map<String, String> functors;
 
-  CanonicalProgram(this.source, this.module, this.volitional, this.population);
+  /// dispatch/3, the compiled program's entry point to the dispatcher, as
+  /// emitted; null without the generic source.
+  final String? dispatchName;
+
+  /// construct/4, as emitted; null without the generic source.  The
+  /// dispatch/3 the compiled program exports takes [dispatchName].
+  final String? constructName;
+
+  /// The widget term of each interactive type, by the type as written.
+  final Map<String, String> widgets;
+
+  CanonicalProgram(this.source, this.module, this.volitional, this.reaching,
+      this.askType,
+      {required this.questionType,
+      required this.functors,
+      this.dispatchName,
+      this.constructName,
+      this.widgets = const {}});
+}
+
+/// The functor the compilation gives a moded interactive type in Question
+/// (vGLP #4 Cowork, 2026-10-02 08:26 UTC, Q1): the type as written, each name
+/// with its first letter lowercased, the names joined by `_` in prefix order,
+/// then `_r` in reader mode and `_w` in writer mode --- `Request?` gives
+/// request_r, `Card` card_w, `Stream(String)?` stream_string_r.  The caller
+/// makes two that coincide distinct.
+String questionFunctorStem(TypeExpr t, bool readerMode) =>
+    '${_functorStem(t)}_${readerMode ? 'r' : 'w'}';
+
+String _functorStem(TypeExpr t) {
+  if (t is TypeRef) {
+    final head = '${t.name[0].toLowerCase()}${t.name.substring(1)}';
+    return [head, for (final a in t.typeArgs) _functorStem(a)].join('_');
+  }
+  return 'any';
 }
 
 /// Whether [tokens] are a vGLP program in the paper's syntax: some declaration
@@ -133,32 +283,64 @@ bool isPaperSyntax(List<Token> tokens) {
   return false;
 }
 
-/// [isPaperSyntax] of a source's text.
-bool isPaperSyntaxSource(String text) => isPaperSyntax(Lexer(text).tokenize());
-
-/// Whether a source in the paper's syntax declares a population: a profile
-/// (`person <name>.`) or a run declaration.
-bool declaresPopulation(String text) {
-  final m = _parse(text).module;
-  return m.kinds.isNotEmpty || m.runDecl != null;
+/// [isPaperSyntax] of a source's text, its widget declarations set aside: a
+/// source with one is in the paper's syntax only if it is so without it.
+bool isPaperSyntaxSource(String text) {
+  final stripped = text.contains('=::=')
+      ? extractWidgetDeclarations(text).stripped
+      : text;
+  return isPaperSyntax(Lexer(stripped).tokenize());
 }
 
 /// Compile [text], a vGLP program in the paper's syntax, by the canonical
-/// compilation.  [population] says that the program declares a population
-/// in another of its modules; one the source declares itself counts too.
-CanonicalProgram compileCanonical(String text, {bool population = false}) {
-  final parsed = _parse(text);
+/// compilation.
+///
+/// [dispatcher] is the generic source of the dispatcher and the construct
+/// processes, programs/vglp/dispatcher.glp; without it the compilation emits
+/// neither.  [scope] is the source's scope, whose types the construct
+/// processes are built from where the source does not define them; without
+/// it, the root's.  [scopeWidgets] are the widget declarations of that scope,
+/// by moded type, which the source's own override.
+CanonicalProgram compileCanonical(String text,
+    {DispatcherSource? dispatcher,
+    TypeEnvironment? scope,
+    Map<String, String> scopeWidgets = const {}}) {
+  final widgetDecls = extractWidgetDeclarations(text);
+  final parsed = _parse(widgetDecls.stripped);
   final m = parsed.module;
-  final inPopulation = population || m.kinds.isNotEmpty || m.runDecl != null;
 
   _checkNoOldDesign(m);
 
-  // The volitional procedures, by their source signature p/n.
-  final declsByKey = {for (final d in m.procDeclarations) d.key: d};
+  // The volitional procedures, by their source signature p/n; the imported
+  // ones, of other modules, by N#p/n.  The program's own declarations are
+  // keyed apart from its imports, an import N#p naming no procedure of the
+  // program.
+  final declsByKey = {
+    for (final d in m.procDeclarations)
+      if (!d.imported) d.key: d
+  };
+  final importsByKey = {
+    for (final d in m.procDeclarations)
+      if (d.imported) d.qualifiedKey: d
+  };
   final procsByKey = {for (final p in m.procedures) p.signature: p};
   final taken = _namesUsed(m);
   final volitional = <String, VolitionalProcedure>{};
+  final imports = <String, ImportedVolitional>{};
+  // Each declaration with an interactive type, the program's own and the
+  // imported, in source order: the order of the questions' alternatives.
+  final declaredInOrder = <Object>[];
   for (final v in parsed.declarations) {
+    if (v.module != null) {
+      final decl = importsByKey['${v.module}#${v.name}/${v.arity + 1}']!;
+      final i = imports.putIfAbsent(
+          '${v.module}#${v.name}/${v.arity}',
+          () => ImportedVolitional(v.module!, v.name, v.arity,
+              decl.argTypes.last, decl.isInputArg(v.arity), decl, v.line,
+              v.column));
+      declaredInOrder.add(i);
+      continue;
+    }
     final sig = '${v.name}/${v.arity}';
     final decl = declsByKey['${v.name}/${v.arity + 1}']!;
     if (declsByKey.containsKey(sig) || procsByKey.containsKey(sig)) {
@@ -170,8 +352,47 @@ CanonicalProgram compileCanonical(String text, {bool population = false}) {
     }
     final t = decl.argTypes.last;
     final guarded = _fresh('${v.name}1', taken);
-    volitional[sig] = VolitionalProcedure(
-        v.name, v.arity, t, decl.isInputArg(v.arity), guarded);
+    volitional[sig] = VolitionalProcedure(v.name, v.arity, t,
+        decl.isInputArg(v.arity), guarded, decl.typeParams, v.line, v.column);
+    declaredInOrder.add(volitional[sig]!);
+  }
+
+  // The functor of each moded interactive type in Question.  An imported
+  // one's is the Definition's own, t, the functor its module's asking clause
+  // writes, so the imports take theirs first; then the program's own, in the
+  // order of the declarations, two that coincide told apart (vGLP #4 Cowork,
+  // 2026-10-02 08:26 UTC, Q1).
+  final functors = <String, String>{};
+  final functorsTaken = <String>{};
+  for (final i in imports.values) {
+    final written = typeSource(i.interactiveType);
+    final f = functors.putIfAbsent(written, () {
+      final stem = questionFunctorStem(i.interactiveType, i.readerMode);
+      if (!functorsTaken.add(stem)) {
+        throw CompileError(
+            'The interactive type $written of the imported ${i.module}#'
+            '${i.name}/${i.arity} has the functor $stem in the questions, and '
+            'so has another imported interactive type: its module\'s asking '
+            'clause writes $stem, and two alternatives of the questions\' '
+            'union cannot share it (vGLP, Definition "Canonical Compilation")',
+            i.line, i.column, phase: 'analyzer');
+      }
+      return stem;
+    });
+    i.functor = f;
+  }
+  for (final v in volitional.values) {
+    final written = typeSource(v.interactiveType);
+    final f = functors.putIfAbsent(written, () {
+      final stem = questionFunctorStem(v.interactiveType, v.readerMode);
+      var name = stem;
+      for (var n = 2; functorsTaken.contains(name); n++) {
+        name = '${stem}_$n';
+      }
+      functorsTaken.add(name);
+      return name;
+    });
+    v.functor = f;
   }
 
   // Every clause written (A)*p is of a procedure declared (T)*p, and every
@@ -199,54 +420,409 @@ CanonicalProgram compileCanonical(String text, {bool population = false}) {
       }
     }
   }
-  _checkNoAskedCall(m, volitional);
+  _checkNoAskedCall(m, volitional, imports);
+  _checkNoAnonymousTerm(m, volitional);
 
-  // The compiled procedures, each with its declaration, in source order; a
-  // volitional procedure becomes its asking clause and its (n+1)-ary
-  // procedure.
+  // The (n+1)-ary procedures of the volitional procedures, by their parsed
+  // signature q/(n+1).
   final askedProcs = {
     for (final v in volitional.values) '${v.name}/${v.arity + 1}': v
   };
+  final importedKeys = imports.keys.toSet();
+  final reaching = _reaching(m, volitional, askedProcs, importedKeys);
+
+  // The program's interactive types, its own and the imported, each with its
+  // functor, in the order of their declarations.
+  final interactive = [
+    for (final x in declaredInOrder)
+      if (x is VolitionalProcedure)
+        InteractiveType(x.interactiveType, x.readerMode, x.functor,
+            x.typeParams, x.line, x.column)
+      else if (x is ImportedVolitional)
+        InteractiveType(x.interactiveType, x.readerMode, x.functor,
+            x.typeParams, x.line, x.column)
+  ];
+
+  // The questions, named fresh against the program's types; the dispatcher's
+  // generic source, its names fresh against the program's and those, which
+  // defines the asks, Ask(Q) (vGLP #4 Cowork, 2026-10-02 21:02 UTC, B); and
+  // without the generic source, the compilation's own Ask(Q), the same.
+  final typeNames = {for (final td in m.typeDefs) td.name};
+  final question = _freshType('Question', typeNames);
+  final procTaken = {...taken};
+  final inst = dispatcher == null
+      ? null
+      : instantiateDispatcher(dispatcher,
+          freshType: (stem) => _freshType(stem, typeNames),
+          freshProc: (stem) => _fresh(stem, procTaken));
+  final added = _addedTypes(interactive,
+      ask: inst?.type(askTypeName) ?? _freshType('Ask', typeNames),
+      question: question,
+      emitAsk: inst == null);
+
+  // The compiled procedures, each with its declaration, in source order; a
+  // volitional procedure becomes its asking clause and its (n+2)-ary
+  // procedure, and a procedure that reaches a question is extended.
   final out = <_Emitted>[];
   for (final p in m.procedures) {
     final v = askedProcs[p.signature];
     if (v == null) {
-      out.add(_Emitted(declsByKey[p.signature], p, p.signature));
+      final decl = declsByKey[p.signature];
+      if (!reaching.contains(p.signature)) {
+        out.add(_Emitted(decl, p));
+        continue;
+      }
+      out.add(_Emitted(
+          decl == null ? null : _withAskStream(decl, decl.name, const [], added),
+          Procedure(p.name, p.arity + 1, [
+            for (final c in p.clauses)
+              _extended(c, p.name, c.head.args, reaching, importedKeys)
+          ], p.line, p.column)));
       continue;
     }
     final decl = declsByKey[p.signature]!;
-    out.add(_Emitted(_askingDeclaration(decl, v), _askingClause(decl, v,
-        inPopulation ? personGoal : constructGoal), p.signature));
-    out.add(_Emitted(
-        ProcDecl(v.guardedName, decl.argTypes, decl.line, decl.column,
-            typeParams: decl.typeParams),
-        _guardedProcedure(p, v),
-        p.signature));
+    out.add(_Emitted(_askingDeclaration(decl, v, added), _askingClause(decl, v)));
+    out.add(_Emitted(_withAskStream(decl, v.guardedName, const [], added),
+        _guardedProcedure(p, v, reaching, importedKeys)));
   }
   // Declarations with no clauses of their own: imported procedures, and
-  // declarations of procedures the runtime implements.
+  // declarations of procedures the runtime implements.  An imported
+  // volitional procedure is compiled as its export is, to the import of p
+  // with its ask stream added (Definition "Canonical Compilation").
   final defined = {for (final p in m.procedures) p.signature};
+  final importedAt = {
+    for (final v in parsed.declarations)
+      if (v.module != null) '${v.line}:${v.column}'
+  };
   final bare = [
     for (final d in m.procDeclarations)
-      if (!defined.contains(d.key)) d
+      if (d.imported && importedAt.contains('${d.line}:${d.column}'))
+        _importDeclaration(
+            imports['${d.qualifiedName}/${d.arity - 1}']!, added)
+      else if (!defined.contains(d.key))
+        d
   ];
 
-  final source = _emit(m, out, bare);
+  // Part 2: the dispatcher and the construct processes.
+  _Elicitation? elicitation;
+  if (dispatcher != null) {
+    elicitation = _elicitation(
+        dispatcher,
+        inst!,
+        m,
+        interactive,
+        added,
+        procTaken,
+        {...scopeWidgets, ...widgetDecls.byModedType},
+        scope);
+  } else if (widgetDecls.byModedType.isNotEmpty) {
+    final d = widgetDecls.positions.first;
+    throw CompileError(
+        'A widget declaration, and no dispatcher\'s generic source to build '
+        'the construct processes it serves', d.$1, d.$2, phase: 'analyzer');
+  }
+
+  final source = _emit(m, added.typeDefs, out, bare, elicitation);
   final module = Parser(Lexer(source).tokenize()).parseModule();
-  return CanonicalProgram(
-      source, module, volitional.values.toList(), inPopulation);
+  return CanonicalProgram(source, module, volitional.values.toList(),
+      reaching, added.ask,
+      questionType: added.question,
+      functors: functors,
+      dispatchName: elicitation?.dispatchName,
+      constructName: elicitation?.constructName,
+      widgets: elicitation?.widgets ?? const {});
+}
+
+// ---------------------------------------------------------------------------
+// Part 2: the dispatcher and the construct processes
+// ---------------------------------------------------------------------------
+
+/// What the compilation emits of the dispatcher's generic source and the
+/// construct processes.
+class _Elicitation {
+  final List<TypeDef> typeDefs;
+  final List<ProcDecl> procDecls;
+  final List<Procedure> procedures;
+  final String constructs;
+  final String dispatchName;
+  final String constructName;
+  final Map<String, String> widgets;
+
+  _Elicitation(this.typeDefs, this.procDecls, this.procedures, this.constructs,
+      this.dispatchName, this.constructName, this.widgets);
+}
+
+_Elicitation _elicitation(
+    DispatcherSource dispatcher,
+    InstantiatedDispatcher inst,
+    Module m,
+    List<InteractiveType> interactive,
+    _AddedTypes added,
+    Set<String> procTaken,
+    Map<String, String> widgets,
+    TypeEnvironment? scope) {
+  // Every name is fresh against the program's and against the names the
+  // compilation has already given.
+  String freshProc(String stem) => _fresh(stem, procTaken);
+  final constructName = freshProc(constructHook);
+  final constructsName = freshProc(constructsHook);
+
+  final generic = GenericNames(
+    dispatch: inst.proc(dispatchEntry),
+    constructs: constructsName,
+    run: inst.proc('run'),
+    shown: inst.proc('shown'),
+    thread: inst.proc('thread'),
+    allDone: inst.proc('all_done'),
+    path: inst.proc('path'),
+    formString: inst.proc('form_string'),
+    formInteger: inst.proc('form_integer'),
+    formNumber: inst.proc('form_number'),
+    formReal: inst.proc('form_real'),
+    formConstant: inst.proc('form_constant'),
+    formModule: inst.proc('form_module'),
+    formAny: inst.proc('form_any'),
+    formedType: inst.type('Formed'),
+    doneType: inst.type('Done'),
+    drawType: inst.type('Draw'),
+    inputType: inst.type(inputTypeName),
+    inputsType: inst.type(inputsTypeName),
+    pathType: inst.type(pathTypeName),
+    personInType: inst.type(personInTypeName),
+    spawnType: inst.type(spawnTypeName),
+    askType: added.ask,
+  );
+
+  // The source's own types first, then its scope's, then the root's.
+  final own = {for (final td in m.typeDefs) td.name: td};
+  final outer = scope ?? TypeEnvironment.empty();
+  TypeDef? resolve(String name) =>
+      own[name] ?? outer.typeTemplates[name] ?? outer.types[name];
+
+  // Each interactive type once, an imported one's among them: its construct
+  // process is the program's (Definition "Canonical Compilation").
+  final types = <InteractiveType>[];
+  final seen = <String>{};
+  for (final t in interactive) {
+    if (!seen.add(t.written)) continue;
+    types.add(t);
+  }
+  // A declaration names a moded type and holds wherever a position of an
+  // interactive variable is of it; one naming a type no position is of is
+  // unused, as an unused type definition is.
+  final constructs = buildConstructs(
+    types: types,
+    constructName: constructName,
+    questionType: added.question,
+    generic: generic,
+    resolve: resolve,
+    declared: widgets,
+    fresh: freshProc,
+  );
+
+  // The generic procedures emitted: those reached from the dispatcher's entry
+  // point and from those the construct processes call.
+  final reached =
+      reachableGeneric(dispatcher, [dispatchEntry, ...GenericNames.used]);
+  final emittedNames = {for (final g in reached) inst.procNames[g]!};
+  return _Elicitation(
+    inst.typeDefs,
+    [
+      for (final d in inst.procDecls)
+        if (emittedNames.contains(d.name)) d
+    ],
+    [
+      for (final p in inst.procedures)
+        if (emittedNames.contains(p.name)) p
+    ],
+    constructs.source,
+    inst.proc(dispatchEntry),
+    constructName,
+    constructs.widgets,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Widget declarations: T =::= W, read from the source text
+// ---------------------------------------------------------------------------
+
+/// The widget declarations of a source, and its text with each blanked out,
+/// its lines kept, for GLP's lexer, which has no token =::=.
+class WidgetDeclarations {
+  final String stripped;
+
+  /// The widget each declaration names, an atom, by its moded type as
+  /// written: 'Card' inbox_card.
+  final Map<String, String> byModedType;
+
+  /// Where each declaration begins, line and column, in source order.
+  final List<(int, int)> positions;
+
+  WidgetDeclarations(this.stripped, this.byModedType, this.positions);
+}
+
+/// Read the widget declarations `T =::= W.` of [text]: T a moded type, W an
+/// atom naming a widget of the construct family (Definition "Widget
+/// Declaration, Default Widget"; vGLP 2026-10-01 23:55 UTC, E, Q3).
+WidgetDeclarations extractWidgetDeclarations(String text) {
+  if (!text.contains('=::=')) {
+    return WidgetDeclarations(text, const {}, const []);
+  }
+  final chars = text.split('');
+  final byType = <String, String>{};
+  final positions = <(int, int)>[];
+  var i = 0;
+  int? itemStart;
+  while (i < text.length) {
+    final c = text[i];
+    if (c == '%') {
+      while (i < text.length && text[i] != '\n') {
+        i++;
+      }
+      continue;
+    }
+    if (c == '\'' || c == '"') {
+      itemStart ??= i;
+      i = _skipQuoted(text, i);
+      continue;
+    }
+    if (c.trim().isEmpty) {
+      i++;
+      continue;
+    }
+    itemStart ??= i;
+    if (text.startsWith('=::=', i)) {
+      final start = itemStart;
+      final end = _itemEnd(text, i + 4);
+      final (line, column) = _lineColumn(text, start);
+      if (end < 0) {
+        throw CompileError(
+            'A widget declaration "T =::= W" with no full stop', line, column,
+            phase: 'parser');
+      }
+      final left = text.substring(start, i).trim();
+      final right = text.substring(i + 4, end).trim();
+      final key = _widgetType(left, line, column);
+      final widget = _widgetAtom(right, line, column);
+      if (byType.containsKey(key)) {
+        throw CompileError(
+            'Two widget declarations for the moded type $key', line, column,
+            phase: 'parser');
+      }
+      byType[key] = widget;
+      positions.add((line, column));
+      for (var k = start; k <= end; k++) {
+        if (chars[k] != '\n') chars[k] = ' ';
+      }
+      i = end + 1;
+      itemStart = null;
+      continue;
+    }
+    if (c == '.' && _isFullStop(text, i)) {
+      itemStart = null;
+    }
+    i++;
+  }
+  return WidgetDeclarations(chars.join(), byType, positions);
+}
+
+/// The index past the quoted atom or string literal opening at [i].
+int _skipQuoted(String text, int i) {
+  final q = text[i];
+  var j = i + 1;
+  while (j < text.length) {
+    if (text[j] == '\\') {
+      j += 2;
+      continue;
+    }
+    if (text[j] == q) return j + 1;
+    j++;
+  }
+  return j;
+}
+
+/// Whether the `.` at [i] ends an item: followed by whitespace, a comment or
+/// the end of the text.
+bool _isFullStop(String text, int i) =>
+    i + 1 >= text.length || text[i + 1].trim().isEmpty || text[i + 1] == '%';
+
+/// The index of the full stop ending the item that goes on at [from], or -1.
+int _itemEnd(String text, int from) {
+  var i = from;
+  while (i < text.length) {
+    final c = text[i];
+    if (c == '%') {
+      while (i < text.length && text[i] != '\n') {
+        i++;
+      }
+      continue;
+    }
+    if (c == '\'' || c == '"') {
+      i = _skipQuoted(text, i);
+      continue;
+    }
+    if (c == '.' && _isFullStop(text, i)) return i;
+    i++;
+  }
+  return -1;
+}
+
+(int, int) _lineColumn(String text, int offset) {
+  var line = 1, column = 1;
+  for (var k = 0; k < offset; k++) {
+    if (text[k] == '\n') {
+      line++;
+      column = 1;
+    } else {
+      column++;
+    }
+  }
+  return (line, column);
+}
+
+/// The moded type a widget declaration names, as written: parsed as the
+/// argument type of an imported declaration, which has no clauses.
+String _widgetType(String left, int line, int column) {
+  try {
+    final m = Parser(Lexer('imported procedure m#w($left).').tokenize())
+        .parseModule();
+    final d = m.procDeclarations.single;
+    if (d.argTypes.length == 1) return typeSource(d.argTypes.single);
+  } on Object {
+    // reported below
+  }
+  throw CompileError(
+      'A widget declaration "T =::= W" whose T, "$left", is not a moded type',
+      line, column, phase: 'parser');
+}
+
+/// The widget a declaration names: an atom (vGLP 2026-10-01 23:55 UTC, E,
+/// Q3), as its constant.
+String _widgetAtom(String right, int line, int column) {
+  if (RegExp(r'^[a-z][A-Za-z0-9_]*$').hasMatch(right)) return right;
+  if (right.length >= 2 && right.startsWith("'") && right.endsWith("'")) {
+    final toks = Lexer(right).tokenize();
+    if (toks.length == 2 && toks.first.type == TokenType.ATOM) {
+      return toks.first.lexeme;
+    }
+  }
+  throw CompileError(
+      'A widget declaration "T =::= W" whose W, "$right", is not an atom '
+      'naming a widget', line, column, phase: 'parser');
 }
 
 // ---------------------------------------------------------------------------
 // The front end: the paper's syntax as the guarded clauses it denotes
 // ---------------------------------------------------------------------------
 
-/// A declaration `procedure (T)*p(T1, ..., Tn)`, at its `procedure` token.
+/// A declaration `procedure (T)*p(T1, ..., Tn)`, at its `procedure` token, or
+/// `imported procedure (T)*N#p(T1, ..., Tn)`, [module] its N.
 class _Declared {
   final String name;
   final int arity;
+  final String? module;
   final int line, column;
-  _Declared(this.name, this.arity, this.line, this.column);
+  _Declared(this.name, this.arity, this.line, this.column, {this.module});
 }
 
 /// A clause `(A)*p(S1, ..., Sn) :- ...`, at the token of its name, which is
@@ -330,32 +906,55 @@ _Parsed _parse(String text) {
     }
 
     // A declaration procedure (T)*p(T1, ..., Tn) reads as
-    // procedure p(T1, ..., Tn, T).
+    // procedure p(T1, ..., Tn, T); an imported one, imported procedure
+    // (T)*N#p(T1, ..., Tn), as its export is, imported procedure
+    // N#p(T1, ..., Tn, T) (vGLP, Definition "Canonical Compilation": "A
+    // declaration imported procedure (T)*N#p(T1, ..., Tn). of a volitional
+    // procedure of another module N is compiled as its export is").
     final d = _interactiveDeclaration(tokens, i);
     if (d != null) {
-      if (tokens[i].type == TokenType.ATOM && tokens[i].lexeme == 'imported') {
-        throw CompileError(
-            'An imported declaration names the asking clause, p/n, and carries '
-            'no interactive type',
-            t.line, t.column, phase: 'parser');
-      }
-      final name = tokens[d.nameIndex];
+      final imported =
+          tokens[i].type == TokenType.ATOM && tokens[i].lexeme == 'imported';
+      var name = tokens[d.nameIndex];
       if (name.type != TokenType.ATOM) {
         throw CompileError(
             'Expected the volitional procedure\'s name after "(T)*"',
             name.line, name.column, phase: 'parser');
       }
-      var j = d.nameIndex + 1;
+      // The module path of an imported one, N or N1#...#Nk, and the name p
+      // after it.
+      String? module;
+      var last = d.nameIndex;
+      if (imported) {
+        final path = <String>[];
+        while (last + 2 < tokens.length &&
+            tokens[last + 1].type == TokenType.HASH &&
+            tokens[last + 2].type == TokenType.ATOM) {
+          path.add(tokens[last].lexeme);
+          last += 2;
+        }
+        if (path.isEmpty) {
+          throw CompileError(
+              'An imported declaration of a volitional procedure names the '
+              'module it is of, "imported procedure (T)*N#p(T1, ..., Tn)" '
+              '(vGLP, Definition "Canonical Compilation")',
+              t.line, t.column, phase: 'parser');
+        }
+        module = path.join('#');
+        name = tokens[last];
+      }
+      var j = last + 1;
       var args = <Token>[];
       if (j < tokens.length && tokens[j].type == TokenType.LPAREN) {
         final a = _matching(tokens, j);
         args = tokens.sublist(j + 1, a);
         j = a + 1;
       }
-      declared.add(_Declared(name.lexeme, _countArgs(args), t.line, t.column));
+      declared.add(_Declared(name.lexeme, _countArgs(args), t.line, t.column,
+          module: module));
       out
         ..addAll(tokens.sublist(i, d.prefixEnd))
-        ..add(name)
+        ..addAll(tokens.sublist(d.nameIndex, last + 1))
         ..add(_tok(TokenType.LPAREN, '(', name))
         ..addAll(args);
       if (args.isNotEmpty) out.add(_tok(TokenType.COMMA, ',', name));
@@ -498,10 +1097,15 @@ void _checkNoOldDesign(Module m) {
 }
 
 /// A goal of a volitional procedure is n-ary until it is asked (Definition
-/// "Guarded Clause, ..."), so no body calls p with n+1 arguments.
-void _checkNoAskedCall(Module m, Map<String, VolitionalProcedure> volitional) {
+/// "Guarded Clause, ..."), so no body calls p with n+1 arguments, nor N#p
+/// with n+1 where p is an imported volitional procedure of N.
+void _checkNoAskedCall(Module m, Map<String, VolitionalProcedure> volitional,
+    Map<String, ImportedVolitional> imports) {
   final asked = {
     for (final v in volitional.values) '${v.name}/${v.arity + 1}': v
+  };
+  final importedAsked = {
+    for (final i in imports.values) '${i.module}#${i.name}/${i.arity + 1}': i
   };
   for (final p in m.procedures) {
     for (final c in p.clauses) {
@@ -516,16 +1120,88 @@ void _checkNoAskedCall(Module m, Map<String, VolitionalProcedure> volitional) {
               g.line, g.column, phase: 'analyzer');
         }
       }
+      for (final g in _remoteCalls(c.body ?? const [])) {
+        final i = importedAsked[_remoteKey(g)];
+        if (i != null) {
+          throw CompileError(
+              'A call of ${i.module}#${i.name} with ${i.arity + 1} arguments: '
+              'a goal of the volitional procedure ${i.name}/${i.arity} is '
+              '${i.arity}-ary until it is asked (vGLP, Definition "Guarded '
+              'Clause, ...")',
+              g.line, g.column, phase: 'analyzer');
+        }
+      }
     }
   }
 }
 
-/// The calls a body makes, a rated or placed goal by its inner goal.
+/// The remote calls a body makes, N # p(...), a placed goal by its inner
+/// goal.
+Iterable<RemoteGoal> _remoteCalls(List<Goal> body) sync* {
+  for (final g in body) {
+    final call = g is SpawnGoal ? g.innerGoal : g;
+    if (call is RemoteGoal) yield call;
+  }
+}
+
+/// A remote call's module path and the goal it calls: N # p(...) is (N, p),
+/// N1 # N2 # p(...) is (N1#N2, p).
+(String, Goal) _remoteTarget(RemoteGoal g) {
+  final path = <String>[g.staticModuleName];
+  var goal = g.goal;
+  while (goal is RemoteGoal) {
+    path.add(goal.staticModuleName);
+    goal = goal.goal;
+  }
+  return (path.join('#'), goal);
+}
+
+/// A remote call by the key of the procedure it calls, N#p/k.
+String _remoteKey(RemoteGoal g) {
+  final (path, goal) = _remoteTarget(g);
+  return '$path#${goal.functor}/${goal.args.length}';
+}
+
+/// The interactive term "is a term of type T, possibly a variable but not the
+/// anonymous variable" (Definition "Guarded Clause, ..."), in either mode of
+/// T: written `_` or `_?`, or `_Name` or `_Name?`, an anonymous variable being
+/// any variable whose name begins with `_` (GLP-Spec, Remark "Anonymous
+/// Variables"), it is refused.  (_) and the handle are out of the language
+/// (Udi, 2026-10-03; vGLP c994328, c2e8b57, as vGLP #5 Cowork reports it).
+void _checkNoAnonymousTerm(
+    Module m, Map<String, VolitionalProcedure> volitional) {
+  for (final v in volitional.values) {
+    for (final p in m.procedures) {
+      if (p.signature != '${v.name}/${v.arity + 1}') continue;
+      for (final c in p.clauses) {
+        if (!_isAnonymous(c.head.args.last)) continue;
+        throw CompileError(
+            'The clause ${_asWritten(c, v)} of ${v.name}/${v.arity}, whose '
+            'interactive type ${v.typeConstant} is in '
+            '${v.readerMode ? 'reader' : 'writer'} mode, has the anonymous '
+            'variable as its interactive term: the interactive term is not '
+            'the anonymous variable (vGLP, Definition "Guarded Clause, '
+            'Volitional Procedure, ...")',
+            c.line, c.column, phase: 'analyzer');
+      }
+    }
+  }
+}
+
+/// The head of a clause of a volitional procedure as the source writes it,
+/// `(A)*p(S1, ..., Sn)`.
+String _asWritten(Clause c, VolitionalProcedure v) {
+  final printer = SourcePrinter();
+  final args = c.head.args;
+  final term = printer.printTerm(args.last);
+  final rest = args.sublist(0, args.length - 1).map(printer.printTerm);
+  return '($term)*${v.name}${rest.isEmpty ? '' : '(${rest.join(', ')})'}';
+}
+
+/// The calls a body makes, a placed goal by its inner goal.
 Iterable<Goal> _calls(List<Goal> body) sync* {
   for (final g in body) {
-    if (g is RatedGoal) {
-      yield* _calls([g.innerGoal]);
-    } else if (g is SpawnGoal) {
+    if (g is SpawnGoal) {
       yield* _calls([g.innerGoal]);
     } else if (g is RemoteGoal) {
       continue;
@@ -553,11 +1229,6 @@ Set<String> _namesUsed(Module m) {
       }
     }
   }
-  for (final k in m.kinds) {
-    for (final d in k.personDecls) {
-      names.add(d.procedure);
-    }
-  }
   return names;
 }
 
@@ -572,24 +1243,234 @@ String _fresh(String stem, Set<String> taken) {
   return name;
 }
 
+
+/// A type name, [stem] or `stem_N`, fresh against [taken].
+String _freshType(String stem, Set<String> taken) {
+  var name = stem;
+  var n = 1;
+  while (taken.contains(name)) {
+    name = '${stem}_$n';
+    n++;
+  }
+  taken.add(name);
+  return name;
+}
+
+// ---------------------------------------------------------------------------
+// Reaching a question
+// ---------------------------------------------------------------------------
+
+/// The procedures that reach a question, by their source signature p/n: "A
+/// procedure of M reaches a question if it is volitional or a clause of it
+/// calls a procedure that does" (Definition "Canonical Compilation"), the
+/// least fixpoint over the program's calls.  A volitional procedure is named
+/// by its source arity, which is the arity of its calls.  A remote call
+/// M # p(...) calls no procedure of the program, and it calls one that
+/// reaches a question where p is a volitional procedure of M the program
+/// imports, by its key M#p/n in [imported].
+Set<String> _reaching(Module m, Map<String, VolitionalProcedure> volitional,
+    Map<String, VolitionalProcedure> askedProcs, Set<String> imported) {
+  final reaching = {for (final v in volitional.values) '${v.name}/${v.arity}'};
+  var changed = true;
+  while (changed) {
+    changed = false;
+    for (final p in m.procedures) {
+      if (askedProcs.containsKey(p.signature) ||
+          reaching.contains(p.signature)) {
+        continue;
+      }
+      final calls = p.clauses.expand((c) => _calls(c.body ?? const []));
+      final remote = p.clauses.expand((c) => _remoteCalls(c.body ?? const []));
+      if (calls.any((g) => reaching.contains('${g.functor}/${g.args.length}')) ||
+          remote.any((g) => imported.contains(_remoteKey(g)))) {
+        reaching.add(p.signature);
+        changed = true;
+      }
+    }
+  }
+  return reaching;
+}
+
+/// Whether the body goal [g] calls a procedure that reaches a question: a
+/// placed goal by its inner goal, and a remote goal where it calls a
+/// volitional procedure the program imports, by its key in [imported].
+bool _callsReaching(Goal g, Set<String> reaching, Set<String> imported) {
+  final call = g is SpawnGoal ? g.innerGoal : g;
+  if (call is RemoteGoal) return imported.contains(_remoteKey(call));
+  return reaching.contains('${call.functor}/${call.args.length}');
+}
+
+/// The body goal [g] with [stream] added as its last argument, a placed goal
+/// to its inner goal and a remote goal to the goal it calls.
+Goal _withStream(Goal g, Term stream) {
+  if (g is SpawnGoal) {
+    final inner = g.innerGoal;
+    return SpawnGoal(
+        inner is RemoteGoal
+            ? _withStream(inner, stream)
+            : Goal(inner.functor, [...inner.args, stream], inner.line,
+                inner.column),
+        g.agentId,
+        g.line,
+        g.column);
+  }
+  if (g is RemoteGoal) {
+    return RemoteGoal(g.module, _withStream(g.goal, stream), g.line, g.column);
+  }
+  return Goal(g.functor, [...g.args, stream], g.line, g.column);
+}
+
+// ---------------------------------------------------------------------------
+// The types the compilation adds
+// ---------------------------------------------------------------------------
+
+/// The questions, [question], one alternative per moded interactive type, its
+/// functor wrapping the type as written in its mode, t(T); and the ask
+/// stream's element, [ask] at Question, Ask(Q) ::= ask(Constant, Q), one
+/// ask/2 over the union of the functors (vGLP #4 Cowork, 2026-10-02 08:26
+/// UTC, Q1), which the dispatcher's generic source defines (2026-10-02 21:02
+/// UTC, B) and the compilation defines only where it has no generic source
+/// ([emitAsk]).  An interactive type that names a type parameter of its
+/// procedure gives Question that parameter, and each declaration with an ask
+/// stream takes it.
+class _AddedTypes {
+  final String ask;
+  final String question;
+  final bool emitAsk;
+  final List<String> params;
+
+  /// Each moded interactive type, once, with its functor.
+  final List<(TypeExpr, String)> interactiveTypes;
+
+  _AddedTypes(this.ask, this.question, this.emitAsk, this.params,
+      this.interactiveTypes);
+
+  List<TypeRef> _paramRefs(int l, int c) =>
+      [for (final p in params) TypeRef(p, l, c)];
+
+  /// Question, or Question(X, ...) where the interactive types name
+  /// parameters.
+  TypeRef questionRef(int l, int c) =>
+      TypeRef(question, l, c, typeArgs: _paramRefs(l, c));
+
+  /// Stream(Ask(Question)), the type of an ask stream.
+  TypeRef stream(int l, int c) => TypeRef('Stream', l, c, typeArgs: [
+        TypeRef(ask, l, c, typeArgs: [questionRef(l, c)])
+      ]);
+
+  /// A declaration's type parameters with the questions' added.
+  List<String> paramsFor(List<String> own) =>
+      [...own, for (final p in params) if (!own.contains(p)) p];
+
+  List<TypeDef> get typeDefs => [
+        TypeDef(
+            question,
+            [
+              for (final (t, f) in interactiveTypes) StructAlt(f, [t], 0, 0)
+            ],
+            0,
+            0,
+            typeParams: params),
+        if (emitAsk)
+          TypeDef(
+              ask,
+              [
+                StructAlt(askFunctor, [
+                  TypeRef('Constant', 0, 0),
+                  TypeRef('Q', 0, 0),
+                ], 0, 0)
+              ],
+              0,
+              0,
+              typeParams: const ['Q']),
+      ];
+}
+
+/// The types the compilation adds, over the program's interactive types, its
+/// own and the imported, in the order of their declarations, each with the
+/// type parameters of its declaration.
+_AddedTypes _addedTypes(Iterable<InteractiveType> interactive,
+    {required String ask, required String question, required bool emitAsk}) {
+  final types = <(TypeExpr, String)>[];
+  final seen = <String>{};
+  final params = <String>[];
+  void collect(TypeExpr t, List<String> own) {
+    if (t is TypeRef) {
+      if (own.contains(t.name) && !params.contains(t.name)) params.add(t.name);
+      for (final a in t.typeArgs) {
+        collect(a, own);
+      }
+    }
+  }
+
+  for (final v in interactive) {
+    final t = v.type;
+    collect(t, v.params);
+    if (seen.add(typeSource(t))) types.add((t, v.functor));
+  }
+  return _AddedTypes(ask, question, emitAsk, params, types);
+}
+
 // ---------------------------------------------------------------------------
 // The compiled procedures
 // ---------------------------------------------------------------------------
 
-/// The asking clause's declaration: the source declaration's argument types.
-ProcDecl _askingDeclaration(ProcDecl decl, VolitionalProcedure v) => ProcDecl(
-    v.askingName, decl.argTypes.sublist(0, v.arity), decl.line, decl.column,
-    typeParams: decl.typeParams, exported: decl.exported);
+/// A procedure's declaration with [extra] argument types and then the ask
+/// stream, Stream(Ask), added.
+ProcDecl _withAskStream(ProcDecl decl, String name, List<TypeExpr> extra,
+        _AddedTypes added, {bool? exported}) =>
+    ProcDecl(
+        name,
+        [...decl.argTypes, ...extra, added.stream(decl.line, decl.column)],
+        decl.line,
+        decl.column,
+        typeParams: added.paramsFor(decl.typeParams),
+        exported: exported ?? decl.exported);
+
+/// The asking clause's declaration: the source declaration's argument types
+/// and the ask stream.
+ProcDecl _askingDeclaration(
+        ProcDecl decl, VolitionalProcedure v, _AddedTypes added) =>
+    ProcDecl(
+        v.askingName,
+        [
+          ...decl.argTypes.sublist(0, v.arity),
+          added.stream(decl.line, decl.column)
+        ],
+        decl.line,
+        decl.column,
+        typeParams: added.paramsFor(decl.typeParams),
+        exported: decl.exported);
+
+/// The import of a volitional procedure of another module, "compiled as its
+/// export is, to the import of p with its ask stream added" (Definition
+/// "Canonical Compilation"): imported procedure N#p(T1, ..., Tn,
+/// Stream(Ask)), the source declaration's argument types and the ask stream
+/// of the program's own asks, as the export N#p's asking clause is declared
+/// in N.
+ProcDecl _importDeclaration(ImportedVolitional i, _AddedTypes added) {
+  final decl = i.decl;
+  return ProcDecl(
+      i.name,
+      [
+        ...decl.argTypes.sublist(0, i.arity),
+        added.stream(decl.line, decl.column)
+      ],
+      decl.line,
+      decl.column,
+      typeParams: added.paramsFor(decl.typeParams),
+      imported: true,
+      modulePath: i.module);
+}
 
 /// The asking clause
 ///
-///     q(S1, ..., Sn) :- construct(T, X), q1(S1', ..., Sn', X?).
+///     q(S1, ..., Sn, [ask(T, t(X)) | D?]) :- q1(S1', ..., Sn', X?, D).
 ///
 /// S'_l the reader of S_l at an input position and the writer at an output
 /// position, the head carrying the pair's other end; X and X? exchanged where
-/// T is in writer mode; person(T, X) in place of construct(T, X) in a program
-/// that declares a population.
-Procedure _askingClause(ProcDecl decl, VolitionalProcedure v, String goal) {
+/// T is in writer mode; t the functor of T in Question.
+Procedure _askingClause(ProcDecl decl, VolitionalProcedure v) {
   final l = decl.line, c = decl.column;
   final head = <Term>[];
   final passed = <Term>[];
@@ -599,78 +1480,125 @@ Procedure _askingClause(ProcDecl decl, VolitionalProcedure v, String goal) {
     head.add(VarTerm(s, !input, l, c));
     passed.add(VarTerm(s, input, l, c));
   }
-  final clause = Clause(Atom(v.askingName, head, l, c),
+  final ask = StructTerm(askFunctor, [
+    ConstTerm(v.typeConstant, l, c),
+    StructTerm(v.functor, [VarTerm('X', !v.readerMode, l, c)], l, c),
+  ], l, c);
+  final clause = Clause(
+      Atom(v.askingName, [...head, ListTerm(ask, VarTerm('D', true, l, c), l, c)],
+          l, c),
       body: [
-        Goal(goal, [
-          ConstTerm(v.typeConstant, l, c),
-          VarTerm('X', !v.readerMode, l, c),
-        ], l, c),
-        Goal(v.guardedName, [...passed, VarTerm('X', v.readerMode, l, c)],
-            l, c),
+        Goal(
+            v.guardedName,
+            [
+              ...passed,
+              VarTerm('X', v.readerMode, l, c),
+              VarTerm('D', false, l, c),
+            ],
+            l,
+            c),
       ],
       line: l,
       column: c);
-  return Procedure(v.askingName, v.arity, [clause], l, c);
+  return Procedure(v.askingName, v.arity + 1, [clause], l, c);
 }
 
-/// The clauses of q as guarded clauses of arity n+1, named q1; a clause whose
-/// interactive term is `_` is given a fresh writer A in its place and the body
-/// goal close(A?).
-Procedure _guardedProcedure(Procedure p, VolitionalProcedure v) {
-  final clauses = <Clause>[];
-  for (final c in p.clauses) {
-    var args = c.head.args;
-    var body = c.body;
-    final last = args.last;
-    if (last is UnderscoreTerm && !last.isReader) {
-      final a = _freshVariable('A', c);
-      args = [
-        ...args.sublist(0, args.length - 1),
-        VarTerm(a, false, last.line, last.column),
-      ];
-      final close = Goal(closeGoal, [VarTerm(a, true, last.line, last.column)],
-          last.line, last.column);
-      // A body that is the single goal `true` is the guarded unit clause's
-      // idiom, and is empty.
-      final rest = (body == null ||
-              (body.length == 1 &&
-                  body.first.functor == 'true' &&
-                  body.first.args.isEmpty))
-          ? const <Goal>[]
-          : body;
-      body = [...rest, close];
-    }
-    clauses.add(Clause(Atom(v.guardedName, args, c.head.line, c.head.column),
-        guards: c.guards, body: body, line: c.line, column: c.column));
-  }
-  return Procedure(v.guardedName, v.arity + 1, clauses, p.line, p.column);
+/// The clauses of q as guarded clauses of arity n+1, named q1, then extended
+/// (Definition "Canonical Compilation"): a compiled clause of arity n+2, its
+/// ask stream and nothing else added.
+Procedure _guardedProcedure(Procedure p, VolitionalProcedure v,
+    Set<String> reaching, Set<String> imported) {
+  final clauses = [
+    for (final c in p.clauses)
+      _extended(c, v.guardedName, c.head.args, reaching, imported)
+  ];
+  return Procedure(v.guardedName, v.arity + 2, clauses, p.line, p.column);
 }
 
-/// A variable name the clause does not use.
-String _freshVariable(String stem, Clause c) {
-  final taken = <String>{};
-  void scan(Term t) {
-    if (t is VarTerm) taken.add(t.name);
-    if (t is StructTerm) t.args.forEach(scan);
-    if (t is ListTerm) {
-      if (t.head != null) scan(t.head!);
-      if (t.tail != null) scan(t.tail!);
+/// Whether [t] is an anonymous variable, in either mode: `_`, `_?`, or a
+/// variable whose name begins with `_` (GLP-Spec, Remark "Anonymous
+/// Variables").
+bool _isAnonymous(Term t) =>
+    t is UnderscoreTerm || (t is VarTerm && t.name.startsWith('_'));
+
+/// A clause of a procedure that reaches a question, named [name], its head's
+/// arguments [headArgs] and then its ask stream (Definition "Canonical
+/// Compilation"): each body call of a procedure that reaches a question is
+/// given a fresh writer as its ask stream, and the head carries D?, D the
+/// clause's ask stream --- the one such call given D itself, more merged into
+/// D by merge goals, a chain of them after the body's own goals --- and []
+/// in place of D? where there is none.
+Clause _extended(Clause c, String name, List<Term> headArgs,
+    Set<String> reaching, Set<String> imported) {
+  final body = c.body ?? const <Goal>[];
+  final l = c.head.line, col = c.head.column;
+  final k = body.where((g) => _callsReaching(g, reaching, imported)).length;
+  if (k == 0) {
+    return Clause(
+        Atom(name, [...headArgs, ListTerm(null, null, l, col)], l, col),
+        guards: c.guards,
+        body: c.body,
+        line: c.line,
+        column: c.column);
+  }
+  final fresh = _FreshVariables(c);
+  final d = fresh.next('D');
+  final streams = k == 1 ? [d] : [for (var i = 0; i < k; i++) fresh.next('D')];
+  var i = 0;
+  final extended = <Goal>[
+    for (final g in body)
+      _callsReaching(g, reaching, imported)
+          ? _withStream(g, VarTerm(streams[i++], false, g.line, g.column))
+          : g
+  ];
+  var merged = streams.first;
+  for (var j = 1; j < k; j++) {
+    final into = j == k - 1 ? d : fresh.next('D');
+    extended.add(Goal(mergeGoal, [
+      VarTerm(merged, true, l, col),
+      VarTerm(streams[j], true, l, col),
+      VarTerm(into, false, l, col),
+    ], l, col));
+    merged = into;
+  }
+  return Clause(Atom(name, [...headArgs, VarTerm(d, true, l, col)], l, col),
+      guards: c.guards, body: extended, line: c.line, column: c.column);
+}
+
+/// Variable names fresh against a clause's.
+class _FreshVariables {
+  final Set<String> _taken = {};
+
+  _FreshVariables(Clause c) {
+    void scan(Term t) {
+      if (t is VarTerm) _taken.add(t.name);
+      if (t is StructTerm) t.args.forEach(scan);
+      if (t is ListTerm) {
+        if (t.head != null) scan(t.head!);
+        if (t.tail != null) scan(t.tail!);
+      }
+    }
+
+    c.head.args.forEach(scan);
+    for (final g in c.guards ?? const <Guard>[]) {
+      g.args.forEach(scan);
+    }
+    for (final g in c.body ?? const <Goal>[]) {
+      g.args.forEach(scan);
     }
   }
 
-  c.head.args.forEach(scan);
-  for (final g in c.guards ?? const <Guard>[]) {
-    g.args.forEach(scan);
+  /// [stem] if it is fresh, else the first of stem1, stem2, ... that is.
+  String next(String stem) {
+    var name = stem;
+    var n = 1;
+    while (_taken.contains(name)) {
+      name = '$stem$n';
+      n++;
+    }
+    _taken.add(name);
+    return name;
   }
-  for (final g in c.body ?? const <Goal>[]) {
-    g.args.forEach(scan);
-  }
-  if (!taken.contains(stem)) return stem;
-  var n = 1;
-  while (taken.contains('$stem$n')) {
-    n++;
-  }
-  return '$stem$n';
 }
 
 // ---------------------------------------------------------------------------
@@ -680,14 +1608,11 @@ String _freshVariable(String stem, Clause c) {
 class _Emitted {
   final ProcDecl? decl;
   final Procedure procedure;
-
-  /// The signature of the source procedure it compiles, by which its profile,
-  /// if any, is found.
-  final String sourceSig;
-  _Emitted(this.decl, this.procedure, this.sourceSig);
+  _Emitted(this.decl, this.procedure);
 }
 
-String _emit(Module m, List<_Emitted> procs, List<ProcDecl> bare) {
+String _emit(Module m, List<TypeDef> added, List<_Emitted> procs,
+    List<ProcDecl> bare, _Elicitation? elicitation) {
   final b = StringBuffer();
   final printer = SourcePrinter();
   b.write(compiledHeader);
@@ -697,50 +1622,52 @@ String _emit(Module m, List<_Emitted> procs, List<ProcDecl> bare) {
     b.writeln(printTypeDef(td));
   }
   b.writeln();
+  for (final td in added) {
+    b.writeln(printTypeDef(td));
+  }
+  b.writeln();
 
-  bool inKind(String sig) => m.kinds.any((k) => k.procedureSigs.contains(sig));
-
-  void declaration(ProcDecl d) => b.writeln(printDeclaration(d));
-  void procedure(_Emitted e) {
-    if (e.decl != null) declaration(e.decl!);
+  for (final d in bare) {
+    b.writeln(printDeclaration(d));
+  }
+  if (bare.isNotEmpty) b.writeln();
+  for (final e in procs) {
+    if (e.decl != null) b.writeln(printDeclaration(e.decl!));
     for (final c in e.procedure.clauses) {
       b.writeln(printer.printClause(c));
     }
     b.writeln();
   }
+  if (elicitation == null) return b.toString();
 
-  for (final d in bare) {
-    if (!inKind(d.key)) declaration(d);
+  // The dispatcher and what the construct processes share, from
+  // programs/vglp/dispatcher.glp; then the construct process of each
+  // interactive type.
+  b.writeln('%% --- the dispatcher (programs/vglp/dispatcher.glp) ---');
+  b.writeln();
+  for (final td in elicitation.typeDefs) {
+    b.writeln(printTypeDef(td));
   }
-  if (bare.any((d) => !inKind(d.key))) b.writeln();
-  for (final e in procs) {
-    if (!inKind(e.sourceSig)) procedure(e);
+  b.writeln();
+  final decls = <String, List<ProcDecl>>{};
+  for (final d in elicitation.procDecls) {
+    decls.putIfAbsent(d.name, () => []).add(d);
   }
-
-  for (final k in m.kinds) {
-    b.writeln('person ${k.name}.');
-    for (final d in k.personDecls) {
-      b.writeln('${d.typeKey} =::= ${d.procedure}.');
+  for (final p in elicitation.procedures) {
+    for (final d in decls[p.name] ?? const <ProcDecl>[]) {
+      if (d.arity == p.arity) b.writeln(printDeclaration(d));
     }
-    for (final d in bare) {
-      if (k.procedureSigs.contains(d.key)) declaration(d);
+    for (final c in p.clauses) {
+      b.writeln(printer.printClause(c));
     }
-    for (final e in procs) {
-      if (k.procedureSigs.contains(e.sourceSig)) procedure(e);
-    }
+    b.writeln();
   }
-
-  final r = m.runDecl;
-  if (r != null) {
-    final mixes = [
-      for (final x in r.mixes)
-        '${x.dimension} ~ (${x.entries.map((e) => '${e.kind} : ${e.probability}').join(' ; ')})'
-    ];
-    b.writeln('run ${r.agents} agents [ ${mixes.join(', ')} ] '
-        'until ${r.untilText} seed ${r.seed}.');
-  }
+  b.writeln('%% --- the construct process of each interactive type ---');
+  b.writeln();
+  b.write(elicitation.constructs);
   return b.toString();
 }
+
 
 /// A procedure declaration as GLP source, an imported one with its module
 /// path.

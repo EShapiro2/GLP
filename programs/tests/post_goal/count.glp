@@ -1,0 +1,8 @@
+%% count.glp --- a goal posted with an input stream its caller extends
+%% (GlpEngine.postGoal; glp_runtime/test/engine/post_goal_test.dart):
+%% count(Xs?, 0, N) consumes the elements the caller injects into Xs and
+%% writes N, their number, when the caller closes the stream.
+
+procedure count(Stream(Constant)?, Integer?, Integer).
+count([_|Xs], N, M?) :- N1 := N? + 1, count(Xs?, N1?, M).
+count([], N, N?).

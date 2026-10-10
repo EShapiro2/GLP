@@ -1,0 +1,62 @@
+%% Questions in both modes (vGLP at c994328, sections/vglp.tex, the fragments
+%% of the currency agent after Definition "Guarded Clause, Volitional
+%% Procedure, ..."; sections/elicitation.tex, Definition "Canonical
+%% Compilation").  Each asking clause sends its ask, ask(T, t(X)), on the ask
+%% stream: the agent's question is the stream of the person's requests,
+%% Stream(Request) in reader mode, asked once and served by serve, ordinary
+%% GLP; the responder's is Card in writer mode.  serve's message clause reads
+%% no request, so it reduces on an arriving friend offer without waiting and
+%% passes the stream on.
+%%
+%% The paper elides the agent's other arguments and its other requests; here
+%% the agent carries its identifier, its network input and a stream of the
+%% texts it posts, and a request is to post a text or to quit.  The program
+%% has two interactive types: each asks inside its own functor in Question,
+%% stream_request_r and card_w, under one ask/2 (vGLP #4 Cowork, 2026-10-02
+%% 08:26 UTC, Q1), and the compiled program loads.  The agent and the
+%% responder are exported for the plays of self.glp, which run them with the
+%% dispatcher and a scripted person (vGLP's code task of 2026-10-01 16:30 UTC,
+%% tests (iv) and (v)).
+
+Peer     ::= Constant.
+Request  ::= post(String) ; quit.
+Offer    ::= offer(Peer).
+Response ::= accept(Peer) ; refuse(Peer).
+YesNo    ::= yes ; no.
+Card     ::= card(Peer, YesNo?).
+Content  ::= friend_request(Peer, Response?).
+Msg      ::= msg(Peer, Content).
+
+exported procedure (Stream(Request)?)*agent(Peer?, Stream(Msg)?,
+    Stream(String)).
+
+%% Ask the person for their requests, once, and serve them.
+(Reqs)*agent(Id, NetIn, Outs?) :-
+    serve(Reqs?, Id?, NetIn?, Outs).
+
+procedure serve(Stream(Request)?, Peer?, Stream(Msg)?, Stream(String)).
+
+%% Post a text.
+serve([post(Text)|Reqs], Id, NetIn, [Text?|Outs?]) :-
+    ground(Id?) | serve(Reqs?, Id?, NetIn?, Outs).
+
+%% Quit.
+serve([quit|_], _, _, []).
+
+%% A peer offers friendship: spawn a responder, which asks the person, and go
+%% on without waiting for a request.
+serve(Reqs, Id, [msg(Id1, friend_request(From, Resp?))|NetIn], Outs?) :-
+    Id? =?= Id1?, ground(From?) |
+    respond_coldcall(offer(From?), Resp),
+    serve(Reqs?, Id?, NetIn?, Outs).
+
+exported procedure (Card)*respond_coldcall(Offer?, Response).
+
+%% Show the person who offers, and pass their answer on.
+(card(From?, Answer))*respond_coldcall(offer(From), Resp?) :-
+    ground(From?) | decide(Answer?, From?, Resp).
+
+%% yes accepts, no refuses.
+procedure decide(YesNo?, Peer?, Response).
+decide(yes, From, accept(From?)).
+decide(no, From, refuse(From?)).

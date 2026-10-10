@@ -5,6 +5,9 @@
 library;
 
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:glp_runtime/compiler/glp_printer.dart'
+    show constantSource, functorNameSource;
 import 'package:glp_runtime/compiler/program_linker.dart' show emitVglpSources;
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/multiagent/simulation_network.dart'
@@ -15,10 +18,10 @@ import 'package:glp_runtime/multiagent/isolate_manager.dart'
     show IsolateManager;
 import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 
 void main() async {
   final gitCommit = await _getGitCommit();
-  final buildTime = '2026-02-01 (GlpEngine refactor)';
 
   print('╔════════════════════════════════════════╗');
   print('║  GLP REPL - With Type Checking         ║');
@@ -27,11 +30,10 @@ void main() async {
   if (gitCommit != null) {
     print('Build: $gitCommit');
   }
-  print('Compiled: $buildTime');
   print('Working directory: ${Directory.current.path}');
   print('');
   print('Input: filename.glp to load, or goal to execute');
-  print('Commands: :quit, :help, :trace, :debug, :limit, :activate, :mad, :boot');
+  print('Commands: :quit, :help, :trace, :debug, :limit, :mad, :boot');
   print('');
 
   // Resolve programs/self.glp relative to this script's location.
@@ -42,9 +44,6 @@ void main() async {
   print('Loaded root self.glp');
   print('');
 
-  // The file an sGLP run's log goes to (`:log <file>`), or null.
-  _LogFile? logFile;
-
   while (true) {
     stdout.write('GLP> ');
     final input = stdin.readLineSync();
@@ -52,7 +51,6 @@ void main() async {
     if (input == null) {
       // End of input: leave the process, not just the loop — after a :boot the
       // VM would otherwise wait on whatever the harness left behind.
-      logFile?.close();
       exit(0);
     }
 
@@ -67,34 +65,8 @@ void main() async {
 
     // Handle commands
     if (trimmed == ':quit' || trimmed == ':q') {
-      logFile?.close();
       print('Goodbye!');
       exit(0);
-    }
-
-    // `:log <file>`: every later sGLP run writes its log to <file>, emptied
-    // now (svGLP, sections/sglp.tex, Definition "Interface Variable, Log";
-    // format in lib/sglp/log.dart).  `:log off` stops it.
-    if (trimmed == ':log' || trimmed.startsWith(':log ')) {
-      final arg = trimmed.substring(4).trim();
-      logFile?.close();
-      logFile = null;
-      engine.onSimulationLog = null;
-      if (arg.isEmpty) {
-        print('Usage: :log <file> | :log off');
-      } else if (arg == 'off') {
-        print('sGLP log off');
-      } else {
-        try {
-          final f = _LogFile(arg);
-          logFile = f;
-          engine.onSimulationLog = f.add;
-          print('sGLP log to $arg');
-        } catch (e) {
-          print('Error: cannot write the log to $arg: $e');
-        }
-      }
-      continue;
     }
 
     if (trimmed == ':help' || trimmed == ':h') {
@@ -152,8 +124,7 @@ void main() async {
       }
       try {
         final compiler = GlpEngine(
-            rootSelfGlpPath: rootSelfGlpPath, identity: engine.identity)
-          ..strictTypes = engine.strictTypes;
+            rootSelfGlpPath: rootSelfGlpPath, identity: engine.identity);
         compiler.loadProgram(progDir);
         final module = compiler.appModule!;
         final artefact = module.artefact as Artefact;
@@ -217,10 +188,10 @@ void main() async {
     }
 
     if (trimmed.startsWith(':mad')) {
-      // :mad <agent> — enter madGLP mode for what follows: the madGLP system
-      // predicates are loaded and a MadContext is created for <agent>, backed
-      // by a single-agent simulation networking layer carrying the runtime's
-      // own identity, so that the seam predicates — send_to_net/1, the
+      // :mad <agent> — enter madGLP mode for what follows: a MadContext is
+      // created for <agent>, backed by a single-agent simulation networking
+      // layer carrying the runtime's own identity, so that the seam
+      // predicates — send_to_net/1, the
       // networking seam, authorise_link/2 — execute instead of aborting. A
       // directory program loaded afterwards runs under it (SGSG's harness
       // request of 2026-08-03 19:01; IGLP Cowork 2026-09-08 00:04, item 2).
@@ -236,15 +207,31 @@ void main() async {
       final agent = parts[1].toLowerCase();
       engine.enableMadGLP(agentId: agent);
       final directory = NetworkDirectory()..register(agent, engine.identity.pub);
+      void dropped(String toId) =>
+          print('[MAD $agent] message to $toId dropped: no router in the REPL');
       final network = SimulationNetworkClient(
         selfId: agent,
         directory: directory,
-        sendToRouter: (toId, payload) {
-          print('[MAD $agent] message to $toId dropped: no router in the REPL');
-        },
+        sendToRouter: (toId, payload) => dropped(toId),
       );
       network.putIdentity(engine.identity.pub, engine.identity.priv);
       engine.madContext!.network = network;
+      // The Sends (IGLP, Definition madGLP Send) place each message of the
+      // outbox on the channel to its destination, as an agent's do
+      // (ctx.onMessageReady → network.send), and a goal's run in this mode
+      // ends with them (GlpEngine.runGoal), so a goal waiting on when_idle is
+      // not held by a message that would never leave.  Until 2026-10-02 the
+      // outbox was wired to nothing and kept every message.  The REPL has no
+      // router, so a message goes nowhere, and is reported; one to an agent
+      // the directory does not hold has no channel at all.
+      engine.madContext!.onMessageReady = (destination, message) {
+        final pk = directory.pkOf(destination);
+        if (pk == null) {
+          dropped(destination);
+        } else {
+          network.send(pk, Uint8List.fromList(message.payload));
+        }
+      };
       print('madGLP mode on: agent $agent, key ${engine.identity.pub.hex}');
       continue;
     }
@@ -258,12 +245,6 @@ void main() async {
     if (trimmed == ':debug' || trimmed == ':d') {
       engine.debugOutput = !engine.debugOutput;
       print('Debug output ${engine.debugOutput ? "enabled" : "disabled"}');
-      continue;
-    }
-
-    if (trimmed == ':strict' || trimmed == ':s') {
-      engine.strictTypes = !engine.strictTypes;
-      print('Strict type checking ${engine.strictTypes ? "enabled" : "disabled"}');
       continue;
     }
 
@@ -357,35 +338,9 @@ void main() async {
       }
     }
 
-    // `:at <placement> <goal>`: post the goal with its conjuncts placed at
-    // the agents of the loaded program's run declaration (svGLP, sections/
-    // sglp.tex, Definition "Simulation Program"): the placement is one entry
-    // per conjunct, comma-separated without spaces --- an agent `a`, a range
-    // `a..b` of agents, or `-` for a conjunct at no agent --- and every agent
-    // has one.  `:at 1..3,- g(1), g(2), g(3), net(...)` places g(a) at a and
-    // net(...) at none.
-    List<int?>? placement;
-    var goalText = trimmed;
-    if (trimmed.startsWith(':at ')) {
-      final rest = trimmed.substring(4).trim();
-      final space = rest.indexOf(' ');
-      if (space < 0) {
-        print('Usage: :at <placement> <goal>');
-        continue;
-      }
-      try {
-        placement = GlpEngine.parsePlacement(rest.substring(0, space));
-      } on FormatException catch (e) {
-        print('Error: ${e.message}');
-        continue;
-      }
-      goalText = rest.substring(space + 1).trim();
-    }
-
     // Run goal
     try {
-      final result = await engine.runGoal(goalText, agents: placement);
-      logFile?.flush();
+      final result = await engine.runGoal(trimmed);
 
       // Print bindings
       if (result.bindings.isNotEmpty) {
@@ -402,15 +357,6 @@ void main() async {
 
       // Print status
       _printStatus(result.status);
-
-      // An sGLP run: the simulated time it reached (svGLP, sections/sglp.tex).
-      final sim = engine.simulation;
-      if (sim != null) {
-        final next = sim.nextActivation;
-        print('Simulated time: ${sim.clock} s after ${sim.releases} '
-            'release${sim.releases == 1 ? '' : 's'}'
-            '${next == null ? '' : '; ${sim.pendingCount} pending, the next at $next s'}');
-      }
 
       if (result.error != null) {
         print('Error: ${result.error}');
@@ -448,20 +394,16 @@ void _printHelp() {
   print('  :clear, :c             Clear loaded programs (keep stdlib)');
   print('  :trace, :t             Toggle trace output (reductions)');
   print('  :debug, :d             Toggle DEBUG output');
-  print('  :strict, :s            Toggle strict type checking (default: on)');
   print('  :limit <n>             Set goal reduction limit to <n>');
   print('  :bytecode, :bc         Show loaded bytecode');
   print('  :emit <dir>            Write the compiled GLP beside each .vglp');
   print('  :mad <agent>           Enter madGLP mode as <agent> (seam predicates run)');
   print('  :boot <f>_boot.glp     Run a multi-agent boot program (one isolate per agent)');
-  print('  :at <placement> <goal> Post an sGLP goal, its conjuncts placed at agents');
-  print('                         (placement: a, a..b or -, comma-separated)');
-  print('  :log <file> | :log off Write each sGLP run\'s log to <file>');
   print('  :artefact <dir> [<to>] Write a program directory\'s certified artefact (<to>/<name>.glpw)');
   print('');
   print('Type Checking:');
   print('  Programs with procedure declarations are type-checked');
-  print('  Type errors abort loading by default (use :strict to toggle)');
+  print('  Type errors abort loading: a program that does not check does not run');
   print('');
   print('Examples:');
   print('  GLP> merge.glp                        # Load typed program');
@@ -469,14 +411,23 @@ void _printHelp() {
   print('');
 }
 
-String _formatTerm(rt.Term? term, [GlpEngine? engine, Set<int>? path]) {
+/// [term] as the REPL displays a binding: text that reads back as the term
+/// (GLP-Spec appendix-lp.tex, Definition "Logic Programs Syntax"; GLP #3
+/// Cowork, 2026-10-04 09:06 UTC, "23:49. Q1 and Q3"), each constant and
+/// functor as the printer writes it (glp_printer.dart, [constantSource],
+/// [functorNameSource]): `'G'`, `'+'`, `'42'` and `'a b'` in single quotes,
+/// a string literal in double quotes.  Until 2026-10-04 a constant was shown
+/// unquoted, as send_to_user/1 shows it to the person, which stays as it is
+/// (body_kernels.dart, `formatGroundTerm`): `'G'` was shown `G`, a variable.
+String _formatTerm(rt.Term? term, [GlpEngine? engine, Set<HeapCell>? path]) {
   if (term == null) return '[]';
 
-  path ??= <int>{};
+  path ??= <HeapCell>{};
 
   if (term is rt.ConstTerm) {
-    if (term.value == null || term.value == 'nil') return '[]';
-    return term.value.toString();
+    final value = term.value;
+    if (value == null || value == rt.nil) return '[]';
+    return constantSource(value);
   }
 
   if (term is rt.StructTerm && term.functor == '.' && term.args.length == 2) {
@@ -534,18 +485,22 @@ String _formatTerm(rt.Term? term, [GlpEngine? engine, Set<int>? path]) {
         }
         current = derefTail;
         path.remove(addr);
-        if (current is! rt.StructTerm) break;
-      } else if (tail is rt.ConstTerm &&
-          (tail.value == 'nil' || tail.value == null)) {
-        break;
-      } else if (tail is rt.StructTerm && tail.functor == '.') {
-        current = tail;
       } else {
-        break;
+        current = tail;
       }
     }
 
-    return '[${elements.join(', ')}]';
+    // The list ends at [] or at another tail, a constant or a structure, which
+    // is shown after "|" as send_to_user shows it (formatGroundTerm).  Until
+    // 2026-10-03 such a tail was dropped, [holding(G, H)|W] shown as
+    // [holding(G, H)] (GLP #3 Cowork, 2026-10-03 21:18 UTC, "11:58. 3": "a
+    // fault, fix it").
+    if (current == null ||
+        (current is rt.ConstTerm &&
+            (current.value == rt.nil || current.value == null))) {
+      return '[${elements.join(', ')}]';
+    }
+    return '[${elements.join(', ')} | ${_formatTerm(current, engine, path)}]';
   }
 
   if (term is rt.StructTerm) {
@@ -572,7 +527,7 @@ String _formatTerm(rt.Term? term, [GlpEngine? engine, Set<int>? path]) {
       }
       return _formatTerm(arg, engine, currentPath);
     }).join(', ');
-    return '${term.functor}($formattedArgs)';
+    return '${functorNameSource(term.functor)}($formattedArgs)';
   }
 
   return term.toString();
@@ -588,29 +543,4 @@ Future<String?> _getGitCommit() async {
     // Git not available or not a git repo
   }
   return null;
-}
-
-/// The file an sGLP run's log is written to: entries buffered and written in
-/// blocks, synchronously, so that the REPL's exit loses none.
-class _LogFile {
-  final RandomAccessFile _file;
-  final StringBuffer _buffer = StringBuffer();
-
-  _LogFile(String path) : _file = File(path).openSync(mode: FileMode.write);
-
-  void add(String line) {
-    _buffer.writeln(line);
-    if (_buffer.length > 1 << 20) flush();
-  }
-
-  void flush() {
-    if (_buffer.isEmpty) return;
-    _file.writeStringSync(_buffer.toString());
-    _buffer.clear();
-  }
-
-  void close() {
-    flush();
-    _file.closeSync();
-  }
 }

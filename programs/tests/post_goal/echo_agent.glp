@@ -1,0 +1,11 @@
+%% echo_agent.glp --- the one program of an agent its host runs
+%% (multiagent/agent_runtime.dart; glp_runtime/test/engine/post_goal_test.dart):
+%% the host posts agent_init(Id, UserIn?, NetIn?), checked, and each of the
+%% person's acts it injects into UserIn is sent back to the person.
+
+procedure agent_init(Constant?, Stream(Constant)?, Stream(_)?).
+agent_init(_, Acts, _) :- echo(Acts?).
+
+procedure echo(Stream(Constant)?).
+echo([A|As]) :- send_to_user([heard(A?)]), echo(As?).
+echo([]).

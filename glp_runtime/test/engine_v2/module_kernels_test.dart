@@ -19,15 +19,19 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
+import 'package:glp_runtime/analysis/type_checker/type_identity.dart'
+    show interfaceTypeIdentityTables;
 import 'package:glp_runtime/compiler/compiler.dart';
 import 'package:glp_runtime/bytecode/runner.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/engine_v2/code_image.dart';
 import 'package:glp_runtime/engine_v2/module_kernels.dart';
+import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/body_kernels.dart';
 import 'package:glp_runtime/wire/artefact.dart';
+import 'package:glp_runtime/wire/codec.dart' show WireWriter;
 import 'package:glp_runtime/wire/flattening.dart';
 
 const _rootSelf = '../programs/self.glp';
@@ -41,8 +45,19 @@ procedure helper(Integer?, Integer).
 helper(X, Y?) :- Y := X? + 1.
 ''';
 
+/// A project of [source] as main.glp, its self.glp exporting go/2 by
+/// forwarding it there: a directory with no self.glp is not a program (TGLP
+/// modules.tex, "Entry and the absence of a boot module").
 Directory _tempProject(String source) {
-  final dir = Directory.systemTemp.createTempSync('glp_modvalue_');
+  // Under the root, programs/ (TGLP modules.tex, "Scope construction": "A
+  // program lies at or below the root"): a program in the system's temporary
+  // directory, outside it, is refused since 2026-10-04.
+  final dir = Directory('../programs/tests').createTempSync('glp_modvalue_');
+  File('${dir.path}/self.glp').writeAsStringSync('''
+imported procedure main#go(Integer?, Integer).
+exported procedure go(Integer?, Integer).
+go(X, Y?) :- main # go(X?, Y).
+''');
   File('${dir.path}/main.glp').writeAsStringSync(source);
   return dir;
 }
@@ -67,7 +82,7 @@ void main() {
       ops: prog.ops.cast<Object>(),
       hM: Uint8List.fromList(List<int>.generate(32, (i) => i)),
       moduleName: 'testmod',
-      isaVersion: 'glp-isa-1',
+      isaVersion: glpIsaVersion,
     );
 
     projectDir = _tempProject(_projectSource);
@@ -86,7 +101,8 @@ void main() {
   /// Compiled-ness alone is not enough — an internal procedure is compiled but
   /// is not runnable from outside (module_kernels.dart, export check), and the
   /// compiled symbol of an exported procedure carries its qualified name
-  /// (`main:go/2`) while the alias `run/2` matches is unqualified (`go/2`).
+  /// (`<the module's path from the root>:go/2`) while the alias `run/2`
+  /// matches is unqualified (`go/2`).
   (String, int) firstRunnableEntry(Artefact a) {
     final image = CodeImage.fromArtefactBytes(a.toBytes());
     for (final sig in image.exportAliases) {
@@ -178,6 +194,29 @@ void main() {
               'scheduler to route the goal to');
     });
 
+    test('run keys the module\'s runner by its compiled identity', () {
+      // "Artefacts are cached and deduplicated by compiled identity" (IGLP
+      // code-format-fragment.tex, Loader, step 4): the SHA-256 of the body,
+      // not the source identity h(M), which two compilations of one source
+      // share.
+      final rt = GlpRuntime();
+      registerModuleKernels(rt);
+
+      final module = projectModule;
+      final artefact = projectModule.artefact as Artefact;
+      final (sig, _) = firstRunnableEntry(artefact);
+      final boot = bootGoalFor(rt, sig);
+      expect(rt.bodyKernels.lookup('_run', 2)!(rt, [boot.goal, module]),
+          equals(BodyKernelResult.success));
+
+      String hex(Uint8List b) =>
+          b.map((x) => x.toRadixString(16).padLeft(2, '0')).join();
+      final key = rt.getGoalProgram(rt.gq.items.last.id);
+      expect(key, equals('module:${hex(artefact.compiledIdentity)}'));
+      expect(hex(artefact.compiledIdentity), isNot(equals(hex(artefact.hM))));
+      expect(rt.runners[key], isNotNull);
+    });
+
     test('run then self_module round-trips the same module value', () {
       final rt = GlpRuntime();
       registerModuleKernels(rt);
@@ -211,7 +250,10 @@ void main() {
     test('aborts when the module exposes no such entry point', () {
       final rt = GlpRuntime();
       registerModuleKernels(rt);
-      final module = ModuleTerm(artefact, name: 'testmod');
+      // A certified module, so that the certificate check passes and the
+      // entry point is what is asked (the `artefact` fixture carries no
+      // certificate, and run/2 refuses it for that first).
+      final module = projectModule;
       final kernel = rt.bodyKernels.lookup('_run', 2)!;
       final before = rt.gq.length;
       expect(kernel(rt, [ConstTerm('no_such_procedure_xyz'), module]),
@@ -297,6 +339,105 @@ void main() {
       } finally {
         dir.deleteSync(recursive: true);
       }
+    });
+  });
+
+  // The certificate is verified before the code runs: the loader "computes
+  // SHA-256 of the body and verifies it equals the compiled identity in the
+  // certificate; verifies the certificate's signature under the key the
+  // certificate carries" (IGLP code-format-fragment.tex, Loader, step 1), and
+  // the machine "activates no program whose certificate does not verify" (GSG
+  // s6-security.tex, G1).  run/2 and run/3 are the activation, an adopter's of
+  // a module it received included (GLP #3 Cowork, 2026-10-02 15:46 UTC, B6).
+  group('run/2 and run/3 activate no module whose certificate does not verify',
+      () {
+    /// [module]'s artefact with its body as it is and [certificate] after it,
+    /// read back as a module value does when it arrives (payload_codec.dart).
+    ModuleTerm withCertificate(ModuleTerm module, Certificate certificate) {
+      final bytes = (module.artefact as Artefact).toBytes();
+      final w = WireWriter();
+      for (final b in Uint8List.sublistView(
+          bytes, 0, Artefact.bodyLength(bytes))) {
+        w.u8(b);
+      }
+      certificate.write(w);
+      final artefact = Artefact.fromBytes(w.toBytes());
+      return ModuleTerm(artefact, name: artefact.moduleName);
+    }
+
+    Certificate certificateOf(ModuleTerm module) =>
+        (module.artefact as Artefact).certificate;
+
+    /// Run [module]'s first runnable entry by `_run/2`, or, where [typed], by
+    /// `_run/3` under the type identity the module's exports record for it, so
+    /// that the type check passes; what the kernel answers and how many goals
+    /// it enqueued.
+    (BodyKernelResult, int) activate(ModuleTerm module, {bool typed = false}) {
+      final rt = GlpRuntime();
+      registerModuleKernels(rt);
+      final art = module.artefact as Artefact;
+      final (sig, _) = firstRunnableEntry(art);
+      final boot = bootGoalFor(rt, sig);
+      final before = rt.gq.length;
+      final BodyKernelResult result;
+      if (typed) {
+        final identity = interfaceTypeIdentityTables(
+          typeDefsText: art.typeDefsText,
+          exportDeclarationTexts: art.exports.map((e) => e.declarationText),
+        ).exported[sig];
+        expect(identity, isNotNull, reason: 'the exports record $sig');
+        result = rt.bodyKernels.lookup('_run', 3)!(
+            rt, [boot.goal, ConstTerm(identity!), module]);
+      } else {
+        result = rt.bodyKernels.lookup('_run', 2)!(rt, [boot.goal, module]);
+      }
+      return (result, rt.gq.length - before);
+    }
+
+    test('a module compiled and signed at load runs (control)', () {
+      expect(certificateOf(projectModule).verifies(), isTrue);
+      expect(activate(projectModule), (BodyKernelResult.success, 1));
+      expect(activate(projectModule, typed: true),
+          (BodyKernelResult.success, 1));
+    });
+
+    test('the same code read back with its certificate as it is runs', () {
+      final module =
+          withCertificate(projectModule, certificateOf(projectModule));
+      expect(activate(module), (BodyKernelResult.success, 1));
+      expect(activate(module, typed: true), (BodyKernelResult.success, 1));
+    });
+
+    test('a module refused a certificate is not activated, by run/2 or run/3',
+        () {
+      final c = certificateOf(projectModule);
+      final module = withCertificate(
+          projectModule, Certificate.refused(hSrc: c.hSrc, hBin: c.hBin));
+      expect(activate(module), (BodyKernelResult.abort, 0));
+      expect(activate(module, typed: true), (BodyKernelResult.abort, 0));
+    });
+
+    test('a forged signature is not activated', () {
+      final c = certificateOf(projectModule);
+      final forged = Uint8List.fromList(c.signature)..[0] ^= 0xFF;
+      final module = withCertificate(
+          projectModule,
+          Certificate(
+              agent: c.agent, hSrc: c.hSrc, hBin: c.hBin, signature: forged));
+      expect(activate(module), (BodyKernelResult.abort, 0));
+      expect(activate(module, typed: true), (BodyKernelResult.abort, 0));
+    });
+
+    test('a certificate over another compiled identity is not activated, '
+        'though its signature verifies', () {
+      final c = certificateOf(projectModule);
+      final other = Uint8List.fromList(c.hBin)..[0] ^= 0xFF;
+      final signed = Certificate.signed(
+          signer: PersonIdentity.generate(), hSrc: c.hSrc, hBin: other);
+      expect(signed.verifies(), isTrue);
+      final module = withCertificate(projectModule, signed);
+      expect(activate(module), (BodyKernelResult.abort, 0));
+      expect(activate(module, typed: true), (BodyKernelResult.abort, 0));
     });
   });
 }

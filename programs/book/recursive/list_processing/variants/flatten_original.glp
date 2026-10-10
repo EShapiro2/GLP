@@ -4,23 +4,18 @@
 %% Type definitions
 NestedList ::= [] ; [_ | NestedList].
 
-procedure flatten(NestedList?, Stream(X)).
+procedure(X) flatten(NestedList?, Stream(X)).
 flatten(Xs, Ys?) :- flatten_dl(Xs?, Ys, []).
 
-procedure flatten_dl(NestedList?, Stream(X), Stream(X)?).
+procedure(X) flatten_dl(NestedList?, Stream(X), Stream(X)?).
 flatten_dl([], Front?, Front).
 flatten_dl([X|Xs], Front?, Back) :-
-    ground(X?), is_list(X?) |
+    ground(X?), list(X?) |
     flatten_dl(X?, Front, Mid?),
     flatten_dl(Xs?, Mid, Back?).
 flatten_dl([X|Xs], [X?|Front?], Back) :-
     otherwise |
     flatten_dl(Xs?, Front, Back?).
-
-%% Helper
-procedure is_list(_?).
-is_list([]).
-is_list([_|T]) :- is_list(T?).
 
 %% Metainterpreter support
 procedure reduce(_?, _).
@@ -28,6 +23,6 @@ reduce(flatten(Xs, Ys?), flatten_dl(Xs?, Ys, [])).
 reduce(flatten_dl([], Front?, Front), true).
 reduce(flatten_dl([X|Xs], Front?, Back),
     (flatten_dl(X?, Front, Mid?), flatten_dl(Xs?, Mid, Back?))) :-
-    ground(X?), is_list(X?) | true.
+    ground(X?), list(X?) | true.
 reduce(flatten_dl([X|Xs], [X?|Front?], Back), flatten_dl(Xs?, Front, Back?)) :-
     otherwise | true.

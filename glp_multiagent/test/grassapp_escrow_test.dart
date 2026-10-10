@@ -5,9 +5,9 @@
 /// his own coins for Frank with a real-time release; nobody cancels, so the
 /// timer wins the race and Frank is paid.
 ///
-/// It loads exactly the way the app does — GlpEngine with strictTypes = false
-/// and loadSource per file, no programDir — so a pass here also exercises the
-/// app's load path, not just the GLP logic.
+/// It loads exactly the way the app does — GlpEngine and loadSource per file,
+/// no programDir — so a pass here also exercises the app's load path, not just
+/// the GLP logic.
 ///
 /// What it pins down:
 ///   * the escrow/5 race commits on the timer, not the cancel;
@@ -27,8 +27,7 @@ void main() {
     final programs = programsDir();
     final dir = '$programs/grassapp';
 
-    final engine = GlpEngine(rootSelfGlpPath: '$programs/self.glp')
-      ..strictTypes = false;
+    final engine = GlpEngine(rootSelfGlpPath: '$programs/self.glp');
 
     // programs/grassapp is a program (SGSG, d27e4d6a): loaded as one, its
     // self.glp exports the play as an entry point.

@@ -37,8 +37,6 @@ class Lexer {
       case ')': return _makeToken(TokenType.RPAREN, startLine, startColumn);
       case '[': return _makeToken(TokenType.LBRACKET, startLine, startColumn);
       case ']': return _makeToken(TokenType.RBRACKET, startLine, startColumn);
-      case '{': return _makeToken(TokenType.LBRACE, startLine, startColumn);
-      case '}': return _makeToken(TokenType.RBRACE, startLine, startColumn);
       case '.':
         if (_match('.')) {
           if (_match('=')) {
@@ -101,16 +99,6 @@ class Lexer {
             final lexeme = source.substring(_current - 3, _current);
             return Token(TokenType.ARITH_EQUAL, lexeme, startLine, startColumn);
           }
-          // `=::=`, sGLP's person declaration T =::= p (svGLP, sections/
-          // sglp.tex, "Simulating a vGLP Program").  It was a lexer error
-          // before, so no existing source carries one.
-          if (_match(':')) {
-            if (_match('=')) {
-              final lexeme = source.substring(_current - 4, _current);
-              return Token(TokenType.EQCOLONCOLONEQ, lexeme, startLine, startColumn);
-            }
-            throw CompileError('Expected "=" after "=::"', startLine, startColumn, phase: 'lexer');
-          }
           throw CompileError('Expected "=" after "=:"', startLine, startColumn, phase: 'lexer');
         }
         if (_match('\\')) {
@@ -125,7 +113,15 @@ class Lexer {
             final lexeme = source.substring(_current - 3, _current);
             return Token(TokenType.GROUND_EQUAL, lexeme, startLine, startColumn);
           }
-          throw CompileError('Expected "=" after "=?"', startLine, startColumn, phase: 'lexer');
+          // =?\= : the negation of =?= (GLP-Spec appendix-guards.tex, 9064202).
+          if (_match('\\')) {
+            if (_match('=')) {
+              final lexeme = source.substring(_current - 4, _current);
+              return Token(TokenType.GROUND_NOT_EQUAL, lexeme, startLine, startColumn);
+            }
+            throw CompileError('Expected "=" after "=?\\"', startLine, startColumn, phase: 'lexer');
+          }
+          throw CompileError('Expected "=" or "\\=" after "=?"', startLine, startColumn, phase: 'lexer');
         }
         return _makeToken(TokenType.EQUALS, startLine, startColumn);
 
@@ -198,10 +194,15 @@ class Lexer {
       return Token(TokenType.PROCEDURE, text, line, column);
     }
 
-    // Check if this is a variable: starts with uppercase OR starts with _ followed by uppercase
-    // Named anonymous variables like _Out, _Result are variables, not atoms
-    final isVariable = _isUpper(text[0]) ||
-        (text[0] == '_' && text.length > 1 && _isUpper(text[1]));
+    // A variable starts with an upper-case letter or with `_`.  Any unquoted
+    // name beginning with an underscore is an anonymous variable --- `_Out`
+    // and `_x`, `_add`, `_1`, `__` alike (GLP-Spec appendix-guards.tex,
+    // "Naming and admission of body kernels": "Quoting is necessary: an
+    // unquoted name beginning with an underscore is an anonymous variable";
+    // glp.tex, Remark "Anonymous Variables"); a quoted one, '_add', is an
+    // atom (_string).  Until 2026-10-02 a name of `_` and a character not
+    // upper case was read as an atom.  `_` alone is the UNDERSCORE token.
+    final isVariable = _isUpper(text[0]) || text[0] == '_';
 
     // Check for reader syntax (Variable?)
     if (_peek() == '?' && isVariable) {
@@ -241,10 +242,24 @@ class Lexer {
   /// Scan string literal or quoted atom
   /// Single quotes produce ATOM (quoted atom, can be used as functor)
   /// Double quotes produce STRING (string literal)
+  ///
+  /// Inside a quoted name a quote is written doubled, `'it''s'`, or escaped,
+  /// `'it\'s'`, and both read as the one string `it's`: GLP-Spec
+  /// appendix-lp.tex, Definition "Logic Programs Syntax", "We employ standard
+  /// LP notions", standard LP syntax doubling the quote (GLP #3 Cowork,
+  /// 2026-10-04 15:19 UTC, NOTED).  Until 2026-10-07 `'it''s'` read as the
+  /// two names `it` and `s`.
   Token _string(String quote, int line, int column) {
     final buffer = StringBuffer();
 
-    while (!_isAtEnd() && _peek() != quote) {
+    while (!_isAtEnd()) {
+      if (_peek() == quote) {
+        if (quote != "'" || _peekNext() != "'") break;
+        // A doubled quote inside a quoted name: one quote.
+        _advance();
+        buffer.write(_advance());
+        continue;
+      }
       if (_peek() == '\\') {
         _advance();
         if (_isAtEnd()) break;

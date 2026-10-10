@@ -1,0 +1,7 @@
+%% Calls the exposed swap/2 by name, at Pair(Tag), and reads the swapped
+%% pair's first element.
+exported procedure run(Tag).
+run(T?) :- swap(pair(a, b), P), first(P?, T).
+
+procedure first(Pair(Tag)?, Tag).
+first(pair(X, _), X?).

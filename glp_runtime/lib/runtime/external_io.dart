@@ -14,9 +14,8 @@ import 'machine_state.dart'; // For GoalRef
 /// - Input stream: Dart injects terms, GLP reads them
 /// - Output stream: GLP writes terms, Dart observes them
 ///
-/// Per heap-pointer-architecture-spec.md Section 1.1:
-/// "Heap navigation follows pointers explicitly rather than computing addresses
-/// via arithmetic. There is no implicit relationship between adjacent heap addresses."
+/// Per IGLP app:in-heap, Variable pairs: either end of a pair reaches its
+/// counterpart by following a pointer, and no address arithmetic relates them.
 ///
 /// Therefore we store BOTH writer and reader addresses explicitly.
 class ExternalChannel {
@@ -24,13 +23,13 @@ class ExternalChannel {
 
   // Input: Dart → GLP
   // Dart holds the writer (to inject terms), GLP receives the reader
-  final int inputWriterAddr;
-  final int inputReaderAddr;
+  final HeapCell inputWriterAddr;
+  final HeapCell inputReaderAddr;
 
   // Output: GLP → Dart
   // GLP holds the writer (to produce terms), Dart holds the reader (to observe)
-  final int outputWriterAddr;
-  final int outputReaderAddr;
+  final HeapCell outputWriterAddr;
+  final HeapCell outputReaderAddr;
 
   ExternalChannel({
     required this.name,
@@ -79,8 +78,8 @@ ExternalChannel createExternalChannel(HeapFCP heap, String name) {
 /// where _? is reader and _ is writer.
 Term buildChannelTerm(ExternalChannel channel) {
   // Use explicit reader/writer addresses - NO address arithmetic
-  // Per heap-pointer-architecture-spec.md: "There is no implicit relationship
-  // between adjacent heap addresses"
+  // No address arithmetic relates the two ends of a pair (IGLP app:in-heap,
+  // Variable pairs).
   return StructTerm('ch', [
     VarRef(channel.inputReaderAddr),   // In - READER (for writer-mode HEAD position)
     VarRef(channel.outputWriterAddr),  // Out - WRITER (for reader-mode HEAD position)
@@ -94,13 +93,13 @@ Term buildChannelTerm(ExternalChannel channel) {
 class InputInjector {
   final HeapFCP heap;
   final String channelName;
-  int _currentWriterId;
+  HeapCell _currentWriterId;
 
-  InputInjector(this.heap, this.channelName, int initialWriterId)
+  InputInjector(this.heap, this.channelName, HeapCell initialWriterId)
       : _currentWriterId = initialWriterId;
 
   /// Current writer variable ID (for debugging)
-  int get currentWriterId => _currentWriterId;
+  HeapCell get currentWriterId => _currentWriterId;
 
   /// Inject a term into the input stream.
   ///
@@ -108,11 +107,17 @@ class InputInjector {
   /// Returns list of goals that were woken up by the injection (should be enqueued).
   List<GoalRef> inject(Term term) {
     // Allocate fresh variable for tail (returns (writerAddr, readerAddr))
-    final (tailWriterAddr, _) = heap.allocateVariable();
+    final (tailWriterAddr, tailReaderAddr) = heap.allocateVariable();
 
-    // Build list cell: [term | tail] using '.' functor (GLP cons convention)
-    // Tail is a writer (per FCP pattern, use readerForWriter() if reader needed)
-    final listCell = StructTerm('.', [term, VarRef(tailWriterAddr)]);
+    // Build list cell: [term | Tail?] using '.' functor (GLP cons convention).
+    // The cell holds the tail's READER and Dart keeps its writer, to bind at the
+    // next injection, so each variable has one writer and one reader (SO), and
+    // a stream reader's head writer at the tail is assigned the reader (GLP-Spec
+    // appendix-term-matching.tex, row "Reader X1?", column "Writer X2"), as
+    // mad_context.dart's network input already builds it.  Until 2026-10-02
+    // the cell held the writer too, which only a runtime matching a goal writer
+    // against a head writer let through (53f8c0b9 made that fail, by the table).
+    final listCell = StructTerm('.', [term, VarRef(tailReaderAddr)]);
 
     // Bind current writer to list cell - this may wake suspended goals
     final activations = heap.bindVariable(_currentWriterId, listCell);
@@ -128,7 +133,7 @@ class InputInjector {
   /// Binds current writer to empty list (nil).
   /// Returns list of goals that were woken up (should be enqueued).
   List<GoalRef> close() {
-    return heap.bindVariable(_currentWriterId, ConstTerm('nil'));
+    return heap.bindVariable(_currentWriterId, ConstTerm(nil));
   }
 }
 
@@ -141,13 +146,13 @@ class OutputObserver {
   final String channelName;
   final void Function(Term) onTerm;
   final void Function() onClose;
-  int _currentReaderId;
+  HeapCell _currentReaderId;
   bool _closed = false;
 
   OutputObserver(
     this.heap,
     this.channelName,
-    int initialReaderId,
+    HeapCell initialReaderId,
     this.onTerm,
     this.onClose,
   ) : _currentReaderId = initialReaderId {
@@ -155,7 +160,7 @@ class OutputObserver {
   }
 
   /// Current reader variable ID (for debugging)
-  int get currentReaderId => _currentReaderId;
+  HeapCell get currentReaderId => _currentReaderId;
 
   /// Whether the stream has been closed
   bool get isClosed => _closed;
@@ -188,7 +193,7 @@ class OutputObserver {
         if (tail is VarRef) {
           _currentReaderId = tail.addr;
           _observeNext();
-        } else if (tail is ConstTerm && tail.value == 'nil') {
+        } else if (tail is ConstTerm && tail.value == nil) {
           // Stream closed with []
           _closed = true;
           onClose();
@@ -196,7 +201,7 @@ class OutputObserver {
           // Nested cons - process recursively
           _processNestedCons(tail);
         }
-      } else if (value is ConstTerm && value.value == 'nil') {
+      } else if (value is ConstTerm && value.value == nil) {
         // Empty list - stream closed
         _closed = true;
         onClose();
@@ -217,7 +222,7 @@ class OutputObserver {
         _currentReaderId = tail.addr;
         _observeNext();
         break;
-      } else if (tail is ConstTerm && tail.value == 'nil') {
+      } else if (tail is ConstTerm && tail.value == nil) {
         _closed = true;
         onClose();
         break;

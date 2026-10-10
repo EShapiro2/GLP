@@ -2,7 +2,8 @@
 ///
 /// Validates end-to-end message flow using the push-based model.
 ///
-/// See: madGLP-spec.md Sections 8.1-8.4
+/// See: IGLP Definitions madGLP Reduce, Send and Receive Transaction
+/// (app:madglp-local-states-transitions).
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
@@ -153,7 +154,8 @@ void main() {
       //    localize() creates LocalizeEntry (Z_q, p, 5) and immediately delivers
       //    the held assignment, binding Z_q to 42.
       final content = StructTerm('_r', [ConstTerm('p'), ConstTerm(5)]);
-      final carrier = StructTerm('.', [content, ConstTerm('#serializer:q:0')]);
+      final carrier = StructTerm(
+          '.', [content, StructTerm('_w', [ConstTerm('q'), ConstTerm(0)])]);
       ctx.handleMadAssignment(
         globalName: GlobalName.writer('q', 0),
         value: carrier,

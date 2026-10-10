@@ -1,0 +1,85 @@
+%% Printed by programs/sglp/transform.glp from the sGLP source in the term form
+%% (README.md, "The term form"); edit the source and run transform.sh, not this file.
+%% transform(delivery, profiles)
+
+%% person(talker)
+%% binds(Stream(Msg), talk)
+exported procedure
+talk
+(
+Stream(Msg)
+,
+Integer?
+,
+MutualRef?
+)
+.
+talk(Ms?, _, Mon)
+:-
+stream_append(rated('/'(1, hour), Tok), Mon?, _)
+,
+say(Tok?, 1, Ms, Mon?)
+.
+procedure
+say
+(
+Token?
+,
+Integer?
+,
+Stream(Msg)
+,
+MutualRef?
+)
+.
+say(go, I, [msg(T?, St) | Ms?], Mon)
+:-
+'=<'(I?, 3)
+|
+text(I?, T)
+,
+next(St?, I?, Ms, Mon?)
+.
+say(go, I, [], _)
+:-
+'>'(I?, 3)
+|
+true
+.
+procedure
+next
+(
+Status
+?
+,
+Integer?
+,
+Stream(Msg)
+,
+MutualRef?
+)
+.
+next(St, I, Ms?, Mon)
+:-
+known(St?)
+|
+':='(I1, '+'(I?, 1))
+,
+stream_append(rated('/'(1, hour), Tok), Mon?, _)
+,
+say(Tok?, I1?, Ms, Mon?)
+.
+procedure
+text
+(
+Integer?
+,
+String
+)
+.
+text(1, hello)
+.
+text(2, there)
+.
+text(3, bye)
+.

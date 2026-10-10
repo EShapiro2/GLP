@@ -2,6 +2,7 @@ import 'package:test/test.dart';
 import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/compiler/ast.dart';
+import 'package:glp_runtime/compiler/error.dart';
 import 'package:glp_runtime/compiler/token.dart';
 
 void main() {
@@ -74,47 +75,41 @@ boot :- true | math # factorial(5, R).
 
       final remote = goal as RemoteGoal;
       expect(remote.staticModuleName, 'math');
-      expect(remote.isDynamic, false);
       expect(remote.goal.functor, 'factorial');
       expect(remote.goal.arity, 2);
     });
 
-    test('parser parses dynamic remote goal', () {
-      final source = '''
+    // The module of a cross-module call is a child directory or module file
+    // of the caller's directory (TGLP modules.tex, "Cross-module type
+    // checking"); a module value is run with run/2 or run/3 (GLP-Spec
+    // appendix-guards.tex, "Dynamic activation"), and the dynamic dispatch
+    // that took a variable is gone (TGLP modules.tex, Implementation).
+    Matcher refusesVariableModule(String shown) => throwsA(predicate(
+        (e) =>
+            e is CompileError &&
+            e.message.contains('names its module') &&
+            e.message.contains('"$shown # ..."'),
+        'a CompileError refusing the variable module $shown'));
+
+    test('parser refuses a remote goal whose module is a writer', () {
+      final parser = Parser(Lexer('''
 call_module(M, R) :- true | M # foo(R).
-''';
-      final lexer = Lexer(source);
-      final tokens = lexer.tokenize();
-      final parser = Parser(tokens);
-      final program = parser.parse();
-
-      final clause = program.procedures[0].clauses[0];
-      final goal = clause.body![0];
-      expect(goal, isA<RemoteGoal>());
-
-      final remote = goal as RemoteGoal;
-      expect(remote.staticModuleName, isNull);
-      expect(remote.isDynamic, true);
-      expect(remote.module, isA<VarTerm>());
-      expect((remote.module as VarTerm).name, 'M');
+''').tokenize());
+      expect(() => parser.parse(), refusesVariableModule('M'));
     });
 
-    test('parser parses reader variable remote goal', () {
-      final source = '''
+    test('parser refuses a remote goal whose module is a reader', () {
+      final parser = Parser(Lexer('''
 call_module(M, R) :- true | M? # foo(R).
-''';
-      final lexer = Lexer(source);
-      final tokens = lexer.tokenize();
-      final parser = Parser(tokens);
-      final program = parser.parse();
+''').tokenize());
+      expect(() => parser.parse(), refusesVariableModule('M?'));
+    });
 
-      final clause = program.procedures[0].clauses[0];
-      final goal = clause.body![0];
-      expect(goal, isA<RemoteGoal>());
-
-      final remote = goal as RemoteGoal;
-      expect(remote.isDynamic, true);
-      expect((remote.module as VarTerm).isReader, true);
+    test('parser refuses a variable module after a named one', () {
+      final parser = Parser(Lexer('''
+call_module(M, R) :- true | math # M? # foo(R).
+''').tokenize());
+      expect(() => parser.parse(), refusesVariableModule('M?'));
     });
 
     test('parser parses chained remote goals', () {

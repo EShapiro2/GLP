@@ -9,6 +9,7 @@ import 'package:sodium_libs/sodium_libs_sumo.dart';
 
 import 'package:grassroots_networking/src/grassroots_network.dart';
 import 'package:grassroots_networking_core/src/models/identity.dart';
+import 'package:grassroots_networking_core/src/session/application_identity.dart';
 import 'package:grassroots_networking_core/src/session/platform_attestation.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 
@@ -49,7 +50,10 @@ class _StubAttestation implements PlatformAttestation {
   }
 
   @override
-  Future<Uint8List?> signSessionDigest(Uint8List digest) async {
+  Future<Uint8List?> signSessionDigest({
+    required Uint8List identityPublicKey,
+    required Uint8List digest,
+  }) async {
     if (offers == null) return null;
     signed.add(digest);
     // A stub signature that is a function of the digest, so a test can tell
@@ -155,11 +159,11 @@ void main() {
       await callee.dispose();
     });
 
-    final connects = <(String, MessageTransport, Uint8List?)>[];
-    caller.onPeerConnected = (pk, transport, binaryHash) => connects.add((
+    final connects = <(String, MessageTransport, ApplicationIdentity?)>[];
+    caller.onPeerConnected = (pk, transport, identity) => connects.add((
           pk.map((b) => b.toRadixString(16).padLeft(2, '0')).join(),
           transport,
-          binaryHash,
+          identity,
         ));
 
     final calleeAddress = await listeningAddress(callee);
@@ -176,7 +180,7 @@ void main() {
         reason: 'the exchange must complete and the peer become reachable');
     expect(connects.single.$2, MessageTransport.udp);
     expect(connects.single.$3, isNull,
-        reason: 'a platform with no attestation yields a null binary hash — '
+        reason: 'a platform with no attestation yields a null identity — '
             'unattested, not refused');
     expect(caller.isPeerReachable(calleeId.publicKey), isTrue);
   });
@@ -185,13 +189,17 @@ void main() {
       () async {
     final callerAttestation = _StubAttestation(
       offers: Uint8List.fromList(List.filled(48, 0xa1)),
-      verdictFor: (offered) =>
-          AttestedBinary(Uint8List.fromList(List.filled(32, 0xb2))),
+      verdictFor: (offered) => const AttestedApplication(
+          IosApplicationIdentity('ABCDE12345.com.eshapiro.callee')),
     );
     final calleeAttestation = _StubAttestation(
       offers: Uint8List.fromList(List.filled(48, 0xc3)),
-      verdictFor: (offered) =>
-          AttestedBinary(Uint8List.fromList(List.filled(32, 0xd4))),
+      verdictFor: (offered) => AttestedApplication(AndroidApplicationIdentity(
+        packages: const [
+          AndroidPackage(name: 'com.eshapiro.caller', version: 3),
+        ],
+        signatureDigests: [Uint8List.fromList(List.filled(32, 0xd4))],
+      )),
     );
 
     final callerId = await identityFromSeed(0x83, 'caller');
@@ -203,11 +211,11 @@ void main() {
       await callee.dispose();
     });
 
-    Uint8List? attestedHash;
+    ApplicationIdentity? attestedIdentity;
     var connected = false;
-    caller.onPeerConnected = (pk, transport, binaryHash) {
+    caller.onPeerConnected = (pk, transport, identity) {
       connected = true;
-      attestedHash = binaryHash;
+      attestedIdentity = identity;
     };
 
     final calleeAddress = await listeningAddress(callee);
@@ -220,8 +228,9 @@ void main() {
     );
 
     expect(await waitFor(() => connected), isTrue);
-    expect(attestedHash, Uint8List.fromList(List.filled(32, 0xb2)),
-        reason: 'onPeerConnected carries the attested binary hash');
+    expect(attestedIdentity,
+        const IosApplicationIdentity('ABCDE12345.com.eshapiro.callee'),
+        reason: 'onPeerConnected carries the attested application identity');
 
     // The long-lived half names the agent's OWN identity key — not the peer's
     // and not the session. This is what makes it long-lived: it is the same
@@ -265,7 +274,7 @@ void main() {
     });
 
     var connected = false;
-    caller.onPeerConnected = (pk, transport, binaryHash) => connected = true;
+    caller.onPeerConnected = (pk, transport, identity) => connected = true;
 
     final calleeAddress = await listeningAddress(callee);
     caller.putKnownPeer(calleeId.publicKey);

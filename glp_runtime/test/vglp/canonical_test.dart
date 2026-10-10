@@ -1,286 +1,193 @@
 // glp_runtime/test/vglp/canonical_test.dart
 //
 // The canonical compilation of a vGLP program in the paper's syntax, in both
-// modes, with person(T, X) in a program that declares a population.
-// Spec: vGLP at 16b3b54 --- sections/vglp.tex, Definition "Guarded Clause,
+// modes.
+// Spec: vGLP at c994328 --- sections/vglp.tex, Definition "Guarded Clause,
 // Volitional Procedure, Interactive Type, Interactive Term, Ordinary Clause,
 // Procedure, vGLP Program"; sections/elicitation.tex, Definition "Canonical
-// Compilation" --- and sGLP, sections/simulation.tex, Definition "Simulation
-// Program", with sections/implementation.tex.  vGLP's code task of
-// 2026-10-01, Part 1, covering tests (i)--(iii).
+// Compilation".  vGLP's code task of 2026-10-01, Part 1, tests (ii) and (iii),
+// with their texts following the task of 2026-10-02 00:13 UTC, items B' and F,
+// and vGLP #5 Cowork's of 2026-10-03 08:16 UTC, item 1: (_) and the handle
+// are out of the language (Udi, 2026-10-03, as vGLP reports it).
 //
-// (i) The .vglp sources of Integration's hand-compiled fixtures,
-//     programs/tests/vglp/person_asks*/, compile to the fixtures,
-//     programs/tests/sglp/person_asks*.glp, up to the names of the asking
-//     clause and of the (n+1)-ary procedure, and the compiled programs run as
-//     the fixtures do, log line for log line.
-// (ii) Outside a population a reader-mode question and a writer-mode one
-//     compile to construct(T, X), and a (_) clause emits close.
-// (iii) The nine .vglp sources in the old syntax are not in the paper's, and
-//     keep their old compilation.
-//
-// Fixtures that must be programs are written under programs/ and removed
-// again, as load_test.dart's are: the ancestor scope chain ends there.
+// (ii) A reader-mode question and a writer-mode one compile to their asking
+//     clauses, which send ask(T, t(X)) on the ask stream, and to their
+//     clauses with the ask stream and nothing else added; every procedure
+//     that reaches a question carries an ask stream, the body's merged into
+//     the head's.  The anonymous variable as the interactive term is refused
+//     in either mode.
+// F   The ask streams: which procedures reach a question, the merges, and the
+//     types the compilation adds.
+// (iii) Each .vglp source in the tree, asked what it is: one in the old
+//     syntax is not in the paper's, and keeps its old compilation; one
+//     declaring a volitional procedure is in the paper's.
 
 import 'dart:io';
 
 import 'package:test/test.dart';
-import 'package:glp_runtime/compiler/ast.dart';
+import 'package:glp_runtime/compiler/ast.dart' show UnderscoreTerm;
 import 'package:glp_runtime/compiler/error.dart';
 import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/parser.dart';
-import 'package:glp_runtime/compiler/program_linker.dart';
-import 'package:glp_runtime/engine/glp_engine.dart';
-import 'package:glp_runtime/runtime/scheduler.dart';
-import 'package:glp_runtime/runtime/terms.dart' as rt;
+import 'package:glp_runtime/compiler/token.dart';
 import 'package:glp_runtime/vglp/canonical.dart';
-import 'package:glp_runtime/vglp/mediator.dart' show printTypeDef;
 import 'package:glp_runtime/vglp/program_compilation.dart'
     show compiledHeader, compileVglpSource;
-import 'package:glp_runtime/analysis/type_checker/type_ast.dart'
-    show ProcDecl;
-import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart'
-    show setRootScopeEnvironmentSource;
 
 const _programs = '../programs';
-final _root = File('$_programs/self.glp').absolute.path;
 
-String _vglp(String name) =>
-    File('$_programs/tests/vglp/$name/$name.vglp').readAsStringSync();
-String _fixture(String name) =>
-    File('$_programs/tests/sglp/$name.glp').absolute.path;
+String _vglp(String dir, String name) =>
+    File('$_programs/tests/vglp/$dir/$name.vglp').readAsStringSync();
 
-// ---------------------------------------------------------------------------
-// A module up to the names of its procedures and of its clauses' variables
-// ---------------------------------------------------------------------------
-
-/// The normal form of [m], its procedures renamed by [names] and each
-/// clause's variables named by first occurrence: what two modules that are
-/// equal up to those names share.
-Map<String, Object> _normalForm(Module m, Map<String, String> names) {
-  String n(String s) => names[s] ?? s;
-  String sig(String s) {
-    final slash = s.lastIndexOf('/');
-    return '${n(s.substring(0, slash))}${s.substring(slash)}';
+/// The .vglp sources under [dir], walked one directory at a time.  Not the
+/// fixtures other tests write under programs/ and remove, `<stem>_<pid>_<time>/`,
+/// which run beside this one: a recursive listing that meets one as it is
+/// removed throws, and failed the load of this file (2026-10-02, beside
+/// load_test.dart's vglp_load_fixture_*).  A directory gone before it is
+/// listed is skipped for the same reason.
+List<File> _vglpSources(Directory dir) {
+  final found = <File>[];
+  List<FileSystemEntity> entries;
+  try {
+    entries = dir.listSync(followLinks: false);
+  } on FileSystemException {
+    return found;
   }
-
-  ProcDecl decl(ProcDecl d) => ProcDecl(n(d.name), d.argTypes, d.line, d.column,
-      typeParams: d.typeParams, exported: d.exported, imported: d.imported,
-      modulePath: d.modulePath);
-
-  final printer = SourcePrinter();
-  return {
-    'types': [for (final t in m.typeDefs) printTypeDef(t)],
-    'declarations': {
-      for (final d in m.procDeclarations) sig(d.key): printDeclaration(decl(d))
-    },
-    'procedures': {
-      for (final p in m.procedures)
-        sig(p.signature): [
-          for (final c in p.clauses) printer.printClause(_renamed(c, n))
-        ]
-    },
-    'kinds': [
-      for (final k in m.kinds)
-        [
-          k.name,
-          [for (final d in k.personDecls) '${d.typeKey} =::= ${d.procedure}'],
-          (k.procedureSigs.map(sig).toList()..sort()),
-        ]
-    ],
-    'run': m.runDecl == null
-        ? 'none'
-        : '${m.runDecl!.agents} ${m.runDecl!.untilSeconds} ${m.runDecl!.seed} '
-            '${m.runDecl!.mixes.map((x) => '${x.dimension}~${x.entries.map((e) => '${e.kind}:${e.probability}').join(';')}').join(',')}',
-  };
+  for (final e in entries) {
+    final name = e.path.split(Platform.pathSeparator).last;
+    if (e is Directory) {
+      if (RegExp(r'_\d+_\d+$').hasMatch(name)) continue;
+      found.addAll(_vglpSources(e));
+    } else if (e is File && name.endsWith('.vglp')) {
+      found.add(e);
+    }
+  }
+  return found;
 }
 
-Clause _renamed(Clause c, String Function(String) n) {
-  final vars = <String, String>{};
-  Term term(Term t) {
-    if (t is VarTerm) {
-      return VarTerm(vars.putIfAbsent(t.name, () => 'V${vars.length + 1}'),
-          t.isReader, t.line, t.column);
+/// Whether [text] holds a volition guard, the old Definition's ("Guarded
+/// Clause, Volition-Guarded Clause, Volition Guard, ..."): an item --- a
+/// declaration, a definition or a clause --- beginning with `*`, bare or
+/// `*(...)`, before the clause it guards.  Read off the tokens, since the
+/// parser does not read every old source (CSSN's two, with guard negation,
+/// which is not GLP syntax).
+bool _holdsVolitionGuard(String text) {
+  final tokens = Lexer(text).tokenize();
+  var depth = 0;
+  var start = true;
+  for (final t in tokens) {
+    if (start && t.type == TokenType.STAR) return true;
+    start = false;
+    switch (t.type) {
+      case TokenType.LPAREN:
+      case TokenType.LBRACKET:
+        depth++;
+      case TokenType.RPAREN:
+      case TokenType.RBRACKET:
+        depth--;
+      case TokenType.DOT:
+        if (depth == 0) start = true;
+      default:
+        break;
     }
-    if (t is StructTerm) {
-      return StructTerm(t.functor, t.args.map(term).toList(), t.line, t.column);
-    }
-    if (t is ListTerm) {
-      if (t.isNil) return t;
-      return ListTerm(t.head == null ? null : term(t.head!),
-          t.tail == null ? null : term(t.tail!), t.line, t.column);
-    }
-    return t;
   }
-
-  Goal goal(Goal g) {
-    if (g is RatedGoal) return g.withInner(goal(g.innerGoal));
-    return Goal(n(g.functor), g.args.map(term).toList(), g.line, g.column);
-  }
-
-  final head = Atom(n(c.head.functor), c.head.args.map(term).toList(),
-      c.head.line, c.head.column);
-  final guards = [
-    for (final g in c.guards ?? const <Guard>[])
-      Guard(g.predicate, g.args.map(term).toList(), g.line, g.column,
-          negated: g.negated)
-  ];
-  final body = c.body?.map(goal).toList();
-  return Clause(head, guards: guards, body: body, line: c.line, column: c.column);
+  return false;
 }
 
-Module _parse(String text) => Parser(Lexer(text).tokenize()).parseModule();
-
-/// The names the fixtures give: the asking clause the source name, and the
-/// (n+1)-ary procedure the source name with 1.
-Map<String, String> _fixtureNames(CanonicalProgram c) =>
-    {for (final v in c.volitional) v.guardedName: '${v.name}1'};
-
-// ---------------------------------------------------------------------------
-// Runs
-// ---------------------------------------------------------------------------
-
-/// A run's outcome as text: its status, its error, its bindings and its log.
-Future<List<String>> _run(String path, String goal, List<int?> agents) async {
-  final engine = GlpEngine(rootSelfGlpPath: _root)..loadFile(path);
-  final lines = <String>[];
-  engine.onSimulationLog = lines.add;
-  final r = await engine.runGoal(goal, agents: agents);
-  return [
-    'status ${r.status}',
-    'error ${r.error}',
-    for (final e in r.bindings.entries) 'binding ${e.key} = ${e.value}',
-    ...lines,
-  ];
+/// Whether [text], its widget declarations set aside, declares a volitional
+/// procedure, `procedure (T)*p(...)` (vGLP, Definition "Guarded Clause,
+/// Volitional Procedure, ..."), as the parser's vGLP mode reads it.
+bool _declaresVolitionalProcedure(String text) {
+  final stripped =
+      text.contains('=::=') ? extractWidgetDeclarations(text).stripped : text;
+  return Parser(Lexer(stripped).tokenize(), vglp: true)
+      .parseModule()
+      .volitionalDeclarations
+      .isNotEmpty;
 }
-
-const _runs = <String, (String, List<int?>)>{
-  'person_asks': ('agent(1, 2, A), agent(2, 2, B), agent(3, 2, C)', [1, 2, 3]),
-  'person_asks_writer': (
-    'start(a, [c], [b, d], [msg(b, offer(b))], O1), '
-        'start(b, [d], [a, c], [], O2)',
-    [1, 2]
-  ),
-  'person_asks_coins': (
-    'start(a, [b], O2?, O1), start(b, [a], O1?, O2)',
-    [1, 2]
-  ),
-};
 
 void main() {
-  if (File(_root).existsSync()) {
-    setRootScopeEnvironmentSource(File(_root).readAsStringSync());
-  }
-
-  final temporary = <Directory>[];
-  Directory scratch(String stem) {
-    final d = Directory('$_programs/${stem}_${pid}_'
-        '${DateTime.now().microsecondsSinceEpoch}')
-      ..createSync();
-    temporary.add(d);
-    return d;
-  }
-
-  tearDown(() {
-    for (final d in temporary) {
-      if (d.existsSync()) d.deleteSync(recursive: true);
-    }
-    temporary.clear();
-  });
-
-  group('(i) the fixtures\' sources compile to the fixtures', () {
-    for (final name in _runs.keys) {
-      test('$name.vglp compiles to $name.glp, up to the names of 2', () {
-        final compiled = compileCanonical(_vglp(name));
-        expect(compiled.population, isTrue,
-            reason: 'the source declares a population');
-        expect(_normalForm(compiled.module, _fixtureNames(compiled)),
-            _normalForm(_parse(File(_fixture(name)).readAsStringSync()), {}));
-      });
-
-      test('$name: the compiled program, emitted by :emit, runs as the '
-          'fixture does, log line for log line', () async {
-        final dir = scratch('vglp_canonical_run');
-        File('${dir.path}/$name.vglp').writeAsStringSync(_vglp(name));
-        final written = emitVglpSources(dir.path, rootSelfGlpPath: _root);
-        expect(written, hasLength(1));
-        final emitted = File(written.single).readAsStringSync();
-        expect(emitted, compileCanonical(_vglp(name)).source);
-
-        final (goal, agents) = _runs[name]!;
-        final fixture = await _run(_fixture(name), goal, agents);
-        expect(fixture.first, isNot('status ${ExecutionStatus.failed}'));
-        expect(fixture.length, greaterThan(3), reason: 'the run logs');
-        expect(await _run(written.single, goal, agents), fixture);
-      });
-    }
-
-    test('the asking clause, by mode: reader mode passes person/2 the writer '
-        'and the clauses the reader; writer mode the other way about', () {
-      final reader = compileCanonical(_vglp('person_asks')).source;
-      expect(reader,
-          contains("ask(S1, S2?) :- person('Pick?', X), ask1(S1?, S2, X?)."));
-      expect(reader, contains('procedure ask(Integer?, Choice).'));
-      expect(reader, contains('procedure ask1(Integer?, Choice, Pick?).'));
-
-      final writer = compileCanonical(_vglp('person_asks_writer')).source;
-      expect(writer, contains("ask(S1, S2, S3?) :- person('Menu', X?), "
-          'ask1(S1?, S2?, S3, X).'));
-      expect(writer, contains("respond(S1, S2?) :- person('Card', X?), "
-          'respond1(S1?, S2, X).'));
-      expect(writer, contains('procedure respond1(Peer?, YesNo, Card).'));
-    });
-  });
-
-  group('(ii) outside a population', () {
+  group('(ii) a reader-mode question and a writer-mode one', () {
     late String q;
-    setUp(() => q = compileCanonical(_vglp('questions')).source);
+    setUp(() => q = compileCanonical(_vglp('fragments', 'questions')).source);
 
-    test('a reader-mode question, (Request?), compiles to construct', () {
+    test('a reader-mode question, (Stream(Request)?), sends its ask with the '
+        'writer of its interactive variable, and the asked goal gets the '
+        'reader', () {
       expect(
           q,
-          contains("agent(S1, S2, S3?) :- construct('Request?', X), "
-              'agent1(S1?, S2?, S3, X?).'));
-      expect(q, contains('procedure agent(Peer?, Stream(Msg)?, Stream(String)).'));
-      expect(q,
-          contains('procedure agent1(Peer?, Stream(Msg)?, Stream(String), Request?).'));
-      expect(q, contains('agent1(_, _, [], quit).'));
+          contains("agent(S1, S2, S3?, [ask('Stream(Request)?', "
+              'stream_request_r(X)) | D?]) :- agent1(S1?, S2?, S3, X?, D).'));
+      expect(
+          q,
+          contains('exported procedure agent(Peer?, Stream(Msg)?, '
+              'Stream(String), Stream(Ask(Question))).'));
+      expect(
+          q,
+          contains('procedure agent1(Peer?, Stream(Msg)?, Stream(String), '
+              'Stream(Request)?, Stream(Ask(Question))).'));
+      expect(
+          q,
+          contains('agent1(Id, NetIn, Outs?, Reqs, D?) :- '
+              'serve(Reqs?, Id?, NetIn?, Outs, D).'));
     });
 
-    test('a writer-mode question, (Card), compiles to construct', () {
+    test('a writer-mode question, (Card), sends its ask with the reader, and '
+        'the asked goal gets the writer', () {
       expect(
           q,
-          contains("respond_coldcall(S1, S2?) :- construct('Card', X?), "
-              'respond_coldcall1(S1?, S2, X).'));
-      expect(q, contains('procedure respond_coldcall1(Offer?, Response, Card).'));
+          contains("respond_coldcall(S1, S2?, [ask('Card', card_w(X?)) | "
+              'D?]) :- respond_coldcall1(S1?, S2, X, D).'));
       expect(
           q,
-          contains('respond_coldcall1(offer(From), Resp?, card(From?, Answer)) '
-              ':- ground(From?) | decide(Answer?, From?, Resp).'));
+          contains('procedure respond_coldcall1(Offer?, Response, Card, '
+              'Stream(Ask(Question))).'));
+      expect(
+          q,
+          contains('respond_coldcall1(offer(From), Resp?, card(From?, Answer), '
+              '[]) :- ground(From?) | decide(Answer?, From?, Resp).'));
     });
 
-    test('a (_) clause is given a fresh writer and the body goal close of '
-        'its reader', () {
+    test('serve, ordinary GLP, reaches a question: its message clause, which '
+        'reads no request, merges its two calls\' ask streams into its own, '
+        'and a clause that calls none carries []', () {
       expect(
           q,
-          contains('agent1(Id, [msg(Id1, friend_request(From, Resp?)) | NetIn], '
-              'Outs?, A) :- (Id? =?= Id1?), ground(From?) | '
-              'respond_coldcall(offer(From?), Resp), agent(Id?, NetIn?, Outs), '
-              'close(A?).'));
+          contains('procedure serve(Stream(Request)?, Peer?, Stream(Msg)?, '
+              'Stream(String), Stream(Ask(Question))).'));
+      expect(
+          q,
+          contains('serve(Reqs, Id, [msg(Id1, friend_request(From, Resp?)) | '
+              'NetIn], Outs?, D?) :- (Id? =?= Id1?), ground(From?) | '
+              'respond_coldcall(offer(From?), Resp, D1), '
+              'serve(Reqs?, Id?, NetIn?, Outs, D2), merge(D1?, D2?, D).'));
+      expect(q, contains('serve([quit | _], _, _, [], []).'));
+      expect(q, isNot(contains('close(')));
+      expect(q, isNot(contains('withdraw')));
     });
 
-    test('no person/2, and no "true |" in an asking clause', () {
-      expect(q, isNot(contains('person(')));
+    test('a procedure that reaches no question is unchanged', () {
+      expect(q, contains('procedure decide(YesNo?, Peer?, Response).'));
+      expect(q, contains('decide(yes, From, accept(From?)).'));
+      expect(q, contains('decide(no, From, refuse(From?)).'));
+    });
+
+    test('the types the compilation adds: the questions, one functor per '
+        'moded interactive type wrapping it as written, and, with no '
+        'dispatcher\'s generic source to define it, one ask/2 over their '
+        'union; no handle', () {
+      expect(
+          q,
+          contains('Question ::= stream_request_r(Stream(Request)?) ; '
+              'card_w(Card).'));
+      expect(q, contains('Ask(Q) ::= ask(Constant, Q).'));
+      expect(q, isNot(contains('Handle')));
+    });
+
+    test('no construct goal, and no "true |" in an asking clause', () {
+      expect(q, isNot(contains('construct(')));
       expect(q, isNot(contains(':- true |')));
       expect(q, startsWith(compiledHeader));
-    });
-
-    test('the same source in a program that declares a population elsewhere '
-        'calls person/2', () {
-      final p = compileCanonical(_vglp('questions'), population: true).source;
-      expect(p, contains("person('Request?', X)"));
-      expect(p, contains("person('Card', X?)"));
-      expect(p, isNot(contains('construct(')));
     });
   });
 
@@ -301,32 +208,19 @@ send_all(Peer, [M|Ms], [msg(Peer?, M?)|Out?]) :-
     ground(Peer?) | send_all(Peer?, Ms?, Out).
 send_all(_, [], []).
 ''');
-      expect(s, contains("chat(S1, S2?) :- construct('Stream(String)?', X), "
-          'chat1(S1?, S2, X?).'));
-      expect(s,
-          contains('procedure chat1(Peer?, Stream(Msg), Stream(String)?).'));
-      expect(s, contains('chat1(Peer, Out?, Ms) :- ground(Peer?) | '
+      expect(
+          s,
+          contains("chat(S1, S2?, [ask('Stream(String)?', "
+              'stream_string_r(X)) | D?]) :- chat1(S1?, S2, X?, D).'));
+      expect(
+          s,
+          contains('procedure chat1(Peer?, Stream(Msg), Stream(String)?, '
+              'Stream(Ask(Question))).'));
+      expect(s, contains('chat1(Peer, Out?, Ms, []) :- ground(Peer?) | '
           'send_all(Peer?, Ms?, Out).'));
-    });
-
-    test('a (_) unit clause, and a (_) clause whose body is true', () {
-      final s = compile('''
-T ::= t.
-procedure (T?)*p(Integer?).
-(_)*p(0).
-(_)*p(N) :- N? > 0 | true.
-''');
-      expect(s, contains('p1(0, A) :- close(A?).'));
-      expect(s, contains('p1(N, A) :- (N? > 0) | close(A?).'));
-    });
-
-    test('the fresh writer of a (_) clause is fresh in the clause', () {
-      final s = compile('''
-T ::= t.
-procedure (T?)*p(Integer?, Integer).
-(_)*p(A, A?).
-''');
-      expect(s, contains('p1(A, A?, A1) :- close(A1?).'));
+      expect(s,
+          contains('Question ::= stream_string_r(Stream(String)?).'));
+      expect(s, contains('Ask(Q) ::= ask(Constant, Q).'));
     });
 
     test('a nullary volitional procedure, and exported, and a parameter '
@@ -339,13 +233,23 @@ exported procedure (T?)*go.
 procedure(X) (Box(X)?)*take(X).
 (box(V))*take(V?).
 ''');
-      expect(s, contains('exported procedure go().'));
-      expect(s, contains("go :- construct('T?', X), go1(X?)."));
-      expect(s, contains('procedure go1(T?).'));
-      expect(s, contains('go1(t).'));
-      expect(s, contains('procedure(X) take(X).'));
-      expect(s, contains('procedure(X) take1(X, Box(X)?).'));
-      expect(s, contains("take(S1?) :- construct('Box(X)?', X), take1(S1, X?)."));
+      // The questions take the parameter an interactive type names, and every
+      // declaration with an ask stream takes it with them.
+      expect(s,
+          contains('exported procedure(X) go(Stream(Ask(Question(X)))).'));
+      expect(s, contains("go([ask('T?', t_r(X)) | D?]) :- go1(X?, D)."));
+      expect(s, contains('procedure(X) go1(T?, Stream(Ask(Question(X)))).'));
+      expect(s, contains('go1(t, []).'));
+      expect(s, contains('procedure(X) take(X, Stream(Ask(Question(X)))).'));
+      expect(s,
+          contains('procedure(X) take1(X, Box(X)?, '
+              'Stream(Ask(Question(X)))).'));
+      expect(
+          s,
+          contains("take(S1?, [ask('Box(X)?', box_x_r(X)) | D?]) :- "
+              'take1(S1, X?, D).'));
+      expect(s, contains('Question(X) ::= t_r(T?) ; box_x_r(Box(X)?).'));
+      expect(s, contains('Ask(Q) ::= ask(Constant, Q).'));
     });
 
     test('the (n+1)-ary procedure\'s name is fresh against the program\'s', () {
@@ -357,8 +261,166 @@ procedure ask1(Integer?).
 ask1(_).
 ''');
       expect(c.volitional.single.guardedName, 'ask1_1');
-      expect(c.source, contains("ask(S1) :- construct('T?', X), ask1_1(S1?, X?)."));
-      expect(c.source, contains('ask1_1(N, t) :- ground(N?) | ask1(N?).'));
+      expect(
+          c.source,
+          contains("ask(S1, [ask('T?', t_r(X)) | D?]) :- "
+              'ask1_1(S1?, X?, D).'));
+      expect(c.source,
+          contains('ask1_1(N, t, []) :- ground(N?) | ask1(N?).'));
+      expect(c.source, contains('procedure ask1(Integer?).'));
+    });
+
+    test('_? at a produced head position is emitted _?, TGLP\'s anonymous '
+        'output, in a clause of a volitional procedure and in an ordinary '
+        'one', () {
+      final c = compileCanonical('''
+T ::= t.
+procedure (T?)*p(Integer?, Integer).
+(t)*p(_, _?).
+procedure q(Integer?, Integer).
+q(_, _?).
+''');
+      expect(c.source, contains('p1(_, _?, t, []).'));
+      expect(c.source, contains('q(_, _?).'));
+      for (final name in ['p1', 'q']) {
+        final head = c.module.procedures
+            .firstWhere((p) => p.name == name)
+            .clauses
+            .single
+            .head;
+        expect(head.args[0],
+            isA<UnderscoreTerm>().having((u) => u.isReader, 'isReader', isFalse),
+            reason: name);
+        expect(head.args[1],
+            isA<UnderscoreTerm>().having((u) => u.isReader, 'isReader', isTrue),
+            reason: name);
+      }
+    });
+
+    group('the anonymous variable as the interactive term is refused, in '
+        'either mode, with the reason', () {
+      // "the interactive term A is a term of type T, possibly a variable but
+      // not the anonymous variable" (Definition "Guarded Clause, ..." at
+      // c994328); an anonymous variable is any variable whose name begins
+      // with _ (GLP-Spec, Remark "Anonymous Variables"), so _Name is refused
+      // as _ is.  vGLP #5 Cowork 2026-10-03 08:16 UTC, item 1: c641358a's
+      // writer-mode refusal widened to both modes, and 80953e04's treatment of
+      // _Name as the anonymous variable made the same refusal.
+      Matcher refusal(String clause, String mode, int line) =>
+          throwsA(isA<CompileError>()
+              .having(
+                  (e) => e.message,
+                  'message',
+                  allOf(
+                      contains('The clause $clause '),
+                      contains('is in $mode mode'),
+                      contains('the interactive term is not the anonymous '
+                          'variable (vGLP, Definition "Guarded Clause, '
+                          'Volitional Procedure, ...")')))
+              .having((e) => e.line, 'line', line));
+
+      const reader = '''
+YesNo ::= yes ; no.
+procedure (YesNo?)*ask(Integer?, Integer).
+(yes)*ask(N, N?).
+''';
+      const writer = '''
+YesNo ::= yes ; no.
+Note ::= note(YesNo).
+procedure (Note)*tell(YesNo?).
+(note(A?))*tell(A).
+''';
+
+      test('in reader mode, (_)', () {
+        expect(() => compile('$reader(_)*ask(_, 0).\n'),
+            refusal('(_)*ask(_, 0)', 'reader', 4));
+      });
+
+      test('in reader mode, (_?)', () {
+        expect(() => compile('$reader(_?)*ask(_, 0).\n'),
+            refusal('(_?)*ask(_, 0)', 'reader', 4));
+      });
+
+      test('in reader mode, (_Name)', () {
+        expect(() => compile('$reader(_Answer)*ask(_, 0).\n'),
+            refusal('(_Answer)*ask(_, 0)', 'reader', 4));
+      });
+
+      test('in reader mode, (_Name?)', () {
+        expect(() => compile('$reader(_Answer?)*ask(_, 0).\n'),
+            refusal('(_Answer?)*ask(_, 0)', 'reader', 4));
+      });
+
+      test('in reader mode, a (_) unit clause, a (_) clause whose body is '
+          'true, and one whose head passes a pair', () {
+        expect(() => compile('''
+T ::= t.
+procedure (T?)*p(Integer?).
+(_)*p(0).
+'''), refusal('(_)*p(0)', 'reader', 3));
+        expect(() => compile('''
+T ::= t.
+procedure (T?)*p(Integer?).
+(t)*p(1).
+(_)*p(N) :- N? > 0 | true.
+'''), refusal('(_)*p(N)', 'reader', 4));
+        expect(() => compile('''
+T ::= t.
+procedure (T?)*p(Integer?, Integer).
+(_)*p(A, A?).
+'''), refusal('(_)*p(A, A?)', 'reader', 3));
+      });
+
+      test('in writer mode, (_)', () {
+        expect(() => compile('$writer(_)*tell(no).\n'),
+            refusal('(_)*tell(no)', 'writer', 5));
+      });
+
+      test('in writer mode, (_?)', () {
+        expect(() => compile('$writer(_?)*tell(no).\n'),
+            refusal('(_?)*tell(no)', 'writer', 5));
+      });
+
+      test('in writer mode, (_Name)', () {
+        expect(() => compile('$writer(_Note)*tell(no).\n'),
+            refusal('(_Note)*tell(no)', 'writer', 5));
+      });
+
+      test('in writer mode, (_Name?)', () {
+        expect(() => compile('$writer(_Note?)*tell(no).\n'),
+            refusal('(_Note?)*tell(no)', 'writer', 5));
+      });
+
+      test('a nullary procedure\'s (_) clause is named too, in either mode',
+          () {
+        expect(() => compile('''
+Note ::= note.
+procedure (Note)*tell.
+(note)*tell.
+(_)*tell :- true | true.
+'''), refusal('(_)*tell', 'writer', 4));
+        expect(() => compile('''
+Note ::= note.
+procedure (Note?)*hear.
+(_)*hear.
+'''), refusal('(_)*hear', 'reader', 3));
+      });
+
+      test('the anonymous variable inside the interactive term is not the '
+          'interactive term, and is not refused: the clause drops the reader '
+          'of a question inside its output', () {
+        // "A reader the program drops leaves its construct on screen, showing
+        // what the program writes into it" (sections/elicitation.tex, the
+        // paragraph before Definition "Canonical Compilation").
+        final s = compile('''
+Peer ::= Constant.
+YesNo ::= yes ; no.
+Card ::= card(Peer, YesNo?).
+procedure (Card)*show(Peer?).
+(card(P?, _))*show(P).
+''');
+        expect(s, contains('show1(P, card(P?, _), []).'));
+      });
     });
 
     group('is refused', () {
@@ -419,37 +481,309 @@ q(X) :- p(0, X?).
     });
   });
 
+  group('F: the ask streams', () {
+    test('a procedure reaches a question if it is volitional or a clause of '
+        'it calls one that does, the least fixpoint; one that does not is '
+        'unchanged', () {
+      final c = compileCanonical('''
+T ::= t.
+procedure (T?)*q(Integer?).
+(t)*q(_).
+procedure r(Integer?).
+r(N) :- q(N?).
+procedure p(Integer?).
+p(N) :- r(N?).
+p(0).
+procedure s(Integer?).
+s(N) :- s1(N?).
+procedure s1(Integer?).
+s1(_).
+''');
+      expect(c.reaching, {'q/1', 'r/1', 'p/1'});
+      expect(c.source,
+          contains('procedure p(Integer?, Stream(Ask(Question))).'));
+      expect(c.source, contains('p(N, D?) :- r(N?, D).'));
+      expect(c.source, contains('p(0, []).'));
+      expect(c.source,
+          contains('procedure r(Integer?, Stream(Ask(Question))).'));
+      expect(c.source, contains('r(N, D?) :- q(N?, D).'));
+      expect(c.source, contains('procedure s(Integer?).'));
+      expect(c.source, contains('s(N) :- s1(N?).'));
+      expect(c.source, contains('s1(_).'));
+    });
+
+    test('mutual recursion reaches through the cycle', () {
+      final c = compileCanonical('''
+T ::= t.
+procedure (T?)*q(Integer?).
+(t)*q(_).
+procedure a(Integer?).
+a(N) :- b(N?).
+procedure b(Integer?).
+b(0) :- q(0).
+b(N) :- N? > 0 | a(N?).
+''');
+      expect(c.reaching, {'q/1', 'a/1', 'b/1'});
+      expect(c.source, contains('b(0, D?) :- q(0, D).'));
+      expect(c.source, contains('b(N, D?) :- (N? > 0) | a(N?, D).'));
+    });
+
+    test('one call is given D, two are merged into it, three by a chain of '
+        'merges, and the names are fresh in the clause', () {
+      final c = compileCanonical('''
+T ::= t.
+procedure (T?)*q(Integer?).
+(t)*q(_).
+procedure m(Integer?, Integer?).
+m(A, D) :- q(A?), q(D?), q(0).
+m(1, B) :- q(B?), q(1).
+m(2, B) :- q(B?).
+m(0, _).
+''');
+      expect(
+          c.source,
+          contains('m(A, D, D1?) :- q(A?, D2), q(D?, D3), q(0, D4), '
+              'merge(D2?, D3?, D5), merge(D5?, D4?, D1).'));
+      expect(c.source,
+          contains('m(1, B, D?) :- q(B?, D1), q(1, D2), merge(D1?, D2?, D).'));
+      expect(c.source, contains('m(2, B, D?) :- q(B?, D).'));
+      expect(c.source, contains('m(0, _, []).'));
+    });
+
+    test('a remote call calls no procedure of the program and is not given '
+        'an ask stream, though it names one that reaches a question', () {
+      final c = compileCanonical('''
+T ::= t.
+procedure (T?)*q(Integer?).
+(t)*q(_).
+procedure p(Integer?).
+p(N) :- lib # q(N?).
+''');
+      expect(c.reaching, {'q/1'});
+      expect(c.source, contains('p(N) :- lib # q(N?).'));
+    });
+
+    test('an interactive type shared by two procedures is one alternative of '
+        'the questions\' union', () {
+      final s = compileCanonical('''
+T ::= t.
+procedure (T?)*p(Integer?).
+(t)*p(_).
+procedure (T?)*q(Integer?).
+(t)*q(_).
+''').source;
+      expect(s, contains('Question ::= t_r(T?).'));
+      expect(s, contains('Ask(Q) ::= ask(Constant, Q).'));
+    });
+
+    test('the types it adds are named fresh against the program\'s', () {
+      final c = compileCanonical('''
+Ask ::= a.
+Handle ::= h.
+Question ::= q.
+procedure (Ask?)*p(Handle?).
+(a)*p(_).
+''');
+      expect(c.askType, 'Ask_1');
+      expect(c.questionType, 'Question_1');
+      expect(c.source, contains('Question_1 ::= ask_r(Ask?).'));
+      expect(c.source, contains('Ask_1(Q) ::= ask(Constant, Q).'));
+      expect(c.source,
+          contains('procedure p1(Handle?, Ask?, Stream(Ask_1(Question_1))).'));
+      // The program's Handle is its own; the compilation adds none.
+      expect(c.source, isNot(contains('Handle_1')));
+    });
+
+    test('an exported procedure that reaches a question keeps exported, and its '
+        'ask stream is the last argument', () {
+      final s = compileCanonical('''
+T ::= t.
+procedure (T?)*q(Integer?).
+(t)*q(_).
+exported procedure go(Integer?).
+go(N) :- q(N?).
+''').source;
+      expect(s,
+          contains('exported procedure go(Integer?, Stream(Ask(Question))).'));
+      expect(s, contains('go(N, D?) :- q(N?, D).'));
+    });
+  });
+
+  group('an imported volitional procedure (vGLP at 7bf50ee, Definition '
+      '"Canonical Compilation", its last sentence)', () {
+    // "A declaration imported procedure (T)*N#p(T1, ..., Tn). of a volitional
+    // procedure of another module N is compiled as its export is, to the
+    // import of p with its ask stream added, and T joins the interactive
+    // types of M: the type of the asks has its functor and ⌈M⌉ its construct
+    // process, so an ask of p on a caller's ask stream is served as any
+    // other."  vGLP's task of 2026-10-10 09:06 UTC.  The runs, the question
+    // answered through the importer's own dispatcher, are elicitation_test's.
+    const types = '''
+Peer     ::= Constant.
+YesNo    ::= yes ; no.
+Offer    ::= offer(Peer).
+Response ::= accept(Peer) ; refuse(Peer).
+Card     ::= card(Peer, YesNo?).
+''';
+
+    test('is compiled as its export is, to the import of p with its ask stream '
+        'added; a call of it reaches a question and is given an ask stream, '
+        'keeping p\'s name; and its type joins the questions', () {
+      final c = compileCanonical('''
+$types
+imported procedure (Card)*responder#respond(Offer?, Response).
+
+exported procedure befriend(Peer?, Response).
+befriend(P, R?) :- ground(P?) | responder # respond(offer(P?), R).
+''');
+      expect(
+          c.source,
+          contains('imported procedure responder#respond(Offer?, Response, '
+              'Stream(Ask(Question))).'));
+      expect(c.source, isNot(contains('respond(Offer?, Response, Card)')));
+      expect(
+          c.source,
+          contains('exported procedure befriend(Peer?, Response, '
+              'Stream(Ask(Question))).'));
+      expect(
+          c.source,
+          contains('befriend(P, R?, D?) :- ground(P?) | '
+              'responder # respond(offer(P?), R, D).'));
+      expect(c.source, contains('Question ::= card_w(Card).'));
+      expect(c.reaching, {'befriend/2'});
+      expect(c.functors, {'Card': 'card_w'});
+      expect(c.volitional, isEmpty);
+      // No asking clause and no clauses of p: they are the module N's.
+      expect(c.module.procedures.map((p) => p.signature), ['befriend/3']);
+    });
+
+    test('its interactive type joins the program\'s own, in the order of the '
+        'declarations, a reader-mode one t_r; calls of both merged', () {
+      final c = compileCanonical('''
+$types
+Note    ::= note(String).
+Request ::= post(String) ; quit.
+
+exported procedure (Note?)*jot(Note).
+(N)*jot(N?).
+
+imported procedure (Stream(Request)?)*agent#agent(Peer?, Stream(String)).
+
+procedure go(Peer?, Note, Stream(String)).
+go(P, N?, Outs?) :- agent # agent(P?, Outs), jot(N).
+''');
+      expect(c.source,
+          contains('Question ::= note_r(Note?) ; '
+              'stream_request_r(Stream(Request)?).'));
+      expect(
+          c.source,
+          contains('imported procedure agent#agent(Peer?, Stream(String), '
+              'Stream(Ask(Question))).'));
+      expect(
+          c.source,
+          contains('go(P, N?, Outs?, D?) :- agent # agent(P?, Outs, D1), '
+              'jot(N, D2), merge(D1?, D2?, D).'));
+      expect(c.functors,
+          {'Note?': 'note_r', 'Stream(Request)?': 'stream_request_r'});
+      expect(c.reaching, {'jot/1', 'go/3'});
+    });
+
+    test('a type shared with a volitional procedure of the program\'s own is '
+        'one alternative of the questions', () {
+      final s = compileCanonical('''
+$types
+exported procedure (Card)*show(Offer?).
+(card(P?, _))*show(offer(P)).
+
+imported procedure (Card)*responder#respond(Offer?, Response).
+''').source;
+      expect(s, contains('Question ::= card_w(Card).'));
+      expect(
+          s,
+          contains('imported procedure responder#respond(Offer?, Response, '
+              'Stream(Ask(Question))).'));
+    });
+
+    test('an import keeps the Definition\'s functor, the one its module\'s '
+        'asking clause writes, and a type of the program\'s own that coincides '
+        'with it is told apart', () {
+      final c = compileCanonical('''
+Stream_string ::= s(String).
+exported procedure (Stream_string)*p(Integer?).
+(s(_))*p(_).
+imported procedure (Stream(String))*n#q(Integer?).
+''');
+      expect(c.functors,
+          {'Stream(String)': 'stream_string_w', 'Stream_string': 'stream_string_w_2'});
+      expect(c.source,
+          contains("p(S1, [ask('Stream_string', stream_string_w_2(X?)) | D?])"));
+    });
+
+    test('a type parameter of the import\'s declaration is the questions\' '
+        'and the compiled import\'s', () {
+      final s = compileCanonical('''
+imported procedure(X) (Stream(X)?)*m#take(X?).
+''').source;
+      expect(s, contains('Question(X) ::= stream_x_r(Stream(X)?).'));
+      expect(
+          s,
+          contains('imported procedure(X) m#take(X?, '
+              'Stream(Ask(Question(X)))).'));
+    });
+
+    group('is refused', () {
+      void refused(String source, String why) => expect(
+          () => compileCanonical(source),
+          throwsA(isA<CompileError>()
+              .having((e) => e.message, 'message', contains(why))));
+
+      test('naming no module', () {
+        refused('''
+$types
+imported procedure (Card)*respond(Offer?, Response).
+''', 'names the module it is of');
+      });
+
+      test('called with n+1 arguments', () {
+        refused('''
+$types
+imported procedure (Card)*responder#respond(Offer?, Response).
+procedure go(Response, Card?).
+go(R?, C) :- responder # respond(offer(bob), R, C?).
+''', 'until it is asked');
+      });
+
+      test('two imported types with one functor', () {
+        refused('''
+Stream_string ::= s(String).
+imported procedure (Stream_string)*n#p(Integer?).
+imported procedure (Stream(String))*n#q(Integer?).
+''', 'so has another imported interactive type');
+      });
+    });
+  });
+
   group('(iii) the old syntax keeps its old compilation', () {
-    final sources = Directory(_programs)
-        .listSync(recursive: true)
-        .whereType<File>()
-        .where((f) => f.path.endsWith('.vglp'))
-        // Not the fixtures another test writes under programs/ and removes,
-        // <stem>_<pid>_<time>/, which run beside this one.
-        .where((f) => !RegExp(r'_\d+_\d+[/\\]').hasMatch(f.path))
-        .toList();
-    final paper = {
-      'person_asks.vglp',
-      'person_asks_writer.vglp',
-      'person_asks_coins.vglp',
-      'questions.vglp',
-      'graph.vglp'
-    };
+    final sources = _vglpSources(Directory(_programs));
     String base(File f) => f.path.split(Platform.pathSeparator).last;
 
-    test('the nine old sources are not in the paper\'s syntax, the five new '
-        'ones are', () {
-      final old = sources.where((f) => !paper.contains(base(f))).toList();
-      expect(old, hasLength(9), reason: old.map((f) => f.path).join('\n'));
-      for (final f in old) {
-        expect(isPaperSyntaxSource(f.readAsStringSync()), isFalse,
-            reason: f.path);
-      }
-      final fresh = sources.where((f) => paper.contains(base(f))).toList();
-      expect(fresh, hasLength(5));
-      for (final f in fresh) {
-        expect(isPaperSyntaxSource(f.readAsStringSync()), isTrue,
-            reason: f.path);
+    // Each source in the tree is asked what it is, and none is named or
+    // counted here (GLP #3 Cowork, 2026-10-10 07:48 UTC, "00:45. Q2").  Until
+    // 2026-10-10 the test counted nine old sources and named the two new
+    // ones, and went red when sGLP's two sources in the paper's syntax
+    // joined the tree (f264ccc6).
+    test('each source in the tree is asked what it is: one holding a '
+        'volition guard is not in the paper\'s syntax, one declaring a '
+        'volitional procedure is', () {
+      expect(sources, isNotEmpty);
+      for (final f in sources) {
+        final text = f.readAsStringSync();
+        final old = _holdsVolitionGuard(text);
+        final paper = !old && _declaresVolitionalProcedure(text);
+        expect(old || paper, isTrue,
+            reason: '${f.path} holds no volition guard and declares no '
+                'volitional procedure');
+        expect(isPaperSyntaxSource(text), paper, reason: f.path);
       }
     });
 
@@ -458,52 +792,6 @@ q(X) :- p(0, X?).
       final f = sources.firstWhere((f) => base(f) == 'responder.vglp');
       expect(() => compileVglpSource(f.readAsStringSync()),
           throwsA(isA<StateError>()));
-    });
-  });
-
-  group('the loader', () {
-    test('a directory program whose .vglp declares a population loads with '
-        'person/2 in scope, and its question is asked of the person', () async {
-      final dir = scratch('vglp_canonical_population');
-      File('${dir.path}/self.glp').writeAsStringSync('''
-Choice ::= left ; right.
-Ack    ::= ok(Integer).
-Pick   ::= pick(Choice, Ack?).
-
-imported procedure picker#agent(Integer?, Stream(Choice)).
-exported procedure agent(Integer?, Stream(Choice)).
-agent(N, Cs?) :- picker # agent(N?, Cs).
-''');
-      File('${dir.path}/picker.vglp').writeAsStringSync('''
-procedure (Pick?)*ask(Integer?, Choice).
-(pick(C, ok(N?)))*ask(N, C?).
-
-exported procedure agent(Integer?, Stream(Choice)).
-agent(N, [C?]) :- ground(N?) | ask(N?, C).
-
-procedure drop(Ack?).
-drop(_).
-
-person lefty.
-Pick? =::= lefty_pick.
-procedure lefty_pick(Pick, Integer?).
-lefty_pick(pick(left, A), _) :- drop(A?).
-
-run 1 agents [ hand ~ (lefty : 1.0) ] until 1 day seed 1.
-''');
-      final engine = GlpEngine(rootSelfGlpPath: _root);
-      expect(engine.loadProgram(dir.path), isTrue);
-      final lines = <String>[];
-      engine.onSimulationLog = lines.add;
-      final r = await engine.runGoal('agent(1, Cs)', agents: [1]);
-      expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
-      final heap = engine.runtime.heap;
-      final cs = heap.dereference(r.bindings['Cs'] as rt.Term);
-      expect(cs, isA<rt.StructTerm>());
-      final first = heap.dereference((cs as rt.StructTerm).args[0]);
-      expect((first as rt.ConstTerm).value, 'left');
-      expect(lines.join('\n'), contains('pick(left,'));
-      expect(lines.join('\n'), contains('ok(1)'));
     });
   });
 }

@@ -28,8 +28,9 @@ void main() {
     final sched = Scheduler(rt: rt, runner: ByteRunner(image));
     final entry = image.entryOffsetOf('p/0')!;
     for (var i = 1; i <= n; i++) {
-      rt.setGoalEnv(i, CallEnv());
-      rt.gq.enqueue(GoalRef(i, entry));
+      final id = rt.nextGoalId++;
+      rt.setGoalEnv(id, CallEnv());
+      rt.gq.enqueue(GoalRef(id, entry));
     }
     return (sched, rt);
   }
@@ -38,7 +39,7 @@ void main() {
       () {
     final (sched, rt) = queued(2500);
     final result = sched.drainWithStatus();
-    expect(result.goalsRan.length, 1000, reason: 'the drain stops at its cap');
+    expect(result.goalsRun, 1000, reason: 'the drain stops at its cap');
     expect(rt.gq.length, 1500, reason: 'and what is left is runnable');
     expect(result.status, ExecutionStatus.capped);
     expect(result.status, isNot(ExecutionStatus.suspended),
@@ -48,7 +49,7 @@ void main() {
   test('drainToQuiescence runs the queue out, however deep', () {
     final (sched, rt) = queued(2500);
     final result = sched.drainToQuiescence();
-    expect(result.goalsRan.length, 2500);
+    expect(result.goalsRun, 2500);
     expect(rt.gq.length, 0, reason: 'quiescent: the queue is empty');
     expect(result.status, ExecutionStatus.succeeded);
   });
@@ -64,10 +65,10 @@ void main() {
       Requeue('loop/0', 0),
     ]));
     final sched = Scheduler(rt: rt, runner: ByteRunner(image));
-    rt.gq.enqueue(GoalRef(1, image.entryOffsetOf('loop/0')!));
+    rt.gq.enqueue(GoalRef(rt.nextGoalId++, image.entryOffsetOf('loop/0')!));
 
     final result = sched.drainToQuiescence(maxCycles: 100);
-    expect(result.goalsRan.length, 100, reason: 'the net, and not a step more');
+    expect(result.goalsRun, 100, reason: 'the net, and not a step more');
     expect(rt.gq.length, greaterThan(0));
     expect(result.status, ExecutionStatus.capped,
         reason: 'the caller is told the run did not finish');

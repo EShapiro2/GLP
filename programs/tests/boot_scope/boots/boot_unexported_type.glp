@@ -1,0 +1,15 @@
+%% boot_unexported_type.glp --- a boot source loaded on
+%% programs/tests/boot_scope/program naming Secret, a type no entry point of
+%% the program carries: undefined in the scope it is checked in, and refused.
+
+procedure boot.
+boot :- client(alice, _)@alice.
+
+procedure client(Constant?, Stream(_)?).
+client(_, _) :- make(S), keep(S?).
+
+procedure make(Secret).
+make(secret(1)).
+
+procedure keep(Secret?).
+keep(_).

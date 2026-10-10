@@ -1,13 +1,12 @@
 /// GLP instruction encoding (D3 wire format, §4).
 ///
-/// Normative source: the IGLP paper appendix `app:wire-format`,
-/// §wf-instructions. An encoded instruction is a u8 opcode followed by its
+/// Normative source: the IGLP paper appendix `app:code-format`,
+/// §cf-instructions. An encoded instruction is a u8 opcode followed by its
 /// operands in the order the opcode table lists. Instruction *semantics* are the
 /// companion GLP paper's; this assigns bytes.
 ///
 /// Operand kinds (§4.1):
 ///  - polarity: u8 (0 writer, 1 reader)
-///  - negated:  u8 (0 plain, 1 negated guard)
 ///  - varIndex/argSlot/arity/count/slots/regIndex: clen
 ///  - constant: the §3.1 constant payload (u8 tag + payload)
 ///  - functor:  string
@@ -19,13 +18,11 @@
 /// are procedure-relative instruction indices. Assembly `Label`s do not exist on
 /// the wire — [encodeCode] strips them and resolves the indices. The caller
 /// supplies the name<->index maps (the artefact's symbol table in S4; bijective
-/// stubs in tests). The retired dynamic-RPC opcodes distribute/transmit
-/// (0x52–0x53) are not part of the wire ISA.
+/// stubs in tests).
 library;
 
 import 'dart:typed_data';
 import 'package:glp_runtime/bytecode/opcodes.dart';
-import 'package:glp_runtime/bytecode/opcodes_v2.dart' as opv2;
 import 'package:glp_runtime/wire/codec.dart';
 
 /// §4.2 opcode bytes.
@@ -70,13 +67,6 @@ class Opcode {
   static const int otherwise = 0x46;
   static const int spawn = 0x50;
   static const int requeue = 0x51;
-  /// sGLP's rated spawn: proc, arity, and the rate per simulated second as an
-  /// f64 (svGLP, sections/sglp.tex).
-  static const int spawnRated = 0x54;
-  // 0x52–0x53 reserved: the retired dynamic-RPC opcodes (distribute/transmit).
-  // Dynamic dispatch is retired in favour of static linking until attestations
-  // exist; flattened artefacts never contain them, so they are not part of the
-  // wire ISA. The runtime classes remain (retired-but-kept). Held, not reused.
 }
 
 /// Resolvers an encoder needs: a procedure label -> proc-table index, and a
@@ -98,7 +88,6 @@ void encodeInstruction(
 }) {
   void constant(Object? v) => encodeConstantPayload(w, wireConstFromValue(v));
   void pol(bool isReader) => w.u8(isReader ? 1 : 0);
-  void neg(bool negated) => w.u8(negated ? 1 : 0);
 
   if (op is Label) {
     throw WireFormatException(
@@ -133,21 +122,21 @@ void encodeInstruction(
   } else if (op is HeadList) {
     w.u8(Opcode.headList);
     w.clen(op.argSlot);
-  } else if (op is opv2.HeadVariable) {
+  } else if (op is HeadVariable) {
     w.u8(Opcode.headVariable);
     pol(op.isReader);
     w.clen(op.varIndex);
-  } else if (op is opv2.GetVariable) {
+  } else if (op is GetVariable) {
     w.u8(Opcode.getVariable);
     pol(op.isReader);
     w.clen(op.varIndex);
     w.clen(op.argSlot);
-  } else if (op is opv2.GetValue) {
+  } else if (op is GetValue) {
     w.u8(Opcode.getValue);
     pol(op.isReader);
     w.clen(op.varIndex);
     w.clen(op.argSlot);
-  } else if (op is opv2.UnifyVariable) {
+  } else if (op is UnifyVariable) {
     w.u8(Opcode.unifyVariable);
     pol(op.isReader);
     w.clen(op.varIndex);
@@ -167,7 +156,7 @@ void encodeInstruction(
   } else if (op is Pop) {
     w.u8(Opcode.pop);
     w.clen(op.regIndex);
-  } else if (op is opv2.PutVariable) {
+  } else if (op is PutVariable) {
     w.u8(Opcode.putVariable);
     pol(op.isReader);
     w.clen(op.varIndex);
@@ -187,7 +176,7 @@ void encodeInstruction(
     w.string(op.functor);
     w.clen(op.arity);
     w.clen(op.argSlot);
-  } else if (op is opv2.SetVariable) {
+  } else if (op is SetVariable) {
     w.u8(Opcode.setVariable);
     pol(op.isReader);
     w.clen(op.varIndex);
@@ -212,34 +201,24 @@ void encodeInstruction(
     // name/arity, so build the signature from the guard's name and arity.
     w.clen(procIndexOf('${op.procedureLabel}/${op.arity}'));
     w.clen(op.arity);
-    neg(op.negated);
   } else if (op is Ground) {
     w.u8(Opcode.ground);
     w.clen(op.varIndex);
-    neg(op.negated);
   } else if (op is Known) {
     w.u8(Opcode.known);
     w.clen(op.varIndex);
-    neg(op.negated);
-  } else if (op is opv2.Unknown) {
+  } else if (op is Unknown) {
     w.u8(Opcode.unknown);
     w.clen(op.varIndex);
   } else if (op is NoReaders) {
     w.u8(Opcode.noReaders);
     w.clen(op.varIndex);
-    neg(op.negated);
   } else if (op is GroundEqual) {
     w.u8(Opcode.groundEqual);
     w.clen(op.leftVarIndex);
     w.clen(op.rightVarIndex);
-    neg(op.negated);
   } else if (op is Otherwise) {
     w.u8(Opcode.otherwise);
-  } else if (op is SpawnRated) {
-    w.u8(Opcode.spawnRated);
-    w.clen(procIndexOf(op.procedureLabel));
-    w.clen(op.arity);
-    w.f64(op.ratePerSecond);
   } else if (op is Spawn) {
     w.u8(Opcode.spawn);
     w.clen(procIndexOf(op.procedureLabel));
@@ -249,16 +228,16 @@ void encodeInstruction(
     w.clen(procIndexOf(op.procedureLabel));
     w.clen(op.arity);
   } else {
-    // Distribute/Transmit (retired dynamic RPC) are not in the wire ISA; a
-    // flattened artefact never contains them. Reaching here on one signals a
-    // stale codegen path, to be reported (not silently encoded).
+    // An instruction object with no opcode in the wire ISA: reported, never
+    // silently encoded.
     throw WireFormatException(
         'instruction not in the wire ISA: ${op.runtimeType}');
   }
 }
 
-/// Decode one instruction. Polarity opcodes decode to the v2 classes; `proc`
-/// and `ctarget` indices are resolved back to labels via the supplied maps.
+/// Decode one instruction. A polarity opcode decodes to its variable
+/// instruction, the polarity its isReader flag; `proc` and `ctarget` indices are
+/// resolved back to labels via the supplied maps.
 Object decodeInstruction(
   WireReader r, {
   required ProcNameOf procNameOf,
@@ -269,12 +248,6 @@ Object decodeInstruction(
     final p = r.u8();
     if (p != 0 && p != 1) throw WireFormatException('polarity not 0/1: $p');
     return p == 1;
-  }
-
-  bool neg() {
-    final n = r.u8();
-    if (n != 0 && n != 1) throw WireFormatException('negated not 0/1: $n');
-    return n == 1;
   }
 
   Object? constant() => valueOfWireConst(decodeConstantPayload(r));
@@ -306,18 +279,18 @@ Object decodeInstruction(
       return HeadList(r.clen());
     case Opcode.headVariable:
       final isReader = pol();
-      return opv2.HeadVariable(r.clen(), isReader: isReader);
+      return HeadVariable(r.clen(), isReader: isReader);
     case Opcode.getVariable:
       final isReader = pol();
       final varIndex = r.clen();
-      return opv2.GetVariable(varIndex, r.clen(), isReader: isReader);
+      return GetVariable(varIndex, r.clen(), isReader: isReader);
     case Opcode.getValue:
       final isReader = pol();
       final varIndex = r.clen();
-      return opv2.GetValue(varIndex, r.clen(), isReader: isReader);
+      return GetValue(varIndex, r.clen(), isReader: isReader);
     case Opcode.unifyVariable:
       final isReader = pol();
-      return opv2.UnifyVariable(r.clen(), isReader: isReader);
+      return UnifyVariable(r.clen(), isReader: isReader);
     case Opcode.unifyConstant:
       return UnifyConstant(constant());
     case Opcode.unifyVoid:
@@ -332,7 +305,7 @@ Object decodeInstruction(
     case Opcode.putVariable:
       final isReader = pol();
       final varIndex = r.clen();
-      return opv2.PutVariable(varIndex, r.clen(), isReader: isReader);
+      return PutVariable(varIndex, r.clen(), isReader: isReader);
     case Opcode.putConstant:
       final v = constant();
       return PutConstant(v, r.clen());
@@ -345,7 +318,7 @@ Object decodeInstruction(
       return PutStructure(f, r.clen(), r.clen());
     case Opcode.setVariable:
       final isReader = pol();
-      return opv2.SetVariable(r.clen(), isReader: isReader);
+      return SetVariable(r.clen(), isReader: isReader);
     case Opcode.setConstant:
       return SetConstant(constant());
     case Opcode.allocate:
@@ -362,22 +335,19 @@ Object decodeInstruction(
       final arity = r.clen();
       // Strip the /arity the symbol table carries back to the bare guard name.
       final name = sig.substring(0, sig.lastIndexOf('/'));
-      return Guard(name, arity, negated: neg());
+      return Guard(name, arity);
     case Opcode.ground:
-      final varIndex = r.clen();
-      return Ground(varIndex, negated: neg());
+      return Ground(r.clen());
     case Opcode.known:
-      final varIndex = r.clen();
-      return Known(varIndex, negated: neg());
+      return Known(r.clen());
     case Opcode.unknown:
-      return opv2.Unknown(r.clen());
+      return Unknown(r.clen());
     case Opcode.noReaders:
-      final varIndex = r.clen();
-      return NoReaders(varIndex, negated: neg());
+      return NoReaders(r.clen());
     case Opcode.groundEqual:
       final l = r.clen();
       final rr = r.clen();
-      return GroundEqual(l, rr, negated: neg());
+      return GroundEqual(l, rr);
     case Opcode.otherwise:
       return Otherwise();
     case Opcode.spawn:
@@ -386,10 +356,6 @@ Object decodeInstruction(
     case Opcode.requeue:
       final label = procNameOf(r.clen());
       return Requeue(label, r.clen());
-    case Opcode.spawnRated:
-      final label = procNameOf(r.clen());
-      final arity = r.clen();
-      return SpawnRated(label, arity, r.f64());
     default:
       throw WireFormatException(
           'unknown opcode: 0x${opcode.toRadixString(16)}');

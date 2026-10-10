@@ -1,0 +1,29 @@
+%% Test (xi)'s compiled program, written by hand: the canonical compilation of
+%% rating.vglp by vGLP's Definition "Canonical Compilation"
+%% (sections/elicitation.tex).  rate and rates reach a question, and each has
+%% one more argument, last, its ask stream; rates/2's first clause calls none
+%% and carries [], its second merges the asking clause's and the recursive
+%% call's by merge(D1?, D2?, D).  The asking clause keeps rate's name and the
+%% guarded clause takes rate1; the ask is ask('Rating?', rating_r(X)), the
+%% interactive type in its mode as a constant and the functor the compilation
+%% gives it, its name in lowercase with _r for reader mode: Rating is in
+%% reader mode, so X and X? are not exchanged, the ask carrying the writer X
+%% and the program holding the reader; rate's argument N is at an output
+%% position, so the head carries N? and the call N.  The types are the
+%% directory's (self.glp).
+
+%% (rating(N))*rate(N?): the asking clause and the guarded clause.
+procedure rate(Integer, Stream(Ask)).
+rate(N?, [ask('Rating?', rating_r(X))|D?]) :- rate1(N, X?, D).
+procedure rate1(Integer, Rating?, Stream(Ask)).
+rate1(N?, rating(N), []).
+
+%% rates(K?, Ns): K asks, Ns the ratings read, in the order asked.
+exported procedure rates(Integer?, Stream(Integer), Stream(Ask)).
+rates(0, [], []).
+rates(K, [N?|Ns?], D?) :-
+    K? > 0 |
+    rate(N, D1),
+    K1 := K? - 1,
+    rates(K1?, Ns, D2),
+    merge(D1?, D2?, D).

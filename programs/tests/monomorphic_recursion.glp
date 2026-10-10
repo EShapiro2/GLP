@@ -10,9 +10,14 @@
 %% procedure closure (no need for any size bound).
 %%
 %% Behaviour:
-%%   - Rejected: "(W, W?) not dual ... Stream<Box<Msg>> is not a subtype of
-%%     Stream<Msg>" — W is produced (by wrap) at Stream(Box(Msg)) but consumed
-%%     (by the recursive ploop, checked monomorphically) at Stream(Msg).
+%%   - Rejected: "No instantiation of wrap/2 for the call wrap(S?, W): argument
+%%     2, W, is to hold Stream<Msg>, and no expansion of Stream(Box(X)) is
+%%     within it" — W is consumed (by the recursive ploop, checked
+%%     monomorphically) at Stream(Msg), and wrap produces a Stream(Box(X))
+%%     whatever X its sites supply (TGLP appendix-implementation-notes.tex, "The
+%%     instantiation of a call").  Until 2026-10-02 wrap was checked at the
+%%     X = Msg its first argument supplies, and the refusal was "(W, W?) not
+%%     dual ... Stream<Box<Msg>> is not a subtype of Stream<Msg>".
 %%
 %% Run (from /Users/udi/Grassroots/GLP/glp_runtime/):
 %%   printf 'load ../programs/tests/monomorphic_recursion.glp\n:quit\n' | bin/glpc
@@ -22,12 +27,12 @@ Msg ::= m.
 Box(X) ::= box(X).
 
 %% Type-changing: input element X, output element box(X) — one Box deeper.
-procedure wrap(Stream(X)?, Stream(Box(X))).
+procedure(X) wrap(Stream(X)?, Stream(Box(X))).
 wrap([E|In], [box(E?)|Out?]) :- wrap(In?, Out).
 wrap([], []).
 
 %% Recursive driver: ploop@Msg would call ploop@Box(Msg) — polymorphic recursion.
-procedure ploop(Stream(X)?).
+procedure(X) ploop(Stream(X)?).
 ploop(S) :- wrap(S?, W), ploop(W?).
 ploop([]).
 

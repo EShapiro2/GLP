@@ -8,6 +8,9 @@ import 'package:test/test.dart';
 import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/compiler/glp_printer.dart';
+import 'package:glp_runtime/compiler/ast.dart';
+import 'package:glp_runtime/compiler/analyzer.dart';
+import 'package:glp_runtime/compiler/error.dart';
 import 'package:glp_runtime/vglp/clause_compilation.dart';
 
 const _preamble = '''
@@ -17,9 +20,8 @@ Decision ::= decision(Constant, Constant, Response).
 Offer ::= offer(Constant).
 ''';
 
-/// Compile one procedure of a vGLP source and return its clauses as GLP text,
-/// one clause per line.
-List<String> emit(String source, String signature) {
+/// Compile one procedure of a vGLP source by the canonical compilation.
+CompiledProcedure compile(String source, String signature) {
   final m = Parser(Lexer(_preamble + source).tokenize(), vglp: true)
       .parseModule();
   final decls = {for (final d in m.procDeclarations) d.key: d};
@@ -31,13 +33,20 @@ List<String> emit(String source, String signature) {
   };
   final proc =
       m.procedures.firstWhere((p) => '${p.name}/${p.arity}' == signature);
-  final cp = compileProcedure(proc,
+  return compileProcedure(proc,
       decl: decls[signature]!,
       isProcedureOfM: (n, a) => defined.contains('$n/$a'),
       clauseName: (p, j) => '${p.name}_$j',
       slotCountOf: (n, a) => slots['$n/$a'] ?? 0);
+}
+
+/// The compiled clauses as GLP text, one clause per line.
+List<String> emit(String source, String signature) {
   final printer = GlpPrinter();
-  return cp.clauses.map((c) => printer.printClause(c).trim()).toList();
+  return compile(source, signature)
+      .clauses
+      .map((c) => printer.printClause(c).trim())
+      .toList();
 }
 
 void main() {
@@ -143,7 +152,10 @@ respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
 
     test('the else clause matches the else reply and carries no answer', () {
       final cs = emit(src, 'respond/3');
-      expect(cs[1], startsWith('respond(Med, offer(From), Resp?, '));
+      // The channel is `_`: with one slot, exposed, there is nothing to abort,
+      // and the body reads it nowhere, so a named `Med` would be a writer with
+      // no reader (TGLP, "SRSW Relaxations").
+      expect(cs[1], startsWith('respond(_, offer(From), Resp?, '));
       expect(cs[1], contains('ask(else, _)'));
       expect(cs[1], isNot(contains('then(')));
     });
@@ -181,9 +193,11 @@ respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
     });
 
     test('a clause aborts the other slots, not its own', () {
+      // The chain's output is `_`: both bodies are `| true`, so nothing reads
+      // the channel the chain hands on (TGLP, "SRSW Relaxations").
       final cs = emit(src, 'respond/3');
-      expect(cs[0], contains('abort(S2?, Med?, Med1)'));
-      expect(cs[2], contains('abort(S1?, Med?, Med1)'));
+      expect(cs[0], contains('abort(S2?, Med?, _)'));
+      expect(cs[2], contains('abort(S1?, Med?, _)'));
     });
 
     test('no close clause for a clause without an else-branch', () {
@@ -199,8 +213,8 @@ respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
       // `| true` is the idiom of an empty body; copied it would be a call of
       // true/0, which no procedure defines.
       final cs = emit(src, 'respond/3');
-      expect(cs[0], endsWith('abort(S2?, Med?, Med1).'));
-      expect(cs[2], endsWith('abort(S1?, Med?, Med1).'));
+      expect(cs[0], endsWith('abort(S2?, Med?, _).'));
+      expect(cs[2], endsWith('abort(S1?, Med?, _).'));
     });
 
     test('each ask clause carries its own clause name', () {
@@ -226,7 +240,7 @@ agent(Id, UserIn, Outs) :-
 ''';
 
     test('it aborts every slot of the goal', () {
-      expect(emit(src, 'agent/3')[0], contains('abort(S1?, Med?, Med1)'));
+      expect(emit(src, 'agent/3')[0], contains('abort(S1?, Med?, _)'));
     });
   });
 
@@ -251,10 +265,12 @@ agent(Id, UserIn, Outs) :-
 
     test('the abort calls chain over the slots, one channel each', () {
       // The slots are of different reply types, so they cannot share a list:
-      // abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, Med1).
+      // abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, _).  The
+      // last output is `_` because this clause's body is `| true` and reads
+      // the channel nowhere (TGLP, "SRSW Relaxations").
       expect(emit(src, 'agent/3')[0],
           contains('abort(S1?, Med?, M1), abort(S2?, M1?, M2), '
-              'abort(S3?, M2?, Med1)'));
+              'abort(S3?, M2?, _)'));
     });
   });
 
@@ -265,11 +281,134 @@ relay(Id, In, Out?) :- ground(Id?) | true.
 ''';
 
     test('it gains the channel and no slot, and calls no aborts', () {
+      // The argument is there — every procedure of M carries the channel — and
+      // it is `_`, this clause reading it nowhere (TGLP, "SRSW Relaxations").
       final cs = emit(src, 'relay/3');
-      expect(cs.single, startsWith('relay(Med, Id, In, Out?)'));
+      expect(cs.single, startsWith('relay(_, Id, In, Out?)'));
       expect(cs.single, isNot(contains('aborts')));
     });
 
 
+  });
+
+  // -------------------------------------------------------------------------
+  // The compiled clause satisfies SRSW
+  // -------------------------------------------------------------------------
+  //
+  // The compiled program is a GLP program, so every clause of it satisfies
+  // SRSW (TGLP, glp.tex, Definition "GLP program": a variable occurs in C iff
+  // its paired variable also occurs in C).  The compilation threads a writer
+  // `Med` through every procedure and hands it on through the abort chain to
+  // the body goals that call procedures of M; where neither the chain nor the
+  // body takes it, the producing position is the anonymous writer `_`, GLP's
+  // writer with no paired reader (TGLP, typed-glp.tex, "SRSW Relaxations").
+  // Until this was fixed the compilation emitted a named `Med` there, and the
+  // canonical compilation's own output was refused by the SRSW pass.
+  group('the compiled clauses satisfy SRSW', () {
+    /// The violations the SRSW pass reports for a compiled procedure.  The
+    /// pass is the analyzer's first step and throws before any other, so a
+    /// CompileError carrying no SRSW message means SRSW passed.
+    List<String> srswViolations(String source, String signature) {
+      final cp = compile(source, signature);
+      final program =
+          Program([Procedure(cp.name, cp.arity, cp.clauses, 0, 0)], 0, 0);
+      try {
+        Analyzer().analyze(program);
+      } on CompileError catch (e) {
+        if (!e.message.contains('SRSW violations found')) return const [];
+        return e.message
+            .split('\n')
+            .where((l) => l.trimLeft().startsWith('•'))
+            .toList();
+      } catch (_) {
+        return const [];
+      }
+      return const [];
+    }
+
+    test('the answer clause of a sole volition-guarded clause satisfies SRSW',
+        () {
+      // One slot, exposed by the answer clause, and a body of `| true`: the
+      // case in which nothing downstream reads the channel.  This is the
+      // clause programs/tests/vglp/one_clause failed the SRSW pass on.
+      const src = '''
+procedure respond(Offer?, Stream(Decision)).
+*(Answer=yes, From?)
+respond(offer(From), [decision(Answer?, From?, response(yes))]) :-
+    ground(From?) | true
+*(no) true.
+''';
+      expect(emit(src, 'respond/2')[0],
+          startsWith('respond(_, offer(From), '));
+      expect(srswViolations(src, 'respond/2'), isEmpty);
+    });
+
+    test('the else and ask clauses satisfy SRSW too', () {
+      const src = '''
+procedure respond(Offer?, Stream(Decision)).
+*(Answer=yes, From?)
+respond(offer(From), [decision(Answer?, From?, response(yes))]) :-
+    ground(From?) | true
+*(no) true.
+''';
+      // Three clauses: answer, else, ask.  The ask clause reads the channel
+      // twice over — send takes Med? and hands Med1 to the re-posed goal — so
+      // it keeps its names, and only the first two carry `_`.
+      final cs = emit(src, 'respond/2');
+      expect(cs, hasLength(3));
+      expect(cs[2], startsWith('respond(Med, offer(From), '));
+      expect(cs[2], contains('Med?, Med1)'));
+      expect(srswViolations(src, 'respond/2'), isEmpty);
+    });
+
+    test('an ordinary clause whose body takes the channel keeps Med named', ()
+        {
+      // The counter-case: the body calls a procedure of M, so the channel has
+      // a reader and the named writer is right.  Without it the test above
+      // would pass on a compiler that emitted `_` everywhere.
+      const src = '''
+procedure agent(Constant?, Stream(Constant)?, Stream(Constant)).
+*(Target)
+agent(Id, UserIn, Outs) :-
+    ground(Id?), ground(Target?) |
+    connect(Target?, Outs?, Outs1),
+    agent(Id?, UserIn?, Outs1?).
+''';
+      expect(emit(src, 'agent/3')[0], startsWith('agent(Med, Id, '));
+      expect(emit(src, 'agent/3')[0], contains('agent(Med?, Id?, '));
+      expect(srswViolations(src, 'agent/3'), isEmpty);
+    });
+
+    test('an abort chain whose output nothing reads satisfies SRSW', () {
+      // Two slots: the ordinary clause aborts both and its body is `| true`,
+      // so the chain's last output has no reader.  The source clause itself
+      // satisfies SRSW — it passes its input straight to its output — so that
+      // only the compilation's own variables are under test.
+      const src = '''
+procedure agent(Constant?, Stream(Constant)?, Stream(Constant)).
+agent(Id, UserIn, UserIn?) :- ground(Id?) | true.
+*(Target)
+agent(Id, UserIn, Outs) :-
+    ground(Id?), ground(Target?) | connect(Target?, Outs?, Outs1),
+    agent(Id?, UserIn?, Outs1?).
+*(Other)
+agent(Id, UserIn, Outs) :-
+    ground(Id?), ground(Other?) | connect(Other?, Outs?, Outs1),
+    agent(Id?, UserIn?, Outs1?).
+''';
+      expect(emit(src, 'agent/3')[0],
+          contains('abort(S1?, Med?, M1), abort(S2?, M1?, _)'));
+      expect(srswViolations(src, 'agent/3'), isEmpty);
+    });
+
+    test('a procedure of M with no volition-guarded clause satisfies SRSW',
+        () {
+      const src = '''
+procedure relay(Constant?, Stream(Constant)?, Stream(Constant)).
+relay(Id, In, In?) :- ground(Id?) | true.
+''';
+      expect(emit(src, 'relay/3').single, startsWith('relay(_, Id, In, In?)'));
+      expect(srswViolations(src, 'relay/3'), isEmpty);
+    });
   });
 }

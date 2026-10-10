@@ -331,7 +331,7 @@ void main() {
 
     test('Channel with explicit dual preserves internal structure', () {
       // Channel ::= ch(Stream?, Stream).
-      // Channel? ::= ch(Stream?, Stream)?.
+      // Channel? ::= ch(Stream?, Stream).
       // The explicit dual preserves internal structure - position 1 is always
       // Stream? (input), position 2 is always Stream (output).
       
@@ -415,7 +415,7 @@ void main() {
 
     test('DiffList with explicit dual preserves internal structure', () {
       // DiffList ::= Stream? \ Stream.
-      // DiffList? ::= (Stream? \ Stream)?.
+      // DiffList? ::= Stream? \ Stream.
       // Position 1 is always content (Stream?, consumed), position 2 is always hole (Stream, produced)
       
       final typeEnv = TypeEnvironment({}, {});

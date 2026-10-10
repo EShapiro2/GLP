@@ -22,13 +22,23 @@
 
 
 Decision ::= yes ; no.
+
+%% Whether the bonds of a lot list were selected out of the holdings: ok, or
+%% fail --- the holdings do not hold them (currency_txn.glp, select_bonds_by_spec).
+Status ::= ok ; fail.
+
+%% What an incoming trade proposal is to the accepter (currency_txn.glp,
+%% classify_trade): a payment or a redemption, both auto-accepted, or a normal
+%% swap, shown to the person.
+TradeClass ::= normal ; payment ; redemption.
+
 Response ::= accept(FriendChannel) ; no.
 
 %% A currency unit: a bond issued by Issuer, maturing at Maturity, serial Serial.
-Bond ::= bond(Constant, Constant, Constant).
+Bond ::= bond(Key, Constant, Integer).
 
 %% A trade line item: Count bonds of Issuer at Maturity.
-Lot ::= lot(Constant, Constant, Constant).
+Lot ::= lot(Key, Constant, Integer).
 
 %% A trade counterparty's answer (writer flows proposer -> responder -> proposer).
 %% decline_menu returns the offered bonds plus the issuer's redemption menu.
@@ -53,14 +63,14 @@ FriendContent ::= response(Response)
                 ; intro(Constant, FriendChannel?)
                 ; coins(Stream(Bond))
                 ; balances(Stream(Bond))
-                ; trade_propose(Stream(Lot), Stream(Bond), TradeResponse?)
+                ; trade_propose(Lot, Stream(Bond), TradeResponse?)
                 ; escrow_offer(Constant, Constant, Constant, Constant, EscrowBenResult)
                 ; group_invite(GroupId, Channel(Stream(GroupSetupResponse), Stream(Handshake)))
-                ; group_msg(GroupId, Constant, Constant)
-                ; group_leave(GroupId, Constant)
+                ; group_msg(GroupId, Key, Constant)
+                ; group_leave(GroupId, Key)
                 ; group_removed(GroupId)
                 ; unfriend.
-FriendMsg     ::= msg(Constant, Constant, FriendContent).
+FriendMsg     ::= msg(Key, Key, FriendContent).
 FriendStream  ::= [] ; [FriendMsg | FriendStream].
 FriendChannel ::= ch(FriendStream, FriendStream?).
 
@@ -68,31 +78,31 @@ FriendChannel ::= ch(FriendStream, FriendStream?).
 %% A group is hosted by its creator; a group identifier is (creator, name).  The
 %% invite conveys a fresh setup channel; the invitee acks and receives the group
 %% channel on it (the same handshake shape as befriending).
-GroupId   ::= group_id(Constant, Constant).
-Handshake ::= ack(Constant) ; nack.
+GroupId   ::= group_id(Key, Constant).
+Handshake ::= ack(Key) ; nack.
 
 %% Group channel content — messages, a member leaving, a member removed.
-GroupContent ::= group_msg(GroupId, Constant, Constant)
-               ; group_leave(GroupId, Constant)
+GroupContent ::= group_msg(GroupId, Key, Constant)
+               ; group_leave(GroupId, Key)
                ; group_removed(GroupId).
-GroupMsg     ::= msg(Constant, Constant, GroupContent).
+GroupMsg     ::= msg(Key, Key, GroupContent).
 
 %% The setup channel conveys the group channel to a joining member.
 GroupSetupResponse ::= group_channel(Channel(Stream(GroupMsg), Stream(GroupMsg))).
 
 %% Group join result — written by group_await_join, injected into UserIn.
-GroupJoinResult ::= group_join_ack(GroupId, Constant, Channel(Stream(Handshake), Stream(GroupSetupResponse)))
-                  ; group_join_nack(GroupId, Constant).
+GroupJoinResult ::= group_join_ack(GroupId, Key, Channel(Stream(Handshake), Stream(GroupSetupResponse)))
+                  ; group_join_nack(GroupId, Key).
 
 %% Group output routing key: the member's own hub channel, or a member entry the
 %% creator keeps to distribute to.
-GroupKey ::= group(GroupId) ; group_member(GroupId, Constant).
+GroupKey ::= group(GroupId) ; group_member(GroupId, Key).
 
 %% Escrowed opaque values in the mediator's pending table — one constructor per
 %% ask.  `?` inside the constructor: the table forwards the writer back to the
 %% agent on response.
 PendingValue ::= response(Response?)
-               ; trade_pending(TradeResponse?, Stream(Lot), Stream(Bond))
+               ; trade_pending(TradeResponse?, Lot, Stream(Bond))
                ; escrow_pending(EscrowCancel?)
                ; group_channel(Channel(Stream(GroupSetupResponse), Stream(Handshake)))
                ; error.
@@ -100,16 +110,16 @@ PendingValue ::= response(Response?)
 %% agent -> mediator (carried on the agent's person output stream).
 %% balance_report is keyed by (Owner, Issuer, Maturity) so the wallet can split
 %% cash (mature coins) from loans (dated bonds).
-AgentContent ::= befriend(Constant, Response?)
+AgentContent ::= befriend(Key, Response?)
                ; connected(Constant)
                ; unfriended(Constant)
                ; rejected
                ; rejected(Constant)
-               ; received(Constant, Constant)
+               ; received(Key, Constant)
                ; balance_report(Constant, Constant, Constant, Integer)
                ; balances_synced(Constant)
                ; date_advanced(Constant)
-               ; trade_proposed(Constant, Stream(Lot), TradeResponse?, Stream(Bond))
+               ; trade_proposed(Key, Lot, TradeResponse?, Stream(Bond))
                ; trade_completed(Constant)
                ; trade_failed(Constant)
                ; trade_returned(Constant)
@@ -123,39 +133,37 @@ AgentContent ::= befriend(Constant, Response?)
                ; escrow_failed(Constant)
                ; group_invite(GroupId, Channel(Stream(GroupSetupResponse), Stream(Handshake)))
                ; group_joined(GroupId)
-               ; group_joined_member(GroupId, Constant)
+               ; group_joined_member(GroupId, Key)
                ; group_left(GroupId)
                ; group_removed(GroupId)
-               ; group_received(GroupId, Constant, Constant).
+               ; group_received(GroupId, Key, Constant).
 
 %% mediator -> agent (mediator's reply to a user action): the compose commands
-%% and the sibling choices, plus response(Response) — the injected-result
-%% vocabulary (inject_msg), which the mediator itself never sends.
-UserContent ::= connect(Constant)
-              ; unfriend(Constant)
-              ; decision(Decision, Constant, PendingValue)
-              ; send(Constant, Constant)
-              ; response(Response)
+%% and the sibling choices.
+UserContent ::= connect(Key)
+              ; unfriend(Key)
+              ; decision(Decision, Key, PendingValue)
+              ; send(Key, Constant)
               ; balance
-              ; mint(Constant, Constant)
+              ; mint(Integer, Constant)
               ; advance_date(Constant)
-              ; pay(Constant, Stream(Lot))
-              ; trade(Constant, Stream(Lot), Stream(Lot))
-              ; redeem(Constant, Stream(Lot), Stream(Lot))
-              ; accept_trade(Constant, PendingValue)
+              ; pay(Key, Lot)
+              ; trade(Key, Lot, Lot)
+              ; redeem(Key, Lot, Lot)
+              ; accept_trade(Key, PendingValue)
               ; reject_trade(Constant, PendingValue)
-              ; deposit_escrow(Constant, Stream(Lot), Constant)
+              ; deposit_escrow(Key, Lot, Constant)
               ; cancel_escrow(Constant, PendingValue)
               ; create_group(Constant)
-              ; invite_group(GroupId, Constant)
+              ; invite_group(GroupId, Key)
               ; accept_group(GroupId, PendingValue)
               ; reject_group(GroupId, PendingValue)
               ; send_group(GroupId, Constant)
               ; leave_group(GroupId)
-              ; remove_from_group(GroupId, Constant).
+              ; remove_from_group(GroupId, Key).
 
 %% agent <-> network cold-call (2-arg msg(Dest, Content)): forwards the writer.
-NetColdCall ::= friend_request(Constant, Response?).
+NetColdCall ::= friend_request(Key, Response?).
 
 %% Network output: only cold calls are ever written to the network entry
 %% (grassapp_agent's connect clause); a friend's messages go on the friend
@@ -170,15 +178,17 @@ NetOutStream ::= [] ; [NetOutMsg | NetOutStream].
 %% into it (handle_response), that friend's messages.  The shape social/graph
 %% gives its NetInMsg.
 NetInMsg     ::= msg(Key, NetColdCall)
-               ; msg(Key, Constant, FriendContent).
+               ; msg(Key, Key, FriendContent).
 NetInStream  ::= [] ; [NetInMsg | NetInStream].
 
-%% The agent's person input: the mediator's vocabulary (UserMsg, including the
-%% injected response/1 of a cold call), and the results the agent's own
-%% concurrent goals inject into it --- a filled or declined trade, an escrow's
-%% outcome at either end, a group join.  The shape social/graph gives its
-%% UserInMsg.
-UserInMsg    ::= msg(Constant, Constant, UserContent)
+%% The agent's person input: the mediator's vocabulary (UserMsg), and the
+%% results the agent's own concurrent goals inject into it --- the response to
+%% its cold call, response(Target, Response), the agent called and its answer
+%% (inject_msg); a filled or declined trade, an escrow's outcome at either end,
+%% a group join.  The msg alternative has the shape social/graph gives its
+%% UserInMsg's.
+UserInMsg    ::= msg(Constant, Key, UserContent)
+               ; response(Key, Response)
                ; trade_complete(Constant, Stream(Bond))
                ; trade_returned_bonds(Constant, Stream(Bond))
                ; trade_returned_bonds_menu(Constant, Stream(Bond), Stream(Bond))
@@ -186,8 +196,8 @@ UserInMsg    ::= msg(Constant, Constant, UserContent)
                ; escrow_dep_returned(Constant, Stream(Bond))
                ; escrow_ben_released(Constant, Stream(Bond))
                ; escrow_ben_cancelled(Constant)
-               ; group_join_ack(GroupId, Constant, Channel(Stream(Handshake), Stream(GroupSetupResponse)))
-               ; group_join_nack(GroupId, Constant).
+               ; group_join_ack(GroupId, Key, Channel(Stream(Handshake), Stream(GroupSetupResponse)))
+               ; group_join_nack(GroupId, Key).
 UserInStream ::= [] ; [UserInMsg | UserInStream].
 
 %% Wrappers for the agent<->mediator channel (CONCRETE element types).
@@ -195,7 +205,7 @@ UserInStream ::= [] ; [UserInMsg | UserInStream].
 %% OutputEntry names the person's entry separately (below), so the type of the
 %% person channel is the agent->mediator vocabulary and nothing wider.
 AgentMsg ::= msg(Constant, Constant, AgentContent).   %% agent -> mediator
-UserMsg  ::= msg(Constant, Constant, UserContent).    %% mediator -> agent
+UserMsg  ::= msg(Constant, Key, UserContent).    %% mediator -> agent
 
 
 %% --- Moved here from grassapp_agent.glp: a module resolves a type another
@@ -208,14 +218,14 @@ UserMsg  ::= msg(Constant, Constant, UserContent).    %% mediator -> agent
 %% AgentMsg and send_to_net/1 read the network entry at msg(Constant, _).
 OutputContent ::= response(Response)
                 ; text(Constant)
-                ; intro(Constant, FriendChannel)
+                ; intro(Constant, FriendChannel?)
                 ; coins(Stream(Bond))
                 ; balances(Stream(Bond))
-                ; trade_propose(Stream(Lot), Stream(Bond), TradeResponse?)
+                ; trade_propose(Lot, Stream(Bond), TradeResponse?)
                 ; escrow_offer(Constant, Constant, Constant, Constant, EscrowBenResult)
                 ; group_invite(GroupId, Channel(Stream(GroupSetupResponse), Stream(Handshake)))
                 ; unfriend.
-OutputMsg     ::= msg(Constant, Constant, OutputContent).
+OutputMsg     ::= msg(Key, Key, OutputContent).
 OutputStream  ::= [] ; [OutputMsg | OutputStream].
 
 %% Output entries.  Four correspondents, four entries, four element types:
@@ -233,47 +243,47 @@ OutputStream  ::= [] ; [OutputMsg | OutputStream].
 %% that union, and send_to_net/1 would be handed friend messages.
 OutputEntry ::= person_output(Stream(AgentMsg)?)
               ; net_output(NetOutStream?)
-              ; output(Constant, OutputStream?)
+              ; output(Key, OutputStream?)
               ; group_entry(GroupKey, Stream(GroupMsg)?).
 OutputsList ::= [] ; [OutputEntry|OutputsList].
 
 %% --- Moved here from grassapp_mediator.glp, for the same reason. ---
-ReqId ::= req(Constant).
+ReqId ::= req(Integer).
 
 %% User -> Mediator (ground commands from Dart).
-UserCmd     ::= connect(Constant)
-              ; unfriend(Constant)
-              ; decision(Decision, Constant, ReqId)
-              ; send(Constant, Constant)
-              ; mint(Constant, Constant)
+UserCmd     ::= connect(Key)
+              ; unfriend(Key)
+              ; decision(Decision, Key, ReqId)
+              ; send(Key, Constant)
+              ; mint(Integer, Constant)
               ; advance_date(Constant)
               ; balance
-              ; pay(Constant, Constant, Constant, Constant)
-              ; trade(Constant, Constant, Constant, Constant, Constant, Constant, Constant)
-              ; redeem(Constant, Constant, Constant, Constant, Constant, Constant, Constant)
-              ; accept_trade(Constant, ReqId)
+              ; pay(Key, Key, Constant, Constant)
+              ; trade(Key, Key, Constant, Constant, Key, Constant, Constant)
+              ; redeem(Key, Key, Constant, Constant, Key, Constant, Constant)
+              ; accept_trade(Key, ReqId)
               ; reject_trade(Constant, ReqId)
-              ; deposit_escrow(Constant, Constant, Constant, Constant, Constant)
+              ; deposit_escrow(Key, Key, Constant, Constant, Constant)
               ; cancel_escrow(Constant, ReqId)
               ; create_group(Constant)
-              ; invite_group(GroupId, Constant)
+              ; invite_group(GroupId, Key)
               ; accept_group(GroupId, ReqId)
               ; reject_group(GroupId, ReqId)
               ; send_group(GroupId, Constant)
               ; leave_group(GroupId)
-              ; remove_from_group(GroupId, Constant).
+              ; remove_from_group(GroupId, Key).
 
 %% Mediator -> User (ground notifications to Dart).
-UserNotify  ::= befriend(Constant, ReqId)
+UserNotify  ::= befriend(Key, ReqId)
               ; connected(Constant)
               ; unfriended(Constant)
               ; rejected
               ; rejected(Constant)
-              ; received(Constant, Constant)
+              ; received(Key, Constant)
               ; balance_report(Constant, Constant, Constant, Integer)
               ; balances_synced(Constant)
               ; date_advanced(Constant)
-              ; trade_proposed(Constant, Constant, Constant, Constant, ReqId)
+              ; trade_proposed(Key, Constant, Constant, Constant, ReqId)
               ; trade_completed(Constant)
               ; trade_failed(Constant)
               ; trade_returned(Constant)
@@ -287,13 +297,23 @@ UserNotify  ::= befriend(Constant, ReqId)
               ; escrow_failed(Constant)
               ; group_invite(GroupId, ReqId)
               ; group_joined(GroupId)
-              ; group_joined_member(GroupId, Constant)
+              ; group_joined_member(GroupId, Key)
               ; group_left(GroupId)
               ; group_removed(GroupId)
-              ; group_received(GroupId, Constant, Constant).
+              ; group_received(GroupId, Key, Constant).
 
 PendingEntry ::= pending(ReqId, PendingValue).
 PendingList  ::= [] ; [PendingEntry | PendingList].
+
+%% The single-isolate scenario (play_grassapp_boot.glp): bob, the person whose
+%% UI is live and whom scenario_init boots, and the four actors around him, each
+%% with its chat reply (reply_of).
+ScenarioPerson ::= bob.
+ScenarioActor  ::= alice ; charlie ; dana ; eve.
+
+%% The two-phone scenario (play_grassapp_duo.glp): its two scripted actors,
+%% each with its opening line (greeting_of) and chat reply (reply_of).
+DuoActor ::= eve ; dana.
 
 %% =============================================================================
 %% ENTRY POINTS (modules.tex, External access): the root self.glp exports each
@@ -313,14 +333,14 @@ imported procedure play_escrow_headless # play_escrow.
 exported procedure play_escrow.
 play_escrow :- play_escrow_headless # play_escrow.
 
-imported procedure play_grassapp_duo # agent_init(Constant?, Stream(UserCmd)?, NetInStream?).
-exported procedure agent_init(Constant?, Stream(UserCmd)?, NetInStream?).
+imported procedure play_grassapp_duo # agent_init(Key?, Stream(UserCmd)?, NetInStream?).
+exported procedure agent_init(Key?, Stream(UserCmd)?, NetInStream?).
 agent_init(Id, UserIn, NetIn) :- play_grassapp_duo # agent_init(Id?, UserIn?, NetIn?).
 
-imported procedure play_grassapp_duo # actor_init(Constant?, Constant?, NetInStream?).
-exported procedure actor_init(Constant?, Constant?, NetInStream?).
+imported procedure play_grassapp_duo # actor_init(DuoActor?, Key?, NetInStream?).
+exported procedure actor_init(DuoActor?, Key?, NetInStream?).
 actor_init(Id, Target, NetIn) :- play_grassapp_duo # actor_init(Id?, Target?, NetIn?).
 
-imported procedure play_grassapp_boot # scenario_init(Constant?, Stream(UserCmd)?, NetInStream?).
-exported procedure scenario_init(Constant?, Stream(UserCmd)?, NetInStream?).
+imported procedure play_grassapp_boot # scenario_init(ScenarioPerson?, Stream(UserCmd)?, NetInStream?).
+exported procedure scenario_init(ScenarioPerson?, Stream(UserCmd)?, NetInStream?).
 scenario_init(Id, UserIn, NetIn) :- play_grassapp_boot # scenario_init(Id?, UserIn?, NetIn?).

@@ -1,0 +1,37 @@
+%% =.. waits for its list.  GLP-Spec appendix-guards: =.. is declared
+%% procedure =..(_, Stream(_)?), the list a reader, and "T =.. [foo, a, b]?
+%% constructs T = foo(a, b)".  With the list's tail or its functor not yet
+%% assigned, =.. suspends until they are and then composes the term; it does
+%% not abort on a list still being built (sGLP's transformation rebuilds terms
+%% with =.. from argument lists still being built).  The list's elements are
+%% not waited on: only the spine and the functor.
+
+procedure tail_on(Constant?, Stream(_)).
+tail_on(go, [b]).
+
+procedure functor_on(Constant?, Constant).
+functor_on(go, h).
+
+procedure copy(Stream(_)?, Stream(_)).
+copy([X|Xs], [X?|Ys?]) :- copy(Xs?, Ys).
+copy([], []).
+
+%% The tail assigned after the call.
+procedure late_tail(_).
+late_tail(T?) :- T =.. [f, a|L?], tail_on(go, L).
+
+%% The spine built one cell per reduction after the call.
+procedure late_spine(_).
+late_spine(T?) :- T =.. [g|L?], copy([a, b, c, d], L).
+
+%% The functor assigned after the call.
+procedure late_functor(_).
+late_functor(T?) :- T =.. [F?, a], functor_on(go, F).
+
+%% Never completed: the caller never assigns Go, so the tail, or the functor,
+%% is never assigned, and =.. stays suspended.
+procedure never_tail(Constant?, _).
+never_tail(Go, T?) :- T =.. [f, a|L?], tail_on(Go?, L).
+
+procedure never_functor(Constant?, _).
+never_functor(Go, T?) :- T =.. [F?, a], functor_on(Go?, F).

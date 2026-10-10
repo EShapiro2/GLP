@@ -2,212 +2,353 @@
 %% (vGLP, Definition "Canonical Compilation").  Do not edit: edit
 %% the .vglp source and compile again.
 
-%% --- the source's own types ---
 
-%% --- the types the compilation adds ---
-Xs_respond_swap_1 ::= xs_respond_swap_1(Constant).
-Reply_respond_swap_1 ::= then(Xs_respond_swap_1) ; else.
-Ctx_respond_swap_1 ::= ctx_respond_swap_1(Constant, Lot, Stream(Instrument)).
-Xs_respond_transfer_1 ::= xs_respond_transfer_1(Constant).
-Reply_respond_transfer_1 ::= then(Xs_respond_transfer_1) ; else.
-Ctx_respond_transfer_1 ::= ctx_respond_transfer_1(Kind, Constant, Stream(Instrument)).
-Xs_agent_1 ::= xs_agent_1(Integer).
-Reply_agent_1 ::= then(Xs_agent_1).
-Xs_agent_2 ::= xs_agent_2(Integer, Integer).
-Reply_agent_2 ::= then(Xs_agent_2).
-Xs_agent_3 ::= xs_agent_3(Constant, Constant, Constant, Integer, Constant, Constant, Integer).
-Reply_agent_3 ::= then(Xs_agent_3).
-Xs_agent_4 ::= xs_agent_4(Constant, Integer).
-Reply_agent_4 ::= then(Xs_agent_4).
-Xs_agent_5 ::= xs_agent_5(Constant, Constant, Constant).
-Reply_agent_5 ::= then(Xs_agent_5).
-Xs_agent_6 ::= xs_agent_6(Constant, Integer).
-Reply_agent_6 ::= then(Xs_agent_6).
-Xs_agent_7 ::= xs_agent_7(Constant, Constant, Constant, Integer).
-Reply_agent_7 ::= then(Xs_agent_7).
-Xs_agent_8 ::= xs_agent_8(Constant, Constant, Constant, Integer).
-Reply_agent_8 ::= then(Xs_agent_8).
-Xs_agent_9 ::= xs_agent_9(Constant, Constant, Constant, Integer).
-Reply_agent_9 ::= then(Xs_agent_9).
-Answer ::= Xs_respond_swap_1 ; Xs_respond_transfer_1 ; Xs_agent_1 ; Xs_agent_2 ; Xs_agent_3 ; Xs_agent_4 ; Xs_agent_5 ; Xs_agent_6 ; Xs_agent_7 ; Xs_agent_8 ; Xs_agent_9.
-Escrow ::= esc_respond_swap_1(Reply_respond_swap_1?) ; esc_respond_transfer_1(Reply_respond_transfer_1?) ; esc_agent_1(Reply_agent_1?) ; esc_agent_2(Reply_agent_2?) ; esc_agent_3(Reply_agent_3?) ; esc_agent_4(Reply_agent_4?) ; esc_agent_5(Reply_agent_5?) ; esc_agent_6(Reply_agent_6?) ; esc_agent_7(Reply_agent_7?) ; esc_agent_8(Reply_agent_8?) ; esc_agent_9(Reply_agent_9?).
-Context ::= Ctx_respond_swap_1 ; Ctx_respond_transfer_1 ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4 ; ctx_agent_5 ; ctx_agent_6 ; ctx_agent_7 ; ctx_agent_8 ; ctx_agent_9.
+Question ::= swapCard_w(SwapCard) ; transferCard_w(TransferCard) ; stream_request_r(Stream(Request)?).
 
-%% --- the mediator's vocabulary, instantiated ---
-ReqId ::= req(Integer).
-Slot(R) ::= none ; ask(R, ReqId).
-AgentMsg ::= ask(Constant, Context, Escrow, ReqId?) ; abort(ReqId).
-Card ::= card(Constant, Context, ReqId) ; closed(ReqId) ; aborted(ReqId).
-UserAnswer ::= answer(ReqId, Answer) ; decline(ReqId).
-PendingEntry ::= pending(ReqId, Escrow).
-PendingList ::= [] ; [PendingEntry | PendingList].
+procedure respond_swap(SwapOffer?, Link?, SwapResponse, Stream(UserInMsg), Stream(Ask(Question))).
+respond_swap(S1, S2, S3?, S4?, [ask('SwapCard', swapCard_w(X?)) | D?]) :- respond_swap1(S1?, S2?, S3, S4, X, D).
 
-%% --- the display declarations, carried through ---
-display agent *(K) : panel(bonds), label("Mint coins"), field(K, number), persistent.
-display agent *(K, D) : panel(bonds), label("Mint bonds"), field(K, number), field(D, date), persistent.
-display agent *(Q, U, D, K, V, D1, K1) : panel(bonds), label("Swap"), field(Q, peer), field(U, peer), field(D, text), field(K, number), field(V, peer), field(D1, text), field(K1, number), persistent.
-display agent *(Q, K) : panel(bonds), label("Pay"), field(Q, peer), field(K, number), persistent.
-display agent *(Q, R, D1) : panel(bonds), label("Redeem"), field(Q, peer), field(R, peer), field(D1, text), persistent.
-display agent *(Q, D) : panel(bonds), label("Mature"), field(Q, peer), field(D, date), persistent.
-display agent *(E, U, D, K) : panel(bonds), label("Deposit"), field(E, peer), field(U, peer), field(D, text), field(K, number), persistent.
-display agent *(Q, U, D, K) : panel(bonds), label("Release"), field(Q, peer), field(U, peer), field(D, text), field(K, number), persistent.
-display agent *(P, U, D, K) : panel(bonds), label("Return"), field(P, peer), field(U, peer), field(D, text), field(K, number), persistent.
-display respond_swap *(yes, From?, Want?, Offered?) : panel(bonds), label("Accept"), transient.
-display respond_transfer *(yes, Kind?, From?, Given?) : panel(bonds), label("Accept"), transient.
-display msg(agent, person, holdings(Lots)) : panel(bonds), view(balances).
+procedure respond_swap1(SwapOffer?, Link?, SwapResponse, Stream(UserInMsg), SwapCard, Stream(Ask(Question))).
+respond_swap1(offer(From, Want, Offered), Link, Resp?, Ans?, card(offer(From?, Want?, Offered?), Answer), []) :- ground(From?), ground(Want?), ground(Offered?) | decide_swap(Answer?, From?, Want?, Offered?, Resp, Link?, Ans).
 
-%% --- the compiled agent ---
-procedure respond_swap(Channel(Closed, Stream(AgentMsg))?, SwapOffer?, Link?, SwapResponse, Stream(UserInMsg), Slot(Reply_respond_swap_1)?).
-respond_swap(Med, offer(From, Want, Offered), Link, Resp?, Ans?, ask(then(xs_respond_swap_1(_)), _)) :- ground(From?), ground(Want?), ground(Offered?) | accept_answer(From?, Want?, Offered?, Resp, Link?, Ans).
-respond_swap(Med, offer(From, Want, Offered), Link, Resp?, Ans?, ask(else, _)) :- ground(From?), ground(Want?), ground(Offered?) | decline_answer(From?, Offered?, Resp, Link?, Ans).
-respond_swap(Med, offer(From, Want, Offered), Link, A3?, A4?, none) :- ground(From?), ground(Want?), ground(Offered?) | send(ask(respond_swap_1, ctx_respond_swap_1(From?, Want?, Offered?), esc_respond_swap_1(R), Id), Med?, Med1), respond_swap(Med1?, offer(From?, Want?, Offered?), Link?, A3, A4, ask(R?, Id?)).
+procedure decide_swap(YesNo?, Key?, Lot?, Stream(Instrument)?, SwapResponse, Link?, Stream(UserInMsg)).
+decide_swap(yes, From, Want, Offered, Resp?, Link, Ans?) :- accept_answer(From?, Want?, Offered?, Resp, Link?, Ans).
+decide_swap(no, From, _, Offered, Resp?, Link, Ans?) :- decline_answer(From?, Offered?, Resp, Link?, Ans).
 
-procedure respond_transfer(Channel(Closed, Stream(AgentMsg))?, TransferOffer?, Link?, TransferResponse, Stream(UserInMsg), Slot(Reply_respond_transfer_1)?).
-respond_transfer(Med, offer_transfer(Kind, From, Given), Link, Resp?, Ans?, ask(then(xs_respond_transfer_1(_)), _)) :- ground(Kind?), ground(From?), ground(Given?) | accept_transfer_answer(Kind?, From?, Given?, Resp, Link?, Ans).
-respond_transfer(Med, offer_transfer(Kind, From, Given), Link, Resp?, Ans?, ask(else, _)) :- ground(Kind?), ground(From?), ground(Given?) | decline_transfer_answer(Kind?, From?, Given?, Resp, Link?, Ans).
-respond_transfer(Med, offer_transfer(Kind, From, Given), Link, A3?, A4?, none) :- ground(Kind?), ground(From?), ground(Given?) | send(ask(respond_transfer_1, ctx_respond_transfer_1(Kind?, From?, Given?), esc_respond_transfer_1(R), Id), Med?, Med1), respond_transfer(Med1?, offer_transfer(Kind?, From?, Given?), Link?, A3, A4, ask(R?, Id?)).
+procedure respond_transfer(TransferOffer?, Link?, TransferResponse, Stream(UserInMsg), Stream(Ask(Question))).
+respond_transfer(S1, S2, S3?, S4?, [ask('TransferCard', transferCard_w(X?)) | D?]) :- respond_transfer1(S1?, S2?, S3, S4, X, D).
 
-exported procedure agent(Channel(Closed, Stream(AgentMsg))?, Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Integer?, Slot(Reply_agent_1)?, Slot(Reply_agent_2)?, Slot(Reply_agent_3)?, Slot(Reply_agent_4)?, Slot(Reply_agent_5)?, Slot(Reply_agent_6)?, Slot(Reply_agent_7)?, Slot(Reply_agent_8)?, Slot(Reply_agent_9)?).
-agent(Med, Id, UserIn, [msg(Id1, call(From, Act, Ch)) | NetIn], Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, S7, S8, S9) :- (Id? =?= Id1?), ground(From?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, M4), abort(S5?, M4?, M5), abort(S6?, M5?, M6), abort(S7?, M6?, M7), abort(S8?, M7?, M8), abort(S9?, M8?, Med1), on_act(Med1?, Act?, link(Ch?), From?, Id?, UserIn?, NetIn?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?).
-agent(Med, Id, UserIn, [msg(From, Id1, Act) | NetIn], Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, S7, S8, S9) :- (Id? =?= Id1?), ground(From?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, M4), abort(S5?, M4?, M5), abort(S6?, M5?, M6), abort(S7?, M6?, M7), abort(S8?, M7?, M8), abort(S9?, M8?, Med1), on_act(Med1?, Act?, linked, From?, Id?, UserIn?, NetIn?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?).
-agent(Med, Id, UserIn, [_ | NetIn], Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, S7, S8, S9) :- ground(Id?), otherwise | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, M4), abort(S5?, M4?, M5), abort(S6?, M5?, M6), abort(S7?, M6?, M7), abort(S8?, M7?, M8), abort(S9?, M8?, Med1), agent(Med1?, Id?, UserIn?, NetIn?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?, none, none, none, none, none, none, none, none, none).
-agent(Med, Id, [accept_swap(From, lot(V, D1, K1), Offered, Resp?, Link) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, S7, S8, S9) :- ground(Id?), ground(From?), ground(V?), ground(D1?), integer(K1?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, M4), abort(S5?, M4?, M5), abort(S6?, M5?, M6), abort(S7?, M6?, M7), abort(S8?, M7?, M8), abort(S9?, M8?, Med1), select_instruments(V?, D1?, K1?, Holdings?, Status, Give, Rest), fill_swap(Med1?, Status?, Id?, From?, Resp, Give?, Offered?, Rest?, Link?, UserIn?, NetIn?, Cal?, Outs?, Date?, Ws?, Serial?).
-agent(Med, Id, [decline_swap(From, Offered, Resp?, Link) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, S7, S8, S9) :- ground(Id?), ground(From?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, M4), abort(S5?, M4?, M5), abort(S6?, M5?, M6), abort(S7?, M6?, M7), abort(S8?, M7?, M8), abort(S9?, M8?, Med1), decline(Resp, Offered?), drop_link(Link?), show(declined(From?), Outs?, Outs1), agent(Med1?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings?, Date?, Ws?, Serial?, none, none, none, none, none, none, none, none, none).
-agent(Med, Id, [swap_accepted(Q, Given, Link) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, S7, S8, S9) :- ground(Id?), ground(Q?), ground(Given?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, M4), abort(S5?, M4?, M5), abort(S6?, M5?, M6), abort(S7?, M6?, M7), abort(S8?, M7?, M8), abort(S9?, M8?, Med1), adopt(Link?, Q?, Outs?, Outs1, NetIn?, NetIn1), append_instruments(Holdings?, Given?, Holdings1), show(swap_done(Q?), Outs1?, Outs2), after_change(Med1?, Id?, UserIn?, NetIn1?, Cal?, Outs2?, Holdings1?, Date?, Ws?, Serial?).
-agent(Med, Id, [swap_declined_by(Q, Given, Link) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, S7, S8, S9) :- ground(Id?), ground(Q?), ground(Given?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, M4), abort(S5?, M4?, M5), abort(S6?, M5?, M6), abort(S7?, M6?, M7), abort(S8?, M7?, M8), abort(S9?, M8?, Med1), drop_link(Link?), append_instruments(Holdings?, Given?, Holdings1), show(swap_declined(Q?), Outs?, Outs1), after_change(Med1?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings1?, Date?, Ws?, Serial?).
-agent(Med, Id, [pay_taken_by(Q, K) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, S7, S8, S9) :- ground(Id?), ground(Q?), integer(K?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, M4), abort(S5?, M4?, M5), abort(S6?, M5?, M6), abort(S7?, M6?, M7), abort(S8?, M7?, M8), abort(S9?, M8?, Med1), show(paid(Q?, K?), Outs?, Outs1), agent(Med1?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings?, Date?, Ws?, Serial?, none, none, none, none, none, none, none, none, none).
-agent(Med, Id, [pay_returned_by(Q, Coins) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, S7, S8, S9) :- ground(Id?), ground(Q?), ground(Coins?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, M4), abort(S5?, M4?, M5), abort(S6?, M5?, M6), abort(S7?, M6?, M7), abort(S8?, M7?, M8), abort(S9?, M8?, Med1), append_instruments(Holdings?, Coins?, Holdings1), count_instruments(Coins?, 0, K), show(not_accepted(Q?, K?), Outs?, Outs1), after_change(Med1?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings1?, Date?, Ws?, Serial?).
-agent(Med, Id, [redeem_given(Q, R, D1, X) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, S7, S8, S9) :- ground(Id?), ground(Q?), ground(R?), ground(D1?), ground(X?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, M4), abort(S5?, M4?, M5), abort(S6?, M5?, M6), abort(S7?, M6?, M7), abort(S8?, M7?, M8), abort(S9?, M8?, Med1), append_instruments(Holdings?, [X?], Holdings1), show(redeemed(Q?, R?, D1?), Outs?, Outs1), after_change(Med1?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings1?, Date?, Ws?, Serial?).
-agent(Med, Id, [redeem_menu_from(Q, Coin, Menu) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, S7, S8, S9) :- ground(Id?), ground(Q?), ground(Coin?), ground(Menu?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, M4), abort(S5?, M4?, M5), abort(S6?, M5?, M6), abort(S7?, M6?, M7), abort(S8?, M7?, M8), abort(S9?, M8?, Med1), append_instruments(Holdings?, [Coin?], Holdings1), show(menu(Q?, Menu?), Outs?, Outs1), after_change(Med1?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings1?, Date?, Ws?, Serial?).
-agent(Med, Id, [redeem_declined_by(Q, Coin) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, S7, S8, S9) :- ground(Id?), ground(Q?), ground(Coin?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, M4), abort(S5?, M4?, M5), abort(S6?, M5?, M6), abort(S7?, M6?, M7), abort(S8?, M7?, M8), abort(S9?, M8?, Med1), append_instruments(Holdings?, [Coin?], Holdings1), show(refused(Q?), Outs?, Outs1), after_change(Med1?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings1?, Date?, Ws?, Serial?).
-agent(Med, Id, [matured_by(Q, D, Coin, T) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, S7, S8, S9) :- ground(Id?), ground(Q?), integer(D?), ground(Coin?), integer(T?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, M4), abort(S5?, M4?, M5), abort(S6?, M5?, M6), abort(S7?, M6?, M7), abort(S8?, M7?, M8), abort(S9?, M8?, Med1), append_instruments(Holdings?, [Coin?], Holdings1), add_warranty(Q?, T?, Ws?, Ws1), show(matured(Q?, D?), Outs?, Outs1), show(warranty(Q?, T?), Outs1?, Outs2), after_change(Med1?, Id?, UserIn?, NetIn?, Cal?, Outs2?, Holdings1?, Date?, Ws1?, Serial?).
-agent(Med, Id, [not_matured_by(Q, bond(I, M, S)) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, S7, S8, S9) :- ground(Id?), ground(Q?), ground(I?), integer(M?), integer(S?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, M4), abort(S5?, M4?, M5), abort(S6?, M5?, M6), abort(S7?, M6?, M7), abort(S8?, M7?, M8), abort(S9?, M8?, Med1), append_instruments(Holdings?, [bond(I?, M?, S?)], Holdings1), show(not_mature(Q?, M?), Outs?, Outs1), after_change(Med1?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings1?, Date?, Ws?, Serial?).
-agent(Med, Id, [accept_transfer(Kind, From, Given, Resp?, Link) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, S7, S8, S9) :- ground(Id?), ground(Kind?), ground(From?), ground(Given?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, M4), abort(S5?, M4?, M5), abort(S6?, M5?, M6), abort(S7?, M6?, M7), abort(S8?, M7?, M8), abort(S9?, M8?, Med1), take_transfer(Resp), adopt(Link?, From?, Outs?, Outs1, NetIn?, NetIn1), append_instruments(Holdings?, Given?, Holdings1), tally(Given?, [], Lots), show(received_transfer(Kind?, From?, Lots?), Outs1?, Outs2), after_change(Med1?, Id?, UserIn?, NetIn1?, Cal?, Outs2?, Holdings1?, Date?, Ws?, Serial?).
-agent(Med, Id, [decline_transfer(Kind, From, Given, Resp?, Link) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, S7, S8, S9) :- ground(Id?), ground(Kind?), ground(From?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, M4), abort(S5?, M4?, M5), abort(S6?, M5?, M6), abort(S7?, M6?, M7), abort(S8?, M7?, M8), abort(S9?, M8?, Med1), decline_transfer_resp(Resp, Given?), drop_link(Link?), show(declined_transfer(Kind?, From?), Outs?, Outs1), agent(Med1?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings?, Date?, Ws?, Serial?, none, none, none, none, none, none, none, none, none).
-agent(Med, Id, [transfer_accepted(Kind, Q, Link) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, S7, S8, S9) :- ground(Id?), ground(Kind?), ground(Q?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, M4), abort(S5?, M4?, M5), abort(S6?, M5?, M6), abort(S7?, M6?, M7), abort(S8?, M7?, M8), abort(S9?, M8?, Med1), adopt(Link?, Q?, Outs?, Outs1, NetIn?, NetIn1), show(transferred(Kind?, Q?), Outs1?, Outs2), agent(Med1?, Id?, UserIn?, NetIn1?, Cal?, Outs2?, Holdings?, Date?, Ws?, Serial?, none, none, none, none, none, none, none, none, none).
-agent(Med, Id, [transfer_declined_by(Kind, Q, Given, Link) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, S7, S8, S9) :- ground(Id?), ground(Kind?), ground(Q?), ground(Given?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, M4), abort(S5?, M4?, M5), abort(S6?, M5?, M6), abort(S7?, M6?, M7), abort(S8?, M7?, M8), abort(S9?, M8?, Med1), drop_link(Link?), append_instruments(Holdings?, Given?, Holdings1), show(transfer_declined(Kind?, Q?), Outs?, Outs1), after_change(Med1?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings1?, Date?, Ws?, Serial?).
-agent(Med, Id, [_ | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, S7, S8, S9) :- ground(Id?), otherwise | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, M4), abort(S5?, M4?, M5), abort(S6?, M5?, M6), abort(S7?, M6?, M7), abort(S8?, M7?, M8), abort(S9?, M8?, Med1), agent(Med1?, Id?, UserIn?, NetIn?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?, none, none, none, none, none, none, none, none, none).
-agent(Med, Id, UserIn, NetIn, [T | Cal], Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, S7, S8, S9) :- ground(Id?), (T? > Date?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, M4), abort(S5?, M4?, M5), abort(S6?, M5?, M6), abort(S7?, M6?, M7), abort(S8?, M7?, M8), abort(S9?, M8?, Med1), show(date_advanced(T?), Outs?, Outs1), agent(Med1?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings?, T?, Ws?, Serial?, none, none, none, none, none, none, none, none, none).
-agent(Med, Id, UserIn, NetIn, [T | Cal], Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, S7, S8, S9) :- ground(Id?), (T? =< Date?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, M4), abort(S5?, M4?, M5), abort(S6?, M5?, M6), abort(S7?, M6?, M7), abort(S8?, M7?, M8), abort(S9?, M8?, Med1), agent(Med1?, Id?, UserIn?, NetIn?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?, none, none, none, none, none, none, none, none, none).
-agent(Med, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, ask(then(xs_agent_1(K)), _), S2, S3, S4, S5, S6, S7, S8, S9) :- ground(Id?), integer(K?), (K? >= 1) | abort(S2?, Med?, M1), abort(S3?, M1?, M2), abort(S4?, M2?, M3), abort(S5?, M3?, M4), abort(S6?, M4?, M5), abort(S7?, M5?, M6), abort(S8?, M6?, M7), abort(S9?, M7?, Med1), create_coins(Id?, K?, Serial?, New), Serial1 := (Serial? + K?), append_instruments(Holdings?, New?, Holdings1), show(minted(K?, now), Outs?, Outs1), after_change(Med1?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings1?, Date?, Ws?, Serial1?).
-agent(Med, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, none, S2, S3, S4, S5, S6, S7, S8, S9) :- ground(Id?) | send(ask(agent_1, ctx_agent_1, esc_agent_1(R), Id1), Med?, Med1), agent(Med1?, Id?, UserIn?, NetIn?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?, ask(R?, Id1?), S2?, S3?, S4?, S5?, S6?, S7?, S8?, S9?).
-agent(Med, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, ask(then(xs_agent_2(K, D)), _), S3, S4, S5, S6, S7, S8, S9) :- ground(Id?), integer(K?), (K? >= 1), integer(D?), (D? > Date?) | abort(S1?, Med?, M1), abort(S3?, M1?, M2), abort(S4?, M2?, M3), abort(S5?, M3?, M4), abort(S6?, M4?, M5), abort(S7?, M5?, M6), abort(S8?, M6?, M7), abort(S9?, M7?, Med1), create_bonds(Id?, D?, K?, Serial?, New), Serial1 := (Serial? + K?), append_instruments(Holdings?, New?, Holdings1), show(minted(K?, D?), Outs?, Outs1), after_change(Med1?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings1?, Date?, Ws?, Serial1?).
-agent(Med, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, none, S3, S4, S5, S6, S7, S8, S9) :- ground(Id?) | send(ask(agent_2, ctx_agent_2, esc_agent_2(R), Id1), Med?, Med1), agent(Med1?, Id?, UserIn?, NetIn?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?, S1?, ask(R?, Id1?), S3?, S4?, S5?, S6?, S7?, S8?, S9?).
-agent(Med, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, ask(then(xs_agent_3(Q, U, D, K, V, D1, K1)), _), S4, S5, S6, S7, S8, S9) :- ground(Id?), ground(Q?), ground(U?), ground(D?), integer(K?), (K? >= 1), ground(V?), ground(D1?), integer(K1?), (K1? >= 1) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S4?, M2?, M3), abort(S5?, M3?, M4), abort(S6?, M4?, M5), abort(S7?, M5?, M6), abort(S8?, M6?, M7), abort(S9?, M7?, Med1), select_instruments(U?, D?, K?, Holdings?, Status, Give, Rest), propose_swap(Med1?, Status?, Id?, Q?, lot(U?, D?, K?), lot(V?, D1?, K1?), Give?, Rest?, UserIn?, NetIn?, Cal?, Outs?, Date?, Ws?, Serial?).
-agent(Med, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, none, S4, S5, S6, S7, S8, S9) :- ground(Id?) | send(ask(agent_3, ctx_agent_3, esc_agent_3(R), Id1), Med?, Med1), agent(Med1?, Id?, UserIn?, NetIn?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?, S1?, S2?, ask(R?, Id1?), S4?, S5?, S6?, S7?, S8?, S9?).
-agent(Med, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, ask(then(xs_agent_4(Q, K)), _), S5, S6, S7, S8, S9) :- ground(Id?), ground(Q?), integer(K?), (K? >= 1) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S5?, M3?, M4), abort(S6?, M4?, M5), abort(S7?, M5?, M6), abort(S8?, M6?, M7), abort(S9?, M7?, Med1), select_instruments(Q?, now, K?, Holdings?, Status, Give, Rest), do_pay(Med1?, Status?, Id?, Q?, K?, Give?, Rest?, UserIn?, NetIn?, Cal?, Outs?, Date?, Ws?, Serial?).
-agent(Med, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, none, S5, S6, S7, S8, S9) :- ground(Id?) | send(ask(agent_4, ctx_agent_4, esc_agent_4(R), Id1), Med?, Med1), agent(Med1?, Id?, UserIn?, NetIn?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?, S1?, S2?, S3?, ask(R?, Id1?), S5?, S6?, S7?, S8?, S9?).
-agent(Med, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, ask(then(xs_agent_5(Q, R, D1)), _), S6, S7, S8, S9) :- ground(Id?), ground(Q?), ground(R?), ground(D1?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, M4), abort(S6?, M4?, M5), abort(S7?, M5?, M6), abort(S8?, M6?, M7), abort(S9?, M7?, Med1), take_instrument(Q?, now, Holdings?, Found, Rest), do_redeem(Med1?, Found?, Id?, Q?, R?, D1?, Rest?, UserIn?, NetIn?, Cal?, Outs?, Date?, Ws?, Serial?).
-agent(Med, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, none, S6, S7, S8, S9) :- ground(Id?) | send(ask(agent_5, ctx_agent_5, esc_agent_5(R1), Id1), Med?, Med1), agent(Med1?, Id?, UserIn?, NetIn?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?, S1?, S2?, S3?, S4?, ask(R1?, Id1?), S6?, S7?, S8?, S9?).
-agent(Med, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, ask(then(xs_agent_6(Q, D)), _), S7, S8, S9) :- ground(Id?), ground(Q?), integer(D?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, M4), abort(S5?, M4?, M5), abort(S7?, M5?, M6), abort(S8?, M6?, M7), abort(S9?, M7?, Med1), take_bond(Q?, D?, Holdings?, Found, Rest), do_mature(Med1?, Found?, Id?, Q?, D?, Rest?, UserIn?, NetIn?, Cal?, Outs?, Date?, Ws?, Serial?).
-agent(Med, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, none, S7, S8, S9) :- ground(Id?) | send(ask(agent_6, ctx_agent_6, esc_agent_6(R), Id1), Med?, Med1), agent(Med1?, Id?, UserIn?, NetIn?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?, S1?, S2?, S3?, S4?, S5?, ask(R?, Id1?), S7?, S8?, S9?).
-agent(Med, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, ask(then(xs_agent_7(E, U, D, K)), _), S8, S9) :- ground(Id?), ground(E?), ground(U?), ground(D?), integer(K?), (K? >= 1) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, M4), abort(S5?, M4?, M5), abort(S6?, M5?, M6), abort(S8?, M6?, M7), abort(S9?, M7?, Med1), select_instruments(U?, D?, K?, Holdings?, Status, Give, Rest), propose_transfer(Med1?, Status?, deposit, Id?, E?, lot(U?, D?, K?), Give?, Rest?, UserIn?, NetIn?, Cal?, Outs?, Date?, Ws?, Serial?).
-agent(Med, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, none, S8, S9) :- ground(Id?) | send(ask(agent_7, ctx_agent_7, esc_agent_7(R), Id1), Med?, Med1), agent(Med1?, Id?, UserIn?, NetIn?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?, S1?, S2?, S3?, S4?, S5?, S6?, ask(R?, Id1?), S8?, S9?).
-agent(Med, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, S7, ask(then(xs_agent_8(Q, U, D, K)), _), S9) :- ground(Id?), ground(Q?), ground(U?), ground(D?), integer(K?), (K? >= 1) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, M4), abort(S5?, M4?, M5), abort(S6?, M5?, M6), abort(S7?, M6?, M7), abort(S9?, M7?, Med1), select_instruments(U?, D?, K?, Holdings?, Status, Give, Rest), propose_transfer(Med1?, Status?, release, Id?, Q?, lot(U?, D?, K?), Give?, Rest?, UserIn?, NetIn?, Cal?, Outs?, Date?, Ws?, Serial?).
-agent(Med, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, S7, none, S9) :- ground(Id?) | send(ask(agent_8, ctx_agent_8, esc_agent_8(R), Id1), Med?, Med1), agent(Med1?, Id?, UserIn?, NetIn?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?, S1?, S2?, S3?, S4?, S5?, S6?, S7?, ask(R?, Id1?), S9?).
-agent(Med, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, S7, S8, ask(then(xs_agent_9(P, U, D, K)), _)) :- ground(Id?), ground(P?), ground(U?), ground(D?), integer(K?), (K? >= 1) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, M4), abort(S5?, M4?, M5), abort(S6?, M5?, M6), abort(S7?, M6?, M7), abort(S8?, M7?, Med1), select_instruments(U?, D?, K?, Holdings?, Status, Give, Rest), propose_transfer(Med1?, Status?, return, Id?, P?, lot(U?, D?, K?), Give?, Rest?, UserIn?, NetIn?, Cal?, Outs?, Date?, Ws?, Serial?).
-agent(Med, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, S7, S8, none) :- ground(Id?) | send(ask(agent_9, ctx_agent_9, esc_agent_9(R), Id1), Med?, Med1), agent(Med1?, Id?, UserIn?, NetIn?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?, S1?, S2?, S3?, S4?, S5?, S6?, S7?, S8?, ask(R?, Id1?)).
+procedure respond_transfer1(TransferOffer?, Link?, TransferResponse, Stream(UserInMsg), TransferCard, Stream(Ask(Question))).
+respond_transfer1(offer_transfer(Kind, From, Given), Link, Resp?, Ans?, card(offer_transfer(Kind?, From?, Given?), Answer), []) :- ground(Kind?), ground(From?), ground(Given?) | decide_transfer(Answer?, Kind?, From?, Given?, Resp, Link?, Ans).
 
-procedure on_act(Channel(Closed, Stream(AgentMsg))?, PeerContent?, Link?, Constant?, Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Integer?).
-on_act(Med, pay(Coins, Resp?), Link, From, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial) :- ground(Coins?) | adopt(Link?, From?, Outs?, Outs1, NetIn?, NetIn1), own_coins(Id?, Coins?, Own), take_payment(Med?, Own?, Id?, From?, Coins?, Resp, UserIn?, NetIn1?, Cal?, Outs1?, Holdings?, Date?, Ws?, Serial?).
-on_act(Med, redeem(Coin, R, D1, Resp?), Link, From, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial) :- ground(Coin?), ground(R?), ground(D1?) | adopt(Link?, From?, Outs?, Outs1, NetIn?, NetIn1), fulfil(Med?, Coin?, R?, D1?, Resp, Id?, From?, UserIn?, NetIn1?, Cal?, Outs1?, Holdings?, Date?, Ws?, Serial?).
-on_act(Med, mature(Bond, Resp?), Link, From, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial) :- ground(Bond?) | adopt(Link?, From?, Outs?, Outs1, NetIn?, NetIn1), grant(Med?, Bond?, Id?, Date?, Serial?, Resp, From?, UserIn?, NetIn1?, Cal?, Outs1?, Holdings?, Ws?).
-on_act(Med, swap(Want, Offered, Resp?), Link, From, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial) :- ground(Want?), ground(Offered?) | med_split(Med?, Medb, Medr), respond_swap(Medb?, offer(From?, Want?, Offered?), Link?, Resp, Ans, none), merge(Ans?, UserIn?, UserIn1), agent(Medr?, Id?, UserIn1?, NetIn?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?, none, none, none, none, none, none, none, none, none).
-on_act(Med, transfer(Kind, Given, Resp?), Link, From, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial) :- ground(Kind?), ground(Given?) | med_split(Med?, Medb, Medr), respond_transfer(Medb?, offer_transfer(Kind?, From?, Given?), Link?, Resp, Ans, none), merge(Ans?, UserIn?, UserIn1), agent(Medr?, Id?, UserIn1?, NetIn?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?, none, none, none, none, none, none, none, none, none).
+procedure decide_transfer(YesNo?, Kind?, Key?, Stream(Instrument)?, TransferResponse, Link?, Stream(UserInMsg)).
+decide_transfer(yes, Kind, From, Given, Resp?, Link, Ans?) :- accept_transfer_answer(Kind?, From?, Given?, Resp, Link?, Ans).
+decide_transfer(no, Kind, From, Given, Resp?, Link, Ans?) :- decline_transfer_answer(Kind?, From?, Given?, Resp, Link?, Ans).
 
-procedure take_payment(Channel(Closed, Stream(AgentMsg))?, Constant?, Constant?, Constant?, Stream(Instrument)?, PayResponse, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Integer?).
-take_payment(Med, yes, Id, From, Coins, pay_taken, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial) :- ground(Coins?) | append_instruments(Holdings?, Coins?, Holdings1), count_instruments(Coins?, 0, K), show(received(From?, K?), Outs?, Outs1), after_change(Med?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings1?, Date?, Ws?, Serial?).
-take_payment(Med, no, Id, From, Coins, pay_returned(Coins?), UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial) :- ground(Coins?) | count_instruments(Coins?, 0, K), show(refused_payment(From?, K?), Outs?, Outs1), agent(Med?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings?, Date?, Ws?, Serial?, none, none, none, none, none, none, none, none, none).
+exported procedure agent(Key?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Integer?, Stream(Ask(Question))).
+agent(S1, S2, S3, S4, S5, S6, S7, S8, S9, [ask('Stream(Request)?', stream_request_r(X)) | D?]) :- agent1(S1?, S2?, S3?, S4?, S5?, S6?, S7?, S8?, S9?, X?, D).
 
-procedure fulfil(Channel(Closed, Stream(AgentMsg))?, Instrument?, Constant?, Constant?, RedeemResponse, Constant?, Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Integer?).
-fulfil(Med, coin(I, S), R, D1, Resp?, Id, From, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial) :- (I? =?= Id?) | take_instrument(R?, D1?, Holdings?, Found, Rest), give(Med?, Found?, coin(I?, S?), R?, D1?, Resp, Id?, From?, UserIn?, NetIn?, Cal?, Outs?, Rest?, Date?, Ws?, Serial?).
-fulfil(Med, X, _, _, redeem_declined(X?), Id, From, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial) :- otherwise | show(refused(From?), Outs?, Outs1), agent(Med?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings?, Date?, Ws?, Serial?, none, none, none, none, none, none, none, none, none).
+exported procedure agent1(Key?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Integer?, Stream(Request)?, Stream(Ask(Question))).
+agent1(Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, Reqs, D?) :- serve(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?, D).
 
-procedure give(Channel(Closed, Stream(AgentMsg))?, Found?, Instrument?, Constant?, Constant?, RedeemResponse, Constant?, Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Integer?).
-give(Med, found(X), Mine, R, D1, redeem_give(X?), Id, From, UserIn, NetIn, Cal, Outs, Rest, Date, Ws, Serial) :- append_instruments(Rest?, [Mine?], Holdings1), show(presented(From?, R?, D1?), Outs?, Outs1), after_change(Med?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings1?, Date?, Ws?, Serial?).
-give(Med, not_found, Mine, R, D1, redeem_menu(Mine?, Menu?), Id, From, UserIn, NetIn, Cal, Outs, Rest, Date, Ws, Serial) :- ground(Rest?) | menu_of(Id?, Rest?, [], Menu), show(unfulfilled(From?, R?, D1?), Outs?, Outs1), agent(Med?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Rest?, Date?, Ws?, Serial?, none, none, none, none, none, none, none, none, none).
+procedure serve(Stream(Request)?, Key?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Integer?, Stream(Ask(Question))).
+serve(Reqs, Id, UserIn, [msg(Id1, call(From, Act, Ch)) | NetIn], Cal, Outs, Holdings, Date, Ws, Serial, D?) :- (Id? =?= Id1?), ground(From?) | on_act(Act?, link(Ch?), From?, Id?, Reqs?, UserIn?, NetIn?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?, D).
+serve(Reqs, Id, UserIn, [msg(From, Id1, Act) | NetIn], Cal, Outs, Holdings, Date, Ws, Serial, D?) :- (Id? =?= Id1?), ground(From?) | on_act(Act?, linked, From?, Id?, Reqs?, UserIn?, NetIn?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?, D).
+serve(Reqs, Id, UserIn, [_ | NetIn], Cal, Outs, Holdings, Date, Ws, Serial, D?) :- ground(Id?), otherwise | serve(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?, D).
+serve(Reqs, Id, [accept_swap(From, lot(V, D1, K1), Offered, Resp?, Link) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D?) :- ground(Id?), ground(From?), ground(V?), ground(D1?), integer(K1?) | select_instruments(V?, D1?, K1?, Holdings?, Status, Give, Rest), fill_swap(Status?, Id?, From?, Resp, Give?, Offered?, Rest?, Link?, Reqs?, UserIn?, NetIn?, Cal?, Outs?, Date?, Ws?, Serial?, D).
+serve(Reqs, Id, [decline_swap(From, Offered, Resp?, Link) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D?) :- ground(Id?), ground(From?) | decline(Resp, Offered?), drop_link(Link?), show(declined(From?), Outs?, Outs1), serve(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings?, Date?, Ws?, Serial?, D).
+serve(Reqs, Id, [swap_accepted(Q, Given, Link) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D?) :- ground(Id?), ground(Q?), ground(Given?) | adopt(Link?, Q?, Outs?, Outs1, NetIn?, NetIn1), append_instruments(Holdings?, Given?, Holdings1), show(swap_done(Q?), Outs1?, Outs2), after_change(Reqs?, Id?, UserIn?, NetIn1?, Cal?, Outs2?, Holdings1?, Date?, Ws?, Serial?, D).
+serve(Reqs, Id, [swap_declined_by(Q, Given, Link) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D?) :- ground(Id?), ground(Q?), ground(Given?) | drop_link(Link?), append_instruments(Holdings?, Given?, Holdings1), show(swap_declined(Q?), Outs?, Outs1), after_change(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings1?, Date?, Ws?, Serial?, D).
+serve(Reqs, Id, [pay_taken_by(Q, K) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D?) :- ground(Id?), ground(Q?), integer(K?) | show(paid(Q?, K?), Outs?, Outs1), serve(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings?, Date?, Ws?, Serial?, D).
+serve(Reqs, Id, [pay_returned_by(Q, Coins) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D?) :- ground(Id?), ground(Q?), ground(Coins?) | append_instruments(Holdings?, Coins?, Holdings1), count_instruments(Coins?, 0, K), show(not_accepted(Q?, K?), Outs?, Outs1), after_change(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings1?, Date?, Ws?, Serial?, D).
+serve(Reqs, Id, [redeem_given(Q, R, D1, X) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D?) :- ground(Id?), ground(Q?), ground(R?), ground(D1?), ground(X?) | append_instruments(Holdings?, [X?], Holdings1), show(redeemed(Q?, R?, D1?), Outs?, Outs1), after_change(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings1?, Date?, Ws?, Serial?, D).
+serve(Reqs, Id, [redeem_menu_from(Q, Coin, Menu) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D?) :- ground(Id?), ground(Q?), ground(Coin?), ground(Menu?) | append_instruments(Holdings?, [Coin?], Holdings1), show(menu(Q?, Menu?), Outs?, Outs1), after_change(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings1?, Date?, Ws?, Serial?, D).
+serve(Reqs, Id, [redeem_declined_by(Q, Coin) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D?) :- ground(Id?), ground(Q?), ground(Coin?) | append_instruments(Holdings?, [Coin?], Holdings1), show(refused(Q?), Outs?, Outs1), after_change(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings1?, Date?, Ws?, Serial?, D).
+serve(Reqs, Id, [matured_by(Q, D, Coin, T) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D1?) :- ground(Id?), ground(Q?), integer(D?), ground(Coin?), integer(T?) | append_instruments(Holdings?, [Coin?], Holdings1), add_warranty(Q?, T?, Ws?, Ws1), show(matured(Q?, D?), Outs?, Outs1), show(warranty(Q?, T?), Outs1?, Outs2), after_change(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs2?, Holdings1?, Date?, Ws1?, Serial?, D1).
+serve(Reqs, Id, [not_matured_by(Q, bond(I, M, S)) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D?) :- ground(Id?), ground(Q?), ground(I?), integer(M?), integer(S?) | append_instruments(Holdings?, [bond(I?, M?, S?)], Holdings1), show(not_mature(Q?, M?), Outs?, Outs1), after_change(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings1?, Date?, Ws?, Serial?, D).
+serve(Reqs, Id, [accept_transfer(Kind, From, Given, Resp?, Link) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D?) :- ground(Id?), ground(Kind?), ground(From?), ground(Given?) | take_transfer(Resp), adopt(Link?, From?, Outs?, Outs1, NetIn?, NetIn1), append_instruments(Holdings?, Given?, Holdings1), tally(Given?, [], Lots), show(received_transfer(Kind?, From?, Lots?), Outs1?, Outs2), after_change(Reqs?, Id?, UserIn?, NetIn1?, Cal?, Outs2?, Holdings1?, Date?, Ws?, Serial?, D).
+serve(Reqs, Id, [decline_transfer(Kind, From, Given, Resp?, Link) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D?) :- ground(Id?), ground(Kind?), ground(From?) | decline_transfer_resp(Resp, Given?), drop_link(Link?), show(declined_transfer(Kind?, From?), Outs?, Outs1), serve(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings?, Date?, Ws?, Serial?, D).
+serve(Reqs, Id, [transfer_accepted(Kind, Q, Link) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D?) :- ground(Id?), ground(Kind?), ground(Q?) | adopt(Link?, Q?, Outs?, Outs1, NetIn?, NetIn1), show(transferred(Kind?, Q?), Outs1?, Outs2), serve(Reqs?, Id?, UserIn?, NetIn1?, Cal?, Outs2?, Holdings?, Date?, Ws?, Serial?, D).
+serve(Reqs, Id, [transfer_declined_by(Kind, Q, Given, Link) | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D?) :- ground(Id?), ground(Kind?), ground(Q?), ground(Given?) | drop_link(Link?), append_instruments(Holdings?, Given?, Holdings1), show(transfer_declined(Kind?, Q?), Outs?, Outs1), after_change(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings1?, Date?, Ws?, Serial?, D).
+serve(Reqs, Id, [_ | UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D?) :- ground(Id?), otherwise | serve(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?, D).
+serve(Reqs, Id, UserIn, NetIn, [T | Cal], Outs, Holdings, Date, Ws, Serial, D?) :- ground(Id?), (T? > Date?) | show(date_advanced(T?), Outs?, Outs1), serve(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings?, T?, Ws?, Serial?, D).
+serve(Reqs, Id, UserIn, NetIn, [T | Cal], Outs, Holdings, Date, Ws, Serial, D?) :- ground(Id?), (T? =< Date?) | serve(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?, D).
+serve([mint(K) | Reqs], Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D?) :- ground(Id?), integer(K?), (K? >= 1) | create_coins(Id?, K?, Serial?, New), Serial1 := (Serial? + K?), append_instruments(Holdings?, New?, Holdings1), show(minted(K?, now), Outs?, Outs1), after_change(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings1?, Date?, Ws?, Serial1?, D).
+serve([mint(K, D) | Reqs], Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D1?) :- ground(Id?), integer(K?), (K? >= 1), integer(D?), (D? > Date?) | create_bonds(Id?, D?, K?, Serial?, New), Serial1 := (Serial? + K?), append_instruments(Holdings?, New?, Holdings1), show(minted(K?, D?), Outs?, Outs1), after_change(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings1?, Date?, Ws?, Serial1?, D1).
+serve([swap(Q, U, D, K, V, D1, K1) | Reqs], Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D2?) :- ground(Id?), ground(Q?), ground(U?), ground(D?), integer(K?), (K? >= 1), ground(V?), ground(D1?), integer(K1?), (K1? >= 1) | select_instruments(U?, D?, K?, Holdings?, Status, Give, Rest), propose_swap(Status?, Id?, Q?, lot(U?, D?, K?), lot(V?, D1?, K1?), Give?, Rest?, Reqs?, UserIn?, NetIn?, Cal?, Outs?, Date?, Ws?, Serial?, D2).
+serve([pay(Q, K) | Reqs], Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D?) :- ground(Id?), ground(Q?), integer(K?), (K? >= 1) | select_instruments(Q?, now, K?, Holdings?, Status, Give, Rest), do_pay(Status?, Id?, Q?, K?, Give?, Rest?, Reqs?, UserIn?, NetIn?, Cal?, Outs?, Date?, Ws?, Serial?, D).
+serve([redeem(Q, R, D1) | Reqs], Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D?) :- ground(Id?), ground(Q?), ground(R?), ground(D1?) | take_instrument(Q?, now, Holdings?, Found, Rest), do_redeem(Found?, Id?, Q?, R?, D1?, Rest?, Reqs?, UserIn?, NetIn?, Cal?, Outs?, Date?, Ws?, Serial?, D).
+serve([mature(Q, D) | Reqs], Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D1?) :- ground(Id?), ground(Q?), integer(D?) | take_bond(Q?, D?, Holdings?, Found, Rest), do_mature(Found?, Id?, Q?, D?, Rest?, Reqs?, UserIn?, NetIn?, Cal?, Outs?, Date?, Ws?, Serial?, D1).
+serve([deposit(E, U, D, K) | Reqs], Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D1?) :- ground(Id?), ground(E?), ground(U?), ground(D?), integer(K?), (K? >= 1) | select_instruments(U?, D?, K?, Holdings?, Status, Give, Rest), propose_transfer(Status?, deposit, Id?, E?, lot(U?, D?, K?), Give?, Rest?, Reqs?, UserIn?, NetIn?, Cal?, Outs?, Date?, Ws?, Serial?, D1).
+serve([release(Q, U, D, K) | Reqs], Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D1?) :- ground(Id?), ground(Q?), ground(U?), ground(D?), integer(K?), (K? >= 1) | select_instruments(U?, D?, K?, Holdings?, Status, Give, Rest), propose_transfer(Status?, release, Id?, Q?, lot(U?, D?, K?), Give?, Rest?, Reqs?, UserIn?, NetIn?, Cal?, Outs?, Date?, Ws?, Serial?, D1).
+serve([return(P, U, D, K) | Reqs], Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D1?) :- ground(Id?), ground(P?), ground(U?), ground(D?), integer(K?), (K? >= 1) | select_instruments(U?, D?, K?, Holdings?, Status, Give, Rest), propose_transfer(Status?, return, Id?, P?, lot(U?, D?, K?), Give?, Rest?, Reqs?, UserIn?, NetIn?, Cal?, Outs?, Date?, Ws?, Serial?, D1).
 
-procedure grant(Channel(Closed, Stream(AgentMsg))?, Instrument?, Constant?, Integer?, Integer?, MatureResponse, Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Stream(Warranty)?).
-grant(Med, bond(I, M, _), Id, Date, Serial, mature_give(coin(Id?, Serial?), Date?), From, UserIn, NetIn, Cal, Outs, Holdings, Ws) :- (I? =?= Id?), (M? =< Date?) | Serial1 := (Serial? + 1), show(matured_for(From?, M?), Outs?, Outs1), agent(Med?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings?, Date?, Ws?, Serial1?, none, none, none, none, none, none, none, none, none).
-grant(Med, bond(I, M, S), Id, Date, Serial, mature_declined(bond(I?, M?, S?)), From, UserIn, NetIn, Cal, Outs, Holdings, Ws) :- otherwise | show(not_mature_for(From?, M?), Outs?, Outs1), agent(Med?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings?, Date?, Ws?, Serial?, none, none, none, none, none, none, none, none, none).
-grant(Med, coin(I, S), Id, Date, Serial, mature_declined(coin(I?, S?)), From, UserIn, NetIn, Cal, Outs, Holdings, Ws) :- show(refused(From?), Outs?, Outs1), agent(Med?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings?, Date?, Ws?, Serial?, none, none, none, none, none, none, none, none, none).
+procedure on_act(PeerContent?, Link?, Key?, Key?, Stream(Request)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Integer?, Stream(Ask(Question))).
+on_act(pay(Coins, Resp?), Link, From, Id, Reqs, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D?) :- ground(Coins?) | adopt(Link?, From?, Outs?, Outs1, NetIn?, NetIn1), own_coins(Id?, Coins?, Own), take_payment(Own?, Id?, From?, Coins?, Resp, Reqs?, UserIn?, NetIn1?, Cal?, Outs1?, Holdings?, Date?, Ws?, Serial?, D).
+on_act(redeem(Coin, R, D1, Resp?), Link, From, Id, Reqs, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D?) :- ground(Coin?), ground(R?), ground(D1?) | adopt(Link?, From?, Outs?, Outs1, NetIn?, NetIn1), fulfil(Coin?, R?, D1?, Resp, Id?, From?, Reqs?, UserIn?, NetIn1?, Cal?, Outs1?, Holdings?, Date?, Ws?, Serial?, D).
+on_act(mature(Bond, Resp?), Link, From, Id, Reqs, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D?) :- ground(Bond?) | adopt(Link?, From?, Outs?, Outs1, NetIn?, NetIn1), grant(Bond?, Id?, Date?, Serial?, Resp, From?, Reqs?, UserIn?, NetIn1?, Cal?, Outs1?, Holdings?, Ws?, D).
+on_act(swap(Want, Offered, Resp?), Link, From, Id, Reqs, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D?) :- ground(Want?), ground(Offered?) | respond_swap(offer(From?, Want?, Offered?), Link?, Resp, Ans, D1), merge(Ans?, UserIn?, UserIn1), serve(Reqs?, Id?, UserIn1?, NetIn?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?, D2), merge(D1?, D2?, D).
+on_act(transfer(Kind, Given, Resp?), Link, From, Id, Reqs, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D?) :- ground(Kind?), ground(Given?) | respond_transfer(offer_transfer(Kind?, From?, Given?), Link?, Resp, Ans, D1), merge(Ans?, UserIn?, UserIn1), serve(Reqs?, Id?, UserIn1?, NetIn?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?, D2), merge(D1?, D2?, D).
 
-procedure fill_swap(Channel(Closed, Stream(AgentMsg))?, Constant?, Constant?, Constant?, SwapResponse, Stream(Instrument)?, Stream(Instrument)?, Stream(Instrument)?, Link?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Integer?).
-fill_swap(Med, ok, Id, From, swap_accept(Give?), Give, Offered, Rest, Link, UserIn, NetIn, Cal, Outs, Date, Ws, Serial) :- adopt(Link?, From?, Outs?, Outs1, NetIn?, NetIn1), append_instruments(Rest?, Offered?, Holdings1), show(swap_done(From?), Outs1?, Outs2), after_change(Med?, Id?, UserIn?, NetIn1?, Cal?, Outs2?, Holdings1?, Date?, Ws?, Serial?).
-fill_swap(Med, fail, Id, From, swap_decline(Offered?), Give, Offered, Rest, Link, UserIn, NetIn, Cal, Outs, Date, Ws, Serial) :- drop_link(Link?), append_instruments(Give?, Rest?, Orig), show(swap_failed(From?), Outs?, Outs1), agent(Med?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Orig?, Date?, Ws?, Serial?, none, none, none, none, none, none, none, none, none).
+procedure take_payment(Decision?, Key?, Key?, Stream(Instrument)?, PayResponse, Stream(Request)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Integer?, Stream(Ask(Question))).
+take_payment(yes, Id, From, Coins, pay_taken, Reqs, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D?) :- ground(Coins?) | append_instruments(Holdings?, Coins?, Holdings1), count_instruments(Coins?, 0, K), show(received(From?, K?), Outs?, Outs1), after_change(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings1?, Date?, Ws?, Serial?, D).
+take_payment(no, Id, From, Coins, pay_returned(Coins?), Reqs, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D?) :- ground(Coins?) | count_instruments(Coins?, 0, K), show(refused_payment(From?, K?), Outs?, Outs1), serve(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings?, Date?, Ws?, Serial?, D).
 
-procedure propose_swap(Channel(Closed, Stream(AgentMsg))?, Constant?, Constant?, Constant?, Lot?, Lot?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Integer?).
-propose_swap(Med, ok, Id, Q, _, Want, Give, Rest, UserIn, NetIn, Cal, Outs, Date, Ws, Serial) :- ground(Q?), ground(Want?), ground(Give?) | med_split(Med?, Medb, Medr), has_peer(Q?, Outs?, Outs1, Known), send_swap(Medb?, Known?, Id?, Q?, Want?, Give?, Outs1?, Outs2, UserIn?, UserIn1), after_change(Medr?, Id?, UserIn1?, NetIn?, Cal?, Outs2?, Rest?, Date?, Ws?, Serial?).
-propose_swap(Med, fail, Id, Q, lot(U, D, K), _, Give, Rest, UserIn, NetIn, Cal, Outs, Date, Ws, Serial) :- append_instruments(Give?, Rest?, Orig), show(lacking(U?, D?, K?), Outs?, Outs1), agent(Med?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Orig?, Date?, Ws?, Serial?, none, none, none, none, none, none, none, none, none).
+procedure fulfil(Instrument?, Key?, Constant?, RedeemResponse, Key?, Key?, Stream(Request)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Integer?, Stream(Ask(Question))).
+fulfil(coin(I, S), R, D1, Resp?, Id, From, Reqs, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D?) :- (I? =?= Id?) | take_instrument(R?, D1?, Holdings?, Found, Rest), give(Found?, coin(I?, S?), R?, D1?, Resp, Id?, From?, Reqs?, UserIn?, NetIn?, Cal?, Outs?, Rest?, Date?, Ws?, Serial?, D).
+fulfil(X, _, _, redeem_declined(X?), Id, From, Reqs, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D?) :- otherwise | show(refused(From?), Outs?, Outs1), serve(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings?, Date?, Ws?, Serial?, D).
 
-procedure send_swap(Channel(Closed, Stream(AgentMsg))?, Constant?, Constant?, Constant?, Lot?, Stream(Instrument)?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(UserInMsg)?, Stream(UserInMsg)).
-send_swap(Med, yes, Id, Q, Want, Give, Outs, Outs1?, UserIn, UserIn1?) :- ground(Q?) | send_friend(Q?, msg(Id?, Q?, swap(Want?, Give?, Resp)), Outs?, Outs1), inject_swap_result(Resp?, Q?, linked, UserIn?, UserIn1).
-send_swap(Med, no, Id, Q, Want, Give, Outs, Outs1?, UserIn, UserIn1?) :- ground(Q?), new_channel(TheirEnd, MyEnd) | send_net(msg(Q?, call(Id?, swap(Want?, Give?, Resp), TheirEnd?)), Outs?, Outs1), inject_swap_result(Resp?, Q?, link(MyEnd?), UserIn?, UserIn1).
+procedure give(Found?, Instrument?, Key?, Constant?, RedeemResponse, Key?, Key?, Stream(Request)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Integer?, Stream(Ask(Question))).
+give(found(X), Mine, R, D1, redeem_give(X?), Id, From, Reqs, UserIn, NetIn, Cal, Outs, Rest, Date, Ws, Serial, D?) :- append_instruments(Rest?, [Mine?], Holdings1), show(presented(From?, R?, D1?), Outs?, Outs1), after_change(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings1?, Date?, Ws?, Serial?, D).
+give(not_found, Mine, R, D1, redeem_menu(Mine?, Menu?), Id, From, Reqs, UserIn, NetIn, Cal, Outs, Rest, Date, Ws, Serial, D?) :- ground(Rest?) | menu_of(Id?, Rest?, [], Menu), show(unfulfilled(From?, R?, D1?), Outs?, Outs1), serve(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Rest?, Date?, Ws?, Serial?, D).
 
-procedure propose_transfer(Channel(Closed, Stream(AgentMsg))?, Constant?, Kind?, Constant?, Constant?, Lot?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Integer?).
-propose_transfer(Med, ok, Kind, Id, Q, Lot, Give, Rest, UserIn, NetIn, Cal, Outs, Date, Ws, Serial) :- ground(Kind?), ground(Q?), ground(Lot?), ground(Give?) | med_split(Med?, Medb, Medr), has_peer(Q?, Outs?, Outs1, Known), send_transfer(Medb?, Known?, Kind?, Id?, Q?, Give?, Outs1?, Outs2, UserIn?, UserIn1), show(offered_transfer(Kind?, Q?, Lot?), Outs2?, Outs3), after_change(Medr?, Id?, UserIn1?, NetIn?, Cal?, Outs3?, Rest?, Date?, Ws?, Serial?).
-propose_transfer(Med, fail, _, Id, _, lot(U, D, K), Give, Rest, UserIn, NetIn, Cal, Outs, Date, Ws, Serial) :- append_instruments(Give?, Rest?, Orig), show(lacking(U?, D?, K?), Outs?, Outs1), agent(Med?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Orig?, Date?, Ws?, Serial?, none, none, none, none, none, none, none, none, none).
+procedure grant(Instrument?, Key?, Integer?, Integer?, MatureResponse, Key?, Stream(Request)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Stream(Warranty)?, Stream(Ask(Question))).
+grant(bond(I, M, _), Id, Date, Serial, mature_give(coin(Id?, Serial?), Date?), From, Reqs, UserIn, NetIn, Cal, Outs, Holdings, Ws, D?) :- (I? =?= Id?), (M? =< Date?) | Serial1 := (Serial? + 1), show(matured_for(From?, M?), Outs?, Outs1), serve(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings?, Date?, Ws?, Serial1?, D).
+grant(bond(I, M, S), Id, Date, Serial, mature_declined(bond(I?, M?, S?)), From, Reqs, UserIn, NetIn, Cal, Outs, Holdings, Ws, D?) :- otherwise | show(not_mature_for(From?, M?), Outs?, Outs1), serve(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings?, Date?, Ws?, Serial?, D).
+grant(coin(I, S), Id, Date, Serial, mature_declined(coin(I?, S?)), From, Reqs, UserIn, NetIn, Cal, Outs, Holdings, Ws, D?) :- show(refused(From?), Outs?, Outs1), serve(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings?, Date?, Ws?, Serial?, D).
 
-procedure send_transfer(Channel(Closed, Stream(AgentMsg))?, Constant?, Kind?, Constant?, Constant?, Stream(Instrument)?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(UserInMsg)?, Stream(UserInMsg)).
-send_transfer(Med, yes, Kind, Id, Q, Give, Outs, Outs1?, UserIn, UserIn1?) :- ground(Kind?), ground(Q?) | send_friend(Q?, msg(Id?, Q?, transfer(Kind?, Give?, Resp)), Outs?, Outs1), inject_transfer_result(Resp?, Kind?, Q?, linked, UserIn?, UserIn1).
-send_transfer(Med, no, Kind, Id, Q, Give, Outs, Outs1?, UserIn, UserIn1?) :- ground(Kind?), ground(Q?), new_channel(TheirEnd, MyEnd) | send_net(msg(Q?, call(Id?, transfer(Kind?, Give?, Resp), TheirEnd?)), Outs?, Outs1), inject_transfer_result(Resp?, Kind?, Q?, link(MyEnd?), UserIn?, UserIn1).
+procedure fill_swap(Status?, Key?, Key?, SwapResponse, Stream(Instrument)?, Stream(Instrument)?, Stream(Instrument)?, Link?, Stream(Request)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Integer?, Stream(Ask(Question))).
+fill_swap(ok, Id, From, swap_accept(Give?), Give, Offered, Rest, Link, Reqs, UserIn, NetIn, Cal, Outs, Date, Ws, Serial, D?) :- adopt(Link?, From?, Outs?, Outs1, NetIn?, NetIn1), append_instruments(Rest?, Offered?, Holdings1), show(swap_done(From?), Outs1?, Outs2), after_change(Reqs?, Id?, UserIn?, NetIn1?, Cal?, Outs2?, Holdings1?, Date?, Ws?, Serial?, D).
+fill_swap(fail, Id, From, swap_decline(Offered?), Give, Offered, Rest, Link, Reqs, UserIn, NetIn, Cal, Outs, Date, Ws, Serial, D?) :- drop_link(Link?), append_instruments(Give?, Rest?, Orig), show(swap_failed(From?), Outs?, Outs1), serve(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Orig?, Date?, Ws?, Serial?, D).
 
-procedure do_pay(Channel(Closed, Stream(AgentMsg))?, Constant?, Constant?, Constant?, Integer?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Integer?).
-do_pay(Med, ok, Id, Q, K, Give, Rest, UserIn, NetIn, Cal, Outs, Date, Ws, Serial) :- ground(Q?) | med_split(Med?, Medb, Medr), has_peer(Q?, Outs?, Outs1, Known), send_owed(Medb?, Known?, Id?, Q?, pay(Give?, Resp), Outs1?, Outs2, NetIn?, NetIn1), inject_pay_result(Resp?, Q?, K?, UserIn?, UserIn1), show(paying(Q?, K?), Outs2?, Outs3), after_change(Medr?, Id?, UserIn1?, NetIn1?, Cal?, Outs3?, Rest?, Date?, Ws?, Serial?).
-do_pay(Med, fail, Id, Q, K, Give, Rest, UserIn, NetIn, Cal, Outs, Date, Ws, Serial) :- append_instruments(Give?, Rest?, Orig), show(lacking(Q?, now, K?), Outs?, Outs1), agent(Med?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Orig?, Date?, Ws?, Serial?, none, none, none, none, none, none, none, none, none).
+procedure propose_swap(Status?, Key?, Key?, Lot?, Lot?, Stream(Instrument)?, Stream(Instrument)?, Stream(Request)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Integer?, Stream(Ask(Question))).
+propose_swap(ok, Id, Q, _, Want, Give, Rest, Reqs, UserIn, NetIn, Cal, Outs, Date, Ws, Serial, D?) :- ground(Q?), ground(Want?), ground(Give?) | has_peer(Q?, Outs?, Outs1, Known), send_swap(Known?, Id?, Q?, Want?, Give?, Outs1?, Outs2, UserIn?, UserIn1), after_change(Reqs?, Id?, UserIn1?, NetIn?, Cal?, Outs2?, Rest?, Date?, Ws?, Serial?, D).
+propose_swap(fail, Id, _, lot(U, D, K), _, Give, Rest, Reqs, UserIn, NetIn, Cal, Outs, Date, Ws, Serial, D1?) :- append_instruments(Give?, Rest?, Orig), show(lacking(U?, D?, K?), Outs?, Outs1), serve(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Orig?, Date?, Ws?, Serial?, D1).
 
-procedure do_redeem(Channel(Closed, Stream(AgentMsg))?, Found?, Constant?, Constant?, Constant?, Constant?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Integer?).
-do_redeem(Med, found(Coin), Id, Q, R, D1, Rest, UserIn, NetIn, Cal, Outs, Date, Ws, Serial) :- ground(Q?) | med_split(Med?, Medb, Medr), has_peer(Q?, Outs?, Outs1, Known), send_owed(Medb?, Known?, Id?, Q?, redeem(Coin?, R?, D1?, Resp), Outs1?, Outs2, NetIn?, NetIn1), inject_redeem_result(Resp?, Q?, R?, D1?, UserIn?, UserIn1), after_change(Medr?, Id?, UserIn1?, NetIn1?, Cal?, Outs2?, Rest?, Date?, Ws?, Serial?).
-do_redeem(Med, not_found, Id, Q, _, _, Holdings, UserIn, NetIn, Cal, Outs, Date, Ws, Serial) :- show(lacking(Q?, now, 1), Outs?, Outs1), agent(Med?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings?, Date?, Ws?, Serial?, none, none, none, none, none, none, none, none, none).
+procedure send_swap(Decision?, Key?, Key?, Lot?, Stream(Instrument)?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(UserInMsg)?, Stream(UserInMsg)).
+send_swap(yes, Id, Q, Want, Give, Outs, Outs1?, UserIn, UserIn1?) :- ground(Q?) | send_friend(Q?, msg(Id?, Q?, swap(Want?, Give?, Resp)), Outs?, Outs1), inject_swap_result(Resp?, Q?, linked, UserIn?, UserIn1).
+send_swap(no, Id, Q, Want, Give, Outs, Outs1?, UserIn, UserIn1?) :- ground(Q?), new_channel(TheirEnd, MyEnd) | send_net(msg(Q?, call(Id?, swap(Want?, Give?, Resp), TheirEnd?)), Outs?, Outs1), inject_swap_result(Resp?, Q?, link(MyEnd?), UserIn?, UserIn1).
 
-procedure do_mature(Channel(Closed, Stream(AgentMsg))?, Found?, Constant?, Constant?, Integer?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Integer?).
-do_mature(Med, found(Bond), Id, Q, D, Rest, UserIn, NetIn, Cal, Outs, Date, Ws, Serial) :- ground(Q?) | med_split(Med?, Medb, Medr), has_peer(Q?, Outs?, Outs1, Known), send_owed(Medb?, Known?, Id?, Q?, mature(Bond?, Resp), Outs1?, Outs2, NetIn?, NetIn1), inject_mature_result(Resp?, Q?, D?, UserIn?, UserIn1), after_change(Medr?, Id?, UserIn1?, NetIn1?, Cal?, Outs2?, Rest?, Date?, Ws?, Serial?).
-do_mature(Med, not_found, Id, Q, D, Holdings, UserIn, NetIn, Cal, Outs, Date, Ws, Serial) :- show(lacking(Q?, D?, 1), Outs?, Outs1), agent(Med?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings?, Date?, Ws?, Serial?, none, none, none, none, none, none, none, none, none).
+procedure propose_transfer(Status?, Kind?, Key?, Key?, Lot?, Stream(Instrument)?, Stream(Instrument)?, Stream(Request)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Integer?, Stream(Ask(Question))).
+propose_transfer(ok, Kind, Id, Q, Lot, Give, Rest, Reqs, UserIn, NetIn, Cal, Outs, Date, Ws, Serial, D?) :- ground(Kind?), ground(Q?), ground(Lot?), ground(Give?) | has_peer(Q?, Outs?, Outs1, Known), send_transfer(Known?, Kind?, Id?, Q?, Give?, Outs1?, Outs2, UserIn?, UserIn1), show(offered_transfer(Kind?, Q?, Lot?), Outs2?, Outs3), after_change(Reqs?, Id?, UserIn1?, NetIn?, Cal?, Outs3?, Rest?, Date?, Ws?, Serial?, D).
+propose_transfer(fail, _, Id, _, lot(U, D, K), Give, Rest, Reqs, UserIn, NetIn, Cal, Outs, Date, Ws, Serial, D1?) :- append_instruments(Give?, Rest?, Orig), show(lacking(U?, D?, K?), Outs?, Outs1), serve(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Orig?, Date?, Ws?, Serial?, D1).
 
-procedure send_owed(Channel(Closed, Stream(AgentMsg))?, Constant?, Constant?, Constant?, PeerContent?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg)).
-send_owed(Med, yes, Id, Q, Act, Outs, Outs1?, NetIn, NetIn?) :- send_friend(Q?, msg(Id?, Q?, Act?), Outs?, Outs1).
-send_owed(Med, no, Id, Q, Act, Outs, Outs2?, NetIn, NetIn1?) :- ground(Q?), new_channel(TheirEnd, MyEnd) | send_net(msg(Q?, call(Id?, Act?, TheirEnd?)), Outs?, Outs1), adopt(link(MyEnd?), Q?, Outs1?, Outs2, NetIn?, NetIn1).
+procedure send_transfer(Decision?, Kind?, Key?, Key?, Stream(Instrument)?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(UserInMsg)?, Stream(UserInMsg)).
+send_transfer(yes, Kind, Id, Q, Give, Outs, Outs1?, UserIn, UserIn1?) :- ground(Kind?), ground(Q?) | send_friend(Q?, msg(Id?, Q?, transfer(Kind?, Give?, Resp)), Outs?, Outs1), inject_transfer_result(Resp?, Kind?, Q?, linked, UserIn?, UserIn1).
+send_transfer(no, Kind, Id, Q, Give, Outs, Outs1?, UserIn, UserIn1?) :- ground(Kind?), ground(Q?), new_channel(TheirEnd, MyEnd) | send_net(msg(Q?, call(Id?, transfer(Kind?, Give?, Resp), TheirEnd?)), Outs?, Outs1), inject_transfer_result(Resp?, Kind?, Q?, link(MyEnd?), UserIn?, UserIn1).
 
-procedure after_change(Channel(Closed, Stream(AgentMsg))?, Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Integer?).
-after_change(Med, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial) :- ground(Holdings?) | tally(Holdings?, [], Lots), show(holdings(Lots?), Outs?, Outs1), agent(Med?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings?, Date?, Ws?, Serial?, none, none, none, none, none, none, none, none, none).
+procedure do_pay(Status?, Key?, Key?, Integer?, Stream(Instrument)?, Stream(Instrument)?, Stream(Request)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Integer?, Stream(Ask(Question))).
+do_pay(ok, Id, Q, K, Give, Rest, Reqs, UserIn, NetIn, Cal, Outs, Date, Ws, Serial, D?) :- ground(Q?) | has_peer(Q?, Outs?, Outs1, Known), send_owed(Known?, Id?, Q?, pay(Give?, Resp), Outs1?, Outs2, NetIn?, NetIn1), inject_pay_result(Resp?, Q?, K?, UserIn?, UserIn1), show(paying(Q?, K?), Outs2?, Outs3), after_change(Reqs?, Id?, UserIn1?, NetIn1?, Cal?, Outs3?, Rest?, Date?, Ws?, Serial?, D).
+do_pay(fail, Id, Q, K, Give, Rest, Reqs, UserIn, NetIn, Cal, Outs, Date, Ws, Serial, D?) :- append_instruments(Give?, Rest?, Orig), show(lacking(Q?, now, K?), Outs?, Outs1), serve(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Orig?, Date?, Ws?, Serial?, D).
 
-%% --- the mediator, and the pending table with the program's clauses ahead of the search clauses ---
-exported procedure med(Channel(Stream(UserAnswer), Stream(Card))?, Channel(Stream(AgentMsg), Closed)?, PendingList?, Integer?).
-med(UserCh, AgentCh, Ps, N) :- receive(ask(C, Ctx, Esc, Id?), AgentCh?, AgentCh1), ground(C?), ground(Ctx?) | Id = req(N?), send(card(C?, Ctx?, req(N?)), UserCh?, UserCh1), N1 := (N? + 1), med(UserCh1?, AgentCh1?, [pending(req(N?), Esc?) | Ps?], N1?).
-med(UserCh, AgentCh, Ps, N) :- receive(answer(ReqId, Vs), UserCh?, UserCh1), ground(ReqId?), ground(Vs?) | answer(ReqId?, Vs?, Ps?, Ps1), send(closed(ReqId?), UserCh1?, UserCh2), med(UserCh2?, AgentCh?, Ps1?, N?).
-med(UserCh, AgentCh, Ps, N) :- receive(decline(ReqId), UserCh?, UserCh1), ground(ReqId?) | close(ReqId?, Ps?, Ps1), send(closed(ReqId?), UserCh1?, UserCh2), med(UserCh2?, AgentCh?, Ps1?, N?).
-med(UserCh, AgentCh, Ps, N) :- receive(abort(ReqId), AgentCh?, AgentCh1), ground(ReqId?) | drop(ReqId?, Ps?, Ps1), send(aborted(ReqId?), UserCh?, UserCh1), med(UserCh1?, AgentCh1?, Ps1?, N?).
+procedure do_redeem(Found?, Key?, Key?, Key?, Constant?, Stream(Instrument)?, Stream(Request)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Integer?, Stream(Ask(Question))).
+do_redeem(found(Coin), Id, Q, R, D1, Rest, Reqs, UserIn, NetIn, Cal, Outs, Date, Ws, Serial, D?) :- ground(Q?) | has_peer(Q?, Outs?, Outs1, Known), send_owed(Known?, Id?, Q?, redeem(Coin?, R?, D1?, Resp), Outs1?, Outs2, NetIn?, NetIn1), inject_redeem_result(Resp?, Q?, R?, D1?, UserIn?, UserIn1), after_change(Reqs?, Id?, UserIn1?, NetIn1?, Cal?, Outs2?, Rest?, Date?, Ws?, Serial?, D).
+do_redeem(not_found, Id, Q, _, _, Holdings, Reqs, UserIn, NetIn, Cal, Outs, Date, Ws, Serial, D?) :- show(lacking(Q?, now, 1), Outs?, Outs1), serve(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings?, Date?, Ws?, Serial?, D).
 
-exported procedure answer(ReqId?, Answer?, PendingList?, PendingList).
-answer(ReqId, xs_respond_swap_1(X1), [pending(Id, esc_respond_swap_1(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_respond_swap_1(X1?)).
-answer(ReqId, xs_respond_transfer_1(X1), [pending(Id, esc_respond_transfer_1(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_respond_transfer_1(X1?)).
-answer(ReqId, xs_agent_1(X1), [pending(Id, esc_agent_1(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_agent_1(X1?)).
-answer(ReqId, xs_agent_2(X1, X2), [pending(Id, esc_agent_2(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_agent_2(X1?, X2?)).
-answer(ReqId, xs_agent_3(X1, X2, X3, X4, X5, X6, X7), [pending(Id, esc_agent_3(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_agent_3(X1?, X2?, X3?, X4?, X5?, X6?, X7?)).
-answer(ReqId, xs_agent_4(X1, X2), [pending(Id, esc_agent_4(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_agent_4(X1?, X2?)).
-answer(ReqId, xs_agent_5(X1, X2, X3), [pending(Id, esc_agent_5(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_agent_5(X1?, X2?, X3?)).
-answer(ReqId, xs_agent_6(X1, X2), [pending(Id, esc_agent_6(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_agent_6(X1?, X2?)).
-answer(ReqId, xs_agent_7(X1, X2, X3, X4), [pending(Id, esc_agent_7(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_agent_7(X1?, X2?, X3?, X4?)).
-answer(ReqId, xs_agent_8(X1, X2, X3, X4), [pending(Id, esc_agent_8(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_agent_8(X1?, X2?, X3?, X4?)).
-answer(ReqId, xs_agent_9(X1, X2, X3, X4), [pending(Id, esc_agent_9(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_agent_9(X1?, X2?, X3?, X4?)).
-answer(ReqId, Vs, [P | Ps], [P? | Ps1?]) :- otherwise | answer(ReqId?, Vs?, Ps?, Ps1).
-answer(_, _, [], []).
+procedure do_mature(Found?, Key?, Key?, Integer?, Stream(Instrument)?, Stream(Request)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Integer?, Stream(Ask(Question))).
+do_mature(found(Bond), Id, Q, D, Rest, Reqs, UserIn, NetIn, Cal, Outs, Date, Ws, Serial, D1?) :- ground(Q?) | has_peer(Q?, Outs?, Outs1, Known), send_owed(Known?, Id?, Q?, mature(Bond?, Resp), Outs1?, Outs2, NetIn?, NetIn1), inject_mature_result(Resp?, Q?, D?, UserIn?, UserIn1), after_change(Reqs?, Id?, UserIn1?, NetIn1?, Cal?, Outs2?, Rest?, Date?, Ws?, Serial?, D1).
+do_mature(not_found, Id, Q, D, Holdings, Reqs, UserIn, NetIn, Cal, Outs, Date, Ws, Serial, D1?) :- show(lacking(Q?, D?, 1), Outs?, Outs1), serve(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings?, Date?, Ws?, Serial?, D1).
 
-exported procedure close(ReqId?, PendingList?, PendingList).
-close(ReqId, [pending(Id, esc_respond_swap_1(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = else.
-close(ReqId, [pending(Id, esc_respond_transfer_1(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = else.
-close(ReqId, [P | Ps], [P? | Ps1?]) :- otherwise | close(ReqId?, Ps?, Ps1).
-close(_, [], []).
+procedure send_owed(Decision?, Key?, Key?, PeerContent?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg)).
+send_owed(yes, Id, Q, Act, Outs, Outs1?, NetIn, NetIn?) :- send_friend(Q?, msg(Id?, Q?, Act?), Outs?, Outs1).
+send_owed(no, Id, Q, Act, Outs, Outs2?, NetIn, NetIn1?) :- ground(Q?), new_channel(TheirEnd, MyEnd) | send_net(msg(Q?, call(Id?, Act?, TheirEnd?)), Outs?, Outs1), adopt(link(MyEnd?), Q?, Outs1?, Outs2, NetIn?, NetIn1).
 
-exported procedure drop(ReqId?, PendingList?, PendingList).
-drop(ReqId, [pending(Id, _) | Ps], Ps?) :- (ReqId? =?= Id?) | true.
-drop(ReqId, [P | Ps], [P? | Ps1?]) :- otherwise | drop(ReqId?, Ps?, Ps1).
-drop(_, [], []).
+procedure after_change(Stream(Request)?, Key?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Integer?, Stream(Ask(Question))).
+after_change(Reqs, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, D?) :- ground(Holdings?) | tally(Holdings?, [], Lots), show(holdings(Lots?), Outs?, Outs1), serve(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings?, Date?, Ws?, Serial?, D).
 
-exported procedure(R) abort(Slot(R)?, Channel(Closed, Stream(AgentMsg))?, Channel(Closed, Stream(AgentMsg))).
-abort(none, Med, Med?).
-abort(ask(_, Id), Med, Med1?) :- ground(Id?) | send(abort(Id?), Med?, Med1).
+%% --- the dispatcher (programs/vglp/dispatcher.glp) ---
 
-exported procedure med_split(Channel(Closed, Stream(AgentMsg))?, Channel(Closed, Stream(AgentMsg)), Channel(Closed, Stream(AgentMsg))).
-med_split(ch(_, Out?), ch([], O1), ch([], O2)) :- merge(O1?, O2?, Out).
+Draw ::= draw(Integer, _, _) ; withdraw(Integer).
+PersonIn ::= [_ | PersonIn].
+Input ::= input(_, _, _).
+Path ::= [] ; [Integer | Path].
+Inputs ::= [Input | Inputs].
+Route ::= route(Integer, Inputs?).
+Routes ::= [] ; [Route | Routes].
+Deads ::= [] ; [Inputs? | Deads].
+Formed(X) ::= formed(X) ; refused.
+Done ::= done.
+Ask(Q) ::= ask(Constant, Q).
+Spawn(Q) ::= spawn(Integer, Q, Inputs, Stream(Draw)?).
+
+procedure(Q) dispatch(Stream(Ask(Q))?, Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_)), Stream(Spawn(Q))).
+dispatch(Asks, ch(PIn, POut?), ch(MIn?, MOut), Ss?) :- split_grants(PIn?, Inputs, MIn), merge(MOut?, DOut?, POut), serve_1(Asks?, Inputs?, COut?, COut, DOut, [], [], 0, Ss).
+
+procedure split_grants(PersonIn?, Inputs, Stream(_)).
+split_grants([input(Id, P, R) | Gs], [input(Id?, P?, R?) | Is?], Ms?) :- split_grants(Gs?, Is, Ms).
+split_grants([G | Gs], Is?, [G? | Ms?]) :- otherwise | split_grants(Gs?, Is, Ms).
+
+procedure(Q) serve_1(Stream(Ask(Q))?, Inputs?, Stream(Draw)?, Stream(Draw), Stream(_), Routes?, Deads?, Integer?, Stream(Spawn(Q))).
+serve_1([ask(_, Q) | Asks], Is, COut, CInto?, DOut?, Rs, Xs, N, [spawn(N?, Q?, Gs?, Ds) | Ss?]) :- ground(N?) | merge(Ds?, CInto1?, CInto), N1 := (N? + 1), serve_1(Asks?, Is?, COut?, CInto1, DOut, [route(N?, Gs) | Rs?], Xs?, N1?, Ss).
+serve_1(Asks, [G | Is], COut, CInto?, DOut?, Rs, Xs, N, Ss?) :- route_grant(G?, Rs?, Rs1), serve_1(Asks?, Is?, COut?, CInto, DOut, Rs1?, Xs?, N?, Ss).
+serve_1(Asks, Is, [draw(Id, W, V) | COut], CInto?, [draw(Id?, W?, V?) | DOut?], Rs, Xs, N, Ss?) :- serve_1(Asks?, Is?, COut?, CInto, DOut, Rs?, Xs?, N?, Ss).
+serve_1(Asks, Is, [withdraw(Id) | COut], CInto?, [withdraw(Id?) | DOut?], Rs, Xs, N, Ss?) :- ground(Id?) | remove_route(Id?, Rs?, Rs1, Xs?, Xs1), serve_1(Asks?, Is?, COut?, CInto, DOut, Rs1?, Xs1?, N?, Ss).
+
+procedure route_grant(Input?, Routes?, Routes).
+route_grant(input(Id, P, R), [route(Id1, [input(Id?, P?, R?) | Gs1?]) | Rs], [route(Id1?, Gs1) | Rs?]) :- (Id? =?= Id1?) | true.
+route_grant(G, [route(Id1, Gs?) | Rs], [route(Id1?, Gs) | Rs1?]) :- otherwise | route_grant(G?, Rs?, Rs1).
+route_grant(_, [], []).
+
+procedure remove_route(Integer?, Routes?, Routes, Deads?, Deads).
+remove_route(Id, [route(Id1, Gs?) | Rs], Rs?, Xs, [Gs | Xs?]) :- (Id? =?= Id1?) | true.
+remove_route(Id, [route(Id1, Gs?) | Rs], [route(Id1?, Gs) | Rs1?], Xs, Xs1?) :- otherwise | remove_route(Id?, Rs?, Rs1, Xs?, Xs1).
+remove_route(_, [], [], Xs, Xs?).
+
+procedure run(Integer?, _?, Stream(_)?, Done?, Stream(Draw)).
+run(Id, _, _, done, [withdraw(Id?)]).
+run(Id, W, [V | Vs], Done, [draw(Id?, W?, V?) | Ds?]) :- ground(W?), ground(V?) | run(Id?, W?, Vs?, Done?, Ds).
+run(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
+
+procedure run_end(Integer?, Done?, Stream(Draw)).
+run_end(Id, done, [withdraw(Id?)]).
+
+procedure all_done(Stream(Done)?, Done).
+all_done([done | Ds], D?) :- all_done(Ds?, D).
+all_done([], done).
+
+procedure shown(_?, Stream(_)).
+shown(X, [X?]) :- ground(X?) | true.
+
+procedure thread(Stream(_)?, Stream(Stream(_))).
+thread(Xs, [[] | Vs?]) :- thread(Xs?, [], Vs).
+
+procedure thread(Stream(_)?, Stream(_)?, Stream(Stream(_))).
+thread([X | Xs], Prev, Vs?) :- ground(X?), ground(Prev?) | append_one(Prev?, X?, New), thread_more(Xs?, New?, Vs).
+thread([], _, []).
+
+procedure thread_more(Stream(_)?, Stream(_)?, Stream(Stream(_))).
+thread_more(Xs, New, [New? | Vs?]) :- ground(New?) | thread(Xs?, New?, Vs).
+
+procedure append_one(Stream(_)?, _?, Stream(_)).
+append_one([Y | Ys], X, [Y? | Zs?]) :- append_one(Ys?, X?, Zs).
+append_one([], X, [X?]).
+
+procedure path(Path?, Integer?, Path).
+path([I | P], J, [I? | Q?]) :- path(P?, J?, Q).
+path([], J, [J?]).
+
+procedure form_string(_?, Formed(String)).
+form_string(R, F?) :- string(R?) | F = formed(R?).
+form_string(_, refused) :- otherwise | true.
+
+procedure form_integer(_?, Formed(Integer)).
+form_integer(R, F?) :- integer(R?) | F = formed(R?).
+form_integer(_, refused) :- otherwise | true.
+
+procedure form_number(_?, Formed(Number)).
+form_number(R, F?) :- number(R?) | F = formed(R?).
+form_number(_, refused) :- otherwise | true.
+
+procedure form_real(_?, Formed(Real)).
+form_real(R, F?) :- real(R?) | F = formed(R?).
+form_real(_, refused) :- otherwise | true.
+
+procedure form_constant(_?, Formed(Constant)).
+form_constant(R, F?) :- constant(R?) | F = formed(R?).
+form_constant(_, refused) :- otherwise | true.
+
+procedure form_module(_?, Formed(Module)).
+form_module(R, F?) :- module(R?) | F = formed(R?).
+form_module(_, refused) :- otherwise | true.
+
+procedure form_any(_?, Formed(_)).
+form_any(R, F?) :- ground(R?) | F = formed(R?).
+form_any(_, refused) :- otherwise | true.
+
+%% --- the construct process of each interactive type ---
+
+exported procedure dispatch(Stream(Ask(Question))?, Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+dispatch(Asks, PCh, MCh?) :- dispatch(Asks?, PCh?, MCh, Ss), constructs(Ss?).
+
+procedure constructs(Stream(Spawn(Question))?).
+constructs([spawn(Id, Q, Gs, Ds?) | Ss]) :- construct(Id?, Q?, Gs?, Ds), constructs(Ss?).
+constructs([]).
+
+procedure construct(Integer?, Question?, Inputs?, Stream(Draw)).
+construct(Id, swapCard_w(X), Gs, Ds?) :- present_swapCard([], X?, Gs?, _, Vs, Done), run(Id?, form(card, [shown, buttons([yes, no])]), Vs?, Done?, Ds).
+construct(Id, transferCard_w(X), Gs, Ds?) :- present_transferCard([], X?, Gs?, _, Vs, Done), run(Id?, form(card, [shown, buttons([yes, no])]), Vs?, Done?, Ds).
+construct(Id, stream_request_r(X?), Gs, Ds?) :- answer_stream_request([], X, Gs?, _, Done), run(Id?, input_box(menu([form(mint, [number]), form(mint, [number, number]), form(swap, [text, text, text, number, text, text, number]), form(pay, [text, number]), form(redeem, [text, text, text]), form(mature, [text, number]), form(deposit, [text, text, text, number]), form(release, [text, text, text, number]), form(return, [text, text, text, number])])), [input([])], Done?, Ds).
+
+procedure form_yesNo(_?, Formed(YesNo)).
+form_yesNo(yes, formed(yes)).
+form_yesNo(no, formed(no)).
+form_yesNo(_, refused) :- otherwise | true.
+
+procedure answer_yesNo(Path?, YesNo, Inputs?, Inputs, Done).
+answer_yesNo(P, X?, [input(Id, P1, R) | Gs], Gs1?, Done?) :- P1? =?= P?, ground(R?) | form_yesNo(R?, F), take_yesNo(F?, P?, X, input(Id?, P1?, R?), Gs?, Gs1, Done).
+answer_yesNo(P, X?, [input(Id, P1, R) | Gs], Gs1?, Done?) :- otherwise | take_yesNo(refused, P?, X, input(Id?, P1?, R?), Gs?, Gs1, Done).
+
+procedure take_yesNo(Formed(YesNo)?, Path?, YesNo, Input?, Inputs?, Inputs, Done).
+take_yesNo(formed(V), _, V?, _, Gs, Gs?, done).
+take_yesNo(refused, P, X?, G, Gs, [G? | Gs1?], Done?) :- answer_yesNo(P?, X, Gs?, Gs1, Done).
+
+procedure start_swapCard_card_2(Stream(_)?, Stream(_)?, Stream(_)).
+start_swapCard_card_2([V1 | S1], [V2 | S2], [card(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_swapCard_card_2(V1?, V2?, S1?, S2?, Vs).
+start_swapCard_card_2([], _, []).
+start_swapCard_card_2(_, [], []).
+
+procedure comb_swapCard_card_2(_?, _?, Stream(_)?, Stream(_)?, Stream(_)).
+comb_swapCard_card_2(_, V2, [V1 | S1], S2, [card(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_swapCard_card_2(V1?, V2?, S1?, S2?, Vs).
+comb_swapCard_card_2(_, _, [], [], []).
+
+procedure present_swapCard(Path?, SwapCard?, Inputs?, Inputs, Stream(_), Done).
+present_swapCard(P, card(H1, H2?), Gs, Gs1?, Vs?, D2?) :- ground(P?) | shown(H1?, V1), path(P?, 2, M2), path(P?, 2, Q2), answer_yesNo(Q2?, H2, Gs?, Gs1, D2), start_swapCard_card_2(V1?, [input(M2?)], Vs).
+
+procedure start_transferCard_card_2(Stream(_)?, Stream(_)?, Stream(_)).
+start_transferCard_card_2([V1 | S1], [V2 | S2], [card(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_transferCard_card_2(V1?, V2?, S1?, S2?, Vs).
+start_transferCard_card_2([], _, []).
+start_transferCard_card_2(_, [], []).
+
+procedure comb_transferCard_card_2(_?, _?, Stream(_)?, Stream(_)?, Stream(_)).
+comb_transferCard_card_2(_, V2, [V1 | S1], S2, [card(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_transferCard_card_2(V1?, V2?, S1?, S2?, Vs).
+comb_transferCard_card_2(_, _, [], [], []).
+
+procedure present_transferCard(Path?, TransferCard?, Inputs?, Inputs, Stream(_), Done).
+present_transferCard(P, card(H1, H2?), Gs, Gs1?, Vs?, D2?) :- ground(P?) | shown(H1?, V1), path(P?, 2, M2), path(P?, 2, Q2), answer_yesNo(Q2?, H2, Gs?, Gs1, D2), start_transferCard_card_2(V1?, [input(M2?)], Vs).
+
+procedure join_request_mint_1(Formed(Integer)?, Formed(Request)).
+join_request_mint_1(formed(X1), formed(mint(X1?))).
+join_request_mint_1(refused, refused).
+
+procedure join_request_mint_2(Formed(Integer)?, Formed(Integer)?, Formed(Request)).
+join_request_mint_2(formed(X1), formed(X2), formed(mint(X1?, X2?))).
+join_request_mint_2(refused, _, refused).
+join_request_mint_2(_, refused, refused).
+
+procedure join_request_swap_7(Formed(Key)?, Formed(Key)?, Formed(Constant)?, Formed(Integer)?, Formed(Key)?, Formed(Constant)?, Formed(Integer)?, Formed(Request)).
+join_request_swap_7(formed(X1), formed(X2), formed(X3), formed(X4), formed(X5), formed(X6), formed(X7), formed(swap(X1?, X2?, X3?, X4?, X5?, X6?, X7?))).
+join_request_swap_7(refused, _, _, _, _, _, _, refused).
+join_request_swap_7(_, refused, _, _, _, _, _, refused).
+join_request_swap_7(_, _, refused, _, _, _, _, refused).
+join_request_swap_7(_, _, _, refused, _, _, _, refused).
+join_request_swap_7(_, _, _, _, refused, _, _, refused).
+join_request_swap_7(_, _, _, _, _, refused, _, refused).
+join_request_swap_7(_, _, _, _, _, _, refused, refused).
+
+procedure join_request_pay_2(Formed(Key)?, Formed(Integer)?, Formed(Request)).
+join_request_pay_2(formed(X1), formed(X2), formed(pay(X1?, X2?))).
+join_request_pay_2(refused, _, refused).
+join_request_pay_2(_, refused, refused).
+
+procedure join_request_redeem_3(Formed(Key)?, Formed(Key)?, Formed(Constant)?, Formed(Request)).
+join_request_redeem_3(formed(X1), formed(X2), formed(X3), formed(redeem(X1?, X2?, X3?))).
+join_request_redeem_3(refused, _, _, refused).
+join_request_redeem_3(_, refused, _, refused).
+join_request_redeem_3(_, _, refused, refused).
+
+procedure join_request_mature_2(Formed(Key)?, Formed(Integer)?, Formed(Request)).
+join_request_mature_2(formed(X1), formed(X2), formed(mature(X1?, X2?))).
+join_request_mature_2(refused, _, refused).
+join_request_mature_2(_, refused, refused).
+
+procedure join_request_deposit_4(Formed(Key)?, Formed(Key)?, Formed(Constant)?, Formed(Integer)?, Formed(Request)).
+join_request_deposit_4(formed(X1), formed(X2), formed(X3), formed(X4), formed(deposit(X1?, X2?, X3?, X4?))).
+join_request_deposit_4(refused, _, _, _, refused).
+join_request_deposit_4(_, refused, _, _, refused).
+join_request_deposit_4(_, _, refused, _, refused).
+join_request_deposit_4(_, _, _, refused, refused).
+
+procedure join_request_release_4(Formed(Key)?, Formed(Key)?, Formed(Constant)?, Formed(Integer)?, Formed(Request)).
+join_request_release_4(formed(X1), formed(X2), formed(X3), formed(X4), formed(release(X1?, X2?, X3?, X4?))).
+join_request_release_4(refused, _, _, _, refused).
+join_request_release_4(_, refused, _, _, refused).
+join_request_release_4(_, _, refused, _, refused).
+join_request_release_4(_, _, _, refused, refused).
+
+procedure join_request_return_4(Formed(Key)?, Formed(Key)?, Formed(Constant)?, Formed(Integer)?, Formed(Request)).
+join_request_return_4(formed(X1), formed(X2), formed(X3), formed(X4), formed(return(X1?, X2?, X3?, X4?))).
+join_request_return_4(refused, _, _, _, refused).
+join_request_return_4(_, refused, _, _, refused).
+join_request_return_4(_, _, refused, _, refused).
+join_request_return_4(_, _, _, refused, refused).
+
+procedure form_request(_?, Formed(Request)).
+form_request(mint(R1), F?) :- form_integer(R1?, F1), join_request_mint_1(F1?, F).
+form_request(mint(R1, R2), F?) :- form_integer(R1?, F1), form_integer(R2?, F2), join_request_mint_2(F1?, F2?, F).
+form_request(swap(R1, R2, R3, R4, R5, R6, R7), F?) :- form_string(R1?, F1), form_string(R2?, F2), form_constant(R3?, F3), form_integer(R4?, F4), form_string(R5?, F5), form_constant(R6?, F6), form_integer(R7?, F7), join_request_swap_7(F1?, F2?, F3?, F4?, F5?, F6?, F7?, F).
+form_request(pay(R1, R2), F?) :- form_string(R1?, F1), form_integer(R2?, F2), join_request_pay_2(F1?, F2?, F).
+form_request(redeem(R1, R2, R3), F?) :- form_string(R1?, F1), form_string(R2?, F2), form_constant(R3?, F3), join_request_redeem_3(F1?, F2?, F3?, F).
+form_request(mature(R1, R2), F?) :- form_string(R1?, F1), form_integer(R2?, F2), join_request_mature_2(F1?, F2?, F).
+form_request(deposit(R1, R2, R3, R4), F?) :- form_string(R1?, F1), form_string(R2?, F2), form_constant(R3?, F3), form_integer(R4?, F4), join_request_deposit_4(F1?, F2?, F3?, F4?, F).
+form_request(release(R1, R2, R3, R4), F?) :- form_string(R1?, F1), form_string(R2?, F2), form_constant(R3?, F3), form_integer(R4?, F4), join_request_release_4(F1?, F2?, F3?, F4?, F).
+form_request(return(R1, R2, R3, R4), F?) :- form_string(R1?, F1), form_string(R2?, F2), form_constant(R3?, F3), form_integer(R4?, F4), join_request_return_4(F1?, F2?, F3?, F4?, F).
+form_request(_, refused) :- otherwise | true.
+
+procedure answer_stream_request(Path?, Stream(Request), Inputs?, Inputs, Done).
+answer_stream_request(P, X?, [input(Id, P1, R) | Gs], Gs1?, Done?) :- P1? =?= P?, ground(R?) | form_request(R?, F), take_stream_request(F?, P?, X, input(Id?, P1?, R?), Gs?, Gs1, Done).
+answer_stream_request(P, X?, [input(Id, P1, R) | Gs], Gs1?, Done?) :- otherwise | take_stream_request(refused, P?, X, input(Id?, P1?, R?), Gs?, Gs1, Done).
+
+procedure take_stream_request(Formed(Request)?, Path?, Stream(Request), Input?, Inputs?, Inputs, Done).
+take_stream_request(formed(V), P, [V? | X1?], _, Gs, Gs1?, Done?) :- answer_stream_request(P?, X1, Gs?, Gs1, Done).
+take_stream_request(refused, P, X?, G, Gs, [G? | Gs1?], Done?) :- answer_stream_request(P?, X, Gs?, Gs1, Done).
 

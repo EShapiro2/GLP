@@ -1,31 +1,40 @@
-/// Tests for the four networking seam kernels — '_peer_address'/2,
-/// '_punch_udp'/1, '_place_declare'/3 and '_place_remove'/1 — and the declared
-/// place's event stream.
+/// Tests for the five networking seam kernels — '_peer_address'/2,
+/// '_punch_udp'/1, '_place_declare'/3, '_place_remove'/1 and
+/// '_trust_declare'/2 — and the declared place's event stream.
 ///
-/// Covers IGLP Definition "Seam Predicates": peer_address assigns the address at
-/// which the layer observes a peer; punch_udp opens a path to an address and
-/// returns nothing; place_declare declares a place and assigns a stream of that
+/// Covers IGLP Definition "Seam Predicates": peer_address assigns address(S), S
+/// the address at which the layer observes a peer, or none where it observes
+/// none (72b5efa; GLP-Spec 090e647, peer_address(Key?, PeerAddress)); punch_udp
+/// opens a path to an address and returns nothing; place_declare declares a place and assigns a stream of that
 /// agent's own entered, exited, unobservable and observable events, fed
 /// serializer-fashion so one declaration yields one stream however many events
-/// follow; place_remove ends the declaration. The stream is closed in exactly
+/// follow; place_remove ends the declaration; trust_declare sets a proximity
+/// underlay's cold-call trust level, pan or lan (477c586; ble until
+/// 2026-10-09). The stream is closed in exactly
 /// two cases — place_remove and a superseding declaration — and an event for a
 /// place removed or superseded is dropped. A declaration the layer refuses is
 /// neither closing case: E receives unobservable, the declaration stands, and
 /// observable follows if the layer later begins reporting.
 ///
 /// The layer functions are GLP-Networking-API's. The simulation realization
-/// provides none of the four (their paper, §Not provided).
+/// provides none of the first four (their paper, §Not provided), and holds a
+/// trust level per underlay (IGLP appendix-implementation-notes.tex,
+/// Simulation realisation).
 
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
+import 'package:glp_runtime/compiler/error.dart' show CompileError;
+import 'package:glp_runtime/compiler/lexer.dart';
+import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/simulation_network.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/terms.dart';
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 
 /// A GlpNetwork that provides the seam predicates and nothing else, so the
 /// kernels can be driven without a transport. Places are recorded rather than
@@ -44,6 +53,9 @@ class _SeamNetwork extends GlpNetwork {
   /// Addresses punched, in order.
   final List<String> punched = [];
 
+  /// Trust levels set, in order, with their media.
+  final List<(ProximityUnderlay, TrustLevel)> trusted = [];
+
   /// Whether the platform accepts a declaration.
   bool accepts = true;
 
@@ -56,6 +68,10 @@ class _SeamNetwork extends GlpNetwork {
 
   @override
   void punchUdp(String address) => punched.add(address);
+
+  @override
+  void setTrustLevel(ProximityUnderlay underlay, TrustLevel level) =>
+      trusted.add((underlay, level));
 
   @override
   Future<bool> declarePlace(String place, double radiusMetres) {
@@ -94,8 +110,6 @@ class _SeamNetwork extends GlpNetwork {
   @override
   List<DiscoveredPeer> getPeers() => const [];
   @override
-  void setTrustLevel(TrustLevel level) {}
-  @override
   String getPublicAddress() => throw UnimplementedError();
   @override
   String generatePeerLink() => throw UnimplementedError();
@@ -114,7 +128,7 @@ class _SeamNetwork extends GlpNetwork {
 
 /// The events on the stream growing from [addr], and whether it is closed —
 /// as the program sees them.
-({List<String> events, bool closed}) _stream(GlpRuntime rt, int addr) {
+({List<String> events, bool closed}) _stream(GlpRuntime rt, HeapCell addr) {
   final events = <String>[];
   Object? cell = rt.heap.derefAddr(addr);
   while (cell is StructTerm && cell.functor == '.') {
@@ -127,7 +141,7 @@ class _SeamNetwork extends GlpNetwork {
       cell = tail;
     }
   }
-  final closed = cell is ConstTerm && (cell.value == 'nil' || cell.value == null);
+  final closed = cell is ConstTerm && (cell.value == nil || cell.value == null);
   return (events: events, closed: closed);
 }
 
@@ -139,8 +153,7 @@ String _hex(int seed) =>
 /// A madGLP engine with [network] bound as its GlpNetwork, capturing `_output`.
 GlpEngine _engine(List<String> out, GlpNetwork network) {
   final engine =
-      GlpEngine(rootSelfGlpPath: File('../programs/self.glp').absolute.path)
-        ..strictTypes = false;
+      GlpEngine(rootSelfGlpPath: File('../programs/self.glp').absolute.path);
   engine.enableMadGLP(agentId: 'alice');
   engine.runtime.outputCallback = out.add;
   engine.madContext!.network = network;
@@ -289,23 +302,93 @@ void main() {
     });
   });
 
+  // The sources below are application modules: they call the root self.glp's
+  // seam predicates and, to show what came back, its send_to_user/1.  A
+  // source with no file behind it is a module at the root, and -mode(system)
+  // is admitted only for the root self.glp and programs/system/ (TGLP
+  // appendix-root-self.tex, app:system-mode; GLP's round six, item 4), so
+  // none declares it: until 2026-10-04 each did, Rule A skipping a source
+  // with no file, and two called '_output' directly.
   group('seam kernels through their GLP wrappers', () {
-    test("peer_address binds the layer's observed address", () async {
+    // What peer_address/2 assigns, taken apart by matching: address(S) or
+    // none (GLP-Spec appendix-guards, "Networking seam").
+    const emitAddress = '''
+procedure emit(PeerAddress?).
+emit(address(S)) :- ground(S?) | send_to_user([S?]).
+emit(none) :- send_to_user([none]).
+''';
+
+    test("peer_address assigns address(S), S the layer's observed address",
+        () async {
       final out = <String>[];
       final network = _SeamNetwork();
       final peer = _hex(1);
       network.addresses[peer] = '203.0.113.7:41234';
       final engine = _engine(out, network);
       engine.loadSource('''
--mode(system).
-procedure emit(_?).
-emit(A) :- ground(A?) | '_output'(A?).
-procedure go.
+${emitAddress}procedure go.
 go :- peer_address('$peer', A), emit(A?).
 ''');
       final result = await engine.runGoal('go');
       expect(result.succeeded, isTrue);
       expect(out, ['203.0.113.7:41234']);
+    });
+
+    test('peer_address assigns none where the layer observes no address, and '
+        'does not abort', () async {
+      final out = <String>[];
+      final network = _SeamNetwork(); // observes no address for any peer
+      final engine = _engine(out, network);
+      engine.loadSource('''
+${emitAddress}procedure go.
+go :- peer_address('${_hex(1)}', A), emit(A?).
+''');
+      final result = await engine.runGoal('go');
+      expect(result.succeeded, isTrue,
+          reason: 'none is a value and not an abort');
+      expect(out, ['none']);
+    });
+
+    test('peer_address/2 and punch_udp/1 are typed: Key?, PeerAddress; String?',
+        () {
+      final root = Parser(
+              Lexer(File('../programs/self.glp').readAsStringSync()).tokenize())
+          .parseModule();
+      String decl(String name, int arity) => root.procDeclarations
+          .singleWhere((d) => d.name == name && d.arity == arity)
+          .toString();
+      expect(decl('peer_address', 2), 'procedure peer_address(Key?, PeerAddress).');
+      expect(decl('punch_udp', 1), 'procedure punch_udp(String?).');
+      expect(decl('_peer_address', 2),
+          'procedure _peer_address(Key?, PeerAddress).');
+      expect(decl('_punch_udp', 1), 'procedure _punch_udp(String?).');
+      final peerAddress =
+          root.typeDefs.singleWhere((t) => t.name == 'PeerAddress');
+      expect(peerAddress.alternatives.map((a) => '$a'),
+          ['address(String)', 'none']);
+
+      // The checker holds a program to them.
+      final engine = _engine(<String>[], _SeamNetwork());
+      Matcher refused(String why) => throwsA(isA<CompileError>().having(
+          (e) => e.message,
+          'message',
+          allOf(contains('Type checking failed'), contains(why))));
+      expect(() => engine.loadSource('''
+procedure take(String?).
+take(S) :- string(S?) | true.
+procedure go.
+go :- peer_address('${_hex(1)}', A), take(A?).
+'''), refused('writer type PeerAddress is not a subtype of String'));
+      expect(() => engine.loadSource('''
+procedure go.
+go :- punch_udp(41234).
+'''), refused('(punch_udp) is not well-typed'),
+          reason: 'an Integer is no String');
+      expect(() => engine.loadSource('''
+procedure go.
+go :- peer_address(7, _).
+'''), refused('(peer_address) is not well-typed'),
+          reason: 'an Integer is no Key');
     });
 
     test('punch_udp hands the address to the layer and returns nothing',
@@ -314,7 +397,6 @@ go :- peer_address('$peer', A), emit(A?).
       final network = _SeamNetwork();
       final engine = _engine(out, network);
       engine.loadSource('''
--mode(system).
 procedure go.
 go :- punch_udp('203.0.113.7:41234').
 ''');
@@ -328,9 +410,8 @@ go :- punch_udp('203.0.113.7:41234').
       final network = _SeamNetwork()..onDeclare = PlaceEvent.entered;
       final engine = _engine(out, network);
       engine.loadSource('''
--mode(system).
 procedure watch(_?).
-watch([E|_]) :- ground(E?) | '_output'(E?).
+watch([E|_]) :- ground(E?) | send_to_user([E?]).
 procedure go.
 go :- place_declare(home, 100, E), watch(E?).
 ''');
@@ -345,7 +426,6 @@ go :- place_declare(home, 100, E), watch(E?).
       final network = _SeamNetwork();
       final engine = _engine(out, network);
       engine.loadSource('''
--mode(system).
 procedure go.
 go :- place_declare(home, 100, _), place_remove(home).
 ''');
@@ -353,9 +433,47 @@ go :- place_declare(home, 100, _), place_remove(home).
       expect(network.declared, [('home', 100.0)]);
       expect(network.removed, ['home']);
     });
+
+    test("trust_declare sets each underlay's level at the layer", () async {
+      final out = <String>[];
+      final network = _SeamNetwork();
+      final engine = _engine(out, network);
+      engine.loadSource('''
+procedure go.
+go :- trust_declare(pan, open), trust_declare(lan, closed).
+''');
+      final result = await engine.runGoal('go');
+      expect(result.succeeded, isTrue);
+      expect(
+          network.trusted,
+          unorderedEquals([
+            (ProximityUnderlay.pan, TrustLevel.open),
+            (ProximityUnderlay.lan, TrustLevel.closed),
+          ]));
+    });
+
+    test('trust_declare of an underlay the layer does not have aborts, ble '
+        'among them', () async {
+      for (final underlay in ['wifi', 'ble']) {
+        final out = <String>[];
+        final network = _SeamNetwork();
+        final engine = _engine(out, network);
+        engine.loadSource('''
+procedure go.
+go :- trust_declare($underlay, open).
+''');
+        final result = await engine.runGoal('go');
+        expect(result.succeeded, isFalse,
+            reason: "$underlay: the kernel aborts, and the goal that called it "
+                "fails");
+        expect(network.trusted, isEmpty);
+      }
+    });
   });
 
-  group('simulation realization provides none of the four (§Not provided)', () {
+  group(
+      'simulation realization: none of the first four (§Not provided), '
+      'a trust level per underlay (Simulation realisation)', () {
     SimulationNetworkClient client() => SimulationNetworkClient(
           selfId: 'alice',
           directory: NetworkDirectory(),
@@ -376,6 +494,17 @@ go :- place_declare(home, 100, _), place_remove(home).
       expect(() => c.declarePlace('home', 100.0), throwsUnsupportedError);
       expect(() => c.removePlace('home'), throwsUnsupportedError);
       expect(fired, 0);
+    });
+
+    test("setTrustLevel holds each underlay's level, both closed until set",
+        () {
+      final c = client();
+      expect(c.trustLevelOf(ProximityUnderlay.pan), TrustLevel.closed);
+      expect(c.trustLevelOf(ProximityUnderlay.lan), TrustLevel.closed);
+      c.setTrustLevel(ProximityUnderlay.pan, TrustLevel.open);
+      expect(c.trustLevelOf(ProximityUnderlay.pan), TrustLevel.open);
+      expect(c.trustLevelOf(ProximityUnderlay.lan), TrustLevel.closed,
+          reason: 'the two underlays are declared independently');
     });
   });
 }

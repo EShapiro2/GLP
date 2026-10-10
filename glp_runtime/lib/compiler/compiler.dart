@@ -5,31 +5,28 @@ import 'codegen.dart';
 import 'error.dart';
 import 'token.dart';
 import 'result.dart';
-import 'ast.dart' show Program, Procedure, Clause, Atom, Goal, Guard, Term, VarTerm, StructTerm, UnderscoreTerm, CompileMode;
-import '../analysis/type_checker/type_ast.dart' show ProcDecl;
+import 'ast.dart' show Program, Procedure, Clause, Atom, Goal, Guard, Term, VarTerm, StructTerm, UnderscoreTerm;
+import '../analysis/type_checker/type_ast.dart' show ProcDecl, TypeEnvironment;
+import '../analysis/type_checker/type_checker.dart' show buildModuleTypeEnvironment;
 import 'package:glp_runtime/bytecode/runner.dart' show BytecodeProgram;
-import '../analysis/type_checker/type_checker.dart' show checkModule;
 
 // Re-export for users of this module
 export 'package:glp_runtime/bytecode/runner.dart' show BytecodeProgram;
 export 'result.dart' show CompilationResult;
-export 'compiler.dart' show CompileOptions;
-
-/// Compilation options
-class CompileOptions {
-  /// Enable type checking
-  final bool typeCheck;
-
-  /// Abort compilation on type errors (only applies if typeCheck is true)
-  final bool strictTypes;
-
-  const CompileOptions({
-    this.typeCheck = false,
-    this.strictTypes = false,
-  });
-}
 
 /// Main GLP compiler
+///
+/// The compiler takes no options.  Until 2026-09-20 a `CompileOptions` carried
+/// `typeCheck` and `strictTypes`, and the block they guarded ran the module
+/// check here, printed `[TYPE ERROR]` per error and carried on whenever
+/// `strictTypes` was off; nothing anywhere constructed the options with
+/// `typeCheck` true, so the block never ran either.  The same object is
+/// typechecked and then compiled, and no diagnostic on a load path is a
+/// warning: a program that does not check does not run (Coordination #1,
+/// 2026-09-18).  The block is therefore deleted rather than repaired, and the
+/// options with it; the loaders check the module and refuse it, and a caller
+/// of this compiler gets no switch that would let a compiled object go
+/// unchecked.
 class GlpCompiler {
   final Lexer Function(String) _createLexer;
   final Parser Function(List<Token>) _createParser;
@@ -47,14 +44,26 @@ class GlpCompiler {
         _createCodegen = createCodegen ?? (() => CodeGenerator());
 
   /// Compile GLP source to bytecode program
-  BytecodeProgram compile(String source, [CompileOptions? options]) {
-    final result = compileWithMetadata(source, options);
+  BytecodeProgram compile(String source,
+      {TypeEnvironment? typeEnv, TypeEnvironment? ancestorScope}) {
+    final result = compileWithMetadata(source,
+        typeEnv: typeEnv, ancestorScope: ancestorScope);
     return result.program;
   }
 
-  /// Compile GLP source to bytecode program with variable metadata
-  CompilationResult compileWithMetadata(String source, [CompileOptions? options]) {
-    final opts = options ?? const CompileOptions();
+  /// Compile GLP source to bytecode program with variable metadata.
+  ///
+  /// [typeEnv] is the scope the source was type-checked in.  The SRSW
+  /// relaxations of a typed program are decided on the type each occurrence has
+  /// (TGLP typed-glp.tex, "Readers of ground types"), so the analyzer is given
+  /// the same scope the checker used, which is also the scope whose defined
+  /// guards it unfolds.  With none, the source's own declarations are built
+  /// here over [ancestorScope], the scope passed in, and over the language
+  /// primitives alone where none is (TGLP Definition "Root, Scope", Π): the
+  /// root self.glp, compiled on its own, is checked in that.  Until 2026-10-04
+  /// the default was a root scope set once for the whole process.
+  CompilationResult compileWithMetadata(String source,
+      {TypeEnvironment? typeEnv, TypeEnvironment? ancestorScope}) {
     try {
       // Phase 1: Lexical analysis
       // Note: Main lexer now handles type declarations (::= and procedure)
@@ -68,56 +77,14 @@ class GlpCompiler {
       // Convert Module to Program for analyzer
       final ast = Program(module.procedures, module.line, module.column);
 
-      // Phase 2.4: Apply partial evaluation (defined guard expansion) BEFORE type checking
-      // This transforms clauses to unfold unit clause guards, which affects coverage checking
-      final partialEvaluator = PartialEvaluator();
-      final transformedAst = partialEvaluator.transformDefinedGuards(ast);
-
-      // Phase 2.5: Type checking (optional)
-      if (opts.typeCheck) {
-        try {
-          // Use checkModule with transformed procedures
-          // This ensures type checking sees the expanded guards
-          final typeResult = checkModule(module, transformedProcedures: transformedAst.procedures);
-
-          // Report type errors and warnings
-          if (typeResult.errors.isNotEmpty) {
-            for (final error in typeResult.errors) {
-              print('[TYPE ERROR] ${error.message} at line ${error.line}');
-            }
-            if (opts.strictTypes) {
-              throw CompileError(
-                'Type checking failed with ${typeResult.errors.length} error(s)',
-                typeResult.errors.first.line,
-                typeResult.errors.first.column,
-              );
-            }
-          }
-
-          if (typeResult.warnings.isNotEmpty) {
-            for (final warning in typeResult.warnings) {
-              print('[TYPE WARNING] ${warning.message} at line ${warning.line}');
-            }
-          }
-        } catch (e) {
-          if (opts.strictTypes) {
-            rethrow;
-          }
-          // In non-strict mode, just print the error and continue
-          print('[TYPE CHECK] Failed: $e');
-        }
-      }
-
-      // Generate reduce/2 for all files except system-mode code (stdlib)
-      final generateReduce = module.compileMode != CompileMode.system;
-
-      // Phase 3: Semantic analysis (with reduce generation flag and proc declarations)
-      // Pass proc declarations for type-based SRSW relaxation
+      // Phase 3: Semantic analysis.  Pass proc declarations for type-based SRSW
+      // relaxation.
       final analyzer = _createAnalyzer();
       final annotatedAst = analyzer.analyze(
         ast,
-        generateReduce: generateReduce,
         procDeclarations: module.procDeclarations,
+        typeEnv: typeEnv ??
+            buildModuleTypeEnvironment(module, ancestorScope: ancestorScope),
       );
 
       // Phase 4: Code generation
@@ -126,8 +93,11 @@ class GlpCompiler {
 
       return result;
     } on CompileError catch (e) {
-      // Rethrow with source context
-      throw CompileError(e.message, e.line, e.column, source: source, phase: e.category?.toString().split('.').last);
+      // Rethrow with source context, and with the error's category.  The
+      // category's name was passed as the phase until 2026-10-02 ('lexical',
+      // 'syntax', 'semantic'), which CompileError does not map, so a lexical,
+      // syntax or semantic error from the compiler came back with none.
+      throw CompileError(e.message, e.line, e.column, source: source, category: e.category);
     }
   }
 
@@ -137,26 +107,24 @@ class GlpCompiler {
   /// Skips lexing, parsing, type checking, and _select generation.
   ///
   /// [procDeclarations] should contain renamed declarations (e.g., from
-  /// [linkProgram]) for SRSW type-based relaxation.
+  /// [linkProgram]).  [typeEnv] is the scope the linked program was checked in
+  /// (the flat module's, [linkedProgramEnvironment]): the SRSW relaxations of a
+  /// typed program are decided on the type each occurrence has, so the analyzer
+  /// is given the same scope the checker used.
+  ///
+  /// The flat program is the object checked, and every clause in it satisfies
+  /// SRSW, the linker's alias clauses included (TGLP modules.tex §Compilation).
+  /// The analyzer's SRSW pass runs here as it does for a single-module program;
+  /// until 2026-09-18 a `skipGlobalSRSW` flag defaulted to skipping it for a
+  /// linked program, and nothing else performed the check, so a directory
+  /// program was compiled and run with no SRSW check at all.
   BytecodeProgram compileProgram(Program ast,
-      {List<ProcDecl>? procDeclarations, bool skipGlobalSRSW = true}) {
+      {List<ProcDecl>? procDeclarations, TypeEnvironment? typeEnv}) {
     final analyzer = _createAnalyzer();
     final annotated = analyzer.analyze(
       ast,
-      generateReduce: true,
       procDeclarations: procDeclarations ?? [],
-      // 🔴 The default skips SRSW, and for a directory program nothing else
-      // performs it: discovery type-checks each module (checkModulesIndependently)
-      // and runs no SRSW pass, so a directory program is compiled and run
-      // unchecked. This comment claimed the opposite until 2026-09-08, when
-      // SGSG lost an afternoon to a clause the check would have rejected at
-      // once (a head handing out the writer of a variable whose reader it was
-      // given, which the compiler silently split into two variables). Turning
-      // it on here is a tree-wide decision, not a local one: 16 of the 24
-      // directory programs the suite loads violate SRSW today, across every
-      // project (IGLP Code's measurement, reported 2026-09-08). A single-module
-      // program passes false and is checked.
-      skipGlobalSRSW: skipGlobalSRSW,
+      typeEnv: typeEnv,
     );
 
     final codegen = _createCodegen();

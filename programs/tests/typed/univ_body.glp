@@ -2,5 +2,5 @@
 %% Compose a compound term from a list via the body goal `T =.. L?`.
 %% (The head form `X? =.. [Y|Ys] :- ...` always parsed; this checks the body.)
 
-procedure comp(_?, _).
+procedure comp(Stream(_)?, _).
 comp(L, T?) :- list(L?) | T =.. L?.

@@ -1,0 +1,4 @@
+%% programs/tests/srsw_linked_neg/m.glp --- the one module; see self.glp.
+
+exported procedure p(Stream(Integer)).
+p(Xs?) :- true.

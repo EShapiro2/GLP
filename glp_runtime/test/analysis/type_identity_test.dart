@@ -13,16 +13,21 @@ library;
 import 'dart:io';
 import 'package:test/test.dart';
 import 'package:glp_runtime/analysis/type_checker/type_identity.dart';
-import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart'
-    show setRootScopeEnvironmentSource;
+import 'package:glp_runtime/analysis/type_checker/type_ast.dart'
+    show TypeEnvironment;
 import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/compiler/program_linker.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
+import 'package:glp_runtime/runtime/module_hierarchy.dart' show rootScope;
 import 'package:glp_runtime/wire/artefact.dart' show Artefact;
 
-TypeIdentityTables tablesOf(String source) =>
-    typeIdentityTablesForModule(Parser(Lexer(source).tokenize()).parseModule());
+/// The scope the sources below are tabled in: the root self.glp's, passed in.
+TypeEnvironment? _scope;
+
+TypeIdentityTables tablesOf(String source) => typeIdentityTablesForModule(
+    Parser(Lexer(source).tokenize()).parseModule(),
+    ancestorScope: _scope);
 
 String identityIn(String source, String key) {
   final id = tablesOf(source).identityOf(key);
@@ -31,13 +36,13 @@ String identityIn(String source, String key) {
 }
 
 void main() {
-  // Root scope from programs/self.glp, as the engine sets it: the identities of
-  // declarations over Number, Stream(X) and the rest are built against the same
-  // scope the type checker uses.
+  // The scope of a module directly under the root, programs/self.glp its one
+  // layer: the identities of declarations over Number, Stream(X) and the rest
+  // are built against the same scope the type checker uses.
   final rootSelfGlp = File('../programs/self.glp');
   final hasRootScope = rootSelfGlp.existsSync();
   if (hasRootScope) {
-    setRootScopeEnvironmentSource(rootSelfGlp.readAsStringSync());
+    _scope = rootScope(rootSelfGlp.absolute.path);
   }
 
   group('canonical print', () {
@@ -48,9 +53,10 @@ procedure paint(Colour?).
 paint(_).
 ''';
       final module = Parser(Lexer(src).tokenize()).parseModule();
-      final first = typeIdentityTablesForModule(module);
+      final first = typeIdentityTablesForModule(module, ancestorScope: _scope);
       final second = typeIdentityTablesForModule(
-          Parser(Lexer(src).tokenize()).parseModule());
+          Parser(Lexer(src).tokenize()).parseModule(),
+          ancestorScope: _scope);
       expect(first.identityOf('paint/1'), second.identityOf('paint/1'));
       expect(typeAutomatonPrintVersion, 'type-automaton/1');
     });
@@ -252,7 +258,7 @@ mix(_, _).
     test('a parameterised declaration has no identity', () {
       final tables = tablesOf('''
 List2(X) ::= [] ; [X | List2(X)].
-procedure head(List2(X)?, X).
+procedure(X) head(List2(X)?, X).
 head(_, _).
 ''');
       expect(tables.parametric, contains('head/2'));
@@ -379,14 +385,16 @@ measure(_).
       if (!Directory(root).existsSync()) return;
       final r = bothPathsFor(root, single: false);
 
-      // The primitives and the root-scope types are absent from the interface
-      // text by design — ambient at every runtime, as they are excluded from
-      // h(M).  `run_jobs/2` reaches Stream(X) and `serve/1` reaches
-      // Channel(In, Out); both must come out of buildRootScopeEnvironment() on
-      // the derived path exactly as they come out of the scope on the compiled
-      // one, or the same program has two identities.
-      expect(r.art.typeDefsText, isNot(contains('Stream')));
-      expect(r.art.typeDefsText, isNot(contains('Channel')));
+      // The root self.glp is a module of the program, the first link of every
+      // chain (TGLP modules.tex, Compilation, first step), so the root types
+      // an export reaches are the program's and travel in its interface text
+      // with its other types: nothing is ambient (GLP's round six, item 1).
+      // `run_jobs/2` reaches Stream(X) and `serve/1` reaches Channel(In, Out);
+      // both must come out the same on the derived path as on the compiled
+      // one, or the same program has two identities.  Until 2026-10-04 they
+      // were absent from the text and supplied by an ambient root scope.
+      expect(r.art.typeDefsText, contains('Stream(X) ::= '));
+      expect(r.art.typeDefsText, contains('Channel(In, Out) ::= '));
       expect(r.derived.exported['run_jobs/2'],
           equals(r.compiled.exported['run_jobs/2']));
       expect(r.derived.exported['serve/1'],
@@ -425,26 +433,20 @@ measure(_).
       expect(r.derived.exported, equals(r.compiled.exported));
     });
 
-    test('an export with no declaration is absent from every field', () {
+    test('a single-file load of a self.glp tables the types it defines', () {
       if (!hasRootScope) return;
-      const target = '../programs/tests/interface_table_single.glp';
+      const target = '../programs/tests/agent_roundtrip/self.glp';
       if (!File(target).existsSync()) return;
-      final r = bothPathsFor(target, single: true);
-
-      // `nudge/1` has clauses and no declaration, so its interface text is
-      // empty and it contributes no types.  The compiled path tables
-      // declarations, so an undeclared procedure is in none of the four fields;
-      // the derived path matches it.  `unresolved` is the narrower case of a
-      // declaration naming a type the scope does not define.
-      final texts = {
-        for (final e in r.art.exports) '${e.name}/${e.arity}': e.declarationText
-      };
-      expect(texts['nudge/1'], isEmpty);
-      for (final t in [r.derived, r.compiled]) {
-        expect(t.exported, isNot(contains('nudge/1')));
-        expect(t.parametric, isNot(contains('nudge/1')));
-        expect(t.unresolved, isNot(contains('nudge/1')));
-      }
+      // The modules it exposes name its types --- typed_social_agent's
+      // inject_msg/5 names Response --- and see them as a module of the
+      // directory sees its self.glp (modules.tex, Definition "Root, Scope").
+      // Until 2026-10-02 the loaded self.glp was no ancestor scope of the
+      // modules it exposes, Response stayed unrenamed and undefined in the
+      // flat module, and the tables were not built; a table that cannot be
+      // built now fails the load, so the load succeeding is the check.
+      final engine = GlpEngine(rootSelfGlpPath: rootSelfGlp.absolute.path);
+      expect(engine.loadFile(target), isTrue);
+      expect(engine.appModule!.declaredTypes, isA<TypeIdentityTables>());
     });
 
     test('an empty interface derives an empty table', () {

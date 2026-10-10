@@ -32,20 +32,15 @@ fill_outer([ping, chan(T?) | []], T).
 
 %% send_root(Mid, Root): the root channel's end on the friend channel.
 procedure send_root(MidChannel?, InnerChannel?).
-send_root(ch(In, Out?), R) :- hold_mid_in(In?), fill_mid(Out, R?).
+send_root(ch(_, Out?), R) :- fill_mid(Out, R?).
 
 procedure fill_mid(MidStream, InnerChannel?).
 fill_mid([midping, root(R?) | []], R).
 
-procedure hold_mid_in(MidStream?).
-hold_mid_in(X) :- true.
 
 %% write_end(Ch, W): hello and a fresh probe on the root channel.
 procedure write_end(InnerChannel?, String).
-write_end(ch(In, Out?), W?) :- hold_in(In?), fill_inner(Out, W).
-
-procedure hold_in(InnerStream?).
-hold_in(X) :- true.
+write_end(ch(_, Out?), W?) :- fill_inner(Out, W).
 
 procedure fill_inner(InnerStream, String).
 fill_inner([hello, probe(W) | []], W?).
@@ -63,10 +58,7 @@ read_outer([chan(C) | S]) :- send_to_user([saw(chan)]), read_mid(C?), read_outer
 read_outer([]).
 
 procedure read_mid(MidChannel?).
-read_mid(ch(In, Out?)) :- read_mid_stream(In?), hold_mid_out(Out).
-
-procedure hold_mid_out(MidStream).
-hold_mid_out(X?) :- true.
+read_mid(ch(In, _?)) :- read_mid_stream(In?).
 
 procedure read_mid_stream(MidStream?).
 read_mid_stream([midping | S]) :- send_to_user([saw(midping)]), read_mid_stream(S?).
@@ -74,10 +66,7 @@ read_mid_stream([root(C) | S]) :- send_to_user([saw(root)]), read_end(C?), read_
 read_mid_stream([]).
 
 procedure read_end(InnerChannel?).
-read_end(ch(In, Out?)) :- read_inner(In?), hold_out(Out).
-
-procedure hold_out(InnerStream).
-hold_out(X?) :- true.
+read_end(ch(In, _?)) :- read_inner(In?).
 
 procedure read_inner(InnerStream?).
 read_inner([hello | S]) :- send_to_user([saw(hello)]), read_inner(S?).

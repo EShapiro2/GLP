@@ -29,21 +29,21 @@
 %% observable and the final holdings can be read off it.
 %%
 %% Entry points: market/0, exported by self.glp as village/0; and market_ui/1,
-%% exported as village_ui/3, which runs the same market with one villager,
-%% named, also on the app's own path: every event its mini-app shows it --- the
-%% cards, their closing and the screen --- goes as well to send_to_user/1, one
-%% term to a line, which is what the app's UI runtime reads and renders (as
-%% play_ui.glp does for alice).  The app therefore shows that villager's screen
-%% as the market runs, while its scripted person answers the cards as before.
+%% exported by self.glp under its own name, a play a test runs, which runs the
+%% same market with one villager, named, whose every event its mini-app shows
+%% it --- the cards, their closing and the screen --- goes as well to
+%% send_to_user/1, one term to a line, which is what the app's UI runtime reads
+%% and renders.  The app's interface code therefore draws that villager's
+%% screen from the run, while its scripted person answers the cards as before.
 
-imported procedure miniapp#coins(Constant?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
-imported procedure person#person(Constant?, Stream(Event)?, Stream(UserAnswer), Script?, Stream(ScreenContent)).
+imported procedure currency#coins(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
+imported procedure currency#person(Key?, Stream(Event)?, Stream(UserAnswer), Script?, Stream(ScreenContent)).
 
 %% =============================================================================
 %% The scripts
 %% =============================================================================
 
-procedure script(Constant?, Script).
+procedure script(Key?, Script).
 script(alice, [mint(15), swap(bob, alice, 15, bob, 15),
                mint(15), swap(charlie, alice, 15, charlie, 15),
                swap(eve, bob, 10, frank, 4)]).
@@ -66,7 +66,7 @@ script(frank, [mint(18), accept(diana), mint(10), accept(eve), pay(diana, 3),
 exported procedure market.
 market :- market(none).
 
-exported procedure market_ui(Constant?).
+exported procedure market_ui(Key?).
 market_ui(V) :- market(V?).
 
 %% The market, with the villager named on the app's path, or none.
@@ -91,21 +91,21 @@ market(V) :-
 %% conversations, the scripted person on the other end of the channel, and its
 %% screen logged.  The villager on the app's path has its events sent to the
 %% user as well.
-exported procedure villager(Constant?, Script?, Stream(Conversation)?).
+exported procedure villager(Key?, Script?, Stream(Conversation)?).
 villager(Id, Script, Convs) :- villager(none, Id?, Script?, Convs?).
 
-procedure villager(Constant?, Constant?, Script?, Stream(Conversation)?).
+procedure villager(Constant?, Key?, Script?, Stream(Conversation)?).
 villager(V, Id, Script, Convs) :-
     V? =?= Id? |
-    miniapp # coins(Id?, ch(Answers?, Events), Convs?),
+    currency # coins(Id?, ch(Answers?, Events), Convs?),
     tee(Events?, ToPerson, ToUser),
     send_to_user(ToUser?),
-    person # person(Id?, ToPerson?, Answers, Script?, Screen),
+    currency # person(Id?, ToPerson?, Answers, Script?, Screen),
     log(Id?, Screen?).
 villager(_, Id, Script, Convs) :-
     otherwise |
-    miniapp # coins(Id?, ch(Answers?, Events), Convs?),
-    person # person(Id?, Events?, Answers, Script?, Screen),
+    currency # coins(Id?, ch(Answers?, Events), Convs?),
+    currency # person(Id?, Events?, Answers, Script?, Screen),
     log(Id?, Screen?).
 
 %% Each event to the person and to the user both.
@@ -114,6 +114,6 @@ tee([E|Es], [E?|Ps?], [E?|Us?]) :- ground(E?) | tee(Es?, Ps, Us).
 tee([], [], []).
 
 %% The screen messages, logged as tagged(Villager, Message).
-procedure log(Constant?, Stream(ScreenContent)?).
+procedure log(Key?, Stream(ScreenContent)?).
 log(Id, [M|Ms]) :- ground(M?) | send_to_user([tagged(Id?, M?)]), log(Id?, Ms?).
 log(_, []).

@@ -102,6 +102,19 @@ class InconsistentPathError extends WellTypedError {
   String toString() => message;
 }
 
+/// Whether two occurrences of one variable in one term have the same type.
+///
+/// Type identity is structural: two types with the same type automaton are one
+/// type, whatever their names or defining modules (TGLP parameterized-types.tex,
+/// after Definition (Instantiation); modules.tex).  So the two occurrences are
+/// compared by their automata --- the same polarity and output types that are
+/// structurally one ([sameBaseType]) --- and not by the names of their states.
+bool sameOccurrenceType(
+    VariableTypeInfo a, VariableTypeInfo b, ProgramDFA dfa) =>
+    a.typeState.name == b.typeState.name ||
+    (a.typeState.isDual == b.typeState.isDual &&
+        sameBaseType(a.typeState.baseName, b.typeState.baseName, dfa));
+
 /// Error: same variable has different types at different occurrences
 class InconsistentVariableError extends WellTypedError {
   final String variableName;
@@ -198,7 +211,7 @@ WellTypedResult checkModedTerm(ModedTerm term, Automaton automaton, ProgramDFA d
       if (variableTypes.containsKey(varKey)) {
         // Same variable appears multiple times - types must match
         final existing = variableTypes[varKey]!;
-        if (existing.typeState.name != result.variableAssignment!.typeState.name) {
+        if (!sameOccurrenceType(existing, result.variableAssignment!, dfa)) {
           errors.add(InconsistentVariableError(
               varKey, existing, result.variableAssignment!));
         }
@@ -226,21 +239,46 @@ WellTypedResult checkModedTerm(ModedTerm term, Automaton automaton, ProgramDFA d
 /// 2. Leaf consistency: variable/constant at leaf matches DFA state
 ///
 /// Fix 4.1: Switches automata at type boundaries when entering user-defined types
+///
+/// [open] names base types that stand for type parameters left open
+/// (well_typed_clause.dart, a call checked with its callee's parameters open:
+/// TGLP appendix-implementation-notes.tex, "The instantiation of a call").  A
+/// path that reaches one is consistent whatever lies at or below it, since a
+/// map could bind the parameter to a type admitting it, and a variable at one
+/// is typed by it.  Empty by default, which is Definition "Consistent Paths"
+/// itself.
 PathCheckResult checkPathAgainstAutomaton(
   ModedPath path,
   Automaton automaton,
-  ProgramDFA dfa,
-) {
+  ProgramDFA dfa, {
+  Set<String> open = const {},
+}) {
   var state = automaton.startState;
   var currentAutomaton = automaton;  // Track current automaton for type switching
 
+  // At an open parameter, the subterm at step [i] holds whatever it is.
+  PathCheckResult? atOpen(int i) {
+    if (open.isEmpty || !open.contains(state.baseName)) return null;
+    final leaf = path.leaf;
+    if (i == path.length - 1 && leaf.isVariable) {
+      return PathCheckResult.consistent(VariableTypeInfo(
+        typeState: state,
+        mode: leaf.isReader ? Mode.consume : Mode.produce,
+        isReader: leaf.isReader,
+      ));
+    }
+    return PathCheckResult.consistent();
+  }
+
   // Handle single-step paths (just a variable or constant at root)
   if (path.length == 1) {
-    return _checkLeafConsistencyForPath(path.leaf, state, dfa);
+    return atOpen(0) ?? _checkLeafConsistencyForPath(path.leaf, state, dfa);
   }
 
   // Traverse path, following automaton transitions
   for (int i = 0; i < path.length - 1; i++) {
+    final opened = atOpen(i);
+    if (opened != null) return opened;
     final step = path.steps[i];
     final nextStep = path.steps[i + 1];
 
@@ -292,7 +330,8 @@ PathCheckResult checkPathAgainstAutomaton(
   }
 
   // Check leaf consistency
-  return _checkLeafConsistencyForPath(path.leaf, state, dfa);
+  return atOpen(path.length - 1) ??
+      _checkLeafConsistencyForPath(path.leaf, state, dfa);
 }
 
 // =============================================================================
@@ -301,15 +340,17 @@ PathCheckResult checkPathAgainstAutomaton(
 
 /// Build transition label from path steps
 TransitionLabel _buildTransitionLabel(PathStep currentStep, PathStep nextStep) {
-  // Parse functor/arity from current step symbol (e.g., "[|]/2" → "[|]", 2)
-  final parts = currentStep.symbol.split('/');
-  if (parts.length != 2) {
+  // Parse functor/arity from current step symbol (e.g., "[|]/2" → "[|]", 2).
+  // Split at the LAST '/': the functor itself may contain '/', as `/` and `//`
+  // do, whose symbols are "//2" and "///2".
+  final slash = currentStep.symbol.lastIndexOf('/');
+  final arity = slash > 0 ? int.tryParse(currentStep.symbol.substring(slash + 1)) : null;
+  if (arity == null) {
     // Leaf node (variable or constant) - shouldn't happen for non-leaf steps
     return TransitionLabel.functor(currentStep.symbol, 0, nextStep.argIndex, mode: nextStep.mode);
   }
 
-  final functor = parts[0];
-  final arity = int.tryParse(parts[1]) ?? 0;
+  final functor = currentStep.symbol.substring(0, slash);
 
   // Label encodes: functor(arity, argIndex) with mode from next step
   return TransitionLabel.functor(functor, arity, nextStep.argIndex, mode: nextStep.mode);

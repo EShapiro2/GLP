@@ -1,0 +1,58 @@
+%% Printed by programs/sglp/transform.glp from the sGLP source in the term form
+%% (README.md, "The term form"); edit the source and run transform.sh, not this file.
+%% transform(panel, profiles)
+
+%% person(judge)
+%% binds(Panel, judge_panel)
+exported procedure
+judge_panel
+(
+Panel
+?
+,
+Integer?
+,
+MutualRef?
+)
+.
+judge_panel(panel(Cs), S, Mon)
+:-
+judge(Cs?, S?, Mon?)
+.
+procedure
+judge
+(
+Cards
+?
+,
+Integer?
+,
+MutualRef?
+)
+.
+judge([card(_, A?) | Cs], S, Mon)
+:-
+random(S?, 2, K, S1)
+,
+stream_append(rated('/'(1, hour), Tok), Mon?, _)
+,
+verdict(Tok?, K?, A)
+,
+judge(Cs?, S1?, Mon?)
+.
+judge([], _, _)
+.
+procedure
+verdict
+(
+Token?
+,
+Integer?
+,
+YesNo
+)
+.
+verdict(go, 1, yes)
+.
+verdict(go, 2, no)
+.

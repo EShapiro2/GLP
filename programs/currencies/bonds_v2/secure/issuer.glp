@@ -31,7 +31,7 @@ imported procedure custodian#custodian(Stream(IssuerBlock)?, Stream(AckMsg)).
 %% Uses ground(X?) relaxation to allow two reader occurrences
 %% of X? in the output streams.
 
-procedure tee(Stream(X)?, Stream(X), Stream(X)).
+procedure(X) tee(Stream(X)?, Stream(X), Stream(X)).
 
 tee([X|Xs], [X?|Ys?], [X?|Zs?]) :-
     ground(X?) |
@@ -53,7 +53,7 @@ bind_finality(finalized).
 %% The first block has no tips because no custodian acks exist yet.
 %% Produces an IssuerBlock and a PendingFinality entry.
 
-procedure first_request(ApprovalReq?, Constant?, IssuerBlock, PendingFinality).
+procedure first_request(ApprovalReq?, Integer?, IssuerBlock, PendingFinality).
 
 first_request(approve_mint(K, Maturity, FinalityM?), Counter,
     block(tx(Counter?, tx_mint(K?, Maturity?)), []),
@@ -71,7 +71,7 @@ first_request(approve_pay(From, To, Coin, FinalityQ?, FinalityR?), Counter,
 %% request, and finality reply variables are extracted into a parallel
 %% pending stream for later binding.
 
-procedure issuer_loop(Stream(ApprovalReq)?, Constant?, AckStreams?,
+procedure issuer_loop(Stream(ApprovalReq)?, Integer?, AckStreams?,
     Stream(IssuerBlock), Stream(PendingFinality)).
 
 %% Mint request

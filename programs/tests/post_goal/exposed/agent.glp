@@ -1,0 +1,11 @@
+%% agent.glp --- the one program of an agent its host runs: the host posts
+%% agent_init(Id, UserIn?, NetIn?), and each integer the person's stream
+%% carries is sent back to the person doubled, by double/2, which this
+%% directory's self.glp exposes.
+
+procedure agent_init(Constant?, Stream(Integer)?, Stream(_)?).
+agent_init(_, Ns, _) :- doubles(Ns?).
+
+procedure doubles(Stream(Integer)?).
+doubles([N|Ns]) :- double(N?, D), send_to_user([doubled(D?)]), doubles(Ns?).
+doubles([]).

@@ -1,6 +1,8 @@
-%% S10 fixture: Foo is defined only in the sibling self.glp, which is outside
-%% the programs/ hierarchy and hence out of scope for a file load. Foo
-%% therefore reads as a type parameter, p/1 inspects it uninstantiated, and
-%% the load is rejected.
+%% S10 fixture: this directory lies OUTSIDE programs/, the root, so this file
+%% and the directory are each refused as a program (TGLP modules.tex, "Scope
+%% construction": "A program lies at or below the root").  Foo is defined only
+%% in the sibling self.glp; until 2026-10-04 this file was compiled in a scope
+%% without that self.glp and refused for Foo, an undefined type name in p/1's
+%% declaration.
 procedure p(Foo).
 p(foo).

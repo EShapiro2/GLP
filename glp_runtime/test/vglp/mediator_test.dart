@@ -135,7 +135,8 @@ void main() {
       // escrow, answer, decline, abort
       expect(medProc.clauses, hasLength(4));
       final text = printProcedures([medProc]);
-      expect(text, contains('receive(ask(C, Ctx, Esc, Id?), AgentCh?, AgentCh1)'));
+      expect(text, contains(
+          'med(UserCh, ch([ask(C, Ctx, Esc, Id?) | AgentIn], AgentOut?), Ps, N)'));
     });
 
     test('the routing clause routes the answer and closes the card', () {
@@ -144,22 +145,24 @@ void main() {
       // other than the one that answered is told that the ask is over.
       final medProc = med.procedures.firstWhere((p) => p.name == 'med');
       final text = printProcedures([medProc]);
-      expect(text, contains('receive(answer(ReqId, Vs), UserCh?, UserCh1)'));
+      expect(text, contains(
+          'med(ch([answer(ReqId, Vs) | UserIn], UserOut?), AgentCh, Ps, N)'));
       expect(text, contains('answer(ReqId?, Vs?, Ps?, Ps1)'));
       expect(
           text,
           contains('answer(ReqId?, Vs?, Ps?, Ps1), '
-              'send(closed(ReqId?), UserCh1?, UserCh2), '
+              'send(closed(ReqId?), ch(UserIn?, UserOut), UserCh2), '
               'med(UserCh2?, AgentCh?, Ps1?, N?)'));
     });
 
     test('the decline clause selects the else-branch and closes the card', () {
       final medProc = med.procedures.firstWhere((p) => p.name == 'med');
       final text = printProcedures([medProc]);
-      expect(text, contains('receive(decline(ReqId), UserCh?, UserCh1)'));
+      expect(text, contains(
+          'med(ch([decline(ReqId) | UserIn], UserOut?), AgentCh, Ps, N)'));
       // close/3 binds the escrowed reply to else; the card goes with it.
       expect(text, contains('close(ReqId?, Ps?, Ps1)'));
-      expect(text, contains('send(closed(ReqId?), UserCh1?, UserCh2)'));
+      expect(text, contains('send(closed(ReqId?), ch(UserIn?, UserOut), UserCh2)'));
     });
 
     test('the mediator binds a non-arithmetic term with =, never :=', () {
@@ -191,7 +194,8 @@ void main() {
     test('the abort clause drops the entry unbound, the decline closes it', () {
       final medProc = med.procedures.firstWhere((p) => p.name == 'med');
       final text = printProcedures([medProc]);
-      expect(text, contains('receive(abort(ReqId), AgentCh?, AgentCh1)'));
+      expect(text, contains(
+          'med(UserCh, ch([abort(ReqId) | AgentIn], AgentOut?), Ps, N)'));
       expect(text, contains('drop(ReqId?, Ps?, Ps1)'));
       expect(text, contains('close(ReqId?, Ps?, Ps1)'));
       expect(text, contains('[pending(req(N?), Esc?) | Ps?]'));

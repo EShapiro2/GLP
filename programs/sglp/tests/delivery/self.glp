@@ -1,0 +1,49 @@
+%% Test (xii) of sGLP in GLP (sGLP's task 6 of 2026-10-10 07:59 UTC, (c);
+%% sGLP's paper, Section 4, "The person process" and "The log"; vGLP, Section
+%% 3, the chat input's delivery status): a vGLP program whose interactive type
+%% is the person's Stream(Msg)?, Msg ::= msg(String, Status?), the person
+%% writing each message's text and the program its status, sent, delivered or
+%% read; a profile writing three messages, each once the last one's status is
+%% written; and its run, the log showing each message with its status as a
+%% variable, the answer handed over before the program writes it.
+%%
+%%   chat.vglp        the vGLP program;
+%%   chat.glp         its canonical compilation (vGLP, Definition "Canonical
+%%                    Compilation"), written by hand;
+%%   chat_sglp.glp    the sGLP source in the term form (programs/sglp/README.md),
+%%                    the profile talker and the run declaration, the vGLP
+%%                    program's interface and its compiled program's
+%%                    predicates;
+%%   profiles.glp and population.glp  printed from chat_sglp.glp by
+%%                    programs/sglp/transform.sh, and not edited;
+%%   harness.glp      the run, by hand: the monitor, the log's sink, the one
+%%                    agent's initial goal and its person process.
+%%
+%%   delivery_run(Ts)    the run of the run declaration; Ts the texts the
+%%                       program read, in order
+
+%% The vGLP program's types (chat.vglp).
+Status ::= sent ; delivered ; read.
+Msg    ::= msg(String, Status?).
+
+%% The type of the asks, which the canonical compilation adds: Stream(Msg) is
+%% in reader mode, so its alternative of Question is
+%% stream_msg_r(Stream(Msg)?), the ask carrying the writer the person process
+%% writes.
+Ask      ::= ask(Constant, Question).
+Question ::= stream_msg_r(Stream(Msg)?).
+
+%% A stochastic person, one profile in the one dimension, as the harness hands
+%% it from the population's draw to the person process (population.glp).
+Talking  ::= talker.
+Profiles ::= profiles(Talking).
+
+imported procedure harness#run(Stream(String)).
+exported procedure delivery_run(Stream(String)).
+delivery_run(Ts?) :- harness # run(Ts).
+
+%% The sGLP source in the term form, chat_sglp.glp, for the transformation
+%% (programs/sglp/transform.glp).
+imported procedure chat_sglp#source(SglpTerms, SglpTerms).
+exported procedure source(SglpTerms, SglpTerms).
+source(V?, S?) :- chat_sglp # source(V, S).

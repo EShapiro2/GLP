@@ -1,7 +1,8 @@
 /// Tests for arithmetic body kernels with Pointer Architecture Heap
 ///
 /// Adapted from: test/bytecode/arithmetic_test.dart
-/// For spec: docs/heap-pointer-architecture-spec.md v3.0
+/// For spec: IGLP app:in-heap (Heap: Variables, Dereferencing,
+/// Binding, Suspension)
 ///
 /// Tests that arithmetic operations work correctly with the new
 /// pointer-based heap architecture.
@@ -291,7 +292,7 @@ void main() {
         0: VarRef(resultWriter),
       });
 
-      final goalId = 1;
+      final goalId = rt.nextGoalId++;
       rt.setGoalEnv(goalId, env);
 
       final entryPc = image.entryOffsetOf('compute_sum/1');
@@ -301,7 +302,9 @@ void main() {
       rt.gq.enqueue(GoalRef(goalId, entryPc!));
 
       print('\nRunning scheduler to drain all goals...');
-      final ran = sched.drain(maxCycles: 100, debug: true, debugOutput: true);
+      final ran = <int>[];
+      sched.drainWithStatus(
+          maxCycles: 100, debug: true, debugOutput: true, goalIds: ran);
       print('Goals executed: ${ran.length}');
 
       // Check if the result variable is bound

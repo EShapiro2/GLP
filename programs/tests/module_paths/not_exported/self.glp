@@ -1,0 +1,6 @@
+%% A cross-module call resolves to the procedure its qualifier exports (TGLP
+%% modules.tex, Compilation, fourth step): m.glp declares helper/1 and does not
+%% export it, so m # helper does not resolve and the program is refused.
+imported procedure m#helper(Integer).
+exported procedure run(Integer).
+run(X?) :- m # helper(X).

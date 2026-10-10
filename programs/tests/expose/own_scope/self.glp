@@ -1,0 +1,13 @@
+%% A signature type from the exposed module's own scope chain.  -expose lifts
+%% the exported procedures of lib/inner/rates.glp "(and the types their
+%% signatures carry) into that directory's scope, as if defined in its
+%% self.glp" (TGLP modules.tex, "The -expose directive"), and "a declaration
+%% carries the transitive closure of the types its signature references"
+%% (modules.tex, "Procedure declarations").  rate/2's signature names Level,
+%% which lib/self.glp defines: Level is in the scope of rates.glp
+%% (Definition (Root, Scope)) and not in this one, so the lift reads the
+%% signature in the scope of rates.glp and carries Level here.  This layer
+%% exports nothing and is not a program; app/ is, and lib/self.glp is not on
+%% its chain, as social/graph/self.glp is not on sglp's when the root self.glp
+%% exposes social#graph#routing#intro.
+-expose(lib#inner#rates).

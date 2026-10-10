@@ -1,15 +1,16 @@
 /// GlpNetwork — the one Dart interface madGLP uses to talk to networking.
 ///
-/// Transcribes the GLP Networking API paper (Sections 2–3) per
-/// `docs/ma/networking-seam-spec.md` v0.2. Two realizations exist behind this
-/// interface: `SimulationNetwork` (this repo, wraps the isolate transport) and
-/// the real BLE/IP layer (Dan's). Integration is a backend swap.
+/// Transcribes the GLP Networking API paper (Sections 2–3) and the contract of
+/// IGLP app:in-networking (One interface; The contract). Two realizations
+/// exist behind this interface: `SimulationNetwork` (this repo, wraps the
+/// isolate transport) and the real BLE/IP layer (Dan's). Integration is a
+/// backend swap.
 ///
 /// Callbacks are settable fields, matching `MadContext.onMessageReady` house
-/// style. `sign`/`verify` are synchronous (spec §2): their future callers are
+/// style. `sign`/`verify` are synchronous: their future callers are
 /// the GLP body kernels, and Ed25519 signing is pure CPU work.
 ///
-/// See: docs/ma/networking-seam-spec.md Section 2.
+/// See: IGLP app:in-networking, One interface and The contract.
 library;
 
 import 'dart:typed_data';
@@ -22,6 +23,14 @@ enum Transport { ble, ip }
 /// Under [closed], an agent does not connect to, and receives no first contact
 /// from, agents it has never contacted. [open] accepts cold-calls from anyone.
 enum TrustLevel { open, closed }
+
+/// A proximity underlay, PAN or LAN: "A level is held per ProximityUnderlay,
+/// and is set with setTrustLevel(underlay, level); both levels default to
+/// Closed" (GLP-Networking-API, Trust levels).  Each underlay has its own
+/// cold-call [TrustLevel], which `trust_declare/2` declares of `pan` or `lan`
+/// (GLP-Spec appendix-guards, "Proximity trust", e0b32d7).  Until 2026-10-09
+/// it was ProximityMedium, ble or lan.
+enum ProximityUnderlay { pan, lan }
 
 /// A 32-byte Ed25519 public key, with value equality and a hex string form.
 ///
@@ -169,8 +178,11 @@ abstract class GlpNetwork {
   /// Fires when a new peer is discovered.
   void Function(DiscoveredPeer p)? onPeerDiscovered;
 
-  /// Set the trust level governing first contact.
-  void setTrustLevel(TrustLevel level);
+  /// Set the cold-call trust level of proximity underlay [underlay] to
+  /// [level]: "A level is held per ProximityUnderlay, and is set with
+  /// setTrustLevel(underlay, level); both levels default to Closed" (paper,
+  /// Trust levels). Backs `trust_declare/2` (IGLP, Definition Seam Predicates).
+  void setTrustLevel(ProximityUnderlay underlay, TrustLevel level);
 
   // --- IP (Section 4) — UnsupportedError in SimulationNetwork ---
 
@@ -188,13 +200,15 @@ abstract class GlpNetwork {
 
   // --- Seam predicates (paper Section 5) ---
   //
-  // The five functions behind the four networking seam predicates
-  // `peer_address/2`, `punch_udp/1`, `place_declare/3` and `place_remove/1`
-  // (IGLP, Definition Seam Predicates). GLP code decides who acts, when, and
-  // whether; each function performs only the mechanism.
+  // The five functions below and [setTrustLevel] above are the six behind the
+  // five networking seam predicates `peer_address/2`, `punch_udp/1`,
+  // `place_declare/3`, `place_remove/1` and `trust_declare/2` (IGLP,
+  // Definition Seam Predicates). GLP code decides who acts, when, and whether;
+  // each function performs only the mechanism.
 
   /// The address at which this layer observes peer [pk], or null if none is
-  /// observed. Backs `peer_address/2`.
+  /// observed. Backs `peer_address/2`, which reports the two as `address(S)`
+  /// and `none`.
   String? observedPeerAddress(PubKey pk);
 
   /// Open a path to [address] and return nothing. Backs `punch_udp/1`.

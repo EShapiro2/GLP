@@ -32,7 +32,8 @@ import 'dart:typed_data';
 
 import 'package:cryptography/dart.dart' show DartSha256;
 
-import '../platform/compat.dart';
+import 'application_identity.dart';
+import 'attestation_verifier.dart';
 
 /// Domain separator for the attestation digest.
 const String kAttestationLabel = 'glp attest';
@@ -67,18 +68,21 @@ sealed class AttestationVerdict {
   const AttestationVerdict();
 }
 
-/// The peer attested, and this is the binary hash it attested to.
-class AttestedBinary extends AttestationVerdict {
-  /// The attested binary hash, carried to GLP on `onPeerConnected`.
-  final Uint8List binaryHash;
+/// The peer attested, and this is the application identity its platform
+/// attested: App Attest's application identifier on iOS, the package with its
+/// version and the signing-certificate digest on Android (spec §Session
+/// Establishment).
+class AttestedApplication extends AttestationVerdict {
+  /// The attested application identity, carried to GLP on `onPeerConnected`.
+  final ApplicationIdentity identity;
 
-  const AttestedBinary(this.binaryHash);
+  const AttestedApplication(this.identity);
 }
 
 /// The peer's platform provides no attestation — a headless server profile
 /// has none. The peer is reported unattested, and `onPeerConnected` carries a
-/// null binary hash. Whether to transact with an unattested peer is a
-/// GLP-level decision.
+/// null identity. Whether to transact with an unattested peer is a GLP-level
+/// decision.
 class UnattestedPlatform extends AttestationVerdict {
   /// Why no attestation was available, for the log. Not carried to GLP:
   /// unattested is unattested.
@@ -137,11 +141,15 @@ abstract class PlatformAttestation {
   /// rather than refusing.
   Future<Uint8List?> attestationFor(Uint8List identityPublicKey);
 
-  /// Sign the per-session [digest] with the attested key.
+  /// Sign the per-session [digest] with the key attested for
+  /// [identityPublicKey].
   ///
   /// Returns null where this platform holds no attestation key, which is the
   /// same condition as [attestationFor] returning null.
-  Future<Uint8List?> signSessionDigest(Uint8List digest);
+  Future<Uint8List?> signSessionDigest({
+    required Uint8List identityPublicKey,
+    required Uint8List digest,
+  });
 
   /// Verify a peer's [evidence] — the attestation against this platform's
   /// pinned root, its challenge naming [peerIdentityKey]; and the signature
@@ -156,41 +164,46 @@ abstract class PlatformAttestation {
   });
 }
 
-/// The attestation of a platform that has none.
+/// The attestation of a platform that has none to offer.
 ///
 /// This is the headless server profile's (spec §Rendezvous Server:
 /// "Having no platform attestation to offer, a rendezvous server is reported
 /// unattested, and this costs nothing"), and it is also what a unit test and
-/// any embedding without a native binding get.
+/// any embedding without a native producer get.
 ///
-/// It offers nothing, and it reports every peer unattested.
-///
-/// A peer that DOES offer an attestation is reported unattested too, and not
-/// invalid: this build cannot verify it, and "cannot determine" is not "found
-/// invalid". Reporting unattested claims nothing about the peer, which is the
-/// truth; reporting invalid would claim a verification that never ran, and
-/// would tear down every session with an attesting peer.
+/// It offers nothing, and it verifies what a peer offers: verification is
+/// arithmetic over bytes against the pinned roots and lives in the core, so a
+/// profile with no attestation of its own still tells a valid attestation from
+/// an invalid one (spec §Session Establishment: "the layer verifies
+/// attestations"). A peer that offers nothing is unattested; a peer whose
+/// offer does not verify is invalid, and its session is torn down.
 class NoPlatformAttestation implements PlatformAttestation {
-  const NoPlatformAttestation();
+  const NoPlatformAttestation({this.verifier = const AttestationVerifier()});
+
+  /// The verifier of what peers offer.
+  final AttestationVerifier verifier;
 
   @override
   Future<Uint8List?> attestationFor(Uint8List identityPublicKey) async => null;
 
   @override
-  Future<Uint8List?> signSessionDigest(Uint8List digest) async => null;
+  Future<Uint8List?> signSessionDigest({
+    required Uint8List identityPublicKey,
+    required Uint8List digest,
+  }) async =>
+      null;
 
   @override
   Future<AttestationVerdict> verify({
     required AttestationEvidence? evidence,
     required Uint8List digest,
     required Uint8List peerIdentityKey,
-  }) async {
-    if (evidence == null) {
-      return const UnattestedPlatform("the peer's platform offers none");
-    }
-    debugPrint('[attest] An attestation was offered; this build verifies none');
-    return const UnattestedPlatform('this build has no verifier');
-  }
+  }) async =>
+      verifier.verify(
+        evidence: evidence,
+        digest: digest,
+        peerIdentityKey: peerIdentityKey,
+      );
 }
 
 /// Tag byte for "my platform provides no attestation".

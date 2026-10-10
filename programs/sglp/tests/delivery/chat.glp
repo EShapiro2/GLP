@@ -1,0 +1,30 @@
+%% Test (xii)'s compiled program, written by hand: the canonical compilation of
+%% chat.vglp by vGLP's Definition "Canonical Compilation"
+%% (sections/elicitation.tex).  chat reaches a question, and has one more
+%% argument, last, its ask stream; deliver and status reach none and are as
+%% the source has them.  The asking clause keeps chat's name and the guarded
+%% clause takes chat1; the ask is ask('Stream(Msg)?', stream_msg_r(X)), the
+%% interactive type in its mode as a constant and the functor the compilation
+%% gives it, its name in lowercase with its type argument appended and _r for
+%% reader mode: Stream(Msg) is in reader mode, so X and X? are not exchanged,
+%% the ask carrying the writer X and the program holding the reader; chat's
+%% argument Ts is at an output position, so the head carries Ts? and the call
+%% Ts.  The types are the directory's (self.glp).
+
+%% (Ms)*chat(Ts?): the asking clause and the guarded clause.
+exported procedure chat(Stream(String), Stream(Ask)).
+chat(Ts?, [ask('Stream(Msg)?', stream_msg_r(X))|D?]) :- chat1(Ts, X?, D).
+exported procedure chat1(Stream(String), Stream(Msg)?, Stream(Ask)).
+chat1(Ts?, Ms, []) :- deliver(Ms?, 0, Ts).
+
+%% deliver(Ms?, I?, Ts): each message's status written, the I-th's by I mod 3,
+%% and its text passed on.
+procedure deliver(Stream(Msg)?, Integer?, Stream(String)).
+deliver([msg(T, S?) | Ms], I, [T? | Ts?]) :- integer(I?) |
+    status(I?, S), I1 := I? + 1, deliver(Ms?, I1?, Ts).
+deliver([], _, []).
+
+procedure status(Integer?, Status).
+status(I, sent) :- I? mod 3 =:= 0 | true.
+status(I, delivered) :- I? mod 3 =:= 1 | true.
+status(I, read) :- I? mod 3 =:= 2 | true.

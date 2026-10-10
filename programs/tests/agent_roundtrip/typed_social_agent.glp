@@ -30,8 +30,17 @@
 %% CHANNEL OPERATIONS (Defined Guards)
 %% =============================================================================
 
+%% Each redefines the root's operation of its name and declares it, as every
+%% procedure of a module is declared (TGLP modules.tex, Definition "Typed
+%% Procedure, Module"); the declarations are the root self.glp's.  Until
+%% 2026-10-03 they had none, and the linker gave the renamed procedures a copy
+%% of the root's.
+
+procedure(X, Y) send(X?, Channel(Y, Stream(X))?, Channel(Y, Stream(X))).
 send(X, ch(In, [X?|Out?]), ch(In?, Out)).
+procedure(X, Y) receive(X, Channel(OpenStream(X), Y)?, Channel(Stream(X), Y)).
 receive(X?, ch([X|In], Out?), ch(In?, Out)).
+procedure(X, Y) new_channel(Channel(X, Y), Channel(Y, X)).
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 
 %% =============================================================================
@@ -90,7 +99,7 @@ add_friend_output(Name, Out?, Outs, [friend_output(Name?, Out)|Outs?]).
 %% INJECT_MSG
 %% =============================================================================
 
-procedure(X) inject_msg(Response?, Constant?, Constant?, Stream(X)?, Stream(X)).
+procedure(X) inject_msg(Response?, Key?, Key?, Stream(X)?, Stream(X)).
 inject_msg(Resp, Target, Id, Ys, [msg(Target?, Id?, response(Resp?))|Ys?]) :-
     known(Resp?) | true.
 inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
@@ -111,14 +120,14 @@ close_outputs([]).
 %% RESPONSE HANDLING
 %% =============================================================================
 
-procedure(X) bind_response(Decision?, Constant?, Response, OutputsList?, OutputsList, Stream(X)?, Stream(X)).
+procedure(X) bind_response(Decision?, Key?, Response, OutputsList?, OutputsList, Stream(X)?, Stream(X)).
 bind_response(yes, From, accept(RetCh?), Outs, Outs1?, In, In1?) :-
     new_channel(RetCh, LocalCh) |
     handle_response(accept(LocalCh?), From?, Outs?, Outs1, In?, In1).
 bind_response(no, _, no, Outs, Outs1?, In, In?) :-
     send_user(msg(agent, person, rejected), Outs?, Outs1).
 
-procedure(X) handle_response(Response?, Constant?, OutputsList?, OutputsList, Stream(X)?, Stream(X)).
+procedure(X) handle_response(Response?, Key?, OutputsList?, OutputsList, Stream(X)?, Stream(X)).
 handle_response(accept(ch(FIn, FOut?)), From, Outs, Outs2?, In, In1?) :-
     ground(From?) |
     add_friend_output(From?, FOut, Outs?, Outs1),
@@ -135,7 +144,7 @@ handle_response(no, From, Outs, Outs1?, In, In?) :-
 %% The two streams are separate types and always were two things: the person
 %% stream carries what the actor or mediator writes, the network stream carries
 %% cold calls plus every friend's messages, merged in on accept.
-exported procedure agent(Constant?, ActorOut?, NetInStream?, OutputsList?).
+exported procedure agent(Key?, ActorOut?, NetInStream?, OutputsList?).
 
 %% --- User messages ---
 

@@ -1,0 +1,17 @@
+%% lift_shadows --- what an -expose lifts shadows an ancestor's definition of
+%% the same name.  -expose(M) "lifts the exported procedures of module M (and
+%% the types their signatures carry) into that directory's scope, as if
+%% defined in its self.glp ... Shadowing applies as usual" (TGLP modules.tex,
+%% "The -expose directive"; Definition (Root, Scope): a later layer shadows an
+%% earlier one).  This layer defines Level and rate/2; app/self.glp, one
+%% directory down, exposes app/lib/rates.glp, whose rate/2 and Level are other
+%% ones, and in app/'s scope they are rates.glp's.  Until 2026-10-07 every
+%% definition already in scope won, so app/ was checked against this layer's
+%% rate/2 and Level, and refused: rate(mid, N) names no Level of this layer.
+%% This layer exports nothing and is not a program; app/ is
+%% (glp_runtime/test/compiler/expose_lift_test.dart).
+Level ::= low ; high.
+
+procedure rate(Level?, Integer).
+rate(low, 1).
+rate(high, 2).

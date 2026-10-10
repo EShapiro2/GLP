@@ -24,17 +24,13 @@ alice_init(_, _) :-
 procedure fill_outer(OuterStream, InnerChannel?).
 fill_outer([ping, chan(C?) | []], C).
 
-%% The greeting, then the probe on the tail in a LATER reduction.
+%% The greeting, then the probe on the tail in a LATER reduction.  The read
+%% side of alice's own end, which she never reads, is the anonymous `_` of its
+%% input slot.
 procedure write_end(InnerChannel?, String).
-write_end(ch(In, Out?), W?) :-
-    hold_in(In?),
+write_end(ch(_, Out?), W?) :-
     greet(Out, Rest?),
     probe_later(Rest, W).
-
-%% The read side of alice's own end, which she never reads, and the write side
-%% of bob's, which he never writes: each is held by a clause that does nothing.
-procedure hold_in(InnerStream?).
-hold_in(X) :- true.
 
 procedure greet(InnerStream, InnerStream?).
 greet([hello | Rest?], Rest).
@@ -54,11 +50,10 @@ read_outer([ping | S]) :- send_to_user([saw(ping)]), read_outer(S?).
 read_outer([chan(C) | S]) :- send_to_user([saw(chan)]), read_end(C?), read_outer(S?).
 read_outer([]).
 
+%% The write side of bob's end, which he never writes, is `_?` at its produced
+%% position: an output the clause never produces, which leaves the stream open.
 procedure read_end(InnerChannel?).
-read_end(ch(In, Out?)) :- read_inner(In?), hold_out(Out).
-
-procedure hold_out(InnerStream).
-hold_out(X?) :- true.
+read_end(ch(In, _?)) :- read_inner(In?).
 
 procedure read_inner(InnerStream?).
 read_inner([hello | S]) :- send_to_user([saw(hello)]), read_inner(S?).

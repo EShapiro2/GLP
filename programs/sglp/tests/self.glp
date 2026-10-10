@@ -1,0 +1,24 @@
+%% The tests of sGLP in GLP (test_sglp.sh): this directory's interface is the
+%% run tests' sGLP sources, which the transformation prints the run tests'
+%% modules from (transform.glp, transform.sh), a call M # p reaching only a
+%% child directory or module file of the caller's directory (TGLP, modules.tex,
+%% Compilation): tests/reader's, test (xi), tests/delivery's, test (xii),
+%% tests/receipt's, test (xiii), and tests/panel's, test (xiv).
+%% The run tests' programs hold no call of the transformation.
+
+imported procedure reader#source(SglpTerms, SglpTerms).
+imported procedure delivery#source(SglpTerms, SglpTerms).
+imported procedure receipt#source(SglpTerms, SglpTerms).
+imported procedure panel#source(SglpTerms, SglpTerms).
+
+exported procedure reader_source(SglpTerms, SglpTerms).
+reader_source(V?, S?) :- reader # source(V, S).
+
+exported procedure delivery_source(SglpTerms, SglpTerms).
+delivery_source(V?, S?) :- delivery # source(V, S).
+
+exported procedure receipt_source(SglpTerms, SglpTerms).
+receipt_source(V?, S?) :- receipt # source(V, S).
+
+exported procedure panel_source(SglpTerms, SglpTerms).
+panel_source(V?, S?) :- panel # source(V, S).

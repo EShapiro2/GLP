@@ -5,7 +5,7 @@
 %% Control messages are ground, so the control stream is distributed to all
 %% metainterpreter instances that participate in the run.
 
-procedure run(_?, Stream(Constant)?).
+procedure run(_?, Stream(String)?).
 run(true, _).                                                  % halt
 run((A, B), Cs) :-                                             % fork
     distribute(Cs?, Cs1, Cs2),
@@ -16,13 +16,13 @@ run(A, Cs) :- known(A?), unknown(Cs?) |                        % reduce
 run(A, []) :- known(A?) |                                      % control closed: run freely
     reduce(A?, B), run(B?, []).
 
-procedure suspended_run(_?, Stream(Constant)?).
+procedure suspended_run(_?, Stream(String)?).
 suspended_run(A, [resume|Cs]) :- run(A?, Cs?).                 % resume
 suspended_run(_, [abort|_]).                                   % abort
 suspended_run(_, []).                                          % control closed: drop goal
 
 %% Ground-stream distribution (control messages are ground)
-procedure distribute(Stream(Constant)?, Stream(Constant), Stream(Constant)).
+procedure distribute(Stream(String)?, Stream(String), Stream(String)).
 distribute([X|Xs], [X?|Ys1?], [X?|Ys2?]) :- ground(X?) | distribute(Xs?, Ys1, Ys2).
 distribute([], [], []).
 

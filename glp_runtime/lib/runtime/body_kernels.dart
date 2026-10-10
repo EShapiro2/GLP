@@ -6,7 +6,7 @@
 /// - Are only accessible to system predicates (assign.glp)
 /// - Expect all preconditions met (guards should verify before calling)
 ///
-/// Per heap-pointer-architecture-spec.md v3.0:
+/// Per IGLP app:in-heap, Variable pairs (the cell's tag gives its polarity):
 /// - VarRef has only addr field
 /// - Use heap.isWriter/isReader to check cell type
 
@@ -20,7 +20,8 @@ import 'terms.dart';
 import 'machine_state.dart' show GoalRef;
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart' show GlobalName;
-import 'package:glp_runtime/multiagent/glp_network.dart' show GlpNetwork, PubKey;
+import 'package:glp_runtime/multiagent/glp_network.dart'
+    show GlpNetwork, ProximityUnderlay, PubKey, TrustLevel;
 import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 import 'package:glp_runtime/wire/artefact.dart' show Artefact;
 import 'package:glp_runtime/wire/codec.dart';
@@ -127,6 +128,7 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   registry.register('_punch_udp', 1, punchUdpKernel);
   registry.register('_place_declare', 3, placeDeclareKernel);
   registry.register('_place_remove', 1, placeRemoveKernel);
+  registry.register('_trust_declare', 2, trustDeclareKernel);
 
   // Module-as-value: producer half. (`_run`/2 — the consumer — is registered by
   // the engine from engine_v2/module_kernels.dart, where CodeImage is in scope.)
@@ -300,132 +302,145 @@ BodyKernelResult negKernel(GlpRuntime rt, List<Object?> args) {
 }
 
 // ============================================================================
+// THE FUNCTIONS OF Exp
+// ============================================================================
+
+/// The sixteen unary functions of `Exp` (the root self.glp; TGLP
+/// appendix-root-self.tex, 2e39edb) by functor, each as its kernel computes
+/// it, `log` being `'_log10'`: its value at a number, or null where the number
+/// is outside its domain and the kernel aborts --- "A body kernel whose
+/// precondition fails --- a zero divisor, an argument out of its domain ---
+/// aborts" (GLP-Spec appendix-guards.tex).
+///
+/// A real that is NaN or infinite --- `'_pow'`, `'_exp'` and real arithmetic
+/// that overflows yield them --- has no integer, so it is outside the domain
+/// of `integer`, `round`, `floor` and `ceil`.  Until 2026-10-02 their kernels
+/// threw on one and the run ended, its other goals with it:
+/// `X := integer(pow(-8, 0.5)), Y := 2 + 2` printed "Unsupported operation:
+/// Infinity or NaN toInt" and bound neither.
+final Map<String, num? Function(num)> _expUnaryFunctions = {
+  'abs': (x) => x.abs(),
+  'sqrt': (x) => x < 0 ? null : math.sqrt(x),
+  'sin': math.sin,
+  'cos': math.cos,
+  'tan': math.tan,
+  'asin': (x) => x < -1 || x > 1 ? null : math.asin(x),
+  'acos': (x) => x < -1 || x > 1 ? null : math.acos(x),
+  'atan': math.atan,
+  'exp': math.exp,
+  'ln': (x) => x <= 0 ? null : math.log(x),
+  'log': (x) => x <= 0 ? null : math.log(x) / math.ln10,
+  'integer': (x) => x.isFinite ? x.toInt() : null,
+  'real': (x) => x.toDouble(),
+  'round': (x) => x.isFinite ? x.round() : null,
+  'floor': (x) => x.isFinite ? x.floor() : null,
+  'ceil': (x) => x.isFinite ? x.ceil() : null,
+};
+
+/// Whether [functor] of [arity] arguments is a function of `Exp`: `pow` of
+/// two, or one of the sixteen unary functions ([expFunction]).
+bool isExpFunction(String functor, int arity) => arity == 1
+    ? _expUnaryFunctions.containsKey(functor)
+    : arity == 2 && functor == 'pow';
+
+/// The value of the function [functor] of `Exp` at the numbers [args], one
+/// per argument, as its kernel computes it --- `pow` as `'_pow'` does, its
+/// domain every pair of numbers, and the unary functions as
+/// [_expUnaryFunctions] has them --- or null where an argument is outside the
+/// function's domain, and where [functor] of that many arguments is no
+/// function of `Exp` ([isExpFunction]).
+///
+/// The kernels compute through it ([_functionKernel]), and so does an
+/// arithmetic comparison guard evaluating an `Exp` (bytecode/runner.dart), in
+/// which an argument outside a function's domain has no value and fails the
+/// guard (GLP-Spec appendix-guards.tex, 026515d): one definition of each
+/// function and its domain, so that a comparison and `:=` cannot disagree on
+/// one.
+num? expFunction(String functor, List<num> args) {
+  if (args.length == 2) {
+    return functor == 'pow' ? math.pow(args[0], args[1]) : null;
+  }
+  if (args.length == 1) return _expUnaryFunctions[functor]?.call(args[0]);
+  return null;
+}
+
+/// The body kernel of the function [functor] of `Exp` of [arity] arguments,
+/// the output after them: it binds the output to the function's value at its
+/// arguments ([expFunction]), and aborts where it is not given [arity]
+/// arguments and the output, where an argument is no number, and where one is
+/// outside the function's domain.
+BodyKernelResult _functionKernel(
+    GlpRuntime rt, List<Object?> args, String functor, int arity) {
+  if (args.length != arity + 1) return BodyKernelResult.abort;
+  final xs = <num>[];
+  for (var i = 0; i < arity; i++) {
+    final x = _getNum(rt, args[i]);
+    if (x == null) return BodyKernelResult.abort;
+    xs.add(x);
+  }
+  final value = expFunction(functor, xs);
+  if (value == null) return BodyKernelResult.abort;
+  return _bindResult(rt, args[arity], value);
+}
+
+// ============================================================================
 // MATH FUNCTION KERNELS
 // ============================================================================
 
-BodyKernelResult absKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], x.abs());
-}
+BodyKernelResult absKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'abs', 1);
 
-BodyKernelResult sqrtKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null || x < 0) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], math.sqrt(x));
-}
+BodyKernelResult sqrtKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'sqrt', 1);
 
-BodyKernelResult sinKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], math.sin(x));
-}
+BodyKernelResult sinKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'sin', 1);
 
-BodyKernelResult cosKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], math.cos(x));
-}
+BodyKernelResult cosKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'cos', 1);
 
-BodyKernelResult tanKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], math.tan(x));
-}
+BodyKernelResult tanKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'tan', 1);
 
-BodyKernelResult expKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], math.exp(x));
-}
+BodyKernelResult expKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'exp', 1);
 
-BodyKernelResult lnKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null || x <= 0) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], math.log(x));
-}
+BodyKernelResult lnKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'ln', 1);
 
-BodyKernelResult log10Kernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null || x <= 0) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], math.log(x) / math.ln10);
-}
+BodyKernelResult log10Kernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'log', 1);
 
-BodyKernelResult powKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 3) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  final y = _getNum(rt, args[1]);
-  if (x == null || y == null) return BodyKernelResult.abort;
-  return _bindResult(rt, args[2], math.pow(x, y));
-}
+BodyKernelResult powKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'pow', 2);
 
-BodyKernelResult asinKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null || x < -1 || x > 1) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], math.asin(x));
-}
+BodyKernelResult asinKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'asin', 1);
 
-BodyKernelResult acosKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null || x < -1 || x > 1) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], math.acos(x));
-}
+BodyKernelResult acosKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'acos', 1);
 
-BodyKernelResult atanKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], math.atan(x));
-}
+BodyKernelResult atanKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'atan', 1);
 
 // ============================================================================
 // TYPE CONVERSION KERNELS
 // ============================================================================
 
-BodyKernelResult integerKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], x.toInt());
-}
+BodyKernelResult integerKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'integer', 1);
 
-BodyKernelResult realKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], x.toDouble());
-}
+BodyKernelResult realKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'real', 1);
 
-BodyKernelResult roundKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], x.round());
-}
+BodyKernelResult roundKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'round', 1);
 
-BodyKernelResult floorKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], x.floor());
-}
+BodyKernelResult floorKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'floor', 1);
 
-BodyKernelResult ceilKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) return BodyKernelResult.abort;
-  final x = _getNum(rt, args[0]);
-  if (x == null) return BodyKernelResult.abort;
-  return _bindResult(rt, args[1], x.ceil());
-}
+BodyKernelResult ceilKernel(GlpRuntime rt, List<Object?> args) =>
+    _functionKernel(rt, args, 'ceil', 1);
 
 // ============================================================================
 // STRUCTURE MANIPULATION KERNELS
@@ -446,30 +461,54 @@ Object? _deref(GlpRuntime rt, Object? term) {
 /// This is required for serialization/globalization where we need the actual
 /// heap structure, not VarRef placeholders. Without this, nested structures
 /// like `msg(bob, intro(alice, Resp))` would be seen as `msg(VarRef, VarRef)`.
+///
+/// The copy keeps a stack of its own, a frame for each structure being
+/// rebuilt, and takes the arguments of each left to right, as the recursion it
+/// replaces did: until 2026-10-02 it recursed once a list element, and
+/// `'_output'` of a list of some 10,000 elements and more overflowed the Dart
+/// stack.
 Term _deepDeref(GlpRuntime rt, Term term) {
-  // First, dereference the term itself if it's a VarRef
-  var current = term;
-  while (current is VarRef) {
-    final val = rt.heap.getValue(current.addr);
-    if (val == null || val is! Term) return current; // Unbound variable
-    current = val;
-  }
-
-  // Now recursively dereference structure arguments
-  if (current is StructTerm) {
-    final newArgs = <Term>[];
-    for (final arg in current.args) {
-      newArgs.add(_deepDeref(rt, arg));
+  // The term itself dereferenced: its value, or the unbound variable it is.
+  Term follow(Term t) {
+    var current = t;
+    while (current is VarRef) {
+      final val = rt.heap.getValue(current.addr);
+      if (val == null || val is! Term) return current; // Unbound variable
+      current = val;
     }
-    return StructTerm(current.functor, newArgs);
+    return current;
   }
 
-  return current; // ConstTerm or unbound VarRef
+  final root = follow(term);
+  if (root is! StructTerm) return root; // ConstTerm or unbound VarRef
+  // Each frame: a structure, and its arguments dereferenced so far.
+  final frames = <(StructTerm, List<Term>)>[(root, <Term>[])];
+  Term? built;
+  while (true) {
+    final (source, args) = frames.last;
+    if (built != null) {
+      args.add(built);
+      built = null;
+    }
+    if (args.length == source.args.length) {
+      frames.removeLast();
+      final copy = StructTerm(source.functor, args);
+      if (frames.isEmpty) return copy;
+      built = copy;
+      continue;
+    }
+    final next = follow(source.args[args.length]);
+    if (next is StructTerm) {
+      frames.add((next, <Term>[]));
+    } else {
+      args.add(next);
+    }
+  }
 }
 
 /// Helper to convert Dart list to GLP list structure
 Term _dartListToGlpList(List<Object?> items) {
-  Term result = ConstTerm('nil');
+  Term result = ConstTerm(nil);
   for (var i = items.length - 1; i >= 0; i--) {
     final item = items[i];
     final termItem = item is Term ? item : ConstTerm(item);
@@ -484,7 +523,7 @@ List<Object?>? _glpListToDartList(GlpRuntime rt, Object? list) {
   var current = _deref(rt, list);
 
   while (current != null) {
-    if (current is ConstTerm && current.value == 'nil') {
+    if (current is ConstTerm && current.value == nil) {
       return result;
     }
     if (current is StructTerm && current.functor == '.' && current.args.length == 2) {
@@ -711,7 +750,7 @@ BodyKernelResult mutualRefCloseKernel(GlpRuntime rt, List<Object?> args) {
     return BodyKernelResult.abort;
   }
 
-  final activations = rt.heap.bindVariable(currentWriterAddr, ConstTerm('nil'));
+  final activations = rt.heap.bindVariable(currentWriterAddr, ConstTerm(nil));
 
   for (final act in activations) {
     rt.gq.enqueue(act);
@@ -727,9 +766,13 @@ BodyKernelResult mutualRefCloseKernel(GlpRuntime rt, List<Object?> args) {
 /// Send kernel for madGLP
 ///
 /// '_send'(T, G, Q) - sends term T via global name G to agent Q.
-/// This is called by the GLP `global_send/3` predicate.
+/// It is called by the root self.glp's `send_to_net/1` (GLP-Spec
+/// appendix-guards, "Output to the network") and `global_send/3` (IGLP
+/// Definition "global_send Predicate").
 ///
-/// Per madGLP-spec.md Section 11.5:
+/// Per IGLP Definition global_send Predicate (the '_send' builtin) and
+/// code-format-fragment.tex (a serializer message to q is
+/// _w(q,0) := [T↑ | _w(q,0)]):
 /// - Case G = _w(q, 0) (Serializer): wraps T in list [T↑ | _w(q,0)]
 /// - Case G = _w(p, i) or _r(p, i) with i > 0: sends T directly
 ///
@@ -1208,10 +1251,10 @@ BodyKernelResult loadFileKernel(GlpRuntime rt, List<Object?> args) {
 // NETWORKING SEAM KERNELS (Definition Seam Predicates)
 // =============================================================================
 //
-// The four kernels behind peer_address/2, punch_udp/1, place_declare/3 and
-// place_remove/1. Each reaches the networking layer through MadContext.network,
-// a GlpNetwork; the layer functions are GLP-Networking-API's, specified with
-// the seam contract. Their effects lie outside the madGLP transition system, as
+// The five kernels behind peer_address/2, punch_udp/1, place_declare/3,
+// place_remove/1 and trust_declare/2. Each reaches the networking layer through
+// MadContext.network, a GlpNetwork; the layer functions are
+// GLP-Networking-API's, specified with the seam contract. Their effects lie outside the madGLP transition system, as
 // sign's and self_module's do.
 //
 // Each GLP wrapper gates its arguments on ground/1, so they are ground here.
@@ -1242,9 +1285,15 @@ String? _groundString(GlpRuntime rt, Object? arg) {
   return null;
 }
 
-/// '_peer_address'(P?, A) — bind A to the address at which the layer observes
-/// peer P. P is the peer's name, which over a real network is its public key
-/// (§Agent Names), presented as 64 lowercase hex characters.
+/// '_peer_address'(P?, A) — assign A `address(S)`, S the address at which the
+/// layer observes peer P, or `none` where it observes no address for P
+/// (GLP-Spec appendix-guards, "Networking seam", 090e647: `peer_address(Key?,
+/// PeerAddress)`, `PeerAddress ::= address(String) ; none`; IGLP, Definition
+/// "Seam Predicates", 72b5efa).  `none` is a value and not a failure, as
+/// signature/2's `unsigned` is.  Until 2026-10-09 the kernel bound the bare
+/// address and aborted where the layer observed none.  P is the peer's name,
+/// which over a real network is its public key (§Agent Names), presented as 64
+/// lowercase hex characters.
 BodyKernelResult peerAddressKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
     print('[ABORT] \'_peer_address\'/2: expected 2 arguments, got ${args.length}');
@@ -1275,12 +1324,12 @@ BodyKernelResult peerAddressKernel(GlpRuntime rt, List<Object?> args) {
     print('[ABORT] \'_peer_address\'/2: ${e.message}');
     return BodyKernelResult.abort;
   }
-  if (address == null) {
-    print('[ABORT] \'_peer_address\'/2: the layer observes no address for '
-        'peer $name');
-    return BodyKernelResult.abort;
-  }
-  return _bindResult(rt, args[1], ConstTerm(address));
+  return _bindResult(
+      rt,
+      args[1],
+      address == null
+          ? ConstTerm('none')
+          : StructTerm('address', [ConstTerm(address)]));
 }
 
 /// '_punch_udp'(A?) — open a path to address A and return nothing.
@@ -1374,6 +1423,53 @@ BodyKernelResult placeRemoveKernel(GlpRuntime rt, List<Object?> args) {
   return BodyKernelResult.success;
 }
 
+/// '_trust_declare'(U?, L?) — set the cold-call trust level of proximity
+/// underlay U, pan or lan, to L, open or closed, and assign nothing (IGLP,
+/// Definition Seam Predicates, 477c586; GLP-Spec appendix-guards, "Proximity
+/// trust", e0b32d7: "Underlay is pan (Bluetooth Low Energy) or lan (the local
+/// network) and Level is open or closed.  Both underlays stand at closed until
+/// declared, a later declaration of an underlay replaces the level then
+/// standing").  An underlay or level the layer does not have is a violated
+/// precondition, and so an abort.  Until 2026-10-09 the first argument was a
+/// proximity medium, ble or lan.
+BodyKernelResult trustDeclareKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    print('[ABORT] \'_trust_declare\'/2: expected 2 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  final seam = _seamContext(rt, '\'_trust_declare\'/2');
+  if (seam == null) return BodyKernelResult.abort;
+
+  final underlay = switch (_groundString(rt, args[0])) {
+    'pan' => ProximityUnderlay.pan,
+    'lan' => ProximityUnderlay.lan,
+    _ => null,
+  };
+  if (underlay == null) {
+    print('[ABORT] \'_trust_declare\'/2: first argument (U) must be pan or '
+        'lan, got ${_deref(rt, args[0])}');
+    return BodyKernelResult.abort;
+  }
+  final level = switch (_groundString(rt, args[1])) {
+    'open' => TrustLevel.open,
+    'closed' => TrustLevel.closed,
+    _ => null,
+  };
+  if (level == null) {
+    print('[ABORT] \'_trust_declare\'/2: second argument (L) must be open or '
+        'closed, got ${_deref(rt, args[1])}');
+    return BodyKernelResult.abort;
+  }
+
+  try {
+    seam.network.setTrustLevel(underlay, level);
+  } on UnsupportedError catch (e) {
+    print('[ABORT] \'_trust_declare\'/2: ${e.message}');
+    return BodyKernelResult.abort;
+  }
+  return BodyKernelResult.success;
+}
+
 // =============================================================================
 // '_output'/1 - Print a ground term as a line
 // =============================================================================
@@ -1408,7 +1504,7 @@ BodyKernelResult outputKernel(GlpRuntime rt, List<Object?> args) {
 /// Lists are shown as [a, b, c], atoms as-is, structs as f(a, b).
 String formatGroundTerm(Term term) {
   if (term is ConstTerm) {
-    if (term.value == 'nil' || term.value == null) return '[]';
+    if (term.value == nil || term.value == null) return '[]';
     return term.value.toString();
   }
   if (term is StructTerm) {
@@ -1420,7 +1516,7 @@ String formatGroundTerm(Term term) {
         elements.add(formatGroundTerm(current.args[0]));
         current = current.args[1];
       }
-      if (current is ConstTerm && (current.value == 'nil' || current.value == null)) {
+      if (current is ConstTerm && (current.value == nil || current.value == null)) {
         return '[${elements.join(', ')}]';
       }
       return '[${elements.join(', ')} | ${formatGroundTerm(current)}]';

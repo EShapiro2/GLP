@@ -1,0 +1,11 @@
+%% A program-root self.glp names the type its -expose lifts.  -expose(lib#m)
+%% lifts q/1 "(and the types their signatures carry) into that directory's
+%% scope, as if defined in its self.glp" (TGLP modules.tex, "The -expose
+%% directive"), so T is in this self.glp's own scope and p/1's declaration
+%% names it.  Until 2026-10-04 the program was refused: undefined type "T" in
+%% the declaration of p/1, while a descendant layer naming T loaded (GLP #3
+%% Cowork, 2026-10-04, FAULT 1).
+-expose(lib#m).
+
+exported procedure p(T?).
+p(S) :- q(S?).

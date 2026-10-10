@@ -1,0 +1,45 @@
+%% Test (i) of sGLP in GLP (sGLP's code task of 2026-10-02 00:06 UTC, item 6;
+%% sGLP's paper at d2f64b6, Section 4, "The monitor"): a request's token is
+%% bound only after when_idle has succeeded.  A rated goal and an unrated busy
+%% goal: the busy goal runs to rest first.
+%%
+%%   busy(N, O)       the rated goal spawned before count(N, Z)    O = after
+%%   busy_late(N, O)  the rated goal spawned after it               O = after
+%%
+%% The rated goal requests rated(1/second, Tok) of the monitor (programs/sglp/
+%% monitor.glp, exposed by programs/sglp/self.glp) and waits on Tok; released,
+%% it finds Z assigned (after) or not (before).  Were a token bound before the
+%% machine rested, it would find count/2 still counting.
+
+Order ::= before ; after.
+
+exported procedure busy(Integer?, Order).
+busy(N, O?) :-
+    allocate_mutual_reference(Mon, Requests),
+    allocate_mutual_reference(Log, _),
+    monitor(Requests?, 20260927, 3600, Log?),
+    rated_probe(Mon?, Z?, O),
+    count(N?, Z).
+
+exported procedure busy_late(Integer?, Order).
+busy_late(N, O?) :-
+    allocate_mutual_reference(Mon, Requests),
+    allocate_mutual_reference(Log, _),
+    count(N?, Z),
+    monitor(Requests?, 20260927, 3600, Log?),
+    rated_probe(Mon?, Z?, O).
+
+%% rated_probe(Mon?, Z?, O): a goal of rate 1/second, translated as the
+%% transformation translates G @ 1/second.
+procedure rated_probe(MutualRef?, Integer?, Order).
+rated_probe(Mon, Z, O?) :-
+    stream_append(rated(1/second, Tok), Mon?, _),
+    probe(Tok?, Z?, O).
+
+procedure probe(Token?, Integer?, Order).
+probe(go, Z, after) :- known(Z?) | true.
+probe(go, Z, before) :- unknown(Z?) | true.
+
+procedure count(Integer?, Integer).
+count(0, 0).
+count(N, Z?) :- N? > 0 | N1 := N? - 1, count(N1?, Z).

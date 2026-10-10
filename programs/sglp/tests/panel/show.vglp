@@ -1,0 +1,25 @@
+%% Test (xiv)'s vGLP program: an interactive type in writer mode, Panel ::=
+%% panel(Cards), whose argument the program writes, a list of cards, holds the
+%% positions the person writes, each card's YesNo? (sGLP's paper, Section 4,
+%% "The person process": the person process "shows the person goal the
+%% question once the positions the program writes are ground, the positions
+%% the person writes inside them left open, each answered as a question of its
+%% own --- vGLP's Present").  The program shows N cards and outputs the
+%% person's answers.  Its canonical compilation (vGLP, Definition "Canonical
+%% Compilation") is show.glp, by hand; the program loader skips a .vglp beside
+%% a .glp of its name, so this source is not loaded.
+
+YesNo ::= yes ; no.
+Card  ::= card(Integer, YesNo?).
+Cards ::= [] ; [Card | Cards].
+Panel ::= panel(Cards).
+
+%% A panel of N cards, numbered 1 to N; As the person's answers, in order.
+exported procedure (Panel)*show(Integer?, Stream(YesNo)).
+(panel(Cs?))*show(N, As?) :- cards(1, N?, Cs, As).
+
+%% cards(I?, N?, Cs, As): the cards I to N, and their answers.
+procedure cards(Integer?, Integer?, Cards, Stream(YesNo)).
+cards(I, N, [card(I?, A) | Cs?], [A? | As?]) :- integer(I?), integer(N?), I? =< N? |
+    I1 := I? + 1, cards(I1?, N?, Cs, As).
+cards(I, N, [], []) :- I? > N? | true.

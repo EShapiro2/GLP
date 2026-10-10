@@ -17,5 +17,4 @@ void main() => runVglpApp(VglpProgram(
       directory: (glp) => glp.coreDir,
       goalLabel: 'superapp_ui/3',
       manifest: superappManifest,
-      friends: const ['bob'],
     ));

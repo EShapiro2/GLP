@@ -36,12 +36,12 @@ producer([]).
 
 %% outer passes its element type opaquely to inner — no destructuring here,
 %% so outer @ ProdMsg is itself clean. The call inner(S?) induces inner @ ProdMsg.
-procedure outer(Stream(X)?).
+procedure(X) outer(Stream(X)?).
 outer(S) :- inner(S?).
 
 %% inner destructures the element at reader polarity; the clash is visible only
 %% at inner @ ProdMsg, reachable only via outer.
-procedure inner(Stream(X)?).
+procedure(X) inner(Stream(X)?).
 inner([befriend(From, Resp?)|Rest]) :- known(From?) | bind(Resp), inner(Rest?).
 inner([]).
 

@@ -20,7 +20,7 @@ Fixed ::= f(Constant).
 Outs ::= [] ; [Ent | Outs].
 
 %% Parameterized router whose body only type-checks at X = Fixed.
-procedure route(Stream(X)?, Stream(X)).
+procedure(X) route(Stream(X)?, Stream(X)).
 route(A, C?) :- produce_fixed(F), merge(A?, F?, C).
 
 procedure produce_fixed(Stream(Fixed)).

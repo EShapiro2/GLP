@@ -2,7 +2,7 @@
 %%
 %% Exports: ui_mediator/5
 %% Types and lookup_pending: from self.glp (ancestor scoping)
-%% Local: send, receive, new_channel (channel operations)
+%% Channels: each clause reads its message in its head, ch([Msg|In], Out?)
 %%
 %% v2 changes:
 %%   - Types and lookup_pending moved to self.glp
@@ -17,281 +17,264 @@
 %% UI MEDIATOR — Main loop
 %% =============================================================================
 
-exported procedure ui_mediator(Constant?, AgentChannel?, PersonChannel?, Stream(PendingEntry)?, Constant?).
+exported procedure ui_mediator(Key?, AgentChannel?, PersonChannel?, Stream(PendingEntry)?, Integer?).
 
 %% --- Agent-to-person: Phase 1 ground pass-through ---
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(msg(agent, person, minted(K, Maturity)),
-            AgentCh?, AgentCh1),
+ui_mediator(Id, ch([msg(agent, person, minted(K, Maturity))|AgentIn], AgentOut?),
+            PersonCh, Ps, N) :-
     ground(K?), ground(Maturity?) |
     send(minted(K?, Maturity?), PersonCh?, PersonCh1),
-    ui_mediator(Id?, AgentCh1?, PersonCh1?, Ps?, N?).
+    ui_mediator(Id?, ch(AgentIn?, AgentOut), PersonCh1?, Ps?, N?).
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(msg(agent, person, date_advanced(D)),
-            AgentCh?, AgentCh1),
+ui_mediator(Id, ch([msg(agent, person, date_advanced(D))|AgentIn], AgentOut?),
+            PersonCh, Ps, N) :-
     ground(D?) |
     send(date_advanced(D?), PersonCh?, PersonCh1),
-    ui_mediator(Id?, AgentCh1?, PersonCh1?, Ps?, N?).
+    ui_mediator(Id?, ch(AgentIn?, AgentOut), PersonCh1?, Ps?, N?).
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(msg(agent, person, balance_report(Holdings)),
-            AgentCh?, AgentCh1),
+ui_mediator(Id, ch([msg(agent, person, balance_report(Holdings))|AgentIn], AgentOut?),
+            PersonCh, Ps, N) :-
     ground(Holdings?) |
     send(balance_report(Holdings?), PersonCh?, PersonCh1),
-    ui_mediator(Id?, AgentCh1?, PersonCh1?, Ps?, N?).
+    ui_mediator(Id?, ch(AgentIn?, AgentOut), PersonCh1?, Ps?, N?).
 
 %% --- Agent-to-person: befriend (non-ground — store Response in pending) ---
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(msg(agent, person, befriend(From, Resp?)),
-            AgentCh?, AgentCh1),
+ui_mediator(Id, ch([msg(agent, person, befriend(From, Resp?))|AgentIn], AgentOut?),
+            PersonCh, Ps, N) :-
     ground(From?) |
     send(befriend(From?, req(N?)), PersonCh?, PersonCh1),
     N1 := N? + 1,
-    ui_mediator(Id?, AgentCh1?, PersonCh1?,
+    ui_mediator(Id?, ch(AgentIn?, AgentOut), PersonCh1?,
         [pending(req(N?), response(Resp)) | Ps?], N1?).
 
 %% --- Agent-to-person: connected (ground — pass through) ---
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(msg(agent, person, connected(Who)),
-            AgentCh?, AgentCh1),
+ui_mediator(Id, ch([msg(agent, person, connected(Who))|AgentIn], AgentOut?),
+            PersonCh, Ps, N) :-
     ground(Who?) |
     send(connected(Who?), PersonCh?, PersonCh1),
-    ui_mediator(Id?, AgentCh1?, PersonCh1?, Ps?, N?).
+    ui_mediator(Id?, ch(AgentIn?, AgentOut), PersonCh1?, Ps?, N?).
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(msg(agent, person, rejected),
-            AgentCh?, AgentCh1) |
+ui_mediator(Id, ch([msg(agent, person, rejected)|AgentIn], AgentOut?),
+            PersonCh, Ps, N) :-
     send(rejected, PersonCh?, PersonCh1),
-    ui_mediator(Id?, AgentCh1?, PersonCh1?, Ps?, N?).
+    ui_mediator(Id?, ch(AgentIn?, AgentOut), PersonCh1?, Ps?, N?).
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(msg(agent, person, rejected(Who)),
-            AgentCh?, AgentCh1),
+ui_mediator(Id, ch([msg(agent, person, rejected(Who))|AgentIn], AgentOut?),
+            PersonCh, Ps, N) :-
     ground(Who?) |
     send(rejected(Who?), PersonCh?, PersonCh1),
-    ui_mediator(Id?, AgentCh1?, PersonCh1?, Ps?, N?).
+    ui_mediator(Id?, ch(AgentIn?, AgentOut), PersonCh1?, Ps?, N?).
 
 %% --- Person-to-agent: Phase 1 pass-through ---
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(mint(K, Maturity), PersonCh?, PersonCh1),
+ui_mediator(Id, AgentCh, ch([mint(K, Maturity)|PersonIn], PersonOut?), Ps, N) :-
     ground(Id?), ground(K?), ground(Maturity?) |
     send(msg(person, Id?, mint(K?, Maturity?)),
          AgentCh?, AgentCh1),
-    ui_mediator(Id?, AgentCh1?, PersonCh1?, Ps?, N?).
+    ui_mediator(Id?, AgentCh1?, ch(PersonIn?, PersonOut), Ps?, N?).
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(balance, PersonCh?, PersonCh1),
+ui_mediator(Id, AgentCh, ch([balance|PersonIn], PersonOut?), Ps, N) :-
     ground(Id?) |
     send(msg(person, Id?, balance),
          AgentCh?, AgentCh1),
-    ui_mediator(Id?, AgentCh1?, PersonCh1?, Ps?, N?).
+    ui_mediator(Id?, AgentCh1?, ch(PersonIn?, PersonOut), Ps?, N?).
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(done, PersonCh?, PersonCh1),
+ui_mediator(Id, AgentCh, ch([done|PersonIn], PersonOut?), Ps, N) :-
     ground(Id?) |
     send(msg(person, Id?, done),
          AgentCh?, AgentCh1),
-    ui_mediator(Id?, AgentCh1?, PersonCh1?, Ps?, N?).
+    ui_mediator(Id?, AgentCh1?, ch(PersonIn?, PersonOut), Ps?, N?).
 
 %% --- Person-to-agent: connect (pass through) ---
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(connect(Target), PersonCh?, PersonCh1),
+ui_mediator(Id, AgentCh, ch([connect(Target)|PersonIn], PersonOut?), Ps, N) :-
     ground(Id?), ground(Target?) |
     send(msg(person, Id?, connect(Target?)),
          AgentCh?, AgentCh1),
-    ui_mediator(Id?, AgentCh1?, PersonCh1?, Ps?, N?).
+    ui_mediator(Id?, AgentCh1?, ch(PersonIn?, PersonOut), Ps?, N?).
 
 %% --- Person-to-agent: decision (with pending lookup) ---
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(decision(Dec, From, ReqId), PersonCh?, PersonCh1),
+ui_mediator(Id, AgentCh, ch([decision(Dec, From, ReqId)|PersonIn], PersonOut?),
+            Ps, N) :-
     ground(Id?), ground(Dec?), ground(From?),
     ground(ReqId?) |
     lookup_pending(ReqId?, Pv, Ps?, Ps1),
     send(msg(person, Id?, decision(Dec?, From?, Pv?)),
          AgentCh?, AgentCh1),
-    ui_mediator(Id?, AgentCh1?, PersonCh1?, Ps1?, N?).
+    ui_mediator(Id?, AgentCh1?, ch(PersonIn?, PersonOut), Ps1?, N?).
 
 %% --- Agent-to-person: trade_proposed (non-ground — store TradeResp + data in pending) ---
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(msg(agent, person, trade_proposed(From, WantSpec, TradeResp?, OfferedBonds)),
-            AgentCh?, AgentCh1),
+ui_mediator(Id, ch([msg(agent, person,
+                        trade_proposed(From, WantSpec, TradeResp?, OfferedBonds))|AgentIn],
+                   AgentOut?),
+            PersonCh, Ps, N) :-
     ground(From?), ground(WantSpec?), ground(OfferedBonds?) |
     send(trade_proposed(From?, WantSpec?, req(N?)), PersonCh?, PersonCh1),
     N1 := N? + 1,
-    ui_mediator(Id?, AgentCh1?, PersonCh1?,
+    ui_mediator(Id?, ch(AgentIn?, AgentOut), PersonCh1?,
         [pending(req(N?), trade_pending(TradeResp, WantSpec?, OfferedBonds?)) | Ps?], N1?).
 
 %% --- Agent-to-person: trade_completed (ground — pass through) ---
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(msg(agent, person, trade_completed(Who)), AgentCh?, AgentCh1),
+ui_mediator(Id, ch([msg(agent, person, trade_completed(Who))|AgentIn], AgentOut?),
+            PersonCh, Ps, N) :-
     ground(Who?) |
     send(trade_completed(Who?), PersonCh?, PersonCh1),
-    ui_mediator(Id?, AgentCh1?, PersonCh1?, Ps?, N?).
+    ui_mediator(Id?, ch(AgentIn?, AgentOut), PersonCh1?, Ps?, N?).
 
 %% --- Agent-to-person: trade_failed (ground — pass through) ---
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(msg(agent, person, trade_failed(Who)), AgentCh?, AgentCh1),
+ui_mediator(Id, ch([msg(agent, person, trade_failed(Who))|AgentIn], AgentOut?),
+            PersonCh, Ps, N) :-
     ground(Who?) |
     send(trade_failed(Who?), PersonCh?, PersonCh1),
-    ui_mediator(Id?, AgentCh1?, PersonCh1?, Ps?, N?).
+    ui_mediator(Id?, ch(AgentIn?, AgentOut), PersonCh1?, Ps?, N?).
 
 %% --- Agent-to-person: trade_returned (ground — pass through) ---
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(msg(agent, person, trade_returned(Who)), AgentCh?, AgentCh1),
+ui_mediator(Id, ch([msg(agent, person, trade_returned(Who))|AgentIn], AgentOut?),
+            PersonCh, Ps, N) :-
     ground(Who?) |
     send(trade_returned(Who?), PersonCh?, PersonCh1),
-    ui_mediator(Id?, AgentCh1?, PersonCh1?, Ps?, N?).
+    ui_mediator(Id?, ch(AgentIn?, AgentOut), PersonCh1?, Ps?, N?).
 
 %% --- Agent-to-person: trade_returned_menu (ground — pass through) ---
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(msg(agent, person, trade_returned_menu(From, Menu)),
-            AgentCh?, AgentCh1),
+ui_mediator(Id, ch([msg(agent, person, trade_returned_menu(From, Menu))|AgentIn],
+                   AgentOut?),
+            PersonCh, Ps, N) :-
     ground(From?), ground(Menu?) |
     send(trade_returned_menu(From?, Menu?), PersonCh?, PersonCh1),
-    ui_mediator(Id?, AgentCh1?, PersonCh1?, Ps?, N?).
+    ui_mediator(Id?, ch(AgentIn?, AgentOut), PersonCh1?, Ps?, N?).
 
 %% --- Person-to-agent: trade (pass through) ---
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(trade(Target, GiveSpec, WantSpec), PersonCh?, PersonCh1),
+ui_mediator(Id, AgentCh, ch([trade(Target, GiveSpec, WantSpec)|PersonIn], PersonOut?),
+            Ps, N) :-
     ground(Id?), ground(Target?), ground(GiveSpec?), ground(WantSpec?) |
     send(msg(person, Id?, trade(Target?, GiveSpec?, WantSpec?)),
          AgentCh?, AgentCh1),
-    ui_mediator(Id?, AgentCh1?, PersonCh1?, Ps?, N?).
+    ui_mediator(Id?, AgentCh1?, ch(PersonIn?, PersonOut), Ps?, N?).
 
 %% --- Person-to-agent: redeem (pass through) ---
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(redeem(Target, GiveSpec, WantSpec), PersonCh?, PersonCh1),
+ui_mediator(Id, AgentCh, ch([redeem(Target, GiveSpec, WantSpec)|PersonIn], PersonOut?),
+            Ps, N) :-
     ground(Id?), ground(Target?), ground(GiveSpec?), ground(WantSpec?) |
     send(msg(person, Id?, redeem(Target?, GiveSpec?, WantSpec?)),
          AgentCh?, AgentCh1),
-    ui_mediator(Id?, AgentCh1?, PersonCh1?, Ps?, N?).
+    ui_mediator(Id?, AgentCh1?, ch(PersonIn?, PersonOut), Ps?, N?).
 
 %% --- Person-to-agent: advance_date (pass through) ---
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(advance_date(D), PersonCh?, PersonCh1),
+ui_mediator(Id, AgentCh, ch([advance_date(D)|PersonIn], PersonOut?), Ps, N) :-
     ground(Id?), ground(D?) |
     send(msg(person, Id?, advance_date(D?)),
          AgentCh?, AgentCh1),
-    ui_mediator(Id?, AgentCh1?, PersonCh1?, Ps?, N?).
+    ui_mediator(Id?, AgentCh1?, ch(PersonIn?, PersonOut), Ps?, N?).
 
 %% --- Person-to-agent: accept_trade (with pending lookup) ---
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(accept_trade(From, ReqId), PersonCh?, PersonCh1),
+ui_mediator(Id, AgentCh, ch([accept_trade(From, ReqId)|PersonIn], PersonOut?), Ps, N) :-
     ground(Id?), ground(From?), ground(ReqId?) |
     lookup_pending(ReqId?, Pv, Ps?, Ps1),
     send(msg(person, Id?, accept_trade(From?, Pv?)),
          AgentCh?, AgentCh1),
-    ui_mediator(Id?, AgentCh1?, PersonCh1?, Ps1?, N?).
+    ui_mediator(Id?, AgentCh1?, ch(PersonIn?, PersonOut), Ps1?, N?).
 
 %% --- Person-to-agent: reject_trade (with pending lookup) ---
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(reject_trade(From, ReqId), PersonCh?, PersonCh1),
+ui_mediator(Id, AgentCh, ch([reject_trade(From, ReqId)|PersonIn], PersonOut?), Ps, N) :-
     ground(Id?), ground(From?), ground(ReqId?) |
     lookup_pending(ReqId?, Pv, Ps?, Ps1),
     send(msg(person, Id?, reject_trade(From?, Pv?)),
          AgentCh?, AgentCh1),
-    ui_mediator(Id?, AgentCh1?, PersonCh1?, Ps1?, N?).
+    ui_mediator(Id?, AgentCh1?, ch(PersonIn?, PersonOut), Ps1?, N?).
 
 %% --- Agent-to-person: escrow_deposited (non-ground — store CancelSignal in pending) ---
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(msg(agent, person, escrow_deposited(Target, ReleaseTime, CancelSignal?)),
-            AgentCh?, AgentCh1),
+ui_mediator(Id, ch([msg(agent, person,
+                        escrow_deposited(Target, ReleaseTime, CancelSignal?))|AgentIn],
+                   AgentOut?),
+            PersonCh, Ps, N) :-
     ground(Target?), ground(ReleaseTime?) |
     send(escrow_deposited(Target?, ReleaseTime?, req(N?)), PersonCh?, PersonCh1),
     N1 := N? + 1,
-    ui_mediator(Id?, AgentCh1?, PersonCh1?,
+    ui_mediator(Id?, ch(AgentIn?, AgentOut), PersonCh1?,
         [pending(req(N?), escrow_pending(CancelSignal)) | Ps?], N1?).
 
 %% --- Agent-to-person: escrow_received (ground — pass through) ---
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(msg(agent, person, escrow_received(From, ReleaseTime)),
-            AgentCh?, AgentCh1),
+ui_mediator(Id, ch([msg(agent, person, escrow_received(From, ReleaseTime))|AgentIn],
+                   AgentOut?),
+            PersonCh, Ps, N) :-
     ground(From?), ground(ReleaseTime?) |
     send(escrow_received(From?, ReleaseTime?), PersonCh?, PersonCh1),
-    ui_mediator(Id?, AgentCh1?, PersonCh1?, Ps?, N?).
+    ui_mediator(Id?, ch(AgentIn?, AgentOut), PersonCh1?, Ps?, N?).
 
 %% --- Agent-to-person: escrow_released (ground — pass through) ---
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(msg(agent, person, escrow_released(From)),
-            AgentCh?, AgentCh1),
+ui_mediator(Id, ch([msg(agent, person, escrow_released(From))|AgentIn], AgentOut?),
+            PersonCh, Ps, N) :-
     ground(From?) |
     send(escrow_released(From?), PersonCh?, PersonCh1),
-    ui_mediator(Id?, AgentCh1?, PersonCh1?, Ps?, N?).
+    ui_mediator(Id?, ch(AgentIn?, AgentOut), PersonCh1?, Ps?, N?).
 
 %% --- Agent-to-person: escrow_cancelled (ground — pass through) ---
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(msg(agent, person, escrow_cancelled(From)),
-            AgentCh?, AgentCh1),
+ui_mediator(Id, ch([msg(agent, person, escrow_cancelled(From))|AgentIn], AgentOut?),
+            PersonCh, Ps, N) :-
     ground(From?) |
     send(escrow_cancelled(From?), PersonCh?, PersonCh1),
-    ui_mediator(Id?, AgentCh1?, PersonCh1?, Ps?, N?).
+    ui_mediator(Id?, ch(AgentIn?, AgentOut), PersonCh1?, Ps?, N?).
 
 %% --- Agent-to-person: escrow_expired (ground — pass through) ---
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(msg(agent, person, escrow_expired(Target)),
-            AgentCh?, AgentCh1),
+ui_mediator(Id, ch([msg(agent, person, escrow_expired(Target))|AgentIn], AgentOut?),
+            PersonCh, Ps, N) :-
     ground(Target?) |
     send(escrow_expired(Target?), PersonCh?, PersonCh1),
-    ui_mediator(Id?, AgentCh1?, PersonCh1?, Ps?, N?).
+    ui_mediator(Id?, ch(AgentIn?, AgentOut), PersonCh1?, Ps?, N?).
 
 %% --- Agent-to-person: escrow_returned (ground — pass through) ---
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(msg(agent, person, escrow_returned(Target)),
-            AgentCh?, AgentCh1),
+ui_mediator(Id, ch([msg(agent, person, escrow_returned(Target))|AgentIn], AgentOut?),
+            PersonCh, Ps, N) :-
     ground(Target?) |
     send(escrow_returned(Target?), PersonCh?, PersonCh1),
-    ui_mediator(Id?, AgentCh1?, PersonCh1?, Ps?, N?).
+    ui_mediator(Id?, ch(AgentIn?, AgentOut), PersonCh1?, Ps?, N?).
 
 %% --- Agent-to-person: escrow_failed (ground — pass through) ---
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(msg(agent, person, escrow_failed(Target)),
-            AgentCh?, AgentCh1),
+ui_mediator(Id, ch([msg(agent, person, escrow_failed(Target))|AgentIn], AgentOut?),
+            PersonCh, Ps, N) :-
     ground(Target?) |
     send(escrow_failed(Target?), PersonCh?, PersonCh1),
-    ui_mediator(Id?, AgentCh1?, PersonCh1?, Ps?, N?).
+    ui_mediator(Id?, ch(AgentIn?, AgentOut), PersonCh1?, Ps?, N?).
 
 %% --- Person-to-agent: deposit_escrow (pass through) ---
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(deposit_escrow(Target, GiveSpec, ReleaseTime), PersonCh?, PersonCh1),
+ui_mediator(Id, AgentCh,
+            ch([deposit_escrow(Target, GiveSpec, ReleaseTime)|PersonIn], PersonOut?),
+            Ps, N) :-
     ground(Id?), ground(Target?), ground(GiveSpec?), ground(ReleaseTime?) |
     send(msg(person, Id?, deposit_escrow(Target?, GiveSpec?, ReleaseTime?)),
          AgentCh?, AgentCh1),
-    ui_mediator(Id?, AgentCh1?, PersonCh1?, Ps?, N?).
+    ui_mediator(Id?, AgentCh1?, ch(PersonIn?, PersonOut), Ps?, N?).
 
 %% --- Person-to-agent: cancel_escrow (with pending lookup) ---
 
-ui_mediator(Id, AgentCh, PersonCh, Ps, N) :-
-    receive(cancel_escrow(Target, ReqId), PersonCh?, PersonCh1),
+ui_mediator(Id, AgentCh, ch([cancel_escrow(Target, ReqId)|PersonIn], PersonOut?), Ps, N) :-
     ground(Id?), ground(Target?), ground(ReqId?) |
     lookup_pending(ReqId?, Pv, Ps?, Ps1),
     send(msg(person, Id?, cancel_escrow(Target?, Pv?)),
          AgentCh?, AgentCh1),
-    ui_mediator(Id?, AgentCh1?, PersonCh1?, Ps1?, N?).
+    ui_mediator(Id?, AgentCh1?, ch(PersonIn?, PersonOut), Ps1?, N?).
 
 %% --- Termination ---
 

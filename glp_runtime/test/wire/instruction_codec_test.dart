@@ -8,7 +8,7 @@ library;
 
 import 'dart:typed_data';
 import 'package:glp_runtime/bytecode/opcodes.dart';
-import 'package:glp_runtime/bytecode/opcodes_v2.dart' as opv2;
+import 'package:glp_runtime/runtime/terms.dart' show nil;
 import 'package:glp_runtime/wire/codec.dart';
 import 'package:glp_runtime/wire/instruction_codec.dart';
 import 'package:test/test.dart';
@@ -65,7 +65,18 @@ void main() {
     });
 
     test('unify_constant nil -> constant tag 0', () {
-      expect(_enc(UnifyConstant('nil')), [0x21, 0x00]);
+      expect(_enc(UnifyConstant(nil)), [0x21, 0x00]);
+    });
+
+    // The empty list and the string 'nil' are two constants, tag 0 and tag 3
+    // (IGLP code format, Terms: "0 nil (no payload, the empty list) ...
+    // 3 string").  Until 2026-10-07 the string 'nil' was encoded as tag 0
+    // and decoded as the runtime's empty list.
+    test('unify_constant of the string nil -> constant tag 3, and back', () {
+      expect(_enc(UnifyConstant('nil')), [0x21, 0x03, 0x03, 0x6E, 0x69, 0x6C]);
+      expect(valueOfWireConst(wireConstFromValue('nil')), 'nil');
+      expect(valueOfWireConst(wireConstFromValue(nil)), same(nil));
+      expect(valueOfWireConst(wireConstFromValue('nil')) == nil, isFalse);
     });
 
     test('unify_constant string', () {
@@ -74,12 +85,12 @@ void main() {
     });
 
     test('head_variable: polarity then varIndex', () {
-      expect(_enc(opv2.HeadVariable(3, isReader: false)), [0x14, 0x00, 0x03]);
-      expect(_enc(opv2.HeadVariable(3, isReader: true)), [0x14, 0x01, 0x03]);
+      expect(_enc(HeadVariable(3, isReader: false)), [0x14, 0x00, 0x03]);
+      expect(_enc(HeadVariable(3, isReader: true)), [0x14, 0x01, 0x03]);
     });
 
     test('get_variable: polarity, varIndex, argSlot', () {
-      expect(_enc(opv2.GetVariable(1, 2, isReader: false)),
+      expect(_enc(GetVariable(1, 2, isReader: false)),
           [0x15, 0x00, 0x01, 0x02]);
     });
 
@@ -89,11 +100,8 @@ void main() {
           [0x12, 0x01, 0x66, 0x02, 0x00]);
     });
 
-    test('guard: proc index, arity, negated', () {
-      expect(_enc(Guard('guard_ok', 1, negated: false)),
-          [0x40, 0x02, 0x01, 0x00]);
-      expect(_enc(Guard('guard_ok', 1, negated: true)),
-          [0x40, 0x02, 0x01, 0x01]);
+    test('guard: proc index, arity', () {
+      expect(_enc(Guard('guard_ok', 1)), [0x40, 0x02, 0x01]);
     });
 
     test('spawn / requeue: proc index, arity', () {
@@ -101,15 +109,13 @@ void main() {
       expect(_enc(Requeue('q/2', 2)), [0x51, 0x01, 0x02]);
     });
 
-    test('ground: varIndex, negated', () {
-      expect(_enc(Ground(4, negated: true)), [0x41, 0x04, 0x01]);
-    });
-
-    test('retired distribute/transmit are not in the wire ISA', () {
-      expect(() => _enc(Distribute(3, 'm', 2)),
-          throwsA(isA<WireFormatException>()));
-      expect(() => _enc(Transmit(1, 'm', 2)),
-          throwsA(isA<WireFormatException>()));
+    test('ground, known, no_readers: varIndex; ground_equal: two varIndex', () {
+      // The guard instructions carry no negated operand (IGLP
+      // code-format-fragment.tex, the opcode table, 9b45225).
+      expect(_enc(Ground(4)), [0x41, 0x04]);
+      expect(_enc(Known(3)), [0x42, 0x03]);
+      expect(_enc(NoReaders(5)), [0x44, 0x05]);
+      expect(_enc(GroundEqual(1, 2)), [0x45, 0x01, 0x02]);
     });
   });
 
@@ -126,40 +132,39 @@ void main() {
       HeadNil(0),
       HeadStructure('foo', 3, 2),
       HeadList(1),
-      opv2.HeadVariable(5, isReader: true),
-      opv2.GetVariable(1, 2, isReader: false),
-      opv2.GetValue(2, 3, isReader: true),
-      opv2.UnifyVariable(4, isReader: false),
+      HeadVariable(5, isReader: true),
+      GetVariable(1, 2, isReader: false),
+      GetValue(2, 3, isReader: true),
+      UnifyVariable(4, isReader: false),
       UnifyConstant('hello'),
       UnifyVoid(count: 3),
       UnifyStructure('bar', 2),
       Push(6),
       Pop(6),
-      opv2.PutVariable(1, 0, isReader: true),
+      PutVariable(1, 0, isReader: true),
       PutConstant(3.14, 1),
       PutNil(2),
       PutList(3),
       PutStructure('baz', 1, 0),
-      opv2.SetVariable(7, isReader: false),
+      SetVariable(7, isReader: false),
       SetConstant(true),
       Allocate(4),
       Deallocate(),
       PutBoundConst('nil', 1),
       PutBoundNil(2),
-      Guard('guard_ok', 1, negated: true),
-      Ground(2, negated: false),
-      Known(3, negated: true),
-      opv2.Unknown(4),
-      NoReaders(5, negated: false),
-      GroundEqual(1, 2, negated: true),
+      Guard('guard_ok', 1),
+      Ground(2),
+      Known(3),
+      Unknown(4),
+      NoReaders(5),
+      GroundEqual(1, 2),
       Otherwise(),
       Spawn('p/1', 1),
       Requeue('q/2', 2),
     ];
 
     test('corpus covers every wire opcode', () {
-      // 40 wire opcodes: 42 in the original table minus the retired
-      // distribute/transmit (0x52–0x53), now reserved.
+      // 40 wire opcodes, IGLP's opcode table (code-format-fragment.tex).
       expect(corpus.length, 40);
     });
 
@@ -177,12 +182,11 @@ void main() {
       final s = _dec(_enc(Spawn('p/1', 1))) as Spawn;
       expect(s.procedureLabel, 'p/1');
       expect(s.arity, 1);
-      final g = _dec(_enc(Guard('guard_ok', 1, negated: true))) as Guard;
+      final g = _dec(_enc(Guard('guard_ok', 1))) as Guard;
       expect(g.procedureLabel, 'guard_ok'); // bare name restored from the signature
       expect(g.arity, 1);
-      expect(g.negated, isTrue);
-      final hv = _dec(_enc(opv2.HeadVariable(5, isReader: true)))
-          as opv2.HeadVariable;
+      final hv = _dec(_enc(HeadVariable(5, isReader: true)))
+          as HeadVariable;
       expect(hv.varIndex, 5);
       expect(hv.isReader, isTrue);
       final hc = _dec(_enc(HeadConstant(42, 1))) as HeadConstant;

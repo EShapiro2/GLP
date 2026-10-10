@@ -1,0 +1,7 @@
+%% The exposed module: a stream of network messages and a procedure over it.
+NetMsg ::= msg(Key, _).
+NetStream ::= [] ; [NetMsg | NetStream].
+
+exported procedure drain(NetStream?).
+drain([]).
+drain([msg(_, _) | S]) :- drain(S?).

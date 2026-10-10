@@ -1,0 +1,9 @@
+%% An unlifted type is not in the exposing scope.  -expose lifts the exported
+%% procedures of lib/clock.glp "(and the types their signatures carry)" (TGLP
+%% modules.tex, "The -expose directive"): scale/2 carries Unit, and nothing
+%% carries Tick, which clock.glp defines for itself.  So pos/, naming Unit,
+%% loads, and neg/, naming Tick, is refused at its declaration.  Until
+%% 2026-10-04 every type clock.glp defined was lifted, as programs/sglp/self.glp's
+%% -expose(monitor) lifted monitor.glp's Queue and Clock beside TimeUnit.  This
+%% layer exports nothing and is not a program.
+-expose(lib#clock).

@@ -1,0 +1,16 @@
+%% mad_ship_refused_boot.glp --- a module value whose certificate does not
+%% verify, shipped in a message, is refused at the receiver's receipt (GLP #3
+%% Cowork, 2026-10-02 20:58 UTC: "a received module whose certificate does not
+%% verify is not a Module value and the message carrying it is refused at
+%% receipt, with the reason"; IGLP code-format-fragment.tex, Loader).
+%%
+%% alice sends bob her own module value, which carries no certificate --- her
+%% program calls send_to_net/1, OS-privileged, so it is refused one --- and
+%% then the atom after.  bob reports each message he receives: the first is
+%% refused at receipt and never reaches his network input, so he reports after
+%% alone.  The agent code is the program directory mad_ship_refused/.
+
+procedure boot.
+boot :-
+    alice_init(alice, _)@alice,
+    bob_init(bob, _)@bob.

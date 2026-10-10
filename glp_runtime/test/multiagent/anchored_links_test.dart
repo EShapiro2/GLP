@@ -16,6 +16,7 @@ import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 
 /// One delivered or queued message in the harness network.
 typedef _Msg = ({String from, String to, List<int> payload});
@@ -42,7 +43,7 @@ class _Net {
 
   /// Create the permanent index-0 serializer entry; returns the network-input
   /// writer address (the root of the agent's network input stream).
-  int bootSerializer(String id) {
+  HeapCell bootSerializer(String id) {
     final (netIn, _) = runtimes[id]!.heap.allocateVariable();
     agents[id]!.wp.initializeSerializerEntry(netIn);
     return netIn;
@@ -123,7 +124,7 @@ class _Net {
 
 /// The n-th element of the list rooted at heap address [addr] (a writer or
 /// reader), following bound tails; throws if the spine is not bound that far.
-Term _streamElement(GlpRuntime rt, int addr, int n) {
+Term _streamElement(GlpRuntime rt, HeapCell addr, int n) {
   Object? cell = rt.heap.derefAddr(addr);
   for (var i = 0; i < n; i++) {
     cell = rt.heap.derefAddr(((cell as StructTerm).args[1] as VarRef).addr);

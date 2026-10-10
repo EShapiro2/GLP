@@ -1,0 +1,235 @@
+%% The run of the Grassroots Social Graph (sGLP's paper, the repository
+%% svGLP-Stochastic-Volitional-GLP: Section 4, "The run"; Section 5; Appendix
+%% B): the machine's setup, written by hand, the population's draw and its
+%% person processes being the transformation's (population.glp, printed from
+%% the run declaration of graph_sglp.glp; sGLP's ruling of 2026-10-03 12:10
+%% UTC).  The declaration, as Section 5 has it:
+%%
+%%   run 100 agents [ approach ~ (homophile : 0.6 ; indifferent : 0.4),
+%%                    response ~ (wary : 0.7 ; sociable : 0.3) ]
+%%       until 1 year seed 20260927.
+%%
+%% run(N, C, U, Seed, Hom, Wary) runs it with N agents until C Us from Seed, the
+%% mix given by Hom and Wary, integers 0..100 (sGLP's code task of 2026-10-02
+%% 15:23 UTC, item 1): an agent's first draw K, of 1..100, makes it homophile
+%% for K =< Hom and indifferent otherwise, its second wary for K =< Wary and
+%% sociable otherwise, so 0 is none and 100 is all: they are the thresholds of
+%% the population's draw, stochastic_person/5 of population.glp, and the run
+%% declaration's are 60 and 70, its declaration/6, which programs/sglp/self.glp's
+%% social_graph/4 passes.  The
+%% whole population is in one machine, as the guard when_idle requires (Section
+%% 4, "The guard").  Its goals:
+%%
+%%   at each agent a of 1..N, its start goal --- the compiled start/6, with a,
+%%   its two lists in increasing order (agents 1..N/2 are of one sex and the
+%%   rest of the other; the first list is the other agents of a's sex, the
+%%   second the agents of the other sex), its input and output streams and its
+%%   ask stream, spawned once both lists are built --- and its person process
+%%   (population.glp, person/6), with its stochastic person and its seed,
+%%   reading that ask stream in the dispatcher's place (Section 3, Definition
+%%   "Simulation Program");
+%%   at no agent, the network --- the root's mwm/2 merging the agents' output
+%%   streams, and a balanced tree of deliver/4 goals handing each message to the
+%%   input stream of the agent it names --- the monitor, with the run's seed and
+%%   the horizon in seconds, and the log's sink.
+%%
+%% In one machine a goal is at agent a by being one of a's: its start goal, its
+%% person process, and the goals they spawn; no goal carries a place.
+%%
+%% The draws (Appendix B).  The monitor draws from the run's seed.  The
+%% population's draws are from a second generator, started at the first value
+%% drawn from the run's seed, split into blocks of 4096 consecutive draws:
+%% agent a's block is the a-th.  Its first two draws pick a's profile in each
+%% dimension by the mix (population.glp, stochastic_person/5), and the seed
+%% they leave is its person process's seed, the start of its own generator,
+%% whatever the mix.  An agent's draws stay within its block
+%% while it answers fewer than about 4090 questions; past that they run into
+%% the next agent's.
+%%
+%% The log's sink: the run's log is the output stream of a mutual reference that
+%% every person process and the monitor append to; the harness hands it to the
+%% root's send_to_user/1, which prints each entry, ground, on its own line, and
+%% run.sh writes those lines to the log file it is given, tab-separated.
+
+imported procedure graph#start(Peer?, Peers?, Peers?, Stream(Msg)?, Stream(Msg),
+                               Stream(Ask)).
+imported procedure population#stochastic_person(Integer?, Integer?, Integer?,
+                                                Profiles, Integer).
+imported procedure population#person(Integer?, Profiles?, MutualRef?, Integer?,
+                                     MutualRef?, Stream(Ask)?).
+
+exported procedure run(Integer?, Number?, Span?, Integer?, Integer?, Integer?).
+run(N, C, U, Seed, Hom, Wary) :-
+    N? >= 2, N? mod 2 =:= 0,
+    Hom? >= 0, Hom? =< 100, Wary? >= 0, Wary? =< 100 |
+    span(U?, Secs),
+    H := C? * Secs?,
+    allocate_mutual_reference(Mon, Requests),
+    allocate_mutual_reference(Log, Entries),
+    send_to_user(Entries?),
+    monitor(Requests?, Seed?, H?, Log?),
+    random(Seed?, 2147483646, Base, _),
+    Half := N? // 2,
+    tree(1, N?, Net?, Ins, []),
+    mwm(Merges?, Net),
+    agents(1, Half?, N?, Base?, Hom?, Wary?, Ins?, Merges, Mon?, Log?).
+
+%% agents(A?, Half?, N?, Block?, Hom?, Wary?, Ins?, Merges, Mon?, Log?): agents
+%% A..N, Half being N/2, Block the start of A's block, Hom and Wary the mix, Ins
+%% their input streams in order, Merges their output streams for mwm/2.
+procedure agents(Integer?, Integer?, Integer?, Integer?, Integer?, Integer?,
+                 Stream(Stream(Msg))?, MwmInput(Msg), MutualRef?, MutualRef?).
+agents(A, H, N, B, Hom, Wary, [In|Ins], [merge(Out?)|Ms?], Mon, Log) :-
+    A? =< N? |
+    peers(A?, H?, N?, Ss, Os, Done),
+    population # stochastic_person(B?, Hom?, Wary?, P, Seed),
+    start_when(Done?, A?, Ss?, Os?, In?, Out, Asks),
+    population # person(A?, P?, Mon?, Seed?, Log?, Asks?),
+    skip(4096, B?, B2),
+    A1 := A? + 1,
+    agents(A1?, H?, N?, B2?, Hom?, Wary?, Ins?, Ms, Mon?, Log?).
+agents(A, _, N, _, _, _, [], [], _, _) :-
+    A? > N? | true.
+
+%% The population's draw (sGLP's code tasks of 2026-10-02 15:44 UTC and
+%% 2026-10-03 08:58 UTC).  draw(N?, Seed?, Hom?, Wary?, D): D is
+%% draw(Homophile, Indifferent, Wary, Sociable, As), the numbers of agents of
+%% 1..N of each profile in each dimension in the run of N agents from Seed with
+%% the mix Hom and Wary, and As the list of agent(A, Approach, Response), A of
+%% 1..N in order, each agent's profiles, without running it: each agent's
+%% stochastic person drawn from its block by population.glp's
+%% stochastic_person/5, as agents/10 draws it, and counted as they are
+%% listed.  run.sh calls it in a REPL
+%% session of its own, so that the run's machine is the same with it as
+%% without, and its log the same.  tally/14 draws as agents/10 does, and a
+%% change to the one is a change to the other.
+exported procedure draw(Integer?, Integer?, Integer?, Integer?, Draw).
+draw(N, Seed, Hom, Wary, draw(H?, I?, W?, S?, As?)) :-
+    N? >= 2, N? mod 2 =:= 0,
+    Hom? >= 0, Hom? =< 100, Wary? >= 0, Wary? =< 100 |
+    random(Seed?, 2147483646, Base, _),
+    tally(1, N?, Base?, Hom?, Wary?, 0, 0, 0, 0, As, H, I, W, S).
+
+%% tally(A?, N?, Block?, Hom?, Wary?, H?, I?, W?, S?, As, H2, I2, W2, S2):
+%% agents A..N, Block the start of A's block, listed in As, and added to H
+%% homophile, I indifferent, W wary and S sociable agents before A, giving H2,
+%% I2, W2 and S2.
+procedure tally(Integer?, Integer?, Integer?, Integer?, Integer?, Integer?,
+                Integer?, Integer?, Integer?, Drawn, Integer, Integer,
+                Integer, Integer).
+tally(A, N, B, Hom, Wary, H, I, W, S, [agent(A?, Ap?, Re?)|As?],
+      H2?, I2?, W2?, S2?) :-
+    A? =< N? |
+    population # stochastic_person(B?, Hom?, Wary?, P, _),
+    profiles_of(P?, Ap1, Re1),
+    add_approach(Ap1?, H?, I?, H1, I1, Ap),
+    add_response(Re1?, W?, S?, W1, S1, Re),
+    skip(4096, B?, B2),
+    A1 := A? + 1,
+    tally(A1?, N?, B2?, Hom?, Wary?, H1?, I1?, W1?, S1?, As, H2, I2, W2, S2).
+tally(A, N, _, _, _, H, I, W, S, [], H?, I?, W?, S?) :-
+    A? > N? | true.
+
+%% profiles_of(P?, Ap, Re): the profiles of the stochastic person P.
+procedure profiles_of(Profiles?, Approach, Response).
+profiles_of(profiles(Ap, Re), Ap?, Re?).
+
+%% add_approach(Ap?, H?, I?, H1, I1, Ap1) and add_response(Re?, W?, S?, W1, S1,
+%% Re1): one agent of the profile added to its count, the profile given back
+%% for its line in the list.
+procedure add_approach(Approach?, Integer?, Integer?, Integer, Integer,
+                       Approach).
+add_approach(homophile, H, I, H1?, I?, homophile) :- H1 := H? + 1.
+add_approach(indifferent, H, I, H?, I1?, indifferent) :- I1 := I? + 1.
+procedure add_response(Response?, Integer?, Integer?, Integer, Integer,
+                       Response).
+add_response(wary, W, S, W1?, S?, wary) :- W1 := W? + 1.
+add_response(sociable, W, S, W?, S1?, sociable) :- S1 := S? + 1.
+
+%% skip(J?, S?, S1): S1 is the seed J draws after S, by J draws of random/4,
+%% each reduced before the next is spawned: the clause waits on its seed,
+%% integer(S?), so an agent's block of 4096 draws is drawn one draw at a time
+%% once the block's start is known, where the 4096 goals were spawned at once,
+%% each suspended on the last (sGLP's code task of 2026-10-02 20:58 UTC, S1).
+%% Not the closed form, the seed times 16807^4096 mod 2^31 - 1: that is the
+%% engine's generator, and GLP-Spec says only that the next seed is determined
+%% by the seed.
+procedure skip(Integer?, Integer?, Integer).
+skip(0, S, S?).
+skip(J, S, S1?) :-
+    J? > 0, integer(S?) |
+    random(S?, 1, _, S2),
+    J1 := J? - 1,
+    skip(J1?, S2?, S1).
+
+%% peers(A?, H?, N?, Ss, Os, D): Ss the other agents of A's sex, Os the agents
+%% of the other sex, in increasing order, and D done once both are built;
+%% agents 1..H are of one sex, H = N/2.
+procedure peers(Integer?, Integer?, Integer?, Stream(Integer), Stream(Integer),
+                Done).
+peers(A, H, N, Ss?, Os?, D?) :-
+    A? =< H? |
+    H1 := H? + 1,
+    range(1, H?, A?, Ss, D1),
+    range(H1?, N?, 0, Os, D2),
+    both(D1?, D2?, D).
+peers(A, H, N, Ss?, Os?, D?) :-
+    A? > H? |
+    H1 := H? + 1,
+    range(H1?, N?, A?, Ss, D1),
+    range(1, H?, 0, Os, D2),
+    both(D1?, D2?, D).
+
+%% both(D1?, D2?, D): D is done once D1 and D2 are.
+procedure both(Done?, Done?, Done).
+both(done, done, done).
+
+%% start_when(D?, A?, Ss?, Os?, In?, Out, Asks): agent A's start goal,
+%% graph#start, writing its ask stream Asks, spawned once D is done, its lists
+%% Ss and Os built, so that start/6's guards ground(Ss?) and ground(Os?) walk
+%% each list once, where, spawned with the lists still growing, they re-walked
+%% them from the head at every new element (sGLP's code task of 2026-10-02
+%% 20:58 UTC, S3).
+procedure start_when(Done?, Peer?, Peers?, Peers?, Stream(Msg)?, Stream(Msg),
+                     Stream(Ask)).
+start_when(done, A, Ss, Os, In, Out?, Asks?) :-
+    graph # start(A?, Ss?, Os?, In?, Out, Asks).
+
+%% range(Lo?, Hi?, Skip?, L, D): L is Lo..Hi without Skip, and D done once L
+%% is built.
+procedure range(Integer?, Integer?, Integer?, Stream(Integer), Done).
+range(Lo, Hi, _, [], done) :-
+    Lo? > Hi? | true.
+range(Lo, Hi, Skip, L?, D?) :-
+    Lo? =< Hi?, Lo? =:= Skip? |
+    Lo1 := Lo? + 1,
+    range(Lo1?, Hi?, Skip?, L, D).
+range(Lo, Hi, Skip, [Lo?|L?], D?) :-
+    Lo? =< Hi?, Lo? =\= Skip? |
+    Lo1 := Lo? + 1,
+    range(Lo1?, Hi?, Skip?, L, D).
+
+%% The network.  tree(Lo?, Hi?, Ms?, Ins, Rest?): a balanced tree of deliver/4
+%% goals over agents Lo..Hi routing the messages Ms, Ins being the input streams
+%% of agents Lo..Hi in order, followed by Rest.
+procedure tree(Integer?, Integer?, Stream(Msg)?, Stream(Stream(Msg)),
+               Stream(Stream(Msg))?).
+tree(Lo, Hi, Ms, [Ms?|Rest?], Rest) :-
+    Lo? =:= Hi? | true.
+tree(Lo, Hi, Ms, Ins?, Rest) :-
+    Lo? < Hi? |
+    Mid := (Lo? + Hi?) // 2,
+    Mid1 := Mid? + 1,
+    deliver(Ms?, Mid?, L, R),
+    tree(Lo?, Mid?, L?, Ins, Ins1?),
+    tree(Mid1?, Hi?, R?, Ins1, Rest?).
+
+%% deliver(Ms?, Mid?, Ls, Hs) sends each message of Ms addressed to an agent
+%% numbered Mid or less to Ls, and each other to Hs (graph.vglp at GLP
+%% 723d1602).
+procedure deliver(Stream(Msg)?, Integer?, Stream(Msg), Stream(Msg)).
+deliver([msg(To, C)|Ms], Mid, [msg(To?, C?)|Ls?], Hs?) :-
+    To? =< Mid? | deliver(Ms?, Mid?, Ls, Hs).
+deliver([msg(To, C)|Ms], Mid, Ls?, [msg(To?, C?)|Hs?]) :-
+    To? > Mid? | deliver(Ms?, Mid?, Ls, Hs).
+deliver([], _, [], []).

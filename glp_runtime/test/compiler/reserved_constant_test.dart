@@ -91,10 +91,8 @@ void main() {
       expect(() => compile(source), returnsNormally);
     });
 
-    test('explicit user mode accepts a kernel-naming constant as data', () {
+    test('user mode accepts a kernel-naming constant as data', () {
       const source = '''
-        -mode(user).
-
         procedure foo(_).
         foo('_sign').
       ''';
@@ -120,14 +118,24 @@ void main() {
       );
     });
 
-    test('allows explicit user mode', () {
+    // -mode(system) is the one mode declaration (GLP-Spec appendix-guards.tex,
+    // Naming and admission of body kernels); a module without it is a user
+    // module.
+    test('refuses -mode(user)', () {
       const source = '''
         -mode(user).
 
         procedure foo(_).
         foo(bar).
       ''';
-      expect(() => compile(source), returnsNormally);
+      expect(
+        () => compile(source),
+        throwsA(isA<CompileError>().having(
+          (e) => e.message,
+          'message',
+          contains('Invalid mode "user"'),
+        )),
+      );
     });
   });
 }

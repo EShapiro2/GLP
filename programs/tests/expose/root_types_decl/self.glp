@@ -1,0 +1,10 @@
+%% IGLP probe: the ancestor layer that exposes a type.  -expose(lib#nets) lifts
+%% drain/1 and the type its signature carries, NetStream, into this directory's
+%% scope and every scope below it (TGLP modules.tex, "The -expose directive";
+%% Definition (Root, Scope)), so the self.glp of decl/, layered after this one,
+%% names NetStream in its declarations.  The root self.glp stood here, exposing
+%% system#mad_predicates and its NetStream, until send_to_net/1 became the root
+%% self.glp's own (GLP-Spec appendix-guards, "Output to the network").  Run by
+%% test/compiler/exposed_root_types_test.dart, which loads decl/ as the
+%% program; this layer exports nothing and is not one.
+-expose(lib#nets).

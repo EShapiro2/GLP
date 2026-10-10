@@ -12,8 +12,8 @@ enum TokenType {
   RPAREN,         // )
   LBRACKET,       // [
   RBRACKET,       // ]
-  LBRACE,         // { (future: sets)
-  RBRACE,         // } (future: sets)
+  LBRACE,         // { --- the lexer makes none: braces are not GLP syntax;
+  RBRACE,         // }     vglp/canonical.dart still names both kinds
 
   // Punctuation
   DOT,            // .
@@ -45,20 +45,20 @@ enum TokenType {
   ARITH_EQUAL,    // =:= (arithmetic equality)
   ARITH_NOT_EQUAL,// =\= (arithmetic inequality)
   GROUND_EQUAL,   // =?= (ground equality)
-  AT_LESS,        // @< (lexicographic less-than on ground constants)
+  GROUND_NOT_EQUAL, // =?\= (ground inequality, the negation of =?=)
+  AT_LESS,        // @< (the standard order of constants)
   UNIV,           // =.. (structure composition: list to compound)
   UNIV_DECOMPOSE, // ..= (structure decomposition: compound to list)
 
   // Special
   UNDERSCORE,     // _ (anonymous variable)
-  TILDE,          // ~ (guard negation)
+  TILDE,          // ~ : no GLP construct; the parser refuses it (GLP has no guard negation)
   HASH,           // # (module operator: Module # Goal)
   BACKSLASH,      // \ (difference list operator: H\T)
   AT,             // @ (isolate spawn operator: Goal@Agent)
 
   // Type declarations
   COLONCOLONEQ,   // ::= (type definition)
-  EQCOLONCOLONEQ, // =::= (sGLP person declaration: T =::= p)
   PROCEDURE,      // procedure (keyword)
 
   // End of file

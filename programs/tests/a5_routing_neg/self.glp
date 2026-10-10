@@ -1,0 +1,11 @@
+%% The program's interface (TGLP modules.tex, External access): go/3, its one
+%% entry point, forwarded to main.glp, which defines it, and the types its
+%% declaration names --- the entry union WITHOUT user_output (only net_output).
+%% A directory with no self.glp is not a program ("Entry and the absence of a
+%% boot module"); until 2026-10-02 this one had none and took main.glp's
+%% exported go/3 for its entry point.
+Note ::= note(Constant).
+OutEntry ::= net_output(Stream(Note)?).
+imported procedure main#go(Note?, Stream(OutEntry)?, Stream(OutEntry)).
+exported procedure go(Note?, Stream(OutEntry)?, Stream(OutEntry)).
+go(X, Outs, Outs1?) :- main # go(X?, Outs?, Outs1).

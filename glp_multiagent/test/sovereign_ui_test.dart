@@ -31,7 +31,7 @@ void main() {
 
   setUp(() {
     sent = [];
-    r = UiRuntime(manifest: sovereignManifest, onSend: sent.add);
+    r = UiRuntime(manifest: sovereignManifest, onSend: (t) => sent.add(formatTerm(t)));
   });
 
   /// The seven asks the compiled agent poses as soon as it runs, `agent_1` to

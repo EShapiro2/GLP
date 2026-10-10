@@ -23,15 +23,25 @@ import '../compiler/parser.dart';
 import '../compiler/ast.dart' as ast;
 import '../compiler/glp_printer.dart';
 import '../analysis/type_checker/type_ast.dart';
+import 'dispatcher.dart';
 import 'types.dart';
 
 /// The generic mediator source, read from [directory] — `programs/vglp/` in the
 /// tree.  Its `self.glp` carries the vocabulary and its `med.glp` the clauses.
+/// The same directory holds the dispatcher's generic source,
+/// `dispatcher.glp`, which a source in the paper's syntax compiles against
+/// (dispatcher.dart); [dispatcher] is null where it is missing.  [directory]
+/// is where it was read, `programs/vglp/`, whose parent is the root of every
+/// program: the compilation reads the root's widget declarations there
+/// (program_compilation.dart, scopeWidgetDeclarations).
 class MediatorSource {
   final ast.Module vocabulary;
   final ast.Module clauses;
+  final DispatcherSource? dispatcher;
+  final String? directory;
 
-  MediatorSource(this.vocabulary, this.clauses);
+  MediatorSource(this.vocabulary, this.clauses,
+      {this.dispatcher, this.directory});
 
   factory MediatorSource.fromDirectory(String directory) {
     final self = File('$directory/self.glp');
@@ -45,6 +55,8 @@ class MediatorSource {
     return MediatorSource(
       Parser(Lexer(self.readAsStringSync()).tokenize()).parseModule(),
       Parser(Lexer(med.readAsStringSync()).tokenize()).parseModule(),
+      dispatcher: DispatcherSource.inDirectory(directory),
+      directory: directory,
     );
   }
 }

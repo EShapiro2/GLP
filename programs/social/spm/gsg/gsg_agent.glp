@@ -45,19 +45,13 @@ agent(_, _, [shutdown | _], _, [], _, _).
 
 %% await(R) synchroniser (architecture §3.3): suspend UserIn until R is
 %% bound by a prior protocol completion (e.g. Integrate accept binding
-%% the matching pending_offer's Reply slot via bind_ok).  R appears as
-%% writer in head (Constant at ↓) and as reader in guard `ground(R?)`
-%% (guard occurrences don't count toward SRSW per §3.4); Constant
-%% relaxation §3.1 covers the remaining count.
+%% the matching pending_offer's Reply slot via bind_ok).
 agent(Id, IRec, [await(R) | UserIn], NetIn, NetOut?, Date, Platform) :-
     ground(R?) |
     agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?, Platform?).
 
 %% Discover (paper §5.2): add Q to Known, bind Reply via bind_ok helper.
-%% R appears as writer R in head (Constant at ↓ → writer) and as writer R
-%% in body call to bind_ok (Constant at ↓ → writer); Constant relaxation
-%% §3.1 permits the multi-writer occurrence.
-agent(Id, IRec, [will(discover(Q, R)) | UserIn], NetIn, NetOut?, Date,
+agent(Id, IRec, [will(discover(Q, R?)) | UserIn], NetIn, NetOut?, Date,
       gsg(Known, Vols, Inbox, FMap, FoFMap, Pending)) :-
     ground(Q?) |
     add_known(Q?, Known?, Known1),
@@ -68,10 +62,6 @@ agent(Id, IRec, [will(discover(Q, R)) | UserIn], NetIn, NetOut?, Date,
 %% Offer friendship (paper §6.3): emit friend_request(epoch_p(Q)+1) to Q,
 %% install pending_offer(Q, X, R) in Pending.  Reply R is NOT bound here;
 %% Integrate accept binds it on receipt of accept(X) from Q.
-%%
-%% R is a Constant: writer in head; reader R? stored inside pending_offer
-%% (recursive agent call's Pending field).  Multi-occurrence allowed by
-%% Constant relaxation §3.1.
 agent(Id, IRec, [will(offer_friendship(Q, R)) | UserIn], NetIn,
       [msg(Id?, Q?, friend_request(X?)) | NetOut1?], Date,
       gsg(Known, Vols, Inbox, FMap, FoFMap, Pending)) :-
@@ -84,7 +74,7 @@ agent(Id, IRec, [will(offer_friendship(Q, R)) | UserIn], NetIn,
 
 %% End friendship (paper §6.4): bump epoch to next even, emit unfriend,
 %% bind Reply via bind_ok (local transaction, no round-trip).
-agent(Id, IRec, [will(end_friendship(Q, R)) | UserIn], NetIn,
+agent(Id, IRec, [will(end_friendship(Q, R?)) | UserIn], NetIn,
       [msg(Id?, Q?, unfriend(X?)) | NetOut1?], Date,
       gsg(Known, Vols, Inbox, FMap, FoFMap, Pending)) :-
     ground(Q?), ground(Id?) |
@@ -99,7 +89,7 @@ agent(Id, IRec, [will(end_friendship(Q, R)) | UserIn], NetIn,
 %% in Vols; will fire later when the matching friend_request arrives via
 %% NetIn absorption.  R is the writer the person will see bound on
 %% completion (via subsequent `await(R?)`).
-agent(Id, IRec, [will(accept_offer(P, R)) | UserIn], NetIn, NetOut?, Date,
+agent(Id, IRec, [will(accept_offer(P, R?)) | UserIn], NetIn, NetOut?, Date,
       gsg(Known, Vols, Inbox, FMap, FoFMap, Pending)) :-
     ground(P?), ground(Id?) |
     try_take_friend_request_from(P?, Inbox?, Inbox1, Matched, X),
@@ -112,7 +102,7 @@ agent(Id, IRec, [tick | UserIn], NetIn, NetOut?, Date, Platform) :-
     agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date1?, Platform?).
 
 %% Query: q_epoch(Q) -- answer with epoch_p(Q).
-agent(Id, IRec, [query(q_epoch(Q), a_epoch(E)) | UserIn], NetIn, NetOut?, Date,
+agent(Id, IRec, [query(q_epoch(Q), a_epoch(E?)) | UserIn], NetIn, NetOut?, Date,
       gsg(Known, Vols, Inbox, FMap, FoFMap, Pending)) :-
     ground(Q?), ground(FMap?) |
     epoch_of(Q?, FMap?, E),

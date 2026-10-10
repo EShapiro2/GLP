@@ -9,8 +9,7 @@ TaggedList ::= [] ; [Tagged | TaggedList].
 procedure(X) observe(Stream(X)?, Stream(X), Stream(X)).
 observe(X?, Y, Z?) :- observe(Y?, X, Z).
 observe(X, X?, X?) :- ground(X) | true.
-observe(Xs, [Y1?|Ys1?], [Y2?|Ys2?]) :-
-    Xs? = [X|Xs1] |
+observe([X|Xs1], [Y1?|Ys1?], [Y2?|Ys2?]) :-
     observe(X?, Y1, Y2),
     observe(Xs1?, Ys1, Ys2).
 

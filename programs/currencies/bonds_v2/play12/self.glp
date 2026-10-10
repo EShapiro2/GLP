@@ -3,3 +3,31 @@
 %% All types (Bond, Lot, PersonCmd, PersonNotify, ActorChannel, NarrativeItem, etc.)
 %% are inherited from the parent bonds/self.glp via ancestor scoping.
 
+%% The directory's interface (TGLP modules.tex, Design, "Hierarchy mirrors the
+%% file system"): the six actors, each forwarded to the module that defines
+%% it, so that boot.glp's fplay12 calls them through play12, a child of its
+%% directory.
+
+imported procedure alice#alice_p12(Constant?, ActorChannel?, Stream(NarrativeItem)).
+exported procedure alice_p12(Constant?, ActorChannel?, Stream(NarrativeItem)).
+alice_p12(T, Ch, Narr?) :- alice # alice_p12(T?, Ch?, Narr).
+
+imported procedure bob#bob_p12(ActorChannel?, Stream(NarrativeItem)).
+exported procedure bob_p12(ActorChannel?, Stream(NarrativeItem)).
+bob_p12(Ch, Narr?) :- bob # bob_p12(Ch?, Narr).
+
+imported procedure charlie#charlie_p12(Constant?, ActorChannel?, Stream(NarrativeItem)).
+exported procedure charlie_p12(Constant?, ActorChannel?, Stream(NarrativeItem)).
+charlie_p12(T, Ch, Narr?) :- charlie # charlie_p12(T?, Ch?, Narr).
+
+imported procedure diana#diana_p12(ActorChannel?, Stream(NarrativeItem)).
+exported procedure diana_p12(ActorChannel?, Stream(NarrativeItem)).
+diana_p12(Ch, Narr?) :- diana # diana_p12(Ch?, Narr).
+
+imported procedure eve#eve_p12(ActorChannel?, Stream(NarrativeItem)).
+exported procedure eve_p12(ActorChannel?, Stream(NarrativeItem)).
+eve_p12(Ch, Narr?) :- eve # eve_p12(Ch?, Narr).
+
+imported procedure frank#frank_p12(ActorChannel?, Stream(NarrativeItem)).
+exported procedure frank_p12(ActorChannel?, Stream(NarrativeItem)).
+frank_p12(Ch, Narr?) :- frank # frank_p12(Ch?, Narr).
