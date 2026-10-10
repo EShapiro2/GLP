@@ -1259,21 +1259,25 @@ BodyKernelResult loadFileKernel(GlpRuntime rt, List<Object?> args) {
 //
 // Each GLP wrapper gates its arguments on ground/1, so they are ground here.
 // A realization that does not provide the function throws UnsupportedError,
-// which is a violated precondition and so an abort, as a missing MadContext is.
+// which is a violated precondition and so an abort.
+//
+// Where no layer is bound at all --- the REPL, a test run without the
+// simulation --- the kernel stands in for a layer that observes nothing and
+// does nothing, and none aborts for want of a layer (IGLP
+// appendix-implementation-notes.tex, "One interface", 6ba0329):
+// "peer_address assigns none, place_declare assigns its stream unobservable
+// and nothing more, and the other seam predicates return having done nothing".
+// Until 2026-10-10 each aborted there, "not in madGLP mode (no MadContext)" or
+// "no GlpNetwork bound to this agent".  An argument the predicate does not
+// take is still a violated precondition and an abort, layer or none.
 
-/// The [MadContext] and its [GlpNetwork], or null with a diagnostic printed.
-({MadContext ctx, GlpNetwork network})? _seamContext(
-    GlpRuntime rt, String kernel) {
+/// The [MadContext] and the [GlpNetwork] bound to it, or null where no layer
+/// is bound at all: no MadContext, or one with no GlpNetwork.
+({MadContext ctx, GlpNetwork network})? _seamLayer(GlpRuntime rt) {
   final ctx = rt.madContext;
-  if (ctx is! MadContext) {
-    print('[ABORT] $kernel: not in madGLP mode (no MadContext)');
-    return null;
-  }
+  if (ctx is! MadContext) return null;
   final network = ctx.network;
-  if (network == null) {
-    print('[ABORT] $kernel: no GlpNetwork bound to this agent');
-    return null;
-  }
+  if (network == null) return null;
   return (ctx: ctx, network: network);
 }
 
@@ -1293,14 +1297,14 @@ String? _groundString(GlpRuntime rt, Object? arg) {
 /// signature/2's `unsigned` is.  Until 2026-10-09 the kernel bound the bare
 /// address and aborted where the layer observed none.  P is the peer's name,
 /// which over a real network is its public key (§Agent Names), presented as 64
-/// lowercase hex characters.
+/// lowercase hex characters.  Where no layer is bound, A is `none` whatever P
+/// names: a layer that observes nothing observes no address for any peer
+/// ("One interface", 6ba0329).
 BodyKernelResult peerAddressKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
     print('[ABORT] \'_peer_address\'/2: expected 2 arguments, got ${args.length}');
     return BodyKernelResult.abort;
   }
-  final seam = _seamContext(rt, '\'_peer_address\'/2');
-  if (seam == null) return BodyKernelResult.abort;
 
   final name = _groundString(rt, args[0]);
   if (name == null) {
@@ -1308,6 +1312,10 @@ BodyKernelResult peerAddressKernel(GlpRuntime rt, List<Object?> args) {
         'constant naming a peer, got ${_deref(rt, args[0])}');
     return BodyKernelResult.abort;
   }
+
+  final seam = _seamLayer(rt);
+  if (seam == null) return _bindResult(rt, args[1], ConstTerm('none'));
+
   final PubKey pk;
   try {
     pk = PubKey.fromHex(name);
@@ -1332,14 +1340,13 @@ BodyKernelResult peerAddressKernel(GlpRuntime rt, List<Object?> args) {
           : StructTerm('address', [ConstTerm(address)]));
 }
 
-/// '_punch_udp'(A?) — open a path to address A and return nothing.
+/// '_punch_udp'(A?) — open a path to address A and return nothing.  Where no
+/// layer is bound it returns having done nothing ("One interface", 6ba0329).
 BodyKernelResult punchUdpKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 1) {
     print('[ABORT] \'_punch_udp\'/1: expected 1 argument, got ${args.length}');
     return BodyKernelResult.abort;
   }
-  final seam = _seamContext(rt, '\'_punch_udp\'/1');
-  if (seam == null) return BodyKernelResult.abort;
 
   final address = _groundString(rt, args[0]);
   if (address == null) {
@@ -1347,6 +1354,9 @@ BodyKernelResult punchUdpKernel(GlpRuntime rt, List<Object?> args) {
         'address, got ${_deref(rt, args[0])}');
     return BodyKernelResult.abort;
   }
+
+  final seam = _seamLayer(rt);
+  if (seam == null) return BodyKernelResult.success;
 
   try {
     seam.network.punchUdp(address);
@@ -1361,13 +1371,16 @@ BodyKernelResult punchUdpKernel(GlpRuntime rt, List<Object?> args) {
 /// location at the time of the call, and grow this agent's own event stream for
 /// P from E's writer. The stream is fed serializer-fashion and closes only on
 /// place_remove or a superseding declaration.
+///
+/// Where no layer is bound, E is assigned `[unobservable | E']` and nothing
+/// more ("One interface", 6ba0329): nothing is declared and nothing recorded,
+/// so no event, no `observable` and no closing ever follows, E' being a writer
+/// no one holds.
 BodyKernelResult placeDeclareKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) {
     print('[ABORT] \'_place_declare\'/3: expected 3 arguments, got ${args.length}');
     return BodyKernelResult.abort;
   }
-  final seam = _seamContext(rt, '\'_place_declare\'/3');
-  if (seam == null) return BodyKernelResult.abort;
 
   final place = _groundString(rt, args[0]);
   if (place == null) {
@@ -1388,6 +1401,13 @@ BodyKernelResult placeDeclareKernel(GlpRuntime rt, List<Object?> args) {
     return BodyKernelResult.abort;
   }
 
+  final seam = _seamLayer(rt);
+  if (seam == null) {
+    final (_, tailReader) = rt.heap.allocateVariable();
+    return _bindResult(rt, stream,
+        StructTerm('.', [ConstTerm('unobservable'), VarRef(tailReader)]));
+  }
+
   try {
     seam.ctx.declarePlace(place, radius.toDouble(), stream.addr);
   } on UnsupportedError catch (e) {
@@ -1398,14 +1418,13 @@ BodyKernelResult placeDeclareKernel(GlpRuntime rt, List<Object?> args) {
 }
 
 /// '_place_remove'(P?) — end the declaration of place P, closing its stream.
-/// Does nothing where P is not declared.
+/// Does nothing where P is not declared.  Where no layer is bound it returns
+/// having done nothing ("One interface", 6ba0329).
 BodyKernelResult placeRemoveKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 1) {
     print('[ABORT] \'_place_remove\'/1: expected 1 argument, got ${args.length}');
     return BodyKernelResult.abort;
   }
-  final seam = _seamContext(rt, '\'_place_remove\'/1');
-  if (seam == null) return BodyKernelResult.abort;
 
   final place = _groundString(rt, args[0]);
   if (place == null) {
@@ -1413,6 +1432,9 @@ BodyKernelResult placeRemoveKernel(GlpRuntime rt, List<Object?> args) {
         'naming a place, got ${_deref(rt, args[0])}');
     return BodyKernelResult.abort;
   }
+
+  final seam = _seamLayer(rt);
+  if (seam == null) return BodyKernelResult.success;
 
   try {
     seam.ctx.removePlace(place);
@@ -1431,14 +1453,13 @@ BodyKernelResult placeRemoveKernel(GlpRuntime rt, List<Object?> args) {
 /// declared, a later declaration of an underlay replaces the level then
 /// standing").  An underlay or level the layer does not have is a violated
 /// precondition, and so an abort.  Until 2026-10-09 the first argument was a
-/// proximity medium, ble or lan.
+/// proximity medium, ble or lan.  Where no layer is bound it returns having
+/// done nothing ("One interface", 6ba0329).
 BodyKernelResult trustDeclareKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
     print('[ABORT] \'_trust_declare\'/2: expected 2 arguments, got ${args.length}');
     return BodyKernelResult.abort;
   }
-  final seam = _seamContext(rt, '\'_trust_declare\'/2');
-  if (seam == null) return BodyKernelResult.abort;
 
   final underlay = switch (_groundString(rt, args[0])) {
     'pan' => ProximityUnderlay.pan,
@@ -1460,6 +1481,9 @@ BodyKernelResult trustDeclareKernel(GlpRuntime rt, List<Object?> args) {
         'closed, got ${_deref(rt, args[1])}');
     return BodyKernelResult.abort;
   }
+
+  final seam = _seamLayer(rt);
+  if (seam == null) return BodyKernelResult.success;
 
   try {
     seam.network.setTrustLevel(underlay, level);

@@ -20,6 +20,13 @@
 /// provides none of the first four (their paper, §Not provided), and holds a
 /// trust level per underlay (IGLP appendix-implementation-notes.tex,
 /// Simulation realisation).
+///
+/// Where no layer is bound at all --- the REPL, a test run without the
+/// simulation --- the runtime stands in for a layer that observes nothing and
+/// does nothing: peer_address assigns none, place_declare assigns its stream
+/// unobservable and nothing more, and the other seam predicates return having
+/// done nothing (IGLP appendix-implementation-notes.tex, "One interface",
+/// 6ba0329).
 
 import 'dart:io';
 import 'dart:typed_data';
@@ -157,6 +164,17 @@ GlpEngine _engine(List<String> out, GlpNetwork network) {
   engine.enableMadGLP(agentId: 'alice');
   engine.runtime.outputCallback = out.add;
   engine.madContext!.network = network;
+  return engine;
+}
+
+/// An engine with no networking layer bound, capturing `_output`: the REPL's
+/// own (bin/glp_repl.dart, before `:mad`), or, [mad], one in madGLP mode with
+/// no GlpNetwork --- a test run without the simulation.
+GlpEngine _unboundEngine(List<String> out, {required bool mad}) {
+  final engine =
+      GlpEngine(rootSelfGlpPath: File('../programs/self.glp').absolute.path);
+  if (mad) engine.enableMadGLP(agentId: 'alice');
+  engine.runtime.outputCallback = out.add;
   return engine;
 }
 
@@ -469,6 +487,140 @@ go :- trust_declare($underlay, open).
         expect(network.trusted, isEmpty);
       }
     });
+  });
+
+  // IGLP appendix-implementation-notes.tex, "One interface" (6ba0329): "Where
+  // no layer is bound at all --- the REPL, a test run without the simulation
+  // --- the runtime stands in for a layer that observes nothing and does
+  // nothing: peer_address assigns none, place_declare assigns its stream
+  // unobservable and nothing more, and the other seam predicates return having
+  // done nothing".  Each test runs twice: under the REPL's engine, with no
+  // MadContext, and in madGLP mode with no GlpNetwork bound.
+  group('no layer bound: a layer that observes nothing and does nothing', () {
+    const emitAddress = '''
+procedure emit(PeerAddress?).
+emit(address(S)) :- ground(S?) | send_to_user([S?]).
+emit(none) :- send_to_user([none]).
+''';
+
+    // Reads E's first event, then waits on the rest: a further event or a
+    // closing would show; a stream that carries nothing more leaves `more`
+    // suspended at quiescence.
+    const watchPlace = '''
+procedure watch(_?).
+watch([E|Es]) :- ground(E?) | send_to_user([E?]), more(Es?).
+procedure more(_?).
+more([E|_]) :- ground(E?) | send_to_user([E?]).
+more([]) :- send_to_user([closed]).
+''';
+
+    for (final mad in [false, true]) {
+      final where = mad ? 'madGLP, no GlpNetwork' : 'the REPL, no MadContext';
+
+      test('$where: peer_address assigns none, for any peer, and does not abort',
+          () async {
+        for (final peer in [_hex(1), 'bob']) {
+          final out = <String>[];
+          final engine = _unboundEngine(out, mad: mad);
+          engine.loadSource('''
+${emitAddress}procedure go.
+go :- peer_address('$peer', A), emit(A?).
+''');
+          final result = await engine.runGoal('go');
+          expect(result.succeeded, isTrue, reason: '$peer: none is a value');
+          expect(out, ['none'], reason: peer);
+        }
+      });
+
+      test('$where: punch_udp returns having done nothing', () async {
+        final out = <String>[];
+        final engine = _unboundEngine(out, mad: mad);
+        engine.loadSource('''
+procedure go.
+go :- punch_udp('203.0.113.7:41234'), send_to_user([returned]).
+''');
+        final result = await engine.runGoal('go');
+        expect(result.succeeded, isTrue);
+        expect(out, ['returned']);
+      });
+
+      test('$where: place_declare assigns its stream unobservable and nothing '
+          'more', () async {
+        final out = <String>[];
+        final engine = _unboundEngine(out, mad: mad);
+        engine.loadSource('''
+${watchPlace}procedure go.
+go :- place_declare(home, 100, E), watch(E?).
+''');
+        final result = await engine.runGoal('go');
+        expect(out, ['unobservable']);
+        expect(result.suspended, isTrue,
+            reason: 'the stream stays open and nothing follows unobservable: '
+                'no event, no observable, no closing');
+        if (mad) {
+          expect(engine.madContext!.hasDeclaredPlace('home'), isFalse,
+              reason: 'nothing is declared');
+        }
+      });
+
+      test('$where: place_remove returns having done nothing, the stream left '
+          'as it was', () async {
+        final out = <String>[];
+        final engine = _unboundEngine(out, mad: mad);
+        engine.loadSource('''
+${watchPlace}procedure go.
+go :- place_declare(home, 100, E), watch(E?), place_remove(home),
+    place_remove(nowhere).
+''');
+        final result = await engine.runGoal('go');
+        expect(out, ['unobservable'],
+            reason: 'place_remove does nothing: the stream is not closed');
+        expect(result.suspended, isTrue);
+      });
+
+      test('$where: a second declaration of a place leaves the first stream as '
+          'it was', () async {
+        final out = <String>[];
+        final engine = _unboundEngine(out, mad: mad);
+        engine.loadSource('''
+${watchPlace}procedure go.
+go :- place_declare(home, 100, E1), watch(E1?), place_declare(home, 200, E2),
+    watch(E2?).
+''');
+        final result = await engine.runGoal('go');
+        expect(out, ['unobservable', 'unobservable']);
+        expect(result.suspended, isTrue,
+            reason: 'nothing is declared, so nothing supersedes and nothing '
+                'closes');
+      });
+
+      test('$where: trust_declare returns having done nothing', () async {
+        final out = <String>[];
+        final engine = _unboundEngine(out, mad: mad);
+        engine.loadSource('''
+procedure go.
+go :- trust_declare(pan, open), trust_declare(lan, closed),
+    send_to_user([returned]).
+''');
+        final result = await engine.runGoal('go');
+        expect(result.succeeded, isTrue);
+        expect(out, ['returned']);
+      });
+
+      test('$where: an argument the predicate does not take still aborts, '
+          'the want of a layer aside', () async {
+        final out = <String>[];
+        final engine = _unboundEngine(out, mad: mad);
+        engine.loadSource('''
+procedure go.
+go :- trust_declare(wifi, open).
+''');
+        final result = await engine.runGoal('go');
+        expect(result.succeeded, isFalse,
+            reason: 'wifi is no underlay: the kernel aborts and the goal '
+                'fails, as with a layer bound');
+      });
+    }
   });
 
   group(
