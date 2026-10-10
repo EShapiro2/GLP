@@ -600,6 +600,10 @@ imported procedure boot#play_unfriend_absent.
 exported procedure play_unfriend_absent.
 play_unfriend_absent :- boot # play_unfriend_absent.
 
+imported procedure boot#play_not_a_friend_ui.
+exported procedure play_not_a_friend_ui.
+play_not_a_friend_ui :- boot # play_not_a_friend_ui.
+
 imported procedure boot#play_introduce_both.
 exported procedure play_introduce_both.
 play_introduce_both :- boot # play_introduce_both.

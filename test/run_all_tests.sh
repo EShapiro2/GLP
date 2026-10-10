@@ -5072,6 +5072,19 @@ HEREDOC
 check "SG super-app: a send to someone not a friend is not sent, and the person is told not_a_friend" "A = \[not_a_friend(bob), connected(bob), received(bob, hello) | " "$sg_naf"
 check "SG super-app: a send between the acceptance and the conveyance is told not_a_friend" "B = \[not_a_friend(alice), connected(alice) | " "$sg_naf"
 
+# The same through the deployed UI mediator (boot.glp, play_not_a_friend_ui):
+# alice's person sends carol, not her friend, a message and is shown
+# not_a_friend(carol); she then sends bob, her friend, one, and his reply is
+# shown after it --- the notice stops no later notification.  The output's
+# lines are joined so that the check holds the two in their order.
+sg_naf_ui=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/social/graph
+play_not_a_friend_ui.
+:quit
+HEREDOC
+2>&1)
+check "SG not_a_friend through the UI mediator: shown, and the friend's reply shown after it" "not_a_friend(carol) received(bob, hi_alice) → succeeds" "$(echo "$sg_naf_ui" | tr '\n' ' ')"
+
 # The child-safe platform hosted, in its own session: a play that has run the
 # currency's mini-app leaves the session such that the next play's invitation
 # opens nothing --- play_invite after play_coins returns [] as well --- so the

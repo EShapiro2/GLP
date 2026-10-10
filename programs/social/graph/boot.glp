@@ -33,6 +33,9 @@ imported procedure ui#alice3(ActorChannel?).
 imported procedure ui#bob3(ActorChannel?).
 imported procedure ui#charlie3(ActorChannel?).
 
+%% From ui/ — the not-a-friend play
+imported procedure ui#alice_naf(ActorChannel?).
+
 %% =============================================================================
 %% LOCAL UTILITIES
 %% =============================================================================
@@ -398,6 +401,34 @@ play_unfriend_absent :-
     core # agent(alice, [msg(person, alice, unfriend(carol))], [],
                   [friend_output(bob, _), user_output(AliceOut)]),
     send_to_user(AliceOut?).
+
+%% =============================================================================
+%% NOT A FRIEND — the mediated UI path (paper Section 5.1)
+%% =============================================================================
+
+%% A message the person addresses to someone who is not their friend is not
+%% sent, and the agent tells the person so.  Alice, bob's friend and not
+%% carol's, sends carol a message through the mediator and is told
+%% not_a_friend(carol); she then sends bob one, and bob's reply reaches her as
+%% received(bob, hi_alice), so the notice stops no later notification.  What
+%% the mediator shows her is printed.
+exported procedure play_not_a_friend_ui.
+play_not_a_friend_ui :-
+    ui # alice_naf(ch(ActorIn?, ActorOut)),
+    core # agent(alice, AgentIn?, NetIn?,
+                  [friend_output(bob, ToBob), user_output(AgentToUser)]),
+    ui # ui_mediator(alice, ch(AgentToUser?, AgentIn),
+                ch(ActorOut?, MedOut), [], 1),
+    tee(MedOut?, ActorIn, Shown),
+    reply_once(ToBob?, NetIn),
+    send_to_user(Shown?).
+
+%% Bob, scripted on his friend channel: he answers alice's first message.
+procedure reply_once(FriendStream?, NetInStream).
+reply_once([msg(alice, bob, text(_)) | _], [msg(bob, alice, text(hi_alice))]).
+reply_once([_ | Fs], NetIn?) :-
+    otherwise | reply_once(Fs?, NetIn).
+reply_once([], []).
 
 %% =============================================================================
 %% INTRODUCTION — the mutual friend's two friend channels (paper Section 5.2)

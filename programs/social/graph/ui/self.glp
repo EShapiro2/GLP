@@ -51,3 +51,8 @@ bob3(Ch) :- actors # bob3(Ch?).
 imported procedure actors#charlie3(ActorChannel?).
 exported procedure charlie3(ActorChannel?).
 charlie3(Ch) :- actors # charlie3(Ch?).
+
+%% The scripted person of the not-a-friend play (actors.glp).
+imported procedure actors#alice_naf(ActorChannel?).
+exported procedure alice_naf(ActorChannel?).
+alice_naf(Ch) :- actors # alice_naf(Ch?).
