@@ -321,7 +321,13 @@ void main() {
     });
   });
 
-  group('explicit dual type definitions', () {
+  // A type's dual is implied by its definition and never defined (TGLP
+  // typed-glp.tex, "Type Declarations"; appendix-type-automaton.tex,
+  // Definition "Dual Type Automaton"), and a definition headed `T?` is
+  // refused (type_def_question_mark_test).  Until 2026-10-10 this group also
+  // defined each T? explicitly, as a type named "T?", with T's alternatives;
+  // modedHead never looked it up, reading T? from T's definition.
+  group('implied dual type definitions', () {
     ast.Goal goal(String f, List<ast.Term> args) =>
         ast.Goal(f, args, 0, 0);
     ast.VarTerm writer(String name) => ast.VarTerm(name, false, 0, 0);
@@ -329,14 +335,13 @@ void main() {
     ast.StructTerm struct(String f, List<ast.Term> args) =>
         ast.StructTerm(f, args, 0, 0);
 
-    test('Channel with explicit dual preserves internal structure', () {
+    test('Channel with its implied dual Channel?', () {
       // Channel ::= ch(Stream?, Stream).
-      // Channel? ::= ch(Stream?, Stream).
-      // The explicit dual preserves internal structure - position 1 is always
-      // Stream? (input), position 2 is always Stream (output).
-      
+      // Channel? is implied: at a Channel? position each mode inside ch is
+      // the complement of Channel's.
+
       final typeEnv = TypeEnvironment({}, {});
-      
+
       // Define Channel
       typeEnv.addType(TypeDef(
         'Channel',
@@ -348,19 +353,7 @@ void main() {
         ],
         0, 0,
       ));
-      
-      // Define explicit dual Channel?
-      typeEnv.addType(TypeDef(
-        'Channel?',
-        [
-          StructAlt('ch', [
-            TypeRef('Stream', 0, 0, isInput: true),   // Stream? (preserved!)
-            TypeRef('Stream', 0, 0, isInput: false),  // Stream (preserved!)
-          ], 0, 0),
-        ],
-        0, 0,
-      ));
-      
+
       // Define Stream (simple for this test)
       typeEnv.addType(TypeDef(
         'Stream',
@@ -386,8 +379,8 @@ void main() {
       );
       
       // Head: send(X, ch(In, Out), ch(In?, Out?))
-      // Arg 2 (Channel?) should have position 1 at mode ↓, position 2 at mode ↑
-      // (preserved from explicit dual definition)
+      // Arg 2 (Channel?) is read from Channel's definition, its modes
+      // complemented (the implied dual)
       final head = goal('send', [
         writer('X'),
         struct('ch', [writer('In'), writer('Out')]),
@@ -413,11 +406,12 @@ void main() {
       expect(out2.isReader, isTrue);  // writer at ↓ complemented to reader
     });
 
-    test('DiffList with explicit dual preserves internal structure', () {
+    test('DiffList with its implied dual DiffList?', () {
       // DiffList ::= Stream? \ Stream.
-      // DiffList? ::= Stream? \ Stream.
-      // Position 1 is always content (Stream?, consumed), position 2 is always hole (Stream, produced)
-      
+      // DiffList? is implied: at a DiffList? position each mode inside \ is
+      // the complement of DiffList's, content (Stream?) and hole (Stream).
+
+
       final typeEnv = TypeEnvironment({}, {});
       
       // Define Stream
@@ -444,19 +438,7 @@ void main() {
         ],
         0, 0,
       ));
-      
-      // Define explicit dual DiffList?
-      typeEnv.addType(TypeDef(
-        'DiffList?',
-        [
-          DiffListAlt(
-            TypeRef('Stream', 0, 0, isInput: true),   // Stream? (preserved!)
-            TypeRef('Stream', 0, 0, isInput: false),  // Stream (preserved!)
-          0, 0),
-        ],
-        0, 0,
-      ));
-      
+
       // procedure dl_append(DiffList?, DiffList?, DiffList).
       final decl = ProcDecl(
         'dl_append',

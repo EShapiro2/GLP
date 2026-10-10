@@ -1818,12 +1818,15 @@ class Parser {
 
   /// Check if we're at a type definition (TypeName ::= ... or TypeName(X) ::= ...)
   /// Used to distinguish type definitions from clause heads starting with capitalized variable.
+  /// A `?` on the type name, `T? ::=`, `T ? ::=`, `T(X)? ::=`, is looked
+  /// past, so that [_parseTypeDef] refuses it at the `?`.
   bool _isTypeDefinition() {
     // TypeName ::= ... (type names are capitalized, tokenized as VARIABLE)
     if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
       // Look ahead for ::=, skipping optional type parameters (X, Y, ...)
       final saved = _current;
       _advance();  // consume type name
+      _match(TokenType.QUESTION);  // `T ?`, refused by [_parseTypeDef]
 
       // Skip optional type parameters: (X, Y, ...)
       if (_check(TokenType.LPAREN)) {
@@ -1835,6 +1838,7 @@ class Parser {
           _advance();
         }
       }
+      _match(TokenType.QUESTION);  // `T(X)?`, refused by [_parseTypeDef]
 
       final isTypeDef = _check(TokenType.COLONCOLONEQ);
 
@@ -1847,19 +1851,33 @@ class Parser {
 
   /// Parse a type definition: TypeName ::= alt ; alt ; alt.
   /// Also supports parameterized: TypeName(X, Y) ::= alt ; alt.
-  /// Also supports explicit dual definitions: TypeName? ::= alt.
+  ///
+  /// The head names the type defined, never its dual: a `?` on it, `T? ::=`,
+  /// `T ? ::=`, `T?(X) ::=` or `T(X)? ::=`, is refused at the `?`
+  /// ([_refuseMarkOnDefinedType]).  TGLP defines a type from its producer's
+  /// perspective, "which implicitly defines its dual" (typed-glp.tex, "Type
+  /// Declarations"), the dual's automaton being the type's with every mode
+  /// complemented (appendix-type-automaton.tex, Definition "Dual Type
+  /// Automaton"): a dual is implied, never defined (GLP #3 Cowork,
+  /// 2026-10-10 11:37 UTC, "09:50").  Until 2026-10-10 `T? ::= alt` was read
+  /// as the definition of a type named `T?`.
   TypeDef _parseTypeDef() {
     final typeNameToken = _check(TokenType.READER)
         ? _advance()
         : _consume(TokenType.VARIABLE, 'Expected type name');
-
-    // For READER tokens (e.g., Channel?), append '?' to the name
-    // This supports explicit dual type definitions
-    final typeName = typeNameToken.type == TokenType.READER
-        ? '${typeNameToken.lexeme}?'
-        : typeNameToken.lexeme;
+    final typeName = typeNameToken.lexeme;
     final line = typeNameToken.line;
     final column = typeNameToken.column;
+
+    // `T?`: the lexer reads a name and a "?" joined to it as one reader
+    // token, the "?" right after the name.
+    if (typeNameToken.type == TokenType.READER) {
+      _refuseMarkOnDefinedType(typeName, line, column + typeName.length);
+    }
+    // `T ?`
+    if (_check(TokenType.QUESTION)) {
+      _refuseMarkOnDefinedType(typeName, _peek().line, _peek().column);
+    }
 
     // Parse optional type parameters: (X, Y, ...)
     final typeParams = <String>[];
@@ -1871,6 +1889,11 @@ class Parser {
         typeParams.add(param.lexeme);
       }
       _consume(TokenType.RPAREN, 'Expected ")" after type parameters');
+      // `T(X)?` and `T(X) ?`
+      if (_check(TokenType.QUESTION)) {
+        _refuseMarkOnDefinedType('$typeName(${typeParams.join(', ')})',
+            _peek().line, _peek().column);
+      }
     }
 
     _consume(TokenType.COLONCOLONEQ, 'Expected "::=" in type definition');
@@ -1975,6 +1998,24 @@ class Parser {
       'name, and marks no type name',
       q.line,
       q.column,
+      phase: 'parser',
+    );
+  }
+
+  /// Refuses the `?` at [line] and [column], on the head of a type
+  /// definition, after [follows], the type it defines ([_parseTypeDef]): a
+  /// `?` marks a type name's dual, which TGLP implies by the type's
+  /// definition and never defines (typed-glp.tex, "Type Declarations";
+  /// appendix-type-automaton.tex, Definition "Dual Type Automaton"), so it
+  /// starts no definition (GLP #3 Cowork, 2026-10-10 11:37 UTC, "09:50").
+  Never _refuseMarkOnDefinedType(String follows, int line, int column) {
+    throw CompileError(
+      'A "?" in a type definition marks the type name before it, "T ?" '
+      'being "T?", the dual of T, which TGLP implies by the definition of T '
+      'and never defines; here it follows "$follows", the type being '
+      'defined, and starts no definition',
+      line,
+      column,
       phase: 'parser',
     );
   }

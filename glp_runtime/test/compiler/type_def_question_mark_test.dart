@@ -15,6 +15,15 @@
 // type name only, GLP-Spec on a variable only (glp.tex, Definition "GLP
 // Variables").  Until 2026-10-10 the parser dropped it, for an "explicit
 // dual" written `Channel? ::= ch(Stream?, Stream)?.`.
+//
+// A `?` on the head of a type definition, `T? ::=`, `T ? ::=`, `T(X)? ::=`,
+// starts no definition and is refused at the `?` (GLP #3 Cowork, 2026-10-10
+// 11:37 UTC, "09:50"): a type is defined from its producer's perspective,
+// "which implicitly defines its dual" (TGLP typed-glp.tex, "Type
+// Declarations"), the dual's automaton being the type's with every mode
+// complemented (appendix-type-automaton.tex, Definition "Dual Type
+// Automaton"); a dual is implied, never defined.  Until 2026-10-10 `T? ::=
+// alt` was read as the definition of a type named `T?`.
 
 import 'dart:io';
 
@@ -115,8 +124,6 @@ void main() {
       ('a structure alternative', 'Q ::= ch(R?, R)?.',
           'the structure "ch(...)"'),
       ('a structure, apart', 'Q ::= ch(R?, R) ?.', 'the structure "ch(...)"'),
-      ('the structure of an "explicit dual"', 'Q? ::= ch(R?, R)?.',
-          'the structure "ch(...)"'),
       ('a structure argument', 'Q ::= f(g(R)?).', 'the structure "g(...)"'),
       ('an operator\'s structure', 'Q ::= +(R, R)?.',
           'the structure "+(...)"'),
@@ -159,6 +166,78 @@ void main() {
     });
   });
 
+  group('a "?" on the type a definition defines starts no definition, and is '
+      'refused', () {
+    /// Checks [e] is the refusal of a "?" on the head, after [follows], at
+    /// [line] and [column].
+    void expectHeadRefusal(
+        CompileError e, String follows, int line, int column) {
+      expect(e.category, ErrorCategory.syntax, reason: '$e');
+      expect(e.message, contains('implies by the definition of T and never '
+          'defines'));
+      expect(e.message, contains('here it follows "$follows", the type being '
+          'defined, and starts no definition'));
+      expect(e.line, line, reason: '$e');
+      expect(e.column, column, reason: '$e');
+    }
+
+    for (final (what, source, follows) in [
+      ('a type name, joined', 'Q? ::= f(R).', 'Q'),
+      ('a type name, apart', 'Q ? ::= f(R).', 'Q'),
+      ('the alias of a type', 'Q? ::= R.', 'Q'),
+      ('a channel', 'Channel? ::= ch(Stream?, Stream).', 'Channel'),
+      ('a difference list', r'DiffList? ::= Stream? \ Stream.', 'DiffList'),
+      ('a parameterised type, before its parameters', 'Q?(X) ::= f(X).', 'Q'),
+      ('a parameterised type, after its parameters', 'Q(X)? ::= f(X).',
+          'Q(X)'),
+      ('a parameterised type, apart', 'Q(X, Y) ? ::= f(X, Y).', 'Q(X, Y)'),
+      ('a type name marked twice', 'Q?? ::= f(R).', 'Q'),
+      // Until 2026-10-10 refused at its last "?", after the structure, with
+      // its head read as the type "Q?".
+      ('the structure of an "explicit dual", at its head', 'Q? ::= ch(R?, R)?.',
+          'Q'),
+    ]) {
+      test('on $what', () {
+        // The refusal points at the "?" on the head, the first one.
+        expectHeadRefusal(
+            _refusal(source), follows, 1, source.indexOf('?') + 1);
+      });
+    }
+
+    test('on a later line, at its "?"', () {
+      expectHeadRefusal(
+          _refusal('R ::= g(Integer).\n\nQ ? ::= f(R).'), 'Q', 3, 3);
+    });
+
+    test('in an interface section', () {
+      try {
+        Parser(Lexer('R ::= g(Integer).\nQ? ::= f(R).').tokenize())
+            .parseInterface();
+      } on CompileError catch (e) {
+        expectHeadRefusal(e, 'Q', 2, 2);
+        return;
+      }
+      fail('parsed');
+    });
+
+    test('without the "?" the same heads parse, each defining the type named',
+        () {
+      for (final (source, name) in [
+        ('Q ::= f(R).', 'Q'),
+        ('Q ::= R.', 'Q'),
+        ('Channel ::= ch(Stream?, Stream).', 'Channel'),
+        (r'DiffList ::= Stream? \ Stream.', 'DiffList'),
+        ('Q(X) ::= f(X).', 'Q'),
+        ('Q(X, Y) ::= f(X, Y).', 'Q'),
+        ('Q ::= ch(R?, R).', 'Q'),
+      ]) {
+        final defs =
+            Parser(Lexer(source).tokenize()).parseModule().typeDefs;
+        expect([for (final d in defs) d.name], [name], reason: source);
+      }
+    });
+  });
+
   group('GLP\'s case', () {
     late GlpEngine engine;
     setUp(() => engine = GlpEngine(
@@ -186,6 +265,18 @@ void main() {
           throwsA(predicate((e) => '$e'.contains(
               'here it follows the structure "f(...)", which is not a type '
               'name, and marks no type name'))));
+    });
+
+    test('with its dual defined, Q? ::= f(R?), it does not load, refused at '
+        'the "?"', () {
+      final source =
+          _case('R?').replaceFirst('Q ::= f(R?).', 'Q? ::= f(R?).');
+      expect(source, contains('\nQ? ::= f(R?).'));
+      expect(
+          () => engine.loadSource(source),
+          throwsA(predicate((e) => '$e'.contains(
+              'here it follows "Q", the type being defined, and starts no '
+              'definition'))));
     });
   });
 }
