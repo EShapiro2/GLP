@@ -193,7 +193,7 @@ void main() {
       final r = await _play('stream', 'play_chat(Out, Log)');
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       expect(r['Out'],
-          '[msg(bob, "hello"), msg(bob, "world") | _]');
+          '[msg(bob, hello), msg(bob, world) | _]');
       // One construct, drawn once, an input box that stays open, the
       // stream's own position the root, [].
       expect(r['Log'], '[drawn(0, input_box(text), input([])) | _]');
@@ -204,7 +204,7 @@ void main() {
         () async {
       final r = await _play('stream', 'play_chat_two(Out, Log)');
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
-      expect(r['Out'], '[msg(carol, "one"), msg(carol, "two") | _]');
+      expect(r['Out'], '[msg(carol, one), msg(carol, two) | _]');
       expect(r['Log'], '[drawn(0, input_box(text), input([])) | _]');
     });
 
@@ -230,7 +230,7 @@ void main() {
         'quits, all on one construct, drawn once and kept open', () async {
       final r = await _play('fragments', 'play_request(Outs, Log)');
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
-      expect(r['Outs'], '["hi"]');
+      expect(r['Outs'], '[hi]');
       expect(r['Log'],
           '[drawn(0, input_box(menu([form(post, [text]), button(quit)])), '
           'input([])) | _]');
@@ -643,7 +643,7 @@ person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       final r = await play('play_befriend_noting(R, N, Log)');
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       expect(r['R'], 'accept(bob)');
-      expect(r['N'], 'note("hi")');
+      expect(r['N'], 'note(hi)');
       // The two constructs are drawn and withdraw in the order their asks
       // reach the dispatcher and their answers come, the merge of the two
       // ask streams deciding the first; each is drawn once and withdraws.
@@ -761,7 +761,7 @@ person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     void cardAndNoteAnswered(_Run r) {
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       expect(r['R'], 'accept(bob)');
-      expect(r['N'], 'note("hi")');
+      expect(r['N'], 'note(hi)');
       final log = r['Log'];
       // The card the person answers first; the note respond reaches in N
       // after its yes; each drawn once and withdrawn.

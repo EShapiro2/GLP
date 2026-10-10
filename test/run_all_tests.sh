@@ -1418,7 +1418,11 @@ check_not "single file: neither loads" "✓ Loaded" "$a40"
 # tail that is no list and no variable was posted as [] (glp_engine.dart,
 # _buildListTerm), and it is now built as written.  A name holding a quote is shown and not
 # typed back: in a here-document inside $(...) bash 3.2 pairs single quotes
-# regardless of the backslash; GlpPrinter's Dart test reads it back.
+# regardless of the backslash; GlpPrinter's Dart test reads it back.  "str" is
+# the string str, shown str: a quoted name and a double-quoted string are two
+# spellings of one string, and the double-quoted form is read and never
+# printed (GLP #3 Cowork, 2026-10-04 15:19 UTC, FAULT 2 (b)); until 2026-10-10
+# it was shown "str".
 echo "--- A41: The answer display reads back ---"
 a41=$("$REPL_RUN" <<HEREDOC
 $TYPED/display_read_back.glp
@@ -1433,7 +1437,7 @@ tails(L41).
 HEREDOC
 2>&1)
 check "display: the fixture loads" "Loaded: .*display_read_back.glp" "$a41"
-check "display: names quoted where they must be" "N41 = \['G', '+', 'mod', '42', 'a b', '_x', 'procedure', \[\], \"str\"\]" "$a41"
+check "display: names quoted where they must be" "N41 = \['G', '+', 'mod', '42', 'a b', '_x', 'procedure', \[\], str\]" "$a41"
 check "display: the shown names read back as the term" "R41 = yes" "$a41"
 check "display: the comparison can fail" "Q41 = no" "$a41"
 check "display: functors quoted where they must be" "T41 = w('G'(a), f('=\.\.', 'X'), +(1), =?=(a, b))" "$a41"
@@ -3698,6 +3702,8 @@ check "S2 leaf loads" "Loaded program" "$s2"
 check "S2 ancestor pmerge resolves" "Z = \[1, 4, 2, 5, 3, 6\]" "$s2"
 
 # --- S3: two distinct instantiations of the parameterised utility in one module ---
+# S3, S5, S6 and X6 show their strings in the one canonical print, a, not "a"
+# (GLP #3 Cowork, 2026-10-04 15:19 UTC, FAULT 2 (b); until 2026-10-10 "a").
 echo "--- S3: two instantiations of the parameterised utility ---"
 s3=$("$REPL_RUN" <<HEREDOC
 $SCOPE_CHAIN/leaf
@@ -3706,7 +3712,7 @@ test_both(Zi, Zc).
 HEREDOC
 2>&1)
 check "S3 integer instantiation" "Zi = \[1, 4, 2, 5, 3, 6\]" "$s3"
-check "S3 constant instantiation" "Zc = \[\"a\", \"c\", \"b\", \"d\"\]" "$s3"
+check "S3 constant instantiation" "Zc = \[a, c, b, d\]" "$s3"
 
 # --- S4: currencies/play12 is a program (TGLP Definition "Program") ---
 # TGLP Definition "Program" (parameterized-types.tex:164, TGLP 9b29563): "a directory
@@ -3733,7 +3739,7 @@ run(Result, S).
 HEREDOC
 2>&1)
 check "S5 walker loads" "Loaded program" "$s5"
-check "S5 opaque pass-through + append" "S = \[\"hello\"" "$s5"
+check "S5 opaque pass-through + append" "S = \[hello" "$s5"
 
 # --- S6: walker parameterised over the entry type ---
 echo "--- S6: parameterised walker (functor decomposition of type param) ---"
@@ -3745,7 +3751,7 @@ HEREDOC
 2>&1)
 check "S6 param walker loads" "Loaded program" "$s6"
 check "S6 functor decomposition" "more(7)" "$s6"
-check "S6 append via parameterised walker" "S = \[\"hello\"" "$s6"
+check "S6 append via parameterised walker" "S = \[hello" "$s6"
 
 # --- S7: shadowing — local definition wins over ancestor ---
 echo "--- S7: shadowing (local pmerge shadows ancestor) ---"
@@ -3889,7 +3895,7 @@ two_inst(Zi, Zc).
 HEREDOC
 2>&1)
 check "X6 integer instantiation" "Zi = \[1, 3, 2, 4\]" "$x6"
-check "X6 constant instantiation" "Zc = \[\"a\", \"b\"\]" "$x6"
+check "X6 constant instantiation" "Zc = \[a, b\]" "$x6"
 
 # --- X7: per-instantiation routing rejection (clause-template rule) ---
 # A parameterised lib router (send_user) exposed from the root, called by a
