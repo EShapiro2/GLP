@@ -1,0 +1,39 @@
+%% The run of test (xiii), by hand, as the examples' harnesses (sGLP's paper,
+%% Section 4, "The run"; Appendix B): the run declaration of receipt_sglp.glp,
+%% one agent, its initial goal chat/2 of chat.glp and its person process
+%% (population.glp, person/6), with its stochastic person and its seed,
+%% reading chat/2's ask stream in the dispatcher's place (Section 3,
+%% Definition "Simulation Program"); the monitor, with the run's seed and the
+%% horizon in seconds; and the log's sink, the root's send_to_user/1, which
+%% prints each entry, ground, on its own line, and the monitor's clock last.
+%% The agent's stochastic person and its person process's seed are drawn from
+%% the start of the first block, as the examples' first agent's are (Appendix
+%% B, "Seeds").  The program holds no call of the transformation, which
+%% printed population.glp before the run (transform.sh).
+
+imported procedure chat#chat(Stream(Receipt), Stream(Ask)).
+imported procedure population#declaration(Integer, Number, Span, Integer).
+imported procedure population#stochastic_person(Integer?, Profiles, Integer).
+imported procedure population#person(Integer?, Profiles?, MutualRef?, Integer?,
+                                     MutualRef?, Stream(Ask)?).
+
+%% run(Rs): the run declaration's run, Rs the receipts the program output.
+exported procedure run(Stream(Receipt)).
+run(Rs?) :-
+    population # declaration(N, C, U, Seed),
+    run(N?, C?, U?, Seed?, Rs).
+
+%% run(N?, C?, U?, Seed?, Rs): the run of one agent until C Us from Seed.
+procedure run(Integer?, Number?, Span?, Integer?, Stream(Receipt)).
+run(1, C, U, Seed, Rs?) :-
+    number(C?), integer(Seed?) |
+    span(U?, Secs),
+    H := C? * Secs?,
+    allocate_mutual_reference(Mon, Requests),
+    allocate_mutual_reference(Log, Entries),
+    send_to_user(Entries?),
+    monitor(Requests?, Seed?, H?, Log?),
+    random(Seed?, 2147483646, Base, _),
+    population # stochastic_person(Base?, P, S),
+    chat # chat(Rs, Asks),
+    population # person(1, P?, Mon?, S?, Log?, Asks?).

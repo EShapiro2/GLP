@@ -1,0 +1,198 @@
+%% Printed by programs/sglp/transform.glp from the sGLP source in the term form
+%% (README.md, "The term form"); edit the source and run transform.sh, not this file.
+%% transform(panel, population)
+
+%% The run declaration of the source:
+%% (run(1, [mix(judging, [share(judge, 1.0)])], 1, week, 20260927))
+
+Profiles
+::=
+profiles(Dimension1)
+.
+Dimension1
+::=
+judge
+.
+Ask ::= ask(Constant, Question).
+Question
+::=
+panel_w(Panel)
+.
+
+%% The person procedures, in the profiles module.
+imported procedure
+profiles
+#
+judge_panel
+(
+Panel
+?
+,
+Integer?
+,
+MutualRef?
+)
+.
+
+%% The person process (sGLP's paper, Section 4, "The person process").
+exported procedure person(Integer?, Profiles?, MutualRef?, Integer?, MutualRef?, Stream(Ask)?).
+person(A, profiles(judge), Mon, Seed, Log, [ask(_, panel_w(panel([]))) | As])
+:-
+random(Seed?, 2147483646, K, S)
+,
+profiles
+#
+judge_panel(panel([]), K?, Mon?)
+,
+person(A?, profiles(judge), Mon?, S?, Log?, As?)
+.
+person(A, profiles(judge), Mon, Seed, Log, [ask(Type, panel_w(panel([card(Z1, Z2?) | Z4]))) | As])
+:-
+ground(Z1?)
+|
+random(Seed?, 2147483646, K, S)
+,
+profiles
+#
+judge_panel(panel([card(Z1?, Z3) | Z5?]), K?, Mon?)
+,
+answer_1(A?, Type?, Z1?, Z3?, Z2, Mon?, Log?)
+,
+present_1(A?, Type?, Z4?, Z5, Mon?, Log?)
+,
+person(A?, profiles(judge), Mon?, S?, Log?, As?)
+.
+person(_, _, _, _, _, []).
+
+%% The answer to a question shown, handed over and logged in it (Section 4, "The person process" and "The log").
+procedure
+answer_1
+(
+Integer?
+,
+Constant?
+,
+Integer?
+,
+YesNo
+?
+,
+YesNo
+,
+MutualRef?
+,
+MutualRef?
+)
+.
+answer_1(A, Type, V1, Y, Y?, Mon, Log)
+:-
+ground(Y?)
+|
+stream_append(time(Time), Mon?, _)
+,
+stream_append(entry(Time?, A?, Type?, panel([card(V1?, Y?) | '_'])), Log?, _)
+.
+
+%% The question shown, each position the person writes answered as a question of its own (Section 4, "The person process").
+procedure
+present_1
+(
+Integer?
+,
+Constant?
+,
+Cards
+?
+,
+Cards
+,
+MutualRef?
+,
+MutualRef?
+)
+.
+present_1(_, _, [], [], _, _)
+.
+present_1(A, Type, [card(Z1, Z2?) | Z4], [card(Z1?, Z3) | Z5?], Mon, Log)
+:-
+ground(Z1?)
+|
+answer_2(A?, Type?, Z1?, Z3?, Z2, Mon?, Log?)
+,
+present_1(A?, Type?, Z4?, Z5, Mon?, Log?)
+.
+
+%% The answer to a question shown, handed over and logged in it (Section 4, "The person process" and "The log").
+procedure
+answer_2
+(
+Integer?
+,
+Constant?
+,
+Integer?
+,
+YesNo
+?
+,
+YesNo
+,
+MutualRef?
+,
+MutualRef?
+)
+.
+answer_2(A, Type, V1, Y, Y?, Mon, Log)
+:-
+ground(Y?)
+|
+stream_append(time(Time), Mon?, _)
+,
+stream_append(entry(Time?, A?, Type?, [card(V1?, Y?) | '_']), Log?, _)
+.
+
+%% The run declaration: its agents, horizon, seed and thresholds.
+exported procedure
+declaration
+(
+Integer
+,
+Number
+,
+Span
+,
+Integer
+)
+.
+declaration(1, 1, week, 20260927)
+.
+
+%% An agent's stochastic person, drawn from its block (Appendix B).
+exported procedure
+stochastic_person
+(
+Integer?
+,
+Profiles
+,
+Integer
+)
+.
+stochastic_person(B, profiles(P1?), S?)
+:-
+random(B?, 100, K1, S)
+,
+judging(K1?, P1)
+.
+
+%% The draw of the dimension(judging)
+procedure
+judging
+(
+Integer?
+,
+Dimension1
+)
+.
+judging(_, judge)
+.

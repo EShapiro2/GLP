@@ -4,7 +4,7 @@
 # 00:06 UTC, item 6, 15:23 UTC, items 1 and 3, 15:24 UTC, items 1 to 4, and
 # 15:44 UTC, and of 2026-10-03 08:44 UTC, item 2, 08:58 UTC, 09:22 UTC and
 # 09:45 UTC, the transformation of 2026-10-03 09:27 UTC, and sGLP's tasks 5 to
-# 7 of 2026-10-09 22:01 UTC and 2026-10-10 07:59 and 08:14 UTC.
+# 8 of 2026-10-09 22:01 UTC and 2026-10-10 07:59, 08:14 and 09:33 UTC.
 #
 #   bash programs/sglp/test_sglp.sh
 #
@@ -128,12 +128,20 @@
 #       and a writer-mode type Post ::= post(Integer, Line?), Line ::=
 #       line(String, Status?), each handed over once the String or Integer the
 #       person writes is ground, a fresh writer at the position the program
-#       writes, its reader to the person goal through the copy's pattern, and
-#       '_' in the log; a writer-mode type with a position the person writes
-#       inside an argument the program writes refused, a case the paper does
-#       not decide; and the checks of (b): a clause answering two questions
-#       refused as not single-answer, and a profile whose predicate is the
-#       compiled program's refused (Section 3, Definition "Single-Answer,
+#       writes, '_' in the log, and, by the relay of sGLP's task 8 of 09:33
+#       UTC, the person goal's writer there bound to a reader the person
+#       process holds, the program's term shown to the person goal by the
+#       present procedure of its type once ground (Section 4, "The person
+#       process": "Every term crossing between the program and the person goal,
+#       in either direction and at every depth, crosses the person process");
+#       a writer-mode type Panel ::= panel(Cards), Card ::= card(Integer,
+#       YesNo?), with positions the person writes inside an argument the
+#       program writes, shown once the positions the program writes are
+#       ground, the cards an element at a time, each card's answer a question
+#       of its own, logged in the question as shown (sGLP's Q1 of 09:33 UTC,
+#       where task 6 refused it); and the checks of (b): a clause answering two
+#       questions refused as not single-answer, and a profile whose predicate is
+#       the compiled program's refused (Section 3, Definition "Single-Answer,
 #       Well-Formed").
 # (xi)  a run with an interactive type in reader mode (tests/reader): five
 #       ratings of the person, each logged once in the order of time and read
@@ -143,8 +151,20 @@
 #       the person's Stream(Msg)?, Msg ::= msg(String, Status?), the person
 #       writing three messages, each once the last one's status is written,
 #       and the program writing sent, delivered or read into each; the printed
-#       handover, an element at a time, and the log, each message with its
-#       status as a variable, then the stream's end.
+#       relay, an element at a time, each status shown to the person goal by
+#       the person process (task 8), and the log, each message with its status
+#       as a variable, then the stream's end.
+# (xiii) a run with a question the program puts inside an answer
+#       (tests/receipt; sGLP's task 8 of 2026-10-10 09:33 UTC): (xii)'s
+#       Stream(Msg)? with Status ::= sent ; read(Ack?), the person
+#       acknowledging each read; the printed relay in both directions, and the
+#       log, the acknowledgement among the answers, read(ack), the program
+#       reading it.
+# (xiv) a run with positions the person writes inside an argument the program
+#       writes (tests/panel; sGLP's Q1 of 2026-10-10 09:33 UTC): Panel ::=
+#       panel(Cards), Card ::= card(Integer, YesNo?), in writer mode, a panel
+#       of three cards; the log each card's answer as a question of its own,
+#       the program reading them.
 #
 # Prints one line per check and a summary line, "=== P passed, F failed ===";
 # exits non-zero if any check fails.  The runs of (iii) and (iv) take some
@@ -532,15 +552,17 @@ check "in reader mode the person goal receives a writer and the program the read
     grep -q '^person(A, profiles(fair), Mon, Seed, Log, \[ask(Type, bid_r(X?)) | As\])$' "$WORK/txreader.bid" &&
     grep -q '^fair_bid(Y, K?, Mon?)$' "$WORK/txreader.bid" &&
     grep -q '^answer_1(A?, Type?, Y?, X, Mon?, Log?)$' "$WORK/txreader.bid" &&
-    grep -A 6 '^answer_1(A, Type, bid(Z1, Z2?), bid(Z1?, Z2), Mon, Log)$' "$WORK/txreader.bid" | tr '\n' ' ' |
-        grep -q " :- ground(Z1?) | stream_append(time(Time), Mon?, _) , stream_append(entry(Time?, A?, Type?, bid(Z1?, '_')), Log?, _) $" &&
-    [ "$(grep -c '^answer_1(A, Type, ' "$WORK/txreader.bid")" -eq 1 ]
-check "a reader-mode type with an argument the program writes is translated: the answer handed over once the argument the person writes is ground, a fresh writer at the one the program writes, its reader to the person goal through the copy, logged as _" $?
-# The handover by the moded type in writer mode, the checks' refusals (sGLP's
-# task 6 of 2026-10-10 07:59 UTC, (a) and (b)): PV, a writer-mode type Post
-# whose answer Line? holds a position the program writes, Status?; NV, a
-# writer-mode type Panel whose argument the program writes, Cards, holds
-# positions the person writes, a case the paper does not decide; QV and
+    grep -A 9 '^answer_1(A, Type, bid(Z1, Z2?), bid(Z1?, Z3), Mon, Log)$' "$WORK/txreader.bid" | tr '\n' ' ' |
+        grep -q " :- ground(Z1?) | stream_append(time(Time), Mon?, _) , stream_append(entry(Time?, A?, Type?, bid(Z1?, '_')), Log?, _) , present_1(A?, Type?, Z3?, Z2, Mon?, Log?) \. " &&
+    [ "$(grep -c '^answer_1(A, Type, ' "$WORK/txreader.bid")" -eq 1 ] &&
+    grep -A 5 '^present_1(_, _, Y, Y?, _, _)$' "$WORK/txreader.bid" | tr '\n' ' ' | grep -q ' :- ground(Y?) | true \. ' &&
+    [ "$(grep -c '^present_1(' "$WORK/txreader.bid")" -eq 2 ]
+check "a reader-mode type with an argument the program writes is translated: the answer handed over once the argument the person writes is ground, a fresh writer at the one the program writes, logged as _, the person goal's writer there bound to a reader the person process holds, and the program's term shown to the person goal by the present procedure of its type once ground" $?
+# The relay by the moded type in writer mode and the checks' refusals (sGLP's
+# task 6 of 2026-10-10 07:59 UTC, (a) and (b), Q1 and task 8 of 09:33 UTC):
+# PV, a writer-mode type Post whose answer Line? holds a position the program
+# writes, Status?; NV, a writer-mode type Panel whose argument the program
+# writes, Cards, holds positions the person writes, each card's YesNo?; QV and
 # ans2, a clause answering two questions; CV, the mended source's interface
 # naming ans/1 a predicate of the compiled program.
 PV="[type('Status', [sent, read]), type('Line', [line('String', dual('Status'))]), type('Post', [post('Integer', dual('Line'))]), volitional('Post', post_w, poster('Integer'))]"
@@ -563,12 +585,22 @@ done
     grep -q '^person(A, profiles(p), Mon, Seed, Log, \[ask(Type, post_w(post(X1, X2?))) | As\])$' "$WORK/txmoded.1" &&
     grep -q '^p_post(post(X1?, Y2), K?, Mon?)$' "$WORK/txmoded.1" &&
     grep -q '^answer_1(A?, Type?, X1?, Y2?, X2, Mon?, Log?)$' "$WORK/txmoded.1" &&
-    grep -A 6 '^answer_1(A, Type, X1, line(Z1, Z2?), line(Z1?, Z2), Mon, Log)$' "$WORK/txmoded.1" | tr '\n' ' ' |
-        grep -q " :- ground(Z1?) | stream_append(time(Time), Mon?, _) , stream_append(entry(Time?, A?, Type?, post(X1?, line(Z1?, '_'))), Log?, _) $"
-check "in writer mode an answer holding a position the program writes is handed over once the positions the person writes are ground, a fresh writer there, its reader to the person goal" $?
-grep -q '^%% not transformed: an interactive type in writer mode with a position the person writes inside an argument the program writes(Panel)$' "$WORK/txmoded.2" &&
-    [ "$(grep -c '^%% not transformed' "$WORK/txmoded.2")" -eq 1 ] && ! grep -q '^person(' "$WORK/txmoded.2"
-check "a writer-mode type with a position the person writes inside an argument the program writes is refused with that fault, nothing printed" $?
+    grep -A 9 '^answer_1(A, Type, X1, line(Z1, Z2?), line(Z1?, Z3), Mon, Log)$' "$WORK/txmoded.1" | tr '\n' ' ' |
+        grep -q " :- ground(Z1?) | stream_append(time(Time), Mon?, _) , stream_append(entry(Time?, A?, Type?, post(X1?, line(Z1?, '_'))), Log?, _) , present_1(A?, Type?, Z3?, Z2, Mon?, Log?) \. " &&
+    grep -A 5 '^present_1(_, _, Y, Y?, _, _)$' "$WORK/txmoded.1" | tr '\n' ' ' | grep -q ' :- ground(Y?) | true \. '
+check "in writer mode an answer holding a position the program writes is handed over once the positions the person writes are ground, a fresh writer there, and the program's term shown to the person goal by the present procedure of its type" $?
+# Q1: the Panel is shown once the positions the program writes are ground,
+# the cards an element at a time, each card's YesNo? answered as a question
+# of its own and logged in the panel or the cards as shown.
+tr '\n' ' ' < "$WORK/txmoded.2" > "$WORK/txmoded.2.flat"
+! grep -q '^%% not transformed' "$WORK/txmoded.2" &&
+    grep -q '^person(A, profiles(p), Mon, Seed, Log, \[ask(_, panel_w(panel(\[\]))) | As\])$' "$WORK/txmoded.2" &&
+    grep -q '^p_panel(panel(\[\]), K?, Mon?)$' "$WORK/txmoded.2" &&
+    grep -q "person(A, profiles(p), Mon, Seed, Log, \[ask(Type, panel_w(panel(\[card(Z1, Z2?) | Z4\]))) | As\]) :- ground(Z1?) | random(Seed?, 2147483646, K, S) , profiles # p_panel(panel(\[card(Z1?, Z3) | Z5?\]), K?, Mon?) , answer_1(A?, Type?, Z1?, Z3?, Z2, Mon?, Log?) , present_1(A?, Type?, Z4?, Z5, Mon?, Log?) , person(A?, profiles(p), Mon?, S?, Log?, As?) \. " "$WORK/txmoded.2.flat" &&
+    grep -q "answer_1 ( Integer? , Constant? , Integer? , YesNo ? , YesNo , MutualRef? , MutualRef? ) \. answer_1(A, Type, V1, Y, Y?, Mon, Log) :- ground(Y?) | stream_append(time(Time), Mon?, _) , stream_append(entry(Time?, A?, Type?, panel(\[card(V1?, Y?) | '_'\])), Log?, _) \. " "$WORK/txmoded.2.flat" &&
+    grep -q "present_1 ( Integer? , Constant? , Cards ? , Cards , MutualRef? , MutualRef? ) \. present_1(_, _, \[\], \[\], _, _) \. present_1(A, Type, \[card(Z1, Z2?) | Z4\], \[card(Z1?, Z3) | Z5?\], Mon, Log) :- ground(Z1?) | answer_2(A?, Type?, Z1?, Z3?, Z2, Mon?, Log?) , present_1(A?, Type?, Z4?, Z5, Mon?, Log?) \. " "$WORK/txmoded.2.flat" &&
+    grep -q "answer_2(A, Type, V1, Y, Y?, Mon, Log) :- ground(Y?) | stream_append(time(Time), Mon?, _) , stream_append(entry(Time?, A?, Type?, \[card(V1?, Y?) | '_'\]), Log?, _) \. " "$WORK/txmoded.2.flat"
+check "a writer-mode type with positions the person writes inside an argument the program writes is translated: shown once the positions the program writes are ground, the cards an element at a time by the present procedure of Cards, each card's answer a question of its own, logged in the question as shown" $?
 grep -q '^%% not transformed: a clause that is not single-answer, of(key(ans2, 1))$' "$WORK/txmoded.3" &&
     [ "$(grep -c '^%% not transformed' "$WORK/txmoded.3")" -eq 1 ] && ! grep -q '^person(' "$WORK/txmoded.3"
 check "a profile clause answering two questions is refused as not single-answer, nothing printed" $?
@@ -607,13 +639,16 @@ echo "--- (xii) a run with the delivery status of vGLP's chat"
 # person writing three messages' texts, each once the last one's status is
 # written, and the program writing each status, sent, delivered or read; each
 # message handed over once its text is ground, a fresh writer at its status
-# whose reader the person goal waits on, and the stream's tail left open, the
-# next answer; the log showing each message with its status as a variable.
+# whose reader the person process keeps and shows the person goal once the
+# program has written it (sGLP's task 8 of 2026-10-10 09:33 UTC), and the
+# stream's tail left open, the next answer; the log showing each message with
+# its status as a variable.
 D="$HERE/tests/delivery/population.glp"
 tr '\n' ' ' < "$D" | grep -q "answer_1(A, Type, \[\], \[\], Mon, Log) :- stream_append(time(Time), Mon?, _) , stream_append(entry(Time?, A?, Type?, \[\]), Log?, _) \." &&
-    tr '\n' ' ' < "$D" | grep -q "answer_1(A, Type, \[msg(Z1, Z2?) | Z3\], \[msg(Z1?, Z2) | Z4?\], Mon, Log) :- ground(Z1?) | stream_append(time(Time), Mon?, _) , stream_append(entry(Time?, A?, Type?, \[msg(Z1?, '_') | '_'\]), Log?, _) , answer_1(A?, Type?, Z3?, Z4, Mon?, Log?) \." &&
+    tr '\n' ' ' < "$D" | grep -q "answer_1(A, Type, \[msg(Z1, Z2?) | Z4\], \[msg(Z1?, Z3) | Z5?\], Mon, Log) :- ground(Z1?) | stream_append(time(Time), Mon?, _) , stream_append(entry(Time?, A?, Type?, \[msg(Z1?, '_') | '_'\]), Log?, _) , present_1(A?, Type?, Z3?, Z2, Mon?, Log?) , answer_1(A?, Type?, Z4?, Z5, Mon?, Log?) \." &&
+    tr '\n' ' ' < "$D" | grep -q "present_1(_, _, Y, Y?, _, _) :- ground(Y?) | true \." &&
     tr '\n' ' ' < "$D" | grep -q "person(A, profiles(talker), Mon, Seed, Log, \[ask(Type, stream_msg_r(X?)) | As\]) :- random(Seed?, 2147483646, K, S) , profiles # talk(Y, K?, Mon?) , answer_1(A?, Type?, Y?, X, Mon?, Log?) ,"
-check "the printed handover: each element once its text is ground, a fresh writer at its status, its reader to the person goal, the tail the next answer, and the stream's end" $?
+check "the printed relay: each element once its text is ground, a fresh writer at its status, whose reader the person process keeps and shows the person goal once ground, the tail the next answer, and the stream's end" $?
 repl "$WORK/delivery.out" ':limit 1000000000000' "$HERE/tests/delivery" 'delivery_run(Ts).'
 sed 's/^\(GLP> \)*//' "$WORK/delivery.out" > "$WORK/delivery.lines"
 grep -q '^✓ Loaded program' "$WORK/delivery.out"
@@ -631,6 +666,73 @@ awk '
     }' "$WORK/delivery.lines"
 check "the log: each message with its status as a variable, then the stream's end, in the order of time; the program reads the three texts; the person, waiting on each status, writes all three; the clock last" $?
 grep '^entry(\|^clock(\|^Ts = ' "$WORK/delivery.lines" | sed 's/^/        /'
+
+echo "--- (xiii) a run with a question the program puts inside an answer"
+# tests/receipt: test (xii)'s delivery status with Status ::= sent ;
+# read(Ack?), the program putting inside the person's answer, where it writes
+# read, a question of the person's, the acknowledgement of a read receipt
+# (sGLP's task 8 of 2026-10-10 09:33 UTC; Section 4, "The person process":
+# "Every term crossing between the program and the person goal, in either
+# direction and at every depth, crosses the person process so, a question the
+# program puts inside an answer included"): the printed relay, the status
+# shown to the person goal by the present procedure of Status, the question
+# inside it a fresh writer whose reader the person process keeps, and the
+# acknowledgement handed to the program and logged in the status as shown;
+# and the run, the log showing the acknowledgement and the program reading it.
+R="$HERE/tests/receipt/population.glp"
+tr '\n' ' ' < "$R" > "$WORK/receipt.flat"
+grep -q "answer_1(A, Type, \[msg(Z1, Z2?) | Z4\], \[msg(Z1?, Z3) | Z5?\], Mon, Log) :- ground(Z1?) | stream_append(time(Time), Mon?, _) , stream_append(entry(Time?, A?, Type?, \[msg(Z1?, '_') | '_'\]), Log?, _) , present_1(A?, Type?, Z3?, Z2, Mon?, Log?) , answer_1(A?, Type?, Z4?, Z5, Mon?, Log?) \." "$WORK/receipt.flat" &&
+    grep -q "present_1(_, _, sent, sent, _, _) \. present_1(A, Type, read(Z1?), read(Z2), Mon, Log) :- answer_2(A?, Type?, Z2?, Z1, Mon?, Log?) \." "$WORK/receipt.flat" &&
+    grep -q "answer_2(A, Type, Y, Y?, Mon, Log) :- ground(Y?) | stream_append(time(Time), Mon?, _) , stream_append(entry(Time?, A?, Type?, read(Y?)), Log?, _) \." "$WORK/receipt.flat"
+check "the printed relay: the status shown to the person goal by the present procedure of Status, the question inside it a fresh writer whose reader the person process keeps, the acknowledgement handed over and logged in the status as shown" $?
+repl "$WORK/receipt.out" ':limit 1000000000000' "$HERE/tests/receipt" 'receipt_run(Rs).'
+sed 's/^\(GLP> \)*//' "$WORK/receipt.out" > "$WORK/receipt.lines"
+grep -q '^✓ Loaded program' "$WORK/receipt.out"
+check "tests/receipt loads, its population printed before the run" $?
+awk '
+    /^entry\(/ { e[++n] = $0; t = substr($0, 7, index($0, ",") - 7) + 0; if (t < last) bad++; last = t }
+    /^Rs = \[plain\(hello\), acked\(there, ack\), plain\(bye\)\]$/ { rs = 1 }
+    /^clock\(/ { c = substr($0, 7, length($0) - 7) + 0; seen = 1 }
+    END {
+        if (e[1] !~ /^entry\([0-9.]+, 1, Stream\(Msg\)\?, \[msg\(hello, _\) \| _\]\)$/) bad++
+        if (e[2] !~ /^entry\([0-9.]+, 1, Stream\(Msg\)\?, \[msg\(there, _\) \| _\]\)$/) bad++
+        if (e[3] !~ /^entry\([0-9.]+, 1, Stream\(Msg\)\?, read\(ack\)\)$/) bad++
+        if (e[4] !~ /^entry\([0-9.]+, 1, Stream\(Msg\)\?, \[msg\(bye, _\) \| _\]\)$/) bad++
+        if (e[5] !~ /^entry\([0-9.]+, 1, Stream\(Msg\)\?, \[\]\)$/) bad++
+        exit !(n == 5 && rs && seen && c == last && !bad)
+    }' "$WORK/receipt.lines"
+check "the log: the three messages, the acknowledgement of the one read, read(ack), after it and before the next, then the stream's end, in the order of time; the program reads the acknowledgement into its receipt; the clock last" $?
+grep '^entry(\|^clock(\|^Rs = ' "$WORK/receipt.lines" | sed 's/^/        /'
+
+echo "--- (xiv) a run with positions the person writes inside an argument the program writes"
+# tests/panel: Panel ::= panel(Cards), Card ::= card(Integer, YesNo?), in
+# writer mode (sGLP's Q1 of 2026-10-10 09:33 UTC; Section 4, "The person
+# process": the person process "shows the person goal the question once the
+# positions the program writes are ground, the positions the person writes
+# inside them left open, each answered as a question of its own"): a panel of
+# three cards, the person answering each; the log one line per card, the first
+# card's answer in the panel as shown and the others' in the cards as shown,
+# an element at a time; the program reading the three answers.
+repl "$WORK/panel.out" ':limit 1000000000000' "$HERE/tests/panel" 'panel_run(3, As).'
+sed 's/^\(GLP> \)*//' "$WORK/panel.out" > "$WORK/panel.lines"
+grep -q '^✓ Loaded program' "$WORK/panel.out"
+check "tests/panel loads, its population printed before the run" $?
+awk '
+    /^entry\(/ {
+        n++; t = substr($0, 7, index($0, ",") - 7) + 0; if (t < last) bad++; last = t
+        if ($0 ~ /^entry\([0-9.]+, 1, Panel, panel\(\[card\(1, (yes|no)\) \| _\]\)\)$/) k = 1
+        else if ($0 ~ /^entry\([0-9.]+, 1, Panel, \[card\([23], (yes|no)\) \| _\]\)$/) k = substr($0, index($0, "[card(") + 6, 1) + 0
+        else { bad++; next }
+        match($0, /card\([0-9], (yes|no)\)/); v[k] = substr($0, RSTART + 8, RLENGTH - 9); got[k]++
+    }
+    /^As = \[/ { s = $0; sub(/^As = \[/, "", s); sub(/\]$/, "", s); m = split(s, as, ", ") }
+    /^clock\(/ { c = substr($0, 7, length($0) - 7) + 0; seen = 1 }
+    END {
+        for (i = 1; i <= 3; i++) if (got[i] != 1 || v[i] != as[i]) bad++
+        exit !(n == 3 && m == 3 && seen && c == last && !bad)
+    }' "$WORK/panel.lines"
+check "the log: each card answered as a question of its own, card 1 in the panel as shown and cards 2 and 3 in the cards as shown, in the order of time; the program reads the three answers logged; the clock last" $?
+grep '^entry(\|^clock(\|^As = ' "$WORK/panel.lines" | sed 's/^/        /'
 
 echo ""
 echo "=== $PASS passed, $FAIL failed ==="

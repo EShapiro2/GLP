@@ -1,6 +1,6 @@
 %% Printed by programs/sglp/transform.glp from the sGLP source in the term form
 %% (README.md, "The term form"); edit the source and run transform.sh, not this file.
-%% transform(delivery, population)
+%% transform(receipt, population)
 
 %% The run declaration of the source:
 %% (run(1, [mix(talking, [share(talker, 1.0)])], 1, week, 20260927))
@@ -108,11 +108,38 @@ MutualRef?
 MutualRef?
 )
 .
-present_1(_, _, Y, Y?, _, _)
+present_1(_, _, sent, sent, _, _)
+.
+present_1(A, Type, read(Z1?), read(Z2), Mon, Log)
+:-
+answer_2(A?, Type?, Z2?, Z1, Mon?, Log?)
+.
+
+%% The answer to a question shown, handed over and logged in it (Section 4, "The person process" and "The log").
+procedure
+answer_2
+(
+Integer?
+,
+Constant?
+,
+Ack
+?
+,
+Ack
+,
+MutualRef?
+,
+MutualRef?
+)
+.
+answer_2(A, Type, Y, Y?, Mon, Log)
 :-
 ground(Y?)
 |
-true
+stream_append(time(Time), Mon?, _)
+,
+stream_append(entry(Time?, A?, Type?, read(Y?)), Log?, _)
 .
 
 %% The run declaration: its agents, horizon, seed and thresholds.

@@ -1,0 +1,34 @@
+%% Test (xiii)'s vGLP program: test (xii)'s delivery status with a read
+%% receipt the person acknowledges --- Status ::= sent ; read(Ack?), the
+%% program writing each message's status into the person's answer, and
+%% putting there, when it writes read, a question of the person's, Ack?, inside
+%% that answer (sGLP's paper, Section 4, "The person process": "Every term
+%% crossing between the program and the person goal, in either direction and
+%% at every depth, crosses the person process so, a question the program puts
+%% inside an answer included").  The program reads each acknowledgement into
+%% the receipt it outputs.  Its canonical compilation (vGLP, Definition
+%% "Canonical Compilation") is chat.glp, by hand; the program loader skips
+%% a .vglp beside a .glp of its name, so this source is not loaded.
+
+Ack     ::= ack.
+Status  ::= sent ; read(Ack?).
+Msg     ::= msg(String, Status?).
+Receipt ::= plain(String) ; acked(String, Ack).
+
+%% The person's messages, read one at a time: a receipt for each, in order.
+exported procedure (Stream(Msg)?)*chat(Stream(Receipt)).
+(Ms)*chat(Rs?) :- deliver(Ms?, 0, Rs).
+
+%% deliver(Ms?, I?, Rs): each message's status written, the I-th's by I mod 2,
+%% and its receipt output.
+procedure deliver(Stream(Msg)?, Integer?, Stream(Receipt)).
+deliver([msg(T, S?) | Ms], I, [R? | Rs?]) :- integer(I?) |
+    receipt(I?, T?, S, R), I1 := I? + 1, deliver(Ms?, I1?, Rs).
+deliver([], _, []).
+
+%% receipt(I?, T?, S, R): an even message is sent, its receipt its text; an
+%% odd one read, the person asked to acknowledge it, its receipt its text and
+%% the acknowledgement.
+procedure receipt(Integer?, String?, Status, Receipt).
+receipt(I, T, sent, plain(T?)) :- I? mod 2 =:= 0 | true.
+receipt(I, T, read(K), acked(T?, K?)) :- I? mod 2 =:= 1 | true.
