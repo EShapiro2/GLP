@@ -518,4 +518,143 @@ nest_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
           'input([2, 3])))), withdrawn(0) | _]');
     });
   });
+
+  group('a volitional procedure imported from another module (vGLP at '
+      '7bf50ee, Definition "Canonical Compilation", its last sentence)', () {
+    // vGLP's task of 2026-10-10 09:06 UTC: "A declaration imported procedure
+    // (T)*N#p(T1, ..., Tn). of a volitional procedure of another module N is
+    // compiled as its export is, to the import of p with its ask stream
+    // added, and T joins the interactive types of M: the type of the asks has
+    // its functor and ⌈M⌉ its construct process, so an ask of p on a
+    // caller's ask stream is served as any other."  responder.vglp exports
+    // Section 3's responder; home.vglp imports it in the paper's syntax and
+    // calls it, once alone and once beside a question of its own, and the
+    // plays run home's procedures with home's dispatcher, which serves the
+    // responder's card.  The program is written under programs/tests/vglp/
+    // for the run and removed after, as the Real question's is.
+    late Directory fixture;
+    const types = '''
+Peer     ::= Constant.
+YesNo    ::= yes ; no.
+Offer    ::= offer(Peer).
+Response ::= accept(Peer) ; refuse(Peer).
+Card     ::= card(Peer, YesNo?).
+Note     ::= note(String).
+''';
+    setUp(() {
+      fixture = Directory('../programs/tests/vglp/import_fixture_${pid}_'
+          '${DateTime.now().microsecondsSinceEpoch}')
+        ..createSync();
+      File('${fixture.path}/responder.vglp').writeAsStringSync('''
+$types
+%% Show the person who offers, and pass their answer on.
+exported procedure (Card)*respond(Offer?, Response).
+(card(From?, Answer))*respond(offer(From), Resp?) :-
+    ground(From?) | decide(Answer?, From?, Resp).
+
+procedure decide(YesNo?, Peer?, Response).
+decide(yes, From, accept(From?)).
+decide(no, From, refuse(From?)).
+''');
+      File('${fixture.path}/home.vglp').writeAsStringSync('''
+$types
+%% The responder's question, imported in the paper's syntax.
+imported procedure (Card)*responder#respond(Offer?, Response).
+
+%% The importer's own question: a note the person writes.
+exported procedure (Note?)*jot(Note).
+(N)*jot(N?).
+
+%% A peer offers friendship: ask the person through the responder.
+exported procedure befriend(Peer?, Response).
+befriend(P, R?) :- ground(P?) | responder # respond(offer(P?), R).
+
+%% The same, and ask the person for a note beside it.
+exported procedure befriend_noting(Peer?, Response, Note).
+befriend_noting(P, R?, N?) :-
+    ground(P?) | responder # respond(offer(P?), R), jot(N).
+''');
+      File('${fixture.path}/self.glp').writeAsStringSync('''
+$types
+Question ::= card_w(Card) ; note_r(Note?).
+Ask(Q)   ::= ask(Constant, Q).
+PersonIn ::= [_ | PersonIn].
+
+imported procedure home#befriend(Peer?, Response, Stream(Ask(Question))).
+imported procedure home#befriend_noting(Peer?, Response, Note,
+    Stream(Ask(Question))).
+imported procedure home#dispatch(Stream(Ask(Question))?,
+    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+
+%% The responder's card, asked through home's call and served by home's
+%% dispatcher: the person grants yes at its question's position.
+exported procedure play_befriend(Response, Stream(_)).
+play_befriend(R?, Log?) :-
+    home # befriend(bob, R, Asks),
+    home # dispatch(Asks?, ch(Gs?, Ds), _),
+    person(Ds?, Gs, Log).
+
+%% The card and home's own note, both served by home's dispatcher.
+exported procedure play_befriend_noting(Response, Note, Stream(_)).
+play_befriend_noting(R?, N?, Log?) :-
+    home # befriend_noting(bob, R, N, Asks),
+    home # dispatch(Asks?, ch(Gs?, Ds), _),
+    person(Ds?, Gs, Log).
+
+%% The person grants yes to a card and the note "hi" to a note.
+procedure person(_?, PersonIn, Stream(_)).
+person([draw(Id, W, card(P, input(Q))) | Ds], [input(Id?, Q?, yes) | Gs?],
+       [drawn(Id?, W?, card(P?, input(Q?))) | Log?]) :-
+    ground(Id?), ground(W?), ground(P?), ground(Q?) |
+    person(Ds?, Gs, Log).
+person([draw(Id, W, input(Q)) | Ds], [input(Id?, Q?, note("hi")) | Gs?],
+       [drawn(Id?, W?, input(Q?)) | Log?]) :-
+    ground(Id?), ground(W?), ground(Q?) |
+    person(Ds?, Gs, Log).
+person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    person(Ds?, Gs, Log).
+''');
+    });
+    tearDown(() {
+      if (fixture.existsSync()) fixture.deleteSync(recursive: true);
+    });
+
+    Future<_Run> play(String goal) async {
+      final engine = GlpEngine(rootSelfGlpPath: _root);
+      expect(engine.loadProgram(fixture.absolute.path), isTrue);
+      return _Run(await engine.runGoal(goal), engine);
+    }
+
+    test('the import loads and type-checks with its module, and the '
+        'importer\'s dispatcher draws the card and answers it with the '
+        'person\'s grant', () async {
+      final r = await play('play_befriend(R, Log)');
+      expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
+      expect(r['R'], 'accept(bob)');
+      expect(
+          r['Log'],
+          '[drawn(0, form(card, [shown, buttons([yes, no])]), '
+          'card(bob, input([2]))), withdrawn(0) | _]');
+    });
+
+    test('beside a question of the importer\'s own, each is served by the '
+        'importer\'s dispatcher and answered by its own grant', () async {
+      final r = await play('play_befriend_noting(R, N, Log)');
+      expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
+      expect(r['R'], 'accept(bob)');
+      expect(r['N'], 'note("hi")');
+      // The two constructs are drawn and withdraw in the order their asks
+      // reach the dispatcher and their answers come, the merge of the two
+      // ask streams deciding the first; each is drawn once and withdraws.
+      final log = r['Log'];
+      expect(
+          log,
+          contains('form(card, [shown, buttons([yes, no])]), '
+              'card(bob, input([2])))'));
+      expect(log, contains('form(note, [text]), input([]))'));
+      expect(RegExp(r'\bdrawn\(').allMatches(log), hasLength(2));
+      expect(RegExp(r'\bwithdrawn\(').allMatches(log), hasLength(2));
+    });
+  });
 }

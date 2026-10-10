@@ -609,6 +609,160 @@ go(N) :- q(N?).
     });
   });
 
+  group('an imported volitional procedure (vGLP at 7bf50ee, Definition '
+      '"Canonical Compilation", its last sentence)', () {
+    // "A declaration imported procedure (T)*N#p(T1, ..., Tn). of a volitional
+    // procedure of another module N is compiled as its export is, to the
+    // import of p with its ask stream added, and T joins the interactive
+    // types of M: the type of the asks has its functor and ⌈M⌉ its construct
+    // process, so an ask of p on a caller's ask stream is served as any
+    // other."  vGLP's task of 2026-10-10 09:06 UTC.  The runs, the question
+    // answered through the importer's own dispatcher, are elicitation_test's.
+    const types = '''
+Peer     ::= Constant.
+YesNo    ::= yes ; no.
+Offer    ::= offer(Peer).
+Response ::= accept(Peer) ; refuse(Peer).
+Card     ::= card(Peer, YesNo?).
+''';
+
+    test('is compiled as its export is, to the import of p with its ask stream '
+        'added; a call of it reaches a question and is given an ask stream, '
+        'keeping p\'s name; and its type joins the questions', () {
+      final c = compileCanonical('''
+$types
+imported procedure (Card)*responder#respond(Offer?, Response).
+
+exported procedure befriend(Peer?, Response).
+befriend(P, R?) :- ground(P?) | responder # respond(offer(P?), R).
+''');
+      expect(
+          c.source,
+          contains('imported procedure responder#respond(Offer?, Response, '
+              'Stream(Ask(Question))).'));
+      expect(c.source, isNot(contains('respond(Offer?, Response, Card)')));
+      expect(
+          c.source,
+          contains('exported procedure befriend(Peer?, Response, '
+              'Stream(Ask(Question))).'));
+      expect(
+          c.source,
+          contains('befriend(P, R?, D?) :- ground(P?) | '
+              'responder # respond(offer(P?), R, D).'));
+      expect(c.source, contains('Question ::= card_w(Card).'));
+      expect(c.reaching, {'befriend/2'});
+      expect(c.functors, {'Card': 'card_w'});
+      expect(c.volitional, isEmpty);
+      // No asking clause and no clauses of p: they are the module N's.
+      expect(c.module.procedures.map((p) => p.signature), ['befriend/3']);
+    });
+
+    test('its interactive type joins the program\'s own, in the order of the '
+        'declarations, a reader-mode one t_r; calls of both merged', () {
+      final c = compileCanonical('''
+$types
+Note    ::= note(String).
+Request ::= post(String) ; quit.
+
+exported procedure (Note?)*jot(Note).
+(N)*jot(N?).
+
+imported procedure (Stream(Request)?)*agent#agent(Peer?, Stream(String)).
+
+procedure go(Peer?, Note, Stream(String)).
+go(P, N?, Outs?) :- agent # agent(P?, Outs), jot(N).
+''');
+      expect(c.source,
+          contains('Question ::= note_r(Note?) ; '
+              'stream_request_r(Stream(Request)?).'));
+      expect(
+          c.source,
+          contains('imported procedure agent#agent(Peer?, Stream(String), '
+              'Stream(Ask(Question))).'));
+      expect(
+          c.source,
+          contains('go(P, N?, Outs?, D?) :- agent # agent(P?, Outs, D1), '
+              'jot(N, D2), merge(D1?, D2?, D).'));
+      expect(c.functors,
+          {'Note?': 'note_r', 'Stream(Request)?': 'stream_request_r'});
+      expect(c.reaching, {'jot/1', 'go/3'});
+    });
+
+    test('a type shared with a volitional procedure of the program\'s own is '
+        'one alternative of the questions', () {
+      final s = compileCanonical('''
+$types
+exported procedure (Card)*show(Offer?).
+(card(P?, _))*show(offer(P)).
+
+imported procedure (Card)*responder#respond(Offer?, Response).
+''').source;
+      expect(s, contains('Question ::= card_w(Card).'));
+      expect(
+          s,
+          contains('imported procedure responder#respond(Offer?, Response, '
+              'Stream(Ask(Question))).'));
+    });
+
+    test('an import keeps the Definition\'s functor, the one its module\'s '
+        'asking clause writes, and a type of the program\'s own that coincides '
+        'with it is told apart', () {
+      final c = compileCanonical('''
+Stream_string ::= s(String).
+exported procedure (Stream_string)*p(Integer?).
+(s(_))*p(_).
+imported procedure (Stream(String))*n#q(Integer?).
+''');
+      expect(c.functors,
+          {'Stream(String)': 'stream_string_w', 'Stream_string': 'stream_string_w_2'});
+      expect(c.source,
+          contains("p(S1, [ask('Stream_string', stream_string_w_2(X?)) | D?])"));
+    });
+
+    test('a type parameter of the import\'s declaration is the questions\' '
+        'and the compiled import\'s', () {
+      final s = compileCanonical('''
+imported procedure(X) (Stream(X)?)*m#take(X?).
+''').source;
+      expect(s, contains('Question(X) ::= stream_x_r(Stream(X)?).'));
+      expect(
+          s,
+          contains('imported procedure(X) m#take(X?, '
+              'Stream(Ask(Question(X)))).'));
+    });
+
+    group('is refused', () {
+      void refused(String source, String why) => expect(
+          () => compileCanonical(source),
+          throwsA(isA<CompileError>()
+              .having((e) => e.message, 'message', contains(why))));
+
+      test('naming no module', () {
+        refused('''
+$types
+imported procedure (Card)*respond(Offer?, Response).
+''', 'names the module it is of');
+      });
+
+      test('called with n+1 arguments', () {
+        refused('''
+$types
+imported procedure (Card)*responder#respond(Offer?, Response).
+procedure go(Response, Card?).
+go(R?, C) :- responder # respond(offer(bob), R, C?).
+''', 'until it is asked');
+      });
+
+      test('two imported types with one functor', () {
+        refused('''
+Stream_string ::= s(String).
+imported procedure (Stream_string)*n#p(Integer?).
+imported procedure (Stream(String))*n#q(Integer?).
+''', 'so has another imported interactive type');
+      });
+    });
+  });
+
   group('(iii) the old syntax keeps its old compilation', () {
     final sources = _vglpSources(Directory(_programs));
     String base(File f) => f.path.split(Platform.pathSeparator).last;

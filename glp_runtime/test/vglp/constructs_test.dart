@@ -302,6 +302,57 @@ procedure (T?)*p.
     });
   });
 
+  group('an imported volitional procedure\'s interactive type (vGLP at '
+      '7bf50ee, Definition "Canonical Compilation", its last sentence)', () {
+    // "T joins the interactive types of M: the type of the asks has its
+    // functor and ⌈M⌉ its construct process, so an ask of p on a caller's
+    // ask stream is served as any other" (vGLP's task of 2026-10-10 09:06
+    // UTC).  The runs are elicitation_test's.
+    test('has its construct process in the importer, spawned by the '
+        'importer\'s dispatcher on the functor the module\'s asking clause '
+        'writes, beside the importer\'s own', () {
+      final c = compile('''
+Peer     ::= Constant.
+YesNo    ::= yes ; no.
+Offer    ::= offer(Peer).
+Response ::= accept(Peer) ; refuse(Peer).
+Card     ::= card(Peer, YesNo?).
+Note     ::= note(String).
+
+imported procedure (Card)*responder#respond(Offer?, Response).
+
+exported procedure (Note?)*jot(Note).
+(N)*jot(N?).
+
+exported procedure befriend(Peer?, Response, Note).
+befriend(P, R?, N?) :- ground(P?) | responder # respond(offer(P?), R), jot(N).
+''');
+      final s = c.source;
+      expect(c.functors, {'Card': 'card_w', 'Note?': 'note_r'});
+      expect(s, contains('Question ::= card_w(Card) ; note_r(Note?).'));
+      expect(
+          s,
+          contains('exported procedure dispatch(Stream(Ask(Question))?, '
+              'Channel(PersonIn, Stream(_))?, '
+              'Channel(Stream(_), Stream(_))).'));
+      expect(s,
+          contains('procedure construct(Integer?, Question?, Inputs?, '
+              'Stream(Draw)).'));
+      expect(
+          s,
+          contains('construct(Id, card_w(X), Gs, Ds?) :- '
+              'present_card([], X?, Gs?, _, Vs, Done), '
+              'run(Id?, form(card, [shown, buttons([yes, no])]), Vs?, Done?, '
+              'Ds).'));
+      expect(s, contains('construct(Id, note_r(X?), Gs, Ds?) :- '));
+      expect(s, contains('form_yesNo(yes, formed(yes)).'));
+      expect(
+          s,
+          contains('imported procedure responder#respond(Offer?, Response, '
+              'Stream(Ask(Question))).'));
+    });
+  });
+
   group('the construct process of a reader-mode question', () {
     test('a menu of forms: the whole term the person\'s, formed from the '
         'grant alternative by alternative, a primitive by its guard', () {
