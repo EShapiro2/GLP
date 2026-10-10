@@ -21,6 +21,7 @@ import 'dart:io';
 import 'package:test/test.dart';
 import 'package:glp_runtime/runtime/module_hierarchy.dart' show rootScope;
 import 'package:glp_runtime/engine/glp_engine.dart';
+import 'package:glp_runtime/compiler/ast.dart' show ConstTerm;
 import 'package:glp_runtime/compiler/error.dart';
 import 'package:glp_runtime/vglp/canonical.dart';
 import 'package:glp_runtime/vglp/dispatcher.dart';
@@ -870,6 +871,50 @@ procedure (A(B)?)*g(Integer?).
     });
   });
 
+  group('a string in the compiled program', () {
+    // One string constant, 'x' and "x" one value and '"x"' the
+    // three-character string, printed by GLP's printer in its one canonical
+    // form, single-quoted and bare where the lexer reads it so, the
+    // double-quoted form read and never printed (GLP-Spec appendix-lp.tex,
+    // Definition "Logic Programs Syntax"; vGLP #5 Cowork, 2026-10-07 20:01
+    // UTC, item 2): in the program's types and clauses, in the construct
+    // process's buttons and formers, and in the module read back.
+    const choice = '''
+Choice ::= 'Yes please' ; "no thanks" ; '"x"'.
+procedure (Choice?)*pick(String).
+('Yes please')*pick('"x"').
+("no thanks")*pick("x").
+''';
+
+    test('is printed in its one canonical form', () {
+      final s = compile(choice).source;
+      expect(s, contains("Choice ::= 'Yes please' ; 'no thanks' ; '\"x\"'."));
+      expect(s, contains("pick1('\"x\"', 'Yes please', [])."));
+      expect(s, contains("pick1(x, 'no thanks', [])."));
+      expect(s, contains("form_choice('no thanks', formed('no thanks'))."));
+      expect(s, contains("form_choice('\"x\"', formed('\"x\"'))."));
+      expect(s, isNot(contains('"no thanks"')));
+      expect(s, isNot(contains('pick1("x"')));
+    });
+
+    test('its default widget names its constants so', () {
+      expect(compile(choice).widgets['Choice?'],
+          "buttons(['Yes please', 'no thanks', '\"x\"'])");
+    });
+
+    test('reads back as the same string', () {
+      final m = compile(choice).module;
+      final pick1 = m.procedures.singleWhere((p) => p.name == 'pick1');
+      expect([
+        for (final c in pick1.clauses)
+          [for (final a in c.head.args.take(2)) (a as ConstTerm).value]
+      ], [
+        ['"x"', 'Yes please'],
+        ['x', 'no thanks'],
+      ]);
+    });
+  });
+
   group('what is not built', () {
     test('a position the program writes inside one the person writes', () {
       expect(() => compile('''
@@ -953,6 +998,20 @@ procedure (YesNo?)*ask(Integer?).
 (yes)*ask(_).
 ''');
       expect(c.widgets['YesNo?'], "'Big buttons'");
+    });
+
+    test('a double-quoted string names the same widget as the quoted name', () {
+      // 'x' and "x" are two spellings of one string (GLP-Spec
+      // appendix-lp.tex, Definition "Logic Programs Syntax").
+      String widget(String w) => compile('''
+YesNo ::= yes ; no.
+YesNo? =::= $w.
+procedure (YesNo?)*ask(Integer?).
+(yes)*ask(_).
+''').widgets['YesNo?']!;
+      expect(widget('"Big buttons"'), "'Big buttons'");
+      expect(widget('"toggle"'), 'toggle');
+      expect(widget('"toggle"'), widget("'toggle'"));
     });
 
     test('are refused where W is not an atom, T not a moded type, or two name '

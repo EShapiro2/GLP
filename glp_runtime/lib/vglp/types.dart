@@ -265,6 +265,17 @@ TypeExpr _typeOfValue(ast.Term value, ast.Clause c) {
   return PrimitiveModeAlt(false, c.line, c.column);
 }
 
+/// The primitive type of a number or string constant [t] by its value's kind
+/// --- `Integer`, `Real` or `String` --- and null where [t] is neither.
+String? _kindOf(ast.Term t) {
+  if (t is! ast.ConstTerm) return null;
+  final v = t.value;
+  if (v is int) return 'Integer';
+  if (v is double) return 'Real';
+  if (v is String) return 'String';
+  return null;
+}
+
 /// The type of the answer writer or context reader [variable] of clause [c].
 ///
 /// It is NOT read off a clause check.  A volition guard's answer writers have
@@ -488,17 +499,18 @@ bool _accepts(ast.Term term, TypeExpr type, TypeEnvironment env, int depth) {
       case 'Any':
       case '_':
         return true;
+      // A constant is of a primitive type by its value's kind (_kindOf), and
+      // Number and Constant are the root's unions, Integer ; Real and
+      // Number ; String ; Module (programs/self.glp).
       case 'Constant':
-        return term is ast.ConstTerm && _isAtom(term);
+        return _kindOf(term) != null;
       case 'String':
-        return term is ast.ConstTerm && _isString(term);
       case 'Integer':
-        return term is ast.ConstTerm && term.value is int;
       case 'Real':
-        return term is ast.ConstTerm && term.value is double;
+        return _kindOf(term) == type.name;
       case 'Number':
-        return term is ast.ConstTerm &&
-            (term.value is int || term.value is double);
+        final k = _kindOf(term);
+        return k == 'Integer' || k == 'Real';
     }
     return _alternatives(type, env)
         .any((a) => _accepts(term, a, env, depth + 1));
@@ -525,16 +537,6 @@ bool _accepts(ast.Term term, TypeExpr type, TypeEnvironment env, int depth) {
         (term.tail == null || _accepts(term.tail!, type.tail, env, depth + 1));
   }
   return false;
-}
-
-bool _isAtom(ast.ConstTerm t) {
-  final v = t.value;
-  return v is String && !v.startsWith('"');
-}
-
-bool _isString(ast.ConstTerm t) {
-  final v = t.value;
-  return v is String && v.startsWith('"');
 }
 
 /// Whether [variable] occurs in [term].

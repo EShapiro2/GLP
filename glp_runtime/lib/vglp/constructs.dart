@@ -79,6 +79,7 @@
 
 import '../compiler/error.dart';
 import '../analysis/type_checker/type_ast.dart';
+import '../compiler/glp_printer.dart' show constantSource, functorNameSource;
 import 'mediator.dart' show typeSource;
 
 /// A moded interactive type of the program: its type as written, its mode,
@@ -765,7 +766,7 @@ class _Generator {
     final leaves = <String>[];
     for (final a in alts) {
       if (a is _ConstAlt) {
-        final c = _constSource(a.value);
+        final c = constantSource(a.value);
         lines.add('$name($c, formed($c)).');
       } else if (a is _NilAlt) {
         lines.add('$name([], formed([])).');
@@ -846,7 +847,7 @@ class _Generator {
     final later = <void Function()>[];
     for (final a in _nodeAlts(n)) {
       if (a is _ConstAlt) {
-        final c = _constSource(a.value);
+        final c = constantSource(a.value);
         clauses.add('$name(_, $c, Gs, Gs?, [$c], done).');
       } else if (a is _NilAlt) {
         clauses.add('$name(_, [], Gs, Gs?, [[]], done).');
@@ -1028,8 +1029,8 @@ class _Generator {
   /// Widget"), as the term vGLP's Q3 names (2026-10-01 23:55 UTC, E).
   String _widget(_Node n, Set<String> visiting) {
     final d = declared[n.moded];
-    if (d != null) return _constSource(d);
-    if (!visiting.add(n.key)) return "ref(${_constSource(n.moded)})";
+    if (d != null) return constantSource(d);
+    if (!visiting.add(n.key)) return "ref(${constantSource(n.moded)})";
     try {
       return _defaultWidget(n, visiting);
     } finally {
@@ -1054,7 +1055,7 @@ class _Generator {
     if (elem != null) return 'input_box(${_widget(n.child(elem), visiting)})';
     final alts = _nodeAlts(n);
     if (alts.every((a) => a is _ConstAlt)) {
-      final cs = alts.map((a) => _constSource((a as _ConstAlt).value));
+      final cs = alts.map((a) => constantSource((a as _ConstAlt).value));
       return alts.length == 1 ? 'button(${cs.single})' : 'buttons([${cs.join(', ')}])';
     }
     if (alts.length == 1) return _altWidget(n, alts.single, visiting);
@@ -1063,7 +1064,7 @@ class _Generator {
 
   String _altWidget(_Node n, _Alt a, Set<String> visiting) {
     if (a is _ConstAlt) {
-      return n.person ? 'button(${_constSource(a.value)})' : 'shown';
+      return n.person ? 'button(${constantSource(a.value)})' : 'shown';
     }
     if (a is _NilAlt) return n.person ? 'button([])' : 'shown';
     if (a is _LeafAlt) return n.person ? _leafWidget(a.leaf) : 'shown';
@@ -1071,7 +1072,7 @@ class _Generator {
     final kids = _children(n, a);
     final ws = kids.map((k) => _widget(k, visiting)).join(', ');
     if (a is _ConsAlt) return 'form(\'.\', [$ws])';
-    return 'form(${_constSource((a as _StructAlt).functor)}, [$ws])';
+    return 'form(${constantSource((a as _StructAlt).functor)}, [$ws])';
   }
 
   bool _altHasQuestion(_Node n, _Alt a) =>
@@ -1114,7 +1115,7 @@ class _Generator {
   String _apply(_Alt a, List<String> args) {
     if (a is _ConsAlt) return '[${args[0]} | ${args[1]}]';
     final s = a as _StructAlt;
-    return '${_constSource(s.functor)}(${args.join(', ')})';
+    return '${functorNameSource(s.functor)}(${args.join(', ')})';
   }
 
   String _guard(_Leaf l) {
@@ -1136,20 +1137,4 @@ class _Generator {
         return 'ground';
     }
   }
-}
-
-/// A constant as GLP source: an atom bare where the lexer reads it back as
-/// one, else quoted; a number as it is; a string literal, whose value carries
-/// its double quotes, as written.
-String _constSource(Object v) {
-  if (v is num) return '$v';
-  final s = '$v';
-  if (s.length >= 2 && s.startsWith('"') && s.endsWith('"')) return s;
-  if (RegExp(r'^[a-z][A-Za-z0-9_]*$').hasMatch(s)) return s;
-  final escaped = s
-      .replaceAll('\\', '\\\\')
-      .replaceAll("'", "\\'")
-      .replaceAll('\n', '\\n')
-      .replaceAll('\t', '\\t');
-  return "'$escaped'";
 }

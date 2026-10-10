@@ -1051,12 +1051,18 @@ String _widgetType(String left, int line, int column) {
 }
 
 /// The widget a declaration names: an atom (vGLP 2026-10-01 23:55 UTC, E,
-/// Q3), as its constant.
+/// Q3), as its constant.  An atom is a string, and a quoted name and a
+/// double-quoted string are two spellings of one string (GLP-Spec
+/// appendix-lp.tex, Definition "Logic Programs Syntax"), so `'inbox_card'`
+/// and `"inbox_card"` name one widget.
 String _widgetAtom(String right, int line, int column) {
   if (RegExp(r'^[a-z][A-Za-z0-9_]*$').hasMatch(right)) return right;
-  if (right.length >= 2 && right.startsWith("'") && right.endsWith("'")) {
+  final q = right.isEmpty ? '' : right[0];
+  if (right.length >= 2 && (q == "'" || q == '"') && right.endsWith(q)) {
     final toks = Lexer(right).tokenize();
-    if (toks.length == 2 && toks.first.type == TokenType.ATOM) {
+    if (toks.length == 2 &&
+        (toks.first.type == TokenType.ATOM ||
+            toks.first.type == TokenType.STRING)) {
       return toks.first.lexeme;
     }
   }
@@ -1474,9 +1480,9 @@ void _checkNoAnonymousTerm(
 }
 
 /// The head of a clause of a volitional procedure as the source writes it,
-/// `(A)*p(S1, ..., Sn)`.
+/// `(A)*p(S1, ..., Sn)`, its terms by GLP's printer (glp_printer.dart).
 String _asWritten(Clause c, VolitionalProcedure v) {
-  final printer = SourcePrinter();
+  final printer = GlpPrinter();
   final args = c.head.args;
   final term = printer.printTerm(args.last);
   final rest = args.sublist(0, args.length - 1).map(printer.printTerm);
@@ -1915,7 +1921,11 @@ class _Emitted {
 String _emit(Module m, List<TypeDef> added, List<_Emitted> procs,
     List<ProcDecl> bare, _Elicitation? elicitation) {
   final b = StringBuffer();
-  final printer = SourcePrinter();
+  // Every clause by GLP's printer, a constant in its one canonical print
+  // (glp_printer.dart, [constantSource]): GLP-Spec appendix-lp.tex,
+  // Definition "Logic Programs Syntax", one string constant, 'x' and "x" one
+  // value, the double-quoted form read and never printed.
+  final printer = GlpPrinter();
   b.write(compiledHeader);
   b.writeln();
 
@@ -1978,31 +1988,3 @@ String printDeclaration(ProcDecl d) {
   return '${prefix}procedure$params ${d.qualifiedName}'
       '(${d.argTypes.map(typeSource).join(', ')}).';
 }
-
-/// GLP source from the AST, a constant as the lexer reads it back: an atom
-/// bare where it can be, else in single quotes (`'Menu?'`), and a string
-/// literal, whose value carries its double quotes, as it was written.
-class SourcePrinter extends GlpPrinter {
-  @override
-  String printTerm(Term term) {
-    if (term is ConstTerm && term.value is String) {
-      return constantSource(term.value as String);
-    }
-    return super.printTerm(term);
-  }
-}
-
-/// A constant's value as source.
-String constantSource(String v) {
-  if (v.length >= 2 && v.startsWith('"') && v.endsWith('"')) {
-    return '"${_escape(v.substring(1, v.length - 1), '"')}"';
-  }
-  if (RegExp(r'^[a-z][A-Za-z0-9_]*$').hasMatch(v)) return v;
-  return "'${_escape(v, "'")}'";
-}
-
-String _escape(String s, String quote) => s
-    .replaceAll('\\', '\\\\')
-    .replaceAll(quote, '\\$quote')
-    .replaceAll('\n', '\\n')
-    .replaceAll('\t', '\\t');

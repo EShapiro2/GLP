@@ -172,6 +172,35 @@ p(Id) :- ground(Id?) | q(f(X?)).
               (e) => e.message, 'message', contains('disagree'))));
     });
 
+    test('a constant in the term is of a type by its value\'s kind', () {
+      // One string constant, 'hi' and "hi" one value of the primitive type
+      // String (GLP-Spec appendix-lp.tex, Definition "Logic Programs Syntax";
+      // TGLP appendix-root-self.tex), and Constant the root's union Number ;
+      // String ; Module, so a number is a Constant too.  Until 2026-10-10 a
+      // string was of String by a leading double quote, and an atom, never a
+      // number, of Constant.
+      for (final s in ['"hi"', "'hi'", 'hi']) {
+        expect(compile('''
+Note ::= note(String, Constant).
+procedure(M) q(M?).
+q(_).
+procedure p(Constant?).
+*(X)
+p(Id) :- ground(Id?) | q(note($s, X?)).
+''').byClause['p_1']!.answer.toString(),
+            'Xs_p_1 ::= xs_p_1(Constant).', reason: s);
+      }
+      expect(compile('''
+Tagged ::= tagged(Constant, Integer).
+procedure(M) q(M?).
+q(_).
+procedure p(Constant?).
+*(X)
+p(Id) :- ground(Id?) | q(tagged(3, X?)).
+''').byClause['p_1']!.answer.toString(),
+          'Xs_p_1 ::= xs_p_1(Integer).');
+    });
+
     test('a term of no type stops the compilation', () {
       expect(
           () => compile('''
