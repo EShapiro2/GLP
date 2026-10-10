@@ -170,6 +170,42 @@ KNOWN_RED_CHECKS=(
 # I ask differently"): its childsafe artefact, refused at its source for the
 # guard negation GLP removed (15ba4b7e), measured at gap 80265f7c.
     "Q asset step writes childsafe.glpw"
+# GSG's spm (programs/social/spm, Coordination Appendix B), red since gap
+# moved under the checker's newer conditions, taken onto the list when gap
+# merged into main (2026-10-10, measured at main 372f062e); GSG's spm task of
+# 2026-10-02 15:32 UTC turns them green.
+    "SG spm End friendship: epoch 2 at alice"
+    "SG spm Integrate unfriend: epoch 2 at bob"
+    "SG spm Replace: alice is gone from bob's map"
+    "SG spm Replace: alice2 rebound to bob"
+    "SG spm Replace: bob renamed alice to alice2 at epoch 1"
+    "SG spm Replace: the announcement fires on a supermajority"
+    "SG spm Replace: the cascade reached carol through bob's vouch"
+    "SG spm Restore: epoch 1 healed from the checkpoint"
+    "SG spm Restore: identity record from the checkpoint"
+    "SG spm Unfriend preserves the identity record"
+    "SG spm befriend: alice at epoch 1"
+    "SG spm befriend: bob at epoch 1"
+    "SG spm crash resets the state"
+    "SG spm loads"
+    "SG spm no failed play"
+    "SG spm secure befriend: alice at epoch 1"
+    "SG spm secure befriend: bob at epoch 1"
+    "SG spm simultaneous offer resolves"
+    "X10 spm accepts a goal"
+    "X10 spm loads"
+# CSSN's artefact: the SG blocks that host the child-safe platform beside a
+# currency, red while childsafe.glpw is not written (the guard negation
+# above); taken onto the list when gap merged into main (2026-10-10, main
+# 372f062e); CSSN's port of 2026-10-09 19:37 UTC turns them green.
+    "SG super-app no failed play"
+    "SG super-app: the super-app installs no text"
+    "SG two mini-apps at once: alice's swap settles"
+    "SG two mini-apps at once: bob's swap settles"
+    "SG two mini-apps at once: no failed play"
+    "SG two mini-apps on two smartphones: alice's swap settles"
+    "SG two mini-apps on two smartphones: bob's swap settles"
+    "SG two mini-apps on two smartphones: the currency's conversation opens"
 )
 KR_CHECKS=0
 
