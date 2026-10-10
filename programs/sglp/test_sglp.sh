@@ -107,7 +107,21 @@
 #       seed and goes on with the rest of the asks and its next seed (sGLP
 #       9f57a43, Definition "Person Process, Simulation Program, Stochastic
 #       Agent"; sGLP's task 4 of 2026-10-09 20:59 UTC), and the run
-#       declaration its thresholds.
+#       declaration its thresholds.  The person clause by the interactive
+#       type's mode (sGLP's task 5 of 2026-10-09 22:01 UTC; sGLP 8b0f1dd,
+#       Definition "Person Process, ...": E the end the ask carries, the writer
+#       where T is in reader mode; Definition "Dual, ...": the person
+#       procedure's first argument of the dual type): a source whose one
+#       interactive type, Rating ::= rating(Integer), is in reader mode, and
+#       whose profile fair answers it with a rating drawn of 1..5 after a rated
+#       goal, is translated: the person procedure imported with its first
+#       argument Rating, the writer; the person process's clause takes the ask
+#       ask(Type, rating(X?)), the writer X it carries, with no guard, spawns
+#       the person goal on a fresh writer Y and the answer procedure on Y? and
+#       X, which, once Y? is ground, assigns X with it and logs it; and a
+#       source whose reader-mode type has an argument the program writes is
+#       refused with that fault, the transformation printing nothing for a
+#       case the paper does not decide.
 #
 # Prints one line per check and a summary line, "=== P passed, F failed ===";
 # exits non-zero if any check fails.  The runs of (iii) and (iv) take some
@@ -460,6 +474,41 @@ check "a source with a dimension not summing to one and a profile in no dimensio
     grep -q '^declaration(2, 1, day, 1)$' "$WORK/txgood.lines" &&
     grep -q '^d(_, p)$' "$WORK/txgood.lines"
 check "the mended source is translated: the token, the monitor's reference, the asks, the person process's clause on an ask and its seeding, the declaration and the draw" $?
+# Reader mode: one interactive type Rating in reader mode, (Rating?)*rate, the
+# person procedure fair_rating of profile fair writing the whole term, a
+# rating of 1..5, after a rated goal of give; and RV, a reader-mode type Bid
+# with an argument the program writes, Reply?.
+RV="[type('Rating', [rating('Integer')]), volitional(dual('Rating'), rate('Integer'))]"
+RP="person(fair), binds('Rating', fair_rating), decl(fair_rating('Rating', dual('Integer'))), clause(fair_rating(var('R?'), var('S')), [], [random(var('S?'), 5, var('K'), var('_')), rated(give(var('K?'), var('R')), rate(1, day))]), decl(give(dual('Integer'), 'Rating')), clause(give(var('K'), rating(var('K?'))), [], []), run(1, [mix(rater, [share(fair, 1.0)])], 30, days, 20260927)"
+BV="[type('Reply', [ok, no]), type('Bid', [bid('Integer', dual('Reply'))]), volitional(dual('Bid'), offer('Integer'))]"
+BP="person(fair), binds('Bid', fair_bid), decl(fair_bid('Bid', dual('Integer'))), clause(fair_bid(bid(1, var('_')), var('_')), [], []), run(1, [mix(bidder, [share(fair, 1.0)])], 30, days, 1)"
+repl "$WORK/txreader.out" ':limit 1000000000000' "$HERE" \
+    "transform_terms($RV, [$RP], profiles)." \
+    "transform_terms($RV, [$RP], population)." \
+    "transform_terms($BV, [$BP], population)."
+sed 's/^\(GLP> \)*//' "$WORK/txreader.out" > "$WORK/txreader.lines"
+# The lines of each part, between its begin and end lines.
+awk '$0 == "%% transform begin" { k++; next } $0 == "%% transform end" { next } k == 2' "$WORK/txreader.lines" > "$WORK/txreader.pop"
+awk '$0 == "%% transform begin" { k++; next } $0 == "%% transform end" { next } k == 3' "$WORK/txreader.lines" > "$WORK/txreader.bid"
+! grep -q '^%% not transformed' "$WORK/txreader.pop" &&
+    grep -q '^fair_rating(R?, S, Mon)$' "$WORK/txreader.lines" &&
+    grep -A 5 '^fair_rating$' "$WORK/txreader.pop" | tr '\n' ' ' | grep -q '^fair_rating ( Rating , Integer? , ' &&
+    grep -A 3 '^person(A, profiles(fair), Mon, Seed, Log, \[ask(Type, rating(X?)) | As\])$' "$WORK/txreader.pop" | tr '\n' ' ' |
+        grep -q ' :- random(Seed?, 2147483646, K, S) , $' &&
+    grep -q '^fair_rating(Y, K?, Mon?)$' "$WORK/txreader.pop" &&
+    grep -q '^answer_1(A?, Type?, Y?, X, Mon?, Log?)$' "$WORK/txreader.pop" &&
+    grep -q '^person(A?, profiles(fair), Mon?, S?, Log?, As?)$' "$WORK/txreader.pop" &&
+    grep -A 16 '^answer_1$' "$WORK/txreader.pop" | tr '\n' ' ' |
+        grep -q '^answer_1 ( Integer? , Constant? , Rating ? , Rating , MutualRef? , MutualRef? ) . ' &&
+    grep -A 5 '^answer_1(A, Type, Y, Y?, Mon, Log)$' "$WORK/txreader.pop" | tr '\n' ' ' |
+        grep -q ' :- ground(Y?) | stream_append(time(Time), Mon?, _) , $' &&
+    grep -q '^stream_append(entry(Time?, A?, Type?, Y?), Log?, _)$' "$WORK/txreader.pop" &&
+    ! grep -q 'rating(rating(' "$WORK/txreader.pop"
+check "in reader mode the person goal receives a writer and the program the reader: the person procedure of the dual type, the clause on the ask's writer, the answer assigned from the copy and logged" $?
+grep -q '^%% not transformed: an interactive type in reader mode of one to nine arguments, none written by the program(Bid)$' "$WORK/txreader.bid" &&
+    [ "$(grep -c '^%% not transformed' "$WORK/txreader.bid")" -eq 1 ] &&
+    ! grep -q '^person(' "$WORK/txreader.bid"
+check "a reader-mode type with an argument the program writes is refused with that fault, nothing printed" $?
 
 echo ""
 echo "=== $PASS passed, $FAIL failed ==="
