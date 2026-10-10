@@ -9,6 +9,7 @@
 
 import 'mode.dart';
 import 'moded_term.dart';
+import '../../runtime/terms.dart' show Nil;
 import 'program_dfa.dart';
 import 'subtyping.dart';
 
@@ -383,9 +384,15 @@ PathCheckResult _checkLeafConsistencyForPath(
   }
 }
 
-/// Convert PathStep to LeafTerm for checkLeafConsistency
-/// Fix 4.2: Properly detects real literals (floating-point numbers)
-/// Fix Bug 1: Atoms are strings per paper Section 4.1
+/// Convert PathStep to LeafTerm for checkLeafConsistency.
+///
+/// A constant leaf is classified by the kind of the value its step carries,
+/// never by its text (GLP-Spec appendix-lp.tex, Definition "Logic Programs
+/// Syntax"; TGLP well-typing.tex, the table of Definition "Consistent Paths",
+/// rows 4 to 7; GLP #3 Cowork, 2026-10-09 18:38 UTC, "12:19", (ii)): an int an
+/// integer, a double a real, a String a string, and the empty list a string
+/// leaf that is the empty list.  Until 2026-10-10 the text was parsed, so the
+/// string `'0000'` was the integer 0 and the string `'[]'` the empty list.
 LeafTerm _pathStepToLeafTerm(PathStep step) {
   if (step.isVariable) {
     // Use the actual structural mode from the path step, not a hardcoded mode
@@ -396,33 +403,21 @@ LeafTerm _pathStepToLeafTerm(PathStep step) {
     }
   } else {
     // Constant - pass structural mode for wildcard checking (spec v0.6)
-    final value = step.symbol;
-
-    // Check for integer first (more specific - no decimal point)
-    final intVal = int.tryParse(value);
-    if (intVal != null) {
-      return LeafTerm.integerConstant(intVal, mode: step.mode);
-    }
-
-    // Fix 4.2: Check for real (floating-point) - includes scientific notation
-    final doubleVal = double.tryParse(value);
-    if (doubleVal != null) {
-      return LeafTerm.realConstant(doubleVal, mode: step.mode);
-    }
-
-    // `[]` is a special case of String, represented efficiently rather than as
-    // a separate kind, so it is a string leaf.  It still matches an explicit
-    // `[]` alternative first, through the constant transition in case 2d of
-    // checkLeafConsistency — that is what keeps `Stream(X) ::= [] ; [X|...]`
-    // enumerable for input coverage.
-
-    // Every other constant is a String, its characters as written: a quoted
-    // name and a double-quoted string are two spellings of one string
-    // (GLP-Spec appendix-lp.tex, Definition "Logic Programs Syntax"), and
-    // `string/1` succeeds on either.  Until 2026-10-10 the parser kept a
-    // double-quoted string's quotes in its value and this stripped a pair of
-    // quotes from any constant, '"x"' coming out the string x.
-    return LeafTerm.stringConstant(value, mode: step.mode);
+    final value = step.value;
+    if (value is int) return LeafTerm.integerConstant(value, mode: step.mode);
+    if (value is double) return LeafTerm.realConstant(value, mode: step.mode);
+    // A string: a quoted name and a double-quoted string are two spellings of
+    // one string, its characters as written, and `string/1` succeeds on it.
+    if (value is String) return LeafTerm.stringConstant(value, mode: step.mode);
+    // `[]` is a String (TGLP appendix-root-self.tex: "The empty list is a
+    // String, hence a Constant"), so it is a string leaf; it still matches an
+    // explicit `[]` alternative first, through the constant transition in case
+    // 2d of checkLeafConsistency --- that is what keeps
+    // `Stream(X) ::= [] ; [X|...]` enumerable for input coverage.
+    if (value is Nil) return LeafTerm.emptyList(mode: step.mode);
+    // A step built without its value (none of this library's paths is): the
+    // constant of its symbol, of no primitive kind.
+    return LeafTerm.constant(value ?? step.symbol, mode: step.mode);
   }
 }
 

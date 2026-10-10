@@ -135,7 +135,7 @@ bool _isSubtype(DFAState stateA, DFAState stateB, ProgramDFA dfa,
       if (entry.key.$1 != stateA) continue;
       final label = entry.key.$2;
       if (label.arity != 0 ||
-          _primitiveOfConstant(label.symbol) != stateB.baseName) {
+          primitiveOfConstant(label.constant) != stateB.baseName) {
         return false;
       }
       accepts = true;
@@ -179,7 +179,7 @@ bool _isSubtype(DFAState stateA, DFAState stateB, ProgramDFA dfa,
       // an `Ack` — because B's primitives must still be contained in A's, which
       // is checked above.
       if (label.arity == 0 &&
-          automB.acceptedPrimitives.contains(_primitiveOfConstant(label.symbol))) {
+          automB.acceptedPrimitives.contains(primitiveOfConstant(label.constant))) {
         continue;
       }
       // A has an alternative B lacks → not a subtype
@@ -212,15 +212,6 @@ DFAState? _transitionIgnoringMode(
     }
   }
   return null;
-}
-
-/// The primitive type a constant alternative belongs to.  `[]` and every
-/// unquoted constant are strings — GLP has one representation for a quoted
-/// string and an unquoted constant.
-String _primitiveOfConstant(String symbol) {
-  if (int.tryParse(symbol) != null) return 'Integer';
-  if (double.tryParse(symbol) != null) return 'Real';
-  return 'String';
 }
 
 /// Target compatibility check (spec section 4.2).
