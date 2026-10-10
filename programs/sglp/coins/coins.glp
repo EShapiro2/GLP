@@ -1,121 +1,131 @@
-%% Coins among friends' compiled program, written by hand: the agent's
-%% clauses, which sGLP's paper (the repository svGLP-Stochastic-Volitional-GLP,
-%% Section 6) leaves to the repository and sGLP's code task of 2026-10-02
-%% 15:24 UTC gives (item 1), as vGLP's compilation gives them, with the person
-%% channel of the paper's Section 4, "The person process".  The types are the
-%% directory's (self.glp).  The four profiles, request and issuer are not here:
-%% the transformation prints them, profiles.glp, from the sGLP source,
-%% coins_sglp.glp; vGLP's compilation is vGLP's, and not the transformation's.
+%% Coins among friends' compiled program, written by hand: the canonical
+%% compilation of coins.vglp, the vGLP program of sGLP's paper, Section 6, by
+%% vGLP's Definition "Canonical Compilation" (sections/elicitation.tex), clause
+%% for clause (README.md, "The vGLP sources and their compilation").  The
+%% types, coins.vglp's and the type of the asks the compilation adds, are the
+%% directory's (self.glp).  The construct processes and the dispatcher are not
+%% here: in a simulation the person process reads the ask stream of the
+%% agent's initial goal in their place (sGLP's paper, Section 3, Definition
+%% "Simulation Program"; Section 4, "The person process"), population.glp's
+%% person/6, printed by the transformation.
 %%
-%% 1. The compiled program: vGLP's canonical compilation as graph.glp has it
-%%    --- the asking clause of each volitional procedure spawns the construct
-%%    process with its question's interactive type and the person's end of the
-%%    variable, and calls the procedure's clause, renamed, with the program's
-%%    end; Menu and Offer are in writer mode, so the construct process takes
-%%    X? and the clause X --- with one argument added: the person channel, a
-%%    mutual reference that reaches the agent's person process, threaded
-%%    through start/5, agent/7, paid/6, settle/10, ask/4 and respond/5 to the
-%%    construct process (construct/3, programs/sglp/construct.glp).
-%% 2. The wallet: held, add and take, ordinary GLP.
-%%
-%% A trailing %+ marks a line the person channel adds or changes, Ch.  The rest
-%% is the source as vGLP's compilation gives it.
+%% 1. The procedures that reach a question: ask and respond, volitional, and
+%%    agent, paid, settle and start, which call them.  Each has one more
+%%    argument, last, its ask stream, which its goal writes: in a clause, each
+%%    call of a procedure that reaches a question is given a fresh writer, D1,
+%%    D2, as its ask stream, and the head carries D?, D the clause's ask
+%%    stream, the call given D itself where there is one such call and
+%%    merge(D1?, D2?, D) merging the two where there are two; the guarded
+%%    clauses of ask and respond call none, and carry [] in place of D?.  Each
+%%    call of a volitional procedure q is a call of its asking clause q_a,
+%%    which writes the ask ask(T, t(X?)) on its ask stream, T the interactive
+%%    type as a constant and t the functor the compilation gives it, and calls
+%%    q, the guarded clause, with X and its own ask stream: Menu and Offer are
+%%    in writer mode, so the clause takes the writer X and the ask carries X?.
+%%    The functor t of an interactive type is that of its one alternative,
+%%    menu and offer (README.md, "The vGLP sources and their compilation").
+%% 2. The wallet: held, add and take, ordinary clauses that reach no
+%%    question, as coins.vglp has them.
 
 %% ---------------------------------------------------------------------------
-%% 1. The compiled program
+%% 1. The procedures that reach a question
 %% ---------------------------------------------------------------------------
 
-%% (Menu)*ask(Peers?, Wallet?, Request): the asking clause and the clause.
-procedure ask(Peers?, Wallet?, Request, MutualRef?).                    %+ Ch
-ask(Fs, W, R?, Ch) :- construct('Menu', X?, Ch?), ask1(Fs?, W?, R, X).  %+ Ch
-procedure ask1(Peers?, Wallet?, Request, Menu).
-ask1(Fs, W, R?, menu(Fs?, W?, R)).
+%% (Menu)*ask(Fs, W, R?): the asking clause and the guarded clause.
+procedure ask_a(Peers?, Wallet?, Request, Stream(Ask)).
+ask_a(Fs, W, R?, [ask('Menu', menu(X?))|D?]) :- ask(Fs?, W?, R, X, D).
+procedure ask(Peers?, Wallet?, Request, Menu, Stream(Ask)).
+ask(Fs, W, R?, menu(Fs?, W?, R), []).
 
-%% (Offer)*respond(Peer?, Integer?, Integer?, YesNo): the asking clause and the
+%% (Offer)*respond(From, K, Held, A?): the asking clause and the guarded
 %% clause.
-procedure respond(Peer?, Integer?, Integer?, YesNo, MutualRef?).        %+ Ch
-respond(From, K, Held, A?, Ch) :-                                       %+ Ch
-    construct('Offer', X?, Ch?), respond1(From?, K?, Held?, A, X).      %+ Ch?
-procedure respond1(Peer?, Integer?, Integer?, YesNo, Offer).
-respond1(From, K, Held, A?, offer(From?, K?, Held?, A)).
+procedure respond_a(Peer?, Integer?, Integer?, YesNo, Stream(Ask)).
+respond_a(From, K, Held, A?, [ask('Offer', offer(X?))|D?]) :-
+    respond(From?, K?, Held?, A, X, D).
+procedure respond(Peer?, Integer?, Integer?, YesNo, Offer, Stream(Ask)).
+respond(From, K, Held, A?, offer(From?, K?, Held?, A), []).
 
 %% The agent: its identifier, its friends, its wallet --- one holding per
 %% issuer, a holding removed when it reaches zero --- the open request, its
 %% input and output streams.  The request stays open while messages come and
 %% go.
 procedure agent(Peer?, Peers?, Wallet?, Request?,
-                Stream(Msg)?, Stream(Msg), MutualRef?).                 %+ Ch
+                Stream(Msg)?, Stream(Msg), Stream(Ask)).
 
 %% The person pays a friend: send them their own coins, as many as the wallet
 %% holds of them up to K, take those off the holding, and ask again.
-agent(Id, Fs, W, pay(F, K), NetIn, [msg(F?, pay(Id?, M?))|Outs?], Ch) :- %+ Ch
+agent(Id, Fs, W, pay(F, K), NetIn, [msg(F?, pay(Id?, M?))|Outs?], D?) :-
     ground(Id?), ground(Fs?), ground(W?), ground(F?), ground(K?) |
     take(F?, K?, W?, M, W1),
-    paid(Id?, Fs?, W1?, NetIn?, Outs, Ch?).                             %+ Ch?
+    paid(Id?, Fs?, W1?, NetIn?, Outs, D).
 
 %% The person proposes a swap of K: send the friend the proposal, and ask
 %% again.
 agent(Id, Fs, W, swap(F, K), NetIn,
-      [msg(F?, propose(Id?, K?))|Outs?], Ch) :-                         %+ Ch
+      [msg(F?, propose(Id?, K?))|Outs?], D?) :-
     ground(Id?), ground(Fs?), ground(W?), ground(F?), ground(K?) |
-    ask(Fs?, W?, R, Ch?),                                               %+ Ch?
-    agent(Id?, Fs?, W?, R?, NetIn?, Outs, Ch?).                         %+ Ch?
+    ask_a(Fs?, W?, R, D1),
+    agent(Id?, Fs?, W?, R?, NetIn?, Outs, D2),
+    merge(D1?, D2?, D).
 
 %% A proposal arrives: put it to the person, with what the wallet holds of the
 %% proposer's coins, and take no message until they answer.
-agent(Id, Fs, W, R, [msg(_, propose(From, K))|NetIn], Outs?, Ch) :-     %+ Ch
+agent(Id, Fs, W, R, [msg(_, propose(From, K))|NetIn], Outs?, D?) :-
     ground(Id?), ground(W?), ground(From?), ground(K?) |
     held(From?, W?, Held),
-    respond(From?, K?, Held?, A, Ch?),                                  %+ Ch?
-    settle(A?, Id?, Fs?, W?, R?, From?, K?, NetIn?, Outs, Ch?).         %+ Ch?
+    respond_a(From?, K?, Held?, A, D1),
+    settle(A?, Id?, Fs?, W?, R?, From?, K?, NetIn?, Outs, D2),
+    merge(D1?, D2?, D).
 
 %% Coins of a friend's arrive: hold them.
-agent(Id, Fs, W, R, [msg(_, coins(From, K))|NetIn], Outs?, Ch) :-       %+ Ch
+agent(Id, Fs, W, R, [msg(_, coins(From, K))|NetIn], Outs?, D?) :-
     ground(W?) |
     add(From?, K?, W?, W1),
-    agent(Id?, Fs?, W1?, R?, NetIn?, Outs, Ch?).                        %+ Ch?
+    agent(Id?, Fs?, W1?, R?, NetIn?, Outs, D).
 
 %% A friend pays me in my own coins, which redeems them: nothing enters the
 %% wallet.
-agent(Id, Fs, W, R, [msg(_, pay(_, _))|NetIn], Outs?, Ch) :-            %+ Ch
+agent(Id, Fs, W, R, [msg(_, pay(_, _))|NetIn], Outs?, D?) :-
     ground(W?) |
-    agent(Id?, Fs?, W?, R?, NetIn?, Outs, Ch?).                         %+ Ch?
+    agent(Id?, Fs?, W?, R?, NetIn?, Outs, D).
 
 %% A friend declines my proposal.
-agent(Id, Fs, W, R, [msg(_, decline(_))|NetIn], Outs?, Ch) :-           %+ Ch
+agent(Id, Fs, W, R, [msg(_, decline(_))|NetIn], Outs?, D?) :-
     ground(W?) |
-    agent(Id?, Fs?, W?, R?, NetIn?, Outs, Ch?).                         %+ Ch?
+    agent(Id?, Fs?, W?, R?, NetIn?, Outs, D).
 
-%% paid(Id?, Fs?, W?, NetIn?, Outs, Ch?): after a payment, ask again with the
+%% paid(Id?, Fs?, W?, NetIn?, Outs, D): after a payment, ask again with the
 %% wallet it leaves, once that is known.
 procedure paid(Peer?, Peers?, Wallet?, Stream(Msg)?, Stream(Msg),
-               MutualRef?).                                             %+ Ch
-paid(Id, Fs, W, NetIn, Outs?, Ch) :-                                    %+ Ch
+               Stream(Ask)).
+paid(Id, Fs, W, NetIn, Outs?, D?) :-
     ground(Fs?), ground(W?) |
-    ask(Fs?, W?, R, Ch?),                                               %+ Ch?
-    agent(Id?, Fs?, W?, R?, NetIn?, Outs, Ch?).                         %+ Ch?
+    ask_a(Fs?, W?, R, D1),
+    agent(Id?, Fs?, W?, R?, NetIn?, Outs, D2),
+    merge(D1?, D2?, D).
 
-%% settle(A?, Id?, Fs?, W?, R?, From?, K?, NetIn?, Outs, Ch?): the person's
+%% settle(A?, Id?, Fs?, W?, R?, From?, K?, NetIn?, Outs, D): the person's
 %% answer to From's proposal of K.  Yes: hold K of From's coins, and send From
 %% K of mine.  No: send From a decline.
 procedure settle(YesNo?, Peer?, Peers?, Wallet?, Request?, Peer?, Integer?,
-                 Stream(Msg)?, Stream(Msg), MutualRef?).                %+ Ch
+                 Stream(Msg)?, Stream(Msg), Stream(Ask)).
 settle(yes, Id, Fs, W, R, From, K, NetIn,
-       [msg(From?, coins(Id?, K?))|Outs?], Ch) :-                       %+ Ch
+       [msg(From?, coins(Id?, K?))|Outs?], D?) :-
     ground(Id?), ground(From?), ground(K?) |
     add(From?, K?, W?, W1),
-    agent(Id?, Fs?, W1?, R?, NetIn?, Outs, Ch?).                        %+ Ch?
+    agent(Id?, Fs?, W1?, R?, NetIn?, Outs, D).
 settle(no, Id, Fs, W, R, From, _, NetIn,
-       [msg(From?, decline(Id?))|Outs?], Ch) :-                         %+ Ch
+       [msg(From?, decline(Id?))|Outs?], D?) :-
     ground(Id?) |
-    agent(Id?, Fs?, W?, R?, NetIn?, Outs, Ch?).                         %+ Ch?
+    agent(Id?, Fs?, W?, R?, NetIn?, Outs, D).
 
 %% The initial goal of an agent: the wallet empty, ask the first menu.
 exported procedure start(Peer?, Peers?, Stream(Msg)?, Stream(Msg),
-                         MutualRef?).                                   %+ Ch
-start(Id, Fs, NetIn, Outs?, Ch) :- ground(Fs?) |                        %+ Ch
-    ask(Fs?, [], R, Ch?),                                               %+ Ch?
-    agent(Id?, Fs?, [], R?, NetIn?, Outs, Ch?).                         %+ Ch?
+                         Stream(Ask)).
+start(Id, Fs, NetIn, Outs?, D?) :- ground(Fs?) |
+    ask_a(Fs?, [], R, D1),
+    agent(Id?, Fs?, [], R?, NetIn?, Outs, D2),
+    merge(D1?, D2?, D).
 
 %% ---------------------------------------------------------------------------
 %% 2. The wallet

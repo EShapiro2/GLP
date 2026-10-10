@@ -1,0 +1,60 @@
+%% The Grassroots Social Graph's vGLP program (sGLP's paper, Section 5): the
+%% types and the volitional procedures as Section 5 prints them, verbatim (its
+%% first program, sections/example.tex); the messages' types and the agent's
+%% clauses, which Section 5 leaves to the repository, as it describes them
+%% (its first paragraph and the paragraph after that program).
+%%
+%% Its canonical compilation (vGLP, Definition "Canonical Compilation") is
+%% graph.glp, written by hand, clause for clause (README.md, "The vGLP sources
+%% and their compilation").  The program loader skips a .vglp beside a .glp of
+%% its name, so this source is read by GLP's parser in its vGLP mode and is
+%% not loaded.
+
+Peer    ::= Constant.
+YesNo   ::= yes ; no.
+Peers   ::= [] ; [Peer | Peers].
+Choice  ::= same(Peer) ; other(Peer).
+Menu    ::= menu(Peers, Peers, Choice?).
+Card    ::= card(Peer, YesNo?).
+
+%% Show the person both lists, and hand them the choice.
+procedure (Menu)*ask(Peers?, Peers?, Choice).
+(menu(Ss?, Os?, C))*ask(Ss, Os, C?).
+
+%% Show the person who offers, and hand them yes or no.
+procedure (Card)*respond(Peer?, YesNo).
+(card(From?, A))*respond(From, A?).
+
+%% The messages between agents: an offer of friendship, and the reply to it.
+Content ::= offer(Peer) ; reply(Peer, YesNo).
+Msg     ::= msg(Peer, Content).
+
+procedure agent(Peer?, Peers?, Peers?, Choice?,
+                Stream(Msg)?, Stream(Msg)).
+
+%% The person picked a peer: offer, and ask again.
+agent(Id, Ss, Os, same(To), NetIn, [msg(To?, offer(Id?))|Outs?]) :-
+    ground(Id?), ground(Ss?), ground(Os?), ground(To?) |
+    ask(Ss?, Os?, Pick),
+    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs).
+agent(Id, Ss, Os, other(To), NetIn, [msg(To?, offer(Id?))|Outs?]) :-
+    ground(Id?), ground(Ss?), ground(Os?), ground(To?) |
+    ask(Ss?, Os?, Pick),
+    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs).
+
+%% An offer arrives: put it to the person, and reply.
+agent(Id, Ss, Os, Pick, [msg(_, offer(From))|NetIn],
+      [msg(From?, reply(Id?, A?))|Outs?]) :-
+    ground(Id?), ground(From?) |
+    respond(From?, A),
+    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs).
+
+%% A reply to my offer arrives.
+agent(Id, Ss, Os, Pick, [msg(_, reply(_, _))|NetIn], Outs?) :-
+    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs).
+
+%% The initial goal of an agent: ask the first menu.
+exported procedure start(Peer?, Peers?, Peers?, Stream(Msg)?, Stream(Msg)).
+start(Id, Ss, Os, NetIn, Outs?) :- ground(Ss?), ground(Os?) |
+    ask(Ss?, Os?, Pick),
+    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs).
