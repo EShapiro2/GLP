@@ -41,11 +41,12 @@ Msg     ::= msg(Peer, Content).
 %% interactive type T as a constant and, under the functor t the compilation
 %% gives T, the person's end X of the question's interactive variable;
 %% Question is the union over those functors, each type in its mode, Menu and
-%% Card being in writer mode.  t is the functor of T's one alternative
-%% (graph.glp).  The harness hands the ask stream of each agent's start goal
-%% to its person process (population.glp, person/6).
+%% Card being in writer mode.  t is the type's name in lowercase with _w for
+%% writer mode, menu_w and card_w (graph.glp).  The harness hands the ask
+%% stream of each agent's start goal to its person process (population.glp,
+%% person/6).
 Ask      ::= ask(Constant, Question).
-Question ::= menu(Menu) ; card(Card).
+Question ::= menu_w(Menu) ; card_w(Card).
 
 %% A stochastic person, one profile per dimension, as the harness hands it from
 %% the population's draw to the person process (population.glp): Approach and

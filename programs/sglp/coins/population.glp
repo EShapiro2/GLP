@@ -24,9 +24,9 @@ generous
 Ask ::= ask(Constant, Question).
 Question
 ::=
-menu(Menu)
+menu_w(Menu)
 ;
-offer(Offer)
+offer_w(Offer)
 .
 
 %% The person procedures, in the profiles module.
@@ -85,7 +85,7 @@ MutualRef?
 
 %% The person process (sGLP's paper, Section 4, "The person process").
 exported procedure person(Integer?, Profiles?, MutualRef?, Integer?, MutualRef?, Stream(Ask)?).
-person(A, profiles(spender, D2), Mon, Seed, Log, [ask(Type, menu(menu(X1, X2, X3?))) | As])
+person(A, profiles(spender, D2), Mon, Seed, Log, [ask(Type, menu_w(menu(X1, X2, X3?))) | As])
 :-
 ground(X1?)
 ,
@@ -101,7 +101,7 @@ answer_1(A?, Type?, X1?, X2?, Y3?, X3, Mon?, Log?)
 ,
 person(A?, profiles(spender, D2?), Mon?, S?, Log?, As?)
 .
-person(A, profiles(saver, D2), Mon, Seed, Log, [ask(Type, menu(menu(X1, X2, X3?))) | As])
+person(A, profiles(saver, D2), Mon, Seed, Log, [ask(Type, menu_w(menu(X1, X2, X3?))) | As])
 :-
 ground(X1?)
 ,
@@ -117,7 +117,7 @@ answer_1(A?, Type?, X1?, X2?, Y3?, X3, Mon?, Log?)
 ,
 person(A?, profiles(saver, D2?), Mon?, S?, Log?, As?)
 .
-person(A, profiles(D1, cautious), Mon, Seed, Log, [ask(Type, offer(offer(X1, X2, X3, X4?))) | As])
+person(A, profiles(D1, cautious), Mon, Seed, Log, [ask(Type, offer_w(offer(X1, X2, X3, X4?))) | As])
 :-
 ground(X1?)
 ,
@@ -135,7 +135,7 @@ answer_2(A?, Type?, X1?, X2?, X3?, Y4?, X4, Mon?, Log?)
 ,
 person(A?, profiles(D1?, cautious), Mon?, S?, Log?, As?)
 .
-person(A, profiles(D1, generous), Mon, Seed, Log, [ask(Type, offer(offer(X1, X2, X3, X4?))) | As])
+person(A, profiles(D1, generous), Mon, Seed, Log, [ask(Type, offer_w(offer(X1, X2, X3, X4?))) | As])
 :-
 ground(X1?)
 ,

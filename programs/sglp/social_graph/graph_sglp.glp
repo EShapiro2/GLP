@@ -4,8 +4,10 @@
 %% The Grassroots Social Graph", whose listings are this source's surface form.
 %%
 %% source(V, S): V is the vGLP program's interface as Section 5 prints it, its
-%% types and its two volitional procedure declarations, which the transformation
-%% reads for the person process (which argument of Menu and Card is the answer);
+%% types and its two volitional procedure declarations, each with the functor
+%% the canonical compilation gives its interactive type, menu_w and card_w,
+%% which the transformation reads for the person process (which argument of
+%% Menu and Card is the answer, and the asks' functors);
 %% S is the sGLP program, the four profiles of graph.vglp at GLP 723d1602 and the
 %% run declaration as Section 5 prints it.  Section 5 prints the homophile's and
 %% the wary profile, with the procedures named pick and answer; four profiles in
@@ -27,8 +29,8 @@ source(
    type('Choice', [same('Peer'), other('Peer')]),
    type('Menu', [menu('Peers', 'Peers', dual('Choice'))]),
    type('Card', [card('Peer', dual('YesNo'))]),
-   volitional('Menu', ask(dual('Peers'), dual('Peers'), 'Choice')),
-   volitional('Card', respond(dual('Peer'), 'YesNo'))],
+   volitional('Menu', menu_w, ask(dual('Peers'), dual('Peers'), 'Choice')),
+   volitional('Card', card_w, respond(dual('Peer'), 'YesNo'))],
 
   %% The profiles and the run declaration.
   [person(homophile),

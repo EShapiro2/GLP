@@ -16,14 +16,17 @@
 %%    D2, as its ask stream, and the head carries D?, D the clause's ask
 %%    stream, the call given D itself where there is one such call and
 %%    merge(D1?, D2?, D) merging the two where there are two; the guarded
-%%    clauses of ask and respond call none, and carry [] in place of D?.  Each
-%%    call of a volitional procedure q is a call of its asking clause q_a,
-%%    which writes the ask ask(T, t(X?)) on its ask stream, T the interactive
-%%    type as a constant and t the functor the compilation gives it, and calls
-%%    q, the guarded clause, with X and its own ask stream: Menu and Offer are
-%%    in writer mode, so the clause takes the writer X and the ask carries X?.
-%%    The functor t of an interactive type is that of its one alternative,
-%%    menu and offer (README.md, "The vGLP sources and their compilation").
+%%    clauses, ask1 and respond1, call none, and carry [] in place of D?.
+%%    Each volitional procedure q keeps its name for its asking clause, which
+%%    every call of q reaches unchanged, and its clauses as guarded clauses
+%%    take the fresh name q1, ask1 and respond1 (vGLP, Definition "Canonical
+%%    Compilation").  The asking clause writes the ask ask(T, t(X?)) on its
+%%    ask stream, T the interactive type as a constant and t the functor the
+%%    compilation gives it, the type's name in lowercase with _w for writer
+%%    mode, menu_w and offer_w, and calls q1 with X and its own ask stream:
+%%    Menu and Offer are in writer mode, so the guarded clause takes the
+%%    writer X and the ask carries X? (README.md, "The vGLP sources and their
+%%    compilation").
 %% 2. The wallet: held, add and take, ordinary clauses that reach no
 %%    question, as coins.vglp has them.
 
@@ -32,18 +35,18 @@
 %% ---------------------------------------------------------------------------
 
 %% (Menu)*ask(Fs, W, R?): the asking clause and the guarded clause.
-procedure ask_a(Peers?, Wallet?, Request, Stream(Ask)).
-ask_a(Fs, W, R?, [ask('Menu', menu(X?))|D?]) :- ask(Fs?, W?, R, X, D).
-procedure ask(Peers?, Wallet?, Request, Menu, Stream(Ask)).
-ask(Fs, W, R?, menu(Fs?, W?, R), []).
+procedure ask(Peers?, Wallet?, Request, Stream(Ask)).
+ask(Fs, W, R?, [ask('Menu', menu_w(X?))|D?]) :- ask1(Fs?, W?, R, X, D).
+procedure ask1(Peers?, Wallet?, Request, Menu, Stream(Ask)).
+ask1(Fs, W, R?, menu(Fs?, W?, R), []).
 
 %% (Offer)*respond(From, K, Held, A?): the asking clause and the guarded
 %% clause.
-procedure respond_a(Peer?, Integer?, Integer?, YesNo, Stream(Ask)).
-respond_a(From, K, Held, A?, [ask('Offer', offer(X?))|D?]) :-
-    respond(From?, K?, Held?, A, X, D).
-procedure respond(Peer?, Integer?, Integer?, YesNo, Offer, Stream(Ask)).
-respond(From, K, Held, A?, offer(From?, K?, Held?, A), []).
+procedure respond(Peer?, Integer?, Integer?, YesNo, Stream(Ask)).
+respond(From, K, Held, A?, [ask('Offer', offer_w(X?))|D?]) :-
+    respond1(From?, K?, Held?, A, X, D).
+procedure respond1(Peer?, Integer?, Integer?, YesNo, Offer, Stream(Ask)).
+respond1(From, K, Held, A?, offer(From?, K?, Held?, A), []).
 
 %% The agent: its identifier, its friends, its wallet --- one holding per
 %% issuer, a holding removed when it reaches zero --- the open request, its
@@ -64,7 +67,7 @@ agent(Id, Fs, W, pay(F, K), NetIn, [msg(F?, pay(Id?, M?))|Outs?], D?) :-
 agent(Id, Fs, W, swap(F, K), NetIn,
       [msg(F?, propose(Id?, K?))|Outs?], D?) :-
     ground(Id?), ground(Fs?), ground(W?), ground(F?), ground(K?) |
-    ask_a(Fs?, W?, R, D1),
+    ask(Fs?, W?, R, D1),
     agent(Id?, Fs?, W?, R?, NetIn?, Outs, D2),
     merge(D1?, D2?, D).
 
@@ -73,7 +76,7 @@ agent(Id, Fs, W, swap(F, K), NetIn,
 agent(Id, Fs, W, R, [msg(_, propose(From, K))|NetIn], Outs?, D?) :-
     ground(Id?), ground(W?), ground(From?), ground(K?) |
     held(From?, W?, Held),
-    respond_a(From?, K?, Held?, A, D1),
+    respond(From?, K?, Held?, A, D1),
     settle(A?, Id?, Fs?, W?, R?, From?, K?, NetIn?, Outs, D2),
     merge(D1?, D2?, D).
 
@@ -100,7 +103,7 @@ procedure paid(Peer?, Peers?, Wallet?, Stream(Msg)?, Stream(Msg),
                Stream(Ask)).
 paid(Id, Fs, W, NetIn, Outs?, D?) :-
     ground(Fs?), ground(W?) |
-    ask_a(Fs?, W?, R, D1),
+    ask(Fs?, W?, R, D1),
     agent(Id?, Fs?, W?, R?, NetIn?, Outs, D2),
     merge(D1?, D2?, D).
 
@@ -123,7 +126,7 @@ settle(no, Id, Fs, W, R, From, _, NetIn,
 exported procedure start(Peer?, Peers?, Stream(Msg)?, Stream(Msg),
                          Stream(Ask)).
 start(Id, Fs, NetIn, Outs?, D?) :- ground(Fs?) |
-    ask_a(Fs?, [], R, D1),
+    ask(Fs?, [], R, D1),
     agent(Id?, Fs?, [], R?, NetIn?, Outs, D2),
     merge(D1?, D2?, D).
 

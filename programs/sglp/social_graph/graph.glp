@@ -15,28 +15,30 @@
 %% call of a procedure that reaches a question is given a fresh writer, D1,
 %% D2, as its ask stream, and the head carries D?, D the clause's ask stream,
 %% the call given D itself where there is one such call and merge(D1?, D2?, D)
-%% merging the two where there are two; the guarded clauses of ask and
-%% respond call none, and carry [] in place of D?.
+%% merging the two where there are two; the guarded clauses, ask1 and
+%% respond1, call none, and carry [] in place of D?.
 %%
-%% Each call of a volitional procedure q is a call of its asking clause q_a,
-%% which writes the ask ask(T, t(X?)) on its ask stream, T the interactive
-%% type as a constant and t the functor the compilation gives it, and calls q,
-%% the guarded clause, with X and its own ask stream: Menu and Card are in
-%% writer mode, so the clause takes the writer X and the ask carries X?.  The
-%% functor t of an interactive type is that of its one alternative, menu and
-%% card (README.md, "The vGLP sources and their compilation").
+%% Each volitional procedure q keeps its name for its asking clause, which every
+%% call of q reaches unchanged, and its clauses as guarded clauses take the
+%% fresh name q1, ask1 and respond1 (vGLP, Definition "Canonical Compilation").
+%% The asking clause writes the ask ask(T, t(X?)) on its ask stream, T the
+%% interactive type as a constant and t the functor the compilation gives it,
+%% the type's name in lowercase with _w for writer mode, menu_w and card_w,
+%% and calls q1 with X and its own ask stream: Menu and Card are in writer
+%% mode, so the guarded clause takes the writer X and the ask carries X?
+%% (README.md, "The vGLP sources and their compilation").
 
 %% (Menu)*ask(Ss, Os, C?): the asking clause and the guarded clause.
-procedure ask_a(Peers?, Peers?, Choice, Stream(Ask)).
-ask_a(Ss, Os, C?, [ask('Menu', menu(X?))|D?]) :- ask(Ss?, Os?, C, X, D).
-procedure ask(Peers?, Peers?, Choice, Menu, Stream(Ask)).
-ask(Ss, Os, C?, menu(Ss?, Os?, C), []).
+procedure ask(Peers?, Peers?, Choice, Stream(Ask)).
+ask(Ss, Os, C?, [ask('Menu', menu_w(X?))|D?]) :- ask1(Ss?, Os?, C, X, D).
+procedure ask1(Peers?, Peers?, Choice, Menu, Stream(Ask)).
+ask1(Ss, Os, C?, menu(Ss?, Os?, C), []).
 
 %% (Card)*respond(From, A?): the asking clause and the guarded clause.
-procedure respond_a(Peer?, YesNo, Stream(Ask)).
-respond_a(From, A?, [ask('Card', card(X?))|D?]) :- respond(From?, A, X, D).
-procedure respond(Peer?, YesNo, Card, Stream(Ask)).
-respond(From, A?, card(From?, A), []).
+procedure respond(Peer?, YesNo, Stream(Ask)).
+respond(From, A?, [ask('Card', card_w(X?))|D?]) :- respond1(From?, A, X, D).
+procedure respond1(Peer?, YesNo, Card, Stream(Ask)).
+respond1(From, A?, card(From?, A), []).
 
 procedure agent(Peer?, Peers?, Peers?, Choice?,
                 Stream(Msg)?, Stream(Msg), Stream(Ask)).
@@ -44,12 +46,12 @@ procedure agent(Peer?, Peers?, Peers?, Choice?,
 %% The person picked a peer: offer, and ask again.
 agent(Id, Ss, Os, same(To), NetIn, [msg(To?, offer(Id?))|Outs?], D?) :-
     ground(Id?), ground(Ss?), ground(Os?), ground(To?) |
-    ask_a(Ss?, Os?, Pick, D1),
+    ask(Ss?, Os?, Pick, D1),
     agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs, D2),
     merge(D1?, D2?, D).
 agent(Id, Ss, Os, other(To), NetIn, [msg(To?, offer(Id?))|Outs?], D?) :-
     ground(Id?), ground(Ss?), ground(Os?), ground(To?) |
-    ask_a(Ss?, Os?, Pick, D1),
+    ask(Ss?, Os?, Pick, D1),
     agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs, D2),
     merge(D1?, D2?, D).
 
@@ -57,7 +59,7 @@ agent(Id, Ss, Os, other(To), NetIn, [msg(To?, offer(Id?))|Outs?], D?) :-
 agent(Id, Ss, Os, Pick, [msg(_, offer(From))|NetIn],
       [msg(From?, reply(Id?, A?))|Outs?], D?) :-
     ground(Id?), ground(From?) |
-    respond_a(From?, A, D1),
+    respond(From?, A, D1),
     agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs, D2),
     merge(D1?, D2?, D).
 
@@ -69,6 +71,6 @@ agent(Id, Ss, Os, Pick, [msg(_, reply(_, _))|NetIn], Outs?, D?) :-
 exported procedure start(Peer?, Peers?, Peers?, Stream(Msg)?, Stream(Msg),
                          Stream(Ask)).
 start(Id, Ss, Os, NetIn, Outs?, D?) :- ground(Ss?), ground(Os?) |
-    ask_a(Ss?, Os?, Pick, D1),
+    ask(Ss?, Os?, Pick, D1),
     agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs, D2),
     merge(D1?, D2?, D).

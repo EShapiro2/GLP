@@ -445,7 +445,7 @@ check "the printed modules are what the transformation prints from the sGLP sour
 # A small source: one interactive type Q ::= q(A?), the person procedure p_q
 # of profile p answering it after a rated goal of ans; BAD has p's dimension at
 # 0.5 and a profile r in no dimension, GOOD neither.
-V="[type('A', [a]), type('Q', [q(dual('A'))]), volitional('Q', ask(dual('A')))]"
+V="[type('A', [a]), type('Q', [q(dual('A'))]), volitional('Q', q_w, ask(dual('A')))]"
 P="person(p), binds('Q', p_q), decl(p_q(dual('Q'), dual('Integer'))), clause(p_q(var('X'), var('_')), [], [rated(ans(var('X?')), rate(1, day))]), decl(ans(dual('Q'))), clause(ans(q(a)), [], [])"
 repl "$WORK/txbad.out" ':limit 1000000000000' "$HERE" \
     "transform_terms($V, [$P, person(r), run(2, [mix(d, [share(p, 0.5)])], 1, day, 1)], profiles)."
@@ -465,8 +465,8 @@ check "a source with a dimension not summing to one and a profile in no dimensio
     grep -q "^stream_append(rated('/'(1, day), Tok), Mon?, _)$" "$WORK/txgood.lines" &&
     grep -q '^ans(Tok?, X?)$' "$WORK/txgood.lines" &&
     grep -q '^Ask ::= ask(Constant, Question).$' "$WORK/txgood.lines" &&
-    grep -A 2 '^Question$' "$WORK/txgood.lines" | tr '\n' ' ' | grep -q '^Question ::= q(Q) $' &&
-    grep -q '^person(A, profiles(p), Mon, Seed, Log, \[ask(Type, q(q(X1?))) | As\])$' "$WORK/txgood.lines" &&
+    grep -A 2 '^Question$' "$WORK/txgood.lines" | tr '\n' ' ' | grep -q '^Question ::= q_w(Q) $' &&
+    grep -q '^person(A, profiles(p), Mon, Seed, Log, \[ask(Type, q_w(q(X1?))) | As\])$' "$WORK/txgood.lines" &&
     grep -q '^random(Seed?, 2147483646, K, S)$' "$WORK/txgood.lines" &&
     grep -q '^p_q(q(Y1), K?, Mon?)$' "$WORK/txgood.lines" &&
     grep -q '^person(A?, profiles(p), Mon?, S?, Log?, As?)$' "$WORK/txgood.lines" &&
@@ -478,9 +478,9 @@ check "the mended source is translated: the token, the monitor's reference, the 
 # person procedure fair_rating of profile fair writing the whole term, a
 # rating of 1..5, after a rated goal of give; and RV, a reader-mode type Bid
 # with an argument the program writes, Reply?.
-RV="[type('Rating', [rating('Integer')]), volitional(dual('Rating'), rate('Integer'))]"
+RV="[type('Rating', [rating('Integer')]), volitional(dual('Rating'), rating_r, rate('Integer'))]"
 RP="person(fair), binds('Rating', fair_rating), decl(fair_rating('Rating', dual('Integer'))), clause(fair_rating(var('R?'), var('S')), [], [random(var('S?'), 5, var('K'), var('_')), rated(give(var('K?'), var('R')), rate(1, day))]), decl(give(dual('Integer'), 'Rating')), clause(give(var('K'), rating(var('K?'))), [], []), run(1, [mix(rater, [share(fair, 1.0)])], 30, days, 20260927)"
-BV="[type('Reply', [ok, no]), type('Bid', [bid('Integer', dual('Reply'))]), volitional(dual('Bid'), offer('Integer'))]"
+BV="[type('Reply', [ok, no]), type('Bid', [bid('Integer', dual('Reply'))]), volitional(dual('Bid'), bid_r, offer('Integer'))]"
 BP="person(fair), binds('Bid', fair_bid), decl(fair_bid('Bid', dual('Integer'))), clause(fair_bid(bid(1, var('_')), var('_')), [], []), run(1, [mix(bidder, [share(fair, 1.0)])], 30, days, 1)"
 repl "$WORK/txreader.out" ':limit 1000000000000' "$HERE" \
     "transform_terms($RV, [$RP], profiles)." \
@@ -493,7 +493,7 @@ awk '$0 == "%% transform begin" { k++; next } $0 == "%% transform end" { next } 
 ! grep -q '^%% not transformed' "$WORK/txreader.pop" &&
     grep -q '^fair_rating(R?, S, Mon)$' "$WORK/txreader.lines" &&
     grep -A 5 '^fair_rating$' "$WORK/txreader.pop" | tr '\n' ' ' | grep -q '^fair_rating ( Rating , Integer? , ' &&
-    grep -A 3 '^person(A, profiles(fair), Mon, Seed, Log, \[ask(Type, rating(X?)) | As\])$' "$WORK/txreader.pop" | tr '\n' ' ' |
+    grep -A 3 '^person(A, profiles(fair), Mon, Seed, Log, \[ask(Type, rating_r(X?)) | As\])$' "$WORK/txreader.pop" | tr '\n' ' ' |
         grep -q ' :- random(Seed?, 2147483646, K, S) , $' &&
     grep -q '^fair_rating(Y, K?, Mon?)$' "$WORK/txreader.pop" &&
     grep -q '^answer_1(A?, Type?, Y?, X, Mon?, Log?)$' "$WORK/txreader.pop" &&

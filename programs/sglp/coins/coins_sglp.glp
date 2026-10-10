@@ -5,8 +5,10 @@
 %%
 %% source(V, S): V is the vGLP program's interface, the types Section 6 prints
 %% and Peer, Peers and YesNo, which it takes from Section 5, and its two
-%% volitional procedure declarations, which the transformation reads for the
-%% person process (which argument of Menu and Offer is the answer); S is the
+%% volitional procedure declarations, each with the functor the canonical
+%% compilation gives its interactive type, menu_w and offer_w, which the
+%% transformation reads for the person process (which argument of Menu and
+%% Offer is the answer, and the asks' functors); S is the
 %% sGLP program: request, as Section 6 prints it, and issuer, which Section 6
 %% describes ("issuer reads the issuer of a holding") and the hand translation
 %% wrote; the spender and the cautious profile as Section 6 prints them, and the
@@ -30,8 +32,8 @@ source(
    type('Request', [pay('Peer', 'Integer'), swap('Peer', 'Integer')]),
    type('Menu', [menu('Peers', 'Wallet', dual('Request'))]),
    type('Offer', [offer('Peer', 'Integer', 'Integer', dual('YesNo'))]),
-   volitional('Menu', ask(dual('Peers'), dual('Wallet'), 'Request')),
-   volitional('Offer', respond(dual('Peer'), dual('Integer'), dual('Integer'), 'YesNo'))],
+   volitional('Menu', menu_w, ask(dual('Peers'), dual('Wallet'), 'Request')),
+   volitional('Offer', offer_w, respond(dual('Peer'), dual('Integer'), dual('Integer'), 'YesNo'))],
 
   %% The profiles' shared program, the profiles and the run declaration.
   [decl(request(dual('Integer'), dual('Menu'))),
