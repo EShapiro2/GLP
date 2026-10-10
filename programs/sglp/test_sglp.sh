@@ -3,7 +3,8 @@
 # svGLP-Stochastic-Volitional-GLP at d2f64b6) and its code tasks of 2026-10-02
 # 00:06 UTC, item 6, 15:23 UTC, items 1 and 3, 15:24 UTC, items 1 to 4, and
 # 15:44 UTC, and of 2026-10-03 08:44 UTC, item 2, 08:58 UTC, 09:22 UTC and
-# 09:45 UTC, and the transformation of 2026-10-03 09:27 UTC.
+# 09:45 UTC, the transformation of 2026-10-03 09:27 UTC, and sGLP's tasks 5 to
+# 7 of 2026-10-09 22:01 UTC and 2026-10-10 07:59 and 08:14 UTC.
 #
 #   bash programs/sglp/test_sglp.sh
 #
@@ -118,10 +119,19 @@
 #       argument Rating, the writer; the person process's clause takes the ask
 #       ask(Type, rating(X?)), the writer X it carries, with no guard, spawns
 #       the person goal on a fresh writer Y and the answer procedure on Y? and
-#       X, which, once Y? is ground, assigns X with it and logs it; and a
-#       source whose reader-mode type has an argument the program writes is
-#       refused with that fault, the transformation printing nothing for a
-#       case the paper does not decide.
+#       X, which, once Y? is ground, assigns X with it and logs it.  The
+#       handover by the moded type (sGLP's task 6 of 2026-10-10 07:59 UTC, (a);
+#       sGLP's paper, Section 4, "The person process", and Appendix B: the
+#       answer handed over once the positions the person writes are ground,
+#       with fresh writers at the positions the program writes, whose readers
+#       the person goal gets): a reader-mode type Bid ::= bid(Integer, Reply?)
+#       and a writer-mode type Post ::= post(Integer, Line?), Line ::=
+#       line(String, Status?), each handed over once the String or Integer the
+#       person writes is ground, a fresh writer at the position the program
+#       writes, its reader to the person goal through the copy's pattern, and
+#       '_' in the log; a writer-mode type with a position the person writes
+#       inside an argument the program writes refused, a case the paper does
+#       not decide.
 #
 # Prints one line per check and a summary line, "=== P passed, F failed ===";
 # exits non-zero if any check fails.  The runs of (iii) and (iv) take some
@@ -476,7 +486,7 @@ check "a source with a dimension not summing to one and a profile in no dimensio
 check "the mended source is translated: the token, the monitor's reference, the asks, the person process's clause on an ask and its seeding, the declaration and the draw" $?
 # Reader mode: one interactive type Rating in reader mode, (Rating?)*rate, the
 # person procedure fair_rating of profile fair writing the whole term, a
-# rating of 1..5, after a rated goal of give; and RV, a reader-mode type Bid
+# rating of 1..5, after a rated goal of give; and BV, a reader-mode type Bid
 # with an argument the program writes, Reply?.
 RV="[type('Rating', [rating('Integer')]), volitional(dual('Rating'), rating_r, rate('Integer'))]"
 RP="person(fair), binds('Rating', fair_rating), decl(fair_rating('Rating', dual('Integer'))), clause(fair_rating(var('R?'), var('S')), [], [random(var('S?'), 5, var('K'), var('_')), rated(give(var('K?'), var('R')), rate(1, day))]), decl(give(dual('Integer'), 'Rating')), clause(give(var('K'), rating(var('K?'))), [], []), run(1, [mix(rater, [share(fair, 1.0)])], 30, days, 20260927)"
@@ -505,10 +515,40 @@ awk '$0 == "%% transform begin" { k++; next } $0 == "%% transform end" { next } 
     grep -q '^stream_append(entry(Time?, A?, Type?, Y?), Log?, _)$' "$WORK/txreader.pop" &&
     ! grep -q 'rating(rating(' "$WORK/txreader.pop"
 check "in reader mode the person goal receives a writer and the program the reader: the person procedure of the dual type, the clause on the ask's writer, the answer assigned from the copy and logged" $?
-grep -q '^%% not transformed: an interactive type in reader mode of one to nine arguments, none written by the program(Bid)$' "$WORK/txreader.bid" &&
-    [ "$(grep -c '^%% not transformed' "$WORK/txreader.bid")" -eq 1 ] &&
-    ! grep -q '^person(' "$WORK/txreader.bid"
-check "a reader-mode type with an argument the program writes is refused with that fault, nothing printed" $?
+! grep -q '^%% not transformed' "$WORK/txreader.bid" &&
+    grep -q '^person(A, profiles(fair), Mon, Seed, Log, \[ask(Type, bid_r(X?)) | As\])$' "$WORK/txreader.bid" &&
+    grep -q '^fair_bid(Y, K?, Mon?)$' "$WORK/txreader.bid" &&
+    grep -q '^answer_1(A?, Type?, Y?, X, Mon?, Log?)$' "$WORK/txreader.bid" &&
+    grep -A 6 '^answer_1(A, Type, bid(Z1, Z2?), bid(Z1?, Z2), Mon, Log)$' "$WORK/txreader.bid" | tr '\n' ' ' |
+        grep -q " :- ground(Z1?) | stream_append(time(Time), Mon?, _) , stream_append(entry(Time?, A?, Type?, bid(Z1?, '_')), Log?, _) $" &&
+    [ "$(grep -c '^answer_1(A, Type, ' "$WORK/txreader.bid")" -eq 1 ]
+check "a reader-mode type with an argument the program writes is translated: the answer handed over once the argument the person writes is ground, a fresh writer at the one the program writes, its reader to the person goal through the copy, logged as _" $?
+# The handover by the moded type in writer mode (sGLP's task 6 of 2026-10-10
+# 07:59 UTC, (a)): PV, a writer-mode type Post whose answer Line? holds a
+# position the program writes, Status?; NV, a writer-mode type Panel whose
+# argument the program writes, Cards, holds positions the person writes, a
+# case the paper does not decide.
+PV="[type('Status', [sent, read]), type('Line', [line('String', dual('Status'))]), type('Post', [post('Integer', dual('Line'))]), volitional('Post', post_w, poster('Integer'))]"
+PP="person(p), binds('Post', p_post), decl(p_post(dual('Post'), dual('Integer'))), clause(p_post(post(var('_'), line(hi, var('_'))), var('_')), [], []), run(1, [mix(d, [share(p, 1.0)])], 1, day, 1)"
+NV="[type('YesNo', [yes, no]), type('Card', [card('Integer', dual('YesNo'))]), type('Cards', [[], ['Card' | 'Cards']]), type('Panel', [panel('Cards')]), volitional('Panel', panel_w, show('Integer'))]"
+NP="person(p), binds('Panel', p_panel), decl(p_panel(dual('Panel'), dual('Integer'))), clause(p_panel(var('_'), var('_')), [], []), run(1, [mix(d, [share(p, 1.0)])], 1, day, 1)"
+repl "$WORK/txmoded.out" ':limit 1000000000000' "$HERE" \
+    "transform_terms($PV, [$PP], population)." \
+    "transform_terms($NV, [$NP], population)."
+sed 's/^\(GLP> \)*//' "$WORK/txmoded.out" > "$WORK/txmoded.lines"
+for k in 1 2; do
+    awk -v k="$k" '$0 == "%% transform begin" { n++; next } $0 == "%% transform end" { next } n == k' "$WORK/txmoded.lines" > "$WORK/txmoded.$k"
+done
+! grep -q '^%% not transformed' "$WORK/txmoded.1" &&
+    grep -q '^person(A, profiles(p), Mon, Seed, Log, \[ask(Type, post_w(post(X1, X2?))) | As\])$' "$WORK/txmoded.1" &&
+    grep -q '^p_post(post(X1?, Y2), K?, Mon?)$' "$WORK/txmoded.1" &&
+    grep -q '^answer_1(A?, Type?, X1?, Y2?, X2, Mon?, Log?)$' "$WORK/txmoded.1" &&
+    grep -A 6 '^answer_1(A, Type, X1, line(Z1, Z2?), line(Z1?, Z2), Mon, Log)$' "$WORK/txmoded.1" | tr '\n' ' ' |
+        grep -q " :- ground(Z1?) | stream_append(time(Time), Mon?, _) , stream_append(entry(Time?, A?, Type?, post(X1?, line(Z1?, '_'))), Log?, _) $"
+check "in writer mode an answer holding a position the program writes is handed over once the positions the person writes are ground, a fresh writer there, its reader to the person goal" $?
+grep -q '^%% not transformed: an interactive type in writer mode with a position the person writes inside an argument the program writes(Panel)$' "$WORK/txmoded.2" &&
+    [ "$(grep -c '^%% not transformed' "$WORK/txmoded.2")" -eq 1 ] && ! grep -q '^person(' "$WORK/txmoded.2"
+check "a writer-mode type with a position the person writes inside an argument the program writes is refused with that fault, nothing printed" $?
 
 echo ""
 echo "=== $PASS passed, $FAIL failed ==="

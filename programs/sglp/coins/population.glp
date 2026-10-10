@@ -155,7 +155,7 @@ person(A?, profiles(D1?, generous), Mon?, S?, Log?, As?)
 .
 person(_, _, _, _, _, []).
 
-%% The answer, assigned and logged (Section 4, "The log").
+%% The answer, handed over and logged (Section 4, "The person process" and "The log").
 procedure
 answer_1
 (
@@ -188,7 +188,7 @@ stream_append(time(Time), Mon?, _)
 stream_append(entry(Time?, A?, Type?, menu(X1?, X2?, Y3?)), Log?, _)
 .
 
-%% The answer, assigned and logged (Section 4, "The log").
+%% The answer, handed over and logged (Section 4, "The person process" and "The log").
 procedure
 answer_2
 (

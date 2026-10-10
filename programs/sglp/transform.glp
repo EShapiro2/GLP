@@ -19,8 +19,11 @@
 %%               that reference, followed by G with Tok? as an added first
 %%               argument, and G's procedure takes the token first, its clauses
 %%               go there;
-%%   population  the person process, one clause per person declaration, and
-%%               the answers it logs; and from the run declaration the
+%%   population  the person process, one clause per person declaration and
+%%               form of the question, and the answer procedures that hand the
+%%               program the person goal's answers by the moded type and log
+%%               them (Section 4, "The person process"; the handover, below);
+%%               and from the run declaration the
 %%               declaration itself and each agent's stochastic person, its
 %%               profile in each dimension drawn from its block.  The harness's
 %%               run/6 and run/7 --- the network, the monitor and the log's
@@ -481,7 +484,9 @@ dimension_names(['Dimension1', 'Dimension2', 'Dimension3', 'Dimension4',
 
 procedure answer_names(Terms).
 answer_names([answer_1, answer_2, answer_3, answer_4, answer_5, answer_6,
-              answer_7, answer_8, answer_9]).
+              answer_7, answer_8, answer_9, answer_10, answer_11, answer_12,
+              answer_13, answer_14, answer_15, answer_16, answer_17, answer_18,
+              answer_19, answer_20]).
 
 
 %% var_names(Vs?, Ns): Ns are the texts of the variables var(X) of the terms Vs.
@@ -606,41 +611,418 @@ tbody([B|Bs], Ts, MR, Ms, [B1?|Bs1?]) :- otherwise, ground(B?), ground(MR?), gro
     args(B?, [], Bk?, B1), tbody(Bs?, Ts?, MR?, Ms?, Bs1).
 
 %% ===========================================================================
+%% Moded types (Section 4, "The person process": "the person process hands the
+%% program's variable the answer once the positions the person writes are
+%% ground, with fresh writers at the positions the program writes, whose
+%% readers it hands the person goal --- vGLP's Answer"; vGLP, Definition
+%% "vmaGLP Transition System", Answer; TGLP's moded types)
+%% ===========================================================================
+%% A type of the interface is type(Name, Alts), Name a constant or, for a
+%% parameterised type, a compound term whose arguments, constants, are its
+%% parameters; an alternative is a constant, a compound term whose arguments
+%% are types, a type T? written dual(T), or the name of a type, of which it is
+%% the union.  A position of a term of a type is written by the writer of the
+%% term, and a position of a type T? by its reader: in an answer the person
+%% writes, the positions of type T? are the program's.
+
+%% The primitive types, each with the guard that holds of a value of it.
+procedure prims(Terms).
+prims([o('Integer', integer), o('Real', real), o('Number', number),
+       o('String', string), o('Constant', constant), o('Module', module)]).
+
+%% prim(T?, G): G is the guard of the primitive type T, none where T is none.
+procedure prim(_?, _).
+prim(T, G?) :- ground(T?) | prims(Ps), lookup(T?, Ps?, G1), prim1(G1?, T?, G).
+procedure prim1(_?, _?, _).
+prim1(G1, T, none) :- G1? =?= T? | true.
+prim1(G1, T, G1?) :- G1? =?\= T? | true.
+
+%% type_alts(T?, Tys?, Alts): the alternatives of the type T as the interface
+%% defines it, a parameterised type's instance with the parameters of its
+%% definition replaced by T's arguments; [] where the interface defines none.
+procedure type_alts(_?, Terms?, Terms).
+type_alts(T, Tys, As?) :- ground(T?), ground(Tys?) |
+    parts_n(T?, F, Args, N), find_type(F?, N?, Args?, Tys?, As).
+procedure find_type(_?, Integer?, Terms?, Terms?, Terms).
+find_type(_, _, _, [], []).
+find_type(F, N, Args, [type(Nm, As)|Tys], Out?) :-
+    ground(Nm?), ground(As?), ground(F?), integer(N?), ground(Args?) |
+    parts_n(Nm?, F1, Ps, N1), find_type1(F1?, N1?, Ps?, As?, F?, N?, Args?, Tys?, Out).
+find_type(F, N, Args, [_|Tys], Out?) :- otherwise | find_type(F?, N?, Args?, Tys?, Out).
+procedure find_type1(_?, Integer?, Terms?, Terms?, _?, Integer?, Terms?, Terms?, Terms).
+find_type1(F1, N1, Ps, As, F, N, Args, _, Out?) :- F1? =?= F?, N1? =:= N? |
+    pairs(Ps?, Args?, Prs), subst_list(As?, Prs?, Out).
+find_type1(_, _, _, _, F, N, Args, Tys, Out?) :- otherwise |
+    find_type(F?, N?, Args?, Tys?, Out).
+procedure pairs(Terms?, Terms?, Terms).
+pairs([], _, []).
+pairs([_|_], [], []).
+pairs([P|Ps], [A|As], [o(P?, A?)|Prs?]) :- pairs(Ps?, As?, Prs).
+
+%% subst(T?, Prs?, U): U is T with each constant P of a pair o(P, A) of Prs
+%% replaced by A.
+procedure subst(_?, Terms?, _).
+subst(T, Prs, U?) :- constant(T?), ground(Prs?) | lookup(T?, Prs?, U).
+subst(T, Prs, U?) :- compound(T?), ground(T?), ground(Prs?) |
+    parts(T?, F, As), subst_list(As?, Prs?, Us), compose(F?, Us?, U).
+procedure subst_list(Terms?, Terms?, Terms).
+subst_list([], _, []).
+subst_list([A|As], Prs, [U?|Us?]) :- ground(Prs?) | subst(A?, Prs?, U), subst_list(As?, Prs?, Us).
+
+%% flat_alts(T?, Tys?, Seen?, Alts): the alternatives of T with each that names
+%% a type replaced by that type's, a primitive type T1 by '$prim'(G), G its
+%% guard; Seen the types whose alternatives are being taken, a union naming
+%% one of them contributing nothing more.
+procedure flat_alts(_?, Terms?, Terms?, Terms).
+flat_alts(T, Tys, Seen, Out?) :- ground(T?), ground(Tys?), ground(Seen?) |
+    type_alts(T?, Tys?, As), flat_list(As?, Tys?, [T?|Seen?], Out).
+procedure flat_list(Terms?, Terms?, Terms?, Terms).
+flat_list([], _, _, []).
+flat_list([A|As], Tys, Seen, Out?) :- ground(A?), ground(Tys?), ground(Seen?) |
+    alt_kind(A?, Tys?, K), flat_one(K?, A?, Tys?, Seen?, O1),
+    flat_list(As?, Tys?, Seen?, O2), append(O1?, O2?, Out).
+%% alt_kind(A?, Tys?, K): K is prim(G) where A is a primitive type, type where
+%% it names a type of the interface, and term otherwise.
+procedure alt_kind(_?, Terms?, _).
+alt_kind(A, Tys, K?) :- ground(A?), ground(Tys?) |
+    prim(A?, G), type_alts(A?, Tys?, As), alt_kind1(G?, As?, K).
+procedure alt_kind1(_?, Terms?, _).
+alt_kind1(G, _, prim(G?)) :- G? =?\= none | true.
+alt_kind1(none, [], term).
+alt_kind1(none, [_|_], type).
+procedure flat_one(_?, _?, Terms?, Terms?, Terms).
+flat_one(prim(G), _, _, _, ['$prim'(G?)]).
+flat_one(term, A, _, _, [A?]).
+flat_one(type, A, Tys, Seen, Out?) :- ground(A?), ground(Seen?) |
+    member(A?, Seen?, In), flat_type(In?, A?, Tys?, Seen?, Out).
+procedure flat_type(Ans?, _?, Terms?, Terms?, Terms).
+flat_type(yes, _, _, _, []).
+flat_type(no, A, Tys, Seen, Out?) :- flat_alts(A?, Tys?, Seen?, Out).
+
+%% mixed(T?, Tys?, Seen?, M): M is yes where a term of type T holds a position
+%% its reader writes, a position of a type T1? reached through positions its
+%% writer writes, and no otherwise; Seen the types on the way, none of which
+%% is looked into again.
+procedure mixed(_?, Terms?, Terms?, Ans).
+mixed(T, Tys, Seen, M?) :- ground(T?), ground(Seen?) |
+    member(T?, Seen?, In), mixed1(In?, T?, Tys?, Seen?, M).
+procedure mixed1(Ans?, _?, Terms?, Terms?, Ans).
+mixed1(yes, _, _, _, no).
+mixed1(no, T, Tys, Seen, M?) :- ground(T?), ground(Tys?), ground(Seen?) |
+    flat_alts(T?, Tys?, [], As), alts_mixed(As?, Tys?, [T?|Seen?], M).
+procedure alts_mixed(Terms?, Terms?, Terms?, Ans).
+alts_mixed([], _, _, no).
+alts_mixed([A|As], Tys, Seen, M?) :- ground(Tys?), ground(Seen?) |
+    alt_mixed(A?, Tys?, Seen?, M1), alts_mixed1(M1?, As?, Tys?, Seen?, M).
+procedure alts_mixed1(Ans?, Terms?, Terms?, Terms?, Ans).
+alts_mixed1(yes, _, _, _, yes).
+alts_mixed1(no, As, Tys, Seen, M?) :- alts_mixed(As?, Tys?, Seen?, M).
+procedure alt_mixed(_?, Terms?, Terms?, Ans).
+alt_mixed('$prim'(_), _, _, no).
+alt_mixed(A, Tys, Seen, M?) :- otherwise, compound(A?), ground(A?) |
+    parts(A?, _, Ts), args_mixed(Ts?, Tys?, Seen?, M).
+alt_mixed(A, _, _, no) :- otherwise, constant(A?) | true.
+procedure args_mixed(Terms?, Terms?, Terms?, Ans).
+args_mixed([], _, _, no).
+args_mixed([dual(_)|_], _, _, yes).
+args_mixed([T|Ts], Tys, Seen, M?) :- otherwise, ground(T?), ground(Tys?), ground(Seen?) |
+    mixed(T?, Tys?, Seen?, M1), args_mixed1(M1?, Ts?, Tys?, Seen?, M).
+procedure args_mixed1(Ans?, Terms?, Terms?, Terms?, Ans).
+args_mixed1(yes, _, _, _, yes).
+args_mixed1(no, Ts, Tys, Seen, M?) :- args_mixed(Ts?, Tys?, Seen?, M).
+
+%% undefined(T?, Tys?, Seen?, Us): Us are the types reached from T, through
+%% the positions of its alternatives, that are neither primitive nor defined
+%% by the interface.
+procedure undefined(_?, Terms?, Terms?, Terms).
+undefined(T, Tys, Seen, Us?) :- ground(T?), ground(Tys?), ground(Seen?) |
+    member(T?, Seen?, In), prim(T?, G), type_alts(T?, Tys?, As),
+    undefined1(In?, G?, As?, T?, Tys?, Seen?, Us).
+procedure undefined1(Ans?, _?, Terms?, _?, Terms?, Terms?, Terms).
+undefined1(yes, _, _, _, _, _, []).
+undefined1(no, G, _, _, _, _, []) :- G? =?\= none | true.
+undefined1(no, none, [], T, _, _, [T?]).
+undefined1(no, none, [_|_], T, Tys, Seen, Us?) :- ground(T?), ground(Tys?), ground(Seen?) |
+    flat_alts(T?, Tys?, [], As), alts_undefined(As?, Tys?, [T?|Seen?], Us).
+procedure alts_undefined(Terms?, Terms?, Terms?, Terms).
+alts_undefined([], _, _, []).
+alts_undefined([A|As], Tys, Seen, Us?) :- ground(A?), ground(Tys?), ground(Seen?) |
+    alt_args(A?, Ts), args_undefined(Ts?, Tys?, Seen?, U1),
+    alts_undefined(As?, Tys?, Seen?, U2), append(U1?, U2?, Us).
+procedure alt_args(_?, Terms).
+alt_args('$prim'(_), []).
+alt_args(A, Ts?) :- otherwise, compound(A?) | parts(A?, _, Ts).
+alt_args(A, []) :- otherwise, constant(A?) | true.
+procedure args_undefined(Terms?, Terms?, Terms?, Terms).
+args_undefined([], _, _, []).
+args_undefined([T|Ts], Tys, Seen, Us?) :- ground(T?), ground(Tys?), ground(Seen?) |
+    undual(T?, T1), undefined(T1?, Tys?, Seen?, U1),
+    args_undefined(Ts?, Tys?, Seen?, U2), append(U1?, U2?, Us).
+
+%% has_dual(A?, D): D is yes where the alternative A has an argument of a type
+%% T?, a position the reader of the term writes.
+procedure has_dual(_?, Ans).
+has_dual('$prim'(_), no).
+has_dual(A, D?) :- otherwise, compound(A?) | parts(A?, _, Ts), member_dual(Ts?, D).
+has_dual(A, no) :- otherwise, constant(A?) | true.
+procedure member_dual(Terms?, Ans).
+member_dual([], no).
+member_dual([dual(_)|_], yes).
+member_dual([T|Ts], D?) :- otherwise, ground(T?) | member_dual(Ts?, D).
+
+%% ===========================================================================
+%% The handover (Section 4, "The person process"; Appendix B)
+%% ===========================================================================
+%% The person goal answers into a copy of the question, and the person
+%% process hands the program's variable the answer: an answer procedure, one
+%% clause per form the answer takes, its head taking the copy's pattern and
+%% writing the program's term, its guards waiting, position by position, on
+%% each position the person writes being ground, and its body logging the
+%% term handed over.  A position the person writes is ground in the copy
+%% where its type holds no position the program writes; one whose type holds
+%% one is taken alternative by alternative, its positions the program writes
+%% fresh writers W in the program's term, W? in the copy's pattern, which
+%% hands their readers to the person goal, and '_' in the log; and one whose
+%% type is one being taken already, a stream's tail, is left open, handed to
+%% the program as the reader of a fresh writer and to its own answer
+%% procedure, its next answer (vGLP: "an answer of type Stream(T) is given one
+%% element at a time, each element leaving the person the writer of the
+%% stream's tail as a new question").
+
+%% The names of the positions taken alternative by alternative, each a writer
+%% and its reader.
+procedure z_names(Terms).
+z_names([n('Z1', 'Z1?'), n('Z2', 'Z2?'), n('Z3', 'Z3?'), n('Z4', 'Z4?'),
+         n('Z5', 'Z5?'), n('Z6', 'Z6?'), n('Z7', 'Z7?'), n('Z8', 'Z8?'),
+         n('Z9', 'Z9?'), n('Z10', 'Z10?'), n('Z11', 'Z11?'), n('Z12', 'Z12?'),
+         n('Z13', 'Z13?'), n('Z14', 'Z14?'), n('Z15', 'Z15?'), n('Z16', 'Z16?'),
+         n('Z17', 'Z17?'), n('Z18', 'Z18?'), n('Z19', 'Z19?'), n('Z20', 'Z20?'),
+         n('Z21', 'Z21?'), n('Z22', 'Z22?'), n('Z23', 'Z23?'), n('Z24', 'Z24?'),
+         n('Z25', 'Z25?'), n('Z26', 'Z26?'), n('Z27', 'Z27?'), n('Z28', 'Z28?'),
+         n('Z29', 'Z29?'), n('Z30', 'Z30?')]).
+
+%% The log's mark of a position the program writes, or the person leaves open:
+%% the constant '_', which a line prints quoted.
+procedure blank(_).
+blank('\'_\'').
+
+%% name_of(Root?, Ns?, W, R, Ns1): W and R the writer and reader of the name
+%% Root, or of the first of Ns where Root is none, Ns1 the names left; nonames
+%% where none is left, which the checks refuse.
+procedure name_of(_?, Terms?, _, _, Terms).
+name_of(n(W, R), Ns, W?, R?, Ns?).
+name_of(none, [n(W, R)|Ns], W?, R?, Ns?).
+name_of(none, [], nonames, nonames, []).
+
+%% expand(T?, Tys?, Path?, Root?, Ns?, Vs): the forms of a position of type T
+%% the person writes in an answer, Path the types being taken on the way to
+%% it, Root its name where it is ground in the copy or none, Ns the names left:
+%% each v(C, X, Gs, L, Ks, Ns1), C the position in the copy's pattern, X in the
+%% program's term, Gs its guards, L in the log, Ks its handover goals
+%% cut(T1, C1, Z1), the positions left open, and Ns1 the names left.
+procedure expand(_?, Terms?, Terms?, _?, Terms?, Terms).
+expand(T, Tys, Path, Root, Ns, Vs?) :-
+    ground(T?), ground(Tys?), ground(Path?), ground(Root?), ground(Ns?) |
+    mixed(T?, Tys?, [], M), member(T?, Path?, On),
+    expand1(M?, On?, T?, Tys?, Path?, Root?, Ns?, Vs).
+procedure expand1(Ans?, Ans?, _?, Terms?, Terms?, _?, Terms?, Terms).
+expand1(no, _, _, _, _, Root, Ns, Vs?) :-
+    name_of(Root?, Ns?, W, R, Ns1), leaf_variant(W?, R?, ground, Ns1?, Vs).
+expand1(yes, yes, T, _, _, _, Ns, Vs?) :-
+    name_of(none, Ns?, CW, CR, Ns1), name_of(none, Ns1?, ZW, ZR, Ns2),
+    cut_variant(T?, CW?, CR?, ZW?, ZR?, Ns2?, Vs).
+expand1(yes, no, T, Tys, Path, _, Ns, Vs?) :- ground(T?), ground(Tys?), ground(Path?), ground(Ns?) |
+    flat_alts(T?, Tys?, [], As), alts_variants(As?, Tys?, [T?|Path?], Ns?, Vs).
+procedure leaf_variant(_?, _?, _?, Terms?, Terms).
+leaf_variant(W, R, G, Ns, [v(var(W?), var(R?), [Gd?], var(R?), [], Ns?)]) :- ground(R?), ground(G?) |
+    Gd =.. [G?, var(R?)].
+procedure cut_variant(_?, _?, _?, _?, _?, Terms?, Terms).
+cut_variant(T, CW, CR, ZW, ZR, Ns, [v(var(CW?), var(ZR?), [], B?, [cut(T?, var(CR?), var(ZW?))], Ns?)]) :-
+    blank(B).
+procedure alts_variants(Terms?, Terms?, Terms?, Terms?, Terms).
+alts_variants([], _, _, _, []).
+alts_variants([A|As], Tys, Path, Ns, Vs?) :- ground(Tys?), ground(Path?), ground(Ns?) |
+    alt_variants(A?, Tys?, Path?, Ns?, V1), alts_variants(As?, Tys?, Path?, Ns?, V2), append(V1?, V2?, Vs).
+procedure alt_variants(_?, Terms?, Terms?, Terms?, Terms).
+alt_variants('$prim'(G), _, _, Ns, Vs?) :-
+    name_of(none, Ns?, W, R, Ns1), leaf_variant(W?, R?, G?, Ns1?, Vs).
+alt_variants(A, Tys, Path, Ns, Vs?) :- otherwise, compound(A?), ground(A?) |
+    parts(A?, F, Ts), args_variants(Ts?, Tys?, Path?, Ns?, AVs), compose_variants(F?, AVs?, Vs).
+alt_variants(A, _, _, Ns, [v(A?, A?, [], A?, [], Ns?)]) :- otherwise, constant(A?) | true.
+%% args_variants(Ts?, Tys?, Path?, Ns?, AVs): the forms of the arguments of
+%% types Ts, each av(Cs, Xs, Gs, Ls, Ks, Ns1), one per choice of a form for
+%% each argument, the names threaded through them in order.
+procedure args_variants(Terms?, Terms?, Terms?, Terms?, Terms).
+args_variants([], _, _, Ns, [av([], [], [], [], [], Ns?)]).
+args_variants([T|Ts], Tys, Path, Ns, AVs?) :- ground(Ts?), ground(Tys?), ground(Path?) |
+    arg_variants(T?, Tys?, Path?, Ns?, Vs), args_cross(Vs?, Ts?, Tys?, Path?, AVs).
+procedure arg_variants(_?, Terms?, Terms?, Terms?, Terms).
+arg_variants(dual(_), _, _, Ns, Vs?) :- name_of(none, Ns?, W, R, Ns1), prog_variant(W?, R?, Ns1?, Vs).
+arg_variants(T, Tys, Path, Ns, Vs?) :- otherwise, ground(T?) | expand(T?, Tys?, Path?, none, Ns?, Vs).
+procedure prog_variant(_?, _?, Terms?, Terms).
+prog_variant(W, R, Ns, [v(var(R?), var(W?), [], B?, [], Ns?)]) :- blank(B).
+procedure args_cross(Terms?, Terms?, Terms?, Terms?, Terms).
+args_cross([], _, _, _, []).
+args_cross([v(C, X, Gs, L, Ks, Ns1)|Vs], Ts, Tys, Path, AVs?) :-
+    ground(Ts?), ground(Tys?), ground(Path?) |
+    args_variants(Ts?, Tys?, Path?, Ns1?, Rest), cons_all(C?, X?, Gs?, L?, Ks?, Rest?, AV1),
+    args_cross(Vs?, Ts?, Tys?, Path?, AV2), append(AV1?, AV2?, AVs).
+procedure cons_all(_?, _?, Terms?, _?, Terms?, Terms?, Terms).
+cons_all(_, _, _, _, _, [], []).
+cons_all(C, X, G, L, K, [av(Cs, Xs, Gs, Ls, Ks, Ns)|R], [av([C?|Cs?], [X?|Xs?], Gs1?, [L?|Ls?], Ks1?, Ns?)|R1?]) :-
+    ground(C?), ground(X?), ground(G?), ground(L?), ground(K?) |
+    append(G?, Gs?, Gs1), append(K?, Ks?, Ks1), cons_all(C?, X?, G?, L?, K?, R?, R1).
+procedure compose_variants(_?, Terms?, Terms).
+compose_variants(_, [], []).
+compose_variants(F, [av(Cs, Xs, Gs, Ls, Ks, Ns)|AVs], [v(C?, X?, Gs?, L?, Ks?, Ns?)|Vs?]) :- ground(F?) |
+    compose(F?, Cs?, C), compose(F?, Xs?, X), compose(F?, Ls?, L), compose_variants(F?, AVs?, Vs).
+
+%% variants_cuts(Vs?, Ts): Ts are the types of the handover goals of the forms
+%% Vs, in order.
+procedure variants_cuts(Terms?, Terms).
+variants_cuts([], []).
+variants_cuts([v(_, _, _, _, Ks, _)|Vs], Ts?) :- cut_types(Ks?, T1), variants_cuts(Vs?, T2), append(T1?, T2?, Ts).
+procedure cut_types(Terms?, Terms).
+cut_types([], []).
+cut_types([cut(T, _, _)|Ks], [T?|Ts?]) :- cut_types(Ks?, Ts).
+%% variants_named(Vs?, A): A is no where a form ran out of names.
+procedure variants_named(Terms?, Ans).
+variants_named(Vs, A?) :- ground(Vs?) | var_names(Vs?, [], Us), member(nonames, Us?, A0), negate(A0?, A).
+procedure negate(Ans?, Ans).
+negate(yes, no).
+negate(no, yes).
+
+%% The plan of the person process (Section 4, "The person process"): one
+%% root per interactive type, and its answer procedures.
+%%
+%% plan(Its?, Tys?, Pl): Pl is plan(Rs, Ps): Rs one root per interactive type,
+%% in order --- wr(T, Af, Was) for one in writer mode, Was its alternatives,
+%% each wa(A, Nm), Nm the name of its answer procedure, or none where it holds
+%% no position the person writes; rd(T, Af, Nm) for one in reader mode, Nm the
+%% name of its answer procedure --- and Ps the answer procedures in the order
+%% of their names, the next of answer_names: wp(T, A, Nm), the answer of the
+%% alternative A of T in writer mode, and hp(T1, Nm), the answer procedure of
+%% the type T1, the interactive type of each root in reader mode, then each
+%% type of a position left open, in the order found.
+procedure plan(Terms?, Terms?, _).
+plan(Its, Tys, Pl?) :- ground(Its?), ground(Tys?) |
+    roots(Its?, Tys?, 1, Rs, K, Ps0), plan1(Rs?, K?, Ps0?, Tys?, Pl).
+procedure plan1(Terms?, Integer?, Terms?, Terms?, _).
+plan1(Rs, K, Ps0, Tys, plan(Rs?, Ps?)) :- ground(Rs?) |
+    root_seeds(Rs?, Seeds), rd_types(Rs?, Found0), plan2(Seeds?, Found0?, K?, Ps0?, Tys?, Ps).
+procedure plan2(Terms?, Terms?, Integer?, Terms?, Terms?, Terms).
+plan2(Seeds, Found0, K, Ps0, Tys, Ps?) :- ground(Found0?) |
+    cut_closure(Seeds?, Found0?, [], Tys?, Found),
+    extra_hps(Found?, Found0?, K?, Ps1), append(Ps0?, Ps1?, Ps).
+procedure roots(Terms?, Terms?, Integer?, Terms, Integer, Terms).
+roots([], _, K, [], K?, []).
+roots([it(T, output, Af)|Its], Tys, K, [wr(T?, Af?, Was?)|Rs?], K2?, Ps?) :-
+    ground(T?), ground(Tys?), integer(K?) |
+    flat_alts(T?, Tys?, [], As), w_alts(As?, T?, K?, Was, K1, Ps1),
+    roots(Its?, Tys?, K1?, Rs, K2, Ps2), append(Ps1?, Ps2?, Ps).
+roots([it(T, input, Af)|Its], Tys, K, [R?|Rs?], K2?, [P?|Ps?]) :- integer(K?) |
+    answer_name(K?, Nm), rd_root(T?, Af?, Nm?, R, P),
+    K1 := K? + 1, roots(Its?, Tys?, K1?, Rs, K2, Ps).
+procedure rd_root(_?, _?, _?, _, _).
+rd_root(T, Af, Nm, rd(T?, Af?, Nm?), hp(T?, Nm?)) :- ground(T?), ground(Nm?) | true.
+procedure w_alts(Terms?, _?, Integer?, Terms, Integer, Terms).
+w_alts([], _, K, [], K?, []).
+w_alts([A|As], T, K, [Wa?|Was?], K2?, Ps?) :- ground(A?), ground(T?), integer(K?) |
+    has_dual(A?, D), w_alt(D?, A?, T?, K?, Wa, K1, P1),
+    w_alts(As?, T?, K1?, Was, K2, P2), append(P1?, P2?, Ps).
+procedure w_alt(Ans?, _?, _?, Integer?, _, Integer, Terms).
+w_alt(no, A, _, K, wa(A?, none), K?, []).
+w_alt(yes, A, T, K, Wa?, K1?, [P?]) :- integer(K?) |
+    answer_name(K?, Nm), K1 := K? + 1, w_named(A?, T?, Nm?, Wa, P).
+procedure w_named(_?, _?, _?, _, _).
+w_named(A, T, Nm, wa(A?, Nm?), wp(T?, A?, Nm?)) :- ground(A?), ground(Nm?) | true.
+%% answer_name(K?, Nm): the K-th of answer_names, none past them.
+procedure answer_name(Integer?, _).
+answer_name(K, Nm?) :- answer_names(ANs), nth_or_none(K?, ANs?, Nm).
+procedure nth_or_none(Integer?, Terms?, _).
+nth_or_none(_, [], none).
+nth_or_none(1, [X|_], X?).
+nth_or_none(K, [_|Xs], X?) :- K? > 1 | K1 := K? - 1, nth_or_none(K1?, Xs?, X).
+%% root_seeds(Rs?, Ts): the types whose forms are taken first: those of the
+%% positions the person writes of each alternative in writer mode, and each
+%% interactive type in reader mode.
+procedure root_seeds(Terms?, Terms).
+root_seeds([], []).
+root_seeds([wr(_, _, Was)|Rs], Ts?) :- wa_seeds(Was?, T1), root_seeds(Rs?, T2), append(T1?, T2?, Ts).
+root_seeds([rd(T, _, _)|Rs], [T?|Ts?]) :- root_seeds(Rs?, Ts).
+procedure wa_seeds(Terms?, Terms).
+wa_seeds([], []).
+wa_seeds([wa(_, none)|Was], Ts?) :- wa_seeds(Was?, Ts).
+wa_seeds([wa(A, Nm)|Was], Ts?) :- Nm? =?\= none, compound(A?) |
+    parts(A?, _, As), dual_args(As?, T1), wa_seeds(Was?, T2), append(T1?, T2?, Ts).
+procedure dual_args(Terms?, Terms).
+dual_args([], []).
+dual_args([dual(T)|As], [T?|Ts?]) :- dual_args(As?, Ts).
+dual_args([A|As], Ts?) :- otherwise, ground(A?) | dual_args(As?, Ts).
+procedure rd_types(Terms?, Terms).
+rd_types([], []).
+rd_types([rd(T, _, _)|Rs], [T?|Ts?]) :- rd_types(Rs?, Ts).
+rd_types([wr(_, _, _)|Rs], Ts?) :- rd_types(Rs?, Ts).
+%% cut_closure(Todo?, Found?, Done?, Tys?, Out): Out is Found with each type of
+%% a position left open in the forms of the types Todo, and of those types in
+%% turn, added in the order found; Done the types whose forms were taken.
+procedure cut_closure(Terms?, Terms?, Terms?, Terms?, Terms).
+cut_closure([], Found, _, _, Found?).
+cut_closure([T|Todo], Found, Done, Tys, Out?) :- ground(T?), ground(Done?) |
+    member(T?, Done?, A), cut_closure1(A?, T?, Todo?, Found?, Done?, Tys?, Out).
+procedure cut_closure1(Ans?, _?, Terms?, Terms?, Terms?, Terms?, Terms).
+cut_closure1(yes, _, Todo, Found, Done, Tys, Out?) :- cut_closure(Todo?, Found?, Done?, Tys?, Out).
+cut_closure1(no, T, Todo, Found, Done, Tys, Out?) :- ground(T?), ground(Tys?) |
+    z_names(Zs), expand(T?, Tys?, [], none, Zs?, Vs), variants_cuts(Vs?, Cs0), dedup(Cs0?, Cs),
+    cut_closure2(Cs?, T?, Todo?, Found?, Done?, Tys?, Out).
+procedure cut_closure2(Terms?, _?, Terms?, Terms?, Terms?, Terms?, Terms).
+cut_closure2(Cs, T, Todo, Found, Done, Tys, Out?) :- ground(Cs?) |
+    add_new(Cs?, Found?, Found1), append(Todo?, Cs?, Todo1),
+    cut_closure(Todo1?, Found1?, [T?|Done?], Tys?, Out).
+procedure add_new(Terms?, Terms?, Terms).
+add_new([], Found, Found?).
+add_new([T|Ts], Found, Out?) :- ground(T?), ground(Found?) |
+    member(T?, Found?, A), add_new1(A?, T?, Found?, Found1), add_new(Ts?, Found1?, Out).
+procedure add_new1(Ans?, _?, Terms?, Terms).
+add_new1(yes, _, Found, Found?).
+add_new1(no, T, Found, Out?) :- append(Found?, [T?], Out).
+procedure extra_hps(Terms?, Terms?, Integer?, Terms).
+extra_hps([], _, _, []).
+extra_hps([T|Ts], Found0, K, Ps?) :- ground(T?), ground(Found0?), integer(K?) |
+    member(T?, Found0?, A), extra_hp(A?, T?, Ts?, Found0?, K?, Ps).
+procedure extra_hp(Ans?, _?, Terms?, Terms?, Integer?, Terms).
+extra_hp(yes, _, Ts, Found0, K, Ps?) :- extra_hps(Ts?, Found0?, K?, Ps).
+extra_hp(no, T, Ts, Found0, K, [P?|Ps?]) :- integer(K?) |
+    answer_name(K?, Nm), hp_named(T?, Nm?, P), K1 := K? + 1, extra_hps(Ts?, Found0?, K1?, Ps).
+procedure hp_named(_?, _?, _).
+hp_named(T, Nm, hp(T?, Nm?)).
+%% hp_name(T?, Ps?, Nm): Nm is the name of the answer procedure of the type T.
+procedure hp_name(_?, Terms?, _).
+hp_name(_, [], none).
+hp_name(T, [hp(T1, Nm)|_], Nm?) :- T? =?= T1? | true.
+hp_name(T, [_|Ps], Nm?) :- otherwise | hp_name(T?, Ps?, Nm).
+
+%% ===========================================================================
 %% The population (Section 4, "The person process" and "The run")
 %% ===========================================================================
 
 %% population(V?, S?, Tail?, Ls): the person process --- its types, the person
-%% procedures it calls, one clause per person declaration, and the answers it
-%% logs --- then the run declaration and each agent's stochastic person, its
-%% profile drawn in each dimension.
+%% procedures it calls, one clause per person declaration and form of the
+%% question, and the answers it hands over and logs --- then the run
+%% declaration and each agent's stochastic person, its profile drawn in each
+%% dimension.
 procedure population(Terms?, Terms?, Terms?, Terms).
 population(V, S, Tl, Ls?) :- ground(V?), ground(S?) |
-    interactives(V?, Its0), types(V?, Tys), its(Its0?, Tys?, 1, Its),
-    binds(S?, none, Bs), runs(S?, Rs),
-    population0(Rs?, Its?, Bs?, Tl?, Ls).
-procedure population0(Terms?, Terms?, Terms?, Terms?, Terms).
-population0([run(N, Mixes, C, U, Seed)], Its, Bs, Tl, Ls?) :- ground(Mixes?) |
+    interactives(V?, Its), types(V?, Tys), binds(S?, none, Bs), runs(S?, Rs),
+    population_p(Its?, Tys?, Rs?, Bs?, Tl?, Ls).
+procedure population_p(Terms?, Terms?, Terms?, Terms?, Terms?, Terms).
+population_p(Its, Tys, Rs, Bs, Tl, Ls?) :- ground(Its?), ground(Tys?) |
+    plan(Its?, Tys?, Pl), population0(Rs?, Its?, Tys?, Pl?, Bs?, Tl?, Ls).
+procedure population0(Terms?, Terms?, Terms?, _?, Terms?, Terms?, Terms).
+population0([run(N, Mixes, C, U, Seed)], Its, Tys, Pl, Bs, Tl, Ls?) :- ground(Mixes?) |
     dims(Mixes?, 1, Ds),
-    population1(Its?, Bs?, Ds?, run(N?, Mixes?, C?, U?, Seed?), Tl?, Ls).
-population0(Rs, _, _, Tl, Tl?) :- otherwise, ground(Rs?) | true.
-
-%% its(Its0?, Tys?, K?, Its): Its is it(T, M, Af, F, As, Nm) for each
-%% interactive type it(T, M, Af) of Its0, Af the functor of its asks, F and As
-%% the functor and the argument types of its one alternative, Nm the name of
-%% the procedure that logs its answer, the K-th of answer_names.
-procedure its(Terms?, Terms?, Integer?, Terms).
-its([], _, _, []).
-its([it(T, M, Af)|Its0], Tys, K, [It?|Its?]) :- ground(Tys?), integer(K?), ground(T?) |
-    type_alts(T?, Tys?, Alts), answer_names(ANs), nth(K?, ANs?, Nm),
-    it_record(Alts?, T?, M?, Af?, Nm?, It),
-    K1 := K? + 1, its(Its0?, Tys?, K1?, Its).
-procedure it_record(Terms?, _?, _?, _?, _?, _).
-it_record([A], T, M, Af, Nm, it(T?, M?, Af?, F?, As?, Nm?)) :- parts(A?, F, As).
-it_record(As, _, _, _, _, none) :- otherwise, ground(As?) | true.
-procedure type_alts(_?, Terms?, Terms).
-type_alts(_, [], []).
-type_alts(T, [type(N, As)|_], As?) :- T? =?= N? | true.
-type_alts(T, [type(N, _)|Tys], As?) :- T? =?\= N? | type_alts(T?, Tys?, As).
+    population1(Its?, Tys?, Pl?, Bs?, Ds?, run(N?, Mixes?, C?, U?, Seed?), Tl?, Ls).
+population0(Rs, _, _, _, _, Tl, Tl?) :- otherwise, ground(Rs?) | true.
 
 %% dims(Mixes?, J?, Ds): Ds is dim(J, D, Qs, Ts, Nm) for each dimension D of
 %% the run declaration, J its position, Qs its profiles, Ts its thresholds ---
@@ -660,14 +1042,14 @@ thresholds([], _, []).
 thresholds([_], _, []).
 thresholds([P, P1|Ps], A, [T?|Ts?]) :- T := A? + P?, thresholds([P1?|Ps?], T?, Ts).
 
-procedure population1(Terms?, Terms?, Terms?, _?, Terms?, Terms).
-population1(Its, Bs, Ds, Run, Tl, ['', '%% The run declaration of the source:', C?|L1?]) :-
-    ground(Its?), ground(Bs?), ground(Ds?), ground(Run?) |
+procedure population1(Terms?, Terms?, _?, Terms?, Terms?, _?, Terms?, Terms).
+population1(Its, Tys, Pl, Bs, Ds, Run, Tl, ['', '%% The run declaration of the source:', C?|L1?]) :-
+    ground(Its?), ground(Tys?), ground(Pl?), ground(Bs?), ground(Ds?), ground(Run?) |
     plain(Run?, R), C =.. ['%% ', R?],
     pp_types(Its?, Ds?, L2?, L1),
     pp_imports(Its?, Bs?, L3?, L2),
-    pp_person(Its?, Bs?, Ds?, L4?, L3),
-    pp_answers(Its?, L5?, L4),
+    pp_person(Pl?, Bs?, Ds?, L4?, L3),
+    pp_answers(Pl?, Tys?, L5?, L4),
     pp_run(Run?, Ds?, Tl?, L5).
 
 %% The types: the stochastic person, one profile per dimension; and the asks
@@ -685,12 +1067,7 @@ procedure pp_types(Terms?, Terms?, Terms?, Terms).
 pp_types(Its, Ds, Tl, ['', 'Profiles', '::=', P?, '.'|L1?]) :- ground(Its?), ground(Ds?) |
     dim_types(Ds?, Nms), P =.. [profiles|Nms?],
     dim_defs(Ds?, ['Ask ::= ask(Constant, Question).', 'Question', '::='|L2?], L1),
-    real_its(Its?, Its1),
-    q_alts(Its1?, ['.'|Tl?], L2).
-procedure real_its(Terms?, Terms).
-real_its([], []).
-real_its([it(T, M, Af, F, As, Nm)|Its], [it(T?, M?, Af?, F?, As?, Nm?)|Its1?]) :- real_its(Its?, Its1).
-real_its([none|Its], Its1?) :- real_its(Its?, Its1).
+    q_alts(Its?, ['.'|Tl?], L2).
 %% q_alts(Its?, Tail?, Ls): the alternatives of Question, one per interactive
 %% type, separated by ;.  q_alt(It?, Tail?, Ls): the alternative t(T) of the
 %% interactive type It, T as written where it is in writer mode and T? where
@@ -701,9 +1078,9 @@ q_alts([], Tl, Tl?).
 q_alts([It], Tl, Ls?) :- q_alt(It?, Tl?, Ls).
 q_alts([It, It1|Its], Tl, Ls?) :- q_alts([It1?|Its?], Tl?, Ls1), q_alt(It?, [';'|Ls1?], Ls).
 procedure q_alt(_?, Terms?, Terms).
-q_alt(it(T, output, Af, _, _, _), Tl, [P?|Tl?]) :- ground(T?), ground(Af?) |
+q_alt(it(T, output, Af), Tl, [P?|Tl?]) :- ground(T?), ground(Af?) |
     compose(Af?, [T?], A), plain(A?, P).
-q_alt(it(T, input, Af, _, _, _), Tl, [Af?, '('|Ls?]) :- ground(T?), ground(Af?) |
+q_alt(it(T, input, Af), Tl, [Af?, '('|Ls?]) :- ground(T?), ground(Af?) |
     type_lines(dual(T?), [')'|Tl?], Ls).
 procedure dim_types(Terms?, Terms).
 dim_types([], []).
@@ -728,34 +1105,39 @@ imports([bp(T, P)|Ps], Its, Tl, Ls?) :- ground(Its?), ground(T?) |
     decl(['imported procedure', profiles, '#'], P?, [PT?, dual('Integer'), dual('MutualRef')], Ls1?, Ls).
 procedure it_of(_?, Terms?, _).
 it_of(_, [], none).
-it_of(T, [it(T1, M, Af, F, As, Nm)|_], it(T1?, M?, Af?, F?, As?, Nm?)) :- T? =?= T1? | true.
-it_of(T, [it(T1, _, _, _, _, _)|Its], It?) :- T? =?\= T1? | it_of(T?, Its?, It).
-it_of(T, [none|Its], It?) :- it_of(T?, Its?, It).
+it_of(T, [it(T1, M, Af)|_], it(T1?, M?, Af?)) :- T? =?= T1? | true.
+it_of(T, [it(T1, _, _)|Its], It?) :- T? =?\= T1? | it_of(T?, Its?, It).
 procedure person_type(_?, _).
-person_type(it(T, output, _, _, _, _), dual(T?)).
-person_type(it(T, input, _, _, _, _), T?).
+person_type(it(T, output, _), dual(T?)).
+person_type(it(T, input, _), T?).
 person_type(none, none).
 
 %% The person process: one clause per person declaration T =::= P of a
-%% profile Q of the dimension J, in the order of the source, then the clause of
-%% the closed stream.  It reads the ask stream of the agent's initial goal, in
-%% the dispatcher's place (Section 3, Definition "Simulation Program"), and
-%% selects an ask ask(T, t(X)) by its functor t, the one the compilation gives
-%% the interactive type T: the asks are of the type union Question, whose
-%% alternatives have distinct functors (TGLP, "Type Declarations"), and the
-%% interactive type, the ask's constant, it passes on to the log.
-procedure pp_person(Terms?, Terms?, Terms?, Terms?, Terms).
-pp_person(Its, Bs, Ds, Tl,
+%% profile Q of the dimension J and form of the question, in the order of the
+%% source, then the clause of the closed stream.  It reads the ask stream of
+%% the agent's initial goal, in the dispatcher's place (Section 3, Definition
+%% "Simulation Program"), and selects an ask ask(T, t(X)) by its functor t,
+%% the one the compilation gives the interactive type T: the asks are of the
+%% type union Question, whose alternatives have distinct functors (TGLP,
+%% "Type Declarations"), and the interactive type, the ask's constant, it
+%% passes on to the log.
+procedure pp_person(_?, Terms?, Terms?, Terms?, Terms).
+pp_person(plan(Rs, _), Bs, Ds, Tl,
           ['', '%% The person process (sGLP\'s paper, Section 4, "The person process").',
            'exported procedure person(Integer?, Profiles?, MutualRef?, Integer?, MutualRef?, Stream(Ask)?).'|Ls?]) :-
-    person_clauses(Bs?, Its?, Ds?, ['person(_, _, _, _, _, []).'|Tl?], Ls).
+    person_clauses(Bs?, Rs?, Ds?, ['person(_, _, _, _, _, []).'|Tl?], Ls).
 procedure person_clauses(Terms?, Terms?, Terms?, Terms?, Terms).
 person_clauses([], _, _, Tl, Tl?).
-person_clauses([b(Q, T, P)|Bs], Its, Ds, Tl, Ls?) :-
-    ground(Its?), ground(Ds?), ground(T?), ground(Q?) |
-    person_clauses(Bs?, Its?, Ds?, Tl?, Ls1),
-    it_of(T?, Its?, It), dim_of(Q?, Ds?, J), length(Ds?, ND),
-    person_clause(It?, Q?, J?, ND?, P?, Ls1?, Ls).
+person_clauses([b(Q, T, P)|Bs], Rs, Ds, Tl, Ls?) :-
+    ground(Rs?), ground(Ds?), ground(T?), ground(Q?) |
+    person_clauses(Bs?, Rs?, Ds?, Tl?, Ls1),
+    root_of(T?, Rs?, R), dim_of(Q?, Ds?, J), length(Ds?, ND),
+    person_clause(R?, Q?, J?, ND?, P?, Ls1?, Ls).
+procedure root_of(_?, Terms?, _).
+root_of(_, [], none).
+root_of(T, [wr(T1, Af, Was)|_], wr(T1?, Af?, Was?)) :- T? =?= T1? | true.
+root_of(T, [rd(T1, Af, Nm)|_], rd(T1?, Af?, Nm?)) :- T? =?= T1? | true.
+root_of(T, [_|Rs], R?) :- otherwise | root_of(T?, Rs?, R).
 procedure dim_of(_?, Terms?, Integer).
 dim_of(_, [], 0).
 dim_of(Q, [dim(J, _, Qs, _, _)|Ds], K?) :- ground(Q?) | member(Q?, Qs?, A), dim_of1(A?, J?, Q?, Ds?, K).
@@ -763,56 +1145,80 @@ procedure dim_of1(Ans?, Integer?, _?, Terms?, Integer).
 dim_of1(yes, J, _, _, J?).
 dim_of1(no, _, Q, Ds, K?) :- dim_of(Q?, Ds?, K).
 
-%% person_clause(It?, Q?, J?, ND?, P?, Tail?, Ls): the clause of the person
-%% declaration T =::= P of the profile Q of the J-th of ND dimensions, T the
-%% interactive type It: on an ask ask(Type, t(E)) of T, E the person's end of
-%% the question's variable, the end the ask carries, and t the functor the
-%% compilation gives T, the rest of the asks As, it draws from its seed Seed a value K
-%% of 1..2147483646 and its next seed S, spawns P on a copy of the question,
-%% K as the goal's seed and the monitor's reference, and the answer procedure
-%% of T, and goes on with As and S, so that the goal's draws and the process's
-%% are on different seed chains (Section 3, Definition "Person Process,
-%% Simulation Program, Stochastic Agent"; Section 4, "The person process";
-%% Appendix B, "Seeds").  The clause is by T's mode (Section 3: "The end the
-%% ask carries is the writer where T is in reader mode and the reader where it
-%% is in writer mode"; vGLP, Definition "Canonical Compilation": X and X?
-%% exchanged in writer mode).  In writer mode the ask carries the reader, the
-%% program writes the question and the person answers in it: the clause takes
-%% the question once each argument the program writes is ground, and the copy
-%% is the question with each answer a fresh variable.  In reader mode the ask
-%% carries the writer and the person writes the whole term: the clause takes
-%% the writer X, and the copy is a fresh writer Y, which the person goal
-%% writes, its first argument being of the dual of T?, T in writer mode, and
-%% which the answer procedure assigns to X; the program holds the reader X?.
+%% person_clause(R?, Q?, J?, ND?, P?, Tail?, Ls): the clauses of the person
+%% declaration T =::= P of the profile Q of the J-th of ND dimensions, R the
+%% root of T: on an ask ask(Type, t(E)) of T, E the person's end of the
+%% question's variable, the end the ask carries, and t the functor the
+%% compilation gives T, the rest of the asks As, it draws from its seed Seed a
+%% value K of 1..2147483646 and its next seed S, spawns P on a copy of the
+%% question, K as the goal's seed and the monitor's reference, and the answer
+%% procedure of the form, and goes on with As and S, so that the goal's draws
+%% and the process's are on different seed chains (Section 3, Definition
+%% "Person Process, Simulation Program, Stochastic Agent"; Section 4, "The
+%% person process"; Appendix B, "Seeds").  The clause is by T's mode (Section
+%% 3: "The end the ask carries is the writer where T is in reader mode and the
+%% reader where it is in writer mode"; vGLP, Definition "Canonical
+%% Compilation": X and X? exchanged in writer mode).  In writer mode the ask
+%% carries the reader, the program writes the question and the person answers
+%% in it, one clause per alternative of T: the clause takes the question once
+%% each argument the program writes is ground, and the copy is the question
+%% with each argument the person writes a fresh writer, its answer procedure
+%% none where it has none.  In reader mode the ask carries the writer and the
+%% person writes the whole term: the clause takes the writer X, and the copy is
+%% a fresh writer Y, which the person goal writes, its first argument being of
+%% the dual of T?, T in writer mode, and which the answer procedure hands to
+%% X; the program holds the reader X?.
 procedure person_clause(_?, _?, Integer?, Integer?, _?, Terms?, Terms).
-person_clause(it(_, output, Af, F, As, Nm), Q, J, ND, P, Tl, Ls?) :- ground(As?) |
-    length(As?, NA), x_names(Xs0), y_names(Ys0), d_names(Dn0),
-    take(NA?, Xs0?, Xs), take(NA?, Ys0?, Ys), take(ND?, Dn0?, Dn),
-    person_clause1(Xs?, Ys?, Dn?, Af?, F?, As?, Nm?, Q?, J?, P?, Tl?, Ls).
-person_clause(it(_, input, Af, _, _, Nm), Q, J, ND, P, Tl, Ls?) :- integer(ND?) |
+person_clause(wr(_, Af, Was), Q, J, ND, P, Tl, Ls?) :- integer(ND?), ground(Was?) |
+    d_names(Dn0), take(ND?, Dn0?, Dn), w_clauses(Was?, Af?, Dn?, Q?, J?, P?, Tl?, Ls).
+person_clause(rd(_, Af, Nm), Q, J, ND, P, Tl, Ls?) :- integer(ND?) |
     d_names(Dn0), take(ND?, Dn0?, Dn),
     person_clause_r(Dn?, Af?, Nm?, Q?, J?, P?, Tl?, Ls).
 person_clause(none, _, _, _, _, Tl, Tl?).
-
-procedure person_clause1(Terms?, Terms?, Terms?, _?, _?, Terms?, _?, _?, Integer?, _?, Terms?, Terms).
-person_clause1(Xs, Ys, Dn, Af, F, As, Nm, Q, J, P, Tl, Ls?) :-
-    ground(Xs?), ground(Ys?), ground(F?), ground(As?) |
-    profiles_terms(Dn?, J?, Q?, 1, PW, PR),
-    question(As?, Xs?, Qa), compose(F?, Qa?, Qt), compose(Af?, [Qt?], At),
+procedure w_clauses(Terms?, _?, Terms?, _?, Integer?, _?, Terms?, Terms).
+w_clauses([], _, _, _, _, _, Tl, Tl?).
+w_clauses([wa(A, Nm)|Was], Af, Dn, Q, J, P, Tl, Ls?) :-
+    ground(Af?), ground(Dn?), ground(Q?), integer(J?), ground(P?) |
+    w_clauses(Was?, Af?, Dn?, Q?, J?, P?, Tl?, Ls1),
+    w_clause(A?, Nm?, Af?, Dn?, Q?, J?, P?, Ls1?, Ls).
+procedure w_clause(_?, _?, _?, Terms?, _?, Integer?, _?, Terms?, Terms).
+w_clause('$prim'(G), _, Af, Dn, Q, J, P, Tl, Ls?) :- ground(G?) |
+    Gd =.. [G?, var('X1?')],
+    person_clause1(Af?, var('X1'), [Gd?], var('X1?'), [], Dn?, Q?, J?, P?, Tl?, Ls).
+w_clause(A, Nm, Af, Dn, Q, J, P, Tl, Ls?) :- otherwise, compound(A?), ground(A?), ground(Nm?) |
+    parts_n(A?, F, As, NA), x_names(Xs0), y_names(Ys0),
+    take(NA?, Xs0?, Xs), take(NA?, Ys0?, Ys),
+    w_clause1(Xs?, Ys?, F?, As?, Nm?, Af?, Dn?, Q?, J?, P?, Tl?, Ls).
+w_clause(A, _, Af, Dn, Q, J, P, Tl, Ls?) :- otherwise, constant(A?) |
+    person_clause1(Af?, A?, [], A?, [], Dn?, Q?, J?, P?, Tl?, Ls).
+procedure w_clause1(Terms?, Terms?, _?, Terms?, _?, _?, Terms?, _?, Integer?, _?, Terms?, Terms).
+w_clause1(Xs, Ys, F, As, Nm, Af, Dn, Q, J, P, Tl, Ls?) :-
+    ground(Xs?), ground(Ys?), ground(F?), ground(As?), ground(Nm?) |
+    question(As?, Xs?, Qa), compose(F?, Qa?, Qt),
     guards(As?, Xs?, Gs),
     copy(As?, Xs?, Ys?, Ca), compose(F?, Ca?, Ct),
     answer_args(As?, Xs?, Ys?, AA), answers_of(As?, Xs?, Ws),
     append(AA?, Ws?, AA1), append(AA1?, [var('Mon?'), var('Log?')], AA2),
-    compose(Nm?, [var('A?'), var('Type?')|AA2?], AG),
+    answer_goal(Nm?, [var('A?'), var('Type?')|AA2?], AG),
+    person_clause1(Af?, Qt?, Gs?, Ct?, AG?, Dn?, Q?, J?, P?, Tl?, Ls).
+%% answer_goal(Nm?, Args?, Gs): the answer procedure's goal, none where Nm is
+%% none.
+procedure answer_goal(_?, Terms?, Terms).
+answer_goal(none, _, []).
+answer_goal(Nm, Args, [G?]) :- Nm? =?\= none, ground(Args?) | compose(Nm?, Args?, G).
+%% person_clause1(Af?, Qt?, Gs?, Ct?, AG?, Dn?, Q?, J?, P?, Tail?, Ls): the
+%% clause on the ask ask(Type, Af(Qt)), its guards Gs, spawning P on the copy
+%% Ct, and the goals AG.
+procedure person_clause1(_?, _?, Terms?, _?, Terms?, Terms?, _?, Integer?, _?, Terms?, Terms).
+person_clause1(Af, Qt, Gs, Ct, AG, Dn, Q, J, P, Tl, Ls?) :- ground(Ct?), ground(P?) |
+    profiles_terms(Dn?, J?, Q?, 1, PW, PR),
+    compose(Af?, [Qt?], At),
     G =.. [P?, Ct?, var('K?'), var('Mon?')],
+    append([random(var('Seed?'), 2147483646, var('K'), var('S')), '#'(profiles, G?)], AG?, B1),
+    append(B1?, [person(var('A?'), PR?, var('Mon?'), var('S?'), var('Log?'), var('As?'))], B),
     clause(person(var('A'), PW?, var('Mon'), var('Seed'), var('Log'),
                   [ask(var('Type'), At?) | var('As')]),
-           Gs?,
-           [random(var('Seed?'), 2147483646, var('K'), var('S')),
-            '#'(profiles, G?),
-            AG?,
-            person(var('A?'), PR?, var('Mon?'), var('S?'), var('Log?'), var('As?'))],
-           Tl?, Ls).
+           Gs?, B?, Tl?, Ls).
 
 %% person_clause_r(Dn?, Af?, Nm?, Q?, J?, P?, Tail?, Ls): the clause in reader
 %% mode: the head takes the ask ask(Type, t(X?)), t the functor Af of the
@@ -822,18 +1228,8 @@ person_clause1(Xs, Ys, Dn, Af, F, As, Nm, Q, J, P, Tl, Ls?) :-
 procedure person_clause_r(Terms?, _?, _?, _?, Integer?, _?, Terms?, Terms).
 person_clause_r(Dn, Af, Nm, Q, J, P, Tl, Ls?) :-
     ground(Dn?), ground(Af?), ground(Nm?), ground(P?) |
-    profiles_terms(Dn?, J?, Q?, 1, PW, PR),
-    compose(Af?, [var('X?')], At),
-    G =.. [P?, var('Y'), var('K?'), var('Mon?')],
     compose(Nm?, [var('A?'), var('Type?'), var('Y?'), var('X'), var('Mon?'), var('Log?')], AG),
-    clause(person(var('A'), PW?, var('Mon'), var('Seed'), var('Log'),
-                  [ask(var('Type'), At?) | var('As')]),
-           [],
-           [random(var('Seed?'), 2147483646, var('K'), var('S')),
-            '#'(profiles, G?),
-            AG?,
-            person(var('A?'), PR?, var('Mon?'), var('S?'), var('Log?'), var('As?'))],
-           Tl?, Ls).
+    person_clause1(Af?, var('X?'), [], var('Y'), [AG?], Dn?, Q?, J?, P?, Tl?, Ls).
 
 %% profiles_terms(Dn?, J?, Q?, I?, PW, PR): the stochastic person in the
 %% clause's head, Q in the J-th dimension and a variable of Dn in each other,
@@ -883,52 +1279,102 @@ answers_of([dual(_)|As], [n(W, _)|Xs], [var(W?)|Ws?]) :- answers_of(As?, Xs?, Ws
 answers_of([A|As], [_|Xs], Ws?) :- otherwise, ground(A?) | answers_of(As?, Xs?, Ws).
 answers_of([_|_], [], []).
 
-%% The answer procedures, one per interactive type T: once each answer of the
-%% copy is ground, it assigns the program's answer with it, asks the monitor
-%% for the clock and logs entry(Time, Agent, Type, Term), Term the question's
-%% term with the answer in place (Section 4, "The log"; Appendix B).  In
-%% writer mode the answers are the arguments the person writes; in reader mode
-%% the answer is the whole term, the copy Y, and the program's variable is
-%% assigned with it (pp_answer_r/4).
-procedure pp_answers(Terms?, Terms?, Terms).
-pp_answers([], Tl, Tl?).
-pp_answers([it(_, output, _, F, As, Nm)|Its], Tl, ['', '%% The answer, assigned and logged (Section 4, "The log").'|Ls?]) :- ground(As?) |
-    pp_answers(Its?, Tl?, Ls2),
-    length(As?, NA), x_names(Xs0), y_names(Ys0), take(NA?, Xs0?, Xs), take(NA?, Ys0?, Ys),
-    pp_answer(Xs?, Ys?, F?, As?, Nm?, Ls2?, Ls).
-pp_answers([it(T, input, _, _, _, Nm)|Its], Tl, ['', '%% The answer, assigned and logged (Section 4, "The log").'|Ls?]) :- ground(T?) |
-    pp_answers(Its?, Tl?, Ls2),
-    pp_answer_r(T?, Nm?, Ls2?, Ls).
-pp_answers([none|Its], Tl, Ls?) :- pp_answers(Its?, Tl?, Ls).
-
-%% pp_answer_r(T?, Nm?, Tail?, Ls): the answer procedure of an interactive
-%% type T in reader mode, Nm(A, Type, Y, Y?, Mon, Log), declared
-%% Nm(Integer?, Constant?, T?, T, MutualRef?, MutualRef?): once the copy Y,
-%% which the person goal writes, is ground, the program's variable, its fourth
-%% argument, is assigned with it, and it is logged.
-procedure pp_answer_r(_?, _?, Terms?, Terms).
-pp_answer_r(T, Nm, Ls2, Ls?) :- ground(T?), ground(Nm?) |
+%% The answer procedures (Section 4, "The person process" and "The log";
+%% Appendix B), in the order of their names: each clause, once the positions
+%% the person writes are ground, position by position, hands the program the
+%% answer, with fresh writers at the positions the program writes, whose
+%% readers go to the person goal through the copy, asks the monitor for the
+%% clock and logs entry(Time, Agent, Type, Term), Term the term handed over,
+%% '_' at each position the program writes or the person leaves open; and
+%% spawns the answer procedure of each position left open.  wp(T, A, Nm):
+%% the answer of the alternative A of T in writer mode, its arguments each
+%% argument shown and each answer's copy, then the program's answers, the log
+%% the question with the answers in place.  hp(T1, Nm): the answer
+%% procedure of a type T1, Nm(A, Type, Y, X, Mon, Log), Y the copy and X the
+%% program's writer.
+procedure pp_answers(_?, Terms?, Terms?, Terms).
+pp_answers(plan(_, Ps), Tys, Tl, Ls?) :- ground(Ps?) | pp_procs(Ps?, Ps?, Tys?, Tl?, Ls).
+procedure pp_procs(Terms?, Terms?, Terms?, Terms?, Terms).
+pp_procs([], _, _, Tl, Tl?).
+pp_procs([P|Ps], All, Tys, Tl, ['', '%% The answer, handed over and logged (Section 4, "The person process" and "The log").'|Ls?]) :-
+    ground(All?), ground(Tys?) |
+    pp_procs(Ps?, All?, Tys?, Tl?, Ls2), pp_proc(P?, All?, Tys?, Ls2?, Ls).
+procedure pp_proc(_?, Terms?, Terms?, Terms?, Terms).
+pp_proc(wp(_, A, Nm), All, Tys, Tl, Ls?) :- ground(A?) |
+    parts(A?, F, As), pp_wp(F?, As?, Nm?, All?, Tys?, Tl?, Ls).
+pp_proc(hp(T, Nm), All, Tys, Tl, Ls?) :- ground(T?), ground(Nm?), ground(All?), ground(Tys?) |
     decl(['procedure'], Nm?, [dual('Integer'), dual('Constant'), dual(T?), T?,
                               dual('MutualRef'), dual('MutualRef')], Ls1?, Ls),
-    compose(Nm?, [var('A'), var('Type'), var('Y'), var('Y?'), var('Mon'), var('Log')], H),
-    clause(H?, [ground(var('Y?'))],
-           [stream_append(time(var('Time')), var('Mon?'), var('_')),
-            stream_append(entry(var('Time?'), var('A?'), var('Type?'), var('Y?')), var('Log?'), var('_'))],
-           Ls2?, Ls1).
-procedure pp_answer(Terms?, Terms?, _?, Terms?, _?, Terms?, Terms).
-pp_answer(Xs, Ys, F, As, Nm, Ls2, Ls?) :- ground(Xs?), ground(Ys?), ground(As?), ground(Nm?) |
+    z_names(Zs), expand(T?, Tys?, [], n('Y', 'Y?'), Zs?, Vs),
+    h_answer_clauses(Vs?, Nm?, All?, Tl?, Ls1).
+procedure pp_wp(_?, Terms?, _?, Terms?, Terms?, Terms?, Terms).
+pp_wp(F, As, Nm, All, Tys, Tl, Ls?) :- ground(As?), ground(Nm?) |
+    length(As?, NA), x_names(Xs0), y_names(Ys0), take(NA?, Xs0?, Xs), take(NA?, Ys0?, Ys),
     answer_types(As?, ATs), answer_writer_types(As?, AWs),
     append(ATs?, AWs?, Ts1), append(Ts1?, [dual('MutualRef'), dual('MutualRef')], Ts2),
     decl(['procedure'], Nm?, [dual('Integer'), dual('Constant')|Ts2?], Ls1?, Ls),
-    head_args(As?, Xs?, Ys?, HA), assigned(As?, Ys?, HW),
-    append(HA?, HW?, HA1), append(HA1?, [var('Mon'), var('Log')], HA2),
+    z_names(Zs), wvariants(As?, Xs?, Ys?, Tys?, Zs?, WVs),
+    w_answer_clauses(WVs?, F?, Nm?, All?, Tl?, Ls1).
+procedure h_answer_clauses(Terms?, _?, Terms?, Terms?, Terms).
+h_answer_clauses([], _, _, Tl, Tl?).
+h_answer_clauses([v(C, X, Gs, L, Ks, _)|Vs], Nm, All, Tl, Ls?) :- ground(Nm?), ground(All?) |
+    h_answer_clauses(Vs?, Nm?, All?, Tl?, Ls1),
+    compose(Nm?, [var('A'), var('Type'), C?, X?, var('Mon'), var('Log')], H),
+    answer_body(L?, Ks?, All?, B),
+    clause(H?, Gs?, B?, Ls1?, Ls).
+procedure w_answer_clauses(Terms?, _?, _?, Terms?, Terms?, Terms).
+w_answer_clauses([], _, _, _, Tl, Tl?).
+w_answer_clauses([w(Hs, Ws, Gs, Ls0, Ks, _)|WVs], F, Nm, All, Tl, Ls?) :- ground(F?), ground(Nm?), ground(All?) |
+    w_answer_clauses(WVs?, F?, Nm?, All?, Tl?, Ls1),
+    append(Hs?, Ws?, HA1), append(HA1?, [var('Mon'), var('Log')], HA2),
     compose(Nm?, [var('A'), var('Type')|HA2?], H),
-    answer_guards(As?, Ys?, Gs),
-    copy_read(As?, Xs?, Ys?, Es), compose(F?, Es?, E),
-    clause(H?, Gs?,
-           [stream_append(time(var('Time')), var('Mon?'), var('_')),
-            stream_append(entry(var('Time?'), var('A?'), var('Type?'), E?), var('Log?'), var('_'))],
-           Ls2?, Ls1).
+    compose(F?, Ls0?, L), answer_body(L?, Ks?, All?, B),
+    clause(H?, Gs?, B?, Ls1?, Ls).
+%% answer_body(L?, Ks?, All?, B): the clock asked, the term L logged, and the
+%% answer procedure of each position left open spawned.
+procedure answer_body(_?, Terms?, Terms?, Terms).
+answer_body(L, Ks, All, [stream_append(time(var('Time')), var('Mon?'), var('_')),
+                         stream_append(entry(var('Time?'), var('A?'), var('Type?'), L?), var('Log?'), var('_'))|Gs?]) :-
+    cut_goals(Ks?, All?, Gs).
+procedure cut_goals(Terms?, Terms?, Terms).
+cut_goals([], _, []).
+cut_goals([cut(T, C, Z)|Ks], All, [G?|Gs?]) :- ground(All?) |
+    hp_name(T?, All?, Nm), compose(Nm?, [var('A?'), var('Type?'), C?, Z?, var('Mon?'), var('Log?')], G),
+    cut_goals(Ks?, All?, Gs).
+
+%% wvariants(Ts?, Xs?, Ys?, Tys?, Ns?, WVs): the forms of the answer of an
+%% alternative in writer mode of argument types Ts, one per choice of a form
+%% for each argument the person writes: each w(Hs, Ws, Gs, Ls, Ks, Ns1), Hs
+%% the head's arguments for the arguments in order, each argument shown its
+%% writer Xi and each answer its copy's pattern, Ws the program's answers'
+%% patterns, Gs the guards, Ls the log's arguments and Ks the handover goals;
+%% an answer of a type holding no position the program writes is its copy
+%% Yi, ground.
+procedure wvariants(Terms?, Terms?, Terms?, Terms?, Terms?, Terms).
+wvariants([], _, _, _, Ns, [w([], [], [], [], [], Ns?)]).
+wvariants([dual(T)|Ts], [_|Xs], [n(YW, YR)|Ys], Tys, Ns, WVs?) :-
+    ground(Ts?), ground(Xs?), ground(Ys?), ground(Tys?), ground(T?), ground(YW?), ground(YR?), ground(Ns?) |
+    expand(T?, Tys?, [], n(YW?, YR?), Ns?, Vs), wcross(Vs?, Ts?, Xs?, Ys?, Tys?, WVs).
+wvariants([T|Ts], [n(XW, XR)|Xs], [_|Ys], Tys, Ns, WVs?) :- otherwise, ground(T?), ground(XW?), ground(XR?) |
+    wvariants(Ts?, Xs?, Ys?, Tys?, Ns?, R), wcons_shown(XW?, XR?, R?, WVs).
+wvariants([_|_], [], _, _, Ns, [w([], [], [], [], [], Ns?)]).
+wvariants([_|_], [_|_], [], _, Ns, [w([], [], [], [], [], Ns?)]).
+procedure wcross(Terms?, Terms?, Terms?, Terms?, Terms?, Terms).
+wcross([], _, _, _, _, []).
+wcross([v(C, X, Gs, L, Ks, Ns1)|Vs], Ts, Xs, Ys, Tys, WVs?) :-
+    ground(Ts?), ground(Xs?), ground(Ys?), ground(Tys?) |
+    wvariants(Ts?, Xs?, Ys?, Tys?, Ns1?, Rest), wcons_answer(C?, X?, Gs?, L?, Ks?, Rest?, W1),
+    wcross(Vs?, Ts?, Xs?, Ys?, Tys?, W2), append(W1?, W2?, WVs).
+procedure wcons_answer(_?, _?, Terms?, _?, Terms?, Terms?, Terms).
+wcons_answer(_, _, _, _, _, [], []).
+wcons_answer(C, X, G, L, K, [w(Hs, Ws, Gs, Ls, Ks, Ns)|R], [w([C?|Hs?], [X?|Ws?], Gs1?, [L?|Ls?], Ks1?, Ns?)|R1?]) :-
+    ground(C?), ground(X?), ground(G?), ground(L?), ground(K?) |
+    append(G?, Gs?, Gs1), append(K?, Ks?, Ks1), wcons_answer(C?, X?, G?, L?, K?, R?, R1).
+procedure wcons_shown(_?, _?, Terms?, Terms).
+wcons_shown(_, _, [], []).
+wcons_shown(XW, XR, [w(Hs, Ws, Gs, Ls, Ks, Ns)|R], [w([var(XW?)|Hs?], Ws?, Gs?, [var(XR?)|Ls?], Ks?, Ns?)|R1?]) :-
+    ground(XW?), ground(XR?) | wcons_shown(XW?, XR?, R?, R1).
+
 procedure undual(_?, _).
 undual(dual(T), U?) :- undual(T?, U).
 undual([], []).
@@ -945,28 +1391,6 @@ procedure answer_writer_types(Terms?, Terms).
 answer_writer_types([], []).
 answer_writer_types([dual(T)|As], [U?|Ts?]) :- undual(T?, U), answer_writer_types(As?, Ts).
 answer_writer_types([A|As], Ts?) :- otherwise, ground(A?) | answer_writer_types(As?, Ts).
-procedure head_args(Terms?, Terms?, Terms?, Terms).
-head_args([], _, _, []).
-head_args([dual(_)|As], [_|Xs], [n(W, _)|Ys], [var(W?)|Hs?]) :- head_args(As?, Xs?, Ys?, Hs).
-head_args([A|As], [n(W, _)|Xs], [_|Ys], [var(W?)|Hs?]) :- otherwise, ground(A?) | head_args(As?, Xs?, Ys?, Hs).
-head_args([_|_], [], _, []).
-head_args([_|_], [_|_], [], []).
-procedure assigned(Terms?, Terms?, Terms).
-assigned([], _, []).
-assigned([dual(_)|As], [n(_, R)|Ys], [var(R?)|Ws?]) :- assigned(As?, Ys?, Ws).
-assigned([A|As], [_|Ys], Ws?) :- otherwise, ground(A?) | assigned(As?, Ys?, Ws).
-assigned([_|_], [], []).
-procedure answer_guards(Terms?, Terms?, Terms).
-answer_guards([], _, []).
-answer_guards([dual(_)|As], [n(_, R)|Ys], [ground(var(R?))|Gs?]) :- answer_guards(As?, Ys?, Gs).
-answer_guards([A|As], [_|Ys], Gs?) :- otherwise, ground(A?) | answer_guards(As?, Ys?, Gs).
-answer_guards([_|_], [], []).
-procedure copy_read(Terms?, Terms?, Terms?, Terms).
-copy_read([], _, _, []).
-copy_read([dual(_)|As], [_|Xs], [n(_, R)|Ys], [var(R?)|Cs?]) :- copy_read(As?, Xs?, Ys?, Cs).
-copy_read([A|As], [n(_, R)|Xs], [_|Ys], [var(R?)|Cs?]) :- otherwise, ground(A?) | copy_read(As?, Xs?, Ys?, Cs).
-copy_read([_|_], [], _, []).
-copy_read([_|_], [_|_], [], []).
 
 %% The run declaration (Section 3; Section 4, "The run"; Appendix B): the
 %% declaration itself, declaration/N, its agents, horizon, seed and the
@@ -1157,9 +1581,8 @@ check_mixes1(ND, ND1, NT, R, Ds, [E?]) :-
     E =.. ['%% not transformed: dimensions (at most nine, named apart and not reserved, at most nine thresholds)', Ds?].
 procedure reserved(Terms?, Ans).
 reserved(Ds, A?) :- ground(Ds?) |
-    any_member(Ds?, [person, stochastic_person, declaration, answer_1, answer_2,
-                     answer_3, answer_4, answer_5, answer_6, answer_7, answer_8,
-                     answer_9, random, true], A).
+    answer_names(ANs), append([person, stochastic_person, declaration, random, true], ANs?, R),
+    any_member(Ds?, R?, A).
 procedure mix_names(Terms?, Terms).
 mix_names([], []).
 mix_names([mix(D, _)|Ms], [D?|Ds?]) :- mix_names(Ms?, Ds).
@@ -1223,20 +1646,25 @@ procedure check_known1(Ans?, _?, Terms?, Terms?, Terms).
 check_known1(yes, _, Qs, Ps, Es?) :- check_known(Qs?, Ps?, Es).
 check_known1(no, Q, Qs, Ps, [E?|Es?]) :- E =.. ['%% not transformed: no profile', Q?], check_known(Qs?, Ps?, Es).
 
-%% The interactive types: each defined, by one alternative, a compound term of
-%% one to nine arguments; in writer mode, one at least an answer, dual(T), an
-%% argument the person writes in the question the program writes; in reader
-%% mode, none dual(T), the person writing the whole term, which is the answer
-%% the person process assigns once it is ground (Section 4, "The person
-%% process"); at most nine; the functors the compilation gives them, which
-%% their declarations carry, distinct, the person process's questions being
-%% of their union (vGLP, Definition "Canonical Compilation"; TGLP, "Type
-%% Declarations": type union is for types with disjoint top-level functors).
+%% The interactive types: each defined by the interface, and over types it
+%% defines or primitive ones; in writer mode, each alternative of at most
+%% nine arguments, and no position the person writes inside an argument the
+%% program writes (the person process shows the person the question once each
+%% argument the program writes is ground, and logs the question as shown,
+%% which such an argument never is before the answer: a case the paper does
+%% not decide, refused until it does); at most nine; the functors the
+%% compilation gives them, which their declarations carry, distinct, the
+%% person process's questions being of their union (vGLP, Definition
+%% "Canonical Compilation"; TGLP, "Type Declarations": type union is for types
+%% with disjoint top-level functors); and names left for the answer
+%% procedures and the positions they take.  A type in reader mode with
+%% positions the program writes is the person process's, its answer handed
+%% over with fresh writers there (Section 4, "The person process").
 procedure check_interactives(Terms?, Terms?, Terms).
 check_interactives(Its0, Tys, Es?) :- ground(Its0?), ground(Tys?) |
     length(Its0?, N), check_its(Its0?, Tys?, E1), check_count(N?, 9, 'interactive types', E2),
-    it_functors(Its0?, Fs), check_functors(Fs?, E3),
-    append(E2?, E1?, E12), append(E12?, E3?, Es).
+    it_functors(Its0?, Fs), check_functors(Fs?, E3), check_plan(Its0?, Tys?, E4),
+    append(E2?, E1?, E12), append(E12?, E3?, E123), append(E123?, E4?, Es).
 procedure it_functors(Terms?, Terms).
 it_functors([], []).
 it_functors([it(_, _, Af)|Its], [Af?|Fs?]) :- it_functors(Its?, Fs).
@@ -1254,22 +1682,79 @@ check_count(N, Max, What, [E?]) :- N? > Max?, ground(What?) | E =.. ['%% not tra
 procedure check_its(Terms?, Terms?, Terms).
 check_its([], _, []).
 check_its([it(T, M, _)|Its], Tys, Es?) :- ground(T?), ground(Tys?) |
-    type_alts(T?, Tys?, As), check_it(As?, T?, M?, E1), check_its(Its?, Tys?, E2), append(E1?, E2?, Es).
-procedure check_it(Terms?, _?, _?, Terms).
-check_it([A], T, M, Es?) :- compound(A?) | parts_n(A?, _, As, N), duals(As?, 0, ND), check_it1(M?, N?, ND?, T?, Es).
-check_it(As, T, _, [E?]) :- otherwise, ground(As?), ground(T?) |
-    E =.. ['%% not transformed: an interactive type not one compound alternative', T?].
-procedure check_it1(_?, Integer?, Integer?, _?, Terms).
-check_it1(output, N, ND, _, []) :- N? >= 1, N? =< 9, ND? >= 1 | true.
-check_it1(input, N, ND, _, []) :- N? >= 1, N? =< 9, ND? =:= 0 | true.
-check_it1(output, N, ND, T, [E?]) :- otherwise, ground(N?), ground(ND?), ground(T?) |
-    E =.. ['%% not transformed: an interactive type of one to nine arguments, an answer among them', T?].
-check_it1(input, N, ND, T, [E?]) :- otherwise, ground(N?), ground(ND?), ground(T?) |
-    E =.. ['%% not transformed: an interactive type in reader mode of one to nine arguments, none written by the program', T?].
-procedure duals(Terms?, Integer?, Integer).
-duals([], N, N?).
-duals([dual(_)|As], N, M?) :- N1 := N? + 1, duals(As?, N1?, M).
-duals([A|As], N, M?) :- otherwise, ground(A?) | duals(As?, N?, M).
+    check_it(T?, M?, Tys?, E1), check_its(Its?, Tys?, E2), append(E1?, E2?, Es).
+procedure check_it(_?, _?, Terms?, Terms).
+check_it(T, M, Tys, Es?) :- ground(T?), ground(Tys?) |
+    type_alts(T?, Tys?, As), undefined(T?, Tys?, [], Us), flat_alts(T?, Tys?, [], Fs),
+    check_it1(As?, Us?, M?, Fs?, T?, Tys?, Es).
+procedure check_it1(Terms?, Terms?, _?, Terms?, _?, Terms?, Terms).
+check_it1([], _, _, _, T, _, [E?]) :- ground(T?) |
+    E =.. ['%% not transformed: an interactive type the interface does not define', T?].
+check_it1([_|_], [_|_], _, _, T, _, [E?]) :- ground(T?) |
+    E =.. ['%% not transformed: an interactive type over a type the interface does not define', T?].
+check_it1([_|_], [], input, _, _, _, []).
+check_it1([_|_], [], output, Fs, T, Tys, Es?) :- ground(T?), ground(Fs?) |
+    alts_arity(Fs?, AA), alts_shown(Fs?, Tys?, AS), check_it2(AA?, AS?, T?, Es).
+procedure check_it2(Ans?, Ans?, _?, Terms).
+check_it2(AA, AS, T, Es?) :- ground(T?) | arity_fault(AA?, T?, E1), shown_fault(AS?, T?, E2), append(E1?, E2?, Es).
+procedure arity_fault(Ans?, _?, Terms).
+arity_fault(yes, _, []).
+arity_fault(no, T, [E?]) :- E =.. ['%% not transformed: an interactive type in writer mode of an alternative of more than nine arguments', T?].
+procedure shown_fault(Ans?, _?, Terms).
+shown_fault(yes, _, []).
+shown_fault(no, T, [E?]) :- E =.. ['%% not transformed: an interactive type in writer mode with a position the person writes inside an argument the program writes', T?].
+%% alts_arity(Fs?, A): A is yes where each alternative has at most nine
+%% arguments.
+procedure alts_arity(Terms?, Ans).
+alts_arity([], yes).
+alts_arity([A|As], R?) :- ground(A?) | alt_args(A?, Ts), length(Ts?, N), alts_arity1(N?, As?, R).
+procedure alts_arity1(Integer?, Terms?, Ans).
+alts_arity1(N, As, R?) :- N? =< 9 | alts_arity(As?, R).
+alts_arity1(N, _, no) :- N? > 9 | true.
+%% alts_shown(Fs?, Tys?, A): A is yes where no argument the program writes,
+%% of an alternative, holds a position the person writes.
+procedure alts_shown(Terms?, Terms?, Ans).
+alts_shown([], _, yes).
+alts_shown([A|As], Tys, R?) :- ground(A?), ground(Tys?) |
+    alt_args(A?, Ts), args_shown(Ts?, Tys?, R1), alts_shown1(R1?, As?, Tys?, R).
+procedure alts_shown1(Ans?, Terms?, Terms?, Ans).
+alts_shown1(yes, As, Tys, R?) :- alts_shown(As?, Tys?, R).
+alts_shown1(no, _, _, no).
+procedure args_shown(Terms?, Terms?, Ans).
+args_shown([], _, yes).
+args_shown([dual(_)|Ts], Tys, R?) :- args_shown(Ts?, Tys?, R).
+args_shown([T|Ts], Tys, R?) :- otherwise, ground(T?), ground(Tys?) |
+    mixed(T?, Tys?, [], M), args_shown1(M?, Ts?, Tys?, R).
+procedure args_shown1(Ans?, Terms?, Terms?, Ans).
+args_shown1(no, Ts, Tys, R?) :- args_shown(Ts?, Tys?, R).
+args_shown1(yes, _, _, no).
+
+%% The answer procedures (Section 4, "The person process"): a name left for
+%% each, and for each position its clauses take.
+procedure check_plan(Terms?, Terms?, Terms).
+check_plan(Its, Tys, Es?) :- ground(Its?), ground(Tys?) | plan(Its?, Tys?, Pl), check_plan1(Pl?, Tys?, Es).
+procedure check_plan1(_?, Terms?, Terms).
+check_plan1(plan(_, Ps), Tys, Es?) :- ground(Ps?), ground(Tys?) | procs_named(Ps?, Tys?, A), check_plan2(A?, Es).
+procedure check_plan2(Ans?, Terms).
+check_plan2(yes, []).
+check_plan2(no, ['%% not transformed: no names left for the answer procedures or the positions they take']).
+procedure procs_named(Terms?, Terms?, Ans).
+procs_named([], _, yes).
+procs_named([P|Ps], Tys, A?) :- ground(Tys?) | proc_named(P?, Tys?, A1), procs_named1(A1?, Ps?, Tys?, A).
+procedure procs_named1(Ans?, Terms?, Terms?, Ans).
+procs_named1(no, _, _, no).
+procs_named1(yes, Ps, Tys, A?) :- procs_named(Ps?, Tys?, A).
+procedure proc_named(_?, Terms?, Ans).
+proc_named(wp(_, _, none), _, no).
+proc_named(hp(_, none), _, no).
+proc_named(wp(_, A, Nm), Tys, Ok?) :- otherwise, ground(A?), ground(Nm?), ground(Tys?) |
+    alt_args(A?, As), wp_named(As?, Tys?, Ok).
+proc_named(hp(T, Nm), Tys, Ok?) :- otherwise, ground(T?), ground(Nm?), ground(Tys?) |
+    z_names(Zs), expand(T?, Tys?, [], n('Y', 'Y?'), Zs?, Vs), variants_named(Vs?, Ok).
+procedure wp_named(Terms?, Terms?, Ans).
+wp_named(As, Tys, Ok?) :- ground(As?) |
+    length(As?, NA), x_names(Xs0), y_names(Ys0), take(NA?, Xs0?, Xs), take(NA?, Ys0?, Ys),
+    z_names(Zs), wvariants(As?, Xs?, Ys?, Tys?, Zs?, WVs), variants_named(WVs?, Ok).
 
 %% The person declarations: each in a profile, of an interactive type, the
 %% type once in its profile.
