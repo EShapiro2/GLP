@@ -7,18 +7,18 @@
 %% Load rv_agent.glp, rv_client.glp, then this file.
 
 %% Local type redeclarations (structural identity allows sharing)
-SignalReply ::= punch(String) ; initiated ; rejected.
+SignalReply ::= punch(String) ; rejected.
 
 SignalMsg ::= reconnect(Key, Key, SignedTerm, SignalReply?)
-            ; available(Key, Key, SignalReply?).
+            ; available(Key, Key, SignedTerm, SignalReply?).
 
 PendingEntry ::= needs(Key, Key, String, SignalReply?)
-               ; ready(Key, Key, SignalReply?).
+               ; ready(Key, Key, String, SignalReply?).
 PendingList ::= [] ; [PendingEntry | PendingList].
 
 imported procedure rv_client#make_reconnect(Key?, Key?, SignedTerm?,
                                              SignalMsg, SignalReply).
-imported procedure rv_client#make_available(Key?, Key?,
+imported procedure rv_client#make_available(Key?, Key?, SignedTerm?,
                                              SignalMsg, SignalReply).
 imported procedure rv_client#handle_reply(SignalReply?).
 imported procedure rv_agent#rv_agent(Hash?, Stream(SignalMsg)?,
@@ -41,9 +41,9 @@ test1_make_reconnect(Msg?, Reply?) :-
 
 exported procedure test2_make_available(SignalMsg, SignalReply).
 test2_make_available(Msg?, Reply?) :-
-    rv_client # make_available(bob, alice, Msg, Reply).
+    rv_client # make_available(bob, alice, sig_ba, Msg, Reply).
 
-%% Expected: Msg = available(bob, alice, <unbound>)
+%% Expected: Msg = available(bob, alice, sig_ba, <unbound>)
 %%           Reply = <unbound>
 
 %% =============================================================================
@@ -51,17 +51,17 @@ test2_make_available(Msg?, Reply?) :-
 %% =============================================================================
 %%
 %% Alice's IP changed.  Alice sends reconnect; bob (having detected the
-%% disconnect) sends available.  The RV agent takes the attestation apart
-%% with signature/2 before it will match them; sig_ab is no signed term, so
-%% signature/2 assigns unsigned, admit_reconnect/7 rejects the reconnect,
-%% and bob's availability is left waiting.
+%% disconnect) sends available.  The RV agent takes each attestation apart
+%% with signature/2 before it will match them; neither sig_ab nor sig_ba
+%% is a signed term, so signature/2 assigns unsigned to each, and
+%% admit_reconnect/7 and admit_available/7 reject both.
 %%
-%% Expected: ReplyA = rejected, ReplyB unbound
+%% Expected: ReplyA = rejected, ReplyB = rejected
 
 exported procedure test3_full_scenario_a_first(SignalReply, SignalReply).
 test3_full_scenario_a_first(ReplyA?, ReplyB?) :-
     rv_client # make_reconnect(alice, bob, sig_ab, MsgA, ReplyA),
-    rv_client # make_available(bob, alice, MsgB, ReplyB),
+    rv_client # make_available(bob, alice, sig_ba, MsgB, ReplyB),
     rv_agent # rv_agent(graph_hash, [MsgA?, MsgB?], []).
 
 %% =============================================================================
@@ -69,35 +69,37 @@ test3_full_scenario_a_first(ReplyA?, ReplyB?) :-
 %% =============================================================================
 %%
 %% Bob detects the disconnect and contacts the RV agent before alice
-%% has cold-called, so his availability is stored first.  Alice's later
-%% reconnect is rejected by admit_reconnect/7, so the stored entry is never
-%% matched — the mirror of test 3, and the same outcome.
+%% has cold-called.  His availability is rejected by admit_available/7,
+%% and alice's later reconnect by admit_reconnect/7 — the mirror of test 3,
+%% and the same outcome.
 %%
-%% Expected: ReplyA = rejected, ReplyB unbound
+%% Expected: ReplyA = rejected, ReplyB = rejected
 
 exported procedure test4_full_scenario_b_first(SignalReply, SignalReply).
 test4_full_scenario_b_first(ReplyA?, ReplyB?) :-
     rv_client # make_reconnect(alice, bob, sig_ab, MsgA, ReplyA),
-    rv_client # make_available(bob, alice, MsgB, ReplyB),
+    rv_client # make_available(bob, alice, sig_ba, MsgB, ReplyB),
     rv_agent # rv_agent(graph_hash, [MsgB?, MsgA?], []).
 
 %% =============================================================================
 %% Test 5: full scenario with handle_reply dispatch
 %% =============================================================================
 %%
-%% Runs the full scenario and then dispatches on the reply the scenario
-%% binds.  Only alice's is bound — the reconnect is rejected, so bob's
-%% reply stays unbound and handle_reply on it would suspend forever
-%% rather than fail.  The punch arm is covered directly by test 7.
+%% Runs the full scenario and then has each client dispatch on the reply
+%% the scenario binds for it.  Both requests are rejected, so both replies
+%% take handle_reply's rejected arm.  The punch arm is covered directly by
+%% test 7.
 
 exported procedure test5_full_scenario_with_handlers.
 test5_full_scenario_with_handlers :-
     rv_client # make_reconnect(alice, bob, sig_ab, MsgA, ReplyA),
-    rv_client # make_available(bob, alice, MsgB, _),
+    rv_client # make_available(bob, alice, sig_ba, MsgB, ReplyB),
     rv_agent # rv_agent(graph_hash, [MsgA?, MsgB?], []),
-    rv_client # handle_reply(ReplyA?).
+    rv_client # handle_reply(ReplyA?),
+    rv_client # handle_reply(ReplyB?).
 
-%% Expected: succeeds — ReplyA = rejected takes handle_reply's rejected arm
+%% Expected: succeeds — ReplyA = ReplyB = rejected, each taking
+%% handle_reply's rejected arm
 
 %% =============================================================================
 %% Test 6: rejected proof — reply is rejected
@@ -105,15 +107,16 @@ test5_full_scenario_with_handlers :-
 %%
 %% Alice sends reconnect carrying a Sig that is not bob's signature over
 %% attest(alice, bob).  signature/2 assigns unsigned and admit_reconnect/7's
-%% otherwise clause binds rejected; the needs entry is never stored, so
-%% bob's availability finds nothing to match.
+%% otherwise clause binds rejected; the needs entry is never stored.  Bob's
+%% availability carries no signature of alice's either, and is rejected by
+%% admit_available/7.
 %%
-%% Expected: ReplyA = rejected, ReplyB unbound
+%% Expected: ReplyA = rejected, ReplyB = rejected
 
 exported procedure test6_bad_signature(SignalReply, SignalReply).
 test6_bad_signature(ReplyA?, ReplyB?) :-
     rv_client # make_reconnect(alice, bob, bad_sig, MsgA, ReplyA),
-    rv_client # make_available(bob, alice, MsgB, ReplyB),
+    rv_client # make_available(bob, alice, sig_ba, MsgB, ReplyB),
     rv_agent # rv_agent(graph_hash, [MsgA?, MsgB?], []).
 
 %% =============================================================================

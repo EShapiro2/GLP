@@ -3,28 +3,38 @@
 %% Load rv_agent.glp first, then this file, then invoke test goals.
 
 %% Local type redeclarations (structural identity allows sharing across modules)
-SignalReply ::= punch(String) ; initiated ; rejected.
+SignalReply ::= punch(String) ; rejected.
 
 PendingEntry ::= needs(Key, Key, String, SignalReply?)
-               ; ready(Key, Key, SignalReply?).
+               ; ready(Key, Key, String, SignalReply?).
 PendingList ::= [] ; [PendingEntry | PendingList].
 
 SignalMsg ::= reconnect(Key, Key, SignedTerm, SignalReply?)
-            ; available(Key, Key, SignalReply?).
+            ; available(Key, Key, SignedTerm, SignalReply?).
 
 imported procedure rv_agent#find_ready(Key?, Key?, String?,
                                         SignalReply,
                                         PendingList?, PendingList).
-imported procedure rv_agent#find_needs(Key?, Key?, SignalReply,
+imported procedure rv_agent#find_needs(Key?, Key?, String?,
+                                        SignalReply,
                                         PendingList?, PendingList).
 imported procedure rv_agent#rv_agent(Hash?, Stream(SignalMsg)?,
                                       PendingList?).
 imported procedure rv_agent#admit_reconnect(Hash?, Key?, Key?, Signature?,
                                              SignalReply,
                                              PendingList?, PendingList).
+imported procedure rv_agent#admit_available(Hash?, Key?, Key?, Signature?,
+                                             SignalReply,
+                                             PendingList?, PendingList).
 imported procedure rv_agent#match_reconnect(Key?, Key?, PeerAddress?,
                                              SignalReply,
                                              PendingList?, PendingList).
+imported procedure rv_agent#match_available(Key?, Key?, PeerAddress?,
+                                             SignalReply,
+                                             PendingList?, PendingList).
+
+%% In every test below alice @< bob and carol @< dave, so the pair of alice
+%% and bob in the fixed order is attest(alice, bob).
 
 %% =============================================================================
 %% Test 1: A arrives first, no B waiting → entry stored in pending
@@ -42,31 +52,31 @@ test1_needs_stored(Pending1?) :-
 
 exported procedure test2_ready_stored(PendingList).
 test2_ready_stored(Pending1?) :-
-    rv_agent # find_needs(alice, bob, _, [], Pending1).
+    rv_agent # find_needs(alice, bob, addr_b, _, [], Pending1).
 
-%% Expected: Pending1 = [ready(bob, alice, _)]
+%% Expected: Pending1 = [ready(bob, alice, addr_b, _)]
 
 %% =============================================================================
-%% Test 3: A arrives after B is waiting → match, replies get bound
+%% Test 3: A arrives after B is waiting → match, both told to punch
 %% =============================================================================
 
 exported procedure test3_match_find_ready(SignalReply, SignalReply, PendingList).
 test3_match_find_ready(ReplyA?, ReplyB?, Pending1?) :-
     rv_agent # find_ready(alice, bob, addr_a, ReplyA,
-                           [ready(bob, alice, ReplyB)], Pending1).
+                           [ready(bob, alice, addr_b, ReplyB)], Pending1).
 
-%% Expected: ReplyA = initiated, ReplyB = punch(addr_a), Pending1 = []
+%% Expected: ReplyA = punch(addr_b), ReplyB = punch(addr_a), Pending1 = []
 
 %% =============================================================================
-%% Test 4: B arrives after A is waiting → match, replies get bound
+%% Test 4: B arrives after A is waiting → match, both told to punch
 %% =============================================================================
 
 exported procedure test4_match_find_needs(SignalReply, SignalReply, PendingList).
 test4_match_find_needs(ReplyA?, ReplyB?, Pending1?) :-
-    rv_agent # find_needs(alice, bob, ReplyB,
+    rv_agent # find_needs(alice, bob, addr_b, ReplyB,
                            [needs(alice, bob, addr_a, ReplyA)], Pending1).
 
-%% Expected: ReplyA = initiated, ReplyB = punch(addr_a), Pending1 = []
+%% Expected: ReplyA = punch(addr_b), ReplyB = punch(addr_a), Pending1 = []
 
 %% =============================================================================
 %% Test 5: find_ready with non-matching ready entry → pass-through, store needs
@@ -75,9 +85,10 @@ test4_match_find_needs(ReplyA?, ReplyB?, Pending1?) :-
 exported procedure test5_find_ready_no_match(PendingList).
 test5_find_ready_no_match(Pending1?) :-
     rv_agent # find_ready(alice, bob, addr_a, _,
-                           [ready(carol, dave, _)], Pending1).
+                           [ready(carol, dave, addr_c, _)], Pending1).
 
-%% Expected: Pending1 = [ready(carol, dave, _), needs(alice, bob, addr_a, _)]
+%% Expected: Pending1 = [ready(carol, dave, addr_c, _),
+%%                       needs(alice, bob, addr_a, _)]
 
 %% =============================================================================
 %% Test 6: find_ready with multiple entries, one matches
@@ -86,21 +97,22 @@ test5_find_ready_no_match(Pending1?) :-
 exported procedure test6_find_ready_skip_then_match(SignalReply, SignalReply, PendingList).
 test6_find_ready_skip_then_match(ReplyA?, ReplyB?, Pending1?) :-
     rv_agent # find_ready(alice, bob, addr_a, ReplyA,
-                           [ready(carol, dave, _),
-                            ready(bob, alice, ReplyB)], Pending1).
+                           [ready(carol, dave, addr_c, _),
+                            ready(bob, alice, addr_b, ReplyB)], Pending1).
 
-%% Expected: ReplyA = initiated, ReplyB = punch(addr_a),
-%%           Pending1 = [ready(carol, dave, _)]
+%% Expected: ReplyA = punch(addr_b), ReplyB = punch(addr_a),
+%%           Pending1 = [ready(carol, dave, addr_c, _)]
 
 %% =============================================================================
 %% Test 7: Run rv_agent on a single reconnect message
 %% =============================================================================
 %%
-%% Every reconnect below is rejected: its Sig is no signed term, so
-%% signature/2 assigns unsigned and admit_reconnect/7 refuses it.  No test
-%% under the plain REPL presents B's signature over attest(A, B) made under
-%% the social graph (graph_hash stands for its source identity), so these
-%% tests exercise the reject path and the pending list around it.
+%% Every request below is rejected: its Sig is no signed term, so
+%% signature/2 assigns unsigned and admit_reconnect/7 or admit_available/7
+%% refuses it.  No test under the plain REPL presents a signature over the
+%% pair made under the social graph (graph_hash stands for its source
+%% identity), so these tests exercise the reject path and the pending list
+%% around it.
 
 exported procedure test7_agent_single_reconnect(SignalReply).
 test7_agent_single_reconnect(ReplyA?) :-
@@ -113,16 +125,16 @@ test7_agent_single_reconnect(ReplyA?) :-
 %% Test 8: Run rv_agent with available then reconnect (B first, A second)
 %% =============================================================================
 %%
-%% B's availability is stored as a ready entry; A's reconnect is then
-%% rejected, so the entry is never matched and B is never told to punch.
+%% B's availability carries no signature of A's, so it is rejected and not
+%% stored; A's reconnect is then rejected in its turn.
 
 exported procedure test8_available_then_reconnect_rejected(SignalReply, SignalReply).
 test8_available_then_reconnect_rejected(ReplyA?, ReplyB?) :-
     rv_agent # rv_agent(
-        graph_hash, [available(bob, alice, ReplyB),
+        graph_hash, [available(bob, alice, sig_ba, ReplyB),
                      reconnect(alice, bob, sig_ab, ReplyA)], []).
 
-%% Expected: ReplyA = rejected, ReplyB unbound (its ready entry is left pending)
+%% Expected: ReplyA = rejected, ReplyB = rejected
 
 %% =============================================================================
 %% Test 9: Two reconnect messages for unrelated pairs → both rejected
@@ -139,19 +151,19 @@ test9_two_reconnects_rejected(RA1?, RA2?) :-
 %% Expected: RA1 = rejected, RA2 = rejected
 
 %% =============================================================================
-%% Test 10: reconnect, then available for same pair → nothing to match against
+%% Test 10: reconnect, then available for same pair → both rejected
 %% =============================================================================
 %%
-%% The reconnect is rejected before it can be stored, so B's availability
-%% arrives to an empty pending list and is stored in its turn.
+%% The reconnect is rejected before it can be stored, and B's availability,
+%% carrying no signature of A's, is rejected in its turn.
 
 exported procedure test10_reconnect_then_available(SignalReply, SignalReply).
 test10_reconnect_then_available(RA?, RB?) :-
     rv_agent # rv_agent(
         graph_hash, [reconnect(alice, bob, sig_ab, RA),
-                     available(bob, alice, RB)], []).
+                     available(bob, alice, sig_ba, RB)], []).
 
-%% Expected: RA = rejected, RB unbound (stored as a ready entry)
+%% Expected: RA = rejected, RB = rejected
 
 %% =============================================================================
 %% Test 11: reconnect with an invalid signature → reply is rejected
@@ -173,7 +185,7 @@ test11_reconnect_rejected(RA?) :-
 %% =============================================================================
 %%
 %% The first reconnect is rejected; the available behind it is still
-%% consumed and stored; the third message is rejected in its turn.  Both
+%% consumed, and rejected; the third message is rejected in its turn.  All
 %% are rejected alike: neither bad_sig nor good_sig is a signed term, so
 %% signature/2 assigns unsigned to each.
 
@@ -181,13 +193,13 @@ exported procedure test12_rejected_does_not_block_stream(SignalReply, SignalRepl
 test12_rejected_does_not_block_stream(RA1?, RA2?, RB?) :-
     rv_agent # rv_agent(
         graph_hash, [reconnect(alice, bob, bad_sig, RA1),
-                     available(bob, alice, RB),
+                     available(bob, alice, bad_sig, RB),
                      reconnect(alice, bob, good_sig, RA2)], []).
 
-%% Expected: RA1 = rejected, RA2 = rejected, RB unbound (stored as ready)
+%% Expected: RA1 = rejected, RA2 = rejected, RB = rejected
 
 %% =============================================================================
-%% Test 13: admit_reconnect refuses every Signature but B's over attest(A, B)
+%% Test 13: admit_reconnect refuses every Signature but B's over the pair
 %% under the social graph
 %% =============================================================================
 %%
@@ -213,11 +225,12 @@ test13_dispatch_refuses(R1?, R2?, R3?, R4?) :-
 %% Test 14: a signature that verifies, made under another program, is rejected
 %% =============================================================================
 %%
-%% This test program signs attest(alice, K) under the person's own key K and
-%% presents it as K's attestation for alice.  signature/2 verifies it and
-%% reports signed(K, H, attest(alice, K)), the signer and the term those the
-%% request names; but H is this test program's source identity and not the
-%% social graph's, so the request is refused.
+%% This test program signs the pair of alice and K, in the fixed order,
+%% under the person's own key K, and presents it as K's attestation for
+%% alice.  signature/2 verifies it and reports signed(K, H, Pair), the
+%% signer and the term those the request names; but H is this test
+%% program's source identity and not the social graph's, so the request is
+%% refused.
 
 exported procedure test14_other_program_rejected(SignalReply).
 test14_other_program_rejected(RA?) :-
@@ -226,8 +239,12 @@ test14_other_program_rejected(RA?) :-
 
 procedure present_own_attestation(Key?, Key?, SignalReply).
 present_own_attestation(A, B, RA?) :-
-    ground(A?), ground(B?) |
+    ground(A?), ground(B?), A? @< B? |
     sign(attest(A?, B?), B?, Sig),
+    rv_agent # rv_agent(graph_hash, [reconnect(A?, B?, Sig?, RA)], []).
+present_own_attestation(A, B, RA?) :-
+    ground(A?), ground(B?), B? @< A? |
+    sign(attest(B?, A?), B?, Sig),
     rv_agent # rv_agent(graph_hash, [reconnect(A?, B?, Sig?, RA)], []).
 
 %% Expected: RA = rejected
@@ -244,21 +261,107 @@ present_own_attestation(A, B, RA?) :-
 exported procedure test15_match_on_none(SignalReply, PendingList).
 test15_match_on_none(ReplyA?, Pending1?) :-
     rv_agent # match_reconnect(alice, bob, none, ReplyA,
-                                [ready(bob, alice, _)], Pending1).
+                                [ready(bob, alice, addr_b, _)], Pending1).
 
-%% Expected: ReplyA = rejected, Pending1 = [ready(bob, alice, _)]
+%% Expected: ReplyA = rejected, Pending1 = [ready(bob, alice, addr_b, _)]
 
 %% =============================================================================
 %% Test 16: an admitted reconnect for which the layer observes an address
 %% =============================================================================
 %%
 %% match_reconnect/6 is given address(addr_a), what peer_address/2 reports
-%% where the layer observes A at addr_a: bob's waiting entry is matched.
+%% where the layer observes A at addr_a: bob's waiting entry is matched, and
+%% each is told to punch to the other's address.
 
 exported procedure test16_match_on_address(SignalReply, SignalReply,
                                            PendingList).
 test16_match_on_address(ReplyA?, ReplyB?, Pending1?) :-
     rv_agent # match_reconnect(alice, bob, address(addr_a), ReplyA,
-                                [ready(bob, alice, ReplyB)], Pending1).
+                                [ready(bob, alice, addr_b, ReplyB)], Pending1).
 
-%% Expected: ReplyA = initiated, ReplyB = punch(addr_a), Pending1 = []
+%% Expected: ReplyA = punch(addr_b), ReplyB = punch(addr_a), Pending1 = []
+
+%% =============================================================================
+%% Test 17: admit_available refuses every Signature but A's over the pair
+%% under the social graph
+%% =============================================================================
+%%
+%% B's availability for A verified as the reconnect request is, given each
+%% refused form directly: unsigned; bob's own signature where the request
+%% needs alice's; alice's over the pair out of the fixed order,
+%% attest(bob, alice); and alice's over attest(alice, bob) made under
+%% another program than the graph.
+
+exported procedure test17_available_dispatch_refuses(SignalReply, SignalReply,
+                                                     SignalReply, SignalReply).
+test17_available_dispatch_refuses(R1?, R2?, R3?, R4?) :-
+    rv_agent # admit_available(graph_hash, bob, alice, unsigned, R1, [], _),
+    rv_agent # admit_available(graph_hash, bob, alice,
+        signed(bob, graph_hash, attest(alice, bob)), R2, [], _),
+    rv_agent # admit_available(graph_hash, bob, alice,
+        signed(alice, graph_hash, attest(bob, alice)), R3, [], _),
+    rv_agent # admit_available(graph_hash, bob, alice,
+        signed(alice, other_hash, attest(alice, bob)), R4, [], _).
+
+%% Expected: R1 = R2 = R3 = R4 = rejected
+
+%% =============================================================================
+%% Test 18: an unverified available is not matched with a waiting A
+%% =============================================================================
+%%
+%% alice's request is waiting in the pending list; bob's availability for
+%% her carries no signature of hers, so it is rejected, and alice is told
+%% nothing: an unverified available never learns A's address.
+
+exported procedure test18_unverified_available_not_matched(SignalReply,
+                                                           SignalReply).
+test18_unverified_available_not_matched(ReplyB?, ReplyA?) :-
+    rv_agent # rv_agent(
+        graph_hash, [available(bob, alice, bad_sig, ReplyB)],
+        [needs(alice, bob, addr_a, ReplyA)]).
+
+%% Expected: ReplyB = rejected, ReplyA unbound
+
+%% =============================================================================
+%% Test 19: a reconnect carrying the pair out of the fixed order is refused
+%% =============================================================================
+%%
+%% bob's signature, under the graph, over attest(bob, alice): signer and
+%% program are right, but the pair is not in the fixed order, alice being
+%% the smaller key.
+
+exported procedure test19_reconnect_pair_out_of_order(SignalReply).
+test19_reconnect_pair_out_of_order(R?) :-
+    rv_agent # admit_reconnect(graph_hash, alice, bob,
+        signed(bob, graph_hash, attest(bob, alice)), R, [], _).
+
+%% Expected: R = rejected
+
+%% =============================================================================
+%% Test 20: an admitted available for which the layer observes no address
+%% =============================================================================
+%%
+%% match_available/6 is given none for B: refused and not stored, and
+%% alice's waiting entry is left as it was.
+
+exported procedure test20_match_available_on_none(SignalReply, PendingList).
+test20_match_available_on_none(ReplyB?, Pending1?) :-
+    rv_agent # match_available(bob, alice, none, ReplyB,
+                                [needs(alice, bob, addr_a, _)], Pending1).
+
+%% Expected: ReplyB = rejected, Pending1 = [needs(alice, bob, addr_a, _)]
+
+%% =============================================================================
+%% Test 21: an admitted available for which the layer observes an address
+%% =============================================================================
+%%
+%% match_available/6 is given address(addr_b): alice's waiting entry is
+%% matched, and each is told to punch to the other's address.
+
+exported procedure test21_match_available_on_address(SignalReply, SignalReply,
+                                                     PendingList).
+test21_match_available_on_address(ReplyA?, ReplyB?, Pending1?) :-
+    rv_agent # match_available(bob, alice, address(addr_b), ReplyB,
+                                [needs(alice, bob, addr_a, ReplyA)], Pending1).
+
+%% Expected: ReplyA = punch(addr_b), ReplyB = punch(addr_a), Pending1 = []
