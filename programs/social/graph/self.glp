@@ -268,7 +268,7 @@ ScreenContent ::= holdings(Stream(Lot))
                 ; lacking(Key, Integer)
                 ; no_conversation(Key).
 CReqId ::= req(Integer).
-Answer ::= xs_respond_swap_1(Constant) ; xs_agent_1(Integer) ; xs_agent_2(Key, Key, Integer, Key, Integer) ; xs_agent_3(Key, Integer) ; xs_agent_4(Key, Key).
+Answer ::= xs_respond_swap_1(String) ; xs_agent_1(Integer) ; xs_agent_2(Key, Key, Integer, Key, Integer) ; xs_agent_3(Key, Integer) ; xs_agent_4(Key, Key).
 Context ::= ctx_respond_swap_1(Key, Lot, Stream(Coin)) ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4.
 UserAnswer ::= answer(CReqId, Answer) ; decline(CReqId).
 Event ::= card(Constant, Context, CReqId)
@@ -371,7 +371,7 @@ SvScreenContent ::= holdings(Stream(SvLot))
                   ; no_conversation(Key)
                   ; fiat_handed(Key, Integer).
 SvReqId ::= req(Integer).
-SvAnswer ::= xs_respond_swap_1(Constant) ; xs_respond_transfer_1(Constant) ; xs_agent_1(Constant, Integer) ; xs_agent_2(Constant, Integer, Integer) ; xs_agent_3(Key, Constant, Key, Constant, Integer, Key, Constant, Integer) ; xs_agent_4(Constant, Key, Integer) ; xs_agent_5(Key, Constant, Integer) ; xs_agent_6(Key, Constant, Integer) ; xs_agent_7(Key, Key, Constant, Integer) ; xs_agent_8(Key, Constant, Key, Constant) ; xs_agent_9(Key, Constant, Integer) ; xs_agent_10(Key, Constant, Key, Constant, Integer) ; xs_agent_11(Key, Constant, Key, Constant, Integer) ; xs_agent_12(Key, Constant, Key, Constant, Integer).
+SvAnswer ::= xs_respond_swap_1(String) ; xs_respond_transfer_1(String) ; xs_agent_1(Constant, Integer) ; xs_agent_2(Constant, Integer, Integer) ; xs_agent_3(Key, Constant, Key, Constant, Integer, Key, Constant, Integer) ; xs_agent_4(Constant, Key, Integer) ; xs_agent_5(Key, Constant, Integer) ; xs_agent_6(Key, Constant, Integer) ; xs_agent_7(Key, Key, Constant, Integer) ; xs_agent_8(Key, Constant, Key, Constant) ; xs_agent_9(Key, Constant, Integer) ; xs_agent_10(Key, Constant, Key, Constant, Integer) ; xs_agent_11(Key, Constant, Key, Constant, Integer) ; xs_agent_12(Key, Constant, Key, Constant, Integer).
 SvContext ::= ctx_respond_swap_1(Key, SvLot, Stream(SvInstrument)) ; ctx_respond_transfer_1(SvKind, Key, Stream(SvInstrument)) ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4 ; ctx_agent_5 ; ctx_agent_6 ; ctx_agent_7 ; ctx_agent_8 ; ctx_agent_9 ; ctx_agent_10 ; ctx_agent_11 ; ctx_agent_12.
 SvUserAnswer ::= answer(SvReqId, SvAnswer) ; decline(SvReqId).
 SvEvent ::= card(Constant, SvContext, SvReqId)
