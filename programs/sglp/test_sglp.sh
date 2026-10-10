@@ -135,6 +135,16 @@
 #       refused as not single-answer, and a profile whose predicate is the
 #       compiled program's refused (Section 3, Definition "Single-Answer,
 #       Well-Formed").
+# (xi)  a run with an interactive type in reader mode (tests/reader): five
+#       ratings of the person, each logged once in the order of time and read
+#       by the program; the population printed by transform.sh before the
+#       run, the program holding no call of the transformation.
+# (xii) a run with vGLP's delivery status (tests/delivery; sGLP's task 6, (c)):
+#       the person's Stream(Msg)?, Msg ::= msg(String, Status?), the person
+#       writing three messages, each once the last one's status is written,
+#       and the program writing sent, delivered or read into each; the printed
+#       handover, an element at a time, and the log, each message with its
+#       status as a variable, then the stream's end.
 #
 # Prints one line per check and a summary line, "=== P passed, F failed ===";
 # exits non-zero if any check fails.  The runs of (iii) and (iv) take some
@@ -565,6 +575,62 @@ check "a profile clause answering two questions is refused as not single-answer,
 grep -q "^%% not transformed: a predicate of a profile's program that is the compiled program's(key(ans, 1))$" "$WORK/txmoded.4" &&
     [ "$(grep -c '^%% not transformed' "$WORK/txmoded.4")" -eq 1 ] && ! grep -q '^person(' "$WORK/txmoded.4"
 check "a profile whose predicate is the compiled program's is refused with that fault, nothing printed" $?
+
+echo "--- (xi) a run with an interactive type in reader mode"
+# tests/reader: the run declaration's run of one agent asking five ratings
+# (rates/3), its person process handing over each rating the person goal
+# writes; the population printed before the run by transform.sh, which (x)
+# holds it to, the program holding no call of the transformation.
+repl "$WORK/reader.out" ':limit 1000000000000' "$HERE/tests/reader" 'reader_run(5, Ns).'
+sed 's/^\(GLP> \)*//' "$WORK/reader.out" > "$WORK/reader.lines"
+grep -q '^✓ Loaded program' "$WORK/reader.out"
+check "tests/reader loads, its population printed before the run" $?
+awk '
+    /^entry\(/ {
+        n++
+        if ($0 !~ /^entry\([0-9.]+, 1, Rating\?, rating\([1-5]\)\)$/) bad++
+        t = substr($0, 7, index($0, ",") - 7) + 0; if (t < last) bad++; last = t
+        r = substr($0, index($0, "rating(") + 7, 1); rs[r]++
+    }
+    /^Ns = \[/ { s = $0; gsub(/[^0-9,]/, "", s); m = split(s, a, ","); for (i = 1; i <= m; i++) ns[a[i]]++ }
+    /^clock\(/ { c = substr($0, 7, length($0) - 7) + 0; seen = 1 }
+    END {
+        for (r in rs) if (rs[r] != ns[r]) bad++
+        for (r in ns) if (rs[r] != ns[r]) bad++
+        exit !(n == 5 && m == 5 && seen && c == last && !bad)
+    }' "$WORK/reader.lines"
+check "five answers logged in the order of time, each a rating of 1..5 of type Rating?, the program reading those five, and the clock last" $?
+grep '^entry(\|^clock(\|^Ns = ' "$WORK/reader.lines" | sed 's/^/        /'
+
+echo "--- (xii) a run with the delivery status of vGLP's chat"
+# tests/delivery: the person's Stream(Msg)?, Msg ::= msg(String, Status?), the
+# person writing three messages' texts, each once the last one's status is
+# written, and the program writing each status, sent, delivered or read; each
+# message handed over once its text is ground, a fresh writer at its status
+# whose reader the person goal waits on, and the stream's tail left open, the
+# next answer; the log showing each message with its status as a variable.
+D="$HERE/tests/delivery/population.glp"
+tr '\n' ' ' < "$D" | grep -q "answer_1(A, Type, \[\], \[\], Mon, Log) :- stream_append(time(Time), Mon?, _) , stream_append(entry(Time?, A?, Type?, \[\]), Log?, _) \." &&
+    tr '\n' ' ' < "$D" | grep -q "answer_1(A, Type, \[msg(Z1, Z2?) | Z3\], \[msg(Z1?, Z2) | Z4?\], Mon, Log) :- ground(Z1?) | stream_append(time(Time), Mon?, _) , stream_append(entry(Time?, A?, Type?, \[msg(Z1?, '_') | '_'\]), Log?, _) , answer_1(A?, Type?, Z3?, Z4, Mon?, Log?) \." &&
+    tr '\n' ' ' < "$D" | grep -q "person(A, profiles(talker), Mon, Seed, Log, \[ask(Type, stream_msg_r(X?)) | As\]) :- random(Seed?, 2147483646, K, S) , profiles # talk(Y, K?, Mon?) , answer_1(A?, Type?, Y?, X, Mon?, Log?) ,"
+check "the printed handover: each element once its text is ground, a fresh writer at its status, its reader to the person goal, the tail the next answer, and the stream's end" $?
+repl "$WORK/delivery.out" ':limit 1000000000000' "$HERE/tests/delivery" 'delivery_run(Ts).'
+sed 's/^\(GLP> \)*//' "$WORK/delivery.out" > "$WORK/delivery.lines"
+grep -q '^✓ Loaded program' "$WORK/delivery.out"
+check "tests/delivery loads, its population printed before the run" $?
+awk '
+    /^entry\(/ { e[++n] = $0; t = substr($0, 7, index($0, ",") - 7) + 0; if (t < last) bad++; last = t }
+    /^Ts = \[hello, there, bye\]$/ { ts = 1 }
+    /^clock\(/ { c = substr($0, 7, length($0) - 7) + 0; seen = 1 }
+    END {
+        if (e[1] !~ /^entry\([0-9.]+, 1, Stream\(Msg\)\?, \[msg\(hello, _\) \| _\]\)$/) bad++
+        if (e[2] !~ /^entry\([0-9.]+, 1, Stream\(Msg\)\?, \[msg\(there, _\) \| _\]\)$/) bad++
+        if (e[3] !~ /^entry\([0-9.]+, 1, Stream\(Msg\)\?, \[msg\(bye, _\) \| _\]\)$/) bad++
+        if (e[4] !~ /^entry\([0-9.]+, 1, Stream\(Msg\)\?, \[\]\)$/) bad++
+        exit !(n == 4 && ts && seen && c == last && !bad)
+    }' "$WORK/delivery.lines"
+check "the log: each message with its status as a variable, then the stream's end, in the order of time; the program reads the three texts; the person, waiting on each status, writes all three; the clock last" $?
+grep '^entry(\|^clock(\|^Ts = ' "$WORK/delivery.lines" | sed 's/^/        /'
 
 echo ""
 echo "=== $PASS passed, $FAIL failed ==="

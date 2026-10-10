@@ -1,23 +1,28 @@
 #!/bin/bash
-# The transformation of the two examples' sGLP sources into GLP (programs/sglp,
-# transform.glp; sGLP's paper, the repository svGLP-Stochastic-Volitional-GLP,
-# Section 4, "The transformation"), through the REPL.
+# The transformation of the sGLP sources of the two examples and of the two
+# run tests into GLP (programs/sglp, transform.glp; sGLP's paper, the
+# repository svGLP-Stochastic-Volitional-GLP, Section 4, "The transformation"),
+# through the REPL.
 #
-#   bash programs/sglp/transform.sh            print into the examples' directories
-#   bash programs/sglp/transform.sh <dir>      print into <dir>/social_graph/ and <dir>/coins/
+#   bash programs/sglp/transform.sh            print into the programs' directories
+#   bash programs/sglp/transform.sh <dir>      print into <dir>/social_graph/, <dir>/coins/,
+#                                              <dir>/tests/reader/ and <dir>/tests/delivery/
 #   bash programs/sglp/transform.sh --check    print into a scratch directory and compare
 #
 # In one REPL session it loads programs/sglp and calls transform(P, Part) for
-# P social_graph and coins and Part profiles and population, and writes what
-# each prints between its lines "%% transform begin" and "%% transform end" to
-# P/Part.glp: social_graph/profiles.glp and social_graph/population.glp, from
-# social_graph/graph_sglp.glp, and coins/profiles.glp and coins/population.glp,
-# from coins/coins_sglp.glp.  The program it loads includes the printed files,
-# which the examples' harnesses call, so they are printed by the program that
-# holds them, the files it prints being those it loaded where the sources are
-# unchanged; --check says whether they are.
+# P social_graph, coins, reader and delivery and Part profiles and population,
+# and writes what each prints between its lines "%% transform begin" and
+# "%% transform end" to its directory's Part.glp: social_graph/profiles.glp and
+# social_graph/population.glp, from social_graph/graph_sglp.glp;
+# coins/profiles.glp and coins/population.glp, from coins/coins_sglp.glp; and
+# the run tests' (xi) and (xii), tests/reader/ from rating_sglp.glp and
+# tests/delivery/ from chat_sglp.glp, the run tests' programs holding no call
+# of the transformation (sGLP's task 6 of 2026-10-10 07:59 UTC).  The program
+# it loads includes the printed files, which the harnesses call, so they are
+# printed by the program that holds them, the files it prints being those it
+# loaded where the sources are unchanged; --check says whether they are.
 #
-# Prints one line per file.  Exits 0 if all four were printed, with no fault
+# Prints one line per file.  Exits 0 if all eight were printed, with no fault
 # of the checks (a line "%% not transformed: ..."), and, with --check, each is
 # byte for byte the file in place; 1 otherwise, the faults or the differing
 # files named; 2 on a bad argument.
@@ -42,14 +47,15 @@ elif [ "$1" = "--check" ]; then
 else
     OUT="$1"
 fi
-mkdir -p "$OUT/social_graph" "$OUT/coins" || exit 2
+mkdir -p "$OUT/social_graph" "$OUT/coins" "$OUT/tests/reader" "$OUT/tests/delivery" || exit 2
 
-PARTS="social_graph/profiles social_graph/population coins/profiles coins/population"
+PARTS="social_graph/profiles social_graph/population coins/profiles coins/population tests/reader/profiles tests/reader/population tests/delivery/profiles tests/delivery/population"
 {
     echo ':limit 1000000000000000'
     echo "$HERE"
     for p in $PARTS; do
-        echo "transform(${p%/*}, ${p#*/})."
+        prog=${p%/*}
+        echo "transform(${prog##*/}, ${p##*/})."
     done
     echo ':quit'
 } > "$WORK/input"

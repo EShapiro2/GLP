@@ -10,7 +10,9 @@
 %%                  printed profiles and population, its harness and its run
 %%                  script;
 %%   coins/         coins among friends, the same;
-%%   tests/         the tests of the suite's sGLP block (test_sglp.sh).
+%%   tests/         the tests of the suite's sGLP block (test_sglp.sh), its
+%%                  self.glp the run tests' sGLP sources, which transform.sh
+%%                  prints their modules from.
 %%
 %% The monitor is exposed to the subtree: the harnesses spawn it.
 %% A run of the social graph is a call of social_graph/4, or of social_graph/6

@@ -1,0 +1,15 @@
+%% Test (xi)'s vGLP program: one interactive type, Rating, in reader mode, the
+%% person writing the whole term, which rate reads; rates asks K ratings.  Its
+%% canonical compilation (vGLP, Definition "Canonical Compilation") is
+%% rating.glp, by hand, which vGLP's compiler prints from this source clause
+%% for clause (README.md, "Tests"); the program loader skips a .vglp beside a
+%% .glp of its name, so this source is not loaded.
+
+Rating ::= rating(Integer).
+
+procedure (Rating?)*rate(Integer).
+(rating(N))*rate(N?).
+
+exported procedure rates(Integer?, Stream(Integer)).
+rates(0, []).
+rates(K, [N?|Ns?]) :- K? > 0 | rate(N), K1 := K? - 1, rates(K1?, Ns).

@@ -48,6 +48,8 @@
 
 imported procedure social_graph#source(SglpTerms, SglpTerms).
 imported procedure coins#source(SglpTerms, SglpTerms).
+imported procedure tests#reader_source(SglpTerms, SglpTerms).
+imported procedure tests#delivery_source(SglpTerms, SglpTerms).
 
 Terms ::= [] ; [_ | Terms].
 Sets  ::= [] ; [Terms | Sets].
@@ -58,13 +60,18 @@ Ans   ::= yes ; no.
 %% ===========================================================================
 
 %% transform(Program?, Part?): print Part, profiles or population, of the
-%% translation of Program, social_graph or coins, between the lines
-%% %% transform begin and %% transform end, which transform.sh drops.
+%% translation of Program, social_graph, coins or the run tests' reader and
+%% delivery (tests/reader, tests/delivery), between the lines %% transform
+%% begin and %% transform end, which transform.sh drops.
 exported procedure transform(Constant?, Constant?).
 transform(Prog, Part) :- Prog? =?= social_graph |
     social_graph # source(V, S), part(social_graph, Part?, V?, S?).
 transform(Prog, Part) :- Prog? =?= coins |
     coins # source(V, S), part(coins, Part?, V?, S?).
+transform(Prog, Part) :- Prog? =?= reader |
+    tests # reader_source(V, S), part(reader, Part?, V?, S?).
+transform(Prog, Part) :- Prog? =?= delivery |
+    tests # delivery_source(V, S), part(delivery, Part?, V?, S?).
 transform(Prog, _) :- otherwise, ground(Prog?) |
     C =.. ['%% not transformed: no sGLP source of', Prog?],
     send_to_user(['%% transform begin', C?, '%% transform end']).
