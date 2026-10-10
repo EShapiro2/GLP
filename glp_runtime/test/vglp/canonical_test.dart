@@ -18,14 +18,18 @@
 //     in either mode.
 // F   The ask streams: which procedures reach a question, the merges, and the
 //     types the compilation adds.
-// (iii) The nine .vglp sources in the old syntax are not in the paper's, and
-//     keep their old compilation.
+// (iii) Each .vglp source in the tree, asked what it is: one in the old
+//     syntax is not in the paper's, and keeps its old compilation; one
+//     declaring a volitional procedure is in the paper's.
 
 import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/compiler/ast.dart' show UnderscoreTerm;
 import 'package:glp_runtime/compiler/error.dart';
+import 'package:glp_runtime/compiler/lexer.dart';
+import 'package:glp_runtime/compiler/parser.dart';
+import 'package:glp_runtime/compiler/token.dart';
 import 'package:glp_runtime/vglp/canonical.dart';
 import 'package:glp_runtime/vglp/program_compilation.dart'
     show compiledHeader, compileVglpSource;
@@ -59,6 +63,47 @@ List<File> _vglpSources(Directory dir) {
     }
   }
   return found;
+}
+
+/// Whether [text] holds a volition guard, the old Definition's ("Guarded
+/// Clause, Volition-Guarded Clause, Volition Guard, ..."): an item --- a
+/// declaration, a definition or a clause --- beginning with `*`, bare or
+/// `*(...)`, before the clause it guards.  Read off the tokens, since the
+/// parser does not read every old source (CSSN's two, with guard negation,
+/// which is not GLP syntax).
+bool _holdsVolitionGuard(String text) {
+  final tokens = Lexer(text).tokenize();
+  var depth = 0;
+  var start = true;
+  for (final t in tokens) {
+    if (start && t.type == TokenType.STAR) return true;
+    start = false;
+    switch (t.type) {
+      case TokenType.LPAREN:
+      case TokenType.LBRACKET:
+        depth++;
+      case TokenType.RPAREN:
+      case TokenType.RBRACKET:
+        depth--;
+      case TokenType.DOT:
+        if (depth == 0) start = true;
+      default:
+        break;
+    }
+  }
+  return false;
+}
+
+/// Whether [text], its widget declarations set aside, declares a volitional
+/// procedure, `procedure (T)*p(...)` (vGLP, Definition "Guarded Clause,
+/// Volitional Procedure, ..."), as the parser's vGLP mode reads it.
+bool _declaresVolitionalProcedure(String text) {
+  final stripped =
+      text.contains('=::=') ? extractWidgetDeclarations(text).stripped : text;
+  return Parser(Lexer(stripped).tokenize(), vglp: true)
+      .parseModule()
+      .volitionalDeclarations
+      .isNotEmpty;
 }
 
 void main() {
@@ -566,22 +611,25 @@ go(N) :- q(N?).
 
   group('(iii) the old syntax keeps its old compilation', () {
     final sources = _vglpSources(Directory(_programs));
-    final paper = {'questions.vglp', 'chat.vglp'};
     String base(File f) => f.path.split(Platform.pathSeparator).last;
 
-    test('the nine old sources are not in the paper\'s syntax, the two new '
-        'ones are', () {
-      final old = sources.where((f) => !paper.contains(base(f))).toList();
-      expect(old, hasLength(9), reason: old.map((f) => f.path).join('\n'));
-      for (final f in old) {
-        expect(isPaperSyntaxSource(f.readAsStringSync()), isFalse,
-            reason: f.path);
-      }
-      final fresh = sources.where((f) => paper.contains(base(f))).toList();
-      expect(fresh, hasLength(2));
-      for (final f in fresh) {
-        expect(isPaperSyntaxSource(f.readAsStringSync()), isTrue,
-            reason: f.path);
+    // Each source in the tree is asked what it is, and none is named or
+    // counted here (GLP #3 Cowork, 2026-10-10 07:48 UTC, "00:45. Q2").  Until
+    // 2026-10-10 the test counted nine old sources and named the two new
+    // ones, and went red when sGLP's two sources in the paper's syntax
+    // joined the tree (f264ccc6).
+    test('each source in the tree is asked what it is: one holding a '
+        'volition guard is not in the paper\'s syntax, one declaring a '
+        'volitional procedure is', () {
+      expect(sources, isNotEmpty);
+      for (final f in sources) {
+        final text = f.readAsStringSync();
+        final old = _holdsVolitionGuard(text);
+        final paper = !old && _declaresVolitionalProcedure(text);
+        expect(old || paper, isTrue,
+            reason: '${f.path} holds no volition guard and declares no '
+                'volitional procedure');
+        expect(isPaperSyntaxSource(text), paper, reason: f.path);
       }
     });
 
