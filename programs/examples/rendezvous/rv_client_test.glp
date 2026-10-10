@@ -7,12 +7,12 @@
 %% Load rv_agent.glp, rv_client.glp, then this file.
 
 %% Local type redeclarations (structural identity allows sharing)
-SignalReply ::= punch(Constant) ; initiated ; rejected.
+SignalReply ::= punch(String) ; initiated ; rejected.
 
 SignalMsg ::= reconnect(Key, Key, SignedTerm, SignalReply?)
             ; available(Key, Key, SignalReply?).
 
-PendingEntry ::= needs(Key, Key, Constant, SignalReply?)
+PendingEntry ::= needs(Key, Key, String, SignalReply?)
                ; ready(Key, Key, SignalReply?).
 PendingList ::= [] ; [PendingEntry | PendingList].
 

@@ -42,7 +42,7 @@
 %% =============================================================================
 
 %% Reply carried back from the RV agent via the shared reply variable
-SignalReply ::= punch(Constant) ; initiated ; rejected.
+SignalReply ::= punch(String) ; initiated ; rejected.
 
 %% Messages sent to the RV agent as cold-calls
 SignalMsg ::= reconnect(Key, Key, SignedTerm, SignalReply?)

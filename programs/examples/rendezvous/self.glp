@@ -9,30 +9,30 @@
 %% SHARED TYPES
 %% =============================================================================
 
-SignalReply ::= punch(Constant) ; initiated ; rejected.
+SignalReply ::= punch(String) ; initiated ; rejected.
 
 SignalMsg ::= reconnect(Key, Key, SignedTerm, SignalReply?)
             ; available(Key, Key, SignalReply?).
 
-PendingEntry ::= needs(Key, Key, Constant, SignalReply?)
+PendingEntry ::= needs(Key, Key, String, SignalReply?)
                ; ready(Key, Key, SignalReply?).
 PendingList ::= [] ; [PendingEntry | PendingList].
 
 %% Friend-mediated rendezvous (fmrv) — a friend already reachable over BLE
 %% relays addresses so two NAT-bound friends can punch to each other.
 
-AddrResult ::= found(Constant) ; not_found.
+AddrResult ::= found(String) ; not_found.
 
 MsgOp ::= mediate(Key)
         ; punch_to(AddrResult)
-        ; addr_update(Constant).
+        ; addr_update(String).
 
 Msg ::= msg(Key, Key, MsgOp).
 
 MsgStream ::= [] ; [Msg | MsgStream].
 FriendStream ::= [] ; [Msg | FriendStream].
 
-FriendEntry ::= fe(Key, FriendStream?, Constant).
+FriendEntry ::= fe(Key, FriendStream?, String).
 FriendList ::= [] ; [FriendEntry | FriendList].
 
 %% =============================================================================
@@ -119,6 +119,18 @@ imported procedure rv_agent_test#test14_other_program_rejected(SignalReply).
 exported procedure test14_other_program_rejected(SignalReply).
 test14_other_program_rejected(R?) :-
     rv_agent_test # test14_other_program_rejected(R).
+
+imported procedure rv_agent_test#test15_match_on_none(SignalReply, PendingList).
+exported procedure test15_match_on_none(SignalReply, PendingList).
+test15_match_on_none(R?, P?) :- rv_agent_test # test15_match_on_none(R, P).
+
+imported procedure rv_agent_test#test16_match_on_address(SignalReply,
+                                                         SignalReply,
+                                                         PendingList).
+exported procedure test16_match_on_address(SignalReply, SignalReply,
+                                           PendingList).
+test16_match_on_address(RA?, RB?, P?) :-
+    rv_agent_test # test16_match_on_address(RA, RB, P).
 
 %% =============================================================================
 %% ENTRY POINTS — rv_client_test

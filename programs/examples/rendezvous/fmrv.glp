@@ -30,12 +30,12 @@
 %% =============================================================================
 
 %% Result of an address lookup in the mediator's friends list
-AddrResult ::= found(Constant) ; not_found.
+AddrResult ::= found(String) ; not_found.
 
 %% Friend-mediated rendezvous message operations
 MsgOp ::= mediate(Key)             %% mediate(C_pk) — A asks B to help reconnect to C
         ; punch_to(AddrResult)     %% punch_to(found(Addr)) or punch_to(not_found)
-        ; addr_update(Constant).   %% addr_update(NewAddr) — notify friends of address change
+        ; addr_update(String).     %% addr_update(NewAddr) — notify friends of address change
 
 %% Protocol message: msg(From, To, Op)
 Msg ::= msg(Key, Key, MsgOp).
@@ -50,7 +50,7 @@ FriendStream ::= [] ; [Msg | FriendStream].
 %% The `?` on FriendStream indicates the data carries a reader reference
 %% to the friend's output stream; the agent holds the paired writer and
 %% prepends messages by binding the writer.
-FriendEntry ::= fe(Key, FriendStream?, Constant).
+FriendEntry ::= fe(Key, FriendStream?, String).
 FriendList ::= [] ; [FriendEntry | FriendList].
 
 %% =============================================================================
@@ -129,7 +129,7 @@ lookup_and_send(_, _, _, not_found, [], []).
 %% update_addr: replace a friend's address in the friends list
 %% =============================================================================
 
-procedure update_addr(Key?, Constant?, FriendList?, FriendList).
+procedure update_addr(Key?, String?, FriendList?, FriendList).
 update_addr(Key, NewAddr, [fe(K, Out?, _)|Fs], [fe(K?, Out, NewAddr?)|Fs?]) :-
     Key? =?= K? | true.
 update_addr(Key, NewAddr, [F|Fs], [F?|Fs1?]) :-

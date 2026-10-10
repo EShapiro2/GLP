@@ -6,16 +6,18 @@
 %% - Accepts cold-calls from any agent (no friends list, no social graph)
 %% - Verifies the reconnection attestation with the language's signature/2
 %% - Learns A's current public address via peer_address (reading the
-%%   source address of the incoming cold-call packet)
+%%   address at which the networking layer observes A), and refuses where
+%%   the layer observes none
 %% - Relays addresses to coordinate hole-punching
 %%
 %% Protocol:
 %%   1. A detects IP change, cold-calls:
 %%      reconnect(A_pk, B_pk, Sig, Reply)
 %%   2. B detects A went silent, cold-calls: available(B_pk, A_pk, Reply)
-%%   3. The RV agent reads A's source address from the networking layer
-%%      via peer_address(A?, AddrA), matches the requests, and tells B
-%%      to punch to AddrA via Reply
+%%   3. The RV agent reads A's address from the networking layer via
+%%      peer_address(A?, PeerAddress) --- address(AddrA), or none, on which
+%%      it refuses --- matches the requests, and tells B to punch to AddrA
+%%      via Reply
 %%
 %% Capability verification (GNA, Section "Rendezvous Server", items
 %% "Capability verification" and "Reconnection"; Section "System
@@ -42,9 +44,9 @@
 %% System predicates:
 %%   signature(Signed?, Signature) — root self.glp (GLP-Spec catalogue):
 %%     signed(Key, Hash, Term) or unsigned.
-%%   peer_address(Pk?, Addr) — body predicate, reads the observed source
-%%     address for peer Pk from the networking layer; the stub at the end
-%%     of this file stands in for it.
+%%   peer_address(Pk?, PeerAddress) — root self.glp (GLP-Spec catalogue):
+%%     address(S), S the address (ip:port, a String) at which the networking
+%%     layer observes peer Pk, or none where it observes no address for Pk.
 
 
 %% =============================================================================
@@ -52,7 +54,7 @@
 %% =============================================================================
 
 %% Reply sent back to agents via their reply variable
-SignalReply ::= punch(Constant) ; initiated ; rejected.
+SignalReply ::= punch(String) ; initiated ; rejected.
 
 %% Messages arriving via cold-call on the agent's input stream
 SignalMsg ::= reconnect(Key, Key, SignedTerm, SignalReply?)
@@ -62,7 +64,7 @@ SignalMsg ::= reconnect(Key, Key, SignedTerm, SignalReply?)
               %% available(B_pk, A_pk, Reply)
 
 %% Pending entries awaiting a match
-PendingEntry ::= needs(Key, Key, Constant, SignalReply?)
+PendingEntry ::= needs(Key, Key, String, SignalReply?)
                  %% needs(A_pk, B_pk, AddrA, ReplyA?) — A wants to reconnect to B
                ; ready(Key, Key, SignalReply?).
                  %% ready(B_pk, A_pk, ReplyB?) — B is available for A
@@ -99,14 +101,15 @@ exported procedure admit_reconnect(Hash?, Key?, Key?, Signature?, SignalReply,
                                    PendingList?, PendingList).
 
 %% B signed attest(A, B) under the social graph: admitted.  Only then does
-%% the RV agent read A's source address from the networking layer via
-%% peer_address (so A does not need to self-report its address) and look
-%% for a waiting B.  The guard grounds A and B.
+%% the RV agent read A's address from the networking layer via the root's
+%% peer_address (so A does not need to self-report its address), and
+%% match_reconnect/6 dispatches on what it reports.  The guard grounds A
+%% and B.
 admit_reconnect(Graph, A, B, signed(K, H, attest(A1, B1)), ReplyA?,
                 Pending, Pending1?) :-
     K? =?= B?, H? =?= Graph?, A1? =?= A?, B1? =?= B? |
-    peer_address(A?, AddrA),
-    find_ready(A?, B?, AddrA?, ReplyA, Pending?, Pending1).
+    peer_address(A?, PeerAddressA),
+    match_reconnect(A?, B?, PeerAddressA?, ReplyA, Pending?, Pending1).
 
 %% unsigned, another signer, another term, or another program's signature:
 %% the reply is bound to `rejected` and the request is not added to the
@@ -117,10 +120,25 @@ admit_reconnect(_, _, _, _, rejected, Pending, Pending?) :-
     otherwise | true.
 
 %% =============================================================================
+%% match_reconnect: dispatch on what peer_address/2 reports for A
+%% =============================================================================
+
+exported procedure match_reconnect(Key?, Key?, PeerAddress?, SignalReply,
+                                   PendingList?, PendingList).
+
+%% The layer observes A at AddrA: look for a waiting B.
+match_reconnect(A, B, address(AddrA), ReplyA?, Pending, Pending1?) :-
+    find_ready(A?, B?, AddrA?, ReplyA, Pending?, Pending1).
+
+%% The layer observes no address for A: there is none to relay, so the
+%% request is refused and not added to the pending list.
+match_reconnect(_, _, none, rejected, Pending, Pending?).
+
+%% =============================================================================
 %% find_ready: A arrived, search pending for a matching ready(B, A, ReplyB)
 %% =============================================================================
 
-exported procedure find_ready(Key?, Key?, Constant?, SignalReply,
+exported procedure find_ready(Key?, Key?, String?, SignalReply,
                               PendingList?, PendingList).
 
 %% Match found: B was waiting — assign replies
@@ -160,19 +178,5 @@ find_needs(A, B, ReplyB?, [], [ready(B?, A?, ReplyB)]).
 %% complete_rendezvous: Both sides matched — assign reply variables
 %% =============================================================================
 
-procedure complete_rendezvous(Constant?, SignalReply, SignalReply).
+procedure complete_rendezvous(String?, SignalReply, SignalReply).
 complete_rendezvous(AddrA, initiated, punch(AddrA?)).
-
-%% =============================================================================
-%% STUB for a system predicate (testing only)
-%% =============================================================================
-%%
-%% peer_address(Pk?, Addr) — body predicate
-%%   Reads the observed source address of the incoming packet from peer Pk.
-%%   Stub: hardcoded mapping for alice, bob, carol.  A real implementation
-%%   would consult the networking layer's recent-packet table.
-
-procedure peer_address(Constant?, Constant).
-peer_address(alice, stub_addr_alice).
-peer_address(bob, stub_addr_bob).
-peer_address(carol, stub_addr_carol).

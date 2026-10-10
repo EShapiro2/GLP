@@ -4783,6 +4783,8 @@ test11_reconnect_rejected(R11).
 test12_rejected_does_not_block_stream(R121, R122, RB12).
 test13_dispatch_refuses(R131, R132, R133, R134).
 test14_other_program_rejected(R14).
+test15_match_on_none(R15, P15).
+test16_match_on_address(RA16, RB16, P16).
 client1_make_reconnect(M1, CR1).
 client2_make_available(M2, CR2).
 client3_full_scenario_a_first(CA3, CB3).
@@ -4848,38 +4850,45 @@ check "RV agent test13: another term is refused" "^R133 = rejected$" "$(_rv_answ
 check "RV agent test13: another program's Hash is refused" "^R134 = rejected$" "$(_rv_answer 13)"
 check "RV agent test14 succeeds" "^→ succeeds$" "$(_rv_answer 14)"
 check "RV agent test14: a signature that verifies under another program is rejected" "^R14 = rejected$" "$(_rv_answer 14)"
+check "RV agent test15 succeeds" "^→ succeeds$" "$(_rv_answer 15)"
+check "RV agent test15: the layer observes no address for A, the reconnect is rejected" "^R15 = rejected$" "$(_rv_answer 15)"
+check "RV agent test15: the layer observes no address for A, B's entry is left pending" "^P15 = \[ready(bob, alice, X[0-9]*)\]$" "$(_rv_answer 15)"
+check "RV agent test16 succeeds" "^→ succeeds$" "$(_rv_answer 16)"
+check "RV agent test16: the layer observes A's address, A is initiated" "^RA16 = initiated$" "$(_rv_answer 16)"
+check "RV agent test16: the layer observes A's address, B punches to it" "^RB16 = punch(addr_a)$" "$(_rv_answer 16)"
+check "RV agent test16: the layer observes A's address, nothing left pending" "^P16 = \[\]$" "$(_rv_answer 16)"
 
 # rv_client_test.glp
-check "RV client test1 succeeds" "^→ succeeds$" "$(_rv_answer 15)"
-check "RV client test1: make_reconnect builds reconnect(A, B, Sig, Reply)" "^M1 = reconnect(alice, bob, sig_ab, X[0-9]*)$" "$(_rv_answer 15)"
-check "RV client test1: make_reconnect leaves the reply unbound" "^CR1 = <unbound>$" "$(_rv_answer 15)"
-check "RV client test2 succeeds" "^→ succeeds$" "$(_rv_answer 16)"
-check "RV client test2: make_available builds available(B, A, Reply)" "^M2 = available(bob, alice, X[0-9]*)$" "$(_rv_answer 16)"
-check "RV client test2: make_available leaves the reply unbound" "^CR2 = <unbound>$" "$(_rv_answer 16)"
-check "RV client test3 succeeds" "^→ succeeds$" "$(_rv_answer 17)"
-check "RV client test3: A first, A's reconnect is rejected" "^CA3 = rejected$" "$(_rv_answer 17)"
-check "RV client test3: A first, B is left waiting" "^CB3 = <unbound>$" "$(_rv_answer 17)"
-check "RV client test4 succeeds" "^→ succeeds$" "$(_rv_answer 18)"
-check "RV client test4: B first, A's reconnect is rejected" "^CA4 = rejected$" "$(_rv_answer 18)"
-check "RV client test4: B first, B is left waiting" "^CB4 = <unbound>$" "$(_rv_answer 18)"
-check "RV client test5: the rejected reply takes handle_reply's rejected arm" "^→ succeeds$" "$(_rv_answer 19)"
-check "RV client test6 succeeds" "^→ succeeds$" "$(_rv_answer 20)"
-check "RV client test6: a bad signature is rejected" "^CA6 = rejected$" "$(_rv_answer 20)"
-check "RV client test6: a bad signature leaves B unmatched" "^CB6 = <unbound>$" "$(_rv_answer 20)"
-check "RV client test7: handle_reply dispatches punch(Addr) to punch_udp" "^→ succeeds$" "$(_rv_answer 21)"
+check "RV client test1 succeeds" "^→ succeeds$" "$(_rv_answer 17)"
+check "RV client test1: make_reconnect builds reconnect(A, B, Sig, Reply)" "^M1 = reconnect(alice, bob, sig_ab, X[0-9]*)$" "$(_rv_answer 17)"
+check "RV client test1: make_reconnect leaves the reply unbound" "^CR1 = <unbound>$" "$(_rv_answer 17)"
+check "RV client test2 succeeds" "^→ succeeds$" "$(_rv_answer 18)"
+check "RV client test2: make_available builds available(B, A, Reply)" "^M2 = available(bob, alice, X[0-9]*)$" "$(_rv_answer 18)"
+check "RV client test2: make_available leaves the reply unbound" "^CR2 = <unbound>$" "$(_rv_answer 18)"
+check "RV client test3 succeeds" "^→ succeeds$" "$(_rv_answer 19)"
+check "RV client test3: A first, A's reconnect is rejected" "^CA3 = rejected$" "$(_rv_answer 19)"
+check "RV client test3: A first, B is left waiting" "^CB3 = <unbound>$" "$(_rv_answer 19)"
+check "RV client test4 succeeds" "^→ succeeds$" "$(_rv_answer 20)"
+check "RV client test4: B first, A's reconnect is rejected" "^CA4 = rejected$" "$(_rv_answer 20)"
+check "RV client test4: B first, B is left waiting" "^CB4 = <unbound>$" "$(_rv_answer 20)"
+check "RV client test5: the rejected reply takes handle_reply's rejected arm" "^→ succeeds$" "$(_rv_answer 21)"
+check "RV client test6 succeeds" "^→ succeeds$" "$(_rv_answer 22)"
+check "RV client test6: a bad signature is rejected" "^CA6 = rejected$" "$(_rv_answer 22)"
+check "RV client test6: a bad signature leaves B unmatched" "^CB6 = <unbound>$" "$(_rv_answer 22)"
+check "RV client test7: handle_reply dispatches punch(Addr) to punch_udp" "^→ succeeds$" "$(_rv_answer 23)"
 
 # friend_mediated_rendezvous_test.glp
-check "RV fmrv test1: an addr_update is consumed" "^→ succeeds$" "$(_rv_answer 22)"
-check "RV fmrv test2 succeeds" "^→ succeeds$" "$(_rv_answer 23)"
-check "RV fmrv test2: alice is sent carol's address" "^FA2 = \[msg(bob, alice, punch_to(found(addr_carol))) | X[0-9]*\]$" "$(_rv_answer 23)"
-check "RV fmrv test2: carol is sent alice's address" "^FC2 = \[msg(bob, carol, punch_to(found(addr_alice))) | X[0-9]*\]$" "$(_rv_answer 23)"
-check "RV fmrv test3: punch_to(found(Addr)) calls punch_udp" "^→ succeeds$" "$(_rv_answer 24)"
-check "RV fmrv test4: the empty stream terminates" "^→ succeeds$" "$(_rv_answer 25)"
-check "RV fmrv test5 succeeds" "^→ succeeds$" "$(_rv_answer 26)"
-check "RV fmrv test5: mediation to an unknown peer sends alice not_found" "^FA5 = \[msg(bob, alice, punch_to(not_found)) | X[0-9]*\]$" "$(_rv_answer 26)"
-check "RV fmrv test6: punch_to(not_found) is a no-op" "^→ succeeds$" "$(_rv_answer 27)"
-check "RV fmrv test7 succeeds" "^→ succeeds$" "$(_rv_answer 28)"
-check "RV fmrv test7: an unknown requester sends alice not_found" "^FA7 = \[msg(bob, alice, punch_to(not_found)) | X[0-9]*\]$" "$(_rv_answer 28)"
+check "RV fmrv test1: an addr_update is consumed" "^→ succeeds$" "$(_rv_answer 24)"
+check "RV fmrv test2 succeeds" "^→ succeeds$" "$(_rv_answer 25)"
+check "RV fmrv test2: alice is sent carol's address" "^FA2 = \[msg(bob, alice, punch_to(found(addr_carol))) | X[0-9]*\]$" "$(_rv_answer 25)"
+check "RV fmrv test2: carol is sent alice's address" "^FC2 = \[msg(bob, carol, punch_to(found(addr_alice))) | X[0-9]*\]$" "$(_rv_answer 25)"
+check "RV fmrv test3: punch_to(found(Addr)) calls punch_udp" "^→ succeeds$" "$(_rv_answer 26)"
+check "RV fmrv test4: the empty stream terminates" "^→ succeeds$" "$(_rv_answer 27)"
+check "RV fmrv test5 succeeds" "^→ succeeds$" "$(_rv_answer 28)"
+check "RV fmrv test5: mediation to an unknown peer sends alice not_found" "^FA5 = \[msg(bob, alice, punch_to(not_found)) | X[0-9]*\]$" "$(_rv_answer 28)"
+check "RV fmrv test6: punch_to(not_found) is a no-op" "^→ succeeds$" "$(_rv_answer 29)"
+check "RV fmrv test7 succeeds" "^→ succeeds$" "$(_rv_answer 30)"
+check "RV fmrv test7: an unknown requester sends alice not_found" "^FA7 = \[msg(bob, alice, punch_to(not_found)) | X[0-9]*\]$" "$(_rv_answer 30)"
 echo ""
 
 # =============================================================================
