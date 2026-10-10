@@ -1868,7 +1868,7 @@ class Parser {
   /// Parse expression in type alternative context.
   /// Handles operators like \ for difference lists.
   Term _parseTypeAltExpression([int minPrecedence = 0]) {
-    var left = _parseTypeAltPrimary();
+    var left = _markedTypeAltPrimary(_parseTypeAltPrimary());
 
     while (_isOperator(_peek()) && _precedence(_peek()) >= minPrecedence) {
       final op = _advance();
@@ -1876,11 +1876,46 @@ class Parser {
       left = StructTerm(_operatorFunctor(op), [left, right], op.line, op.column);
     }
 
-    // Check for trailing ? on the whole expression (for explicit duals)
-    // This is allowed in type definitions and simply consumed
-    _match(TokenType.QUESTION);
-
     return left;
+  }
+
+  /// [term], a primary of a type alternative, with the `?` standing apart
+  /// after it read: `T ?` is `T?`, the dual of the type T, as a procedure
+  /// declaration reads it ([_parseProcArgType]).  `?` is the complementation
+  /// operator on a type (TGLP typed-glp.tex, "Type Declarations": "GLP types
+  /// are specified using BNF rules with the complementation operator ?", and
+  /// "its dual (for example Stream?) is an input type"), so after anything
+  /// but a type name not yet complemented it marks nothing, and it is refused
+  /// rather than dropped (GLP #3 Cowork, 2026-10-10 07:48 UTC, "00:26": "A
+  /// parser that drops a mark silently is at fault whatever the syntax").
+  /// Until 2026-10-10 a `?` standing apart was consumed here and dropped, so
+  /// `Q ::= f(R ?).` was read as `f(R)`.
+  Term _markedTypeAltPrimary(Term term) {
+    while (_check(TokenType.QUESTION)) {
+      final q = _advance();
+      if (term is VarTerm && !term.isReader) {
+        term = VarTerm(term.name, true, term.line, term.column);
+        continue;
+      }
+      // Shown as written: a constant by its name, and a parameterised type
+      // reference in reader mode, the structure whose functor carries the
+      // mark ([_parseTypeAltPrimary]), with the mark last.
+      final follows = term is ConstTerm
+          ? '${term.value}'
+          : term is StructTerm && term.functor.endsWith('?')
+              ? '${term.functor.substring(0, term.functor.length - 1)}'
+                  '(${term.args.join(", ")})?'
+              : '$term';
+      throw CompileError(
+        'A "?" in a type definition marks the type name before it, "T ?" '
+        'being "T?", the dual of T; here it follows "$follows", and marks '
+        'nothing',
+        q.line,
+        q.column,
+        phase: 'parser',
+      );
+    }
+    return term;
   }
 
   /// Parse primary term in type alternative context.
