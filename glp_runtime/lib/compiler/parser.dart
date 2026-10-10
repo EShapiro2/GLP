@@ -1855,18 +1855,17 @@ class Parser {
 
   /// Parse a single type alternative using unified term parsing.
   /// Per spec (type-conversion.md): Parse as Term, then convert to TypeExpr.
-  /// 
-  /// For explicit dual definitions like `Channel? ::= ch(Stream?, Stream)?.`,
-  /// the trailing `?` on the structure is allowed and consumed. The duality
-  /// is captured in the type name (Channel?), so the trailing `?` is
-  /// documentation that confirms the definition is for the dual form.
+  ///
+  /// A `?` marks a type name only ([_markedTypeAltPrimary]); after a
+  /// structure, a list or a parenthesised term it marks no type name and is
+  /// refused ([_refuseMarkAfter]).
   TypeExpr _parseTypeAlt() {
     final term = _parseTypeAltTerm();
     return termToTypeExpr(term);
   }
 
   /// Parse a term in type alternative context.
-  /// Similar to _parseTerm() but allows trailing `?` on structures.
+  /// Similar to _parseTerm(), with a `?` on a type name read as its dual.
   Term _parseTypeAltTerm() {
     return _parseTypeAltExpression();
   }
@@ -1924,8 +1923,29 @@ class Parser {
     return term;
   }
 
-  /// Parse primary term in type alternative context.
-  /// Allows trailing `?` on structures (for explicit dual definitions).
+  /// Refuses a `?` next, after [what]: a structure, a list or a parenthesised
+  /// term of a type alternative, which is no type name, so that the `?` marks
+  /// no type name.  TGLP gives `?` a meaning on a type name only, its dual
+  /// (typed-glp.tex, "Type Declarations"), and GLP-Spec on a variable only, a
+  /// reader (glp.tex, Definition "GLP Variables"); a `?` after anything else
+  /// is refused, not dropped (GLP, 2026-10-10 08:40 UTC).  Until 2026-10-10
+  /// such a `?` was consumed here and dropped, for an "explicit dual" written
+  /// `Channel? ::= ch(Stream?, Stream)?.`, which TGLP does not have.
+  void _refuseMarkAfter(String what) {
+    if (!_check(TokenType.QUESTION)) return;
+    final q = _peek();
+    throw CompileError(
+      'A "?" in a type definition marks the type name before it, "T ?" '
+      'being "T?", the dual of T; here it follows $what, which is not a type '
+      'name, and marks no type name',
+      q.line,
+      q.column,
+      phase: 'parser',
+    );
+  }
+
+  /// Parse primary term in type alternative context.  A `?` after a
+  /// structure, a list or a parenthesised term is refused ([_refuseMarkAfter]).
   Term _parseTypeAltPrimary() {
     // An operator name in a type alternative is a name, as in a term
     // ([_operatorNames]): the functor of a structure alternative before "(",
@@ -1943,8 +1963,7 @@ class Parser {
         }
       }
       _consume(TokenType.RPAREN, 'Expected ")" after operator struct arguments');
-      // Allow trailing ? on structure in type definitions
-      _match(TokenType.QUESTION);
+      _refuseMarkAfter('the structure "${functorToken.lexeme}(...)"');
       return StructTerm(functorToken.lexeme, args, functorToken.line, functorToken.column);
     }
     if (operatorName == 'constant') {
@@ -2020,13 +2039,13 @@ class Parser {
         for (int i = terms.length - 2; i >= 0; i--) {
           result = StructTerm(',', [terms[i], result], startToken.line, startToken.column);
         }
-        // Allow trailing ? on parenthesized expression
-        _match(TokenType.QUESTION);
+        _refuseMarkAfter('the parenthesised term "(...)"');
         return result;
       } else {
         _consume(TokenType.RPAREN, 'Expected ")" after expression');
-        // Allow trailing ? on parenthesized expression
-        _match(TokenType.QUESTION);
+        // Refused here, and not left to [_markedTypeAltPrimary], which would
+        // read "(T) ?" as "T?": the "?" follows the parenthesised term.
+        _refuseMarkAfter('the parenthesised term "(...)"');
         return terms[0];
       }
     }
@@ -2044,8 +2063,7 @@ class Parser {
           }
         }
         _consume(TokenType.RPAREN, 'Expected ")" after structure arguments');
-        // Allow trailing ? on structure in type definitions (for explicit duals)
-        _match(TokenType.QUESTION);
+        _refuseMarkAfter('the structure "${functorToken.lexeme}(...)"');
         return StructTerm(functorToken.lexeme, args, functorToken.line, functorToken.column);
       } else {
         return ConstTerm(functorToken.lexeme, functorToken.line, functorToken.column);
@@ -2060,14 +2078,13 @@ class Parser {
     );
   }
 
-  /// Parse list in type alternative context.
-  /// Allows trailing ? on lists (for explicit duals).
+  /// Parse list in type alternative context.  A `?` after the list is
+  /// refused ([_refuseMarkAfter]).
   Term _parseTypeAltList() {
     final bracketToken = _consume(TokenType.LBRACKET, 'Expected "["');
 
     if (_match(TokenType.RBRACKET)) {
-      // Allow trailing ? on empty list in type definitions
-      _match(TokenType.QUESTION);
+      _refuseMarkAfter('the list "[]"');
       return ListTerm(null, null, bracketToken.line, bracketToken.column);
     }
 
@@ -2083,8 +2100,7 @@ class Parser {
     if (_match(TokenType.PIPE)) {
       tail = _parseTypeAltTerm();
       _consume(TokenType.RBRACKET, 'Expected "]" after list tail');
-      // Allow trailing ? on list in type definitions
-      _match(TokenType.QUESTION);
+      _refuseMarkAfter('the list "[...]"');
       Term result = tail;
       for (int i = elements.length - 1; i >= 0; i--) {
         result = ListTerm(elements[i], result, bracketToken.line, bracketToken.column);
@@ -2093,8 +2109,7 @@ class Parser {
     }
 
     _consume(TokenType.RBRACKET, 'Expected "]" after list elements');
-    // Allow trailing ? on list in type definitions
-    _match(TokenType.QUESTION);
+    _refuseMarkAfter('the list "[...]"');
 
     Term result = ListTerm(null, null, bracketToken.line, bracketToken.column);
     for (int i = elements.length - 1; i >= 0; i--) {
