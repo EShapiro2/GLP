@@ -1,16 +1,16 @@
 import 'dart:typed_data';
 import '../platform/compat.dart';
 import '../models/peer.dart';
+import '../models/underlay.dart';
 import '../session/application_identity.dart';
 import '../transport/address_utils.dart';
-import 'messages_actions.dart';
 
 /// The outcome of a session's attestation exchange (spec §Session
 /// Establishment).
 ///
-/// One of these exists per (peer, medium) once the exchange has completed;
+/// One of these exists per (peer, session) once the exchange has completed;
 /// its absence means the exchange is still in flight, and a peer is not
-/// reachable on that medium until it is present. A failed verification never
+/// reachable over that session's underlay until it is present. A failed verification never
 /// produces one: it tears the session down.
 ///
 /// [identity] is the attested application identity, carried to GLP on
@@ -215,16 +215,27 @@ class PeerState {
   /// handshake itself): a peer is only [isReachable] once authenticated.
   final bool bleAuthenticated;
 
-  /// The attestation exchange's outcome on each medium (spec §Session
-  /// Establishment). A session is authenticated before it is attested, and a
-  /// peer is not reachable until it is both: "A peer becomes reachable when
-  /// its session is established, authenticated, and attested."
+  /// The attestation exchange's outcome on each session — the GATT session
+  /// and the UDP session (spec §Session Establishment). A session is
+  /// authenticated before it is attested, and a peer is not reachable over
+  /// its underlay until it is both: "A peer becomes reachable over an underlay
+  /// when its session on that underlay is established, authenticated, and
+  /// attested."
   ///
   /// Null while the exchange is still in flight — which is why reachability
   /// asks for a non-null entry rather than for a truthy flag. Nothing here is
   /// cached across sessions: it is cleared with the session that produced it.
   final PeerAttestation? bleAttestation;
   final PeerAttestation? udpAttestation;
+
+  /// The underlay of the attested UDP session — [Underlay.lan] when the
+  /// peer's address lay within one of the agent's own local prefixes when the
+  /// session was attested, [Underlay.wan] otherwise (spec §Networking API: "A
+  /// LAN connection and a WAN connection are both IP connections; the layer
+  /// tells them apart by whether the peer's address is on the agent's own
+  /// local network"). Set and cleared with [udpAttestation], so a
+  /// disconnect reports the underlay its connect reported.
+  final Underlay? udpUnderlay;
 
   const PeerState({
     required this.publicKey,
@@ -243,6 +254,7 @@ class PeerState {
     this.bleAuthenticated = false,
     this.bleAttestation,
     this.udpAttestation,
+    this.udpUnderlay,
   });
 
   /// Hex representation of public key (for map keys)
@@ -288,42 +300,73 @@ class PeerState {
   /// `docs/GLP_Networking_API/sections/ip.tex` §IP Connection: connected fires
   /// once the stream is "established and authenticated". A raw BLE/UDX link
   /// without a session does not count as reachable.
-  bool get isReachable => reachableTransports.isNotEmpty;
+  bool get isReachable => reachableUnderlays.isNotEmpty;
 
-  /// The transports over which this peer is reachable *right now* — one entry
-  /// per medium that holds a completed Noise session. Empty when the peer is
-  /// unreachable. This is the projection behind `GrassrootsNetwork.peerTransports`
-  /// and the per-transport `onPeerConnected` / `onPeerDisconnected` callbacks.
-  /// Iterated BLE-before-IP so callers observe a stable order. Spec
-  /// `docs/GLP_Networking_API/sections/api.tex` §Connection and Reachability.
-  Set<MessageTransport> get reachableTransports => {
-        if (bleAuthenticated && bleAttestation != null) MessageTransport.ble,
-        if (hasLiveUdpConnection && udpAttestation != null)
-          MessageTransport.udp,
+  /// The underlays over which this peer is reachable *right now* — one entry
+  /// per session that is authenticated and attested: [Underlay.pan] for the
+  /// GATT session, and [udpUnderlay] for the UDP session. Empty when the peer
+  /// is unreachable. This is the projection behind
+  /// `GrassrootsNetwork.peerUnderlays` and the per-underlay `onPeerConnected`
+  /// / `onPeerDisconnected` callbacks. Iterated PAN-before-IP so callers
+  /// observe a stable order. Spec §Connection and Reachability.
+  Set<Underlay> get reachableUnderlays => {
+        if (bleAuthenticated && bleAttestation != null) Underlay.pan,
+        if (hasLiveUdpConnection &&
+            udpAttestation != null &&
+            udpUnderlay != null)
+          udpUnderlay!,
       };
 
-  /// The attestation held for [transport], or null when the exchange has not
-  /// completed on it.
-  PeerAttestation? attestationFor(MessageTransport transport) =>
-      switch (transport) {
-        MessageTransport.ble => bleAttestation,
-        MessageTransport.udp => udpAttestation,
+  /// The attestation held for the session on [underlay], or null when the
+  /// exchange has not completed on it.
+  PeerAttestation? attestationFor(Underlay underlay) => switch (underlay) {
+        Underlay.pan => bleAttestation,
+        Underlay.lan || Underlay.wan =>
+          udpUnderlay == underlay ? udpAttestation : null,
       };
 
-  /// This peer with [transport]'s attestation set to [attestation], which may
-  /// be null to clear it.
+  /// This peer with the attestation of its session on [underlay] set to
+  /// [attestation]: the GATT session's for [Underlay.pan], the UDP session's
+  /// for [Underlay.lan] and [Underlay.wan], which also records the UDP
+  /// session's underlay.
+  PeerState withAttestation(Underlay underlay, PeerAttestation attestation) =>
+      _withSessionAttestations(
+        bleAttestation:
+            underlay == Underlay.pan ? attestation : bleAttestation,
+        udpAttestation:
+            underlay == Underlay.pan ? udpAttestation : attestation,
+        udpUnderlay: underlay == Underlay.pan ? udpUnderlay : underlay,
+      );
+
+  /// This peer with the attestation of its session on [carrier] cleared — and,
+  /// for the UDP session, its underlay with it.
   ///
   /// Its own method rather than a [copyWith] argument because clearing is the
   /// important case and `copyWith` cannot express it: nothing is cached across
   /// sessions, so the attestation goes out with the session that produced it.
-  PeerState withAttestation(
-    MessageTransport transport,
-    PeerAttestation? attestation,
-  ) =>
+  PeerState withoutAttestation(PeerTransport carrier) => switch (carrier) {
+        PeerTransport.bleDirect => _withSessionAttestations(
+            bleAttestation: null,
+            udpAttestation: udpAttestation,
+            udpUnderlay: udpUnderlay,
+          ),
+        PeerTransport.udp => _withSessionAttestations(
+            bleAttestation: bleAttestation,
+            udpAttestation: null,
+            udpUnderlay: null,
+          ),
+        PeerTransport.webrtc => this,
+      };
+
+  PeerState _withSessionAttestations({
+    required PeerAttestation? bleAttestation,
+    required PeerAttestation? udpAttestation,
+    required Underlay? udpUnderlay,
+  }) =>
       PeerState(
         publicKey: publicKey,
         connectionState: connectionState,
-        transport: this.transport,
+        transport: transport,
         rssi: rssi,
         protocolVersion: protocolVersion,
         lastSeen: lastSeen,
@@ -335,10 +378,9 @@ class PeerState {
         lastDirectReachAt: lastDirectReachAt,
         hasLiveUdpConnection: hasLiveUdpConnection,
         bleAuthenticated: bleAuthenticated,
-        bleAttestation:
-            transport == MessageTransport.ble ? attestation : bleAttestation,
-        udpAttestation:
-            transport == MessageTransport.udp ? attestation : udpAttestation,
+        bleAttestation: bleAttestation,
+        udpAttestation: udpAttestation,
+        udpUnderlay: udpUnderlay,
       );
 
   /// The currently active transport based on available connections.
@@ -378,6 +420,7 @@ class PeerState {
     bool? bleAuthenticated,
     PeerAttestation? bleAttestation,
     PeerAttestation? udpAttestation,
+    Underlay? udpUnderlay,
   }) {
     return PeerState(
       publicKey: publicKey ?? this.publicKey,
@@ -399,6 +442,7 @@ class PeerState {
       bleAuthenticated: bleAuthenticated ?? this.bleAuthenticated,
       bleAttestation: bleAttestation ?? this.bleAttestation,
       udpAttestation: udpAttestation ?? this.udpAttestation,
+      udpUnderlay: udpUnderlay ?? this.udpUnderlay,
     );
   }
 
@@ -417,7 +461,8 @@ class PeerState {
           lastDirectReachAt == other.lastDirectReachAt &&
           hasLiveUdpConnection == other.hasLiveUdpConnection &&
           bleAttestation == other.bleAttestation &&
-          udpAttestation == other.udpAttestation;
+          udpAttestation == other.udpAttestation &&
+          udpUnderlay == other.udpUnderlay;
 
   @override
   int get hashCode => Object.hash(
@@ -432,6 +477,7 @@ class PeerState {
         hasLiveUdpConnection,
         bleAttestation,
         udpAttestation,
+        udpUnderlay,
       );
 }
 

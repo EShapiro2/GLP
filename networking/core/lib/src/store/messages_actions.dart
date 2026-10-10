@@ -1,10 +1,6 @@
 import 'dart:typed_data';
 
-/// Transport type for message tracking
-enum MessageTransport {
-  ble,
-  udp,
-}
+import '../models/underlay.dart';
 
 /// Message delivery status
 enum MessageStatus {
@@ -37,14 +33,16 @@ abstract class MessageAction {}
 class MessageSendingAction extends MessageAction {
   /// Unique message ID for tracking status
   final String messageId;
-  final MessageTransport transport;
+  /// The underlay the message travels or travelled over (GNA §Networking
+  /// API).
+  final Underlay underlay;
   final Uint8List recipientPubkey;
   final int payloadSize;
   final DateTime timestamp;
 
   MessageSendingAction({
     required this.messageId,
-    required this.transport,
+    required this.underlay,
     required this.recipientPubkey,
     required this.payloadSize,
     DateTime? timestamp,
@@ -82,14 +80,16 @@ class MessageQueuedAction extends MessageAction {
 class MessageSentAction extends MessageAction {
   /// Unique message ID for tracking status
   final String messageId;
-  final MessageTransport transport;
+  /// The underlay the message travels or travelled over (GNA §Networking
+  /// API).
+  final Underlay underlay;
   final Uint8List recipientPubkey;
   final int payloadSize;
   final DateTime timestamp;
 
   MessageSentAction({
     required this.messageId,
-    required this.transport,
+    required this.underlay,
     required this.recipientPubkey,
     required this.payloadSize,
     DateTime? timestamp,
@@ -128,14 +128,16 @@ class MessageReadAction extends MessageAction {
 class MessageReceivedAction extends MessageAction {
   /// Unique message ID (from sender)
   final String messageId;
-  final MessageTransport transport;
+  /// The underlay the message travels or travelled over (GNA §Networking
+  /// API).
+  final Underlay underlay;
   final Uint8List senderPubkey;
   final int payloadSize;
   final DateTime timestamp;
 
   MessageReceivedAction({
     required this.messageId,
-    required this.transport,
+    required this.underlay,
     required this.senderPubkey,
     required this.payloadSize,
     DateTime? timestamp,

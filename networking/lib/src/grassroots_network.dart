@@ -21,6 +21,7 @@ import 'package:grassroots_networking_core/src/transport/udp_transport_service.d
 import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:grassroots_networking_core/src/models/peer.dart';
 import 'package:grassroots_networking_core/src/models/packet.dart';
+import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/protocol/protocol_handler.dart';
 import 'package:grassroots_networking_core/src/protocol/fragment_handler.dart';
 import 'package:grassroots_networking_core/src/protocol/message_transport.dart';
@@ -328,12 +329,12 @@ Set<String> computeStaleBlePeerPubkeys({
 ///
 /// final grassroots = GrassrootsNetwork(identity: identity);
 ///
-/// grassroots.onMessageReceived = (senderPubkey, payload) {
+/// grassroots.onMessageReceived = (sender, payload, messageId, underlay) {
 ///   // Handle incoming GSG block
 /// };
 ///
-/// grassroots.onPeerConnected = (publicKey, transport) {
-///   // peer reachable over `transport` (BLE or UDP) — start cordial dissemination
+/// grassroots.onPeerConnected = (pk, underlay, identity) {
+///   // peer reachable over `underlay` (PAN, LAN or WAN)
 /// };
 ///
 /// await grassroots.initialize();
@@ -365,19 +366,20 @@ class GrassrootsNetwork {
   /// Last known settings state for detecting changes
   SettingsState? _lastSettingsState;
 
-  /// Per-peer set of reachable transports from the previous store tick. Used
-  /// by the reachability subscriber to detect, per medium, transports that
+  /// Per-peer set of reachable underlays from the previous store tick. Used
+  /// by the reachability subscriber to detect, per underlay, underlays that
   /// came up (fire onPeerConnected) or went down (fire onPeerDisconnected). A
   /// missing entry is treated as the empty set, so a peer that materializes
-  /// already-reachable fires connect for each live medium. Only non-empty sets
-  /// are retained — an unreachable peer holds no entry.
-  final Map<String, Set<MessageTransport>> _lastKnownTransports = {};
+  /// already-reachable fires connect for each live underlay. Only non-empty
+  /// sets are retained — an unreachable peer holds no entry.
+  final Map<String, Set<Underlay>> _lastKnownUnderlays = {};
 
   /// Pubkeys (hex) already surfaced via [onPeerDiscovered] this session.
-  /// Discovery is the identity-learned event — the first accepted ANNOUNCE
-  /// carrying a peer's public key — which precedes the Noise session and
-  /// therefore [onPeerConnected]. Fired once per identity; a peer going out
-  /// of range and returning is a re-*connect*, not a re-discover.
+  /// Discovery is the identity-learned event on a proximity underlay — the
+  /// first accepted ANNOUNCE carrying a nearby peer's public key, over the PAN
+  /// or from a LAN source — which precedes the Noise session and therefore
+  /// [onPeerConnected]. Fired once per identity; a peer going out of range
+  /// and returning is a re-*connect*, not a re-discover.
   final Set<String> _discoveredPubkeyHexes = {};
 
   /// Permission handler
@@ -417,7 +419,7 @@ class GrassrootsNetwork {
   }
 
   /// Per-pair handshake serialization (spec §Session Establishment: one
-  /// handshake per medium per pair). The announce-triggered initiation and
+  /// handshake per underlay per pair). The announce-triggered initiation and
   /// the inbound handshake handler both mutate the pair's handshake state
   /// across awaits; run concurrently they can each observe no handshake in
   /// flight and create one, clobbering the pair's single state machine —
@@ -668,57 +670,51 @@ class GrassrootsNetwork {
 
   // ===== Public callbacks =====
 
-  /// Called when an application message is received.
-  /// Parameters: messageId, senderPubkey, payload (raw GSG block data),
-  /// transport (the transport the message actually arrived on).
+  /// Called for every incoming payload (spec §Point-to-Point Communication,
+  /// `onMessageReceived(sender, payload, messageId, underlay)`). Receives the
+  /// sender's public key, the byte payload, a layer-assigned `messageId`, and
+  /// the [Underlay] over which the message was delivered, taken from the
+  /// receive path.
   void Function(
-    String messageId,
-    Uint8List senderPubkey,
+    Uint8List sender,
     Uint8List payload,
-    MessageTransport transport,
+    String messageId,
+    Underlay underlay,
   )? onMessageReceived;
 
-  /// Spec-compliant receive callback
-  /// (`docs/GLP_Networking_API/sections/api.tex` §onReceive).
-  ///
-  /// Fired alongside [onMessageReceived] for every accepted message. Use this
-  /// when you only need the sender's pubkey and payload. The richer
-  /// [onMessageReceived] variant additionally provides a transport-assigned
-  /// `messageId` (useful for dedup / ACK correlation; also dispatched via the
-  /// Redux `MessageReceivedAction`) and the transport the message actually
-  /// arrived on (taken from the receive path).
-  void Function(Uint8List senderPubkey, Uint8List payload)? onReceive;
+  /// Called for each nearby Grassroots agent found, with the underlay of
+  /// discovery (spec §Concepts and Principles, Discovery:
+  /// `onPeerDiscovered(pk, underlay)`). The agent's key is known once ANNOUNCE
+  /// has run, so this fires on the first accepted ANNOUNCE from a nearby
+  /// agent: over the PAN, or from a source within one of the agent's own
+  /// local prefixes on the LAN. WAN contact is not discovery and does not
+  /// fire it.
+  void Function(Uint8List pk, ProximityUnderlay underlay)? onPeerDiscovered;
 
-  /// Spec: `docs/GLP_Networking_API/sections/api.tex` §onPeerDiscovered.
-  /// Fires when a new peer's identity becomes known to us for the first
-  /// time (the first ANNOUNCE arrives carrying their pubkey).
-  void Function(Uint8List publicKey)? onPeerDiscovered;
-
-  /// Called when a peer becomes reachable over a given transport. Fires once
-  /// per medium: a peer reachable over both BLE and IP fires twice (one BLE,
-  /// one IP), and a medium that drops and later recovers fires again. Receives
-  /// the peer's public key, the [MessageTransport] it connected over, and the
-  /// peer's attested application identity — null where the peer's platform
-  /// provides no attestation (spec §Connection and Reachability, §Session
-  /// Establishment). A peer is reachable only once its session is
-  /// established, authenticated AND attested, so this never fires before the
-  /// attestation exchange.
+  /// Called when a peer becomes reachable over an underlay. Fires once per
+  /// underlay: a peer reachable over the PAN and over the LAN or WAN fires
+  /// twice, and an underlay that drops and later recovers fires again.
+  /// Receives the peer's public key, the [Underlay] over which it connected,
+  /// and the peer's attested application identity — null where the peer's
+  /// platform provides no attestation (spec §Connection and Reachability,
+  /// `onPeerConnected(pk, underlay, identity?)`; §Session Establishment). A
+  /// peer is reachable only once its session is established, authenticated
+  /// AND attested, so this never fires before the attestation exchange.
   void Function(
-    Uint8List publicKey,
-    MessageTransport transport,
+    Uint8List pk,
+    Underlay underlay,
     ApplicationIdentity? identity,
   )? onPeerConnected;
 
   /// Called when an existing peer sends an ANNOUNCE update.
   void Function(PeerState peer)? onPeerUpdated;
 
-  /// Called when a peer stops being reachable over a given transport. Fires
-  /// per medium: losing one of two live transports fires here for the medium
+  /// Called when a peer is no longer reachable over a given underlay. Fires
+  /// per underlay: losing one of two live underlays fires here for the one
   /// that dropped while the peer stays reachable over the other. Receives the
-  /// peer's public key and the [MessageTransport] that went down. Spec
-  /// `docs/GLP_Networking_API/sections/api.tex` §Connection and Reachability.
-  void Function(Uint8List publicKey, MessageTransport transport)?
-      onPeerDisconnected;
+  /// peer's public key and that [Underlay] (spec §Connection and
+  /// Reachability, `onPeerDisconnected(pk, underlay)`).
+  void Function(Uint8List pk, Underlay underlay)? onPeerDisconnected;
 
   /// Called when UDP transport becomes available
   void Function()? onUdpInitialized;
@@ -864,14 +860,14 @@ class GrassrootsNetwork {
   /// Check if a peer is reachable via any transport
   bool isPeerReachable(Uint8List pubkey) => _peersState.isPeerReachable(pubkey);
 
-  /// The transports by which [pubkey] is currently reachable, or an empty list
-  /// if it is unreachable. Spec `docs/GLP_Networking_API/sections/api.tex`
-  /// §Connection and Reachability — lets GLP make proximity-aware decisions
-  /// (e.g. nearby friends = friends ∩ peers reachable over BLE). Returns a
-  /// fresh list ordered BLE-before-IP.
-  List<MessageTransport> peerTransports(Uint8List pubkey) =>
-      _peersState.getPeerByPubkey(pubkey)?.reachableTransports.toList() ??
-      const <MessageTransport>[];
+  /// The underlays by which [pk] is currently reachable, or an empty list if
+  /// it is unreachable (spec §Connection and Reachability,
+  /// `peerUnderlays(pk)`) — lets GLP make proximity-aware decisions (e.g.
+  /// nearby friends = friends ∩ peers reachable over PAN). Returns a fresh
+  /// list ordered PAN-before-IP.
+  List<Underlay> peerUnderlays(Uint8List pk) =>
+      _peersState.getPeerByPubkey(pk)?.reachableUnderlays.toList() ??
+      const <Underlay>[];
 
   /// The agent's current public `ip:port`, or null if not yet known.
   /// Address changes are surfaced via [onConnectivityStatusChanged].
@@ -1129,12 +1125,12 @@ class GrassrootsNetwork {
   /// Whether UDP is currently enabled and available
   bool get isUdpEnabled => _udpAvailable && _isUdpEnabledInSettings;
 
-  /// The cold-call trust level of [medium] (spec §Trust levels). Closed until
-  /// GLP sets it with [setTrustLevel]. The two proximity media carry their own
-  /// levels, so an agent may answer strangers over one while ignoring them
-  /// over the other.
-  ColdCallTrustLevel trustLevelOf(ProximityMedium medium) =>
-      store.state.settings.trustLevelOf(medium);
+  /// The cold-call trust level of [underlay] (spec §Trust levels). Closed
+  /// until GLP sets it with [setTrustLevel]. The two proximity underlays carry
+  /// their own levels, so an agent may answer strangers over one while
+  /// ignoring them over the other.
+  ColdCallTrustLevel trustLevelOf(ProximityUnderlay underlay) =>
+      store.state.settings.trustLevelOf(underlay);
 
   /// Whether IP contact from [senderPubkey] is answered (spec §Cold Calls,
   /// Trust levels).
@@ -1161,7 +1157,7 @@ class GrassrootsNetwork {
         _udpService?.getPeerIdForPubkey(senderPubkey) != null) {
       return true;
     }
-    if (trustLevelOf(ProximityMedium.lan) == ColdCallTrustLevel.open &&
+    if (trustLevelOf(ProximityUnderlay.lan) == ColdCallTrustLevel.open &&
         _isLanSource(udpPeerId)) {
       return true;
     }
@@ -1178,6 +1174,26 @@ class GrassrootsNetwork {
     if (remote == null) return false;
     return store.state.localNetwork.network.containsAddress(remote.ip);
   }
+
+  /// The underlay of [pk]'s session on [carrier] (spec §Networking API): a
+  /// GATT session is [Underlay.pan], and a UDP session is [_udpUnderlayOf].
+  /// Null for a carrier that holds no session.
+  Underlay? _underlayOf(PeerTransport carrier, Uint8List pk) =>
+      switch (carrier) {
+        PeerTransport.bleDirect => Underlay.pan,
+        PeerTransport.udp => _udpUnderlayOf(pk),
+        PeerTransport.webrtc => null,
+      };
+
+  /// The underlay of [pk]'s UDP session: [Underlay.lan] when the peer's
+  /// address lies within one of the agent's own local prefixes, and
+  /// [Underlay.wan] otherwise — "the layer tells them apart by whether the
+  /// peer's address is on the agent's own local network" (spec §Networking
+  /// API), by the test the LAN trust level uses ([_isLanSource]).
+  Underlay _udpUnderlayOf(Uint8List pk) =>
+      _isLanSource(_udpService?.getPeerIdForPubkey(pk))
+          ? Underlay.lan
+          : Underlay.wan;
 
   List<RendezvousServerSettings> get configuredRendezvousServers =>
       store.state.settings.configuredRendezvousServers;
@@ -2329,7 +2345,7 @@ class GrassrootsNetwork {
   /// Each side's ANNOUNCE identifies it to the other, and the existing
   /// handshake glare resolution settles the pair from there.
   void _lanColdCall(String token, String address) {
-    final trust = trustLevelOf(ProximityMedium.lan);
+    final trust = trustLevelOf(ProximityUnderlay.lan);
     if (trust != ColdCallTrustLevel.open) {
       debugPrint(
         '[lan] unmatched instance $token ignored (lan trust=${trust.name})',
@@ -2524,21 +2540,22 @@ class GrassrootsNetwork {
     await _bleService?.applyRoleModeChange();
   }
 
-  /// Set the cold-call trust level of one proximity medium. Spec
-  /// `docs/GLP_Networking_API/sections/proximity.tex` §Discovery:
-  /// `setTrustLevel(medium, level)`. Until set, both levels are Closed.
+  /// Set the cold-call trust level of the given [ProximityUnderlay] to Open
+  /// or Closed (spec §Concepts and Principles, Discovery:
+  /// `setTrustLevel(underlay, level)`; §Trust levels). Until set, both levels
+  /// are Closed.
   ///
-  /// The level is keyed on the medium of discovery, not on the transport that
-  /// carries the session it leads to: a LAN session is an IP session, so
-  /// keying on the transport would tie LAN contact to contact from the
-  /// Internet at large. The two levels are independent — GLP raises one upon
-  /// entering a trusted place or local network and lowers it upon leaving.
+  /// A LAN session and a WAN session are both IP sessions, and only LAN
+  /// contact — a source within one of the agent's own local prefixes — is
+  /// governed by the LAN level; WAN contact is governed by no level. The two
+  /// levels are independent — GLP raises one upon entering a trusted place or
+  /// local network and lowers it upon leaving.
   Future<void> setTrustLevel(
-    ProximityMedium medium,
+    ProximityUnderlay underlay,
     ColdCallTrustLevel level,
   ) async {
-    if (store.state.settings.trustLevelOf(medium) == level) return;
-    store.dispatch(SetColdCallTrustLevelAction(medium, level));
+    if (store.state.settings.trustLevelOf(underlay) == level) return;
+    store.dispatch(SetColdCallTrustLevelAction(underlay, level));
   }
 
   // ===== Hole punching =====
@@ -2678,7 +2695,7 @@ class GrassrootsNetwork {
     store.dispatch(
       MessageSendingAction(
         messageId: messageId,
-        transport: MessageTransport.ble, // Tentative — updated on actual send
+        underlay: Underlay.pan, // Tentative — updated on actual send
         recipientPubkey: recipientPubkey,
         payloadSize: payload.length,
       ),
@@ -2730,7 +2747,7 @@ class GrassrootsNetwork {
           messageId: messageId,
           recipientPubkey: recipientPubkey,
           payload: payload,
-          transport: MessageTransport.ble,
+          underlay: Underlay.pan,
           bleDeviceId: bleDeviceId,
         );
         // Delivery confirmed by ACK, not BLE write success.
@@ -2777,7 +2794,7 @@ class GrassrootsNetwork {
           messageId: messageId,
           recipientPubkey: recipientPubkey,
           payload: payload,
-          transport: MessageTransport.udp,
+          underlay: _udpUnderlayOf(recipientPubkey),
           bleDeviceId: null,
         );
         return true;
@@ -2809,7 +2826,7 @@ class GrassrootsNetwork {
                 messageId: messageId,
                 recipientPubkey: recipientPubkey,
                 payload: payload,
-                transport: MessageTransport.udp,
+                underlay: _udpUnderlayOf(recipientPubkey),
                 bleDeviceId: null,
               );
               return true;
@@ -2893,7 +2910,7 @@ class GrassrootsNetwork {
           store.dispatch(
             MessageSendingAction(
               messageId: attemptCounted.messageId,
-              transport: MessageTransport.ble,
+              underlay: Underlay.pan,
               recipientPubkey: attemptCounted.recipientPubkey,
               payloadSize: attemptCounted.payload.length,
             ),
@@ -2970,13 +2987,13 @@ class GrassrootsNetwork {
     required String messageId,
     required Uint8List recipientPubkey,
     required Uint8List payload,
-    required MessageTransport transport,
+    required Underlay underlay,
     required String? bleDeviceId,
   }) {
     store.dispatch(
       MessageSentAction(
         messageId: messageId,
-        transport: transport,
+        underlay: underlay,
         recipientPubkey: recipientPubkey,
         payloadSize: payload.length,
       ),
@@ -3456,8 +3473,8 @@ class GrassrootsNetwork {
     Uint8List payload,
     PeerTransport transport,
   ) async {
-    final medium = _messageTransportOf(transport);
-    if (medium == null) return;
+    final underlay = _underlayOf(transport, senderPubkey);
+    if (underlay == null) return;
     final peerShort = _pubkeyToHex(senderPubkey).substring(0, 8);
 
     final digest = _attestationDigestFor(transport, senderPubkey, senderPubkey);
@@ -3491,7 +3508,7 @@ class GrassrootsNetwork {
         debugPrint('[attest] $peerShort attested as $identity');
         store.dispatch(PeerAttestedAction(
           publicKey: senderPubkey,
-          transport: medium,
+          underlay: underlay,
           attestation: PeerAttestation(identity: identity),
         ));
         _drainQueuedMessagesForPeer(senderPubkey);
@@ -3499,7 +3516,7 @@ class GrassrootsNetwork {
         debugPrint('[attest] $peerShort unattested: $reason');
         store.dispatch(PeerAttestedAction(
           publicKey: senderPubkey,
-          transport: medium,
+          underlay: underlay,
           attestation: PeerAttestation.unattested,
         ));
         _drainQueuedMessagesForPeer(senderPubkey);
@@ -3532,13 +3549,6 @@ class GrassrootsNetwork {
         break;
     }
   }
-
-  MessageTransport? _messageTransportOf(PeerTransport transport) =>
-      switch (transport) {
-        PeerTransport.udp => MessageTransport.udp,
-        PeerTransport.bleDirect => MessageTransport.ble,
-        PeerTransport.webrtc => null,
-      };
 
   Future<void> _startNoiseHandshakeForPeer({
     required PeerTransport transport,
@@ -4504,22 +4514,20 @@ class GrassrootsNetwork {
     // Message received from any transport
     _messageRouter.onMessageReceived =
         (messageId, senderPubkey, payload, arrivalTransport) {
-      // Authoritative arrival transport from the receive path (not inferred
-      // from the peer's preferred/active transport).
-      final transport = arrivalTransport == PeerTransport.udp
-          ? MessageTransport.udp
-          : MessageTransport.ble;
+      // The underlay of the session the message arrived on, from the receive
+      // path (not inferred from the peer's preferred/active carrier).
+      final underlay = _underlayOf(arrivalTransport, senderPubkey);
+      if (underlay == null) return;
 
       store.dispatch(
         MessageReceivedAction(
           messageId: messageId,
-          transport: transport,
+          underlay: underlay,
           senderPubkey: senderPubkey,
           payloadSize: payload.length,
         ),
       );
-      onMessageReceived?.call(messageId, senderPubkey, payload, transport);
-      onReceive?.call(senderPubkey, payload);
+      onMessageReceived?.call(senderPubkey, payload, messageId, underlay);
     };
 
     // ACK received (delivery confirmation)
@@ -4589,7 +4597,7 @@ class GrassrootsNetwork {
         (packet, transport, {String? peerId}) async {
       try {
         // Serialized with any in-flight announce-triggered initiation for
-        // the same pair (spec §Session: one handshake per medium per pair).
+        // the same pair (spec §Session Establishment: one handshake per underlay per pair).
         final result = await _serializedHandshake(
           _peekHandshakePairKey(packet, transport, peerId),
           () => _noiseSessions.handleHandshakePacket(
@@ -4713,16 +4721,28 @@ class GrassrootsNetwork {
         ));
       }
 
-      // onPeerDiscovered is the identity-learned event: a peer's public key
-      // arrives in the signed ANNOUNCE, which is sent in the clear and
-      // precedes the Noise session. Because onPeerConnected is gated on an
-      // authenticated Noise session (see processReachabilityTransitions),
-      // discovery strictly precedes connection — so we surface it here, once per
-      // identity, rather than coupling it to the reachability transition. The
-      // rendezvous server is infrastructure, not a discoverable peer.
-      if (!_isRendezvousPubkeyHex(pubkeyHex) &&
+      // onPeerDiscovered is the identity-learned event on a proximity
+      // underlay: a nearby peer's public key arrives in the signed ANNOUNCE,
+      // which is sent in the clear and precedes the Noise session. Because
+      // onPeerConnected is gated on an authenticated Noise session (see
+      // processReachabilityTransitions), discovery strictly precedes
+      // connection — so we surface it here, once per identity, rather than
+      // coupling it to the reachability transition. Discovery is over the
+      // proximity underlays (spec §Concepts and Principles, Discovery): a BLE
+      // ANNOUNCE is PAN discovery, a UDP ANNOUNCE from a source within one of
+      // the agent's own local prefixes is LAN discovery, and WAN contact is
+      // not discovery. The rendezvous server is infrastructure, not a
+      // discoverable peer.
+      final discoveredOn = switch (transport) {
+        PeerTransport.bleDirect => ProximityUnderlay.pan,
+        PeerTransport.udp =>
+          _isLanSource(udpPeerId) ? ProximityUnderlay.lan : null,
+        PeerTransport.webrtc => null,
+      };
+      if (discoveredOn != null &&
+          !_isRendezvousPubkeyHex(pubkeyHex) &&
           _discoveredPubkeyHexes.add(pubkeyHex)) {
-        onPeerDiscovered?.call(data.publicKey);
+        onPeerDiscovered?.call(data.publicKey, discoveredOn);
       }
 
       // onPeerConnected is driven by the reachability subscriber (it fires once
@@ -5032,7 +5052,7 @@ class GrassrootsNetwork {
   void _processReachabilityTransitions(PeersState peersState) {
     processReachabilityTransitions(
       peersState: peersState,
-      lastKnownTransports: _lastKnownTransports,
+      lastKnownUnderlays: _lastKnownUnderlays,
       onConnected: onPeerConnected,
       onDisconnected: onPeerDisconnected,
     );
@@ -5061,7 +5081,7 @@ class GrassrootsNetwork {
     _messageRouter.shouldAcceptBleAnnounce =
         (senderPubkey, {String? bleDeviceId, BleRole? bleRole}) {
       // The BLE level alone governs a BLE encounter (spec §Trust levels).
-      if (store.state.settings.isOpenOn(ProximityMedium.ble)) {
+      if (store.state.settings.isOpenOn(ProximityUnderlay.pan)) {
         return true;
       }
       // Closed: recognize only already-known peers — keys GLP supplied via
@@ -5531,7 +5551,7 @@ class GrassrootsNetwork {
 
     final knownHint = _bleService!.getKnownPeerPubkeyHintForPeerId(deviceId);
     // A BLE device is a BLE encounter, so the BLE level governs it.
-    final allowsColdCall = store.state.settings.isOpenOn(ProximityMedium.ble);
+    final allowsColdCall = store.state.settings.isOpenOn(ProximityUnderlay.pan);
     if (!isKnown && !allowsColdCall && knownHint == null) {
       debugPrint(
         '[ble-announce] Suppressed ANNOUNCE to $deviceId '
@@ -5643,79 +5663,80 @@ class GrassrootsNetwork {
 
 }
 
-/// Diff each peer's set of reachable transports against the previous tick and
-/// fire the per-transport reachability callbacks for every medium that came up
-/// or went down. Pure-ish: the only side effects are calling [onConnected] /
-/// [onDisconnected] and mutating [lastKnownTransports] in place.
+/// Diff each peer's set of reachable underlays against the previous tick and
+/// fire the per-underlay reachability callbacks for every underlay that came
+/// up or went down. Pure-ish: the only side effects are calling [onConnected]
+/// / [onDisconnected] and mutating [lastKnownUnderlays] in place.
 ///
-/// Semantics (per medium, independently — BLE and IP never interfere):
-///   - a transport reachable now but not last tick: fire [onConnected] with
-///     the peer's public key and that transport. (Discovery — onPeerDiscovered
+/// Semantics (per underlay, independently — the PAN and IP sessions never
+/// interfere):
+///   - an underlay reachable now but not last tick: fire [onConnected] with
+///     the peer's public key and that underlay. (Discovery — onPeerDiscovered
 ///     — is surfaced separately at ANNOUNCE receipt, because a peer's identity
 ///     is known before its Noise session authenticates.)
-///   - a transport reachable last tick but not now: fire [onDisconnected] with
-///     the public key and that transport. A peer that loses one of two live
-///     media fires a disconnect for the lost medium while staying reachable
+///   - an underlay reachable last tick but not now: fire [onDisconnected] with
+///     the public key and that underlay. A peer that loses one of two live
+///     underlays fires a disconnect for the lost one while staying reachable
 ///     over the other.
 ///   - a peer removed from [peersState.peersList] entirely (e.g.
-///     PeerRemovedAction): fire [onDisconnected] for each medium it still held.
-///   - no medium changed: no fire.
+///     PeerRemovedAction): fire [onDisconnected] for each underlay it still
+///     held.
+///   - no underlay changed: no fire.
 @visibleForTesting
 void processReachabilityTransitions({
   required PeersState peersState,
-  required Map<String, Set<MessageTransport>> lastKnownTransports,
+  required Map<String, Set<Underlay>> lastKnownUnderlays,
   required void Function(
-    Uint8List publicKey,
-    MessageTransport transport,
+    Uint8List pk,
+    Underlay underlay,
     ApplicationIdentity? identity,
   )? onConnected,
-  required void Function(Uint8List publicKey, MessageTransport transport)?
-      onDisconnected,
+  required void Function(Uint8List pk, Underlay underlay)? onDisconnected,
 }) {
   final seenPubkeys = <String>{};
 
   for (final peer in peersState.peersList) {
     final pk = peer.pubkeyHex;
     seenPubkeys.add(pk);
-    final previous = lastKnownTransports[pk] ?? const <MessageTransport>{};
-    final current = peer.reachableTransports;
+    final previous = lastKnownUnderlays[pk] ?? const <Underlay>{};
+    final current = peer.reachableUnderlays;
     if (setEquals(previous, current)) continue;
 
-    for (final t in current.difference(previous)) {
+    for (final u in current.difference(previous)) {
       onConnected?.call(
         peer.publicKey,
-        t,
-        peer.attestationFor(t)?.identity,
+        u,
+        peer.attestationFor(u)?.identity,
       );
     }
-    for (final t in previous.difference(current)) {
-      onDisconnected?.call(peer.publicKey, t);
+    for (final u in previous.difference(current)) {
+      onDisconnected?.call(peer.publicKey, u);
     }
 
     // Retain only non-empty sets so an unreachable peer holds no entry and the
     // removed-while-reachable sweep below stays simple.
     if (current.isEmpty) {
-      lastKnownTransports.remove(pk);
+      lastKnownUnderlays.remove(pk);
     } else {
-      lastKnownTransports[pk] = current;
+      lastKnownUnderlays[pk] = current;
     }
   }
 
   // Removed-while-reachable: the peer's entry vanished entirely, so surface a
-  // disconnect on each medium it still held.
-  final missing = lastKnownTransports.keys
+  // disconnect on each underlay it still held.
+  final missing = lastKnownUnderlays.keys
       .where((pk) => !seenPubkeys.contains(pk))
       .toList(growable: false);
   for (final pk in missing) {
-    final transports = lastKnownTransports.remove(pk)!;
+    final underlays = lastKnownUnderlays.remove(pk)!;
     final cb = onDisconnected;
     if (cb == null) continue;
     final pubkey = Uint8List.fromList([
       for (var i = 0; i < pk.length; i += 2)
         int.parse(pk.substring(i, i + 2), radix: 16)
     ]);
-    for (final t in transports) {
-      cb(pubkey, t);
+    for (final u in underlays) {
+      cb(pubkey, u);
     }
   }
 }

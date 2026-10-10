@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 import '../models/identity.dart';
 import '../models/packet.dart';
 import '../models/peer.dart';
+import '../models/underlay.dart';
 import '../platform/compat.dart';
 import '../protocol/fragment_handler.dart';
 import '../protocol/message_transport.dart';
@@ -29,14 +30,16 @@ import 'known_peers_persistence.dart';
 /// the Flutter package runs — no reimplementation and no fork — exposing the
 /// spec's API surface: construction with identity, [putKnownPeer] /
 /// [removeKnownPeer] / [putPeerAddress], [send], [onMessageReceived],
-/// [onPeerConnected] / [onPeerDisconnected], [getPublicAddress]. IP is the
-/// only medium: no BLE, no mDNS, no connectivity plugin — the public address
-/// is static configuration ([staticPublicAddress]), as on a globally routable
-/// server.
+/// [onPeerConnected] / [onPeerDisconnected], [getPublicAddress]. It realizes
+/// the WAN underlay alone (spec §Networking API: "a server-side agent ...
+/// realizes the WAN underlay alone, headless, with proximity discovery
+/// absent"), so every callback reports [Underlay.wan]: no BLE, no mDNS, no
+/// connectivity plugin — the public address is static configuration
+/// ([staticPublicAddress]), as on a globally routable server.
 ///
-/// This profile has no proximity medium and therefore no trust level (spec
-/// §Trust levels — a level is held per `ProximityMedium`, and this profile has
-/// none). Unsolicited inbound IP contact is governed by no level: an inbound
+/// This profile has no proximity underlay and therefore no trust level (spec
+/// §Trust levels — a level is held per `ProximityUnderlay`, and this profile
+/// has none). Unsolicited inbound IP contact is governed by no level: an inbound
 /// ANNOUNCE or Noise handshake from a key not in the known set is rejected, so
 /// an unknown caller cannot be answered at all. [putKnownPeer] registers a key,
 /// [removeKnownPeer] revokes it; a service that must accept a caller registers
@@ -149,24 +152,34 @@ class HeadlessGrassrootsNetwork {
 
   // ===== Spec API surface =====
 
-  /// Callback for received message payloads:
-  /// `(messageId, senderPubkey, payload, transport)`.
-  void Function(String messageId, Uint8List senderPubkey, Uint8List payload,
-      MessageTransport transport)? onMessageReceived;
-
-  /// Fired when a peer becomes reachable over IP (authenticated session up).
-  /// Receives the peer's public key, the transport it connected over, and
-  /// the peer's attested application identity — null where the peer's
-  /// platform provides none (spec §Connection and Reachability).
+  /// Callback for incoming payloads (spec §Point-to-Point Communication,
+  /// `onMessageReceived(sender, payload, messageId, underlay)`): the sender's
+  /// public key, the byte payload, a layer-assigned `messageId`, and the
+  /// underlay over which the message was delivered — [Underlay.wan] in this
+  /// profile.
   void Function(
-    Uint8List pubkey,
-    MessageTransport transport,
+    Uint8List sender,
+    Uint8List payload,
+    String messageId,
+    Underlay underlay,
+  )? onMessageReceived;
+
+  /// Fired when a peer becomes reachable (authenticated and attested session
+  /// up). Receives the peer's public key, the underlay over which it
+  /// connected — [Underlay.wan] in this profile — and the peer's attested
+  /// application identity, null where the peer's platform provides none
+  /// (spec §Connection and Reachability, `onPeerConnected(pk, underlay,
+  /// identity?)`).
+  void Function(
+    Uint8List pk,
+    Underlay underlay,
     ApplicationIdentity? identity,
   )? onPeerConnected;
 
-  /// Fired when a peer stops being reachable over IP.
-  void Function(Uint8List pubkey, MessageTransport transport)?
-      onPeerDisconnected;
+  /// Fired when a peer is no longer reachable over an underlay —
+  /// [Underlay.wan] in this profile (spec §Connection and Reachability,
+  /// `onPeerDisconnected(pk, underlay)`).
+  void Function(Uint8List pk, Underlay underlay)? onPeerDisconnected;
 
   /// The agent's current public `ip:port` — static configuration in this
   /// profile — or null when none was configured.
@@ -196,7 +209,7 @@ class HeadlessGrassrootsNetwork {
     _udpMessageSender.abandonPeer(hex);
     unawaited(_udpService?.disconnectFromPeer(hex));
     if (_reachablePeers.remove(hex)) {
-      onPeerDisconnected?.call(pubkey, MessageTransport.udp);
+      onPeerDisconnected?.call(pubkey, Underlay.wan);
     }
   }
 
@@ -258,7 +271,7 @@ class HeadlessGrassrootsNetwork {
     _connectionSub = null;
     _noiseSessions.resetTransport(PeerTransport.udp);
     for (final hex in _reachablePeers.toList()) {
-      onPeerDisconnected?.call(_bytes(hex), MessageTransport.udp);
+      onPeerDisconnected?.call(_bytes(hex), Underlay.wan);
     }
     _reachablePeers.clear();
     _announcedTo.clear();
@@ -422,7 +435,7 @@ class HeadlessGrassrootsNetwork {
 
   /// Unsolicited inbound IP contact is governed by no trust level (spec §Trust
   /// levels): it is refused unless the peer is in the known-peer set or
-  /// presents a valid invite. This profile has no proximity medium — no BLE,
+  /// presents a valid invite. This profile has no proximity underlay — no BLE,
   /// no LAN discovery — and no invite support, so the known-peer set is the
   /// whole of it.
   bool _acceptsContactFrom(Uint8List pubkey) => _isKnown(pubkey);
@@ -432,12 +445,7 @@ class HeadlessGrassrootsNetwork {
   void _setupRouterCallbacks() {
     _messageRouter.onMessageReceived =
         (messageId, senderPubkey, payload, arrivalTransport) {
-      onMessageReceived?.call(
-        messageId,
-        senderPubkey,
-        payload,
-        MessageTransport.udp,
-      );
+      onMessageReceived?.call(senderPubkey, payload, messageId, Underlay.wan);
     };
 
     _messageRouter.shouldAcceptUdpAnnounce = (senderPubkey, {udpPeerId}) =>
@@ -615,7 +623,7 @@ class HeadlessGrassrootsNetwork {
   }
 
   /// Per-pair handshake serialization (spec §Session Establishment: one
-  /// handshake per medium per pair). The announce-triggered initiation and
+  /// handshake per underlay per pair). The announce-triggered initiation and
   /// the inbound handshake handler both mutate the pair's handshake state
   /// across awaits; run concurrently they can each observe no handshake in
   /// flight and create one, clobbering the pair's single state machine —
@@ -663,7 +671,7 @@ class HeadlessGrassrootsNetwork {
           final pubkey = _bytes(event.peerId);
           _noiseSessions.reset(PeerTransport.udp, pubkey);
           if (_reachablePeers.remove(event.peerId)) {
-            onPeerDisconnected?.call(pubkey, MessageTransport.udp);
+            onPeerDisconnected?.call(pubkey, Underlay.wan);
           }
         }
       }
@@ -837,11 +845,11 @@ class HeadlessGrassrootsNetwork {
   void _completeAttestation(Uint8List pubkey, PeerAttestation attestation) {
     store.dispatch(PeerAttestedAction(
       publicKey: pubkey,
-      transport: MessageTransport.udp,
+      underlay: Underlay.wan,
       attestation: attestation,
     ));
     if (_reachablePeers.add(_hex(pubkey))) {
-      onPeerConnected?.call(pubkey, MessageTransport.udp, attestation.identity);
+      onPeerConnected?.call(pubkey, Underlay.wan, attestation.identity);
     }
     _drainQueueFor(pubkey);
   }

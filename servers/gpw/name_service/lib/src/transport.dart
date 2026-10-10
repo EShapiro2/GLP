@@ -60,10 +60,9 @@ class PushService {
           ? null
           : FileKnownPeersStore(knownPeersPath),
     );
-    network.setTrustLevel(ColdCallTrustLevel.closed);
     final service = PushService._(network, writer);
     network.onMessageReceived =
-        (messageId, senderPk, payload, transport) async {
+        (senderPk, payload, messageId, underlay) async {
       final result =
           await writer.applyPush(b64url(senderPk), payload);
       await network.send(

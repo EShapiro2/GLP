@@ -61,8 +61,8 @@ Future<void> main(List<String> argv) async {
   );
   final servicePk = _bytes(args['peer'] as String);
   final connected = Completer<void>();
-  network.onPeerConnected = (pk, transport, _) {
-    print('Service reachable (${transport.name})');
+  network.onPeerConnected = (pk, underlay, _) {
+    print('Service reachable (${underlay.name})');
     if (!connected.isCompleted) connected.complete();
   };
 

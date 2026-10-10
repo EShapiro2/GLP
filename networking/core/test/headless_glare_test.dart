@@ -69,7 +69,7 @@ void main() {
 
     acceptor.putKnownPeer(dialerId.publicKey);
     final delivered = <String>[];
-    acceptor.onMessageReceived = (messageId, sender, payload, transport) {
+    acceptor.onMessageReceived = (sender, payload, messageId, underlay) {
       expect(_hex(sender), _hex(dialerId.publicKey));
       delivered.add(utf8.decode(payload));
     };

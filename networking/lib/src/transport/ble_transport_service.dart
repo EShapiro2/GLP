@@ -8,6 +8,7 @@ import 'package:redux/redux.dart';
 
 import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:grassroots_networking_core/src/models/packet.dart';
+import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 import 'package:grassroots_networking_core/src/transport/transport_service.dart';
 
@@ -722,7 +723,7 @@ class BleTransportService extends TransportService {
       );
       return false;
     }
-    if (!store.state.settings.isOpenOn(ProximityMedium.ble) &&
+    if (!store.state.settings.isOpenOn(ProximityUnderlay.pan) &&
         _knownPeerPubkeyForDerivedServiceUuid(serviceUuid) == null) {
       debugPrint('Skipping $pathId: closed BLE trust and unknown service UUID');
       return false;
@@ -951,7 +952,7 @@ class BleTransportService extends TransportService {
     if (!_shouldOpenCentralLeg(adv, serviceUuid, existing)) {
       return;
     }
-    if (!store.state.settings.isOpenOn(ProximityMedium.ble) &&
+    if (!store.state.settings.isOpenOn(ProximityUnderlay.pan) &&
         _knownPeerPubkeyForDerivedServiceUuid(serviceUuid) == null) {
       return;
     }
