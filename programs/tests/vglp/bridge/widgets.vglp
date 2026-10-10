@@ -1,0 +1,125 @@
+%% widgets.vglp --- a question of each default widget of vGLP's Definition
+%% "Widget Declaration, Default Widget" (sections/elicitation.tex), for the
+%% Dart bridge of the paragraph "The implementation" (subsection "The
+%% Implementation: Compiling vGLP onto GLP") and its Flutter tests,
+%% glp_multiagent/test/bridge_test.dart.  The module is compiled by the
+%% canonical compilation (Definition "Canonical Compilation") as the program
+%% loads, and self.glp runs it by the calls of the compiled module.
+%%
+%% Each agent reads the program's own end of the person channel, MCh, and
+%% asks its questions at once, so their constructs are open together; it
+%% writes each answer, once the person has given it, on the program's output
+%% to the person, got(Q, X), which the dispatcher merges with the draws and
+%% the bridge shows as it shows any output that is no draw.  The default
+%% widget of each question's type, by the Definition's items:
+%%
+%%   Ok?              a constant: a button
+%%   YesNo?           a union of constants: a row of buttons
+%%   String?          a text field
+%%   Integer?, Real?  a number field
+%%   Date?            a date picker
+%%   Peer?            an agent identifier: a peer field
+%%   Pay?             a tuple: a form with one field per argument
+%%   Request?         a union of tuples: a menu of forms
+%%   Card             its peer a value the program writes: shown and not edited
+%%   Choice           a list the program writes, with a choice coming back: a
+%%                    picker
+%%   Stream(String)?  a stream the person writes: the widget of its element
+%%                    type, kept open, one element per submission
+%%   Feed             a stream the program writes: a thread
+
+Peer    ::= Constant.
+Date    ::= Integer.
+Ok      ::= ok.
+YesNo   ::= yes ; no.
+Pay     ::= pay(Peer, Integer).
+Request ::= send(Peer, Integer) ; post(String).
+Card    ::= card(Peer, YesNo?).
+Choice  ::= choose(Stream(Peer), Peer?).
+Feed    ::= feed(Stream(String), YesNo?).
+
+%% ---------------------------------------------------------------------------
+%% The agents
+%% ---------------------------------------------------------------------------
+
+%% The primitive and constant questions.
+exported procedure inputs(Channel(Stream(_), Stream(_))?).
+inputs(ch(_, Out?)) :-
+    button_q(O1), buttons_q(O2), text_q(O3), integer_q(O4), real_q(O5),
+    date_q(O6), peer_q(O7),
+    merge(O1?, O2?, M1), merge(M1?, O3?, M2), merge(M2?, O4?, M3),
+    merge(M3?, O5?, M4), merge(M4?, O6?, M5), merge(M5?, O7?, Out).
+
+%% The structured questions: a form, a menu of forms, a picker, a thread and
+%% an input box.
+exported procedure forms(Channel(Stream(_), Stream(_))?).
+forms(ch(_, Out?)) :-
+    form_q(O1), menu_q(O2), pick_q([alice, bob, carol], O3),
+    feed_q(["one", "two"], O4), lines_q(O5),
+    merge(O1?, O2?, M1), merge(M1?, O3?, M2), merge(M2?, O4?, M3),
+    merge(M3?, O5?, Out).
+
+%% Two responders' cards, open at once.
+exported procedure cards(Channel(Stream(_), Stream(_))?).
+cards(ch(_, Out?)) :-
+    card_q(alice, O1), card_q(bob, O2),
+    merge(O1?, O2?, Out).
+
+%% ---------------------------------------------------------------------------
+%% The questions
+%% ---------------------------------------------------------------------------
+
+procedure (Ok?)*button_q(Stream(_)).
+(X)*button_q(Out?) :- answered(button, X?, Out).
+
+procedure (YesNo?)*buttons_q(Stream(_)).
+(X)*buttons_q(Out?) :- answered(buttons, X?, Out).
+
+procedure (String?)*text_q(Stream(_)).
+(X)*text_q(Out?) :- answered(text, X?, Out).
+
+procedure (Integer?)*integer_q(Stream(_)).
+(X)*integer_q(Out?) :- answered(integer, X?, Out).
+
+procedure (Real?)*real_q(Stream(_)).
+(X)*real_q(Out?) :- answered(real, X?, Out).
+
+procedure (Date?)*date_q(Stream(_)).
+(X)*date_q(Out?) :- answered(date, X?, Out).
+
+procedure (Peer?)*peer_q(Stream(_)).
+(X)*peer_q(Out?) :- answered(peer, X?, Out).
+
+procedure (Pay?)*form_q(Stream(_)).
+(X)*form_q(Out?) :- answered(form, X?, Out).
+
+procedure (Request?)*menu_q(Stream(_)).
+(X)*menu_q(Out?) :- answered(menu, X?, Out).
+
+%% The card shows the offering peer, and the person answers yes or no.
+procedure (Card)*card_q(Peer?, Stream(_)).
+(card(P?, A))*card_q(P, Out?) :- ground(P?) | answered(P?, A?, Out).
+
+%% The picker offers the peers the program lists.
+procedure (Choice)*pick_q(Stream(Peer)?, Stream(_)).
+(choose(Ps?, C))*pick_q(Ps, Out?) :- answered(pick, C?, Out).
+
+%% The thread shows the lines the program writes, and the person answers yes
+%% or no.
+procedure (Feed)*feed_q(Stream(String)?, Stream(_)).
+(feed(Ls?, A))*feed_q(Ls, Out?) :- answered(feed, A?, Out).
+
+%% The input box takes one line per submission, and each line is answered.
+procedure (Stream(String)?)*lines_q(Stream(_)).
+(Ls)*lines_q(Out?) :- lines(Ls?, Out).
+
+procedure lines(Stream(String)?, Stream(_)).
+lines([L | Ls], [got(line, L?) | Out?]) :- ground(L?) | lines(Ls?, Out).
+lines([], []).
+
+%% answered(Q?, X?, Out): once the person has answered X, write got(Q, X) on
+%% the program's output to the person, which then closes.  Written only once
+%% X is ground, so that the output reaches the person whole and holds up
+%% nothing behind it.
+procedure answered(Constant?, _?, Stream(_)).
+answered(Q, X, [got(Q?, X?)]) :- ground(X?) | true.

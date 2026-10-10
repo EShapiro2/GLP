@@ -26,6 +26,14 @@ class GInt extends GTerm {
   const GInt(this.value);
 }
 
+/// A real constant, GLP's `Real`: what a number field forms over a `Real`
+/// position (vGLP, Definition "Widget Declaration, Default Widget": "a number
+/// (`Integer` or `Real`): ... a number field").
+class GReal extends GTerm {
+  final double value;
+  const GReal(this.value);
+}
+
 /// A string constant, `"..."` — GLP's `String`, which is not an atom: a
 /// `text` widget over a `String` writer grants one of these, and over a
 /// `Constant` writer an atom, so the widget alone does not settle the term.
@@ -56,6 +64,7 @@ class GList extends GTerm {
     GAtom(:final name) => (name, const []),
     GStruct(:final functor, :final args) => (functor, args),
     GInt() => ('', const []),
+    GReal() => ('', const []),
     GString() => ('', const []),
     GList() => ('', const []),
   };
@@ -67,6 +76,8 @@ String formatTerm(GTerm t) {
     case GAtom(:final name):
       return name;
     case GInt(:final value):
+      return '$value';
+    case GReal(:final value):
       return '$value';
     case GString(:final value):
       return '"$value"';
@@ -115,6 +126,8 @@ List<List<String>> scalarGroups(GTerm t) {
         row.add(name);
       case GInt(:final value):
         row.add('$value');
+      case GReal(:final value):
+        row.add('$value');
       case GString(:final value):
         row.add(value);
       case GStruct(:final args):
@@ -138,6 +151,7 @@ List<List<String>> scalarGroups(GTerm t) {
 List<String> scalarsOf(GTerm t) => switch (t) {
       GAtom(:final name) => [name],
       GInt(:final value) => ['$value'],
+      GReal(:final value) => ['$value'],
       GString(:final value) => [value],
       GStruct(:final args) => [for (final a in args) ...scalarsOf(a)],
       GList(:final items) => [for (final i in items) ...scalarsOf(i)],
@@ -241,14 +255,36 @@ class _Parser {
     return GString(sb.toString());
   }
 
+  /// An integer, or a real where a fraction or an exponent follows the
+  /// digits, as the runtime prints a `Real` (`2.5`, `1e-7`, `1.0e+21`).
   GTerm _number() {
     final start = _i;
     if (_peekChar() == '-') _i++;
-    if (!_isDigit(_s[_i])) _fail();
+    if (_atEnd || !_isDigit(_s[_i])) _fail();
+    _digits();
+    var real = false;
+    if (_i + 1 < _s.length && _s[_i] == '.' && _isDigit(_s[_i + 1])) {
+      real = true;
+      _i++;
+      _digits();
+    }
+    if (!_atEnd && (_s[_i] == 'e' || _s[_i] == 'E')) {
+      var j = _i + 1;
+      if (j < _s.length && (_s[j] == '+' || _s[j] == '-')) j++;
+      if (j < _s.length && _isDigit(_s[j])) {
+        real = true;
+        _i = j;
+        _digits();
+      }
+    }
+    final text = _s.substring(start, _i);
+    return real ? GReal(double.parse(text)) : GInt(int.parse(text));
+  }
+
+  void _digits() {
     while (!_atEnd && _isDigit(_s[_i])) {
       _i++;
     }
-    return GInt(int.parse(_s.substring(start, _i)));
   }
 
   GTerm _quotedAtomOrStruct() {
@@ -343,6 +379,7 @@ class GPattern {
         case GList(:final items):
           items.forEach(walk);
         case GInt():
+        case GReal():
         case GString():
           break;
       }
@@ -381,6 +418,8 @@ bool _match(GTerm pattern, GTerm t, Map<String, GTerm> out) {
       return t is GAtom && t.name == name;
     case GInt(:final value):
       return t is GInt && t.value == value;
+    case GReal(:final value):
+      return t is GReal && t.value == value;
     case GString(:final value):
       return t is GString && t.value == value;
     case GStruct(:final functor, :final args):

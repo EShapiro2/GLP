@@ -1,0 +1,72 @@
+%% self.glp --- the entries by which the Dart bridge runs widgets.vglp, for
+%% its Flutter tests, glp_multiagent/test/bridge_test.dart.
+%%
+%% vGLP, sections/elicitation.tex, the paragraph "The implementation": the
+%% engine runs the compiled program unchanged, "and the bridge draws each
+%% construct's widget and returns the person's raw input as grants"; Section
+%% "The Grassroots App": "A compiled module M is run by the goals
+%%     M # agent(MCh?, NetCh?, Asks), M # dispatch(Asks?, PersonCh?, MCh)
+%% with the person channel PersonCh = ch(Grants?, Draws)".  The calls are the
+%% compiled module's, as the canonical compilation emits them.
+%%
+%% Each entry is the host's (glp_runtime/lib/multiagent/agent_runtime.dart):
+%% the agent's identifier, the person's input stream and the network input.
+%% The person's input is the person channel's grants, Gs, whose writer the
+%% host holds and extends with each grant the bridge returns,
+%% input(Id, P, R); the person channel's other half, Ds, carries the
+%% constructs' draws merged with the program's own output to the person, and
+%% goes to the person by send_to_user/1, which hands the host each term as it
+%% is ground.  The person channel never closes (Definition "Person Channel,
+%% Person Writer, GLP with Persons, Grant"), and neither does the host's
+%% person input.  The agents of widgets.vglp reach no network, and the entry
+%% drops its input.
+%%
+%% The types of widgets.vglp and those its compilation adds, written again
+%% for the declarations of the procedures imported from its compiled module.
+
+Peer     ::= Constant.
+Date     ::= Integer.
+Ok       ::= ok.
+YesNo    ::= yes ; no.
+Pay      ::= pay(Peer, Integer).
+Request  ::= send(Peer, Integer) ; post(String).
+Card     ::= card(Peer, YesNo?).
+Choice   ::= choose(Stream(Peer), Peer?).
+Feed     ::= feed(Stream(String), YesNo?).
+Question ::= ok_r(Ok?) ; yesNo_r(YesNo?) ; string_r(String?)
+           ; integer_r(Integer?) ; real_r(Real?) ; date_r(Date?)
+           ; peer_r(Peer?) ; pay_r(Pay?) ; request_r(Request?)
+           ; card_w(Card) ; choice_w(Choice) ; feed_w(Feed)
+           ; stream_string_r(Stream(String)?).
+Ask(Q)   ::= ask(Constant, Q).
+PersonIn ::= [_ | PersonIn].
+
+imported procedure widgets#inputs(Channel(Stream(_), Stream(_))?,
+    Stream(Ask(Question))).
+imported procedure widgets#forms(Channel(Stream(_), Stream(_))?,
+    Stream(Ask(Question))).
+imported procedure widgets#cards(Channel(Stream(_), Stream(_))?,
+    Stream(Ask(Question))).
+imported procedure widgets#dispatch(Stream(Ask(Question))?,
+    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+
+%% The primitive and constant questions.
+exported procedure inputs_init(Constant?, PersonIn?, Stream(_)?).
+inputs_init(_, Gs, _) :-
+    widgets # inputs(MCh?, Asks),
+    widgets # dispatch(Asks?, ch(Gs?, Ds), MCh),
+    send_to_user(Ds?).
+
+%% The structured questions.
+exported procedure forms_init(Constant?, PersonIn?, Stream(_)?).
+forms_init(_, Gs, _) :-
+    widgets # forms(MCh?, Asks),
+    widgets # dispatch(Asks?, ch(Gs?, Ds), MCh),
+    send_to_user(Ds?).
+
+%% Two cards open at once.
+exported procedure cards_init(Constant?, PersonIn?, Stream(_)?).
+cards_init(_, Gs, _) :-
+    widgets # cards(MCh?, Asks),
+    widgets # dispatch(Asks?, ch(Gs?, Ds), MCh),
+    send_to_user(Ds?).

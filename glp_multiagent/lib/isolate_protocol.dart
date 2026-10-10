@@ -243,13 +243,14 @@ Future<void> _runAgent(InitAgent init) async {
 }
 
 /// The runtime term of a ground term from the screen, as the agent's heap
-/// holds it: an atom or an integer a constant, a string the constant of its
-/// text in quotes (a string literal keeps its quotes in the runtime's
+/// holds it: an atom, an integer or a real a constant, a string the constant
+/// of its text in quotes (a string literal keeps its quotes in the runtime's
 /// constant), a compound a structure, and a list its '.' cells ending in [],
 /// the runtime's [rt.nil].
 rt.Term runtimeTermOf(GTerm t) => switch (t) {
       GAtom(:final name) => rt.ConstTerm(name),
       GInt(:final value) => rt.ConstTerm(value),
+      GReal(:final value) => rt.ConstTerm(value),
       GString(:final value) => rt.ConstTerm('"$value"'),
       GStruct(:final functor, :final args) =>
         rt.StructTerm(functor, [for (final a in args) runtimeTermOf(a)]),
