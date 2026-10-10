@@ -7,7 +7,8 @@
 %% types and its two volitional procedure declarations, each with the functor
 %% the canonical compilation gives its interactive type, menu_w and card_w,
 %% which the transformation reads for the person process (which argument of
-%% Menu and Card is the answer, and the asks' functors);
+%% Menu and Card is the answer, and the asks' functors), and the predicates of
+%% the compiled program, graph.glp, which the profiles' must differ from;
 %% S is the sGLP program, the four profiles of graph.vglp at GLP 723d1602 and the
 %% run declaration as Section 5 prints it.  Section 5 prints the homophile's and
 %% the wary profile, with the procedures named pick and answer; four profiles in
@@ -30,7 +31,10 @@ source(
    type('Menu', [menu('Peers', 'Peers', dual('Choice'))]),
    type('Card', [card('Peer', dual('YesNo'))]),
    volitional('Menu', menu_w, ask(dual('Peers'), dual('Peers'), 'Choice')),
-   volitional('Card', card_w, respond(dual('Peer'), 'YesNo'))],
+   volitional('Card', card_w, respond(dual('Peer'), 'YesNo')),
+   %% The predicates of its compiled program, graph.glp.
+   compiled(ask, 4), compiled(ask1, 5), compiled(respond, 3), compiled(respond1, 4),
+   compiled(agent, 7), compiled(start, 6)],
 
   %% The profiles and the run declaration.
   [person(homophile),

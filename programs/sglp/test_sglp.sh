@@ -131,7 +131,10 @@
 #       writes, its reader to the person goal through the copy's pattern, and
 #       '_' in the log; a writer-mode type with a position the person writes
 #       inside an argument the program writes refused, a case the paper does
-#       not decide.
+#       not decide; and the checks of (b): a clause answering two questions
+#       refused as not single-answer, and a profile whose predicate is the
+#       compiled program's refused (Section 3, Definition "Single-Answer,
+#       Well-Formed").
 #
 # Prints one line per check and a summary line, "=== P passed, F failed ===";
 # exits non-zero if any check fails.  The runs of (iii) and (iv) take some
@@ -523,20 +526,27 @@ check "in reader mode the person goal receives a writer and the program the read
         grep -q " :- ground(Z1?) | stream_append(time(Time), Mon?, _) , stream_append(entry(Time?, A?, Type?, bid(Z1?, '_')), Log?, _) $" &&
     [ "$(grep -c '^answer_1(A, Type, ' "$WORK/txreader.bid")" -eq 1 ]
 check "a reader-mode type with an argument the program writes is translated: the answer handed over once the argument the person writes is ground, a fresh writer at the one the program writes, its reader to the person goal through the copy, logged as _" $?
-# The handover by the moded type in writer mode (sGLP's task 6 of 2026-10-10
-# 07:59 UTC, (a)): PV, a writer-mode type Post whose answer Line? holds a
-# position the program writes, Status?; NV, a writer-mode type Panel whose
-# argument the program writes, Cards, holds positions the person writes, a
-# case the paper does not decide.
+# The handover by the moded type in writer mode, the checks' refusals (sGLP's
+# task 6 of 2026-10-10 07:59 UTC, (a) and (b)): PV, a writer-mode type Post
+# whose answer Line? holds a position the program writes, Status?; NV, a
+# writer-mode type Panel whose argument the program writes, Cards, holds
+# positions the person writes, a case the paper does not decide; QV and
+# ans2, a clause answering two questions; CV, the mended source's interface
+# naming ans/1 a predicate of the compiled program.
 PV="[type('Status', [sent, read]), type('Line', [line('String', dual('Status'))]), type('Post', [post('Integer', dual('Line'))]), volitional('Post', post_w, poster('Integer'))]"
 PP="person(p), binds('Post', p_post), decl(p_post(dual('Post'), dual('Integer'))), clause(p_post(post(var('_'), line(hi, var('_'))), var('_')), [], []), run(1, [mix(d, [share(p, 1.0)])], 1, day, 1)"
 NV="[type('YesNo', [yes, no]), type('Card', [card('Integer', dual('YesNo'))]), type('Cards', [[], ['Card' | 'Cards']]), type('Panel', [panel('Cards')]), volitional('Panel', panel_w, show('Integer'))]"
 NP="person(p), binds('Panel', p_panel), decl(p_panel(dual('Panel'), dual('Integer'))), clause(p_panel(var('_'), var('_')), [], []), run(1, [mix(d, [share(p, 1.0)])], 1, day, 1)"
+QV="[type('A', [a]), type('Q2', [q2(dual('A'), dual('A'))]), volitional('Q2', q2_w, ask2('Integer'))]"
+QP="person(p), binds('Q2', p_q2), decl(p_q2(dual('Q2'), dual('Integer'))), clause(p_q2(var('X'), var('_')), [], [rated(ans2(var('X?')), rate(1, day))]), decl(ans2(dual('Q2'))), clause(ans2(q2(a, a)), [], []), run(1, [mix(d, [share(p, 1.0)])], 1, day, 1)"
+CV="[type('A', [a]), type('Q', [q(dual('A'))]), volitional('Q', q_w, ask(dual('A'))), compiled(ask, 2), compiled(ask1, 3), compiled(ans, 1)]"
 repl "$WORK/txmoded.out" ':limit 1000000000000' "$HERE" \
     "transform_terms($PV, [$PP], population)." \
-    "transform_terms($NV, [$NP], population)."
+    "transform_terms($NV, [$NP], population)." \
+    "transform_terms($QV, [$QP], population)." \
+    "transform_terms($CV, [$P, run(2, [mix(d, [share(p, 1.0)])], 1, day, 1)], population)."
 sed 's/^\(GLP> \)*//' "$WORK/txmoded.out" > "$WORK/txmoded.lines"
-for k in 1 2; do
+for k in 1 2 3 4; do
     awk -v k="$k" '$0 == "%% transform begin" { n++; next } $0 == "%% transform end" { next } n == k' "$WORK/txmoded.lines" > "$WORK/txmoded.$k"
 done
 ! grep -q '^%% not transformed' "$WORK/txmoded.1" &&
@@ -549,6 +559,12 @@ check "in writer mode an answer holding a position the program writes is handed 
 grep -q '^%% not transformed: an interactive type in writer mode with a position the person writes inside an argument the program writes(Panel)$' "$WORK/txmoded.2" &&
     [ "$(grep -c '^%% not transformed' "$WORK/txmoded.2")" -eq 1 ] && ! grep -q '^person(' "$WORK/txmoded.2"
 check "a writer-mode type with a position the person writes inside an argument the program writes is refused with that fault, nothing printed" $?
+grep -q '^%% not transformed: a clause that is not single-answer, of(key(ans2, 1))$' "$WORK/txmoded.3" &&
+    [ "$(grep -c '^%% not transformed' "$WORK/txmoded.3")" -eq 1 ] && ! grep -q '^person(' "$WORK/txmoded.3"
+check "a profile clause answering two questions is refused as not single-answer, nothing printed" $?
+grep -q "^%% not transformed: a predicate of a profile's program that is the compiled program's(key(ans, 1))$" "$WORK/txmoded.4" &&
+    [ "$(grep -c '^%% not transformed' "$WORK/txmoded.4")" -eq 1 ] && ! grep -q '^person(' "$WORK/txmoded.4"
+check "a profile whose predicate is the compiled program's is refused with that fault, nothing printed" $?
 
 echo ""
 echo "=== $PASS passed, $FAIL failed ==="

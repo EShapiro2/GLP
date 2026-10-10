@@ -1527,12 +1527,12 @@ k_var([_|_], var('K')).
 
 procedure checks(Terms?, Terms?, Terms).
 checks(V, S, Es?) :- ground(V?), ground(S?) |
-    runs(S?, Rs), interactives(V?, Its0), types(V?, Tys), binds(S?, none, Bs),
-    persons(S?, Ps), decls(S?, Hs), clauses(S?, Cs),
-    check_runs(Rs?, Its0?, Tys?, Bs?, Ps?, Hs?, Cs?, Es).
+    runs(S?, Rs), interactives(V?, Its0), types(V?, Tys), compileds(V?, CKs),
+    binds(S?, none, Bs), persons(S?, Ps), decls(S?, Hs), clauses(S?, Cs),
+    check_runs(Rs?, Its0?, Tys?, CKs?, Bs?, Ps?, Hs?, Cs?, Es).
 
-procedure check_runs(Terms?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms).
-check_runs([run(N, Ms, C, U, Seed)], Its0, Tys, Bs, Ps, Hs, Cs, Es?) :-
+procedure check_runs(Terms?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms?, Terms).
+check_runs([run(N, Ms, C, U, Seed)], Its0, Tys, CKs, Bs, Ps, Hs, Cs, Es?) :-
     ground(Ms?), ground(Its0?), ground(Tys?), ground(Bs?), ground(Ps?), ground(Hs?), ground(Cs?) |
     check_run(N?, C?, U?, Seed?, E0),
     check_mixes(Ms?, E1),
@@ -1544,11 +1544,14 @@ check_runs([run(N, Ms, C, U, Seed)], Its0, Tys, Bs, Ps, Hs, Cs, Es?) :-
     check_rated(Cs?, Hs?, Bs?, E7),
     check_names(Cs?, E8),
     check_decls(Hs?, E9),
+    check_compiled(Hs?, Cs?, CKs?, E10),
+    check_single(Cs?, Hs?, Tys?, E11),
     append(E0?, E1?, A1), append(A1?, E2?, A2), append(A2?, E3?, A3),
     append(A3?, E4?, A4), append(A4?, E5?, A5), append(A5?, E6?, A6),
-    append(A6?, E7?, A7), append(A7?, E8?, A8), append(A8?, E9?, Es).
-check_runs([], _, _, _, _, _, _, ['%% not transformed: no run declaration']).
-check_runs([_, _|_], _, _, _, _, _, _, ['%% not transformed: more than one run declaration']).
+    append(A6?, E7?, A7), append(A7?, E8?, A8), append(A8?, E9?, A9),
+    append(A9?, E10?, A10), append(A10?, E11?, Es).
+check_runs([], _, _, _, _, _, _, _, ['%% not transformed: no run declaration']).
+check_runs([_, _|_], _, _, _, _, _, _, _, ['%% not transformed: more than one run declaration']).
 
 %% The run: a positive number of agents, a horizon of a unit of time, a seed.
 procedure check_run(_?, _?, _?, _?, Terms).
@@ -1755,6 +1758,108 @@ procedure wp_named(Terms?, Terms?, Ans).
 wp_named(As, Tys, Ok?) :- ground(As?) |
     length(As?, NA), x_names(Xs0), y_names(Ys0), take(NA?, Xs0?, Xs), take(NA?, Ys0?, Ys),
     z_names(Zs), wvariants(As?, Xs?, Ys?, Tys?, Zs?, WVs), variants_named(WVs?, Ok).
+
+%% The predicates of the profiles' programs distinct from those of the vGLP
+%% program's canonical compilation (Section 3, Definition "Single-Answer,
+%% Well-Formed"), which the interface names, compiled(Name, Arity) each, the
+%% transformation having no reader of that program.
+procedure compileds(Terms?, Terms).
+compileds([], []).
+compileds([compiled(F, N)|Is], [key(F?, N?)|Ks?]) :- compileds(Is?, Ks).
+compileds([I|Is], Ks?) :- otherwise, ground(I?) | compileds(Is?, Ks).
+procedure check_compiled(Terms?, Terms?, Terms?, Terms).
+check_compiled(Hs, Cs, CKs, Es?) :- ground(CKs?) |
+    decl_keys(Hs?, K1), head_keys(Cs?, K2), append(K1?, K2?, K3), dedup(K3?, Ks), clashes(Ks?, CKs?, Es).
+procedure head_keys(Terms?, Terms).
+head_keys([], []).
+head_keys([cl(H, _, _)|Cs], [K?|Ks?]) :- key(H?, K), head_keys(Cs?, Ks).
+procedure clashes(Terms?, Terms?, Terms).
+clashes([], _, []).
+clashes([K|Ks], CKs, Es?) :- ground(K?), ground(CKs?) | member(K?, CKs?, A), clash(A?, K?, Ks?, CKs?, Es).
+procedure clash(Ans?, _?, Terms?, Terms?, Terms).
+clash(no, _, Ks, CKs, Es?) :- clashes(Ks?, CKs?, Es).
+clash(yes, K, Ks, CKs, [E?|Es?]) :-
+    E =.. ['%% not transformed: a predicate of a profile\'s program that is the compiled program\'s', K?],
+    clashes(Ks?, CKs?, Es).
+
+%% Every clause of a profile's program single-answer (Section 3, Definition
+%% "Single-Answer, Well-Formed": "of the positions the person writes in the
+%% arguments of its head, by the moded types of the arguments, at most one
+%% holds a term that is not a variable"): a position the person writes, one
+%% that answers a question, is an argument of the clause's procedure's type T,
+%% which the person writes, or a position of a type T? in an argument of type
+%% T?, which the program writes, or in a position the person writes, and so
+%% on down; the positions below a position the person writes that the person
+%% writes too are of the same answer.
+procedure check_single(Terms?, Terms?, Terms?, Terms).
+check_single([], _, _, []).
+check_single([cl(H, _, _)|Cs], Hs, Tys, Es?) :- ground(H?), ground(Hs?), ground(Tys?) |
+    key(H?, K), check_single1(K?, H?, Hs?, Tys?, E1), check_single(Cs?, Hs?, Tys?, E2), append(E1?, E2?, Es).
+procedure check_single1(_?, _?, Terms?, Terms?, Terms).
+check_single1(K, H, Hs, Tys, Es?) :- ground(K?) | decl_of(K?, Hs?, D), single(D?, H?, Tys?, K?, Es).
+procedure decl_of(_?, Terms?, _).
+decl_of(_, [], none).
+decl_of(K, [H|Hs], D?) :- ground(H?), ground(K?) | key(H?, K1), decl_of1(K1?, K?, H?, Hs?, D).
+procedure decl_of1(_?, _?, _?, Terms?, _).
+decl_of1(K1, K, H, _, H?) :- K1? =?= K? | true.
+decl_of1(K1, K, _, Hs, D?) :- K1? =?\= K? | decl_of(K?, Hs?, D).
+procedure single(_?, _?, Terms?, _?, Terms).
+single(none, _, _, K, [E?]) :- ground(K?) |
+    E =.. ['%% not transformed: a clause of an undeclared procedure', K?].
+single(D, H, Tys, K, Es?) :- otherwise, ground(D?), ground(H?) |
+    parts(D?, _, Ts), parts(H?, _, As), arg_answers(As?, Ts?, Tys?, 0, N), single1(N?, K?, Es).
+procedure single1(Integer?, _?, Terms).
+single1(N, _, []) :- N? =< 1 | true.
+single1(N, K, [E?]) :- N? > 1, ground(K?) |
+    E =.. ['%% not transformed: a clause that is not single-answer, of', K?].
+procedure arg_answers(Terms?, Terms?, Terms?, Integer?, Integer).
+arg_answers([], _, _, N, N?).
+arg_answers([_|_], [], _, N, N?).
+arg_answers([A|As], [dual(T)|Ts], Tys, N0, N?) :- ground(Tys?) |
+    answers(A?, T?, program, root, Tys?, N1), N2 := N0? + N1?, arg_answers(As?, Ts?, Tys?, N2?, N).
+arg_answers([A|As], [T|Ts], Tys, N0, N?) :- otherwise, ground(Tys?) |
+    answers(A?, T?, person, root, Tys?, N1), N2 := N0? + N1?, arg_answers(As?, Ts?, Tys?, N2?, N).
+%% answers(T?, Ty?, O?, P?, Tys?, N): N is the number of positions the person
+%% writes that answer a question, in the term T at a position of type Ty that
+%% O writes, its parent position written by P, holding a term that is not a
+%% variable, there and below.
+procedure answers(_?, _?, _?, _?, Terms?, Integer).
+answers(var(_), _, _, _, _, 0).
+answers(T, Ty, O, P, Tys, N?) :- otherwise, ground(T?), ground(Ty?), ground(O?), ground(Tys?) |
+    here(O?, P?, N0), flat_alts(Ty?, Tys?, [], As), match_alt(T?, As?, M),
+    below(M?, T?, O?, Tys?, N1), N := N0? + N1?.
+procedure here(_?, _?, Integer).
+here(person, P, 1) :- P? =?\= person | true.
+here(_, _, 0) :- otherwise | true.
+procedure match_alt(_?, Terms?, _).
+match_alt(_, [], leaf).
+match_alt(T, ['$prim'(_)|_], leaf) :- constant(T?) | true.
+match_alt(T, [A|As], M?) :- otherwise, ground(T?) | match_one(T?, A?, R), match_alt1(R?, T?, As?, M).
+procedure match_alt1(_?, _?, Terms?, _).
+match_alt1(no, T, As, M?) :- match_alt(T?, As?, M).
+match_alt1(R, _, _, R?) :- otherwise, ground(R?) | true.
+procedure match_one(_?, _?, _).
+match_one(T, A, R?) :- compound(T?), compound(A?), ground(T?), ground(A?) |
+    parts_n(T?, F, _, N), parts_n(A?, F2, Ts, N2), match_one1(F?, N?, F2?, N2?, Ts?, R).
+match_one(T, A, leaf) :- constant(T?), constant(A?), T? =?= A? | true.
+match_one(_, _, no) :- otherwise | true.
+procedure match_one1(_?, Integer?, _?, Integer?, Terms?, _).
+match_one1(F, N, F2, N2, Ts, args(Ts?)) :- F? =?= F2?, N? =:= N2? | true.
+match_one1(_, _, _, _, _, no) :- otherwise | true.
+procedure below(_?, _?, _?, Terms?, Integer).
+below(leaf, _, _, _, 0).
+below(args(Ts), T, O, Tys, N?) :- ground(T?) | parts(T?, _, As), child_answers(As?, Ts?, O?, Tys?, 0, N).
+procedure child_answers(Terms?, Terms?, _?, Terms?, Integer?, Integer).
+child_answers([], _, _, _, N, N?).
+child_answers([_|_], [], _, _, N, N?).
+child_answers([A|As], [dual(T)|Ts], O, Tys, N0, N?) :- ground(O?), ground(Tys?) |
+    flip(O?, O1), answers(A?, T?, O1?, O?, Tys?, N1), N2 := N0? + N1?,
+    child_answers(As?, Ts?, O?, Tys?, N2?, N).
+child_answers([A|As], [T|Ts], O, Tys, N0, N?) :- otherwise, ground(O?), ground(Tys?) |
+    answers(A?, T?, O?, O?, Tys?, N1), N2 := N0? + N1?, child_answers(As?, Ts?, O?, Tys?, N2?, N).
+procedure flip(_?, _).
+flip(person, program).
+flip(program, person).
 
 %% The person declarations: each in a profile, of an interactive type, the
 %% type once in its profile.

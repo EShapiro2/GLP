@@ -8,7 +8,8 @@
 %% volitional procedure declarations, each with the functor the canonical
 %% compilation gives its interactive type, menu_w and offer_w, which the
 %% transformation reads for the person process (which argument of Menu and
-%% Offer is the answer, and the asks' functors); S is the
+%% Offer is the answer, and the asks' functors), and the predicates of the
+%% compiled program, coins.glp, which the profiles' must differ from; S is the
 %% sGLP program: request, as Section 6 prints it, and issuer, which Section 6
 %% describes ("issuer reads the issuer of a holding") and the hand translation
 %% wrote; the spender and the cautious profile as Section 6 prints them, and the
@@ -33,7 +34,11 @@ source(
    type('Menu', [menu('Peers', 'Wallet', dual('Request'))]),
    type('Offer', [offer('Peer', 'Integer', 'Integer', dual('YesNo'))]),
    volitional('Menu', menu_w, ask(dual('Peers'), dual('Wallet'), 'Request')),
-   volitional('Offer', offer_w, respond(dual('Peer'), dual('Integer'), dual('Integer'), 'YesNo'))],
+   volitional('Offer', offer_w, respond(dual('Peer'), dual('Integer'), dual('Integer'), 'YesNo')),
+   %% The predicates of its compiled program, coins.glp.
+   compiled(ask, 4), compiled(ask1, 5), compiled(respond, 5), compiled(respond1, 6),
+   compiled(agent, 7), compiled(paid, 6), compiled(settle, 10), compiled(start, 5),
+   compiled(held, 3), compiled(add, 4), compiled(take, 5)],
 
   %% The profiles' shared program, the profiles and the run declaration.
   [decl(request(dual('Integer'), dual('Menu'))),
