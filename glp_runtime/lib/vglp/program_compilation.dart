@@ -184,18 +184,23 @@ String _emit(ast.Module module, CompiledTypes types, InstantiatedMediator med,
 /// the self.vglp beside each self.glp from the root down
 /// (scopeWidgetDeclarations), the root being the parent of the [mediator]'s
 /// directory, programs/.
+///
+/// A source at [path] is compiled with the exports of the modules it imports
+/// from read beside it (_SiblingExports): an import of a procedure of
+/// another module that reaches a question is "compiled as its export is"
+/// (vGLP, Definition "Canonical Compilation", the import sentence), and a
+/// source in neither syntax that has such an import reaches a question
+/// through it, and is compiled by the canonical compilation too
+/// (importsReachingProcedure).
 String compileVglpSource(String text,
     {MediatorSource? mediator, TypeEnvironment? scope, String? path}) {
-  if (isPaperSyntaxSource(text)) {
-    final dir = mediator?.directory;
-    return compileCanonical(text,
-            dispatcher: mediator?.dispatcher,
-            scope: scope,
-            scopeWidgets: path != null && dir != null
-                ? scopeWidgetDeclarations(path, Directory(dir).parent.path)
-                : const {})
-        .source;
-  }
+  final canonical = path == null
+      ? (isPaperSyntaxSource(text)
+          ? compileCanonical(text,
+              dispatcher: mediator?.dispatcher, scope: scope)
+          : null)
+      : _SiblingExports(mediator, scope).compile(path, text);
+  if (canonical != null) return canonical.source;
   if (mediator == null) {
     throw StateError('${path ?? 'The source'} is in the old syntax, and the '
         'generic mediator source it compiles against is missing');
@@ -203,6 +208,89 @@ String compileVglpSource(String text,
   final module =
       Parser(Lexer(text).tokenize(), vglp: true).parseModule();
   return compileProgram(module, mediator, scope: scope).source;
+}
+
+/// The exports of the modules a `.vglp` source imports from, as its
+/// compilation reads them: "compiled as their exports are" (vGLP, Definition
+/// "Canonical Compilation", the import sentence).
+///
+/// The qualifier N of an import is "a single child directory or module file
+/// relative to the caller's directory" (TGLP modules.tex, "Cross-module type
+/// checking").  A module file N.vglp beside the source, which the loader
+/// compiles, is read by its own canonical compilation, in the same scope ---
+/// the ancestor chain of one directory --- with the same generic source and
+/// the same widget declarations of that scope; so is one whose N.glp beside
+/// it is its compiled module, which the loader links in its place.  A module
+/// N.glp written by hand, which stands, is a GLP module, as is any qualifier
+/// naming no N.vglp beside the source --- a directory, entered through its
+/// self.glp, or a path of several segments, which TGLP leaves to future
+/// work: no export is read of it, and no procedure of it reaches a question.
+///
+/// Each source is compiled once per call; a source whose export is read
+/// while it is itself being compiled is refused, the imports of procedures
+/// that reach a question forming a cycle the Definition gives no order.
+class _SiblingExports {
+  final MediatorSource? mediator;
+  final TypeEnvironment? scope;
+  final _compiled = <String, CanonicalProgram?>{};
+  final _compiling = <String>[];
+
+  _SiblingExports(this.mediator, this.scope);
+
+  /// The canonical compilation of the source [text] at [path], or null where
+  /// it is not compiled by it: in the old syntax, or in neither syntax with
+  /// no import of a procedure that reaches a question.
+  CanonicalProgram? compile(String path, String text) {
+    final key = File(path).absolute.path;
+    if (_compiled.containsKey(key)) return _compiled[key];
+    if (_compiling.contains(key)) {
+      final cycle = [..._compiling.sublist(_compiling.indexOf(key)), key]
+          .map((p) => File(p).uri.pathSegments.last)
+          .join(' imports from ');
+      throw CompileError(
+          'The imports of procedures that reach a question form a cycle, '
+          '$cycle: each is compiled as its export is (vGLP, Definition '
+          '"Canonical Compilation"), so the compilation reads a module\'s '
+          'export before it compiles its importer, and modules that import '
+          'from each other give it no export to read first',
+          1, 1, phase: 'analyzer');
+    }
+    _compiling.add(key);
+    try {
+      CanonicalProgram? reader(String module) => _exportOf(key, module);
+      CanonicalProgram? result;
+      if (isPaperSyntaxSource(text) || importsReachingProcedure(text, reader)) {
+        final dir = mediator?.directory;
+        result = compileCanonical(text,
+            dispatcher: mediator?.dispatcher,
+            scope: scope,
+            scopeWidgets: dir != null
+                ? scopeWidgetDeclarations(path, Directory(dir).parent.path)
+                : const {},
+            exports: reader);
+      }
+      return _compiled[key] = result;
+    } finally {
+      _compiling.removeLast();
+    }
+  }
+
+  /// The export of [module] as the source at [importer] reads it: the
+  /// canonical compilation of the module file [module].vglp beside it, or
+  /// null where [module] is no such vGLP module.
+  CanonicalProgram? _exportOf(String importer, String module) {
+    if (module.contains('#')) return null;
+    final dir = File(importer).parent.path;
+    final sep = Platform.pathSeparator;
+    final vglp = File('$dir$sep$module.vglp');
+    if (!vglp.existsSync()) return null;
+    final glp = File('$dir$sep$module.glp');
+    if (glp.existsSync() &&
+        !glp.readAsStringSync().startsWith(compiledHeader)) {
+      return null;
+    }
+    return compile(vglp.path, vglp.readAsStringSync());
+  }
 }
 
 /// Emit the compiled GLP beside each `.vglp` source under [rootDir], and return

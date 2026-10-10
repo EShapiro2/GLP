@@ -657,4 +657,208 @@ person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       expect(RegExp(r'\bwithdrawn\(').allMatches(log), hasLength(2));
     });
   });
+
+  group('the import of a procedure of another module that reaches a question '
+      '(vGLP, Definition "Canonical Compilation", the import sentence; '
+      'vGLP\'s task of 2026-10-10 11:43 UTC)', () {
+    // "... are compiled as their exports are, to the import of p with its ask
+    // stream added, and the interactive types of N join those of M, each with
+    // the functor its export gives it and its widget: the type of the asks
+    // has their functors and ⌈M⌉ their construct processes, so an ask on a
+    // caller's ask stream, of p or of a question p reaches in N, is served as
+    // any other."  The three cases of Code #6's Q1--Q3 (2026-10-10 11:12
+    // UTC), each a program of two .vglp modules, home importing from N and
+    // calling it, and a self.glp whose play runs home's call with home's own
+    // dispatcher and a scripted person.  Each is linked and type-checked as a
+    // whole on load, TGLP's linked check on home's call among the checks.
+    // The program is written under programs/tests/vglp/ for the run and
+    // removed after, as the group above's is.
+    const types = '''
+Peer      ::= Constant.
+YesNo     ::= yes ; no.
+Offer     ::= offer(Peer).
+Response  ::= accept(Peer) ; refuse(Peer).
+Card      ::= card(Peer, YesNo?).
+Note      ::= note(String).
+Box(X)    ::= box(X).
+Box_yesNo ::= box_yn(YesNo).
+''';
+    // N: respond asks a card and, on yes, a note through jot, a question
+    // respond reaches in N that no importer names; offer_from is an ordinary
+    // procedure that reaches both.
+    const responder = '''
+$types
+%% Show the person who offers; on yes, ask them for a note to the peer.
+exported procedure (Card)*respond(Offer?, Response, Note).
+(card(From?, Answer))*respond(offer(From), Resp?, N?) :-
+    ground(From?) | decide(Answer?, From?, Resp, N).
+
+procedure decide(YesNo?, Peer?, Response, Note).
+decide(yes, From, accept(From?), N?) :- jot(N).
+decide(no, From, refuse(From?), note("")).
+
+%% The note, a question of N's own that no importer names.
+procedure (Note?)*jot(Note).
+(N)*jot(N?).
+
+%% An ordinary procedure that reaches a question.
+exported procedure offer_from(Peer?, Response, Note).
+offer_from(P, R?, N?) :- ground(P?) | respond(offer(P?), R, N).
+''';
+    // The plays of the card and the note: the person grants yes to the card
+    // and the note "hi" to the note.
+    const cardAndNote = '''
+$types
+Question ::= card_w(Card) ; note_r(Note?).
+Ask(Q)   ::= ask(Constant, Q).
+PersonIn ::= [_ | PersonIn].
+
+imported procedure home#befriend(Peer?, Response, Note,
+    Stream(Ask(Question))).
+imported procedure home#dispatch(Stream(Ask(Question))?,
+    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+
+exported procedure play(Response, Note, Stream(_)).
+play(R?, N?, Log?) :-
+    home # befriend(bob, R, N, Asks),
+    home # dispatch(Asks?, ch(Gs?, Ds), _),
+    person(Ds?, Gs, Log).
+
+procedure person(_?, PersonIn, Stream(_)).
+person([draw(Id, W, card(P, input(Q))) | Ds], [input(Id?, Q?, yes) | Gs?],
+       [drawn(Id?, W?, card(P?, input(Q?))) | Log?]) :-
+    ground(Id?), ground(W?), ground(P?), ground(Q?) |
+    person(Ds?, Gs, Log).
+person([draw(Id, W, input(Q)) | Ds], [input(Id?, Q?, note("hi")) | Gs?],
+       [drawn(Id?, W?, input(Q?)) | Log?]) :-
+    ground(Id?), ground(W?), ground(Q?) |
+    person(Ds?, Gs, Log).
+person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    person(Ds?, Gs, Log).
+''';
+
+    final fixtures = <Directory>[];
+    tearDown(() {
+      for (final d in fixtures) {
+        if (d.existsSync()) d.deleteSync(recursive: true);
+      }
+      fixtures.clear();
+    });
+
+    Future<_Run> play(Map<String, String> files, String goal) async {
+      final dir = Directory('../programs/tests/vglp/import_fixture_${pid}_'
+          '${DateTime.now().microsecondsSinceEpoch}')
+        ..createSync();
+      fixtures.add(dir);
+      files.forEach((name, text) =>
+          File('${dir.path}/$name').writeAsStringSync(text));
+      final engine = GlpEngine(rootSelfGlpPath: _root);
+      expect(engine.loadProgram(dir.absolute.path), isTrue);
+      return _Run(await engine.runGoal(goal), engine);
+    }
+
+    void cardAndNoteAnswered(_Run r) {
+      expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
+      expect(r['R'], 'accept(bob)');
+      expect(r['N'], 'note("hi")');
+      final log = r['Log'];
+      // The card the person answers first; the note respond reaches in N
+      // after its yes; each drawn once and withdrawn.
+      expect(
+          log,
+          startsWith('[drawn(0, form(card, [shown, buttons([yes, no])]), '
+              'card(bob, input([2]))), withdrawn(0), '
+              'drawn(1, form(note, [text]), input([])), withdrawn(1)'));
+    }
+
+    test('(Q1) N with an interactive type home does not import by name: a '
+        'question respond reaches in N is served by home\'s dispatcher',
+        () async {
+      cardAndNoteAnswered(await play({
+        'responder.vglp': responder,
+        'home.vglp': '''
+$types
+%% respond's card, imported; respond reaches jot's note in responder.
+imported procedure (Card)*responder#respond(Offer?, Response, Note).
+
+exported procedure befriend(Peer?, Response, Note).
+befriend(P, R?, N?) :- ground(P?) | responder # respond(offer(P?), R, N).
+''',
+        'self.glp': cardAndNote,
+      }, 'play(R, N, Log)'));
+    });
+
+    test('(Q2) an ordinary procedure of N that reaches a question, imported '
+        'in vGLP arity and called, by a module with no question of its own',
+        () async {
+      cardAndNoteAnswered(await play({
+        'responder.vglp': responder,
+        'home.vglp': '''
+$types
+%% offer_from, an ordinary procedure of responder, imported in vGLP arity.
+imported procedure responder#offer_from(Peer?, Response, Note).
+
+exported procedure befriend(Peer?, Response, Note).
+befriend(P, R?, N?) :- ground(P?) | responder # offer_from(P?, R, N).
+''',
+        'self.glp': cardAndNote,
+      }, 'play(R, N, Log)'));
+    });
+
+    test('(Q3) a `_2` functor in N, carried to home: its ask served by '
+        'home\'s dispatcher on that functor', () async {
+      final r = await play({
+        'boxes.vglp': '''
+$types
+%% Two interactive types whose functors coincide, box_yesNo_r: the second
+%% declared is told apart in boxes, box_yesNo_r_2.
+exported procedure (Box(YesNo)?)*pick(Peer?, YesNo).
+(box(A))*pick(P, A?) :- ground(P?) | true.
+
+exported procedure (Box_yesNo?)*confirm(Peer?, YesNo).
+(box_yn(A))*confirm(P, A?) :- ground(P?) | true.
+''',
+        'home.vglp': '''
+$types
+imported procedure (Box_yesNo?)*boxes#confirm(Peer?, YesNo).
+
+exported procedure ask_confirm(Peer?, YesNo).
+ask_confirm(P, A?) :- ground(P?) | boxes # confirm(P?, A).
+''',
+        'self.glp': '''
+$types
+Question ::= box_yesNo_r(Box(YesNo)?) ; box_yesNo_r_2(Box_yesNo?).
+Ask(Q)   ::= ask(Constant, Q).
+PersonIn ::= [_ | PersonIn].
+
+imported procedure home#ask_confirm(Peer?, YesNo, Stream(Ask(Question))).
+imported procedure home#dispatch(Stream(Ask(Question))?,
+    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+
+exported procedure play(YesNo, Stream(_)).
+play(A?, Log?) :-
+    home # ask_confirm(bob, A, Asks),
+    home # dispatch(Asks?, ch(Gs?, Ds), _),
+    person(Ds?, Gs, Log).
+
+%% The person confirms: box_yn(yes).
+procedure person(_?, PersonIn, Stream(_)).
+person([draw(Id, W, input(Q)) | Ds], [input(Id?, Q?, box_yn(yes)) | Gs?],
+       [drawn(Id?, W?, input(Q?)) | Log?]) :-
+    ground(Id?), ground(W?), ground(Q?) |
+    person(Ds?, Gs, Log).
+person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    person(Ds?, Gs, Log).
+''',
+      }, 'play(A, Log)');
+      expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
+      expect(r['A'], 'yes');
+      expect(
+          r['Log'],
+          '[drawn(0, form(box_yn, [buttons([yes, no])]), input([])), '
+          'withdrawn(0) | _]');
+    });
+  });
 }

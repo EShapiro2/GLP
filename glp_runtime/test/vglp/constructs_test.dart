@@ -42,6 +42,24 @@ void main() {
   CanonicalProgram compile(String text) =>
       compileCanonical(text, dispatcher: dispatcher, scope: scope);
 
+  // [text] with the exports of the modules [modules], each N's source by N,
+  // read by its own canonical compilation against the same generic source in
+  // the same scope (vGLP, Definition "Canonical Compilation": the imports of
+  // procedures that reach a question "are compiled as their exports are";
+  // vGLP's task of 2026-10-10 11:43 UTC).
+  CanonicalProgram compileWith(String text, Map<String, String> modules) {
+    late final ExportReader reader;
+    reader = (module) {
+      final t = modules[module];
+      return t == null
+          ? null
+          : compileCanonical(t,
+              dispatcher: dispatcher, scope: scope, exports: reader);
+    };
+    return compileCanonical(text,
+        dispatcher: dispatcher, scope: scope, exports: reader);
+  }
+
   Matcher refused(String why) => throwsA(isA<CompileError>()
       .having((e) => e.message, 'message', contains(why)));
 
@@ -307,18 +325,22 @@ procedure (T?)*p.
     // "T joins the interactive types of M: the type of the asks has its
     // functor and ⌈M⌉ its construct process, so an ask of p on a caller's
     // ask stream is served as any other" (vGLP's task of 2026-10-10 09:06
-    // UTC).  The runs are elicitation_test's.
+    // UTC).  The runs are elicitation_test's.  Since vGLP's task of 11:43
+    // UTC the compilation reads N's export, so the import is given its
+    // module's source.
     test('has its construct process in the importer, spawned by the '
         'importer\'s dispatcher on the functor the module\'s asking clause '
         'writes, beside the importer\'s own', () {
-      final c = compile('''
+      const types = '''
 Peer     ::= Constant.
 YesNo    ::= yes ; no.
 Offer    ::= offer(Peer).
 Response ::= accept(Peer) ; refuse(Peer).
 Card     ::= card(Peer, YesNo?).
 Note     ::= note(String).
-
+''';
+      final c = compileWith('''
+$types
 imported procedure (Card)*responder#respond(Offer?, Response).
 
 exported procedure (Note?)*jot(Note).
@@ -326,7 +348,17 @@ exported procedure (Note?)*jot(Note).
 
 exported procedure befriend(Peer?, Response, Note).
 befriend(P, R?, N?) :- ground(P?) | responder # respond(offer(P?), R), jot(N).
-''');
+''', {
+        'responder': '''
+$types
+exported procedure (Card)*respond(Offer?, Response).
+(card(From?, Answer))*respond(offer(From), Resp?) :-
+    ground(From?) | decide(Answer?, From?, Resp).
+procedure decide(YesNo?, Peer?, Response).
+decide(yes, From, accept(From?)).
+decide(no, From, refuse(From?)).
+'''
+      });
       final s = c.source;
       expect(c.functors, {'Card': 'card_w', 'Note?': 'note_r'});
       expect(s, contains('Question ::= card_w(Card) ; note_r(Note?).'));
@@ -350,6 +382,170 @@ befriend(P, R?, N?) :- ground(P?) | responder # respond(offer(P?), R), jot(N).
           s,
           contains('imported procedure responder#respond(Offer?, Response, '
               'Stream(Ask(Question))).'));
+    });
+  });
+
+  group('the interactive types of an imported module (vGLP, Definition '
+      '"Canonical Compilation", the import sentence; vGLP\'s task of '
+      '2026-10-10 11:43 UTC)', () {
+    // "... and the interactive types of N join those of M, each with the
+    // functor its export gives it and its widget: the type of the asks has
+    // their functors and ⌈M⌉ their construct processes, so an ask on a
+    // caller's ask stream, of p or of a question p reaches in N, is served as
+    // any other."  The widget of a type of N is the one N gives it: "one [a
+    // widget declaration] in a module holds in that module" (Definition
+    // "Widget Declaration, Default Widget").  The runs are
+    // elicitation_test's.
+    const types = '''
+Peer      ::= Constant.
+YesNo     ::= yes ; no.
+Offer     ::= offer(Peer).
+Response  ::= accept(Peer) ; refuse(Peer).
+Card      ::= card(Peer, YesNo?).
+Note      ::= note(String).
+Box(X)    ::= box(X).
+Box_yesNo ::= box_yn(YesNo).
+''';
+    // N declares the card's widget, and asks a note on yes through jot,
+    // which it does not export.
+    const responder = '''
+$types
+Card =::= inbox_card.
+
+exported procedure (Card)*respond(Offer?, Response, Note).
+(card(From?, Answer))*respond(offer(From), Resp?, N?) :-
+    ground(From?) | decide(Answer?, From?, Resp, N).
+
+procedure decide(YesNo?, Peer?, Response, Note).
+decide(yes, From, accept(From?), N?) :- jot(N).
+decide(no, From, refuse(From?), note("")).
+
+procedure (Note?)*jot(Note).
+(N)*jot(N?).
+''';
+    const boxes = '''
+$types
+exported procedure (Box(YesNo)?)*pick(Peer?, YesNo).
+(box(A))*pick(P, A?) :- ground(P?) | true.
+
+exported procedure (Box_yesNo?)*confirm(Peer?, YesNo).
+(box_yn(A))*confirm(P, A?) :- ground(P?) | true.
+''';
+    const calling = '''
+imported procedure (Card)*responder#respond(Offer?, Response, Note).
+
+exported procedure befriend(Peer?, Response, Note).
+befriend(P, R?, N?) :- ground(P?) | responder # respond(offer(P?), R, N).
+''';
+    const befriend = '''
+$types
+$calling''';
+
+    test('each has its construct process in the importer, spawned on the '
+        'functor N gives it, with the widget N gives it', () {
+      final c = compileWith(befriend, {'responder': responder});
+      final s = c.source;
+      expect(s, contains('Question ::= card_w(Card) ; note_r(Note?).'));
+      expect(
+          s,
+          contains('construct(Id, card_w(X), Gs, Ds?) :- '
+              'present_card([], X?, Gs?, _, Vs, Done), '
+              'run(Id?, inbox_card, Vs?, Done?, Ds).'));
+      expect(
+          s,
+          contains('construct(Id, note_r(X?), Gs, Ds?) :- '
+              'answer_note([], X, Gs?, _, Done), '
+              'run(Id?, form(note, [text]), [input([])], Done?, Ds).'));
+      expect(c.widgets,
+          {'Card': 'inbox_card', 'Note?': 'form(note, [text])'});
+      // The importer declares no widget: Card's is the one N gives it.
+      expect(s, isNot(contains('form(card, [shown, buttons([yes, no])])')));
+    });
+
+    test('a `_2` functor of N has its construct process on that functor', () {
+      final s = compileWith('''
+$types
+imported procedure (Box_yesNo?)*boxes#confirm(Peer?, YesNo).
+exported procedure ask_confirm(Peer?, YesNo).
+ask_confirm(P, A?) :- ground(P?) | boxes # confirm(P?, A).
+''', {'boxes': boxes}).source;
+      expect(
+          s,
+          contains('Question ::= box_yesNo_r(Box(YesNo)?) ; '
+              'box_yesNo_r_2(Box_yesNo?).'));
+      expect(s, contains('construct(Id, box_yesNo_r(X?), Gs, Ds?) :- '));
+      expect(s, contains('construct(Id, box_yesNo_r_2(X?), Gs, Ds?) :- '));
+    });
+
+    test('a type of the program\'s own that is one of N\'s, its widget the '
+        'one N gives it, is one construct process', () {
+      final c = compileWith('''
+$types
+Card =::= inbox_card.
+$calling
+exported procedure (Card)*show(Offer?).
+(card(P?, _))*show(offer(P)).
+''', {'responder': responder});
+      expect(c.source, contains('Question ::= card_w(Card) ; note_r(Note?).'));
+      expect(
+          RegExp(r'construct\(Id, card_w\(').allMatches(c.source), hasLength(1));
+      expect(c.widgets['Card'], 'inbox_card');
+    });
+
+    group('is refused', () {
+      test('a type of the program\'s own that is one of N\'s, with another '
+          'widget: one functor, two widgets', () {
+        expect(
+            () => compileWith('''
+$befriend
+exported procedure (Card)*show(Offer?).
+(card(P?, _))*show(offer(P)).
+''', {'responder': responder}),
+            refused('its widget is form(card, [shown, buttons([yes, no])]) '
+                'here and inbox_card in responder'));
+      });
+
+      // "Types referenced in an imported declaration are resolved against
+      // the caller's type scope" (TGLP modules.tex, Design): a type of N
+      // joins the importer's questions by its name, which the importer's
+      // scope must define, as it must every type its imports name.
+      test('a type of N the importer\'s scope does not define', () {
+        expect(
+            () => compileWith(befriend, {
+                  'responder': '''
+$types
+Mood ::= happy ; sad.
+exported procedure (Card)*respond(Offer?, Response, Note).
+(card(From?, Answer))*respond(offer(From), Resp?, note("")) :-
+    ground(From?) | decide(Answer?, From?, Resp).
+procedure decide(YesNo?, Peer?, Response).
+decide(yes, From, accept(From?)).
+decide(no, From, refuse(From?)).
+exported procedure (Mood?)*feel(Mood).
+(M1)*feel(M1?).
+'''
+                }),
+            refused('The type Mood of an interactive variable is defined '
+                'neither in the source nor in its scope'));
+      });
+
+      test('one type from two modules with two widgets', () {
+        expect(
+            () => compileWith('''
+$types
+imported procedure (Card)*responder#respond(Offer?, Response, Note).
+imported procedure (Card)*plain#show(Offer?).
+''', {
+              'responder': responder,
+              'plain': '''
+$types
+exported procedure (Card)*show(Offer?).
+(card(P?, _))*show(offer(P)).
+''',
+            }),
+            refused('its widget inbox_card in responder and '
+                'form(card, [shown, buttons([yes, no])]) in plain'));
+      });
     });
   });
 

@@ -54,17 +54,25 @@
 //     each procedure that reaches a question declared with Stream(Ask) added,
 //     the asking clause with the source declaration's argument types and it,
 //     and q with the argument of T in its mode and it;
-//   - a declaration imported procedure (T)*N#p(T1, ..., Tn) of a volitional
-//     procedure of another module N "is compiled as its export is, to the
-//     import of p with its ask stream added, and T joins the interactive
-//     types of M" (vGLP at 7bf50ee, the Definition's last sentence; vGLP's
-//     task of 2026-10-10 09:06 UTC): imported procedure N#p(T1, ..., Tn,
-//     Stream(Ask)) in the program's types, T's functor in Question the
-//     Definition's t --- the one N's asking clause writes, so an import
-//     takes its own and a type of the program's that coincides with it is
-//     told apart as above --- and T's construct process the program's; a
-//     call N#p(S1, ..., Sn) is a call of a procedure that reaches a question,
-//     given an ask stream as any such call is, and keeps p's name;
+//   - "A declaration imported procedure (T)*N#p(T1,...,Tn). of a volitional
+//     procedure of another module N, and a declaration imported procedure
+//     N#p(T1,...,Tn). of an ordinary procedure of N that reaches a question,
+//     are compiled as their exports are, to the import of p with its ask
+//     stream added, and the interactive types of N join those of M, each with
+//     the functor its export gives it and its widget: the type of the asks
+//     has their functors and ⌈M⌉ their construct processes, so an ask on a
+//     caller's ask stream, of p or of a question p reaches in N, is served as
+//     any other" (vGLP, the Definition, the import sentence; vGLP's tasks of
+//     2026-10-10 09:06 and 11:43 UTC).  The compilation reads N's export ---
+//     N's own canonical compilation, which an [ExportReader] gives it ---
+//     and compiles each such declaration to imported procedure N#p(T1, ...,
+//     Tn, Stream(Ask)) in the program's types; every interactive type of N,
+//     N's own and those N imports, joins Question with the functor N gives
+//     it, a `_2` of N's included, and joins the construct processes with the
+//     widget N gives it; a type of the program's own that is one of N's is
+//     that one, its functor N's; a call N#p(S1, ..., Sn) is a call of a
+//     procedure that reaches a question, given an ask stream as any such call
+//     is, and keeps p's name;
 //   - the dispatcher and the construct processes (Part 2): the dispatcher's
 //     generic source, programs/vglp/dispatcher.glp, its names made fresh
 //     against the program's (dispatcher.dart), and the clause of construct/4
@@ -109,6 +117,7 @@ import '../compiler/parser.dart';
 import '../compiler/token.dart';
 import '../analysis/type_checker/type_ast.dart'
     show
+        PrimitiveModeAlt,
         ProcDecl,
         StructAlt,
         TypeDef,
@@ -169,13 +178,11 @@ class VolitionalProcedure {
 }
 
 /// A volitional procedure of another module N, imported by a declaration
-/// `imported procedure (T)*N#p(T1, ..., Tn).`: "compiled as its export is, to
-/// the import of p with its ask stream added, and T joins the interactive
-/// types of M: the type of the asks has its functor and ⌈M⌉ its construct
-/// process, so an ask of p on a caller's ask stream is served as any other"
-/// (vGLP, Definition "Canonical Compilation", its last sentence).  A call
-/// N#p(S1, ..., Sn) is a call of a procedure that reaches a question, and is
-/// given an ask stream as any such call is.
+/// `imported procedure (T)*N#p(T1, ..., Tn).`: "compiled as their exports
+/// are, to the import of p with its ask stream added, and the interactive
+/// types of N join those of M" (vGLP, Definition "Canonical Compilation", the
+/// import sentence).  A call N#p(S1, ..., Sn) is a call of a procedure that
+/// reaches a question, and is given an ask stream as any such call is.
 class ImportedVolitional {
   /// The module path N.
   final String module;
@@ -195,7 +202,7 @@ class ImportedVolitional {
   /// The parsed declaration, N#p(T1, ..., Tn, T).
   final ProcDecl decl;
 
-  /// The functor of T in Question: the Definition's t, the functor N's
+  /// The functor of T in Question: the one N's export gives it, which N's
   /// asking clause writes.
   late final String functor;
 
@@ -207,6 +214,26 @@ class ImportedVolitional {
   /// The type parameters of the declaration.
   List<String> get typeParams => decl.typeParams;
 }
+
+/// An ordinary procedure of another module N that reaches a question,
+/// imported by a declaration `imported procedure N#p(T1, ..., Tn).` in vGLP
+/// arity, as its source declares it: "compiled as their exports are, to the
+/// import of p with its ask stream added" (vGLP, Definition "Canonical
+/// Compilation", the import sentence).  Whether p reaches a question is read
+/// from N's export.
+class _OrdinaryImport {
+  final String module;
+  final ProcDecl decl;
+  _OrdinaryImport(this.module, this.decl);
+}
+
+/// The export of a module N that a declaration of the program imports from,
+/// as the compilation reads it ("compiled as their exports are", vGLP,
+/// Definition "Canonical Compilation", the import sentence): N's canonical
+/// compilation, or null where N is no vGLP module whose export can be read
+/// --- a GLP module, none of whose procedures reaches a question.  [module]
+/// is the qualifier as the declaration writes it, N or N1#...#Nk.
+typedef ExportReader = CanonicalProgram? Function(String module);
 
 /// The canonical compilation of one source: the GLP module's text, the module
 /// it parses to, the volitional procedures it compiled, the procedures that
@@ -238,13 +265,26 @@ class CanonicalProgram {
   /// The widget term of each interactive type, by the type as written.
   final Map<String, String> widgets;
 
+  /// Every interactive type of the program, its own and those its imports
+  /// bring, once each and in the order of Question's alternatives, each with
+  /// its functor and, where the construct processes were built, its widget:
+  /// what an importer of the program reads of its export.
+  final List<InteractiveType> interactive;
+
+  /// The procedures the program exports that reach a question, by their
+  /// source signature p/n: those an importer imports in vGLP arity, its
+  /// import compiled with the ask stream added.
+  final Set<String> exportedReaching;
+
   CanonicalProgram(this.source, this.module, this.volitional, this.reaching,
       this.askType,
       {required this.questionType,
       required this.functors,
       this.dispatchName,
       this.constructName,
-      this.widgets = const {}});
+      this.widgets = const {},
+      this.interactive = const [],
+      this.exportedReaching = const {}});
 }
 
 /// The functor the compilation gives a moded interactive type in Question
@@ -292,19 +332,55 @@ bool isPaperSyntaxSource(String text) {
   return isPaperSyntax(Lexer(stripped).tokenize());
 }
 
-/// Compile [text], a vGLP program in the paper's syntax, by the canonical
-/// compilation.
+/// Whether [text], in neither syntax --- no volitional procedure in the
+/// paper's syntax ([isPaperSyntaxSource]) and no volition guard of the old
+/// --- imports, in vGLP arity, an ordinary procedure of another module that
+/// reaches a question, by that module's export as [exports] reads it.  Such
+/// a source reaches a question through its import, and is compiled by the
+/// canonical compilation (vGLP, Definition "Canonical Compilation": "The
+/// canonical compilation ⌈M⌉ of a vGLP program M", and the import sentence).
+bool importsReachingProcedure(String text, ExportReader exports) {
+  final stripped = text.contains('=::=')
+      ? extractWidgetDeclarations(text).stripped
+      : text;
+  final Module m;
+  try {
+    m = _parse(stripped).module;
+  } on CompileError {
+    // The old syntax, or no program: the compilation that reads it says.
+    return false;
+  }
+  if (m.displayDecls.isNotEmpty) return false;
+  for (final d in m.procDeclarations) {
+    if (!d.imported || d.modulePath == null) continue;
+    final n = exports(d.modulePath!);
+    if (n != null && n.exportedReaching.contains('${d.name}/${d.arity}')) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Compile [text], a vGLP program, by the canonical compilation: one in the
+/// paper's syntax, or one in neither syntax that imports a procedure of
+/// another module reaching a question ([importsReachingProcedure]).
 ///
 /// [dispatcher] is the generic source of the dispatcher and the construct
 /// processes, programs/vglp/dispatcher.glp; without it the compilation emits
 /// neither.  [scope] is the source's scope, whose types the construct
 /// processes are built from where the source does not define them; without
 /// it, the root's.  [scopeWidgets] are the widget declarations of that scope,
-/// by moded type, which the source's own override.
+/// by moded type, which the source's own override.  [exports] reads the
+/// export of a module the source imports from: the declarations importing a
+/// procedure of another module that reaches a question "are compiled as their
+/// exports are" (vGLP, Definition "Canonical Compilation", the import
+/// sentence).  Without it no export is read: an import of a volitional
+/// procedure is refused, and every other import is an import as GLP's are.
 CanonicalProgram compileCanonical(String text,
     {DispatcherSource? dispatcher,
     TypeEnvironment? scope,
-    Map<String, String> scopeWidgets = const {}}) {
+    Map<String, String> scopeWidgets = const {},
+    ExportReader? exports}) {
   final widgetDecls = extractWidgetDeclarations(text);
   final parsed = _parse(widgetDecls.stripped);
   final m = parsed.module;
@@ -327,18 +403,14 @@ CanonicalProgram compileCanonical(String text,
   final taken = _namesUsed(m);
   final volitional = <String, VolitionalProcedure>{};
   final imports = <String, ImportedVolitional>{};
-  // Each declaration with an interactive type, the program's own and the
-  // imported, in source order: the order of the questions' alternatives.
-  final declaredInOrder = <Object>[];
   for (final v in parsed.declarations) {
     if (v.module != null) {
       final decl = importsByKey['${v.module}#${v.name}/${v.arity + 1}']!;
-      final i = imports.putIfAbsent(
+      imports.putIfAbsent(
           '${v.module}#${v.name}/${v.arity}',
           () => ImportedVolitional(v.module!, v.name, v.arity,
               decl.argTypes.last, decl.isInputArg(v.arity), decl, v.line,
               v.column));
-      declaredInOrder.add(i);
       continue;
     }
     final sig = '${v.name}/${v.arity}';
@@ -354,45 +426,6 @@ CanonicalProgram compileCanonical(String text,
     final guarded = _fresh('${v.name}1', taken);
     volitional[sig] = VolitionalProcedure(v.name, v.arity, t,
         decl.isInputArg(v.arity), guarded, decl.typeParams, v.line, v.column);
-    declaredInOrder.add(volitional[sig]!);
-  }
-
-  // The functor of each moded interactive type in Question.  An imported
-  // one's is the Definition's own, t, the functor its module's asking clause
-  // writes, so the imports take theirs first; then the program's own, in the
-  // order of the declarations, two that coincide told apart (vGLP #4 Cowork,
-  // 2026-10-02 08:26 UTC, Q1).
-  final functors = <String, String>{};
-  final functorsTaken = <String>{};
-  for (final i in imports.values) {
-    final written = typeSource(i.interactiveType);
-    final f = functors.putIfAbsent(written, () {
-      final stem = questionFunctorStem(i.interactiveType, i.readerMode);
-      if (!functorsTaken.add(stem)) {
-        throw CompileError(
-            'The interactive type $written of the imported ${i.module}#'
-            '${i.name}/${i.arity} has the functor $stem in the questions, and '
-            'so has another imported interactive type: its module\'s asking '
-            'clause writes $stem, and two alternatives of the questions\' '
-            'union cannot share it (vGLP, Definition "Canonical Compilation")',
-            i.line, i.column, phase: 'analyzer');
-      }
-      return stem;
-    });
-    i.functor = f;
-  }
-  for (final v in volitional.values) {
-    final written = typeSource(v.interactiveType);
-    final f = functors.putIfAbsent(written, () {
-      final stem = questionFunctorStem(v.interactiveType, v.readerMode);
-      var name = stem;
-      for (var n = 2; functorsTaken.contains(name); n++) {
-        name = '${stem}_$n';
-      }
-      functorsTaken.add(name);
-      return name;
-    });
-    v.functor = f;
   }
 
   // Every clause written (A)*p is of a procedure declared (T)*p, and every
@@ -423,25 +456,227 @@ CanonicalProgram compileCanonical(String text,
   _checkNoAskedCall(m, volitional, imports);
   _checkNoAnonymousTerm(m, volitional);
 
+  // THE EXPORTS.  "A declaration imported procedure (T)*N#p(T1,...,Tn). of a
+  // volitional procedure of another module N, and a declaration imported
+  // procedure N#p(T1,...,Tn). of an ordinary procedure of N that reaches a
+  // question, are compiled as their exports are" (vGLP, Definition
+  // "Canonical Compilation", the import sentence): the compilation reads N's
+  // export, once per module.
+  final exportsRead = <String, CanonicalProgram?>{};
+  CanonicalProgram? exportOf(String module, int line, int column) {
+    if (exportsRead.containsKey(module)) return exportsRead[module];
+    CanonicalProgram? n;
+    if (exports != null) {
+      try {
+        n = exports(module);
+      } on CompileError catch (e) {
+        throw CompileError(
+            'The export of $module, which the compilation reads for the '
+            'import here (vGLP, Definition "Canonical Compilation": "compiled '
+            'as their exports are"), is not compiled: ${e.message} (in '
+            '$module at line ${e.line}, column ${e.column})',
+            line, column, category: e.category);
+      }
+    }
+    return exportsRead[module] = n;
+  }
+
+  // An import of a volitional procedure reads p in N's export: a volitional
+  // procedure of N that N exports, of the interactive type the declaration
+  // names.
+  for (final i in imports.values) {
+    final sig = '${i.name}/${i.arity}';
+    final declared = typeSource(i.interactiveType);
+    final n = exportOf(i.module, i.line, i.column);
+    if (n == null) {
+      throw CompileError(
+          'imported procedure ($declared)*${i.module}#${i.name}(...) imports '
+          'a volitional procedure, compiled as its export is (vGLP, '
+          'Definition "Canonical Compilation"), and ${i.module} is no vGLP '
+          'module whose export the compilation reads'
+          '${exports == null ? ': none is given it' : ''}',
+          i.line, i.column, phase: 'analyzer');
+    }
+    final theirs = [
+      for (final v in n.volitional)
+        if ('${v.name}/${v.arity}' == sig) v
+    ];
+    if (theirs.isEmpty) {
+      final what = n.exportedReaching.contains(sig)
+          ? 'an ordinary procedure that reaches a question, imported as '
+              'imported procedure ${i.module}#${i.name}(T1, ..., Tn)'
+          : 'no volitional procedure';
+      throw CompileError(
+          'imported procedure ($declared)*${i.module}#${i.name}(...) imports '
+          'a volitional procedure, and $sig of ${i.module} is $what (vGLP, '
+          'Definition "Canonical Compilation")',
+          i.line, i.column, phase: 'analyzer');
+    }
+    if (!n.exportedReaching.contains(sig)) {
+      throw CompileError(
+          'imported procedure ($declared)*${i.module}#${i.name}(...) imports '
+          '$sig, which ${i.module} does not export: a cross-module call '
+          'resolves to a procedure its module exports (TGLP, Section '
+          '"Compilation", the fourth step)',
+          i.line, i.column, phase: 'analyzer');
+    }
+    final exported = typeSource(theirs.single.interactiveType);
+    if (exported != declared) {
+      throw CompileError(
+          'imported procedure ($declared)*${i.module}#${i.name}(...) names '
+          'the interactive type $declared, and ${i.module} declares '
+          '($exported)*${i.name}: the import is compiled as its export is '
+          '(vGLP, Definition "Canonical Compilation")',
+          i.line, i.column, phase: 'analyzer');
+    }
+  }
+
+  // Every other import of a procedure of another module N reads N's export:
+  // an ordinary procedure of N that reaches a question, which N exports, is
+  // imported in vGLP arity and compiled with its ask stream added; any other
+  // import, and every import of a module with no vGLP export, is an import as
+  // GLP's are.
+  final volitionalAt = {
+    for (final v in parsed.declarations)
+      if (v.module != null) '${v.line}:${v.column}'
+  };
+  final ordinary = <String, _OrdinaryImport>{};
+  for (final d in m.procDeclarations) {
+    if (!d.imported || d.modulePath == null) continue;
+    if (volitionalAt.contains('${d.line}:${d.column}')) continue;
+    final n = exportOf(d.modulePath!, d.line, d.column);
+    if (n == null) continue;
+    final sig = '${d.name}/${d.arity}';
+    if (n.volitional.any((v) => '${v.name}/${v.arity}' == sig)) {
+      throw CompileError(
+          'imported procedure ${d.qualifiedName}(...) imports the volitional '
+          'procedure $sig of ${d.modulePath} as an ordinary one: a volitional '
+          'procedure is imported with its interactive type, imported '
+          'procedure (T)*${d.qualifiedName}(T1, ..., Tn) (vGLP, Definition '
+          '"Canonical Compilation")',
+          d.line, d.column, phase: 'analyzer');
+    }
+    if (!n.exportedReaching.contains(sig)) continue;
+    ordinary.putIfAbsent(
+        d.qualifiedKey, () => _OrdinaryImport(d.modulePath!, d));
+  }
+  _checkNoAskStreamCall(m, ordinary, importsByKey);
+
+  // The declarations with an interactive type, the program's own and the
+  // imported, in source order: the order of the questions' alternatives, an
+  // import bringing every interactive type of its module at its place.
+  final items = <(int, int, Object)>[
+    for (final v in volitional.values) (v.line, v.column, v),
+    for (final i in imports.values) (i.line, i.column, i),
+    for (final o in ordinary.values) (o.decl.line, o.decl.column, o),
+  ]..sort((a, b) => a.$1 != b.$1 ? a.$1 - b.$1 : a.$2 - b.$2);
+  String moduleOf(Object x) =>
+      x is ImportedVolitional ? x.module : (x as _OrdinaryImport).module;
+
+  // The functor of each moded interactive type in Question.  An imported
+  // one's is the one its module's export gives it, which that module's
+  // asking clause writes, a `_2` among them, so the imports' are taken
+  // first; two imported types of one functor are refused, and so is one type
+  // joining with two functors or two widgets.  Then the program's own, in the
+  // order of the declarations: a type that is one of the imported takes its
+  // functor, the interactive types of N joining those of M; another takes the
+  // Definition's t, two that coincide told apart (vGLP #4 Cowork, 2026-10-02
+  // 08:26 UTC, Q1).
+  final functors = <String, String>{};
+  final joined = <String, InteractiveType>{};
+  final byFunctor = <String, InteractiveType>{};
+  final joinedModules = <String>{};
+  for (final (l, c, x) in items) {
+    if (x is VolitionalProcedure) continue;
+    final module = moduleOf(x);
+    if (!joinedModules.add(module)) continue;
+    for (final e in exportsRead[module]!.interactive) {
+      final w = e.written;
+      final same = byFunctor[e.functor];
+      if (same != null) {
+        if (same.written == w && same.widget == e.widget) continue;
+        throw CompileError(
+            same.written == w
+                ? 'The interactive type $w joins the questions from '
+                    '${same.from} and from $module with the functor '
+                    '${e.functor}, its widget ${same.widget} in ${same.from} '
+                    'and ${e.widget} in $module: one construct process serves '
+                    'the asks of one functor, and the Definition gives a type '
+                    'of N "the functor its export gives it and its widget" '
+                    '(vGLP, Definition "Canonical Compilation")'
+                : 'The interactive type $w of $module has the functor '
+                    '${e.functor} in the questions, and so has another '
+                    'imported interactive type, ${same.written} of '
+                    '${same.from}: each module\'s asking clauses write their '
+                    'functors, and two alternatives of the questions\' union '
+                    'cannot share one (vGLP, Definition "Canonical '
+                    'Compilation")',
+            l, c, phase: 'analyzer');
+      }
+      final other = joined[w];
+      if (other != null) {
+        throw CompileError(
+            'The interactive type $w joins the questions with the functor '
+            '${other.functor} from ${other.from} and ${e.functor} from '
+            '$module: each module\'s asking clauses write their functors, and '
+            'one type of the questions\' union has one (vGLP, Definition '
+            '"Canonical Compilation")',
+            l, c, phase: 'analyzer');
+      }
+      final t = InteractiveType(_relocated(e.type, l, c), e.readerMode,
+          e.functor, e.params, l, c,
+          widget: e.widget, from: module);
+      byFunctor[e.functor] = t;
+      joined[w] = t;
+      functors[w] = e.functor;
+    }
+  }
+  for (final i in imports.values) {
+    i.functor = functors[typeSource(i.interactiveType)]!;
+  }
+  final functorsTaken = {...functors.values};
+  for (final v in volitional.values) {
+    final written = typeSource(v.interactiveType);
+    final f = functors.putIfAbsent(written, () {
+      final stem = questionFunctorStem(v.interactiveType, v.readerMode);
+      var name = stem;
+      for (var n = 2; functorsTaken.contains(name); n++) {
+        name = '${stem}_$n';
+      }
+      functorsTaken.add(name);
+      return name;
+    });
+    v.functor = f;
+    final j = joined[written];
+    if (j != null && !j.alsoOwn) joined[written] = j.withOwn();
+  }
+
   // The (n+1)-ary procedures of the volitional procedures, by their parsed
   // signature q/(n+1).
   final askedProcs = {
     for (final v in volitional.values) '${v.name}/${v.arity + 1}': v
   };
-  final importedKeys = imports.keys.toSet();
+  final importedKeys = {...imports.keys, ...ordinary.keys};
   final reaching = _reaching(m, volitional, askedProcs, importedKeys);
 
   // The program's interactive types, its own and the imported, each with its
-  // functor, in the order of their declarations.
-  final interactive = [
-    for (final x in declaredInOrder)
-      if (x is VolitionalProcedure)
-        InteractiveType(x.interactiveType, x.readerMode, x.functor,
-            x.typeParams, x.line, x.column)
-      else if (x is ImportedVolitional)
-        InteractiveType(x.interactiveType, x.readerMode, x.functor,
-            x.typeParams, x.line, x.column)
-  ];
+  // functor, in the order of their declarations; an imported one with the
+  // widget its module gives it.
+  final interactive = <InteractiveType>[];
+  final listed = <String>{};
+  for (final (_, _, x) in items) {
+    if (x is VolitionalProcedure) {
+      interactive.add(joined[typeSource(x.interactiveType)] ??
+          InteractiveType(x.interactiveType, x.readerMode, x.functor,
+              x.typeParams, x.line, x.column));
+      continue;
+    }
+    final module = moduleOf(x);
+    if (!listed.add(module)) continue;
+    for (final e in exportsRead[module]!.interactive) {
+      interactive.add(joined[e.written]!);
+    }
+  }
 
   // The questions, named fresh against the program's types; the dispatcher's
   // generic source, its names fresh against the program's and those, which
@@ -486,19 +721,19 @@ CanonicalProgram compileCanonical(String text,
         _guardedProcedure(p, v, reaching, importedKeys)));
   }
   // Declarations with no clauses of their own: imported procedures, and
-  // declarations of procedures the runtime implements.  An imported
-  // volitional procedure is compiled as its export is, to the import of p
-  // with its ask stream added (Definition "Canonical Compilation").
+  // declarations of procedures the runtime implements.  An import of a
+  // procedure of another module that reaches a question is compiled as its
+  // export is, to the import of p with its ask stream added (Definition
+  // "Canonical Compilation").
   final defined = {for (final p in m.procedures) p.signature};
-  final importedAt = {
-    for (final v in parsed.declarations)
-      if (v.module != null) '${v.line}:${v.column}'
-  };
   final bare = [
     for (final d in m.procDeclarations)
-      if (d.imported && importedAt.contains('${d.line}:${d.column}'))
+      if (d.imported && volitionalAt.contains('${d.line}:${d.column}'))
+        _importDeclaration(d, imports['${d.qualifiedName}/${d.arity - 1}']!.module,
+            d.arity - 1, added)
+      else if (d.imported && ordinary.containsKey(d.qualifiedKey))
         _importDeclaration(
-            imports['${d.qualifiedName}/${d.arity - 1}']!, added)
+            d, ordinary[d.qualifiedKey]!.module, d.arity, added)
       else if (!defined.contains(d.key))
         d
   ];
@@ -524,13 +759,32 @@ CanonicalProgram compileCanonical(String text,
 
   final source = _emit(m, added.typeDefs, out, bare, elicitation);
   final module = Parser(Lexer(source).tokenize()).parseModule();
+  final widgets = elicitation?.widgets ?? const <String, String>{};
+  final once = <String>{};
   return CanonicalProgram(source, module, volitional.values.toList(),
       reaching, added.ask,
       questionType: added.question,
       functors: functors,
       dispatchName: elicitation?.dispatchName,
       constructName: elicitation?.constructName,
-      widgets: elicitation?.widgets ?? const {});
+      widgets: widgets,
+      // What an importer reads of the program's export: its interactive
+      // types with their functors and widgets, and the procedures it exports
+      // that reach a question.
+      interactive: [
+        for (final t in interactive)
+          if (once.add(t.written)) t.withWidget(widgets[t.written] ?? t.widget)
+      ],
+      exportedReaching: {
+        for (final s in reaching)
+          if ((volitional[s] == null
+                      ? declsByKey[s]
+                      : declsByKey[
+                          '${volitional[s]!.name}/${volitional[s]!.arity + 1}'])
+                  ?.exported ??
+              false)
+            s
+      });
 }
 
 // ---------------------------------------------------------------------------
@@ -1135,6 +1389,37 @@ void _checkNoAskedCall(Module m, Map<String, VolitionalProcedure> volitional,
   }
 }
 
+/// The ask stream of an ordinary procedure of another module that reaches a
+/// question is the compilation's, added to its import and to each call of it
+/// (Definition "Canonical Compilation": "each such procedure has one more
+/// argument, last, its ask stream"), so no body calls N#p with n+1 arguments
+/// where N#p/n is imported in vGLP arity and reaches a question --- unless
+/// the program imports a procedure N#p/(n+1) as well, which that call is of.
+void _checkNoAskStreamCall(Module m, Map<String, _OrdinaryImport> ordinary,
+    Map<String, ProcDecl> importsByKey) {
+  final longer = {
+    for (final o in ordinary.values)
+      '${o.module}#${o.decl.name}/${o.decl.arity + 1}': o
+  };
+  for (final p in m.procedures) {
+    for (final c in p.clauses) {
+      for (final g in _remoteCalls(c.body ?? const [])) {
+        final key = _remoteKey(g);
+        final o = longer[key];
+        if (o == null || importsByKey.containsKey(key)) continue;
+        throw CompileError(
+            'A call of ${o.module}#${o.decl.name} with ${o.decl.arity + 1} '
+            'arguments: ${o.decl.name}/${o.decl.arity} of ${o.module} reaches '
+            'a question, imported as imported procedure '
+            '${o.decl.qualifiedName}(T1, ..., Tn), and its ask stream is the '
+            'compilation\'s, added to its import and to its calls (vGLP, '
+            'Definition "Canonical Compilation")',
+            g.line, g.column, phase: 'analyzer');
+      }
+    }
+  }
+}
+
 /// The remote calls a body makes, N # p(...), a placed goal by its inner
 /// goal.
 Iterable<RemoteGoal> _remoteCalls(List<Goal> body) sync* {
@@ -1266,8 +1551,9 @@ String _freshType(String stem, Set<String> taken) {
 /// least fixpoint over the program's calls.  A volitional procedure is named
 /// by its source arity, which is the arity of its calls.  A remote call
 /// M # p(...) calls no procedure of the program, and it calls one that
-/// reaches a question where p is a volitional procedure of M the program
-/// imports, by its key M#p/n in [imported].
+/// reaches a question where p is a procedure of M the program imports that
+/// reaches a question, volitional or ordinary, by its key M#p/n in
+/// [imported].
 Set<String> _reaching(Module m, Map<String, VolitionalProcedure> volitional,
     Map<String, VolitionalProcedure> askedProcs, Set<String> imported) {
   final reaching = {for (final v in volitional.values) '${v.name}/${v.arity}'};
@@ -1293,7 +1579,8 @@ Set<String> _reaching(Module m, Map<String, VolitionalProcedure> volitional,
 
 /// Whether the body goal [g] calls a procedure that reaches a question: a
 /// placed goal by its inner goal, and a remote goal where it calls a
-/// volitional procedure the program imports, by its key in [imported].
+/// procedure the program imports that reaches a question, by its key in
+/// [imported].
 bool _callsReaching(Goal g, Set<String> reaching, Set<String> imported) {
   final call = g is SpawnGoal ? g.innerGoal : g;
   if (call is RemoteGoal) return imported.contains(_remoteKey(call));
@@ -1442,25 +1729,39 @@ ProcDecl _askingDeclaration(
         typeParams: added.paramsFor(decl.typeParams),
         exported: decl.exported);
 
-/// The import of a volitional procedure of another module, "compiled as its
-/// export is, to the import of p with its ask stream added" (Definition
-/// "Canonical Compilation"): imported procedure N#p(T1, ..., Tn,
-/// Stream(Ask)), the source declaration's argument types and the ask stream
-/// of the program's own asks, as the export N#p's asking clause is declared
-/// in N.
-ProcDecl _importDeclaration(ImportedVolitional i, _AddedTypes added) {
-  final decl = i.decl;
+/// The import of a procedure of another module N that reaches a question,
+/// volitional or ordinary, "compiled as their exports are, to the import of
+/// p with its ask stream added" (Definition "Canonical Compilation"):
+/// imported procedure N#p(T1, ..., Tn, Stream(Ask)), the source
+/// declaration's first [arity] argument types --- a volitional one's
+/// interactive type, which the front end puts last, dropped --- and the ask
+/// stream of the program's asks, as N's export of p is declared in N.
+ProcDecl _importDeclaration(
+    ProcDecl decl, String module, int arity, _AddedTypes added) {
   return ProcDecl(
-      i.name,
+      decl.name,
       [
-        ...decl.argTypes.sublist(0, i.arity),
+        ...decl.argTypes.sublist(0, arity),
         added.stream(decl.line, decl.column)
       ],
       decl.line,
       decl.column,
       typeParams: added.paramsFor(decl.typeParams),
       imported: true,
-      modulePath: i.module);
+      modulePath: module);
+}
+
+/// [t] with every position its own taken to [line] and [column]: an
+/// imported interactive type, read from its module's source, placed at the
+/// import that brings it, where an error about it is the importer's.
+TypeExpr _relocated(TypeExpr t, int line, int column) {
+  if (t is TypeRef) {
+    return TypeRef(t.name, line, column,
+        isInput: t.isInput,
+        typeArgs: [for (final a in t.typeArgs) _relocated(a, line, column)]);
+  }
+  if (t is PrimitiveModeAlt) return PrimitiveModeAlt(t.isInput, line, column);
+  return t;
 }
 
 /// The asking clause

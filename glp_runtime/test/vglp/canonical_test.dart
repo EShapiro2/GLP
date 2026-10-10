@@ -39,6 +39,21 @@ const _programs = '../programs';
 String _vglp(String dir, String name) =>
     File('$_programs/tests/vglp/$dir/$name.vglp').readAsStringSync();
 
+/// The exports of the modules [sources], each N's source by N, as the
+/// compilation reads them: N's own canonical compilation, its imports read
+/// from the same sources (vGLP, Definition "Canonical Compilation": the
+/// imports of procedures that reach a question "are compiled as their
+/// exports are"; vGLP's task of 2026-10-10 11:43 UTC).  A module not among
+/// them has no vGLP export.
+ExportReader _exportsOf(Map<String, String> sources) {
+  late final ExportReader reader;
+  reader = (module) {
+    final text = sources[module];
+    return text == null ? null : compileCanonical(text, exports: reader);
+  };
+  return reader;
+}
+
 /// The .vglp sources under [dir], walked one directory at a time.  Not the
 /// fixtures other tests write under programs/ and remove, `<stem>_<pid>_<time>/`,
 /// which run beside this one: a recursive listing that meets one as it is
@@ -618,6 +633,9 @@ go(N) :- q(N?).
     // process, so an ask of p on a caller's ask stream is served as any
     // other."  vGLP's task of 2026-10-10 09:06 UTC.  The runs, the question
     // answered through the importer's own dispatcher, are elicitation_test's.
+    // Since vGLP's task of 11:43 UTC the compilation reads N's export, so
+    // each import here is given its module's source, N's own canonical
+    // compilation its export (the next group).
     const types = '''
 Peer     ::= Constant.
 YesNo    ::= yes ; no.
@@ -625,6 +643,45 @@ Offer    ::= offer(Peer).
 Response ::= accept(Peer) ; refuse(Peer).
 Card     ::= card(Peer, YesNo?).
 ''';
+    const responder = '''
+$types
+exported procedure (Card)*respond(Offer?, Response).
+(card(From?, Answer))*respond(offer(From), Resp?) :-
+    ground(From?) | decide(Answer?, From?, Resp).
+procedure decide(YesNo?, Peer?, Response).
+decide(yes, From, accept(From?)).
+decide(no, From, refuse(From?)).
+''';
+    final modules = _exportsOf({
+      'responder': responder,
+      'agent': '''
+$types
+Request ::= post(String) ; quit.
+exported procedure (Stream(Request)?)*agent(Peer?, Stream(String)).
+(Rs)*agent(P, Outs?) :- ground(P?) | serve(Rs?, Outs).
+procedure serve(Stream(Request)?, Stream(String)).
+serve([post(S) | Rs], [S? | Outs?]) :- serve(Rs?, Outs).
+serve([quit | _], []).
+serve([], []).
+''',
+      'n': '''
+exported procedure (Stream(String))*q(Integer?).
+(["hi"])*q(_).
+''',
+      'm': '''
+exported procedure(X) (Stream(X)?)*take(X?).
+(Xs)*take(_).
+''',
+      'n1': '''
+Stream_string ::= s(String).
+exported procedure (Stream_string)*p(Integer?).
+(s(_))*p(_).
+''',
+      'n2': '''
+exported procedure (Stream(String))*q(Integer?).
+(["hi"])*q(_).
+''',
+    });
 
     test('is compiled as its export is, to the import of p with its ask stream '
         'added; a call of it reaches a question and is given an ask stream, '
@@ -635,7 +692,7 @@ imported procedure (Card)*responder#respond(Offer?, Response).
 
 exported procedure befriend(Peer?, Response).
 befriend(P, R?) :- ground(P?) | responder # respond(offer(P?), R).
-''');
+''', exports: modules);
       expect(
           c.source,
           contains('imported procedure responder#respond(Offer?, Response, '
@@ -671,7 +728,7 @@ imported procedure (Stream(Request)?)*agent#agent(Peer?, Stream(String)).
 
 procedure go(Peer?, Note, Stream(String)).
 go(P, N?, Outs?) :- agent # agent(P?, Outs), jot(N).
-''');
+''', exports: modules);
       expect(c.source,
           contains('Question ::= note_r(Note?) ; '
               'stream_request_r(Stream(Request)?).'));
@@ -696,7 +753,7 @@ exported procedure (Card)*show(Offer?).
 (card(P?, _))*show(offer(P)).
 
 imported procedure (Card)*responder#respond(Offer?, Response).
-''').source;
+''', exports: modules).source;
       expect(s, contains('Question ::= card_w(Card).'));
       expect(
           s,
@@ -712,7 +769,7 @@ Stream_string ::= s(String).
 exported procedure (Stream_string)*p(Integer?).
 (s(_))*p(_).
 imported procedure (Stream(String))*n#q(Integer?).
-''');
+''', exports: modules);
       expect(c.functors,
           {'Stream(String)': 'stream_string_w', 'Stream_string': 'stream_string_w_2'});
       expect(c.source,
@@ -723,7 +780,7 @@ imported procedure (Stream(String))*n#q(Integer?).
         'and the compiled import\'s', () {
       final s = compileCanonical('''
 imported procedure(X) (Stream(X)?)*m#take(X?).
-''').source;
+''', exports: modules).source;
       expect(s, contains('Question(X) ::= stream_x_r(Stream(X)?).'));
       expect(
           s,
@@ -733,7 +790,7 @@ imported procedure(X) (Stream(X)?)*m#take(X?).
 
     group('is refused', () {
       void refused(String source, String why) => expect(
-          () => compileCanonical(source),
+          () => compileCanonical(source, exports: modules),
           throwsA(isA<CompileError>()
               .having((e) => e.message, 'message', contains(why))));
 
@@ -753,12 +810,378 @@ go(R?, C) :- responder # respond(offer(bob), R, C?).
 ''', 'until it is asked');
       });
 
+      // Two types of ONE module whose functors coincide are told apart in
+      // it, `_2`, and travel so (the next group); two of two modules are
+      // refused.
       test('two imported types with one functor', () {
         refused('''
 Stream_string ::= s(String).
-imported procedure (Stream_string)*n#p(Integer?).
-imported procedure (Stream(String))*n#q(Integer?).
+imported procedure (Stream_string)*n1#p(Integer?).
+imported procedure (Stream(String))*n2#q(Integer?).
 ''', 'so has another imported interactive type');
+      });
+    });
+  });
+
+  group('the import of a procedure of another module that reaches a question '
+      '(vGLP, Definition "Canonical Compilation", the import sentence; '
+      'vGLP\'s task of 2026-10-10 11:43 UTC)', () {
+    // "A declaration imported procedure (T)*N#p(T1,...,Tn). of a volitional
+    // procedure of another module N, and a declaration imported procedure
+    // N#p(T1,...,Tn). of an ordinary procedure of N that reaches a question,
+    // are compiled as their exports are, to the import of p with its ask
+    // stream added, and the interactive types of N join those of M, each with
+    // the functor its export gives it and its widget: the type of the asks
+    // has their functors and ⌈M⌉ their construct processes, so an ask on a
+    // caller's ask stream, of p or of a question p reaches in N, is served
+    // as any other."  The construct processes and widgets are
+    // constructs_test's; the runs, through the importer's own dispatcher,
+    // elicitation_test's.
+    const types = '''
+Peer      ::= Constant.
+YesNo     ::= yes ; no.
+Offer     ::= offer(Peer).
+Response  ::= accept(Peer) ; refuse(Peer).
+Card      ::= card(Peer, YesNo?).
+Note      ::= note(String).
+Box(X)    ::= box(X).
+Box_yesNo ::= box_yn(YesNo).
+''';
+    // N: respond asks a card and, on yes, a note through jot, which N does
+    // not export; offer_from, ordinary, reaches both questions; echo reaches
+    // none.
+    const responder = '''
+$types
+exported procedure (Card)*respond(Offer?, Response, Note).
+(card(From?, Answer))*respond(offer(From), Resp?, N?) :-
+    ground(From?) | decide(Answer?, From?, Resp, N).
+
+procedure decide(YesNo?, Peer?, Response, Note).
+decide(yes, From, accept(From?), N?) :- jot(N).
+decide(no, From, refuse(From?), note("")).
+
+procedure (Note?)*jot(Note).
+(N)*jot(N?).
+
+exported procedure offer_from(Peer?, Response, Note).
+offer_from(P, R?, N?) :- ground(P?) | respond(offer(P?), R, N).
+
+exported procedure echo(Peer?, Peer).
+echo(P, P?).
+''';
+    // N: two interactive types whose functors coincide, box_yesNo_r, told
+    // apart in N, the second declared box_yesNo_r_2.
+    const boxes = '''
+$types
+exported procedure (Box(YesNo)?)*pick(Peer?, YesNo).
+(box(A))*pick(P, A?) :- ground(P?) | true.
+
+exported procedure (Box_yesNo?)*confirm(Peer?, YesNo).
+(box_yn(A))*confirm(P, A?) :- ground(P?) | true.
+''';
+    // N importing from K: relay calls boxes' confirm.
+    const relay = '''
+$types
+imported procedure (Box_yesNo?)*boxes#confirm(Peer?, YesNo).
+exported procedure check(Peer?, YesNo).
+check(P, A?) :- ground(P?) | boxes # confirm(P?, A).
+''';
+    final modules = _exportsOf(
+        {'responder': responder, 'boxes': boxes, 'relay': relay});
+
+    test('N\'s export: its interactive types, with their functors in N, and '
+        'the procedures it exports that reach a question', () {
+      final n = modules('responder')!;
+      expect(n.interactive.map((t) => '${t.functor}(${t.written})'),
+          ['card_w(Card)', 'note_r(Note?)']);
+      expect(n.exportedReaching, {'respond/3', 'offer_from/3'});
+      expect(modules('boxes')!.interactive.map((t) => '${t.functor}(${t.written})'),
+          ['box_yesNo_r(Box(YesNo)?)', 'box_yesNo_r_2(Box_yesNo?)']);
+      expect(modules('lib'), isNull);
+    });
+
+    test('(Q1) an import of p brings every interactive type of N, one p '
+        'does not name and a question p reaches in N among them, each with '
+        'N\'s functor', () {
+      final c = compileCanonical('''
+$types
+imported procedure (Card)*responder#respond(Offer?, Response, Note).
+
+exported procedure befriend(Peer?, Response, Note).
+befriend(P, R?, N?) :- ground(P?) | responder # respond(offer(P?), R, N).
+''', exports: modules);
+      expect(c.source, contains('Question ::= card_w(Card) ; note_r(Note?).'));
+      expect(
+          c.source,
+          contains('imported procedure responder#respond(Offer?, Response, '
+              'Note, Stream(Ask(Question))).'));
+      expect(
+          c.source,
+          contains('befriend(P, R?, N?, D?) :- ground(P?) | '
+              'responder # respond(offer(P?), R, N, D).'));
+      expect(c.functors, {'Card': 'card_w', 'Note?': 'note_r'});
+      expect(c.interactive.map((t) => t.from), ['responder', 'responder']);
+      expect(c.exportedReaching, {'befriend/3'});
+    });
+
+    test('(Q1) the interactive types of N are those N imports too', () {
+      final c = compileCanonical('''
+$types
+imported procedure relay#check(Peer?, YesNo).
+
+exported procedure go(Peer?, YesNo).
+go(P, A?) :- ground(P?) | relay # check(P?, A).
+''', exports: modules);
+      expect(
+          c.source,
+          contains('Question ::= box_yesNo_r(Box(YesNo)?) ; '
+              'box_yesNo_r_2(Box_yesNo?).'));
+      expect(
+          c.source,
+          contains('imported procedure relay#check(Peer?, YesNo, '
+              'Stream(Ask(Question))).'));
+    });
+
+    test('(Q2) an ordinary procedure of N that reaches a question, imported '
+        'in vGLP arity, is compiled with its ask stream added, and a program '
+        'with no volitional procedure of its own reaches a question through '
+        'it', () {
+      const home = '''
+$types
+imported procedure responder#offer_from(Peer?, Response, Note).
+
+exported procedure befriend(Peer?, Response, Note).
+befriend(P, R?, N?) :- ground(P?) | responder # offer_from(P?, R, N).
+''';
+      expect(isPaperSyntaxSource(home), isFalse);
+      expect(importsReachingProcedure(home, modules), isTrue);
+      final c = compileCanonical(home, exports: modules);
+      expect(
+          c.source,
+          contains('imported procedure responder#offer_from(Peer?, Response, '
+              'Note, Stream(Ask(Question))).'));
+      expect(
+          c.source,
+          contains('befriend(P, R?, N?, D?) :- ground(P?) | '
+              'responder # offer_from(P?, R, N, D).'));
+      expect(c.source, contains('Question ::= card_w(Card) ; note_r(Note?).'));
+      expect(c.reaching, {'befriend/3'});
+      expect(c.volitional, isEmpty);
+    });
+
+    test('(Q2) an ordinary procedure of N that reaches no question, and a '
+        'procedure of a module with no vGLP export, are imported as GLP\'s '
+        'are, and bring no question', () {
+      const home = '''
+$types
+imported procedure responder#echo(Peer?, Peer).
+imported procedure lib#twice(Peer?, Peer).
+
+exported procedure (Note?)*jot(Note).
+(N)*jot(N?).
+
+procedure go(Peer?, Peer).
+go(P, Q?) :- responder # echo(P?, Q).
+procedure go2(Peer?, Peer).
+go2(P, Q?) :- lib # twice(P?, Q).
+''';
+      final c = compileCanonical(home, exports: modules);
+      expect(c.source, contains('imported procedure responder#echo(Peer?, Peer).'));
+      expect(c.source, contains('imported procedure lib#twice(Peer?, Peer).'));
+      expect(c.source, contains('go(P, Q?) :- responder # echo(P?, Q).'));
+      expect(c.source, contains('go2(P, Q?) :- lib # twice(P?, Q).'));
+      expect(c.source, contains('Question ::= note_r(Note?).'));
+      expect(c.reaching, {'jot/1'});
+      expect(
+          importsReachingProcedure('''
+$types
+imported procedure responder#echo(Peer?, Peer).
+''', modules),
+          isFalse);
+    });
+
+    test('(Q3) a `_2` functor of N travels with its export, and a type of the '
+        'program\'s own that is that one takes it', () {
+      final c = compileCanonical('''
+$types
+imported procedure (Box_yesNo?)*boxes#confirm(Peer?, YesNo).
+
+exported procedure (Box_yesNo?)*recheck(Peer?, YesNo).
+(box_yn(A))*recheck(P, A?) :- ground(P?) | true.
+
+exported procedure ask_confirm(Peer?, YesNo).
+ask_confirm(P, A?) :- ground(P?) | boxes # confirm(P?, A).
+''', exports: modules);
+      expect(c.functors,
+          {'Box(YesNo)?': 'box_yesNo_r', 'Box_yesNo?': 'box_yesNo_r_2'});
+      expect(
+          c.source,
+          contains('Question ::= box_yesNo_r(Box(YesNo)?) ; '
+              'box_yesNo_r_2(Box_yesNo?).'));
+      expect(c.source,
+          contains("[ask('Box_yesNo?', box_yesNo_r_2(X)) | D?]"));
+      expect(
+          c.source,
+          contains('imported procedure boxes#confirm(Peer?, YesNo, '
+              'Stream(Ask(Question))).'));
+      expect(c.interactive, hasLength(2));
+      expect(c.interactive.last.alsoOwn, isTrue);
+    });
+
+    group('is refused', () {
+      void refused(String source, String why, {ExportReader? exports}) =>
+          expect(
+              () => compileCanonical(source, exports: exports),
+              throwsA(isA<CompileError>()
+                  .having((e) => e.message, 'message', contains(why))));
+
+      test('an import of a volitional procedure, no export being given', () {
+        refused('''
+$types
+imported procedure (Card)*responder#respond(Offer?, Response, Note).
+''', 'none is given it');
+      });
+
+      test('an import of a volitional procedure of a module with no vGLP '
+          'export', () {
+        refused('''
+$types
+imported procedure (Card)*lib#respond(Offer?, Response, Note).
+''', 'lib is no vGLP module whose export the compilation reads',
+            exports: modules);
+      });
+
+      test('naming an interactive type N does not give p', () {
+        refused('''
+$types
+imported procedure (Note?)*boxes#confirm(Peer?, YesNo).
+''', 'and boxes declares (Box_yesNo?)*confirm', exports: modules);
+      });
+
+      test('an ordinary procedure of N imported as a volitional one', () {
+        refused('''
+$types
+imported procedure (Card)*responder#offer_from(Peer?, Response, Note).
+''', 'is an ordinary procedure that reaches a question', exports: modules);
+      });
+
+      test('a volitional procedure N does not export', () {
+        refused('''
+$types
+imported procedure (Note?)*responder#jot(Note).
+''', 'which responder does not export', exports: modules);
+      });
+
+      test('a volitional procedure of N imported as an ordinary one', () {
+        refused('''
+$types
+imported procedure responder#respond(Offer?, Response, Note).
+''', 'as an ordinary one', exports: modules);
+      });
+
+      test('an ordinary import that reaches a question called with n+1 '
+          'arguments', () {
+        refused('''
+$types
+imported procedure responder#offer_from(Peer?, Response, Note).
+procedure go(Response, Note, Stream(_)).
+go(R?, N?, D?) :- responder # offer_from(bob, R, N, D).
+''', 'its ask stream is the compilation\'s', exports: modules);
+      });
+
+      test('one type joining from two modules with two functors', () {
+        // one gives Box_yesNo? box_yesNo_r; two, which imports boxes' and
+        // declares its own of the type before, box_yesNo_r_2.
+        final three = _exportsOf({
+          'boxes': boxes,
+          'one': '''
+$types
+exported procedure (Box_yesNo?)*one(Peer?, YesNo).
+(box_yn(A))*one(P, A?) :- ground(P?) | true.
+''',
+          'two': '''
+$types
+exported procedure (Box_yesNo?)*two(Peer?, YesNo).
+(box_yn(A))*two(P, A?) :- ground(P?) | true.
+imported procedure (Box(YesNo)?)*boxes#pick(Peer?, YesNo).
+''',
+        });
+        expect(three('two')!.interactive.map((t) => '${t.functor}(${t.written})'),
+            ['box_yesNo_r_2(Box_yesNo?)', 'box_yesNo_r(Box(YesNo)?)']);
+        refused('''
+$types
+imported procedure (Box_yesNo?)*one#one(Peer?, YesNo).
+imported procedure (Box_yesNo?)*two#two(Peer?, YesNo).
+''', 'joins the questions with the functor box_yesNo_r from one and '
+            'box_yesNo_r_2 from two', exports: three);
+      });
+    });
+
+    group('read beside the source (compileVglpSource)', () {
+      late Directory dir;
+      setUp(() => dir = Directory.systemTemp.createTempSync('vglp_exports_'));
+      tearDown(() => dir.deleteSync(recursive: true));
+      String write(String name, String text) {
+        final f = File('${dir.path}/$name')..writeAsStringSync(text);
+        return f.path;
+      }
+
+      const home = '''
+$types
+imported procedure (Card)*responder#respond(Offer?, Response, Note).
+exported procedure befriend(Peer?, Response, Note).
+befriend(P, R?, N?) :- ground(P?) | responder # respond(offer(P?), R, N).
+''';
+
+      test('the module file N.vglp beside it, and its compiled module N.glp '
+          'beside that; an N.glp written by hand stands, a GLP module', () {
+        write('responder.vglp', responder);
+        final path = write('home.vglp', home);
+        final s = compileVglpSource(home, path: path);
+        expect(s, contains('Question ::= card_w(Card) ; note_r(Note?).'));
+        write('responder.glp', compileVglpSource(responder));
+        expect(compileVglpSource(home, path: path), s);
+        write('responder.glp', '%% written by hand\n');
+        expect(
+            () => compileVglpSource(home, path: path),
+            throwsA(isA<CompileError>().having((e) => e.message, 'message',
+                contains('responder is no vGLP module'))));
+      });
+
+      test('a source in neither syntax that imports a procedure reaching a '
+          'question is compiled by the canonical compilation', () {
+        write('responder.vglp', responder);
+        const plain = '''
+$types
+imported procedure responder#offer_from(Peer?, Response, Note).
+exported procedure befriend(Peer?, Response, Note).
+befriend(P, R?, N?) :- ground(P?) | responder # offer_from(P?, R, N).
+''';
+        final s = compileVglpSource(plain, path: write('home.vglp', plain));
+        expect(s, startsWith(compiledHeader));
+        expect(
+            s,
+            contains('imported procedure responder#offer_from(Peer?, '
+                'Response, Note, Stream(Ask(Question))).'));
+      });
+
+      test('modules importing from each other are refused', () {
+        const a = '''
+$types
+imported procedure (Note?)*b#jot_b(Note).
+exported procedure (Note?)*jot_a(Note).
+(N)*jot_a(N?).
+''';
+        write('b.vglp', '''
+$types
+imported procedure (Note?)*a#jot_a(Note).
+exported procedure (Note?)*jot_b(Note).
+(N)*jot_b(N?).
+''');
+        expect(
+            () => compileVglpSource(a, path: write('a.vglp', a)),
+            throwsA(isA<CompileError>().having(
+                (e) => e.message, 'message', contains('form a cycle'))));
       });
     });
   });

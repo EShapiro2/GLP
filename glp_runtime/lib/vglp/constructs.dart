@@ -83,7 +83,12 @@ import 'mediator.dart' show typeSource;
 
 /// A moded interactive type of the program: its type as written, its mode,
 /// the functor the compilation gives it in Question, and the type parameters
-/// of the procedure that declares it.
+/// of the procedure that declares it.  One of another module N, which an
+/// import brings (vGLP, Definition "Canonical Compilation": "the interactive
+/// types of N join those of M, each with the functor its export gives it and
+/// its widget"), carries the module it is [from] and the [widget] N gives
+/// it; [alsoOwn] where a volitional procedure of the program's own has it
+/// too.
 class InteractiveType {
   final TypeExpr type;
   final bool readerMode;
@@ -91,11 +96,36 @@ class InteractiveType {
   final List<String> params;
   final int line, column;
 
+  /// The widget term the type's module gives it, where it is another
+  /// module's; null for the program's own, whose widget is the one in its
+  /// scope.
+  final String? widget;
+
+  /// The module whose export brings the type, or null for the program's own.
+  final String? from;
+
+  /// Whether a volitional procedure of the program's own has this imported
+  /// type too: the two are one alternative of the questions, of one
+  /// functor, and one construct process serves both.
+  final bool alsoOwn;
+
   InteractiveType(this.type, this.readerMode, this.functor, this.params,
-      this.line, this.column);
+      this.line, this.column,
+      {this.widget, this.from, this.alsoOwn = false});
 
   /// The moded type as written, `Card` or `Request?`.
   String get written => typeSource(type);
+
+  /// The same type with [widget] as its widget.
+  InteractiveType withWidget(String? widget) =>
+      InteractiveType(type, readerMode, functor, params, line, column,
+          widget: widget, from: from, alsoOwn: alsoOwn);
+
+  /// The same imported type, a volitional procedure of the program's own
+  /// having it too.
+  InteractiveType withOwn() =>
+      InteractiveType(type, readerMode, functor, params, line, column,
+          widget: widget, from: from, alsoOwn: true);
 }
 
 /// A type's name as a lowercase atom stem, `Stream(String)` stream_string,
@@ -369,12 +399,38 @@ class _Generator {
     final widgets = <String, String>{};
     for (final t in types) {
       final root = _Node(t.type, t.readerMode, t.params.toSet());
-      final w = _widget(root, {});
+      final w = _typeWidget(t, root);
       widgets[t.written] = w;
       hook.writeln(_constructClause(t, root, w));
     }
     hook.writeln();
     return ConstructProcesses('$hook$_out', widgets);
+  }
+
+  /// The widget of interactive type [t], whose root is [root]: the one its
+  /// module gives it where it is another module's, "each with the functor
+  /// its export gives it and its widget" (vGLP, Definition "Canonical
+  /// Compilation"), and the one in the program's scope where it is the
+  /// program's own.  An imported type the program's own volitional procedure
+  /// has too is served by one construct process, so the two widgets are one,
+  /// or it is refused: the Definition gives no construct process two.
+  String _typeWidget(InteractiveType t, _Node root) {
+    final given = t.widget;
+    if (given == null) return _widget(root, {});
+    if (t.alsoOwn) {
+      final own = _widget(root, {});
+      if (own != given) {
+        throw CompileError(
+            'The interactive type ${t.written} is a question of the program\'s '
+            'own and of ${t.from}, one alternative ${t.functor} of the '
+            'questions, and its widget is $own here and $given in ${t.from}: '
+            'one construct process serves the asks of one functor, and the '
+            'Definition gives an imported type "the functor its export gives '
+            'it and its widget" (vGLP, Definition "Canonical Compilation")',
+            t.line, t.column, phase: 'analyzer');
+      }
+    }
+    return given;
   }
 
   // --- the construct clause -------------------------------------------------
