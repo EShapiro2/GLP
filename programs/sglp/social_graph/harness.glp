@@ -24,9 +24,10 @@
 %%   its two lists in increasing order (agents 1..N/2 are of one sex and the
 %%   rest of the other; the first list is the other agents of a's sex, the
 %%   second the agents of the other sex), its input and output streams and its
-%%   person channel, spawned once both lists are built --- and its person
-%%   process (population.glp, person/6), with its stochastic person and its
-%%   seed, reading that channel;
+%%   ask stream, spawned once both lists are built --- and its person process
+%%   (population.glp, person/6), with its stochastic person and its seed,
+%%   reading that ask stream in the dispatcher's place (Section 3, Definition
+%%   "Simulation Program");
 %%   at no agent, the network --- the root's mwm/2 merging the agents' output
 %%   streams, and a balanced tree of deliver/4 goals handing each message to the
 %%   input stream of the agent it names --- the monitor, with the run's seed and
@@ -51,11 +52,11 @@
 %% run.sh writes those lines to the log file it is given, tab-separated.
 
 imported procedure graph#start(Peer?, Peers?, Peers?, Stream(Msg)?, Stream(Msg),
-                               MutualRef?).
+                               Stream(Ask)).
 imported procedure population#stochastic_person(Integer?, Integer?, Integer?,
                                                 Profiles, Integer).
 imported procedure population#person(Integer?, Profiles?, MutualRef?, Integer?,
-                                     MutualRef?, Stream(Question)?).
+                                     MutualRef?, Stream(Ask)?).
 
 exported procedure run(Integer?, Number?, Span?, Integer?, Integer?, Integer?).
 run(N, C, U, Seed, Hom, Wary) :-
@@ -82,9 +83,8 @@ agents(A, H, N, B, Hom, Wary, [In|Ins], [merge(Out?)|Ms?], Mon, Log) :-
     A? =< N? |
     peers(A?, H?, N?, Ss, Os, Done),
     population # stochastic_person(B?, Hom?, Wary?, P, Seed),
-    allocate_mutual_reference(Ch, Questions),
-    start_when(Done?, A?, Ss?, Os?, In?, Out, Ch?),
-    population # person(A?, P?, Mon?, Seed?, Log?, Questions?),
+    start_when(Done?, A?, Ss?, Os?, In?, Out, Asks),
+    population # person(A?, P?, Mon?, Seed?, Log?, Asks?),
     skip(4096, B?, B2),
     A1 := A? + 1,
     agents(A1?, H?, N?, B2?, Hom?, Wary?, Ins?, Ms, Mon?, Log?).
@@ -184,15 +184,16 @@ peers(A, H, N, Ss?, Os?, D?) :-
 procedure both(Done?, Done?, Done).
 both(done, done, done).
 
-%% start_when(D?, A?, Ss?, Os?, In?, Out, Ch?): agent A's start goal,
-%% graph#start, spawned once D is done, its lists Ss and Os built, so that
-%% start/6's guards ground(Ss?) and ground(Os?) walk each list once, where,
-%% spawned with the lists still growing, they re-walked them from the head at
-%% every new element (sGLP's code task of 2026-10-02 20:58 UTC, S3).
+%% start_when(D?, A?, Ss?, Os?, In?, Out, Asks): agent A's start goal,
+%% graph#start, writing its ask stream Asks, spawned once D is done, its lists
+%% Ss and Os built, so that start/6's guards ground(Ss?) and ground(Os?) walk
+%% each list once, where, spawned with the lists still growing, they re-walked
+%% them from the head at every new element (sGLP's code task of 2026-10-02
+%% 20:58 UTC, S3).
 procedure start_when(Done?, Peer?, Peers?, Peers?, Stream(Msg)?, Stream(Msg),
-                     MutualRef?).
-start_when(done, A, Ss, Os, In, Out?, Ch) :-
-    graph # start(A?, Ss?, Os?, In?, Out, Ch?).
+                     Stream(Ask)).
+start_when(done, A, Ss, Os, In, Out?, Asks?) :-
+    graph # start(A?, Ss?, Os?, In?, Out, Asks).
 
 %% range(Lo?, Hi?, Skip?, L, D): L is Lo..Hi without Skip, and D done once L
 %% is built.

@@ -6,9 +6,12 @@
 %%   coins_sglp.glp  the sGLP source in the term form (programs/sglp/README.md),
 %%                request, issuer, its profiles and its run declaration, and the
 %%                vGLP program's interface the transformation reads;
-%%   coins.glp    the compiled program with the person channel threaded through
-%%                it, the agent's clauses of the task's item 1 and the wallet's
-%%                held, add and take, written by hand, vGLP's compilation being
+%%   coins.vglp   the vGLP program of Section 6, its types and volitional
+%%                procedures as Section 6 prints them, and the agent's clauses
+%%                and the wallet's held, add and take as it and Appendix B
+%%                describe them;
+%%   coins.glp    its canonical compilation (vGLP, Definition "Canonical
+%%                Compilation"), written by hand, vGLP's compilation being
 %%                vGLP's and not the transformation's;
 %%   profiles.glp the four profiles translated, with request and issuer, and
 %%   population.glp  the person process, the run declaration and each agent's
@@ -45,11 +48,16 @@ Msg     ::= msg(Peer, Content).
 %% The friends of agents 1..N, agent a's the a-th list, in increasing order.
 Friends ::= [] ; [Peers | Friends].
 
-%% A question on the person channel, as the harness hands the channel's stream
-%% to the person process (population.glp): the interactive type as a
-%% constant, and the person's end of the variable.
-Interactive ::= Menu ; Offer.
-Question    ::= question(Constant, Interactive).
+%% The type of the asks, which the canonical compilation adds (vGLP,
+%% Definition "Canonical Compilation"): an ask, ask(T, t(X)), is the
+%% interactive type T as a constant and, under the functor t the compilation
+%% gives T, the person's end X of the question's interactive variable;
+%% Question is the union over those functors, each type in its mode, Menu and
+%% Offer being in writer mode.  t is the functor of T's one alternative
+%% (coins.glp).  The harness hands the ask stream of each agent's start goal
+%% to its person process (population.glp, person/6).
+Ask      ::= ask(Constant, Question).
+Question ::= menu(Menu) ; offer(Offer).
 
 %% A stochastic person, one profile per dimension, as the harness hands it from
 %% the population's draw to the person process (population.glp): Spending and

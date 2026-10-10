@@ -6,11 +6,12 @@
 #
 # The two contracts of /Grassroots/Jurix Sections 3.3 and 3.4, which Section 7
 # certifies by hand, and contracts broken in one place each, one per way of
-# failing the three conjuncts of def:syntactically-grassroots; then the
+# failing the three conjuncts of def:syntactically-grassroots; then contracts
+# declaring a predicate reflexive (the paragraph after def:binding); then the
 # compilation of Section 5, against the two displays of Section 5.2; then the
 # contract of a grassroots federation, /Grassroots/GFWC sections/schemas.tex,
-# against the three conditions of Section 8 of /Grassroots/Jurix, and four
-# contracts broken in one place each, three against those and one against
+# against the three conditions of Section 8 of /Grassroots/Jurix, and five
+# contracts changing it in one place each, four against those and one against
 # rootedness, which is none of them; then small contracts on the
 # speech-act variables of traceable provenance and on volition by connected
 # component, in the language of Section 8; then the compilation of Section 8,
@@ -66,7 +67,7 @@ compiled() { # compiled <contract> <schema> ; the display, whitespace removed
 run() {     # run <goal> ... ; loads the program, then posts each goal
   local goals=""
   for g in "$@"; do goals="$goals$g\n"; done
-  # The REPL's default reduction limit is 10000, which CSSN's eighteen
+  # The REPL's default reduction limit is 10000, which CSSN's twenty-eight
   # schemas exceed; :limit is the REPL's knob for it.
   (cd "$GLP_DIR/glp_runtime" \
      && printf "%b" "$JURIX\n:limit 1000000\n$goals:quit\n" | bin/glpc 2>&1)
@@ -166,15 +167,143 @@ check "a speech act from an untraceable record: only friend keeps provenance" \
 check "and the verdict is the second conjunct alone" \
       "V = not_grassroots([untraceable([item, sent, tagged])])" "$out"
 
-# CSSN's child-safe contract, eighteen schemas, transcribed from their entries
-# of 2026-08-15 20:35 and 21:40 and 2026-08-16 12:37 UTC in
-# Coordination/mail/Legal_inbox.md.  Its introductory act is parent_child;
+# CSSN's child-safe contract, eighteen schemas, twenty-eight expanded,
+# transcribed from their entries of 2026-08-15 20:35 and 21:40 and 2026-08-16
+# 12:37 UTC in Coordination/mail/Legal_inbox.md, with send, parent_child,
+# friend and the five expanded schemas brought to CSSN's paper on 2026-10-09.  Its introductory act is parent_child;
 # befriending is obstructed there by design.
 out=$(run 'check_named(cssn, V).' 'traceable_of(cssn, E).')
 check "CSSN's contract is syntactically grassroots" \
       "V = syntactically_grassroots" "$out"
 check "CSSN's predicates of traceable provenance" \
       "E = [parenting, parent, child, friend, approval, withdrawal, member, listed, item, sent, posted, delivered]" \
+      "$out"
+
+# send is CSSN's paper's, sections/artefact-schemas.tex:46--47: the sender
+# requires the item it sends and nothing else, the recipient that the sender
+# is its friend (Legal 2026-10-09 18:46 UTC).  Its display in the form of
+# Section 5.2.
+send_cssn=$(cat <<'EOF' | squash
+\begin{align*}
+& c'_{\Alice} := c_{\Alice} \uplus \{\mathit{sent}(x,\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{item}(x,a,\Alice)\},\\
+& \text{provided } \mathit{item}(x,a,f) \in c_{\Alice} \text{ and } \mathit{friend}(\Alice) \in c_{\Bob}, \qquad \text{guarded by } \{\Alice\}
+\end{align*}
+EOF
+)
+check_eq "CSSN's send requires at the sender the item it sends and nothing else" \
+         "$send_cssn" "$(compiled cssn send)"
+
+# friend is reflexive, as CSSN's sections/schemas.tex declares it, and
+# parent_child forbids parent(r) at the parent's role, as its
+# sections/artefact-schemas.tex:8 writes it (Legal 2026-10-09 18:43 UTC).
+out=$(run 'contract_named(cssn, C).')
+check "CSSN's contract declares friend reflexive" \
+      "C = reflexive([friend], [schema(parent_child," "$out"
+parent_child_cssn=$(cat <<'EOF' | squash
+\begin{align*}
+& c'_{\Alice} := c_{\Alice} \uplus \{\mathit{parenting}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{parent}(\Alice),\mathit{child}\},\\
+& \text{provided } \mathit{parent}(\Bob) \notin c_{\Alice} \text{ and } \mathit{parent}(\Alice) \notin c_{\Bob}, \qquad \text{guarded by } \{\Alice,\Bob\}
+\end{align*}
+EOF
+)
+check_eq "CSSN's parent_child forbids parent(r) at the parent's role" \
+         "$parent_child_cssn" "$(compiled cssn parent_child)"
+
+# unfriend, child_unfriend, leave, child_leave and child_leave_2 each stand for
+# one schema per role, guarded at that role, so the contract is twenty-eight
+# schemas expanded (CSSN's sections/appendix-cascade.tex:24 and :32), every one
+# of them a willed act, where four of the five unexpanded were owed acts,
+# guarded by the empty set (Legal 2026-10-09 19:47 UTC).  The one guarded at
+# the role CSSN's table writes r is <schema>_r, and its display, in the form of
+# Section 5.2, is guarded by the person at that role alone; deliver is left the
+# one schema no party guards.
+out=$(run 'compile_named(cssn).')
+check_eq "CSSN's contract compiles to twenty-eight displays" "28" \
+         "$(printf '%s' "$out" | grep -c 'begin{align')"
+check_eq "and deliver's is the one guarded by the empty set" "1" \
+         "$(printf '%s' "$out" | grep -cF 'guarded by } \emptyset')"
+
+IFS= read -r -d '' unfriend_body <<'EOF'
+\begin{align*}
+& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{friend}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{friend}(\Alice)\},\\
+& \text{provided } \mathit{friend}(\Bob) \in c_{\Alice} \text{ and } \mathit{friend}(\Alice) \in c_{\Bob}, \qquad \text{guarded by }
+EOF
+IFS= read -r -d '' child_unfriend_body <<'EOF'
+\begin{align*}
+& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{friend}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{friend}(\Alice)\}, \qquad c'_{\mathit{Carol}} := c_{\mathit{Carol}} \uplus \{\mathit{withdrawal}\}, \qquad c'_{\mathit{Dave}} := c_{\mathit{Dave}} \uplus \{\mathit{withdrawal}\},\\
+& \text{provided } \{\mathit{parent}(\mathit{Carol}),\mathit{friend}(\Bob)\} \subseteq c_{\Alice} \text{ and } \{\mathit{parent}(\mathit{Dave}),\mathit{friend}(\Alice)\} \subseteq c_{\Bob} \text{ and } \mathit{parenting}(\Alice) \in c_{\mathit{Carol}} \text{ and } \mathit{parenting}(\Bob) \in c_{\mathit{Dave}}, \qquad \text{guarded by }
+EOF
+IFS= read -r -d '' leave_body <<'EOF'
+\begin{align*}
+& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{listed}(\Bob,n)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{member}(\Alice,n)\},\\
+& \text{provided } \mathit{listed}(\Bob,n) \in c_{\Alice} \text{ and } \mathit{member}(\Alice,n) \in c_{\Bob}, \qquad \text{guarded by }
+EOF
+IFS= read -r -d '' child_leave_body <<'EOF'
+\begin{align*}
+& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{listed}(\Bob,n)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{member}(\Alice,n)\}, \qquad c'_{\mathit{Carol}} := c_{\mathit{Carol}} \uplus \{\mathit{withdrawal}\},\\
+& \text{provided } \mathit{listed}(\Bob,n) \in c_{\Alice} \text{ and } \mathit{member}(\Alice,n) \in c_{\Bob} \text{ and } \mathit{parenting}(\Bob) \in c_{\mathit{Carol}}, \qquad \text{guarded by }
+EOF
+IFS= read -r -d '' child_leave_2_body <<'EOF'
+\begin{align*}
+& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{listed}(\Bob,n)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{member}(\Alice,n)\}, \qquad c'_{\mathit{Carol}} := c_{\mathit{Carol}} \uplus \{\mathit{withdrawal}\}, \qquad c'_{\mathit{Dave}} := c_{\mathit{Dave}} \uplus \{\mathit{withdrawal}\},\\
+& \text{provided } \mathit{listed}(\Bob,n) \in c_{\Alice} \text{ and } \mathit{member}(\Alice,n) \in c_{\Bob} \text{ and } \mathit{parenting}(\Alice) \in c_{\mathit{Carol}} \text{ and } \mathit{parenting}(\Bob) \in c_{\mathit{Dave}}, \qquad \text{guarded by }
+EOF
+
+expanded() { # expanded <schema> <role as CSSN writes it> <role's person> <body>
+  check_eq "CSSN's $1 is ${1%_*} guarded at $2 alone" \
+           "$(printf '%s' "$4\\{$3\\}\\end{align*}" | squash)" "$(compiled cssn "$1")"
+}
+expanded unfriend_p       p '\Alice'         "$unfriend_body"
+expanded unfriend_q       q '\Bob'           "$unfriend_body"
+expanded child_unfriend_r r '\Alice'         "$child_unfriend_body"
+expanded child_unfriend_s s '\Bob'           "$child_unfriend_body"
+expanded child_unfriend_p p '\mathit{Carol}' "$child_unfriend_body"
+expanded child_unfriend_q q '\mathit{Dave}'  "$child_unfriend_body"
+expanded leave_a          a '\Alice'         "$leave_body"
+expanded leave_q          q '\Bob'           "$leave_body"
+expanded child_leave_a    a '\Alice'         "$child_leave_body"
+expanded child_leave_s    s '\Bob'           "$child_leave_body"
+expanded child_leave_p    p '\mathit{Carol}' "$child_leave_body"
+expanded child_leave_2_r  r '\Alice'         "$child_leave_2_body"
+expanded child_leave_2_s  s '\Bob'           "$child_leave_2_body"
+expanded child_leave_2_p  p '\mathit{Carol}' "$child_leave_2_body"
+expanded child_leave_2_q  q '\mathit{Dave}'  "$child_leave_2_body"
+
+# --- reflexive predicates (the paragraph after def:binding) ----------------
+# A contract may declare a predicate of arity one reflexive.  The social graph
+# with friend declared so certifies as it does without.
+out=$(run 'check_named(sg_reflexive, V).')
+check "the social graph with friend reflexive is syntactically grassroots" \
+      "V = syntactically_grassroots" "$out"
+
+# No schema adds or deletes, at a role, the atom of a reflexive predicate
+# naming that role: a contract in which one does is refused as malformed,
+# naming the schema, the role and the atom, and is not compiled.
+out=$(run 'check_named(sg_refl_malformed, V).')
+check "adding or deleting friend of its own role makes the contract malformed" \
+      "V = malformed([reflexive(self_befriend, 1, atom(friend, [role(1)])), reflexive(self_unfriend, 1, atom(friend, [role(1)]))])" \
+      "$out"
+out=$(run 'compile_named(sg_refl_malformed).')
+check "a malformed contract is not compiled" \
+      "% not compiled: sg_refl_malformed is malformed" "$(printf '%s' "$out" | tr '\n' ' ')"
+check_not "and no display is printed for it" "begin{align" "$out"
+
+# Clause 1 of def:unobstructed skips a required atom of a reflexive predicate
+# naming the role: befriend requiring friend of each party at its own role is
+# obstructed when friend is not reflexive and unobstructed when it is.
+out=$(run 'check_named(sg_self_required, V).')
+check "friend of its own role required, friend not reflexive: clause 1 fails" \
+      "V = not_grassroots([obstructed(befriend, 1, atom(friend, [role(1)]), unobtainable), obstructed(befriend, 2, atom(friend, [role(2)]), unobtainable)])" \
+      "$out"
+out=$(run 'check_named(sg_refl_required, V).')
+check "friend of its own role required, friend reflexive: clause 1 skips it" \
+      "V = syntactically_grassroots" "$out"
+
+# Clause 3 of def:unobstructed: the introductory act forbids at a role no atom
+# of a reflexive predicate naming that role.
+out=$(run 'check_named(sg_refl_forbidden, V).')
+check "friend of its own role forbidden, friend reflexive: clause 3 fails" \
+      "V = not_grassroots([obstructed(befriend, 1, atom(friend, [role(1)]), reflexive), obstructed(befriend, 2, atom(friend, [role(2)]), reflexive)])" \
       "$out"
 
 # A contract with no schemas.
@@ -278,6 +407,20 @@ out=$(run 'check_named(gf_uncohesive, V).')
 check "a seat atom of no role of the schema fails cohesion, and seat traceable provenance" \
       "V = conditions_failed([untraceable([seat]), cohesion(federate, 1, atom(seat, [nterm(nvar(eta))]))])" \
       "$out"
+
+# Cohesion alone (Legal 2026-10-09 18:31 UTC): the federation with one schema
+# more, seat_child, whose seated role requires child(zeta, eta) and seats its
+# assembly in eta.  eta is the name term of no role of it, so cohesion fails;
+# it is an argument of the required child atom, so seat keeps traceable
+# provenance; the role graph is one role, so volition holds.  seat stops
+# being rooted, which is no condition.
+out=$(run 'check_named(gf_cohesion_only, V).' 'traceable_of(gf_cohesion_only, T).' \
+          'rooted_of(gf_cohesion_only, E).')
+check "a seat atom in a child the role requires fails cohesion alone" \
+      "V = conditions_failed([cohesion(seat_child, 1, atom(seat, [nterm(nvar(eta))]))])" \
+      "$out"
+check "and seat and child keep traceable provenance" "T = [seat, child]" "$out"
+check "and seat is not rooted, which is no condition" "E = []" "$out"
 
 # A join no assembly decides: its two roles are the assemblies of the two
 # communities, nothing joins them, and neither guards.

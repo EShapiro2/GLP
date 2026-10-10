@@ -2,24 +2,21 @@
 %% paper, the repository svGLP-Stochastic-Volitional-GLP at d2f64b6, Section 4).
 %%
 %%   monitor.glp    the monitor, over the guard when_idle;
-%%   construct.glp  the construct process of a compiled program in a
-%%                  simulation;
 %%   transform.glp  the transformation, from an example's sGLP source in the
 %%                  term form (README.md) to its profiles.glp and
 %%                  population.glp, which transform.sh writes;
-%%   social_graph/  the Grassroots Social Graph: its sGLP source, its compiled
-%%                  program, the printed profiles and population, its harness
-%%                  and its run script;
+%%   social_graph/  the Grassroots Social Graph: its sGLP source, its vGLP
+%%                  program and the program's canonical compilation, the
+%%                  printed profiles and population, its harness and its run
+%%                  script;
 %%   coins/         coins among friends, the same;
 %%   tests/         the tests of the suite's sGLP block (test_sglp.sh).
 %%
-%% Both modules are exposed to the subtree: the compiled programs call
-%% construct/3, and the harnesses spawn the monitor.
+%% The monitor is exposed to the subtree: the harnesses spawn it.
 %% A run of the social graph is a call of social_graph/4, or of social_graph/6
 %% for another mix, with this directory loaded (social_graph/run.sh); a run of
 %% coins among friends is a call of coins/7 (coins/run.sh).
 -expose(monitor).
--expose(construct).
 
 %% The term form of an sGLP program (README.md, "The term form"): a list of
 %% terms, one per declaration and clause, in GLP-Spec's term syntax; its

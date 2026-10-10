@@ -11,10 +11,30 @@ class Parser {
   int _current = 0;
   Clause? _pendingClause;  // Clause parsed but belongs to different procedure
 
-  /// Admit vGLP's volition guards and else-branches (vGLP, Definition "Guarded
-  /// Clause, Volition-Guarded Clause, ...").  False for a .glp source, which is
-  /// a vGLP program with no volition-guarded clauses (Definition "GLP, maGLP,
-  /// cGLP"): a volition guard in one is a parse error, not silently ignored.
+  /// Read a .vglp source (vGLP, sections/vglp.tex, Definition "Guarded
+  /// Clause, Volitional Procedure, Interactive Type, Interactive Term,
+  /// Ordinary Clause, Procedure, vGLP Program"): a volitional procedure p of
+  /// arity n "is declared `procedure (T)*p(T1, ..., Tn).`", T its interactive
+  /// type, in writer or reader mode as an argument type is, and "a clause of it
+  /// has the form `(A)*p(S1, ..., Sn) :- G | B`, where the interactive term A
+  /// is a term of type T, possibly a variable but not the anonymous variable,
+  /// and it is the guarded clause `p(S1, ..., Sn, A) :- G | B`, of arity n+1".
+  /// The parser reads each as what the Definition says it is: the declaration
+  /// as `p(T1, ..., Tn, T)`, listed in [Module.volitionalDeclarations], and the
+  /// clause as that guarded clause, its interactive term marked
+  /// ([Clause.interactiveTerm]).  The declaration takes TGLP's `exported` and
+  /// parameter list as any procedure declaration does ("vGLP is typed as GLP
+  /// is, by the parameterised moded type system of [TGLP] ... not restated
+  /// here", vGLP Section "Volition-Guarded GLP"); an imported one declares the
+  /// procedure's goals, n-ary until asked, and carries no interactive type.
+  ///
+  /// It also admits the volition guards and else-branches of the Definition
+  /// that one replaced ("Guarded Clause, Volition-Guarded Clause, ..."), in
+  /// which the .vglp sources not yet in the Definition's syntax are written.
+  ///
+  /// False for a .glp source: "GLP is vGLP without volitional procedures"
+  /// (vGLP Section "Volition-Guarded GLP"), and either syntax in one is a parse
+  /// error, not silently ignored.
   final bool vglp;
 
   Parser(this.tokens, {this.vglp = false});
@@ -149,13 +169,18 @@ class Parser {
     final procDeclarations = <ProcDecl>[];
     final procedures = <Procedure>[];
     final displayDecls = <DisplayDecl>[];
+    final volitionalDecls = <VolitionalDeclaration>[];
 
     // Track pending procedure declaration (waiting for its first clause)
     ProcDecl? pendingProcDecl;
+    // Whether the pending declaration is a volitional procedure's.
+    var pendingVolitional = false;
     // Track which procedures we've seen clauses for (signature -> first Procedure)
     final seenProcedures = <String, Procedure>{};
 
     while (!_isAtEnd()) {
+      if (!vglp) _refuseVolitionalSyntax();
+
       // A procedure declaration: 'procedure ...', 'exported procedure ...' or
       // 'imported procedure ...', a name after the keyword and its parameter
       // list ([_atProcDeclaration]); any other item beginning `procedure` is a
@@ -184,11 +209,14 @@ class Parser {
           // Builtin or imported - clear pending without error
           pendingProcDecl = null;
         }
+        final volitional = vglp && _interactiveDeclarationAt(_current) != null;
         final decl = _parseProcDeclaration();
         procDeclarations.add(decl);
+        if (volitional) volitionalDecls.add(VolitionalDeclaration(decl));
         // Imported procedures are declaration-only — no clauses expected
         if (!decl.imported) {
           pendingProcDecl = decl;
+          pendingVolitional = volitional;
         }
       } else if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
         // Might be a type definition (TypeName ::= ...) or a clause head
@@ -219,6 +247,7 @@ class Parser {
           _current = startPos;
           final proc = _parseProcedure();
           final sig = '${proc.name}/${proc.arity}';
+          var declaredVolitional = false;
 
           // Check if this matches pending declaration
           if (pendingProcDecl != null) {
@@ -226,6 +255,7 @@ class Parser {
             if (sig == pendingSig) {
               // This clause matches the pending declaration - good
               pendingProcDecl = null;
+              declaredVolitional = pendingVolitional;
             } else if (builtinProcedures.contains(pendingSig)) {
               // Pending was a builtin (no clauses needed) - clear it
               pendingProcDecl = null;
@@ -239,6 +269,7 @@ class Parser {
               );
             }
           }
+          _checkInteractiveTerms(proc, declaredVolitional);
 
           // Check for non-contiguous clauses
           if (seenProcedures.containsKey(sig)) {
@@ -257,12 +288,14 @@ class Parser {
           procedures.add(proc);
         }
       } else if (_check(TokenType.ATOM) || _check(TokenType.PROCEDURE) ||
-          (vglp && _check(TokenType.STAR))) {
+          (vglp && (_check(TokenType.STAR) || _check(TokenType.LPAREN)))) {
         // Clause starting with an atom (procedure name), `procedure` among
-        // them where no declaration begins there, or with the volition guard
-        // preceding one.
+        // them where no declaration begins there, or, in a .vglp source, with
+        // the interactive term `(A)*` of a clause of a volitional procedure or
+        // the volition guard `*(...)` preceding one.
         final proc = _parseProcedure();
         final sig = '${proc.name}/${proc.arity}';
+        var declaredVolitional = false;
 
         // Check if this matches pending declaration
         if (pendingProcDecl != null) {
@@ -270,6 +303,7 @@ class Parser {
           if (sig == pendingSig) {
             // This clause matches the pending declaration - good
             pendingProcDecl = null;
+            declaredVolitional = pendingVolitional;
           } else if (builtinProcedures.contains(pendingSig)) {
             // Pending was a builtin (no clauses needed) - clear it
             pendingProcDecl = null;
@@ -283,6 +317,7 @@ class Parser {
             );
           }
         }
+        _checkInteractiveTerms(proc, declaredVolitional);
 
         // Check for non-contiguous clauses
         if (seenProcedures.containsKey(sig)) {
@@ -331,9 +366,55 @@ class Parser {
       compileMode: compileMode,
       exposes: exposes,
       displayDecls: displayDecls,
+      volitionalDeclarations: volitionalDecls,
       line: 1,
       column: 1,
     );
+  }
+
+  /// The clauses of [proc] against its declaration, [volitional] where it is
+  /// `procedure (T)*p(T1, ..., Tn).` (vGLP, Definition "Guarded Clause,
+  /// Volitional Procedure, ..."): "a clause of it has the form
+  /// `(A)*p(S1, ..., Sn) :- G | B`", so there every clause is written so; and
+  /// a clause written so is of a procedure declared so, which "is declared
+  /// `procedure (T)*p(T1, ..., Tn).`", T the type of A, so elsewhere none is.
+  void _checkInteractiveTerms(Procedure proc, bool volitional) {
+    final n = proc.arity - 1;
+    for (final c in proc.clauses) {
+      if (volitional && c.interactiveTerm == null) {
+        throw CompileError(
+          'A clause of the volitional procedure ${proc.name}/$n is written '
+          '"(A)*${proc.name}(S1, ..., Sn) :- G | B", with its interactive '
+          'term (vGLP, Definition "Guarded Clause, Volitional Procedure, ...")',
+          c.line, c.column, phase: 'parser');
+      }
+      if (!volitional && c.interactiveTerm != null) {
+        throw CompileError(
+          'The clause (A)*${proc.name}/$n is of no procedure declared '
+          '"procedure (T)*${proc.name}(T1, ..., Tn)." immediately before its '
+          'clauses: a volitional procedure is declared with its interactive '
+          'type (vGLP, Definition "Guarded Clause, Volitional Procedure, ...")',
+          c.line, c.column, phase: 'parser');
+      }
+    }
+  }
+
+  /// In a .glp source, the refusal of vGLP's syntax for a volitional
+  /// procedure where an item begins with it: "GLP is vGLP without volitional
+  /// procedures" (vGLP Section "Volition-Guarded GLP").  Neither form parses
+  /// as GLP, the declaration's interactive type standing where a name is
+  /// expected and the clause's interactive term where a head is.
+  void _refuseVolitionalSyntax() {
+    final declaration = _interactiveDeclarationAt(_current) != null;
+    if (!declaration && _indexAfterInteractiveTerm(_current) == _current) {
+      return;
+    }
+    throw CompileError(
+      '${declaration ? 'The declaration "procedure (T)*p(...)"' : 'The clause "(A)*p(...)"'} '
+      'of a volitional procedure may appear only in a .vglp source: GLP is '
+      'vGLP without volitional procedures (vGLP, Definition "Guarded Clause, '
+      'Volitional Procedure, ...")',
+      _peek().line, _peek().column, phase: 'parser');
   }
 
   /// Parse an interface section: type definitions and procedure declarations
@@ -439,8 +520,11 @@ class Parser {
       // Check if next clause could be part of this procedure
       bool couldBeSameProcedure = false;
 
-      // A volition guard precedes the head, so look past it for the name.
-      final headIdx = vglp ? _indexAfterVolitionGuard(_current) : _current;
+      // An interactive term or a volition guard precedes the head, so look
+      // past it for the name.
+      final headIdx = vglp
+          ? _indexAfterVolitionGuard(_indexAfterInteractiveTerm(_current))
+          : _current;
       if (headIdx < tokens.length &&
           (tokens[headIdx].type == TokenType.ATOM ||
               tokens[headIdx].type == TokenType.PROCEDURE) &&
@@ -499,6 +583,109 @@ class Parser {
     }
 
     return Procedure(name, arity, clauses, firstClause.line, firstClause.column);
+  }
+
+  /// The index of the parenthesis closing the one at [open], or -1 where none
+  /// does before the end.
+  int _closingParen(int open) {
+    var depth = 0;
+    for (var i = open; i < tokens.length; i++) {
+      final t = tokens[i].type;
+      if (t == TokenType.EOF) return -1;
+      if (t == TokenType.LPAREN) depth++;
+      if (t == TokenType.RPAREN && --depth == 0) return i;
+    }
+    return -1;
+  }
+
+  /// The index of the first token past the interactive term `(A)*` of a
+  /// clause of a volitional procedure beginning at [i], or [i] itself if none
+  /// begins there (vGLP, Definition "Guarded Clause, Volitional Procedure,
+  /// ...").  Used to look at the head of the clause without parsing it.
+  int _indexAfterInteractiveTerm(int i) {
+    if (i >= tokens.length || tokens[i].type != TokenType.LPAREN) return i;
+    final close = _closingParen(i);
+    if (close < 0 ||
+        close + 1 >= tokens.length ||
+        tokens[close + 1].type != TokenType.STAR) {
+      return i;
+    }
+    return close + 2;
+  }
+
+  /// Where a volitional procedure's declaration beginning at [at] carries its
+  /// interactive type, `(T)*` before the name (vGLP, Definition "Guarded
+  /// Clause, Volitional Procedure, ..."): [open], the index of the
+  /// parenthesis before T, and [name], that of the token after `*`.  The
+  /// declaration is `procedure (T)*p(...)`, or `procedure(X, ...) (T)*p(...)`
+  /// with TGLP's parameter list, either after `exported` or `imported`.  Null
+  /// where no such declaration begins at [at].
+  ({int open, int name})? _interactiveDeclarationAt(int at) {
+    var i = at;
+    if (i < tokens.length &&
+        tokens[i].type == TokenType.ATOM &&
+        (tokens[i].lexeme == 'exported' || tokens[i].lexeme == 'imported')) {
+      i++;
+    }
+    if (i >= tokens.length || tokens[i].type != TokenType.PROCEDURE) {
+      return null;
+    }
+    i++;
+    if (i >= tokens.length || tokens[i].type != TokenType.LPAREN) return null;
+    final close = _closingParen(i);
+    if (close < 0 || close + 1 >= tokens.length) return null;
+    if (tokens[close + 1].type == TokenType.STAR) {
+      return (open: i, name: close + 2);
+    }
+    // A parameter list, then the interactive type.
+    final open = close + 1;
+    if (tokens[open].type != TokenType.LPAREN) return null;
+    final close2 = _closingParen(open);
+    if (close2 < 0 ||
+        close2 + 1 >= tokens.length ||
+        tokens[close2 + 1].type != TokenType.STAR) {
+      return null;
+    }
+    return (open: open, name: close2 + 2);
+  }
+
+  /// Parse the interactive term `(A)*` of a clause of a volitional procedure
+  /// if one precedes the head, in a .vglp source; null where the clause is
+  /// ordinary (vGLP, Definition "Guarded Clause, Volitional Procedure, ...").
+  /// "The interactive term A is a term of type T, possibly a variable but not
+  /// the anonymous variable": `_`, `_?`, `_Name` and `_Name?` are refused, an
+  /// anonymous variable being any variable whose name begins with `_`
+  /// (GLP-Spec, Remark "Anonymous Variables").
+  Term? _parseInteractiveTermOpt() {
+    if (!vglp || !_check(TokenType.LPAREN)) return null;
+    final open = _advance();
+    if (_check(TokenType.RPAREN)) {
+      throw CompileError(
+        'An empty interactive term "()": a clause of a volitional procedure '
+        'is written "(A)*p(S1, ..., Sn) :- G | B", A a term (vGLP, Definition '
+        '"Guarded Clause, Volitional Procedure, ...")',
+        open.line, open.column, phase: 'parser');
+    }
+    final term = _parseTerm();
+    _consume(TokenType.RPAREN, 'Expected ")" after the interactive term');
+    _consume(TokenType.STAR,
+        'Expected "*" after the interactive term: a clause of a volitional '
+        'procedure is written "(A)*p(S1, ..., Sn) :- G | B"');
+    if (term is UnderscoreTerm ||
+        (term is VarTerm && term.name.startsWith('_'))) {
+      throw CompileError(
+        'The interactive term "$term" is the anonymous variable: "the '
+        'interactive term A is a term of type T, possibly a variable but not '
+        'the anonymous variable" (vGLP, Definition "Guarded Clause, '
+        'Volitional Procedure, ..."; GLP-Spec, Remark "Anonymous Variables")',
+        term.line, term.column, phase: 'parser');
+    }
+    if (!_check(TokenType.ATOM) && !_check(TokenType.PROCEDURE)) {
+      throw CompileError(
+        'Expected the volitional procedure\'s name after "(A)*"',
+        _peek().line, _peek().column, phase: 'parser');
+    }
+    return term;
   }
 
   /// The index of the first token past a volition guard beginning at [i], or
@@ -665,11 +852,23 @@ class Parser {
   //     or: Head :- Body.
   //     or: Head.
   //
-  // A vGLP clause may be preceded by a volition guard and, if it is, followed
-  // by an else-branch before the full stop.
+  // A clause of a volitional procedure, (A)*p(S1, ..., Sn) :- G | B, is read
+  // as the guarded clause p(S1, ..., Sn, A) :- G | B, of arity n+1, that it is
+  // (vGLP, Definition "Guarded Clause, Volitional Procedure, ..."), A marked
+  // as its interactive term.
+  //
+  // A vGLP clause of the Definition that one replaced may be preceded by a
+  // volition guard and, if it is, followed by an else-branch before the full
+  // stop.
   Clause _parseClause() {
     final volitionGuard = _parseVolitionGuardOpt();
-    final head = _parseAtom();
+    final interactiveTerm =
+        volitionGuard == null ? _parseInteractiveTermOpt() : null;
+    final written = _parseAtom();
+    final head = interactiveTerm == null
+        ? written
+        : Atom(written.functor, [...written.args, interactiveTerm],
+            written.line, written.column);
 
     List<Guard>? guards;
     List<Goal>? body;
@@ -739,6 +938,7 @@ class Parser {
 
     return Clause(head, guards: guards, body: body,
         volitionGuard: volitionGuard, elseBranch: elseBranch,
+        interactiveTerm: interactiveTerm,
         line: head.line, column: head.column);
   }
 
@@ -1884,8 +2084,24 @@ class Parser {
   /// `procedure(X) :- q(X?).`, `procedure.` --- begins a clause of the
   /// procedure named `procedure`.  Until 2026-10-04 every `procedure` there
   /// began a declaration, and such a clause was a syntax error.
+  ///
+  /// In a .vglp source the declaration of a volitional procedure carries its
+  /// interactive type before the name, `procedure (T)*p(...)`
+  /// ([_interactiveDeclarationAt]).
   bool _atProcDeclaration([int? at]) {
     var i = at ?? _current;
+    final interactive = vglp ? _interactiveDeclarationAt(i) : null;
+    if (interactive != null) {
+      i = interactive.name;
+      if (i + 1 >= tokens.length ||
+          !_procedureNameTokens.contains(tokens[i].type)) {
+        return false;
+      }
+      final after = tokens[i + 1].type;
+      return after == TokenType.LPAREN ||
+          after == TokenType.DOT ||
+          after == TokenType.HASH;
+    }
     if (i < tokens.length &&
         tokens[i].type == TokenType.ATOM &&
         (tokens[i].lexeme == 'exported' || tokens[i].lexeme == 'imported')) {
@@ -1934,11 +2150,28 @@ class Parser {
   /// Spec: Moded-Types, sections/parameterized-types.tex, Parameterised
   /// Procedure Declarations and the paragraph Declaration parameters.
   ProcDecl _parseProcDeclaration() {
+    // A volitional procedure's declaration, in a .vglp source: its interactive
+    // type stands before its name ([_interactiveDeclarationAt]).
+    final interactive = vglp ? _interactiveDeclarationAt(_current) : null;
+
     // Check for 'exported' or 'imported' keyword before 'procedure'
     bool exported = false;
     bool imported = false;
     final startLine = _peek().line;
     final startColumn = _peek().column;
+    if (interactive != null && _check(TokenType.ATOM) &&
+        _peek().lexeme == 'imported') {
+      // An imported declaration types a cross-module call (TGLP modules.tex,
+      // "Cross-module type checking"), and a goal of a volitional procedure
+      // of arity n is "n-ary until it is asked" (vGLP, Definition "Guarded
+      // Clause, Volitional Procedure, ...").
+      throw CompileError(
+        'An imported declaration carries no interactive type: it types the '
+        'call M#p(S1, ..., Sn), and a goal of a volitional procedure of arity '
+        'n is n-ary until it is asked (vGLP, Definition "Guarded Clause, '
+        'Volitional Procedure, ...")',
+        startLine, startColumn, phase: 'parser');
+    }
     if (_check(TokenType.ATOM) && _peek().lexeme == 'exported') {
       _advance(); // consume 'exported'
       exported = true;
@@ -1952,9 +2185,11 @@ class Parser {
 
     // Optional type-parameter list: procedure(X, Y) p(...).
     // No other declaration form has "(" directly after the keyword, so the
-    // list is unambiguous.
+    // list is unambiguous, save in a .vglp source, where "(" there may open
+    // the interactive type of a volitional procedure, `procedure (T)*p(...)`.
     final typeParams = <String>[];
-    if (_match(TokenType.LPAREN)) {
+    if ((interactive == null || _current != interactive.open) &&
+        _match(TokenType.LPAREN)) {
       typeParams.add(_consume(TokenType.VARIABLE, 'Expected type parameter name').lexeme);
       while (_match(TokenType.COMMA)) {
         typeParams.add(_consume(TokenType.VARIABLE, 'Expected type parameter name').lexeme);
@@ -1970,6 +2205,17 @@ class Parser {
           );
         }
       }
+    }
+
+    // The interactive type T of a volitional procedure, `(T)*`, in writer or
+    // reader mode as an argument type is (vGLP, Definition "Guarded Clause,
+    // Volitional Procedure, ...").
+    TypeExpr? interactiveType;
+    if (interactive != null) {
+      _consume(TokenType.LPAREN, 'Expected "(" before the interactive type');
+      interactiveType = _parseProcArgType();
+      _consume(TokenType.RPAREN, 'Expected ")" after the interactive type');
+      _consume(TokenType.STAR, 'Expected "*" after the interactive type');
     }
 
     // Parse procedure name, possibly with module path for imported procedures.
@@ -2059,6 +2305,12 @@ class Parser {
       _consume(TokenType.RPAREN, 'Expected ")" after procedure arguments');
     }
     // If no LPAREN, argTypes remains empty (nullary procedure)
+
+    // A volitional procedure's clauses are the guarded clauses
+    // p(S1, ..., Sn, A) of arity n+1, A of type T (vGLP, Definition "Guarded
+    // Clause, Volitional Procedure, ..."), so its declaration is theirs,
+    // p(T1, ..., Tn, T).
+    if (interactiveType != null) argTypes.add(interactiveType);
 
     _consume(TokenType.DOT, 'Expected "." after procedure declaration');
 

@@ -1,6 +1,7 @@
 /// Abstract Syntax Tree nodes for GLP
 
-import '../analysis/type_checker/type_ast.dart' show TypeDef, ProcDecl;
+import '../analysis/type_checker/type_ast.dart'
+    show TypeDef, TypeExpr, ProcDecl;
 
 /// Compilation mode: controls compiler restrictions
 enum CompileMode {
@@ -39,8 +40,56 @@ class Procedure extends AstNode {
 
   String get signature => '$name/$arity';
 
+  /// Whether this is a volitional procedure (vGLP, Definition "Guarded
+  /// Clause, Volitional Procedure, Interactive Type, Interactive Term,
+  /// Ordinary Clause, Procedure, vGLP Program"): its clauses are written
+  /// `(A)*p(S1, ..., Sn) :- G | B`, each the guarded clause
+  /// `p(S1, ..., Sn, A) :- G | B` of arity n+1, so [arity] is n+1, the
+  /// volitional procedure's own arity n being one less.  The parser admits
+  /// such clauses only after the declaration `procedure (T)*p(T1, ..., Tn).`
+  /// and only such clauses there ([Module.volitionalDeclarations]).
+  bool get isVolitional =>
+      clauses.isNotEmpty && clauses.first.interactiveTerm != null;
+
   @override
   String toString() => 'Procedure($signature, ${clauses.length} clauses)';
+}
+
+/// The declaration of a volitional procedure p of arity n,
+/// `procedure (T)*p(T1, ..., Tn).`, T its interactive type, in writer or
+/// reader mode as an argument type is (vGLP, Definition "Guarded Clause,
+/// Volitional Procedure, Interactive Type, Interactive Term, Ordinary Clause,
+/// Procedure, vGLP Program").
+///
+/// A clause of the procedure "is the guarded clause p(S1, ..., Sn, A) :- G |
+/// B, of arity n+1", so [decl] declares those clauses: `p(T1, ..., Tn, T)`,
+/// the interactive type last.  It is among the module's procedure
+/// declarations as well, where it stands for the procedure's clauses.
+class VolitionalDeclaration extends AstNode {
+  final ProcDecl decl;
+
+  VolitionalDeclaration(this.decl) : super(decl.line, decl.column);
+
+  String get name => decl.name;
+
+  /// n, the arity of the volitional procedure; its clauses have n+1
+  /// arguments.
+  int get arity => decl.argTypes.length - 1;
+
+  /// p/n.
+  String get signature => '$name/$arity';
+
+  /// T, in its mode.
+  TypeExpr get interactiveType => decl.argTypes.last;
+
+  /// Whether T is in reader mode.
+  bool get readerMode => decl.isInputArg(arity);
+
+  @override
+  String toString() {
+    final types = decl.argTypes.sublist(0, arity).join(', ');
+    return 'procedure ($interactiveType)*$name($types).';
+  }
 }
 
 /// One position of a volition guard's question, `X_l = T_l` (vGLP,
@@ -150,10 +199,18 @@ class DisplayDecl extends AstNode {
 
 // Clause: Head :- Guards | Body.
 //
-// A vGLP clause may carry a volition guard before its head and, if it does, an
-// else-branch after its body.  Both are null in GLP, which is vGLP without
-// volition-guarded clauses (vGLP, Definition "GLP, maGLP, cGLP"), and the
-// parser only admits them for a .vglp source.
+// A clause of a volitional procedure is written (A)*p(S1, ..., Sn) :- G | B
+// and is the guarded clause p(S1, ..., Sn, A) :- G | B, of arity n+1 (vGLP,
+// Definition "Guarded Clause, Volitional Procedure, Interactive Type,
+// Interactive Term, Ordinary Clause, Procedure, vGLP Program"): its head is
+// that guarded clause's, and [interactiveTerm] is A, the head's last argument.
+// It is null for an ordinary clause, and always in GLP, which is vGLP without
+// volitional procedures; the parser admits the form only for a .vglp source.
+//
+// A .vglp source not yet in that syntax may carry the volition guard of the
+// Definition it replaced ("Guarded Clause, Volition-Guarded Clause, ...")
+// before its head and, if it does, an else-branch after its body; both are
+// null otherwise, and the parser admits them only for a .vglp source.
 class Clause extends AstNode {
   final Atom head;
   final List<Guard>? guards;  // Optional guard list before |
@@ -161,12 +218,19 @@ class Clause extends AstNode {
   final VolitionGuard? volitionGuard;
   final ElseBranch? elseBranch;
 
+  /// The interactive term A of a clause `(A)*p(S1, ..., Sn) :- G | B` of a
+  /// volitional procedure, the last argument of [head]; null for an ordinary
+  /// clause.
+  final Term? interactiveTerm;
+
   Clause(this.head, {this.guards, this.body, this.volitionGuard, this.elseBranch,
-      required int line, required int column})
+      this.interactiveTerm, required int line, required int column})
       : super(line, column);
 
-  /// Whether this is a volition-guarded clause (vGLP, Definition "Guarded
-  /// Clause, ...").
+  /// Whether this is a volition-guarded clause, of the Definition "Guarded
+  /// Clause, Volition-Guarded Clause, ..." that vGLP's Definition "Guarded
+  /// Clause, Volitional Procedure, ..." replaced.  A clause of a volitional
+  /// procedure is not one: it carries [interactiveTerm].
   bool get isVolitionGuarded => volitionGuard != null;
 
   @override
@@ -363,6 +427,12 @@ class Module extends AstNode {
   final List<String> exposes;     // `-expose(M).` module paths (e.g. "lib#streams")
   final List<DisplayDecl> displayDecls;  // `display ... : ... .` declarations
 
+  /// The declarations `procedure (T)*p(T1, ..., Tn).` of the module's
+  /// volitional procedures, in source order (vGLP, Definition "Guarded
+  /// Clause, Volitional Procedure, ...").  Each one's [ProcDecl] is in
+  /// [procDeclarations] too, and its procedure in [procedures].
+  final List<VolitionalDeclaration> volitionalDeclarations;
+
   Module({
     this.typeDefs = const [],
     this.procDeclarations = const [],
@@ -371,6 +441,7 @@ class Module extends AstNode {
     this.compileMode = CompileMode.user,
     this.exposes = const [],
     this.displayDecls = const [],
+    this.volitionalDeclarations = const [],
     required int line,
     required int column,
   }) : super(line, column);

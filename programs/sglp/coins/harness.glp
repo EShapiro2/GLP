@@ -24,9 +24,10 @@
 %% goals:
 %%
 %%   at each agent a of 1..N, its start goal --- the compiled start/5, with a,
-%%   its friends, its input and output streams and its person channel --- and
-%%   its person process, with its stochastic person and its seed, reading that
-%%   channel (population.glp, person/6);
+%%   its friends, its input and output streams and its ask stream --- and its
+%%   person process, with its stochastic person and its seed, reading that ask
+%%   stream in the dispatcher's place (population.glp, person/6; Section 3,
+%%   Definition "Simulation Program");
 %%   at no agent, the network --- the root's mwm/2 merging the agents' output
 %%   streams, and a balanced tree of deliver/4 goals handing each message to the
 %%   input stream of the agent it names --- the monitor, with the run's seed and
@@ -51,11 +52,11 @@
 %% run.sh writes those lines to the log file it is given, tab-separated.
 
 imported procedure coins#start(Peer?, Peers?, Stream(Msg)?, Stream(Msg),
-                               MutualRef?).
+                               Stream(Ask)).
 imported procedure population#stochastic_person(Integer?, Integer?, Integer?,
                                                 Profiles, Integer).
 imported procedure population#person(Integer?, Profiles?, MutualRef?, Integer?,
-                                     MutualRef?, Stream(Question)?).
+                                     MutualRef?, Stream(Ask)?).
 
 exported procedure run(Integer?, Friends?, Number?, Span?, Integer?, Integer?,
                        Integer?).
@@ -83,9 +84,8 @@ agents(A, N, [Fs|Fss], B, Spend, Cred, [In|Ins], [merge(Out?)|Ms?], Mon,
        Log) :-
     A? =< N? |
     population # stochastic_person(B?, Spend?, Cred?, P, Seed),
-    allocate_mutual_reference(Ch, Questions),
-    coins # start(A?, Fs?, In?, Out, Ch?),
-    population # person(A?, P?, Mon?, Seed?, Log?, Questions?),
+    coins # start(A?, Fs?, In?, Out, Asks),
+    population # person(A?, P?, Mon?, Seed?, Log?, Asks?),
     skip(4096, B?, B2),
     A1 := A? + 1,
     agents(A1?, N?, Fss?, B2?, Spend?, Cred?, Ins?, Ms, Mon?, Log?).
