@@ -124,7 +124,7 @@ PendingList ::= [] ; [PendingEntry | PendingList].
 %% One alternative per volition-guarded clause of the agent, its reply type
 %% and its escrow, as the compilation emits them --- Answer and Context with
 %% the alternatives written out, which the compiled module names.
-Xs_respond_swap_1 ::= xs_respond_swap_1(Constant).
+Xs_respond_swap_1 ::= xs_respond_swap_1(String).
 Reply_respond_swap_1 ::= then(Xs_respond_swap_1) ; else.
 Ctx_respond_swap_1 ::= ctx_respond_swap_1(Key, Lot, Stream(Coin)).
 Xs_agent_1 ::= xs_agent_1(Integer).
@@ -135,7 +135,7 @@ Xs_agent_3 ::= xs_agent_3(Key, Integer).
 Reply_agent_3 ::= then(Xs_agent_3).
 Xs_agent_4 ::= xs_agent_4(Key, Key).
 Reply_agent_4 ::= then(Xs_agent_4).
-Answer ::= xs_respond_swap_1(Constant) ; xs_agent_1(Integer) ; xs_agent_2(Key, Key, Integer, Key, Integer) ; xs_agent_3(Key, Integer) ; xs_agent_4(Key, Key).
+Answer ::= xs_respond_swap_1(String) ; xs_agent_1(Integer) ; xs_agent_2(Key, Key, Integer, Key, Integer) ; xs_agent_3(Key, Integer) ; xs_agent_4(Key, Key).
 Escrow ::= esc_respond_swap_1(Reply_respond_swap_1?) ; esc_agent_1(Reply_agent_1?) ; esc_agent_2(Reply_agent_2?) ; esc_agent_3(Reply_agent_3?) ; esc_agent_4(Reply_agent_4?).
 Context ::= ctx_respond_swap_1(Key, Lot, Stream(Coin)) ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4.
 

@@ -213,10 +213,10 @@ PendingList ::= [] ; [PendingEntry | PendingList].
 %% One alternative per volition-guarded clause of the agent, its reply type
 %% and its escrow, as the compilation emits them --- Answer and Context with
 %% the alternatives written out, which the compiled module names.
-Xs_respond_swap_1 ::= xs_respond_swap_1(Constant).
+Xs_respond_swap_1 ::= xs_respond_swap_1(String).
 Reply_respond_swap_1 ::= then(Xs_respond_swap_1) ; else.
 Ctx_respond_swap_1 ::= ctx_respond_swap_1(Key, Lot, Stream(Instrument)).
-Xs_respond_transfer_1 ::= xs_respond_transfer_1(Constant).
+Xs_respond_transfer_1 ::= xs_respond_transfer_1(String).
 Reply_respond_transfer_1 ::= then(Xs_respond_transfer_1) ; else.
 Ctx_respond_transfer_1 ::= ctx_respond_transfer_1(Kind, Key, Stream(Instrument)).
 Xs_agent_1 ::= xs_agent_1(Constant, Integer).
@@ -243,7 +243,7 @@ Xs_agent_11 ::= xs_agent_11(Key, Constant, Key, Constant, Integer).
 Reply_agent_11 ::= then(Xs_agent_11).
 Xs_agent_12 ::= xs_agent_12(Key, Constant, Key, Constant, Integer).
 Reply_agent_12 ::= then(Xs_agent_12).
-Answer ::= xs_respond_swap_1(Constant) ; xs_respond_transfer_1(Constant) ; xs_agent_1(Constant, Integer) ; xs_agent_2(Constant, Integer, Integer) ; xs_agent_3(Key, Constant, Key, Constant, Integer, Key, Constant, Integer) ; xs_agent_4(Constant, Key, Integer) ; xs_agent_5(Key, Constant, Integer) ; xs_agent_6(Key, Constant, Integer) ; xs_agent_7(Key, Key, Constant, Integer) ; xs_agent_8(Key, Constant, Key, Constant) ; xs_agent_9(Key, Constant, Integer) ; xs_agent_10(Key, Constant, Key, Constant, Integer) ; xs_agent_11(Key, Constant, Key, Constant, Integer) ; xs_agent_12(Key, Constant, Key, Constant, Integer).
+Answer ::= xs_respond_swap_1(String) ; xs_respond_transfer_1(String) ; xs_agent_1(Constant, Integer) ; xs_agent_2(Constant, Integer, Integer) ; xs_agent_3(Key, Constant, Key, Constant, Integer, Key, Constant, Integer) ; xs_agent_4(Constant, Key, Integer) ; xs_agent_5(Key, Constant, Integer) ; xs_agent_6(Key, Constant, Integer) ; xs_agent_7(Key, Key, Constant, Integer) ; xs_agent_8(Key, Constant, Key, Constant) ; xs_agent_9(Key, Constant, Integer) ; xs_agent_10(Key, Constant, Key, Constant, Integer) ; xs_agent_11(Key, Constant, Key, Constant, Integer) ; xs_agent_12(Key, Constant, Key, Constant, Integer).
 Escrow ::= esc_respond_swap_1(Reply_respond_swap_1?) ; esc_respond_transfer_1(Reply_respond_transfer_1?) ; esc_agent_1(Reply_agent_1?) ; esc_agent_2(Reply_agent_2?) ; esc_agent_3(Reply_agent_3?) ; esc_agent_4(Reply_agent_4?) ; esc_agent_5(Reply_agent_5?) ; esc_agent_6(Reply_agent_6?) ; esc_agent_7(Reply_agent_7?) ; esc_agent_8(Reply_agent_8?) ; esc_agent_9(Reply_agent_9?) ; esc_agent_10(Reply_agent_10?) ; esc_agent_11(Reply_agent_11?) ; esc_agent_12(Reply_agent_12?).
 Context ::= ctx_respond_swap_1(Key, Lot, Stream(Instrument)) ; ctx_respond_transfer_1(Kind, Key, Stream(Instrument)) ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4 ; ctx_agent_5 ; ctx_agent_6 ; ctx_agent_7 ; ctx_agent_8 ; ctx_agent_9 ; ctx_agent_10 ; ctx_agent_11 ; ctx_agent_12.
 
