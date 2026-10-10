@@ -32,7 +32,7 @@ agent_init(Id, UserIn, NetIn) :-
     send_to_user(UserOut?).
 
 %% --- Scripted actor: same agent, a script instead of a live user -------------
-exported procedure actor_init(Key?, Key?, NetInStream?).
+exported procedure actor_init(DuoActor?, Key?, NetInStream?).
 actor_init(Id, Target, NetIn) :-
     ground(Id?), ground(Target?) |
     send_to_net(NetOut?),
@@ -44,17 +44,19 @@ actor_init(Id, Target, NetIn) :-
 %% --- Actor script -------------------------------------------------------------
 
 %% Cold-call the local human, then court them.
-procedure duo_actor(Key?, Key?, Stream(UserNotify)?, Stream(UserCmd)).
+procedure duo_actor(DuoActor?, Key?, Stream(UserNotify)?, Stream(UserCmd)).
 duo_actor(Me, Target, Ns, [connect(Target?) | Cs?]) :-
     ground(Me?), ground(Target?) |
     duo_courter(Me?, Target?, Ns?, Cs).
 
-%% On becoming the human's friend: greet, mint, and pay them 2 coins.
-procedure duo_courter(Key?, Key?, Stream(UserNotify)?, Stream(UserCmd)).
+%% On becoming the human's friend: greet, mint, and pay them 2 coins.  The pay
+%% command is written in the body from Me?, a DuoActor where pay takes a Key.
+procedure duo_courter(DuoActor?, Key?, Stream(UserNotify)?, Stream(UserCmd)).
 duo_courter(Me, Target, [connected(Who) | Ns],
-    [send(Target?, Greeting?) | [mint(5, 0) | [pay(Target?, Me?, 0, 2) | Cs?]]]) :-
+    [send(Target?, Greeting?) | [mint(5, 0) | [Pay? | Cs?]]]) :-
     ground(Me?), ground(Target?), Who? =?= Target? |
     greeting_of(Me?, Greeting),
+    Pay = pay(Target?, Me?, 0, 2),
     duo_drain(Me?, Ns?, Cs).
 duo_courter(Me, Target, [_ | Ns], Cs?) :-
     ground(Me?), ground(Target?), otherwise |
@@ -62,17 +64,17 @@ duo_courter(Me, Target, [_ | Ns], Cs?) :-
 duo_courter(_, _, [], []).
 
 %% Each actor's opening line and chat reply.
-procedure greeting_of(Constant?, Constant).
+procedure greeting_of(DuoActor?, Constant).
 greeting_of(eve, welcome_to_grassroots).
 greeting_of(dana, hello_from_your_local_actor).
 
-procedure reply_of(Constant?, Constant).
+procedure reply_of(DuoActor?, Constant).
 reply_of(eve, lovely_day_isnt_it).
 reply_of(dana, happy_to_trade_anytime).
 
 %% After courting: answer chat messages, accept any friend offer, swap, or
 %% group invitation, greet a joined group, ignore the rest.
-procedure duo_drain(Constant?, Stream(UserNotify)?, Stream(UserCmd)).
+procedure duo_drain(DuoActor?, Stream(UserNotify)?, Stream(UserCmd)).
 duo_drain(Me, [received(From, _) | Ns], [send(From?, R?) | Cs?]) :-
     ground(Me?), ground(From?) |
     reply_of(Me?, R),

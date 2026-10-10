@@ -311,6 +311,10 @@ PendingList  ::= [] ; [PendingEntry | PendingList].
 ScenarioPerson ::= bob.
 ScenarioActor  ::= alice ; charlie ; dana ; eve.
 
+%% The two-phone scenario (play_grassapp_duo.glp): its two scripted actors,
+%% each with its opening line (greeting_of) and chat reply (reply_of).
+DuoActor ::= eve ; dana.
+
 %% =============================================================================
 %% ENTRY POINTS (modules.tex, External access): the root self.glp exports each
 %% program entry by forwarding to the play module that defines it, so a
@@ -333,8 +337,8 @@ imported procedure play_grassapp_duo # agent_init(Key?, Stream(UserCmd)?, NetInS
 exported procedure agent_init(Key?, Stream(UserCmd)?, NetInStream?).
 agent_init(Id, UserIn, NetIn) :- play_grassapp_duo # agent_init(Id?, UserIn?, NetIn?).
 
-imported procedure play_grassapp_duo # actor_init(Key?, Key?, NetInStream?).
-exported procedure actor_init(Key?, Key?, NetInStream?).
+imported procedure play_grassapp_duo # actor_init(DuoActor?, Key?, NetInStream?).
+exported procedure actor_init(DuoActor?, Key?, NetInStream?).
 actor_init(Id, Target, NetIn) :- play_grassapp_duo # actor_init(Id?, Target?, NetIn?).
 
 imported procedure play_grassapp_boot # scenario_init(ScenarioPerson?, Stream(UserCmd)?, NetInStream?).
