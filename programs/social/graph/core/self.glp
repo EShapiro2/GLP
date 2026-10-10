@@ -87,6 +87,10 @@ imported procedure superapp_plays#play_both_ways(Stream(AgentContent), Stream(Ag
 exported procedure play_both_ways(Stream(AgentContent), Stream(AgentContent)).
 play_both_ways(A?, B?) :- superapp_plays # play_both_ways(A, B).
 
+imported procedure superapp_plays#play_not_a_friend(Stream(AgentContent), Stream(AgentContent)).
+exported procedure play_not_a_friend(Stream(AgentContent), Stream(AgentContent)).
+play_not_a_friend(A?, B?) :- superapp_plays # play_not_a_friend(A, B).
+
 
 imported procedure superapp_plays#play_invite_timed(Integer).
 exported procedure play_invite_timed(Integer).

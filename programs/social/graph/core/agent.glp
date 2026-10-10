@@ -132,11 +132,16 @@ agent(Id, [msg(person, Id1, decision(no, _, accept(no, _)))|UserIn],
     send_user(msg(agent, person, rejected), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, Host?).
 
-%% User sends text message
+%% The person sends a message (Section 5.1): a message the person addresses to
+%% someone who is not their friend is not sent, and the agent tells the person
+%% so.  Whether Target has a friend output entry is a procedure over the
+%% outputs list, which no guard admits, so it is a body goal and send_step/6
+%% dispatches on its answer, as introduce_step/9 does (app:code).
 agent(Id, [msg(person, Id1, send(Target, Text))|UserIn], NetIn, Outs, Host) :-
     Id? =?= Id1?, ground(Target?) |
-    send_friend(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Host?).
+    anchor_friend(Target?, Outs?, Outs1, F),
+    send_step(F?, Id?, Target?, Text?, Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?, Host?).
 
 %% User unfriends Target — notify the peer on the friend channel, tear down,
 %% and tell the person the friend is gone.
@@ -1241,3 +1246,18 @@ introduce_step(found(_), found(_), Id, P, Q, UserIn, NetIn,
     agent(Id?, UserIn?, NetIn?, Outs2?, Host?).
 introduce_step(_, _, Id, _, _, UserIn, NetIn, Outs, Host) :-
     otherwise | agent(Id?, UserIn?, NetIn?, Outs?, Host?).
+
+%% =============================================================================
+%% A MESSAGE TO A FRIEND (Section 5.1)
+%% =============================================================================
+
+%% send_step(F, ...): the person's message, dispatched on the lookup of the
+%% outputs list.  Where Target has a friend output entry the message is sent
+%% on the friend channel; where it has none the message is not sent, and the
+%% person is told not_a_friend(Target) --- a send between the person's
+%% acceptance and the conveyance being such a message.
+procedure send_step(AnchorFriend?, Key?, Key?, Constant?, OutputsList?, OutputsList).
+send_step(found(_), Id, Target, Text, Outs, Outs1?) :-
+    send_friend(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1).
+send_step(none, _, Target, _, Outs, Outs1?) :-
+    send_user(msg(agent, person, not_a_friend(Target?)), Outs?, Outs1).

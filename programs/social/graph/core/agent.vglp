@@ -55,9 +55,10 @@
 %% NetColdCall, NetOutMsg, NetOutStream, NetInMsg, NetInStream) are those of
 %% self.glp.  Helper procedures — channel ops, merge, the lib/routing routers
 %% (send_user, send_net, send_friend), await_consent, await_conveyance,
-%% already_friend, convey, adopt, close_friend, and the local cold_call and
-%% close_outputs — are those of agent.glp and lib/routing/, unchanged; this
-%% file gives the agent procedure and its responders.
+%% already_friend, convey, adopt, close_friend, and the local cold_call,
+%% anchor_friend, send_step and close_outputs — are those of agent.glp and
+%% lib/routing/, unchanged; this file gives the agent procedure and its
+%% responders.
 
 
 %% Screen vocabulary — self.glp's AgentContent minus the escrow vocabulary
@@ -67,7 +68,8 @@ AgentContent ::= connected(Constant)
                ; rejected
                ; rejected(Constant)
                ; unfriended(Constant)
-               ; received(Key, Constant).
+               ; received(Key, Constant)
+               ; not_a_friend(Key).
 AgentToUserMsg    ::= msg(Constant, Constant, AgentContent).
 AgentToUserStream ::= [] ; [AgentToUserMsg | AgentToUserStream].
 
@@ -239,12 +241,16 @@ agent(Id, UserIn, NetIn, Outs) :-
     send_user(msg(agent, person, unfriended(Target?)), Outs2?, Outs3),
     agent(Id?, UserIn?, NetIn?, Outs3?).
 
-%% Message a friend.
+%% Message a friend: a message the person addresses to someone who is not
+%% their friend is not sent, and the agent tells the person so (GSG Section
+%% 5.1): the lookup of the outputs list and the dispatch on its answer
+%% (send_step/6, agent.glp).
 *(Target, Text)
 agent(Id, UserIn, NetIn, Outs) :-
     ground(Id?), ground(Target?) |
-    send_friend(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?).
+    anchor_friend(Target?, Outs?, Outs1, F),
+    send_step(F?, Id?, Target?, Text?, Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?).
 
 %% Offer an introduction of friend P to friend Q: the two consent variables,
 %% each party's own to write and the other's to read, by role.

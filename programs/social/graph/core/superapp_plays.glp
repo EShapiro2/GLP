@@ -200,6 +200,81 @@ both_ways_answer(Me, [_ | Outs], Seen?, Cmds?) :-
 both_ways_answer(_, [], [], []).
 
 %% =============================================================================
+%% play_not_a_friend: a message the person addresses to someone who is not
+%% their friend is not sent, and the agent tells the person so (GSG Section
+%% 5.1; GSG 2026-10-09 18:48 UTC).  Alice's person sends bob a message before
+%% either has called the other, and is told not_a_friend(bob).  Bob's person
+%% calls alice --- bob, the larger identity, accepts, his call his consent ---
+%% and sends her a message at once, between his acceptance and the
+%% conveyance, and is told not_a_friend(alice).  Alice's person consents to
+%% bob's call only once bob was told, so his send precedes the conveyance by
+%% causality and not by scheduling.  Alice, the proposer, mints the friend
+%% channel and conveys it; each person is told connected, and bob's person,
+%% told connected(alice), sends her a message again, which reaches her.  The
+%% persons stand at the end, their streams open.
+%% Expected: A = [not_a_friend(bob), connected(bob), received(bob, hello) | _],
+%% B = [not_a_friend(alice), connected(alice) | _], → suspended.
+%% =============================================================================
+exported procedure play_not_a_friend(Stream(AgentContent), Stream(AgentContent)).
+play_not_a_friend(A?, B?) :-
+    crossbar2(AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
+    agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
+    naf_alice(AliceOut?, Told?, A, AliceIn),
+    agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
+    naf_bob(BobOut?, B, Told, BobIn).
+
+%% Alice's person sends bob a message, and consents to bob's call once bob
+%% was told not_a_friend(alice), the pending value passed back as it came.
+procedure naf_alice(AgentToUserStream?, Constant?, Stream(AgentContent), UserInStream).
+naf_alice(Outs, Told, Seen?, [msg(person, alice, send(bob, hi)) | Cmds?]) :-
+    naf_alice_wait(Outs?, Told?, Seen, Cmds).
+
+procedure naf_alice_wait(AgentToUserStream?, Constant?, Stream(AgentContent), UserInStream).
+naf_alice_wait([msg(agent, person, not_a_friend(F)) | Outs], Told, [not_a_friend(F?) | Seen?], Cmds?) :-
+    naf_alice_wait(Outs?, Told?, Seen, Cmds).
+naf_alice_wait([msg(agent, person, befriend(From, P)) | Outs], told, Seen?,
+               [msg(person, alice, decision(yes, From?, P?)) | Cmds?]) :-
+    naf_record(Outs?, Seen, Cmds).
+naf_alice_wait([_ | Outs], Told, Seen?, Cmds?) :-
+    otherwise | naf_alice_wait(Outs?, Told?, Seen, Cmds).
+naf_alice_wait([], _, [], []).
+
+%% Bob's person calls alice and sends her a message at once; told
+%% not_a_friend(alice), it lets alice's person consent, and told
+%% connected(alice), it sends her a message again.
+procedure naf_bob(AgentToUserStream?, Stream(AgentContent), Constant, UserInStream).
+naf_bob(Outs, Seen?, Told?,
+        [msg(person, bob, connect(alice)), msg(person, bob, send(alice, hi)) | Cmds?]) :-
+    naf_bob_wait(Outs?, Seen, Told, Cmds).
+
+procedure naf_bob_wait(AgentToUserStream?, Stream(AgentContent), Constant, UserInStream).
+naf_bob_wait([msg(agent, person, not_a_friend(F)) | Outs], [not_a_friend(F?) | Seen?], told, Cmds?) :-
+    naf_bob_friend(Outs?, Seen, Cmds).
+naf_bob_wait([_ | Outs], Seen?, Told?, Cmds?) :-
+    otherwise | naf_bob_wait(Outs?, Seen, Told, Cmds).
+naf_bob_wait([], [], untold, []).
+
+procedure naf_bob_friend(AgentToUserStream?, Stream(AgentContent), UserInStream).
+naf_bob_friend([msg(agent, person, connected(alice)) | Outs], [connected(alice) | Seen?],
+               [msg(person, bob, send(alice, hello)) | Cmds?]) :-
+    naf_record(Outs?, Seen, Cmds).
+naf_bob_friend([_ | Outs], Seen?, Cmds?) :-
+    otherwise | naf_bob_friend(Outs?, Seen, Cmds).
+naf_bob_friend([], [], []).
+
+%% What a person is told of a send and of a befriending, recorded.
+procedure naf_record(AgentToUserStream?, Stream(AgentContent), UserInStream).
+naf_record([msg(agent, person, not_a_friend(F)) | Outs], [not_a_friend(F?) | Seen?], Cmds?) :-
+    naf_record(Outs?, Seen, Cmds).
+naf_record([msg(agent, person, connected(F)) | Outs], [connected(F?) | Seen?], Cmds?) :-
+    naf_record(Outs?, Seen, Cmds).
+naf_record([msg(agent, person, received(F, T)) | Outs], [received(F?, T?) | Seen?], Cmds?) :-
+    naf_record(Outs?, Seen, Cmds).
+naf_record([_ | Outs], Seen?, Cmds?) :-
+    otherwise | naf_record(Outs?, Seen, Cmds).
+naf_record([], [], []).
+
+%% =============================================================================
 %% play_invite_timed(Ms): play_invite, timed --- the milliseconds from the
 %% moment alice's person sends the invitation to the moment the root
 %% channel's end reaches bob's execution of the mini-app (its opened/1 on the

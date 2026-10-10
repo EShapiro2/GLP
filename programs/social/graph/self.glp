@@ -78,7 +78,11 @@ AgentContent ::= befriend(Key, PendingValue)
                ; rejected
                ; rejected(Constant)
                ; unfriended(Constant)
-               ; received(Key, Constant).
+               ; received(Key, Constant)
+               %% A message the person addressed to someone who is not their
+               %% friend is not sent, and the agent tells the person so
+               %% (Section 5.1).
+               ; not_a_friend(Key).
 
 %% Network content (2-arg cold-call: msg(Dest, Content)): the caller, the
 %% caller's consent, bound before sending, and the callee's consent, for the
@@ -509,7 +513,8 @@ UserNotify ::= befriend(Key, ReqId)
              ; rejected
              ; rejected(Constant)
              ; received(Key, Constant)
-             ; unfriended(Constant).
+             ; unfriended(Constant)
+             ; not_a_friend(Key).
 
 %% User ↔ mediator streams and channels
 UserCmdStream    ::= [] ; [UserCmd | UserCmdStream].

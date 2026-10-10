@@ -5056,6 +5056,22 @@ check "SG super-app hosts the currency: alice's swap done" "C1 = \[opened(bob), 
 check "SG super-app hosts the currency: bob's swap done" "C2 = \[opened(alice), minted(2), holdings(\[lot(bob, 2)\]), swap_done(alice), holdings(\[lot(alice, 2)\]) | " "$sg_core"
 check_not "SG super-app no failed play" "→ failed" "$sg_core"
 
+# A message the person addresses to someone who is not their friend is not
+# sent, and the agent tells the person so (GSG paper, Section 5.1): alice's
+# person sends to bob before either has called the other; bob's person calls
+# alice and sends to her between his acceptance and the conveyance, alice's
+# person consenting only once he was told.  Each is told not_a_friend; the
+# befriending then completes and bob's next message reaches alice.
+sg_naf=$("$REPL_RUN" <<HEREDOC
+$SG_CORE
+:limit 5000000
+play_not_a_friend(A, B).
+:quit
+HEREDOC
+2>&1)
+check "SG super-app: a send to someone not a friend is not sent, and the person is told not_a_friend" "A = \[not_a_friend(bob), connected(bob), received(bob, hello) | " "$sg_naf"
+check "SG super-app: a send between the acceptance and the conveyance is told not_a_friend" "B = \[not_a_friend(alice), connected(alice) | " "$sg_naf"
+
 # The child-safe platform hosted, in its own session: a play that has run the
 # currency's mini-app leaves the session such that the next play's invitation
 # opens nothing --- play_invite after play_coins returns [] as well --- so the
