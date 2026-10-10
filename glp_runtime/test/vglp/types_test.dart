@@ -95,15 +95,21 @@ respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
 
   group('an anonymous question position', () {
     // The volition guard writes a ground term there and no writer: its type is
-    // the type of the term, Constant for an atom and Integer for an integer.
+    // the type of the term, a constant's by its value's kind --- String for a
+    // string, in either spelling, and Integer for an integer (GLP-Spec
+    // appendix-lp.tex, Definition "Logic Programs Syntax"; TGLP
+    // appendix-root-self.tex).  Until 2026-10-10 `yes` was typed Constant and
+    // `"yes"` String, by the spelling.
     test('is typed by its ground term', () {
-      expect(compile('''
+      for (final s in ['yes', "'yes'", '"yes"']) {
+        expect(compile('''
 procedure respond(ColdCallOffer?, Response, UserInStream).
-*(yes, From?)
+*($s, From?)
 respond(offer(From), Resp?, [decision(yes, From?, response(Resp))]) :-
     ground(From?) | true.
 ''').byClause['respond_1']!.answer.toString(),
-          'Xs_respond_1 ::= xs_respond_1(Constant).');
+            'Xs_respond_1 ::= xs_respond_1(String).', reason: s);
+      }
       expect(compile('''
 procedure respond(ColdCallOffer?, Response, UserInStream).
 *(3, From?)
@@ -199,6 +205,29 @@ procedure p(Constant?).
 p(Id) :- ground(Id?) | q(tagged(3, X?)).
 ''').byClause['p_1']!.answer.toString(),
           'Xs_p_1 ::= xs_p_1(Integer).');
+    });
+
+    test('the empty list is a String, hence a Constant', () {
+      // TGLP appendix-root-self.tex: "The empty list is a String, hence a
+      // Constant."  Until 2026-10-10 neither type took [], and note([], [], X)
+      // was a term of no type.
+      expect(compile('''
+Note ::= note(String, Constant, Constant).
+procedure(M) q(M?).
+q(_).
+procedure p(Constant?).
+*(X)
+p(Id) :- ground(Id?) | q(note([], [], X?)).
+''').byClause['p_1']!.answer.toString(),
+          'Xs_p_1 ::= xs_p_1(Constant).');
+      // At an anonymous question position, [] is typed by its kind, String.
+      expect(compile('''
+procedure respond(ColdCallOffer?, Response, UserInStream).
+*([], From?)
+respond(offer(From), Resp?, [decision(yes, From?, response(Resp))]) :-
+    ground(From?) | true.
+''').byClause['respond_1']!.answer.toString(),
+          'Xs_respond_1 ::= xs_respond_1(String).');
     });
 
     test('a term of no type stops the compilation', () {

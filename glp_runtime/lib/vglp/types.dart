@@ -249,25 +249,28 @@ TypeEnvironment _environmentOf(ast.Module module, List<ast.Module> ancestors,
 }
 
 /// The type of an anonymous answer position, which is the type of the ground
-/// term the volition guard writes there: `yes` is a Constant, `3` an Integer,
-/// and a compound term takes the primitive type `_`, since it has no declared
-/// one.  (`Any` is the checker's internal name and is not source syntax.)
+/// term the volition guard writes there, a constant typed by its value's kind
+/// (GLP-Spec appendix-lp.tex, Definition "Logic Programs Syntax": a constant
+/// is a number, a string or the empty list, `'x'` and `"x"` one string; TGLP
+/// appendix-root-self.tex, the primitive types Integer, Real and String, and
+/// "The empty list is a String, hence a Constant"): `3` an Integer, `2.5` a
+/// Real, `yes` and `"yes"` alike a String, and `[]` a String; and a compound
+/// term takes the primitive type `_`, since it has no declared one.  (`Any`
+/// is the checker's internal name and is not source syntax.)  Until
+/// 2026-10-10 a string was typed by its spelling, `"yes"` a String and `yes`
+/// a Constant.
 TypeExpr _typeOfValue(ast.Term value, ast.Clause c) {
-  if (value is ast.ConstTerm) {
-    final v = value.value;
-    if (v is int) return TypeRef('Integer', c.line, c.column);
-    if (v is double) return TypeRef('Real', c.line, c.column);
-    if (v is String && v.startsWith('"')) {
-      return TypeRef('String', c.line, c.column);
-    }
-    return TypeRef('Constant', c.line, c.column);
-  }
+  final kind = _kindOf(value);
+  if (kind != null) return TypeRef(kind, c.line, c.column);
   return PrimitiveModeAlt(false, c.line, c.column);
 }
 
-/// The primitive type of a number or string constant [t] by its value's kind
-/// --- `Integer`, `Real` or `String` --- and null where [t] is neither.
+/// The primitive type of a constant [t] by its value's kind --- `Integer`,
+/// `Real` or `String`, the empty list a String (TGLP appendix-root-self.tex:
+/// "The empty list is a String, hence a Constant") --- and null where [t] is
+/// no constant.
 String? _kindOf(ast.Term t) {
+  if (t is ast.ListTerm && t.isNil) return 'String';
   if (t is! ast.ConstTerm) return null;
   final v = t.value;
   if (v is int) return 'Integer';
@@ -499,9 +502,11 @@ bool _accepts(ast.Term term, TypeExpr type, TypeEnvironment env, int depth) {
       case 'Any':
       case '_':
         return true;
-      // A constant is of a primitive type by its value's kind (_kindOf), and
-      // Number and Constant are the root's unions, Integer ; Real and
-      // Number ; String ; Module (programs/self.glp).
+      // A constant is of a primitive type by its value's kind (_kindOf), the
+      // empty list a String, and Number and Constant are the root's unions,
+      // Integer ; Real and Number ; String ; Module (programs/self.glp; TGLP
+      // appendix-root-self.tex: "The empty list is a String, hence a
+      // Constant").
       case 'Constant':
         return _kindOf(term) != null;
       case 'String':
