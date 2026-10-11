@@ -120,11 +120,27 @@ class AgentReady extends FromAgentMsg {
   AgentReady(this.agentId, this.commandPort);
 }
 
-/// Output line for display in the agent's panel.
+/// A line of the agent's transcript (AgentRuntime.onOutput): its own notes
+/// and, marked `< `, what its program emits to the person, as a terminal
+/// shows it.  No screen reads it; a screen takes [AgentNotify].
 class AgentOutput extends FromAgentMsg {
   final String agentId;
   final String line;
   AgentOutput(this.agentId, this.line);
+}
+
+/// A term the agent's program emits to its person by send_to_user/1, whole
+/// (GLP-Spec appendix-guards.tex, "Output to the person": send_to_user(Stream)
+/// "emits each element of Stream to the person operating the agent"), as the
+/// screen holds a ground term ([screenTermOf]) --- carried as [UserInput]
+/// carries the person's act the other way, and handed to the person's bridge
+/// (ui_runtime/runtime.dart, [UiRuntime.handle]), which parses no text.
+/// Until 2026-10-11 the screen took the transcript's `< ` line and parsed it,
+/// and a term whose print did not parse never arrived.
+class AgentNotify extends FromAgentMsg {
+  final String agentId;
+  final GTerm term;
+  AgentNotify(this.agentId, this.term);
 }
 
 /// Trace log entry.
@@ -187,7 +203,12 @@ Future<void> _runAgent(InitAgent init) async {
     extraArgs: init.extraArgs,
   );
 
-  // Wire callbacks to send messages back to the main isolate.
+  // Wire callbacks to send messages back to the main isolate: what the
+  // program emits to the person as the term it is, and the transcript.
+  agent.onUserOutput = (term) {
+    init.replyPort.send(AgentNotify(agentId, screenTermOf(term)));
+  };
+
   agent.onOutput = (line) {
     init.replyPort.send(AgentOutput(agentId, line));
   };
@@ -243,21 +264,66 @@ Future<void> _runAgent(InitAgent init) async {
 }
 
 /// The runtime term of a ground term from the screen, as the agent's heap
-/// holds it: an atom or an integer a constant, a string the constant of its
-/// text --- the one value of an atom of that text, GLP having one kind of
-/// constant besides numbers and [] (GLP-Spec appendix-lp.tex, Definition
+/// holds it: an atom, an integer or a real a constant, a string the constant
+/// of its text --- the one value of an atom of that text, GLP having one kind
+/// of constant besides numbers and [] (GLP-Spec appendix-lp.tex, Definition
 /// "Logic Programs Syntax"); until 2026-10-10 it was the text in double
 /// quotes --- a compound a structure, and a list its '.' cells ending in [],
 /// the runtime's [rt.nil].
 rt.Term runtimeTermOf(GTerm t) => switch (t) {
       GAtom(:final name) => rt.ConstTerm(name),
       GInt(:final value) => rt.ConstTerm(value),
+      GReal(:final value) => rt.ConstTerm(value),
       GString(:final value) => rt.ConstTerm(value),
       GStruct(:final functor, :final args) =>
         rt.StructTerm(functor, [for (final a in args) runtimeTermOf(a)]),
       GList(:final items) => items.reversed.fold<rt.Term>(rt.ConstTerm(rt.nil),
           (tail, item) => rt.StructTerm('.', [runtimeTermOf(item), tail])),
     };
+
+/// The screen's term of a ground term the agent's program emits to its person
+/// (send_to_user/1), the inverse of [runtimeTermOf]: an integer a [GInt], a
+/// real a [GReal], the empty list a [GList] of nothing, a string the [GAtom]
+/// of its characters --- GLP has one string constant (GLP-Spec
+/// appendix-lp.tex, Definition "Logic Programs Syntax"), and the screen's
+/// [GAtom] and [GString] of one text are that one value --- a list ending in
+/// [] a [GList], and any other structure a [GStruct], a list cell ending
+/// elsewhere among them, `'.'(H, T)`.  The term arrives whole and no text is
+/// read: `form('.', [...])` and `'Hi there'` arrive as written (GLP #3
+/// Cowork, 2026-10-11 12:59 UTC, "21:40 AND 03:16, (iii)").  A list's spine is
+/// walked, not recursed on.  Throws on what is not a ground term of these
+/// kinds.
+GTerm screenTermOf(rt.Term t) {
+  if (t is rt.ConstTerm) {
+    final v = t.value;
+    if (v == null || v == rt.nil) return const GList([]);
+    if (v is int) return GInt(v);
+    if (v is double) return GReal(v);
+    if (v is String) return GAtom(v);
+    throw ArgumentError('no screen term for the constant $v');
+  }
+  if (t is rt.StructTerm) {
+    if (t.functor == '.' && t.args.length == 2) {
+      final items = <GTerm>[];
+      rt.Term rest = t;
+      while (rest is rt.StructTerm && rest.functor == '.' && rest.args.length == 2) {
+        items.add(screenTermOf(rest.args[0]));
+        rest = rest.args[1];
+      }
+      if (rest is rt.ConstTerm && (rest.value == null || rest.value == rt.nil)) {
+        return GList(items);
+      }
+      var cell = screenTermOf(rest);
+      for (final item in items.reversed) {
+        cell = GStruct('.', [item, cell]);
+      }
+      return cell;
+    }
+    return GStruct(t.functor, [for (final a in t.args) screenTermOf(a)]);
+  }
+  throw ArgumentError('no screen term for $t, which is no ground constant '
+      'or structure');
+}
 
 void _sendStats(AgentRuntime agent, SendPort replyPort) {
   agent.updateStats();

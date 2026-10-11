@@ -49,8 +49,11 @@
 %%
 %%   Under the plain REPL the tests present no attestation signed under the
 %%   social graph, so through the agent they exercise the reject path
-%%   alone; the dispatch on what peer_address/2 reports is given its two
-%%   answers directly.
+%%   alone, but for test 22, whose test program stands in for the graph:
+%%   its available is admitted and reaches peer_address/2, which with no
+%%   networking layer bound assigns none (IGLP, "One interface"), and is
+%%   refused there.  The dispatch on what peer_address/2 reports is given
+%%   its two answers directly.
 %%
 %% System predicates:
 %%   signature(Signed?, Signature) — root self.glp (GLP-Spec catalogue):

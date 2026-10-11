@@ -1,10 +1,12 @@
 /// A compiled vGLP program on a live person's screen.
 ///
 /// One app shell for any of them: it runs the program's live-person harness in
-/// an agent isolate, feeds what the person channel carries — the mediator's
-/// cards and their closing, and the agent's screen messages — into a
-/// [UiRuntime], and renders it through [AgentSurface] from the program's
-/// manifest. Nothing here is particular to a program: the manifest is the
+/// an agent isolate, feeds what the person channel carries — a compiled
+/// module's draws, which the runtime's bridge draws as constructs; the
+/// deployed mediator's cards and their closing; and the agent's screen
+/// messages — into a [UiRuntime], and renders it through [AgentSurface] from
+/// the program's manifest.  The person's grants on the constructs go back as
+/// every act of the person does. Nothing here is particular to a program: the manifest is the
 /// image of its display declarations, and the vocabulary between them is the
 /// canonical compilation's, the same for every compiled vGLP program.
 ///
@@ -133,12 +135,10 @@ class _VglpScreenState extends State<VglpScreen> {
     if (msg is AgentReady) {
       _commands = msg.commandPort;
       setState(() => _status = 'Ready');
-    } else if (msg is AgentOutput) {
-      // The isolate marks a genuine `_output/1` term with a leading '< ';
-      // its own chatter ([INIT]…, > …) carries no such marker.
-      final line =
-          msg.line.startsWith('< ') ? msg.line.substring(2) : msg.line;
-      _ui?.handleLine(line);
+    } else if (msg is AgentNotify) {
+      // What the agent's program emits to the person, the term whole; the
+      // agent's transcript (AgentOutput) is not the screen's.
+      _ui?.handle(msg.term);
       setState(() {});
     } else if (msg is AgentError) {
       setState(() => _status = 'Error: ${msg.error}');

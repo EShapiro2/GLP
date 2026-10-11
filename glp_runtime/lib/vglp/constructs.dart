@@ -67,15 +67,33 @@
 // question's type, so a question is bound only with a term of its type
 // (vGLP, 2026-10-02 08:26 UTC, item 6).
 //
+// LISTS, STREAMS AND FORMS (vGLP #6 Cowork, 2026-10-11 12:55 UTC, Task B,
+// from Definition "Widget Declaration, Default Widget" and the Answer rule
+// at 90988ea).  A stream the person writes is a type of [] and [E | S] named
+// Stream, a list one named List, told apart by the name: a list is ended by
+// a grant of [], a stream never, and the list's widget is input_list(W), the
+// stream's input_box(W).  A stream or a list inside a form the person writes
+// is a question of its own: the form is formed with [] there, its answer
+// carries a fresh variable there (open_N), answered at its own position from
+// the grants that follow, and the construct is drawn again with the answer;
+// its entry in the form's widget is question(L, W) and every other field(L,
+// W), L the name of the field's declared type.  A position of type Key, or
+// of a type defined as Key, is a peer field.
+//
 // WHAT IS NOT BUILT, each a compile error naming the type: a position the
 // program writes inside one the person writes (the Answer transition leaves
 // it to the program, and the construct has no output to show for it yet); a
 // position the person writes of a type parameter (no input forms a term the
-// checker can type at it); a stream the program writes whose elements hold
-// questions; a difference list or a mutual reference.  A position the person
-// writes of type Real is built, formed by real/1 and drawn as a number field
-// (vGLP #5 Cowork, 2026-10-03 08:16 UTC, item 6; Definition "Widget
-// Declaration, Default Widget" at c2e8b57: "a number (Integer or Real)").
+// checker can type at it, _checkPersonWritable); a recursive type the person
+// writes that is neither a Stream nor a List, and a list cell the person
+// writes outside one (the Definition gives them no widget); a stream or a
+// list inside a form that is an element of a stream or a list the person
+// writes (the elements share one position); a stream the program writes
+// whose elements hold questions; a difference list or a mutual reference.
+// A position the person writes of type Real is built, formed by real/1 and
+// drawn as a number field (vGLP #5 Cowork, 2026-10-03 08:16 UTC, item 6;
+// Definition "Widget Declaration, Default Widget" at c2e8b57: "a number
+// (Integer or Real)").
 
 import '../compiler/error.dart';
 import '../analysis/type_checker/type_ast.dart';
@@ -369,6 +387,13 @@ class _Generator {
   final _altsMemo = <String, List<_Alt>>{};
   final _questionMemo = <String, bool>{};
   final _multiMemo = <String, bool>{};
+  final _suffixes = <String, String>{};
+  final _suffixesUsed = <String, Set<String>>{};
+  final _nestedMemo = <String, bool>{};
+
+  /// The interactive type whose construct process is being built, for the
+  /// position of a compile error.
+  InteractiveType? _at;
 
   _Generator(this.gen, this.resolve, this.declared, this.fresh,
       this.questionType, this.constructName);
@@ -399,6 +424,7 @@ class _Generator {
           '${gen.inputsType}?, Stream(${gen.drawType})).');
     final widgets = <String, String>{};
     for (final t in types) {
+      _at = t;
       final root = _Node(t.type, t.readerMode, t.params.toSet());
       final w = _typeWidget(t, root);
       widgets[t.written] = w;
@@ -443,6 +469,13 @@ class _Generator {
     if (root.person) {
       _checkPersonWritable(root, t);
       final answer = _answer(root);
+      if (_holdsNested(root)) {
+        // The form's answer leaves its streams and lists open, each a
+        // question of its own drawn under it: the view after the answer.
+        return '$constructName(Id, $f(X?), Gs, Ds?) :- '
+            '$answer([], X, Gs?, _, Vs, Done), '
+            '${gen.run}(Id?, $w, [input([]) | Vs?], Done?, Ds).';
+      }
       return '$constructName(Id, $f(X?), Gs, Ds?) :- '
           '$answer([], X, Gs?, _, Done), '
           '${gen.run}(Id?, $w, [input([])], Done?, Ds).';
@@ -633,7 +666,13 @@ class _Generator {
   /// The construct forms every position the person writes: none is written by
   /// the program; and none is of a type parameter, of which no input forms a
   /// term the checker can type (the paper is silent on parametrised
-  /// interactive types: vGLP #4 Cowork, 2026-10-02 08:26 UTC, item 2).
+  /// interactive types: vGLP #4 Cowork, 2026-10-02 08:26 UTC, item 2).  The
+  /// Definition now gives such a position a text field (vGLP #6 Cowork,
+  /// 2026-10-11 12:55 UTC, item 2, Q2), and the widget is text, but its
+  /// forming clause, form_any/2's Formed(_) passed where Formed(X) is read,
+  /// is refused by the checker at the abstract instance (TGLP
+  /// parameterized-types.tex, sec:abstract-parameters): the refusal stands
+  /// until the paper says how the construct forms a term of a parameter.
   void _checkPersonWritable(_Node n, InteractiveType t) {
     if (_hasProgramInside(n, {})) {
       throw CompileError(
@@ -654,10 +693,69 @@ class _Generator {
     }
   }
 
-  /// Whether the view of [n], a position the program writes, can change once
-  /// drawn: it holds a stream the program writes.
+  /// A stream or a list the person writes: [n] written by the person, of a
+  /// type whose alternatives are [] and [E | S], S the same type, named
+  /// `Stream` or `List` --- the two told apart by the type's name, the
+  /// Answer rule allowing [] "for a list" and not for a stream (Definition
+  /// "vmaGLP Transition System", Answer; vGLP #6 Cowork, 2026-10-11 12:55
+  /// UTC, item 2, Q1).  Its element type and whether it is a list; null for
+  /// any other node.
+  ({TypeExpr elem, bool list})? _personSeq(_Node n) {
+    if (!n.person) return null;
+    final t = n.type;
+    if (t is! TypeRef || (t.name != 'Stream' && t.name != 'List')) return null;
+    final e = _streamElement(n);
+    if (e == null) return null;
+    return (elem: e, list: t.name == 'List');
+  }
+
+  /// Whether [k], a child of [n], is a stream or a list inside a form the
+  /// person writes: "submitted as a question of its own and drawn under the
+  /// form" (Definition "Widget Declaration, Default Widget"), the form's
+  /// answer carrying a fresh variable at its position (Definition "vmaGLP
+  /// Transition System", Answer: "a reader Y_i? at each position the person
+  /// writes whose type is a stream or list type").
+  bool _isNestedSeq(_Node n, _Node k) =>
+      n.person && _personSeq(n) == null && _personSeq(k) != null;
+
+  /// Whether [n], a position the person writes that is not itself a stream
+  /// or a list, holds a stream or a list inside it, in an argument or in an
+  /// argument's argument: its answer leaves that one open, a question of its
+  /// own.
+  bool _holdsNested(_Node n) {
+    if (!n.person || _personSeq(n) != null) return false;
+    final memo = _nestedMemo[n.key];
+    if (memo != null) return memo;
+    _nestedMemo[n.key] = false; // least fixpoint through recursive types
+    var result = false;
+    for (final a in _nodeAlts(n)) {
+      if (a is! _StructAlt) continue;
+      for (final c in _children(n, a)) {
+        if (_isNestedSeq(n, c) || _holdsNested(c)) result = true;
+      }
+    }
+    return _nestedMemo[n.key] = result;
+  }
+
+  /// Whether [t] is `Key`, or a type defined as `Key`, directly or through
+  /// such definitions: an agent identifier, drawn as a peer field whatever
+  /// the type is named (vGLP #6 Cowork, 2026-10-11 12:55 UTC, item 3, Q1).
+  bool _isKey(TypeExpr t, [Set<String>? seen]) {
+    if (t is! TypeRef || t.isInput || t.typeArgs.isNotEmpty) return false;
+    if (t.name == 'Key') return true;
+    final s = seen ?? <String>{};
+    if (!s.add(t.name)) return false;
+    final def = resolve(t.name);
+    if (def == null || def.typeParams.isNotEmpty) return false;
+    final alts = def.alternatives;
+    return alts.length == 1 && _isKey(alts.single, s);
+  }
+
+  /// Whether the view of [n] can change once drawn: a position the program
+  /// writes holding a stream the program writes, or one the person writes
+  /// whose answer leaves a stream or list open under it.
   bool _multi(_Node n) {
-    if (n.person) return false;
+    if (n.person) return _holdsNested(n);
     final memo = _multiMemo[n.key];
     if (memo != null) return memo;
     _multiMemo[n.key] = false;
@@ -679,6 +777,29 @@ class _Generator {
     return _names.putIfAbsent(key, () {
       final stem = _typeStem(n.type);
       return fresh(suffix.isEmpty ? '${role}_$stem' : '${role}_${stem}_$suffix');
+    });
+  }
+
+  /// The suffix of the procedures of alternative [a] of node [n], join_N and
+  /// start_N: `cons` for a list cell, and for a structure its functor's
+  /// characters made a name, each character outside a name (a letter, a
+  /// digit or `_`, lexer.dart) replaced by `_`, then its arity ---
+  /// `'odd one'(Choice)` odd_one_1.  Two alternatives of one node whose
+  /// suffixes so made coincide are told apart by `_2`, `_3`, ... in the
+  /// order met, as the Definition's t is (canonical.dart, THE ASK; vGLP #6
+  /// Cowork, 2026-10-11 12:55 UTC, Task A).
+  String _altSuffix(_Node n, _Alt a) {
+    if (a is! _StructAlt) return 'cons';
+    final raw = '${a.functor}/${a.args.length}';
+    return _suffixes.putIfAbsent('${n.typeKey}|$raw', () {
+      final made = a.functor.replaceAll(RegExp(r'[^A-Za-z0-9_]'), '_');
+      final stem = '${made}_${a.args.length}';
+      final used = _suffixesUsed.putIfAbsent(n.typeKey, () => <String>{});
+      var s = stem;
+      for (var k = 2; !used.add(s); k++) {
+        s = '${stem}_$k';
+      }
+      return s;
     });
   }
 
@@ -708,6 +829,23 @@ class _Generator {
   /// input(Id, P1, R); it guards on P1 being its own P and forms the term
   /// from R, and a grant for another position goes on through take_N's
   /// refused clause, rebuilt whole (2026-10-04 09:05 UTC, C).
+  ///
+  /// A list the person writes is ended by the person: a grant of [] for its
+  /// position binds the rest of the list to [], and the question is
+  /// answered; a stream is not, its question never answered (Definition
+  /// "vmaGLP Transition System", Answer: "or [] for a list"; vGLP #6 Cowork,
+  /// 2026-10-11 12:55 UTC, item 2, Q1).
+  ///
+  /// A question of a type holding a stream or a list inside a form the
+  /// person writes ([_holdsNested]) is answer_N(P, X, Gs?, Gs1, Vs, Done):
+  /// its answer carries a fresh variable at each such position, which stays
+  /// open, a question of its own at its own position, answered from the
+  /// grants that follow; Vs the one view after the answer, the term answered
+  /// with each such position marked input(Q) (open_N); Done once every one
+  /// of them is (Definition "Widget Declaration, Default Widget": "a stream
+  /// or list inside a form the person writes: submitted as a question of
+  /// its own and drawn under the form"; vGLP #6 Cowork, 2026-10-11 12:55 UTC,
+  /// item 2).
   String _answer(_Node n) {
     final name = _name('answer', n);
     if (!_emitted.add('answer:${n.typeKey}')) return name;
@@ -718,29 +856,137 @@ class _Generator {
     final formed = gen.formedType;
     final gs = gen.inputsType;
     final pt = gen.pathType;
-    final elem = _streamElement(n);
-    final e = elem == null ? null : n.child(elem);
+    final seq = _personSeq(n);
+    final e = seq == null ? null : n.child(seq.elem);
+    if (e != null && _holdsNested(e)) {
+      final at = _at!;
+      throw CompileError(
+          'The construct of the interactive type ${at.written} is not built: '
+          'the person writes ${n.typeKey}, whose element ${e.typeKey} holds a '
+          'stream or a list, a question of its own at each element\'s '
+          'answer, and the elements of a stream or a list share one position',
+          at.line, at.column, phase: 'analyzer');
+    }
+    final nested = _holdsNested(n);
+    final vs = nested ? ', Vs' : '';
+    final vsOut = nested ? ', Vs?' : '';
+    final vsType = nested ? ', Stream(_)' : '';
     final form = _former(e ?? n);
+    final open = nested ? _open(n) : null;
+    _out.writeln('procedure$p $name($pt?, $t, $gs?, $gs$vsType, $done).');
+    if (seq != null && seq.list) {
+      _out.writeln('$name(P, [], [input(_, P1, []) | Gs], Gs?, done) :- '
+          'P1? =?= P? | true.');
+    }
     _out
-      ..writeln('procedure$p $name($pt?, $t, $gs?, $gs, $done).')
-      ..writeln('$name(P, X?, [input(Id, P1, R) | Gs], Gs1?, Done?) :- '
+      ..writeln('$name(P, X?, [input(Id, P1, R) | Gs], Gs1?$vsOut, Done?) :- '
           'P1? =?= P?, ground(R?) | $form(R?, F), '
-          '$take(F?, P?, X, input(Id?, P1?, R?), Gs?, Gs1, Done).')
-      ..writeln('$name(P, X?, [input(Id, P1, R) | Gs], Gs1?, Done?) :- '
+          '$take(F?, P?, X, input(Id?, P1?, R?), Gs?, Gs1$vs, Done).')
+      ..writeln('$name(P, X?, [input(Id, P1, R) | Gs], Gs1?$vsOut, Done?) :- '
           'otherwise | '
-          '$take(refused, P?, X, input(Id?, P1?, R?), Gs?, Gs1, Done).')
+          '$take(refused, P?, X, input(Id?, P1?, R?), Gs?, Gs1$vs, Done).')
       ..writeln()
       ..writeln('procedure$p $take($formed(${(e ?? n).typeKey})?, $pt?, $t, '
-          '${gen.inputType}?, $gs?, $gs, $done).');
+          '${gen.inputType}?, $gs?, $gs$vsType, $done).');
     if (e != null) {
       _out.writeln('$take(formed(V), P, [V? | X1?], _, Gs, Gs1?, Done?) :- '
           '$name(P?, X1, Gs?, Gs1, Done).');
+    } else if (nested) {
+      _out.writeln('$take(formed(V), P, X?, _, Gs, Gs1?, [W?], Done?) :- '
+          '$open(V?, P?, X, Gs?, Gs1, W, Done).');
     } else {
       _out.writeln('$take(formed(V), _, V?, _, Gs, Gs?, done).');
     }
     _out
-      ..writeln('$take(refused, P, X?, G, Gs, [G? | Gs1?], Done?) :- '
-          '$name(P?, X, Gs?, Gs1, Done).')
+      ..writeln('$take(refused, P, X?, G, Gs, [G? | Gs1?]$vsOut, Done?) :- '
+          '$name(P?, X, Gs?, Gs1$vs, Done).')
+      ..writeln();
+    return name;
+  }
+
+  /// open_N(V?, P, X, Gs?, Gs1, W, Done): X the answer of node [n], a type
+  /// holding a stream or a list inside a form the person writes, from V, the
+  /// term formed from the person's input, which holds [] at each such
+  /// position: X is V with a fresh variable there, its writer answered at
+  /// its own position below P from the grants Gs, a question of its own; W
+  /// the view of the answer, V with each such position marked input(Q);
+  /// Done once every one of them is answered.  An alternative holding none
+  /// is X = V, its view V, answered at once.
+  String _open(_Node n) {
+    final name = _name('open', n);
+    if (!_emitted.add('open:${n.typeKey}')) return name;
+    final t = n.typeKey;
+    final p = _declParams(n);
+    final gs = gen.inputsType;
+    final clauses = <String>[];
+    for (final a in _nodeAlts(n)) {
+      if (a is! _StructAlt) continue;
+      final kids = _children(n, a);
+      if (!kids.any((k) => _isNestedSeq(n, k) || _holdsNested(k))) continue;
+      final head = <String>[], xs = <String>[], views = <String>[];
+      final goals = <String>[], guards = <String>[], dones = <String>[];
+      var gsIn = 'Gs';
+      var g = 0;
+      var pathReads = 0;
+      for (var i = 0; i < kids.length; i++) {
+        final k = kids[i];
+        final idx = i + 1;
+        if (_isNestedSeq(n, k)) {
+          final y = 'Y$idx', m = 'M$idx', q = 'Q$idx', d = 'D$idx';
+          final gsOut = 'Gs${++g}';
+          head.add('_');
+          xs.add('$y?');
+          views.add('input($m?)');
+          goals
+            ..add('${gen.path}(P?, $idx, $m)')
+            ..add('${gen.path}(P?, $idx, $q)')
+            ..add('${_answer(k)}($q?, $y, $gsIn?, $gsOut, $d)');
+          pathReads += 2;
+          gsIn = gsOut;
+          dones.add(d);
+        } else if (_holdsNested(k)) {
+          final h = 'H$idx', x = 'X$idx', v = 'V$idx', q = 'Q$idx';
+          final d = 'D$idx';
+          final gsOut = 'Gs${++g}';
+          head.add(h);
+          xs.add('$x?');
+          views.add('$v?');
+          final open = _open(k);
+          goals
+            ..add('${gen.path}(P?, $idx, $q)')
+            ..add('$open($h?, $q?, $x, $gsIn?, $gsOut, $v, $d)');
+          pathReads += 1;
+          gsIn = gsOut;
+          dones.add(d);
+        } else {
+          final h = 'H$idx';
+          head.add(h);
+          xs.add('$h?');
+          views.add('$h?');
+          guards.add('ground($h?)');
+        }
+      }
+      if (pathReads > 1) guards.insert(0, 'ground(P?)');
+      String doneHead;
+      if (dones.length == 1) {
+        doneHead = '${dones.single}?';
+      } else {
+        doneHead = 'Done?';
+        goals.add(
+            '${gen.allDone}([${dones.map((d) => '$d?').join(', ')}], Done)');
+      }
+      final g0 = guards.isEmpty ? '' : '${guards.join(', ')} | ';
+      clauses.add('$name(${_apply(a, head)}, P, ${_apply(a, xs)}, Gs, '
+          '$gsIn?, ${_apply(a, views)}, $doneHead) :- $g0${goals.join(', ')}.');
+    }
+    _out.writeln('procedure$p $name($t?, ${gen.pathType}?, $t, $gs?, $gs, _, '
+        '${gen.doneType}).');
+    for (final c in clauses) {
+      _out.writeln(c);
+    }
+    _out
+      ..writeln('$name(V, _, X?, Gs, Gs?, W?, done) :- '
+          'ground(V?) | X = V?, W = V?.')
       ..writeln();
     return name;
   }
@@ -771,14 +1017,28 @@ class _Generator {
       } else if (a is _NilAlt) {
         lines.add('$name([], formed([])).');
       } else if (a is _StructAlt || a is _ConsAlt) {
+        // A stream or a list inside the form is not formed from the input:
+        // it holds [] in the term formed, and the answer a fresh variable
+        // there, a question of its own (open_N).
         final kids = _children(n, a);
         final k = kids.length;
-        final rs = [for (var i = 0; i < k; i++) 'R${i + 1}'];
-        final calls = [
+        final own = [
           for (var i = 0; i < k; i++)
-            '${_former(kids[i])}(R${i + 1}?, F${i + 1})',
+            if (!_isNestedSeq(n, kids[i])) i
+        ];
+        final rs = [
+          for (var i = 0; i < k; i++) own.contains(i) ? 'R${i + 1}' : '_'
+        ];
+        if (own.isEmpty) {
+          lines.add('$name(${_apply(a, rs)}, '
+              'formed(${_apply(a, List.filled(k, '[]'))})).');
+          continue;
+        }
+        final calls = [
+          for (var j = 0; j < own.length; j++)
+            '${_former(kids[own[j]])}(R${own[j] + 1}?, F${j + 1})',
           '${_join(n, a, kids)}('
-              '${[for (var i = 0; i < k; i++) 'F${i + 1}?'].join(', ')}, F)',
+              '${[for (var j = 0; j < own.length; j++) 'F${j + 1}?'].join(', ')}, F)',
         ];
         lines.add('$name(${_apply(a, rs)}, F?) :- ${calls.join(', ')}.');
       } else if (a is _LeafAlt) {
@@ -799,19 +1059,29 @@ class _Generator {
   /// join_N(F1?, ..., Fk?, F): the result of forming a structure or cons
   /// alternative of node [n] from its children's, formed(f(X1?, ..., Xk?))
   /// where each child formed, and refused where any was refused, one clause
-  /// per position (vGLP #5 Cowork, 2026-10-03 08:16 UTC, item 3).
+  /// per position (vGLP #5 Cowork, 2026-10-03 08:16 UTC, item 3).  A stream
+  /// or a list inside a form the person writes is no child formed: it is []
+  /// in the term (open_N).
   String _join(_Node n, _Alt a, List<_Node> kids) {
-    final suffix = a is _StructAlt ? '${a.functor}_${a.args.length}' : 'cons';
+    final suffix = _altSuffix(n, a);
     final name = _name('join', n, suffix);
     if (!_emitted.add('join:${n.typeKey}:$suffix')) return name;
     final p = _declParams(n);
     final formed = gen.formedType;
-    final k = kids.length;
-    final ins = [for (final c in kids) '$formed(${c.typeKey})?'];
+    final own = [
+      for (final c in kids)
+        if (!_isNestedSeq(n, c)) c
+    ];
+    final k = own.length;
+    final ins = [for (final c in own) '$formed(${c.typeKey})?'];
+    var j = 0;
+    final args = [
+      for (final c in kids) _isNestedSeq(n, c) ? '[]' : 'X${++j}?'
+    ];
     _out
       ..writeln('procedure$p $name(${ins.join(', ')}, $formed(${n.typeKey})).')
       ..writeln('$name(${[for (var i = 0; i < k; i++) 'formed(X${i + 1})'].join(', ')}, '
-          'formed(${_apply(a, [for (var i = 0; i < k; i++) 'X${i + 1}?'])})).');
+          'formed(${_apply(a, args)})).');
     for (var i = 0; i < k; i++) {
       _out.writeln('$name('
           '${[for (var j = 0; j < k; j++) j == i ? 'refused' : '_'].join(', ')}, '
@@ -886,8 +1156,9 @@ class _Generator {
     // present_N.  P is ground, so where it is read more than once the clause
     // guards on it.
     var pathReads = 0;
-    final direct =
-        kids.every((k) => k.person || (!_hasQuestion(k) && !_multi(k)));
+    final direct = kids.every((k) => k.person
+        ? !_holdsNested(k)
+        : (!_hasQuestion(k) && !_multi(k)));
     for (var i = 0; i < kids.length; i++) {
       final k = kids[i];
       final h = 'H${i + 1}';
@@ -898,14 +1169,23 @@ class _Generator {
         final gsOut = 'Gs${++g}';
         final d = 'D${i + 1}';
         final m = 'M$idx', q = 'Q$idx';
+        // A question holding a stream or a list inside a form the person
+        // writes is drawn again once answered, that one open under it.
+        final nested = _holdsNested(k);
+        final w = 'W$idx';
         goals
           ..add('${gen.path}(P?, $idx, $m)')
           ..add('${gen.path}(P?, $idx, $q)')
-          ..add('${_answer(k)}($q?, $h, $gsIn?, $gsOut, $d)');
+          ..add('${_answer(k)}($q?, $h, $gsIn?, $gsOut'
+              '${nested ? ', $w' : ''}, $d)');
         pathReads += 2;
         gsIn = gsOut;
         dones.add(d);
-        views.add(direct ? 'input($m?)' : '[input($m?)]');
+        views.add(direct
+            ? 'input($m?)'
+            : nested
+                ? '[input($m?) | $w?]'
+                : '[input($m?)]');
       } else if (!_hasQuestion(k)) {
         head.add(h);
         if (direct) {
@@ -964,7 +1244,7 @@ class _Generator {
   /// start_N_f(V1s?, ..., Vns?, Vs): the views of a structure from the views
   /// of its arguments, again each time one of them changes.
   String _combiner(_Node n, _Alt a, List<_Node> kids) {
-    final suffix = a is _StructAlt ? '${a.functor}_${a.args.length}' : 'cons';
+    final suffix = _altSuffix(n, a);
     final start = _name('start', n, suffix);
     if (!_emitted.add('start:${n.typeKey}:$suffix')) return start;
     final p = _declParams(n);
@@ -1030,7 +1310,22 @@ class _Generator {
   String _widget(_Node n, Set<String> visiting) {
     final d = declared[n.moded];
     if (d != null) return constantSource(d);
-    if (!visiting.add(n.key)) return "ref(${constantSource(n.moded)})";
+    if (!visiting.add(n.key)) {
+      if (n.person) {
+        // "a recursive type the person writes that is not a list is refused
+        // by the compiler with a message naming the type, until the paper
+        // gives it a widget" (vGLP #6 Cowork, 2026-10-11 12:55 UTC, item 2,
+        // Q1).
+        final at = _at!;
+        throw CompileError(
+            'The construct of the interactive type ${at.written} is not '
+            'built: the person writes ${n.typeKey}, a recursive type that is '
+            'neither a Stream nor a List, and the Definition gives it no '
+            'widget (Definition "Widget Declaration, Default Widget")',
+            at.line, at.column, phase: 'analyzer');
+      }
+      return "ref(${constantSource(n.moded)})";
+    }
     try {
       return _defaultWidget(n, visiting);
     } finally {
@@ -1050,9 +1345,18 @@ class _Generator {
       return 'menu([${alts.map((a) => _altWidget(n, a, visiting)).join(', ')}])';
     }
     if (t is TypeRef && t.name == 'Date') return 'date';
-    if (t is TypeRef && t.name == 'Peer') return 'peer';
-    final elem = _streamElement(n);
-    if (elem != null) return 'input_box(${_widget(n.child(elem), visiting)})';
+    // An agent identifier: Peer, or Key or a type defined as Key, whatever
+    // it is named (vGLP #6 Cowork, 2026-10-11 12:55 UTC, item 3, Q1).
+    if (t is TypeRef && (t.name == 'Peer' || _isKey(t))) return 'peer';
+    // A stream the person writes: the widget of its element type, kept open,
+    // one element per submission; a list the person writes: the same, with
+    // a button that ends the list (Definition "Widget Declaration, Default
+    // Widget").
+    final seq = _personSeq(n);
+    if (seq != null) {
+      final w = _widget(n.child(seq.elem), visiting);
+      return seq.list ? 'input_list($w)' : 'input_box($w)';
+    }
     final alts = _nodeAlts(n);
     if (alts.every((a) => a is _ConstAlt)) {
       final cs = alts.map((a) => constantSource((a as _ConstAlt).value));
@@ -1062,6 +1366,13 @@ class _Generator {
     return 'menu([${alts.map((a) => _altWidget(n, a, visiting)).join(', ')}])';
   }
 
+  /// The widget of alternative [a] of node [n].  A tuple is a form with one
+  /// field per argument, field(L, W), "each labelled by the name of its
+  /// declared type", L that name (Definition "Widget Declaration, Default
+  /// Widget"; vGLP #6 Cowork, 2026-10-11 12:55 UTC, item 3, Q2); a stream or
+  /// a list inside a form the person writes is no field of it but
+  /// question(L, W), "submitted as a question of its own and drawn under the
+  /// form" (item 2).
   String _altWidget(_Node n, _Alt a, Set<String> visiting) {
     if (a is _ConstAlt) {
       return n.person ? 'button(${constantSource(a.value)})' : 'shown';
@@ -1070,8 +1381,26 @@ class _Generator {
     if (a is _LeafAlt) return n.person ? _leafWidget(a.leaf) : 'shown';
     if (!n.person && !_altHasQuestion(n, a)) return 'shown';
     final kids = _children(n, a);
-    final ws = kids.map((k) => _widget(k, visiting)).join(', ');
-    if (a is _ConsAlt) return 'form(\'.\', [$ws])';
+    final ws = [
+      for (final k in kids)
+        '${_isNestedSeq(n, k) ? 'question' : 'field'}'
+            '(${constantSource(k.typeKey)}, ${_widget(k, visiting)})'
+    ].join(', ');
+    if (a is _ConsAlt) {
+      if (n.person) {
+        // A list cell the person writes outside a Stream or a List: the
+        // Definition gives it no widget, and the compiler emits no
+        // form('.', ...) (vGLP #6 Cowork, 2026-10-11 12:55 UTC, item 2, Q1).
+        final at = _at!;
+        throw CompileError(
+            'The construct of the interactive type ${at.written} is not '
+            'built: the person writes ${n.typeKey}, a list cell of which is '
+            'neither a Stream nor a List, and the Definition gives it no '
+            'widget (Definition "Widget Declaration, Default Widget")',
+            at.line, at.column, phase: 'analyzer');
+      }
+      return 'form(\'.\', [$ws])';
+    }
     return 'form(${constantSource((a as _StructAlt).functor)}, [$ws])';
   }
 

@@ -11,6 +11,7 @@ export 'src/models/identity.dart';
 export 'src/models/packet.dart';
 export 'src/models/peer.dart';
 export 'src/models/block.dart';
+export 'src/models/underlay.dart';
 export 'src/protocol/protocol_handler.dart';
 export 'src/protocol/fragment_handler.dart';
 export 'src/protocol/message_transport.dart';

@@ -28,9 +28,9 @@ MessagesState messagesReducer(MessagesState state, MessageAction action) {
         return state;
       }
       // Update in place so we preserve `sentAt` and any timestamps; only
-      // bump the transport/payload metadata and the status.
+      // bump the underlay/payload metadata and the status.
       updated[action.messageId] = existing.copyWith(
-        transport: action.transport,
+        underlay: action.underlay,
         recipientPubkey: action.recipientPubkey,
         payloadSize: action.payloadSize,
         status: MessageStatus.sending,
@@ -38,7 +38,7 @@ MessagesState messagesReducer(MessagesState state, MessageAction action) {
     } else {
       updated[action.messageId] = OutgoingMessage(
         messageId: action.messageId,
-        transport: action.transport,
+        underlay: action.underlay,
         recipientPubkey: action.recipientPubkey,
         payloadSize: action.payloadSize,
         sentAt: action.timestamp,
@@ -110,7 +110,7 @@ MessagesState messagesReducer(MessagesState state, MessageAction action) {
       }
       // Update existing message (sending/queued -> sent)
       updated[action.messageId] = existing.copyWith(
-        transport: action.transport,
+        underlay: action.underlay,
         recipientPubkey: action.recipientPubkey,
         payloadSize: action.payloadSize,
         status: MessageStatus.sent,
@@ -119,7 +119,7 @@ MessagesState messagesReducer(MessagesState state, MessageAction action) {
       // Create new message (for backwards compatibility)
       final message = OutgoingMessage(
         messageId: action.messageId,
-        transport: action.transport,
+        underlay: action.underlay,
         recipientPubkey: action.recipientPubkey,
         payloadSize: action.payloadSize,
         sentAt: action.timestamp,
@@ -177,7 +177,7 @@ MessagesState messagesReducer(MessagesState state, MessageAction action) {
   if (action is MessageReceivedAction) {
     final message = IncomingMessage(
       messageId: action.messageId,
-      transport: action.transport,
+      underlay: action.underlay,
       senderPubkey: action.senderPubkey,
       payloadSize: action.payloadSize,
       receivedAt: action.timestamp,

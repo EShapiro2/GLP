@@ -46,6 +46,12 @@ dependencies:
   meta: ^1.11.0
   collection: ^1.18.0
 
+  # The runtime's network interface, GlpNetwork, which the backend glue
+  # (lib/glp_adapter.dart, GNA Appendix B) implements over the headless layer;
+  # and the runtime itself, which the glue's two-process test runs.
+  glp_runtime:
+    path: ../../glp_runtime
+
 dev_dependencies:
   test: ^1.25.8
   lints: ^4.0.0

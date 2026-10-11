@@ -67,10 +67,10 @@ void main() {
 
     final delivered = <(Uint8List sender, String payload)>[];
     final serviceConnected = <String>[];
-    service.onMessageReceived = (messageId, sender, payload, transport) {
+    service.onMessageReceived = (sender, payload, messageId, underlay) {
       delivered.add((sender, utf8.decode(payload)));
     };
-    service.onPeerConnected = (pk, transport, _) {
+    service.onPeerConnected = (pk, underlay, _) {
       serviceConnected.add(_hex(pk));
     };
 
@@ -82,9 +82,9 @@ void main() {
     // The spec sequence: putPeerAddress supplies key and address; send
     // dials, establishes the session, delivers.
     final pusherLinked = Completer<void>();
-    pusher.onPeerConnected = (pk, transport, _) {
+    pusher.onPeerConnected = (pk, underlay, _) {
       expect(_hex(pk), _hex(service.identity.publicKey));
-      expect(transport, MessageTransport.udp);
+      expect(underlay, Underlay.wan);
       if (!pusherLinked.isCompleted) pusherLinked.complete();
     };
     pusher.putPeerAddress(service.identity.publicKey, address);
@@ -153,7 +153,7 @@ void main() {
     // admit it otherwise.
     service.putKnownPeer(caller.identity.publicKey);
     final delivered = Completer<String>();
-    service.onMessageReceived = (messageId, sender, payload, transport) {
+    service.onMessageReceived = (sender, payload, messageId, underlay) {
       if (!delivered.isCompleted) delivered.complete(utf8.decode(payload));
     };
     expect(await service.start(), isTrue);

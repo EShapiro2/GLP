@@ -1,6 +1,5 @@
 import '../models/peer.dart';
 import 'peers_state.dart';
-import 'messages_actions.dart';
 import 'peers_actions.dart';
 
 /// Reducer for peers-related state
@@ -274,6 +273,7 @@ PeersState peersReducer(PeersState state, dynamic action) {
         // the session that produced it (spec §Session Establishment).
         bleAttestation: hasAnyBle ? existing.bleAttestation : null,
         udpAttestation: existing.udpAttestation,
+        udpUnderlay: existing.udpUnderlay,
       );
       return state.copyWith(
         peers: Map.from(state.peers)..[pubkeyHex] = updated,
@@ -292,7 +292,7 @@ PeersState peersReducer(PeersState state, dynamic action) {
         peers: Map.from(state.peers)
           ..[pubkeyHex] = existing
               .copyWith(bleAuthenticated: true)
-              .withAttestation(MessageTransport.ble, null),
+              .withoutAttestation(PeerTransport.bleDirect),
       );
     }
     return state;
@@ -305,7 +305,7 @@ PeersState peersReducer(PeersState state, dynamic action) {
     return state.copyWith(
       peers: Map.from(state.peers)
         ..[pubkeyHex] =
-            existing.withAttestation(action.transport, action.attestation),
+            existing.withAttestation(action.underlay, action.attestation),
     );
   }
 
@@ -314,7 +314,7 @@ PeersState peersReducer(PeersState state, dynamic action) {
     if (existing != null) {
       final updated = existing
           .copyWith(hasLiveUdpConnection: action.connected)
-          .withAttestation(MessageTransport.udp, null);
+          .withoutAttestation(PeerTransport.udp);
       return state.copyWith(
         peers: Map.from(state.peers)..[action.pubkeyHex] = updated,
       );
@@ -363,8 +363,9 @@ PeersState peersReducer(PeersState state, dynamic action) {
         // Transport independence: a UDP drop must not touch BLE auth.
         bleAuthenticated: existing.bleAuthenticated,
         bleAttestation: existing.bleAttestation,
-        // The UDP session is gone, and its attestation with it.
+        // The UDP session is gone, and its attestation and underlay with it.
         udpAttestation: null,
+        udpUnderlay: null,
       );
       return state.copyWith(
         peers: Map.from(state.peers)..[pubkeyHex] = updated,
@@ -462,6 +463,7 @@ PeersState peersReducer(PeersState state, dynamic action) {
         bleAuthenticated: existing.bleAuthenticated,
         bleAttestation: existing.bleAttestation,
         udpAttestation: existing.udpAttestation,
+        udpUnderlay: existing.udpUnderlay,
       );
       return state.copyWith(
         peers: Map.from(state.peers)..[pubkeyHex] = updated,

@@ -18,7 +18,16 @@ class ReassembledMessage {
   final String messageId;
   final Uint8List payload;
 
-  ReassembledMessage({required this.messageId, required this.payload});
+  /// The fragment type the message travelled as: [PacketType.fragment] for a
+  /// `send` payload, [PacketType.attestationFragment] for the attestation
+  /// exchange.
+  final PacketType type;
+
+  ReassembledMessage({
+    required this.messageId,
+    required this.payload,
+    this.type = PacketType.fragment,
+  });
 }
 
 /// One decoded fragment (spec §Message Transport: every fragment carries
@@ -31,20 +40,26 @@ class Fragment {
   final int count;
   final Uint8List chunk;
 
+  /// The packet type the fragment arrived as (one of
+  /// [FragmentHandler.fragmentTypes]); a message's fragments all share it.
+  final PacketType type;
+
   Fragment({
     required this.messageId,
     required this.index,
     required this.count,
     required this.chunk,
+    this.type = PacketType.fragment,
   });
 }
 
 class _ReassemblyState {
   final int count;
+  final PacketType type;
   final Map<int, Uint8List> receivedChunks = {};
   final DateTime startedAt = DateTime.now();
 
-  _ReassemblyState({required this.count});
+  _ReassemblyState({required this.count, required this.type});
 
   bool get isComplete => receivedChunks.length == count;
 
@@ -65,6 +80,21 @@ class _ReassemblyState {
 class FragmentHandler {
   /// The messageId is a full 36-character UUID.
   static const int messageIdLength = 36;
+
+  /// The packet types a fragment travels as (spec §Message Protocol: one
+  /// protocol carries `send` payloads and the attestation exchange). The two
+  /// share the layout below, the acknowledgments and the retransmission; the
+  /// type tells the receiver which the reassembled message is.
+  static const Set<PacketType> fragmentTypes = {
+    PacketType.fragment,
+    PacketType.attestationFragment,
+  };
+
+  static void _checkFragmentType(PacketType type) {
+    if (!fragmentTypes.contains(type)) {
+      throw ArgumentError.value(type, 'type', 'not a fragment type');
+    }
+  }
 
   /// Per-fragment payload overhead: messageId + index(u32) + count(u32).
   static const int fragmentHeaderLength = messageIdLength + 8;
@@ -99,12 +129,16 @@ class FragmentHandler {
       payload.length > maxChunk;
 
   /// Split [payload] into self-contained fragments of at most [maxChunk]
-  /// chunk bytes each.
+  /// chunk bytes each, travelling as [type] — [PacketType.fragment] for a
+  /// `send` payload, [PacketType.attestationFragment] for the attestation
+  /// exchange.
   FragmentedMessage fragment({
     required Uint8List payload,
     required String messageId,
     required int maxChunk,
+    PacketType type = PacketType.fragment,
   }) {
+    _checkFragmentType(type);
     if (messageId.length != messageIdLength) {
       throw ArgumentError.value(
           messageId, 'messageId', 'must be a 36-character UUID');
@@ -115,7 +149,7 @@ class FragmentHandler {
       final start = i * maxChunk;
       final end = (start + maxChunk).clamp(0, payload.length);
       fragments.add(GrassrootsPacket(
-        type: PacketType.fragment,
+        type: type,
         payload: encodeFragment(
           messageId: messageId,
           index: i,
@@ -143,7 +177,12 @@ class FragmentHandler {
     return bytes;
   }
 
-  static Fragment decodeFragment(Uint8List payload) {
+  /// Decode a fragment payload that arrived as [type].
+  static Fragment decodeFragment(
+    Uint8List payload, {
+    PacketType type = PacketType.fragment,
+  }) {
+    _checkFragmentType(type);
     if (payload.length < fragmentHeaderLength) {
       throw const FormatException('Fragment payload is truncated');
     }
@@ -161,6 +200,7 @@ class FragmentHandler {
       index: index,
       count: count,
       chunk: Uint8List.fromList(payload.sublist(fragmentHeaderLength)),
+      type: type,
     );
   }
 
@@ -189,14 +229,24 @@ class FragmentHandler {
 
   /// Store an incoming [fragment]. Returns the reassembled message when
   /// this fragment completes it, null otherwise (including duplicates).
+  ///
+  /// A message's fragments share one type: a fragment whose type differs
+  /// from the first one received for its messageId is dropped, as one whose
+  /// count differs is, so a payload's chunk can never complete an attestation
+  /// or the reverse.
   ReassembledMessage? addFragment(Fragment fragment) {
     final state = _reassemblyBuffer.putIfAbsent(
       fragment.messageId,
-      () => _ReassemblyState(count: fragment.count),
+      () => _ReassemblyState(count: fragment.count, type: fragment.type),
     );
     if (state.count != fragment.count) {
       debugPrint('[fragment] Count mismatch for ${fragment.messageId}: '
           '${state.count} vs ${fragment.count}; dropping fragment');
+      return null;
+    }
+    if (state.type != fragment.type) {
+      debugPrint('[fragment] Type mismatch for ${fragment.messageId}: '
+          '${state.type.name} vs ${fragment.type.name}; dropping fragment');
       return null;
     }
     state.receivedChunks[fragment.index] = fragment.chunk;
@@ -205,6 +255,7 @@ class FragmentHandler {
     return ReassembledMessage(
       messageId: fragment.messageId,
       payload: state.assemble(),
+      type: state.type,
     );
   }
 

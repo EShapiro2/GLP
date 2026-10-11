@@ -1,42 +1,59 @@
 /// GlpNetwork — the one Dart interface madGLP uses to talk to networking.
 ///
-/// Transcribes the GLP Networking API paper (Sections 2–3) and the contract of
-/// IGLP app:in-networking (One interface; The contract). Two realizations
-/// exist behind this interface: `SimulationNetwork` (this repo, wraps the
-/// isolate transport) and the real BLE/IP layer (Dan's). Integration is a
-/// backend swap.
+/// IGLP, Implementation Notes, "Networking Seam", One interface: "The
+/// multiagent runtime reaches the network through one interface, the one the
+/// GLP Networking API specifies ... A simulation realisation of the same
+/// interface backs the tests and plays, so transport integration is a backend
+/// swap."  The interface is GNA's API (Section "Networking API" and the
+/// Proximity, WAN and Seam sections; Section "Complete API Summary" lists it
+/// whole), in the summary's order: identity, known peers, connection and
+/// reachability, communication, cryptography, the proximity underlays, the
+/// WAN, places.  Two realisations exist behind it: `SimulationNetworkClient`
+/// (this package) and the glue over the networking layer (GNA's, in
+/// `networking/`).
+///
+/// The layer is instantiated once per agent with its key pair (GNA,
+/// "Identity": "The key pair ... is supplied to the layer's constructor when
+/// it is instantiated; it is immutable for the layer's lifetime"), so the
+/// interface has no call that installs an identity.  Until 2026-10-11 it had
+/// one, `putIdentity`, which the API does not.
 ///
 /// Callbacks are settable fields, matching `MadContext.onMessageReady` house
-/// style. `sign`/`verify` are synchronous: their future callers are
-/// the GLP body kernels, and Ed25519 signing is pure CPU work.
+/// style, each with the API's parameters in the API's order.  `sign`/`verify`
+/// are synchronous: their callers are the GLP body kernels, and Ed25519
+/// signing is pure CPU work.
 ///
 /// See: IGLP app:in-networking, One interface and The contract.
 library;
 
 import 'dart:typed_data';
 
-/// Transport medium a peer is reachable over.
-enum Transport { ble, ip }
+/// The underlay a peer is reachable over: GNA, "Networking API": "An Underlay
+/// is one of PAN, LAN or WAN; a peer may be reachable over more than one
+/// underlay at a time."  Until 2026-10-11 the interface had a transport, ble
+/// or ip, in its place.
+enum Underlay { pan, lan, wan }
 
-/// Trust level governing first contact (paper Section 3).
+/// Trust level governing first contact (GNA, "Cold Calls", Trust levels).
 ///
-/// Under [closed], an agent does not connect to, and receives no first contact
-/// from, agents it has never contacted. [open] accepts cold-calls from anyone.
+/// Under [closed], the agent completes neither the ANNOUNCE exchange nor the
+/// session handshake with an unknown key on that underlay; [open] completes
+/// both with any unknown contact.
 enum TrustLevel { open, closed }
 
 /// A proximity underlay, PAN or LAN: "A level is held per ProximityUnderlay,
 /// and is set with setTrustLevel(underlay, level); both levels default to
-/// Closed" (GLP-Networking-API, Trust levels).  Each underlay has its own
-/// cold-call [TrustLevel], which `trust_declare/2` declares of `pan` or `lan`
-/// (GLP-Spec appendix-guards, "Proximity trust", e0b32d7).  Until 2026-10-09
-/// it was ProximityMedium, ble or lan.
+/// Closed" (GNA, Trust levels).  Each underlay has its own cold-call
+/// [TrustLevel], which `trust_declare/2` declares of `pan` or `lan`
+/// (GLP-Spec appendix-guards, "Proximity trust", e0b32d7).  It is also the
+/// underlay of discovery ([GlpNetwork.onPeerDiscovered]).
 enum ProximityUnderlay { pan, lan }
 
 /// A 32-byte Ed25519 public key, with value equality and a hex string form.
 ///
-/// This is the network-level identity of an agent. Symbolic agent identifiers
-/// (e.g. "alice") are resolved to a [PubKey] only at the seam (spec §4); GLP
-/// programs and global names keep the symbolic identifiers.
+/// The network-level identity of an agent.  Over a real network it is the
+/// agent's name; symbolic agent names are the simulation realisation's choice,
+/// resolved to a [PubKey] at the seam (IGLP, Remark "Agent Names").
 class PubKey {
   /// The 32 raw bytes of the Ed25519 public key.
   final Uint8List bytes;
@@ -89,7 +106,7 @@ class PubKey {
   String toString() => 'PubKey(${hex.substring(0, 8)}…)';
 }
 
-/// An event on a declared place's stream (paper Section 5).
+/// An event on a declared place's stream (GNA, "The Seam", place functions).
 ///
 /// [entered] and [exited] are the declaring device's own crossings of the
 /// place. [unobservable] says the layer has stopped reporting crossings — the
@@ -104,132 +121,188 @@ class PubKey {
 /// every standing declaration.
 enum PlaceEvent { entered, exited, unobservable, observable }
 
-/// A device found by scanning, before its identity is fully established.
-///
-/// Carries transport-specific identification; in the simulation realization the
-/// public key is known directly (spec §2, §3).
+/// A nearby agent found by proximity discovery: its key, known once ANNOUNCE
+/// has run, and the proximity underlay it was found on — what
+/// `onPeerDiscovered(pk, underlay)` reports of it (GNA, "Concepts and
+/// Principles", Discovery).  The element of [GlpNetwork.getPeers].
 class DiscoveredPeer {
   /// The peer's public key.
   final PubKey pk;
 
-  /// The transport the peer was discovered over.
-  final Transport transport;
+  /// The proximity underlay the peer was discovered over.
+  final ProximityUnderlay underlay;
 
-  DiscoveredPeer(this.pk, this.transport);
+  DiscoveredPeer(this.pk, this.underlay);
 
   @override
-  String toString() => 'DiscoveredPeer($pk, $transport)';
+  String toString() => 'DiscoveredPeer($pk, $underlay)';
 }
 
 /// The networking interface madGLP talks to.
 ///
-/// One realization wraps the simulation isolate transport; another wraps the
-/// real BLE/IP layer. The runtime adapter (spec §4) drives outgoing traffic via
-/// [send] and receives via [onMessageReceived].
+/// One realisation wraps the simulation isolate transport; another wraps the
+/// networking layer.  The runtime drives outgoing traffic via [send] and
+/// receives via [onMessageReceived].  A realisation that does not provide a
+/// function throws [UnsupportedError] from it.
 abstract class GlpNetwork {
-  // --- Identity (paper Section 2.1) ---
+  // --- Identity (GNA, "Identity") ---
 
-  /// Install this layer's identity (its key pair). The layer holds the private
-  /// key for [sign].
-  void putIdentity(PubKey pub, Uint8List priv);
-
-  /// This layer's own public key.
+  /// This layer's own public key: `getIdentity() → PubKey`.  The key pair was
+  /// supplied when the layer was instantiated; the layer holds the private key
+  /// for [sign].
   PubKey getIdentity();
 
-  // --- Connection and reachability (Section 2.2) ---
+  // --- Known peers (GNA, "Known Peers") ---
 
-  /// Fires when a peer becomes reachable over transport [t].
-  void Function(PubKey pk, Transport t)? onPeerConnected;
+  /// Add [pk] to the known-peer set: `putKnownPeer(pk)`.  The set is what
+  /// Closed trust recognises.  Backs `peer_declare/1`.
+  void putKnownPeer(PubKey pk);
 
-  /// Fires when a peer is no longer reachable over transport [t].
-  void Function(PubKey pk, Transport t)? onPeerDisconnected;
+  /// Remove [pk] and any recorded address from the known-peer set:
+  /// `removeKnownPeer(pk)`.
+  void removeKnownPeer(PubKey pk);
 
-  /// Whether [pk] is currently reachable over any transport.
+  // --- Connection and reachability (GNA, "Connection and Reachability") ---
+
+  /// `onPeerConnected(pk, underlay, identity?)`: fires when a peer becomes
+  /// reachable, with its key, the [Underlay] over which it connected, and its
+  /// attested application identity, null where the peer's platform provides
+  /// no attestation.  The identity is carried as the layer reports it: "What
+  /// the layer attests of a peer and its session is the API's to specify; the
+  /// runtime relies on none of it here" (IGLP, The contract).
+  void Function(PubKey pk, Underlay underlay, Object? identity)?
+      onPeerConnected;
+
+  /// `onPeerDisconnected(pk, underlay)`: fires when a peer is no longer
+  /// reachable over [Underlay] `underlay`.
+  void Function(PubKey pk, Underlay underlay)? onPeerDisconnected;
+
+  /// `isPeerReachable(pk) → bool`: whether [pk] is currently reachable via any
+  /// underlay.
   bool isPeerReachable(PubKey pk);
 
-  /// The transports over which [pk] is currently reachable (`[]` if none).
-  List<Transport> peerTransports(PubKey pk);
+  /// `peerUnderlays(pk) → List<Underlay>`: the underlays by which [pk] is
+  /// currently reachable (empty if unreachable).
+  List<Underlay> peerUnderlays(PubKey pk);
 
-  // --- Point-to-point communication (Section 2.5) ---
+  // --- Point-to-point communication (GNA, "Point-to-Point Communication") ---
 
-  /// Send opaque [payload] bytes to peer [pk]. Order is arbitrary; delivery is
-  /// fair (every message sent is eventually delivered while reachable).
+  /// `send(pubKey, payload)`: send opaque [payload] bytes to peer [pk].  Order
+  /// is arbitrary; delivery is fair (GNA, "Networking Assumptions").
   void send(PubKey pk, Uint8List payload);
 
-  /// Fires on delivery of an inbound message, with the authenticated [sender]
-  /// key, the opaque [payload], the layer-assigned [messageId], and [t].
-  void Function(PubKey sender, Uint8List payload, String messageId, Transport t)?
+  /// `onMessageReceived(sender, payload, messageId, underlay)`: fires on
+  /// delivery of an inbound message, with the authenticated sender's key, the
+  /// opaque payload, the layer-assigned messageId, and the [Underlay] over
+  /// which it was delivered.
+  void Function(
+          PubKey sender, Uint8List payload, String messageId, Underlay underlay)?
       onMessageReceived;
 
-  // --- Signing primitives backing the system predicates (Section 2) ---
-  // The layer holds the private key. Synchronous (spec §2).
+  // --- Cryptography (GNA, "The Seam", Signatures) ---
+  // The layer holds the private key.  Synchronous.
 
-  /// Sign [message] with this layer's private key (Ed25519).
+  /// `sign(bytes)`: Ed25519 signature over [message] under this layer's key.
   Uint8List sign(Uint8List message);
 
-  /// Verify that [signature] over [message] is valid for [signer] (Ed25519).
+  /// `verify(pk, bytes, signature)`: whether [signature] over [message] is
+  /// [signer]'s Ed25519 signature.
   bool verify(PubKey signer, Uint8List message, Uint8List signature);
 
-  // --- BLE (Section 3) ---
+  // --- Proximity underlays, PAN and LAN (GNA, "Concepts and Principles",
+  // Discovery) ---
 
-  /// Currently discovered/adjacent peers.
+  /// `getPeers() → List<Peer>`: the nearby Grassroots agents found by scanning
+  /// and browsing the proximity underlays.
   List<DiscoveredPeer> getPeers();
 
-  /// Fires when a new peer is discovered.
-  void Function(DiscoveredPeer p)? onPeerDiscovered;
+  /// `onPeerDiscovered(pk, underlay)`: fires for each nearby Grassroots agent
+  /// found, with the proximity underlay of discovery.
+  void Function(PubKey pk, ProximityUnderlay underlay)? onPeerDiscovered;
 
-  /// Set the cold-call trust level of proximity underlay [underlay] to
-  /// [level]: "A level is held per ProximityUnderlay, and is set with
-  /// setTrustLevel(underlay, level); both levels default to Closed" (paper,
-  /// Trust levels). Backs `trust_declare/2` (IGLP, Definition Seam Predicates).
+  /// `setTrustLevel(underlay, level)`: set the cold-call trust level of
+  /// proximity underlay [underlay] to [level]; "both levels default to
+  /// Closed" (GNA, Trust levels).  Backs `trust_declare/2`.
   void setTrustLevel(ProximityUnderlay underlay, TrustLevel level);
 
-  // --- IP (Section 4) — UnsupportedError in SimulationNetwork ---
+  // --- WAN (GNA, "WAN Underlay") ---
 
-  /// Fires when this layer's public IP address changes.
-  void Function(String? oldAddr, String newAddr)? onConnectivityStatusChanged;
+  /// `onConnectivityStatusChanged(oldAddress?, newAddress?)`: fires when the
+  /// layer detects a change in the agent's public `ip:port`, "either of which
+  /// may be null when no public address is available"; fired on startup and on
+  /// every address change.
+  void Function(String? oldAddress, String? newAddress)?
+      onConnectivityStatusChanged;
 
-  /// This layer's public IP address.
-  String getPublicAddress();
+  /// `getPublicAddress() → Address?`: the agent's current public `ip:port`, or
+  /// null if not yet known.
+  String? getPublicAddress();
 
-  /// Generate a peer-link URI others can consume to reach this layer.
-  String generatePeerLink();
+  /// `networkIdentity() → NetworkId?`: an opaque fingerprint of the local
+  /// network the agent is attached to, or null when it is attached to none or
+  /// no constituent is readable (GNA, "Local Network Identity").
+  String? networkIdentity();
 
-  /// Consume a peer-link URI to reach another layer.
-  void consumePeerLink(String uri);
+  /// `onNetworkChanged(oldId?, newId?)`: fires when the fingerprint changes;
+  /// either may be null.
+  void Function(String? oldId, String? newId)? onNetworkChanged;
 
-  // --- Seam predicates (paper Section 5) ---
-  //
-  // The five functions below and [setTrustLevel] above are the six behind the
-  // five networking seam predicates `peer_address/2`, `punch_udp/1`,
-  // `place_declare/3`, `place_remove/1` and `trust_declare/2` (IGLP,
-  // Definition Seam Predicates). GLP code decides who acts, when, and whether;
-  // each function performs only the mechanism.
+  /// `generatePeerLink() → URI`: produce a signed, one-time, RV-mediated
+  /// invite link and register the invite with a rendezvous server.
+  Future<String> generatePeerLink();
 
-  /// The address at which this layer observes peer [pk], or null if none is
-  /// observed. Backs `peer_address/2`, which reports the two as `address(S)`
-  /// and `none`.
+  /// `consumePeerLink(uri) → PubKey`: verify the inviter's signature, register
+  /// the inviter's identity, submit the redemption claim, and return the
+  /// inviter's public key.
+  Future<PubKey> consumePeerLink(String uri);
+
+  /// `putPeerAddress(pk, address)`: inform the layer of peer [pk]'s current
+  /// public `ip:port`, learned at the GLP level; the layer records it with the
+  /// known peer.  Backs `address_declare/2`.
+  void putPeerAddress(PubKey pk, String address);
+
+  /// `observedPeerAddress(pk) → Address?`: the public `ip:port` at which the
+  /// layer observes the connected peer [pk], or null if none is observed.
+  /// Backs `peer_address/2`, which reports the two as `address(S)` and `none`.
   String? observedPeerAddress(PubKey pk);
 
-  /// Open a path to [address] and return nothing. Backs `punch_udp/1`.
+  /// `punchUdp(address)`: send a short burst of UDP datagrams toward
+  /// [address], opening the NAT mapping; returns nothing.  Backs
+  /// `punch_udp/1`.
   void punchUdp(String address);
 
-  /// Declare [place] — the region of [radiusMetres] about this device's
-  /// location at the time of the call — and report its crossings through
-  /// [onPlaceEvent]. Backs `place_declare/3`.
+  // --- Places (GNA, "The Seam", place functions) ---
+
+  /// `declarePlace(place, radius)`: declare [place] — the region of
+  /// [radiusMetres] about this device's location at the time of the call —
+  /// and report its crossings through [onPlaceEvent].  Backs `place_declare/3`.
   ///
   /// Returns false when the platform refuses, leaving the place undeclared. A
   /// further declaration under the same name supersedes the first. GLP supplies
   /// a name and a radius and receives no coordinates.
   Future<bool> declarePlace(String place, double radiusMetres);
 
-  /// End the declaration of [place]. Backs `place_remove/1`. Removing a place
-  /// that is not declared does nothing.
+  /// `removePlace(place)`: end the declaration of [place].  Backs
+  /// `place_remove/1`.  Removing a place that is not declared does nothing.
   Future<void> removePlace(String place);
 
-  /// Fires on each event of a declared place, naming the place and the event.
+  /// `onPlaceEvent(place, event)`: fires on each event of a declared place,
+  /// naming the place and the event; feeds the stream of `place_declare/3`.
   ///
   /// A crossing reported for a place already removed or superseded is dropped
   /// by the layer and never arrives here.
   void Function(String place, PlaceEvent event)? onPlaceEvent;
+
+  // --- The seam predicates ---
+  //
+  // Eight of the functions above are the layer functions behind the seven
+  // networking seam predicates (IGLP, Definition "Seam Predicates"; GNA,
+  // "The Seam"; IGLP, The contract: "these eight back the seam predicates"):
+  // [observedPeerAddress] behind `peer_address/2`, [punchUdp] behind
+  // `punch_udp/1`, [declarePlace] and [onPlaceEvent] behind `place_declare/3`,
+  // [removePlace] behind `place_remove/1`, [setTrustLevel] behind
+  // `trust_declare/2`, [putKnownPeer] behind `peer_declare/1`, and
+  // [putPeerAddress] behind `address_declare/2`.  GLP code decides who acts,
+  // when, and whether; each function performs only the mechanism.  Until
+  // 2026-10-11 this comment counted six functions behind five predicates.
 }

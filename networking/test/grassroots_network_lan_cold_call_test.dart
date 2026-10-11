@@ -9,6 +9,7 @@ import 'package:sodium_libs/sodium_libs_sumo.dart';
 
 import 'package:grassroots_networking/src/grassroots_network.dart';
 import 'package:grassroots_networking_core/src/models/identity.dart';
+import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 
 import 'helpers/sodium_test_bootstrap.dart';
@@ -89,7 +90,7 @@ void main() {
   test('Open contacts an unmatched LAN instance, keyed by its address',
       () async {
     final network = await startNode(await identityFromSeed(0x71, 'self'));
-    await network.setTrustLevel(ProximityMedium.lan, ColdCallTrustLevel.open);
+    await network.setTrustLevel(ProximityUnderlay.lan, ColdCallTrustLevel.open);
 
     const address = '127.0.0.1:45071';
     expect(network.debugUdpPeerIdForAddress(address), isNull,
@@ -110,7 +111,7 @@ void main() {
 
   test('Closed ignores an unmatched LAN instance', () async {
     final network = await startNode(await identityFromSeed(0x72, 'self'));
-    await network.setTrustLevel(ProximityMedium.lan, ColdCallTrustLevel.closed);
+    await network.setTrustLevel(ProximityUnderlay.lan, ColdCallTrustLevel.closed);
 
     const address = '127.0.0.1:45072';
     network.debugResolveLanInstance(unmatchedToken, address);
@@ -124,7 +125,7 @@ void main() {
   test('a second resolution of the same instance does not dial twice',
       () async {
     final network = await startNode(await identityFromSeed(0x73, 'self'));
-    await network.setTrustLevel(ProximityMedium.lan, ColdCallTrustLevel.open);
+    await network.setTrustLevel(ProximityUnderlay.lan, ColdCallTrustLevel.open);
 
     const address = '127.0.0.1:45073';
     network.debugResolveLanInstance(unmatchedToken, address);
@@ -141,7 +142,7 @@ void main() {
 
   test('an unusable address is not dialed', () async {
     final network = await startNode(await identityFromSeed(0x74, 'self'));
-    await network.setTrustLevel(ProximityMedium.lan, ColdCallTrustLevel.open);
+    await network.setTrustLevel(ProximityUnderlay.lan, ColdCallTrustLevel.open);
 
     network.debugResolveLanInstance(unmatchedToken, 'not-an-address');
     await settle();

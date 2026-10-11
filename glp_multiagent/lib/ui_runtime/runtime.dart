@@ -3,12 +3,18 @@
 ///
 /// Holds the transport (send a ground `UserCmd`, receive ground `UserNotify`),
 /// an inbox of cards, and an activity store — the screen. It renders nothing
-/// itself; it turns notify text into structured state and turns the person's
+/// itself; it turns notify terms into structured state and turns the person's
 /// taps into ground command terms. It names no app-specific constructor —
 /// everything specific comes from the [Manifest]. If a constructor name ever
 /// needs special-casing here, that logic belongs in the schema instead.
+///
+/// It carries the [Bridge] of vGLP's paragraph "The implementation" beside the
+/// deployed mediator's vocabulary: a compiled module's draws open and remove
+/// its constructs, and the person's grants on them go out as `input(Id, P,
+/// R)`, by the same transport (bridge.dart).
 library;
 
+import 'bridge.dart';
 import 'manifest.dart';
 import 'term.dart';
 
@@ -32,9 +38,12 @@ class InboxCard {
       {Map<String, GTerm>? asks})
       : asks = asks ?? <String, GTerm>{};
 
-  /// The row key this card alerts on — the formatted value of its [itemKey]
-  /// field (the offering person, the proposing friend, the invited group).
-  String get itemKey => formatTerm(fields[desc.itemKey]!);
+  /// The value of the card's item field — the offering person, the
+  /// proposing friend, the invited group — the row it alerts on.
+  GTerm get item => fields[desc.itemKey]!;
+
+  /// The row key this card alerts on — the formatted value of its [item].
+  String get itemKey => formatTerm(item);
 
   /// The answers whose ask is still open — the buttons this card actually
   /// offers. A sibling whose ask the agent has aborted is no longer offered.
@@ -80,6 +89,31 @@ class ActivityStore {
   /// program tallies its whole state after every change, so a key no longer
   /// reported is no longer held.
   final Map<String, Map<String, GTerm>> balances = {};
+
+  /// The term each row key names.  A row is keyed by the print of a term
+  /// ([keyOf]), and the term is taken from here --- to show the row, or to
+  /// send the term back --- and never by reading the key back as text: the
+  /// bridge parses no text (GLP #3 Cowork, 2026-10-11 12:59 UTC, "21:40 AND
+  /// 03:16, (iii)").  Until 2026-10-11 the surface parsed the key, and a key
+  /// whose print it did not read was shown, and sent, as a name.
+  final Map<String, GTerm> _keyed = {};
+
+  /// The key of [t], its print ([formatTerm], which reads back as the term
+  /// and so tells two terms apart), recorded with [t].
+  String keyOf(GTerm t) {
+    final k = formatTerm(t);
+    _keyed[k] = t;
+    return k;
+  }
+
+  /// The term [key] names: the one [keyOf] recorded for it, and for a key
+  /// made of a name alone --- the phone owner's identifier --- the string of
+  /// that name.
+  GTerm termOf(String key) => _keyed[key] ?? GAtom(key);
+
+  /// The default display of a stored key — a value the runtime keyed a row
+  /// by: [displayText] of the term it names.
+  String displayKey(String key) => displayText(termOf(key));
 }
 
 /// The per-agent UI runtime.
@@ -103,8 +137,9 @@ class UiRuntime {
   /// drop the ones that vanished (a coin spent to zero). Keyed by owner.
   final Map<String, Set<String>> _holdingsTouched = {};
 
-  /// Raw boundary lines, kept for debugging/trace.
-  final List<String> raw = [];
+  /// Every term the person channel carried, in order, kept for
+  /// debugging/trace.
+  final List<GTerm> raw = [];
 
   int _cardSeq = 0;
 
@@ -116,6 +151,13 @@ class UiRuntime {
 
   /// The parsed patterns of the manifest's declared views, by source text.
   final Map<String, GPattern> _viewPatterns = {};
+
+  /// The Dart bridge: the constructs a compiled module draws, and the
+  /// grants the person makes on them, sent as every act of the person is.
+  late final Bridge bridge = Bridge(onGrant: (grant) {
+    onSend(grant);
+    onChange?.call();
+  });
 
   UiRuntime({required this.manifest, required this.onSend}) {
     for (final v in manifest.state) {
@@ -136,21 +178,36 @@ class UiRuntime {
     }
   }
 
-  /// Feed one boundary line from `AgentOutput`. Lines that are not a single
-  /// well-formed notify term (init/help/prompt lines) are ignored.
-  void handleLine(String line) {
-    raw.add(line);
-    final term = tryParseTerm(line.trim());
-    if (term == null) return;
+  /// Take one term of the person channel, whole: an element the agent's
+  /// program emitted by send_to_user/1 (GLP-Spec appendix-guards.tex, "Output
+  /// to the person": it "emits each element of Stream to the person operating
+  /// the agent"), carried from the agent as a term (isolate_protocol.dart,
+  /// `AgentNotify`, `screenTermOf`) and never as text: the bridge parses none
+  /// (GLP #3 Cowork, 2026-10-11 12:59 UTC, "21:40 AND 03:16, (iii)").  A term
+  /// with no constructor, a number or a list, is no notify.  Until 2026-10-11
+  /// this took the line the agent printed and parsed it, and a term whose
+  /// print did not parse --- a string with a space, `form('.', ...)` --- was
+  /// dropped.
+  void handle(GTerm term) {
+    raw.add(term);
     final (ctor, args) = ctorArgs(term);
     if (ctor.isEmpty) return;
 
-    // The person channel of a compiled vGLP program (Definition "Canonical
-    // Compilation") carries one vocabulary whatever the program: the
-    // mediator's cards and their closing, the agent's screen messages, and,
-    // from the person, answers. A card is selected by its CLAUSE, not by
-    // constructor and arity — `card`/3 is one constructor for every clause of
-    // the program — so these two come first and consume what they recognise.
+    // A compiled module's draws (vGLP, the paragraph "The implementation"):
+    // `draw(Id, W, V)` and `withdraw(Id)` are the bridge's, and everything
+    // else on the person channel is the program's own output, shown below as
+    // every screen message is.
+    if (bridge.read(term)) {
+      onChange?.call();
+      return;
+    }
+
+    // The deployed mediator's person channel, the earlier compilation's,
+    // carries one vocabulary whatever the program: the mediator's cards and
+    // their closing, the agent's screen messages, and, from the person,
+    // answers. A card is selected by its CLAUSE, not by constructor and
+    // arity — `card`/3 is one constructor for every clause of the program —
+    // so these two come first and consume what they recognise.
     if (ctor == cardCtor && args.length == 3 && _handleCard(args)) return;
     if ((ctor == closedCtor || ctor == abortedCtor) &&
         args.length == 1 &&
@@ -285,7 +342,7 @@ class UiRuntime {
             // the one argument where there is one, and the item's own
             // constructor over them where there are several — so two lots of
             // one thing are one row; the person reads its default display,
-            // the arguments in order ([displayKey]).
+            // the arguments in order ([ActivityStore.displayKey]).
             final rows = <String, GTerm>{};
             if (content is GList) {
               for (final item in content.items) {
@@ -294,7 +351,7 @@ class UiRuntime {
                 final named = itemArgs.sublist(0, itemArgs.length - 1);
                 final key =
                     named.length == 1 ? named.first : GStruct(ctor, named);
-                rows[formatTerm(key)] = itemArgs.last;
+                rows[store.keyOf(key)] = itemArgs.last;
               }
             }
             store.balances[v.store] = rows;
@@ -313,7 +370,7 @@ class UiRuntime {
             if (itemArgs.length == 2) {
               store.threads
                   .putIfAbsent(v.store, () => <String, List<GTerm>>{})
-                  .putIfAbsent(formatTerm(itemArgs[0]), () => <GTerm>[])
+                  .putIfAbsent(store.keyOf(itemArgs[0]), () => <GTerm>[])
                   .add(itemArgs[1]);
             }
         }
@@ -440,20 +497,20 @@ class UiRuntime {
             :final maturityField
           ):
           final h = store.holdings.putIfAbsent(storeKey, () => {});
-          final owner = formatTerm(fields[ownerField]!);
-          final coin = formatTerm(fields[coinField]!);
+          final owner = store.keyOf(fields[ownerField]!);
+          final coin = store.keyOf(fields[coinField]!);
           // With a maturity the key is `issuer@maturity`: one issuer may be held
           // at several maturities at once, and those must stay distinct rows.
           final key = maturityField == null
               ? coin
-              : '$coin@${formatTerm(fields[maturityField]!)}';
+              : '$coin@${store.keyOf(fields[maturityField]!)}';
           h.putIfAbsent(owner, () => {})[key] = fields[amountField]!;
           _holdingsTouched.putIfAbsent(owner, () => <String>{}).add(key);
         case SyncBalances(store: final storeKey, :final ownerField):
           // Prune to the just-reported snapshot: drop any of the owner's
           // holdings not set since the previous sync — how a coin spent to zero
           // leaves the wallet (it is simply no longer reported).
-          final owner = formatTerm(fields[ownerField]!);
+          final owner = store.keyOf(fields[ownerField]!);
           final touched = _holdingsTouched[owner] ?? const <String>{};
           store.holdings[storeKey]?[owner]
               ?.removeWhere((k, _) => !touched.contains(k));
@@ -467,7 +524,7 @@ class UiRuntime {
             :final releaseField
           ):
           final e = store.escrow.putIfAbsent(storeKey, () => {});
-          e[formatTerm(fields[whoField]!)] = GStruct('esc', [
+          e[store.keyOf(fields[whoField]!)] = GStruct('esc', [
             fields[coinField]!,
             fields[maturityField]!,
             fields[amountField]!,
@@ -479,12 +536,12 @@ class UiRuntime {
           onNotice?.call(renderTemplate(template, fields));
         case ExtendThread(:final thread, :final keyField, :final valueField):
           final t = store.threads.putIfAbsent(thread, () => <String, List<GTerm>>{});
-          final k = formatTerm(fields[keyField]!);
+          final k = store.keyOf(fields[keyField]!);
           t.putIfAbsent(k, () => <GTerm>[]).add(fields[valueField]!);
         case OpenChat(:final thread, :final peerField):
           store.threads
               .putIfAbsent(thread, () => <String, List<GTerm>>{})
-              .putIfAbsent(formatTerm(fields[peerField]!), () => <GTerm>[]);
+              .putIfAbsent(store.keyOf(fields[peerField]!), () => <GTerm>[]);
         case PushChat(
             :final thread,
             :final peerField,
@@ -494,7 +551,7 @@ class UiRuntime {
           ):
           final t =
               store.threads.putIfAbsent(thread, () => <String, List<GTerm>>{});
-          final k = formatTerm(fields[peerField]!);
+          final k = store.keyOf(fields[peerField]!);
           // Encode direction (and optional tick) in the stored term so the
           // renderer can draw left/right bubbles with delivery marks.
           final dir = outgoing ? 'out' : 'in';
@@ -507,7 +564,7 @@ class UiRuntime {
         case OpenGroup(:final thread, :final keyField):
           store.threads
               .putIfAbsent(thread, () => <String, List<GTerm>>{})
-              .putIfAbsent(formatTerm(fields[keyField]!), () => <GTerm>[]);
+              .putIfAbsent(store.keyOf(fields[keyField]!), () => <GTerm>[]);
         case PushGroupChat(
             :final thread,
             :final keyField,
@@ -516,7 +573,7 @@ class UiRuntime {
           ):
           final t =
               store.threads.putIfAbsent(thread, () => <String, List<GTerm>>{});
-          final k = formatTerm(fields[keyField]!);
+          final k = store.keyOf(fields[keyField]!);
           // Store author + text; the renderer draws the person's own posts on
           // the right (author == self) and others' on the left, labeled.
           final msg = GStruct('grp', [fields[authorField]!, fields[textField]!]);
@@ -528,7 +585,7 @@ class UiRuntime {
   }
 
   /// Post to a group: build `sendCtor(GroupId, text)` from the open group's
-  /// `GroupId` term (recovered from its thread key) and the input text. No
+  /// `GroupId` term (the term its thread key names) and the input text. No
   /// optimistic echo — the message appears when its `group_received` round-trips
   /// through the hub, so the person's own post and others' arrive by one path.
   void sendGroup(GroupChatView view, GTerm groupId, String text) {
@@ -539,28 +596,33 @@ class UiRuntime {
 
   /// Append the person's own outgoing message to a conversation immediately
   /// (optimistic echo), then send the command. Used by the chat input.
+  /// [peer] is the conversation's key, and the command carries the term it
+  /// names ([ActivityStore.termOf]).
   void sendChat(ChatView chat, String peer, String text) {
     final atom = chatAtom(text);
     final t = store.threads.putIfAbsent(chat.threadKey, () => <String, List<GTerm>>{});
     t.putIfAbsent(peer, () => <GTerm>[]).add(GStruct('out', [GAtom(atom), GAtom('sent')]));
-    onSend(GStruct(chat.sendCtor, [GAtom(peer), GAtom(atom)]));
+    onSend(GStruct(chat.sendCtor, [store.termOf(peer), GAtom(atom)]));
     onChange?.call();
   }
 }
 
-/// The constructors of the compiled vGLP person channel, fixed by vGLP's
-/// Definition "Canonical Compilation" and therefore the same for every
-/// compiled program — they are the compilation's, not any application's.
+/// The constructors of the deployed mediator's person channel, the earlier
+/// compilation's, the same for every program it compiled — they are the
+/// compilation's, not any application's.  They stay beside the bridge's
+/// (bridge.dart) until the owners port their `.vglp` sources to the
+/// compilation of vGLP's Definition "Canonical Compilation".
 const String cardCtor = 'card';
 const String closedCtor = 'closed';
 const String abortedCtor = 'aborted';
 const String answerCtor = 'answer';
 const String declineCtor = 'decline';
 
-/// Free text as a GLP constant the boundary round-trips: the `_output` kernel
-/// prints atoms unquoted, so a chat text must be a plain lowercase atom —
-/// lowercase, word characters joined by `_`, never variable-shaped. The chat
-/// renderer shows `_` as a space.
+/// Free text as the constant a chat sends: lowercase, word characters joined
+/// by `_`, never variable-shaped. The chat renderer shows `_` as a space.
+/// The form was made for the text pipe, in which the `_output` kernel printed
+/// a constant unquoted and the screen read the line back; that pipe is gone
+/// (2026-10-11), and the text could now cross as typed.
 String chatAtom(String raw) {
   var s = raw.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');
   s = s.replaceAll(RegExp(r'^_+|_+$'), '');

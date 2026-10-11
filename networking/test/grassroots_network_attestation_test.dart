@@ -9,6 +9,7 @@ import 'package:sodium_libs/sodium_libs_sumo.dart';
 
 import 'package:grassroots_networking/src/grassroots_network.dart';
 import 'package:grassroots_networking_core/src/models/identity.dart';
+import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/session/application_identity.dart';
 import 'package:grassroots_networking_core/src/session/platform_attestation.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
@@ -159,10 +160,10 @@ void main() {
       await callee.dispose();
     });
 
-    final connects = <(String, MessageTransport, ApplicationIdentity?)>[];
-    caller.onPeerConnected = (pk, transport, identity) => connects.add((
+    final connects = <(String, Underlay, ApplicationIdentity?)>[];
+    caller.onPeerConnected = (pk, underlay, identity) => connects.add((
           pk.map((b) => b.toRadixString(16).padLeft(2, '0')).join(),
-          transport,
+          underlay,
           identity,
         ));
 
@@ -178,7 +179,9 @@ void main() {
 
     expect(await waitFor(() => connects.isNotEmpty), isTrue,
         reason: 'the exchange must complete and the peer become reachable');
-    expect(connects.single.$2, MessageTransport.udp);
+    // Loopback lies within none of the agent's own local prefixes, so the
+    // UDP session is WAN.
+    expect(connects.single.$2, Underlay.wan);
     expect(connects.single.$3, isNull,
         reason: 'a platform with no attestation yields a null identity — '
             'unattested, not refused');

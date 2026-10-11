@@ -5,7 +5,7 @@
 /// produces from a flat program: a BODY followed by a CERTIFICATE. The body's
 /// sections, in order:
 ///
-///   1. Header        — magic `GLPW`, u8 code-format version (2), string
+///   1. Header        — magic `GLPW`, u8 code-format version (3), string
 ///                      instruction-set version, string program name. Neither
 ///                      identity is in the header: both are in the certificate,
 ///                      where they are signed.
@@ -49,11 +49,14 @@ import 'package:glp_runtime/wire/instruction_codec.dart';
 /// Magic `GLPW`.
 const List<int> artefactMagic = [0x47, 0x4C, 0x50, 0x57];
 
-/// Code-format version this implementation writes and accepts. Version 2
-/// introduces the message kind byte (0 value, 1 request, 2 acknowledgement)
-/// and the certified artefact layout above; the loader refuses a version it
-/// does not support.
-const int wireFormatVersion = 2;
+/// Code-format version this implementation writes and accepts: 3 (IGLP Code
+/// Format appendix, "Program Artefact": "u8 code-format version (this
+/// document: 3)").  "Version 2 added the message kind byte, version 3 the
+/// serializer message's serial" ("Format Versioning"); the certified artefact
+/// layout above came with version 2.  The loader refuses a version it does not
+/// support, 2 among them: a version-2 runtime sends cold calls without a
+/// serial.
+const int wireFormatVersion = 3;
 
 /// The instruction-set version this implementation writes in an artefact's
 /// header (IGLP, Code Format appendix, "Format Versioning": new instructions

@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:grassroots_networking_core/src/store/messages_actions.dart';
+import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/store/peers_state.dart';
 import 'package:grassroots_networking_core/src/store/peers_actions.dart';
 import 'package:grassroots_networking_core/src/store/peers_reducer.dart';
@@ -1210,7 +1210,7 @@ void main() {
       expect(authenticated.isReachable, false);
 
       final attested = authenticated.withAttestation(
-        MessageTransport.ble,
+        Underlay.pan,
         PeerAttestation.unattested,
       );
       expect(attested.isReachable, true,

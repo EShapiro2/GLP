@@ -22,6 +22,8 @@ import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart' show GlobalName;
 import 'package:glp_runtime/multiagent/glp_network.dart'
     show GlpNetwork, ProximityUnderlay, PubKey, TrustLevel;
+import 'package:glp_runtime/multiagent/simulation_network.dart'
+    show SimulationNetworkClient;
 import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 import 'package:glp_runtime/wire/artefact.dart' show Artefact;
 import 'package:glp_runtime/wire/codec.dart';
@@ -129,6 +131,8 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   registry.register('_place_declare', 3, placeDeclareKernel);
   registry.register('_place_remove', 1, placeRemoveKernel);
   registry.register('_trust_declare', 2, trustDeclareKernel);
+  registry.register('_peer_declare', 1, peerDeclareKernel);
+  registry.register('_address_declare', 2, addressDeclareKernel);
 
   // Module-as-value: producer half. (`_run`/2 — the consumer — is registered by
   // the engine from engine_v2/module_kernels.dart, where CodeImage is in scope.)
@@ -1245,29 +1249,36 @@ BodyKernelResult loadFileKernel(GlpRuntime rt, List<Object?> args) {
 // NETWORKING SEAM KERNELS (Definition Seam Predicates)
 // =============================================================================
 //
-// The five kernels behind peer_address/2, punch_udp/1, place_declare/3,
-// place_remove/1 and trust_declare/2. Each reaches the networking layer through
+// The seven kernels behind the seven seam predicates (IGLP, Definition "Seam
+// Predicates"): peer_address/2, punch_udp/1, place_declare/3, place_remove/1,
+// trust_declare/2, and peer_declare/1 and address_declare/2 over
+// GlpNetwork.putKnownPeer and putPeerAddress, the last two since 2026-10-11
+// (GLP-Spec 6e9c276, IGLP c2292b9). Each reaches the networking layer through
 // MadContext.network, a GlpNetwork; the layer functions are
 // GLP-Networking-API's, specified with the seam contract. Their effects lie outside the madGLP transition system, as
 // sign's and self_module's do.
 //
 // Each GLP wrapper gates its arguments on ground/1, so they are ground here.
 // A realization that does not provide the function throws UnsupportedError,
-// which is a violated precondition and so an abort, as a missing MadContext is.
+// which is a violated precondition and so an abort.
+//
+// Where no layer is bound at all --- the REPL, a test run without the
+// simulation --- the kernel stands in for a layer that observes nothing and
+// does nothing, and none aborts for want of a layer (IGLP
+// appendix-implementation-notes.tex, "One interface", 6ba0329):
+// "peer_address assigns none, place_declare assigns its stream unobservable
+// and nothing more, and the other seam predicates return having done nothing".
+// Until 2026-10-10 each aborted there, "not in madGLP mode (no MadContext)" or
+// "no GlpNetwork bound to this agent".  An argument the predicate does not
+// take is still a violated precondition and an abort, layer or none.
 
-/// The [MadContext] and its [GlpNetwork], or null with a diagnostic printed.
-({MadContext ctx, GlpNetwork network})? _seamContext(
-    GlpRuntime rt, String kernel) {
+/// The [MadContext] and the [GlpNetwork] bound to it, or null where no layer
+/// is bound at all: no MadContext, or one with no GlpNetwork.
+({MadContext ctx, GlpNetwork network})? _seamLayer(GlpRuntime rt) {
   final ctx = rt.madContext;
-  if (ctx is! MadContext) {
-    print('[ABORT] $kernel: not in madGLP mode (no MadContext)');
-    return null;
-  }
+  if (ctx is! MadContext) return null;
   final network = ctx.network;
-  if (network == null) {
-    print('[ABORT] $kernel: no GlpNetwork bound to this agent');
-    return null;
-  }
+  if (network == null) return null;
   return (ctx: ctx, network: network);
 }
 
@@ -1287,14 +1298,14 @@ String? _groundString(GlpRuntime rt, Object? arg) {
 /// signature/2's `unsigned` is.  Until 2026-10-09 the kernel bound the bare
 /// address and aborted where the layer observed none.  P is the peer's name,
 /// which over a real network is its public key (§Agent Names), presented as 64
-/// lowercase hex characters.
+/// lowercase hex characters.  Where no layer is bound, A is `none` whatever P
+/// names: a layer that observes nothing observes no address for any peer
+/// ("One interface", 6ba0329).
 BodyKernelResult peerAddressKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
     print('[ABORT] \'_peer_address\'/2: expected 2 arguments, got ${args.length}');
     return BodyKernelResult.abort;
   }
-  final seam = _seamContext(rt, '\'_peer_address\'/2');
-  if (seam == null) return BodyKernelResult.abort;
 
   final name = _groundString(rt, args[0]);
   if (name == null) {
@@ -1302,6 +1313,10 @@ BodyKernelResult peerAddressKernel(GlpRuntime rt, List<Object?> args) {
         'constant naming a peer, got ${_deref(rt, args[0])}');
     return BodyKernelResult.abort;
   }
+
+  final seam = _seamLayer(rt);
+  if (seam == null) return _bindResult(rt, args[1], ConstTerm('none'));
+
   final PubKey pk;
   try {
     pk = PubKey.fromHex(name);
@@ -1326,14 +1341,13 @@ BodyKernelResult peerAddressKernel(GlpRuntime rt, List<Object?> args) {
           : StructTerm('address', [ConstTerm(address)]));
 }
 
-/// '_punch_udp'(A?) — open a path to address A and return nothing.
+/// '_punch_udp'(A?) — open a path to address A and return nothing.  Where no
+/// layer is bound it returns having done nothing ("One interface", 6ba0329).
 BodyKernelResult punchUdpKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 1) {
     print('[ABORT] \'_punch_udp\'/1: expected 1 argument, got ${args.length}');
     return BodyKernelResult.abort;
   }
-  final seam = _seamContext(rt, '\'_punch_udp\'/1');
-  if (seam == null) return BodyKernelResult.abort;
 
   final address = _groundString(rt, args[0]);
   if (address == null) {
@@ -1341,6 +1355,9 @@ BodyKernelResult punchUdpKernel(GlpRuntime rt, List<Object?> args) {
         'address, got ${_deref(rt, args[0])}');
     return BodyKernelResult.abort;
   }
+
+  final seam = _seamLayer(rt);
+  if (seam == null) return BodyKernelResult.success;
 
   try {
     seam.network.punchUdp(address);
@@ -1355,13 +1372,16 @@ BodyKernelResult punchUdpKernel(GlpRuntime rt, List<Object?> args) {
 /// location at the time of the call, and grow this agent's own event stream for
 /// P from E's writer. The stream is fed serializer-fashion and closes only on
 /// place_remove or a superseding declaration.
+///
+/// Where no layer is bound, E is assigned `[unobservable | E']` and nothing
+/// more ("One interface", 6ba0329): nothing is declared and nothing recorded,
+/// so no event, no `observable` and no closing ever follows, E' being a writer
+/// no one holds.
 BodyKernelResult placeDeclareKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) {
     print('[ABORT] \'_place_declare\'/3: expected 3 arguments, got ${args.length}');
     return BodyKernelResult.abort;
   }
-  final seam = _seamContext(rt, '\'_place_declare\'/3');
-  if (seam == null) return BodyKernelResult.abort;
 
   final place = _groundString(rt, args[0]);
   if (place == null) {
@@ -1382,6 +1402,13 @@ BodyKernelResult placeDeclareKernel(GlpRuntime rt, List<Object?> args) {
     return BodyKernelResult.abort;
   }
 
+  final seam = _seamLayer(rt);
+  if (seam == null) {
+    final (_, tailReader) = rt.heap.allocateVariable();
+    return _bindResult(rt, stream,
+        StructTerm('.', [ConstTerm('unobservable'), VarRef(tailReader)]));
+  }
+
   try {
     seam.ctx.declarePlace(place, radius.toDouble(), stream.addr);
   } on UnsupportedError catch (e) {
@@ -1392,14 +1419,13 @@ BodyKernelResult placeDeclareKernel(GlpRuntime rt, List<Object?> args) {
 }
 
 /// '_place_remove'(P?) — end the declaration of place P, closing its stream.
-/// Does nothing where P is not declared.
+/// Does nothing where P is not declared.  Where no layer is bound it returns
+/// having done nothing ("One interface", 6ba0329).
 BodyKernelResult placeRemoveKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 1) {
     print('[ABORT] \'_place_remove\'/1: expected 1 argument, got ${args.length}');
     return BodyKernelResult.abort;
   }
-  final seam = _seamContext(rt, '\'_place_remove\'/1');
-  if (seam == null) return BodyKernelResult.abort;
 
   final place = _groundString(rt, args[0]);
   if (place == null) {
@@ -1407,6 +1433,9 @@ BodyKernelResult placeRemoveKernel(GlpRuntime rt, List<Object?> args) {
         'naming a place, got ${_deref(rt, args[0])}');
     return BodyKernelResult.abort;
   }
+
+  final seam = _seamLayer(rt);
+  if (seam == null) return BodyKernelResult.success;
 
   try {
     seam.ctx.removePlace(place);
@@ -1425,14 +1454,13 @@ BodyKernelResult placeRemoveKernel(GlpRuntime rt, List<Object?> args) {
 /// declared, a later declaration of an underlay replaces the level then
 /// standing").  An underlay or level the layer does not have is a violated
 /// precondition, and so an abort.  Until 2026-10-09 the first argument was a
-/// proximity medium, ble or lan.
+/// proximity medium, ble or lan.  Where no layer is bound it returns having
+/// done nothing ("One interface", 6ba0329).
 BodyKernelResult trustDeclareKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
     print('[ABORT] \'_trust_declare\'/2: expected 2 arguments, got ${args.length}');
     return BodyKernelResult.abort;
   }
-  final seam = _seamContext(rt, '\'_trust_declare\'/2');
-  if (seam == null) return BodyKernelResult.abort;
 
   final underlay = switch (_groundString(rt, args[0])) {
     'pan' => ProximityUnderlay.pan,
@@ -1455,6 +1483,9 @@ BodyKernelResult trustDeclareKernel(GlpRuntime rt, List<Object?> args) {
     return BodyKernelResult.abort;
   }
 
+  final seam = _seamLayer(rt);
+  if (seam == null) return BodyKernelResult.success;
+
   try {
     seam.network.setTrustLevel(underlay, level);
   } on UnsupportedError catch (e) {
@@ -1464,15 +1495,126 @@ BodyKernelResult trustDeclareKernel(GlpRuntime rt, List<Object?> args) {
   return BodyKernelResult.success;
 }
 
+/// The key of the peer a program names in a seam predicate's `Key` argument
+/// [name], or null where [name] names none.  Over a real network an agent's
+/// name is its public key (IGLP, Remark "Agent Names"), presented as 64 hex
+/// characters; the simulation realisation names agents symbolically, "resolved
+/// to keys at the seam" (IGLP appendix-implementation-notes.tex, "Simulation
+/// realisation"), through the identifier--key directory its router owns, as its
+/// hosts resolve a message's destination.  A key in hex, as self_key/1 gives
+/// it, names its peer there too.
+PubKey? _peerKey(GlpNetwork network, String name) {
+  if (network is SimulationNetworkClient) {
+    final pk = network.directory.pkOf(name);
+    if (pk != null) return pk;
+  }
+  if (!RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(name)) return null;
+  return PubKey.fromHex(name);
+}
+
+/// '_peer_declare'(P?) — give the layer the public key P of a peer the program
+/// knows, `putKnownPeer(pk)`, and return nothing (IGLP, Definition "Seam
+/// Predicates": "peer_declare gives the layer the public key P of a peer the
+/// program knows"; GLP-Spec appendix-guards, the row '_peer_declare'(Key?) and
+/// "Known peers").  The known-peer set is what Closed trust recognises (GNA,
+/// "Known Peers"); in the simulation the router answers a first contact from a
+/// declared peer under closed ("Simulation realisation").  A P that names no
+/// peer is a violated precondition, and so an abort.  Where no layer is bound
+/// it returns having done nothing ("One interface", 6ba0329).
+BodyKernelResult peerDeclareKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 1) {
+    print('[ABORT] \'_peer_declare\'/1: expected 1 argument, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  final name = _groundString(rt, args[0]);
+  if (name == null) {
+    print('[ABORT] \'_peer_declare\'/1: argument (P) must be a ground constant '
+        'naming a peer, got ${_deref(rt, args[0])}');
+    return BodyKernelResult.abort;
+  }
+
+  final seam = _seamLayer(rt);
+  if (seam == null) return BodyKernelResult.success;
+
+  final pk = _peerKey(seam.network, name);
+  if (pk == null) {
+    print('[ABORT] \'_peer_declare\'/1: $name names no peer: neither a '
+        '64-character hex public key nor an agent the layer names');
+    return BodyKernelResult.abort;
+  }
+
+  try {
+    seam.network.putKnownPeer(pk);
+  } on UnsupportedError catch (e) {
+    print('[ABORT] \'_peer_declare\'/1: ${e.message}');
+    return BodyKernelResult.abort;
+  }
+  return BodyKernelResult.success;
+}
+
+/// '_address_declare'(P?, A?) — give the layer the address A at which peer P
+/// is reached, `putPeerAddress(pk, address)`, and return nothing (IGLP,
+/// Definition "Seam Predicates": "address_declare the address A at which peer
+/// P is reached"; GLP-Spec appendix-guards, the row '_address_declare'(Key?,
+/// String?) and "Known peers").  The layer records it with the known peer
+/// (GNA, "Connectivity and Address"); the simulation realisation takes it to
+/// no effect, "the effect of address_declare/2" not being provided
+/// ("Simulation realisation").  A P that names no peer is a violated
+/// precondition, and so an abort.  Where no layer is bound it returns having
+/// done nothing ("One interface", 6ba0329).
+BodyKernelResult addressDeclareKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    print('[ABORT] \'_address_declare\'/2: expected 2 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  final name = _groundString(rt, args[0]);
+  if (name == null) {
+    print('[ABORT] \'_address_declare\'/2: first argument (P) must be a ground '
+        'constant naming a peer, got ${_deref(rt, args[0])}');
+    return BodyKernelResult.abort;
+  }
+  final address = _groundString(rt, args[1]);
+  if (address == null) {
+    print('[ABORT] \'_address_declare\'/2: second argument (A) must be a '
+        'ground constant address, got ${_deref(rt, args[1])}');
+    return BodyKernelResult.abort;
+  }
+
+  final seam = _seamLayer(rt);
+  if (seam == null) return BodyKernelResult.success;
+
+  final pk = _peerKey(seam.network, name);
+  if (pk == null) {
+    print('[ABORT] \'_address_declare\'/2: $name names no peer: neither a '
+        '64-character hex public key nor an agent the layer names');
+    return BodyKernelResult.abort;
+  }
+
+  try {
+    seam.network.putPeerAddress(pk, address);
+  } on UnsupportedError catch (e) {
+    print('[ABORT] \'_address_declare\'/2: ${e.message}');
+    return BodyKernelResult.abort;
+  }
+  return BodyKernelResult.success;
+}
+
 // =============================================================================
-// '_output'/1 - Print a ground term as a line
+// '_output'/1 - An element of send_to_user/1 to the person
 // =============================================================================
 
-/// '_output'(T) - prints ground term T to stdout.
+/// '_output'(T) - emits the ground term T to the person operating the agent
+/// (GLP-Spec appendix-guards.tex, "Output to the person": send_to_user(Stream)
+/// "emits each element of Stream to the person operating the agent").
 ///
-/// Called by send_to_user/1 after ui_relay has ensured the term is ground.
-/// The output callback can be overridden via GlpRuntime.outputCallback
-/// for testing or Flutter integration.
+/// Called by send_to_user/1, whose clause guards T ground.  Where the runtime
+/// has a person's bridge, [GlpRuntime.outputTermCallback], the term goes to it
+/// whole and no text is made; otherwise a terminal is the person, and T goes
+/// to [GlpRuntime.outputCallback], or to stdout, as a terminal shows it
+/// ([formatGroundTerm]).  Until 2026-10-11 every element was printed, and a
+/// screen read the line back.
 BodyKernelResult outputKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 1) {
     print('[ABORT] \'_output\'/1: expected 1 argument, got ${args.length}');
@@ -1480,14 +1622,19 @@ BodyKernelResult outputKernel(GlpRuntime rt, List<Object?> args) {
   }
 
   final term = _deepDeref(rt, args[0] as Term);
-  final formatted = formatGroundTerm(term);
 
-  // Use callback if set (for testing/Flutter), otherwise print
+  final toPerson = rt.outputTermCallback;
+  if (toPerson != null) {
+    toPerson(term);
+    return BodyKernelResult.success;
+  }
+
+  final shown = formatGroundTerm(term);
   final callback = rt.outputCallback;
   if (callback != null) {
-    callback(formatted);
+    callback(shown);
   } else {
-    print(formatted);
+    print(shown);
   }
 
   return BodyKernelResult.success;
