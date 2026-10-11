@@ -103,11 +103,11 @@ import 'mediator.dart' show typeSource;
 /// A moded interactive type of the program: its type as written, its mode,
 /// the functor the compilation gives it in Question, and the type parameters
 /// of the procedure that declares it.  One of another module N, which an
-/// import brings (vGLP, Definition "Canonical Compilation": "the interactive
-/// types of N join those of M, each with the functor its export gives it and
-/// its widget"), carries the module it is [from] and the [widget] N gives
-/// it; [alsoOwn] where a volitional procedure of the program's own has it
-/// too.
+/// import brings (vGLP at 66b6500, Definition "Canonical Compilation": "the
+/// interactive types of N join those of M, each with the functor and the
+/// widget its export gives it, M declaring no widget for a type it
+/// imports"), carries the module it is [from] and the [widget] N gives it;
+/// [alsoOwn] where a volitional procedure of the program's own has it too.
 class InteractiveType {
   final TypeExpr type;
   final bool readerMode;
@@ -435,30 +435,17 @@ class _Generator {
   }
 
   /// The widget of interactive type [t], whose root is [root]: the one its
-  /// module gives it where it is another module's, "each with the functor
-  /// its export gives it and its widget" (vGLP, Definition "Canonical
-  /// Compilation"), and the one in the program's scope where it is the
-  /// program's own.  An imported type the program's own volitional procedure
-  /// has too is served by one construct process, so the two widgets are one,
-  /// or it is refused: the Definition gives no construct process two.
-  String _typeWidget(InteractiveType t, _Node root) {
-    final given = t.widget;
-    if (given == null) return _widget(root, {});
-    if (t.alsoOwn) {
-      final own = _widget(root, {});
-      if (own != given) {
-        throw CompileError(
-            'The interactive type ${t.written} is a question of the program\'s '
-            'own and of ${t.from}, one alternative ${t.functor} of the '
-            'questions, and its widget is $own here and $given in ${t.from}: '
-            'one construct process serves the asks of one functor, and the '
-            'Definition gives an imported type "the functor its export gives '
-            'it and its widget" (vGLP, Definition "Canonical Compilation")',
-            t.line, t.column, phase: 'analyzer');
-      }
-    }
-    return given;
-  }
+  /// module gives it where it is another module's, the importer declaring
+  /// none for it, a volitional procedure of the program's own of the type
+  /// included ("the interactive types of N join those of M, each with the
+  /// functor and the widget its export gives it, M declaring no widget for
+  /// a type it imports", vGLP at 66b6500, Definition "Canonical
+  /// Compilation"; vGLP #7 Cowork, 2026-10-11 14:19 UTC, item 1: "the
+  /// widget travels with the type from the module that exports it, as the
+  /// functor does"); and the one in the program's scope where it is the
+  /// program's own.
+  String _typeWidget(InteractiveType t, _Node root) =>
+      t.widget ?? _widget(root, {});
 
   // --- the construct clause -------------------------------------------------
 

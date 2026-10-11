@@ -64,6 +64,20 @@ void main() {
   Matcher refused(String why) => throwsA(isA<CompileError>()
       .having((e) => e.message, 'message', contains(why)));
 
+  // The line and column, from 1, at which [needle] first occurs in [text].
+  (int, int) at(String text, String needle) {
+    final i = text.indexOf(needle);
+    final before = text.substring(0, i).split('\n');
+    return (before.length, before.last.length + 1);
+  }
+
+  // A refusal with [why] in its message, at [line] and [column].
+  Matcher refusedAt(String why, int line, int column) => throwsA(
+      isA<CompileError>()
+          .having((e) => e.message, 'message', contains(why))
+          .having((e) => e.line, 'line', line)
+          .having((e) => e.column, 'column', column));
+
   const card = '''
 Peer ::= Constant.
 Offer ::= offer(Peer).
@@ -488,7 +502,6 @@ ask_confirm(P, A?) :- ground(P?) | boxes # confirm(P?, A).
         'one N gives it, is one construct process', () {
       final c = compileWith('''
 $types
-Card =::= inbox_card.
 $calling
 exported procedure (Card)*show(Offer?).
 (card(P?, _))*show(offer(P)).
@@ -499,19 +512,97 @@ exported procedure (Card)*show(Offer?).
       expect(c.widgets['Card'], 'inbox_card');
     });
 
-    group('is refused', () {
-      test('a type of the program\'s own that is one of N\'s, with another '
-          'widget: one functor, two widgets', () {
-        expect(
-            () => compileWith('''
+    // vGLP at 66b6500, Definition "Canonical Compilation": "each with the
+    // functor and the widget its export gives it, M declaring no widget for
+    // a type it imports" (vGLP #7 Cowork, 2026-10-11 14:19 UTC, item 1: "the
+    // widget travels with the type from the module that exports it, as the
+    // functor does").
+    test('a type of the program\'s own that is one of N\'s takes the widget N '
+        'gives it, not the one the program\'s scope would give it', () {
+      final c = compileWith('''
 $befriend
 exported procedure (Card)*show(Offer?).
 (card(P?, _))*show(offer(P)).
-''', {'responder': responder}),
-            refused("its widget is form(card, [field('Peer', shown), "
-                "field('YesNo', buttons([yes, no]))]) "
-                'here and inbox_card in responder'));
+''', {'responder': responder});
+      expect(c.widgets['Card'], 'inbox_card');
+      expect(
+          c.source,
+          contains('construct(Id, card_w(X), Gs, Ds?) :- '
+              'present_card([], X?, Gs?, _, Vs, Done), '
+              'run(Id?, inbox_card, Vs?, Done?, Ds).'));
+      expect(c.source, isNot(contains('form(card, [')));
+      // What an importer of the program reads of its export.
+      expect(
+          c.interactive.singleWhere((t) => t.written == 'Card').widget,
+          'inbox_card');
+    });
+
+    test('a declaration of the importer for a type of its own alone holds '
+        'in it', () {
+      final c = compileWith('''
+$types
+Mood ::= happy ; sad.
+Mood? =::= dial.
+$calling
+exported procedure (Mood?)*feel(Mood).
+(M1)*feel(M1?).
+''', {'responder': responder});
+      expect(c.widgets['Mood?'], 'dial');
+      expect(c.widgets['Card'], 'inbox_card');
+    });
+
+    group('is refused', () {
+      const declaring = 'A widget declaration for Card, an interactive type '
+          'this module imports from responder: the type joins with the widget '
+          'its export gives it, inbox_card, and the importer declares none for '
+          'it (vGLP, Definition "Canonical Compilation": "each with the '
+          'functor and the widget its export gives it, M declaring no widget '
+          'for a type it imports")';
+
+      test('a widget declaration of the importer for a type it imports, '
+          'another widget or the same, the message naming the type, its '
+          'module and the widget it travels with, at the declaration', () {
+        final lamp = '''
+$types
+Card =::= lamp.
+$calling
+''';
+        final (l1, c1) = at(lamp, 'Card =::=');
+        expect(() => compileWith(lamp, {'responder': responder}),
+            refusedAt(declaring, l1, c1));
+        final same = '''
+$types
+$calling
+  Card =::= inbox_card.
+exported procedure (Card)*show(Offer?).
+(card(P?, _))*show(offer(P)).
+''';
+        final (l2, c2) = at(same, 'Card =::=');
+        expect(c2, 3);
+        expect(() => compileWith(same, {'responder': responder}),
+            refusedAt(declaring, l2, c2));
       });
+
+      test('a type a question of N reaches is one the importer imports, '
+          'though its import names another', () {
+        // respond reaches jot's Note? in responder.
+        final src = '''
+$types
+$calling
+Note? =::= jotter.
+''';
+        final (l, c) = at(src, 'Note? =::=');
+        expect(
+            () => compileWith(src, {'responder': responder}),
+            refusedAt(
+                'A widget declaration for Note?, an interactive type this '
+                'module imports from responder: the type joins with the '
+                "widget its export gives it, form(note, [field('String', "
+                'text)]), and the importer declares none for it',
+                l,
+                c));
+      });
+
 
       // "Types referenced in an imported declaration are resolved against
       // the caller's type scope" (TGLP modules.tex, Design): a type of N

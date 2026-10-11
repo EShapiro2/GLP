@@ -59,20 +59,23 @@
 //     N#p(T1,...,Tn). of an ordinary procedure of N that reaches a question,
 //     are compiled as their exports are, to the import of p with its ask
 //     stream added, and the interactive types of N join those of M, each with
-//     the functor its export gives it and its widget: the type of the asks
-//     has their functors and ⌈M⌉ their construct processes, so an ask on a
-//     caller's ask stream, of p or of a question p reaches in N, is served as
-//     any other" (vGLP, the Definition, the import sentence; vGLP's tasks of
-//     2026-10-10 09:06 and 11:43 UTC).  The compilation reads N's export ---
-//     N's own canonical compilation, which an [ExportReader] gives it ---
-//     and compiles each such declaration to imported procedure N#p(T1, ...,
-//     Tn, Stream(Ask)) in the program's types; every interactive type of N,
-//     N's own and those N imports, joins Question with the functor N gives
-//     it, a `_2` of N's included, and joins the construct processes with the
-//     widget N gives it; a type of the program's own that is one of N's is
-//     that one, its functor N's; a call N#p(S1, ..., Sn) is a call of a
-//     procedure that reaches a question, given an ask stream as any such call
-//     is, and keeps p's name;
+//     the functor and the widget its export gives it, M declaring no widget
+//     for a type it imports: the type of the asks has their functors and
+//     ⌈M⌉ their construct processes, so an ask on a caller's ask stream, of
+//     p or of a question p reaches in N, is served as any other" (vGLP at
+//     66b6500, the Definition, the import sentence; vGLP's tasks of
+//     2026-10-10 09:06 and 11:43 UTC, and vGLP #7 Cowork, 2026-10-11 14:19
+//     UTC, item 1).  The compilation reads N's export --- N's own canonical
+//     compilation, which an [ExportReader] gives it --- and compiles each
+//     such declaration to imported procedure N#p(T1, ..., Tn, Stream(Ask))
+//     in the program's types; every interactive type of N, N's own and those
+//     N imports, joins Question with the functor N gives it, a `_2` of N's
+//     included, and joins the construct processes with the widget N gives
+//     it; a type of the program's own that is one of N's is that one, its
+//     functor and its widget N's; a widget declaration of the program's for
+//     a type it imports is refused; a call N#p(S1, ..., Sn) is a call of a
+//     procedure that reaches a question, given an ask stream as any such
+//     call is, and keeps p's name;
 //   - the dispatcher and the construct processes (Part 2): the dispatcher's
 //     generic source, programs/vglp/dispatcher.glp, its names made fresh
 //     against the program's (dispatcher.dart), and the clause of construct/4
@@ -579,7 +582,8 @@ CanonicalProgram compileCanonical(String text,
   // first; two imported types of one functor are refused, and so is one type
   // joining with two functors or two widgets.  Then the program's own, in the
   // order of the declarations: a type that is one of the imported takes its
-  // functor, the interactive types of N joining those of M; another takes the
+  // functor and its widget, the interactive types of N joining those of M,
+  // and the program declares no widget for it; another takes the
   // Definition's t, two that coincide told apart (vGLP #4 Cowork, 2026-10-02
   // 08:26 UTC, Q1).
   final functors = <String, String>{};
@@ -602,7 +606,7 @@ CanonicalProgram compileCanonical(String text,
                     '${e.functor}, its widget ${same.widget} in ${same.from} '
                     'and ${e.widget} in $module: one construct process serves '
                     'the asks of one functor, and the Definition gives a type '
-                    'of N "the functor its export gives it and its widget" '
+                    'of N "the functor and the widget its export gives it" '
                     '(vGLP, Definition "Canonical Compilation")'
                 : 'The interactive type $w of $module has the functor '
                     '${e.functor} in the questions, and so has another '
@@ -633,6 +637,23 @@ CanonicalProgram compileCanonical(String text,
   }
   for (final i in imports.values) {
     i.functor = functors[typeSource(i.interactiveType)]!;
+  }
+  // "... each with the functor and the widget its export gives it, M
+  // declaring no widget for a type it imports" (vGLP at 66b6500, Definition
+  // "Canonical Compilation"; vGLP #7 Cowork, 2026-10-11 14:19 UTC, item 1:
+  // "a declaration in the importer of another widget for a type it imports
+  // is refused").
+  for (final t in joined.values) {
+    final at = widgetDecls.positionOf(t.written);
+    if (at == null) continue;
+    throw CompileError(
+        'A widget declaration for ${t.written}, an interactive type this '
+        'module imports from ${t.from}: the type joins with the widget its '
+        'export gives it, ${t.widget}, and the importer declares none for it '
+        '(vGLP, Definition "Canonical Compilation": "each with the functor '
+        'and the widget its export gives it, M declaring no widget for a type '
+        'it imports")',
+        at.$1, at.$2, phase: 'analyzer');
   }
   final functorsTaken = {...functors.values};
   for (final v in volitional.values) {
@@ -913,6 +934,16 @@ class WidgetDeclarations {
   final List<(int, int)> positions;
 
   WidgetDeclarations(this.stripped, this.byModedType, this.positions);
+
+  /// Where the declaration of the moded type [key] begins, or null.
+  (int, int)? positionOf(String key) {
+    var i = 0;
+    for (final k in byModedType.keys) {
+      if (k == key) return positions[i];
+      i++;
+    }
+    return null;
+  }
 }
 
 /// Read the widget declarations `T =::= W.` of [text]: T a moded type, W an
