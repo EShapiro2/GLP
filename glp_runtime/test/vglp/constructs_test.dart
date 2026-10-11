@@ -26,6 +26,9 @@ import 'package:glp_runtime/compiler/error.dart';
 import 'package:glp_runtime/vglp/canonical.dart';
 import 'package:glp_runtime/vglp/dispatcher.dart';
 import 'package:glp_runtime/vglp/constructs.dart' show listEnd;
+import 'package:glp_runtime/vglp/mediator.dart' show MediatorSource;
+import 'package:glp_runtime/vglp/program_compilation.dart'
+    show compileVglpSource;
 
 const _programs = '../programs';
 
@@ -1742,6 +1745,128 @@ procedure (YesNo?)*ask(Integer?).
 (yes)*ask(_).
 ask(1, t).
 '''), throwsA(isA<CompileError>().having((e) => e.line, 'line', 5)));
+    });
+  });
+
+  group('modules that import from each other procedures that reach a '
+      'question (vGLP at 66b6500, Definition "Canonical Compilation"; vGLP #7 '
+      'Cowork, 2026-10-11 14:19 UTC, item 2)', () {
+    // "Modules that import from each other procedures that reach a question
+    // are compiled together, their interactive types joined once": each
+    // with one functor and one widget, every module of them with the
+    // construct process of every type.  The modules are written under
+    // programs/tests/vglp/ and compiled beside each other against the
+    // generic source, as the loader compiles them, and removed after.
+    final mediator = MediatorSource.fromDirectory(dir.path);
+    const types = '''
+Peer      ::= Constant.
+YesNo     ::= yes ; no.
+Offer     ::= offer(Peer).
+Response  ::= accept(Peer) ; refuse(Peer).
+Card      ::= card(Peer, YesNo?).
+Note      ::= note(String).
+''';
+    // a and b import from each other jot_a and jot_b; a asks a card too.
+    String a(String more) => '''
+$types
+imported procedure (Note?)*b#jot_b(Note).
+exported procedure (Note?)*jot_a(Note).
+(N)*jot_a(N?).
+exported procedure (Card)*respond(Offer?, Response).
+(card(From?, Answer))*respond(offer(From), Resp?) :-
+    ground(From?) | decide(Answer?, From?, Resp).
+procedure decide(YesNo?, Peer?, Response).
+decide(yes, From, accept(From?)).
+decide(no, From, refuse(From?)).
+$more''';
+    String b(String more) => '''
+$types
+imported procedure (Note?)*a#jot_a(Note).
+exported procedure (Note?)*jot_b(Note).
+(N)*jot_b(N?).
+$more''';
+
+    late Directory fixture;
+    setUp(() => fixture = Directory('$_programs/tests/vglp/cycle_fixture_'
+        '${pid}_${DateTime.now().microsecondsSinceEpoch}')
+      ..createSync());
+    tearDown(() {
+      if (fixture.existsSync()) fixture.deleteSync(recursive: true);
+    });
+
+    // Write [files] into the fixture and compile [entry] beside them.
+    String compileBeside(Map<String, String> files, String entry) {
+      files.forEach((name, text) =>
+          File('${fixture.path}/$name').writeAsStringSync(text));
+      final path = File('${fixture.path}/$entry').absolute.path;
+      return compileVglpSource(File(path).readAsStringSync(),
+          mediator: mediator, scope: scope, path: path);
+    }
+
+    test('each has the construct process of every interactive type of them, '
+        'on its one functor with its one widget', () {
+      final files = {'a.vglp': a(''), 'b.vglp': b('')};
+      for (final m in ['a.vglp', 'b.vglp']) {
+        final s = compileBeside(files, m);
+        expect(
+            s,
+            contains('construct(Id, card_w(X), Gs, Ds?) :- '
+                'present_card([], X?, Gs?, _, Vs, Done), '
+                'run(Id?, form(card, [field(\'Peer\', shown), '
+                'field(\'YesNo\', buttons([yes, no]))]), Vs?, Done?, Ds).'),
+            reason: m);
+        expect(
+            s,
+            contains('construct(Id, note_r(X?), Gs, Ds?) :- '
+                'answer_note([], X, Gs?, _, Done), '
+                'run(Id?, form(note, [field(\'String\', text)]), '
+                '[input([])], Done?, Ds).'),
+            reason: m);
+      }
+    });
+
+    test('a type of theirs that the widget declarations of one of them would '
+        'draw apart from another\'s is refused: one type, two widgets', () {
+      // a's YesNo? =::= toggle draws a's card with a toggle, b's with
+      // buttons.
+      expect(
+          () => compileBeside(
+              {'a.vglp': a('YesNo? =::= toggle.\n'), 'b.vglp': b('')},
+              'b.vglp'),
+          refused('The interactive type Card of the modules compiled '
+              'together, a, b, has the widget'));
+    });
+
+    test('one type joining from modules outside them with two widgets is '
+        'refused', () {
+      // x gives the card inbox_card, y its default.
+      String responder(String name, String widget) => '''
+$types
+$widget
+exported procedure (Card)*$name(Offer?, Response).
+(card(From?, Answer))*$name(offer(From), Resp?) :-
+    ground(From?) | decide(Answer?, From?, Resp).
+procedure decide(YesNo?, Peer?, Response).
+decide(yes, From, accept(From?)).
+decide(no, From, refuse(From?)).
+''';
+      expect(
+          () => compileBeside({
+                'x.vglp': responder('respond_x', 'Card =::= inbox_card.'),
+                'y.vglp': responder('respond_y', ''),
+                'a.vglp': '''
+$types
+imported procedure (Note?)*b#jot_b(Note).
+exported procedure (Note?)*jot_a(Note).
+(N)*jot_a(N?).
+imported procedure (Card)*x#respond_x(Offer?, Response).
+''',
+                'b.vglp': b('imported procedure (Card)*y#respond_y(Offer?, '
+                    'Response).\n'),
+              }, 'a.vglp'),
+          refused('The interactive type Card joins the questions of the '
+              'modules compiled together, a, b, from x and from y with the '
+              'functor card_w, its widget inbox_card in x'));
     });
   });
 }

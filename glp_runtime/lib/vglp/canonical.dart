@@ -76,6 +76,12 @@
 //     a type it imports is refused; a call N#p(S1, ..., Sn) is a call of a
 //     procedure that reaches a question, given an ask stream as any such
 //     call is, and keeps p's name;
+//   - "Modules that import from each other procedures that reach a question
+//     are compiled together, their interactive types joined once" (vGLP at
+//     66b6500, the Definition; vGLP #7 Cowork, 2026-10-11 14:19 UTC, item
+//     2): read before any export of theirs is emitted, each export of one of
+//     them standing in by what was read of it ("Modules compiled together"
+//     below, and program_compilation.dart);
 //   - the dispatcher and the construct processes (Part 2): the dispatcher's
 //     generic source, programs/vglp/dispatcher.glp, its names made fresh
 //     against the program's (dispatcher.dart), and the clause of construct/4
@@ -806,6 +812,354 @@ CanonicalProgram compileCanonical(String text,
               false)
             s
       });
+}
+
+// ---------------------------------------------------------------------------
+// Modules compiled together
+// ---------------------------------------------------------------------------
+//
+// "Modules that import from each other procedures that reach a question are
+// compiled together, their interactive types joined once" (vGLP at 66b6500,
+// Definition "Canonical Compilation"; vGLP #7 Cowork, 2026-10-11 14:19 UTC,
+// item 2).  Which procedures of each reach a question, and their interactive
+// types with their functors and widgets, are read off their sources across
+// the modules before any export of theirs is emitted: the front of each
+// module ([readModuleFront]), the procedures that reach a question a least
+// fixpoint over the calls of all of them (program_compilation.dart), and the
+// interactive types joined once ([joinComponentTypes]).  Each module is then
+// compiled by [compileCanonical], its imports of the others compiled as their
+// exports are, each export standing in by what was read of it.
+
+/// An import of a procedure of another module, as the compilation reads it
+/// before any export is emitted: `imported procedure (T)*N#p(T1, ..., Tn).`
+/// or `imported procedure N#p(T1, ..., Tn).`.
+class FrontImport {
+  /// The module path N, as the declaration writes it.
+  final String module;
+
+  /// p/n, n the arity of p's calls: a volitional procedure's without its
+  /// interactive type.
+  final String signature;
+
+  /// N#p/n, the key [compileCanonical] reads the calls of p by.
+  final String key;
+
+  /// Whether the declaration imports a volitional procedure, with its
+  /// interactive type.
+  final bool volitional;
+
+  final int line, column;
+
+  FrontImport(this.module, this.signature, this.key, this.volitional,
+      this.line, this.column);
+}
+
+/// A module as the compilation reads it before any export is emitted: its
+/// volitional procedures with their interactive types, its imports of
+/// procedures of other modules, its widget declarations, and which of its
+/// procedures reach a question given which of its imports do.
+class ModuleFront {
+  final Module module;
+
+  /// The module's own volitional procedures, by their source signature p/n,
+  /// in the order of their declarations.
+  final Map<String, VolitionalProcedure> volitional;
+
+  final Map<String, ProcDecl> _decls;
+
+  /// The imports, in source order.
+  final List<FrontImport> imports;
+
+  final WidgetDeclarations widgets;
+
+  ModuleFront._(
+      this.module, this.volitional, this._decls, this.imports, this.widgets);
+
+  /// The procedures that reach a question, by their source signature, where
+  /// an import of a volitional procedure reaches one and an import of an
+  /// ordinary procedure does where [reaches] says so: "A procedure of M
+  /// reaches a question if it is volitional or a clause of it calls a
+  /// procedure that does" (Definition "Canonical Compilation"), as
+  /// [compileCanonical] reads it.
+  Set<String> reaching(bool Function(FrontImport i) reaches) => _reaching(
+      module,
+      volitional,
+      {for (final v in volitional.values) '${v.name}/${v.arity + 1}': v},
+      {
+        for (final i in imports)
+          if (i.volitional || reaches(i)) i.key
+      });
+
+  /// Those of [reaching] the module exports.
+  Set<String> exportedReaching(Set<String> reaching) => {
+        for (final s in reaching)
+          if ((volitional[s] == null
+                      ? _decls[s]
+                      : _decls[
+                          '${volitional[s]!.name}/${volitional[s]!.arity + 1}'])
+                  ?.exported ??
+              false)
+            s
+      };
+}
+
+/// The front of [text], read as [compileCanonical] reads the source, or null
+/// where it has display declarations, whose imports no compilation by the
+/// canonical compilation reads.  A source the front end cannot read is
+/// refused, as its compilation refuses it.
+ModuleFront? readModuleFront(String text) {
+  final widgets = extractWidgetDeclarations(text);
+  final parsed = _parse(widgets.stripped);
+  final m = parsed.module;
+  if (m.displayDecls.isNotEmpty) return null;
+  final decls = {
+    for (final d in m.procDeclarations)
+      if (!d.imported) d.key: d
+  };
+  final taken = _namesUsed(m);
+  final volitional = <String, VolitionalProcedure>{};
+  final imports = <FrontImport>[];
+  final keys = <String>{};
+  final volitionalAt = <String>{};
+  for (final v in parsed.declarations) {
+    if (v.module != null) {
+      volitionalAt.add('${v.line}:${v.column}');
+      final key = '${v.module}#${v.name}/${v.arity}';
+      if (keys.add(key)) {
+        imports.add(FrontImport(
+            v.module!, '${v.name}/${v.arity}', key, true, v.line, v.column));
+      }
+      continue;
+    }
+    final decl = decls['${v.name}/${v.arity + 1}'];
+    if (decl == null) continue;
+    volitional.putIfAbsent(
+        '${v.name}/${v.arity}',
+        () => VolitionalProcedure(
+            v.name,
+            v.arity,
+            decl.argTypes.last,
+            decl.isInputArg(v.arity),
+            _fresh('${v.name}1', taken),
+            decl.typeParams,
+            v.line,
+            v.column));
+  }
+  for (final d in m.procDeclarations) {
+    if (!d.imported || d.modulePath == null) continue;
+    if (volitionalAt.contains('${d.line}:${d.column}')) continue;
+    if (!keys.add(d.qualifiedKey)) continue;
+    imports.add(FrontImport(d.modulePath!, '${d.name}/${d.arity}',
+        d.qualifiedKey, false, d.line, d.column));
+  }
+  imports.sort((a, b) =>
+      a.line != b.line ? a.line - b.line : a.column - b.column);
+  return ModuleFront._(m, volitional, decls, imports, widgets);
+}
+
+/// A module of modules compiled together: its [name], as its importers'
+/// declarations write it; its [front]; and its imports of procedures that
+/// reach a question of modules outside the component, each with that
+/// module's export, in source order.
+class ComponentMember {
+  final String name;
+  final ModuleFront front;
+  final List<(FrontImport, CanonicalProgram)> outside;
+  ComponentMember(this.name, this.front, this.outside);
+}
+
+/// A refusal of modules compiled together, placed in the text of [member].
+class ComponentRefusal implements Exception {
+  final String member;
+  final CompileError error;
+  ComponentRefusal(this.member, this.error);
+}
+
+const _together = '"Modules that import from each other procedures that reach '
+    'a question are compiled together, their interactive types joined once"';
+
+/// The interactive types of modules compiled together, joined once, each
+/// with one functor and, where its widget is given before the construct
+/// processes are built, one widget: "Modules that import from each other
+/// procedures that reach a question are compiled together, their interactive
+/// types joined once" (vGLP at 66b6500, Definition "Canonical Compilation").
+///
+/// A type the component imports from a module outside it has the functor and
+/// the widget that module's export gives it ("each with the functor and the
+/// widget its export gives it"), a type of the component's own that is one of
+/// them included; one type joining with two functors or two widgets is
+/// refused, and so are two types joining with one functor, as an import
+/// refuses them (the import sentence).  Every other type, the component's
+/// own, has the Definition's t, those coinciding with a functor the
+/// component imports told apart by `_2`, `_3`, ...; its widget is the one its
+/// scope gives it, which the modules compiled together share, being of one
+/// directory.  The undecided cases are refused, the Definition not saying how
+/// to decide them: two types of two of the modules whose functors coincide,
+/// and a widget declaration of one of the modules for a type of the
+/// component's own.
+///
+/// The types are in the order of [members] and, in each, of its
+/// declarations, an import bringing those of its module at its place.
+List<InteractiveType> joinComponentTypes(List<ComponentMember> members) {
+  final names = [for (final m in members) m.name].join(', ');
+
+  // The types the component imports from modules outside it.
+  final outside = <String, (InteractiveType, String)>{};
+  final outsideByFunctor = <String, (InteractiveType, String)>{};
+  for (final m in members) {
+    for (final (i, n) in m.outside) {
+      for (final e in n.interactive) {
+        final w = e.written;
+        final same = outsideByFunctor[e.functor];
+        if (same != null) {
+          if (same.$1.written == w && same.$1.widget == e.widget) continue;
+          throw ComponentRefusal(
+              m.name,
+              CompileError(
+                  same.$1.written == w
+                      ? 'The interactive type $w joins the questions of the '
+                          'modules compiled together, $names, from ${same.$2} '
+                          'and from ${i.module} with the functor ${e.functor}, '
+                          'its widget ${same.$1.widget} in ${same.$2} and '
+                          '${e.widget} in ${i.module}: their interactive types '
+                          'are joined once, each with the functor and the '
+                          'widget its export gives it (vGLP, Definition '
+                          '"Canonical Compilation": $_together)'
+                      : 'The interactive type $w of ${i.module} has the '
+                          'functor ${e.functor} in the questions of the '
+                          'modules compiled together, $names, and so has '
+                          '${same.$1.written} of ${same.$2}: two alternatives '
+                          'of the questions\' union cannot share one (vGLP, '
+                          'Definition "Canonical Compilation": $_together)',
+                  i.line,
+                  i.column,
+                  phase: 'analyzer'));
+        }
+        final other = outside[w];
+        if (other != null) {
+          throw ComponentRefusal(
+              m.name,
+              CompileError(
+                  'The interactive type $w joins the questions of the modules '
+                  'compiled together, $names, with the functor '
+                  '${other.$1.functor} from ${other.$2} and ${e.functor} from '
+                  '${i.module}: their interactive types are joined once, one '
+                  'type of the questions\' union with one functor (vGLP, '
+                  'Definition "Canonical Compilation": $_together)',
+                  i.line,
+                  i.column,
+                  phase: 'analyzer'));
+        }
+        outside[w] = (e, i.module);
+        outsideByFunctor[e.functor] = (e, i.module);
+      }
+    }
+  }
+
+  // The component's own types, each with the modules that declare it.
+  final own = <String, VolitionalProcedure>{};
+  final declaredIn = <String, List<ComponentMember>>{};
+  for (final m in members) {
+    for (final v in m.front.volitional.values) {
+      final w = typeSource(v.interactiveType);
+      if (outside.containsKey(w)) continue;
+      own.putIfAbsent(w, () => v);
+      final ms = declaredIn.putIfAbsent(w, () => []);
+      if (!ms.contains(m)) ms.add(m);
+    }
+  }
+
+  // No module of the component declares a widget for a type of its own.
+  for (final m in members) {
+    for (final key in m.front.widgets.byModedType.keys) {
+      if (!own.containsKey(key)) continue;
+      final at = m.front.widgets.positionOf(key)!;
+      throw ComponentRefusal(
+          m.name,
+          CompileError(
+              'A widget declaration for $key, an interactive type of the '
+              'modules compiled together, $names: their interactive types '
+              'are joined once, each with one widget, and the Definition '
+              'does not say which module\'s declaration gives a type of '
+              'theirs its widget (vGLP, Definition "Canonical Compilation": '
+              '"each with the functor and the widget its export gives it, M '
+              'declaring no widget for a type it imports"; $_together)',
+              at.$1,
+              at.$2,
+              phase: 'analyzer'));
+    }
+  }
+
+  // The functors: an imported one's its export's; each of the component's
+  // own the Definition's t, told apart from those imported, and two of one
+  // module told apart in the order of its declarations.
+  final functors = <String, String>{
+    for (final e in outside.values) e.$1.written: e.$1.functor
+  };
+  final taken = {...functors.values};
+  final byStem = <String, List<String>>{};
+  for (final MapEntry(key: w, value: v) in own.entries) {
+    byStem
+        .putIfAbsent(questionFunctorStem(v.interactiveType, v.readerMode),
+            () => [])
+        .add(w);
+  }
+  for (final MapEntry(key: stem, value: ws) in byStem.entries) {
+    final modules = {for (final w in ws) ...declaredIn[w]!};
+    if (ws.length > 1 && modules.length > 1) {
+      final w = ws[1];
+      final m = declaredIn[w]!.first;
+      final v = m.front.volitional.values
+          .firstWhere((v) => typeSource(v.interactiveType) == w);
+      throw ComponentRefusal(
+          m.name,
+          CompileError(
+              'The interactive types ${ws.first} of '
+              '${declaredIn[ws.first]!.map((m) => m.name).join(', ')} and $w '
+              'of ${declaredIn[w]!.map((m) => m.name).join(', ')}, of the '
+              'modules compiled together, $names, both have the functor '
+              '$stem: their interactive types are joined once, and the '
+              'Definition does not say which of two types of two of the '
+              'modules is told apart from the other (vGLP, Definition '
+              '"Canonical Compilation": $_together)',
+              v.line,
+              v.column,
+              phase: 'analyzer'));
+    }
+    for (final w in ws) {
+      var name = stem;
+      for (var n = 2; taken.contains(name); n++) {
+        name = '${stem}_$n';
+      }
+      taken.add(name);
+      functors[w] = name;
+    }
+  }
+
+  // The types, once each.
+  final joint = <InteractiveType>[];
+  final listed = <String>{};
+  for (final m in members) {
+    final items = <(int, int, Object)>[
+      for (final v in m.front.volitional.values) (v.line, v.column, v),
+      for (final o in m.outside) (o.$1.line, o.$1.column, o),
+    ]..sort((a, b) => a.$1 != b.$1 ? a.$1 - b.$1 : a.$2 - b.$2);
+    for (final (_, _, x) in items) {
+      if (x is VolitionalProcedure) {
+        final w = typeSource(x.interactiveType);
+        if (!listed.add(w)) continue;
+        joint.add(outside[w]?.$1 ??
+            InteractiveType(x.interactiveType, x.readerMode, functors[w]!,
+                x.typeParams, x.line, x.column));
+        continue;
+      }
+      final (_, n) = x as (FrontImport, CanonicalProgram);
+      for (final e in n.interactive) {
+        if (listed.add(e.written)) joint.add(outside[e.written]!.$1);
+      }
+    }
+  }
+  return joint;
 }
 
 // ---------------------------------------------------------------------------

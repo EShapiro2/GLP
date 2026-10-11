@@ -27,6 +27,7 @@ import '../analysis/type_checker/type_ast.dart';
 import '../runtime/module_hierarchy.dart' show discoverSelfChain;
 import 'canonical.dart';
 import 'clause_compilation.dart';
+import 'constructs.dart' show InteractiveType;
 import 'mediator.dart';
 import 'types.dart';
 
@@ -191,7 +192,9 @@ String _emit(ast.Module module, CompiledTypes types, InstantiatedMediator med,
 /// (vGLP, Definition "Canonical Compilation", the import sentence), and a
 /// source in neither syntax that has such an import reaches a question
 /// through it, and is compiled by the canonical compilation too
-/// (importsReachingProcedure).
+/// (importsReachingProcedure).  Modules that import from each other
+/// procedures that reach a question are compiled together, their
+/// interactive types joined once (the Definition, its next sentence).
 String compileVglpSource(String text,
     {MediatorSource? mediator, TypeEnvironment? scope, String? path}) {
   final canonical = path == null
@@ -226,14 +229,22 @@ String compileVglpSource(String text,
 /// self.glp, or a path of several segments, which TGLP leaves to future
 /// work: no export is read of it, and no procedure of it reaches a question.
 ///
-/// Each source is compiled once per call; a source whose export is read
-/// while it is itself being compiled is refused, the imports of procedures
-/// that reach a question forming a cycle the Definition gives no order.
+/// Each source is compiled once per call.  "Modules that import from each
+/// other procedures that reach a question are compiled together, their
+/// interactive types joined once" (vGLP at 66b6500, the Definition; vGLP #7
+/// Cowork, 2026-10-11 14:19 UTC, item 2): a source that imports, directly or
+/// through others, from a module that imports from it is compiled with all
+/// of them (_compileComponent), and a source that does not is compiled as
+/// its own, reading the export of each module it imports from.
 class _SiblingExports {
   final MediatorSource? mediator;
   final TypeEnvironment? scope;
   final _compiled = <String, CanonicalProgram?>{};
-  final _compiling = <String>[];
+
+  /// The modules of a component compiled together that are refused, each
+  /// with its refusal, which every reading of its export meets.
+  final _refused = <String, CompileError>{};
+  final _compiling = <String>{};
 
   _SiblingExports(this.mediator, this.scope);
 
@@ -243,42 +254,49 @@ class _SiblingExports {
   CanonicalProgram? compile(String path, String text) {
     final key = File(path).absolute.path;
     if (_compiled.containsKey(key)) return _compiled[key];
-    if (_compiling.contains(key)) {
-      final cycle = [..._compiling.sublist(_compiling.indexOf(key)), key]
-          .map((p) => File(p).uri.pathSegments.last)
-          .join(' imports from ');
-      throw CompileError(
-          'The imports of procedures that reach a question form a cycle, '
-          '$cycle: each is compiled as its export is (vGLP, Definition '
-          '"Canonical Compilation"), so the compilation reads a module\'s '
-          'export before it compiles its importer, and modules that import '
-          'from each other give it no export to read first',
-          1, 1, phase: 'analyzer');
+    final refused = _refused[key];
+    if (refused != null) throw refused;
+    if (!_compiling.add(key)) {
+      // The modules that import from each other are compiled together
+      // (_compileComponent), and none of them is read through the export of
+      // another on the way, so no compilation reads its own.
+      throw StateError('The compilation of $path reads its own export, and '
+          'the modules that import from each other are compiled together');
     }
-    _compiling.add(key);
     try {
+      final component = _component(key, text, path);
+      if (component != null) {
+        _compileComponent(component);
+        final r = _refused[key];
+        if (r != null) throw r;
+        return _compiled[key];
+      }
       CanonicalProgram? reader(String module) => _exportOf(key, module);
       CanonicalProgram? result;
       if (isPaperSyntaxSource(text) || importsReachingProcedure(text, reader)) {
-        final dir = mediator?.directory;
-        result = compileCanonical(text,
-            dispatcher: mediator?.dispatcher,
-            scope: scope,
-            scopeWidgets: dir != null
-                ? scopeWidgetDeclarations(path, Directory(dir).parent.path)
-                : const {},
-            exports: reader);
+        result = _compileOne(path, text, reader);
       }
       return _compiled[key] = result;
     } finally {
-      _compiling.removeLast();
+      _compiling.remove(key);
     }
   }
 
-  /// The export of [module] as the source at [importer] reads it: the
-  /// canonical compilation of the module file [module].vglp beside it, or
-  /// null where [module] is no such vGLP module.
-  CanonicalProgram? _exportOf(String importer, String module) {
+  CanonicalProgram _compileOne(
+      String path, String text, ExportReader exports) {
+    final dir = mediator?.directory;
+    return compileCanonical(text,
+        dispatcher: mediator?.dispatcher,
+        scope: scope,
+        scopeWidgets: dir != null
+            ? scopeWidgetDeclarations(path, Directory(dir).parent.path)
+            : const {},
+        exports: exports);
+  }
+
+  /// The module file [module].vglp beside the source at [importer], by its
+  /// absolute path, or null where [module] is no such vGLP module.
+  String? _sibling(String importer, String module) {
     if (module.contains('#')) return null;
     final dir = File(importer).parent.path;
     final sep = Platform.pathSeparator;
@@ -289,8 +307,361 @@ class _SiblingExports {
         !glp.readAsStringSync().startsWith(compiledHeader)) {
       return null;
     }
-    return compile(vglp.path, vglp.readAsStringSync());
+    return vglp.absolute.path;
   }
+
+  /// The export of [module] as the source at [importer] reads it: the
+  /// canonical compilation of the module file [module].vglp beside it, or
+  /// null where [module] is no such vGLP module.
+  CanonicalProgram? _exportOf(String importer, String module) {
+    final path = _sibling(importer, module);
+    return path == null ? null : compile(path, File(path).readAsStringSync());
+  }
+
+  /// The modules that import from each other with the source [text] at
+  /// [key], directly or through others, by the module files their imports
+  /// name beside them, or null where it imports from none that imports from
+  /// it.  An import is followed whatever it imports, which procedures reach
+  /// a question being decided only by all of them together.
+  _Component? _component(String key, String text, String path) {
+    final texts = <String, String>{key: text};
+    final fronts = <String, ModuleFront?>{};
+    final edges = <String, List<String>>{};
+    void visit(String k) {
+      if (edges.containsKey(k)) return;
+      final out = edges[k] = <String>[];
+      ModuleFront? front;
+      try {
+        front = readModuleFront(texts[k]!);
+      } on CompileError {
+        // Refused by its own compilation, which reads no export of it.
+        front = null;
+      }
+      fronts[k] = front;
+      for (final i in front?.imports ?? const <FrontImport>[]) {
+        final t = _sibling(k, i.module);
+        if (t == null) continue;
+        if (!out.contains(t)) out.add(t);
+        texts.putIfAbsent(t, () => File(t).readAsStringSync());
+        visit(t);
+      }
+    }
+
+    visit(key);
+    final scc = _components(edges).firstWhere((c) => c.contains(key));
+    if (scc.length == 1 && !edges[key]!.contains(key)) return null;
+    return _Component(
+        {...scc}, {for (final k in scc) k: k == key ? path : k}, texts, fronts);
+  }
+
+  /// Compile the modules of [c], which import from each other.
+  ///
+  /// Which procedures of each reach a question is the least fixpoint over
+  /// the calls of all of them, an import of a procedure of one of them
+  /// reaching one where that procedure does.  The modules that import from
+  /// each other procedures that reach a question are then compiled together,
+  /// each such set once its imports of procedures reaching a question of the
+  /// others are compiled: their interactive types joined once
+  /// (joinComponentTypes), and each compiled by the canonical compilation,
+  /// an import of another of them compiled as its export is, by what was read
+  /// of it.  One that imports none from a module that imports from it is
+  /// compiled as its own.
+  void _compileComponent(_Component c) {
+    final members = c.members.toList()..sort();
+    final er = {for (final k in members) k: <String>{}};
+    final reach = {for (final k in members) k: <String>{}};
+
+    bool reaches(String k, FrontImport i) {
+      final t = _sibling(k, i.module);
+      if (t != null && c.members.contains(t)) {
+        return er[t]!.contains(i.signature);
+      }
+      final CanonicalProgram? n;
+      try {
+        n = _exportOf(k, i.module);
+      } on CompileError {
+        // Its compilation refuses the importer when it reads the export.
+        return false;
+      }
+      return n != null && n.exportedReaching.contains(i.signature);
+    }
+
+    for (var changed = true; changed;) {
+      changed = false;
+      for (final k in members) {
+        final f = c.fronts[k];
+        if (f == null) continue;
+        final r = f.reaching((i) => reaches(k, i));
+        final e = f.exportedReaching(r);
+        reach[k] = r;
+        if (e.length != er[k]!.length) {
+          er[k] = e;
+          changed = true;
+        }
+      }
+    }
+
+    final canonical = {
+      for (final k in members)
+        k: isPaperSyntaxSource(c.texts[k]!) ||
+            (c.fronts[k]?.imports.any((i) => reaches(k, i)) ?? false)
+    };
+
+    // The imports of procedures that reach a question, between them.
+    final real = <String, List<String>>{
+      for (final k in members)
+        k: [
+          if (canonical[k]!)
+            for (final i in c.fronts[k]?.imports ?? const <FrontImport>[])
+              if (_sibling(k, i.module) case final t?
+                  when c.members.contains(t) &&
+                      (i.volitional || er[t]!.contains(i.signature)))
+                t
+        ]
+    };
+
+    // The export of [module] as the module [k] of the component reads it: of
+    // one compiled before it, its compilation; of one compiled after it,
+    // which it imports no procedure reaching a question from, what was read
+    // of it.
+    ExportReader readerOf(String k) => (module) {
+          final t = _sibling(k, module);
+          if (t == null || !c.members.contains(t)) return _exportOf(k, module);
+          final r = _refused[t];
+          if (r != null) throw r;
+          if (_compiled.containsKey(t)) return _compiled[t];
+          return canonical[t]! ? _standIn(c, t, reach[t]!, er[t]!) : null;
+        };
+
+    for (final set in _components(real)) {
+      final k = set.first;
+      if (set.length == 1 && !real[k]!.contains(k)) {
+        try {
+          _compiled[k] = canonical[k]!
+              ? _compileOne(c.paths[k]!, c.texts[k]!, readerOf(k))
+              : null;
+        } on CompileError catch (e) {
+          _refused[k] = e;
+        }
+        continue;
+      }
+      _compileTogether(c, (set.toList()..sort()), reach, er, readerOf);
+    }
+  }
+
+  /// Compile the modules [together], which import from each other
+  /// procedures that reach a question: "compiled together, their interactive
+  /// types joined once" (vGLP at 66b6500, Definition "Canonical
+  /// Compilation").  Their interactive types are joined before any of them
+  /// is compiled, and each import of a procedure of another of them is
+  /// compiled as that one's export is, by what was read of it with those
+  /// types; the compiled modules are held to it, and one refused refuses them
+  /// all.
+  void _compileTogether(
+      _Component c,
+      List<String> together,
+      Map<String, Set<String>> reach,
+      Map<String, Set<String>> er,
+      ExportReader Function(String k) readerOf) {
+    final errors = <String, CompileError>{};
+    String name(String k) {
+      final file = File(k).uri.pathSegments.last;
+      return file.substring(0, file.length - '.vglp'.length);
+    }
+
+    // The members, each with the exports of the modules outside them that
+    // its imports of procedures reaching a question are of.
+    final members = <ComponentMember>[];
+    for (final k in together) {
+      final read = readerOf(k);
+      final outside = <(FrontImport, CanonicalProgram)>[];
+      for (final i in c.fronts[k]!.imports) {
+        if (together.contains(_sibling(k, i.module))) continue;
+        final CanonicalProgram? n;
+        try {
+          n = read(i.module);
+        } on CompileError {
+          // Its compilation refuses the importer when it reads the export.
+          continue;
+        }
+        if (n == null) continue;
+        if (i.volitional || n.exportedReaching.contains(i.signature)) {
+          outside.add((i, n));
+        }
+      }
+      members.add(ComponentMember(name(k), c.fronts[k]!, outside));
+    }
+
+    List<InteractiveType>? joint;
+    try {
+      joint = joinComponentTypes(members);
+    } on ComponentRefusal catch (r) {
+      errors[together.firstWhere((k) => name(k) == r.member)] = r.error;
+    }
+
+    final results = <String, CanonicalProgram>{};
+    if (joint != null) {
+      final functors = {for (final t in joint) t.written: t.functor};
+      final standIns = {
+        for (final k in together)
+          k: _standIn(c, k, reach[k]!, er[k]!,
+              interactive: joint, functors: functors)
+      };
+      for (final k in together) {
+        final read = readerOf(k);
+        try {
+          results[k] = _compileOne(c.paths[k]!, c.texts[k]!, (module) {
+            final t = _sibling(k, module);
+            return together.contains(t) ? standIns[t] : read(module);
+          });
+        } on CompileError catch (e) {
+          errors[k] = e;
+        }
+      }
+
+      // Each compiled as it was read: the procedures that reach a question,
+      // and the interactive types with their functors, are those joined;
+      // and each type has one widget across them.
+      if (errors.isEmpty) {
+        for (final k in together) {
+          final p = results[k]!;
+          final types = {for (final t in p.interactive) t.written: t.functor};
+          if (p.exportedReaching.length != er[k]!.length ||
+              !p.exportedReaching.containsAll(er[k]!) ||
+              types.length != functors.length ||
+              types.entries.any((e) => functors[e.key] != e.value)) {
+            throw StateError('${name(k)}, compiled together with '
+                '${together.map(name).join(', ')}, is not compiled as it was '
+                'read before: its procedures that reach a question '
+                '${p.exportedReaching}, read ${er[k]}; its interactive types '
+                '$types, joined $functors');
+          }
+        }
+        for (final w in functors.keys) {
+          final widgetOf = {
+            for (final k in together)
+              k: results[k]!.interactive.firstWhere((t) => t.written == w).widget
+          };
+          final first = together.first;
+          final other = together
+              .firstWhere((k) => widgetOf[k] != widgetOf[first], orElse: () => '');
+          if (other.isEmpty) continue;
+          final declaring = [first, other].firstWhere(
+              (k) => c.fronts[k]!.widgets.positions.isNotEmpty,
+              orElse: () => other);
+          final at = c.fronts[declaring]!.widgets.positions.isEmpty
+              ? (1, 1)
+              : c.fronts[declaring]!.widgets.positions.first;
+          errors[declaring] = CompileError(
+              'The interactive type $w of the modules compiled together, '
+              '${together.map(name).join(', ')}, has the widget '
+              '${widgetOf[first]} in ${name(first)} and ${widgetOf[other]} in '
+              '${name(other)}, by their widget declarations: their '
+              'interactive types are joined once, each with one widget '
+              '(vGLP, Definition "Canonical Compilation": "each with the '
+              'functor and the widget its export gives it"; $_togetherText)',
+              at.$1,
+              at.$2,
+              phase: 'analyzer');
+          break;
+        }
+      }
+    }
+
+    if (errors.isEmpty) {
+      for (final k in together) {
+        _compiled[k] = results[k];
+      }
+      return;
+    }
+    final failed = together.firstWhere(errors.containsKey);
+    final e = errors[failed]!;
+    for (final k in together) {
+      if (errors.containsKey(k)) {
+        _refused[k] = errors[k]!;
+        continue;
+      }
+      final at = c.fronts[k]!.imports.firstWhere(
+          (i) => together.contains(_sibling(k, i.module)));
+      _refused[k] = CompileError(
+          'The module ${name(failed)}, compiled together with this one '
+          '(vGLP, Definition "Canonical Compilation": $_togetherText), is not '
+          'compiled: ${e.message} (in ${name(failed)} at line ${e.line}, '
+          'column ${e.column})',
+          at.line,
+          at.column,
+          category: e.category);
+    }
+  }
+
+  /// The export of the module [k] of [c] as the compilation reads it before
+  /// it is compiled: its volitional procedures, the procedures it exports
+  /// that reach a question, and, of modules compiled together, their
+  /// interactive types joined once with their functors.
+  CanonicalProgram _standIn(
+          _Component c, String k, Set<String> reach, Set<String> er,
+          {List<InteractiveType> interactive = const [],
+          Map<String, String> functors = const {}}) =>
+      CanonicalProgram('', c.fronts[k]!.module,
+          c.fronts[k]!.volitional.values.toList(), reach, '',
+          questionType: '',
+          functors: functors,
+          interactive: interactive,
+          exportedReaching: er);
+}
+
+const _togetherText = '"Modules that import from each other procedures that '
+    'reach a question are compiled together, their interactive types joined '
+    'once"';
+
+/// Modules that import from each other, directly or through others: each by
+/// its absolute path, with the path it is compiled at, its text and its
+/// front.
+class _Component {
+  final Set<String> members;
+  final Map<String, String> paths;
+  final Map<String, String> texts;
+  final Map<String, ModuleFront?> fronts;
+  _Component(this.members, this.paths, this.texts, this.fronts);
+}
+
+/// The strongly connected components of the graph [edges], each before any
+/// that reaches it (Tarjan).
+List<List<String>> _components(Map<String, List<String>> edges) {
+  final index = <String, int>{};
+  final low = <String, int>{};
+  final stack = <String>[];
+  final onStack = <String>{};
+  final out = <List<String>>[];
+  var next = 0;
+  void connect(String v) {
+    index[v] = low[v] = next++;
+    stack.add(v);
+    onStack.add(v);
+    for (final w in edges[v] ?? const <String>[]) {
+      if (!index.containsKey(w)) {
+        connect(w);
+        low[v] = low[v]! < low[w]! ? low[v]! : low[w]!;
+      } else if (onStack.contains(w)) {
+        low[v] = low[v]! < index[w]! ? low[v]! : index[w]!;
+      }
+    }
+    if (low[v] == index[v]) {
+      final scc = <String>[];
+      String w;
+      do {
+        w = stack.removeLast();
+        onStack.remove(w);
+        scc.add(w);
+      } while (w != v);
+      out.add(scc);
+    }
+  }
+
+  for (final v in edges.keys) {
+    if (!index.containsKey(v)) connect(v);
+  }
+  return out;
 }
 
 /// Emit the compiled GLP beside each `.vglp` source under [rootDir], and return

@@ -1245,4 +1245,251 @@ person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
           'input([])), withdrawn(0) | _]');
     });
   });
+
+  group('modules that import from each other procedures that reach a '
+      'question (vGLP at 66b6500, Definition "Canonical Compilation"; vGLP #7 '
+      'Cowork, 2026-10-11 14:19 UTC, item 2)', () {
+    // "Modules that import from each other procedures that reach a question
+    // are compiled together, their interactive types joined once."  Each
+    // program is .vglp modules that import from each other, compiled on
+    // load, linked and type-checked as a whole, TGLP's linked check on each
+    // import of one of them by another among the checks; a self.glp whose
+    // plays run a call of one of them with that module's own dispatcher and
+    // a scripted person, who answers the question of each.  Written under
+    // programs/tests/vglp/ for the run and removed after, as the groups
+    // above are.
+    const types = '''
+Peer      ::= Constant.
+YesNo     ::= yes ; no.
+Offer     ::= offer(Peer).
+Response  ::= accept(Peer) ; refuse(Peer).
+Card      ::= card(Peer, YesNo?).
+Note      ::= note(String).
+Box_yesNo ::= box_yn(YesNo).
+''';
+    // The person answers yes to a card, "hi" to a note and box_yn(yes) to a
+    // box, telling the note's and the box's apart by their widgets.
+    const person = '''
+procedure person(_?, PersonIn, Stream(_)).
+person([draw(Id, W, card(P, input(Q))) | Ds], [input(Id?, Q?, yes) | Gs?],
+       [drawn(Id?, W?, card(P?, input(Q?))) | Log?]) :-
+    ground(Id?), ground(W?), ground(P?), ground(Q?) |
+    person(Ds?, Gs, Log).
+person([draw(Id, form(note, F), input(Q)) | Ds],
+       [input(Id?, Q?, note("hi")) | Gs?],
+       [drawn(Id?, form(note, F?), input(Q?)) | Log?]) :-
+    ground(Id?), ground(F?), ground(Q?) |
+    person(Ds?, Gs, Log).
+person([draw(Id, form(box_yn, F), input(Q)) | Ds],
+       [input(Id?, Q?, box_yn(yes)) | Gs?],
+       [drawn(Id?, form(box_yn, F?), input(Q?)) | Log?]) :-
+    ground(Id?), ground(F?), ground(Q?) |
+    person(Ds?, Gs, Log).
+person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    person(Ds?, Gs, Log).
+''';
+    const card = 'form(card, [field(Peer, shown), field(YesNo, '
+        'buttons([yes, no]))]), card(bob, input([2])))';
+    const note = 'form(note, [field(String, text)]), input([]))';
+    const box = 'form(box_yn, [field(YesNo, buttons([yes, no]))]), '
+        'input([]))';
+
+    final fixtures = <Directory>[];
+    tearDown(() {
+      for (final d in fixtures) {
+        if (d.existsSync()) d.deleteSync(recursive: true);
+      }
+      fixtures.clear();
+    });
+
+    Future<_Run> play(Map<String, String> files, String goal) async {
+      final dir = Directory('../programs/tests/vglp/cycle_fixture_${pid}_'
+          '${DateTime.now().microsecondsSinceEpoch}')
+        ..createSync();
+      fixtures.add(dir);
+      files.forEach((name, text) =>
+          File('${dir.path}/$name').writeAsStringSync(text));
+      final engine = GlpEngine(rootSelfGlpPath: _root);
+      expect(engine.loadProgram(dir.absolute.path), isTrue);
+      return _Run(await engine.runGoal(goal), engine);
+    }
+
+    // Each of [drawn] drawn once and withdrawn, and nothing else.
+    void answered(_Run r, List<String> drawn) {
+      expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
+      final log = r['Log'];
+      for (final d in drawn) {
+        expect(log, contains(d));
+      }
+      expect(RegExp(r'\bdrawn\(').allMatches(log), hasLength(drawn.length));
+      expect(RegExp(r'\bwithdrawn\(').allMatches(log), hasLength(drawn.length));
+    }
+
+    // cards and notes, each importing a procedure of the other that reaches
+    // a question --- cards notes' ordinary noting, notes cards' respond ---
+    // with their questions in the two orders of their declarations; home
+    // beside them, importing cards' befriend.
+    const cards = '''
+$types
+%% notes' noting, which asks the person for a note.
+imported procedure notes#noting(Peer?, Note).
+
+%% Show the person who offers, and pass their answer on.
+exported procedure (Card)*respond(Offer?, Response).
+(card(From?, Answer))*respond(offer(From), Resp?) :-
+    ground(From?) | decide(Answer?, From?, Resp).
+
+procedure decide(YesNo?, Peer?, Response).
+decide(yes, From, accept(From?)).
+decide(no, From, refuse(From?)).
+
+%% A peer offers friendship: ask the person, and for a note through notes.
+exported procedure befriend(Peer?, Response, Note).
+befriend(P, R?, N?) :-
+    ground(P?) | respond(offer(P?), R), notes # noting(P?, N).
+''';
+    const notes = '''
+$types
+%% The person writes a note.
+exported procedure (Note?)*jot(Note).
+(N)*jot(N?).
+
+exported procedure noting(Peer?, Note).
+noting(P, N?) :- ground(P?) | jot(N).
+
+%% cards' respond, and a note beside it.
+imported procedure (Card)*cards#respond(Offer?, Response).
+exported procedure noted(Peer?, Response, Note).
+noted(P, R?, N?) :-
+    ground(P?) | cards # respond(offer(P?), R), noting(P?, N).
+''';
+    const home = '''
+$types
+%% cards' befriend, imported in vGLP arity: home is compiled as its own.
+imported procedure cards#befriend(Peer?, Response, Note).
+exported procedure go(Peer?, Response, Note).
+go(P, R?, N?) :- ground(P?) | cards # befriend(P?, R, N).
+''';
+    String plays(String module, String proc) => '''
+$types
+Question ::= card_w(Card) ; note_r(Note?).
+Ask(Q)   ::= ask(Constant, Q).
+PersonIn ::= [_ | PersonIn].
+
+imported procedure $module#$proc(Peer?, Response, Note,
+    Stream(Ask(Question))).
+imported procedure $module#dispatch(Stream(Ask(Question))?,
+    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+
+exported procedure play(Response, Note, Stream(_)).
+play(R?, N?, Log?) :-
+    $module # $proc(bob, R, N, Asks),
+    $module # dispatch(Asks?, ch(Gs?, Ds), _),
+    person(Ds?, Gs, Log).
+
+$person''';
+
+    test('two modules each importing a procedure of the other that reaches a '
+        'question: cards\' dispatcher serves its card and the note of notes',
+        () async {
+      final r = await play({
+        'cards.vglp': cards,
+        'notes.vglp': notes,
+        'self.glp': plays('cards', 'befriend'),
+      }, 'play(R, N, Log)');
+      answered(r, [card, note]);
+      expect(r['R'], 'accept(bob)');
+      expect(r['N'], 'note(hi)');
+    });
+
+    test('the same, notes\' dispatcher serving its note and the card of '
+        'cards', () async {
+      final r = await play({
+        'cards.vglp': cards,
+        'notes.vglp': notes,
+        'self.glp': plays('notes', 'noted'),
+      }, 'play(R, N, Log)');
+      answered(r, [card, note]);
+      expect(r['R'], 'accept(bob)');
+      expect(r['N'], 'note(hi)');
+    });
+
+    test('a module beside them, importing from cards: its dispatcher serves '
+        'the card and the note', () async {
+      final r = await play({
+        'cards.vglp': cards,
+        'notes.vglp': notes,
+        'home.vglp': home,
+        'self.glp': plays('home', 'go'),
+      }, 'play(R, N, Log)');
+      answered(r, [card, note]);
+      expect(r['R'], 'accept(bob)');
+      expect(r['N'], 'note(hi)');
+    });
+
+    test('a cycle of three: asker\'s dispatcher serves its card, the note of '
+        'writer and the box of checker', () async {
+      // asker imports from writer, writer from checker, checker from asker.
+      final r = await play({
+        'asker.vglp': '''
+$types
+imported procedure writer#jot_and_confirm(Peer?, Note, YesNo).
+
+exported procedure (Card)*respond(Offer?, Response).
+(card(From?, Answer))*respond(offer(From), Resp?) :-
+    ground(From?) | decide(Answer?, From?, Resp).
+
+procedure decide(YesNo?, Peer?, Response).
+decide(yes, From, accept(From?)).
+decide(no, From, refuse(From?)).
+
+exported procedure all(Peer?, Response, Note, YesNo).
+all(P, R?, N?, A?) :-
+    ground(P?) | respond(offer(P?), R), writer # jot_and_confirm(P?, N, A).
+''',
+        'writer.vglp': '''
+$types
+exported procedure (Note?)*jot(Note).
+(N)*jot(N?).
+
+imported procedure (Box_yesNo?)*checker#confirm(Peer?, YesNo).
+exported procedure jot_and_confirm(Peer?, Note, YesNo).
+jot_and_confirm(P, N?, A?) :- ground(P?) | jot(N), checker # confirm(P?, A).
+''',
+        'checker.vglp': '''
+$types
+exported procedure (Box_yesNo?)*confirm(Peer?, YesNo).
+(box_yn(A))*confirm(P, A?) :- ground(P?) | true.
+
+imported procedure (Card)*asker#respond(Offer?, Response).
+exported procedure checked(Peer?, Response, YesNo).
+checked(P, R?, A?) :-
+    ground(P?) | asker # respond(offer(P?), R), confirm(P?, A).
+''',
+        'self.glp': '''
+$types
+Question ::= card_w(Card) ; note_r(Note?) ; box_yesNo_r(Box_yesNo?).
+Ask(Q)   ::= ask(Constant, Q).
+PersonIn ::= [_ | PersonIn].
+
+imported procedure asker#all(Peer?, Response, Note, YesNo,
+    Stream(Ask(Question))).
+imported procedure asker#dispatch(Stream(Ask(Question))?,
+    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+
+exported procedure play(Response, Note, YesNo, Stream(_)).
+play(R?, N?, A?, Log?) :-
+    asker # all(bob, R, N, A, Asks),
+    asker # dispatch(Asks?, ch(Gs?, Ds), _),
+    person(Ds?, Gs, Log).
+
+$person''',
+      }, 'play(R, N, A, Log)');
+      answered(r, [card, note, box]);
+      expect(r['R'], 'accept(bob)');
+      expect(r['N'], 'note(hi)');
+      expect(r['A'], 'yes');
+    });
+  });
 }
