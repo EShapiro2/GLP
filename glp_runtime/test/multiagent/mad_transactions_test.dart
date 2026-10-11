@@ -233,6 +233,57 @@ void main() {
       expect(ctx.wp.serializerAppendedCount, 3);
     });
 
+    // Remark Fair Message Delivery: "A repeat is harmless everywhere but at the
+    // serializer: a value finds its entry removed"; §app:requests-acks: "A
+    // value ... matching no entry and no pending value is dropped".  A repeat
+    // is not early (app:in-networking, Early messages), so it is not held.
+    test('a reader-name value delivered twice is applied once and the repeat '
+        'dropped, not held as early', () {
+      final runtime = GlpRuntime();
+      final ctx = MadContext(agentId: 'q', runtime: runtime);
+      final (writerAddr, _) = runtime.heap.allocateVariable();
+      ctx.wp.addLocalizeEntry(writerAddr, 'p', 3);
+
+      for (var k = 0; k < 2; k++) {
+        ctx.handleMadAssignment(
+          globalName: GlobalName.reader('p', 3),
+          value: ConstTerm(42),
+          fromAgent: 'p',
+        );
+      }
+      expect((runtime.heap.derefAddr(writerAddr) as ConstTerm).value, 42);
+      expect(ctx.wp.findByRemote('p', 3), isNull);
+      expect(ctx.earlyAssignmentCount, 0,
+          reason: 'the repeat found its entry removed: dropped, not early');
+      expect(ctx.mp.totalLength, 1, reason: 'one acknowledgement, not two');
+
+      // An early value — its entry not yet made — is still held.
+      ctx.handleMadAssignment(
+        globalName: GlobalName.reader('p', 4),
+        value: ConstTerm(43),
+        fromAgent: 'p',
+      );
+      expect(ctx.earlyAssignmentCount, 1);
+    });
+
+    test('a writer-name value delivered twice is applied once', () {
+      final runtime = GlpRuntime();
+      final ctx = MadContext(agentId: 'p', runtime: runtime);
+      final (writerAddr, _) = runtime.heap.allocateVariable();
+      final index = ctx.wp.addGlobalizeEntry(writerAddr, 'q');
+      for (final v in [42, 43]) {
+        ctx.handleMadAssignment(
+          globalName: GlobalName.writer('p', index),
+          value: ConstTerm(v),
+          fromAgent: 'q',
+        );
+      }
+      expect((runtime.heap.derefAddr(writerAddr) as ConstTerm).value, 42);
+      expect(ctx.wp.lookupByIndex(index), isNull);
+      expect(ctx.heldAssignmentCount, 0);
+      expect(ctx.reportedLinkCount, 0);
+    });
+
     test('a serializer message without a serial is refused, and a serial on '
         'another message', () {
       final runtime = GlpRuntime();

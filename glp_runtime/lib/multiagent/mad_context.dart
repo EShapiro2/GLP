@@ -102,6 +102,17 @@ class MadContext {
   /// Indices are never reused, so the record never misclassifies.
   final Set<(String, int)> _forwardedReaderNames = {};
 
+  /// Reader names whose value this agent applied, removing the entry (madGLP
+  /// Receive, Reader case: "The entry matching (p, i) is removed").  A value
+  /// arriving for such a name afterwards is a repeat, and is dropped: "a value
+  /// finds its entry removed" (Remark Fair Message Delivery), "A value ...
+  /// matching no entry and no pending value is dropped" (§app:requests-acks).
+  /// It is not early — an early assignment is one arriving "before the message
+  /// whose localization creates its global writers table entry" (IGLP
+  /// app:in-networking, Early messages) — and is not held.  Indices are never
+  /// reused, so the record never misclassifies.
+  final Set<(String, int)> _appliedReaderNames = {};
+
   /// Held incoming assignments (Definition Held Link, case 4): an assignment
   /// arriving at the anchor from an agent it did not export the name to is
   /// "retained keyed by its global name" and not applied, until
@@ -845,6 +856,13 @@ class MadContext {
             'forwarded — stale value dropped');
         return;
       }
+      // A repeat of a value already applied here finds its entry removed, and
+      // is dropped (Remark Fair Message Delivery).
+      if (_appliedReaderNames.contains((globalName.agent, globalName.index))) {
+        _trace('[MAD $agentId] _handleReaderAssignment: $globalName was '
+            'applied before — a repeat, dropped');
+        return;
+      }
       // Issue 7 / spec §8.3 (Early Messages): the assignment arrived before its
       // LocalizeEntry exists (possible under any non-FIFO transport). Hold it,
       // keyed by (remoteAgent, remoteIndex); localize() delivers it when it
@@ -890,6 +908,7 @@ class MadContext {
 
     // Remove the entry
     wp.removeLocalizeEntry(globalName.agent, globalName.index);
+    _appliedReaderNames.add((globalName.agent, globalName.index));
     _trace('[MAD $agentId] _handleReaderAssignment: entry removed');
 
     // Acknowledge to the value's sender (madGLP Receive, Reader case): the
@@ -1237,6 +1256,11 @@ class MadContext {
 
   /// Number of requests retained because their link is held.
   int get heldRequestCount => _heldRequests.length;
+
+  /// Number of reader-name assignments retained because they arrived early,
+  /// before the entry their localization creates (IGLP app:in-networking,
+  /// Early messages).
+  int get earlyAssignmentCount => _heldReaderAssignments.length;
 
   /// Whether the value for reader name (anchorAgent, index) is still pending.
   bool hasPendingReaderValue(String anchorAgent, int index) =>
