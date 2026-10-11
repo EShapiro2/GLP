@@ -164,8 +164,8 @@ void main() {
       expect(r['Resp'], 'accept(bob)');
       expect(
           r['Log'],
-          '[drawn(0, form(card, [shown, buttons([yes, no])]), '
-          'card(bob, input([2]))), withdrawn(0) | _]');
+          '[drawn(0, form(card, [field(Peer, shown), field(YesNo, '
+          'buttons([yes, no]))]), card(bob, input([2]))), withdrawn(0) | _]');
     });
 
     test('a grant that forms no term of the question\'s type answers nothing, '
@@ -217,11 +217,11 @@ void main() {
       final log = r['Log'];
       expect(
           log,
-          contains('drawn(0, input_box(menu([form(post, [text]), '
-              'button(quit)])), input([]))'));
+          contains('drawn(0, input_box(menu([form(post, [field(String, '
+              'text)]), button(quit)])), input([]))'));
       expect(log,
-          contains('drawn(1, form(card, [shown, buttons([yes, no])]), '
-              'card(carol, input([2])))'));
+          contains('drawn(1, form(card, [field(Peer, shown), field(YesNo, '
+              'buttons([yes, no]))]), card(carol, input([2])))'));
       expect(log, isNot(contains('withdrawn')));
     });
   });
@@ -233,8 +233,8 @@ void main() {
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       expect(r['Outs'], '[hi]');
       expect(r['Log'],
-          '[drawn(0, input_box(menu([form(post, [text]), button(quit)])), '
-          'input([])) | _]');
+          '[drawn(0, input_box(menu([form(post, [field(String, text)]), '
+          'button(quit)])), input([])) | _]');
     });
   });
 
@@ -342,7 +342,8 @@ pricing_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       expect(r['P'], 'price(2.5)');
       expect(r['Log'],
-          '[drawn(0, form(price, [number]), input([])), withdrawn(0) | _]');
+          '[drawn(0, form(price, [field(Real, number)]), input([])), '
+          'withdrawn(0) | _]');
     });
   });
 
@@ -413,6 +414,249 @@ picking_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       expect(r['P'], 'odd one(b)');
       expect(r['Log'], startsWith('[drawn(0, '));
       expect(r['Log'], endsWith(', input([])), withdrawn(0) | _]'));
+    });
+  });
+
+  group('Task B (vGLP #6 Cowork, 2026-10-11 12:55 UTC): lists, streams in '
+      'forms, keys', () {
+    // Definition "Widget Declaration, Default Widget" and the Answer rule of
+    // Definition "vmaGLP Transition System" (vGLP 90988ea): a list the person
+    // writes is ended by the person, [] its answer, and a stream is not; a
+    // stream or a list inside a form the person writes is a question of its
+    // own, the form's answer carrying a fresh variable there, drawn under the
+    // form; a Key is a peer field.  The program is written under
+    // programs/tests/vglp/ for the run and removed after, as the Real
+    // question's is.
+    late Directory fixture;
+    setUp(() {
+      fixture = Directory('../programs/tests/vglp/taskb_fixture_${pid}_'
+          '${DateTime.now().microsecondsSinceEpoch}')
+        ..createSync();
+      const types = '''
+List(X) ::= [] ; [X | List(X)].
+Post    ::= post(String, Stream(String)) ; tags(List(Constant)) ; quit.
+Peer    ::= Constant.
+Reply   ::= reply(String, Stream(String)).
+Card    ::= card(Peer, Reply?).
+Issuer  ::= Key.
+Lot     ::= lot(Issuer, Integer).
+''';
+      File('${fixture.path}/b.vglp').writeAsStringSync('''
+$types
+exported procedure (List(Integer)?)*numbers(List(Integer)).
+(Ns)*numbers(Ns?).
+
+exported procedure (Stream(Integer)?)*counts(Stream(Integer)).
+(Cs)*counts(Cs?).
+
+exported procedure (Post?)*poster(Post).
+(P)*poster(P?).
+
+exported procedure (Card)*respond(Reply).
+(card(bob, R))*respond(R?).
+
+exported procedure (Lot?)*lot(Lot).
+(L)*lot(L?).
+''');
+      File('${fixture.path}/self.glp').writeAsStringSync('''
+$types
+Question ::= list_integer_r(List(Integer)?) ; stream_integer_r(Stream(Integer)?)
+           ; post_r(Post?) ; card_w(Card) ; lot_r(Lot?).
+Ask(Q)   ::= ask(Constant, Q).
+PersonIn ::= [_ | PersonIn].
+
+imported procedure b#numbers(List(Integer), Stream(Ask(Question))).
+imported procedure b#counts(Stream(Integer), Stream(Ask(Question))).
+imported procedure b#poster(Post, Stream(Ask(Question))).
+imported procedure b#respond(Reply, Stream(Ask(Question))).
+imported procedure b#lot(Lot, Stream(Ask(Question))).
+imported procedure b#dispatch(Stream(Ask(Question))?,
+    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+
+%% A list: two numbers, then its end.
+exported procedure play_numbers(List(Integer), Stream(_)).
+play_numbers(Ns?, Log?) :-
+    b # numbers(Ns, Asks), b # dispatch(Asks?, ch(Gs?, Ds), _),
+    numbers_person(Ds?, Gs, Log).
+
+procedure numbers_person(_?, PersonIn, Stream(_)).
+numbers_person([draw(Id, W, input(Q)) | Ds],
+               [input(Id?, Q?, 1), input(Id?, Q?, 2), input(Id?, Q?, []) | Gs?],
+               [drawn(Id?, W?, input(Q?)) | Log?]) :-
+    ground(Id?), ground(W?), ground(Q?) |
+    numbers_person(Ds?, Gs, Log).
+numbers_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    numbers_person(Ds?, Gs, Log).
+
+%% A stream: a number, [], and a number.
+exported procedure play_counts(Stream(Integer), Stream(_)).
+play_counts(Cs?, Log?) :-
+    b # counts(Cs, Asks), b # dispatch(Asks?, ch(Gs?, Ds), _),
+    counts_person(Ds?, Gs, Log).
+
+procedure counts_person(_?, PersonIn, Stream(_)).
+counts_person([draw(Id, W, input(Q)) | Ds],
+              [input(Id?, Q?, 1), input(Id?, Q?, []), input(Id?, Q?, 2) | Gs?],
+              [drawn(Id?, W?, input(Q?)) | Log?]) :-
+    ground(Id?), ground(W?), ground(Q?) |
+    counts_person(Ds?, Gs, Log).
+counts_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    counts_person(Ds?, Gs, Log).
+
+%% A post: the form with [] at its stream, then two lines into the stream
+%% at the position the redrawn view marks.
+exported procedure play_post(Post, Stream(_)).
+play_post(P?, Log?) :-
+    b # poster(P, Asks), b # dispatch(Asks?, ch(Gs?, Ds), _),
+    post_person(Ds?, Gs, Log).
+
+procedure post_person(_?, PersonIn, Stream(_)).
+post_person([draw(Id, W, input(Q)) | Ds],
+            [input(Id?, Q?, post(hi, [])) | Gs?],
+            [drawn(Id?, W?, input(Q?)) | Log?]) :-
+    ground(Id?), ground(W?), ground(Q?) |
+    post_person(Ds?, Gs, Log).
+post_person([draw(Id, _, post(S, input(Q))) | Ds],
+            [input(Id?, Q?, x), input(Id?, Q?, y) | Gs?],
+            [drawn(Id?, post(S?, input(Q?))) | Log?]) :-
+    ground(Id?), ground(S?), ground(Q?) |
+    post_person(Ds?, Gs, Log).
+post_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    post_person(Ds?, Gs, Log).
+
+%% Tags: the form with [] at its list, then a tag and the list's end.
+exported procedure play_tags(Post, Stream(_)).
+play_tags(P?, Log?) :-
+    b # poster(P, Asks), b # dispatch(Asks?, ch(Gs?, Ds), _),
+    tags_person(Ds?, Gs, Log).
+
+procedure tags_person(_?, PersonIn, Stream(_)).
+tags_person([draw(Id, _, input(Q)) | Ds],
+            [input(Id?, Q?, tags([])) | Gs?],
+            [drawn(Id?, input(Q?)) | Log?]) :-
+    ground(Id?), ground(Q?) |
+    tags_person(Ds?, Gs, Log).
+tags_person([draw(Id, _, tags(input(Q))) | Ds],
+            [input(Id?, Q?, a), input(Id?, Q?, []) | Gs?],
+            [drawn(Id?, tags(input(Q?))) | Log?]) :-
+    ground(Id?), ground(Q?) |
+    tags_person(Ds?, Gs, Log).
+tags_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    tags_person(Ds?, Gs, Log).
+
+%% A card the program writes holding the person's reply, which holds a
+%% stream: the reply, then a line into its stream.
+exported procedure play_respond(Reply, Stream(_)).
+play_respond(R?, Log?) :-
+    b # respond(R, Asks), b # dispatch(Asks?, ch(Gs?, Ds), _),
+    respond_person(Ds?, Gs, Log).
+
+procedure respond_person(_?, PersonIn, Stream(_)).
+respond_person([draw(Id, _, card(F, input(Q))) | Ds],
+               [input(Id?, Q?, reply(hi, [])) | Gs?],
+               [drawn(Id?, card(F?, input(Q?))) | Log?]) :-
+    ground(Id?), ground(F?), ground(Q?) |
+    respond_person(Ds?, Gs, Log).
+respond_person([draw(Id, _, card(F, reply(S, input(Q)))) | Ds],
+               [input(Id?, Q?, x) | Gs?],
+               [drawn(Id?, card(F?, reply(S?, input(Q?)))) | Log?]) :-
+    ground(Id?), ground(F?), ground(S?), ground(Q?) |
+    respond_person(Ds?, Gs, Log).
+respond_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    respond_person(Ds?, Gs, Log).
+
+%% A lot: its issuer a key.
+exported procedure play_lot(Lot, Stream(_)).
+play_lot(L?, Log?) :-
+    b # lot(L, Asks), b # dispatch(Asks?, ch(Gs?, Ds), _),
+    lot_person(Ds?, Gs, Log).
+
+procedure lot_person(_?, PersonIn, Stream(_)).
+lot_person([draw(Id, W, input(Q)) | Ds],
+           [input(Id?, Q?, lot('0a1b', 5)) | Gs?],
+           [drawn(Id?, W?, input(Q?)) | Log?]) :-
+    ground(Id?), ground(W?), ground(Q?) |
+    lot_person(Ds?, Gs, Log).
+lot_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    lot_person(Ds?, Gs, Log).
+''');
+    });
+    tearDown(() {
+      if (fixture.existsSync()) fixture.deleteSync(recursive: true);
+    });
+
+    Future<_Run> play(String goal) async {
+      final engine = GlpEngine(rootSelfGlpPath: _root);
+      expect(engine.loadProgram(fixture.absolute.path), isTrue);
+      return _Run(await engine.runGoal(goal), engine);
+    }
+
+    test('(1) a list the person writes takes one element per grant and ends '
+        'on a grant of [], and its construct withdraws', () async {
+      final r = await play('play_numbers(Ns, Log)');
+      expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
+      expect(r['Ns'], '[1, 2]');
+      expect(r['Log'],
+          '[drawn(0, input_list(number), input([])), withdrawn(0) | _]');
+    });
+
+    test('(1) a stream the person writes is not ended: a grant of [] answers '
+        'nothing, and the stream stays open', () async {
+      final r = await play('play_counts(Cs, Log)');
+      expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
+      expect(r['Cs'], '[1, 2 | _]');
+      expect(r['Log'], '[drawn(0, input_box(number), input([])) | _]');
+    });
+
+    test('(3) a stream inside a form: the form answered with a fresh stream, '
+        'drawn again with the answer, the stream taking its lines at its own '
+        'position, and the construct staying', () async {
+      final r = await play('play_post(P, Log)');
+      expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
+      expect(r['P'], 'post(hi, [x, y | _])');
+      expect(
+          r['Log'],
+          "[drawn(0, menu([form(post, [field(String, text), "
+          "question(Stream(String), input_box(text))]), form(tags, "
+          "[question(List(Constant), input_list(text))]), button(quit)]), "
+          'input([])), drawn(0, post(hi, input([2]))) | _]');
+    });
+
+    test('(3) a list inside a form: answered, then ended, and the construct '
+        'withdraws', () async {
+      final r = await play('play_tags(P, Log)');
+      expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
+      expect(r['P'], 'tags([a])');
+      expect(r['Log'],
+          '[drawn(0, input([])), drawn(0, tags(input([1]))), withdrawn(0) | _]');
+    });
+
+    test('(3) in a question of a structure the program writes: the card drawn '
+        'again with the reply, its stream at the path down to it', () async {
+      final r = await play('play_respond(R, Log)');
+      expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
+      expect(r['R'], 'reply(hi, [x | _])');
+      expect(
+          r['Log'],
+          '[drawn(0, card(bob, input([2]))), '
+          'drawn(0, card(bob, reply(hi, input([2, 2])))) | _]');
+    });
+
+    test('(5) and (6) a key is a peer field, each field labelled by its '
+        'declared type\'s name, and the lot formed', () async {
+      final r = await play('play_lot(L, Log)');
+      expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
+      expect(r['L'], 'lot(0a1b, 5)');
+      expect(
+          r['Log'],
+          '[drawn(0, form(lot, [field(Issuer, peer), field(Integer, '
+          'number)]), input([])), withdrawn(0) | _]');
     });
   });
 
@@ -558,8 +802,9 @@ nest_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       expect(r['B'], 'both(bob, yes, no)');
       expect(
           r['Log'],
-          '[drawn(0, form(card, [shown, buttons([yes, no]), buttons([yes, '
-          'no])]), card(bob, input([2]), input([3]))), withdrawn(0) | _]');
+          '[drawn(0, form(card, [field(Peer, shown), field(YesNo, '
+          'buttons([yes, no])), field(YesNo, buttons([yes, no]))]), '
+          'card(bob, input([2]), input([3]))), withdrawn(0) | _]');
     });
 
     test('a grant at the second question answers it and leaves the first, '
@@ -705,8 +950,8 @@ person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       expect(r['R'], 'accept(bob)');
       expect(
           r['Log'],
-          '[drawn(0, form(card, [shown, buttons([yes, no])]), '
-          'card(bob, input([2]))), withdrawn(0) | _]');
+          '[drawn(0, form(card, [field(Peer, shown), field(YesNo, '
+          'buttons([yes, no]))]), card(bob, input([2]))), withdrawn(0) | _]');
     });
 
     test('beside a question of the importer\'s own, each is served by the '
@@ -721,9 +966,9 @@ person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       final log = r['Log'];
       expect(
           log,
-          contains('form(card, [shown, buttons([yes, no])]), '
-              'card(bob, input([2])))'));
-      expect(log, contains('form(note, [text]), input([]))'));
+          contains('form(card, [field(Peer, shown), field(YesNo, '
+              'buttons([yes, no]))]), card(bob, input([2])))'));
+      expect(log, contains('form(note, [field(String, text)]), input([]))'));
       expect(RegExp(r'\bdrawn\(').allMatches(log), hasLength(2));
       expect(RegExp(r'\bwithdrawn\(').allMatches(log), hasLength(2));
     });
@@ -838,9 +1083,10 @@ person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       // after its yes; each drawn once and withdrawn.
       expect(
           log,
-          startsWith('[drawn(0, form(card, [shown, buttons([yes, no])]), '
-              'card(bob, input([2]))), withdrawn(0), '
-              'drawn(1, form(note, [text]), input([])), withdrawn(1)'));
+          startsWith('[drawn(0, form(card, [field(Peer, shown), '
+              'field(YesNo, buttons([yes, no]))]), card(bob, input([2]))), '
+              'withdrawn(0), drawn(1, form(note, [field(String, text)]), '
+              'input([])), withdrawn(1)'));
     }
 
     test('(Q1) N with an interactive type home does not import by name: a '
@@ -928,8 +1174,8 @@ person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       expect(r['A'], 'yes');
       expect(
           r['Log'],
-          '[drawn(0, form(box_yn, [buttons([yes, no])]), input([])), '
-          'withdrawn(0) | _]');
+          '[drawn(0, form(box_yn, [field(YesNo, buttons([yes, no]))]), '
+          'input([])), withdrawn(0) | _]');
     });
   });
 }

@@ -11,17 +11,26 @@
 /// by the terms the compiled construct processes name them with:
 ///
 ///   - a constant: a button, `button(C)`; a union of constants: a row of
-///     buttons, `buttons([C1, ..., Cn])`;
+///     buttons, `buttons([C1, ..., Cn])`; a position of type `Constant`,
+///     `Module` or a type parameter: a text field, `text`;
 ///   - `String`, a number (`Integer` or `Real`), `Date` and an agent
 ///     identifier: a text field, a number field, a date picker and a peer
 ///     field, `text`, `number`, `date` and `peer`;
-///   - a tuple: a form with one field per argument, `form(F, [W1, ...,
-///     Wn])`; a union of tuples: a menu of forms, `menu([W1, ..., Wn])`;
+///   - a tuple: a form with one field per argument, each labelled by the
+///     name of its declared type, `form(F, [E1, ..., En])`, each `Ei`
+///     `field(L, W)`, `L` that name; a stream or list inside a form the
+///     person writes: submitted as a question of its own and drawn under the
+///     form, its entry `question(L, W)` and no field of the form; a union of
+///     tuples: a menu of forms, `menu([W1, ..., Wn])`, each alternative's
+///     chip naming its functor, and its arity where two share a functor
+///     (Remark "Construct Families");
 ///   - a value the program writes: shown and not edited, `shown`; a list the
 ///     program writes, with a choice coming back: a picker, `picker`;
 ///   - a stream the person writes: the widget of its element type, kept
-///     open, one element per submission, `input_box(W)`; a stream the
-///     program writes: a thread, `thread`.
+///     open, one element per submission, `input_box(W)`; a list the person
+///     writes: the same, with a button that ends the list, `input_list(W)`,
+///     the button granting `[]`; a stream the program writes: a thread,
+///     `thread`.
 ///
 /// A widget a declaration names (`T =::= W`) is a constant naming a Dart
 /// widget: "In the grassroots app, W names a Dart widget, a small
@@ -33,8 +42,9 @@
 /// field a `String`, a number field an `Integer` or a `Real` as typed, a date
 /// picker the `Integer` of the local date it picks (`Date` is "a named type
 /// over `Integer`, the local date an agent counts"), a peer field the
-/// identifier typed, a form the tuple of its fields and a menu the
-/// alternative chosen.  The construct process forms the answer from it, and
+/// identifier typed, a form the tuple of its fields --- `[]` at a question
+/// of its own, which the form's answer leaves open --- a menu the
+/// alternative chosen, and a list's end button `[]`.  The construct process forms the answer from it, and
 /// refuses one that forms no term of the question's type; the family checks
 /// no type.
 library;
@@ -73,6 +83,10 @@ ValueKey<String> nodeKey(int id, String kind, List<int> at) =>
 /// The key of the submit button of the question at [at] of construct [id].
 ValueKey<String> submitKey(int id, List<int> at) =>
     ValueKey('$id:submit:${pathText(at)}');
+
+/// The key of the button that ends the list at [at] of construct [id].
+ValueKey<String> endKey(int id, List<int> at) =>
+    ValueKey('$id:end:${pathText(at)}');
 
 /// A path as the boundary writes it, `[]`, `[2]`, `[1, 2]`.
 String pathText(List<int> at) => '[${at.join(', ')}]';
@@ -169,21 +183,27 @@ class _ConstructViewState extends State<ConstructView> {
       case 'picker' when ws.isEmpty:
         return _picker(v, at);
       case 'form' when _isForm(ws):
-        final fields = (ws[1] as GList).items;
+        final entries = _entries(ws);
         final f = _name(ws[0]);
         final (vf, vs) = ctorArgs(v);
-        if (vf != f || vs.length != fields.length) break;
+        if (vf != f || vs.length != entries.length) break;
+        // The form's fields, each labelled, and under them its questions of
+        // their own, each drawn once the form's answer leaves it open.
+        Widget entry(int i) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: _labelled(
+                  entries[i].label, _node(entries[i].widget, vs[i], [...at, i + 1])),
+            );
         return _keyed(
             'form',
             at,
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (var i = 0; i < fields.length; i++)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 3),
-                    child: _node(fields[i], vs[i], [...at, i + 1]),
-                  ),
+                for (var i = 0; i < entries.length; i++)
+                  if (!entries[i].own) entry(i),
+                for (var i = 0; i < entries.length; i++)
+                  if (entries[i].own) entry(i),
               ],
             ));
       case 'menu' when ws.length == 1 && ws[0] is GList:
@@ -196,13 +216,20 @@ class _ConstructViewState extends State<ConstructView> {
           if (ak == 'form' &&
               _isForm(aws) &&
               _name(aws[0]) == vf &&
-              (aws[1] as GList).items.length == vs.length) {
+              _entries(aws).length == vs.length) {
             return _keyed('menu', at, _shown(a, v, at));
           }
         }
         if (alts.any((a) => a is GAtom && a.name == 'shown')) {
           return _keyed('menu', at, Text(displayText(v)));
         }
+      // A position the person has answered, inside a form whose answer left
+      // a question of its own open: the answer, shown and no more edited.
+      case 'text' || 'number' || 'date' || 'peer' when ws.isEmpty:
+        return _keyed('shown', at, Text(displayText(v)));
+      case 'button' || 'buttons' || 'input_box' || 'input_list'
+          when ws.length == 1:
+        return _keyed('shown', at, Text(displayText(v)));
     }
     final named = _named(w, v, at);
     if (named != null) return named;
@@ -268,6 +295,31 @@ class _ConstructViewState extends State<ConstructView> {
           return _keyed('input_box', at, _question(ws[0], p, at));
         }
         return _keyed('input_box', at, _submitting(ws[0], p, at, keepOpen: true));
+      case 'input_list' when ws.length == 1:
+        // The same, with a button that ends the list: it grants [], the
+        // list's end, at the list's position.
+        final (ek, _) = ctorArgs(ws[0]);
+        return _keyed(
+            'input_list',
+            at,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (ek == 'button' || ek == 'buttons')
+                  _question(ws[0], p, at)
+                else
+                  _submitting(ws[0], p, at, keepOpen: true),
+                const SizedBox(height: 6),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: OutlinedButton(
+                    key: endKey(_id, at),
+                    onPressed: () => widget.grant(p, const GList([])),
+                    child: const Text('End'),
+                  ),
+                ),
+              ],
+            ));
       case 'text' || 'number' || 'date' || 'peer' when ws.isEmpty:
         return _submitting(w, p, at, keepOpen: false);
       case 'form' when _isForm(ws):
@@ -287,7 +339,7 @@ class _ConstructViewState extends State<ConstructView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _editor(w, at),
+        _editor(w, at, null),
         const SizedBox(height: 6),
         Align(
           alignment: Alignment.centerRight,
@@ -308,8 +360,9 @@ class _ConstructViewState extends State<ConstructView> {
 
   // === Editors: the person's input before it is submitted ==================
 
-  /// The editor of widget [w] at position [at].
-  Widget _editor(GTerm w, List<int> at) {
+  /// The editor of widget [w] at position [at], labelled [label] where it
+  /// is a field of a form, by the name of the field's declared type.
+  Widget _editor(GTerm w, List<int> at, String? label) {
     final (kind, ws) = ctorArgs(w);
     final k = pathText(at);
     switch (kind) {
@@ -323,7 +376,7 @@ class _ConstructViewState extends State<ConstructView> {
                   ? const TextInputType.numberWithOptions(
                       signed: true, decimal: true)
                   : TextInputType.text,
-              decoration: InputDecoration(labelText: kind, isDense: true),
+              decoration: InputDecoration(labelText: label, isDense: true),
               onChanged: (_) => setState(() {}),
             ));
       case 'date' when ws.isEmpty:
@@ -332,7 +385,7 @@ class _ConstructViewState extends State<ConstructView> {
             'date',
             at,
             Row(children: [
-              const Text('date'),
+              if (label != null) Text(label),
               IconButton(
                 key: ValueKey('$_id:date:$k:earlier'),
                 icon: const Icon(Icons.chevron_left),
@@ -346,37 +399,45 @@ class _ConstructViewState extends State<ConstructView> {
               ),
             ]));
       case 'button' when ws.length == 1:
-        return _keyed('button', at, Chip(label: Text(displayText(ws[0]))));
+        return _keyed('button', at,
+            _labelled(label, Chip(label: Text(displayText(ws[0])))));
       case 'buttons' when ws.length == 1 && ws[0] is GList:
         final chosen = _chosen[k];
         return _keyed(
             'buttons',
             at,
-            Wrap(spacing: 8, children: [
+            _labelled(label, Wrap(spacing: 8, children: [
               for (final c in (ws[0] as GList).items)
                 ChoiceChip(
                   label: Text(displayText(c)),
                   selected: chosen != null && formatTerm(chosen) == formatTerm(c),
                   onSelected: (_) => setState(() => _chosen[k] = c),
                 ),
-            ]));
+            ])));
       case 'form' when _isForm(ws):
-        final fields = (ws[1] as GList).items;
+        // Its fields, each labelled by the name of its declared type; a
+        // question of its own is no field, and is drawn under the form once
+        // the form's answer leaves it open.
+        final entries = _entries(ws);
         return _keyed(
             'form',
             at,
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(_name(ws[0]),
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-                for (var i = 0; i < fields.length; i++)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: _editor(fields[i], [...at, i + 1]),
-                  ),
-              ],
-            ));
+            _labelled(
+                label,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_name(ws[0]),
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    for (var i = 0; i < entries.length; i++)
+                      if (!entries[i].own)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: _editor(entries[i].widget, [...at, i + 1],
+                              entries[i].label),
+                        ),
+                  ],
+                )));
       case 'menu' when ws.length == 1 && ws[0] is GList:
         final alts = (ws[0] as GList).items;
         final chosen = _alternative[k];
@@ -389,7 +450,7 @@ class _ConstructViewState extends State<ConstructView> {
                 Wrap(spacing: 8, children: [
                   for (var i = 0; i < alts.length; i++)
                     ChoiceChip(
-                      label: Text(_alternativeLabel(alts[i])),
+                      label: Text(_alternativeLabel(alts, i)),
                       selected: chosen == i,
                       // Another alternative is another form: what was
                       // typed into the last one goes with it.
@@ -402,7 +463,7 @@ class _ConstructViewState extends State<ConstructView> {
                 if (chosen != null && ctorArgs(alts[chosen]).$1 == 'form')
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
-                    child: _editor(alts[chosen], at),
+                    child: _editor(alts[chosen], at, label),
                   ),
               ],
             ));
@@ -434,10 +495,16 @@ class _ConstructViewState extends State<ConstructView> {
       case 'buttons' when ws.length == 1:
         return _chosen[k];
       case 'form' when _isForm(ws):
-        final fields = (ws[1] as GList).items;
+        final entries = _entries(ws);
         final values = <GTerm>[];
-        for (var i = 0; i < fields.length; i++) {
-          final v = _value(fields[i], [...at, i + 1]);
+        for (var i = 0; i < entries.length; i++) {
+          if (entries[i].own) {
+            // A question of its own: no input here, the form's answer
+            // leaving it open.
+            values.add(const GList([]));
+            continue;
+          }
+          final v = _value(entries[i].widget, [...at, i + 1]);
           if (v == null) return null;
           values.add(v);
         }
@@ -450,8 +517,10 @@ class _ConstructViewState extends State<ConstructView> {
     return null;
   }
 
-  /// An agent identifier, as GLP writes a constant unquoted.
-  static final RegExp _identifier = RegExp(r'^[a-z][A-Za-z0-9_]*$');
+  /// An agent identifier: a name, or a key, the hex string `Key` carries
+  /// (programs/self.glp, `Key ::= String`) --- letters, digits and `_`, and
+  /// nothing else.
+  static final RegExp _identifier = RegExp(r'^[A-Za-z0-9_]+$');
 
   /// Clear every editor at [at] and below it, for the next submission.
   void _clear(List<int> at) {
@@ -497,18 +566,60 @@ class _ConstructViewState extends State<ConstructView> {
   Widget _keyed(String kind, List<int> at, Widget child) =>
       KeyedSubtree(key: nodeKey(_id, kind, at), child: child);
 
-  static bool _isForm(List<GTerm> ws) => ws.length == 2 && ws[1] is GList;
+  /// A form, `form(F, [E1, ..., En])`, each entry `field(L, W)` or
+  /// `question(L, W)`.
+  static bool _isForm(List<GTerm> ws) =>
+      ws.length == 2 &&
+      ws[1] is GList &&
+      (ws[1] as GList).items.every((e) {
+        final (k, es) = ctorArgs(e);
+        return (k == 'field' || k == 'question') && es.length == 2;
+      });
+
+  /// The entries of a form, one per argument: its label, the name of the
+  /// argument's declared type; its widget; and whether it is a question of
+  /// its own, `question(L, W)`, and no field of the form.
+  static List<({String label, GTerm widget, bool own})> _entries(
+          List<GTerm> ws) =>
+      [
+        for (final e in (ws[1] as GList).items)
+          (
+            label: displayText(ctorArgs(e).$2[0]),
+            widget: ctorArgs(e).$2[1],
+            own: ctorArgs(e).$1 == 'question',
+          )
+      ];
+
+  /// [child] under [label], where there is one.
+  static Widget _labelled(String? label, Widget child) => label == null
+      ? child
+      : Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(fontSize: 12)),
+            child,
+          ],
+        );
 
   /// The functor a form names.
   static String _name(GTerm f) => ctorArgs(f).$1;
 
-  /// What a menu's alternative is called: its form's functor, or its
-  /// button's constant.
-  static String _alternativeLabel(GTerm a) {
-    final (k, ws) = ctorArgs(a);
-    if (k == 'form' && _isForm(ws)) return _name(ws[0]);
+  /// What the menu's alternative [i] of [alts] is called: its form's
+  /// functor, and its arity where another of its forms has that functor
+  /// (Remark "Construct Families"; vGLP #6 Cowork, 2026-10-11 12:55 UTC,
+  /// item 3, Q3); or its button's constant.
+  static String _alternativeLabel(List<GTerm> alts, int i) {
+    final (k, ws) = ctorArgs(alts[i]);
+    if (k == 'form' && _isForm(ws)) {
+      final f = _name(ws[0]);
+      final shared = alts.where((a) {
+        final (ak, aws) = ctorArgs(a);
+        return ak == 'form' && _isForm(aws) && _name(aws[0]) == f;
+      }).length;
+      return shared > 1 ? '$f/${_entries(ws).length}' : f;
+    }
     if (k == 'button' && ws.length == 1) return displayText(ws[0]);
-    return formatTerm(a);
+    return formatTerm(alts[i]);
   }
 }
 

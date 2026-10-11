@@ -266,10 +266,13 @@ void main() {
       'a picker, a thread and an input box', (tester) async {
     final p = await _Person.boot(tester, 'forms_init');
 
-    final form = p.the('form(pay, [peer, number])');
-    final menu = p.the('menu([form(send, [peer, number]), form(post, [text])])');
+    final form =
+        p.the('form(pay, [field(Peer, peer), field(Integer, number)])');
+    final menu = p.the('menu([form(send, [field(Peer, peer), field(Integer, '
+        'number)]), form(post, [field(String, text)])])');
     final picker = p.the('picker');
-    final feed = p.the('form(feed, [thread, buttons([yes, no])])');
+    final feed = p.the('form(feed, [field(Stream(String), thread), '
+        'field(YesNo, buttons([yes, no]))])');
     final box = p.the('input_box(text)');
     expect(p.ui.bridge.constructs, hasLength(5));
 
@@ -352,7 +355,8 @@ void main() {
       'its own construct, and each goal its own answer', (tester) async {
     final p = await _Person.boot(tester, 'cards_init');
 
-    final cards = p.drawn('form(card, [shown, buttons([yes, no])])');
+    final cards = p.drawn(
+        'form(card, [field(Peer, shown), field(YesNo, buttons([yes, no]))])');
     expect(cards, hasLength(2));
     final views = {for (final c in cards) formatTerm(c.view)};
     expect(views, {'card(alice, input([2]))', 'card(bob, input([2]))'});
@@ -450,6 +454,128 @@ void main() {
               of: find.byKey(constructKey(2)),
               matching: find.byType(ElevatedButton)),
           findsNothing);
+    });
+
+    // vGLP #6 Cowork, 2026-10-11 12:55 UTC, Task B, from Definition "Widget
+    // Declaration, Default Widget" and Remark "Construct Families".
+    Future<void> surface(WidgetTester tester) => tester.pumpWidget(
+        MaterialApp(home: AgentSurface(agentId: 'bob', runtime: r)));
+    Finder field(int id, String kind, List<int> at) => find.descendant(
+        of: find.byKey(nodeKey(id, kind, at)), matching: find.byType(TextField));
+    Finder inside(int id, Finder f) =>
+        find.descendant(of: find.byKey(constructKey(id)), matching: f);
+
+    testWidgets(
+        'a list the person writes: the widget of its element, kept open, and '
+        'a button that ends the list, granting [] (item 1); a stream has no '
+        'such button', (tester) async {
+      r.handleLine('draw(1, input_list(number), input([]))');
+      r.handleLine('draw(2, input_box(number), input([]))');
+      await surface(tester);
+      expect(find.byKey(nodeKey(1, 'input_list', [])), findsOneWidget);
+      await tester.enterText(field(1, 'number', []), '4');
+      await tester.pump();
+      await tester.tap(find.byKey(submitKey(1, [])));
+      await tester.pump();
+      expect(sent, ['input(1, [], 4)']);
+      expect(tester.widget<TextField>(field(1, 'number', [])).controller!.text,
+          isEmpty);
+      await tester.tap(find.byKey(endKey(1, [])));
+      await tester.pump();
+      expect(sent, ['input(1, [], 4)', 'input(1, [], [])']);
+      expect(find.byKey(nodeKey(2, 'input_box', [])), findsOneWidget);
+      expect(find.byKey(endKey(2, [])), findsNothing);
+    });
+
+    testWidgets(
+        'a stream inside a form the person writes is no field of it: the form '
+        'is submitted with [] there, and once drawn with its answer the '
+        'stream is drawn under it, a question of its own (item 3)',
+        (tester) async {
+      const w = "form(post, [field('String', text), "
+          "question('Stream(String)', input_box(text))])";
+      r.handleLine('draw(3, $w, input([]))');
+      await surface(tester);
+      // One field, labelled by its declared type's name, and no input box.
+      expect(field(3, 'text', [1]), findsOneWidget);
+      expect(inside(3, find.byType(TextField)), findsOneWidget);
+      expect(find.byKey(nodeKey(3, 'input_box', [2])), findsNothing);
+      expect(inside(3, find.text('Stream(String)')), findsNothing);
+      await tester.enterText(field(3, 'text', [1]), 'hi');
+      await tester.pump();
+      await tester.tap(find.byKey(submitKey(3, [])));
+      await tester.pump();
+      expect(sent, ['input(3, [], post("hi", []))']);
+      // The answer, its stream at [2] open: the form shown, the input box
+      // under it.
+      r.handleLine("draw(3, $w, post('hi', input([2])))");
+      await tester.pump();
+      expect(find.byKey(nodeKey(3, 'shown', [1])), findsOneWidget);
+      expect(inside(3, find.text('hi')), findsOneWidget);
+      expect(find.byKey(nodeKey(3, 'input_box', [2])), findsOneWidget);
+      expect(inside(3, find.text('Stream(String)')), findsOneWidget);
+      await tester.enterText(field(3, 'text', [2]), 'x');
+      await tester.pump();
+      await tester.tap(find.byKey(submitKey(3, [2])));
+      await tester.pump();
+      expect(sent.last, 'input(3, [2], "x")');
+      expect(find.text('No widget', findRichText: true), findsNothing);
+    });
+
+    testWidgets(
+        'a peer field takes an agent identifier, a name or a key, and nothing '
+        'else (item 5)', (tester) async {
+      r.handleLine('draw(5, peer, input([]))');
+      await surface(tester);
+      bool submittable() =>
+          tester.widget<ElevatedButton>(find.byKey(submitKey(5, []))).onPressed !=
+          null;
+      await tester.enterText(field(5, 'peer', []), 'Carol Smith');
+      await tester.pump();
+      expect(submittable(), isFalse);
+      await tester.enterText(field(5, 'peer', []), '0a1b2c');
+      await tester.pump();
+      await tester.tap(find.byKey(submitKey(5, [])));
+      await tester.pump();
+      expect(sent, ['input(5, [], 0a1b2c)']);
+    });
+
+    testWidgets(
+        'a form field is labelled by the name of its declared type, and no '
+        'field by its widget\'s kind (item 6)', (tester) async {
+      r.handleLine("draw(6, form(lot, [field('Key', peer), "
+          "field('Integer', number), field('Date', date)]), input([]))");
+      await surface(tester);
+      for (final label in ['Key', 'Integer', 'Date']) {
+        expect(inside(6, find.text(label)), findsOneWidget, reason: label);
+      }
+      for (final kind in ['peer', 'number', 'date', 'text']) {
+        expect(inside(6, find.text(kind)), findsNothing, reason: kind);
+      }
+    });
+
+    testWidgets(
+        'a menu\'s chip names its alternative\'s functor, and its arity where '
+        'two share a functor (item 7)', (tester) async {
+      r.handleLine("draw(7, menu([form(mint, [field('Integer', number)]), "
+          "form(mint, [field('Integer', number), field('Integer', number)]), "
+          "form(pay, [field('Key', peer), field('Integer', number)]), "
+          'button(quit)]), input([]))');
+      await surface(tester);
+      for (final chip in ['mint/1', 'mint/2', 'pay', 'quit']) {
+        expect(inside(7, find.text(chip)), findsOneWidget, reason: chip);
+      }
+      expect(inside(7, find.text('mint')), findsNothing);
+      await tester.tap(inside(7, find.text('mint/2')));
+      await tester.pump();
+      expect(field(7, 'number', [1]), findsOneWidget);
+      expect(field(7, 'number', [2]), findsOneWidget);
+      await tester.enterText(field(7, 'number', [1]), '3');
+      await tester.enterText(field(7, 'number', [2]), '30');
+      await tester.pump();
+      await tester.tap(find.byKey(submitKey(7, [])));
+      await tester.pump();
+      expect(sent, ['input(7, [], mint(3, 30))']);
     });
 
     test('a real crosses the boundary as a Real', () {

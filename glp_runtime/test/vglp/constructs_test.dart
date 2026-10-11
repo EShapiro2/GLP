@@ -277,7 +277,8 @@ procedure (T?)*p.
           s,
           contains('construct(Id, card_w(X), Gs, Ds?) :- '
               'present_card([], X?, Gs?, _, Vs, Done), '
-              'run(Id?, form(card, [shown, buttons([yes, no])]), Vs?, Done?, '
+              'run(Id?, form(card, [field(\'Peer\', shown), field(\'YesNo\', '
+              'buttons([yes, no]))]), Vs?, Done?, '
               'Ds).'));
       // The view waits for the peer, so the output comes before the input
       // inside it; the question is marked with its position, the card's at
@@ -375,7 +376,8 @@ decide(no, From, refuse(From?)).
           s,
           contains('construct(Id, card_w(X), Gs, Ds?) :- '
               'present_card([], X?, Gs?, _, Vs, Done), '
-              'run(Id?, form(card, [shown, buttons([yes, no])]), Vs?, Done?, '
+              'run(Id?, form(card, [field(\'Peer\', shown), field(\'YesNo\', '
+              'buttons([yes, no]))]), Vs?, Done?, '
               'Ds).'));
       expect(s, contains('construct(Id, note_r(X?), Gs, Ds?) :- '));
       expect(s, contains('form_yesNo(yes, formed(yes)).'));
@@ -456,11 +458,15 @@ $calling''';
           s,
           contains('construct(Id, note_r(X?), Gs, Ds?) :- '
               'answer_note([], X, Gs?, _, Done), '
-              'run(Id?, form(note, [text]), [input([])], Done?, Ds).'));
+              'run(Id?, form(note, [field(\'String\', text)]), [input([])], '
+              'Done?, Ds).'));
       expect(c.widgets,
-          {'Card': 'inbox_card', 'Note?': 'form(note, [text])'});
+          {
+        'Card': 'inbox_card',
+        'Note?': "form(note, [field('String', text)])"
+      });
       // The importer declares no widget: Card's is the one N gives it.
-      expect(s, isNot(contains('form(card, [shown, buttons([yes, no])])')));
+      expect(s, isNot(contains('form(card, [')));
     });
 
     test('a `_2` functor of N has its construct process on that functor', () {
@@ -502,7 +508,8 @@ $befriend
 exported procedure (Card)*show(Offer?).
 (card(P?, _))*show(offer(P)).
 ''', {'responder': responder}),
-            refused('its widget is form(card, [shown, buttons([yes, no])]) '
+            refused("its widget is form(card, [field('Peer', shown), "
+                "field('YesNo', buttons([yes, no]))]) "
                 'here and inbox_card in responder'));
       });
 
@@ -545,7 +552,8 @@ exported procedure (Card)*show(Offer?).
 ''',
             }),
             refused('its widget inbox_card in responder and '
-                'form(card, [shown, buttons([yes, no])]) in plain'));
+                "form(card, [field('Peer', shown), field('YesNo', "
+                "buttons([yes, no]))]) in plain"));
       });
     });
   });
@@ -563,7 +571,8 @@ procedure (Request?)*agent(Integer?).
           s,
           contains('construct(Id, request_r(X?), Gs, Ds?) :- '
               'answer_request([], X, Gs?, _, Done), run(Id?, menu([form(post, '
-              '[text]), button(quit)]), [input([])], Done?, Ds).'));
+              "[field('String', text)]), button(quit)]), [input([])], Done?, "
+              'Ds).'));
       expect(s,
           contains('form_request(post(R1), F?) :- form_string(R1?, F1), '
               'join_request_post_1(F1?, F).'));
@@ -628,7 +637,8 @@ procedure (Order?)*order(Order).
 ''').source;
       expect(
           s,
-          contains('menu([form(order, [peer, form(lot, [number, date])]), '
+          contains("menu([form(order, [field('Peer', peer), field('Lot', "
+              "form(lot, [field('Integer', number), field('Date', date)]))]), "
               'button(cancel)])'));
       expect(
           s,
@@ -655,7 +665,7 @@ Price ::= price(Real).
 procedure (Price?)*quote(Price).
 (P)*quote(P?).
 ''');
-      expect(c.widgets['Price?'], 'form(price, [number])');
+      expect(c.widgets['Price?'], "form(price, [field('Real', number)])");
       expect(
           c.source,
           contains('form_price(price(R1), F?) :- form_real(R1?, F1), '
@@ -694,7 +704,10 @@ Board ::= board(Stream(Integer), Stream(String)?).
 procedure (Board)*game(Stream(String)).
 (board([1, 2, 3], Moves))*game(Moves?).
 ''').source;
-      expect(s, contains('form(board, [thread, input_box(text)])'));
+      expect(
+          s,
+          contains("form(board, [field('Stream(Integer)', thread), "
+              "field('Stream(String)', input_box(text))])"));
       expect(
           s,
           contains('present_board(P, board(H1, H2?), Gs, Gs1?, Vs?, D2?) :- '
@@ -731,8 +744,9 @@ procedure (Outer)*nested(YesNo, String).
 ''').source;
       expect(
           s,
-          contains('form(outer, [shown, form(inner, [shown, buttons([yes, '
-              'no])]), text])'));
+          contains("form(outer, [field('Integer', shown), field('Inner', "
+              "form(inner, [field('Peer', shown), field('YesNo', "
+              "buttons([yes, no]))])), field('String', text)])"));
       // The nested structure's position is its argument's, [2], and its
       // question's below it [2, 2]; the outer question's is [3] (C).
       expect(
@@ -922,6 +936,246 @@ procedure (Pick?)*pick(Pick).
     });
   });
 
+  // vGLP #6 Cowork, 2026-10-11 12:55 UTC, Task B, from Definition "Widget
+  // Declaration, Default Widget" and the Answer rule of Definition "vmaGLP
+  // Transition System" (vGLP 90988ea).  The runs are elicitation_test's.
+  group('Task B (1): a list the person writes', () {
+    test('draws the stream widget with a button that ends the list, [] its '
+        'answer; neither ref(T) nor form(\'.\', ...)', () {
+      final c = compile('''
+List(X) ::= [] ; [X | List(X)].
+procedure (List(String)?)*names(List(String)).
+(Ns)*names(Ns?).
+''');
+      expect(c.widgets['List(String)?'], 'input_list(text)');
+      final s = c.source;
+      expect(
+          s,
+          contains('answer_list_string(P, [], [input(_, P1, []) | Gs], Gs?, '
+              'done) :- P1? =?= P? | true.'));
+      expect(
+          s,
+          contains('take_list_string(formed(V), P, [V? | X1?], _, Gs, Gs1?, '
+              'Done?) :- answer_list_string(P?, X1, Gs?, Gs1, Done).'));
+      expect(s, isNot(contains('ref(')));
+      expect(s, isNot(contains("form('.'")));
+    });
+
+    test('a List of no parameter is a list too', () {
+      final c = compile('''
+List ::= [] ; [Integer | List].
+procedure (List?)*numbers(List).
+(Ns)*numbers(Ns?).
+''');
+      expect(c.widgets['List?'], 'input_list(number)');
+    });
+
+    test('a stream is not ended by the person: no clause takes []', () {
+      final c = compile('''
+procedure (Stream(String)?)*lines(Stream(String)).
+(Ls)*lines(Ls?).
+''');
+      expect(c.widgets['Stream(String)?'], 'input_box(text)');
+      expect(c.source, isNot(contains('answer_stream_string(P, [], ')));
+    });
+  });
+
+  group('Task B (2): a recursive type the person writes that is neither a '
+      'Stream nor a List', () {
+    test('is refused by the compiler, the message naming the type', () {
+      expect(() => compile('''
+Tree ::= leaf ; node(Tree, Tree).
+procedure (Tree?)*plant(Tree).
+(T)*plant(T?).
+'''), refused('the person writes Tree, a recursive type that is neither a '
+          'Stream nor a List'));
+      expect(() => compile('''
+Names ::= [] ; [String | Names].
+procedure (Names?)*name(Names).
+(Ns)*name(Ns?).
+'''), refused('the person writes Names, a recursive type that is neither a '
+          'Stream nor a List'));
+    });
+
+    test('a list cell the person writes outside a Stream or a List is refused '
+        'too, and no form(\'.\', ...) is emitted', () {
+      expect(() => compile('''
+Nil ::= [].
+Pair ::= [Integer | Nil].
+procedure (Pair?)*pair(Pair).
+(P)*pair(P?).
+'''), refused('the person writes Pair, a list cell of which is neither a '
+          'Stream nor a List'));
+    });
+  });
+
+  group('Task B (3): a stream or a list inside a form the person writes', () {
+    const post = '''
+List(X) ::= [] ; [X | List(X)].
+Post ::= post(String, Stream(String)) ; tags(List(Constant)) ; quit.
+procedure (Post?)*poster(Post).
+(P)*poster(P?).
+''';
+
+    test('is a question of its own, drawn under the form: question(L, W), and '
+        'no input_box as a field', () {
+      final c = compile(post);
+      expect(
+          c.widgets['Post?'],
+          "menu([form(post, [field('String', text), "
+          "question('Stream(String)', input_box(text))]), "
+          "form(tags, [question('List(Constant)', input_list(text))]), "
+          'button(quit)])');
+      expect(c.widgets['Post?'], isNot(contains("field('Stream(String)'")));
+    });
+
+    test('the form\'s answer carries a fresh variable there, answered from '
+        'the grants that follow at its own position, and the construct is '
+        'drawn again with the answer', () {
+      final s = compile(post).source;
+      expect(
+          s,
+          contains('construct(Id, post_r(X?), Gs, Ds?) :- '
+              'answer_post([], X, Gs?, _, Vs, Done), run(Id?, menu('));
+      expect(s, contains('[input([]) | Vs?], Done?, Ds).'));
+      // Formed with [] there, not from the input.
+      expect(
+          s,
+          contains('form_post(post(R1, _), F?) :- form_string(R1?, F1), '
+              'join_post_post_2(F1?, F).'));
+      expect(s, contains('join_post_post_2(formed(X1), formed(post(X1?, []))).'));
+      expect(s, contains('form_post(tags(_), formed(tags([]))).'));
+      expect(
+          s,
+          contains('take_post(formed(V), P, X?, _, Gs, Gs1?, [W?], Done?) :- '
+              'open_post(V?, P?, X, Gs?, Gs1, W, Done).'));
+      expect(
+          s,
+          contains('open_post(post(H1, _), P, post(H1?, Y2?), Gs, Gs1?, '
+              'post(H1?, input(M2?)), D2?) :- ground(P?), ground(H1?) | '
+              'path(P?, 2, M2), path(P?, 2, Q2), '
+              'answer_stream_string(Q2?, Y2, Gs?, Gs1, D2).'));
+      expect(
+          s,
+          contains('open_post(tags(_), P, tags(Y1?), Gs, Gs1?, '
+              'tags(input(M1?)), D1?) :- ground(P?) | path(P?, 1, M1), '
+              'path(P?, 1, Q1), answer_list_constant(Q1?, Y1, Gs?, Gs1, D1).'));
+      expect(
+          s,
+          contains('open_post(V, _, X?, Gs, Gs?, W?, done) :- ground(V?) | '
+              'X = V?, W = V?.'));
+    });
+
+    test('in a form inside the form, at the path down to it', () {
+      final c = compile('''
+List(X) ::= [] ; [X | List(X)].
+Wrap ::= wrap(Integer, List(Integer)).
+Order ::= order(Integer, Wrap).
+procedure (Order?)*order(Order).
+(O)*order(O?).
+''');
+      expect(
+          c.widgets['Order?'],
+          "form(order, [field('Integer', number), field('Wrap', form(wrap, "
+          "[field('Integer', number), question('List(Integer)', "
+          'input_list(number))]))])');
+      expect(
+          c.source,
+          contains('open_order(order(H1, H2), P, order(H1?, X2?), Gs, Gs1?, '
+              'order(H1?, V2?), D2?) :- ground(H1?) | path(P?, 2, Q2), '
+              'open_wrap(H2?, Q2?, X2, Gs?, Gs1, V2, D2).'));
+    });
+
+    test('in a question of a structure the program writes, drawn again once '
+        'answered', () {
+      final s = compile('''
+Peer ::= Constant.
+Reply ::= reply(String, Stream(String)).
+Card ::= card(Peer, Reply?).
+procedure (Card)*respond(Reply).
+(card(bob, R))*respond(R?).
+''').source;
+      expect(
+          s,
+          contains('present_card(P, card(H1, H2?), Gs, Gs1?, Vs?, D2?) :- '
+              'ground(P?) | shown(H1?, V1), path(P?, 2, M2), path(P?, 2, Q2), '
+              'answer_reply(Q2?, H2, Gs?, Gs1, W2, D2), '
+              'start_card_card_2(V1?, [input(M2?) | W2?], Vs).'));
+    });
+
+    test('is refused in an element of a stream or a list, whose elements '
+        'share one position', () {
+      expect(() => compile('''
+Req ::= post(String, Stream(String)).
+procedure (Stream(Req)?)*agent(Stream(Req)).
+(Rs)*agent(Rs?).
+'''), refused('whose element Req holds a stream or a list'));
+    });
+  });
+
+  group('Task B (4): a position of type Constant or Module draws a text field',
+      () {
+    test('as String does', () {
+      final c = compile('''
+Tag ::= tag(Constant, Module, String).
+procedure (Tag?)*tag(Tag).
+(T)*tag(T?).
+''');
+      expect(
+          c.widgets['Tag?'],
+          "form(tag, [field('Constant', text), field('Module', text), "
+          "field('String', text)])");
+    });
+  });
+
+  group('Task B (5): a position of type Key, or of a type defined as Key, '
+      'draws a peer field, whatever its name', () {
+    test('Key, Issuer ::= Key and Owner ::= Issuer; a String is a text field',
+        () {
+      final c = compile('''
+Issuer ::= Key.
+Owner ::= Issuer.
+Name ::= String.
+Lot ::= lot(Key, Issuer, Owner, Name, Integer).
+procedure (Lot?)*lot(Lot).
+(L)*lot(L?).
+procedure (Key?)*key(Key).
+(K)*key(K?).
+''');
+      expect(
+          c.widgets['Lot?'],
+          "form(lot, [field('Key', peer), field('Issuer', peer), "
+          "field('Owner', peer), field('Name', text), field('Integer', "
+          'number)])');
+      expect(c.widgets['Key?'], 'peer');
+    });
+  });
+
+  group('Task B (6): a form field is labelled by the name of its declared '
+      'type', () {
+    test('in a form the person writes and in one the program writes', () {
+      final c = compile('''
+Peer ::= Constant.
+Date ::= Integer.
+YesNo ::= yes ; no.
+Pay ::= pay(Peer, Integer, Date, Real).
+Offer ::= offer(Peer, Stream(Integer), YesNo?).
+procedure (Pay?)*pay(Pay).
+(P)*pay(P?).
+procedure (Offer)*offer(YesNo).
+(offer(bob, [1, 2], A))*offer(A?).
+''');
+      expect(
+          c.widgets['Pay?'],
+          "form(pay, [field('Peer', peer), field('Integer', number), "
+          "field('Date', date), field('Real', number)])");
+      expect(
+          c.widgets['Offer'],
+          "form(offer, [field('Peer', shown), field('Stream(Integer)', "
+          "thread), field('YesNo', buttons([yes, no]))])");
+    });
+  });
+
   group('a string in the compiled program', () {
     // One string constant, 'x' and "x" one value and '"x"' the
     // three-character string, printed by GLP's printer in its one canonical
@@ -1028,7 +1282,8 @@ procedure (Pair)*both(YesNo, YesNo).
 Pair ::= pair(YesNo?, YesNo?).
 ''');
       expect(c.widgets['Card'], 'inbox_card');
-      expect(c.widgets['Pair'], 'form(pair, [toggle, toggle])');
+      expect(c.widgets['Pair'],
+          "form(pair, [field('YesNo', toggle), field('YesNo', toggle)])");
     });
 
     test('a declaration for the other mode does not apply', () {
