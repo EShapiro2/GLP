@@ -1,123 +1,46 @@
-/// The currency mini-app's screen, the image of the display declarations of
-/// `programs/currencies/coins/currency/coins_agent.vglp`.
+/// The currency mini-app's screen: the panel the Dart bridge draws the
+/// constructs of `programs/currencies/coins/currency/coins_agent.vglp` in,
+/// and the views of what the agent writes to its person.
 ///
-/// Nothing here is invented. Every element is derived from one declaration
-/// under vGLP's Definitions "Display Declaration", "Manifest" and "Canonical
-/// Compilation", by the derivation vGLP wrote out in
-/// `/Grassroots/vGLP/docs/currency-manifest-derivation.md`. The declarations,
-/// carried through into the compiled `coins_agent.glp`, are:
+/// The program runs by its bridge entry, `coins_ui(alice, Grants, _)`
+/// (`programs/currencies/coins/play_ui.glp`, `(Id, UserIn, NetIn)`), which
+/// gives the mini-app the person channel `ch(Grants?, Draws)` of vGLP's
+/// Definition "Person Channel, Person Writer, GLP with Persons, Grant" and
+/// sends the draws to the person by `send_to_user/1`.  Its constructs are
+/// therefore the bridge's (vGLP, sections/elicitation.tex, the paragraph "The
+/// implementation": "the bridge draws each construct's widget and returns
+/// the person's raw input as grants"): the dispatcher draws `draw(Id, W, V)`
+/// and withdraws `withdraw(Id)`, and the person grants `input(Id, P, R)`.
+/// The source declares no display and no widget, so each construct is the
+/// default widget of its interactive type (Definition "Widget Declaration,
+/// Default Widget"), drawn by the construct family: the agent's question,
+/// `Stream(Request)?`, an input box of a menu of the four forms of `Request
+/// ::= mint(Integer) ; swap(Peer, Lot, Lot) ; pay(Peer, Integer) ;
+/// redeem(Peer, Peer)`, kept open, one request per submission; and the swap
+/// responder's question, `Card ::= card(Offer, YesNo?)` in writer mode, a
+/// card showing the offer with the buttons yes and no, withdrawn once
+/// answered.  Nothing of the deployed mediator's card vocabulary --- its
+/// forms, its cards and their answers --- is named here: none of it reaches
+/// this program.
 ///
-/// ```
-/// display agent *(Amount) : panel(coins), label("Mint"),
-///     field(Amount, number), persistent.
-/// display agent *(Friend, GiveCoin, GiveAmount, WantCoin, WantAmount) :
-///     panel(coins), label("Swap"), field(Friend, peer), field(GiveCoin, peer),
-///     field(GiveAmount, number), field(WantCoin, peer),
-///     field(WantAmount, number), persistent.
-/// display agent *(Friend, Amount) : panel(coins), label("Pay"),
-///     field(Friend, peer), field(Amount, number), persistent.
-/// display agent *(Friend, WantCoin) : panel(coins), label("Redeem"),
-///     field(Friend, peer), field(WantCoin, peer), persistent.
-/// display respond_swap *(yes, From?, Want?, Offered?) : panel(coins),
-///     label("Accept"), transient.
-/// display msg(agent, person, holdings(Lots)) : panel(coins), view(balances).
-/// ```
-///
-/// A field's label is its writer's name: a display declaration's `field(X, W)`
-/// item gives the widget and not a label, so the writer is what the person
-/// sees, and Currencies named the writers on 2026-09-09 so that the forms
-/// label themselves. The clause names and answer functors are the compilation's — the
-/// four request clauses of `agent` are `agent_1` to `agent_4` in the order
-/// they are written, and the one clause of `respond_swap` is `respond_swap_1`,
-/// the accept clause, whose reply type is
-/// `Reply_respond_swap_1 ::= then(Xs_respond_swap_1) ; else`: its else-branch
-/// is the decline.
+/// What is named here is the agent's own output to its person, `msg(agent,
+/// person, C)` with `C` a `ScreenContent` (`programs/currencies/coins/
+/// self.glp`), which the dispatcher merges with the draws: "the lists the
+/// program writes --- the friends, the chat threads, the balances --- which
+/// the runtime renders as GLP renders every message to the person" (vGLP,
+/// sections/ui-primitives.tex).  The holdings, tallied by issuer after every
+/// change, are the balances view, each tally replacing the last; every other
+/// message is a line of the screen, shown by its default display.
 library;
 
 import '../ui_runtime/manifest.dart';
-import '../ui_runtime/term.dart';
 
-/// The four request clauses of `agent`, perpetually pending: each a compose
-/// form bound to the standing card of its clause.
-const _mint = CommandDesc(
-  ctor: '',
-  clause: 'agent_1',
-  answerCtor: 'xs_agent_1',
-  label: 'Mint',
-  args: [FieldDesc('Amount', FieldType.number, 'Amount')],
-);
-
-const _swap = CommandDesc(
-  ctor: '',
-  clause: 'agent_2',
-  answerCtor: 'xs_agent_2',
-  label: 'Swap',
-  args: [
-    FieldDesc('Friend', FieldType.peer, 'Friend'),
-    FieldDesc('GiveCoin', FieldType.peer, 'GiveCoin'),
-    FieldDesc('GiveAmount', FieldType.number, 'GiveAmount'),
-    FieldDesc('WantCoin', FieldType.peer, 'WantCoin'),
-    FieldDesc('WantAmount', FieldType.number, 'WantAmount'),
-  ],
-);
-
-const _pay = CommandDesc(
-  ctor: '',
-  clause: 'agent_3',
-  answerCtor: 'xs_agent_3',
-  label: 'Pay',
-  args: [
-    FieldDesc('Friend', FieldType.peer, 'Friend'),
-    FieldDesc('Amount', FieldType.number, 'Amount'),
-  ],
-);
-
-const _redeem = CommandDesc(
-  ctor: '',
-  clause: 'agent_4',
-  answerCtor: 'xs_agent_4',
-  label: 'Redeem',
-  args: [
-    FieldDesc('Friend', FieldType.peer, 'Friend'),
-    FieldDesc('WantCoin', FieldType.peer, 'WantCoin'),
-  ],
-);
-
-/// The swap responder's one transient clause, its context
-/// `ctx_respond_swap_1(From, Want, Offered)`. Its question has one position,
-/// the ground `yes`, which the Accept button carries; `From`, `Want` and
-/// `Offered` are context and carry no field.
-///
-/// The clause's reply type is `Reply_respond_swap_1 ::= then(Xs) ; else`, so
-/// the card carries a decline: the runtime derives it from [elseBranch], and
-/// the person's tap grants `decline(ReqId)`, which selects the else-branch —
-/// the clause's own refusal, `decline_answer`, and the image of the
-/// transaction's else-effect.
-const _respondSwap = InboxDesc(
-  clauses: ['respond_swap_1'],
-  elseBranch: ['respond_swap_1'],
-  args: ['From', 'Want', 'Offered'],
-  itemKey: 'From',
-  title: '',
-  answers: [
-    AnswerDesc(
-      label: 'Accept',
-      cmdCtor: '',
-      clause: 'respond_swap_1',
-      answerCtor: 'xs_respond_swap_1',
-      fill: [ConstFill(GAtom('yes'))],
-    ),
-  ],
-);
-
-/// Panel `coins`: the four forms, the swap card, the balances view, and the
-/// default display — a list in the program's panel — which takes the sixteen
-/// other alternatives of `ScreenContent`.
+/// Panel `coins`: the constructs the bridge holds open, then the balances
+/// view, then the screen, which takes every message of the agent's the
+/// balances view leaves.
 const _coinsPanel = Panel(
   id: 'coins',
   name: 'coins',
-  commands: [_mint, _swap, _pay, _redeem],
-  inbox: [_respondSwap],
   views: [
     ScreenView(
       pattern: 'msg(agent, person, holdings(Lots))',

@@ -4,7 +4,7 @@
 %% network a two-way crossbar for cold calls, and under :boot (../../superapp_boot.glp)
 %% by two isolates with their own keys.  The certified mini-apps are ../pingapp,
 %% of the one-way user-interface stream, and Currencies' ../../../currencies/coins/currency,
-%% of the cards-and-answers channel (play_coins); the super-app reads their
+%% of the person channel (play_coins); the super-app reads their
 %% artefacts with load_file/2.  The persons are scripted on the agents' person
 %% streams --- the mediator's cards for an invitation are vGLP's to add --- and
 %% the mini-apps' user-interface streams come back to the caller, or, under
@@ -498,7 +498,7 @@ sg_init(bob, consent, NetIn) :-
 
 %% The currency on two smartphones (../../coins_boot.glp): each person trusts
 %% the compiler's key, installs the certified currency with its own end of a
-%% cards-and-answers channel, and scripts the swap of play_coins; what the
+%% person channel, and scripts the swap of play_coins; what the
 %% currency shows a person goes to the person, printed by the harness.
 sg_init(alice, coins, NetIn) :-
     agent # agent(alice, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
@@ -680,14 +680,15 @@ carol_warm_run([], []).
 %% alice and bob install it with its two certifications, alice befriends bob
 %% and invites him, and the handshake opens a root channel of the currency
 %% protocol between their two executions, each activated by run/3 with its
-%% cards-and-answers channel and its conversations.  The persons hold the
-%% other ends of the cards-and-answers channels: each mints 2, alice offers her
-%% 2 for bob's 2 and bob accepts --- the currency's own swap (its play_swap)
-%% over the conversation the social graph delivered.  Expected: ScreenA =
-%% [opened(bob), minted(2), holdings([lot(alice, 2)]), holdings([]),
-%% swap_done(bob), holdings([lot(bob, 2)]) | _], ScreenB = [opened(alice),
-%% minted(2), holdings([lot(bob, 2)]), swap_done(alice), holdings([lot(alice,
-%% 2)]) | _], → suspended (the executions pend on their remaining cards).
+%% person channel and its conversations.  The persons hold the other ends of
+%% the person channels, scripted on what the dispatchers draw: each mints 2,
+%% alice offers her 2 for bob's 2 and bob accepts --- the currency's own swap
+%% (its play_swap) over the conversation the social graph delivered.
+%% Expected: ScreenA = [opened(bob), minted(2), holdings([lot(alice, 2)]),
+%% holdings([]), swap_done(bob), holdings([lot(bob, 2)]) | _], ScreenB =
+%% [opened(alice), minted(2), holdings([lot(bob, 2)]), swap_done(alice),
+%% holdings([lot(alice, 2)]) | _], → suspended (the agents' request forms
+%% stay open and the person channels never close).
 %% ../../coins_boot.glp runs the same swap on two smartphones.
 %% =============================================================================
 exported procedure play_coins(Stream(ScreenContent), Stream(ScreenContent)).
@@ -704,20 +705,28 @@ play_coins(ScreenA?, ScreenB?) :-
     bob_coins_person(C?, CSig?, AppEndB?, BobOut?, BobIn),
     coin_person(bob, PersonEndB?, [mint(2), accept(alice)], ScreenB).
 
-%% The person's end of the cards-and-answers channel: the screen messages,
-%% read off the events.  The person answers no card here, and closes her
-%% answers when the events close.
-procedure screen_of(Channel(Stream(Event), Stream(UserAnswer))?, Stream(ScreenContent)).
-screen_of(ch(Events, Answers?), Screen?) :- screen_events(Events?, Screen, Answers).
+%% The person's end of the currency's person channel, read for its screen:
+%% the screen messages off the events, no construct granted on; the person
+%% channel never closes, so the person holds its grant writer for good.
+procedure screen_of(Channel(Stream(_), PersonIn)?, Stream(ScreenContent)).
+screen_of(ch(Ds, Gs?), Screen?) :-
+    events(Ds?, Es),
+    screen_events(Es?, Gs, Screen).
 
-procedure screen_events(Stream(Event)?, Stream(ScreenContent), Stream(UserAnswer)).
-screen_events([msg(_, _, X) | Es], [X? | Screen?], Answers?) :- ground(X?) | screen_events(Es?, Screen, Answers).
-screen_events([card(_, _, _) | Es], Screen?, Answers?) :- screen_events(Es?, Screen, Answers).
-screen_events([closed(_) | Es], Screen?, Answers?) :- screen_events(Es?, Screen, Answers).
-screen_events([aborted(_) | Es], Screen?, Answers?) :- screen_events(Es?, Screen, Answers).
-screen_events([], [], []).
+procedure screen_events(Events?, PersonIn, Stream(ScreenContent)).
+screen_events([msg(_, _, X) | Es], Gs?, [X? | Screen?]) :- ground(X?) | screen_events(Es?, Gs, Screen).
+screen_events([draw(_, _, _) | Es], Gs?, Screen?) :- screen_events(Es?, Gs, Screen).
+screen_events([withdraw(_) | Es], Gs?, Screen?) :- screen_events(Es?, Gs, Screen).
 
-procedure alice_coins_person(Content?, String?, Channel(Stream(UserAnswer), Stream(Event))?, AgentToUserStream?, UserInStream).
+%% What the person channel carries, as one stream of events: the dispatcher's
+%% draws and withdrawals, and the screen it merges in.  The channel's stream
+%% never closes, and is read as any term.
+procedure events(_?, Events).
+events([draw(I, W, V) | Ds], [draw(I?, W?, V?) | Es?]) :- events(Ds?, Es).
+events([withdraw(I) | Ds], [withdraw(I?) | Es?]) :- events(Ds?, Es).
+events([msg(A, P, M) | Ds], [msg(A?, P?, M?) | Es?]) :- events(Ds?, Es).
+
+procedure alice_coins_person(Content?, String?, Channel(PersonIn, Stream(_))?, AgentToUserStream?, UserInStream).
 alice_coins_person(C, CSig, AppEnd, Outs,
                    [msg(person, alice, install_coins(currency, C?, CSig?, AppEnd?)),
                     msg(person, alice, connect(bob)) | Cmds?]) :-
@@ -730,7 +739,7 @@ alice_coins_run([msg(agent, person, connected(bob)) | Outs],
 alice_coins_run([_ | Outs], Cmds?) :- otherwise | alice_coins_run(Outs?, Cmds).
 alice_coins_run([], []).
 
-procedure bob_coins_person(Content?, String?, Channel(Stream(UserAnswer), Stream(Event))?, AgentToUserStream?, UserInStream).
+procedure bob_coins_person(Content?, String?, Channel(PersonIn, Stream(_))?, AgentToUserStream?, UserInStream).
 bob_coins_person(C, CSig, AppEnd, Outs,
                  [msg(person, bob, install_coins(currency, C?, CSig?, AppEnd?)),
                   msg(person, bob, accept_invite(currency, alice)) | Cmds?]) :-
@@ -746,7 +755,7 @@ bob_coins_run([], []).
 
 %% The two persons of both platforms under :boot, each trusting the compiler's
 %% key once for the two artefacts it signed.
-procedure alice_both_boot(String?, Content?, String?, Channel(Stream(UserAnswer), Stream(Event))?, Content?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AgentToUserStream?, UserInStream).
+procedure alice_both_boot(String?, Content?, String?, Channel(PersonIn, Stream(_))?, Content?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AgentToUserStream?, UserInStream).
 alice_both_boot(CK, CC, CCSig, CoinsEnd, CS, CSSig, CssnEnd, Outs,
                 [msg(person, alice, trust(CK?)),
                  msg(person, alice, install_coins(currency, CC?, CCSig?, CoinsEnd?)),
@@ -754,7 +763,7 @@ alice_both_boot(CK, CC, CCSig, CoinsEnd, CS, CSSig, CssnEnd, Outs,
                  msg(person, alice, connect(bob)) | Cmds?]) :-
     alice_both_run(Outs?, Cmds).
 
-procedure bob_both_boot(String?, Content?, String?, Channel(Stream(UserAnswer), Stream(Event))?, Content?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AgentToUserStream?, UserInStream).
+procedure bob_both_boot(String?, Content?, String?, Channel(PersonIn, Stream(_))?, Content?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AgentToUserStream?, UserInStream).
 bob_both_boot(CK, CC, CCSig, CoinsEnd, CS, CSSig, CssnEnd, Outs,
               [msg(person, bob, trust(CK?)),
                msg(person, bob, install_coins(currency, CC?, CCSig?, CoinsEnd?)),
@@ -779,14 +788,14 @@ bob_cssn_boot(C, CK, CSig, AppEnd, Outs,
     bob_cssn_run(Outs?, Cmds).
 
 %% The same two persons under :boot, each trusting the compiler's key first.
-procedure alice_coins_boot(Content?, String?, String?, Channel(Stream(UserAnswer), Stream(Event))?, AgentToUserStream?, UserInStream).
+procedure alice_coins_boot(Content?, String?, String?, Channel(PersonIn, Stream(_))?, AgentToUserStream?, UserInStream).
 alice_coins_boot(C, CK, CSig, AppEnd, Outs,
                  [msg(person, alice, trust(CK?)),
                   msg(person, alice, install_coins(currency, C?, CSig?, AppEnd?)),
                   msg(person, alice, connect(bob)) | Cmds?]) :-
     alice_coins_run(Outs?, Cmds).
 
-procedure bob_coins_boot(Content?, String?, String?, Channel(Stream(UserAnswer), Stream(Event))?, AgentToUserStream?, UserInStream).
+procedure bob_coins_boot(Content?, String?, String?, Channel(PersonIn, Stream(_))?, AgentToUserStream?, UserInStream).
 bob_coins_boot(C, CK, CSig, AppEnd, Outs,
                [msg(person, bob, trust(CK?)),
                 msg(person, bob, install_coins(currency, C?, CSig?, AppEnd?)),
@@ -910,7 +919,7 @@ play_both(ScreenA?, ScreenB?, SeenA?, SeenB?) :-
 
 %% alice's person: install both, cold-call bob, and invite him to both once
 %% they are friends.
-procedure alice_both_person(Content?, String?, Channel(Stream(UserAnswer), Stream(Event))?, Content?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AgentToUserStream?, UserInStream).
+procedure alice_both_person(Content?, String?, Channel(PersonIn, Stream(_))?, Content?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AgentToUserStream?, UserInStream).
 alice_both_person(CC, CCSig, CoinsEnd, CS, CSSig, CssnEnd, Outs,
                   [msg(person, alice, install_coins(currency, CC?, CCSig?, CoinsEnd?)),
                    msg(person, alice, install_cssn(childsafe, CS?, CSSig?, CssnEnd?)),
@@ -927,7 +936,7 @@ alice_both_run([], []).
 
 %% bob's person: install both, consent to the friendship, and accept both
 %% invitations.
-procedure bob_both_person(Content?, String?, Channel(Stream(UserAnswer), Stream(Event))?, Content?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AgentToUserStream?, UserInStream).
+procedure bob_both_person(Content?, String?, Channel(PersonIn, Stream(_))?, Content?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AgentToUserStream?, UserInStream).
 bob_both_person(CC, CCSig, CoinsEnd, CS, CSSig, CssnEnd, Outs,
                 [msg(person, bob, install_coins(currency, CC?, CCSig?, CoinsEnd?)),
                  msg(person, bob, install_cssn(childsafe, CS?, CSSig?, CssnEnd?)),
@@ -944,109 +953,101 @@ bob_both_run([], []).
 
 %% =============================================================================
 %% coin_person(Id, PersonEnd, Script, Screen): a scripted person on the
-%% super-app's end of the currency's cards-and-answers channel, after
-%% Currencies' person.glp: the mediator reissues the request cards after every
-%% reduction, so a step is answered on the latest open card of its clause
-%% (mint on agent_1, swap on agent_2, accept on the respond_swap_1 card of the
-%% proposer) and is done when the screen shows its effect.
+%% super-app's end of the currency's person channel, after Currencies'
+%% currency/person.glp.  It reads what the channel carries --- the constructs
+%% the dispatcher draws and withdraws, and the screen the agent writes --- and
+%% grants its acts on the constructs, the person's taps and submissions, in
+%% the order of its script, each when the one before it has taken effect on
+%% the screen.  A step waits for the draw of its clause's construct and grants
+%% input(Id, P, R) with the step's term R at the position P the draw marks
+%% input: mint and swap on the agent's request form, which is drawn once and
+%% stays on screen, the agent's requests being one construct, its question the
+%% stream of requests; accept on the proposer's respond_swap card, drawn per
+%% proposed swap and withdrawn once answered.  A step is done when the screen
+%% shows its effect, and the screen messages come out on its last argument.
+%% The person channel never closes, so the person holds its grant writer for
+%% good.
 %% =============================================================================
-procedure coin_person(Key?, Channel(Stream(Event), Stream(UserAnswer))?, CoinScript?, Stream(ScreenContent)).
-coin_person(Id, ch(Events, Answers?), Script, Screen?) :-
+procedure coin_person(Key?, Channel(Stream(_), PersonIn)?, CoinScript?, Stream(ScreenContent)).
+coin_person(Id, ch(Ds, Gs?), Script, Screen?) :-
     ground(Id?) |
-    cp(Id?, Events?, Answers, Script?, open(no_card, no_card), [], idle, Screen).
+    events(Ds?, Es),
+    cp(Id?, Es?, Gs, Script?, no_form, [], idle, Screen).
 
-procedure cp(Key?, Stream(Event)?, Stream(UserAnswer), CoinScript?, OpenCards?, SwapCards?, Sent?, Stream(ScreenContent)).
-cp(Id, [card(agent_1, _, R) | Es], As?, Script, open(_, S), Swaps, P, Screen?) :-
-    ground(R?) |
-    try_step(Id?, Es?, As, Script?, open(R?, S?), Swaps?, P?, Screen).
-cp(Id, [card(agent_2, _, R) | Es], As?, Script, open(M, _), Swaps, P, Screen?) :-
-    ground(R?) |
-    try_step(Id?, Es?, As, Script?, open(M?, R?), Swaps?, P?, Screen).
-cp(Id, [card(respond_swap_1, ctx_respond_swap_1(From, _, _), R) | Es], As?, Script, Open, Swaps, P, Screen?) :-
-    ground(From?), ground(R?) |
-    try_step(Id?, Es?, As, Script?, Open?, [swap_card(From?, R?) | Swaps?], P?, Screen).
-cp(Id, [card(L, _, _) | Es], As?, Script, Open, Swaps, P, Screen?) :-
-    L? =?\= agent_1, L? =?\= agent_2, L? =?\= respond_swap_1 |
-    cp(Id?, Es?, As, Script?, Open?, Swaps?, P?, Screen).
-cp(Id, [closed(R) | Es], As?, Script, open(M, S), Swaps, P, Screen?) :-
-    ground(R?) |
-    close_req(R?, M?, M1),
-    close_req(R?, S?, S1),
-    close_swap(R?, Swaps?, Swaps1),
-    try_step(Id?, Es?, As, Script?, open(M1?, S1?), Swaps1?, P?, Screen).
-cp(Id, [aborted(R) | Es], As?, Script, open(M, S), Swaps, P, Screen?) :-
-    ground(R?) |
-    close_req(R?, M?, M1),
-    close_req(R?, S?, S1),
-    close_swap(R?, Swaps?, Swaps1),
-    abort_sent(R?, P?, P1),
-    try_step(Id?, Es?, As, Script?, open(M1?, S1?), Swaps1?, P1?, Screen).
-cp(Id, [msg(_, _, X) | Es], As?, [Step | Script], Open, Swaps, P, [X? | Screen?]) :-
+procedure cp(Key?, Events?, PersonIn, CoinScript?, Form?, OpenOffers?, Sent?, Stream(ScreenContent)).
+%% The request form: its question is the stream of requests, at position P.
+cp(Id, [draw(C, _, input(P)) | Es], Gs?, Script, _, Swaps, S, Screen?) :-
+    ground(C?), ground(P?) |
+    try_step(Id?, Es?, Gs, Script?, form(C?, P?), Swaps?, S?, Screen).
+%% The card of a proposed swap, kept until the script reaches it.
+cp(Id, [draw(C, _, card(offer(From, _, _), input(P))) | Es], Gs?, Script, Form, Swaps, S, Screen?) :-
+    ground(C?), ground(From?), ground(P?) |
+    try_step(Id?, Es?, Gs, Script?, Form?, [open_offer(From?, C?, P?) | Swaps?], S?, Screen).
+%% Any other construct is left; the dispatcher draws none, every construct of
+%% the agent being caught above.
+cp(Id, [draw(_, _, _) | Es], Gs?, Script, Form, Swaps, S, Screen?) :-
+    otherwise |
+    cp(Id?, Es?, Gs, Script?, Form?, Swaps?, S?, Screen).
+%% A card withdrawn: the person's answer to it took effect, and it is no
+%% longer on screen.  A step in flight is left alone: it leaves sent when the
+%% screen shows its effect.
+cp(Id, [withdraw(_) | Es], Gs?, Script, Form, Swaps, S, Screen?) :-
+    try_step(Id?, Es?, Gs, Script?, Form?, Swaps?, S?, Screen).
+%% The screen: passed on; the current step is done when it shows its effect.
+cp(Id, [msg(_, _, X) | Es], Gs?, [Step | Script], Form, Swaps, S, [X? | Screen?]) :-
     ground(X?), ground(Step?) |
     done(Step?, X?, D),
-    advance(D?, Id?, Es?, As, Step?, Script?, Open?, Swaps?, P?, Screen).
-cp(Id, [msg(_, _, X) | Es], As?, [], Open, Swaps, P, [X? | Screen?]) :-
+    advance(D?, Id?, Es?, Gs, Step?, Script?, Form?, Swaps?, S?, Screen).
+cp(Id, [msg(_, _, X) | Es], Gs?, [], Form, Swaps, S, [X? | Screen?]) :-
     ground(X?) |
-    cp(Id?, Es?, As, [], Open?, Swaps?, P?, Screen).
-cp(_, [], [], _, _, _, _, []).
+    cp(Id?, Es?, Gs, [], Form?, Swaps?, S?, Screen).
 
-procedure close_req(CReqId?, OpenReq?, OpenReq).
-close_req(R, R1, no_card) :- R? =?= R1? | true.
-close_req(_, R1, R1?) :- otherwise | true.
-
-procedure close_swap(CReqId?, SwapCards?, SwapCards).
-close_swap(R, [swap_card(_, R1) | Rest], Rest?) :- R? =?= R1? | true.
-close_swap(R, [S | Rest], [S? | Rest1?]) :- otherwise | close_swap(R?, Rest?, Rest1).
-close_swap(_, [], []).
-
-%% An aborted card returns the step to idle: its answer reached no goal, so the
-%% step is the person's to make again.  A closed card leaves it alone --- the
-%% person's act took effect and a person answers an ask once (Udi, 2026-09-24).
-procedure abort_sent(CReqId?, Sent?, Sent).
-abort_sent(R, sent(R1), idle) :- R? =?= R1? | true.
-abort_sent(_, P, P?) :- otherwise | true.
-
-procedure done(CoinStep?, ScreenContent?, Constant).
+%% Whether the screen shows the step's effect.
+procedure done(CoinStep?, ScreenContent?, Decision).
 done(mint(K), minted(K1), yes) :- K? =:= K1? | true.
 done(swap(Q, _, _, _, _), swap_done(Q1), yes) :- Q? =?= Q1? | true.
 done(accept(Q), swap_done(Q1), yes) :- Q? =?= Q1? | true.
 done(_, _, no) :- otherwise | true.
 
-procedure advance(Constant?, Key?, Stream(Event)?, Stream(UserAnswer), CoinStep?, CoinScript?, OpenCards?, SwapCards?, Sent?, Stream(ScreenContent)).
-advance(yes, Id, Es, As?, _, Script, Open, Swaps, _, Screen?) :-
-    try_step(Id?, Es?, As, Script?, Open?, Swaps?, idle, Screen).
-advance(no, Id, Es, As?, Step, Script, Open, Swaps, P, Screen?) :-
-    cp(Id?, Es?, As, [Step? | Script?], Open?, Swaps?, P?, Screen).
+procedure advance(Decision?, Key?, Events?, PersonIn, CoinStep?, CoinScript?, Form?, OpenOffers?, Sent?, Stream(ScreenContent)).
+advance(yes, Id, Es, Gs?, _, Script, Form, Swaps, _, Screen?) :-
+    try_step(Id?, Es?, Gs, Script?, Form?, Swaps?, idle, Screen).
+advance(no, Id, Es, Gs?, Step, Script, Form, Swaps, S, Screen?) :-
+    cp(Id?, Es?, Gs, [Step? | Script?], Form?, Swaps?, S?, Screen).
 
-procedure try_step(Key?, Stream(Event)?, Stream(UserAnswer), CoinScript?, OpenCards?, SwapCards?, Sent?, Stream(ScreenContent)).
-try_step(Id, Es, As?, [], Open, Swaps, P, Screen?) :-
-    cp(Id?, Es?, As, [], Open?, Swaps?, P?, Screen).
-try_step(Id, Es, As?, [Step | Script], Open, Swaps, sent(R), Screen?) :-
-    cp(Id?, Es?, As, [Step? | Script?], Open?, Swaps?, sent(R?), Screen).
-try_step(Id, Es, As?, [Step | Script], Open, Swaps, idle, Screen?) :-
-    ground(Step?), ground(Open?), ground(Swaps?) |
-    pick(Step?, Open?, Swaps?, Choice, Swaps1),
-    act(Choice?, Id?, Es?, As, [Step? | Script?], Open?, Swaps1?, Screen).
+%% Grant the current step, if its construct is on screen and no grant is out.
+procedure try_step(Key?, Events?, PersonIn, CoinScript?, Form?, OpenOffers?, Sent?, Stream(ScreenContent)).
+try_step(Id, Es, Gs?, [], Form, Swaps, S, Screen?) :-
+    cp(Id?, Es?, Gs, [], Form?, Swaps?, S?, Screen).
+try_step(Id, Es, Gs?, [Step | Script], Form, Swaps, sent, Screen?) :-
+    cp(Id?, Es?, Gs, [Step? | Script?], Form?, Swaps?, sent, Screen).
+try_step(Id, Es, Gs?, [Step | Script], Form, Swaps, idle, Screen?) :-
+    ground(Step?), ground(Form?), ground(Swaps?) |
+    pick(Step?, Form?, Swaps?, Choice, Swaps1),
+    act(Choice?, Id?, Es?, Gs, [Step? | Script?], Form?, Swaps1?, Screen).
 
-procedure pick(CoinStep?, OpenCards?, SwapCards?, Choice, SwapCards).
-pick(mint(K), open(req(N), _), Swaps, answer(req(N?), xs_agent_1(K?)), Swaps?).
-pick(swap(Q, U, K, V, K1), open(_, req(N)), Swaps, answer(req(N?), xs_agent_2(Q?, U?, K?, V?, K1?)), Swaps?).
-pick(accept(From), _, Swaps, C?, Swaps1?) :-
-    ground(From?) | find_swap(From?, Swaps?, C, Swaps1).
+%% A request is granted on the request form, once it is drawn: the step's
+%% term, the request; an acceptance yes on the proposer's card.
+procedure pick(CoinStep?, Form?, OpenOffers?, Choice, OpenOffers).
+pick(mint(K), form(C, P), Swaps, grant(C?, P?, mint(K?)), Swaps?).
+pick(swap(Q, U, K, V, K1), form(C, P), Swaps, grant(C?, P?, swap(Q?, lot(U?, K?), lot(V?, K1?))), Swaps?).
+pick(accept(From), _, Swaps, Choice?, Swaps1?) :-
+    ground(From?) | find_offer(From?, Swaps?, Choice, Swaps1).
 pick(_, _, Swaps, wait, Swaps?) :- otherwise | true.
 
-procedure find_swap(Key?, SwapCards?, Choice, SwapCards).
-find_swap(From, [swap_card(F, R) | Rest], answer(R?, xs_respond_swap_1(yes)), Rest?) :-
+procedure find_offer(Key?, OpenOffers?, Choice, OpenOffers).
+find_offer(From, [open_offer(F, C, P) | Rest], grant(C?, P?, yes), Rest?) :-
     From? =?= F? | true.
-find_swap(From, [S | Rest], C?, [S? | Rest1?]) :- otherwise | find_swap(From?, Rest?, C, Rest1).
-find_swap(_, [], wait, []).
+find_offer(From, [O | Rest], Choice?, [O? | Rest1?]) :-
+    otherwise | find_offer(From?, Rest?, Choice, Rest1).
+find_offer(_, [], wait, []).
 
-procedure act(Choice?, Key?, Stream(Event)?, Stream(UserAnswer), CoinScript?, OpenCards?, SwapCards?, Stream(ScreenContent)).
-act(answer(R, A), Id, Es, [answer(R?, A?) | As1?], Script, Open, Swaps, Screen?) :-
-    ground(R?) |
-    cp(Id?, Es?, As1, Script?, Open?, Swaps?, sent(R?), Screen).
-act(wait, Id, Es, As?, Script, Open, Swaps, Screen?) :-
-    cp(Id?, Es?, As, Script?, Open?, Swaps?, idle, Screen).
+procedure act(Choice?, Key?, Events?, PersonIn, CoinScript?, Form?, OpenOffers?, Stream(ScreenContent)).
+%% A grant, on the request form or on a card.
+act(grant(C, P, X), Id, Es, [input(C?, P?, X?) | Gs?], Script, Form, Swaps, Screen?) :-
+    cp(Id?, Es?, Gs, Script?, Form?, Swaps?, sent, Screen).
+act(wait, Id, Es, Gs?, Script, Form, Swaps, Screen?) :-
+    cp(Id?, Es?, Gs, Script?, Form?, Swaps?, idle, Screen).
 
 %% =============================================================================
 %% play_reinvite: the registry's return from running to idle (Section 3,
@@ -1152,7 +1153,7 @@ bob_until_closed([], []).
 %% the super-app.  alice and bob install it with its two certifications, alice
 %% befriends bob and invites him, the handshake opens a root channel of the
 %% denominated protocol between their two executions, and each is activated by
-%% run/3 with its cards-and-answers channel and its conversations.
+%% run/3 with its person channel and its conversations.
 %%
 %% What this play is for is the ACTIVATION, not the acts: run/3 admits the
 %% mini-app only if the entry's type identity in this scope is the one its
@@ -1160,9 +1161,11 @@ bob_until_closed([], []).
 %% by hand in ../self.glp.  So the play fences the copy: if a constructor of
 %% it drifts from Currencies' own, run/3 refuses the mini-app and the screens
 %% stay empty.  The acts over the conversation are the mini-app's own and are
-%% exercised in its Section N4, so no card is answered here.
+%% exercised in its Section N4, so nothing is granted here: each person reads
+%% the screen off what its dispatcher draws.
 %% Expected: ScreenA = [opened(bob) | _], ScreenB = [opened(alice) | _],
-%% → suspended (both executions pend on their cards).
+%% → suspended (the agents' request forms stay open and the person channels
+%% never close).
 %% =============================================================================
 exported procedure play_sovereign(Stream(SvScreenContent), Stream(SvScreenContent)).
 play_sovereign(ScreenA?, ScreenB?) :-
@@ -1178,21 +1181,28 @@ play_sovereign(ScreenA?, ScreenB?) :-
     bob_sv_person(C?, CSig?, AppEndB?, BobOut?, BobIn),
     sv_screen_of(PersonEndB?, ScreenB).
 
-%% The person's end of the cards-and-answers channel, as screen_of/2 is for the
-%% currency: the screen messages read off the events, no card answered, and
-%% the answers closed when the events close.
-procedure sv_screen_of(Channel(Stream(SvEvent), Stream(SvUserAnswer))?, Stream(SvScreenContent)).
-sv_screen_of(ch(Events, Answers?), Screen?) :-
-    sv_screen_events(Events?, Screen, Answers).
+%% The person's end of the denominated currencies' person channel, as
+%% screen_of/2 is for the currency: the screen messages read off the events,
+%% no construct granted on; the person channel never closes, so the person
+%% holds its grant writer for good.
+procedure sv_screen_of(Channel(Stream(_), PersonIn)?, Stream(SvScreenContent)).
+sv_screen_of(ch(Ds, Gs?), Screen?) :-
+    sv_events(Ds?, Es),
+    sv_screen_events(Es?, Gs, Screen).
 
-procedure sv_screen_events(Stream(SvEvent)?, Stream(SvScreenContent), Stream(SvUserAnswer)).
-sv_screen_events([msg(_, _, X) | Es], [X? | Screen?], Answers?) :- ground(X?) | sv_screen_events(Es?, Screen, Answers).
-sv_screen_events([card(_, _, _) | Es], Screen?, Answers?) :- sv_screen_events(Es?, Screen, Answers).
-sv_screen_events([closed(_) | Es], Screen?, Answers?) :- sv_screen_events(Es?, Screen, Answers).
-sv_screen_events([aborted(_) | Es], Screen?, Answers?) :- sv_screen_events(Es?, Screen, Answers).
-sv_screen_events([], [], []).
+procedure sv_screen_events(SvEvents?, PersonIn, Stream(SvScreenContent)).
+sv_screen_events([msg(_, _, X) | Es], Gs?, [X? | Screen?]) :- ground(X?) | sv_screen_events(Es?, Gs, Screen).
+sv_screen_events([draw(_, _, _) | Es], Gs?, Screen?) :- sv_screen_events(Es?, Gs, Screen).
+sv_screen_events([withdraw(_) | Es], Gs?, Screen?) :- sv_screen_events(Es?, Gs, Screen).
 
-procedure alice_sv_person(Content?, String?, Channel(Stream(SvUserAnswer), Stream(SvEvent))?, AgentToUserStream?, UserInStream).
+%% What the person channel carries, as events/2 reads it for the currency, at
+%% the denominated currencies' screen.
+procedure sv_events(_?, SvEvents).
+sv_events([draw(I, W, V) | Ds], [draw(I?, W?, V?) | Es?]) :- sv_events(Ds?, Es).
+sv_events([withdraw(I) | Ds], [withdraw(I?) | Es?]) :- sv_events(Ds?, Es).
+sv_events([msg(A, P, M) | Ds], [msg(A?, P?, M?) | Es?]) :- sv_events(Ds?, Es).
+
+procedure alice_sv_person(Content?, String?, Channel(PersonIn, Stream(_))?, AgentToUserStream?, UserInStream).
 alice_sv_person(C, CSig, AppEnd, Outs,
                 [msg(person, alice, install_sovereign(denominated, C?, CSig?, AppEnd?)),
                  msg(person, alice, connect(bob)) | Cmds?]) :-
@@ -1205,7 +1215,7 @@ alice_sv_run([msg(agent, person, connected(bob)) | Outs],
 alice_sv_run([_ | Outs], Cmds?) :- otherwise | alice_sv_run(Outs?, Cmds).
 alice_sv_run([], []).
 
-procedure bob_sv_person(Content?, String?, Channel(Stream(SvUserAnswer), Stream(SvEvent))?, AgentToUserStream?, UserInStream).
+procedure bob_sv_person(Content?, String?, Channel(PersonIn, Stream(_))?, AgentToUserStream?, UserInStream).
 bob_sv_person(C, CSig, AppEnd, Outs,
               [msg(person, bob, install_sovereign(denominated, C?, CSig?, AppEnd?)),
                msg(person, bob, accept_invite(denominated, alice)) | Cmds?]) :-

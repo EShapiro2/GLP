@@ -1,0 +1,82 @@
+%% ---------------------------------------------------------------------------
+%% The plays of the canonical CVA platform of Jurix's social graph
+%% (programs/jurix, contract_named(social_graph, C); Jurix, Section 3.3),
+%% platform.vglp, which programs/vglp/cva/compile.sh prints from it.  Each runs
+%% two agents, alice and bob, their persons scripted and paced on their threads
+%% (../self.glp), and gives each person's log: the thread, with gave(C, A)
+%% where the person answers a card.
+%%
+%% play_befriend: alice proposes befriending bob, bob is asked and answers
+%%   yes; Propose, Relay, Ask, Answer and Commit, at each its own.
+%% play_unfriend: befriended, bob proposes unfriending alice; unfriend is one
+%%   class guarded by either party (vGLP, Section 3.2, the paragraph on act
+%%   schemas), so alice is asked, answers no, and the else-branch concurs, a
+%%   guard set omitting her: committed at both.
+%% play_refused: alice proposes befriending bob and bob answers no; every guard
+%%   set names him, so the else-branch says no and the attempt aborts at both.
+%%
+%% The types of platform.vglp, written again for the declarations of the
+%% procedures imported from its compiled module.
+%% ---------------------------------------------------------------------------
+
+Speech   ::= speech(String, Peer).
+Class    ::= befriend(Peer, Peer) ; unfriend(Peer, Peer) ; sign(Peer, Speech)
+           ; forward(Peer, Peer, Peer, Peer, Speech).
+Request  ::= propose(Class) ; known(Peer).
+Verdict  ::= will ; yes ; no.
+Vote     ::= vote(Peer, Integer, Class, Verdict).
+Content  ::= hello(Peer) ; cargo(Peer, Integer, Vote).
+Net      ::= msg(Peer, Content).
+Txn      ::= propose(Class) ; relay(Class) ; ask(Class) ; answer(Class)
+           ; concur(Class) ; decline(Class) ; commit(Class) ; abort(Class)
+           ; record(Peer).
+Session  ::= session(Stream(Request)?, Stream(Txn)).
+YesNo    ::= yes ; no.
+Attempt  ::= attempt(Class, Integer).
+Card     ::= card(Attempt, YesNo?).
+Question ::= session_w(Session) ; card_w(Card).
+Ask(Q)   ::= ask(Constant, Q).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+
+exported procedure play_befriend(Stream(_), Stream(_)).
+play_befriend(LA?, LB?) :-
+    pair([req(known(bob)), wait(record(bob)),
+          req(propose(befriend(alice, bob)))],
+         [req(known(alice)), wait(record(alice)),
+          card(befriend(alice, bob), yes)],
+         LA, LB).
+
+exported procedure play_unfriend(Stream(_), Stream(_)).
+play_unfriend(LA?, LB?) :-
+    pair([req(known(bob)), wait(record(bob)),
+          req(propose(befriend(alice, bob))), wait(commit(befriend(alice, bob))),
+          card(unfriend(bob, alice), no)],
+         [req(known(alice)), wait(record(alice)),
+          card(befriend(alice, bob), yes), wait(commit(befriend(alice, bob))),
+          req(propose(unfriend(bob, alice)))],
+         LA, LB).
+
+exported procedure play_refused(Stream(_), Stream(_)).
+play_refused(LA?, LB?) :-
+    pair([req(known(bob)), wait(record(bob)),
+          req(propose(befriend(alice, bob)))],
+         [req(known(alice)), wait(record(alice)),
+          card(befriend(alice, bob), no)],
+         LA, LB).
+
+%% alice and bob, each with its dispatcher and scripted person, their networks
+%% joined.
+procedure pair(Steps?, Steps?, Stream(_), Stream(_)).
+pair(SA, SB, LA?, LB?) :-
+    platform # agent(alice, InA?, OutA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), _),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), _),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    merge(OutA?, OutB?, Net),
+    route(Net?, alice, InA, bob, InB).

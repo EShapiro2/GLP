@@ -3,8 +3,7 @@
 ///
 /// Nothing here is invented. Every element is derived from one declaration
 /// under vGLP's Definitions "Display Declaration", "Manifest" and "Canonical
-/// Compilation", exactly as the currency mini-app's manifest is
-/// ([coinsManifest]). The declarations, carried through into the compiled
+/// Compilation". The declarations, carried through into the compiled
 /// `home.glp`, are:
 ///
 /// ```

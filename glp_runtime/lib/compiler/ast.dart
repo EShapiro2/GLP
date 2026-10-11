@@ -2,6 +2,7 @@
 
 import '../analysis/type_checker/type_ast.dart'
     show TypeDef, TypeExpr, ProcDecl;
+import 'glp_printer.dart' show constantSource;
 
 /// Compilation mode: controls compiler restrictions
 enum CompileMode {
@@ -330,22 +331,20 @@ class ListTerm extends Term {
 }
 
 class ConstTerm extends Term {
-  final Object? value;  // String, int, double, or atom name
+  /// A number (int or double) or a string: a quoted name and a double-quoted
+  /// string are two spellings of one string, the characters as written
+  /// (GLP-Spec appendix-lp.tex, Definition "Logic Programs Syntax").
+  final Object? value;
 
   ConstTerm(this.value, int line, int column) : super(line, column);
 
+  /// The constant as the printer writes it ([constantSource]): single-quoted,
+  /// bare where the lexer reads it so, never in double quotes.  Until
+  /// 2026-10-10 every string printed in double quotes here.
   @override
   String toString() {
-    if (value is String) {
-      final s = value as String;
-      // Don't double-quote if already quoted (string literals)
-      if ((s.startsWith('"') && s.endsWith('"')) ||
-          (s.startsWith("'") && s.endsWith("'"))) {
-        return s;
-      }
-      return '"$value"';
-    }
-    return value.toString();
+    final v = value;
+    return v == null ? 'null' : constantSource(v);
   }
 }
 

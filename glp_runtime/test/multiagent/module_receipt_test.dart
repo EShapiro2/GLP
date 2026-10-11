@@ -142,6 +142,7 @@ Uint8List _shipColdCall(Uint8List bytes) =>
         WConst(WString('bob')),
         WStruct('ship', [WConst(WModule(bytes))]),
       ]),
+      serial: 1,
     )));
 
 /// Run [f], giving back what it printed.

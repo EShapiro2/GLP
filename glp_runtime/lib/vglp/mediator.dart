@@ -165,7 +165,10 @@ TypeExpr _bindExpr(
 /// A type expression as GLP source.  A type read off the checker's environment
 /// may carry an EXPANDED name, `Stream<Coin>`, which is the environment's
 /// internal name for an instantiation and is not source syntax; it is printed
-/// as the instantiation it stands for, `Stream(Coin)`.
+/// as the instantiation it stands for, `Stream(Coin)`.  A constant alternative
+/// and a functor are printed by GLP's printer (glp_printer.dart,
+/// [constantSource] and [functorNameSource]), a string in its one canonical
+/// print (GLP-Spec appendix-lp.tex, Definition "Logic Programs Syntax").
 String typeSource(TypeExpr e) {
   if (e is TypeRef) {
     final name = _sourceName(e.name);
@@ -174,8 +177,10 @@ String typeSource(TypeExpr e) {
         : '(${e.typeArgs.map(typeSource).join(', ')})';
     return e.isInput ? '$name$args?' : '$name$args';
   }
+  if (e is ConstantAlt) return constantSource(e.value);
   if (e is StructAlt) {
-    return '${e.functor}(${e.args.map(typeSource).join(', ')})';
+    return '${functorNameSource(e.functor)}'
+        '(${e.args.map(typeSource).join(', ')})';
   }
   if (e is ListConsAlt) {
     return '[${typeSource(e.head)} | ${typeSource(e.tail)}]';
@@ -230,13 +235,17 @@ String printTypeDef(TypeDef d) {
 }
 
 /// A display declaration as GLP source, carried into the compiled program
-/// unchanged (vGLP, Definition "Display Declaration, Default Display").  Atoms
-/// are printed bare and string literals quoted, as the source had them.
+/// (vGLP, Definition "Display Declaration, Default Display"), every name and
+/// term by GLP's printer (glp_printer.dart): a string in its one canonical
+/// print, single-quoted and bare where the lexer reads it so, `'x'` and `"x"`
+/// being one value (GLP-Spec appendix-lp.tex, Definition "Logic Programs
+/// Syntax"), so `label("Accept")` is carried as `label('Accept')`.
 String printDisplayDecl(ast.DisplayDecl d) {
   final items = d.items
       .map((i) => i.args.isEmpty
-          ? i.name
-          : '${i.name}(${i.args.map(_termSource).join(', ')})')
+          ? constantNameSource(i.name)
+          : '${functorNameSource(i.name)}'
+              '(${i.args.map(_termSource).join(', ')})')
       .join(', ');
   if (d.isClauseForm) {
     final g = d.guard!;
@@ -249,38 +258,13 @@ String printDisplayDecl(ast.DisplayDecl d) {
                 : '${q.writer!.name}=${_termSource(q.value!)}'),
       for (final c in g.context) '${c.name}?',
     ];
-    return 'display ${d.predicate} *(${positions.join(', ')}) : $items.';
+    return 'display ${constantNameSource(d.predicate!)} '
+        '*(${positions.join(', ')}) : $items.';
   }
   return 'display ${_termSource(d.pattern!)} : $items.';
 }
 
-String _termSource(ast.Term t) {
-  if (t is ast.VarTerm) return t.isReader ? '${t.name}?' : t.name;
-  if (t is ast.UnderscoreTerm) return '_';
-  if (t is ast.ConstTerm) {
-    final v = t.value;
-    if (v is String) return _atomSource(v);
-    return '$v';
-  }
-  if (t is ast.StructTerm) {
-    return '${t.functor}(${t.args.map(_termSource).join(', ')})';
-  }
-  return GlpPrinter().printTerm(t);
-}
-
-/// An atom as source: bare where the lexer reads it back as one, else quoted
-/// with single quotes --- `label('Send a message')`; a string literal keeps
-/// the double quotes its value carries.
-String _atomSource(String v) {
-  if (v.startsWith('"')) return v;
-  if (RegExp(r'^[a-z][A-Za-z0-9_]*$').hasMatch(v)) return v;
-  final escaped = v
-      .replaceAll('\\', '\\\\')
-      .replaceAll("'", "\\'")
-      .replaceAll('\n', '\\n')
-      .replaceAll('\t', '\\t');
-  return "'$escaped'";
-}
+String _termSource(ast.Term t) => GlpPrinter().printTerm(t);
 
 /// The mediator's clauses as GLP source.
 String printProcedures(List<ast.Procedure> procedures) {

@@ -78,7 +78,7 @@ void main() {
       'the open parameter notwithstanding', () {
     final err = _refusal('open_bound_conflict.glp');
     expect(err, contains('The bindings tried for the call '
-        'pair_up("foo", N?, Out) conflict'));
+        'pair_up(foo, N?, Out) conflict'));
     expect(err, contains('Y: Integer, String'));
     expect(err, contains('with X open'));
   });

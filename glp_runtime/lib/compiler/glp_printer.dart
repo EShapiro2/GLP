@@ -63,17 +63,16 @@ String functorNameSource(String name) {
 final Map<String, String> _functorNames = {};
 
 /// A constant's [value] as the AST and the runtime hold it, as source: a
-/// number as written, a string literal --- whose value carries its double
-/// quotes --- in double quotes, escaped as the reader reads one, and a name by
-/// [constantNameSource].  The runtime's empty list, its value `nil`
-/// (runtime/terms.dart), is the caller's to print.
+/// number as written, and a string by [constantNameSource] --- single-quoted,
+/// bare where the lexer reads it so.  A quoted name and a double-quoted string
+/// are two spellings of one string (GLP-Spec appendix-lp.tex, Definition
+/// "Logic Programs Syntax"; GLP #3 Cowork, 2026-10-04 15:19 UTC, FAULT 2 (b)):
+/// one canonical print, the double-quoted form read and never printed.  Until
+/// 2026-10-10 a string literal's value carried its double quotes and printed
+/// in them.  The runtime's empty list, its value `nil` (runtime/terms.dart),
+/// is the caller's to print.
 String constantSource(Object value) {
-  if (value is String) {
-    if (value.length >= 2 && value.startsWith('"') && value.endsWith('"')) {
-      return '"${_escaped(value.substring(1, value.length - 1), '"')}"';
-    }
-    return constantNameSource(value);
-  }
+  if (value is String) return constantNameSource(value);
   return value.toString();
 }
 

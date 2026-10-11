@@ -134,7 +134,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
   Map<String, InboxCard> _pendingByItem(Panel panel) {
     final m = <String, InboxCard>{};
     for (final c in _r.inbox) {
-      if (c.panel.id == panel.id) m[c.itemKey] = c;
+      if (c.panel.id == panel.id) m[_r.store.keyOf(c.item)] = c;
     }
     return m;
   }
@@ -264,8 +264,8 @@ class _AgentSurfaceState extends State<AgentSurface> {
   // template's substitutions, a bubble's text — is shown by the default
   // display of vGLP Section 6.3 (see [scalarGroups]): a compound as its
   // arguments in order, a list as one group per element, and never as a term.
-  // [formatTerm] is kept for the boundary and for a row's identity, not for
-  // what the person reads.
+  // [formatTerm] is kept for a row's identity, its key, whose term the store
+  // holds (ActivityStore.termOf), not for what the person reads.
 
   Widget _screenPanel(Panel p) {
     final cards = _r.inbox.where((c) => c.panel.id == p.id).toList();
@@ -390,7 +390,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
             rows.add(ListTile(
               dense: true,
               leading: const Icon(Icons.toll, color: _accent),
-              title: Text(displayKey(e.key),
+              title: Text(_r.store.displayKey(e.key),
                   style: const TextStyle(fontWeight: FontWeight.w600)),
               trailing: Text(displayText(e.value),
                   style: const TextStyle(
@@ -442,7 +442,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
         for (final e in convs.entries) {
           rows.add(ListTile(
               dense: true,
-              title: Text(displayKey(e.key)),
+              title: Text(_r.store.displayKey(e.key)),
               subtitle: Text(e.value.map(displayText).join(', '))));
         }
     }
@@ -514,7 +514,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
 
   void _answer(InboxCard card, AnswerDesc answer) {
     if (answer.needsPicker) return; // reserved for child-safe pickers
-    final item = card.itemKey;
+    final item = _r.store.keyOf(card.item);
     _r.answerCard(card, answer);
     // Accepting a group invitation joins the group; open it (paper §8: the
     // group joins the chat list — drill straight into its conversation).
@@ -529,7 +529,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
   Widget _friendsPanel(Panel p) {
     final pending = _pendingByItem(p);
     final friends =
-        (_r.store.lists[p.friends!.listKey] ?? const []).map(formatTerm);
+        (_r.store.lists[p.friends!.listKey] ?? const []).map(_r.store.keyOf);
     // Established friends, then anyone who has offered but isn't a friend yet
     // (first contact is gated here, so the offer shows as an alerting row).
     final rows = <String>{...friends, ...pending.keys};
@@ -550,7 +550,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
     final pending = _pendingByItem(p);
     final people = <String>{_self};
     if (w.friendsList.isNotEmpty) {
-      people.addAll((_r.store.lists[w.friendsList] ?? const []).map(formatTerm));
+      people.addAll((_r.store.lists[w.friendsList] ?? const []).map(_r.store.keyOf));
     }
     people.addAll((_r.store.holdings[w.storeKey] ?? const {}).keys);
     people.addAll(pending.keys);
@@ -597,7 +597,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
   /// A chat-list key is a group when it is a `group_id(...)` term (groups share
   /// the chat list with one-to-one peers, which are plain atoms).
   bool _isGroupKey(String key) {
-    final t = tryParseTerm(key);
+    final t = _r.store.termOf(key);
     return t is GStruct && t.functor == 'group_id';
   }
 
@@ -606,11 +606,12 @@ class _AgentSurfaceState extends State<AgentSurface> {
   /// One list row. When [card] is non-null the row carries a per-item alert and
   /// tapping it opens the accept/decline sheet; otherwise tapping runs [onOpen]
   /// (drill into holdings or a conversation), if any. [name] is the row's key,
-  /// a formatted term; the person reads its default display ([displayKey]).
+  /// a formatted term; the person reads its default display
+  /// ([ActivityStore.displayKey]).
   Widget _personTile(String name, InboxCard? card,
       {String? titleOverride, String? subtitle, VoidCallback? onOpen}) {
     final alerting = card != null;
-    final shown = displayKey(name);
+    final shown = _r.store.displayKey(name);
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: _accent.shade100,
@@ -653,7 +654,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
         leading: BackButton(onPressed: () => setState(() => _openItem = null)),
         titleSpacing: 0,
         title: Text(
-            isSelf ? 'Your wallet' : "${_cap(displayKey(person))}'s coins",
+            isSelf ? 'Your wallet' : "${_cap(_r.store.displayKey(person))}'s coins",
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
       ),
       body: Column(
@@ -698,7 +699,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
                       onPressed: () => _composeCommand(context, a,
                           prefill: isSelf
                               ? const {}
-                              : {w.friendField: GAtom(person)}),
+                              : {w.friendField: _r.store.termOf(person)}),
                       child: Text(a.label),
                     ),
                 ],
@@ -761,13 +762,13 @@ class _AgentSurfaceState extends State<AgentSurface> {
   Widget _escrowTile(WalletView w, String who, GTerm entry) {
     final s = (entry is GStruct && entry.args.length >= 3) ? entry : null;
     // The issuer is compared with the phone's owner, so it stays the key.
-    final issuer = s == null ? '' : formatTerm(s.args[0]);
+    final issuer = s == null ? '' : _r.store.keyOf(s.args[0]);
     final amount = s == null ? '' : displayText(s.args[2]);
     final release =
         (s != null && s.args.length > 3) ? displayText(s.args[3]) : null;
     return ListTile(
       leading: const Icon(Icons.lock_clock, color: _accent),
-      title: Text('$amount ${_coinShort(issuer, w)} → ${_cap(displayKey(who))}',
+      title: Text('$amount ${_coinShort(issuer, w)} → ${_cap(_r.store.displayKey(who))}',
           style: const TextStyle(fontWeight: FontWeight.w600)),
       subtitle: Text(release == null ? 'in escrow' : 'releases $release'),
     );
@@ -780,7 +781,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
       leading: Icon(dated ? Icons.schedule : Icons.toll, color: _accent),
       title: Text(_coinLabel(issuer, w),
           style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: dated ? Text('matures ${displayKey(maturity)}') : null,
+      subtitle: dated ? Text('matures ${_r.store.displayKey(maturity)}') : null,
       trailing: Text(displayText(amount),
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
     );
@@ -793,17 +794,17 @@ class _AgentSurfaceState extends State<AgentSurface> {
       final (issuer, maturity) = _splitHolding(e.key);
       final dated = maturity != null && maturity != '0';
       final short = '${displayText(e.value)} ${_coinShort(issuer, w)}';
-      return dated ? '$short (matures ${displayKey(maturity)})' : short;
+      return dated ? '$short (matures ${_r.store.displayKey(maturity)})' : short;
     }).join(', ');
   }
 
   /// [coin] is a holdings key, compared with the phone's owner as the key and
   /// read by the person as its default display.
   String _coinLabel(String coin, WalletView w) =>
-      coin == _self ? 'Your coins' : "${_cap(displayKey(coin))}'s coins";
+      coin == _self ? 'Your coins' : "${_cap(_r.store.displayKey(coin))}'s coins";
 
   String _coinShort(String coin, WalletView w) =>
-      coin == _self ? 'yours' : "${_cap(displayKey(coin))}'s";
+      coin == _self ? 'yours' : "${_cap(_r.store.displayKey(coin))}'s";
 
   // === Chat drill-down: bubbles + input =====================================
 
@@ -817,7 +818,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
         elevation: 0,
         leading: BackButton(onPressed: () => setState(() => _openItem = null)),
         titleSpacing: 0,
-        title: Text(_cap(displayKey(peer)),
+        title: Text(_cap(_r.store.displayKey(peer)),
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
       ),
       body: Column(
@@ -950,7 +951,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
   }
 
   Widget _groupConversation(GroupChatView v, String key) {
-    final gid = tryParseTerm(key) ?? GAtom(key);
+    final gid = _r.store.termOf(key);
     final msgs = _r.store.threads[v.threadKey]?[key] ?? const [];
     return Scaffold(
       backgroundColor: const Color(0xFFF3EFEA),
@@ -992,7 +993,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
     final s =
         (m is GStruct && m.functor == 'grp' && m.args.length == 2) ? m : null;
     // The author is compared with the phone's owner, so it stays the key.
-    final author = s != null ? formatTerm(s.args[0]) : '';
+    final author = s != null ? _r.store.keyOf(s.args[0]) : '';
     final text = s != null
         ? displayText(s.args[1]).replaceAll('_', ' ')
         : displayText(m).replaceAll('_', ' ');
@@ -1013,7 +1014,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (!outgoing)
-              Text(_cap(displayKey(author)),
+              Text(_cap(_r.store.displayKey(author)),
                   style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -1065,11 +1066,11 @@ class _AgentSurfaceState extends State<AgentSurface> {
   /// A group's display name: `group_id(creator, name)` → the name; else the
   /// key's default display.
   String _groupName(String key) {
-    final t = tryParseTerm(key);
+    final t = _r.store.termOf(key);
     if (t is GStruct && t.functor == 'group_id' && t.args.length == 2) {
       return _cap(displayText(t.args[1]));
     }
-    return displayKey(key);
+    return _r.store.displayKey(key);
   }
 
   String _lastGroupText(List<GTerm> msgs) {

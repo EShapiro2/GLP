@@ -114,21 +114,21 @@ void main() {
       final v = await _answer('subtype_merge.glp',
           'join([pending_link(a, b)], [msg("k", c, ping)], X)', 'X');
       expect(v, contains('pending_link(a, b)'));
-      expect(v, contains('msg("k", c, ping)'));
+      expect(v, contains('msg(k, c, ping)'));
     });
 
     test('the friend stream first', () async {
       final v = await _answer('subtype_merge.glp',
           'join_first([pending_link(a, b)], [msg("k", c, ping)], Y)', 'Y');
       expect(v, contains('pending_link(a, b)'));
-      expect(v, contains('msg("k", c, ping)'));
+      expect(v, contains('msg(k, c, ping)'));
     });
 
     test('the friend stream written by an earlier goal', () async {
       final v = await _answer(
           'subtype_merge.glp', 'join_hub([pending_link(a, b)], Z)', 'Z');
       expect(v, contains('pending_link(a, b)'));
-      expect(v, contains('msg("k", c, ping)'));
+      expect(v, contains('msg(k, c, ping)'));
     });
 
     test('inside an instantiated parameterised procedure', () async {
@@ -138,7 +138,7 @@ void main() {
               '[pending_link(a, b)], W)',
           'W');
       expect(v, contains('pending_link(a, b)'));
-      expect(v, contains('msg("k", c, text("hi"))'));
+      expect(v, contains('msg(k, c, text(hi))'));
     });
 
     test('where an alternative of the one is not an alternative of the other, '

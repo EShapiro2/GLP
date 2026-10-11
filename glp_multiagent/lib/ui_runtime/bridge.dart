@@ -42,6 +42,16 @@ const String drawCtor = 'draw';
 const String withdrawCtor = 'withdraw';
 const String inputCtor = 'input';
 
+/// The raw input `R` the end button of a list the person writes grants,
+/// `input(Id, P, [end])`: "a list the person writes: the same, with a button
+/// that ends the list" (vGLP, Definition "Widget Declaration, Default
+/// Widget"), its grant a term of its own that no element can be (vGLP #7
+/// Cowork, 2026-10-11 14:31 UTC, item 3).  A list cell, which no element of
+/// a flat interactive type is, where `[]`, a constant, may be one; the
+/// construct process's answer clause takes the same
+/// (`glp_runtime/lib/vglp/constructs.dart`, `listEnd`).
+const GTerm listEnd = GList([GAtom('end')]);
+
 /// A construct on screen: its identifier, the widget its latest draw names,
 /// and the view that draw carries.
 class OpenConstruct {

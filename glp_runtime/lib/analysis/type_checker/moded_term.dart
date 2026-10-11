@@ -9,6 +9,7 @@
 // reader/writer status.
 
 import 'mode.dart';
+import '../../runtime/terms.dart' show Nil, nil;
 
 // =============================================================================
 // Moded Term Classes
@@ -75,23 +76,29 @@ class ModedCompound extends ModedTerm {
   int get hashCode => Object.hash(mode, functor, arity, Object.hashAll(args));
 }
 
-/// A constant (integer, string, atom) with mode annotation.
+/// A constant (integer, real, string, or the empty list) with mode annotation.
 ///
-/// Example: ↓42, ↑"hello", ↓[]
+/// Example: ↓42, ↑hello, ↓[]
 class ModedConstant extends ModedTerm {
   @override
   final Mode mode;
 
-  /// The constant value: int, double, String, or atom name
+  /// The constant's value, of its kind: an int, a double, a String, or the
+  /// empty list, the runtime's [nil] (runtime/terms.dart).  GLP-Spec
+  /// appendix-lp.tex, Definition "Logic Programs Syntax": "a constant
+  /// (numbers, strings, or the empty list `[]`)", so the string `'[]'` is a
+  /// String and not the empty list, and `'0'` a String and not a number.
+  /// Until 2026-10-10 the empty list was held here as the string '[]', and
+  /// the two were one value.
   final Object value;
 
   ModedConstant(this.mode, this.value);
 
-  /// Convenience constructor for nil []
-  factory ModedConstant.nil(Mode mode) => ModedConstant(mode, '[]');
+  /// The empty list `[]`.
+  factory ModedConstant.nil(Mode mode) => ModedConstant(mode, nil);
 
-  /// Check if this is nil
-  bool get isNil => value == '[]';
+  /// Whether this is the empty list `[]`, and not the string `'[]'`.
+  bool get isNil => value is Nil;
 
   /// True if value is an integer
   bool get isInteger => value is int;
@@ -109,12 +116,13 @@ class ModedConstant extends ModedTerm {
   /// `_`, and says nothing of quoting; `Constant ::= Number ; String ; Module`
   /// in the root carries the same reading, and `[]` is a `String` and hence a
   /// `Constant` (TGLP sec:root-self).  So every constant that is not a number
-  /// is a String leaf, quoted or not — as `well_typed_term.dart` builds the
-  /// leaf and `subtyping.dart` reads a constant alternative.  Until 2026-09-23
-  /// this getter counted only a quoted constant, a distinction the type system
-  /// does not have; `isAtom`, which named the complementary half of that
-  /// distinction, went with it.
-  bool get isString => value is String;
+  /// is a String leaf, quoted or not, the empty list among them — as
+  /// `well_typed_term.dart` builds the leaf and `subtyping.dart` reads a
+  /// constant alternative, by the value's kind ([primitiveOfConstant]).  Until
+  /// 2026-09-23 this getter counted only a quoted constant, a distinction the
+  /// type system does not have; `isAtom`, which named the complementary half
+  /// of that distinction, went with it.
+  bool get isString => value is String || value is Nil;
 
   @override
   T accept<T>(ModedTermVisitor<T> visitor) => visitor.visitConstant(this);
@@ -127,11 +135,18 @@ class ModedConstant extends ModedTerm {
 
   @override
   bool operator ==(Object other) =>
-      other is ModedConstant && mode == other.mode && value == other.value;
+      other is ModedConstant &&
+      mode == other.mode &&
+      sameConstant(value, other.value);
 
   @override
   int get hashCode => Object.hash(mode, value);
 }
+
+/// Whether [a] and [b] are one constant: one value of one kind.  Dart's `==`
+/// holds of the integer 1 and the real 1.0, which are two constants.
+bool sameConstant(Object? a, Object? b) =>
+    a == b && (a is double) == (b is double);
 
 /// A variable (reader or writer) with structural mode annotation.
 ///
@@ -248,9 +263,18 @@ class ModedPath {
 class PathStep {
   /// Symbol at this position:
   /// - functor/arity for compound (e.g., "merge/3", "[|]/2")
-  /// - value for constant (e.g., "42", "[]")
+  /// - the constant's text for a constant (e.g., "42", "[]"), for display
   /// - variable name for variable (e.g., "X", "X?")
   final String symbol;
+
+  /// The constant's value at a constant leaf, of its kind --- an int, a
+  /// double, a String, or the empty list [nil] --- and null at a functor or a
+  /// variable.  A constant is typed by its value's kind and never by its text
+  /// (GLP #3 Cowork, 2026-10-09 18:38 UTC, "12:19", (ii)): the symbol of the
+  /// string `'0000'` is the text of the integer 0000, and the symbol of the
+  /// string `'[]'` the text of the empty list.  Until 2026-10-10 a step
+  /// carried the symbol alone, and the leaf was classified by parsing it.
+  final Object? value;
 
   /// Argument index: 0 for root, 1-based for arguments
   final int argIndex;
@@ -270,6 +294,7 @@ class PathStep {
     required this.mode,
     this.isVariable = false,
     this.isReader = false,
+    this.value,
   });
 
   /// Whether this is a writer variable
@@ -288,11 +313,12 @@ class PathStep {
       argIndex == other.argIndex &&
       mode == other.mode &&
       isVariable == other.isVariable &&
-      isReader == other.isReader;
+      isReader == other.isReader &&
+      sameConstant(value, other.value);
 
   @override
   int get hashCode =>
-      Object.hash(symbol, argIndex, mode, isVariable, isReader);
+      Object.hash(symbol, argIndex, mode, isVariable, isReader, value);
 }
 
 // =============================================================================
@@ -447,6 +473,7 @@ Set<ModedPath> paths(ModedTerm t) {
     mode: t.mode,
     isVariable: t is ModedVariable,
     isReader: t is ModedVariable ? t.isReader : false,
+    value: t is ModedConstant ? t.value : null,
   );
 
   _extractPaths(t, [rootStep], result);
@@ -465,6 +492,7 @@ void _extractPaths(ModedTerm t, List<PathStep> prefix, Set<ModedPath> result) {
         mode: child.mode,
         isVariable: child is ModedVariable,
         isReader: child is ModedVariable ? child.isReader : false,
+        value: child is ModedConstant ? child.value : null,
       );
       _extractPaths(child, [...prefix, childStep], result);
     }
