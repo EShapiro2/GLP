@@ -12,7 +12,7 @@
 
 Peer    ::= Constant.
 YesNo   ::= yes ; no.
-Peers   ::= [] ; [Peer | Peers].
+Peers   ::= List(Peer).
 Choice  ::= same(Peer) ; other(Peer).
 Menu    ::= menu(Peers, Peers, Choice?).
 Card    ::= card(Peer, YesNo?).
