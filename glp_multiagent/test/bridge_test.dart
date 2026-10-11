@@ -4,8 +4,9 @@
 // bridge/widgets.vglp, run by the calls of its compilation ---
 // `widgets # A(MCh?, Asks), widgets # dispatch(Asks?, ch(Gs?, Ds), MCh)`,
 // its entries in that directory's self.glp --- in the agent host, the
-// person channel's draws handed to the bridge line by line and its grants
-// injected on the person's input.  Each construct is drawn as the widget its
+// person channel's draws handed to the bridge term by term, whole, as the
+// agent emits them (AgentRuntime.onUserOutput; the bridge parses no text),
+// and its grants injected on the person's input.  Each construct is drawn as the widget its
 // draw names in the grassroots app's construct family (Definition "Widget
 // Declaration, Default Widget"), answered through the screen, returned as
 // input(Id, P, R), received by the module's goal --- which writes got(Q, X)
@@ -21,6 +22,7 @@ import 'package:glp_multiagent/ui_runtime/runtime.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
 
+import 'fixture_term.dart';
 import 'programs_dir.dart';
 
 /// One panel, whose one view is the default display: every screen message
@@ -50,7 +52,9 @@ class _Person {
   final List<String> grants = [];
 
   final List<GTerm> _unsent = [];
-  final List<String> _lines = [];
+
+  /// Every term the person channel carried, as the agent emitted it.
+  final List<GTerm> _carried = [];
   int _fed = 0;
 
   _Person._(this.tester, this.agent, this.ui);
@@ -71,7 +75,7 @@ class _Person {
           person._unsent.add(t);
         });
     person = _Person._(tester, agent, ui);
-    agent.onOutput = person._lines.add;
+    agent.onUserOutput = (t) => person._carried.add(screenTermOf(t));
     agent.onLog = (_, __) {};
     agent.onSendMadMessage = (_, __) async {};
     await tester.runAsync(() => agent.initialize());
@@ -86,9 +90,8 @@ class _Person {
 
   /// Hand the bridge what the person channel has carried since last time.
   void _replay() {
-    for (; _fed < _lines.length; _fed++) {
-      final l = _lines[_fed];
-      if (l.startsWith('< ')) ui.handleLine(l.substring(2));
+    for (; _fed < _carried.length; _fed++) {
+      ui.handle(_carried[_fed]);
     }
   }
 
@@ -207,11 +210,14 @@ void main() {
     expect(p.screen, contains('got(buttons, no)'));
     p.withdrawn(buttons);
 
-    // A text field: a String.
+    // A text field: a String.  The person's text, a space in it, reaches
+    // the program and comes back whole, a term, its print the canonical one
+    // (until 2026-10-11 it came back as a line the screen could not read,
+    // and never arrived).
     await p.type(text, 'text', [], 'hello world');
     await p.submit(text);
-    expect(p.grants.last, 'input(${text.id}, [], "hello world")');
-    expect(p.screen, contains('got(text, "hello world")'));
+    expect(p.grants.last, "input(${text.id}, [], 'hello world')");
+    expect(p.screen, contains("got(text, 'hello world')"));
     p.withdrawn(text);
 
     // A peer field: an agent identifier, and nothing else.
@@ -295,8 +301,8 @@ void main() {
     expect(find.byKey(nodeKey(menu.id, 'text', [1])), findsOneWidget);
     await p.type(menu, 'text', [1], 'hello');
     await p.submit(menu);
-    expect(p.grants.last, 'input(${menu.id}, [], post("hello"))');
-    expect(p.screen, contains('got(menu, post("hello"))'));
+    expect(p.grants.last, 'input(${menu.id}, [], post(hello))');
+    expect(p.screen, contains('got(menu, post(hello))'));
     p.withdrawn(menu);
 
     // A picker: the list the program writes, the choice at its own position.
@@ -313,7 +319,7 @@ void main() {
 
     // A thread the program writes, and the person's yes or no beside it: a
     // form whose first field is shown, element by element, and not edited.
-    expect(formatTerm(feed.view), 'feed(["one", "two"], input([2]))');
+    expect(formatTerm(feed.view), 'feed([one, two], input([2]))');
     expect(find.byKey(nodeKey(feed.id, 'form', [])), findsOneWidget);
     expect(find.byKey(nodeKey(feed.id, 'thread', [1])), findsOneWidget);
     expect(find.byKey(nodeKey(feed.id, 'buttons', [2])), findsOneWidget);
@@ -330,8 +336,8 @@ void main() {
     expect(find.byKey(nodeKey(box.id, 'input_box', [])), findsOneWidget);
     await p.type(box, 'text', [], 'first');
     await p.submit(box);
-    expect(p.grants.last, 'input(${box.id}, [], "first")');
-    expect(p.screen, contains('got(line, "first")'));
+    expect(p.grants.last, 'input(${box.id}, [], first)');
+    expect(p.screen, contains('got(line, first)'));
     p.open(box);
     expect(
         tester
@@ -341,8 +347,8 @@ void main() {
         isEmpty);
     await p.type(box, 'text', [], 'second');
     await p.submit(box);
-    expect(p.grants.last, 'input(${box.id}, [], "second")');
-    expect(p.screen, contains('got(line, "second")'));
+    expect(p.grants.last, 'input(${box.id}, [], second)');
+    expect(p.screen, contains('got(line, second)'));
     p.open(box);
     expect(p.ui.bridge.constructs.map((c) => c.id), [box.id]);
   });
@@ -399,9 +405,9 @@ void main() {
 
     test('a draw opens a construct, a redraw replaces its view, a withdraw '
         'removes it, and the rest is the program\'s output', () {
-      r.handleLine('draw(4, picker, choose([alice], input([2])))');
-      r.handleLine('got(x, 1)');
-      r.handleLine('draw(4, picker, choose([alice, bob], input([2])))');
+      r.handle(fixtureTerm('draw(4, picker, choose([alice], input([2])))'));
+      r.handle(fixtureTerm('got(x, 1)'));
+      r.handle(fixtureTerm('draw(4, picker, choose([alice, bob], input([2])))'));
       expect(r.bridge.constructs.map((c) => c.id), [4]);
       expect(formatTerm(r.bridge.construct(4)!.view),
           'choose([alice, bob], input([2]))');
@@ -410,7 +416,7 @@ void main() {
       expect(sent, ['input(4, [2], bob)']);
       // The construct stays until the dispatcher withdraws it.
       expect(r.bridge.construct(4), isNotNull);
-      r.handleLine('withdraw(4)');
+      r.handle(fixtureTerm('withdraw(4)'));
       expect(r.bridge.constructs, isEmpty);
       // A construct withdrawn takes no grant.
       r.bridge.grant(4, const GList([GInt(2)]), const GAtom('bob'));
@@ -420,8 +426,8 @@ void main() {
 
     test('a draw or a withdraw naming no construct identifier is not the '
         'bridge\'s', () {
-      r.handleLine('draw(alice, text, input([]))');
-      r.handleLine('withdraw(req(1))');
+      r.handle(fixtureTerm('draw(alice, text, input([]))'));
+      r.handle(fixtureTerm('withdraw(req(1))'));
       expect(r.bridge.constructs, isEmpty);
       expect(r.store.lists['screen']!.map(formatTerm),
           ['draw(alice, text, input([]))', 'withdraw(req(1))']);
@@ -430,8 +436,8 @@ void main() {
     testWidgets(
         'a declared widget is the Dart widget the family names; one the family '
         'lacks is drawn as such and takes no input', (tester) async {
-      r.handleLine('draw(1, stars, input([]))');
-      r.handleLine('draw(2, gauge, input([]))');
+      r.handle(fixtureTerm('draw(1, stars, input([]))'));
+      r.handle(fixtureTerm('draw(2, gauge, input([]))'));
       final family = ConstructFamily(named: {
         'stars': (context, c, view, at, grant) => TextButton(
             onPressed: () => grant(questionAt(view)!, const GInt(5)),

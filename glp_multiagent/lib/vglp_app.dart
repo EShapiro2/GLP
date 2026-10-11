@@ -135,12 +135,10 @@ class _VglpScreenState extends State<VglpScreen> {
     if (msg is AgentReady) {
       _commands = msg.commandPort;
       setState(() => _status = 'Ready');
-    } else if (msg is AgentOutput) {
-      // The isolate marks a genuine `_output/1` term with a leading '< ';
-      // its own chatter ([INIT]…, > …) carries no such marker.
-      final line =
-          msg.line.startsWith('< ') ? msg.line.substring(2) : msg.line;
-      _ui?.handleLine(line);
+    } else if (msg is AgentNotify) {
+      // What the agent's program emits to the person, the term whole; the
+      // agent's transcript (AgentOutput) is not the screen's.
+      _ui?.handle(msg.term);
       setState(() {});
     } else if (msg is AgentError) {
       setState(() => _status = 'Error: ${msg.error}');

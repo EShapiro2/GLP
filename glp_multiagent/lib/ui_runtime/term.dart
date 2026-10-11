@@ -1,20 +1,31 @@
-/// Ground-term model and boundary parser/formatter.
+/// Ground-term model, its print, and a reader of term source.
 ///
 /// Everything crossing the Dart/GLP boundary is a ground term (vGLP, "One
-/// bridge").  A `UserNotify` arrives as GLP-syntax text via `_output/1` and is
-/// read here; a `UserCmd`, the person's act, is sent as a term and never as
-/// text, the agent isolate handing it to the agent runtime as the runtime's
-/// own term (isolate_protocol.dart, `runtimeTermOf`).  This file gives the
-/// generic UI runtime its own self-contained model of those ground terms, so it
-/// never depends on GLP-runtime internals.
+/// bridge"), and crosses as one, never as text.  A `UserNotify`, what the
+/// agent's program emits to the person by send_to_user/1, arrives as the term
+/// the `_output/1` kernel was given (isolate_protocol.dart, `screenTermOf`
+/// and `AgentNotify`); a `UserCmd`, the person's act, goes back as a term the
+/// agent isolate hands the agent runtime as the runtime's own
+/// (`runtimeTermOf`).  Until 2026-10-11 a notify arrived as the line the
+/// kernel printed and was parsed here.  This file gives the generic UI
+/// runtime its own model of those ground terms; their print is GLP's own
+/// (glp_runtime glp_printer.dart).
 library;
+
+import 'package:glp_runtime/compiler/glp_printer.dart'
+    show constantNameSource, functorNameSource;
 
 /// A ground GLP term.
 sealed class GTerm {
   const GTerm();
 }
 
-/// An atom: an identifier (`alice`, `yes`) or a quoted constant (`'_user'`).
+/// A string constant: an identifier (`alice`, `yes`) or a quoted name
+/// (`'_user'`, `'Hi there'`).  GLP has one string constant (GLP-Spec
+/// appendix-lp.tex, Definition "Logic Programs Syntax"), so this and a
+/// [GString] of the same text are one value (isolate_protocol.dart,
+/// `runtimeTermOf`); a string the agent emits arrives as one of these
+/// (`screenTermOf`).
 class GAtom extends GTerm {
   final String name;
   const GAtom(this.name);
@@ -34,9 +45,11 @@ class GReal extends GTerm {
   const GReal(this.value);
 }
 
-/// A string constant, `"..."` — GLP's `String`, which is not an atom: a
-/// `text` widget over a `String` writer grants one of these, and over a
-/// `Constant` writer an atom, so the widget alone does not settle the term.
+/// The person's text, as a `text` widget grants it: GLP's one string
+/// constant, the same value as a [GAtom] of the same text (GLP-Spec
+/// appendix-lp.tex, Definition "Logic Programs Syntax"; GLP #3 Cowork,
+/// 2026-10-04 15:19 UTC, FAULT 2 (b)), and printed as one ([formatTerm]).
+/// Until 2026-10-10 a `"..."` string was a constant of its own, not an atom.
 class GString extends GTerm {
   final String value;
   const GString(this.value);
@@ -70,19 +83,38 @@ class GList extends GTerm {
   };
 }
 
-/// Render a ground term as GLP source text, suitable for the command boundary.
+/// A ground term as GLP's canonical print writes it, text that reads back as
+/// the term: each string and functor as the printer writes it (glp_runtime
+/// glp_printer.dart, [constantNameSource] and [functorNameSource]) ---
+/// single-quoted, bare where the lexer reads it so, never in double quotes,
+/// a [GAtom] and a [GString] of one text alike, being one value --- lists as
+/// `[a, b]` and `[a | T]`, structures as `f(a, b)`, as the REPL shows a
+/// binding.  It is a term's identity on the screen, a row's key among them;
+/// what the person reads is [displayText].  Until 2026-10-11 a name was
+/// written raw, `Hi there` and `G`, and a [GString] in double quotes.
 String formatTerm(GTerm t) {
   switch (t) {
     case GAtom(:final name):
-      return name;
+      return constantNameSource(name);
     case GInt(:final value):
       return '$value';
     case GReal(:final value):
       return '$value';
     case GString(:final value):
-      return '"$value"';
+      return constantNameSource(value);
+    case GStruct(functor: '.', args: [_, _]):
+      final items = <String>[];
+      GTerm rest = t;
+      while (rest is GStruct && rest.functor == '.' && rest.args.length == 2) {
+        items.add(formatTerm(rest.args[0]));
+        rest = rest.args[1];
+      }
+      if (rest is GList) {
+        return '[${[...items, ...rest.items.map(formatTerm)].join(', ')}]';
+      }
+      return '[${items.join(', ')} | ${formatTerm(rest)}]';
     case GStruct(:final functor, :final args):
-      return '$functor(${args.map(formatTerm).join(', ')})';
+      return '${functorNameSource(functor)}(${args.map(formatTerm).join(', ')})';
     case GList(:final items):
       return '[${items.map(formatTerm).join(', ')}]';
   }
@@ -160,21 +192,19 @@ List<String> scalarsOf(GTerm t) => switch (t) {
 /// The default display of a value where the screen has one line of text for
 /// it — a template's `{name}`, a tile's title or trailing figure: the rows of
 /// [scalarGroups], the cells of a row a space apart and the rows a comma
-/// apart. A scalar is itself; a `String` is its text, not the quoted literal
-/// [formatTerm] writes for the boundary.
+/// apart. A scalar is itself; a string is its text, not the print
+/// [formatTerm] writes for its identity.
 String displayText(GTerm t) =>
     scalarGroups(t).map((row) => row.join(' ')).join(', ');
 
-/// The default display of a stored key — a value the runtime keyed a row by,
-/// as [formatTerm] wrote it. The row's identity stays the formatted term;
-/// what the person reads is [displayText] of the value it names.
-String displayKey(String key) => displayText(tryParseTerm(key) ?? GAtom(key));
-
-/// Parse one ground term from [s], requiring the whole string to be consumed.
+/// Read one ground term from the source text [s], requiring the whole string
+/// to be consumed: a display declaration's pattern ([GPattern.parse]), and a
+/// test's fixture.  Nothing the agent emits is read here --- it arrives as a
+/// term --- and no row key is read back: a key's term is the store's
+/// (runtime.dart, `ActivityStore.termOf`).
 ///
-/// Returns `null` when [s] is not a single well-formed ground term — e.g. log
-/// lines like `[INIT] Loaded ...` (trailing text) or `> connect(bob)` (leading
-/// prompt). The caller uses this to separate notify terms from log noise.
+/// Returns `null` when [s] is not a single well-formed ground term — e.g.
+/// `[INIT] Loaded ...` (trailing text) or `> connect(bob)` (leading prompt).
 GTerm? tryParseTerm(String s) {
   final p = _Parser(s);
   try {
