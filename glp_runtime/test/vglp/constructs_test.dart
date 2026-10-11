@@ -898,32 +898,35 @@ both(P, A, B, both(P?, A?, B?)).
               'take_yesNo(F?, P?, X, input(Id?, P1?, R?), Gs?, Gs1, Done).'));
     });
 
-    test('the position is the path of argument indices from the root, a '
-        'list cell\'s head its argument 1 and its tail its argument 2', () {
-      final s = compile('''
+    // Until vGLP #7 Cowork's ruling of 2026-10-11 14:31 UTC (item 2) a list
+    // cell the program writes held questions here, at [1] and [2, 1]; a list
+    // cell is now a Stream's or a List's, and one outside them holding a
+    // question is refused (vGLP at 66b6500, Definition "Volitional
+    // Procedure, Interactive Type, ...": "An interactive type is flat").
+    test('the position is the path of argument indices from the root, and a '
+        'list cell the program writes holding a question, outside a Stream '
+        'or a List, is refused', () {
+      const src = '''
 YesNo ::= yes ; no.
 Nil ::= [].
 Tail ::= [YesNo? | Nil].
 Two ::= [YesNo? | Tail].
 procedure (Two)*pair(YesNo, YesNo).
 ([A, B])*pair(A?, B?).
-''').source;
-      // The first question is at [1]; the second, the head of the tail, at
-      // [2, 1], present_tail called at [2].
+''';
+      final (l, c) = at(src, 'procedure (Two)');
       expect(
-          s,
-          contains('present_two(P, [H1? | H2], Gs, Gs2?, Vs?, Done?) :- '
-              'ground(P?) | path(P?, 1, M1), path(P?, 1, Q1), '
-              'answer_yesNo(Q1?, H1, Gs?, Gs1, D1), path(P?, 2, Q2), '
-              'present_tail(Q2?, H2?, Gs1?, Gs2, V2, D2)'));
-      expect(
-          s,
-          contains('present_tail(P, [H1? | H2], Gs, Gs1?, '
-              '[[input(M1?) | H2?]], D1?) :- ground(P?), ground(H2?) | '
-              'path(P?, 1, M1), path(P?, 1, Q1), '
-              'answer_yesNo(Q1?, H1, Gs?, Gs1, D1).'));
-      expect(s, contains('construct(Id, two_w(X), Gs, Ds?) :- '
-          'present_two([], X?, Gs?, _, Vs, Done)'));
+          () => compile(src),
+          refusedAt(
+              'The interactive type Two is not flat: the program writes Two, '
+              'a list cell of which is neither a Stream nor a List, holding a '
+              'question, and an interactive type is flat, "built from '
+              'constants, String, Integer, Real, Key, Constant, Module, named '
+              'types so built, tuples and unions, and Stream or List" (vGLP, '
+              'Definition "Volitional Procedure, Interactive Type, Interactive '
+              'Term, Ordinary Clause, vGLP Program")',
+              l,
+              c));
     });
 
     test('an alternative holding no question does not read its position, '
@@ -1073,30 +1076,308 @@ procedure (Stream(String)?)*lines(Stream(String)).
 
   group('Task B (2): a recursive type the person writes that is neither a '
       'Stream nor a List', () {
-    test('is refused by the compiler, the message naming the type', () {
-      expect(() => compile('''
+    test('is refused by the compiler, the message naming the type, at the '
+        'interactive type', () {
+      const tree = '''
 Tree ::= leaf ; node(Tree, Tree).
 procedure (Tree?)*plant(Tree).
 (T)*plant(T?).
-'''), refused('the person writes Tree, a recursive type that is neither a '
-          'Stream nor a List'));
-      expect(() => compile('''
+''';
+      final (l1, c1) = at(tree, 'procedure');
+      expect(
+          () => compile(tree),
+          refusedAt(
+              'The interactive type Tree? is not flat: the person writes '
+              'Tree, a recursive type that is neither a Stream nor a List, '
+              'and an interactive type is flat, "it has no other recursive '
+              'type" (vGLP, Definition "Volitional Procedure, Interactive '
+              'Type, Interactive Term, Ordinary Clause, vGLP Program")',
+              l1,
+              c1));
+      const names = '''
 Names ::= [] ; [String | Names].
 procedure (Names?)*name(Names).
 (Ns)*name(Ns?).
-'''), refused('the person writes Names, a recursive type that is neither a '
-          'Stream nor a List'));
+''';
+      final (l2, c2) = at(names, 'procedure');
+      expect(
+          () => compile(names),
+          refusedAt(
+              'the person writes Names, a recursive type that is neither a '
+              'Stream nor a List, and an interactive type is flat, "it has no '
+              'other recursive type"',
+              l2,
+              c2));
     });
 
     test('a list cell the person writes outside a Stream or a List is refused '
         'too, and no form(\'.\', ...) is emitted', () {
-      expect(() => compile('''
+      const pair = '''
 Nil ::= [].
 Pair ::= [Integer | Nil].
 procedure (Pair?)*pair(Pair).
 (P)*pair(P?).
-'''), refused('the person writes Pair, a list cell of which is neither a '
-          'Stream nor a List'));
+''';
+      final (l, c) = at(pair, 'procedure');
+      expect(
+          () => compile(pair),
+          refusedAt(
+              'The interactive type Pair? is not flat: the person writes '
+              'Pair, a list cell of which is neither a Stream nor a List, and '
+              'an interactive type is flat, "built from constants, String, '
+              'Integer, Real, Key, Constant, Module, named types so built, '
+              'tuples and unions, and Stream or List"',
+              l,
+              c));
+    });
+  });
+
+  // vGLP at 66b6500, Definition "Volitional Procedure, Interactive Type,
+  // Interactive Term, Ordinary Clause, vGLP Program": "An interactive type
+  // is flat: it is built from constants, String, Integer, Real, Key,
+  // Constant, Module, named types so built, tuples and unions, and Stream or
+  // List as the whole type or as an argument of a tuple, never under another
+  // Stream or List; it has no other recursive type, and no type parameter at
+  // a position the person writes."  vGLP #7 Cowork, 2026-10-11 14:31 UTC,
+  // item 2: refused "a stream or list inside an element of a stream or list
+  // the person writes; a list cell outside Stream and List; a recursive type
+  // other than Stream and List, wherever it holds a question, program-written
+  // structures included".
+  group('flat interactive types (vGLP #7 Cowork, 2026-10-11 14:31 UTC, item '
+      '2)', () {
+    test('a stream or a list that is the element of a stream or a list the '
+        'person writes is refused', () {
+      const streams = '''
+procedure (Stream(Stream(String))?)*lines(Stream(Stream(String))).
+(Ls)*lines(Ls?).
+''';
+      expect(
+          () => compile(streams),
+          refusedAt(
+              'The interactive type Stream(Stream(String))? is not flat: the '
+              'person writes Stream(Stream(String)), whose element '
+              'Stream(String) is a stream or a list, and an interactive type '
+              'is flat, "never under another Stream or List" (vGLP, '
+              'Definition "Volitional Procedure, Interactive Type, '
+              'Interactive Term, Ordinary Clause, vGLP Program")',
+              1,
+              1));
+      const lists = '''
+List(X) ::= [] ; [X | List(X)].
+procedure (List(List(Integer))?)*rows(List(List(Integer))).
+(Rs)*rows(Rs?).
+''';
+      final (l, c) = at(lists, 'procedure');
+      expect(
+          () => compile(lists),
+          refusedAt(
+              'the person writes List(List(Integer)), whose element '
+              'List(Integer) is a stream or a list',
+              l,
+              c));
+    });
+
+    test('a tuple \'.\'(H, T) is a list cell, refused outside a Stream or a '
+        'List where it holds a question', () {
+      const src = '''
+Nil ::= [].
+T ::= t('.'(Integer?, Nil)).
+procedure (T)*cell(Integer).
+(t([N]))*cell(N?).
+''';
+      final (l, c) = at(src, 'procedure');
+      expect(
+          () => compile(src),
+          refusedAt(
+              "the program writes '.'(Integer?, Nil), a list cell of which is "
+              'neither a Stream nor a List, holding a question',
+              l,
+              c));
+    });
+
+    test('a Stream or a List that is an alternative of a union, neither the '
+        'whole type nor an argument of a tuple, is refused', () {
+      const src = '''
+Maybe ::= none ; Stream(Integer).
+procedure (Maybe?)*maybe(Maybe).
+(M)*maybe(M?).
+''';
+      final (l, c) = at(src, 'procedure');
+      expect(
+          () => compile(src),
+          refusedAt(
+              'The interactive type Maybe? is not flat: the person writes '
+              'Maybe, a union one of whose alternatives is Stream(Integer), '
+              'neither the whole type nor an argument of a tuple, and an '
+              'interactive type is flat, "Stream or List as the whole type or '
+              'as an argument of a tuple"',
+              l,
+              c));
+    });
+
+    test('a recursive type other than a Stream or a List that holds a '
+        'question is refused in a structure the program writes too', () {
+      const src = '''
+YesNo ::= yes ; no.
+Tree ::= leaf ; node(Tree, YesNo?).
+Card ::= card(Integer, Tree).
+procedure (Card)*grow(YesNo).
+(card(1, node(leaf, A)))*grow(A?).
+''';
+      final (l, c) = at(src, 'procedure');
+      expect(
+          () => compile(src),
+          refusedAt(
+              'The interactive type Card is not flat: the program writes '
+              'Tree, a recursive type that is neither a Stream nor a List, '
+              'holding a question, and an interactive type is flat, "it has '
+              'no other recursive type"',
+              l,
+              c));
+      // Recursive through a Stream: the element is the type again.
+      const through = '''
+Thread ::= post(String, Stream(Thread)).
+procedure (Thread?)*reply(Thread).
+(T)*reply(T?).
+''';
+      final (l2, c2) = at(through, 'procedure');
+      expect(
+          () => compile(through),
+          refusedAt(
+              'the person writes Thread, a recursive type that is neither a '
+              'Stream nor a List, and an interactive type is flat, "it has no '
+              'other recursive type"',
+              l2,
+              c2));
+    });
+
+    test('a structure the program writes holding no question is shown as it '
+        'is written: a recursive type and a list cell there are not refused, '
+        'and no ref(T) or form(\'.\', ...) is emitted', () {
+      // vGLP #7 Cowork, 2026-10-11 14:31 UTC, item 2: "wherever it holds a
+      // question" (sGLP's coins.vglp and graph.vglp draw their Peers and
+      // Wallet so).
+      final c = compile('''
+YesNo ::= yes ; no.
+Peers ::= [] ; [Constant | Peers].
+Nil ::= [].
+Pair ::= [Integer | Nil].
+Menu ::= menu(Peers, Pair, YesNo?).
+procedure (Menu)*choose(YesNo).
+(menu([a, b], [1], A))*choose(A?).
+''');
+      expect(
+          c.widgets['Menu'],
+          "form(menu, [field('Peers', thread), field('Pair', shown), "
+          "field('YesNo', buttons([yes, no]))])");
+      expect(c.source, isNot(contains('ref(')));
+      expect(c.source, isNot(contains("form('.'")));
+    });
+
+    test('a position the person writes of a type parameter is refused '
+        'outright, the message citing the Definition (vGLP #7 Cowork, '
+        '2026-10-11 14:31 UTC, item 1)', () {
+      const box = '''
+Box(X) ::= box(X).
+procedure(X) (Box(X)?)*take(X).
+(box(V))*take(V?).
+''';
+      final (l1, c1) = at(box, 'procedure');
+      const why = 'The interactive type Box(X)? is refused: the person writes '
+          'a position of type X, a type parameter, and an interactive type has '
+          '"no type parameter at a position the person writes" (vGLP, '
+          'Definition "Volitional Procedure, Interactive Type, Interactive '
+          'Term, Ordinary Clause, vGLP Program")';
+      expect(() => compile(box), refusedAt(why, l1, c1));
+      // The whole type a parameter, and a stream's element one.
+      const whole = '''
+procedure(X) (X?)*take(X).
+(V)*take(V?).
+''';
+      expect(
+          () => compile(whole),
+          refusedAt(
+              'The interactive type X? is refused: the person writes a '
+              'position of type X, a type parameter',
+              1,
+              1));
+      const stream = '''
+procedure(E) (Stream(E)?)*takes(Stream(E)).
+(Vs)*takes(Vs?).
+''';
+      expect(
+          () => compile(stream),
+          refusedAt(
+              'The interactive type Stream(E)? is refused: the person writes '
+              'a position of type E, a type parameter',
+              1,
+              1));
+      // At a position the program writes a parameter is shown.
+      final c = compile('''
+YesNo ::= yes ; no.
+Card(X) ::= card(X, YesNo?).
+procedure(X) (Card(X))*see(X?, YesNo).
+(card(V?, A))*see(V, A?).
+''');
+      expect(c.widgets['Card(X)'],
+          "form(card, [field('X', shown), field('YesNo', buttons([yes, no]))])");
+    });
+  });
+
+  // vGLP #7 Cowork, 2026-10-11 14:31 UTC, item 2: "An alias of a Stream or
+  // List, `Lines ::= Stream(String)`, is a named type so built and is NOT
+  // refused: it draws as the stream it names, like Date and Key draw by
+  // their names."
+  group('an alias of a Stream or a List (vGLP #7 Cowork, 2026-10-11 14:31 '
+      'UTC, item 2)', () {
+    test('draws as the stream it names, and is answered as it, an element '
+        'per grant', () {
+      final c = compile('''
+Lines ::= Stream(String).
+procedure (Lines?)*write(Lines).
+(Ls)*write(Ls?).
+''');
+      expect(c.widgets['Lines?'], 'input_box(text)');
+      final s = c.source;
+      expect(
+          s,
+          contains('take_lines(formed(V), P, [V? | X1?], _, Gs, Gs1?, Done?) '
+              ':- answer_lines(P?, X1, Gs?, Gs1, Done).'));
+      expect(s, isNot(contains("form('.'")));
+      expect(s, isNot(contains('answer_lines(P, [], ')));
+    });
+
+    test('of a List, with its end button, through two names', () {
+      final c = compile('''
+List(X) ::= [] ; [X | List(X)].
+Names ::= List(String).
+Roll ::= Names.
+procedure (Roll?)*call(Roll).
+(R)*call(R?).
+''');
+      expect(c.widgets['Roll?'], 'input_list(text)');
+      expect(
+          c.source,
+          contains('answer_roll(P, [], [input(_, P1, []) | Gs], Gs?, done) :- '
+              'P1? =?= P? | true.'));
+    });
+
+    test('a field of a form the person writes, a question of its own; and '
+        'one the program writes, a thread', () {
+      final c = compile('''
+Lines ::= Stream(String).
+YesNo ::= yes ; no.
+Post ::= post(String, Lines).
+Feed ::= feed(Lines, YesNo?).
+procedure (Post?)*post(Post).
+(P)*post(P?).
+procedure (Feed)*feed(YesNo).
+(feed(["a"], A))*feed(A?).
+''');
+      expect(c.widgets['Post?'],
+          "form(post, [field('String', text), question('Lines', input_box(text))])");
+      expect(c.widgets['Feed'],
+          "form(feed, [field('Lines', thread), field('YesNo', buttons([yes, no]))])");
     });
   });
 
@@ -1195,12 +1476,23 @@ procedure (Card)*respond(Reply).
     });
 
     test('is refused in an element of a stream or a list, whose elements '
-        'share one position', () {
-      expect(() => compile('''
+        'share one position, the type not flat (vGLP #7 Cowork, 2026-10-11 '
+        '14:31 UTC, item 2)', () {
+      const src = '''
 Req ::= post(String, Stream(String)).
 procedure (Stream(Req)?)*agent(Stream(Req)).
 (Rs)*agent(Rs?).
-'''), refused('whose element Req holds a stream or a list'));
+''';
+      final (l, c) = at(src, 'procedure');
+      expect(
+          () => compile(src),
+          refusedAt(
+              'The interactive type Stream(Req)? is not flat: the person '
+              'writes Stream(Req), whose element Req holds a stream or a '
+              'list, and an interactive type is flat, "never under another '
+              'Stream or List"',
+              l,
+              c));
     });
   });
 
@@ -1321,12 +1613,15 @@ procedure (Order?)*order(Order).
 '''), refused('a position of it is written by the program'));
     });
 
-    test('a position the person writes of a type parameter', () {
+    test('a position the person writes of a type parameter: refused '
+        'outright since vGLP #7 Cowork, 2026-10-11 14:31 UTC, item 1 (the '
+        'flat types above)', () {
       expect(() => compile('''
 Box(X) ::= box(X).
 procedure(X) (Box(X)?)*take(X).
 (box(V))*take(V?).
-'''), refused('of a type parameter'));
+'''), refusedAt('the person writes a position of type X, a type parameter',
+          2, 1));
     });
 
 

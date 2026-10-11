@@ -11,8 +11,10 @@
 /// by the terms the compiled construct processes name them with:
 ///
 ///   - a constant: a button, `button(C)`; a union of constants: a row of
-///     buttons, `buttons([C1, ..., Cn])`; a position of type `Constant`,
-///     `Module` or a type parameter: a text field, `text`;
+///     buttons, `buttons([C1, ..., Cn])`; a position of type `Constant` or
+///     `Module`: a text field, `text` (an interactive type has "no type
+///     parameter at a position the person writes", vGLP, Definition
+///     "Volitional Procedure, Interactive Type, ...");
 ///   - `String`, a number (`Integer` or `Real`), `Date` and an agent
 ///     identifier: a text field, a number field, a date picker and a peer
 ///     field, `text`, `number`, `date` and `peer`;
@@ -605,12 +607,14 @@ class _ConstructViewState extends State<ConstructView> {
   static String _name(GTerm f) => ctorArgs(f).$1;
 
   /// The functor and arguments of a view a form is drawn over, a list among
-  /// them as the list cell `'.'(H, T)` it is: the default widget of a list
-  /// cell the program writes with a question in it is `form('.', [Wh, Wt])`
-  /// (Definition "Widget Declaration, Default Widget": a tuple, "a form with
-  /// one field per argument"), drawn over the list the program wrote, which
-  /// reaches the screen whole (isolate_protocol.dart, `screenTermOf`) and is a
-  /// [GList] there where it ends in [].
+  /// them as the list cell `'.'(H, T)` it is: a draw naming `form('.', [Wh,
+  /// Wt])` is drawn over the list the program wrote, which reaches the screen
+  /// whole (isolate_protocol.dart, `screenTermOf`) and is a [GList] there
+  /// where it ends in [].  The compilation emits no such widget since the
+  /// interactive types are flat, a list cell holding a question outside a
+  /// Stream or a List refused (vGLP at 66b6500, Definition "Volitional
+  /// Procedure, Interactive Type, ..."; vGLP #7 Cowork, 2026-10-11 14:31 UTC,
+  /// item 2).
   static (String, List<GTerm>) _viewArgs(GTerm v) =>
       v is GList && v.items.isNotEmpty
           ? ('.', [v.items.first, GList(v.items.sublist(1))])

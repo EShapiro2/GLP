@@ -421,7 +421,9 @@ picking_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       'forms, keys', () {
     // Definition "Widget Declaration, Default Widget" and the Answer rule of
     // Definition "vmaGLP Transition System" (vGLP 90988ea): a list the person
-    // writes is ended by the person, [] its answer, and a stream is not; a
+    // writes is ended by the person, [] its answer, and a stream is not; an
+    // alias of a stream draws as the stream it names (vGLP #7 Cowork,
+    // 2026-10-11 14:31 UTC, item 2); a
     // stream or a list inside a form the person writes is a question of its
     // own, the form's answer carrying a fresh variable there, drawn under the
     // form; a Key is a peer field.  The program is written under
@@ -440,6 +442,7 @@ Reply   ::= reply(String, Stream(String)).
 Card    ::= card(Peer, Reply?).
 Issuer  ::= Key.
 Lot     ::= lot(Issuer, Integer).
+Lines   ::= Stream(String).
 ''';
       File('${fixture.path}/b.vglp').writeAsStringSync('''
 $types
@@ -457,11 +460,14 @@ exported procedure (Card)*respond(Reply).
 
 exported procedure (Lot?)*lot(Lot).
 (L)*lot(L?).
+
+exported procedure (Lines?)*write(Lines).
+(Ls)*write(Ls?).
 ''');
       File('${fixture.path}/self.glp').writeAsStringSync('''
 $types
 Question ::= list_integer_r(List(Integer)?) ; stream_integer_r(Stream(Integer)?)
-           ; post_r(Post?) ; card_w(Card) ; lot_r(Lot?).
+           ; post_r(Post?) ; card_w(Card) ; lot_r(Lot?) ; lines_r(Lines?).
 Ask(Q)   ::= ask(Constant, Q).
 PersonIn ::= [_ | PersonIn].
 
@@ -470,6 +476,7 @@ imported procedure b#counts(Stream(Integer), Stream(Ask(Question))).
 imported procedure b#poster(Post, Stream(Ask(Question))).
 imported procedure b#respond(Reply, Stream(Ask(Question))).
 imported procedure b#lot(Lot, Stream(Ask(Question))).
+imported procedure b#write(Lines, Stream(Ask(Question))).
 imported procedure b#dispatch(Stream(Ask(Question))?,
     Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
 
@@ -585,6 +592,22 @@ lot_person([draw(Id, W, input(Q)) | Ds],
 lot_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
     lot_person(Ds?, Gs, Log).
+
+%% An alias of a stream: two lines, and [end] answering nothing.
+exported procedure play_write(Lines, Stream(_)).
+play_write(Ls?, Log?) :-
+    b # write(Ls, Asks), b # dispatch(Asks?, ch(Gs?, Ds), _),
+    write_person(Ds?, Gs, Log).
+
+procedure write_person(_?, PersonIn, Stream(_)).
+write_person([draw(Id, W, input(Q)) | Ds],
+             [input(Id?, Q?, one), input(Id?, Q?, [end]), input(Id?, Q?, two) | Gs?],
+             [drawn(Id?, W?, input(Q?)) | Log?]) :-
+    ground(Id?), ground(W?), ground(Q?) |
+    write_person(Ds?, Gs, Log).
+write_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    write_person(Ds?, Gs, Log).
 ''');
     });
     tearDown(() {
@@ -612,6 +635,14 @@ lot_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       expect(r['Cs'], '[1, 2 | _]');
       expect(r['Log'], '[drawn(0, input_box(number), input([])) | _]');
+    });
+
+    test('an alias of a stream draws as the stream it names and is answered '
+        'as it (vGLP #7 Cowork, 2026-10-11 14:31 UTC, item 2)', () async {
+      final r = await play('play_write(Ls, Log)');
+      expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
+      expect(r['Ls'], '[one, two | _]');
+      expect(r['Log'], '[drawn(0, input_box(text), input([])) | _]');
     });
 
     test('(3) a stream inside a form: the form answered with a fresh stream, '
