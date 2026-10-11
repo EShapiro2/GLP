@@ -74,7 +74,7 @@ Loading a project: enter the directory path at the prompt; the project linker re
 
 | Suite | Command (from the worktree root) | Tests |
 |---|---|---|
-| Full suite (canonical) | `bash test/run_all_tests.sh` | 3951 passed, 0 failed, `KNOWN_RED_CHECKS` 113 (CSSN's 93 with its artefact's 8, GSG's spm 20) and `KNOWN_RED` Dart entries as listed --- at GLP `908f86b3`, 2026-10-11, vGLP's Task C, the act-schema compiler |
+| Full suite (canonical) | `bash test/run_all_tests.sh` | 3961 passed, 0 failed, `KNOWN_RED_CHECKS` 113 (CSSN's 93 with its artefact's 8, GSG's spm 20) and `KNOWN_RED` Dart entries as listed --- at GLP `e92151a3`, 2026-10-11, the three-owner merge (Currencies' ports, GSG's interfaces, IGLP's manifests) and vGLP's opener test |
 | Dart unit tests alone | `cd glp_runtime && dart test` | glp_runtime only |
 | Flutter package alone | `cd glp_multiagent && flutter test` | glp_multiagent only |
 
