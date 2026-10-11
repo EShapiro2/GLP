@@ -72,7 +72,7 @@ Loading a project: enter the directory path at the prompt; the project linker re
 
 | Suite | Command (from the worktree root) | Tests |
 |---|---|---|
-| Full suite (canonical) | `bash test/run_all_tests.sh` | 3776 passed, 0 failed, `KNOWN_RED_CHECKS` 113 (CSSN's 93 with its artefact's 8, GSG's spm 20) and `KNOWN_RED` Dart entries as listed --- at GLP `84b8a51a`, 2026-10-11, GNA's adapter |
+| Full suite (canonical) | `bash test/run_all_tests.sh` | 3785 passed, 0 failed, `KNOWN_RED_CHECKS` 113 (CSSN's 93 with its artefact's 8, GSG's spm 20) and `KNOWN_RED` Dart entries as listed --- at GLP `5b3b8a97`, 2026-10-11, `peer_declare` and `address_declare` |
 | Dart unit tests alone | `cd glp_runtime && dart test` | glp_runtime only |
 | Flutter package alone | `cd glp_multiagent && flutter test` | glp_multiagent only |
 
