@@ -3,11 +3,11 @@
 /// screens: the figure `village-market-coins.png`.
 ///
 /// Each phone is one villager's own execution of the currency mini-app under
-/// the Grassroots Super-App, its screen derived from the display declarations
-/// of `programs/currencies/coins/currency/coins_agent.vglp` and rendered by
-/// the same `AgentSurface` and `coinsManifest` that render the Swap form and
-/// the proposal card of that appendix, in the same phone shell and at the same
-/// scale.
+/// the Grassroots Super-App, its screen the constructs the Dart bridge draws
+/// for `programs/currencies/coins/currency/coins_agent.vglp` and the views of
+/// what its agent writes, rendered by the same `AgentSurface` and
+/// `coinsManifest` that render the request form and the proposal card of that
+/// appendix, in the same phone shell and at the same scale.
 ///
 /// The play `market_ui/1` runs the whole six-agent market and sends the events
 /// of the villager it names to the user's stream as well
@@ -24,29 +24,29 @@
 ///
 /// The image this test writes is the figure.  Under `market_ui/1` the app
 /// observes and does not answer: `village.glp`'s `villager/4` sends the named
-/// villager's events through `tee/3` to the app and to the scripted person,
-/// and the person's answers go to the mediator and not to the app.  The
-/// mediator sends `closed(ReqId)` when an ask is answered or declined and
-/// `aborted(ReqId)` when it is aborted (`coins_agent.glp`, `med/4`), so the
-/// app retires every card the scripted person answered, and the test requires
-/// that no card stands on any phone at the end of the run.
+/// villager's events --- the constructs the dispatcher draws and withdraws,
+/// and the screen --- through `tee/3` to the app and to the scripted person,
+/// and the person's grants go to the dispatcher and not to the app.  "The
+/// construct process withdraws when every question it holds is answered"
+/// (vGLP, sections/elicitation.tex, "The Implementation: Compiling vGLP onto
+/// GLP"), so the app removes every card the scripted person answered, and the
+/// test requires that no construct but the request form, whose stream
+/// question stays open, stands on any phone at the end of the run.
 ///
 /// The SCREEN view is suppressed in this test, at Currencies' request of
 /// 2026-09-24: it shows each screen message by its arguments with the functor
 /// dropped, and GC makes no claim about it.  Each phone is rendered from
 /// [_balancesOnly], a manifest local to this test: `coinsManifest`'s one panel
-/// with that view left out, and the same forms, the same card and the same
-/// BALANCES view.  No library code is changed.  The runtime handles cards,
-/// `closed` and `aborted` before it tries any view, and ignores a screen
-/// message no view matches, so the holdings and the cards are those of
-/// `coinsManifest`; the test checks this against a runtime under
-/// `coinsManifest` fed the same lines.
+/// with that view left out, and the same BALANCES view.  No library code is
+/// changed.  The bridge reads the draws before the runtime tries any view,
+/// and the runtime ignores a screen message no view matches, so the holdings
+/// and the constructs are those of `coinsManifest`; the test checks this
+/// against a runtime under `coinsManifest` fed the same lines.
 ///
 /// The phones are cut below the balances, at Currencies' request of
 /// 2026-09-24: each shell is laid out as tall as the longest list, four rows,
 /// and one row's height under it, measured from the layout, and closes its
-/// lower edge with the bezel and corner radius of its upper edge, so the +
-/// button at the foot of the screen falls outside it.
+/// lower edge with the bezel and corner radius of its upper edge.
 library;
 
 import 'dart:io';
@@ -94,7 +94,7 @@ const _expected = <String, Map<String, String>>{
 
 /// `coinsManifest` with its SCREEN view, the list view of the default display,
 /// left out, and every other element of it kept as the same object: the
-/// panel's id and name, its four forms, its swap card and its BALANCES view.
+/// panel's id and name and its BALANCES view.
 final Manifest _balancesOnly = () {
   final p = coinsManifest.panels.single;
   return Manifest(
@@ -211,7 +211,8 @@ void main() {
 
       final r = UiRuntime(manifest: _balancesOnly, onSend: (_) {});
       // The same lines under the app's manifest, SCREEN view included, so that
-      // the test shows that leaving the view out changes no holding and no card.
+      // the test shows that leaving the view out changes no holding and no
+      // construct.
       final full = UiRuntime(manifest: coinsManifest, onSend: (_) {});
       final result = (await tester.runAsync(() async {
         engine.loadProgram('$repo/currencies/coins');
@@ -230,14 +231,13 @@ void main() {
             x.store.balances.map((s, b) =>
                 MapEntry(s, b.map((k, a) => MapEntry(k, formatTerm(a))))),
             [
-              for (final c in x.inbox)
-                '${c.itemKey} ${c.asks.map((k, a) => MapEntry(k, formatTerm(a)))}'
+              for (final c in x.bridge.constructs)
+                '${c.id} ${formatTerm(c.widget)} ${formatTerm(c.view)}'
             ],
-            x.standing.map((k, a) => MapEntry(k, formatTerm(a))),
           ].toString();
       expect(state(r), state(full),
           reason: '${v.id}: leaving the SCREEN view out changed the holdings '
-              'or the cards');
+              'or the constructs');
       // The screen is the agent's report of its own holdings, and it is
       // Currencies' list: the figure is checked against it, never fitted to it.
       expect(
@@ -311,15 +311,9 @@ void main() {
     // Every phone shows its BALANCES view, and none shows a SCREEN view.
     expect(find.text('BALANCES'), findsNWidgets(_villagers.length));
     expect(find.text('SCREEN'), findsNothing);
-    // The + button stands at the foot of the 720-point screen, below the
-    // shell's lower edge, so no phone shows it.
-    for (final v in _villagers) {
-      final screenBottom = tester.getRect(surfaceOf(v)).top + height - 20;
-      final plus = tester.getRect(find.descendant(
-          of: surfaceOf(v), matching: find.byType(FloatingActionButton)));
-      expect(plus.top, greaterThanOrEqualTo(screenBottom),
-          reason: '${v.id}: the + button shows above the cut');
-    }
+    // No phone has a + button: the panel has no compose form, the request
+    // form being a construct the bridge draws.
+    expect(find.byType(FloatingActionButton), findsNothing);
 
     final boundary = tester.renderObject<RenderRepaintBoundary>(
         find.byType(RepaintBoundary).first);
@@ -330,10 +324,18 @@ void main() {
     });
     File('/private/tmp/village-market-coins.png').writeAsBytesSync(bytes!);
 
-    // The stale-card census: a card the app did not retire would stand above
-    // the BALANCES view, so the figure requires none on any phone.
+    // The stale-card census: a card the dispatcher did not withdraw would
+    // stand above the BALANCES view, so the figure requires none on any
+    // phone --- every construct open at the end is the request form, the
+    // agent's one question, Stream(Request)?, which stays open while its
+    // stream does.
     final census = {
-      for (final v in _villagers) v.name: runtimes[v.id]!.inbox.length
+      for (final v in _villagers)
+        v.name: runtimes[v.id]!
+            .bridge
+            .constructs
+            .where((c) => !formatTerm(c.widget).startsWith('input_box('))
+            .length
     };
     // ignore: avoid_print
     print('[stale cards] $census');
@@ -341,5 +343,10 @@ void main() {
     expect(stale, isEmpty,
         reason: 'cards the app never retired: $stale --- the image just '
             'written is not the figure');
+    // And the request form stands on every phone, once.
+    for (final v in _villagers) {
+      expect(runtimes[v.id]!.bridge.constructs, hasLength(1),
+          reason: '${v.id}: the request form, and nothing else, stands');
+    }
   }, timeout: const Timeout(Duration(minutes: 15)));
 }

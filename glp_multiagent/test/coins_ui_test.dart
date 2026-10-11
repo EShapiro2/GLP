@@ -1,20 +1,36 @@
-/// The currency mini-app's screen, over the person channel of a compiled vGLP
-/// program (vGLP, Definition "Canonical Compilation").
+/// The currency mini-app's screen, over the person channel of the compiled
+/// coins agent (vGLP, Definition "Person Channel, Person Writer, GLP with
+/// Persons, Grant"), through the Dart bridge (sections/elicitation.tex, the
+/// paragraph "The implementation").
 ///
-/// The three mechanisms every compiled vGLP program needs, exercised on the
-/// manifest derived from `coins_agent.vglp`'s display declarations: a card
-/// matched by the value of its first argument with its context destructured; a
-/// nested answer `answer(Id, xs_C(...))`; and standing cards — a persistent
-/// clause's form bound to the latest card of that clause. The swap card is one
-/// clause, `respond_swap_1`, whose else-branch earns it a decline the manifest
-/// does not write.
+/// The three mechanisms the compiled program needs of its screen, exercised
+/// on [coinsManifest] with the draws fed as the dispatcher of
+/// `programs/currencies/coins/currency/coins_agent.glp` draws them (its
+/// `construct/4`, the request form and the swap responder's card): a draw
+/// opens a construct by its identifier, with its widget and its view; the
+/// person's act on a construct is granted as `input(Id, P, R)`, at the
+/// position `P` the view marks `input(P)`; and the request form, the
+/// question `Stream(Request)?`, stays open, one request per submission
+/// (vGLP, Remark "Persistence"), while a card goes on its withdrawal.  The
+/// deployed mediator's card vocabulary opens nothing on this screen.
 library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/manifests/coins_ui.dart';
-import 'package:glp_multiagent/ui_runtime/manifest.dart';
+import 'package:glp_multiagent/ui_runtime/bridge.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
+
+/// The widget of the agent's question, `Stream(Request)?`, as
+/// `coins_agent.glp` draws it: an input box of a menu of the four forms of
+/// `Request`.
+const _requestForm = 'input_box(menu([form(mint, [number]), '
+    'form(swap, [peer, form(lot, [text, number]), form(lot, [text, number])]), '
+    'form(pay, [peer, number]), form(redeem, [peer, peer])]))';
+
+/// The widget of the swap responder's question, `Card ::= card(Offer,
+/// YesNo?)` in writer mode: the offer shown, and the buttons yes and no.
+const _card = 'form(card, [shown, buttons([yes, no])])';
 
 void main() {
   late List<String> sent;
@@ -25,140 +41,121 @@ void main() {
     r = UiRuntime(manifest: coinsManifest, onSend: (t) => sent.add(formatTerm(t)));
   });
 
-  /// The four asks the compiled agent poses as soon as it runs, in the order
-  /// `coins_agent.glp` emits them (lines 68, 70, 72, 74).
-  void poseRequestCards({int from = 1}) {
-    r.handleLine('card(agent_1, ctx_agent_1, req($from))');
-    r.handleLine('card(agent_2, ctx_agent_2, req(${from + 1}))');
-    r.handleLine('card(agent_3, ctx_agent_3, req(${from + 2}))');
-    r.handleLine('card(agent_4, ctx_agent_4, req(${from + 3}))');
+  /// The agent's question, drawn as construct [id] over the view `input([])`:
+  /// the whole variable is the person's.
+  void drawRequestForm({int id = 0}) =>
+      r.handleLine('draw($id, $_requestForm, input([]))');
+
+  /// The card of a swap [from] proposes, drawn as construct [id]: the offer
+  /// shown, the answer the person's at position [2].
+  void drawCard(int id, String from, String want, String offered) =>
+      r.handleLine(
+          'draw($id, $_card, card(offer($from, $want, $offered), input([2])))');
+
+  /// The position of the question construct [id] holds at [at] of its view.
+  GList position(int id, List<int> at) {
+    var v = r.bridge.construct(id)!.view;
+    for (final i in at) {
+      v = ctorArgs(v).$2[i - 1];
+    }
+    return questionAt(v)!;
   }
 
-  group('a card is matched by its clause', () {
-    test('the four request clauses stand, and none opens an inbox card', () {
-      poseRequestCards();
-      expect(r.standing.keys.toSet(),
-          {'agent_1', 'agent_2', 'agent_3', 'agent_4'});
-      expect(formatTerm(r.standing['agent_3']!), 'req(3)');
+  group('a draw opens a construct', () {
+    test('the request form is one construct, its view the person\'s whole '
+        'variable, and no card', () {
+      drawRequestForm();
+      final c = r.bridge.constructs.single;
+      expect(c.id, 0);
+      expect(formatTerm(c.widget), _requestForm);
+      expect(formatTerm(c.view), 'input([])');
+      expect(r.inbox, isEmpty);
+      expect(r.standing, isEmpty);
+    });
+
+    test('a card is a construct of its own, the offer in its view', () {
+      drawRequestForm();
+      drawCard(7, 'alice', 'lot(bob, 2)', '[coin(alice, 1), coin(alice, 2)]');
+      expect(r.bridge.constructs.map((c) => c.id), [0, 7]);
+      final card = r.bridge.construct(7)!;
+      expect(formatTerm(card.widget), _card);
+      final (_, args) = ctorArgs(card.view);
+      expect(formatTerm(args[0]),
+          'offer(alice, lot(bob, 2), [coin(alice, 1), coin(alice, 2)])');
+      expect(formatTerm(position(7, [2])), '[2]');
       expect(r.inbox, isEmpty);
     });
 
-    test('a transient clause opens a card, its context destructured', () {
+    test('the deployed mediator\'s card vocabulary opens nothing', () {
+      r.handleLine('card(agent_1, ctx_agent_1, req(1))');
       r.handleLine(
           'card(respond_swap_1, ctx_respond_swap_1(alice, lot(bob, 2), '
           '[coin(alice, 1), coin(alice, 2)]), req(7))');
-      final card = r.inbox.single;
-      expect(card.panel.id, 'coins');
-      expect(card.itemKey, 'alice');
-      expect(formatTerm(card.fields['Want']!), 'lot(bob, 2)');
-      expect(formatTerm(card.fields['Offered']!),
-          '[coin(alice, 1), coin(alice, 2)]');
-    });
-
-    test('a clause the manifest does not name opens nothing', () {
-      r.handleLine('card(other_1, ctx_other_1(alice), req(9))');
+      expect(r.bridge.constructs, isEmpty);
       expect(r.inbox, isEmpty);
       expect(r.standing, isEmpty);
     });
   });
 
-  group('a nested fill', () {
-    test('a form grants answer(Id, xs_C(v1, ..., vi))', () {
-      poseRequestCards();
-      final mint = _form(r, 'agent_1');
-      r.submitCommand(mint, {'Amount': GInt(3)});
-      expect(sent, ['answer(req(1), xs_agent_1(3))']);
+  group('a grant is input(Id, P, R)', () {
+    test('a request is granted on the request form at its question, []', () {
+      drawRequestForm();
+      r.bridge.grant(0, position(0, []), tryParseTerm('mint(3)')!);
+      expect(sent, ['input(0, [], mint(3))']);
     });
 
-    test('the swap form carries its five person inputs in order', () {
-      poseRequestCards();
-      r.submitCommand(_form(r, 'agent_2'), {
-        'Friend': GAtom('bob'),
-        'GiveCoin': GAtom('alice'),
-        'GiveAmount': GInt(2),
-        'WantCoin': GAtom('bob'),
-        'WantAmount': GInt(2),
-      });
-      expect(sent, ['answer(req(2), xs_agent_2(bob, alice, 2, bob, 2))']);
+    test('the swap request carries its peer and its two lots', () {
+      drawRequestForm();
+      r.bridge.grant(
+          0, position(0, []), tryParseTerm('swap(bob, lot(alice, 2), lot(bob, 2))')!);
+      expect(sent, ['input(0, [], swap(bob, lot(alice, 2), lot(bob, 2)))']);
     });
 
-    test('a card button grants the ground term of its own clause', () {
-      r.handleLine(
-          'card(respond_swap_1, ctx_respond_swap_1(alice, lot(bob, 2), []), '
-          'req(7))');
-      final card = r.inbox.single;
-      r.answerCard(card, _answer(card, 'Accept'));
-      expect(sent, ['answer(req(7), xs_respond_swap_1(yes))']);
-      expect(r.inbox, isEmpty);
+    test('a card\'s answer is granted at the position its view marks', () {
+      drawCard(7, 'alice', 'lot(bob, 2)', '[]');
+      r.bridge.grant(7, position(7, [2]), const GAtom('yes'));
+      expect(sent, ['input(7, [2], yes)']);
+    });
+
+    test('a refusal is an answer, no, granted as yes is', () {
+      drawCard(5, 'alice', 'lot(bob, 2)', '[coin(alice, 1)]');
+      r.bridge.grant(5, position(5, [2]), const GAtom('no'));
+      expect(sent, ['input(5, [2], no)']);
     });
   });
 
-  group('standing cards', () {
-    test('a fresh card of a clause replaces the one before it', () {
-      poseRequestCards();
-      r.handleLine('card(agent_1, ctx_agent_1, req(11))');
-      expect(formatTerm(r.standing['agent_1']!), 'req(11)');
-      r.submitCommand(_form(r, 'agent_1'), {'Amount': GInt(1)});
-      expect(sent, ['answer(req(11), xs_agent_1(1))']);
+  group('the request form stands; a card goes on its withdrawal', () {
+    test('a submission leaves the request form open for the next request', () {
+      drawRequestForm(id: 11);
+      r.bridge.grant(11, position(11, []), tryParseTerm('mint(1)')!);
+      expect(r.bridge.construct(11), isNotNull);
+      r.bridge.grant(11, position(11, []), tryParseTerm('pay(bob, 1)')!);
+      expect(sent, ['input(11, [], mint(1))', 'input(11, [], pay(bob, 1))']);
     });
 
-    test('answering consumes the ask; the next card restores the form', () {
-      poseRequestCards();
-      r.submitCommand(_form(r, 'agent_1'), {'Amount': GInt(3)});
-      expect(r.standing.containsKey('agent_1'), isFalse);
-      // A second submission with no card standing grants nothing.
-      r.submitCommand(_form(r, 'agent_1'), {'Amount': GInt(4)});
-      expect(sent, ['answer(req(1), xs_agent_1(3))']);
-      // The goal poses the next question.
-      r.handleLine('card(agent_1, ctx_agent_1, req(12))');
-      r.submitCommand(_form(r, 'agent_1'), {'Amount': GInt(4)});
-      expect(sent.last, 'answer(req(12), xs_agent_1(4))');
+    test('withdraw(Id) removes the card, which then takes no grant', () {
+      drawRequestForm();
+      drawCard(5, 'alice', 'lot(bob, 2)', '[coin(alice, 1)]');
+      r.bridge.grant(5, position(5, [2]), const GAtom('yes'));
+      r.handleLine('withdraw(5)');
+      expect(r.bridge.construct(5), isNull);
+      expect(r.bridge.constructs.map((c) => c.id), [0]);
+      r.bridge.grant(5, tryParseTerm('[2]')! as GList, const GAtom('no'));
+      expect(sent, ['input(5, [2], yes)']);
     });
 
-    test('closed(Id) retires a standing card', () {
-      poseRequestCards();
-      r.handleLine('closed(req(2))');
-      expect(r.standing.containsKey('agent_2'), isFalse);
-      expect(r.standing.containsKey('agent_1'), isTrue);
-    });
-  });
-
-  group('the swap card is one clause, an Accept and its else-branch decline',
-      () {
-    const ctx = 'alice, lot(bob, 2), [coin(alice, 1)]';
-
-    setUp(() {
-      r.handleLine('card(respond_swap_1, ctx_respond_swap_1($ctx), req(5))');
-    });
-
-    test('one card, one ask, an Accept and a Decline', () {
-      final card = r.inbox.single;
-      expect(card.asks.keys.toSet(), {'respond_swap_1'});
-      expect(card.liveAnswers.map((a) => a.label), ['Accept', 'Decline']);
-    });
-
-    test('the decline grants decline(Id) on the card\'s own ReqId', () {
-      final card = r.inbox.single;
-      r.answerCard(card, _answer(card, 'Decline'));
-      expect(sent, ['decline(req(5))']);
-      expect(r.inbox, isEmpty);
-    });
-
-    test('a different context is a different card', () {
-      r.handleLine(
-          'card(respond_swap_1, ctx_respond_swap_1(charlie, lot(bob, 1), []), '
-          'req(8))');
-      expect(r.inbox.length, 2);
-      expect(r.inbox.map((c) => c.itemKey).toSet(), {'alice', 'charlie'});
-    });
-
-    test('closed(Id) retires the card with its one ask', () {
-      r.handleLine('closed(req(5))');
-      expect(r.inbox, isEmpty);
+    test('two proposers\' swaps are two cards', () {
+      drawCard(5, 'alice', 'lot(bob, 2)', '[coin(alice, 1)]');
+      drawCard(8, 'charlie', 'lot(bob, 1)', '[]');
+      expect(r.bridge.constructs.map((c) => c.id), [5, 8]);
+      expect(
+          r.bridge.constructs
+              .map((c) => formatTerm(ctorArgs(ctorArgs(c.view).$2[0]).$2[0])),
+          ['alice', 'charlie']);
     });
   });
 
-  group('the declared views', () {
+  group('the views of the agent\'s output', () {
     test('the balances view is fed by its pattern and replaces its rows', () {
       r.handleLine(
           'msg(agent, person, holdings([lot(alice, 3), lot(bob, 2)]))');
@@ -180,11 +177,12 @@ void main() {
       r.handleLine('msg(agent, person, holdings([lot(alice, 1)]))');
       expect(r.store.lists['screen'], isEmpty);
     });
+
+    test('a draw is the bridge\'s, and reaches no view', () {
+      drawRequestForm();
+      r.handleLine('withdraw(0)');
+      expect(r.store.lists['screen'], isEmpty);
+      expect(r.store.balances, isEmpty);
+    });
   });
 }
-
-CommandDesc _form(UiRuntime r, String clause) =>
-    r.manifest.standingForm(clause)!.$2;
-
-AnswerDesc _answer(InboxCard card, String label) =>
-    card.liveAnswers.firstWhere((a) => a.label == label);
