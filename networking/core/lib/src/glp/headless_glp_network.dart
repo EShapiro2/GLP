@@ -1,0 +1,192 @@
+/// The runtime's network interface over the headless layer: GNA's backend
+/// glue for a server-side agent.
+///
+/// IGLP, Implementation Notes, "Networking Seam", One interface: "The
+/// multiagent runtime reaches the network through one interface, the one the
+/// GLP Networking API specifies"; that interface is the runtime's
+/// `GlpNetwork`.  This class implements it over [HeadlessGrassrootsNetwork],
+/// the headless profile of GNA, Section "Networking API": "a server-side
+/// agent ... realizes the WAN underlay alone, headless, with proximity
+/// discovery absent".
+///
+/// Every function the layer has passes straight through, and nothing is
+/// interpreted: a key travels as its 32 bytes, an underlay, a trust level and
+/// a place event by their names, which the two sides share; the attested
+/// application identity of `onPeerConnected` travels as the layer reports it,
+/// since "the runtime relies on none of it" (IGLP, The contract).
+///
+/// A function of the API the headless layer does not have throws
+/// [UnsupportedError], the interface's statement that a realisation does not
+/// provide it, naming the layer's want: getPeers, setTrustLevel, peerUnderlays,
+/// sign, verify, networkIdentity, generatePeerLink, consumePeerLink,
+/// observedPeerAddress, punchUdp, declarePlace and removePlace.  A callback the
+/// layer has no event for --- onPeerDiscovered, onConnectivityStatusChanged,
+/// onNetworkChanged, onPlaceEvent --- is held and never fires.
+library;
+
+import 'dart:async';
+import 'dart:typed_data';
+
+import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
+
+import '../headless/headless_grassroots_network.dart';
+import '../models/underlay.dart';
+
+/// [glp.GlpNetwork] over a [HeadlessGrassrootsNetwork].
+class HeadlessGlpNetwork implements glp.GlpNetwork {
+  /// The layer this glue passes through to.
+  final HeadlessGrassrootsNetwork layer;
+
+  HeadlessGlpNetwork(this.layer);
+
+  static glp.PubKey _key(Uint8List bytes) => glp.PubKey.fromList(bytes);
+
+  static glp.Underlay _underlay(Underlay u) => glp.Underlay.values.byName(u.name);
+
+  static Never _absent(String function) => throw UnsupportedError(
+      '$function: the headless layer (HeadlessGrassrootsNetwork) does not '
+      'provide it');
+
+  // --- Identity ---
+
+  @override
+  glp.PubKey getIdentity() => _key(layer.identity.publicKey);
+
+  // --- Known peers ---
+
+  @override
+  void putKnownPeer(glp.PubKey pk) => layer.putKnownPeer(pk.bytes);
+
+  @override
+  void removeKnownPeer(glp.PubKey pk) => layer.removeKnownPeer(pk.bytes);
+
+  // --- Connection and reachability ---
+
+  void Function(glp.PubKey pk, glp.Underlay underlay, Object? identity)?
+      _onPeerConnected;
+
+  @override
+  void Function(glp.PubKey pk, glp.Underlay underlay, Object? identity)?
+      get onPeerConnected => _onPeerConnected;
+
+  @override
+  set onPeerConnected(
+      void Function(glp.PubKey pk, glp.Underlay underlay, Object? identity)?
+          cb) {
+    _onPeerConnected = cb;
+    layer.onPeerConnected = cb == null
+        ? null
+        : (pk, underlay, identity) => cb(_key(pk), _underlay(underlay), identity);
+  }
+
+  void Function(glp.PubKey pk, glp.Underlay underlay)? _onPeerDisconnected;
+
+  @override
+  void Function(glp.PubKey pk, glp.Underlay underlay)? get onPeerDisconnected =>
+      _onPeerDisconnected;
+
+  @override
+  set onPeerDisconnected(
+      void Function(glp.PubKey pk, glp.Underlay underlay)? cb) {
+    _onPeerDisconnected = cb;
+    layer.onPeerDisconnected = cb == null
+        ? null
+        : (pk, underlay) => cb(_key(pk), _underlay(underlay));
+  }
+
+  @override
+  bool isPeerReachable(glp.PubKey pk) => layer.isPeerReachable(pk.bytes);
+
+  @override
+  List<glp.Underlay> peerUnderlays(glp.PubKey pk) => _absent('peerUnderlays');
+
+  // --- Point-to-point communication ---
+
+  @override
+  void send(glp.PubKey pk, Uint8List payload) =>
+      unawaited(layer.send(pk.bytes, payload));
+
+  void Function(glp.PubKey sender, Uint8List payload, String messageId,
+      glp.Underlay underlay)? _onMessageReceived;
+
+  @override
+  void Function(glp.PubKey sender, Uint8List payload, String messageId,
+      glp.Underlay underlay)? get onMessageReceived => _onMessageReceived;
+
+  @override
+  set onMessageReceived(
+      void Function(glp.PubKey sender, Uint8List payload, String messageId,
+              glp.Underlay underlay)?
+          cb) {
+    _onMessageReceived = cb;
+    layer.onMessageReceived = cb == null
+        ? null
+        : (sender, payload, messageId, underlay) =>
+            cb(_key(sender), payload, messageId, _underlay(underlay));
+  }
+
+  // --- Cryptography ---
+
+  @override
+  Uint8List sign(Uint8List message) => _absent('sign');
+
+  @override
+  bool verify(glp.PubKey signer, Uint8List message, Uint8List signature) =>
+      _absent('verify');
+
+  // --- Proximity underlays (absent from this profile) ---
+
+  @override
+  List<glp.DiscoveredPeer> getPeers() => _absent('getPeers');
+
+  @override
+  void Function(glp.PubKey pk, glp.ProximityUnderlay underlay)?
+      onPeerDiscovered;
+
+  @override
+  void setTrustLevel(glp.ProximityUnderlay underlay, glp.TrustLevel level) =>
+      _absent('setTrustLevel');
+
+  // --- WAN ---
+
+  @override
+  void Function(String? oldAddress, String? newAddress)?
+      onConnectivityStatusChanged;
+
+  @override
+  String? getPublicAddress() => layer.getPublicAddress();
+
+  @override
+  String? networkIdentity() => _absent('networkIdentity');
+
+  @override
+  void Function(String? oldId, String? newId)? onNetworkChanged;
+
+  @override
+  Future<String> generatePeerLink() => _absent('generatePeerLink');
+
+  @override
+  Future<glp.PubKey> consumePeerLink(String uri) => _absent('consumePeerLink');
+
+  @override
+  void putPeerAddress(glp.PubKey pk, String address) =>
+      layer.putPeerAddress(pk.bytes, address);
+
+  @override
+  String? observedPeerAddress(glp.PubKey pk) => _absent('observedPeerAddress');
+
+  @override
+  void punchUdp(String address) => _absent('punchUdp');
+
+  // --- Places (no location service on a headless server) ---
+
+  @override
+  Future<bool> declarePlace(String place, double radiusMetres) =>
+      _absent('declarePlace');
+
+  @override
+  Future<void> removePlace(String place) => _absent('removePlace');
+
+  @override
+  void Function(String place, glp.PlaceEvent event)? onPlaceEvent;
+}
