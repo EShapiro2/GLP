@@ -1602,14 +1602,19 @@ BodyKernelResult addressDeclareKernel(GlpRuntime rt, List<Object?> args) {
 }
 
 // =============================================================================
-// '_output'/1 - Print a ground term as a line
+// '_output'/1 - An element of send_to_user/1 to the person
 // =============================================================================
 
-/// '_output'(T) - prints ground term T to stdout.
+/// '_output'(T) - emits the ground term T to the person operating the agent
+/// (GLP-Spec appendix-guards.tex, "Output to the person": send_to_user(Stream)
+/// "emits each element of Stream to the person operating the agent").
 ///
-/// Called by send_to_user/1 after ui_relay has ensured the term is ground.
-/// The output callback can be overridden via GlpRuntime.outputCallback
-/// for testing or Flutter integration.
+/// Called by send_to_user/1, whose clause guards T ground.  Where the runtime
+/// has a person's bridge, [GlpRuntime.outputTermCallback], the term goes to it
+/// whole and no text is made; otherwise a terminal is the person, and T goes
+/// to [GlpRuntime.outputCallback], or to stdout, as a terminal shows it
+/// ([formatGroundTerm]).  Until 2026-10-11 every element was printed, and a
+/// screen read the line back.
 BodyKernelResult outputKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 1) {
     print('[ABORT] \'_output\'/1: expected 1 argument, got ${args.length}');
@@ -1617,14 +1622,19 @@ BodyKernelResult outputKernel(GlpRuntime rt, List<Object?> args) {
   }
 
   final term = _deepDeref(rt, args[0] as Term);
-  final formatted = formatGroundTerm(term);
 
-  // Use callback if set (for testing/Flutter), otherwise print
+  final toPerson = rt.outputTermCallback;
+  if (toPerson != null) {
+    toPerson(term);
+    return BodyKernelResult.success;
+  }
+
+  final shown = formatGroundTerm(term);
   final callback = rt.outputCallback;
   if (callback != null) {
-    callback(formatted);
+    callback(shown);
   } else {
-    print(formatted);
+    print(shown);
   }
 
   return BodyKernelResult.success;

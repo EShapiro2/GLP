@@ -135,6 +135,9 @@ void main() {
       rootSelfGlpPath: '$repo/self.glp',
     );
     agent.onOutput = lines.add;
+    // What the agent's program emits to the person, each term whole.
+    final notifies = <GTerm>[];
+    agent.onUserOutput = (t) => notifies.add(screenTermOf(t));
     agent.onLog = (_, __) {};
     agent.onSendMadMessage = (_, __) async {};
 
@@ -145,9 +148,8 @@ void main() {
 
     var fed = 0;
     void replay() {
-      for (; fed < lines.length; fed++) {
-        final l = lines[fed];
-        if (l.startsWith('< ')) r.handleLine(l.substring(2));
+      for (; fed < notifies.length; fed++) {
+        r.handle(notifies[fed]);
       }
     }
 

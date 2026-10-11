@@ -4,6 +4,8 @@ import 'package:glp_multiagent/ui_runtime/manifest.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
 
+import 'fixture_term.dart';
+
 void main() {
   group('boundary parser', () {
     test('parses a notify struct with nested req id', () {
@@ -44,7 +46,7 @@ void main() {
     });
 
     test('befriend card belongs to the Friends panel, keyed by the offerer', () {
-      r.handleLine('befriend(alice, req(1))');
+      r.handle(fixtureTerm('befriend(alice, req(1))'));
       expect(r.inbox.length, 1);
       final card = r.inbox.first;
       expect(card.desc.notifyCtor, 'befriend');
@@ -59,7 +61,7 @@ void main() {
     test(
         'trade_proposed card belongs to the Currencies panel, keyed by the proposer',
         () {
-      r.handleLine('trade_proposed(alice, bob, 0, 1, req(3))');
+      r.handle(fixtureTerm('trade_proposed(alice, bob, 0, 1, req(3))'));
       final card = r.inbox.single;
       expect(card.panel.id, 'currencies');
       expect(card.itemKey, 'alice');
@@ -70,7 +72,7 @@ void main() {
 
     test('an escrow deposit raises the cancel card AND records what is locked',
         () {
-      r.handleLine('escrow_deposited(frank, 900, frank, 0, 5, req(7))');
+      r.handle(fixtureTerm('escrow_deposited(frank, 900, frank, 0, 5, req(7))'));
 
       // The card offers the one choice the depositor still has.
       final card = r.inbox.single;
@@ -86,30 +88,30 @@ void main() {
     });
 
     test('escrow expiry retires the cancel card unanswered (dismissed-by)', () {
-      r.handleLine('escrow_deposited(frank, 900, frank, 0, 5, req(7))');
+      r.handle(fixtureTerm('escrow_deposited(frank, 900, frank, 0, 5, req(7))'));
       expect(r.inbox, hasLength(1));
 
       // Nobody answered: the timer won, so the choice is gone and so is the
       // card — and the locked bonds stop being shown as locked.
-      r.handleLine('escrow_expired(frank)');
+      r.handle(fixtureTerm('escrow_expired(frank)'));
       expect(r.inbox, isEmpty);
       expect(r.store.escrow['escrow'], isEmpty);
       expect(sent, isEmpty);
     });
 
     test('a dismissing notify only retires the card for its own item', () {
-      r.handleLine('escrow_deposited(frank, 900, frank, 0, 5, req(7))');
-      r.handleLine('escrow_deposited(dana, 900, alice, 0, 2, req(8))');
+      r.handle(fixtureTerm('escrow_deposited(frank, 900, frank, 0, 5, req(7))'));
+      r.handle(fixtureTerm('escrow_deposited(dana, 900, alice, 0, 2, req(8))'));
       expect(r.inbox, hasLength(2));
 
-      r.handleLine('escrow_expired(dana)');
+      r.handle(fixtureTerm('escrow_expired(dana)'));
       expect(r.inbox.single.itemKey, 'frank',
           reason: "dana's expiry must not retire frank's escrow card");
       expect(r.store.escrow['escrow']!.keys, ['frank']);
     });
 
     test('cancelling an escrow answers the card with its req id', () {
-      r.handleLine('escrow_deposited(frank, 900, frank, 0, 5, req(7))');
+      r.handle(fixtureTerm('escrow_deposited(frank, 900, frank, 0, 5, req(7))'));
       final card = r.inbox.single;
       r.answerCard(card, card.desc.answers.single);
       expect(sent, ['cancel_escrow(frank, req(7))']);
@@ -117,38 +119,38 @@ void main() {
     });
 
     test('connected adds the friend AND opens the conversation', () {
-      r.handleLine('connected(bob)');
+      r.handle(fixtureTerm('connected(bob)'));
       expect(r.store.lists['friends']!.map(formatTerm).toList(), ['bob']);
       expect(r.store.threads['chats']!.containsKey('bob'), isTrue);
     });
 
     test('connected is idempotent (no duplicate friend)', () {
-      r.handleLine('connected(bob)');
-      r.handleLine('connected(bob)');
+      r.handle(fixtureTerm('connected(bob)'));
+      r.handle(fixtureTerm('connected(bob)'));
       expect(r.store.lists['friends']!.length, 1);
     });
 
     test('unfriended removes the friend from the list (paper §5)', () {
-      r.handleLine('connected(bob)');
-      r.handleLine('connected(carol)');
-      r.handleLine('unfriended(bob)');
+      r.handle(fixtureTerm('connected(bob)'));
+      r.handle(fixtureTerm('connected(carol)'));
+      r.handle(fixtureTerm('unfriended(bob)'));
       expect(r.store.lists['friends']!.map(formatTerm).toList(), ['carol']);
     });
 
     test('rejected(who) and bare rejected add no friend', () {
-      r.handleLine('rejected(carol)');
-      r.handleLine('rejected');
+      r.handle(fixtureTerm('rejected(carol)'));
+      r.handle(fixtureTerm('rejected'));
       expect(r.store.lists['friends'], isEmpty);
     });
 
     test('received from a friend extends the Chats conversation', () {
-      r.handleLine("received(alice, 'hi')");
+      r.handle(fixtureTerm("received(alice, 'hi')"));
       expect(r.inbox, isEmpty);
       expect(r.store.threads['chats']!['alice']!.length, 1);
     });
 
     test('balance_report sets a keyed (issuer, maturity) holding', () {
-      r.handleLine('balance_report(bob, alice, 0, 2)');
+      r.handle(fixtureTerm('balance_report(bob, alice, 0, 2)'));
       expect(
           formatTerm(r.store.holdings['holdings']!['bob']!['alice@0']!), '2');
     });
@@ -157,12 +159,12 @@ void main() {
       // Bob holds 15 of his own coins, then spends them all and holds 10
       // alice-coins instead. Each snapshot reports only what remains, and the
       // sync drops the emptied lot — spent coins do not linger in the wallet.
-      r.handleLine('balance_report(bob, bob, 0, 15)');
-      r.handleLine('balances_synced(bob)');
+      r.handle(fixtureTerm('balance_report(bob, bob, 0, 15)'));
+      r.handle(fixtureTerm('balances_synced(bob)'));
       expect(r.store.holdings['holdings']!['bob']!.keys, ['bob@0']);
 
-      r.handleLine('balance_report(bob, alice, 0, 10)');
-      r.handleLine('balances_synced(bob)');
+      r.handle(fixtureTerm('balance_report(bob, alice, 0, 10)'));
+      r.handle(fixtureTerm('balances_synced(bob)'));
       expect(r.store.holdings['holdings']!['bob']!.keys, ['alice@0'],
           reason: 'the spent bob-coins must be pruned, not lingering');
     });
@@ -236,8 +238,8 @@ void main() {
     setUp(() {
       sent = [];
       r = UiRuntime(manifest: manifest, onSend: (t) => sent.add(formatTerm(t)));
-      r.handleLine('card(offer_1, ctx_offer_1(alice), req(1))');
-      r.handleLine('card(offer_2, ctx_offer_2(alice), req(2))');
+      r.handle(fixtureTerm('card(offer_1, ctx_offer_1(alice), req(1))'));
+      r.handle(fixtureTerm('card(offer_2, ctx_offer_2(alice), req(2))'));
     });
 
     test('the decline is offered beside the declared buttons', () {
@@ -262,7 +264,7 @@ void main() {
     });
 
     test('no decline once that ask is closed, the sibling standing', () {
-      r.handleLine('closed(req(2))');
+      r.handle(fixtureTerm('closed(req(2))'));
       expect(r.inbox.single.liveAnswers, isEmpty,
           reason: 'the accept and the decline were both of the closed ask');
       expect(r.inbox.single.asks.keys, ['offer_1']);

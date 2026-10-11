@@ -185,7 +185,7 @@ class _ConstructViewState extends State<ConstructView> {
       case 'form' when _isForm(ws):
         final entries = _entries(ws);
         final f = _name(ws[0]);
-        final (vf, vs) = ctorArgs(v);
+        final (vf, vs) = _viewArgs(v);
         if (vf != f || vs.length != entries.length) break;
         // The form's fields, each labelled, and under them its questions of
         // their own, each drawn once the form's answer leaves it open.
@@ -209,7 +209,7 @@ class _ConstructViewState extends State<ConstructView> {
       case 'menu' when ws.length == 1 && ws[0] is GList:
         // The program wrote one alternative: its form, where one has its
         // functor and arity, or a value shown.
-        final (vf, vs) = ctorArgs(v);
+        final (vf, vs) = _viewArgs(v);
         final alts = (ws[0] as GList).items;
         for (final a in alts) {
           final (ak, aws) = ctorArgs(a);
@@ -603,6 +603,18 @@ class _ConstructViewState extends State<ConstructView> {
 
   /// The functor a form names.
   static String _name(GTerm f) => ctorArgs(f).$1;
+
+  /// The functor and arguments of a view a form is drawn over, a list among
+  /// them as the list cell `'.'(H, T)` it is: the default widget of a list
+  /// cell the program writes with a question in it is `form('.', [Wh, Wt])`
+  /// (Definition "Widget Declaration, Default Widget": a tuple, "a form with
+  /// one field per argument"), drawn over the list the program wrote, which
+  /// reaches the screen whole (isolate_protocol.dart, `screenTermOf`) and is a
+  /// [GList] there where it ends in [].
+  static (String, List<GTerm>) _viewArgs(GTerm v) =>
+      v is GList && v.items.isNotEmpty
+          ? ('.', [v.items.first, GList(v.items.sublist(1))])
+          : ctorArgs(v);
 
   /// What the menu's alternative [i] of [alts] is called: its form's
   /// functor, and its arity where another of its forms has that functor
