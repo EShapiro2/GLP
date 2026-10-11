@@ -3483,6 +3483,141 @@ check_not "One-clause: abort, no failed goal" "ERROR" "$vg_abort"
 check "One-clause: the reducing clause drops the open ask and its card is aborted" "tagged(abort, aborted(req(0)), \[picked(bob)\])" "$vg_abort"
 echo ""
 
+# -----------------------------------------------------------------------------
+# Section VG, continued: the compiler from an act-schema contract to its
+# canonical CVA platform in vGLP (programs/vglp/cva; vGLP, Section 3.2, the
+# paragraph on act schemas, and Section 5.4, "The canonical platform is
+# structured"; vGLP's Task C, 2026-10-11).  Jurix's social graph and currency
+# (programs/jurix) compiled, the committed modules held to what the compiler
+# prints; the contracts it refuses, not local or not effective; and the plays
+# of each platform, two agents with scripted persons paced on their threads,
+# each run on the committed module through the canonical compilation and
+# ended at the REPL's :limit, the clocks ticking without end.  A play gives
+# each person's log: its thread, the app transactions its agent takes, with
+# gave(C, A) where the person answers a card.
+# -----------------------------------------------------------------------------
+echo "--- The canonical CVA platform of an act-schema contract ---"
+CVA="$GLP_DIR/programs/vglp/cva"
+
+cva_print=$(bash "$CVA/compile.sh" --check 2>&1)
+check "CVA compiler: the social graph's platform is what the compiler prints" "social_graph/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: the currency's platform is what the compiler prints" "currency/platform.vglp: as printed" "$cva_print"
+check_not "CVA compiler: no contract refused or missing" "^fault\|^missing\|NOT as printed" "$cva_print"
+
+cva_refuse=$("$REPL_RUN" <<HEREDOC
+$CVA/compiler/
+:limit 100000000
+compile(two_reqs, [schema(s1, [rs(guarded, [atom(x, [])], [], [atom(r1, [])], []), rs(guarded, [atom(y, [])], [], [atom(r2, [])], [])]), schema(s2, [rs(guarded, [atom(x, [])], [], [atom(r3, [])], []), rs(guarded, [atom(y, [])], [], [atom(r4, [])], [])])], syntactically_grassroots).
+compile(free_x, [schema(s, [rs(guarded, [atom(x1, [])], [], [atom(r, [pvar(x)])], []), rs(guarded, [atom(y1, [])], [], [atom(t, [pvar(x)])], [])])], syntactically_grassroots).
+compile(uneff, [schema(u, [rs(unguarded, [atom(x, [role(2)])], [], [], []), rs(unguarded, [atom(y, [role(1)])], [], [], [])])], syntactically_grassroots).
+compile(gossip, [], not_grassroots([no_introductory_act])).
+compile(federated, [], conditions_met).
+compile(one_req, [schema(s1, [rs(guarded, [atom(x, [])], [], [atom(r1, [])], []), rs(guarded, [atom(y, [])], [], [atom(r2, [])], [])]), schema(s2, [rs(guarded, [atom(x, [])], [], [atom(r3, [])], []), rs(guarded, [atom(y, [])], [], [atom(r2, [])], [])])], syntactically_grassroots).
+:quit
+HEREDOC
+2>&1)
+check "CVA compiler: two schemas of one class requiring different atoms at both participants, refused" "%% not compiled(two_reqs)" "$cva_refuse"
+check "CVA compiler: ... the two schema-bindings named" "%% the schema-binding(s1(person(0), person(1)))" "$cva_refuse"
+check "CVA compiler: a variable of no changed atom required at two participants, refused" "%% and the schema-binding(s(person(0), person(1), free))" "$cva_refuse"
+check "CVA compiler: an unguarded schema whose first role names no other role, refused as not effective" "%% the schema(u)" "$cva_refuse"
+check "CVA compiler: a contract not syntactically grassroots is not compiled" "%% not compiled(gossip)" "$cva_refuse"
+check "CVA compiler: a contract with community roles is not compiled" "%% not compiled(federated)" "$cva_refuse"
+check "CVA compiler: requirements differing at one participant only, compiled" "%% the canonical CVA platform of the contract(one_req)" "$cva_refuse"
+check_not "CVA compiler: ... and not refused" "%% not compiled(one_req)" "$cva_refuse"
+
+cva_sg_load=$("$REPL_RUN" <<HEREDOC
+$CVA/social_graph/
+:quit
+HEREDOC
+2>&1)
+check "CVA social graph: the platform and its plays load, compiled by the canonical compilation" "Loaded program: .*cva/social_graph" "$cva_sg_load"
+check_not "CVA social graph: no type errors" "Type checking failed" "$cva_sg_load"
+
+cva_sg_befriend=$("$REPL_RUN" <<HEREDOC
+$CVA/social_graph/
+:limit 300000
+play_befriend(A, B).
+:quit
+HEREDOC
+2>&1)
+check "CVA befriend: alice records bob, proposes, relays bob's vote and commits" "A = \[record(bob), propose(befriend(alice, bob)), relay(befriend(alice, bob)), commit(befriend(alice, bob))" "$cva_sg_befriend"
+check "CVA befriend: bob relays alice's vote, is asked, answers yes and commits" "B = \[.*relay(befriend(alice, bob)), ask(befriend(alice, bob)), gave(befriend(alice, bob), yes), answer(befriend(alice, bob)), commit(befriend(alice, bob))" "$cva_sg_befriend"
+check "CVA befriend: bob records alice" "B = \[.*record(alice)" "$cva_sg_befriend"
+
+cva_sg_unfriend=$("$REPL_RUN" <<HEREDOC
+$CVA/social_graph/
+:limit 300000
+play_unfriend(A, B).
+:quit
+HEREDOC
+2>&1)
+check "CVA unfriend: bob proposes unfriending alice and commits" "B = \[.*commit(befriend(alice, bob)), propose(unfriend(bob, alice)), relay(unfriend(bob, alice)), commit(unfriend(bob, alice))" "$cva_sg_unfriend"
+check "CVA unfriend: alice, a guard set naming her, is asked, says no, and the else-branch commits it" "A = \[.*relay(unfriend(bob, alice)), ask(unfriend(bob, alice)), gave(unfriend(bob, alice), no), answer(unfriend(bob, alice)), commit(unfriend(bob, alice))" "$cva_sg_unfriend"
+
+cva_sg_refused=$("$REPL_RUN" <<HEREDOC
+$CVA/social_graph/
+:limit 300000
+play_refused(A, B).
+:quit
+HEREDOC
+2>&1)
+check "CVA refused: bob says no to befriending, every guard set naming him, and aborts" "B = \[.*ask(befriend(alice, bob)), gave(befriend(alice, bob), no), answer(befriend(alice, bob)), abort(befriend(alice, bob))" "$cva_sg_refused"
+check "CVA refused: alice relays bob's no and aborts" "A = \[record(bob), propose(befriend(alice, bob)), relay(befriend(alice, bob)), abort(befriend(alice, bob))" "$cva_sg_refused"
+check_not "CVA refused: nothing committed" "commit(befriend" "$cva_sg_refused"
+
+cva_cur_load=$("$REPL_RUN" <<HEREDOC
+$CVA/currency/
+:quit
+HEREDOC
+2>&1)
+check "CVA currency: the platform and its plays load, compiled by the canonical compilation" "Loaded program: .*cva/currency" "$cva_cur_load"
+check_not "CVA currency: no type errors" "Type checking failed" "$cva_cur_load"
+
+cva_cur_payswap=$("$REPL_RUN" <<HEREDOC
+$CVA/currency/
+:limit 300000
+play_pay_swap(A, B).
+:quit
+HEREDOC
+2>&1)
+check "CVA pay and swap: alice mints, swaps on the two wills, and pays bob" "A = \[propose(mint(alice)), commit(mint(alice)), record(bob), propose(swap(alice, bob, bob, alice)), relay(swap(alice, bob, bob, alice)), commit(swap(alice, bob, bob, alice)), propose(pay(alice, bob)), relay(pay(alice, bob)), commit(pay(alice, bob))" "$cva_cur_payswap"
+check "CVA pay and swap: bob wills the swap on his card" "B = \[.*relay(swap(alice, bob, bob, alice)), ask(swap(alice, bob, bob, alice)), gave(swap(alice, bob, bob, alice), yes), answer(swap(alice, bob, bob, alice)), commit(swap(alice, bob, bob, alice))" "$cva_cur_payswap"
+check "CVA pay and swap: bob's machine concurs in the pay, guarded by alice alone" "B = \[.*relay(pay(alice, bob)), concur(pay(alice, bob)), commit(pay(alice, bob))" "$cva_cur_payswap"
+
+cva_cur_pledged=$("$REPL_RUN" <<HEREDOC
+$CVA/currency/
+:limit 300000
+play_pledged(A, B).
+:quit
+HEREDOC
+2>&1)
+check "CVA pledged: alice's offer pledges her coin, and the mint after is taken" "A = \[propose(mint(alice)), commit(mint(alice)), record(bob), propose(swap(alice, bob, bob, alice)), propose(mint(alice)), commit(mint(alice))" "$cva_cur_pledged"
+check_not "CVA pledged: a second offer of the pledged coin is dropped" "propose(swap(alice, bob, carol, alice))" "$cva_cur_pledged"
+check "CVA pledged: bob is asked about the first" "B = \[.*ask(swap(alice, bob, bob, alice))" "$cva_cur_pledged"
+
+cva_cur_declined=$("$REPL_RUN" <<HEREDOC
+$CVA/currency/
+:limit 300000
+play_declined(A, B).
+:quit
+HEREDOC
+2>&1)
+check "CVA declined: bob's machine declines a swap for a coin he does not hold, and aborts" "B = \[.*relay(swap(alice, bob, carol, alice)), decline(swap(alice, bob, carol, alice)), abort(swap(alice, bob, carol, alice))" "$cva_cur_declined"
+check "CVA declined: alice relays the no and aborts" "A = \[.*propose(swap(alice, bob, carol, alice)), relay(swap(alice, bob, carol, alice)), abort(swap(alice, bob, carol, alice))" "$cva_cur_declined"
+
+cva_cur_closed=$("$REPL_RUN" <<HEREDOC
+$CVA/currency/
+:limit 300000
+play_closed(A, B).
+:quit
+HEREDOC
+2>&1)
+check "CVA closed: bob, asked, offers his coin elsewhere and his machine declines, closing the card" "B = \[.*ask(swap(alice, bob, bob, alice)), propose(swap(bob, alice, carol, bob)), decline(swap(alice, bob, bob, alice))" "$cva_cur_closed"
+check "CVA closed: the yes bob gives the closed card is taken by no Answer" "B = \[.*gave(swap(alice, bob, bob, alice), yes), abort(swap(alice, bob, bob, alice))" "$cva_cur_closed"
+check_not "CVA closed: no answer to the closed card" "answer(swap(alice, bob, bob, alice))" "$cva_cur_closed"
+echo ""
+
+
 # =============================================================================
 # Section O: Currencies Multi-Isolate Tests
 # =============================================================================

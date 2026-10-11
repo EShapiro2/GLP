@@ -2108,16 +2108,90 @@ $more''';
       }
     });
 
-    test('a type of theirs that the widget declarations of one of them would '
-        'draw apart from another\'s is refused: one type, two widgets', () {
-      // a's YesNo? =::= toggle draws a's card with a toggle, b's with
-      // buttons.
+    // "the module that defines a type declares its widget, and the others
+    // declare none for it" (vGLP #8 Cowork, 2026-10-11 16:44 UTC, Q2; Udi
+    // approved): a declaration of the module that defines a type, of the
+    // type or of a type inside it, gives the type its widget in each of
+    // them; another module's declaration for it is refused as one for a type
+    // it imports.  Until then a declaration on an inner type that drew a
+    // type of theirs apart in two of them was refused, one type with two
+    // widgets.
+    test('a type of theirs is drawn by the widget declaration of the module '
+        'that defines it on a type inside it, in each of them', () {
+      // a defines the card and declares YesNo? =::= toggle: b draws a's
+      // card with a toggle too.
+      final files = {'a.vglp': a('YesNo? =::= toggle.\n'), 'b.vglp': b('')};
+      for (final m in ['a.vglp', 'b.vglp']) {
+        expect(
+            compileBeside(files, m),
+            contains('construct(Id, card_w(X), Gs, Ds?) :- '
+                'present_card([], X?, Gs?, _, Vs, Done), '
+                'run(Id?, form(card, [field(\'Peer\', shown), '
+                'field(\'YesNo\', toggle)]), Vs?, Done?, Ds).'),
+            reason: m);
+      }
+    });
+
+    test('a widget declaration of the module that defines a type of theirs '
+        'for the type gives it its widget in each of them', () {
+      final files = {'a.vglp': a('Card =::= inbox_card.\n'), 'b.vglp': b('')};
+      for (final m in ['a.vglp', 'b.vglp']) {
+        expect(
+            compileBeside(files, m),
+            contains('construct(Id, card_w(X), Gs, Ds?) :- '
+                'present_card([], X?, Gs?, _, Vs, Done), '
+                'run(Id?, inbox_card, Vs?, Done?, Ds).'),
+            reason: m);
+      }
+    });
+
+    test('a widget declaration of one of them for a type of theirs it does '
+        'not define is refused, as one for a type it imports', () {
+      // b declares a widget for a's card.
+      final bs = b('Card =::= inbox_card.\n');
+      final (line, column) = at(bs, 'Card =::=');
+      const why = 'A widget declaration for Card, an interactive type this '
+          'module imports from a: the type joins with the widget its export '
+          'gives it, form(card, [field(\'Peer\', shown), field(\'YesNo\', '
+          'buttons([yes, no]))]), and the importer declares none for it '
+          '(vGLP, Definition "Canonical Compilation": "each with the '
+          'functor and the widget its export gives it, M declaring no widget '
+          'for a type it imports")';
+      expect(() => compileBeside({'a.vglp': a(''), 'b.vglp': bs}, 'b.vglp'),
+          refusedAt(why, line, column));
+      // a, compiled together with it, is refused with it, at its import of
+      // b.
+      final (l, c) = at(a(''), 'imported procedure (Note?)*b#jot_b');
+      expect(
+          () => compileBeside({'a.vglp': a(''), 'b.vglp': bs}, 'a.vglp'),
+          refusedAt(
+              'The module b, compiled together with this one (vGLP, '
+              'Definition "Canonical Compilation": "Modules that import from '
+              'each other procedures that reach a question are compiled '
+              'together, their interactive types joined once"), is not '
+              'compiled: $why (in b at line $line, column $column)',
+              l,
+              c));
+    });
+
+    test('two of them that define a type and declare it two widgets are '
+        'refused: one type, two widgets', () {
+      // a and b both define Note?, jot_a and jot_b.
+      final bs = b('Note? =::= note_box.\n');
+      final (line, column) = at(bs, 'Note? =::=');
       expect(
           () => compileBeside(
-              {'a.vglp': a('YesNo? =::= toggle.\n'), 'b.vglp': b('')},
+              {'a.vglp': a('Note? =::= note_pad.\n'), 'b.vglp': bs},
               'b.vglp'),
-          refused('The interactive type Card of the modules compiled '
-              'together, a, b, has the widget'));
+          refusedAt(
+              'The interactive type Note? of the modules compiled together, '
+              'a, b, is defined by a and b and has the widget note_pad in a '
+              'and note_box in b, by their widget declarations: "the module '
+              'that defines a type declares its widget, and the others '
+              'declare none for it" (vGLP #8 Cowork, 2026-10-11 16:44 UTC, '
+              'Q2)',
+              line,
+              column));
     });
 
     test('one type joining from modules outside them with two widgets is '
