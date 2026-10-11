@@ -143,10 +143,10 @@ void main() {
 
     final serviceSaw = Completer<ApplicationIdentity?>();
     final callerSaw = Completer<ApplicationIdentity?>();
-    service.onPeerConnected = (pk, transport, identity) {
+    service.onPeerConnected = (pk, underlay, identity) {
       if (!serviceSaw.isCompleted) serviceSaw.complete(identity);
     };
-    caller.onPeerConnected = (pk, transport, identity) {
+    caller.onPeerConnected = (pk, underlay, identity) {
       if (!callerSaw.isCompleted) callerSaw.complete(identity);
     };
 
@@ -224,10 +224,10 @@ void main() {
 
     final serviceSaw = Completer<ApplicationIdentity?>();
     final callerSaw = Completer<ApplicationIdentity?>();
-    service.onPeerConnected = (pk, transport, identity) {
+    service.onPeerConnected = (pk, underlay, identity) {
       if (!serviceSaw.isCompleted) serviceSaw.complete(identity);
     };
-    caller.onPeerConnected = (pk, transport, identity) {
+    caller.onPeerConnected = (pk, underlay, identity) {
       if (!callerSaw.isCompleted) callerSaw.complete(identity);
     };
 

@@ -42,11 +42,13 @@ import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
     router.routeSend('alice', destId, Uint8List.fromList(msg.payload));
   };
   router.onDeliver = (toId, fromPk, payload, messageId, t) {
-    final (gn, value) = PayloadCodec.deserializeGlobalSendPayload(payload);
+    final (:name, :value, :serial) =
+        PayloadCodec.deserializeValuePayload(payload);
     ctxBob.handleMadAssignment(
-      globalName: gn,
+      globalName: name,
       value: value,
       fromAgent: router.directory.idOf(fromPk)!,
+      serial: serial,
     );
   };
 

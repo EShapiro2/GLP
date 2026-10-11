@@ -1,3 +1,4 @@
+import '../models/underlay.dart';
 import '../platform/compat.dart';
 
 /// Available transport protocols
@@ -26,31 +27,16 @@ enum BleRoleMode {
   peripheralOnly,
 }
 
-/// The medium on which a nearby agent is discovered: BLE radio range, or the
-/// local network. Spec `docs/GLP_Networking_API/sections/api.tex` §Networking
-/// API.
-///
-/// Not a `MessageTransport`: a LAN session is an IP session. A trust level is
-/// keyed on the medium of discovery, never on the transport carrying the
-/// session it leads to — keying on the transport would tie LAN contact to
-/// contact from the Internet at large.
-enum ProximityMedium {
-  /// Discovered by BLE advertisement.
-  ble,
-
-  /// Discovered by mDNS on the local network.
-  lan,
-}
-
 /// Policy for unsolicited proximity contact from peers that do not already
-/// have an accepted relationship with us. Spec §Trust levels.
+/// have an accepted relationship with us, held per [ProximityUnderlay]. Spec
+/// §Trust levels.
 enum ColdCallTrustLevel {
   /// Complete the ANNOUNCE exchange and the session handshake with any
-  /// unknown contact on this medium, revealing our full public key.
+  /// unknown contact on this underlay, revealing our full public key.
   open,
 
   /// Complete neither with an unknown key: unmatched encounters on this
-  /// medium are ignored.
+  /// underlay are ignored.
   closed,
 }
 
@@ -142,15 +128,15 @@ class SettingsState {
   /// Which BLE roles this device should run. Default `auto`.
   final BleRoleMode bleRoleMode;
 
-  /// The cold-call trust level of each proximity medium (spec §Trust levels).
-  /// Both default to Closed, and GLP sets one medium's level with
-  /// `setTrustLevel(medium, level)`.
+  /// The cold-call trust level of each proximity underlay (spec §Trust
+  /// levels). Both default to Closed, and GLP sets one underlay's level with
+  /// `setTrustLevel(underlay, level)`.
   ///
   /// The two levels are independent because the declarations behind them are:
-  /// this place is trusted, so BLE contact here is open; this local network is
+  /// this place is trusted, so PAN contact here is open; this local network is
   /// trusted, so LAN contact on it is open. Neither declaration implies the
   /// other, and neither is global.
-  final Map<ProximityMedium, ColdCallTrustLevel> coldCallTrustLevels;
+  final Map<ProximityUnderlay, ColdCallTrustLevel> coldCallTrustLevels;
 
   const SettingsState({
     this.bluetoothEnabled = true,
@@ -163,25 +149,26 @@ class SettingsState {
     this.anchorPubkeyHex,
     this.rendezvousServers = const [],
     this.bleRoleMode = BleRoleMode.auto,
-    this.coldCallTrustLevels = closedOnEveryMedium,
+    this.coldCallTrustLevels = closedOnEveryUnderlay,
   });
 
   static const SettingsState initial = SettingsState();
 
-  /// The starting level of every proximity medium: until GLP sets one, both
-  /// are Closed.
-  static const Map<ProximityMedium, ColdCallTrustLevel> closedOnEveryMedium = {
-    ProximityMedium.ble: ColdCallTrustLevel.closed,
-    ProximityMedium.lan: ColdCallTrustLevel.closed,
+  /// The starting level of every proximity underlay: until GLP sets one,
+  /// both are Closed.
+  static const Map<ProximityUnderlay, ColdCallTrustLevel>
+      closedOnEveryUnderlay = {
+    ProximityUnderlay.pan: ColdCallTrustLevel.closed,
+    ProximityUnderlay.lan: ColdCallTrustLevel.closed,
   };
 
-  /// The cold-call trust level of [medium]. Closed until GLP sets it.
-  ColdCallTrustLevel trustLevelOf(ProximityMedium medium) =>
-      coldCallTrustLevels[medium] ?? ColdCallTrustLevel.closed;
+  /// The cold-call trust level of [underlay]. Closed until GLP sets it.
+  ColdCallTrustLevel trustLevelOf(ProximityUnderlay underlay) =>
+      coldCallTrustLevels[underlay] ?? ColdCallTrustLevel.closed;
 
-  /// Whether [medium] answers unsolicited contact from an unknown key.
-  bool isOpenOn(ProximityMedium medium) =>
-      trustLevelOf(medium) == ColdCallTrustLevel.open;
+  /// Whether [underlay] answers unsolicited contact from an unknown key.
+  bool isOpenOn(ProximityUnderlay underlay) =>
+      trustLevelOf(underlay) == ColdCallTrustLevel.open;
 
   /// Whether at least one transport is enabled
   bool get hasActiveTransport => bluetoothEnabled || udpEnabled;
@@ -238,7 +225,7 @@ class SettingsState {
     List<TransportProtocol>? transportPriority,
     List<RendezvousServerSettings>? rendezvousServers,
     BleRoleMode? bleRoleMode,
-    Map<ProximityMedium, ColdCallTrustLevel>? coldCallTrustLevels,
+    Map<ProximityUnderlay, ColdCallTrustLevel>? coldCallTrustLevels,
     // Use Object? + sentinel so callers can pass null to clear.
     Object? anchorAddress = _sentinel,
     Object? anchorPubkeyHex = _sentinel,
@@ -259,13 +246,13 @@ class SettingsState {
     );
   }
 
-  /// Set the level of [medium], leaving every other medium's untouched.
+  /// Set the level of [underlay], leaving every other underlay's untouched.
   SettingsState withTrustLevel(
-    ProximityMedium medium,
+    ProximityUnderlay underlay,
     ColdCallTrustLevel level,
   ) =>
       copyWith(
-        coldCallTrustLevels: {...coldCallTrustLevels, medium: level},
+        coldCallTrustLevels: {...coldCallTrustLevels, underlay: level},
       );
 
   Map<String, dynamic> toJson() => {
@@ -295,24 +282,8 @@ class SettingsState {
       (m) => m.name == roleModeName,
       orElse: () => BleRoleMode.auto,
     );
-    // A level per proximity medium is required. A blob written before the
-    // levels were split carries a single `coldCallTrustLevel` scalar and is
-    // malformed under this shape; it throws, and the caller falls back to the
-    // default — Closed on every medium, which is what an unset level means.
-    final trustLevelsJson = json['coldCallTrustLevels'];
-    if (trustLevelsJson is! Map) {
-      throw FormatException(
-        'settings: coldCallTrustLevels must be a map of '
-        'ProximityMedium to ColdCallTrustLevel, got $trustLevelsJson',
-      );
-    }
-    final coldCallTrustLevels = <ProximityMedium, ColdCallTrustLevel>{
-      for (final medium in ProximityMedium.values)
-        medium: ColdCallTrustLevel.values.firstWhere(
-          (level) => level.name == trustLevelsJson[medium.name],
-          orElse: () => ColdCallTrustLevel.closed,
-        ),
-    };
+    final coldCallTrustLevels =
+        _decodeColdCallTrustLevels(json['coldCallTrustLevels']);
 
     return SettingsState(
       bluetoothEnabled: json['bluetoothEnabled'] as bool? ?? true,
@@ -356,8 +327,8 @@ class SettingsState {
         Object.hashAll(rendezvousServers),
         bleRoleMode,
         Object.hashAll([
-          for (final medium in ProximityMedium.values)
-            trustLevelOf(medium),
+          for (final underlay in ProximityUnderlay.values)
+            trustLevelOf(underlay),
         ]),
       );
 
@@ -368,3 +339,40 @@ class SettingsState {
 
 /// Sentinel for copyWith — distinguishes "not passed" from "passed null".
 const _sentinel = Object();
+
+/// Decode the persisted trust levels: a level for each [ProximityUnderlay],
+/// keyed by its name, and nothing else (no tolerant decoder,
+/// `networking/CLAUDE.md`).
+///
+/// A blob that lacks a level for either underlay, carries any other key, or
+/// names no [ColdCallTrustLevel] is malformed: it throws, and the caller falls
+/// back to the default — Closed on every underlay, which is what an unset
+/// level means.
+Map<ProximityUnderlay, ColdCallTrustLevel> _decodeColdCallTrustLevels(
+  Object? json,
+) {
+  if (json is! Map) {
+    throw FormatException(
+      'settings: coldCallTrustLevels must be a map of '
+      'ProximityUnderlay to ColdCallTrustLevel, got $json',
+    );
+  }
+  final names = {for (final underlay in ProximityUnderlay.values) underlay.name};
+  final unknown = json.keys.where((key) => !names.contains(key)).toList();
+  if (unknown.isNotEmpty) {
+    throw FormatException(
+      'settings: coldCallTrustLevels names no ProximityUnderlay $unknown',
+    );
+  }
+  return {
+    for (final underlay in ProximityUnderlay.values)
+      underlay: ColdCallTrustLevel.values.firstWhere(
+        (level) => level.name == json[underlay.name],
+        orElse: () => throw FormatException(
+          'settings: coldCallTrustLevels.${underlay.name} must be one of '
+          '${ColdCallTrustLevel.values.map((l) => l.name).join(', ')}, '
+          'got ${json[underlay.name]}',
+        ),
+      ),
+  };
+}

@@ -64,6 +64,22 @@ class RouterTrust extends IsolateMessage {
   String toString() => 'RouterTrust($agentId, $underlay, $level)';
 }
 
+/// Agent → router: the agent's layer adds a key to its known-peer set
+/// ([known] true, putKnownPeer) or removes it ([known] false,
+/// removeKnownPeer) (GNA, "Known Peers"); the router consults the set in the
+/// Closed first-contact rule ("under closed, first contact from an agent not
+/// declared by peer_declare is not answered", IGLP, Simulation realisation).
+class RouterKnownPeer extends IsolateMessage {
+  final String agentId;
+  final PubKey pk;
+  final bool known;
+
+  RouterKnownPeer(this.agentId, this.pk, this.known);
+
+  @override
+  String toString() => 'RouterKnownPeer($agentId, $pk, $known)';
+}
+
 /// Router → agent: a delivered message, with the authenticated sender id and the
 /// router-assigned messageId.
 class Deliver extends IsolateMessage {
@@ -155,7 +171,8 @@ class AgentConfig {
 
   /// This agent's Ed25519 key pair: its identity is its public key, held with
   /// its private key by the networking layer (IGLP app:in-networking, The
-  /// contract). The agent installs it on its GlpNetwork via putIdentity.
+  /// contract). The agent's GlpNetwork is instantiated with it (GNA,
+  /// "Identity").
   final ({PubKey pub, Uint8List priv}) keyPair;
 
   /// The shared identifier–key directory, published to every adapter (§4).
@@ -492,6 +509,15 @@ class IsolateManager {
     } else if (msg is RouterTrust) {
       _log('${msg.agentId} sets trust ${msg.underlay.name} ${msg.level.name}');
       _router.setTrustLevel(msg.agentId, msg.underlay, msg.level);
+
+    } else if (msg is RouterKnownPeer) {
+      _log('${msg.agentId} ${msg.known ? 'puts' : 'removes'} known peer '
+          '${msg.pk}');
+      if (msg.known) {
+        _router.putKnownPeer(msg.agentId, msg.pk);
+      } else {
+        _router.removeKnownPeer(msg.agentId, msg.pk);
+      }
     }
   }
 
@@ -628,15 +654,17 @@ void _agentIsolateEntry(AgentConfig config) async {
   final network = SimulationNetworkClient(
     selfId: agentId,
     directory: config.directory,
+    keyPair: config.keyPair,
     sendToRouter: (toId, payload) =>
         config.mainPort.send(RouterSend(agentId, toId, payload)),
-    // The agent's trust declarations reach the router, which enforces them,
-    // over the same port as its sends, so that a send after a declaration is
-    // routed under it.
+    // The agent's trust declarations and known peers reach the router, which
+    // enforces them, over the same port as its sends, so that a send after a
+    // declaration is routed under it.
     trustToRouter: (underlay, level) =>
         config.mainPort.send(RouterTrust(agentId, underlay, level)),
+    knownPeerToRouter: (pk, known) =>
+        config.mainPort.send(RouterKnownPeer(agentId, pk, known)),
   );
-  network.putIdentity(config.keyPair.pub, config.keyPair.priv);
   // Back the seam predicates (IGLP Definition Seam Predicates).
   ctx.network = network;
 
@@ -709,7 +737,7 @@ void _agentIsolateEntry(AgentConfig config) async {
           senderPk,
           Uint8List.fromList(msg.payload),
           msg.messageId,
-          Transport.ble,
+          Underlay.pan,
         );
       } else {
         print('[$agentId] ERROR: delivery from unknown ${msg.fromId}');  // Always print errors

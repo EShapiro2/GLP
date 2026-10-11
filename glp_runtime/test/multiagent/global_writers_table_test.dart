@@ -62,6 +62,28 @@ void main() {
       expect(table.serializerWriterAddr, _c(1001));
     });
 
+    // Definition Index-0 Serializer: "agent p creates a permanent entry
+    // (N_p, D_p) at index 0, where ... D_p, empty at boot, is the set of
+    // (sender, serial) pairs of the cold calls appended so far".
+    test('the serializer entry is (N_p, D_p), D_p empty at boot', () {
+      final table = GlobalWritersTable('p');
+      table.initializeSerializerEntry(_c(999));
+      expect(table.serializerAppendedCount, 0);
+      expect(table.serializerHasAppended('q', 1), isFalse);
+
+      table.recordSerializerAppend('q', 1);
+      expect(table.serializerHasAppended('q', 1), isTrue);
+      // The pair names the cold call: the same serial from another sender,
+      // or another serial from the same sender, is another cold call.
+      expect(table.serializerHasAppended('r', 1), isFalse);
+      expect(table.serializerHasAppended('q', 2), isFalse);
+      table.recordSerializerAppend('q', 1);
+      expect(table.serializerAppendedCount, 1);
+      // Updating N_p leaves D_p as it is.
+      table.updateSerializerWriter(_c(1001));
+      expect(table.serializerHasAppended('q', 1), isTrue);
+    });
+
     test('removeGlobalizeEntry does not remove index 0', () {
       // Given: table with serializer entry
       final table = GlobalWritersTable('p');

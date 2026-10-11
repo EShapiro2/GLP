@@ -256,7 +256,16 @@ class AppAttestFixture {
   }
 
   /// The attestation object over [challenge] — the agent's identity key.
-  Uint8List attestationObject(Uint8List challenge, {String? forAppId}) {
+  ///
+  /// [receipt] is the attestation statement's receipt, which Apple issues as
+  /// a signed structure of a few kilobytes for the application's own server
+  /// to redeem; no verifier here reads it, so its size is all a test needs of
+  /// it — what makes a real attestation object several kilobytes.
+  Uint8List attestationObject(
+    Uint8List challenge, {
+    String? forAppId,
+    List<int> receipt = const [0x00],
+  }) {
     final data = authData(forAppId: forAppId);
     final nonce = sha256([...data, ...sha256(challenge)]);
     final credential = certificate(
@@ -279,7 +288,7 @@ class AppAttestFixture {
           CborBytes(credential),
           CborBytes(intermediate),
         ]),
-        CborString('receipt'): CborBytes([0x00]),
+        CborString('receipt'): CborBytes(receipt),
       }),
       CborString('authData'): CborBytes(data),
     })));

@@ -39,7 +39,15 @@ class ProtocolHandler {
   /// attestation would check it against the session digest, find it INVALID,
   /// and tear the session down — a spurious hard security failure with a
   /// misleading reason rather than a decode error.
-  static const int protocolVersion = 5;
+  ///
+  /// 6 since 2026-10-11, for the attestation exchange riding the Message
+  /// Protocol (spec §Session Establishment, §Message Protocol): the
+  /// attestation travels as the fragments of a message, acknowledged and
+  /// retransmitted, where version 5 sent it as one packet. The SHAPE changes —
+  /// a version-5 peer's single attestation packet is not a fragment, and this
+  /// layer's fragment decoder does not tolerate it — so a mixed pair would
+  /// wait on an exchange neither side can read. Refused here instead.
+  static const int protocolVersion = 6;
 
   /// Length of the trailing Ed25519 signature on an ANNOUNCE payload.
   static const int announceSignatureLength = 64;

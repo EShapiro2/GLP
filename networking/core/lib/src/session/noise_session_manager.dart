@@ -177,7 +177,7 @@ class NoiseSessionManager {
   /// on the wire; verified during [handleHandshakePacket] — message 1 by its
   /// signature, messages 2/3 against the Noise-authenticated static).
   /// Exposed so a coordinator can serialize handshake processing per pair
-  /// (spec §Session Establishment: one handshake per medium per pair).
+  /// (spec §Session Establishment: one handshake per underlay per pair).
   Uint8List claimedHandshakeSender(Uint8List payload) =>
       _decodeHandshakePayload(payload).$2;
 

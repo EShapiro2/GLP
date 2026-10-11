@@ -24,8 +24,9 @@ class _Delivered {
 class _Conn {
   final String toId;
   final PubKey peerPk;
+  final Underlay underlay;
   final ConnectivityEvent event;
-  _Conn(this.toId, this.peerPk, this.event);
+  _Conn(this.toId, this.peerPk, this.underlay, this.event);
 }
 
 /// Build a router with three registered agents (alice, bob, carol), all Open over the PAN,
@@ -36,10 +37,14 @@ SimulationRouter _router(List<_Delivered> delivered, List<_Conn> conn) {
     r.register(id, generateKeyPair().pub);
     r.setTrustLevel(id, ProximityUnderlay.pan, TrustLevel.open);
   }
-  r.onDeliver = (toId, fromPk, payload, messageId, t) =>
-      delivered.add(_Delivered(toId, fromPk, payload, messageId));
-  r.onConnectivity = (toId, peerPk, t, event) =>
-      conn.add(_Conn(toId, peerPk, event));
+  r.onDeliver = (toId, fromPk, payload, messageId, underlay) {
+    // "the reported underlay is the PAN throughout" (IGLP, Simulation
+    // realisation).
+    expect(underlay, Underlay.pan);
+    delivered.add(_Delivered(toId, fromPk, payload, messageId));
+  };
+  r.onConnectivity = (toId, peerPk, underlay, event) =>
+      conn.add(_Conn(toId, peerPk, underlay, event));
   return r;
 }
 
@@ -102,6 +107,8 @@ void main() {
           conn.where((c) => c.event == ConnectivityEvent.discovered).length;
       expect(connected, 6);
       expect(discovered, 6);
+      expect(conn.every((c) => c.underlay == Underlay.pan), isTrue,
+          reason: 'the reported underlay is the PAN throughout');
     });
   });
 
@@ -120,6 +127,32 @@ void main() {
       r.setTrustLevel('bob', ProximityUnderlay.pan, TrustLevel.open);
       r.routeSend('alice', 'bob', _bytes([1]));
       expect(delivered.length, 1);
+    });
+
+    // "under closed, first contact from an agent not declared by peer_declare
+    // is not answered" (IGLP, Simulation realisation): a key in the receiver's
+    // known-peer set (GNA, "Known Peers") is answered.
+    test('Closed receiver answers a first contact from a known peer, and '
+        'stops on its removal', () {
+      final delivered = <_Delivered>[];
+      final r = _router(delivered, []);
+      r.setTrustLevel('bob', ProximityUnderlay.pan, TrustLevel.closed);
+      final alicePk = r.directory.pkOf('alice')!;
+      r.putKnownPeer('bob', alicePk);
+      expect(r.isKnownPeer('bob', alicePk), isTrue);
+      r.routeSend('alice', 'bob', _bytes([1]));
+      expect(delivered.map((d) => d.payload[0]), [1],
+          reason: 'alice is a known peer of bob: answered under Closed');
+
+      r.removeKnownPeer('bob', alicePk);
+      expect(r.isKnownPeer('bob', alicePk), isFalse);
+      r.routeSend('alice', 'bob', _bytes([2]));
+      expect(delivered.map((d) => d.payload[0]), [1],
+          reason: 'removed: a first contact again, not answered');
+
+      r.routeSend('carol', 'bob', _bytes([3]));
+      expect(delivered.map((d) => d.payload[0]), [1],
+          reason: "carol is not in bob's known-peer set");
     });
 
     test('Closed receiver accepts once it has contacted the sender', () {
@@ -177,6 +210,7 @@ void main() {
       final bob = SimulationNetworkClient(
         selfId: 'bob',
         directory: r.directory,
+        keyPair: generateKeyPair(),
         sendToRouter: (toId, payload) => r.routeSend('bob', toId, payload),
         trustToRouter: (underlay, level) =>
             r.setTrustLevel('bob', underlay, level),
@@ -192,6 +226,37 @@ void main() {
       bob.setTrustLevel(ProximityUnderlay.pan, TrustLevel.open);
       r.routeSend('alice', 'bob', _bytes([2]));
       expect(delivered.map((d) => d.payload[0]), [2]);
+    });
+
+    test('putKnownPeer and removeKnownPeer reach the router, which answers '
+        'the known peer under Closed', () {
+      final delivered = <_Delivered>[];
+      final r = _router(delivered, []);
+      final bob = SimulationNetworkClient(
+        selfId: 'bob',
+        directory: r.directory,
+        keyPair: generateKeyPair(),
+        sendToRouter: (toId, payload) => r.routeSend('bob', toId, payload),
+        trustToRouter: (underlay, level) =>
+            r.setTrustLevel('bob', underlay, level),
+        knownPeerToRouter: (pk, known) => known
+            ? r.putKnownPeer('bob', pk)
+            : r.removeKnownPeer('bob', pk),
+      );
+      bob.setTrustLevel(ProximityUnderlay.pan, TrustLevel.closed);
+      final alicePk = r.directory.pkOf('alice')!;
+
+      bob.putKnownPeer(alicePk);
+      expect(bob.isKnownPeer(alicePk), isTrue);
+      expect(r.isKnownPeer('bob', alicePk), isTrue);
+      r.routeSend('alice', 'bob', _bytes([1]));
+      expect(delivered.map((d) => d.payload[0]), [1]);
+
+      bob.removeKnownPeer(alicePk);
+      expect(bob.isKnownPeer(alicePk), isFalse);
+      expect(r.isKnownPeer('bob', alicePk), isFalse);
+      r.routeSend('alice', 'bob', _bytes([2]));
+      expect(delivered.map((d) => d.payload[0]), [1]);
     });
   });
 
@@ -249,6 +314,7 @@ void main() {
       final client = SimulationNetworkClient(
         selfId: 'alice',
         directory: r.directory,
+        keyPair: generateKeyPair(),
         sendToRouter: (toId, payload) => r.routeSend('alice', toId, payload),
       );
       client.send(r.directory.pkOf('bob')!, _bytes([7, 7]));
@@ -262,9 +328,9 @@ void main() {
       final client = SimulationNetworkClient(
         selfId: 'alice',
         directory: NetworkDirectory(),
+        keyPair: kp,
         sendToRouter: (_, __) {},
       );
-      client.putIdentity(kp.pub, kp.priv);
 
       final msg = _bytes([10, 20, 30, 40]);
       final sig = client.sign(msg);
@@ -277,30 +343,48 @@ void main() {
       expect(client.verify(other, msg, sig), isFalse);
     });
 
-    test('getPeers excludes self; identity round-trips', () {
+    // The key pair is supplied at instantiation and is the layer's identity
+    // (GNA, "Identity": "supplied to the layer's constructor when it is
+    // instantiated; it is immutable for the layer's lifetime").
+    test('getPeers excludes self, over the PAN; identity is the pair the '
+        'client was instantiated with', () {
       final r = _router([], []);
+      final kp = generateKeyPair();
       final client = SimulationNetworkClient(
         selfId: 'alice',
         directory: r.directory,
+        keyPair: kp,
         sendToRouter: (_, __) {},
       );
-      final kp = generateKeyPair();
-      client.putIdentity(kp.pub, kp.priv);
       expect(client.getIdentity(), kp.pub);
       final peerIds =
           client.getPeers().map((p) => r.directory.idOf(p.pk)).toSet();
       expect(peerIds, {'bob', 'carol'});
+      expect(client.getPeers().map((p) => p.underlay).toSet(),
+          {ProximityUnderlay.pan});
+      expect(client.peerUnderlays(r.directory.pkOf('bob')!), [Underlay.pan]);
+      expect(client.peerUnderlays(generateKeyPair().pub), isEmpty);
     });
 
-    test('IP methods throw UnsupportedError', () {
+    // "Not provided: the WAN underlay and the rendezvous server, so
+    // peer_address/2, punch_udp/1 and the effect of address_declare/2" (IGLP,
+    // Simulation realisation).
+    test('WAN methods throw UnsupportedError; putPeerAddress takes an address '
+        'to no effect', () {
       final client = SimulationNetworkClient(
         selfId: 'alice',
         directory: NetworkDirectory(),
+        keyPair: generateKeyPair(),
         sendToRouter: (_, __) {},
       );
       expect(() => client.getPublicAddress(), throwsUnsupportedError);
+      expect(() => client.networkIdentity(), throwsUnsupportedError);
       expect(() => client.generatePeerLink(), throwsUnsupportedError);
       expect(() => client.consumePeerLink('x'), throwsUnsupportedError);
+      final bobPk = generateKeyPair().pub;
+      client.putPeerAddress(bobPk, '203.0.113.7:41234');
+      expect(client.isKnownPeer(bobPk), isFalse,
+          reason: 'the address has no effect: nothing is recorded');
     });
   });
 }

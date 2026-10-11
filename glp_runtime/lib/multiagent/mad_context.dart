@@ -102,6 +102,17 @@ class MadContext {
   /// Indices are never reused, so the record never misclassifies.
   final Set<(String, int)> _forwardedReaderNames = {};
 
+  /// Reader names whose value this agent applied, removing the entry (madGLP
+  /// Receive, Reader case: "The entry matching (p, i) is removed").  A value
+  /// arriving for such a name afterwards is a repeat, and is dropped: "a value
+  /// finds its entry removed" (Remark Fair Message Delivery), "A value ...
+  /// matching no entry and no pending value is dropped" (§app:requests-acks).
+  /// It is not early — an early assignment is one arriving "before the message
+  /// whose localization creates its global writers table entry" (IGLP
+  /// app:in-networking, Early messages) — and is not held.  Indices are never
+  /// reused, so the record never misclassifies.
+  final Set<(String, int)> _appliedReaderNames = {};
+
   /// Held incoming assignments (Definition Held Link, case 4): an assignment
   /// arriving at the anchor from an agent it did not export the name to is
   /// "retained keyed by its global name" and not applied, until
@@ -404,16 +415,31 @@ class MadContext {
   ///
   /// Both non-serializer cases: localize T, bind writer, register spawned goals, remove entry.
   /// Serializer case: extend network input stream, update entry (don't remove).
+  ///
+  /// [serial] is the serial a serializer message carries, which its sender
+  /// allocated (Definition "madGLP Receive Transaction", Serializer case: "m
+  /// ... under serial i from sender s"); a serializer message has one and no
+  /// other message does (IGLP Code Format, "Messages").  [fromAgent] is the
+  /// sender the layer authenticates.
   void handleMadAssignment({
     required GlobalName globalName,
     required Term value,
     required String fromAgent,
+    int? serial,
   }) {
-    _trace('[MAD $agentId] handleMadAssignment: $globalName := $value from $fromAgent');
+    _trace('[MAD $agentId] handleMadAssignment: $globalName := $value from '
+        '$fromAgent${serial == null ? '' : ' under serial $serial'}');
 
-    if (globalName.isWriter && globalName.index == 0) {
+    final isSerializer = globalName.isWriter && globalName.index == 0;
+    if (isSerializer != (serial != null)) {
+      throw ArgumentError(isSerializer
+          ? 'a serializer message $globalName := ... carries a serial'
+          : 'only a serializer message carries a serial, not $globalName');
+    }
+
+    if (isSerializer) {
       // Case _w(p, 0) := [T | _w(p,0)] - serializer (cold-call to network input)
-      _handleSerializerAssignment(value, fromAgent);
+      _handleSerializerAssignment(value, fromAgent, serial!);
     } else if (globalName.isWriter) {
       // Case _w(p, i) := T with i > 0 - we globalized this writer, direct lookup
       _handleWriterAssignment(globalName, value, fromAgent);
@@ -425,12 +451,19 @@ class MadContext {
 
   /// Handle serializer assignment _w(p, 0) := [T | _w(p,0)]
   ///
-  /// This is a cold-call to our network input stream.
-  /// Spec Section 8.3: "Agent q finds the permanent entry `(N_q, *)` at index 0.
-  /// Localize T↑ by q to get T_q↓. Assign N_q := [T_q↓ | N'_q] where N'_q is a
-  /// fresh writer. Update the entry to `(N'_q, *)` at index 0."
-  void _handleSerializerAssignment(Term value, String fromAgent) {
-    _trace('[MAD $agentId] _handleSerializerAssignment: cold-call from $fromAgent');
+  /// This is a cold-call to our network input stream, under [serial] from
+  /// [fromAgent], the sender the layer authenticates.  Definition madGLP
+  /// Receive Transaction, Serializer case: "The receiving agent is q, with
+  /// entry (N_q, D_q) at index 0 in W_q.  If (s, i) ∈ D_q, m is a repeat: it is
+  /// dropped and nothing changes.  Otherwise let N'_q be a fresh local writer,
+  /// σ̂ = {N_q := [T_q↓ | N'_q?]} ... The entry at index 0 in W'_q becomes
+  /// (N'_q, D_q ∪ {(s, i)})."
+  ///
+  /// A repeat is dropped before anything is localized, so it creates no entry,
+  /// record, goal, request or report.
+  void _handleSerializerAssignment(Term value, String fromAgent, int serial) {
+    _trace('[MAD $agentId] _handleSerializerAssignment: cold-call from '
+        '$fromAgent under serial $serial');
 
     // Get current serializer writer from index-0 entry
     final currentWriter = wp.serializerWriterAddr;
@@ -438,6 +471,12 @@ class MadContext {
       throw StateError('Serializer entry not initialized at index 0');
     }
     _trace('[MAD $agentId] _handleSerializerAssignment: current serializer writer=$currentWriter');
+
+    if (wp.serializerHasAppended(fromAgent, serial)) {
+      _trace('[MAD $agentId] _handleSerializerAssignment: ($fromAgent, '
+          '$serial) appended before — a repeat, dropped');
+      return;
+    }
 
     // The value is [T | _w(p,0)] - extract the content T
     Term content;
@@ -481,6 +520,7 @@ class MadContext {
     }
 
     _appendToNetworkInput(content);
+    wp.recordSerializerAppend(fromAgent, serial);
   }
 
   /// Append [content] to this agent's network input stream through the index-0
@@ -740,13 +780,23 @@ class MadContext {
       return;
     }
 
+    // An assignment for a link already held is dropped, not held or reported
+    // again: "a request or assignment arriving for a link already held is
+    // dropped, so a held link is reported once" (§Held Links) — an assignment
+    // delivered twice among them (Remark "Fair Message Delivery").
+    final linkKey = (globalName.agent, globalName.index, true);
+    if (!authorised && _heldAssignments.containsKey(linkKey)) {
+      _trace('[MAD $agentId] _handleWriterAssignment: $globalName already '
+          'held — assignment dropped');
+      return;
+    }
+
     // Definition Held Link, case 4: at the anchor, an assignment arriving from
     // an agent it did not export the name to. The test is structural — the
     // entry's `q` against the sender — and consults nothing outside the agent.
     // This is why `q` is kept in the entry `(X, q)`.
     if (entry.remoteAgent != fromAgent && !authorised) {
-      _heldAssignments[(globalName.agent, globalName.index, true)] =
-          (value: value, fromAgent: fromAgent);
+      _heldAssignments[linkKey] = (value: value, fromAgent: fromAgent);
       _reportPendingLink(globalName, fromAgent);
       return;
     }
@@ -806,6 +856,13 @@ class MadContext {
             'forwarded — stale value dropped');
         return;
       }
+      // A repeat of a value already applied here finds its entry removed, and
+      // is dropped (Remark Fair Message Delivery).
+      if (_appliedReaderNames.contains((globalName.agent, globalName.index))) {
+        _trace('[MAD $agentId] _handleReaderAssignment: $globalName was '
+            'applied before — a repeat, dropped');
+        return;
+      }
       // Issue 7 / spec §8.3 (Early Messages): the assignment arrived before its
       // LocalizeEntry exists (possible under any non-FIFO transport). Hold it,
       // keyed by (remoteAgent, remoteIndex); localize() delivers it when it
@@ -851,6 +908,7 @@ class MadContext {
 
     // Remove the entry
     wp.removeLocalizeEntry(globalName.agent, globalName.index);
+    _appliedReaderNames.add((globalName.agent, globalName.index));
     _trace('[MAD $agentId] _handleReaderAssignment: entry removed');
 
     // Acknowledge to the value's sender (madGLP Receive, Reader case): the
@@ -959,17 +1017,19 @@ class MadContext {
     }
     switch (payload[0]) {
       case wireMsgKindValue:
-        final (GlobalName, Term) received;
+        final ({GlobalName name, Term value, int? serial}) received;
         try {
-          received = PayloadCodec.deserializeGlobalSendPayload(payload);
+          received = PayloadCodec.deserializeValuePayload(payload);
         } on ModuleRefusal catch (refusal) {
           print('[REFUSED] $agentId: a message from $fromAgent is refused at '
               'receipt: ${refusal.message}');
           return;
         }
-        final (globalName, value) = received;
         handleMadAssignment(
-            globalName: globalName, value: value, fromAgent: fromAgent);
+            globalName: received.name,
+            value: received.value,
+            fromAgent: fromAgent,
+            serial: received.serial);
       case wireMsgKindRequest:
         handleRequest(
             PayloadCodec.decodeRequestOrAckPayload(payload), fromAgent);
@@ -997,6 +1057,16 @@ class MadContext {
     // is proof the name was forwarded. Nothing is redirected and no holder is
     // recorded until `authorise_link/2` answers.
     //
+    // A request for a link already held is dropped, not held or reported again:
+    // "a request or assignment arriving for a link already held is dropped, so
+    // a held link is reported once" (§Held Links) — a request delivered twice
+    // among them (Remark "Fair Message Delivery").
+    if (_heldRequests.containsKey(key)) {
+      _trace('[MAD $agentId] handleRequest: $globalName already held — '
+          'request dropped');
+      return;
+    }
+
     // A request matching no live link is stale and dropped as before, without
     // troubling the program: "A request for a closed link is dropped."
     final isLive = _pendingReaderValues.containsKey(key) ||
@@ -1187,6 +1257,11 @@ class MadContext {
   /// Number of requests retained because their link is held.
   int get heldRequestCount => _heldRequests.length;
 
+  /// Number of reader-name assignments retained because they arrived early,
+  /// before the entry their localization creates (IGLP app:in-networking,
+  /// Early messages).
+  int get earlyAssignmentCount => _heldReaderAssignments.length;
+
   /// Whether the value for reader name (anchorAgent, index) is still pending.
   bool hasPendingReaderValue(String anchorAgent, int index) =>
       _pendingReaderValues.containsKey((anchorAgent, index));
@@ -1241,7 +1316,11 @@ class MadContext {
   ///
   /// **Case G = `_w(q, 0)` (Serializer)**:
   /// 1. Globalizes term T for remote agent Q
-  /// 2. Adds message `(_w(q,0) := [T↑ | _w(q,0)], Q)` to M_p — content wrapped in list cell
+  /// 2. Allocates a serial i from the agent's global-name counter, one per
+  ///    message, so that (this agent, i) is unique for the whole run as every
+  ///    global name is (Remark "Cold-Call via Serializer", item 1)
+  /// 3. Adds message `(_w(q,0) := [T↑ | _w(q,0)], Q)` under serial i to M_p —
+  ///    content wrapped in list cell
   ///
   /// **Case G = `_w(p, i)` or `_r(p, i)` with i > 0 (Normal)**:
   /// 1. Globalizes term T for remote agent Q
@@ -1292,9 +1371,14 @@ class MadContext {
     // Create payload based on serializer (index 0) vs normal (index > 0)
     List<int> payload;
     if (isWriter && gnIndex == 0) {
-      // Serializer case: wrap in list cell [T↑ | _w(q,0)]
-      _trace('[MAD $agentId] send: serializer case, wrapping in list cell');
-      payload = PayloadCodec.createSerializerPayload(globalName, globalizedTerm);
+      // Serializer case: wrap in list cell [T↑ | _w(q,0)], under a serial
+      // this agent allocates from its global-name counter — after T's own
+      // names, which keep the indices they had before cold calls carried one.
+      final serial = wp.allocateIndex();
+      _trace('[MAD $agentId] send: serializer case, wrapping in list cell, '
+          'serial $serial');
+      payload = PayloadCodec.createSerializerPayload(globalName, globalizedTerm,
+          serial: serial);
     } else {
       // Normal case: send directly
       _trace('[MAD $agentId] send: normal case, sending directly');

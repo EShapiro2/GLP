@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/store/app_state.dart';
 import 'package:grassroots_networking_core/src/store/reducers.dart';
 import 'package:grassroots_networking_core/src/store/peers_actions.dart';
@@ -45,7 +46,7 @@ void main() {
         const initial = AppState.initial;
         final action = MessageSentAction(
           messageId: 'msg1',
-          transport: MessageTransport.ble,
+          underlay: Underlay.pan,
           recipientPubkey: Uint8List(32),
           payloadSize: 100,
         );
@@ -56,7 +57,7 @@ void main() {
         expect(result.messages, isNot(equals(initial.messages)));
         expect(result.messages.outgoingMessages.containsKey('msg1'), isTrue);
         final msg = result.messages.outgoingMessages['msg1']!;
-        expect(msg.transport, MessageTransport.ble);
+        expect(msg.underlay, Underlay.pan);
         expect(msg.payloadSize, 100);
 
         // Other state sections remain unchanged

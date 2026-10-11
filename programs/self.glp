@@ -166,11 +166,12 @@ procedure is_mutual_ref(MutualRef?).
 % Every kernel registered by runtime/body_kernels.dart and
 % engine_v2/module_kernels.dart is here, and nothing else.  The signatures are
 % GLP-Spec's appendix-guards.tex body-kernel table, which is the authority, and
-% the Network group's five seam rows are taken from it verbatim: four were
-% registered by 9d5e0dd9 and entered builtinProcedures in d6760b3a, and
+% the Network group's seven seam rows are taken from it verbatim: four were
+% registered by 9d5e0dd9 and entered builtinProcedures in d6760b3a,
 % '_trust_declare' was registered and entered it in weeding round three (B4),
-% which is what lets them be declared at all — parser.dart admits a clause-less
-% root declaration only for a name in that set.
+% and '_peer_declare' and '_address_declare' on 2026-10-11 (GLP-Spec 6e9c276,
+% IGLP c2292b9), which is what lets them be declared at all — parser.dart
+% admits a clause-less root declaration only for a name in that set.
 %
 % '_copy' is neither registered nor declared: d6760b3a unregistered the kernel
 % after its catalogue row was removed, and no caller in programs/ ever named it.
@@ -228,6 +229,8 @@ procedure '_punch_udp'(String?).
 procedure '_place_declare'(_?, _?, _).
 procedure '_place_remove'(_?).
 procedure '_trust_declare'(_?, _?).
+procedure '_peer_declare'(Key?).
+procedure '_address_declare'(Key?, String?).
 
 % Signature (GLP-Spec appendix-guards, the Signature kernel rows)
 procedure '_self_key'(Key).
@@ -689,9 +692,9 @@ authorise_link(L, A) :- known(A?) | '_authorise_link'(L?, A?).
 
 % =============================================================================
 % NETWORKING SEAM (peer_address/2, punch_udp/1, place_declare/3, place_remove/1,
-% trust_declare/2)
+% trust_declare/2, peer_declare/1, address_declare/2)
 % =============================================================================
-% GLP-Spec's appendix-guards lists all four among the system predicates, on the
+% GLP-Spec's appendix-guards lists all seven among the system predicates, on the
 % same grounds as sign/3 and authorise_link/2 above.  The clause bodies are
 % IGLP's madglp-spec.tex, Definition "Seam Predicates"; the layer behind them is
 % GLP-Networking-API's.
@@ -712,8 +715,11 @@ authorise_link(L, A) :- known(A?) | '_authorise_link'(L?, A?).
 % supplies the writer, which is what self_key/1 does above.  Reported to
 % IGLP 2026-08-01; the paper is theirs to correct.
 %
-% The five kernels are registered --- four by 9d5e0dd9, '_trust_declare' in
-% weeding round three (B4) --- and are declared in the block above.
+% The seven kernels are registered --- four by 9d5e0dd9, '_trust_declare' in
+% weeding round three (B4), '_peer_declare' and '_address_declare' on
+% 2026-10-11 --- and are declared in the block above.  peer_declare/1 and
+% address_declare/2 are the paper's clauses verbatim, and their declarations the
+% catalogue's signature column verbatim (GLP-Spec 6e9c276, IGLP c2292b9).
 
 %% peer_address/2 - assign A address(S), S the address at which the layer
 %% observes peer P, or none where it observes no address for P.
@@ -748,6 +754,18 @@ procedure trust_declare(Constant?, Constant?).
 trust_declare(Underlay, Level) :-
     ground(Underlay?), ground(Level?) |
     '_trust_declare'(Underlay?, Level?).
+
+%% peer_declare/1 - give the networking layer the public key P of a peer the
+%% program knows (GLP-Spec appendix-guards, "Known peers").
+procedure peer_declare(Key?).
+peer_declare(P) :- ground(P?) | '_peer_declare'(P?).
+
+%% address_declare/2 - give the networking layer the address A at which peer P
+%% is reached.  Who learns an agent's address is the social graph's decision,
+%% and the layer holds no social graph, so the program tells the layer what it
+%% knows ("Known peers").
+procedure address_declare(Key?, String?).
+address_declare(P, A) :- ground(P?), ground(A?) | '_address_declare'(P?, A?).
 
 % =============================================================================
 % MULTIWAY MERGE (mwm/2)

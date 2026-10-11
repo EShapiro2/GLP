@@ -17,6 +17,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import 'construct_family.dart';
 import 'manifest.dart';
 import 'runtime.dart';
 import 'term.dart';
@@ -37,13 +38,18 @@ class AgentSurface extends StatefulWidget {
   /// Suppress the transient "…completed" snackbars. Used for the figure
   /// capture, where a toast floating over the wallets is noise.
   final bool muteNotices;
+
+  /// The construct family the bridge's constructs are drawn with (vGLP,
+  /// Remark "Construct Families"): the grassroots app's unless one is given.
+  final ConstructFamily family;
   const AgentSurface(
       {super.key,
       required this.agentId,
       required this.runtime,
       this.initialPanel = 0,
       this.openSelfWallet = false,
-      this.muteNotices = false});
+      this.muteNotices = false,
+      this.family = ConstructFamily.standard});
 
   @override
   State<AgentSurface> createState() => _AgentSurfaceState();
@@ -246,10 +252,12 @@ class _AgentSurfaceState extends State<AgentSurface> {
 
   // === A compiled vGLP program's panel ======================================
   //
-  // Its open cards, then its declared views in order — the last of which is
-  // the default display, a list of everything the others leave. A card here is
-  // not pinned to a row: this panel has none, so the card is the paper's inbox
-  // card itself, its content the context and its buttons the sibling clauses.
+  // The constructs the bridge holds open, each drawn by the construct family
+  // from the widget and view of its latest draw; then its open cards, then
+  // its declared views in order — the last of which is the default display, a
+  // list of everything the others leave. A card here is not pinned to a row:
+  // this panel has none, so the card is the paper's inbox card itself, its
+  // content the context and its buttons the sibling clauses.
   //
   // Every value this surface shows without a widget of its own — a card's
   // context, a message of the panel's list, a view's rows and keys, a
@@ -264,6 +272,13 @@ class _AgentSurfaceState extends State<AgentSurface> {
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 8),
       children: [
+        for (final c in _r.bridge.constructs)
+          ConstructView(
+            key: constructKey(c.id),
+            construct: c,
+            family: widget.family,
+            grant: (path, raw) => _r.bridge.grant(c.id, path, raw),
+          ),
         for (final c in cards) _clauseCard(c),
         for (final v in p.views) ..._viewSection(v),
       ],

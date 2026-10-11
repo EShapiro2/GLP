@@ -27,6 +27,12 @@ class _Net {
   final List<_Msg> queue = [];
   final List<_Msg> deliveryLog = [];
 
+  /// The messages the network delivers twice, as fair delivery allows:
+  /// "every message placed in a communication channel is eventually delivered
+  /// to its recipient, possibly more than once" (Remark Fair Message
+  /// Delivery).  None by default.
+  bool Function(_Msg m)? twice;
+
   /// Add an agent, booting its permanent index-0 serializer entry — every
   /// agent has one (Definition Index-0 Serializer), and it is where both
   /// cold-calls and `pending_link` reports are delivered.
@@ -59,6 +65,11 @@ class _Net {
         final m = queue.removeAt(0);
         deliveryLog.add(m);
         agents[m.to]!.handleIncomingPayload(payload: m.payload, fromAgent: m.from);
+        if (twice?.call(m) ?? false) {
+          deliveryLog.add(m);
+          agents[m.to]!
+              .handleIncomingPayload(payload: m.payload, fromAgent: m.from);
+        }
       }
     }
   }
@@ -268,6 +279,71 @@ void main() {
       _expectGroundName(reports.single.$1, 'p', 1, true);
       expect(reports.single.$2, 'r',
           reason: 'the agent that actually sent it, not the one p exported to');
+    });
+
+    // §Held Links: "a request or assignment arriving for a link already held
+    // is dropped, so a held link is reported once."
+    test('(3) a request delivered twice is held and reported once', () {
+      final net = _Net();
+      net.add('alice');
+      net.add('bob');
+      net.add('charlie');
+      net.twice = (m) => m.to == 'charlie';
+      final (rn: rn, restW: restW) = _forwardedReader(net);
+      net.settle();
+      net.answerAll(true); // alice releases her request
+      net.settle();
+
+      final requests = net.deliveryLog.where((m) =>
+          m.to == 'charlie' && m.payload[0] == 1 /* request */);
+      expect(requests.length, 2, reason: 'the request arrived twice');
+      expect(net.agents['charlie']!.heldRequestCount, 1);
+      expect(net.agents['charlie']!.reportedLinkCount, 1);
+      final reports = _reports(net, 'charlie');
+      expect(reports.length, 1);
+      _expectGroundName(reports.single.$1, 'charlie', rn.index, false);
+      expect(reports.single.$2, 'alice');
+
+      // Authorised once, the link completes at the requester.
+      net.answerAll(true);
+      net.runtimes['charlie']!.heap.bindVariable(restW, ConstTerm('done'));
+      net.agents['charlie']!.onWriterBound(restW, ConstTerm('done'));
+      net.settleAuthorising();
+      expect(net.agents['charlie']!.pendingReaderValueCount, 0);
+      expect(_reports(net, 'charlie').length, 1);
+    });
+
+    test('(4) an assignment delivered twice is held and reported once', () {
+      final net = _Net();
+      net.add('p');
+      net.add('q');
+      net.add('r');
+      final zr = _forwardedWriter(net);
+      net.twice = (m) => m.to == 'p';
+      final pXr = net.agents['p']!.wp.lookupByIndex(1)!.writerAddr;
+
+      net.runtimes['r']!.heap.bindVariable(zr, ConstTerm(42));
+      net.settle();
+      net.answerAll(true); // r releases the value; it reaches p twice
+      net.settle();
+
+      expect(
+          net.deliveryLog.where((m) => m.from == 'r' && m.to == 'p').length, 2,
+          reason: 'the assignment arrived twice');
+      expect(net.agents['p']!.heldAssignmentCount, 1);
+      expect(net.agents['p']!.reportedLinkCount, 1);
+      final reports = _reports(net, 'p');
+      expect(reports.length, 1);
+      _expectGroundName(reports.single.$1, 'p', 1, true);
+      expect(reports.single.$2, 'r');
+
+      // Authorised once, it is applied once.
+      net.answerAll(true);
+      net.settle();
+      expect((net.runtimes['p']!.heap.derefAddr(pXr) as ConstTerm).value, 42);
+      expect(net.agents['p']!.heldAssignmentCount, 0);
+      expect(net.agents['p']!.wp.lookupByIndex(1), isNull);
+      expect(_reports(net, 'p').length, 1);
     });
 
     test('authorise releases exactly what was held; the link then completes',

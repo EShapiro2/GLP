@@ -10,7 +10,10 @@
 library;
 
 import 'dart:typed_data';
+import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/terms.dart';
+import 'package:glp_runtime/multiagent/global_writers_table.dart';
+import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
 import 'package:glp_runtime/wire/artefact.dart' show Artefact, glpIsaVersion;
 import 'package:glp_runtime/wire/payload_codec.dart';
@@ -56,8 +59,11 @@ void main() {
 
     test('the functor bytes _w / _r do not appear on the wire (tag 2, not 3)',
         () {
-      final payload = Uint8List.fromList(PayloadCodec.createGlobalSendPayload(
-          GlobalName.writer('alice', 0), _globalized()));
+      // A message to _w(alice,0) is a serializer message, and carries a
+      // serial (code format, Messages, version 3).
+      final payload = Uint8List.fromList(PayloadCodec.createSerializerPayload(
+          GlobalName.writer('alice', 0), _globalized(),
+          serial: 1));
       // A tag-3 structure would embed the functor string "_w"/"_r" verbatim.
       expect(_contains(payload, '_w'.codeUnits), isFalse);
       expect(_contains(payload, '_r'.codeUnits), isFalse);
@@ -69,6 +75,7 @@ void main() {
       final payload = PayloadCodec.createSerializerPayload(
         GlobalName.writer('queen', 0),
         StructTerm('intro', [ConstTerm('hi')]),
+        serial: 1,
       );
       final (gn, value) = PayloadCodec.deserializeGlobalSendPayload(payload);
       expect(gn.isWriter, isTrue);
@@ -85,6 +92,78 @@ void main() {
       // No '#serializer' string marker on the wire.
       expect(_contains(Uint8List.fromList(payload), '#serializer'.codeUnits),
           isFalse);
+    });
+
+    test('the serial rides with the message and decodes back', () {
+      final payload = PayloadCodec.createSerializerPayload(
+          GlobalName.writer('queen', 0), ConstTerm('hi'),
+          serial: 17);
+      final (:name, :value, :serial) =
+          PayloadCodec.deserializeValuePayload(payload);
+      expect('$name', '_w(queen, 0)');
+      expect(serial, 17);
+      expect(((value as StructTerm).args[0] as ConstTerm).value, 'hi');
+      // A value message on any other name has none.
+      expect(
+          PayloadCodec.deserializeValuePayload(PayloadCodec
+                  .createGlobalSendPayload(GlobalName.reader('queen', 3),
+                      ConstTerm('hi')))
+              .serial,
+          isNull);
+    });
+  });
+
+  // Remark "Cold-Call via Serializer", item 1: the message is sent "under a
+  // serial i that p allocates from its global-name counter (§app:in-networking),
+  // so that (p, i) is unique for the whole run as every global name is";
+  // Remark "Serializer vs Regular Global Links": '_send' on index 0 sends
+  // "under a fresh serial".
+  group("'_send' on index 0 takes a serial from the global-name counter", () {
+    List<({GlobalName name, Term value, int? serial})> sendAll(
+        void Function(MadContext ctx, GlpRuntime rt) sends) {
+      final rt = GlpRuntime();
+      final ctx = MadContext(agentId: 'alice', runtime: rt);
+      final payloads = <List<int>>[];
+      ctx.onMessageReady = (_, msg) => payloads.add(msg.payload);
+      sends(ctx, rt);
+      ctx.flushMessages();
+      return [for (final p in payloads) PayloadCodec.deserializeValuePayload(p)];
+    }
+
+    test('one serial per message, after the names of the term it carries', () {
+      late GlobalWritersTable wp;
+      final sent = sendAll((ctx, rt) {
+        wp = ctx.wp;
+        for (var k = 0; k < 2; k++) {
+          final (_, r) = rt.heap.allocateVariable();
+          ctx.send(StructTerm('m', [VarRef(r)]), true, 'bob', 0, 'bob');
+        }
+      });
+      expect(sent.map((m) => '${m.name}'), ['_w(bob, 0)', '_w(bob, 0)']);
+      // The first message's reader takes index 1 and its serial 2; the second
+      // message's reader 3 and its serial 4: one counter for both.
+      expect(sent.map((m) => m.serial), [2, 4]);
+      expect(
+          sent.map((m) =>
+              '${extractGlobalNames((m.value as StructTerm).args[0]).single}'),
+          ['_r(alice, 1)', '_r(alice, 3)']);
+      expect(wp.nextIndex, 5);
+    });
+
+    test('the same term sent twice is two cold calls, under two serials', () {
+      final sent = sendAll((ctx, rt) {
+        ctx.send(ConstTerm('hello'), true, 'bob', 0, 'bob');
+        ctx.send(ConstTerm('hello'), true, 'bob', 0, 'bob');
+      });
+      expect(sent.map((m) => m.serial), [1, 2]);
+    });
+
+    test('a value on a link of index above 0 takes no serial', () {
+      final sent = sendAll((ctx, rt) {
+        ctx.send(ConstTerm('v'), false, 'alice', 7, 'bob');
+      });
+      expect(sent.single.serial, isNull);
+      expect('${sent.single.name}', '_r(alice, 7)');
     });
   });
 

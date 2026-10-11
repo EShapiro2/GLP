@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/store/messages_state.dart';
 import 'package:grassroots_networking_core/src/store/messages_actions.dart';
 import 'package:grassroots_networking_core/src/store/messages_reducer.dart';
@@ -15,7 +16,7 @@ void main() {
       const state = MessagesState.initial;
       final action = MessageSendingAction(
         messageId: 'msg-1',
-        transport: MessageTransport.ble,
+        underlay: Underlay.pan,
         recipientPubkey: testRecipientPubkey,
         payloadSize: 128,
         timestamp: testTimestamp,
@@ -26,7 +27,7 @@ void main() {
       expect(newState.outgoingMessages.length, 1);
       final msg = newState.outgoingMessages['msg-1']!;
       expect(msg.messageId, 'msg-1');
-      expect(msg.transport, MessageTransport.ble);
+      expect(msg.underlay, Underlay.pan);
       expect(msg.recipientPubkey, testRecipientPubkey);
       expect(msg.payloadSize, 128);
       expect(msg.sentAt, testTimestamp);
@@ -42,7 +43,7 @@ void main() {
         final id = 'existing-$i';
         existing[id] = OutgoingMessage(
           messageId: id,
-          transport: MessageTransport.ble,
+          underlay: Underlay.pan,
           recipientPubkey: testRecipientPubkey,
           payloadSize: 64,
           sentAt: DateTime(2025, 1, 1, 0, 0, i), // incrementing timestamps
@@ -54,7 +55,7 @@ void main() {
       // Add one more message with a later timestamp
       final action = MessageSendingAction(
         messageId: 'new-msg',
-        transport: MessageTransport.udp,
+        underlay: Underlay.wan,
         recipientPubkey: testRecipientPubkey,
         payloadSize: 256,
         timestamp: DateTime(2025, 6, 1),
@@ -77,7 +78,7 @@ void main() {
         outgoingMessages: {
           'msg-1': OutgoingMessage(
             messageId: 'msg-1',
-            transport: MessageTransport.ble,
+            underlay: Underlay.pan,
             recipientPubkey: testRecipientPubkey,
             payloadSize: 128,
             sentAt: testTimestamp,
@@ -97,7 +98,7 @@ void main() {
         outgoingMessages: {
           'msg-1': OutgoingMessage(
             messageId: 'msg-1',
-            transport: MessageTransport.ble,
+            underlay: Underlay.pan,
             recipientPubkey: testRecipientPubkey,
             payloadSize: 128,
             sentAt: testTimestamp,
@@ -119,7 +120,7 @@ void main() {
         outgoingMessages: {
           'msg-1': OutgoingMessage(
             messageId: 'msg-1',
-            transport: MessageTransport.ble,
+            underlay: Underlay.pan,
             recipientPubkey: testRecipientPubkey,
             payloadSize: 128,
             sentAt: testTimestamp,
@@ -151,7 +152,7 @@ void main() {
         outgoingMessages: {
           'msg-1': OutgoingMessage(
             messageId: 'msg-1',
-            transport: MessageTransport.ble,
+            underlay: Underlay.pan,
             recipientPubkey: testRecipientPubkey,
             payloadSize: 128,
             sentAt: testTimestamp,
@@ -162,7 +163,7 @@ void main() {
 
       final action = MessageSentAction(
         messageId: 'msg-1',
-        transport: MessageTransport.udp,
+        underlay: Underlay.wan,
         recipientPubkey: testRecipientPubkey,
         payloadSize: 128,
         timestamp: testTimestamp,
@@ -172,7 +173,7 @@ void main() {
 
       expect(newState.outgoingMessages['msg-1']!.status, MessageStatus.sent);
       expect(
-          newState.outgoingMessages['msg-1']!.transport, MessageTransport.udp);
+          newState.outgoingMessages['msg-1']!.underlay, Underlay.wan);
     });
 
     test('creates new message if does not exist (backwards compat)', () {
@@ -180,7 +181,7 @@ void main() {
 
       final action = MessageSentAction(
         messageId: 'msg-new',
-        transport: MessageTransport.udp,
+        underlay: Underlay.wan,
         recipientPubkey: testRecipientPubkey,
         payloadSize: 256,
         timestamp: testTimestamp,
@@ -191,7 +192,7 @@ void main() {
       expect(newState.outgoingMessages.length, 1);
       final msg = newState.outgoingMessages['msg-new']!;
       expect(msg.status, MessageStatus.sent);
-      expect(msg.transport, MessageTransport.udp);
+      expect(msg.underlay, Underlay.wan);
       expect(msg.payloadSize, 256);
       expect(msg.sentAt, testTimestamp);
     });
@@ -202,7 +203,7 @@ void main() {
         final id = 'existing-$i';
         existing[id] = OutgoingMessage(
           messageId: id,
-          transport: MessageTransport.ble,
+          underlay: Underlay.pan,
           recipientPubkey: testRecipientPubkey,
           payloadSize: 64,
           sentAt: DateTime(2025, 1, 1, 0, 0, i),
@@ -213,7 +214,7 @@ void main() {
       // MessageSentAction for a non-existing message should create + trim
       final action = MessageSentAction(
         messageId: 'brand-new',
-        transport: MessageTransport.udp,
+        underlay: Underlay.wan,
         recipientPubkey: testRecipientPubkey,
         payloadSize: 100,
         timestamp: DateTime(2025, 6, 1),
@@ -234,7 +235,7 @@ void main() {
         outgoingMessages: {
           'msg-1': OutgoingMessage(
             messageId: 'msg-1',
-            transport: MessageTransport.ble,
+            underlay: Underlay.pan,
             recipientPubkey: testRecipientPubkey,
             payloadSize: 128,
             sentAt: testTimestamp,
@@ -271,7 +272,7 @@ void main() {
         outgoingMessages: {
           'msg-1': OutgoingMessage(
             messageId: 'msg-1',
-            transport: MessageTransport.ble,
+            underlay: Underlay.pan,
             recipientPubkey: testRecipientPubkey,
             payloadSize: 128,
             sentAt: testTimestamp,
@@ -318,7 +319,7 @@ void main() {
 
     OutgoingMessage deliveredAt(MessageStatus status) => OutgoingMessage(
           messageId: 'msg-1',
-          transport: MessageTransport.ble,
+          underlay: Underlay.pan,
           recipientPubkey: testRecipientPubkey,
           payloadSize: 64,
           sentAt: testTimestamp,
@@ -338,7 +339,7 @@ void main() {
       );
       final action = MessageSentAction(
         messageId: 'msg-1',
-        transport: MessageTransport.ble,
+        underlay: Underlay.pan,
         recipientPubkey: testRecipientPubkey,
         payloadSize: 64,
         timestamp: testTimestamp,
@@ -357,7 +358,7 @@ void main() {
       );
       final action = MessageSentAction(
         messageId: 'msg-1',
-        transport: MessageTransport.ble,
+        underlay: Underlay.pan,
         recipientPubkey: testRecipientPubkey,
         payloadSize: 64,
         timestamp: testTimestamp,
@@ -398,7 +399,7 @@ void main() {
         state,
         MessageSendingAction(
           messageId: 'msg-1',
-          transport: MessageTransport.ble,
+          underlay: Underlay.pan,
           recipientPubkey: testRecipientPubkey,
           payloadSize: 64,
           timestamp: testTimestamp,
@@ -419,7 +420,7 @@ void main() {
         state,
         MessageSendingAction(
           messageId: 'msg-1',
-          transport: MessageTransport.ble,
+          underlay: Underlay.pan,
           recipientPubkey: testRecipientPubkey,
           payloadSize: 64,
           timestamp: testTimestamp,
@@ -458,7 +459,7 @@ void main() {
         state,
         MessageSendingAction(
           messageId: 'msg-1',
-          transport: MessageTransport.ble,
+          underlay: Underlay.pan,
           recipientPubkey: testRecipientPubkey,
           payloadSize: 64,
           timestamp: testTimestamp,
@@ -473,7 +474,7 @@ void main() {
       const state = MessagesState.initial;
       final action = MessageReceivedAction(
         messageId: 'inc-1',
-        transport: MessageTransport.udp,
+        underlay: Underlay.wan,
         senderPubkey: testSenderPubkey,
         payloadSize: 512,
         timestamp: testTimestamp,
@@ -484,7 +485,7 @@ void main() {
       expect(newState.incomingMessages.length, 1);
       final msg = newState.incomingMessages['inc-1']!;
       expect(msg.messageId, 'inc-1');
-      expect(msg.transport, MessageTransport.udp);
+      expect(msg.underlay, Underlay.wan);
       expect(msg.senderPubkey, testSenderPubkey);
       expect(msg.payloadSize, 512);
       expect(msg.receivedAt, testTimestamp);
@@ -496,7 +497,7 @@ void main() {
         final id = 'inc-$i';
         existing[id] = IncomingMessage(
           messageId: id,
-          transport: MessageTransport.ble,
+          underlay: Underlay.pan,
           senderPubkey: testSenderPubkey,
           payloadSize: 64,
           receivedAt: DateTime(2025, 1, 1, 0, 0, i),
@@ -506,7 +507,7 @@ void main() {
 
       final action = MessageReceivedAction(
         messageId: 'inc-new',
-        transport: MessageTransport.udp,
+        underlay: Underlay.wan,
         senderPubkey: testSenderPubkey,
         payloadSize: 100,
         timestamp: DateTime(2025, 6, 1),

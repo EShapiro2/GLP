@@ -23,6 +23,9 @@ import '../analysis/type_checker/root_scope.dart' show rootRenamed;
 
 /// The body kernels that reach the network or the person (IGLP Cowork,
 /// 2026-09-08; GLP-Spec appendix-guards, the Network and I/O kernel rows).
+/// '_peer_declare' and '_address_declare' since 2026-10-11, when they entered
+/// the runtime: "the seven system predicates of the networking layer ... and
+/// the kernels beneath them" are OS-privileged (GSG, Section 3).
 const Set<String> privilegedKernels = {
   '_send/3',
   '_output/1',
@@ -31,6 +34,8 @@ const Set<String> privilegedKernels = {
   '_place_declare/3',
   '_place_remove/1',
   '_trust_declare/2',
+  '_peer_declare/1',
+  '_address_declare/2',
   '_authorise_link/2',
 };
 
@@ -50,6 +55,8 @@ const Set<String> privilegedPredicates = {
   'place_declare/3',
   'place_remove/1',
   'trust_declare/2',
+  'peer_declare/1',
+  'address_declare/2',
   'authorise_link/2',
 };
 

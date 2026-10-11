@@ -96,7 +96,7 @@ SettingsState settingsReducer(SettingsState state, SettingsAction action) {
   }
 
   if (action is SetColdCallTrustLevelAction) {
-    return state.withTrustLevel(action.medium, action.level);
+    return state.withTrustLevel(action.underlay, action.level);
   }
 
   return state;
