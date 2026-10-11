@@ -86,6 +86,25 @@ void main() {
       expect(r.inbox, isEmpty);
     });
 
+    test('the swap card\'s answer is a row of two buttons, yes and no', () {
+      drawCard(7, 'alice', 'lot(bob, 2)', '[]');
+      final (form, fields) = ctorArgs(r.bridge.construct(7)!.widget);
+      expect(form, 'form');
+      final ws = (fields[1] as GList).items;
+      expect(formatTerm(fields[0]), 'card');
+      expect(formatTerm(ws[0]), 'shown', reason: 'the offer, shown');
+      expect(formatTerm(ws[1]), 'buttons([yes, no])',
+          reason: 'YesNo ::= yes ; no, a row of buttons');
+    });
+
+    test('a draw of an open construct redraws it in place', () {
+      drawCard(7, 'alice', 'lot(bob, 2)', '[]');
+      drawCard(7, 'alice', 'lot(bob, 2)', '[coin(alice, 1)]');
+      expect(r.bridge.constructs.map((c) => c.id), [7]);
+      expect(formatTerm(ctorArgs(r.bridge.construct(7)!.view).$2[0]),
+          'offer(alice, lot(bob, 2), [coin(alice, 1)])');
+    });
+
     test('the deployed mediator\'s card vocabulary opens nothing', () {
       r.handleLine('card(agent_1, ctx_agent_1, req(1))');
       r.handleLine(
@@ -133,13 +152,18 @@ void main() {
       expect(sent, ['input(11, [], mint(1))', 'input(11, [], pay(bob, 1))']);
     });
 
-    test('withdraw(Id) removes the card, which then takes no grant', () {
+    test('withdraw(Id) removes that construct and no other', () {
       drawRequestForm();
       drawCard(5, 'alice', 'lot(bob, 2)', '[coin(alice, 1)]');
-      r.bridge.grant(5, position(5, [2]), const GAtom('yes'));
       r.handleLine('withdraw(5)');
       expect(r.bridge.construct(5), isNull);
       expect(r.bridge.constructs.map((c) => c.id), [0]);
+    });
+
+    test('a withdrawn card takes no grant', () {
+      drawCard(5, 'alice', 'lot(bob, 2)', '[coin(alice, 1)]');
+      r.bridge.grant(5, position(5, [2]), const GAtom('yes'));
+      r.handleLine('withdraw(5)');
       r.bridge.grant(5, tryParseTerm('[2]')! as GList, const GAtom('no'));
       expect(sent, ['input(5, [2], yes)']);
     });

@@ -157,6 +157,14 @@ void main() {
       expect(sent, ['input(0, [], swap(bob, usd, alice, now, 15, bob, now, 15))']);
     });
 
+    test('a request leaves the form open, and the next goes to it', () {
+      drawRequestForm();
+      r.bridge.grant(0, position(0, []), tryParseTerm('mint(usd, 1)')!);
+      expect(r.bridge.construct(0), isNotNull);
+      r.bridge.grant(0, position(0, []), tryParseTerm('mint(usd, 2)')!);
+      expect(sent, ['input(0, [], mint(usd, 1))', 'input(0, [], mint(usd, 2))']);
+    });
+
     test('two requests of different forms go to the same construct, in '
         'order, and the form stays open', () {
       drawRequestForm(id: 41);
