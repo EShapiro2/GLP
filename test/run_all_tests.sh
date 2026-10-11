@@ -3315,24 +3315,29 @@ check "Sovereign market: the four parties outside the sovereign layer are unmove
 
 echo "--- The live-person harness (sovereign_ui): the central bank on the app's screen ---"
 
-# The entry the app starts, sovereign_ui/3 (programs/currencies/sovereign/play_ui.glp),
-# with no answers: the central bank's twelve request cards and its two opened
-# conversations reach its screen by send_to_user/1, one term to a line, as
-# the app's UI runtime reads them, while the peers' screens are tagged and
-# nothing of theirs reaches the central bank's screen; with no tap the peers
-# mint and wait for the line.
+# The entry the app starts and the Dart bridge runs, sovereign_ui/3
+# (programs/currencies/sovereign/play_ui.glp), with no grant: its person
+# stream is open and stays so, as a person channel never closes (vGLP,
+# Definition "Person Channel, Person Writer, GLP with Persons, Grant";
+# PersonIn ::= [_ | PersonIn]).  The central bank's request form --- the
+# agent's question, one form per alternative of its twelve requests, Mint
+# coins the first and Return the twelfth --- is drawn, and its two opened
+# conversations reach its screen, by send_to_user/1, one term to a line, as
+# the bridge reads them, while the peers' screens are tagged and nothing of
+# theirs reaches the central bank's screen; with no grant the peers mint and
+# wait for the line.
 n4_ui=$("$REPL_RUN" <<HEREDOC
 $SOV
 :limit 50000000
-sovereign_ui(cb, [], []).
+sovereign_ui(cb, G?, []).
 :quit
 HEREDOC
 2>&1)
 
 check "Sovereign harness: no runtime error" "→ suspended" "$n4_ui"
 check_not "Sovereign harness: no failed goal" "ERROR" "$n4_ui"
-check "Sovereign harness: the central bank's Mint coins form stands" "card(agent_1, ctx_agent_1, req(" "$n4_ui"
-check "Sovereign harness: and its Return form, the twelfth" "card(agent_12, ctx_agent_12, req(" "$n4_ui"
+check "Sovereign harness: the central bank's Mint coins form stands" "draw([0-9][0-9]*, input_box(menu(\[form(mint, \[text, number\]), " "$n4_ui"
+check "Sovereign harness: and its Return form, the twelfth" "input_box(menu(\[\(form([a-z]*, \[[a-z, ]*\]), \)\{11\}form(return, \[text, text, text, text, number\])\])), input(\[\]))" "$n4_ui"
 check "Sovereign harness: its conversation with the community bank reaches its screen" "msg(agent, person, opened(diana))" "$n4_ui"
 check "Sovereign harness: and with the household" "msg(agent, person, opened(frank))" "$n4_ui"
 check "Sovereign harness: the peers' screens are tagged" "tagged(diana, minted(10, now))" "$n4_ui"
