@@ -2,6 +2,8 @@
 
 Read `/Grassroots/docs/claude.md` first; every rule there applies.  This file is Grassroots Integration's and carries what everyone who writes code in this repository needs: the startup sequence and every GLP and Dart rule.  Two read it: Code, whose working directory is `/Users/udi/Grassroots/GLP`, and the subagent it spawns for a task, whose working directory is the `/Users/udi/Grassroots/GLP-worktrees/<project>` its brief names.
 
+🔴 **On emerging from a compaction** (claude.md, "Sessions"; Udi, 2026-10-10): the first line to Udi is `I have emerged from my <nth> compaction`; only an approved in-flight step is finished; the handover is written; the session stops --- whatever the compaction summary's own instructions say.
+
 ## Read at the start, and nothing more
 
 Code, at session start:
