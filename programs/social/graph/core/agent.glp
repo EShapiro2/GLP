@@ -247,7 +247,8 @@ agent(Id, [msg(person, Id1, install(App, M, CSig, Ui?))|UserIn], NetIn, Outs,
     agent(Id?, UserIn?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
 
 %% Install a certified mini-app of the currency's interface: its
-%% user-interface grant is its end of a channel of cards and answers.
+%% user-interface grant is its end of its person channel (vGLP, Definition
+%% "Person Channel, Person Writer, GLP with Persons, Grant").
 agent(Id, [msg(person, Id1, install_coins(App, M, CSig, Ui))|UserIn], NetIn, Outs,
       host(Apps, Atts, Pend, Trusted)) :-
     Id? =?= Id1?, ground(App?), ground(Trusted?) |
@@ -256,8 +257,8 @@ agent(Id, [msg(person, Id1, install_coins(App, M, CSig, Ui))|UserIn], NetIn, Out
     agent(Id?, UserIn?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
 
 %% Install a certified mini-app of the denominated currencies' interface: its
-%% user-interface grant is its end of a channel of cards and answers, as the
-%% currency's is, the two differing in what the cards carry and not in shape.
+%% user-interface grant is its end of its person channel, of the currency's
+%% type, the two differing in what the dispatcher draws and not in shape.
 agent(Id, [msg(person, Id1, install_sovereign(App, M, CSig, Ui))|UserIn], NetIn, Outs,
       host(Apps, Atts, Pend, Trusted)) :-
     Id? =?= Id1?, ground(App?), ground(Trusted?) |
@@ -556,11 +557,11 @@ procedure install_step(Verdict?, Constant?, String?, AppUiStream, AppList?, AppL
 install_step(ok(M), App, CSig, Ui?, Apps, [app(App?, M?, CSig?, idle(Ui)) | Apps?]).
 install_step(refused, _, _, [], Apps, Apps?).
 
-procedure install_coins_step(Verdict?, Constant?, String?, Channel(Stream(UserAnswer), Stream(Event))?, AppList?, AppList).
+procedure install_coins_step(Verdict?, Constant?, String?, Channel(PersonIn, Stream(_))?, AppList?, AppList).
 install_coins_step(ok(M), App, CSig, Ui, Apps, [app(App?, M?, CSig?, idle_coins(Ui?)) | Apps?]).
 install_coins_step(refused, _, _, _, Apps, Apps?).
 
-procedure install_sovereign_step(Verdict?, Constant?, String?, Channel(Stream(SvUserAnswer), Stream(SvEvent))?, AppList?, AppList).
+procedure install_sovereign_step(Verdict?, Constant?, String?, Channel(PersonIn, Stream(_))?, AppList?, AppList).
 install_sovereign_step(ok(M), App, CSig, Ui, Apps, [app(App?, M?, CSig?, idle_sovereign(Ui?)) | Apps?]).
 install_sovereign_step(refused, _, _, _, Apps, Apps?).
 
@@ -623,7 +624,7 @@ entry_type(ping, T?) :- find_type(ping/3, T).
 entry_type(sovereign, T?) :- find_type(sovereign/3, T).
 
 %% The currency's entry, declared here for find_type/2 (never run).
-procedure coins(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
+procedure coins(Key?, Channel(PersonIn, Stream(_))?, Stream(Conversation)?).
 coins(_, _, _).
 
 %% The child-safe platform's entry, likewise.
@@ -633,7 +634,7 @@ cssn(_, _, _).
 %% The denominated currencies' entry, likewise.  Currencies' miniapp.glp also
 %% exports sovereign/4, the same with the agent's calendar; that fourth
 %% argument is the headless plays', and run/3 activates the three.
-procedure sovereign(Key?, Channel(Stream(SvUserAnswer), Stream(SvEvent))?, Stream(SvConversation)?).
+procedure sovereign(Key?, Channel(PersonIn, Stream(_))?, Stream(SvConversation)?).
 sovereign(_, _, _).
 
 %% --- The inviter ---
@@ -837,9 +838,9 @@ deliver(App, Friend, ping_end(End), _, _, _, [app(A, M1, C, running(Sg?)) | Rest
         [app(A?, M1?, C?, running(Sg1)) | Rest?], UserIn, UserIn?) :-
     App? =?= A? |
     open_conv(Friend?, End?, Sg, Sg1?).
-%% The currency: activated with its two channels, the cards-and-answers
-%% channel held since installation and the conversations stream; each
-%% conversation handed to it on the latter.
+%% The currency: activated with its two channels, the person channel held
+%% since installation and the conversations stream; each conversation handed
+%% to it on the latter.
 deliver(App, Friend, coins_end(End), Id, T, M, [app(A, M1, C, idle_coins(Ui)) | Rest],
         [app(A?, M1?, C?, running_coins(Convs1)) | Rest?], UserIn, UserIn?) :-
     App? =?= A? |
@@ -863,8 +864,8 @@ deliver(App, Friend, cssn_end(End), _, _, _, [app(A, M1, C, running_cssn(Convs?)
     App? =?= A? |
     open_conv_cssn(Friend?, End?, Convs, Convs1?).
 %% The denominated currencies: activated with its two channels exactly as the
-%% currency is --- the cards-and-answers channel held since installation and
-%% the conversations stream --- each conversation handed to it on the latter.
+%% currency is --- the person channel held since installation and the
+%% conversations stream --- each conversation handed to it on the latter.
 deliver(App, Friend, sovereign_end(End), Id, T, M, [app(A, M1, C, idle_sovereign(Ui)) | Rest],
         [app(A?, M1?, C?, running_sovereign(Convs1)) | Rest?], UserIn, UserIn?) :-
     App? =?= A? |
