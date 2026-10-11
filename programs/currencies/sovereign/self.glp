@@ -195,77 +195,71 @@ SwapOffer     ::= offer(Key, Lot, Stream(Instrument)).
 TransferOffer ::= offer_transfer(Kind, Key, Stream(Instrument)).
 
 %% =============================================================================
-%% The vocabulary of the compiled agent's mediator, at this program's answer and
-%% context types, so that the plays can type the goals they spawn.  These are
-%% the types the canonical compilation emits into denominated/sovereign_agent.glp
-%% (programs/vglp/self.glp instantiated at Answer and Context); the compiled
+%% The agent's questions (vGLP, Definition "Guarded Clause, Volitional
+%% Procedure, Interactive Type, ..."): the person's requests, the agent's
+%% interactive type in reader mode, and the responders' cards, in writer mode.
+%% =============================================================================
+
+%% A request: one alternative per request clause of the agent, each a
+%% transaction of the definition at the party whose election it is ---
+%% Mint_p(f, k), Mint_p(f, d, k), Swap, Accept, Pay, Payout, Spend, Redeem,
+%% Mature, Deposit, Release and Return --- with the arguments its clause
+%% reads.  A due is `now` for coins and the maturity date for bonds.
+Request ::= mint(Constant, Integer)
+          ; mint(Constant, Integer, Integer)
+          ; swap(Key, Constant, Key, Constant, Integer, Key, Constant, Integer)
+          ; accept(Constant, Key, Integer)
+          ; pay(Key, Constant, Integer)
+          ; payout(Key, Constant, Integer)
+          ; spend(Key, Key, Constant, Integer)
+          ; redeem(Key, Constant, Key, Constant)
+          ; mature(Key, Constant, Integer)
+          ; deposit(Key, Constant, Key, Constant, Integer)
+          ; release(Key, Constant, Key, Constant, Integer)
+          ; return(Key, Constant, Key, Constant, Integer).
+
+%% A responder's card: the offer, which the agent writes for the person to
+%% see, and the person's answer, yes accepting and no declining.
+YesNo        ::= yes ; no.
+SwapCard     ::= card(SwapOffer, YesNo?).
+TransferCard ::= card(TransferOffer, YesNo?).
+
+%% =============================================================================
+%% The vocabulary of the compiled agent's dispatcher, so that the mini-app
+%% entry and the plays can type the goals they spawn: the union of the
+%% agent's questions and the asks its goals send, as the canonical
+%% compilation emits them into denominated/sovereign_agent.glp, and the person
+%% channel's input, as programs/vglp/dispatcher.glp gives it.  The compiled
 %% module's own definitions shadow these within it, and the two must agree.
 %% =============================================================================
 
-ReqId ::= req(Integer).
-Slot(R) ::= none ; ask(R, ReqId).
-AgentMsg ::= ask(Constant, Context, Escrow, ReqId?) ; abort(ReqId).
-Card ::= card(Constant, Context, ReqId) ; closed(ReqId) ; aborted(ReqId).
-UserAnswer ::= answer(ReqId, Answer) ; decline(ReqId).
-PendingEntry ::= pending(ReqId, Escrow).
-PendingList ::= [] ; [PendingEntry | PendingList].
-
-%% One alternative per volition-guarded clause of the agent, its reply type
-%% and its escrow, as the compilation emits them --- Answer and Context with
-%% the alternatives written out, which the compiled module names.
-Xs_respond_swap_1 ::= xs_respond_swap_1(Constant).
-Reply_respond_swap_1 ::= then(Xs_respond_swap_1) ; else.
-Ctx_respond_swap_1 ::= ctx_respond_swap_1(Key, Lot, Stream(Instrument)).
-Xs_respond_transfer_1 ::= xs_respond_transfer_1(Constant).
-Reply_respond_transfer_1 ::= then(Xs_respond_transfer_1) ; else.
-Ctx_respond_transfer_1 ::= ctx_respond_transfer_1(Kind, Key, Stream(Instrument)).
-Xs_agent_1 ::= xs_agent_1(Constant, Integer).
-Reply_agent_1 ::= then(Xs_agent_1).
-Xs_agent_2 ::= xs_agent_2(Constant, Integer, Integer).
-Reply_agent_2 ::= then(Xs_agent_2).
-Xs_agent_3 ::= xs_agent_3(Key, Constant, Key, Constant, Integer, Key, Constant, Integer).
-Reply_agent_3 ::= then(Xs_agent_3).
-Xs_agent_4 ::= xs_agent_4(Constant, Key, Integer).
-Reply_agent_4 ::= then(Xs_agent_4).
-Xs_agent_5 ::= xs_agent_5(Key, Constant, Integer).
-Reply_agent_5 ::= then(Xs_agent_5).
-Xs_agent_6 ::= xs_agent_6(Key, Constant, Integer).
-Reply_agent_6 ::= then(Xs_agent_6).
-Xs_agent_7 ::= xs_agent_7(Key, Key, Constant, Integer).
-Reply_agent_7 ::= then(Xs_agent_7).
-Xs_agent_8 ::= xs_agent_8(Key, Constant, Key, Constant).
-Reply_agent_8 ::= then(Xs_agent_8).
-Xs_agent_9 ::= xs_agent_9(Key, Constant, Integer).
-Reply_agent_9 ::= then(Xs_agent_9).
-Xs_agent_10 ::= xs_agent_10(Key, Constant, Key, Constant, Integer).
-Reply_agent_10 ::= then(Xs_agent_10).
-Xs_agent_11 ::= xs_agent_11(Key, Constant, Key, Constant, Integer).
-Reply_agent_11 ::= then(Xs_agent_11).
-Xs_agent_12 ::= xs_agent_12(Key, Constant, Key, Constant, Integer).
-Reply_agent_12 ::= then(Xs_agent_12).
-Answer ::= xs_respond_swap_1(Constant) ; xs_respond_transfer_1(Constant) ; xs_agent_1(Constant, Integer) ; xs_agent_2(Constant, Integer, Integer) ; xs_agent_3(Key, Constant, Key, Constant, Integer, Key, Constant, Integer) ; xs_agent_4(Constant, Key, Integer) ; xs_agent_5(Key, Constant, Integer) ; xs_agent_6(Key, Constant, Integer) ; xs_agent_7(Key, Key, Constant, Integer) ; xs_agent_8(Key, Constant, Key, Constant) ; xs_agent_9(Key, Constant, Integer) ; xs_agent_10(Key, Constant, Key, Constant, Integer) ; xs_agent_11(Key, Constant, Key, Constant, Integer) ; xs_agent_12(Key, Constant, Key, Constant, Integer).
-Escrow ::= esc_respond_swap_1(Reply_respond_swap_1?) ; esc_respond_transfer_1(Reply_respond_transfer_1?) ; esc_agent_1(Reply_agent_1?) ; esc_agent_2(Reply_agent_2?) ; esc_agent_3(Reply_agent_3?) ; esc_agent_4(Reply_agent_4?) ; esc_agent_5(Reply_agent_5?) ; esc_agent_6(Reply_agent_6?) ; esc_agent_7(Reply_agent_7?) ; esc_agent_8(Reply_agent_8?) ; esc_agent_9(Reply_agent_9?) ; esc_agent_10(Reply_agent_10?) ; esc_agent_11(Reply_agent_11?) ; esc_agent_12(Reply_agent_12?).
-Context ::= ctx_respond_swap_1(Key, Lot, Stream(Instrument)) ; ctx_respond_transfer_1(Kind, Key, Stream(Instrument)) ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4 ; ctx_agent_5 ; ctx_agent_6 ; ctx_agent_7 ; ctx_agent_8 ; ctx_agent_9 ; ctx_agent_10 ; ctx_agent_11 ; ctx_agent_12.
+Question ::= swapCard_w(SwapCard) ; transferCard_w(TransferCard) ; stream_request_r(Stream(Request)?).
+Ask(Q)   ::= ask(Constant, Q).
+PersonIn ::= [_ | PersonIn].
 
 %% =============================================================================
 %% The plays' vocabulary: what a person sees, and the agreements the escrow
 %% programs run.
 %% =============================================================================
 
-%% What a person sees: the cards and their closing, and the screen.
-Event ::= card(Constant, Context, ReqId)
-        ; closed(ReqId)
-        ; aborted(ReqId)
+%% What a person sees on the mini-app's person channel: the constructs the
+%% dispatcher draws and withdraws, draw(Id, W, V) and withdraw(Id), each a
+%% term of any type the bridge would render, and the screen the agent writes,
+%% which the dispatcher merges in.  The person channel never closes, and
+%% neither do the events.
+Event ::= draw(_, _, _)
+        ; withdraw(_)
         ; msg(Constant, Constant, ScreenContent).
+Events ::= [Event | Events].
 
-%% A script: the person's acts, in order.  A step is an answer to one of the
-%% agent's twelve request cards --- mint(F, K) the Mint coins card and
-%% mint(F, K, D) the Mint bonds card, accept_coins(F, U, L) the Accept card;
-%% an advance of the calendar, which in a headless run the play drives; an
-%% acceptance of a swap or of a transfer the named party proposes; a unit of
-%% the fiat currency handed over, which is the person's act outside the
-%% contract and no card of the agent's; or a wait for a screen message.  A
-%% due is `now` for coins and the maturity date for bonds.
+%% A script: the person's acts, in order.  A step is a request, granted on
+%% the agent's request form --- mint(F, K) for coins and mint(F, K, D) for
+%% bonds, accept_coins(F, U, L) the request accept(F, U, L); an advance of
+%% the calendar, which in a headless run the play drives; an acceptance of a
+%% swap or of a transfer the named party proposes, granted on its card; a unit
+%% of the fiat currency handed over, which is the person's act outside the
+%% contract and no construct of the agent's; or a wait for a screen message.
+%% A due is `now` for coins and the maturity date for bonds.
 Step ::= mint(Constant, Integer)
        ; mint(Constant, Integer, Integer)
        ; advance(Integer)
@@ -586,16 +580,16 @@ inject_transfer_result(transfer_decline(Given), Kind, Q, Ys, [transfer_declined_
 inject_transfer_result(R, Kind, Q, [Y|Ys], [Y?|Ys1?]) :-
     inject_transfer_result(R?, Kind?, Q?, Ys?, Ys1).
 
-%% The two bodies of the swap responder's accept clause: the acceptance, and
-%% the refusal the machine gives for a person who has not answered.  Each hands
-%% the agent the offer with the response writer.
+%% The bodies of the swap responder's two answers (decide_swap): the
+%% acceptance, on yes, and the decline, on no.  Each hands the agent the offer
+%% with the response writer.
 procedure accept_answer(Key?, Lot?, Stream(Instrument)?, SwapResponse, Stream(UserInMsg)).
 accept_answer(From, Want, Offered, Resp?, [accept_swap(From?, Want?, Offered?, Resp)]).
 
 procedure decline_answer(Key?, Stream(Instrument)?, SwapResponse, Stream(UserInMsg)).
 decline_answer(From, Offered, Resp?, [decline_swap(From?, Offered?, Resp)]).
 
-%% The same for the transfer responder.
+%% The same for the transfer responder (decide_transfer).
 procedure accept_transfer_answer(Kind?, Key?, Stream(Instrument)?, TransferResponse, Stream(UserInMsg)).
 accept_transfer_answer(Kind, From, Given, Resp?, [accept_transfer(Kind?, From?, Given?, Resp)]).
 
@@ -641,13 +635,14 @@ credit_line :- credit_line # run.
 %% =============================================================================
 %% Entry point: the mini-app on a live person's screen (play_ui.glp) --- the
 %% central bank's, over the sovereign market cut to the central bank, the
-%% community bank and the household; and the same run with its taps scripted,
-%% for the test suite
+%% community bank and the household, the entry the Dart bridge runs, its
+%% arguments the agent's identifier, the person's grants and the network
+%% input; and the same run with its taps scripted, for the test suite
 %% =============================================================================
 
-imported procedure play_ui#sovereign_ui(Key?, Stream(UserAnswer)?, Stream(_)?).
-exported procedure sovereign_ui(Key?, Stream(UserAnswer)?, Stream(_)?).
-sovereign_ui(Id, Answers, NetIn) :- play_ui # sovereign_ui(Id?, Answers?, NetIn?).
+imported procedure play_ui#sovereign_ui(Key?, PersonIn?, Stream(_)?).
+exported procedure sovereign_ui(Key?, PersonIn?, Stream(_)?).
+sovereign_ui(Id, Grants, NetIn) :- play_ui # sovereign_ui(Id?, Grants?, NetIn?).
 
 imported procedure play_ui#play_sovereign_ui.
 exported procedure play_sovereign_ui.

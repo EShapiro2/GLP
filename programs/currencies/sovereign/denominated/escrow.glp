@@ -26,8 +26,7 @@
 %% Whether the escrow program accepts a transfer offered to the escrow agent:
 %% yes, no, or keep --- a party under no agreement keeps the card for its
 %% script.  A card the program does not accept now stays open, and is put to
-%% it again at every change of its state; one it never accepts is declined for
-%% it by the machine on the card's deadline.
+%% it again at every change of its state; one it never accepts stays open.
 %% =============================================================================
 
 exported procedure accepts(Agreement?, Kind?, Key?, Stream(Lot)?, Constant, Agreement).

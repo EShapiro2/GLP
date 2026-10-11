@@ -14,17 +14,17 @@
 %% both (TGLP modules.tex: a qualifier is a single child directory, entered
 %% through its self.glp).
 
-imported procedure miniapp#sovereign(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
-exported procedure sovereign(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
+imported procedure miniapp#sovereign(Key?, Channel(PersonIn, Stream(_))?, Stream(Conversation)?).
+exported procedure sovereign(Key?, Channel(PersonIn, Stream(_))?, Stream(Conversation)?).
 sovereign(Id, Ui, Convs) :- miniapp # sovereign(Id?, Ui?, Convs?).
 
-imported procedure miniapp#sovereign(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?, Stream(Integer)?).
-exported procedure sovereign(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?, Stream(Integer)?).
+imported procedure miniapp#sovereign(Key?, Channel(PersonIn, Stream(_))?, Stream(Conversation)?, Stream(Integer)?).
+exported procedure sovereign(Key?, Channel(PersonIn, Stream(_))?, Stream(Conversation)?, Stream(Integer)?).
 sovereign(Id, Ui, Convs, Cal) :- miniapp # sovereign(Id?, Ui?, Convs?, Cal?).
 
-imported procedure person#person(Key?, Stream(Event)?, Stream(UserAnswer), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
-exported procedure person(Key?, Stream(Event)?, Stream(UserAnswer), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
-person(Id, Events, Answers?, Cal?, Script, Ag, Screen?) :- person # person(Id?, Events?, Answers, Cal, Script?, Ag?, Screen).
+imported procedure person#person(Key?, _?, PersonIn, Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
+exported procedure person(Key?, _?, PersonIn, Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
+person(Id, Draws, Grants?, Cal?, Script, Ag, Screen?) :- person # person(Id?, Draws?, Grants, Cal, Script?, Ag?, Screen).
 
 imported procedure plays#play_mint(Stream(ScreenContent)).
 exported procedure play_mint(Stream(ScreenContent)).
