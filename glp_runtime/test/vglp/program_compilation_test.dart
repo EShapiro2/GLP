@@ -170,10 +170,12 @@ display respond *(Answer=yes, From?) : panel(inbox), label("Accept"), transient.
     // Clause, Procedure, vGLP Program" says it holds: a volitional procedure,
     // "declared `procedure (T)*p(T1, ..., Tn).`", whose clauses are written
     // "(A)*p(S1, ..., Sn) :- G | B" (GLP #3 Cowork, 2026-10-09 19:15 UTC).
-    // The bonds source is asked it from its port; the coins and sovereign
-    // sources keep the old question until theirs.
+    // Each is asked it from its port: bonds on its own, coins and sovereign
+    // in the three-owner merge (GLP #3 Cowork, 2026-10-09 18:38 UTC).
     for (final path in [
+      'currencies/coins/currency/coins_agent.vglp',
       'currencies/bonds/bonds_agent.vglp',
+      'currencies/sovereign/denominated/sovereign_agent.vglp',
     ]) {
       test('$path parses as vGLP and holds a volitional procedure', () {
         final file = File('$_programs/$path');
@@ -190,8 +192,6 @@ display respond *(Answer=yes, From?) : panel(inbox), label("Accept"), transient.
       'grassapp/grassapp_agent.vglp',
       'cssn/childsafe/agent.vglp',
       'cssn/childsafe/child_agent.vglp',
-      'currencies/coins/currency/coins_agent.vglp',
-      'currencies/sovereign/denominated/sovereign_agent.vglp',
     ]) {
       test('$path parses as vGLP', () {
         final file = File('$_programs/$path');
