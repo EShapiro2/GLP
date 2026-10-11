@@ -3488,8 +3488,8 @@ echo ""
 # canonical CVA platform in vGLP (programs/vglp/cva; vGLP, Section 3.2, the
 # paragraph on act schemas, and Section 5.4, "The canonical platform is
 # structured"; vGLP's Task C, 2026-10-11).  Jurix's social graph and currency
-# (programs/jurix) compiled, the committed modules held to what the compiler
-# prints; the contracts it refuses, not local or not effective; and the plays
+# (programs/jurix) and vGLP's nudge (programs/vglp/cva/contracts.glp)
+# compiled, the committed modules held to what the compiler prints; the contracts it refuses, not local or not effective; and the plays
 # of each platform, two agents with scripted persons paced on their threads,
 # each run on the committed module through the canonical compilation and
 # ended at the REPL's :limit, the clocks ticking without end.  A play gives
@@ -3502,6 +3502,7 @@ CVA="$GLP_DIR/programs/vglp/cva"
 cva_print=$(bash "$CVA/compile.sh" --check 2>&1)
 check "CVA compiler: the social graph's platform is what the compiler prints" "social_graph/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: the currency's platform is what the compiler prints" "currency/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's nudge, certified by Jurix's check/2, compiled to the platform it prints" "nudge/platform.vglp: as printed" "$cva_print"
 check_not "CVA compiler: no contract refused or missing" "^fault\|^missing\|NOT as printed" "$cva_print"
 
 cva_refuse=$("$REPL_RUN" <<HEREDOC
@@ -3615,6 +3616,33 @@ HEREDOC
 check "CVA closed: bob, asked, offers his coin elsewhere and his machine declines, closing the card" "B = \[.*ask(swap(alice, bob, bob, alice)), propose(swap(bob, alice, carol, bob)), decline(swap(alice, bob, bob, alice))" "$cva_cur_closed"
 check "CVA closed: the yes bob gives the closed card is taken by no Answer" "B = \[.*gave(swap(alice, bob, bob, alice), yes), abort(swap(alice, bob, bob, alice))" "$cva_cur_closed"
 check_not "CVA closed: no answer to the closed card" "answer(swap(alice, bob, bob, alice))" "$cva_cur_closed"
+
+# vGLP's contract nudge (programs/vglp/cva/contracts.glp): befriend and an
+# unguarded nudge, the one contract here with an unguarded class.  Its opener,
+# the person in its first role, opens it on a tick by its machine's Concur, no
+# person asked; the other participant's machine concurs on the vote, and it
+# commits at both (vGLP's 2026-10-11 20:48 UTC, Q4 of Code's 18:53 UTC).
+cva_nudge_load=$("$REPL_RUN" <<HEREDOC
+$CVA/nudge/
+:quit
+HEREDOC
+2>&1)
+check "CVA nudge: the platform and its play load, compiled by the canonical compilation" "Loaded program: .*cva/nudge" "$cva_nudge_load"
+check_not "CVA nudge: no type errors" "Type checking failed" "$cva_nudge_load"
+
+cva_nudge=$("$REPL_RUN" <<HEREDOC
+$CVA/nudge/
+:limit 300000
+play_nudge(A, B).
+:quit
+HEREDOC
+2>&1)
+check "CVA nudge: befriended, alice's Concur opens nudge(alice, bob), whose opener she is, and it commits at her" "A = \[record(bob), propose(befriend(alice, bob)), relay(befriend(alice, bob)), commit(befriend(alice, bob)), concur(nudge(alice, bob)), .*relay(nudge(alice, bob)), commit(nudge(alice, bob))" "$cva_nudge"
+check "CVA nudge: bob's machine concurs on alice's vote, and it commits at him" "B = \[.*relay(nudge(alice, bob)), concur(nudge(alice, bob)), commit(nudge(alice, bob))" "$cva_nudge"
+check "CVA nudge: bob's Concur opens nudge(bob, alice), whose opener he is, and it commits at him" "B = \[.*commit(befriend(alice, bob)), concur(nudge(bob, alice)), .*relay(nudge(bob, alice)), commit(nudge(bob, alice))" "$cva_nudge"
+check "CVA nudge: alice's machine concurs on bob's vote, and it commits at her" "A = \[.*relay(nudge(bob, alice)), concur(nudge(bob, alice)), commit(nudge(bob, alice))" "$cva_nudge"
+check_not "CVA nudge: no person is asked about the unguarded class" "ask(nudge" "$cva_nudge"
+check_not "CVA nudge: nothing aborted" "abort(" "$cva_nudge"
 echo ""
 
 

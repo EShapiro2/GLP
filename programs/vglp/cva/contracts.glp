@@ -1,0 +1,60 @@
+%% ---------------------------------------------------------------------------
+%% vGLP's contracts for the compiler from an act-schema contract to its
+%% canonical CVA platform (compiler/, compile.sh), beside Jurix's two, which
+%% programs/jurix holds.  Each is a contract in the term form programs/jurix
+%% reads (its README, "Writing a contract"), and compile.sh has Jurix's checker,
+%% check/2, certify it before it compiles it, as it does Jurix's.
+%%
+%% nudge is the grassroots social network's befriend with an unguarded act of
+%% its own, so that a contract compiled here has an unguarded class, which
+%% neither of Jurix's two has.  Written as Jurix writes a contract:
+%%
+%%   befriend(p?, q?) :  not friend(q), +friend(q)    not friend(p), +friend(p)
+%%   nudge(p, q)      :  friend(q), not nudged(q),    friend(p), +nudged_by(p)
+%%                       +nudged(q)
+%%
+%% nudge is guarded at neither role, its role graph joined by the friend atom
+%% its first role requires, so it meets volition; its first role requires
+%% friend(q), naming the other role and the variable of every atom it deletes
+%% and adds, so the contract is effective (vGLP, Section 3.2, after Definition
+%% "Effective Local Specification").  Its class at a binding is unguarded and
+%% its opener the person in its first role (Section 3.2, the paragraph on act
+%% schemas), whose machine opens it on a tick, every other participant voting
+%% by its machine (Section 5.4, "The canonical platform is structured";
+%% Definition "Canonical CVA Platform", Propose and Vote).  nudge/self.glp
+%% plays it.
+%% ---------------------------------------------------------------------------
+
+%% The contract, as programs/jurix/self.glp writes it.
+NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
+            ; ext(NameTerm, Constant).
+Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm).
+Args      ::= [] ; [Arg | Args].
+Atom      ::= atom(Constant, Args).
+Atoms     ::= [] ; [Atom | Atoms].
+Guard     ::= guarded ; unguarded ; guarded_at(Constant).
+RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant).
+RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
+            ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
+RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
+Reach     ::= reach(NameTerm, Constant, NameTerm).
+Reaches   ::= [] ; [Reach | Reaches].
+Schema    ::= schema(Constant, RoleSpecs) ; cschema(Constant, Reaches, RoleSpecs).
+Contract  ::= [] ; [Schema | Contract].
+Preds     ::= [] ; [Constant | Preds].
+Declared  ::= Contract ; reflexive(Preds, Contract).
+
+%% contract_named(Name, C): the contract named, as contract_named/2 of
+%% programs/jurix gives Jurix's.
+procedure contract_named(Constant?, Declared).
+contract_named(nudge, C?) :- nudge(C).
+
+procedure nudge(Contract).
+nudge([schema(befriend,
+         [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
+          rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
+       schema(nudge,
+         [rs(unguarded, [atom(nudged, [role(2)])], [], [atom(friend, [role(2)])],
+                        [atom(nudged, [role(2)])]),
+          rs(unguarded, [atom(nudged_by, [role(1)])], [], [atom(friend, [role(1)])],
+                        [])])]).
