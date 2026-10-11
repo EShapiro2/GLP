@@ -769,13 +769,23 @@ class MadContext {
       return;
     }
 
+    // An assignment for a link already held is dropped, not held or reported
+    // again: "a request or assignment arriving for a link already held is
+    // dropped, so a held link is reported once" (§Held Links) — an assignment
+    // delivered twice among them (Remark "Fair Message Delivery").
+    final linkKey = (globalName.agent, globalName.index, true);
+    if (!authorised && _heldAssignments.containsKey(linkKey)) {
+      _trace('[MAD $agentId] _handleWriterAssignment: $globalName already '
+          'held — assignment dropped');
+      return;
+    }
+
     // Definition Held Link, case 4: at the anchor, an assignment arriving from
     // an agent it did not export the name to. The test is structural — the
     // entry's `q` against the sender — and consults nothing outside the agent.
     // This is why `q` is kept in the entry `(X, q)`.
     if (entry.remoteAgent != fromAgent && !authorised) {
-      _heldAssignments[(globalName.agent, globalName.index, true)] =
-          (value: value, fromAgent: fromAgent);
+      _heldAssignments[linkKey] = (value: value, fromAgent: fromAgent);
       _reportPendingLink(globalName, fromAgent);
       return;
     }
@@ -1028,6 +1038,16 @@ class MadContext {
     // is proof the name was forwarded. Nothing is redirected and no holder is
     // recorded until `authorise_link/2` answers.
     //
+    // A request for a link already held is dropped, not held or reported again:
+    // "a request or assignment arriving for a link already held is dropped, so
+    // a held link is reported once" (§Held Links) — a request delivered twice
+    // among them (Remark "Fair Message Delivery").
+    if (_heldRequests.containsKey(key)) {
+      _trace('[MAD $agentId] handleRequest: $globalName already held — '
+          'request dropped');
+      return;
+    }
+
     // A request matching no live link is stale and dropped as before, without
     // troubling the program: "A request for a closed link is dropped."
     final isLive = _pendingReaderValues.containsKey(key) ||
