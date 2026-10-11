@@ -1796,17 +1796,134 @@ procedure(X) (Box(X)?)*take(X).
 '''), refusedAt('the person writes a position of type X, a type parameter',
           2, 1));
     });
+  });
 
-
-    test('a stream the program writes whose elements hold questions', () {
-      expect(() => compile('''
+  // vGLP #8 Cowork, 2026-10-11 15:47 UTC, item 2, Task D: "A stream or list
+  // the program writes whose elements hold questions, as the paper has it:
+  // Present hands the person each element with the writers inside it
+  // (Definition "vmaGLP Transition System"), each such writer a question
+  // (Definition "Question"), drawn by Definition "Widget Declaration" (a
+  // stream the program writes: a list or a thread; a question by the widget
+  // of its type).  Draw each element as it is presented and take the
+  // answers to its questions as any grant."  Not built until then, refused
+  // as "a stream the program writes whose elements hold questions".  The
+  // runs are elicitation_test's and glp_multiagent's bridge_test's, on
+  // programs/tests/vglp/cards.
+  group('Task D: a stream or a list the program writes whose elements hold '
+      'questions', () {
+    test('is built: its widget a thread of the element type\'s widget, each '
+        'element presented at its own position as it arrives, the element '
+        'of a list cell at P with 1 at its end and its tail at P with 2', () {
+      final c = compile('''
 YesNo ::= yes ; no.
 Card ::= card(Integer, YesNo?).
 procedure (Stream(Card))*cards.
 (Cs?)*cards :- deal(Cs).
 procedure deal(Stream(Card)).
 deal([]).
-'''), refused('whose elements hold questions'));
+''');
+      const card = "form(card, [field('Integer', shown), field('YesNo', "
+          'buttons([yes, no]))])';
+      expect(c.widgets['Stream(Card)'], 'thread($card)');
+      final s = c.source;
+      expect(
+          s,
+          contains('construct(Id, stream_card_w(X), Gs, Ds?) :- '
+              'present_stream_card([], X?, Gs?, _, Vs, Done), '
+              'run(Id?, thread($card), Vs?, Done?, Ds).'));
+      // The views, the elements' so far, [] before any.
+      expect(
+          s,
+          contains('present_stream_card(P, Xs, Gs, Gs1?, [[] | Vs?], '
+              'Done?) :- present_stream_card_more(P?, Xs?, [], Gs?, Gs1, Vs, '
+              'Done).'));
+      // Each element presented at P with 1 at its end, its tail at P with
+      // 2, the grants it does not take passed on to those after it.
+      expect(
+          s,
+          contains('present_stream_card_more(P, [X | Xs], Prev, Gs, Gs2?, '
+              'Vs?, Done?) :- ground(P?) | path(P?, 1, Q1), '
+              'present_card(Q1?, X?, Gs?, Gs1, V1, D1), path(P?, 2, Q2), '
+              'present_stream_card_next(V1?, Prev?, Q2?, Xs?, Gs1?, Gs2, Vs, '
+              'D2), all_done([D1?, D2?], Done).'));
+      // Done once the stream is closed and every element answered.
+      expect(s,
+          contains('present_stream_card_more(_, [], _, Gs, Gs?, [], done).'));
+      // Drawn again as each element's view arrives.
+      expect(
+          s,
+          contains('present_stream_card_next([W | _], Prev, Q, Xs, Gs, '
+              'Gs1?, Vs?, Done?) :- append_one(Prev?, W?, New), '
+              'present_stream_card_shown(New?, Q?, Xs?, Gs?, Gs1, Vs, '
+              'Done).'));
+      expect(
+          s,
+          contains('present_stream_card_shown(New, Q, Xs, Gs, Gs1?, '
+              '[New? | Vs?], Done?) :- ground(New?) | '
+              'present_stream_card_more(Q?, Xs?, New?, Gs?, Gs1, Vs, '
+              'Done).'));
+      expect(s, isNot(contains('ref(')));
+    });
+
+    test('as an argument of a tuple, a List: the form\'s field a thread, the '
+        'tuple\'s views combined as its list\'s change', () {
+      final c = compile('''
+YesNo ::= yes ; no.
+Card ::= card(Integer, YesNo?).
+List(X) ::= [] ; [X | List(X)].
+Panel ::= panel(List(Card)).
+procedure (Panel)*show(YesNo, YesNo).
+(panel([card(1, A1), card(2, A2)]))*show(A1?, A2?).
+''');
+      expect(
+          c.widgets['Panel'],
+          "form(panel, [field('List(Card)', thread(form(card, "
+          "[field('Integer', shown), field('YesNo', buttons([yes, no]))])))])");
+      expect(
+          c.source,
+          contains('present_panel(P, panel(H1), Gs, Gs1?, Vs?, D1?) :- '
+              'path(P?, 1, Q1), present_list_card(Q1?, H1?, Gs?, Gs1, V1, '
+              'D1), start_panel_panel_1(V1?, Vs).'));
+    });
+
+    test('an element that is itself a question: the program hands the person '
+        'its writer, marked input(P) in the view and answered there', () {
+      final c = compile('''
+YesNo ::= yes ; no.
+procedure (Stream(YesNo?))*ballot(YesNo, YesNo).
+([A1, A2])*ballot(A1?, A2?).
+''');
+      expect(c.widgets['Stream(YesNo?)'], 'thread(buttons([yes, no]))');
+      expect(
+          c.source,
+          contains('present_stream_yesNo_more(P, [X? | Xs], Prev, Gs, Gs2?, '
+              'Vs?, Done?) :- ground(P?) | path(P?, 1, M1), '
+              'path(P?, 1, Q1), answer_yesNo(Q1?, X, Gs?, Gs1, D1), '
+              'path(P?, 2, Q2), present_stream_yesNo_next([input(M1?)], '
+              'Prev?, Q2?, Xs?, Gs1?, Gs2, Vs, D2), all_done([D1?, D2?], '
+              'Done).'));
+    });
+
+    test('an element holding a stream or a list is refused, the type not '
+        'flat', () {
+      const src = '''
+YesNo ::= yes ; no.
+Ballot ::= ballot(Stream(YesNo?)).
+procedure (Stream(Ballot))*ballots.
+(Bs?)*ballots :- none(Bs).
+procedure none(Stream(Ballot)).
+none([]).
+''';
+      final (l, c) = at(src, 'procedure (Stream');
+      expect(
+          () => compile(src),
+          refusedAt(
+              'The interactive type Stream(Ballot) is not flat: the program '
+              'writes Stream(Ballot), whose element Ballot holds a stream or '
+              'a list, holding a question, and an interactive type is flat, '
+              '"never under another Stream or List"',
+              l,
+              c));
     });
   });
 

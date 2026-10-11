@@ -32,7 +32,10 @@
 ///     open, one element per submission, `input_box(W)`; a list the person
 ///     writes: the same, with a button that ends the list, `input_list(W)`,
 ///     the button granting [listEnd], `[end]`; a stream the program writes:
-///     a thread, `thread`.
+///     a thread, `thread`, and one whose elements hold questions,
+///     `thread(W)`, each element drawn as it arrives by `W`, the widget of
+///     its type, each question in it by the field of its position (vGLP #8
+///     Cowork, 2026-10-11 15:47 UTC, item 2).
 ///
 /// A widget a declaration names (`T =::= W`) is a constant naming a Dart
 /// widget: "In the grassroots app, W names a Dart widget, a small
@@ -92,6 +95,15 @@ ValueKey<String> endKey(int id, List<int> at) =>
 
 /// A path as the boundary writes it, `[]`, `[2]`, `[1, 2]`.
 String pathText(List<int> at) => '[${at.join(', ')}]';
+
+/// The position of element [k], from 0, of the list at [at]: a list cell is
+/// `'.'(H, T)`, its element at its argument 1 and its tail at its argument 2,
+/// so [at] with 2 for each element before it and then 1 (vGLP, Definition
+/// "Construct Process": each question "at its path from the root of the
+/// interactive variable's term"; `glp_runtime/lib/vglp/constructs.dart`,
+/// `_presentSeq`).
+List<int> elementAt(List<int> at, int k) =>
+    [...at, for (var j = 0; j < k; j++) 2, 1];
 
 /// One construct, drawn by [family] from its widget and view.
 class ConstructView extends StatefulWidget {
@@ -179,6 +191,25 @@ class _ConstructViewState extends State<ConstructView> {
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 2),
                     child: Text(displayText(e)),
+                  ),
+              ],
+            ));
+      case 'thread' when ws.length == 1 && v is GList:
+        // A stream or a list the program writes whose elements hold
+        // questions: each element drawn by the widget of its type, at its
+        // own position --- the path of argument indices through the list
+        // cells, 2 for each element before it and then 1 --- and each
+        // question in it by the field of its position.
+        return _keyed(
+            'thread',
+            at,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (var k = 0; k < v.items.length; k++)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    child: _node(ws[0], v.items[k], elementAt(at, k)),
                   ),
               ],
             ));

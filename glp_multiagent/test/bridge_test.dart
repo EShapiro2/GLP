@@ -59,11 +59,13 @@ class _Person {
 
   _Person._(this.tester, this.agent, this.ui);
 
-  static Future<_Person> boot(WidgetTester tester, String entry) async {
+  /// Boot [entry] of the fixture in programs/tests/vglp/[dir].
+  static Future<_Person> boot(WidgetTester tester, String entry,
+      {String dir = 'bridge'}) async {
     final programs = programsDir();
     final agent = AgentRuntime(
       agentId: 'bob',
-      program: '$programs/tests/vglp/bridge',
+      program: '$programs/tests/vglp/$dir',
       goalLabel: '$entry/3',
       rootSelfGlpPath: '$programs/self.glp',
     );
@@ -396,6 +398,128 @@ void main() {
       'input(${first.id}, [2], yes)',
     ]);
     expect(p.ui.bridge.constructs, isEmpty);
+  });
+
+  // vGLP #8 Cowork, 2026-10-11 15:47 UTC, item 2, Task D: a stream or a list
+  // the program writes whose elements hold questions.  "Present hands the
+  // person each element with the writers inside it (Definition "vmaGLP
+  // Transition System"), each such writer a question (Definition
+  // "Question"), drawn by Definition "Widget Declaration" (a stream the
+  // program writes: a list or a thread; a question by the widget of its
+  // type).  Draw each element as it is presented and take the answers to its
+  // questions as any grant."  The fixture is programs/tests/vglp/cards.
+  group('a stream or a list the program writes whose elements hold questions',
+      () {
+    const card = "form(card, [field('Integer', shown), "
+        "field('YesNo', buttons([yes, no]))])";
+
+    /// The button [label] of the question at [at] of construct [c].
+    Finder button(OpenConstruct c, List<int> at, String label) =>
+        find.descendant(
+            of: find.byKey(nodeKey(c.id, 'buttons', at)),
+            matching: find.widgetWithText(ElevatedButton, label));
+
+    testWidgets(
+        'a panel of two cards, a list the program writes: one construct, the '
+        'list a thread of cards, each drawn by its widget at its own '
+        'position, answered out of order, and the program receiving both '
+        'answers', (tester) async {
+      final p = await _Person.boot(tester, 'panel_init', dir: 'cards');
+      final panel =
+          p.the("form(panel, [field('List(Card)', thread($card))])");
+      expect(p.ui.bridge.constructs, hasLength(1));
+      // The two cards presented at once, the second while the first's
+      // question is open: the k-th card's answer at the path through the
+      // list cells, [1, 1, 2] and [1, 2, 1, 2].
+      expect(formatTerm(panel.view),
+          'panel([card(1, input([1, 1, 2])), card(2, input([1, 2, 1, 2]))])');
+      expect(find.byKey(nodeKey(panel.id, 'thread', [1])), findsOneWidget);
+      for (final (n, at) in [
+        ('1', [1, 1]),
+        ('2', [1, 2, 1])
+      ]) {
+        expect(find.byKey(nodeKey(panel.id, 'form', at)), findsOneWidget);
+        final shown = find.byKey(nodeKey(panel.id, 'shown', [...at, 1]));
+        expect(find.descendant(of: shown, matching: find.text(n)),
+            findsOneWidget);
+        expect(find.byKey(nodeKey(panel.id, 'buttons', [...at, 2])),
+            findsOneWidget);
+      }
+      expect(p.screen, isEmpty);
+
+      // The second card answered first: its grant reaches its question, and
+      // the program its answer; the panel stays, the first card open.
+      await p.tap(button(panel, [1, 2, 1, 2], 'no'));
+      expect(p.grants.last, 'input(${panel.id}, [1, 2, 1, 2], no)');
+      expect(p.screen, ['got(2, no)']);
+      p.open(panel);
+
+      await p.tap(button(panel, [1, 1, 2], 'yes'));
+      expect(p.grants.last, 'input(${panel.id}, [1, 1, 2], yes)');
+      expect(p.screen, ['got(2, no)', 'got(1, yes)']);
+      // Every question answered and the list closed: withdrawn.
+      p.withdrawn(panel);
+      expect(p.grants, [
+        'input(${panel.id}, [1, 2, 1, 2], no)',
+        'input(${panel.id}, [1, 1, 2], yes)',
+      ]);
+    });
+
+    testWidgets(
+        'a stream of cards the program writes: its third card drawn as the '
+        'program writes it, once the first two are answered, and answered '
+        'as they were', (tester) async {
+      final p = await _Person.boot(tester, 'deal_init', dir: 'cards');
+      final deal = p.the('thread($card)');
+      expect(formatTerm(deal.view),
+          '[card(1, input([1, 2])), card(2, input([2, 1, 2]))]');
+      expect(find.byKey(nodeKey(deal.id, 'buttons', [2, 2, 1, 2])),
+          findsNothing);
+
+      // One answered: the program waits for the other, and writes nothing.
+      await p.tap(button(deal, [1, 2], 'yes'));
+      expect(p.grants.last, 'input(${deal.id}, [1, 2], yes)');
+      expect(p.screen, isEmpty);
+      expect(formatTerm(p.ui.bridge.construct(deal.id)!.view),
+          '[card(1, input([1, 2])), card(2, input([2, 1, 2]))]');
+
+      // Both answered: the program receives them and writes the third card,
+      // drawn under the first two at its own position.
+      await p.tap(button(deal, [2, 1, 2], 'yes'));
+      expect(p.grants.last, 'input(${deal.id}, [2, 1, 2], yes)');
+      expect(p.screen, ['got(1, yes)', 'got(2, yes)']);
+      p.open(deal);
+      expect(
+          formatTerm(p.ui.bridge.construct(deal.id)!.view),
+          '[card(1, input([1, 2])), card(2, input([2, 1, 2])), '
+          'card(3, input([2, 2, 1, 2]))]');
+      final third = find.byKey(nodeKey(deal.id, 'shown', [2, 2, 1, 1]));
+      expect(find.descendant(of: third, matching: find.text('3')),
+          findsOneWidget);
+
+      await p.tap(button(deal, [2, 2, 1, 2], 'no'));
+      expect(p.grants.last, 'input(${deal.id}, [2, 2, 1, 2], no)');
+      expect(p.screen, ['got(1, yes)', 'got(2, yes)', 'got(3, no)']);
+      // The stream closed and every question answered: withdrawn.
+      p.withdrawn(deal);
+    });
+
+    testWidgets(
+        'a stream the program writes whose elements are themselves '
+        'questions: each element drawn by its type\'s widget at its own '
+        'position', (tester) async {
+      final p = await _Person.boot(tester, 'votes_init', dir: 'cards');
+      final votes = p.the('thread(buttons([yes, no]))');
+      expect(formatTerm(votes.view), '[input([1]), input([2, 1])]');
+      await p.tap(button(votes, [2, 1], 'no'));
+      expect(p.grants.last, 'input(${votes.id}, [2, 1], no)');
+      expect(p.screen, ['got(2, no)']);
+      p.open(votes);
+      await p.tap(button(votes, [1], 'yes'));
+      expect(p.grants.last, 'input(${votes.id}, [1], yes)');
+      expect(p.screen, ['got(2, no)', 'got(1, yes)']);
+      p.withdrawn(votes);
+    });
   });
 
   group('the bridge on the person channel', () {

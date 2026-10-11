@@ -27,8 +27,10 @@
 // stream's own path; the view marks each such position input(P), and the
 // scripted person sends back the P it reads there.
 // Programs: programs/tests/vglp/fragments (questions.vglp, the fragments of
-// Sections 1 and 3, and its plays) and programs/tests/vglp/stream (chat.vglp,
-// the chat input of Section 3, and its play); the Real question and the card
+// Sections 1 and 3, and its plays), programs/tests/vglp/stream (chat.vglp,
+// the chat input of Section 3, and its play) and programs/tests/vglp/cards
+// (cards.vglp, a stream and a list the program writes whose elements hold
+// questions, and its plays; Task D); the Real question and the card
 // of two questions are written under programs/tests/vglp/ for their runs.
 
 import 'dart:async';
@@ -1490,6 +1492,56 @@ $person''',
       expect(r['R'], 'accept(bob)');
       expect(r['N'], 'note(hi)');
       expect(r['A'], 'yes');
+    });
+  });
+
+  // vGLP #8 Cowork, 2026-10-11 15:47 UTC, item 2, Task D: a stream or a list
+  // the program writes whose elements hold questions, Present handing the
+  // person each element with the writers inside it (vGLP at 66b6500,
+  // Definition "vmaGLP Transition System"), each a question (Definition
+  // "Question"), each element drawn as it is presented and its questions
+  // answered as any grant.  programs/tests/vglp/cards: cards.vglp, and the
+  // plays of its self.glp, whose scripted person logs each view it reads,
+  // view(V), and answers once the cards it waits for are drawn.
+  group('a stream or a list the program writes whose elements hold questions '
+      '(Task D)', () {
+    test('a panel of two cards, a list the program writes at once: drawn as '
+        'each card arrives, both open together, each answered at its own '
+        'position, the program receiving both, and the construct '
+        'withdrawn', () async {
+      final r = await _play('cards', 'play_panel(Log)');
+      expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
+      final log = r['Log'];
+      expect(
+          log,
+          startsWith('[view(panel([])), '
+              'view(panel([card(1, input([1, 1, 2]))])), '
+              'both(0, [1, 1, 2], [1, 2, 1, 2]), '));
+      expect(log, contains('got(1, yes)'));
+      expect(log, contains('got(2, no)'));
+      expect(log, contains('withdrawn(0)'));
+    });
+
+    test('a stream of cards: the third drawn only once the first two are '
+        'answered, then answered as they were, and the construct withdrawn '
+        'with the stream closed', () async {
+      final r = await _play('cards', 'play_deal(Log)');
+      expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
+      final log = r['Log'];
+      expect(
+          log,
+          startsWith('[view([]), view([card(1, input([1, 2]))]), '
+              'two([1, 2], [2, 1, 2]), '));
+      // No view holds the third card before the person answers the first
+      // two, which they do on reading two(...).
+      expect(log.substring(0, log.indexOf('two(')), isNot(contains('card(3')));
+      expect(log, contains('three([2, 2, 1, 2])'));
+      expect(log.indexOf('three('), greaterThan(log.indexOf('two(')));
+      for (final got in ['got(1, yes)', 'got(2, yes)', 'got(3, no)']) {
+        expect(log, contains(got));
+      }
+      expect(log.indexOf('got(3, no)'), greaterThan(log.indexOf('three(')));
+      expect(log, contains('withdrawn(0)'));
     });
   });
 }

@@ -101,11 +101,16 @@
 // person writes of the type _, none of the Definition's building blocks.
 // So the compilation emits neither ref(T) nor form('.', ...).
 //
+// A STREAM OR A LIST THE PROGRAM WRITES WHOSE ELEMENTS HOLD QUESTIONS (vGLP
+// #8 Cowork, 2026-10-11 15:47 UTC, item 2, Task D): each element presented
+// as it arrives, at its own position, its questions answered as any grant;
+// its widget thread(W), W the element type's, its views the elements' views
+// so far (_presentSeq).
+//
 // WHAT IS NOT BUILT, each a compile error naming the type: a position the
 // program writes inside one the person writes (the Answer transition leaves
 // it to the program, and the construct has no output to show for it yet,
-// _checkPersonWritable); a stream the program writes whose elements hold
-// questions; a difference list or a mutual reference.
+// _checkPersonWritable); a difference list or a mutual reference.
 // A position the person writes of type Real is built, formed by real/1 and
 // drawn as a number field (vGLP #5 Cowork, 2026-10-03 08:16 UTC, item 6;
 // Definition "Widget Declaration, Default Widget" at c2e8b57: "a number
@@ -201,6 +206,7 @@ class GenericNames {
   final String run;
   final String shown;
   final String thread;
+  final String appendOne;
   final String allDone;
   final String path;
   final Map<_Leaf, String> _leafFormers;
@@ -220,6 +226,7 @@ class GenericNames {
       required this.run,
       required this.shown,
       required this.thread,
+      required this.appendOne,
       required this.allDone,
       required this.path,
       required String formString,
@@ -256,6 +263,7 @@ class GenericNames {
     'run',
     'shown',
     'thread',
+    'append_one',
     'all_done',
     'path',
     'form_string',
@@ -771,7 +779,7 @@ class _Generator {
   ///     it is not among the Definition's building blocks").
   ///
   /// A stream the program writes whose elements hold questions is flat, and
-  /// is refused here as not built (_present).
+  /// is presented element by element ([_presentSeq]).
   void _checkFlat(InteractiveType it, _Node root) {
     // The clauses of the Definition's sentence each refusal quotes.
     const builtFrom = 'built from constants, String, Integer, Real, Key, '
@@ -802,15 +810,6 @@ class _Generator {
               '${elem.typeKey} ${identical(elem, n) ? 'is' : 'holds'} a '
               'stream or a list${holds(n)}',
               notUnder);
-        }
-        if (!n.person && _hasQuestion(n)) {
-          // Flat, and not built: a stream the program writes is shown
-          // element by element, a thread, and holds no question.
-          throw CompileError(
-              'The construct of the interactive type ${it.written} is not '
-              'built: the program writes the stream ${n.typeKey}, whose '
-              'elements hold questions',
-              it.line, it.column, phase: 'analyzer');
         }
         final e = n.child(seq.elem);
         walk(e, path, (n, e));
@@ -1266,12 +1265,16 @@ class _Generator {
   String _present(_Node n, InteractiveType it) {
     final name = _name('present', n);
     if (!_emitted.add('present:${n.typeKey}')) return name;
+    final seq = _seqOf(n);
+    if (seq != null) {
+      _presentSeq(n, seq.elem, name, it);
+      return name;
+    }
     if (_streamElement(n) != null) {
-      throw CompileError(
-          'The construct of the interactive type ${it.written} is not built: '
-          'the program writes the stream ${n.typeKey}, whose elements hold '
-          'questions',
-          it.line, it.column, phase: 'analyzer');
+      // A recursive type of [] and [E | S] that is not a Stream or a List
+      // is refused before it is presented, the type not flat (_checkFlat).
+      throw StateError('present_N meets ${n.typeKey}, which _checkFlat '
+          'refuses');
     }
     final t = n.typeKey;
     final p = _declParams(n);
@@ -1301,6 +1304,110 @@ class _Generator {
       f();
     }
     return name;
+  }
+
+  /// present_N(P, Xs?, Gs?, Gs1, Vs, Done) of node [n], a stream or a list
+  /// the program writes whose elements, of type [elem], hold questions:
+  /// "Present hands the person each element with the writers inside it, each
+  /// such writer a question, drawn by the Definition (the stream as a list
+  /// or a thread, each question by its type's widget); each element drawn as
+  /// it is presented, the answers to its questions taken as any grant" (vGLP
+  /// #8 Cowork, 2026-10-11 15:47 UTC, item 2, Task D; vGLP at 66b6500,
+  /// Definition "vmaGLP Transition System", Present; Definition "Question":
+  /// "a writer presented inside the program's output"; Definition "Construct
+  /// Process": "as the program's output arrives on a reader it holds, each
+  /// writer inside it at a position the person writes is added to its
+  /// questions ... It has the bridge draw the widget of T with the output so
+  /// far, again as more arrives").
+  ///
+  /// The element of a list cell at position P is at P with 1 at its end, and
+  /// the cell's tail at P with 2 at its end, the path of argument indices
+  /// from the root of the interactive variable's term ('.'(H, T), GLP-Spec
+  /// appendix-lp.tex, Definition "Logic Programs Syntax"): so the k-th
+  /// element is at P with k - 1 2s and then 1 at its end, and its questions
+  /// below it.  Each
+  /// element is presented as it arrives, at its own position --- by its
+  /// present_N where the program writes it, by its answer_N where the
+  /// element is itself a question --- and its questions take their grants
+  /// as any question does, the grants an element does not take passed on to
+  /// those after it.  The views are the elements' views so far, in the
+  /// stream's order, the first [] before any arrives, again as each
+  /// element's view arrives, as thread/2 shows a stream the program writes
+  /// that holds no question.  An element's views are one: its type is flat,
+  /// so nothing in it is a stream or a list whose view changes ([_multi]).
+  /// Done once the stream is closed and every element's questions are
+  /// answered; a stream never closed keeps its construct, "no reader at a
+  /// position whose output may hold one" never holding.
+  void _presentSeq(_Node n, TypeExpr elem, String name, InteractiveType it) {
+    final e = n.child(elem);
+    if (_multi(e)) {
+      throw StateError('The element ${e.typeKey} of ${n.typeKey} has views '
+          'that change, which _checkFlat refuses');
+    }
+    final more = _name('present', n, 'more');
+    final next = _name('present', n, 'next');
+    final shown = _name('present', n, 'shown');
+    final t = n.typeKey;
+    final p = _declParams(n);
+    final done = gen.doneType;
+    final pt = gen.pathType;
+    final gs = gen.inputsType;
+    final path = gen.path;
+    // The element at P with 1 at its end: its view's stream V1, its goals,
+    // and its head pattern in the list cell.
+    final String x, v1;
+    final List<String> elemGoals;
+    if (e.person) {
+      // The element is itself a question: the program hands the person its
+      // writer, and the view marks it.
+      _checkPersonWritable(e, it);
+      x = 'X?';
+      v1 = '[input(M1?)]';
+      elemGoals = [
+        '$path(P?, 1, M1)',
+        '$path(P?, 1, Q1)',
+        '${_answer(e)}(Q1?, X, Gs?, Gs1, D1)',
+      ];
+    } else {
+      x = 'X';
+      v1 = 'V1?';
+      elemGoals = [
+        '$path(P?, 1, Q1)',
+        '${_present(e, it)}(Q1?, X?, Gs?, Gs1, V1, D1)',
+      ];
+    }
+    // The views are lists of the elements' views, Stream(Stream(_)), as
+    // thread/2's are.
+    const vs = 'Stream(Stream(_))';
+    _out
+      ..writeln('procedure$p $name($pt?, $t?, $gs?, $gs, $vs, $done).')
+      ..writeln('$name(P, Xs, Gs, Gs1?, [[] | Vs?], Done?) :- '
+          '$more(P?, Xs?, [], Gs?, Gs1, Vs, Done).')
+      ..writeln()
+      ..writeln('procedure$p $more($pt?, $t?, Stream(_)?, $gs?, $gs, $vs, '
+          '$done).')
+      ..writeln('$more(P, [$x | Xs], Prev, Gs, Gs2?, Vs?, Done?) :- '
+          'ground(P?) | ${elemGoals.join(', ')}, $path(P?, 2, Q2), '
+          '$next($v1, Prev?, Q2?, Xs?, Gs1?, Gs2, Vs, D2), '
+          '${gen.allDone}([D1?, D2?], Done).')
+      ..writeln('$more(_, [], _, Gs, Gs?, [], done).')
+      ..writeln()
+      // An element's views are never closed before its one view; the type
+      // of the views has [], which an element with none would add nothing
+      // for.
+      ..writeln('procedure$p $next(Stream(_)?, Stream(_)?, $pt?, $t?, $gs?, '
+          '$gs, $vs, $done).')
+      ..writeln('$next([W | _], Prev, Q, Xs, Gs, Gs1?, Vs?, Done?) :- '
+          '${gen.appendOne}(Prev?, W?, New), '
+          '$shown(New?, Q?, Xs?, Gs?, Gs1, Vs, Done).')
+      ..writeln('$next([], Prev, Q, Xs, Gs, Gs1?, Vs?, Done?) :- '
+          '$more(Q?, Xs?, Prev?, Gs?, Gs1, Vs, Done).')
+      ..writeln()
+      ..writeln('procedure$p $shown(Stream(_)?, $pt?, $t?, $gs?, $gs, $vs, '
+          '$done).')
+      ..writeln('$shown(New, Q, Xs, Gs, Gs1?, [New? | Vs?], Done?) :- '
+          'ground(New?) | $more(Q?, Xs?, New?, Gs?, Gs1, Vs, Done).')
+      ..writeln();
   }
 
   String _presentStruct(_Node n, _Alt a, String name,
@@ -1493,6 +1600,14 @@ class _Generator {
       if (!_hasQuestion(n)) {
         return _streamElement(n) != null ? 'thread' : 'shown';
       }
+      // A stream or a list the program writes whose elements hold
+      // questions: a thread of its elements, each drawn by the widget of
+      // the element type, W, and each question in it by the field of its
+      // position (Definition "Widget Declaration, Default Widget": "a stream
+      // the program writes: a list or a thread"; vGLP #8 Cowork, 2026-10-11
+      // 15:47 UTC, item 2).
+      final seq = _seqOf(n);
+      if (seq != null) return 'thread(${_widget(n.child(seq.elem), visiting)})';
       final alts = _nodeAlts(n);
       if (alts.length == 1 && _isPicker(n, alts.single)) return 'picker';
       if (alts.length == 1) return _altWidget(n, alts.single, visiting);
