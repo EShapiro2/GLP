@@ -97,8 +97,9 @@
 // _checkFlat): a stream or a list in an element of a stream or a list; a
 // list cell outside a Stream or a List, a tuple '.'(H, T) being one; a
 // recursive type other than a Stream or a List; a position the person
-// writes of a type parameter, which has no widget; and a position the
-// person writes of the type _, none of the Definition's building blocks.
+// writes of a type parameter, which has no widget; and a position of the
+// type _, whoever writes it, none of the Definition's building blocks
+// (vGLP #8 Cowork, 2026-10-11 17:24 UTC, Q2).
 // So the compilation emits neither ref(T) nor form('.', ...).
 //
 // A STREAM OR A LIST THE PROGRAM WRITES WHOSE ELEMENTS HOLD QUESTIONS (vGLP
@@ -773,10 +774,12 @@ class _Generator {
   ///   - a recursive type other than a Stream or a List;
   ///   - a position the person writes of a type parameter, refused outright
   ///     (14:31 UTC, item 1);
-  ///   - a position the person writes of the type `_`, which is none of the
+  ///   - a position of the type `_`, whoever writes it, which is none of the
   ///     types an interactive type is built from (15:47 UTC, item 3: "The
   ///     type `_` where the person writes: refused, with the flat refusals;
-  ///     it is not among the Definition's building blocks").
+  ///     it is not among the Definition's building blocks"; vGLP #8 Cowork,
+  ///     2026-10-11 17:24 UTC, Q2: "the type _ refused everywhere in an
+  ///     interactive type, the building blocks excluding it").
   ///
   /// A stream the program writes whose elements hold questions is flat, and
   /// is presented element by element ([_presentSeq]).
@@ -831,9 +834,9 @@ class _Generator {
               'person writes" ($_flatDefinition)',
               it.line, it.column, phase: 'analyzer');
         }
-        if (a is _LeafAlt && a.leaf == _Leaf.any && n.person) {
+        if (a is _LeafAlt && a.leaf == _Leaf.any) {
           refuse(
-              'the person writes a position of type _, none of the types '
+              '${who(n)} writes a position of type _, none of the types '
               'an interactive type is built from',
               builtFrom);
         }

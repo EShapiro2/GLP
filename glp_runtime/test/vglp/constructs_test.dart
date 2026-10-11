@@ -1447,6 +1447,44 @@ procedure (Stream(_)?)*any(Stream(_)).
           refusedAt('The interactive type Stream(_)? $why', 1, 1));
     });
 
+    test('the type _ at a position the program writes is refused too, the '
+        'type _ refused everywhere in an interactive type (vGLP #8 Cowork, '
+        '2026-10-11 17:24 UTC, Q2)', () {
+      const why = 'is not flat: the program writes a position of type _, '
+          'none of the types an interactive type is built from, and an '
+          'interactive type is flat, "built from constants, String, Integer, '
+          'Real, Key, Constant, Module, named types so built, tuples and '
+          'unions, and Stream or List" (vGLP, Definition "Volitional '
+          'Procedure, Interactive Type, Interactive Term, Ordinary Clause, '
+          'vGLP Program")';
+      // Beside a question, in a structure the program writes.
+      const beside = '''
+YesNo ::= yes ; no.
+Card ::= card(_, YesNo?).
+procedure (Card)*see(YesNo).
+(card(1, A))*see(A?).
+''';
+      final (l1, c1) = at(beside, 'procedure');
+      expect(() => compile(beside),
+          refusedAt('The interactive type Card $why', l1, c1));
+      // In a structure the program writes that holds no question.
+      const note = '''
+Note ::= note(_).
+procedure (Note)*tell(Integer?).
+(note(N?))*tell(N).
+''';
+      final (l2, c2) = at(note, 'procedure');
+      expect(() => compile(note),
+          refusedAt('The interactive type Note $why', l2, c2));
+      // The element of a stream the program writes.
+      const thread = '''
+procedure (Stream(_))*tell(Stream(_)?).
+(Xs?)*tell(Xs).
+''';
+      expect(() => compile(thread),
+          refusedAt('The interactive type Stream(_) $why', 1, 1));
+    });
+
     test('a position the person writes of a type parameter is refused '
         'outright, the message citing the Definition (vGLP #7 Cowork, '
         '2026-10-11 14:31 UTC, item 1)', () {
