@@ -91,13 +91,15 @@
 // Stream or List as the whole type or as an argument of a tuple, never under
 // another Stream or List; it has no other recursive type, and no type
 // parameter at a position the person writes").  Refused, each naming the
-// type, wherever it holds a question, a structure the program writes
-// included (vGLP #7 Cowork, 2026-10-11 14:31 UTC, items 1 and 2;
+// type, over the whole interactive type, a structure the program writes
+// included, one holding no question too (vGLP #7 Cowork, 2026-10-11 14:31
+// UTC, items 1 and 2; vGLP #8 Cowork, 2026-10-11 15:47 UTC, items 1 and 3;
 // _checkFlat): a stream or a list in an element of a stream or a list; a
 // list cell outside a Stream or a List, a tuple '.'(H, T) being one; a
-// recursive type other than a Stream or a List; and a position the person
-// writes of a type parameter, which has no widget.  So the compilation
-// emits neither ref(T) nor form('.', ...).
+// recursive type other than a Stream or a List; a position the person
+// writes of a type parameter, which has no widget; and a position the
+// person writes of the type _, none of the Definition's building blocks.
+// So the compilation emits neither ref(T) nor form('.', ...).
 //
 // WHAT IS NOT BUILT, each a compile error naming the type: a position the
 // program writes inside one the person writes (the Answer transition leaves
@@ -592,8 +594,7 @@ class _Generator {
             'alternative ${typeSource(s)} is a type in the other mode',
             t.line, t.column, phase: 'analyzer');
       }
-      _flatten(s, params, out, seen,
-          t.name == 'Stream' || t.name == 'List' ? key : from);
+      _flatten(s, params, out, seen, _seqName(t.name) != null ? key : from);
     }
   }
 
@@ -652,10 +653,14 @@ class _Generator {
   /// 66b6500, Definition "Volitional Procedure, Interactive Type, ...";
   /// vGLP #7 Cowork, 2026-10-11 14:31 UTC, item 2); null for any other
   /// type.
+  ///
+  /// A scope's type definitions name an instantiated Stream or List by its
+  /// instantiation, `Stream<Instrument>`, which is `Stream(Instrument)`
+  /// ([_seqName]).
   TypeRef? _seqType(TypeExpr t, [Set<String>? seen]) {
     if (t is! TypeRef) return null;
     final u = _unmoded(t) as TypeRef;
-    if (u.name == 'Stream' || u.name == 'List') return u;
+    if (_seqName(u.name) != null) return u;
     if (u.name == 'MutualRef' || _leafOf(u.name, const {}) != null) {
       return null;
     }
@@ -682,7 +687,15 @@ class _Generator {
     if (s == null) return null;
     final e = _streamElement(n);
     if (e == null) return null;
-    return (elem: e, list: s.name == 'List');
+    return (elem: e, list: _seqName(s.name) == 'List');
+  }
+
+  /// `Stream` or `List` where [name] is one of the two, as written or as a
+  /// scope instantiates it, `Stream<Instrument>`; null for any other name.
+  static String? _seqName(String name) {
+    final lt = name.indexOf('<');
+    final base = lt < 0 ? name : name.substring(0, lt);
+    return base == 'Stream' || base == 'List' ? base : null;
   }
 
   /// The children of an alternative, as nodes.
@@ -738,22 +751,27 @@ class _Generator {
   /// tuple, never under another Stream or List; it has no other recursive
   /// type, and no type parameter at a position the person writes" (vGLP at
   /// 66b6500, Definition "Volitional Procedure, Interactive Type, ...").
-  /// Each is refused wherever it holds a question, a structure the program
-  /// writes included (vGLP #7 Cowork, 2026-10-11 14:31 UTC, items 1 and 2):
+  /// Each is refused over the whole interactive type, a structure the
+  /// program writes included, one holding no question too (vGLP #7 Cowork,
+  /// 2026-10-11 14:31 UTC, items 1 and 2; vGLP #8 Cowork, 2026-10-11 15:47
+  /// UTC, item 1: "The flat refusals hold over the whole interactive type, a
+  /// program-written structure holding no question included"):
   ///
-  ///   - a stream or a list in an element of a stream or a list the person
-  ///     writes, the element itself one or holding one;
+  ///   - a stream or a list in an element of a stream or a list, whoever
+  ///     writes it, the element itself one or holding one;
   ///   - a list cell outside a Stream or a List: a list cell type, a tuple
   ///     '.'(H, T), or a Stream or a List as an alternative of a union, none
   ///     the whole type nor an argument of a tuple;
   ///   - a recursive type other than a Stream or a List;
   ///   - a position the person writes of a type parameter, refused outright
-  ///     (14:31 UTC, item 1).
+  ///     (14:31 UTC, item 1);
+  ///   - a position the person writes of the type `_`, which is none of the
+  ///     types an interactive type is built from (15:47 UTC, item 3: "The
+  ///     type `_` where the person writes: refused, with the flat refusals;
+  ///     it is not among the Definition's building blocks").
   ///
-  /// A structure the program writes that holds no question is shown as it
-  /// is written, and is not walked.  A stream the program writes whose
-  /// elements hold questions is flat, and is refused here as not built
-  /// (_present).
+  /// A stream the program writes whose elements hold questions is flat, and
+  /// is refused here as not built (_present).
   void _checkFlat(InteractiveType it, _Node root) {
     // The clauses of the Definition's sentence each refusal quotes.
     const builtFrom = 'built from constants, String, Integer, Real, Key, '
@@ -768,24 +786,15 @@ class _Generator {
         'interactive type is flat, "$clause" ($_flatDefinition)',
         it.line, it.column, phase: 'analyzer');
     String who(_Node n) => n.person ? 'the person' : 'the program';
-    String holds(_Node n) => n.person ? '' : ', holding a question';
+    String holds(_Node n) =>
+        n.person || !_hasQuestion(n) ? '' : ', holding a question';
 
     // [path] the types of the positions above [n], a Stream's or a List's
     // left out, whose recursion is its tail's; [inSeq] the stream or the
     // list that [n] is in an element of, with that element.
     void walk(_Node n, List<String> path, (_Node, _Node)? inSeq) {
-      if (!_hasQuestion(n)) return;
       final seq = _seqOf(n);
       if (seq != null) {
-        if (!n.person) {
-          // Flat, and not built: a stream the program writes is shown
-          // element by element, a thread, and holds no question.
-          throw CompileError(
-              'The construct of the interactive type ${it.written} is not '
-              'built: the program writes the stream ${n.typeKey}, whose '
-              'elements hold questions',
-              it.line, it.column, phase: 'analyzer');
-        }
         if (inSeq != null) {
           final (outer, elem) = inSeq;
           refuse(
@@ -793,6 +802,15 @@ class _Generator {
               '${elem.typeKey} ${identical(elem, n) ? 'is' : 'holds'} a '
               'stream or a list${holds(n)}',
               notUnder);
+        }
+        if (!n.person && _hasQuestion(n)) {
+          // Flat, and not built: a stream the program writes is shown
+          // element by element, a thread, and holds no question.
+          throw CompileError(
+              'The construct of the interactive type ${it.written} is not '
+              'built: the program writes the stream ${n.typeKey}, whose '
+              'elements hold questions',
+              it.line, it.column, phase: 'analyzer');
         }
         final e = n.child(seq.elem);
         walk(e, path, (n, e));
@@ -814,8 +832,13 @@ class _Generator {
               'person writes" ($_flatDefinition)',
               it.line, it.column, phase: 'analyzer');
         }
+        if (a is _LeafAlt && a.leaf == _Leaf.any && n.person) {
+          refuse(
+              'the person writes a position of type _, none of the types '
+              'an interactive type is built from',
+              builtFrom);
+        }
         if (a is _ConsAlt) {
-          if (!n.person && !_altHasQuestion(n, a)) continue;
           final kids = _children(n, a);
           if (kids.any((k) => below.contains(k.typeKey))) {
             refuse(
@@ -1540,8 +1563,13 @@ class _Generator {
         return 'number';
       case _Leaf.constant:
       case _Leaf.module:
-      case _Leaf.any:
         return 'text';
+      case _Leaf.any:
+        // The type _ where the person writes is none of the types an
+        // interactive type is built from: refused before its widget is
+        // drawn (_checkFlat; vGLP #8 Cowork, 2026-10-11 15:47 UTC, item 3).
+        throw StateError('The type _ where the person writes, which '
+            '_checkFlat refuses');
       case _Leaf.param:
         // "no type parameter at a position the person writes" (vGLP at
         // 66b6500, Definition "Volitional Procedure, Interactive Type,

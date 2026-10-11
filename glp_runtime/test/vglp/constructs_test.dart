@@ -19,7 +19,8 @@
 import 'dart:io';
 
 import 'package:test/test.dart';
-import 'package:glp_runtime/runtime/module_hierarchy.dart' show rootScope;
+import 'package:glp_runtime/runtime/module_hierarchy.dart'
+    show buildAncestorScope, rootScope;
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/compiler/ast.dart' show ConstTerm;
 import 'package:glp_runtime/compiler/error.dart';
@@ -816,11 +817,14 @@ procedure (Board)*game(Stream(String)).
               'comb_board_board_2(V1?, V2?, S1?, S2?, Vs).'));
     });
 
+    // Its Peers was `[] ; [Peer | Peers]` until vGLP #8 Cowork's ruling of
+    // 2026-10-11 15:47 UTC (item 1), which refuses it as not flat wherever
+    // it stands; its flat form is a Stream.
     test('a list the program writes, with a choice of its element coming '
         'back: a picker', () {
       final s = compile('''
 Peer ::= Constant.
-Peers ::= [] ; [Peer | Peers].
+Peers ::= Stream(Peer).
 Pick ::= pick(Peers, Peer?).
 procedure (Pick)*choose(Peer).
 (pick([bob, carol], P))*choose(P?).
@@ -1258,27 +1262,189 @@ procedure (Thread?)*reply(Thread).
               c2));
     });
 
-    test('a structure the program writes holding no question is shown as it '
-        'is written: a recursive type and a list cell there are not refused, '
-        'and no ref(T) or form(\'.\', ...) is emitted', () {
-      // vGLP #7 Cowork, 2026-10-11 14:31 UTC, item 2: "wherever it holds a
-      // question" (sGLP's coins.vglp and graph.vglp draw their Peers and
-      // Wallet so).
-      final c = compile('''
+    // Until vGLP #8 Cowork's ruling of 2026-10-11 15:47 UTC (item 1) a
+    // structure the program writes holding no question was shown as it was
+    // written, a recursive type and a list cell there not refused; the flat
+    // refusals now hold over the whole interactive type.
+    test('a structure the program writes holding no question is refused too '
+        'where it is not flat, each refusal at the interactive type\'s line '
+        'and column (vGLP #8 Cowork, 2026-10-11 15:47 UTC, item 1)', () {
+      // A recursive type other than a Stream or a List: sGLP's Peers of
+      // coins.vglp and graph.vglp until their rewrite.
+      const recursive = '''
 YesNo ::= yes ; no.
 Peers ::= [] ; [Constant | Peers].
+Menu ::= menu(Peers, YesNo?).
+procedure (Menu)*choose(YesNo).
+(menu([a, b], A))*choose(A?).
+''';
+      final (l1, c1) = at(recursive, 'procedure');
+      expect(
+          () => compile(recursive),
+          refusedAt(
+              'The interactive type Menu is not flat: the program writes '
+              'Peers, a recursive type that is neither a Stream nor a List, '
+              'and an interactive type is flat, "it has no other recursive '
+              'type" (vGLP, Definition "Volitional Procedure, Interactive '
+              'Type, Interactive Term, Ordinary Clause, vGLP Program")',
+              l1,
+              c1));
+      // A list cell outside a Stream or a List.
+      const cell = '''
+YesNo ::= yes ; no.
 Nil ::= [].
 Pair ::= [Integer | Nil].
-Menu ::= menu(Peers, Pair, YesNo?).
+Menu ::= menu(Pair, YesNo?).
 procedure (Menu)*choose(YesNo).
-(menu([a, b], [1], A))*choose(A?).
+(menu([1], A))*choose(A?).
+''';
+      final (l2, c2) = at(cell, 'procedure');
+      expect(
+          () => compile(cell),
+          refusedAt(
+              'The interactive type Menu is not flat: the program writes '
+              'Pair, a list cell of which is neither a Stream nor a List, and '
+              'an interactive type is flat, "built from constants, String, '
+              'Integer, Real, Key, Constant, Module, named types so built, '
+              'tuples and unions, and Stream or List" (vGLP, Definition',
+              l2,
+              c2));
+      // A stream under a stream.
+      const nested = '''
+YesNo ::= yes ; no.
+Feed ::= feed(Stream(Stream(String)), YesNo?).
+procedure (Feed)*see(YesNo).
+(feed([["a"]], A))*see(A?).
+''';
+      final (l3, c3) = at(nested, 'procedure');
+      expect(
+          () => compile(nested),
+          refusedAt(
+              'The interactive type Feed is not flat: the program writes '
+              'Stream(Stream(String)), whose element Stream(String) is a '
+              'stream or a list, and an interactive type is flat, "never '
+              'under another Stream or List" (vGLP, Definition',
+              l3,
+              c3));
+      // A Stream as an alternative of a union.
+      const union = '''
+YesNo ::= yes ; no.
+Maybe ::= none ; Stream(Integer).
+Card ::= card(Maybe, YesNo?).
+procedure (Card)*see(YesNo).
+(card(none, A))*see(A?).
+''';
+      final (l4, c4) = at(union, 'procedure');
+      expect(
+          () => compile(union),
+          refusedAt(
+              'The interactive type Card is not flat: the program writes '
+              'Maybe, a union one of whose alternatives is Stream(Integer), '
+              'neither the whole type nor an argument of a tuple, and an '
+              'interactive type is flat, "Stream or List as the whole type or '
+              'as an argument of a tuple" (vGLP, Definition',
+              l4,
+              c4));
+      // A writer-mode type that holds no question at all, refused the same.
+      const none = '''
+Nil ::= [].
+Pair ::= [Integer | Nil].
+Note ::= note(Pair).
+procedure (Note)*tell(Integer?).
+(note([N?]))*tell(N).
+''';
+      final (l5, c5) = at(none, 'procedure');
+      expect(
+          () => compile(none),
+          refusedAt(
+              'The interactive type Note is not flat: the program writes '
+              'Pair, a list cell of which is neither a Stream nor a List, and '
+              'an interactive type is flat',
+              l5,
+              c5));
+    });
+
+    test('its flat form, a Stream or a List or a named type defined as one, '
+        'is shown as a thread, and no ref(T) or form(\'.\', ...) is emitted '
+        '(sGLP\'s Peers and Wallet written List(Peer) and List(Holding))',
+        () {
+      final c = compile('''
+Peer ::= Constant.
+List(X) ::= [] ; [X | List(X)].
+Holding ::= holding(Peer, Integer).
+Peers ::= List(Peer).
+Wallet ::= List(Holding).
+Request ::= pay(Peer, Integer) ; swap(Peer, Integer).
+Menu ::= menu(Peers, Wallet, Request?).
+procedure (Menu)*ask(Peers?, Wallet?, Request).
+(menu(Fs?, W?, R))*ask(Fs, W, R?).
 ''');
       expect(
           c.widgets['Menu'],
-          "form(menu, [field('Peers', thread), field('Pair', shown), "
-          "field('YesNo', buttons([yes, no]))])");
+          "form(menu, [field('Peers', thread), field('Wallet', thread), "
+          "field('Request', menu([form(pay, [field('Peer', peer), "
+          "field('Integer', number)]), form(swap, [field('Peer', peer), "
+          "field('Integer', number)])]))])");
       expect(c.source, isNot(contains('ref(')));
       expect(c.source, isNot(contains("form('.'")));
+    });
+
+    test('a Stream a scope\'s definition names by its instantiation, '
+        'Stream<Integer>, is the Stream it is: not refused as a recursive '
+        'type where the program writes it (bonds_agent.vglp\'s SwapOffer, '
+        'of its directory\'s self.glp)', () {
+      final tmp = Directory.systemTemp.createTempSync('vglp_scope_');
+      addTearDown(() => tmp.deleteSync(recursive: true));
+      final self = File('${tmp.path}/self.glp')
+        ..writeAsStringSync('Offer ::= offer(Integer, Stream(Integer)).\n');
+      final inScope = buildAncestorScope(
+          chain: [self.path],
+          rootSelfGlpPath: File('$_programs/self.glp').absolute.path);
+      final c = compileCanonical('''
+YesNo ::= yes ; no.
+Card ::= card(Offer, YesNo?).
+procedure (Card)*see(Offer?, YesNo).
+(card(O?, A))*see(O, A?).
+''', dispatcher: dispatcher, scope: inScope);
+      expect(c.widgets['Card'],
+          "form(card, [field('Offer', shown), field('YesNo', buttons([yes, no]))])");
+    });
+
+    test('the type _ at a position the person writes is refused, none of the '
+        'Definition\'s building blocks (vGLP #8 Cowork, 2026-10-11 15:47 UTC, '
+        'item 3)', () {
+      const why = 'is not flat: the person writes a position of type _, none '
+          'of the types an interactive type is built from, and an '
+          'interactive type is flat, "built from constants, String, Integer, '
+          'Real, Key, Constant, Module, named types so built, tuples and '
+          'unions, and Stream or List" (vGLP, Definition "Volitional '
+          'Procedure, Interactive Type, Interactive Term, Ordinary Clause, '
+          'vGLP Program")';
+      // A field of a form the person writes.
+      const field = '''
+Note ::= note(String, _).
+procedure (Note?)*note(Note).
+(N)*note(N?).
+''';
+      final (l1, c1) = at(field, 'procedure');
+      expect(() => compile(field),
+          refusedAt('The interactive type Note? $why', l1, c1));
+      // A question inside a structure the program writes.
+      const inside = '''
+Card ::= card(Integer, _?).
+procedure (Card)*see(_).
+(card(1, X))*see(X?).
+''';
+      final (l2, c2) = at(inside, 'procedure');
+      expect(() => compile(inside),
+          refusedAt('The interactive type Card $why', l2, c2));
+      // The element of a stream the person writes.
+      const stream = '''
+procedure (Stream(_)?)*any(Stream(_)).
+(Xs)*any(Xs?).
+''';
+      expect(() => compile(stream),
+          refusedAt('The interactive type Stream(_)? $why', 1, 1));
     });
 
     test('a position the person writes of a type parameter is refused '
