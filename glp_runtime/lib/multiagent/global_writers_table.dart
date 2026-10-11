@@ -82,6 +82,12 @@ class GlobalWritersTable {
   /// This entry is permanent - never removed.
   HeapCell? _serializerWriterAddr;
 
+  /// The D_p of the serializer entry `(N_p, D_p)` (IGLP Definition Index-0
+  /// Serializer): "the set of (sender, serial) pairs of the cold calls
+  /// appended so far", empty at boot.  A cold call delivered twice is
+  /// appended once.
+  final Set<(String, int)> _serializerAppended = {};
+
   /// GlobalizeEntries: direct index lookup
   /// Key is the index i, value is the entry at that index.
   /// Corresponds to global name `_w(agentId, i)`.
@@ -134,6 +140,25 @@ class GlobalWritersTable {
 
   /// Check if the serializer entry is initialized.
   bool get hasSerializerEntry => _serializerWriterAddr != null;
+
+  /// Whether the cold call of serial [serial] from [sender] is in the
+  /// serializer entry's D_p: appended before, so a repeat (Definition madGLP
+  /// Receive Transaction, Serializer case: "If (s, i) ∈ D_q, m is a repeat").
+  bool serializerHasAppended(String sender, int serial) =>
+      _serializerAppended.contains((sender, serial));
+
+  /// Add the pair ([sender], [serial]) to the serializer entry's D_p, as the
+  /// Serializer case does when it appends the cold call: "The entry at index 0
+  /// in W'_q becomes (N'_q, D_q ∪ {(s, i)})".
+  void recordSerializerAppend(String sender, int serial) {
+    if (_serializerWriterAddr == null) {
+      throw StateError('Cannot record a cold call: serializer not initialized');
+    }
+    _serializerAppended.add((sender, serial));
+  }
+
+  /// The number of pairs in the serializer entry's D_p.
+  int get serializerAppendedCount => _serializerAppended.length;
 
   // ===========================================================================
   // GlobalizeEntry Operations
@@ -272,7 +297,8 @@ class GlobalWritersTable {
   @override
   String toString() {
     final buf = StringBuffer('GlobalWritersTable($agentId, nextIndex=$_nextIndex)\n');
-    buf.writeln('  Serializer[0]: ${_serializerWriterAddr ?? "(not initialized)"}');
+    buf.writeln('  Serializer[0]: ${_serializerWriterAddr ?? "(not initialized)"}'
+        ', ${_serializerAppended.length} cold calls appended');
     buf.writeln('  GlobalizeEntries:');
     for (final entry in _globalizeEntries.entries) {
       buf.writeln('    [${entry.key}] ${entry.value}');

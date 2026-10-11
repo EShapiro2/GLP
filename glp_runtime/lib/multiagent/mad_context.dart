@@ -440,10 +440,16 @@ class MadContext {
 
   /// Handle serializer assignment _w(p, 0) := [T | _w(p,0)]
   ///
-  /// This is a cold-call to our network input stream.
-  /// Spec Section 8.3: "Agent q finds the permanent entry `(N_q, *)` at index 0.
-  /// Localize T↑ by q to get T_q↓. Assign N_q := [T_q↓ | N'_q] where N'_q is a
-  /// fresh writer. Update the entry to `(N'_q, *)` at index 0."
+  /// This is a cold-call to our network input stream, under [serial] from
+  /// [fromAgent], the sender the layer authenticates.  Definition madGLP
+  /// Receive Transaction, Serializer case: "The receiving agent is q, with
+  /// entry (N_q, D_q) at index 0 in W_q.  If (s, i) ∈ D_q, m is a repeat: it is
+  /// dropped and nothing changes.  Otherwise let N'_q be a fresh local writer,
+  /// σ̂ = {N_q := [T_q↓ | N'_q?]} ... The entry at index 0 in W'_q becomes
+  /// (N'_q, D_q ∪ {(s, i)})."
+  ///
+  /// A repeat is dropped before anything is localized, so it creates no entry,
+  /// record, goal, request or report.
   void _handleSerializerAssignment(Term value, String fromAgent, int serial) {
     _trace('[MAD $agentId] _handleSerializerAssignment: cold-call from '
         '$fromAgent under serial $serial');
@@ -454,6 +460,12 @@ class MadContext {
       throw StateError('Serializer entry not initialized at index 0');
     }
     _trace('[MAD $agentId] _handleSerializerAssignment: current serializer writer=$currentWriter');
+
+    if (wp.serializerHasAppended(fromAgent, serial)) {
+      _trace('[MAD $agentId] _handleSerializerAssignment: ($fromAgent, '
+          '$serial) appended before — a repeat, dropped');
+      return;
+    }
 
     // The value is [T | _w(p,0)] - extract the content T
     Term content;
@@ -497,6 +509,7 @@ class MadContext {
     }
 
     _appendToNetworkInput(content);
+    wp.recordSerializerAppend(fromAgent, serial);
   }
 
   /// Append [content] to this agent's network input stream through the index-0

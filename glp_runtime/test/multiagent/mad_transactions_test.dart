@@ -176,6 +176,84 @@ void main() {
       // Entry was created by localize then removed by delivery.
       expect(ctx.wp.findByRemote('p', 5), isNull);
     });
+
+    // Definition madGLP Receive Transaction, Serializer case: "If (s, i) ∈
+    // D_q, m is a repeat: it is dropped and nothing changes.  Otherwise ...
+    // The entry at index 0 in W'_q becomes (N'_q, D_q ∪ {(s, i)})."
+    test('a serializer message is appended once, by its sender and serial',
+        () {
+      final runtime = GlpRuntime();
+      final ctx = MadContext(agentId: 'q', runtime: runtime);
+      final (netW, _) = runtime.heap.allocateVariable();
+      ctx.wp.initializeSerializerEntry(netW);
+
+      Term cell(Term content) => StructTerm(
+          '.', [content, StructTerm('_w', [ConstTerm('q'), ConstTerm(0)])]);
+      void receive(Term content, String from, int serial) =>
+          ctx.handleMadAssignment(
+            globalName: GlobalName.writer('q', 0),
+            value: cell(content),
+            fromAgent: from,
+            serial: serial,
+          );
+      List<Object?> stream() {
+        final out = <Object?>[];
+        Object? c = runtime.heap.derefAddr(netW);
+        while (c is StructTerm && c.functor == '.') {
+          final head = c.args[0];
+          out.add(head is ConstTerm ? head.value : head);
+          final tail = c.args[1];
+          if (tail is! VarRef) break;
+          c = runtime.heap.derefAddr(tail.addr);
+        }
+        return out;
+      }
+
+      // A cold call carrying a reader: localized, appended, its pair in D_q.
+      receive(StructTerm('_r', [ConstTerm('p'), ConstTerm(1)]), 'p', 2);
+      expect(ctx.wp.localizeEntryCount, 1);
+      final writerAfterFirst = ctx.wp.serializerWriterAddr;
+      expect(ctx.wp.serializerHasAppended('p', 2), isTrue);
+
+      // The same message again: dropped and nothing changes — no second
+      // entry, no second element, the entry's writer where it was.
+      receive(StructTerm('_r', [ConstTerm('p'), ConstTerm(1)]), 'p', 2);
+      expect(ctx.wp.localizeEntryCount, 1);
+      expect(ctx.wp.serializerWriterAddr, writerAfterFirst);
+      expect(ctx.wp.serializerAppendedCount, 1);
+
+      // A fresh serial from the same sender, and the same serial from
+      // another, are new cold calls and are appended.
+      receive(ConstTerm('second'), 'p', 3);
+      receive(ConstTerm('third'), 'r', 2);
+      receive(ConstTerm('third'), 'r', 2);
+      final s = stream();
+      expect(s.length, 3);
+      expect(s.sublist(1), ['second', 'third']);
+      expect(ctx.wp.serializerAppendedCount, 3);
+    });
+
+    test('a serializer message without a serial is refused, and a serial on '
+        'another message', () {
+      final runtime = GlpRuntime();
+      final ctx = MadContext(agentId: 'q', runtime: runtime);
+      final (netW, _) = runtime.heap.allocateVariable();
+      ctx.wp.initializeSerializerEntry(netW);
+      expect(
+          () => ctx.handleMadAssignment(
+              globalName: GlobalName.writer('q', 0),
+              value: ConstTerm('x'),
+              fromAgent: 'p'),
+          throwsArgumentError);
+      expect(
+          () => ctx.handleMadAssignment(
+              globalName: GlobalName.writer('q', 4),
+              value: ConstTerm('x'),
+              fromAgent: 'p',
+              serial: 1),
+          throwsArgumentError);
+      expect(runtime.heap.derefAddr(netW), isNot(isA<StructTerm>()));
+    });
   });
 
   group('Send Transaction', () {
