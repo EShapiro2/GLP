@@ -165,6 +165,13 @@ exported procedure test21_match_available_on_address(SignalReply, SignalReply,
 test21_match_available_on_address(RA?, RB?, P?) :-
     rv_agent_test # test21_match_available_on_address(RA, RB, P).
 
+imported procedure rv_agent_test#test22_available_admitted_no_layer(
+    Signature, SignalReply, SignalReply).
+exported procedure test22_available_admitted_no_layer(Signature, SignalReply,
+                                                      SignalReply).
+test22_available_admitted_no_layer(S?, RB?, RA?) :-
+    rv_agent_test # test22_available_admitted_no_layer(S, RB, RA).
+
 %% =============================================================================
 %% ENTRY POINTS — rv_client_test
 %% =============================================================================

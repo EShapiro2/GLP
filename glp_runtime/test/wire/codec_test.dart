@@ -146,6 +146,7 @@ void main() {
       final a = WireAssignment.serializer(
         agent: agent,
         head: WStruct('intro', [const WConst(WString('hi'))]),
+        serial: 5,
       );
       expect(a.gIsReader, isFalse);
       expect(a.gIndex, 0);
@@ -156,6 +157,58 @@ void main() {
       expect(tail.index, 0);
       expect(tail.agentString, 'queen');
       expect(_roundTripAssign(a), a);
+    });
+
+    // Code format, Messages: "A serializer (cold-call) message to agent q is
+    // the assignment _w(q,0) := [T↑ | _w(q,0)]: polarity 0, agent q, index 0,
+    // clen serial, then the encoding of the list cell"; the serial is new in
+    // code-format version 3.
+    test('the serializer message carries its serial after the index', () {
+      final agent = Uint8List.fromList(utf8.encode('q'));
+      final a = WireAssignment.serializer(
+          agent: agent, head: const WConst(WInt(1)), serial: 200);
+      final b = encodeAssignmentToBytes(a);
+      // polarity 0; agent: length 1, 'q'; index 0; serial 200 as a two-byte
+      // clen (high bits 10); then the list cell (tag 3, '.', arity 2).
+      expect(b.sublist(0, 6), [0, 1, 0x71, 0, 0x80, 200]);
+      expect(b[6], 3);
+      final back = _roundTripAssign(a);
+      expect(back.serial, 200);
+      expect(back, a);
+      // Two serializer messages differing only in serial are two messages.
+      expect(
+          WireAssignment.serializer(
+              agent: agent, head: const WConst(WInt(1)), serial: 201),
+          isNot(a));
+    });
+
+    test('no other message carries a serial', () {
+      final a = WireAssignment(
+        gIsReader: false,
+        gAgent: Uint8List.fromList(utf8.encode('q')),
+        gIndex: 4,
+        value: const WConst(WInt(1)),
+      );
+      // polarity 0; agent 'q'; index 4; then the term at once.
+      expect(encodeAssignmentToBytes(a).sublist(0, 5), [0, 1, 0x71, 4, 1]);
+      expect(_roundTripAssign(a).serial, isNull);
+    });
+
+    test('a serializer message without a serial, or another with one, is '
+        'refused', () {
+      final q = Uint8List.fromList(utf8.encode('q'));
+      expect(
+          () => WireAssignment(
+              gIsReader: false, gAgent: q, gIndex: 0, value: const WConst(WNil())),
+          throwsArgumentError);
+      expect(
+          () => WireAssignment(
+              gIsReader: true,
+              gAgent: q,
+              gIndex: 3,
+              value: const WConst(WNil()),
+              serial: 1),
+          throwsArgumentError);
     });
   });
 

@@ -53,23 +53,27 @@ TypeExpr termToTypeExpr(Term term) {
       );
     }
 
-    // Parameterized type reference — uppercase-initial functor (possibly with trailing '?')
-    // e.g., Stream(X), Channel(In, Out), Stream(X)? (encoded as "Stream?")
-    // In type definition bodies, uppercase functor with arguments is always a parameterized
-    // type reference, never a struct alternative (struct functors are lowercase atoms).
-    var functor = term.functor;
-    bool isInput = false;
-    if (functor.endsWith('?')) {
-      functor = functor.substring(0, functor.length - 1);
-      isInput = true;
-    }
-    if (functor.isNotEmpty && _isUppercaseLetter(functor[0])) {
-      return TypeRef(functor, term.line, term.column,
-          isInput: isInput,
-          typeArgs: term.args.map(termToTypeExpr).toList());
+    // Parameterized type reference — a name written as a type name is, a
+    // variable-shaped token, before "(" ([TypeRefTerm]), uppercase-initial,
+    // e.g., Stream(X), Channel(In, Out), Stream(X)? (encoded as "Stream?").
+    // A structure whose functor is a name written as a constant is, quoted
+    // or bare, is a structure alternative whatever its first letter.
+    if (term is TypeRefTerm) {
+      var functor = term.functor;
+      bool isInput = false;
+      if (functor.endsWith('?')) {
+        functor = functor.substring(0, functor.length - 1);
+        isInput = true;
+      }
+      if (functor.isNotEmpty && _isUppercaseLetter(functor[0])) {
+        return TypeRef(functor, term.line, term.column,
+            isInput: isInput,
+            typeArgs: term.args.map(termToTypeExpr).toList());
+      }
     }
 
-    // Regular structure (lowercase functor, including conjunction ',')
+    // A structure alternative: its functor a name, quoted or bare, an
+    // operator's among them, and the conjunction ','
     return StructAlt(
       term.functor,
       term.args.map(termToTypeExpr).toList(),
@@ -80,6 +84,19 @@ TypeExpr termToTypeExpr(Term term) {
   
   // Should not reach here for valid terms
   throw ArgumentError('Cannot convert term to type expression: $term');
+}
+
+/// A parameterised type reference in a type alternative, `Name(T1, ..., Tn)`,
+/// as the parser reads it: `Name` a variable-shaped token, as a type name is
+/// written, its functor carrying a trailing `?` where it is marked as a dual.
+/// Only this is read as a type reference ([termToTypeExpr]).  A quoted name is
+/// a string, never a type name (GLP-Spec appendix-lp.tex, Definition "Logic
+/// Programs Syntax"; GLP #3 Cowork, 2026-10-11 12:59 UTC, "21:56"), so
+/// `'Odd one'(Integer)` is the structure of that functor, its first letter a
+/// capital or not.  Until 2026-10-11 a structure was read as a type reference
+/// by its functor's first letter, quoted or not.
+class TypeRefTerm extends StructTerm {
+  TypeRefTerm(super.functor, super.args, super.line, super.column);
 }
 
 /// Check if a character is an uppercase letter (A-Z).

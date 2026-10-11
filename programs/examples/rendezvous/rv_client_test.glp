@@ -126,7 +126,8 @@ test6_bad_signature(ReplyA?, ReplyB?) :-
 %% The punch arm is unreachable through the RV agent under the plain REPL,
 %% where no test presents an attestation signed under the social graph, so
 %% it is exercised on a literal reply.  The guard is ground(Addr?) and
-%% punch_udp is rv_client's stub.
+%% punch_udp is the root's, which under the plain REPL, no networking layer
+%% bound, returns having done nothing (IGLP, "One interface").
 
 exported procedure test7_handle_reply_punch.
 test7_handle_reply_punch :-

@@ -13,7 +13,9 @@
 /// ground terms and never as text (GSG, Appendix "The Prototype's Screens",
 /// and Section 3, "What the super-app grants a mini-app", (ib)).  Network
 /// output goes through send_to_net → the _send/3 kernel → MadContext; output to
-/// the person through send_to_user → the _output/1 kernel → [onOutput].
+/// the person through send_to_user → the _output/1 kernel → [onUserOutput],
+/// each element a ground term, whole, and in the agent's transcript
+/// ([onOutput]) as a terminal shows it.
 library;
 
 import 'dart:io';
@@ -21,6 +23,7 @@ import 'dart:typed_data';
 
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
+import 'package:glp_runtime/runtime/body_kernels.dart' show formatGroundTerm;
 import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:glp_runtime/runtime/external_io.dart';
@@ -33,7 +36,7 @@ import 'package:glp_runtime/multiagent/simulation_network.dart';
 ///
 /// Usage:
 /// 1. Create with the agent's id and the path of its one program
-/// 2. Set callbacks: onOutput, onLog, onSendMadMessage
+/// 2. Set callbacks: onUserOutput, onOutput, onLog, onSendMadMessage
 /// 3. Call initialize() to compile and start
 /// 4. Call injectUserInput(act) with each of the person's acts, a ground term
 /// 5. Call onMadMessageReceived(from, payload) for network messages
@@ -55,15 +58,29 @@ class AgentRuntime {
   final List<String> extraArgs;
 
   // Callbacks set by UI layer
+  /// The agent's transcript, line by line: its own notes and, marked `< `,
+  /// each element its program emits to the person, as a terminal shows it
+  /// ([formatGroundTerm]).  No screen reads it: a screen is handed the term
+  /// itself, by [onUserOutput].
   void Function(String line)? onOutput;
+
+  /// The person's bridge: each element the agent's program emits to its
+  /// person by send_to_user/1, handed over whole, a ground term (GLP-Spec
+  /// appendix-guards.tex, "Output to the person": send_to_user(Stream) "emits
+  /// each element of Stream to the person operating the agent").  Until
+  /// 2026-10-11 a screen had only [onOutput]'s line, and parsed it.
+  void Function(rt.Term term)? onUserOutput;
   void Function(String tag, String message)? onLog;
   Future<void> Function(String destination, Uint8List payload)? onSendMadMessage;
 
-  /// Connectivity callbacks surfaced from the networking seam (spec §2/§3). The
-  /// coordinator forwards router events via [onConnectivityEvent].
-  void Function(PubKey pk, Transport t)? onPeerConnected;
-  void Function(PubKey pk, Transport t)? onPeerDisconnected;
-  void Function(DiscoveredPeer p)? onPeerDiscovered;
+  /// Connectivity callbacks surfaced from the networking seam, with the
+  /// parameters of [GlpNetwork]'s (GNA, "Connection and Reachability" and
+  /// "Concepts and Principles", Discovery). The coordinator forwards router
+  /// events via [onConnectivityEvent].
+  void Function(PubKey pk, Underlay underlay, Object? identity)?
+      onPeerConnected;
+  void Function(PubKey pk, Underlay underlay)? onPeerDisconnected;
+  void Function(PubKey pk, ProximityUnderlay underlay)? onPeerDiscovered;
 
   /// This agent's Ed25519 key pair. Provided by the coordinator, or generated.
   final ({PubKey pub, Uint8List priv})? keyPair;
@@ -125,15 +142,20 @@ class AgentRuntime {
     return pk;
   }
 
-  /// Forward a router connectivity event to this client's callbacks (seam §3).
-  void onConnectivityEvent(PubKey peer, Transport t, ConnectivityEvent event) {
+  /// Forward a router connectivity event to this client's callbacks.  The
+  /// simulation attests nothing, so a connection carries no identity; a
+  /// discovery is over a proximity underlay, the PAN throughout (IGLP,
+  /// "Simulation realisation").
+  void onConnectivityEvent(
+      PubKey peer, Underlay underlay, ConnectivityEvent event) {
     switch (event) {
       case ConnectivityEvent.connected:
-        onPeerConnected?.call(peer, t);
+        onPeerConnected?.call(peer, underlay, null);
       case ConnectivityEvent.disconnected:
-        onPeerDisconnected?.call(peer, t);
+        onPeerDisconnected?.call(peer, underlay);
       case ConnectivityEvent.discovered:
-        onPeerDiscovered?.call(DiscoveredPeer(peer, t));
+        onPeerDiscovered?.call(
+            peer, ProximityUnderlay.values.byName(underlay.name));
     }
   }
 
@@ -212,9 +234,11 @@ class AgentRuntime {
     _ctx = engine.madContext;
     _log('INIT: MadContext created');
 
-    // Wire _output/1 kernel to our output callback
-    _runtime!.outputCallback = (text) {
-      _output('< $text');
+    // The _output/1 kernel's person: the bridge is handed each element whole
+    // ([onUserOutput]), and the transcript shows it as a terminal does.
+    _runtime!.outputTermCallback = (term) {
+      onUserOutput?.call(term);
+      _output('< ${formatGroundTerm(term)}');
     };
 
     // Networking seam (spec §3-4): route outgoing/incoming through a
@@ -224,10 +248,10 @@ class AgentRuntime {
     final network = SimulationNetworkClient(
       selfId: agentIdLower,
       directory: directory,
+      keyPair: kp,
       sendToRouter: (toId, payload) =>
           _sendMadPayload(toId, Uint8List.fromList(payload)),
     );
-    network.putIdentity(kp.pub, kp.priv);
     _network = network;
     _ctx!.network = network; // backs the seam predicates (IGLP Definition Seam Predicates)
 
@@ -365,7 +389,7 @@ class AgentRuntime {
     }
 
     network.onMessageReceived
-        ?.call(_pkFor(from.toLowerCase()), payload, '', Transport.ble);
+        ?.call(_pkFor(from.toLowerCase()), payload, '', Underlay.pan);
 
     updateStats();
     await _runUntilQuiescent();

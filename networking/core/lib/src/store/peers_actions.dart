@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 import '../models/peer.dart';
-import 'messages_actions.dart';
+import '../models/underlay.dart';
 import 'peers_state.dart';
 
 /// Which BLE role our device played in the connection.
@@ -156,21 +156,25 @@ class PeerBleAuthenticatedAction extends PeerAction {
   PeerBleAuthenticatedAction(this.publicKey);
 }
 
-/// The attestation exchange completed on one medium (spec §Session
-/// Establishment). Until it has, the peer is not reachable on that medium:
-/// "A peer becomes reachable when its session is established, authenticated,
-/// and attested."
+/// The attestation exchange completed on one session (spec §Session
+/// Establishment). Until it has, the peer is not reachable over that
+/// session's underlay: "A peer becomes reachable over an underlay when its
+/// session on that underlay is established, authenticated, and attested."
+///
+/// [underlay] is the session's: [Underlay.pan] for the GATT session, and for
+/// the UDP session [Underlay.lan] or [Underlay.wan] as the layer classified
+/// the peer's address against the agent's own local prefixes.
 ///
 /// A failed verification produces no action of this kind — it tears the
 /// session down instead.
 class PeerAttestedAction extends PeerAction {
   final Uint8List publicKey;
-  final MessageTransport transport;
+  final Underlay underlay;
   final PeerAttestation attestation;
 
   PeerAttestedAction({
     required this.publicKey,
-    required this.transport,
+    required this.underlay,
     required this.attestation,
   });
 }

@@ -39,14 +39,18 @@ class PayloadCodec {
   }
 
   /// Encode a serializer (cold-call) message to agent q: the value message
-  /// `_w(q,0) := [T↑ | _w(q,0)]`. The tail is the encoded variable `_w(q,0)`.
+  /// `_w(q,0) := [T↑ | _w(q,0)]` under the sender's [serial], "an index the
+  /// sender allocates from its global-name counter" (§cf-terms, Messages).
+  /// The tail is the encoded variable `_w(q,0)`.
   static List<int> createSerializerPayload(
-      GlobalName serializerName, Term content) {
+      GlobalName serializerName, Term content,
+      {required int serial}) {
     assert(serializerName.isWriter && serializerName.index == 0,
         'Serializer payload requires _w(agent, 0) global name');
     return encodeMessageToBytes(WireValueMessage(WireAssignment.serializer(
       agent: _agentBytes(serializerName.agent),
       head: termToWire(content),
+      serial: serial,
     )));
   }
 
@@ -93,7 +97,20 @@ class PayloadCodec {
   /// carrying it is refused at receipt, with the reason ... nothing is
   /// delivered as text" (GLP #3 Cowork, 2026-10-02 20:58 UTC).  Until
   /// 2026-10-02 any module a message carried decoded to a Module value.
+  ///
+  /// A serializer message's serial is not returned; the Receive transaction
+  /// takes it from [deserializeValuePayload].
   static (GlobalName, Term) deserializeGlobalSendPayload(List<int> payload) {
+    final (:name, :value, serial: _) = deserializeValuePayload(payload);
+    return (name, value);
+  }
+
+  /// [deserializeGlobalSendPayload] with the serial: a serializer message to
+  /// `_w(q,0)` carries the serial its sender allocated, which with the sender
+  /// names the cold call for the whole run (§cf-terms, Messages); [serial] is
+  /// null for every other value message.
+  static ({GlobalName name, Term value, int? serial}) deserializeValuePayload(
+      List<int> payload) {
     final m = decodeMessageFromBytes(_asUint8(payload));
     if (m is! WireValueMessage) {
       throw WireFormatException('expected value message (kind 0)');
@@ -103,7 +120,11 @@ class PayloadCodec {
     final globalName = a.gIsReader
         ? GlobalName.reader(agent, a.gIndex)
         : GlobalName.writer(agent, a.gIndex);
-    return (globalName, _wireToTerm(a.value, certify: true));
+    return (
+      name: globalName,
+      value: _wireToTerm(a.value, certify: true),
+      serial: a.serial,
+    );
   }
 
   /// Serialize a ground term as a canonical agent-message payload. Throws if a

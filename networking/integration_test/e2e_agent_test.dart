@@ -30,6 +30,7 @@ import 'package:sodium_libs/sodium_libs_sumo.dart';
 
 import 'package:grassroots_networking/src/grassroots_network.dart';
 import 'package:grassroots_networking_core/src/models/identity.dart';
+import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 
 const role = String.fromEnvironment('E2E_ROLE');
@@ -112,8 +113,8 @@ class Agent {
 
   /// (senderHex, utf8 payload or '<binary n bytes>') in arrival order.
   final messages = <(String, Uint8List)>[];
-  final connects = <(String, MessageTransport, DateTime)>[];
-  final disconnects = <(String, MessageTransport, DateTime)>[];
+  final connects = <(String, Underlay, DateTime)>[];
+  final disconnects = <(String, Underlay, DateTime)>[];
   final redemptions = <String>[];
 
   static Future<Agent> spawn(String nickname) async {
@@ -136,18 +137,18 @@ class Agent {
       sodium: sodium,
     );
     final agent = Agent(identity, store, network);
-    network.onMessageReceived = (messageId, sender, payload, transport) {
+    network.onMessageReceived = (sender, payload, messageId, underlay) {
       agent.messages.add((hexOf(sender), payload));
       note('onMessageReceived from ${hexOf(sender).substring(0, 8)} '
-          '(${payload.length} bytes, $transport)');
+          '(${payload.length} bytes, $underlay)');
     };
-    network.onPeerConnected = (pubkey, transport, identity) {
-      agent.connects.add((hexOf(pubkey), transport, DateTime.now()));
-      note('onPeerConnected ${hexOf(pubkey).substring(0, 8)} via $transport');
+    network.onPeerConnected = (pubkey, underlay, identity) {
+      agent.connects.add((hexOf(pubkey), underlay, DateTime.now()));
+      note('onPeerConnected ${hexOf(pubkey).substring(0, 8)} via $underlay');
     };
-    network.onPeerDisconnected = (pubkey, transport) {
-      agent.disconnects.add((hexOf(pubkey), transport, DateTime.now()));
-      note('onPeerDisconnected ${hexOf(pubkey).substring(0, 8)} via $transport');
+    network.onPeerDisconnected = (pubkey, underlay) {
+      agent.disconnects.add((hexOf(pubkey), underlay, DateTime.now()));
+      note('onPeerDisconnected ${hexOf(pubkey).substring(0, 8)} via $underlay');
     };
     network.onPeerLinkRedeemed = (redeemer) {
       agent.redemptions.add(hexOf(redeemer));
@@ -193,10 +194,12 @@ class Agent {
     note('observed: $what');
   }
 
+  /// A UDP session — on the LAN or the WAN — came up with [peerHex].
   bool udpConnectedTo(String peerHex) =>
-      connects.any((c) => c.$1 == peerHex && c.$2 == MessageTransport.udp);
+      connects.any((c) => c.$1 == peerHex && c.$2 != Underlay.pan);
+  /// A UDP session — on the LAN or the WAN — with [peerHex] went down.
   bool udpDisconnectedFrom(String peerHex) =>
-      disconnects.any((d) => d.$1 == peerHex && d.$2 == MessageTransport.udp);
+      disconnects.any((d) => d.$1 == peerHex && d.$2 != Underlay.pan);
   bool receivedFrom(String peerHex, bool Function(Uint8List) match) =>
       messages.any((m) => m.$1 == peerHex && match(m.$2));
 }

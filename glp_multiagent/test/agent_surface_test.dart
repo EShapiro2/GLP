@@ -6,6 +6,8 @@ import 'package:glp_multiagent/ui_runtime/agent_surface.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
 
+import 'fixture_term.dart';
+
 // Mirror the app: onChange triggers a setState that rebuilds AgentSurface.
 Widget _wrap(UiRuntime r) => MaterialApp(
       home: SizedBox(
@@ -31,7 +33,7 @@ void main() {
     expect(find.text('No friends yet'), findsOneWidget);
 
     // Deliver the boundary notify (main.dart strips '< ' first).
-    r.handleLine('befriend(alice, req(1))');
+    r.handle(fixtureTerm('befriend(alice, req(1))'));
     await tester.pump();
 
     // The offer is a per-item alert on the Friends panel — a row for the
@@ -62,7 +64,7 @@ void main() {
     final r = UiRuntime(manifest: socialManifest, onSend: (t) => sent.add(formatTerm(t)));
     await tester.pumpWidget(_wrap(r));
 
-    r.handleLine('befriend_intro(alice, charlie, req(5))');
+    r.handle(fixtureTerm('befriend_intro(alice, charlie, req(5))'));
     await tester.pump();
 
     expect(find.text('Charlie'), findsOneWidget);
@@ -83,7 +85,7 @@ void main() {
     final r = UiRuntime(manifest: grassrootsManifest, onSend: (_) {});
     await tester.pumpWidget(_wrap(r));
 
-    r.handleLine('connected(bob)');
+    r.handle(fixtureTerm('connected(bob)'));
     await tester.pump();
 
     // Friends is the default panel; the friend is listed (capitalised).
@@ -96,8 +98,8 @@ void main() {
     final r = UiRuntime(manifest: grassrootsManifest, onSend: (t) => sent.add(formatTerm(t)));
     await tester.pumpWidget(_wrap(r));
 
-    r.handleLine('connected(alice)');
-    r.handleLine('trade_proposed(alice, bob, 0, 1, req(3))');
+    r.handle(fixtureTerm('connected(alice)'));
+    r.handle(fixtureTerm('trade_proposed(alice, bob, 0, 1, req(3))'));
     await tester.pump();
 
     // Switch to the Currencies panel; the swap alerts Alice's wallet row.

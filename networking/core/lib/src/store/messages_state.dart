@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import '../platform/compat.dart';
+import '../models/underlay.dart';
 import 'messages_actions.dart';
 
 /// Type of chat message content
@@ -32,7 +33,7 @@ enum ChatMessageType {
 @immutable
 class OutgoingMessage {
   final String messageId;
-  final MessageTransport transport;
+  final Underlay underlay;
   final Uint8List recipientPubkey;
   final int payloadSize;
   final DateTime sentAt;
@@ -42,7 +43,7 @@ class OutgoingMessage {
 
   const OutgoingMessage({
     required this.messageId,
-    required this.transport,
+    required this.underlay,
     required this.recipientPubkey,
     required this.payloadSize,
     required this.sentAt,
@@ -55,7 +56,7 @@ class OutgoingMessage {
       recipientPubkey.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
   OutgoingMessage copyWith({
-    MessageTransport? transport,
+    Underlay? underlay,
     Uint8List? recipientPubkey,
     int? payloadSize,
     MessageStatus? status,
@@ -64,7 +65,7 @@ class OutgoingMessage {
   }) {
     return OutgoingMessage(
       messageId: messageId,
-      transport: transport ?? this.transport,
+      underlay: underlay ?? this.underlay,
       recipientPubkey: recipientPubkey ?? this.recipientPubkey,
       payloadSize: payloadSize ?? this.payloadSize,
       sentAt: sentAt,
@@ -89,14 +90,14 @@ class OutgoingMessage {
 @immutable
 class IncomingMessage {
   final String messageId;
-  final MessageTransport transport;
+  final Underlay underlay;
   final Uint8List senderPubkey;
   final int payloadSize;
   final DateTime receivedAt;
 
   const IncomingMessage({
     required this.messageId,
-    required this.transport,
+    required this.underlay,
     required this.senderPubkey,
     required this.payloadSize,
     required this.receivedAt,
@@ -405,13 +406,13 @@ class MessagesState {
       .where((m) => m.status == MessageStatus.read)
       .toList();
 
-  /// Count of outgoing messages by transport
-  int outgoingCountByTransport(MessageTransport transport) =>
-      outgoingMessages.values.where((m) => m.transport == transport).length;
+  /// Count of outgoing messages by underlay
+  int outgoingCountByUnderlay(Underlay underlay) =>
+      outgoingMessages.values.where((m) => m.underlay == underlay).length;
 
-  /// Count of incoming messages by transport
-  int incomingCountByTransport(MessageTransport transport) =>
-      incomingMessages.values.where((m) => m.transport == transport).length;
+  /// Count of incoming messages by underlay
+  int incomingCountByUnderlay(Underlay underlay) =>
+      incomingMessages.values.where((m) => m.underlay == underlay).length;
 
   // ===== Conversation Getters =====
 

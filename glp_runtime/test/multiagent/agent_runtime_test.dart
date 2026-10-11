@@ -107,17 +107,24 @@ void main() {
       );
       final events = <String>[];
       final pk = generateKeyPair().pub;
-      agent.onPeerDiscovered = (p) => events.add('discovered');
-      agent.onPeerConnected = (p, t) => events.add('connected:$t');
-      agent.onPeerDisconnected = (p, t) => events.add('disconnected');
+      agent.onPeerDiscovered = (p, u) => events.add('discovered:$u');
+      agent.onPeerConnected = (p, u, identity) =>
+          events.add('connected:$u:$identity');
+      agent.onPeerDisconnected = (p, u) => events.add('disconnected:$u');
 
-      agent.onConnectivityEvent(pk, Transport.ble, ConnectivityEvent.discovered);
-      agent.onConnectivityEvent(pk, Transport.ble, ConnectivityEvent.connected);
+      agent.onConnectivityEvent(pk, Underlay.pan, ConnectivityEvent.discovered);
+      agent.onConnectivityEvent(pk, Underlay.pan, ConnectivityEvent.connected);
       agent.onConnectivityEvent(
-          pk, Transport.ble, ConnectivityEvent.disconnected);
+          pk, Underlay.pan, ConnectivityEvent.disconnected);
 
-      expect(events,
-          ['discovered', 'connected:Transport.ble', 'disconnected']);
+      // The callbacks carry GNA's parameters: discovery the proximity
+      // underlay, a connection the underlay and the attested identity --- none
+      // in the simulation --- and a disconnection the underlay.
+      expect(events, [
+        'discovered:ProximityUnderlay.pan',
+        'connected:Underlay.pan:null',
+        'disconnected:Underlay.pan'
+      ]);
     });
   });
 }

@@ -23,12 +23,12 @@
 /// final grassroots = GrassrootsNetwork(identity: identity);
 /// 
 /// // Set up callbacks
-/// grassroots.onMessageReceived = (senderPubkey, payload) {
+/// grassroots.onMessageReceived = (sender, payload, messageId, underlay) {
 ///   // Handle incoming GSG block
 /// };
 /// 
-/// grassroots.onPeerConnected = (publicKey, transport) {
-///   // peer reachable over `transport` (BLE or UDP)
+/// grassroots.onPeerConnected = (pk, underlay, identity) {
+///   // peer reachable over `underlay` (PAN, LAN or WAN)
 /// };
 /// 
 /// // Initialize and start
@@ -88,6 +88,7 @@ export 'src/identity_store.dart';
 export 'package:grassroots_networking_core/src/models/peer.dart';
 export 'package:grassroots_networking_core/src/models/packet.dart';
 export 'package:grassroots_networking_core/src/models/block.dart';
+export 'package:grassroots_networking_core/src/models/underlay.dart';
 
 // Redux Store (core states/actions/reducers; persistence is Flutter-side)
 export 'package:grassroots_networking_core/src/store/store.dart';

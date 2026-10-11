@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:grassroots_bluetooth_layer/grassroots_bluetooth_layer_testing.dart';
 import 'package:grassroots_networking_core/src/models/identity.dart';
+import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/store/app_state.dart';
 import 'package:grassroots_networking_core/src/store/peers_actions.dart'
     show BleDeviceRemovedAction, PeerAnnounceReceivedAction;
@@ -160,7 +161,7 @@ void main() {
       store = Store<AppState>(appReducer, initialState: AppState.initial);
       // The suite exercises open-mode dialing toward unknown peers; the
       // default trust level is closed.
-      store.dispatch(SetColdCallTrustLevelAction(ProximityMedium.ble, ColdCallTrustLevel.open));
+      store.dispatch(SetColdCallTrustLevelAction(ProximityUnderlay.pan, ColdCallTrustLevel.open));
       transport = BleTransportService(
         // Low service UUID → this transport is the deterministic first-mover,
         // so the existing "advertisement → dial" expectations hold against the
@@ -859,7 +860,7 @@ void main() {
       store = Store<AppState>(appReducer, initialState: AppState.initial);
       // The suite exercises open-mode dialing toward unknown peers; the
       // default trust level is closed.
-      store.dispatch(SetColdCallTrustLevelAction(ProximityMedium.ble, ColdCallTrustLevel.open));
+      store.dispatch(SetColdCallTrustLevelAction(ProximityUnderlay.pan, ColdCallTrustLevel.open));
       // Reset transport state so initialize works again
       // (no easy way to reset Redux from outside).
       transport = BleTransportService(
@@ -912,7 +913,7 @@ void main() {
 
     test('closed trust dials only derived UUIDs for accepted friends',
         () async {
-      store.dispatch(SetColdCallTrustLevelAction(ProximityMedium.ble, ColdCallTrustLevel.closed));
+      store.dispatch(SetColdCallTrustLevelAction(ProximityUnderlay.pan, ColdCallTrustLevel.closed));
       const unknownRemoteId = 'UNKNOWN';
       const unknownUuid = '84c40316-0871-e5ad-ffff-000000000000';
 
@@ -960,7 +961,7 @@ void main() {
       final ble =
           GrassrootsBluetooth.test(hostApi: hostApi, callbacks: callbacks);
       final store = Store<AppState>(appReducer, initialState: AppState.initial);
-      store.dispatch(SetColdCallTrustLevelAction(ProximityMedium.ble, ColdCallTrustLevel.open));
+      store.dispatch(SetColdCallTrustLevelAction(ProximityUnderlay.pan, ColdCallTrustLevel.open));
       final transport = BleTransportService(
         identity: await _makeIdentity('Sym'),
         store: store,
@@ -1009,7 +1010,7 @@ void main() {
       final ble =
           GrassrootsBluetooth.test(hostApi: hostApi, callbacks: callbacks);
       final store = Store<AppState>(appReducer, initialState: AppState.initial);
-      store.dispatch(SetColdCallTrustLevelAction(ProximityMedium.ble, ColdCallTrustLevel.open));
+      store.dispatch(SetColdCallTrustLevelAction(ProximityUnderlay.pan, ColdCallTrustLevel.open));
       final transport = BleTransportService(
         identity: identity,
         store: store,
@@ -1185,7 +1186,7 @@ void main() {
       final ble =
           GrassrootsBluetooth.test(hostApi: hostApi, callbacks: callbacks);
       final store = Store<AppState>(appReducer, initialState: AppState.initial);
-      store.dispatch(SetColdCallTrustLevelAction(ProximityMedium.ble, ColdCallTrustLevel.open));
+      store.dispatch(SetColdCallTrustLevelAction(ProximityUnderlay.pan, ColdCallTrustLevel.open));
       final transport = BleTransportService(
         identity: identity,
         store: store,
@@ -1717,7 +1718,7 @@ void main() {
       store = Store<AppState>(appReducer, initialState: AppState.initial);
       // The suite exercises open-mode dialing toward unknown peers; the
       // default trust level is closed.
-      store.dispatch(SetColdCallTrustLevelAction(ProximityMedium.ble, ColdCallTrustLevel.open));
+      store.dispatch(SetColdCallTrustLevelAction(ProximityUnderlay.pan, ColdCallTrustLevel.open));
       transport = BleTransportService(
         identity: await _makeIdentity('Watchdog'),
         store: store,

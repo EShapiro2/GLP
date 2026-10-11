@@ -41,13 +41,18 @@ enum PacketType {
   /// Session-encrypted signaling packet.
   secureSignaling(0x12),
 
-  /// One side's platform attestation over the session's digest (spec
-  /// §Session Establishment). Sent once, after the handshake completes;
-  /// never sent in clear, so only [secureAttestation] appears on the wire.
-  attestation(0x13),
+  /// A fragment of the attestation exchange (spec §Session Establishment):
+  /// each side sends its attestation and per-session signature "as a message
+  /// of the Message Protocol ... after handshake message 3", so it travels as
+  /// a `send` payload does — fragmented, acknowledged by [fragmentAck] and
+  /// [ack], retransmitted (§Message Protocol). The layout is [fragment]'s;
+  /// this type alone tells the receiver that the reassembled message is the
+  /// peer's attestation and not a payload. Never sent in clear, so only
+  /// [secureAttestationFragment] appears on the wire.
+  attestationFragment(0x13),
 
-  /// Session-encrypted platform attestation.
-  secureAttestation(0x14);
+  /// Session-encrypted attestation fragment.
+  secureAttestationFragment(0x14);
 
   final int value;
   const PacketType(this.value);
@@ -71,7 +76,7 @@ extension PacketTypeSessionSecurity on PacketType {
       case PacketType.ack:
       case PacketType.readReceipt:
       case PacketType.signaling:
-      case PacketType.attestation:
+      case PacketType.attestationFragment:
         return true;
       case PacketType.announce:
       case PacketType.noiseHandshake:
@@ -80,7 +85,7 @@ extension PacketTypeSessionSecurity on PacketType {
       case PacketType.secureAck:
       case PacketType.secureReadReceipt:
       case PacketType.secureSignaling:
-      case PacketType.secureAttestation:
+      case PacketType.secureAttestationFragment:
         return false;
     }
   }
@@ -92,7 +97,7 @@ extension PacketTypeSessionSecurity on PacketType {
       case PacketType.secureAck:
       case PacketType.secureReadReceipt:
       case PacketType.secureSignaling:
-      case PacketType.secureAttestation:
+      case PacketType.secureAttestationFragment:
         return true;
       case PacketType.announce:
       case PacketType.fragment:
@@ -100,7 +105,7 @@ extension PacketTypeSessionSecurity on PacketType {
       case PacketType.ack:
       case PacketType.readReceipt:
       case PacketType.signaling:
-      case PacketType.attestation:
+      case PacketType.attestationFragment:
       case PacketType.noiseHandshake:
         return false;
     }
@@ -118,8 +123,8 @@ extension PacketTypeSessionSecurity on PacketType {
         return PacketType.secureReadReceipt;
       case PacketType.signaling:
         return PacketType.secureSignaling;
-      case PacketType.attestation:
-        return PacketType.secureAttestation;
+      case PacketType.attestationFragment:
+        return PacketType.secureAttestationFragment;
       case PacketType.announce:
       case PacketType.noiseHandshake:
       case PacketType.secureFragment:
@@ -127,7 +132,7 @@ extension PacketTypeSessionSecurity on PacketType {
       case PacketType.secureAck:
       case PacketType.secureReadReceipt:
       case PacketType.secureSignaling:
-      case PacketType.secureAttestation:
+      case PacketType.secureAttestationFragment:
         throw StateError('Packet type $this has no secure variant');
     }
   }
@@ -144,15 +149,15 @@ extension PacketTypeSessionSecurity on PacketType {
         return PacketType.readReceipt;
       case PacketType.secureSignaling:
         return PacketType.signaling;
-      case PacketType.secureAttestation:
-        return PacketType.attestation;
+      case PacketType.secureAttestationFragment:
+        return PacketType.attestationFragment;
       case PacketType.announce:
       case PacketType.fragment:
       case PacketType.fragmentAck:
       case PacketType.ack:
       case PacketType.readReceipt:
       case PacketType.signaling:
-      case PacketType.attestation:
+      case PacketType.attestationFragment:
       case PacketType.noiseHandshake:
         throw StateError('Packet type $this is not session encrypted');
     }

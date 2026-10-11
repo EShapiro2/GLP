@@ -137,7 +137,7 @@ void main() {
     expect(await localCandidates(caller), isNotEmpty);
 
     final delivered = <String>[];
-    callee.onMessageReceived = (messageId, senderPk, payload, transport) {
+    callee.onMessageReceived = (senderPk, payload, messageId, underlay) {
       delivered.add(utf8.decode(payload));
     };
 

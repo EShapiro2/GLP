@@ -25,6 +25,8 @@ import 'package:glp_multiagent/ui_runtime/manifest.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
 
+import 'fixture_term.dart';
+
 void main() {
   late List<String> sent;
   late UiRuntime r;
@@ -39,19 +41,19 @@ void main() {
   /// Redeem, Deposit, Release, Return.
   void poseRequestCards({int from = 1}) {
     for (var i = 0; i < 7; i++) {
-      r.handleLine('card(agent_${i + 1}, ctx_agent_${i + 1}, req(${from + i}))');
+      r.handle(fixtureTerm('card(agent_${i + 1}, ctx_agent_${i + 1}, req(${from + i}))'));
     }
   }
 
   /// The swap card: bob offers two of his own bonds for two alice-bonds.
-  void poseSwapCard({int id = 20}) => r.handleLine(
+  void poseSwapCard({int id = 20}) => r.handle(fixtureTerm(
       'card(respond_swap_1, ctx_respond_swap_1(bob, lot(alice, usd, 0, 2), '
-      '[bond(bob, usd, 30, 7), bond(bob, usd, 30, 8)]), req($id))');
+      '[bond(bob, usd, 30, 7), bond(bob, usd, 30, 8)]), req($id))'));
 
   /// The transfer card: the escrow agent releases one bond to the beneficiary.
-  void poseTransferCard({int id = 30}) => r.handleLine(
+  void poseTransferCard({int id = 30}) => r.handle(fixtureTerm(
       'card(respond_transfer_1, ctx_respond_transfer_1(release, escrow, '
-      '[bond(charlie, usd, 0, 1)]), req($id))');
+      '[bond(charlie, usd, 0, 1)]), req($id))'));
 
   group('the seven forms', () {
     test('all seven stand, and none opens an inbox card', () {
@@ -204,7 +206,7 @@ void main() {
       r.submitCommand(_form(r, 'agent_1'),
           {'F': const GAtom('usd'), 'K': const GInt(2), 'D': const GInt(0)});
       expect(sent.length, 1);
-      r.handleLine('card(agent_1, ctx_agent_1, req(12))');
+      r.handle(fixtureTerm('card(agent_1, ctx_agent_1, req(12))'));
       r.submitCommand(_form(r, 'agent_1'),
           {'F': const GAtom('usd'), 'K': const GInt(2), 'D': const GInt(0)});
       expect(sent.last, 'answer(req(12), xs_agent_1(usd, 2, 0))');
@@ -255,13 +257,13 @@ void main() {
       poseSwapCard(id: 23);
       poseTransferCard(id: 33);
       expect(r.inbox.length, 2);
-      r.handleLine('closed(req(23))');
+      r.handle(fixtureTerm('closed(req(23))'));
       expect(r.inbox.single.asks.keys.single, 'respond_transfer_1');
     });
 
     test('a clause the manifest does not name opens nothing', () {
-      r.handleLine('card(respond_swap_2, ctx_respond_swap_2(bob, '
-          'lot(alice, usd, 0, 2), []), req(9))');
+      r.handle(fixtureTerm('card(respond_swap_2, ctx_respond_swap_2(bob, '
+          'lot(alice, usd, 0, 2), []), req(9))'));
       expect(r.inbox, isEmpty);
       expect(r.standing, isEmpty);
     });
@@ -269,8 +271,8 @@ void main() {
 
   group('the declared views', () {
     test('every screen message but holdings lands in the default display', () {
-      r.handleLine('msg(agent, person, minted(2, 30))');
-      r.handleLine('msg(agent, person, transferred(release, frank))');
+      r.handle(fixtureTerm('msg(agent, person, minted(2, 30))'));
+      r.handle(fixtureTerm('msg(agent, person, transferred(release, frank))'));
       expect(r.store.lists['screen']!.map(formatTerm),
           ['minted(2, 30)', 'transferred(release, frank)']);
     });

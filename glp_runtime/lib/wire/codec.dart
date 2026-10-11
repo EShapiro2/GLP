@@ -161,29 +161,62 @@ class WStruct extends WireTerm {
 
 /// An assignment message `G := T↑` (§cf-terms, Messages). G is a global name;
 /// the message carries G's polarity, agent, and index, then the encoding of T.
+///
+/// A message to `_w(q,0)` is a serializer (cold-call) message and carries a
+/// [serial] after the index, and no other message does: "polarity 0, agent q,
+/// index 0, clen serial, then the encoding of the list cell" (§cf-terms,
+/// Messages; new in code-format version 3).
 class WireAssignment {
   /// Polarity of G: false = writer `_w`, true = reader `_r`.
   final bool gIsReader;
   final Uint8List gAgent;
   final int gIndex;
   final WireTerm value;
+
+  /// The serial of a serializer message: "an index the sender allocates from
+  /// its global-name counter, so the pair of the sender, which the layer
+  /// authenticates, and the serial names the cold call for the whole run"
+  /// (§cf-terms, Messages).  Present exactly when G is `_w(q,0)`.
+  final int? serial;
+
   WireAssignment(
       {required this.gIsReader,
       required this.gAgent,
       required this.gIndex,
-      required this.value});
+      required this.value,
+      this.serial}) {
+    if (isSerializer != (serial != null)) {
+      throw ArgumentError(isSerializer
+          ? 'a serializer message _w(q,0) := ... carries a serial '
+              '(code format, Messages)'
+          : 'only a serializer message _w(q,0) := ... carries a serial '
+              '(code format, Messages)');
+    }
+  }
+
+  /// Whether G is `_w(q,0)`, so that the message is a serializer message.
+  bool get isSerializer => isSerializerName(gIsReader, gIndex);
+
+  /// Whether the global name of polarity [isReader] and index [index] is a
+  /// serializer writer `_w(q,0)`.
+  static bool isSerializerName(bool isReader, int index) =>
+      !isReader && index == 0;
 
   /// The serializer (cold-call) message to agent q: the assignment
-  /// `_w(q,0) := [T↑ | _w(q,0)]`. G is the writer `_w(q,0)`; the value is the
-  /// list cell whose head is T and whose tail is the variable `_w(q,0)`.
+  /// `_w(q,0) := [T↑ | _w(q,0)]` under the sender's [serial]. G is the writer
+  /// `_w(q,0)`; the value is the list cell whose head is T and whose tail is
+  /// the variable `_w(q,0)`.
   factory WireAssignment.serializer(
-      {required Uint8List agent, required WireTerm head}) {
+      {required Uint8List agent,
+      required WireTerm head,
+      required int serial}) {
     final tail = WVar(isReader: false, agent: agent, index: 0);
     return WireAssignment(
       gIsReader: false,
       gAgent: agent,
       gIndex: 0,
       value: WStruct('.', [head, tail]),
+      serial: serial,
     );
   }
 
@@ -192,11 +225,12 @@ class WireAssignment {
       other is WireAssignment &&
       other.gIsReader == gIsReader &&
       other.gIndex == gIndex &&
+      other.serial == serial &&
       other.value == value &&
       _bytesEqual(other.gAgent, gAgent);
   @override
   int get hashCode =>
-      Object.hash(gIsReader, gIndex, value, Object.hashAll(gAgent));
+      Object.hash(gIsReader, gIndex, serial, value, Object.hashAll(gAgent));
 }
 
 // ============================================================================
@@ -641,10 +675,14 @@ WireTerm decodeTermFromBytes(Uint8List b) {
 // Message encoding (§cf-terms, Messages)
 // ============================================================================
 
+/// Encode an assignment: polarity, agent, index, then — for a serializer
+/// message `_w(q,0) := ...` alone — the clen serial, then the term
+/// (§cf-terms, Messages; the serial is new in code-format version 3).
 void encodeAssignment(WireWriter w, WireAssignment a) {
   w.u8(a.gIsReader ? 1 : 0);
   w.bytes(a.gAgent);
   w.clen(a.gIndex);
+  if (a.isSerializer) w.clen(a.serial!);
   encodeTerm(w, a.value);
 }
 
@@ -655,9 +693,15 @@ WireAssignment decodeAssignment(WireReader r) {
   }
   final agent = r.bytes();
   final index = r.clen();
+  final serial =
+      WireAssignment.isSerializerName(pol == 1, index) ? r.clen() : null;
   final value = decodeTerm(r);
   return WireAssignment(
-      gIsReader: pol == 1, gAgent: agent, gIndex: index, value: value);
+      gIsReader: pol == 1,
+      gAgent: agent,
+      gIndex: index,
+      value: value,
+      serial: serial);
 }
 
 Uint8List encodeAssignmentToBytes(WireAssignment a) {
@@ -674,8 +718,9 @@ WireAssignment decodeAssignmentFromBytes(Uint8List b) {
 }
 
 /// Encode a message with its opening u8 kind (§cf-terms, Messages; code-format
-/// version 2): 0 value, then the assignment; 1 request / 2 acknowledgement,
-/// then polarity (1, a reader name), agent, clen index — no term.
+/// version 2): 0 value, then the assignment, a serializer message's serial
+/// among it (version 3); 1 request / 2 acknowledgement, then polarity (1, a
+/// reader name), agent, clen index — no term.
 void encodeMessage(WireWriter w, WireMessage m) {
   switch (m) {
     case WireValueMessage(:final assignment):

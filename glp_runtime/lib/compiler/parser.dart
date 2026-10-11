@@ -2053,8 +2053,10 @@ class Parser {
     }
 
     // Parameterized type reference in type body: TypeName(Arg1, Arg2, ...)
-    // Uppercase names followed by ( are parameterized type refs, not structs.
-    // Encode reader mode in functor name for type_conversion to decode.
+    // A type name, a variable-shaped token, before "(" is a parameterized
+    // type ref ([TypeRefTerm]); a quoted name before "(" is a structure's
+    // functor, below, never a type name.  Encode reader mode in functor name
+    // for type_conversion to decode.
     if ((_check(TokenType.VARIABLE) || _check(TokenType.READER)) &&
         _current + 1 < tokens.length && tokens[_current + 1].type == TokenType.LPAREN) {
       final token = _advance();
@@ -2070,7 +2072,7 @@ class Parser {
       _consume(TokenType.RPAREN, 'Expected ")" after type arguments');
       final trailingQ = _match(TokenType.QUESTION);
       final effectiveName = (isReader || trailingQ) ? '${token.lexeme}?' : token.lexeme;
-      return StructTerm(effectiveName, args, token.line, token.column);
+      return TypeRefTerm(effectiveName, args, token.line, token.column);
     }
 
     // Variable or Reader (simple, non-parameterized)
@@ -2131,7 +2133,8 @@ class Parser {
       }
     }
 
-    // Structure or Constant Atom
+    // Structure or Constant Atom: a name, quoted or bare, whatever its first
+    // letter --- a quoted name is a string, never a type name ([TypeRefTerm])
     if (_check(TokenType.ATOM)) {
       final functorToken = _advance();
 

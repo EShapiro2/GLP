@@ -32,7 +32,8 @@ import 'package:glp_multiagent/manifests/coins_ui.dart';
 import 'package:glp_multiagent/ui_runtime/agent_surface.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
-import 'package:glp_multiagent/isolate_protocol.dart' show runtimeTermOf;
+import 'package:glp_multiagent/isolate_protocol.dart'
+    show runtimeTermOf, screenTermOf;
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/runtime/scheduler.dart' show ExecutionStatus;
 
@@ -108,10 +109,10 @@ void main() {
     final repo = Directory('../programs').existsSync()
         ? Directory('../programs').absolute.path
         : '/Users/udi/Grassroots/GLP/programs';
-    // What send_to_user/1 sends alice, one term to a line.
-    final lines = <String>[];
+    // What send_to_user/1 sends alice, each term whole.
+    final notifies = <GTerm>[];
     final engine = GlpEngine(rootSelfGlpPath: '$repo/self.glp');
-    engine.runtime.outputCallback = lines.add;
+    engine.runtime.outputTermCallback = (t) => notifies.add(screenTermOf(t));
     // programs/currencies/coins is a program: currency/ is the certified
     // mini-app and this directory adds the harness that runs it for a live
     // person, play_ui.glp's coins_ui/3, which reads alice's answers on its
@@ -135,8 +136,8 @@ void main() {
 
     var fed = 0;
     void replay() {
-      for (; fed < lines.length; fed++) {
-        r.handleLine(lines[fed]);
+      for (; fed < notifies.length; fed++) {
+        r.handle(notifies[fed]);
       }
     }
 

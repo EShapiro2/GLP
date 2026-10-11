@@ -21,8 +21,11 @@
 %% Address updates: when an agent's address changes, it notifies its friends
 %% via msg(_, _, addr_update(NewAddr)).  Recipients update their friends list.
 %%
-%% System predicates assumed:
-%%   punch_udp(Addr?) — body predicate, initiates UDP hole-punch to Addr
+%% System predicates:
+%%   punch_udp(Addr?) — root self.glp (GLP-Spec catalogue): opens a path to
+%%     address Addr and assigns nothing; where no networking layer is bound,
+%%     the plain REPL's case, it returns having done nothing (IGLP, "One
+%%     interface").
 
 
 %% =============================================================================
@@ -135,14 +138,3 @@ update_addr(Key, NewAddr, [fe(K, Out?, _)|Fs], [fe(K?, Out, NewAddr?)|Fs?]) :-
 update_addr(Key, NewAddr, [F|Fs], [F?|Fs1?]) :-
     otherwise | update_addr(Key?, NewAddr?, Fs?, Fs1).
 update_addr(_, _, [], []).
-
-%% =============================================================================
-%% STUB for system predicate
-%% =============================================================================
-%%
-%% punch_udp(Addr?) — body predicate
-%%   Real: initiates UDP hole-punch to Addr.
-%%   Stub: always succeeds.
-
-procedure punch_udp(Constant?).
-punch_udp(_).
