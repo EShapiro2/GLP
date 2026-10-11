@@ -110,7 +110,7 @@ Object? _meetRef(_Ref a, _Ref b, TypeEnvironment env, Set<String> assumed) {
     // A constant alternative is a value of a primitive type, so it survives
     // against that primitive: `red` is in the meet of `Colour ::= red ; green`
     // and `String`.
-    final prim = _constantPrimitive(altA.key);
+    final prim = _constantPrimitive(altA);
     if (prim != null && byKeyB.containsKey('prim:$prim')) {
       met.add(altA);
       continue;
@@ -119,7 +119,7 @@ Object? _meetRef(_Ref a, _Ref b, TypeEnvironment env, Set<String> assumed) {
     if (altA.key.startsWith('prim:')) {
       final p = altA.key.substring(5);
       for (final other in altsB) {
-        if (_constantPrimitive(other.key) == p) met.add(other);
+        if (_constantPrimitive(other) == p) met.add(other);
       }
     }
   }
@@ -188,8 +188,10 @@ List<_Alt>? _flatten(_Ref ref, TypeEnvironment env, Set<String> seen) {
   if (!seen.add(ref.stateName)) return const [];
   final out = <_Alt>[];
   for (final alt in def.alternatives) {
+    // A constant is keyed by its canonical print, which tells its kind:
+    // `const:[]` the empty list and `const:'[]'` the string ([constantLabel]).
     if (alt is ConstantAlt) {
-      out.add(_Alt('const:${alt.value}', alt, const []));
+      out.add(_Alt('const:${constantLabel(alt.value)}', alt, const []));
     } else if (alt is ListNilAlt) {
       out.add(_Alt('const:[]', alt, const []));
     } else if (alt is ListConsAlt) {
@@ -222,15 +224,15 @@ _Ref _resolve(TypeExpr e, bool dual) {
   return const _Ref(null, false);
 }
 
-/// The primitive type a constant alternative is a value of, or null where the
-/// key is not a constant.  `[]` and every unquoted constant are strings --- GLP
-/// has one representation for a quoted string and an unquoted constant.
-String? _constantPrimitive(String key) {
-  if (!key.startsWith('const:')) return null;
-  final v = key.substring(6);
-  if (int.tryParse(v) != null) return 'Integer';
-  if (double.tryParse(v) != null) return 'Real';
-  return 'String';
+/// The primitive type a constant alternative is a value of, by its value's
+/// kind ([primitiveOfConstant]), or null where [alt] is not a constant.  The
+/// empty list is a String.  Until 2026-10-10 the kind was parsed off the key's
+/// text, so the string '0' was an Integer.
+String? _constantPrimitive(_Alt alt) {
+  final source = alt.source;
+  if (source is ConstantAlt) return primitiveOfConstant(source.value);
+  if (source is ListNilAlt) return 'String';
+  return null;
 }
 
 bool _sameAlts(List<_Alt> a, List<_Alt> b) {

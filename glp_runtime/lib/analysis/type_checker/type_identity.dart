@@ -52,7 +52,7 @@ import 'dart:typed_data';
 
 import 'mode.dart';
 import 'param_expansion.dart';
-import 'program_dfa.dart' show UnknownTypeError;
+import 'program_dfa.dart' show UnknownTypeError, constantLabel;
 import 'type_ast.dart';
 import 'type_environment_builder.dart';
 import '../../compiler/ast.dart' as ast;
@@ -256,9 +256,14 @@ class _Expansion {
       TypeExpr alt, bool dual, Map<String, _State> out, Set<String> inlined) {
     final here = dual ? Mode.consume : Mode.produce;
 
+    // A constant by its canonical print ([constantLabel]), which tells its
+    // kind: the integer 0 and the string '0' are two labels, and the string
+    // '[]' is not the empty list's.  A name, a number and `[]` print as they
+    // did, so their labels, and the identities over them, are as they were.
+    // Until 2026-10-10 the constant's text, in which the kinds were one.
     if (alt is ConstantAlt) {
       out.putIfAbsent(
-          _label(alt.value.toString(), 0, 0, here), () => _State.check);
+          _label(constantLabel(alt.value), 0, 0, here), () => _State.check);
       return;
     }
     if (alt is ListNilAlt) {

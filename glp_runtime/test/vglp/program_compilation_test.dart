@@ -7,6 +7,7 @@
 import 'dart:io';
 
 import 'package:test/test.dart';
+import 'package:glp_runtime/compiler/ast.dart' show ConstTerm;
 import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/vglp/mediator.dart';
@@ -129,19 +130,61 @@ respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
     });
 
     test('display declarations are carried through unchanged', () {
+      // Carried through in the one canonical print of GLP's printer
+      // (glp_printer.dart): 'x' and "x" are two spellings of one string, the
+      // double-quoted form read and never printed, a string single-quoted and
+      // bare where the lexer reads it so (GLP-Spec appendix-lp.tex, Definition
+      // "Logic Programs Syntax"; vGLP #5 Cowork, 2026-10-07 20:01 UTC, item
+      // 2).  Until 2026-10-10 a string literal kept its double quotes,
+      // label("Mint").
       final out = compile('''
 $src
-display respond *(Answer=yes, From?) : panel(inbox), label("Accept"), transient.
+display respond *(Answer=yes, From?) : panel(inbox), label("Mint"), transient.
 ''');
       expect(out.source, contains('display respond'));
-      expect(out.source, contains('label("Accept")'));
-      // An atom is printed bare and a string literal keeps its quotes, as the
-      // source had them: a declaration printed panel("inbox") would no longer
-      // match its clause's guard.
+      expect(out.source, contains("label('Mint')"));
+      expect(out.source, isNot(contains('"Mint"')));
       expect(out.source, contains('panel(inbox)'));
       expect(out.source, contains('*(Answer=yes, From?)'));
       expect(out.source, isNot(contains('"inbox"')));
       expect(out.source, isNot(contains('"yes"')));
+      // The other spelling of the one string compiles to the same text.
+      expect(
+          compile('''
+$src
+display respond *(Answer=yes, From?) : panel(inbox), label('Mint'), transient.
+''').source,
+          out.source);
+    });
+
+    test('a string \'"x"\' round-trips through the compiler', () {
+      // '"x"' is the three-character string, the reader keeping the
+      // characters as written, and another value than "x" and 'x', the
+      // one-character string (GLP-Spec appendix-lp.tex, Definition "Logic
+      // Programs Syntax"): the compiled program prints it '"x"', and that
+      // text reads back as the same three characters, in a clause and in a
+      // display declaration alike.
+      final out = compile('''
+$src
+procedure tag(String).
+tag('"x"').
+tag("x").
+display respond *(Answer=yes, From?) : panel(inbox), label('"x"'), transient.
+''').source;
+      // tag/1 gains the mediator channel ahead of its own argument.
+      expect(out, contains('tag(_, \'"x"\') :- true.'));
+      expect(out, contains('tag(_, x) :- true.'));
+      expect(out, contains('label(\'"x"\')'));
+      final back = Parser(Lexer(out).tokenize()).parseModule();
+      final tags = back.procedures.singleWhere((p) => p.name == 'tag');
+      expect([
+        for (final c in tags.clauses) (c.head.args.last as ConstTerm).value
+      ], ['"x"', 'x']);
+      final label = back.displayDecls.single.items
+          .singleWhere((i) => i.name == 'label')
+          .args
+          .single as ConstTerm;
+      expect(label.value, '"x"');
     });
   });
 

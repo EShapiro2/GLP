@@ -1458,7 +1458,13 @@ class Parser {
       return ConstTerm(token.literal, token.line, token.column);
     }
 
-    // String - preserve quotes for type checking string detection
+    // A double-quoted string: the string of its characters, the one value a
+    // quoted name of the same characters is (GLP-Spec appendix-lp.tex,
+    // Definition "Logic Programs Syntax": one kind of constant besides
+    // numbers and [], the string, "also commonly referred to as an atom"),
+    // so "x" and 'x' are one value and '"x"' is the three-character string.
+    // Until 2026-10-10 the value kept the double quotes, so "x" and 'x' were
+    // two values and "x" and '"x"' one.
     if (_check(TokenType.STRING)) {
       final token = _advance();
       // Check for invalid reader mark on string
@@ -1470,8 +1476,7 @@ class Parser {
           phase: 'parser'
         );
       }
-      // Wrap in quotes so type checker can distinguish strings from atoms
-      return ConstTerm('"${token.literal}"', token.line, token.column);
+      return ConstTerm(token.literal, token.line, token.column);
     }
 
     // List
@@ -2048,8 +2053,10 @@ class Parser {
     }
 
     // Parameterized type reference in type body: TypeName(Arg1, Arg2, ...)
-    // Uppercase names followed by ( are parameterized type refs, not structs.
-    // Encode reader mode in functor name for type_conversion to decode.
+    // A type name, a variable-shaped token, before "(" is a parameterized
+    // type ref ([TypeRefTerm]); a quoted name before "(" is a structure's
+    // functor, below, never a type name.  Encode reader mode in functor name
+    // for type_conversion to decode.
     if ((_check(TokenType.VARIABLE) || _check(TokenType.READER)) &&
         _current + 1 < tokens.length && tokens[_current + 1].type == TokenType.LPAREN) {
       final token = _advance();
@@ -2065,7 +2072,7 @@ class Parser {
       _consume(TokenType.RPAREN, 'Expected ")" after type arguments');
       final trailingQ = _match(TokenType.QUESTION);
       final effectiveName = (isReader || trailingQ) ? '${token.lexeme}?' : token.lexeme;
-      return StructTerm(effectiveName, args, token.line, token.column);
+      return TypeRefTerm(effectiveName, args, token.line, token.column);
     }
 
     // Variable or Reader (simple, non-parameterized)
@@ -2088,10 +2095,10 @@ class Parser {
       return ConstTerm(token.literal, token.line, token.column);
     }
 
-    // String
+    // A double-quoted string, the string of its characters (as in a term).
     if (_check(TokenType.STRING)) {
       final token = _advance();
-      return ConstTerm('"${token.literal}"', token.line, token.column);
+      return ConstTerm(token.literal, token.line, token.column);
     }
 
     // List
@@ -2126,7 +2133,8 @@ class Parser {
       }
     }
 
-    // Structure or Constant Atom
+    // Structure or Constant Atom: a name, quoted or bare, whatever its first
+    // letter --- a quoted name is a string, never a type name ([TypeRefTerm])
     if (_check(TokenType.ATOM)) {
       final functorToken = _advance();
 

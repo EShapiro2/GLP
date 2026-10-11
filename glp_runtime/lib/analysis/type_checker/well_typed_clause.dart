@@ -1102,7 +1102,9 @@ ClauseCheckResult checkGoal(
 /// at a given argument position (1-indexed).
 ///
 /// Returns null if the argument is a variable (wildcard - accepts everything).
-/// Returns a set of strings like "[]", "[|]", "s/1", "0" etc.
+/// Returns a set of strings like "[]", "[|]", "s/1", "0", "'0'" etc., a
+/// constant spelled as its transition label is ([constantLabel]): `[]` the
+/// empty list and `'[]'` the string, `0` the integer and `'0'` the string.
 Set<String>? getAcceptedLabels(
   ast.Clause clause,
   int argIndex,
@@ -1125,8 +1127,10 @@ Set<String>? getLabelsFromTerm(ast.Term term) {
   }
 
   if (term is ast.ConstTerm) {
-    // Constant - accepts only this value
-    return {term.value.toString()};
+    // Constant - accepts only this value, of its kind.  Until 2026-10-10 its
+    // text, so a head's '[]' covered the empty list.
+    final value = term.value;
+    return {value == null ? 'null' : constantLabel(value)};
   }
 
   if (term is ast.ListTerm) {
@@ -3792,7 +3796,7 @@ String? _structuralFormOfNamedType(
 /// alternative that is not identified by one: a parameter of [params], or a
 /// reference to a template instance.
 String? _alternativeShape(TypeExpr alt, [List<String> params = const []]) {
-  if (alt is ConstantAlt) return 'const:${alt.value}';
+  if (alt is ConstantAlt) return 'const:${constantLabel(alt.value)}';
   if (alt is StructAlt) return 'struct:${alt.functor}/${alt.args.length}';
   if (alt is ListNilAlt) return 'nil';
   if (alt is ListConsAlt) return 'cons';

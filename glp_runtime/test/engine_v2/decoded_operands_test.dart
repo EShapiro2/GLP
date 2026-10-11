@@ -144,9 +144,11 @@ void main() {
     }
     expect(seen.length, 400);
     // 400, 399, ... mod 4: 0 zero, 3 many, 2 2.5, 1 "one", repeating, the
-    // string constant held with its quotes.
+    // string constant held as its characters, one value with 'one' (GLP #3
+    // Cowork, 2026-10-04 15:19 UTC, FAULT 2 (b)); until 2026-10-10 it was held
+    // with its double quotes.
     expect(seen.take(4).toList(),
-        ['Const(zero)', 'Const(many)', 'Const(2.5)', 'Const("one")']);
+        ['Const(zero)', 'Const(many)', 'Const(2.5)', 'Const(one)']);
     expect(seen.toSet().length, 4);
   });
 }

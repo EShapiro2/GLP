@@ -196,8 +196,8 @@ constructs([spawn(Id, Q, Gs, Ds?) | Ss]) :- construct(Id?, Q?, Gs?, Ds), constru
 constructs([]).
 
 procedure construct(Integer?, Question?, Inputs?, Stream(Draw)).
-construct(Id, card_w(X), Gs, Ds?) :- present_card([], X?, Gs?, _, Vs, Done), run(Id?, form(card, [shown, buttons([yes, no])]), Vs?, Done?, Ds).
-construct(Id, stream_request_r(X?), Gs, Ds?) :- answer_stream_request([], X, Gs?, _, Done), run(Id?, input_box(menu([form(mint, [number]), form(swap, [peer, form(lot, [text, number]), form(lot, [text, number])]), form(pay, [peer, number]), form(redeem, [peer, peer])])), [input([])], Done?, Ds).
+construct(Id, card_w(X), Gs, Ds?) :- present_card([], X?, Gs?, _, Vs, Done), run(Id?, form(card, [field('Offer', shown), field('YesNo', buttons([yes, no]))]), Vs?, Done?, Ds).
+construct(Id, stream_request_r(X?), Gs, Ds?) :- answer_stream_request([], X, Gs?, _, Done), run(Id?, input_box(menu([form(mint, [field('Integer', number)]), form(swap, [field('Peer', peer), field('Lot', form(lot, [field('Key', peer), field('Integer', number)])), field('Lot', form(lot, [field('Key', peer), field('Integer', number)]))]), form(pay, [field('Peer', peer), field('Integer', number)]), form(redeem, [field('Peer', peer), field('Peer', peer)])])), [input([])], Done?, Ds).
 
 procedure form_yesNo(_?, Formed(YesNo)).
 form_yesNo(yes, formed(yes)).

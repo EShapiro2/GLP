@@ -100,7 +100,7 @@ void main() {
       ('after a constant', 'Q ::= f(a ?).', 'a'),
       ('after a constant alternative', 'Q ::= a ? ; b.', 'a'),
       ('after a number', 'Q ::= f(5 ?).', '5'),
-      ('after a string', 'Q ::= f("s" ?).', '"s"'),
+      ('after a string', 'Q ::= f("s" ?).', 's'),
       ('after a dual, joined', 'Q ::= f(R? ?).', 'R?'),
       ('after a dual, apart', 'Q ::= f(R ? ?).', 'R?'),
       ('after _?', 'Q ::= f(_? ?).', '_?'),

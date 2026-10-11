@@ -5,6 +5,29 @@
 
 import 'type_ast.dart';
 import 'mode.dart';
+import '../../compiler/glp_printer.dart' show constantSource;
+import '../../runtime/terms.dart' show Nil, nil;
+
+/// A constant as a transition label, an alternative's key and a coverage
+/// label spell it: its canonical print (glp_printer.dart, [constantSource]),
+/// which reads back as the constant and so tells its kind --- `0` the integer,
+/// `'0'` the string, `[]` the empty list and `'[]'` the string.  Until
+/// 2026-10-10 these were the constant's text, `value.toString()`, in which
+/// the integer 0 and the string '0', and the empty list and the string '[]',
+/// were one.
+String constantLabel(Object value) => constantSource(value);
+
+/// The primitive type a constant value is a value of, by its kind and never by
+/// its text (TGLP well-typing.tex, the table of Definition "Consistent Paths",
+/// rows 4 to 6): an int an `Integer`, a double a `Real`, a string a `String`,
+/// and the empty list a `String` too (TGLP appendix-root-self.tex: "The empty
+/// list is a String, hence a Constant").  Null for anything else.
+String? primitiveOfConstant(Object? value) => switch (value) {
+      int() => 'Integer',
+      double() => 'Real',
+      String() || Nil() => 'String',
+      _ => null,
+    };
 
 /// A state in the program DFA.
 ///
@@ -114,7 +137,14 @@ class TransitionLabel {
   final int argIndex;
   final Mode? mode;
 
-  TransitionLabel._(this.symbol, this.arity, this.argIndex, this.mode);
+  /// A constant label's value, of its kind (an int, a double, a String, or
+  /// the empty list [nil]); null for a functor label.  The symbol of a
+  /// constant label is [constantLabel] of it, which tells the kinds apart;
+  /// the value is what [primitiveOfConstant] classifies.
+  final Object? constant;
+
+  TransitionLabel._(this.symbol, this.arity, this.argIndex, this.mode,
+      [this.constant]);
 
   /// Create a functor transition label.
   factory TransitionLabel.functor(String name, int arity, int argIndex,
@@ -122,14 +152,15 @@ class TransitionLabel {
     return TransitionLabel._(name, arity, argIndex, mode);
   }
 
-  /// Create a constant transition label.
+  /// Create a constant transition label: [value] of its kind, the empty list
+  /// being the runtime's [nil].
   factory TransitionLabel.constant(Object value) {
-    return TransitionLabel._(value.toString(), 0, 0, null);
+    return TransitionLabel._(constantLabel(value), 0, 0, null, value);
   }
 
   /// Returns a dual label with flipped mode
   TransitionLabel get dual =>
-      TransitionLabel._(symbol, arity, argIndex, mode?.flip);
+      TransitionLabel._(symbol, arity, argIndex, mode?.flip, constant);
 
   @override
   String toString() {
@@ -438,7 +469,8 @@ void _addTypeTransitions(
     final label = TransitionLabel.constant(alt.value);
     transitions[(fromState, label)] = states['_FINAL_']!;
   } else if (alt is ListNilAlt) {
-    final label = TransitionLabel.constant('[]');
+    // The empty list, not the string '[]' (a ConstantAlt).
+    final label = TransitionLabel.constant(nil);
     transitions[(fromState, label)] = states['_FINAL_']!;
   } else if (alt is ListConsAlt) {
     var headMode = _modeOf(alt.head, contextMode);
@@ -743,6 +775,13 @@ class LeafTerm {
     return LeafTerm._(isVariable: false, value: value, isString: true, mode: mode);
   }
 
+  /// Create the empty-list leaf: a String (TGLP appendix-root-self.tex: "The
+  /// empty list is a String, hence a Constant") whose value is the empty list
+  /// [nil], so it matches a `[]` alternative and not a `'[]'` one.
+  factory LeafTerm.emptyList({Mode? mode}) {
+    return LeafTerm._(isVariable: false, value: nil, isString: true, mode: mode);
+  }
+
   /// Create a constant leaf (atom or other).
   factory LeafTerm.constant(Object value, {Mode? mode}) {
     return LeafTerm._(isVariable: false, value: value, mode: mode);
@@ -882,6 +921,8 @@ LeafConsistencyResult checkLeafConsistency(
     }
   }
 
+  final shown = leaf.value;
   return LeafConsistencyResult.inconsistent(
-      'No alternative of ${state.name} matches the constant ${leaf.value}');
+      'No alternative of ${state.name} matches the constant '
+      '${shown == null ? 'null' : constantLabel(shown)}');
 }

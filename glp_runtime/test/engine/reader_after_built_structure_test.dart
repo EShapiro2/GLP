@@ -104,7 +104,7 @@ void main() {
     _suspendsThenReduces('d2(O, X?)', {'X = f(3)': '[3]', 'X = g': '[]'});
     // vGLP's compiled reader-mode clause while its question is open.
     _suspendsThenReduces('agent("alice", O, Q?)',
-        {'Q = post("hi")': '["hi"]', 'Q = quit': '[]'});
+        {'Q = post("hi")': '[hi]', 'Q = quit': '[]'});
   });
 
   group('head_structure at an argument holding the unbound reader', () {

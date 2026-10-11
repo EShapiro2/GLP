@@ -4,6 +4,7 @@ import 'suspend_ops.dart';
 import 'commit.dart';
 import 'fairness.dart';
 import 'body_kernels.dart';
+import 'terms.dart' show Term;
 import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 import 'package:glp_runtime/multiagent/mad_context.dart' show MadContext;
 import 'package:glp_runtime/bytecode/runner.dart'
@@ -79,8 +80,17 @@ class GlpRuntime {
   /// engine at construction (multiagent/identity.dart).
   PersonIdentity? identity;
 
-  // Output callback for '_output'/1 kernel.
-  // If set, called instead of print(). Used by tests and Flutter UI.
+  /// The person send_to_user/1 emits to, the '_output'/1 kernel's two ends
+  /// (GLP-Spec appendix-guards.tex, "Output to the person": send_to_user(
+  /// Stream) "emits each element of Stream to the person operating the
+  /// agent").  Where [outputTermCallback] is set, a person's bridge is the
+  /// person: it is handed each element whole, the ground term, and nothing is
+  /// printed or read back.  Where it is not, a terminal is the person:
+  /// [outputCallback], or stdout where that is not set either, is handed the
+  /// element as a terminal shows it (body_kernels.dart, [formatGroundTerm]).
+  /// Until 2026-10-11 there was the terminal alone, and a screen parsed what
+  /// it printed.
+  void Function(Term term)? outputTermCallback;
   void Function(String)? outputCallback;
 
   /// Check if a goal has a pending wait and if the timer has fired
