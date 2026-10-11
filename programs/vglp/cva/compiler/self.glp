@@ -1,0 +1,156 @@
+%% ---------------------------------------------------------------------------
+%% The compiler from an act-schema contract to its canonical CVA platform in
+%% vGLP.
+%%
+%% vGLP (/Grassroots/vGLP), Section 3.2, sections/cva-2pc.tex: Definitions
+%% "Volition-Guarded Specification", "Local Specification, Opener, Compatible
+%% Family", "Effective Local Specification" and "Canonical CVA Platform", and
+%% the paragraph on act schemas, which says when a contract of act schemas is a
+%% local specification and when it is effective; Section 5.4,
+%% sections/cva-implementation.tex, Definitions "Structured CVA Platform" and
+%% "Compilation of a Structured Platform" and the paragraph "The canonical
+%% platform is structured".  Jurix (/Grassroots/Jurix), Sections 3 and 5:
+%% Definitions "Act schema", "Binding", "Compilation" and "Realisation of a
+%% contract".  The papers are the specification; each module names the
+%% definitions it decides.
+%%
+%% compile(Name, Contract, Verdict) takes a contract in the term form
+%% programs/jurix reads, and the verdict its checker gives it, and prints the
+%% .vglp module of the contract's canonical platform between the lines
+%% "%% compile begin" and "%% compile end", one line of source to a line, as
+%% programs/jurix/compile.glp prints its output; or, for a contract it does not
+%% compile, the lines saying why.  programs/vglp/cva/compile.sh runs the
+%% checker of programs/jurix and then this.
+%% ---------------------------------------------------------------------------
+
+%% The contract, as programs/jurix/self.glp writes it.
+NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
+            ; ext(NameTerm, Constant).
+Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm).
+Args      ::= [] ; [Arg | Args].
+Atom      ::= atom(Constant, Args).
+Atoms     ::= [] ; [Atom | Atoms].
+Guard     ::= guarded ; unguarded ; guarded_at(Constant).
+RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant).
+RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
+            ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
+RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
+Reach     ::= reach(NameTerm, Constant, NameTerm).
+Reaches   ::= [] ; [Reach | Reaches].
+Schema    ::= schema(Constant, RoleSpecs) ; cschema(Constant, Reaches, RoleSpecs).
+Contract  ::= [] ; [Schema | Contract].
+Preds     ::= [] ; [Constant | Preds].
+Declared  ::= Contract ; reflexive(Preds, Contract).
+
+%% Its checker's verdict.
+Cause     ::= unobtainable ; blocked_by(Constant, Integer, Atom) ; reflexive.
+Fault     ::= no_introductory_act
+            ; obstructed(Constant, Integer, Atom, Cause)
+            ; untraceable(Preds)
+            ; volition(Constant, Integer, Integer)
+            ; cohesion(Constant, Integer, Atom)
+            ; reflexive(Constant, Integer, Atom).
+Faults    ::= [] ; [Fault | Faults].
+Verdict   ::= syntactically_grassroots ; not_grassroots(Faults)
+            ; conditions_met ; conditions_failed(Faults) ; malformed(Faults).
+
+imported procedure cvac#compile(Constant?, Declared?, Verdict?).
+exported procedure compile(Constant?, Declared?, Verdict?).
+compile(Nm, D, V) :- cvac # compile(Nm?, D?, V?).
+
+%% ---------------------------------------------------------------------------
+%% Shared by the modules of the compiler
+%% ---------------------------------------------------------------------------
+
+YesNo ::= yes ; no.
+Ints  ::= [] ; [Integer | Ints].
+
+procedure rs_parts(RoleSpec?, Atoms, Atoms, Atoms, Atoms).
+rs_parts(rs(_, P, M, K, N), P?, M?, K?, N?).
+rs_parts(crs(_, _, P, M, K, N), P?, M?, K?, N?).
+
+procedure rs_guarded(RoleSpec?, YesNo).
+rs_guarded(rs(guarded, _, _, _, _), yes).
+rs_guarded(rs(guarded_at(_), _, _, _, _), yes).
+rs_guarded(rs(unguarded, _, _, _, _), no).
+rs_guarded(crs(_, guarded, _, _, _, _), yes).
+rs_guarded(crs(_, guarded_at(_), _, _, _, _), yes).
+rs_guarded(crs(_, unguarded, _, _, _, _), no).
+
+%% The variables of a schema in the order programs/jurix gives them
+%% (self.glp, schema_vars): its roles, then its party variables and then its
+%% speech-act variables, each in order of first occurrence, the atoms of each
+%% role read as +(i), -(i), =(i), not(i).
+procedure schema_vars(RoleSpecs?, Args).
+schema_vars(Rs, Vs?) :- ground(Rs?) |
+    rs_count(Rs?, K),
+    role_args(1, K?, Ro),
+    rs_args(Rs?, As),
+    schema_vars1(Ro?, As?, Vs).
+procedure schema_vars1(Args?, Args?, Args).
+schema_vars1(Ro, As, Vs?) :- ground(As?) |
+    pvars_of(As?, Pv0),
+    dedup(Pv0?, Pv),
+    svars_of(As?, Sv0),
+    dedup(Sv0?, Sv),
+    app(Pv?, Sv?, PS),
+    app(Ro?, PS?, Vs).
+procedure rs_count(RoleSpecs?, Integer).
+rs_count([], 0).
+rs_count([_|Rs], N?) :- rs_count(Rs?, M), N := M? + 1.
+procedure role_args(Integer?, Integer?, Args).
+role_args(I, K, []) :- I? > K? | true.
+role_args(I, K, [role(I?)|R?]) :- I? =< K? | I1 := I? + 1, role_args(I1?, K?, R).
+procedure rs_args(RoleSpecs?, Args).
+rs_args([], []).
+rs_args([R|Rs], As?) :- ground(R?) |
+    rs_parts(R?, P, M, K, N),
+    atoms_args(P?, A1),
+    atoms_args(M?, A2),
+    atoms_args(K?, A3),
+    atoms_args(N?, A4),
+    rs_args(Rs?, A5),
+    app(A4?, A5?, A45),
+    app(A3?, A45?, A35),
+    app(A2?, A35?, A25),
+    app(A1?, A25?, As).
+procedure atoms_args(Atoms?, Args).
+atoms_args([], []).
+atoms_args([atom(_, As)|Xs], R?) :- atoms_args(Xs?, R1), app(As?, R1?, R).
+procedure pvars_of(Args?, Args).
+pvars_of([], []).
+pvars_of([pvar(X)|As], [pvar(X?)|R?]) :- pvars_of(As?, R).
+pvars_of([role(_)|As], R?) :- pvars_of(As?, R).
+pvars_of([svar(_)|As], R?) :- pvars_of(As?, R).
+pvars_of([nterm(_)|As], R?) :- pvars_of(As?, R).
+procedure svars_of(Args?, Args).
+svars_of([], []).
+svars_of([svar(X)|As], [svar(X?)|R?]) :- svars_of(As?, R).
+svars_of([role(_)|As], R?) :- svars_of(As?, R).
+svars_of([pvar(_)|As], R?) :- svars_of(As?, R).
+svars_of([nterm(_)|As], R?) :- svars_of(As?, R).
+
+procedure and(YesNo?, YesNo?, YesNo).
+and(yes, B, B?).
+and(no, _, no).
+procedure or(YesNo?, YesNo?, YesNo).
+or(yes, _, yes).
+or(no, B, B?).
+procedure neg(YesNo?, YesNo).
+neg(yes, no).
+neg(no, yes).
+
+procedure(X) app(Stream(X)?, Stream(X)?, Stream(X)).
+app([], Ys, Ys?).
+app([X|Xs], Ys, [X?|Zs?]) :- app(Xs?, Ys?, Zs).
+procedure(X) mem(X?, Stream(X)?, YesNo).
+mem(_, [], no).
+mem(X, [Y|_], yes) :- X? =?= Y? | true.
+mem(X, [_|Ys], R?) :- otherwise | mem(X?, Ys?, R).
+procedure(X) dedup(Stream(X)?, Stream(X)).
+dedup([], []).
+dedup([X|Xs], [X?|Ys?]) :- ground(X?) | remove_all(X?, Xs?, Xs1), dedup(Xs1?, Ys).
+procedure(X) remove_all(X?, Stream(X)?, Stream(X)).
+remove_all(_, [], []).
+remove_all(X, [Y|Ys], Zs?) :- X? =?= Y? | remove_all(X?, Ys?, Zs).
+remove_all(X, [Y|Ys], [Y?|Zs?]) :- otherwise | remove_all(X?, Ys?, Zs).
