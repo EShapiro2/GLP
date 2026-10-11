@@ -73,9 +73,11 @@
 // Stream, a list one named List, or a named type defined as one of them,
 // `Lines ::= Stream(String)`, which draws as the stream it names (vGLP #7
 // Cowork, 2026-10-11 14:31 UTC, item 2); the two are told apart by the name:
-// a list is ended by a grant of [], a stream never, and the list's widget is
-// input_list(W), the stream's input_box(W).  A stream or a list inside a form
-// the person writes is a question of its own: the form is formed with [] there,
+// a list is ended by the grant of its end button, a stream never, and the
+// list's widget is input_list(W), the stream's input_box(W).  The end
+// button grants [end], a list cell, which no element of a flat type can be
+// (listEnd; 14:31 UTC, item 3).  A stream or a list inside a form the
+// person writes is a question of its own: the form is formed with [] there,
 // its answer carries a fresh variable there (open_N), answered at its own
 // position from the grants that follow, and the construct is drawn again
 // with the answer; its entry in the form's widget is question(L, W) and
@@ -115,6 +117,19 @@ import 'mediator.dart' show typeSource;
 /// The Definition an interactive type is refused by where it is not flat.
 const _flatDefinition = 'vGLP, Definition "Volitional Procedure, Interactive '
     'Type, Interactive Term, Ordinary Clause, vGLP Program"';
+
+/// The term the end button of a list the person writes grants, R in
+/// input(Id, P, R): "a list the person writes: the same, with a button that
+/// ends the list" (vGLP at 66b6500, Definition "Widget Declaration, Default
+/// Widget"), its grant "a term of its own that no element can be" (vGLP #7
+/// Cowork, 2026-10-11 14:31 UTC, item 3).  It is a list cell, and no element
+/// of a list the person writes is one: the element type is flat, a list
+/// cell occurring in it only as a Stream's or a List's, and a Stream or a
+/// List never under another ([_Generator._checkFlat]); `[]`, a constant
+/// (GLP-Spec appendix-lp.tex: "a constant (numbers, strings, or the empty
+/// list [])"), may be an element.  The bridge's end button grants the same
+/// (glp_multiagent/lib/ui_runtime/bridge.dart, listEnd).
+const listEnd = '[end]';
 
 /// A moded interactive type of the program: its type as written, its mode,
 /// the functor the compilation gives it in Question, and the type parameters
@@ -960,11 +975,13 @@ class _Generator {
   /// from R, and a grant for another position goes on through take_N's
   /// refused clause, rebuilt whole (2026-10-04 09:05 UTC, C).
   ///
-  /// A list the person writes is ended by the person: a grant of [] for its
-  /// position binds the rest of the list to [], and the question is
-  /// answered; a stream is not, its question never answered (Definition
-  /// "vmaGLP Transition System", Answer: "or [] for a list"; vGLP #6 Cowork,
-  /// 2026-10-11 12:55 UTC, item 2, Q1).
+  /// A list the person writes is ended by the person: the grant of its end
+  /// button, [listEnd], for its position binds the rest of the list to [],
+  /// and the question is answered; a stream is not, its question never
+  /// answered (Definition "vmaGLP Transition System", Answer: "or [] for a
+  /// list"; vGLP #6 Cowork, 2026-10-11 12:55 UTC, item 2, Q1).  The end's
+  /// grant is no element's, so no input both ends the list and forms an
+  /// element (vGLP #7 Cowork, 2026-10-11 14:31 UTC, item 3).
   ///
   /// A question of a type holding a stream or a list inside a form the
   /// person writes ([_holdsNested]) is answer_N(P, X, Gs?, Gs1, Vs, Done):
@@ -998,8 +1015,8 @@ class _Generator {
     final open = nested ? _open(n) : null;
     _out.writeln('procedure$p $name($pt?, $t, $gs?, $gs$vsType, $done).');
     if (seq != null && seq.list) {
-      _out.writeln('$name(P, [], [input(_, P1, []) | Gs], Gs?, done) :- '
-          'P1? =?= P? | true.');
+      _out.writeln('$name(P, [], [input(_, P1, $listEnd) | Gs], Gs?, done) '
+          ':- P1? =?= P? | true.');
     }
     _out
       ..writeln('$name(P, X?, [input(Id, P1, R) | Gs], Gs1?$vsOut, Done?) :- '

@@ -473,8 +473,9 @@ void main() {
 
     testWidgets(
         'a list the person writes: the widget of its element, kept open, and '
-        'a button that ends the list, granting [] (item 1); a stream has no '
-        'such button', (tester) async {
+        'a button that ends the list, granting [end], a term no element can be '
+        '(item 1; vGLP #7 Cowork, 2026-10-11 14:31 UTC, item 3); a stream has '
+        'no such button', (tester) async {
       r.handle(fixtureTerm('draw(1, input_list(number), input([]))'));
       r.handle(fixtureTerm('draw(2, input_box(number), input([]))'));
       await surface(tester);
@@ -488,7 +489,7 @@ void main() {
           isEmpty);
       await tester.tap(find.byKey(endKey(1, [])));
       await tester.pump();
-      expect(sent, ['input(1, [], 4)', 'input(1, [], [])']);
+      expect(sent, ['input(1, [], 4)', 'input(1, [], [end])']);
       expect(find.byKey(nodeKey(2, 'input_box', [])), findsOneWidget);
       expect(find.byKey(endKey(2, [])), findsNothing);
     });

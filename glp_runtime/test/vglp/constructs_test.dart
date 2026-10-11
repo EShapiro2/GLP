@@ -25,6 +25,7 @@ import 'package:glp_runtime/compiler/ast.dart' show ConstTerm;
 import 'package:glp_runtime/compiler/error.dart';
 import 'package:glp_runtime/vglp/canonical.dart';
 import 'package:glp_runtime/vglp/dispatcher.dart';
+import 'package:glp_runtime/vglp/constructs.dart' show listEnd;
 
 const _programs = '../programs';
 
@@ -1035,7 +1036,8 @@ procedure (Pick?)*pick(Pick).
   // Transition System" (vGLP 90988ea).  The runs are elicitation_test's.
   group('Task B (1): a list the person writes', () {
     test('draws the stream widget with a button that ends the list, [] its '
-        'answer; neither ref(T) nor form(\'.\', ...)', () {
+        'answer on the end button\'s grant, [end] (vGLP #7 Cowork, 2026-10-11 '
+        '14:31 UTC, item 3); neither ref(T) nor form(\'.\', ...)', () {
       final c = compile('''
 List(X) ::= [] ; [X | List(X)].
 procedure (List(String)?)*names(List(String)).
@@ -1043,10 +1045,12 @@ procedure (List(String)?)*names(List(String)).
 ''');
       expect(c.widgets['List(String)?'], 'input_list(text)');
       final s = c.source;
+      expect(listEnd, '[end]');
       expect(
           s,
-          contains('answer_list_string(P, [], [input(_, P1, []) | Gs], Gs?, '
-              'done) :- P1? =?= P? | true.'));
+          contains('answer_list_string(P, [], [input(_, P1, [end]) | Gs], '
+              'Gs?, done) :- P1? =?= P? | true.'));
+      expect(s, isNot(contains('input(_, P1, [])')));
       expect(
           s,
           contains('take_list_string(formed(V), P, [V? | X1?], _, Gs, Gs1?, '
@@ -1358,8 +1362,8 @@ procedure (Roll?)*call(Roll).
       expect(c.widgets['Roll?'], 'input_list(text)');
       expect(
           c.source,
-          contains('answer_roll(P, [], [input(_, P1, []) | Gs], Gs?, done) :- '
-              'P1? =?= P? | true.'));
+          contains('answer_roll(P, [], [input(_, P1, [end]) | Gs], Gs?, done) '
+              ':- P1? =?= P? | true.'));
     });
 
     test('a field of a form the person writes, a question of its own; and '

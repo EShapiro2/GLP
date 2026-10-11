@@ -421,9 +421,10 @@ picking_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       'forms, keys', () {
     // Definition "Widget Declaration, Default Widget" and the Answer rule of
     // Definition "vmaGLP Transition System" (vGLP 90988ea): a list the person
-    // writes is ended by the person, [] its answer, and a stream is not; an
-    // alias of a stream draws as the stream it names (vGLP #7 Cowork,
-    // 2026-10-11 14:31 UTC, item 2); a
+    // writes is ended by the person, [] its answer, on the grant of its end
+    // button, [end], a term no element can be (vGLP #7 Cowork, 2026-10-11
+    // 14:31 UTC, item 3), and a stream is not; an alias of a stream draws as
+    // the stream it names (item 2); a
     // stream or a list inside a form the person writes is a question of its
     // own, the form's answer carrying a fresh variable there, drawn under the
     // form; a Key is a peer field.  The program is written under
@@ -442,6 +443,7 @@ Reply   ::= reply(String, Stream(String)).
 Card    ::= card(Peer, Reply?).
 Issuer  ::= Key.
 Lot     ::= lot(Issuer, Integer).
+Opt     ::= none ; [].
 Lines   ::= Stream(String).
 ''';
       File('${fixture.path}/b.vglp').writeAsStringSync('''
@@ -461,13 +463,17 @@ exported procedure (Card)*respond(Reply).
 exported procedure (Lot?)*lot(Lot).
 (L)*lot(L?).
 
+exported procedure (List(Opt)?)*opts(List(Opt)).
+(Os)*opts(Os?).
+
 exported procedure (Lines?)*write(Lines).
 (Ls)*write(Ls?).
 ''');
       File('${fixture.path}/self.glp').writeAsStringSync('''
 $types
 Question ::= list_integer_r(List(Integer)?) ; stream_integer_r(Stream(Integer)?)
-           ; post_r(Post?) ; card_w(Card) ; lot_r(Lot?) ; lines_r(Lines?).
+           ; post_r(Post?) ; card_w(Card) ; lot_r(Lot?) ; list_opt_r(List(Opt)?)
+           ; lines_r(Lines?).
 Ask(Q)   ::= ask(Constant, Q).
 PersonIn ::= [_ | PersonIn].
 
@@ -476,11 +482,12 @@ imported procedure b#counts(Stream(Integer), Stream(Ask(Question))).
 imported procedure b#poster(Post, Stream(Ask(Question))).
 imported procedure b#respond(Reply, Stream(Ask(Question))).
 imported procedure b#lot(Lot, Stream(Ask(Question))).
+imported procedure b#opts(List(Opt), Stream(Ask(Question))).
 imported procedure b#write(Lines, Stream(Ask(Question))).
 imported procedure b#dispatch(Stream(Ask(Question))?,
     Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
 
-%% A list: two numbers, then its end.
+%% A list: two numbers, then its end, [end].
 exported procedure play_numbers(List(Integer), Stream(_)).
 play_numbers(Ns?, Log?) :-
     b # numbers(Ns, Asks), b # dispatch(Asks?, ch(Gs?, Ds), _),
@@ -488,7 +495,7 @@ play_numbers(Ns?, Log?) :-
 
 procedure numbers_person(_?, PersonIn, Stream(_)).
 numbers_person([draw(Id, W, input(Q)) | Ds],
-               [input(Id?, Q?, 1), input(Id?, Q?, 2), input(Id?, Q?, []) | Gs?],
+               [input(Id?, Q?, 1), input(Id?, Q?, 2), input(Id?, Q?, [end]) | Gs?],
                [drawn(Id?, W?, input(Q?)) | Log?]) :-
     ground(Id?), ground(W?), ground(Q?) |
     numbers_person(Ds?, Gs, Log).
@@ -496,7 +503,7 @@ numbers_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
     numbers_person(Ds?, Gs, Log).
 
-%% A stream: a number, [], and a number.
+%% A stream: a number, [end], [], and a number.
 exported procedure play_counts(Stream(Integer), Stream(_)).
 play_counts(Cs?, Log?) :-
     b # counts(Cs, Asks), b # dispatch(Asks?, ch(Gs?, Ds), _),
@@ -504,7 +511,8 @@ play_counts(Cs?, Log?) :-
 
 procedure counts_person(_?, PersonIn, Stream(_)).
 counts_person([draw(Id, W, input(Q)) | Ds],
-              [input(Id?, Q?, 1), input(Id?, Q?, []), input(Id?, Q?, 2) | Gs?],
+              [input(Id?, Q?, 1), input(Id?, Q?, [end]), input(Id?, Q?, []),
+               input(Id?, Q?, 2) | Gs?],
               [drawn(Id?, W?, input(Q?)) | Log?]) :-
     ground(Id?), ground(W?), ground(Q?) |
     counts_person(Ds?, Gs, Log).
@@ -547,7 +555,7 @@ tags_person([draw(Id, _, input(Q)) | Ds],
     ground(Id?), ground(Q?) |
     tags_person(Ds?, Gs, Log).
 tags_person([draw(Id, _, tags(input(Q))) | Ds],
-            [input(Id?, Q?, a), input(Id?, Q?, []) | Gs?],
+            [input(Id?, Q?, a), input(Id?, Q?, [end]) | Gs?],
             [drawn(Id?, tags(input(Q?))) | Log?]) :-
     ground(Id?), ground(Q?) |
     tags_person(Ds?, Gs, Log).
@@ -593,6 +601,22 @@ lot_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
     lot_person(Ds?, Gs, Log).
 
+%% A list whose element type has [], a constant: none, [], then its end.
+exported procedure play_opts(List(Opt), Stream(_)).
+play_opts(Os?, Log?) :-
+    b # opts(Os, Asks), b # dispatch(Asks?, ch(Gs?, Ds), _),
+    opts_person(Ds?, Gs, Log).
+
+procedure opts_person(_?, PersonIn, Stream(_)).
+opts_person([draw(Id, W, input(Q)) | Ds],
+            [input(Id?, Q?, none), input(Id?, Q?, []), input(Id?, Q?, [end]) | Gs?],
+            [drawn(Id?, W?, input(Q?)) | Log?]) :-
+    ground(Id?), ground(W?), ground(Q?) |
+    opts_person(Ds?, Gs, Log).
+opts_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    opts_person(Ds?, Gs, Log).
+
 %% An alias of a stream: two lines, and [end] answering nothing.
 exported procedure play_write(Lines, Stream(_)).
 play_write(Ls?, Log?) :-
@@ -621,7 +645,8 @@ write_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     }
 
     test('(1) a list the person writes takes one element per grant and ends '
-        'on a grant of [], and its construct withdraws', () async {
+        'on the grant of its end button, [end], and its construct withdraws',
+        () async {
       final r = await play('play_numbers(Ns, Log)');
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       expect(r['Ns'], '[1, 2]');
@@ -629,12 +654,23 @@ write_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
           '[drawn(0, input_list(number), input([])), withdrawn(0) | _]');
     });
 
-    test('(1) a stream the person writes is not ended: a grant of [] answers '
-        'nothing, and the stream stays open', () async {
+    test('(1) a stream the person writes is not ended: a grant of [end] or '
+        'of [] answers nothing, and the stream stays open', () async {
       final r = await play('play_counts(Cs, Log)');
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       expect(r['Cs'], '[1, 2 | _]');
       expect(r['Log'], '[drawn(0, input_box(number), input([])) | _]');
+    });
+
+    test('(1) the end\'s grant is no element\'s: a list whose element type '
+        'has [], a constant, takes [] as an element and ends on [end] (vGLP #7 '
+        'Cowork, 2026-10-11 14:31 UTC, item 3)', () async {
+      final r = await play('play_opts(Os, Log)');
+      expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
+      expect(r['Os'], '[none, []]');
+      expect(r['Log'],
+          '[drawn(0, input_list(menu([button(none), button([])])), '
+          'input([])), withdrawn(0) | _]');
     });
 
     test('an alias of a stream draws as the stream it names and is answered '

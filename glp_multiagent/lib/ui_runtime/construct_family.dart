@@ -31,8 +31,8 @@
 ///   - a stream the person writes: the widget of its element type, kept
 ///     open, one element per submission, `input_box(W)`; a list the person
 ///     writes: the same, with a button that ends the list, `input_list(W)`,
-///     the button granting `[]`; a stream the program writes: a thread,
-///     `thread`.
+///     the button granting [listEnd], `[end]`; a stream the program writes:
+///     a thread, `thread`.
 ///
 /// A widget a declaration names (`T =::= W`) is a constant naming a Dart
 /// widget: "In the grassroots app, W names a Dart widget, a small
@@ -46,9 +46,9 @@
 /// over `Integer`, the local date an agent counts"), a peer field the
 /// identifier typed, a form the tuple of its fields --- `[]` at a question
 /// of its own, which the form's answer leaves open --- a menu the
-/// alternative chosen, and a list's end button `[]`.  The construct process forms the answer from it, and
-/// refuses one that forms no term of the question's type; the family checks
-/// no type.
+/// alternative chosen, and a list's end button [listEnd], `[end]`.  The
+/// construct process forms the answer from it, and refuses one that forms no
+/// term of the question's type; the family checks no type.
 library;
 
 import 'package:flutter/material.dart';
@@ -298,8 +298,8 @@ class _ConstructViewState extends State<ConstructView> {
         }
         return _keyed('input_box', at, _submitting(ws[0], p, at, keepOpen: true));
       case 'input_list' when ws.length == 1:
-        // The same, with a button that ends the list: it grants [], the
-        // list's end, at the list's position.
+        // The same, with a button that ends the list: it grants [end], the
+        // list's end (listEnd), at the list's position.
         final (ek, _) = ctorArgs(ws[0]);
         return _keyed(
             'input_list',
@@ -316,7 +316,7 @@ class _ConstructViewState extends State<ConstructView> {
                   alignment: Alignment.centerRight,
                   child: OutlinedButton(
                     key: endKey(_id, at),
-                    onPressed: () => widget.grant(p, const GList([])),
+                    onPressed: () => widget.grant(p, listEnd),
                     child: const Text('End'),
                   ),
                 ),
