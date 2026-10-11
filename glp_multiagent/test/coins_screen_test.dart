@@ -1,24 +1,29 @@
-/// The currency mini-app in use: a mint and a swap, willed through the screen
-/// derived from `coins_agent.vglp`'s display declarations and carried by the
-/// person channel of the compiled program.
+/// The currency mini-app in use: a mint and a swap, willed through the
+/// constructs the Dart bridge draws, and a swap of bob's accepted on its
+/// card.
 ///
-/// The whole path runs: `programs/currencies/coins` at `coins_ui/3` — alice's execution of
-/// the mini-app with its mediator, and bob's, scripted, over one conversation —
-/// the cards arriving as ground terms, the person's taps on the derived
-/// constructs going back as `answer(req(N), xs_C(...))`, and the agent's screen
-/// coming back to the balances view and the default display. Nothing is
-/// simulated and no term is hand-fed.
+/// The whole path runs: `programs/currencies/coins` at `coins_ui/3` — the
+/// mini-app's bridge entry (`programs/currencies/coins/play_ui.glp`), alice's
+/// execution of the mini-app on the person channel `ch(Grants?, Draws)` of
+/// vGLP's Definition "Person Channel, Person Writer, GLP with Persons,
+/// Grant", and bob's, scripted, over one conversation.  The compiled
+/// program's dispatcher draws each construct, `draw(Id, W, V)`, and withdraws
+/// it, `withdraw(Id)`; the bridge draws each as the default widget of its
+/// interactive type (Definition "Widget Declaration, Default Widget"), and
+/// alice's taps and submissions on them go back as her grants, `input(Id, P,
+/// R)` (vGLP, sections/elicitation.tex, the paragraph "The implementation");
+/// the agent's screen comes back to the balances view and the default
+/// display.  Nothing is simulated and no term is hand-fed.
 ///
 /// The play is run directly, as test code, with no host: the host posts
 /// `superapp/3` and nothing of Currencies' (GSG Section 5.1; Currencies #7
 /// Cowork, 2026-10-04 09:15 UTC, item 2).  The engine loads the coins program
-/// and posts `coins_ui(alice, Answers?, [])` through its posting call, which
+/// and posts `coins_ui(alice, Grants?, [])` through its posting call, which
 /// checks the goal as every posted goal is checked (TGLP modules.tex, "the
 /// initial goal posted to the runtime ... is type-checked before execution as
-/// a body goal"; GlpEngine.postGoal); alice's taps go into `Answers` through
+/// a body goal"; GlpEngine.postGoal); alice's grants go into `Grants` through
 /// the injector the call returns, and what `send_to_user/1` sends her is read
-/// off the runtime's output.  Until 2026-10-04 the play ran under the host,
-/// AgentRuntime, which posted it unchecked.
+/// off the runtime's output.
 library;
 
 import 'dart:io';
@@ -30,6 +35,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/manifests/coins_ui.dart';
 import 'package:glp_multiagent/ui_runtime/agent_surface.dart';
+import 'package:glp_multiagent/ui_runtime/bridge.dart';
+import 'package:glp_multiagent/ui_runtime/construct_family.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
 import 'package:glp_multiagent/isolate_protocol.dart'
@@ -115,12 +122,12 @@ void main() {
     engine.runtime.outputTermCallback = (t) => notifies.add(screenTermOf(t));
     // programs/currencies/coins is a program: currency/ is the certified
     // mini-app and this directory adds the harness that runs it for a live
-    // person, play_ui.glp's coins_ui/3, which reads alice's answers on its
-    // second argument and not its third.
+    // person, play_ui.glp's coins_ui/3, the bridge entry, which reads alice's
+    // grants on its second argument and not its third.
     expect(engine.loadProgram('$repo/currencies/coins'), isTrue);
-    final play = engine.postGoal('coins_ui(alice, Answers?, [])',
-        inputs: ['Answers']);
-    final answers = play.inputs['Answers']!;
+    final play = engine.postGoal('coins_ui(alice, Grants?, [])',
+        inputs: ['Grants']);
+    final grants = play.inputs['Grants']!;
 
     /// The play run until quiescent, as one event of the agent's is: a run
     /// stopped at the net is half a run, and nothing after it means what it
@@ -141,10 +148,10 @@ void main() {
       }
     }
 
-    // Each of alice's taps, a ground term, into her answers stream.
+    // Each of alice's grants, a ground term, onto her person channel.
     Future<void> settle() async {
       while (sends.isNotEmpty) {
-        answers
+        grants
             .inject(runtimeTermOf(sends.removeAt(0)))
             .forEach(engine.runtime.gq.enqueue);
         drain();
@@ -156,56 +163,74 @@ void main() {
     drain();
     replay();
 
-    // The compiled agent poses its four request clauses as soon as it runs, so
-    // all four forms stand before the person has done anything.
-    expect(r.standing.keys.toSet(),
-        {'agent_1', 'agent_2', 'agent_3', 'agent_4'});
+    /// The open constructs whose widget is [w].
+    List<OpenConstruct> drawn(String w) => [
+          for (final c in r.bridge.constructs)
+            if (formatTerm(c.widget) == w) c,
+        ];
+
+    // The agent asks its question as soon as it runs, before the person has
+    // done anything: the stream of her requests, one construct, drawn as the
+    // default widget of Stream(Request)? --- an input box of a menu of the
+    // four forms of Request ::= mint(Integer) ; swap(Peer, Lot, Lot) ;
+    // pay(Peer, Integer) ; redeem(Peer, Peer), each field labelled by the
+    // name of its declared type, a Key a peer field.
+    const requestForm = "input_box(menu([form(mint, [field('Integer', number)]), "
+        "form(swap, [field('Peer', peer), "
+        "field('Lot', form(lot, [field('Key', peer), field('Integer', number)])), "
+        "field('Lot', form(lot, [field('Key', peer), field('Integer', number)]))]), "
+        "form(pay, [field('Peer', peer), field('Integer', number)]), "
+        "form(redeem, [field('Peer', peer), field('Peer', peer)])]))";
+    expect(r.bridge.constructs.map((c) => formatTerm(c.widget)), [requestForm]);
+    final form = r.bridge.constructs.single;
+    expect(formatTerm(form.view), 'input([])');
     expect(r.store.lists['screen']!.map(formatTerm), contains('opened(bob)'));
 
     await tester.pumpWidget(_phoneApp(AgentSurface(agentId: 'alice', runtime: r)));
     await tester.pumpAndSettle();
 
-    /// Fill and submit one of the panel's compose forms.
-    Future<void> compose(String label, List<String> values,
-        {String? formShot, String? sheetShot}) async {
-      await tester.tap(find.byType(FloatingActionButton));
+    Finder inForm(Finder f) =>
+        find.descendant(of: find.byKey(constructKey(form.id)), matching: f);
+
+    /// Choose one of the menu's forms, fill its fields, and send it: one
+    /// request on the request form, one element of the stream.
+    Future<void> request(String alternative, Map<List<int>, (String, String)> fields,
+        {String? formShot}) async {
+      await tester.tap(inForm(find.widgetWithText(ChoiceChip, alternative)));
       await tester.pumpAndSettle();
-      if (sheetShot != null) await _shot(tester, sheetShot);
-      await tester.tap(find.text(label));
+      expect(inForm(find.byType(TextField)), findsNWidgets(fields.length));
+      for (final e in fields.entries) {
+        final (kind, text) = e.value;
+        await tester.enterText(
+            find.descendant(
+                of: find.byKey(nodeKey(form.id, kind, e.key)),
+                matching: find.byType(TextField)),
+            text);
+      }
       await tester.pumpAndSettle();
-      final fields = find.byType(TextField);
-      expect(fields, findsNWidgets(values.length));
-      for (var i = 0; i < values.length; i++) {
-        await tester.enterText(fields.at(i), values[i]);
-      }
-      if (formShot != null) {
-        await tester.pumpAndSettle();
-        await _shot(tester, formShot);
-      }
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Send'));
+      if (formShot != null) await _shot(tester, formShot);
+      await tester.tap(find.byKey(submitKey(form.id, const [])));
       await tester.pumpAndSettle();
       await settle();
     }
 
-    // The panel's "+" offers the four persistent clauses, and only those the
-    // agent has posed: a volition is offered iff it is pending.
-    await tester.tap(find.byType(FloatingActionButton));
-    await tester.pumpAndSettle();
-    for (final label in ['Mint', 'Swap', 'Pay', 'Redeem']) {
-      expect(find.text(label), findsOneWidget);
+    // The form offers the four requests, a menu of their forms, and only
+    // those: the alternatives of Request.
+    for (final label in ['mint', 'swap', 'pay', 'redeem']) {
+      expect(inForm(find.widgetWithText(ChoiceChip, label)), findsOneWidget);
     }
+    expect(inForm(find.byType(ChoiceChip)), findsNWidgets(4));
     await _shot(tester, '/private/tmp/coins-forms.png');
-    await tester.tapAt(const Offset(180, 120)); // dismiss the sheet
-    await tester.pumpAndSettle();
 
-    // --- The mint: the Mint form's one field is its clause's one writer. ----
-    await compose('Mint', ['2']);
+    // --- The mint: the mint form's one field is its one argument. ------------
+    await request('mint', {
+      [1]: ('number', '2')
+    });
     expect(r.store.lists['screen']!.map(formatTerm), contains('minted(2)'));
     expect(
         r.store.balances['balances']!
             .map((k, v) => MapEntry(k, formatTerm(v))),
         {'alice': '2'});
-    expect(find.text('MINT'), findsNothing); // the form is not the panel
     expect(find.text('BALANCES'), findsOneWidget);
     // The default display shows the message as its scalars, never as a term
     // (vGLP Section 6.3).
@@ -213,14 +238,25 @@ void main() {
     expect(find.text('minted(2)'), findsNothing);
     await _shot(tester, '/private/tmp/coins-minted.png');
 
-    // The question stands again: answering consumed one ask and the goal posed
-    // the next, so the form is offered with a fresh ReqId.
-    expect(r.standing.containsKey('agent_1'), isTrue);
+    // The question stands: a stream question takes one element per
+    // submission and stays open while its stream does (vGLP, Remark
+    // "Persistence"), so the same construct takes the next request.
+    expect(r.bridge.construct(form.id), isNotNull);
+    expect(find.byKey(constructKey(form.id)), findsOneWidget);
 
     // --- The swap: alice gives her 2 for bob's 2; bob's script accepts. -----
-    // The form's five fields are the five writers of its clause's question,
-    // in the question's order.
-    await compose('Swap', ['bob', 'alice', '2', 'bob', '2'],
+    // The swap form's five fields are the leaves of swap(Peer, Lot, Lot), in
+    // order: the counterparty, and each lot's issuer, a Key and so a peer
+    // field, and number.
+    await request(
+        'swap',
+        {
+          [1]: ('peer', 'bob'),
+          [2, 1]: ('peer', 'alice'),
+          [2, 2]: ('number', '2'),
+          [3, 1]: ('peer', 'bob'),
+          [3, 2]: ('number', '2'),
+        },
         formShot: '/private/tmp/coins-swap-form.png');
     expect(r.store.lists['screen']!.map(formatTerm), contains('swap_done(bob)'));
     expect(
@@ -228,24 +264,38 @@ void main() {
             .map((k, v) => MapEntry(k, formatTerm(v))),
         {'bob': '2'});
 
-    // --- The card: bob proposes the reverse swap, and the responder's one
-    // clause is one card, an Accept and the decline its else-branch earns. ---
-    final card = r.inbox.single;
-    expect(card.asks.keys.toSet(), {'respond_swap_1'});
-    expect(card.itemKey, 'bob');
-    expect(formatTerm(card.fields['Want']!), 'lot(bob, 2)');
-    // The card shows the lot as its scalars, never as its term.
-    expect(find.text('lot(bob, 2)'), findsNothing);
+    // --- The card: bob proposes the reverse swap, and the swap responder's
+    // question, Card ::= card(Offer, YesNo?) in writer mode, is one construct:
+    // the offer shown, and the buttons yes and no at its answer. -------------
+    const cardWidget =
+        "form(card, [field('Offer', shown), field('YesNo', buttons([yes, no]))])";
+    final cards = drawn(cardWidget);
+    expect(cards, hasLength(1));
+    final card = cards.single;
+    final (_, cardArgs) = ctorArgs(card.view);
+    final (_, offer) = ctorArgs(cardArgs[0]);
+    expect(formatTerm(offer[0]), 'bob');
+    expect(formatTerm(offer[1]), 'lot(bob, 2)');
+    expect(formatTerm(cardArgs[1]), 'input([2])');
+    Finder inCard(Finder f) =>
+        find.descendant(of: find.byKey(constructKey(card.id)), matching: f);
+    // The card shows the offer as its scalars, never as its term.
+    expect(inCard(find.textContaining('lot(bob, 2)')), findsNothing);
+    expect(inCard(find.textContaining('offer(')), findsNothing);
+    expect(find.byKey(nodeKey(card.id, 'shown', const [1])), findsOneWidget);
     expect(find.text('swap_done(bob)'), findsNothing);
-    expect(find.widgetWithText(ElevatedButton, 'Accept'), findsOneWidget);
-    expect(find.widgetWithText(OutlinedButton, 'Decline'), findsOneWidget);
+    expect(inCard(find.widgetWithText(ElevatedButton, 'yes')), findsOneWidget);
+    expect(inCard(find.widgetWithText(ElevatedButton, 'no')), findsOneWidget);
     await _shot(tester, '/private/tmp/coins-card.png');
 
-    await tester.tap(find.widgetWithText(ElevatedButton, 'Accept'));
+    await tester.tap(inCard(find.widgetWithText(ElevatedButton, 'yes')));
     await tester.pumpAndSettle();
     await settle();
     expect(sends, isEmpty);
-    expect(r.inbox, isEmpty);
+    // Answered, the card is withdrawn; the request form stands.
+    expect(r.bridge.construct(card.id), isNull);
+    expect(find.byKey(constructKey(card.id)), findsNothing);
+    expect(r.bridge.constructs.map((c) => c.id), [form.id]);
     expect(
         r.store.balances['balances']!
             .map((k, v) => MapEntry(k, formatTerm(v))),

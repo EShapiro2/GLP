@@ -2,20 +2,23 @@
 # The compiler from an act-schema contract to its canonical CVA platform in
 # vGLP (programs/vglp/cva/compiler; vGLP, Section 3.2, the paragraph on act
 # schemas, and Section 5.4, "The canonical platform is structured"), run on
-# the contracts of programs/jurix through the REPL.
+# the contracts of programs/jurix and of contracts.glp through the REPL.
 #
 #   bash programs/vglp/cva/compile.sh            print into programs/vglp/cva/<contract>/platform.vglp
 #   bash programs/vglp/cva/compile.sh <dir>      print into <dir>/<contract>/platform.vglp
 #   bash programs/vglp/cva/compile.sh --check    print into a scratch directory and compare
 #
 # for <contract> social_graph and currency, Jurix's two (Jurix, Sections 3.3
-# and 3.4).  A contract is checked before it is compiled (Jurix, Section 5), so
-# one REPL session on programs/jurix prints each contract, contract_named/2, and
-# the checker's verdict on it, check_named/2; a second, on the compiler, calls
-# compile(Name, Contract, Verdict) for each and writes what it prints between
-# its lines "%% compile begin" and "%% compile end" to the contract's
-# platform.vglp.  The compiled modules are committed beside their plays, which
-# load them; --check says whether each is what the compiler prints.
+# and 3.4), and nudge, vGLP's, which contracts.glp beside the compiler holds.
+# A contract is checked before it is compiled (Jurix, Section 5), so a REPL
+# session on contracts.glp prints each of vGLP's contracts, contract_named/2;
+# one on programs/jurix prints each of Jurix's, contract_named/2, and the
+# checker's verdict on each contract, check_named/2 for Jurix's and check/2 for
+# vGLP's; and one on the compiler calls compile(Name, Contract, Verdict) for
+# each and writes what it prints between its lines "%% compile begin" and
+# "%% compile end" to the contract's platform.vglp.  The compiled modules are
+# committed beside their plays, which load them; --check says whether each is
+# what the compiler prints.
 #
 # Prints one line per contract.  Exits 0 if each was compiled and, with
 # --check, each is byte for byte the file in place; 1 otherwise, the contract
@@ -25,7 +28,9 @@ set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 GLP_DIR="$(cd "$HERE/../../.." && pwd)"
 RT="$GLP_DIR/glp_runtime"
-CONTRACTS="social_graph currency"
+JURIX="social_graph currency"
+OURS="nudge"
+CONTRACTS="$JURIX $OURS"
 
 CHECK=0
 if [ $# -gt 1 ]; then
@@ -44,19 +49,46 @@ else
 fi
 for c in $CONTRACTS; do mkdir -p "$OUT/$c" || exit 2; done
 
-# The contracts and their verdicts, from programs/jurix.  The REPL stops a
-# goal at 10000 reductions unless told otherwise; the checker takes more.
+# vGLP's contracts, from contracts.glp.
+{
+    echo "$HERE/contracts.glp"
+    for c in $OURS; do echo "contract_named($c, C)."; done
+    echo ':quit'
+} > "$WORK/ours.in"
+(cd "$RT" && bin/glpc < "$WORK/ours.in" > "$WORK/ours.out" 2>&1)
+sed -e 's/^\(GLP> \)*//' "$WORK/ours.out" | grep -E '^C = ' > "$WORK/ours"
+
+# Jurix's contracts, and the verdicts on all of them, from programs/jurix.
+# The REPL stops a goal at 10000 reductions unless told otherwise; the
+# checker takes more.
 {
     echo "$GLP_DIR/programs/jurix/"
     echo ':limit 10000000'
-    for c in $CONTRACTS; do
+    for c in $JURIX; do
         echo "contract_named($c, C)."
         echo "check_named($c, V)."
+    done
+    n=0
+    for c in $OURS; do
+        n=$((n + 1))
+        echo "check($(sed -n "${n}p" "$WORK/ours" | sed -e 's/^C = //'), V)."
     done
     echo ':quit'
 } > "$WORK/jurix.in"
 (cd "$RT" && bin/glpc < "$WORK/jurix.in" > "$WORK/jurix.out" 2>&1)
-sed -e 's/^\(GLP> \)*//' "$WORK/jurix.out" | grep -E '^(C|V) = ' > "$WORK/terms"
+sed -e 's/^\(GLP> \)*//' "$WORK/jurix.out" | grep -E '^(C|V) = ' > "$WORK/jv"
+
+# Each contract's two lines, its C and its V, in the order of CONTRACTS.
+nj=$(echo $JURIX | wc -w)
+{
+    head -n $((2 * nj)) "$WORK/jv"
+    n=0
+    for c in $OURS; do
+        n=$((n + 1))
+        sed -n "${n}p" "$WORK/ours"
+        sed -n "$((2 * nj + n))p" "$WORK/jv"
+    done
+} > "$WORK/terms"
 
 # The compiler, on each contract and its verdict.
 {
@@ -85,7 +117,7 @@ awk -v out="$OUT" -v names="$CONTRACTS" '
 OK=1
 if [ -s "$WORK/status" ]; then
     cat "$WORK/status"
-    grep -E '^(GLP> )*(Error|✗)' "$WORK/jurix.out" "$WORK/compile.out" | head -20
+    grep -E '^(GLP> )*(Error|✗)' "$WORK/ours.out" "$WORK/jurix.out" "$WORK/compile.out" | head -20
     OK=0
 fi
 for c in $CONTRACTS; do

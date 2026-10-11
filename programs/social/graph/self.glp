@@ -51,9 +51,9 @@ UserContent ::= connect(Key)
               %% attestation: read back the attestation minted at
               %% the befriending (Section 5.5).
               ; install(Constant, Content, String, AppUiStream?)
-              ; install_coins(Constant, Content, String, Channel(Stream(UserAnswer), Stream(Event)))
+              ; install_coins(Constant, Content, String, Channel(PersonIn, Stream(_)))
               ; install_cssn(Constant, Content, String, Channel(Stream(CsAppCmd), Stream(CsAppNotify)))
-              ; install_sovereign(Constant, Content, String, Channel(Stream(SvUserAnswer), Stream(SvEvent)))
+              ; install_sovereign(Constant, Content, String, Channel(PersonIn, Stream(_)))
               ; invite(Constant, Key)
               ; accept_invite(Constant, Key)
               ; decline_invite(Constant, Key)
@@ -193,9 +193,9 @@ CreatorCert ::= creator_cert(String, Stream(Constant), Constant).
 %%   run/3 has activated it, SgEnd the super-app's writer of the mini-app's
 %%   social-graph stream.
 AppStatus ::= idle(AppUiStream?) ; running(SgToAppStream?)
-            ; idle_coins(Channel(Stream(UserAnswer), Stream(Event))) ; running_coins(Stream(Conversation)?)
+            ; idle_coins(Channel(PersonIn, Stream(_))) ; running_coins(Stream(Conversation)?)
             ; idle_cssn(Channel(Stream(CsAppCmd), Stream(CsAppNotify))) ; running_cssn(Stream(CsConversation)?)
-            ; idle_sovereign(Channel(Stream(SvUserAnswer), Stream(SvEvent))) ; running_sovereign(Stream(SvConversation)?).
+            ; idle_sovereign(Channel(PersonIn, Stream(_))) ; running_sovereign(Stream(SvConversation)?).
 App       ::= app(Constant, Module, String, AppStatus).
 AppList   ::= [] ; [App | AppList].
 Attest     ::= att(Key, String).
@@ -228,14 +228,17 @@ Host ::= host(AppList, AttestList, PendingInv, Stream(String)).
 
 %% =============================================================================
 %% THE INTERFACE OF THE CURRENCY MINI-APP (programs/currencies/coins/currency), as the
-%% super-app declares it: coins(Id, Ui, Convs), Ui the mini-app's end of a
-%% channel of the mediator's cards and the person's answers, Convs the stream
-%% on which the social graph hands it its conversations, each a root channel
-%% of the currency protocol.  The definitions are Currencies' own
+%% super-app declares it: coins(Id, Ui, Convs), Ui the mini-app's end of its
+%% person channel (vGLP, Definition "Person Channel, Person Writer, GLP with
+%% Persons, Grant"), on which it reads the person's grants and writes what its
+%% dispatcher draws and withdraws and the screen its agent writes, Convs the
+%% stream on which the social graph hands it its conversations, each a root
+%% channel of the currency protocol.  The definitions are Currencies' own
 %% (programs/currencies/coins/self.glp) written here again, since find_type/2 resolves a
 %% declaration in the caller's scope and the identity is structural: the
 %% super-app carries the interface of every mini-app it hosts.  The names are
-%% the super-app's where they clash with the mediator's (CReqId).
+%% the super-app's where they clash with its own (COffer, Offer being the
+%% invitation's).
 %% =============================================================================
 Coin ::= coin(Key, Integer).
 Lot  ::= lot(Key, Integer).
@@ -267,38 +270,57 @@ ScreenContent ::= holdings(Stream(Lot))
                 ; refused(Key)
                 ; lacking(Key, Integer)
                 ; no_conversation(Key).
-CReqId ::= req(Integer).
-Answer ::= xs_respond_swap_1(String) ; xs_agent_1(Integer) ; xs_agent_2(Key, Key, Integer, Key, Integer) ; xs_agent_3(Key, Integer) ; xs_agent_4(Key, Key).
-Context ::= ctx_respond_swap_1(Key, Lot, Stream(Coin)) ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4.
-UserAnswer ::= answer(CReqId, Answer) ; decline(CReqId).
-Event ::= card(Constant, Context, CReqId)
-        ; closed(CReqId)
-        ; aborted(CReqId)
-        ; msg(Constant, Constant, ScreenContent).
+%% The agent's questions: the person's requests, its interactive type in
+%% reader mode, and the responder's card, in writer mode.
+Peer     ::= Key.
+Request  ::= mint(Integer) ; swap(Peer, Lot, Lot) ; pay(Peer, Integer) ; redeem(Peer, Peer).
+YesNo    ::= yes ; no.
+COffer   ::= offer(Key, Lot, Stream(Coin)).
+Card     ::= card(COffer, YesNo?).
+%% The vocabulary of the compiled agent's dispatcher: the union of the
+%% agent's questions, the asks its goals send, and the person channel's
+%% input, the person's grants input(Id, P, R); and what the person sees on
+%% the channel, the constructs the dispatcher draws and withdraws and the
+%% screen the agent writes.  The person channel never closes, and neither do
+%% the events.
+Question ::= card_w(Card) ; stream_request_r(Stream(Request)?).
+Ask(Q)   ::= ask(Constant, Q).
+PersonIn ::= [_ | PersonIn].
+Event    ::= draw(_, _, _)
+           ; withdraw(_)
+           ; msg(Constant, Constant, ScreenContent).
+Events   ::= [Event | Events].
 
-%% A person's script for the currency (core/superapp_plays.glp): its acts in
-%% order; a step is answered on the mediator's latest open card for its
-%% clause and is done when the screen shows its effect.
+%% A person's script for the currency (core/superapp_plays.glp), after
+%% Currencies' currency/person.glp: its acts in order.  A request is granted
+%% on the agent's request form once it is drawn, at the position its draw
+%% marks input; an acceptance on the proposer's card; a step is done when the
+%% screen shows its effect.  The person keeps the request form's construct
+%% and position, the open cards of proposed swaps by proposer, each with its
+%% construct and position, and whether a grant is out; what the dispatcher
+%% draws is a term of any type.
 CoinStep   ::= mint(Integer) ; swap(Key, Key, Integer, Key, Integer) ; accept(Key).
 CoinScript ::= [] ; [CoinStep | CoinScript].
-OpenReq    ::= no_card ; req(Integer).
-OpenCards  ::= open(OpenReq, OpenReq).
-SwapCard   ::= swap_card(Key, CReqId).
-SwapCards  ::= [] ; [SwapCard | SwapCards].
-Sent       ::= idle ; sent(CReqId).
-Choice     ::= answer(CReqId, Answer) ; wait.
+Form       ::= no_form ; form(_, _).
+OpenOffer  ::= open_offer(_, _, _).
+OpenOffers ::= [] ; [OpenOffer | OpenOffers].
+Sent       ::= idle ; sent.
+Choice     ::= grant(_, _, _) ; wait.
 
 %% =============================================================================
 %% THE INTERFACE OF THE DENOMINATED CURRENCIES MINI-APP
 %% (programs/currencies/sovereign/denominated), as the super-app declares it:
 %% sovereign(Id, Ui, Convs), the two granted channels its second and third
-%% arguments, as coins/3 has them.  The definitions are Currencies' own
+%% arguments, as coins/3 has them: Ui its end of its person channel, of the
+%% currency's type.  The definitions are Currencies' own
 %% (programs/currencies/sovereign/self.glp), written here again for the reason the
 %% currency's are above and taken from that file rather than from their letter.
-%% The names are the super-app's, prefixed Sv throughout: EVERY one of them
-%% clashes with the currency's, the two mini-apps being hosted side by side and
-%% an instrument not being the currency's coin.  Structurally the channel is the
-%% currency's with a different payload and more acts --- an instrument, a coin
+%% The names are the super-app's, prefixed Sv where they clash with the
+%% currency's, the two mini-apps being hosted side by side and an instrument
+%% not being the currency's coin; YesNo, Ask(Q) and PersonIn are the
+%% currency's above, theirs and ours being the same type.  Structurally the
+%% channel is the currency's with a different payload and more acts --- an
+%% instrument, a coin
 %% or a bond, in place of the currency's coin; pay carrying a response writer;
 %% payout new, and spend and spent, the two legs of a spend through the issuer
 %% of the coins spent; redeem carrying the issuer and due of the instrument
@@ -370,14 +392,34 @@ SvScreenContent ::= holdings(Stream(SvLot))
                   ; lacking(Key, Constant, Integer)
                   ; no_conversation(Key)
                   ; fiat_handed(Key, Integer).
-SvReqId ::= req(Integer).
-SvAnswer ::= xs_respond_swap_1(String) ; xs_respond_transfer_1(String) ; xs_agent_1(Constant, Integer) ; xs_agent_2(Constant, Integer, Integer) ; xs_agent_3(Key, Constant, Key, Constant, Integer, Key, Constant, Integer) ; xs_agent_4(Constant, Key, Integer) ; xs_agent_5(Key, Constant, Integer) ; xs_agent_6(Key, Constant, Integer) ; xs_agent_7(Key, Key, Constant, Integer) ; xs_agent_8(Key, Constant, Key, Constant) ; xs_agent_9(Key, Constant, Integer) ; xs_agent_10(Key, Constant, Key, Constant, Integer) ; xs_agent_11(Key, Constant, Key, Constant, Integer) ; xs_agent_12(Key, Constant, Key, Constant, Integer).
-SvContext ::= ctx_respond_swap_1(Key, SvLot, Stream(SvInstrument)) ; ctx_respond_transfer_1(SvKind, Key, Stream(SvInstrument)) ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4 ; ctx_agent_5 ; ctx_agent_6 ; ctx_agent_7 ; ctx_agent_8 ; ctx_agent_9 ; ctx_agent_10 ; ctx_agent_11 ; ctx_agent_12.
-SvUserAnswer ::= answer(SvReqId, SvAnswer) ; decline(SvReqId).
-SvEvent ::= card(Constant, SvContext, SvReqId)
-          ; closed(SvReqId)
-          ; aborted(SvReqId)
-          ; msg(Constant, Constant, SvScreenContent).
+SvSwapOffer     ::= offer(Key, SvLot, Stream(SvInstrument)).
+SvTransferOffer ::= offer_transfer(SvKind, Key, Stream(SvInstrument)).
+%% The agent's questions: the person's requests, its interactive type in
+%% reader mode, and the responders' cards, in writer mode.
+SvRequest ::= mint(Constant, Integer)
+            ; mint(Constant, Integer, Integer)
+            ; swap(Key, Constant, Key, Constant, Integer, Key, Constant, Integer)
+            ; accept(Constant, Key, Integer)
+            ; pay(Key, Constant, Integer)
+            ; payout(Key, Constant, Integer)
+            ; spend(Key, Key, Constant, Integer)
+            ; redeem(Key, Constant, Key, Constant)
+            ; mature(Key, Constant, Integer)
+            ; deposit(Key, Constant, Key, Constant, Integer)
+            ; release(Key, Constant, Key, Constant, Integer)
+            ; return(Key, Constant, Key, Constant, Integer).
+SvSwapCard     ::= card(SvSwapOffer, YesNo?).
+SvTransferCard ::= card(SvTransferOffer, YesNo?).
+%% The vocabulary of the compiled agent's dispatcher: the union of the
+%% agent's questions, whose asks are of the currency's Ask(Q), and the person
+%% channel's input, the currency's PersonIn; and what the person sees on the
+%% channel, the constructs the dispatcher draws and withdraws and the screen
+%% the agent writes.
+SvQuestion ::= swapCard_w(SvSwapCard) ; transferCard_w(SvTransferCard) ; stream_request_r(Stream(SvRequest)?).
+SvEvent    ::= draw(_, _, _)
+             ; withdraw(_)
+             ; msg(Constant, Constant, SvScreenContent).
+SvEvents   ::= [SvEvent | SvEvents].
 
 %% =============================================================================
 %% THE CHILD-SAFE PLATFORM'S INTERFACE, copied from programs/cssn/self.glp for
@@ -425,8 +467,7 @@ CsChannel ::= ch(Stream(CsFriendMsg), Stream(CsFriendMsg)?).
 CsConversation ::= conversation(Constant, Channel(Stream(CsFriendMsg), Stream(CsFriendMsg))).
 
 %% Person -> mini-app commands, and mini-app -> person notifications: the
-%% cards-and-answers channel of this platform, as the currency's Event and
-%% UserAnswer are of that one.
+%% commands-and-notifications channel of this platform.
 CsAppCmd ::= accept_intro(Constant, ReqId)
            ; reject_intro(Constant, ReqId)
            ; accept_child_intro(Constant, ReqId)

@@ -2,15 +2,17 @@
 /// the interface derived from the program.
 ///
 /// `programs/currencies/sovereign` at `sovereign_ui/3`: the central bank's
-/// execution of the denominated bond agent with its mediator, and its two
-/// counterparties' — Diana the community bank and Frank the household,
-/// scripted — over the three conversations of the sovereign market cut to
-/// them. Nothing on this screen is written here — [sovereignManifest] is the
-/// image of the display declarations of
-/// `programs/currencies/sovereign/denominated/sovereign_agent.vglp`, and the
-/// shell is [runVglpApp], which carries any compiled vGLP program.
+/// execution of the denominated bond agent on the person channel of vGLP's
+/// Definition "Person Channel, Person Writer, GLP with Persons, Grant", and
+/// its two counterparties' --- Diana the community bank and Frank the
+/// household, scripted --- over the three conversations of the sovereign
+/// market cut to them.  Nothing on this screen is written here: the bridge
+/// draws the constructs the compiled program's dispatcher draws, each the
+/// default widget of its interactive type, and returns the central bank's
+/// input as grants; [sovereignManifest] views what the agent writes to it;
+/// and the shell is [runVglpApp], which carries any compiled vGLP program.
 ///
-/// `sovereign_ui/3` is the program's live-person harness, Currencies' own in
+/// `sovereign_ui/3` is the program's bridge entry, Currencies' own in
 /// `programs/currencies/sovereign/play_ui.glp` and exported from that
 /// directory's `self.glp`: the entry the Flutter agent runtime starts, whose
 /// three arguments are (Id, UserIn, NetIn) — the same contract `coins_ui/3`

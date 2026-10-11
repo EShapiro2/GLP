@@ -1,9 +1,10 @@
 %% ---------------------------------------------------------------------------
 %% programs/vglp/cva --- the compiler from an act-schema contract to its
-%% canonical CVA platform in vGLP (compiler/, compile.sh), the platforms it
-%% prints (social_graph/platform.vglp, currency/platform.vglp, each beside its
-%% plays) and what the plays of both share, here: a scripted person and a
-%% network between two agents.
+%% canonical CVA platform in vGLP (compiler/, compile.sh), vGLP's contracts
+%% beside Jurix's (contracts.glp), the platforms it prints
+%% (social_graph/platform.vglp, currency/platform.vglp, nudge/platform.vglp,
+%% each beside its plays) and what the plays of all three share, here: a
+%% scripted person and a network between two agents.
 %%
 %% A play runs two agents of a compiled platform, each the agent of the module
 %% with its ask stream and its dispatcher on that stream and on its person

@@ -27,9 +27,23 @@
 %% here is the acceptance of clause 4: accept grants acceptance atoms, a
 %% multiset, and a payout or a spend deletes one at the payee for each coin
 %% paid; the issuer of the coins spent takes part in a spend, countersigning
-%% and recording it, and is not asked.  Its compilation by the vGLP canonical
-%% compilation, the agent and its mediator, is sovereign_agent.glp beside this
-%% file (glpc :emit); the compiled module is not edited.
+%% and recording it, and is not asked.  Its canonical compilation (vGLP,
+%% Definition "Canonical Compilation"), the agent with its dispatcher and
+%% construct processes, is sovereign_agent.glp beside this file (glpc :emit);
+%% the compiled module is not edited.
+%%
+%% The syntax is vGLP's (Definition "Guarded Clause, Volitional Procedure,
+%% Interactive Type, Interactive Term, Ordinary Clause, Procedure, vGLP
+%% Program").  The agent is a volitional procedure whose question is the
+%% stream of the person's requests, Stream(Request)?, of a union type with one
+%% alternative per request; its one clause asks it, once, and passes it to
+%% serve, ordinary GLP, which has one clause per alternative, each the clause
+%% of its transaction reading its request at the head of the stream, and
+%% carries the rest of the stream, Reqs?, through every helper that continues
+%% the agent.  A responder is a volitional procedure whose interactive type, a
+%% card, is in writer mode: its clause writes the card at once, the offer for
+%% the person to see, and hands the person the writer of their answer, which a
+%% helper reads with a clause per answer.
 %%
 %% The agent runs as a mini-app of the Grassroots Super-App (miniapp.glp) and
 %% holds no network entry.  Two parties transact over the root channel of the
@@ -46,27 +60,8 @@
 %% issuer and a date; the acceptances it has granted, a multiset of pairs of
 %% an issuer and a denomination; and the serial its next instrument takes.
 %%
-%% The types, and the helpers over holdings, dates and conversations, are
-%% self.glp's.
-
-%% The twelve request clauses of agent and the accept clause of each
-%% responder, as the app renders them.  A lot's due is `now` for coins and
-%% the maturity date for bonds.
-display agent *(F, K) : panel(sovereign), label("Mint coins"), field(F, text), field(K, number), persistent.
-display agent *(F, K, D) : panel(sovereign), label("Mint bonds"), field(F, text), field(K, number), field(D, date), persistent.
-display agent *(Q, F, U, D, K, V, D1, K1) : panel(sovereign), label("Swap"), field(Q, peer), field(F, text), field(U, peer), field(D, text), field(K, number), field(V, peer), field(D1, text), field(K1, number), persistent.
-display agent *(F, U, L) : panel(sovereign), label("Accept"), field(F, text), field(U, peer), field(L, number), persistent.
-display agent *(Q, F, K) : panel(sovereign), label("Pay"), field(Q, peer), field(F, text), field(K, number), persistent.
-display agent *(Q, F, K) : panel(sovereign), label("Payout"), field(Q, peer), field(F, text), field(K, number), persistent.
-display agent *(Q, S, F, K) : panel(sovereign), label("Spend"), field(Q, peer), field(S, peer), field(F, text), field(K, number), persistent.
-display agent *(Q, F, R, D1) : panel(sovereign), label("Redeem"), field(Q, peer), field(F, text), field(R, peer), field(D1, text), persistent.
-display agent *(Q, F, D) : panel(sovereign), label("Mature"), field(Q, peer), field(F, text), field(D, date), persistent.
-display agent *(E, F, U, D, K) : panel(sovereign), label("Deposit"), field(E, peer), field(F, text), field(U, peer), field(D, text), field(K, number), persistent.
-display agent *(Q, F, U, D, K) : panel(sovereign), label("Release"), field(Q, peer), field(F, text), field(U, peer), field(D, text), field(K, number), persistent.
-display agent *(P, F, U, D, K) : panel(sovereign), label("Return"), field(P, peer), field(F, text), field(U, peer), field(D, text), field(K, number), persistent.
-display respond_swap *(yes, From?, Want?, Offered?) : panel(sovereign), label("Accept"), transient.
-display respond_transfer *(yes, Kind?, From?, Given?) : panel(sovereign), label("Accept"), transient.
-display msg(agent, person, holdings(Lots)) : panel(sovereign), view(balances).
+%% The types --- the requests and the cards among them --- and the helpers
+%% over holdings, dates and conversations, are self.glp's.
 
 %% =============================================================================
 %% The swap responder: one goal per arriving proposal, so proposals pend
@@ -74,16 +69,21 @@ display msg(agent, person, holdings(Lots)) : panel(sovereign), view(balances).
 %% parties; this is the counterparty's guard.
 %% =============================================================================
 
-procedure respond_swap(SwapOffer?, SwapResponse, Stream(UserInMsg)).
+procedure (SwapCard)*respond_swap(SwapOffer?, SwapResponse, Stream(UserInMsg)).
 
-%% Accept: the agent gives the wanted instruments and takes the offered ones,
-%% declining itself when it does not hold the wanted ones.  The else-branch is
-%% the person's decline.
-*(yes, From?, Want?, Offered?)
-respond_swap(offer(From, Want, Offered), Resp?, Ans?) :-
+%% Show the person the offer, and pass their answer on.
+(card(offer(From?, Want?, Offered?), Answer))*respond_swap(offer(From, Want, Offered), Resp?, Ans?) :-
     ground(From?), ground(Want?), ground(Offered?) |
-    accept_answer(From?, Want?, Offered?, Resp, Ans)
- *(no) decline_answer(From?, Offered?, Resp, Ans).
+    decide_swap(Answer?, From?, Want?, Offered?, Resp, Ans).
+
+%% yes accepts: the agent gives the wanted instruments and takes the offered
+%% ones, declining itself when it does not hold the wanted ones.  no is the
+%% person's decline.
+procedure decide_swap(YesNo?, Key?, Lot?, Stream(Instrument)?, SwapResponse, Stream(UserInMsg)).
+decide_swap(yes, From, Want, Offered, Resp?, Ans?) :-
+    accept_answer(From?, Want?, Offered?, Resp, Ans).
+decide_swap(no, From, _, Offered, Resp?, Ans?) :-
+    decline_answer(From?, Offered?, Resp, Ans).
 
 %% =============================================================================
 %% The transfer responder: the receiver's guard of a deposit, a release or a
@@ -91,14 +91,19 @@ respond_swap(offer(From, Want, Offered), Resp?, Ans?) :-
 %% the escrow agent the escrow program answers in place of the person.
 %% =============================================================================
 
-procedure respond_transfer(TransferOffer?, TransferResponse, Stream(UserInMsg)).
+procedure (TransferCard)*respond_transfer(TransferOffer?, TransferResponse, Stream(UserInMsg)).
 
-%% Accept: the instruments are taken.  The else-branch is the person's decline.
-*(yes, Kind?, From?, Given?)
-respond_transfer(offer_transfer(Kind, From, Given), Resp?, Ans?) :-
+%% Show the person the transfer, and pass their answer on.
+(card(offer_transfer(Kind?, From?, Given?), Answer))*respond_transfer(offer_transfer(Kind, From, Given), Resp?, Ans?) :-
     ground(Kind?), ground(From?), ground(Given?) |
-    accept_transfer_answer(Kind?, From?, Given?, Resp, Ans)
- *(no) decline_transfer_answer(Kind?, From?, Given?, Resp, Ans).
+    decide_transfer(Answer?, Kind?, From?, Given?, Resp, Ans).
+
+%% yes accepts: the instruments are taken.  no is the person's decline.
+procedure decide_transfer(YesNo?, Kind?, Key?, Stream(Instrument)?, TransferResponse, Stream(UserInMsg)).
+decide_transfer(yes, Kind, From, Given, Resp?, Ans?) :-
+    accept_transfer_answer(Kind?, From?, Given?, Resp, Ans).
+decide_transfer(no, Kind, From, Given, Resp?, Ans?) :-
+    decline_transfer_answer(Kind?, From?, Given?, Resp, Ans).
 
 %% =============================================================================
 %% The agent
@@ -110,440 +115,439 @@ respond_transfer(offer_transfer(Kind, From, Given), Resp?, Ans?) :-
 %% a stream of dates; its outputs --- the screen and a channel per
 %% counterparty; and its machine state --- holdings, date, warranties
 %% received, acceptances granted, and the serial its next instrument takes.
+%% Its question is the stream of the person's requests.
 
-exported procedure agent(Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+exported procedure (Stream(Request)?)*agent(Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+
+%% Ask the person for their requests, once, and serve them.
+(Reqs)*agent(Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, As?, Serial?).
+
+%% serve(Reqs, Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date,
+%% Warranties, Acceptances, Serial): the agent, with the rest of the person's
+%% requests.
+
+procedure serve(Stream(Request)?, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
 
 %% --- Reactive: acts arriving from counterparties, on their conversations ---
 
 %% An act on the conversation with From.
-agent(Id, UserIn, [msg(From, Id1, Act)|PeerIn], Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve(Reqs, Id, UserIn, [msg(From, Id1, Act)|PeerIn], Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     Id? =?= Id1?, ground(From?) |
-    on_act(Act?, From?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, As?, Serial?).
+    on_act(Act?, From?, Id?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% Anything else from a counterparty is dropped.
-agent(Id, UserIn, [_|PeerIn], Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve(Reqs, Id, UserIn, [_|PeerIn], Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), otherwise |
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% --- Reactive: a conversation the social graph hands the agent ---
 
 %% A conversation with Q opened: its channel is adopted --- the write side
 %% becomes the output to Q, the read side joins the input from counterparties
 %% --- and the screen shows it.
-agent(Id, UserIn, PeerIn, [conversation(Q, Ch)|Convs], Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve(Reqs, Id, UserIn, PeerIn, [conversation(Q, Ch)|Convs], Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(Q?) |
     adopt(Q?, Ch?, Outs?, Outs1, PeerIn?, PeerIn1),
     show(opened(Q?), Outs1?, Outs2),
-    agent(Id?, UserIn?, PeerIn1?, Convs?, Cal?, Outs2?, Holdings?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn1?, Convs?, Cal?, Outs2?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% --- Reactive: the person's answers to swap and transfer offers, and the
 %% results of the acts this agent proposed, on its own input ---
 
 %% The person accepted a proposed swap (respond_swap): give the wanted
 %% instruments and take the offered ones, if the wanted ones are held.
-agent(Id, [accept_swap(From, lot(V, F1, D1, K1), Offered, Resp?)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve(Reqs, Id, [accept_swap(From, lot(V, F1, D1, K1), Offered, Resp?)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(From?), ground(V?), ground(F1?), ground(D1?), integer(K1?) |
     select_instruments(V?, F1?, D1?, K1?, Holdings?, Status, Give, Rest),
-    fill_swap(Status?, Id?, From?, Resp, Give?, Offered?, Rest?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Date?, Ws?, As?, Serial?).
+    fill_swap(Status?, Id?, From?, Resp, Give?, Offered?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Date?, Ws?, As?, Serial?).
 
 %% The person declined one.
-agent(Id, [decline_swap(From, Offered, Resp?)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve(Reqs, Id, [decline_swap(From, Offered, Resp?)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(From?) |
     decline(Resp, Offered?),
     show(declined(From?), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% My proposal was accepted: the counterparty's instruments are mine.
-agent(Id, [swap_accepted(Q, Given)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve(Reqs, Id, [swap_accepted(Q, Given)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(Q?), ground(Given?) |
     append_instruments(Holdings?, Given?, Holdings1),
     show(swap_done(Q?), Outs?, Outs1),
-    after_change(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As?, Serial?).
+    after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As?, Serial?).
 
 %% My proposal was declined: my instruments come back.
-agent(Id, [swap_declined_by(Q, Given)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve(Reqs, Id, [swap_declined_by(Q, Given)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(Q?), ground(Given?) |
     append_instruments(Holdings?, Given?, Holdings1),
     show(swap_declined(Q?), Outs?, Outs1),
-    after_change(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As?, Serial?).
+    after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As?, Serial?).
 
 %% My payment, payout or spend was taken: the screen says which.
-agent(Id, [pay_taken_by(Shown)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve(Reqs, Id, [pay_taken_by(Shown)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(Shown?) |
     show(Shown?, Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% My payment, payout or spend was returned: the coins come back.
-agent(Id, [pay_returned_by(Q, Coins)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve(Reqs, Id, [pay_returned_by(Q, Coins)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(Q?), ground(Coins?) |
     append_instruments(Holdings?, Coins?, Holdings1),
     count_instruments(Coins?, 0, K),
     show(not_accepted(Q?, K?), Outs?, Outs1),
-    after_change(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As?, Serial?).
+    after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As?, Serial?).
 
 %% A spend of my coins I countersigned was taken by its payee, or returned by
 %% it: my log records which.
-agent(Id, [spend_settled(Shown)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve(Reqs, Id, [spend_settled(Shown)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(Shown?) |
     show(Shown?, Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% My presentation was fulfilled: the instrument I chose is mine.
-agent(Id, [redeem_given(Q, R, D1, X)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve(Reqs, Id, [redeem_given(Q, R, D1, X)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(Q?), ground(R?), ground(D1?), ground(X?) |
     append_instruments(Holdings?, [X?], Holdings1),
     show(redeemed(Q?, R?, D1?), Outs?, Outs1),
-    after_change(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As?, Serial?).
+    after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As?, Serial?).
 
 %% The issuer holds no instrument of the issuer and due I named: my coin is
 %% back, with the lots it does hold, to choose among.
-agent(Id, [redeem_menu_from(Q, Coin, Menu)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve(Reqs, Id, [redeem_menu_from(Q, Coin, Menu)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(Q?), ground(Coin?), ground(Menu?) |
     append_instruments(Holdings?, [Coin?], Holdings1),
     show(menu(Q?, Menu?), Outs?, Outs1),
-    after_change(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As?, Serial?).
+    after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As?, Serial?).
 
 %% What I presented was not the issuer's coin: back.
-agent(Id, [redeem_declined_by(Q, Coin)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve(Reqs, Id, [redeem_declined_by(Q, Coin)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(Q?), ground(Coin?) |
     append_instruments(Holdings?, [Coin?], Holdings1),
     show(refused(Q?), Outs?, Outs1),
-    after_change(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As?, Serial?).
+    after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As?, Serial?).
 
 %% My matured bond was taken for a coin of its issuer, who warranted its date,
 %% which I record --- w'_p = w_p + {(q, d*_q)} of Mature.
-agent(Id, [matured_by(Q, D, Coin, T)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve(Reqs, Id, [matured_by(Q, D, Coin, T)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(Q?), integer(D?), ground(Coin?), integer(T?) |
     append_instruments(Holdings?, [Coin?], Holdings1),
     add_warranty(Q?, T?, Ws?, Ws1),
     show(matured(Q?, D?), Outs?, Outs1),
     show(warranty(Q?, T?), Outs1?, Outs2),
-    after_change(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs2?, Holdings1?, Date?, Ws1?, As?, Serial?).
+    after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs2?, Holdings1?, Date?, Ws1?, As?, Serial?).
 
 %% The bond I presented is not mature by its issuer's date: back.
-agent(Id, [not_matured_by(Q, bond(I, F, M, S))|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve(Reqs, Id, [not_matured_by(Q, bond(I, F, M, S))|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(Q?), ground(I?), ground(F?), integer(M?), integer(S?) |
     append_instruments(Holdings?, [bond(I?, F?, M?, S?)], Holdings1),
     show(not_mature(Q?, M?), Outs?, Outs1),
-    after_change(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As?, Serial?).
+    after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As?, Serial?).
 
 %% The person accepted a proposed transfer (respond_transfer): the
 %% instruments are taken.
-agent(Id, [accept_transfer(Kind, From, Given, Resp?)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve(Reqs, Id, [accept_transfer(Kind, From, Given, Resp?)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(Kind?), ground(From?), ground(Given?) |
     take_transfer(Resp),
     append_instruments(Holdings?, Given?, Holdings1),
     tally(Given?, [], Lots),
     show(received_transfer(Kind?, From?, Lots?), Outs?, Outs1),
-    after_change(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As?, Serial?).
+    after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As?, Serial?).
 
 %% The person declined one: the instruments go back.
-agent(Id, [decline_transfer(Kind, From, Given, Resp?)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve(Reqs, Id, [decline_transfer(Kind, From, Given, Resp?)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(Kind?), ground(From?) |
     decline_transfer_resp(Resp, Given?),
     show(declined_transfer(Kind?, From?), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% My transfer was accepted: the instruments set aside for it are gone.
-agent(Id, [transfer_accepted(Kind, Q)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve(Reqs, Id, [transfer_accepted(Kind, Q)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(Kind?), ground(Q?) |
     show(transferred(Kind?, Q?), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% My transfer was declined: my instruments come back.
-agent(Id, [transfer_declined_by(Kind, Q, Given)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve(Reqs, Id, [transfer_declined_by(Kind, Q, Given)|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(Kind?), ground(Q?), ground(Given?) |
     append_instruments(Holdings?, Given?, Holdings1),
     show(transfer_declined(Kind?, Q?), Outs?, Outs1),
-    after_change(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As?, Serial?).
+    after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As?, Serial?).
 
 %% Anything else on the input is dropped.
-agent(Id, [_|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve(Reqs, Id, [_|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), otherwise |
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% --- Advance_p(t), guarded by no one: the calendar.  A date past the agent's
 %% advances it --- the precondition t > d*_p, the effect d'*_p = t --- and one
 %% not past it is no transaction and is dropped.  In a headless run the play
 %% writes the calendar; on a device the clock does. ---
 
-agent(Id, UserIn, PeerIn, Convs, [T|Cal], Outs, Holdings, Date, Ws, As, Serial) :-
+serve(Reqs, Id, UserIn, PeerIn, Convs, [T|Cal], Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), T? > Date? |
     show(date_advanced(T?), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, T?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, T?, Ws?, As?, Serial?).
 
-agent(Id, UserIn, PeerIn, Convs, [T|Cal], Outs, Holdings, Date, Ws, As, Serial) :-
+serve(Reqs, Id, UserIn, PeerIn, Convs, [T|Cal], Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), T? =< Date? |
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% --- Volitional: the transactions of Definition "The Transactions of
-%% Denominated Grassroots Currencies" at the party whose election they are.
-%% Request clauses, perpetually pending, after every otherwise clause of the
-%% procedure. ---
+%% Denominated Grassroots Currencies" at the party whose election they are,
+%% one clause per alternative of Request, each reading its request at the head
+%% of the person's stream, after every otherwise clause of the procedure. ---
 
 %% Mint_p(f, k), guarded by p: c'_p = c_p + cent^k_{f,p}, k coins, carrying no
 %% date.
-*(F, K)
-agent(Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve([mint(F, K)|Reqs], Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(F?), integer(K?), K? >= 1 |
     create_coins(Id?, F?, K?, Serial?, New),
     Serial1 := Serial? + K?,
     append_instruments(Holdings?, New?, Holdings1),
     show(minted(K?, now), Outs?, Outs1),
-    after_change(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As?, Serial1?).
+    after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As?, Serial1?).
 
 %% Mint_p(f, d, k), guarded by p: precondition d > d*_p, so no bond is born
 %% due; c'_p = c_p + cent^k_{f,p,d}.
-*(F, K, D)
-agent(Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve([mint(F, K, D)|Reqs], Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(F?), integer(K?), K? >= 1, integer(D?), D? > Date? |
     create_bonds(Id?, F?, D?, K?, Serial?, New),
     Serial1 := Serial? + K?,
     append_instruments(Holdings?, New?, Holdings1),
     show(minted(K?, D?), Outs?, Outs1),
-    after_change(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As?, Serial1?).
+    after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As?, Serial1?).
 
 %% Swap_{p,q}(cent^k_{f,u,*}, cent^{k'}_{f,v,*}), guarded by both: p proposes,
 %% giving one lot for another of the one denomination, coins or bonds, and q
 %% answers by respond_swap.  The precondition at p, cent^k_{f,u,*} in c_p, is
 %% the selection; q's part of it is q's.
-*(Q, F, U, D, K, V, D1, K1)
-agent(Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve([swap(Q, F, U, D, K, V, D1, K1)|Reqs], Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(Q?), ground(F?), ground(U?), ground(D?), integer(K?), K? >= 1,
     ground(V?), ground(D1?), integer(K1?), K1? >= 1 |
     select_instruments(U?, F?, D?, K?, Holdings?, Status, Give, Rest),
-    propose_swap(Status?, Id?, Q?, lot(U?, F?, D?, K?), lot(V?, F?, D1?, K1?), Give?, Rest?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Date?, Ws?, As?, Serial?).
+    propose_swap(Status?, Id?, Q?, lot(U?, F?, D?, K?), lot(V?, F?, D1?, K1?), Give?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Date?, Ws?, As?, Serial?).
 
 %% Accept_p(f, u, L), guarded by p: precondition cent_{f,u,*} in c_p, a coin
 %% or a bond of u in f; A'_p = A_p + L.{(u, f)}, L acceptance atoms.
-*(F, U, L)
-agent(Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve([accept(F, U, L)|Reqs], Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(F?), ground(U?), integer(L?), L? >= 1 |
     holds(U?, F?, Holdings?, Held, Holdings1),
-    do_accept(Held?, Id?, U?, F?, L?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings1?, Date?, Ws?, As?, Serial?).
+    do_accept(Held?, Id?, U?, F?, L?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings1?, Date?, Ws?, As?, Serial?).
 
 %% Pay_{p,q}(cent^k_{f,q}), guarded by p: k q-coins in f to their issuer q,
 %% which takes them (clause 7 of the contract) and needs no acceptance.  No
 %% date is read.  The precondition cent^k_{f,q} in c_p is the selection.
-*(Q, F, K)
-agent(Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve([pay(Q, F, K)|Reqs], Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(Q?), ground(F?), integer(K?), K? >= 1 |
     select_instruments(Q?, F?, now, K?, Holdings?, Status, Give, Rest),
-    do_pay(Status?, Id?, Q?, F?, K?, Give?, Rest?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Date?, Ws?, As?, Serial?).
+    do_pay(Status?, Id?, Q?, F?, K?, Give?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Date?, Ws?, As?, Serial?).
 
 %% Payout_{p,q}(cent^k_{f,p}), guarded by p: k of p's own coins in f to q,
 %% which deletes k of accepts(p, f) and is not asked.  The precondition
 %% cent^k_{f,p} in c_p is the selection; k.{(p, f)} in A_q is q's.
-*(Q, F, K)
-agent(Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve([payout(Q, F, K)|Reqs], Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(Q?), ground(F?), integer(K?), K? >= 1 |
     select_instruments(Id?, F?, now, K?, Holdings?, Status, Give, Rest),
-    do_payout(Status?, Id?, Q?, F?, K?, Give?, Rest?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Date?, Ws?, As?, Serial?).
+    do_payout(Status?, Id?, Q?, F?, K?, Give?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Date?, Ws?, As?, Serial?).
 
 %% Spend_{p,q}(cent^k_{f,s}), guarded by p: k coins of s in f to q, through
 %% their issuer s, which countersigns and records the payment and is not
 %% asked; q deletes k of accepts(s, f) and is not asked.  The precondition
 %% cent^k_{f,s} in c_p is the selection; k.{(s, f)} in A_q is q's.
-*(Q, S, F, K)
-agent(Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve([spend(Q, S, F, K)|Reqs], Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(Q?), ground(S?), ground(F?), integer(K?), K? >= 1 |
     select_instruments(S?, F?, now, K?, Holdings?, Status, Give, Rest),
-    do_spend(Status?, Id?, Q?, S?, F?, K?, Give?, Rest?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Date?, Ws?, As?, Serial?).
+    do_spend(Status?, Id?, Q?, S?, F?, K?, Give?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Date?, Ws?, As?, Serial?).
 
 %% Redeem_{p,q}(f; r, *), guarded by p: a q-coin in f presented to q for a
 %% coin or a bond of r in f that q holds, of p's choice (clause 6), due D1.
 %% No date is read.  The precondition cent_{f,q} in c_p is the selection;
 %% cent_{f,r,*} in c_q is tested at q, which discloses what it holds where it
 %% fails.
-*(Q, F, R, D1)
-agent(Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve([redeem(Q, F, R, D1)|Reqs], Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(Q?), ground(F?), ground(R?), ground(D1?) |
     take_instrument(Q?, F?, now, Holdings?, Found, Rest),
-    do_redeem(Found?, Id?, Q?, R?, D1?, Rest?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Date?, Ws?, As?, Serial?).
+    do_redeem(Found?, Id?, Q?, R?, D1?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Date?, Ws?, As?, Serial?).
 
 %% Mature_{p,q}(f, d), guarded by p: a q-bond in f maturing at d presented to
 %% q for a q-coin (clause 6).  The precondition cent_{f,q,d} in c_p is the
 %% selection; d <= d*_q is tested at q, which warrants its date in its answer.
-*(Q, F, D)
-agent(Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve([mature(Q, F, D)|Reqs], Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(Q?), ground(F?), integer(D?) |
     take_bond(Q?, F?, D?, Holdings?, Found, Rest),
-    do_mature(Found?, Id?, Q?, D?, Rest?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Date?, Ws?, As?, Serial?).
+    do_mature(Found?, Id?, Q?, D?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Date?, Ws?, As?, Serial?).
 
 %% Deposit_{p,e}(cent^k_{f,u,*}), guarded by both: p proposes the transfer to
 %% the escrow agent e, which answers by respond_transfer.  The precondition
 %% cent^k_{f,u,*} in c_p is the selection.
-*(E, F, U, D, K)
-agent(Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve([deposit(E, F, U, D, K)|Reqs], Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(E?), ground(F?), ground(U?), ground(D?), integer(K?), K? >= 1 |
     select_instruments(U?, F?, D?, K?, Holdings?, Status, Give, Rest),
-    propose_transfer(Status?, deposit, Id?, E?, lot(U?, F?, D?, K?), Give?, Rest?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Date?, Ws?, As?, Serial?).
+    propose_transfer(Status?, deposit, Id?, E?, lot(U?, F?, D?, K?), Give?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Date?, Ws?, As?, Serial?).
 
 %% Release_{e,q}(cent^k_{f,u,*}), guarded by both: the escrow agent e proposes
 %% the transfer to the beneficiary q, which answers by respond_transfer.
-*(Q, F, U, D, K)
-agent(Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve([release(Q, F, U, D, K)|Reqs], Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(Q?), ground(F?), ground(U?), ground(D?), integer(K?), K? >= 1 |
     select_instruments(U?, F?, D?, K?, Holdings?, Status, Give, Rest),
-    propose_transfer(Status?, release, Id?, Q?, lot(U?, F?, D?, K?), Give?, Rest?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Date?, Ws?, As?, Serial?).
+    propose_transfer(Status?, release, Id?, Q?, lot(U?, F?, D?, K?), Give?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Date?, Ws?, As?, Serial?).
 
 %% Return_{e,p}(cent^k_{f,u,*}), guarded by both: the escrow agent e proposes
 %% the transfer back to the depositor p, which answers by respond_transfer.
-*(P, F, U, D, K)
-agent(Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+serve([return(P, F, U, D, K)|Reqs], Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(P?), ground(F?), ground(U?), ground(D?), integer(K?), K? >= 1 |
     select_instruments(U?, F?, D?, K?, Holdings?, Status, Give, Rest),
-    propose_transfer(Status?, return, Id?, P?, lot(U?, F?, D?, K?), Give?, Rest?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Date?, Ws?, As?, Serial?).
+    propose_transfer(Status?, return, Id?, P?, lot(U?, F?, D?, K?), Give?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Date?, Ws?, As?, Serial?).
 
 %% =============================================================================
 %% An arriving act, on the conversation it came on
 %% =============================================================================
 
-procedure on_act(PeerContent?, Key?, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+procedure on_act(PeerContent?, Key?, Key?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
 
 %% Pay at q, the issuer: q's own coins are taken, with no acceptance, and no
 %% date is read.
-on_act(pay(Coins, Resp?), From, Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+on_act(pay(Coins, Resp?), From, Id, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Coins?) |
     own_coins(Id?, Coins?, Own),
-    take_payment(Own?, Id?, From?, Coins?, Resp, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, As?, Serial?).
+    take_payment(Own?, Id?, From?, Coins?, Resp, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% Payout at q: the payer's own coins in F are taken if q has accepted as many
 %% of them, and that many of accepts(p, f) are deleted.
-on_act(payout(F, Coins, Resp?), From, Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+on_act(payout(F, Coins, Resp?), From, Id, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(F?), ground(Coins?) |
-    take_accepted(From?, From?, F?, Coins?, Resp, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, As?, Serial?).
+    take_accepted(From?, From?, F?, Coins?, Resp, Id?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% Spend at s, the issuer: the payment of its own coins is countersigned and
 %% forwarded to the payee, on the conversation s holds with it; its answer
 %% goes back to the payer, and s records the payment when the payee has taken
 %% it.
-on_act(spend(Q, F, Coins, Resp?), From, Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+on_act(spend(Q, F, Coins, Resp?), From, Id, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Q?), ground(F?), ground(Coins?) |
     own_coins(Id?, Coins?, Own),
-    countersign(Own?, From?, Q?, F?, Coins?, Resp, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, As?, Serial?).
+    countersign(Own?, From?, Q?, F?, Coins?, Resp, Id?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% Spend at q: the coins of s in F, countersigned by s, are taken if q has
 %% accepted as many of them, and that many of accepts(s, f) are deleted.
-on_act(spent(P, F, Coins, Resp?), From, Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+on_act(spent(P, F, Coins, Resp?), From, Id, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(P?), ground(F?), ground(Coins?) |
-    take_accepted(P?, From?, F?, Coins?, Resp, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, As?, Serial?).
+    take_accepted(P?, From?, F?, Coins?, Resp, Id?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% Redeem at q: the presented coin is taken back and the instrument named
 %% given, if the presented coin is q's and the instrument named is held.
-on_act(redeem(Coin, R, D1, Resp?), From, Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+on_act(redeem(Coin, R, D1, Resp?), From, Id, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Coin?), ground(R?), ground(D1?) |
-    fulfil(Coin?, R?, D1?, Resp, Id?, From?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, As?, Serial?).
+    fulfil(Coin?, R?, D1?, Resp, Id?, From?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% Mature at q: the presented bond, if q's and mature by q's date, is taken
 %% for a q-coin, and q's date is warranted.
-on_act(mature(Bond, Resp?), From, Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+on_act(mature(Bond, Resp?), From, Id, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Bond?) |
-    grant(Bond?, Id?, Date?, Serial?, Resp, From?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Ws?, As?).
+    grant(Bond?, Id?, Date?, Serial?, Resp, From?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Ws?, As?).
 
 %% Swap at q: a responder poses it to the person; the answer reaches the agent
 %% on its input.
-on_act(swap(Want, Offered, Resp?), From, Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+on_act(swap(Want, Offered, Resp?), From, Id, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Want?), ground(Offered?) |
     respond_swap(offer(From?, Want?, Offered?), Resp, Ans),
     merge(Ans?, UserIn?, UserIn1),
-    agent(Id?, UserIn1?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn1?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% A deposit, release or return at its receiver: a responder poses it to the
 %% person --- at the escrow agent, to the escrow program.
-on_act(transfer(Kind, Given, Resp?), From, Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+on_act(transfer(Kind, Given, Resp?), From, Id, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Kind?), ground(Given?) |
     respond_transfer(offer_transfer(Kind?, From?, Given?), Resp, Ans),
     merge(Ans?, UserIn?, UserIn1),
-    agent(Id?, UserIn1?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn1?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% A payment of my own coins is taken; instruments that are not my coins are
 %% no payment of clause 5, and go back.
-procedure take_payment(Decision?, Key?, Key?, Stream(Instrument)?, PayResponse, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
-take_payment(yes, Id, From, Coins, pay_taken, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+procedure take_payment(Decision?, Key?, Key?, Stream(Instrument)?, PayResponse, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+take_payment(yes, Id, From, Coins, pay_taken, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Coins?) |
     append_instruments(Holdings?, Coins?, Holdings1),
     count_instruments(Coins?, 0, K),
     show(received(From?, K?), Outs?, Outs1),
-    after_change(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As?, Serial?).
-take_payment(no, Id, From, Coins, pay_returned(Coins?), UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+    after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As?, Serial?).
+take_payment(no, Id, From, Coins, pay_returned(Coins?), Reqs, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Coins?) |
     count_instruments(Coins?, 0, K),
     show(refused_payment(From?, K?), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% A payout or a spend at its payee: the coins of issuer U in F, paid by P,
 %% are taken if every one is a U-coin in F and the payee holds as many of
 %% accepts(U, f), which that many are deleted; else they go back.
-procedure take_accepted(Key?, Key?, Constant?, Stream(Instrument)?, PayResponse, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
-take_accepted(P, U, F, Coins, Resp?, Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+procedure take_accepted(Key?, Key?, Constant?, Stream(Instrument)?, PayResponse, Key?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+take_accepted(P, U, F, Coins, Resp?, Id, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Coins?), ground(As?) |
     issued_by(U?, F?, Coins?, Valid),
     count_instruments(Coins?, 0, K),
     count_acceptances(U?, F?, As?, 0, N),
-    admit(Valid?, K?, N?, P?, U?, F?, Coins?, Resp, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, As?, Serial?).
+    admit(Valid?, K?, N?, P?, U?, F?, Coins?, Resp, Id?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, As?, Serial?).
 
-procedure admit(Constant?, Integer?, Integer?, Key?, Key?, Constant?, Stream(Instrument)?, PayResponse, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
-admit(yes, K, N, P, U, F, Coins, pay_taken, Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+procedure admit(Constant?, Integer?, Integer?, Key?, Key?, Constant?, Stream(Instrument)?, PayResponse, Key?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+admit(yes, K, N, P, U, F, Coins, pay_taken, Id, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     K? =< N? |
     delete_acceptances(U?, F?, K?, As?, As1),
     append_instruments(Holdings?, Coins?, Holdings1),
     show(received_from(P?, U?, K?), Outs?, Outs1),
-    after_accepting(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As1?, Serial?).
-admit(_, K, _, P, U, _, Coins, pay_returned(Coins?), Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+    after_accepting(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As1?, Serial?).
+admit(_, K, _, P, U, _, Coins, pay_returned(Coins?), Id, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     otherwise |
     show(refused_from(P?, U?, K?), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% A spend of my own coins, countersigned: forwarded to the payee on my
 %% conversation with it, the payee's answer relayed to the payer and recorded
 %% in my log when it comes; with no conversation open, or coins not mine, it
 %% goes back.
-procedure countersign(Decision?, Key?, Key?, Constant?, Stream(Instrument)?, PayResponse, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
-countersign(yes, P, Q, F, Coins, Resp?, Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+procedure countersign(Decision?, Key?, Key?, Constant?, Stream(Instrument)?, PayResponse, Key?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+countersign(yes, P, Q, F, Coins, Resp?, Id, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Q?) |
     has_peer(Q?, Outs?, Outs1, Known),
-    forward_spend(Known?, P?, Q?, F?, Coins?, Resp, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
-countersign(no, P, _, _, Coins, pay_returned(Coins?), Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+    forward_spend(Known?, P?, Q?, F?, Coins?, Resp, Id?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
+countersign(no, P, _, _, Coins, pay_returned(Coins?), Id, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Coins?) |
     count_instruments(Coins?, 0, K),
     show(refused_payment(P?, K?), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
 
-procedure forward_spend(Decision?, Key?, Key?, Constant?, Stream(Instrument)?, PayResponse, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
-forward_spend(yes, P, Q, F, Coins, Resp?, Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+procedure forward_spend(Decision?, Key?, Key?, Constant?, Stream(Instrument)?, PayResponse, Key?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+forward_spend(yes, P, Q, F, Coins, Resp?, Id, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Q?), ground(Coins?) |
     send_friend(Q?, msg(Id?, Q?, spent(P?, F?, Coins?, Resp1)), Outs?, Outs1),
     count_instruments(Coins?, 0, K),
     relay_spend(Resp1?, P?, Q?, K?, Resp, UserIn?, UserIn1),
-    agent(Id?, UserIn1?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
-forward_spend(no, _, Q, _, Coins, pay_returned(Coins?), Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+    serve(Reqs?, Id?, UserIn1?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
+forward_spend(no, _, Q, _, Coins, pay_returned(Coins?), Id, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     show(no_conversation(Q?), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% A presentation: my coin is taken back and the instrument named given, if
 %% held; else the coin goes back with the lots I hold; anything but my coin
 %% goes back.
-procedure fulfil(Instrument?, Key?, Constant?, RedeemResponse, Key?, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
-fulfil(coin(I, F, S), R, D1, Resp?, Id, From, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+procedure fulfil(Instrument?, Key?, Constant?, RedeemResponse, Key?, Key?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+fulfil(coin(I, F, S), R, D1, Resp?, Id, From, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     I? =?= Id? |
     take_instrument(R?, F?, D1?, Holdings?, Found, Rest),
-    give(Found?, coin(I?, F?, S?), R?, D1?, Resp, Id?, From?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Rest?, Date?, Ws?, As?, Serial?).
-fulfil(X, _, _, redeem_declined(X?), Id, From, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+    give(Found?, coin(I?, F?, S?), R?, D1?, Resp, Id?, From?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Rest?, Date?, Ws?, As?, Serial?).
+fulfil(X, _, _, redeem_declined(X?), Id, From, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     otherwise |
     show(refused(From?), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
 
-procedure give(Found?, Instrument?, Key?, Constant?, RedeemResponse, Key?, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
-give(found(X), Mine, R, D1, redeem_give(X?), Id, From, UserIn, PeerIn, Convs, Cal, Outs, Rest, Date, Ws, As, Serial) :-
+procedure give(Found?, Instrument?, Key?, Constant?, RedeemResponse, Key?, Key?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+give(found(X), Mine, R, D1, redeem_give(X?), Id, From, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Rest, Date, Ws, As, Serial) :-
     append_instruments(Rest?, [Mine?], Holdings1),
     show(presented(From?, R?, D1?), Outs?, Outs1),
-    after_change(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As?, Serial?).
-give(not_found, Mine, R, D1, redeem_menu(Mine?, Menu?), Id, From, UserIn, PeerIn, Convs, Cal, Outs, Rest, Date, Ws, As, Serial) :-
+    after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As?, Serial?).
+give(not_found, Mine, R, D1, redeem_menu(Mine?, Menu?), Id, From, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Rest, Date, Ws, As, Serial) :-
     ground(Rest?) |
     menu_of(Id?, Rest?, [], Menu),
     show(unfulfilled(From?, R?, D1?), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Rest?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Rest?, Date?, Ws?, As?, Serial?).
 
 %% A maturing: my bond, mature by my date, is taken for a fresh coin of mine
 %% in its denomination, and my date is warranted in the answer; the bond is
@@ -552,212 +556,212 @@ give(not_found, Mine, R, D1, redeem_menu(Mine?, Menu?), Id, From, UserIn, PeerIn
 %% precede the response they are written into: a head output term must not
 %% read a variable a later head argument binds (engine defect, reported to
 %% IGLP 2026-09-03).
-procedure grant(Instrument?, Key?, Integer?, Integer?, MatureResponse, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Stream(Warranty)?, Stream(Acceptance)?).
-grant(bond(I, F, M, _), Id, Date, Serial, mature_give(coin(Id?, F?, Serial?), Date?), From, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Ws, As) :-
+procedure grant(Instrument?, Key?, Integer?, Integer?, MatureResponse, Key?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Stream(Warranty)?, Stream(Acceptance)?).
+grant(bond(I, F, M, _), Id, Date, Serial, mature_give(coin(Id?, F?, Serial?), Date?), From, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Ws, As) :-
     I? =?= Id?, M? =< Date? |
     Serial1 := Serial? + 1,
     show(matured_for(From?, M?), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial1?).
-grant(bond(I, F, M, S), Id, Date, Serial, mature_declined(bond(I?, F?, M?, S?)), From, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Ws, As) :-
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial1?).
+grant(bond(I, F, M, S), Id, Date, Serial, mature_declined(bond(I?, F?, M?, S?)), From, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Ws, As) :-
     otherwise |
     show(not_mature_for(From?, M?), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
-grant(coin(I, F, S), Id, Date, Serial, mature_declined(coin(I?, F?, S?)), From, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Ws, As) :-
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
+grant(coin(I, F, S), Id, Date, Serial, mature_declined(coin(I?, F?, S?)), From, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Ws, As) :-
     show(refused(From?), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% An accepted swap is filled: the wanted instruments go and the offered ones
 %% come; wanted instruments not held decline it.
-procedure fill_swap(Status?, Key?, Key?, SwapResponse, Stream(Instrument)?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
-fill_swap(ok, Id, From, swap_accept(Give?), Give, Offered, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
+procedure fill_swap(Status?, Key?, Key?, SwapResponse, Stream(Instrument)?, Stream(Instrument)?, Stream(Instrument)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+fill_swap(ok, Id, From, swap_accept(Give?), Give, Offered, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     append_instruments(Rest?, Offered?, Holdings1),
     show(swap_done(From?), Outs?, Outs1),
-    after_change(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As?, Serial?).
-fill_swap(fail, Id, From, swap_decline(Offered?), Give, Offered, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
+    after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, As?, Serial?).
+fill_swap(fail, Id, From, swap_decline(Offered?), Give, Offered, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     append_instruments(Give?, Rest?, Orig),
     show(swap_failed(From?), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Ws?, As?, Serial?).
 
 %% =============================================================================
 %% The acts this agent proposes, each on the conversation with its counterparty
 %% =============================================================================
 
 %% Accept: L acceptance atoms of U in F, if an instrument of U in F is held.
-procedure do_accept(Decision?, Key?, Key?, Constant?, Integer?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
-do_accept(yes, Id, U, F, L, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+procedure do_accept(Decision?, Key?, Key?, Constant?, Integer?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+do_accept(yes, Id, U, F, L, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     add_acceptances(U?, F?, L?, As?, As1),
     show(accepted(U?, F?, L?), Outs?, Outs1),
-    acceptances_changed(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As1?, Serial?).
-do_accept(no, Id, U, F, _, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+    acceptances_changed(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As1?, Serial?).
+do_accept(no, Id, U, F, _, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     show(not_held(U?, F?), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% Swap: the proposal, with the instruments given set aside until the answer.
-procedure propose_swap(Status?, Key?, Key?, Lot?, Lot?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
-propose_swap(ok, Id, Q, _, Want, Give, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
+procedure propose_swap(Status?, Key?, Key?, Lot?, Lot?, Stream(Instrument)?, Stream(Instrument)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+propose_swap(ok, Id, Q, _, Want, Give, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     ground(Q?), ground(Want?), ground(Give?) |
     has_peer(Q?, Outs?, Outs1, Known),
-    send_swap(Known?, Id?, Q?, Want?, Give?, Rest?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Date?, Ws?, As?, Serial?).
-propose_swap(fail, Id, _, lot(U, _, D, K), _, Give, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
+    send_swap(Known?, Id?, Q?, Want?, Give?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Date?, Ws?, As?, Serial?).
+propose_swap(fail, Id, _, lot(U, _, D, K), _, Give, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     append_instruments(Give?, Rest?, Orig),
     show(lacking(U?, D?, K?), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Ws?, As?, Serial?).
 
 %% On the conversation with Q, holding the instruments given until Q answers;
 %% with no conversation open, the instruments stay.
-procedure send_swap(Decision?, Key?, Key?, Lot?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
-send_swap(yes, Id, Q, Want, Give, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
+procedure send_swap(Decision?, Key?, Key?, Lot?, Stream(Instrument)?, Stream(Instrument)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+send_swap(yes, Id, Q, Want, Give, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     ground(Q?) |
     send_friend(Q?, msg(Id?, Q?, swap(Want?, Give?, Resp)), Outs?, Outs1),
     inject_swap_result(Resp?, Q?, UserIn?, UserIn1),
-    after_change(Id?, UserIn1?, PeerIn?, Convs?, Cal?, Outs1?, Rest?, Date?, Ws?, As?, Serial?).
-send_swap(no, Id, Q, _, Give, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
+    after_change(Reqs?, Id?, UserIn1?, PeerIn?, Convs?, Cal?, Outs1?, Rest?, Date?, Ws?, As?, Serial?).
+send_swap(no, Id, Q, _, Give, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     append_instruments(Give?, Rest?, Orig),
     show(no_conversation(Q?), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Ws?, As?, Serial?).
 
 %% A deposit, release or return: the proposal, with the instruments given set
 %% aside until the answer.
-procedure propose_transfer(Status?, Kind?, Key?, Key?, Lot?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
-propose_transfer(ok, Kind, Id, Q, Lot, Give, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
+procedure propose_transfer(Status?, Kind?, Key?, Key?, Lot?, Stream(Instrument)?, Stream(Instrument)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+propose_transfer(ok, Kind, Id, Q, Lot, Give, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     ground(Kind?), ground(Q?), ground(Lot?), ground(Give?) |
     has_peer(Q?, Outs?, Outs1, Known),
-    send_transfer(Known?, Kind?, Id?, Q?, Lot?, Give?, Rest?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Date?, Ws?, As?, Serial?).
-propose_transfer(fail, _, Id, _, lot(U, _, D, K), Give, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
+    send_transfer(Known?, Kind?, Id?, Q?, Lot?, Give?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Date?, Ws?, As?, Serial?).
+propose_transfer(fail, _, Id, _, lot(U, _, D, K), Give, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     append_instruments(Give?, Rest?, Orig),
     show(lacking(U?, D?, K?), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Ws?, As?, Serial?).
 
 %% On the conversation with Q; with no conversation open, the instruments
 %% stay.
-procedure send_transfer(Decision?, Kind?, Key?, Key?, Lot?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
-send_transfer(yes, Kind, Id, Q, Lot, Give, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
+procedure send_transfer(Decision?, Kind?, Key?, Key?, Lot?, Stream(Instrument)?, Stream(Instrument)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+send_transfer(yes, Kind, Id, Q, Lot, Give, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     ground(Kind?), ground(Q?) |
     send_friend(Q?, msg(Id?, Q?, transfer(Kind?, Give?, Resp)), Outs?, Outs1),
     inject_transfer_result(Resp?, Kind?, Q?, UserIn?, UserIn1),
     show(offered_transfer(Kind?, Q?, Lot?), Outs1?, Outs2),
-    after_change(Id?, UserIn1?, PeerIn?, Convs?, Cal?, Outs2?, Rest?, Date?, Ws?, As?, Serial?).
-send_transfer(no, _, Id, Q, _, Give, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
+    after_change(Reqs?, Id?, UserIn1?, PeerIn?, Convs?, Cal?, Outs2?, Rest?, Date?, Ws?, As?, Serial?).
+send_transfer(no, _, Id, Q, _, Give, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     append_instruments(Give?, Rest?, Orig),
     show(no_conversation(Q?), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Ws?, As?, Serial?).
 
 %% Pay: the coins go to Q, their issuer, set aside until Q answers.
-procedure do_pay(Status?, Key?, Key?, Constant?, Integer?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
-do_pay(ok, Id, Q, _, K, Give, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
+procedure do_pay(Status?, Key?, Key?, Constant?, Integer?, Stream(Instrument)?, Stream(Instrument)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+do_pay(ok, Id, Q, _, K, Give, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     ground(Q?), ground(Give?) |
     has_peer(Q?, Outs?, Outs1, Known),
-    send_pay(Known?, Id?, Q?, Q?, pay(Give?, Resp), Resp?, paying(Q?, K?), paid(Q?, K?), Give?, Rest?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Date?, Ws?, As?, Serial?).
-do_pay(fail, Id, Q, _, K, Give, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
+    send_pay(Known?, Id?, Q?, Q?, pay(Give?, Resp), Resp?, paying(Q?, K?), paid(Q?, K?), Give?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Date?, Ws?, As?, Serial?).
+do_pay(fail, Id, Q, _, K, Give, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     append_instruments(Give?, Rest?, Orig),
     show(lacking(Q?, now, K?), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Ws?, As?, Serial?).
 
 %% Payout: my own coins go to Q, set aside until Q answers.
-procedure do_payout(Status?, Key?, Key?, Constant?, Integer?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
-do_payout(ok, Id, Q, F, K, Give, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
+procedure do_payout(Status?, Key?, Key?, Constant?, Integer?, Stream(Instrument)?, Stream(Instrument)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+do_payout(ok, Id, Q, F, K, Give, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     ground(Q?), ground(Give?) |
     has_peer(Q?, Outs?, Outs1, Known),
-    send_pay(Known?, Id?, Q?, Q?, payout(F?, Give?, Resp), Resp?, paying_out(Q?, K?), paid_out(Q?, K?), Give?, Rest?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Date?, Ws?, As?, Serial?).
-do_payout(fail, Id, _, _, K, Give, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
+    send_pay(Known?, Id?, Q?, Q?, payout(F?, Give?, Resp), Resp?, paying_out(Q?, K?), paid_out(Q?, K?), Give?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Date?, Ws?, As?, Serial?).
+do_payout(fail, Id, _, _, K, Give, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     ground(Id?) |
     append_instruments(Give?, Rest?, Orig),
     show(lacking(Id?, now, K?), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Ws?, As?, Serial?).
 
 %% Spend: the coins of S go to Q through S, set aside until Q answers.
-procedure do_spend(Status?, Key?, Key?, Key?, Constant?, Integer?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
-do_spend(ok, Id, Q, S, F, K, Give, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
+procedure do_spend(Status?, Key?, Key?, Key?, Constant?, Integer?, Stream(Instrument)?, Stream(Instrument)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+do_spend(ok, Id, Q, S, F, K, Give, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     ground(Q?), ground(S?), ground(Give?) |
     has_peer(S?, Outs?, Outs1, Known),
-    send_pay(Known?, Id?, S?, Q?, spend(Q?, F?, Give?, Resp), Resp?, spending(Q?, S?, K?), spent_at(Q?, S?, K?), Give?, Rest?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Date?, Ws?, As?, Serial?).
-do_spend(fail, Id, _, S, _, K, Give, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
+    send_pay(Known?, Id?, S?, Q?, spend(Q?, F?, Give?, Resp), Resp?, spending(Q?, S?, K?), spent_at(Q?, S?, K?), Give?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Date?, Ws?, As?, Serial?).
+do_spend(fail, Id, _, S, _, K, Give, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     append_instruments(Give?, Rest?, Orig),
     show(lacking(S?, now, K?), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Ws?, As?, Serial?).
 
 %% A payment, a payout or a spend: the act goes on the conversation with To
 %% --- the payee, or for a spend the issuer --- and its answer, when it comes,
 %% shows Taken or brings the coins back for payee Q; with no conversation
 %% open, the coins stay.
-procedure send_pay(Decision?, Key?, Key?, Key?, PeerContent?, PayResponse?, ScreenContent?, ScreenContent?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
-send_pay(yes, Id, To, Q, Act, Resp, Paying, Taken, _, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
+procedure send_pay(Decision?, Key?, Key?, Key?, PeerContent?, PayResponse?, ScreenContent?, ScreenContent?, Stream(Instrument)?, Stream(Instrument)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+send_pay(yes, Id, To, Q, Act, Resp, Paying, Taken, _, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     ground(To?) |
     send_friend(To?, msg(Id?, To?, Act?), Outs?, Outs1),
     inject_pay_result(Resp?, Q?, Taken?, UserIn?, UserIn1),
     show(Paying?, Outs1?, Outs2),
-    after_change(Id?, UserIn1?, PeerIn?, Convs?, Cal?, Outs2?, Rest?, Date?, Ws?, As?, Serial?).
-send_pay(no, Id, To, _, _, _, _, _, Give, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
+    after_change(Reqs?, Id?, UserIn1?, PeerIn?, Convs?, Cal?, Outs2?, Rest?, Date?, Ws?, As?, Serial?).
+send_pay(no, Id, To, _, _, _, _, _, Give, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     append_instruments(Give?, Rest?, Orig),
     show(no_conversation(To?), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Ws?, As?, Serial?).
 
 %% Redeem: the coin is presented to Q, with the issuer and due wanted.
-procedure do_redeem(Found?, Key?, Key?, Key?, Constant?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
-do_redeem(found(Coin), Id, Q, R, D1, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
+procedure do_redeem(Found?, Key?, Key?, Key?, Constant?, Stream(Instrument)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+do_redeem(found(Coin), Id, Q, R, D1, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     ground(Q?) |
     has_peer(Q?, Outs?, Outs1, Known),
-    send_redeem(Known?, Id?, Q?, R?, D1?, Coin?, Rest?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Date?, Ws?, As?, Serial?).
-do_redeem(not_found, Id, Q, _, _, Holdings, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
+    send_redeem(Known?, Id?, Q?, R?, D1?, Coin?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Date?, Ws?, As?, Serial?).
+do_redeem(not_found, Id, Q, _, _, Holdings, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     show(lacking(Q?, now, 1), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% On the conversation with Q; with no conversation open, the coin stays.
-procedure send_redeem(Decision?, Key?, Key?, Key?, Constant?, Instrument?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
-send_redeem(yes, Id, Q, R, D1, Coin, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
+procedure send_redeem(Decision?, Key?, Key?, Key?, Constant?, Instrument?, Stream(Instrument)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+send_redeem(yes, Id, Q, R, D1, Coin, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     ground(Q?) |
     send_friend(Q?, msg(Id?, Q?, redeem(Coin?, R?, D1?, Resp)), Outs?, Outs1),
     inject_redeem_result(Resp?, Q?, R?, D1?, UserIn?, UserIn1),
-    after_change(Id?, UserIn1?, PeerIn?, Convs?, Cal?, Outs1?, Rest?, Date?, Ws?, As?, Serial?).
-send_redeem(no, Id, Q, _, _, Coin, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
+    after_change(Reqs?, Id?, UserIn1?, PeerIn?, Convs?, Cal?, Outs1?, Rest?, Date?, Ws?, As?, Serial?).
+send_redeem(no, Id, Q, _, _, Coin, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     append_instruments(Rest?, [Coin?], Orig),
     show(no_conversation(Q?), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Ws?, As?, Serial?).
 
 %% Mature: the bond is presented to Q.
-procedure do_mature(Found?, Key?, Key?, Integer?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
-do_mature(found(Bond), Id, Q, D, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
+procedure do_mature(Found?, Key?, Key?, Integer?, Stream(Instrument)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+do_mature(found(Bond), Id, Q, D, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     ground(Q?) |
     has_peer(Q?, Outs?, Outs1, Known),
-    send_mature(Known?, Id?, Q?, D?, Bond?, Rest?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Date?, Ws?, As?, Serial?).
-do_mature(not_found, Id, Q, D, Holdings, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
+    send_mature(Known?, Id?, Q?, D?, Bond?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Date?, Ws?, As?, Serial?).
+do_mature(not_found, Id, Q, D, Holdings, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     show(lacking(Q?, D?, 1), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% On the conversation with Q; with no conversation open, the bond stays.
-procedure send_mature(Decision?, Key?, Key?, Integer?, Instrument?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
-send_mature(yes, Id, Q, D, Bond, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
+procedure send_mature(Decision?, Key?, Key?, Integer?, Instrument?, Stream(Instrument)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+send_mature(yes, Id, Q, D, Bond, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     ground(Q?) |
     send_friend(Q?, msg(Id?, Q?, mature(Bond?, Resp)), Outs?, Outs1),
     inject_mature_result(Resp?, Q?, D?, UserIn?, UserIn1),
-    after_change(Id?, UserIn1?, PeerIn?, Convs?, Cal?, Outs1?, Rest?, Date?, Ws?, As?, Serial?).
-send_mature(no, Id, Q, _, Bond, Rest, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
+    after_change(Reqs?, Id?, UserIn1?, PeerIn?, Convs?, Cal?, Outs1?, Rest?, Date?, Ws?, As?, Serial?).
+send_mature(no, Id, Q, _, Bond, Rest, Reqs, UserIn, PeerIn, Convs, Cal, Outs, Date, Ws, As, Serial) :-
     append_instruments(Rest?, [Bond?], Orig),
     show(no_conversation(Q?), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Orig?, Date?, Ws?, As?, Serial?).
 
 %% After a change of holdings: the screen shows them, and the agent continues.
-procedure after_change(Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
-after_change(Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+procedure after_change(Stream(Request)?, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+after_change(Reqs, Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Holdings?) |
     tally(Holdings?, [], Lots),
     show(holdings(Lots?), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% After a change of acceptances, and of holdings with it: the screen shows
 %% both, and the agent continues.
-procedure after_accepting(Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
-after_accepting(Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+procedure after_accepting(Stream(Request)?, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+after_accepting(Reqs, Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(As?) |
     tally_acceptances(As?, [], Tally),
     show(acceptances(Tally?), Outs?, Outs1),
-    after_change(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
+    after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
 
 %% After a change of acceptances alone: the screen shows them, and the agent
 %% continues.
-procedure acceptances_changed(Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
-acceptances_changed(Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
+procedure acceptances_changed(Stream(Request)?, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?).
+acceptances_changed(Reqs, Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(As?) |
     tally_acceptances(As?, [], Tally),
     show(acceptances(Tally?), Outs?, Outs1),
-    agent(Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, Date?, Ws?, As?, Serial?).

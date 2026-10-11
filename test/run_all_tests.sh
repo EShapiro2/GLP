@@ -2883,7 +2883,18 @@ HEREDOC
 check "Coins village: no runtime error" "→ suspended" "$n2_run"
 check_not "Coins village: no failed goal" "ERROR" "$n2_run"
 check "Coins village: the conversations open" "tagged(frank, opened(eve))" "$n2_run"
-check "Coins village: Alice's holdings" "tagged(alice, holdings(\[lot(bob, 5), lot(charlie, 15), lot(alice, 8), lot(frank, 4)\]))" "$n2_run"
+# Alice's holdings are read as a multiset: since the port to the dispatcher's
+# person channel, bob's payment of 5 can reach her agent before her swap with
+# charlie settles, and her lots are tallied in the order they arrive
+# (Currencies #8 Cowork, 2026-10-11 13:06 UTC: "the coins holdings check reads
+# the multiset").  Each holdings line of hers, its lots sorted:
+n2_alice=$(echo "$n2_run" | grep -o 'tagged(alice, holdings(\[[^]]*\]))' | awk '{
+  s = $0; sub(/^tagged\(alice, holdings\(\[/, "", s); sub(/\]\)\)$/, "", s)
+  n = split(s, a, /\), /); for (i = 1; i < n; i++) a[i] = a[i] ")"
+  for (i = 2; i <= n; i++) { v = a[i]; j = i - 1; while (j > 0 && a[j] > v) { a[j + 1] = a[j]; j-- } a[j + 1] = v }
+  o = ""; for (i = 1; i <= n; i++) o = o (i > 1 ? ", " : "") a[i]
+  print "alice holds {" o "}" }')
+check "Coins village: Alice's holdings" "^alice holds {lot(alice, 8), lot(bob, 5), lot(charlie, 15), lot(frank, 4)}$" "$n2_alice"
 check "Coins village: Bob's holdings" "tagged(bob, holdings(\[lot(alice, 10), lot(diana, 20)\]))" "$n2_run"
 check "Coins village: Charlie's holdings" "tagged(charlie, holdings(\[lot(alice, 10), lot(eve, 10), lot(charlie, 6), lot(frank, 5)\]))" "$n2_run"
 check "Coins village: Diana's holdings" "tagged(diana, holdings(\[lot(bob, 24), lot(frank, 13), lot(diana, 8)\]))" "$n2_run"
@@ -3319,24 +3330,31 @@ check "Sovereign market: the four parties outside the sovereign layer are unmove
 
 echo "--- The live-person harness (sovereign_ui): the central bank on the app's screen ---"
 
-# The entry the app starts, sovereign_ui/3 (programs/currencies/sovereign/play_ui.glp),
-# with no answers: the central bank's twelve request cards and its two opened
-# conversations reach its screen by send_to_user/1, one term to a line, as
-# the app's UI runtime reads them, while the peers' screens are tagged and
-# nothing of theirs reaches the central bank's screen; with no tap the peers
-# mint and wait for the line.
+# The entry the app starts and the Dart bridge runs, sovereign_ui/3
+# (programs/currencies/sovereign/play_ui.glp), with no grant: its person
+# stream is open and stays so, as a person channel never closes (vGLP,
+# Definition "Person Channel, Person Writer, GLP with Persons, Grant";
+# PersonIn ::= [_ | PersonIn]).  The central bank's request form --- the
+# agent's question, one form per alternative of its twelve requests, Mint
+# coins the first and Return the twelfth, each field labelled by the name of
+# its declared type and a Key a peer field (vGLP, Definition "Widget
+# Declaration, Default Widget") --- is drawn, and its two opened
+# conversations reach its screen, by send_to_user/1, one term to a line, as
+# the bridge reads them, while the peers' screens are tagged and nothing of
+# theirs reaches the central bank's screen; with no grant the peers mint and
+# wait for the line.
 n4_ui=$("$REPL_RUN" <<HEREDOC
 $SOV
 :limit 50000000
-sovereign_ui(cb, [], []).
+sovereign_ui(cb, G?, []).
 :quit
 HEREDOC
 2>&1)
 
 check "Sovereign harness: no runtime error" "→ suspended" "$n4_ui"
 check_not "Sovereign harness: no failed goal" "ERROR" "$n4_ui"
-check "Sovereign harness: the central bank's Mint coins form stands" "card(agent_1, ctx_agent_1, req(" "$n4_ui"
-check "Sovereign harness: and its Return form, the twelfth" "card(agent_12, ctx_agent_12, req(" "$n4_ui"
+check "Sovereign harness: the central bank's Mint coins form stands" "draw([0-9][0-9]*, input_box(menu(\[form(mint, \[field(Constant, text), field(Integer, number)\]), " "$n4_ui"
+check "Sovereign harness: and its Return form, the twelfth" "input_box(menu(\[\(form([a-z]*, \[[A-Za-z(), ]*\]), \)\{11\}form(return, \[field(Key, peer), field(Constant, text), field(Key, peer), field(Constant, text), field(Integer, number)\])\])), input(\[\]))" "$n4_ui"
 check "Sovereign harness: its conversation with the community bank reaches its screen" "msg(agent, person, opened(diana))" "$n4_ui"
 check "Sovereign harness: and with the household" "msg(agent, person, opened(frank))" "$n4_ui"
 check "Sovereign harness: the peers' screens are tagged" "tagged(diana, minted(10, now))" "$n4_ui"
@@ -3488,8 +3506,8 @@ echo ""
 # canonical CVA platform in vGLP (programs/vglp/cva; vGLP, Section 3.2, the
 # paragraph on act schemas, and Section 5.4, "The canonical platform is
 # structured"; vGLP's Task C, 2026-10-11).  Jurix's social graph and currency
-# (programs/jurix) compiled, the committed modules held to what the compiler
-# prints; the contracts it refuses, not local or not effective; and the plays
+# (programs/jurix) and vGLP's nudge (programs/vglp/cva/contracts.glp)
+# compiled, the committed modules held to what the compiler prints; the contracts it refuses, not local or not effective; and the plays
 # of each platform, two agents with scripted persons paced on their threads,
 # each run on the committed module through the canonical compilation and
 # ended at the REPL's :limit, the clocks ticking without end.  A play gives
@@ -3502,6 +3520,7 @@ CVA="$GLP_DIR/programs/vglp/cva"
 cva_print=$(bash "$CVA/compile.sh" --check 2>&1)
 check "CVA compiler: the social graph's platform is what the compiler prints" "social_graph/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: the currency's platform is what the compiler prints" "currency/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's nudge, certified by Jurix's check/2, compiled to the platform it prints" "nudge/platform.vglp: as printed" "$cva_print"
 check_not "CVA compiler: no contract refused or missing" "^fault\|^missing\|NOT as printed" "$cva_print"
 
 cva_refuse=$("$REPL_RUN" <<HEREDOC
@@ -3615,6 +3634,33 @@ HEREDOC
 check "CVA closed: bob, asked, offers his coin elsewhere and his machine declines, closing the card" "B = \[.*ask(swap(alice, bob, bob, alice)), propose(swap(bob, alice, carol, bob)), decline(swap(alice, bob, bob, alice))" "$cva_cur_closed"
 check "CVA closed: the yes bob gives the closed card is taken by no Answer" "B = \[.*gave(swap(alice, bob, bob, alice), yes), abort(swap(alice, bob, bob, alice))" "$cva_cur_closed"
 check_not "CVA closed: no answer to the closed card" "answer(swap(alice, bob, bob, alice))" "$cva_cur_closed"
+
+# vGLP's contract nudge (programs/vglp/cva/contracts.glp): befriend and an
+# unguarded nudge, the one contract here with an unguarded class.  Its opener,
+# the person in its first role, opens it on a tick by its machine's Concur, no
+# person asked; the other participant's machine concurs on the vote, and it
+# commits at both (vGLP's 2026-10-11 20:48 UTC, Q4 of Code's 18:53 UTC).
+cva_nudge_load=$("$REPL_RUN" <<HEREDOC
+$CVA/nudge/
+:quit
+HEREDOC
+2>&1)
+check "CVA nudge: the platform and its play load, compiled by the canonical compilation" "Loaded program: .*cva/nudge" "$cva_nudge_load"
+check_not "CVA nudge: no type errors" "Type checking failed" "$cva_nudge_load"
+
+cva_nudge=$("$REPL_RUN" <<HEREDOC
+$CVA/nudge/
+:limit 300000
+play_nudge(A, B).
+:quit
+HEREDOC
+2>&1)
+check "CVA nudge: befriended, alice's Concur opens nudge(alice, bob), whose opener she is, and it commits at her" "A = \[record(bob), propose(befriend(alice, bob)), relay(befriend(alice, bob)), commit(befriend(alice, bob)), concur(nudge(alice, bob)), .*relay(nudge(alice, bob)), commit(nudge(alice, bob))" "$cva_nudge"
+check "CVA nudge: bob's machine concurs on alice's vote, and it commits at him" "B = \[.*relay(nudge(alice, bob)), concur(nudge(alice, bob)), commit(nudge(alice, bob))" "$cva_nudge"
+check "CVA nudge: bob's Concur opens nudge(bob, alice), whose opener he is, and it commits at him" "B = \[.*commit(befriend(alice, bob)), concur(nudge(bob, alice)), .*relay(nudge(bob, alice)), commit(nudge(bob, alice))" "$cva_nudge"
+check "CVA nudge: alice's machine concurs on bob's vote, and it commits at her" "A = \[.*relay(nudge(bob, alice)), concur(nudge(bob, alice)), commit(nudge(bob, alice))" "$cva_nudge"
+check_not "CVA nudge: no person is asked about the unguarded class" "ask(nudge" "$cva_nudge"
+check_not "CVA nudge: nothing aborted" "abort(" "$cva_nudge"
 echo ""
 
 
@@ -5465,6 +5511,24 @@ HEREDOC
 2>&1)
 check "SG grassapp escrow: released to the beneficiary" "tagged(frank, escrow_released(charlie))" "$sg_escrow"
 check "SG grassapp escrow: expired at the depositor" "tagged(charlie, escrow_expired(frank))" "$sg_escrow"
+
+# A message the person addresses to someone who is not their friend is not
+# sent, and the agent tells the person so (GSG paper, Section 5.1), in the
+# super-app prototype as in the social graph (play_not_a_friend_headless.glp):
+# alice's person sends carol, not her friend, a message and is shown
+# not_a_friend(carol); only then does she call bob, and once they are friends
+# her message to him reaches him.  The output's lines are joined so that the
+# second check holds the two in their order.
+sg_naf_ga=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/grassapp
+:limit 5000000
+play_not_a_friend.
+:quit
+HEREDOC
+2>&1)
+check "SG grassapp not_a_friend: a send to someone not a friend is not sent, and the person is told not_a_friend" "tagged(alice, not_a_friend(carol))" "$sg_naf_ga"
+check "SG grassapp not_a_friend: a later message to a friend is delivered" "tagged(alice, not_a_friend(carol)).*tagged(bob, received(alice, hi_bob))" "$(echo "$sg_naf_ga" | tr '\n' ' ')"
+check_not "SG grassapp not_a_friend no failed play" "→ failed" "$sg_naf_ga"
 
 sg_village=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/grassapp

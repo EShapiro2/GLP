@@ -1,31 +1,64 @@
-/// The sovereign mini-app's screen, over the person channel of a compiled vGLP
-/// program (vGLP, Definition "Canonical Compilation").
+/// The sovereign mini-app's screen, over the person channel of the compiled
+/// sovereign agent (vGLP, Definition "Person Channel, Person Writer, GLP with
+/// Persons, Grant"), through the Dart bridge (sections/elicitation.tex, the
+/// paragraph "The implementation").
 ///
-/// The manifest is the image of the twelve `panel(sovereign)` display
-/// declarations of `sovereign_agent.vglp`, by vGLP's derivation in
-/// `/Grassroots/vGLP/docs/sovereign-manifest-derivation.md`. What is exercised
-/// here is what that screen adds to the coins one: seven standing forms in one
-/// panel rather than four, each with its own standing ReqId; two cards, each
-/// one Accept and the decline its clause's else-branch earns; and a context
-/// value that is not a scalar — a lot, and a list of bonds — which the
-/// mediator flattens to its scalars for the card.
+/// The draws are fed as the dispatcher of
+/// `programs/currencies/sovereign/denominated/sovereign_agent.glp` draws them
+/// (its `construct/4`): the agent's question, `Stream(Request)?`, an input
+/// box of a menu of the twelve forms of `Request`, one per request clause of
+/// SGC's Definition 2.2; and the two responders' questions, `SwapCard ::=
+/// card(SwapOffer, YesNo?)` and `TransferCard ::= card(TransferOffer,
+/// YesNo?)`, each in writer mode, a card showing the offer with the buttons
+/// yes and no.  What is exercised here is what that screen adds to the coins
+/// one: twelve forms in the one request form rather than four, every request
+/// granted on the one question; two kinds of card, each answered at the
+/// position its view marks; and an offer that is not a scalar --- a lot, and
+/// a list of bonds --- which the card shows by its scalars.
 ///
-/// The cards are fed as the lines the mediator writes. The program's own
-/// live-person harness is Currencies' and is not on disc yet, so the run this
-/// screen will carry is not what is tested here — the vocabulary between the
-/// two is the canonical compilation's and is the same for every compiled vGLP
-/// program.
+/// The live run of this screen is `sovereign_screen_test.dart`'s; the
+/// vocabulary between the two is the canonical compilation's and is the same
+/// for every compiled vGLP program.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/manifests/sovereign_ui.dart';
 import 'package:glp_multiagent/ui_runtime/agent_surface.dart';
-import 'package:glp_multiagent/ui_runtime/manifest.dart';
+import 'package:glp_multiagent/ui_runtime/bridge.dart';
+import 'package:glp_multiagent/ui_runtime/construct_family.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
 
 import 'fixture_term.dart';
+
+/// The widget of the agent's question as `sovereign_agent.glp` draws it,
+/// each field `field(L, W)`, labelled by the name of its declared type, a
+/// `Key` a peer field (vGLP, Definition "Widget Declaration, Default
+/// Widget").
+const _c = "field('Constant', text)";
+const _i = "field('Integer', number)";
+const _k = "field('Key', peer)";
+const _requestForm = 'input_box(menu(['
+    'form(mint, [$_c, $_i]), '
+    'form(mint, [$_c, $_i, $_i]), '
+    'form(swap, [$_k, $_c, $_k, $_c, $_i, $_k, $_c, $_i]), '
+    'form(accept, [$_c, $_k, $_i]), '
+    'form(pay, [$_k, $_c, $_i]), '
+    'form(payout, [$_k, $_c, $_i]), '
+    'form(spend, [$_k, $_k, $_c, $_i]), '
+    'form(redeem, [$_k, $_c, $_k, $_c]), '
+    'form(mature, [$_k, $_c, $_i]), '
+    'form(deposit, [$_k, $_c, $_k, $_c, $_i]), '
+    'form(release, [$_k, $_c, $_k, $_c, $_i]), '
+    'form(return, [$_k, $_c, $_k, $_c, $_i])]))';
+
+/// The widget of each responder's question: the offer shown, labelled by its
+/// type, and the buttons yes and no.
+const _swapCard =
+    "form(card, [field('SwapOffer', shown), field('YesNo', buttons([yes, no]))])";
+const _transferCard = "form(card, [field('TransferOffer', shown), "
+    "field('YesNo', buttons([yes, no]))])";
 
 void main() {
   late List<String> sent;
@@ -36,240 +69,182 @@ void main() {
     r = UiRuntime(manifest: sovereignManifest, onSend: (t) => sent.add(formatTerm(t)));
   });
 
-  /// The seven asks the compiled agent poses as soon as it runs, `agent_1` to
-  /// `agent_7` in the order the request clauses are written — Mint, Swap, Pay,
-  /// Redeem, Deposit, Release, Return.
-  void poseRequestCards({int from = 1}) {
-    for (var i = 0; i < 7; i++) {
-      r.handle(fixtureTerm('card(agent_${i + 1}, ctx_agent_${i + 1}, req(${from + i}))'));
-    }
-  }
+  /// The agent's question, drawn as construct [id] over the view `input([])`.
+  void drawRequestForm({int id = 0}) =>
+      r.handle(fixtureTerm('draw($id, $_requestForm, input([]))'));
 
   /// The swap card: bob offers two of his own bonds for two alice-bonds.
-  void poseSwapCard({int id = 20}) => r.handle(fixtureTerm(
-      'card(respond_swap_1, ctx_respond_swap_1(bob, lot(alice, usd, 0, 2), '
-      '[bond(bob, usd, 30, 7), bond(bob, usd, 30, 8)]), req($id))'));
+  void drawSwapCard({int id = 20}) => r.handle(fixtureTerm('draw($id, $_swapCard, '
+      'card(offer(bob, lot(alice, usd, 0, 2), '
+      '[bond(bob, usd, 30, 7), bond(bob, usd, 30, 8)]), input([2])))'));
 
   /// The transfer card: the escrow agent releases one bond to the beneficiary.
-  void poseTransferCard({int id = 30}) => r.handle(fixtureTerm(
-      'card(respond_transfer_1, ctx_respond_transfer_1(release, escrow, '
-      '[bond(charlie, usd, 0, 1)]), req($id))'));
+  void drawTransferCard({int id = 30}) =>
+      r.handle(fixtureTerm('draw($id, $_transferCard, '
+      'card(offer_transfer(release, escrow, [bond(charlie, usd, 0, 1)]), '
+      'input([2])))'));
 
-  group('the seven forms', () {
-    test('all seven stand, and none opens an inbox card', () {
-      poseRequestCards();
-      expect(r.standing.keys.toSet(), {
-        'agent_1',
-        'agent_2',
-        'agent_3',
-        'agent_4',
-        'agent_5',
-        'agent_6',
-        'agent_7',
-      });
-      expect(formatTerm(r.standing['agent_5']!), 'req(5)');
+  /// The position of the question construct [id] holds at [at] of its view.
+  GList position(int id, List<int> at) {
+    var v = r.bridge.construct(id)!.view;
+    for (final i in at) {
+      v = ctorArgs(v).$2[i - 1];
+    }
+    return questionAt(v)!;
+  }
+
+  /// The forms of the request form's menu, in order.
+  List<GTerm> forms() {
+    final (_, box) = ctorArgs(r.bridge.construct(0)!.widget);
+    final (_, menu) = ctorArgs(box.single);
+    return (menu.single as GList).items;
+  }
+
+  group('the twelve forms', () {
+    test('the request form is one construct, and no card', () {
+      drawRequestForm();
+      final c = r.bridge.constructs.single;
+      expect(formatTerm(c.widget), _requestForm);
+      expect(formatTerm(c.view), 'input([])');
       expect(r.inbox, isEmpty);
+      expect(r.standing, isEmpty);
     });
 
-    test('each form is in the sovereign panel, labelled as its clause is', () {
-      for (final e in const {
-        'agent_1': 'Mint',
-        'agent_2': 'Swap',
-        'agent_3': 'Pay',
-        'agent_4': 'Redeem',
-        'agent_5': 'Deposit',
-        'agent_6': 'Release',
-        'agent_7': 'Return',
-      }.entries) {
-        final (panel, form) = r.manifest.standingForm(e.key)!;
-        expect(panel.id, 'sovereign');
-        expect(form.label, e.value);
-      }
+    test('the menu offers each request by its functor, in the order of '
+        'Request', () {
+      drawRequestForm();
+      expect(forms().map((f) => formatTerm(ctorArgs(f).$2[0])), [
+        'mint',
+        'mint',
+        'swap',
+        'accept',
+        'pay',
+        'payout',
+        'spend',
+        'redeem',
+        'mature',
+        'deposit',
+        'release',
+        'return',
+      ]);
     });
 
-    test('the fields of each form are its clause writers, in order', () {
-      void check(String clause, List<(String, FieldType, String)> fields) {
-        final form = _form(r, clause);
-        expect(form.args.map((f) => f.name).toList(),
-            fields.map((f) => f.$1).toList(),
-            reason: '$clause writers');
-        expect(form.args.map((f) => f.type).toList(),
-            fields.map((f) => f.$2).toList(),
-            reason: '$clause widgets');
-        expect(form.args.map((f) => f.label).toList(),
-            fields.map((f) => f.$3).toList(),
-            reason: '$clause labels');
-      }
-
-      check('agent_1', const [
-        ('F', FieldType.text, 'Denomination'),
-        ('K', FieldType.number, 'Number of bonds'),
-        ('D', FieldType.date, 'Maturity'),
-      ]);
-      check('agent_2', const [
-        ('Q', FieldType.peer, 'Counterparty'),
-        ('F', FieldType.text, 'Denomination'),
-        ('U', FieldType.peer, 'Issuer of the bonds given'),
-        ('D', FieldType.date, 'Maturity of the bonds given'),
-        ('K', FieldType.number, 'Number of the bonds given'),
-        ('V', FieldType.peer, 'Issuer of the bonds wanted'),
-        ('D1', FieldType.date, 'Maturity of the bonds wanted'),
-        ('K1', FieldType.number, 'Number of the bonds wanted'),
-      ]);
-      check('agent_3', const [
-        ('Q', FieldType.peer, 'Payee'),
-        ('F', FieldType.text, 'Denomination'),
-        ('D', FieldType.date, 'Maturity'),
-        ('K', FieldType.number, 'Number'),
-      ]);
-      check('agent_4', const [
-        ('Q', FieldType.peer, 'Issuer presented to'),
-        ('F', FieldType.text, 'Denomination'),
-        ('D', FieldType.date, 'Maturity of the coin presented'),
-        ('R', FieldType.peer, 'Issuer wanted'),
-        ('D1', FieldType.date, 'Maturity wanted'),
-      ]);
-      check('agent_5', const [
-        ('E', FieldType.peer, 'Escrow agent'),
-        ('F', FieldType.text, 'Denomination'),
-        ('U', FieldType.peer, 'Issuer'),
-        ('D', FieldType.date, 'Maturity'),
-        ('K', FieldType.number, 'Number'),
-      ]);
-      check('agent_6', const [
-        ('Q', FieldType.peer, 'Beneficiary'),
-        ('F', FieldType.text, 'Denomination'),
-        ('U', FieldType.peer, 'Issuer'),
-        ('D', FieldType.date, 'Maturity'),
-        ('K', FieldType.number, 'Number'),
-      ]);
-      check('agent_7', const [
-        ('P', FieldType.peer, 'Depositor'),
-        ('F', FieldType.text, 'Denomination'),
-        ('U', FieldType.peer, 'Issuer'),
-        ('D', FieldType.date, 'Maturity'),
-        ('K', FieldType.number, 'Number'),
-      ]);
+    test('the fields of each form are its arguments, in order, each the '
+        'widget of its type', () {
+      drawRequestForm();
+      final fields = {
+        for (final f in forms())
+          '${formatTerm(ctorArgs(f).$2[0])}/${(ctorArgs(f).$2[1] as GList).items.length}':
+              (ctorArgs(f).$2[1] as GList).items.map(formatTerm).toList(),
+      };
+      expect(fields, {
+        'mint/2': [_c, _i],
+        'mint/3': [_c, _i, _i],
+        'swap/8': [_k, _c, _k, _c, _i, _k, _c, _i],
+        'accept/3': [_c, _k, _i],
+        'pay/3': [_k, _c, _i],
+        'payout/3': [_k, _c, _i],
+        'spend/4': [_k, _k, _c, _i],
+        'redeem/4': [_k, _c, _k, _c],
+        'mature/3': [_k, _c, _i],
+        'deposit/5': [_k, _c, _k, _c, _i],
+        'release/5': [_k, _c, _k, _c, _i],
+        'return/5': [_k, _c, _k, _c, _i],
+      });
     });
   });
 
-  group('a submit grants its clause against its own standing card', () {
-    test('Mint grants xs_agent_1 against the ReqId of agent_1', () {
-      poseRequestCards();
-      r.submitCommand(_form(r, 'agent_1'),
-          {'F': const GAtom('usd'), 'K': const GInt(5), 'D': const GInt(0)});
-      expect(sent, ['answer(req(1), xs_agent_1(usd, 5, 0))']);
+  group('every request is granted on the one question', () {
+    test('a mint is input(Id, [], mint(F, K))', () {
+      drawRequestForm();
+      r.bridge.grant(0, position(0, []), tryParseTerm('mint(usd, 5)')!);
+      expect(sent, ['input(0, [], mint(usd, 5))']);
     });
 
-    test('Swap carries its eight person inputs in the question order', () {
-      poseRequestCards();
-      r.submitCommand(_form(r, 'agent_2'), {
-        'Q': const GAtom('bob'),
-        'F': const GAtom('usd'),
-        'U': const GAtom('alice'),
-        'D': const GInt(0),
-        'K': const GInt(15),
-        'V': const GAtom('bob'),
-        'D1': const GInt(0),
-        'K1': const GInt(15),
-      });
-      expect(sent,
-          ['answer(req(2), xs_agent_2(bob, usd, alice, 0, 15, bob, 0, 15))']);
+    test('a swap carries its eight arguments in the order of Request', () {
+      drawRequestForm();
+      r.bridge.grant(0, position(0, []),
+          tryParseTerm('swap(bob, usd, alice, now, 15, bob, now, 15)')!);
+      expect(sent, ['input(0, [], swap(bob, usd, alice, now, 15, bob, now, 15))']);
     });
 
-    test('each of the seven answers the ReqId of ITS clause', () {
-      poseRequestCards(from: 41);
-      r.submitCommand(_form(r, 'agent_7'), {
-        'P': const GAtom('charlie'),
-        'F': const GAtom('usd'),
-        'U': const GAtom('frank'),
-        'D': const GInt(0),
-        'K': const GInt(5),
-      });
-      r.submitCommand(_form(r, 'agent_3'), {
-        'Q': const GAtom('alice'),
-        'F': const GAtom('usd'),
-        'D': const GInt(0),
-        'K': const GInt(5),
-      });
+    test('a request leaves the form open, and the next goes to it', () {
+      drawRequestForm();
+      r.bridge.grant(0, position(0, []), tryParseTerm('mint(usd, 1)')!);
+      expect(r.bridge.construct(0), isNotNull);
+      r.bridge.grant(0, position(0, []), tryParseTerm('mint(usd, 2)')!);
+      expect(sent, ['input(0, [], mint(usd, 1))', 'input(0, [], mint(usd, 2))']);
+    });
+
+    test('two requests of different forms go to the same construct, in '
+        'order, and the form stays open', () {
+      drawRequestForm(id: 41);
+      r.bridge.grant(
+          41, position(41, []), tryParseTerm('return(charlie, usd, frank, now, 5)')!);
+      r.bridge.grant(41, position(41, []), tryParseTerm('pay(alice, usd, 5)')!);
       expect(sent, [
-        'answer(req(47), xs_agent_7(charlie, usd, frank, 0, 5))',
-        'answer(req(43), xs_agent_3(alice, usd, 0, 5))',
+        'input(41, [], return(charlie, usd, frank, now, 5))',
+        'input(41, [], pay(alice, usd, 5))',
       ]);
-    });
-
-    test('answering consumes the ask; the next card restores the form', () {
-      poseRequestCards();
-      r.submitCommand(_form(r, 'agent_1'),
-          {'F': const GAtom('usd'), 'K': const GInt(1), 'D': const GInt(0)});
-      expect(r.standing.containsKey('agent_1'), isFalse);
-      r.submitCommand(_form(r, 'agent_1'),
-          {'F': const GAtom('usd'), 'K': const GInt(2), 'D': const GInt(0)});
-      expect(sent.length, 1);
-      r.handle(fixtureTerm('card(agent_1, ctx_agent_1, req(12))'));
-      r.submitCommand(_form(r, 'agent_1'),
-          {'F': const GAtom('usd'), 'K': const GInt(2), 'D': const GInt(0)});
-      expect(sent.last, 'answer(req(12), xs_agent_1(usd, 2, 0))');
+      expect(r.bridge.construct(41), isNotNull);
     });
   });
 
   group('the two cards', () {
-    test('the swap card is one Accept and a decline', () {
-      poseSwapCard();
-      final card = r.inbox.single;
-      expect(card.panel.id, 'sovereign');
-      expect(card.itemKey, 'bob');
-      expect(card.asks.keys.toSet(), {'respond_swap_1'});
-      expect(card.liveAnswers.map((a) => a.label), ['Accept', 'Decline']);
-    });
-
-    test('Accept grants xs_respond_swap_1(yes) on the card\'s own ReqId', () {
-      poseSwapCard(id: 21);
-      final card = r.inbox.single;
-      r.answerCard(card, _answer(card, 'Accept'));
-      expect(sent, ['answer(req(21), xs_respond_swap_1(yes))']);
+    test('the swap card is a construct of its own, its answer at [2]', () {
+      drawSwapCard();
+      final card = r.bridge.construct(20)!;
+      expect(formatTerm(card.widget), _swapCard);
+      final (_, args) = ctorArgs(card.view);
+      expect(formatTerm(args[0]),
+          'offer(bob, lot(alice, usd, 0, 2), [bond(bob, usd, 30, 7), bond(bob, usd, 30, 8)])');
+      expect(formatTerm(position(20, [2])), '[2]');
       expect(r.inbox, isEmpty);
     });
 
-    test('the decline grants decline(Id) on the card\'s own ReqId', () {
-      poseSwapCard(id: 22);
-      final card = r.inbox.single;
-      r.answerCard(card, _answer(card, 'Decline'));
-      expect(sent, ['decline(req(22))']);
-      expect(r.inbox, isEmpty);
+    test('yes is granted on the card\'s own construct', () {
+      drawSwapCard(id: 21);
+      r.bridge.grant(21, position(21, [2]), const GAtom('yes'));
+      expect(sent, ['input(21, [2], yes)']);
     });
 
-    test('the transfer card answers and declines its own clause', () {
-      poseTransferCard(id: 31);
-      final card = r.inbox.single;
-      expect(card.asks.keys.toSet(), {'respond_transfer_1'});
-      expect(formatTerm(card.fields['Kind']!), 'release');
-      r.answerCard(card, _answer(card, 'Accept'));
-      expect(sent, ['answer(req(31), xs_respond_transfer_1(yes))']);
-
-      poseTransferCard(id: 32);
-      final next = r.inbox.single;
-      r.answerCard(next, _answer(next, 'Decline'));
-      expect(sent.last, 'decline(req(32))');
+    test('a refusal is an answer, no, granted as yes is', () {
+      drawSwapCard(id: 22);
+      r.bridge.grant(22, position(22, [2]), const GAtom('no'));
+      expect(sent, ['input(22, [2], no)']);
     });
 
-    test('the two cards stand together and are distinct', () {
-      poseSwapCard(id: 23);
-      poseTransferCard(id: 33);
-      expect(r.inbox.length, 2);
-      r.handle(fixtureTerm('closed(req(23))'));
-      expect(r.inbox.single.asks.keys.single, 'respond_transfer_1');
+    test('the transfer card answers on its own construct', () {
+      drawTransferCard(id: 31);
+      final (_, args) = ctorArgs(r.bridge.construct(31)!.view);
+      expect(formatTerm(ctorArgs(args[0]).$2[0]), 'release');
+      r.bridge.grant(31, position(31, [2]), const GAtom('yes'));
+      r.handle(fixtureTerm('withdraw(31)'));
+      drawTransferCard(id: 32);
+      r.bridge.grant(32, position(32, [2]), const GAtom('no'));
+      expect(sent, ['input(31, [2], yes)', 'input(32, [2], no)']);
     });
 
-    test('a clause the manifest does not name opens nothing', () {
-      r.handle(fixtureTerm('card(respond_swap_2, ctx_respond_swap_2(bob, '
+    test('the two cards stand together, are distinct, and go on their own '
+        'withdrawals', () {
+      drawSwapCard(id: 23);
+      drawTransferCard(id: 33);
+      expect(r.bridge.constructs.map((c) => c.id), [23, 33]);
+      r.handle(fixtureTerm('withdraw(23)'));
+      expect(r.bridge.constructs.map((c) => c.id), [33]);
+    });
+
+    test('the deployed mediator\'s card vocabulary opens nothing', () {
+      r.handle(fixtureTerm('card(agent_1, ctx_agent_1, req(1))'));
+      r.handle(fixtureTerm('card(respond_swap_1, ctx_respond_swap_1(bob, '
           'lot(alice, usd, 0, 2), []), req(9))'));
+      expect(r.bridge.constructs, isEmpty);
       expect(r.inbox, isEmpty);
       expect(r.standing, isEmpty);
     });
   });
 
-  group('the declared views', () {
+  group('the views of the agent\'s output', () {
     test('every screen message but holdings lands in the default display', () {
       r.handle(fixtureTerm('msg(agent, person, minted(2, 30))'));
       r.handle(fixtureTerm('msg(agent, person, transferred(release, frank))'));
@@ -278,70 +253,77 @@ void main() {
     });
   });
 
-  group('a compound context is shown as its scalars', () {
+  group('a compound offer is shown as its scalars', () {
     testWidgets('a lot and a list of bonds show their scalars, not their terms',
         (tester) async {
       tester.view.physicalSize = const Size(600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      poseRequestCards();
-      poseSwapCard(id: 24);
+      drawRequestForm();
+      drawSwapCard(id: 24);
       await tester.pumpWidget(MaterialApp(
           home: AgentSurface(
               agentId: 'alice', runtime: r, muteNotices: true)));
       await tester.pumpAndSettle();
 
-      // `Want` is the lot lot(alice, usd, 0, 2) — its four scalars, and the
-      // term itself nowhere.
-      expect(find.text('lot(alice, usd, 0, 2)'), findsNothing);
-      expect(find.text('alice'), findsOneWidget);
-      expect(find.text('0'), findsOneWidget);
-      expect(find.text('2'), findsOneWidget);
+      Finder inCard(Finder f) =>
+          find.descendant(of: find.byKey(constructKey(24)), matching: f);
 
-      // `Offered` is two bonds — one group of four scalars per bond, so the
-      // serials 7 and 8 and the maturity 30 twice.
-      expect(find.text('bond(bob, usd, 30, 7)'), findsNothing);
-      expect(find.text('7'), findsOneWidget);
-      expect(find.text('8'), findsOneWidget);
-      expect(find.text('30'), findsNWidgets(2));
-      // The denomination of all three groups.
-      expect(find.text('usd'), findsNWidgets(3));
-      // `From` is a scalar and stays one value; `bob` is also each bond's
-      // issuer, so it is the context value and the two groups.
-      expect(find.text('bob'), findsNWidgets(3));
+      // The offer: bob, the lot wanted --- its four scalars --- and the two
+      // bonds offered, one group of four per bond.
+      expect(inCard(find.text('bob alice usd 0 2, bob usd 30 7, bob usd 30 8')),
+          findsOneWidget);
+      // No term, of the offer or of any part of it.
+      for (final term in [
+        'offer(',
+        'lot(alice, usd, 0, 2)',
+        'bond(bob, usd, 30, 7)',
+        'bond(bob, usd, 30, 8)',
+      ]) {
+        expect(find.textContaining(term), findsNothing, reason: term);
+      }
 
-      // The card's buttons are the Accept of its clause and the decline its
-      // else-branch earns.
-      expect(find.widgetWithText(ElevatedButton, 'Accept'), findsOneWidget);
-      expect(find.widgetWithText(OutlinedButton, 'Decline'), findsOneWidget);
+      // The card's buttons are its answer's two constants, yes and no.
+      expect(inCard(find.widgetWithText(ElevatedButton, 'yes')), findsOneWidget);
+      expect(inCard(find.widgetWithText(ElevatedButton, 'no')), findsOneWidget);
     });
 
-    testWidgets('the panel offers the seven forms, each by its label',
+    testWidgets('the request form offers the twelve forms, each by its functor',
         (tester) async {
       tester.view.physicalSize = const Size(600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      poseRequestCards();
+      drawRequestForm();
       await tester.pumpWidget(MaterialApp(
           home: AgentSurface(
               agentId: 'alice', runtime: r, muteNotices: true)));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byType(FloatingActionButton));
-      await tester.pumpAndSettle();
+      Finder inForm(Finder f) =>
+          find.descendant(of: find.byKey(constructKey(0)), matching: f);
+      expect(inForm(find.byType(ChoiceChip)), findsNWidgets(12));
       for (final label in const [
-        'Mint',
-        'Swap',
-        'Pay',
-        'Redeem',
-        'Deposit',
-        'Release',
-        'Return'
+        'swap',
+        'accept',
+        'pay',
+        'payout',
+        'spend',
+        'redeem',
+        'mature',
+        'deposit',
+        'release',
+        'return'
       ]) {
-        expect(find.text(label), findsOneWidget, reason: label);
+        expect(inForm(find.widgetWithText(ChoiceChip, label)), findsOneWidget,
+            reason: label);
       }
+      // The two mints share a functor, and are told apart by their arity.
+      expect(inForm(find.widgetWithText(ChoiceChip, 'mint/2')), findsOneWidget);
+      expect(inForm(find.widgetWithText(ChoiceChip, 'mint/3')), findsOneWidget);
+      // No compose form beside it: the request form is the one way in.
+      expect(find.byType(FloatingActionButton), findsNothing);
     });
   });
 
@@ -358,9 +340,3 @@ void main() {
     ]);
   });
 }
-
-CommandDesc _form(UiRuntime r, String clause) =>
-    r.manifest.standingForm(clause)!.$2;
-
-AnswerDesc _answer(InboxCard card, String label) =>
-    card.liveAnswers.firstWhere((a) => a.label == label);

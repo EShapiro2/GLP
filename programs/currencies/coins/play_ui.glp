@@ -1,35 +1,36 @@
 %% play_ui.glp --- the currency mini-app with a LIVE person: the person on the
 %% other end of the mini-app's channel is the app's user, not a script.
 %%
-%% coins_ui(alice, Answers, NetIn) is the entry the Flutter agent runtime
-%% starts, whose three arguments are (Id, UserIn, NetIn): alice's answers
-%% arrive on the second, injected as ground terms by her taps on the mini-app's
-%% constructs, and what her mini-app shows her --- the mediator's cards and
-%% their closing, and the screen --- leaves by send_to_user/1, one term to a
-%% line, which is what the app's UI runtime reads.  Her screen is therefore
-%% derived from the display declarations of currency/coins_agent.vglp and from
-%% nothing else.
+%% coins_ui(alice, Grants, NetIn) is the entry the Flutter agent runtime
+%% starts, whose three arguments are (Id, UserIn, NetIn), and the entry the
+%% Dart bridge runs (vGLP, sections/elicitation.tex, the paragraph "The
+%% implementation"): alice's grants arrive on the second, input(Id, P, R) as
+%% the bridge returns them from her acts on the mini-app's constructs, and the
+%% other half of her person channel --- the constructs the dispatcher draws and
+%% withdraws, and the screen --- leaves by send_to_user/1, one term to a line,
+%% which is what the bridge reads.  Her screen is therefore derived from the
+%% interactive types of currency/coins_agent.vglp and from nothing else.
 %%
 %% Bob is scripted (currency/person.glp) and shares one conversation with her,
 %% as the villagers do in village.glp.  His script exercises both of alice's
-%% constructs: he mints 2, accepts the swap alice proposes through her Swap
-%% form, and then proposes the reverse swap himself --- the 2 alice-coins he
+%% constructs: he mints 2, accepts the swap alice proposes as a request on
+%% her request form, and then proposes the reverse swap himself --- the 2 alice-coins he
 %% now holds for the 2 bob-coins she now holds --- which arrives at her as the
-%% card of the swap responder, its accept clause her Accept and its else-branch her Decline.
+%% card of the swap responder, its yes her Accept and its no her Decline.
 %% Both executions are in one heap and the network is not used.
 %%
 %% This file is the harness of the app, not part of the currency: the certified
 %% program is currency/, which this directory is not (see self.glp).
 
-imported procedure currency#coins(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
-imported procedure currency#person(Key?, Stream(Event)?, Stream(UserAnswer), Script?, Stream(ScreenContent)).
+imported procedure currency#coins(Key?, Channel(PersonIn, Stream(_))?, Stream(Conversation)?).
+imported procedure currency#person(Key?, _?, PersonIn, Script?, Stream(ScreenContent)).
 
-exported procedure coins_ui(Key?, Stream(UserAnswer)?, Stream(_)?).
-coins_ui(alice, Answers, _) :-
-    currency # coins(alice, ch(Answers?, Events), [conversation(bob, ch(AB?, BA))]),
-    send_to_user(Events?),
-    currency # coins(bob, ch(BobAnswers?, BobEvents), [conversation(alice, ch(BA?, AB))]),
-    currency # person(bob, BobEvents?, BobAnswers,
+exported procedure coins_ui(Key?, PersonIn?, Stream(_)?).
+coins_ui(alice, Grants, _) :-
+    currency # coins(alice, ch(Grants?, Draws), [conversation(bob, ch(AB?, BA))]),
+    send_to_user(Draws?),
+    currency # coins(bob, ch(BobGrants?, BobDraws), [conversation(alice, ch(BA?, AB))]),
+    currency # person(bob, BobDraws?, BobGrants,
                     [mint(2), accept(alice), swap(alice, alice, 2, bob, 2)],
                     BobScreen),
     log_peer(bob, BobScreen?).

@@ -102,53 +102,53 @@ UserInMsg ::= accept_swap(Key, Lot, Stream(Coin), SwapResponse?)
 
 %% The offer a swap responder carries: the proposer, the lot it wants, the
 %% coins it offers.
-SwapOffer ::= offer(Key, Lot, Stream(Coin)).
+Offer ::= offer(Key, Lot, Stream(Coin)).
 
 %% =============================================================================
-%% The vocabulary of the compiled agent's mediator, at this program's answer and
-%% context types, so that the mini-app entry and the play can type the goals
-%% they spawn.  These are the types the canonical compilation emits into
-%% currency/coins_agent.glp (programs/vglp/self.glp instantiated at Answer and
-%% Context); the compiled module's own definitions shadow these within it, and
-%% the two must agree.
+%% The agent's questions (vGLP, Definition "Guarded Clause, Volitional
+%% Procedure, Interactive Type, ..."): the person's requests, the agent's
+%% interactive type in reader mode, and the responder's card, in writer mode.
 %% =============================================================================
 
-ReqId ::= req(Integer).
-Slot(R) ::= none ; ask(R, ReqId).
-AgentMsg ::= ask(Constant, Context, Escrow, ReqId?) ; abort(ReqId).
-Card ::= card(Constant, Context, ReqId) ; closed(ReqId) ; aborted(ReqId).
-UserAnswer ::= answer(ReqId, Answer) ; decline(ReqId).
-PendingEntry ::= pending(ReqId, Escrow).
-PendingList ::= [] ; [PendingEntry | PendingList].
+%% A peer: the agent identifier a request names, a person, and so a Key.
+Peer ::= Key.
 
-%% One alternative per volition-guarded clause of the agent, its reply type
-%% and its escrow, as the compilation emits them --- Answer and Context with
-%% the alternatives written out, which the compiled module names.
-Xs_respond_swap_1 ::= xs_respond_swap_1(String).
-Reply_respond_swap_1 ::= then(Xs_respond_swap_1) ; else.
-Ctx_respond_swap_1 ::= ctx_respond_swap_1(Key, Lot, Stream(Coin)).
-Xs_agent_1 ::= xs_agent_1(Integer).
-Reply_agent_1 ::= then(Xs_agent_1).
-Xs_agent_2 ::= xs_agent_2(Key, Key, Integer, Key, Integer).
-Reply_agent_2 ::= then(Xs_agent_2).
-Xs_agent_3 ::= xs_agent_3(Key, Integer).
-Reply_agent_3 ::= then(Xs_agent_3).
-Xs_agent_4 ::= xs_agent_4(Key, Key).
-Reply_agent_4 ::= then(Xs_agent_4).
-Answer ::= xs_respond_swap_1(String) ; xs_agent_1(Integer) ; xs_agent_2(Key, Key, Integer, Key, Integer) ; xs_agent_3(Key, Integer) ; xs_agent_4(Key, Key).
-Escrow ::= esc_respond_swap_1(Reply_respond_swap_1?) ; esc_agent_1(Reply_agent_1?) ; esc_agent_2(Reply_agent_2?) ; esc_agent_3(Reply_agent_3?) ; esc_agent_4(Reply_agent_4?).
-Context ::= ctx_respond_swap_1(Key, Lot, Stream(Coin)) ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4.
+%% A request: one alternative per request clause of the agent, each a
+%% transaction of Definition 3.1 at the party whose election it is --- Mint,
+%% Swap, Pay and Redeem --- with the arguments its clause reads.
+Request ::= mint(Integer) ; swap(Peer, Lot, Lot) ; pay(Peer, Integer) ; redeem(Peer, Peer).
 
-%% What the mini-app shows its person on its channel to the super-app user
-%% interface: the mediator's cards and their closing, and the screen.
-Event ::= card(Constant, Context, ReqId)
-        ; closed(ReqId)
-        ; aborted(ReqId)
+%% The responder's card: the offer, which the agent writes for the person to
+%% see, and the person's answer, yes accepting and no declining.
+YesNo ::= yes ; no.
+Card  ::= card(Offer, YesNo?).
+
+%% =============================================================================
+%% The vocabulary of the compiled agent's dispatcher, so that the mini-app
+%% entry and the plays can type the goals they spawn: the union of the agent's
+%% questions and the asks its goals send, as the canonical compilation emits
+%% them into currency/coins_agent.glp, and the person channel's input, as
+%% programs/vglp/dispatcher.glp gives it.  The compiled module's own
+%% definitions shadow these within it, and the two must agree.
+%% =============================================================================
+
+Question ::= card_w(Card) ; stream_request_r(Stream(Request)?).
+Ask(Q)   ::= ask(Constant, Q).
+PersonIn ::= [_ | PersonIn].
+
+%% What the person sees on the mini-app's person channel: the constructs the
+%% dispatcher draws and withdraws, draw(Id, W, V) and withdraw(Id), each a
+%% term of any type the bridge would render, and the screen the agent writes,
+%% which the dispatcher merges in.  The person channel never closes, and
+%% neither do the events.
+Event ::= draw(_, _, _)
+        ; withdraw(_)
         ; msg(Constant, Constant, ScreenContent).
+Events ::= [Event | Events].
 
-%% A person's script (currency/person.glp): its acts, in order.  A step is an
-%% answer to one of the agent's four request cards, an acceptance of a swap the
-%% named party proposes, or a wait for a screen message.
+%% A person's script (currency/person.glp): its acts, in order.  A step is a
+%% request, granted on the agent's request form; an acceptance of a swap the
+%% named party proposes, granted on its card; or a wait for a screen message.
 Step ::= mint(Integer)
        ; swap(Key, Key, Integer, Key, Integer)
        ; pay(Key, Integer)
@@ -282,9 +282,9 @@ inject_redeem_result(redeem_declined(C), Q, Ys, [redeem_declined_by(Q?, C?)|Ys?]
 inject_redeem_result(R, Q, [Y|Ys], [Y?|Ys1?]) :-
     inject_redeem_result(R?, Q?, Ys?, Ys1).
 
-%% The two bodies of the swap responder's accept clause: the acceptance, and
-%% the refusal the machine gives for a person who has not answered.  Each hands
-%% the agent the offer with the response writer.
+%% The bodies of the swap responder's two answers (decide_swap): the
+%% acceptance, on yes, and the decline, on no.  Each hands the agent the offer
+%% with the response writer.
 procedure accept_answer(Key?, Lot?, Stream(Coin)?, SwapResponse, Stream(UserInMsg)).
 accept_answer(From, Want, Offered, Resp?, [accept_swap(From?, Want?, Offered?, Resp)]).
 
@@ -316,12 +316,14 @@ exported procedure village.
 village :- village # market.
 
 %% =============================================================================
-%% Entry point: the mini-app on a live person's screen (play_ui.glp)
+%% Entry point: the mini-app on a live person's screen (play_ui.glp), the
+%% entry the Dart bridge runs: its arguments are the agent's identifier, the
+%% person's grants and the network input.
 %% =============================================================================
 
-imported procedure play_ui#coins_ui(Key?, Stream(UserAnswer)?, Stream(_)?).
-exported procedure coins_ui(Key?, Stream(UserAnswer)?, Stream(_)?).
-coins_ui(Id, Answers, NetIn) :- play_ui # coins_ui(Id?, Answers?, NetIn?).
+imported procedure play_ui#coins_ui(Key?, PersonIn?, Stream(_)?).
+exported procedure coins_ui(Key?, PersonIn?, Stream(_)?).
+coins_ui(Id, Grants, NetIn) :- play_ui # coins_ui(Id?, Grants?, NetIn?).
 
 %% =============================================================================
 %% Entry point: the village market with one villager's events on the user's
@@ -329,7 +331,7 @@ coins_ui(Id, Answers, NetIn) :- play_ui # coins_ui(Id?, Answers?, NetIn?).
 %% balances views of the paper's Appendix C.2 are drawn from it, one villager
 %% per run, by the app's interface code.  The host posts superapp/3 and nothing
 %% of this program (GSG Section 5.1), so this is no host entry: the villager's
-%% cards are answered by its scripted person, as in village/0.
+%% constructs are answered by its scripted person, as in village/0.
 %% =============================================================================
 
 imported procedure village#market_ui(Key?).

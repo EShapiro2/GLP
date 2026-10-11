@@ -109,6 +109,7 @@ AgentContent ::= connected(Constant)
                ; rejected
                ; rejected(Constant)
                ; received(Key, Constant)
+               ; not_a_friend(Key)
                ; balance_report(Constant, Constant, Constant, Integer)
                ; balances_synced(Constant)
                ; date_advanced(Constant)
@@ -543,12 +544,16 @@ agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     send_person(msg(agent, person, unfriended(Friend?)), Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
 
-%% Message a friend.
+%% Message a friend: a message the person addresses to someone who is not
+%% their friend is not sent, and the agent tells the person so (GSG Section
+%% 5.1): the lookup of the outputs list and the dispatch on its answer
+%% (anchor_friend/4 and send_step/6, grassapp_agent.glp).
 *(Target, Text)
 agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(Target?) |
-    lookup_send(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
+    anchor_friend(Target?, Outs?, Outs1, F),
+    send_step(F?, Id?, Target?, Text?, Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% --- Volitional: group transactions the person originates ---
 %% Compiled form: UserCmds create_group/1, invite_group/2, send_group/2,

@@ -17,27 +17,29 @@
 %%   6. sale of debt              Alice sells 10 bob-coins to Eve for 4 frank-coins
 %%
 %% Each villager runs the mini-app (currency/miniapp.glp): the compiled agent with
-%% its mediator, activated with its two channels.  The play stands in for the
+%% its dispatcher, activated with its two channels.  The play stands in for the
 %% super-app: it opens, before the market, the conversation between every two
 %% villagers who transact --- one root channel each, an end to each of the two
 %% --- and hands each villager its conversations on its channel to the social
 %% graph.  A scripted person (currency/person.glp) stands in for the super-app
-%% user interface: it reads the cards the mediator shows and the screen the
-%% agent writes, and answers the cards --- the person's taps --- in the order
-%% of its script, each step when the one before it has taken effect.  The
-%% screen messages are logged as tagged(Villager, Message), so the run is
-%% observable and the final holdings can be read off it.
+%% user interface: it reads the constructs the dispatcher draws --- the agent's
+%% request form, drawn once and kept on screen, and a card per proposed swap
+%% --- and the screen the agent writes, and grants its acts on them --- the
+%% person's taps and submissions --- in the order of its script, each step when
+%% the one before it has taken effect.  The screen messages are logged as
+%% tagged(Villager, Message), so the run is observable and the final holdings
+%% can be read off it.
 %%
 %% Entry points: market/0, exported by self.glp as village/0; and market_ui/1,
 %% exported by self.glp under its own name, a play a test runs, which runs the
 %% same market with one villager, named, whose every event its mini-app shows
-%% it --- the cards, their closing and the screen --- goes as well to
-%% send_to_user/1, one term to a line, which is what the app's UI runtime reads
-%% and renders.  The app's interface code therefore draws that villager's
-%% screen from the run, while its scripted person answers the cards as before.
+%% it --- the constructs drawn and withdrawn, and the screen --- goes as well to
+%% send_to_user/1, one term to a line, which is what the app's bridge reads and
+%% renders.  The app's interface code therefore draws that villager's screen
+%% from the run, while its scripted person grants its acts as before.
 
-imported procedure currency#coins(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
-imported procedure currency#person(Key?, Stream(Event)?, Stream(UserAnswer), Script?, Stream(ScreenContent)).
+imported procedure currency#coins(Key?, Channel(PersonIn, Stream(_))?, Stream(Conversation)?).
+imported procedure currency#person(Key?, _?, PersonIn, Script?, Stream(ScreenContent)).
 
 %% =============================================================================
 %% The scripts
@@ -87,7 +89,7 @@ market(V) :-
     script(frank, SF),
     villager(V?, frank, SF?, [conversation(diana, ch(FD?, DF)), conversation(eve, ch(FE?, EF))]).
 
-%% One villager: the mini-app, activated with its channel to the person and its
+%% One villager: the mini-app, activated with its person channel and its
 %% conversations, the scripted person on the other end of the channel, and its
 %% screen logged.  The villager on the app's path has its events sent to the
 %% user as well.
@@ -97,19 +99,20 @@ villager(Id, Script, Convs) :- villager(none, Id?, Script?, Convs?).
 procedure villager(Constant?, Key?, Script?, Stream(Conversation)?).
 villager(V, Id, Script, Convs) :-
     V? =?= Id? |
-    currency # coins(Id?, ch(Answers?, Events), Convs?),
+    currency # coins(Id?, ch(Grants?, Events), Convs?),
     tee(Events?, ToPerson, ToUser),
     send_to_user(ToUser?),
-    currency # person(Id?, ToPerson?, Answers, Script?, Screen),
+    currency # person(Id?, ToPerson?, Grants, Script?, Screen),
     log(Id?, Screen?).
 villager(_, Id, Script, Convs) :-
     otherwise |
-    currency # coins(Id?, ch(Answers?, Events), Convs?),
-    currency # person(Id?, Events?, Answers, Script?, Screen),
+    currency # coins(Id?, ch(Grants?, Events), Convs?),
+    currency # person(Id?, Events?, Grants, Script?, Screen),
     log(Id?, Screen?).
 
-%% Each event to the person and to the user both.
-procedure tee(Stream(Event)?, Stream(Event), Stream(Event)).
+%% Each event to the person and to the user both.  The person channel's
+%% stream is read as any term.
+procedure tee(Stream(_)?, Stream(_), Stream(_)).
 tee([E|Es], [E?|Ps?], [E?|Us?]) :- ground(E?) | tee(Es?, Ps, Us).
 tee([], [], []).
 

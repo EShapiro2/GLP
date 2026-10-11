@@ -33,15 +33,17 @@
 %% calendar.  The play drives the calendars.
 %%
 %% Each party runs the mini-app (denominated/miniapp.glp): the compiled agent
-%% with its mediator, activated with its channel to the person, its
+%% with its dispatcher, activated with its person channel, its
 %% conversations, and its calendar.  The play stands in for the super-app: it
 %% opens, before the market, the conversation between every two parties who
 %% transact --- one root channel each, an end to each of the two --- and hands
 %% each party its conversations on its channel to the social graph.  A scripted
 %% person (denominated/person.glp) stands in for the super-app user interface:
-%% it reads the cards the mediator shows and the screen the agent writes, and
-%% answers the cards --- the person's taps --- in the order of its script, each
-%% step when the one before it has taken effect; it also writes the agent's
+%% it reads the constructs the dispatcher draws --- the agent's request form,
+%% drawn once and kept on screen, and a card per proposed swap or transfer ---
+%% and the screen the agent writes, and grants its acts on them --- the
+%% person's taps and submissions --- in the order of its script, each step
+%% when the one before it has taken effect; it also writes the agent's
 %% calendar, which on a device the clock would.  At the escrow agent the escrow
 %% program (denominated/escrow.glp) answers the transfer cards and wills the
 %% release, and the person performs it.  The screen messages are logged as
@@ -51,8 +53,8 @@
 %% Entry points: market/0, exported by self.glp as village/0; and
 %% sovereign_market/0, exported as sovereign_village/0.
 
-imported procedure denominated#sovereign(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?, Stream(Integer)?).
-imported procedure denominated#person(Key?, Stream(Event)?, Stream(UserAnswer), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
+imported procedure denominated#sovereign(Key?, Channel(PersonIn, Stream(_))?, Stream(Conversation)?, Stream(Integer)?).
+imported procedure denominated#person(Key?, _?, PersonIn, Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
 
 %% =============================================================================
 %% The scripts
@@ -221,7 +223,7 @@ sov_script(escrow, [await(received_transfer(deposit, charlie, [lot(frank, usd, n
                     accept_transfer(frank), return(frank, usd, eve, now, 2)]).
 sov_script(P, S?) :- otherwise | script(P?, S).
 
-%% One villager: the mini-app, activated with its channel to the person, its
+%% One villager: the mini-app, activated with its person channel, its
 %% conversations and its calendar; the scripted person on the other end of the
 %% channel, under no agreement; and its screen logged.
 exported procedure villager(Key?, Script?, Stream(Conversation)?).
@@ -234,8 +236,8 @@ villager(Id, Script, Convs) :-
 exported procedure escrow_agent(Key?, Script?, Agreement?, Stream(Conversation)?).
 escrow_agent(Id, Script, Ag, Convs) :-
     ground(Id?) |
-    denominated # sovereign(Id?, ch(Answers?, Events), Convs?, Cal?),
-    denominated # person(Id?, Events?, Answers, Cal, Script?, Ag?, Screen),
+    denominated # sovereign(Id?, ch(Grants?, Draws), Convs?, Cal?),
+    denominated # person(Id?, Draws?, Grants, Cal, Script?, Ag?, Screen),
     log(Id?, Screen?).
 
 %% The screen messages, logged as tagged(Party, Message).
