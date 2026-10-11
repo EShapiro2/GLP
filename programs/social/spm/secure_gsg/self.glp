@@ -533,29 +533,51 @@ secure_ir_of(Q, [_ | Rest], IR?) :- otherwise | secure_ir_of(Q?, Rest?, IR).
 secure_ir_of(_, [], ir([], 0)).
 
 %% =============================================================================
-%% ENTRY POINTS (modules.tex, External access): the root self.glp exports each
-%% play by forwarding to the module that defines it, so a directory load of
-%% programs/social/spm/secure_gsg is a program whose plays an external goal can call.
+%% THE AGENT, forwarded to the module that defines it (modules.tex, Compilation,
+%% fourth step): a play in plays/ calls `agent(...)` unqualified, resolved by
+%% walking the scope to this file, which enters secure_gsg_agent.glp, a module
+%% file of this directory.
 %% =============================================================================
-imported procedure play_secure_befriend # play_secure_befriend(Integer, Integer).
+imported procedure secure_gsg_agent # agent(Agent?, IdentityRecord?,
+                                             Stream(UserEvent(SecureGsgVolition, SecureGsgQuery, SecureGsgAnswer))?,
+                                             Stream(InMsg(SecureGsgCargo))?,
+                                             Stream(NetMsg(SecureGsgCargo)),
+                                             Integer?,
+                                             SecureGsgPlatform?).
+exported procedure agent(Agent?, IdentityRecord?,
+                          Stream(UserEvent(SecureGsgVolition, SecureGsgQuery, SecureGsgAnswer))?,
+                          Stream(InMsg(SecureGsgCargo))?,
+                          Stream(NetMsg(SecureGsgCargo)),
+                          Integer?,
+                          SecureGsgPlatform?).
+agent(Id, IRec, UserIn, NetIn, NetOut?, Date, Platform) :-
+    secure_gsg_agent # agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?, Platform?).
+
+%% =============================================================================
+%% ENTRY POINTS (modules.tex, External access): the plays, exported by
+%% plays/self.glp and forwarded here, so that programs/social/spm/self.glp can
+%% enter this directory through this file and export them as the program's
+%% entry points.
+%% =============================================================================
+imported procedure plays # play_secure_befriend(Integer, Integer).
 exported procedure play_secure_befriend(Integer, Integer).
-play_secure_befriend(A?, B?) :- play_secure_befriend # play_secure_befriend(A, B).
+play_secure_befriend(A?, B?) :- plays # play_secure_befriend(A, B).
 
-imported procedure play_secure_rebroadcast # play_secure_rebroadcast(Integer, Integer).
+imported procedure plays # play_secure_rebroadcast(Integer, Integer).
 exported procedure play_secure_rebroadcast(Integer, Integer).
-play_secure_rebroadcast(A?, B?) :- play_secure_rebroadcast # play_secure_rebroadcast(A, B).
+play_secure_rebroadcast(A?, B?) :- plays # play_secure_rebroadcast(A, B).
 
-imported procedure play_secure_restore # play_secure_restore(Integer, Integer, Integer, IdentityRecord).
+imported procedure plays # play_secure_restore(Integer, Integer, Integer, IdentityRecord).
 exported procedure play_secure_restore(Integer, Integer, Integer, IdentityRecord).
-play_secure_restore(A?, Z?, B?, IR?) :- play_secure_restore # play_secure_restore(A, Z, B, IR).
+play_secure_restore(A?, Z?, B?, IR?) :- plays # play_secure_restore(A, Z, B, IR).
 
-imported procedure play_secure_unfriend # play_secure_unfriend(Integer, Integer, IdentityRecord).
+imported procedure plays # play_secure_unfriend(Integer, Integer, IdentityRecord).
 exported procedure play_secure_unfriend(Integer, Integer, IdentityRecord).
-play_secure_unfriend(A?, B?, IR?) :- play_secure_unfriend # play_secure_unfriend(A, B, IR).
+play_secure_unfriend(A?, B?, IR?) :- plays # play_secure_unfriend(A, B, IR).
 
-imported procedure play_secure_replace # play_secure_replace(Constant, Integer, Integer, Integer, Integer).
+imported procedure plays # play_secure_replace(Constant, Integer, Integer, Integer, Integer).
 exported procedure play_secure_replace(Constant, Integer, Integer, Integer, Integer).
-play_secure_replace(R?, A?, B?, C?, D?) :- play_secure_replace # play_secure_replace(R, A, B, C, D).
+play_secure_replace(R?, A?, B?, C?, D?) :- plays # play_secure_replace(R, A, B, C, D).
 
 %% =============================================================================
 %% REPLACE (SPM, Replace Protocol): Vouch, Announce new identity, Integrate

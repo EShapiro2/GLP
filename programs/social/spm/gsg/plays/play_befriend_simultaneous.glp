@@ -24,34 +24,22 @@
 %%   BobFinalEpoch  = 1
 
 
-imported procedure gsg_agent # agent(Agent?, IdentityRecord?,
-                                      Stream(UserEvent(GsgVolition, GsgQuery, GsgAnswer))?,
-                                      Stream(InMsg(GsgCargo))?,
-                                      Stream(NetMsg(GsgCargo)),
-                                      Integer?,
-                                      GsgPlatform?).
-
-imported procedure cva # network(NetEndList(GsgCargo)?).
-
-NetEnd(C) ::= net_end(Agent, Stream(NetMsg(C)), Stream(InMsg(C))?).
-NetEndList(C) ::= [] ; [NetEnd(C) | NetEndList(C)].
-
 exported procedure play_befriend_simultaneous(Integer, Integer).
 
 play_befriend_simultaneous(AliceFinalEpoch?, BobFinalEpoch?) :-
-    gsg_agent # agent(alice, ir([], 51),
+    agent(alice, ir([], 51),
           [will(discover(bob, RA1)), await(RA1?),
            will(offer_friendship(bob, RA2)), await(RA2?),
            query(q_epoch(bob), a_epoch(AliceFinalEpoch)),
            shutdown],
           AliceIn?, AliceOut, 0,
           gsg([], [], [], [], [], [])),
-    gsg_agent # agent(bob, ir([], 51),
+    agent(bob, ir([], 51),
           [will(discover(alice, RB1)), await(RB1?),
            will(offer_friendship(alice, RB2)), await(RB2?),
            query(q_epoch(alice), a_epoch(BobFinalEpoch)),
            shutdown],
           BobIn?, BobOut, 0,
           gsg([], [], [], [], [], [])),
-    cva # network([net_end(alice, AliceOut?, AliceIn),
-                   net_end(bob,   BobOut?,   BobIn)]).
+    network([net_end(alice, AliceOut?, AliceIn),
+             net_end(bob,   BobOut?,   BobIn)]).

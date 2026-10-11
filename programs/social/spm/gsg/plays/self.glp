@@ -1,0 +1,18 @@
+%% gsg/plays/self.glp -- the social graph's plays, entered through this file
+%% (TGLP modules.tex, Cross-module type checking: a directory is entered
+%% through its self.glp).  Each play is forwarded to the module file that
+%% defines it, and ../self.glp calls them as `plays # play_x`.  A play calls
+%% `agent(...)` and `network(...)` unqualified, resolved by walking the scope:
+%% ../self.glp forwards the agent and ../../self.glp the network mediator.
+
+imported procedure play_befriend # play_befriend(Integer, Integer).
+exported procedure play_befriend(Integer, Integer).
+play_befriend(A?, B?) :- play_befriend # play_befriend(A, B).
+
+imported procedure play_befriend_simultaneous # play_befriend_simultaneous(Integer, Integer).
+exported procedure play_befriend_simultaneous(Integer, Integer).
+play_befriend_simultaneous(A?, B?) :- play_befriend_simultaneous # play_befriend_simultaneous(A, B).
+
+imported procedure play_three_agents # play_three_agents.
+exported procedure play_three_agents.
+play_three_agents :- play_three_agents # play_three_agents.

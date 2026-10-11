@@ -2,12 +2,16 @@
 %%
 %% cva/ is the CVA substrate (types and the network mediator), shared by the
 %% two platforms beside it, gsg/ (the social graph) and secure_gsg/ (its
-%% secure version).  A play reaches the mediator as `cva # network(...)`,
-%% which resolves only where cva/ is a module of the loaded program: so the
-%% program is this directory, entered through this file, and its entry points
-%% are the plays of the two platforms, forwarded here through each platform's
-%% own self.glp (modules.tex, External access).  Each platform directory still
-%% loads on its own (suite Section X10), with its plays dropped as dead code.
+%% secure version).  A qualifier names a child directory or module file of
+%% the caller's directory (TGLP modules.tex, Cross-module type checking), so a
+%% play, in its platform's plays/, reaches the mediator by the unqualified
+%% call `network(...)`, resolved by walking the scope to this file, which
+%% forwards it to `cva # network`; and it reaches its platform's agent by the
+%% unqualified call `agent(...)`, which its platform's self.glp forwards to
+%% the agent module.  The program is this directory, entered through this
+%% file, and its entry points are the plays of the two platforms, exported by
+%% each platform's plays/self.glp and forwarded here through the platform's
+%% own self.glp (modules.tex, External access).
 
 %% The agent and the identity record are common to cva/, gsg/ and secure_gsg/,
 %% and are defined once, here, at the lowest common ancestor of the modules
@@ -20,6 +24,19 @@
 %% it.
 Agent ::= Constant.
 IdentityRecord ::= ir(Stream(Agent), Integer).
+
+%% The network mediator (cva/network.glp), forwarded for the plays of both
+%% platforms: a play's `network(...)` resolves here, and this clause enters
+%% cva/ through its self.glp.  The endpoint types repeat cva/self.glp's,
+%% whose scope does not reach this file.
+NetMsg(C) ::= msg(Agent, Agent, C).
+InMsg(C) ::= msg(Agent, C).
+NetEnd(C) ::= net_end(Agent, Stream(NetMsg(C)), Stream(InMsg(C))?).
+NetEndList(C) ::= [] ; [NetEnd(C) | NetEndList(C)].
+
+imported procedure(C) cva # network(NetEndList(C)?).
+exported procedure(C) network(NetEndList(C)?).
+network(N) :- cva # network(N?).
 
 imported procedure gsg # play_befriend(Integer, Integer).
 exported procedure play_befriend(Integer, Integer).

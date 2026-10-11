@@ -490,18 +490,40 @@ classify_pending(Self, P, [Entry | Rest], [Entry? | Rest1?], M?) :-
 classify_pending(_, _, [], [], pm_none).
 
 %% =============================================================================
-%% ENTRY POINTS (modules.tex, External access): the plays, forwarded to the
-%% modules that define them, so that programs/social/spm/self.glp can enter this
-%% directory through this file and export them as the program's entry points.
+%% THE AGENT, forwarded to the module that defines it (modules.tex, Compilation,
+%% fourth step): a play in plays/ calls `agent(...)` unqualified, resolved by
+%% walking the scope to this file, which enters gsg_agent.glp, a module file of
+%% this directory.
 %% =============================================================================
-imported procedure play_befriend # play_befriend(Integer, Integer).
+imported procedure gsg_agent # agent(Agent?, IdentityRecord?,
+                                      Stream(UserEvent(GsgVolition, GsgQuery, GsgAnswer))?,
+                                      Stream(InMsg(GsgCargo))?,
+                                      Stream(NetMsg(GsgCargo)),
+                                      Integer?,
+                                      GsgPlatform?).
+exported procedure agent(Agent?, IdentityRecord?,
+                          Stream(UserEvent(GsgVolition, GsgQuery, GsgAnswer))?,
+                          Stream(InMsg(GsgCargo))?,
+                          Stream(NetMsg(GsgCargo)),
+                          Integer?,
+                          GsgPlatform?).
+agent(Id, IRec, UserIn, NetIn, NetOut?, Date, Platform) :-
+    gsg_agent # agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?, Platform?).
+
+%% =============================================================================
+%% ENTRY POINTS (modules.tex, External access): the plays, exported by
+%% plays/self.glp and forwarded here, so that programs/social/spm/self.glp can
+%% enter this directory through this file and export them as the program's
+%% entry points.
+%% =============================================================================
+imported procedure plays # play_befriend(Integer, Integer).
 exported procedure play_befriend(Integer, Integer).
-play_befriend(A?, B?) :- play_befriend # play_befriend(A, B).
+play_befriend(A?, B?) :- plays # play_befriend(A, B).
 
-imported procedure play_befriend_simultaneous # play_befriend_simultaneous(Integer, Integer).
+imported procedure plays # play_befriend_simultaneous(Integer, Integer).
 exported procedure play_befriend_simultaneous(Integer, Integer).
-play_befriend_simultaneous(A?, B?) :- play_befriend_simultaneous # play_befriend_simultaneous(A, B).
+play_befriend_simultaneous(A?, B?) :- plays # play_befriend_simultaneous(A, B).
 
-imported procedure play_three_agents # play_three_agents.
+imported procedure plays # play_three_agents.
 exported procedure play_three_agents.
-play_three_agents :- play_three_agents # play_three_agents.
+play_three_agents :- plays # play_three_agents.
