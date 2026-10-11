@@ -404,16 +404,31 @@ class MadContext {
   ///
   /// Both non-serializer cases: localize T, bind writer, register spawned goals, remove entry.
   /// Serializer case: extend network input stream, update entry (don't remove).
+  ///
+  /// [serial] is the serial a serializer message carries, which its sender
+  /// allocated (Definition "madGLP Receive Transaction", Serializer case: "m
+  /// ... under serial i from sender s"); a serializer message has one and no
+  /// other message does (IGLP Code Format, "Messages").  [fromAgent] is the
+  /// sender the layer authenticates.
   void handleMadAssignment({
     required GlobalName globalName,
     required Term value,
     required String fromAgent,
+    int? serial,
   }) {
-    _trace('[MAD $agentId] handleMadAssignment: $globalName := $value from $fromAgent');
+    _trace('[MAD $agentId] handleMadAssignment: $globalName := $value from '
+        '$fromAgent${serial == null ? '' : ' under serial $serial'}');
 
-    if (globalName.isWriter && globalName.index == 0) {
+    final isSerializer = globalName.isWriter && globalName.index == 0;
+    if (isSerializer != (serial != null)) {
+      throw ArgumentError(isSerializer
+          ? 'a serializer message $globalName := ... carries a serial'
+          : 'only a serializer message carries a serial, not $globalName');
+    }
+
+    if (isSerializer) {
       // Case _w(p, 0) := [T | _w(p,0)] - serializer (cold-call to network input)
-      _handleSerializerAssignment(value, fromAgent);
+      _handleSerializerAssignment(value, fromAgent, serial!);
     } else if (globalName.isWriter) {
       // Case _w(p, i) := T with i > 0 - we globalized this writer, direct lookup
       _handleWriterAssignment(globalName, value, fromAgent);
@@ -429,8 +444,9 @@ class MadContext {
   /// Spec Section 8.3: "Agent q finds the permanent entry `(N_q, *)` at index 0.
   /// Localize T↑ by q to get T_q↓. Assign N_q := [T_q↓ | N'_q] where N'_q is a
   /// fresh writer. Update the entry to `(N'_q, *)` at index 0."
-  void _handleSerializerAssignment(Term value, String fromAgent) {
-    _trace('[MAD $agentId] _handleSerializerAssignment: cold-call from $fromAgent');
+  void _handleSerializerAssignment(Term value, String fromAgent, int serial) {
+    _trace('[MAD $agentId] _handleSerializerAssignment: cold-call from '
+        '$fromAgent under serial $serial');
 
     // Get current serializer writer from index-0 entry
     final currentWriter = wp.serializerWriterAddr;
@@ -959,17 +975,19 @@ class MadContext {
     }
     switch (payload[0]) {
       case wireMsgKindValue:
-        final (GlobalName, Term) received;
+        final ({GlobalName name, Term value, int? serial}) received;
         try {
-          received = PayloadCodec.deserializeGlobalSendPayload(payload);
+          received = PayloadCodec.deserializeValuePayload(payload);
         } on ModuleRefusal catch (refusal) {
           print('[REFUSED] $agentId: a message from $fromAgent is refused at '
               'receipt: ${refusal.message}');
           return;
         }
-        final (globalName, value) = received;
         handleMadAssignment(
-            globalName: globalName, value: value, fromAgent: fromAgent);
+            globalName: received.name,
+            value: received.value,
+            fromAgent: fromAgent,
+            serial: received.serial);
       case wireMsgKindRequest:
         handleRequest(
             PayloadCodec.decodeRequestOrAckPayload(payload), fromAgent);
@@ -1241,7 +1259,11 @@ class MadContext {
   ///
   /// **Case G = `_w(q, 0)` (Serializer)**:
   /// 1. Globalizes term T for remote agent Q
-  /// 2. Adds message `(_w(q,0) := [T↑ | _w(q,0)], Q)` to M_p — content wrapped in list cell
+  /// 2. Allocates a serial i from the agent's global-name counter, one per
+  ///    message, so that (this agent, i) is unique for the whole run as every
+  ///    global name is (Remark "Cold-Call via Serializer", item 1)
+  /// 3. Adds message `(_w(q,0) := [T↑ | _w(q,0)], Q)` under serial i to M_p —
+  ///    content wrapped in list cell
   ///
   /// **Case G = `_w(p, i)` or `_r(p, i)` with i > 0 (Normal)**:
   /// 1. Globalizes term T for remote agent Q
@@ -1292,9 +1314,14 @@ class MadContext {
     // Create payload based on serializer (index 0) vs normal (index > 0)
     List<int> payload;
     if (isWriter && gnIndex == 0) {
-      // Serializer case: wrap in list cell [T↑ | _w(q,0)]
-      _trace('[MAD $agentId] send: serializer case, wrapping in list cell');
-      payload = PayloadCodec.createSerializerPayload(globalName, globalizedTerm);
+      // Serializer case: wrap in list cell [T↑ | _w(q,0)], under a serial
+      // this agent allocates from its global-name counter — after T's own
+      // names, which keep the indices they had before cold calls carried one.
+      final serial = wp.allocateIndex();
+      _trace('[MAD $agentId] send: serializer case, wrapping in list cell, '
+          'serial $serial');
+      payload = PayloadCodec.createSerializerPayload(globalName, globalizedTerm,
+          serial: serial);
     } else {
       // Normal case: send directly
       _trace('[MAD $agentId] send: normal case, sending directly');

@@ -160,6 +160,7 @@ void main() {
         globalName: GlobalName.writer('q', 0),
         value: carrier,
         fromAgent: 'p',
+        serial: 1,
       );
 
       // The held value reached the localized reader on the network-input stream:

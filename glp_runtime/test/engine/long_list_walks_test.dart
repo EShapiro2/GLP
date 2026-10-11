@@ -179,7 +179,8 @@ void main() {
 
       final (g0, cell) = PayloadCodec.deserializeGlobalSendPayload(
           PayloadCodec.createSerializerPayload(
-              GlobalName.writer('bob', 0), _ints(_n)));
+              GlobalName.writer('bob', 0), _ints(_n),
+              serial: 1));
       expect('$g0', '_w(bob, 0)');
       final c = cell as StructTerm;
       expect(_elements(c.args[0]).length, _n);
