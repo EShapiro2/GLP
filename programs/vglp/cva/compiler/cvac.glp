@@ -1,0 +1,295 @@
+%% cvac.glp --- compile(Name, Contract, Verdict): the canonical CVA platform of
+%% an act-schema contract, printed as a .vglp module (vGLP, Section 3.2, the
+%% paragraph on act schemas, and Section 5.4, "The canonical platform is
+%% structured"; self.glp says more).
+%%
+%% A contract is compiled when programs/jurix certifies it syntactically
+%% grassroots, every role a party role (Jurix, Section 5: "the compilation is
+%% defined for syntactically grassroots contracts"), and when it is a local and
+%% effective specification by the paragraph on act schemas and the sentence
+%% after Definition "Effective Local Specification", which local.glp decides.
+%% Otherwise it prints the lines saying why and nothing else.
+%%
+%% The module is the contract's own part, printed here, and the text every
+%% contract shares, text.glp.  The contract's part is the type Class, one
+%% alternative per schema, the schema's name applied to the people in its roles,
+%% then its party variables, then its speech-act variables, in programs/jurix's
+%% order; the contract itself, as the term programs/jurix reads, from which the
+%% shared text computes the classes; its reflexive predicates; and per schema a
+%% clause taking a term of Class to the binding it names, binding_of, and one
+%% taking a binding back to the term, class_of.  GLP has no string
+%% concatenation, so a line naming the contract or a schema is printed as a
+%% term, the printer writing a term on a line of its own, as
+%% programs/sglp/transform.glp prints a clause's head; a source variable is a
+%% constant whose name is the variable's, V1, V1?, from vname/3.
+
+Lines ::= [] ; [String | Lines].
+imported procedure text#fixed_text(Lines).
+imported procedure local#faults(Contract?, Stream(_)).
+
+Found ::= named(Constant, Constant) ; unnamed.
+
+exported procedure compile(Constant?, Declared?, Verdict?).
+compile(Nm, D, V) :- ground(D?) |
+    decl_schemas(D?, C),
+    decl_reflexive(D?, Rf),
+    compile0(Nm?, C?, Rf?, V?).
+procedure compile0(Constant?, Contract?, Preds?, Verdict?).
+compile0(Nm, C, Rf, V) :- ground(Nm?), ground(C?) |
+    verdict_lines(V?, Nm?, L1),
+    community_lines(C?, Nm?, L2),
+    lapp(L1?, L2?, L),
+    compile1(L?, Nm?, C?, Rf?).
+
+procedure compile1(Stream(_)?, Constant?, Contract?, Preds?).
+compile1([], Nm, C, Rf) :- ground(C?) |
+    names_lines(C?, Nm?, L1),
+    compile2(L1?, Nm?, C?, Rf?).
+compile1([L|Ls], _, _, _) :-
+    send_to_user(['%% compile begin', L?|Ls1?]),
+    lapp(Ls?, ['%% compile end'], Ls1).
+
+procedure compile2(Stream(_)?, Constant?, Contract?, Preds?).
+compile2([], Nm, C, Rf) :- ground(C?) |
+    local # faults(C?, Fs),
+    compile3(Fs?, Nm?, C?, Rf?).
+compile2([L|Ls], _, _, _) :-
+    send_to_user(['%% compile begin', L?|Ls1?]),
+    lapp(Ls?, ['%% compile end'], Ls1).
+
+procedure compile3(Stream(_)?, Constant?, Contract?, Preds?).
+compile3([], Nm, C, Rf) :-
+    module_lines(Nm?, C?, Rf?, Ls),
+    send_to_user(['%% compile begin'|Ls?]).
+compile3([F|Fs], Nm, _, _) :- ground(Nm?) |
+    H =.. ['%% not compiled', Nm?],
+    send_to_user(['%% compile begin', H?, F?|Fs1?]),
+    lapp(Fs?, ['%% compile end'], Fs1).
+
+%% --- The contract compiled ------------------------------------------------
+procedure decl_schemas(Declared?, Contract).
+decl_schemas([], []).
+decl_schemas([S|Ss], [S?|Ss?]).
+decl_schemas(reflexive(_, C), C?).
+procedure decl_reflexive(Declared?, Preds).
+decl_reflexive([], []).
+decl_reflexive([_|_], []).
+decl_reflexive(reflexive(Rf, _), Rf?).
+
+%% Jurix, Section 5: the compilation is defined for syntactically grassroots
+%% contracts; a contract with community roles has no canonical platform here,
+%% its roles' extents being no participants of a binding.
+procedure verdict_lines(Verdict?, Constant?, Stream(_)).
+verdict_lines(syntactically_grassroots, _, []).
+verdict_lines(not_grassroots(_), Nm, [H?, '%% it is not syntactically grassroots; check_named in programs/jurix gives the faults.']) :-
+    ground(Nm?) | H =.. ['%% not compiled', Nm?].
+verdict_lines(malformed(_), Nm, [H?, '%% it is malformed; check_named in programs/jurix gives the faults.']) :-
+    ground(Nm?) | H =.. ['%% not compiled', Nm?].
+verdict_lines(conditions_met, Nm, [H?, '%% it has community roles, which the canonical platform of vGLP Section 3.2 does not take.']) :-
+    ground(Nm?) | H =.. ['%% not compiled', Nm?].
+verdict_lines(conditions_failed(_), Nm, [H?, '%% it has community roles, which the canonical platform of vGLP Section 3.2 does not take.']) :-
+    ground(Nm?) | H =.. ['%% not compiled', Nm?].
+
+procedure community_lines(Contract?, Constant?, Stream(_)).
+community_lines(C, Nm, L?) :- ground(Nm?) |
+    has_community(C?, B),
+    community_lines1(B?, Nm?, L).
+procedure community_lines1(YesNo?, Constant?, Stream(_)).
+community_lines1(no, _, []).
+community_lines1(yes, Nm, [H?, '%% it has community roles, which the canonical platform of vGLP Section 3.2 does not take.']) :-
+    ground(Nm?) | H =.. ['%% not compiled', Nm?].
+procedure has_community(Contract?, YesNo).
+has_community([], no).
+has_community([schema(_, Rs)|Ss], B?) :- roles_community(Rs?, B1), has_community1(B1?, Ss?, B).
+has_community([cschema(_, _, _)|_], yes).
+procedure has_community1(YesNo?, Contract?, YesNo).
+has_community1(yes, _, yes).
+has_community1(no, Ss, B?) :- has_community(Ss?, B).
+procedure roles_community(RoleSpecs?, YesNo).
+roles_community([], no).
+roles_community([rs(_, _, _, _, _)|Rs], B?) :- roles_community(Rs?, B).
+roles_community([crs(_, _, _, _, _, _)|_], yes).
+
+%% A schema's variables are named V1, V2, ... in the printed clauses; there are
+%% as many names as vname/3 has.
+procedure names_lines(Contract?, Constant?, Stream(_)).
+names_lines([], _, []).
+names_lines([schema(S, Rs)|Ss], Nm, L?) :- ground(S?), ground(Rs?), ground(Nm?) |
+    schema_vars(Rs?, Vs),
+    count_args(Vs?, N),
+    vname(N?, F),
+    names_lines1(F?, S?, Ss?, Nm?, L).
+names_lines([cschema(_, _, _)|Ss], Nm, L?) :- names_lines(Ss?, Nm?, L).
+procedure names_lines1(Found?, Constant?, Contract?, Constant?, Stream(_)).
+names_lines1(named(_, _), _, Ss, Nm, L?) :- names_lines(Ss?, Nm?, L).
+names_lines1(unnamed, S, _, Nm, [H?, H2?]) :- ground(Nm?), ground(S?) |
+    H =.. ['%% not compiled', Nm?],
+    H2 =.. ['%% the compiler names the variables of no schema with this many, at', S?].
+procedure count_args(Args?, Integer).
+count_args([], 0).
+count_args([_|As], N?) :- count_args(As?, M), N := M? + 1.
+
+%% --- The module ------------------------------------------------------------
+procedure module_lines(Constant?, Contract?, Preds?, Stream(_)).
+module_lines(Nm, C, Rf, Ls?) :- ground(Nm?), ground(C?), ground(Rf?) |
+    H =.. ['%% the canonical CVA platform of the contract', Nm?],
+    class_lines(C?, L1),
+    T1 =.. [contract_schemas, C?],
+    T2 =.. [reflexive_preds, Rf?],
+    binding_lines(C?, L2),
+    class_of_lines(C?, L3),
+    text # fixed_text(Fx),
+    lapp(L3?, [''|Fx?], L3x),
+    lapp(L2?, ['',
+        'procedure class_of(Constant?, Binding?, Peer?, Class).'|L3x?], L2x),
+    lapp(L1?, ['',
+        'procedure contract_schemas(Schemas).',
+        T1?,
+        '.',
+        '',
+        'procedure reflexive_preds(Preds).',
+        T2?,
+        '.',
+        '',
+        'procedure binding_of(Class?, Constant, Binding).'|L2x?], L1x),
+    lapp(['%% Printed by programs/vglp/cva/compiler from the contract named below, as',
+         '%% programs/jurix holds it (Jurix, Sections 3 and 5): the canonical CVA',
+         '%% platform of the contract in the structured form of vGLP Section 5.4,',
+         '%% written in vGLP (vGLP, Section 3.2, the paragraph on act schemas).  Edit the',
+         '%% contract or the compiler and run programs/vglp/cva/compile.sh, not this file.',
+         H?,
+         '',
+         '%% ===========================================================================',
+         '%% The contract',
+         '%% ===========================================================================',
+         '',
+         'Class ::='|L1x?], ['%% compile end'], Ls).
+
+%% Class ::= the schemas' alternatives, separated by ;.
+procedure class_lines(Contract?, Stream(_)).
+class_lines([], ['.']).
+class_lines([schema(S, Rs)|Ss], [A?|L?]) :- ground(S?), ground(Rs?) |
+    schema_vars(Rs?, Vs),
+    var_types(Vs?, Ts),
+    A =.. [S?|Ts?],
+    class_lines1(Ss?, L).
+class_lines([cschema(_, _, _)|Ss], L?) :- class_lines(Ss?, L).
+procedure class_lines1(Contract?, Stream(_)).
+class_lines1([], ['.']).
+class_lines1([S|Ss], [';'|L?]) :- class_lines([S?|Ss?], L).
+procedure var_types(Args?, Stream(_)).
+var_types([], []).
+var_types([role(_)|Vs], ['Peer'|Ts?]) :- var_types(Vs?, Ts).
+var_types([pvar(_)|Vs], ['Peer'|Ts?]) :- var_types(Vs?, Ts).
+var_types([svar(_)|Vs], ['Speech'|Ts?]) :- var_types(Vs?, Ts).
+var_types([nterm(_)|Vs], ['Peer'|Ts?]) :- var_types(Vs?, Ts).
+
+%% binding_of(s(V1, ..., Vn), s, [b(Var1, p(V1?)), ...]).
+procedure binding_lines(Contract?, Stream(_)).
+binding_lines([], []).
+binding_lines([schema(S, Rs)|Ss], [T?, '.'|L?]) :- ground(Rs?) |
+    schema_vars(Rs?, Vs),
+    binding_line(S?, Vs?, T),
+    binding_lines(Ss?, L).
+binding_lines([cschema(_, _, _)|Ss], L?) :- binding_lines(Ss?, L).
+procedure binding_line(Constant?, Args?, _).
+binding_line(S, Vs, T?) :- ground(S?), ground(Vs?) |
+    var_names(Vs?, 1, Ns, _),
+    bind_terms(Vs?, 1, Bs),
+    Hd =.. [S?|Ns?],
+    T =.. [binding_of, Hd?, S?, Bs?].
+procedure bind_terms(Args?, Integer?, Stream(_)).
+bind_terms([], _, []).
+bind_terms([V|Vs], I, [b(V?, W?)|Bs?]) :- ground(V?), integer(I?) |
+    vname(I?, F),
+    wrapped(V?, F?, W),
+    I1 := I? + 1,
+    bind_terms(Vs?, I1?, Bs).
+procedure wrapped(Arg?, Found?, _).
+wrapped(role(_), named(_, Q), p(Q?)).
+wrapped(pvar(_), named(_, Q), p(Q?)).
+wrapped(svar(_), named(_, Q), s(Q?)).
+wrapped(nterm(_), named(_, Q), p(Q?)).
+wrapped(_, unnamed, p(unnamed)).
+procedure var_names(Args?, Integer?, Stream(_), Stream(_)).
+var_names([], _, [], []).
+var_names([_|Vs], I, [N?|Ns?], [Q?|Qs?]) :- integer(I?) |
+    vname(I?, F),
+    name_of(F?, N, Q),
+    I1 := I? + 1,
+    var_names(Vs?, I1?, Ns, Qs).
+procedure name_of(Found?, Constant, Constant).
+name_of(named(N, Q), N?, Q?).
+name_of(unnamed, unnamed, unnamed).
+
+%% class_of(s, B, D, s(V1?, ..., Vn?)) :- ground(B?), ground(D?) |
+%%     val_peer(Var1, B?, D?, V1), ... .
+procedure class_of_lines(Contract?, Stream(_)).
+class_of_lines([], []).
+class_of_lines([schema(S, Rs)|Ss], [T?, ':-', 'ground(B?)', ',', 'ground(D?)', '|'|L?]) :-
+    ground(Rs?) |
+    schema_vars(Rs?, Vs),
+    class_of_line(S?, Vs?, T, L1),
+    class_of_lines(Ss?, L2),
+    lapp(L1?, L2?, L).
+class_of_lines([cschema(_, _, _)|Ss], L?) :- class_of_lines(Ss?, L).
+procedure class_of_line(Constant?, Args?, _, Stream(_)).
+class_of_line(S, Vs, T?, L1?) :- ground(S?), ground(Vs?) |
+    var_names(Vs?, 1, _, Qs),
+    Out =.. [S?|Qs?],
+    T =.. [class_of, S?, 'B', 'D', Out?],
+    val_goals(Vs?, 1, L1).
+procedure val_goals(Args?, Integer?, Stream(_)).
+val_goals([], _, []).
+val_goals([V|Vs], I, [G?|L?]) :- ground(V?), integer(I?) |
+    vname(I?, F),
+    name_of(F?, N, _),
+    val_goal(V?, N?, G),
+    I1 := I? + 1,
+    val_goals1(Vs?, I1?, L).
+procedure val_goals1(Args?, Integer?, Stream(_)).
+val_goals1([], _, ['.']).
+val_goals1([V|Vs], I, [','|L?]) :- val_goals([V?|Vs?], I?, L).
+procedure val_goal(Arg?, Constant?, _).
+val_goal(svar(X), N, G?) :- ground(X?), ground(N?) | G =.. [val_speech, svar(X?), 'B?', 'D?', N?].
+val_goal(role(I), N, G?) :- ground(N?) | G =.. [val_peer, role(I?), 'B?', 'D?', N?].
+val_goal(pvar(X), N, G?) :- ground(X?), ground(N?) | G =.. [val_peer, pvar(X?), 'B?', 'D?', N?].
+val_goal(nterm(_), N, G?) :- ground(N?) | G =.. [val_peer, unnamed, 'B?', 'D?', N?].
+
+procedure vname(Integer?, Found).
+vname(1, named('V1', 'V1?')).
+vname(2, named('V2', 'V2?')).
+vname(3, named('V3', 'V3?')).
+vname(4, named('V4', 'V4?')).
+vname(5, named('V5', 'V5?')).
+vname(6, named('V6', 'V6?')).
+vname(7, named('V7', 'V7?')).
+vname(8, named('V8', 'V8?')).
+vname(9, named('V9', 'V9?')).
+vname(10, named('V10', 'V10?')).
+vname(11, named('V11', 'V11?')).
+vname(12, named('V12', 'V12?')).
+vname(13, named('V13', 'V13?')).
+vname(14, named('V14', 'V14?')).
+vname(15, named('V15', 'V15?')).
+vname(16, named('V16', 'V16?')).
+vname(17, named('V17', 'V17?')).
+vname(18, named('V18', 'V18?')).
+vname(19, named('V19', 'V19?')).
+vname(20, named('V20', 'V20?')).
+vname(21, named('V21', 'V21?')).
+vname(22, named('V22', 'V22?')).
+vname(23, named('V23', 'V23?')).
+vname(24, named('V24', 'V24?')).
+vname(25, named('V25', 'V25?')).
+vname(26, named('V26', 'V26?')).
+vname(27, named('V27', 'V27?')).
+vname(28, named('V28', 'V28?')).
+vname(29, named('V29', 'V29?')).
+vname(30, named('V30', 'V30?')).
+vname(N, unnamed) :- otherwise, integer(N?) | true.
+
+%% Lines are constants and terms, each printed on a line of its own.
+procedure lapp(Stream(_)?, Stream(_)?, Stream(_)).
+lapp([], Ys, Ys?).
+lapp([X|Xs], Ys, [X?|Zs?]) :- lapp(Xs?, Ys?, Zs).

@@ -57,6 +57,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:glp_multiagent/isolate_protocol.dart' show screenTermOf;
 import 'package:glp_multiagent/manifests/coins_ui.dart';
 import 'package:glp_multiagent/ui_runtime/agent_surface.dart';
 import 'package:glp_multiagent/ui_runtime/manifest.dart';
@@ -199,7 +200,7 @@ void main() {
 
     final runtimes = <String, UiRuntime>{};
     for (final v in _villagers) {
-      final lines = <String>[];
+      final notifies = <GTerm>[];
       // programs/currencies/coins is a program: currency/ is the certified
       // mini-app and this directory adds village.glp, which stands in for the
       // super-app and for the six persons.  The play is run directly: the
@@ -207,7 +208,7 @@ void main() {
       // what send_to_user/1 sends is read off the runtime's output.
       final engine = GlpEngine(rootSelfGlpPath: '$repo/self.glp')
         ..maxCycles = 50000000;
-      engine.runtime.outputCallback = lines.add;
+      engine.runtime.outputTermCallback = (t) => notifies.add(screenTermOf(t));
 
       final r = UiRuntime(manifest: _balancesOnly, onSend: (_) {});
       // The same lines under the app's manifest, SCREEN view included, so that
@@ -223,9 +224,9 @@ void main() {
       expect(result.failed || result.capped, isFalse,
           reason: '${v.id}: the market did not run to the end: '
               '${result.status.name} ${result.error ?? ''}');
-      for (final l in lines) {
-        r.handleLine(l);
-        full.handleLine(l);
+      for (final t in notifies) {
+        r.handle(t);
+        full.handle(t);
       }
       String state(UiRuntime x) => [
             x.store.balances.map((s, b) =>

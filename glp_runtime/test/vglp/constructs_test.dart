@@ -21,9 +21,14 @@ import 'dart:io';
 import 'package:test/test.dart';
 import 'package:glp_runtime/runtime/module_hierarchy.dart' show rootScope;
 import 'package:glp_runtime/engine/glp_engine.dart';
+import 'package:glp_runtime/compiler/ast.dart' show ConstTerm;
 import 'package:glp_runtime/compiler/error.dart';
 import 'package:glp_runtime/vglp/canonical.dart';
 import 'package:glp_runtime/vglp/dispatcher.dart';
+import 'package:glp_runtime/vglp/constructs.dart' show listEnd;
+import 'package:glp_runtime/vglp/mediator.dart' show MediatorSource;
+import 'package:glp_runtime/vglp/program_compilation.dart'
+    show compileVglpSource;
 
 const _programs = '../programs';
 
@@ -62,6 +67,20 @@ void main() {
 
   Matcher refused(String why) => throwsA(isA<CompileError>()
       .having((e) => e.message, 'message', contains(why)));
+
+  // The line and column, from 1, at which [needle] first occurs in [text].
+  (int, int) at(String text, String needle) {
+    final i = text.indexOf(needle);
+    final before = text.substring(0, i).split('\n');
+    return (before.length, before.last.length + 1);
+  }
+
+  // A refusal with [why] in its message, at [line] and [column].
+  Matcher refusedAt(String why, int line, int column) => throwsA(
+      isA<CompileError>()
+          .having((e) => e.message, 'message', contains(why))
+          .having((e) => e.line, 'line', line)
+          .having((e) => e.column, 'column', column));
 
   const card = '''
 Peer ::= Constant.
@@ -276,7 +295,8 @@ procedure (T?)*p.
           s,
           contains('construct(Id, card_w(X), Gs, Ds?) :- '
               'present_card([], X?, Gs?, _, Vs, Done), '
-              'run(Id?, form(card, [shown, buttons([yes, no])]), Vs?, Done?, '
+              'run(Id?, form(card, [field(\'Peer\', shown), field(\'YesNo\', '
+              'buttons([yes, no]))]), Vs?, Done?, '
               'Ds).'));
       // The view waits for the peer, so the output comes before the input
       // inside it; the question is marked with its position, the card's at
@@ -374,7 +394,8 @@ decide(no, From, refuse(From?)).
           s,
           contains('construct(Id, card_w(X), Gs, Ds?) :- '
               'present_card([], X?, Gs?, _, Vs, Done), '
-              'run(Id?, form(card, [shown, buttons([yes, no])]), Vs?, Done?, '
+              'run(Id?, form(card, [field(\'Peer\', shown), field(\'YesNo\', '
+              'buttons([yes, no]))]), Vs?, Done?, '
               'Ds).'));
       expect(s, contains('construct(Id, note_r(X?), Gs, Ds?) :- '));
       expect(s, contains('form_yesNo(yes, formed(yes)).'));
@@ -455,11 +476,15 @@ $calling''';
           s,
           contains('construct(Id, note_r(X?), Gs, Ds?) :- '
               'answer_note([], X, Gs?, _, Done), '
-              'run(Id?, form(note, [text]), [input([])], Done?, Ds).'));
+              'run(Id?, form(note, [field(\'String\', text)]), [input([])], '
+              'Done?, Ds).'));
       expect(c.widgets,
-          {'Card': 'inbox_card', 'Note?': 'form(note, [text])'});
+          {
+        'Card': 'inbox_card',
+        'Note?': "form(note, [field('String', text)])"
+      });
       // The importer declares no widget: Card's is the one N gives it.
-      expect(s, isNot(contains('form(card, [shown, buttons([yes, no])])')));
+      expect(s, isNot(contains('form(card, [')));
     });
 
     test('a `_2` functor of N has its construct process on that functor', () {
@@ -481,7 +506,6 @@ ask_confirm(P, A?) :- ground(P?) | boxes # confirm(P?, A).
         'one N gives it, is one construct process', () {
       final c = compileWith('''
 $types
-Card =::= inbox_card.
 $calling
 exported procedure (Card)*show(Offer?).
 (card(P?, _))*show(offer(P)).
@@ -492,18 +516,97 @@ exported procedure (Card)*show(Offer?).
       expect(c.widgets['Card'], 'inbox_card');
     });
 
-    group('is refused', () {
-      test('a type of the program\'s own that is one of N\'s, with another '
-          'widget: one functor, two widgets', () {
-        expect(
-            () => compileWith('''
+    // vGLP at 66b6500, Definition "Canonical Compilation": "each with the
+    // functor and the widget its export gives it, M declaring no widget for
+    // a type it imports" (vGLP #7 Cowork, 2026-10-11 14:19 UTC, item 1: "the
+    // widget travels with the type from the module that exports it, as the
+    // functor does").
+    test('a type of the program\'s own that is one of N\'s takes the widget N '
+        'gives it, not the one the program\'s scope would give it', () {
+      final c = compileWith('''
 $befriend
 exported procedure (Card)*show(Offer?).
 (card(P?, _))*show(offer(P)).
-''', {'responder': responder}),
-            refused('its widget is form(card, [shown, buttons([yes, no])]) '
-                'here and inbox_card in responder'));
+''', {'responder': responder});
+      expect(c.widgets['Card'], 'inbox_card');
+      expect(
+          c.source,
+          contains('construct(Id, card_w(X), Gs, Ds?) :- '
+              'present_card([], X?, Gs?, _, Vs, Done), '
+              'run(Id?, inbox_card, Vs?, Done?, Ds).'));
+      expect(c.source, isNot(contains('form(card, [')));
+      // What an importer of the program reads of its export.
+      expect(
+          c.interactive.singleWhere((t) => t.written == 'Card').widget,
+          'inbox_card');
+    });
+
+    test('a declaration of the importer for a type of its own alone holds '
+        'in it', () {
+      final c = compileWith('''
+$types
+Mood ::= happy ; sad.
+Mood? =::= dial.
+$calling
+exported procedure (Mood?)*feel(Mood).
+(M1)*feel(M1?).
+''', {'responder': responder});
+      expect(c.widgets['Mood?'], 'dial');
+      expect(c.widgets['Card'], 'inbox_card');
+    });
+
+    group('is refused', () {
+      const declaring = 'A widget declaration for Card, an interactive type '
+          'this module imports from responder: the type joins with the widget '
+          'its export gives it, inbox_card, and the importer declares none for '
+          'it (vGLP, Definition "Canonical Compilation": "each with the '
+          'functor and the widget its export gives it, M declaring no widget '
+          'for a type it imports")';
+
+      test('a widget declaration of the importer for a type it imports, '
+          'another widget or the same, the message naming the type, its '
+          'module and the widget it travels with, at the declaration', () {
+        final lamp = '''
+$types
+Card =::= lamp.
+$calling
+''';
+        final (l1, c1) = at(lamp, 'Card =::=');
+        expect(() => compileWith(lamp, {'responder': responder}),
+            refusedAt(declaring, l1, c1));
+        final same = '''
+$types
+$calling
+  Card =::= inbox_card.
+exported procedure (Card)*show(Offer?).
+(card(P?, _))*show(offer(P)).
+''';
+        final (l2, c2) = at(same, 'Card =::=');
+        expect(c2, 3);
+        expect(() => compileWith(same, {'responder': responder}),
+            refusedAt(declaring, l2, c2));
       });
+
+      test('a type a question of N reaches is one the importer imports, '
+          'though its import names another', () {
+        // respond reaches jot's Note? in responder.
+        final src = '''
+$types
+$calling
+Note? =::= jotter.
+''';
+        final (l, c) = at(src, 'Note? =::=');
+        expect(
+            () => compileWith(src, {'responder': responder}),
+            refusedAt(
+                'A widget declaration for Note?, an interactive type this '
+                'module imports from responder: the type joins with the '
+                "widget its export gives it, form(note, [field('String', "
+                'text)]), and the importer declares none for it',
+                l,
+                c));
+      });
+
 
       // "Types referenced in an imported declaration are resolved against
       // the caller's type scope" (TGLP modules.tex, Design): a type of N
@@ -544,7 +647,8 @@ exported procedure (Card)*show(Offer?).
 ''',
             }),
             refused('its widget inbox_card in responder and '
-                'form(card, [shown, buttons([yes, no])]) in plain'));
+                "form(card, [field('Peer', shown), field('YesNo', "
+                "buttons([yes, no]))]) in plain"));
       });
     });
   });
@@ -562,7 +666,8 @@ procedure (Request?)*agent(Integer?).
           s,
           contains('construct(Id, request_r(X?), Gs, Ds?) :- '
               'answer_request([], X, Gs?, _, Done), run(Id?, menu([form(post, '
-              '[text]), button(quit)]), [input([])], Done?, Ds).'));
+              "[field('String', text)]), button(quit)]), [input([])], Done?, "
+              'Ds).'));
       expect(s,
           contains('form_request(post(R1), F?) :- form_string(R1?, F1), '
               'join_request_post_1(F1?, F).'));
@@ -627,7 +732,8 @@ procedure (Order?)*order(Order).
 ''').source;
       expect(
           s,
-          contains('menu([form(order, [peer, form(lot, [number, date])]), '
+          contains("menu([form(order, [field('Peer', peer), field('Lot', "
+              "form(lot, [field('Integer', number), field('Date', date)]))]), "
               'button(cancel)])'));
       expect(
           s,
@@ -654,7 +760,7 @@ Price ::= price(Real).
 procedure (Price?)*quote(Price).
 (P)*quote(P?).
 ''');
-      expect(c.widgets['Price?'], 'form(price, [number])');
+      expect(c.widgets['Price?'], "form(price, [field('Real', number)])");
       expect(
           c.source,
           contains('form_price(price(R1), F?) :- form_real(R1?, F1), '
@@ -693,7 +799,10 @@ Board ::= board(Stream(Integer), Stream(String)?).
 procedure (Board)*game(Stream(String)).
 (board([1, 2, 3], Moves))*game(Moves?).
 ''').source;
-      expect(s, contains('form(board, [thread, input_box(text)])'));
+      expect(
+          s,
+          contains("form(board, [field('Stream(Integer)', thread), "
+              "field('Stream(String)', input_box(text))])"));
       expect(
           s,
           contains('present_board(P, board(H1, H2?), Gs, Gs1?, Vs?, D2?) :- '
@@ -730,8 +839,9 @@ procedure (Outer)*nested(YesNo, String).
 ''').source;
       expect(
           s,
-          contains('form(outer, [shown, form(inner, [shown, buttons([yes, '
-              'no])]), text])'));
+          contains("form(outer, [field('Integer', shown), field('Inner', "
+              "form(inner, [field('Peer', shown), field('YesNo', "
+              "buttons([yes, no]))])), field('String', text)])"));
       // The nested structure's position is its argument's, [2], and its
       // question's below it [2, 2]; the outer question's is [3] (C).
       expect(
@@ -792,32 +902,35 @@ both(P, A, B, both(P?, A?, B?)).
               'take_yesNo(F?, P?, X, input(Id?, P1?, R?), Gs?, Gs1, Done).'));
     });
 
-    test('the position is the path of argument indices from the root, a '
-        'list cell\'s head its argument 1 and its tail its argument 2', () {
-      final s = compile('''
+    // Until vGLP #7 Cowork's ruling of 2026-10-11 14:31 UTC (item 2) a list
+    // cell the program writes held questions here, at [1] and [2, 1]; a list
+    // cell is now a Stream's or a List's, and one outside them holding a
+    // question is refused (vGLP at 66b6500, Definition "Volitional
+    // Procedure, Interactive Type, ...": "An interactive type is flat").
+    test('the position is the path of argument indices from the root, and a '
+        'list cell the program writes holding a question, outside a Stream '
+        'or a List, is refused', () {
+      const src = '''
 YesNo ::= yes ; no.
 Nil ::= [].
 Tail ::= [YesNo? | Nil].
 Two ::= [YesNo? | Tail].
 procedure (Two)*pair(YesNo, YesNo).
 ([A, B])*pair(A?, B?).
-''').source;
-      // The first question is at [1]; the second, the head of the tail, at
-      // [2, 1], present_tail called at [2].
+''';
+      final (l, c) = at(src, 'procedure (Two)');
       expect(
-          s,
-          contains('present_two(P, [H1? | H2], Gs, Gs2?, Vs?, Done?) :- '
-              'ground(P?) | path(P?, 1, M1), path(P?, 1, Q1), '
-              'answer_yesNo(Q1?, H1, Gs?, Gs1, D1), path(P?, 2, Q2), '
-              'present_tail(Q2?, H2?, Gs1?, Gs2, V2, D2)'));
-      expect(
-          s,
-          contains('present_tail(P, [H1? | H2], Gs, Gs1?, '
-              '[[input(M1?) | H2?]], D1?) :- ground(P?), ground(H2?) | '
-              'path(P?, 1, M1), path(P?, 1, Q1), '
-              'answer_yesNo(Q1?, H1, Gs?, Gs1, D1).'));
-      expect(s, contains('construct(Id, two_w(X), Gs, Ds?) :- '
-          'present_two([], X?, Gs?, _, Vs, Done)'));
+          () => compile(src),
+          refusedAt(
+              'The interactive type Two is not flat: the program writes Two, '
+              'a list cell of which is neither a Stream nor a List, holding a '
+              'question, and an interactive type is flat, "built from '
+              'constants, String, Integer, Real, Key, Constant, Module, named '
+              'types so built, tuples and unions, and Stream or List" (vGLP, '
+              'Definition "Volitional Procedure, Interactive Type, Interactive '
+              'Term, Ordinary Clause, vGLP Program")',
+              l,
+              c));
     });
 
     test('an alternative holding no question does not read its position, '
@@ -870,6 +983,633 @@ procedure (A(B)?)*g(Integer?).
     });
   });
 
+  group('a functor that is not a name (vGLP #6 Cowork, 2026-10-11 12:55 UTC, '
+      'Task A)', () {
+    test('names its join and start procedures by its characters made a name, '
+        'each one outside a name replaced by `_`', () {
+      final s = compile('''
+Choice ::= a ; b.
+Pick ::= 'odd one'(Choice).
+procedure (Pick?)*pick(Pick).
+(P)*pick(P?).
+''').source;
+      expect(
+          s,
+          contains("form_pick('odd one'(R1), F?) :- form_choice(R1?, F1), "
+              'join_pick_odd_one_1(F1?, F).'));
+      expect(s,
+          contains("join_pick_odd_one_1(formed(X1), formed('odd one'(X1?)))."));
+      expect(s, isNot(contains('join_pick_odd one')));
+      final w = compile('''
+Board ::= 'the board'(Stream(Integer), Stream(String)?).
+procedure (Board)*game(Stream(String)).
+('the board'([1, 2, 3], Moves))*game(Moves?).
+''').source;
+      expect(w, contains('start_board_the_board_2('));
+      expect(w, isNot(contains('start_board_the board')));
+    });
+
+    test('two functors made one name are told apart by `_2`, as the '
+        'Definition\'s t is', () {
+      final s = compile('''
+Choice ::= a ; b.
+Pick ::= 'odd one'(Choice) ; odd_one(Choice) ; 'odd-one'(Choice).
+procedure (Pick?)*pick(Pick).
+(P)*pick(P?).
+''').source;
+      expect(
+          s,
+          contains("form_pick('odd one'(R1), F?) :- form_choice(R1?, F1), "
+              'join_pick_odd_one_1(F1?, F).'));
+      expect(
+          s,
+          contains('form_pick(odd_one(R1), F?) :- form_choice(R1?, F1), '
+              'join_pick_odd_one_1_2(F1?, F).'));
+      expect(
+          s,
+          contains("form_pick('odd-one'(R1), F?) :- form_choice(R1?, F1), "
+              'join_pick_odd_one_1_3(F1?, F).'));
+      expect(s,
+          contains('join_pick_odd_one_1_2(formed(X1), formed(odd_one(X1?))).'));
+    });
+  });
+
+  // vGLP #6 Cowork, 2026-10-11 12:55 UTC, Task B, from Definition "Widget
+  // Declaration, Default Widget" and the Answer rule of Definition "vmaGLP
+  // Transition System" (vGLP 90988ea).  The runs are elicitation_test's.
+  group('Task B (1): a list the person writes', () {
+    test('draws the stream widget with a button that ends the list, [] its '
+        'answer on the end button\'s grant, [end] (vGLP #7 Cowork, 2026-10-11 '
+        '14:31 UTC, item 3); neither ref(T) nor form(\'.\', ...)', () {
+      final c = compile('''
+List(X) ::= [] ; [X | List(X)].
+procedure (List(String)?)*names(List(String)).
+(Ns)*names(Ns?).
+''');
+      expect(c.widgets['List(String)?'], 'input_list(text)');
+      final s = c.source;
+      expect(listEnd, '[end]');
+      expect(
+          s,
+          contains('answer_list_string(P, [], [input(_, P1, [end]) | Gs], '
+              'Gs?, done) :- P1? =?= P? | true.'));
+      expect(s, isNot(contains('input(_, P1, [])')));
+      expect(
+          s,
+          contains('take_list_string(formed(V), P, [V? | X1?], _, Gs, Gs1?, '
+              'Done?) :- answer_list_string(P?, X1, Gs?, Gs1, Done).'));
+      expect(s, isNot(contains('ref(')));
+      expect(s, isNot(contains("form('.'")));
+    });
+
+    test('a List of no parameter is a list too', () {
+      final c = compile('''
+List ::= [] ; [Integer | List].
+procedure (List?)*numbers(List).
+(Ns)*numbers(Ns?).
+''');
+      expect(c.widgets['List?'], 'input_list(number)');
+    });
+
+    test('a stream is not ended by the person: no clause takes []', () {
+      final c = compile('''
+procedure (Stream(String)?)*lines(Stream(String)).
+(Ls)*lines(Ls?).
+''');
+      expect(c.widgets['Stream(String)?'], 'input_box(text)');
+      expect(c.source, isNot(contains('answer_stream_string(P, [], ')));
+    });
+  });
+
+  group('Task B (2): a recursive type the person writes that is neither a '
+      'Stream nor a List', () {
+    test('is refused by the compiler, the message naming the type, at the '
+        'interactive type', () {
+      const tree = '''
+Tree ::= leaf ; node(Tree, Tree).
+procedure (Tree?)*plant(Tree).
+(T)*plant(T?).
+''';
+      final (l1, c1) = at(tree, 'procedure');
+      expect(
+          () => compile(tree),
+          refusedAt(
+              'The interactive type Tree? is not flat: the person writes '
+              'Tree, a recursive type that is neither a Stream nor a List, '
+              'and an interactive type is flat, "it has no other recursive '
+              'type" (vGLP, Definition "Volitional Procedure, Interactive '
+              'Type, Interactive Term, Ordinary Clause, vGLP Program")',
+              l1,
+              c1));
+      const names = '''
+Names ::= [] ; [String | Names].
+procedure (Names?)*name(Names).
+(Ns)*name(Ns?).
+''';
+      final (l2, c2) = at(names, 'procedure');
+      expect(
+          () => compile(names),
+          refusedAt(
+              'the person writes Names, a recursive type that is neither a '
+              'Stream nor a List, and an interactive type is flat, "it has no '
+              'other recursive type"',
+              l2,
+              c2));
+    });
+
+    test('a list cell the person writes outside a Stream or a List is refused '
+        'too, and no form(\'.\', ...) is emitted', () {
+      const pair = '''
+Nil ::= [].
+Pair ::= [Integer | Nil].
+procedure (Pair?)*pair(Pair).
+(P)*pair(P?).
+''';
+      final (l, c) = at(pair, 'procedure');
+      expect(
+          () => compile(pair),
+          refusedAt(
+              'The interactive type Pair? is not flat: the person writes '
+              'Pair, a list cell of which is neither a Stream nor a List, and '
+              'an interactive type is flat, "built from constants, String, '
+              'Integer, Real, Key, Constant, Module, named types so built, '
+              'tuples and unions, and Stream or List"',
+              l,
+              c));
+    });
+  });
+
+  // vGLP at 66b6500, Definition "Volitional Procedure, Interactive Type,
+  // Interactive Term, Ordinary Clause, vGLP Program": "An interactive type
+  // is flat: it is built from constants, String, Integer, Real, Key,
+  // Constant, Module, named types so built, tuples and unions, and Stream or
+  // List as the whole type or as an argument of a tuple, never under another
+  // Stream or List; it has no other recursive type, and no type parameter at
+  // a position the person writes."  vGLP #7 Cowork, 2026-10-11 14:31 UTC,
+  // item 2: refused "a stream or list inside an element of a stream or list
+  // the person writes; a list cell outside Stream and List; a recursive type
+  // other than Stream and List, wherever it holds a question, program-written
+  // structures included".
+  group('flat interactive types (vGLP #7 Cowork, 2026-10-11 14:31 UTC, item '
+      '2)', () {
+    test('a stream or a list that is the element of a stream or a list the '
+        'person writes is refused', () {
+      const streams = '''
+procedure (Stream(Stream(String))?)*lines(Stream(Stream(String))).
+(Ls)*lines(Ls?).
+''';
+      expect(
+          () => compile(streams),
+          refusedAt(
+              'The interactive type Stream(Stream(String))? is not flat: the '
+              'person writes Stream(Stream(String)), whose element '
+              'Stream(String) is a stream or a list, and an interactive type '
+              'is flat, "never under another Stream or List" (vGLP, '
+              'Definition "Volitional Procedure, Interactive Type, '
+              'Interactive Term, Ordinary Clause, vGLP Program")',
+              1,
+              1));
+      const lists = '''
+List(X) ::= [] ; [X | List(X)].
+procedure (List(List(Integer))?)*rows(List(List(Integer))).
+(Rs)*rows(Rs?).
+''';
+      final (l, c) = at(lists, 'procedure');
+      expect(
+          () => compile(lists),
+          refusedAt(
+              'the person writes List(List(Integer)), whose element '
+              'List(Integer) is a stream or a list',
+              l,
+              c));
+    });
+
+    test('a tuple \'.\'(H, T) is a list cell, refused outside a Stream or a '
+        'List where it holds a question', () {
+      const src = '''
+Nil ::= [].
+T ::= t('.'(Integer?, Nil)).
+procedure (T)*cell(Integer).
+(t([N]))*cell(N?).
+''';
+      final (l, c) = at(src, 'procedure');
+      expect(
+          () => compile(src),
+          refusedAt(
+              "the program writes '.'(Integer?, Nil), a list cell of which is "
+              'neither a Stream nor a List, holding a question',
+              l,
+              c));
+    });
+
+    test('a Stream or a List that is an alternative of a union, neither the '
+        'whole type nor an argument of a tuple, is refused', () {
+      const src = '''
+Maybe ::= none ; Stream(Integer).
+procedure (Maybe?)*maybe(Maybe).
+(M)*maybe(M?).
+''';
+      final (l, c) = at(src, 'procedure');
+      expect(
+          () => compile(src),
+          refusedAt(
+              'The interactive type Maybe? is not flat: the person writes '
+              'Maybe, a union one of whose alternatives is Stream(Integer), '
+              'neither the whole type nor an argument of a tuple, and an '
+              'interactive type is flat, "Stream or List as the whole type or '
+              'as an argument of a tuple"',
+              l,
+              c));
+    });
+
+    test('a recursive type other than a Stream or a List that holds a '
+        'question is refused in a structure the program writes too', () {
+      const src = '''
+YesNo ::= yes ; no.
+Tree ::= leaf ; node(Tree, YesNo?).
+Card ::= card(Integer, Tree).
+procedure (Card)*grow(YesNo).
+(card(1, node(leaf, A)))*grow(A?).
+''';
+      final (l, c) = at(src, 'procedure');
+      expect(
+          () => compile(src),
+          refusedAt(
+              'The interactive type Card is not flat: the program writes '
+              'Tree, a recursive type that is neither a Stream nor a List, '
+              'holding a question, and an interactive type is flat, "it has '
+              'no other recursive type"',
+              l,
+              c));
+      // Recursive through a Stream: the element is the type again.
+      const through = '''
+Thread ::= post(String, Stream(Thread)).
+procedure (Thread?)*reply(Thread).
+(T)*reply(T?).
+''';
+      final (l2, c2) = at(through, 'procedure');
+      expect(
+          () => compile(through),
+          refusedAt(
+              'the person writes Thread, a recursive type that is neither a '
+              'Stream nor a List, and an interactive type is flat, "it has no '
+              'other recursive type"',
+              l2,
+              c2));
+    });
+
+    test('a structure the program writes holding no question is shown as it '
+        'is written: a recursive type and a list cell there are not refused, '
+        'and no ref(T) or form(\'.\', ...) is emitted', () {
+      // vGLP #7 Cowork, 2026-10-11 14:31 UTC, item 2: "wherever it holds a
+      // question" (sGLP's coins.vglp and graph.vglp draw their Peers and
+      // Wallet so).
+      final c = compile('''
+YesNo ::= yes ; no.
+Peers ::= [] ; [Constant | Peers].
+Nil ::= [].
+Pair ::= [Integer | Nil].
+Menu ::= menu(Peers, Pair, YesNo?).
+procedure (Menu)*choose(YesNo).
+(menu([a, b], [1], A))*choose(A?).
+''');
+      expect(
+          c.widgets['Menu'],
+          "form(menu, [field('Peers', thread), field('Pair', shown), "
+          "field('YesNo', buttons([yes, no]))])");
+      expect(c.source, isNot(contains('ref(')));
+      expect(c.source, isNot(contains("form('.'")));
+    });
+
+    test('a position the person writes of a type parameter is refused '
+        'outright, the message citing the Definition (vGLP #7 Cowork, '
+        '2026-10-11 14:31 UTC, item 1)', () {
+      const box = '''
+Box(X) ::= box(X).
+procedure(X) (Box(X)?)*take(X).
+(box(V))*take(V?).
+''';
+      final (l1, c1) = at(box, 'procedure');
+      const why = 'The interactive type Box(X)? is refused: the person writes '
+          'a position of type X, a type parameter, and an interactive type has '
+          '"no type parameter at a position the person writes" (vGLP, '
+          'Definition "Volitional Procedure, Interactive Type, Interactive '
+          'Term, Ordinary Clause, vGLP Program")';
+      expect(() => compile(box), refusedAt(why, l1, c1));
+      // The whole type a parameter, and a stream's element one.
+      const whole = '''
+procedure(X) (X?)*take(X).
+(V)*take(V?).
+''';
+      expect(
+          () => compile(whole),
+          refusedAt(
+              'The interactive type X? is refused: the person writes a '
+              'position of type X, a type parameter',
+              1,
+              1));
+      const stream = '''
+procedure(E) (Stream(E)?)*takes(Stream(E)).
+(Vs)*takes(Vs?).
+''';
+      expect(
+          () => compile(stream),
+          refusedAt(
+              'The interactive type Stream(E)? is refused: the person writes '
+              'a position of type E, a type parameter',
+              1,
+              1));
+      // At a position the program writes a parameter is shown.
+      final c = compile('''
+YesNo ::= yes ; no.
+Card(X) ::= card(X, YesNo?).
+procedure(X) (Card(X))*see(X?, YesNo).
+(card(V?, A))*see(V, A?).
+''');
+      expect(c.widgets['Card(X)'],
+          "form(card, [field('X', shown), field('YesNo', buttons([yes, no]))])");
+    });
+  });
+
+  // vGLP #7 Cowork, 2026-10-11 14:31 UTC, item 2: "An alias of a Stream or
+  // List, `Lines ::= Stream(String)`, is a named type so built and is NOT
+  // refused: it draws as the stream it names, like Date and Key draw by
+  // their names."
+  group('an alias of a Stream or a List (vGLP #7 Cowork, 2026-10-11 14:31 '
+      'UTC, item 2)', () {
+    test('draws as the stream it names, and is answered as it, an element '
+        'per grant', () {
+      final c = compile('''
+Lines ::= Stream(String).
+procedure (Lines?)*write(Lines).
+(Ls)*write(Ls?).
+''');
+      expect(c.widgets['Lines?'], 'input_box(text)');
+      final s = c.source;
+      expect(
+          s,
+          contains('take_lines(formed(V), P, [V? | X1?], _, Gs, Gs1?, Done?) '
+              ':- answer_lines(P?, X1, Gs?, Gs1, Done).'));
+      expect(s, isNot(contains("form('.'")));
+      expect(s, isNot(contains('answer_lines(P, [], ')));
+    });
+
+    test('of a List, with its end button, through two names', () {
+      final c = compile('''
+List(X) ::= [] ; [X | List(X)].
+Names ::= List(String).
+Roll ::= Names.
+procedure (Roll?)*call(Roll).
+(R)*call(R?).
+''');
+      expect(c.widgets['Roll?'], 'input_list(text)');
+      expect(
+          c.source,
+          contains('answer_roll(P, [], [input(_, P1, [end]) | Gs], Gs?, done) '
+              ':- P1? =?= P? | true.'));
+    });
+
+    test('a field of a form the person writes, a question of its own; and '
+        'one the program writes, a thread', () {
+      final c = compile('''
+Lines ::= Stream(String).
+YesNo ::= yes ; no.
+Post ::= post(String, Lines).
+Feed ::= feed(Lines, YesNo?).
+procedure (Post?)*post(Post).
+(P)*post(P?).
+procedure (Feed)*feed(YesNo).
+(feed(["a"], A))*feed(A?).
+''');
+      expect(c.widgets['Post?'],
+          "form(post, [field('String', text), question('Lines', input_box(text))])");
+      expect(c.widgets['Feed'],
+          "form(feed, [field('Lines', thread), field('YesNo', buttons([yes, no]))])");
+    });
+  });
+
+  group('Task B (3): a stream or a list inside a form the person writes', () {
+    const post = '''
+List(X) ::= [] ; [X | List(X)].
+Post ::= post(String, Stream(String)) ; tags(List(Constant)) ; quit.
+procedure (Post?)*poster(Post).
+(P)*poster(P?).
+''';
+
+    test('is a question of its own, drawn under the form: question(L, W), and '
+        'no input_box as a field', () {
+      final c = compile(post);
+      expect(
+          c.widgets['Post?'],
+          "menu([form(post, [field('String', text), "
+          "question('Stream(String)', input_box(text))]), "
+          "form(tags, [question('List(Constant)', input_list(text))]), "
+          'button(quit)])');
+      expect(c.widgets['Post?'], isNot(contains("field('Stream(String)'")));
+    });
+
+    test('the form\'s answer carries a fresh variable there, answered from '
+        'the grants that follow at its own position, and the construct is '
+        'drawn again with the answer', () {
+      final s = compile(post).source;
+      expect(
+          s,
+          contains('construct(Id, post_r(X?), Gs, Ds?) :- '
+              'answer_post([], X, Gs?, _, Vs, Done), run(Id?, menu('));
+      expect(s, contains('[input([]) | Vs?], Done?, Ds).'));
+      // Formed with [] there, not from the input.
+      expect(
+          s,
+          contains('form_post(post(R1, _), F?) :- form_string(R1?, F1), '
+              'join_post_post_2(F1?, F).'));
+      expect(s, contains('join_post_post_2(formed(X1), formed(post(X1?, []))).'));
+      expect(s, contains('form_post(tags(_), formed(tags([]))).'));
+      expect(
+          s,
+          contains('take_post(formed(V), P, X?, _, Gs, Gs1?, [W?], Done?) :- '
+              'open_post(V?, P?, X, Gs?, Gs1, W, Done).'));
+      expect(
+          s,
+          contains('open_post(post(H1, _), P, post(H1?, Y2?), Gs, Gs1?, '
+              'post(H1?, input(M2?)), D2?) :- ground(P?), ground(H1?) | '
+              'path(P?, 2, M2), path(P?, 2, Q2), '
+              'answer_stream_string(Q2?, Y2, Gs?, Gs1, D2).'));
+      expect(
+          s,
+          contains('open_post(tags(_), P, tags(Y1?), Gs, Gs1?, '
+              'tags(input(M1?)), D1?) :- ground(P?) | path(P?, 1, M1), '
+              'path(P?, 1, Q1), answer_list_constant(Q1?, Y1, Gs?, Gs1, D1).'));
+      expect(
+          s,
+          contains('open_post(V, _, X?, Gs, Gs?, W?, done) :- ground(V?) | '
+              'X = V?, W = V?.'));
+    });
+
+    test('in a form inside the form, at the path down to it', () {
+      final c = compile('''
+List(X) ::= [] ; [X | List(X)].
+Wrap ::= wrap(Integer, List(Integer)).
+Order ::= order(Integer, Wrap).
+procedure (Order?)*order(Order).
+(O)*order(O?).
+''');
+      expect(
+          c.widgets['Order?'],
+          "form(order, [field('Integer', number), field('Wrap', form(wrap, "
+          "[field('Integer', number), question('List(Integer)', "
+          'input_list(number))]))])');
+      expect(
+          c.source,
+          contains('open_order(order(H1, H2), P, order(H1?, X2?), Gs, Gs1?, '
+              'order(H1?, V2?), D2?) :- ground(H1?) | path(P?, 2, Q2), '
+              'open_wrap(H2?, Q2?, X2, Gs?, Gs1, V2, D2).'));
+    });
+
+    test('in a question of a structure the program writes, drawn again once '
+        'answered', () {
+      final s = compile('''
+Peer ::= Constant.
+Reply ::= reply(String, Stream(String)).
+Card ::= card(Peer, Reply?).
+procedure (Card)*respond(Reply).
+(card(bob, R))*respond(R?).
+''').source;
+      expect(
+          s,
+          contains('present_card(P, card(H1, H2?), Gs, Gs1?, Vs?, D2?) :- '
+              'ground(P?) | shown(H1?, V1), path(P?, 2, M2), path(P?, 2, Q2), '
+              'answer_reply(Q2?, H2, Gs?, Gs1, W2, D2), '
+              'start_card_card_2(V1?, [input(M2?) | W2?], Vs).'));
+    });
+
+    test('is refused in an element of a stream or a list, whose elements '
+        'share one position, the type not flat (vGLP #7 Cowork, 2026-10-11 '
+        '14:31 UTC, item 2)', () {
+      const src = '''
+Req ::= post(String, Stream(String)).
+procedure (Stream(Req)?)*agent(Stream(Req)).
+(Rs)*agent(Rs?).
+''';
+      final (l, c) = at(src, 'procedure');
+      expect(
+          () => compile(src),
+          refusedAt(
+              'The interactive type Stream(Req)? is not flat: the person '
+              'writes Stream(Req), whose element Req holds a stream or a '
+              'list, and an interactive type is flat, "never under another '
+              'Stream or List"',
+              l,
+              c));
+    });
+  });
+
+  group('Task B (4): a position of type Constant or Module draws a text field',
+      () {
+    test('as String does', () {
+      final c = compile('''
+Tag ::= tag(Constant, Module, String).
+procedure (Tag?)*tag(Tag).
+(T)*tag(T?).
+''');
+      expect(
+          c.widgets['Tag?'],
+          "form(tag, [field('Constant', text), field('Module', text), "
+          "field('String', text)])");
+    });
+  });
+
+  group('Task B (5): a position of type Key, or of a type defined as Key, '
+      'draws a peer field, whatever its name', () {
+    test('Key, Issuer ::= Key and Owner ::= Issuer; a String is a text field',
+        () {
+      final c = compile('''
+Issuer ::= Key.
+Owner ::= Issuer.
+Name ::= String.
+Lot ::= lot(Key, Issuer, Owner, Name, Integer).
+procedure (Lot?)*lot(Lot).
+(L)*lot(L?).
+procedure (Key?)*key(Key).
+(K)*key(K?).
+''');
+      expect(
+          c.widgets['Lot?'],
+          "form(lot, [field('Key', peer), field('Issuer', peer), "
+          "field('Owner', peer), field('Name', text), field('Integer', "
+          'number)])');
+      expect(c.widgets['Key?'], 'peer');
+    });
+  });
+
+  group('Task B (6): a form field is labelled by the name of its declared '
+      'type', () {
+    test('in a form the person writes and in one the program writes', () {
+      final c = compile('''
+Peer ::= Constant.
+Date ::= Integer.
+YesNo ::= yes ; no.
+Pay ::= pay(Peer, Integer, Date, Real).
+Offer ::= offer(Peer, Stream(Integer), YesNo?).
+procedure (Pay?)*pay(Pay).
+(P)*pay(P?).
+procedure (Offer)*offer(YesNo).
+(offer(bob, [1, 2], A))*offer(A?).
+''');
+      expect(
+          c.widgets['Pay?'],
+          "form(pay, [field('Peer', peer), field('Integer', number), "
+          "field('Date', date), field('Real', number)])");
+      expect(
+          c.widgets['Offer'],
+          "form(offer, [field('Peer', shown), field('Stream(Integer)', "
+          "thread), field('YesNo', buttons([yes, no]))])");
+    });
+  });
+
+  group('a string in the compiled program', () {
+    // One string constant, 'x' and "x" one value and '"x"' the
+    // three-character string, printed by GLP's printer in its one canonical
+    // form, single-quoted and bare where the lexer reads it so, the
+    // double-quoted form read and never printed (GLP-Spec appendix-lp.tex,
+    // Definition "Logic Programs Syntax"; vGLP #5 Cowork, 2026-10-07 20:01
+    // UTC, item 2): in the program's types and clauses, in the construct
+    // process's buttons and formers, and in the module read back.
+    const choice = '''
+Choice ::= 'Yes please' ; "no thanks" ; '"x"'.
+procedure (Choice?)*pick(String).
+('Yes please')*pick('"x"').
+("no thanks")*pick("x").
+''';
+
+    test('is printed in its one canonical form', () {
+      final s = compile(choice).source;
+      expect(s, contains("Choice ::= 'Yes please' ; 'no thanks' ; '\"x\"'."));
+      expect(s, contains("pick1('\"x\"', 'Yes please', [])."));
+      expect(s, contains("pick1(x, 'no thanks', [])."));
+      expect(s, contains("form_choice('no thanks', formed('no thanks'))."));
+      expect(s, contains("form_choice('\"x\"', formed('\"x\"'))."));
+      expect(s, isNot(contains('"no thanks"')));
+      expect(s, isNot(contains('pick1("x"')));
+    });
+
+    test('its default widget names its constants so', () {
+      expect(compile(choice).widgets['Choice?'],
+          "buttons(['Yes please', 'no thanks', '\"x\"'])");
+    });
+
+    test('reads back as the same string', () {
+      final m = compile(choice).module;
+      final pick1 = m.procedures.singleWhere((p) => p.name == 'pick1');
+      expect([
+        for (final c in pick1.clauses)
+          [for (final a in c.head.args.take(2)) (a as ConstTerm).value]
+      ], [
+        ['"x"', 'Yes please'],
+        ['x', 'no thanks'],
+      ]);
+    });
+  });
+
   group('what is not built', () {
     test('a position the program writes inside one the person writes', () {
       expect(() => compile('''
@@ -880,12 +1620,15 @@ procedure (Order?)*order(Order).
 '''), refused('a position of it is written by the program'));
     });
 
-    test('a position the person writes of a type parameter', () {
+    test('a position the person writes of a type parameter: refused '
+        'outright since vGLP #7 Cowork, 2026-10-11 14:31 UTC, item 1 (the '
+        'flat types above)', () {
       expect(() => compile('''
 Box(X) ::= box(X).
 procedure(X) (Box(X)?)*take(X).
 (box(V))*take(V?).
-'''), refused('of a type parameter'));
+'''), refusedAt('the person writes a position of type X, a type parameter',
+          2, 1));
     });
 
 
@@ -932,7 +1675,8 @@ procedure (Pair)*both(YesNo, YesNo).
 Pair ::= pair(YesNo?, YesNo?).
 ''');
       expect(c.widgets['Card'], 'inbox_card');
-      expect(c.widgets['Pair'], 'form(pair, [toggle, toggle])');
+      expect(c.widgets['Pair'],
+          "form(pair, [field('YesNo', toggle), field('YesNo', toggle)])");
     });
 
     test('a declaration for the other mode does not apply', () {
@@ -953,6 +1697,20 @@ procedure (YesNo?)*ask(Integer?).
 (yes)*ask(_).
 ''');
       expect(c.widgets['YesNo?'], "'Big buttons'");
+    });
+
+    test('a double-quoted string names the same widget as the quoted name', () {
+      // 'x' and "x" are two spellings of one string (GLP-Spec
+      // appendix-lp.tex, Definition "Logic Programs Syntax").
+      String widget(String w) => compile('''
+YesNo ::= yes ; no.
+YesNo? =::= $w.
+procedure (YesNo?)*ask(Integer?).
+(yes)*ask(_).
+''').widgets['YesNo?']!;
+      expect(widget('"Big buttons"'), "'Big buttons'");
+      expect(widget('"toggle"'), 'toggle');
+      expect(widget('"toggle"'), widget("'toggle'"));
     });
 
     test('are refused where W is not an atom, T not a moded type, or two name '
@@ -987,6 +1745,202 @@ procedure (YesNo?)*ask(Integer?).
 (yes)*ask(_).
 ask(1, t).
 '''), throwsA(isA<CompileError>().having((e) => e.line, 'line', 5)));
+    });
+  });
+
+  group('modules that import from each other procedures that reach a '
+      'question (vGLP at 66b6500, Definition "Canonical Compilation"; vGLP #7 '
+      'Cowork, 2026-10-11 14:19 UTC, item 2)', () {
+    // "Modules that import from each other procedures that reach a question
+    // are compiled together, their interactive types joined once": each
+    // with one functor and one widget, every module of them with the
+    // construct process of every type.  The modules are written under
+    // programs/tests/vglp/ and compiled beside each other against the
+    // generic source, as the loader compiles them, and removed after.
+    final mediator = MediatorSource.fromDirectory(dir.path);
+    const types = '''
+Peer      ::= Constant.
+YesNo     ::= yes ; no.
+Offer     ::= offer(Peer).
+Response  ::= accept(Peer) ; refuse(Peer).
+Card      ::= card(Peer, YesNo?).
+Note      ::= note(String).
+''';
+    // a and b import from each other jot_a and jot_b; a asks a card too.
+    String a(String more) => '''
+$types
+imported procedure (Note?)*b#jot_b(Note).
+exported procedure (Note?)*jot_a(Note).
+(N)*jot_a(N?).
+exported procedure (Card)*respond(Offer?, Response).
+(card(From?, Answer))*respond(offer(From), Resp?) :-
+    ground(From?) | decide(Answer?, From?, Resp).
+procedure decide(YesNo?, Peer?, Response).
+decide(yes, From, accept(From?)).
+decide(no, From, refuse(From?)).
+$more''';
+    String b(String more) => '''
+$types
+imported procedure (Note?)*a#jot_a(Note).
+exported procedure (Note?)*jot_b(Note).
+(N)*jot_b(N?).
+$more''';
+
+    late Directory fixture;
+    setUp(() => fixture = Directory('$_programs/tests/vglp/cycle_fixture_'
+        '${pid}_${DateTime.now().microsecondsSinceEpoch}')
+      ..createSync());
+    tearDown(() {
+      if (fixture.existsSync()) fixture.deleteSync(recursive: true);
+    });
+
+    // Write [files] into the fixture and compile [entry] beside them.
+    String compileBeside(Map<String, String> files, String entry) {
+      files.forEach((name, text) =>
+          File('${fixture.path}/$name').writeAsStringSync(text));
+      final path = File('${fixture.path}/$entry').absolute.path;
+      return compileVglpSource(File(path).readAsStringSync(),
+          mediator: mediator, scope: scope, path: path);
+    }
+
+    test('each has the construct process of every interactive type of them, '
+        'on its one functor with its one widget', () {
+      final files = {'a.vglp': a(''), 'b.vglp': b('')};
+      for (final m in ['a.vglp', 'b.vglp']) {
+        final s = compileBeside(files, m);
+        expect(
+            s,
+            contains('construct(Id, card_w(X), Gs, Ds?) :- '
+                'present_card([], X?, Gs?, _, Vs, Done), '
+                'run(Id?, form(card, [field(\'Peer\', shown), '
+                'field(\'YesNo\', buttons([yes, no]))]), Vs?, Done?, Ds).'),
+            reason: m);
+        expect(
+            s,
+            contains('construct(Id, note_r(X?), Gs, Ds?) :- '
+                'answer_note([], X, Gs?, _, Done), '
+                'run(Id?, form(note, [field(\'String\', text)]), '
+                '[input([])], Done?, Ds).'),
+            reason: m);
+      }
+    });
+
+    // "the module that defines a type declares its widget, and the others
+    // declare none for it" (vGLP #8 Cowork, 2026-10-11 16:44 UTC, Q2; Udi
+    // approved): a declaration of the module that defines a type, of the
+    // type or of a type inside it, gives the type its widget in each of
+    // them; another module's declaration for it is refused as one for a type
+    // it imports.  Until then a declaration on an inner type that drew a
+    // type of theirs apart in two of them was refused, one type with two
+    // widgets.
+    test('a type of theirs is drawn by the widget declaration of the module '
+        'that defines it on a type inside it, in each of them', () {
+      // a defines the card and declares YesNo? =::= toggle: b draws a's
+      // card with a toggle too.
+      final files = {'a.vglp': a('YesNo? =::= toggle.\n'), 'b.vglp': b('')};
+      for (final m in ['a.vglp', 'b.vglp']) {
+        expect(
+            compileBeside(files, m),
+            contains('construct(Id, card_w(X), Gs, Ds?) :- '
+                'present_card([], X?, Gs?, _, Vs, Done), '
+                'run(Id?, form(card, [field(\'Peer\', shown), '
+                'field(\'YesNo\', toggle)]), Vs?, Done?, Ds).'),
+            reason: m);
+      }
+    });
+
+    test('a widget declaration of the module that defines a type of theirs '
+        'for the type gives it its widget in each of them', () {
+      final files = {'a.vglp': a('Card =::= inbox_card.\n'), 'b.vglp': b('')};
+      for (final m in ['a.vglp', 'b.vglp']) {
+        expect(
+            compileBeside(files, m),
+            contains('construct(Id, card_w(X), Gs, Ds?) :- '
+                'present_card([], X?, Gs?, _, Vs, Done), '
+                'run(Id?, inbox_card, Vs?, Done?, Ds).'),
+            reason: m);
+      }
+    });
+
+    test('a widget declaration of one of them for a type of theirs it does '
+        'not define is refused, as one for a type it imports', () {
+      // b declares a widget for a's card.
+      final bs = b('Card =::= inbox_card.\n');
+      final (line, column) = at(bs, 'Card =::=');
+      const why = 'A widget declaration for Card, an interactive type this '
+          'module imports from a: the type joins with the widget its export '
+          'gives it, form(card, [field(\'Peer\', shown), field(\'YesNo\', '
+          'buttons([yes, no]))]), and the importer declares none for it '
+          '(vGLP, Definition "Canonical Compilation": "each with the '
+          'functor and the widget its export gives it, M declaring no widget '
+          'for a type it imports")';
+      expect(() => compileBeside({'a.vglp': a(''), 'b.vglp': bs}, 'b.vglp'),
+          refusedAt(why, line, column));
+      // a, compiled together with it, is refused with it, at its import of
+      // b.
+      final (l, c) = at(a(''), 'imported procedure (Note?)*b#jot_b');
+      expect(
+          () => compileBeside({'a.vglp': a(''), 'b.vglp': bs}, 'a.vglp'),
+          refusedAt(
+              'The module b, compiled together with this one (vGLP, '
+              'Definition "Canonical Compilation": "Modules that import from '
+              'each other procedures that reach a question are compiled '
+              'together, their interactive types joined once"), is not '
+              'compiled: $why (in b at line $line, column $column)',
+              l,
+              c));
+    });
+
+    test('two of them that define a type and declare it two widgets are '
+        'refused: one type, two widgets', () {
+      // a and b both define Note?, jot_a and jot_b.
+      final bs = b('Note? =::= note_box.\n');
+      final (line, column) = at(bs, 'Note? =::=');
+      expect(
+          () => compileBeside(
+              {'a.vglp': a('Note? =::= note_pad.\n'), 'b.vglp': bs},
+              'b.vglp'),
+          refusedAt(
+              'The interactive type Note? of the modules compiled together, '
+              'a, b, is defined by a and b and has the widget note_pad in a '
+              'and note_box in b, by their widget declarations: "the module '
+              'that defines a type declares its widget, and the others '
+              'declare none for it" (vGLP #8 Cowork, 2026-10-11 16:44 UTC, '
+              'Q2)',
+              line,
+              column));
+    });
+
+    test('one type joining from modules outside them with two widgets is '
+        'refused', () {
+      // x gives the card inbox_card, y its default.
+      String responder(String name, String widget) => '''
+$types
+$widget
+exported procedure (Card)*$name(Offer?, Response).
+(card(From?, Answer))*$name(offer(From), Resp?) :-
+    ground(From?) | decide(Answer?, From?, Resp).
+procedure decide(YesNo?, Peer?, Response).
+decide(yes, From, accept(From?)).
+decide(no, From, refuse(From?)).
+''';
+      expect(
+          () => compileBeside({
+                'x.vglp': responder('respond_x', 'Card =::= inbox_card.'),
+                'y.vglp': responder('respond_y', ''),
+                'a.vglp': '''
+$types
+imported procedure (Note?)*b#jot_b(Note).
+exported procedure (Note?)*jot_a(Note).
+(N)*jot_a(N?).
+imported procedure (Card)*x#respond_x(Offer?, Response).
+''',
+                'b.vglp': b('imported procedure (Card)*y#respond_y(Offer?, '
+                    'Response).\n'),
+              }, 'a.vglp'),
+          refused('The interactive type Card joins the questions of the '
+              'modules compiled together, a, b, from x and from y with the '
+              'functor card_w, its widget inbox_card in x'));
     });
   });
 }

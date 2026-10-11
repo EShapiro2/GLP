@@ -39,7 +39,8 @@ import 'package:glp_multiagent/ui_runtime/bridge.dart';
 import 'package:glp_multiagent/ui_runtime/construct_family.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
-import 'package:glp_multiagent/isolate_protocol.dart' show runtimeTermOf;
+import 'package:glp_multiagent/isolate_protocol.dart'
+    show runtimeTermOf, screenTermOf;
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/runtime/scheduler.dart' show ExecutionStatus;
 
@@ -115,10 +116,10 @@ void main() {
     final repo = Directory('../programs').existsSync()
         ? Directory('../programs').absolute.path
         : '/Users/udi/Grassroots/GLP/programs';
-    // What send_to_user/1 sends alice, one term to a line.
-    final lines = <String>[];
+    // What send_to_user/1 sends alice, each term whole.
+    final notifies = <GTerm>[];
     final engine = GlpEngine(rootSelfGlpPath: '$repo/self.glp');
-    engine.runtime.outputCallback = lines.add;
+    engine.runtime.outputTermCallback = (t) => notifies.add(screenTermOf(t));
     // programs/currencies/coins is a program: currency/ is the certified
     // mini-app and this directory adds the harness that runs it for a live
     // person, play_ui.glp's coins_ui/3, the bridge entry, which reads alice's
@@ -142,8 +143,8 @@ void main() {
 
     var fed = 0;
     void replay() {
-      for (; fed < lines.length; fed++) {
-        r.handleLine(lines[fed]);
+      for (; fed < notifies.length; fed++) {
+        r.handle(notifies[fed]);
       }
     }
 
@@ -172,10 +173,14 @@ void main() {
     // done anything: the stream of her requests, one construct, drawn as the
     // default widget of Stream(Request)? --- an input box of a menu of the
     // four forms of Request ::= mint(Integer) ; swap(Peer, Lot, Lot) ;
-    // pay(Peer, Integer) ; redeem(Peer, Peer).
-    const requestForm = 'input_box(menu([form(mint, [number]), '
-        'form(swap, [peer, form(lot, [text, number]), form(lot, [text, number])]), '
-        'form(pay, [peer, number]), form(redeem, [peer, peer])]))';
+    // pay(Peer, Integer) ; redeem(Peer, Peer), each field labelled by the
+    // name of its declared type, a Key a peer field.
+    const requestForm = "input_box(menu([form(mint, [field('Integer', number)]), "
+        "form(swap, [field('Peer', peer), "
+        "field('Lot', form(lot, [field('Key', peer), field('Integer', number)])), "
+        "field('Lot', form(lot, [field('Key', peer), field('Integer', number)]))]), "
+        "form(pay, [field('Peer', peer), field('Integer', number)]), "
+        "form(redeem, [field('Peer', peer), field('Peer', peer)])]))";
     expect(r.bridge.constructs.map((c) => formatTerm(c.widget)), [requestForm]);
     final form = r.bridge.constructs.single;
     expect(formatTerm(form.view), 'input([])');
@@ -241,14 +246,15 @@ void main() {
 
     // --- The swap: alice gives her 2 for bob's 2; bob's script accepts. -----
     // The swap form's five fields are the leaves of swap(Peer, Lot, Lot), in
-    // order: the counterparty, and each lot's issuer and number.
+    // order: the counterparty, and each lot's issuer, a Key and so a peer
+    // field, and number.
     await request(
         'swap',
         {
           [1]: ('peer', 'bob'),
-          [2, 1]: ('text', 'alice'),
+          [2, 1]: ('peer', 'alice'),
           [2, 2]: ('number', '2'),
-          [3, 1]: ('text', 'bob'),
+          [3, 1]: ('peer', 'bob'),
           [3, 2]: ('number', '2'),
         },
         formShot: '/private/tmp/coins-swap-form.png');
@@ -261,7 +267,8 @@ void main() {
     // --- The card: bob proposes the reverse swap, and the swap responder's
     // question, Card ::= card(Offer, YesNo?) in writer mode, is one construct:
     // the offer shown, and the buttons yes and no at its answer. -------------
-    const cardWidget = 'form(card, [shown, buttons([yes, no])])';
+    const cardWidget =
+        "form(card, [field('Offer', shown), field('YesNo', buttons([yes, no]))])";
     final cards = drawn(cardWidget);
     expect(cards, hasLength(1));
     final card = cards.single;

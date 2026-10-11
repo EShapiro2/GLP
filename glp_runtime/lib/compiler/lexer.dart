@@ -239,9 +239,11 @@ class Lexer {
     return Token(TokenType.NUMBER, text, line, column, value);
   }
 
-  /// Scan string literal or quoted atom
-  /// Single quotes produce ATOM (quoted atom, can be used as functor)
-  /// Double quotes produce STRING (string literal)
+  /// Scan a quoted name or a double-quoted string: two spellings of one
+  /// string, the characters between the quotes (GLP-Spec appendix-lp.tex,
+  /// Definition "Logic Programs Syntax").  Single quotes produce ATOM, which
+  /// may also stand as a functor or a predicate name; double quotes produce
+  /// STRING, which stands only as a constant.
   ///
   /// Inside a quoted name a quote is written doubled, `'it''s'`, or escaped,
   /// `'it\'s'`, and both read as the one string `it's`: GLP-Spec

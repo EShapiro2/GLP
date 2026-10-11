@@ -13,6 +13,7 @@
 import 'dart:io';
 import 'package:test/test.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
+import 'package:glp_runtime/runtime/terms.dart';
 
 void main() {
   group('_output kernel', () {
@@ -136,6 +137,49 @@ test :- send_to_user([hello | Tail?]), Tail = [world].
       final result = await engine.runGoal('test');
       expect(result.succeeded, isTrue);
       expect(outputLines, ['hello', 'world']);
+    });
+  });
+
+  // A person's bridge is handed each element whole, the term, and nothing is
+  // printed (GLP-Spec appendix-guards.tex, "Output to the person":
+  // send_to_user(Stream) "emits each element of Stream to the person operating
+  // the agent"; GLP #3 Cowork, 2026-10-11 12:59 UTC, "21:40 AND 03:16, (iii)":
+  // the person's bridge "takes the term '_output' was given").  Until
+  // 2026-10-11 every element was printed, and a screen read the line back: a
+  // string with a space, `said(Hi there)`, did not read.
+  group('send_to_user to a person\'s bridge', () {
+    test('the bridge is handed each term whole, and nothing is printed',
+        () async {
+      final engine = GlpEngine(
+          rootSelfGlpPath: File('../programs/self.glp').absolute.path);
+      expect(
+          engine.loadSource('''
+procedure test.
+test :- send_to_user(['Hi there', said('Hi there'), form('.', [text]),
+    ['A b', c], 42, '42', hello]).
+'''),
+          isTrue);
+      final terms = <Term>[];
+      final lines = <String>[];
+      engine.runtime.outputTermCallback = terms.add;
+      engine.runtime.outputCallback = lines.add;
+      final result = await engine.runGoal('test');
+      expect(result.succeeded, isTrue);
+      expect(lines, isEmpty);
+      expect(terms, hasLength(7));
+      expect((terms[0] as ConstTerm).value, 'Hi there');
+      final said = terms[1] as StructTerm;
+      expect(said.functor, 'said');
+      expect((said.args.single as ConstTerm).value, 'Hi there');
+      final form = terms[2] as StructTerm;
+      expect(form.functor, 'form');
+      expect((form.args[0] as ConstTerm).value, '.');
+      final list = terms[3] as StructTerm;
+      expect(list.functor, '.');
+      expect((list.args[0] as ConstTerm).value, 'A b');
+      expect((terms[4] as ConstTerm).value, 42);
+      expect((terms[5] as ConstTerm).value, '42');
+      expect((terms[6] as ConstTerm).value, 'hello');
     });
   });
 }

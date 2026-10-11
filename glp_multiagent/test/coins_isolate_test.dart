@@ -21,7 +21,7 @@
 /// (TGLP modules.tex, "the initial goal posted to the runtime ... is
 /// type-checked before execution as a body goal"; GlpEngine.postGoal); each
 /// grant the test sends is injected into `Grants` through the injector the
-/// call returned, and every line the play sends alice comes back.
+/// call returned, and every term the play sends alice comes back whole.
 ///
 /// The widget test beside this one drives the surface; this one holds the
 /// wiring the surface never sees — the resolved program directory, the goal
@@ -33,7 +33,8 @@ import 'dart:io';
 import 'dart:isolate';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:glp_multiagent/isolate_protocol.dart' show runtimeTermOf;
+import 'package:glp_multiagent/isolate_protocol.dart'
+    show runtimeTermOf, screenTermOf;
 import 'package:glp_multiagent/manifests/coins_ui.dart';
 import 'package:glp_multiagent/ui_runtime/bridge.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
@@ -41,7 +42,7 @@ import 'package:glp_multiagent/ui_runtime/term.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/runtime/scheduler.dart' show ExecutionStatus;
 
-/// What the play's isolate reports that is not a line of alice's screen.
+/// What the play's isolate reports that is not a term of alice's screen.
 class _PlayFault {
   final String error;
   _PlayFault(this.error);
@@ -49,13 +50,13 @@ class _PlayFault {
 
 /// The play's isolate: [init] is the test's port and the repo's programs/.
 /// It sends back its own port, for alice's grants, once the play is posted;
-/// then each line the play sends alice, and a [_PlayFault] where the load,
+/// then each term the play sends alice, whole, and a [_PlayFault] where the load,
 /// the posting or a run fails.
 void _playIsolate((SendPort, String) init) {
   final (reply, repo) = init;
   final grants = ReceivePort();
   final engine = GlpEngine(rootSelfGlpPath: '$repo/self.glp');
-  engine.runtime.outputCallback = reply.send;
+  engine.runtime.outputTermCallback = (t) => reply.send(screenTermOf(t));
   try {
     engine.loadProgram('$repo/currencies/coins');
     final play = engine.postGoal('coins_ui(alice, Grants?, [])',
@@ -98,8 +99,8 @@ void main() {
     reply.listen((m) {
       if (m is SendPort) {
         commands = m;
-      } else if (m is String) {
-        r.handleLine(m);
+      } else if (m is GTerm) {
+        r.handle(m);
       } else if (m is _PlayFault) {
         fail('the play: ${m.error}');
       }
@@ -152,10 +153,14 @@ void main() {
     // The agent asks its question once, as soon as it runs: the stream of
     // her requests, drawn as the default widget of Stream(Request)? --- an
     // input box of a menu of the four forms of Request --- over the view
-    // input([]), the whole variable hers to write.
-    const requestForm = 'input_box(menu([form(mint, [number]), '
-        'form(swap, [peer, form(lot, [text, number]), form(lot, [text, number])]), '
-        'form(pay, [peer, number]), form(redeem, [peer, peer])]))';
+    // input([]), the whole variable hers to write; each field labelled by
+    // the name of its declared type, a Key a peer field.
+    const requestForm = "input_box(menu([form(mint, [field('Integer', number)]), "
+        "form(swap, [field('Peer', peer), "
+        "field('Lot', form(lot, [field('Key', peer), field('Integer', number)])), "
+        "field('Lot', form(lot, [field('Key', peer), field('Integer', number)]))]), "
+        "form(pay, [field('Peer', peer), field('Integer', number)]), "
+        "form(redeem, [field('Peer', peer), field('Peer', peer)])]))";
     expect(await until(() => drawn(requestForm).length == 1), isTrue,
         reason: 'the request form, drawn once');
     final form = drawn(requestForm).single;
@@ -186,7 +191,8 @@ void main() {
     // Bob proposes the reverse swap: one card, the swap responder's question,
     // Card ::= card(Offer, YesNo?) in writer mode --- the offer shown and her
     // answer at position [2].
-    const card = 'form(card, [shown, buttons([yes, no])])';
+    const card =
+        "form(card, [field('Offer', shown), field('YesNo', buttons([yes, no]))])";
     await until(() => drawn(card).length == 1);
     expect(drawn(card), hasLength(1));
     final offer = drawn(card).single;

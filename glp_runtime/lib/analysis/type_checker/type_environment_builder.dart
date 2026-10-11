@@ -9,7 +9,7 @@
 import 'type_ast.dart';
 import 'root_scope.dart';
 import 'param_expansion.dart';
-import 'program_dfa.dart' show primitiveClosure;
+import 'program_dfa.dart' show primitiveClosure, constantLabel;
 import '../../compiler/ast.dart' as ast;
 
 /// Error for circular alias chain
@@ -605,7 +605,9 @@ void _checkDeterminism(TypeDef def, [Map<String, TypeDef> scope = const {}]) {
 
   for (final alt in def.alternatives) {
     if (alt is ConstantAlt) {
-      final key = alt.value.toString();
+      // Keyed by kind and value ([constantLabel]): `0 ; '0'` are two
+      // alternatives.  Until 2026-10-10 by text, and refused as one.
+      final key = constantLabel(alt.value);
       if (constants.contains(key)) {
         throw NonDeterministicTypeError(
           'Duplicate constant alternative: $key in ${def.name}',

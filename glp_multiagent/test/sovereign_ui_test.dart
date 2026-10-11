@@ -30,23 +30,35 @@ import 'package:glp_multiagent/ui_runtime/construct_family.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
 
-/// The widget of the agent's question as `sovereign_agent.glp` draws it.
-const _requestForm = 'input_box(menu(['
-    'form(mint, [text, number]), '
-    'form(mint, [text, number, number]), '
-    'form(swap, [text, text, text, text, number, text, text, number]), '
-    'form(accept, [text, text, number]), '
-    'form(pay, [text, text, number]), '
-    'form(payout, [text, text, number]), '
-    'form(spend, [text, text, text, number]), '
-    'form(redeem, [text, text, text, text]), '
-    'form(mature, [text, text, number]), '
-    'form(deposit, [text, text, text, text, number]), '
-    'form(release, [text, text, text, text, number]), '
-    'form(return, [text, text, text, text, number])]))';
+import 'fixture_term.dart';
 
-/// The widget of each responder's question.
-const _card = 'form(card, [shown, buttons([yes, no])])';
+/// The widget of the agent's question as `sovereign_agent.glp` draws it,
+/// each field `field(L, W)`, labelled by the name of its declared type, a
+/// `Key` a peer field (vGLP, Definition "Widget Declaration, Default
+/// Widget").
+const _c = "field('Constant', text)";
+const _i = "field('Integer', number)";
+const _k = "field('Key', peer)";
+const _requestForm = 'input_box(menu(['
+    'form(mint, [$_c, $_i]), '
+    'form(mint, [$_c, $_i, $_i]), '
+    'form(swap, [$_k, $_c, $_k, $_c, $_i, $_k, $_c, $_i]), '
+    'form(accept, [$_c, $_k, $_i]), '
+    'form(pay, [$_k, $_c, $_i]), '
+    'form(payout, [$_k, $_c, $_i]), '
+    'form(spend, [$_k, $_k, $_c, $_i]), '
+    'form(redeem, [$_k, $_c, $_k, $_c]), '
+    'form(mature, [$_k, $_c, $_i]), '
+    'form(deposit, [$_k, $_c, $_k, $_c, $_i]), '
+    'form(release, [$_k, $_c, $_k, $_c, $_i]), '
+    'form(return, [$_k, $_c, $_k, $_c, $_i])]))';
+
+/// The widget of each responder's question: the offer shown, labelled by its
+/// type, and the buttons yes and no.
+const _swapCard =
+    "form(card, [field('SwapOffer', shown), field('YesNo', buttons([yes, no]))])";
+const _transferCard = "form(card, [field('TransferOffer', shown), "
+    "field('YesNo', buttons([yes, no]))])";
 
 void main() {
   late List<String> sent;
@@ -59,17 +71,18 @@ void main() {
 
   /// The agent's question, drawn as construct [id] over the view `input([])`.
   void drawRequestForm({int id = 0}) =>
-      r.handleLine('draw($id, $_requestForm, input([]))');
+      r.handle(fixtureTerm('draw($id, $_requestForm, input([]))'));
 
   /// The swap card: bob offers two of his own bonds for two alice-bonds.
-  void drawSwapCard({int id = 20}) => r.handleLine('draw($id, $_card, '
+  void drawSwapCard({int id = 20}) => r.handle(fixtureTerm('draw($id, $_swapCard, '
       'card(offer(bob, lot(alice, usd, 0, 2), '
-      '[bond(bob, usd, 30, 7), bond(bob, usd, 30, 8)]), input([2])))');
+      '[bond(bob, usd, 30, 7), bond(bob, usd, 30, 8)]), input([2])))'));
 
   /// The transfer card: the escrow agent releases one bond to the beneficiary.
-  void drawTransferCard({int id = 30}) => r.handleLine('draw($id, $_card, '
+  void drawTransferCard({int id = 30}) =>
+      r.handle(fixtureTerm('draw($id, $_transferCard, '
       'card(offer_transfer(release, escrow, [bond(charlie, usd, 0, 1)]), '
-      'input([2])))');
+      'input([2])))'));
 
   /// The position of the question construct [id] holds at [at] of its view.
   GList position(int id, List<int> at) {
@@ -125,20 +138,18 @@ void main() {
               (ctorArgs(f).$2[1] as GList).items.map(formatTerm).toList(),
       };
       expect(fields, {
-        'mint/2': ['text', 'number'],
-        'mint/3': ['text', 'number', 'number'],
-        'swap/8': [
-          'text', 'text', 'text', 'text', 'number', 'text', 'text', 'number'
-        ],
-        'accept/3': ['text', 'text', 'number'],
-        'pay/3': ['text', 'text', 'number'],
-        'payout/3': ['text', 'text', 'number'],
-        'spend/4': ['text', 'text', 'text', 'number'],
-        'redeem/4': ['text', 'text', 'text', 'text'],
-        'mature/3': ['text', 'text', 'number'],
-        'deposit/5': ['text', 'text', 'text', 'text', 'number'],
-        'release/5': ['text', 'text', 'text', 'text', 'number'],
-        'return/5': ['text', 'text', 'text', 'text', 'number'],
+        'mint/2': [_c, _i],
+        'mint/3': [_c, _i, _i],
+        'swap/8': [_k, _c, _k, _c, _i, _k, _c, _i],
+        'accept/3': [_c, _k, _i],
+        'pay/3': [_k, _c, _i],
+        'payout/3': [_k, _c, _i],
+        'spend/4': [_k, _k, _c, _i],
+        'redeem/4': [_k, _c, _k, _c],
+        'mature/3': [_k, _c, _i],
+        'deposit/5': [_k, _c, _k, _c, _i],
+        'release/5': [_k, _c, _k, _c, _i],
+        'return/5': [_k, _c, _k, _c, _i],
       });
     });
   });
@@ -183,7 +194,7 @@ void main() {
     test('the swap card is a construct of its own, its answer at [2]', () {
       drawSwapCard();
       final card = r.bridge.construct(20)!;
-      expect(formatTerm(card.widget), _card);
+      expect(formatTerm(card.widget), _swapCard);
       final (_, args) = ctorArgs(card.view);
       expect(formatTerm(args[0]),
           'offer(bob, lot(alice, usd, 0, 2), [bond(bob, usd, 30, 7), bond(bob, usd, 30, 8)])');
@@ -208,7 +219,7 @@ void main() {
       final (_, args) = ctorArgs(r.bridge.construct(31)!.view);
       expect(formatTerm(ctorArgs(args[0]).$2[0]), 'release');
       r.bridge.grant(31, position(31, [2]), const GAtom('yes'));
-      r.handleLine('withdraw(31)');
+      r.handle(fixtureTerm('withdraw(31)'));
       drawTransferCard(id: 32);
       r.bridge.grant(32, position(32, [2]), const GAtom('no'));
       expect(sent, ['input(31, [2], yes)', 'input(32, [2], no)']);
@@ -219,14 +230,14 @@ void main() {
       drawSwapCard(id: 23);
       drawTransferCard(id: 33);
       expect(r.bridge.constructs.map((c) => c.id), [23, 33]);
-      r.handleLine('withdraw(23)');
+      r.handle(fixtureTerm('withdraw(23)'));
       expect(r.bridge.constructs.map((c) => c.id), [33]);
     });
 
     test('the deployed mediator\'s card vocabulary opens nothing', () {
-      r.handleLine('card(agent_1, ctx_agent_1, req(1))');
-      r.handleLine('card(respond_swap_1, ctx_respond_swap_1(bob, '
-          'lot(alice, usd, 0, 2), []), req(9))');
+      r.handle(fixtureTerm('card(agent_1, ctx_agent_1, req(1))'));
+      r.handle(fixtureTerm('card(respond_swap_1, ctx_respond_swap_1(bob, '
+          'lot(alice, usd, 0, 2), []), req(9))'));
       expect(r.bridge.constructs, isEmpty);
       expect(r.inbox, isEmpty);
       expect(r.standing, isEmpty);
@@ -235,8 +246,8 @@ void main() {
 
   group('the views of the agent\'s output', () {
     test('every screen message but holdings lands in the default display', () {
-      r.handleLine('msg(agent, person, minted(2, 30))');
-      r.handleLine('msg(agent, person, transferred(release, frank))');
+      r.handle(fixtureTerm('msg(agent, person, minted(2, 30))'));
+      r.handle(fixtureTerm('msg(agent, person, transferred(release, frank))'));
       expect(r.store.lists['screen']!.map(formatTerm),
           ['minted(2, 30)', 'transferred(release, frank)']);
     });
@@ -308,7 +319,9 @@ void main() {
         expect(inForm(find.widgetWithText(ChoiceChip, label)), findsOneWidget,
             reason: label);
       }
-      expect(inForm(find.widgetWithText(ChoiceChip, 'mint')), findsNWidgets(2));
+      // The two mints share a functor, and are told apart by their arity.
+      expect(inForm(find.widgetWithText(ChoiceChip, 'mint/2')), findsOneWidget);
+      expect(inForm(find.widgetWithText(ChoiceChip, 'mint/3')), findsOneWidget);
       // No compose form beside it: the request form is the one way in.
       expect(find.byType(FloatingActionButton), findsNothing);
     });

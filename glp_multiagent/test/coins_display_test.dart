@@ -24,6 +24,8 @@ import 'package:glp_multiagent/ui_runtime/construct_family.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
 
+import 'fixture_term.dart';
+
 void main() {
   late UiRuntime r;
   late List<String> sent;
@@ -42,12 +44,13 @@ void main() {
 
       // The swap card, as the compiled agent draws it: the offer of bob, who
       // wants a lot of his own and offers a list of coins.
-      r.handleLine('draw(7, form(card, [shown, buttons([yes, no])]), '
-          'card(offer(bob, lot(bob, 2), [coin(alice, 3)]), input([2])))');
+      r.handle(fixtureTerm("draw(7, form(card, [field('Offer', shown), "
+          "field('YesNo', buttons([yes, no]))]), "
+          'card(offer(bob, lot(bob, 2), [coin(alice, 3)]), input([2])))'));
       // Two messages of the default display: a menu, whose second argument is
       // a list, and a message of one scalar.
-      r.handleLine('msg(agent, person, menu(carol, [dave, erin]))');
-      r.handleLine('msg(agent, person, opened(frank))');
+      r.handle(fixtureTerm('msg(agent, person, menu(carol, [dave, erin]))'));
+      r.handle(fixtureTerm('msg(agent, person, opened(frank))'));
 
       await tester.pumpWidget(MaterialApp(
           home: AgentSurface(agentId: 'alice', runtime: r, muteNotices: true)));
@@ -129,8 +132,12 @@ void main() {
           'release bob, bob usd 30 7');
       expect(displayText(const GString('hello')), 'hello');
       expect(displayText(const GAtom('bob')), 'bob');
-      expect(displayKey('lot(bob, 2)'), 'bob 2');
-      expect(displayKey('bob'), 'bob');
+      // A stored key: the default display of the term it names, which the
+      // store holds (until 2026-10-11 the key's text was parsed back); a key
+      // of a name alone, the phone owner's, is that name.
+      expect(r.store.displayKey(r.store.keyOf(fixtureTerm('lot(bob, 2)'))),
+          'bob 2');
+      expect(r.store.displayKey('bob'), 'bob');
     });
 
     test('a template substitutes the default display, never the term', () {

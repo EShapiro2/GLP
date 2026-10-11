@@ -21,16 +21,24 @@ import 'package:glp_multiagent/ui_runtime/bridge.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
 
+import 'fixture_term.dart';
+
 /// The widget of the agent's question, `Stream(Request)?`, as
 /// `coins_agent.glp` draws it: an input box of a menu of the four forms of
-/// `Request`.
-const _requestForm = 'input_box(menu([form(mint, [number]), '
-    'form(swap, [peer, form(lot, [text, number]), form(lot, [text, number])]), '
-    'form(pay, [peer, number]), form(redeem, [peer, peer])]))';
+/// `Request`, each field `field(L, W)`, labelled by the name of its declared
+/// type, a `Key` a peer field (vGLP, Definition "Widget Declaration, Default
+/// Widget").
+const _requestForm = "input_box(menu([form(mint, [field('Integer', number)]), "
+    "form(swap, [field('Peer', peer), "
+    "field('Lot', form(lot, [field('Key', peer), field('Integer', number)])), "
+    "field('Lot', form(lot, [field('Key', peer), field('Integer', number)]))]), "
+    "form(pay, [field('Peer', peer), field('Integer', number)]), "
+    "form(redeem, [field('Peer', peer), field('Peer', peer)])]))";
 
 /// The widget of the swap responder's question, `Card ::= card(Offer,
 /// YesNo?)` in writer mode: the offer shown, and the buttons yes and no.
-const _card = 'form(card, [shown, buttons([yes, no])])';
+const _card =
+    "form(card, [field('Offer', shown), field('YesNo', buttons([yes, no]))])";
 
 void main() {
   late List<String> sent;
@@ -44,13 +52,13 @@ void main() {
   /// The agent's question, drawn as construct [id] over the view `input([])`:
   /// the whole variable is the person's.
   void drawRequestForm({int id = 0}) =>
-      r.handleLine('draw($id, $_requestForm, input([]))');
+      r.handle(fixtureTerm('draw($id, $_requestForm, input([]))'));
 
   /// The card of a swap [from] proposes, drawn as construct [id]: the offer
   /// shown, the answer the person's at position [2].
   void drawCard(int id, String from, String want, String offered) =>
-      r.handleLine(
-          'draw($id, $_card, card(offer($from, $want, $offered), input([2])))');
+      r.handle(fixtureTerm(
+          'draw($id, $_card, card(offer($from, $want, $offered), input([2])))'));
 
   /// The position of the question construct [id] holds at [at] of its view.
   GList position(int id, List<int> at) {
@@ -92,8 +100,9 @@ void main() {
       expect(form, 'form');
       final ws = (fields[1] as GList).items;
       expect(formatTerm(fields[0]), 'card');
-      expect(formatTerm(ws[0]), 'shown', reason: 'the offer, shown');
-      expect(formatTerm(ws[1]), 'buttons([yes, no])',
+      expect(formatTerm(ws[0]), "field('Offer', shown)",
+          reason: 'the offer, shown');
+      expect(formatTerm(ws[1]), "field('YesNo', buttons([yes, no]))",
           reason: 'YesNo ::= yes ; no, a row of buttons');
     });
 
@@ -106,10 +115,10 @@ void main() {
     });
 
     test('the deployed mediator\'s card vocabulary opens nothing', () {
-      r.handleLine('card(agent_1, ctx_agent_1, req(1))');
-      r.handleLine(
+      r.handle(fixtureTerm('card(agent_1, ctx_agent_1, req(1))'));
+      r.handle(fixtureTerm(
           'card(respond_swap_1, ctx_respond_swap_1(alice, lot(bob, 2), '
-          '[coin(alice, 1), coin(alice, 2)]), req(7))');
+          '[coin(alice, 1), coin(alice, 2)]), req(7))'));
       expect(r.bridge.constructs, isEmpty);
       expect(r.inbox, isEmpty);
       expect(r.standing, isEmpty);
@@ -155,7 +164,7 @@ void main() {
     test('withdraw(Id) removes that construct and no other', () {
       drawRequestForm();
       drawCard(5, 'alice', 'lot(bob, 2)', '[coin(alice, 1)]');
-      r.handleLine('withdraw(5)');
+      r.handle(fixtureTerm('withdraw(5)'));
       expect(r.bridge.construct(5), isNull);
       expect(r.bridge.constructs.map((c) => c.id), [0]);
     });
@@ -163,7 +172,7 @@ void main() {
     test('a withdrawn card takes no grant', () {
       drawCard(5, 'alice', 'lot(bob, 2)', '[coin(alice, 1)]');
       r.bridge.grant(5, position(5, [2]), const GAtom('yes'));
-      r.handleLine('withdraw(5)');
+      r.handle(fixtureTerm('withdraw(5)'));
       r.bridge.grant(5, tryParseTerm('[2]')! as GList, const GAtom('no'));
       expect(sent, ['input(5, [2], yes)']);
     });
@@ -181,30 +190,30 @@ void main() {
 
   group('the views of the agent\'s output', () {
     test('the balances view is fed by its pattern and replaces its rows', () {
-      r.handleLine(
-          'msg(agent, person, holdings([lot(alice, 3), lot(bob, 2)]))');
+      r.handle(fixtureTerm(
+          'msg(agent, person, holdings([lot(alice, 3), lot(bob, 2)]))'));
       expect(r.store.balances['balances']!.map((k, v) => MapEntry(k, formatTerm(v))),
           {'alice': '3', 'bob': '2'});
-      r.handleLine('msg(agent, person, holdings([lot(bob, 2)]))');
+      r.handle(fixtureTerm('msg(agent, person, holdings([lot(bob, 2)]))'));
       expect(r.store.balances['balances']!.keys, ['bob']);
     });
 
     test('every other screen message lands in the default display', () {
-      r.handleLine('msg(agent, person, minted(3))');
-      r.handleLine('msg(agent, person, swap_done(bob))');
-      r.handleLine('msg(agent, person, opened(bob))');
+      r.handle(fixtureTerm('msg(agent, person, minted(3))'));
+      r.handle(fixtureTerm('msg(agent, person, swap_done(bob))'));
+      r.handle(fixtureTerm('msg(agent, person, opened(bob))'));
       expect(r.store.lists['screen']!.map(formatTerm),
           ['minted(3)', 'swap_done(bob)', 'opened(bob)']);
     });
 
     test('a holdings message does not also reach the default display', () {
-      r.handleLine('msg(agent, person, holdings([lot(alice, 1)]))');
+      r.handle(fixtureTerm('msg(agent, person, holdings([lot(alice, 1)]))'));
       expect(r.store.lists['screen'], isEmpty);
     });
 
     test('a draw is the bridge\'s, and reaches no view', () {
       drawRequestForm();
-      r.handleLine('withdraw(0)');
+      r.handle(fixtureTerm('withdraw(0)'));
       expect(r.store.lists['screen'], isEmpty);
       expect(r.store.balances, isEmpty);
     });

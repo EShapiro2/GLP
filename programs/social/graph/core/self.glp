@@ -23,7 +23,7 @@ ping(_, [], _).
 %% exported: a caller declares what it passes in its own scope, and the linked
 %% check holds the two structurally compatible (TGLP, "Structural type
 %% compatibility").
-HomeAnswer ::= xs_respond_friend_1(Constant) ; xs_respond_friend_2(Constant) ; xs_home_1(String) ; xs_home_2(String, Constant) ; xs_home_3(Constant, Key) ; xs_home_4(Key).
+HomeAnswer ::= xs_respond_friend_1(String) ; xs_respond_friend_2(String) ; xs_home_1(String) ; xs_home_2(String, Constant) ; xs_home_3(Constant, Key) ; xs_home_4(Key).
 HomeReqId ::= req(Integer).
 HomeUserAnswer ::= answer(HomeReqId, HomeAnswer) ; decline(HomeReqId).
 

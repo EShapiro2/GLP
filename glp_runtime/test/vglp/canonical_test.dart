@@ -30,7 +30,9 @@ import 'package:glp_runtime/compiler/error.dart';
 import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/compiler/token.dart';
+import 'package:glp_runtime/runtime/module_hierarchy.dart' show rootScope;
 import 'package:glp_runtime/vglp/canonical.dart';
+import 'package:glp_runtime/vglp/mediator.dart' show MediatorSource;
 import 'package:glp_runtime/vglp/program_compilation.dart'
     show compiledHeader, compileVglpSource;
 
@@ -1165,23 +1167,463 @@ befriend(P, R?, N?) :- ground(P?) | responder # offer_from(P?, R, N).
                 'Response, Note, Stream(Ask(Question))).'));
       });
 
-      test('modules importing from each other are refused', () {
+      // "Modules that import from each other procedures that reach a
+      // question are compiled together, their interactive types joined
+      // once" (vGLP at 66b6500, the Definition; vGLP #7 Cowork, 2026-10-11
+      // 14:19 UTC, item 2).  Until then the compilation refused them.
+      test('modules importing from each other are compiled together, their '
+          'interactive types joined once', () {
         const a = '''
 $types
 imported procedure (Note?)*b#jot_b(Note).
 exported procedure (Note?)*jot_a(Note).
 (N)*jot_a(N?).
 ''';
-        write('b.vglp', '''
+        const b = '''
 $types
 imported procedure (Note?)*a#jot_a(Note).
 exported procedure (Note?)*jot_b(Note).
 (N)*jot_b(N?).
-''');
+''';
+        final pb = write('b.vglp', b);
+        final sa = compileVglpSource(a, path: write('a.vglp', a));
+        final sb = compileVglpSource(b, path: pb);
+        expect(sa, contains('Question ::= note_r(Note?).'));
+        expect(sb, contains('Question ::= note_r(Note?).'));
         expect(
-            () => compileVglpSource(a, path: write('a.vglp', a)),
-            throwsA(isA<CompileError>().having(
-                (e) => e.message, 'message', contains('form a cycle'))));
+            sa,
+            contains('imported procedure b#jot_b(Note, '
+                'Stream(Ask(Question))).'));
+        expect(
+            sb,
+            contains('imported procedure a#jot_a(Note, '
+                'Stream(Ask(Question))).'));
+      });
+
+      // Two modules of two interactive types, each importing a procedure of
+      // the other that reaches a question: cards a volitional one, notes an
+      // ordinary one.
+      const cards = '''
+$types
+imported procedure notes#noting(Peer?, Note).
+exported procedure (Card)*respond(Offer?, Response).
+(card(From?, Answer))*respond(offer(From), Resp?) :-
+    ground(From?) | decide(Answer?, From?, Resp).
+procedure decide(YesNo?, Peer?, Response).
+decide(yes, From, accept(From?)).
+decide(no, From, refuse(From?)).
+exported procedure befriend(Peer?, Response, Note).
+befriend(P, R?, N?) :-
+    ground(P?) | respond(offer(P?), R), notes # noting(P?, N).
+''';
+      const notes = '''
+$types
+exported procedure (Note?)*jot(Note).
+(N)*jot(N?).
+exported procedure noting(Peer?, Note).
+noting(P, N?) :- ground(P?) | jot(N).
+imported procedure (Card)*cards#respond(Offer?, Response).
+exported procedure noted(Peer?, Response, Note).
+noted(P, R?, N?) :-
+    ground(P?) | cards # respond(offer(P?), R), noting(P?, N).
+''';
+
+      test('two modules each importing a procedure of the other that reaches '
+          'a question: each has every question of both, each type with one '
+          'functor, and the procedures that reach one through the other '
+          'have their ask streams', () {
+        final pn = write('notes.vglp', notes);
+        final sc = compileVglpSource(cards, path: write('cards.vglp', cards));
+        final sn = compileVglpSource(notes, path: pn);
+        // The questions in each module's order of its declarations, of one
+        // union.
+        expect(sc, contains('Question ::= card_w(Card) ; note_r(Note?).'));
+        expect(sn, contains('Question ::= note_r(Note?) ; card_w(Card).'));
+        expect(
+            sc,
+            contains('imported procedure notes#noting(Peer?, Note, '
+                'Stream(Ask(Question))).'));
+        expect(
+            sc,
+            contains('befriend(P, R?, N?, D?) :- ground(P?) | '
+                'respond(offer(P?), R, D1), notes # noting(P?, N, D2), '
+                'merge(D1?, D2?, D).'));
+        expect(
+            sn,
+            contains('imported procedure cards#respond(Offer?, Response, '
+                'Stream(Ask(Question))).'));
+        expect(sn, contains("noting(P, N?, D?) :- ground(P?) | jot(N, D)."));
+        expect(sn, contains("[ask('Note?', note_r(X)) | D?]"));
+        expect(sc, contains("[ask('Card', card_w(X?)) | D?]"));
+      });
+
+      test('a cycle of three: each module has the questions of all three, '
+          'each type with one functor', () {
+        // x imports from y, y from z, z from x.
+        const x = '''
+$types
+imported procedure (Note?)*y#jot(Note).
+exported procedure (Card)*respond(Offer?, Response).
+(card(From?, Answer))*respond(offer(From), Resp?) :-
+    ground(From?) | decide(Answer?, From?, Resp).
+procedure decide(YesNo?, Peer?, Response).
+decide(yes, From, accept(From?)).
+decide(no, From, refuse(From?)).
+''';
+        const y = '''
+$types
+exported procedure (Note?)*jot(Note).
+(N)*jot(N?).
+imported procedure z#check(Peer?, YesNo).
+exported procedure both(Peer?, Note, YesNo).
+both(P, N?, A?) :- ground(P?) | jot(N), z # check(P?, A).
+''';
+        const z = '''
+$types
+exported procedure (Box_yesNo?)*confirm(Peer?, YesNo).
+(box_yn(A))*confirm(P, A?) :- ground(P?) | true.
+imported procedure (Card)*x#respond(Offer?, Response).
+exported procedure check(Peer?, YesNo).
+check(P, A?) :- ground(P?) | confirm(P?, A).
+exported procedure checked(Peer?, Response, YesNo).
+checked(P, R?, A?) :- ground(P?) | x # respond(offer(P?), R), check(P?, A).
+''';
+        final px = write('x.vglp', x), py = write('y.vglp', y);
+        final pz = write('z.vglp', z);
+        const all = ['card_w(Card)', 'note_r(Note?)', 'box_yesNo_r(Box_yesNo?)'];
+        for (final (path, text) in [(px, x), (py, y), (pz, z)]) {
+          final s = compileVglpSource(text, path: path);
+          final q = RegExp(r'^Question ::= (.*)\.$', multiLine: true)
+              .firstMatch(s)!
+              .group(1)!
+              .split(' ; ');
+          expect(q.toSet(), all.toSet(), reason: path);
+          expect(q, hasLength(3), reason: path);
+        }
+      });
+
+      test('a module beside them, importing from one of them, compiled as its '
+          'own: its questions are all of theirs', () {
+        write('cards.vglp', cards);
+        write('notes.vglp', notes);
+        const home = '''
+$types
+imported procedure cards#befriend(Peer?, Response, Note).
+exported procedure go(Peer?, Response, Note).
+go(P, R?, N?) :- ground(P?) | cards # befriend(P?, R, N).
+''';
+        final s = compileVglpSource(home, path: write('home.vglp', home));
+        expect(s, contains('Question ::= card_w(Card) ; note_r(Note?).'));
+        expect(
+            s,
+            contains('imported procedure cards#befriend(Peer?, Response, Note, '
+                'Stream(Ask(Question))).'));
+        expect(s, contains('go(P, R?, N?, D?) :- ground(P?) | '
+            'cards # befriend(P?, R, N, D).'));
+      });
+
+      test('modules importing from each other, one way only reaching a '
+          'question: each is compiled as its own, as beside a module that '
+          'imports nothing from it', () {
+        // a imports b's echo, which reaches no question; b imports a's jot,
+        // which does.
+        const a = '''
+$types
+imported procedure b#echo(Peer?, Peer).
+exported procedure (Note?)*jot_a(Note).
+(N)*jot_a(N?).
+procedure go(Peer?, Peer).
+go(P, Q?) :- b # echo(P?, Q).
+''';
+        const b = '''
+$types
+exported procedure echo(Peer?, Peer).
+echo(P, P?).
+imported procedure (Note?)*a#jot_a(Note).
+exported procedure noting(Note).
+noting(N?) :- a # jot_a(N).
+''';
+        final pa = write('a.vglp', a);
+        final pb = write('b.vglp', b);
+        final sa = compileVglpSource(a, path: pa);
+        final sb = compileVglpSource(b, path: pb);
+        expect(sa, contains('imported procedure b#echo(Peer?, Peer).'));
+        expect(sb, contains('Question ::= note_r(Note?).'));
+        // b beside an a that imports nothing from it compiles to the same
+        // text, and a beside a b that imports nothing from it.
+        write('a.vglp', '''
+$types
+exported procedure (Note?)*jot_a(Note).
+(N)*jot_a(N?).
+''');
+        expect(compileVglpSource(b, path: pb), sb);
+        write('a.vglp', a);
+        write('b.vglp', '''
+$types
+exported procedure echo(Peer?, Peer).
+echo(P, P?).
+''');
+        expect(compileVglpSource(a, path: pa), sa);
+      });
+
+      // a and b import from each other jot_a and jot_b.
+      String a(String more) => '''
+$types
+imported procedure (Note?)*b#jot_b(Note).
+exported procedure (Note?)*jot_a(Note).
+(N)*jot_a(N?).
+$more''';
+      String b(String more) => '''
+$types
+imported procedure (Note?)*a#jot_a(Note).
+exported procedure (Note?)*jot_b(Note).
+(N)*jot_b(N?).
+$more''';
+
+      // a's pick and b's confirm, two types of two of them with one functor,
+      // box_yesNo_r.
+      final pick = a('exported procedure (Box(YesNo)?)*pick(Peer?, '
+          'YesNo).\n(box(A))*pick(P, A?) :- ground(P?) | true.\n');
+      final confirm = b('exported procedure (Box_yesNo?)*confirm(Peer?, '
+          'YesNo).\n(box_yn(A))*confirm(P, A?) :- ground(P?) | true.\n');
+
+      // The line of [text] holding [what], from 1.
+      int lineOf(String text, String what) =>
+          text.split('\n').indexWhere((l) => l.contains(what)) + 1;
+
+      group('compiled together, is refused', () {
+        void refusedTogether(Map<String, String> files, String entry,
+            String why) {
+          files.forEach(write);
+          final path = '${dir.path}/$entry';
+          expect(
+              () => compileVglpSource(File(path).readAsStringSync(),
+                  path: path),
+              throwsA(isA<CompileError>()
+                  .having((e) => e.message, 'message', contains(why))));
+        }
+
+        // Refused with [why], at [line] and [column] of [entry].
+        void refusedAt(Map<String, String> files, String entry, String why,
+            int line, int column) {
+          files.forEach(write);
+          final path = '${dir.path}/$entry';
+          expect(
+              () => compileVglpSource(File(path).readAsStringSync(),
+                  path: path),
+              throwsA(isA<CompileError>()
+                  .having((e) => e.message, 'message', contains(why))
+                  .having((e) => (e.line, e.column), 'line and column',
+                      (line, column))));
+        }
+
+        test('one type joining from modules outside them with two functors',
+            () {
+          // one gives Box_yesNo? box_yesNo_r; two, which declares its own of
+          // the type before it imports boxes' pick, box_yesNo_r_2.
+          refusedTogether({
+            'boxes.vglp': boxes,
+            'one.vglp': '''
+$types
+exported procedure (Box_yesNo?)*one(Peer?, YesNo).
+(box_yn(A))*one(P, A?) :- ground(P?) | true.
+''',
+            'two.vglp': '''
+$types
+exported procedure (Box_yesNo?)*two(Peer?, YesNo).
+(box_yn(A))*two(P, A?) :- ground(P?) | true.
+imported procedure (Box(YesNo)?)*boxes#pick(Peer?, YesNo).
+''',
+            'a.vglp': a('imported procedure (Box_yesNo?)*one#one('
+                'Peer?, YesNo).\n'),
+            'b.vglp': b('imported procedure (Box_yesNo?)*two#two('
+                'Peer?, YesNo).\n'),
+          }, 'a.vglp',
+              'joins the questions of the modules compiled together, a, b, '
+              'with the functor box_yesNo_r from one and box_yesNo_r_2 '
+              'from two');
+        });
+
+        // "the module first in import order keeps the functor and the
+        // other takes _2" (vGLP #8 Cowork, 2026-10-11 16:44 UTC, Q1), the
+        // module first in import order "the one the program's entry imports
+        // first": where there is no entry beside them, or one importing none
+        // of them, the order is undecided and the two are refused, at the
+        // declaration of the second.  Until then the two were refused
+        // whatever the entry (the next group).
+        test('two types of two of the modules with one functor, and no '
+            'self.glp beside them, the program\'s entry: their import order '
+            'is undecided', () {
+          refusedAt(
+              {'a.vglp': pick, 'b.vglp': confirm},
+              'b.vglp',
+              'The interactive types Box(YesNo)? of a and Box_yesNo? of b, '
+              'of the modules compiled together, a, b, both have the '
+              'functor box_yesNo_r: "the module first in import order keeps '
+              'the functor and the other takes _2" (vGLP #8 Cowork, '
+              '2026-10-11 16:44 UTC, Q1), and their import order is '
+              'undecided: there is no self.glp beside them, the program\'s '
+              'entry',
+              lineOf(confirm, '*confirm('),
+              1);
+        });
+
+        test('the same, the self.glp beside them importing none of them',
+            () {
+          refusedAt(
+              {
+                'a.vglp': pick,
+                'b.vglp': confirm,
+                'self.glp': 'exported procedure go(Integer).\ngo(1).\n',
+              },
+              'a.vglp',
+              'and their import order is undecided: the self.glp beside them, '
+              'the program\'s entry, imports none of them, directly or '
+              'through the modules beside it',
+              lineOf(pick, 'b#jot_b('),
+              1);
+        });
+
+        test('one of them refused refuses the others', () {
+          refusedTogether({
+            'a.vglp': a('procedure go(Note).\ngo(N?) :- jot_a(N, _).\n'),
+            'b.vglp': b(''),
+          }, 'b.vglp',
+              'The module a, compiled together with this one');
+        });
+      });
+
+      // vGLP #8 Cowork, 2026-10-11 16:44 UTC (Udi approved), answering Code
+      // #7's 16:19 UTC: "Q1: yes, the module first in import order keeps the
+      // functor and the other takes _2.  Q2: yes, the module that defines a
+      // type declares its widget, and the others declare none for it."
+      // Until then both were refused (the group above).
+      group('compiled together, by the rulings of vGLP #8 Cowork, 2026-10-11 '
+          '16:44 UTC', () {
+        String compiled(String name) {
+          final path = '${dir.path}/$name';
+          return compileVglpSource(File(path).readAsStringSync(), path: path);
+        }
+
+        // The questions of a and of b, each one union.
+        void questions(String expected) {
+          for (final m in ['a.vglp', 'b.vglp']) {
+            expect(compiled(m), contains('Question ::= $expected.'),
+                reason: m);
+          }
+        }
+
+        test('(Q1) two types of two of them with one functor: the module the '
+            'self.glp beside them, the program\'s entry, imports first keeps '
+            'it, and the other takes _2', () {
+          write('a.vglp', pick);
+          write('b.vglp', confirm);
+          // The entry imports a's pick first.
+          write('self.glp', '''
+$types
+imported procedure a#pick(Peer?, YesNo, Stream(_)).
+imported procedure b#confirm(Peer?, YesNo, Stream(_)).
+''');
+          questions('note_r(Note?) ; box_yesNo_r(Box(YesNo)?) ; '
+              'box_yesNo_r_2(Box_yesNo?)');
+          expect(compiled('a.vglp'),
+              contains("[ask('Box(YesNo)?', box_yesNo_r(X)) | D?]"));
+          expect(compiled('b.vglp'),
+              contains("[ask('Box_yesNo?', box_yesNo_r_2(X)) | D?]"));
+          // The entry imports b's confirm first.
+          write('self.glp', '''
+$types
+imported procedure b#confirm(Peer?, YesNo, Stream(_)).
+imported procedure a#pick(Peer?, YesNo, Stream(_)).
+''');
+          questions('note_r(Note?) ; box_yesNo_r_2(Box(YesNo)?) ; '
+              'box_yesNo_r(Box_yesNo?)');
+          expect(compiled('a.vglp'),
+              contains("[ask('Box(YesNo)?', box_yesNo_r_2(X)) | D?]"));
+          expect(compiled('b.vglp'),
+              contains("[ask('Box_yesNo?', box_yesNo_r(X)) | D?]"));
+        });
+
+        test('(Q1) the same, the entry importing b first through a module '
+            'beside them, before it imports a', () {
+          write('a.vglp', pick);
+          write('b.vglp', confirm);
+          write('home.vglp', '''
+$types
+imported procedure (Box_yesNo?)*b#confirm(Peer?, YesNo).
+exported procedure go(Peer?, YesNo).
+go(P, A?) :- ground(P?) | b # confirm(P?, A).
+''');
+          write('self.glp', '''
+$types
+imported procedure home#go(Peer?, YesNo, Stream(_)).
+imported procedure a#pick(Peer?, YesNo, Stream(_)).
+''');
+          questions('note_r(Note?) ; box_yesNo_r_2(Box(YesNo)?) ; '
+              'box_yesNo_r(Box_yesNo?)');
+          // home, beside them, has their questions as b's export gives
+          // them.
+          expect(
+              compiled('home.vglp'),
+              contains('Question ::= note_r(Note?) ; '
+                  'box_yesNo_r_2(Box(YesNo)?) ; box_yesNo_r(Box_yesNo?).'));
+        });
+
+        test('(Q2) a widget declaration of one of them for a type it defines '
+            'gives the type its widget in each of them, another that '
+            'defines it too declaring none', () {
+          // a and b both define Note?, jot_a and jot_b; a declares its
+          // widget.
+          final mediator = MediatorSource.fromDirectory('$_programs/vglp');
+          final scope = rootScope(File('$_programs/self.glp').absolute.path);
+          write('a.vglp', a('Note? =::= note_pad.\n'));
+          write('b.vglp', b(''));
+          for (final m in ['a.vglp', 'b.vglp']) {
+            final path = '${dir.path}/$m';
+            final s = compileVglpSource(File(path).readAsStringSync(),
+                mediator: mediator, scope: scope, path: path);
+            expect(
+                s,
+                contains('construct(Id, note_r(X?), Gs, Ds?) :- '
+                    'answer_note([], X, Gs?, _, Done), '
+                    'run(Id?, note_pad, [input([])], Done?, Ds).'),
+                reason: m);
+          }
+        });
+      });
+
+      test('a type of theirs is told apart from a functor imported from '
+          'outside them, and a type imported from outside them is one of '
+          'theirs too', () {
+        // one gives Box_yesNo? box_yesNo_r; a's own Box(YesNo)? is told
+        // apart, box_yesNo_r_2, in a and in b.
+        write('one.vglp', '''
+$types
+exported procedure (Box_yesNo?)*one(Peer?, YesNo).
+(box_yn(A))*one(P, A?) :- ground(P?) | true.
+''');
+        const a = '''
+$types
+imported procedure (Note?)*b#jot_b(Note).
+exported procedure (Box(YesNo)?)*pick(Peer?, YesNo).
+(box(A))*pick(P, A?) :- ground(P?) | true.
+''';
+        const b = '''
+$types
+imported procedure (Box(YesNo)?)*a#pick(Peer?, YesNo).
+imported procedure (Box_yesNo?)*one#one(Peer?, YesNo).
+exported procedure (Note?)*jot_b(Note).
+(N)*jot_b(N?).
+''';
+        final pa = write('a.vglp', a), pb = write('b.vglp', b);
+        expect(
+            compileVglpSource(a, path: pa),
+            contains('Question ::= box_yesNo_r_2(Box(YesNo)?) ; '
+                'box_yesNo_r(Box_yesNo?) ; note_r(Note?).'));
+        expect(
+            compileVglpSource(b, path: pb),
+            contains('Question ::= box_yesNo_r_2(Box(YesNo)?) ; '
+                'box_yesNo_r(Box_yesNo?) ; note_r(Note?).'));
       });
     });
   });

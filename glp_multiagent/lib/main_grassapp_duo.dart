@@ -310,12 +310,12 @@ class _DuoScreenState extends State<DuoScreen> {
         human?.commandPort?.send(UserInput(const GAtom('balance')));
       }
       setState(() {});
-    } else if (msg is AgentOutput) {
+    } else if (msg is AgentNotify) {
+      // What the agent's program emits to the person, the term whole; the
+      // agent's transcript (AgentOutput) is not the screen's.
       final state = _agents[msg.agentId];
       if (state != null && state.ui != null) {
-        final boundaryLine =
-            msg.line.startsWith('< ') ? msg.line.substring(2) : msg.line;
-        state.ui!.handleLine(boundaryLine);
+        state.ui!.handle(msg.term);
         setState(() {});
       }
     } else if (msg is AgentLog) {
