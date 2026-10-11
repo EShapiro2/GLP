@@ -22,6 +22,8 @@ import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart' show GlobalName;
 import 'package:glp_runtime/multiagent/glp_network.dart'
     show GlpNetwork, ProximityUnderlay, PubKey, TrustLevel;
+import 'package:glp_runtime/multiagent/simulation_network.dart'
+    show SimulationNetworkClient;
 import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 import 'package:glp_runtime/wire/artefact.dart' show Artefact;
 import 'package:glp_runtime/wire/codec.dart';
@@ -129,6 +131,8 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   registry.register('_place_declare', 3, placeDeclareKernel);
   registry.register('_place_remove', 1, placeRemoveKernel);
   registry.register('_trust_declare', 2, trustDeclareKernel);
+  registry.register('_peer_declare', 1, peerDeclareKernel);
+  registry.register('_address_declare', 2, addressDeclareKernel);
 
   // Module-as-value: producer half. (`_run`/2 — the consumer — is registered by
   // the engine from engine_v2/module_kernels.dart, where CodeImage is in scope.)
@@ -1251,11 +1255,11 @@ BodyKernelResult loadFileKernel(GlpRuntime rt, List<Object?> args) {
 // NETWORKING SEAM KERNELS (Definition Seam Predicates)
 // =============================================================================
 //
-// The five kernels behind peer_address/2, punch_udp/1, place_declare/3,
-// place_remove/1 and trust_declare/2, five of the seven seam predicates (IGLP,
-// Definition "Seam Predicates"); the kernels of the other two, peer_declare/1
-// and address_declare/2, over GlpNetwork.putKnownPeer and putPeerAddress, are
-// not yet in the runtime. Each reaches the networking layer through
+// The seven kernels behind the seven seam predicates (IGLP, Definition "Seam
+// Predicates"): peer_address/2, punch_udp/1, place_declare/3, place_remove/1,
+// trust_declare/2, and peer_declare/1 and address_declare/2 over
+// GlpNetwork.putKnownPeer and putPeerAddress, the last two since 2026-10-11
+// (GLP-Spec 6e9c276, IGLP c2292b9). Each reaches the networking layer through
 // MadContext.network, a GlpNetwork; the layer functions are
 // GLP-Networking-API's, specified with the seam contract. Their effects lie outside the madGLP transition system, as
 // sign's and self_module's do.
@@ -1492,6 +1496,112 @@ BodyKernelResult trustDeclareKernel(GlpRuntime rt, List<Object?> args) {
     seam.network.setTrustLevel(underlay, level);
   } on UnsupportedError catch (e) {
     print('[ABORT] \'_trust_declare\'/2: ${e.message}');
+    return BodyKernelResult.abort;
+  }
+  return BodyKernelResult.success;
+}
+
+/// The key of the peer a program names in a seam predicate's `Key` argument
+/// [name], or null where [name] names none.  Over a real network an agent's
+/// name is its public key (IGLP, Remark "Agent Names"), presented as 64 hex
+/// characters; the simulation realisation names agents symbolically, "resolved
+/// to keys at the seam" (IGLP appendix-implementation-notes.tex, "Simulation
+/// realisation"), through the identifier--key directory its router owns, as its
+/// hosts resolve a message's destination.  A key in hex, as self_key/1 gives
+/// it, names its peer there too.
+PubKey? _peerKey(GlpNetwork network, String name) {
+  if (network is SimulationNetworkClient) {
+    final pk = network.directory.pkOf(name);
+    if (pk != null) return pk;
+  }
+  if (!RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(name)) return null;
+  return PubKey.fromHex(name);
+}
+
+/// '_peer_declare'(P?) — give the layer the public key P of a peer the program
+/// knows, `putKnownPeer(pk)`, and return nothing (IGLP, Definition "Seam
+/// Predicates": "peer_declare gives the layer the public key P of a peer the
+/// program knows"; GLP-Spec appendix-guards, the row '_peer_declare'(Key?) and
+/// "Known peers").  The known-peer set is what Closed trust recognises (GNA,
+/// "Known Peers"); in the simulation the router answers a first contact from a
+/// declared peer under closed ("Simulation realisation").  A P that names no
+/// peer is a violated precondition, and so an abort.  Where no layer is bound
+/// it returns having done nothing ("One interface", 6ba0329).
+BodyKernelResult peerDeclareKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 1) {
+    print('[ABORT] \'_peer_declare\'/1: expected 1 argument, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  final name = _groundString(rt, args[0]);
+  if (name == null) {
+    print('[ABORT] \'_peer_declare\'/1: argument (P) must be a ground constant '
+        'naming a peer, got ${_deref(rt, args[0])}');
+    return BodyKernelResult.abort;
+  }
+
+  final seam = _seamLayer(rt);
+  if (seam == null) return BodyKernelResult.success;
+
+  final pk = _peerKey(seam.network, name);
+  if (pk == null) {
+    print('[ABORT] \'_peer_declare\'/1: $name names no peer: neither a '
+        '64-character hex public key nor an agent the layer names');
+    return BodyKernelResult.abort;
+  }
+
+  try {
+    seam.network.putKnownPeer(pk);
+  } on UnsupportedError catch (e) {
+    print('[ABORT] \'_peer_declare\'/1: ${e.message}');
+    return BodyKernelResult.abort;
+  }
+  return BodyKernelResult.success;
+}
+
+/// '_address_declare'(P?, A?) — give the layer the address A at which peer P
+/// is reached, `putPeerAddress(pk, address)`, and return nothing (IGLP,
+/// Definition "Seam Predicates": "address_declare the address A at which peer
+/// P is reached"; GLP-Spec appendix-guards, the row '_address_declare'(Key?,
+/// String?) and "Known peers").  The layer records it with the known peer
+/// (GNA, "Connectivity and Address"); the simulation realisation takes it to
+/// no effect, "the effect of address_declare/2" not being provided
+/// ("Simulation realisation").  A P that names no peer is a violated
+/// precondition, and so an abort.  Where no layer is bound it returns having
+/// done nothing ("One interface", 6ba0329).
+BodyKernelResult addressDeclareKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    print('[ABORT] \'_address_declare\'/2: expected 2 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  final name = _groundString(rt, args[0]);
+  if (name == null) {
+    print('[ABORT] \'_address_declare\'/2: first argument (P) must be a ground '
+        'constant naming a peer, got ${_deref(rt, args[0])}');
+    return BodyKernelResult.abort;
+  }
+  final address = _groundString(rt, args[1]);
+  if (address == null) {
+    print('[ABORT] \'_address_declare\'/2: second argument (A) must be a '
+        'ground constant address, got ${_deref(rt, args[1])}');
+    return BodyKernelResult.abort;
+  }
+
+  final seam = _seamLayer(rt);
+  if (seam == null) return BodyKernelResult.success;
+
+  final pk = _peerKey(seam.network, name);
+  if (pk == null) {
+    print('[ABORT] \'_address_declare\'/2: $name names no peer: neither a '
+        '64-character hex public key nor an agent the layer names');
+    return BodyKernelResult.abort;
+  }
+
+  try {
+    seam.network.putPeerAddress(pk, address);
+  } on UnsupportedError catch (e) {
+    print('[ABORT] \'_address_declare\'/2: ${e.message}');
     return BodyKernelResult.abort;
   }
   return BodyKernelResult.success;
