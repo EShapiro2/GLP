@@ -182,10 +182,6 @@ procedure form_module(_?, Formed(Module)).
 form_module(R, F?) :- module(R?) | F = formed(R?).
 form_module(_, refused) :- otherwise | true.
 
-procedure form_any(_?, Formed(_)).
-form_any(R, F?) :- ground(R?) | F = formed(R?).
-form_any(_, refused) :- otherwise | true.
-
 %% --- the construct process of each interactive type ---
 
 exported procedure dispatch(Stream(Ask(Question))?, Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
