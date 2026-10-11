@@ -5512,6 +5512,24 @@ HEREDOC
 check "SG grassapp escrow: released to the beneficiary" "tagged(frank, escrow_released(charlie))" "$sg_escrow"
 check "SG grassapp escrow: expired at the depositor" "tagged(charlie, escrow_expired(frank))" "$sg_escrow"
 
+# A message the person addresses to someone who is not their friend is not
+# sent, and the agent tells the person so (GSG paper, Section 5.1), in the
+# super-app prototype as in the social graph (play_not_a_friend_headless.glp):
+# alice's person sends carol, not her friend, a message and is shown
+# not_a_friend(carol); only then does she call bob, and once they are friends
+# her message to him reaches him.  The output's lines are joined so that the
+# second check holds the two in their order.
+sg_naf_ga=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/grassapp
+:limit 5000000
+play_not_a_friend.
+:quit
+HEREDOC
+2>&1)
+check "SG grassapp not_a_friend: a send to someone not a friend is not sent, and the person is told not_a_friend" "tagged(alice, not_a_friend(carol))" "$sg_naf_ga"
+check "SG grassapp not_a_friend: a later message to a friend is delivered" "tagged(alice, not_a_friend(carol)).*tagged(bob, received(alice, hi_bob))" "$(echo "$sg_naf_ga" | tr '\n' ' ')"
+check_not "SG grassapp not_a_friend no failed play" "→ failed" "$sg_naf_ga"
+
 sg_village=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/grassapp
 :limit 5000000

@@ -4,8 +4,8 @@
 %% The typed social agent (cold-call befriending, friend channels, one-to-one
 %% messaging) extended with MATURITY-AWARE holdings and the currency
 %% transactions. Self contained: carries its own copies of the social helpers
-%% (merge, lookup_send, inject_msg, bind_response, handle_response) so the
-%% scenario loads without the social-graph modules.
+%% (merge, lookup_send, anchor_friend, send_step, inject_msg, bind_response,
+%% handle_response) so the scenario loads without the social-graph modules.
 %%
 %% State is the spec pair (c_p, d*_p) plus a mint counter:
 %%   Holdings   — multiset of bonds, Stream(Bond)   (c_p)
@@ -51,6 +51,28 @@ lookup_send_step(Key, Msg, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
     otherwise |
     lookup_send_step(Key?, Msg?, Rest?, Rest1).
 lookup_send_step(_, _, [], []).
+
+%% anchor_friend(Key, Outs, Outs1, F): found(Key) where the outputs list holds a
+%% friend entry output(Key, ...), none where it holds none; the outputs passed
+%% through.  social/graph's core/agent.glp anchor_friend/4, over this program's
+%% friend entry.
+procedure anchor_friend(Key?, OutputsList?, OutputsList, AnchorFriend).
+anchor_friend(Key, [output(K, Out?) | Rest], [output(K?, Out) | Rest?], found(K?)) :-
+    Key? =?= K? | true.
+anchor_friend(Key, [E | Rest], [E? | Rest1?], F?) :-
+    otherwise | anchor_friend(Key?, Rest?, Rest1, F).
+anchor_friend(_, [], [], none).
+
+%% send_step(F, ...): the person's message, dispatched on the lookup of the
+%% outputs list (GSG Section 5.1).  Where Target has a friend output entry the
+%% message is sent on the friend channel; where it has none the message is not
+%% sent, and the person is told not_a_friend(Target).  social/graph's
+%% core/agent.glp send_step/6, its friend router this program's lookup_send/4.
+procedure send_step(AnchorFriend?, Key?, Key?, Constant?, OutputsList?, OutputsList).
+send_step(found(_), Id, Target, Text, Outs, Outs1?) :-
+    lookup_send(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1).
+send_step(none, _, Target, _, Outs, Outs1?) :-
+    send_person(msg(agent, person, not_a_friend(Target?)), Outs?, Outs1).
 
 %% The person's entry carries no key: there is one person, and its element type
 %% is AgentMsg, so this is the only way anything reaches the person channel.
@@ -645,10 +667,17 @@ agent(Id, [msg(person, Id1, decision(Dec, From, response(Resp?)))|UserIn], NetIn
     bind_response(Dec?, From?, Resp, Outs?, Outs1, NetIn?, NetIn1),
     agent(Id?, UserIn?, NetIn1?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
+%% The person sends a message (GSG Section 5.1): a message the person addresses
+%% to someone who is not their friend is not sent, and the agent tells the
+%% person so.  Whether Target has a friend output entry is a procedure over the
+%% outputs list, which no guard admits, so it is a body goal and send_step/6
+%% dispatches on its answer --- the lookup and dispatch of social/graph's
+%% core/agent.glp.
 agent(Id, [msg(person, Id1, send(Target, Text))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(Target?) |
-    lookup_send(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
+    anchor_friend(Target?, Outs?, Outs1, F),
+    send_step(F?, Id?, Target?, Text?, Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
 
 agent(Id, [response(From, Resp)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?) |

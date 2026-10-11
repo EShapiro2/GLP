@@ -131,6 +131,14 @@ ui_mediator(Id, ch([msg(agent, person, received(From, Text))|AgentIn], AgentOut?
     send(received(From?, Text?), UserCh?, UserCh1),
     ui_mediator(Id?, ch(AgentIn?, AgentOut), UserCh1?, Ps?, N?).
 
+%% A message the person addressed to someone who is not their friend was not
+%% sent, and the agent tells the person so (GSG Section 5.1).
+ui_mediator(Id, ch([msg(agent, person, not_a_friend(Who))|AgentIn], AgentOut?),
+            UserCh, Ps, N) :-
+    ground(Who?) |
+    send(not_a_friend(Who?), UserCh?, UserCh1),
+    ui_mediator(Id?, ch(AgentIn?, AgentOut), UserCh1?, Ps?, N?).
+
 %% Holdings are reported per (owner, issuer, maturity) so the wallet can show
 %% cash (mature) and loans (dated) as distinct views.
 ui_mediator(Id, ch([msg(agent, person,
