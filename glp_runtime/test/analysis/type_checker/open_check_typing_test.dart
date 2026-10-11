@@ -50,8 +50,8 @@ void main() {
 
   test('a constant where an Integer is read, X open: refused', () {
     final err = _refusal('open_typed_constant.glp');
-    expect(err, contains('No instantiation of q/2 for the call q("foo", _)'));
-    expect(err, contains('argument 1, "foo", has no well-typing at any '
+    expect(err, contains('No instantiation of q/2 for the call q(foo, _)'));
+    expect(err, contains('argument 1, foo, has no well-typing at any '
         'expansion of Integer?'));
   });
 

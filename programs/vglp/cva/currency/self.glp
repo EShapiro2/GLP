@@ -1,0 +1,107 @@
+%% ---------------------------------------------------------------------------
+%% The plays of the canonical CVA platform of Jurix's currency
+%% (programs/jurix, contract_named(currency, C); Jurix, Section 3.4, the cent
+%% sign written coin), platform.vglp, which programs/vglp/cva/compile.sh prints
+%% from it.  Each runs two agents, alice and bob, their persons scripted and
+%% paced on their threads (../self.glp), and gives each person's log: the
+%% thread, with gave(C, A) where the person answers a card.  swap(P, Q, V, U):
+%% P gives a coin of U and takes one of V, Q the converse.
+%%
+%% play_pay_swap: each mints a coin of its own; alice proposes swapping hers
+%%   for bob's, bob is asked and answers yes, and the swap commits on the two
+%%   wills; alice then pays bob his coin back, guarded by her alone, and bob's
+%%   machine concurs.
+%% play_pledged: alice mints one coin and offers it in a swap bob does not
+%%   answer; her next proposal, a swap offering the same coin, is dropped, the
+%%   coin pledged to the first (vGLP, Definition "Vote, App State, Pledged
+%%   State, Compatible Effect"), and a mint after it is taken.
+%% play_declined: alice proposes a swap for a coin bob does not hold; bob's
+%%   machine declines it, its effect incompatible, and the attempt aborts at
+%%   both.
+%% play_closed: bob is asked about alice's swap and, before answering, offers
+%%   his coin elsewhere; his machine then declines the swap, which closes the
+%%   card (vGLP, Section 5.4, "a card being closed by the agent's own Decline
+%%   and by Abort"), and the yes bob gives it after is taken by no Answer.
+%%
+%% The types of platform.vglp, written again for the declarations of the
+%% procedures imported from its compiled module.
+%% ---------------------------------------------------------------------------
+
+Class    ::= mint(Peer) ; swap(Peer, Peer, Peer, Peer) ; pay(Peer, Peer)
+           ; redeem(Peer, Peer, Peer).
+Request  ::= propose(Class) ; known(Peer).
+Verdict  ::= will ; yes ; no.
+Vote     ::= vote(Peer, Integer, Class, Verdict).
+Content  ::= hello(Peer) ; cargo(Peer, Integer, Vote).
+Net      ::= msg(Peer, Content).
+Txn      ::= propose(Class) ; relay(Class) ; ask(Class) ; answer(Class)
+           ; concur(Class) ; decline(Class) ; commit(Class) ; abort(Class)
+           ; record(Peer).
+Session  ::= session(Stream(Request)?, Stream(Txn)).
+YesNo    ::= yes ; no.
+Attempt  ::= attempt(Class, Integer).
+Card     ::= card(Attempt, YesNo?).
+Question ::= session_w(Session) ; card_w(Card).
+Ask(Q)   ::= ask(Constant, Q).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+
+exported procedure play_pay_swap(Stream(_), Stream(_)).
+play_pay_swap(LA?, LB?) :-
+    pair([req(propose(mint(alice))), wait(commit(mint(alice))),
+          req(known(bob)), wait(record(bob)),
+          req(propose(swap(alice, bob, bob, alice))),
+          wait(commit(swap(alice, bob, bob, alice))),
+          req(propose(pay(alice, bob)))],
+         [req(propose(mint(bob))), wait(commit(mint(bob))),
+          req(known(alice)), wait(record(alice)),
+          card(swap(alice, bob, bob, alice), yes)],
+         LA, LB).
+
+exported procedure play_pledged(Stream(_), Stream(_)).
+play_pledged(LA?, LB?) :-
+    pair([req(propose(mint(alice))), wait(commit(mint(alice))),
+          req(known(bob)), wait(record(bob)),
+          req(propose(swap(alice, bob, bob, alice))),
+          req(propose(swap(alice, bob, carol, alice))),
+          req(propose(mint(alice)))],
+         [req(propose(mint(bob))), wait(commit(mint(bob))),
+          req(known(alice))],
+         LA, LB).
+
+exported procedure play_declined(Stream(_), Stream(_)).
+play_declined(LA?, LB?) :-
+    pair([req(propose(mint(alice))), wait(commit(mint(alice))),
+          req(known(bob)), wait(record(bob)),
+          req(propose(swap(alice, bob, carol, alice)))],
+         [req(known(alice))],
+         LA, LB).
+
+exported procedure play_closed(Stream(_), Stream(_)).
+play_closed(LA?, LB?) :-
+    pair([req(propose(mint(alice))), wait(commit(mint(alice))),
+          req(known(bob)), wait(record(bob)),
+          req(propose(swap(alice, bob, bob, alice)))],
+         [req(propose(mint(bob))), wait(commit(mint(bob))),
+          req(known(alice)), wait(record(alice)),
+          wait(ask(swap(alice, bob, bob, alice))),
+          req(propose(swap(bob, alice, carol, bob))),
+          wait(decline(swap(alice, bob, bob, alice))),
+          card(swap(alice, bob, bob, alice), yes)],
+         LA, LB).
+
+%% alice and bob, each with its dispatcher and scripted person, their networks
+%% joined.
+procedure pair(Steps?, Steps?, Stream(_), Stream(_)).
+pair(SA, SB, LA?, LB?) :-
+    platform # agent(alice, InA?, OutA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), _),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), _),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    merge(OutA?, OutB?, Net),
+    route(Net?, alice, InA, bob, InB).

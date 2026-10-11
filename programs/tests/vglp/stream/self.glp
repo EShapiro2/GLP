@@ -21,7 +21,7 @@
 %% The types of chat.vglp and those its compilation adds, written again for
 %% the declarations of the procedures imported from its compiled module.
 
-Peer     ::= Constant.
+Peer     ::= Key.
 Msg      ::= msg(Peer, String).
 Question ::= stream_string_r(Stream(String)?).
 Ask(Q)   ::= ask(Constant, Q).

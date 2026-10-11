@@ -416,7 +416,9 @@ void _printHelp() {
 /// Cowork, 2026-10-04 09:06 UTC, "23:49. Q1 and Q3"), each constant and
 /// functor as the printer writes it (glp_printer.dart, [constantSource],
 /// [functorNameSource]): `'G'`, `'+'`, `'42'` and `'a b'` in single quotes,
-/// a string literal in double quotes.  Until 2026-10-04 a constant was shown
+/// `"str"`, the string `str`, as `str` (GLP #3 Cowork, 2026-10-04 15:19 UTC,
+/// FAULT 2 (b): the double-quoted form is read and never printed).  Until
+/// 2026-10-04 a constant was shown
 /// unquoted, as send_to_user/1 shows it to the person, which stays as it is
 /// (body_kernels.dart, `formatGroundTerm`): `'G'` was shown `G`, a variable.
 String _formatTerm(rt.Term? term, [GlpEngine? engine, Set<HeapCell>? path]) {

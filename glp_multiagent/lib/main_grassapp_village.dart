@@ -20,9 +20,11 @@ import 'package:flutter/material.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
 
 import 'glp_sources.dart';
+import 'isolate_protocol.dart' show screenTermOf;
 import 'manifests/grassapp_ui.dart';
 import 'ui_runtime/agent_surface.dart';
 import 'ui_runtime/runtime.dart';
+import 'ui_runtime/term.dart';
 
 void main() => runApp(const VillageApp());
 
@@ -61,7 +63,7 @@ const _villagers = <_Villager>[
 /// One replayable notify: which agent's phone, and the term to hand its runtime.
 class _Ev {
   final String agent;
-  final String notify;
+  final GTerm notify;
   const _Ev(this.agent, this.notify);
 }
 
@@ -124,11 +126,13 @@ class _VillageScreenState extends State<VillageScreen> {
       // programs/grassapp is a program (SGSG, d27e4d6a): loaded as one, its
       // self.glp exports play_village as an entry point.
       engine.loadProgram(glp.grassappDir);
-      final captured = <String>[];
-      engine.runtime.outputCallback = captured.add;
+      // What send_to_user/1 emits, each term whole: the village's play tags
+      // each notify with the phone it is for.
+      final captured = <GTerm>[];
+      engine.runtime.outputTermCallback = (t) => captured.add(screenTermOf(t));
       await engine.runGoal('play_village.');
-      for (final line in captured) {
-        final ev = _parseTagged(line);
+      for (final term in captured) {
+        final ev = _tagged(term);
         if (ev != null) _events.add(ev);
       }
       setState(() {
@@ -145,17 +149,15 @@ class _VillageScreenState extends State<VillageScreen> {
     }
   }
 
-  /// `tagged(agent, notify)` -> `_Ev`; null for any other line.
-  _Ev? _parseTagged(String raw) {
-    final line = raw.trim();
-    final i = line.indexOf('tagged(');
-    if (i < 0) return null;
-    var s = line.substring(i + 7);
-    if (!s.endsWith(')')) return null;
-    s = s.substring(0, s.length - 1);
-    final c = s.indexOf(',');
-    if (c < 0) return null;
-    return _Ev(s.substring(0, c).trim(), s.substring(c + 1).trim());
+  /// `tagged(agent, notify)` -> `_Ev`; null for any other term.  Until
+  /// 2026-10-11 this read the line the play printed.
+  _Ev? _tagged(GTerm t) {
+    if (t is! GStruct || t.functor != 'tagged' || t.args.length != 2) {
+      return null;
+    }
+    final agent = t.args[0];
+    if (agent is! GAtom) return null;
+    return _Ev(agent.name, t.args[1]);
   }
 
   void _play() {
@@ -173,8 +175,8 @@ class _VillageScreenState extends State<VillageScreen> {
         return;
       }
       final ev = _events[_cursor++];
-      _uis[ev.agent]?.handleLine(ev.notify);
-      setState(() => _status = '${ev.agent}  ◂  ${ev.notify}');
+      _uis[ev.agent]?.handle(ev.notify);
+      setState(() => _status = '${ev.agent}  ◂  ${formatTerm(ev.notify)}');
     });
   }
 

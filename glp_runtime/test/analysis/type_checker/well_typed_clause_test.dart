@@ -12,6 +12,7 @@ import 'package:glp_runtime/analysis/type_checker/mode.dart';
 import 'package:glp_runtime/analysis/type_checker/program_dfa.dart';
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
 import 'package:glp_runtime/compiler/ast.dart' as ast;
+import 'package:glp_runtime/runtime/terms.dart' as rt show nil;
 
 void main() {
   group('checkClause', () {
@@ -76,10 +77,13 @@ void main() {
       final streamDual = streamState(isDual: true);
       final finalState = state('_FINAL_', isFinal: true);
 
-      // Create automaton for Stream type with [] and [|] transitions
+      // Create automaton for Stream type with [] and [|] transitions.  The
+      // [] transition is the empty list's, the runtime's rt.nil: until
+      // 2026-10-10 it was written TransitionLabel.constant('[]'), which is now
+      // the string '[]' (GLP #3 Cowork, 2026-10-09 18:38 UTC, "12:19", (ii)).
       final streamTransitions = <(DFAState, TransitionLabel), DFAState>{
         // [] transition
-        (stream, TransitionLabel.constant('[]')): finalState,
+        (stream, TransitionLabel.constant(rt.nil)): finalState,
         // [H|T] transitions
         (stream, TransitionLabel.functor('[|]', 2, 1, mode: Mode.produce)): prodWild,
         (stream, TransitionLabel.functor('[|]', 2, 2, mode: Mode.produce)): stream,
@@ -87,7 +91,7 @@ void main() {
 
       // Create automaton for Stream? (dual) type
       final streamDualTransitions = <(DFAState, TransitionLabel), DFAState>{
-        (streamDual, TransitionLabel.constant('[]')): finalState,
+        (streamDual, TransitionLabel.constant(rt.nil)): finalState,
         (streamDual, TransitionLabel.functor('[|]', 2, 1, mode: Mode.consume)): consWild,
         (streamDual, TransitionLabel.functor('[|]', 2, 2, mode: Mode.consume)): streamDual,
       };

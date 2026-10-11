@@ -5,10 +5,10 @@
 %% --- the source's own types ---
 
 %% --- the types the compilation adds ---
-Xs_respond_friend_1 ::= xs_respond_friend_1(Constant).
+Xs_respond_friend_1 ::= xs_respond_friend_1(String).
 Reply_respond_friend_1 ::= then(Xs_respond_friend_1).
 Ctx_respond_friend_1 ::= ctx_respond_friend_1(Key).
-Xs_respond_friend_2 ::= xs_respond_friend_2(Constant).
+Xs_respond_friend_2 ::= xs_respond_friend_2(String).
 Reply_respond_friend_2 ::= then(Xs_respond_friend_2).
 Ctx_respond_friend_2 ::= ctx_respond_friend_2(Key).
 Xs_home_1 ::= xs_home_1(String).
@@ -33,12 +33,12 @@ PendingEntry ::= pending(ReqId, Escrow).
 PendingList ::= [] ; [PendingEntry | PendingList].
 
 %% --- the display declarations, carried through ---
-display home *(Key) : panel(apps), label("Trust a compiler"), field(Key, text), persistent.
-display home *(Name, App) : panel(apps), label("Install a mini-app"), field(Name, text), field(App, text), persistent.
-display home *(App, Friend) : panel(apps), label("Invite a friend"), field(App, peer), field(Friend, peer), persistent.
-display home *(Friend) : panel(apps), label("Connect"), field(Friend, peer), persistent.
-display respond_friend *(yes, From?) : panel(apps), label("Accept"), transient.
-display respond_friend *(no, From?) : panel(apps), label("Decline"), transient.
+display home *(Key) : panel(apps), label('Trust a compiler'), field(Key, text), persistent.
+display home *(Name, App) : panel(apps), label('Install a mini-app'), field(Name, text), field(App, text), persistent.
+display home *(App, Friend) : panel(apps), label('Invite a friend'), field(App, peer), field(Friend, peer), persistent.
+display home *(Friend) : panel(apps), label('Connect'), field(Friend, peer), persistent.
+display respond_friend *(yes, From?) : panel(apps), label('Accept'), transient.
+display respond_friend *(no, From?) : panel(apps), label('Decline'), transient.
 display msg(agent, person, connected(Friend)) : panel(apps), view(friends).
 
 %% --- the compiled agent ---

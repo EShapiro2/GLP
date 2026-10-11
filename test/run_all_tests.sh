@@ -1418,7 +1418,11 @@ check_not "single file: neither loads" "✓ Loaded" "$a40"
 # tail that is no list and no variable was posted as [] (glp_engine.dart,
 # _buildListTerm), and it is now built as written.  A name holding a quote is shown and not
 # typed back: in a here-document inside $(...) bash 3.2 pairs single quotes
-# regardless of the backslash; GlpPrinter's Dart test reads it back.
+# regardless of the backslash; GlpPrinter's Dart test reads it back.  "str" is
+# the string str, shown str: a quoted name and a double-quoted string are two
+# spellings of one string, and the double-quoted form is read and never
+# printed (GLP #3 Cowork, 2026-10-04 15:19 UTC, FAULT 2 (b)); until 2026-10-10
+# it was shown "str".
 echo "--- A41: The answer display reads back ---"
 a41=$("$REPL_RUN" <<HEREDOC
 $TYPED/display_read_back.glp
@@ -1433,7 +1437,7 @@ tails(L41).
 HEREDOC
 2>&1)
 check "display: the fixture loads" "Loaded: .*display_read_back.glp" "$a41"
-check "display: names quoted where they must be" "N41 = \['G', '+', 'mod', '42', 'a b', '_x', 'procedure', \[\], \"str\"\]" "$a41"
+check "display: names quoted where they must be" "N41 = \['G', '+', 'mod', '42', 'a b', '_x', 'procedure', \[\], str\]" "$a41"
 check "display: the shown names read back as the term" "R41 = yes" "$a41"
 check "display: the comparison can fail" "Q41 = no" "$a41"
 check "display: functors quoted where they must be" "T41 = w('G'(a), f('=\.\.', 'X'), +(1), =?=(a, b))" "$a41"
@@ -2879,7 +2883,18 @@ HEREDOC
 check "Coins village: no runtime error" "→ suspended" "$n2_run"
 check_not "Coins village: no failed goal" "ERROR" "$n2_run"
 check "Coins village: the conversations open" "tagged(frank, opened(eve))" "$n2_run"
-check "Coins village: Alice's holdings" "tagged(alice, holdings(\[lot(bob, 5), lot(charlie, 15), lot(alice, 8), lot(frank, 4)\]))" "$n2_run"
+# Alice's holdings are read as a multiset: since the port to the dispatcher's
+# person channel, bob's payment of 5 can reach her agent before her swap with
+# charlie settles, and her lots are tallied in the order they arrive
+# (Currencies #8 Cowork, 2026-10-11 13:06 UTC: "the coins holdings check reads
+# the multiset").  Each holdings line of hers, its lots sorted:
+n2_alice=$(echo "$n2_run" | grep -o 'tagged(alice, holdings(\[[^]]*\]))' | awk '{
+  s = $0; sub(/^tagged\(alice, holdings\(\[/, "", s); sub(/\]\)\)$/, "", s)
+  n = split(s, a, /\), /); for (i = 1; i < n; i++) a[i] = a[i] ")"
+  for (i = 2; i <= n; i++) { v = a[i]; j = i - 1; while (j > 0 && a[j] > v) { a[j + 1] = a[j]; j-- } a[j + 1] = v }
+  o = ""; for (i = 1; i <= n; i++) o = o (i > 1 ? ", " : "") a[i]
+  print "alice holds {" o "}" }')
+check "Coins village: Alice's holdings" "^alice holds {lot(alice, 8), lot(bob, 5), lot(charlie, 15), lot(frank, 4)}$" "$n2_alice"
 check "Coins village: Bob's holdings" "tagged(bob, holdings(\[lot(alice, 10), lot(diana, 20)\]))" "$n2_run"
 check "Coins village: Charlie's holdings" "tagged(charlie, holdings(\[lot(alice, 10), lot(eve, 10), lot(charlie, 6), lot(frank, 5)\]))" "$n2_run"
 check "Coins village: Diana's holdings" "tagged(diana, holdings(\[lot(bob, 24), lot(frank, 13), lot(diana, 8)\]))" "$n2_run"
@@ -3321,7 +3336,9 @@ echo "--- The live-person harness (sovereign_ui): the central bank on the app's 
 # Definition "Person Channel, Person Writer, GLP with Persons, Grant";
 # PersonIn ::= [_ | PersonIn]).  The central bank's request form --- the
 # agent's question, one form per alternative of its twelve requests, Mint
-# coins the first and Return the twelfth --- is drawn, and its two opened
+# coins the first and Return the twelfth, each field labelled by the name of
+# its declared type and a Key a peer field (vGLP, Definition "Widget
+# Declaration, Default Widget") --- is drawn, and its two opened
 # conversations reach its screen, by send_to_user/1, one term to a line, as
 # the bridge reads them, while the peers' screens are tagged and nothing of
 # theirs reaches the central bank's screen; with no grant the peers mint and
@@ -3336,8 +3353,8 @@ HEREDOC
 
 check "Sovereign harness: no runtime error" "→ suspended" "$n4_ui"
 check_not "Sovereign harness: no failed goal" "ERROR" "$n4_ui"
-check "Sovereign harness: the central bank's Mint coins form stands" "draw([0-9][0-9]*, input_box(menu(\[form(mint, \[text, number\]), " "$n4_ui"
-check "Sovereign harness: and its Return form, the twelfth" "input_box(menu(\[\(form([a-z]*, \[[a-z, ]*\]), \)\{11\}form(return, \[text, text, text, text, number\])\])), input(\[\]))" "$n4_ui"
+check "Sovereign harness: the central bank's Mint coins form stands" "draw([0-9][0-9]*, input_box(menu(\[form(mint, \[field(Constant, text), field(Integer, number)\]), " "$n4_ui"
+check "Sovereign harness: and its Return form, the twelfth" "input_box(menu(\[\(form([a-z]*, \[[A-Za-z(), ]*\]), \)\{11\}form(return, \[field(Key, peer), field(Constant, text), field(Key, peer), field(Constant, text), field(Integer, number)\])\])), input(\[\]))" "$n4_ui"
 check "Sovereign harness: its conversation with the community bank reaches its screen" "msg(agent, person, opened(diana))" "$n4_ui"
 check "Sovereign harness: and with the household" "msg(agent, person, opened(frank))" "$n4_ui"
 check "Sovereign harness: the peers' screens are tagged" "tagged(diana, minted(10, now))" "$n4_ui"
@@ -3483,6 +3500,141 @@ HEREDOC
 check_not "One-clause: abort, no failed goal" "ERROR" "$vg_abort"
 check "One-clause: the reducing clause drops the open ask and its card is aborted" "tagged(abort, aborted(req(0)), \[picked(bob)\])" "$vg_abort"
 echo ""
+
+# -----------------------------------------------------------------------------
+# Section VG, continued: the compiler from an act-schema contract to its
+# canonical CVA platform in vGLP (programs/vglp/cva; vGLP, Section 3.2, the
+# paragraph on act schemas, and Section 5.4, "The canonical platform is
+# structured"; vGLP's Task C, 2026-10-11).  Jurix's social graph and currency
+# (programs/jurix) compiled, the committed modules held to what the compiler
+# prints; the contracts it refuses, not local or not effective; and the plays
+# of each platform, two agents with scripted persons paced on their threads,
+# each run on the committed module through the canonical compilation and
+# ended at the REPL's :limit, the clocks ticking without end.  A play gives
+# each person's log: its thread, the app transactions its agent takes, with
+# gave(C, A) where the person answers a card.
+# -----------------------------------------------------------------------------
+echo "--- The canonical CVA platform of an act-schema contract ---"
+CVA="$GLP_DIR/programs/vglp/cva"
+
+cva_print=$(bash "$CVA/compile.sh" --check 2>&1)
+check "CVA compiler: the social graph's platform is what the compiler prints" "social_graph/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: the currency's platform is what the compiler prints" "currency/platform.vglp: as printed" "$cva_print"
+check_not "CVA compiler: no contract refused or missing" "^fault\|^missing\|NOT as printed" "$cva_print"
+
+cva_refuse=$("$REPL_RUN" <<HEREDOC
+$CVA/compiler/
+:limit 100000000
+compile(two_reqs, [schema(s1, [rs(guarded, [atom(x, [])], [], [atom(r1, [])], []), rs(guarded, [atom(y, [])], [], [atom(r2, [])], [])]), schema(s2, [rs(guarded, [atom(x, [])], [], [atom(r3, [])], []), rs(guarded, [atom(y, [])], [], [atom(r4, [])], [])])], syntactically_grassroots).
+compile(free_x, [schema(s, [rs(guarded, [atom(x1, [])], [], [atom(r, [pvar(x)])], []), rs(guarded, [atom(y1, [])], [], [atom(t, [pvar(x)])], [])])], syntactically_grassroots).
+compile(uneff, [schema(u, [rs(unguarded, [atom(x, [role(2)])], [], [], []), rs(unguarded, [atom(y, [role(1)])], [], [], [])])], syntactically_grassroots).
+compile(gossip, [], not_grassroots([no_introductory_act])).
+compile(federated, [], conditions_met).
+compile(one_req, [schema(s1, [rs(guarded, [atom(x, [])], [], [atom(r1, [])], []), rs(guarded, [atom(y, [])], [], [atom(r2, [])], [])]), schema(s2, [rs(guarded, [atom(x, [])], [], [atom(r3, [])], []), rs(guarded, [atom(y, [])], [], [atom(r2, [])], [])])], syntactically_grassroots).
+:quit
+HEREDOC
+2>&1)
+check "CVA compiler: two schemas of one class requiring different atoms at both participants, refused" "%% not compiled(two_reqs)" "$cva_refuse"
+check "CVA compiler: ... the two schema-bindings named" "%% the schema-binding(s1(person(0), person(1)))" "$cva_refuse"
+check "CVA compiler: a variable of no changed atom required at two participants, refused" "%% and the schema-binding(s(person(0), person(1), free))" "$cva_refuse"
+check "CVA compiler: an unguarded schema whose first role names no other role, refused as not effective" "%% the schema(u)" "$cva_refuse"
+check "CVA compiler: a contract not syntactically grassroots is not compiled" "%% not compiled(gossip)" "$cva_refuse"
+check "CVA compiler: a contract with community roles is not compiled" "%% not compiled(federated)" "$cva_refuse"
+check "CVA compiler: requirements differing at one participant only, compiled" "%% the canonical CVA platform of the contract(one_req)" "$cva_refuse"
+check_not "CVA compiler: ... and not refused" "%% not compiled(one_req)" "$cva_refuse"
+
+cva_sg_load=$("$REPL_RUN" <<HEREDOC
+$CVA/social_graph/
+:quit
+HEREDOC
+2>&1)
+check "CVA social graph: the platform and its plays load, compiled by the canonical compilation" "Loaded program: .*cva/social_graph" "$cva_sg_load"
+check_not "CVA social graph: no type errors" "Type checking failed" "$cva_sg_load"
+
+cva_sg_befriend=$("$REPL_RUN" <<HEREDOC
+$CVA/social_graph/
+:limit 300000
+play_befriend(A, B).
+:quit
+HEREDOC
+2>&1)
+check "CVA befriend: alice records bob, proposes, relays bob's vote and commits" "A = \[record(bob), propose(befriend(alice, bob)), relay(befriend(alice, bob)), commit(befriend(alice, bob))" "$cva_sg_befriend"
+check "CVA befriend: bob relays alice's vote, is asked, answers yes and commits" "B = \[.*relay(befriend(alice, bob)), ask(befriend(alice, bob)), gave(befriend(alice, bob), yes), answer(befriend(alice, bob)), commit(befriend(alice, bob))" "$cva_sg_befriend"
+check "CVA befriend: bob records alice" "B = \[.*record(alice)" "$cva_sg_befriend"
+
+cva_sg_unfriend=$("$REPL_RUN" <<HEREDOC
+$CVA/social_graph/
+:limit 300000
+play_unfriend(A, B).
+:quit
+HEREDOC
+2>&1)
+check "CVA unfriend: bob proposes unfriending alice and commits" "B = \[.*commit(befriend(alice, bob)), propose(unfriend(bob, alice)), relay(unfriend(bob, alice)), commit(unfriend(bob, alice))" "$cva_sg_unfriend"
+check "CVA unfriend: alice, a guard set naming her, is asked, says no, and the else-branch commits it" "A = \[.*relay(unfriend(bob, alice)), ask(unfriend(bob, alice)), gave(unfriend(bob, alice), no), answer(unfriend(bob, alice)), commit(unfriend(bob, alice))" "$cva_sg_unfriend"
+
+cva_sg_refused=$("$REPL_RUN" <<HEREDOC
+$CVA/social_graph/
+:limit 300000
+play_refused(A, B).
+:quit
+HEREDOC
+2>&1)
+check "CVA refused: bob says no to befriending, every guard set naming him, and aborts" "B = \[.*ask(befriend(alice, bob)), gave(befriend(alice, bob), no), answer(befriend(alice, bob)), abort(befriend(alice, bob))" "$cva_sg_refused"
+check "CVA refused: alice relays bob's no and aborts" "A = \[record(bob), propose(befriend(alice, bob)), relay(befriend(alice, bob)), abort(befriend(alice, bob))" "$cva_sg_refused"
+check_not "CVA refused: nothing committed" "commit(befriend" "$cva_sg_refused"
+
+cva_cur_load=$("$REPL_RUN" <<HEREDOC
+$CVA/currency/
+:quit
+HEREDOC
+2>&1)
+check "CVA currency: the platform and its plays load, compiled by the canonical compilation" "Loaded program: .*cva/currency" "$cva_cur_load"
+check_not "CVA currency: no type errors" "Type checking failed" "$cva_cur_load"
+
+cva_cur_payswap=$("$REPL_RUN" <<HEREDOC
+$CVA/currency/
+:limit 300000
+play_pay_swap(A, B).
+:quit
+HEREDOC
+2>&1)
+check "CVA pay and swap: alice mints, swaps on the two wills, and pays bob" "A = \[propose(mint(alice)), commit(mint(alice)), record(bob), propose(swap(alice, bob, bob, alice)), relay(swap(alice, bob, bob, alice)), commit(swap(alice, bob, bob, alice)), propose(pay(alice, bob)), relay(pay(alice, bob)), commit(pay(alice, bob))" "$cva_cur_payswap"
+check "CVA pay and swap: bob wills the swap on his card" "B = \[.*relay(swap(alice, bob, bob, alice)), ask(swap(alice, bob, bob, alice)), gave(swap(alice, bob, bob, alice), yes), answer(swap(alice, bob, bob, alice)), commit(swap(alice, bob, bob, alice))" "$cva_cur_payswap"
+check "CVA pay and swap: bob's machine concurs in the pay, guarded by alice alone" "B = \[.*relay(pay(alice, bob)), concur(pay(alice, bob)), commit(pay(alice, bob))" "$cva_cur_payswap"
+
+cva_cur_pledged=$("$REPL_RUN" <<HEREDOC
+$CVA/currency/
+:limit 300000
+play_pledged(A, B).
+:quit
+HEREDOC
+2>&1)
+check "CVA pledged: alice's offer pledges her coin, and the mint after is taken" "A = \[propose(mint(alice)), commit(mint(alice)), record(bob), propose(swap(alice, bob, bob, alice)), propose(mint(alice)), commit(mint(alice))" "$cva_cur_pledged"
+check_not "CVA pledged: a second offer of the pledged coin is dropped" "propose(swap(alice, bob, carol, alice))" "$cva_cur_pledged"
+check "CVA pledged: bob is asked about the first" "B = \[.*ask(swap(alice, bob, bob, alice))" "$cva_cur_pledged"
+
+cva_cur_declined=$("$REPL_RUN" <<HEREDOC
+$CVA/currency/
+:limit 300000
+play_declined(A, B).
+:quit
+HEREDOC
+2>&1)
+check "CVA declined: bob's machine declines a swap for a coin he does not hold, and aborts" "B = \[.*relay(swap(alice, bob, carol, alice)), decline(swap(alice, bob, carol, alice)), abort(swap(alice, bob, carol, alice))" "$cva_cur_declined"
+check "CVA declined: alice relays the no and aborts" "A = \[.*propose(swap(alice, bob, carol, alice)), relay(swap(alice, bob, carol, alice)), abort(swap(alice, bob, carol, alice))" "$cva_cur_declined"
+
+cva_cur_closed=$("$REPL_RUN" <<HEREDOC
+$CVA/currency/
+:limit 300000
+play_closed(A, B).
+:quit
+HEREDOC
+2>&1)
+check "CVA closed: bob, asked, offers his coin elsewhere and his machine declines, closing the card" "B = \[.*ask(swap(alice, bob, bob, alice)), propose(swap(bob, alice, carol, bob)), decline(swap(alice, bob, bob, alice))" "$cva_cur_closed"
+check "CVA closed: the yes bob gives the closed card is taken by no Answer" "B = \[.*gave(swap(alice, bob, bob, alice), yes), abort(swap(alice, bob, bob, alice))" "$cva_cur_closed"
+check_not "CVA closed: no answer to the closed card" "answer(swap(alice, bob, bob, alice))" "$cva_cur_closed"
+echo ""
+
 
 # =============================================================================
 # Section O: Currencies Multi-Isolate Tests
@@ -3703,6 +3855,8 @@ check "S2 leaf loads" "Loaded program" "$s2"
 check "S2 ancestor pmerge resolves" "Z = \[1, 4, 2, 5, 3, 6\]" "$s2"
 
 # --- S3: two distinct instantiations of the parameterised utility in one module ---
+# S3, S5, S6 and X6 show their strings in the one canonical print, a, not "a"
+# (GLP #3 Cowork, 2026-10-04 15:19 UTC, FAULT 2 (b); until 2026-10-10 "a").
 echo "--- S3: two instantiations of the parameterised utility ---"
 s3=$("$REPL_RUN" <<HEREDOC
 $SCOPE_CHAIN/leaf
@@ -3711,7 +3865,7 @@ test_both(Zi, Zc).
 HEREDOC
 2>&1)
 check "S3 integer instantiation" "Zi = \[1, 4, 2, 5, 3, 6\]" "$s3"
-check "S3 constant instantiation" "Zc = \[\"a\", \"c\", \"b\", \"d\"\]" "$s3"
+check "S3 constant instantiation" "Zc = \[a, c, b, d\]" "$s3"
 
 # --- S4: currencies/play12 is a program (TGLP Definition "Program") ---
 # TGLP Definition "Program" (parameterized-types.tex:164, TGLP 9b29563): "a directory
@@ -3738,7 +3892,7 @@ run(Result, S).
 HEREDOC
 2>&1)
 check "S5 walker loads" "Loaded program" "$s5"
-check "S5 opaque pass-through + append" "S = \[\"hello\"" "$s5"
+check "S5 opaque pass-through + append" "S = \[hello" "$s5"
 
 # --- S6: walker parameterised over the entry type ---
 echo "--- S6: parameterised walker (functor decomposition of type param) ---"
@@ -3750,7 +3904,7 @@ HEREDOC
 2>&1)
 check "S6 param walker loads" "Loaded program" "$s6"
 check "S6 functor decomposition" "more(7)" "$s6"
-check "S6 append via parameterised walker" "S = \[\"hello\"" "$s6"
+check "S6 append via parameterised walker" "S = \[hello" "$s6"
 
 # --- S7: shadowing — local definition wins over ancestor ---
 echo "--- S7: shadowing (local pmerge shadows ancestor) ---"
@@ -3894,7 +4048,7 @@ two_inst(Zi, Zc).
 HEREDOC
 2>&1)
 check "X6 integer instantiation" "Zi = \[1, 3, 2, 4\]" "$x6"
-check "X6 constant instantiation" "Zc = \[\"a\", \"b\"\]" "$x6"
+check "X6 constant instantiation" "Zc = \[a, b\]" "$x6"
 
 # --- X7: per-instantiation routing rejection (clause-template rule) ---
 # A parameterised lib router (send_user) exposed from the root, called by a

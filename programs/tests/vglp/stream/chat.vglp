@@ -5,9 +5,11 @@
 %% passes the reader on, and the question stays open until the person answers
 %% it.  The procedure is exported for the play of self.glp (vGLP's code task
 %% of 2026-10-01 16:30 UTC, test (v), its first half: a reader-mode stream
-%% question takes one element per submission).
+%% question takes one element per submission).  The peer is a Key, the agent
+%% identifier, as the paper's fragments declare it (vGLP at 66b6500; vGLP #7
+%% Cowork, 2026-10-11 14:19 UTC, item 4).
 
-Peer ::= Constant.
+Peer ::= Key.
 Msg ::= msg(Peer, String).
 exported procedure (Stream(String)?)*chat(Peer?, Stream(Msg)).
 (Ms)*chat(Peer, Out?) :- ground(Peer?) |

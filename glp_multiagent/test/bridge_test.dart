@@ -4,8 +4,9 @@
 // bridge/widgets.vglp, run by the calls of its compilation ---
 // `widgets # A(MCh?, Asks), widgets # dispatch(Asks?, ch(Gs?, Ds), MCh)`,
 // its entries in that directory's self.glp --- in the agent host, the
-// person channel's draws handed to the bridge line by line and its grants
-// injected on the person's input.  Each construct is drawn as the widget its
+// person channel's draws handed to the bridge term by term, whole, as the
+// agent emits them (AgentRuntime.onUserOutput; the bridge parses no text),
+// and its grants injected on the person's input.  Each construct is drawn as the widget its
 // draw names in the grassroots app's construct family (Definition "Widget
 // Declaration, Default Widget"), answered through the screen, returned as
 // input(Id, P, R), received by the module's goal --- which writes got(Q, X)
@@ -21,6 +22,7 @@ import 'package:glp_multiagent/ui_runtime/runtime.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
 
+import 'fixture_term.dart';
 import 'programs_dir.dart';
 
 /// One panel, whose one view is the default display: every screen message
@@ -50,7 +52,9 @@ class _Person {
   final List<String> grants = [];
 
   final List<GTerm> _unsent = [];
-  final List<String> _lines = [];
+
+  /// Every term the person channel carried, as the agent emitted it.
+  final List<GTerm> _carried = [];
   int _fed = 0;
 
   _Person._(this.tester, this.agent, this.ui);
@@ -71,7 +75,7 @@ class _Person {
           person._unsent.add(t);
         });
     person = _Person._(tester, agent, ui);
-    agent.onOutput = person._lines.add;
+    agent.onUserOutput = (t) => person._carried.add(screenTermOf(t));
     agent.onLog = (_, __) {};
     agent.onSendMadMessage = (_, __) async {};
     await tester.runAsync(() => agent.initialize());
@@ -86,9 +90,8 @@ class _Person {
 
   /// Hand the bridge what the person channel has carried since last time.
   void _replay() {
-    for (; _fed < _lines.length; _fed++) {
-      final l = _lines[_fed];
-      if (l.startsWith('< ')) ui.handleLine(l.substring(2));
+    for (; _fed < _carried.length; _fed++) {
+      ui.handle(_carried[_fed]);
     }
   }
 
@@ -207,11 +210,14 @@ void main() {
     expect(p.screen, contains('got(buttons, no)'));
     p.withdrawn(buttons);
 
-    // A text field: a String.
+    // A text field: a String.  The person's text, a space in it, reaches
+    // the program and comes back whole, a term, its print the canonical one
+    // (until 2026-10-11 it came back as a line the screen could not read,
+    // and never arrived).
     await p.type(text, 'text', [], 'hello world');
     await p.submit(text);
-    expect(p.grants.last, 'input(${text.id}, [], "hello world")');
-    expect(p.screen, contains('got(text, "hello world")'));
+    expect(p.grants.last, "input(${text.id}, [], 'hello world')");
+    expect(p.screen, contains("got(text, 'hello world')"));
     p.withdrawn(text);
 
     // A peer field: an agent identifier, and nothing else.
@@ -266,10 +272,13 @@ void main() {
       'a picker, a thread and an input box', (tester) async {
     final p = await _Person.boot(tester, 'forms_init');
 
-    final form = p.the('form(pay, [peer, number])');
-    final menu = p.the('menu([form(send, [peer, number]), form(post, [text])])');
+    final form =
+        p.the("form(pay, [field('Peer', peer), field('Integer', number)])");
+    final menu = p.the("menu([form(send, [field('Peer', peer), field('Integer', "
+        "number)]), form(post, [field('String', text)])])");
     final picker = p.the('picker');
-    final feed = p.the('form(feed, [thread, buttons([yes, no])])');
+    final feed = p.the("form(feed, [field('Stream(String)', thread), "
+        "field('YesNo', buttons([yes, no]))])");
     final box = p.the('input_box(text)');
     expect(p.ui.bridge.constructs, hasLength(5));
 
@@ -295,8 +304,8 @@ void main() {
     expect(find.byKey(nodeKey(menu.id, 'text', [1])), findsOneWidget);
     await p.type(menu, 'text', [1], 'hello');
     await p.submit(menu);
-    expect(p.grants.last, 'input(${menu.id}, [], post("hello"))');
-    expect(p.screen, contains('got(menu, post("hello"))'));
+    expect(p.grants.last, 'input(${menu.id}, [], post(hello))');
+    expect(p.screen, contains('got(menu, post(hello))'));
     p.withdrawn(menu);
 
     // A picker: the list the program writes, the choice at its own position.
@@ -313,7 +322,7 @@ void main() {
 
     // A thread the program writes, and the person's yes or no beside it: a
     // form whose first field is shown, element by element, and not edited.
-    expect(formatTerm(feed.view), 'feed(["one", "two"], input([2]))');
+    expect(formatTerm(feed.view), 'feed([one, two], input([2]))');
     expect(find.byKey(nodeKey(feed.id, 'form', [])), findsOneWidget);
     expect(find.byKey(nodeKey(feed.id, 'thread', [1])), findsOneWidget);
     expect(find.byKey(nodeKey(feed.id, 'buttons', [2])), findsOneWidget);
@@ -330,8 +339,8 @@ void main() {
     expect(find.byKey(nodeKey(box.id, 'input_box', [])), findsOneWidget);
     await p.type(box, 'text', [], 'first');
     await p.submit(box);
-    expect(p.grants.last, 'input(${box.id}, [], "first")');
-    expect(p.screen, contains('got(line, "first")'));
+    expect(p.grants.last, 'input(${box.id}, [], first)');
+    expect(p.screen, contains('got(line, first)'));
     p.open(box);
     expect(
         tester
@@ -341,8 +350,8 @@ void main() {
         isEmpty);
     await p.type(box, 'text', [], 'second');
     await p.submit(box);
-    expect(p.grants.last, 'input(${box.id}, [], "second")');
-    expect(p.screen, contains('got(line, "second")'));
+    expect(p.grants.last, 'input(${box.id}, [], second)');
+    expect(p.screen, contains('got(line, second)'));
     p.open(box);
     expect(p.ui.bridge.constructs.map((c) => c.id), [box.id]);
   });
@@ -352,7 +361,8 @@ void main() {
       'its own construct, and each goal its own answer', (tester) async {
     final p = await _Person.boot(tester, 'cards_init');
 
-    final cards = p.drawn('form(card, [shown, buttons([yes, no])])');
+    final cards = p.drawn(
+        "form(card, [field('Peer', shown), field('YesNo', buttons([yes, no]))])");
     expect(cards, hasLength(2));
     final views = {for (final c in cards) formatTerm(c.view)};
     expect(views, {'card(alice, input([2]))', 'card(bob, input([2]))'});
@@ -399,9 +409,9 @@ void main() {
 
     test('a draw opens a construct, a redraw replaces its view, a withdraw '
         'removes it, and the rest is the program\'s output', () {
-      r.handleLine('draw(4, picker, choose([alice], input([2])))');
-      r.handleLine('got(x, 1)');
-      r.handleLine('draw(4, picker, choose([alice, bob], input([2])))');
+      r.handle(fixtureTerm('draw(4, picker, choose([alice], input([2])))'));
+      r.handle(fixtureTerm('got(x, 1)'));
+      r.handle(fixtureTerm('draw(4, picker, choose([alice, bob], input([2])))'));
       expect(r.bridge.constructs.map((c) => c.id), [4]);
       expect(formatTerm(r.bridge.construct(4)!.view),
           'choose([alice, bob], input([2]))');
@@ -410,7 +420,7 @@ void main() {
       expect(sent, ['input(4, [2], bob)']);
       // The construct stays until the dispatcher withdraws it.
       expect(r.bridge.construct(4), isNotNull);
-      r.handleLine('withdraw(4)');
+      r.handle(fixtureTerm('withdraw(4)'));
       expect(r.bridge.constructs, isEmpty);
       // A construct withdrawn takes no grant.
       r.bridge.grant(4, const GList([GInt(2)]), const GAtom('bob'));
@@ -420,8 +430,8 @@ void main() {
 
     test('a draw or a withdraw naming no construct identifier is not the '
         'bridge\'s', () {
-      r.handleLine('draw(alice, text, input([]))');
-      r.handleLine('withdraw(req(1))');
+      r.handle(fixtureTerm('draw(alice, text, input([]))'));
+      r.handle(fixtureTerm('withdraw(req(1))'));
       expect(r.bridge.constructs, isEmpty);
       expect(r.store.lists['screen']!.map(formatTerm),
           ['draw(alice, text, input([]))', 'withdraw(req(1))']);
@@ -430,8 +440,8 @@ void main() {
     testWidgets(
         'a declared widget is the Dart widget the family names; one the family '
         'lacks is drawn as such and takes no input', (tester) async {
-      r.handleLine('draw(1, stars, input([]))');
-      r.handleLine('draw(2, gauge, input([]))');
+      r.handle(fixtureTerm('draw(1, stars, input([]))'));
+      r.handle(fixtureTerm('draw(2, gauge, input([]))'));
       final family = ConstructFamily(named: {
         'stars': (context, c, view, at, grant) => TextButton(
             onPressed: () => grant(questionAt(view)!, const GInt(5)),
@@ -450,6 +460,129 @@ void main() {
               of: find.byKey(constructKey(2)),
               matching: find.byType(ElevatedButton)),
           findsNothing);
+    });
+
+    // vGLP #6 Cowork, 2026-10-11 12:55 UTC, Task B, from Definition "Widget
+    // Declaration, Default Widget" and Remark "Construct Families".
+    Future<void> surface(WidgetTester tester) => tester.pumpWidget(
+        MaterialApp(home: AgentSurface(agentId: 'bob', runtime: r)));
+    Finder field(int id, String kind, List<int> at) => find.descendant(
+        of: find.byKey(nodeKey(id, kind, at)), matching: find.byType(TextField));
+    Finder inside(int id, Finder f) =>
+        find.descendant(of: find.byKey(constructKey(id)), matching: f);
+
+    testWidgets(
+        'a list the person writes: the widget of its element, kept open, and '
+        'a button that ends the list, granting [end], a term no element can be '
+        '(item 1; vGLP #7 Cowork, 2026-10-11 14:31 UTC, item 3); a stream has '
+        'no such button', (tester) async {
+      r.handle(fixtureTerm('draw(1, input_list(number), input([]))'));
+      r.handle(fixtureTerm('draw(2, input_box(number), input([]))'));
+      await surface(tester);
+      expect(find.byKey(nodeKey(1, 'input_list', [])), findsOneWidget);
+      await tester.enterText(field(1, 'number', []), '4');
+      await tester.pump();
+      await tester.tap(find.byKey(submitKey(1, [])));
+      await tester.pump();
+      expect(sent, ['input(1, [], 4)']);
+      expect(tester.widget<TextField>(field(1, 'number', [])).controller!.text,
+          isEmpty);
+      await tester.tap(find.byKey(endKey(1, [])));
+      await tester.pump();
+      expect(sent, ['input(1, [], 4)', 'input(1, [], [end])']);
+      expect(find.byKey(nodeKey(2, 'input_box', [])), findsOneWidget);
+      expect(find.byKey(endKey(2, [])), findsNothing);
+    });
+
+    testWidgets(
+        'a stream inside a form the person writes is no field of it: the form '
+        'is submitted with [] there, and once drawn with its answer the '
+        'stream is drawn under it, a question of its own (item 3)',
+        (tester) async {
+      const w = "form(post, [field('String', text), "
+          "question('Stream(String)', input_box(text))])";
+      r.handle(fixtureTerm('draw(3, $w, input([]))'));
+      await surface(tester);
+      // One field, labelled by its declared type's name, and no input box.
+      expect(field(3, 'text', [1]), findsOneWidget);
+      expect(inside(3, find.byType(TextField)), findsOneWidget);
+      expect(find.byKey(nodeKey(3, 'input_box', [2])), findsNothing);
+      expect(inside(3, find.text('Stream(String)')), findsNothing);
+      await tester.enterText(field(3, 'text', [1]), 'hi');
+      await tester.pump();
+      await tester.tap(find.byKey(submitKey(3, [])));
+      await tester.pump();
+      expect(sent, ['input(3, [], post(hi, []))']);
+      // The answer, its stream at [2] open: the form shown, the input box
+      // under it.
+      r.handle(fixtureTerm("draw(3, $w, post('hi', input([2])))"));
+      await tester.pump();
+      expect(find.byKey(nodeKey(3, 'shown', [1])), findsOneWidget);
+      expect(inside(3, find.text('hi')), findsOneWidget);
+      expect(find.byKey(nodeKey(3, 'input_box', [2])), findsOneWidget);
+      expect(inside(3, find.text('Stream(String)')), findsOneWidget);
+      await tester.enterText(field(3, 'text', [2]), 'x');
+      await tester.pump();
+      await tester.tap(find.byKey(submitKey(3, [2])));
+      await tester.pump();
+      expect(sent.last, 'input(3, [2], x)');
+      expect(find.text('No widget', findRichText: true), findsNothing);
+    });
+
+    testWidgets(
+        'a peer field takes an agent identifier, a name or a key, and nothing '
+        'else (item 5)', (tester) async {
+      r.handle(fixtureTerm('draw(5, peer, input([]))'));
+      await surface(tester);
+      bool submittable() =>
+          tester.widget<ElevatedButton>(find.byKey(submitKey(5, []))).onPressed !=
+          null;
+      await tester.enterText(field(5, 'peer', []), 'Carol Smith');
+      await tester.pump();
+      expect(submittable(), isFalse);
+      await tester.enterText(field(5, 'peer', []), '0a1b2c');
+      await tester.pump();
+      await tester.tap(find.byKey(submitKey(5, [])));
+      await tester.pump();
+      expect(sent, ["input(5, [], '0a1b2c')"]);
+    });
+
+    testWidgets(
+        'a form field is labelled by the name of its declared type, and no '
+        'field by its widget\'s kind (item 6)', (tester) async {
+      r.handle(fixtureTerm("draw(6, form(lot, [field('Key', peer), "
+          "field('Integer', number), field('Date', date)]), input([]))"));
+      await surface(tester);
+      for (final label in ['Key', 'Integer', 'Date']) {
+        expect(inside(6, find.text(label)), findsOneWidget, reason: label);
+      }
+      for (final kind in ['peer', 'number', 'date', 'text']) {
+        expect(inside(6, find.text(kind)), findsNothing, reason: kind);
+      }
+    });
+
+    testWidgets(
+        'a menu\'s chip names its alternative\'s functor, and its arity where '
+        'two share a functor (item 7)', (tester) async {
+      r.handle(fixtureTerm("draw(7, menu([form(mint, [field('Integer', number)]), "
+          "form(mint, [field('Integer', number), field('Integer', number)]), "
+          "form(pay, [field('Key', peer), field('Integer', number)]), "
+          'button(quit)]), input([]))'));
+      await surface(tester);
+      for (final chip in ['mint/1', 'mint/2', 'pay', 'quit']) {
+        expect(inside(7, find.text(chip)), findsOneWidget, reason: chip);
+      }
+      expect(inside(7, find.text('mint')), findsNothing);
+      await tester.tap(inside(7, find.text('mint/2')));
+      await tester.pump();
+      expect(field(7, 'number', [1]), findsOneWidget);
+      expect(field(7, 'number', [2]), findsOneWidget);
+      await tester.enterText(field(7, 'number', [1]), '3');
+      await tester.enterText(field(7, 'number', [2]), '30');
+      await tester.pump();
+      await tester.tap(find.byKey(submitKey(7, [])));
+      await tester.pump();
+      expect(sent, ['input(7, [], mint(3, 30))']);
     });
 
     test('a real crosses the boundary as a Real', () {

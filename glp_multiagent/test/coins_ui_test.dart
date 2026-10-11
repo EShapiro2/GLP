@@ -16,6 +16,8 @@ import 'package:glp_multiagent/ui_runtime/manifest.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
 
+import 'fixture_term.dart';
+
 void main() {
   late List<String> sent;
   late UiRuntime r;
@@ -28,10 +30,10 @@ void main() {
   /// The four asks the compiled agent poses as soon as it runs, in the order
   /// `coins_agent.glp` emits them (lines 68, 70, 72, 74).
   void poseRequestCards({int from = 1}) {
-    r.handleLine('card(agent_1, ctx_agent_1, req($from))');
-    r.handleLine('card(agent_2, ctx_agent_2, req(${from + 1}))');
-    r.handleLine('card(agent_3, ctx_agent_3, req(${from + 2}))');
-    r.handleLine('card(agent_4, ctx_agent_4, req(${from + 3}))');
+    r.handle(fixtureTerm('card(agent_1, ctx_agent_1, req($from))'));
+    r.handle(fixtureTerm('card(agent_2, ctx_agent_2, req(${from + 1}))'));
+    r.handle(fixtureTerm('card(agent_3, ctx_agent_3, req(${from + 2}))'));
+    r.handle(fixtureTerm('card(agent_4, ctx_agent_4, req(${from + 3}))'));
   }
 
   group('a card is matched by its clause', () {
@@ -44,9 +46,9 @@ void main() {
     });
 
     test('a transient clause opens a card, its context destructured', () {
-      r.handleLine(
+      r.handle(fixtureTerm(
           'card(respond_swap_1, ctx_respond_swap_1(alice, lot(bob, 2), '
-          '[coin(alice, 1), coin(alice, 2)]), req(7))');
+          '[coin(alice, 1), coin(alice, 2)]), req(7))'));
       final card = r.inbox.single;
       expect(card.panel.id, 'coins');
       expect(card.itemKey, 'alice');
@@ -56,7 +58,7 @@ void main() {
     });
 
     test('a clause the manifest does not name opens nothing', () {
-      r.handleLine('card(other_1, ctx_other_1(alice), req(9))');
+      r.handle(fixtureTerm('card(other_1, ctx_other_1(alice), req(9))'));
       expect(r.inbox, isEmpty);
       expect(r.standing, isEmpty);
     });
@@ -83,9 +85,9 @@ void main() {
     });
 
     test('a card button grants the ground term of its own clause', () {
-      r.handleLine(
+      r.handle(fixtureTerm(
           'card(respond_swap_1, ctx_respond_swap_1(alice, lot(bob, 2), []), '
-          'req(7))');
+          'req(7))'));
       final card = r.inbox.single;
       r.answerCard(card, _answer(card, 'Accept'));
       expect(sent, ['answer(req(7), xs_respond_swap_1(yes))']);
@@ -96,7 +98,7 @@ void main() {
   group('standing cards', () {
     test('a fresh card of a clause replaces the one before it', () {
       poseRequestCards();
-      r.handleLine('card(agent_1, ctx_agent_1, req(11))');
+      r.handle(fixtureTerm('card(agent_1, ctx_agent_1, req(11))'));
       expect(formatTerm(r.standing['agent_1']!), 'req(11)');
       r.submitCommand(_form(r, 'agent_1'), {'Amount': GInt(1)});
       expect(sent, ['answer(req(11), xs_agent_1(1))']);
@@ -110,14 +112,14 @@ void main() {
       r.submitCommand(_form(r, 'agent_1'), {'Amount': GInt(4)});
       expect(sent, ['answer(req(1), xs_agent_1(3))']);
       // The goal poses the next question.
-      r.handleLine('card(agent_1, ctx_agent_1, req(12))');
+      r.handle(fixtureTerm('card(agent_1, ctx_agent_1, req(12))'));
       r.submitCommand(_form(r, 'agent_1'), {'Amount': GInt(4)});
       expect(sent.last, 'answer(req(12), xs_agent_1(4))');
     });
 
     test('closed(Id) retires a standing card', () {
       poseRequestCards();
-      r.handleLine('closed(req(2))');
+      r.handle(fixtureTerm('closed(req(2))'));
       expect(r.standing.containsKey('agent_2'), isFalse);
       expect(r.standing.containsKey('agent_1'), isTrue);
     });
@@ -128,7 +130,7 @@ void main() {
     const ctx = 'alice, lot(bob, 2), [coin(alice, 1)]';
 
     setUp(() {
-      r.handleLine('card(respond_swap_1, ctx_respond_swap_1($ctx), req(5))');
+      r.handle(fixtureTerm('card(respond_swap_1, ctx_respond_swap_1($ctx), req(5))'));
     });
 
     test('one card, one ask, an Accept and a Decline', () {
@@ -145,39 +147,39 @@ void main() {
     });
 
     test('a different context is a different card', () {
-      r.handleLine(
+      r.handle(fixtureTerm(
           'card(respond_swap_1, ctx_respond_swap_1(charlie, lot(bob, 1), []), '
-          'req(8))');
+          'req(8))'));
       expect(r.inbox.length, 2);
       expect(r.inbox.map((c) => c.itemKey).toSet(), {'alice', 'charlie'});
     });
 
     test('closed(Id) retires the card with its one ask', () {
-      r.handleLine('closed(req(5))');
+      r.handle(fixtureTerm('closed(req(5))'));
       expect(r.inbox, isEmpty);
     });
   });
 
   group('the declared views', () {
     test('the balances view is fed by its pattern and replaces its rows', () {
-      r.handleLine(
-          'msg(agent, person, holdings([lot(alice, 3), lot(bob, 2)]))');
+      r.handle(fixtureTerm(
+          'msg(agent, person, holdings([lot(alice, 3), lot(bob, 2)]))'));
       expect(r.store.balances['balances']!.map((k, v) => MapEntry(k, formatTerm(v))),
           {'alice': '3', 'bob': '2'});
-      r.handleLine('msg(agent, person, holdings([lot(bob, 2)]))');
+      r.handle(fixtureTerm('msg(agent, person, holdings([lot(bob, 2)]))'));
       expect(r.store.balances['balances']!.keys, ['bob']);
     });
 
     test('every other screen message lands in the default display', () {
-      r.handleLine('msg(agent, person, minted(3))');
-      r.handleLine('msg(agent, person, swap_done(bob))');
-      r.handleLine('msg(agent, person, opened(bob))');
+      r.handle(fixtureTerm('msg(agent, person, minted(3))'));
+      r.handle(fixtureTerm('msg(agent, person, swap_done(bob))'));
+      r.handle(fixtureTerm('msg(agent, person, opened(bob))'));
       expect(r.store.lists['screen']!.map(formatTerm),
           ['minted(3)', 'swap_done(bob)', 'opened(bob)']);
     });
 
     test('a holdings message does not also reach the default display', () {
-      r.handleLine('msg(agent, person, holdings([lot(alice, 1)]))');
+      r.handle(fixtureTerm('msg(agent, person, holdings([lot(alice, 1)]))'));
       expect(r.store.lists['screen'], isEmpty);
     });
   });

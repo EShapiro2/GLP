@@ -116,7 +116,7 @@ void main() {
     final dir =
         Directory('../programs/tests/param_theta_covered').absolute.path;
     expect(() => engine.loadProgram(dir),
-        refusal('pick/3', 'pick(a("one"), Xs?, N)', 'R'));
+        refusal('pick/3', 'pick(a(one), Xs?, N)', 'R'));
     expect(engine.loadedPrograms.containsKey('__program__'), isFalse);
   });
 
@@ -124,7 +124,7 @@ void main() {
     final dir =
         Directory('../programs/tests/param_theta_uncovered').absolute.path;
     expect(() => engine.loadProgram(dir),
-        refusal('pick/3', 'pick(a("one"), Xs?, N)', 'R'));
+        refusal('pick/3', 'pick(a(one), Xs?, N)', 'R'));
     expect(engine.loadedPrograms.containsKey('__program__'), isFalse);
   });
 }
