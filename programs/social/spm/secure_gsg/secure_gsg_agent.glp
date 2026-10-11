@@ -45,7 +45,7 @@ agent(Id, IRec, [await(R) | UserIn], NetIn, NetOut?, Date, Platform) :-
     agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?, Platform?).
 
 %% Discover (paper §5.2): add Q to Known, bind Reply.
-agent(Id, IRec, [will(discover(Q, R)) | UserIn], NetIn, NetOut?, Date,
+agent(Id, IRec, [will(discover(Q, R?)) | UserIn], NetIn, NetOut?, Date,
       secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
     ground(Q?) |
     add_known(Q?, Known?, Known1),
@@ -57,7 +57,7 @@ agent(Id, IRec, [will(discover(Q, R)) | UserIn], NetIn, NetOut?, Date,
 %% friend_request(X, IRec_self).  IRec passed as a whole into the cargo;
 %% `ground(IRec?)` enables multi-reader use (§3.3 relaxation) across the
 %% output message and the recursive agent call.
-agent(Id, IRec, [will(offer_friendship(Q, R)) | UserIn], NetIn,
+agent(Id, IRec, [will(offer_friendship(Q, R?)) | UserIn], NetIn,
       [msg(Id?, Q?, friend_request(X?, IRec?)) | NetOut1?], Date,
       secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
     ground(Q?), ground(Id?), ground(FMap?), ground(IRec?) |
@@ -65,11 +65,11 @@ agent(Id, IRec, [will(offer_friendship(Q, R)) | UserIn], NetIn,
     X := E? + 1,
     agent(Id?, IRec?, UserIn?, NetIn?, NetOut1, Date?,
           secure_gsg(Known?, Vols?, Inbox?, FMap?, FoFMap?,
-                     [pending_offer(Q?, X?, R?) | Pending?], LBD?)).
+                     [pending_offer(Q?, X?, R) | Pending?], LBD?)).
 
 %% Accept offer (paper §8.2 Accept offer + §6.3, volitional): body-dispatch
 %% on whether matching friend_request is already in Inbox.
-agent(Id, IRec, [will(accept_offer(P, R)) | UserIn], NetIn, NetOut?, Date,
+agent(Id, IRec, [will(accept_offer(P, R?)) | UserIn], NetIn, NetOut?, Date,
       secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
     ground(P?), ground(Id?) |
     try_take_friend_request_from(P?, Inbox?, Inbox1, Matched, X, K, S),
@@ -91,7 +91,7 @@ agent(Id, IRec, [tick | UserIn], NetIn, NetOut?, Date,
 %% End friendship (paper, Unfriend inherited): FMap[Q].epoch := epoch + 1,
 %% preserving K and σ; emit unfriend(X) to Q and stream_update(Q, X) to every
 %% recipient; bind Reply.
-agent(Id, IRec, [will(end_friendship(Q, R)) | UserIn], NetIn,
+agent(Id, IRec, [will(end_friendship(Q, R?)) | UserIn], NetIn,
       [msg(Id?, Q?, unfriend(X?)) | NetOut1?], Date,
       secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
     ground(Q?), ground(Id?), ground(FMap?) |
@@ -111,7 +111,7 @@ agent(Id, IRec, [crash | UserIn], NetIn, NetOut?, Date, _) :-
           secure_gsg([], [], [], [], [], [], 0)).
 
 %% Query: q_epoch(Q) -- answer with secure_epoch_of(Q).
-agent(Id, IRec, [query(q_epoch(Q), a_epoch(E)) | UserIn], NetIn, NetOut?, Date,
+agent(Id, IRec, [query(q_epoch(Q), a_epoch(E?)) | UserIn], NetIn, NetOut?, Date,
       secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
     ground(Q?), ground(FMap?) |
     secure_epoch_of(Q?, FMap?, E),
@@ -119,7 +119,7 @@ agent(Id, IRec, [query(q_epoch(Q), a_epoch(E)) | UserIn], NetIn, NetOut?, Date,
           secure_gsg(Known?, Vols?, Inbox?, FMap?, FoFMap?, Pending?, LBD?)).
 
 %% Query: q_ir(Q) -- the identity record stored for Q.
-agent(Id, IRec, [query(q_ir(Q), a_ir(IR)) | UserIn], NetIn, NetOut?, Date,
+agent(Id, IRec, [query(q_ir(Q), a_ir(IR?)) | UserIn], NetIn, NetOut?, Date,
       secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
     ground(Q?), ground(FMap?) |
     secure_ir_of(Q?, FMap?, IR),
@@ -127,7 +127,7 @@ agent(Id, IRec, [query(q_ir(Q), a_ir(IR)) | UserIn], NetIn, NetOut?, Date,
           secure_gsg(Known?, Vols?, Inbox?, FMap?, FoFMap?, Pending?, LBD?)).
 
 %% Query: q_fof_epoch(Q, F) -- epoch_p(q, f).
-agent(Id, IRec, [query(q_fof_epoch(Q, F), a_epoch(E)) | UserIn], NetIn, NetOut?, Date,
+agent(Id, IRec, [query(q_fof_epoch(Q, F), a_epoch(E?)) | UserIn], NetIn, NetOut?, Date,
       secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
     ground(Q?), ground(F?), ground(FoFMap?) |
     fof_epoch_of(Q?, F?, FoFMap?, E),
@@ -136,7 +136,7 @@ agent(Id, IRec, [query(q_fof_epoch(Q, F), a_epoch(E)) | UserIn], NetIn, NetOut?,
 
 %% Vouch (SPM, Replace Protocol, Phase 2): a custodian, willing, sends the
 %% fresh agent P1 vouch(P, P1, L), L its own view of P's friends.
-agent(Id, IRec, [will(vouch(P, P1, R)) | UserIn], NetIn,
+agent(Id, IRec, [will(vouch(P, P1, R?)) | UserIn], NetIn,
       [msg(Id?, P1?, vouch(P?, P1?, L?)) | NetOut1?], Date,
       secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
     ground(P?), ground(P1?), ground(Id?), ground(FoFMap?) |
@@ -151,7 +151,7 @@ agent(Id, IRec, [will(vouch(P, P1, R)) | UserIn], NetIn,
 %% vouches name and for every voucher, and send new_identity(P, Id, V, IR_Id)
 %% to every stub; the Reply reads insufficient where the vouches do not reach
 %% the threshold.
-agent(Id, IRec, [will(announce_new_identity(P, ir(K, S), R)) | UserIn], NetIn, NetOut?, Date,
+agent(Id, IRec, [will(announce_new_identity(P, ir(K, S), R?)) | UserIn], NetIn, NetOut?, Date,
       secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
     ground(P?), ground(K?), ground(S?), ground(Id?), ground(Inbox?) |
     vouchers(K?, P?, Id?, Inbox?, V),
@@ -349,7 +349,7 @@ accept_offer_step(false, Id, IRec, P, R?, _, _, _, UserIn, NetIn, NetOut?, Date,
                   Known, Vols, Inbox, FMap, FoFMap, Pending, LBD) :-
     otherwise |
     agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
-          secure_gsg(Known?, [accept_offer(P?, R?) | Vols?],
+          secure_gsg(Known?, [accept_offer(P?, R) | Vols?],
                      Inbox?, FMap?, FoFMap?, Pending?, LBD?)).
 
 %% friend_request_dispatch: PASS 3 dispatch on classify_pending result.

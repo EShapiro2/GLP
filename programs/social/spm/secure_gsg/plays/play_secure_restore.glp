@@ -36,21 +36,21 @@ exported procedure play_secure_restore(Integer, Integer, Integer, IdentityRecord
 
 play_secure_restore(AliceEpochOfBob?, Zero?, BobEpochOfAlice?, BobIRofAlice?) :-
     secure_gsg_agent # agent(alice, ir([cust_a1, cust_a2], 67),
-          [will(discover(bob, R0a?)), await(R0a?),
-           will(offer_friendship(bob, RA?)), await(RA?),
+          [will(discover(bob, R0a)), await(R0a?),
+           will(offer_friendship(bob, RA)), await(RA?),
            await(Zero?),                                       %% bob has crashed and reads 0
            tick,                                               %% re-broadcast: checkpoint to bob
-           query(q_epoch(bob), a_epoch(AliceEpochOfBob?)),
+           query(q_epoch(bob), a_epoch(AliceEpochOfBob)),
            shutdown],
           AliceIn?, AliceOut, 0,
           secure_gsg([], [], [], [], [], [], 0)),
     secure_gsg_agent # agent(bob, ir([cust_b1, cust_b2], 67),
-          [will(accept_offer(alice, RB?)), await(RB?),
+          [will(accept_offer(alice, RB)), await(RB?),
            crash,
-           query(q_epoch(alice), a_epoch(Zero?)),              %% the state is gone
+           query(q_epoch(alice), a_epoch(Zero)),              %% the state is gone
            await(Later?),                                      %% the checkpoint has had time to arrive
-           query(q_epoch(alice), a_epoch(BobEpochOfAlice?)),
-           query(q_ir(alice), a_ir(BobIRofAlice?)),
+           query(q_epoch(alice), a_epoch(BobEpochOfAlice)),
+           query(q_ir(alice), a_ir(BobIRofAlice)),
            shutdown],
           BobIn?, BobOut, 0,
           secure_gsg([], [], [], [], [], [], 0)),

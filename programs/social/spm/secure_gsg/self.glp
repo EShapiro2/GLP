@@ -59,14 +59,18 @@ SecureGsgCargo ::= friend_request(Integer, IdentityRecord)        %% paper §8.2
 %% PERSON VOLITIONS (paper §6.3 + §6.4 + §8.7)
 %% =============================================================================
 
-%% Each volition carries a Reply Constant (architecture §3.3) the agent
-%% binds to `ok` on protocol completion.  Same pattern as GsgVolition.
-SecureGsgVolition ::= discover(Agent, Constant)
-                    ; offer_friendship(Agent, Constant)
-                    ; accept_offer(Agent, Constant)
-                    ; end_friendship(Agent, Constant)
-                    ; vouch(Agent, Agent, Constant)              %% Vouch: vouch(p, p', Reply)
-                    ; announce_new_identity(Agent, IdentityRecord, Constant).
+%% Each volition carries a Reply (architecture §3.3) the agent binds to `ok`
+%% on protocol completion.  Same pattern as GsgVolition: a reply slot is
+%% typed Constant? (an answer slot Integer? or IdentityRecord?,
+%% SecureGsgAnswer below) in every type that has one; the term that carries
+%% it is constructed with the writer and matched in a head with the reader,
+%% and bind_ok/1 consumes the writer once.
+SecureGsgVolition ::= discover(Agent, Constant?)
+                    ; offer_friendship(Agent, Constant?)
+                    ; accept_offer(Agent, Constant?)
+                    ; end_friendship(Agent, Constant?)
+                    ; vouch(Agent, Agent, Constant?)             %% Vouch: vouch(p, p', Reply)
+                    ; announce_new_identity(Agent, IdentityRecord, Constant?).
                       %% Announce new identity at p': the replaced p, its
                       %% identity record (K_p, σ_p), known to the person out
                       %% of band (spec-issue F), and Reply.
@@ -81,10 +85,10 @@ SecureGsgQuery ::= q_epoch(Agent)                  %% paper notation: epoch_p(q)
                  ; q_ir(Agent)                      %% IR_p[q]: (K, σ) stored for q
                  ; q_fmap_dom.
 
-SecureGsgAnswer ::= a_epoch(Integer)
-                  ; a_bool(Constant)
-                  ; a_ir(IdentityRecord)
-                  ; a_keys(Stream(Agent)).
+SecureGsgAnswer ::= a_epoch(Integer?)
+                  ; a_bool(Constant?)
+                  ; a_ir(IdentityRecord?)
+                  ; a_keys(Stream(Agent)?).
 
 %% =============================================================================
 %% PLATFORM STATE (paper §8.1)
@@ -121,7 +125,7 @@ FoFMap ::= [] ; [FoFEntry | FoFMap].
 
 %% Pending offers (architecture §3.3): same shape as gsg's, redefined here
 %% (sibling-directory types aren't transitively visible to the type checker).
-PendingOffer ::= pending_offer(Agent, Integer, Constant).
+PendingOffer ::= pending_offer(Agent, Integer, Constant?).
 PendingList ::= [] ; [PendingOffer | PendingList].
 
 %% Platform state: GSG's six fields + LastBroadcastDate (paper §8.5 spec
@@ -293,7 +297,7 @@ secure_send_snapshot(_, _, [], Cont?, Cont).
 %% `bind_ok(R)` rather than head literal (literal-vs-unbound-reader
 %% suspends per three-valued unification).
 exported procedure take_pending_offer(Agent?, Integer?, PendingList?, PendingList).
-take_pending_offer(Q, X, [pending_offer(Q1, X1, R) | Rest], Rest?) :-
+take_pending_offer(Q, X, [pending_offer(Q1, X1, R?) | Rest], Rest?) :-
     Q? =?= Q1?, X? =?= X1? | bind_ok(R).
 take_pending_offer(Q, X, [Entry | Rest], [Entry? | Rest1?]) :-
     otherwise | take_pending_offer(Q?, X?, Rest?, Rest1).
@@ -302,7 +306,7 @@ take_pending_offer(_, _, [], []).
 %% try_take_accept_offer_vol: same as gsg's.
 exported procedure try_take_accept_offer_vol(Agent?, Stream(SecureGsgVolition)?,
                                               Stream(SecureGsgVolition), Constant).
-try_take_accept_offer_vol(P, [accept_offer(P1, R) | Rest], Rest?, true) :-
+try_take_accept_offer_vol(P, [accept_offer(P1, R?) | Rest], Rest?, true) :-
     P? =?= P1? | bind_ok(R).
 try_take_accept_offer_vol(P, [V | Rest], [V? | Rest1?], M?) :-
     otherwise | try_take_accept_offer_vol(P?, Rest?, Rest1, M).
@@ -332,10 +336,10 @@ PendingMatch ::= pm_resolve ; pm_ignore ; pm_none.
 
 exported procedure classify_pending(Agent?, Agent?, PendingList?,
                                      PendingList, PendingMatch).
-classify_pending(Self, P, [pending_offer(P1, _, R) | Rest], Rest?, pm_resolve) :-
+classify_pending(Self, P, [pending_offer(P1, _, R?) | Rest], Rest?, pm_resolve) :-
     P? =?= P1?, P? @< Self? | bind_ok(R).
-classify_pending(Self, P, [pending_offer(P1, X, R) | Rest],
-                 [pending_offer(P1?, X?, R?) | Rest?], pm_ignore) :-
+classify_pending(Self, P, [pending_offer(P1, X, R?) | Rest],
+                 [pending_offer(P1?, X?, R) | Rest?], pm_ignore) :-
     P? =?= P1?, Self? @< P? | true.
 classify_pending(Self, P, [Entry | Rest], [Entry? | Rest1?], M?) :-
     otherwise | classify_pending(Self?, P?, Rest?, Rest1, M).
