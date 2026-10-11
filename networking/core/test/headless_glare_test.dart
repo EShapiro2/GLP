@@ -270,15 +270,22 @@ class _PhoneStyleDialer {
   /// The handshake is followed by the attestation exchange, and the peer is
   /// not reachable until it completes (spec §Session Establishment). This
   /// stand-in has no platform attestation, so it sends the absence — which is
-  /// what a phone coordinator does on a platform that provides none.
+  /// what a phone coordinator does on a platform that provides none — as a
+  /// message of the Message Protocol: the absence is small enough for one
+  /// self-contained attestation fragment.
   Future<void> sendAttestation(Uint8List peerPubkey) async {
     final handshakeHash =
         sessions.handshakeHashFor(PeerTransport.udp, peerPubkey);
     if (handshakeHash == null) return;
     final encrypted = await sessions.encryptPacket(
       GrassrootsPacket(
-        type: PacketType.attestation,
-        payload: encodeAttestationPayload(null),
+        type: PacketType.attestationFragment,
+        payload: FragmentHandler.encodeFragment(
+          messageId: '00000000-0000-4000-8000-0000000000a7',
+          index: 0,
+          count: 1,
+          chunk: encodeAttestationPayload(null),
+        ),
       ),
       transport: PeerTransport.udp,
       remotePubkey: peerPubkey,

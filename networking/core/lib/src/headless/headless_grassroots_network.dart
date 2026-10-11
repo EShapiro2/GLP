@@ -363,12 +363,21 @@ class HeadlessGrassrootsNetwork {
   /// responder cannot complete the handshake). Per the dial sequence (spec
   /// Implementation Notes) the handshake initiator is the ACCEPTING
   /// endpoint: toward a peer this endpoint dialed, it only waits.
+  ///
+  /// Where the session exists the packet is encrypted in the caller's
+  /// synchronous step, with no await before the session is read: the message
+  /// transport asks a bound message whether its session is still current in
+  /// that same step (the attestation exchange), and an await between the two
+  /// would let a session that replaced it carry the fragment.
   Future<Uint8List?> _sessionPacketBytes(
     GrassrootsPacket packet,
     Uint8List recipientPubkey,
   ) async {
     if (!packet.type.usesSessionSecurity) return packet.serialize();
-    if (!await _ensureUdpSession(recipientPubkey)) return null;
+    if (!_noiseSessions.hasSession(PeerTransport.udp, recipientPubkey) &&
+        !await _ensureUdpSession(recipientPubkey)) {
+      return null;
+    }
     final encrypted = await _noiseSessions.encryptPacket(
       packet,
       transport: PeerTransport.udp,
@@ -753,12 +762,40 @@ class HeadlessGrassrootsNetwork {
     unawaited(_sendAttestation(pubkey));
   }
 
+  /// The session each peer's attestation was last sent on, by its handshake
+  /// hash: the exchange is once per session (spec §Session Establishment),
+  /// and a session is reported established by both the handshake handler and
+  /// the dial that awaited it.
+  final Map<String, Uint8List> _attestationSentOn = {};
+
+  /// Whether [pubkey]'s current session is the one whose handshake hash is
+  /// [handshakeHash].
+  bool _isCurrentSession(Uint8List pubkey, Uint8List handshakeHash) =>
+      _sameBytes(
+        _noiseSessions.handshakeHashFor(PeerTransport.udp, pubkey),
+        handshakeHash,
+      );
+
   /// Send this profile's attestation over the session's digest, or the
-  /// explicit absence where it has none.
+  /// explicit absence where it has none, as a message of the Message
+  /// Protocol after handshake message 3 (spec §Session Establishment): its
+  /// fragments acknowledged and retransmitted as a payload's are (§Message
+  /// Protocol), and outside the fair-delivery queue, which waits on the
+  /// reachability this exchange decides.
+  ///
+  /// The message is bound to its session: the signature names that session's
+  /// handshake hash, so a fragment carried into a later session would be
+  /// found invalid there and tear it down. Once its session is gone the
+  /// message fails untransmitted; the next session sends its own, nothing
+  /// being cached. When its attempts are exhausted while its session stands,
+  /// the session is torn down (§Message Protocol).
   Future<void> _sendAttestation(Uint8List pubkey) async {
     final handshakeHash =
         _noiseSessions.handshakeHashFor(PeerTransport.udp, pubkey);
     if (handshakeHash == null) return;
+    final hex = _hex(pubkey);
+    if (_sameBytes(_attestationSentOn[hex], handshakeHash)) return;
+    _attestationSentOn[hex] = handshakeHash;
     final digest = attestationDigest(
       identityPublicKey: identity.publicKey,
       handshakeHash: handshakeHash,
@@ -784,15 +821,30 @@ class HeadlessGrassrootsNetwork {
       debugPrint('[headless][attest] Platform attestation failed: $e');
       evidence = null;
     }
-    final bytes = await _sessionPacketBytes(
-      GrassrootsPacket(
-        type: PacketType.attestation,
-        payload: encodeAttestationPayload(evidence),
-      ),
-      pubkey,
+    final delivered = await _udpMessageSender.sendMessage(
+      hex,
+      _uuid.v4(),
+      encodeAttestationPayload(evidence),
+      fragmentType: PacketType.attestationFragment,
+      isCurrent: () =>
+          _udpService != null && _isCurrentSession(pubkey, handshakeHash),
     );
-    if (bytes == null) return;
-    await _udpService?.sendToPeer(_hex(pubkey), bytes);
+    if (delivered || !_isCurrentSession(pubkey, handshakeHash)) return;
+    debugPrint('[headless][attest] Our attestation to ${hex.substring(0, 8)} '
+        'went unacknowledged; tearing the session down');
+    _tearDownSession(pubkey);
+  }
+
+  /// Tear the UDP session with [pubkey] down: an attestation found invalid,
+  /// or ours undeliverable on it. The disconnect event drops reachability
+  /// where the peer had it.
+  void _tearDownSession(Uint8List pubkey) {
+    _noiseSessions.reset(PeerTransport.udp, pubkey);
+    store.dispatch(PeerUdpConnectionChangedAction(
+      pubkeyHex: _hex(pubkey),
+      connected: false,
+    ));
+    unawaited(_udpService?.disconnectFromPeer(_hex(pubkey)));
   }
 
   /// A peer's attestation arrived. An attestation that fails verification
@@ -827,12 +879,7 @@ class HeadlessGrassrootsNetwork {
       case InvalidAttestation(:final reason):
         debugPrint('[headless][attest] $peerShort failed verification: '
             '$reason; tearing the session down');
-        _noiseSessions.reset(PeerTransport.udp, senderPubkey);
-        store.dispatch(PeerUdpConnectionChangedAction(
-          pubkeyHex: _hex(senderPubkey),
-          connected: false,
-        ));
-        unawaited(_udpService?.disconnectFromPeer(_hex(senderPubkey)));
+        _tearDownSession(senderPubkey);
       case AttestedApplication(:final identity):
         debugPrint('[headless][attest] $peerShort attested as $identity');
         _completeAttestation(senderPubkey, PeerAttestation(identity: identity));
@@ -876,6 +923,14 @@ class HeadlessGrassrootsNetwork {
 
   static String _hex(Uint8List bytes) =>
       bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+
+  static bool _sameBytes(Uint8List? a, Uint8List? b) {
+    if (a == null || b == null || a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
 
   static Uint8List _bytes(String hex) {
     final out = Uint8List(hex.length ~/ 2);

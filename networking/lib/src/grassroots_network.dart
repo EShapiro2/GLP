@@ -468,11 +468,8 @@ class GrassrootsNetwork {
   /// The BLE carrier of the same transport: fragments ride GATT writes,
   /// which are link-acknowledged — retransmission is a backstop that rarely
   /// fires (spec §Message Transport).
-  late final MessageTransportSender _bleMessageSender = MessageTransportSender(
-    maxChunk: FragmentHandler.bleMaxChunk,
-    windowPerPeer: 4,
-    initialBackoff: const Duration(seconds: 2),
-    maxAttempts: 3,
+  late final MessageTransportSender _bleMessageSender =
+      MessageTransportSender.gatt(
     sendPacket: (peerHex, packet) async {
       final service = _bleService;
       if (service == null) return false;
@@ -3372,20 +3369,63 @@ class GrassrootsNetwork {
     );
   }
 
+  /// The session each peer's attestation was last sent on, per medium, by
+  /// its handshake hash: the exchange is once per session (spec §Session
+  /// Establishment), and a session may be reported established more than
+  /// once.
+  final Map<String, Uint8List> _attestationSentOn = {};
+
+  /// Whether [pubkey]'s current session on [transport] is the one whose
+  /// handshake hash is [handshakeHash].
+  bool _isCurrentSession(
+    PeerTransport transport,
+    Uint8List pubkey,
+    Uint8List handshakeHash,
+  ) {
+    final current = _noiseSessions.handshakeHashFor(transport, pubkey);
+    return current != null && listEquals(current, handshakeHash);
+  }
+
   /// Ask the platform to attest this agent over the session's digest, and
   /// send it. A platform with none sends the absence, which is distinct from
   /// a failure and is what the peer reports as unattested.
+  ///
+  /// It goes as a message of the Message Protocol after handshake message 3
+  /// (spec §Session Establishment): fragmented, acknowledged and
+  /// retransmitted by the medium's carrier as a `send` payload is (§Message
+  /// Protocol), and outside the outbound queue, which waits on the
+  /// reachability this exchange decides.
+  ///
+  /// The message is bound to its session: the signature names that session's
+  /// handshake hash, so a fragment carried into a later session would be
+  /// found invalid there and tear it down. Once its session is gone the
+  /// message fails untransmitted, and the next session sends its own, nothing
+  /// being cached. When its attempts are exhausted while its session stands,
+  /// the session is torn down (§Message Protocol).
   Future<void> _sendAttestation(
     PeerTransport transport,
     Uint8List pubkey,
   ) async {
-    final digest =
-        _attestationDigestFor(transport, pubkey, identity.publicKey);
-    if (digest == null) {
+    final sender = switch (transport) {
+      PeerTransport.udp => _udpMessageSender,
+      PeerTransport.bleDirect => _bleMessageSender,
+      PeerTransport.webrtc => null,
+    };
+    if (sender == null) return;
+    final handshakeHash = _noiseSessions.handshakeHashFor(transport, pubkey);
+    if (handshakeHash == null) {
       debugPrint('[attest] No handshake hash for '
           '${_pubkeyToHex(pubkey).substring(0, 8)}; cannot attest');
       return;
     }
+    final sentKey = _handshakePairKey(transport, pubkey);
+    final sentOn = _attestationSentOn[sentKey];
+    if (sentOn != null && listEquals(sentOn, handshakeHash)) return;
+    _attestationSentOn[sentKey] = handshakeHash;
+    final digest = attestationDigest(
+      identityPublicKey: identity.publicKey,
+      handshakeHash: handshakeHash,
+    );
 
     // Both halves or neither. The attestation is long-lived — the binding
     // obtains it once per install — while the signature is computed afresh
@@ -3412,58 +3452,24 @@ class GrassrootsNetwork {
       evidence = null;
     }
 
-    final packet = GrassrootsPacket(
-      type: PacketType.attestation,
-      payload: encodeAttestationPayload(evidence),
-    );
-
     // Over the medium the session belongs to, and no other: the digest binds
     // to that session's handshake hash, so the attestation means nothing
     // anywhere else. Sessions are per medium (spec §Session Establishment).
-    final sent = await _sendAttestationPacket(packet, transport, pubkey);
-    if (!sent) {
-      debugPrint('[attest] Could not send our attestation to '
-          '${_pubkeyToHex(pubkey).substring(0, 8)} over ${transport.name}');
+    final delivered = await sender.sendMessage(
+      _pubkeyToHex(pubkey),
+      _uuid.v4(),
+      encodeAttestationPayload(evidence),
+      fragmentType: PacketType.attestationFragment,
+      isCurrent: () => _isCurrentSession(transport, pubkey, handshakeHash),
+    );
+    if (delivered || !_isCurrentSession(transport, pubkey, handshakeHash)) {
+      return;
     }
-  }
-
-  Future<bool> _sendAttestationPacket(
-    GrassrootsPacket packet,
-    PeerTransport transport,
-    Uint8List pubkey,
-  ) async {
-    final peer = _peersState.getPeerByPubkey(pubkey);
-    switch (transport) {
-      case PeerTransport.bleDirect:
-        final bleDeviceId = _connectedBleDeviceIdForPeer(peer);
-        if (bleDeviceId == null) return false;
-        final bytes = await _packetBytesForTransport(
-          packet: packet,
-          transport: PeerTransport.bleDirect,
-          recipientPubkey: pubkey,
-          peerId: bleDeviceId,
-        );
-        if (bytes == null) return false;
-        return await _bleService?.sendToPeer(bleDeviceId, bytes) ?? false;
-      case PeerTransport.udp:
-        // The session exists, so the path does; send over it rather than
-        // dialing. An endpoint that accepted an inbound connection has no
-        // dial-book address for the caller, and the attestation must still
-        // reach it — this is where the exchange used to stall in one
-        // direction.
-        final peerId = _udpService?.getPeerIdForPubkey(pubkey);
-        if (peerId == null) return false;
-        final bytes = await _packetBytesForTransport(
-          packet: packet,
-          transport: PeerTransport.udp,
-          recipientPubkey: pubkey,
-          peerId: peerId,
-        );
-        if (bytes == null) return false;
-        return await _udpService?.sendToPeer(peerId, bytes) ?? false;
-      case PeerTransport.webrtc:
-        return false;
-    }
+    _tearDownForAttestation(
+      transport,
+      pubkey,
+      'our attestation went unacknowledged',
+    );
   }
 
   /// A peer's attestation arrived. Verify it against the digest this session
@@ -3526,8 +3532,9 @@ class GrassrootsNetwork {
     }
   }
 
-  /// An attestation failed verification: the session is torn down and
-  /// onPeerConnected does not fire, since reachability was never reported.
+  /// The exchange failed on this session — the peer's attestation failed
+  /// verification, or ours could not be delivered: the session is torn down,
+  /// and onPeerConnected does not fire where reachability was never reported.
   void _tearDownForAttestation(
     PeerTransport transport,
     Uint8List pubkey,
@@ -3646,12 +3653,20 @@ class GrassrootsNetwork {
   }) async {
     var outgoing = packet;
     if (packet.type.usesSessionSecurity) {
-      final ready = await _ensureNoiseSession(
-        transport: transport,
-        recipientPubkey: recipientPubkey,
-        peerId: peerId,
-      );
-      if (!ready) return null;
+      // Where the session exists the packet is encrypted in the caller's
+      // synchronous step, with no await before the session is read: the
+      // message transport asks a bound message whether its session is still
+      // current in that same step (the attestation exchange), and an await
+      // between the two would let a session that replaced it carry the
+      // fragment.
+      if (!_noiseSessions.hasSession(transport, recipientPubkey) &&
+          !await _ensureNoiseSession(
+            transport: transport,
+            recipientPubkey: recipientPubkey,
+            peerId: peerId,
+          )) {
+        return null;
+      }
       outgoing = await _noiseSessions.encryptPacket(
         packet,
         transport: transport,
