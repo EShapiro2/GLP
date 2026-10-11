@@ -315,8 +315,10 @@ empty(Xs) :- Xs? =?= [] | true.
       e.runtime.outputCallback = out.add;
       final dirOf = NetworkDirectory()..register('alice', identity.pub);
       final client = SimulationNetworkClient(
-          selfId: 'alice', directory: dirOf, sendToRouter: (_, __) {});
-      client.putIdentity(identity.pub, identity.priv);
+          selfId: 'alice',
+          directory: dirOf,
+          keyPair: identity.keyPair,
+          sendToRouter: (_, __) {});
       e.madContext!.network = client;
       e.maxCycles = 10000000;
       // Under the root, programs/ (TGLP modules.tex, "Scope construction": "A

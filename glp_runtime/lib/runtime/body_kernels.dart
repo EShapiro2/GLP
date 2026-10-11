@@ -1252,7 +1252,10 @@ BodyKernelResult loadFileKernel(GlpRuntime rt, List<Object?> args) {
 // =============================================================================
 //
 // The five kernels behind peer_address/2, punch_udp/1, place_declare/3,
-// place_remove/1 and trust_declare/2. Each reaches the networking layer through
+// place_remove/1 and trust_declare/2, five of the seven seam predicates (IGLP,
+// Definition "Seam Predicates"); the kernels of the other two, peer_declare/1
+// and address_declare/2, over GlpNetwork.putKnownPeer and putPeerAddress, are
+// not yet in the runtime. Each reaches the networking layer through
 // MadContext.network, a GlpNetwork; the layer functions are
 // GLP-Networking-API's, specified with the seam contract. Their effects lie outside the madGLP transition system, as
 // sign's and self_module's do.

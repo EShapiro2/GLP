@@ -59,11 +59,14 @@ class AgentRuntime {
   void Function(String tag, String message)? onLog;
   Future<void> Function(String destination, Uint8List payload)? onSendMadMessage;
 
-  /// Connectivity callbacks surfaced from the networking seam (spec §2/§3). The
-  /// coordinator forwards router events via [onConnectivityEvent].
-  void Function(PubKey pk, Transport t)? onPeerConnected;
-  void Function(PubKey pk, Transport t)? onPeerDisconnected;
-  void Function(DiscoveredPeer p)? onPeerDiscovered;
+  /// Connectivity callbacks surfaced from the networking seam, with the
+  /// parameters of [GlpNetwork]'s (GNA, "Connection and Reachability" and
+  /// "Concepts and Principles", Discovery). The coordinator forwards router
+  /// events via [onConnectivityEvent].
+  void Function(PubKey pk, Underlay underlay, Object? identity)?
+      onPeerConnected;
+  void Function(PubKey pk, Underlay underlay)? onPeerDisconnected;
+  void Function(PubKey pk, ProximityUnderlay underlay)? onPeerDiscovered;
 
   /// This agent's Ed25519 key pair. Provided by the coordinator, or generated.
   final ({PubKey pub, Uint8List priv})? keyPair;
@@ -125,15 +128,20 @@ class AgentRuntime {
     return pk;
   }
 
-  /// Forward a router connectivity event to this client's callbacks (seam §3).
-  void onConnectivityEvent(PubKey peer, Transport t, ConnectivityEvent event) {
+  /// Forward a router connectivity event to this client's callbacks.  The
+  /// simulation attests nothing, so a connection carries no identity; a
+  /// discovery is over a proximity underlay, the PAN throughout (IGLP,
+  /// "Simulation realisation").
+  void onConnectivityEvent(
+      PubKey peer, Underlay underlay, ConnectivityEvent event) {
     switch (event) {
       case ConnectivityEvent.connected:
-        onPeerConnected?.call(peer, t);
+        onPeerConnected?.call(peer, underlay, null);
       case ConnectivityEvent.disconnected:
-        onPeerDisconnected?.call(peer, t);
+        onPeerDisconnected?.call(peer, underlay);
       case ConnectivityEvent.discovered:
-        onPeerDiscovered?.call(DiscoveredPeer(peer, t));
+        onPeerDiscovered?.call(
+            peer, ProximityUnderlay.values.byName(underlay.name));
     }
   }
 
@@ -224,10 +232,10 @@ class AgentRuntime {
     final network = SimulationNetworkClient(
       selfId: agentIdLower,
       directory: directory,
+      keyPair: kp,
       sendToRouter: (toId, payload) =>
           _sendMadPayload(toId, Uint8List.fromList(payload)),
     );
-    network.putIdentity(kp.pub, kp.priv);
     _network = network;
     _ctx!.network = network; // backs the seam predicates (IGLP Definition Seam Predicates)
 
@@ -365,7 +373,7 @@ class AgentRuntime {
     }
 
     network.onMessageReceived
-        ?.call(_pkFor(from.toLowerCase()), payload, '', Transport.ble);
+        ?.call(_pkFor(from.toLowerCase()), payload, '', Underlay.pan);
 
     updateStats();
     await _runUntilQuiescent();

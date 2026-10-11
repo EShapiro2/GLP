@@ -5,10 +5,10 @@
 /// the module certificate is that person's signature at compilation. The
 /// runtime therefore holds one identity, from construction, and every kernel
 /// that signs — `'_sign'`/3, and the compiler writing a certificate — signs
-/// under it; `'_self_key'`/1 answers its public half. A harness that installs
-/// the agent's key pair on its networking layer ([GlpNetwork.putIdentity])
-/// installs the same pair here, so the layer, the certificate and `self_key`
-/// agree on who the person is.
+/// under it; `'_self_key'`/1 answers its public half. A harness that
+/// instantiates the agent's networking layer with its key pair (GNA,
+/// "Identity") installs the same pair here, so the layer, the certificate and
+/// `self_key` agree on who the person is.
 ///
 /// Where the compiler runs with no agent — `glpc`, the suite — the paper says
 /// nothing about whose key certifies (reported to IGLP, 2026-09-08): the
@@ -39,7 +39,8 @@ class PersonIdentity {
         Uint8List.fromList(kp.privateKey.bytes));
   }
 
-  /// The pair as [GlpNetwork.putIdentity] takes it.
+  /// The pair as a networking layer is instantiated with it
+  /// (`SimulationNetworkClient.keyPair`).
   ({PubKey pub, Uint8List priv}) get keyPair => (pub: pub, priv: priv);
 
   /// Sign [message] under this identity's private key.

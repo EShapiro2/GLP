@@ -98,15 +98,21 @@ class _SeamNetwork extends GlpNetwork {
   void fire(String place, PlaceEvent event) => onPlaceEvent?.call(place, event);
 
   // --- Not exercised here ---
+  //
+  // putKnownPeer and putPeerAddress are the layer functions behind
+  // peer_declare/1 and address_declare/2, whose kernels the runtime does not
+  // yet have; nothing here calls them.
 
-  @override
-  void putIdentity(PubKey pub, Uint8List priv) {}
   @override
   PubKey getIdentity() => throw UnimplementedError();
   @override
+  void putKnownPeer(PubKey pk) => throw UnimplementedError();
+  @override
+  void removeKnownPeer(PubKey pk) => throw UnimplementedError();
+  @override
   bool isPeerReachable(PubKey pk) => true;
   @override
-  List<Transport> peerTransports(PubKey pk) => const [Transport.ip];
+  List<Underlay> peerUnderlays(PubKey pk) => const [Underlay.wan];
   @override
   void send(PubKey pk, Uint8List payload) {}
   @override
@@ -117,11 +123,16 @@ class _SeamNetwork extends GlpNetwork {
   @override
   List<DiscoveredPeer> getPeers() => const [];
   @override
-  String getPublicAddress() => throw UnimplementedError();
+  String? getPublicAddress() => throw UnimplementedError();
   @override
-  String generatePeerLink() => throw UnimplementedError();
+  String? networkIdentity() => throw UnimplementedError();
   @override
-  void consumePeerLink(String uri) => throw UnimplementedError();
+  Future<String> generatePeerLink() => throw UnimplementedError();
+  @override
+  Future<PubKey> consumePeerLink(String uri) => throw UnimplementedError();
+  @override
+  void putPeerAddress(PubKey pk, String address) =>
+      throw UnimplementedError();
 }
 
 /// A MadContext over a bare runtime, with [network] bound.
@@ -629,6 +640,7 @@ go :- trust_declare(wifi, open).
     SimulationNetworkClient client() => SimulationNetworkClient(
           selfId: 'alice',
           directory: NetworkDirectory(),
+          keyPair: generateKeyPair(),
           sendToRouter: (_, __) {},
         );
 
