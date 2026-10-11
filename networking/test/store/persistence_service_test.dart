@@ -188,11 +188,11 @@ void main() {
 
     test('handles partial settings JSON gracefully', () async {
       // Only bluetoothEnabled present, rest should use defaults. The
-      // per-medium trust levels are required, not defaulted — a blob without
+      // per-underlay trust levels are required, not defaulted — a blob without
       // them is malformed (spec §Trust levels; no tolerant decoder).
       final partialJson = {
         'bluetoothEnabled': false,
-        'coldCallTrustLevels': {'ble': 'closed', 'lan': 'closed'},
+        'coldCallTrustLevels': {'pan': 'closed', 'lan': 'closed'},
       };
 
       SharedPreferences.setMockInitialValues({
@@ -222,7 +222,7 @@ void main() {
           rendezvousA.toJson(),
           rendezvousB.toJson(),
         ],
-        'coldCallTrustLevels': {'ble': 'closed', 'lan': 'closed'},
+        'coldCallTrustLevels': {'pan': 'closed', 'lan': 'closed'},
       };
 
       SharedPreferences.setMockInitialValues({

@@ -77,9 +77,12 @@ class MessageRouter {
   })? onSignalingReceived;
 
   /// Called when a peer's platform attestation arrives (spec §Session
-  /// Establishment). It rides the session, so the sender is
-  /// session-authenticated; the coordinator verifies it against the digest
-  /// this session binds to and tears the session down if it fails.
+  /// Establishment): the reassembled message of the attestation exchange,
+  /// which rides the Message Protocol as `send` payloads do — its fragments
+  /// acknowledged, the message de-duplicated and acknowledged whole — and is
+  /// told from a payload by its fragment type alone. It rides the session, so
+  /// the sender is session-authenticated; the coordinator verifies it against
+  /// the digest this session binds to and tears the session down if it fails.
   void Function(
     Uint8List senderPubkey,
     Uint8List payload,
@@ -272,6 +275,7 @@ class MessageRouter {
 
     switch (packet.type) {
       case PacketType.fragment:
+      case PacketType.attestationFragment:
         _handleFragment(
           packet,
           senderPubkey: senderPubkey,
@@ -291,8 +295,6 @@ class MessageRouter {
           observedIp: observedIp,
           observedPort: observedPort,
         );
-      case PacketType.attestation:
-        onAttestationReceived?.call(senderPubkey, packet.payload, transport);
       case PacketType.announce:
       case PacketType.noiseHandshake:
       case PacketType.secureFragment:
@@ -300,7 +302,7 @@ class MessageRouter {
       case PacketType.secureAck:
       case PacketType.secureReadReceipt:
       case PacketType.secureSignaling:
-      case PacketType.secureAttestation:
+      case PacketType.secureAttestationFragment:
         return;
     }
   }
@@ -394,7 +396,8 @@ class MessageRouter {
   }) {
     final Fragment fragment;
     try {
-      fragment = FragmentHandler.decodeFragment(packet.payload);
+      fragment =
+          FragmentHandler.decodeFragment(packet.payload, type: packet.type);
     } catch (e) {
       debugPrint('Dropping malformed fragment: $e');
       return;
@@ -425,6 +428,7 @@ class MessageRouter {
     _deliverMessage(
       reassembled.messageId,
       reassembled.payload,
+      type: reassembled.type,
       senderPubkey: senderPubkey,
       transport: transport,
       peerId: peerId,
@@ -450,6 +454,7 @@ class MessageRouter {
   void _deliverMessage(
     String messageId,
     Uint8List body, {
+    required PacketType type,
     required Uint8List senderPubkey,
     required PeerTransport transport,
     String? peerId,
@@ -461,7 +466,14 @@ class MessageRouter {
     // cannot catch them — this id is what makes redelivery detectable.
     final firstSeen = !_seenPackets.checkAndAdd(messageId);
     if (firstSeen) {
-      onMessageReceived?.call(messageId, senderPubkey, body, transport);
+      // The attestation exchange rides the same protocol as payloads (spec
+      // §Message Protocol) and goes to the coordinator, never to the
+      // application.
+      if (type == PacketType.attestationFragment) {
+        onAttestationReceived?.call(senderPubkey, body, transport);
+      } else {
+        onMessageReceived?.call(messageId, senderPubkey, body, transport);
+      }
     } else {
       debugPrint(
         'Duplicate message ${messageId.length >= 8 ? messageId.substring(0, 8) : messageId}; '

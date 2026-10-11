@@ -212,9 +212,9 @@ void main() async {
       final network = SimulationNetworkClient(
         selfId: agent,
         directory: directory,
+        keyPair: engine.identity.keyPair,
         sendToRouter: (toId, payload) => dropped(toId),
       );
-      network.putIdentity(engine.identity.pub, engine.identity.priv);
       engine.madContext!.network = network;
       // The Sends (IGLP, Definition madGLP Send) place each message of the
       // outbox on the channel to its destination, as an agent's do

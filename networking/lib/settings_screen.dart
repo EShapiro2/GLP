@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:redux/redux.dart';
 import 'debug_log_screen.dart';
 import 'package:grassroots_networking_core/src/store/app_state.dart';
+import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/store/settings_actions.dart';
 import 'package:grassroots_networking_core/src/store/settings_state.dart';
 import 'package:grassroots_networking_core/src/store/transports_state.dart';
@@ -442,7 +443,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 12),
           _buildTrustLevelSegments(
-            medium: ProximityMedium.ble,
+            underlay: ProximityUnderlay.pan,
             label: 'Bluetooth',
             openDescription:
                 'Currently open: unknown peers in Bluetooth range can '
@@ -453,7 +454,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 12),
           _buildTrustLevelSegments(
-            medium: ProximityMedium.lan,
+            underlay: ProximityUnderlay.lan,
             label: 'Local network',
             openDescription:
                 'Currently open: unknown peers on this local network can '
@@ -468,12 +469,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildTrustLevelSegments({
-    required ProximityMedium medium,
+    required ProximityUnderlay underlay,
     required String label,
     required String openDescription,
     required String closedDescription,
   }) {
-    final level = widget.store.state.settings.trustLevelOf(medium);
+    final level = widget.store.state.settings.trustLevelOf(underlay);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -515,7 +516,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           onSelectionChanged: (selection) {
             if (selection.isEmpty) return;
             widget.store
-                .dispatch(SetColdCallTrustLevelAction(medium, selection.first));
+                .dispatch(SetColdCallTrustLevelAction(underlay, selection.first));
             widget.onSettingsChanged?.call();
           },
         ),

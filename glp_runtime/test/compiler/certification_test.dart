@@ -49,6 +49,26 @@ void main() {
       expect(root, contains('authorise_link/2'));
     });
 
+    test('all seven seam predicates of the networking layer and their kernels '
+        'are privileged, peer_declare/1 and address_declare/2 among them', () {
+      // GSG, Section 3: "the seven system predicates of the networking layer
+      // ... and the kernels beneath them.  These are the OS-privileged
+      // predicates"; the two entered the root on 2026-10-11.
+      for (final name in [
+        'peer_address/2',
+        'punch_udp/1',
+        'place_declare/3',
+        'place_remove/1',
+        'trust_declare/2',
+        'peer_declare/1',
+        'address_declare/2',
+      ]) {
+        expect(privilegedPredicates, contains(name));
+        expect(privilegedKernels, contains('_$name'));
+        expect(root, contains(name));
+      }
+    });
+
     test('the signature predicates are not privileged: a mini-app may sign',
         () {
       expect(root, isNot(contains('sign/3')));

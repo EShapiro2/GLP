@@ -127,7 +127,7 @@ void main() {
     final recipientAddress = recipientLoopback!;
 
     final delivered = <String>[];
-    recipient.onMessageReceived = (messageId, senderPk, payload, transport) {
+    recipient.onMessageReceived = (senderPk, payload, messageId, underlay) {
       expect(hexOf(senderPk), hexOf(senderId.publicKey));
       delivered.add(utf8.decode(payload));
     };

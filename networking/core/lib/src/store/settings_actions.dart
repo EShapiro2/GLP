@@ -1,3 +1,4 @@
+import '../models/underlay.dart';
 import 'settings_state.dart';
 
 /// Base class for settings-related actions
@@ -73,11 +74,12 @@ class SetBleRoleModeAction extends SettingsAction {
   SetBleRoleModeAction(this.mode);
 }
 
-/// Set the cold-call trust level of one proximity medium, leaving every other
-/// medium's untouched (spec §Trust levels — the two levels are independent).
+/// Set the cold-call trust level of one proximity underlay, leaving every
+/// other underlay's untouched (spec §Trust levels — the two levels are
+/// independent).
 class SetColdCallTrustLevelAction extends SettingsAction {
-  final ProximityMedium medium;
+  final ProximityUnderlay underlay;
   final ColdCallTrustLevel level;
 
-  SetColdCallTrustLevelAction(this.medium, this.level);
+  SetColdCallTrustLevelAction(this.underlay, this.level);
 }

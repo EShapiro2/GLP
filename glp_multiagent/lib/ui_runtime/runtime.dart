@@ -7,8 +7,14 @@
 /// taps into ground command terms. It names no app-specific constructor —
 /// everything specific comes from the [Manifest]. If a constructor name ever
 /// needs special-casing here, that logic belongs in the schema instead.
+///
+/// It carries the [Bridge] of vGLP's paragraph "The implementation" beside the
+/// deployed mediator's vocabulary: a compiled module's draws open and remove
+/// its constructs, and the person's grants on them go out as `input(Id, P,
+/// R)`, by the same transport (bridge.dart).
 library;
 
+import 'bridge.dart';
 import 'manifest.dart';
 import 'term.dart';
 
@@ -117,6 +123,13 @@ class UiRuntime {
   /// The parsed patterns of the manifest's declared views, by source text.
   final Map<String, GPattern> _viewPatterns = {};
 
+  /// The Dart bridge: the constructs a compiled module draws, and the
+  /// grants the person makes on them, sent as every act of the person is.
+  late final Bridge bridge = Bridge(onGrant: (grant) {
+    onSend(grant);
+    onChange?.call();
+  });
+
   UiRuntime({required this.manifest, required this.onSend}) {
     for (final v in manifest.state) {
       if (v.kind == StateKind.list) {
@@ -145,12 +158,21 @@ class UiRuntime {
     final (ctor, args) = ctorArgs(term);
     if (ctor.isEmpty) return;
 
-    // The person channel of a compiled vGLP program (Definition "Canonical
-    // Compilation") carries one vocabulary whatever the program: the
-    // mediator's cards and their closing, the agent's screen messages, and,
-    // from the person, answers. A card is selected by its CLAUSE, not by
-    // constructor and arity — `card`/3 is one constructor for every clause of
-    // the program — so these two come first and consume what they recognise.
+    // A compiled module's draws (vGLP, the paragraph "The implementation"):
+    // `draw(Id, W, V)` and `withdraw(Id)` are the bridge's, and everything
+    // else on the person channel is the program's own output, shown below as
+    // every screen message is.
+    if (bridge.read(term)) {
+      onChange?.call();
+      return;
+    }
+
+    // The deployed mediator's person channel, the earlier compilation's,
+    // carries one vocabulary whatever the program: the mediator's cards and
+    // their closing, the agent's screen messages, and, from the person,
+    // answers. A card is selected by its CLAUSE, not by constructor and
+    // arity — `card`/3 is one constructor for every clause of the program —
+    // so these two come first and consume what they recognise.
     if (ctor == cardCtor && args.length == 3 && _handleCard(args)) return;
     if ((ctor == closedCtor || ctor == abortedCtor) &&
         args.length == 1 &&
@@ -548,9 +570,11 @@ class UiRuntime {
   }
 }
 
-/// The constructors of the compiled vGLP person channel, fixed by vGLP's
-/// Definition "Canonical Compilation" and therefore the same for every
-/// compiled program — they are the compilation's, not any application's.
+/// The constructors of the deployed mediator's person channel, the earlier
+/// compilation's, the same for every program it compiled — they are the
+/// compilation's, not any application's.  They stay beside the bridge's
+/// (bridge.dart) until the owners port their `.vglp` sources to the
+/// compilation of vGLP's Definition "Canonical Compilation".
 const String cardCtor = 'card';
 const String closedCtor = 'closed';
 const String abortedCtor = 'aborted';

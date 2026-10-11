@@ -9,6 +9,7 @@ import 'package:sodium_libs/sodium_libs_sumo.dart';
 
 import 'package:grassroots_networking/src/grassroots_network.dart';
 import 'package:grassroots_networking_core/src/models/identity.dart';
+import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 import 'package:grassroots_networking_core/src/transport/local_network.dart';
 
@@ -128,7 +129,7 @@ void main() {
     expect(receiverAddress, isNotNull);
 
     receiverStore.dispatch(LocalNetworkChangedAction(receiverLocalNetwork));
-    await receiver.setTrustLevel(ProximityMedium.lan, lanLevel);
+    await receiver.setTrustLevel(ProximityUnderlay.lan, lanLevel);
 
     // The caller learns where to dial; the receiver is told nothing about the
     // caller, so the caller's contact is unsolicited and its key unknown.
@@ -212,11 +213,11 @@ void main() {
 
     receiverStore.dispatch(LocalNetworkChangedAction(loopbackIsLocal));
     await receiver.setTrustLevel(
-        ProximityMedium.ble, ColdCallTrustLevel.open);
+        ProximityUnderlay.pan, ColdCallTrustLevel.open);
 
-    expect(receiver.trustLevelOf(ProximityMedium.ble),
+    expect(receiver.trustLevelOf(ProximityUnderlay.pan),
         ColdCallTrustLevel.open);
-    expect(receiver.trustLevelOf(ProximityMedium.lan),
+    expect(receiver.trustLevelOf(ProximityUnderlay.lan),
         ColdCallTrustLevel.closed);
 
     caller.putPeerAddress(
@@ -234,4 +235,104 @@ void main() {
         reason: 'the caller was inside a local prefix throughout, so only the '
             'LAN level being Closed can have refused it');
   }, timeout: const Timeout(Duration(minutes: 2)));
+
+  /// A known caller dials the receiver and sends. Returns what the receiver
+  /// reported of the caller: the underlays of its connects, of its received
+  /// messages, and of its discoveries, and its `peerUnderlays` once the
+  /// message has arrived.
+  Future<
+      ({
+        List<Underlay> connected,
+        List<Underlay> received,
+        List<ProximityUnderlay> discovered,
+        List<Underlay> reachable,
+      })> receiverReportOfKnownCaller({
+    required int seed,
+    required LocalNetwork receiverLocalNetwork,
+  }) async {
+    final callerId = await identityFromSeed(seed, 'known-caller');
+    final receiverId = await identityFromSeed(seed + 1, 'known-receiver');
+    final callerHex = hexOf(callerId.publicKey);
+
+    final (caller, _) = await startNode(callerId);
+    final (receiver, receiverStore) = await startNode(receiverId);
+    addTearDown(() async {
+      await caller.dispose();
+      await receiver.dispose();
+    });
+
+    expect(await listeningAddress(caller), isNotNull);
+    final receiverAddress = await listeningAddress(receiver);
+    expect(receiverAddress, isNotNull);
+
+    receiverStore.dispatch(LocalNetworkChangedAction(receiverLocalNetwork));
+    // A known peer is answered under every level and from every source, so
+    // only the source address can decide the underlay.
+    receiver.putKnownPeer(callerId.publicKey);
+
+    final connected = <Underlay>[];
+    final received = <Underlay>[];
+    final discovered = <ProximityUnderlay>[];
+    receiver.onPeerConnected = (pk, underlay, identity) {
+      if (hexOf(pk) == callerHex) connected.add(underlay);
+    };
+    receiver.onMessageReceived = (sender, payload, messageId, underlay) {
+      if (hexOf(sender) == callerHex) received.add(underlay);
+    };
+    receiver.onPeerDiscovered = (pk, underlay) {
+      if (hexOf(pk) == callerHex) discovered.add(underlay);
+    };
+
+    caller.putPeerAddress(receiverId.publicKey, receiverAddress!);
+    await caller.send(
+      receiverId.publicKey,
+      Uint8List.fromList(utf8.encode('which underlay')),
+    );
+
+    final deadline = DateTime.now().add(const Duration(seconds: 12));
+    while (received.isEmpty && DateTime.now().isBefore(deadline)) {
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    }
+    expect(received, isNotEmpty, reason: 'the known caller must get through');
+    expect(
+      receiverStore.state.localNetwork.network,
+      receiverLocalNetwork,
+      reason: 'the injected prefixes must still be the ones in force',
+    );
+    return (
+      connected: connected,
+      received: received,
+      discovered: discovered,
+      reachable: receiver.peerUnderlays(callerId.publicKey),
+    );
+  }
+
+  test(
+      'a UDP session with a peer within a local prefix is LAN: connect, '
+      'receive and discovery report it', () async {
+    final report = await receiverReportOfKnownCaller(
+      seed: 0x71,
+      receiverLocalNetwork: loopbackIsLocal,
+    );
+    expect(report.connected, [Underlay.lan]);
+    expect(report.received, everyElement(Underlay.lan));
+    expect(report.discovered, [ProximityUnderlay.lan]);
+    expect(report.reachable, [Underlay.lan]);
+  }, timeout: const Timeout(Duration(minutes: 2)));
+
+  test(
+      'a UDP session with a peer outside every local prefix is WAN, and WAN '
+      'contact is no discovery', () async {
+    final report = await receiverReportOfKnownCaller(
+      seed: 0x73,
+      receiverLocalNetwork: elsewhereIsLocal,
+    );
+    expect(report.connected, [Underlay.wan]);
+    expect(report.received, everyElement(Underlay.wan));
+    expect(report.discovered, isEmpty);
+    expect(report.reachable, [Underlay.wan]);
+  }, timeout: const Timeout(Duration(minutes: 2)));
 }
+
+String hexOf(Uint8List bytes) =>
+    bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();

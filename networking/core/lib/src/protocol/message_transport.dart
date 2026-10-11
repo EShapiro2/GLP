@@ -32,6 +32,20 @@ class MessageTransportSender {
     this.maxAttempts = 8,
   });
 
+  /// The GATT carrier (spec §Message Protocol: over BLE a fragment rides a
+  /// GATT write without response, sized to the negotiated MTU): fragments of
+  /// [FragmentHandler.bleMaxChunk], a window of four, and retransmission a
+  /// backstop to the link's own acknowledgment. One profile, so that a test
+  /// drives the carrier the coordinator runs.
+  factory MessageTransportSender.gatt({required PacketSender sendPacket}) =>
+      MessageTransportSender(
+        maxChunk: FragmentHandler.bleMaxChunk,
+        windowPerPeer: 4,
+        initialBackoff: const Duration(seconds: 2),
+        maxAttempts: 3,
+        sendPacket: sendPacket,
+      );
+
   final int maxChunk;
   final PacketSender sendPacket;
 
@@ -52,12 +66,28 @@ class MessageTransportSender {
 
   /// Send [payload] as [messageId] to [peerHex]. Completes true when every
   /// fragment has been acknowledged (or the whole message was), false when
-  /// a fragment exhausted its retransmissions or the peer was abandoned.
+  /// a fragment exhausted its retransmissions, the peer was abandoned, or
+  /// [isCurrent] said the message no longer belongs on the wire.
+  ///
+  /// [fragmentType] is what the fragments travel as: a `send` payload's
+  /// [PacketType.fragment], or [PacketType.attestationFragment] for the
+  /// attestation exchange, which rides the same protocol (spec §Message
+  /// Protocol).
+  ///
+  /// [isCurrent], where given, binds the message to something that can end
+  /// before the message is through — the attestation to the session whose
+  /// handshake hash its signature names (spec §Session Establishment). It is
+  /// asked before every transmission, in the same synchronous step that hands
+  /// the fragment to [sendPacket]; once it answers false the message fails
+  /// untransmitted, and nothing of it reaches a session it does not belong
+  /// to.
   Future<bool> sendMessage(
     String peerHex,
     String messageId,
-    Uint8List payload,
-  ) {
+    Uint8List payload, {
+    PacketType fragmentType = PacketType.fragment,
+    bool Function()? isCurrent,
+  }) {
     if (_disposed) return Future.value(false);
     final lane = _lanes.putIfAbsent(peerHex, () => _PeerLane(peerHex));
     // A retry can race the original (e.g. the coordinator's ACK watchdog
@@ -69,10 +99,12 @@ class MessageTransportSender {
       payload: payload,
       messageId: messageId,
       maxChunk: maxChunk,
+      type: fragmentType,
     );
     final message = _OutboundMessage(
       messageId: messageId,
       fragments: fragmented.fragments,
+      isCurrent: isCurrent,
     );
     lane.messages.add(message);
     _pump(lane);
@@ -160,6 +192,15 @@ class MessageTransportSender {
   ) {
     if (_disposed || message.completer.isCompleted) return;
     if (inFlight.attempts >= maxAttempts) {
+      _failMessage(lane, message);
+      return;
+    }
+    if (message.isCurrent != null && !message.isCurrent!()) {
+      // What the message was bound to has ended: fail it before anything of
+      // it is sent, rather than let a carrier carry it into whatever has
+      // taken that thing's place.
+      debugPrint('[transport] ${message.messageId} no longer current; '
+          'failing it untransmitted');
       _failMessage(lane, message);
       return;
     }
@@ -262,11 +303,18 @@ class _PeerLane {
 }
 
 class _OutboundMessage {
-  _OutboundMessage({required this.messageId, required this.fragments})
-      : pending = {for (var i = 0; i < fragments.length; i++) i};
+  _OutboundMessage({
+    required this.messageId,
+    required this.fragments,
+    this.isCurrent,
+  }) : pending = {for (var i = 0; i < fragments.length; i++) i};
 
   final String messageId;
   final List<GrassrootsPacket> fragments;
+
+  /// Whether the message still belongs on the wire (see
+  /// [MessageTransportSender.sendMessage]); null for an unbound message.
+  final bool Function()? isCurrent;
 
   /// Fragment indices not yet transmitted (or returned by a failed slot).
   final Set<int> pending;

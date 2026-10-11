@@ -80,11 +80,11 @@ Future<void> main(List<String> argv) async {
     print('Known peer registered: ${hex.substring(0, 8)}…');
   }
 
-  network.onPeerConnected = (pk, transport, _) =>
-      print('Peer connected (${transport.name}): ${_hex(pk)}');
-  network.onPeerDisconnected = (pk, transport) =>
-      print('Peer disconnected (${transport.name}): ${_hex(pk)}');
-  network.onMessageReceived = (messageId, sender, payload, transport) {
+  network.onPeerConnected = (pk, underlay, _) =>
+      print('Peer connected (${underlay.name}): ${_hex(pk)}');
+  network.onPeerDisconnected = (pk, underlay) =>
+      print('Peer disconnected (${underlay.name}): ${_hex(pk)}');
+  network.onMessageReceived = (sender, payload, messageId, underlay) {
     String rendering;
     try {
       rendering = utf8.decode(payload);

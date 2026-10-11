@@ -238,7 +238,7 @@ Future<void> _push(_Opts o) async {
     sodium: sodium,
   );
   final ack = Completer<Map>();
-  network.onMessageReceived = (messageId, senderPk, bytes, transport) {
+  network.onMessageReceived = (senderPk, bytes, messageId, underlay) {
     try {
       final m = jsonDecode(utf8.decode(bytes)) as Map;
       if (m['format'] == 'gpw/push-ack/1' && !ack.isCompleted) {

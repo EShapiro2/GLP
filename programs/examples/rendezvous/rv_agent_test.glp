@@ -365,3 +365,61 @@ test21_match_available_on_address(ReplyA?, ReplyB?, Pending1?) :-
                                 [needs(alice, bob, addr_a, ReplyA)], Pending1).
 
 %% Expected: ReplyA = punch(addr_b), ReplyB = punch(addr_a), Pending1 = []
+
+%% =============================================================================
+%% Test 22: the admitting path under the plain REPL
+%% =============================================================================
+%%
+%% An available whose signature verifies, taken through the agent to the
+%% networking layer.  This test program stands in for the social graph: it
+%% signs the pair of the person's own key K and bob, in the fixed order,
+%% under K --- K being A, whose signature B's availability carries --- and
+%% gives the agent as Graph the program identity signature/2 reports for
+%% that signature.  The agent takes the signature apart, finds it A's over
+%% the pair under Graph, and admits the availability; it then reads B's
+%% address through the root's peer_address/2.  Under the plain REPL no
+%% networking layer is bound, and the runtime stands in for a layer that
+%% observes nothing (IGLP, "One interface"): peer_address/2 assigns none,
+%% and match_available/6 refuses.  So B is rejected and A, waiting, is told
+%% nothing --- test 18's outcome, reached here through the admission and the
+%% layer and not through the signature.  The two punches, which follow only
+%% where the layer observes an address, are tests 16 and 21, given
+%% address(S) directly.
+%%
+%% Report is what signature/2 reports for the signature presented.
+
+exported procedure test22_available_admitted_no_layer(Signature, SignalReply,
+                                                      SignalReply).
+test22_available_admitted_no_layer(Report?, ReplyB?, ReplyA?) :-
+    self_key(K),
+    sign_own_pair(K?, bob, Sig),
+    present_signed_available(K?, bob, Sig?, Report, ReplyB, ReplyA).
+
+%% A signs the pair of A and B, in the fixed order, under A's own key.
+procedure sign_own_pair(Key?, Key?, SignedTerm).
+sign_own_pair(A, B, Sig?) :-
+    ground(A?), ground(B?), A? @< B? |
+    sign(attest(A?, B?), A?, Sig).
+sign_own_pair(A, B, Sig?) :-
+    ground(A?), ground(B?), B? @< A? |
+    sign(attest(B?, A?), A?, Sig).
+
+%% B's availability for A carries A's signature Sig, A's request waiting.
+procedure present_signed_available(Key?, Key?, SignedTerm?, Signature,
+                                   SignalReply, SignalReply).
+present_signed_available(A, B, Sig, Report?, ReplyB?, ReplyA?) :-
+    ground(A?), ground(B?), ground(Sig?) |
+    signature(Sig?, Report),
+    signature(Sig?, S),
+    graph_of(S?, Graph),
+    rv_agent # rv_agent(Graph?, [available(B?, A?, Sig?, ReplyB)],
+                        [needs(A?, B?, addr_a, ReplyA)]).
+
+%% The program identity a signature was made under, given the agent as Graph.
+procedure graph_of(Signature?, Hash).
+graph_of(signed(_, H, _), H?).
+graph_of(unsigned, no_graph).
+
+%% Expected: Report = signed(K, H, attest(..)), K self_key's answer and the
+%%           pair K's and bob's in the fixed order;
+%%           ReplyB = rejected, ReplyA unbound

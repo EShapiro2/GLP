@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/store/settings_state.dart';
 import 'package:grassroots_networking_core/src/store/settings_actions.dart';
 import 'package:grassroots_networking_core/src/store/settings_reducer.dart';
@@ -241,11 +242,11 @@ void main() {
 
     group('SetColdCallTrustLevelAction', () {
       test('every medium defaults to closed until set', () {
-        for (final medium in ProximityMedium.values) {
+        for (final underlay in ProximityUnderlay.values) {
           expect(
-            SettingsState.initial.trustLevelOf(medium),
+            SettingsState.initial.trustLevelOf(underlay),
             ColdCallTrustLevel.closed,
-            reason: '${medium.name} must start closed',
+            reason: '${underlay.name} must start closed',
           );
         }
       });
@@ -255,12 +256,12 @@ void main() {
         final result = settingsReducer(
           state,
           SetColdCallTrustLevelAction(
-            ProximityMedium.ble,
+            ProximityUnderlay.pan,
             ColdCallTrustLevel.open,
           ),
         );
 
-        expect(result.trustLevelOf(ProximityMedium.ble),
+        expect(result.trustLevelOf(ProximityUnderlay.pan),
             ColdCallTrustLevel.open);
         expect(result.bluetoothEnabled, state.bluetoothEnabled);
         expect(result.udpEnabled, state.udpEnabled);
@@ -272,35 +273,35 @@ void main() {
         final bleOpen = settingsReducer(
           SettingsState.initial,
           SetColdCallTrustLevelAction(
-            ProximityMedium.ble,
+            ProximityUnderlay.pan,
             ColdCallTrustLevel.open,
           ),
         );
-        expect(bleOpen.trustLevelOf(ProximityMedium.lan),
+        expect(bleOpen.trustLevelOf(ProximityUnderlay.lan),
             ColdCallTrustLevel.closed);
 
         final bothOpen = settingsReducer(
           bleOpen,
           SetColdCallTrustLevelAction(
-            ProximityMedium.lan,
+            ProximityUnderlay.lan,
             ColdCallTrustLevel.open,
           ),
         );
-        expect(bothOpen.trustLevelOf(ProximityMedium.ble),
+        expect(bothOpen.trustLevelOf(ProximityUnderlay.pan),
             ColdCallTrustLevel.open);
-        expect(bothOpen.trustLevelOf(ProximityMedium.lan),
+        expect(bothOpen.trustLevelOf(ProximityUnderlay.lan),
             ColdCallTrustLevel.open);
 
         final lanOnly = settingsReducer(
           bothOpen,
           SetColdCallTrustLevelAction(
-            ProximityMedium.ble,
+            ProximityUnderlay.pan,
             ColdCallTrustLevel.closed,
           ),
         );
-        expect(lanOnly.trustLevelOf(ProximityMedium.ble),
+        expect(lanOnly.trustLevelOf(ProximityUnderlay.pan),
             ColdCallTrustLevel.closed);
-        expect(lanOnly.trustLevelOf(ProximityMedium.lan),
+        expect(lanOnly.trustLevelOf(ProximityUnderlay.lan),
             ColdCallTrustLevel.open);
       });
 
@@ -308,24 +309,56 @@ void main() {
         final bleOpen = settingsReducer(
           SettingsState.initial,
           SetColdCallTrustLevelAction(
-            ProximityMedium.ble,
+            ProximityUnderlay.pan,
             ColdCallTrustLevel.open,
           ),
         );
         final restored = SettingsState.fromJson(bleOpen.toJson());
-        expect(restored.trustLevelOf(ProximityMedium.ble),
+        expect(restored.trustLevelOf(ProximityUnderlay.pan),
             ColdCallTrustLevel.open);
-        expect(restored.trustLevelOf(ProximityMedium.lan),
+        expect(restored.trustLevelOf(ProximityUnderlay.lan),
             ColdCallTrustLevel.closed);
       });
 
       test('a blob carrying the old single level is malformed', () {
-        // No tolerant decoder: the per-medium form is required, and a blob
+        // No tolerant decoder: the per-underlay form is required, and a blob
         // written before the levels were split does not carry it.
         final old = SettingsState.initial.toJson()
           ..remove('coldCallTrustLevels')
           ..['coldCallTrustLevel'] = 'open';
         expect(() => SettingsState.fromJson(old), throwsFormatException);
+      });
+
+      test('the persisted levels are keyed by the proximity underlays', () {
+        final json = settingsReducer(
+          SettingsState.initial,
+          SetColdCallTrustLevelAction(
+            ProximityUnderlay.pan,
+            ColdCallTrustLevel.open,
+          ),
+        ).toJson();
+        expect(json['coldCallTrustLevels'], {'pan': 'open', 'lan': 'closed'});
+      });
+
+      test('a blob keyed by anything but the proximity underlays is malformed',
+          () {
+        // No tolerant decoder (networking/CLAUDE.md): a key that names no
+        // ProximityUnderlay is not read past, a `ble` key included.
+        final blob = SettingsState.initial.toJson()
+          ..['coldCallTrustLevels'] = {'ble': 'open', 'lan': 'closed'};
+        expect(() => SettingsState.fromJson(blob), throwsFormatException);
+      });
+
+      test('a blob lacking a proximity underlay\'s level is malformed', () {
+        final blob = SettingsState.initial.toJson()
+          ..['coldCallTrustLevels'] = {'pan': 'open'};
+        expect(() => SettingsState.fromJson(blob), throwsFormatException);
+      });
+
+      test('a blob naming no trust level is malformed', () {
+        final blob = SettingsState.initial.toJson()
+          ..['coldCallTrustLevels'] = {'pan': 'ajar', 'lan': 'closed'};
+        expect(() => SettingsState.fromJson(blob), throwsFormatException);
       });
     });
 

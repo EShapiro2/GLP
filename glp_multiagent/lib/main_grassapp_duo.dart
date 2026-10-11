@@ -188,17 +188,17 @@ class _DuoScreenState extends State<DuoScreen> {
         store: store,
         sodium: sodium,
       );
-      network.onMessageReceived = (messageId, sender, payload, transport) {
+      network.onMessageReceived = (sender, payload, messageId, underlay) {
         final env = decodeEnvelope(payload);
         TraceLog.log('NET', 'recv ${env.from} → ${env.to} '
-            '(${env.payload.length}B, $transport)');
+            '(${env.payload.length}B, $underlay)');
         IsolateRouter.instance.route(env.from, env.to, env.payload);
       };
-      network.onPeerConnected = (pk, transport, _) {
-        setState(() => _netStatus = 'linked ($transport)');
-        TraceLog.log('NET', 'peer phone connected via $transport');
+      network.onPeerConnected = (pk, underlay, _) {
+        setState(() => _netStatus = 'linked ($underlay)');
+        TraceLog.log('NET', 'peer phone connected via $underlay');
       };
-      network.onPeerDisconnected = (pk, transport) {
+      network.onPeerDisconnected = (pk, underlay) {
         setState(() => _netStatus = 'link lost');
       };
 

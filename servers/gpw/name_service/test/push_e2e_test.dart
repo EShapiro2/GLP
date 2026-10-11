@@ -51,7 +51,6 @@ void main() {
       identity: await GrassrootsIdentity.generate(nickname: 'gpw-mirror'),
       sodium: sodium!,
     );
-    serviceNet.setTrustLevel(ColdCallTrustLevel.closed);
     final mirrors = Directory('${tmp.path}/mirrors')..createSync();
     final store = NameStore(tmp.path);
     final writer = MirrorWriter(zone: zone, store: store, mirrorsDir: mirrors);
@@ -62,7 +61,7 @@ void main() {
       serverKey: await SigningKey.generate(),
       registrar: LayerRegistrar(serviceNet),
     );
-    serviceNet.onMessageReceived = (messageId, senderPk, payload, _) async {
+    serviceNet.onMessageReceived = (senderPk, payload, messageId, _) async {
       final result = await writer.applyPush(b64url(senderPk), payload);
       await serviceNet.send(senderPk,
           Uint8List.fromList(utf8.encode(jsonEncode(result.toJson()))));
@@ -88,7 +87,7 @@ void main() {
       await serviceNet.dispose();
     });
     final ack = Completer<Map>();
-    phone.onMessageReceived = (messageId, senderPk, payload, _) {
+    phone.onMessageReceived = (senderPk, payload, messageId, _) {
       final m = jsonDecode(utf8.decode(payload)) as Map;
       if (m['format'] == 'gpw/push-ack/1' && !ack.isCompleted) {
         ack.complete(m);
@@ -119,7 +118,7 @@ void main() {
         sodium: sodium!);
     addTearDown(() => stranger.dispose());
     var strangerLinked = false;
-    stranger.onPeerConnected = (_, __) => strangerLinked = true;
+    stranger.onPeerConnected = (_, __, ___) => strangerLinked = true;
     expect(await stranger.start(), isTrue);
     stranger.putPeerAddress(serviceNet.identity.publicKey, address);
     await stranger.send(serviceNet.identity.publicKey,

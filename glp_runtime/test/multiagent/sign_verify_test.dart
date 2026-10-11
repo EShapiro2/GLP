@@ -54,9 +54,9 @@ GlpEngine _agent(String id, PersonIdentity identity, List<String> out) {
   final client = SimulationNetworkClient(
     selfId: id,
     directory: dir,
+    keyPair: identity.keyPair,
     sendToRouter: (_, __) {},
   );
-  client.putIdentity(identity.pub, identity.priv);
   engine.madContext!.network = client;
   return engine;
 }

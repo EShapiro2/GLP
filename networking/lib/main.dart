@@ -415,8 +415,8 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
       );
 
       grassroots.onMessageReceived =
-          (messageId, senderPubkey, payload, transport) {
-        _handleIncomingMessage(messageId, senderPubkey, payload, transport);
+          (senderPubkey, payload, messageId, underlay) {
+        _handleIncomingMessage(messageId, senderPubkey, payload, underlay);
       };
 
       // Friend presence is handled at the transport layer; no app-layer
@@ -525,7 +525,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
   }
 
   Future<void> _handleIncomingMessage(String messageId, Uint8List senderPubkey,
-      Uint8List payload, MessageTransport transport) async {
+      Uint8List payload, Underlay underlay) async {
     final senderHex = ChatMessage.pubkeyToHex(senderPubkey);
     final myHex = ChatMessage.pubkeyToHex(_identity!.publicKey);
 
@@ -533,7 +533,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
 
     if (block != null) {
       await _handleBlock(
-          block, senderHex, myHex, messageId, senderPubkey, transport);
+          block, senderHex, myHex, messageId, senderPubkey, underlay);
     } else {
       debugPrint(
           '📨 Failed to parse block (${payload.length} bytes from $senderHex) - dropping');
@@ -546,13 +546,13 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
       String myHex,
       String messageId,
       Uint8List senderPubkey,
-      MessageTransport transport) async {
+      Underlay underlay) async {
     // Find sender name
     final peer = _peers.values
         .where((p) => ChatMessage.pubkeyToHex(p.publicKey) == senderHex)
         .firstOrNull;
     final senderName = peer?.displayName ?? 'Unknown';
-    final transportName = transport == MessageTransport.udp ? 'UDX' : 'BLE';
+    final transportName = underlay.name.toUpperCase();
 
     switch (block.type) {
       case BlockType.say:
@@ -2398,8 +2398,8 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
       platformAttestation: _platformAttestation(),
     );
     newGrassroots.onMessageReceived =
-        (messageId, senderPubkey, payload, transport) {
-      _handleIncomingMessage(messageId, senderPubkey, payload, transport);
+        (senderPubkey, payload, messageId, underlay) {
+      _handleIncomingMessage(messageId, senderPubkey, payload, underlay);
     };
 
     if (!mounted) return;
