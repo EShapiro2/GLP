@@ -35,6 +35,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:test/test.dart';
+import 'package:glp_runtime/compiler/program_linker.dart' show emitVglpSources;
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
@@ -342,6 +343,76 @@ pricing_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       expect(r['P'], 'price(2.5)');
       expect(r['Log'],
           '[drawn(0, form(price, [number]), input([])), withdrawn(0) | _]');
+    });
+  });
+
+  group('a functor that is not a name (vGLP #6 Cowork, 2026-10-11 12:55 UTC, '
+      'Task A)', () {
+    // Pick ::= 'odd one'(Choice): the join procedure of its alternative is
+    // named by the functor's characters made a name, join_pick_odd_one_1, so
+    // the module :emit writes reads back, and runs.  The program is written
+    // under programs/tests/vglp/ for the run and removed after, as the Real
+    // question's is; its module is emitted beside the source, which the load
+    // then skips for the module (vGLP CLAUDE.md, "The REPL loads them").
+    late Directory fixture;
+    setUp(() {
+      fixture = Directory('../programs/tests/vglp/odd_fixture_${pid}_'
+          '${DateTime.now().microsecondsSinceEpoch}')
+        ..createSync();
+      File('${fixture.path}/pick.vglp').writeAsStringSync('''
+Choice ::= a ; b.
+Pick ::= 'odd one'(Choice).
+exported procedure (Pick?)*pick(Pick).
+(P)*pick(P?).
+''');
+      File('${fixture.path}/self.glp').writeAsStringSync('''
+Choice   ::= a ; b.
+Pick     ::= 'odd one'(Choice).
+Question ::= pick_r(Pick?).
+Ask(Q)   ::= ask(Constant, Q).
+PersonIn ::= [_ | PersonIn].
+
+imported procedure pick#pick(Pick, Stream(Ask(Question))).
+imported procedure pick#dispatch(Stream(Ask(Question))?,
+    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+
+exported procedure play_pick(Pick, Stream(_)).
+play_pick(P?, Log?) :-
+    pick # pick(P, Asks),
+    pick # dispatch(Asks?, ch(Gs?, Ds), _),
+    picking_person(Ds?, Gs, Log).
+
+procedure picking_person(_?, PersonIn, Stream(_)).
+picking_person([draw(Id, W, input(Q)) | Ds],
+               [input(Id?, Q?, 'odd one'(b)) | Gs?],
+               [drawn(Id?, W?, input(Q?)) | Log?]) :-
+    ground(Id?), ground(W?), ground(Q?) |
+    picking_person(Ds?, Gs, Log).
+picking_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    picking_person(Ds?, Gs, Log).
+''');
+    });
+    tearDown(() {
+      if (fixture.existsSync()) fixture.deleteSync(recursive: true);
+    });
+
+    test('its emitted module reads back and runs: the person\'s grant forms '
+        "'odd one'(b)", () async {
+      final written =
+          emitVglpSources(fixture.absolute.path, rootSelfGlpPath: _root);
+      final emitted = File('${fixture.absolute.path}/pick.glp');
+      expect(written, [emitted.path]);
+      final text = emitted.readAsStringSync();
+      expect(text, contains('join_pick_odd_one_1('));
+      expect(text, isNot(contains('join_pick_odd one')));
+      final engine = GlpEngine(rootSelfGlpPath: _root);
+      expect(engine.loadProgram(fixture.absolute.path), isTrue);
+      final r = _Run(await engine.runGoal('play_pick(P, Log)'), engine);
+      expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
+      expect(r['P'], 'odd one(b)');
+      expect(r['Log'], startsWith('[drawn(0, '));
+      expect(r['Log'], endsWith(', input([])), withdrawn(0) | _]'));
     });
   });
 

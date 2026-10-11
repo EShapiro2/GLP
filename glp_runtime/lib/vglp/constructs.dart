@@ -369,6 +369,8 @@ class _Generator {
   final _altsMemo = <String, List<_Alt>>{};
   final _questionMemo = <String, bool>{};
   final _multiMemo = <String, bool>{};
+  final _suffixes = <String, String>{};
+  final _suffixesUsed = <String, Set<String>>{};
 
   _Generator(this.gen, this.resolve, this.declared, this.fresh,
       this.questionType, this.constructName);
@@ -682,6 +684,29 @@ class _Generator {
     });
   }
 
+  /// The suffix of the procedures of alternative [a] of node [n], join_N and
+  /// start_N: `cons` for a list cell, and for a structure its functor's
+  /// characters made a name, each character outside a name (a letter, a
+  /// digit or `_`, lexer.dart) replaced by `_`, then its arity ---
+  /// `'odd one'(Choice)` odd_one_1.  Two alternatives of one node whose
+  /// suffixes so made coincide are told apart by `_2`, `_3`, ... in the
+  /// order met, as the Definition's t is (canonical.dart, THE ASK; vGLP #6
+  /// Cowork, 2026-10-11 12:55 UTC, Task A).
+  String _altSuffix(_Node n, _Alt a) {
+    if (a is! _StructAlt) return 'cons';
+    final raw = '${a.functor}/${a.args.length}';
+    return _suffixes.putIfAbsent('${n.typeKey}|$raw', () {
+      final made = a.functor.replaceAll(RegExp(r'[^A-Za-z0-9_]'), '_');
+      final stem = '${made}_${a.args.length}';
+      final used = _suffixesUsed.putIfAbsent(n.typeKey, () => <String>{});
+      var s = stem;
+      for (var k = 2; !used.add(s); k++) {
+        s = '${stem}_$k';
+      }
+      return s;
+    });
+  }
+
   String _declParams(_Node n) {
     final used = <String>{};
     void scan(TypeExpr t) {
@@ -801,7 +826,7 @@ class _Generator {
   /// where each child formed, and refused where any was refused, one clause
   /// per position (vGLP #5 Cowork, 2026-10-03 08:16 UTC, item 3).
   String _join(_Node n, _Alt a, List<_Node> kids) {
-    final suffix = a is _StructAlt ? '${a.functor}_${a.args.length}' : 'cons';
+    final suffix = _altSuffix(n, a);
     final name = _name('join', n, suffix);
     if (!_emitted.add('join:${n.typeKey}:$suffix')) return name;
     final p = _declParams(n);
@@ -964,7 +989,7 @@ class _Generator {
   /// start_N_f(V1s?, ..., Vns?, Vs): the views of a structure from the views
   /// of its arguments, again each time one of them changes.
   String _combiner(_Node n, _Alt a, List<_Node> kids) {
-    final suffix = a is _StructAlt ? '${a.functor}_${a.args.length}' : 'cons';
+    final suffix = _altSuffix(n, a);
     final start = _name('start', n, suffix);
     if (!_emitted.add('start:${n.typeKey}:$suffix')) return start;
     final p = _declParams(n);

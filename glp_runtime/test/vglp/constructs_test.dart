@@ -871,6 +871,57 @@ procedure (A(B)?)*g(Integer?).
     });
   });
 
+  group('a functor that is not a name (vGLP #6 Cowork, 2026-10-11 12:55 UTC, '
+      'Task A)', () {
+    test('names its join and start procedures by its characters made a name, '
+        'each one outside a name replaced by `_`', () {
+      final s = compile('''
+Choice ::= a ; b.
+Pick ::= 'odd one'(Choice).
+procedure (Pick?)*pick(Pick).
+(P)*pick(P?).
+''').source;
+      expect(
+          s,
+          contains("form_pick('odd one'(R1), F?) :- form_choice(R1?, F1), "
+              'join_pick_odd_one_1(F1?, F).'));
+      expect(s,
+          contains("join_pick_odd_one_1(formed(X1), formed('odd one'(X1?)))."));
+      expect(s, isNot(contains('join_pick_odd one')));
+      final w = compile('''
+Board ::= 'the board'(Stream(Integer), Stream(String)?).
+procedure (Board)*game(Stream(String)).
+('the board'([1, 2, 3], Moves))*game(Moves?).
+''').source;
+      expect(w, contains('start_board_the_board_2('));
+      expect(w, isNot(contains('start_board_the board')));
+    });
+
+    test('two functors made one name are told apart by `_2`, as the '
+        'Definition\'s t is', () {
+      final s = compile('''
+Choice ::= a ; b.
+Pick ::= 'odd one'(Choice) ; odd_one(Choice) ; 'odd-one'(Choice).
+procedure (Pick?)*pick(Pick).
+(P)*pick(P?).
+''').source;
+      expect(
+          s,
+          contains("form_pick('odd one'(R1), F?) :- form_choice(R1?, F1), "
+              'join_pick_odd_one_1(F1?, F).'));
+      expect(
+          s,
+          contains('form_pick(odd_one(R1), F?) :- form_choice(R1?, F1), '
+              'join_pick_odd_one_1_2(F1?, F).'));
+      expect(
+          s,
+          contains("form_pick('odd-one'(R1), F?) :- form_choice(R1?, F1), "
+              'join_pick_odd_one_1_3(F1?, F).'));
+      expect(s,
+          contains('join_pick_odd_one_1_2(formed(X1), formed(odd_one(X1?))).'));
+    });
+  });
+
   group('a string in the compiled program', () {
     // One string constant, 'x' and "x" one value and '"x"' the
     // three-character string, printed by GLP's printer in its one canonical
