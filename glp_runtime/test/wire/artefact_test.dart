@@ -16,6 +16,7 @@ import 'package:glp_runtime/analysis/type_checker/type_identity.dart'
 import 'package:glp_runtime/multiagent/identity.dart';
 import 'package:glp_runtime/wire/artefact.dart';
 import 'package:glp_runtime/wire/codec.dart';
+import 'package:glp_runtime/engine_v2/code_image.dart' show CodeImage;
 import 'package:test/test.dart';
 
 Uint8List _hm() => Uint8List.fromList(List<int>.generate(32, (i) => i));
@@ -56,11 +57,11 @@ Artefact _sample({PersonIdentity? signer}) => Artefact(
 
 void main() {
   group('artefact byte format', () {
-    test('header begins with magic GLPW and code-format version 2', () {
+    test('header begins with magic GLPW and code-format version 3', () {
       final b = _sample().toBytes();
       expect(b.sublist(0, 4), artefactMagic); // 'GLPW'
-      expect(b[4], wireFormatVersion); // 2 (message kind byte, certificate)
-      expect(wireFormatVersion, 2);
+      expect(b[4], wireFormatVersion); // 3 (the serializer message's serial)
+      expect(wireFormatVersion, 3);
     });
 
     test('neither identity is in the header: the body is followed by the '
@@ -230,6 +231,35 @@ void main() {
       final wrongHM = Uint8List(32);
       expect(() => ArtefactLoader().load(bytes, offeredHM: wrongHM),
           throwsA(isA<WireFormatException>()));
+    });
+
+    // Format Versioning: "A loader refuses an artefact whose code-format
+    // version ... it does not support"; "version 2 added the message kind
+    // byte, version 3 the serializer message's serial".  The artefact is a
+    // version-2 one in every other respect sound: its body hashes to its
+    // certificate's compiled identity and the certificate verifies.
+    test('refuses a code-format version-2 artefact', () {
+      final body = Uint8List.fromList(_sample().bodyBytes());
+      expect(body[4], 3);
+      body[4] = 2;
+      final cert = Certificate.signed(
+          signer: _compiler,
+          hSrc: _hm(),
+          hBin: Artefact.compiledIdentityOfBody(body));
+      final w = WireWriter();
+      for (final b in body) {
+        w.u8(b);
+      }
+      cert.write(w);
+      final v2 = w.toBytes();
+      final refusedFor2 = throwsA(isA<WireFormatException>()
+          .having((e) => e.message, 'message', contains('version: 2')));
+      expect(() => ArtefactLoader().load(v2, offeredHM: _hm()), refusedFor2);
+      expect(() => Artefact.fromBytes(v2), refusedFor2);
+      expect(() => CodeImage.fromArtefactBytes(v2), refusedFor2);
+      final (:artefact, :refusal) = Artefact.certify(v2);
+      expect(artefact, isNull);
+      expect(refusal, contains('version: 2'));
     });
 
     test('refuses an unsupported ISA version', () {
