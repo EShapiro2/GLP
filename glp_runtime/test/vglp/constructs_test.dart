@@ -682,6 +682,22 @@ procedure (Request?)*agent(Integer?).
           'F = formed(R?).'));
     });
 
+    test('form_any, which no construct calls, the type _ refused everywhere '
+        'in an interactive type, is not emitted; the formers of the '
+        'primitives are (vGLP #8 Cowork, 2026-10-11 17:24 UTC, NOTED)', () {
+      final s = compile('''
+Request ::= post(String) ; quit.
+procedure (Request?)*agent(Integer?).
+(post(T))*agent(N) :- ground(N?), ground(T?) | true.
+(quit)*agent(_).
+''').source;
+      for (final f in ['string', 'integer', 'number', 'real', 'constant',
+          'module']) {
+        expect(s, contains('procedure form_$f(_?, Formed('));
+      }
+      expect(s, isNot(contains('form_any')));
+    });
+
     test('a union with a primitive alternative: the primitive formed by its '
         'guard, the term written in the body (Q2)', () {
       final s = compile('''

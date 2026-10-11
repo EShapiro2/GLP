@@ -236,7 +236,6 @@ class GenericNames {
       required String formReal,
       required String formConstant,
       required String formModule,
-      required String formAny,
       required this.formedType,
       required this.doneType,
       required this.drawType,
@@ -253,8 +252,6 @@ class GenericNames {
           _Leaf.number: formNumber,
           _Leaf.constant: formConstant,
           _Leaf.module: formModule,
-          _Leaf.any: formAny,
-          _Leaf.param: formAny,
         };
 
   /// The generic procedures the construct processes may call, by their
@@ -273,7 +270,6 @@ class GenericNames {
     'form_real',
     'form_constant',
     'form_module',
-    'form_any',
   ];
 }
 
@@ -1166,7 +1162,18 @@ class _Generator {
   /// 21:13 UTC, Q2).
   String _former(_Node n) {
     final leaf = _soleLeaf(n);
-    if (leaf != null) return gen._leafFormers[leaf]!;
+    if (leaf != null) {
+      // The type _ and a type parameter where the person writes are refused
+      // before any position is formed (_checkFlat), so no construct calls a
+      // former of either, and form_any is not emitted (vGLP #8 Cowork,
+      // 2026-10-11 17:24 UTC, NOTED).
+      final f = gen._leafFormers[leaf];
+      if (f == null) {
+        throw StateError('A position the person writes of type '
+            '${n.typeKey}, which _checkFlat refuses, is formed');
+      }
+      return f;
+    }
     final name = _name('form', n);
     if (!_emitted.add('form:${n.typeKey}')) return name;
     final t = n.typeKey;

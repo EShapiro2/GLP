@@ -1253,7 +1253,6 @@ _Elicitation _elicitation(
     formReal: inst.proc('form_real'),
     formConstant: inst.proc('form_constant'),
     formModule: inst.proc('form_module'),
-    formAny: inst.proc('form_any'),
     formedType: inst.type('Formed'),
     doneType: inst.type('Done'),
     drawType: inst.type('Draw'),
