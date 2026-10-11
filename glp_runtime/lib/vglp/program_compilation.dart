@@ -282,8 +282,8 @@ class _SiblingExports {
     }
   }
 
-  CanonicalProgram _compileOne(
-      String path, String text, ExportReader exports) {
+  CanonicalProgram _compileOne(String path, String text, ExportReader exports,
+      {Set<String> ownTogether = const {}}) {
     final dir = mediator?.directory;
     return compileCanonical(text,
         dispatcher: mediator?.dispatcher,
@@ -291,7 +291,8 @@ class _SiblingExports {
         scopeWidgets: dir != null
             ? scopeWidgetDeclarations(path, Directory(dir).parent.path)
             : const {},
-        exports: exports);
+        exports: exports,
+        ownTogether: ownTogether);
   }
 
   /// The module file [module].vglp beside the source at [importer], by its
@@ -453,10 +454,25 @@ class _SiblingExports {
   /// procedures that reach a question: "compiled together, their interactive
   /// types joined once" (vGLP at 66b6500, Definition "Canonical
   /// Compilation").  Their interactive types are joined before any of them
-  /// is compiled, and each import of a procedure of another of them is
-  /// compiled as that one's export is, by what was read of it with those
-  /// types; the compiled modules are held to it, and one refused refuses them
-  /// all.
+  /// is compiled, two of two of them with one functor told apart in import
+  /// order (_importOrder; vGLP #8 Cowork, 2026-10-11 16:44 UTC, Q1), and each
+  /// import of a procedure of another of them is compiled as that one's
+  /// export is, by what was read of it with those types; the compiled modules
+  /// are held to it, and one refused refuses them all.
+  ///
+  /// "The module that defines a type declares its widget, and the others
+  /// declare none for it" (vGLP #8 Cowork, Q2): a type of theirs has the
+  /// widget the modules that define it draw it with, by their widget
+  /// declarations --- of the type, or of a type inside it --- and their
+  /// scope, and every module of them has it so, as a type imported from
+  /// outside them has the widget its export gives it.  So each is compiled
+  /// twice: first with the widget of every type of theirs drawn by its own
+  /// declarations, which gives the widget each module that defines a type
+  /// draws it with; then with those widgets, each module's declaration for a
+  /// type it does not define refused as one for a type it imports.  Of two
+  /// modules that define one type, one whose declarations draw it as its
+  /// scope does declares nothing for it and takes the other's; two that draw
+  /// it apart are refused, one type with two widgets.
   void _compileTogether(
       _Component c,
       List<String> together,
@@ -492,78 +508,158 @@ class _SiblingExports {
       members.add(ComponentMember(name(k), c.fronts[k]!, outside));
     }
 
-    List<InteractiveType>? joint;
+    ({List<InteractiveType> types, Map<String, List<String>> definers})?
+        joined;
     try {
-      joint = joinComponentTypes(members);
+      final (order, undecided) = _importOrder(together, name);
+      joined = joinComponentTypes(members,
+          importOrder: order, undecided: undecided);
     } on ComponentRefusal catch (r) {
       errors[together.firstWhere((k) => name(k) == r.member)] = r.error;
     }
 
-    final results = <String, CanonicalProgram>{};
-    if (joint != null) {
-      final functors = {for (final t in joint) t.written: t.functor};
-      final standIns = {
-        for (final k in together)
-          k: _standIn(c, k, reach[k]!, er[k]!,
-              interactive: joint, functors: functors)
+    var results = <String, CanonicalProgram>{};
+    if (joined != null) {
+      final functors = {for (final t in joined.types) t.written: t.functor};
+      final byName = {for (final k in together) name(k): k};
+      final definers = {
+        for (final MapEntry(key: w, value: ns) in joined.definers.entries)
+          w: [for (final n in ns) byName[n]!]
       };
-      for (final k in together) {
-        final read = readerOf(k);
-        try {
-          results[k] = _compileOne(c.paths[k]!, c.texts[k]!, (module) {
-            final t = _sibling(k, module);
-            return together.contains(t) ? standIns[t] : read(module);
-          });
-        } on CompileError catch (e) {
-          errors[k] = e;
+
+      // Each module compiled with the interactive types [types], the types
+      // of theirs [own] gives it its own.
+      Map<String, CanonicalProgram> compileAll(List<InteractiveType> types,
+          Set<String> Function(String k) own, Map<String, CompileError> failed,
+          {Map<String, String>? texts}) {
+        final standIns = {
+          for (final k in together)
+            k: _standIn(c, k, reach[k]!, er[k]!,
+                interactive: types, functors: functors)
+        };
+        final out = <String, CanonicalProgram>{};
+        for (final k in (texts?.keys ?? together)) {
+          final read = readerOf(k);
+          try {
+            out[k] = _compileOne(c.paths[k]!, texts?[k] ?? c.texts[k]!,
+                (module) {
+              final t = _sibling(k, module);
+              return together.contains(t) ? standIns[t] : read(module);
+            }, ownTogether: own(k));
+          } on CompileError catch (e) {
+            failed[k] = e;
+          }
         }
+        return out;
+      }
+
+      String? widgetOf(CanonicalProgram? p, String w) {
+        for (final t in p?.interactive ?? const <InteractiveType>[]) {
+          if (t.written == w) return t.widget;
+        }
+        return null;
+      }
+
+      // First, every type of theirs each module's own: the widget each
+      // module that defines a type draws it with, and, of one with widget
+      // declarations, the widget its scope alone draws it with.
+      final all = definers.keys.toSet();
+      final drawn = compileAll(joined.types, (_) => all, {});
+      final declaring = [
+        for (final k in together)
+          if (drawn.containsKey(k) &&
+              c.fronts[k]!.widgets.positions.isNotEmpty)
+            k
+      ];
+      final undeclared = compileAll(joined.types, (_) => all, {},
+          texts: {for (final k in declaring) k: c.fronts[k]!.widgets.stripped});
+
+      final widgets = <String, String?>{};
+      final conflicts = <String, CompileError>{};
+      for (final MapEntry(key: w, value: ks) in definers.entries) {
+        final ds = [for (final k in ks) if (drawn.containsKey(k)) k];
+        if (ds.isEmpty) continue;
+        final declared = [
+          for (final k in ds)
+            if (declaring.contains(k) &&
+                (!undeclared.containsKey(k) ||
+                    widgetOf(undeclared[k], w) != widgetOf(drawn[k], w)))
+              k
+        ];
+        final by = declared.isEmpty ? ds : declared;
+        final widget = widgetOf(drawn[by.first], w);
+        widgets[w] = widget;
+        final other = by.skip(1).where((k) => widgetOf(drawn[k], w) != widget);
+        if (other.isEmpty) continue;
+        final k = other.first;
+        final front = c.fronts[k]!;
+        final at = front.widgets.positionOf(w) ??
+            (declared.contains(k)
+                ? front.widgets.positions.first
+                : (() {
+                    final v = front.volitional.values.firstWhere(
+                        (v) => typeSource(v.interactiveType) == w);
+                    return (v.line, v.column);
+                  })());
+        conflicts[k] = CompileError(
+            'The interactive type $w of the modules compiled together, '
+            '${together.map(name).join(', ')}, is defined by '
+            '${name(by.first)} and ${name(k)} and has the widget $widget in '
+            '${name(by.first)} and ${widgetOf(drawn[k], w)} in ${name(k)}'
+            '${declared.isEmpty ? '' : ', by their widget declarations'}: '
+            '"the module that defines a type declares its widget, and the '
+            'others declare none for it" (vGLP #8 Cowork, 2026-10-11 16:44 '
+            'UTC, Q2), and their interactive types are joined once, each '
+            'with one widget (vGLP, Definition "Canonical Compilation": "each '
+            'with the functor and the widget its export gives it"; '
+            '$_togetherText)',
+            at.$1,
+            at.$2,
+            phase: 'analyzer');
+      }
+
+      // Then each with those widgets, a module's own types those it
+      // defines.
+      final joint = [
+        for (final t in joined.types)
+          widgets[t.written] != null ? t.withWidget(widgets[t.written]) : t
+      ];
+      final failed = <String, CompileError>{};
+      results = compileAll(
+          joint,
+          (k) => {
+                for (final MapEntry(key: w, value: ks) in definers.entries)
+                  if (ks.contains(k)) w
+              },
+          failed);
+      for (final k in together) {
+        final e = failed[k] ?? conflicts[k];
+        if (e != null) errors[k] = e;
       }
 
       // Each compiled as it was read: the procedures that reach a question,
-      // and the interactive types with their functors, are those joined;
-      // and each type has one widget across them.
+      // and the interactive types with their functors and widgets, are those
+      // joined.
       if (errors.isEmpty) {
+        final joinedWidgets = {for (final t in joint) t.written: t.widget};
         for (final k in together) {
           final p = results[k]!;
           final types = {for (final t in p.interactive) t.written: t.functor};
           if (p.exportedReaching.length != er[k]!.length ||
               !p.exportedReaching.containsAll(er[k]!) ||
               types.length != functors.length ||
-              types.entries.any((e) => functors[e.key] != e.value)) {
+              types.entries.any((e) => functors[e.key] != e.value) ||
+              p.interactive.any((t) =>
+                  definers.containsKey(t.written) &&
+                  t.widget != joinedWidgets[t.written])) {
             throw StateError('${name(k)}, compiled together with '
                 '${together.map(name).join(', ')}, is not compiled as it was '
                 'read before: its procedures that reach a question '
                 '${p.exportedReaching}, read ${er[k]}; its interactive types '
-                '$types, joined $functors');
+                '$types, joined $functors; their widgets '
+                '${{for (final t in p.interactive) t.written: t.widget}}, '
+                'joined $joinedWidgets');
           }
-        }
-        for (final w in functors.keys) {
-          final widgetOf = {
-            for (final k in together)
-              k: results[k]!.interactive.firstWhere((t) => t.written == w).widget
-          };
-          final first = together.first;
-          final other = together
-              .firstWhere((k) => widgetOf[k] != widgetOf[first], orElse: () => '');
-          if (other.isEmpty) continue;
-          final declaring = [first, other].firstWhere(
-              (k) => c.fronts[k]!.widgets.positions.isNotEmpty,
-              orElse: () => other);
-          final at = c.fronts[declaring]!.widgets.positions.isEmpty
-              ? (1, 1)
-              : c.fronts[declaring]!.widgets.positions.first;
-          errors[declaring] = CompileError(
-              'The interactive type $w of the modules compiled together, '
-              '${together.map(name).join(', ')}, has the widget '
-              '${widgetOf[first]} in ${name(first)} and ${widgetOf[other]} in '
-              '${name(other)}, by their widget declarations: their '
-              'interactive types are joined once, each with one widget '
-              '(vGLP, Definition "Canonical Compilation": "each with the '
-              'functor and the widget its export gives it"; $_togetherText)',
-              at.$1,
-              at.$2,
-              phase: 'analyzer');
-          break;
         }
       }
     }
@@ -594,6 +690,70 @@ class _SiblingExports {
     }
   }
 
+  /// The modules [together], by their names, in import order, or null where
+  /// it is undecided, with why: "the module first in import order keeps the
+  /// functor and the other takes _2" (vGLP #8 Cowork, 2026-10-11 16:44 UTC,
+  /// Q1), the module first in import order being "the one the program's
+  /// entry imports first" (Code #7, 2026-10-11 16:19 UTC, Q1).
+  ///
+  /// The program's entry, as the compilation finds it, is the self.glp
+  /// beside them: their qualifiers name module files of one directory, and a
+  /// module outside it reaches them only through it, a directory exporting
+  /// through its self.glp (TGLP, Section "Compilation", the fourth step), so
+  /// it is the program's entry where the directory is the program and stands
+  /// in their order for the program's where the directory is in it.  The
+  /// order is the order in which its imports reach them, directly or through
+  /// the module files beside it, each file's imports in source order and
+  /// followed as they are met.  It is undecided where there is no self.glp
+  /// beside them, or one whose imports reach none of them.
+  (List<String>?, String) _importOrder(
+      List<String> together, String Function(String k) name) {
+    final dir = File(together.first).parent.path;
+    final sep = Platform.pathSeparator;
+    final entry = File('$dir${sep}self.glp');
+    if (!entry.existsSync()) {
+      return (null, 'there is no self.glp beside them, the program\'s entry');
+    }
+    final names = {for (final k in together) name(k)};
+    final order = <String>[];
+    final seen = <String>{};
+    void visit(File f) {
+      for (final n in _importedModules(
+          f.readAsStringSync(), f.path.endsWith('.vglp'))) {
+        if (!seen.add(n)) continue;
+        if (names.contains(n)) order.add(n);
+        final g = _moduleFile(dir, n);
+        if (g != null) visit(g);
+      }
+    }
+
+    visit(entry);
+    if (order.isEmpty) {
+      return (
+        null,
+        'the self.glp beside them, the program\'s entry, imports none of '
+            'them, directly or through the modules beside it'
+      );
+    }
+    return (order, '');
+  }
+
+  /// The module file [module] of the directory [dir], as a qualifier names
+  /// it, or null where it names none: N.vglp, or the N.glp beside it where
+  /// that is written by hand and stands (_sibling), or an N.glp alone.
+  File? _moduleFile(String dir, String module) {
+    final sep = Platform.pathSeparator;
+    final vglp = File('$dir$sep$module.vglp');
+    final glp = File('$dir$sep$module.glp');
+    if (vglp.existsSync()) {
+      return glp.existsSync() &&
+              !glp.readAsStringSync().startsWith(compiledHeader)
+          ? glp
+          : vglp;
+    }
+    return glp.existsSync() ? glp : null;
+  }
+
   /// The export of the module [k] of [c] as the compilation reads it before
   /// it is compiled: its volitional procedures, the procedures it exports
   /// that reach a question, and, of modules compiled together, their
@@ -613,6 +773,57 @@ class _SiblingExports {
 const _togetherText = '"Modules that import from each other procedures that '
     'reach a question are compiled together, their interactive types joined '
     'once"';
+
+/// The modules a source's text names as qualifiers, in source order, each
+/// once: N in a declaration `imported procedure N#p(...)` or a call
+/// `N # p(...)`, and M in a directive `-expose(M).`, each of one segment, a
+/// module file or a child directory of the source's directory (TGLP, Section
+/// "Compilation", the fourth step).  A `.vglp` source is read with its widget
+/// declarations set aside; a text the lexer refuses names none, its own
+/// compilation refusing it.
+List<String> _importedModules(String text, bool vglp) {
+  final List<Token> ts;
+  try {
+    ts = Lexer(vglp && text.contains('=::=')
+            ? extractWidgetDeclarations(text).stripped
+            : text)
+        .tokenize();
+  } on CompileError {
+    return const [];
+  }
+  bool at(int i, TokenType t) => i >= 0 && i < ts.length && ts[i].type == t;
+  final out = <String>[];
+  void add(String n) {
+    if (!out.contains(n)) out.add(n);
+  }
+
+  for (var i = 0; i < ts.length; i++) {
+    if (at(i, TokenType.MINUS) &&
+        at(i + 1, TokenType.ATOM) &&
+        ts[i + 1].lexeme == 'expose' &&
+        at(i + 2, TokenType.LPAREN)) {
+      final parts = <String>[];
+      var j = i + 3;
+      while (at(j, TokenType.ATOM)) {
+        parts.add(ts[j].lexeme);
+        j++;
+        if (!at(j, TokenType.HASH)) break;
+        j++;
+      }
+      if (parts.length == 1) add(parts.single);
+      i = j;
+      continue;
+    }
+    if (at(i, TokenType.ATOM) &&
+        at(i + 1, TokenType.HASH) &&
+        at(i + 2, TokenType.ATOM) &&
+        !at(i - 1, TokenType.HASH) &&
+        !at(i + 3, TokenType.HASH)) {
+      add(ts[i].lexeme);
+    }
+  }
+  return out;
+}
 
 /// Modules that import from each other, directly or through others: each by
 /// its absolute path, with the path it is compiled at, its text and its

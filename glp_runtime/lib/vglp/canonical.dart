@@ -81,7 +81,11 @@
 //     66b6500, the Definition; vGLP #7 Cowork, 2026-10-11 14:19 UTC, item
 //     2): read before any export of theirs is emitted, each export of one of
 //     them standing in by what was read of it ("Modules compiled together"
-//     below, and program_compilation.dart);
+//     below, and program_compilation.dart); of two types of two of them with
+//     one functor, the module first in import order keeps it and the other
+//     takes `_2`, and a type's widget is declared by the module that defines
+//     it, the others declaring none for it (vGLP #8 Cowork, 2026-10-11 16:44
+//     UTC, Q1 and Q2);
 //   - the dispatcher and the construct processes (Part 2): the dispatcher's
 //     generic source, programs/vglp/dispatcher.glp, its names made fresh
 //     against the program's (dispatcher.dart), and the clause of construct/4
@@ -385,11 +389,20 @@ bool importsReachingProcedure(String text, ExportReader exports) {
 /// exports are" (vGLP, Definition "Canonical Compilation", the import
 /// sentence).  Without it no export is read: an import of a volitional
 /// procedure is refused, and every other import is an import as GLP's are.
+///
+/// [ownTogether] are, of modules compiled together with this one, the
+/// interactive types this one defines, a volitional procedure of its own
+/// having each, which its imports of the others bring back to it: "the
+/// module that defines a type declares its widget, and the others declare
+/// none for it" (vGLP #8 Cowork, 2026-10-11 16:44 UTC, Q2), so its widget
+/// declaration for one of them is its own and is not refused as one for a
+/// type it imports.
 CanonicalProgram compileCanonical(String text,
     {DispatcherSource? dispatcher,
     TypeEnvironment? scope,
     Map<String, String> scopeWidgets = const {},
-    ExportReader? exports}) {
+    ExportReader? exports,
+    Set<String> ownTogether = const {}}) {
   final widgetDecls = extractWidgetDeclarations(text);
   final parsed = _parse(widgetDecls.stripped);
   final m = parsed.module;
@@ -648,8 +661,11 @@ CanonicalProgram compileCanonical(String text,
   // declaring no widget for a type it imports" (vGLP at 66b6500, Definition
   // "Canonical Compilation"; vGLP #7 Cowork, 2026-10-11 14:19 UTC, item 1:
   // "a declaration in the importer of another widget for a type it imports
-  // is refused").
+  // is refused").  A type of modules compiled together with this one that
+  // this one defines is not one it imports (vGLP #8 Cowork, 2026-10-11
+  // 16:44 UTC, Q2).
   for (final t in joined.values) {
+    if (ownTogether.contains(t.written)) continue;
     final at = widgetDecls.positionOf(t.written);
     if (at == null) continue;
     throw CompileError(
@@ -991,16 +1007,26 @@ const _together = '"Modules that import from each other procedures that reach '
 /// refused, and so are two types joining with one functor, as an import
 /// refuses them (the import sentence).  Every other type, the component's
 /// own, has the Definition's t, those coinciding with a functor the
-/// component imports told apart by `_2`, `_3`, ...; its widget is the one its
-/// scope gives it, which the modules compiled together share, being of one
-/// directory.  The undecided cases are refused, the Definition not saying how
-/// to decide them: two types of two of the modules whose functors coincide,
-/// and a widget declaration of one of the modules for a type of the
-/// component's own.
+/// component imports told apart by `_2`, `_3`, ...; two of them coinciding
+/// with each other are told apart as within one module by the order of its
+/// declarations, and of two types of two of the modules "the module first in
+/// import order keeps the functor and the other takes _2" (vGLP #8 Cowork,
+/// 2026-10-11 16:44 UTC, Q1): by [importOrder], the modules' names in the
+/// order the program's entry imports them, directly or through others; where
+/// that order is undecided, [importOrder] null and [undecided] saying why,
+/// the two are refused.  The widget of a type of the component's own is not
+/// given here: "the module that defines a type declares its widget, and the
+/// others declare none for it" (vGLP #8 Cowork, Q2), which the compilation
+/// of the modules together reads off the module that defines it
+/// (program_compilation.dart); [definers] names, of each such type, the
+/// modules of the component that define it, a volitional procedure of their
+/// own having it.
 ///
 /// The types are in the order of [members] and, in each, of its
 /// declarations, an import bringing those of its module at its place.
-List<InteractiveType> joinComponentTypes(List<ComponentMember> members) {
+({List<InteractiveType> types, Map<String, List<String>> definers})
+    joinComponentTypes(List<ComponentMember> members,
+        {List<String>? importOrder, String undecided = ''}) {
   final names = [for (final m in members) m.name].join(', ');
 
   // The types the component imports from modules outside it.
@@ -1056,7 +1082,8 @@ List<InteractiveType> joinComponentTypes(List<ComponentMember> members) {
     }
   }
 
-  // The component's own types, each with the modules that declare it.
+  // The component's own types, each with the modules that define it, a
+  // volitional procedure of their own having it.
   final own = <String, VolitionalProcedure>{};
   final declaredIn = <String, List<ComponentMember>>{};
   for (final m in members) {
@@ -1069,30 +1096,12 @@ List<InteractiveType> joinComponentTypes(List<ComponentMember> members) {
     }
   }
 
-  // No module of the component declares a widget for a type of its own.
-  for (final m in members) {
-    for (final key in m.front.widgets.byModedType.keys) {
-      if (!own.containsKey(key)) continue;
-      final at = m.front.widgets.positionOf(key)!;
-      throw ComponentRefusal(
-          m.name,
-          CompileError(
-              'A widget declaration for $key, an interactive type of the '
-              'modules compiled together, $names: their interactive types '
-              'are joined once, each with one widget, and the Definition '
-              'does not say which module\'s declaration gives a type of '
-              'theirs its widget (vGLP, Definition "Canonical Compilation": '
-              '"each with the functor and the widget its export gives it, M '
-              'declaring no widget for a type it imports"; $_together)',
-              at.$1,
-              at.$2,
-              phase: 'analyzer'));
-    }
-  }
-
   // The functors: an imported one's its export's; each of the component's
-  // own the Definition's t, told apart from those imported, and two of one
-  // module told apart in the order of its declarations.
+  // own the Definition's t, told apart from those imported, two of one
+  // module told apart in the order of its declarations, and two of two
+  // modules in import order, then the order of the declarations of the
+  // module first in it: "the module first in import order keeps the functor
+  // and the other takes _2" (vGLP #8 Cowork, 2026-10-11 16:44 UTC, Q1).
   final functors = <String, String>{
     for (final e in outside.values) e.$1.written: e.$1.functor
   };
@@ -1104,27 +1113,54 @@ List<InteractiveType> joinComponentTypes(List<ComponentMember> members) {
             () => [])
         .add(w);
   }
-  for (final MapEntry(key: stem, value: ws) in byStem.entries) {
+  VolitionalProcedure declaration(ComponentMember m, String w) => m
+      .front.volitional.values
+      .firstWhere((v) => typeSource(v.interactiveType) == w);
+  for (final MapEntry(key: stem, value: unordered) in byStem.entries) {
+    var ws = unordered;
     final modules = {for (final w in ws) ...declaredIn[w]!};
     if (ws.length > 1 && modules.length > 1) {
-      final w = ws[1];
-      final m = declaredIn[w]!.first;
-      final v = m.front.volitional.values
-          .firstWhere((v) => typeSource(v.interactiveType) == w);
-      throw ComponentRefusal(
-          m.name,
-          CompileError(
-              'The interactive types ${ws.first} of '
-              '${declaredIn[ws.first]!.map((m) => m.name).join(', ')} and $w '
-              'of ${declaredIn[w]!.map((m) => m.name).join(', ')}, of the '
-              'modules compiled together, $names, both have the functor '
-              '$stem: their interactive types are joined once, and the '
-              'Definition does not say which of two types of two of the '
-              'modules is told apart from the other (vGLP, Definition '
-              '"Canonical Compilation": $_together)',
-              v.line,
-              v.column,
-              phase: 'analyzer'));
+      final missing = importOrder == null
+          ? modules
+          : modules.where((m) => !importOrder.contains(m.name)).toSet();
+      if (missing.isNotEmpty) {
+        final w = ws[1];
+        final m = declaredIn[w]!.first;
+        final v = declaration(m, w);
+        throw ComponentRefusal(
+            m.name,
+            CompileError(
+                'The interactive types ${ws.first} of '
+                '${declaredIn[ws.first]!.map((m) => m.name).join(', ')} and '
+                '$w of ${declaredIn[w]!.map((m) => m.name).join(', ')}, of '
+                'the modules compiled together, $names, both have the '
+                'functor $stem: "the module first in import order keeps the '
+                'functor and the other takes _2" (vGLP #8 Cowork, 2026-10-11 '
+                '16:44 UTC, Q1), and their import order is undecided: '
+                '${undecided.isNotEmpty ? undecided : 'the program\'s entry '
+                    'imports none of ${missing.map((m) => m.name).join(', ')}'} '
+                '(vGLP, Definition "Canonical Compilation": $_together)',
+                v.line,
+                v.column,
+                phase: 'analyzer'));
+      }
+      // Each type at the module of it first in import order, by the order of
+      // its declarations there.
+      (int, int, int) key(String w) {
+        final m = declaredIn[w]!.reduce((a, b) =>
+            importOrder!.indexOf(a.name) <= importOrder.indexOf(b.name)
+                ? a
+                : b);
+        final v = declaration(m, w);
+        return (importOrder!.indexOf(m.name), v.line, v.column);
+      }
+
+      int compare((int, int, int) a, (int, int, int) b) => a.$1 != b.$1
+          ? a.$1 - b.$1
+          : a.$2 != b.$2
+              ? a.$2 - b.$2
+              : a.$3 - b.$3;
+      ws = [...ws]..sort((a, b) => compare(key(a), key(b)));
     }
     for (final w in ws) {
       var name = stem;
@@ -1159,7 +1195,13 @@ List<InteractiveType> joinComponentTypes(List<ComponentMember> members) {
       }
     }
   }
-  return joint;
+  return (
+    types: joint,
+    definers: {
+      for (final MapEntry(key: w, value: ms) in declaredIn.entries)
+        w: [for (final m in ms) m.name]
+    }
+  );
 }
 
 // ---------------------------------------------------------------------------

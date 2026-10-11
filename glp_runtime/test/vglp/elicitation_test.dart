@@ -1491,5 +1491,118 @@ $person''',
       expect(r['N'], 'note(hi)');
       expect(r['A'], 'yes');
     });
+
+    // vGLP #8 Cowork, 2026-10-11 16:44 UTC (Udi approved): "Q1: yes, the
+    // module first in import order keeps the functor and the other takes
+    // _2.  Q2: yes, the module that defines a type declares its widget, and
+    // the others declare none for it."  Until then both were refused.
+
+    // picker and confirmer import from each other pick and confirm, of two
+    // types with one functor, box_yesNo_r; the person answers box(yes) to
+    // the box and box_yn(no) to the box_yn.
+    const boxTypes = '''
+$types
+Box(X)    ::= box(X).
+''';
+    const picker = '''
+$boxTypes
+imported procedure (Box_yesNo?)*confirmer#confirm(Peer?, YesNo).
+
+exported procedure (Box(YesNo)?)*pick(Peer?, YesNo).
+(box(A))*pick(P, A?) :- ground(P?) | true.
+
+exported procedure both(Peer?, YesNo, YesNo).
+both(P, A?, B?) :- ground(P?) | pick(P?, A), confirmer # confirm(P?, B).
+''';
+    const confirmer = '''
+$boxTypes
+imported procedure (Box(YesNo)?)*picker#pick(Peer?, YesNo).
+
+exported procedure (Box_yesNo?)*confirm(Peer?, YesNo).
+(box_yn(A))*confirm(P, A?) :- ground(P?) | true.
+
+exported procedure checked(Peer?, YesNo, YesNo).
+checked(P, A?, B?) :- ground(P?) | picker # pick(P?, A), confirm(P?, B).
+''';
+    // The program's entry: its play runs [proc] of [module] with that
+    // module's dispatcher, the questions [question].
+    String boxPlays(String module, String proc, String question) => '''
+$boxTypes
+Question ::= $question.
+Ask(Q)   ::= ask(Constant, Q).
+PersonIn ::= [_ | PersonIn].
+
+imported procedure $module#$proc(Peer?, YesNo, YesNo,
+    Stream(Ask(Question))).
+imported procedure $module#dispatch(Stream(Ask(Question))?,
+    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+
+exported procedure play(YesNo, YesNo, Stream(_)).
+play(A?, B?, Log?) :-
+    $module # $proc(bob, A, B, Asks),
+    $module # dispatch(Asks?, ch(Gs?, Ds), _),
+    person(Ds?, Gs, Log).
+
+procedure person(_?, PersonIn, Stream(_)).
+person([draw(Id, form(box, F), input(Q)) | Ds],
+       [input(Id?, Q?, box(yes)) | Gs?],
+       [drawn(Id?, form(box, F?), input(Q?)) | Log?]) :-
+    ground(Id?), ground(F?), ground(Q?) |
+    person(Ds?, Gs, Log).
+person([draw(Id, form(box_yn, F), input(Q)) | Ds],
+       [input(Id?, Q?, box_yn(no)) | Gs?],
+       [drawn(Id?, form(box_yn, F?), input(Q?)) | Log?]) :-
+    ground(Id?), ground(F?), ground(Q?) |
+    person(Ds?, Gs, Log).
+person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    person(Ds?, Gs, Log).
+''';
+    const pickBox = 'form(box, [field(YesNo, buttons([yes, no]))]), '
+        'input([]))';
+
+    test('(Q1) two types of two of them with one functor: the entry imports '
+        'picker first, whose box keeps box_yesNo_r, and picker\'s dispatcher '
+        'serves both on their functors', () async {
+      final r = await play({
+        'picker.vglp': picker,
+        'confirmer.vglp': confirmer,
+        'self.glp': boxPlays('picker', 'both',
+            'box_yesNo_r(Box(YesNo)?) ; box_yesNo_r_2(Box_yesNo?)'),
+      }, 'play(A, B, Log)');
+      answered(r, [pickBox, box]);
+      expect(r['A'], 'yes');
+      expect(r['B'], 'no');
+    });
+
+    test('(Q1) the same, the entry importing confirmer first, whose box_yn '
+        'keeps box_yesNo_r, and confirmer\'s dispatcher serving both',
+        () async {
+      final r = await play({
+        'picker.vglp': picker,
+        'confirmer.vglp': confirmer,
+        'self.glp': boxPlays('confirmer', 'checked',
+            'box_yesNo_r_2(Box(YesNo)?) ; box_yesNo_r(Box_yesNo?)'),
+      }, 'play(A, B, Log)');
+      answered(r, [pickBox, box]);
+      expect(r['A'], 'yes');
+      expect(r['B'], 'no');
+    });
+
+    test('(Q2) cards, which defines the card, declares YesNo? =::= toggle: '
+        'notes\' dispatcher draws cards\' card with the toggle', () async {
+      final r = await play({
+        'cards.vglp': '${cards}YesNo? =::= toggle.\n',
+        'notes.vglp': notes,
+        'self.glp': plays('notes', 'noted'),
+      }, 'play(R, N, Log)');
+      answered(r, [
+        'form(card, [field(Peer, shown), field(YesNo, toggle)]), '
+            'card(bob, input([2])))',
+        note
+      ]);
+      expect(r['R'], 'accept(bob)');
+      expect(r['N'], 'note(hi)');
+    });
   });
 }
