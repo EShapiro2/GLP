@@ -1,0 +1,182 @@
+%% self.glp --- the entries by which the Dart bridge runs pending.vglp, for its
+%% Flutter tests, glp_multiagent/test/bridge_test.dart, and the plays by which
+%% a scripted person answers it, for glp_runtime/test/vglp/elicitation_test.dart:
+%% the pending drawing of vGLP 118e04d, Definition "Construct Process" (vGLP
+%% #8 Cowork, 2026-10-11 20:48 UTC and 22:51 UTC, Udi approved).
+%%
+%% Each entry is the host's (glp_runtime/lib/multiagent/agent_runtime.dart),
+%% as cards/self.glp's are.  Each play spawns the compiled goal with the
+%% dispatcher on its ask stream and on a person channel whose grants a
+%% scripted person writes from the draws it reads, and logs what it reads.
+%% The person channel never closes (vGLP, Definition "Person Channel, Person
+%% Writer, GLP with Persons, Grant"), so neither does a log.  The person
+%% grants input(Id, P, R), P the path the view marks input(P), and sends the
+%% program its word, peer(P) or word(W), a grant that is not input/3, which
+%% the dispatcher passes to the program (programs/vglp/dispatcher.glp,
+%% split_grants/3).  A view marks a widget position the program has not yet
+%% written whole pending(P).
+%%
+%% The types of pending.vglp and those its compilation adds, written again
+%% for the declarations of the procedures imported from its compiled module.
+
+Peer     ::= Constant.
+YesNo    ::= yes ; no.
+Card     ::= card(Peer, YesNo?).
+Note     ::= note(Constant).
+Board    ::= board(Stream(Note), YesNo?).
+Question ::= card_w(Card) ; stream_card_w(Stream(Card)) ; board_w(Board).
+Ask(Q)   ::= ask(Constant, Q).
+PersonIn ::= [_ | PersonIn].
+
+imported procedure pending#late(Channel(Stream(_), Stream(_))?,
+    Stream(Ask(Question))).
+imported procedure pending#deal(Channel(Stream(_), Stream(_))?,
+    Stream(Ask(Question))).
+imported procedure pending#board(Channel(Stream(_), Stream(_))?,
+    Stream(Ask(Question))).
+imported procedure pending#dispatch(Stream(Ask(Question))?,
+    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+
+%% ---------------------------------------------------------------------------
+%% The bridge's entries
+%% ---------------------------------------------------------------------------
+
+%% The card whose Peer the person's word names.
+exported procedure late_init(Constant?, PersonIn?, Stream(_)?).
+late_init(_, Gs, _) :-
+    pending # late(MCh?, Asks),
+    pending # dispatch(Asks?, ch(Gs?, Ds), MCh),
+    send_to_user(Ds?).
+
+%% The stream of three cards.
+exported procedure deal_init(Constant?, PersonIn?, Stream(_)?).
+deal_init(_, Gs, _) :-
+    pending # deal(MCh?, Asks),
+    pending # dispatch(Asks?, ch(Gs?, Ds), MCh),
+    send_to_user(Ds?).
+
+%% The thread of notes beside a question.
+exported procedure board_init(Constant?, PersonIn?, Stream(_)?).
+board_init(_, Gs, _) :-
+    pending # board(MCh?, Asks),
+    pending # dispatch(Asks?, ch(Gs?, Ds), MCh),
+    send_to_user(Ds?).
+
+%% ---------------------------------------------------------------------------
+%% The plays
+%% ---------------------------------------------------------------------------
+
+%% The card, drawn with its Peer pending and its question open: the person
+%% sends the peer, and once the card is drawn again with bob in it, answers
+%% yes.
+exported procedure play_late(Stream(_)).
+play_late(Log?) :-
+    pending # late(MCh?, Asks),
+    pending # dispatch(Asks?, ch(Gs?, Ds), MCh),
+    late_person(Ds?, Gs, Log).
+
+procedure late_person(_?, PersonIn, Stream(_)).
+late_person([draw(Id, _, card(pending(P), input(Q))) | Ds],
+            [peer(bob) | Gs?], [pending(Id?, P?, Q?) | Log?]) :-
+    ground(Id?), ground(P?), ground(Q?) |
+    late_person(Ds?, Gs, Log).
+late_person([draw(Id, _, card(bob, input(Q))) | Ds],
+            [input(Id?, Q?, yes) | Gs?], [whole(Id?, Q?) | Log?]) :-
+    ground(Id?), ground(Q?) |
+    late_person(Ds?, Gs, Log).
+late_person([draw(_, _, V) | Ds], Gs?, [view(V?) | Log?]) :-
+    otherwise |
+    late_person(Ds?, Gs, Log).
+late_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    late_person(Ds?, Gs, Log).
+late_person([got(N, X) | Ds], Gs?, [got(N?, X?) | Log?]) :-
+    late_person(Ds?, Gs, Log).
+
+%% The same card, answered while its Peer is still pending: the question
+%% beside the pending position is offered at once.  The person never sends
+%% the peer.
+exported procedure play_late_answered(Stream(_)).
+play_late_answered(Log?) :-
+    pending # late(MCh?, Asks),
+    pending # dispatch(Asks?, ch(Gs?, Ds), MCh),
+    early_person(Ds?, Gs, Log).
+
+procedure early_person(_?, PersonIn, Stream(_)).
+early_person([draw(Id, _, card(pending(P), input(Q))) | Ds],
+             [input(Id?, Q?, no) | Gs?], [pending(Id?, P?, Q?) | Log?]) :-
+    ground(Id?), ground(P?), ground(Q?) |
+    early_person(Ds?, Gs, Log).
+early_person([draw(_, _, V) | Ds], Gs?, [view(V?) | Log?]) :-
+    otherwise |
+    early_person(Ds?, Gs, Log).
+early_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    early_person(Ds?, Gs, Log).
+early_person([got(N, X) | Ds], Gs?, [got(N?, X?) | Log?]) :-
+    early_person(Ds?, Gs, Log).
+
+%% The stream of cards: drawn with its first card pending, its second's Peer
+%% pending and its third whole, its tail not drawn.  The person answers the
+%% third first, yes; once the first is written, the second, no, its Peer
+%% still pending; then sends the peer, dave; and once the second is drawn
+%% again with dave in it, answers the first, yes.
+exported procedure play_deal(Stream(_)).
+play_deal(Log?) :-
+    pending # deal(MCh?, Asks),
+    pending # dispatch(Asks?, ch(Gs?, Ds), MCh),
+    deal_person(Ds?, Gs, Log).
+
+procedure deal_person(_?, PersonIn, Stream(_)).
+deal_person([draw(Id, _, [pending(P1), card(pending(P2), input(Q2)),
+                         card(bob, input(Q3))]) | Ds],
+            [input(Id?, Q3?, yes) | Gs?],
+            [third(P1?, P2?, Q2?, Q3?) | Log?]) :-
+    ground(Id?), ground(P1?), ground(P2?), ground(Q2?), ground(Q3?) |
+    deal_person(Ds?, Gs, Log).
+deal_person([draw(Id, _, [card(carol, input(Q1)), card(pending(P2), input(Q2)),
+                         card(bob, _)]) | Ds],
+            [input(Id?, Q2?, no) | Gs?],
+            [second(Q1?, P2?, Q2?) | Log?]) :-
+    ground(Id?), ground(Q1?), ground(P2?), ground(Q2?) |
+    deal_person(Ds?, Gs, Log).
+deal_person([draw(Id, _, [card(carol, input(Q1)), card(dave, _),
+                         card(bob, _)]) | Ds],
+            [input(Id?, Q1?, yes) | Gs?],
+            [first(Q1?) | Log?]) :-
+    ground(Id?), ground(Q1?) |
+    deal_person(Ds?, Gs, Log).
+deal_person([draw(_, _, V) | Ds], Gs?, [view(V?) | Log?]) :-
+    otherwise |
+    deal_person(Ds?, Gs, Log).
+deal_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    deal_person(Ds?, Gs, Log).
+deal_person([got(2, no) | Ds], [peer(dave) | Gs?], [got(2, no) | Log?]) :-
+    deal_person(Ds?, Gs, Log).
+deal_person([got(N, X) | Ds], Gs?, [got(N?, X?) | Log?]) :-
+    otherwise |
+    deal_person(Ds?, Gs, Log).
+
+%% The thread of notes: drawn with its second note pending, its tail not
+%% drawn; the person sends the word, and once the note is drawn whole,
+%% answers yes.
+exported procedure play_board(Stream(_)).
+play_board(Log?) :-
+    pending # board(MCh?, Asks),
+    pending # dispatch(Asks?, ch(Gs?, Ds), MCh),
+    board_person(Ds?, Gs, Log).
+
+procedure board_person(_?, PersonIn, Stream(_)).
+board_person([draw(Id, _, board([note(first), pending(P)], input(Q))) | Ds],
+             [word(second) | Gs?], [pending(Id?, P?, Q?) | Log?]) :-
+    ground(Id?), ground(P?), ground(Q?) |
+    board_person(Ds?, Gs, Log).
+board_person([draw(Id, _, board([note(first), note(second)], input(Q))) | Ds],
+             [input(Id?, Q?, yes) | Gs?], [whole(Id?, Q?) | Log?]) :-
+    ground(Id?), ground(Q?) |
+    board_person(Ds?, Gs, Log).
+board_person([draw(_, _, V) | Ds], Gs?, [view(V?) | Log?]) :-
+    otherwise |
+    board_person(Ds?, Gs, Log).
+board_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    board_person(Ds?, Gs, Log).
+board_person([got(N, X) | Ds], Gs?, [got(N?, X?) | Log?]) :-
+    board_person(Ds?, Gs, Log).

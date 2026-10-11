@@ -1244,7 +1244,7 @@ _Elicitation _elicitation(
     run: inst.proc('run'),
     shown: inst.proc('shown'),
     thread: inst.proc('thread'),
-    appendOne: inst.proc('append_one'),
+    consViews: inst.proc('cons_views'),
     allDone: inst.proc('all_done'),
     path: inst.proc('path'),
     formString: inst.proc('form_string'),

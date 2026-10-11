@@ -224,22 +224,34 @@ procedure all_done(Stream(Done)?, Done).
 all_done([done | Ds], D?) :- all_done(Ds?, D).
 all_done([], done).
 
-procedure shown(_?, Stream(_)).
-shown(X, [X?]) :- ground(X?) | true.
+procedure shown(Path?, _?, Stream(_)).
+shown(_, X, [X?]) :- ground(X?) | true.
+shown(P, X, [pending(P?) | Vs?]) :- shown_whole(X?, Vs).
 
-procedure thread(Stream(_)?, Stream(Stream(_))).
-thread(Xs, [[] | Vs?]) :- thread(Xs?, [], Vs).
+procedure shown_whole(_?, Stream(_)).
+shown_whole(X, [X?]) :- ground(X?) | true.
 
-procedure thread(Stream(_)?, Stream(_)?, Stream(Stream(_))).
-thread([X | Xs], Prev, Vs?) :- ground(X?), ground(Prev?) | append_one(Prev?, X?, New), thread_more(Xs?, New?, Vs).
-thread([], _, []).
+procedure thread(Path?, Stream(_)?, Stream(Stream(_))).
+thread(P, [X | Xs], Vs?) :- thread_cell(P?, X?, Xs?, Vs).
+thread(_, [], [[]]).
+thread(P, Xs, [[] | Vs?]) :- thread_tail(P?, Xs?, Vs).
 
-procedure thread_more(Stream(_)?, Stream(_)?, Stream(Stream(_))).
-thread_more(Xs, New, [New? | Vs?]) :- ground(New?) | thread(Xs?, New?, Vs).
+procedure thread_tail(Path?, Stream(_)?, Stream(Stream(_))).
+thread_tail(P, [X | Xs], Vs?) :- thread_cell(P?, X?, Xs?, Vs).
+thread_tail(_, [], []).
 
-procedure append_one(Stream(_)?, _?, Stream(_)).
-append_one([Y | Ys], X, [Y? | Zs?]) :- append_one(Ys?, X?, Zs).
-append_one([], X, [X?]).
+procedure thread_cell(Path?, _?, Stream(_)?, Stream(Stream(_))).
+thread_cell(P, X, Xs, Vs?) :- ground(P?) | path(P?, 1, P1), path(P?, 2, P2), shown(P1?, X?, V1), thread(P2?, Xs?, V2), cons_views(V1?, V2?, Vs).
+
+procedure cons_views(Stream(_)?, Stream(Stream(_))?, Stream(Stream(_))).
+cons_views([E | Es], [T | Ts], [[E? | T?] | Vs?]) :- ground(E?), ground(T?) | cons_more(E?, T?, Es?, Ts?, Vs).
+cons_views([], _, []).
+cons_views(_, [], []).
+
+procedure cons_more(_?, Stream(_)?, Stream(_)?, Stream(Stream(_))?, Stream(Stream(_))).
+cons_more(_, T, [E | Es], Ts, [[E? | T?] | Vs?]) :- ground(E?), ground(T?) | cons_more(E?, T?, Es?, Ts?, Vs).
+cons_more(E, _, Es, [T | Ts], [[E? | T?] | Vs?]) :- ground(E?), ground(T?) | cons_more(E?, T?, Es?, Ts?, Vs).
+cons_more(_, _, [], [], []).
 
 procedure path(Path?, Integer?, Path).
 path([I | P], J, [I? | Q?]) :- path(P?, J?, Q).
@@ -306,7 +318,12 @@ comb_swapCard_card_2(_, V2, [V1 | S1], S2, [card(V1?, V2?) | Vs?]) :- ground(V1?
 comb_swapCard_card_2(_, _, [], [], []).
 
 procedure present_swapCard(Path?, SwapCard?, Inputs?, Inputs, Stream(_), Done).
-present_swapCard(P, card(H1, H2?), Gs, Gs1?, Vs?, D2?) :- ground(P?) | shown(H1?, V1), path(P?, 2, M2), path(P?, 2, Q2), answer_yesNo(Q2?, H2, Gs?, Gs1, D2), start_swapCard_card_2(V1?, [input(M2?)], Vs).
+present_swapCard(P, card(H1, H2?), Gs, Gs1?, Vs?, D2?) :- ground(P?) | path(P?, 1, Q1), shown(Q1?, H1?, V1), path(P?, 2, M2), path(P?, 2, Q2), answer_yesNo(Q2?, H2, Gs?, Gs1, D2), start_swapCard_card_2(V1?, [input(M2?)], Vs).
+present_swapCard(P, X, Gs, Gs1?, [pending(P?) | Vs?], Done?) :- ground(P?) | present_swapCard_wait(P?, X?, Gs?, Gs1, Vs, Done).
+
+procedure present_swapCard_wait(Path?, SwapCard?, Inputs?, Inputs, Stream(_), Done).
+present_swapCard_wait(P, card(H1, H2?), Gs, Gs1?, Vs?, Done?) :- present_swapCard(P?, card(H1?, H2), Gs?, Gs1, Vs, Done).
+present_swapCard_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, Done?) :- present_swapCard_wait(P?, X?, Gs?, Gs1, Vs, Done).
 
 procedure start_transferCard_card_2(Stream(_)?, Stream(_)?, Stream(_)).
 start_transferCard_card_2([V1 | S1], [V2 | S2], [card(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_transferCard_card_2(V1?, V2?, S1?, S2?, Vs).
@@ -318,7 +335,12 @@ comb_transferCard_card_2(_, V2, [V1 | S1], S2, [card(V1?, V2?) | Vs?]) :- ground
 comb_transferCard_card_2(_, _, [], [], []).
 
 procedure present_transferCard(Path?, TransferCard?, Inputs?, Inputs, Stream(_), Done).
-present_transferCard(P, card(H1, H2?), Gs, Gs1?, Vs?, D2?) :- ground(P?) | shown(H1?, V1), path(P?, 2, M2), path(P?, 2, Q2), answer_yesNo(Q2?, H2, Gs?, Gs1, D2), start_transferCard_card_2(V1?, [input(M2?)], Vs).
+present_transferCard(P, card(H1, H2?), Gs, Gs1?, Vs?, D2?) :- ground(P?) | path(P?, 1, Q1), shown(Q1?, H1?, V1), path(P?, 2, M2), path(P?, 2, Q2), answer_yesNo(Q2?, H2, Gs?, Gs1, D2), start_transferCard_card_2(V1?, [input(M2?)], Vs).
+present_transferCard(P, X, Gs, Gs1?, [pending(P?) | Vs?], Done?) :- ground(P?) | present_transferCard_wait(P?, X?, Gs?, Gs1, Vs, Done).
+
+procedure present_transferCard_wait(Path?, TransferCard?, Inputs?, Inputs, Stream(_), Done).
+present_transferCard_wait(P, card(H1, H2?), Gs, Gs1?, Vs?, Done?) :- present_transferCard(P?, card(H1?, H2), Gs?, Gs1, Vs, Done).
+present_transferCard_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, Done?) :- present_transferCard_wait(P?, X?, Gs?, Gs1, Vs, Done).
 
 procedure join_request_mint_2(Formed(Constant)?, Formed(Integer)?, Formed(Request)).
 join_request_mint_2(formed(X1), formed(X2), formed(mint(X1?, X2?))).

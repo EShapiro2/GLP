@@ -1,0 +1,114 @@
+%% pending.vglp --- positions the program writes after the ask, for the
+%% construct processes (glp_runtime/test/vglp/elicitation_test.dart) and the
+%% Dart bridge (glp_multiagent/test/bridge_test.dart): vGLP's pending
+%% drawing of 2026-10-11 (vGLP #8 Cowork, 20:48 UTC, "19:09 (D, Q1)", and
+%% 22:51 UTC, Udi approved).  vGLP 118e04d, Definition "Construct Process":
+%% the construct process "has the bridge draw the widget of T with the output
+%% so far, again as more arrives, each widget position the program has not
+%% yet written whole --- the root, a field, an element of any stream, the
+%% thread's included --- drawn as pending, and a stream's unwritten tail not
+%% drawn, so that the questions beside it are offered at once".
+%%
+%% Each agent reads its own end of the person channel, MCh, on which the
+%% dispatcher passes it every grant that is not input(Id, P, R), and takes
+%% from it the person's word that writes what it has left unwritten: peer(P)
+%% a peer, word(W) a note.  It writes each answer, once the person has given
+%% it, on its output to the person, got(N, X), N the card's number, which the
+%% dispatcher merges with the draws.
+%%
+%%   late    a card whose Peer the program writes after the ask: the peer
+%%           the person's word names
+%%   deal    a stream of three cards: the first written once the third is
+%%           answered, the second's Peer the person's word, the third whole;
+%%           its tail written, [], once all three are answered
+%%   board   a thread of notes beside a question, its second note written
+%%           before its argument, the person's word, is bound
+
+Peer  ::= Constant.
+YesNo ::= yes ; no.
+Card  ::= card(Peer, YesNo?).
+Note  ::= note(Constant).
+Board ::= board(Stream(Note), YesNo?).
+Fin   ::= fin.
+
+%% ---------------------------------------------------------------------------
+%% The agents
+%% ---------------------------------------------------------------------------
+
+%% A card whose Peer the person's word names.
+exported procedure late(Channel(Stream(_), Stream(_))?).
+late(ch(In, Out?)) :- peer_of(In?, Peer), respond(Peer?, Out).
+
+%% A stream of three cards, the second's Peer the person's word.
+exported procedure deal(Channel(Stream(_), Stream(_))?).
+deal(ch(In, Out?)) :- peer_of(In?, Peer), cards(Peer?, Out).
+
+%% A thread of notes beside a question, the second note's argument the
+%% person's word.
+exported procedure board(Channel(Stream(_), Stream(_))?).
+board(ch(In, Out?)) :- word_of(In?, W), notes(W?, Out).
+
+%% ---------------------------------------------------------------------------
+%% The questions
+%% ---------------------------------------------------------------------------
+
+%% The card is written at once, its Peer whenever the person's word comes.
+procedure (Card)*respond(Peer?, Stream(_)).
+(card(Peer?, A))*respond(Peer, Out?) :- answered(0, A?, Out, _).
+
+%% The stream: its first card unwritten, its second with the Peer still to
+%% come, its third whole, and its tail unwritten.  Once the third is
+%% answered the program writes the first; once the first and the second are
+%% answered, it closes the stream.
+procedure (Stream(Card))*cards(Peer?, Stream(_)).
+([X1?, card(Peer?, A2), card(bob, A3) | Cs?])*cards(Peer, Out?) :-
+    answered(3, A3?, O3, F3),
+    first(F3?, X1, O1, F1),
+    answered(2, A2?, O2, F2),
+    merge(O3?, O2?, O32),
+    merge(O32?, O1?, Out),
+    close(F1?, F2?, Cs).
+
+%% The thread: its first note whole, its second written before its argument
+%% is, and its tail closed once the question is answered.
+procedure (Board)*notes(Constant?, Stream(_)).
+(board([note(first), note(W?) | Ns?], A))*notes(W, Out?) :-
+    answered(0, A?, Out, F),
+    end_notes(F?, Ns).
+
+%% ---------------------------------------------------------------------------
+%% Helpers
+%% ---------------------------------------------------------------------------
+
+%% peer_of(In?, P): P the peer of the first peer(P) the person sends.  The
+%% dispatcher never closes In, the person channel never closing; its type,
+%% the dispatcher's, has [], for which no peer comes: nobody.
+procedure peer_of(Stream(_)?, Peer).
+peer_of([peer(P) | _], P1?) :- constant(P?) | P1 = P?.
+peer_of([_ | In], P?) :- otherwise | peer_of(In?, P).
+peer_of([], nobody).
+
+%% word_of(In?, W): W the word of the first word(W) the person sends; none,
+%% where In closes, as peer_of/2.
+procedure word_of(Stream(_)?, Constant).
+word_of([word(W) | _], W1?) :- constant(W?) | W1 = W?.
+word_of([_ | In], W?) :- otherwise | word_of(In?, W).
+word_of([], none).
+
+%% answered(N?, X?, Out, F): once the person has answered X, got(N, X) on
+%% the program's output to the person, which then closes, and F fin.
+procedure answered(Integer?, YesNo?, Stream(_), Fin).
+answered(N, X, [got(N?, X?)], fin) :- ground(X?) | true.
+
+%% first(F?, X, Out, F1): once F is fin, X the first card, card(carol, A),
+%% and its answer awaited as answered/4 awaits one.
+procedure first(Fin?, Card, Stream(_), Fin).
+first(fin, card(carol, A), Out?, F?) :- answered(1, A?, Out, F).
+
+%% close(F1?, F2?, Cs): the stream closed once both are fin.
+procedure close(Fin?, Fin?, Stream(Card)).
+close(fin, fin, []).
+
+%% end_notes(F?, Ns): the thread closed once F is fin.
+procedure end_notes(Fin?, Stream(Note)).
+end_notes(fin, []).

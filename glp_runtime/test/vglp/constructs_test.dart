@@ -299,16 +299,43 @@ procedure (T?)*p.
               'run(Id?, form(card, [field(\'Peer\', shown), field(\'YesNo\', '
               'buttons([yes, no]))]), Vs?, Done?, '
               'Ds).'));
-      // The view waits for the peer, so the output comes before the input
-      // inside it; the question is marked with its position, the card's at
-      // the root [] and the question its argument 2, [2] (C).
+      // The peer is shown at its position, [1], pending(P) until the
+      // program writes it, and the question beside it is offered at once,
+      // marked with its position, the card's at the root [] and the question
+      // its argument 2, [2] (C); the card drawn again as the peer is
+      // written (vGLP 118e04d, Definition "Construct Process").
       expect(
           s,
-          contains('present_card(P, card(H1, H2?), Gs, Gs1?, '
-              '[card(H1?, input(M2?))], D2?) :- ground(P?), ground(H1?) | '
+          contains('present_card(P, card(H1, H2?), Gs, Gs1?, Vs?, D2?) :- '
+              'ground(P?) | path(P?, 1, Q1), shown(Q1?, H1?, V1), '
               'path(P?, 2, M2), path(P?, 2, Q2), '
-              'answer_yesNo(Q2?, H2, Gs?, Gs1, D2).'));
+              'answer_yesNo(Q2?, H2, Gs?, Gs1, D2), '
+              'start_card_card_2(V1?, [input(M2?)], Vs).'));
+      expect(
+          s,
+          contains('comb_card_card_2(_, V2, [V1 | S1], S2, '
+              '[card(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | '
+              'comb_card_card_2(V1?, V2?, S1?, S2?, Vs).'));
+      // The card itself not yet written when it is drawn: pending at the
+      // root, the grants passed on until it is.
+      expect(
+          s,
+          contains('present_card(P, X, Gs, Gs1?, [pending(P?) | Vs?], '
+              'Done?) :- ground(P?) | '
+              'present_card_wait(P?, X?, Gs?, Gs1, Vs, Done).'));
+      expect(
+          s,
+          contains('present_card_wait(P, card(H1, H2?), Gs, Gs1?, Vs?, '
+              'Done?) :- present_card(P?, card(H1?, H2), Gs?, Gs1, Vs, '
+              'Done).'));
+      expect(
+          s,
+          contains('present_card_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, '
+              'Done?) :- present_card_wait(P?, X?, Gs?, Gs1, Vs, Done).'));
       expect(s, contains('procedure path(Path?, Integer?, Path).'));
+      expect(s, contains('procedure shown(Path?, _?, Stream(_)).'));
+      expect(s, contains('shown(P, X, [pending(P?) | Vs?]) :- '
+          'shown_whole(X?, Vs).'));
     });
 
     test('binds the question with the term the person\'s input forms, by '
@@ -820,12 +847,23 @@ procedure (Board)*game(Stream(String)).
           s,
           contains("form(board, [field('Stream(Integer)', thread), "
               "field('Stream(String)', input_box(text))])"));
+      // The thread at its position, [1], its elements so far, each pending
+      // until written whole and its unwritten tail not drawn (vGLP 118e04d,
+      // Definition "Construct Process").
       expect(
           s,
           contains('present_board(P, board(H1, H2?), Gs, Gs1?, Vs?, D2?) :- '
-              'ground(P?) | thread(H1?, V1), path(P?, 2, M2), '
+              'ground(P?) | path(P?, 1, Q1), thread(Q1?, H1?, V1), '
+              'path(P?, 2, M2), '
               'path(P?, 2, Q2), answer_stream_string(Q2?, H2, Gs?, Gs1, D2), '
               'start_board_board_2(V1?, [input(M2?)], Vs).'));
+      expect(s, contains('thread(P, Xs, [[] | Vs?]) :- '
+          'thread_tail(P?, Xs?, Vs).'));
+      expect(
+          s,
+          contains('thread_cell(P, X, Xs, Vs?) :- ground(P?) | '
+              'path(P?, 1, P1), path(P?, 2, P2), shown(P1?, X?, V1), '
+              'thread(P2?, Xs?, V2), cons_views(V1?, V2?, Vs).'));
       expect(
           s,
           contains('comb_board_board_2(_, V2, [V1 | S1], S2, '
@@ -867,17 +905,35 @@ procedure (Outer)*nested(YesNo, String).
       expect(
           s,
           contains('present_outer(P, outer(H1, H2, H3?), Gs, Gs2?, Vs?, '
-              'Done?) :- ground(P?) | shown(H1?, V1), path(P?, 2, Q2), '
+              'Done?) :- ground(P?) | path(P?, 1, Q1), shown(Q1?, H1?, V1), '
+              'path(P?, 2, Q2), '
               'present_inner(Q2?, H2?, Gs?, Gs1, V2, D2), path(P?, 3, M3), '
               'path(P?, 3, Q3), answer_string(Q3?, H3, Gs1?, Gs2, D3), '
               'all_done([D2?, D3?], Done), '
               'start_outer_outer_3(V1?, V2?, [input(M3?)], Vs).'));
       expect(
           s,
-          contains('present_inner(P, inner(H1, H2?), Gs, Gs1?, '
-              '[inner(H1?, input(M2?))], D2?) :- ground(P?), ground(H1?) | '
+          contains('present_inner(P, inner(H1, H2?), Gs, Gs1?, Vs?, D2?) :- '
+              'ground(P?) | path(P?, 1, Q1), shown(Q1?, H1?, V1), '
               'path(P?, 2, M2), path(P?, 2, Q2), '
-              'answer_yesNo(Q2?, H2, Gs?, Gs1, D2).'));
+              'answer_yesNo(Q2?, H2, Gs?, Gs1, D2), '
+              'start_inner_inner_2(V1?, [input(M2?)], Vs).'));
+      // The nested structure not yet written when it is drawn: pending at
+      // [2], the grants passed on to the outer question at [3] until it is.
+      expect(
+          s,
+          contains('present_inner(P, X, Gs, Gs1?, [pending(P?) | Vs?], '
+              'Done?) :- ground(P?) | '
+              'present_inner_wait(P?, X?, Gs?, Gs1, Vs, Done).'));
+      expect(
+          s,
+          contains('present_inner_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, '
+              'Done?) :- present_inner_wait(P?, X?, Gs?, Gs1, Vs, Done).'));
+      expect(
+          s,
+          contains('present_outer_wait(P, outer(H1, H2, H3?), Gs, Gs1?, Vs?, '
+              'Done?) :- present_outer(P?, outer(H1?, H2?, H3), Gs?, Gs1, '
+              'Vs, Done).'));
     });
 
     test('a writer-mode type the person writes nowhere holds no question, and '
@@ -908,12 +964,13 @@ both(P, A, B, both(P?, A?, B?)).
 ''').source;
       expect(
           s,
-          contains('present_card(P, card(H1, H2?, H3?), Gs, Gs2?, '
-              '[card(H1?, input(M2?), input(M3?))], Done?) :- ground(P?), '
-              'ground(H1?) | path(P?, 2, M2), path(P?, 2, Q2), '
+          contains('present_card(P, card(H1, H2?, H3?), Gs, Gs2?, Vs?, '
+              'Done?) :- ground(P?) | path(P?, 1, Q1), shown(Q1?, H1?, V1), '
+              'path(P?, 2, M2), path(P?, 2, Q2), '
               'answer_yesNo(Q2?, H2, Gs?, Gs1, D2), path(P?, 3, M3), '
               'path(P?, 3, Q3), answer_yesNo(Q3?, H3, Gs1?, Gs2, D3), '
-              'all_done([D2?, D3?], Done).'));
+              'all_done([D2?, D3?], Done), '
+              'start_card_card_3(V1?, [input(M2?)], [input(M3?)], Vs).'));
       expect('procedure answer_yesNo('.allMatches(s), hasLength(1));
       expect(
           s,
@@ -953,8 +1010,13 @@ procedure (Two)*pair(YesNo, YesNo).
               c));
     });
 
-    test('an alternative holding no question does not read its position, '
-        'and one reading it once does not guard on it', () {
+    // Until the pending drawing (vGLP 118e04d, Definition "Construct
+    // Process") an alternative holding no question did not read its
+    // position, its view waiting for it, ground(H1?); it is one widget
+    // position, shown, drawn pending at its position until written whole.
+    test('an alternative holding no question is one widget position, shown at '
+        'its position and drawn pending there until written whole, and one '
+        'reading its position once does not guard on it', () {
       final s = compile('''
 Peer ::= Constant.
 YesNo ::= yes ; no.
@@ -964,8 +1026,8 @@ procedure (T)*mixed(YesNo).
 (b(inner(bob, A)))*mixed(A?).
 ''').source;
       expect(s,
-          contains('present_t(_, a(H1), Gs, Gs?, [a(H1?)], done) :- '
-              'ground(H1?) | true.'));
+          contains('present_t(P, a(H1), Gs, Gs?, Vs?, done) :- '
+              'shown(P?, a(H1?), Vs).'));
       expect(
           s,
           contains('present_t(P, b(H1), Gs, Gs1?, Vs?, D1?) :- '
@@ -1697,7 +1759,8 @@ procedure (Card)*respond(Reply).
       expect(
           s,
           contains('present_card(P, card(H1, H2?), Gs, Gs1?, Vs?, D2?) :- '
-              'ground(P?) | shown(H1?, V1), path(P?, 2, M2), path(P?, 2, Q2), '
+              'ground(P?) | path(P?, 1, Q1), shown(Q1?, H1?, V1), '
+              'path(P?, 2, M2), path(P?, 2, Q2), '
               'answer_reply(Q2?, H2, Gs?, Gs1, W2, D2), '
               'start_card_card_2(V1?, [input(M2?) | W2?], Vs).'));
     });
@@ -1885,38 +1948,41 @@ deal([]).
           contains('construct(Id, stream_card_w(X), Gs, Ds?) :- '
               'present_stream_card([], X?, Gs?, _, Vs, Done), '
               'run(Id?, thread($card), Vs?, Done?, Ds).'));
-      // The views, the elements' so far, [] before any.
+      // The views, the elements' so far: a cell as it is written; [] for
+      // the stream closed with none; and the unwritten tail not drawn, []
+      // where no element is written yet, its grants passed on until it is
+      // (vGLP 118e04d, Definition "Construct Process").
+      expect(
+          s,
+          contains('present_stream_card(P, [X | Xs], Gs, Gs1?, Vs?, Done?) :- '
+              'present_stream_card_cell(P?, X?, Xs?, Gs?, Gs1, Vs, Done).'));
+      expect(s,
+          contains('present_stream_card(_, [], Gs, Gs?, [[]], done).'));
       expect(
           s,
           contains('present_stream_card(P, Xs, Gs, Gs1?, [[] | Vs?], '
-              'Done?) :- present_stream_card_more(P?, Xs?, [], Gs?, Gs1, Vs, '
+              'Done?) :- present_stream_card_tail(P?, Xs?, Gs?, Gs1, Vs, '
               'Done).'));
-      // Each element presented at P with 1 at its end, its tail at P with
-      // 2, the grants it does not take passed on to those after it.
       expect(
           s,
-          contains('present_stream_card_more(P, [X | Xs], Prev, Gs, Gs2?, '
-              'Vs?, Done?) :- ground(P?) | path(P?, 1, Q1), '
-              'present_card(Q1?, X?, Gs?, Gs1, V1, D1), path(P?, 2, Q2), '
-              'present_stream_card_next(V1?, Prev?, Q2?, Xs?, Gs1?, Gs2, Vs, '
-              'D2), all_done([D1?, D2?], Done).'));
+          contains('present_stream_card_tail(P, Xs, [G | Gs], [G? | Gs1?], '
+              'Vs?, Done?) :- present_stream_card_tail(P?, Xs?, Gs?, Gs1, Vs, '
+              'Done).'));
       // Done once the stream is closed and every element answered.
       expect(s,
-          contains('present_stream_card_more(_, [], _, Gs, Gs?, [], done).'));
-      // Drawn again as each element's view arrives.
+          contains('present_stream_card_tail(_, [], Gs, Gs?, [], done).'));
+      // Each element presented at P with 1 at its end, its tail at P with
+      // 2, the grants it does not take passed on to those after it, and the
+      // cell drawn again as its element's view or its tail's changes.
       expect(
           s,
-          contains('present_stream_card_next([W | _], Prev, Q, Xs, Gs, '
-              'Gs1?, Vs?, Done?) :- append_one(Prev?, W?, New), '
-              'present_stream_card_shown(New?, Q?, Xs?, Gs?, Gs1, Vs, '
-              'Done).'));
-      expect(
-          s,
-          contains('present_stream_card_shown(New, Q, Xs, Gs, Gs1?, '
-              '[New? | Vs?], Done?) :- ground(New?) | '
-              'present_stream_card_more(Q?, Xs?, New?, Gs?, Gs1, Vs, '
-              'Done).'));
+          contains('present_stream_card_cell(P, X, Xs, Gs, Gs2?, Vs?, Done?) '
+              ':- ground(P?) | path(P?, 1, Q1), '
+              'present_card(Q1?, X?, Gs?, Gs1, V1, D1), path(P?, 2, Q2), '
+              'present_stream_card(Q2?, Xs?, Gs1?, Gs2, V2, D2), '
+              'cons_views(V1?, V2?, Vs), all_done([D1?, D2?], Done).'));
       expect(s, isNot(contains('ref(')));
+      expect(s, isNot(contains('append_one')));
     });
 
     test('as an argument of a tuple, a List: the form\'s field a thread, the '
@@ -1950,11 +2016,16 @@ procedure (Stream(YesNo?))*ballot(YesNo, YesNo).
       expect(c.widgets['Stream(YesNo?)'], 'thread(buttons([yes, no]))');
       expect(
           c.source,
-          contains('present_stream_yesNo_more(P, [X? | Xs], Prev, Gs, Gs2?, '
-              'Vs?, Done?) :- ground(P?) | path(P?, 1, M1), '
+          contains('present_stream_yesNo(P, [X? | Xs], Gs, Gs1?, Vs?, '
+              'Done?) :- present_stream_yesNo_cell(P?, X, Xs?, Gs?, Gs1, Vs, '
+              'Done).'));
+      expect(
+          c.source,
+          contains('present_stream_yesNo_cell(P, X?, Xs, Gs, Gs2?, Vs?, '
+              'Done?) :- ground(P?) | path(P?, 1, M1), '
               'path(P?, 1, Q1), answer_yesNo(Q1?, X, Gs?, Gs1, D1), '
-              'path(P?, 2, Q2), present_stream_yesNo_next([input(M1?)], '
-              'Prev?, Q2?, Xs?, Gs1?, Gs2, Vs, D2), all_done([D1?, D2?], '
+              'path(P?, 2, Q2), present_stream_yesNo(Q2?, Xs?, Gs1?, Gs2, V2, '
+              'D2), cons_views([input(M1?)], V2?, Vs), all_done([D1?, D2?], '
               'Done).'));
     });
 

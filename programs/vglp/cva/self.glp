@@ -13,7 +13,7 @@
 %% route/5.  The person reads what its dispatcher draws (vGLP, the construct
 %% process, draw(Id, W, V) and withdraw(Id); a grant input(Id, P, R)): the
 %% session, the agent's question, whose thread it logs as the program writes
-%% it, and the cards Ask raises.  The plays pace the persons on the thread
+%% it, each element once written whole, and the cards Ask raises.  The plays pace the persons on the thread
 %% (vGLP #8, 2026-10-11 16:44 UTC, Q5).
 %%
 %% The person's script is a list of steps: req(R) grants the request R on the
@@ -120,9 +120,13 @@ among(_, [], n).
 among(X, [Y|_], y) :- X? =?= Y? | true.
 among(X, [_|Ys], B?) :- otherwise | among(X?, Ys?, B).
 
-%% The thread as a list, whatever its unwritten tail is drawn as.
+%% The thread's written elements as a list: those before the first the
+%% program has not yet written whole, which is drawn pending(P), its
+%% unwritten tail not drawn (vGLP 118e04d, Definition "Construct Process"),
+%% so each transaction is logged once it is written, in the thread's order.
 procedure list_of(_?, Stream(_)).
-list_of([X|Xs], [X?|Ys?]) :- list_of(Xs?, Ys).
+list_of([pending(_)|_], []).
+list_of([X|Xs], [X?|Ys?]) :- otherwise | list_of(Xs?, Ys).
 list_of(_, []) :- otherwise | true.
 
 %% Log the transactions of the thread not logged before.

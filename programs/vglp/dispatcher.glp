@@ -18,7 +18,9 @@
 %% the grant naming its question, vGLP #5 Cowork, 2026-10-04 09:05 UTC, C):
 %% a construct sends draw(Id, W, V), W its widget and V the output so far with
 %% each position the person writes shown as input(P), P that position's path,
-%% again as more arrives, and withdraw(Id).
+%% and each widget position the program has not yet written whole shown as
+%% pending(P), a stream's unwritten tail not shown (vGLP 118e04d, Definition
+%% "Construct Process"), again as more arrives, and withdraw(Id).
 %%
 %% A GRANT is input(Id, P, R): Id the identifier of the construct, P the
 %% position of the question in it, and R the ground term of the person's
@@ -225,35 +227,86 @@ all_done([done | Ds], D?) :-
     all_done(Ds?, D).
 all_done([], done).
 
-%% shown(X?, Views): the view of a position the program writes and the person
-%% does not, once it is written: the term itself.
-procedure shown(_?, Stream(_)).
-shown(X, [X?]) :-
+%% PENDING (vGLP 118e04d, Definition "Construct Process": "It has the bridge
+%% draw the widget of T with the output so far, again as more arrives, each
+%% widget position the program has not yet written whole --- the root, a
+%% field, an element of any stream, the thread's included --- drawn as
+%% pending, and a stream's unwritten tail not drawn, so that the questions
+%% beside it are offered at once").  A widget position the program has not
+%% yet written whole when it is drawn is drawn pending(P), P its path, as a
+%% position the person writes is drawn input(P), and drawn again once
+%% written; a stream is drawn as the list of its elements so far, its
+%% unwritten tail not drawn.  Which of the two a position is drawn as is
+%% decided by the first clause that can reduce (GLP-Spec, Definition "cGLP
+%% Transition System", Reduce: "the first clause for which the GLP reduction
+%% of A with C succeeds"): the clause for the position written whole where
+%% it is, and the pending clause after it where it is not.
+
+%% shown(P?, X?, Views): the views of a widget position the program writes
+%% and the person does not, at path P: X itself where it is written whole
+%% when drawn; pending(P) where it is not, and X once it is.
+procedure shown(Path?, _?, Stream(_)).
+shown(_, X, [X?]) :-
+    ground(X?) | true.
+shown(P, X, [pending(P?) | Vs?]) :-
+    shown_whole(X?, Vs).
+
+%% shown_whole(X?, Views): X, once written whole.
+procedure shown_whole(_?, Stream(_)).
+shown_whole(X, [X?]) :-
     ground(X?) | true.
 
-%% thread(Xs?, Views): the view of a stream the program writes and the person
-%% does not: the elements so far, again as each arrives.
-procedure thread(Stream(_)?, Stream(Stream(_))).
-thread(Xs, [[] | Vs?]) :-
-    thread(Xs?, [], Vs).
+%% thread(P?, Xs?, Views): the views of a stream the program writes and the
+%% person does not, at path P: the list of its elements so far, each at its
+%% own path --- the element of a list cell at P with 1 at its end, its tail
+%% at P with 2 at its end --- drawn by shown/3, pending until written whole;
+%% its unwritten tail not drawn; again as each cell and each element is
+%% written.
+procedure thread(Path?, Stream(_)?, Stream(Stream(_))).
+thread(P, [X | Xs], Vs?) :-
+    thread_cell(P?, X?, Xs?, Vs).
+thread(_, [], [[]]).
+thread(P, Xs, [[] | Vs?]) :-
+    thread_tail(P?, Xs?, Vs).
 
-procedure thread(Stream(_)?, Stream(_)?, Stream(Stream(_))).
-thread([X | Xs], Prev, Vs?) :-
-    ground(X?), ground(Prev?) |
-    append_one(Prev?, X?, New),
-    thread_more(Xs?, New?, Vs).
-thread([], _, []).
+%% thread_tail(P?, Xs?, Views): the views of a stream at P, drawn with no
+%% element of it yet, as its tail is written.
+procedure thread_tail(Path?, Stream(_)?, Stream(Stream(_))).
+thread_tail(P, [X | Xs], Vs?) :-
+    thread_cell(P?, X?, Xs?, Vs).
+thread_tail(_, [], []).
 
-procedure thread_more(Stream(_)?, Stream(_)?, Stream(Stream(_))).
-thread_more(Xs, New, [New? | Vs?]) :-
-    ground(New?) |
-    thread(Xs?, New?, Vs).
+%% thread_cell(P?, X?, Xs?, Views): the views of the list cell [X | Xs] at P.
+procedure thread_cell(Path?, _?, Stream(_)?, Stream(Stream(_))).
+thread_cell(P, X, Xs, Vs?) :-
+    ground(P?) |
+    path(P?, 1, P1),
+    path(P?, 2, P2),
+    shown(P1?, X?, V1),
+    thread(P2?, Xs?, V2),
+    cons_views(V1?, V2?, Vs).
 
-%% append_one(Xs?, X?, Ys): Ys is Xs with X at its end.
-procedure append_one(Stream(_)?, _?, Stream(_)).
-append_one([Y | Ys], X, [Y? | Zs?]) :-
-    append_one(Ys?, X?, Zs).
-append_one([], X, [X?]).
+%% cons_views(Es?, Ts?, Views): the views of a list cell from the views of
+%% its element, Es, and those of its tail, Ts, each the list of the tail's
+%% elements so far: [E | T], again each time either is drawn again.  An
+%% element and a tail are each drawn before their views close, but each is a
+%% stream, whose [] the procedure covers.
+procedure cons_views(Stream(_)?, Stream(Stream(_))?, Stream(Stream(_))).
+cons_views([E | Es], [T | Ts], [[E? | T?] | Vs?]) :-
+    ground(E?), ground(T?) |
+    cons_more(E?, T?, Es?, Ts?, Vs).
+cons_views([], _, []).
+cons_views(_, [], []).
+
+procedure cons_more(_?, Stream(_)?, Stream(_)?, Stream(Stream(_))?,
+    Stream(Stream(_))).
+cons_more(_, T, [E | Es], Ts, [[E? | T?] | Vs?]) :-
+    ground(E?), ground(T?) |
+    cons_more(E?, T?, Es?, Ts?, Vs).
+cons_more(E, _, Es, [T | Ts], [[E? | T?] | Vs?]) :-
+    ground(E?), ground(T?) |
+    cons_more(E?, T?, Es?, Ts?, Vs).
+cons_more(_, _, [], [], []).
 
 %% path(P?, I?, Q): Q is the path of argument I of the position at path P,
 %% P with I at its end.
