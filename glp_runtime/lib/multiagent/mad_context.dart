@@ -602,23 +602,17 @@ class MadContext {
   // ===========================================================================
   // DECLARED PLACES (Definition Seam Predicates)
   // ===========================================================================
-
-  /// The current tail writer of each declared place's event stream, by place
-  /// name. A place is in this map exactly while its declaration stands.
-  final Map<String, HeapCell> _placeStreamWriters = {};
-
-  /// Which declaration of each place is the standing one. Incremented on every
-  /// [declarePlace], so an answer the layer returns late can be told from the
-  /// declaration it answers: the tail writer moves with every event and cannot
-  /// identify a declaration, this does.
-  final Map<String, int> _placeDeclarations = {};
+  //
+  // The declared places and their streams are the runtime's bookkeeping,
+  // [GlpRuntime.placeStreams], kept whether a layer is bound or none is
+  // (runtime/place_streams.dart); here the layer is told and its reports are
+  // put on the streams.
 
   /// Whether [place] is declared at this agent.
-  bool hasDeclaredPlace(String place) =>
-      _placeStreamWriters.containsKey(place);
+  bool hasDeclaredPlace(String place) => runtime.placeStreams.isDeclared(place);
 
   /// Names of the places declared at this agent.
-  Iterable<String> get declaredPlaces => _placeStreamWriters.keys;
+  Iterable<String> get declaredPlaces => runtime.placeStreams.places;
 
   /// Declare [place] with radius [radiusMetres], its event stream growing from
   /// [streamWriterAddr] — the writer of the `E` of `place_declare(P, R, E)`.
@@ -635,12 +629,9 @@ class MadContext {
       throw StateError('no GlpNetwork bound to agent $agentId');
     }
 
-    // A further declaration supersedes the earlier one: close its stream.
-    _closePlaceStream(place);
-
-    _placeStreamWriters[place] = streamWriterAddr;
-    final declaration = (_placeDeclarations[place] ?? 0) + 1;
-    _placeDeclarations[place] = declaration;
+    // A further declaration supersedes the earlier one, closing its stream.
+    final declaration =
+        runtime.placeStreams.declare(place, streamWriterAddr);
     _installPlaceEventHandler(network);
     _trace('[MAD $agentId] declarePlace($place, $radiusMetres): stream '
         'writer=$streamWriterAddr');
@@ -658,7 +649,7 @@ class MadContext {
             '— unobservable');
         // Answers can arrive after place_remove or after a superseding
         // declaration, whose stream is the successor's, not this one's.
-        if (_placeDeclarations[place] != declaration) return;
+        if (!runtime.placeStreams.isStanding(place, declaration)) return;
         deliverPlaceEvent(place, PlaceEvent.unobservable);
       },
       onError: (Object e) => _trace(
@@ -673,8 +664,8 @@ class MadContext {
     if (network == null) {
       throw StateError('no GlpNetwork bound to agent $agentId');
     }
-    if (!_placeStreamWriters.containsKey(place)) return;
-    _closePlaceStream(place);
+    if (!runtime.placeStreams.close(place)) return;
+    _trace('[MAD $agentId] place $place: stream closed');
     network.removePlace(place).catchError((Object e) =>
         _trace('[MAD $agentId] removePlace($place): layer failed: $e'));
     _trace('[MAD $agentId] removePlace($place)');
@@ -698,36 +689,12 @@ class MadContext {
   ///
   /// An event for a place that is not declared here is dropped.
   void deliverPlaceEvent(String place, PlaceEvent event) {
-    final currentWriter = _placeStreamWriters[place];
-    if (currentWriter == null) {
+    if (!runtime.placeStreams.deliver(place, ConstTerm(event.name))) {
       _trace('[MAD $agentId] place event $event for undeclared $place — dropped');
       return;
     }
-
-    final (freshWriter, freshReader) = runtime.heap.allocateVariable();
-    final cell = StructTerm(
-        '.', [ConstTerm(event.name), VarRef(freshReader)]);
-    final activations = runtime.heap.bindVariable(currentWriter, cell);
-    _placeStreamWriters[place] = freshWriter;
-    _trace('[MAD $agentId] place $place: $event, ${activations.length} '
-        'activations');
-
-    for (final act in activations) {
-      runtime.enqueueReactivatedGoal(act);
-    }
+    _trace('[MAD $agentId] place $place: $event');
     onPlaceEventDelivered?.call();
-  }
-
-  /// Close [place]'s stream — assign its tail `[]` — and forget the place.
-  /// Does nothing where [place] is not declared.
-  void _closePlaceStream(String place) {
-    final writer = _placeStreamWriters.remove(place);
-    if (writer == null) return;
-    final activations = runtime.heap.bindVariable(writer, ConstTerm(nil));
-    for (final act in activations) {
-      runtime.enqueueReactivatedGoal(act);
-    }
-    _trace('[MAD $agentId] place $place: stream closed');
   }
 
   /// The ground presentation of a global name (§Global Variable Names): the
