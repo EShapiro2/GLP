@@ -109,7 +109,7 @@ try_step(Id, Es, Gs?, [Step|Script], Form, Swaps, idle, Screen?) :-
 %% term, the request; an acceptance on the proposer's card.
 procedure pick(Step?, Form?, OpenOffers?, Choice, OpenOffers).
 pick(mint(K), form(C, P), Swaps, grant(C?, P?, mint(K?)), Swaps?).
-pick(swap(Q, U, K, V, K1), form(C, P), Swaps, grant(C?, P?, swap(Q?, lot(U?, K?), lot(V?, K1?))), Swaps?).
+pick(swap(Q, U, K, V, K1), form(C, P), Swaps, grant(C?, P?, swap(Q?, U?, K?, V?, K1?)), Swaps?).
 pick(pay(Q, K), form(C, P), Swaps, grant(C?, P?, pay(Q?, K?)), Swaps?).
 pick(redeem(Q, R), form(C, P), Swaps, grant(C?, P?, redeem(Q?, R?)), Swaps?).
 pick(accept(From), _, Swaps, Choice?, Swaps1?) :-

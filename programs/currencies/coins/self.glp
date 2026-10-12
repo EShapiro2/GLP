@@ -110,13 +110,26 @@ Offer ::= offer(Key, Lot, Stream(Coin)).
 %% interactive type in reader mode, and the responder's card, in writer mode.
 %% =============================================================================
 
-%% A peer: the agent identifier a request names, a person, and so a Key.
-Peer ::= Key.
+%% The fields of a request, one named type per meaning over its base type,
+%% each named by the variable its clause gives it, so that vGLP labels the
+%% field by it (Definition "Widget Declaration, Default Widget"): the
+%% counterparty, a Friend, and the amounts and issuers given and wanted.  An
+%% issuer is an agent identifier, a person, and so a Key.
+Amount     ::= Integer.
+Friend     ::= Key.
+GiveCoin   ::= Key.
+GiveAmount ::= Integer.
+WantCoin   ::= Key.
+WantAmount ::= Integer.
 
 %% A request: one alternative per request clause of the agent, each a
 %% transaction of Definition 3.1 at the party whose election it is --- Mint,
-%% Swap, Pay and Redeem --- with the arguments its clause reads.
-Request ::= mint(Integer) ; swap(Peer, Lot, Lot) ; pay(Peer, Integer) ; redeem(Peer, Peer).
+%% Swap, Pay and Redeem --- with the arguments its clause reads.  A swap is
+%% flat, the two lots its clause builds given field by field.
+Request ::= mint(Amount)
+          ; swap(Friend, GiveCoin, GiveAmount, WantCoin, WantAmount)
+          ; pay(Friend, Amount)
+          ; redeem(Friend, WantCoin).
 
 %% The responder's card: the offer, which the agent writes for the person to
 %% see, and the person's answer, yes accepting and no declining.

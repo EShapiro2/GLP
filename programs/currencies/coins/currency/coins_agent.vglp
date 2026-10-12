@@ -179,7 +179,7 @@ serve([mint(Amount)|Reqs], Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :-
 %% Swap_{p,q}(cent^k_u, cent^{k'}_v), guarded by both: p proposes, giving k
 %% u-coins for k' v-coins, and q answers by respond_swap.  The precondition at
 %% p, cent^k_u in c_p, is the selection; q's part of it is q's.
-serve([swap(Friend, lot(GiveCoin, GiveAmount), lot(WantCoin, WantAmount))|Reqs], Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :-
+serve([swap(Friend, GiveCoin, GiveAmount, WantCoin, WantAmount)|Reqs], Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :-
     ground(Id?), ground(Friend?), ground(GiveCoin?), integer(GiveAmount?), GiveAmount? >= 1, ground(WantCoin?), integer(WantAmount?), WantAmount? >= 1 |
     select_coins(GiveCoin?, GiveAmount?, Holdings?, Status, Give, Rest),
     propose_swap(Status?, Id?, Friend?, lot(GiveCoin?, GiveAmount?), lot(WantCoin?, WantAmount?), Give?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Outs?, Serial?).

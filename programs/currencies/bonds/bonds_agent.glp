@@ -245,7 +245,7 @@ constructs([]).
 procedure construct(Integer?, Question?, Inputs?, Stream(Draw)).
 construct(Id, swapCard_w(X), Gs, Ds?) :- present_swapCard([], X?, Gs?, _, Vs, Done), run(Id?, form(card, [field('SwapOffer', shown), field('YesNo', buttons([yes, no]))]), Vs?, Done?, Ds).
 construct(Id, transferCard_w(X), Gs, Ds?) :- present_transferCard([], X?, Gs?, _, Vs, Done), run(Id?, form(card, [field('TransferOffer', shown), field('YesNo', buttons([yes, no]))]), Vs?, Done?, Ds).
-construct(Id, stream_request_r(X?), Gs, Ds?) :- answer_stream_request([], X, Gs?, _, Done), run(Id?, input_box(menu([form(mint, [field('Integer', number)]), form(mint, [field('Integer', number), field('Integer', number)]), form(swap, [field('Key', peer), field('Key', peer), field('Constant', text), field('Integer', number), field('Key', peer), field('Constant', text), field('Integer', number)]), form(pay, [field('Key', peer), field('Integer', number)]), form(redeem, [field('Key', peer), field('Key', peer), field('Constant', text)]), form(mature, [field('Key', peer), field('Integer', number)]), form(deposit, [field('Key', peer), field('Key', peer), field('Constant', text), field('Integer', number)]), form(release, [field('Key', peer), field('Key', peer), field('Constant', text), field('Integer', number)]), form(return, [field('Key', peer), field('Key', peer), field('Constant', text), field('Integer', number)])])), [input([])], Done?, Ds).
+construct(Id, stream_request_r(X?), Gs, Ds?) :- answer_stream_request([], X, Gs?, _, Done), run(Id?, input_box(menu([form(mint, [field('Amount', number)]), form(mint, [field('Amount', number), field('Maturity', number)]), form(swap, [field('Friend', peer), field('GiveIssuer', peer), field('GiveDue', text), field('GiveAmount', number), field('WantIssuer', peer), field('WantDue', text), field('WantAmount', number)]), form(pay, [field('Friend', peer), field('Amount', number)]), form(redeem, [field('Friend', peer), field('WantIssuer', peer), field('WantDue', text)]), form(mature, [field('Friend', peer), field('Maturity', number)]), form(deposit, [field('EscrowAgent', peer), field('Issuer', peer), field('Due', text), field('Amount', number)]), form(release, [field('Beneficiary', peer), field('Issuer', peer), field('Due', text), field('Amount', number)]), form(return, [field('Depositor', peer), field('Issuer', peer), field('Due', text), field('Amount', number)])])), [input([])], Done?, Ds).
 
 procedure form_yesNo(_?, Formed(YesNo)).
 form_yesNo(yes, formed(yes)).
@@ -294,16 +294,16 @@ procedure present_transferCard_wait(Path?, TransferCard?, Inputs?, Inputs, Strea
 present_transferCard_wait(P, card(H1, H2?), Gs, Gs1?, Vs?, Done?) :- present_transferCard(P?, card(H1?, H2), Gs?, Gs1, Vs, Done).
 present_transferCard_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, Done?) :- present_transferCard_wait(P?, X?, Gs?, Gs1, Vs, Done).
 
-procedure join_request_mint_1(Formed(Integer)?, Formed(Request)).
+procedure join_request_mint_1(Formed(Amount)?, Formed(Request)).
 join_request_mint_1(formed(X1), formed(mint(X1?))).
 join_request_mint_1(refused, refused).
 
-procedure join_request_mint_2(Formed(Integer)?, Formed(Integer)?, Formed(Request)).
+procedure join_request_mint_2(Formed(Amount)?, Formed(Maturity)?, Formed(Request)).
 join_request_mint_2(formed(X1), formed(X2), formed(mint(X1?, X2?))).
 join_request_mint_2(refused, _, refused).
 join_request_mint_2(_, refused, refused).
 
-procedure join_request_swap_7(Formed(Key)?, Formed(Key)?, Formed(Constant)?, Formed(Integer)?, Formed(Key)?, Formed(Constant)?, Formed(Integer)?, Formed(Request)).
+procedure join_request_swap_7(Formed(Friend)?, Formed(GiveIssuer)?, Formed(GiveDue)?, Formed(GiveAmount)?, Formed(WantIssuer)?, Formed(WantDue)?, Formed(WantAmount)?, Formed(Request)).
 join_request_swap_7(formed(X1), formed(X2), formed(X3), formed(X4), formed(X5), formed(X6), formed(X7), formed(swap(X1?, X2?, X3?, X4?, X5?, X6?, X7?))).
 join_request_swap_7(refused, _, _, _, _, _, _, refused).
 join_request_swap_7(_, refused, _, _, _, _, _, refused).
@@ -313,37 +313,37 @@ join_request_swap_7(_, _, _, _, refused, _, _, refused).
 join_request_swap_7(_, _, _, _, _, refused, _, refused).
 join_request_swap_7(_, _, _, _, _, _, refused, refused).
 
-procedure join_request_pay_2(Formed(Key)?, Formed(Integer)?, Formed(Request)).
+procedure join_request_pay_2(Formed(Friend)?, Formed(Amount)?, Formed(Request)).
 join_request_pay_2(formed(X1), formed(X2), formed(pay(X1?, X2?))).
 join_request_pay_2(refused, _, refused).
 join_request_pay_2(_, refused, refused).
 
-procedure join_request_redeem_3(Formed(Key)?, Formed(Key)?, Formed(Constant)?, Formed(Request)).
+procedure join_request_redeem_3(Formed(Friend)?, Formed(WantIssuer)?, Formed(WantDue)?, Formed(Request)).
 join_request_redeem_3(formed(X1), formed(X2), formed(X3), formed(redeem(X1?, X2?, X3?))).
 join_request_redeem_3(refused, _, _, refused).
 join_request_redeem_3(_, refused, _, refused).
 join_request_redeem_3(_, _, refused, refused).
 
-procedure join_request_mature_2(Formed(Key)?, Formed(Integer)?, Formed(Request)).
+procedure join_request_mature_2(Formed(Friend)?, Formed(Maturity)?, Formed(Request)).
 join_request_mature_2(formed(X1), formed(X2), formed(mature(X1?, X2?))).
 join_request_mature_2(refused, _, refused).
 join_request_mature_2(_, refused, refused).
 
-procedure join_request_deposit_4(Formed(Key)?, Formed(Key)?, Formed(Constant)?, Formed(Integer)?, Formed(Request)).
+procedure join_request_deposit_4(Formed(EscrowAgent)?, Formed(Issuer)?, Formed(Due)?, Formed(Amount)?, Formed(Request)).
 join_request_deposit_4(formed(X1), formed(X2), formed(X3), formed(X4), formed(deposit(X1?, X2?, X3?, X4?))).
 join_request_deposit_4(refused, _, _, _, refused).
 join_request_deposit_4(_, refused, _, _, refused).
 join_request_deposit_4(_, _, refused, _, refused).
 join_request_deposit_4(_, _, _, refused, refused).
 
-procedure join_request_release_4(Formed(Key)?, Formed(Key)?, Formed(Constant)?, Formed(Integer)?, Formed(Request)).
+procedure join_request_release_4(Formed(Beneficiary)?, Formed(Issuer)?, Formed(Due)?, Formed(Amount)?, Formed(Request)).
 join_request_release_4(formed(X1), formed(X2), formed(X3), formed(X4), formed(release(X1?, X2?, X3?, X4?))).
 join_request_release_4(refused, _, _, _, refused).
 join_request_release_4(_, refused, _, _, refused).
 join_request_release_4(_, _, refused, _, refused).
 join_request_release_4(_, _, _, refused, refused).
 
-procedure join_request_return_4(Formed(Key)?, Formed(Key)?, Formed(Constant)?, Formed(Integer)?, Formed(Request)).
+procedure join_request_return_4(Formed(Depositor)?, Formed(Issuer)?, Formed(Due)?, Formed(Amount)?, Formed(Request)).
 join_request_return_4(formed(X1), formed(X2), formed(X3), formed(X4), formed(return(X1?, X2?, X3?, X4?))).
 join_request_return_4(refused, _, _, _, refused).
 join_request_return_4(_, refused, _, _, refused).

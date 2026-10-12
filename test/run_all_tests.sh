@@ -3358,8 +3358,8 @@ HEREDOC
 
 check "Sovereign harness: no runtime error" "→ suspended" "$n4_ui"
 check_not "Sovereign harness: no failed goal" "ERROR" "$n4_ui"
-check "Sovereign harness: the central bank's Mint coins form stands" "draw([0-9][0-9]*, input_box(menu(\[form(mint, \[field(Constant, text), field(Integer, number)\]), " "$n4_ui"
-check "Sovereign harness: and its Return form, the twelfth" "input_box(menu(\[\(form([a-z]*, \[[A-Za-z(), ]*\]), \)\{11\}form(return, \[field(Key, peer), field(Constant, text), field(Key, peer), field(Constant, text), field(Integer, number)\])\])), input(\[\]))" "$n4_ui"
+check "Sovereign harness: the central bank's Mint coins form stands" "draw([0-9][0-9]*, input_box(menu(\[form(mint, \[field(Denomination, text), field(Amount, number)\]), " "$n4_ui"
+check "Sovereign harness: and its Return form, the twelfth" "input_box(menu(\[\(form([a-z]*, \[[A-Za-z(), ]*\]), \)\{11\}form(return, \[field(Depositor, peer), field(Denomination, text), field(Issuer, peer), field(Due, text), field(Amount, number)\])\])), input(\[\]))" "$n4_ui"
 check "Sovereign harness: its conversation with the community bank reaches its screen" "msg(agent, person, opened(diana))" "$n4_ui"
 check "Sovereign harness: and with the household" "msg(agent, person, opened(frank))" "$n4_ui"
 check "Sovereign harness: the peers' screens are tagged" "tagged(diana, minted(10, now))" "$n4_ui"

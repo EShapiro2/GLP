@@ -199,18 +199,43 @@ TransferOffer ::= offer_transfer(Kind, Key, Stream(Instrument)).
 %% Mint_p(f, k), Mint_p(f, d, k), Swap, Accept, Pay, Payout, Spend, Redeem,
 %% Mature, Deposit, Release and Return --- with the arguments its clause
 %% reads.  A due is `now` for coins and the maturity date for bonds.
-Request ::= mint(Constant, Integer)
-          ; mint(Constant, Integer, Integer)
-          ; swap(Key, Constant, Key, Constant, Integer, Key, Constant, Integer)
-          ; accept(Constant, Key, Integer)
-          ; pay(Key, Constant, Integer)
-          ; payout(Key, Constant, Integer)
-          ; spend(Key, Key, Constant, Integer)
-          ; redeem(Key, Constant, Key, Constant)
-          ; mature(Key, Constant, Integer)
-          ; deposit(Key, Constant, Key, Constant, Integer)
-          ; release(Key, Constant, Key, Constant, Integer)
-          ; return(Key, Constant, Key, Constant, Integer).
+%% The fields of a request, one named type per meaning over its base type,
+%% each named by the variable its clause gives it, so that vGLP labels the
+%% field by it (Definition "Widget Declaration, Default Widget"): the
+%% counterparty, a Friend, as in the coins; the issuer, due and amount of
+%% the lot given and of the lot wanted; a maturity; and the parties of the
+%% escrow transfers, the bonds' names; and the denomination, which follows
+%% the counterparty, and the limit of an acceptance.  A due is `now` for coins and the maturity date for
+%% bonds.
+Amount      ::= Integer.
+Maturity    ::= Integer.
+Friend      ::= Key.
+GiveIssuer  ::= Key.
+GiveDue     ::= Constant.
+GiveAmount  ::= Integer.
+WantIssuer  ::= Key.
+WantDue     ::= Constant.
+WantAmount  ::= Integer.
+EscrowAgent ::= Key.
+Beneficiary ::= Key.
+Depositor   ::= Key.
+Issuer      ::= Key.
+Due         ::= Constant.
+Denomination ::= Constant.
+Limit       ::= Integer.
+
+Request ::= mint(Denomination, Amount)
+          ; mint(Denomination, Amount, Maturity)
+          ; swap(Friend, Denomination, GiveIssuer, GiveDue, GiveAmount, WantIssuer, WantDue, WantAmount)
+          ; accept(Denomination, Issuer, Limit)
+          ; pay(Friend, Denomination, Amount)
+          ; payout(Friend, Denomination, Amount)
+          ; spend(Friend, Issuer, Denomination, Amount)
+          ; redeem(Friend, Denomination, WantIssuer, WantDue)
+          ; mature(Friend, Denomination, Maturity)
+          ; deposit(EscrowAgent, Denomination, Issuer, Due, Amount)
+          ; release(Beneficiary, Denomination, Issuer, Due, Amount)
+          ; return(Depositor, Denomination, Issuer, Due, Amount).
 
 %% A responder's card: the offer, which the agent writes for the person to
 %% see, and the person's answer, yes accepting and no declining.

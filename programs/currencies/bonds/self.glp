@@ -165,15 +165,37 @@ TransferOffer ::= offer_transfer(Kind, Key, Stream(Instrument)).
 %% Swap, Pay, Redeem, Mature, Deposit, Release and Return --- with the
 %% arguments its clause reads.  A due is `now` for coins and the maturity date
 %% for bonds.
-Request ::= mint(Integer)
-          ; mint(Integer, Integer)
-          ; swap(Key, Key, Constant, Integer, Key, Constant, Integer)
-          ; pay(Key, Integer)
-          ; redeem(Key, Key, Constant)
-          ; mature(Key, Integer)
-          ; deposit(Key, Key, Constant, Integer)
-          ; release(Key, Key, Constant, Integer)
-          ; return(Key, Key, Constant, Integer).
+%% The fields of a request, one named type per meaning over its base type,
+%% each named by the variable its clause gives it, so that vGLP labels the
+%% field by it (Definition "Widget Declaration, Default Widget"): the
+%% counterparty, a Friend, as in the coins; the issuer, due and amount of
+%% the lot given and of the lot wanted; a maturity; and the parties of the
+%% escrow transfers.  A due is `now` for coins and the maturity date for
+%% bonds.
+Amount      ::= Integer.
+Maturity    ::= Integer.
+Friend      ::= Key.
+GiveIssuer  ::= Key.
+GiveDue     ::= Constant.
+GiveAmount  ::= Integer.
+WantIssuer  ::= Key.
+WantDue     ::= Constant.
+WantAmount  ::= Integer.
+EscrowAgent ::= Key.
+Beneficiary ::= Key.
+Depositor   ::= Key.
+Issuer      ::= Key.
+Due         ::= Constant.
+
+Request ::= mint(Amount)
+          ; mint(Amount, Maturity)
+          ; swap(Friend, GiveIssuer, GiveDue, GiveAmount, WantIssuer, WantDue, WantAmount)
+          ; pay(Friend, Amount)
+          ; redeem(Friend, WantIssuer, WantDue)
+          ; mature(Friend, Maturity)
+          ; deposit(EscrowAgent, Issuer, Due, Amount)
+          ; release(Beneficiary, Issuer, Due, Amount)
+          ; return(Depositor, Issuer, Due, Amount).
 
 %% A responder's card: the offer, which the agent writes for the person to
 %% see, and the person's answer, yes accepting and no declining.
