@@ -1,6 +1,6 @@
 # GLP Guards Quick Reference
 
-**Last Updated**: 2026-10-02
+**Last Updated**: 2026-10-12
 
 ---
 
@@ -234,11 +234,13 @@ check(X) :- known(X?) | true.
 
 is valid because X appears as writer in the head and X? appears as reader in the guard, satisfying SRSW with one writer and one reader.
 
-This is distinct from the multiple-occurrence relaxation below. Guard reader counting ensures guards participate in SRSW validation. The relaxation below determines which guards permit the reader of a variable to appear multiple times.
+This is distinct from the multiple-occurrence relaxation below. Guard reader counting ensures guards participate in SRSW validation. The relaxation below determines which guards permit the writer and the reader of a variable to appear multiple times.
 
 ### Guards That Imply Groundness
 
-| Guard | Implies Ground | Allows Multiple Reader Occurrences |
+The catalogue (GLP-Spec appendix-guards.tex, "Guard predicates", `ef658d5`): "The 'Ground' column indicates whether success of the guard implies that the argument is ground; such guards permit multiple occurrences of both the writer and the reader in the clause" (Remark "Guards and SRSW").  Until `ef658d5` it said "of the reader in the clause body".
+
+| Guard | Implies Ground | Allows Multiple Occurrences of X and X? |
 |-------|----------------|-------------------------|
 | ✅ `ground(X?)` | Yes | ✅ Yes |
 | ✅ `constant(X?)` | Yes | ✅ Yes |
@@ -260,7 +262,7 @@ This is distinct from the multiple-occurrence relaxation below. Guard reader cou
 | ✅ `no_readers(X?)` | **NO** | ❌ No |
 | ✅ `otherwise` | No | ❌ No |
 
-**Note**: Arithmetic comparison guards suspend if operands are unbound and only succeed if both operands are bound to numbers. Therefore, when they succeed, both operands are guaranteed to be ground.
+**Note**: Arithmetic comparison guards suspend if operands are unbound and only succeed if both operands are bound to numbers. Therefore, when they succeed, both operands are guaranteed to be ground.  The catalogue says so --- "Success implies both arguments are ground" --- and its arithmetic comparisons table has a Ground column, "yes" in every row (GLP-Spec appendix-guards.tex, "Arithmetic comparison guards", `ef658d5`).
 
 **Critical Difference**: `known(X)` tests if X is bound to either a constant or compound term (i.e., `constant(X) ∨ compound(X)`), but does not require groundness. A compound term like `f(Y)` is known but not ground if Y is unbound. Similarly, `compound(X)` succeeds on `f(Y)` even when Y is unbound.
 
@@ -309,10 +311,10 @@ The SRSW analyzer must:
 1. Track guards in HEAD/GUARDS phase
 2. Recognize guards that imply groundness:
    - Type guards: `ground/1`, `integer/1`, `real/1`, `number/1`, `string/1`, `constant/1`
-   - Arithmetic comparisons: `<`, `=<`, `>`, `>=`, `=:=`, `=\=`
+   - Arithmetic comparisons: `<`, `=<`, `>`, `>=`, `=:=`, `=\=` (Ground "yes" in every row of their table, GLP-Spec `ef658d5`)
 3. For variables with ground-guaranteeing guards:
    - Mark variable as "ground-certified" for this clause
-   - Allow multiple occurrences of its reader in the clause; its writer occurs once
+   - Allow multiple occurrences of both its writer and its reader in the clause: "such guards permit multiple occurrences of both the writer and the reader in the clause" (GLP-Spec appendix-guards.tex, `ef658d5`)
 4. For variables without such guards:
    - Enforce strict single-occurrence constraint
 

@@ -315,7 +315,7 @@ GLP-Spec's Remark "Guards and SRSW" (`GLP-Spec/sections/glp.tex`, `rem:guards-sr
 >
 > Furthermore, if the success of a guard implies that X? is bound to a ground term, then both X and X? may occur multiple times in the clause.
 
-GLP-Spec names the groundness-implying guards as "those the catalogue's Ground column marks" (`GLP-Spec/sections/appendix-guards.tex`, `appendix:guards-system`); TGLP lists `ground`, `integer`, `number`, `string`, `constant`, the arithmetic comparisons and `=?=`, and says that `known` and `compound` do not imply groundness.
+GLP-Spec names the groundness-implying guards as "those the catalogue's Ground column marks" (`GLP-Spec/sections/appendix-guards.tex`, `appendix:guards-system`), and the catalogue says of them: "The 'Ground' column indicates whether success of the guard implies that the argument is ground; such guards permit multiple occurrences of both the writer and the reader in the clause" (`ef658d5`; until then "of the reader in the clause body").  Its arithmetic comparisons table has the Ground column too since `ef658d5`, "yes" in every row.  TGLP lists `ground`, `integer`, `number`, `string`, `constant`, the arithmetic comparisons and `=?=`, and says that `known` and `compound` do not imply groundness.
 
 **Example:**
 
