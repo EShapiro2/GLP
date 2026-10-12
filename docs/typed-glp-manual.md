@@ -1,6 +1,6 @@
 # Typed GLP Manual
 
-**Version**: 2.23
+**Version**: 2.24
 **Date**: 2026-10-12
 **Status**: ACTIVE
 
@@ -309,7 +309,13 @@ Guards that imply groundness include: `ground/1`, `integer/1`, `real/1`, `number
 
 ### 3.4 Guard Occurrences and SRSW Counting
 
-TGLP's Remark "Guards and SRSW" (`TGLP/sections/glp.tex`, `rem:guards-srsw`), its first paragraph, governs how an occurrence of a reader in a guard counts toward SRSW, and is the authority.
+GLP-Spec's Remark "Guards and SRSW" (`GLP-Spec/sections/glp.tex`, `rem:guards-srsw`) and TGLP's Remark of the same name (`TGLP/sections/glp.tex`, `rem:guards-srsw`) govern how the occurrences of a variable in a guard count toward SRSW, and are the authority.  Both state it in the same words:
+
+> Guard occurrences count toward SRSW satisfaction: if X? occurs in a guard, its paired writer X must occur in the head and X? may additionally occur once in the body.
+>
+> Furthermore, if the success of a guard implies that X? is bound to a ground term, then both X and X? may occur multiple times in the clause.
+
+GLP-Spec names the groundness-implying guards as "those the catalogue's Ground column marks" (`GLP-Spec/sections/appendix-guards.tex`, `appendix:guards-system`); TGLP lists `ground`, `integer`, `number`, `string`, `constant`, the arithmetic comparisons and `=?=`, and says that `known` and `compound` do not imply groundness.
 
 **Example:**
 
@@ -319,7 +325,14 @@ foo(X, Y?) :- known(X?) | bar(X?, Y).
 
 Here `X?` appears twice in the clause — once in the guard (`known(X?)`) and once in the body (`bar(X?, Y)`).  The guard occurrence does not consume the single-reader allowance, so the single body occurrence is valid.  Note that `known/1` does not imply groundness, so this is not the ground-guard relaxation of Section 3.3 — it is the guard-occurrence rule.
 
-Combined with Section 3.3: if a groundness-implying guard like `ground(X?)` is present, `X?` may appear multiple times in the clause, in guard and body alike; `X` still occurs once.
+Under a groundness-implying guard on `X?`, both `X` and `X?` may occur more than once, in the head as in the body (`programs/tests/srsw/ground_writer_multi_ok.glp`):
+
+```prolog
+w(X, Y?) :- integer(X?) | Y = s(X).
+two(R, R) :- ground(R?) | true.
+```
+
+A goal reduces with such a clause only where the goal and the head have a writer mgu (GLP-Spec `glp.tex`, Definitions "Writer MGU" and "GLP Goal/Clause Reduction"): `two(3, 3)` reduces, `two(3, 4)` and `two(f(1), f(2))` fail, and `two(X?, 3)` suspends until `X?` is assigned.  Without such a guard, `two(R, R) :- true.` is an SRSW violation.
 
 ---
 
@@ -1156,6 +1169,7 @@ Consequences:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.24 | 2026-10-12 | §3.4 states the Remark "Guards and SRSW" as GLP-Spec (`831f315`, Udi's sentence restored, 2026-10-12) and TGLP both state it, pointing to both: under a groundness-implying guard on `X?`, both `X` and `X?` may occur multiple times in the clause, in the head as in the body; the sentence that `X` still occurs once is gone (GLP, 2026-10-12 07:30 UTC). |
 | 2.23 | 2026-10-12 | §8.1 says what GLP-Spec says of guards and defined guards, Definition "Guarded Clause" and appendix "Guards, Kernel and Seam Predicates", and no more (GLP, 2026-10-12): the call-graph unfoldability rule, the recursion ban, the multi-clause PE limit and the error text `Unknown guard predicate`, in no paper, removed, with the "Practical implication" resting on them, §8.2's "safe special case" and §8.3's last sentence.  §3.5: the sentence that a type alias does not inherit the constant-type relaxation, which TGLP `b32934d` contradicts, deleted as GLP ruled (Integration, 2026-09-23), with the error, the workaround and the advice resting on it, and the heading that stated it; `MutualRef` among the primitive types (GLP-Spec "Predefined types"). |
 | 2.22 | 2026-10-12 | Second copies of TGLP's definitions replaced by pointers to TGLP (Integration, 2026-10-11): §2A.2, §3.1, §3.4, §8.3, §8.4, §9.1, §9.4, §16.1, §17.7, §19.6, §19.7, §20.1, §20.3, §21; their examples kept.  §3.5 left for GLP. |
 | 2.21 | 2026-07-23 | Added §15B.5: transforming an aggregate that stores writers (folded in from the retired `docs/type system/friends-list-moding-pattern.md`).  §3.5: `Constant` is a root `self.glp` union `Number ; String ; Module`, not a primitive; the primitives are `Integer`, `Real`, `String`, `Module`. |
