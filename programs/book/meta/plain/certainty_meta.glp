@@ -4,9 +4,6 @@
 %% Computes certainty factor of results.
 %% Each clause has associated certainty; result certainty is computed.
 
-%% External procedure declarations (no clauses in this file)
-procedure clause(_?, _?, _, Number).
-
 procedure reduce(_?, _?, Number).
 reduce(_, true, 1).                              %% halt - certainty 1
 reduce(Program, (A, B), C?) :-                   %% fork - min of certainties
@@ -26,4 +23,11 @@ min(X, Y, Z?) :- ground(X?), ground(Y?), X? =< Y? | Z = X?.
 min(X, Y, Z?) :- ground(X?), ground(Y?), Y? < X? | Z = Y?.
 
 %% clause/4 returns body and certainty factor Cr
-%% Example: clause(foo(X), Program, Body, 0.9)
+%% Object program: merge, named merge, each clause with its certainty
+procedure clause(_?, _?, _, Number).
+clause(merge([X|Xs], Ys, [X?|Zs?]), merge, merge(Xs?, Ys?, Zs), 0.9).
+clause(merge(Xs, [Y|Ys], [Y?|Zs?]), merge, merge(Xs?, Ys?, Zs), 0.8).
+clause(merge([], [], []), merge, true, 1).
+
+%% Example initial goal:
+%% reduce(merge, merge([1],[2],Xs), C).   %% Xs = [1,2], C = 0.9*0.8*1
