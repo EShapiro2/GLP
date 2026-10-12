@@ -87,16 +87,19 @@ void main() {
     );
 
     // Simulated Noise sessions: each router "decrypts" a secure packet back
-    // to its clear variant and reports the session-authenticated sender.
+    // to its clear variant and reports the session-authenticated sender and
+    // the session's handshake hash.
     bobRouter.decryptSessionPacket =
         (packet, transport, {String? peerId}) async => (
               packet.copyWith(type: packet.type.clearVariant),
               aliceIdentity.publicKey,
+              Uint8List(32),
             );
     aliceRouter.decryptSessionPacket =
         (packet, transport, {String? peerId}) async => (
               packet.copyWith(type: packet.type.clearVariant),
               bobIdentity.publicKey,
+              Uint8List(32),
             );
   });
 

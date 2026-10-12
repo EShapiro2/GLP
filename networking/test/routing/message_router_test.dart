@@ -108,14 +108,22 @@ void main() {
       );
     }
 
+    /// The handshake hash the stubbed session reports.
+    final stubSessionHash = Uint8List.fromList(List.filled(32, 0x5e));
+
     /// Stub the Noise session layer: every session-encrypted packet
     /// "decrypts" back to its clear variant with [sender] (default: the
-    /// other peer) as the session-authenticated sender identity.
+    /// other peer) as the session-authenticated sender identity, under the
+    /// session whose handshake hash is [stubSessionHash].
     void stubSession({Uint8List? sender}) {
       final senderPubkey = sender ?? otherPubkey;
       router.decryptSessionPacket =
           (packet, transport, {String? peerId}) async {
-        return (packet.copyWith(type: packet.type.clearVariant), senderPubkey);
+        return (
+          packet.copyWith(type: packet.type.clearVariant),
+          senderPubkey,
+          stubSessionHash,
+        );
       };
     }
 
@@ -163,7 +171,7 @@ void main() {
         router.decryptSessionPacket =
             (packet, transport, {String? peerId}) async {
           decryptCalled = true;
-          return (packet, otherPubkey);
+          return (packet, otherPubkey, Uint8List(32));
         };
 
         final p = GrassrootsPacket(
@@ -231,7 +239,7 @@ void main() {
           router.decryptSessionPacket =
               (packet, transport, {String? peerId}) async {
             decryptCalled = true;
-            return (packet, otherPubkey);
+            return (packet, otherPubkey, Uint8List(32));
           };
 
           await router.processPacket(
@@ -688,6 +696,82 @@ void main() {
         expect(reassembledSender, equals(otherPubkey));
         // Every fragment was acknowledged (spec §Message Transport).
         expect(ackedIndices, hasLength(fragmented.fragments.length));
+      });
+    });
+
+    // =========================================================================
+    // The attestation exchange gates the payloads (GNA, 2026-10-11, Task A)
+    // =========================================================================
+
+    group('the attestation exchange gates the payloads', () {
+      test(
+          'a payload on a session whose exchange has not completed is dropped '
+          'unacknowledged; on a completed one it is delivered and acknowledged',
+          () async {
+        stubSession();
+        var attested = false;
+        final asked = <Uint8List>[];
+        router.isSessionAttested = (_, __, handshakeHash) {
+          asked.add(handshakeHash);
+          return attested;
+        };
+        final delivered = <String>[];
+        final fragmentAcks = <String>[];
+        final acks = <String>[];
+        router.onMessageReceived = (id, _, __, ___) => delivered.add(id);
+        router.onFragmentAckRequested =
+            (_, __, id, ___) => fragmentAcks.add(id);
+        router.onAckRequested = (_, __, id) => acks.add(id);
+
+        const messageId = '55555555-5555-4555-8555-555555555555';
+        final p = secureMessagePacket(
+          messageId: messageId,
+          body: Uint8List.fromList([7]),
+        );
+
+        await router.processPacket(p, transport: PeerTransport.udp);
+        expect(delivered, isEmpty);
+        expect(fragmentAcks, isEmpty,
+            reason: 'unacknowledged, so the sender retransmits');
+        expect(acks, isEmpty);
+        expect(asked.single, stubSessionHash,
+            reason: 'asked of the session that decrypted it');
+
+        attested = true;
+        await router.processPacket(p, transport: PeerTransport.udp);
+        expect(delivered, [messageId]);
+        expect(fragmentAcks, [messageId]);
+        expect(acks, [messageId]);
+      });
+
+      test(
+          'an attestation reaches the coordinator, with the handshake hash of '
+          'the session that decrypted it, before its session is attested',
+          () async {
+        stubSession();
+        router.isSessionAttested = (_, __, ___) => false;
+        final judged = <(Uint8List, Uint8List)>[];
+        router.onAttestationReceived = (_, body, __, handshakeHash) =>
+            judged.add((body, handshakeHash));
+        router.onMessageReceived = (_, __, ___, ____) =>
+            fail('the exchange never reaches the application');
+
+        await router.processPacket(
+          GrassrootsPacket(
+            type: PacketType.secureAttestationFragment,
+            payload: FragmentHandler.encodeFragment(
+              messageId: '66666666-6666-4666-8666-666666666666',
+              index: 0,
+              count: 1,
+              chunk: Uint8List.fromList([9, 9]),
+            ),
+          ),
+          transport: PeerTransport.udp,
+        );
+
+        expect(judged, hasLength(1));
+        expect(judged.single.$1, [9, 9]);
+        expect(judged.single.$2, stubSessionHash);
       });
     });
 

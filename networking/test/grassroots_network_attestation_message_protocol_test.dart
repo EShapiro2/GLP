@@ -277,4 +277,61 @@ void main() {
     expect(calleeAttestation.offered.first!.attestation,
         callerAttestation.offers);
   });
+
+  test(
+      'send is held until the peer is reachable, and the receiver delivers a '
+      'payload only once it has the sender\'s attestation (GNA, 2026-10-11, '
+      'Task A)', () async {
+    final callerAttestation = _LargeAttestation(
+      offers: Uint8List.fromList(List.generate(3000, (i) => (i * 13) % 256)),
+      identity: calleeIdentity,
+    );
+    final calleeAttestation = _LargeAttestation(
+      offers: Uint8List.fromList(List.generate(3000, (i) => (i * 17) % 256)),
+      identity: callerIdentity,
+    );
+
+    final callerId = await identityFromSeed(0x95, 'caller');
+    final calleeId = await identityFromSeed(0x96, 'callee');
+    final caller = await startNode(callerId, callerAttestation);
+    final callee = await startNode(calleeId, calleeAttestation);
+    final calleeAddress = await listeningAddress(callee);
+    final relay =
+        await _LossyRelay.start(int.parse(calleeAddress.split(':').last));
+    addTearDown(() async {
+      relay.close();
+      await caller.dispose();
+      await callee.dispose();
+    });
+
+    // The caller's attestation is lost once on its way, so the caller can be
+    // ready to send while the callee still waits for the caller's half.
+    relay.dropTowardCallee = (datagram) =>
+        datagram.isNotEmpty &&
+        datagram.first == PacketType.secureAttestationFragment.value &&
+        relay.dropped == 0;
+
+    final calleeEvents = <String>[];
+    callee.onPeerConnected = (_, __, ___) => calleeEvents.add('connected');
+    callee.onMessageReceived = (_, payload, __, ___) =>
+        calleeEvents.add('received ${utf8.decode(payload)}');
+
+    caller.putKnownPeer(calleeId.publicKey);
+    callee.putKnownPeer(callerId.publicKey);
+    caller.putPeerAddress(calleeId.publicKey, '127.0.0.1:${relay.port}');
+    await caller.send(
+      calleeId.publicKey,
+      Uint8List.fromList(utf8.encode('hello')),
+    );
+    expect(caller.queuedMessageCountForPeer(calleeId.publicKey), 1,
+        reason: 'held: the callee is not reachable yet');
+
+    expect(
+        await waitFor(() => calleeEvents.contains('received hello')), isTrue,
+        reason: 'delivered once the exchange completed');
+    expect(calleeEvents.first, 'connected',
+        reason: 'nothing is delivered before the callee has the caller\'s '
+            'attestation');
+    expect(caller.queuedMessageCountForPeer(calleeId.publicKey), 0);
+  });
 }

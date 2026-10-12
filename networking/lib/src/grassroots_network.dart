@@ -2306,6 +2306,13 @@ class GrassrootsNetwork {
     return messageId;
   }
 
+  /// Hand [payload] to the carrier of an underlay over which the peer is
+  /// reachable — its session there established, authenticated and attested —
+  /// and answer whether it did (spec §Session Establishment; GNA, 2026-10-11,
+  /// Task A: `send` is held until the peer is reachable). PAN first, then the
+  /// peer's IP underlay. A peer reachable over none is connected to in the
+  /// background ([_openPathsTo]), and the attestation exchange's completion
+  /// drains the queue ([_onAttestationReceived]).
   Future<bool> _trySendMessageNow({
     required Uint8List recipientPubkey,
     required Uint8List payload,
@@ -2317,9 +2324,12 @@ class GrassrootsNetwork {
       return false;
     }
 
-    // --- Try BLE first (preferred for nearby peers) ---
+    // --- The PAN, preferred for nearby peers ---
     final bleDeviceId = _connectedBleDeviceIdForPeer(peer);
-    if (_bleAvailable && _bleService != null && bleDeviceId != null) {
+    if (peer.reachableUnderlays.contains(Underlay.pan) &&
+        _bleAvailable &&
+        _bleService != null &&
+        bleDeviceId != null) {
       debugPrint('Sending via BLE to ${peer.displayName}');
 
       final success = await _bleMessageSender.sendMessage(
@@ -2342,36 +2352,15 @@ class GrassrootsNetwork {
       debugPrint('BLE send failed, falling back to UDP...');
     }
 
-    // --- Try UDP (direct connection or connect-on-demand) ---
+    // --- The LAN or the WAN: the peer's attested UDP session ---
     if (_udpAvailable && _udpService != null) {
-      // Re-read peer — state may have changed during BLE attempt.
+      // Re-read peer — state may have changed during the BLE attempt.
       final resolvedPeer = _peersState.getPeerByPubkey(recipientPubkey) ?? peer;
-
-      // Ensure a path exists (existing association, or connect-on-demand
-      // from the dial book), then hand the payload to the message
-      // transport: fragments, per-fragment ACK, retransmit with backoff.
-      var havePath = _udpService!.getPeerIdForPubkey(recipientPubkey) != null;
-      if (!havePath) {
-        final udpCandidates = _udpCandidatesForPeer(resolvedPeer);
-        if (udpCandidates.isNotEmpty) {
-          final udpAddr = resolvedPeer.udpAddress ?? udpCandidates.first;
-          debugPrint(
-            'Sending via UDP to ${resolvedPeer.displayName} at $udpCandidates',
-          );
-          havePath = await _ensureUdpConnection(
-            resolvedPeer.pubkeyHex,
-            udpAddr,
-          );
-          if (havePath) {
-            // Introduce ourselves so the acceptor can verify and initiate
-            // the session (dial sequence, Implementation Notes).
-            await _udpService!
-                .sendToPeer(resolvedPeer.pubkeyHex, await _createSignedAnnounce());
-          }
-        }
-      }
-      final pathUnderlay = havePath ? _udpUnderlayOf(recipientPubkey) : null;
-      if (pathUnderlay != null &&
+      final ipUnderlay = resolvedPeer.reachableUnderlays
+          .where((u) => u != Underlay.pan)
+          .firstOrNull;
+      if (ipUnderlay != null &&
+          _udpService!.getPeerIdForPubkey(recipientPubkey) != null &&
           await _udpMessageSender.sendMessage(
             resolvedPeer.pubkeyHex,
             messageId,
@@ -2381,56 +2370,104 @@ class GrassrootsNetwork {
           messageId: messageId,
           recipientPubkey: recipientPubkey,
           payload: payload,
-          underlay: pathUnderlay,
+          underlay: ipUnderlay,
           bleDeviceId: null,
         );
         return true;
       }
-
-      // No address — try rendezvous-coordinated discovery
-      if (_isKnownPeerPubkey(recipientPubkey)) {
-        debugPrint(
-          '[send] No direct path to ${resolvedPeer.displayName}, '
-          'attempting discovery via rendezvous servers...',
-        );
-        final discovered = await _discoverPeerViaRendezvous(resolvedPeer);
-        if (discovered) {
-          // Re-read peer — discovery updated the address
-          final freshPeer = _peersState.getPeerByPubkey(recipientPubkey);
-          final freshCandidates = _udpCandidatesForPeer(freshPeer);
-          if (freshPeer != null && freshCandidates.isNotEmpty) {
-            debugPrint('[send] Discovery succeeded, sending via UDP');
-            final connected = await _ensureUdpConnection(
-              freshPeer.pubkeyHex,
-              freshPeer.udpAddress ?? freshCandidates.first,
-            );
-            final freshUnderlay =
-                connected ? _udpUnderlayOf(recipientPubkey) : null;
-            if (freshUnderlay != null &&
-                await _udpMessageSender.sendMessage(
-                  freshPeer.pubkeyHex,
-                  messageId,
-                  payload,
-                )) {
-              _markSentAndTrackForAck(
-                messageId: messageId,
-                recipientPubkey: recipientPubkey,
-                payload: payload,
-                underlay: freshUnderlay,
-                bleDeviceId: null,
-              );
-              return true;
-            }
-          }
-        }
-        debugPrint('[send] Discovery failed for ${resolvedPeer.displayName}');
-      }
     }
 
     debugPrint(
-      'No transport currently available for ${peer.displayName}; queuing message',
+      '${peer.displayName} is not reachable over any underlay; holding the '
+      'message until it is',
     );
+    unawaited(_openPathsTo(recipientPubkey));
     return false;
+  }
+
+  /// Path openings in progress, by pubkey hex: one at a time per peer.
+  final Map<String, Future<void>> _pathOpeningsInFlight = {};
+
+  /// Bring a session with [pubkey] up where none is attested: over a GATT
+  /// link already standing, start its handshake; over IP, connect on demand
+  /// from the dial book — or, for a known peer with no usable address, by
+  /// rendezvous-coordinated discovery — introduce ourselves by ANNOUNCE, and
+  /// start the handshake. The attestation exchange follows each session
+  /// ([_onNoiseSessionEstablished]); its completion makes the peer reachable
+  /// and drains the queue.
+  Future<void> _openPathsTo(Uint8List pubkey) {
+    final pubkeyHex = _pubkeyToHex(pubkey);
+    final inFlight = _pathOpeningsInFlight[pubkeyHex];
+    if (inFlight != null) return inFlight;
+    final opening = _openPaths(pubkey, pubkeyHex);
+    _pathOpeningsInFlight[pubkeyHex] = opening;
+    return opening.whenComplete(() {
+      if (identical(_pathOpeningsInFlight[pubkeyHex], opening)) {
+        _pathOpeningsInFlight.remove(pubkeyHex);
+      }
+    });
+  }
+
+  Future<void> _openPaths(Uint8List pubkey, String pubkeyHex) async {
+    final peer = _peersState.getPeerByPubkey(pubkey);
+    if (peer == null) return;
+    final reachable = peer.reachableUnderlays;
+
+    if (!reachable.contains(Underlay.pan) &&
+        _connectedBleDeviceIdForPeer(peer) != null) {
+      unawaited(_startNoiseHandshakeForPeer(
+        transport: PeerTransport.bleDirect,
+        peer: peer,
+      ));
+    }
+
+    final udp = _udpService;
+    if (udp == null || !_udpAvailable) return;
+    if (reachable.any((u) => u != Underlay.pan)) return;
+
+    if (udp.getPeerIdForPubkey(pubkey) != null) {
+      // A path stands and its session is not attested yet: make sure its
+      // handshake is under way.
+      await _ensureNoiseSession(
+        transport: PeerTransport.udp,
+        recipientPubkey: pubkey,
+        peerId: pubkeyHex,
+      );
+      return;
+    }
+
+    Future<bool> dial(PeerState target) async {
+      final candidates = _udpCandidatesForPeer(target);
+      if (candidates.isEmpty) return false;
+      final address = target.udpAddress ?? candidates.first;
+      debugPrint('Connecting via UDP to ${target.displayName} at $address');
+      if (!await _ensureUdpConnection(target.pubkeyHex, address)) return false;
+      // Introduce ourselves so the acceptor can verify us and initiate the
+      // session (dial sequence, Implementation Notes); and initiate it
+      // ourselves, the glare rule settling the pair.
+      await _udpService?.sendToPeer(
+          target.pubkeyHex, await _createSignedAnnounce());
+      await _ensureNoiseSession(
+        transport: PeerTransport.udp,
+        recipientPubkey: pubkey,
+        peerId: target.pubkeyHex,
+      );
+      return true;
+    }
+
+    if (await dial(peer)) return;
+
+    // No usable address — try rendezvous-coordinated discovery.
+    if (!_isKnownPeerPubkey(pubkey)) return;
+    debugPrint(
+      '[send] No direct path to ${peer.displayName}, '
+      'attempting discovery via rendezvous servers...',
+    );
+    if (await _discoverPeerViaRendezvous(peer)) {
+      final freshPeer = _peersState.getPeerByPubkey(pubkey);
+      if (freshPeer != null && await dial(freshPeer)) return;
+    }
+    debugPrint('[send] Discovery failed for ${peer.displayName}');
   }
 
   void _queueOutboundMessage({
@@ -2542,7 +2579,7 @@ class GrassrootsNetwork {
     final queuedPeerHexes = List<String>.from(_outboundMessageQueue.keys);
     for (final pubkeyHex in queuedPeerHexes) {
       final peer = _peersState.getPeerByPubkeyHex(pubkeyHex);
-      if (peer == null || !_hasLiveSendPath(peer)) continue;
+      if (peer == null || !peer.isReachable) continue;
       _drainQueuedMessagesForPeer(peer.publicKey);
     }
   }
@@ -2784,7 +2821,9 @@ class GrassrootsNetwork {
     return false;
   }
 
-  /// Broadcast a message to all peers on all enabled transports.
+  /// Broadcast a message to every peer over each underlay it is reachable
+  /// over: as `send`, never into a session whose attestation exchange has not
+  /// completed (GNA, 2026-10-11, Task A).
   Future<void> broadcast(Uint8List payload) async {
     // Broadcast as individually encrypted unicast packets, one Noise session
     // per peer per transport medium.
@@ -2793,6 +2832,11 @@ class GrassrootsNetwork {
         for (final peerId in _bleService!.connectedPeerIds) {
           final pubkey = _bleService!.getPubkeyForPeerId(peerId);
           if (pubkey == null) continue;
+          final peer = _peersState.getPeerByPubkey(pubkey);
+          if (peer == null ||
+              !peer.reachableUnderlays.contains(Underlay.pan)) {
+            continue;
+          }
           await _bleMessageSender.sendMessage(
             _pubkeyToHex(pubkey),
             _uuid.v4(),
@@ -2807,7 +2851,8 @@ class GrassrootsNetwork {
     if (_udpAvailable && _udpService != null) {
       try {
         for (final peer in _peersState.peersList) {
-          if (_udpService!.getPeerIdForPubkey(peer.publicKey) == null) {
+          if (_udpService!.getPeerIdForPubkey(peer.publicKey) == null ||
+              !peer.reachableUnderlays.any((u) => u != Underlay.pan)) {
             continue;
           }
           await _udpMessageSender.sendMessage(
@@ -2894,12 +2939,6 @@ class GrassrootsNetwork {
   bool _hasLiveBlePath(PeerState? peer) =>
       _connectedBleDeviceIdForPeer(peer) != null;
 
-  bool _hasLiveSendPath(PeerState? peer) {
-    if (peer == null) return false;
-    if (_hasLiveBlePath(peer)) return true;
-    return _udpService?.getPeerIdForPubkey(peer.publicKey) != null;
-  }
-
   static String _pubkeyToHex(Uint8List pubkey) =>
       pubkey.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
@@ -2939,28 +2978,60 @@ class GrassrootsNetwork {
     // attestation is torn down, and sending into it would be sending to a
     // peer that never becomes reachable.
     unawaited(_sendAttestation(transport, pubkey));
+    _awaitPeerAttestation(transport, pubkey);
+  }
+
+  /// The session each peer's attestation was verified on, per medium, by its
+  /// handshake hash: what decides whether a payload on a session is delivered
+  /// (GNA, 2026-10-11, Task A).
+  final Map<String, Uint8List> _attestedOn = {};
+
+  /// The deadline by which each peer's attestation must arrive on its current
+  /// session, per medium.
+  final Map<String, ({Uint8List hash, Timer timer})> _attestationDeadlines =
+      {};
+
+  /// Wait for the peer's attestation on [pubkey]'s current [transport]
+  /// session as long as the sender's attempts last, then tear the session
+  /// down if it has not come (GNA, 2026-10-11, Attestation Q1). An
+  /// attestation is never queued for the next session: the next session
+  /// sends its own.
+  void _awaitPeerAttestation(PeerTransport transport, Uint8List pubkey) {
+    final sender = switch (transport) {
+      PeerTransport.udp => _udpMessageSender,
+      PeerTransport.bleDirect => _bleMessageSender,
+      PeerTransport.webrtc => null,
+    };
+    if (sender == null) return;
+    final hash = _noiseSessions.handshakeHashFor(transport, pubkey);
+    if (hash == null) return;
+    final key = _handshakePairKey(transport, pubkey);
+    final standing = _attestationDeadlines[key];
+    // A session may be reported established more than once: one deadline per
+    // session.
+    if (standing != null && listEquals(standing.hash, hash)) return;
+    standing?.timer.cancel();
+    late final ({Uint8List hash, Timer timer}) deadline;
+    deadline = (
+      hash: hash,
+      timer: Timer(sender.attemptWindow, () {
+        if (identical(_attestationDeadlines[key], deadline)) {
+          _attestationDeadlines.remove(key);
+        }
+        if (!_isCurrentSession(transport, pubkey, hash)) return;
+        final attestedOn = _attestedOn[key];
+        if (attestedOn != null && listEquals(attestedOn, hash)) return;
+        _tearDownForAttestation(
+          transport,
+          pubkey,
+          "no attestation within the sender's attempts",
+        );
+      }),
+    );
+    _attestationDeadlines[key] = deadline;
   }
 
   // ===== Attestation (spec §Session Establishment) =====
-
-  /// The digest this session's attestation binds to, for the agent holding
-  /// [identityPublicKey]: `H("glp attest" | pk | h)`.
-  ///
-  /// Both ends compute the other's expected digest from the peer's key and
-  /// the shared handshake hash, so neither has to be told what was attested.
-  Uint8List? _attestationDigestFor(
-    PeerTransport transport,
-    Uint8List sessionPeer,
-    Uint8List identityPublicKey,
-  ) {
-    final handshakeHash =
-        _noiseSessions.handshakeHashFor(transport, sessionPeer);
-    if (handshakeHash == null) return null;
-    return attestationDigest(
-      identityPublicKey: identityPublicKey,
-      handshakeHash: handshakeHash,
-    );
-  }
 
   /// The session each peer's attestation was last sent on, per medium, by
   /// its handshake hash: the exchange is once per session (spec §Session
@@ -3065,13 +3136,23 @@ class GrassrootsNetwork {
     );
   }
 
-  /// A peer's attestation arrived. Verify it against the digest this session
-  /// binds to; an attestation that fails tears the session down.
+  /// A peer's attestation arrived on the session whose handshake hash is
+  /// [handshakeHash], the session that decrypted it (GNA, 2026-10-11, Task
+  /// A). Verify it against the digest that session binds to; an attestation
+  /// that fails tears that session down. A verdict on a session no longer
+  /// current concerns nothing that stands, and is dropped.
   Future<void> _onAttestationReceived(
     Uint8List senderPubkey,
     Uint8List payload,
     PeerTransport transport,
+    Uint8List handshakeHash,
   ) async {
+    final peerShort = _pubkeyToHex(senderPubkey).substring(0, 8);
+    if (!_isCurrentSession(transport, senderPubkey, handshakeHash)) {
+      debugPrint('[attest] $peerShort attestation arrived on a session no '
+          'longer current; dropped');
+      return;
+    }
     final underlay = _underlayOf(transport, senderPubkey);
     if (underlay == null) {
       // An IP session whose peer's address falls under no underlay this layer
@@ -3083,13 +3164,11 @@ class GrassrootsNetwork {
       );
       return;
     }
-    final peerShort = _pubkeyToHex(senderPubkey).substring(0, 8);
 
-    final digest = _attestationDigestFor(transport, senderPubkey, senderPubkey);
-    if (digest == null) {
-      debugPrint('[attest] No handshake hash for $peerShort; dropping');
-      return;
-    }
+    final digest = attestationDigest(
+      identityPublicKey: senderPubkey,
+      handshakeHash: handshakeHash,
+    );
 
     AttestationEvidence? offered;
     try {
@@ -3110,10 +3189,14 @@ class GrassrootsNetwork {
     } catch (e) {
       verdict = InvalidAttestation('verification threw: $e');
     }
+    // Verification awaits; the session it judged may have gone meanwhile.
+    if (!_isCurrentSession(transport, senderPubkey, handshakeHash)) return;
 
+    final attestedKey = _handshakePairKey(transport, senderPubkey);
     switch (verdict) {
       case AttestedApplication(:final identity):
         debugPrint('[attest] $peerShort attested as $identity');
+        _attestedOn[attestedKey] = handshakeHash;
         store.dispatch(PeerAttestedAction(
           publicKey: senderPubkey,
           underlay: underlay,
@@ -3122,6 +3205,7 @@ class GrassrootsNetwork {
         _drainQueuedMessagesForPeer(senderPubkey);
       case UnattestedPlatform(:final reason):
         debugPrint('[attest] $peerShort unattested: $reason');
+        _attestedOn[attestedKey] = handshakeHash;
         store.dispatch(PeerAttestedAction(
           publicKey: senderPubkey,
           underlay: underlay,
@@ -3144,6 +3228,7 @@ class GrassrootsNetwork {
   ) {
     debugPrint('[attest] Tearing down the ${transport.name} session with '
         '${_pubkeyToHex(pubkey).substring(0, 8)}: $reason');
+    _attestedOn.remove(_handshakePairKey(transport, pubkey));
     _noiseSessions.reset(transport, pubkey);
     switch (transport) {
       case PeerTransport.udp:
@@ -4289,8 +4374,16 @@ class GrassrootsNetwork {
     };
 
     _messageRouter.onAttestationReceived =
-        (senderPubkey, payload, transport) {
-      unawaited(_onAttestationReceived(senderPubkey, payload, transport));
+        (senderPubkey, payload, transport, handshakeHash) {
+      unawaited(_onAttestationReceived(
+          senderPubkey, payload, transport, handshakeHash));
+    };
+
+    _messageRouter.isSessionAttested =
+        (senderPubkey, transport, handshakeHash) {
+      final attestedOn =
+          _attestedOn[_handshakePairKey(transport, senderPubkey)];
+      return attestedOn != null && listEquals(attestedOn, handshakeHash);
     };
 
     _messageRouter.decryptSessionPacket =
@@ -5058,6 +5151,10 @@ class GrassrootsNetwork {
       pending.ackTimer?.cancel();
     }
     _ackPendingMessages.clear();
+    for (final deadline in _attestationDeadlines.values) {
+      deadline.timer.cancel();
+    }
+    _attestationDeadlines.clear();
 
     _messageRouter.dispose();
     _signalingService.dispose();

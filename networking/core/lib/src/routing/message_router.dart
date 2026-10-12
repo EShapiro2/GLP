@@ -81,13 +81,34 @@ class MessageRouter {
   /// which rides the Message Protocol as `send` payloads do — its fragments
   /// acknowledged, the message de-duplicated and acknowledged whole — and is
   /// told from a payload by its fragment type alone. It rides the session, so
-  /// the sender is session-authenticated; the coordinator verifies it against
-  /// the digest this session binds to and tears the session down if it fails.
+  /// the sender is session-authenticated.
+  ///
+  /// [handshakeHash] is that of the session that decrypted it (GNA,
+  /// 2026-10-11, Task A): the coordinator verifies it against the digest that
+  /// session binds to, not against whichever session is current when it
+  /// judges, and tears that session down if it fails. Every fragment of one
+  /// attestation is sent under one session, and a fragment decrypts only
+  /// under its own, so the session that decrypted the completing fragment is
+  /// the session of the whole message.
   void Function(
     Uint8List senderPubkey,
     Uint8List payload,
     PeerTransport transport,
+    Uint8List handshakeHash,
   )? onAttestationReceived;
+
+  /// Whether the attestation exchange on the session whose handshake hash is
+  /// [handshakeHash] has completed: the peer's attestation verified on that
+  /// session (spec §Session Establishment: "neither peer is reported
+  /// reachable until it succeeds"). A `send` payload arriving on a session
+  /// whose exchange has not completed is dropped unacknowledged, so the
+  /// sender retransmits it (GNA, 2026-10-11, Task A). Unset, every session
+  /// counts as completed.
+  bool Function(
+    Uint8List senderPubkey,
+    PeerTransport transport,
+    Uint8List handshakeHash,
+  )? isSessionAttested;
 
   /// Called after payload-signature verification and before a BLE ANNOUNCE is
   /// applied. Return false to reject first contact from that sender.
@@ -127,9 +148,10 @@ class MessageRouter {
   })? onNoiseHandshakeReceived;
 
   /// Decrypts a session-encrypted packet before normal routing. Returns the
-  /// clear packet together with the session-authenticated sender identity,
-  /// or null when no session covers the packet.
-  Future<(GrassrootsPacket, Uint8List)?> Function(
+  /// clear packet together with the session-authenticated sender identity and
+  /// the handshake hash of the session that decrypted it, or null when no
+  /// session covers the packet.
+  Future<(GrassrootsPacket, Uint8List, Uint8List)?> Function(
     GrassrootsPacket packet,
     PeerTransport transport, {
     String? peerId,
@@ -244,7 +266,7 @@ class MessageRouter {
       debugPrint('Dropping encrypted packet without session');
       return;
     }
-    final (clearPacket, senderPubkey) = decrypted;
+    final (clearPacket, senderPubkey, handshakeHash) = decrypted;
     packet = clearPacket;
 
     String? effectiveUdpPeerId = udpPeerId;
@@ -280,6 +302,7 @@ class MessageRouter {
           packet,
           senderPubkey: senderPubkey,
           transport: transport,
+          handshakeHash: handshakeHash,
           peerId: effectiveUdpPeerId ?? bleDeviceId,
         );
       case PacketType.fragmentAck:
@@ -392,6 +415,7 @@ class MessageRouter {
     GrassrootsPacket packet, {
     required Uint8List senderPubkey,
     required PeerTransport transport,
+    required Uint8List handshakeHash,
     String? peerId,
   }) {
     final Fragment fragment;
@@ -400,6 +424,18 @@ class MessageRouter {
           FragmentHandler.decodeFragment(packet.payload, type: packet.type);
     } catch (e) {
       debugPrint('Dropping malformed fragment: $e');
+      return;
+    }
+
+    // A payload on a session whose attestation exchange has not completed is
+    // dropped unacknowledged, so the sender retransmits it (GNA, 2026-10-11,
+    // Task A); the exchange's own fragments are what complete it.
+    if (fragment.type == PacketType.fragment &&
+        !(isSessionAttested?.call(senderPubkey, transport, handshakeHash) ??
+            true)) {
+      debugPrint('Dropping payload fragment of ${fragment.messageId} '
+          'unacknowledged: its session has not completed the attestation '
+          'exchange');
       return;
     }
 
@@ -431,6 +467,7 @@ class MessageRouter {
       type: reassembled.type,
       senderPubkey: senderPubkey,
       transport: transport,
+      handshakeHash: handshakeHash,
       peerId: peerId,
     );
   }
@@ -457,6 +494,7 @@ class MessageRouter {
     required PacketType type,
     required Uint8List senderPubkey,
     required PeerTransport transport,
+    required Uint8List handshakeHash,
     String? peerId,
   }) {
     // Dedup by messageId: only deliver to the app once, but ACK every time
@@ -470,7 +508,8 @@ class MessageRouter {
       // §Message Protocol) and goes to the coordinator, never to the
       // application.
       if (type == PacketType.attestationFragment) {
-        onAttestationReceived?.call(senderPubkey, body, transport);
+        onAttestationReceived?.call(
+            senderPubkey, body, transport, handshakeHash);
       } else {
         onMessageReceived?.call(messageId, senderPubkey, body, transport);
       }

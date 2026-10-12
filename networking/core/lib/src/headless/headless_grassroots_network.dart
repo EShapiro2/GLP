@@ -351,6 +351,11 @@ class HeadlessGrassrootsNetwork {
     }
     _reachablePeers.clear();
     _announcedTo.clear();
+    _attestedOn.clear();
+    for (final deadline in _attestationDeadlines.values) {
+      deadline.timer.cancel();
+    }
+    _attestationDeadlines.clear();
     await udp?.dispose();
   }
 
@@ -365,10 +370,12 @@ class HeadlessGrassrootsNetwork {
   // ===== Send =====
 
   /// Send [payload] to the peer with [recipientPubkey] (spec §Point-to-Point
-  /// Communication). Delivers over an existing session, dials the peer's
-  /// dial-book address on demand, or queues the message until the peer is
-  /// reachable (fair delivery). Returns the message id, or null for invalid
-  /// input.
+  /// Communication). Held until the peer is reachable — its session
+  /// established, authenticated and attested (spec §Session Establishment;
+  /// GNA, 2026-10-11, Task A) — and delivered then: a peer not reachable is
+  /// dialed at its dial-book address on demand, and the message queues
+  /// (fair delivery, §Networking Assumptions) until the attestation exchange
+  /// completes. Returns the message id, or null for invalid input.
   Future<String?> send(
     Uint8List recipientPubkey,
     Uint8List payload, {
@@ -390,6 +397,10 @@ class HeadlessGrassrootsNetwork {
     return messageId;
   }
 
+  /// Hand [payload] to the message transport if the peer is reachable, and
+  /// answer whether it did. A peer not reachable is connected to in the
+  /// background — dialed, its session established, the exchange run — and
+  /// the reachability that follows drains the queue ([_completeAttestation]).
   Future<bool> _trySendNow(
     Uint8List recipientPubkey,
     Uint8List payload,
@@ -399,18 +410,10 @@ class HeadlessGrassrootsNetwork {
     if (udp == null) return false;
     final hex = _hex(recipientPubkey);
 
-    // No existing UDX connection — dial the dial-book address, if any.
-    if (udp.getPeerIdForPubkey(recipientPubkey) == null) {
-      final address = store.state.peers.getPeerByPubkeyHex(hex)?.udpAddress ??
-          store.state.knownPeers.known[hex];
-      if (address == null) return false;
-      if (!await _dial(recipientPubkey, address)) return false;
+    if (!_reachablePeers.contains(hex)) {
+      unawaited(_connect(recipientPubkey));
+      return false;
     }
-
-    // Establish the session up front (the dialer waits for the acceptor's
-    // handshake per the dial sequence) so the transport engine's fragments
-    // all ride an existing session.
-    if (!await _ensureUdpSession(recipientPubkey)) return false;
 
     unawaited(
       _udpMessageSender.sendMessage(hex, messageId, payload).then((ok) {
@@ -488,6 +491,36 @@ class HeadlessGrassrootsNetwork {
       if (!sent) return false;
     }
     return _noiseSessions.waitForSession(PeerTransport.udp, recipientPubkey);
+  }
+
+  /// Connections in progress, by pubkey hex: one at a time per peer.
+  final Map<String, Future<void>> _connecting = {};
+
+  /// Bring the session with [pubkey] up: dial its dial-book address if no
+  /// path stands, then establish the Noise session (the dialer waits for the
+  /// acceptor's handshake per the dial sequence). The attestation exchange
+  /// follows the session ([_onSessionEstablished]), and its completion makes
+  /// the peer reachable.
+  Future<void> _connect(Uint8List pubkey) {
+    final hex = _hex(pubkey);
+    final inFlight = _connecting[hex];
+    if (inFlight != null) return inFlight;
+    final connecting = () async {
+      final udp = _udpService;
+      if (udp == null) return;
+      if (udp.getPeerIdForPubkey(pubkey) == null) {
+        final address =
+            store.state.peers.getPeerByPubkeyHex(hex)?.udpAddress ??
+                store.state.knownPeers.known[hex];
+        if (address == null) return;
+        if (!await _dial(pubkey, address)) return;
+      }
+      await _ensureUdpSession(pubkey);
+    }();
+    _connecting[hex] = connecting;
+    return connecting.whenComplete(() {
+      if (identical(_connecting[hex], connecting)) _connecting.remove(hex);
+    });
   }
 
   void _drainQueueFor(Uint8List pubkey) {
@@ -623,9 +656,12 @@ class HeadlessGrassrootsNetwork {
     };
 
     _messageRouter.onAttestationReceived =
-        (senderPubkey, payload, transport) {
-      unawaited(_onAttestationReceived(senderPubkey, payload));
+        (senderPubkey, payload, transport, handshakeHash) {
+      unawaited(_onAttestationReceived(senderPubkey, payload, handshakeHash));
     };
+
+    _messageRouter.isSessionAttested = (senderPubkey, transport, handshakeHash) =>
+        _sameBytes(_attestedOn[_hex(senderPubkey)], handshakeHash);
 
     _messageRouter.decryptSessionPacket =
         (packet, transport, {String? peerId}) async {
@@ -834,6 +870,48 @@ class HeadlessGrassrootsNetwork {
     // the absence — which the peer reports as unattested rather than
     // refusing, absence and failure being distinct.
     unawaited(_sendAttestation(pubkey));
+    _awaitPeerAttestation(pubkey);
+  }
+
+  /// The session each peer's attestation was verified on, by its handshake
+  /// hash: what decides whether a payload on a session is delivered (Task A)
+  /// and what a later attestation on the same session is checked against.
+  final Map<String, Uint8List> _attestedOn = {};
+
+  /// The deadline by which each peer's attestation must arrive on its current
+  /// session, by pubkey hex.
+  final Map<String, ({Uint8List hash, Timer timer})> _attestationDeadlines =
+      {};
+
+  /// Wait for the peer's attestation on [pubkey]'s current session as long as
+  /// the sender's attempts last, then tear the session down if it has not
+  /// come (GNA, 2026-10-11, Attestation Q1). An attestation is never queued
+  /// for the next session: the next session sends its own.
+  void _awaitPeerAttestation(Uint8List pubkey) {
+    final hash = _noiseSessions.handshakeHashFor(PeerTransport.udp, pubkey);
+    if (hash == null) return;
+    final hex = _hex(pubkey);
+    final standing = _attestationDeadlines[hex];
+    // A session is reported established by both the handshake handler and
+    // the dial that awaited it: one deadline per session.
+    if (standing != null && _sameBytes(standing.hash, hash)) return;
+    standing?.timer.cancel();
+    late final ({Uint8List hash, Timer timer}) deadline;
+    deadline = (
+      hash: hash,
+      timer: Timer(_udpMessageSender.attemptWindow, () {
+        if (identical(_attestationDeadlines[hex], deadline)) {
+          _attestationDeadlines.remove(hex);
+        }
+        if (_udpService == null || !_isCurrentSession(pubkey, hash)) return;
+        if (_sameBytes(_attestedOn[hex], hash)) return;
+        debugPrint('[headless][attest] No attestation from '
+            '${hex.substring(0, 8)} within the sender\'s attempts; tearing '
+            'the session down');
+        _tearDownSession(pubkey);
+      }),
+    );
+    _attestationDeadlines[hex] = deadline;
   }
 
   /// The session each peer's attestation was last sent on, by its handshake
@@ -913,6 +991,7 @@ class HeadlessGrassrootsNetwork {
   /// or ours undeliverable on it. The disconnect event drops reachability
   /// where the peer had it.
   void _tearDownSession(Uint8List pubkey) {
+    _attestedOn.remove(_hex(pubkey));
     _noiseSessions.reset(PeerTransport.udp, pubkey);
     store.dispatch(PeerUdpConnectionChangedAction(
       pubkeyHex: _hex(pubkey),
@@ -921,16 +1000,23 @@ class HeadlessGrassrootsNetwork {
     unawaited(_udpService?.disconnectFromPeer(_hex(pubkey)));
   }
 
-  /// A peer's attestation arrived. An attestation that fails verification
-  /// tears the session down and onPeerConnected does not fire.
+  /// A peer's attestation arrived on the session whose handshake hash is
+  /// [handshakeHash], the session that decrypted it (GNA, 2026-10-11, Task A).
+  /// It is judged against that session's digest; an attestation that fails
+  /// verification tears that session down and onPeerConnected does not fire.
+  /// A verdict on a session no longer current concerns nothing that stands,
+  /// and is dropped.
   Future<void> _onAttestationReceived(
     Uint8List senderPubkey,
     Uint8List payload,
+    Uint8List handshakeHash,
   ) async {
     final peerShort = _hex(senderPubkey).substring(0, 8);
-    final handshakeHash =
-        _noiseSessions.handshakeHashFor(PeerTransport.udp, senderPubkey);
-    if (handshakeHash == null) return;
+    if (!_isCurrentSession(senderPubkey, handshakeHash)) {
+      debugPrint('[headless][attest] $peerShort attestation arrived on a '
+          'session no longer current; dropped');
+      return;
+    }
     final digest = attestationDigest(
       identityPublicKey: senderPubkey,
       handshakeHash: handshakeHash,
@@ -948,6 +1034,8 @@ class HeadlessGrassrootsNetwork {
     } catch (e) {
       verdict = InvalidAttestation('verification threw: $e');
     }
+    // Verification awaits; the session it judged may have gone meanwhile.
+    if (!_isCurrentSession(senderPubkey, handshakeHash)) return;
 
     switch (verdict) {
       case InvalidAttestation(:final reason):
@@ -956,14 +1044,21 @@ class HeadlessGrassrootsNetwork {
         _tearDownSession(senderPubkey);
       case AttestedApplication(:final identity):
         debugPrint('[headless][attest] $peerShort attested as $identity');
-        _completeAttestation(senderPubkey, PeerAttestation(identity: identity));
+        _completeAttestation(senderPubkey, handshakeHash,
+            PeerAttestation(identity: identity));
       case UnattestedPlatform(:final reason):
         debugPrint('[headless][attest] $peerShort unattested: $reason');
-        _completeAttestation(senderPubkey, PeerAttestation.unattested);
+        _completeAttestation(
+            senderPubkey, handshakeHash, PeerAttestation.unattested);
     }
   }
 
-  void _completeAttestation(Uint8List pubkey, PeerAttestation attestation) {
+  void _completeAttestation(
+    Uint8List pubkey,
+    Uint8List handshakeHash,
+    PeerAttestation attestation,
+  ) {
+    _attestedOn[_hex(pubkey)] = handshakeHash;
     store.dispatch(PeerAttestedAction(
       publicKey: pubkey,
       underlay: Underlay.wan,

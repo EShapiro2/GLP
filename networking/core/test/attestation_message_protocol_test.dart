@@ -137,6 +137,13 @@ class _LossyRelay {
   /// Datagrams lost on the way to the service.
   int dropped = 0;
 
+  /// Every datagram the caller sent toward the service, lost or not: when,
+  /// on [clock], and its frame's type byte.
+  final List<({Duration at, int type})> towardService = [];
+
+  /// The clock [towardService] is read on.
+  final Stopwatch clock = Stopwatch()..start();
+
   int get port => _socket.port;
 
   void _relay(Datagram d) {
@@ -150,6 +157,9 @@ class _LossyRelay {
     }
     _callerAddress = d.address;
     _callerPort = d.port;
+    if (d.data.isNotEmpty) {
+      towardService.add((at: clock.elapsed, type: d.data.first));
+    }
     if (d.data.isNotEmpty &&
         d.data.first == PacketType.secureAttestationFragment.value) {
       attestationFragmentsSeen++;
@@ -162,6 +172,33 @@ class _LossyRelay {
   }
 
   void close() => _socket.close();
+}
+
+/// A platform whose producer never answers: its holder never sends its half
+/// of the exchange. It verifies what it is offered as the default does.
+class _SilentProducer implements PlatformAttestation {
+  @override
+  Future<Uint8List?> attestationFor(Uint8List identityPublicKey) =>
+      Completer<Uint8List?>().future;
+
+  @override
+  Future<Uint8List?> signSessionDigest({
+    required Uint8List identityPublicKey,
+    required Uint8List digest,
+  }) =>
+      Completer<Uint8List?>().future;
+
+  @override
+  Future<AttestationVerdict> verify({
+    required AttestationEvidence? evidence,
+    required Uint8List digest,
+    required Uint8List peerIdentityKey,
+  }) =>
+      const NoPlatformAttestation().verify(
+        evidence: evidence,
+        digest: digest,
+        peerIdentityKey: peerIdentityKey,
+      );
 }
 
 bool _isAttestationFragment(Uint8List datagram) =>
@@ -406,6 +443,146 @@ void main() {
     }, timeout: const Timeout(Duration(minutes: 2)));
   });
 
+  // GNA, 2026-10-11, Task A: `send` held until the peer is reachable; a
+  // payload arriving on a session whose exchange has not completed dropped
+  // unacknowledged, so the sender retransmits; and Attestation Q1: the
+  // receiver waits for the peer's attestation as long as the sender's
+  // attempts last, then tears the session down.
+  group('the exchange gates the payloads, headless over UDP', () {
+    test(
+        'send is held until the peer is reachable: no payload leaves before '
+        'the caller reports the service connected', () async {
+      if (sodiumUnavailable != null) {
+        markTestSkipped(sodiumUnavailable!);
+        return;
+      }
+      final (service, caller) = await pair(
+          const NoPlatformAttestation(), const NoPlatformAttestation(), 0x81);
+      final relay = await _LossyRelay.start(service.boundPort!);
+      addTearDown(relay.close);
+
+      Duration? callerConnectedAt;
+      caller.onPeerConnected = (_, __, ___) =>
+          callerConnectedAt ??= relay.clock.elapsed;
+      final delivered = Completer<void>();
+      service.onMessageReceived = (_, payload, __, ___) {
+        if (utf8.decode(payload) == 'hello' && !delivered.isCompleted) {
+          delivered.complete();
+        }
+      };
+
+      await dial(caller, service, relay.port);
+      await delivered.future.timeout(const Duration(seconds: 15));
+
+      final payloadsAt = [
+        for (final d in relay.towardService)
+          if (d.type == PacketType.secureFragment.value) d.at,
+      ];
+      expect(payloadsAt, isNotEmpty);
+      expect(callerConnectedAt, isNotNull);
+      expect(payloadsAt, everyElement(greaterThanOrEqualTo(callerConnectedAt!)),
+          reason: 'the payload waited for the service to be reachable');
+    });
+
+    test(
+        'a payload arriving before the receiver has the sender\'s attestation '
+        'is dropped unacknowledged, and its retransmission is delivered after '
+        'the exchange completes', () async {
+      if (sodiumUnavailable != null) {
+        markTestSkipped(sodiumUnavailable!);
+        return;
+      }
+      final (service, caller) = await pair(
+          const NoPlatformAttestation(), const NoPlatformAttestation(), 0x83);
+      final relay = await _LossyRelay.start(service.boundPort!);
+      addTearDown(relay.close);
+
+      // The caller's attestation is lost once on its way: the caller, which
+      // has the service's, sends its payload while the service still waits
+      // for the caller's attestation's retransmission.
+      relay.dropTowardService =
+          (datagram) => _isAttestationFragment(datagram) && relay.dropped == 0;
+
+      final events = <String>[];
+      Duration? serviceConnectedAt;
+      service.onPeerConnected = (_, __, ___) {
+        serviceConnectedAt ??= relay.clock.elapsed;
+        events.add('connected');
+      };
+      final delivered = Completer<void>();
+      service.onMessageReceived = (_, payload, __, ___) {
+        events.add('received ${utf8.decode(payload)}');
+        if (!delivered.isCompleted) delivered.complete();
+      };
+
+      await dial(caller, service, relay.port);
+      await delivered.future.timeout(const Duration(seconds: 15));
+
+      expect(events.first, 'connected',
+          reason: 'nothing is delivered before the exchange completes');
+      expect(events, contains('received hello'));
+      final payloadsAt = [
+        for (final d in relay.towardService)
+          if (d.type == PacketType.secureFragment.value) d.at,
+      ];
+      expect(payloadsAt.where((at) => at < serviceConnectedAt!), isNotEmpty,
+          reason: 'the payload reached the service before its exchange '
+              'completed');
+      expect(payloadsAt.length, greaterThanOrEqualTo(2),
+          reason: 'unacknowledged, it was sent again');
+    });
+
+    test(
+        'a receiver whose peer never attests tears the session down when the '
+        'sender\'s attempts would have run out', () async {
+      if (sodiumUnavailable != null) {
+        markTestSkipped(sodiumUnavailable!);
+        return;
+      }
+      // The caller's producer never answers, so the caller never sends its
+      // half of the exchange; nothing on the wire is lost.
+      final (service, caller) =
+          await pair(const NoPlatformAttestation(), _SilentProducer(), 0x85);
+      final callerHex = caller.identity.publicKey
+          .map((b) => b.toRadixString(16).padLeft(2, '0'))
+          .join();
+      var serviceConnected = false;
+      service.onPeerConnected = (_, __, ___) => serviceConnected = true;
+      var delivered = false;
+      service.onMessageReceived = (_, __, ___, ____) => delivered = true;
+
+      bool sessionStands() =>
+          service.store.state.peers
+              .getPeerByPubkeyHex(callerHex)
+              ?.hasLiveUdpConnection ??
+          false;
+
+      await dial(caller, service, service.boundPort!);
+      final clock = Stopwatch()..start();
+      while (!sessionStands() && clock.elapsed < const Duration(seconds: 15)) {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
+      expect(sessionStands(), isTrue, reason: 'the handshake completed');
+      final establishedAt = clock.elapsed;
+
+      while (sessionStands() && clock.elapsed < const Duration(seconds: 60)) {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      }
+      expect(sessionStands(), isFalse,
+          reason: 'the session was torn down for want of an attestation');
+      final window = MessageTransportSender(
+        maxChunk: FragmentHandler.udpMaxChunk,
+        sendPacket: (_, __) async => false,
+      ).attemptWindow;
+      expect(clock.elapsed - establishedAt,
+          greaterThanOrEqualTo(window - const Duration(seconds: 2)),
+          reason: 'it waited as long as the sender\'s attempts last');
+      expect(serviceConnected, isFalse);
+      expect(delivered, isFalse,
+          reason: 'no payload is delivered on a session never attested');
+    }, timeout: const Timeout(Duration(minutes: 2)));
+  });
+
   group('the GATT carrier', () {
     test(
         'fragments the attestation, retransmits a lost fragment, and delivers '
@@ -428,9 +605,15 @@ void main() {
 
       // The session layer stands in as the identity transform: the clear
       // fragment travels as its session-encrypted type, and decrypting is
-      // naming its sender. What is under test is the protocol above it.
+      // naming its sender and its session. What is under test is the protocol
+      // above it.
+      final sessionHash = Uint8List.fromList(List.filled(32, 0x3c));
       router.decryptSessionPacket = (packet, transport, {String? peerId}) async =>
-          (packet.copyWith(type: packet.type.clearVariant), senderId.publicKey);
+          (
+            packet.copyWith(type: packet.type.clearVariant),
+            senderId.publicKey,
+            sessionHash,
+          );
 
       final payload =
           await _exchangePayload(_AndroidProducer(), senderId.publicKey);
@@ -443,9 +626,12 @@ void main() {
           .map((b) => b.toRadixString(16).padLeft(2, '0'))
           .join();
       final attestations = <(Uint8List, PeerTransport)>[];
+      final sessions = <Uint8List>[];
       final payloads = <Uint8List>[];
-      router.onAttestationReceived = (from, body, transport) =>
-          attestations.add((body, transport));
+      router.onAttestationReceived = (from, body, transport, handshakeHash) {
+        attestations.add((body, transport));
+        sessions.add(handshakeHash);
+      };
       router.onMessageReceived = (_, __, body, ___) => payloads.add(body);
       // The receiver's acknowledgments return over the link.
       router.onFragmentAckRequested = (transport, peerId, messageId, index) =>
@@ -487,6 +673,8 @@ void main() {
       expect(attestations.single.$1, payload,
           reason: 'reassembled whole, byte for byte');
       expect(attestations.single.$2, PeerTransport.bleDirect);
+      expect(sessions.single, sessionHash,
+          reason: 'judged against the session that decrypted it');
       expect(payloads, isEmpty,
           reason: 'the exchange never reaches the application');
       expect(

@@ -269,13 +269,15 @@ class NoiseSessionManager {
   }
 
   /// Decrypt a session packet that arrived on [peerId], returning the clear
-  /// packet together with the session-authenticated sender identity.
+  /// packet together with the session-authenticated sender identity and the
+  /// handshake hash of the session that decrypted it — the session an
+  /// attestation it carries is judged against (spec §Session Establishment).
   ///
   /// The owning session is resolved by identity: first the caller-supplied
   /// [remotePubkey] (when the connection is already identified, e.g. via
   /// ANNOUNCE), then the connection→identity mapping learned at handshake
   /// completion.
-  Future<(GrassrootsPacket, Uint8List)> decryptPacket(
+  Future<(GrassrootsPacket, Uint8List, Uint8List)> decryptPacket(
     GrassrootsPacket packet, {
     required PeerTransport transport,
     String? peerId,
@@ -307,6 +309,7 @@ class NoiseSessionManager {
     return (
       packet.copyWith(type: clearType, payload: clearPayload),
       sender,
+      session.handshakeHash,
     );
   }
 
