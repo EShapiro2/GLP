@@ -6,10 +6,10 @@
 
 ## WxW (Writer-to-Writer Matching Fails)
 
-GLP term matching fails on writer-to-writer to ensure no readers are abandoned:
+GLP term matching fails on writer-to-writer to ensure no readers are abandoned (GLP-Spec glp.tex, Definition "Term Matching", its table, defined for two terms that jointly satisfy SO):
 - If writers X and Y were to match, their readers X? and Y? would have no writer to provide values
-- Runtime must FAIL immediately on writer-to-writer term matching attempts
-- This is NOT a suspension case - it's a definitive failure
+- Runtime must FAIL on writer-to-writer term matching --- not a suspension, a definitive failure
+- Except at a repeated head writer, licensed by a groundness-implying guard (Remark "Guards and SRSW"): a head with a repeated variable does not satisfy SO, so the table does not apply there; the clause reduces by the writer mgu (Definitions "Writer MGU" and "GLP Goal/Clause Reduction"), a goal writer met there assigned what the mgu assigns it, a goal reader suspending, a clash failing (GLP, 2026-10-12)
 
 ---
 
