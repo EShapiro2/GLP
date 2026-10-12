@@ -321,7 +321,7 @@ class AgentRuntime {
     // reader"), the extra constants between them, and before them the
     // person's input stream where the entry takes one --- an arity-3 entry
     // with no extra constants (agent_init/3, scenario_init/3: Id, UserIn,
-    // NetIn).  The plays' actors (actor_init/3: Id, Target, NetIn) and the
+    // NetIn).  The plays' actors (actor_init/4: Id, Role, Target, NetIn) and the
     // parent/child entries take constants there instead.  Decided by the
     // goal's shape, not its name.  The goal holds the readers of the two
     // input streams, and the host their writers: the person's, to inject
