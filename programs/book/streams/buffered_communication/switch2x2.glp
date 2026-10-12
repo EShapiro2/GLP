@@ -24,7 +24,7 @@ switch2x2(In1, In2, Out1, Out2) :-
     receive(M, In2?, Ins2), send(M?, Out2?, Outs2) |
     switch2x2(In1?, Ins2?, Out1?, Outs2?).
 
-%% Helper predicates (from bounded_buffer.glp)
+%% Helper predicates: send and receive on hollow streams
 procedure(X) send(X?, OpenHollow(X)?, Hollow(X)).
 send(Msg, [Msg?|NBuf], NBuf?).
 
