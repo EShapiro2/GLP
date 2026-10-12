@@ -18,11 +18,15 @@
 %%   determines, so its guard sets are the minimal {alice} and {bob} (vGLP,
 %%   Definition "Volition-Guarded Specification, Participants, Guard Sets,
 %%   Simple Guards"): the attempt asks nobody and bob's machine votes yes.
-%% play_busy: swapped and each minted again, bob proposes a swap and alice,
-%%   asked, leaves her card open, bob holding his attempt prepared; alice
-%%   proposes paying bob, and bob's machine votes no, its lock held, and the pay
-%%   aborts; alice answers bob's card no, the else-branch, and his swap aborts;
-%%   alice proposes the pay again, and bob's machine votes yes.
+%% play_busy: bob having minted twice, swapped as above and alice minted
+%%   again, alice proposes a swap and bob, asked, leaves his card open, alice
+%%   holding her attempt prepared; bob proposes paying alice her coin back, and
+%%   alice's machine votes no, its lock held, and the pay aborts: bob, its
+%%   initiator, does not precede alice in the order of identifiers, so her
+%%   Start refuses his start, where it would defer the start of an initiator
+%%   preceding her (vGLP 2026-10-12 08:26 UTC, Q-A); bob answers alice's card
+%%   no, the else-branch, and her swap aborts; bob proposes the pay again, and
+%%   alice's machine votes yes.
 %% play_declined: alice proposes a swap for a coin bob does not hold; bob, not
 %%   ready, votes no without asking his person, and it aborts at both.
 %%
@@ -82,18 +86,17 @@ play_busy(LA?, LB?, N?) :-
           req(propose(swap(alice, bob, bob, alice))),
           wait(tally(attempt(alice, 2, swap(alice, bob, bob, alice)))),
           req(propose(mint(alice))), wait(propose(attempt(alice, 3, mint(alice)))),
-          wait(start(attempt(bob, 3, swap(bob, alice, alice, bob)))),
-          req(propose(pay(alice, bob))),
-          wait(tally(attempt(alice, 4, pay(alice, bob)))),
-          card(attempt(bob, 3, swap(bob, alice, alice, bob)), no),
-          wait(outcome(attempt(bob, 3, swap(bob, alice, alice, bob)))),
-          req(propose(pay(alice, bob)))],
+          req(propose(swap(alice, bob, bob, alice)))],
          [req(propose(mint(bob))), wait(propose(attempt(bob, 1, mint(bob)))),
+          req(propose(mint(bob))), wait(propose(attempt(bob, 2, mint(bob)))),
           req(known(alice)), wait(discover(alice)),
           card(swap(alice, bob, bob, alice), yes),
-          wait(outcome(attempt(alice, 2, swap(alice, bob, bob, alice)))),
-          req(propose(mint(bob))), wait(propose(attempt(bob, 2, mint(bob)))),
-          req(propose(swap(bob, alice, alice, bob)))],
+          wait(start(attempt(alice, 4, swap(alice, bob, bob, alice)))),
+          req(propose(pay(bob, alice))),
+          wait(tally(attempt(bob, 3, pay(bob, alice)))),
+          card(attempt(alice, 4, swap(alice, bob, bob, alice)), no),
+          wait(outcome(attempt(alice, 4, swap(alice, bob, bob, alice)))),
+          req(propose(pay(bob, alice)))],
          LA, LB, N).
 
 exported procedure play_declined(Stream(_), Stream(_), Stream(Sent(Cargo))).

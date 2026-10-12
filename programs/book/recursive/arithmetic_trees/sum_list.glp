@@ -5,8 +5,9 @@
 NumList ::= [] ; [Number | NumList].
 
 procedure sum(NumList?, Number).
-procedure sum(NumList?, Number?, Number).
 sum(Xs, S?) :- sum(Xs?, 0, S).
+
+procedure sum(NumList?, Number?, Number).
 sum([], Acc, Acc?).
 sum([X|Xs], Acc, S?) :- Acc1 := Acc? + X?, sum(Xs?, Acc1?, S).
 

@@ -5,10 +5,10 @@
 NestedList ::= [] ; [_ | NestedList].
 
 %% Procedure type declarations
-procedure(X) flatten(NestedList?, Stream(X)).
+procedure flatten(NestedList?, Stream(_)).
 flatten(Xs, Ys?) :- flatten_dl(Xs?, Ys, []).
 
-procedure(X) flatten_dl(NestedList?, Stream(X), Stream(X)?).
+procedure flatten_dl(_?, Stream(_), Stream(_)?).
 flatten_dl([], Front?, Front).
 flatten_dl([X|Xs], Front?, Back) :-
     ground(X?), list(X?) |

@@ -321,8 +321,10 @@ PendingList  ::= [] ; [PendingEntry | PendingList].
 ScenarioPerson ::= bob.
 ScenarioActor  ::= alice ; charlie ; dana ; eve.
 
-%% The two-phone scenario (play_grassapp_duo.glp): its two scripted actors,
-%% each with its opening line (greeting_of) and chat reply (reply_of).
+%% The two-phone scenario (play_grassapp_duo.glp): the roles of its two
+%% scripted actors, each with its opening line (greeting_of) and chat reply
+%% (reply_of).  An actor is named by its Key, over a real network its public
+%% key (IGLP, Remark "Agent Names"), and given its role apart from it.
 DuoActor ::= eve ; dana.
 
 %% =============================================================================
@@ -347,13 +349,21 @@ imported procedure play_not_a_friend_headless # play_not_a_friend.
 exported procedure play_not_a_friend.
 play_not_a_friend :- play_not_a_friend_headless # play_not_a_friend.
 
+imported procedure play_not_a_friend_sends_headless # play_not_a_friend_sends.
+exported procedure play_not_a_friend_sends.
+play_not_a_friend_sends :- play_not_a_friend_sends_headless # play_not_a_friend_sends.
+
+imported procedure play_not_a_friend_sends_headless # play_not_a_friend_escrow.
+exported procedure play_not_a_friend_escrow.
+play_not_a_friend_escrow :- play_not_a_friend_sends_headless # play_not_a_friend_escrow.
+
 imported procedure play_grassapp_duo # agent_init(Key?, Stream(UserCmd)?, NetInStream?).
 exported procedure agent_init(Key?, Stream(UserCmd)?, NetInStream?).
 agent_init(Id, UserIn, NetIn) :- play_grassapp_duo # agent_init(Id?, UserIn?, NetIn?).
 
-imported procedure play_grassapp_duo # actor_init(DuoActor?, Key?, NetInStream?).
-exported procedure actor_init(DuoActor?, Key?, NetInStream?).
-actor_init(Id, Target, NetIn) :- play_grassapp_duo # actor_init(Id?, Target?, NetIn?).
+imported procedure play_grassapp_duo # actor_init(Key?, DuoActor?, Key?, NetInStream?).
+exported procedure actor_init(Key?, DuoActor?, Key?, NetInStream?).
+actor_init(Id, Role, Target, NetIn) :- play_grassapp_duo # actor_init(Id?, Role?, Target?, NetIn?).
 
 imported procedure play_grassapp_boot # scenario_init(ScenarioPerson?, Stream(UserCmd)?, NetInStream?).
 exported procedure scenario_init(ScenarioPerson?, Stream(UserCmd)?, NetInStream?).

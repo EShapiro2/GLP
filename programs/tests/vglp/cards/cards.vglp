@@ -25,7 +25,6 @@
 
 YesNo   ::= yes ; no.
 Card    ::= card(Integer, YesNo?).
-List(X) ::= [] ; [X | List(X)].
 Panel   ::= panel(List(Card)).
 
 %% ---------------------------------------------------------------------------

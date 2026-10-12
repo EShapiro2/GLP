@@ -3,9 +3,9 @@
 %% canonical CVA platform in vGLP (compiler/, compile.sh), vGLP's contracts
 %% beside Jurix's (contracts.glp), the platforms it prints
 %% (social_graph/platform.vglp, currency/platform.vglp, nudge/platform.vglp,
-%% introduce/platform.vglp, each beside its plays) and what the plays of all
-%% of them share, here: a scripted person and a network between two agents or
-%% three.
+%% introduce/platform.vglp, gnudge/platform.vglp, each beside its plays) and
+%% what the plays of all of them share, here: a scripted person and a network
+%% between two agents or three.
 %%
 %% A play runs the agents of a compiled platform, each the agent of the module
 %% with its ask stream and its dispatcher on that stream and on its person

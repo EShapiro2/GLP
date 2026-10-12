@@ -1,0 +1,27 @@
+%% secure_gsg/plays/self.glp -- the secure social graph's plays, entered
+%% through this file (TGLP modules.tex, Cross-module type checking: a directory
+%% is entered through its self.glp).  Each play is forwarded to the module file
+%% that defines it, and ../self.glp calls them as `plays # play_x`.  A play
+%% calls `agent(...)` and `network(...)` unqualified, resolved by walking the
+%% scope: ../self.glp forwards the agent and ../../self.glp the network
+%% mediator.
+
+imported procedure play_secure_befriend # play_secure_befriend(Integer, Integer).
+exported procedure play_secure_befriend(Integer, Integer).
+play_secure_befriend(A?, B?) :- play_secure_befriend # play_secure_befriend(A, B).
+
+imported procedure play_secure_rebroadcast # play_secure_rebroadcast(Integer, Integer).
+exported procedure play_secure_rebroadcast(Integer, Integer).
+play_secure_rebroadcast(A?, B?) :- play_secure_rebroadcast # play_secure_rebroadcast(A, B).
+
+imported procedure play_secure_restore # play_secure_restore(Integer, Integer, Integer, IdentityRecord).
+exported procedure play_secure_restore(Integer, Integer, Integer, IdentityRecord).
+play_secure_restore(A?, Z?, B?, IR?) :- play_secure_restore # play_secure_restore(A, Z, B, IR).
+
+imported procedure play_secure_unfriend # play_secure_unfriend(Integer, Integer, IdentityRecord).
+exported procedure play_secure_unfriend(Integer, Integer, IdentityRecord).
+play_secure_unfriend(A?, B?, IR?) :- play_secure_unfriend # play_secure_unfriend(A, B, IR).
+
+imported procedure play_secure_replace # play_secure_replace(Constant, Integer, Integer, Integer, Integer).
+exported procedure play_secure_replace(Constant, Integer, Integer, Integer, Integer).
+play_secure_replace(R?, A?, B?, C?, D?) :- play_secure_replace # play_secure_replace(R, A, B, C, D).

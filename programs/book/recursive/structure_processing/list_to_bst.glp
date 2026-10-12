@@ -2,10 +2,10 @@
 %% Source: AofGLP Book Chapter 6
 
 %% Type definitions
-BST ::= empty ; node(_, BST, BST).
+BST(X) ::= empty ; node(X, BST(X), BST(X)).
 NonEmptyList(X) ::= [X | Stream(X)].
 
-procedure(X) list_to_bst(Stream(X)?, BST).
+procedure(X) list_to_bst(Stream(X)?, BST(X)).
 list_to_bst([], empty).
 list_to_bst([X|Xs], node(Mid?, L?, R?)) :-
     length([X?|Xs?], Len, Ys),

@@ -134,13 +134,14 @@ ClassRes  ::= cls(Info) ; nocls.
 %% and the record.  The agent state: its identifier, the app state, the local
 %% date, the peers hello has been sent to and received from, the number of the
 %% next message, the tick since which each opening class its ticks have met has
-%% waited, the classes met, and the messages pending on a peer not yet known.
+%% waited, the classes met, and the messages pending: on a peer not yet known,
+%% pend(Q, M), or a start deferred, deferred(M).
 Lock      ::= unlocked ; held(Attempt).
 Rec       ::= asked(Attempt) ; voted(Attempt, YesNo) ; got(Attempt, Peer, YesNo)
             ; closed(Attempt).
 Recs      ::= [] ; [Rec | Recs].
 App       ::= app(GAtoms, Integer, Lock, Recs).
-Pend      ::= pend(Peer, Net).
+Pend      ::= pend(Peer, Net) ; deferred(Net).
 Pends     ::= [] ; [Pend | Pends].
 WKey      ::= op(Class).
 Wait      ::= w(WKey, Integer).
@@ -156,7 +157,7 @@ Cands     ::= [] ; [Cand | Cands].
 Choice    ::= take(Info) ; none.
 PKey      ::= key(WKey) ; nokey.
 Cond      ::= go(Info) ; drop.
-MCond     ::= mgo(Info) ; mpend(Peer) ; mdrop.
+MCond     ::= mgo(Info) ; mpend(Peer) ; mdefer ; mdrop.
 Known     ::= allknown ; unknown(Peer).
 Then      ::= own ; done.
 CardRes   ::= card_for(Attempt) ; nocard.
@@ -205,7 +206,7 @@ await(_, _, close, []).
 %% The agent goal: one clause per kind of trigger, which computes the
 %% conditions of the schemas the trigger puts up and calls the dispatch.  It
 %% reads first what it has put up itself, its own tick after every other
-%% trigger it reads and the messages pending on a peer put up again, and then
+%% trigger it reads and the messages pending put up again, and then
 %% its input stream.
 %% ===========================================================================
 
@@ -254,8 +255,9 @@ step(tick, done, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
 
 %% After a dispatch: the cards whose question the new app state no longer holds
 %% pending are closed; where the app state or the date has changed, the
-%% messages pending on a peer are put up again; and after a trigger read from
-%% the input stream, a tick excepted, the agent goal takes a tick of its own.
+%% messages pending on a peer are put up again, and where the app state has
+%% changed, the starts deferred; and after a trigger read from the input
+%% stream, a tick excepted, the agent goal takes a tick of its own.
 procedure next(Then?, YesNo?, App?, Stream(Trigger)?, Stream(Trigger)?,
     Stream(Trigger)?, Stream(Trigger), Stream(Demand), Stream(Txn), Stream(Net),
     OpenCards?, St?).
@@ -263,9 +265,10 @@ next(Th, Dt, Ap0, Ag, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
     ground(Ap0?), ground(St?) |
     app_changed(Ap0?, St?, Ca1),
     app_changed(Ap0?, St?, Ca2),
+    app_changed(Ap0?, St?, Ca3),
     or(Dt?, Ca1?, Ch),
     close_falsified(Ca2?, Cards?, St?, Cards1),
-    repend(Ch?, St?, Ag1, St1),
+    repend(Ch?, Ca3?, St?, Ag1, St1),
     own_after(Th?, Ow),
     app(Ag?, Ag1?, Ag2),
     app(Ag2?, Ls?, L1),
@@ -282,19 +285,28 @@ procedure own_after(Then?, Stream(Trigger)).
 own_after(own, [tick]).
 own_after(done, []).
 
-procedure repend(YesNo?, St?, Stream(Trigger), St).
-repend(no, St, [], St?).
-repend(yes, St, Ag?, St1?) :- ground(St?) |
+%% repend(Changed?, AppChanged?, St?, Ag, St1): the messages pending on a peer
+%% put up again where the app state or the date has changed, and the starts
+%% deferred where the app state has.
+procedure repend(YesNo?, YesNo?, St?, Stream(Trigger), St).
+repend(no, _, St, [], St?).
+repend(yes, Ca, St, Ag?, St1?) :- ground(St?) |
     st_pends(St?, Pd),
-    pend_triggers(Pd?, Ag),
-    set_pends(St?, [], St1).
-procedure pend_triggers(Pends?, Stream(Trigger)).
-pend_triggers([], []).
-pend_triggers([pend(_, M)|Ps], [net(M?)|Ts?]) :- pend_triggers(Ps?, Ts).
+    pend_triggers(Pd?, Ca?, Ag, Rest),
+    set_pends(St?, Rest?, St1).
+procedure pend_triggers(Pends?, YesNo?, Stream(Trigger), Pends).
+pend_triggers([], _, [], []).
+pend_triggers([pend(_, M)|Ps], Ca, [net(M?)|Ts?], R?) :-
+    pend_triggers(Ps?, Ca?, Ts, R).
+pend_triggers([deferred(M)|Ps], yes, [net(M?)|Ts?], R?) :-
+    pend_triggers(Ps?, yes, Ts, R).
+pend_triggers([deferred(M)|Ps], no, Ts?, [deferred(M?)|R?]) :-
+    pend_triggers(Ps?, no, Ts, R).
 
 %% --- Propose of a guarded class, on the request propose([t]) ---------------
 %% Its condition: the class is guarded, the agent a guard of it, ready for it
-%% and knowing every other participant.
+%% and knowing every other participant, and no start of an initiator
+%% preceding the agent waiting among its pending messages.
 procedure propose_cond(Class?, St?, Cond, St).
 propose_cond(C, St, Cd?, St2?) :- ground(C?), ground(St?) |
     st_class(C?, St?, R, St1),
@@ -308,9 +320,11 @@ propose_cond1(cls(I), St, Cd?, St?) :- ground(I?), ground(St?) |
     ready_i(I?, St?, Rd),
     others_known(I?, St?, K),
     known_ok(K?, Kn),
+    no_prior_start(St?, Np),
     and(Gd?, IsG?, B1),
     and(B1?, Rd?, B2),
-    and(B2?, Kn?, B),
+    and(B2?, Kn?, B3),
+    and(B3?, Np?, B),
     go_or_drop(B?, I?, Cd).
 
 procedure dispatch_propose(Cond?, Class?, Then?, App?, Stream(Trigger)?,
@@ -401,7 +415,11 @@ split_pends([X|Ps], Q, Ag?, [X?|R?]) :- otherwise |
 %% One schema to a cargo.  Start's condition is that the attempt's initiator is
 %% known, Tally's that every other participant is, Outcome's none; a message
 %% whose schema's condition fails on a peer not yet known is pending on it, and
-%% one whose class the agent does not take part in is dropped.
+%% one whose class the agent does not take part in is dropped.  Start defers,
+%% and does not refuse, the start of an initiator that precedes the agent in
+%% the order of identifiers while the agent holds prepared an attempt it
+%% initiated, the attempt not closed: the message waits among the pending,
+%% put up again when the app state changes (vGLP 2026-10-12 08:26 UTC, Q-A).
 procedure message_cond(Cargo?, St?, MCond, St).
 message_cond(X, St, Cd?, St2?) :- ground(X?), ground(St?) |
     cargo_class(X?, C),
@@ -411,7 +429,8 @@ procedure message_cond1(ClassRes?, Cargo?, St?, MCond, St).
 message_cond1(nocls, _, St, mdrop, St?).
 message_cond1(cls(I), start(At), St, Cd?, St?) :- ground(At?), ground(St?) |
     attempt_id(At?, P),
-    peer_cond(P?, St?, I?, Cd).
+    peer_cond(P?, St?, I?, Cd0),
+    defer_cond(Cd0?, At?, St?, Cd).
 message_cond1(cls(I), vote(_, _), St, Cd?, St?) :- ground(I?), ground(St?) |
     others_known(I?, St?, K),
     known_cond2(K?, I?, Cd).
@@ -428,6 +447,30 @@ peer_cond1(no, P, _, mpend(P?)).
 procedure known_cond2(Known?, Info?, MCond).
 known_cond2(allknown, I, mgo(I?)).
 known_cond2(unknown(P), _, mpend(P?)).
+procedure defer_cond(MCond?, Attempt?, St?, MCond).
+defer_cond(mpend(P), _, _, mpend(P?)).
+defer_cond(mdefer, _, _, mdefer).
+defer_cond(mdrop, _, _, mdrop).
+defer_cond(mgo(I), At, St, Cd?) :- ground(At?), ground(St?) |
+    st_id(St?, Id),
+    st_app(St?, Ap),
+    defers(At?, Id?, Ap?, D),
+    defer_cond1(D?, I?, Cd).
+procedure defer_cond1(YesNo?, Info?, MCond).
+defer_cond1(yes, _, mdefer).
+defer_cond1(no, I, mgo(I?)).
+procedure defers(Attempt?, Peer?, App?, YesNo).
+defers(At, Id, app(_, _, L, R), D?) :- ground(At?), ground(Id?), ground(R?) |
+    mem(closed(At?), R?, Cl),
+    neg(Cl?, Open),
+    own_held(L?, Id?, Own),
+    attempt_id(At?, P),
+    precedes(P?, Id?, Pr),
+    and(Open?, Own?, D1),
+    and(D1?, Pr?, D).
+procedure own_held(Lock?, Peer?, YesNo).
+own_held(unlocked, _, no).
+own_held(held(A), Id, B?) :- attempt_id(A?, P), same(P?, Id?, B).
 procedure cargo_class(Cargo?, Class).
 cargo_class(start(attempt(_, _, C)), C?).
 cargo_class(vote(attempt(_, _, C), _), C?).
@@ -440,7 +483,11 @@ dispatch_message(mdrop, _, _, _, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Cards,
     next(Th?, no, Ap0?, [], Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
 dispatch_message(mpend(P), M, _, _, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Cards,
         St) :-
-    add_pend(P?, M?, St?, St1),
+    add_pend(pend(P?, M?), St?, St1),
+    next(Th?, no, Ap0?, [], Ls?, In?, Ans, Dem, Thr, Out, Cards?, St1?).
+dispatch_message(mdefer, M, _, _, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Cards,
+        St) :-
+    add_pend(deferred(M?), St?, St1),
     next(Th?, no, Ap0?, [], Ls?, In?, Ans, Dem, Thr, Out, Cards?, St1?).
 dispatch_message(mgo(I), _, _, start(At), Th, Ap0, Ls, In, Ans?, Dem?,
         [start(At?)|Thr?], Out?, Cards, St) :-
@@ -554,7 +601,8 @@ tick_cond1(Is, St, Ch?, St1?) :- ground(Is?), ground(St?) |
     set_waits(St?, W1?, St1).
 
 %% Propose of an unguarded class, by its opener: the class unguarded, the agent
-%% its opener, ready for it and knowing every other participant.
+%% its opener, ready for it and knowing every other participant, and no start
+%% of an initiator preceding the agent waiting among its pending messages.
 procedure op_cands(Infos?, St?, Cands).
 op_cands([], _, []).
 op_cands([I|Is], St, Cs?) :- ground(I?), ground(St?) |
@@ -563,9 +611,11 @@ op_cands([I|Is], St, Cs?) :- ground(I?), ground(St?) |
     ready_i(I?, St?, Rd),
     others_known(I?, St?, K),
     known_ok(K?, Kn),
+    no_prior_start(St?, Np),
     and(Ug?, Op?, B1),
     and(B1?, Rd?, B2),
-    and(B2?, Kn?, B),
+    and(B2?, Kn?, B3),
+    and(B3?, Np?, B),
     op_cands(Is?, St?, Cs1),
     keep_cand(B?, I?, Cs1?, Cs).
 procedure keep_cand(YesNo?, Info?, Cands?, Cands).
@@ -1012,6 +1062,35 @@ known_ok(unknown(_), no).
 procedure go_or_drop(YesNo?, Info?, Cond).
 go_or_drop(yes, I, go(I?)).
 go_or_drop(no, _, drop).
+
+%% An agent proposes only where no start of an initiator preceding it waits
+%% among its pending messages, deferred or pending on a peer not yet known, so
+%% that it handles such a start before it proposes again (vGLP 2026-10-12
+%% 08:26 UTC, Q-A).
+procedure no_prior_start(St?, YesNo).
+no_prior_start(St, B?) :- ground(St?) |
+    st_id(St?, Id),
+    st_pends(St?, Pd),
+    prior_start(Pd?, Id?, P),
+    neg(P?, B).
+procedure prior_start(Pends?, Peer?, YesNo).
+prior_start([], _, no).
+prior_start([X|Ps], Id, B?) :- ground(Id?) |
+    pend_net(X?, M),
+    net_prior(M?, Id?, B1),
+    prior_start1(B1?, Ps?, Id?, B).
+procedure prior_start1(YesNo?, Pends?, Peer?, YesNo).
+prior_start1(yes, _, _, yes).
+prior_start1(no, Ps, Id, B?) :- prior_start(Ps?, Id?, B).
+procedure pend_net(Pend?, Net).
+pend_net(pend(_, M), M?).
+pend_net(deferred(M), M?).
+procedure net_prior(Net?, Peer?, YesNo).
+net_prior(msg(_, cargo(_, _, start(attempt(P, _, _)))), Id, B?) :- precedes(P?, Id?, B).
+net_prior(_, _, no) :- otherwise | true.
+procedure precedes(Peer?, Peer?, YesNo).
+precedes(P, Q, yes) :- P? @< Q? | true.
+precedes(_, _, no) :- otherwise | true.
 
 procedure guard_of_i(Info?, St?, YesNo).
 guard_of_i(I, St, B?) :- info_gsets(I?, G), st_id(St?, Id), in_some(Id?, G?, B).
@@ -1523,21 +1602,25 @@ procedure keep_set(YesNo?, Peers?, PeerSets?, PeerSets).
 keep_set(yes, _, M, M?).
 keep_set(no, X, M, [X?|M?]).
 %% The opener of an unguarded class: the least, in the order of identifiers,
-%% of the people in the first role of its schema-bindings.
+%% of the people in the first role of its unguarded schema-bindings, those
+%% with no marked role (vGLP 2026-10-12 08:26 UTC, Q-B), so that the tick,
+%% which finds the classes of the unguarded schemas with the agent in their
+%% first role, finds every class its agent opens.
 procedure mates_opener(Mates?, Opener).
 mates_opener(Ms, Op?) :- ground(Ms?) |
     mates_gsets(Ms?, G),
     only_empty(G?, Ug),
-    mates_firsts(Ms?, Fs),
+    unguarded_firsts(Ms?, Fs),
     sort_peers(Fs?, Ss),
     mates_opener1(Ug?, Ss?, Op).
 procedure mates_opener1(YesNo?, Peers?, Opener).
 mates_opener1(yes, [P|_], opener(P?)).
 mates_opener1(yes, [], guarded_class).
 mates_opener1(no, _, guarded_class).
-procedure mates_firsts(Mates?, Peers).
-mates_firsts([], []).
-mates_firsts([mate(_, _, _, F)|Ms], [F?|Fs?]) :- mates_firsts(Ms?, Fs).
+procedure unguarded_firsts(Mates?, Peers).
+unguarded_firsts([], []).
+unguarded_firsts([mate(_, _, [], F)|Ms], [F?|Fs?]) :- unguarded_firsts(Ms?, Fs).
+unguarded_firsts([mate(_, _, [_|_], _)|Ms], Fs?) :- unguarded_firsts(Ms?, Fs).
 
 %% ===========================================================================
 %% Atoms, bindings and matching
@@ -1685,10 +1768,10 @@ procedure set_waits(St?, Waits?, St).
 set_waits(st(Id, Ap, D, Se, Rc, N, _, Ca, Pd), W, st(Id?, Ap?, D?, Se?, Rc?, N?, W?, Ca?, Pd?)).
 procedure set_pends(St?, Pends?, St).
 set_pends(st(Id, Ap, D, Se, Rc, N, W, Ca, _), Pd, st(Id?, Ap?, D?, Se?, Rc?, N?, W?, Ca?, Pd?)).
-procedure add_pend(Peer?, Net?, St?, St).
-add_pend(P, M, st(Id, Ap, D, Se, Rc, N, W, Ca, Pd),
+procedure add_pend(Pend?, St?, St).
+add_pend(X, st(Id, Ap, D, Se, Rc, N, W, Ca, Pd),
         st(Id?, Ap?, D?, Se?, Rc?, N?, W?, Ca?, Pd1?)) :-
-    app(Pd?, [pend(P?, M?)], Pd1).
+    app(Pd?, [X?], Pd1).
 procedure add_sent(Peer?, St?, St).
 add_sent(Q, st(Id, Ap, D, Se, Rc, N, W, Ca, Pd),
         st(Id?, Ap?, D?, [Q?|Se?], Rc?, N?, W?, Ca?, Pd?)).

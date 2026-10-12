@@ -283,6 +283,9 @@ class _DuoScreenState extends State<DuoScreen> {
           goalLabel: 'agent_init/3',
           deferStart: true,
         )));
+    // actor_init(Id, Role, Target, NetIn): the runtime gives the Id, the
+    // agent's name (its key over a real network, IGLP Remark "Agent Names");
+    // the Role is the actor's cast name, eve or dana, given apart from it.
     for (final entry in actorTargets.entries) {
       _isolates.add(await Isolate.spawn(
           agentIsolateEntry,
@@ -291,8 +294,8 @@ class _DuoScreenState extends State<DuoScreen> {
             program: programDir,
             rootSelfGlpPath: glp.rootSelfGlp,
             replyPort: _replyPort.sendPort,
-            goalLabel: 'actor_init/3',
-            extraArgs: [entry.value],
+            goalLabel: 'actor_init/4',
+            extraArgs: [entry.key, entry.value],
             deferStart: true,
           )));
     }

@@ -1,0 +1,21 @@
+%% A procedure whose abstract instance hands its parameter to a concrete type
+%% by a body pair: fwd2/2 hands A? through id/2 to B, and B? to note/2, which
+%% reads a Msg.  Definition "Parametrically Well-Typed" (TGLP
+%% parameterized-types.tex) checks the abstract instance by Definition
+%% "Well-Typed Clause with Subtyping", under which B's type, the abstract type
+%% M by id/2's instantiation, is to be a subtype of Msg; by Definition
+%% "Abstract Type" an abstract type "matches only itself", so it is not, and
+%% fwd2/2 is not parametrically well-typed.  go/1's call supplies no type for
+%% M --- 5 is a constant at a bare parameter --- and fwd2/2's clauses fix none,
+%% so the call is refused.  Until 2026-10-12 an abstract type, with no
+%% alternatives, was within every type: fwd2/2 was certified, M left open and
+%% go(O) gave O = [5], an Integer where note/2 reads a Msg.
+Msg ::= m(Constant).
+procedure note(Msg?, Stream(Msg)).
+note(X, [X?]).
+procedure(T) id(T?, T).
+id(X, X?).
+procedure(M) fwd2(M?, Stream(Msg)).
+fwd2(A, Out?) :- id(A?, B), note(B?, Out).
+procedure go(Stream(Msg)).
+go(Out?) :- fwd2(5, Out).

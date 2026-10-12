@@ -329,6 +329,14 @@ final Manifest grassrootsManifest = Manifest(
       args: ['from', 'text'],
       effects: [PushChat('chats', 'from', 'text', outgoing: false)],
     ),
+    // GSG Section 5.1: "A message the person addresses to someone who is not
+    // their friend is not sent, and the agent tells the person so" --- the
+    // agent's not_a_friend(Target), passed on by the mediator
+    // (programs/grassapp/grassapp_mediator.glp). A notice, no lasting state.
+    ActivityDesc(
+        notifyCtor: 'not_a_friend',
+        args: ['who'],
+        effects: [Toast('{who} is not your friend — not sent')]),
     ActivityDesc(
       notifyCtor: 'balance_report',
       args: ['owner', 'issuer', 'maturity', 'count'],

@@ -170,30 +170,6 @@ KNOWN_RED_CHECKS=(
 # I ask differently"): its childsafe artefact, refused at its source for the
 # guard negation GLP removed (15ba4b7e), measured at gap 80265f7c.
     "Q asset step writes childsafe.glpw"
-# GSG's spm (programs/social/spm, Coordination Appendix B), red since gap
-# moved under the checker's newer conditions, taken onto the list when gap
-# merged into main (2026-10-10, measured at main 372f062e); GSG's spm task of
-# 2026-10-02 15:32 UTC turns them green.
-    "SG spm End friendship: epoch 2 at alice"
-    "SG spm Integrate unfriend: epoch 2 at bob"
-    "SG spm Replace: alice is gone from bob's map"
-    "SG spm Replace: alice2 rebound to bob"
-    "SG spm Replace: bob renamed alice to alice2 at epoch 1"
-    "SG spm Replace: the announcement fires on a supermajority"
-    "SG spm Replace: the cascade reached carol through bob's vouch"
-    "SG spm Restore: epoch 1 healed from the checkpoint"
-    "SG spm Restore: identity record from the checkpoint"
-    "SG spm Unfriend preserves the identity record"
-    "SG spm befriend: alice at epoch 1"
-    "SG spm befriend: bob at epoch 1"
-    "SG spm crash resets the state"
-    "SG spm loads"
-    "SG spm no failed play"
-    "SG spm secure befriend: alice at epoch 1"
-    "SG spm secure befriend: bob at epoch 1"
-    "SG spm simultaneous offer resolves"
-    "X10 spm accepts a goal"
-    "X10 spm loads"
 # CSSN's artefact: the SG blocks that host the child-safe platform beside a
 # currency, red while childsafe.glpw is not written (the guard negation
 # above); taken onto the list when gap merged into main (2026-10-10, main
@@ -446,9 +422,9 @@ check "Factorial 1" "Fac1 = 1" "$a9"
 check "Factorial 2" "Fac2 = 2" "$a9"
 check "Factorial 3" "Fac3 = 6" "$a9"
 check "Factorial 5" "Fac5 = 120" "$a9"
-check "Hanoi 0" "succeeds" "$a9"
-check "Hanoi 1" "succeeds" "$a9"
-check "Hanoi 2" "succeeds" "$a9"
+check "Hanoi 0" "Mh0 = \[\]" "$a9"
+check "Hanoi 1" "Mh1 = \[move(a, c)\]" "$a9"
+check "Hanoi 2" "Mh2 = \[move(a, b), move(a, c), move(b, c)\]" "$a9"
 check "Primes 20" "Ps20 = \[2, 3, 5, 7, 11, 13, 17, 19\]" "$a9"
 check "Primes 10" "Ps10 = \[2, 3, 5, 7\]" "$a9"
 
@@ -1460,6 +1436,11 @@ echo "=== Section B: Positive Type Check Tests ==="
 echo ""
 
 POSITIVE_FILES=(
+    # --- book ---
+    # Rejected until GLP's book task of 2026-10-12 21:18 UTC re-declared them:
+    # cooperative.glp over Stream(Item), merge_dynamic.glp over Msg.
+    "$BOOK/streams/producers_consumers/cooperative.glp"
+    "$BOOK/streams/producers_consumers/merge_dynamic.glp"
     # --- typechecker/positive ---
     # Structural identity in the duality check (§20.3): a Stream<A> stored into a
     # field typed by the named alias AStream must type-check (false positive before
@@ -1636,12 +1617,15 @@ POSITIVE_FILES=(
     "$GLP_DIR/programs/tests/param_decl_list.glp"
 
     # --- SRSW relaxations (glp.tex Remark "Guards and SRSW") ---
-    # Both must be ACCEPTED; their negative counterpart is srsw/known_not_ground
-    # in Section D. A guard occurrence counts toward SRSW, so X? in a guard plus
-    # once in the body is legal; and a groundness-implying guard licenses
-    # multiple occurrences of both halves.
+    # All must be ACCEPTED; their negative counterparts are srsw/known_not_ground
+    # and srsw/writer_twice_no_ground in Section D. A guard occurrence counts
+    # toward SRSW, so X? in a guard plus once in the body is legal; and a
+    # groundness-implying guard licenses multiple occurrences of both halves,
+    # the reader X? (ground_guard_multi_ok) and the writer X, in the head as in
+    # the body (ground_writer_multi_ok; GLP-Spec 831f315).
     "$GLP_DIR/programs/tests/srsw/guard_occurrence_ok.glp"
     "$GLP_DIR/programs/tests/srsw/ground_guard_multi_ok.glp"
+    "$GLP_DIR/programs/tests/srsw/ground_writer_multi_ok.glp"
 
     # Moved here from NEGATIVE_FILES on 2026-08-03, the day the fixture was
     # swept. It was rejected standalone because agent/4 and inject_msg/5 were
@@ -1917,11 +1901,7 @@ NEGATIVE_FILES=(
     # moved to POSITIVE_FILES. That sweep did NOT unskip ui_mediator_test, which
     # this comment used to predict; that test was removed on 2026-08-03 (Udi's
     # instruction) rather than repaired, and known-issues Issue 20 says why.
-    # The two streams entries are GLP-ICLP's, expected rejections until they
-    # re-declare or prune them.
     "$AGENT_RT/channel.glp"
-    "$BOOK/streams/producers_consumers/cooperative.glp"
-    "$BOOK/streams/producers_consumers/merge_dynamic.glp"
 
     # The recv2x2 probe directory reduced to one file, bodies and declarations
     # unchanged: boot_b_outfed and boot_d_outfed hand-build ch(S?, OutW?), a
@@ -1982,9 +1962,11 @@ SRSW_FILES=(
     # Nor does =?\=, Ground "no" (GLP-Spec appendix-guards.tex, bbff21d): A13's
     # neq_pair, which read each argument twice after it, until 2026-10-02.
     "$GLP_DIR/programs/tests/srsw/neq_not_ground.glp"
-    # And no guard licenses a repeated writer: "X occurs once, as ever" (glp.tex
-    # Remark "Guards and SRSW", bbff21d), integer/1 here.
-    "$GLP_DIR/programs/tests/srsw/ground_writer_once.glp"
+    # And without a groundness-implying guard a writer occurs once: "if the
+    # success of a guard implies that X? is bound to a ground term, then both X
+    # and X? may occur multiple times in the clause" (glp.tex Remark "Guards
+    # and SRSW", 831f315) --- here under known/1, and with no guard.
+    "$GLP_DIR/programs/tests/srsw/writer_twice_no_ground.glp"
 )
 
 for f in "${SRSW_FILES[@]}"; do
@@ -2012,11 +1994,30 @@ check "pairing: a variable with no writer" "Variable \"Y\" has no writer" "$srsw
 srsw_neq=$(echo -e "$GLP_DIR/programs/tests/srsw/neq_not_ground.glp\n:quit" | "$REPL_RUN" 2>&1)
 check "=?\\= grounds nothing: a reader twice after it is refused" "Reader variable \"X?\" occurs 2 times" "$srsw_neq"
 
-# No guard licenses a repeated writer (glp.tex Remark "Guards and SRSW",
-# bbff21d): the writer twice under integer/1 is refused, and the diagnostic
-# says so.
-srsw_wonce=$(echo -e "$GLP_DIR/programs/tests/srsw/ground_writer_once.glp\n:quit" | "$REPL_RUN" 2>&1)
-check "a writer twice under a groundness-implying guard is refused" "Writer variable \"X\" occurs 2 times; a writer occurs once, whatever the guards" "$srsw_wonce"
+# A groundness-implying guard licenses a repeated writer, in the head as in
+# the body (glp.tex Remark "Guards and SRSW", 831f315): without one it is
+# refused, and the diagnostic says so; with one the clause loads
+# (ground_writer_multi_ok, Section B) and its goal reduces only where the
+# occurrences meet one term, the writer mgu of the goal and the head
+# (Definitions "Writer MGU", "GLP Goal/Clause Reduction").
+srsw_wtwice=$(echo -e "$GLP_DIR/programs/tests/srsw/writer_twice_no_ground.glp\n:quit" | "$REPL_RUN" 2>&1)
+check "a writer twice without a groundness-implying guard is refused" "Writer variable \"X\" occurs 2 times without a groundness-implying guard" "$srsw_wtwice"
+check "a writer twice in the head without a guard is refused" "Writer variable \"R\" occurs 2 times in the head of the clause two(R, R) without a groundness-implying guard" "$srsw_wtwice"
+srsw_wmulti=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/srsw/ground_writer_multi_ok.glp
+w(3, Yw1).
+same_ground(3, 3, Sg1).
+same_ground(3, 4, Sg2).
+same_ground(f(1), f(1), Sg3).
+same_ground(f(1), f(2), Sg4).
+:quit
+HEREDOC
+2>&1)
+check "a writer in the head and the body under integer/1 runs" "Yw1 = s(3)" "$srsw_wmulti"
+check "a writer twice in the head: one term reduces" "Sg1 = yes" "$srsw_wmulti"
+check "a writer twice in the head: two terms do not" "Sg2 = no" "$srsw_wmulti"
+check "a writer twice in the head: one structure reduces" "Sg3 = yes" "$srsw_wmulti"
+check "a writer twice in the head: two structures do not" "Sg4 = no" "$srsw_wmulti"
 
 # merge_with_reader: the one entry of this section that is rejected by the SRSW
 # pass rather than by the type checker, so it is the only test that speaks for
@@ -3527,7 +3528,7 @@ echo ""
 # initiating agent, and Section 5.4, "The canonical platform is structured"
 # and the paragraph on act schemas; vGLP's Task C, reworked to the five
 # handlers of vGLP 8d56915 and the answers of 158ec9b).  Jurix's social graph
-# and currency (programs/jurix) and vGLP's nudge and introduce
+# and currency (programs/jurix) and vGLP's nudge, introduce and gnudge
 # (programs/vglp/cva/contracts.glp) compiled, the committed modules held to
 # what the compiler prints; the contracts it refuses, not local, without
 # simple guards or not effective; and the plays of each platform, two agents
@@ -3547,6 +3548,7 @@ check "CVA compiler: the social graph's platform is what the compiler prints" "s
 check "CVA compiler: the currency's platform, its classes guarded by their minimal guard sets, is what the compiler prints" "currency/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's nudge, certified by Jurix's check/2, compiled to the platform it prints" "nudge/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's introduce, certified by Jurix's check/2, compiled to the platform it prints" "introduce/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's gnudge, certified by Jurix's check/2, compiled to the platform it prints" "gnudge/platform.vglp: as printed" "$cva_print"
 check_not "CVA compiler: no contract refused or missing" "^fault\|^missing\|NOT as printed" "$cva_print"
 
 cva_refuse=$("$REPL_RUN" <<HEREDOC
@@ -3670,10 +3672,14 @@ play_busy(A, B, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA busy: bob proposes a swap, alice is asked and leaves her card open, and proposes a pay" "A = \[.*start(attempt(bob, 3, swap(bob, alice, alice, bob))), propose(attempt(alice, 4, pay(alice, bob)))" "$cva_cur_busy"
-check "CVA busy: bob's machine, its lock held by his swap, votes no on the pay, which aborts" "sent(bob, alice, vote(attempt(alice, 4, pay(alice, bob)), no)), sent(alice, bob, outcome(attempt(alice, 4, pay(alice, bob)), abort))" "$cva_cur_busy"
-check "CVA busy: alice answers bob's card no, and his swap aborts" "sent(alice, bob, vote(attempt(bob, 3, swap(bob, alice, alice, bob)), no)), sent(bob, alice, outcome(attempt(bob, 3, swap(bob, alice, alice, bob)), abort))" "$cva_cur_busy"
-check "CVA busy: the lock released, bob's machine votes yes on the pay proposed again, and it commits" "sent(bob, alice, vote(attempt(alice, 5, pay(alice, bob)), yes)), sent(alice, bob, outcome(attempt(alice, 5, pay(alice, bob)), commit))" "$cva_cur_busy"
+# play_busy, the roles of 2026-10-11 swapped (vGLP's 2026-10-12 08:26 UTC,
+# Q-A): a participant holding prepared an attempt it initiated defers the
+# start of an initiator preceding it, so the busy no comes from alice's
+# machine on the start of bob, who does not precede her.
+check "CVA busy: alice proposes a swap, bob is asked and leaves his card open, and proposes a pay" "B = \[.*start(attempt(alice, 4, swap(alice, bob, bob, alice))), propose(attempt(bob, 3, pay(bob, alice)))" "$cva_cur_busy"
+check "CVA busy: alice's machine, its lock held by her swap, votes no on the pay of bob, who does not precede her, and it aborts" "sent(alice, bob, vote(attempt(bob, 3, pay(bob, alice)), no)), sent(bob, alice, outcome(attempt(bob, 3, pay(bob, alice)), abort))" "$cva_cur_busy"
+check "CVA busy: bob answers alice's card no, and her swap aborts" "sent(bob, alice, vote(attempt(alice, 4, swap(alice, bob, bob, alice)), no)), sent(alice, bob, outcome(attempt(alice, 4, swap(alice, bob, bob, alice)), abort))" "$cva_cur_busy"
+check "CVA busy: the lock released, alice's machine votes yes on the pay proposed again, and it commits" "sent(alice, bob, vote(attempt(bob, 4, pay(bob, alice)), yes)), sent(bob, alice, outcome(attempt(bob, 4, pay(bob, alice)), commit))" "$cva_cur_busy"
 
 cva_cur_declined=$("$REPL_RUN" <<HEREDOC
 $CVA/currency/
@@ -3690,7 +3696,11 @@ check_not "CVA declined: no card answered" "gave(" "$cva_cur_declined"
 # unguarded nudge, the one contract here with an unguarded class.  Its opener,
 # the person in its first role, proposes it on a tick, the attempt asking
 # nobody and the other participant voting by its machine (vGLP's 2026-10-11
-# 22:51 UTC, the nudge play redone on the five handlers).
+# 22:51 UTC, the nudge play redone on the five handlers).  Both openers propose
+# at once; bob, holding his own attempt prepared, defers the start of alice,
+# who precedes him, and does not refuse it, and proposes only once it is
+# handled, so alice's nudge commits, bob's first attempt aborts on her busy no
+# and his second commits (vGLP's 2026-10-12 08:26 UTC, Q-A, Udi approved).
 cva_nudge_load=$("$REPL_RUN" <<HEREDOC
 $CVA/nudge/
 :quit
@@ -3711,6 +3721,14 @@ check "CVA nudge: alice, its opener, proposes nudge(alice, bob) on a tick once b
 check "CVA nudge: bob, its opener, proposes nudge(bob, alice) on a tick once befriended" "B = \[.*outcome(attempt(alice, 1, befriend(alice, bob))), propose(attempt(bob, 1, nudge(bob, alice)))" "$cva_nudge"
 check "CVA nudge: bob's machine votes on alice's start, no person asked" "sent(bob, alice, vote(attempt(alice, 2, nudge(alice, bob)), " "$cva_nudge"
 check_not "CVA nudge: no person answers for the unguarded class" "answer(attempt([a-z]*, [0-9]*, nudge" "$cva_nudge"
+check "CVA nudge: bob waits: holding his own attempt prepared, he takes the start of alice, who precedes him, only once his attempt has aborted" "B = \[.*propose(attempt(bob, 1, nudge(bob, alice))), tally(attempt(bob, 1, nudge(bob, alice))), start(attempt(alice, 2, nudge(alice, bob)))" "$cva_nudge"
+check "CVA nudge: ... her start delivered to him before, his vote on it, yes, only after his abort" "sent(alice, bob, start(attempt(alice, 2, nudge(alice, bob)))).*sent(bob, alice, outcome(attempt(bob, 1, nudge(bob, alice)), abort)), sent(bob, alice, vote(attempt(alice, 2, nudge(alice, bob)), yes))" "$cva_nudge"
+check_not "CVA nudge: ... and bob never refuses alice's start" "sent(bob, alice, vote(attempt(alice, [0-9]*, nudge(alice, bob)), no))" "$cva_nudge"
+check "CVA nudge: alice's nudge committed at both" "B = \[.*outcome(attempt(alice, 2, nudge(alice, bob)))" "$cva_nudge"
+check "CVA nudge: ... alice telling bob commit" "sent(alice, bob, outcome(attempt(alice, 2, nudge(alice, bob)), commit))" "$cva_nudge"
+check "CVA nudge: bob's nudge committed at both" "A = \[.*outcome(attempt(bob, 2, nudge(bob, alice)))" "$cva_nudge"
+check "CVA nudge: ... bob telling alice commit" "sent(bob, alice, outcome(attempt(bob, 2, nudge(bob, alice)), commit))" "$cva_nudge"
+check_not "CVA nudge: nothing aborted for ever: no third attempt at either nudge" "attempt(alice, 3, nudge\|attempt(bob, 3, nudge" "$cva_nudge"
 
 # vGLP's contract introduce (programs/vglp/cva/contracts.glp): befriend and a
 # three-party introduce, guarded at every role (vGLP's 2026-10-11 22:59 UTC,
@@ -3739,6 +3757,41 @@ check_not "CVA introduce: ... and the card closed by the program, her yes takes 
 check "CVA introduce: asked again, both answer yes, and alice tallies both" "A = \[.*propose(attempt(alice, 4, introduce(alice, bob, carol))), tally(attempt(alice, 4, introduce(alice, bob, carol))), tally(attempt(alice, 4, introduce(alice, bob, carol)))" "$cva_intro"
 check "CVA introduce: ... and tells bob commit" "sent(alice, bob, outcome(attempt(alice, 4, introduce(alice, bob, carol)), commit))" "$cva_intro"
 check "CVA introduce: ... and carol" "sent(alice, carol, outcome(attempt(alice, 4, introduce(alice, bob, carol)), commit))" "$cva_intro"
+
+# vGLP's contract gnudge (programs/vglp/cva/contracts.glp): nudge with a
+# second schema g, nudge(a, b) and g(b?, a) determining the same transactions,
+# g guarded at its first role.  The opener of an unguarded class is the least
+# person in the first role of its unguarded schema-bindings (vGLP's 2026-10-12
+# 08:26 UTC, Q-B, Udi approved): alice preceding bob, bob opens the class of
+# nudge(bob, alice), which the least person in the first role of all its
+# schema-bindings, g(alice, bob)'s alice, would leave unopened, alice's tick
+# finding only the classes of the unguarded schemas with her in their first
+# role.
+cva_gnudge_load=$("$REPL_RUN" <<HEREDOC
+$CVA/gnudge/
+:quit
+HEREDOC
+2>&1)
+check "CVA gnudge: the platform and its play load, compiled by the canonical compilation" "Loaded program: .*cva/gnudge" "$cva_gnudge_load"
+check_not "CVA gnudge: no type errors" "Type checking failed" "$cva_gnudge_load"
+
+cva_gnudge=$("$REPL_RUN" <<HEREDOC
+$CVA/gnudge/
+:limit 600000
+play_gnudge(A, B, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA gnudge: alice and bob befriended, committed at both" "sent(alice, bob, outcome(attempt(alice, 1, befriend(alice, bob)), commit))" "$cva_gnudge"
+check "CVA gnudge: bob, the least person in the first role of the unguarded schema-bindings of nudge(bob, alice), opens it on a tick once befriended, though alice precedes him" "B = \[.*outcome(attempt(alice, 1, befriend(alice, bob))).*propose(attempt(bob, 1, nudge(bob, alice)))" "$cva_gnudge"
+check "CVA gnudge: ... its start told to alice, whose machine votes on it, no person asked" "sent(alice, bob, vote(attempt(bob, 1, nudge(bob, alice)), " "$cva_gnudge"
+check_not "CVA gnudge: alice, preceding bob, proposes nothing of the class of nudge(bob, alice)" "propose(attempt(alice, [0-9]*, nudge(bob, alice)))\|propose(attempt(alice, [0-9]*, g(" "$cva_gnudge"
+check_not "CVA gnudge: no person answers for the unguarded class" "answer(attempt([a-z]*, [0-9]*, nudge\|answer(attempt([a-z]*, [0-9]*, g(" "$cva_gnudge"
+check "CVA gnudge: bob waits: holding his own attempt prepared, he takes the start of alice, who precedes him, only once his attempt has aborted" "B = \[.*propose(attempt(bob, 1, nudge(bob, alice))), tally(attempt(bob, 1, nudge(bob, alice))), start(attempt(alice, 2, nudge(alice, bob)))" "$cva_gnudge"
+check_not "CVA gnudge: ... and bob never refuses alice's start" "sent(bob, alice, vote(attempt(alice, [0-9]*, nudge(alice, bob)), no))" "$cva_gnudge"
+check "CVA gnudge: alice's nudge committed at both" "sent(alice, bob, outcome(attempt(alice, 2, nudge(alice, bob)), commit))" "$cva_gnudge"
+check "CVA gnudge: bob's nudge, the class he opens, committed at both" "sent(bob, alice, outcome(attempt(bob, 2, nudge(bob, alice)), commit))" "$cva_gnudge"
+check_not "CVA gnudge: nothing aborted for ever: no third attempt at either nudge" "attempt(alice, 3, nudge\|attempt(bob, 3, nudge" "$cva_gnudge"
 echo ""
 
 
@@ -4206,10 +4259,13 @@ check "X8 goal succeeds" "succeeds" "$x8"
 # Issue 21); the goal is what X8's goal-check ordering fix made possible (every
 # goal used to fail with UnknownTypeError: UserEvent, a gsg/self.glp template
 # named by a module one directory below it).  Since 2026-09-07 the program is
-# programs/social/spm: the platform plays reach the CVA mediator as `cva # network`,
-# which resolves only where cva/ is a module of the loaded program, so
-# spm/self.glp is the root and exports the plays as the entry points; cva/
-# still loads on its own.
+# programs/social/spm, spm/self.glp the root exporting the plays as the entry
+# points.  Since 2026-10-12 (GSG's layout, its task of 2026-10-02 item 2): each
+# platform's plays/ has a self.glp exporting its plays, called `plays # play_x`;
+# each platform's self.glp forwards `agent` to its agent module; spm/self.glp
+# forwards `network` to `cva # network`, and the plays call `agent(...)` and
+# `network(...)` unqualified, resolved up the scope chain.  cva/ still loads on
+# its own; gsg/ and secure_gsg/ do not, cva being a sibling outside them.
 echo "--- X10: spm programs ---"
 x10c=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/social/spm/cva
@@ -5607,6 +5663,54 @@ HEREDOC
 check "SG grassapp not_a_friend: a send to someone not a friend is not sent, and the person is told not_a_friend" "tagged(alice, not_a_friend(carol))" "$sg_naf_ga"
 check "SG grassapp not_a_friend: a later message to a friend is delivered" "tagged(alice, not_a_friend(carol)).*tagged(bob, received(alice, hi_bob))" "$(echo "$sg_naf_ga" | tr '\n' ' ')"
 check_not "SG grassapp not_a_friend no failed play" "→ failed" "$sg_naf_ga"
+
+# The same at grassapp's other friend sends (play_not_a_friend_sends_headless.glp):
+# alice mints 5 of her own coins, then pays dave, proposes a trade to eve,
+# escrows for frank and invites grace to a group, none of them her friend, and
+# is told not_a_friend of each; she befriends carol and unfriends her, and
+# carol's payment, arriving after the unfriend and not alice's coin, cannot be
+# returned to her and is not taken: not_a_friend(carol).  The bonds each act
+# selected stay in the holdings, 5 alice coins before and after, and no escrow
+# is opened.  The output's lines are joined for the two ordered checks.
+sg_nafs_ga=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/grassapp
+:limit 5000000
+play_not_a_friend_sends.
+:quit
+HEREDOC
+2>&1)
+sg_nafs_ga_line=$(echo "$sg_nafs_ga" | tr '\n' ' ')
+check "SG grassapp not_a_friend sends: a payment to someone not a friend is not sent, and the person is told not_a_friend" "tagged(alice, not_a_friend(dave))" "$sg_nafs_ga"
+check "SG grassapp not_a_friend sends: a trade proposed to someone not a friend is not sent, and the person is told not_a_friend" "tagged(alice, not_a_friend(eve))" "$sg_nafs_ga"
+check "SG grassapp not_a_friend sends: an escrow offered to someone not a friend is not sent, and the person is told not_a_friend" "tagged(alice, not_a_friend(frank))" "$sg_nafs_ga"
+check "SG grassapp not_a_friend sends: a group invitation to someone not a friend is not sent, and the person is told not_a_friend" "tagged(alice, not_a_friend(grace))" "$sg_nafs_ga"
+check "SG grassapp not_a_friend sends: a refused payment's return to someone no longer a friend is not sent, and the person is told not_a_friend" "tagged(alice, not_a_friend(carol))" "$sg_nafs_ga"
+check "SG grassapp not_a_friend sends: the holdings before, 5 of alice's own coins" "tagged(alice, balance_report(alice, alice, 0, 5)).*tagged(alice, not_a_friend(dave))" "$sg_nafs_ga_line"
+check "SG grassapp not_a_friend sends: the holdings after, the same 5" "tagged(alice, not_a_friend(carol)).*tagged(alice, balance_report(alice, alice, 0, 5))" "$sg_nafs_ga_line"
+check_not "SG grassapp not_a_friend sends: no bond the acts selected leaves the holdings" "balance_report(alice, alice, 0, [0-4])" "$sg_nafs_ga"
+check_not "SG grassapp not_a_friend sends: the refused payment is not taken" "balance_report(alice, carol" "$sg_nafs_ga"
+check_not "SG grassapp not_a_friend sends: no escrow is opened" "escrow_deposited" "$sg_nafs_ga"
+check_not "SG grassapp not_a_friend sends no failed play" "→ failed" "$sg_nafs_ga"
+
+# A deposit not sent conveys nothing, and leaves the agent's date to an escrow
+# already open (play_not_a_friend_escrow, the same file): alice escrows 2 of her
+# 4 coins for bob, her friend, until 30, then 2 for dave, not her friend, and is
+# told not_a_friend(dave); she advances her date to 30, and the escrow for bob
+# releases.  She holds the 2 for dave still, and bob the 2 released to him.
+sg_nafe_ga=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/grassapp
+:limit 5000000
+play_not_a_friend_escrow.
+:quit
+HEREDOC
+2>&1)
+sg_nafe_ga_line=$(echo "$sg_nafe_ga" | tr '\n' ' ')
+check "SG grassapp not_a_friend escrow: a deposit for someone not a friend is not sent, and the person is told not_a_friend" "tagged(alice, not_a_friend(dave))" "$sg_nafe_ga"
+check "SG grassapp not_a_friend escrow: the escrow already open releases on its date after it" "tagged(alice, not_a_friend(dave)).*tagged(bob, escrow_released(alice))" "$sg_nafe_ga_line"
+check "SG grassapp not_a_friend escrow: and expires at the depositor" "tagged(alice, not_a_friend(dave)).*tagged(alice, escrow_expired(bob))" "$sg_nafe_ga_line"
+check "SG grassapp not_a_friend escrow: the holdings after, the 2 for dave never having left" "tagged(alice, escrow_expired(bob)).*tagged(alice, balance_report(alice, alice, 0, 2))" "$sg_nafe_ga_line"
+check "SG grassapp not_a_friend escrow: bob holds the 2 released to him" "tagged(bob, balance_report(bob, alice, 0, 2))" "$sg_nafe_ga"
+check_not "SG grassapp not_a_friend escrow no failed play" "→ failed" "$sg_nafe_ga"
 
 sg_village=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/grassapp

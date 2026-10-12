@@ -27,7 +27,15 @@ import 'dart:typed_data';
 
 import 'package:glp_runtime/bytecode/runner.dart';
 import 'package:glp_runtime/bytecode/opcodes.dart'
-    show HeadStructure, HeadConstant, HeadNil, HeadList, GetVariable, GetValue;
+    show
+        HeadStructure,
+        HeadConstant,
+        HeadNil,
+        HeadList,
+        HeadVariable,
+        GetVariable,
+        GetValue,
+        UnifyVariable;
 import 'package:glp_runtime/engine_v2/code_image.dart';
 import 'package:glp_runtime/engine_v2/step_outcome.dart';
 import 'package:glp_runtime/runtime/terms.dart';
@@ -231,6 +239,71 @@ class ByteRunner with OpExecutors implements GoalRunner {
     return keys;
   }
 
+  /// For each clause whose head repeats a writer, by the byte offset of its
+  /// `clause_try`: the clause variables whose writer occurs more than once
+  /// among the head's instructions (`get_variable`, `get_value`,
+  /// `unify_variable`, `head_variable` in writer mode), which the runner
+  /// matches as the writer mgu does ([RunnerContext.repeatedHeadWriters]).  A
+  /// head writer occurs more than once only under a guard whose success
+  /// implies its reader ground (GLP-Spec glp.tex, Remark "Guards and SRSW"),
+  /// and its first occurrence must know it is not the only one: a goal writer
+  /// it meets is assigned what a later occurrence meets (Definition "Writer
+  /// MGU"), where at a writer occurring once it fails the clause
+  /// (appendix-term-matching.tex, row "Writer X1", column "Writer X2").
+  late final List<Set<int>?> _repeatedHeadWriters =
+      _buildRepeatedHeadWriters();
+
+  List<Set<int>?> _buildRepeatedHeadWriters() {
+    final code = image.code;
+    final sets = List<Set<int>?>.filled(code.length, null);
+    for (final sym in image.symbols) {
+      if (!sym.compiled) continue;
+      final end = sym.codeOffset + sym.codeLength;
+      var clauseAt = -1;
+      final writers = <int, int>{};
+      var inHead = false;
+      void close() {
+        if (clauseAt < 0) return;
+        final repeated = {
+          for (final e in writers.entries)
+            if (e.value > 1) e.key,
+        };
+        if (repeated.isNotEmpty) sets[clauseAt] = repeated;
+        clauseAt = -1;
+      }
+
+      var off = sym.codeOffset;
+      while (off < end) {
+        final opcode = code[off];
+        final rr = WireReader(Uint8List.sublistView(code, off));
+        final op = decodeInstruction(rr,
+            procNameOf: (i) => image.symbolAt(i).signature,
+            ctargetLabelOf: (i) => '#$i');
+        if (opcode == Opcode.clauseTry) {
+          close();
+          clauseAt = off;
+          writers.clear();
+          inHead = true;
+        } else if (inHead) {
+          if (opcode < Opcode.headConstant || opcode > Opcode.pop) {
+            inHead = false;
+            close();
+          } else {
+            int? writer;
+            if (op is GetVariable && !op.isReader) writer = op.varIndex;
+            if (op is GetValue && !op.isReader) writer = op.varIndex;
+            if (op is UnifyVariable && !op.isReader) writer = op.varIndex;
+            if (op is HeadVariable && !op.isReader) writer = op.varIndex;
+            if (writer != null) writers[writer] = (writers[writer] ?? 0) + 1;
+          }
+        }
+        off += rr.offset;
+      }
+      close();
+    }
+    return sets;
+  }
+
   /// Whether the goal's argument [key.slot] --- [value], as dereferenced ---
   /// fails the clause [key] names at its head_structure: bound, and not a
   /// structure of the functor and arity matched against (as
@@ -370,6 +443,7 @@ class ByteRunner with OpExecutors implements GoalRunner {
     final code = image.code;
     final decoded = _decoded;
     final clauseKeys = _clauseKeys;
+    final repeatedHeadWriters = _repeatedHeadWriters;
     var pc = cx.kappa; // byte offset of the goal's entry instruction
     // The indexed argument of the goal, dereferenced, for the procedure being
     // tried: read at its first indexed clause, and again after a tail call,
@@ -398,6 +472,8 @@ class ByteRunner with OpExecutors implements GoalRunner {
             }
           }
           execClauseTry(cx); // advance
+          final repeated = repeatedHeadWriters[opStart];
+          if (repeated != null) cx.repeatedHeadWriters = repeated;
           pc = after;
           continue;
 

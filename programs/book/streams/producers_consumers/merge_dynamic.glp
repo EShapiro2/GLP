@@ -10,8 +10,11 @@ merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge([], Ys, Ys?).
 merge(Xs, [], Xs?).
 
-% Dynamic merge: merge(Ws) messages add new streams
-procedure(X) dmerge(Stream(X)?, Stream(X)?, Stream(X)).
+% Dynamic merge: merge(Ws) messages add new streams; a message is such a
+% request, Ws a further stream of messages, or a string or a number.
+Msg ::= merge(Stream(Msg)) ; String ; Number.
+
+procedure dmerge(Stream(Msg)?, Stream(Msg)?, Stream(Msg)).
 dmerge([merge(Ws)|Xs], Ys, Zs?) :-
     dmerger(Ws?, Xs?, Xs1), dmerge(Xs1?, Ys?, Zs).
 dmerge(Xs, [merge(Ws)|Ys], Zs?) :-
@@ -22,5 +25,5 @@ dmerge(Xs, [Y|Ys], [Y?|Zs?]) :-
     otherwise | dmerge(Xs?, Ys?, Zs).
 dmerge([], [], []).
 
-procedure(X) dmerger(Stream(X)?, Stream(X)?, Stream(X)).
+procedure dmerger(Stream(Msg)?, Stream(Msg)?, Stream(Msg)).
 dmerger(Ws, Xs, Out?) :- dmerge(Ws?, Xs?, Out).

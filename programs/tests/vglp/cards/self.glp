@@ -26,7 +26,6 @@
 
 YesNo    ::= yes ; no.
 Card     ::= card(Integer, YesNo?).
-List(X)  ::= [] ; [X | List(X)].
 Panel    ::= panel(List(Card)).
 Question ::= panel_w(Panel) ; stream_card_w(Stream(Card))
            ; stream_yesNo_w(Stream(YesNo?)).

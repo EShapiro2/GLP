@@ -5,7 +5,7 @@
 %% Demonstrates accumulator idiom with bidirectional state access.
 
 %% Type definitions
-CounterMsg ::= clear ; up ; down ; show(Number).
+CounterMsg ::= clear ; up ; down ; show(Number?).
 
 %% Procedure type declaration
 procedure counter(Stream(CounterMsg)?, Number?).

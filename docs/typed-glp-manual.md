@@ -1,6 +1,6 @@
 # Typed GLP Manual
 
-**Version**: 2.22
+**Version**: 2.24
 **Date**: 2026-10-12
 **Status**: ACTIVE
 
@@ -294,7 +294,7 @@ Variable `V` has type `Integer`. The reader `V?` appears twice (arg 2 and arg 4)
 
 ### 3.3 Guard-Based Relaxation
 
-Alternatively, if a guard establishes that a variable is ground, its reader may occur multiple times; its writer occurs once (GLP-Spec glp.tex, Remark "Guards and SRSW": "then X? may occur multiple times in the clause; X occurs once, as ever"):
+Alternatively, if a guard establishes that a variable is ground, both its writer and its reader may occur multiple times (GLP-Spec glp.tex and TGLP glp.tex, Remark "Guards and SRSW", `rem:guards-srsw`: "then both X and X? may occur multiple times in the clause"; §3.4):
 
 ```prolog
 broadcast(Msg, Out1, Out2, Out3) :- ground(Msg?) |
@@ -309,7 +309,13 @@ Guards that imply groundness include: `ground/1`, `integer/1`, `real/1`, `number
 
 ### 3.4 Guard Occurrences and SRSW Counting
 
-TGLP's Remark "Guards and SRSW" (`TGLP/sections/glp.tex`, `rem:guards-srsw`), its first paragraph, governs how an occurrence of a reader in a guard counts toward SRSW, and is the authority.
+GLP-Spec's Remark "Guards and SRSW" (`GLP-Spec/sections/glp.tex`, `rem:guards-srsw`) and TGLP's Remark of the same name (`TGLP/sections/glp.tex`, `rem:guards-srsw`) govern how the occurrences of a variable in a guard count toward SRSW, and are the authority.  Both state it in the same words:
+
+> Guard occurrences count toward SRSW satisfaction: if X? occurs in a guard, its paired writer X must occur in the head and X? may additionally occur once in the body.
+>
+> Furthermore, if the success of a guard implies that X? is bound to a ground term, then both X and X? may occur multiple times in the clause.
+
+GLP-Spec names the groundness-implying guards as "those the catalogue's Ground column marks" (`GLP-Spec/sections/appendix-guards.tex`, `appendix:guards-system`), and the catalogue says of them: "The 'Ground' column indicates whether success of the guard implies that the argument is ground; such guards permit multiple occurrences of both the writer and the reader in the clause" (`ef658d5`; until then "of the reader in the clause body").  Its arithmetic comparisons table has the Ground column too since `ef658d5`, "yes" in every row.  TGLP lists `ground`, `integer`, `number`, `string`, `constant`, the arithmetic comparisons and `=?=`, and says that `known` and `compound` do not imply groundness.
 
 **Example:**
 
@@ -319,11 +325,18 @@ foo(X, Y?) :- known(X?) | bar(X?, Y).
 
 Here `X?` appears twice in the clause — once in the guard (`known(X?)`) and once in the body (`bar(X?, Y)`).  The guard occurrence does not consume the single-reader allowance, so the single body occurrence is valid.  Note that `known/1` does not imply groundness, so this is not the ground-guard relaxation of Section 3.3 — it is the guard-occurrence rule.
 
-Combined with Section 3.3: if a groundness-implying guard like `ground(X?)` is present, `X?` may appear multiple times in the clause, in guard and body alike; `X` still occurs once.
+Under a groundness-implying guard on `X?`, both `X` and `X?` may occur more than once, in the head as in the body (`programs/tests/srsw/ground_writer_multi_ok.glp`):
+
+```prolog
+w(X, Y?) :- integer(X?) | Y = s(X).
+two(R, R) :- ground(R?) | true.
+```
+
+A goal reduces with such a clause only where the goal and the head have a writer mgu (GLP-Spec `glp.tex`, Definitions "Writer MGU" and "GLP Goal/Clause Reduction"): `two(3, 3)` reduces, `two(3, 4)` and `two(f(1), f(2))` fail, and `two(X?, 3)` suspends until `X?` is assigned.  Without such a guard, `two(R, R) :- true.` is an SRSW violation.
 
 ---
 
-### 3.5 Type Aliases Do Not Inherit Constant-Type Relaxation
+### 3.5 Type Aliases of Constant Types
 
 A type alias of a constant type, such as
 
@@ -332,19 +345,7 @@ Agent ::= Constant.
 Epoch ::= Integer.
 ```
 
-is structurally equivalent to the type it names (Section 20.3 type identity is structural).  `Constant` is itself a root `self.glp` union, `Number ; String ; Module`; the primitive types are `Integer`, `Real`, `String` and `Module`.  Aliases improve documentation: `stream_update(Agent, Epoch)` is clearer than `stream_update(Constant, Integer)`.
-
-However, the SRSW relaxation of Section 3.1 (which permits multiple readers of `Constant`, `Integer`, `Number`, `String`, `Real`) does **not** automatically transfer through the alias.  A variable typed as `Agent` is treated by the SRSW checker as a non-constant-type variable; multi-reader use without a ground guard is rejected with:
-
-> Reader variable X? occurs 2 times without ground guard or constant type
-
-The workaround is an explicit ground guard (Section 3.3):
-
-```prolog
-broadcast(A, Out1, Out2) :- ground(A?) | send(A?, Out1), send(A?, Out2).
-```
-
-When designing aliases, either expect the explicit guard at use sites, or refer to the underlying primitive type directly in procedure declarations where multi-reader use is needed without a guard.
+is structurally equivalent to the type it names (Section 20.3 type identity is structural).  `Constant` is itself a root `self.glp` union, `Number ; String ; Module`; the primitive types are `Integer`, `Real`, `String`, `Module` and `MutualRef` (GLP-Spec `appendix-guards.tex`, "Predefined types").  Aliases improve documentation: `stream_update(Agent, Epoch)` is clearer than `stream_update(Constant, Integer)`.
 
 ---
 
@@ -474,19 +475,11 @@ When consuming `Channel?` with pattern `ch(In, Out?)`:
 
 ### 8.1 The Guard Rule
 
-A guard expression must be **compile-time unfoldable**.  After partial evaluation, only the built-in three-valued operations may remain — `ground/1`, `known/1`, `=?=/2`, the arithmetic comparisons (`</2`, `>/2`, `=:=/2`, `=\=/2`, `=</2`, `>=/2`), the type tests (`integer/1`, `real/1`, `number/1`, `string/1`, `constant/1`, `compound/1`, `list/1`), and `otherwise`.  Anything else, the runtime cannot evaluate at guard time, and the guard is rejected at load with `Unknown guard predicate`.
+GLP-Spec's Definition "Guarded Clause" (`GLP-Spec/sections/glp.tex`, `def:guarded-clause`), a guard being a conjunction of guard predicates, and its appendix "Guards, Kernel and Seam Predicates" (`GLP-Spec/sections/appendix-guards.tex`, `appendix:guards-system`), whose paragraphs "Guard predicates", "Arithmetic comparison guards" and "Time guards" list the guard predicates and whose paragraph "Defined guard predicates" adds the defined ones, govern what may appear in a guard, and are the authority.  Of defined guards GLP-Spec says: "A unit clause `p(T1,...,Tn).` defines a guard predicate; the call `p(S1,...,Sn)` in guard position is unfolded to the term matching of `T1` with `S1`, ..., `Tn` with `Sn`."  The defined guard predicates shipped with the runtime are `=`, `new_channel`, `send`, `receive`, `close`, `dl_append` and `dl_to_list` (§8.2).
 
-The partial evaluator unfolds a call by substituting its body for the call site.  **A call is unfoldable iff its full call graph terminates at the built-ins above.**  In particular:
+### 8.2 Single-Unit-Clause Procedures
 
-- **Recursive procedures are NOT unfoldable.**  Direct recursion (a procedure calling itself) or mutual recursion produces either an infinite expansion or a residual call — neither is admissible in a guard.  **No recursive procedure may appear in a guard.**
-- **Single-unit-clause procedures (one clause, no body) are always unfoldable** — substitution is a one-step identity.  This is the *safe special case* the PE is guaranteed to handle (§8.2); it is convenience, not a separate language construct.
-- **Multi-clause non-recursive procedures** are in principle unfoldable (enumerate clauses, substitute each), but the current PE accepts only the single-unit-clause case.  Until extended, treat any procedure with more than one clause as off-limits in guards.
-
-**Practical implication.**  A precondition of the form "**∃ x ∈ list such that P(x)**" cannot be a guard, because list traversal is recursive.  Put such tests in the clause body via dispatch (a helper procedure with `otherwise` fallthrough), or restructure so the precondition is decided by head pattern matching against a known position.
-
-### 8.2 Single-Unit-Clause Procedures: the Safe Special Case
-
-A **single-unit-clause procedure** is a regular procedure defined by exactly one clause with no guards and no body.  These are the always-unfoldable case of §8.1 and the standard idiom for user-defined guards.  In general they are NOT expected to work as body predicates.
+A **single-unit-clause procedure** is a regular procedure defined by exactly one clause with no guards and no body.  Its unit clause defines a guard predicate (§8.1).  In general they are NOT expected to work as body predicates.
 
 The root self.glp defines several single-unit-clause procedures.  The PE automatically includes them when processing any program, so user programs do not need to redefine them.  Multi-clause procedures defined in the root `self.glp` (e.g. `merge/3`) resolve through the ancestor scope chain like any ancestor `self.glp` definition, subject to innermost-first shadowing; unfolding applies only to single-unit-clause procedures, as an optimisation.  User programs may override a root self.glp unit clause by defining a procedure with the same name/arity.
 
@@ -527,8 +520,6 @@ play :- new_channel(AliceCh, BobCh) | alice(AliceCh?), bob(BobCh?).
 %% After partial evaluation
 play :- alice(ch(Xs?, Ys)?), bob(ch(Ys?, Xs)?).
 ```
-
-The substitution leaves only built-ins (here: the implicit channel-creation bindings) and so satisfies the §8.1 rule.
 
 ### 8.4 Channel Closure: the Two-Clause Idiom
 
@@ -1178,6 +1169,8 @@ Consequences:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.24 | 2026-10-12 | §3.4 states the Remark "Guards and SRSW" as GLP-Spec (`831f315`, Udi's sentence restored, 2026-10-12) and TGLP both state it, pointing to both: under a groundness-implying guard on `X?`, both `X` and `X?` may occur multiple times in the clause, in the head as in the body; the sentence that `X` still occurs once is gone (GLP, 2026-10-12 07:30 UTC). |
+| 2.23 | 2026-10-12 | §8.1 says what GLP-Spec says of guards and defined guards, Definition "Guarded Clause" and appendix "Guards, Kernel and Seam Predicates", and no more (GLP, 2026-10-12): the call-graph unfoldability rule, the recursion ban, the multi-clause PE limit and the error text `Unknown guard predicate`, in no paper, removed, with the "Practical implication" resting on them, §8.2's "safe special case" and §8.3's last sentence.  §3.5: the sentence that a type alias does not inherit the constant-type relaxation, which TGLP `b32934d` contradicts, deleted as GLP ruled (Integration, 2026-09-23), with the error, the workaround and the advice resting on it, and the heading that stated it; `MutualRef` among the primitive types (GLP-Spec "Predefined types"). |
 | 2.22 | 2026-10-12 | Second copies of TGLP's definitions replaced by pointers to TGLP (Integration, 2026-10-11): §2A.2, §3.1, §3.4, §8.3, §8.4, §9.1, §9.4, §16.1, §17.7, §19.6, §19.7, §20.1, §20.3, §21; their examples kept.  §3.5 left for GLP. |
 | 2.21 | 2026-07-23 | Added §15B.5: transforming an aggregate that stores writers (folded in from the retired `docs/type system/friends-list-moding-pattern.md`).  §3.5: `Constant` is a root `self.glp` union `Number ; String ; Module`, not a primitive; the primitives are `Integer`, `Real`, `String`, `Module`. |
 | 2.20 | 2026-06-24 | §19.7: defined self-contained module (no `M#p`, no uninstantiated type parameter) and program (self-contained module or directory with `self.glp`); uniform pipeline (link, typecheck, compile if it passes, run) for one module or many; removed the multi-module-only framing and the development-aid note. |

@@ -1,20 +1,18 @@
 %% Type definitions
 NumList ::= [] ; [Number | NumList].
 
-%% Procedure type declarations
-procedure sort(NumList, NumList).
-procedure bbl(NumList, Number, NumList).
-procedure bbl1(Number, NumList, Number, NumList).
-
 %% bsort.glp - Selection sort (bubble sort variant)
 
+procedure sort(NumList?, NumList).
 sort([], []).
 sort([X|Xs], [Smallest?|Sorted?]) :-
     bbl([X?|Xs?], Smallest, Rest),
     sort(Rest?, Sorted).
 
+procedure bbl(OpenStream(Number)?, Number, NumList).
 bbl([X|Xs], Y?, Ys?) :- bbl1(X?, Xs?, Y, Ys).
 
+procedure bbl1(Number?, NumList?, Number, NumList).
 bbl1(Min, [], Min?, []).
 bbl1(Min, [X|Xs], Smallest?, [X?|Ys?]) :-
     Min? < X? | bbl1(Min?, Xs?, Smallest, Ys).

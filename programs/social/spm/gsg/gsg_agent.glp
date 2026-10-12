@@ -62,7 +62,7 @@ agent(Id, IRec, [will(discover(Q, R?)) | UserIn], NetIn, NetOut?, Date,
 %% Offer friendship (paper §6.3): emit friend_request(epoch_p(Q)+1) to Q,
 %% install pending_offer(Q, X, R) in Pending.  Reply R is NOT bound here;
 %% Integrate accept binds it on receipt of accept(X) from Q.
-agent(Id, IRec, [will(offer_friendship(Q, R)) | UserIn], NetIn,
+agent(Id, IRec, [will(offer_friendship(Q, R?)) | UserIn], NetIn,
       [msg(Id?, Q?, friend_request(X?)) | NetOut1?], Date,
       gsg(Known, Vols, Inbox, FMap, FoFMap, Pending)) :-
     ground(Q?), ground(Id?), ground(FMap?) |
@@ -70,7 +70,7 @@ agent(Id, IRec, [will(offer_friendship(Q, R)) | UserIn], NetIn,
     X := E? + 1,
     agent(Id?, IRec?, UserIn?, NetIn?, NetOut1, Date?,
           gsg(Known?, Vols?, Inbox?, FMap?, FoFMap?,
-              [pending_offer(Q?, X?, R?) | Pending?])).
+              [pending_offer(Q?, X?, R) | Pending?])).
 
 %% End friendship (paper §6.4): bump epoch to next even, emit unfriend,
 %% bind Reply via bind_ok (local transaction, no round-trip).
@@ -98,7 +98,7 @@ agent(Id, IRec, [will(accept_offer(P, R?)) | UserIn], NetIn, NetOut?, Date,
 
 %% Tick (architecture §2.3): advance local date.
 agent(Id, IRec, [tick | UserIn], NetIn, NetOut?, Date, Platform) :-
-    Date1 := Date? + 1 |
+    Date1 := Date? + 1,
     agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date1?, Platform?).
 
 %% Query: q_epoch(Q) -- answer with epoch_p(Q).
@@ -259,7 +259,7 @@ accept_offer_step(false, Id, IRec, P, R?, _, UserIn, NetIn, NetOut?, Date,
                   Known, Vols, Inbox, FMap, FoFMap, Pending) :-
     otherwise |
     agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
-          gsg(Known?, [accept_offer(P?, R?) | Vols?], Inbox?,
+          gsg(Known?, [accept_offer(P?, R) | Vols?], Inbox?,
               FMap?, FoFMap?, Pending?)).
 
 %% =============================================================================

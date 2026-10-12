@@ -17,10 +17,9 @@
 %%   Agent : paper's Π-membership, defined once in ../self.glp, the lowest
 %%           common ancestor of cva/, gsg/ and secure_gsg/.
 %%
-%% Paper notation "epoch" maps to `Integer` directly throughout — the alias
-%% `Epoch ::= Integer` was tried but fails SRSW's constant-type relaxation
-%% (aliases don't inherit relaxation; see typed-glp-manual §3.5).  Using
-%% Integer directly preserves multi-reader use for body-bound epoch values.
+%% Paper notation "epoch" maps to `Integer` directly throughout.  Where an
+%% epoch is a reply --- the slot of a_epoch --- it is typed Integer?, as every
+%% reply slot is (Reply, below).
 %% =============================================================================
 
 %% CVA substrate types redefined here.  Sibling-directory types from
@@ -32,9 +31,9 @@ NetMsg(C) ::= msg(Agent, Agent, C).
 InMsg(C) ::= msg(Agent, C).
 %% UserEvent extended with `await(Constant)`: a pure synchroniser that
 %% suspends UserIn consumption until the carried Constant is ground
-%% (architecture §3.3 reply-variable sync).  Same `Constant` type as the
-%% volition Reply slots, so the same reply variable can flow through
-%% both (SRSW constant-type relaxation permits multi-occurrence).
+%% (architecture §3.3 reply-variable sync).  The play constructs a volition
+%% with the writer of its reply slot and reads that writer's reader in
+%% await: the slot is typed Constant? (Reply, below).
 UserEvent(V, Q, A) ::= will(V) ; unwill(V) ; tick ; crash ; shutdown
                      ; query(Q, A) ; await(Constant).
 %% IdentityRecord is defined once in ../self.glp.
@@ -62,13 +61,16 @@ GsgCargo ::= friend_request(Integer)         %% paper §6.2: friend_request(x), 
 %% =============================================================================
 
 %% Reply: a one-shot writer the agent binds to `ok` when a volition's
-%% protocol round-trip has completed.
+%% protocol round-trip has completed.  A reply slot is typed Constant? (an
+%% answer slot Integer?, GsgAnswer below) in every type that has one: the
+%% term that carries it is constructed with the writer and matched in a head
+%% with the reader, and bind_ok/1 consumes the writer once.
 %%
 %% Binding the writer to `ok` is done by `bind_ok/1` (head-literal at the
 %% ↑ output position; rv_agent.glp complete_rendezvous pattern), called
 %% from the agent's clause body.
 GsgVolition ::= discover(Agent, Constant?)
-              ; offer_friendship(Agent, Constant)
+              ; offer_friendship(Agent, Constant?)
               ; accept_offer(Agent, Constant?)
               ; end_friendship(Agent, Constant?).
 
@@ -85,8 +87,8 @@ GsgQuery ::= q_epoch(Agent)              %% paper notation: epoch_p(q)
            ; q_fmap_dom.                 %% dom(FMap_p)
 
 GsgAnswer ::= a_epoch(Integer?)
-            ; a_bool(Constant)           %% 'true' or 'false'
-            ; a_keys(Stream(Agent)).
+            ; a_bool(Constant?)          %% 'true' or 'false'
+            ; a_keys(Stream(Agent)?).
 
 %% =============================================================================
 %% PLATFORM STATE (paper §6.1)
@@ -118,7 +120,7 @@ FoFMap ::= [] ; [FoFEntry | FoFMap].
 %% PendingList until Integrate accept fires (matching accept(X) from q
 %% arrives), at which point R is bound to `ok` and the pending entry is
 %% removed.
-PendingOffer ::= pending_offer(Agent, Integer, Constant).
+PendingOffer ::= pending_offer(Agent, Integer, Constant?).
 PendingList ::= [] ; [PendingOffer | PendingList].
 
 GsgPlatform ::= gsg(Stream(Agent),               %% Known
@@ -193,7 +195,7 @@ set_epoch(Q, X, [], [fme(Q?, X?)]).
 exported procedure bump_epoch(Agent?, FMap?, FMap, Integer).
 
 bump_epoch(Q, [fme(Q1, E) | Rest], [fme(Q1?, X?) | Rest?], X?) :-
-    Q? =?= Q1?, X := E? + 1 | true.
+    Q? =?= Q1? | X := E? + 1.
 
 bump_epoch(Q, [Entry | Rest], [Entry? | Rest1?], X?) :-
     otherwise | bump_epoch(Q?, Rest?, Rest1, X).
@@ -372,7 +374,7 @@ bind_ok(ok).
 exported procedure take_pending_offer(Agent?, Integer?, PendingList?, PendingList).
 
 %% Match: bind Reply writer R to `ok` via bind_ok helper; drop entry.
-take_pending_offer(Q, X, [pending_offer(Q1, X1, R) | Rest], Rest?) :-
+take_pending_offer(Q, X, [pending_offer(Q1, X1, R?) | Rest], Rest?) :-
     Q? =?= Q1?, X? =?= X1? | bind_ok(R).
 
 %% No match: keep entry, recurse.
@@ -388,7 +390,7 @@ take_pending_offer(_, _, [], []).
 %% per typed-glp-manual §8.1, multi-clause procedures cannot appear in
 %% guards.  Useful for body dispatch via a 2-clause step procedure.
 exported procedure has_pending_offer(Agent?, Integer?, PendingList?, Constant).
-has_pending_offer(Q, X, [pending_offer(Q1, X1, _) | _], true) :-
+has_pending_offer(Q, X, [pending_offer(Q1, X1, _?) | _], true) :-
     Q? =?= Q1?, X? =?= X1? | true.
 has_pending_offer(Q, X, [_ | Rest], B?) :-
     otherwise | has_pending_offer(Q?, X?, Rest?, B).
@@ -412,7 +414,7 @@ exported procedure try_take_accept_offer_vol(Agent?, Stream(GsgVolition)?,
                                               Stream(GsgVolition), Constant).
 
 %% Match: bind the entry's R to ok, drop entry.
-try_take_accept_offer_vol(P, [accept_offer(P1, R) | Rest], Rest?, true) :-
+try_take_accept_offer_vol(P, [accept_offer(P1, R?) | Rest], Rest?, true) :-
     P? =?= P1? | bind_ok(R).
 
 %% No match this entry: keep, recurse.
@@ -471,13 +473,13 @@ exported procedure classify_pending(Agent?, Agent?, PendingList?,
 %% Match P, P @< Self (i.e. Self has the larger name): Resolve case,
 %% extract entry, bind R.  GLP defines `@<` but not `@>`, so we write
 %% `P @< Self` instead of the paper's `Self > P`.
-classify_pending(Self, P, [pending_offer(P1, _, R) | Rest], Rest?, pm_resolve) :-
+classify_pending(Self, P, [pending_offer(P1, _, R?) | Rest], Rest?, pm_resolve) :-
     P? =?= P1?, P? @< Self? | bind_ok(R).
 
 %% Match P, Self @< P (smaller-name side): ignore case, keep entry, don't
 %% bind R (Integrate accept will do so when the other side's accept arrives).
-classify_pending(Self, P, [pending_offer(P1, X, R) | Rest],
-                 [pending_offer(P1?, X?, R?) | Rest?], pm_ignore) :-
+classify_pending(Self, P, [pending_offer(P1, X, R?) | Rest],
+                 [pending_offer(P1?, X?, R) | Rest?], pm_ignore) :-
     P? =?= P1?, Self? @< P? | true.
 
 %% No match at this entry: keep, recurse.
@@ -488,18 +490,40 @@ classify_pending(Self, P, [Entry | Rest], [Entry? | Rest1?], M?) :-
 classify_pending(_, _, [], [], pm_none).
 
 %% =============================================================================
-%% ENTRY POINTS (modules.tex, External access): the plays, forwarded to the
-%% modules that define them, so that programs/social/spm/self.glp can enter this
-%% directory through this file and export them as the program's entry points.
+%% THE AGENT, forwarded to the module that defines it (modules.tex, Compilation,
+%% fourth step): a play in plays/ calls `agent(...)` unqualified, resolved by
+%% walking the scope to this file, which enters gsg_agent.glp, a module file of
+%% this directory.
 %% =============================================================================
-imported procedure play_befriend # play_befriend(Integer, Integer).
+imported procedure gsg_agent # agent(Agent?, IdentityRecord?,
+                                      Stream(UserEvent(GsgVolition, GsgQuery, GsgAnswer))?,
+                                      Stream(InMsg(GsgCargo))?,
+                                      Stream(NetMsg(GsgCargo)),
+                                      Integer?,
+                                      GsgPlatform?).
+exported procedure agent(Agent?, IdentityRecord?,
+                          Stream(UserEvent(GsgVolition, GsgQuery, GsgAnswer))?,
+                          Stream(InMsg(GsgCargo))?,
+                          Stream(NetMsg(GsgCargo)),
+                          Integer?,
+                          GsgPlatform?).
+agent(Id, IRec, UserIn, NetIn, NetOut?, Date, Platform) :-
+    gsg_agent # agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?, Platform?).
+
+%% =============================================================================
+%% ENTRY POINTS (modules.tex, External access): the plays, exported by
+%% plays/self.glp and forwarded here, so that programs/social/spm/self.glp can
+%% enter this directory through this file and export them as the program's
+%% entry points.
+%% =============================================================================
+imported procedure plays # play_befriend(Integer, Integer).
 exported procedure play_befriend(Integer, Integer).
-play_befriend(A?, B?) :- play_befriend # play_befriend(A, B).
+play_befriend(A?, B?) :- plays # play_befriend(A, B).
 
-imported procedure play_befriend_simultaneous # play_befriend_simultaneous(Integer, Integer).
+imported procedure plays # play_befriend_simultaneous(Integer, Integer).
 exported procedure play_befriend_simultaneous(Integer, Integer).
-play_befriend_simultaneous(A?, B?) :- play_befriend_simultaneous # play_befriend_simultaneous(A, B).
+play_befriend_simultaneous(A?, B?) :- plays # play_befriend_simultaneous(A, B).
 
-imported procedure play_three_agents # play_three_agents.
+imported procedure plays # play_three_agents.
 exported procedure play_three_agents.
-play_three_agents :- play_three_agents # play_three_agents.
+play_three_agents :- plays # play_three_agents.

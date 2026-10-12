@@ -1,15 +1,15 @@
 # GLP Guards Quick Reference
 
-**Last Updated**: 2026-10-02
+**Last Updated**: 2026-10-12
 
 ---
 
 ## WxW (Writer-to-Writer Matching Fails)
 
-GLP term matching fails on writer-to-writer to ensure no readers are abandoned:
+GLP term matching fails on writer-to-writer to ensure no readers are abandoned (GLP-Spec glp.tex, Definition "Term Matching", its table, defined for two terms that jointly satisfy SO):
 - If writers X and Y were to match, their readers X? and Y? would have no writer to provide values
-- Runtime must FAIL immediately on writer-to-writer term matching attempts
-- This is NOT a suspension case - it's a definitive failure
+- Runtime must FAIL on writer-to-writer term matching --- not a suspension, a definitive failure
+- Except at a repeated head writer, licensed by a groundness-implying guard (Remark "Guards and SRSW"): a head with a repeated variable does not satisfy SO, so the table does not apply there; the clause reduces by the writer mgu (Definitions "Writer MGU" and "GLP Goal/Clause Reduction"), a goal writer met there assigned what the mgu assigns it, a goal reader suspending, a clash failing (GLP, 2026-10-12)
 
 ---
 
@@ -214,11 +214,11 @@ process(X, Y?) :- ground(X) | Y = computed(X?).  % Would fail, not suspend
 
 ## Ground Guards - SRSW Relaxation
 
-Per the formal definition, variables occur as reader/writer pairs with exactly one of each. The exception: when a guard guarantees groundness, the reader may occur more than once, because a ground term contains no unbound writer; the writer occurs once, whatever the guard.
+Per the formal definition, variables occur as reader/writer pairs with exactly one of each. The exception: when a guard guarantees groundness, both the writer and the reader may occur more than once, because a ground term contains no unbound writer.
 
 ### The Rule
 
-GLP-Spec glp.tex, Remark "Guards and SRSW" (bbff21d): "if the success of a guard implies that X? is bound to a ground term, then X? may occur multiple times in the clause; X occurs once, as ever."  Until 2026-10-02 the analyzer licensed the writer as well; it now refuses a writer occurring more than once in a clause, whatever the guards: `Writer variable "X" occurs 2 times; a writer occurs once, whatever the guards`, or, twice in the head, `... occurs 2 times in the head of the clause ...`.
+GLP-Spec glp.tex, Remark "Guards and SRSW" (`831f315`, restored 2026-10-12 with Udi's approval; TGLP glp.tex states the same): "if the success of a guard implies that X? is bound to a ground term, then both X and X? may occur multiple times in the clause."  The analyzer licenses a repeated writer only where such a guard grounds it at its reader and the writer occurs in the head; elsewhere it refuses: `Writer variable "X" occurs 2 times ... without a groundness-implying guard`.  The withdrawn reading of 2026-10-02 (`bbff21d`, a writer once whatever the guard) is undone.
 
 ### Why This Works
 
@@ -234,11 +234,13 @@ check(X) :- known(X?) | true.
 
 is valid because X appears as writer in the head and X? appears as reader in the guard, satisfying SRSW with one writer and one reader.
 
-This is distinct from the multiple-occurrence relaxation below. Guard reader counting ensures guards participate in SRSW validation. The relaxation below determines which guards permit the reader of a variable to appear multiple times.
+This is distinct from the multiple-occurrence relaxation below. Guard reader counting ensures guards participate in SRSW validation. The relaxation below determines which guards permit the writer and the reader of a variable to appear multiple times.
 
 ### Guards That Imply Groundness
 
-| Guard | Implies Ground | Allows Multiple Reader Occurrences |
+The catalogue (GLP-Spec appendix-guards.tex, "Guard predicates", `ef658d5`): "The 'Ground' column indicates whether success of the guard implies that the argument is ground; such guards permit multiple occurrences of both the writer and the reader in the clause" (Remark "Guards and SRSW").  Until `ef658d5` it said "of the reader in the clause body".
+
+| Guard | Implies Ground | Allows Multiple Occurrences of X and X? |
 |-------|----------------|-------------------------|
 | ✅ `ground(X?)` | Yes | ✅ Yes |
 | ✅ `constant(X?)` | Yes | ✅ Yes |
@@ -260,7 +262,7 @@ This is distinct from the multiple-occurrence relaxation below. Guard reader cou
 | ✅ `no_readers(X?)` | **NO** | ❌ No |
 | ✅ `otherwise` | No | ❌ No |
 
-**Note**: Arithmetic comparison guards suspend if operands are unbound and only succeed if both operands are bound to numbers. Therefore, when they succeed, both operands are guaranteed to be ground.
+**Note**: Arithmetic comparison guards suspend if operands are unbound and only succeed if both operands are bound to numbers. Therefore, when they succeed, both operands are guaranteed to be ground.  The catalogue says so --- "Success implies both arguments are ground" --- and its arithmetic comparisons table has a Ground column, "yes" in every row (GLP-Spec appendix-guards.tex, "Arithmetic comparison guards", `ef658d5`).
 
 **Critical Difference**: `known(X)` tests if X is bound to either a constant or compound term (i.e., `constant(X) ∨ compound(X)`), but does not require groundness. A compound term like `f(Y)` is known but not ground if Y is unbound. Similarly, `compound(X)` succeeds on `f(Y)` even when Y is unbound.
 
@@ -309,10 +311,10 @@ The SRSW analyzer must:
 1. Track guards in HEAD/GUARDS phase
 2. Recognize guards that imply groundness:
    - Type guards: `ground/1`, `integer/1`, `real/1`, `number/1`, `string/1`, `constant/1`
-   - Arithmetic comparisons: `<`, `=<`, `>`, `>=`, `=:=`, `=\=`
+   - Arithmetic comparisons: `<`, `=<`, `>`, `>=`, `=:=`, `=\=` (Ground "yes" in every row of their table, GLP-Spec `ef658d5`)
 3. For variables with ground-guaranteeing guards:
    - Mark variable as "ground-certified" for this clause
-   - Allow multiple occurrences of its reader in the clause; its writer occurs once
+   - Allow multiple occurrences of both its writer and its reader in the clause: "such guards permit multiple occurrences of both the writer and the reader in the clause" (GLP-Spec appendix-guards.tex, `ef658d5`)
 4. For variables without such guards:
    - Enforce strict single-occurrence constraint
 

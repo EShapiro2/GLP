@@ -5,10 +5,14 @@
 %% Creates a self-organizing merge tree.
 %% A merge(Ws) message is taken by the first two clauses, ahead of the forwarding ones.
 
-procedure(X) merger(Stream(X)?, Stream(X)?, Stream(X)).
+%% Type definitions: a message is a merge(Ws) request, Ws a further stream
+%% of messages, or a string or a number, the items the clauses below forward.
+Msg ::= merge(Stream(Msg)) ; String ; Number.
+
+procedure merger(Stream(Msg)?, Stream(Msg)?, Stream(Msg)).
 merger(Ws, Xs, Out?) :- merge(Ws?, Xs?, Out).
 
-procedure(X) merge(Stream(X)?, Stream(X)?, Stream(X)).
+procedure merge(Stream(Msg)?, Stream(Msg)?, Stream(Msg)).
 merge([merge(Ws)|Xs], Ys, Zs?) :-
    merger(Ws?, Xs?, Xs1), merge(Xs1?, Ys?, Zs).
 merge(Xs, [merge(Ws)|Ys], Zs?) :-
@@ -16,13 +20,13 @@ merge(Xs, [merge(Ws)|Ys], Zs?) :-
 merge([X|Xs], Ys, [X?|Zs?]) :-
     compound(X?) | merge(Ys?, Xs?, Zs).
 merge([X|Xs], Ys, [X?|Zs?]) :-
-    atom(X?) | merge(Ys?, Xs?, Zs).
+    string(X?) | merge(Ys?, Xs?, Zs).
 merge([X|Xs], Ys, [X?|Zs?]) :-
     number(X?) | merge(Ys?, Xs?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :-
     compound(Y?) | merge(Xs?, Ys?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :-
-    atom(Y?) | merge(Xs?, Ys?, Zs).
+    string(Y?) | merge(Xs?, Ys?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :-
     number(Y?) | merge(Xs?, Ys?, Zs).
 merge([], [], []).
