@@ -58,6 +58,14 @@ class MadContext {
   /// verify under the runtime's person identity, not through the layer.
   GlpNetwork? network;
 
+  /// Called after a place event the layer reports is delivered onto its
+  /// place's stream ([deliverPlaceEvent]), so that the host runs: a place
+  /// event is an event, and "On each event the agent binds what the event
+  /// delivers, reduces until quiescent ... and then performs its Sends"
+  /// (IGLP, Implementation Notes, "Event-driven execution").  Set by a host
+  /// over a given network; the simulation reports no place events.
+  void Function()? onPlaceEventDelivered;
+
   /// The canonical bytes e(T) of a ground term T, which a signature signs and
   /// a verifier checks (IGLP code-format-fragment.tex, "Signed and Hashed
   /// Content"). It throws on a variable, and the bytes are agent-independent,
@@ -707,6 +715,7 @@ class MadContext {
     for (final act in activations) {
       runtime.enqueueReactivatedGoal(act);
     }
+    onPlaceEventDelivered?.call();
   }
 
   /// Close [place]'s stream — assign its tail `[]` — and forget the place.
