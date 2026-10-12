@@ -687,7 +687,7 @@ exported procedure (Card)*show(Offer?).
       final s = compile('''
 Request ::= post(String) ; quit.
 procedure (Request?)*agent(Integer?).
-(post(T))*agent(N) :- ground(N?), ground(T?) | true.
+(post(T))*agent(_) :- ground(T?) | true.
 (quit)*agent(_).
 ''').source;
       expect(
@@ -715,7 +715,7 @@ procedure (Request?)*agent(Integer?).
       final s = compile('''
 Request ::= post(String) ; quit.
 procedure (Request?)*agent(Integer?).
-(post(T))*agent(N) :- ground(N?), ground(T?) | true.
+(post(T))*agent(_) :- ground(T?) | true.
 (quit)*agent(_).
 ''').source;
       for (final f in ['string', 'integer', 'number', 'real', 'constant',

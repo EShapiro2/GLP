@@ -477,6 +477,7 @@ CanonicalProgram compileCanonical(String text,
   }
   _checkNoAskedCall(m, volitional, imports);
   _checkNoAnonymousTerm(m, volitional);
+  _checkLaterClausesRead(m, volitional, declsByKey);
 
   // THE EXPORTS.  "A declaration imported procedure (T)*N#p(T1,...,Tn). of a
   // volitional procedure of another module N, and a declaration imported
@@ -1904,6 +1905,77 @@ void _checkNoAnonymousTerm(
       }
     }
   }
+}
+
+/// "A clause of a volitional procedure reads an argument at an input
+/// position, by a non-variable term at that position in its head or by a
+/// guard on it, only if every later clause of the procedure reads it too"
+/// (vGLP, Definition "Volitional Procedure, Interactive Type, Interactive
+/// Term, Ordinary Clause, vGLP Program").  The asking clause passes each
+/// argument on through a pair of its own, so a later clause that does not
+/// read it could be taken where the source goal takes the earlier one
+/// (vGLP, the paragraph after Definition "Canonical Compilation").
+///
+/// The arguments are S1, ..., Sn, the interactive term A not among them: the
+/// asking clause passes S1, ..., Sn through its pairs and A is matched
+/// against the goal's end of its fresh interactive variable.  A position is
+/// an input position where its declared type is in reader mode, as the
+/// asking clause reads it ([_askingClause]).  A guard is on the argument
+/// where the variable at that position occurs in it, as writer or reader.
+void _checkLaterClausesRead(Module m,
+    Map<String, VolitionalProcedure> volitional,
+    Map<String, ProcDecl> declsByKey) {
+  for (final v in volitional.values) {
+    final decl = declsByKey['${v.name}/${v.arity + 1}']!;
+    final p = m.procedures
+        .where((p) => p.signature == '${v.name}/${v.arity + 1}')
+        .firstOrNull;
+    if (p == null) continue;
+    bool reads(Clause c, int k) {
+      final s = c.head.args[k];
+      if (s is UnderscoreTerm) return false;
+      if (s is! VarTerm) return true;
+      for (final g in c.guards ?? const <Guard>[]) {
+        if (g.args.any((t) => _occurs(s.name, t))) return true;
+      }
+      return false;
+    }
+
+    for (var k = 0; k < v.arity; k++) {
+      if (!decl.isInputArg(k)) continue;
+      for (var i = 0; i < p.clauses.length; i++) {
+        if (!reads(p.clauses[i], k)) continue;
+        for (var j = i + 1; j < p.clauses.length; j++) {
+          final later = p.clauses[j];
+          if (reads(later, k)) continue;
+          final c = p.clauses[i];
+          throw CompileError(
+              'The clause ${_asWritten(c, v)} of the volitional procedure '
+              '${v.name}/${v.arity}, at line ${c.line}, reads its argument at '
+              'input position ${k + 1}, and the later clause '
+              '${_asWritten(later, v)}, at line ${later.line}, does not: a '
+              'clause of a volitional procedure reads an argument at an input '
+              'position, by a non-variable term at that position in its head '
+              'or by a guard on it, only if every later clause of the '
+              'procedure reads it too (vGLP, Definition "Volitional '
+              'Procedure, Interactive Type, Interactive Term, Ordinary Clause, '
+              'vGLP Program")',
+              later.line, later.column, phase: 'analyzer');
+        }
+      }
+    }
+  }
+}
+
+/// Whether the variable [name] occurs in [t], as writer or reader.
+bool _occurs(String name, Term t) {
+  if (t is VarTerm) return t.name == name;
+  if (t is StructTerm) return t.args.any((a) => _occurs(name, a));
+  if (t is ListTerm) {
+    return (t.head != null && _occurs(name, t.head!)) ||
+        (t.tail != null && _occurs(name, t.tail!));
+  }
+  return false;
 }
 
 /// The head of a clause of a volitional procedure as the source writes it,

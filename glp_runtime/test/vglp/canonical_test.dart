@@ -1665,4 +1665,70 @@ exported procedure (Note?)*jot_b(Note).
       }
     });
   });
+
+  group('a clause of a volitional procedure reads an argument at an input '
+      'position only if every later clause reads it too', () {
+    // "A clause of a volitional procedure reads an argument at an input
+    // position, by a non-variable term at that position in its head or by a
+    // guard on it, only if every later clause of the procedure reads it too"
+    // (vGLP 901f7d2, Definition "Volitional Procedure, Interactive Type,
+    // Interactive Term, Ordinary Clause, vGLP Program"); the paragraph after
+    // Definition "Canonical Compilation" says why.  vGLP #9 Cowork's task of
+    // 2026-10-12 19:24 UTC, item 4.
+    const head = '''
+YesNo ::= yes ; no.
+procedure (YesNo?)*ask(Integer?, YesNo).
+''';
+    Matcher refusal(String clause, String later, int line) =>
+        throwsA(isA<CompileError>()
+            .having(
+                (e) => e.message,
+                'message',
+                allOf(
+                    contains('The clause $clause of the volitional procedure '
+                        'ask/2, at line ${line - 1}, reads its argument at '
+                        'input position 1, and the later clause $later, at '
+                        'line $line, does not'),
+                    contains('only if every later clause of the procedure '
+                        'reads it too (vGLP, Definition "Volitional '
+                        'Procedure, Interactive Type, Interactive Term, '
+                        'Ordinary Clause, vGLP Program")')))
+            .having((e) => e.line, 'line', line));
+
+    test('a first clause reading by a head term, a second not: refused', () {
+      expect(
+          () => compileCanonical('$head(A)*ask(0, A?).\n(A)*ask(_, A?).\n'),
+          refusal('(A)*ask(0, A?)', '(A)*ask(_, A?)', 4));
+    });
+
+    test('the second clause reading it too: accepted', () {
+      final c = compileCanonical('$head(A)*ask(0, A?).\n(A)*ask(1, A?).\n');
+      expect(c.source, contains('ask1(0, A?, A, []).'));
+      expect(c.source, contains('ask1(1, A?, A, []).'));
+    });
+
+    test('a first clause reading by a guard, a second not: refused', () {
+      expect(
+          () => compileCanonical(
+              '$head(A)*ask(N, A?) :- N? > 0 | true.\n(A)*ask(_, A?).\n'),
+          refusal('(A)*ask(N, A?)', '(A)*ask(_, A?)', 4));
+    });
+
+    test('a guard reading in the second clause reads as a head term does: '
+        'accepted', () {
+      compileCanonical(
+          '$head(A)*ask(0, A?).\n(A)*ask(N, A?) :- N? > 0 | true.\n');
+    });
+
+    test('a clause reading none of its arguments before one that reads: '
+        'accepted, as a structured responder\'s answer clause comes before '
+        'its clause on the closing reader', () {
+      compileCanonical('$head(A)*ask(_, A?).\n(A)*ask(0, A?).\n');
+    });
+
+    test('the interactive term and an output position are not input '
+        'positions of the procedure\'s arguments: accepted', () {
+      compileCanonical('$head(yes)*ask(_, yes).\n(A)*ask(_, A?).\n');
+    });
+  });
 }
