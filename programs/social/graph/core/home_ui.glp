@@ -1,44 +1,44 @@
 %% home_ui.glp --- the super-app with a LIVE person.
 %%
-%% superapp(Id, Answers, NetIn), the super-app (GSG paper, Section 5.1), is
+%% superapp(Id, Grants, NetIn), the super-app (GSG paper, Section 5.1), is
 %% defined in self.glp, the entry of the super-app's contract.
 %%
-%% superapp_ui(alice, Answers, NetIn) is the same super-app as a play: the
+%% superapp_ui(alice, Grants, NetIn) is the same super-app as a play: the
 %% harness the Flutter agent runtime starts, as
 %% programs/currencies/coins/play_ui.glp is the currency's.  It has the three
-%% arguments that runtime expects (Id, UserIn, NetIn): alice's answers arrive
-%% on the second, injected
-%% as ground terms by her taps on the constructs of home.vglp, and what her
-%% super-app shows her --- the mediator's cards and their closing, and what the
-%% super-app tells her --- leaves by send_to_user/1, one term to a line.  Her
-%% screen is therefore derived from the display declarations of home.vglp and
-%% from nothing else.
+%% arguments that runtime expects (Id, UserIn, NetIn): alice's grants arrive
+%% on the second, input(Id, P, R) as the bridge returns them from her acts on
+%% the constructs of home.vglp's questions (vGLP, sections/elicitation.tex,
+%% the paragraph "The implementation"), and the other half of her person
+%% channel --- the constructs the dispatcher draws and withdraws, and what her
+%% super-app tells her, merged with them --- leaves by send_to_user/1, one
+%% term to a line, which is what the bridge reads.  Her screen is therefore
+%% derived from the interactive types of home.vglp and from what the agent
+%% tells her, and from nothing else.
 %%
-%% Behind the screen is the real super-app: her commands go to agent/5, which
+%% Behind the screen is the real super-app: her commands go to agent/4, which
 %% installs, invites and befriends as it does in every play.  Bob is scripted
 %% and shares the network with her through a crossbar, so her Connect and
-%% Invite have someone to reach.  The mediator's vocabulary is the compiled
-%% module's own: the person's answers are typed by core's copy of it under
-%% its own names (self.glp, HomeUserAnswer), and the imported declarations
-%% leave the other positions untyped, since this harness only passes them
-%% along.
+%% Invite have someone to reach.  home/3 and its dispatcher are imported at
+%% the types of home.glp's exports, as superapp/3 imports them (self.glp,
+%% HomeQuestion).
 %%
 %% superapp_ui/3 is the harness of the app, not part of the super-app's
 %% contract; superapp/3 is the super-app.
 
-imported procedure home#home(_?, Key?, AgentToUserStream?, Stream(UserInMsg), _?, _?, _?, _?).
-imported procedure home#med(_?, _?, _?, Integer?).
+imported procedure home#home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(HomeQuestion))).
+imported procedure home#dispatch(Stream(Ask(HomeQuestion))?, Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
 imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 
-exported procedure superapp_ui(Key?, Stream(HomeUserAnswer)?, NetInStream?).
-superapp_ui(alice, Answers, _) :-
+exported procedure superapp_ui(Key?, PersonIn?, NetInStream?).
+superapp_ui(alice, Grants, _) :-
     crossbar(AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
     agent # agent(alice, Cmds?, AliceNetIn?, [user_output(Outs), net_output(AliceNetOut)]),
     tee_out(Outs?, Shown, Seen),
-    send_to_user(Shown?),
-    home # home(ch([], Asks), alice, Seen?, Cmds, none, none, none, none),
-    home # med(ch(Answers?, Cards), ch(Asks?, _), [], 0),
-    send_to_user(Cards?),
+    home # home(alice, Seen?, Cmds, Asks),
+    home # dispatch(Asks?, ch(Grants?, Draws), MCh),
+    show_notices(MCh?, Shown?),
+    send_to_user(Draws?),
     agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
     bob_answers(BobOut?, BobIn).
 
@@ -55,7 +55,8 @@ bob_answers([_ | Outs], Cmds?) :- otherwise | bob_answers(Outs?, Cmds).
 bob_answers([], []).
 
 %% The network between the two.  The person's stream is shown as well as read
-%% by tee_out/3, self.glp's.
+%% by tee_out/3, and sent onto the person channel by show_notices/2, both
+%% self.glp's.
 procedure crossbar(NetOutStream?, NetOutStream?, NetInStream, NetInStream).
 crossbar(AOut, BOut, AIn?, BIn?) :-
     merge(AOut?, BOut?, All),

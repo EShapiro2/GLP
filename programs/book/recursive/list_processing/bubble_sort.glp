@@ -1,7 +1,5 @@
 %% bubble_sort.glp - Bubble Sort in GLP
 %% Source: Standard GLP sorting
-%% STATUS: ILL-TYPED - uses anonymous _ in body (SRSW violation)
-%%         Cannot be fixed without changing program structure
 
 %% Type definitions
 NumList ::= [] ; [Number | NumList].
@@ -26,7 +24,7 @@ bubble([], [], no).
 
 procedure continue(Flag?, NumList?, NumList).
 continue(yes, Xs, Sorted?) :- bsort(Xs?, Sorted).
-continue(no, Sorted?, Sorted).
+continue(no, Sorted, Sorted?).
 
 %% Metainterpreter support
 procedure reduce(_?, _).
@@ -37,4 +35,4 @@ reduce(bubble([X,Y|Xs], [X?|Ys?], Swapped?), bubble([Y?|Xs?], Ys, Swapped)) :- X
 reduce(bubble([X], [X?], no), true).
 reduce(bubble([], [], no), true).
 reduce(continue(yes, Xs, Sorted?), bsort(Xs?, Sorted)).
-reduce(continue(no, Sorted?, Sorted), true).
+reduce(continue(no, Sorted, Sorted?), true).

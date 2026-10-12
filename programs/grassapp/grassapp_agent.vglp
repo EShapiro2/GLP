@@ -1,108 +1,46 @@
 %% grassapp_agent.vglp — the GrassApp agent as a vGLP program.
 %%
-%% vGLP source of the tested, deployed GLP program grassapp_agent.glp +
-%% grassapp_mediator.glp (this directory): the agent authored with
-%% volition-guarded clauses, the mediator and its UserCmd/UserNotify vocabulary
-%% absent — they belong to the implementation, which maps the volition-guarded
-%% clauses into concrete UI constructs.  Exhibit for the paper "Volition
-%% Elicitation: Operational Semantics for People and Their Machines", which
-%% defines vGLP.
+%% vGLP source of the GrassApp agent, agent/8 (currencies among friends, with
+%% the social graph, one-to-one messaging and groups): the person's fifteen
+%% requests to their agent and the person's answers to the offers that reach
+%% it, authored as questions, with nothing of an implementation's vocabulary.
+%% The deployed agent is grassapp_agent.glp with grassapp_mediator.glp beside
+%% this file, written by hand; this source is not their compilation, and the
+%% loader skips it, a .vglp beside a .glp of its own name.
 %%
-%% NOTATION (defined in the paper):
-%%   *                          marks a volition-guarded clause: reducing a goal
-%%                              with it requires, besides its guards, the person
-%%                              willing this reduction.  Among volition-guarded
-%%                              clauses for the same goal, the person's answer
-%%                              selects the clause.
-%%   *(X1,...,Xk)               a volition-guarded clause with person-supplied
-%%                              inputs: the position's term is anonymous, so the
-%%                              writer alone is written.  The person fills the
-%%                              field and the clause reads Xi?.
-%%   *(t, Y?)                   the dual abbreviation: the position's writer is
-%%                              anonymous, so the ground term alone is written.
-%%                              t is the button's label; Y? is a context reader,
-%%                              the card's content.
-%%   *(A=t, Y?)                 both named, for a ground answer the clause reads.
+%% The syntax is vGLP's (Definition "Volitional Procedure, Interactive Type,
+%% Interactive Term, Ordinary Clause, vGLP Program").  The agent is a
+%% volitional procedure whose question is the stream of the person's
+%% requests, Stream(Request)?, of a union type with one alternative per
+%% request; its one clause asks it, once, and passes it to serve, ordinary
+%% GLP, which has one clause per alternative, each the clause of its
+%% transaction reading its request at the head of the stream, and carries the
+%% rest of the stream, Reqs?, through every helper that continues the agent.
+%% A responder --- respond_coldcall, respond_trade, respond_group_invite,
+%% respond_escrow_cancel --- is a volitional procedure whose interactive type,
+%% a card, is in writer mode: one goal per arriving offer, so offers pend
+%% concurrently and are answered in any order; its clause writes the card at
+%% once, the offer for the person to see, and hands the person the writer of
+%% their answer, which a decide helper reads with a clause per answer.  A
+%% refusal is an answer, no, taken by its clause as yes is.  The escrow's card
+%% has one answer, cancel: unanswered, the escrow runs to its release.
 %%
-%% NAME THE POSITION EXACTLY WHEN THE CLAUSE READS ITS VALUE.  An answer is a
-%% tuple over the question's positions, not a substitution over names, so sibling
-%% clauses have different answers whether or not anything is named.  Of the four
-%% responders below, respond_coldcall names its answer because
-%% decision(Answer?, ...) carries it to the agent, and respond_escrow_cancel
-%% names its because the head binds Answer? into the cancel signal.  respond_trade
-%% and respond_group_invite name nothing: their answer reaches the clause only by
-%% selecting it, and the word the person chose has no image in the compiled code,
-%% which is accept_trade against reject_trade.
+%% Clause order follows the paper's remark "Ordering with otherwise": the
+%% request clauses follow every otherwise clause of serve.
 %%
-%% RESPONDERS.  An arriving offer spawns a responder goal — respond_coldcall,
-%% respond_trade, respond_group_invite — one goal per offer, so offers pend
-%% concurrently and are answered in any order.  The responder carries the offer
-%% and the response writer (or, for a group invitation, the setup channel).
-%% respond_trade's volition-guarded sibling clauses (accept/decline) are the
-%% person's choice; respond_coldcall and respond_group_invite have one clause
-%% each, the acceptance, whose else-branch is the refusal, taken when the person
-%% wills no answer.  The clause or branch taken injects its answer, through a
-%% merge, into the agent's UserIn, where an ordinary agent clause carries it out
-%% on the agent's current state.
-%% respond_escrow_cancel is a responder with one clause and no sibling: the person
-%% may cancel an escrow they opened, or leave it to run to its release.
-%%
-%% Correspondence to the implementation (clause for clause):
-%%   - a *(X1..Xk) Request clause  ->  a UserCmd constructor over X1..Xk, the
-%%     mediator's pass-through, and the agent clause matching
-%%     msg(person, Id, cmd(X1..Xk));
-%%   - for the currency requests the mediator is not a pass-through: the compose
-%%     form carries scalar fields and the mediator packs them into the Lot the
-%%     deployed agent consumes.  That packing is part of the compilation, so
-%%     the question here carries the scalars the form does — this is why Pay is
-%%     *(Friend, Coin, Maturity, Amount) and the deployed clause matches
-%%     pay(Friend, GiveSpec);
-%%   - a responder goal, spawned per arriving offer  ->  a pending-table entry
-%%     req(N) in the mediator, rendered as an inbox card;
-%%   - a responder's volition-guarded clause, or a branch of it, injecting its
-%%     answer through the merge into UserIn  ->  the UserCmds decision/3, accept_trade/2,
-%%     reject_trade/2, accept_group/2, reject_group/2 and cancel_escrow/2 routing
-%%     the escrowed writer back to the agent; the agent's answer clauses below
-%%     match the deployed ones modulo the msg(person, Id, ...) wrapper and the
-%%     mediator's trade_pending / group_channel / escrow_pending packing of the
-%%     escrowed fields.
-%% The escrow vocabulary of the deployed AgentContent — befriend/2,
-%% trade_proposed/4, escrow_deposited/6 and the person-facing group_invite/2 —
-%% does not appear here: the machine's question to the person is not a message
-%% but a pending volition-guarded reduction.
-%%
-%% Three deployed clauses have no counterpart here, and each is a compilation
-%% artefact rather than a step of the program: the agent/7 shim, which opens the
-%% date stream for the plays and tests; the reject_group clause, because here the
-%% responder's else-branch writes the nack on the setup channel itself; and the
-%% cancel_escrow clause, because here the cancelling responder binds the cancel
-%% signal itself.  Each exists in the deployed program only because an answer has
-%% to reach the agent as a command through the mediator.
-%%
-%% Clause order follows the paper's remark "Ordering with otherwise": Request
-%% clauses (perpetually pending) follow every otherwise clause of the procedure
-%% — the compose clauses come last, after the catch-alls — and between
-%% volition-guarded siblings otherwise is not used.
-%%
-%% This file is vGLP, not GLP: the REPL does not load it (hence .vglp).  Its
-%% correctness argument is the clause-for-clause correspondence to the tested,
-%% deployed implementation in this directory.
-%%
-%% WHAT THIS FILE INHERITS.  Every type of self.glp, and every helper procedure
-%% of grassapp_agent.glp, is used here unchanged and is not restated — the rule,
-%% not a list, because a list goes stale and this one did.  Two helpers are the
-%% exception and are restated below, because the person's will reaches them:
-%% trade_dispatch, whose normal-trade clause spawns a responder instead of
-%% sending the offer to the mediator, and escrow_step, whose found clause spawns
-%% the cancel responder instead of handing the cancel signal to the mediator.
-%% AgentContent is restated because it loses the four ask constructors, and the
-%% types that carry it — AgentMsg, OutputEntry, OutputsList — with it.
+%% WHAT THIS FILE INHERITS.  The types of self.glp not restated below, and the
+%% transaction predicates of currency_txn.glp (create_bonds, append,
+%% select_bonds_by_spec, classify_trade, own_coins, build_menu), exposed by
+%% self.glp's -expose(currency_txn); merge/3 and new_channel/2 are the root's.
+%% The agent's own helpers are grassapp_agent.glp's, written here again so
+%% that the source compiles whole, Reqs? threaded through those that continue
+%% the agent.
 
 
-%% Agent-to-person content: self.glp's AgentContent minus the four asks
-%% (befriend/2, trade_proposed/4, escrow_deposited/6, group_invite/2).  Under
-%% vGLP the machine asks by a pending reduction, not by a message, so what is
-%% left is outcome and state — the screen.
+%% Agent-to-person content: self.glp's AgentContent less the four asks
+%% (befriend/2, trade_proposed/4, escrow_deposited/6, group_invite/2): the
+%% machine asks by a question, not by a message, so what is left is outcome
+%% and state — the screen.
 AgentContent ::= connected(Constant)
                ; unfriended(Constant)
                ; rejected
@@ -139,122 +77,125 @@ OutputEntry ::= person_output(Stream(AgentMsg)?)
               ; group_entry(GroupKey, Stream(GroupMsg)?).
 OutputsList ::= [] ; [OutputEntry|OutputsList].
 
-%% The offers the responders carry: the question the pending reduction poses.
+%% The agent's own input: the person's requests are its question, not
+%% messages, so UserIn carries the answers the responders inject and the
+%% results injected by inject_msg, inject_trade_result, the two
+%% inject_escrow_*_result and inject_group_result.  A position marked ? is
+%% written by the agent that reads the message.
+UserInMsg    ::= decision(Decision, Key, PendingValue)
+               ; accept_trade(Key, Lot, Stream(Bond), TradeResponse?)
+               ; reject_trade(Key, Stream(Bond), TradeResponse?)
+               ; accept_group(GroupId, Stream(GroupSetupResponse))
+               ; response(Key, Response)
+               ; trade_complete(Constant, Stream(Bond))
+               ; trade_returned_bonds(Constant, Stream(Bond))
+               ; trade_returned_bonds_menu(Constant, Stream(Bond), Stream(Bond))
+               ; escrow_dep_expired(Constant)
+               ; escrow_dep_returned(Constant, Stream(Bond))
+               ; escrow_ben_released(Constant, Stream(Bond))
+               ; escrow_ben_cancelled(Constant)
+               ; group_join_ack(GroupId, Key, Channel(Stream(Handshake), Stream(GroupSetupResponse)))
+               ; group_join_nack(GroupId, Key).
+UserInStream ::= [] ; [UserInMsg | UserInStream].
+
+%% =============================================================================
+%% The questions (vGLP, Definition "Volitional Procedure, Interactive Type,
+%% ..."): the person's requests, the agent's interactive type in reader mode,
+%% and the responders' cards, in writer mode.
+%% =============================================================================
+
+%% A request: one alternative per request clause of the agent --- the seven
+%% currency transactions, the three social ones and the five of groups ---
+%% with the arguments its clause reads, a lot as its three scalars.
+Request ::= mint(Integer, Constant)
+          ; advance_date(Constant)
+          ; balance
+          ; pay(Key, Key, Constant, Integer)
+          ; trade(Key, Key, Constant, Integer, Key, Constant, Integer)
+          ; redeem(Key, Key, Constant, Integer, Key, Constant, Integer)
+          ; deposit_escrow(Key, Key, Constant, Integer, Constant)
+          ; connect(Key)
+          ; unfriend(Key)
+          ; send(Key, Constant)
+          ; create_group(Constant)
+          ; invite_group(GroupId, Key)
+          ; send_group(GroupId, Constant)
+          ; leave_group(GroupId)
+          ; remove_from_group(GroupId, Key).
+
+%% The offers the responders carry, and their cards: the offer, which the
+%% agent writes for the person to see, and the person's answer.
 ColdCallOffer    ::= offer(Constant).
 TradeOffer       ::= offer(Constant, Lot, Stream(Bond)).
 GroupInviteOffer ::= offer(GroupId).
 EscrowOffer      ::= offer(Constant).
+ColdCallCard     ::= card(ColdCallOffer, Decision?).
+TradeCard        ::= card(TradeOffer, Decision?).
+GroupInviteCard  ::= card(GroupInviteOffer, Decision?).
+EscrowCard       ::= card(EscrowOffer, EscrowCancel?).
 
 %% =============================================================================
-%% RESPONDERS — one goal per arriving offer; the volition-guarded clauses live
-%% here, so offers pend concurrently and are answered in any order.
+%% RESPONDERS — one goal per arriving offer, so offers pend concurrently and
+%% are answered in any order.
 %% =============================================================================
 
-procedure respond_coldcall(ColdCallOffer?, Response, Stream(X)).
+procedure (ColdCallCard)*respond_coldcall(ColdCallOffer?, Response, UserInStream).
 
-%% Accept a friend offer.  The else-branch is the refusal, taken when the
-%% person wills no answer: the caller is answered no, which bind_response
-%% acts on.
-*(Answer=yes, From?)
-respond_coldcall(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
-    ground(From?) | true
- *(no) true.
+%% Show the person the peer who offers friendship, and pass their answer on.
+(card(offer(From?), Answer))*respond_coldcall(offer(From), Resp?, Ans?) :-
+    ground(From?) |
+    decide_coldcall(Answer?, From?, Resp, Ans).
 
-procedure respond_trade(TradeOffer?, TradeResponse, Stream(X)).
+%% yes accepts and no refuses: the caller is answered by bind_response.
+procedure decide_coldcall(Decision?, Constant?, Response, UserInStream).
+decide_coldcall(yes, From, Resp?, [decision(yes, From?, response(Resp))]).
+decide_coldcall(no, From, Resp?, [decision(no, From?, response(Resp))]).
 
-%% Accept a proposed swap: the agent's answer clause gives the want-bonds and
-%% takes the offered ones (declining itself if the want-bonds are not held).
-*(yes, From?, WantSpec?, OfferedBonds?)
-respond_trade(offer(From, WantSpec, OfferedBonds), TradeResp?,
-    [accept_trade(From?, WantSpec?, OfferedBonds?, TradeResp)]) :-
-    ground(From?), ground(WantSpec?), ground(OfferedBonds?) | true.
+procedure (TradeCard)*respond_trade(TradeOffer?, TradeResponse, UserInStream).
 
-%% Decline: the offered bonds go back to the proposer.
-*(no, From?, WantSpec?, OfferedBonds?)
-respond_trade(offer(From, WantSpec, OfferedBonds), TradeResp?,
-    [reject_trade(From?, OfferedBonds?, TradeResp)]) :-
-    ground(From?), ground(WantSpec?), ground(OfferedBonds?) | true.
+%% Show the person the proposed swap: who proposes, what is wanted and what is
+%% offered; and pass their answer on.
+(card(offer(From?, WantSpec?, OfferedBonds?), Answer))*respond_trade(offer(From, WantSpec, OfferedBonds), TradeResp?, Ans?) :-
+    ground(From?), ground(WantSpec?), ground(OfferedBonds?) |
+    decide_trade(Answer?, From?, WantSpec?, OfferedBonds?, TradeResp, Ans).
 
-procedure respond_group_invite(Key?, GroupInviteOffer?, Channel(Stream(GroupSetupResponse), Stream(Handshake))?, Stream(X)).
+%% yes accepts: the agent's answer clause gives the want-bonds and takes the
+%% offered ones (declining itself if the want-bonds are not held).  no
+%% declines: the offered bonds go back to the proposer.
+procedure decide_trade(Decision?, Constant?, Lot?, Stream(Bond)?, TradeResponse, UserInStream).
+decide_trade(yes, From, WantSpec, OfferedBonds, TradeResp?, [accept_trade(From?, WantSpec?, OfferedBonds?, TradeResp)]).
+decide_trade(no, From, _, OfferedBonds, TradeResp?, [reject_trade(From?, OfferedBonds?, TradeResp)]).
 
-%% Accept a group invitation: ack on the setup channel, hand the read side to
-%% the agent to await the group channel from the hub.  The else-branch is the
-%% refusal, taken when the person wills no answer: nack on the setup channel,
-%% which closes it, and nothing injected.  The two branches share the head, so
-%% each builds its answer in its body.
-*(yes, GroupId?)
-respond_group_invite(Id, offer(GroupId), Ch, Ans?) :-
+procedure (GroupInviteCard)*respond_group_invite(Key?, GroupInviteOffer?, Channel(Stream(GroupSetupResponse), Stream(Handshake))?, UserInStream).
+
+%% Show the person the group they are invited to, and pass their answer on.
+(card(offer(GroupId?), Answer))*respond_group_invite(Id, offer(GroupId), Ch, Ans?) :-
     ground(Id?), ground(GroupId?) |
-    accept_group_invite(Id?, GroupId?, Ch?, Ans)
- *(no) decline_group_invite(Ch?, Ans).
+    decide_group(Answer?, Id?, GroupId?, Ch?, Ans).
 
-%% The two answers, as the heads of the two clauses built them.
-procedure accept_group_invite(Key?, GroupId?, Channel(Stream(GroupSetupResponse), Stream(Handshake))?, Stream(X)).
+%% yes accepts: ack on the setup channel, and the read side to the agent to
+%% await the group channel from the hub.  no declines: nack on the setup
+%% channel, which closes it, and nothing injected.
+procedure decide_group(Decision?, Key?, GroupId?, Channel(Stream(GroupSetupResponse), Stream(Handshake))?, UserInStream).
+decide_group(yes, Id, GroupId, Ch, Ans?) :- accept_group_invite(Id?, GroupId?, Ch?, Ans).
+decide_group(no, _, _, Ch, Ans?) :- decline_group_invite(Ch?, Ans).
+
+procedure accept_group_invite(Key?, GroupId?, Channel(Stream(GroupSetupResponse), Stream(Handshake))?, UserInStream).
 accept_group_invite(Id, GroupId, ch(ChRead, [ack(Id?)|[]]), [accept_group(GroupId?, ChRead?)]).
-procedure decline_group_invite(Channel(Stream(GroupSetupResponse), Stream(Handshake))?, Stream(X)).
+procedure decline_group_invite(Channel(Stream(GroupSetupResponse), Stream(Handshake))?, UserInStream).
 decline_group_invite(ch(_, [nack|[]]), []).
 
-procedure respond_escrow_cancel(EscrowOffer?, EscrowCancel).
+procedure (EscrowCard)*respond_escrow_cancel(EscrowOffer?, EscrowCancel).
 
-%% Cancel an escrow I opened, before its release time.  One volition-guarded
-%% clause, so one button and no sibling: unanswered, the escrow runs to release.
-%% The clause binds the cancel signal, which is what wins the race in escrow/6.
-*(Answer=cancel, Target?)
-respond_escrow_cancel(offer(Target), Answer?) :-
-    ground(Target?) | true.
+%% Show the person the escrow they opened, for them to cancel before its
+%% release time: the one answer, cancel, binds the cancel signal, which is
+%% what wins the race in escrow/6; unanswered, the escrow runs to release.
+(card(offer(Target?), Answer))*respond_escrow_cancel(offer(Target), Cancel?) :-
+    ground(Target?) |
+    decide_cancel(Answer?, Cancel).
 
-%% =============================================================================
-%% THE TWO HELPERS THE PERSON'S WILL REACHES
-%% =============================================================================
-
-%% Classify an incoming proposal.  Payment and redemption are settled by the
-%% program; only the normal trade is a question for the person, and it spawns a
-%% responder rather than sending the offer to the mediator.
-procedure trade_dispatch(TradeClass?, Key?, Key?, Lot?, Stream(Bond)?, TradeResponse,
-    Stream(Bond)?, Integer?, Constant?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Constant)).
-
-%% Payment — auto-accept (proposer gives, wants nothing).
-trade_dispatch(payment, Id, From, _, OfferedBonds, trade_accept([]),
-    Holdings, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
-    append(Holdings?, OfferedBonds?, NewHoldings),
-    send_person(msg(agent, person, trade_completed(From?)), Outs?, Outs1),
-    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?, DateW).
-
-%% Redemption — the issuer must fulfil: auto-accept with the requested bonds,
-%% or decline with a menu of what it does hold.
-trade_dispatch(redemption, Id, From, WantSpec, OfferedBonds, TradeResp?,
-    Holdings, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
-    select_bonds_by_spec([WantSpec?], Holdings?, Status, Selected, Remaining),
-    redemption_result(Status?, Id?, From?, TradeResp, OfferedBonds?, Selected?, Remaining?,
-        NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
-
-%% Normal trade — spawn a responder; the offer pends until the person answers.
-trade_dispatch(normal, Id, From, WantSpec, OfferedBonds, TradeResp?,
-    Holdings, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
-    respond_trade(offer(From?, WantSpec?, OfferedBonds?), TradeResp, Ans),
-    merge(Ans?, UserIn?, UserIn1),
-    agent(Id?, UserIn1?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?, DateW).
-
-%% Open the escrow where the beneficiary is a friend (GSG Section 5.1; the
-%% lookup is do_deposit_escrow_result's, grassapp_agent.glp).  The cancel signal
-%% is the person's to bind, so it goes to a responder rather than to the
-%% mediator's pending table.  Where the beneficiary is not a friend no escrow is
-%% opened and no responder spawned: the offer is not sent, the person is told
-%% not_a_friend(Target), the selected bonds stay in the holdings, and the
-%% agent's date stream goes on.
-procedure escrow_step(AnchorFriend?, Key?, Key?, Constant?, Constant?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)?, Integer?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
-escrow_step(found(_), Id, Target, ReleaseTime, Coin, Maturity, Amount, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs, []) :-
-    escrow(ReleaseTime?, EscrowDates?, Selected?, CancelSignal?, BenResult, DepResult),
-    respond_escrow_cancel(offer(Target?), CancelSignal),
-    inject_escrow_dep_result(DepResult?, Target?, UserIn?, UserIn1),
-    lookup_send(Target?,
-        msg(Id?, Target?, escrow_offer(ReleaseTime?, Coin?, Maturity?, Amount?, BenResult?)),
-        Outs?, Outs1),
-    after_change(Id?, Remaining?, NextSerial?, Clock?, UserIn1?, NetIn?, Outs1?, EscrowDates).
-escrow_step(none, Id, Target, _, _, _, _, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
-    append(Selected?, Remaining?, OrigHoldings),
-    send_person(msg(agent, person, not_a_friend(Target?)), Outs?, Outs1),
-    after_change(Id?, OrigHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?, DateW).
+procedure decide_cancel(EscrowCancel?, EscrowCancel).
+decide_cancel(cancel, cancel).
 
 %% =============================================================================
 %% AGENT/8 — the main loop.  Argument 8 is the agent's own date as a stream, so
@@ -262,350 +203,879 @@ escrow_step(none, Id, Target, _, _, _, _, Selected, Remaining, NextSerial, Clock
 %% deposit path opens a fresh channel onto it.
 %% =============================================================================
 
-procedure agent(Key?, UserInStream?, NetInStream?, OutputsList?, Stream(Bond)?, Integer?, Constant?, Stream(Constant)).
+%% agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW): the
+%% agent's identity, its own input, the network input, its outputs, its
+%% holdings, the serial its next bond takes, its own date, and that date as a
+%% stream.  Its question is the stream of the person's requests.
+procedure (Stream(Request)?)*agent(Key?, UserInStream?, NetInStream?, OutputsList?, Stream(Bond)?, Integer?, Constant?, Stream(Constant)).
+
+%% Ask the person for their requests, once, and serve them.
+(Reqs)*agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?, DateW).
+
+%% serve(Reqs, Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW):
+%% the agent, with the rest of the person's requests.
+procedure serve(Stream(Request)?, Key?, UserInStream?, NetInStream?, OutputsList?, Stream(Bond)?, Integer?, Constant?, Stream(Constant)).
 
 %% --- Reactive: network messages ---
 
 %% A peer cold-calls me: spawn a responder — the offer pends until the person
 %% answers; the answer is merged into UserIn.
-agent(Id, UserIn, [msg(Id1, friend_request(From, Resp?))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve(Reqs, Id, UserIn, [msg(Id1, friend_request(From, Resp?))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1? |
     respond_coldcall(offer(From?), Resp, Ans),
     merge(Ans?, UserIn?, UserIn1),
-    agent(Id?, UserIn1?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?, DateW).
+    serve(Reqs?, Id?, UserIn1?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% A peer answered my cold call.
-agent(Id, UserIn, [msg(From, Id1, response(Resp))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve(Reqs, Id, UserIn, [msg(From, Id1, response(Resp))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1? |
     handle_response(Resp?, From?, Outs?, Outs1, NetIn?, NetIn1),
-    agent(Id?, UserIn?, NetIn1?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
+    serve(Reqs?, Id?, UserIn?, NetIn1?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% A friend messages me.
-agent(Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve(Reqs, Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1? |
     send_person(msg(agent, person, received(From?, Text?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% A friend pays me bonds.  Def 3.2: a coin is a bond mature at its issuer's own
 %% date, so a valid Pay carries my own coins.  I take them only when EVERY
 %% offered bond is a coin of mine; otherwise it is a swap, and I return the lot.
-agent(Id, UserIn, [msg(From, Id1, coins(Bonds))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve(Reqs, Id, UserIn, [msg(From, Id1, coins(Bonds))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(From?), ground(Bonds?) |
     own_coins(Id?, Clock?, Bonds?, AllCoins),
-    take_payment(AllCoins?, Id?, From?, Bonds?, Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
+    take_payment(AllCoins?, Id?, From?, Bonds?, Holdings?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs?, DateW).
 
 %% A friend proposes a trade (or presents my own bonds for redemption).
-agent(Id, UserIn, [msg(From, Id1, trade_propose(WantSpec, OfferedBonds, TradeResp?))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve(Reqs, Id, UserIn, [msg(From, Id1, trade_propose(WantSpec, OfferedBonds, TradeResp?))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(From?), ground(WantSpec?), ground(OfferedBonds?) |
     classify_trade(Id?, Clock?, [WantSpec?], OfferedBonds?, TradeClass),
     trade_dispatch(TradeClass?, Id?, From?, WantSpec?, OfferedBonds?, TradeResp,
-        Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
+        Holdings?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs?, DateW).
 
 %% A friend opened an escrow for me: watch its outcome, tell the person.
-agent(Id, UserIn, [msg(From, Id1, escrow_offer(ReleaseTime, Coin, Maturity, Amount, BenResult))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve(Reqs, Id, UserIn, [msg(From, Id1, escrow_offer(ReleaseTime, Coin, Maturity, Amount, BenResult))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(From?), ground(ReleaseTime?),
     ground(Coin?), ground(Maturity?), ground(Amount?) |
     inject_escrow_ben_result(BenResult?, From?, UserIn?, UserIn1),
     send_person(msg(agent, person, escrow_received(From?, ReleaseTime?, Coin?, Maturity?, Amount?)),
         Outs?, Outs1),
-    agent(Id?, UserIn1?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
+    serve(Reqs?, Id?, UserIn1?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% A friend unfriended me (Integrate unfriend): drop the channel, tell the person.
-agent(Id, UserIn, [msg(From, Id1, unfriend)|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve(Reqs, Id, UserIn, [msg(From, Id1, unfriend)|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(From?) |
     drop_friend(From?, Outs?, Outs1),
     send_person(msg(agent, person, unfriended(From?)), Outs1?, Outs2),
-    agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% A friend publishes their holdings: report them as that friend's balances.
-agent(Id, UserIn, [msg(From, Id1, balances(FH))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve(Reqs, Id, UserIn, [msg(From, Id1, balances(FH))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(From?), ground(FH?) |
     emit_balances(From?, FH?, Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% A friend invites me to a group: spawn a responder — the invite pends until
 %% the person answers; the answer is merged into UserIn.
-agent(Id, UserIn, [msg(_, Id1, group_invite(GroupId, Ch))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve(Reqs, Id, UserIn, [msg(_, Id1, group_invite(GroupId, Ch))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(GroupId?) |
     respond_group_invite(Id?, offer(GroupId?), Ch?, Ans),
     merge(Ans?, UserIn?, UserIn1),
-    agent(Id?, UserIn1?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?, DateW).
+    serve(Reqs?, Id?, UserIn1?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% A group message arrives — distribute to members (hub side), show the person.
-agent(Id, UserIn, [msg(_, _, group_msg(GroupId, Author, Text))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve(Reqs, Id, UserIn, [msg(_, _, group_msg(GroupId, Author, Text))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(GroupId?), ground(Author?), ground(Text?) |
     distribute_group_msg(GroupId?, msg(Author?, Author?, group_msg(GroupId?, Author?, Text?)), Outs?, Outs1),
     send_person(msg(agent, person, group_received(GroupId?, Author?, Text?)), Outs1?, Outs2),
-    agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% A member left my group — close their hub-side entry.
-agent(Id, UserIn, [msg(Member, _, group_leave(GroupId, Member1))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve(Reqs, Id, UserIn, [msg(Member, _, group_leave(GroupId, Member1))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(GroupId?), ground(Member?), Member? =?= Member1? |
     close_output(group_member(GroupId?, Member?), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% The creator removed me from a group — close my member entry, tell the person.
-agent(Id, UserIn, [msg(_, _, group_removed(GroupId))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve(Reqs, Id, UserIn, [msg(_, _, group_removed(GroupId))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(GroupId?) |
     close_output(group(GroupId?), Outs?, Outs1),
     send_person(msg(agent, person, group_removed(GroupId?)), Outs1?, Outs2),
-    agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% Network catch-all (drop unrecognised network message).
-agent(Id, UserIn, [_|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve(Reqs, Id, UserIn, [_|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), otherwise |
-    agent(Id?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?, DateW).
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?, DateW).
 
-%% --- Reactive: responder answers and injected results on UserIn.  UserIn does
-%% not carry the person's commands — those are grants; it carries the answers the
-%% responders inject and the results injected by inject_msg, inject_trade_result
-%% and the two inject_escrow_*_result. ---
+%% --- Reactive: responder answers and injected results on UserIn ---
 
 %% The person answered a friend offer (injected by respond_coldcall).
-agent(Id, [decision(Dec, From, response(Resp?))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve(Reqs, Id, [decision(Dec, From, response(Resp?))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?) |
     bind_response(Dec?, From?, Resp, Outs?, Outs1, NetIn?, NetIn1),
-    agent(Id?, UserIn?, NetIn1?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
+    serve(Reqs?, Id?, UserIn?, NetIn1?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% The person accepted a proposed trade (injected by respond_trade): give the
 %% want-bonds, take the offered ones.
-agent(Id, [accept_trade(From, WantSpec, OfferedBonds, TradeResp?)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve(Reqs, Id, [accept_trade(From, WantSpec, OfferedBonds, TradeResp?)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(From?), ground(WantSpec?), ground(OfferedBonds?) |
     select_bonds_by_spec([WantSpec?], Holdings?, Status, Selected, Remaining),
-    handle_trade_fill(Status?, Id?, From?, TradeResp, OfferedBonds?, Selected?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
+    handle_trade_fill(Status?, Id?, From?, TradeResp, OfferedBonds?, Selected?, Remaining?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs?, DateW).
 
 %% The person declined a proposed trade.
-agent(Id, [reject_trade(From, OfferedBonds, TradeResp?)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve(Reqs, Id, [reject_trade(From, OfferedBonds, TradeResp?)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(From?), ground(OfferedBonds?) |
     bind_trade_decline(TradeResp, OfferedBonds?),
     send_person(msg(agent, person, trade_failed(From?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% The person accepted a group invitation (injected by respond_group_invite):
 %% await the group channel from the hub.
-agent(Id, [accept_group(GroupId, ChRead)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve(Reqs, Id, [accept_group(GroupId, ChRead)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(GroupId?) |
-    await_group_channel(Id?, GroupId?, ChRead?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?, DateW).
+    await_group_channel(Id?, GroupId?, ChRead?, Reqs?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% My cold call was answered (injected by inject_msg).
-agent(Id, [response(From, Resp)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve(Reqs, Id, [response(From, Resp)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?) |
     handle_response(Resp?, From?, Outs?, Outs1, NetIn?, NetIn1),
-    agent(Id?, UserIn?, NetIn1?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
+    serve(Reqs?, Id?, UserIn?, NetIn1?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% Proposer: my trade was accepted — take the bonds they gave.
-agent(Id, [trade_complete(From, TheirBonds)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve(Reqs, Id, [trade_complete(From, TheirBonds)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(From?), ground(TheirBonds?) |
     append(Holdings?, TheirBonds?, NewHoldings),
     send_person(msg(agent, person, trade_completed(From?)), Outs?, Outs1),
-    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?, DateW).
+    after_change(Id?, NewHoldings?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs1?, DateW).
 
 %% Proposer: my trade was declined — take my bonds back.
-agent(Id, [trade_returned_bonds(From, OurBonds)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve(Reqs, Id, [trade_returned_bonds(From, OurBonds)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(From?), ground(OurBonds?) |
     append(Holdings?, OurBonds?, NewHoldings),
     send_person(msg(agent, person, trade_returned(From?)), Outs?, Outs1),
-    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?, DateW).
+    after_change(Id?, NewHoldings?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs1?, DateW).
 
 %% Proposer: redemption declined with a menu of what the issuer holds.
-agent(Id, [trade_returned_bonds_menu(From, OurBonds, Menu)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve(Reqs, Id, [trade_returned_bonds_menu(From, OurBonds, Menu)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(From?), ground(OurBonds?), ground(Menu?) |
     append(Holdings?, OurBonds?, NewHoldings),
     send_person(msg(agent, person, trade_returned_menu(From?, Menu?)), Outs?, Outs1),
-    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?, DateW).
+    after_change(Id?, NewHoldings?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs1?, DateW).
 
 %% Depositor: the release time won — the bonds went to the beneficiary.
-agent(Id, [escrow_dep_expired(Target)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve(Reqs, Id, [escrow_dep_expired(Target)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(Target?) |
     send_person(msg(agent, person, escrow_expired(Target?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% Depositor: the cancel won — the bonds come home.
-agent(Id, [escrow_dep_returned(Target, OurBonds)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve(Reqs, Id, [escrow_dep_returned(Target, OurBonds)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(Target?), ground(OurBonds?) |
     append(Holdings?, OurBonds?, NewHoldings),
     send_person(msg(agent, person, escrow_returned(Target?)), Outs?, Outs1),
-    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?, DateW).
+    after_change(Id?, NewHoldings?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs1?, DateW).
 
 %% Beneficiary: released — take the bonds.
-agent(Id, [escrow_ben_released(From, Bonds)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve(Reqs, Id, [escrow_ben_released(From, Bonds)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(From?), ground(Bonds?) |
     append(Holdings?, Bonds?, NewHoldings),
     send_person(msg(agent, person, escrow_released(From?)), Outs?, Outs1),
-    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?, DateW).
+    after_change(Id?, NewHoldings?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs1?, DateW).
 
 %% Beneficiary: the depositor cancelled.
-agent(Id, [escrow_ben_cancelled(From)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve(Reqs, Id, [escrow_ben_cancelled(From)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(From?) |
     send_person(msg(agent, person, escrow_cancelled(From?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% Injected group_join_ack (by inject_group_result): creator wires the member's
 %% hub side and hands over the member's group channel.
-agent(Id, [group_join_ack(GroupId, Invitee, ch(_, [group_channel(MemberEnd?)|[]]))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve(Reqs, Id, [group_join_ack(GroupId, Invitee, ch(_, [group_channel(MemberEnd?)|[]]))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(GroupId?), ground(Invitee?) |
     setup_group_hub_side(GroupId?, Invitee?, Outs?, Outs1, NetIn?, NetIn1, MemberEnd),
     send_person(msg(agent, person, group_joined_member(GroupId?, Invitee?)), Outs1?, Outs2),
-    agent(Id?, UserIn?, NetIn1?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
+    serve(Reqs?, Id?, UserIn?, NetIn1?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% Injected group_join_nack — nothing to do.
-agent(Id, [group_join_nack(_, _)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve(Reqs, Id, [group_join_nack(_, _)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?) |
-    agent(Id?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?, DateW).
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% Injection catch-all (drop unrecognised injected message).
-agent(Id, [_|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve(Reqs, Id, [_|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), otherwise |
-    agent(Id?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?, DateW).
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?, DateW).
 
-%% --- Volitional: currency transactions the person originates ---
-%% Request clauses, perpetually pending, placed after every otherwise clause
-%% (remark "Ordering with otherwise"); each willing supplies the parameters.
-%% Compiled form: UserCmds mint/2, advance_date/1, balance/0, pay/4, trade/7,
-%% redeem/7, deposit_escrow/5.
+%% --- Volitional: the person's requests, one clause per alternative of
+%% Request, each reading its request at the head of the person's stream,
+%% after every otherwise clause of the procedure ---
 
 %% Mint K bonds of my own at Maturity (Maturity 0 = cash).
-*(K, Maturity)
-agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve([mint(K, Maturity)|Reqs], Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(K?), ground(Maturity?) |
     NewNextSerial := NextSerial? + K?,
     create_bonds(Id?, Maturity?, K?, NextSerial?, NewBonds),
     append(Holdings?, NewBonds?, NewHoldings),
-    after_change(Id?, NewHoldings?, NewNextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
+    after_change(Id?, NewHoldings?, NewNextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs?, DateW).
 
-%% Advance my own local date.  The deployed agent takes this from the person as a
-%% command, so it is a request clause here; the paper's Definition of the bonds
+%% Advance my own local date.  The deployed agent takes this from the person as
+%% a command, so it is a request here; the paper's Definition of the bonds
 %% transactions calls Advance-date unguarded.
-*(D)
-agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, [D?|DateW1?]) :-
+serve([advance_date(D)|Reqs], Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, [D?|DateW1?]) :-
     ground(Id?), ground(D?), D? > Clock? |
     send_person(msg(agent, person, date_advanced(D?)), Outs?, Outs1),
-    after_change(Id?, Holdings?, NextSerial?, D?, UserIn?, NetIn?, Outs1?, DateW1).
+    after_change(Id?, Holdings?, NextSerial?, D?, Reqs?, UserIn?, NetIn?, Outs1?, DateW1).
 
-%% Report current balances on demand.  The empty question: one button, no fields.
-*
-agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+%% Report current balances on demand.
+serve([balance|Reqs], Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(Holdings?) |
     emit_balances(Id?, Holdings?, Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% Pay a friend Amount bonds of Coin maturing at Maturity.  The payer does not
 %% test maturity — Def 3.2 makes it the issuer's call on receipt.
-*(Friend, Coin, Maturity, Amount)
-agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve([pay(Friend, Coin, Maturity, Amount)|Reqs], Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(Friend?), ground(Coin?), ground(Maturity?), ground(Amount?) |
     select_bonds_by_spec([lot(Coin?, Maturity?, Amount?)], Holdings?, Status, Selected, Remaining),
-    do_pay(Status?, Id?, Friend?, Selected?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
+    do_pay(Status?, Id?, Friend?, Selected?, Remaining?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs?, DateW).
 
 %% Propose a trade: the maturity-carrying swap, of which a loan is an instance.
-*(Friend, GiveCoin, GiveMaturity, GiveAmount, WantCoin, WantMaturity, WantAmount)
-agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve([trade(Friend, GiveCoin, GiveMaturity, GiveAmount, WantCoin, WantMaturity, WantAmount)|Reqs], Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(Friend?),
     ground(GiveCoin?), ground(GiveMaturity?), ground(GiveAmount?),
     ground(WantCoin?), ground(WantMaturity?), ground(WantAmount?) |
     do_trade(Id?, Friend?, lot(GiveCoin?, GiveMaturity?, GiveAmount?),
              lot(WantCoin?, WantMaturity?, WantAmount?),
-             Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
+             Holdings?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs?, DateW).
 
 %% Redeem: present a friend's bonds and name what I want back; the issuer must
 %% fulfil, judging maturity by its own date.
-*(Friend, GiveCoin, GiveMaturity, GiveAmount, WantCoin, WantMaturity, WantAmount)
-agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve([redeem(Friend, GiveCoin, GiveMaturity, GiveAmount, WantCoin, WantMaturity, WantAmount)|Reqs], Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(Friend?),
     ground(GiveCoin?), ground(GiveMaturity?), ground(GiveAmount?),
     ground(WantCoin?), ground(WantMaturity?), ground(WantAmount?) |
     do_redeem(Id?, Friend?, lot(GiveCoin?, GiveMaturity?, GiveAmount?),
               lot(WantCoin?, WantMaturity?, WantAmount?),
-              Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
+              Holdings?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs?, DateW).
 
 %% Deposit an escrow: lock bonds for a friend until ReleaseTime, cancellable
-%% until then by the responder escrow_step spawns.
-*(Friend, Coin, Maturity, Amount, ReleaseTime)
-agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+%% until then by the responder escrow_step spawns.  DateW is the agent's date
+%% stream: an opened or failed deposit closes it, a deposit not sent leaves it
+%% to the agent (do_deposit_escrow, grassapp_agent.glp).
+serve([deposit_escrow(Friend, Coin, Maturity, Amount, ReleaseTime)|Reqs], Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(Friend?),
     ground(Coin?), ground(Maturity?), ground(Amount?), ground(ReleaseTime?) |
     do_deposit_escrow(Id?, Friend?, lot(Coin?, Maturity?, Amount?), ReleaseTime?,
-                      Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
-
-%% --- Volitional: social transactions the person originates ---
-%% Compiled form: UserCmds connect/1, unfriend/1, send/2.
+                      Holdings?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs?, DateW).
 
 %% Offer friendship by cold call.
-*(Target)
-agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve([connect(Target)|Reqs], Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(Target?) |
     send_net(msg(Target?, friend_request(Id?, Resp)), Outs?, Outs1),
     inject_msg(Resp?, Target?, UserIn?, UserIn1),
-    agent(Id?, UserIn1?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
+    serve(Reqs?, Id?, UserIn1?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% Unfriend (End friend): tear down the friend channel, sending a final
 %% `unfriend` over it, and tell the person the friend is gone.
-*(Friend)
-agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve([unfriend(Friend)|Reqs], Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(Friend?) |
     end_friend(Friend?, Id?, Outs?, Outs1),
     send_person(msg(agent, person, unfriended(Friend?)), Outs1?, Outs2),
-    agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% Message a friend: a message the person addresses to someone who is not
 %% their friend is not sent, and the agent tells the person so (GSG Section
-%% 5.1): the lookup of the outputs list and the dispatch on its answer
-%% (anchor_friend/4 and send_step/6, grassapp_agent.glp).
-*(Target, Text)
-agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+%% 5.1): the lookup of the outputs list and the dispatch on its answer.
+serve([send(Target, Text)|Reqs], Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(Target?) |
     anchor_friend(Target?, Outs?, Outs1, F),
     send_step(F?, Id?, Target?, Text?, Outs1?, Outs2),
-    agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
-
-%% --- Volitional: group transactions the person originates ---
-%% Compiled form: UserCmds create_group/1, invite_group/2, send_group/2,
-%% leave_group/1, remove_from_group/2.
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% Create a group — set up the creator's hub-side link.
-*(Name)
-agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve([create_group(Name)|Reqs], Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(Name?) |
     setup_group_creator(group_id(Id?, Name?), Outs?, Outs1, NetIn?, NetIn1),
     send_person(msg(agent, person, group_joined(group_id(Id?, Name?))), Outs1?, Outs2),
-    agent(Id?, UserIn?, NetIn1?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
+    serve(Reqs?, Id?, UserIn?, NetIn1?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% Invite a friend to a group: an invitation the person addresses to someone who
 %% is not their friend is not sent, and the agent tells the person so (GSG
 %% Section 5.1): the lookup of the outputs list and the dispatch on its answer
-%% (anchor_friend/4 and invite_step/8, grassapp_agent.glp).
-*(GroupId, Invitee)
-agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+%% (anchor_friend/4 and invite_step/8).
+serve([invite_group(GroupId, Invitee)|Reqs], Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(GroupId?), ground(Invitee?) |
     anchor_friend(Invitee?, Outs?, Outs1, F),
     invite_step(F?, Id?, GroupId?, Invitee?, UserIn?, Outs1?, Outs2, UserIn1),
-    agent(Id?, UserIn1?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
+    serve(Reqs?, Id?, UserIn1?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% Post to a group — send on the member-to-hub channel.
-*(GroupId, Text)
-agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve([send_group(GroupId, Text)|Reqs], Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(GroupId?), ground(Text?) |
     lookup_send_group(group(GroupId?), msg(Id?, Id?, group_msg(GroupId?, Id?, Text?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% Leave a group.
-*(GroupId)
-agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve([leave_group(GroupId)|Reqs], Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(GroupId?) |
     lookup_send_group(group(GroupId?), msg(Id?, Id?, group_leave(GroupId?, Id?)), Outs?, Outs1),
     close_output(group(GroupId?), Outs1?, Outs2),
     send_person(msg(agent, person, group_left(GroupId?)), Outs2?, Outs3),
-    agent(Id?, UserIn?, NetIn?, Outs3?, Holdings?, NextSerial?, Clock?, DateW).
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs3?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% Remove a member from an owned group.
-*(GroupId, Member)
-agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+serve([remove_from_group(GroupId, Member)|Reqs], Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(GroupId?), ground(Member?) |
     lookup_send_group(group_member(GroupId?, Member?), msg(Id?, Member?, group_removed(GroupId?)), Outs?, Outs1),
     close_output(group_member(GroupId?, Member?), Outs1?, Outs2),
-    agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% --- Termination ---
 
-agent(_, [], _, Outs, _, _, _, []) :- close_outputs(Outs?).
-agent(_, _, [], Outs, _, _, _, []) :- close_outputs(Outs?).
+serve(_, _, [], _, Outs, _, _, _, []) :- close_outputs(Outs?).
+serve(_, _, _, [], Outs, _, _, _, []) :- close_outputs(Outs?).
+
+%% =============================================================================
+%% ROUTING (grassapp_agent.glp's)
+%% =============================================================================
+
+procedure lookup_send(Key?, OutputMsg?, OutputsList?, OutputsList).
+lookup_send(Key, Msg, Outs, Outs1?) :-
+    ground(Key?) |
+    lookup_send_step(Key?, Msg?, Outs?, Outs1).
+
+procedure lookup_send_step(Key?, OutputMsg?, OutputsList?, OutputsList).
+lookup_send_step(Key, Msg, [output(K, [Msg?|Out1?])|Rest], [output(K?, Out1)|Rest?]) :-
+    Key? =?= K? | true.
+lookup_send_step(Key, Msg, [person_output(Out?)|Rest], [person_output(Out)|Rest1?]) :-
+    lookup_send_step(Key?, Msg?, Rest?, Rest1).
+lookup_send_step(Key, Msg, [net_output(Out?)|Rest], [net_output(Out)|Rest1?]) :-
+    lookup_send_step(Key?, Msg?, Rest?, Rest1).
+lookup_send_step(Key, Msg, [group_entry(GK, Out?)|Rest], [group_entry(GK?, Out)|Rest1?]) :-
+    lookup_send_step(Key?, Msg?, Rest?, Rest1).
+lookup_send_step(Key, Msg, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
+    otherwise |
+    lookup_send_step(Key?, Msg?, Rest?, Rest1).
+lookup_send_step(_, _, [], []).
+
+%% anchor_friend(Key, Outs, Outs1, F): found(Key) where the outputs list holds a
+%% friend entry output(Key, ...), none where it holds none; the outputs passed
+%% through.
+procedure anchor_friend(Key?, OutputsList?, OutputsList, AnchorFriend).
+anchor_friend(Key, [output(K, Out?) | Rest], [output(K?, Out) | Rest?], found(K?)) :-
+    Key? =?= K? | true.
+anchor_friend(Key, [E | Rest], [E? | Rest1?], F?) :-
+    otherwise | anchor_friend(Key?, Rest?, Rest1, F).
+anchor_friend(_, [], [], none).
+
+%% send_step(F, ...): the person's message, dispatched on the lookup of the
+%% outputs list (GSG Section 5.1).  Where Target has a friend output entry the
+%% message is sent on the friend channel; where it has none the message is not
+%% sent, and the person is told not_a_friend(Target).
+procedure send_step(AnchorFriend?, Key?, Key?, Constant?, OutputsList?, OutputsList).
+send_step(found(_), Id, Target, Text, Outs, Outs1?) :-
+    lookup_send(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1).
+send_step(none, _, Target, _, Outs, Outs1?) :-
+    send_person(msg(agent, person, not_a_friend(Target?)), Outs?, Outs1).
+
+%% The person's entry carries no key: there is one person.
+procedure send_person(AgentMsg?, OutputsList?, OutputsList).
+send_person(Msg, [person_output([Msg?|Out1?])|Rest], [person_output(Out1)|Rest?]).
+send_person(Msg, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    send_person(Msg?, Rest?, Rest1).
+send_person(_, [], []).
+
+%% The network's entry carries no key either: there is one network.
+procedure send_net(NetOutMsg?, OutputsList?, OutputsList).
+send_net(Msg, [net_output([Msg?|Out1?])|Rest], [net_output(Out1)|Rest?]).
+send_net(Msg, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    send_net(Msg?, Rest?, Rest1).
+send_net(_, [], []).
+
+procedure inject_msg(Response?, Key?, UserInStream?, UserInStream).
+inject_msg(Resp, Target, Ys, [response(Target?, Resp?)|Ys?]) :-
+    known(Resp?) | true.
+inject_msg(Resp, Target, [Y|Ys], [Y?|Ys1?]) :-
+    inject_msg(Resp?, Target?, Ys?, Ys1).
+
+procedure add_output(Key?, OutputStream, OutputsList?, OutputsList).
+add_output(Name, Out?, Outs, [output(Name?, Out)|Outs?]).
+
+procedure close_outputs(OutputsList?).
+close_outputs([person_output([])|Outs]) :- close_outputs(Outs?).
+close_outputs([net_output([])|Outs]) :- close_outputs(Outs?).
+close_outputs([output(_, [])|Outs]) :- close_outputs(Outs?).
+close_outputs([group_entry(_, [])|Outs]) :- close_outputs(Outs?).
+close_outputs([]).
+
+%% =============================================================================
+%% RESPONSE HANDLING (does not continue the agent)
+%% =============================================================================
+
+procedure bind_response(Decision?, Key?, Response, OutputsList?, OutputsList, NetInStream?, NetInStream).
+bind_response(yes, From, accept(RetCh?), Outs, Outs1?, In, In1?) :-
+    new_channel(RetCh, LocalCh) |
+    handle_response(accept(LocalCh?), From?, Outs?, Outs1, In?, In1).
+bind_response(no, _, no, Outs, Outs1?, In, In?) :-
+    send_person(msg(agent, person, rejected), Outs?, Outs1).
+
+procedure handle_response(Response?, Key?, OutputsList?, OutputsList, NetInStream?, NetInStream).
+handle_response(accept(ch(FIn, FOut?)), From, Outs, Outs2?, In, In1?) :-
+    ground(From?) |
+    add_output(From?, FOut, Outs?, Outs1),
+    send_person(msg(agent, person, connected(From?)), Outs1?, Outs2),
+    merge(In?, FIn?, In1).
+handle_response(no, From, Outs, Outs1?, In, In?) :-
+    ground(From?) |
+    send_person(msg(agent, person, rejected(From?)), Outs?, Outs1).
+
+%% =============================================================================
+%% UNFRIEND (End friend / Integrate unfriend)
+%% =============================================================================
+
+procedure end_friend(Key?, Key?, OutputsList?, OutputsList).
+end_friend(Key, Id, [output(K, [msg(Id?, Key?, unfriend)])|Rest], Rest?) :-
+    Key? =?= K? | true.
+end_friend(Key, Id, [person_output(Out?)|Rest], [person_output(Out)|Rest1?]) :-
+    end_friend(Key?, Id?, Rest?, Rest1).
+end_friend(Key, Id, [net_output(Out?)|Rest], [net_output(Out)|Rest1?]) :-
+    end_friend(Key?, Id?, Rest?, Rest1).
+end_friend(Key, Id, [group_entry(GK, Out?)|Rest], [group_entry(GK?, Out)|Rest1?]) :-
+    end_friend(Key?, Id?, Rest?, Rest1).
+end_friend(Key, Id, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
+    otherwise |
+    end_friend(Key?, Id?, Rest?, Rest1).
+end_friend(_, _, [], []).
+
+procedure drop_friend(Key?, OutputsList?, OutputsList).
+drop_friend(Key, [output(K, [])|Rest], Rest?) :-
+    Key? =?= K? | true.
+drop_friend(Key, [person_output(Out?)|Rest], [person_output(Out)|Rest1?]) :-
+    drop_friend(Key?, Rest?, Rest1).
+drop_friend(Key, [net_output(Out?)|Rest], [net_output(Out)|Rest1?]) :-
+    drop_friend(Key?, Rest?, Rest1).
+drop_friend(Key, [group_entry(GK, Out?)|Rest], [group_entry(GK?, Out)|Rest1?]) :-
+    drop_friend(Key?, Rest?, Rest1).
+drop_friend(Key, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
+    otherwise |
+    drop_friend(Key?, Rest?, Rest1).
+drop_friend(_, [], []).
+
+%% =============================================================================
+%% BALANCES — tally the bond multiset by (issuer, maturity)
+%% =============================================================================
+
+procedure tally_bonds(Stream(Bond)?, Stream(Lot)?, Stream(Lot)).
+tally_bonds([bond(I, M, _)|Rest], Acc, Tally?) :-
+    ground(I?), ground(M?) |
+    tally_add(I?, M?, Acc?, Acc1),
+    tally_bonds(Rest?, Acc1?, Tally).
+tally_bonds([], Acc, Acc?).
+
+procedure tally_add(Key?, Constant?, Stream(Lot)?, Stream(Lot)).
+tally_add(I, M, [lot(I2, M2, N)|Rest], [lot(I2?, M2?, N1?)|Rest?]) :-
+    I? =?= I2?, M? =?= M2? | N1 := N? + 1.
+tally_add(I, M, [L|Rest], [L?|Rest1?]) :-
+    otherwise |
+    tally_add(I?, M?, Rest?, Rest1).
+tally_add(I, M, [], [lot(I?, M?, 1)]).
+
+procedure emit_tally(Constant?, Stream(Lot)?, OutputsList?, OutputsList).
+emit_tally(Self, [lot(I, M, N)|Rest], Outs, Outs2?) :-
+    ground(Self?), ground(I?), ground(M?), ground(N?) |
+    send_person(msg(agent, person, balance_report(Self?, I?, M?, N?)), Outs?, Outs1),
+    emit_tally(Self?, Rest?, Outs1?, Outs2).
+emit_tally(_, [], Outs, Outs?).
+
+%% One balance_report(Owner, Issuer, Maturity, Count) per held position, then
+%% a snapshot boundary, balances_synced, so that a holding spent to zero is
+%% dropped from the screen.
+procedure emit_balances(Constant?, Stream(Bond)?, OutputsList?, OutputsList).
+emit_balances(Self, Holdings, Outs, Outs2?) :-
+    ground(Self?), ground(Holdings?) |
+    tally_bonds(Holdings?, [], Tally),
+    emit_tally(Self?, Tally?, Outs?, Outs1),
+    send_person(msg(agent, person, balances_synced(Self?)), Outs1?, Outs2).
+
+%% Publish my holdings to every friend (so their wallet shows my currency).
+procedure publish_balances(Key?, Stream(Bond)?, OutputsList?, OutputsList).
+publish_balances(Self, Holdings, [person_output(S?)|Rest], [person_output(S)|Rest1?]) :-
+    ground(Self?), ground(Holdings?) |
+    publish_balances(Self?, Holdings?, Rest?, Rest1).
+publish_balances(Self, Holdings, [net_output(S?)|Rest], [net_output(S)|Rest1?]) :-
+    ground(Self?), ground(Holdings?) |
+    publish_balances(Self?, Holdings?, Rest?, Rest1).
+publish_balances(Self, Holdings, [group_entry(GK, S?)|Rest], [group_entry(GK?, S)|Rest1?]) :-
+    ground(Self?), ground(Holdings?) |
+    publish_balances(Self?, Holdings?, Rest?, Rest1).
+publish_balances(Self, Holdings,
+    [output(K, [msg(Self?, K?, balances(Holdings?))|S1?])|Rest],
+    [output(K?, S1)|Rest1?]) :-
+    ground(Self?), ground(Holdings?), ground(K?), otherwise |
+    publish_balances(Self?, Holdings?, Rest?, Rest1).
+publish_balances(_, _, [], []).
+
+%% After a holdings change: report balances to the person, publish to
+%% friends, then continue.
+procedure after_change(Key?, Stream(Bond)?, Integer?, Constant?, Stream(Request)?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+after_change(Id, Holdings, NextSerial, Clock, Reqs, UserIn, NetIn, Outs, DateW?) :-
+    ground(Id?), ground(Holdings?) |
+    emit_balances(Id?, Holdings?, Outs?, Outs1),
+    publish_balances(Id?, Holdings?, Outs1?, Outs2),
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
+
+%% =============================================================================
+%% TRADE / REDEEM / PAY — the transaction two-phase (currency_txn called bare)
+%% =============================================================================
+
+procedure bind_trade_decline(TradeResponse, Stream(Bond)?).
+bind_trade_decline(trade_decline(Bonds?), Bonds).
+
+%% Watch the proposer's trade-response writer; inject the settlement into UserIn.
+procedure inject_trade_result(TradeResponse?, Constant?, UserInStream?, UserInStream).
+inject_trade_result(trade_accept(TheirBonds), From, Ys,
+    [trade_complete(From?, TheirBonds?)|Ys?]) :-
+    ground(From?), ground(TheirBonds?) | true.
+inject_trade_result(trade_decline(OurBonds), From, Ys,
+    [trade_returned_bonds(From?, OurBonds?)|Ys?]) :-
+    ground(From?), ground(OurBonds?) | true.
+inject_trade_result(trade_decline_menu(OurBonds, Menu), From, Ys,
+    [trade_returned_bonds_menu(From?, OurBonds?, Menu?)|Ys?]) :-
+    ground(From?), ground(OurBonds?), ground(Menu?) | true.
+inject_trade_result(R, From, [Y|Ys], [Y?|Ys1?]) :-
+    inject_trade_result(R?, From?, Ys?, Ys1).
+
+%% --- Proposer: trade (the maturity-carrying swap; a loan is its instance) ---
+
+procedure do_trade(Key?, Key?, Lot?, Lot?, Stream(Bond)?, Integer?, Constant?, Stream(Request)?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+do_trade(Id, Target, GiveSpec, WantSpec, Holdings, NextSerial, Clock, Reqs, UserIn, NetIn, Outs, DateW?) :-
+    select_bonds_by_spec([GiveSpec?], Holdings?, Status, Selected, Remaining),
+    do_trade_result(Status?, Id?, Target?, WantSpec?, Selected?, Remaining?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs?, DateW).
+
+procedure do_trade_result(Status?, Key?, Key?, Lot?, Stream(Bond)?, Stream(Bond)?, Integer?, Constant?, Stream(Request)?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+do_trade_result(ok, Id, Target, WantSpec, Selected, Remaining, NextSerial, Clock, Reqs, UserIn, NetIn, Outs, DateW?) :-
+    anchor_friend(Target?, Outs?, Outs1, F),
+    trade_step(F?, Id?, Target?, WantSpec?, Selected?, Remaining?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs1?, DateW).
+do_trade_result(fail, Id, Target, _, Selected, Remaining, NextSerial, Clock, Reqs, UserIn, NetIn, Outs, DateW?) :-
+    append(Selected?, Remaining?, OrigHoldings),
+    send_person(msg(agent, person, trade_failed(Target?)), Outs?, Outs1),
+    after_change(Id?, OrigHoldings?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs1?, DateW).
+
+%% trade_step(F, ...): the proposal, dispatched on the lookup of the outputs list
+%% (GSG Section 5.1), as send_step/6 dispatches the person's message.  Where
+%% Target has a friend output entry the proposal is sent and its response
+%% awaited; where it has none the proposal is not sent, no response is awaited,
+%% the person is told not_a_friend(Target), and the selected bonds stay in the
+%% holdings, nothing having been conveyed.
+procedure trade_step(AnchorFriend?, Key?, Key?, Lot?, Stream(Bond)?, Stream(Bond)?, Integer?, Constant?, Stream(Request)?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+trade_step(found(_), Id, Target, WantSpec, Selected, Remaining, NextSerial, Clock, Reqs, UserIn, NetIn, Outs, DateW?) :-
+    lookup_send(Target?, msg(Id?, Target?, trade_propose(WantSpec?, Selected?, TradeResp)), Outs?, Outs1),
+    inject_trade_result(TradeResp?, Target?, UserIn?, UserIn1),
+    after_change(Id?, Remaining?, NextSerial?, Clock?, Reqs?, UserIn1?, NetIn?, Outs1?, DateW).
+trade_step(none, Id, Target, _, Selected, Remaining, NextSerial, Clock, Reqs, UserIn, NetIn, Outs, DateW?) :-
+    append(Selected?, Remaining?, OrigHoldings),
+    send_person(msg(agent, person, not_a_friend(Target?)), Outs?, Outs1),
+    after_change(Id?, OrigHoldings?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs1?, DateW).
+
+%% --- Proposer: redeem (Def 3.2, guarded by the redeemer) ---
+%% Offer the Target's bonds named by GiveSpec; whether they are coins is the
+%% issuer's call, tested against the issuer's own date on receipt.
+
+procedure do_redeem(Key?, Key?, Lot?, Lot?, Stream(Bond)?, Integer?, Constant?, Stream(Request)?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+do_redeem(Id, Target, GiveSpec, WantSpec, Holdings, NextSerial, Clock, Reqs, UserIn, NetIn, Outs, DateW?) :-
+    select_bonds_by_spec([GiveSpec?], Holdings?, Status, Selected, Remaining),
+    do_trade_result(Status?, Id?, Target?, WantSpec?, Selected?, Remaining?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs?, DateW).
+
+%% --- Proposer: pay (mature coins of the payee, handed over unilaterally) ---
+
+procedure do_pay(Status?, Key?, Key?, Stream(Bond)?, Stream(Bond)?, Integer?, Constant?, Stream(Request)?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+do_pay(ok, Id, Friend, Selected, Remaining, NextSerial, Clock, Reqs, UserIn, NetIn, Outs, DateW?) :-
+    anchor_friend(Friend?, Outs?, Outs1, F),
+    pay_step(F?, Id?, Friend?, Selected?, Remaining?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs1?, DateW).
+do_pay(fail, Id, Friend, Selected, Remaining, NextSerial, Clock, Reqs, UserIn, NetIn, Outs, DateW?) :-
+    append(Selected?, Remaining?, OrigHoldings),
+    send_person(msg(agent, person, trade_failed(Friend?)), Outs?, Outs1),
+    after_change(Id?, OrigHoldings?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs1?, DateW).
+
+%% pay_step(F, ...): the payment, dispatched on the lookup of the outputs list
+%% (GSG Section 5.1).  Where Friend has a friend output entry the coins are sent;
+%% where it has none they are not, the person is told not_a_friend(Friend), and
+%% the selected bonds stay in the holdings, nothing having been conveyed.
+procedure pay_step(AnchorFriend?, Key?, Key?, Stream(Bond)?, Stream(Bond)?, Integer?, Constant?, Stream(Request)?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+pay_step(found(_), Id, Friend, Selected, Remaining, NextSerial, Clock, Reqs, UserIn, NetIn, Outs, DateW?) :-
+    lookup_send(Friend?, msg(Id?, Friend?, coins(Selected?)), Outs?, Outs1),
+    after_change(Id?, Remaining?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs1?, DateW).
+pay_step(none, Id, Friend, Selected, Remaining, NextSerial, Clock, Reqs, UserIn, NetIn, Outs, DateW?) :-
+    append(Selected?, Remaining?, OrigHoldings),
+    send_person(msg(agent, person, not_a_friend(Friend?)), Outs?, Outs1),
+    after_change(Id?, OrigHoldings?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs1?, DateW).
+
+%% --- Responder: take an incoming payment (Def 3.2, Pay) ---
+%% own_coins says yes iff every offered bond is a coin of Id; then Id takes
+%% them.  Otherwise it is not a Pay but an unsolicited swap, so Id returns the
+%% whole lot to the payer unchanged.
+procedure take_payment(Decision?, Key?, Key?, Stream(Bond)?, Stream(Bond)?, Integer?, Constant?, Stream(Request)?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+take_payment(yes, Id, _, Bonds, Holdings, NextSerial, Clock, Reqs, UserIn, NetIn, Outs, DateW?) :-
+    append(Holdings?, Bonds?, NewHoldings),
+    after_change(Id?, NewHoldings?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs?, DateW).
+take_payment(no, Id, From, Bonds, Holdings, NextSerial, Clock, Reqs, UserIn, NetIn, Outs, DateW?) :-
+    anchor_friend(From?, Outs?, Outs1, F),
+    return_step(F?, Id?, From?, Bonds?, Holdings?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs1?, DateW).
+
+%% return_step(F, ...): the refused lot's return, dispatched on the lookup of the
+%% outputs list (GSG Section 5.1).  Where From has a friend output entry the lot
+%% goes back to it; where it has none --- From was unfriended while its payment
+%% was in flight --- it is not sent, and the person is told not_a_friend(From).
+%% The return selects nothing from the holdings, which stay as they are.
+procedure return_step(AnchorFriend?, Key?, Key?, Stream(Bond)?, Stream(Bond)?, Integer?, Constant?, Stream(Request)?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+return_step(found(_), Id, From, Bonds, Holdings, NextSerial, Clock, Reqs, UserIn, NetIn, Outs, DateW?) :-
+    lookup_send(From?, msg(Id?, From?, coins(Bonds?)), Outs?, Outs1),
+    after_change(Id?, Holdings?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs1?, DateW).
+return_step(none, Id, From, _, Holdings, NextSerial, Clock, Reqs, UserIn, NetIn, Outs, DateW?) :-
+    send_person(msg(agent, person, not_a_friend(From?)), Outs?, Outs1),
+    after_change(Id?, Holdings?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs1?, DateW).
+
+%% --- Responder: fill an accepted trade ---
+
+procedure handle_trade_fill(Status?, Key?, Key?, TradeResponse, Stream(Bond)?, Stream(Bond)?, Stream(Bond)?, Integer?, Constant?, Stream(Request)?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+handle_trade_fill(ok, Id, From, trade_accept(Selected?), OfferedBonds, Selected, Remaining, NextSerial, Clock, Reqs, UserIn, NetIn, Outs, DateW?) :-
+    append(Remaining?, OfferedBonds?, NewHoldings),
+    send_person(msg(agent, person, trade_completed(From?)), Outs?, Outs1),
+    after_change(Id?, NewHoldings?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs1?, DateW).
+handle_trade_fill(fail, Id, From, trade_decline(OfferedBonds?), OfferedBonds, Selected, Remaining, NextSerial, Clock, Reqs, UserIn, NetIn, Outs, DateW?) :-
+    append(Selected?, Remaining?, OrigHoldings),
+    send_person(msg(agent, person, trade_failed(From?)), Outs?, Outs1),
+    after_change(Id?, OrigHoldings?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs1?, DateW).
+
+%% --- Responder: classify an incoming proposal.  Payment and redemption are
+%% settled by the program; only the normal trade is a question for the person,
+%% and it spawns a responder. ---
+
+procedure trade_dispatch(TradeClass?, Key?, Key?, Lot?, Stream(Bond)?, TradeResponse,
+    Stream(Bond)?, Integer?, Constant?, Stream(Request)?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+
+%% Payment — auto-accept (proposer gives, wants nothing).
+trade_dispatch(payment, Id, From, _, OfferedBonds, trade_accept([]),
+    Holdings, NextSerial, Clock, Reqs, UserIn, NetIn, Outs, DateW?) :-
+    append(Holdings?, OfferedBonds?, NewHoldings),
+    send_person(msg(agent, person, trade_completed(From?)), Outs?, Outs1),
+    after_change(Id?, NewHoldings?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs1?, DateW).
+
+%% Redemption — the issuer must fulfil: auto-accept with the requested bonds,
+%% or decline with a menu of what it does hold.
+trade_dispatch(redemption, Id, From, WantSpec, OfferedBonds, TradeResp?,
+    Holdings, NextSerial, Clock, Reqs, UserIn, NetIn, Outs, DateW?) :-
+    select_bonds_by_spec([WantSpec?], Holdings?, Status, Selected, Remaining),
+    redemption_result(Status?, Id?, From?, TradeResp, OfferedBonds?, Selected?, Remaining?,
+        NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs?, DateW).
+
+%% Normal trade — spawn a responder; the offer pends until the person answers.
+trade_dispatch(normal, Id, From, WantSpec, OfferedBonds, TradeResp?,
+    Holdings, NextSerial, Clock, Reqs, UserIn, NetIn, Outs, DateW?) :-
+    respond_trade(offer(From?, WantSpec?, OfferedBonds?), TradeResp, Ans),
+    merge(Ans?, UserIn?, UserIn1),
+    serve(Reqs?, Id?, UserIn1?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?, DateW).
+
+procedure redemption_result(Status?, Key?, Key?, TradeResponse, Stream(Bond)?,
+    Stream(Bond)?, Stream(Bond)?, Integer?, Constant?, Stream(Request)?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+redemption_result(ok, Id, From, trade_accept(Selected?), OfferedBonds, Selected, Remaining,
+    NextSerial, Clock, Reqs, UserIn, NetIn, Outs, DateW?) :-
+    append(Remaining?, OfferedBonds?, NewHoldings),
+    send_person(msg(agent, person, trade_completed(From?)), Outs?, Outs1),
+    after_change(Id?, NewHoldings?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs1?, DateW).
+redemption_result(fail, Id, From, trade_decline_menu(OfferedBonds?, Menu?), OfferedBonds,
+    Selected, Remaining, NextSerial, Clock, Reqs, UserIn, NetIn, Outs, DateW?) :-
+    append(Selected?, Remaining?, OrigHoldings),
+    redemption_reject(Id?, From?, OrigHoldings?, Menu, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs?, DateW).
+
+procedure redemption_reject(Key?, Key?, Stream(Bond)?, Stream(Bond),
+    Integer?, Constant?, Stream(Request)?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+redemption_reject(Id, From, OrigHoldings, Menu?, NextSerial, Clock, Reqs, UserIn, NetIn, Outs, DateW?) :-
+    ground(OrigHoldings?) |
+    build_menu(Id?, OrigHoldings?, Menu),
+    send_person(msg(agent, person, trade_failed(From?)), Outs?, Outs1),
+    after_change(Id?, OrigHoldings?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs1?, DateW).
+
+%% =============================================================================
+%% ESCROW — the holder's own date releases it; cancel races it
+%% =============================================================================
+
+%% Dates is the holder's own date as it advances.  The release clause suspends
+%% on that stream and fires the instant a date reaches T, sending the bonds to
+%% the beneficiary and expiry to the depositor; cancel races it and returns
+%% the bonds.
+procedure escrow(Constant?, Stream(Constant)?, Stream(Bond)?, EscrowCancel?, EscrowBenResult, EscrowDepResult).
+escrow(T, [D|_], Bonds, _, escrow_bonds(Bonds?), escrow_expired) :-
+    D? >= T? | true.
+escrow(T, [D|Ds], Bonds, Cancel, Ben?, Dep?) :-
+    D? < T? | escrow(T?, Ds?, Bonds?, Cancel?, Ben, Dep).
+escrow(_, _, Bonds, cancel, escrow_cancelled, escrow_bonds(Bonds?)).
+
+%% Watch the beneficiary's outcome writer; inject the settlement into UserIn.
+procedure inject_escrow_ben_result(EscrowBenResult?, Constant?, UserInStream?, UserInStream).
+inject_escrow_ben_result(escrow_bonds(Bonds), From, Ys,
+    [escrow_ben_released(From?, Bonds?)|Ys?]) :-
+    ground(From?), ground(Bonds?) | true.
+inject_escrow_ben_result(escrow_cancelled, From, Ys,
+    [escrow_ben_cancelled(From?)|Ys?]) :-
+    ground(From?) | true.
+inject_escrow_ben_result(R, From, [Y|Ys], [Y?|Ys1?]) :-
+    inject_escrow_ben_result(R?, From?, Ys?, Ys1).
+
+%% Watch the depositor's outcome writer; inject the settlement into UserIn.
+procedure inject_escrow_dep_result(EscrowDepResult?, Constant?, UserInStream?, UserInStream).
+inject_escrow_dep_result(escrow_bonds(Bonds), Target, Ys,
+    [escrow_dep_returned(Target?, Bonds?)|Ys?]) :-
+    ground(Target?), ground(Bonds?) | true.
+inject_escrow_dep_result(escrow_expired, Target, Ys,
+    [escrow_dep_expired(Target?)|Ys?]) :-
+    ground(Target?) | true.
+inject_escrow_dep_result(R, Target, [Y|Ys], [Y?|Ys1?]) :-
+    inject_escrow_dep_result(R?, Target?, Ys?, Ys1).
+
+%% The escrowed bonds leave Holdings, so both sides carry the lot scalars.
+procedure lot_scalars(Lot?, Key, Constant, Integer).
+lot_scalars(lot(I, M, A), I?, M?, A?).
+
+%% Depositor: select the bonds, then open the escrow (or report failure).
+%% DateW is the agent's date stream: an opened or failed deposit closes it, as
+%% the deposit clause did before the lookup; a deposit not sent leaves it to
+%% the agent.
+procedure do_deposit_escrow(Key?, Key?, Lot?, Constant?, Stream(Bond)?, Integer?, Constant?, Stream(Request)?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+do_deposit_escrow(Id, Target, GiveSpec, ReleaseTime, Holdings, NextSerial, Clock, Reqs, UserIn, NetIn, Outs, DateW?) :-
+    ground(GiveSpec?) |
+    lot_scalars(GiveSpec?, Coin, Maturity, Amount),
+    select_bonds_by_spec([GiveSpec?], Holdings?, Status, Selected, Remaining),
+    do_deposit_escrow_result(Status?, Id?, Target?, ReleaseTime?, Coin?, Maturity?, Amount?, Selected?, Remaining?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs?, DateW).
+
+procedure do_deposit_escrow_result(Status?, Key?, Key?, Constant?, Constant?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)?, Integer?, Constant?, Stream(Request)?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+do_deposit_escrow_result(ok, Id, Target, ReleaseTime, Coin, Maturity, Amount, Selected, Remaining, NextSerial, Clock, Reqs, UserIn, NetIn, Outs, DateW?) :-
+    ground(Coin?), ground(Maturity?), ground(Amount?) |
+    anchor_friend(Target?, Outs?, Outs1, F),
+    escrow_step(F?, Id?, Target?, ReleaseTime?, Coin?, Maturity?, Amount?, Selected?, Remaining?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs1?, DateW).
+do_deposit_escrow_result(fail, Id, Target, _, _, _, _, Selected, Remaining, NextSerial, Clock, Reqs, UserIn, NetIn, Outs, []) :-
+    append(Selected?, Remaining?, OrigHoldings),
+    send_person(msg(agent, person, escrow_failed(Target?)), Outs?, Outs1),
+    after_change(Id?, OrigHoldings?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs1?, _).
+
+%% escrow_step(F, ...): the escrow offer, dispatched on the lookup of the
+%% outputs list (GSG Section 5.1).  Where Target has a friend output entry the
+%% escrow is opened, the offer sent and its release awaited, the cancel signal
+%% the person's to bind, so it goes to a responder; where it has none no escrow
+%% is opened and no responder spawned, the offer is not sent, the person is
+%% told not_a_friend(Target), the selected bonds stay in the holdings, and the
+%% agent's date stream goes on, nothing having been conveyed.
+procedure escrow_step(AnchorFriend?, Key?, Key?, Constant?, Constant?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)?, Integer?, Constant?, Stream(Request)?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+escrow_step(found(_), Id, Target, ReleaseTime, Coin, Maturity, Amount, Selected, Remaining, NextSerial, Clock, Reqs, UserIn, NetIn, Outs, []) :-
+    escrow(ReleaseTime?, EscrowDates?, Selected?, CancelSignal?, BenResult, DepResult),
+    respond_escrow_cancel(offer(Target?), CancelSignal),
+    inject_escrow_dep_result(DepResult?, Target?, UserIn?, UserIn1),
+    lookup_send(Target?,
+        msg(Id?, Target?, escrow_offer(ReleaseTime?, Coin?, Maturity?, Amount?, BenResult?)),
+        Outs?, Outs1),
+    after_change(Id?, Remaining?, NextSerial?, Clock?, Reqs?, UserIn1?, NetIn?, Outs1?, EscrowDates).
+escrow_step(none, Id, Target, _, _, _, _, Selected, Remaining, NextSerial, Clock, Reqs, UserIn, NetIn, Outs, DateW?) :-
+    append(Selected?, Remaining?, OrigHoldings),
+    send_person(msg(agent, person, not_a_friend(Target?)), Outs?, Outs1),
+    after_change(Id?, OrigHoldings?, NextSerial?, Clock?, Reqs?, UserIn?, NetIn?, Outs1?, DateW).
+
+%% =============================================================================
+%% GROUPS
+%% =============================================================================
+
+procedure add_group_output(GroupKey?, Stream(GroupMsg), OutputsList?, OutputsList).
+add_group_output(Key, Out?, Outs, [group_entry(Key?, Out)|Outs?]).
+
+procedure setup_group_creator(GroupId?, OutputsList?, OutputsList, NetInStream?, NetInStream).
+setup_group_creator(GroupId, Outs, Outs1?, NetIn, NetIn1?) :-
+    ground(GroupId?) |
+    add_group_output(group(GroupId?), MemberToHub, Outs?, Outs1),
+    merge(MemberToHub?, NetIn?, NetIn1).
+
+procedure setup_group_hub_side(GroupId?, Key?, OutputsList?, OutputsList, NetInStream?, NetInStream, Channel(Stream(GroupMsg), Stream(GroupMsg))).
+setup_group_hub_side(GroupId, Member, Outs, Outs1?, NetIn, NetIn1?,
+        ch(HubToMember?, MemberToHub)) :-
+    ground(GroupId?), ground(Member?) |
+    add_group_output(group_member(GroupId?, Member?), HubToMember, Outs?, Outs1),
+    merge(NetIn?, MemberToHub?, NetIn1).
+
+procedure lookup_send_group(GroupKey?, GroupMsg?, OutputsList?, OutputsList).
+lookup_send_group(Key, Msg, Outs, Outs1?) :-
+    ground(Key?) |
+    lookup_send_group_step(Key?, Msg?, Outs?, Outs1).
+
+procedure lookup_send_group_step(GroupKey?, GroupMsg?, OutputsList?, OutputsList).
+lookup_send_group_step(Key, Msg, [group_entry(K, [Msg?|Out1?])|Rest], [group_entry(K?, Out1)|Rest?]) :-
+    Key? =?= K? | true.
+lookup_send_group_step(Key, Msg, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    lookup_send_group_step(Key?, Msg?, Rest?, Rest1).
+lookup_send_group_step(_, _, [], []).
+
+procedure distribute_group_msg(GroupId?, GroupMsg?, OutputsList?, OutputsList).
+distribute_group_msg(GroupId, Msg,
+    [group_entry(group_member(GId, M), [Msg?|Out1?])|Rest],
+    [group_entry(group_member(GId?, M?), Out1)|Rest1?]) :-
+    GroupId? =?= GId?, ground(Msg?) |
+    distribute_group_msg(GroupId?, Msg?, Rest?, Rest1).
+distribute_group_msg(GroupId, Msg, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    distribute_group_msg(GroupId?, Msg?, Rest?, Rest1).
+distribute_group_msg(_, _, [], []).
+
+procedure close_output(GroupKey?, OutputsList?, OutputsList).
+close_output(_, [], []).
+close_output(Key, [group_entry(K, [])|Rest], Rest?) :-
+    Key? =?= K? | true.
+close_output(Key, [person_output(Out?)|Rest], [person_output(Out)|Rest1?]) :-
+    close_output(Key?, Rest?, Rest1).
+close_output(Key, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    close_output(Key?, Rest?, Rest1).
+
+procedure group_await_join(GroupId?, Key?, Channel(Stream(Handshake), Stream(GroupSetupResponse))?, GroupJoinResult).
+group_await_join(GroupId, Invitee, ch([ack(_)|ChIn], ChOut?),
+                 group_join_ack(GroupId?, Invitee?, ch(ChIn?, ChOut))).
+group_await_join(GroupId, Invitee, ch([nack|_], []),
+                 group_join_nack(GroupId?, Invitee?)).
+%% The invitee's side closed without answering: no join, and close our side.
+group_await_join(GroupId, Invitee, ch([], []),
+                 group_join_nack(GroupId?, Invitee?)).
+
+procedure inject_group_result(GroupJoinResult?, UserInStream?, UserInStream).
+inject_group_result(group_join_ack(G, I, Ch), Ys,
+    [group_join_ack(G?, I?, Ch?)|Ys?]) :-
+    ground(I?) | true.
+inject_group_result(group_join_nack(G, I), Ys,
+    [group_join_nack(G?, I?)|Ys?]) :-
+    ground(I?) | true.
+inject_group_result(Res, [Y|Ys], [Y?|Ys1?]) :-
+    inject_group_result(Res?, Ys?, Ys1).
+
+%% invite_step(F, ...): the group invitation, dispatched on the lookup of the
+%% outputs list (GSG Section 5.1).  Where Invitee has a friend output entry the
+%% invitation is sent with a fresh setup channel and the invitee's answer
+%% awaited on it; where it has none the invitation is not sent, no answer is
+%% awaited, and the person is told not_a_friend(Invitee).
+procedure invite_step(AnchorFriend?, Key?, GroupId?, Key?, UserInStream?, OutputsList?, OutputsList, UserInStream).
+invite_step(found(_), Id, GroupId, Invitee, UserIn, Outs, Outs1?, UserIn1?) :-
+    ground(GroupId?), ground(Invitee?), new_channel(InviteeCh, CreatorCh) |
+    lookup_send(Invitee?, msg(Id?, Invitee?, group_invite(GroupId?, InviteeCh?)), Outs?, Outs1),
+    group_await_join(GroupId?, Invitee?, CreatorCh?, Result),
+    inject_group_result(Result?, UserIn?, UserIn1).
+invite_step(none, _, _, Invitee, UserIn, Outs, Outs1?, UserIn?) :-
+    send_person(msg(agent, person, not_a_friend(Invitee?)), Outs?, Outs1).
+
+procedure await_group_channel(Key?, GroupId?, Stream(GroupSetupResponse)?, Stream(Request)?, UserInStream?, NetInStream?, OutputsList?, Stream(Bond)?, Integer?, Constant?, Stream(Constant)).
+await_group_channel(Id, GroupId, [group_channel(ch(FromHub, ToHub?))|_],
+        Reqs, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
+    ground(Id?), ground(GroupId?) |
+    add_group_output(group(GroupId?), ToHub, Outs?, Outs1),
+    merge(NetIn?, FromHub?, NetIn1),
+    send_person(msg(agent, person, group_joined(GroupId?)), Outs1?, Outs2),
+    serve(Reqs?, Id?, UserIn?, NetIn1?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
+await_group_channel(_, _, [], _, _, _, _, _, _, _, []) :- true.

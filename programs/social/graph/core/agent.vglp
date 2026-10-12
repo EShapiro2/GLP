@@ -1,69 +1,48 @@
 %% agent.vglp — the social-graph agent as a vGLP program.
 %%
-%% vGLP source of the tested GLP program agent.glp + ui/mediator.glp (this
-%% directory): the agent authored with volition-guarded clauses, the mediator
-%% and its UserCmd/UserNotify vocabulary absent — they belong to the
-%% implementation, which maps the volition-guarded clauses into concrete UI
-%% constructs.  Exhibit for the paper "Volition Elicitation: Operational
-%% Semantics for People and Their Machines", which defines vGLP.
+%% vGLP source of the social graph's agent/4 (GSG paper, Sections 5.1 and 5.2,
+%% app:code): the person's requests to their agent --- connect, unfriend,
+%% send, introduce --- and the person's answers to a friend offer and to an
+%% introduction, authored as questions, with nothing of an implementation's
+%% vocabulary.  The deployed agent is agent.glp beside this file, written by
+%% hand and extended with the super-app's host (agent/5); this source is not
+%% its compilation, and the loader skips it, a .vglp beside a .glp of its own
+%% name.
 %%
-%% NOTATION (defined in the paper):
-%%   *                          marks a volition-guarded clause: reducing a goal with
-%%                              it requires, besides its guards, the person willing
-%%                              this reduction. Among volition-guarded clauses for
-%%                              the same goal, the person's answer selects the clause.
-%%   *(X1,...,Xk)               a volition-guarded clause with person-supplied inputs:
-%%                              the person's answer binds the writers X1..Xk; the clause
-%%                              carries their readers Xi?.
+%% The syntax is vGLP's (Definition "Volitional Procedure, Interactive Type,
+%% Interactive Term, Ordinary Clause, vGLP Program").  The agent is a
+%% volitional procedure whose question is the stream of the person's
+%% requests, Stream(Request)?, of a union type with one alternative per
+%% request; its one clause asks it, once, and passes it to serve, ordinary
+%% GLP, which has one clause per alternative, each the clause of its
+%% transaction reading its request at the head of the stream, and carries the
+%% rest of the stream, Reqs?, through every clause that continues the agent.
+%% A responder --- respond_coldcall, respond_intro --- is a volitional
+%% procedure whose interactive type, a card, is in writer mode: one goal per
+%% arriving offer, so offers pend concurrently and are answered in any order;
+%% its clause writes the card at once, the offering peer for the person to
+%% see, and hands the person the writer of their answer, which decide/4 reads
+%% with a clause per answer and injects, with the pending value of the
+%% befriending passed back as it came, into the agent's UserIn.  A refusal is
+%% an answer, no, on which the agent binds its consent to no.
 %%
-%% RESPONDERS. An arriving offer spawns a responder goal — respond_coldcall,
-%% respond_intro — one goal per offer, so offers pend concurrently and are
-%% answered in any order.  The responder carries the offer and the pending
-%% value, the two consents of the befriending by this agent's role (GSG paper,
-%% Sections 5.1 and 5.2); its one volition-guarded clause is the acceptance,
-%% its else-branch the refusal, taken when the person wills no answer, and the
-%% branch taken injects the person's decision, with the pending value passed
-%% back as it came, through a merge, into the agent's UserIn.
+%% Clause order follows the paper's remark "Ordering with otherwise": the
+%% request clauses follow every otherwise clause of serve.
 %%
-%% Correspondence to the implementation (clause for clause):
-%%   - a *(X1..Xk) Request clause  ->  a UserCmd constructor over X1..Xk, a mediator
-%%     pass-through, and the agent clause matching msg(person, Id, cmd(X1..Xk)):
-%%     connect/1, unfriend/1, send/2, introduce/2;
-%%   - a responder goal, spawned per arriving offer  ->  a pending-table entry
-%%     req(N) in the mediator, rendered as an inbox card;
-%%   - a responder's then-branch and else-branch  ->  the UserCmds decision/3
-%%     (cold call, yes and no) and accept_intro/2, reject_intro/2 (introduction)
-%%     routing the pending value back to the agent; the agent's decision clauses
-%%     below match the deployed clauses modulo the msg(person, Id, ...) wrapper,
-%%     and the deployed accept_intro and reject_intro are the same by role, with
-%%     the held links' bookkeeping, which this exhibit leaves out.
-%% The escrow vocabulary — befriend/2, befriend_intro/3, and the pending table —
-%% does not appear here: the machine's question to the person is not a message
-%% but a pending volition-guarded reduction.
-%%
-%% Clause order follows the paper's remark "Ordering with otherwise":
-%% Request clauses (perpetually pending) follow every otherwise clause of the
-%% procedure — the compose clauses come last, after the catch-alls — and
-%% between volition-guarded siblings otherwise is not used.
-%%
-%% This file is vGLP, not GLP: the REPL does not load it (hence .vglp).  Its
-%% correctness argument is the clause-for-clause correspondence to the tested,
-%% deployed implementation in this directory.
-%%
-%% Shared types (Decision, Conveyance, ProposerConsent, AcceptorConsent,
-%% PendingValue, FriendContent, FriendMsg, FriendStream, FriendChannel,
-%% NetColdCall, NetOutMsg, NetOutStream, NetInMsg, NetInStream) are those of
-%% self.glp.  Helper procedures — channel ops, merge, the lib/routing routers
-%% (send_user, send_net, send_friend), await_consent, await_conveyance,
-%% already_friend, convey, adopt, close_friend, and the local cold_call,
-%% anchor_friend, send_step and close_outputs — are those of agent.glp and
-%% lib/routing/, unchanged; this file gives the agent procedure and its
-%% responders.
+%% The types not declared here --- Decision, Conveyance, ProposerConsent,
+%% AcceptorConsent, PendingValue, FriendContent, FriendMsg, FriendStream,
+%% FriendChannel, NetColdCall, NetOutMsg, NetOutStream, NetInMsg,
+%% NetInStream, AnchorFriend --- are those of ../self.glp.  The routers and
+%% the befriending's helpers --- send_user, send_net, send_friend,
+%% close_friend, already_friend, convey, adopt, await_consent and
+%% await_conveyance --- are lib/routing/'s, exposed from the root self.glp;
+%% merge/3 is the root's.  The agent's own helpers are agent.glp's, written
+%% here again so that the source compiles whole.
 
 
-%% Screen vocabulary — self.glp's AgentContent minus the escrow vocabulary
-%% (befriend/2, befriend_intro/3): under vGLP the machine asks the person by a
-%% pending reduction, not by a message.
+%% Screen vocabulary — ../self.glp's AgentContent less the asks (befriend/2,
+%% befriend_intro/3): the machine asks the person by a question, not by a
+%% message.
 AgentContent ::= connected(Constant)
                ; rejected
                ; rejected(Constant)
@@ -78,94 +57,124 @@ OutputEntry ::= user_output(AgentToUserStream?)
               ; friend_output(Key, FriendStream?).
 OutputsList ::= [] ; [OutputEntry | OutputsList].
 
-%% UserIn — under vGLP the person's commands are grants, not messages; UserIn
-%% carries the decisions the responders inject and the outcomes the awaits
-%% inject (await_consent, await_conveyance).
+%% UserIn — the person's requests are the agent's question, not messages;
+%% UserIn carries the decisions the responders inject and the outcomes the
+%% awaits inject (await_consent, await_conveyance).
 UserInMsg      ::= decision(Decision, Key, PendingValue)
                  ; consented(Key, Conveyance?)
                  ; adopt(Key, FriendChannel)
                  ; declined(Key).
 UserInStream   ::= [] ; [UserInMsg | UserInStream].
 
-%% The offers the responders carry: the question the pending reduction poses.
+%% =============================================================================
+%% The questions (vGLP, Definition "Volitional Procedure, Interactive Type,
+%% ..."): the person's requests, the agent's interactive type in reader mode,
+%% and the responders' cards, in writer mode.
+%% =============================================================================
+
+%% A request: one alternative per request clause of the agent --- connect,
+%% unfriend, send and introduce --- with the arguments its clause reads.
+Request ::= connect(Key)
+          ; unfriend(Key)
+          ; send(Key, Constant)
+          ; introduce(Key, Key).
+
+%% The offers the responders carry, and their cards: the offer, which the
+%% agent writes for the person to see, and the person's answer, yes or no.
 ColdCallOffer ::= offer(Key).
 IntroOffer    ::= offer(Key).
+ColdCallCard  ::= card(ColdCallOffer, Decision?).
+IntroCard     ::= card(IntroOffer, Decision?).
 
 %% =============================================================================
-%% RESPONDERS — one goal per arriving offer; the volition-guarded clauses live
-%% here, so offers pend concurrently and are answered in any order.
+%% RESPONDERS — one goal per arriving offer, so offers pend concurrently and
+%% are answered in any order.
 %% =============================================================================
 
-procedure respond_coldcall(ColdCallOffer?, PendingValue?, UserInStream).
+procedure (ColdCallCard)*respond_coldcall(ColdCallOffer?, PendingValue?, UserInStream).
 
-%% Answer a friend offer.  The else-branch is the refusal, taken when the
-%% person wills no answer: the decision no, on which the agent binds its
-%% consent to no.
-*(Answer=yes, From?)
-respond_coldcall(offer(From), P, [decision(Answer?, From?, P?)]) :-
-    ground(From?) | true
- *(no) true.
+%% Show the person the peer who offers friendship, and pass their answer on.
+(card(offer(From?), Answer))*respond_coldcall(offer(From), P, Ans?) :-
+    ground(From?) |
+    decide(Answer?, From?, P?, Ans).
 
-procedure respond_intro(IntroOffer?, PendingValue?, UserInStream).
+procedure (IntroCard)*respond_intro(IntroOffer?, PendingValue?, UserInStream).
 
-%% Answer an introduction, as a friend offer is answered: the pending value
-%% carries this agent's consent and the other's, by role.
-*(Answer=yes, Other?)
-respond_intro(offer(Other), P, [decision(Answer?, Other?, P?)]) :-
-    ground(Other?) | true
- *(no) true.
+%% Show the person the peer a common friend introduces, and pass their answer
+%% on: the pending value carries this agent's consent and the other's, by
+%% role.
+(card(offer(Other?), Answer))*respond_intro(offer(Other), P, Ans?) :-
+    ground(Other?) |
+    decide(Answer?, Other?, P?, Ans).
+
+%% yes consents and no refuses: the person's decision, with the pending value
+%% passed back as it came.
+procedure decide(Decision?, Key?, PendingValue?, UserInStream).
+decide(yes, From, P, [decision(yes, From?, P?)]).
+decide(no, From, P, [decision(no, From?, P?)]).
 
 %% =============================================================================
 %% AGENT/4
 %% =============================================================================
 
-procedure agent(Key?, UserInStream?, NetInStream?, OutputsList?).
+%% agent(Id, UserIn, NetIn, Outs): the agent's identity, the answers and
+%% outcomes injected into its own input, the network input, and its outputs.
+%% Its question is the stream of the person's requests.
+procedure (Stream(Request)?)*agent(Key?, UserInStream?, NetInStream?, OutputsList?).
+
+%% Ask the person for their requests, once, and serve them.
+(Reqs)*agent(Id, UserIn, NetIn, Outs) :-
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs?).
+
+%% serve(Reqs, Id, UserIn, NetIn, Outs): the agent, with the rest of the
+%% person's requests.
+procedure serve(Stream(Request)?, Key?, UserInStream?, NetInStream?, OutputsList?).
 
 %% --- Reactive: network messages ---
 
 %% A peer cold-calls me: spawn a responder with the pending value by my role,
 %% the opposite of the message's name; the answer is merged into UserIn.
-agent(Id, UserIn, [msg(Id1, befriend_propose(From, yes, Mine?))|NetIn], Outs) :-
+serve(Reqs, Id, UserIn, [msg(Id1, befriend_propose(From, yes, Mine?))|NetIn], Outs) :-
     Id? =?= Id1? |
     respond_coldcall(offer(From?), propose(Mine, yes), Ans),
     merge(Ans?, UserIn?, UserIn1),
-    agent(Id?, UserIn1?, NetIn?, Outs?).
-agent(Id, UserIn, [msg(Id1, befriend_accept(From, yes(C), Mine?))|NetIn], Outs) :-
+    serve(Reqs?, Id?, UserIn1?, NetIn?, Outs?).
+serve(Reqs, Id, UserIn, [msg(Id1, befriend_accept(From, yes(C), Mine?))|NetIn], Outs) :-
     Id? =?= Id1? |
     respond_coldcall(offer(From?), accept(Mine, yes(C?)), Ans),
     merge(Ans?, UserIn?, UserIn1),
-    agent(Id?, UserIn1?, NetIn?, Outs?).
+    serve(Reqs?, Id?, UserIn1?, NetIn?, Outs?).
 
 %% A common friend offers an introduction: spawn a responder likewise.
-agent(Id, UserIn, [msg(_From, Id1, introduce_propose(Other, Mine?, Theirs))|NetIn], Outs) :-
+serve(Reqs, Id, UserIn, [msg(_From, Id1, introduce_propose(Other, Mine?, Theirs))|NetIn], Outs) :-
     Id? =?= Id1? |
     respond_intro(offer(Other?), propose(Mine, Theirs?), Ans),
     merge(Ans?, UserIn?, UserIn1),
-    agent(Id?, UserIn1?, NetIn?, Outs?).
-agent(Id, UserIn, [msg(_From, Id1, introduce_accept(Other, Mine?, Theirs))|NetIn], Outs) :-
+    serve(Reqs?, Id?, UserIn1?, NetIn?, Outs?).
+serve(Reqs, Id, UserIn, [msg(_From, Id1, introduce_accept(Other, Mine?, Theirs))|NetIn], Outs) :-
     Id? =?= Id1? |
     respond_intro(offer(Other?), accept(Mine, Theirs?), Ans),
     merge(Ans?, UserIn?, UserIn1),
-    agent(Id?, UserIn1?, NetIn?, Outs?).
+    serve(Reqs?, Id?, UserIn1?, NetIn?, Outs?).
 
 %% A friend messages me.
-agent(Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs) :-
+serve(Reqs, Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs) :-
     Id? =?= Id1? |
     send_user(msg(agent, person, received(From?, Text?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?).
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs1?).
 
 %% A friend unfriended me (Integrate unfriend): comply — tear down my side and
 %% tell the person the friend is gone.
-agent(Id, UserIn, [msg(From, Id1, unfriend)|NetIn], Outs) :-
+serve(Reqs, Id, UserIn, [msg(From, Id1, unfriend)|NetIn], Outs) :-
     Id? =?= Id1?, ground(From?) |
     close_friend(From?, Outs?, Outs1),
     send_user(msg(agent, person, unfriended(From?)), Outs1?, Outs2),
-    agent(Id?, UserIn?, NetIn?, Outs2?).
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs2?).
 
 %% Network catch-all (drop unrecognised network message).
-agent(Id, UserIn, [_|NetIn], Outs) :-
+serve(Reqs, Id, UserIn, [_|NetIn], Outs) :-
     ground(Id?), otherwise |
-    agent(Id?, UserIn?, NetIn?, Outs?).
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs?).
 
 %% --- Reactive: responder answers and injected outcomes on UserIn ---
 
@@ -173,97 +182,93 @@ agent(Id, UserIn, [_|NetIn], Outs) :-
 %% the proposer binds its consent to yes(Conveyance?) and awaits the other's;
 %% the acceptor binds its consent to yes and awaits the proposer's; a refusal
 %% binds the consent to no and tells the person.
-agent(Id, [decision(yes, From, propose(yes(C?), Theirs))|UserIn], NetIn, Outs) :-
+serve(Reqs, Id, [decision(yes, From, propose(yes(C?), Theirs))|UserIn], NetIn, Outs) :-
     ground(Id?) |
     await_consent(From?, Theirs?, C, UserIn?, UserIn1),
-    agent(Id?, UserIn1?, NetIn?, Outs?).
-agent(Id, [decision(yes, From, accept(yes, Theirs))|UserIn], NetIn, Outs) :-
+    serve(Reqs?, Id?, UserIn1?, NetIn?, Outs?).
+serve(Reqs, Id, [decision(yes, From, accept(yes, Theirs))|UserIn], NetIn, Outs) :-
     ground(Id?) |
     await_conveyance(From?, Theirs?, UserIn?, UserIn1),
-    agent(Id?, UserIn1?, NetIn?, Outs?).
-agent(Id, [decision(no, _, propose(no, _))|UserIn], NetIn, Outs) :-
+    serve(Reqs?, Id?, UserIn1?, NetIn?, Outs?).
+serve(Reqs, Id, [decision(no, _, propose(no, _))|UserIn], NetIn, Outs) :-
     ground(Id?) |
     send_user(msg(agent, person, rejected), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?).
-agent(Id, [decision(no, _, accept(no, _))|UserIn], NetIn, Outs) :-
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs1?).
+serve(Reqs, Id, [decision(no, _, accept(no, _))|UserIn], NetIn, Outs) :-
     ground(Id?) |
     send_user(msg(agent, person, rejected), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?).
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs1?).
 
 %% The other consented (injected by await_consent): test already_friend and
 %% convey — already_friends, or a fresh friend channel installed at once.
-agent(Id, [consented(Other, Conv?)|UserIn], NetIn, Outs) :-
+serve(Reqs, Id, [consented(Other, Conv?)|UserIn], NetIn, Outs) :-
     ground(Id?), ground(Other?) |
     already_friend(Other?, Outs?, Outs1, D),
     convey(D?, Other?, Conv, Outs1?, Outs2, NetIn?, NetIn1),
-    agent(Id?, UserIn?, NetIn1?, Outs2?).
+    serve(Reqs?, Id?, UserIn?, NetIn1?, Outs2?).
 
 %% The friend channel conveyed (injected by await_conveyance): install it.
-agent(Id, [adopt(Other, Ch)|UserIn], NetIn, Outs) :-
+serve(Reqs, Id, [adopt(Other, Ch)|UserIn], NetIn, Outs) :-
     ground(Id?), ground(Other?) |
     adopt(Other?, Ch?, Outs?, Outs1, NetIn?, NetIn1),
-    agent(Id?, UserIn?, NetIn1?, Outs1?).
+    serve(Reqs?, Id?, UserIn?, NetIn1?, Outs1?).
 
 %% The other declined (injected by either await): tell the person.
-agent(Id, [declined(Other)|UserIn], NetIn, Outs) :-
+serve(Reqs, Id, [declined(Other)|UserIn], NetIn, Outs) :-
     ground(Id?) |
     send_user(msg(agent, person, rejected(Other?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?).
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs1?).
 
 %% Injection catch-all (drop unrecognised injected message).
-agent(Id, [_|UserIn], NetIn, Outs) :-
+serve(Reqs, Id, [_|UserIn], NetIn, Outs) :-
     ground(Id?), otherwise |
-    agent(Id?, UserIn?, NetIn?, Outs?).
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs?).
 
-%% --- Volitional: social transactions the person originates ---
-%% Request clauses, perpetually pending, placed after every otherwise clause
-%% (remark "Ordering with otherwise"); each willing supplies the parameters.
-%% Compiled form: UserCmds connect/1, unfriend/1, send/2, introduce/2.
+%% --- Volitional: the social transactions the person originates, one clause
+%% per alternative of Request, each reading its request at the head of the
+%% person's stream, after every otherwise clause of the procedure ---
 
-%% Offer friendship by cold call (cold_call/6, agent.glp, as app:code prints
-%% it).
-*(Target)
-agent(Id, UserIn, NetIn, Outs) :-
+%% Offer friendship by cold call (cold_call/6, as app:code prints it).
+serve([connect(Target)|Reqs], Id, UserIn, NetIn, Outs) :-
     ground(Id?), ground(Target?) |
     cold_call(Id?, Target?, UserIn?, UserIn1, Outs?, Outs1),
-    agent(Id?, UserIn1?, NetIn?, Outs1?).
+    serve(Reqs?, Id?, UserIn1?, NetIn?, Outs1?).
 
 %% Unfriend (End friend): notify the peer on the friend channel, tear down,
 %% and tell the person the friend is gone.  Guarded by either party, so
-%% one-way: no ack, no decline.
-%% Idempotent: if Target is not a friend, send_friend and close_friend are
-%% no-ops.
-*(Target)
-agent(Id, UserIn, NetIn, Outs) :-
+%% one-way: no ack, no decline.  Idempotent: if Target is not a friend,
+%% send_friend and close_friend are no-ops.
+serve([unfriend(Target)|Reqs], Id, UserIn, NetIn, Outs) :-
     ground(Id?), ground(Target?) |
     send_friend(Target?, msg(Id?, Target?, unfriend), Outs?, Outs1),
     close_friend(Target?, Outs1?, Outs2),
     send_user(msg(agent, person, unfriended(Target?)), Outs2?, Outs3),
-    agent(Id?, UserIn?, NetIn?, Outs3?).
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs3?).
 
 %% Message a friend: a message the person addresses to someone who is not
 %% their friend is not sent, and the agent tells the person so (GSG Section
-%% 5.1): the lookup of the outputs list and the dispatch on its answer
-%% (send_step/6, agent.glp).
-*(Target, Text)
-agent(Id, UserIn, NetIn, Outs) :-
+%% 5.1): the lookup of the outputs list and the dispatch on its answer.
+serve([send(Target, Text)|Reqs], Id, UserIn, NetIn, Outs) :-
     ground(Id?), ground(Target?) |
     anchor_friend(Target?, Outs?, Outs1, F),
     send_step(F?, Id?, Target?, Text?, Outs1?, Outs2),
-    agent(Id?, UserIn?, NetIn?, Outs2?).
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs2?).
 
 %% Offer an introduction of friend P to friend Q: the two consent variables,
 %% each party's own to write and the other's to read, by role.
-*(P, Q)
-agent(Id, UserIn, NetIn, Outs) :-
+serve([introduce(P, Q)|Reqs], Id, UserIn, NetIn, Outs) :-
     ground(Id?), ground(P?), ground(Q?), P? =?\= Q? |
     introduce_pair(Id?, P?, Q?, Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?).
+    serve(Reqs?, Id?, UserIn?, NetIn?, Outs1?).
 
 %% --- Termination ---
 
-agent(_, [], _, Outs) :- close_outputs(Outs?).
-agent(_, _, [], Outs) :- close_outputs(Outs?).
+serve(_, _, [], _, Outs) :- close_outputs(Outs?).
+serve(_, _, _, [], Outs) :- close_outputs(Outs?).
+
+%% =============================================================================
+%% The agent's own helpers (agent.glp's)
+%% =============================================================================
 
 %% The introduction's two messages by role, the smaller identity proposing
 %% (introduce_step/9, agent.glp, as app:code prints it).
@@ -276,3 +281,52 @@ introduce_pair(Id, P, Q, Outs, Outs2?) :-
     otherwise |
     send_friend(Q?, msg(Id?, Q?, introduce_propose(P?, QSay, PSay?)), Outs?, Outs1),
     send_friend(P?, msg(Id?, P?, introduce_accept(Q?, PSay, QSay?)), Outs1?, Outs2).
+
+%% The cold call (app:code): the person's connect(Target) is the person's
+%% consent, so the agent sends the target its consent and a fresh variable for
+%% the target's, and awaits the target's consent on its own input stream.  The
+%% agent with the smaller identity proposes: its consent carries the reader of
+%% the conveyance variable it will write, and it awaits the other's consent;
+%% the agent with the larger identity accepts, and awaits the proposer's
+%% consent and then the conveyance.
+procedure cold_call(Key?, Key?, UserInStream?, UserInStream, OutputsList?, OutputsList).
+cold_call(Id, Target, UserIn, UserIn1?, Outs, Outs1?) :-
+    Id? @< Target? |
+    send_net(msg(Target?,
+        befriend_accept(Id?, yes(Conveyance?), Theirs)),
+        Outs?, Outs1),
+    await_consent(Target?, Theirs?, Conveyance,
+                  UserIn?, UserIn1).
+cold_call(Id, Target, UserIn, UserIn1?, Outs, Outs1?) :-
+    otherwise |
+    send_net(msg(Target?,
+        befriend_propose(Id?, yes, Theirs)),
+        Outs?, Outs1),
+    await_conveyance(Target?, Theirs?, UserIn?, UserIn1).
+
+%% anchor_friend(Key, Outs, Outs1, F): found(Key) where the outputs list holds
+%% a friend entry for Key, none where it holds none; the outputs passed
+%% through.
+procedure anchor_friend(Constant?, OutputsList?, OutputsList, AnchorFriend).
+anchor_friend(Anchor, [friend_output(K, Out?) | Rest], [friend_output(K?, Out) | Rest?], found(K?)) :-
+    Anchor? =?= K? | true.
+anchor_friend(Anchor, [E | Rest], [E? | Rest1?], F?) :-
+    otherwise | anchor_friend(Anchor?, Rest?, Rest1, F).
+anchor_friend(_, [], [], none).
+
+%% send_step(F, ...): the person's message, dispatched on the lookup of the
+%% outputs list.  Where Target has a friend output entry the message is sent
+%% on the friend channel; where it has none the message is not sent, and the
+%% person is told not_a_friend(Target).
+procedure send_step(AnchorFriend?, Key?, Key?, Constant?, OutputsList?, OutputsList).
+send_step(found(_), Id, Target, Text, Outs, Outs1?) :-
+    send_friend(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1).
+send_step(none, _, Target, _, Outs, Outs1?) :-
+    send_user(msg(agent, person, not_a_friend(Target?)), Outs?, Outs1).
+
+%% The agent's outputs, closed as it ends.
+procedure close_outputs(OutputsList?).
+close_outputs([user_output([])|Outs]) :- close_outputs(Outs?).
+close_outputs([net_output([])|Outs]) :- close_outputs(Outs?).
+close_outputs([friend_output(_, [])|Outs]) :- close_outputs(Outs?).
+close_outputs([]).

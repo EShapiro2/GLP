@@ -1,0 +1,20 @@
+%% inspect_neg.glp --- NEGATIVE: a parameterised procedure that inspects its
+%% parameter through a defined guard, and that no call in the program
+%% instantiates.  Unfolded "at compile time, before type checking" (TGLP
+%% appendix-root-self.tex), isdone's constant `done` stands at the parameter's
+%% position in pskip's head, so pskip/1 is not parametrically well-typed
+%% (parameterized-types.tex, Definition "Parametrically Well-Typed"): "Where a
+%% program contains a parameterised procedure that no call in it instantiates
+%% and that is not parametrically well-typed, compilation rejects the program."
+%%
+%% Run (from glp_runtime/):
+%%   printf 'load ../programs/tests/goal_cert/inspect_neg.glp\n:quit\n' | bin/glpc
+
+Tok ::= done.
+
+procedure isdone(Tok?).
+isdone(done).
+
+procedure(X) pskip(Stream(X)?).
+pskip([X|Xs]) :- isdone(X?) | pskip(Xs?).
+pskip([]).

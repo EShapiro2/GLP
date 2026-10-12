@@ -12,19 +12,19 @@
 %% test_monitor(V1, V2).
 
 %% Type definitions
-MonitorReq ::= add(Number?) ; subtract(Number?) ; value(Number).
+MonitorReq ::= add(Number) ; subtract(Number) ; value(Number?).
 ReqList ::= [] ; [MonitorReq | ReqList].
 
 % Client 1: immediate - add 5, add 3, query value
 procedure client1(Number, ReqList).
-client1(V1, [add(5), add(3), value(V1?)|Xs?]) :- client1_cont(Xs).
+client1(V1?, [add(5), add(3), value(V1)|Xs?]) :- client1_cont(Xs).
 
 procedure client1_cont(ReqList).
 client1_cont([]).
 
 % Client 2: delayed by 100ms - uses body list construction
 procedure client2(Number, ReqList).
-client2(V, [add(10), subtract(2), value(V?)|Ys1?]) :-
+client2(V?, [add(10), subtract(2), value(V)|Ys1?]) :-
     wait(100) |
     client2_cont(Ys1).
 

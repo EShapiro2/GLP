@@ -1,117 +1,45 @@
-/// The Grassroots Super-App's own screen, the image of the display
-/// declarations of `programs/social/graph/core/home.vglp`.
+/// The Grassroots Super-App's own screen: the panel the Dart bridge draws the
+/// constructs of `programs/social/graph/core/home.vglp` in, and the views of
+/// what the super-app tells its person.
 ///
-/// Nothing here is invented. Every element is derived from one declaration
-/// under vGLP's Definitions "Display Declaration", "Manifest" and "Canonical
-/// Compilation". The declarations, carried through into the compiled
-/// `home.glp`, are:
+/// The program runs by its bridge entry, `superapp_ui(alice, Grants, _)`
+/// (`programs/social/graph/core/home_ui.glp`, `(Id, UserIn, NetIn)`), which
+/// gives the super-app's person interface the person channel `ch(Grants?,
+/// Draws)` of vGLP's Definition "Person Channel, Person Writer, GLP with
+/// Persons, Grant" and sends the draws to the person by `send_to_user/1`, as
+/// `superapp/3` does (GSG Section 5.1).  Its constructs are therefore the
+/// bridge's (vGLP, sections/elicitation.tex, the paragraph "The
+/// implementation"): the dispatcher draws `draw(Id, W, V)` and withdraws
+/// `withdraw(Id)`, and the person grants `input(Id, P, R)`.  The source
+/// declares no display and no widget, so each construct is the default widget
+/// of its interactive type (Definition "Widget Declaration, Default Widget"),
+/// drawn by the construct family: `home`'s question, `Stream(Request)?`, an
+/// input box of a menu of the four forms of `Request ::= trust(CompilerKey) ;
+/// install(AppName, Artefact) ; invite(AppName, Friend) ; connect(Friend)`,
+/// each field labelled by the name of its declared type, a `Key` a peer
+/// field, kept open, one request per submission (Remark "Persistence"); and
+/// the question of `respond_friend`, `FriendRequest ::= from(Friend,
+/// Decision?)` in writer mode, a card showing the friend who asks to connect
+/// with the buttons yes and no, withdrawn once answered.  Nothing of the
+/// deployed mediator's vocabulary --- its forms, its cards and their answers
+/// --- is named here: none of it reaches this program.
 ///
-/// ```
-/// display home *(Key) : panel(apps), label("Trust a compiler"),
-///     field(Key, text), persistent.
-/// display home *(Name, App) : panel(apps), label("Install a mini-app"),
-///     field(Name, text), field(App, text), persistent.
-/// display home *(App, Friend) : panel(apps), label("Invite a friend"),
-///     field(App, peer), field(Friend, peer), persistent.
-/// display home *(Friend) : panel(apps), label("Connect"),
-///     field(Friend, peer), persistent.
-/// display respond_friend *(yes, From?) : panel(apps), label("Accept"), transient.
-/// display respond_friend *(no, From?) : panel(apps), label("Decline"), transient.
-/// display msg(agent, person, connected(Friend)) : panel(apps), view(friends).
-/// ```
-///
-/// The four persistent clauses are the person's acts on their own super-app —
-/// trusting a compiler's key, installing a certified mini-app, inviting a
-/// friend to it, asking a person to connect — and the friend's own request is
-/// answered on the transient card of `respond_friend`, whose two clauses share
-/// the context `ctx_respond_friend_j(From)` and are therefore one card with a
-/// button each.
-///
-/// Two of the `text` fields are GLP `String`s and one is a `Constant`: the
-/// compiled answer types are `xs_home_1(String)` and `xs_home_2(String,
-/// Constant)`, and `home_2`'s first argument is the file name `load_file/2`
-/// reads. The widget does not settle that, so the transcription reads `Xs_C`
-/// as well as the `field` items — see [FieldType.string].
+/// What is named here is what the super-app tells its person, `msg(agent,
+/// person, C)` with `C` an `AgentContent` (`programs/social/graph/self.glp`),
+/// which `superapp/3` sends onto the program's end of the person channel and
+/// the dispatcher merges with the draws: the friends the person connects
+/// with, the friends view, and every other message a line of the screen,
+/// shown by its default display.
 library;
 
 import '../ui_runtime/manifest.dart';
-import '../ui_runtime/term.dart';
 
-/// The four persistent clauses of `home`, each a compose form bound to the
-/// standing card of its clause.
-const _trust = CommandDesc(
-  ctor: '',
-  clause: 'home_1',
-  answerCtor: 'xs_home_1',
-  label: 'Trust a compiler',
-  args: [FieldDesc('Key', FieldType.string, 'Key')],
-);
-
-const _install = CommandDesc(
-  ctor: '',
-  clause: 'home_2',
-  answerCtor: 'xs_home_2',
-  label: 'Install a mini-app',
-  args: [
-    FieldDesc('Name', FieldType.string, 'Name'),
-    FieldDesc('App', FieldType.text, 'App'),
-  ],
-);
-
-const _invite = CommandDesc(
-  ctor: '',
-  clause: 'home_3',
-  answerCtor: 'xs_home_3',
-  label: 'Invite a friend',
-  args: [
-    FieldDesc('App', FieldType.peer, 'App'),
-    FieldDesc('Friend', FieldType.peer, 'Friend'),
-  ],
-);
-
-const _connect = CommandDesc(
-  ctor: '',
-  clause: 'home_4',
-  answerCtor: 'xs_home_4',
-  label: 'Connect',
-  args: [FieldDesc('Friend', FieldType.peer, 'Friend')],
-);
-
-/// The two clauses of the friend responder, transient and sharing the context
-/// `ctx_respond_friend_j(From)`: one card, a button each. Neither has an
-/// else-branch, so neither carries a decline — a request to connect stands
-/// until the person decides it, either way by a will of their own.
-const _respondFriend = InboxDesc(
-  clauses: ['respond_friend_1', 'respond_friend_2'],
-  args: ['From'],
-  itemKey: 'From',
-  title: '',
-  answers: [
-    AnswerDesc(
-      label: 'Accept',
-      cmdCtor: '',
-      clause: 'respond_friend_2',
-      answerCtor: 'xs_respond_friend_2',
-      fill: [ConstFill(GAtom('yes'))],
-    ),
-    AnswerDesc(
-      label: 'Decline',
-      cmdCtor: '',
-      clause: 'respond_friend_1',
-      answerCtor: 'xs_respond_friend_1',
-      fill: [ConstFill(GAtom('no'))],
-    ),
-  ],
-);
-
-/// Panel `apps`: the four forms, the connect card, the friends view, and the
-/// default display — a list in the program's panel — which takes every other
-/// message the super-app shows its person.
+/// Panel `apps`: the constructs the bridge holds open, then the friends
+/// view, then the screen, which takes every message of the super-app's the
+/// friends view leaves.
 const _appsPanel = Panel(
   id: 'apps',
   name: 'apps',
-  commands: [_trust, _install, _invite, _connect],
-  inbox: [_respondFriend],
   views: [
     ScreenView(
       pattern: 'msg(agent, person, connected(Friend))',

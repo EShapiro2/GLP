@@ -202,11 +202,12 @@ display respond *(Answer=yes, From?) : panel(inbox), label('"x"'), transient.
     // bonds/bonds_agent.vglp and sovereign/denominated/sovereign_agent.vglp
     // also COMPILE and RUN --- Sections N2, N3 and N4 of test/run_all_tests.sh
     // load their emitted .glp and run the village market; social/graph/core/
-    // home.vglp compiles, its home.glp being the compiler's output, and no
-    // section of the suite runs it.  The rest do not yet compile, the edits
-    // being with their owners — social/graph and grassapp SGSG's, the two cssn
-    // sources CSSN's.  Each parse test becomes the compilation test as its
-    // source is repaired.
+    // home.vglp compiles, its home.glp being the compiler's output, which
+    // Section SG runs on the dispatcher (superapp_ui/3); social/graph/core/
+    // agent.vglp and grassapp/grassapp_agent.vglp compile, beside the
+    // hand-written agent.glp and grassapp_agent.glp the programs load.  The
+    // two cssn sources do not yet compile, the edits being CSSN's.  Each
+    // parse test becomes the compilation test as its source is repaired.
     //
     // A currency source is asked what vGLP's Definition "Guarded Clause,
     // Volitional Procedure, Interactive Type, Interactive Term, Ordinary
@@ -214,11 +215,17 @@ display respond *(Answer=yes, From?) : panel(inbox), label('"x"'), transient.
     // "declared `procedure (T)*p(T1, ..., Tn).`", whose clauses are written
     // "(A)*p(S1, ..., Sn) :- G | B" (GLP #3 Cowork, 2026-10-09 19:15 UTC).
     // Each is asked it from its port: bonds on its own, coins and sovereign
-    // in the three-owner merge (GLP #3 Cowork, 2026-10-09 18:38 UTC).
+    // in the three-owner merge (GLP #3 Cowork, 2026-10-09 18:38 UTC); the
+    // social graph's agent and the grassroots app's, item 2 of GSG's port
+    // (GSG 2026-10-11 13:19 UTC), and the super-app's person interface,
+    // home.vglp, its item 1, in the one merge of the two.
     for (final path in [
       'currencies/coins/currency/coins_agent.vglp',
       'currencies/bonds/bonds_agent.vglp',
       'currencies/sovereign/denominated/sovereign_agent.vglp',
+      'social/graph/core/agent.vglp',
+      'social/graph/core/home.vglp',
+      'grassapp/grassapp_agent.vglp',
     ]) {
       test('$path parses as vGLP and holds a volitional procedure', () {
         final file = File('$_programs/$path');
@@ -230,9 +237,6 @@ display respond *(Answer=yes, From?) : panel(inbox), label('"x"'), transient.
       });
     }
     for (final path in [
-      'social/graph/core/agent.vglp',
-      'social/graph/core/home.vglp',
-      'grassapp/grassapp_agent.vglp',
       'cssn/childsafe/agent.vglp',
       'cssn/childsafe/child_agent.vglp',
     ]) {

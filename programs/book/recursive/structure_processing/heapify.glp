@@ -1,34 +1,58 @@
 %% Type definitions
 Tree ::= void ; tree(Number, Tree, Tree).
 
-%% Procedure type declarations
-procedure heapify(Tree, Tree).
-procedure adjust(Number, Tree, Tree, Tree).
-procedure greater(Number, Tree).
-procedure reduce(Any, Any).
-
 %% heapify.glp - Adjusting a binary tree to satisfy the heap property (AoP 3.28)
 %% heapify(Tree,Heap) :- Heap has the same elements as Tree but satisfies the heap property.
 
+procedure heapify(Tree?, Tree).
 heapify(void, void).
 heapify(tree(X, L, R), Heap?) :-
     heapify(L?, HeapL), heapify(R?, HeapR), adjust(X?, HeapL?, HeapR?, Heap).
 
-adjust(X, HeapL, HeapR, tree(X?, HeapL?, HeapR?)) :-
-    greater(X?, HeapL?), greater(X?, HeapR?) | true.
-adjust(X, tree(X1, L, R), HeapR, tree(X1?, HeapL?, HeapR?)) :-
-    X? < X1?, greater(X1?, HeapR?) | adjust(X?, L?, R?, HeapL).
-adjust(X, HeapL, tree(X1, L, R), tree(X1?, HeapL?, HeapR?)) :-
-    X? < X1?, greater(X1?, HeapL?) | adjust(X?, L?, R?, HeapR).
+%% adjust/4's guards greater(X, HeapL) and greater(X, HeapR) are written with
+%% the catalogue's guards: greater/2 below is no guard predicate (GLP-Spec,
+%% "Defined guard predicates": only a unit clause defines one), so each of its
+%% two clauses is unfolded into the head and guard of adjust/4, the void case
+%% matching void and the tree case matching tree(X1, L, R) with X >= X1.
+procedure adjust(Number?, Tree?, Tree?, Tree).
+adjust(X, void, void, tree(X?, void, void)).
+adjust(X, void, tree(X2, L2, R2), tree(X?, void, tree(X2?, L2?, R2?))) :-
+    X? >= X2? | true.
+adjust(X, tree(X1, L1, R1), void, tree(X?, tree(X1?, L1?, R1?), void)) :-
+    X? >= X1? | true.
+adjust(X, tree(X1, L1, R1), tree(X2, L2, R2), tree(X?, tree(X1?, L1?, R1?), tree(X2?, L2?, R2?))) :-
+    X? >= X1?, X? >= X2? | true.
+adjust(X, tree(X1, L, R), void, tree(X1?, HeapL?, void)) :-
+    X? < X1? | adjust(X?, L?, R?, HeapL).
+adjust(X, tree(X1, L, R), tree(X2, L2, R2), tree(X1?, HeapL?, tree(X2?, L2?, R2?))) :-
+    X? < X1?, X1? >= X2? | adjust(X?, L?, R?, HeapL).
+adjust(X, void, tree(X1, L, R), tree(X1?, void, HeapR?)) :-
+    X? < X1? | adjust(X?, L?, R?, HeapR).
+adjust(X, tree(X2, L2, R2), tree(X1, L, R), tree(X1?, tree(X2?, L2?, R2?), HeapR?)) :-
+    X? < X1?, X1? >= X2? | adjust(X?, L?, R?, HeapR).
 
-greater(X, void).
-greater(X, tree(X1, L, R)) :- X? >= X1? | true.
+procedure greater(Number?, Tree?).
+greater(_, void).
+greater(X, tree(X1, _, _)) :- X? >= X1? | true.
 
 %% reduce clauses for metainterpreter
+procedure reduce(_?, _).
 reduce(heapify(void, void), true).
 reduce(heapify(tree(X, L, R), Heap?), (heapify(L?, HeapL), heapify(R?, HeapR), adjust(X?, HeapL?, HeapR?, Heap))).
-reduce(adjust(X, HeapL, HeapR, tree(X?, HeapL?, HeapR?)), (greater(X?, HeapL?), greater(X?, HeapR?))) :- true.
-reduce(adjust(X, tree(X1, L, R), HeapR, tree(X1?, HeapL?, HeapR?)), adjust(X?, L?, R?, HeapL)) :- X? < X1?, greater(X1?, HeapR?) | true.
-reduce(adjust(X, HeapL, tree(X1, L, R), tree(X1?, HeapL?, HeapR?)), adjust(X?, L?, R?, HeapR)) :- X? < X1?, greater(X1?, HeapL?) | true.
-reduce(greater(X, void), true).
-reduce(greater(X, tree(X1, L, R)), true) :- X? >= X1? | true.
+reduce(adjust(X, void, void, tree(X?, void, void)), true).
+reduce(adjust(X, void, tree(X2, L2, R2), tree(X?, void, tree(X2?, L2?, R2?))), true) :-
+    X? >= X2? | true.
+reduce(adjust(X, tree(X1, L1, R1), void, tree(X?, tree(X1?, L1?, R1?), void)), true) :-
+    X? >= X1? | true.
+reduce(adjust(X, tree(X1, L1, R1), tree(X2, L2, R2), tree(X?, tree(X1?, L1?, R1?), tree(X2?, L2?, R2?))), true) :-
+    X? >= X1?, X? >= X2? | true.
+reduce(adjust(X, tree(X1, L, R), void, tree(X1?, HeapL?, void)), adjust(X?, L?, R?, HeapL)) :-
+    X? < X1? | true.
+reduce(adjust(X, tree(X1, L, R), tree(X2, L2, R2), tree(X1?, HeapL?, tree(X2?, L2?, R2?))), adjust(X?, L?, R?, HeapL)) :-
+    X? < X1?, X1? >= X2? | true.
+reduce(adjust(X, void, tree(X1, L, R), tree(X1?, void, HeapR?)), adjust(X?, L?, R?, HeapR)) :-
+    X? < X1? | true.
+reduce(adjust(X, tree(X2, L2, R2), tree(X1, L, R), tree(X1?, tree(X2?, L2?, R2?), HeapR?)), adjust(X?, L?, R?, HeapR)) :-
+    X? < X1?, X1? >= X2? | true.
+reduce(greater(_, void), true).
+reduce(greater(X, tree(X1, _, _)), true) :- X? >= X1? | true.

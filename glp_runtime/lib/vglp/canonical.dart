@@ -478,6 +478,7 @@ CanonicalProgram compileCanonical(String text,
   _checkNoAskedCall(m, volitional, imports);
   _checkNoAnonymousTerm(m, volitional);
   _checkLaterClausesRead(m, volitional, declsByKey);
+  _checkWritersAtOutputs(m, volitional, imports, declsByKey);
 
   // THE EXPORTS.  "A declaration imported procedure (T)*N#p(T1,...,Tn). of a
   // volitional procedure of another module N, and a declaration imported
@@ -1962,6 +1963,77 @@ void _checkLaterClausesRead(Module m,
               'vGLP Program")',
               later.line, later.column, phase: 'analyzer');
         }
+      }
+    }
+  }
+}
+
+/// "Every call of a volitional procedure, in a clause body or in the initial
+/// goal, holds a writer at each output position" (vGLP, Definition
+/// "Volitional Procedure, Interactive Type, Interactive Term, Ordinary
+/// Clause, vGLP Program"): "at an output position the asking clause's head
+/// carries a reader, which a writer of the goal matches and a term of the
+/// goal that is not a writer does not" (the paragraph after Definition
+/// "Canonical Compilation").
+///
+/// The calls are those of every clause body of the source, of the program's
+/// own volitional procedures and, N # p(...), of those it imports; the
+/// initial goal is not in the source (the head comment, "The initial goal").
+/// A position is an output position where its declared type is in writer
+/// mode, as the asking clause reads it ([_askingClause]).  A writer is a
+/// writer variable or an anonymous variable, which "denotes a fresh writer"
+/// (GLP-Spec, Remark "Anonymous Variables"); any other term --- a reader, a
+/// constant, a compound --- is refused.
+void _checkWritersAtOutputs(Module m,
+    Map<String, VolitionalProcedure> volitional,
+    Map<String, ImportedVolitional> imports,
+    Map<String, ProcDecl> declsByKey) {
+  final ownClauses = {
+    for (final v in volitional.values) '${v.name}/${v.arity + 1}': v
+  };
+  bool isWriter(Term t) =>
+      (t is VarTerm && !t.isReader) || (t is UnderscoreTerm && !t.isReader);
+  final printer = GlpPrinter();
+  String clauseOf(Procedure p, Clause c) {
+    final v = ownClauses[p.signature];
+    return v != null ? _asWritten(c, v) : printer.printAtom(c.head);
+  }
+
+  void check(Procedure p, Clause c, Goal call, Goal target, String name,
+      int arity, ProcDecl decl) {
+    for (var k = 0; k < arity; k++) {
+      if (decl.isInputArg(k)) continue;
+      final s = target.args[k];
+      if (isWriter(s)) continue;
+      throw CompileError(
+          'The call ${printer.printGoal(call)} of the volitional procedure '
+          '$name/$arity, in the clause ${clauseOf(p, c)} at line ${c.line}, '
+          'holds ${printer.printTerm(s)} at output position ${k + 1}, which '
+          'is not a writer: every call of a volitional procedure, in a clause '
+          'body or in the initial goal, holds a writer at each output '
+          'position (vGLP, Definition "Volitional Procedure, Interactive '
+          'Type, Interactive Term, Ordinary Clause, vGLP Program"), the '
+          'asking clause\'s head carrying a reader there, which only a writer '
+          'of the goal matches (vGLP, the paragraph after Definition '
+          '"Canonical Compilation")',
+          call.line, call.column, phase: 'analyzer');
+    }
+  }
+
+  for (final p in m.procedures) {
+    for (final c in p.clauses) {
+      final body = c.body ?? const <Goal>[];
+      for (final g in _calls(body)) {
+        final v = volitional['${g.functor}/${g.args.length}'];
+        if (v == null) continue;
+        check(p, c, g, g, v.name, v.arity,
+            declsByKey['${v.name}/${v.arity + 1}']!);
+      }
+      for (final g in _remoteCalls(body)) {
+        final i = imports[_remoteKey(g)];
+        if (i == null) continue;
+        final (_, target) = _remoteTarget(g);
+        check(p, c, g, target, '${i.module}#${i.name}', i.arity, i.decl);
       }
     }
   }

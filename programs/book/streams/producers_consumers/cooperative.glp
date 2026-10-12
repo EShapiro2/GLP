@@ -1,21 +1,20 @@
 %% cooperative.glp - Cooperative stream production example
 %% Source: AofGLP Book
-%% STATUS: ILL-TYPED - uses anonymous _ in body (SRSW violation)
-%%         Cannot be fixed without changing program structure
 
 %% Type definitions
 Done ::= done.
+Item ::= a ; b.
 
 % Bob produces two a's then hands tail to Alice
-procedure(X) bob(Stream(X), Done).
+procedure bob(Stream(Item), Done).
 bob([a,a|Tail?], Result?) :- alice(Tail, Result).
 
 % Alice produces three b's then hands tail to Bob
-procedure(X) alice(Stream(X), Done).
+procedure alice(Stream(Item), Done).
 alice([b,b,b|Tail?], Result?) :- bob_finish(Tail, Result).
 
 % Bob produces two more a's then closes
-procedure(X) bob_finish(Stream(X), Done).
+procedure bob_finish(Stream(Item), Done).
 bob_finish([a,a], done).
 
 % Reader: counts elements in stream
@@ -26,7 +25,7 @@ reader([X|Xs], Count, Result?) :- ground(X?) |
     reader(Xs?, Count1?, Result).
 
 % Test cooperative production
-procedure(X) test_coop(Stream(X), Done).
+procedure test_coop(Stream(Item), Done).
 test_coop(Stream?, Done?) :- bob(Stream, Done).
 
 % Test reading the cooperatively-produced stream

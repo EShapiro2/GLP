@@ -422,9 +422,9 @@ check "Factorial 1" "Fac1 = 1" "$a9"
 check "Factorial 2" "Fac2 = 2" "$a9"
 check "Factorial 3" "Fac3 = 6" "$a9"
 check "Factorial 5" "Fac5 = 120" "$a9"
-check "Hanoi 0" "succeeds" "$a9"
-check "Hanoi 1" "succeeds" "$a9"
-check "Hanoi 2" "succeeds" "$a9"
+check "Hanoi 0" "Mh0 = \[\]" "$a9"
+check "Hanoi 1" "Mh1 = \[move(a, c)\]" "$a9"
+check "Hanoi 2" "Mh2 = \[move(a, b), move(a, c), move(b, c)\]" "$a9"
 check "Primes 20" "Ps20 = \[2, 3, 5, 7, 11, 13, 17, 19\]" "$a9"
 check "Primes 10" "Ps10 = \[2, 3, 5, 7\]" "$a9"
 
@@ -1436,6 +1436,11 @@ echo "=== Section B: Positive Type Check Tests ==="
 echo ""
 
 POSITIVE_FILES=(
+    # --- book ---
+    # Rejected until GLP's book task of 2026-10-12 21:18 UTC re-declared them:
+    # cooperative.glp over Stream(Item), merge_dynamic.glp over Msg.
+    "$BOOK/streams/producers_consumers/cooperative.glp"
+    "$BOOK/streams/producers_consumers/merge_dynamic.glp"
     # --- typechecker/positive ---
     # Structural identity in the duality check (§20.3): a Stream<A> stored into a
     # field typed by the named alias AStream must type-check (false positive before
@@ -1896,11 +1901,7 @@ NEGATIVE_FILES=(
     # moved to POSITIVE_FILES. That sweep did NOT unskip ui_mediator_test, which
     # this comment used to predict; that test was removed on 2026-08-03 (Udi's
     # instruction) rather than repaired, and known-issues Issue 20 says why.
-    # The two streams entries are GLP-ICLP's, expected rejections until they
-    # re-declare or prune them.
     "$AGENT_RT/channel.glp"
-    "$BOOK/streams/producers_consumers/cooperative.glp"
-    "$BOOK/streams/producers_consumers/merge_dynamic.glp"
 
     # The recv2x2 probe directory reduced to one file, bodies and declarations
     # unchanged: boot_b_outfed and boot_d_outfed hand-build ch(S?, OutW?), a
@@ -5412,6 +5413,32 @@ HEREDOC
 2>&1)
 check "SG super-app: a send to someone not a friend is not sent, and the person is told not_a_friend" "A = \[not_a_friend(bob), connected(bob), received(bob, hello) | " "$sg_naf"
 check "SG super-app: a send between the acceptance and the conveyance is told not_a_friend" "B = \[not_a_friend(alice), connected(alice) | " "$sg_naf"
+
+# The super-app's own person interface on the dispatcher (GSG paper, Section
+# 3; vGLP, Definitions "Volitional Procedure, ..." and "Canonical
+# Compilation"): home/3 asks the person once for the stream of their
+# requests, and the dispatcher draws its construct on the person channel, the
+# default widget of a stream of a union of tuples, a menu of the four forms
+# kept open; a Connect granted on it reaches the agent, whose notice
+# connected(bob) arrives on the same channel, merged with the draws
+# (superapp_ui/3, alice with a scripted bob).  A friend's request to connect
+# raises respond_friend's card, the friend shown, and the person's yes on it
+# is their decision, with the pending value passed back as it came (home.glp
+# alone, its dispatcher with a scripted grant).
+sg_home=$("$REPL_RUN" <<HEREDOC
+$SG_CORE
+:limit 5000000
+superapp_ui(alice, [input(0, [], connect(bob)) | G?], []).
+load $SG_CORE/home.glp
+home(alice, [msg(agent, person, befriend(bob, error))], C, A), dispatch(A?, ch([input(1, [2], yes) | G1?], D), M).
+:quit
+HEREDOC
+2>&1)
+check "SG super-app home: the request form, a menu of the four acts, drawn on the person channel" "draw(0, input_box(menu(\[form(trust, \[field(CompilerKey, peer)\]), form(install, \[field(AppName, text), field(Artefact, text)\]), form(invite, \[field(AppName, text), field(Friend, peer)\]), form(connect, \[field(Friend, peer)\])\])), input(\[\]))" "$sg_home"
+check "SG super-app home: a Connect granted reaches the agent, and connected(bob) is shown on the person channel" "^msg(agent, person, connected(bob))$" "$sg_home"
+check "SG super-app home: a friend's request to connect raises respond_friend's card, the friend shown" "ask('FriendRequest', friendRequest_w(from(bob, yes)))" "$sg_home"
+check "SG super-app home: yes on the card is the person's decision, the pending value passed back" "C = \[msg(person, alice, decision(yes, bob, error))\]" "$sg_home"
+check_not "SG super-app home: no failed goal" "→ failed" "$sg_home"
 
 # The same through the deployed UI mediator (boot.glp, play_not_a_friend_ui):
 # alice's person sends carol, not her friend, a message and is shown

@@ -1,0 +1,25 @@
+%% goal_cert_scope/unit.glp --- a unit calling p/2 of its ancestor self.glp
+%% where no site of the call supplies a type for p's parameter: in go/1, p's
+%% output is read only by len/2, whose own parameter is open too.  Such a call
+%% is left open, and its clause well-typed, only where the callee is
+%% parametrically well-typed; otherwise it is refused (TGLP
+%% appendix-implementation-notes.tex, "The instantiation of a call").  p/2 is,
+%% on its clauses as unfolded (appendix-root-self.tex), in its layer as at the
+%% check of self.glp, so the unit loads and the goal go(N) runs, N = 2.  q/2
+%% passes its parameter through to p/2, and is certified parametrically
+%% well-typed by its layer, asking p/2's of the ancestor layer: the goal
+%% q([a,b], O), which supplies no type for q's parameter, is admitted and
+%% runs, O = [a,b].
+%%
+%% Run (from glp_runtime/):
+%%   printf 'load ../programs/tests/goal_cert_scope/unit.glp\ngo(N).\nq([a,b], O).\n:quit\n' | bin/glpc
+
+procedure(Z) len(Stream(Z)?, Integer).
+len([_|Xs], N?) :- len(Xs?, N1), N := N1? + 1.
+len([], 0).
+
+procedure go(Integer).
+go(N?) :- p([a,b], O), len(O?, N).
+
+procedure(W) q(Stream(W)?, Stream(W)).
+q(In, Out?) :- p(In?, Out).

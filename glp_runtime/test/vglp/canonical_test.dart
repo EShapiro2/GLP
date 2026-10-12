@@ -1731,4 +1731,95 @@ procedure (YesNo?)*ask(Integer?, YesNo).
       compileCanonical('$head(yes)*ask(_, yes).\n(A)*ask(_, A?).\n');
     });
   });
+
+  group('every call of a volitional procedure holds a writer at each output '
+      'position', () {
+    // "every call of a volitional procedure, in a clause body or in the
+    // initial goal, holds a writer at each output position" (vGLP de068b4,
+    // Definition "Volitional Procedure, Interactive Type, Interactive Term,
+    // Ordinary Clause, vGLP Program"); the paragraph after Definition
+    // "Canonical Compilation" says why: the asking clause's head carries a
+    // reader there, which only a writer of the goal matches.  vGLP's task of
+    // 2026-10-12 21:35 UTC, item 1.  The initial goal is not in the source.
+    const head = '''
+Yes ::= yes.
+Done ::= done.
+procedure (Yes?)*q(Done).
+(yes)*q(done).
+''';
+    Matcher refusal(String call, String name, String clause, int line,
+            String term) =>
+        throwsA(isA<CompileError>()
+            .having(
+                (e) => e.message,
+                'message',
+                allOf(
+                    contains('The call $call of the volitional procedure '
+                        '$name/1, in the clause $clause at line $line, holds '
+                        '$term at output position 1, which is not a writer'),
+                    contains('every call of a volitional procedure, in a '
+                        'clause body or in the initial goal, holds a writer '
+                        'at each output position (vGLP, Definition '
+                        '"Volitional Procedure, Interactive Type, Interactive '
+                        'Term, Ordinary Clause, vGLP Program")')))
+            .having((e) => e.line, 'line', line));
+
+    test('(yes)*q(done). called as q(done) in a clause body: refused', () {
+      expect(
+          () => compileCanonical('${head}procedure main.\nmain :- q(done).\n'),
+          refusal('q(done)', 'q', 'main', 6, 'done'));
+    });
+
+    test('called as q(X): accepted, X passed on as the writer', () {
+      final c = compileCanonical(
+          '${head}procedure main(Done?).\nmain(X?) :- q(X).\n');
+      expect(c.source, contains('main(X?, D?) :- q(X, D).'));
+    });
+
+    test('called with the anonymous variable, a fresh writer: accepted', () {
+      compileCanonical('${head}procedure main.\nmain :- q(_).\n');
+    });
+
+    test('called with a reader at the output position: refused', () {
+      expect(
+          () => compileCanonical(
+              '${head}procedure main(Done).\nmain(X) :- q(X?).\n'),
+          refusal('q(X?)', 'q', 'main(X)', 6, 'X?'));
+    });
+
+    test('called in a clause of a volitional procedure: refused, the clause '
+        'named as written', () {
+      expect(
+          () => compileCanonical('''
+Yes ::= yes.
+Done ::= done.
+procedure (Yes?)*q(Done).
+(yes)*q(done).
+procedure (Yes?)*r.
+(yes)*r :- q(done).
+'''),
+          refusal('q(done)', 'q', '(yes)*r', 6, 'done'));
+    });
+
+    test('a call N # p(...) of an imported volitional procedure: refused',
+        () {
+      final modules = _exportsOf({
+        'n': '''
+Yes ::= yes.
+Done ::= done.
+exported procedure (Yes?)*q(Done).
+(yes)*q(done).
+''',
+      });
+      expect(
+          () => compileCanonical('''
+Yes ::= yes.
+Done ::= done.
+imported procedure (Yes?)*n#q(Done).
+exported procedure main.
+main :- n # q(done).
+''', exports: modules),
+          refusal('n # q(done)', 'n#q', 'main', 5, 'done'));
+    });
+  });
 }
