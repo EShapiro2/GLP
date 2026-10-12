@@ -17,39 +17,46 @@
 procedure ping(Constant?, AppUiStream, SgChannel?).
 ping(_, [], _).
 
-%% The person's answers to the super-app's own person interface (home.vglp),
-%% as the super-app receives them: home.glp:8--31's Answer, ReqId and
-%% UserAnswer written here again under core's own names.  Types are not
-%% exported: a caller declares what it passes in its own scope, and the linked
-%% check holds the two structurally compatible (TGLP, "Structural type
-%% compatibility").
-HomeAnswer ::= xs_respond_friend_1(String) ; xs_respond_friend_2(String) ; xs_home_1(String) ; xs_home_2(String, Constant) ; xs_home_3(Constant, Key) ; xs_home_4(Key).
-HomeReqId ::= req(Integer).
-HomeUserAnswer ::= answer(HomeReqId, HomeAnswer) ; decline(HomeReqId).
+%% The questions of the super-app's own person interface (home.vglp), as its
+%% compilation home.glp carries them (vGLP, Definition "Canonical
+%% Compilation"): the union of home's questions, of which the asks on its ask
+%% stream are made, written here again under core's own names, since
+%% ../self.glp's Question and Request are the currency's.  Types are not
+%% exported: a caller declares what it passes in its own scope, and the
+%% imported declarations below carry exactly the types of home.glp's exports,
+%% structurally (TGLP, "Cross-module type checking").  Ask(Q) and PersonIn are
+%% ../self.glp's, as home.glp's own.
+HomeRequest       ::= trust(Key) ; install(String, String) ; invite(String, Key) ; connect(Key).
+HomeFriendRequest ::= from(Key, Decision?).
+HomeQuestion      ::= friendRequest_w(HomeFriendRequest) ; stream_request_r(Stream(HomeRequest)?).
 
 %% The super-app (GSG paper, Section 5.1): the one goal the runtime posts,
 %% with the person's public key, the stream of the person's acts and the
 %% stream from the network, and nothing else.  It runs agent/4, with the
-%% super-app's own person interface (home/8) and its mediator (med/4) between
-%% the person and the agent, and sends the two streams of the outputs list to
-%% the person by send_to_user/1 and to the network by send_to_net/1.  The
-%% person is sent what the agent tells her and the mediator's cards.  The
-%% imported declarations of home/8 and med/4 type the person's answers and
-%% the positions the super-app reads, and leave the others untyped, since it
-%% only passes them along.
-imported procedure home#home(_?, Key?, AgentToUserStream?, Stream(UserInMsg), _?, _?, _?, _?).
-imported procedure home#med(_?, _?, _?, Integer?).
+%% super-app's own person interface (home/3) and its dispatcher between the
+%% person and the agent, and sends the two streams of the outputs list to the
+%% person and to the network.  The person's acts are the grants of the person
+%% channel (vGLP, Definition "Person Channel, Person Writer, GLP with Persons,
+%% Grant"), ch(Grants?, Draws), which the dispatcher reads: home's asks go to
+%% it, and it draws the constructs of home's questions.  What the agent tells
+%% the person goes to her on the dispatcher's channel to the program, which
+%% merges it with the draws, as miniapp.glp of programs/currencies/coins/
+%% currency does with its screen; home reads the same stream for a friend's
+%% request to connect.  The draws leave by send_to_user/1, and the network
+%% stream by send_to_net/1.
+imported procedure home#home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(HomeQuestion))).
+imported procedure home#dispatch(Stream(Ask(HomeQuestion))?, Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
 imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
-exported procedure superapp(Key?, Stream(HomeUserAnswer)?, NetInStream?).
-superapp(Id, Answers, NetIn) :-
+exported procedure superapp(Key?, PersonIn?, NetInStream?).
+superapp(Id, Grants, NetIn) :-
     ground(Id?) |
     agent # agent(Id?, Cmds?, NetIn?, [user_output(Outs), net_output(NetOut)]),
     send_to_net(NetOut?),
     tee_out(Outs?, Shown, Seen),
-    send_to_user(Shown?),
-    home # home(ch([], Asks), Id?, Seen?, Cmds, none, none, none, none),
-    home # med(ch(Answers?, Cards), ch(Asks?, _), [], 0),
-    send_to_user(Cards?).
+    home # home(Id?, Seen?, Cmds, Asks),
+    home # dispatch(Asks?, ch(Grants?, Draws), MCh),
+    show_notices(MCh?, Shown?),
+    send_to_user(Draws?).
 
 %% What the agent tells the person, shown to her and read by the person
 %% interface: superapp/3 above and superapp_ui/3 (home_ui.glp) reach it by
@@ -57,6 +64,18 @@ superapp(Id, Answers, NetIn) :-
 procedure tee_out(AgentToUserStream?, AgentToUserStream, AgentToUserStream).
 tee_out([X | Xs], [X? | Ys?], [X? | Zs?]) :- ground(X?) | tee_out(Xs?, Ys, Zs).
 tee_out([], [], []).
+
+%% What the agent tells the person, onto the program's output to the person,
+%% which the dispatcher's channel to the program carries as any term; the
+%% person's input other than grants is not read.  superapp_ui/3 reaches it by
+%% scope.
+procedure show_notices(Channel(Stream(_), Stream(_))?, AgentToUserStream?).
+show_notices(ch(_, Out?), Shown) :- relay(Shown?, Out).
+
+%% Each message as it comes, read as any term.
+procedure relay(_?, Stream(_)).
+relay([M | Ms], [M? | Out?]) :- relay(Ms?, Out).
+relay([], []).
 
 %% The agent, exported for the parent's UI boot plays (../boot.glp,
 %% ../play_ui_boot.glp), which call it as core # agent: a call into this
@@ -67,9 +86,9 @@ agent(Id, UserIn, NetIn, Outs) :- agent # agent(Id?, UserIn?, NetIn?, Outs?).
 
 %% The super-app as a play, alice with a scripted Bob: what the Flutter agent
 %% runtime starts (home_ui.glp).
-imported procedure home_ui#superapp_ui(Key?, Stream(HomeUserAnswer)?, NetInStream?).
-exported procedure superapp_ui(Key?, Stream(HomeUserAnswer)?, NetInStream?).
-superapp_ui(Id, Answers, NetIn) :- home_ui # superapp_ui(Id?, Answers?, NetIn?).
+imported procedure home_ui#superapp_ui(Key?, PersonIn?, NetInStream?).
+exported procedure superapp_ui(Key?, PersonIn?, NetInStream?).
+superapp_ui(Id, Grants, NetIn) :- home_ui # superapp_ui(Id?, Grants?, NetIn?).
 
 imported procedure superapp_plays#play_invite(AppUiStream, AppUiStream).
 exported procedure play_invite(AppUiStream, AppUiStream).

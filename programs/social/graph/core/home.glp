@@ -2,115 +2,240 @@
 %% (vGLP, Definition "Canonical Compilation").  Do not edit: edit
 %% the .vglp source and compile again.
 
-%% --- the source's own types ---
+CompilerKey ::= Key.
+Friend ::= Key.
+AppName ::= String.
+Artefact ::= String.
+Request ::= trust(CompilerKey) ; install(AppName, Artefact) ; invite(AppName, Friend) ; connect(Friend).
+FriendRequest ::= from(Friend, Decision?).
 
-%% --- the types the compilation adds ---
-Xs_respond_friend_1 ::= xs_respond_friend_1(String).
-Reply_respond_friend_1 ::= then(Xs_respond_friend_1).
-Ctx_respond_friend_1 ::= ctx_respond_friend_1(Key).
-Xs_respond_friend_2 ::= xs_respond_friend_2(String).
-Reply_respond_friend_2 ::= then(Xs_respond_friend_2).
-Ctx_respond_friend_2 ::= ctx_respond_friend_2(Key).
-Xs_home_1 ::= xs_home_1(String).
-Reply_home_1 ::= then(Xs_home_1).
-Xs_home_2 ::= xs_home_2(String, Constant).
-Reply_home_2 ::= then(Xs_home_2).
-Xs_home_3 ::= xs_home_3(Constant, Key).
-Reply_home_3 ::= then(Xs_home_3).
-Xs_home_4 ::= xs_home_4(Key).
-Reply_home_4 ::= then(Xs_home_4).
-Answer ::= Xs_respond_friend_1 ; Xs_respond_friend_2 ; Xs_home_1 ; Xs_home_2 ; Xs_home_3 ; Xs_home_4.
-Escrow ::= esc_respond_friend_1(Reply_respond_friend_1?) ; esc_respond_friend_2(Reply_respond_friend_2?) ; esc_home_1(Reply_home_1?) ; esc_home_2(Reply_home_2?) ; esc_home_3(Reply_home_3?) ; esc_home_4(Reply_home_4?).
-Context ::= Ctx_respond_friend_1 ; Ctx_respond_friend_2 ; ctx_home_1 ; ctx_home_2 ; ctx_home_3 ; ctx_home_4.
+Question ::= friendRequest_w(FriendRequest) ; stream_request_r(Stream(Request)?).
 
-%% --- the mediator's vocabulary, instantiated ---
-ReqId ::= req(Integer).
-Slot(R) ::= none ; ask(R, ReqId).
-AgentMsg ::= ask(Constant, Context, Escrow, ReqId?) ; abort(ReqId).
-Card ::= card(Constant, Context, ReqId) ; closed(ReqId) ; aborted(ReqId).
-UserAnswer ::= answer(ReqId, Answer) ; decline(ReqId).
-PendingEntry ::= pending(ReqId, Escrow).
-PendingList ::= [] ; [PendingEntry | PendingList].
+procedure respond_friend(Key?, Key?, PendingValue?, Stream(UserInMsg), Stream(Ask(Question))).
+respond_friend(S1, S2, S3, S4?, [ask('FriendRequest', friendRequest_w(X?)) | D?]) :- respond_friend1(S1?, S2?, S3?, S4, X, D).
 
-%% --- the display declarations, carried through ---
-display home *(Key) : panel(apps), label('Trust a compiler'), field(Key, text), persistent.
-display home *(Name, App) : panel(apps), label('Install a mini-app'), field(Name, text), field(App, text), persistent.
-display home *(App, Friend) : panel(apps), label('Invite a friend'), field(App, peer), field(Friend, peer), persistent.
-display home *(Friend) : panel(apps), label('Connect'), field(Friend, peer), persistent.
-display respond_friend *(yes, From?) : panel(apps), label('Accept'), transient.
-display respond_friend *(no, From?) : panel(apps), label('Decline'), transient.
-display msg(agent, person, connected(Friend)) : panel(apps), view(friends).
+procedure respond_friend1(Key?, Key?, PendingValue?, Stream(UserInMsg), FriendRequest, Stream(Ask(Question))).
+respond_friend1(Id, From, P, Cmds?, from(From?, Answer), []) :- ground(Id?), ground(From?) | decide_friend(Answer?, Id?, From?, P?, Cmds).
 
-%% --- the compiled agent ---
-procedure respond_friend(Channel(Closed, Stream(AgentMsg))?, Key?, Key?, PendingValue?, Stream(UserInMsg), Slot(Reply_respond_friend_1)?, Slot(Reply_respond_friend_2)?).
-respond_friend(Med, Id, From, P, [msg(person, Id?, decision(yes, From?, P?))], ask(then(xs_respond_friend_1(_)), _), S2) :- ground(Id?), ground(From?) | abort(S2?, Med?, _).
-respond_friend(Med, Id, From, P, A4?, none, S2) :- ground(Id?), ground(From?) | send(ask(respond_friend_1, ctx_respond_friend_1(From?), esc_respond_friend_1(R), Id1), Med?, Med1), respond_friend(Med1?, Id?, From?, P?, A4, ask(R?, Id1?), S2?).
-respond_friend(Med, Id, From, P, [msg(person, Id?, decision(no, From?, P?))], S1, ask(then(xs_respond_friend_2(_)), _)) :- ground(Id?), ground(From?) | abort(S1?, Med?, _).
-respond_friend(Med, Id, From, P, A4?, S1, none) :- ground(Id?), ground(From?) | send(ask(respond_friend_2, ctx_respond_friend_2(From?), esc_respond_friend_2(R), Id1), Med?, Med1), respond_friend(Med1?, Id?, From?, P?, A4, S1?, ask(R?, Id1?)).
+procedure decide_friend(Decision?, Key?, Key?, PendingValue?, Stream(UserInMsg)).
+decide_friend(yes, Id, From, P, [msg(person, Id?, decision(yes, From?, P?))]).
+decide_friend(no, Id, From, P, [msg(person, Id?, decision(no, From?, P?))]).
 
-exported procedure home(Channel(Closed, Stream(AgentMsg))?, Key?, AgentToUserStream?, Stream(UserInMsg), Slot(Reply_home_1)?, Slot(Reply_home_2)?, Slot(Reply_home_3)?, Slot(Reply_home_4)?).
-home(Med, Id, Outs, Cmds?, ask(then(xs_home_1(Key)), _), S2, S3, S4) :- ground(Id?), ground(Key?) | abort(S2?, Med?, M1), abort(S3?, M1?, M2), abort(S4?, M2?, Med1), trust_act(Med1?, Key?, Id?, Outs?, Cmds).
-home(Med, Id, Outs, A3?, none, S2, S3, S4) :- ground(Id?) | send(ask(home_1, ctx_home_1, esc_home_1(R), Id1), Med?, Med1), home(Med1?, Id?, Outs?, A3, ask(R?, Id1?), S2?, S3?, S4?).
-home(Med, Id, Outs, Cmds?, S1, ask(then(xs_home_2(Name, App)), _), S3, S4) :- ground(Id?), ground(Name?), ground(App?) | abort(S1?, Med?, M1), abort(S3?, M1?, M2), abort(S4?, M2?, Med1), load_file(Name?, C), install_act(Med1?, C?, App?, Id?, Outs?, Cmds).
-home(Med, Id, Outs, A3?, S1, none, S3, S4) :- ground(Id?) | send(ask(home_2, ctx_home_2, esc_home_2(R), Id1), Med?, Med1), home(Med1?, Id?, Outs?, A3, S1?, ask(R?, Id1?), S3?, S4?).
-home(Med, Id, Outs, Cmds?, S1, S2, ask(then(xs_home_3(App, Friend)), _), S4) :- ground(Id?), ground(App?), ground(Friend?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S4?, M2?, Med1), invite_act(Med1?, App?, Friend?, Id?, Outs?, Cmds).
-home(Med, Id, Outs, A3?, S1, S2, none, S4) :- ground(Id?) | send(ask(home_3, ctx_home_3, esc_home_3(R), Id1), Med?, Med1), home(Med1?, Id?, Outs?, A3, S1?, S2?, ask(R?, Id1?), S4?).
-home(Med, Id, Outs, Cmds?, S1, S2, S3, ask(then(xs_home_4(Friend)), _)) :- ground(Id?), ground(Friend?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, Med1), connect_act(Med1?, Friend?, Id?, Outs?, Cmds).
-home(Med, Id, Outs, A3?, S1, S2, S3, none) :- ground(Id?) | send(ask(home_4, ctx_home_4, esc_home_4(R), Id1), Med?, Med1), home(Med1?, Id?, Outs?, A3, S1?, S2?, S3?, ask(R?, Id1?)).
-home(Med, Id, [msg(agent, person, befriend(From, P)) | Outs], Cmds?, S1, S2, S3, S4) :- ground(Id?), ground(From?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, Med1), med_split(Med1?, Medb, Medr), respond_friend(Medb?, Id?, From?, P?, Answer, none, none), merge(Answer?, Cmds1?, Cmds), home(Medr?, Id?, Outs?, Cmds1, none, none, none, none).
-home(Med, Id, [_ | Outs], Cmds?, S1, S2, S3, S4) :- ground(Id?), otherwise | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, Med1), home(Med1?, Id?, Outs?, Cmds, none, none, none, none).
-home(Med, _, [], [], S1, S2, S3, S4) :- abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, _).
+exported procedure home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
+home(S1, S2, S3?, [ask('Stream(Request)?', stream_request_r(X)) | D?]) :- home1(S1?, S2?, S3, X?, D).
 
-procedure trust_act(Channel(Closed, Stream(AgentMsg))?, String?, Key?, AgentToUserStream?, Stream(UserInMsg)).
-trust_act(Med, Key, Id, Outs, [msg(person, Id?, trust(Key?)) | Cmds?]) :- ground(Key?) | home(Med?, Id?, Outs?, Cmds, none, none, none, none).
+exported procedure home1(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Request)?, Stream(Ask(Question))).
+home1(Id, Outs, Cmds?, Reqs, D?) :- serve(Reqs?, Id?, Outs?, Cmds, D).
 
-procedure invite_act(Channel(Closed, Stream(AgentMsg))?, Constant?, Key?, Key?, AgentToUserStream?, Stream(UserInMsg)).
-invite_act(Med, App, Friend, Id, Outs, [msg(person, Id?, invite(App?, Friend?)) | Cmds?]) :- ground(App?), ground(Friend?) | home(Med?, Id?, Outs?, Cmds, none, none, none, none).
+procedure serve(Stream(Request)?, Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
+serve(Reqs, Id, [msg(agent, person, befriend(From, P)) | Outs], Cmds?, D?) :- ground(Id?), ground(From?) | respond_friend(Id?, From?, P?, Answer, D1), merge(Answer?, Cmds1?, Cmds), serve(Reqs?, Id?, Outs?, Cmds1, D2), merge(D1?, D2?, D).
+serve(Reqs, Id, [_ | Outs], Cmds?, D?) :- ground(Id?), otherwise | serve(Reqs?, Id?, Outs?, Cmds, D).
+serve(_, _, [], [], []).
+serve([trust(Key) | Reqs], Id, Outs, Cmds?, D?) :- ground(Id?), ground(Key?) | trust_act(Key?, Id?, Reqs?, Outs?, Cmds, D).
+serve([install(App, Name) | Reqs], Id, Outs, Cmds?, D?) :- ground(Id?), ground(App?), ground(Name?) | load_file(Name?, C), install_act(C?, App?, Id?, Reqs?, Outs?, Cmds, D).
+serve([invite(App, Friend) | Reqs], Id, Outs, Cmds?, D?) :- ground(Id?), ground(App?), ground(Friend?) | invite_act(App?, Friend?, Id?, Reqs?, Outs?, Cmds, D).
+serve([connect(Friend) | Reqs], Id, Outs, Cmds?, D?) :- ground(Id?), ground(Friend?) | connect_act(Friend?, Id?, Reqs?, Outs?, Cmds, D).
 
-procedure connect_act(Channel(Closed, Stream(AgentMsg))?, Key?, Key?, AgentToUserStream?, Stream(UserInMsg)).
-connect_act(Med, Friend, Id, Outs, [msg(person, Id?, connect(Friend?)) | Cmds?]) :- ground(Friend?) | home(Med?, Id?, Outs?, Cmds, none, none, none, none).
+procedure trust_act(String?, Key?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
+trust_act(Key, Id, Reqs, Outs, [msg(person, Id?, trust(Key?)) | Cmds?], D?) :- ground(Key?) | serve(Reqs?, Id?, Outs?, Cmds, D).
 
-procedure install_act(Channel(Closed, Stream(AgentMsg))?, Content?, Constant?, Key?, AgentToUserStream?, Stream(UserInMsg)).
-install_act(Med, M, App, Id, Outs, [msg(person, Id?, install(App?, M?, CSig?, Ui)) | Cmds?]) :- module(M?) | med_split(Med?, Medb, Medr), med_split(Medr?, Medb1, Medr1), creator_certification(Medb?, M?, CSig), hold_ui(Medb1?, Ui?), home(Medr1?, Id?, Outs?, Cmds, none, none, none, none).
-install_act(Med, S, _, Id, Outs, Cmds?) :- string(S?) | home(Med?, Id?, Outs?, Cmds, none, none, none, none).
+procedure invite_act(Constant?, Key?, Key?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
+invite_act(App, Friend, Id, Reqs, Outs, [msg(person, Id?, invite(App?, Friend?)) | Cmds?], D?) :- ground(App?), ground(Friend?) | serve(Reqs?, Id?, Outs?, Cmds, D).
 
-procedure creator_certification(Channel(Closed, Stream(AgentMsg))?, Module?, String).
-creator_certification(_, M, CSig?) :- decompose_module(M?, _, Src, _), self_key(K), sign(creator_cert(Src?, [friendship, ending_a_friendship], grassroots), K?, CSig).
+procedure connect_act(Key?, Key?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
+connect_act(Friend, Id, Reqs, Outs, [msg(person, Id?, connect(Friend?)) | Cmds?], D?) :- ground(Friend?) | serve(Reqs?, Id?, Outs?, Cmds, D).
 
-procedure hold_ui(Channel(Closed, Stream(AgentMsg))?, AppUiStream?).
-hold_ui(Med, [_ | Xs]) :- hold_ui(Med?, Xs?).
-hold_ui(_, []) :- true.
+procedure install_act(Content?, Constant?, Key?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
+install_act(M, App, Id, Reqs, Outs, [msg(person, Id?, install(App?, M?, CSig?, Ui)) | Cmds?], D?) :- module(M?) | creator_certification(M?, CSig), hold_ui(Ui?), serve(Reqs?, Id?, Outs?, Cmds, D).
+install_act(S, _, Id, Reqs, Outs, Cmds?, D?) :- string(S?) | serve(Reqs?, Id?, Outs?, Cmds, D).
 
-%% --- the mediator, and the pending table with the program's clauses ahead of the search clauses ---
-exported procedure med(Channel(Stream(UserAnswer), Stream(Card))?, Channel(Stream(AgentMsg), Closed)?, PendingList?, Integer?).
-med(UserCh, ch([ask(C, Ctx, Esc, Id?) | AgentIn], AgentOut?), Ps, N) :- ground(C?), ground(Ctx?) | Id = req(N?), send(card(C?, Ctx?, req(N?)), UserCh?, UserCh1), N1 := (N? + 1), med(UserCh1?, ch(AgentIn?, AgentOut), [pending(req(N?), Esc?) | Ps?], N1?).
-med(ch([answer(ReqId, Vs) | UserIn], UserOut?), AgentCh, Ps, N) :- ground(ReqId?), ground(Vs?) | answer(ReqId?, Vs?, Ps?, Ps1), send(closed(ReqId?), ch(UserIn?, UserOut), UserCh2), med(UserCh2?, AgentCh?, Ps1?, N?).
-med(ch([decline(ReqId) | UserIn], UserOut?), AgentCh, Ps, N) :- ground(ReqId?) | close(ReqId?, Ps?, Ps1), send(closed(ReqId?), ch(UserIn?, UserOut), UserCh2), med(UserCh2?, AgentCh?, Ps1?, N?).
-med(UserCh, ch([abort(ReqId) | AgentIn], AgentOut?), Ps, N) :- ground(ReqId?) | drop(ReqId?, Ps?, Ps1), send(aborted(ReqId?), UserCh?, UserCh1), med(UserCh1?, ch(AgentIn?, AgentOut), Ps1?, N?).
+procedure creator_certification(Module?, String).
+creator_certification(M, CSig?) :- decompose_module(M?, _, Src, _), self_key(K), sign(creator_cert(Src?, [friendship, ending_a_friendship], grassroots), K?, CSig).
 
-exported procedure answer(ReqId?, Answer?, PendingList?, PendingList).
-answer(ReqId, xs_respond_friend_1(X1), [pending(Id, esc_respond_friend_1(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_respond_friend_1(X1?)).
-answer(ReqId, xs_respond_friend_2(X1), [pending(Id, esc_respond_friend_2(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_respond_friend_2(X1?)).
-answer(ReqId, xs_home_1(X1), [pending(Id, esc_home_1(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_home_1(X1?)).
-answer(ReqId, xs_home_2(X1, X2), [pending(Id, esc_home_2(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_home_2(X1?, X2?)).
-answer(ReqId, xs_home_3(X1, X2), [pending(Id, esc_home_3(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_home_3(X1?, X2?)).
-answer(ReqId, xs_home_4(X1), [pending(Id, esc_home_4(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_home_4(X1?)).
-answer(ReqId, Vs, [P | Ps], [P? | Ps1?]) :- otherwise | answer(ReqId?, Vs?, Ps?, Ps1).
-answer(_, _, [], []).
+procedure hold_ui(AppUiStream?).
+hold_ui([_ | Xs]) :- hold_ui(Xs?).
+hold_ui([]).
 
-exported procedure close(ReqId?, PendingList?, PendingList).
-close(ReqId, [P | Ps], [P? | Ps1?]) :- otherwise | close(ReqId?, Ps?, Ps1).
-close(_, [], []).
+%% --- the dispatcher (programs/vglp/dispatcher.glp) ---
 
-exported procedure drop(ReqId?, PendingList?, PendingList).
-drop(ReqId, [pending(Id, _) | Ps], Ps?) :- (ReqId? =?= Id?) | true.
-drop(ReqId, [P | Ps], [P? | Ps1?]) :- otherwise | drop(ReqId?, Ps?, Ps1).
-drop(_, [], []).
+Draw ::= draw(Integer, _, _) ; withdraw(Integer).
+PersonIn ::= [_ | PersonIn].
+Input ::= input(_, _, _).
+Path ::= [] ; [Integer | Path].
+Inputs ::= [Input | Inputs].
+Route ::= route(Integer, Inputs?).
+Routes ::= [] ; [Route | Routes].
+Deads ::= [] ; [Inputs? | Deads].
+Formed(X) ::= formed(X) ; refused.
+Done ::= done.
+Ask(Q) ::= ask(Constant, Q).
+Spawn(Q) ::= spawn(Integer, Q, Inputs, Stream(Draw)?).
 
-exported procedure(R) abort(Slot(R)?, Channel(Closed, Stream(AgentMsg))?, Channel(Closed, Stream(AgentMsg))).
-abort(none, Med, Med?).
-abort(ask(_, Id), Med, Med1?) :- ground(Id?) | send(abort(Id?), Med?, Med1).
+procedure(Q) dispatch(Stream(Ask(Q))?, Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_)), Stream(Spawn(Q))).
+dispatch(Asks, ch(PIn, POut?), ch(MIn?, MOut), Ss?) :- split_grants(PIn?, Inputs, MIn), merge(MOut?, DOut?, POut), serve_1(Asks?, Inputs?, COut?, COut, DOut, [], [], 0, Ss).
 
-exported procedure med_split(Channel(Closed, Stream(AgentMsg))?, Channel(Closed, Stream(AgentMsg)), Channel(Closed, Stream(AgentMsg))).
-med_split(ch(_, Out?), ch([], O1), ch([], O2)) :- merge(O1?, O2?, Out).
+procedure split_grants(PersonIn?, Inputs, Stream(_)).
+split_grants([input(Id, P, R) | Gs], [input(Id?, P?, R?) | Is?], Ms?) :- split_grants(Gs?, Is, Ms).
+split_grants([G | Gs], Is?, [G? | Ms?]) :- otherwise | split_grants(Gs?, Is, Ms).
+
+procedure(Q) serve_1(Stream(Ask(Q))?, Inputs?, Stream(Draw)?, Stream(Draw), Stream(_), Routes?, Deads?, Integer?, Stream(Spawn(Q))).
+serve_1([ask(_, Q) | Asks], Is, COut, CInto?, DOut?, Rs, Xs, N, [spawn(N?, Q?, Gs?, Ds) | Ss?]) :- ground(N?) | merge(Ds?, CInto1?, CInto), N1 := (N? + 1), serve_1(Asks?, Is?, COut?, CInto1, DOut, [route(N?, Gs) | Rs?], Xs?, N1?, Ss).
+serve_1(Asks, [G | Is], COut, CInto?, DOut?, Rs, Xs, N, Ss?) :- route_grant(G?, Rs?, Rs1), serve_1(Asks?, Is?, COut?, CInto, DOut, Rs1?, Xs?, N?, Ss).
+serve_1(Asks, Is, [draw(Id, W, V) | COut], CInto?, [draw(Id?, W?, V?) | DOut?], Rs, Xs, N, Ss?) :- serve_1(Asks?, Is?, COut?, CInto, DOut, Rs?, Xs?, N?, Ss).
+serve_1(Asks, Is, [withdraw(Id) | COut], CInto?, [withdraw(Id?) | DOut?], Rs, Xs, N, Ss?) :- ground(Id?) | remove_route(Id?, Rs?, Rs1, Xs?, Xs1), serve_1(Asks?, Is?, COut?, CInto, DOut, Rs1?, Xs1?, N?, Ss).
+
+procedure route_grant(Input?, Routes?, Routes).
+route_grant(input(Id, P, R), [route(Id1, [input(Id?, P?, R?) | Gs1?]) | Rs], [route(Id1?, Gs1) | Rs?]) :- (Id? =?= Id1?) | true.
+route_grant(G, [route(Id1, Gs?) | Rs], [route(Id1?, Gs) | Rs1?]) :- otherwise | route_grant(G?, Rs?, Rs1).
+route_grant(_, [], []).
+
+procedure remove_route(Integer?, Routes?, Routes, Deads?, Deads).
+remove_route(Id, [route(Id1, Gs?) | Rs], Rs?, Xs, [Gs | Xs?]) :- (Id? =?= Id1?) | true.
+remove_route(Id, [route(Id1, Gs?) | Rs], [route(Id1?, Gs) | Rs1?], Xs, Xs1?) :- otherwise | remove_route(Id?, Rs?, Rs1, Xs?, Xs1).
+remove_route(_, [], [], Xs, Xs?).
+
+procedure run(Integer?, _?, Stream(_)?, Done?, Stream(Draw)).
+run(Id, _, _, done, [withdraw(Id?)]).
+run(Id, W, [V | Vs], Done, [draw(Id?, W?, V?) | Ds?]) :- ground(W?), ground(V?) | run(Id?, W?, Vs?, Done?, Ds).
+run(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
+
+procedure run_end(Integer?, Done?, Stream(Draw)).
+run_end(Id, done, [withdraw(Id?)]).
+
+procedure all_done(Stream(Done)?, Done).
+all_done([done | Ds], D?) :- all_done(Ds?, D).
+all_done([], done).
+
+procedure shown(Path?, _?, Stream(_)).
+shown(_, X, [X?]) :- ground(X?) | true.
+shown(P, X, [pending(P?) | Vs?]) :- shown_whole(X?, Vs).
+
+procedure shown_whole(_?, Stream(_)).
+shown_whole(X, [X?]) :- ground(X?) | true.
+
+procedure thread(Path?, Stream(_)?, Stream(Stream(_))).
+thread(P, [X | Xs], Vs?) :- thread_cell(P?, X?, Xs?, Vs).
+thread(_, [], [[]]).
+thread(P, Xs, [[] | Vs?]) :- thread_tail(P?, Xs?, Vs).
+
+procedure thread_tail(Path?, Stream(_)?, Stream(Stream(_))).
+thread_tail(P, [X | Xs], Vs?) :- thread_cell(P?, X?, Xs?, Vs).
+thread_tail(_, [], []).
+
+procedure thread_cell(Path?, _?, Stream(_)?, Stream(Stream(_))).
+thread_cell(P, X, Xs, Vs?) :- ground(P?) | path(P?, 1, P1), path(P?, 2, P2), shown(P1?, X?, V1), thread(P2?, Xs?, V2), cons_views(V1?, V2?, Vs).
+
+procedure cons_views(Stream(_)?, Stream(Stream(_))?, Stream(Stream(_))).
+cons_views([E | Es], [T | Ts], [[E? | T?] | Vs?]) :- ground(E?), ground(T?) | cons_more(E?, T?, Es?, Ts?, Vs).
+cons_views([], _, []).
+cons_views(_, [], []).
+
+procedure cons_more(_?, Stream(_)?, Stream(_)?, Stream(Stream(_))?, Stream(Stream(_))).
+cons_more(_, T, [E | Es], Ts, [[E? | T?] | Vs?]) :- ground(E?), ground(T?) | cons_more(E?, T?, Es?, Ts?, Vs).
+cons_more(E, _, Es, [T | Ts], [[E? | T?] | Vs?]) :- ground(E?), ground(T?) | cons_more(E?, T?, Es?, Ts?, Vs).
+cons_more(_, _, [], [], []).
+
+procedure path(Path?, Integer?, Path).
+path([I | P], J, [I? | Q?]) :- path(P?, J?, Q).
+path([], J, [J?]).
+
+procedure form_string(_?, Formed(String)).
+form_string(R, F?) :- string(R?) | F = formed(R?).
+form_string(_, refused) :- otherwise | true.
+
+procedure form_integer(_?, Formed(Integer)).
+form_integer(R, F?) :- integer(R?) | F = formed(R?).
+form_integer(_, refused) :- otherwise | true.
+
+procedure form_number(_?, Formed(Number)).
+form_number(R, F?) :- number(R?) | F = formed(R?).
+form_number(_, refused) :- otherwise | true.
+
+procedure form_real(_?, Formed(Real)).
+form_real(R, F?) :- real(R?) | F = formed(R?).
+form_real(_, refused) :- otherwise | true.
+
+procedure form_constant(_?, Formed(Constant)).
+form_constant(R, F?) :- constant(R?) | F = formed(R?).
+form_constant(_, refused) :- otherwise | true.
+
+procedure form_module(_?, Formed(Module)).
+form_module(R, F?) :- module(R?) | F = formed(R?).
+form_module(_, refused) :- otherwise | true.
+
+%% --- the construct process of each interactive type ---
+
+exported procedure dispatch(Stream(Ask(Question))?, Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+dispatch(Asks, PCh, MCh?) :- dispatch(Asks?, PCh?, MCh, Ss), constructs(Ss?).
+
+procedure constructs(Stream(Spawn(Question))?).
+constructs([spawn(Id, Q, Gs, Ds?) | Ss]) :- construct(Id?, Q?, Gs?, Ds), constructs(Ss?).
+constructs([]).
+
+procedure construct(Integer?, Question?, Inputs?, Stream(Draw)).
+construct(Id, friendRequest_w(X), Gs, Ds?) :- present_friendRequest([], X?, Gs?, _, Vs, Done), run(Id?, form(from, [field('Friend', shown), field('Decision', buttons([yes, no]))]), Vs?, Done?, Ds).
+construct(Id, stream_request_r(X?), Gs, Ds?) :- answer_stream_request([], X, Gs?, _, Done), run(Id?, input_box(menu([form(trust, [field('CompilerKey', peer)]), form(install, [field('AppName', text), field('Artefact', text)]), form(invite, [field('AppName', text), field('Friend', peer)]), form(connect, [field('Friend', peer)])])), [input([])], Done?, Ds).
+
+procedure form_decision(_?, Formed(Decision)).
+form_decision(yes, formed(yes)).
+form_decision(no, formed(no)).
+form_decision(_, refused) :- otherwise | true.
+
+procedure answer_decision(Path?, Decision, Inputs?, Inputs, Done).
+answer_decision(P, X?, [input(Id, P1, R) | Gs], Gs1?, Done?) :- P1? =?= P?, ground(R?) | form_decision(R?, F), take_decision(F?, P?, X, input(Id?, P1?, R?), Gs?, Gs1, Done).
+answer_decision(P, X?, [input(Id, P1, R) | Gs], Gs1?, Done?) :- otherwise | take_decision(refused, P?, X, input(Id?, P1?, R?), Gs?, Gs1, Done).
+
+procedure take_decision(Formed(Decision)?, Path?, Decision, Input?, Inputs?, Inputs, Done).
+take_decision(formed(V), _, V?, _, Gs, Gs?, done).
+take_decision(refused, P, X?, G, Gs, [G? | Gs1?], Done?) :- answer_decision(P?, X, Gs?, Gs1, Done).
+
+procedure start_friendRequest_from_2(Stream(_)?, Stream(_)?, Stream(_)).
+start_friendRequest_from_2([V1 | S1], [V2 | S2], [from(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_friendRequest_from_2(V1?, V2?, S1?, S2?, Vs).
+start_friendRequest_from_2([], _, []).
+start_friendRequest_from_2(_, [], []).
+
+procedure comb_friendRequest_from_2(_?, _?, Stream(_)?, Stream(_)?, Stream(_)).
+comb_friendRequest_from_2(_, V2, [V1 | S1], S2, [from(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_friendRequest_from_2(V1?, V2?, S1?, S2?, Vs).
+comb_friendRequest_from_2(_, _, [], [], []).
+
+procedure present_friendRequest(Path?, FriendRequest?, Inputs?, Inputs, Stream(_), Done).
+present_friendRequest(P, from(H1, H2?), Gs, Gs1?, Vs?, D2?) :- ground(P?) | path(P?, 1, Q1), shown(Q1?, H1?, V1), path(P?, 2, M2), path(P?, 2, Q2), answer_decision(Q2?, H2, Gs?, Gs1, D2), start_friendRequest_from_2(V1?, [input(M2?)], Vs).
+present_friendRequest(P, X, Gs, Gs1?, [pending(P?) | Vs?], Done?) :- ground(P?) | present_friendRequest_wait(P?, X?, Gs?, Gs1, Vs, Done).
+
+procedure present_friendRequest_wait(Path?, FriendRequest?, Inputs?, Inputs, Stream(_), Done).
+present_friendRequest_wait(P, from(H1, H2?), Gs, Gs1?, Vs?, Done?) :- present_friendRequest(P?, from(H1?, H2), Gs?, Gs1, Vs, Done).
+present_friendRequest_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, Done?) :- present_friendRequest_wait(P?, X?, Gs?, Gs1, Vs, Done).
+
+procedure join_request_trust_1(Formed(CompilerKey)?, Formed(Request)).
+join_request_trust_1(formed(X1), formed(trust(X1?))).
+join_request_trust_1(refused, refused).
+
+procedure join_request_install_2(Formed(AppName)?, Formed(Artefact)?, Formed(Request)).
+join_request_install_2(formed(X1), formed(X2), formed(install(X1?, X2?))).
+join_request_install_2(refused, _, refused).
+join_request_install_2(_, refused, refused).
+
+procedure join_request_invite_2(Formed(AppName)?, Formed(Friend)?, Formed(Request)).
+join_request_invite_2(formed(X1), formed(X2), formed(invite(X1?, X2?))).
+join_request_invite_2(refused, _, refused).
+join_request_invite_2(_, refused, refused).
+
+procedure join_request_connect_1(Formed(Friend)?, Formed(Request)).
+join_request_connect_1(formed(X1), formed(connect(X1?))).
+join_request_connect_1(refused, refused).
+
+procedure form_request(_?, Formed(Request)).
+form_request(trust(R1), F?) :- form_string(R1?, F1), join_request_trust_1(F1?, F).
+form_request(install(R1, R2), F?) :- form_string(R1?, F1), form_string(R2?, F2), join_request_install_2(F1?, F2?, F).
+form_request(invite(R1, R2), F?) :- form_string(R1?, F1), form_string(R2?, F2), join_request_invite_2(F1?, F2?, F).
+form_request(connect(R1), F?) :- form_string(R1?, F1), join_request_connect_1(F1?, F).
+form_request(_, refused) :- otherwise | true.
+
+procedure answer_stream_request(Path?, Stream(Request), Inputs?, Inputs, Done).
+answer_stream_request(P, X?, [input(Id, P1, R) | Gs], Gs1?, Done?) :- P1? =?= P?, ground(R?) | form_request(R?, F), take_stream_request(F?, P?, X, input(Id?, P1?, R?), Gs?, Gs1, Done).
+answer_stream_request(P, X?, [input(Id, P1, R) | Gs], Gs1?, Done?) :- otherwise | take_stream_request(refused, P?, X, input(Id?, P1?, R?), Gs?, Gs1, Done).
+
+procedure take_stream_request(Formed(Request)?, Path?, Stream(Request), Input?, Inputs?, Inputs, Done).
+take_stream_request(formed(V), P, [V? | X1?], _, Gs, Gs1?, Done?) :- answer_stream_request(P?, X1, Gs?, Gs1, Done).
+take_stream_request(refused, P, X?, G, Gs, [G? | Gs1?], Done?) :- answer_stream_request(P?, X, Gs?, Gs1, Done).
 
