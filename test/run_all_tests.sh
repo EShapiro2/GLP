@@ -3555,7 +3555,7 @@ check_not "CVA compiler: ... and not refused" "%% not compiled(one_req)" "$cva_r
 check "CVA compiler: a class with two minimal guard sets not both of one person, refused as without simple guards" "%% not compiled(two_gsets)" "$cva_refuse"
 check "CVA compiler: ... the schema-bindings of the two guard sets named" "%% and the schema-binding(s2(person(0), person(1), person(2)))" "$cva_refuse"
 check "CVA compiler: an unguarded class whose schema-bindings require different atoms at one participant, refused as not effective" "%% not compiled(unguarded_reqs)" "$cva_refuse"
-check "CVA compiler: ... the two schema-bindings named" "%% and the schema-binding(u2(person(1), person(0)))" "$cva_refuse"
+check "CVA compiler: ... the two schema-bindings of the unguarded class named" "%% and the schema-binding(u2(person(1), person(0)))" "$cva_refuse"
 
 cva_sg_load=$("$REPL_RUN" <<HEREDOC
 $CVA/social_graph/
