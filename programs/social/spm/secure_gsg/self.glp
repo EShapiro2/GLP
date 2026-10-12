@@ -762,9 +762,9 @@ inner_to_pairs([], []).
 %% rebind_entry(Q?, E?, K?, σ?, FMap?, FMap1): FMap[q] := (max(epoch(q), e), K, σ)
 %% where epoch(q) < e or the entry is a stub; unchanged otherwise.
 exported procedure rebind_entry(Agent?, Integer?, Stream(Agent)?, Integer?, SecureFMap?, SecureFMap).
-rebind_entry(Q, E, K, S, [full(Q1, E0, K0, S0) | Rest], [full(Q1?, E?, K?, S?) | Rest?]) :-
+rebind_entry(Q, E, K, S, [full(Q1, E0, _, _) | Rest], [full(Q1?, E?, K?, S?) | Rest?]) :-
     Q? =?= Q1?, E0? < E? | true.
-rebind_entry(Q, E, K, S, [full(Q1, E0, K0, S0) | Rest], [full(Q1?, E0?, K0?, S0?) | Rest?]) :-
+rebind_entry(Q, E, _, _, [full(Q1, E0, K0, S0) | Rest], [full(Q1?, E0?, K0?, S0?) | Rest?]) :-
     Q? =?= Q1?, E0? >= E? | true.
 rebind_entry(Q, E, K, S, [skeleton(Q1, _, _) | Rest], [full(Q1?, E?, K?, S?) | Rest?]) :-
     Q? =?= Q1? | true.

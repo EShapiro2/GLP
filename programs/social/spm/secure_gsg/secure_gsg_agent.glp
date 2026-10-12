@@ -416,7 +416,7 @@ tick_step(LBD, Date, Id, IRec, UserIn, NetIn, NetOut?, Date1,
           secure_gsg(Known?, Vols?, Inbox?, FMap2?, FoFMap?, Pending?, Date?)).
 
 %% LBD >= Date: already broadcast at or beyond this date; skip.
-tick_step(LBD, Date, Id, IRec, UserIn, NetIn, NetOut?, Date1,
+tick_step(LBD, _, Id, IRec, UserIn, NetIn, NetOut?, Date1,
           Known, Vols, Inbox, FMap, FoFMap, Pending) :-
     otherwise |
     agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date1?,
