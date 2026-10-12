@@ -134,7 +134,7 @@
 #       present procedure of its type once ground (Section 4, "The person
 #       process": "Every term crossing between the program and the person goal,
 #       in either direction and at every depth, crosses the person process");
-#       a writer-mode type Panel ::= panel(Cards), Card ::= card(Integer,
+#       a writer-mode type Panel ::= panel(List(Card)), Card ::= card(Integer,
 #       YesNo?), with positions the person writes inside an argument the
 #       program writes, shown once the positions the program writes are
 #       ground, the cards an element at a time, each card's answer a question
@@ -562,7 +562,7 @@ check "a reader-mode type with an argument the program writes is translated: the
 # task 6 of 2026-10-10 07:59 UTC, (a) and (b), Q1 and task 8 of 09:33 UTC):
 # PV, a writer-mode type Post whose answer Line? holds a position the program
 # writes, Status?; NV, a writer-mode type Panel whose argument the program
-# writes, Cards, holds positions the person writes, each card's YesNo?; QV and
+# writes, List(Card), holds positions the person writes, each card's YesNo?; QV and
 # ans2, a clause answering two questions; CV, the mended source's interface
 # naming ans/1 a predicate of the compiled program.
 PV="[type('Status', [sent, read]), type('Line', [line('String', dual('Status'))]), type('Post', [post('Integer', dual('Line'))]), volitional('Post', post_w, poster('Integer'))]"
@@ -600,7 +600,7 @@ tr '\n' ' ' < "$WORK/txmoded.2" > "$WORK/txmoded.2.flat"
     grep -q "answer_1 ( Integer? , Constant? , Integer? , YesNo ? , YesNo , MutualRef? , MutualRef? ) \. answer_1(A, Type, V1, Y, Y?, Mon, Log) :- ground(Y?) | stream_append(time(Time), Mon?, _) , stream_append(entry(Time?, A?, Type?, panel(\[card(V1?, Y?) | '_'\])), Log?, _) \. " "$WORK/txmoded.2.flat" &&
     grep -q "present_1 ( Integer? , Constant? , List(Card) ? , List(Card) , MutualRef? , MutualRef? ) \. present_1(_, _, \[\], \[\], _, _) \. present_1(A, Type, \[card(Z1, Z2?) | Z4\], \[card(Z1?, Z3) | Z5?\], Mon, Log) :- ground(Z1?) | answer_2(A?, Type?, Z1?, Z3?, Z2, Mon?, Log?) , present_1(A?, Type?, Z4?, Z5, Mon?, Log?) \. " "$WORK/txmoded.2.flat" &&
     grep -q "answer_2(A, Type, V1, Y, Y?, Mon, Log) :- ground(Y?) | stream_append(time(Time), Mon?, _) , stream_append(entry(Time?, A?, Type?, \[card(V1?, Y?) | '_'\]), Log?, _) \. " "$WORK/txmoded.2.flat"
-check "a writer-mode type with positions the person writes inside an argument the program writes is translated: shown once the positions the program writes are ground, the cards an element at a time by the present procedure of Cards, each card's answer a question of its own, logged in the question as shown" $?
+check "a writer-mode type with positions the person writes inside an argument the program writes is translated: shown once the positions the program writes are ground, the cards an element at a time by the present procedure of List(Card), each card's answer a question of its own, logged in the question as shown" $?
 grep -q '^%% not transformed: a clause that is not single-answer, of(key(ans2, 1))$' "$WORK/txmoded.3" &&
     [ "$(grep -c '^%% not transformed' "$WORK/txmoded.3")" -eq 1 ] && ! grep -q '^person(' "$WORK/txmoded.3"
 check "a profile clause answering two questions is refused as not single-answer, nothing printed" $?
