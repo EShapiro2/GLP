@@ -4206,10 +4206,13 @@ check "X8 goal succeeds" "succeeds" "$x8"
 # Issue 21); the goal is what X8's goal-check ordering fix made possible (every
 # goal used to fail with UnknownTypeError: UserEvent, a gsg/self.glp template
 # named by a module one directory below it).  Since 2026-09-07 the program is
-# programs/social/spm: the platform plays reach the CVA mediator as `cva # network`,
-# which resolves only where cva/ is a module of the loaded program, so
-# spm/self.glp is the root and exports the plays as the entry points; cva/
-# still loads on its own.
+# programs/social/spm, spm/self.glp the root exporting the plays as the entry
+# points.  Since 2026-10-12 (GSG's layout, its task of 2026-10-02 item 2): each
+# platform's plays/ has a self.glp exporting its plays, called `plays # play_x`;
+# each platform's self.glp forwards `agent` to its agent module; spm/self.glp
+# forwards `network` to `cva # network`, and the plays call `agent(...)` and
+# `network(...)` unqualified, resolved up the scope chain.  cva/ still loads on
+# its own; gsg/ and secure_gsg/ do not, cva being a sibling outside them.
 echo "--- X10: spm programs ---"
 x10c=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/social/spm/cva
