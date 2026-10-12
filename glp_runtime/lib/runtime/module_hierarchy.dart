@@ -13,6 +13,8 @@ import 'package:path/path.dart' as ppath;
 import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/compiler/ast.dart' as ast;
+import 'package:glp_runtime/compiler/partial_evaluator.dart'
+    show PartialEvaluator;
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
 import 'package:glp_runtime/analysis/type_checker/param_expansion.dart';
 
@@ -217,9 +219,30 @@ TypeEnvironment mergeModuleIntoScope(TypeEnvironment env, ast.Module module,
   final moduleEnv = buildScopeFromModule(expanded);
   // The layer's clauses join the scope's, by key: a defined guard of the
   // layer is unfolded, and its parameterised procedures certified, by them
-  // ([TypeEnvironment.scopeLayers]).
+  // ([TypeEnvironment.scopeLayers]).  They are the module's procedures as the
+  // partial evaluator unfolds them in the scope the module is declared over,
+  // [env], as the load unfolds them before checking the module
+  // (checkModulesIndependently, GlpEngine.loadFile): "When called in guard
+  // position, the partial evaluator unfolds them at compile time, before type
+  // checking" (TGLP appendix-root-self.tex).  So a parameterised procedure of
+  // any layer --- the root self.glp, an ancestor self.glp, a loaded unit --- is
+  // certified by its layer on the clauses the load certifies, and a call from
+  // a unit or a goal gets the load's verdict: one procedure, one verdict.  A
+  // unit clause, which alone defines a guard, has no guard and is unchanged.
+  // Until 2026-10-12 the layer held the clauses as written, so a procedure
+  // matching its input through a defined guard, certified at load with the
+  // match in its head, was found not parametrically well-typed at the goal
+  // (`p([a,b], O)` on programs/tests/goal_cert/unfolded_guard.glp) and from a
+  // unit calling it in its scope.
+  final unfolded = module.procedures.isEmpty
+      ? const <ast.Procedure>[]
+      : PartialEvaluator()
+          .transformDefinedGuards(
+              ast.Program(module.procedures, module.line, module.column),
+              scope: env)
+          .procedures;
   final clauses = <String, List<ast.Clause>>{};
-  for (final proc in module.procedures) {
+  for (final proc in unfolded) {
     for (final c in proc.clauses) {
       clauses
           .putIfAbsent('${c.head.functor}/${c.head.arity}', () => [])

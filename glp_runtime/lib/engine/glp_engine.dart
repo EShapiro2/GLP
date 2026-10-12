@@ -420,14 +420,10 @@ class GlpEngine {
     // condition 1).  Until 2026-10-02 such a module was compiled and run with
     // no check.  (Single-file/REPL semantics: a parametric procedure inspecting
     // its parameter with no instantiation is rejected — checkModule's default.)
-    // The procedures as the partial evaluator unfolds them are the ones
-    // checked, and the ones a goal posted to this unit is checked against
-    // ([_unfoldedModule]).
-    final Program transformedAst;
     {
       final ast = Program(module.procedures, module.line, module.column);
       final partialEvaluator = PartialEvaluator();
-      transformedAst =
+      final transformedAst =
           partialEvaluator.transformDefinedGuards(ast, scope: ancestorScope);
 
       final TypeCheckResult typeResult;
@@ -532,12 +528,10 @@ class GlpEngine {
 
     // Its entry points, every procedure it defines, declared in the scope it
     // was checked in ([scope]), which is what a goal posted to it is checked
-    // against ([_checkGoalWellTyped]); their clauses the ones the check above
-    // certified, as unfolded ([_unfoldedModule]).
+    // against ([_checkGoalWellTyped]).
     final declaredIn = ancestorScope!;
-    final unfolded = _unfoldedModule(module, transformedAst.procedures);
     _unitEntryPoints[name] = _UnitEntryPoints(_plainProcedures(program),
-        () => mergeModuleIntoScope(declaredIn, unfolded, label: moduleInfo.name));
+        () => mergeModuleIntoScope(declaredIn, module, label: moduleInfo.name));
 
     return true;
   }
@@ -714,20 +708,9 @@ class GlpEngine {
     final programRoot = _normDir(programDir);
     final programSelf = modules.firstWhere((m) =>
         m.isSelfGlp && _normDir(File(m.filePath).parent.path) == programRoot);
-    // Its clauses as the partial evaluator unfolds them in the scope it was
-    // checked in, as checkModulesIndependently unfolds them before checking
-    // it ([_unfoldedModule]).
-    final selfUnfolded = _unfoldedModule(
-        programSelf.ast,
-        PartialEvaluator()
-            .transformDefinedGuards(
-                Program(programSelf.ast.procedures, programSelf.ast.line,
-                    programSelf.ast.column),
-                scope: programSelf.ancestorScope)
-            .procedures);
     _unitEntryPoints['__program__'] = _UnitEntryPoints(
         _plainProcedures(program),
-        () => mergeModuleIntoScope(programSelf.ancestorScope, selfUnfolded,
+        () => mergeModuleIntoScope(programSelf.ancestorScope, programSelf.ast,
             label: programSelf.moduleName));
 
     return true;
@@ -1182,35 +1165,6 @@ class GlpEngine {
     }
     return false;
   }
-
-  /// [module] with [procedures], its procedures as the partial evaluator
-  /// unfolds its defined guards: "When called in guard position, the partial
-  /// evaluator unfolds them at compile time, before type checking" (TGLP
-  /// appendix-root-self.tex).  The load checks and certifies a unit's
-  /// procedures so unfolded, and a goal posted to the unit is checked against
-  /// the layer of its scope that holds these same clauses
-  /// ([_checkGoalWellTyped]): its callee's parametricity is decided on them
-  /// ([scopeProcedureIsParametric]), by the load's own certification
-  /// ([certifyParametricProcedures]), and a call that instantiates its callee
-  /// is verified on them ([_verifyInLayer]) --- one procedure, one verdict.
-  /// Until 2026-10-12 the layer held the clauses as written, so a procedure
-  /// matching its input through a defined guard, certified at load with the
-  /// match in its head, was found not parametrically well-typed at the goal:
-  /// `p([a,b], O)` posted to programs/tests/goal_cert/unfolded_guard.glp was
-  /// refused.
-  static Module _unfoldedModule(Module module, List<Procedure> procedures) =>
-      Module(
-        typeDefs: module.typeDefs,
-        procDeclarations: module.procDeclarations,
-        paramProcDecls: module.paramProcDecls,
-        procedures: procedures,
-        compileMode: module.compileMode,
-        exposes: module.exposes,
-        displayDecls: module.displayDecls,
-        volitionalDeclarations: module.volitionalDeclarations,
-        line: module.line,
-        column: module.column,
-      );
 
   static String _baseName(String path) {
     final parts = path.split('/').where((s) => s.isNotEmpty);

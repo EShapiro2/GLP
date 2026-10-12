@@ -1,0 +1,13 @@
+%% goal_cert_scope/self.glp --- an ancestor self.glp whose parameterised
+%% procedure p/2 matches its input through the defined guard recv/3.  Unfolded
+%% "at compile time, before type checking" (TGLP appendix-root-self.tex), recv's
+%% match stands in p's head and p/2 is parametrically well-typed
+%% (parameterized-types.tex, Definition "Parametrically Well-Typed"), in this
+%% scope's layer as at load.  unit.glp calls it; see there.
+
+procedure(X) recv(X, OpenStream(X)?, Stream(X)).
+recv(Msg?, [Msg|N], N?).
+
+procedure(X) p(Stream(X)?, Stream(X)).
+p(In, [M?|Out?]) :- recv(M, In?, In1) | p(In1?, Out).
+p([], []).

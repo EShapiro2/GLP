@@ -16,7 +16,14 @@
 /// `p([a,b], O)` posted to goal_cert/unfolded_guard.glp, whose p/2 the load
 /// certified, was refused as "p/2 is not parametrically well-typed".
 ///
-/// Fixtures: programs/tests/goal_cert/, and the book's
+/// Every layer of a scope holds its module's clauses so unfolded --- the root
+/// self.glp, an ancestor self.glp, a loaded unit (module_hierarchy.dart,
+/// mergeModuleIntoScope) --- so a unit's call to an ancestor's procedure gets
+/// the load's verdict on that procedure too: until 2026-10-12
+/// goal_cert_scope/unit.glp was refused at load.
+///
+/// Fixtures: programs/tests/goal_cert/, programs/tests/goal_cert_scope/, and
+/// the book's
 /// streams/buffered_communication/switch2x2.glp.
 library;
 
@@ -101,6 +108,25 @@ void main() {
           if (r.bindings[v] case final rt.ConstTerm c) '${c.value}',
       ]..sort();
       expect(routed, ['a', 'b', 'c']);
+    });
+
+    test(
+        'goal_cert_scope/unit.glp: p/2 of the ancestor self.glp, matching '
+        'through a defined guard, is certified for the unit at load, its call '
+        'left open in go/1, and at the goal through q/2', () async {
+      final engine = GlpEngine(rootSelfGlpPath: _rootSelf);
+      expect(engine.loadFile('../programs/tests/goal_cert_scope/unit.glp'),
+          isTrue);
+      final go = await engine.runGoal('go(N)');
+      expect(go.error, isNull);
+      expect(go.status, ExecutionStatus.succeeded);
+      final n = go.bindings['N'];
+      expect(n, isA<rt.ConstTerm>());
+      expect((n as rt.ConstTerm).value, 2);
+      final q = await engine.runGoal('q([a,b], O)');
+      expect(q.error, isNull);
+      expect(q.status, ExecutionStatus.succeeded);
+      expect(_list(engine, q.bindings['O']), ['a', 'b']);
     });
   });
 }
