@@ -1630,7 +1630,6 @@ exported procedure (Note?)*jot_b(Note).
 
   group('(iii) the old syntax keeps its old compilation', () {
     final sources = _vglpSources(Directory(_programs));
-    String base(File f) => f.path.split(Platform.pathSeparator).last;
 
     // Each source in the tree is asked what it is, and none is named or
     // counted here (GLP #3 Cowork, 2026-10-10 07:48 UTC, "00:45. Q2").  Until
@@ -1652,11 +1651,18 @@ exported procedure (Note?)*jot_b(Note).
       }
     });
 
+    // Until 2026-10-12 the old source was the one named responder.vglp,
+    // IGLP's one-clause fixture, which is now in the paper's syntax (GLP,
+    // 2026-10-11 12:59 UTC, "03:24"); each old source is now found by what
+    // it is, as above.
     test('an old source with no mediator to compile against is refused, not '
         'compiled by the new compilation', () {
-      final f = sources.firstWhere((f) => base(f) == 'responder.vglp');
-      expect(() => compileVglpSource(f.readAsStringSync()),
-          throwsA(isA<StateError>()));
+      for (final f in sources) {
+        final text = f.readAsStringSync();
+        if (!_holdsVolitionGuard(text)) continue;
+        expect(() => compileVglpSource(text), throwsA(isA<StateError>()),
+            reason: f.path);
+      }
     });
   });
 }

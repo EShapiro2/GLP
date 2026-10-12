@@ -173,9 +173,13 @@ ping(a).
   });
 
   group('the one-clause program of programs/tests/vglp', () {
-    // Every procedure has one volition-guarded clause and no ordinary clause
-    // beside it, save pick, which has one: the case the per-clause reply
-    // types exist for.  Its plays run in Section VG of test/run_all_tests.sh.
+    // Every procedure is volitional with one clause, its question in writer
+    // mode (vGLP, Definition "Volitional Procedure, Interactive Type,
+    // Interactive Term, Ordinary Clause, vGLP Program").  Its plays run in
+    // Section VG of test/run_all_tests.sh, and its bridge entry in
+    // glp_multiagent/test/bridge_test.dart.  Until 2026-10-12 it was in the
+    // old syntax, for the old compilation's per-clause reply types (GLP,
+    // 2026-10-11 12:59 UTC, "03:24").
     const dir = '$_programs/tests/vglp/one_clause';
 
     test('compiles on load and is well-typed, input coverage included', () {
@@ -184,17 +188,30 @@ ping(a).
       expect(() => typeCheckProgram(modules, rootDir: dir), returnsNormally);
     });
 
-    test("a clause with no else-branch has a reply type with no else", () {
+    test('is compiled by the canonical compilation: its three interactive '
+        'types joined in one union of questions, a functor each in writer '
+        'mode, and each procedure asking by its asking clause', () {
       final m = discoverProgram(dir, rootSelfGlpPath: _rootSelfGlp)
           .firstWhere((m) => m.moduleName == 'tests/vglp/one_clause/responder');
       String def(String name) =>
           m.ast.typeDefs.firstWhere((d) => d.name == name).toString();
-      expect(def('Reply_greet_1'), 'Reply_greet_1 ::= then(Xs_greet_1).');
-      expect(def('Reply_respond_1'),
-          'Reply_respond_1 ::= then(Xs_respond_1) ; else.');
-      expect(def('Escrow'),
-          'Escrow ::= esc_respond_1(Reply_respond_1?) ; '
-          'esc_greet_1(Reply_greet_1?) ; esc_pick_1(Reply_pick_1?).');
+      expect(def('Question'),
+          'Question ::= card_w(Card) ; greeting_w(Greeting) ; choice_w(Choice).');
+      for (final (p, t, f) in [
+        ('respond', 'Card', 'card_w'),
+        ('greet', 'Greeting', 'greeting_w'),
+        ('pick', 'Choice', 'choice_w'),
+      ]) {
+        final asking = m.ast.procedures
+            .firstWhere((q) => q.name == p && q.arity == 3)
+            .clauses;
+        expect(asking, hasLength(1), reason: p);
+        expect(asking.single.toString(), contains("ask('$t', $f("),
+            reason: '$p asks its question on its ask stream');
+      }
+      expect(m.ast.typeDefs.map((d) => d.name),
+          isNot(anyOf(contains('Escrow'), contains('Reply_respond_1'))),
+          reason: 'none of the old compilation\'s reply types');
     });
   });
 

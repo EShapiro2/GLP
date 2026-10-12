@@ -662,6 +662,62 @@ void main() {
     });
   });
 
+  // GLP, 2026-10-11 12:59 UTC, "03:24": the one-clause fixture,
+  // programs/tests/vglp/one_clause, restated in vGLP's syntax --- three
+  // volitional procedures, each with one clause, its question in writer mode,
+  // the offering peer shown --- runs through the dispatcher and the bridge.
+  // Its entry asks all three at once of three peers, and puts the decisions
+  // on the program's own output to the person, which the dispatcher merges
+  // with the draws.
+  testWidgets(
+      'the one-clause program: its three cards drawn at once, the offering '
+      'peer shown and the person\'s position marked, each answered through '
+      'the screen, its decision reaching the program, and withdrawn',
+      (tester) async {
+    final p = await _Person.boot(tester, 'responder_init', dir: 'one_clause');
+    final card = p.the("form(card, [field('Peer', shown), "
+        "field('YesNo', buttons([yes, no]))])");
+    final greeting = p.the("form(greeting, [field('Peer', shown), "
+        "field('Name', text)])");
+    final choice = p.the("form(choice, [field('Peer', shown), "
+        "field('Constant', text)])");
+    expect(p.ui.bridge.constructs, hasLength(3));
+    expect(formatTerm(card.view), 'card(bob, input([2]))');
+    expect(formatTerm(greeting.view), 'greeting(carol, input([2]))');
+    expect(formatTerm(choice.view), 'choice(dana, input([2]))');
+    for (final (c, peer) in [(card, 'bob'), (greeting, 'carol'), (choice, 'dana')]) {
+      final shown = find.byKey(nodeKey(c.id, 'shown', [1]));
+      expect(find.descendant(of: shown, matching: find.text(peer)),
+          findsOneWidget, reason: 'the offering peer shown before any input');
+    }
+    expect(p.screen, isEmpty);
+
+    // respond's card: the tap grants no, an answer its clause takes.
+    await p.tap(find.descendant(
+        of: find.byKey(nodeKey(card.id, 'buttons', [2])),
+        matching: find.widgetWithText(ElevatedButton, 'no')));
+    expect(p.grants.last, 'input(${card.id}, [2], no)');
+    expect(p.screen, contains('decided(no, bob)'));
+    p.withdrawn(card);
+
+    // greet's card: the person gives a name.
+    await p.type(greeting, 'text', [2], 'alice');
+    await p.submit(greeting, [2]);
+    expect(p.grants.last, 'input(${greeting.id}, [2], alice)');
+    expect(p.screen, contains('greeted(alice, carol)'));
+    p.withdrawn(greeting);
+
+    // pick's card: the person gives a choice.
+    await p.type(choice, 'text', [2], 'go');
+    await p.submit(choice, [2]);
+    expect(p.grants.last, 'input(${choice.id}, [2], go)');
+    expect(p.screen, contains('picked(go)'));
+    p.withdrawn(choice);
+
+    expect(p.ui.bridge.constructs, isEmpty);
+    expect(p.screen, hasLength(3));
+  });
+
   group('the bridge on the person channel', () {
     late List<String> sent;
     late UiRuntime r;

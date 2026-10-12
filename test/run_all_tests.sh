@@ -3437,24 +3437,29 @@ echo ""
 
 # =============================================================================
 # Section VG: The canonical compilation on one-clause procedures
-# (programs/tests/vglp/one_clause): every procedure of responder.vglp has one
-# volition-guarded clause, the case the per-clause reply types exist for.  The
-# source compiles on load (no .glp beside it).  Three plays: the person's
-# answer reaches its clause; an answer of another clause's form leaves the
-# pending table as it is; a clause reducing a goal with an open ask drops the
-# ask and reports its card aborted; and the person's decline selects the else-branch,
-# which is the fourth play.  They end at once: the deadline went on 2026-09-15
-# (Udi), so nothing waits out a wall-clock minute for a person who is not at
-# the phone.  play_decline is the only play that reduces an else clause, and
-# writing it found the defect it now guards: the compiled else clause kept the
-# answer writer in its head, which no reply binds, so its output suspended for
-# ever.  The Definition's else clause is H'[T'] since 2026-09-15 and the head
-# carries the else answer, which is why the play reports decided(no, bob).
+# (programs/tests/vglp/one_clause): every procedure of responder.vglp is
+# volitional with one clause, its question in writer mode, the offering peer
+# shown (vGLP, Definition "Volitional Procedure, Interactive Type, Interactive
+# Term, Ordinary Clause, vGLP Program").  The source compiles on load (no .glp
+# beside it), and each play runs it through the dispatcher and the construct
+# processes with a scripted person, who sees each draw and grants input(Id,
+# Q, R) at the position the view marks (Definition "Canonical Compilation" and
+# the paragraph before it); a play gives the decisions D and the person's
+# log L.  The person's answer reaches its clause; a refusal is an answer, no,
+# which the clause takes; a grant that forms no term of the question's type
+# answers nothing, and the next one answers it; greet's card is drawn before
+# the person gives a name, its clause guarded only on what the program
+# writes; pick's one clause takes the person's choice.  Until 2026-10-12 the
+# fixture was in the old syntax and its plays spoke the old compilation's
+# mediator, cards and slots, with an else-branch selected by a decline and a
+# play in which an ordinary clause aborted pick's open ask, which the paper
+# has no counterpart for (GLP, 2026-10-11 12:59 UTC, "03:24").
 # =============================================================================
 echo "=== Section VG: Canonical compilation, one-clause procedures ==="
 echo ""
 
 ONECLAUSE="$GLP_DIR/programs/tests/vglp/one_clause"
+VG_CARD="drawn(0, form(card, \[field('Peer', shown), field('YesNo', buttons(\[yes, no\]))\]), card(bob, input(\[2\]))), withdrawn(0) |"
 
 vg_load=$("$REPL_RUN" <<HEREDOC
 $ONECLAUSE
@@ -3466,39 +3471,53 @@ check_not "One-clause program no type errors" "Type checking failed" "$vg_load"
 
 vg_answer=$("$REPL_RUN" <<HEREDOC
 $ONECLAUSE
-play_answer.
+play_answer(D, L).
 :quit
 HEREDOC
 2>&1)
 check_not "One-clause: answer, no failed goal" "ERROR" "$vg_answer"
-check "One-clause: the answer reaches its clause" "tagged(answer, \[decided(yes, bob)\])" "$vg_answer"
+check "One-clause: the answer reaches its clause" "D = \[decided(yes, bob)\]" "$vg_answer"
+check "One-clause: the card is drawn, the offering peer shown and the person's position marked, and withdraws once answered" "L = \[$VG_CARD" "$vg_answer"
 
 vg_decline=$("$REPL_RUN" <<HEREDOC
 $ONECLAUSE
-play_decline.
+play_decline(D, L).
 :quit
 HEREDOC
 2>&1)
 check_not "One-clause: decline, no failed goal" "ERROR" "$vg_decline"
-check "One-clause: the person's decline selects the else-branch, with its else answer" "tagged(decline, \[decided(no, bob)\])" "$vg_decline"
+check "One-clause: the person's decline is an answer, no, which the clause takes" "D = \[decided(no, bob)\]" "$vg_decline"
+check "One-clause: the declined card withdraws once answered" "L = \[$VG_CARD" "$vg_decline"
 
 vg_mismatch=$("$REPL_RUN" <<HEREDOC
 $ONECLAUSE
-play_mismatch.
+play_mismatch(D, L).
 :quit
 HEREDOC
 2>&1)
 check_not "One-clause: mismatch, no failed goal" "ERROR" "$vg_mismatch"
-check "One-clause: a mismatched answer leaves the table, the next one reaches its clause" "tagged(mismatch, \[decided(yes, bob)\])" "$vg_mismatch"
+check "One-clause: a grant that forms no YesNo answers nothing, the next one reaches its clause" "D = \[decided(yes, bob)\]" "$vg_mismatch"
+check "One-clause: the card stays through the refused grant and withdraws once answered" "L = \[$VG_CARD" "$vg_mismatch"
 
-vg_abort=$("$REPL_RUN" <<HEREDOC
+vg_greet=$("$REPL_RUN" <<HEREDOC
 $ONECLAUSE
-play_abort.
+play_greet(D, L).
 :quit
 HEREDOC
 2>&1)
-check_not "One-clause: abort, no failed goal" "ERROR" "$vg_abort"
-check "One-clause: the reducing clause drops the open ask and its card is aborted" "tagged(abort, aborted(req(0)), \[picked(bob)\])" "$vg_abort"
+check_not "One-clause: greet, no failed goal" "ERROR" "$vg_greet"
+check "One-clause: greet's card is drawn before the person gives a name, its clause guarded on what the program writes" "L = \[drawn(0, form(greeting, \[field('Peer', shown), field('Name', text)\]), greeting(bob, input(\[2\]))), withdrawn(0) |" "$vg_greet"
+check "One-clause: the name the person gives reaches greet's clause" "D = \[greeted(alice, bob)\]" "$vg_greet"
+
+vg_pick=$("$REPL_RUN" <<HEREDOC
+$ONECLAUSE
+play_pick(D, L).
+:quit
+HEREDOC
+2>&1)
+check_not "One-clause: pick, no failed goal" "ERROR" "$vg_pick"
+check "One-clause: pick's card is drawn, the offering peer shown" "L = \[drawn(0, form(choice, \[field('Peer', shown), field('Constant', text)\]), choice(bob, input(\[2\]))), withdrawn(0) |" "$vg_pick"
+check "One-clause: pick's one clause takes the person's choice" "D = \[picked(go)\]" "$vg_pick"
 echo ""
 
 # -----------------------------------------------------------------------------
