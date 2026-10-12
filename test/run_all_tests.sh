@@ -6378,7 +6378,19 @@ fi
 # `dart test` exits non-zero whenever anything is red — including a known-red
 # entry, which is not a suite failure — so every capture below is guarded
 # against `set -e` (line 24) rather than letting it abort the run.
+#
+# Each runner's raw output is kept, overwritten on every run, so that a failure
+# can be read in full after the suite ends: the section itself prints only the
+# failing names and, when its gate fails, the last twenty lines of dart test's
+# output and none of flutter test's (Integration, 2026-10-11).  Writing them
+# reads nothing back and moves no count or gate.
+Q_RAW_DIR="/Users/udi/Grassroots/tmp"
+Q_RAW_DART="$Q_RAW_DIR/suite_q_dart.txt"
+Q_RAW_FLUTTER="$Q_RAW_DIR/suite_q_flutter.txt"
+mkdir -p "$Q_RAW_DIR" 2>/dev/null || true
 DART_TREE_RESULT=$(cd "$GLP_RUNTIME" && "$DART" test 2>&1) && DART_TREE_STATUS=0 || DART_TREE_STATUS=$?
+printf '%s\n' "$DART_TREE_RESULT" > "$Q_RAW_DART" 2>/dev/null \
+    || echo "  (dart test's output could not be written to $Q_RAW_DART)"
 
 # Strip ANSI colour and CR so the reporter's in-place updates become lines.
 DART_TREE_CLEAN=$(printf '%s' "$DART_TREE_RESULT" | sed 's/\x1b\[[0-9;]*m//g' | tr '\r' '\n') || true
@@ -6404,8 +6416,12 @@ if ! command -v flutter >/dev/null 2>&1; then
     FAIL=$((FAIL + 1))
     MA_PASSED=0
     MA_FAILS=""
+    echo "flutter is not on PATH, so glp_multiagent/test/ did not run" > "$Q_RAW_FLUTTER" 2>/dev/null \
+        || echo "  (flutter test's output could not be written to $Q_RAW_FLUTTER)"
 else
     MA_RESULT=$(cd "$GLP_DIR/glp_multiagent" && flutter test 2>&1) && MA_STATUS=0 || MA_STATUS=$?
+    printf '%s\n' "$MA_RESULT" > "$Q_RAW_FLUTTER" 2>/dev/null \
+        || echo "  (flutter test's output could not be written to $Q_RAW_FLUTTER)"
     MA_CLEAN=$(printf '%s' "$MA_RESULT" | sed 's/\x1b\[[0-9;]*m//g' | tr '\r' '\n') || true
 
     MA_PASSED=$(printf '%s' "$MA_CLEAN" | grep -oE '\+[0-9]+' | tail -1 | tr -d '+') || true
