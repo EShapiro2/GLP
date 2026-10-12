@@ -74,6 +74,18 @@ class _Net {
     }
   }
 
+  /// Deliver, in order, the queued messages [pick] selects, and leave the rest
+  /// queued: delivery is unordered (Networking Seam, "The contract").
+  void deliverWhere(bool Function(_Msg m) pick) {
+    flushAll();
+    final chosen = queue.where(pick).toList();
+    queue.removeWhere(pick);
+    for (final m in chosen) {
+      deliveryLog.add(m);
+      agents[m.to]!.handleIncomingPayload(payload: m.payload, fromAgent: m.from);
+    }
+  }
+
   int answerAll(bool authorise) {
     var n = 0;
     for (final ctx in agents.values) {
@@ -183,6 +195,62 @@ HeapCell _forwardedWriter(_Net net) {
       .args[0] as VarRef;
   qRt.hashCode; // keep qRt referenced for clarity of the three-agent shape
   return zr.addr;
+}
+
+/// The end the first element of [id]'s network input stream carried: the
+/// argument of the cold call `m(...)`.
+VarRef _carried(_Net net, String id) =>
+    ((net.runtimes[id]!.heap.derefAddr(net.netIn[id]!) as StructTerm).args[0]
+            as StructTerm)
+        .args[0] as VarRef;
+
+/// Build the reader forwarded twice: charlie anchors a reader and exports it
+/// to bob, who forwards it to alice, who forwards it to dave, each in a cold
+/// call.  Alice and dave each localize the forwarded name and request it of
+/// charlie (Definition Localize, case 2); each holder's program authorises its
+/// own request (Held Links, case 1), so both requests are on their way to
+/// charlie, neither yet delivered.  Dave is the current holder, alice a past
+/// one.  Returns the reader name and charlie's writer.
+({GlobalName rn, HeapCell restW}) _forwardedTwice(_Net net) {
+  final res = _forwardedReader(net);
+  net.deliverWhere((m) => m.to == 'alice');
+  net.agents['alice']!.send(
+      StructTerm('m', [_carried(net, 'alice')]), true, 'dave', 0, 'dave');
+  net.deliverWhere((m) => m.to == 'dave');
+  expect(net.agents['alice']!.wp.findByRemote('charlie', res.rn.index), isNull,
+      reason: 'alice forwarded the name under its original anchor');
+  expect(net.agents['dave']!.hasReportedLink('charlie', res.rn.index, false),
+      isTrue);
+  net.agents['alice']!.answerLink(res.rn, true);
+  net.agents['dave']!.answerLink(res.rn, true);
+  net.flushAll();
+  expect(
+      net.queue
+          .where((m) => m.to == 'charlie' && m.payload[0] == 1 /* request */)
+          .map((m) => m.from)
+          .toSet(),
+      {'alice', 'dave'});
+  return res;
+}
+
+/// After [_forwardedTwice] and the run: the value reached dave, the current
+/// holder, who acknowledged it, closing the link; alice and bob, past holders,
+/// discarded what reached them, holding nothing early.
+void _expectDaveHasIt(_Net net, GlobalName rn, String why) {
+  expect(net.runtimes['dave']!.heap.derefAddr(_carried(net, 'dave').addr),
+      isA<ConstTerm>().having((c) => c.value, 'value', 'v'),
+      reason: 'the current holder receives the value ($why)');
+  expect(net.agents['dave']!.wp.findByRemote('charlie', rn.index), isNull);
+  expect(net.agents['charlie']!.pendingReaderValueCount, 0,
+      reason: 'the current holder acknowledged: the link is closed ($why)');
+  expect(net.agents['charlie']!.recordedRequestPairCount, 0,
+      reason: "a closed link's pairs are released ($why)");
+  for (final past in ['alice', 'bob']) {
+    expect(net.agents[past]!.earlyAssignmentCount, 0,
+        reason: 'a past holder discards the value ($why)');
+  }
+  expect(net.reportedCount, 0);
+  expect(net.heldCount, 0);
 }
 
 void main() {
@@ -522,6 +590,161 @@ void main() {
                   as ConstTerm)
               .value,
           'direct');
+    });
+  });
+
+  // IGLP 6998d52, §app:requests-acks: "On receiving req(_r(p, i)) from
+  // requester s, the anchor p records s among the link's holders; if the value
+  // is pending, p addresses it to s as well. Delivery is unordered, so when a
+  // reader is forwarded twice the two holders' requests reach p in either
+  // order and p cannot tell the current holder from the past one: it sends the
+  // value to each, a past holder discards it (below), and the current holder
+  // acknowledges. A request repeating a (link, requester) pair already
+  // recorded --- the link held, authorised or closed --- is dropped."  §Held
+  // Links: "A request from a requester already recorded for the link ... [is]
+  // dropped, so each party is reported once; a request from a further
+  // requester --- the reader forwarded again --- is held and reported in its
+  // turn, the anchor's program asked once for each party that comes to hold
+  // the end."
+  group('Requests from several holders (madGLP)', () {
+    test(
+        "two holders' requests in both arrival orders, the value produced "
+        'before, between and after them: neither order loses the value', () {
+      for (final first in ['alice', 'dave']) {
+        for (final produce in ['before', 'between', 'after']) {
+          final why = '$first first, value produced $produce';
+          final second = first == 'alice' ? 'dave' : 'alice';
+          final net = _Net();
+          for (final id in ['alice', 'bob', 'charlie', 'dave']) {
+            net.add(id);
+          }
+          final (rn: rn, restW: restW) = _forwardedTwice(net);
+          final charlie = net.agents['charlie']!;
+          void value() =>
+              net.runtimes['charlie']!.heap.bindVariable(restW, ConstTerm('v'));
+          void request(String who) =>
+              net.deliverWhere((m) => m.from == who && m.to == 'charlie');
+
+          if (produce == 'before') value();
+          request(first);
+          expect(charlie.reportedLinkCount, 1, reason: why);
+          charlie.answerLink(rn, true);
+          if (produce == 'between') value();
+          request(second);
+          expect(charlie.reportedLinkCount, 1, reason: why);
+          charlie.answerLink(rn, true);
+          if (produce == 'after') value();
+          net.settle();
+
+          _expectDaveHasIt(net, rn, why);
+          final reports = _reports(net, 'charlie');
+          expect([for (final r in reports) r.$2], [first, second],
+              reason: 'each party reported once ($why)');
+          for (final r in reports) {
+            _expectGroundName(r.$1, 'charlie', rn.index, false);
+          }
+        }
+      }
+    });
+
+    test('a request repeated while held, once authorised, and once the link '
+        'is closed, is dropped', () {
+      final net = _Net();
+      net.add('alice');
+      net.add('bob');
+      net.add('charlie');
+      final (rn: rn, restW: restW) = _forwardedReader(net);
+      net.settle();
+      net.answerAll(true); // alice releases her request
+      net.settle();
+      final charlie = net.agents['charlie']!;
+      final req = net.deliveryLog.singleWhere(
+          (m) => m.to == 'charlie' && m.payload[0] == 1 /* request */);
+      void repeat() => charlie.handleIncomingPayload(
+          payload: req.payload, fromAgent: req.from);
+
+      // Held: reported once, held once.
+      expect(charlie.heldRequestCount, 1);
+      repeat();
+      expect(charlie.heldRequestCount, 1, reason: 'held: the repeat dropped');
+      expect(charlie.reportedLinkCount, 1);
+      expect(_reports(net, 'charlie').length, 1);
+
+      // Authorised: the requester is recorded; the repeat is not held or
+      // reported again, and nothing is sent.
+      charlie.answerLink(rn, true);
+      expect(charlie.heldRequestCount, 0);
+      repeat();
+      expect(charlie.heldRequestCount, 0,
+          reason: 'authorised: the repeat dropped, not held again');
+      expect(charlie.reportedLinkCount, 0);
+      expect(_reports(net, 'charlie').length, 1,
+          reason: 'authorised: not reported again');
+      expect(charlie.mp.totalLength, 0, reason: 'authorised: nothing sent');
+      expect(charlie.globalSendRegistry.getGoalFor(restW)!.requesters,
+          ['alice']);
+
+      // Closed: the value reaches alice, who acknowledges it.
+      net.runtimes['charlie']!.heap.bindVariable(restW, ConstTerm('v'));
+      net.settle();
+      expect(
+          (net.runtimes['alice']!.heap
+                  .derefAddr(_carried(net, 'alice').addr) as ConstTerm)
+              .value,
+          'v');
+      expect(charlie.pendingReaderValueCount, 0);
+      final mark = net.deliveryLog.length;
+      repeat();
+      net.settle();
+      expect(charlie.heldRequestCount, 0, reason: 'closed: the repeat dropped');
+      expect(charlie.reportedLinkCount, 0);
+      expect(_reports(net, 'charlie').length, 1);
+      expect(net.deliveryLog.length, mark, reason: 'closed: nothing sent');
+      expect(charlie.recordedRequestPairCount, 0);
+    });
+
+    test("a reader forwarded twice, its two holders' requests overlapping: "
+        'the second held and reported in its turn, the value to each', () {
+      for (final first in ['alice', 'dave']) {
+        for (final produce in ['before', 'after']) {
+          final why = '$first first, value produced $produce';
+          final second = first == 'alice' ? 'dave' : 'alice';
+          final net = _Net();
+          for (final id in ['alice', 'bob', 'charlie', 'dave']) {
+            net.add(id);
+          }
+          final (rn: rn, restW: restW) = _forwardedTwice(net);
+          final charlie = net.agents['charlie']!;
+          void value() =>
+              net.runtimes['charlie']!.heap.bindVariable(restW, ConstTerm('v'));
+
+          if (produce == 'before') value();
+          // Both requests reach charlie before his program answers either.
+          net.deliverWhere((m) => m.from == first && m.to == 'charlie');
+          net.deliverWhere((m) => m.from == second && m.to == 'charlie');
+          expect(charlie.heldRequestCount, 2, reason: why);
+          expect(charlie.reportedLinkCount, 1, reason: why);
+          expect([for (final r in _reports(net, 'charlie')) r.$2], [first],
+              reason: 'the second is held, not yet reported ($why)');
+
+          // The first answered, the second is reported in its turn.
+          charlie.answerLink(rn, true);
+          expect(charlie.heldRequestCount, 1, reason: why);
+          expect([for (final r in _reports(net, 'charlie')) r.$2],
+              [first, second],
+              reason: 'reported in its turn ($why)');
+          expect(
+              charlie.reportedLinks.single.$2, second, reason: why);
+          charlie.answerLink(rn, true);
+          expect(charlie.heldRequestCount, 0, reason: why);
+
+          if (produce == 'after') value();
+          net.settle();
+          _expectDaveHasIt(net, rn, why);
+          expect(_reports(net, 'charlie').length, 2,
+              reason: 'the program asked once per party ($why)');
+        }
+      }
     });
   });
 }

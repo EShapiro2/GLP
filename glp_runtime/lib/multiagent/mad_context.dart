@@ -81,8 +81,9 @@ class MadContext {
 
   /// Pending reader-name values (spec §app:requests-acks): a sent value
   /// `_r(p, i) := T↑` is retained here, keyed by (p, i), until its
-  /// acknowledgement arrives. A request for the link re-addresses the pending
-  /// value to the requester; the acknowledgement deletes it, closing the link.
+  /// acknowledgement arrives. An authorised request for the link addresses the
+  /// pending value to the requester as well; the acknowledgement deletes it,
+  /// closing the link.
   /// Writer-name and serializer values are fire-and-forget and never pend.
   ///
   /// nestedReaderNames are the reader names anchored at this agent that the
@@ -129,8 +130,21 @@ class MadContext {
   /// Held incoming requests (Definition Held Link, case 3): every request
   /// reaching the anchor is held — the agent the anchor exported the name to
   /// sends none, so a request always means the name was forwarded. The
-  /// requester is retained so authorisation can record it as the link's holder.
-  final Map<(String, int), String> _heldRequests = {};
+  /// requesters are retained so authorisation can record each among the
+  /// link's holders.  Per link, in order of arrival: the first is the one
+  /// reported, and "a request from a further requester --- the reader
+  /// forwarded again --- is held and reported in its turn, the anchor's
+  /// program asked once for each party that comes to hold the end" (§Held
+  /// Links), its turn coming when the program has answered the one before.
+  final Map<(String, int), List<String>> _heldRequests = {};
+
+  /// The (link, requester) pairs the anchor has recorded, by link: a requester
+  /// is recorded when its request is held.  "A request repeating a (link,
+  /// requester) pair already recorded --- the link held, authorised or closed
+  /// --- is dropped" (§app:requests-acks).  A link's pairs are released when
+  /// the link closes, after which every request for it is dropped as one "for
+  /// a closed link" (madGLP Receive, Request case).
+  final Map<(String, int), Set<String>> _requestPairs = {};
 
   /// Links reported and not yet answered, newest report per link. Keyed as
   /// `(anchor, index, isWriter)`; the value is the agent the name or traffic
@@ -274,9 +288,26 @@ class MadContext {
       _reportPendingLink(result.globalName, record!.sender);
     }
 
+    // The requesters recorded among the link's holders before the value was
+    // produced each receive it as well: "p cannot tell the current holder
+    // from the past one: it sends the value to each, a past holder discards
+    // it, and the current holder acknowledges" (§app:requests-acks).  Only a
+    // reader-name link at its anchor has requesters.
+    for (final requester in result.requesters) {
+      if (requester == result.destination) continue;
+      mp.add(OutboundMessage(
+        destination: requester,
+        type: MessageType.assignment,
+        payload: payload,
+      ));
+      _trace('[MAD $agentId] value ${result.globalName} sent to requester '
+          '$requester as well');
+    }
+
     // A reader-name value pends until acknowledged (§app:requests-acks): a
-    // request re-addresses it, the acknowledgement releases it. Writer-name
-    // values are fire-and-forget — they always find their fixed anchor entry.
+    // request addresses it to the requester as well, the acknowledgement
+    // releases it. Writer-name values are fire-and-forget — they always find
+    // their fixed anchor entry.
     // The spawns' names are the value's self-anchored reader links, recorded
     // so the acknowledgement can name their holder.
     if (result.globalName.isReader && result.globalName.index > 0) {
@@ -781,9 +812,10 @@ class MadContext {
     }
 
     // An assignment for a link already held is dropped, not held or reported
-    // again: "a request or assignment arriving for a link already held is
-    // dropped, so a held link is reported once" (§Held Links) — an assignment
-    // delivered twice among them (Remark "Fair Message Delivery").
+    // again: "A request from a requester already recorded for the link, and
+    // an assignment for a link already holding one, are dropped, so each party
+    // is reported once" (§Held Links) — an assignment delivered twice among
+    // them (Remark "Fair Message Delivery").
     final linkKey = (globalName.agent, globalName.index, true);
     if (!authorised && _heldAssignments.containsKey(linkKey)) {
       _trace('[MAD $agentId] _handleWriterAssignment: $globalName already '
@@ -1045,51 +1077,98 @@ class MadContext {
   }
 
   /// Handle req(_r(p, i)) — we are the anchor p (madGLP Receive, Request
-  /// case): record the requester as the link's holder; if the value is
-  /// pending, re-address it to the requester. A request for a closed link is
-  /// dropped.
+  /// case): the request is held; on authorisation the requester is recorded
+  /// among the link's holders and a pending value is addressed to it as well.
+  /// A request repeating a recorded (link, requester) pair, and a request for
+  /// a closed link, are dropped.
   void handleRequest(GlobalName globalName, String fromAgent) {
     _trace('[MAD $agentId] handleRequest: req($globalName) from $fromAgent');
     final key = (globalName.agent, globalName.index);
 
-    // Definition Held Link, case 3: at the anchor, a request. Every request is
-    // held — the agent the anchor exported the name to sends none, so a request
-    // is proof the name was forwarded. Nothing is redirected and no holder is
-    // recorded until `authorise_link/2` answers.
-    //
-    // A request for a link already held is dropped, not held or reported again:
-    // "a request or assignment arriving for a link already held is dropped, so
-    // a held link is reported once" (§Held Links) — a request delivered twice
-    // among them (Remark "Fair Message Delivery").
-    if (_heldRequests.containsKey(key)) {
-      _trace('[MAD $agentId] handleRequest: $globalName already held — '
-          'request dropped');
+    // "A request repeating a (link, requester) pair already recorded --- the
+    // link held, authorised or closed --- is dropped" (§app:requests-acks); "A
+    // request from a requester already recorded for the link ... [is]
+    // dropped, so each party is reported once" (§Held Links) — a request
+    // delivered twice among them (Remark "Fair Message Delivery").  A closed
+    // link's pairs are released, and the closed case falls to the test below.
+    if (_requestPairs[key]?.contains(fromAgent) ?? false) {
+      _trace('[MAD $agentId] handleRequest: ($globalName, $fromAgent) '
+          'recorded before — request dropped');
       return;
     }
 
     // A request matching no live link is stale and dropped as before, without
     // troubling the program: "A request for a closed link is dropped."
-    final isLive = _pendingReaderValues.containsKey(key) ||
-        globalSendRegistry.hasGoalForLink(globalName);
-    if (!isLive) {
+    if (!_readerLinkIsLive(globalName)) {
       _trace('[MAD $agentId] handleRequest: $globalName matches nothing — '
           'stale request dropped');
       return;
     }
-    _heldRequests[key] = fromAgent;
-    _reportPendingLink(globalName, fromAgent);
+
+    // Definition Held Link, case 3: at the anchor, a request. Every request is
+    // held — the agent the anchor exported the name to sends none, so a request
+    // is proof the name was forwarded. Nothing is redirected and no holder is
+    // recorded until `authorise_link/2` answers.  A further requester's
+    // request is held behind the one reported, and reported in its turn.
+    (_requestPairs[key] ??= <String>{}).add(fromAgent);
+    final queue = _heldRequests[key] ??= <String>[];
+    queue.add(fromAgent);
+    if (queue.length == 1) {
+      _reportPendingLink(globalName, fromAgent);
+    } else {
+      _trace('[MAD $agentId] handleRequest: req($globalName) from '
+          '$fromAgent held behind ${queue.length - 1} — reported in its turn');
+    }
+  }
+
+  /// Whether the reader-name link [globalName] anchored here is live: its
+  /// value not yet produced (the `global_send` goal waits) or produced and
+  /// pending.  Otherwise the link is closed — acknowledged or refused.
+  bool _readerLinkIsLive(GlobalName globalName) =>
+      _pendingReaderValues
+          .containsKey((globalName.agent, globalName.index)) ||
+      globalSendRegistry.hasGoalForLink(globalName);
+
+  /// After the program answered the held request reported for the link
+  /// [globalName], report the next requester held for it, in its turn (§Held
+  /// Links).  A held request whose link has closed meanwhile is dropped
+  /// unreported: "A request for a closed link is dropped" (madGLP Receive,
+  /// Request case).
+  void _reportNextHeldRequest(GlobalName globalName) {
+    final key = (globalName.agent, globalName.index);
+    final queue = _heldRequests[key];
+    if (queue == null) return;
+    if (queue.isNotEmpty && _readerLinkIsLive(globalName)) {
+      _reportPendingLink(globalName, queue.first);
+      return;
+    }
+    for (final requester in queue) {
+      _trace('[MAD $agentId] held req($globalName) from $requester: the link '
+          'closed — dropped');
+    }
+    _heldRequests.remove(key);
+  }
+
+  /// Release the request records of the reader-name link [globalName], now
+  /// closed: its recorded (link, requester) pairs, and the requests held
+  /// behind the one reported, which are for a closed link.
+  void _releaseRequestRecords(GlobalName globalName, {bool held = false}) {
+    final key = (globalName.agent, globalName.index);
+    _requestPairs.remove(key);
+    if (held) _heldRequests.remove(key);
   }
 
   /// Perform the request the anchor held, once authorised (madGLP Receive,
-  /// Request case): record the requester as the link's holder, and re-address a
-  /// pending value to it, unsent.
+  /// Request case): record the requester among the link's holders, and address
+  /// a pending value to it as well, unsent.
   void _applyRequest(GlobalName globalName, String fromAgent) {
     final key = (globalName.agent, globalName.index);
     final pending = _pendingReaderValues[key];
     if (pending != null) {
-      // Redirect the pending value to the requester. The copy sent to a past
-      // holder is dropped there as stale; the value stays pending until the
-      // current holder's acknowledgement arrives.
+      // Address the pending value to the requester as well: "if the value is
+      // pending, p addresses it to s as well" (§app:requests-acks). The copy
+      // sent to a past holder is dropped there as stale; the value stays
+      // pending until the current holder's acknowledgement arrives.
       _pendingReaderValues[key] = (
         payload: pending.payload,
         destination: fromAgent,
@@ -1100,16 +1179,17 @@ class MadContext {
         type: MessageType.assignment,
         payload: pending.payload,
       ));
-      _trace('[MAD $agentId] handleRequest: pending $globalName re-addressed '
-          'to $fromAgent');
+      _trace('[MAD $agentId] handleRequest: pending $globalName addressed '
+          'to $fromAgent as well');
       return;
     }
 
-    // Value not yet produced: record the requester as the link's holder — the
-    // destination consulted at send time is per-link runtime state.
-    if (globalSendRegistry.redirectGoal(globalName, fromAgent)) {
-      _trace('[MAD $agentId] handleRequest: holder of $globalName recorded '
-          'as $fromAgent');
+    // Value not yet produced: record the requester among the link's holders —
+    // per-link runtime state consulted at send time, when the value goes to
+    // each holder recorded (§app:requests-acks).
+    if (globalSendRegistry.recordRequester(globalName, fromAgent)) {
+      _trace('[MAD $agentId] handleRequest: $fromAgent recorded among the '
+          'holders of $globalName');
       return;
     }
 
@@ -1135,6 +1215,9 @@ class MadContext {
     for (final nested in removed.nestedReaderNames) {
       _recordHolder(nested, fromAgent);
     }
+    // The link is closed: every request for it is now dropped as one for a
+    // closed link, so its recorded (link, requester) pairs are released.
+    _releaseRequestRecords(globalName);
     _trace('[MAD $agentId] handleAck: pending $globalName released — link '
         'closed');
   }
@@ -1181,7 +1264,17 @@ class MadContext {
   /// A refusal is accepted in every case — the program refuses for reasons the
   /// runtime does not see. Returns false only when the link was never reported,
   /// so the caller can tell an answer from a mis-addressed one.
+  ///
+  /// A held request answered, the next requester held for the same link is
+  /// reported in its turn (§Held Links), within this transaction.
   bool answerLink(GlobalName gn, bool authorise) {
+    final answered = _answerLink(gn, authorise);
+    if (answered && !gn.isWriter) _reportNextHeldRequest(gn);
+    _flushReports();
+    return answered;
+  }
+
+  bool _answerLink(GlobalName gn, bool authorise) {
     final linkKey = (gn.agent, gn.index, gn.isWriter);
     if (_reportedLinks.remove(linkKey) == null) {
       _trace('[MAD $agentId] answerLink: $gn was not reported — ignored');
@@ -1190,10 +1283,13 @@ class MadContext {
     _trace('[MAD $agentId] answerLink: $gn '
         '${authorise ? "AUTHORISED" : "REFUSED"}');
 
-    final requestKey = (gn.agent, gn.index);
     final heldMessage = mp.findHeld(gn.agent, gn.index, gn.isWriter);
     final heldAssignment = _heldAssignments.remove(linkKey);
-    final heldRequester = _heldRequests.remove(requestKey);
+    // The held request reported for the link is the first held for it.
+    final heldQueue = gn.isWriter ? null : _heldRequests[(gn.agent, gn.index)];
+    final heldRequester = (heldQueue == null || heldQueue.isEmpty)
+        ? null
+        : heldQueue.removeAt(0);
 
     if (authorise) {
       // A held outgoing message becomes unsent — the same message, released.
@@ -1234,6 +1330,9 @@ class MadContext {
     } else {
       wp.removeLocalizeEntry(gn.agent, gn.index);
       _pendingReaderValues.remove((gn.agent, gn.index));
+      // The link is closed: its recorded pairs go, and the requests still
+      // held for it are for a closed link, dropped.
+      _releaseRequestRecords(gn, held: true);
     }
     final rec = up.findByLink(gn.agent, gn.index);
     if (rec != null) {
@@ -1254,8 +1353,14 @@ class MadContext {
   /// Number of assignments retained because their link is held.
   int get heldAssignmentCount => _heldAssignments.length;
 
-  /// Number of requests retained because their link is held.
-  int get heldRequestCount => _heldRequests.length;
+  /// Number of requests retained because their link is held: the one reported
+  /// for each link and those held behind it.
+  int get heldRequestCount =>
+      _heldRequests.values.fold(0, (n, q) => n + q.length);
+
+  /// Number of (link, requester) pairs recorded for links still live.
+  int get recordedRequestPairCount =>
+      _requestPairs.values.fold(0, (n, s) => n + s.length);
 
   /// Number of reader-name assignments retained because they arrived early,
   /// before the entry their localization creates (IGLP app:in-networking,
