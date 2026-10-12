@@ -26,8 +26,8 @@
 %% and Frank's agent returns it, as it is not mature by his date; Frank's date
 %% then advances to 28 by his own calendar, and once he has presented his
 %% first diana-coin, Diana presents a frank-bond again and takes a frank-coin
-%% for it, Frank warranting his date.  Bob's date advances to 25 by his own
-%% calendar.  The play drives the calendars.
+%% for it.  Bob's date advances to 25 by his own calendar.  The play drives
+%% the calendars.
 %%
 %% Each party runs the compiled agent (bonds_agent.glp) with its dispatcher,
 %% and a scripted person: it reads the constructs the dispatcher draws --- the
@@ -43,7 +43,7 @@
 %%
 %% Entry point: market/0, exported by self.glp as village/0.
 
-imported procedure bonds_agent#agent(Key?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Integer?, Stream(Ask(Question))).
+imported procedure bonds_agent#agent(Key?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Integer?, Stream(Ask(Question))).
 imported procedure bonds_agent#dispatch(Stream(Ask(Question))?, Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
 imported procedure escrow#accepts(Agreement?, Kind?, Key?, Stream(Lot)?, Constant, Agreement).
 imported procedure escrow#react(Agreement?, ScreenContent?, Script, Agreement).
@@ -135,7 +135,7 @@ exported procedure escrow_agent(Key?, Script?, Agreement?, Stream(NetInMsg)?, St
 escrow_agent(Id, Script, Ag, NetIn, NetOut?) :-
     ground(Id?) |
     bonds_agent # agent(Id?, [], NetIn?, Cal?,
-                        [user_output(Screen), net_output(NetOut)], [], 0, [], 1, Asks),
+                        [user_output(Screen), net_output(NetOut)], [], 0, 1, Asks),
     bonds_agent # dispatch(Asks?, ch(Grants?, Draws), _),
     merge_events(Draws?, Screen?, Events),
     person(Id?, Events?, Grants, Cal, Script?, [], no_form, [], [], idle, Ag?, []).

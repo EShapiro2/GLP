@@ -17,13 +17,10 @@
 %% practical implementation gives each instrument.  A party's holdings are a
 %% multiset of instruments, Stream(Instrument).  A lot is k instruments of one
 %% issuer, kind and maturity, lot(Issuer, Due, K), its due `now` for coins and
-%% the maturity date for bonds: the cent^k_{u,*} of Section 3.4.  A warranty
-%% dated(Issuer, Date) is the pair (q, d*_q) of Mature: the issuer's warranty
-%% of its date, recorded at the bearer of a bond it took for a coin.
+%% the maturity date for bonds: the cent^k_{u,*} of Section 3.4.
 
 Instrument ::= coin(Key, Integer) ; bond(Key, Integer, Integer).
 Lot        ::= lot(Key, Constant, Integer).
-Warranty   ::= dated(Key, Integer).
 
 %% The three escrow transfers of clause 7: a deposit by the depositor with the
 %% escrow agent, a release by the escrow agent to the beneficiary, a return by
@@ -36,22 +33,20 @@ Kind ::= deposit ; release ; return.
 SwapResponse ::= swap_accept(Stream(Instrument)) ; swap_decline(Stream(Instrument)).
 
 %% The payee's answer to a payment: the coins taken, or returned because they
-%% are not the payee's own coins.  No date is read and none is warranted.
+%% are not the payee's own coins.  No date is read.
 PayResponse ::= pay_taken ; pay_returned(Stream(Instrument)).
 
 %% The issuer's answer to a presentation of its coin: the instrument taken in
 %% exchange; the presented coin returned with the lots the issuer holds, its
 %% own apart, for the bearer to choose among; or what was presented returned
-%% because it is not the issuer's coin.  No date is read and none is
-%% warranted.
+%% because it is not the issuer's coin.  No date is read.
 RedeemResponse ::= redeem_give(Instrument)
                  ; redeem_menu(Instrument, Stream(Lot))
                  ; redeem_declined(Instrument).
 
 %% The issuer's answer to a matured bond presented to it: a coin of its own
-%% for it, with its date --- the warranty of clause 2 --- or the bond
-%% returned, because it is not mature by the issuer's date.
-MatureResponse ::= mature_give(Instrument, Integer) ; mature_declined(Instrument).
+%% for it, or the bond returned, because it is not mature by the issuer's date.
+MatureResponse ::= mature_give(Instrument) ; mature_declined(Instrument).
 
 %% The receiver's answer to an escrow transfer: taken, or the instruments
 %% returned.
@@ -104,12 +99,10 @@ OutputEntry ::= user_output(Stream(ScreenMsg)?)
               ; friend_output(Key, Stream(PeerMsg)?).
 
 %% The screen: the holdings, tallied by issuer and due, after every change of
-%% them; the date after every advance; each warranty as it is recorded; and
-%% what each act came to.  A due is `now` for coins and the maturity date for
+%% them; the date after every advance; and what each act came to.  A due is `now` for coins and the maturity date for
 %% bonds.
 ScreenContent ::= holdings(Stream(Lot))
                 ; date_advanced(Integer)
-                ; warranty(Key, Integer)
                 ; minted(Integer, Constant)
                 ; paying(Key, Integer)
                 ; paid(Key, Integer)
@@ -148,7 +141,7 @@ UserInMsg ::= accept_swap(Key, Lot, Stream(Instrument), SwapResponse?, Link)
             ; redeem_given(Key, Key, Constant, Instrument)
             ; redeem_menu_from(Key, Instrument, Stream(Lot))
             ; redeem_declined_by(Key, Instrument)
-            ; matured_by(Key, Integer, Instrument, Integer)
+            ; matured_by(Key, Integer, Instrument)
             ; not_matured_by(Key, Instrument)
             ; accept_transfer(Kind, Key, Stream(Instrument), TransferResponse?, Link)
             ; decline_transfer(Kind, Key, Stream(Instrument), TransferResponse?, Link)
@@ -377,20 +370,6 @@ menu_of(Id, [bond(I, M, _)|Rest], Acc, Menu?) :-
 menu_of(_, [], Acc, Acc?).
 
 %% =============================================================================
-%% Warranties
-%% =============================================================================
-
-%% The warranties with the pair (Issuer, Date) added: the set union
-%% w'_p = w_p + {(q, d*_q)} of mature.
-procedure add_warranty(Key?, Integer?, Stream(Warranty)?, Stream(Warranty)).
-add_warranty(Q, T, [dated(Q1, T1)|Rest], [dated(Q1?, T1?)|Rest?]) :-
-    Q? =?= Q1?, T? =:= T1? | true.
-add_warranty(Q, T, [W|Rest], [W?|Rest1?]) :-
-    otherwise |
-    add_warranty(Q?, T?, Rest?, Rest1).
-add_warranty(Q, T, [], [dated(Q?, T?)]).
-
-%% =============================================================================
 %% Channels to counterparties
 %% =============================================================================
 
@@ -455,8 +434,8 @@ inject_redeem_result(Resp, Q, R, D1, [Y|Ys], [Y?|Ys1?]) :-
 
 %% The issuer's answer to a bond maturing at D presented to it, when it comes.
 procedure inject_mature_result(MatureResponse?, Key?, Integer?, Stream(UserInMsg)?, Stream(UserInMsg)).
-inject_mature_result(mature_give(Coin, T), Q, D, Ys, [matured_by(Q?, D?, Coin?, T?)|Ys?]) :-
-    ground(Q?), ground(Coin?), integer(T?) | true.
+inject_mature_result(mature_give(Coin), Q, D, Ys, [matured_by(Q?, D?, Coin?)|Ys?]) :-
+    ground(Q?), ground(Coin?) | true.
 inject_mature_result(mature_declined(Bond), Q, _, Ys, [not_matured_by(Q?, Bond?)|Ys?]) :-
     ground(Q?), ground(Bond?) | true.
 inject_mature_result(Resp, Q, D, [Y|Ys], [Y?|Ys1?]) :-

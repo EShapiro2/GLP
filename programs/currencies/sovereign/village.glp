@@ -29,8 +29,8 @@
 %% and Frank's agent returns it, as it is not mature by his date; Frank's date
 %% then advances to 28 by his own calendar, and once he has presented his
 %% first diana-coin, Diana presents a frank-bond again and takes a frank-coin
-%% for it, Frank warranting his date.  Bob's date advances to 25 by his own
-%% calendar.  The play drives the calendars.
+%% for it.  Bob's date advances to 25 by his own calendar.  The play drives
+%% the calendars.
 %%
 %% Each party runs the mini-app (denominated/miniapp.glp): the compiled agent
 %% with its dispatcher, activated with its person channel, its
