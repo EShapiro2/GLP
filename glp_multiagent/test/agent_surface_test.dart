@@ -92,6 +92,30 @@ void main() {
     expect(find.text('Bob'), findsOneWidget);
   });
 
+  // GSG Section 5.1: "A message the person addresses to someone who is not
+  // their friend is not sent, and the agent tells the person so."  Each
+  // mediator passes the agent's not_a_friend(Target) to the person; the screen
+  // shows it, and it adds no friend.  Before its manifest named it, the runtime
+  // dropped it as a notify it did not know.
+  for (final (name, manifest) in [
+    ('GrassApp', grassrootsManifest),
+    ('the social graph', socialManifest),
+  ]) {
+    testWidgets('$name: not_a_friend(Who) is shown to the person',
+        (tester) async {
+      final r = UiRuntime(manifest: manifest, onSend: (_) {});
+      await tester.pumpWidget(_wrap(r));
+
+      r.handle(fixtureTerm('not_a_friend(carol)'));
+      await tester.pump();
+
+      expect(find.widgetWithText(SnackBar, 'carol is not your friend — not sent'),
+          findsOneWidget);
+      expect(r.store.lists['friends'], isEmpty);
+      expect(find.text('No friends yet'), findsOneWidget);
+    });
+  }
+
   testWidgets('a swap offer alerts a Currencies row; tapping it accepts',
       (tester) async {
     final sent = <String>[];
