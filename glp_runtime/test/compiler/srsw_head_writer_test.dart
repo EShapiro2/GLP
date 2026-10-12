@@ -29,9 +29,16 @@
 import 'dart:io';
 
 import 'package:test/test.dart';
+import 'package:glp_runtime/bytecode/runner.dart'
+    show BytecodeProgram, CallEnv;
 import 'package:glp_runtime/compiler/compiler.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
-import 'package:glp_runtime/runtime/scheduler.dart' show ExecutionStatus;
+import 'package:glp_runtime/engine_v2/interp.dart'
+    show ByteRunner, codeImageFromProgram;
+import 'package:glp_runtime/runtime/machine_state.dart' show GoalRef;
+import 'package:glp_runtime/runtime/runtime.dart' show GlpRuntime;
+import 'package:glp_runtime/runtime/scheduler.dart'
+    show ExecutionStatus, Scheduler;
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 
 /// The compiler's diagnostic for [source], or '' if it compiles.
@@ -53,15 +60,59 @@ GlpEngine _engineWith(String source, String filename) {
 }
 
 /// [term], dereferenced, printed.
-String _show(GlpEngine engine, rt.Term? term) {
-  final heap = engine.runtime.heap;
+String _show(GlpEngine engine, rt.Term? term) => _shown(engine.runtime, term);
+
+/// [term], dereferenced on [runtime]'s heap, printed; an unbound variable as
+/// `_`.
+String _shown(GlpRuntime runtime, rt.Term? term) {
+  final heap = runtime.heap;
   final t = term == null ? null : heap.dereference(term);
   if (t is rt.ConstTerm) return '${t.value}';
   if (t is rt.StructTerm) {
-    return '${t.functor}(${t.args.map((a) => _show(engine, a)).join(', ')})';
+    return '${t.functor}(${t.args.map((a) => _shown(runtime, a)).join(', ')})';
   }
+  if (t is rt.VarRef) return '_';
   return '$t';
 }
+
+/// Post [proc] of [program] with the arguments [argsOf] makes to a scheduler
+/// over the byte runner, run it, and give its status and the arguments as
+/// they stand after the run.  A goal writer at a consumed argument is
+/// ill-moded (TGLP well-typing.tex: a writer is consistent only at a produced
+/// position), so the REPL's goal check refuses such a goal, and it is posted
+/// here directly, as goal_writer_head_writer_test.dart posts its own.
+(ExecutionStatus, List<rt.Term>, GlpRuntime) _post(BytecodeProgram program,
+    String proc, List<rt.Term> Function(GlpRuntime runtime) argsOf) {
+  final runtime = GlpRuntime();
+  final image = codeImageFromProgram(program);
+  final sched = Scheduler(rt: runtime, runner: ByteRunner(image));
+  final args = argsOf(runtime);
+  final id = runtime.nextGoalId++;
+  runtime.setGoalEnv(
+    id,
+    CallEnv(args: {for (var i = 0; i < args.length; i++) i: args[i]}),
+  );
+  runtime.gq.enqueue(GoalRef(id, image.entryOffsetOf(proc)!));
+  return (sched.drainWithStatus().status, args, runtime);
+}
+
+/// A goal term as the REPL passes one: the reader of a writer bound to it.
+rt.Term _term(GlpRuntime runtime, rt.Term t) {
+  final (w, r) = runtime.heap.allocateVariable();
+  runtime.heap.bindWriter(w, t);
+  return rt.VarRef(r);
+}
+
+/// The writer, or the reader, of a fresh unbound variable.
+rt.Term _writer(GlpRuntime runtime) =>
+    rt.VarRef(runtime.heap.allocateVariable().$1);
+(rt.Term, rt.Term) _pair(GlpRuntime runtime) {
+  final (w, r) = runtime.heap.allocateVariable();
+  return (rt.VarRef(w), rt.VarRef(r));
+}
+
+rt.Term _c(Object v) => rt.ConstTerm(v);
+rt.Term _s(String f, List<rt.Term> args) => rt.StructTerm(f, args);
 
 void main() {
   group('a writer twice in the head, under a groundness-implying guard, loads',
@@ -324,6 +375,200 @@ dupt(X, Y?, Z?) :- ground(X?) | Y = X, Z = X.
       expect(r.succeeded, isTrue, reason: '${r.error}');
       expect(_show(e, r.bindings['Y']), '7');
       expect(_show(e, r.bindings['Z']), '7');
+    });
+  });
+
+  // A goal writer met by any occurrence of a repeated head writer is assigned
+  // what the writer mgu assigns it, in either argument order; a goal reader
+  // met there suspends; a clash fails (GLP #5 Cowork, 2026-10-12 08:18 UTC,
+  // task A).  GLP-Spec glp.tex, Definition "Writer MGU": two(3, Y) against
+  // two(R, R) has the writer mgu {R := 3, Y := 3}, and by Definition "GLP
+  // Goal/Clause Reduction" it reduces; the row "Writer X1 / Writer X2: fail"
+  // is defined for two terms that jointly satisfy SO (appendix-term-
+  // matching.tex, Definition "Term Matching"), and a head with a repeated
+  // variable does not.  Until 2026-10-12 every one of these goal writers
+  // failed the clause.
+  group('a repeated head writer meets a goal writer as the writer mgu says',
+      () {
+    final program = GlpCompiler().compile('''
+two(R, R) :- ground(R?) | true.
+three(R, R, R) :- ground(R?) | true.
+nest(f(R), R) :- ground(R?) | true.
+rfirst(R?, R, R) :- ground(R?) | true.
+once(R) :- ground(R?) | true.
+''');
+
+    test('two(3, Y) reduces, Y := 3', () {
+      final (status, args, runtime) =
+          _post(program, 'two/2', (r) => [_term(r, _c(3)), _writer(r)]);
+      expect(status, ExecutionStatus.succeeded);
+      expect(_shown(runtime, args[1]), '3');
+    });
+
+    test('two(Y, 3) reduces, Y := 3', () {
+      final (status, args, runtime) =
+          _post(program, 'two/2', (r) => [_writer(r), _term(r, _c(3))]);
+      expect(status, ExecutionStatus.succeeded);
+      expect(_shown(runtime, args[0]), '3');
+    });
+
+    test('two(f(W), f(1)) reduces, W := 1', () {
+      late rt.Term w;
+      final (status, _, runtime) = _post(program, 'two/2', (r) {
+        w = _writer(r);
+        return [
+          _term(r, _s('f', [w])),
+          _term(r, _s('f', [_c(1)]))
+        ];
+      });
+      expect(status, ExecutionStatus.succeeded);
+      expect(_shown(runtime, w), '1');
+    });
+
+    test('two(f(1), f(W)) reduces, W := 1: the other order, nested', () {
+      late rt.Term w;
+      final (status, _, runtime) = _post(program, 'two/2', (r) {
+        w = _writer(r);
+        return [
+          _term(r, _s('f', [_c(1)])),
+          _term(r, _s('f', [w]))
+        ];
+      });
+      expect(status, ExecutionStatus.succeeded);
+      expect(_shown(runtime, w), '1');
+    });
+
+    test('two(Y, Z) fails: no writer mgu, and no reader to wait on', () {
+      final (status, args, runtime) =
+          _post(program, 'two/2', (r) => [_writer(r), _writer(r)]);
+      expect(status, ExecutionStatus.failed);
+      expect(_shown(runtime, args[0]), '_');
+      expect(_shown(runtime, args[1]), '_');
+    });
+
+    test('two(X?, 3) suspends on X?', () {
+      final (status, _, _) = _post(
+          program, 'two/2', (r) => [_pair(r).$2, _term(r, _c(3))]);
+      expect(status, ExecutionStatus.suspended);
+    });
+
+    test('two(3, 4) fails', () {
+      final (status, _, _) = _post(
+          program, 'two/2', (r) => [_term(r, _c(3)), _term(r, _c(4))]);
+      expect(status, ExecutionStatus.failed);
+    });
+
+    test('a goal reader met by either occurrence suspends, and the goal '
+        'writer is left unassigned: two(Y, X?), two(X?, Y)', () {
+      final (s1, a1, r1) =
+          _post(program, 'two/2', (r) => [_writer(r), _pair(r).$2]);
+      expect(s1, ExecutionStatus.suspended);
+      expect(_shown(r1, a1[0]), '_');
+      final (s2, a2, r2) =
+          _post(program, 'two/2', (r) => [_pair(r).$2, _writer(r)]);
+      expect(s2, ExecutionStatus.suspended);
+      expect(_shown(r2, a2[1]), '_');
+    });
+
+    test('no ground term for the writers fails: two(f(Y), f(Z)), '
+        'two(Y, f(W))', () {
+      expect(
+          _post(program, 'two/2', (r) => [
+                _term(r, _s('f', [_writer(r)])),
+                _term(r, _s('f', [_writer(r)]))
+              ]).$1,
+          ExecutionStatus.failed);
+      expect(
+          _post(program, 'two/2',
+              (r) => [_writer(r), _term(r, _s('f', [_writer(r)]))]).$1,
+          ExecutionStatus.failed);
+    });
+
+    test('a clash fails though a reader waits elsewhere: two(f(X?, 1), '
+        'f(2, 3)); without the clash it suspends: two(f(W, X?), f(1, 2))', () {
+      expect(
+          _post(program, 'two/2', (r) => [
+                _term(r, _s('f', [_pair(r).$2, _c(1)])),
+                _term(r, _s('f', [_c(2), _c(3)]))
+              ]).$1,
+          ExecutionStatus.failed);
+      late rt.Term w;
+      final (status, _, runtime) = _post(program, 'two/2', (r) {
+        w = _writer(r);
+        return [
+          _term(r, _s('f', [w, _pair(r).$2])),
+          _term(r, _s('f', [_c(1), _c(2)]))
+        ];
+      });
+      expect(status, ExecutionStatus.suspended);
+      expect(_shown(runtime, w), '_', reason: 'a suspended clause commits '
+          'nothing');
+    });
+
+    test('three(Y, Z, 3) reduces, Y := 3 and Z := 3: two goal writers met '
+        'at one position take the term a later occurrence gives', () {
+      final (status, args, runtime) = _post(program, 'three/3',
+          (r) => [_writer(r), _writer(r), _term(r, _c(3))]);
+      expect(status, ExecutionStatus.succeeded);
+      expect(_shown(runtime, args[0]), '3');
+      expect(_shown(runtime, args[1]), '3');
+    });
+
+    test('three(f(Y), f(Z), f(3)) reduces; three(Y, Z, W) fails', () {
+      late rt.Term y, z;
+      final (status, _, runtime) = _post(program, 'three/3', (r) {
+        y = _writer(r);
+        z = _writer(r);
+        return [
+          _term(r, _s('f', [y])),
+          _term(r, _s('f', [z])),
+          _term(r, _s('f', [_c(3)]))
+        ];
+      });
+      expect(status, ExecutionStatus.succeeded);
+      expect(_shown(runtime, y), '3');
+      expect(_shown(runtime, z), '3');
+      expect(
+          _post(program, 'three/3',
+              (r) => [_writer(r), _writer(r), _writer(r)]).$1,
+          ExecutionStatus.failed);
+    });
+
+    test('in a structure first: nest(f(Y), 3) and nest(f(3), Y) reduce, '
+        'Y := 3', () {
+      late rt.Term y;
+      final (s1, _, r1) = _post(program, 'nest/2', (r) {
+        y = _writer(r);
+        return [_term(r, _s('f', [y])), _term(r, _c(3))];
+      });
+      expect(s1, ExecutionStatus.succeeded);
+      expect(_shown(r1, y), '3');
+      final (s2, a2, r2) = _post(program, 'nest/2',
+          (r) => [_term(r, _s('f', [_c(3)])), _writer(r)]);
+      expect(s2, ExecutionStatus.succeeded);
+      expect(_shown(r2, a2[1]), '3');
+    });
+
+    test('under a suspended goal reader: nest(X?, Y) suspends on X?, where '
+        'X? := f(3) would give Y := 3', () {
+      final (status, args, runtime) =
+          _post(program, 'nest/2', (r) => [_pair(r).$2, _writer(r)]);
+      expect(status, ExecutionStatus.suspended);
+      expect(_shown(runtime, args[1]), '_');
+    });
+
+    test('the reader first: rfirst(W0, Y, 3) reduces, W0 and Y 3', () {
+      final (status, args, runtime) = _post(program, 'rfirst/3',
+          (r) => [_writer(r), _writer(r), _term(r, _c(3))]);
+      expect(status, ExecutionStatus.succeeded);
+      expect(_shown(runtime, args[0]), '3');
+      expect(_shown(runtime, args[1]), '3');
+    });
+
+    test('a head writer occurring once still fails a goal writer, under the '
+        'same guard: once(Y)', () {
+      expect(_post(program, 'once/1', (r) => [_writer(r)]).$1,
+          ExecutionStatus.failed);
     });
   });
 }
