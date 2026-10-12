@@ -1,115 +1,183 @@
-%% self.glp — the one-clause program of programs/tests/vglp: its types, the
-%% mirror of the vocabulary the canonical compilation emits into responder.glp
-%% (programs/vglp/self.glp instantiated at this program's Answer, Escrow and
-%% Context; the compiled module's own definitions shadow these within it, and
-%% the two must agree), and three plays.  Section VG of test/run_all_tests.sh
-%% runs them: an answer reaches its clause, a mismatched answer leaves the
-%% pending table as it is, and a clause reducing a goal with an open ask
-%% drops the ask and reports its card ABORTED --- aborted and not closed,
-%% since the ask carries no reduction at all (Udi, 2026-09-24).
+%% self.glp --- the one-clause program of programs/tests/vglp: the plays of
+%% responder.vglp, its questions put to a scripted person through the
+%% dispatcher and the construct processes, for Section VG of
+%% test/run_all_tests.sh, and the entry by which the Dart bridge runs it, for
+%% glp_multiagent/test/bridge_test.dart (vGLP, sections/elicitation.tex,
+%% Definition "Canonical Compilation" and the paragraph before it).
+%%
+%% Each play spawns the compiled goal with its ask stream and the dispatcher
+%% on that stream and on the person channel, as whatever spawns an agent's
+%% initial goal does; none of these goals has a person channel of its own, so
+%% the program's end of one, the dispatcher's third argument, is dropped.  On
+%% each ask the dispatcher spawns the construct process of its question,
+%% which draws its widget and the card the clause writes, draw(Id, W, V), the
+%% person's position marked input(Q), and withdraws once the question is
+%% answered, withdraw(Id).  The person grants input(Id, Q, R) only after the
+%% draw that gives it Id and Q, and logs what it sees.  The person channel
+%% never closes (Definition "Person Channel, Person Writer, GLP with Persons,
+%% Grant"), so a person holds its writer for good, watching after the last
+%% withdrawal, and its log stays open.
+%%
+%% Each play gives the decisions of its procedure, D, and the person's log,
+%% Log: an answer reaches its clause (play_answer); a refusal is an answer,
+%% no, which respond's clause takes as it takes yes (play_decline); a grant
+%% that forms no term of the question's type answers nothing, and the next
+%% that forms one answers it (play_mismatch); greet's card is written before
+%% the person gives a name, its clause guarded only on what the program
+%% writes (play_greet); and pick's one clause takes the person's choice
+%% (play_pick).  Until 2026-10-12 a fourth play aborted pick's open ask by
+%% its ordinary clause; the paper has no abort: "A reader the program drops
+%% leaves its construct on screen, showing what the program writes into it,
+%% until the person's input, which dismisses the question (Dismiss) and
+%% withdraws it" (Definition "Canonical Compilation", the paragraph before
+%% it), and pick has no ordinary clause (Definition "Volitional Procedure,
+%% ...").
+%%
+%% The types of responder.vglp and those its compilation adds, written again
+%% for the declarations of the procedures imported from its compiled module;
+%% type identity is structural, and the module's own shadow these within it.
 
-Offer    ::= offer(Constant).
-Decision ::= decided(Constant, Constant) ; greeted(Constant, Constant) ; picked(Constant).
-Report   ::= tagged(Constant, Stream(Decision)) ; tagged(Constant, Card, Stream(Decision)).
+Peer     ::= Constant.
+Name     ::= Constant.
+Offer    ::= offer(Peer).
+YesNo    ::= yes ; no.
+Decision ::= decided(YesNo, Peer) ; greeted(Name, Peer) ; picked(Constant).
+Card     ::= card(Peer, YesNo?).
+Greeting ::= greeting(Peer, Name?).
+Choice   ::= choice(Peer, Constant?).
+Question ::= card_w(Card) ; greeting_w(Greeting) ; choice_w(Choice).
+Ask(Q)   ::= ask(Constant, Q).
+PersonIn ::= [_ | PersonIn].
+Path     ::= [] ; [Integer | Path].
 
-%% --- the compiled vocabulary, mirrored ---
-ReqId ::= req(Integer).
-Xs_respond_1 ::= xs_respond_1(Constant).
-Reply_respond_1 ::= then(Xs_respond_1) ; else.
-Ctx_respond_1 ::= ctx_respond_1(Constant).
-Xs_greet_1 ::= xs_greet_1(Constant).
-Reply_greet_1 ::= then(Xs_greet_1).
-Ctx_greet_1 ::= ctx_greet_1(Constant).
-Xs_pick_1 ::= xs_pick_1(Constant).
-Reply_pick_1 ::= then(Xs_pick_1).
-Ctx_pick_1 ::= ctx_pick_1(Constant).
-Answer ::= Xs_respond_1 ; Xs_greet_1 ; Xs_pick_1.
-Escrow ::= esc_respond_1(Reply_respond_1?) ; esc_greet_1(Reply_greet_1?) ; esc_pick_1(Reply_pick_1?).
-Context ::= Ctx_respond_1 ; Ctx_greet_1 ; Ctx_pick_1.
-Slot(R) ::= none ; ask(R, ReqId).
-AgentMsg ::= ask(Constant, Context, Escrow, ReqId?) ; abort(ReqId).
-Card ::= card(Constant, Context, ReqId) ; closed(ReqId) ; aborted(ReqId).
-UserAnswer ::= answer(ReqId, Answer) ; decline(ReqId).
-PendingEntry ::= pending(ReqId, Escrow).
-PendingList ::= [] ; [PendingEntry | PendingList].
+imported procedure responder#respond(Offer?, Stream(Decision),
+    Stream(Ask(Question))).
+imported procedure responder#greet(Offer?, Stream(Decision),
+    Stream(Ask(Question))).
+imported procedure responder#pick(Offer?, Stream(Decision),
+    Stream(Ask(Question))).
+imported procedure responder#dispatch(Stream(Ask(Question))?,
+    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
 
-imported procedure responder#respond(Channel(Closed, Stream(AgentMsg))?, Offer?, Stream(Decision), Slot(Reply_respond_1)?).
-imported procedure responder#greet(Channel(Closed, Stream(AgentMsg))?, Offer?, Stream(Decision), Slot(Reply_greet_1)?).
-imported procedure responder#pick(Channel(Closed, Stream(AgentMsg))?, Stream(Constant)?, Offer?, Stream(Decision), Slot(Reply_pick_1)?).
-imported procedure responder#med(Channel(Stream(UserAnswer), Stream(Card))?, Channel(Stream(AgentMsg), Closed)?, PendingList?, Integer?).
+%% ---------------------------------------------------------------------------
+%% The plays
+%% ---------------------------------------------------------------------------
 
-%% --- the plays ---
+%% The person answers respond's card yes.
+exported procedure play_answer(Stream(Decision), Stream(_)).
+play_answer(D?, Log?) :-
+    responder # respond(offer(bob), D, Asks),
+    responder # dispatch(Asks?, ch(Gs?, Ds), _),
+    person(Ds?, [yes], Gs, Log).
 
-%% The person answers respond's card yes; the then-branch reduces.
-exported procedure play_answer.
-play_answer :-
-    responder # respond(ch([], Asks), offer(bob), D, none),
-    responder # med(ch(Answers?, Cards), ch(Asks?, _), [], 0),
-    person_answer(Cards?, Answers),
-    report(answer, D?).
+%% The person declines respond's card: the refusal is an answer, no.
+exported procedure play_decline(Stream(Decision), Stream(_)).
+play_decline(D?, Log?) :-
+    responder # respond(offer(bob), D, Asks),
+    responder # dispatch(Asks?, ch(Gs?, Ds), _),
+    person(Ds?, [no], Gs, Log).
 
-procedure person_answer(Stream(Card)?, Stream(UserAnswer)).
-person_answer([card(respond_1, ctx_respond_1(From), R) | _],
-              [answer(R?, xs_respond_1(yes))]) :-
-    ground(From?), ground(R?) | true.
-person_answer([_ | Cs], As?) :- otherwise | person_answer(Cs?, As).
-person_answer([], []).
+%% The person first grants nobody, which forms no YesNo and answers nothing,
+%% and then yes.
+exported procedure play_mismatch(Stream(Decision), Stream(_)).
+play_mismatch(D?, Log?) :-
+    responder # respond(offer(bob), D, Asks),
+    responder # dispatch(Asks?, ch(Gs?, Ds), _),
+    person(Ds?, [nobody, yes], Gs, Log).
 
-%% The person declines respond's card: no answer is willed, the else-branch
-%% reduces with the else answer no, and the card is closed.  This is what
-%% selects an else-branch now that no timer does (Udi, 2026-09-15).
-exported procedure play_decline.
-play_decline :-
-    responder # respond(ch([], Asks), offer(bob), D, none),
-    responder # med(ch(Answers?, Cards), ch(Asks?, _), [], 0),
-    person_decline(Cards?, Answers),
-    report(decline, D?).
+%% The person sees greet's card, the offering peer shown, and gives a name.
+exported procedure play_greet(Stream(Decision), Stream(_)).
+play_greet(D?, Log?) :-
+    responder # greet(offer(bob), D, Asks),
+    responder # dispatch(Asks?, ch(Gs?, Ds), _),
+    person(Ds?, [alice], Gs, Log).
 
-procedure person_decline(Stream(Card)?, Stream(UserAnswer)).
-person_decline([card(respond_1, ctx_respond_1(From), R) | _],
-               [decline(R?)]) :-
-    ground(From?), ground(R?) | true.
-person_decline([_ | Cs], As?) :- otherwise | person_decline(Cs?, As).
-person_decline([], []).
+%% The person sees pick's card and gives a choice.
+exported procedure play_pick(Stream(Decision), Stream(_)).
+play_pick(D?, Log?) :-
+    responder # pick(offer(bob), D, Asks),
+    responder # dispatch(Asks?, ch(Gs?, Ds), _),
+    person(Ds?, [go], Gs, Log).
 
-%% The person first answers with a term of another clause's form, which
-%% matches no answer clause and leaves the table as it is, then answers yes.
-exported procedure play_mismatch.
-play_mismatch :-
-    responder # respond(ch([], Asks), offer(bob), D, none),
-    responder # med(ch(Answers?, Cards), ch(Asks?, _), [], 0),
-    person_mismatch(Cards?, Answers),
-    report(mismatch, D?).
+%% person(Ds?, Rs?, Gs, Log): at the first draw of a card with the person's
+%% position marked input(Q), grant each of Rs in turn at Q, and log every
+%% draw and withdrawal.
+procedure person(_?, List(_)?, PersonIn, Stream(_)).
+person([draw(Id, W, card(P, input(Q))) | Ds], Rs, Gs?,
+       [drawn(Id?, W?, card(P?, input(Q?))) | Log?]) :-
+    ground(Id?), ground(Q?) |
+    grant(Id?, Q?, Rs?, Gs, Gs1?),
+    watching(Ds?, Gs1, Log).
+person([draw(Id, W, greeting(P, input(Q))) | Ds], Rs, Gs?,
+       [drawn(Id?, W?, greeting(P?, input(Q?))) | Log?]) :-
+    ground(Id?), ground(Q?) |
+    grant(Id?, Q?, Rs?, Gs, Gs1?),
+    watching(Ds?, Gs1, Log).
+person([draw(Id, W, choice(P, input(Q))) | Ds], Rs, Gs?,
+       [drawn(Id?, W?, choice(P?, input(Q?))) | Log?]) :-
+    ground(Id?), ground(Q?) |
+    grant(Id?, Q?, Rs?, Gs, Gs1?),
+    watching(Ds?, Gs1, Log).
+person([draw(Id, W, V) | Ds], Rs, Gs?, [drawn(Id?, W?, V?) | Log?]) :-
+    otherwise |
+    person(Ds?, Rs?, Gs, Log).
+person([withdraw(Id) | Ds], Rs, Gs?, [withdrawn(Id?) | Log?]) :-
+    person(Ds?, Rs?, Gs, Log).
 
-procedure person_mismatch(Stream(Card)?, Stream(UserAnswer)).
-person_mismatch([card(respond_1, ctx_respond_1(From), R) | _],
-                [answer(R?, xs_greet_1(nobody)), answer(R?, xs_respond_1(yes))]) :-
-    ground(From?), ground(R?) | true.
-person_mismatch([_ | Cs], As?) :- otherwise | person_mismatch(Cs?, As).
-person_mismatch([], []).
+%% grant(Id?, Q?, Rs?, Gs, Gs1?): grant each of Rs at position Q of construct
+%% Id, the person's grants going on as Gs1.
+procedure grant(Integer?, Path?, List(_)?, PersonIn, PersonIn?).
+grant(Id, Q, [R | Rs], [input(Id?, Q?, R?) | Gs?], Gs1) :-
+    ground(Id?), ground(Q?) |
+    grant(Id?, Q?, Rs?, Gs, Gs1?).
+grant(_, _, [], Gs1?, Gs1).
 
-%% pick's card is open when go arrives; the ordinary clause reduces the goal,
-%% aborts the ask, and the mediator drops the entry and reports the card
-%% aborted.
-exported procedure play_abort.
-play_abort :-
-    responder # pick(ch([], Asks), Go?, offer(bob), D, none),
-    responder # med(ch(Answers?, Cards), ch(Asks?, _), [], 0),
-    person_abort(Cards?, Answers, Go, D?).
+%% watching(Ds?, Gs, Log): grant nothing more, and log every draw and
+%% withdrawal.
+procedure watching(_?, PersonIn, Stream(_)).
+watching([draw(Id, W, V) | Ds], Gs?, [drawn(Id?, W?, V?) | Log?]) :-
+    watching(Ds?, Gs, Log).
+watching([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    watching(Ds?, Gs, Log).
 
-procedure person_abort(Stream(Card)?, Stream(UserAnswer), Stream(Constant), Stream(Decision)?).
-person_abort([card(pick_1, ctx_pick_1(From), R) | Cs], [], [go], D) :-
-    ground(From?), ground(R?) |
-    seen_aborted(Cs?, R?, D?).
-person_abort([_ | Cs], As?, Go?, D) :- otherwise | person_abort(Cs?, As, Go, D?).
-person_abort([], [], [], _).
+%% ---------------------------------------------------------------------------
+%% The bridge's entry
+%% ---------------------------------------------------------------------------
 
-procedure seen_aborted(Stream(Card)?, ReqId?, Stream(Decision)?).
-seen_aborted([aborted(R1) | _], R, D) :-
-    R? =?= R1?, ground(D?) |
-    send_to_user([tagged(abort, aborted(R?), D?)]).
-seen_aborted([_ | Cs], R, D) :- otherwise | seen_aborted(Cs?, R?, D?).
-seen_aborted([], _, _).
+%% The host's entry (glp_runtime/lib/multiagent/agent_runtime.dart): the
+%% agent's identifier, the person's input stream and the network input.  The
+%% three questions are asked at once, of three peers; the person channel's
+%% grants are the person's input, and its draws, merged by the dispatcher
+%% with the program's own output to the person --- the decisions --- go to
+%% the person by send_to_user/1.  The program reaches no network, and the
+%% entry drops its input.
+exported procedure responder_init(Constant?, PersonIn?, Stream(_)?).
+responder_init(_, Gs, _) :-
+    responder # respond(offer(bob), D1, A1),
+    responder # greet(offer(carol), D2, A2),
+    responder # pick(offer(dana), D3, A3),
+    merge(A1?, A2?, A12),
+    merge(A12?, A3?, Asks),
+    answered(D1?, O1),
+    answered(D2?, O2),
+    answered(D3?, O3),
+    merge(O1?, O2?, O12),
+    merge(O12?, O3?, O),
+    responder # dispatch(Asks?, ch(Gs?, Ds), MCh),
+    to_person(MCh?, O?),
+    send_to_user(Ds?).
 
-procedure report(Constant?, Stream(Decision)?).
-report(Tag, D) :- ground(D?) | send_to_user([tagged(Tag?, D?)]).
+%% answered(D?, O): each decision of D on O once the person's answer in it is
+%% given.  A clause writes its decision when it writes the card, the answer
+%% still to come, and send_to_user/1 emits the elements of its stream in
+%% order, each once ground: a decision passed on unanswered would hold back
+%% every draw and every other decision behind it.
+procedure answered(Stream(Decision)?, Stream(Decision)).
+answered([X | Xs], [X? | Ys?]) :-
+    ground(X?) | answered(Xs?, Ys).
+answered([], []).
+
+%% to_person(MCh?, O?): the program's own output to the person, O, on its end
+%% of the person channel.
+procedure to_person(Channel(Stream(_), Stream(_))?, Stream(_)?).
+to_person(ch(_, O?), O).

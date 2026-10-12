@@ -16,8 +16,9 @@
 ///
 /// Network bootstrap: each phone derives BOTH phones' transport identities
 /// from fixed demo seeds, so name→pubkey is static; the phones pair through
-/// the rendezvous server given by --dart-define=DUO_ANCHOR_ADDR/_PK (the
-/// known-peer reconnection machinery does the rest).
+/// the rendezvous server given by --dart-define=DUO_ANCHOR_ADDR/_PK, which the
+/// layer is instantiated with (GNA, "Instantiation"), and the known-peer
+/// reconnection machinery does the rest.
 library;
 
 import 'dart:async';
@@ -61,6 +62,29 @@ DuoCast castFor(String role) => switch (role) {
       'phone2' => const DuoCast('alice', 'dana', ['bob', 'eve']),
       _ => const DuoCast('bob', 'eve', []), // solo: dana spawned extra below
     };
+
+/// The duo's attestation (GNA, api.tex, "Attestation": "neither peer is
+/// reported reachable until the exchange succeeds"): the platform's native
+/// producer --- App Attest on iOS, registered by the Runner
+/// (ios/Runner/AppDelegate.swift, PlatformAttestationPlugin) --- and the
+/// layer's verifier, wired as the networking layer's demo app wires them
+/// (networking/lib/main.dart).  The duo is development-signed, as that app
+/// is, so an App Attest key it generates is attested in Apple's development
+/// sandbox and a peer running it offers a sandbox attestation, which it
+/// therefore accepts from its peers.  Where the platform provides none --- the
+/// simulator, macOS --- the producer answers none and the peer is reported
+/// unattested.  Until 2026-10-12 the duo had no producer, and every peer of
+/// it was unattested.
+PlatformAttestation _platformAttestation() => NativePlatformAttestation(
+      verifier: const AttestationVerifier(allowAppAttestDevelopment: true),
+    );
+
+/// The 32 bytes of a 64-character hex key (the anchor's, from
+/// --dart-define=DUO_ANCHOR_PK).
+Uint8List _keyFromHex(String hex) => Uint8List.fromList([
+      for (var i = 0; i < hex.length; i += 2)
+        int.parse(hex.substring(i, i + 2), radix: 16),
+    ]);
 
 /// Fixed demo seed per phone role — both phones derive both identities, so
 /// name→pubkey needs no exchange. Demo-only, obviously not a key ceremony.
@@ -177,14 +201,21 @@ class _DuoScreenState extends State<DuoScreen> {
           Uint8List.fromList((await otherKeyPair.extractPublicKey()).bytes);
       _remotePhonePk = otherPk;
 
-      final store = Store<AppState>(
-        appReducer,
-        initialState: const AppState(
-          settings: SettingsState(bluetoothEnabled: false),
-        ),
-      );
+      final store = Store<AppState>(appReducer, initialState: const AppState());
+      // The layer as GNA's Section "Instantiation" has it: the key pair, the
+      // underlays it runs --- the local network and the Internet, the duo
+      // pairing over IP --- and the rendezvous server it holds a session with,
+      // which it dials at start and again on its heartbeat while none stands.
+      // Until 2026-10-12 the server was added after initialization, in a loop
+      // of three attempts behind a wait for a public address.
       final network = GrassrootsNetwork(
         identity: myIdentity,
+        underlays: const {Underlay.lan, Underlay.wan},
+        rendezvousServers: [
+          if (anchorPk.isNotEmpty)
+            RendezvousServer(anchorAddr, _keyFromHex(anchorPk)),
+        ],
+        platformAttestation: _platformAttestation(),
         store: store,
         sodium: sodium,
       );
@@ -209,26 +240,6 @@ class _DuoScreenState extends State<DuoScreen> {
       network.putKnownPeer(otherPk);
       _network = network;
       setState(() => _netStatus = 'pairing…');
-      // Dialing the rendezvous server needs our local address candidates —
-      // wait for public-address discovery before configuring it.
-      final discoveryDeadline =
-          DateTime.now().add(const Duration(seconds: 60));
-      while (network.getPublicAddress() == null &&
-          DateTime.now().isBefore(discoveryDeadline)) {
-        await Future.delayed(const Duration(milliseconds: 500));
-      }
-      TraceLog.log('NET', 'public address: ${network.getPublicAddress()}');
-      if (anchorPk.isNotEmpty) {
-        var rv = false;
-        for (var attempt = 1; attempt <= 3 && !rv; attempt++) {
-          rv = await network.addRendezvousServer(
-            address: anchorAddr,
-            pubkeyHex: anchorPk,
-          );
-          TraceLog.log('NET', 'rendezvous $anchorAddr attempt $attempt: $rv');
-          if (!rv) await Future.delayed(const Duration(seconds: 3));
-        }
-      }
     } catch (e) {
       setState(() => _netStatus = 'network error: $e');
       TraceLog.log('NET', 'ERROR: $e');

@@ -6,9 +6,9 @@ import 'dart:typed_data';
 import 'package:cryptography/cryptography.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
 import 'package:sodium/sodium_sumo.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
-import 'package:grassroots_networking_core/glp_adapter.dart';
+import 'package:grassroots_networking_glue/headless_glp_network.dart';
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 
 import 'helpers/glp_adapter_host.dart';
@@ -57,8 +57,10 @@ void main() {
       if (sodiumUnavailable != null) return;
       layer = HeadlessGrassrootsNetwork(
         identity: await identityFromSeed(seedOf(0x21)),
+        rendezvousServers: const [],
         sodium: sodium!,
-        staticPublicAddress: '203.0.113.7:9600',
+        serverAddress: ServerAddress(
+            listenPort: 9600, publicAddress: '203.0.113.7:9600'),
       );
       network = HeadlessGlpNetwork(layer);
       peer = glp.PubKey.fromList(
@@ -130,25 +132,59 @@ void main() {
       expect(layer.onMessageReceived, isNull);
     });
 
-    test('what the headless layer does not have throws UnsupportedError', () {
+    test(
+        'the WAN functions and the cryptography pass straight through (GNA, '
+        '2026-10-11, Task C; until then they threw UnsupportedError)',
+        () async {
       if (sodiumUnavailable != null) {
         markTestSkipped(sodiumUnavailable!);
         return;
       }
-      final bytes = Uint8List.fromList([1]);
-      expect(() => network.peerUnderlays(peer), throwsUnsupportedError);
-      expect(() => network.sign(bytes), throwsUnsupportedError);
-      expect(() => network.verify(peer, bytes, bytes), throwsUnsupportedError);
-      expect(() => network.getPeers(), throwsUnsupportedError);
+      final message = Uint8List.fromList('attest(alice, bob)'.codeUnits);
+      final signature = network.sign(message);
+      expect(signature, layer.sign(message));
+      expect(network.verify(network.getIdentity(), message, signature), isTrue);
+      expect(network.verify(peer, message, signature), isFalse);
+
+      expect(network.peerUnderlays(peer), isEmpty);
+      expect(network.observedPeerAddress(peer), isNull,
+          reason: 'the peer is not connected');
+      expect(network.networkIdentity(), layer.networkIdentity());
+      expect(() => network.punchUdp('nowhere'), throwsArgumentError,
+          reason: "the layer's refusal of an unparseable address, unchanged");
+      await expectLater(network.generatePeerLink(), throwsStateError,
+          reason: 'the layer has no rendezvous server to register with');
+      await expectLater(network.consumePeerLink('x'), throwsFormatException,
+          reason: "the layer's refusal of a malformed link, unchanged");
+
+      final events = <String>[];
+      network.onConnectivityStatusChanged =
+          (oldAddress, newAddress) => events.add('address $oldAddress $newAddress');
+      network.onNetworkChanged =
+          (oldId, newId) => events.add('network $oldId $newId');
+      layer.onConnectivityStatusChanged!(null, '203.0.113.7:9600');
+      layer.onNetworkChanged!(null, 'n-1');
+      expect(events, ['address null 203.0.113.7:9600', 'network null n-1']);
+    });
+
+    test(
+        'no proximity underlay and no location service: getPeers is empty, '
+        'setTrustLevel and the places are refused as unsupported', () {
+      // GNA, 2026-10-11, the adapter's Q1; Section "Instantiation", Location
+      // service: "none on a headless server".
+      if (sodiumUnavailable != null) {
+        markTestSkipped(sodiumUnavailable!);
+        return;
+      }
+      expect(network.getPeers(), isEmpty);
       expect(
           () => network.setTrustLevel(
               glp.ProximityUnderlay.pan, glp.TrustLevel.open),
           throwsUnsupportedError);
-      expect(() => network.networkIdentity(), throwsUnsupportedError);
-      expect(() => network.generatePeerLink(), throwsUnsupportedError);
-      expect(() => network.consumePeerLink('x'), throwsUnsupportedError);
-      expect(() => network.observedPeerAddress(peer), throwsUnsupportedError);
-      expect(() => network.punchUdp('127.0.0.1:9'), throwsUnsupportedError);
+      expect(
+          () => network.setTrustLevel(
+              glp.ProximityUnderlay.lan, glp.TrustLevel.closed),
+          throwsUnsupportedError);
       expect(() => network.declarePlace('home', 50), throwsUnsupportedError);
       expect(() => network.removePlace('home'), throwsUnsupportedError);
     });
@@ -203,7 +239,7 @@ answer(forty_two).
           glp.PubKey.fromList((await identityFromSeed(calleeSeed)).publicKey);
 
       // The second process: the callee over its own headless layer.
-      final child = await Process.start(Platform.resolvedExecutable, [
+      final child = await Process.start(_dartExecutable(), [
         'run',
         'test/helpers/glp_adapter_agent.dart',
         _hex(calleeSeed),
@@ -247,8 +283,11 @@ answer(forty_two).
       final calleeAddress = '127.0.0.1:${ready[1]}';
 
       // This process: the caller over its own headless layer.
-      final layer =
-          HeadlessGrassrootsNetwork(identity: callerIdentity, sodium: sodium!);
+      final layer = HeadlessGrassrootsNetwork(
+        identity: callerIdentity,
+        rendezvousServers: const [],
+        sodium: sodium!,
+      );
       addTearDown(layer.dispose);
       final network = HeadlessGlpNetwork(layer);
       final connected = <String>[];
@@ -295,6 +334,18 @@ answer(forty_two).
       await fromChild((l) => l == 'CONNECTED ${caller.hex} wan null');
     }, timeout: const Timeout(Duration(minutes: 3)));
   });
+}
+
+/// The Dart that runs the second process.  The test runs under
+/// `flutter test`, in flutter_tester, whose executable is not Dart's: the
+/// Flutter SDK's own Dart is used, and failing that the Dart on the path.
+String _dartExecutable() {
+  final root = Platform.environment['FLUTTER_ROOT'];
+  if (root != null) {
+    final dart = File('$root/bin/dart');
+    if (dart.existsSync()) return dart.path;
+  }
+  return 'dart';
 }
 
 String _hex(List<int> bytes) =>

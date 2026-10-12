@@ -1,19 +1,29 @@
 %% ---------------------------------------------------------------------------
 %% The plays of the canonical CVA platform of Jurix's social graph
 %% (programs/jurix, contract_named(social_graph, C); Jurix, Section 3.3),
-%% platform.vglp, which programs/vglp/cva/compile.sh prints from it.  Each runs
-%% two agents, alice and bob, their persons scripted and paced on their threads
-%% (../self.glp), and gives each person's log: the thread, with gave(C, A)
-%% where the person answers a card.
+%% platform.vglp, which programs/vglp/cva/compile.sh prints from it: two-phase
+%% commit coordinated by the initiating agent (vGLP, Section 3.2, Definition
+%% "Canonical CVA Platform").  Each runs two agents, alice and bob, their
+%% persons scripted and paced on their threads (../self.glp), and gives each
+%% person's log, the thread with gave(K, A) where the person answers a card,
+%% and the network's log of the cargoes it carries.
 %%
-%% play_befriend: alice proposes befriending bob, bob is asked and answers
-%%   yes; Propose, Relay, Ask, Answer and Commit, at each its own.
+%% play_befriend: alice proposes befriending bob; bob, in its guard set, is
+%%   asked on his card and answers yes; alice tallies his yes and commits, and
+%%   bob's Outcome commits.
 %% play_unfriend: befriended, bob proposes unfriending alice; unfriend is one
-%%   class guarded by either party (vGLP, Section 3.2, the paragraph on act
-%%   schemas), so alice is asked, answers no, and the else-branch concurs, a
-%%   guard set omitting her: committed at both.
-%% play_refused: alice proposes befriending bob and bob answers no; every guard
-%%   set names him, so the else-branch says no and the attempt aborts at both.
+%%   class guarded by either party, its guard sets {alice} and {bob} (vGLP,
+%%   Section 5.4, the paragraph on act schemas), so the attempt asks nobody and
+%%   alice's machine votes yes; befriended again, alice proposes unfriending
+%%   bob, and bob's machine votes yes.
+%% play_refused: alice proposes befriending bob and bob answers no; the
+%%   else-branch votes no and the attempt aborts at both; alice proposes it
+%%   again, bob is asked again and answers yes, and it commits.
+%% play_pending: the network holds alice's hello to bob until her first cargo
+%%   to him has passed, so her start reaches bob before he knows her; his
+%%   Start, whose condition needs the initiator known, is pending on alice
+%%   (vGLP, Definition "Compilation of a Structured Platform") and is put up
+%%   again at the second hello, so bob is asked and the befriending commits.
 %%
 %% The types of platform.vglp, written again for the declarations of the
 %% procedures imported from its compiled module.
@@ -23,16 +33,15 @@ Speech   ::= speech(String, Peer).
 Class    ::= befriend(Peer, Peer) ; unfriend(Peer, Peer) ; sign(Peer, Speech)
            ; forward(Peer, Peer, Peer, Peer, Speech).
 Request  ::= propose(Class) ; known(Peer).
-Verdict  ::= will ; yes ; no.
-Vote     ::= vote(Peer, Integer, Class, Verdict).
-Content  ::= hello(Peer) ; cargo(Peer, Integer, Vote).
-Net      ::= msg(Peer, Content).
-Txn      ::= propose(Class) ; relay(Class) ; ask(Class) ; answer(Class)
-           ; concur(Class) ; decline(Class) ; commit(Class) ; abort(Class)
-           ; record(Peer).
-Session  ::= session(Stream(Request)?, Stream(Txn)).
 YesNo    ::= yes ; no.
-Attempt  ::= attempt(Class, Integer).
+Decision ::= commit ; abort.
+Attempt  ::= attempt(Peer, Integer, Class).
+Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision).
+Content  ::= hello(Peer) ; cargo(Peer, Integer, Cargo).
+Net      ::= msg(Peer, Content).
+Txn      ::= propose(Attempt) ; start(Attempt) ; answer(Attempt)
+           ; tally(Attempt) ; outcome(Attempt) ; discover(Peer).
+Session  ::= session(Stream(Request)?, Stream(Txn)).
 Card     ::= card(Attempt, YesNo?).
 Question ::= session_w(Session) ; card_w(Card).
 Ask(Q)   ::= ask(Constant, Q).
@@ -42,36 +51,52 @@ imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
 imported procedure platform#dispatch(Stream(Ask(Question))?,
     Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
 
-exported procedure play_befriend(Stream(_), Stream(_)).
-play_befriend(LA?, LB?) :-
-    pair([req(known(bob)), wait(record(bob)),
+exported procedure play_befriend(Stream(_), Stream(_), Stream(Sent(Cargo))).
+play_befriend(LA?, LB?, N?) :-
+    pair([req(known(bob)), wait(discover(bob)),
           req(propose(befriend(alice, bob)))],
-         [req(known(alice)), wait(record(alice)),
+         [req(known(alice)), wait(discover(alice)),
           card(befriend(alice, bob), yes)],
-         LA, LB).
+         LA, LB, N).
 
-exported procedure play_unfriend(Stream(_), Stream(_)).
-play_unfriend(LA?, LB?) :-
-    pair([req(known(bob)), wait(record(bob)),
-          req(propose(befriend(alice, bob))), wait(commit(befriend(alice, bob))),
-          card(unfriend(bob, alice), no)],
-         [req(known(alice)), wait(record(alice)),
-          card(befriend(alice, bob), yes), wait(commit(befriend(alice, bob))),
-          req(propose(unfriend(bob, alice)))],
-         LA, LB).
+exported procedure play_unfriend(Stream(_), Stream(_), Stream(Sent(Cargo))).
+play_unfriend(LA?, LB?, N?) :-
+    pair([req(known(bob)), wait(discover(bob)),
+          req(propose(befriend(alice, bob))),
+          wait(tally(attempt(alice, 1, befriend(alice, bob)))),
+          wait(outcome(attempt(bob, 1, unfriend(bob, alice)))),
+          req(propose(befriend(alice, bob))),
+          wait(tally(attempt(alice, 2, befriend(alice, bob)))),
+          req(propose(unfriend(alice, bob)))],
+         [req(known(alice)), wait(discover(alice)),
+          card(attempt(alice, 1, befriend(alice, bob)), yes),
+          wait(outcome(attempt(alice, 1, befriend(alice, bob)))),
+          req(propose(unfriend(bob, alice))),
+          card(attempt(alice, 2, befriend(alice, bob)), yes)],
+         LA, LB, N).
 
-exported procedure play_refused(Stream(_), Stream(_)).
-play_refused(LA?, LB?) :-
-    pair([req(known(bob)), wait(record(bob)),
+exported procedure play_refused(Stream(_), Stream(_), Stream(Sent(Cargo))).
+play_refused(LA?, LB?, N?) :-
+    pair([req(known(bob)), wait(discover(bob)),
+          req(propose(befriend(alice, bob))),
+          wait(tally(attempt(alice, 1, befriend(alice, bob)))),
           req(propose(befriend(alice, bob)))],
-         [req(known(alice)), wait(record(alice)),
-          card(befriend(alice, bob), no)],
-         LA, LB).
+         [req(known(alice)), wait(discover(alice)),
+          card(attempt(alice, 1, befriend(alice, bob)), no),
+          card(attempt(alice, 2, befriend(alice, bob)), yes)],
+         LA, LB, N).
+
+exported procedure play_pending(Stream(_), Stream(_), Stream(Sent(Cargo))).
+play_pending(LA?, LB?, N?) :-
+    pair_late([req(known(bob)), wait(discover(bob)),
+               req(propose(befriend(alice, bob)))],
+              [req(known(alice)), card(befriend(alice, bob), yes)],
+              LA, LB, N).
 
 %% alice and bob, each with its dispatcher and scripted person, their networks
 %% joined.
-procedure pair(Steps?, Steps?, Stream(_), Stream(_)).
-pair(SA, SB, LA?, LB?) :-
+procedure pair(Steps?, Steps?, Stream(_), Stream(_), Stream(Sent(Cargo))).
+pair(SA, SB, LA?, LB?, N?) :-
     platform # agent(alice, InA?, OutA, AsA),
     platform # dispatch(AsA?, ch(GA?, DA), _),
     person(DA?, GA, ps(nosess, [], [], SA?), LA),
@@ -79,4 +104,36 @@ pair(SA, SB, LA?, LB?) :-
     platform # dispatch(AsB?, ch(GB?, DB), _),
     person(DB?, GB, ps(nosess, [], [], SB?), LB),
     merge(OutA?, OutB?, Net),
-    route(Net?, alice, InA, bob, InB).
+    route(Net?, alice, InA, bob, InB, N).
+
+%% The same, the network holding alice's hello to bob until after her first
+%% cargo to him.
+procedure pair_late(Steps?, Steps?, Stream(_), Stream(_), Stream(Sent(Cargo))).
+pair_late(SA, SB, LA?, LB?, N?) :-
+    platform # agent(alice, InA?, OutA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), _),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), _),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    merge(OutA?, OutB?, Net),
+    route_late(Net?, alice, InA, bob, InB, holding, N).
+
+Held(X) ::= holding ; held(Msg(X)).
+procedure(X) route_late(Stream(Msg(X))?, Peer?, Stream(Msg(X)), Peer?, Stream(Msg(X)),
+    Held(X)?, Stream(Sent(X))).
+route_late([msg(To, hello(F))|Ms], A, OA?, B, OB?, holding, Log?) :-
+    ground(To?), ground(F?), ground(B?), To? =?= B? |
+    route_late(Ms?, A?, OA, B?, OB, held(msg(To?, hello(F?))), Log).
+route_late([msg(To, cargo(F, K, X))|Ms], A, OA?, B,
+        [msg(To?, cargo(F?, K?, X?)), H?|OB?], held(H), Log?) :-
+    ground(To?), ground(F?), ground(K?), ground(X?), ground(B?), To? =?= B? |
+    note(cargo(F?, K?, X?), To?, Log, Log1?),
+    route(Ms?, A?, OA, B?, OB, Log1).
+route_late([msg(To, C)|Ms], A, [msg(To?, C?)|OA?], B, OB?, Hd, Log?) :-
+    ground(To?), ground(C?), ground(A?), To? =?= A? |
+    note(C?, To?, Log, Log1?),
+    route_late(Ms?, A?, OA, B?, OB, Hd?, Log1).
+route_late([_|Ms], A, OA?, B, OB?, Hd, Log?) :- otherwise |
+    route_late(Ms?, A?, OA, B?, OB, Hd?, Log).
+route_late([], _, [], _, [], _, []).

@@ -115,7 +115,8 @@ final Manifest socialManifest = Manifest(
 
   // Becoming friends adds the friend (Friends) and opens a conversation
   // (Chats); a message from a friend extends it; an ended friendship removes
-  // the friend; a refused offer leaves no friend.
+  // the friend; a refused offer leaves no friend; a message to someone who is
+  // not a friend is not sent, and the person is told so.
   activity: const [
     ActivityDesc(
       notifyCtor: 'connected',
@@ -132,6 +133,14 @@ final Manifest socialManifest = Manifest(
       args: ['from', 'text'],
       effects: [PushChat('chats', 'from', 'text', outgoing: false)],
     ),
+    // GSG Section 5.1: "A message the person addresses to someone who is not
+    // their friend is not sent, and the agent tells the person so" --- the
+    // agent's not_a_friend(Target), passed on by the mediator
+    // (programs/social/graph/ui/mediator.glp). A notice, no lasting state.
+    ActivityDesc(
+        notifyCtor: 'not_a_friend',
+        args: ['who'],
+        effects: [Toast('{who} is not your friend — not sent')]),
     ActivityDesc(notifyCtor: 'rejected', args: ['who']),
     ActivityDesc(notifyCtor: 'rejected', args: []),
   ],

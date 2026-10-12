@@ -87,22 +87,20 @@ void main() {
     );
 
     // Simulated Noise sessions: each router "decrypts" a secure packet back
-    // to its clear variant and reports the session-authenticated sender.
+    // to its clear variant and reports the session-authenticated sender and
+    // the session's handshake hash.
     bobRouter.decryptSessionPacket =
         (packet, transport, {String? peerId}) async => (
               packet.copyWith(type: packet.type.clearVariant),
               aliceIdentity.publicKey,
+              Uint8List(32),
             );
     aliceRouter.decryptSessionPacket =
         (packet, transport, {String? peerId}) async => (
               packet.copyWith(type: packet.type.clearVariant),
               bobIdentity.publicKey,
+              Uint8List(32),
             );
-  });
-
-  tearDown(() {
-    aliceRouter.dispose();
-    bobRouter.dispose();
   });
 
   group('BLE ANNOUNCE roundtrip', () {
@@ -372,8 +370,9 @@ void main() {
     });
   });
 
-  group('BLE dedup across multiple packets', () {
-    test('same message sent twice is only delivered once', () async {
+  // GNA, 2026-10-11, Task B: no duplicate filter; delivery is at least once.
+  group('BLE delivery at least once across multiple packets', () {
+    test('the same message sent twice is delivered twice', () async {
       final messagePayload = Uint8List.fromList([1, 2, 3]);
       final packet = oneFragmentMessage(messageId: '44444444-4444-4444-4444-444444444444', body: messagePayload);
 
@@ -393,7 +392,7 @@ void main() {
         rssi: -50,
       );
 
-      expect(receiveCount, equals(1));
+      expect(receiveCount, equals(2));
     });
 
     test('ANNOUNCE is always processed even if seen before', () async {

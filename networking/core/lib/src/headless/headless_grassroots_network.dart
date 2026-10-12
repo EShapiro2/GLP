@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 import '../models/identity.dart';
 import '../models/packet.dart';
 import '../models/peer.dart';
+import '../models/rendezvous_server.dart';
 import '../models/underlay.dart';
 import '../platform/compat.dart';
 import '../protocol/fragment_handler.dart';
@@ -18,32 +19,81 @@ import '../routing/message_router.dart';
 import '../session/application_identity.dart';
 import '../session/noise_session_manager.dart';
 import '../session/platform_attestation.dart';
+import '../signaling/peer_link.dart';
+import '../signaling/signaling_codec.dart';
 import '../store/store.dart';
 import '../transport/address_utils.dart';
+import '../transport/hole_punch_service.dart';
+import '../transport/local_network.dart';
 import '../transport/udp_transport_service.dart';
 import 'known_peers_persistence.dart';
+
+/// A server's listen port and static public `ip:port`, one optional pair (GNA
+/// §Instantiation, "Server address: listen port and static public ip:port, or
+/// none --- A rendezvous server's; none on a smartphone, which learns its
+/// public address from a rendezvous server").  Only the headless profile takes
+/// it (GNA, 2026-10-11, Q4).
+@immutable
+class ServerAddress {
+  /// The UDP port the server binds: the port of its published address.
+  final int listenPort;
+
+  /// The server's static public `ip:port`, canonical; what
+  /// [HeadlessGrassrootsNetwork.getPublicAddress] returns.
+  final String publicAddress;
+
+  const ServerAddress._(this.listenPort, this.publicAddress);
+
+  /// Throws [ArgumentError] on a port outside 0..65535 or an unparseable
+  /// address.
+  factory ServerAddress({
+    required int listenPort,
+    required String publicAddress,
+  }) {
+    if (listenPort < 0 || listenPort > 65535) {
+      throw ArgumentError.value(listenPort, 'listenPort', 'not a UDP port');
+    }
+    final parsed = parseAddressString(publicAddress);
+    if (parsed == null) {
+      throw ArgumentError.value(
+          publicAddress, 'publicAddress', 'not a valid ip:port');
+    }
+    return ServerAddress._(listenPort, parsed.toAddressString());
+  }
+}
 
 /// Pure-Dart, IP-only server profile of the Grassroots networking layer
 /// (spec `GLP_Networking_API`; GPW cross-project request, Answer 2).
 ///
 /// A headless embedding of the same session, framing, and router internals
 /// the Flutter package runs — no reimplementation and no fork — exposing the
-/// spec's API surface: construction with identity, [putKnownPeer] /
-/// [removeKnownPeer] / [putPeerAddress], [send], [onMessageReceived],
-/// [onPeerConnected] / [onPeerDisconnected], [getPublicAddress]. It realizes
+/// spec's API for the WAN underlay (GNA, 2026-10-11, Task C): construction
+/// with identity, [getIdentity]; [putKnownPeer] / [removeKnownPeer] /
+/// [putPeerAddress]; [onPeerConnected] / [onPeerDisconnected],
+/// [isPeerReachable], [peerUnderlays]; [send], [onMessageReceived]; [sign],
+/// [verify]; [onConnectivityStatusChanged], [getPublicAddress],
+/// [networkIdentity], [onNetworkChanged], [generatePeerLink],
+/// [consumePeerLink], [observedPeerAddress], [punchUdp]. It realizes
 /// the WAN underlay alone (spec §Networking API: "a server-side agent ...
 /// realizes the WAN underlay alone, headless, with proximity discovery
 /// absent"), so every callback reports [Underlay.wan]: no BLE, no mDNS, no
-/// connectivity plugin — the public address is static configuration
-/// ([staticPublicAddress]), as on a globally routable server.
+/// connectivity plugin.
+///
+/// Instantiation (spec §Instantiation): the key pair, the rendezvous servers,
+/// the attestation, and a server's listen port and static public address as
+/// one optional pair ([ServerAddress]).  It runs [Underlay.wan] alone, so it
+/// takes no underlays; it has no location service, so it takes none (GNA,
+/// 2026-10-11, Q3).  It holds a session with each rendezvous server, dialing
+/// it at [start] and again on the heartbeat tick while none stands (Q2); a
+/// rendezvous server passes an empty list.
 ///
 /// This profile has no proximity underlay and therefore no trust level (spec
 /// §Trust levels — a level is held per `ProximityUnderlay`, and this profile
 /// has none). Unsolicited inbound IP contact is governed by no level: an inbound
-/// ANNOUNCE or Noise handshake from a key not in the known set is rejected, so
-/// an unknown caller cannot be answered at all. [putKnownPeer] registers a key,
-/// [removeKnownPeer] revokes it; a service that must accept a caller registers
-/// its key first.
+/// ANNOUNCE or Noise handshake from a key neither in the known set nor a
+/// configured rendezvous server's is rejected, so an unknown caller cannot be
+/// answered at all. [putKnownPeer] registers a key, [removeKnownPeer] revokes
+/// it; a service that must accept a caller registers its key first.
 ///
 /// Known peers persist through [HeadlessKnownPeersStore] — file-backed
 /// ([FileKnownPeersStore]) or in-memory ([MemoryKnownPeersStore]) — replacing
@@ -51,18 +101,14 @@ import 'known_peers_persistence.dart';
 class HeadlessGrassrootsNetwork {
   HeadlessGrassrootsNetwork({
     required this.identity,
-    required this.sodium,
-    this.listenPort = 0,
-    this.staticPublicAddress,
+    required List<RendezvousServer> rendezvousServers,
     this.attestation = const NoPlatformAttestation(),
+    this.serverAddress,
+    required this.sodium,
     HeadlessKnownPeersStore? knownPeersStore,
-  }) : _knownPeersStore = knownPeersStore ?? MemoryKnownPeersStore() {
-    store = Store<AppState>(
-      appReducer,
-      initialState: const AppState(
-        settings: SettingsState(bluetoothEnabled: false),
-      ),
-    );
+  })  : rendezvousServers = List.unmodifiable(rendezvousServers),
+        _knownPeersStore = knownPeersStore ?? MemoryKnownPeersStore() {
+    store = Store<AppState>(appReducer, initialState: const AppState());
     _protocolHandler = ProtocolHandler(identity: identity, sodium: sodium);
     _fragmentHandler = FragmentHandler();
     _noiseSessions = NoiseSessionManager(identity: identity, sodium: sodium);
@@ -84,13 +130,13 @@ class HeadlessGrassrootsNetwork {
   final GrassrootsIdentity identity;
   final SodiumSumo sodium;
 
-  /// Fixed UDP port to bind (the port of the service's published address);
-  /// 0 binds an ephemeral port (initiator profile).
-  final int listenPort;
+  /// The rendezvous servers this agent holds a session with (spec
+  /// §Instantiation); empty on a rendezvous server itself.
+  final List<RendezvousServer> rendezvousServers;
 
-  /// The agent's static public `ip:port`, as configured for a globally
-  /// routable server. Returned by [getPublicAddress]; no discovery runs.
-  final String? staticPublicAddress;
+  /// A server's listen port and static public address, or null: then an
+  /// ephemeral port is bound and [getPublicAddress] answers null.
+  final ServerAddress? serverAddress;
 
   /// This profile's platform attestation service. A headless server has none
   /// to offer (spec §Rendezvous Server: "Having no platform attestation to
@@ -181,12 +227,302 @@ class HeadlessGrassrootsNetwork {
   /// `onPeerDisconnected(pk, underlay)`).
   void Function(Uint8List pk, Underlay underlay)? onPeerDisconnected;
 
-  /// The agent's current public `ip:port` — static configuration in this
-  /// profile — or null when none was configured.
-  String? getPublicAddress() => staticPublicAddress;
+  /// The agent's current public `ip:port` — the static address of its
+  /// [serverAddress] in this profile — or null when it was given none.
+  String? getPublicAddress() => serverAddress?.publicAddress;
 
-  /// The actually bound UDP port (after [start]); useful when [listenPort]
-  /// was 0.
+  /// The agent's own public key (spec §Identity, `getIdentity() → PubKey`).
+  Uint8List getIdentity() => identity.publicKey;
+
+  /// Callback when the layer detects a change in the agent's public address
+  /// (spec §Connectivity and Address, `onConnectivityStatusChanged(old?,
+  /// new?)`): "Fired on startup and on every address change." This profile's
+  /// address is static, its [serverAddress]'s or none, so it fires once, at
+  /// [start], with `old` null.
+  void Function(String? oldAddress, String? newAddress)?
+      onConnectivityStatusChanged;
+
+  /// Callback when the fingerprint of the attached local network changes
+  /// (spec §Local Network Identity, `onNetworkChanged(oldId?, newId?)`).
+  void Function(String? oldId, String? newId)? onNetworkChanged;
+
+  /// Fired when a peer link minted by [generatePeerLink] is redeemed: the
+  /// rendezvous server forwarded the redeemer's identity (spec §WAN
+  /// Cold-Call). Receives the redeemer's key, whose first contact the link
+  /// authorizes; what to do with it is GLP's.
+  void Function(Uint8List redeemerPubkey)? onPeerLinkRedeemed;
+
+  /// An opaque fingerprint of the local network the agent is attached to, or
+  /// null (spec §Local Network Identity, `networkIdentity()`).
+  String? networkIdentity() => store.state.localNetwork.networkId;
+
+  /// The underlays [pubkey] is reachable over (spec §Connection and
+  /// Reachability, `peerUnderlays(pk)`): [Underlay.wan], this profile's one,
+  /// while its session stands attested; empty otherwise.
+  List<Underlay> peerUnderlays(Uint8List pubkey) =>
+      isPeerReachable(pubkey) ? const [Underlay.wan] : const [];
+
+  /// The public `ip:port` at which the layer observes the connected peer — the
+  /// source address of its live session — or null when it is not connected
+  /// (spec §Connectivity and Address, `observedPeerAddress(pk)`).
+  String? observedPeerAddress(Uint8List pubkey) {
+    if (!isPeerReachable(pubkey)) return null;
+    final udp = _udpService;
+    final peerId = udp?.getPeerIdForPubkey(pubkey);
+    if (udp == null || peerId == null) return null;
+    final remote = udp.getRemoteAddress(peerId);
+    return remote == null
+        ? null
+        : AddressInfo(remote.ip, remote.port).toAddressString();
+  }
+
+  /// Detached Ed25519 signature over [message] under the agent's key (spec
+  /// §The Seam, Signatures, `sign(bytes)`).
+  Uint8List sign(Uint8List message) => _protocolHandler.signBytes(message);
+
+  /// Whether [signature] is [signer]'s Ed25519 signature over [message]
+  /// (spec, `verify(pk, bytes, signature)`); false on malformed input.
+  bool verify(Uint8List signer, Uint8List message, Uint8List signature) =>
+      _protocolHandler.verifyBytes(
+        signature: signature,
+        message: message,
+        publicKey: signer,
+      );
+
+  /// Hole-punch services, one per IP family the UDP socket is bound to.
+  final Map<InternetAddressType, HolePunchService> _holePunchServices = {};
+
+  /// Send a short burst of UDP datagrams toward [address], opening the NAT
+  /// mapping, and return at once (spec §Connectivity and Address,
+  /// `punchUdp(address)`, behind `punch_udp/1`). Throws [ArgumentError] on an
+  /// unparseable address; toward a family this layer has no socket for it is
+  /// a no-op.
+  void punchUdp(String address) {
+    final parsed = parseAddressString(address);
+    if (parsed == null) {
+      throw ArgumentError.value(address, 'address', 'not a valid ip:port');
+    }
+    final service = _holePunchServices[parsed.ip.type];
+    if (service == null) {
+      debugPrint('[headless][punch-udp] No socket for ${parsed.ip.type.name}; '
+          'ignoring punch toward ${parsed.toAddressString()}');
+      return;
+    }
+    unawaited(service.punch(parsed.ip, parsed.port));
+  }
+
+  /// Keys whose first contact a peer link authorizes (spec §Cold Calls:
+  /// "Invitation links carry that invite as their own authorization"): the
+  /// inviter, recorded at redemption, and the redeemer, recorded when the
+  /// rendezvous server's redeemed notification arrives.
+  final Set<String> _inviteAuthorized = {};
+
+  /// Invites minted by [generatePeerLink] and not yet redeemed, by InviteId
+  /// hex: the rendezvous server each was registered with, and its expiry.
+  final Map<String, ({String rvPubkeyHex, int expiresAtMs})>
+      _outstandingInvites = {};
+
+  /// Produce a signed, one-time, rendezvous-mediated invite link and register
+  /// the invite with a rendezvous server (spec §WAN Cold-Call,
+  /// `generatePeerLink() → URI`): the first configured server, over this
+  /// agent's session with it. Throws [StateError] when there is no rendezvous
+  /// server or the registration cannot be delivered.
+  Future<String> generatePeerLink() async {
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    _outstandingInvites.removeWhere((_, invite) => invite.expiresAtMs < nowMs);
+    if (rendezvousServers.isEmpty) {
+      throw StateError(
+          'generatePeerLink requires a configured rendezvous server');
+    }
+    final rv = rendezvousServers.first;
+    final nonce = sodium.randombytes.buf(32);
+    final expiresAtMs =
+        DateTime.now().add(inviteLifetime).millisecondsSinceEpoch;
+    final invite = PeerLinkInvite.create(
+      identityPubkey: identity.publicKey,
+      rvPubkey: rv.publicKey,
+      rvAddress: rv.address,
+      nonce: nonce,
+      expiresAtMs: expiresAtMs,
+      sign: _protocolHandler.signBytes,
+    );
+    final inviteId = deriveInviteId(nonce);
+    final inviteKey = await deriveInviteKey(
+      nonce: nonce,
+      inviterPubkey: identity.publicKey,
+      rvPubkey: rv.publicKey,
+      rvAddress: rv.address,
+      expiresAtMs: expiresAtMs,
+    );
+    final registration = const SignalingCodec().encode(RegisterInviteMessage(
+      inviteId: inviteId,
+      inviteKey: inviteKey,
+      expiresAtMs: expiresAtMs,
+    ));
+    if (!await _sendSignaling(rv.publicKey, rv.address, registration)) {
+      throw StateError(
+          'Could not register invite with rendezvous server ${rv.address}');
+    }
+    _outstandingInvites[_hex(inviteId)] =
+        (rvPubkeyHex: rv.pubkeyHex, expiresAtMs: expiresAtMs);
+    return invite.toUri();
+  }
+
+  /// Redeem a peer link received out of band (spec §WAN Cold-Call,
+  /// `consumePeerLink(uri) → PubKey`): verify the inviter's signature and the
+  /// expiration, register the inviter's identity locally, and submit the
+  /// redemption claim to the rendezvous server named in the link. Returns the
+  /// inviter's key. Throws [FormatException] for a malformed or
+  /// signature-invalid link and [StateError] for an expired or self-issued
+  /// link or an unreachable rendezvous server.
+  Future<Uint8List> consumePeerLink(String uri) async {
+    final invite = PeerLinkInvite.fromUri(uri);
+    if (!invite.verifySignature(sodium)) {
+      throw const FormatException('Invite signature verification failed');
+    }
+    if (invite.isExpired) {
+      throw StateError('Invite link has expired');
+    }
+    if (_hex(invite.inviterPubkey) == _hex(identity.publicKey)) {
+      throw StateError('Cannot redeem an invite issued by this identity');
+    }
+    // The link authorizes the inviter's first contact (spec §Cold Calls).
+    _inviteAuthorized.add(_hex(invite.inviterPubkey));
+    store.dispatch(PeerIdentityRegisteredAction(publicKey: invite.inviterPubkey));
+
+    final inviteId = deriveInviteId(invite.nonce);
+    final inviteKey = await deriveInviteKey(
+      nonce: invite.nonce,
+      inviterPubkey: invite.inviterPubkey,
+      rvPubkey: invite.rvPubkey,
+      rvAddress: invite.rvAddress,
+      expiresAtMs: invite.expiresAtMs,
+    );
+    final redeemerNonce = sodium.randombytes.buf(32);
+    final mac = await computeRedemptionMac(
+      inviteKey: inviteKey,
+      inviterPubkey: invite.inviterPubkey,
+      redeemerPubkey: identity.publicKey,
+      inviteId: inviteId,
+      redeemerNonce: redeemerNonce,
+    );
+    final claim = const SignalingCodec().encode(RedeemInviteMessage(
+      inviteId: inviteId,
+      redeemerNonce: redeemerNonce,
+      mac: mac,
+    ));
+    if (!await _sendSignaling(invite.rvPubkey, invite.rvAddress, claim)) {
+      throw StateError('Could not submit redemption to rendezvous server '
+          '${invite.rvAddress}');
+    }
+    return invite.inviterPubkey;
+  }
+
+  /// Send a signaling payload to [pubkey] at [address] over this agent's
+  /// session with it, dialing and establishing one where none stands.
+  Future<bool> _sendSignaling(
+    Uint8List pubkey,
+    String address,
+    Uint8List payload,
+  ) async {
+    final udp = _udpService;
+    if (udp == null) return false;
+    if (udp.getPeerIdForPubkey(pubkey) == null &&
+        !await _dial(pubkey, address)) {
+      return false;
+    }
+    if (!await _ensureUdpSession(pubkey)) return false;
+    final bytes = await _sessionPacketBytes(
+      GrassrootsPacket(type: PacketType.signaling, payload: payload),
+      pubkey,
+    );
+    if (bytes == null) return false;
+    return await _udpService?.sendToPeer(_hex(pubkey), bytes) ?? false;
+  }
+
+  /// A signaling payload arrived over a session. This profile acts on one
+  /// kind: a rendezvous server's notice that an invite this agent minted was
+  /// redeemed (spec §WAN Cold-Call, Redemption). The reconnection signaling
+  /// of the Flutter profile is not this profile's (it holds no punch
+  /// coordination), and server-bound messages are an agent's never.
+  void _onSignalingReceived(Uint8List senderPubkey, Uint8List payload) {
+    debugOnSignaling?.call(senderPubkey, payload);
+    final SignalingMessage message;
+    try {
+      message = const SignalingCodec().decode(payload);
+    } catch (e) {
+      debugPrint('[headless][signaling] Undecodable signaling: $e');
+      return;
+    }
+    if (message is! InviteRedeemedMessage) {
+      debugPrint('[headless][signaling] Ignoring ${message.runtimeType}');
+      return;
+    }
+    final senderHex = _hex(senderPubkey);
+    final inviteIdHex = _hex(message.inviteId);
+    final shortId = inviteIdHex.substring(0, 8);
+    if (!_isRendezvousServer(senderPubkey)) {
+      debugPrint('[headless][peer-link] redeemed notice for $shortId from a '
+          'sender that is no configured rendezvous server; dropped');
+      return;
+    }
+    // Acknowledged whatever its fate, so the server stops retrying.
+    unawaited(_sendSignaling(
+      senderPubkey,
+      _rendezvousAddressOf(senderHex),
+      const SignalingCodec()
+          .encode(InviteRedeemedAckMessage(inviteId: message.inviteId)),
+    ));
+    final outstanding = _outstandingInvites[inviteIdHex];
+    if (outstanding == null || outstanding.rvPubkeyHex != senderHex) {
+      debugPrint('[headless][peer-link] redeemed notice for unknown, handled '
+          'or another server\'s invite $shortId; acknowledged');
+      return;
+    }
+    // Single use locally, as the server's flip is.
+    _outstandingInvites.remove(inviteIdHex);
+    _inviteAuthorized.add(_hex(message.redeemerPubkey));
+    store.dispatch(
+        PeerIdentityRegisteredAction(publicKey: message.redeemerPubkey));
+    onPeerLinkRedeemed?.call(message.redeemerPubkey);
+  }
+
+  String _rendezvousAddressOf(String pubkeyHex) => rendezvousServers
+      .firstWhere((server) => server.pubkeyHex == pubkeyHex)
+      .address;
+
+  /// Every signaling payload this layer receives, before it acts on it; for
+  /// tests that stand a rendezvous server up on a headless layer.
+  @visibleForTesting
+  void Function(Uint8List senderPubkey, Uint8List payload)? debugOnSignaling;
+
+  /// Send a signaling payload to a peer over this layer's session with it;
+  /// for tests that stand a rendezvous server up on a headless layer.
+  @visibleForTesting
+  Future<bool> debugSendSignaling(Uint8List pubkey, Uint8List payload) async {
+    final udp = _udpService;
+    if (udp == null || udp.getPeerIdForPubkey(pubkey) == null) return false;
+    final bytes = await _sessionPacketBytes(
+      GrassrootsPacket(type: PacketType.signaling, payload: payload),
+      pubkey,
+    );
+    if (bytes == null) return false;
+    return udp.sendToPeer(_hex(pubkey), bytes);
+  }
+
+  /// Read the attached local network and, if it differs from the held one,
+  /// record it and tell the runtime (spec §Local Network Identity). At
+  /// [start] and on the heartbeat tick.
+  Future<void> _refreshLocalNetwork() async {
+    final network = await readLocalNetwork();
+    final previous = store.state.localNetwork.network;
+    if (network == previous) return;
+    store.dispatch(LocalNetworkChangedAction(network));
+    onNetworkChanged?.call(previous.networkId, network.networkId);
+  }
+
+  /// The actually bound UDP port (after [start]); useful when no
+  /// [serverAddress] was given and an ephemeral port was bound.
   int? get boundPort =>
       _udpService?.localPortForAddressType(InternetAddressType.IPv4) ??
       _udpService?.localPortForAddressType(InternetAddressType.IPv6);
@@ -236,15 +572,16 @@ class HeadlessGrassrootsNetwork {
 
   // ===== Lifecycle =====
 
-  /// Bind the UDP socket(s) (on [listenPort]) and start accepting and
-  /// dialing. Returns false when no socket could be bound.
+  /// Bind the UDP socket(s) (on the [serverAddress]'s listen port, or an
+  /// ephemeral one) and start accepting and dialing; dial each rendezvous
+  /// server. Returns false when no socket could be bound.
   Future<bool> start() async {
     if (_udpService != null) return true;
     final udp = UdpTransportService(
       identity: identity,
       store: store,
       protocolHandler: _protocolHandler,
-      listenPort: listenPort,
+      listenPort: serverAddress?.listenPort ?? 0,
     );
     if (!await udp.initialize()) {
       return false;
@@ -252,13 +589,61 @@ class HeadlessGrassrootsNetwork {
     _udpService = udp;
     _setupUdpCallbacks(udp);
     await udp.start();
+    for (final entry in udp.rawSocketsByType.entries) {
+      _holePunchServices[entry.key] = HolePunchService(
+        socket: entry.value,
+        senderPubkey: identity.publicKey,
+      );
+    }
     _heartbeatTimer = Timer.periodic(heartbeatInterval, (_) {
+      _holdRendezvousSessions();
+      unawaited(_refreshLocalNetwork());
       for (final hex in _outboundQueue.keys.toList()) {
         _drainQueueFor(_bytes(hex));
       }
     });
+    // "Fired on startup" (spec §Connectivity and Address): the static
+    // address, or none.
+    onConnectivityStatusChanged?.call(null, getPublicAddress());
+    await _refreshLocalNetwork();
     debugPrint('[headless] listening on UDP port $boundPort '
         '(${_hex(identity.publicKey).substring(0, 8)}…)');
+    _holdRendezvousSessions();
+    return true;
+  }
+
+  /// Dial each rendezvous server with no connection standing (spec
+  /// §Instantiation; §Connectivity and Address: "The heartbeat sweep
+  /// therefore re-initiates connections to the known peers and the
+  /// configured rendezvous servers").  The dial sequence is a send's: our
+  /// signed ANNOUNCE, and the server, accepting, initiates the handshake.
+  void _holdRendezvousSessions() {
+    final udp = _udpService;
+    if (udp == null) return;
+    for (final server in rendezvousServers) {
+      if (udp.getPeerIdForPubkey(server.publicKey) != null) continue;
+      unawaited(() async {
+        if (!await _dial(server.publicKey, server.address)) {
+          debugPrint('[headless][rendezvous] could not dial $server');
+        }
+      }());
+    }
+  }
+
+  /// Open a UDP path to [pubkey] at [address] and send our signed ANNOUNCE
+  /// (the dial sequence, spec Implementation Notes): the accepting endpoint,
+  /// having verified it, initiates the Noise handshake.
+  Future<bool> _dial(Uint8List pubkey, String address) async {
+    final udp = _udpService;
+    if (udp == null) return false;
+    final parsed = parseAddressString(address);
+    if (parsed == null) return false;
+    final hex = _hex(pubkey);
+    _dialedPeers.add(hex);
+    if (!await udp.connectToPeer(hex, parsed.ip, parsed.port)) {
+      return false;
+    }
+    await udp.sendToPeer(hex, _signedAnnounceBytes());
     return true;
   }
 
@@ -267,6 +652,10 @@ class HeadlessGrassrootsNetwork {
     _udpService = null;
     _heartbeatTimer?.cancel();
     _heartbeatTimer = null;
+    for (final service in _holePunchServices.values) {
+      service.dispose();
+    }
+    _holePunchServices.clear();
     await _connectionSub?.cancel();
     _connectionSub = null;
     _noiseSessions.resetTransport(PeerTransport.udp);
@@ -275,6 +664,11 @@ class HeadlessGrassrootsNetwork {
     }
     _reachablePeers.clear();
     _announcedTo.clear();
+    _attestedOn.clear();
+    for (final deadline in _attestationDeadlines.values) {
+      deadline.timer.cancel();
+    }
+    _attestationDeadlines.clear();
     await udp?.dispose();
   }
 
@@ -283,16 +677,17 @@ class HeadlessGrassrootsNetwork {
     await _storeSubscription?.cancel();
     _storeSubscription = null;
     _noiseSessions.dispose();
-    _messageRouter.dispose();
   }
 
   // ===== Send =====
 
   /// Send [payload] to the peer with [recipientPubkey] (spec §Point-to-Point
-  /// Communication). Delivers over an existing session, dials the peer's
-  /// dial-book address on demand, or queues the message until the peer is
-  /// reachable (fair delivery). Returns the message id, or null for invalid
-  /// input.
+  /// Communication). Held until the peer is reachable — its session
+  /// established, authenticated and attested (spec §Session Establishment;
+  /// GNA, 2026-10-11, Task A) — and delivered then: a peer not reachable is
+  /// dialed at its dial-book address on demand, and the message queues
+  /// (fair delivery, §Networking Assumptions) until the attestation exchange
+  /// completes. Returns the message id, or null for invalid input.
   Future<String?> send(
     Uint8List recipientPubkey,
     Uint8List payload, {
@@ -314,6 +709,10 @@ class HeadlessGrassrootsNetwork {
     return messageId;
   }
 
+  /// Hand [payload] to the message transport if the peer is reachable, and
+  /// answer whether it did. A peer not reachable is connected to in the
+  /// background — dialed, its session established, the exchange run — and
+  /// the reachability that follows drains the queue ([_completeAttestation]).
   Future<bool> _trySendNow(
     Uint8List recipientPubkey,
     Uint8List payload,
@@ -323,27 +722,10 @@ class HeadlessGrassrootsNetwork {
     if (udp == null) return false;
     final hex = _hex(recipientPubkey);
 
-    // No existing UDX connection — dial the dial-book address, if any.
-    if (udp.getPeerIdForPubkey(recipientPubkey) == null) {
-      final address = store.state.peers.getPeerByPubkeyHex(hex)?.udpAddress ??
-          store.state.knownPeers.known[hex];
-      if (address == null) return false;
-      final parsed = parseAddressString(address);
-      if (parsed == null) return false;
-      _dialedPeers.add(hex);
-      if (!await udp.connectToPeer(hex, parsed.ip, parsed.port)) {
-        return false;
-      }
-      // The dial sequence (spec Implementation Notes): the dialer sends its
-      // signed ANNOUNCE; the accepting endpoint, having verified it,
-      // initiates the Noise handshake.
-      await udp.sendToPeer(hex, _signedAnnounceBytes());
+    if (!_reachablePeers.contains(hex)) {
+      unawaited(_connect(recipientPubkey));
+      return false;
     }
-
-    // Establish the session up front (the dialer waits for the acceptor's
-    // handshake per the dial sequence) so the transport engine's fragments
-    // all ride an existing session.
-    if (!await _ensureUdpSession(recipientPubkey)) return false;
 
     unawaited(
       _udpMessageSender.sendMessage(hex, messageId, payload).then((ok) {
@@ -423,6 +805,36 @@ class HeadlessGrassrootsNetwork {
     return _noiseSessions.waitForSession(PeerTransport.udp, recipientPubkey);
   }
 
+  /// Connections in progress, by pubkey hex: one at a time per peer.
+  final Map<String, Future<void>> _connecting = {};
+
+  /// Bring the session with [pubkey] up: dial its dial-book address if no
+  /// path stands, then establish the Noise session (the dialer waits for the
+  /// acceptor's handshake per the dial sequence). The attestation exchange
+  /// follows the session ([_onSessionEstablished]), and its completion makes
+  /// the peer reachable.
+  Future<void> _connect(Uint8List pubkey) {
+    final hex = _hex(pubkey);
+    final inFlight = _connecting[hex];
+    if (inFlight != null) return inFlight;
+    final connecting = () async {
+      final udp = _udpService;
+      if (udp == null) return;
+      if (udp.getPeerIdForPubkey(pubkey) == null) {
+        final address =
+            store.state.peers.getPeerByPubkeyHex(hex)?.udpAddress ??
+                store.state.knownPeers.known[hex];
+        if (address == null) return;
+        if (!await _dial(pubkey, address)) return;
+      }
+      await _ensureUdpSession(pubkey);
+    }();
+    _connecting[hex] = connecting;
+    return connecting.whenComplete(() {
+      if (identical(_connecting[hex], connecting)) _connecting.remove(hex);
+    });
+  }
+
   void _drainQueueFor(Uint8List pubkey) {
     final queued = _outboundQueue.remove(_hex(pubkey));
     if (queued == null || queued.isEmpty) return;
@@ -442,12 +854,25 @@ class HeadlessGrassrootsNetwork {
   bool _isKnown(Uint8List pubkey) =>
       store.state.knownPeers.known.containsKey(_hex(pubkey));
 
+  bool _isRendezvousServer(Uint8List pubkey) {
+    final hex = _hex(pubkey);
+    return rendezvousServers.any((server) => server.pubkeyHex == hex);
+  }
+
   /// Unsolicited inbound IP contact is governed by no trust level (spec §Trust
   /// levels): it is refused unless the peer is in the known-peer set or
   /// presents a valid invite. This profile has no proximity underlay — no BLE,
-  /// no LAN discovery — and no invite support, so the known-peer set is the
-  /// whole of it.
-  bool _acceptsContactFrom(Uint8List pubkey) => _isKnown(pubkey);
+  /// no LAN discovery — so the known-peer set and the keys a peer link
+  /// authorized are the whole of it, with the configured rendezvous servers,
+  /// infrastructure this agent itself dials, and contact this agent solicited
+  /// by dialing it.
+  bool _acceptsContactFrom(Uint8List pubkey) {
+    final hex = _hex(pubkey);
+    return _isKnown(pubkey) ||
+        _isRendezvousServer(pubkey) ||
+        _inviteAuthorized.contains(hex) ||
+        _dialedPeers.contains(hex);
+  }
 
   // ===== Wiring (mirrors the Flutter coordinator's IP path) =====
 
@@ -548,10 +973,17 @@ class HeadlessGrassrootsNetwork {
       }
     };
 
+    _messageRouter.onSignalingReceived =
+        (senderPubkey, payload, {observedIp, observedPort}) =>
+            _onSignalingReceived(senderPubkey, payload);
+
     _messageRouter.onAttestationReceived =
-        (senderPubkey, payload, transport) {
-      unawaited(_onAttestationReceived(senderPubkey, payload));
+        (senderPubkey, payload, transport, handshakeHash) {
+      unawaited(_onAttestationReceived(senderPubkey, payload, handshakeHash));
     };
+
+    _messageRouter.isSessionAttested = (senderPubkey, transport, handshakeHash) =>
+        _sameBytes(_attestedOn[_hex(senderPubkey)], handshakeHash);
 
     _messageRouter.decryptSessionPacket =
         (packet, transport, {String? peerId}) async {
@@ -760,6 +1192,48 @@ class HeadlessGrassrootsNetwork {
     // the absence — which the peer reports as unattested rather than
     // refusing, absence and failure being distinct.
     unawaited(_sendAttestation(pubkey));
+    _awaitPeerAttestation(pubkey);
+  }
+
+  /// The session each peer's attestation was verified on, by its handshake
+  /// hash: what decides whether a payload on a session is delivered (Task A)
+  /// and what a later attestation on the same session is checked against.
+  final Map<String, Uint8List> _attestedOn = {};
+
+  /// The deadline by which each peer's attestation must arrive on its current
+  /// session, by pubkey hex.
+  final Map<String, ({Uint8List hash, Timer timer})> _attestationDeadlines =
+      {};
+
+  /// Wait for the peer's attestation on [pubkey]'s current session as long as
+  /// the sender's attempts last, then tear the session down if it has not
+  /// come (GNA, 2026-10-11, Attestation Q1). An attestation is never queued
+  /// for the next session: the next session sends its own.
+  void _awaitPeerAttestation(Uint8List pubkey) {
+    final hash = _noiseSessions.handshakeHashFor(PeerTransport.udp, pubkey);
+    if (hash == null) return;
+    final hex = _hex(pubkey);
+    final standing = _attestationDeadlines[hex];
+    // A session is reported established by both the handshake handler and
+    // the dial that awaited it: one deadline per session.
+    if (standing != null && _sameBytes(standing.hash, hash)) return;
+    standing?.timer.cancel();
+    late final ({Uint8List hash, Timer timer}) deadline;
+    deadline = (
+      hash: hash,
+      timer: Timer(_udpMessageSender.attemptWindow, () {
+        if (identical(_attestationDeadlines[hex], deadline)) {
+          _attestationDeadlines.remove(hex);
+        }
+        if (_udpService == null || !_isCurrentSession(pubkey, hash)) return;
+        if (_sameBytes(_attestedOn[hex], hash)) return;
+        debugPrint('[headless][attest] No attestation from '
+            '${hex.substring(0, 8)} within the sender\'s attempts; tearing '
+            'the session down');
+        _tearDownSession(pubkey);
+      }),
+    );
+    _attestationDeadlines[hex] = deadline;
   }
 
   /// The session each peer's attestation was last sent on, by its handshake
@@ -839,6 +1313,7 @@ class HeadlessGrassrootsNetwork {
   /// or ours undeliverable on it. The disconnect event drops reachability
   /// where the peer had it.
   void _tearDownSession(Uint8List pubkey) {
+    _attestedOn.remove(_hex(pubkey));
     _noiseSessions.reset(PeerTransport.udp, pubkey);
     store.dispatch(PeerUdpConnectionChangedAction(
       pubkeyHex: _hex(pubkey),
@@ -847,16 +1322,30 @@ class HeadlessGrassrootsNetwork {
     unawaited(_udpService?.disconnectFromPeer(_hex(pubkey)));
   }
 
-  /// A peer's attestation arrived. An attestation that fails verification
-  /// tears the session down and onPeerConnected does not fire.
+  /// A peer's attestation arrived on the session whose handshake hash is
+  /// [handshakeHash], the session that decrypted it (GNA, 2026-10-11, Task A).
+  /// It is judged against that session's digest; an attestation that fails
+  /// verification tears that session down and onPeerConnected does not fire.
+  /// A verdict on a session no longer current concerns nothing that stands,
+  /// and is dropped.
   Future<void> _onAttestationReceived(
     Uint8List senderPubkey,
     Uint8List payload,
+    Uint8List handshakeHash,
   ) async {
     final peerShort = _hex(senderPubkey).substring(0, 8);
-    final handshakeHash =
-        _noiseSessions.handshakeHashFor(PeerTransport.udp, senderPubkey);
-    if (handshakeHash == null) return;
+    if (!_isCurrentSession(senderPubkey, handshakeHash)) {
+      debugPrint('[headless][attest] $peerShort attestation arrived on a '
+          'session no longer current; dropped');
+      return;
+    }
+    // Delivery is at least once, so a re-sent attestation can arrive again;
+    // on a session already attested it is ignored (GNA, 2026-10-11, Task B).
+    if (_sameBytes(_attestedOn[_hex(senderPubkey)], handshakeHash)) {
+      debugPrint('[headless][attest] $peerShort attestation again on a '
+          'session already attested; ignored');
+      return;
+    }
     final digest = attestationDigest(
       identityPublicKey: senderPubkey,
       handshakeHash: handshakeHash,
@@ -874,6 +1363,8 @@ class HeadlessGrassrootsNetwork {
     } catch (e) {
       verdict = InvalidAttestation('verification threw: $e');
     }
+    // Verification awaits; the session it judged may have gone meanwhile.
+    if (!_isCurrentSession(senderPubkey, handshakeHash)) return;
 
     switch (verdict) {
       case InvalidAttestation(:final reason):
@@ -882,14 +1373,21 @@ class HeadlessGrassrootsNetwork {
         _tearDownSession(senderPubkey);
       case AttestedApplication(:final identity):
         debugPrint('[headless][attest] $peerShort attested as $identity');
-        _completeAttestation(senderPubkey, PeerAttestation(identity: identity));
+        _completeAttestation(senderPubkey, handshakeHash,
+            PeerAttestation(identity: identity));
       case UnattestedPlatform(:final reason):
         debugPrint('[headless][attest] $peerShort unattested: $reason');
-        _completeAttestation(senderPubkey, PeerAttestation.unattested);
+        _completeAttestation(
+            senderPubkey, handshakeHash, PeerAttestation.unattested);
     }
   }
 
-  void _completeAttestation(Uint8List pubkey, PeerAttestation attestation) {
+  void _completeAttestation(
+    Uint8List pubkey,
+    Uint8List handshakeHash,
+    PeerAttestation attestation,
+  ) {
+    _attestedOn[_hex(pubkey)] = handshakeHash;
     store.dispatch(PeerAttestedAction(
       publicKey: pubkey,
       underlay: Underlay.wan,

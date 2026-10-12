@@ -624,7 +624,12 @@ go :- address_declare('${_hex(1)}', at(host, 41234)).
   // nothing: peer_address assigns none, place_declare assigns its stream
   // unobservable and nothing more, and the other seam predicates return having
   // done nothing".  Each test runs twice: under the REPL's engine, with no
-  // MadContext, and in madGLP mode with no GlpNetwork bound.
+  // MadContext, and in madGLP mode with no GlpNetwork bound.  Closing a
+  // place's stream is the runtime's bookkeeping and not the layer's, so with
+  // no layer place_remove and a further declaration close it as ever, and only
+  // the reporting is absent (IGLP madglp-spec.tex, "closed, its tail assigned
+  // [], in exactly two cases: place_remove, and a further declaration of the
+  // same place"; GLP, 2026-10-11 12:59 UTC, "23:12" (a)).
   group('no layer bound: a layer that observes nothing and does nothing', () {
     const emitAddress = '''
 procedure emit(PeerAddress?).
@@ -685,15 +690,18 @@ go :- place_declare(home, 100, E), watch(E?).
         expect(out, ['unobservable']);
         expect(result.suspended, isTrue,
             reason: 'the stream stays open and nothing follows unobservable: '
-                'no event, no observable, no closing');
+                'no event, no observable, and no closing until place_remove '
+                'or a further declaration');
+        expect(engine.runtime.placeStreams.isDeclared('home'), isTrue,
+            reason: "the declaration stands in the runtime's bookkeeping, "
+                'which is not the layer\'s');
         if (mad) {
-          expect(engine.madContext!.hasDeclaredPlace('home'), isFalse,
-              reason: 'nothing is declared');
+          expect(engine.madContext!.hasDeclaredPlace('home'), isTrue);
         }
       });
 
-      test('$where: place_remove returns having done nothing, the stream left '
-          'as it was', () async {
+      test('$where: place_remove closes the stream, its tail assigned [], '
+          'and an undeclared place is no matter', () async {
         final out = <String>[];
         final engine = _unboundEngine(out, mad: mad);
         engine.loadSource('''
@@ -702,25 +710,71 @@ go :- place_declare(home, 100, E), watch(E?), place_remove(home),
     place_remove(nowhere).
 ''');
         final result = await engine.runGoal('go');
-        expect(out, ['unobservable'],
-            reason: 'place_remove does nothing: the stream is not closed');
-        expect(result.suspended, isTrue);
+        expect(out, ['unobservable', 'closed'],
+            reason: 'place_remove closes the stream with no layer as with one');
+        expect(result.succeeded, isTrue,
+            reason: 'nothing waits on the stream once it is closed');
+        expect(engine.runtime.placeStreams.isDeclared('home'), isFalse);
+        if (mad) {
+          expect(engine.madContext!.hasDeclaredPlace('home'), isFalse);
+        }
       });
 
-      test('$where: a second declaration of a place leaves the first stream as '
-          'it was', () async {
+      test('$where: a further declaration of a place closes the first stream, '
+          'and its own carries unobservable and stays open', () async {
         final out = <String>[];
         final engine = _unboundEngine(out, mad: mad);
         engine.loadSource('''
 ${watchPlace}procedure go.
 go :- place_declare(home, 100, E1), watch(E1?), place_declare(home, 200, E2),
-    watch(E2?).
+    watch2(E2?).
+procedure watch2(_?).
+watch2([E|Es]) :- ground(E?) | send_to_user([second(E?)]), more2(Es?).
+procedure more2(_?).
+more2([E|_]) :- ground(E?) | send_to_user([second(E?)]).
+more2([]) :- send_to_user([second(closed)]).
 ''');
         final result = await engine.runGoal('go');
-        expect(out, ['unobservable', 'unobservable']);
+        expect(out.toSet(), {'unobservable', 'closed', 'second(unobservable)'},
+            reason: 'the first stream is unobservable then closed; the second '
+                'carries unobservable');
+        expect(out, hasLength(3));
+        expect(out.indexOf('unobservable'), lessThan(out.indexOf('closed')));
         expect(result.suspended, isTrue,
-            reason: 'nothing is declared, so nothing supersedes and nothing '
-                'closes');
+            reason: 'the second stream stays open: it is the standing '
+                'declaration');
+        expect(engine.runtime.placeStreams.isDeclared('home'), isTrue);
+      });
+
+      test('$where: place_remove after a further declaration closes the '
+          'standing stream', () async {
+        final out = <String>[];
+        final engine = _unboundEngine(out, mad: mad);
+        engine.loadSource('''
+${watchPlace}procedure go.
+go :- place_declare(home, 100, E1), place_declare(home, 200, E2),
+    watch(E1?), watch2(E2?), place_remove(home).
+procedure watch2(_?).
+watch2([E|Es]) :- ground(E?) | send_to_user([second(E?)]), more2(Es?).
+procedure more2(_?).
+more2([E|_]) :- ground(E?) | send_to_user([second(E?)]).
+more2([]) :- send_to_user([second(closed)]).
+''');
+        final result = await engine.runGoal('go');
+        expect(out.toSet(), {
+          'unobservable',
+          'closed',
+          'second(unobservable)',
+          'second(closed)'
+        });
+        expect(out, hasLength(4));
+        expect(out.indexOf('unobservable'), lessThan(out.indexOf('closed')));
+        expect(out.indexOf('second(unobservable)'),
+            lessThan(out.indexOf('second(closed)')));
+        expect(result.succeeded, isTrue,
+            reason: 'both streams are closed: the first superseded, the '
+                'second removed');
+        expect(engine.runtime.placeStreams.isDeclared('home'), isFalse);
       });
 
       test('$where: trust_declare returns having done nothing', () async {

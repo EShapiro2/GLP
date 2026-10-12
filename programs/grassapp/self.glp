@@ -32,6 +32,11 @@ Status ::= ok ; fail.
 %% swap, shown to the person.
 TradeClass ::= normal ; payment ; redemption.
 
+%% Whether the outputs list holds a friend entry for a key (grassapp_agent.glp,
+%% anchor_friend/4): found, or none --- what the send clause's dispatch,
+%% send_step/6, reads (GSG Section 5.1), as social/graph's AnchorFriend.
+AnchorFriend ::= none ; found(Key).
+
 Response ::= accept(FriendChannel) ; no.
 
 %% A currency unit: a bond issued by Issuer, maturing at Maturity, serial Serial.
@@ -116,6 +121,10 @@ AgentContent ::= befriend(Key, Response?)
                ; rejected
                ; rejected(Constant)
                ; received(Key, Constant)
+               %% A message the person addressed to someone who is not their
+               %% friend is not sent, and the agent tells the person so
+               %% (GSG Section 5.1).
+               ; not_a_friend(Key)
                ; balance_report(Constant, Constant, Constant, Integer)
                ; balances_synced(Constant)
                ; date_advanced(Constant)
@@ -280,6 +289,7 @@ UserNotify  ::= befriend(Key, ReqId)
               ; rejected
               ; rejected(Constant)
               ; received(Key, Constant)
+              ; not_a_friend(Key)
               ; balance_report(Constant, Constant, Constant, Integer)
               ; balances_synced(Constant)
               ; date_advanced(Constant)
@@ -332,6 +342,10 @@ play_loan :- play_loan_headless # play_loan.
 imported procedure play_escrow_headless # play_escrow.
 exported procedure play_escrow.
 play_escrow :- play_escrow_headless # play_escrow.
+
+imported procedure play_not_a_friend_headless # play_not_a_friend.
+exported procedure play_not_a_friend.
+play_not_a_friend :- play_not_a_friend_headless # play_not_a_friend.
 
 imported procedure play_grassapp_duo # agent_init(Key?, Stream(UserCmd)?, NetInStream?).
 exported procedure agent_init(Key?, Stream(UserCmd)?, NetInStream?).

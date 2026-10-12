@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:grassroots_networking/src/transport/hole_punch_service.dart';
+import 'package:grassroots_networking_core/src/transport/hole_punch_service.dart';
 
 void main() {
   group('PunchPacket', () {

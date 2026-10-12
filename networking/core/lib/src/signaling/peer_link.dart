@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:cryptography/dart.dart' show DartSha256;
-import 'package:sodium_libs/sodium_libs_sumo.dart';
+import 'package:sodium/sodium_sumo.dart';
 
 /// IP cold-call deep-link invites — spec `GLP_Networking_API` §IP Cold-Call.
 ///

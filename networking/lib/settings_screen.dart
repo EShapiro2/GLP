@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:redux/redux.dart';
 import 'debug_log_screen.dart';
+import 'network_preferences.dart';
+import 'package:grassroots_networking_core/src/models/rendezvous_server.dart';
 import 'package:grassroots_networking_core/src/store/app_state.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/store/settings_actions.dart';
@@ -11,16 +13,22 @@ import 'package:grassroots_networking_core/src/store/settings_state.dart';
 import 'package:grassroots_networking_core/src/store/transports_state.dart';
 import 'package:grassroots_networking_core/src/transport/transport_service.dart';
 
-/// Settings screen for configuring transport protocols
+/// Settings screen: the underlays and rendezvous servers the layer is
+/// instantiated with ([NetworkPreferences], which the app applies by
+/// rebuilding the layer), and the settings of the running layer (the BLE role
+/// mode and the cold-call trust levels).
 class SettingsScreen extends StatefulWidget {
   final Store<AppState> store;
 
-  /// Callback when settings are changed
+  /// Callback when a setting of the running layer is changed
   final VoidCallback? onSettingsChanged;
-  final Future<bool> Function(String address, String pubkeyHex)?
-      onAddRendezvousServer;
-  final Future<void> Function(String address, String pubkeyHex)?
-      onRemoveRendezvousServer;
+
+  /// The underlays and rendezvous servers the layer was instantiated with.
+  final NetworkPreferences preferences;
+
+  /// Persist [NetworkPreferences] and rebuild the layer with them.
+  final Future<void> Function(NetworkPreferences preferences)
+      onPreferencesChanged;
 
   /// Debug-only: switch which BLE roles the local device runs.
   final Future<void> Function(BleRoleMode mode)? onBleRoleModeChanged;
@@ -29,8 +37,8 @@ class SettingsScreen extends StatefulWidget {
     super.key,
     required this.store,
     this.onSettingsChanged,
-    this.onAddRendezvousServer,
-    this.onRemoveRendezvousServer,
+    required this.preferences,
+    required this.onPreferencesChanged,
     this.onBleRoleModeChanged,
   });
 
@@ -39,34 +47,36 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  late bool _bluetoothEnabled;
-  late bool _udpEnabled;
+  late NetworkPreferences _preferences;
   bool _isSavingAnchor = false;
   StreamSubscription<AppState>? _storeSubscription;
 
   late final TextEditingController _anchorAddressController;
   late final TextEditingController _anchorPubkeyController;
 
+  bool get _runsPan => _preferences.underlays.contains(Underlay.pan);
+  bool get _runsLan => _preferences.underlays.contains(Underlay.lan);
+  bool get _runsWan => _preferences.underlays.contains(Underlay.wan);
+
   @override
   void initState() {
     super.initState();
-    _bluetoothEnabled = widget.store.state.settings.bluetoothEnabled;
-    _udpEnabled = widget.store.state.settings.udpEnabled;
+    _preferences = widget.preferences;
 
     _anchorAddressController = TextEditingController();
     _anchorPubkeyController = TextEditingController();
     _storeSubscription = widget.store.onChange.listen((state) {
-      final settings = state.settings;
-      if (_bluetoothEnabled != settings.bluetoothEnabled) {
-        _bluetoothEnabled = settings.bluetoothEnabled;
-      }
-      if (_udpEnabled != settings.udpEnabled) {
-        _udpEnabled = settings.udpEnabled;
-      }
       if (mounted) {
         setState(() {});
       }
     });
+  }
+
+  /// Apply [preferences]: the app persists them and rebuilds the layer.
+  Future<void> _setPreferences(NetworkPreferences preferences) async {
+    setState(() => _preferences = preferences);
+    await widget.onPreferencesChanged(preferences);
+    if (mounted) setState(() {});
   }
 
   @override
@@ -110,48 +120,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: Text(
-              'Choose which protocols to use for peer communication. '
-              'Bluetooth is preferred when peers are nearby.',
+              'Choose how to reach peers: Bluetooth for those in radio range, '
+              'the local network for those on it, the Internet for the rest. '
+              'Bluetooth is preferred when peers are nearby. A change '
+              'restarts the networking layer.',
               style: TextStyle(color: Colors.grey, fontSize: 13),
             ),
           ),
 
           const SizedBox(height: 8),
 
-          // Bluetooth Toggle
+          // PAN
           _buildTransportTile(
             icon: Icons.bluetooth,
             iconColor: Colors.blue,
             title: 'Bluetooth',
             subtitle: 'Connect to nearby peers via BLE',
-            value: _bluetoothEnabled,
+            value: _runsPan,
             available:
                 widget.store.state.transports.bleState != TransportState.error,
-            onChanged: _onBluetoothChanged,
+            onChanged: (value) => _onUnderlayChanged(Underlay.pan, value),
             priority: 1,
           ),
 
           // Debug: BLE role mode (auto / central-only / peripheral-only).
-          if (_bluetoothEnabled && widget.onBleRoleModeChanged != null)
+          if (_runsPan && widget.onBleRoleModeChanged != null)
             _buildBleRoleModeSelector(),
 
-          if (_bluetoothEnabled) _buildColdCallTrustSelector(),
+          // LAN
+          _buildTransportTile(
+            icon: Icons.wifi,
+            iconColor: Colors.teal,
+            title: 'Local network',
+            subtitle: 'Connect to peers on the same local network',
+            value: _runsLan,
+            available:
+                widget.store.state.transports.udpState != TransportState.error,
+            onChanged: (value) => _onUnderlayChanged(Underlay.lan, value),
+            priority: 2,
+          ),
 
-          // UDP Toggle
+          if (_runsPan || _runsLan) _buildColdCallTrustSelector(),
+
+          // WAN
           _buildTransportTile(
             icon: Icons.public,
             iconColor: Colors.green,
             title: 'Internet',
             subtitle: 'Connect to peers over the Internet',
-            value: _udpEnabled,
+            value: _runsWan,
             available:
                 widget.store.state.transports.udpState != TransportState.error,
-            onChanged: _onUdpChanged,
-            priority: 2,
+            onChanged: (value) => _onUnderlayChanged(Underlay.wan, value),
+            priority: 3,
           ),
 
           // Internet connection status
-          if (_udpEnabled && widget.store.state.transports.udpState.isUsable)
+          if ((_runsLan || _runsWan) &&
+              widget.store.state.transports.udpState.isUsable)
             _buildConnectionStatusBadge(),
 
           const Divider(height: 32),
@@ -162,7 +188,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const Divider(height: 32),
 
           // Warning if no transport enabled
-          if (!_bluetoothEnabled && !_udpEnabled)
+          if (_preferences.underlays.isEmpty)
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
               padding: const EdgeInsets.all(16),
@@ -723,7 +749,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildAnchorServerSection() {
-    final servers = widget.store.state.settings.configuredRendezvousServers;
+    final servers = _preferences.rendezvousServers;
     final hasAnchor = servers.isNotEmpty;
 
     return Column(
@@ -767,8 +793,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           padding: EdgeInsets.symmetric(horizontal: 16),
           child: Text(
             'A lightweight server that helps peers find each other for '
-            'hole-punching. Add one or more servers below. Server is stored '
-            'only after live ANNOUNCE response. IPv6 only.',
+            'hole-punching. Add one or more servers below; a change restarts '
+            'the networking layer.',
             style: TextStyle(color: Colors.grey, fontSize: 13),
           ),
         ),
@@ -847,7 +873,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.add_link_outlined, size: 18),
-                  label: Text(_isSavingAnchor ? 'Verifying...' : 'Add Server'),
+                  label: Text(_isSavingAnchor ? 'Restarting...' : 'Add Server'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1B3D2F),
                     foregroundColor: const Color(0xFFE8A33C),
@@ -866,7 +892,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildConfiguredAnchorTile(RendezvousServerSettings server) {
+  Widget _buildConfiguredAnchorTile(RendezvousServer server) {
     final shortPubkey = server.pubkeyHex.length > 16
         ? '${server.pubkeyHex.substring(0, 16)}...'
         : server.pubkeyHex;
@@ -902,11 +928,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  String _formatAnchorDetails(RendezvousServerSettings server) {
+  String _formatAnchorDetails(RendezvousServer server) {
     return '${server.address} ${server.pubkeyHex}';
   }
 
-  Future<void> _copyAnchorDetails(RendezvousServerSettings server) async {
+  Future<void> _copyAnchorDetails(RendezvousServer server) async {
     await Clipboard.setData(
       ClipboardData(text: _formatAnchorDetails(server)),
     );
@@ -938,11 +964,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
       return;
     }
 
-    if (widget.onAddRendezvousServer == null) {
+    final RendezvousServer server;
+    try {
+      server = RendezvousServer(
+        address,
+        NetworkPreferences.hexToKey(pubkey.toLowerCase()),
+      );
+    } on ArgumentError {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Transport not ready. Cannot verify server yet'),
-        ),
+        const SnackBar(content: Text('Server address must be ip:port')),
+      );
+      return;
+    }
+    if (_preferences.rendezvousServers.contains(server)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Rendezvous server already added')),
       );
       return;
     }
@@ -951,8 +987,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _isSavingAnchor = true;
     });
 
-    final saved =
-        await widget.onAddRendezvousServer!.call(address, pubkey.toLowerCase());
+    await _setPreferences(_preferences.copyWith(
+      rendezvousServers: [..._preferences.rendezvousServers, server],
+    ));
 
     if (!mounted) return;
 
@@ -960,27 +997,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _isSavingAnchor = false;
     });
 
-    if (!saved) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Server did not respond. Not saved'),
-        ),
-      );
-      return;
-    }
-
     _anchorAddressController.clear();
     _anchorPubkeyController.clear();
-    widget.onSettingsChanged?.call();
-
-    setState(() {});
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Rendezvous server added')),
     );
   }
 
-  void _onRemoveAnchor(RendezvousServerSettings server) {
+  void _onRemoveAnchor(RendezvousServer server) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -997,18 +1022,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-              if (widget.onRemoveRendezvousServer != null) {
-                await widget.onRemoveRendezvousServer!(
-                  server.address,
-                  server.pubkeyHex,
-                );
-              } else {
-                widget.store.dispatch(RemoveRendezvousServerAction(server));
-              }
-              widget.onSettingsChanged?.call();
-              if (mounted) {
-                setState(() {});
-              }
+              await _setPreferences(_preferences.copyWith(
+                rendezvousServers: [
+                  for (final s in _preferences.rendezvousServers)
+                    if (s != server) s,
+                ],
+              ));
             },
             child: const Text('Remove', style: TextStyle(color: Colors.red)),
           ),
@@ -1017,34 +1036,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _onBluetoothChanged(bool value) {
-    // Prevent disabling both transports
-    if (!value && !_udpEnabled) {
+  void _onUnderlayChanged(Underlay underlay, bool value) {
+    final underlays = {..._preferences.underlays};
+    if (value) {
+      underlays.add(underlay);
+    } else {
+      underlays.remove(underlay);
+    }
+    // Prevent disabling every underlay
+    if (underlays.isEmpty) {
       _showCannotDisableDialog();
       return;
     }
-
-    setState(() {
-      _bluetoothEnabled = value;
-    });
-
-    widget.store.dispatch(SetBluetoothEnabledAction(value));
-    widget.onSettingsChanged?.call();
-  }
-
-  void _onUdpChanged(bool value) {
-    // Prevent disabling both transports
-    if (!value && !_bluetoothEnabled) {
-      _showCannotDisableDialog();
-      return;
-    }
-
-    setState(() {
-      _udpEnabled = value;
-    });
-
-    widget.store.dispatch(SetUdpEnabledAction(value));
-    widget.onSettingsChanged?.call();
+    unawaited(_setPreferences(_preferences.copyWith(underlays: underlays)));
   }
 
   void _showCannotDisableDialog() {
@@ -1053,7 +1057,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Cannot Disable'),
         content: const Text(
-          'At least one transport protocol must be enabled to communicate with peers.',
+          'At least one of Bluetooth, the local network and the Internet must be '
+          'enabled to communicate with peers.',
         ),
         actions: [
           TextButton(

@@ -1,8 +1,9 @@
 import 'package:redux/redux.dart';
 import 'package:flutter/foundation.dart';
 
+import 'package:grassroots_networking_core/src/models/rendezvous_server.dart';
 import 'package:grassroots_networking_core/src/store/app_state.dart';
-import 'signaling_codec.dart';
+import 'package:grassroots_networking_core/src/signaling/signaling_codec.dart';
 
 /// Orchestrates signaling between this agent and rendezvous servers.
 ///
@@ -33,6 +34,10 @@ import 'signaling_codec.dart';
 /// service transport-agnostic.
 class SignalingService {
   final Store<AppState> store;
+
+  /// The layer's rendezvous servers, fixed for its lifetime (spec
+  /// §Instantiation).
+  final List<RendezvousServer> rendezvousServers;
   final SignalingCodec codec;
 
   // ===== Callbacks (set by coordinator) =====
@@ -91,7 +96,11 @@ class SignalingService {
     Uint8List redeemerPubkey,
   )? onInviteRedeemed;
 
-  SignalingService({required this.store, this.codec = const SignalingCodec()});
+  SignalingService({
+    required this.store,
+    required this.rendezvousServers,
+    this.codec = const SignalingCodec(),
+  });
 
   // ===== Outgoing API (called by coordinator) =====
 
@@ -221,14 +230,6 @@ class SignalingService {
     return await sendFn?.call(recipientPubkey, payload) ?? false;
   }
 
-  static Uint8List _hexToBytes(String hex) {
-    final bytes = <int>[];
-    for (var i = 0; i < hex.length; i += 2) {
-      bytes.add(int.parse(hex.substring(i, i + 2), radix: 16));
-    }
-    return Uint8List.fromList(bytes);
-  }
-
   // ===== Incoming processing (called by MessageRouter via coordinator) =====
 
   /// Process an incoming signaling packet.
@@ -327,14 +328,7 @@ class SignalingService {
       return true;
     }
 
-    for (final server in store.state.settings.configuredRendezvousServers) {
-      if (server.pubkeyHex.isNotEmpty &&
-          server.pubkeyHex.toLowerCase() == senderHex) {
-        return true;
-      }
-    }
-
-    return false;
+    return rendezvousServers.any((server) => server.pubkeyHex == senderHex);
   }
 
   /// Configured rendezvous servers in deterministic lexicographic order by
@@ -342,20 +336,9 @@ class SignalingService {
   List<Uint8List> _configuredRendezvousPubkeys({String? excludePubkeyHex}) {
     final servers = <String, Uint8List>{};
 
-    for (final server in store.state.settings.configuredRendezvousServers) {
-      final normalizedHex = server.pubkeyHex.toLowerCase();
-      if (normalizedHex.isEmpty || normalizedHex == excludePubkeyHex) {
-        continue;
-      }
-
-      try {
-        servers.putIfAbsent(
-          normalizedHex,
-          () => _hexToBytes(normalizedHex),
-        );
-      } catch (e) {
-        debugPrint('Ignoring invalid rendezvous pubkey in settings: $e');
-      }
+    for (final server in rendezvousServers) {
+      if (server.pubkeyHex == excludePubkeyHex) continue;
+      servers.putIfAbsent(server.pubkeyHex, () => server.publicKey);
     }
 
     final orderedHexes = servers.keys.toList()..sort();

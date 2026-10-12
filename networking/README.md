@@ -11,7 +11,6 @@ This package provides a BLE mesh networking layer based on the [Bitchat protocol
 - **Dual-mode BLE**: Operates as both Central (scanner) and Peripheral (advertiser) simultaneously
 - **Mesh Routing**: Multi-hop message relay (up to 7 hops)
 - **Fragmentation**: Automatic chunking and reassembly of large messages
-- **Deduplication**: Bloom filter prevents duplicate packet processing
 - **Store-and-Forward**: Caches messages for offline peers (12hr retention)
 - **Protocol Compatible**: Works with other Bitchat implementations
 
@@ -207,7 +206,6 @@ Inter-fragment delay: 20ms
 ### Mesh Routing
 
 - TTL starts at 7, decremented at each hop
-- Bloom filter prevents duplicate processing
 - Packets with TTL=0 are not relayed
 - ANNOUNCE packets are not relayed (direct only)
 

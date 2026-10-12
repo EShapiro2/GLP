@@ -1,5 +1,12 @@
 /// The runtime's network interface over the networking layer: GNA's backend
-/// glue for an agent on a phone.
+/// glue for an agent on a phone.  [GrassrootsGlpNetwork] implements
+/// glp_runtime's `GlpNetwork` over [GrassrootsNetwork].
+///
+/// A library of the glue package, beside the layer's core and depending on
+/// the layer and the runtime, so that neither the core nor the Flutter package
+/// carries the GLP runtime (GNA, 2026-10-11); and a library of its own, so
+/// that the layer's library does not carry the runtime's names, several of
+/// which (`Underlay`, `ProximityUnderlay`, `PlaceEvent`) the two share.
 ///
 /// IGLP, Implementation Notes, "Networking Seam", One interface: "The
 /// multiagent runtime reaches the network through one interface, the one the
@@ -13,13 +20,11 @@
 /// application identity of `onPeerConnected` travels as the layer reports it,
 /// since "the runtime relies on none of it" (IGLP, The contract).
 ///
-/// Two functions of the API the layer does not have as GNA specifies them, and
-/// they throw [UnsupportedError], the interface's statement that a realisation
-/// does not provide them: `getPeers`, which GNA has scan and browse the
-/// proximity underlays for nearby agents and the layer's returns the peers
-/// reachable over any underlay; and `observedPeerAddress`, the address at
-/// which the layer observes a connected peer, where the layer has only the
-/// dial-book address, supplied or observed.
+/// Every function of the API passes straight through (GNA, 2026-10-11, Task
+/// C): `getPeers` answers the agents on the proximity underlays, and
+/// `observedPeerAddress` the address at which the layer observes a connected
+/// peer.  Until 2026-10-12 the two threw [UnsupportedError], the layer's
+/// answering every reachable peer and the dial-book address.
 library;
 
 import 'dart:async';
@@ -29,7 +34,7 @@ import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
 import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/store/settings_state.dart';
 
-import '../grassroots_network.dart';
+import 'package:grassroots_networking/src/grassroots_network.dart';
 
 /// [glp.GlpNetwork] over a [GrassrootsNetwork].
 class GrassrootsGlpNetwork implements glp.GlpNetwork {
@@ -41,10 +46,6 @@ class GrassrootsGlpNetwork implements glp.GlpNetwork {
   static glp.PubKey _key(Uint8List bytes) => glp.PubKey.fromList(bytes);
 
   static glp.Underlay _underlay(Underlay u) => glp.Underlay.values.byName(u.name);
-
-  static Never _absent(String function, String why) => throw UnsupportedError(
-      '$function: the layer (GrassrootsNetwork) does not provide it as GNA '
-      'specifies: $why');
 
   // --- Identity ---
 
@@ -137,10 +138,11 @@ class GrassrootsGlpNetwork implements glp.GlpNetwork {
   // --- Proximity underlays ---
 
   @override
-  List<glp.DiscoveredPeer> getPeers() => _absent(
-      'getPeers',
-      'GNA has it scan and browse the proximity underlays for nearby agents; '
-          "the layer's getPeers returns the peers reachable over any underlay");
+  List<glp.DiscoveredPeer> getPeers() => [
+        for (final peer in layer.getPeers())
+          glp.DiscoveredPeer(_key(peer.publicKey),
+              glp.ProximityUnderlay.values.byName(peer.underlay.name)),
+      ];
 
   void Function(glp.PubKey pk, glp.ProximityUnderlay underlay)?
       _onPeerDiscovered;
@@ -212,11 +214,8 @@ class GrassrootsGlpNetwork implements glp.GlpNetwork {
       layer.putPeerAddress(pk.bytes, address);
 
   @override
-  String? observedPeerAddress(glp.PubKey pk) => _absent(
-      'observedPeerAddress',
-      'GNA has it answer the address at which the layer observes the '
-          'connected peer; the layer has only peerAddress, the dial-book '
-          'address, supplied by putPeerAddress or observed');
+  String? observedPeerAddress(glp.PubKey pk) =>
+      layer.observedPeerAddress(pk.bytes);
 
   @override
   void punchUdp(String address) => layer.punchUdp(address);

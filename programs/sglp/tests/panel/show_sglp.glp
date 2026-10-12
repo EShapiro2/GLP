@@ -5,7 +5,7 @@
 %%   Panel =::= judge_panel.
 %%   procedure judge_panel(Panel?, Integer?).
 %%   judge_panel(panel(Cs), S) :- judge(Cs?, S?).
-%%   procedure judge(Cards?, Integer?).
+%%   procedure judge(List(Card)?, Integer?).
 %%   judge([card(_, A?) | Cs], S) :-
 %%       random(S?, 2, K, S1), verdict(K?, A) @ 1/hour, judge(Cs?, S1?).
 %%   judge([], _).
@@ -31,8 +31,9 @@ source(
   %% predicates (show.glp).
   [type('YesNo', [yes, no]),
    type('Card', [card('Integer', dual('YesNo'))]),
-   type('Cards', [[], ['Card' | 'Cards']]),
-   type('Panel', [panel('Cards')]),
+   type('Panel', [panel('List'('Card'))]),
+   %% List, the root's (programs/self.glp), given in the interface that uses it.
+   type('List'('X'), [[], ['X' | 'List'('X')]]),
    volitional('Panel', panel_w, show(dual('Integer'), 'Stream'('YesNo'))),
    compiled(show, 3), compiled(show1, 4), compiled(cards, 4)],
 
@@ -41,7 +42,7 @@ source(
    binds('Panel', judge_panel),
    decl(judge_panel(dual('Panel'), dual('Integer'))),
    clause(judge_panel(panel(var('Cs')), var('S')), [], [judge(var('Cs?'), var('S?'))]),
-   decl(judge(dual('Cards'), dual('Integer'))),
+   decl(judge(dual('List'('Card')), dual('Integer'))),
    clause(judge([card(var('_'), var('A?')) | var('Cs')], var('S')), [],
           [random(var('S?'), 2, var('K'), var('S1')), rated(verdict(var('K?'), var('A')), rate(1, hour)),
            judge(var('Cs?'), var('S1?'))]),

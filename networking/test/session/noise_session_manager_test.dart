@@ -100,12 +100,12 @@ void main() {
 
     // BLE resolves the session via the connection→identity map learned at
     // handshake completion; UDP resolves via an explicit remote pubkey.
-    final (bleDecrypted, bleSender) = await bobSessions.decryptPacket(
+    final (bleDecrypted, bleSender, bleHash) = await bobSessions.decryptPacket(
       bleEncrypted,
       transport: PeerTransport.bleDirect,
       peerId: 'alice-conn',
     );
-    final (udpDecrypted, udpSender) = await bobSessions.decryptPacket(
+    final (udpDecrypted, udpSender, udpHash) = await bobSessions.decryptPacket(
       udpEncrypted,
       transport: PeerTransport.udp,
       remotePubkey: alice.publicKey,
@@ -117,6 +117,14 @@ void main() {
     expect(udpDecrypted.payload, clear.payload);
     expect(bleSender, equals(alice.publicKey));
     expect(udpSender, equals(alice.publicKey));
+    // Each reports the handshake hash of the session that decrypted it, the
+    // one an attestation it carries is judged against (GNA, 2026-10-11, Task
+    // A): the medium's own session, one per underlay per pair.
+    expect(bleHash,
+        bobSessions.handshakeHashFor(PeerTransport.bleDirect, alice.publicKey));
+    expect(udpHash,
+        bobSessions.handshakeHashFor(PeerTransport.udp, alice.publicKey));
+    expect(bleHash, isNot(equals(udpHash)));
   });
 
   test(

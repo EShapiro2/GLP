@@ -1,31 +1,52 @@
-%% responder.vglp — three procedures, each with one volition-guarded clause,
-%% the case the per-clause reply types of the canonical compilation exist for
-%% (vGLP, Definition "Canonical Compilation", the types item): a slot admits
-%% exactly the replies its clause can receive, so the compiled clauses cover
-%% it with no ordinary clause beside them.
+%% responder.vglp --- three volitional procedures, each with one clause, its
+%% question in writer mode: the program shows the offering peer and hands the
+%% person the writer of the rest (vGLP, sections/vglp.tex, Definition
+%% "Volitional Procedure, Interactive Type, Interactive Term, Ordinary Clause,
+%% vGLP Program": every clause of a volitional procedure has the form
+%% (A)*p(S1, ..., Sn) :- G | B).  The canonical compilation joins the three
+%% interactive types in one union of questions, one functor each, card_w,
+%% greeting_w and choice_w (Definition "Canonical Compilation").
 %%
-%% respond has an else-branch, so its reply type has else and the person can
-%% decline its card; greet has none, so its reply type has no else; pick also
-%% has an ordinary clause, which aborts the open ask when it reduces the goal.
+%% Each clause writes its card at once, guarded only on what the program
+%% writes, the offering peer: "the person holds the writer of an input only
+%% after the output containing it is presented" (Definition "vmaGLP
+%% Transition System"), so a guard on the person's own position would never
+%% let the clause write the card that presents it.  A refusal is an answer,
+%% no, taken by respond's clause as yes is.
 %%
-%% respond and pick are exported: the plays in self.glp call them, and a
-%% cross-module call resolves to a procedure its module exports (TGLP
-%% modules.tex, Compilation, fourth step).
+%% respond, greet and pick are exported: the plays and the bridge's entry
+%% in self.glp call them, and a cross-module call resolves to a procedure its
+%% module exports (TGLP modules.tex, Compilation, fourth step).
+%%
+%% Until 2026-10-12 the fixture was in the old syntax, for the old
+%% compilation's per-clause reply types: respond had an else-branch, greet
+%% and pick guarded on the person's own position as well as on the offering
+%% peer, and pick had an ordinary clause beside its volition-guarded one,
+%% which aborted the open ask (GLP, 2026-10-11 12:59 UTC, "03:24").
 
-exported procedure respond(Offer?, Stream(Decision)).
-*(Answer=yes, From?)
-respond(offer(From), [decided(Answer?, From?)]) :-
-    ground(From?) | true
-*(no) true.
+Peer     ::= Constant.
+Name     ::= Constant.
+Offer    ::= offer(Peer).
+YesNo    ::= yes ; no.
+Decision ::= decided(YesNo, Peer) ; greeted(Name, Peer) ; picked(Constant).
 
-procedure greet(Offer?, Stream(Decision)).
-*(Name, From?)
-greet(offer(From), [greeted(Name?, From?)]) :-
-    ground(From?), ground(Name?) | true.
+%% The person sees who offers and answers yes or no.
+Card     ::= card(Peer, YesNo?).
 
-exported procedure pick(Stream(Constant)?, Offer?, Stream(Decision)).
-pick([go | _], offer(From), [picked(From?)]) :-
+%% The person sees who offers and gives a name.
+Greeting ::= greeting(Peer, Name?).
+
+%% The person sees who offers and gives a choice.
+Choice   ::= choice(Peer, Constant?).
+
+exported procedure (Card)*respond(Offer?, Stream(Decision)).
+(card(From?, Answer))*respond(offer(From), [decided(Answer?, From?)]) :-
     ground(From?) | true.
-*(Choice, From?)
-pick(_, offer(From), [picked(Choice?)]) :-
-    ground(From?), ground(Choice?) | true.
+
+exported procedure (Greeting)*greet(Offer?, Stream(Decision)).
+(greeting(From?, Name))*greet(offer(From), [greeted(Name?, From?)]) :-
+    ground(From?) | true.
+
+exported procedure (Choice)*pick(Offer?, Stream(Decision)).
+(choice(From?, C))*pick(offer(From), [picked(C?)]) :-
+    ground(From?) | true.

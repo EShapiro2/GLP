@@ -3,7 +3,16 @@
 /// Widget").
 ///
 /// A draw `draw(Id, W, V)` names its widget `W` and carries its view `V`, each
-/// position the person writes marked `input(P)` (bridge.dart).  "A question's
+/// position the person writes marked `input(P)`, each widget position the
+/// program has not yet written whole marked `pending(P)`, and a stream the
+/// program writes its elements so far, its unwritten tail not drawn
+/// (bridge.dart).  The family draws a pending position by the widget of its
+/// type, as a placeholder that takes no input, and the questions beside it
+/// as ever, offered at once (vGLP 118e04d, Definition "Construct Process":
+/// "each widget position the program has not yet written whole --- the
+/// root, a field, an element of any stream, the thread's included --- drawn
+/// as pending, and a stream's unwritten tail not drawn, so that the
+/// questions beside it are offered at once").  "A question's
 /// type fixes a construct's semantic content --- what it shows, what it
 /// takes, and the answer each submission forms --- and nothing of its
 /// layout": the family decides what each widget looks like, and this file is
@@ -32,7 +41,10 @@
 ///     open, one element per submission, `input_box(W)`; a list the person
 ///     writes: the same, with a button that ends the list, `input_list(W)`,
 ///     the button granting [listEnd], `[end]`; a stream the program writes:
-///     a thread, `thread`.
+///     a thread, `thread`, and one whose elements hold questions,
+///     `thread(W)`, each element drawn as it arrives by `W`, the widget of
+///     its type, each question in it by the field of its position (vGLP #8
+///     Cowork, 2026-10-11 15:47 UTC, item 2).
 ///
 /// A widget a declaration names (`T =::= W`) is a constant naming a Dart
 /// widget: "In the grassroots app, W names a Dart widget, a small
@@ -93,6 +105,15 @@ ValueKey<String> endKey(int id, List<int> at) =>
 /// A path as the boundary writes it, `[]`, `[2]`, `[1, 2]`.
 String pathText(List<int> at) => '[${at.join(', ')}]';
 
+/// The position of element [k], from 0, of the list at [at]: a list cell is
+/// `'.'(H, T)`, its element at its argument 1 and its tail at its argument 2,
+/// so [at] with 2 for each element before it and then 1 (vGLP, Definition
+/// "Construct Process": each question "at its path from the root of the
+/// interactive variable's term"; `glp_runtime/lib/vglp/constructs.dart`,
+/// `_presentSeq`).
+List<int> elementAt(List<int> at, int k) =>
+    [...at, for (var j = 0; j < k; j++) 2, 1];
+
 /// One construct, drawn by [family] from its widget and view.
 class ConstructView extends StatefulWidget {
   final OpenConstruct construct;
@@ -152,13 +173,33 @@ class _ConstructViewState extends State<ConstructView> {
   // === A position of the view ==============================================
 
   /// The widget [w] over the view [v] at position [at]: a question where the
-  /// view marks one, `input(P)`, and otherwise what the program wrote.
+  /// view marks one, `input(P)`; a position the program has not yet written
+  /// whole where it marks one pending, `pending(P)`; and otherwise what the
+  /// program wrote.
   Widget _node(GTerm w, GTerm v, List<int> at) {
     final p = questionAt(v);
     if (p != null) {
       return _question(w, p, [for (final i in p.items) (i as GInt).value]);
     }
+    final q = pendingAt(v);
+    if (q != null) return _pending(w, q);
     return _shown(w, v, at);
+  }
+
+  /// The widget position at `P` that the program has not yet written whole,
+  /// `pending(P)`, drawn by [w], the widget of its type: a placeholder naming
+  /// the form where [w] is one, taking no input, and drawn again once the
+  /// program writes the position.
+  Widget _pending(GTerm w, GList p) {
+    final at = [for (final i in p.items) (i as GInt).value];
+    final (kind, ws) = ctorArgs(w);
+    final form = kind == 'form' && _isForm(ws) ? _name(ws[0]) : null;
+    return _keyed(
+        'pending',
+        at,
+        Text(form == null ? '\u2026' : '$form \u2026',
+            style: TextStyle(
+                color: Colors.grey.shade600, fontStyle: FontStyle.italic)));
   }
 
   /// A position the program writes, drawn by its widget.
@@ -168,6 +209,8 @@ class _ConstructViewState extends State<ConstructView> {
       case 'shown' when ws.isEmpty:
         return _keyed('shown', at, Text(displayText(v)));
       case 'thread' when ws.isEmpty:
+        // Its elements so far, each shown, or pending where the program has
+        // not yet written it whole, at the position it carries.
         final items = v is GList ? v.items : [v];
         return _keyed(
             'thread',
@@ -178,7 +221,28 @@ class _ConstructViewState extends State<ConstructView> {
                 for (final e in items)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Text(displayText(e)),
+                    child: pendingAt(e) != null
+                        ? _pending(const GAtom('shown'), pendingAt(e)!)
+                        : Text(displayText(e)),
+                  ),
+              ],
+            ));
+      case 'thread' when ws.length == 1 && v is GList:
+        // A stream or a list the program writes whose elements hold
+        // questions: each element drawn by the widget of its type, at its
+        // own position --- the path of argument indices through the list
+        // cells, 2 for each element before it and then 1 --- and each
+        // question in it by the field of its position.
+        return _keyed(
+            'thread',
+            at,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (var k = 0; k < v.items.length; k++)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    child: _node(ws[0], v.items[k], elementAt(at, k)),
                   ),
               ],
             ));
@@ -239,7 +303,8 @@ class _ConstructViewState extends State<ConstructView> {
   }
 
   /// A picker: the list the program writes, each element a button granting
-  /// itself at the choice's position.
+  /// itself at the choice's position, an element the program has not yet
+  /// written whole drawn pending and granting nothing.
   Widget _picker(GTerm v, List<int> at) {
     final (_, args) = ctorArgs(v);
     GList? list;
@@ -264,10 +329,13 @@ class _ConstructViewState extends State<ConstructView> {
           runSpacing: 4,
           children: [
             for (final e in list.items)
-              OutlinedButton(
-                onPressed: () => widget.grant(p, e),
-                child: Text(displayText(e)),
-              ),
+              if (pendingAt(e) != null)
+                _pending(const GAtom('shown'), pendingAt(e)!)
+              else
+                OutlinedButton(
+                  onPressed: () => widget.grant(p, e),
+                  child: Text(displayText(e)),
+                ),
           ],
         ));
   }

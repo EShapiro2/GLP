@@ -57,6 +57,7 @@ Future<void> main(List<String> argv) async {
 
   final network = HeadlessGrassrootsNetwork(
     identity: identity,
+    rendezvousServers: const [],
     sodium: sodium,
   );
   final servicePk = _bytes(args['peer'] as String);

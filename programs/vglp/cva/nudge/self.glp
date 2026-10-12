@@ -2,17 +2,19 @@
 %% The play of the canonical CVA platform of vGLP's contract nudge
 %% (../contracts.glp, contract_named(nudge, C): the social network's befriend
 %% and an unguarded nudge), platform.vglp, which programs/vglp/cva/compile.sh
-%% prints from it.  It runs two agents, alice and bob, their persons scripted
-%% and paced on their threads (../self.glp), and gives each person's log: the
-%% thread, with gave(C, A) where the person answers a card.
+%% prints from it: two-phase commit coordinated by the initiating agent (vGLP,
+%% Section 3.2, Definition "Canonical CVA Platform").  It runs two agents,
+%% alice and bob, their persons scripted and paced on their threads
+%% (../self.glp), and gives each person's log, the thread with gave(K, A) where
+%% the person answers a card, and the network's log of the cargoes it carries.
 %%
 %% play_nudge: alice proposes befriending bob, bob is asked and answers yes,
-%%   and it commits at both.  Each is then the opener of the unguarded class
-%%   of nudge whose first role it is in (vGLP, Section 3.2, the paragraph on act
-%%   schemas), and its machine opens it on a tick, its Concur, with no person
-%%   asked (Section 5.4, "The canonical platform is structured": Propose of an
-%%   unguarded class, by its opener, on a tick); the other's machine concurs on
-%%   the vote, and the class commits at both.
+%%   and it commits.  Each is then the opener of the unguarded class of nudge
+%%   whose first role it is in (vGLP, Section 5.4, the paragraph on act
+%%   schemas), and its machine proposes it on a tick (Section 5.4, "The
+%%   canonical platform is structured": Propose of an unguarded class, by its
+%%   opener, on a tick); the attempt asks nobody, the other's machine votes on
+%%   its start, and it commits at both.
 %%
 %% The types of platform.vglp, written again for the declarations of the
 %% procedures imported from its compiled module.
@@ -20,16 +22,15 @@
 
 Class    ::= befriend(Peer, Peer) ; nudge(Peer, Peer).
 Request  ::= propose(Class) ; known(Peer).
-Verdict  ::= will ; yes ; no.
-Vote     ::= vote(Peer, Integer, Class, Verdict).
-Content  ::= hello(Peer) ; cargo(Peer, Integer, Vote).
-Net      ::= msg(Peer, Content).
-Txn      ::= propose(Class) ; relay(Class) ; ask(Class) ; answer(Class)
-           ; concur(Class) ; decline(Class) ; commit(Class) ; abort(Class)
-           ; record(Peer).
-Session  ::= session(Stream(Request)?, Stream(Txn)).
 YesNo    ::= yes ; no.
-Attempt  ::= attempt(Class, Integer).
+Decision ::= commit ; abort.
+Attempt  ::= attempt(Peer, Integer, Class).
+Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision).
+Content  ::= hello(Peer) ; cargo(Peer, Integer, Cargo).
+Net      ::= msg(Peer, Content).
+Txn      ::= propose(Attempt) ; start(Attempt) ; answer(Attempt)
+           ; tally(Attempt) ; outcome(Attempt) ; discover(Peer).
+Session  ::= session(Stream(Request)?, Stream(Txn)).
 Card     ::= card(Attempt, YesNo?).
 Question ::= session_w(Session) ; card_w(Card).
 Ask(Q)   ::= ask(Constant, Q).
@@ -39,18 +40,18 @@ imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
 imported procedure platform#dispatch(Stream(Ask(Question))?,
     Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
 
-exported procedure play_nudge(Stream(_), Stream(_)).
-play_nudge(LA?, LB?) :-
-    pair([req(known(bob)), wait(record(bob)),
+exported procedure play_nudge(Stream(_), Stream(_), Stream(Sent(Cargo))).
+play_nudge(LA?, LB?, N?) :-
+    pair([req(known(bob)), wait(discover(bob)),
           req(propose(befriend(alice, bob)))],
-         [req(known(alice)), wait(record(alice)),
+         [req(known(alice)), wait(discover(alice)),
           card(befriend(alice, bob), yes)],
-         LA, LB).
+         LA, LB, N).
 
 %% alice and bob, each with its dispatcher and scripted person, their networks
 %% joined.
-procedure pair(Steps?, Steps?, Stream(_), Stream(_)).
-pair(SA, SB, LA?, LB?) :-
+procedure pair(Steps?, Steps?, Stream(_), Stream(_), Stream(Sent(Cargo))).
+pair(SA, SB, LA?, LB?, N?) :-
     platform # agent(alice, InA?, OutA, AsA),
     platform # dispatch(AsA?, ch(GA?, DA), _),
     person(DA?, GA, ps(nosess, [], [], SA?), LA),
@@ -58,4 +59,4 @@ pair(SA, SB, LA?, LB?) :-
     platform # dispatch(AsB?, ch(GB?, DB), _),
     person(DB?, GB, ps(nosess, [], [], SB?), LB),
     merge(OutA?, OutB?, Net),
-    route(Net?, alice, InA, bob, InB).
+    route(Net?, alice, InA, bob, InB, N).

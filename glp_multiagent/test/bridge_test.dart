@@ -59,11 +59,13 @@ class _Person {
 
   _Person._(this.tester, this.agent, this.ui);
 
-  static Future<_Person> boot(WidgetTester tester, String entry) async {
+  /// Boot [entry] of the fixture in programs/tests/vglp/[dir].
+  static Future<_Person> boot(WidgetTester tester, String entry,
+      {String dir = 'bridge'}) async {
     final programs = programsDir();
     final agent = AgentRuntime(
       agentId: 'bob',
-      program: '$programs/tests/vglp/bridge',
+      program: '$programs/tests/vglp/$dir',
       goalLabel: '$entry/3',
       rootSelfGlpPath: '$programs/self.glp',
     );
@@ -143,6 +145,14 @@ class _Person {
 
   Future<void> submit(OpenConstruct c, [List<int> at = const []]) =>
       tap(find.byKey(submitKey(c.id, at)));
+
+  /// Send the program the person's word [t], a grant that is not input(Id,
+  /// P, R), which the dispatcher passes to the program on its own end of the
+  /// person channel (programs/vglp/dispatcher.glp, split_grants/3).
+  Future<void> say(GTerm t) async {
+    _unsent.add(t);
+    await settle();
+  }
 
   bool submittable(OpenConstruct c, [List<int> at = const []]) =>
       tester.widget<ElevatedButton>(find.byKey(submitKey(c.id, at))).onPressed !=
@@ -398,6 +408,316 @@ void main() {
     expect(p.ui.bridge.constructs, isEmpty);
   });
 
+  // vGLP #8 Cowork, 2026-10-11 15:47 UTC, item 2, Task D: a stream or a list
+  // the program writes whose elements hold questions.  "Present hands the
+  // person each element with the writers inside it (Definition "vmaGLP
+  // Transition System"), each such writer a question (Definition
+  // "Question"), drawn by Definition "Widget Declaration" (a stream the
+  // program writes: a list or a thread; a question by the widget of its
+  // type).  Draw each element as it is presented and take the answers to its
+  // questions as any grant."  The fixture is programs/tests/vglp/cards.
+  group('a stream or a list the program writes whose elements hold questions',
+      () {
+    const card = "form(card, [field('Integer', shown), "
+        "field('YesNo', buttons([yes, no]))])";
+
+    /// The button [label] of the question at [at] of construct [c].
+    Finder button(OpenConstruct c, List<int> at, String label) =>
+        find.descendant(
+            of: find.byKey(nodeKey(c.id, 'buttons', at)),
+            matching: find.widgetWithText(ElevatedButton, label));
+
+    testWidgets(
+        'a panel of two cards, a list the program writes: one construct, the '
+        'list a thread of cards, each drawn by its widget at its own '
+        'position, answered out of order, and the program receiving both '
+        'answers', (tester) async {
+      final p = await _Person.boot(tester, 'panel_init', dir: 'cards');
+      final panel =
+          p.the("form(panel, [field('List(Card)', thread($card))])");
+      expect(p.ui.bridge.constructs, hasLength(1));
+      // The two cards presented at once, the second while the first's
+      // question is open: the k-th card's answer at the path through the
+      // list cells, [1, 1, 2] and [1, 2, 1, 2].
+      expect(formatTerm(panel.view),
+          'panel([card(1, input([1, 1, 2])), card(2, input([1, 2, 1, 2]))])');
+      expect(find.byKey(nodeKey(panel.id, 'thread', [1])), findsOneWidget);
+      for (final (n, at) in [
+        ('1', [1, 1]),
+        ('2', [1, 2, 1])
+      ]) {
+        expect(find.byKey(nodeKey(panel.id, 'form', at)), findsOneWidget);
+        final shown = find.byKey(nodeKey(panel.id, 'shown', [...at, 1]));
+        expect(find.descendant(of: shown, matching: find.text(n)),
+            findsOneWidget);
+        expect(find.byKey(nodeKey(panel.id, 'buttons', [...at, 2])),
+            findsOneWidget);
+      }
+      expect(p.screen, isEmpty);
+
+      // The second card answered first: its grant reaches its question, and
+      // the program its answer; the panel stays, the first card open.
+      await p.tap(button(panel, [1, 2, 1, 2], 'no'));
+      expect(p.grants.last, 'input(${panel.id}, [1, 2, 1, 2], no)');
+      expect(p.screen, ['got(2, no)']);
+      p.open(panel);
+
+      await p.tap(button(panel, [1, 1, 2], 'yes'));
+      expect(p.grants.last, 'input(${panel.id}, [1, 1, 2], yes)');
+      expect(p.screen, ['got(2, no)', 'got(1, yes)']);
+      // Every question answered and the list closed: withdrawn.
+      p.withdrawn(panel);
+      expect(p.grants, [
+        'input(${panel.id}, [1, 2, 1, 2], no)',
+        'input(${panel.id}, [1, 1, 2], yes)',
+      ]);
+    });
+
+    testWidgets(
+        'a stream of cards the program writes: its third card drawn as the '
+        'program writes it, once the first two are answered, and answered '
+        'as they were', (tester) async {
+      final p = await _Person.boot(tester, 'deal_init', dir: 'cards');
+      final deal = p.the('thread($card)');
+      expect(formatTerm(deal.view),
+          '[card(1, input([1, 2])), card(2, input([2, 1, 2]))]');
+      expect(find.byKey(nodeKey(deal.id, 'buttons', [2, 2, 1, 2])),
+          findsNothing);
+
+      // One answered: the program waits for the other, and writes nothing.
+      await p.tap(button(deal, [1, 2], 'yes'));
+      expect(p.grants.last, 'input(${deal.id}, [1, 2], yes)');
+      expect(p.screen, isEmpty);
+      expect(formatTerm(p.ui.bridge.construct(deal.id)!.view),
+          '[card(1, input([1, 2])), card(2, input([2, 1, 2]))]');
+
+      // Both answered: the program receives them and writes the third card,
+      // drawn under the first two at its own position.
+      await p.tap(button(deal, [2, 1, 2], 'yes'));
+      expect(p.grants.last, 'input(${deal.id}, [2, 1, 2], yes)');
+      expect(p.screen, ['got(1, yes)', 'got(2, yes)']);
+      p.open(deal);
+      expect(
+          formatTerm(p.ui.bridge.construct(deal.id)!.view),
+          '[card(1, input([1, 2])), card(2, input([2, 1, 2])), '
+          'card(3, input([2, 2, 1, 2]))]');
+      final third = find.byKey(nodeKey(deal.id, 'shown', [2, 2, 1, 1]));
+      expect(find.descendant(of: third, matching: find.text('3')),
+          findsOneWidget);
+
+      await p.tap(button(deal, [2, 2, 1, 2], 'no'));
+      expect(p.grants.last, 'input(${deal.id}, [2, 2, 1, 2], no)');
+      expect(p.screen, ['got(1, yes)', 'got(2, yes)', 'got(3, no)']);
+      // The stream closed and every question answered: withdrawn.
+      p.withdrawn(deal);
+    });
+
+    testWidgets(
+        'a stream the program writes whose elements are themselves '
+        'questions: each element drawn by its type\'s widget at its own '
+        'position', (tester) async {
+      final p = await _Person.boot(tester, 'votes_init', dir: 'cards');
+      final votes = p.the('thread(buttons([yes, no]))');
+      expect(formatTerm(votes.view), '[input([1]), input([2, 1])]');
+      await p.tap(button(votes, [2, 1], 'no'));
+      expect(p.grants.last, 'input(${votes.id}, [2, 1], no)');
+      expect(p.screen, ['got(2, no)']);
+      p.open(votes);
+      await p.tap(button(votes, [1], 'yes'));
+      expect(p.grants.last, 'input(${votes.id}, [1], yes)');
+      expect(p.screen, ['got(2, no)', 'got(1, yes)']);
+      p.withdrawn(votes);
+    });
+  });
+
+  // The pending drawing (vGLP #8 Cowork, 2026-10-11 20:48 UTC, "19:09 (D,
+  // Q1)", and 22:51 UTC, Udi approved; vGLP 118e04d, Definition "Construct
+  // Process": "each widget position the program has not yet written whole
+  // --- the root, a field, an element of any stream, the thread's included
+  // --- drawn as pending, and a stream's unwritten tail not drawn, so that
+  // the questions beside it are offered at once").  The fixture is
+  // programs/tests/vglp/pending: the program writes what it leaves unwritten
+  // from the person's word, peer(P) or word(W).
+  group('a position the program has not yet written whole is drawn pending',
+      () {
+    const card = "form(card, [field('Peer', shown), "
+        "field('YesNo', buttons([yes, no]))])";
+
+    /// The button [label] of the question at [at] of construct [c].
+    Finder button(OpenConstruct c, List<int> at, String label) =>
+        find.descendant(
+            of: find.byKey(nodeKey(c.id, 'buttons', at)),
+            matching: find.widgetWithText(ElevatedButton, label));
+
+    /// The text [t] inside the [kind] widget at [at] of construct [c].
+    Finder text(OpenConstruct c, String kind, List<int> at, String t) =>
+        find.descendant(
+            of: find.byKey(nodeKey(c.id, kind, at)), matching: find.text(t));
+
+    testWidgets(
+        'a card whose Peer the program writes after the ask: the Peer drawn '
+        'pending, the question beside it offered at once, and the card drawn '
+        'again once the Peer is written', (tester) async {
+      final p = await _Person.boot(tester, 'late_init', dir: 'pending');
+      final c = p.the(card);
+      expect(formatTerm(c.view), 'card(pending([1]), input([2]))');
+      expect(find.byKey(nodeKey(c.id, 'pending', [1])), findsOneWidget);
+      expect(find.byKey(nodeKey(c.id, 'shown', [1])), findsNothing);
+      expect(button(c, [2], 'yes'), findsOneWidget);
+
+      await p.say(const GStruct('peer', [GAtom('bob')]));
+      expect(formatTerm(p.ui.bridge.construct(c.id)!.view),
+          'card(bob, input([2]))');
+      expect(find.byKey(nodeKey(c.id, 'pending', [1])), findsNothing);
+      expect(text(c, 'shown', [1], 'bob'), findsOneWidget);
+
+      await p.tap(button(c, [2], 'yes'));
+      expect(p.grants.last, 'input(${c.id}, [2], yes)');
+      expect(p.screen, ['got(0, yes)']);
+      p.withdrawn(c);
+    });
+
+    testWidgets(
+        'the same card answered while its Peer is still pending: the program '
+        'receives the answer, and the construct withdraws', (tester) async {
+      final p = await _Person.boot(tester, 'late_init', dir: 'pending');
+      final c = p.the(card);
+      expect(find.byKey(nodeKey(c.id, 'pending', [1])), findsOneWidget);
+      await p.tap(button(c, [2], 'no'));
+      expect(p.grants, ['input(${c.id}, [2], no)']);
+      expect(p.screen, ['got(0, no)']);
+      p.withdrawn(c);
+    });
+
+    testWidgets(
+        'a stream partly written: its first card pending, drawn by its '
+        'type\'s widget, its second\'s Peer pending, its third whole, its tail '
+        'not drawn; the third answered first and the second while its Peer '
+        'is pending; each card drawn again as it is written', (tester) async {
+      final p = await _Person.boot(tester, 'deal_init', dir: 'pending');
+      final d = p.the('thread($card)');
+      expect(
+          formatTerm(d.view),
+          '[pending([1]), card(pending([2, 1, 1]), input([2, 1, 2])), '
+          'card(bob, input([2, 2, 1, 2]))]');
+      // The first card pending at its own position, drawn by the card's
+      // widget, a form, as a placeholder naming it; the second's Peer
+      // pending beside its question.
+      expect(text(d, 'pending', [1], 'card \u2026'), findsOneWidget);
+      expect(find.byKey(nodeKey(d.id, 'pending', [2, 1, 1])), findsOneWidget);
+      expect(button(d, [1, 2], 'yes'), findsNothing);
+
+      // The third answered first: its grant passes the pending first card
+      // and the second card's question.
+      await p.tap(button(d, [2, 2, 1, 2], 'yes'));
+      expect(p.screen, ['got(3, yes)']);
+      expect(
+          formatTerm(p.ui.bridge.construct(d.id)!.view),
+          '[card(carol, input([1, 2])), card(pending([2, 1, 1]), '
+          'input([2, 1, 2])), card(bob, input([2, 2, 1, 2]))]');
+      expect(find.byKey(nodeKey(d.id, 'pending', [1])), findsNothing);
+      expect(text(d, 'shown', [1, 1], 'carol'), findsOneWidget);
+
+      // The second answered while its Peer is pending; then the Peer
+      // written, and the card drawn again.
+      await p.tap(button(d, [2, 1, 2], 'no'));
+      expect(p.screen, ['got(3, yes)', 'got(2, no)']);
+      await p.say(const GStruct('peer', [GAtom('dave')]));
+      expect(text(d, 'shown', [2, 1, 1], 'dave'), findsOneWidget);
+      expect(find.byKey(nodeKey(d.id, 'pending', [2, 1, 1])), findsNothing);
+
+      await p.tap(button(d, [1, 2], 'yes'));
+      expect(p.screen, ['got(3, yes)', 'got(2, no)', 'got(1, yes)']);
+      // Every card answered and the stream closed: withdrawn.
+      p.withdrawn(d);
+      expect(p.grants, [
+        'input(${d.id}, [2, 2, 1, 2], yes)',
+        'input(${d.id}, [2, 1, 2], no)',
+        'input(${d.id}, [1, 2], yes)',
+      ]);
+    });
+
+    testWidgets(
+        'a thread element written before its argument is bound: drawn '
+        'pending at its own position beside the question, then whole',
+        (tester) async {
+      final p = await _Person.boot(tester, 'board_init', dir: 'pending');
+      final b = p.the("form(board, [field('Stream(Note)', thread), "
+          "field('YesNo', buttons([yes, no]))])");
+      expect(formatTerm(b.view), 'board([note(first), pending([1, 2, 1])], '
+          'input([2]))');
+      expect(text(b, 'thread', [1], 'first'), findsOneWidget);
+      expect(find.byKey(nodeKey(b.id, 'pending', [1, 2, 1])), findsOneWidget);
+      expect(button(b, [2], 'yes'), findsOneWidget);
+
+      await p.say(const GStruct('word', [GAtom('second')]));
+      expect(formatTerm(p.ui.bridge.construct(b.id)!.view),
+          'board([note(first), note(second)], input([2]))');
+      expect(find.byKey(nodeKey(b.id, 'pending', [1, 2, 1])), findsNothing);
+      expect(text(b, 'thread', [1], 'second'), findsOneWidget);
+
+      await p.tap(button(b, [2], 'yes'));
+      expect(p.screen, ['got(0, yes)']);
+      p.withdrawn(b);
+    });
+  });
+
+  // GLP, 2026-10-11 12:59 UTC, "03:24": the one-clause fixture,
+  // programs/tests/vglp/one_clause, restated in vGLP's syntax --- three
+  // volitional procedures, each with one clause, its question in writer mode,
+  // the offering peer shown --- runs through the dispatcher and the bridge.
+  // Its entry asks all three at once of three peers, and puts the decisions
+  // on the program's own output to the person, which the dispatcher merges
+  // with the draws.
+  testWidgets(
+      'the one-clause program: its three cards drawn at once, the offering '
+      'peer shown and the person\'s position marked, each answered through '
+      'the screen, its decision reaching the program, and withdrawn',
+      (tester) async {
+    final p = await _Person.boot(tester, 'responder_init', dir: 'one_clause');
+    final card = p.the("form(card, [field('Peer', shown), "
+        "field('YesNo', buttons([yes, no]))])");
+    final greeting = p.the("form(greeting, [field('Peer', shown), "
+        "field('Name', text)])");
+    final choice = p.the("form(choice, [field('Peer', shown), "
+        "field('Constant', text)])");
+    expect(p.ui.bridge.constructs, hasLength(3));
+    expect(formatTerm(card.view), 'card(bob, input([2]))');
+    expect(formatTerm(greeting.view), 'greeting(carol, input([2]))');
+    expect(formatTerm(choice.view), 'choice(dana, input([2]))');
+    for (final (c, peer) in [(card, 'bob'), (greeting, 'carol'), (choice, 'dana')]) {
+      final shown = find.byKey(nodeKey(c.id, 'shown', [1]));
+      expect(find.descendant(of: shown, matching: find.text(peer)),
+          findsOneWidget, reason: 'the offering peer shown before any input');
+    }
+    expect(p.screen, isEmpty);
+
+    // respond's card: the tap grants no, an answer its clause takes.
+    await p.tap(find.descendant(
+        of: find.byKey(nodeKey(card.id, 'buttons', [2])),
+        matching: find.widgetWithText(ElevatedButton, 'no')));
+    expect(p.grants.last, 'input(${card.id}, [2], no)');
+    expect(p.screen, contains('decided(no, bob)'));
+    p.withdrawn(card);
+
+    // greet's card: the person gives a name.
+    await p.type(greeting, 'text', [2], 'alice');
+    await p.submit(greeting, [2]);
+    expect(p.grants.last, 'input(${greeting.id}, [2], alice)');
+    expect(p.screen, contains('greeted(alice, carol)'));
+    p.withdrawn(greeting);
+
+    // pick's card: the person gives a choice.
+    await p.type(choice, 'text', [2], 'go');
+    await p.submit(choice, [2]);
+    expect(p.grants.last, 'input(${choice.id}, [2], go)');
+    expect(p.screen, contains('picked(go)'));
+    p.withdrawn(choice);
+
+    expect(p.ui.bridge.constructs, isEmpty);
+    expect(p.screen, hasLength(3));
+  });
+
   group('the bridge on the person channel', () {
     late List<String> sent;
     late UiRuntime r;
@@ -583,6 +903,44 @@ void main() {
       await tester.tap(find.byKey(submitKey(7, [])));
       await tester.pump();
       expect(sent, ['input(7, [], mint(3, 30))']);
+    });
+
+    testWidgets(
+        'a widget position the program has not yet written whole, pending(P), '
+        'is drawn by its type\'s widget as a placeholder taking no input, the '
+        'questions beside it offered at once, and drawn again once written '
+        '(vGLP 118e04d, Definition "Construct Process")', (tester) async {
+      const card = "form(card, [field('Peer', shown), "
+          "field('YesNo', buttons([yes, no]))])";
+      // The root pending: the card's form named, nothing to answer.
+      r.handle(fixtureTerm('draw(8, $card, pending([]))'));
+      // A field pending beside a question.
+      r.handle(fixtureTerm('draw(9, $card, card(pending([1]), input([2])))'));
+      // A picker whose list's second element is pending.
+      r.handle(fixtureTerm('draw(10, picker, '
+          'choose([alice, pending([1, 2, 1])], input([2])))'));
+      await surface(tester);
+      expect(find.byKey(nodeKey(8, 'pending', [])), findsOneWidget);
+      expect(inside(8, find.text('card \u2026')), findsOneWidget);
+      expect(inside(8, find.byType(ElevatedButton)), findsNothing);
+      expect(find.byKey(nodeKey(9, 'pending', [1])), findsOneWidget);
+      expect(inside(9, find.text('\u2026')), findsOneWidget);
+      await tester.tap(inside(9, find.widgetWithText(ElevatedButton, 'yes')));
+      await tester.pump();
+      expect(sent, ['input(9, [2], yes)']);
+      expect(find.byKey(nodeKey(10, 'pending', [1, 2, 1])), findsOneWidget);
+      expect(inside(10, find.byType(OutlinedButton)), findsOneWidget);
+      // Written: drawn again, the placeholder gone.
+      r.handle(fixtureTerm('draw(8, $card, card(bob, input([2])))'));
+      r.handle(fixtureTerm('draw(10, picker, '
+          'choose([alice, bob], input([2])))'));
+      await tester.pump();
+      expect(find.byKey(nodeKey(8, 'pending', [])), findsNothing);
+      expect(inside(8, find.text('bob')), findsOneWidget);
+      expect(inside(8, find.byType(ElevatedButton)), findsNWidgets(2));
+      expect(find.byKey(nodeKey(10, 'pending', [1, 2, 1])), findsNothing);
+      expect(inside(10, find.byType(OutlinedButton)), findsNWidgets(2));
+      expect(find.text('No widget', findRichText: true), findsNothing);
     });
 
     test('a real crosses the boundary as a Real', () {

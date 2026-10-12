@@ -1,6 +1,7 @@
 %% local.glp --- whether a contract of act schemas is a local and effective
-%% specification (vGLP, Section 3.2, the paragraph on act schemas and the
-%% sentence after Definition "Effective Local Specification"), and, where it is
+%% specification with simple guards (vGLP, Section 5.4, the paragraph on act
+%% schemas and the sentence after it; Section 3.2, Definition "Volition-Guarded
+%% Specification, Participants, Guard Sets, Simple Guards"), and, where it is
 %% not, the lines saying why.
 %%
 %% Local: "a contract written as act schemas ... is a local specification when
@@ -32,10 +33,20 @@
 %% in an atom required or forbidden at a participant makes the requirements
 %% there differ for some binding of it.
 %%
-%% Effective: "a contract of act schemas is effective where the atoms each
-%% unguarded schema requires at its first role name every other role and every
-%% variable of its deleted and added atoms"; otherwise refused, the schema
-%% named.
+%% Simple guards: the guard sets of a class are "the minimal sets among the
+%% people in the marked roles of its schema-bindings", and the specification
+%% has simple guards "if every class has one guard set, or guard sets of one
+%% person each"; a class with two minimal guard sets not both of one person is
+%% refused, two schema-bindings with such sets named (vGLP 2026-10-11 22:59
+%% UTC, Q1, Udi approved).
+%%
+%% Effective: "a contract of act schemas is effective where the schema-bindings
+%% of each unguarded class require and forbid the same atoms at every
+%% participant, and the atoms each unguarded schema requires at its first role
+%% name every other role and every variable of its deleted and added atoms";
+%% otherwise refused, the two schema-bindings or the schema named.  A class is
+%% unguarded where one of its schema-bindings has no marked role, the empty set
+%% then its one minimal guard set.
 
 Val      ::= person(Integer) ; sp(Integer, Integer) ; free.
 Vals     ::= [] ; [Val | Vals].
@@ -50,24 +61,67 @@ Mate     ::= mate(Constant, RoleSpecs, Binding).
 Mates    ::= [] ; [Mate | Mates].
 Found    ::= found(Val) ; unbound.
 Match    ::= match(Binding) ; nomatch.
-Pair     ::= nonlocal(Constant, RoleSpecs, Binding, Constant, RoleSpecs, Binding).
+Pair     ::= nonlocal(Constant, RoleSpecs, Binding, Constant, RoleSpecs, Binding)
+           ; uneffective(Constant, RoleSpecs, Binding, Constant, RoleSpecs, Binding)
+           ; nonsimple(Constant, RoleSpecs, Binding, Constant, RoleSpecs, Binding).
 Pairs    ::= [] ; [Pair | Pairs].
+Gd       ::= gd(Constant, RoleSpecs, Binding, Ints).
+Gds      ::= [] ; [Gd | Gds].
+GdRes    ::= gdf(Gd) ; nogd.
 
 exported procedure faults(Contract?, Stream(_)).
 faults(C, Ls?) :- ground(C?) |
     local_pairs(C?, C?, Ps),
-    local_lines(Ps?, L1),
+    pair_lines(Ps?, L1),
     effective_lines(C?, L2),
     lapp(L1?, L2?, Ls).
 
-%% The first pair found is named.
-procedure local_lines(Pairs?, Stream(_)).
-local_lines([], []).
-local_lines([nonlocal(N1, Rs1, B1, N2, Rs2, B2)|_],
-        ['%% it is not a local specification (vGLP, Section 3.2, the paragraph on act schemas):',
+%% The first pair found of each kind is named: not local, not simple, not
+%% effective.
+procedure pair_lines(Pairs?, Stream(_)).
+pair_lines(Ps, L?) :- ground(Ps?) |
+    first_of(nonlocal, Ps?, F1),
+    first_of(nonsimple, Ps?, F2),
+    first_of(uneffective, Ps?, F3),
+    fault_lines(F1?, L1),
+    fault_lines(F2?, L2),
+    fault_lines(F3?, L3),
+    lapp(L2?, L3?, L23),
+    lapp(L1?, L23?, L).
+procedure kind_of(Pair?, Constant).
+kind_of(nonlocal(_, _, _, _, _, _), nonlocal).
+kind_of(uneffective(_, _, _, _, _, _), uneffective).
+kind_of(nonsimple(_, _, _, _, _, _), nonsimple).
+procedure first_of(Constant?, Pairs?, Pairs).
+first_of(_, [], []).
+first_of(K, [P|Ps], F?) :- ground(K?), ground(P?) |
+    kind_of(P?, K1),
+    first_of1(K1?, K?, P?, Ps?, F).
+procedure first_of1(Constant?, Constant?, Pair?, Pairs?, Pairs).
+first_of1(K1, K, P, _, [P?]) :- K1? =?= K? | true.
+first_of1(_, K, _, Ps, F?) :- otherwise | first_of(K?, Ps?, F).
+procedure fault_lines(Pairs?, Stream(_)).
+fault_lines([], []).
+fault_lines([nonlocal(N1, Rs1, B1, N2, Rs2, B2)|_],
+        ['%% it is not a local specification (vGLP, Section 5.4, the paragraph on act schemas):',
          '%% two schema-bindings delete and add the same atoms at each participant and require',
          '%% or forbid different atoms at two participants, a variable free being sent anywhere:',
          T1?, T2?]) :-
+    two_terms(N1?, Rs1?, B1?, N2?, Rs2?, B2?, T1, T2).
+fault_lines([nonsimple(N1, Rs1, B1, N2, Rs2, B2)|_],
+        ['%% it does not have simple guards (vGLP, Section 3.2, Definition "Volition-Guarded',
+         '%% Specification, Participants, Guard Sets, Simple Guards"): a class has two minimal guard',
+         '%% sets, not both of one person, those of the marked roles of these schema-bindings:',
+         T1?, T2?]) :-
+    two_terms(N1?, Rs1?, B1?, N2?, Rs2?, B2?, T1, T2).
+fault_lines([uneffective(N1, Rs1, B1, N2, Rs2, B2)|_],
+        ['%% it is not effective (vGLP, Section 5.4, the sentence after the paragraph on act schemas):',
+         '%% two schema-bindings of an unguarded class require or forbid different atoms at a',
+         '%% participant, a variable free being sent anywhere:',
+         T1?, T2?]) :-
+    two_terms(N1?, Rs1?, B1?, N2?, Rs2?, B2?, T1, T2).
+procedure two_terms(Constant?, RoleSpecs?, Binding?, Constant?, RoleSpecs?, Binding?, _, _).
+two_terms(N1, Rs1, B1, N2, Rs2, B2, T1?, T2?) :-
     ground(N1?), ground(Rs1?), ground(B1?), ground(N2?), ground(Rs2?), ground(B2?) |
     sb_term(N1?, Rs1?, B1?, S1),
     sb_term(N2?, Rs2?, B2?, S2),
@@ -119,7 +173,7 @@ effective_one(no, Nm, Rs, L?) :- ground(Rs?), ground(Nm?) |
     effective_one1(Ok?, Nm?, L).
 procedure effective_one1(YesNo?, Constant?, Stream(_)).
 effective_one1(yes, _, []).
-effective_one1(no, Nm, ['%% it is not effective (vGLP, Section 3.2, the sentence after Definition "Effective Local Specification"):',
+effective_one1(no, Nm, ['%% it is not effective (vGLP, Section 5.4, the sentence after the paragraph on act schemas):',
         '%% an unguarded schema whose first role requires no atom naming some other role, or',
         '%% some variable of an atom it deletes or adds:', T?]) :-
     ground(Nm?) | T =.. ['%% the schema', Nm?].
@@ -173,21 +227,125 @@ binding_pairs(Pt, B, Nm, Rs, C, Ps?) :- ground(Pt?) |
     binding_pairs1(V?, Pt?, B?, Nm?, Rs?, C?, Ps).
 procedure binding_pairs1(YesNo?, Parts?, Binding?, Constant?, RoleSpecs?, Contract?, Pairs).
 binding_pairs1(no, _, _, _, _, _, []).
+%% The class of the schema-binding: its mates compared with it, at two
+%% participants for locality and, where the class is unguarded, at one for
+%% effectiveness; and its minimal guard sets.
 binding_pairs1(yes, Pt, B, Nm, Rs, C, Ps?) :- ground(Pt?) |
     mates_of(C?, Pt?, Ms),
-    compare_mates(Ms?, Pt?, Nm?, Rs?, B?, Ps).
-procedure compare_mates(Mates?, Parts?, Constant?, RoleSpecs?, Binding?, Pairs).
-compare_mates([], _, _, _, _, []).
-compare_mates([mate(N2, Rs2, B2)|Ms], Pt, Nm, Rs, B, Ps?) :-
-    ground(N2?), ground(Rs2?), ground(B2?), ground(Pt?), ground(Nm?), ground(Rs?), ground(B?) |
+    class_faults(Ms?, Pt?, Nm?, Rs?, B?, Ps).
+procedure class_faults(Mates?, Parts?, Constant?, RoleSpecs?, Binding?, Pairs).
+class_faults(Ms, Pt, Nm, Rs, B, Ps?) :- ground(Ms?) |
+    mates_guards(Ms?, Gs),
+    class_faults1(Gs?, Ms?, Pt?, Nm?, Rs?, B?, Ps).
+procedure class_faults1(Gds?, Mates?, Parts?, Constant?, RoleSpecs?, Binding?, Pairs).
+class_faults1(Gs, Ms, Pt, Nm, Rs, B, Ps?) :- ground(Gs?) |
+    some_unguarded(Gs?, Ug),
+    compare_mates(Ms?, Ug?, Pt?, Nm?, Rs?, B?, P1),
+    simple_fault(Gs?, P2),
+    app(P1?, P2?, Ps).
+procedure compare_mates(Mates?, YesNo?, Parts?, Constant?, RoleSpecs?, Binding?, Pairs).
+compare_mates([], _, _, _, _, _, []).
+compare_mates([mate(N2, Rs2, B2)|Ms], Ug, Pt, Nm, Rs, B, Ps?) :-
+    ground(N2?), ground(Rs2?), ground(B2?), ground(Ug?), ground(Pt?), ground(Nm?), ground(Rs?),
+    ground(B?) |
     parts_people(Pt?, Q),
     differing(Q?, Rs?, B?, Rs2?, B2?, K),
-    compare_one(K?, nonlocal(Nm?, Rs?, B?, N2?, Rs2?, B2?), P1),
-    compare_mates(Ms?, Pt?, Nm?, Rs?, B?, P2),
+    compare_one(K?, Ug?, Nm?, Rs?, B?, N2?, Rs2?, B2?, P1),
+    compare_mates(Ms?, Ug?, Pt?, Nm?, Rs?, B?, P2),
     app(P1?, P2?, Ps).
-procedure compare_one(Integer?, Pair?, Pairs).
-compare_one(K, P, [P?]) :- K? >= 2 | true.
-compare_one(K, _, []) :- K? < 2 | true.
+procedure compare_one(Integer?, YesNo?, Constant?, RoleSpecs?, Binding?, Constant?, RoleSpecs?,
+    Binding?, Pairs).
+compare_one(K, _, N1, Rs1, B1, N2, Rs2, B2, [nonlocal(N1?, Rs1?, B1?, N2?, Rs2?, B2?)]) :-
+    K? >= 2 | true.
+compare_one(K, yes, N1, Rs1, B1, N2, Rs2, B2, [uneffective(N1?, Rs1?, B1?, N2?, Rs2?, B2?)]) :-
+    K? =:= 1 | true.
+compare_one(K, no, _, _, _, _, _, _, []) :- K? =:= 1 | true.
+compare_one(K, _, _, _, _, _, _, _, []) :- K? < 1 | true.
+
+%% The people in the marked roles of each mate, a set, ascending.
+procedure mates_guards(Mates?, Gds).
+mates_guards([], []).
+mates_guards([mate(N, Rs, B)|Ms], [gd(N?, Rs?, B?, G?)|Gs?]) :- ground(Rs?), ground(B?) |
+    guard_people(Rs?, 1, B?, G0),
+    sort_ints(G0?, G1),
+    dedup(G1?, G),
+    mates_guards(Ms?, Gs).
+procedure some_unguarded(Gds?, YesNo).
+some_unguarded([], no).
+some_unguarded([gd(_, _, _, [])|_], yes).
+some_unguarded([gd(_, _, _, [_|_])|Gs], B?) :- some_unguarded(Gs?, B).
+
+%% Simple guards: the minimal guard sets one, or all of one person each;
+%% otherwise two schema-bindings of distinct minimal sets, one of them not of
+%% one person, named.
+procedure simple_fault(Gds?, Pairs).
+simple_fault(Gs, P?) :- ground(Gs?) |
+    minimal_gds(Gs?, Gs?, M0),
+    dedup_gds(M0?, M),
+    simple_fault1(M?, P).
+procedure simple_fault1(Gds?, Pairs).
+simple_fault1(M, P?) :- ground(M?) |
+    count_gds(M?, N),
+    first_nonsingle(M?, F),
+    simple_fault2(N?, F?, M?, P).
+procedure simple_fault2(Integer?, GdRes?, Gds?, Pairs).
+simple_fault2(N, _, _, []) :- N? < 2 | true.
+simple_fault2(N, nogd, _, []) :- N? >= 2 | true.
+simple_fault2(N, gdf(G1), M, P?) :- N? >= 2, ground(G1?) |
+    other_gd(G1?, M?, G2),
+    nonsimple_pair(G1?, G2?, P).
+procedure nonsimple_pair(Gd?, GdRes?, Pairs).
+nonsimple_pair(gd(N1, Rs1, B1, _), gdf(gd(N2, Rs2, B2, _)),
+        [nonsimple(N1?, Rs1?, B1?, N2?, Rs2?, B2?)]).
+nonsimple_pair(_, nogd, []).
+procedure minimal_gds(Gds?, Gds?, Gds).
+minimal_gds([], _, []).
+minimal_gds([gd(N, Rs, B, G)|Gs], All, M?) :- ground(G?), ground(All?) |
+    has_smaller(All?, G?, S),
+    minimal_gds(Gs?, All?, M1),
+    keep_gd(S?, gd(N?, Rs?, B?, G?), M1?, M).
+procedure has_smaller(Gds?, Ints?, YesNo).
+has_smaller([], _, no).
+has_smaller([gd(_, _, _, H)|Gs], G, B?) :- ground(H?), ground(G?) |
+    all_in(H?, G?, Sub),
+    all_in(G?, H?, Sup),
+    neg(Sup?, Strict),
+    and(Sub?, Strict?, B1),
+    has_smaller1(B1?, Gs?, G?, B).
+procedure has_smaller1(YesNo?, Gds?, Ints?, YesNo).
+has_smaller1(yes, _, _, yes).
+has_smaller1(no, Gs, G, B?) :- has_smaller(Gs?, G?, B).
+procedure keep_gd(YesNo?, Gd?, Gds?, Gds).
+keep_gd(yes, _, M, M?).
+keep_gd(no, X, M, [X?|M?]).
+procedure dedup_gds(Gds?, Gds).
+dedup_gds([], []).
+dedup_gds([gd(N, Rs, B, G)|Gs], [gd(N?, Rs?, B?, G?)|R?]) :- ground(G?) |
+    drop_gds(G?, Gs?, Gs1),
+    dedup_gds(Gs1?, R).
+procedure drop_gds(Ints?, Gds?, Gds).
+drop_gds(_, [], []).
+drop_gds(G, [gd(_, _, _, H)|Gs], R?) :- G? =?= H? | drop_gds(G?, Gs?, R).
+drop_gds(G, [X|Gs], [X?|R?]) :- otherwise | drop_gds(G?, Gs?, R).
+procedure count_gds(Gds?, Integer).
+count_gds([], 0).
+count_gds([_|Gs], N?) :- count_gds(Gs?, M), N := M? + 1.
+procedure first_nonsingle(Gds?, GdRes).
+first_nonsingle([], nogd).
+first_nonsingle([gd(_, _, _, [_])|Gs], F?) :- first_nonsingle(Gs?, F).
+first_nonsingle([gd(N, Rs, B, G)|_], gdf(gd(N?, Rs?, B?, G?))) :- otherwise | true.
+procedure other_gd(Gd?, Gds?, GdRes).
+other_gd(_, [], nogd).
+other_gd(gd(N, Rs, B, G), [gd(_, _, _, H)|Gs], F?) :- ground(G?), ground(H?), G? =?= H? |
+    other_gd(gd(N?, Rs?, B?, G?), Gs?, F).
+other_gd(_, [Y|_], gdf(Y?)) :- otherwise | true.
+procedure sort_ints(Ints?, Ints).
+sort_ints([], []).
+sort_ints([X|Xs], S?) :- sort_ints(Xs?, S1), insert_int(X?, S1?, S).
+procedure insert_int(Integer?, Ints?, Ints).
+insert_int(X, [], [X?]).
+insert_int(X, [Y|Ys], [X?, Y?|Ys?]) :- X? =< Y? | true.
+insert_int(X, [Y|Ys], [Y?|R?]) :- X? > Y? | insert_int(X?, Ys?, R).
 
 %% The number of participants at which the two require or forbid different
 %% atoms, an atom with a variable left free differing.

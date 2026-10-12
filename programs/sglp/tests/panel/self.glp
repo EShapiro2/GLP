@@ -3,7 +3,7 @@
 %% person goal the question once the positions the program writes are ground,
 %% the positions the person writes inside them left open, each answered as a
 %% question of its own --- vGLP's Present"; Appendix B): a vGLP program whose
-%% interactive type in writer mode, Panel ::= panel(Cards), Card ::=
+%% interactive type in writer mode, Panel ::= panel(List(Card)), Card ::=
 %% card(Integer, YesNo?), holds the positions the person writes inside the
 %% argument the program writes; a profile answering each card; and its run,
 %% the log showing each card's answer as a question of its own, in the panel
@@ -27,8 +27,7 @@
 %% The vGLP program's types (show.vglp).
 YesNo ::= yes ; no.
 Card  ::= card(Integer, YesNo?).
-Cards ::= [] ; [Card | Cards].
-Panel ::= panel(Cards).
+Panel ::= panel(List(Card)).
 
 %% The type of the asks, which the canonical compilation adds: Panel is in
 %% writer mode, so its alternative of Question is panel_w(Panel), the ask

@@ -1636,12 +1636,15 @@ POSITIVE_FILES=(
     "$GLP_DIR/programs/tests/param_decl_list.glp"
 
     # --- SRSW relaxations (glp.tex Remark "Guards and SRSW") ---
-    # Both must be ACCEPTED; their negative counterpart is srsw/known_not_ground
-    # in Section D. A guard occurrence counts toward SRSW, so X? in a guard plus
-    # once in the body is legal; and a groundness-implying guard licenses
-    # multiple occurrences of both halves.
+    # All must be ACCEPTED; their negative counterparts are srsw/known_not_ground
+    # and srsw/writer_twice_no_ground in Section D. A guard occurrence counts
+    # toward SRSW, so X? in a guard plus once in the body is legal; and a
+    # groundness-implying guard licenses multiple occurrences of both halves,
+    # the reader X? (ground_guard_multi_ok) and the writer X, in the head as in
+    # the body (ground_writer_multi_ok; GLP-Spec 831f315).
     "$GLP_DIR/programs/tests/srsw/guard_occurrence_ok.glp"
     "$GLP_DIR/programs/tests/srsw/ground_guard_multi_ok.glp"
+    "$GLP_DIR/programs/tests/srsw/ground_writer_multi_ok.glp"
 
     # Moved here from NEGATIVE_FILES on 2026-08-03, the day the fixture was
     # swept. It was rejected standalone because agent/4 and inject_msg/5 were
@@ -1982,9 +1985,11 @@ SRSW_FILES=(
     # Nor does =?\=, Ground "no" (GLP-Spec appendix-guards.tex, bbff21d): A13's
     # neq_pair, which read each argument twice after it, until 2026-10-02.
     "$GLP_DIR/programs/tests/srsw/neq_not_ground.glp"
-    # And no guard licenses a repeated writer: "X occurs once, as ever" (glp.tex
-    # Remark "Guards and SRSW", bbff21d), integer/1 here.
-    "$GLP_DIR/programs/tests/srsw/ground_writer_once.glp"
+    # And without a groundness-implying guard a writer occurs once: "if the
+    # success of a guard implies that X? is bound to a ground term, then both X
+    # and X? may occur multiple times in the clause" (glp.tex Remark "Guards
+    # and SRSW", 831f315) --- here under known/1, and with no guard.
+    "$GLP_DIR/programs/tests/srsw/writer_twice_no_ground.glp"
 )
 
 for f in "${SRSW_FILES[@]}"; do
@@ -2012,11 +2017,30 @@ check "pairing: a variable with no writer" "Variable \"Y\" has no writer" "$srsw
 srsw_neq=$(echo -e "$GLP_DIR/programs/tests/srsw/neq_not_ground.glp\n:quit" | "$REPL_RUN" 2>&1)
 check "=?\\= grounds nothing: a reader twice after it is refused" "Reader variable \"X?\" occurs 2 times" "$srsw_neq"
 
-# No guard licenses a repeated writer (glp.tex Remark "Guards and SRSW",
-# bbff21d): the writer twice under integer/1 is refused, and the diagnostic
-# says so.
-srsw_wonce=$(echo -e "$GLP_DIR/programs/tests/srsw/ground_writer_once.glp\n:quit" | "$REPL_RUN" 2>&1)
-check "a writer twice under a groundness-implying guard is refused" "Writer variable \"X\" occurs 2 times; a writer occurs once, whatever the guards" "$srsw_wonce"
+# A groundness-implying guard licenses a repeated writer, in the head as in
+# the body (glp.tex Remark "Guards and SRSW", 831f315): without one it is
+# refused, and the diagnostic says so; with one the clause loads
+# (ground_writer_multi_ok, Section B) and its goal reduces only where the
+# occurrences meet one term, the writer mgu of the goal and the head
+# (Definitions "Writer MGU", "GLP Goal/Clause Reduction").
+srsw_wtwice=$(echo -e "$GLP_DIR/programs/tests/srsw/writer_twice_no_ground.glp\n:quit" | "$REPL_RUN" 2>&1)
+check "a writer twice without a groundness-implying guard is refused" "Writer variable \"X\" occurs 2 times without a groundness-implying guard" "$srsw_wtwice"
+check "a writer twice in the head without a guard is refused" "Writer variable \"R\" occurs 2 times in the head of the clause two(R, R) without a groundness-implying guard" "$srsw_wtwice"
+srsw_wmulti=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/srsw/ground_writer_multi_ok.glp
+w(3, Yw1).
+same_ground(3, 3, Sg1).
+same_ground(3, 4, Sg2).
+same_ground(f(1), f(1), Sg3).
+same_ground(f(1), f(2), Sg4).
+:quit
+HEREDOC
+2>&1)
+check "a writer in the head and the body under integer/1 runs" "Yw1 = s(3)" "$srsw_wmulti"
+check "a writer twice in the head: one term reduces" "Sg1 = yes" "$srsw_wmulti"
+check "a writer twice in the head: two terms do not" "Sg2 = no" "$srsw_wmulti"
+check "a writer twice in the head: one structure reduces" "Sg3 = yes" "$srsw_wmulti"
+check "a writer twice in the head: two structures do not" "Sg4 = no" "$srsw_wmulti"
 
 # merge_with_reader: the one entry of this section that is rejected by the SRSW
 # pass rather than by the type checker, so it is the only test that speaks for
@@ -3437,24 +3461,29 @@ echo ""
 
 # =============================================================================
 # Section VG: The canonical compilation on one-clause procedures
-# (programs/tests/vglp/one_clause): every procedure of responder.vglp has one
-# volition-guarded clause, the case the per-clause reply types exist for.  The
-# source compiles on load (no .glp beside it).  Three plays: the person's
-# answer reaches its clause; an answer of another clause's form leaves the
-# pending table as it is; a clause reducing a goal with an open ask drops the
-# ask and reports its card aborted; and the person's decline selects the else-branch,
-# which is the fourth play.  They end at once: the deadline went on 2026-09-15
-# (Udi), so nothing waits out a wall-clock minute for a person who is not at
-# the phone.  play_decline is the only play that reduces an else clause, and
-# writing it found the defect it now guards: the compiled else clause kept the
-# answer writer in its head, which no reply binds, so its output suspended for
-# ever.  The Definition's else clause is H'[T'] since 2026-09-15 and the head
-# carries the else answer, which is why the play reports decided(no, bob).
+# (programs/tests/vglp/one_clause): every procedure of responder.vglp is
+# volitional with one clause, its question in writer mode, the offering peer
+# shown (vGLP, Definition "Volitional Procedure, Interactive Type, Interactive
+# Term, Ordinary Clause, vGLP Program").  The source compiles on load (no .glp
+# beside it), and each play runs it through the dispatcher and the construct
+# processes with a scripted person, who sees each draw and grants input(Id,
+# Q, R) at the position the view marks (Definition "Canonical Compilation" and
+# the paragraph before it); a play gives the decisions D and the person's
+# log L.  The person's answer reaches its clause; a refusal is an answer, no,
+# which the clause takes; a grant that forms no term of the question's type
+# answers nothing, and the next one answers it; greet's card is drawn before
+# the person gives a name, its clause guarded only on what the program
+# writes; pick's one clause takes the person's choice.  Until 2026-10-12 the
+# fixture was in the old syntax and its plays spoke the old compilation's
+# mediator, cards and slots, with an else-branch selected by a decline and a
+# play in which an ordinary clause aborted pick's open ask, which the paper
+# has no counterpart for (GLP, 2026-10-11 12:59 UTC, "03:24").
 # =============================================================================
 echo "=== Section VG: Canonical compilation, one-clause procedures ==="
 echo ""
 
 ONECLAUSE="$GLP_DIR/programs/tests/vglp/one_clause"
+VG_CARD="drawn(0, form(card, \[field('Peer', shown), field('YesNo', buttons(\[yes, no\]))\]), card(bob, input(\[2\]))), withdrawn(0) |"
 
 vg_load=$("$REPL_RUN" <<HEREDOC
 $ONECLAUSE
@@ -3466,61 +3495,82 @@ check_not "One-clause program no type errors" "Type checking failed" "$vg_load"
 
 vg_answer=$("$REPL_RUN" <<HEREDOC
 $ONECLAUSE
-play_answer.
+play_answer(D, L).
 :quit
 HEREDOC
 2>&1)
 check_not "One-clause: answer, no failed goal" "ERROR" "$vg_answer"
-check "One-clause: the answer reaches its clause" "tagged(answer, \[decided(yes, bob)\])" "$vg_answer"
+check "One-clause: the answer reaches its clause" "D = \[decided(yes, bob)\]" "$vg_answer"
+check "One-clause: the card is drawn, the offering peer shown and the person's position marked, and withdraws once answered" "L = \[$VG_CARD" "$vg_answer"
 
 vg_decline=$("$REPL_RUN" <<HEREDOC
 $ONECLAUSE
-play_decline.
+play_decline(D, L).
 :quit
 HEREDOC
 2>&1)
 check_not "One-clause: decline, no failed goal" "ERROR" "$vg_decline"
-check "One-clause: the person's decline selects the else-branch, with its else answer" "tagged(decline, \[decided(no, bob)\])" "$vg_decline"
+check "One-clause: the person's decline is an answer, no, which the clause takes" "D = \[decided(no, bob)\]" "$vg_decline"
+check "One-clause: the declined card withdraws once answered" "L = \[$VG_CARD" "$vg_decline"
 
 vg_mismatch=$("$REPL_RUN" <<HEREDOC
 $ONECLAUSE
-play_mismatch.
+play_mismatch(D, L).
 :quit
 HEREDOC
 2>&1)
 check_not "One-clause: mismatch, no failed goal" "ERROR" "$vg_mismatch"
-check "One-clause: a mismatched answer leaves the table, the next one reaches its clause" "tagged(mismatch, \[decided(yes, bob)\])" "$vg_mismatch"
+check "One-clause: a grant that forms no YesNo answers nothing, the next one reaches its clause" "D = \[decided(yes, bob)\]" "$vg_mismatch"
+check "One-clause: the card stays through the refused grant and withdraws once answered" "L = \[$VG_CARD" "$vg_mismatch"
 
-vg_abort=$("$REPL_RUN" <<HEREDOC
+vg_greet=$("$REPL_RUN" <<HEREDOC
 $ONECLAUSE
-play_abort.
+play_greet(D, L).
 :quit
 HEREDOC
 2>&1)
-check_not "One-clause: abort, no failed goal" "ERROR" "$vg_abort"
-check "One-clause: the reducing clause drops the open ask and its card is aborted" "tagged(abort, aborted(req(0)), \[picked(bob)\])" "$vg_abort"
+check_not "One-clause: greet, no failed goal" "ERROR" "$vg_greet"
+check "One-clause: greet's card is drawn before the person gives a name, its clause guarded on what the program writes" "L = \[drawn(0, form(greeting, \[field('Peer', shown), field('Name', text)\]), greeting(bob, input(\[2\]))), withdrawn(0) |" "$vg_greet"
+check "One-clause: the name the person gives reaches greet's clause" "D = \[greeted(alice, bob)\]" "$vg_greet"
+
+vg_pick=$("$REPL_RUN" <<HEREDOC
+$ONECLAUSE
+play_pick(D, L).
+:quit
+HEREDOC
+2>&1)
+check_not "One-clause: pick, no failed goal" "ERROR" "$vg_pick"
+check "One-clause: pick's card is drawn, the offering peer shown" "L = \[drawn(0, form(choice, \[field('Peer', shown), field('Constant', text)\]), choice(bob, input(\[2\]))), withdrawn(0) |" "$vg_pick"
+check "One-clause: pick's one clause takes the person's choice" "D = \[picked(go)\]" "$vg_pick"
 echo ""
 
 # -----------------------------------------------------------------------------
 # Section VG, continued: the compiler from an act-schema contract to its
-# canonical CVA platform in vGLP (programs/vglp/cva; vGLP, Section 3.2, the
-# paragraph on act schemas, and Section 5.4, "The canonical platform is
-# structured"; vGLP's Task C, 2026-10-11).  Jurix's social graph and currency
-# (programs/jurix) and vGLP's nudge (programs/vglp/cva/contracts.glp)
-# compiled, the committed modules held to what the compiler prints; the contracts it refuses, not local or not effective; and the plays
-# of each platform, two agents with scripted persons paced on their threads,
-# each run on the committed module through the canonical compilation and
-# ended at the REPL's :limit, the clocks ticking without end.  A play gives
-# each person's log: its thread, the app transactions its agent takes, with
-# gave(C, A) where the person answers a card.
+# canonical CVA platform in vGLP (programs/vglp/cva; vGLP, Section 3.2,
+# Definition "Canonical CVA Platform", two-phase commit coordinated by the
+# initiating agent, and Section 5.4, "The canonical platform is structured"
+# and the paragraph on act schemas; vGLP's Task C, reworked to the five
+# handlers of vGLP 8d56915 and the answers of 158ec9b).  Jurix's social graph
+# and currency (programs/jurix) and vGLP's nudge and introduce
+# (programs/vglp/cva/contracts.glp) compiled, the committed modules held to
+# what the compiler prints; the contracts it refuses, not local, without
+# simple guards or not effective; and the plays of each platform, two agents
+# or three with scripted persons paced on their threads, each run on the
+# committed module through the canonical compilation and ended at the REPL's
+# :limit, the clocks ticking without end.  A play gives each person's log, its
+# thread, the app transactions its agent takes applied to their attempts and
+# discover(Q) for each peer it comes to know, with gave(K, A) where the person
+# answers a card; and the network's log of the cargoes it carries,
+# sent(From, To, Cargo), where the votes and the outcomes show.
 # -----------------------------------------------------------------------------
 echo "--- The canonical CVA platform of an act-schema contract ---"
 CVA="$GLP_DIR/programs/vglp/cva"
 
 cva_print=$(bash "$CVA/compile.sh" --check 2>&1)
 check "CVA compiler: the social graph's platform is what the compiler prints" "social_graph/platform.vglp: as printed" "$cva_print"
-check "CVA compiler: the currency's platform is what the compiler prints" "currency/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: the currency's platform, its classes guarded by their minimal guard sets, is what the compiler prints" "currency/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's nudge, certified by Jurix's check/2, compiled to the platform it prints" "nudge/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's introduce, certified by Jurix's check/2, compiled to the platform it prints" "introduce/platform.vglp: as printed" "$cva_print"
 check_not "CVA compiler: no contract refused or missing" "^fault\|^missing\|NOT as printed" "$cva_print"
 
 cva_refuse=$("$REPL_RUN" <<HEREDOC
@@ -3532,6 +3582,8 @@ compile(uneff, [schema(u, [rs(unguarded, [atom(x, [role(2)])], [], [], []), rs(u
 compile(gossip, [], not_grassroots([no_introductory_act])).
 compile(federated, [], conditions_met).
 compile(one_req, [schema(s1, [rs(guarded, [atom(x, [])], [], [atom(r1, [])], []), rs(guarded, [atom(y, [])], [], [atom(r2, [])], [])]), schema(s2, [rs(guarded, [atom(x, [])], [], [atom(r3, [])], []), rs(guarded, [atom(y, [])], [], [atom(r2, [])], [])])], syntactically_grassroots).
+compile(two_gsets, [schema(s1, [rs(guarded, [atom(x, [])], [], [], []), rs(guarded, [atom(y, [])], [], [], []), rs(unguarded, [atom(z, [])], [], [], [])]), schema(s2, [rs(unguarded, [atom(x, [])], [], [], []), rs(guarded, [atom(y, [])], [], [], []), rs(guarded, [atom(z, [])], [], [], [])])], syntactically_grassroots).
+compile(unguarded_reqs, [schema(u1, [rs(unguarded, [atom(x, [role(2)])], [], [atom(r, [role(2)])], []), rs(unguarded, [atom(y, [role(1)])], [], [atom(w, [role(1)])], [])]), schema(u2, [rs(unguarded, [atom(y, [role(2)])], [], [atom(w, [role(2)])], []), rs(unguarded, [atom(x, [role(1)])], [], [], [])])], syntactically_grassroots).
 :quit
 HEREDOC
 2>&1)
@@ -3543,6 +3595,10 @@ check "CVA compiler: a contract not syntactically grassroots is not compiled" "%
 check "CVA compiler: a contract with community roles is not compiled" "%% not compiled(federated)" "$cva_refuse"
 check "CVA compiler: requirements differing at one participant only, compiled" "%% the canonical CVA platform of the contract(one_req)" "$cva_refuse"
 check_not "CVA compiler: ... and not refused" "%% not compiled(one_req)" "$cva_refuse"
+check "CVA compiler: a class with two minimal guard sets not both of one person, refused as without simple guards" "%% not compiled(two_gsets)" "$cva_refuse"
+check "CVA compiler: ... the schema-bindings of the two guard sets named" "%% and the schema-binding(s2(person(0), person(1), person(2)))" "$cva_refuse"
+check "CVA compiler: an unguarded class whose schema-bindings require different atoms at one participant, refused as not effective" "%% not compiled(unguarded_reqs)" "$cva_refuse"
+check "CVA compiler: ... the two schema-bindings of the unguarded class named" "%% and the schema-binding(u2(person(1), person(0)))" "$cva_refuse"
 
 cva_sg_load=$("$REPL_RUN" <<HEREDOC
 $CVA/social_graph/
@@ -3554,35 +3610,50 @@ check_not "CVA social graph: no type errors" "Type checking failed" "$cva_sg_loa
 
 cva_sg_befriend=$("$REPL_RUN" <<HEREDOC
 $CVA/social_graph/
-:limit 300000
-play_befriend(A, B).
+:limit 600000
+play_befriend(A, B, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA befriend: alice records bob, proposes, relays bob's vote and commits" "A = \[record(bob), propose(befriend(alice, bob)), relay(befriend(alice, bob)), commit(befriend(alice, bob))" "$cva_sg_befriend"
-check "CVA befriend: bob relays alice's vote, is asked, answers yes and commits" "B = \[.*relay(befriend(alice, bob)), ask(befriend(alice, bob)), gave(befriend(alice, bob), yes), answer(befriend(alice, bob)), commit(befriend(alice, bob))" "$cva_sg_befriend"
-check "CVA befriend: bob records alice" "B = \[.*record(alice)" "$cva_sg_befriend"
+check "CVA befriend: alice discovers bob, proposes the attempt and tallies bob's vote" "A = \[discover(bob), propose(attempt(alice, 1, befriend(alice, bob))), tally(attempt(alice, 1, befriend(alice, bob)))" "$cva_sg_befriend"
+check "CVA befriend: bob, in its guard set, is asked on the start, answers yes on his card, and takes the outcome" "B = \[discover(alice), start(attempt(alice, 1, befriend(alice, bob))), gave(befriend(alice, bob), yes), answer(attempt(alice, 1, befriend(alice, bob))), outcome(attempt(alice, 1, befriend(alice, bob)))" "$cva_sg_befriend"
+check "CVA befriend: the start to bob, his yes to alice, and the commit she tells him" "N = \[sent(alice, bob, start(attempt(alice, 1, befriend(alice, bob)))), sent(bob, alice, vote(attempt(alice, 1, befriend(alice, bob)), yes)), sent(alice, bob, outcome(attempt(alice, 1, befriend(alice, bob)), commit))" "$cva_sg_befriend"
 
 cva_sg_unfriend=$("$REPL_RUN" <<HEREDOC
 $CVA/social_graph/
-:limit 300000
-play_unfriend(A, B).
+:limit 600000
+play_unfriend(A, B, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA unfriend: bob proposes unfriending alice and commits" "B = \[.*commit(befriend(alice, bob)), propose(unfriend(bob, alice)), relay(unfriend(bob, alice)), commit(unfriend(bob, alice))" "$cva_sg_unfriend"
-check "CVA unfriend: alice, a guard set naming her, is asked, says no, and the else-branch commits it" "A = \[.*relay(unfriend(bob, alice)), ask(unfriend(bob, alice)), gave(unfriend(bob, alice), no), answer(unfriend(bob, alice)), commit(unfriend(bob, alice))" "$cva_sg_unfriend"
+check "CVA unfriend: bob proposes unfriending alice, the attempt asking nobody, and tallies her vote" "B = \[.*outcome(attempt(alice, 1, befriend(alice, bob))), propose(attempt(bob, 1, unfriend(bob, alice))), tally(attempt(bob, 1, unfriend(bob, alice)))" "$cva_sg_unfriend"
+check "CVA unfriend: alice's machine votes on bob's start, unasked, and takes the outcome" "A = \[.*start(attempt(bob, 1, unfriend(bob, alice))), outcome(attempt(bob, 1, unfriend(bob, alice)))" "$cva_sg_unfriend"
+check "CVA unfriend: ... its yes, and bob's unfriend committed" "sent(alice, bob, vote(attempt(bob, 1, unfriend(bob, alice)), yes)), sent(bob, alice, outcome(attempt(bob, 1, unfriend(bob, alice)), commit))" "$cva_sg_unfriend"
+check "CVA unfriend: befriended again, alice proposes unfriending bob, and bob's machine votes on it, unasked" "B = \[.*start(attempt(alice, 3, unfriend(alice, bob))), outcome(attempt(alice, 3, unfriend(alice, bob)))" "$cva_sg_unfriend"
+check "CVA unfriend: ... and alice's unfriend committed" "sent(alice, bob, outcome(attempt(alice, 3, unfriend(alice, bob)), commit))" "$cva_sg_unfriend"
+check_not "CVA unfriend: no person answers for unfriending" "answer(attempt([a-z]*, [0-9]*, unfriend" "$cva_sg_unfriend"
 
 cva_sg_refused=$("$REPL_RUN" <<HEREDOC
 $CVA/social_graph/
-:limit 300000
-play_refused(A, B).
+:limit 600000
+play_refused(A, B, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA refused: bob says no to befriending, every guard set naming him, and aborts" "B = \[.*ask(befriend(alice, bob)), gave(befriend(alice, bob), no), answer(befriend(alice, bob)), abort(befriend(alice, bob))" "$cva_sg_refused"
-check "CVA refused: alice relays bob's no and aborts" "A = \[record(bob), propose(befriend(alice, bob)), relay(befriend(alice, bob)), abort(befriend(alice, bob))" "$cva_sg_refused"
-check_not "CVA refused: nothing committed" "commit(befriend" "$cva_sg_refused"
+check "CVA refused: bob answers no and the else-branch votes" "B = \[.*gave(attempt(alice, 1, befriend(alice, bob)), no), answer(attempt(alice, 1, befriend(alice, bob))), outcome(attempt(alice, 1, befriend(alice, bob)))" "$cva_sg_refused"
+check "CVA refused: ... no, and alice tallies it and tells bob abort" "sent(bob, alice, vote(attempt(alice, 1, befriend(alice, bob)), no)), sent(alice, bob, outcome(attempt(alice, 1, befriend(alice, bob)), abort))" "$cva_sg_refused"
+check "CVA refused: aborted at both, alice proposes again and bob is asked again and answers yes" "B = \[.*outcome(attempt(alice, 1, befriend(alice, bob))), start(attempt(alice, 2, befriend(alice, bob))), gave(attempt(alice, 2, befriend(alice, bob)), yes), answer(attempt(alice, 2, befriend(alice, bob))), outcome(attempt(alice, 2, befriend(alice, bob)))" "$cva_sg_refused"
+check "CVA refused: ... and the second attempt commits" "sent(alice, bob, outcome(attempt(alice, 2, befriend(alice, bob)), commit))" "$cva_sg_refused"
+
+cva_sg_pending=$("$REPL_RUN" <<HEREDOC
+$CVA/social_graph/
+:limit 600000
+play_pending(A, B, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA pending: alice's start reaches bob before her hello, pends on her, and is put up again at the second hello" "B = \[discover(alice), start(attempt(alice, 1, befriend(alice, bob))), gave(befriend(alice, bob), yes), answer(attempt(alice, 1, befriend(alice, bob)))" "$cva_sg_pending"
+check "CVA pending: ... and the befriending commits" "sent(alice, bob, outcome(attempt(alice, 1, befriend(alice, bob)), commit))" "$cva_sg_pending"
 
 cva_cur_load=$("$REPL_RUN" <<HEREDOC
 $CVA/currency/
@@ -3594,52 +3665,56 @@ check_not "CVA currency: no type errors" "Type checking failed" "$cva_cur_load"
 
 cva_cur_payswap=$("$REPL_RUN" <<HEREDOC
 $CVA/currency/
-:limit 300000
-play_pay_swap(A, B).
+:limit 600000
+play_pay_swap(A, B, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA pay and swap: alice mints, swaps on the two wills, and pays bob" "A = \[propose(mint(alice)), commit(mint(alice)), record(bob), propose(swap(alice, bob, bob, alice)), relay(swap(alice, bob, bob, alice)), commit(swap(alice, bob, bob, alice)), propose(pay(alice, bob)), relay(pay(alice, bob)), commit(pay(alice, bob))" "$cva_cur_payswap"
-check "CVA pay and swap: bob wills the swap on his card" "B = \[.*relay(swap(alice, bob, bob, alice)), ask(swap(alice, bob, bob, alice)), gave(swap(alice, bob, bob, alice), yes), answer(swap(alice, bob, bob, alice)), commit(swap(alice, bob, bob, alice))" "$cva_cur_payswap"
-check "CVA pay and swap: bob's machine concurs in the pay, guarded by alice alone" "B = \[.*relay(pay(alice, bob)), concur(pay(alice, bob)), commit(pay(alice, bob))" "$cva_cur_payswap"
+check "CVA pay and swap: alice's mint, a class of one participant, applied at its Propose" "A = \[propose(attempt(alice, 1, mint(alice))), discover(bob)" "$cva_cur_payswap"
+check "CVA pay and swap: alice proposes the swap, and bob is asked and answers yes" "B = \[.*start(attempt(alice, 2, swap(alice, bob, bob, alice))), gave(swap(alice, bob, bob, alice), yes), answer(attempt(alice, 2, swap(alice, bob, bob, alice))), outcome(attempt(alice, 2, swap(alice, bob, bob, alice)))" "$cva_cur_payswap"
+check "CVA pay and swap: ... and the swap commits" "sent(alice, bob, outcome(attempt(alice, 2, swap(alice, bob, bob, alice)), commit))" "$cva_cur_payswap"
+check "CVA pay and swap: alice pays bob, guarded by her alone, and bob's machine votes yes, unasked, and it commits" "sent(alice, bob, start(attempt(alice, 3, pay(alice, bob)))), sent(bob, alice, vote(attempt(alice, 3, pay(alice, bob)), yes)), sent(alice, bob, outcome(attempt(alice, 3, pay(alice, bob)), commit))" "$cva_cur_payswap"
+check "CVA pay and swap: bob takes the pay's start and its outcome" "B = \[.*start(attempt(alice, 3, pay(alice, bob))), outcome(attempt(alice, 3, pay(alice, bob)))" "$cva_cur_payswap"
 
-cva_cur_pledged=$("$REPL_RUN" <<HEREDOC
+cva_cur_redeem=$("$REPL_RUN" <<HEREDOC
 $CVA/currency/
-:limit 300000
-play_pledged(A, B).
+:limit 600000
+play_redeem(A, B, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA pledged: alice's offer pledges her coin, and the mint after is taken" "A = \[propose(mint(alice)), commit(mint(alice)), record(bob), propose(swap(alice, bob, bob, alice)), propose(mint(alice)), commit(mint(alice))" "$cva_cur_pledged"
-check_not "CVA pledged: a second offer of the pledged coin is dropped" "propose(swap(alice, bob, carol, alice))" "$cva_cur_pledged"
-check "CVA pledged: bob is asked about the first" "B = \[.*ask(swap(alice, bob, bob, alice))" "$cva_cur_pledged"
+check "CVA redeem: the swap back, a class redeem also determines, guarded by alice alone: bob's machine votes, unasked" "B = \[.*start(attempt(alice, 3, swap(alice, bob, alice, bob))), outcome(attempt(alice, 3, swap(alice, bob, alice, bob)))" "$cva_cur_redeem"
+check "CVA redeem: ... yes, and it commits" "sent(bob, alice, vote(attempt(alice, 3, swap(alice, bob, alice, bob)), yes)), sent(alice, bob, outcome(attempt(alice, 3, swap(alice, bob, alice, bob)), commit))" "$cva_cur_redeem"
+check_not "CVA redeem: bob answers nothing for the swap back" "answer(attempt(alice, 3, swap" "$cva_cur_redeem"
+
+cva_cur_busy=$("$REPL_RUN" <<HEREDOC
+$CVA/currency/
+:limit 600000
+play_busy(A, B, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA busy: bob proposes a swap, alice is asked and leaves her card open, and proposes a pay" "A = \[.*start(attempt(bob, 3, swap(bob, alice, alice, bob))), propose(attempt(alice, 4, pay(alice, bob)))" "$cva_cur_busy"
+check "CVA busy: bob's machine, its lock held by his swap, votes no on the pay, which aborts" "sent(bob, alice, vote(attempt(alice, 4, pay(alice, bob)), no)), sent(alice, bob, outcome(attempt(alice, 4, pay(alice, bob)), abort))" "$cva_cur_busy"
+check "CVA busy: alice answers bob's card no, and his swap aborts" "sent(alice, bob, vote(attempt(bob, 3, swap(bob, alice, alice, bob)), no)), sent(bob, alice, outcome(attempt(bob, 3, swap(bob, alice, alice, bob)), abort))" "$cva_cur_busy"
+check "CVA busy: the lock released, bob's machine votes yes on the pay proposed again, and it commits" "sent(bob, alice, vote(attempt(alice, 5, pay(alice, bob)), yes)), sent(alice, bob, outcome(attempt(alice, 5, pay(alice, bob)), commit))" "$cva_cur_busy"
 
 cva_cur_declined=$("$REPL_RUN" <<HEREDOC
 $CVA/currency/
-:limit 300000
-play_declined(A, B).
+:limit 600000
+play_declined(A, B, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA declined: bob's machine declines a swap for a coin he does not hold, and aborts" "B = \[.*relay(swap(alice, bob, carol, alice)), decline(swap(alice, bob, carol, alice)), abort(swap(alice, bob, carol, alice))" "$cva_cur_declined"
-check "CVA declined: alice relays the no and aborts" "A = \[.*propose(swap(alice, bob, carol, alice)), relay(swap(alice, bob, carol, alice)), abort(swap(alice, bob, carol, alice))" "$cva_cur_declined"
-
-cva_cur_closed=$("$REPL_RUN" <<HEREDOC
-$CVA/currency/
-:limit 300000
-play_closed(A, B).
-:quit
-HEREDOC
-2>&1)
-check "CVA closed: bob, asked, offers his coin elsewhere and his machine declines, closing the card" "B = \[.*ask(swap(alice, bob, bob, alice)), propose(swap(bob, alice, carol, bob)), decline(swap(alice, bob, bob, alice))" "$cva_cur_closed"
-check "CVA closed: the yes bob gives the closed card is taken by no Answer" "B = \[.*gave(swap(alice, bob, bob, alice), yes), abort(swap(alice, bob, bob, alice))" "$cva_cur_closed"
-check_not "CVA closed: no answer to the closed card" "answer(swap(alice, bob, bob, alice))" "$cva_cur_closed"
+check "CVA declined: bob, not holding the coin, votes on the start without asking his person" "B = \[discover(alice), start(attempt(alice, 2, swap(alice, bob, carol, alice))), outcome(attempt(alice, 2, swap(alice, bob, carol, alice)))" "$cva_cur_declined"
+check "CVA declined: ... no, and it aborts at both" "sent(bob, alice, vote(attempt(alice, 2, swap(alice, bob, carol, alice)), no)), sent(alice, bob, outcome(attempt(alice, 2, swap(alice, bob, carol, alice)), abort))" "$cva_cur_declined"
+check_not "CVA declined: no card answered" "gave(" "$cva_cur_declined"
 
 # vGLP's contract nudge (programs/vglp/cva/contracts.glp): befriend and an
 # unguarded nudge, the one contract here with an unguarded class.  Its opener,
-# the person in its first role, opens it on a tick by its machine's Concur, no
-# person asked; the other participant's machine concurs on the vote, and it
-# commits at both (vGLP's 2026-10-11 20:48 UTC, Q4 of Code's 18:53 UTC).
+# the person in its first role, proposes it on a tick, the attempt asking
+# nobody and the other participant voting by its machine (vGLP's 2026-10-11
+# 22:51 UTC, the nudge play redone on the five handlers).
 cva_nudge_load=$("$REPL_RUN" <<HEREDOC
 $CVA/nudge/
 :quit
@@ -3650,17 +3725,44 @@ check_not "CVA nudge: no type errors" "Type checking failed" "$cva_nudge_load"
 
 cva_nudge=$("$REPL_RUN" <<HEREDOC
 $CVA/nudge/
-:limit 300000
-play_nudge(A, B).
+:limit 600000
+play_nudge(A, B, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA nudge: befriended, alice's Concur opens nudge(alice, bob), whose opener she is, and it commits at her" "A = \[record(bob), propose(befriend(alice, bob)), relay(befriend(alice, bob)), commit(befriend(alice, bob)), concur(nudge(alice, bob)), .*relay(nudge(alice, bob)), commit(nudge(alice, bob))" "$cva_nudge"
-check "CVA nudge: bob's machine concurs on alice's vote, and it commits at him" "B = \[.*relay(nudge(alice, bob)), concur(nudge(alice, bob)), commit(nudge(alice, bob))" "$cva_nudge"
-check "CVA nudge: bob's Concur opens nudge(bob, alice), whose opener he is, and it commits at him" "B = \[.*commit(befriend(alice, bob)), concur(nudge(bob, alice)), .*relay(nudge(bob, alice)), commit(nudge(bob, alice))" "$cva_nudge"
-check "CVA nudge: alice's machine concurs on bob's vote, and it commits at her" "A = \[.*relay(nudge(bob, alice)), concur(nudge(bob, alice)), commit(nudge(bob, alice))" "$cva_nudge"
-check_not "CVA nudge: no person is asked about the unguarded class" "ask(nudge" "$cva_nudge"
-check_not "CVA nudge: nothing aborted" "abort(" "$cva_nudge"
+check "CVA nudge: alice and bob befriended, committed at both" "sent(alice, bob, outcome(attempt(alice, 1, befriend(alice, bob)), commit))" "$cva_nudge"
+check "CVA nudge: alice, its opener, proposes nudge(alice, bob) on a tick once befriended" "A = \[discover(bob), propose(attempt(alice, 1, befriend(alice, bob))), tally(attempt(alice, 1, befriend(alice, bob))), propose(attempt(alice, 2, nudge(alice, bob)))" "$cva_nudge"
+check "CVA nudge: bob, its opener, proposes nudge(bob, alice) on a tick once befriended" "B = \[.*outcome(attempt(alice, 1, befriend(alice, bob))), propose(attempt(bob, 1, nudge(bob, alice)))" "$cva_nudge"
+check "CVA nudge: bob's machine votes on alice's start, no person asked" "sent(bob, alice, vote(attempt(alice, 2, nudge(alice, bob)), " "$cva_nudge"
+check_not "CVA nudge: no person answers for the unguarded class" "answer(attempt([a-z]*, [0-9]*, nudge" "$cva_nudge"
+
+# vGLP's contract introduce (programs/vglp/cva/contracts.glp): befriend and a
+# three-party introduce, guarded at every role (vGLP's 2026-10-11 22:59 UTC,
+# Q3, Udi approved).  Three agents: the attempt asks two, the first answers
+# no, and the other's card is closed by the program once its Outcome closes
+# the attempt; asked again, both answer yes.
+cva_intro_load=$("$REPL_RUN" <<HEREDOC
+$CVA/introduce/
+:quit
+HEREDOC
+2>&1)
+check "CVA introduce: the platform and its play load, compiled by the canonical compilation" "Loaded program: .*cva/introduce" "$cva_intro_load"
+check_not "CVA introduce: no type errors" "Type checking failed" "$cva_intro_load"
+
+cva_intro=$("$REPL_RUN" <<HEREDOC
+$CVA/introduce/
+:limit 1500000
+play_introduce(A, B, C, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA introduce: alice, befriended with both, proposes introducing bob and carol, its start told to both" "sent(alice, bob, start(attempt(alice, 3, introduce(alice, bob, carol)))), sent(alice, carol, start(attempt(alice, 3, introduce(alice, bob, carol))))" "$cva_intro"
+check "CVA introduce: bob, asked, answers no, and alice tells both abort" "sent(bob, alice, vote(attempt(alice, 3, introduce(alice, bob, carol)), no)), sent(alice, bob, outcome(attempt(alice, 3, introduce(alice, bob, carol)), abort)), sent(alice, carol, outcome(attempt(alice, 3, introduce(alice, bob, carol)), abort))" "$cva_intro"
+check "CVA introduce: carol, asked, her card still open when Outcome closes the attempt, gives it yes after" "C = \[.*start(attempt(alice, 3, introduce(alice, bob, carol))), outcome(attempt(alice, 3, introduce(alice, bob, carol))), gave(attempt(alice, 3, introduce(alice, bob, carol)), yes), start(attempt(alice, 4, introduce(alice, bob, carol)))" "$cva_intro"
+check_not "CVA introduce: ... and the card closed by the program, her yes takes no Answer" "C = \[.*answer(attempt(alice, 3, introduce" "$cva_intro"
+check "CVA introduce: asked again, both answer yes, and alice tallies both" "A = \[.*propose(attempt(alice, 4, introduce(alice, bob, carol))), tally(attempt(alice, 4, introduce(alice, bob, carol))), tally(attempt(alice, 4, introduce(alice, bob, carol)))" "$cva_intro"
+check "CVA introduce: ... and tells bob commit" "sent(alice, bob, outcome(attempt(alice, 4, introduce(alice, bob, carol)), commit))" "$cva_intro"
+check "CVA introduce: ... and carol" "sent(alice, carol, outcome(attempt(alice, 4, introduce(alice, bob, carol)), commit))" "$cva_intro"
 echo ""
 
 
@@ -5512,6 +5614,24 @@ HEREDOC
 check "SG grassapp escrow: released to the beneficiary" "tagged(frank, escrow_released(charlie))" "$sg_escrow"
 check "SG grassapp escrow: expired at the depositor" "tagged(charlie, escrow_expired(frank))" "$sg_escrow"
 
+# A message the person addresses to someone who is not their friend is not
+# sent, and the agent tells the person so (GSG paper, Section 5.1), in the
+# super-app prototype as in the social graph (play_not_a_friend_headless.glp):
+# alice's person sends carol, not her friend, a message and is shown
+# not_a_friend(carol); only then does she call bob, and once they are friends
+# her message to him reaches him.  The output's lines are joined so that the
+# second check holds the two in their order.
+sg_naf_ga=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/grassapp
+:limit 5000000
+play_not_a_friend.
+:quit
+HEREDOC
+2>&1)
+check "SG grassapp not_a_friend: a send to someone not a friend is not sent, and the person is told not_a_friend" "tagged(alice, not_a_friend(carol))" "$sg_naf_ga"
+check "SG grassapp not_a_friend: a later message to a friend is delivered" "tagged(alice, not_a_friend(carol)).*tagged(bob, received(alice, hi_bob))" "$(echo "$sg_naf_ga" | tr '\n' ' ')"
+check_not "SG grassapp not_a_friend no failed play" "→ failed" "$sg_naf_ga"
+
 sg_village=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/grassapp
 :limit 5000000
@@ -6282,7 +6402,19 @@ fi
 # `dart test` exits non-zero whenever anything is red — including a known-red
 # entry, which is not a suite failure — so every capture below is guarded
 # against `set -e` (line 24) rather than letting it abort the run.
+#
+# Each runner's raw output is kept, overwritten on every run, so that a failure
+# can be read in full after the suite ends: the section itself prints only the
+# failing names and, when its gate fails, the last twenty lines of dart test's
+# output and none of flutter test's (Integration, 2026-10-11).  Writing them
+# reads nothing back and moves no count or gate.
+Q_RAW_DIR="/Users/udi/Grassroots/tmp"
+Q_RAW_DART="$Q_RAW_DIR/suite_q_dart.txt"
+Q_RAW_FLUTTER="$Q_RAW_DIR/suite_q_flutter.txt"
+mkdir -p "$Q_RAW_DIR" 2>/dev/null || true
 DART_TREE_RESULT=$(cd "$GLP_RUNTIME" && "$DART" test 2>&1) && DART_TREE_STATUS=0 || DART_TREE_STATUS=$?
+printf '%s\n' "$DART_TREE_RESULT" > "$Q_RAW_DART" 2>/dev/null \
+    || echo "  (dart test's output could not be written to $Q_RAW_DART)"
 
 # Strip ANSI colour and CR so the reporter's in-place updates become lines.
 DART_TREE_CLEAN=$(printf '%s' "$DART_TREE_RESULT" | sed 's/\x1b\[[0-9;]*m//g' | tr '\r' '\n') || true
@@ -6308,8 +6440,12 @@ if ! command -v flutter >/dev/null 2>&1; then
     FAIL=$((FAIL + 1))
     MA_PASSED=0
     MA_FAILS=""
+    echo "flutter is not on PATH, so glp_multiagent/test/ did not run" > "$Q_RAW_FLUTTER" 2>/dev/null \
+        || echo "  (flutter test's output could not be written to $Q_RAW_FLUTTER)"
 else
     MA_RESULT=$(cd "$GLP_DIR/glp_multiagent" && flutter test 2>&1) && MA_STATUS=0 || MA_STATUS=$?
+    printf '%s\n' "$MA_RESULT" > "$Q_RAW_FLUTTER" 2>/dev/null \
+        || echo "  (flutter test's output could not be written to $Q_RAW_FLUTTER)"
     MA_CLEAN=$(printf '%s' "$MA_RESULT" | sed 's/\x1b\[[0-9;]*m//g' | tr '\r' '\n') || true
 
     MA_PASSED=$(printf '%s' "$MA_CLEAN" | grep -oE '\+[0-9]+' | tail -1 | tr -d '+') || true

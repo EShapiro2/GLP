@@ -9,6 +9,7 @@ import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 
 import 'helpers/sodium_test_bootstrap.dart';
+import 'package:grassroots_networking_core/src/models/underlay.dart';
 
 /// Spec conformance for the known-peer supply calls (GLP Networking API
 /// §Cold-Call Trust Levels + §Connectivity and Address): the layer recognizes
@@ -55,8 +56,13 @@ void main() {
     final peer = await identity('Peer');
     final peerHex = hexOf(peer.publicKey);
     final store = Store<AppState>(appReducer, initialState: const AppState());
-    final network =
-        GrassrootsNetwork(identity: self, store: store, sodium: sodium);
+    final network = GrassrootsNetwork(
+      identity: self,
+      underlays: const {Underlay.pan, Underlay.lan, Underlay.wan},
+      rendezvousServers: const [],
+      store: store,
+      sodium: sodium,
+    );
 
     network.putKnownPeer(peer.publicKey);
 
@@ -78,8 +84,13 @@ void main() {
     final peer = await identity('Peer');
     final peerHex = hexOf(peer.publicKey);
     final store = Store<AppState>(appReducer, initialState: const AppState());
-    final network =
-        GrassrootsNetwork(identity: self, store: store, sodium: sodium);
+    final network = GrassrootsNetwork(
+      identity: self,
+      underlays: const {Underlay.pan, Underlay.lan, Underlay.wan},
+      rendezvousServers: const [],
+      store: store,
+      sodium: sodium,
+    );
 
     // A peer never seen before: putPeerAddress creates the dial-book entry
     // AND makes the key known (Closed-mode recognition covers it).
@@ -101,8 +112,13 @@ void main() {
     final peer = await identity('Peer');
     final peerHex = hexOf(peer.publicKey);
     final store = Store<AppState>(appReducer, initialState: const AppState());
-    final network =
-        GrassrootsNetwork(identity: self, store: store, sodium: sodium);
+    final network = GrassrootsNetwork(
+      identity: self,
+      underlays: const {Underlay.pan, Underlay.lan, Underlay.wan},
+      rendezvousServers: const [],
+      store: store,
+      sodium: sodium,
+    );
 
     expect(
       () => network.putPeerAddress(peer.publicKey, 'not-an-address'),
@@ -119,8 +135,13 @@ void main() {
     final peer = await identity('Peer');
     final peerHex = hexOf(peer.publicKey);
     final store = Store<AppState>(appReducer, initialState: const AppState());
-    final network =
-        GrassrootsNetwork(identity: self, store: store, sodium: sodium);
+    final network = GrassrootsNetwork(
+      identity: self,
+      underlays: const {Underlay.pan, Underlay.lan, Underlay.wan},
+      rendezvousServers: const [],
+      store: store,
+      sodium: sodium,
+    );
 
     network.putPeerAddress(peer.publicKey, '203.0.113.5:4001');
     expect(store.state.knownPeers.isKnown(peerHex), isTrue);

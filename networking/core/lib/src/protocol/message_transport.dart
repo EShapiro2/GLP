@@ -229,6 +229,20 @@ class MessageTransportSender {
     });
   }
 
+  /// How long a message's attempts last: from its first transmission to the
+  /// moment its last retransmission goes unacknowledged and the message
+  /// fails. The receiver of the attestation exchange waits this long for the
+  /// peer's attestation before it tears the session down (GNA, 2026-10-11,
+  /// Attestation Q1: "the receiver waits for the peer's attestation as long as
+  /// the sender's attempts last").
+  Duration get attemptWindow {
+    var window = Duration.zero;
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      window += _backoffFor(attempt);
+    }
+    return window;
+  }
+
   /// The backoff schedule, for tests. What it guards against is invisible
   /// from the outside — a spinning CPU, not an error — so it is asserted
   /// directly rather than through the sender's behaviour.

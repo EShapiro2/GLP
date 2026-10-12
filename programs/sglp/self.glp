@@ -152,7 +152,7 @@ social_graph_draw(N, Seed, Hom, Wary, D?) :-
 %% children's (TGLP, "Declaration parameters" and Definition "Root, Scope";
 %% sGLP's code task of 2026-10-03 21:09 UTC).
 Peer  ::= Constant.
-Peers ::= [] ; [Peer | Peers].
+Peers ::= List(Peer).
 
 imported procedure coins#run(Integer?, Stream(Peers)?, Number?, Span?, Integer?,
                              Integer?, Integer?).

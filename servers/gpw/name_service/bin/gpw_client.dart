@@ -235,6 +235,7 @@ Future<void> _push(_Opts o) async {
   );
   final network = HeadlessGrassrootsNetwork(
     identity: identity,
+    rendezvousServers: const [],
     sodium: sodium,
   );
   final ack = Completer<Map>();

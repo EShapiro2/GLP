@@ -14,8 +14,11 @@
 ///
 ///   - `draw(Id, W, V)`: draw construct `Id` with the widget `W` names in
 ///     the construct family in use, over the view `V`, each position the
-///     person writes marked `input(P)`, `P` its path; drawn again as more of
-///     the view arrives;
+///     person writes marked `input(P)`, `P` its path, and each widget
+///     position the program has not yet written whole marked `pending(P)`,
+///     a stream shown as its elements so far, its unwritten tail not shown
+///     (vGLP, Definition "Construct Process"); drawn again as more of the
+///     view arrives;
 ///   - `withdraw(Id)`: remove it, every question it holds being answered;
 ///   - `input(Id, P, R)`: the grant of the person's raw input `R`, a ground
 ///     term, to the question at position `P` of construct `Id`.
@@ -41,6 +44,14 @@ import 'term.dart';
 const String drawCtor = 'draw';
 const String withdrawCtor = 'withdraw';
 const String inputCtor = 'input';
+
+/// The mark of a widget position the program has not yet written whole in a
+/// view, `pending(P)`, `P` its path, beside `input(P)`: "each widget position
+/// the program has not yet written whole --- the root, a field, an element of
+/// any stream, the thread's included --- drawn as pending ... so that the
+/// questions beside it are offered at once" (vGLP 118e04d, Definition
+/// "Construct Process"; `programs/vglp/dispatcher.glp`, shown/3).
+const String pendingCtor = 'pending';
 
 /// The raw input `R` the end button of a list the person writes grants,
 /// `input(Id, P, [end])`: "a list the person writes: the same, with a button
@@ -116,6 +127,20 @@ class Bridge {
 /// the program writes.
 GList? questionAt(GTerm view) {
   if (view is! GStruct || view.functor != inputCtor || view.args.length != 1) {
+    return null;
+  }
+  final p = view.args.single;
+  if (p is! GList || !p.items.every((i) => i is GInt)) return null;
+  return p;
+}
+
+/// The position `P` of the widget position a view marks pending, where
+/// [view] is `pending(P)` and `P` a path of argument indices; null for any
+/// other view.
+GList? pendingAt(GTerm view) {
+  if (view is! GStruct ||
+      view.functor != pendingCtor ||
+      view.args.length != 1) {
     return null;
   }
   final p = view.args.single;

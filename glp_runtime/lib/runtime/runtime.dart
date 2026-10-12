@@ -4,6 +4,7 @@ import 'suspend_ops.dart';
 import 'commit.dart';
 import 'fairness.dart';
 import 'body_kernels.dart';
+import 'place_streams.dart';
 import 'terms.dart' show Term;
 import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 import 'package:glp_runtime/multiagent/mad_context.dart' show MadContext;
@@ -74,6 +75,11 @@ class GlpRuntime {
   // madGLP context (set when running in multiagent mode)
   // Used by '_cold_send' kernel to access globalization infrastructure
   Object? madContext;
+
+  /// The declared places and their event streams (place_streams.dart): the
+  /// runtime's bookkeeping behind place_declare/3 and place_remove/1, kept
+  /// whether a networking layer is bound or none is.
+  late final PlaceStreams placeStreams = PlaceStreams(this);
 
   /// The person's identity this runtime holds: the key `self_key/1` answers,
   /// `sign/3` signs under, and the compiler certifies modules with. Set by the

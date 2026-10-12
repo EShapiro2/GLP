@@ -101,10 +101,10 @@ Integer?
 ,
 Constant?
 ,
-Cards
+List(Card)
 ?
 ,
-Cards
+List(Card)
 ,
 MutualRef?
 ,

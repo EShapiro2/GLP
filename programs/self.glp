@@ -17,6 +17,8 @@
 
 % Collections (parameterized)
 Stream(X) ::= [] ; [X | Stream(X)].
+% A finite list: vGLP draws a list position as a list the person ends, a stream position as a stream.
+List(X) ::= [] ; [X | List(X)].
 OpenStream(X) ::= [X | Stream(X)].
 DiffList(X) ::= Stream(X) \ Stream(X)?.
 

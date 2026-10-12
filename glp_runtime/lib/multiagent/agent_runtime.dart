@@ -16,8 +16,19 @@
 /// the person through send_to_user → the _output/1 kernel → [onUserOutput],
 /// each element a ground term, whole, and in the agent's transcript
 /// ([onOutput]) as a terminal shows it.
+///
+/// The network: the host runs over a [GlpNetwork] it is given, and builds the
+/// simulation's only when it is given none (IGLP, Implementation Notes,
+/// "Networking Seam", One interface: "A simulation realisation of the same
+/// interface backs the tests and plays, so transport integration is a backend
+/// swap").  Over a given network the agent is named by its key (IGLP, Remark
+/// "Agent Names": "Over a real network, the name of an agent p is its public
+/// key, held by the networking layer"), presented as 64 lowercase hex
+/// characters, as self_key/1 presents it.  Until 2026-10-12 the host built the
+/// simulation's network itself, always.
 library;
 
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -35,12 +46,17 @@ import 'package:glp_runtime/multiagent/simulation_network.dart';
 /// Agent runtime encapsulating GLP execution, madGLP context, and I/O.
 ///
 /// Usage:
-/// 1. Create with the agent's id and the path of its one program
+/// 1. Create with the agent's id and the path of its one program, and with
+///    the agent's [GlpNetwork] and key pair where it runs over a given one
 /// 2. Set callbacks: onUserOutput, onOutput, onLog, onSendMadMessage
 /// 3. Call initialize() to compile and start
 /// 4. Call injectUserInput(act) with each of the person's acts, a ground term
-/// 5. Call onMadMessageReceived(from, payload) for network messages
+/// 5. In the simulation, call onMadMessageReceived(from, payload) for network
+///    messages; a given network delivers its own
 class AgentRuntime {
+  /// The host's handle on the agent: its name in the simulation, which names
+  /// agents symbolically, and its tag in the log.  Over a given network the
+  /// agent's name is its key ([name]).
   final String agentId;
 
   /// The path of the one program the agent runs: a directory with a self.glp,
@@ -82,18 +98,28 @@ class AgentRuntime {
   void Function(PubKey pk, Underlay underlay)? onPeerDisconnected;
   void Function(PubKey pk, ProximityUnderlay underlay)? onPeerDiscovered;
 
-  /// This agent's Ed25519 key pair. Provided by the coordinator, or generated.
+  /// This agent's Ed25519 key pair. Provided by the coordinator, or generated
+  /// --- the runtime without a layer generates the person's key itself (IGLP,
+  /// "One interface").  Over a given network it is the layer's, which holds
+  /// it (IGLP, The contract: "an agent's identity is its public key, held with
+  /// its private key by the networking layer"), and must be provided.
   final ({PubKey pub, Uint8List priv})? keyPair;
 
-  /// The shared identifier–key directory. Provided by the coordinator, or built
-  /// lazily (deterministic routing keys) when absent.
+  /// The shared identifier–key directory of the simulation. Provided by the
+  /// coordinator, or built lazily (deterministic routing keys) when absent.
+  /// Unused over a given network, which names agents by key.
   final NetworkDirectory directory;
+
+  /// The networking layer the host was given, or null, and the host builds
+  /// the simulation's.
+  final GlpNetwork? givenNetwork;
 
   // Runtime state
   /// The agent's networking layer (seam spec §3-4): outgoing via [send],
-  /// incoming via [GlpNetwork.onMessageReceived]. In simulation it forwards to
-  /// the coordinator through [onSendMadMessage].
-  SimulationNetworkClient? _network;
+  /// incoming via [GlpNetwork.onMessageReceived]: the one given, or the
+  /// simulation's, which forwards to the coordinator through
+  /// [onSendMadMessage].
+  GlpNetwork? _network;
   GlpRuntime? _runtime;
   MadContext? _ctx;
   Scheduler? _scheduler;
@@ -124,11 +150,39 @@ class AgentRuntime {
     this.extraArgs = const [],
     this.keyPair,
     NetworkDirectory? directory,
-  }) : directory = directory ?? NetworkDirectory();
+    GlpNetwork? network,
+  })  : directory = directory ?? NetworkDirectory(),
+        givenNetwork = network {
+    if (network == null) return;
+    // The person's key is the layer's: the engine holds it from construction,
+    // so the certificate its compiler writes, self_key/1 and sign/3 are under
+    // the key the agent is named by.  The layer gives out its public key and
+    // keeps the private half, so the host is given the pair as well.
+    final kp = keyPair;
+    if (kp == null) {
+      throw ArgumentError('agent $agentId runs over a given network, whose '
+          'key pair names it, and was given none');
+    }
+    if (kp.pub != network.getIdentity()) {
+      throw ArgumentError('agent $agentId was given the key pair of '
+          '${kp.pub.hex} and a network whose key is '
+          '${network.getIdentity().hex}: an agent has one key, its name');
+    }
+  }
 
-  /// Deterministic routing key for [id]: returns the directory entry if present,
-  /// otherwise derives a stable 32-byte key and registers it. Routing-only — the
-  /// signing identity is the agent's real [keyPair].
+  /// The agent's name in madGLP: its key, as 64 lowercase hex characters,
+  /// over a given network (IGLP, Remark "Agent Names"), and [agentId] in the
+  /// simulation, whose agent names are symbolic --- "symbolic agent names are
+  /// the simulation realisation's choice".  It is the anchor of every global
+  /// name the agent creates and the first argument of its entry goal.
+  String get name =>
+      givenNetwork?.getIdentity().hex ?? agentId.toLowerCase();
+
+  /// Deterministic routing key for [id], in the simulation only: returns the
+  /// directory entry if present, otherwise derives a stable 32-byte key and
+  /// registers it. Routing-only — the signing identity is the agent's real
+  /// [keyPair].  Over a given network no key is made up: the agent's name is
+  /// its key, and a destination is the key it names.
   PubKey _pkFor(String id) {
     final existing = directory.pkOf(id);
     if (existing != null) return existing;
@@ -186,7 +240,7 @@ class AgentRuntime {
   // =========================================================================
 
   Future<void> initialize() async {
-    final agentIdLower = agentId.toLowerCase();
+    final selfName = name; // its key over a given network ([name])
     _log('INIT: Starting');
     _output('[INIT] Creating MadContext...');
 
@@ -202,7 +256,7 @@ class AgentRuntime {
         identity: PersonIdentity(kp.pub, kp.priv));
 
     // Enable madGLP mode (creates the MadContext)
-    engine.enableMadGLP(agentId: agentIdLower);
+    engine.enableMadGLP(agentId: selfName);
 
     // Load the one program (TGLP, def:program).  A directory with a self.glp
     // is linked whole.  A self-contained module file is a program too (TGLP
@@ -241,35 +295,16 @@ class AgentRuntime {
       _output('< ${formatGroundTerm(term)}');
     };
 
-    // Networking seam (spec §3-4): route outgoing/incoming through a
-    // SimulationNetworkClient instead of serializing OutboundMessages directly.
-    // The wire carries the opaque payload bytes only (no MessageType).
-    directory.register(agentIdLower, kp.pub); // self identity (for sign/verify)
-    final network = SimulationNetworkClient(
-      selfId: agentIdLower,
-      directory: directory,
-      keyPair: kp,
-      sendToRouter: (toId, payload) =>
-          _sendMadPayload(toId, Uint8List.fromList(payload)),
-    );
-    _network = network;
-    _ctx!.network = network; // backs the seam predicates (IGLP Definition Seam Predicates)
-
-    // Outgoing (spec §4): ctx.onMessageReady(destId, msg) → network.send.
-    _ctx!.onMessageReady = (destination, msg) async {
-      network.send(_pkFor(destination), Uint8List.fromList(msg.payload));
-    };
-
-    // Incoming (spec §4): dispatch on the message kind byte (value/request/
-    // acknowledgement) via the MadContext receive entry point.
-    network.onMessageReceived = (senderPk, payload, messageId, transport) {
-      try {
-        final fromId = directory.idOf(senderPk) ?? '?';
-        _ctx!.handleIncomingPayload(payload: payload, fromAgent: fromId);
-      } catch (e) {
-        _log('MAD_ERROR: $e');
-      }
-    };
+    // Networking seam (spec §3-4): route outgoing/incoming through the
+    // agent's GlpNetwork instead of serializing OutboundMessages directly ---
+    // the one given, or, where none is, the simulation's.  The wire carries
+    // the opaque payload bytes only (no MessageType).
+    final given = givenNetwork;
+    if (given != null) {
+      _bindGivenNetwork(given);
+    } else {
+      _bindSimulationNetwork(selfName, kp);
+    }
 
     _output('[INIT] Loaded GLP program');
 
@@ -296,7 +331,7 @@ class AgentRuntime {
     final goalArity = int.parse(goalLabel.split('/').last);
     final takesUserIn = goalArity == extraArgs.length + 3;
     final goalArgs = [
-      glpConstantText(agentIdLower),
+      glpConstantText(selfName),
       if (takesUserIn) 'UserIn?',
       for (final extra in extraArgs)
         int.tryParse(extra)?.toString() ?? glpConstantText(extra),
@@ -325,7 +360,7 @@ class AgentRuntime {
     // The scheduler over the code image the goal was posted on.
     _scheduler = posted.scheduler..traceSink = (line) => _log('GLP: $line');
 
-    final argsDesc = [agentIdLower, ...extraArgs, 'NetIn'].join(', ');
+    final argsDesc = [selfName, ...extraArgs, 'NetIn'].join(', ');
     _output('[GOAL] Started $goalName($argsDesc)');
     _log('INIT: GQ length before initial run: ${_runtime!.gq.length}');
 
@@ -335,6 +370,116 @@ class AgentRuntime {
 
     _initialized = true;
     updateStats();
+  }
+
+  /// Bind the network the host was given: the agent is named by its key, a
+  /// destination is the key it names, and the sender of an incoming message
+  /// is named by the key the layer authenticated (IGLP, Remark "Agent Names";
+  /// The contract: "the sender authenticated by the layer").  Each event the
+  /// layer delivers --- a message, a place event --- is followed by a run
+  /// until quiescent and the Sends it makes (IGLP, Implementation Notes,
+  /// "Event-driven execution": "On each event the agent binds what the event
+  /// delivers, reduces until quiescent ... and then performs its Sends").
+  void _bindGivenNetwork(GlpNetwork network) {
+    _network = network;
+    _ctx!.network = network; // backs the seam predicates (IGLP Definition Seam Predicates)
+
+    // Outgoing: the destination's name is its key.  A destination that is no
+    // key names no agent over the layer, and its message is not sent.
+    _ctx!.onMessageReady = (destination, msg) async {
+      final PubKey pk;
+      try {
+        pk = PubKey.fromHex(destination);
+      } on Object catch (e) {
+        _log('MAD_ERROR: a message to $destination, which is no key and so '
+            'names no agent over the network, is not sent: $e');
+        _output('[ERROR] a message to $destination, which names no agent '
+            'over the network, is not sent');
+        return;
+      }
+      network.send(pk, Uint8List.fromList(msg.payload));
+    };
+
+    // Incoming: the Receive transaction, from the sender the layer
+    // authenticated, then a run and the Sends it makes --- taken once the
+    // code that delivered the message has returned, since a layer may deliver
+    // from inside a call the runtime made of it, and a transaction or a run
+    // is never started inside another.
+    network.onMessageReceived = (sender, payload, messageId, underlay) {
+      _log('MAD_RECV from ${sender.hex} over ${underlay.name} '
+          '(${payload.length} bytes)');
+      scheduleMicrotask(() {
+        try {
+          _ctx!.handleIncomingPayload(payload: payload, fromAgent: sender.hex);
+        } catch (e) {
+          _log('MAD_ERROR: $e');
+        }
+        updateStats();
+        unawaited(_runUntilQuiescent());
+      });
+    };
+
+    // A place event the layer reports binds the place's stream (MadContext
+    // .deliverPlaceEvent); the run follows it, once the code that delivered
+    // it has returned.
+    _ctx!.onPlaceEventDelivered =
+        () => scheduleMicrotask(() => unawaited(_runUntilQuiescent()));
+
+    // Connectivity, surfaced as the layer reports it, its attested identity
+    // with it.
+    network.onPeerConnected =
+        (pk, underlay, identity) => onPeerConnected?.call(pk, underlay, identity);
+    network.onPeerDisconnected =
+        (pk, underlay) => onPeerDisconnected?.call(pk, underlay);
+    network.onPeerDiscovered =
+        (pk, underlay) => onPeerDiscovered?.call(pk, underlay);
+  }
+
+  /// Build and bind the simulation's network, where the host was given none:
+  /// a [SimulationNetworkClient] over [directory], whose sends go to the
+  /// coordinator by [onSendMadMessage] and whose deliveries the coordinator
+  /// makes by [onMadMessageReceived].  Agent names are symbolic and resolved
+  /// to keys at the seam (IGLP, "Simulation realisation").
+  void _bindSimulationNetwork(
+      String selfName, ({PubKey pub, Uint8List priv}) kp) {
+    directory.register(selfName, kp.pub); // self identity (for sign/verify)
+    final network = SimulationNetworkClient(
+      selfId: selfName,
+      directory: directory,
+      keyPair: kp,
+      sendToRouter: (toId, payload) =>
+          _sendMadPayload(toId, Uint8List.fromList(payload)),
+    );
+    _network = network;
+    _ctx!.network = network; // backs the seam predicates (IGLP Definition Seam Predicates)
+
+    // Outgoing (spec §4): ctx.onMessageReady(destId, msg) → network.send.
+    _ctx!.onMessageReady = (destination, msg) async {
+      network.send(_pkFor(destination), Uint8List.fromList(msg.payload));
+    };
+
+    // Incoming (spec §4): dispatch on the message kind byte (value/request/
+    // acknowledgement) via the MadContext receive entry point.  The sender is
+    // the agent the directory names by the key the layer authenticated; a key
+    // it names no agent by is a fault --- the layer authenticates every
+    // sender --- and the message is dropped and reported (GLP #3 Cowork,
+    // 2026-10-11 12:59 UTC, "01:05").  Until 2026-10-12 such a sender was
+    // named '?', and the message received.
+    network.onMessageReceived = (senderPk, payload, messageId, underlay) {
+      final fromId = directory.idOf(senderPk);
+      if (fromId == null) {
+        _log('MAD_ERROR: a message from $senderPk, a key the directory '
+            'names no agent by, is dropped');
+        _output('[ERROR] a message from ${senderPk.hex}, which names no '
+            'agent, is dropped');
+        return;
+      }
+      try {
+        _ctx!.handleIncomingPayload(payload: payload, fromAgent: fromId);
+      } catch (e) {
+        _log('MAD_ERROR: $e');
+      }
+    };
   }
 
   // =========================================================================
@@ -379,8 +524,15 @@ class AgentRuntime {
 
   /// Handle an incoming madGLP message (seam §4): the opaque payload bytes are
   /// surfaced to the networking layer, which deserializes and dispatches them.
+  /// The simulation's delivery, which its coordinator makes; a given network
+  /// delivers its own messages, and a delivery here is refused.
   Future<void> onMadMessageReceived(String from, Uint8List payload) async {
     _log('MAD_RECV from $from (${payload.length} bytes)');
+
+    if (givenNetwork != null) {
+      throw StateError('agent $agentId runs over a given network, which '
+          'delivers its messages; a coordinator delivers none');
+    }
 
     final network = _network;
     if (_runtime == null || _ctx == null || network == null) {

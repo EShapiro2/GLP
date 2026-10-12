@@ -1270,7 +1270,12 @@ BodyKernelResult loadFileKernel(GlpRuntime rt, List<Object?> args) {
 // and nothing more, and the other seam predicates return having done nothing".
 // Until 2026-10-10 each aborted there, "not in madGLP mode (no MadContext)" or
 // "no GlpNetwork bound to this agent".  An argument the predicate does not
-// take is still a violated precondition and an abort, layer or none.
+// take is still a violated precondition and an abort, layer or none.  A
+// place's stream is the runtime's bookkeeping and not the layer's, so with no
+// layer place_remove and a further declaration still close it (IGLP
+// madglp-spec.tex, "closed, its tail assigned [], in exactly two cases:
+// place_remove, and a further declaration of the same place"; GLP, 2026-10-11
+// 12:59 UTC, "23:12" (a)): only the reporting is absent.
 
 /// The [MadContext] and the [GlpNetwork] bound to it, or null where no layer
 /// is bound at all: no MadContext, or one with no GlpNetwork.
@@ -1374,9 +1379,12 @@ BodyKernelResult punchUdpKernel(GlpRuntime rt, List<Object?> args) {
 /// place_remove or a superseding declaration.
 ///
 /// Where no layer is bound, E is assigned `[unobservable | E']` and nothing
-/// more ("One interface", 6ba0329): nothing is declared and nothing recorded,
-/// so no event, no `observable` and no closing ever follows, E' being a writer
-/// no one holds.
+/// more is reported ("One interface", 6ba0329): no event and no `observable`
+/// ever follows.  The declaration stands in the runtime's bookkeeping
+/// ([GlpRuntime.placeStreams]) as it does with a layer, so place_remove or a
+/// further declaration closes the stream, E' assigned `[]` (GLP, 2026-10-11
+/// 12:59 UTC, "23:12" (a)).  Until 2026-10-12 nothing was recorded, and E' was
+/// a writer no one held, never closed.
 BodyKernelResult placeDeclareKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) {
     print('[ABORT] \'_place_declare\'/3: expected 3 arguments, got ${args.length}');
@@ -1404,9 +1412,9 @@ BodyKernelResult placeDeclareKernel(GlpRuntime rt, List<Object?> args) {
 
   final seam = _seamLayer(rt);
   if (seam == null) {
-    final (_, tailReader) = rt.heap.allocateVariable();
-    return _bindResult(rt, stream,
-        StructTerm('.', [ConstTerm('unobservable'), VarRef(tailReader)]));
+    rt.placeStreams.declare(place, stream.addr);
+    rt.placeStreams.deliver(place, ConstTerm('unobservable'));
+    return BodyKernelResult.success;
   }
 
   try {
@@ -1419,8 +1427,9 @@ BodyKernelResult placeDeclareKernel(GlpRuntime rt, List<Object?> args) {
 }
 
 /// '_place_remove'(P?) — end the declaration of place P, closing its stream.
-/// Does nothing where P is not declared.  Where no layer is bound it returns
-/// having done nothing ("One interface", 6ba0329).
+/// Does nothing where P is not declared.  Where no layer is bound it closes
+/// the stream all the same, the runtime's bookkeeping, and tells no layer
+/// ("One interface", 6ba0329; GLP, 2026-10-11 12:59 UTC, "23:12" (a)).
 BodyKernelResult placeRemoveKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 1) {
     print('[ABORT] \'_place_remove\'/1: expected 1 argument, got ${args.length}');
@@ -1435,7 +1444,10 @@ BodyKernelResult placeRemoveKernel(GlpRuntime rt, List<Object?> args) {
   }
 
   final seam = _seamLayer(rt);
-  if (seam == null) return BodyKernelResult.success;
+  if (seam == null) {
+    rt.placeStreams.close(place);
+    return BodyKernelResult.success;
+  }
 
   try {
     seam.ctx.removePlace(place);

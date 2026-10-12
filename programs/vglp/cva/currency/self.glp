@@ -2,26 +2,29 @@
 %% The plays of the canonical CVA platform of Jurix's currency
 %% (programs/jurix, contract_named(currency, C); Jurix, Section 3.4, the cent
 %% sign written coin), platform.vglp, which programs/vglp/cva/compile.sh prints
-%% from it.  Each runs two agents, alice and bob, their persons scripted and
-%% paced on their threads (../self.glp), and gives each person's log: the
-%% thread, with gave(C, A) where the person answers a card.  swap(P, Q, V, U):
+%% from it: two-phase commit coordinated by the initiating agent (vGLP, Section
+%% 3.2, Definition "Canonical CVA Platform").  Each runs two agents, alice and
+%% bob, their persons scripted and paced on their threads (../self.glp), and
+%% gives each person's log, the thread with gave(K, A) where the person answers
+%% a card, and the network's log of the cargoes it carries.  swap(P, Q, V, U):
 %% P gives a coin of U and takes one of V, Q the converse.
 %%
-%% play_pay_swap: each mints a coin of its own; alice proposes swapping hers
-%%   for bob's, bob is asked and answers yes, and the swap commits on the two
-%%   wills; alice then pays bob his coin back, guarded by her alone, and bob's
-%%   machine concurs.
-%% play_pledged: alice mints one coin and offers it in a swap bob does not
-%%   answer; her next proposal, a swap offering the same coin, is dropped, the
-%%   coin pledged to the first (vGLP, Definition "Vote, App State, Pledged
-%%   State, Compatible Effect"), and a mint after it is taken.
-%% play_declined: alice proposes a swap for a coin bob does not hold; bob's
-%%   machine declines it, its effect incompatible, and the attempt aborts at
-%%   both.
-%% play_closed: bob is asked about alice's swap and, before answering, offers
-%%   his coin elsewhere; his machine then declines the swap, which closes the
-%%   card (vGLP, Section 5.4, "a card being closed by the agent's own Decline
-%%   and by Abort"), and the yes bob gives it after is taken by no Answer.
+%% play_pay_swap: each mints a coin of its own, a class of one participant,
+%%   applied at once; alice proposes swapping hers for bob's, bob is asked and
+%%   answers yes, and it commits; alice then pays bob his coin back, guarded by
+%%   her alone, and bob's machine votes yes.
+%% play_redeem: swapped as above, alice proposes the swap back,
+%%   swap(alice, bob, alice, bob), a class that redeem(alice, bob, alice) also
+%%   determines, so its guard sets are the minimal {alice} and {bob} (vGLP,
+%%   Definition "Volition-Guarded Specification, Participants, Guard Sets,
+%%   Simple Guards"): the attempt asks nobody and bob's machine votes yes.
+%% play_busy: swapped and each minted again, bob proposes a swap and alice,
+%%   asked, leaves her card open, bob holding his attempt prepared; alice
+%%   proposes paying bob, and bob's machine votes no, its lock held, and the pay
+%%   aborts; alice answers bob's card no, the else-branch, and his swap aborts;
+%%   alice proposes the pay again, and bob's machine votes yes.
+%% play_declined: alice proposes a swap for a coin bob does not hold; bob, not
+%%   ready, votes no without asking his person, and it aborts at both.
 %%
 %% The types of platform.vglp, written again for the declarations of the
 %% procedures imported from its compiled module.
@@ -30,16 +33,15 @@
 Class    ::= mint(Peer) ; swap(Peer, Peer, Peer, Peer) ; pay(Peer, Peer)
            ; redeem(Peer, Peer, Peer).
 Request  ::= propose(Class) ; known(Peer).
-Verdict  ::= will ; yes ; no.
-Vote     ::= vote(Peer, Integer, Class, Verdict).
-Content  ::= hello(Peer) ; cargo(Peer, Integer, Vote).
-Net      ::= msg(Peer, Content).
-Txn      ::= propose(Class) ; relay(Class) ; ask(Class) ; answer(Class)
-           ; concur(Class) ; decline(Class) ; commit(Class) ; abort(Class)
-           ; record(Peer).
-Session  ::= session(Stream(Request)?, Stream(Txn)).
 YesNo    ::= yes ; no.
-Attempt  ::= attempt(Class, Integer).
+Decision ::= commit ; abort.
+Attempt  ::= attempt(Peer, Integer, Class).
+Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision).
+Content  ::= hello(Peer) ; cargo(Peer, Integer, Cargo).
+Net      ::= msg(Peer, Content).
+Txn      ::= propose(Attempt) ; start(Attempt) ; answer(Attempt)
+           ; tally(Attempt) ; outcome(Attempt) ; discover(Peer).
+Session  ::= session(Stream(Request)?, Stream(Txn)).
 Card     ::= card(Attempt, YesNo?).
 Question ::= session_w(Session) ; card_w(Card).
 Ask(Q)   ::= ask(Constant, Q).
@@ -49,54 +51,63 @@ imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
 imported procedure platform#dispatch(Stream(Ask(Question))?,
     Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
 
-exported procedure play_pay_swap(Stream(_), Stream(_)).
-play_pay_swap(LA?, LB?) :-
-    pair([req(propose(mint(alice))), wait(commit(mint(alice))),
-          req(known(bob)), wait(record(bob)),
+exported procedure play_pay_swap(Stream(_), Stream(_), Stream(Sent(Cargo))).
+play_pay_swap(LA?, LB?, N?) :-
+    pair([req(propose(mint(alice))), wait(propose(attempt(alice, 1, mint(alice)))),
+          req(known(bob)), wait(discover(bob)),
           req(propose(swap(alice, bob, bob, alice))),
-          wait(commit(swap(alice, bob, bob, alice))),
+          wait(tally(attempt(alice, 2, swap(alice, bob, bob, alice)))),
           req(propose(pay(alice, bob)))],
-         [req(propose(mint(bob))), wait(commit(mint(bob))),
-          req(known(alice)), wait(record(alice)),
+         [req(propose(mint(bob))), wait(propose(attempt(bob, 1, mint(bob)))),
+          req(known(alice)), wait(discover(alice)),
           card(swap(alice, bob, bob, alice), yes)],
-         LA, LB).
+         LA, LB, N).
 
-exported procedure play_pledged(Stream(_), Stream(_)).
-play_pledged(LA?, LB?) :-
-    pair([req(propose(mint(alice))), wait(commit(mint(alice))),
-          req(known(bob)), wait(record(bob)),
+exported procedure play_redeem(Stream(_), Stream(_), Stream(Sent(Cargo))).
+play_redeem(LA?, LB?, N?) :-
+    pair([req(propose(mint(alice))), wait(propose(attempt(alice, 1, mint(alice)))),
+          req(known(bob)), wait(discover(bob)),
           req(propose(swap(alice, bob, bob, alice))),
-          req(propose(swap(alice, bob, carol, alice))),
-          req(propose(mint(alice)))],
-         [req(propose(mint(bob))), wait(commit(mint(bob))),
-          req(known(alice))],
-         LA, LB).
+          wait(tally(attempt(alice, 2, swap(alice, bob, bob, alice)))),
+          req(propose(swap(alice, bob, alice, bob)))],
+         [req(propose(mint(bob))), wait(propose(attempt(bob, 1, mint(bob)))),
+          req(known(alice)), wait(discover(alice)),
+          card(swap(alice, bob, bob, alice), yes)],
+         LA, LB, N).
 
-exported procedure play_declined(Stream(_), Stream(_)).
-play_declined(LA?, LB?) :-
-    pair([req(propose(mint(alice))), wait(commit(mint(alice))),
-          req(known(bob)), wait(record(bob)),
+exported procedure play_busy(Stream(_), Stream(_), Stream(Sent(Cargo))).
+play_busy(LA?, LB?, N?) :-
+    pair([req(propose(mint(alice))), wait(propose(attempt(alice, 1, mint(alice)))),
+          req(known(bob)), wait(discover(bob)),
+          req(propose(swap(alice, bob, bob, alice))),
+          wait(tally(attempt(alice, 2, swap(alice, bob, bob, alice)))),
+          req(propose(mint(alice))), wait(propose(attempt(alice, 3, mint(alice)))),
+          wait(start(attempt(bob, 3, swap(bob, alice, alice, bob)))),
+          req(propose(pay(alice, bob))),
+          wait(tally(attempt(alice, 4, pay(alice, bob)))),
+          card(attempt(bob, 3, swap(bob, alice, alice, bob)), no),
+          wait(outcome(attempt(bob, 3, swap(bob, alice, alice, bob)))),
+          req(propose(pay(alice, bob)))],
+         [req(propose(mint(bob))), wait(propose(attempt(bob, 1, mint(bob)))),
+          req(known(alice)), wait(discover(alice)),
+          card(swap(alice, bob, bob, alice), yes),
+          wait(outcome(attempt(alice, 2, swap(alice, bob, bob, alice)))),
+          req(propose(mint(bob))), wait(propose(attempt(bob, 2, mint(bob)))),
+          req(propose(swap(bob, alice, alice, bob)))],
+         LA, LB, N).
+
+exported procedure play_declined(Stream(_), Stream(_), Stream(Sent(Cargo))).
+play_declined(LA?, LB?, N?) :-
+    pair([req(propose(mint(alice))), wait(propose(attempt(alice, 1, mint(alice)))),
+          req(known(bob)), wait(discover(bob)),
           req(propose(swap(alice, bob, carol, alice)))],
          [req(known(alice))],
-         LA, LB).
-
-exported procedure play_closed(Stream(_), Stream(_)).
-play_closed(LA?, LB?) :-
-    pair([req(propose(mint(alice))), wait(commit(mint(alice))),
-          req(known(bob)), wait(record(bob)),
-          req(propose(swap(alice, bob, bob, alice)))],
-         [req(propose(mint(bob))), wait(commit(mint(bob))),
-          req(known(alice)), wait(record(alice)),
-          wait(ask(swap(alice, bob, bob, alice))),
-          req(propose(swap(bob, alice, carol, bob))),
-          wait(decline(swap(alice, bob, bob, alice))),
-          card(swap(alice, bob, bob, alice), yes)],
-         LA, LB).
+         LA, LB, N).
 
 %% alice and bob, each with its dispatcher and scripted person, their networks
 %% joined.
-procedure pair(Steps?, Steps?, Stream(_), Stream(_)).
-pair(SA, SB, LA?, LB?) :-
+procedure pair(Steps?, Steps?, Stream(_), Stream(_), Stream(Sent(Cargo))).
+pair(SA, SB, LA?, LB?, N?) :-
     platform # agent(alice, InA?, OutA, AsA),
     platform # dispatch(AsA?, ch(GA?, DA), _),
     person(DA?, GA, ps(nosess, [], [], SA?), LA),
@@ -104,4 +115,4 @@ pair(SA, SB, LA?, LB?) :-
     platform # dispatch(AsB?, ch(GB?, DB), _),
     person(DB?, GB, ps(nosess, [], [], SB?), LB),
     merge(OutA?, OutB?, Net),
-    route(Net?, alice, InA, bob, InB).
+    route(Net?, alice, InA, bob, InB, N).

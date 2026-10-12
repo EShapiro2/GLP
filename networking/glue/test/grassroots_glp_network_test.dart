@@ -5,9 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
 import 'package:redux/redux.dart';
-import 'package:sodium_libs/sodium_libs_sumo.dart';
+import 'package:sodium/sodium_sumo.dart';
 
-import 'package:grassroots_networking/glp_adapter.dart';
+import 'package:grassroots_networking_glue/grassroots_glp_network.dart';
 import 'package:grassroots_networking/src/grassroots_network.dart';
 import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
@@ -15,7 +15,7 @@ import 'package:grassroots_networking_core/src/places/place_registry.dart';
 import 'package:grassroots_networking_core/src/session/application_identity.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 
-import 'helpers/sodium_test_bootstrap.dart';
+import 'package:grassroots_networking_core/src/headless/libsodium_loader.dart';
 
 /// A platform geofencing binding that registers in memory and reports what the
 /// test tells it to.
@@ -63,7 +63,8 @@ void main() {
 
   late SodiumSumo sodium;
   setUpAll(() async {
-    sodium = await initTestSodium();
+    // The core's native libsodium, as the headless glue's test loads it.
+    sodium = await initHeadlessSodium();
   });
 
   // GrassrootsNetwork's constructor subscribes to connectivity changes;
@@ -91,6 +92,8 @@ void main() {
           {PlaceGeofenceBackend? backend}) async =>
       GrassrootsNetwork(
         identity: self,
+        underlays: const {Underlay.pan, Underlay.lan, Underlay.wan},
+        rendezvousServers: const [],
         store: Store<AppState>(appReducer, initialState: const AppState()),
         sodium: sodium,
         placeGeofenceBackend: backend,
@@ -107,7 +110,7 @@ void main() {
     network.putKnownPeer(peer);
     expect(layer.store.state.knownPeers.known.containsKey(peer.hex), isTrue);
     network.putPeerAddress(peer, '198.51.100.4:9601');
-    expect(layer.peerAddress(peer.bytes), '198.51.100.4:9601');
+    expect(layer.store.state.knownPeers.known[peer.hex], '198.51.100.4:9601');
     expect(() => network.putPeerAddress(peer, 'nowhere'), throwsArgumentError,
         reason: "the layer's refusal of an unparseable address, unchanged");
     network.removeKnownPeer(peer);
@@ -211,14 +214,20 @@ void main() {
     await layer.dispose();
   });
 
-  test('what the layer does not have as GNA specifies it throws '
-      'UnsupportedError', () async {
+  test(
+      'getPeers and observedPeerAddress pass straight through (GNA, '
+      '2026-10-11, Task C; until then they threw UnsupportedError)', () async {
     final layer = await layerFor(await identity('self'));
     final network = GrassrootsGlpNetwork(layer);
     final peer = glp.PubKey.fromList((await identity('peer')).publicKey);
 
-    expect(() => network.getPeers(), throwsUnsupportedError);
-    expect(() => network.observedPeerAddress(peer), throwsUnsupportedError);
+    // Nothing is nearby and nothing is connected: the layer's answers.
+    expect(network.getPeers(), isEmpty);
+    expect(layer.getPeers(), isEmpty);
+    network.putPeerAddress(peer, '198.51.100.4:9601');
+    expect(network.observedPeerAddress(peer), isNull,
+        reason: 'the dial-book address is no observed one');
+    expect(layer.observedPeerAddress(peer.bytes), isNull);
 
     await layer.dispose();
   });

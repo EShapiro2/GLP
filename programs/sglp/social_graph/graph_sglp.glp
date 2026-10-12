@@ -26,10 +26,12 @@ source(
   %% The vGLP program's interface (Section 5).
   [type('Peer', ['Constant']),
    type('YesNo', [yes, no]),
-   type('Peers', [[], ['Peer' | 'Peers']]),
+   type('Peers', ['List'('Peer')]),
    type('Choice', [same('Peer'), other('Peer')]),
    type('Menu', [menu('Peers', 'Peers', dual('Choice'))]),
    type('Card', [card('Peer', dual('YesNo'))]),
+   %% List, the root's (programs/self.glp), given in the interface that uses it.
+   type('List'('X'), [[], ['X' | 'List'('X')]]),
    volitional('Menu', menu_w, ask(dual('Peers'), dual('Peers'), 'Choice')),
    volitional('Card', card_w, respond(dual('Peer'), 'YesNo')),
    %% The predicates of its compiled program, graph.glp.

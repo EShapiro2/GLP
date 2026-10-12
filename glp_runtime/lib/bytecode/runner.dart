@@ -260,6 +260,18 @@ class RunnerContext {
   /// Whether clause variable [varIndex] is unknown ([unknownVars]).
   bool isUnknown(int varIndex) => unknownVars.contains(varIndex);
 
+  /// The clause variables a writer occurrence of the head has given a value
+  /// in this clause attempt, from the goal subterm it met.  A head writer
+  /// occurs more than once only where the success of a guard implies that its
+  /// reader is bound to a ground term (GLP-Spec glp.tex, Remark "Guards and
+  /// SRSW", 831f315), and a later writer occurrence of a variable here is
+  /// matched against that value ([_matchRepeatedWriter]), the reduction being
+  /// defined by the writer mgu of the goal and the head (Definitions "Writer
+  /// MGU" and "GLP Goal/Clause Reduction").  Until 2026-10-12 a later
+  /// occurrence overwrote the value (get_variable), compared it by identity or
+  /// by functor alone (get_value), or passed it by (unify_variable).
+  final Set<int> headWriterValued = <int>{};
+
   // WAM-style structure traversal state
   UnifyMode mode = UnifyMode.read;   // Current unification mode
   int S = 0;                          // Structure pointer (current position in structure)
@@ -353,6 +365,7 @@ class RunnerContext {
     unknownVars.clear();
     unknownPlaceholders.clear();
     unknownKeys.clear();
+    headWriterValued.clear();
     inBody = false;
     mode = UnifyMode.read;
     S = 0;
@@ -439,6 +452,35 @@ bool _isGoalWriter(RunnerContext cx, Object? t) =>
     t is VarRef &&
     _isUnboundWriterCell(cx, t.addr) &&
     !cx.sigmaHat.containsKey(t.addr);
+
+/// A later writer occurrence in the head of a variable an earlier writer
+/// occurrence gave [value] ([RunnerContext.headWriterValued]), meeting the
+/// goal subterm [goalSubterm].  Such a clause is licensed by a guard whose
+/// success implies the reader ground (GLP-Spec glp.tex, Remark "Guards and
+/// SRSW", 831f315: "both X and X? may occur multiple times in the clause"),
+/// and the goal reduces with it only if the goal and the head have a writer
+/// mgu (Definitions "Writer MGU" and "GLP Goal/Clause Reduction"): the two goal
+/// subterms the occurrences meet must be one term.  So the occurrence is
+/// decided as ground equality decides its two arguments
+/// ([_decideGroundEquality]): equal, it passes; unifiable only by assigning
+/// the goal's readers, the goal suspends on them, as term matching does on a
+/// reader it meets ("suspend on X1?", appendix-term-matching.tex), and the
+/// rest of the head is matched; never equal --- a clash, or an unbound writer
+/// in either --- it fails.  The value is kept: the variable has it already.
+StepOutcome _matchRepeatedWriter(
+    RunnerContext cx, Object? value, Object? goalSubterm) {
+  final (decision, readers) = _decideGroundEquality(value, goalSubterm, cx);
+  switch (decision) {
+    case _GroundEquality.equal:
+      return StepOutcome.advance;
+    case _GroundEquality.never:
+      return StepOutcome.nextClause;
+    case _GroundEquality.unifiable:
+      return _undecidedMember(cx, readers) == GuardResult.failure
+          ? StepOutcome.nextClause
+          : StepOutcome.advance;
+  }
+}
 
 /// Whether clause variable [varIndex] has no value yet in this clause attempt,
 /// so that its writer occurrence met in a skipped subterm makes it unknown
@@ -3364,10 +3406,21 @@ mixin OpExecutors {
                 if (_isGoalWriter(cx, value)) {
                   return StepOutcome.nextClause;
                 }
+                // Whether an earlier writer occurrence gave the variable its
+                // value; if not, this one does, the variable being known.
+                final valuedBefore = cx.headWriterValued.contains(varIndex);
+                if (!cx.isUnknown(varIndex)) cx.headWriterValued.add(varIndex);
                 if (cx.isUnknown(varIndex)) {
                   // A later writer occurrence of an unknown variable: what it
                   // meets is matched against a value not yet there, so it is
                   // undecided, and gives the variable no value.
+                  cx.S++;
+                } else if (valuedBefore) {
+                  // A later writer occurrence of a variable an earlier one
+                  // gave its value: matched against it.
+                  final outcome =
+                      _matchRepeatedWriter(cx, existingValue, value);
+                  if (outcome != StepOutcome.advance) return outcome;
                   cx.S++;
                 } else if (existingValue is HeapCell || (existingValue is VarRef && cx.rt.heap.isWriter(existingValue.addr))) {
                   // Clause variable is a fresh variable addr from previous UnifyReader
@@ -3528,6 +3581,12 @@ mixin OpExecutors {
           // matched against a value not yet there, so it is undecided, and
           // gives the variable no value.
           if (cx.isUnknown(varIndex)) return StepOutcome.advance;
+          // A later writer occurrence of a variable an earlier one gave its
+          // value, inside a structure: matched against it.
+          if (cx.headWriterValued.contains(varIndex)) {
+            return _matchRepeatedWriter(cx, cx.clauseVars[varIndex], arg);
+          }
+          cx.headWriterValued.add(varIndex);
           // GetWriterVariable logic: Load argument into clause WRITER variable
           // IMPORTANT: Check if clauseVars[varIndex] already has a writer from
           // an earlier occurrence (e.g., inside a structure via UnifyVariable).
@@ -3691,6 +3750,12 @@ mixin OpExecutors {
         if (storedValue == null) return StepOutcome.nextClause;
 
         if (!isReaderMode) {
+          // A later writer occurrence of a variable an earlier one gave its
+          // value: matched against it.
+          if (cx.headWriterValued.contains(varIndex)) {
+            return _matchRepeatedWriter(cx, storedValue, arg);
+          }
+          cx.headWriterValued.add(varIndex);
           // GetWriterValue logic: Unify argument with clause WRITER variable
           // storedValue is already the writer addr (or term)
 
@@ -4031,13 +4096,20 @@ mixin OpExecutors {
           final (writerAddr, _) = cx.rt.heap.allocateVariable();
           cx.argSlots[argSlot] = VarRef(writerAddr);
           cx.clauseVars[varIndex] = VarRef(writerAddr);
-        } else if (value is StructTerm && isReaderMode) {
-          // Structure (PutReader only) - create fresh variable and bind it
+        } else if (value is StructTerm) {
+          // A structure the head gave the variable: a fresh variable bound to
+          // it, its reader passed.  A writer occurrence reaches here too, the
+          // variable's writer occurring in the head and again in the body
+          // under a guard whose success implies its reader ground (GLP-Spec
+          // glp.tex, Remark "Guards and SRSW", 831f315), the body goal being
+          // given the term (Definition "GLP Goal/Clause Reduction": the body
+          // under the writer mgu); until 2026-10-12 it was refused here.
           final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
           cx.rt.heap.bindWriterStruct(writerAddr, value.functor, value.args);
           cx.argSlots[argSlot] = VarRef(readerAddr);
-        } else if (value is ConstTerm && isReaderMode) {
-          // Constant (PutReader only) - create fresh variable and bind it
+        } else if (value is ConstTerm) {
+          // A constant the head gave the variable, in either mode, as a
+          // structure above.
           final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
           cx.rt.heap.bindWriterConst(writerAddr, value.value);
           cx.argSlots[argSlot] = VarRef(readerAddr);
@@ -4046,8 +4118,9 @@ mixin OpExecutors {
           final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
           cx.clauseVars[varIndex] = VarRef(writerAddr);
           cx.argSlots[argSlot] = VarRef(isReaderMode ? readerAddr : writerAddr);
-        } else if (value is Term && isReaderMode) {
-          // Ground term (e.g., MutualRefTerm) - store on heap and pass VarRef
+        } else if (value is Term) {
+          // Ground term (e.g., MutualRefTerm) - store on heap and pass VarRef,
+          // in either mode, as a structure above.
           // Per spec v2.16.3 Section 1.1: CallEnv arguments must be VarRefs
           final heapAddr = cx.rt.heap.storeTermOnHeap(value);
           cx.argSlots[argSlot] = VarRef(heapAddr);

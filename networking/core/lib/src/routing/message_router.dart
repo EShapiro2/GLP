@@ -1,5 +1,4 @@
 import 'package:redux/redux.dart';
-import '../mesh/bloom_filter.dart';
 import '../models/packet.dart';
 import '../models/peer.dart';
 import '../protocol/fragment_handler.dart';
@@ -21,17 +20,23 @@ import '../platform/compat.dart';
 /// are dropped.
 ///
 /// Responsibilities:
-/// - Message delivery deduplication (via BloomFilter, keyed by messageId)
 /// - ANNOUNCE decoding and Redux dispatch
 /// - Fragment reassembly delegation
 /// - Callback dispatch to application layer
 ///
 /// All transports feed into [processPacket] — one entry point, one format.
+///
+/// Delivery is at least once (spec §Message Protocol: "A re-send after a lost
+/// acknowledgment, possibly over another underlay, may deliver a message
+/// twice, which madGLP tolerates"; §Networking Assumptions: "possibly more
+/// than once"): a message is delivered every time it is reassembled, and
+/// acknowledged every time. There is no duplicate filter (GNA, 2026-10-11,
+/// Task B): the Bloom filter that was one took a fresh message for a
+/// duplicate about 1% of the time near its capacity, and dropped it.
 class MessageRouter {
   final Store<AppState> store;
   final ProtocolHandler protocolHandler;
   final FragmentHandler fragmentHandler;
-  final BloomFilter _seenPackets = BloomFilter();
 
   /// Called when a message is received. [transport] is the transport the packet
   /// actually arrived on — authoritative, taken from the receive path rather
@@ -81,13 +86,34 @@ class MessageRouter {
   /// which rides the Message Protocol as `send` payloads do — its fragments
   /// acknowledged, the message de-duplicated and acknowledged whole — and is
   /// told from a payload by its fragment type alone. It rides the session, so
-  /// the sender is session-authenticated; the coordinator verifies it against
-  /// the digest this session binds to and tears the session down if it fails.
+  /// the sender is session-authenticated.
+  ///
+  /// [handshakeHash] is that of the session that decrypted it (GNA,
+  /// 2026-10-11, Task A): the coordinator verifies it against the digest that
+  /// session binds to, not against whichever session is current when it
+  /// judges, and tears that session down if it fails. Every fragment of one
+  /// attestation is sent under one session, and a fragment decrypts only
+  /// under its own, so the session that decrypted the completing fragment is
+  /// the session of the whole message.
   void Function(
     Uint8List senderPubkey,
     Uint8List payload,
     PeerTransport transport,
+    Uint8List handshakeHash,
   )? onAttestationReceived;
+
+  /// Whether the attestation exchange on the session whose handshake hash is
+  /// [handshakeHash] has completed: the peer's attestation verified on that
+  /// session (spec §Session Establishment: "neither peer is reported
+  /// reachable until it succeeds"). A `send` payload arriving on a session
+  /// whose exchange has not completed is dropped unacknowledged, so the
+  /// sender retransmits it (GNA, 2026-10-11, Task A). Unset, every session
+  /// counts as completed.
+  bool Function(
+    Uint8List senderPubkey,
+    PeerTransport transport,
+    Uint8List handshakeHash,
+  )? isSessionAttested;
 
   /// Called after payload-signature verification and before a BLE ANNOUNCE is
   /// applied. Return false to reject first contact from that sender.
@@ -127,9 +153,10 @@ class MessageRouter {
   })? onNoiseHandshakeReceived;
 
   /// Decrypts a session-encrypted packet before normal routing. Returns the
-  /// clear packet together with the session-authenticated sender identity,
-  /// or null when no session covers the packet.
-  Future<(GrassrootsPacket, Uint8List)?> Function(
+  /// clear packet together with the session-authenticated sender identity and
+  /// the handshake hash of the session that decrypted it, or null when no
+  /// session covers the packet.
+  Future<(GrassrootsPacket, Uint8List, Uint8List)?> Function(
     GrassrootsPacket packet,
     PeerTransport transport, {
     String? peerId,
@@ -244,7 +271,7 @@ class MessageRouter {
       debugPrint('Dropping encrypted packet without session');
       return;
     }
-    final (clearPacket, senderPubkey) = decrypted;
+    final (clearPacket, senderPubkey, handshakeHash) = decrypted;
     packet = clearPacket;
 
     String? effectiveUdpPeerId = udpPeerId;
@@ -280,6 +307,7 @@ class MessageRouter {
           packet,
           senderPubkey: senderPubkey,
           transport: transport,
+          handshakeHash: handshakeHash,
           peerId: effectiveUdpPeerId ?? bleDeviceId,
         );
       case PacketType.fragmentAck:
@@ -392,6 +420,7 @@ class MessageRouter {
     GrassrootsPacket packet, {
     required Uint8List senderPubkey,
     required PeerTransport transport,
+    required Uint8List handshakeHash,
     String? peerId,
   }) {
     final Fragment fragment;
@@ -403,6 +432,18 @@ class MessageRouter {
       return;
     }
 
+    // A payload on a session whose attestation exchange has not completed is
+    // dropped unacknowledged, so the sender retransmits it (GNA, 2026-10-11,
+    // Task A); the exchange's own fragments are what complete it.
+    if (fragment.type == PacketType.fragment &&
+        !(isSessionAttested?.call(senderPubkey, transport, handshakeHash) ??
+            true)) {
+      debugPrint('Dropping payload fragment of ${fragment.messageId} '
+          'unacknowledged: its session has not completed the attestation '
+          'exchange');
+      return;
+    }
+
     // Acknowledge every fragment, duplicates included — the sender's
     // retransmit stops only on the ACK (spec §Message Transport).
     onFragmentAckRequested?.call(
@@ -411,13 +452,6 @@ class MessageRouter {
       fragment.messageId,
       fragment.index,
     );
-
-    // A fragment of an already-delivered message: the sender missed the
-    // delivery ACK — re-issue it rather than rebuffering.
-    if (_seenPackets.mightContain(fragment.messageId)) {
-      onAckRequested?.call(transport, peerId, fragment.messageId);
-      return;
-    }
 
     final reassembled = fragmentHandler.addFragment(fragment);
     if (reassembled == null) return;
@@ -431,6 +465,7 @@ class MessageRouter {
       type: reassembled.type,
       senderPubkey: senderPubkey,
       transport: transport,
+      handshakeHash: handshakeHash,
       peerId: peerId,
     );
   }
@@ -457,28 +492,19 @@ class MessageRouter {
     required PacketType type,
     required Uint8List senderPubkey,
     required PeerTransport transport,
+    required Uint8List handshakeHash,
     String? peerId,
   }) {
-    // Dedup by messageId: only deliver to the app once, but ACK every time
-    // so the sender's watchdog and BLE-disconnect re-queue stop retrying
-    // when the original ACK got lost. Retries are fresh encryptions
-    // (possibly over a different medium), so the session's replay window
-    // cannot catch them — this id is what makes redelivery detectable.
-    final firstSeen = !_seenPackets.checkAndAdd(messageId);
-    if (firstSeen) {
-      // The attestation exchange rides the same protocol as payloads (spec
-      // §Message Protocol) and goes to the coordinator, never to the
-      // application.
-      if (type == PacketType.attestationFragment) {
-        onAttestationReceived?.call(senderPubkey, body, transport);
-      } else {
-        onMessageReceived?.call(messageId, senderPubkey, body, transport);
-      }
+    // Delivered every time it is reassembled: a re-send after a lost
+    // acknowledgment is delivered again (at least once, spec §Message
+    // Protocol), and acknowledged again below so the sender stops. The
+    // attestation exchange rides the same protocol as payloads and goes to
+    // the coordinator, never to the application; a second attestation on a
+    // session already attested is the coordinator's to ignore.
+    if (type == PacketType.attestationFragment) {
+      onAttestationReceived?.call(senderPubkey, body, transport, handshakeHash);
     } else {
-      debugPrint(
-        'Duplicate message ${messageId.length >= 8 ? messageId.substring(0, 8) : messageId}; '
-        're-ACKing without re-delivering.',
-      );
+      onMessageReceived?.call(messageId, senderPubkey, body, transport);
     }
 
     // Send ACK back to confirm delivery. The sender waits for this to
@@ -536,23 +562,4 @@ class MessageRouter {
 
   static String _pubkeyToHex(Uint8List pubkey) =>
       pubkey.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-
-  // ===== Deduplication API =====
-
-  /// Mark a message ID as delivered (e.g., for locally-originated messages)
-  void markSeen(String messageId) {
-    _seenPackets.add(messageId);
-  }
-
-  /// Check if a message ID has been delivered before
-  bool isDuplicate(String messageId) {
-    return _seenPackets.mightContain(messageId);
-  }
-
-  // ===== Lifecycle =====
-
-  /// Clean up resources
-  void dispose() {
-    _seenPackets.clear();
-  }
 }

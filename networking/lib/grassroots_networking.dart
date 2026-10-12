@@ -4,7 +4,6 @@
 /// It handles:
 /// - BLE Central/Peripheral dual-mode operation
 /// - Packet fragmentation and reassembly
-/// - Duplicate detection via Bloom filter
 /// - Local queueing of our own outbound messages for offline peers
 /// 
 /// ## Usage
@@ -89,6 +88,7 @@ export 'package:grassroots_networking_core/src/models/peer.dart';
 export 'package:grassroots_networking_core/src/models/packet.dart';
 export 'package:grassroots_networking_core/src/models/block.dart';
 export 'package:grassroots_networking_core/src/models/underlay.dart';
+export 'package:grassroots_networking_core/src/models/rendezvous_server.dart';
 
 // Redux Store (core states/actions/reducers; persistence is Flutter-side)
 export 'package:grassroots_networking_core/src/store/store.dart';

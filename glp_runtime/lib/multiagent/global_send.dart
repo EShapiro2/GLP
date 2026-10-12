@@ -27,9 +27,19 @@ class GlobalSendGoal {
   final GlobalName globalName;
 
   /// Agent to send the message to. For a reader-name link this is per-link
-  /// runtime state — the link's current holder — not a destination frozen at
-  /// spawn: a request for the link re-addresses it (spec §app:requests-acks).
+  /// runtime state — the link's last recorded holder — not a destination
+  /// frozen at spawn: an authorised request or an acknowledgement records a
+  /// holder and the value is globalized for it (spec §app:requests-acks).
   String destination;
+
+  /// The requesters the anchor recorded among the link's holders, in the
+  /// order their requests were authorised (IGLP §app:requests-acks: "the
+  /// anchor p records s among the link's holders").  Delivery is unordered, so
+  /// the anchor "cannot tell the current holder from the past one: it sends
+  /// the value to each, a past holder discards it, and the current holder
+  /// acknowledges" — on production the value goes to [destination] and to
+  /// every one of these.
+  final List<String> requesters = [];
 
   GlobalSendGoal({
     required this.readerAddr,
@@ -62,6 +72,11 @@ class GlobalSendFiredResult {
   /// Destination agent
   final String destination;
 
+  /// The requesters recorded among the link's holders before the value was
+  /// produced ([GlobalSendGoal.requesters]): the value goes to each of them as
+  /// well as to [destination].
+  final List<String> requesters;
+
   /// The original value (before globalization)
   final Object? value;
 
@@ -77,6 +92,7 @@ class GlobalSendFiredResult {
   GlobalSendFiredResult({
     required this.globalName,
     required this.destination,
+    this.requesters = const [],
     required this.value,
     required this.newGoals,
     required this.extractedVariables,
@@ -123,13 +139,34 @@ class GlobalSendRegistry {
   /// Returns false when no goal matches (the value was already produced, or
   /// the link never existed here).
   ///
-  /// Spec (madGLP Receive, Request case): "If the request arrives before the
-  /// value is produced, the anchor records the requester as the link's holder
-  /// — the destination consulted at send time is per-link runtime state."
+  /// Spec (madGLP Receive, Acknowledgement case): "The receiver records s as
+  /// the holder of every link whose reader name anchored at the receiver
+  /// occurs in V" — the destination consulted at send time is per-link
+  /// runtime state.  A request records its requester by [recordRequester].
   bool redirectGoal(GlobalName globalName, String newHolder) {
     for (final goal in _goals.values) {
       if (goal.globalName == globalName) {
         goal.destination = newHolder;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Record the authorised [requester] among the holders of the link
+  /// [globalName] (madGLP Receive, Request case; IGLP §app:requests-acks: "the
+  /// anchor p records s among the link's holders"): if a not-yet-fired goal
+  /// for the link exists, the requester becomes the holder the value is
+  /// globalized for, and is kept among the requesters the value is sent to on
+  /// production, so an earlier requester recorded before it still receives
+  /// the value.  Returns false when no goal matches.
+  bool recordRequester(GlobalName globalName, String requester) {
+    for (final goal in _goals.values) {
+      if (goal.globalName == globalName) {
+        goal.destination = requester;
+        if (!goal.requesters.contains(requester)) {
+          goal.requesters.add(requester);
+        }
         return true;
       }
     }
@@ -212,6 +249,7 @@ class GlobalSendRegistry {
     return GlobalSendFiredResult(
       globalName: goal.globalName,
       destination: goal.destination,
+      requesters: List.unmodifiable(goal.requesters),
       value: value,
       newGoals: newGoals,
       extractedVariables: variables,

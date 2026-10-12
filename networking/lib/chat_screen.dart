@@ -449,8 +449,11 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _forwardMessage(ChatMessageState message) {
-    // Show dialog to select a peer to forward to
-    final peers = widget.grassroots.getPeers();
+    // Show dialog to select a peer to forward to: every reachable peer, over
+    // any underlay (getPeers answers the nearby ones alone).
+    final peers = widget.grassroots.store.state.peers.peersList
+        .where((p) => p.isReachable)
+        .toList();
 
     if (peers.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(

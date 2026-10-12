@@ -95,11 +95,13 @@ void main() {
   ) async {
     final service = HeadlessGrassrootsNetwork(
       identity: await identityFromSeed(seed, 'service'),
+      rendezvousServers: const [],
       sodium: sodium!,
       attestation: serviceAttestation,
     );
     final caller = HeadlessGrassrootsNetwork(
       identity: await identityFromSeed(seed + 1, 'caller'),
+      rendezvousServers: const [],
       sodium: sodium!,
       attestation: callerAttestation,
     );

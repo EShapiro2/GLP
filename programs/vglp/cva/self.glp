@@ -3,53 +3,91 @@
 %% canonical CVA platform in vGLP (compiler/, compile.sh), vGLP's contracts
 %% beside Jurix's (contracts.glp), the platforms it prints
 %% (social_graph/platform.vglp, currency/platform.vglp, nudge/platform.vglp,
-%% each beside its plays) and what the plays of all three share, here: a
-%% scripted person and a network between two agents.
+%% introduce/platform.vglp, each beside its plays) and what the plays of all
+%% of them share, here: a scripted person and a network between two agents or
+%% three.
 %%
-%% A play runs two agents of a compiled platform, each the agent of the module
+%% A play runs the agents of a compiled platform, each the agent of the module
 %% with its ask stream and its dispatcher on that stream and on its person
 %% channel, as whatever spawns an agent's initial goal does (vGLP, Definition
 %% "Canonical Compilation"), its person scripted, and their networks joined by
-%% route/5.  The person reads what its dispatcher draws (vGLP, the construct
-%% process, draw(Id, W, V) and withdraw(Id); a grant input(Id, P, R)): the
-%% session, the agent's question, whose thread it logs as the program writes
-%% it, and the cards Ask raises.  The plays pace the persons on the thread
-%% (vGLP #8, 2026-10-11 16:44 UTC, Q5).
+%% route/6 or route3/8.  The person reads what its dispatcher draws (vGLP, the
+%% construct process, draw(Id, W, V) and withdraw(Id); a grant input(Id, P,
+%% R)): the session, the agent's question, whose thread it logs as the program
+%% writes it, each element once written whole, and the cards Start raises.
+%% The plays pace the persons on the thread, on which the agent goal writes
+%% each app transaction it takes, its schema applied to its attempt, and
+%% discover(Q) once it knows Q (vGLP, Definition "Compilation of a Structured
+%% Platform").
 %%
 %% The person's script is a list of steps: req(R) grants the request R on the
 %% session's request stream; wait(T) waits until the transaction T is on the
-%% thread; card(C, A) answers A, yes or no, the card of an attempt of the class
-%% C, once it is drawn.  Its log is the thread, each transaction once, with
-%% gave(C, A) where it answers a card.  It reads what the dispatcher sends it
-%% as any term and its script as terms of any form, the steps holding the
-%% platform's requests, transactions and classes (docs/typed-glp-manual.md,
-%% 18.3, the play of programs/tests/vglp/fragments likewise).  The person
-%% channel never closes, so a run ends at the REPL's :limit, the clock of each
-%% agent ticking without end (vGLP #8, 2026-10-11 16:44 UTC, after the fact).
+%% thread; card(K, A) answers A, yes or no, the card of the attempt K, or of an
+%% attempt of the class K, once it is drawn.  Its log is the thread, each
+%% transaction once, with gave(K, A) where it answers a card.  It reads what
+%% the dispatcher sends it as any term and its script as terms of any form, the
+%% steps holding the platform's requests, transactions, attempts and classes
+%% (docs/typed-glp-manual.md, 18.3, the play of programs/tests/vglp/fragments
+%% likewise).  The network logs each cargo it carries, sent(From, To, Cargo),
+%% so a play shows what the thread does not name, the votes and the outcomes.
+%% The person channel never closes, so a run ends at the REPL's :limit, the
+%% clock of each agent ticking without end (vGLP #8, 2026-10-11 16:44 UTC,
+%% after the fact).
 %% ---------------------------------------------------------------------------
 
-Peer     ::= Key.
-Msg(M)   ::= msg(Peer, M).
-PersonIn ::= [_ | PersonIn].
-Step     ::= req(_) ; wait(_) ; card(_, _).
-Steps    ::= [] ; [Step | Steps].
-Sess     ::= nosess ; sess(Integer, _).
-Seen     ::= seen(Integer, _, _).
-Seens    ::= [] ; [Seen | Seens].
-PSt      ::= ps(Sess, Stream(_), Seens, Steps).
-CardAt   ::= card_at(Integer, _, Seens) ; nocard.
-YN       ::= y ; n.
+Peer       ::= Key.
+Carried(X) ::= hello(Peer) ; cargo(Peer, Integer, X).
+Msg(X)     ::= msg(Peer, Carried(X)).
+Sent(X)    ::= sent(Peer, Peer, X).
+PersonIn   ::= [_ | PersonIn].
+Step       ::= req(_) ; wait(_) ; card(_, _).
+Steps      ::= [] ; [Step | Steps].
+Sess       ::= nosess ; sess(Integer, _).
+Seen       ::= seen(Integer, _, _).
+Seens      ::= [] ; [Seen | Seens].
+PSt        ::= ps(Sess, Stream(_), Seens, Steps).
+CardAt     ::= card_at(Integer, _, Seens) ; nocard.
+YN         ::= y ; n.
 
-%% The network between two agents A and B: each message to its recipient.
-procedure(M) route(Stream(Msg(M))?, Peer?, Stream(Msg(M)), Peer?, Stream(Msg(M))).
-route([msg(To, C)|Ms], A, [msg(To?, C?)|OA?], B, OB?) :-
-    ground(To?), ground(A?), ground(B?), To? =?= A? |
-    route(Ms?, A?, OA, B?, OB).
-route([msg(To, C)|Ms], A, OA?, B, [msg(To?, C?)|OB?]) :-
-    ground(To?), ground(A?), ground(B?), To? =?= B? |
-    route(Ms?, A?, OA, B?, OB).
-route([msg(_, _)|Ms], A, OA?, B, OB?) :- otherwise | route(Ms?, A?, OA, B?, OB).
-route([], _, [], _, []).
+%% The network between two agents A and B: each message to its recipient, each
+%% cargo logged.
+procedure(X) route(Stream(Msg(X))?, Peer?, Stream(Msg(X)), Peer?, Stream(Msg(X)),
+    Stream(Sent(X))).
+route([msg(To, C)|Ms], A, [msg(To?, C?)|OA?], B, OB?, Log?) :-
+    ground(To?), ground(C?), ground(A?), ground(B?), To? =?= A? |
+    note(C?, To?, Log, Log1?),
+    route(Ms?, A?, OA, B?, OB, Log1).
+route([msg(To, C)|Ms], A, OA?, B, [msg(To?, C?)|OB?], Log?) :-
+    ground(To?), ground(C?), ground(A?), ground(B?), To? =?= B? |
+    note(C?, To?, Log, Log1?),
+    route(Ms?, A?, OA, B?, OB, Log1).
+route([msg(_, _)|Ms], A, OA?, B, OB?, Log?) :- otherwise |
+    route(Ms?, A?, OA, B?, OB, Log).
+route([], _, [], _, [], []).
+
+%% The network between three agents A, B and C.
+procedure(X) route3(Stream(Msg(X))?, Peer?, Stream(Msg(X)), Peer?, Stream(Msg(X)),
+    Peer?, Stream(Msg(X)), Stream(Sent(X))).
+route3([msg(To, M)|Ms], A, [msg(To?, M?)|OA?], B, OB?, C, OC?, Log?) :-
+    ground(To?), ground(M?), ground(A?), ground(B?), ground(C?), To? =?= A? |
+    note(M?, To?, Log, Log1?),
+    route3(Ms?, A?, OA, B?, OB, C?, OC, Log1).
+route3([msg(To, M)|Ms], A, OA?, B, [msg(To?, M?)|OB?], C, OC?, Log?) :-
+    ground(To?), ground(M?), ground(A?), ground(B?), ground(C?), To? =?= B? |
+    note(M?, To?, Log, Log1?),
+    route3(Ms?, A?, OA, B?, OB, C?, OC, Log1).
+route3([msg(To, M)|Ms], A, OA?, B, OB?, C, [msg(To?, M?)|OC?], Log?) :-
+    ground(To?), ground(M?), ground(A?), ground(B?), ground(C?), To? =?= C? |
+    note(M?, To?, Log, Log1?),
+    route3(Ms?, A?, OA, B?, OB, C?, OC, Log1).
+route3([msg(_, _)|Ms], A, OA?, B, OB?, C, OC?, Log?) :- otherwise |
+    route3(Ms?, A?, OA, B?, OB, C?, OC, Log).
+route3([], _, [], _, [], _, [], []).
+
+%% A cargo, logged with its sender and its recipient; a hello, not.
+procedure(X) note(Carried(X)?, Peer?, Stream(Sent(X)), Stream(Sent(X))?).
+note(hello(_), _, Log1?, Log1).
+note(cargo(F, _, X), To, [sent(F?, To?, X?)|Log1?], Log1).
 
 %% The person.
 procedure person(_?, PersonIn, PSt?, Stream(_)).
@@ -100,15 +138,22 @@ carded(card_at(Id, P, Cs1), ps(Se, T, _, [card(K, A)|Ss]),
     advance(ps(Se?, T?, Cs1?, Ss?), Gs, Gs1?, St1, Log, Log1?).
 carded(nocard, St, Gs1?, Gs1, St?, Log1?, Log1).
 
+%% The card of the attempt K, or of an attempt of the class K, the earliest
+%% drawn first.
 procedure find_card(_?, Seens?, CardAt).
-find_card(_, [], nocard).
-find_card(K, [seen(Id, P, attempt(C, _))|Cs], card_at(Id?, P?, Cs?)) :- K? =?= C? | true.
-find_card(K, [S|Cs], F?) :- otherwise | find_card1(S?, K?, Cs?, F).
-procedure find_card1(Seen?, _?, Seens?, CardAt).
-find_card1(S, K, Cs, F?) :- find_card(K?, Cs?, F0), keep_found(S?, F0?, F).
-procedure keep_found(Seen?, CardAt?, CardAt).
-keep_found(S, card_at(Id, P, Cs), card_at(Id?, P?, [S?|Cs?])).
-keep_found(_, nocard, nocard).
+find_card(K, Cs, F?) :- ground(Cs?) | rev_seen(Cs?, [], Rs), find_card1(K?, Rs?, [], F).
+procedure find_card1(_?, Seens?, Seens?, CardAt).
+find_card1(_, [], _, nocard).
+find_card1(K, [seen(Id, P, At)|Cs], Done, card_at(Id?, P?, Rest?)) :-
+    ground(At?), ground(K?), K? =?= At? |
+    rev_seen(Done?, Cs?, Rest).
+find_card1(K, [seen(Id, P, attempt(_, _, C))|Cs], Done, card_at(Id?, P?, Rest?)) :-
+    ground(C?), ground(K?), K? =?= C? |
+    rev_seen(Done?, Cs?, Rest).
+find_card1(K, [S|Cs], Done, F?) :- otherwise | find_card1(K?, Cs?, [S?|Done?], F).
+procedure rev_seen(Seens?, Seens?, Seens).
+rev_seen([], Acc, Acc?).
+rev_seen([S|Ss], Acc, R?) :- rev_seen(Ss?, [S?|Acc?], R).
 
 procedure drop_seen(Integer?, Seens?, Seens).
 drop_seen(_, [], []).
@@ -120,9 +165,13 @@ among(_, [], n).
 among(X, [Y|_], y) :- X? =?= Y? | true.
 among(X, [_|Ys], B?) :- otherwise | among(X?, Ys?, B).
 
-%% The thread as a list, whatever its unwritten tail is drawn as.
+%% The thread's written elements as a list: those before the first the
+%% program has not yet written whole, which is drawn pending(P), its
+%% unwritten tail not drawn (vGLP 118e04d, Definition "Construct Process"),
+%% so each transaction is logged once it is written, in the thread's order.
 procedure list_of(_?, Stream(_)).
-list_of([X|Xs], [X?|Ys?]) :- list_of(Xs?, Ys).
+list_of([pending(_)|_], []).
+list_of([X|Xs], [X?|Ys?]) :- otherwise | list_of(Xs?, Ys).
 list_of(_, []) :- otherwise | true.
 
 %% Log the transactions of the thread not logged before.

@@ -22,7 +22,7 @@ judge(Cs?, S?, Mon?)
 procedure
 judge
 (
-Cards
+List(Card)
 ?
 ,
 Integer?
