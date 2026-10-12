@@ -98,7 +98,7 @@ agent(Id, IRec, [will(accept_offer(P, R?)) | UserIn], NetIn, NetOut?, Date,
 
 %% Tick (architecture §2.3): advance local date.
 agent(Id, IRec, [tick | UserIn], NetIn, NetOut?, Date, Platform) :-
-    Date1 := Date? + 1 |
+    Date1 := Date? + 1,
     agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date1?, Platform?).
 
 %% Query: q_epoch(Q) -- answer with epoch_p(Q).

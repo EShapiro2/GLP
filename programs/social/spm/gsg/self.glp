@@ -195,7 +195,7 @@ set_epoch(Q, X, [], [fme(Q?, X?)]).
 exported procedure bump_epoch(Agent?, FMap?, FMap, Integer).
 
 bump_epoch(Q, [fme(Q1, E) | Rest], [fme(Q1?, X?) | Rest?], X?) :-
-    Q? =?= Q1?, X := E? + 1 | true.
+    Q? =?= Q1? | X := E? + 1.
 
 bump_epoch(Q, [Entry | Rest], [Entry? | Rest1?], X?) :-
     otherwise | bump_epoch(Q?, Rest?, Rest1, X).
