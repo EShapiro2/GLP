@@ -3,13 +3,15 @@
 %% vGLP.
 %%
 %% vGLP (/Grassroots/vGLP), Section 3.2, sections/cva-2pc.tex: Definitions
-%% "Volition-Guarded Specification", "Local Specification, Opener, Compatible
-%% Family", "Effective Local Specification" and "Canonical CVA Platform", and
-%% the paragraph on act schemas, which says when a contract of act schemas is a
-%% local specification and when it is effective; Section 5.4,
-%% sections/cva-implementation.tex, Definitions "Structured CVA Platform" and
-%% "Compilation of a Structured Platform" and the paragraph "The canonical
-%% platform is structured".  Jurix (/Grassroots/Jurix), Sections 3 and 5:
+%% "Volition-Guarded Specification, Participants, Guard Sets, Simple Guards",
+%% "Local Specification, Opener", "Attempt, Message, App State, Question,
+%% Ready" and "Canonical CVA Platform", two-phase commit coordinated by the
+%% initiating agent; Section 5.4, sections/cva-implementation.tex, Definitions
+%% "Structured CVA Platform", "Compilation of a Structured Platform" and
+%% "Effective Local Specification", the paragraph "The canonical platform is
+%% structured", and the paragraph on act schemas with the sentence after it,
+%% which say when a contract of act schemas is a local specification and when
+%% it is effective.  Jurix (/Grassroots/Jurix), Sections 3 and 5:
 %% Definitions "Act schema", "Binding", "Compilation" and "Realisation of a
 %% contract".  The papers are the specification; each module names the
 %% definitions it decides.

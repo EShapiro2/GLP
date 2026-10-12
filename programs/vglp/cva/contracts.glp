@@ -3,7 +3,8 @@
 %% canonical CVA platform (compiler/, compile.sh), beside Jurix's two, which
 %% programs/jurix holds.  Each is a contract in the term form programs/jurix
 %% reads (its README, "Writing a contract"), and compile.sh has Jurix's checker,
-%% check/2, certify it before it compiles it, as it does Jurix's.
+%% check/2, certify it before it compiles it, as it does Jurix's.  Both are
+%% test code.
 %%
 %% nudge is the grassroots social network's befriend with an unguarded act of
 %% its own, so that a contract compiled here has an unguarded class, which
@@ -16,13 +17,30 @@
 %% nudge is guarded at neither role, its role graph joined by the friend atom
 %% its first role requires, so it meets volition; its first role requires
 %% friend(q), naming the other role and the variable of every atom it deletes
-%% and adds, so the contract is effective (vGLP, Section 3.2, after Definition
-%% "Effective Local Specification").  Its class at a binding is unguarded and
-%% its opener the person in its first role (Section 3.2, the paragraph on act
-%% schemas), whose machine opens it on a tick, every other participant voting
-%% by its machine (Section 5.4, "The canonical platform is structured";
-%% Definition "Canonical CVA Platform", Propose and Vote).  nudge/self.glp
-%% plays it.
+%% and adds, and its schema-bindings of one class require and forbid the same
+%% atoms at every participant, so the contract is effective (vGLP, Section 5.4,
+%% the sentence after the paragraph on act schemas).  Its class at a binding is
+%% unguarded and its opener the person in its first role (Section 5.4, the
+%% paragraph on act schemas), whose machine proposes it on a tick, the attempt
+%% asking nobody and the other participant voting by its machine (Section 5.4,
+%% "The canonical platform is structured"; Definition "Canonical CVA
+%% Platform", Propose and Start).  nudge/self.glp plays it.
+%%
+%% introduce is befriend with a three-party act, by which a person introduces
+%% two of its friends to each other, so that a contract compiled here has a
+%% class of three participants, an attempt that asks two (vGLP 2026-10-11 22:59
+%% UTC, Q3, Udi approved):
+%%
+%%   befriend(p?, q?)      :  at p  not friend(q), +friend(q)
+%%                             at q  not friend(p), +friend(p)
+%%   introduce(p?, q?, r?) :  at p  friend(q), friend(r), +introduced(q, r)
+%%                             at q  not friend(r), +friend(r)
+%%                             at r  not friend(q), +friend(q)
+%%
+%% introduce is guarded at every role, so its
+%% one guard set is its three participants; the friend atoms its first role
+%% requires join its role graph.  introduce/self.glp plays it among three
+%% agents.
 %% ---------------------------------------------------------------------------
 
 %% The contract, as programs/jurix/self.glp writes it.
@@ -48,6 +66,7 @@ Declared  ::= Contract ; reflexive(Preds, Contract).
 %% programs/jurix gives Jurix's.
 procedure contract_named(Constant?, Declared).
 contract_named(nudge, C?) :- nudge(C).
+contract_named(introduce, C?) :- introduce(C).
 
 procedure nudge(Contract).
 nudge([schema(befriend,
@@ -58,3 +77,13 @@ nudge([schema(befriend,
                         [atom(nudged, [role(2)])]),
           rs(unguarded, [atom(nudged_by, [role(1)])], [], [atom(friend, [role(1)])],
                         [])])]).
+
+procedure introduce(Contract).
+introduce([schema(befriend,
+             [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
+              rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
+           schema(introduce,
+             [rs(guarded, [atom(introduced, [role(2), role(3)])], [],
+                          [atom(friend, [role(2)]), atom(friend, [role(3)])], []),
+              rs(guarded, [atom(friend, [role(3)])], [], [], [atom(friend, [role(3)])]),
+              rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])])])]).

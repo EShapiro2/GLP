@@ -3503,24 +3503,31 @@ echo ""
 
 # -----------------------------------------------------------------------------
 # Section VG, continued: the compiler from an act-schema contract to its
-# canonical CVA platform in vGLP (programs/vglp/cva; vGLP, Section 3.2, the
-# paragraph on act schemas, and Section 5.4, "The canonical platform is
-# structured"; vGLP's Task C, 2026-10-11).  Jurix's social graph and currency
-# (programs/jurix) and vGLP's nudge (programs/vglp/cva/contracts.glp)
-# compiled, the committed modules held to what the compiler prints; the contracts it refuses, not local or not effective; and the plays
-# of each platform, two agents with scripted persons paced on their threads,
-# each run on the committed module through the canonical compilation and
-# ended at the REPL's :limit, the clocks ticking without end.  A play gives
-# each person's log: its thread, the app transactions its agent takes, with
-# gave(C, A) where the person answers a card.
+# canonical CVA platform in vGLP (programs/vglp/cva; vGLP, Section 3.2,
+# Definition "Canonical CVA Platform", two-phase commit coordinated by the
+# initiating agent, and Section 5.4, "The canonical platform is structured"
+# and the paragraph on act schemas; vGLP's Task C, reworked to the five
+# handlers of vGLP 8d56915 and the answers of 158ec9b).  Jurix's social graph
+# and currency (programs/jurix) and vGLP's nudge and introduce
+# (programs/vglp/cva/contracts.glp) compiled, the committed modules held to
+# what the compiler prints; the contracts it refuses, not local, without
+# simple guards or not effective; and the plays of each platform, two agents
+# or three with scripted persons paced on their threads, each run on the
+# committed module through the canonical compilation and ended at the REPL's
+# :limit, the clocks ticking without end.  A play gives each person's log, its
+# thread, the app transactions its agent takes applied to their attempts and
+# discover(Q) for each peer it comes to know, with gave(K, A) where the person
+# answers a card; and the network's log of the cargoes it carries,
+# sent(From, To, Cargo), where the votes and the outcomes show.
 # -----------------------------------------------------------------------------
 echo "--- The canonical CVA platform of an act-schema contract ---"
 CVA="$GLP_DIR/programs/vglp/cva"
 
 cva_print=$(bash "$CVA/compile.sh" --check 2>&1)
 check "CVA compiler: the social graph's platform is what the compiler prints" "social_graph/platform.vglp: as printed" "$cva_print"
-check "CVA compiler: the currency's platform is what the compiler prints" "currency/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: the currency's platform, its classes guarded by their minimal guard sets, is what the compiler prints" "currency/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's nudge, certified by Jurix's check/2, compiled to the platform it prints" "nudge/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's introduce, certified by Jurix's check/2, compiled to the platform it prints" "introduce/platform.vglp: as printed" "$cva_print"
 check_not "CVA compiler: no contract refused or missing" "^fault\|^missing\|NOT as printed" "$cva_print"
 
 cva_refuse=$("$REPL_RUN" <<HEREDOC
@@ -3532,6 +3539,8 @@ compile(uneff, [schema(u, [rs(unguarded, [atom(x, [role(2)])], [], [], []), rs(u
 compile(gossip, [], not_grassroots([no_introductory_act])).
 compile(federated, [], conditions_met).
 compile(one_req, [schema(s1, [rs(guarded, [atom(x, [])], [], [atom(r1, [])], []), rs(guarded, [atom(y, [])], [], [atom(r2, [])], [])]), schema(s2, [rs(guarded, [atom(x, [])], [], [atom(r3, [])], []), rs(guarded, [atom(y, [])], [], [atom(r2, [])], [])])], syntactically_grassroots).
+compile(two_gsets, [schema(s1, [rs(guarded, [atom(x, [])], [], [], []), rs(guarded, [atom(y, [])], [], [], []), rs(unguarded, [atom(z, [])], [], [], [])]), schema(s2, [rs(unguarded, [atom(x, [])], [], [], []), rs(guarded, [atom(y, [])], [], [], []), rs(guarded, [atom(z, [])], [], [], [])])], syntactically_grassroots).
+compile(unguarded_reqs, [schema(u1, [rs(unguarded, [atom(x, [role(2)])], [], [atom(r, [role(2)])], []), rs(unguarded, [atom(y, [role(1)])], [], [atom(w, [role(1)])], [])]), schema(u2, [rs(unguarded, [atom(y, [role(2)])], [], [atom(w, [role(2)])], []), rs(unguarded, [atom(x, [role(1)])], [], [], [])])], syntactically_grassroots).
 :quit
 HEREDOC
 2>&1)
@@ -3543,6 +3552,10 @@ check "CVA compiler: a contract not syntactically grassroots is not compiled" "%
 check "CVA compiler: a contract with community roles is not compiled" "%% not compiled(federated)" "$cva_refuse"
 check "CVA compiler: requirements differing at one participant only, compiled" "%% the canonical CVA platform of the contract(one_req)" "$cva_refuse"
 check_not "CVA compiler: ... and not refused" "%% not compiled(one_req)" "$cva_refuse"
+check "CVA compiler: a class with two minimal guard sets not both of one person, refused as without simple guards" "%% not compiled(two_gsets)" "$cva_refuse"
+check "CVA compiler: ... the schema-bindings of the two guard sets named" "%% and the schema-binding(s2(person(0), person(1), person(2)))" "$cva_refuse"
+check "CVA compiler: an unguarded class whose schema-bindings require different atoms at one participant, refused as not effective" "%% not compiled(unguarded_reqs)" "$cva_refuse"
+check "CVA compiler: ... the two schema-bindings named" "%% and the schema-binding(u2(person(1), person(0)))" "$cva_refuse"
 
 cva_sg_load=$("$REPL_RUN" <<HEREDOC
 $CVA/social_graph/
@@ -3554,35 +3567,50 @@ check_not "CVA social graph: no type errors" "Type checking failed" "$cva_sg_loa
 
 cva_sg_befriend=$("$REPL_RUN" <<HEREDOC
 $CVA/social_graph/
-:limit 300000
-play_befriend(A, B).
+:limit 600000
+play_befriend(A, B, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA befriend: alice records bob, proposes, relays bob's vote and commits" "A = \[record(bob), propose(befriend(alice, bob)), relay(befriend(alice, bob)), commit(befriend(alice, bob))" "$cva_sg_befriend"
-check "CVA befriend: bob relays alice's vote, is asked, answers yes and commits" "B = \[.*relay(befriend(alice, bob)), ask(befriend(alice, bob)), gave(befriend(alice, bob), yes), answer(befriend(alice, bob)), commit(befriend(alice, bob))" "$cva_sg_befriend"
-check "CVA befriend: bob records alice" "B = \[.*record(alice)" "$cva_sg_befriend"
+check "CVA befriend: alice discovers bob, proposes the attempt and tallies bob's vote" "A = \[discover(bob), propose(attempt(alice, 1, befriend(alice, bob))), tally(attempt(alice, 1, befriend(alice, bob)))" "$cva_sg_befriend"
+check "CVA befriend: bob, in its guard set, is asked on the start, answers yes on his card, and takes the outcome" "B = \[discover(alice), start(attempt(alice, 1, befriend(alice, bob))), gave(befriend(alice, bob), yes), answer(attempt(alice, 1, befriend(alice, bob))), outcome(attempt(alice, 1, befriend(alice, bob)))" "$cva_sg_befriend"
+check "CVA befriend: the start to bob, his yes to alice, and the commit she tells him" "N = \[sent(alice, bob, start(attempt(alice, 1, befriend(alice, bob)))), sent(bob, alice, vote(attempt(alice, 1, befriend(alice, bob)), yes)), sent(alice, bob, outcome(attempt(alice, 1, befriend(alice, bob)), commit))" "$cva_sg_befriend"
 
 cva_sg_unfriend=$("$REPL_RUN" <<HEREDOC
 $CVA/social_graph/
-:limit 300000
-play_unfriend(A, B).
+:limit 600000
+play_unfriend(A, B, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA unfriend: bob proposes unfriending alice and commits" "B = \[.*commit(befriend(alice, bob)), propose(unfriend(bob, alice)), relay(unfriend(bob, alice)), commit(unfriend(bob, alice))" "$cva_sg_unfriend"
-check "CVA unfriend: alice, a guard set naming her, is asked, says no, and the else-branch commits it" "A = \[.*relay(unfriend(bob, alice)), ask(unfriend(bob, alice)), gave(unfriend(bob, alice), no), answer(unfriend(bob, alice)), commit(unfriend(bob, alice))" "$cva_sg_unfriend"
+check "CVA unfriend: bob proposes unfriending alice, the attempt asking nobody, and tallies her vote" "B = \[.*outcome(attempt(alice, 1, befriend(alice, bob))), propose(attempt(bob, 1, unfriend(bob, alice))), tally(attempt(bob, 1, unfriend(bob, alice)))" "$cva_sg_unfriend"
+check "CVA unfriend: alice's machine votes on bob's start, unasked, and takes the outcome" "A = \[.*start(attempt(bob, 1, unfriend(bob, alice))), outcome(attempt(bob, 1, unfriend(bob, alice)))" "$cva_sg_unfriend"
+check "CVA unfriend: ... its yes, and bob's unfriend committed" "sent(alice, bob, vote(attempt(bob, 1, unfriend(bob, alice)), yes)), sent(bob, alice, outcome(attempt(bob, 1, unfriend(bob, alice)), commit))" "$cva_sg_unfriend"
+check "CVA unfriend: befriended again, alice proposes unfriending bob, and bob's machine votes on it, unasked" "B = \[.*start(attempt(alice, 3, unfriend(alice, bob))), outcome(attempt(alice, 3, unfriend(alice, bob)))" "$cva_sg_unfriend"
+check "CVA unfriend: ... and alice's unfriend committed" "sent(alice, bob, outcome(attempt(alice, 3, unfriend(alice, bob)), commit))" "$cva_sg_unfriend"
+check_not "CVA unfriend: no person answers for unfriending" "answer(attempt([a-z]*, [0-9]*, unfriend" "$cva_sg_unfriend"
 
 cva_sg_refused=$("$REPL_RUN" <<HEREDOC
 $CVA/social_graph/
-:limit 300000
-play_refused(A, B).
+:limit 600000
+play_refused(A, B, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA refused: bob says no to befriending, every guard set naming him, and aborts" "B = \[.*ask(befriend(alice, bob)), gave(befriend(alice, bob), no), answer(befriend(alice, bob)), abort(befriend(alice, bob))" "$cva_sg_refused"
-check "CVA refused: alice relays bob's no and aborts" "A = \[record(bob), propose(befriend(alice, bob)), relay(befriend(alice, bob)), abort(befriend(alice, bob))" "$cva_sg_refused"
-check_not "CVA refused: nothing committed" "commit(befriend" "$cva_sg_refused"
+check "CVA refused: bob answers no and the else-branch votes" "B = \[.*gave(attempt(alice, 1, befriend(alice, bob)), no), answer(attempt(alice, 1, befriend(alice, bob))), outcome(attempt(alice, 1, befriend(alice, bob)))" "$cva_sg_refused"
+check "CVA refused: ... no, and alice tallies it and tells bob abort" "sent(bob, alice, vote(attempt(alice, 1, befriend(alice, bob)), no)), sent(alice, bob, outcome(attempt(alice, 1, befriend(alice, bob)), abort))" "$cva_sg_refused"
+check "CVA refused: aborted at both, alice proposes again and bob is asked again and answers yes" "B = \[.*outcome(attempt(alice, 1, befriend(alice, bob))), start(attempt(alice, 2, befriend(alice, bob))), gave(attempt(alice, 2, befriend(alice, bob)), yes), answer(attempt(alice, 2, befriend(alice, bob))), outcome(attempt(alice, 2, befriend(alice, bob)))" "$cva_sg_refused"
+check "CVA refused: ... and the second attempt commits" "sent(alice, bob, outcome(attempt(alice, 2, befriend(alice, bob)), commit))" "$cva_sg_refused"
+
+cva_sg_pending=$("$REPL_RUN" <<HEREDOC
+$CVA/social_graph/
+:limit 600000
+play_pending(A, B, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA pending: alice's start reaches bob before her hello, pends on her, and is put up again at the second hello" "B = \[discover(alice), start(attempt(alice, 1, befriend(alice, bob))), gave(befriend(alice, bob), yes), answer(attempt(alice, 1, befriend(alice, bob)))" "$cva_sg_pending"
+check "CVA pending: ... and the befriending commits" "sent(alice, bob, outcome(attempt(alice, 1, befriend(alice, bob)), commit))" "$cva_sg_pending"
 
 cva_cur_load=$("$REPL_RUN" <<HEREDOC
 $CVA/currency/
@@ -3594,52 +3622,56 @@ check_not "CVA currency: no type errors" "Type checking failed" "$cva_cur_load"
 
 cva_cur_payswap=$("$REPL_RUN" <<HEREDOC
 $CVA/currency/
-:limit 300000
-play_pay_swap(A, B).
+:limit 600000
+play_pay_swap(A, B, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA pay and swap: alice mints, swaps on the two wills, and pays bob" "A = \[propose(mint(alice)), commit(mint(alice)), record(bob), propose(swap(alice, bob, bob, alice)), relay(swap(alice, bob, bob, alice)), commit(swap(alice, bob, bob, alice)), propose(pay(alice, bob)), relay(pay(alice, bob)), commit(pay(alice, bob))" "$cva_cur_payswap"
-check "CVA pay and swap: bob wills the swap on his card" "B = \[.*relay(swap(alice, bob, bob, alice)), ask(swap(alice, bob, bob, alice)), gave(swap(alice, bob, bob, alice), yes), answer(swap(alice, bob, bob, alice)), commit(swap(alice, bob, bob, alice))" "$cva_cur_payswap"
-check "CVA pay and swap: bob's machine concurs in the pay, guarded by alice alone" "B = \[.*relay(pay(alice, bob)), concur(pay(alice, bob)), commit(pay(alice, bob))" "$cva_cur_payswap"
+check "CVA pay and swap: alice's mint, a class of one participant, applied at its Propose" "A = \[propose(attempt(alice, 1, mint(alice))), discover(bob)" "$cva_cur_payswap"
+check "CVA pay and swap: alice proposes the swap, and bob is asked and answers yes" "B = \[.*start(attempt(alice, 2, swap(alice, bob, bob, alice))), gave(swap(alice, bob, bob, alice), yes), answer(attempt(alice, 2, swap(alice, bob, bob, alice))), outcome(attempt(alice, 2, swap(alice, bob, bob, alice)))" "$cva_cur_payswap"
+check "CVA pay and swap: ... and the swap commits" "sent(alice, bob, outcome(attempt(alice, 2, swap(alice, bob, bob, alice)), commit))" "$cva_cur_payswap"
+check "CVA pay and swap: alice pays bob, guarded by her alone, and bob's machine votes yes, unasked, and it commits" "sent(alice, bob, start(attempt(alice, 3, pay(alice, bob)))), sent(bob, alice, vote(attempt(alice, 3, pay(alice, bob)), yes)), sent(alice, bob, outcome(attempt(alice, 3, pay(alice, bob)), commit))" "$cva_cur_payswap"
+check "CVA pay and swap: bob takes the pay's start and its outcome" "B = \[.*start(attempt(alice, 3, pay(alice, bob))), outcome(attempt(alice, 3, pay(alice, bob)))" "$cva_cur_payswap"
 
-cva_cur_pledged=$("$REPL_RUN" <<HEREDOC
+cva_cur_redeem=$("$REPL_RUN" <<HEREDOC
 $CVA/currency/
-:limit 300000
-play_pledged(A, B).
+:limit 600000
+play_redeem(A, B, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA pledged: alice's offer pledges her coin, and the mint after is taken" "A = \[propose(mint(alice)), commit(mint(alice)), record(bob), propose(swap(alice, bob, bob, alice)), propose(mint(alice)), commit(mint(alice))" "$cva_cur_pledged"
-check_not "CVA pledged: a second offer of the pledged coin is dropped" "propose(swap(alice, bob, carol, alice))" "$cva_cur_pledged"
-check "CVA pledged: bob is asked about the first" "B = \[.*ask(swap(alice, bob, bob, alice))" "$cva_cur_pledged"
+check "CVA redeem: the swap back, a class redeem also determines, guarded by alice alone: bob's machine votes, unasked" "B = \[.*start(attempt(alice, 3, swap(alice, bob, alice, bob))), outcome(attempt(alice, 3, swap(alice, bob, alice, bob)))" "$cva_cur_redeem"
+check "CVA redeem: ... yes, and it commits" "sent(bob, alice, vote(attempt(alice, 3, swap(alice, bob, alice, bob)), yes)), sent(alice, bob, outcome(attempt(alice, 3, swap(alice, bob, alice, bob)), commit))" "$cva_cur_redeem"
+check_not "CVA redeem: bob answers nothing for the swap back" "answer(attempt(alice, 3, swap" "$cva_cur_redeem"
+
+cva_cur_busy=$("$REPL_RUN" <<HEREDOC
+$CVA/currency/
+:limit 600000
+play_busy(A, B, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA busy: bob proposes a swap, alice is asked and leaves her card open, and proposes a pay" "A = \[.*start(attempt(bob, 3, swap(bob, alice, alice, bob))), propose(attempt(alice, 4, pay(alice, bob)))" "$cva_cur_busy"
+check "CVA busy: bob's machine, its lock held by his swap, votes no on the pay, which aborts" "sent(bob, alice, vote(attempt(alice, 4, pay(alice, bob)), no)), sent(alice, bob, outcome(attempt(alice, 4, pay(alice, bob)), abort))" "$cva_cur_busy"
+check "CVA busy: alice answers bob's card no, and his swap aborts" "sent(alice, bob, vote(attempt(bob, 3, swap(bob, alice, alice, bob)), no)), sent(bob, alice, outcome(attempt(bob, 3, swap(bob, alice, alice, bob)), abort))" "$cva_cur_busy"
+check "CVA busy: the lock released, bob's machine votes yes on the pay proposed again, and it commits" "sent(bob, alice, vote(attempt(alice, 5, pay(alice, bob)), yes)), sent(alice, bob, outcome(attempt(alice, 5, pay(alice, bob)), commit))" "$cva_cur_busy"
 
 cva_cur_declined=$("$REPL_RUN" <<HEREDOC
 $CVA/currency/
-:limit 300000
-play_declined(A, B).
+:limit 600000
+play_declined(A, B, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA declined: bob's machine declines a swap for a coin he does not hold, and aborts" "B = \[.*relay(swap(alice, bob, carol, alice)), decline(swap(alice, bob, carol, alice)), abort(swap(alice, bob, carol, alice))" "$cva_cur_declined"
-check "CVA declined: alice relays the no and aborts" "A = \[.*propose(swap(alice, bob, carol, alice)), relay(swap(alice, bob, carol, alice)), abort(swap(alice, bob, carol, alice))" "$cva_cur_declined"
-
-cva_cur_closed=$("$REPL_RUN" <<HEREDOC
-$CVA/currency/
-:limit 300000
-play_closed(A, B).
-:quit
-HEREDOC
-2>&1)
-check "CVA closed: bob, asked, offers his coin elsewhere and his machine declines, closing the card" "B = \[.*ask(swap(alice, bob, bob, alice)), propose(swap(bob, alice, carol, bob)), decline(swap(alice, bob, bob, alice))" "$cva_cur_closed"
-check "CVA closed: the yes bob gives the closed card is taken by no Answer" "B = \[.*gave(swap(alice, bob, bob, alice), yes), abort(swap(alice, bob, bob, alice))" "$cva_cur_closed"
-check_not "CVA closed: no answer to the closed card" "answer(swap(alice, bob, bob, alice))" "$cva_cur_closed"
+check "CVA declined: bob, not holding the coin, votes on the start without asking his person" "B = \[discover(alice), start(attempt(alice, 2, swap(alice, bob, carol, alice))), outcome(attempt(alice, 2, swap(alice, bob, carol, alice)))" "$cva_cur_declined"
+check "CVA declined: ... no, and it aborts at both" "sent(bob, alice, vote(attempt(alice, 2, swap(alice, bob, carol, alice)), no)), sent(alice, bob, outcome(attempt(alice, 2, swap(alice, bob, carol, alice)), abort))" "$cva_cur_declined"
+check_not "CVA declined: no card answered" "gave(" "$cva_cur_declined"
 
 # vGLP's contract nudge (programs/vglp/cva/contracts.glp): befriend and an
 # unguarded nudge, the one contract here with an unguarded class.  Its opener,
-# the person in its first role, opens it on a tick by its machine's Concur, no
-# person asked; the other participant's machine concurs on the vote, and it
-# commits at both (vGLP's 2026-10-11 20:48 UTC, Q4 of Code's 18:53 UTC).
+# the person in its first role, proposes it on a tick, the attempt asking
+# nobody and the other participant voting by its machine (vGLP's 2026-10-11
+# 22:51 UTC, the nudge play redone on the five handlers).
 cva_nudge_load=$("$REPL_RUN" <<HEREDOC
 $CVA/nudge/
 :quit
@@ -3650,17 +3682,44 @@ check_not "CVA nudge: no type errors" "Type checking failed" "$cva_nudge_load"
 
 cva_nudge=$("$REPL_RUN" <<HEREDOC
 $CVA/nudge/
-:limit 300000
-play_nudge(A, B).
+:limit 600000
+play_nudge(A, B, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA nudge: befriended, alice's Concur opens nudge(alice, bob), whose opener she is, and it commits at her" "A = \[record(bob), propose(befriend(alice, bob)), relay(befriend(alice, bob)), commit(befriend(alice, bob)), concur(nudge(alice, bob)), .*relay(nudge(alice, bob)), commit(nudge(alice, bob))" "$cva_nudge"
-check "CVA nudge: bob's machine concurs on alice's vote, and it commits at him" "B = \[.*relay(nudge(alice, bob)), concur(nudge(alice, bob)), commit(nudge(alice, bob))" "$cva_nudge"
-check "CVA nudge: bob's Concur opens nudge(bob, alice), whose opener he is, and it commits at him" "B = \[.*commit(befriend(alice, bob)), concur(nudge(bob, alice)), .*relay(nudge(bob, alice)), commit(nudge(bob, alice))" "$cva_nudge"
-check "CVA nudge: alice's machine concurs on bob's vote, and it commits at her" "A = \[.*relay(nudge(bob, alice)), concur(nudge(bob, alice)), commit(nudge(bob, alice))" "$cva_nudge"
-check_not "CVA nudge: no person is asked about the unguarded class" "ask(nudge" "$cva_nudge"
-check_not "CVA nudge: nothing aborted" "abort(" "$cva_nudge"
+check "CVA nudge: alice and bob befriended, committed at both" "sent(alice, bob, outcome(attempt(alice, 1, befriend(alice, bob)), commit))" "$cva_nudge"
+check "CVA nudge: alice, its opener, proposes nudge(alice, bob) on a tick once befriended" "A = \[discover(bob), propose(attempt(alice, 1, befriend(alice, bob))), tally(attempt(alice, 1, befriend(alice, bob))), propose(attempt(alice, 2, nudge(alice, bob)))" "$cva_nudge"
+check "CVA nudge: bob, its opener, proposes nudge(bob, alice) on a tick once befriended" "B = \[.*outcome(attempt(alice, 1, befriend(alice, bob))), propose(attempt(bob, 1, nudge(bob, alice)))" "$cva_nudge"
+check "CVA nudge: bob's machine votes on alice's start, no person asked" "sent(bob, alice, vote(attempt(alice, 2, nudge(alice, bob)), " "$cva_nudge"
+check_not "CVA nudge: no person answers for the unguarded class" "answer(attempt([a-z]*, [0-9]*, nudge" "$cva_nudge"
+
+# vGLP's contract introduce (programs/vglp/cva/contracts.glp): befriend and a
+# three-party introduce, guarded at every role (vGLP's 2026-10-11 22:59 UTC,
+# Q3, Udi approved).  Three agents: the attempt asks two, the first answers
+# no, and the other's card is closed by the program once its Outcome closes
+# the attempt; asked again, both answer yes.
+cva_intro_load=$("$REPL_RUN" <<HEREDOC
+$CVA/introduce/
+:quit
+HEREDOC
+2>&1)
+check "CVA introduce: the platform and its play load, compiled by the canonical compilation" "Loaded program: .*cva/introduce" "$cva_intro_load"
+check_not "CVA introduce: no type errors" "Type checking failed" "$cva_intro_load"
+
+cva_intro=$("$REPL_RUN" <<HEREDOC
+$CVA/introduce/
+:limit 1500000
+play_introduce(A, B, C, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA introduce: alice, befriended with both, proposes introducing bob and carol, its start told to both" "sent(alice, bob, start(attempt(alice, 3, introduce(alice, bob, carol)))), sent(alice, carol, start(attempt(alice, 3, introduce(alice, bob, carol))))" "$cva_intro"
+check "CVA introduce: bob, asked, answers no, and alice tells both abort" "sent(bob, alice, vote(attempt(alice, 3, introduce(alice, bob, carol)), no)), sent(alice, bob, outcome(attempt(alice, 3, introduce(alice, bob, carol)), abort)), sent(alice, carol, outcome(attempt(alice, 3, introduce(alice, bob, carol)), abort))" "$cva_intro"
+check "CVA introduce: carol, asked, her card still open when Outcome closes the attempt, gives it yes after" "C = \[.*start(attempt(alice, 3, introduce(alice, bob, carol))), outcome(attempt(alice, 3, introduce(alice, bob, carol))), gave(attempt(alice, 3, introduce(alice, bob, carol)), yes), start(attempt(alice, 4, introduce(alice, bob, carol)))" "$cva_intro"
+check_not "CVA introduce: ... and the card closed by the program, her yes takes no Answer" "C = \[.*answer(attempt(alice, 3, introduce" "$cva_intro"
+check "CVA introduce: asked again, both answer yes, and alice tallies both" "A = \[.*propose(attempt(alice, 4, introduce(alice, bob, carol))), tally(attempt(alice, 4, introduce(alice, bob, carol))), tally(attempt(alice, 4, introduce(alice, bob, carol)))" "$cva_intro"
+check "CVA introduce: ... and tells bob commit" "sent(alice, bob, outcome(attempt(alice, 4, introduce(alice, bob, carol)), commit))" "$cva_intro"
+check "CVA introduce: ... and carol" "sent(alice, carol, outcome(attempt(alice, 4, introduce(alice, bob, carol)), commit))" "$cva_intro"
 echo ""
 
 

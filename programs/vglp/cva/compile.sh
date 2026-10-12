@@ -9,7 +9,8 @@
 #   bash programs/vglp/cva/compile.sh --check    print into a scratch directory and compare
 #
 # for <contract> social_graph and currency, Jurix's two (Jurix, Sections 3.3
-# and 3.4), and nudge, vGLP's, which contracts.glp beside the compiler holds.
+# and 3.4), and nudge and introduce, vGLP's, which contracts.glp beside the
+# compiler holds.
 # A contract is checked before it is compiled (Jurix, Section 5), so a REPL
 # session on contracts.glp prints each of vGLP's contracts, contract_named/2;
 # one on programs/jurix prints each of Jurix's, contract_named/2, and the
@@ -29,7 +30,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 GLP_DIR="$(cd "$HERE/../../.." && pwd)"
 RT="$GLP_DIR/glp_runtime"
 JURIX="social_graph currency"
-OURS="nudge"
+OURS="nudge introduce"
 CONTRACTS="$JURIX $OURS"
 
 CHECK=0
