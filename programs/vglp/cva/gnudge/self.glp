@@ -17,7 +17,9 @@
 %%   unguarded schema-bindings (vGLP 2026-10-12 08:26 UTC, Q-B), though alice
 %%   precedes him: bob's machine proposes it on a tick, the attempt asking
 %%   nobody and alice's machine voting on its start.  alice opens the class of
-%%   nudge(alice, bob) likewise.
+%%   nudge(alice, bob) likewise, both at once, and as in the play of nudge bob
+%%   defers alice's start while he holds his own attempt prepared, and both
+%%   nudges commit in turn (Q-A).
 %%
 %% The types of platform.vglp, written again for the declarations of the
 %% procedures imported from its compiled module.

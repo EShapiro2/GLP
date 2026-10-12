@@ -13,8 +13,14 @@
 %%   whose first role it is in (vGLP, Section 5.4, the paragraph on act
 %%   schemas), and its machine proposes it on a tick (Section 5.4, "The
 %%   canonical platform is structured": Propose of an unguarded class, by its
-%%   opener, on a tick); the attempt asks nobody, the other's machine votes on
-%%   its start, and it commits at both.
+%%   opener, on a tick), the attempt asking nobody and the other's machine
+%%   voting on its start.  Both propose at once.  bob, holding his own attempt
+%%   prepared, defers the start of alice, who precedes him in the order of
+%%   identifiers, and does not refuse it; alice's machine votes no on bob's,
+%%   which aborts; alice's start, put up again, bob's machine votes yes, and
+%%   her nudge commits at both; bob, proposing only once no start of an
+%%   initiator preceding him waits, proposes again, and his nudge commits at
+%%   both (vGLP 2026-10-12 08:26 UTC, Q-A).
 %%
 %% The types of platform.vglp, written again for the declarations of the
 %% procedures imported from its compiled module.

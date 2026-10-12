@@ -3671,10 +3671,14 @@ play_busy(A, B, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA busy: bob proposes a swap, alice is asked and leaves her card open, and proposes a pay" "A = \[.*start(attempt(bob, 3, swap(bob, alice, alice, bob))), propose(attempt(alice, 4, pay(alice, bob)))" "$cva_cur_busy"
-check "CVA busy: bob's machine, its lock held by his swap, votes no on the pay, which aborts" "sent(bob, alice, vote(attempt(alice, 4, pay(alice, bob)), no)), sent(alice, bob, outcome(attempt(alice, 4, pay(alice, bob)), abort))" "$cva_cur_busy"
-check "CVA busy: alice answers bob's card no, and his swap aborts" "sent(alice, bob, vote(attempt(bob, 3, swap(bob, alice, alice, bob)), no)), sent(bob, alice, outcome(attempt(bob, 3, swap(bob, alice, alice, bob)), abort))" "$cva_cur_busy"
-check "CVA busy: the lock released, bob's machine votes yes on the pay proposed again, and it commits" "sent(bob, alice, vote(attempt(alice, 5, pay(alice, bob)), yes)), sent(alice, bob, outcome(attempt(alice, 5, pay(alice, bob)), commit))" "$cva_cur_busy"
+# play_busy, the roles of 2026-10-11 swapped (vGLP's 2026-10-12 08:26 UTC,
+# Q-A): a participant holding prepared an attempt it initiated defers the
+# start of an initiator preceding it, so the busy no comes from alice's
+# machine on the start of bob, who does not precede her.
+check "CVA busy: alice proposes a swap, bob is asked and leaves his card open, and proposes a pay" "B = \[.*start(attempt(alice, 4, swap(alice, bob, bob, alice))), propose(attempt(bob, 3, pay(bob, alice)))" "$cva_cur_busy"
+check "CVA busy: alice's machine, its lock held by her swap, votes no on the pay of bob, who does not precede her, and it aborts" "sent(alice, bob, vote(attempt(bob, 3, pay(bob, alice)), no)), sent(bob, alice, outcome(attempt(bob, 3, pay(bob, alice)), abort))" "$cva_cur_busy"
+check "CVA busy: bob answers alice's card no, and her swap aborts" "sent(bob, alice, vote(attempt(alice, 4, swap(alice, bob, bob, alice)), no)), sent(alice, bob, outcome(attempt(alice, 4, swap(alice, bob, bob, alice)), abort))" "$cva_cur_busy"
+check "CVA busy: the lock released, alice's machine votes yes on the pay proposed again, and it commits" "sent(alice, bob, vote(attempt(bob, 4, pay(bob, alice)), yes)), sent(bob, alice, outcome(attempt(bob, 4, pay(bob, alice)), commit))" "$cva_cur_busy"
 
 cva_cur_declined=$("$REPL_RUN" <<HEREDOC
 $CVA/currency/
@@ -3691,7 +3695,11 @@ check_not "CVA declined: no card answered" "gave(" "$cva_cur_declined"
 # unguarded nudge, the one contract here with an unguarded class.  Its opener,
 # the person in its first role, proposes it on a tick, the attempt asking
 # nobody and the other participant voting by its machine (vGLP's 2026-10-11
-# 22:51 UTC, the nudge play redone on the five handlers).
+# 22:51 UTC, the nudge play redone on the five handlers).  Both openers propose
+# at once; bob, holding his own attempt prepared, defers the start of alice,
+# who precedes him, and does not refuse it, and proposes only once it is
+# handled, so alice's nudge commits, bob's first attempt aborts on her busy no
+# and his second commits (vGLP's 2026-10-12 08:26 UTC, Q-A, Udi approved).
 cva_nudge_load=$("$REPL_RUN" <<HEREDOC
 $CVA/nudge/
 :quit
@@ -3712,6 +3720,14 @@ check "CVA nudge: alice, its opener, proposes nudge(alice, bob) on a tick once b
 check "CVA nudge: bob, its opener, proposes nudge(bob, alice) on a tick once befriended" "B = \[.*outcome(attempt(alice, 1, befriend(alice, bob))), propose(attempt(bob, 1, nudge(bob, alice)))" "$cva_nudge"
 check "CVA nudge: bob's machine votes on alice's start, no person asked" "sent(bob, alice, vote(attempt(alice, 2, nudge(alice, bob)), " "$cva_nudge"
 check_not "CVA nudge: no person answers for the unguarded class" "answer(attempt([a-z]*, [0-9]*, nudge" "$cva_nudge"
+check "CVA nudge: bob waits: holding his own attempt prepared, he takes the start of alice, who precedes him, only once his attempt has aborted" "B = \[.*propose(attempt(bob, 1, nudge(bob, alice))), tally(attempt(bob, 1, nudge(bob, alice))), start(attempt(alice, 2, nudge(alice, bob)))" "$cva_nudge"
+check "CVA nudge: ... her start delivered to him before, his vote on it, yes, only after his abort" "sent(alice, bob, start(attempt(alice, 2, nudge(alice, bob)))).*sent(bob, alice, outcome(attempt(bob, 1, nudge(bob, alice)), abort)), sent(bob, alice, vote(attempt(alice, 2, nudge(alice, bob)), yes))" "$cva_nudge"
+check_not "CVA nudge: ... and bob never refuses alice's start" "sent(bob, alice, vote(attempt(alice, [0-9]*, nudge(alice, bob)), no))" "$cva_nudge"
+check "CVA nudge: alice's nudge committed at both" "B = \[.*outcome(attempt(alice, 2, nudge(alice, bob)))" "$cva_nudge"
+check "CVA nudge: ... alice telling bob commit" "sent(alice, bob, outcome(attempt(alice, 2, nudge(alice, bob)), commit))" "$cva_nudge"
+check "CVA nudge: bob's nudge committed at both" "A = \[.*outcome(attempt(bob, 2, nudge(bob, alice)))" "$cva_nudge"
+check "CVA nudge: ... bob telling alice commit" "sent(bob, alice, outcome(attempt(bob, 2, nudge(bob, alice)), commit))" "$cva_nudge"
+check_not "CVA nudge: nothing aborted for ever: no third attempt at either nudge" "attempt(alice, 3, nudge\|attempt(bob, 3, nudge" "$cva_nudge"
 
 # vGLP's contract introduce (programs/vglp/cva/contracts.glp): befriend and a
 # three-party introduce, guarded at every role (vGLP's 2026-10-11 22:59 UTC,
@@ -3770,6 +3786,11 @@ check "CVA gnudge: bob, the least person in the first role of the unguarded sche
 check "CVA gnudge: ... its start told to alice, whose machine votes on it, no person asked" "sent(alice, bob, vote(attempt(bob, 1, nudge(bob, alice)), " "$cva_gnudge"
 check_not "CVA gnudge: alice, preceding bob, proposes nothing of the class of nudge(bob, alice)" "propose(attempt(alice, [0-9]*, nudge(bob, alice)))\|propose(attempt(alice, [0-9]*, g(" "$cva_gnudge"
 check_not "CVA gnudge: no person answers for the unguarded class" "answer(attempt([a-z]*, [0-9]*, nudge\|answer(attempt([a-z]*, [0-9]*, g(" "$cva_gnudge"
+check "CVA gnudge: bob waits: holding his own attempt prepared, he takes the start of alice, who precedes him, only once his attempt has aborted" "B = \[.*propose(attempt(bob, 1, nudge(bob, alice))), tally(attempt(bob, 1, nudge(bob, alice))), start(attempt(alice, 2, nudge(alice, bob)))" "$cva_gnudge"
+check_not "CVA gnudge: ... and bob never refuses alice's start" "sent(bob, alice, vote(attempt(alice, [0-9]*, nudge(alice, bob)), no))" "$cva_gnudge"
+check "CVA gnudge: alice's nudge committed at both" "sent(alice, bob, outcome(attempt(alice, 2, nudge(alice, bob)), commit))" "$cva_gnudge"
+check "CVA gnudge: bob's nudge, the class he opens, committed at both" "sent(bob, alice, outcome(attempt(bob, 2, nudge(bob, alice)), commit))" "$cva_gnudge"
+check_not "CVA gnudge: nothing aborted for ever: no third attempt at either nudge" "attempt(alice, 3, nudge\|attempt(bob, 3, nudge" "$cva_gnudge"
 echo ""
 
 
