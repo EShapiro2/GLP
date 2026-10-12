@@ -1,7 +1,7 @@
 # Typed GLP Manual
 
-**Version**: 2.21
-**Date**: 2026-07-23
+**Version**: 2.22
+**Date**: 2026-10-12
 **Status**: ACTIVE
 
 This manual captures essential programming principles and advice for writing correct Typed GLP programs. It covers the SRSW (Single-Reader Single-Writer) constraint, type declarations, moding, modules, parameterized types, and common pitfalls.
@@ -180,22 +180,7 @@ Given a procedure declaration and its type definitions, what form—writer (`X`)
 
 ### 2A.2 The Rule
 
-**Step 1: Determine the structural mode at each position.**
-
-Start with the mode declared for the procedure argument:
-- `Type?` in the procedure declaration → ↓ (consume)
-- `Type` (no `?`) → ↑ (produce)
-
-Traverse into the type structure.  Each `?` encountered in the type definition **flips** the mode: ↓ becomes ↑, ↑ becomes ↓.  Two flips cancel out.
-
-**Step 2: Choose the variable form in the head.**
-
-- At a ↓ (consume) position → use a **writer** (`X`): it captures the incoming value
-- At a ↑ (produce) position → use a **reader** (`X?`): it is a hole to be filled
-
-**Step 3: Body variables follow from SRSW.**
-
-The body occurrence is the paired variable: if the head has `X` (writer), the body has `X?` (reader), and vice versa.
+TGLP's Definition "Moded Head" (`TGLP/sections/well-typing.tex`, `def:moded-head`), with the paragraph before it on input slots and output placeholders, governs the mode of each position of a clause head and the form of the variable there; TGLP's Definition "GLP Program" (`TGLP/sections/glp.tex`, `def:glp-program`), the SRSW restriction, governs where that variable's pair occurs.  They are the authority; the worked example below applies them.
 
 ### 2A.3 Worked Example: Signaling Server
 
@@ -294,9 +279,7 @@ This is the default for ordinary captures and constructions.  For forwarding a r
 
 ### 3.1 The Rule
 
-When a variable's type is a **constant type** (`Integer`, `Real`, `Number`, `String`, `Constant`), its reader may appear multiple times in the clause without violating SRSW; its writer occurs once (TGLP, Definition "Constant Type" and SRSW*: "several occurrences of a reader of constant type permitted, ... its paired writer occurring once").
-
-This is because constant values contain no internal writers and can be safely duplicated.
+TGLP's Definition "Constant Type" (`TGLP/sections/typed-glp.tex`, `def:constant-type`), with the relaxation SRSW* and Proposition "Readers of Constant Types" (`prop:constant-type-readers`) after it, under SRSW Relaxations, governs how often a reader of a constant type and its writer may occur in a clause, and is the authority.
 
 ### 3.2 Example
 
@@ -326,11 +309,7 @@ Guards that imply groundness include: `ground/1`, `integer/1`, `real/1`, `number
 
 ### 3.4 Guard Occurrences and SRSW Counting
 
-A reader `X?` appearing in a guard does **not** count toward the single-reader limit in the body.  Specifically, if `X?` occurs in a guard, its paired writer `X` must occur in the head, and `X?` may additionally occur once in the body.
-
-This rule is stated in GLP-Spec, `glp.tex`, Remark "Guards and SRSW":
-
-> Guard occurrences count toward SRSW satisfaction: if X? occurs in a guard, its paired writer X must occur in the head and X? may additionally occur once in the body.
+TGLP's Remark "Guards and SRSW" (`TGLP/sections/glp.tex`, `rem:guards-srsw`), its first paragraph, governs how an occurrence of a reader in a guard counts toward SRSW, and is the authority.
 
 **Example:**
 
@@ -539,7 +518,7 @@ The `=` predicate performs assignment: the call `X = T` assigns the value `T` on
 
 ### 8.3 Guard-Position Unfolding
 
-When a single-unit-clause procedure is called in guard position, the partial evaluator substitutes its body in line:
+TGLP's subsection "The Root `self.glp`" (`TGLP/sections/appendix-root-self.tex`, `app:root-self-glp`) governs the unfolding of a single-unit-clause procedure called in guard position, when it happens relative to type checking, and what it places in a channel consumer's head, and is the authority.  For example:
 
 ```prolog
 %% Original
@@ -551,11 +530,9 @@ play :- alice(ch(Xs?, Ys)?), bob(ch(Ys?, Xs)?).
 
 The substitution leaves only built-ins (here: the implicit channel-creation bindings) and so satisfies the §8.1 rule.
 
-**Guard unfolding precedes type checking.**  The partial evaluator unfolds guard-position calls to single-unit-clause procedures (`receive`, `close`, `send`, `new_channel`, and user-defined guards) *before* the type checker runs.  Unfolding a channel guard places the guard clause's channel structure into the consumer's head: `... :- receive(M, Ch?, Ch1) | ...` yields a head matching `ch([M|In], Out?)`, and `... :- close(Ch?) | ...` yields a head matching `ch([], [])`.  Input coverage (contravariance) is therefore checked on these *unfolded* heads, not on the source variable head.
-
 ### 8.4 Channel Closure: the Two-Clause Idiom
 
-A procedure that consumes a channel reads a full stream `Stream(X) = OpenStream(X) ∪ Closed`, so — to be well-typed — it must accept both a non-empty read stream and the closed one.  The idiom is two guarded clauses, one calling `receive` and one calling `close`:
+TGLP's subsection "The Root `self.glp`" (`TGLP/sections/appendix-root-self.tex`, `app:root-self-glp`), with condition 2 of Definition "Well-Typed GLP Program" (`TGLP/sections/well-typing.tex`, `def:well-typed-program`), governs which clauses a channel consumer needs, and is the authority.  The idiom:
 
 ```prolog
 procedure consume(Channel(Stream(Msg), Stream(Cmd))?).
@@ -563,7 +540,7 @@ consume(Ch) :- receive(M, Ch?, Ch1) | handle(M?), consume(Ch1?).  %% non-empty: 
 consume(Ch) :- close(Ch?) | done.                                 %% closed:    unfolds to ch([], [])
 ```
 
-After guard unfolding the two heads are `ch([M|In], Out?)` and `ch([], [])`, which together cover every input path of the channel (input coverage / contravariance).  A consumer that unfolds only `receive` leaves the closed read stream `ch([], _)` uncovered and is **rejected**.  Equivalently, a consumer may destructure the channel directly in the head — one clause matching `ch([Msg|In], Out?)` and one matching `ch([], ...)` — the same two-way split; when the non-empty clause matches only a *specific* message, an `otherwise`-guarded skip clause covers the remaining messages.
+Equivalently, a consumer may destructure the channel directly in the head — one clause matching `ch([Msg|In], Out?)` and one matching `ch([], ...)` — the same two-way split; when the non-empty clause matches only a *specific* message, an `otherwise`-guarded skip clause covers the remaining messages.
 
 ---
 
@@ -571,7 +548,7 @@ After guard unfolding the two heads are `ch([M|In], Out?)` and `ch([], [])`, whi
 
 ### 9.1 Definition
 
-An anonymous variable is any variable whose name begins with `_` (e.g., `_`, `_In?`, `_Out`). Anonymous writers may appear in the head, denoting a fresh writer with no paired reader, so that a value assigned to it is discarded. This provides a controlled exception to the SRSW restriction, allowing a process to abandon an input (e.g. an input stream) they are no longer interested in.  TGLP's "Anonymous variables", under SRSW Relaxations, governs anonymous variables in clauses and is the authority.
+TGLP's paragraph "Anonymous variables", under SRSW Relaxations (`TGLP/sections/typed-glp.tex`, `sec:srsw-relaxations`), governs anonymous variables in clauses, and is the authority.  A typical use is abandoning an input, an input stream for one, that a process no longer needs.
 
 ### 9.3 Examples
 
@@ -592,7 +569,7 @@ Using named anonymous variables like `_From` and `_To` documents what is being d
 
 ### 9.4 Important Distinction
 
-The symbols `_` and `_?` in **type definitions** are primitive type symbols meaning "any produced term" and "any consumed term" respectively. They are not variables and should not be confused with anonymous variables in program clauses.
+The last sentence of TGLP's paragraph "Anonymous variables" (`TGLP/sections/typed-glp.tex`, `sec:srsw-relaxations`), with Section "Type Declarations" (`TGLP/sections/typed-glp.tex`, `sec:type-declarations`), governs what `_` and `_?` are in a type definition, and is the authority.  Contrast:
 
 ```prolog
 %% In type definition: _ is a type symbol (system builtins only)
@@ -906,13 +883,7 @@ agent_init(Id, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
 
 ### 16.1 The Distinction
 
-The `?` symbol appears in two different contexts with different meanings:
-
-- **In type definitions**: `?` describes the mode of data as it flows through the structure. For example, `credit_propose(Constant, Constant, BondList, CreditResponse?)` means the fourth position carries a reader reference — the data at that position is a reader pointing to an unbound writer.
-
-- **On clause variables**: `?` marks the reader half of a variable in that clause. `X?` reads the value that `X` (the writer) provides.
-
-These are independent. The `?` in a type definition does NOT constrain the clause variable to be a reader.
+What `?` means in a type definition is TGLP's Section "Type Declarations" (`TGLP/sections/typed-glp.tex`, `sec:type-declarations`); what it means on a clause variable is TGLP's Definition "GLP Variables" (`TGLP/sections/glp.tex`, `def:glp-variables`); and how the two meet in a clause head is TGLP's Definition "Moded Head" (`TGLP/sections/well-typing.tex`, `def:moded-head`).  They are the authority.
 
 ### 16.2 Why This Matters
 
@@ -1011,13 +982,7 @@ The generic procedures `merge`, `send`, `new_channel` work directly with precise
 
 ### 17.7 Per-Instantiation Checking
 
-A parameterized procedure has no type of its own; it is checked once per instantiation, the type checker matching each call's argument types against the declaration and checking the clauses at that instantiation. Three consequences:
-
-- A parameterized procedure with no caller in its program is never instantiated, and so is not certified. If a parameterized export is used only from outside (no internal call), the program has a free type parameter, has no linked program, and is not compiled.
-- A parameter-inspecting module — one that matches a concrete functor at a parameter position — loaded on its own is rejected: with the parameter free there is nothing to check it against. It is checked only when a program instantiates it.
-- A cross-module `#` call instantiates the callee's parameters as a local call does; the whole-program check verifies the callee's clauses at every instantiation any call induces.
-
-Formal account: Moded-Types paper, §Parameterised Procedure Declarations and §Modular Checking via Abstract Parameters.
+TGLP's Definition "Instantiation" (`TGLP/sections/parameterized-types.tex`, `def:instantiation`) with the paragraphs after it, Section "Programs and Modules" (`sec:programs-and-modules`) and Section "Modular Checking via Abstract Parameters" (`sec:abstract-parameters`), with "Cross-module type checking" in Section "Design" (`TGLP/sections/modules.tex`, `sec:mod-design`), govern when and how a parameterised procedure is checked, and are the authority.
 
 ---
 
@@ -1120,7 +1085,7 @@ compute(X, Y?) :- math_service # double(X?, Y).
 
 ### 19.6 The `self.glp` Scope Chain
 
-Each directory may contain a `self.glp` file that defines types and procedures visible to all modules in that directory and its subdirectories. This follows FCP's `self.cp` convention.
+TGLP's Definition "Root, Scope" (`TGLP/sections/modules.tex`, `def:scope`) and Section "Design" (`sec:mod-design`), its paragraphs "Hierarchy mirrors the file system", "Implicit ancestor scoping" and "External access", govern what a module sees, what shadows what, and what a directory's `self.glp` exports; what the root `self.glp` holds is TGLP's subsection "The Root `self.glp`" (`TGLP/sections/appendix-root-self.tex`, `app:root-self-glp`).  They are the authority.  For example:
 
 ```
 program/
@@ -1132,25 +1097,15 @@ program/
     actors.glp           — sees ui/self.glp + program/self.glp
 ```
 
-A module sees every type and procedure of every ancestor scope. When a name is defined at more than one level, the nearer definition shadows the farther one, and a module's own definition shadows every ancestor's, for types and procedures alike.
-
-A directory's `self.glp` is also the directory's interface: it declares which of the directory's procedures are exported, and a cross-module call into the directory resolves only to a procedure its `self.glp` exports — defined there directly, or forwarded to the module that defines it (`p :- m#p`). A program's entry points are the root `self.glp`'s exports (§19.7; Moded-Types paper, §Design, §External access).
-
-The root `programs/self.glp` defines all predefined types (`Stream(X)`, `Channel(In, Out)`, `DiffList(X)`, `OpenStream(X)`) and all predefined procedure declarations (`merge`, `send`, `receive`, `new_channel`, etc.). Every module sees root self.glp automatically.
-
 ### 19.7 Static Linking
 
-A Typed GLP module is **self-contained** if it has no cross-module `M#p` call and no uninstantiated type parameter. A Typed GLP program is either a self-contained module or a directory with a `self.glp`. Every program is compiled by static linking, one module or many: linked within its filesystem context, type-checked, compiled if it passes type checking, and run. The linker resolves every `M # goal(...)` call at compile time to a local call, flattening the modules into one program. Load a program by its directory:
+TGLP's Section "Design" (`TGLP/sections/modules.tex`, `sec:mod-design`) defines a self-contained module and a program; Section "Compilation" (`sec:compilation`) governs linking, the type checking of the linked program and a program's entry points; Definition "Well-Typed Program" (`TGLP/sections/parameterized-types.tex`, `def:well-typed-program-modular`) and Theorem "Soundness of Well-Typing" (`TGLP/sections/glp-semantics.tex`, `thm:soundness`) govern what a well-typed program is guaranteed; and Section "Implementation" (`TGLP/sections/modules.tex`, `sec:mod-implementation`), with Section "Dynamic Activation" (`sec:dynamic-linking`), governs the retired dynamic dispatch and what replaces it.  They are the authority.  Load a program by its directory:
 ```
 GLP> social_graph/
 ✓ Loaded program: social_graph/
 ```
 
-A program's entry points are the root `self.glp`'s exported procedures — each defined there or forwarded to the module that defines it (§19.4). A single-module program exports all its procedures, so every one is an entry point. The unit of compilation and execution is the whole program, and only a well-typed program carries the soundness guarantee (Moded-Types paper, §Static Linking, §External access).
-
-Static linking is fully type-checked — the goal, every clause, every cross-module instantiation. **Discipline:** trace a runtime bug by first recompiling the whole program and re-checking it as one; most mode bugs are whole-program type errors invisible to a single-module check.
-
-**Dynamic linking is retired.** A runtime dynamic-dispatch mechanism — routing cross-module calls through GLP channels at runtime — is present in the implementation but retired: it cannot be typed without runtime type-checking, which GLP avoids. Static linking is the model in force. Dynamic activation will return through attestation among validated modules, needing no runtime type-checking (Moded-Types paper, §Type-Compatible Attestation Between Agents), and the present mechanism will be removed once that lands.
+**Discipline:** trace a runtime bug by first recompiling the whole program and re-checking it as one; most mode bugs are whole-program type errors invisible to a single-module check.
 
 ### 19.8 Module Design Guidelines
 
@@ -1182,7 +1137,7 @@ Exposure sits at the exposing directory's level in the ancestor chain, so innerm
 
 ### 20.1 The Rule
 
-An alternative in a type definition may be a type name. This provides type union: all alternatives of the named type are inherited. The top-level functors across all alternatives (including inherited ones) must be distinct.
+TGLP's Section "Type Declarations" (`TGLP/sections/typed-glp.tex`, `sec:type-declarations`), on a type name as an alternative, with subsection "Type Aliases" (`TGLP/sections/appendix-root-self.tex`, `app:type-aliases`), on the expansion of a union, governs type union and the distinct top-level functors it requires, and is the authority.  For example:
 
 ```prolog
 AgentContent ::= connected(Constant) ; rejected.
@@ -1203,13 +1158,13 @@ C ::= A ; B.          %% INVALID: msg/1 appears in both A and B
 
 ### 20.3 Structural Type Identity
 
-Type identity is structural. Two independently defined types with the same alternatives are compatible, regardless of name or defining module.
+TGLP's paragraph "Structural type compatibility", in Section "Design" (`TGLP/sections/modules.tex`, `sec:mod-design`), governs when two types are compatible, and is the authority; the type identity it rests on is TGLP's Section "Dynamic Activation" (`TGLP/sections/modules.tex`, `sec:dynamic-linking`).
 
 ---
 
 ## 21. Initial Goals Are Type-Checked
 
-Every goal posted at the REPL (or at boot) is type-checked before it runs. A goal is checked as a *body goal* — condition 2 of the well-typed-clause definition (each unit goal, as a produced moded term, well-typed by the program's types) plus the body-body variable-pair rule — and an ill-typed goal is rejected with a specific error and never runs. It is checked against one program's types; it may be conjunctive, but every unit goal is checked against that one program.
+TGLP's Section "Type-Compatible Attestation Between Agents" (`TGLP/sections/modules.tex`, `sec:runtime-boundary`), its last paragraph, with subsection "Well-Typed Outcomes" of Section "GLP Semantics and Well-Typing" (`TGLP/sections/glp-semantics.tex`, `sec:glp-semantics-well-typing`), governs the type checking of a goal posted at the REPL or at boot, and is the authority.  An ill-typed goal is rejected with a specific error and never runs.
 
 Consequences:
 
@@ -1217,14 +1172,13 @@ Consequences:
 - `X = foo` does not type-check: `=` is declared `=(_?, _)`, so the left argument is consumed and `X` there is a writer at a consume position. Write `foo = X` — the value is consumed, `X` is produced — which binds `X`.
 - A goal calling an undeclared procedure is rejected as undeclared, not run and failed.
 
-Formal definition: Moded-Types paper, §Type-Compatible Attestation Between Agents, and the well-typed-goal definition in the semantics section.
-
 ---
 
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.22 | 2026-10-12 | Second copies of TGLP's definitions replaced by pointers to TGLP (Integration, 2026-10-11): §2A.2, §3.1, §3.4, §8.3, §8.4, §9.1, §9.4, §16.1, §17.7, §19.6, §19.7, §20.1, §20.3, §21; their examples kept.  §3.5 left for GLP. |
 | 2.21 | 2026-07-23 | Added §15B.5: transforming an aggregate that stores writers (folded in from the retired `docs/type system/friends-list-moding-pattern.md`).  §3.5: `Constant` is a root `self.glp` union `Number ; String ; Module`, not a primitive; the primitives are `Integer`, `Real`, `String`, `Module`. |
 | 2.20 | 2026-06-24 | §19.7: defined self-contained module (no `M#p`, no uninstantiated type parameter) and program (self-contained module or directory with `self.glp`); uniform pipeline (link, typecheck, compile if it passes, run) for one module or many; removed the multi-module-only framing and the development-aid note. |
 | 2.19 | 2026-06-24 | §19.6: stated the general scope-chain shadowing rule (nearer definition shadows farther, module's own shadows all ancestors', for types and procedures), previously only in §8.2 and §19.9. |
