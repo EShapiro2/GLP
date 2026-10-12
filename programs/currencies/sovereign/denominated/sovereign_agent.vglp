@@ -278,15 +278,17 @@ serve(Reqs, Id, [_|UserIn], PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Se
     ground(Id?), otherwise |
     serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, As?, Serial?).
 
-%% --- Advance_p(t), guarded by no one: the calendar.  A date past the agent's
-%% advances it --- the precondition t > d*_p, the effect d'*_p = t --- and one
-%% not past it is no transaction and is dropped.  In a headless run the play
-%% writes the calendar; on a device the clock does. ---
+%% --- Advance_p, guarded by no one: the calendar.  A date past the agent's
+%% advances it by one day, the effect d'*_p = d*_p + 1, and stays at the head
+%% of the calendar, so a date k days past the agent's is taken as k advances;
+%% a date not past it is no transaction and is dropped.  In a headless run the
+%% play writes the calendar; on a device the clock does. ---
 
 serve(Reqs, Id, UserIn, PeerIn, Convs, [T|Cal], Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), T? > Date? |
-    show(date_advanced(T?), Outs?, Outs1),
-    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings?, T?, Ws?, As?, Serial?).
+    Date1 := Date? + 1,
+    show(date_advanced(Date1?), Outs?, Outs1),
+    serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, [T?|Cal?], Outs1?, Holdings?, Date1?, Ws?, As?, Serial?).
 
 serve(Reqs, Id, UserIn, PeerIn, Convs, [T|Cal], Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), T? =< Date? |
@@ -335,7 +337,7 @@ serve([accept(F, U, L)|Reqs], Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Da
     do_accept(Held?, Id?, U?, F?, L?, Reqs?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings1?, Date?, Ws?, As?, Serial?).
 
 %% Pay_{p,q}(cent^k_{f,q}), guarded by p: k q-coins in f to their issuer q,
-%% which takes them (clause 7 of the contract) and needs no acceptance.  No
+%% which takes them (clause 5 of the contract) and needs no acceptance.  No
 %% date is read.  The precondition cent^k_{f,q} in c_p is the selection.
 serve([pay(Q, F, K)|Reqs], Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, As, Serial) :-
     ground(Id?), ground(Q?), ground(F?), integer(K?), K? >= 1 |

@@ -2982,6 +2982,7 @@ check "Bonds village: the escrow agent holds nothing at the end" "tagged(escrow,
 check "Bonds village: a bond presented before its issuer's date reaches its maturity is returned by the issuer" "tagged(frank, not_mature_for(diana, 28))" "$n3_run"
 check "Bonds village: and the bearer holds it back" "tagged(diana, not_mature(frank, 28))" "$n3_run"
 check "Bonds village: Bob's bonds mature by his own calendar" "tagged(bob, date_advanced(25))" "$n3_run"
+check "Bonds village: Advance is the next day, so the day before is logged too" "tagged(bob, date_advanced(24))" "$n3_run"
 check "Bonds village: the redemption takes back an immature bond" "tagged(frank, redeemed(diana, frank, 28))" "$n3_run"
 check "Bonds village: once mature by its issuer's date, the bond is taken for a coin" "tagged(diana, matured(frank, 28))" "$n3_run"
 check "Bonds village: and the issuer's date is recorded at the bearer" "tagged(diana, warranty(frank, 28))" "$n3_run"
@@ -3284,6 +3285,7 @@ check "Denominated village: Frank's holdings, denominated" "tagged(frank, holdin
 check "Denominated village: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n4_run"
 check "Denominated village: a bond presented before its issuer's date reaches its maturity is still returned" "tagged(diana, not_mature(frank, 28))" "$n4_run"
 check "Denominated village: and taken for a coin once it has, the issuer's date recorded at the bearer" "tagged(diana, warranty(frank, 28))" "$n4_run"
+check "Denominated village: Advance is the next day, so the day before is logged too" "tagged(bob, date_advanced(24))" "$n4_run"
 
 echo "--- The sovereign market (sovereign_village) ---"
 
@@ -3319,6 +3321,7 @@ check "Sovereign market: and the issuer countersigns and records the spend" "tag
 check "Sovereign market: mature --- a bond presented before its issuer's date reaches its maturity is returned" "tagged(diana, not_mature(frank, 28))" "$n4_sov"
 check "Sovereign market: and taken for a coin once it has" "tagged(diana, matured(frank, 28))" "$n4_sov"
 check "Sovereign market: the issuer's date recorded at the bearer" "tagged(diana, warranty(frank, 28))" "$n4_sov"
+check "Sovereign market: Advance is the next day, so the day before is logged too" "tagged(bob, date_advanced(24))" "$n4_sov"
 check "Sovereign market: one escrow released" "tagged(frank, received_transfer(release, escrow, \[lot(frank, usd, now, 5)\]))" "$n4_sov"
 check "Sovereign market: and another returned" "tagged(frank, received_transfer(return, escrow, \[lot(eve, usd, now, 2)\]))" "$n4_sov"
 check "Sovereign market: the central bank's final holdings" "tagged(cb, holdings(\[lot(cb, usd, now, 17), lot(diana, usd, now, 10)\]))" "$n4_sov"

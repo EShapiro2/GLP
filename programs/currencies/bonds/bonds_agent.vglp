@@ -252,15 +252,17 @@ serve(Reqs, Id, [_|UserIn], NetIn, Cal, Outs, Holdings, Date, Ws, Serial) :-
     ground(Id?), otherwise |
     serve(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?).
 
-%% --- Advance_p(t), guarded by no one: the calendar.  A date past the agent's
-%% advances it --- the precondition t > d*_p, the effect d'*_p = t --- and one
-%% not past it is no transaction and is dropped.  In a headless run the play
-%% writes the calendar; on a device the clock does. ---
+%% --- Advance_p, guarded by no one: the calendar.  A date past the agent's
+%% advances it by one day, the effect d'*_p = d*_p + 1, and stays at the head
+%% of the calendar, so a date k days past the agent's is taken as k advances;
+%% a date not past it is no transaction and is dropped.  In a headless run the
+%% play writes the calendar; on a device the clock does. ---
 
 serve(Reqs, Id, UserIn, NetIn, [T|Cal], Outs, Holdings, Date, Ws, Serial) :-
     ground(Id?), T? > Date? |
-    show(date_advanced(T?), Outs?, Outs1),
-    serve(Reqs?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings?, T?, Ws?, Serial?).
+    Date1 := Date? + 1,
+    show(date_advanced(Date1?), Outs?, Outs1),
+    serve(Reqs?, Id?, UserIn?, NetIn?, [T?|Cal?], Outs1?, Holdings?, Date1?, Ws?, Serial?).
 
 serve(Reqs, Id, UserIn, NetIn, [T|Cal], Outs, Holdings, Date, Ws, Serial) :-
     ground(Id?), T? =< Date? |
