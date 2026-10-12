@@ -1,0 +1,6 @@
+%% See self.glp.
+
+Colour ::= red ; green ; blue.
+
+exported procedure pick(Colour?, Colour).
+pick(C, C?).

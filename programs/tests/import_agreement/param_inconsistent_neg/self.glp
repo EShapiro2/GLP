@@ -1,0 +1,15 @@
+%% An imported declaration that instantiates one parameter of its export two
+%% ways is refused (TGLP modules.tex, "Cross-module type checking": their type
+%% automata are equal "once the exported declaration's type parameters, if
+%% any, are instantiated (Definition Instantiation)" --- one instantiation, X
+%% bound once).  The import takes X to Integer at the first argument and to
+%% Constant at the second.  The fixture is its own root.
+
+IntList ::= [] ; [Integer | IntList].
+CList ::= [] ; [Constant | CList].
+Constant ::= a ; b.
+
+imported procedure lib#pass(IntList?, CList).
+
+exported procedure go(IntList?, CList).
+go(L, R?) :- lib # pass(L?, R).

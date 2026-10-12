@@ -1,0 +1,13 @@
+%% An imported declaration whose mode differs from its export's is refused
+%% (TGLP modules.tex, "Cross-module type checking": "their type automata are
+%% equal"; the procedure transition carries each argument's mode).  The
+%% import declares the first argument produced, Colour, where the export
+%% declares it consumed, Colour?; the call here is well-typed by the import, so
+%% only the comparison with the export refuses it.  The fixture is its own root.
+
+Colour ::= red ; green ; blue.
+
+imported procedure lib#pick(Colour, Colour).
+
+exported procedure go(Colour, Colour).
+go(C?, D?) :- lib # pick(C, D).

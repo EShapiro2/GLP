@@ -199,7 +199,30 @@ class _Expansion {
   final Map<String, TypeDef> types;
   final Map<_State, Map<String, _State>> transitions = {};
 
-  _Expansion(this.types);
+  /// Abstract types standing for type parameters ([abstractTypePrefix]), which
+  /// [importExportDisagreement] tracks where a type definition carries one as a
+  /// bare alternative: there the parameter is no state of its own but adds its
+  /// instance's transitions to the state that inlines it.  Empty for a type
+  /// identity, which a parameterised declaration has none of.
+  final Set<String> holes;
+
+  /// For each state, the parameters in [holes] it inlines as bare
+  /// alternatives, each with the mode it is viewed at.
+  final Map<_State, Set<(String, bool)>> inlinedHoles = {};
+  Set<(String, bool)>? _inlining;
+
+  _Expansion(this.types, {this.holes = const {}});
+
+  /// The transitions of [s], computed on first use: a state the walk of
+  /// [importExportDisagreement] reaches by instantiating a parameter need not
+  /// be reachable from the declaration's own state.
+  Map<String, _State> of(_State s) {
+    final known = transitions[s];
+    if (known != null) return known;
+    final t = _transitionsOf(s);
+    transitions[s] = t;
+    return t;
+  }
 
   void expand(ProcDecl decl) {
     final work = <_State>[_State.proc];
@@ -238,7 +261,10 @@ class _Expansion {
         final def = types[s.name];
         if (def == null) throw UnknownTypeError(s.name);
         final out = <String, _State>{};
+        final inlining = _inlining = <(String, bool)>{};
         _addAlternatives(def, s.dual, out, {'${s.name}:${s.dual}'});
+        _inlining = null;
+        if (inlining.isNotEmpty) inlinedHoles[s] = inlining;
         return out;
     }
   }
@@ -298,6 +324,12 @@ class _Expansion {
       final d = alt.isInput != dual; // XOR
       if (TypeRef.builtins.contains(alt.name)) {
         out.putIfAbsent(_primLabel(alt.name, d), () => _State.check);
+        return;
+      }
+      if (holes.contains(alt.name)) {
+        // A parameter as a bare alternative: its abstract type has no
+        // transitions, and what it adds is its instance's.
+        _inlining?.add((alt.name, d));
         return;
       }
       final target = types[alt.name];
@@ -448,6 +480,312 @@ String typeIdentityHex(ProcDecl decl, TypeEnvironment env) =>
 /// Lowercase hex of a hash.
 String hex(Uint8List bytes) =>
     bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+
+// =============================================================================
+// Agreement of an imported declaration with the export it names
+// =============================================================================
+
+/// Where an imported declaration and the declaration its module exports
+/// disagree: the [argument] (1-based) and what differs there.
+class DeclarationDisagreement {
+  final int argument;
+  final String detail;
+  const DeclarationDisagreement(this.argument, this.detail);
+
+  @override
+  String toString() => 'argument $argument: $detail';
+}
+
+/// Whether the imported declaration [imported] agrees with the declaration
+/// [exported] its module exports, and if not, where they differ.
+///
+/// TGLP modules.tex, "Cross-module type checking": "The imported declaration
+/// must agree with the declaration M exports: their type automata are equal
+/// (structural type compatibility) once the exported declaration's type
+/// parameters, if any, are instantiated (Definition Instantiation); subtyping
+/// applies to the arguments of a call, not between the two declarations."
+///
+/// The automata are the ones a type identity is the hash of (steps 1 and 2
+/// above): each declaration's, expanded against its own module's types
+/// ([importedTypes], [exportedTypes]), the procedure name abstracted.  Equal
+/// automata are bisimilar ones, which the walk below decides directly on the
+/// pair, as Moore refinement (step 2) would on their union: a pair of states
+/// agrees when the two start in one partition class and have the same
+/// transition labels, the targets of each label agreeing in turn.  Two
+/// automata built against two scopes are compared this way, rather than by
+/// their prints, because the export's parameters must be instantiated first.
+///
+/// [exportedParams] are the abstract types (`$abstract_X`,
+/// [buildAbstractInstance]) standing for the export's type parameters.  The
+/// instantiation is found by matching: where the walk reaches a parameter `X`
+/// of the export it binds `X` to the import's state there, and every later
+/// occurrence of `X` must agree with that binding.  The instantiation is thus
+/// "some instantiation" of the sentence, the one the import's own types
+/// supply, and no subtyping enters: a state of the import that is a strict
+/// subtype or supertype of the export's is a disagreement.
+///
+/// [importedParams] are the abstract types standing for the import's own type
+/// parameters, which it holds open: "a parameter the importing module holds
+/// open stays open across the module boundary and is fixed at the call".  An
+/// abstract type matches only itself (parameterized-types.tex, Definition
+/// "Abstract Type"), so it agrees only with an export parameter bound to it.
+DeclarationDisagreement? importExportDisagreement({
+  required ProcDecl imported,
+  required Map<String, TypeDef> importedTypes,
+  Set<String> importedParams = const {},
+  required ProcDecl exported,
+  required Map<String, TypeDef> exportedTypes,
+  Set<String> exportedParams = const {},
+}) {
+  final ie = _Expansion(importedTypes, holes: importedParams)..expand(imported);
+  final ee = _Expansion(exportedTypes, holes: exportedParams)..expand(exported);
+
+  // The export's parameters, each bound to a state of the import at the
+  // produced view.
+  final theta = <String, _State>{};
+
+  _State? flip(_State s, bool d) {
+    if (!d) return s;
+    switch (s.kind) {
+      case _Kind.type:
+      case _Kind.prim:
+      case _Kind.wildcard:
+        return _State(s.kind, s.name, !s.dual);
+      case _Kind.check:
+      case _Kind.proc:
+        return null;
+    }
+  }
+
+  bool isExportParam(_Side x) =>
+      x.export &&
+      x.state.kind == _Kind.type &&
+      exportedParams.contains(x.state.name);
+
+  String abstractMark(_State s) => 'abstract:${s.name}:${s.dual}';
+  bool isImportAbstract(_State s) =>
+      s.kind == _Kind.type && importedParams.contains(s.name);
+
+  // A state of the import: its class, with its own abstract type or those it
+  // inlines, and its transitions.
+  _View importView(_State s) {
+    final marks = <String>{
+      for (final h in ie.inlinedHoles[s] ?? const <(String, bool)>{})
+        abstractMark(_State.type(h.$1, h.$2)),
+    };
+    final base =
+        isImportAbstract(s) ? abstractMark(s) : '${_initialClass(s)}';
+    return _View(base, marks, {
+      for (final e in ie.of(s).entries) e.key: _Side(false, e.value),
+    });
+  }
+
+  // A state of the export, with each parameter it inlines replaced by its
+  // instance; null where one of them is not bound yet.
+  _View? exportView(_State s) {
+    final out = <String, _Side>{
+      for (final e in ee.of(s).entries) e.key: _Side(true, e.value),
+    };
+    final marks = <String>{};
+    for (final h in ee.inlinedHoles[s] ?? const <(String, bool)>{}) {
+      final bound = theta[h.$1];
+      if (bound == null) return null;
+      final y = flip(bound, h.$2)!;
+      switch (y.kind) {
+        case _Kind.prim:
+          out.putIfAbsent(_primLabel(y.name, y.dual), () => _Side(false, _State.check));
+        case _Kind.wildcard:
+          out.putIfAbsent(
+              '#any/0@0:${_modeTag(y.dual ? Mode.consume : Mode.produce)}',
+              () => _Side(false, y));
+        case _Kind.type:
+          final v = importView(y);
+          if (isImportAbstract(y)) marks.add(abstractMark(y));
+          marks.addAll(v.marks);
+          for (final e in v.out.entries) {
+            out.putIfAbsent(e.key, () => e.value);
+          }
+        case _Kind.check:
+        case _Kind.proc:
+          break;
+      }
+    }
+    return _View('${_initialClass(s)}', marks, out);
+  }
+
+  _View? view(_Side x) => x.export ? exportView(x.state) : importView(x.state);
+
+  String describe(_Side x) {
+    final s = x.state;
+    final q = s.dual ? '?' : '';
+    switch (s.kind) {
+      case _Kind.check:
+        return 'a constant';
+      case _Kind.proc:
+        return 'the procedure';
+      case _Kind.wildcard:
+        return '_$q';
+      case _Kind.prim:
+        return '${s.name}$q';
+      case _Kind.type:
+        final name = s.name.startsWith(abstractTypePrefix)
+            ? s.name.substring(abstractTypePrefix.length)
+            : s.name;
+        return '$name$q';
+    }
+  }
+
+  String at(List<String> path) =>
+      path.isEmpty ? '' : ' at ${path.join(' ')}';
+
+  int argOf(String procLabel) {
+    // `#proc/n@i:mode`
+    final at = procLabel.indexOf('@');
+    final colon = procLabel.indexOf(':', at);
+    return int.parse(procLabel.substring(at + 1, colon));
+  }
+
+  final queue = <_Pair>[
+    _Pair(_Side(true, _State.proc), _Side(false, _State.proc), 0, const [])
+  ];
+  final seen = <(_Side, _Side)>{};
+  var deferred = <_Pair>[];
+
+  // Breadth first, the arguments in order, so the disagreement reported is at
+  // the first argument and the shortest path where there is one.
+  var next = 0;
+  while (true) {
+    while (next < queue.length) {
+      final p = queue[next++];
+      var a = p.export;
+      final b = p.import;
+      var exportDesc = describe(a);
+
+      // The export's parameter here is instantiated to the import's state.
+      if (isExportParam(a)) {
+        final bound = theta[a.state.name];
+        if (bound == null) {
+          final instance = flip(b.state, a.state.dual);
+          if (instance == null) {
+            return DeclarationDisagreement(p.argument,
+                'the import has ${describe(b)}${at(p.path)} where the export '
+                'has its parameter ${describe(a)}');
+          }
+          theta[a.state.name] = instance;
+          continue;
+        }
+        a = _Side(false, flip(bound, a.state.dual)!);
+        exportDesc = 'its parameter $exportDesc, instantiated to ${describe(a)}';
+      }
+      if (!seen.add((a, b))) continue;
+
+      final va = view(a);
+      if (va == null) {
+        deferred.add(_Pair(a, b, p.argument, p.path));
+        continue;
+      }
+      final vb = view(b)!;
+
+      if (p.argument == 0) {
+        // The declaration's own state: the two must have the same arguments
+        // at the same modes.
+        final la = va.out.keys.toSet(), lb = vb.out.keys.toSet();
+        if (!_sameSet(la, lb)) {
+          final ia = {for (final l in la) argOf(l): l};
+          final ib = {for (final l in lb) argOf(l): l};
+          for (var i = 1; i <= ia.length; i++) {
+            if (ia[i] != ib[i]) {
+              final ma = ia[i]!.endsWith(':down') ? 'consumed (?)' : 'produced';
+              final mb = ib[i]!.endsWith(':down') ? 'consumed (?)' : 'produced';
+              return DeclarationDisagreement(i,
+                  'the import declares it $mb where the export declares it $ma');
+            }
+          }
+        }
+        for (final l in la.toList()..sort((x, y) => argOf(x) - argOf(y))) {
+          queue.add(_Pair(va.out[l]!, vb.out[l]!, argOf(l), const []));
+        }
+        continue;
+      }
+
+      if (va.cls != vb.cls || !_sameSet(va.marks, vb.marks)) {
+        return DeclarationDisagreement(p.argument,
+            'the import has ${describe(b)}${at(p.path)} where the export has '
+            '$exportDesc');
+      }
+      final la = va.out.keys.toSet(), lb = vb.out.keys.toSet();
+      if (!_sameSet(la, lb)) {
+        final onlyI = (lb.difference(la).toList()..sort()).join(', ');
+        final onlyE = (la.difference(lb).toList()..sort()).join(', ');
+        return DeclarationDisagreement(p.argument,
+            'the import has ${describe(b)}${at(p.path)} where the export has '
+            '$exportDesc, and they differ in their transitions'
+            '${onlyI.isEmpty ? '' : ' --- only the import\'s has $onlyI'}'
+            '${onlyE.isEmpty ? '' : ' --- only the export\'s has $onlyE'}');
+      }
+      for (final l in la.toList()..sort()) {
+        queue.add(_Pair(va.out[l]!, vb.out[l]!, p.argument, [...p.path, l]));
+      }
+    }
+    if (deferred.isEmpty) return null;
+    // A parameter the export inlines as a bare alternative waits for its
+    // binding at another position.
+    final retry = deferred.where((p) => view(p.export) != null).toList();
+    if (retry.isEmpty) {
+      final p = deferred.first;
+      final unbound = (ee.inlinedHoles[p.export.state] ?? const {})
+          .map((h) => h.$1)
+          .where((n) => !theta.containsKey(n))
+          .map((n) => n.substring(abstractTypePrefix.length))
+          .join(', ');
+      return DeclarationDisagreement(p.argument,
+          'the export\'s parameter $unbound${at(p.path)} is a bare alternative '
+          'of a type and occurs nowhere else, so matching finds no instance '
+          'of it to compare with the import\'s ${describe(p.import)}');
+    }
+    deferred = deferred.where((p) => !retry.contains(p)).toList();
+    for (final p in retry) {
+      seen.remove((p.export, p.import));
+      queue.add(p);
+    }
+  }
+}
+
+bool _sameSet<T>(Set<T> a, Set<T> b) =>
+    a.length == b.length && a.containsAll(b);
+
+/// A state of one of the two automata [importExportDisagreement] walks.
+class _Side {
+  final bool export;
+  final _State state;
+  const _Side(this.export, this.state);
+
+  @override
+  bool operator ==(Object other) =>
+      other is _Side && other.export == export && other.state == state;
+
+  @override
+  int get hashCode => Object.hash(export, state);
+}
+
+/// A state as the walk sees it: its partition class, the abstract types it
+/// is or inlines, and its transitions.
+class _View {
+  final String cls;
+  final Set<String> marks;
+  final Map<String, _Side> out;
+  _View(this.cls, this.marks, this.out);
+}
+
+/// A pair of states the walk compares, the export's first, with the argument
+/// and the path of labels below it that reached them.
+class _Pair {
+  final _Side export;
+  final _Side import;
+  final int argument;
+  final List<String> path;
+  _Pair(this.export, this.import, this.argument, this.path);
+}
 
 // =============================================================================
 // The two tables
