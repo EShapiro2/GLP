@@ -294,7 +294,7 @@ Variable `V` has type `Integer`. The reader `V?` appears twice (arg 2 and arg 4)
 
 ### 3.3 Guard-Based Relaxation
 
-Alternatively, if a guard establishes that a variable is ground, its reader may occur multiple times; its writer occurs once (GLP-Spec glp.tex, Remark "Guards and SRSW": "then X? may occur multiple times in the clause; X occurs once, as ever"):
+Alternatively, if a guard establishes that a variable is ground, both its writer and its reader may occur multiple times (GLP-Spec glp.tex and TGLP glp.tex, Remark "Guards and SRSW", `rem:guards-srsw`: "then both X and X? may occur multiple times in the clause"; §3.4):
 
 ```prolog
 broadcast(Msg, Out1, Out2, Out3) :- ground(Msg?) |

@@ -214,11 +214,11 @@ process(X, Y?) :- ground(X) | Y = computed(X?).  % Would fail, not suspend
 
 ## Ground Guards - SRSW Relaxation
 
-Per the formal definition, variables occur as reader/writer pairs with exactly one of each. The exception: when a guard guarantees groundness, the reader may occur more than once, because a ground term contains no unbound writer; the writer occurs once, whatever the guard.
+Per the formal definition, variables occur as reader/writer pairs with exactly one of each. The exception: when a guard guarantees groundness, both the writer and the reader may occur more than once, because a ground term contains no unbound writer.
 
 ### The Rule
 
-GLP-Spec glp.tex, Remark "Guards and SRSW" (bbff21d): "if the success of a guard implies that X? is bound to a ground term, then X? may occur multiple times in the clause; X occurs once, as ever."  Until 2026-10-02 the analyzer licensed the writer as well; it now refuses a writer occurring more than once in a clause, whatever the guards: `Writer variable "X" occurs 2 times; a writer occurs once, whatever the guards`, or, twice in the head, `... occurs 2 times in the head of the clause ...`.
+GLP-Spec glp.tex, Remark "Guards and SRSW" (`831f315`, restored 2026-10-12 with Udi's approval; TGLP glp.tex states the same): "if the success of a guard implies that X? is bound to a ground term, then both X and X? may occur multiple times in the clause."  The analyzer licenses a repeated writer only where such a guard grounds it at its reader and the writer occurs in the head; elsewhere it refuses: `Writer variable "X" occurs 2 times ... without a groundness-implying guard`.  The withdrawn reading of 2026-10-02 (`bbff21d`, a writer once whatever the guard) is undone.
 
 ### Why This Works
 
