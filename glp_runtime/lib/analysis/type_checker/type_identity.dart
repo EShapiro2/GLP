@@ -524,6 +524,19 @@ class DeclarationDisagreement {
 /// supply, and no subtyping enters: a state of the import that is a strict
 /// subtype or supertype of the export's is a disagreement.
 ///
+/// A parameter the walk never reaches as a state of its own occurs only as a
+/// bare alternative of a type (`Opt(X) ::= none ; X`), where it adds its
+/// instance's transitions to the state that inlines it.  It is bound as an
+/// instantiation would bind it (GLP, 2026-10-12 22:31 UTC, item 2): to the
+/// transitions and abstract types the import's states have at every place
+/// it is inlined.  The export's own transitions are walked first, whatever
+/// the parameter's instance, since an alternative adds transitions and
+/// never takes one away; so a parameter still unbound after them occurs
+/// nowhere but as a bare alternative, and its instance enters the walk only
+/// through the labels it adds.  An instance with fewer transitions than those
+/// common to every place could only leave a label of the import unmatched,
+/// so if any instantiation makes the two automata equal, this one does.
+///
 /// [importedParams] are the abstract types standing for the import's own type
 /// parameters, which it holds open: "a parameter the importing module holds
 /// open stays open across the module boundary and is fixed at the call".  An
@@ -566,9 +579,33 @@ DeclarationDisagreement? importExportDisagreement({
   bool isImportAbstract(_State s) =>
       s.kind == _Kind.type && importedParams.contains(s.name);
 
+  // The instance of a parameter that occurs only as a bare alternative, as a
+  // state of the import of its own, `#instance:X`, viewed at the produced
+  // mode.  The name is no type name, so it collides with none.
+  const instancePrefix = '#instance:';
+  final instances = <String, _View>{};
+
+  _State flipTarget(_State s) => flip(s, true) ?? s;
+  String flipLabel(String l) => l.endsWith(':up')
+      ? '${l.substring(0, l.length - 3)}:down'
+      : '${l.substring(0, l.length - 5)}:up';
+  String flipMark(String m) => m.endsWith(':true')
+      ? '${m.substring(0, m.length - 5)}:false'
+      : '${m.substring(0, m.length - 6)}:true';
+  // A view of the import's at the dual mode when [d].
+  _View flipView(_View v, bool d) => !d
+      ? v
+      : _View(v.cls, {for (final m in v.marks) flipMark(m)}, {
+          for (final e in v.out.entries)
+            flipLabel(e.key): _Side(e.value.export, flipTarget(e.value.state)),
+        });
+
   // A state of the import: its class, with its own abstract type or those it
   // inlines, and its transitions.
   _View importView(_State s) {
+    if (s.kind == _Kind.type && s.name.startsWith(instancePrefix)) {
+      return flipView(instances[s.name]!, s.dual);
+    }
     final marks = <String>{
       for (final h in ie.inlinedHoles[s] ?? const <(String, bool)>{})
         abstractMark(_State.type(h.$1, h.$2)),
@@ -628,6 +665,10 @@ DeclarationDisagreement? importExportDisagreement({
       case _Kind.prim:
         return '${s.name}$q';
       case _Kind.type:
+        if (s.name.startsWith(instancePrefix)) {
+          final x = s.name.substring(instancePrefix.length);
+          return 'the instance of ${x.substring(abstractTypePrefix.length)}$q';
+        }
         final name = s.name.startsWith(abstractTypePrefix)
             ? s.name.substring(abstractTypePrefix.length)
             : s.name;
@@ -680,11 +721,25 @@ DeclarationDisagreement? importExportDisagreement({
       if (!seen.add((a, b))) continue;
 
       final va = view(a);
+      final vb = view(b)!;
       if (va == null) {
+        // A parameter the export inlines here is not bound yet.  Its
+        // instance can only add transitions, so the export's own are walked
+        // now; the state waits for the rest.
+        final own = ee.of(a.state);
+        for (final l in own.keys.toList()..sort()) {
+          final t = vb.out[l];
+          if (t == null) {
+            return DeclarationDisagreement(p.argument,
+                'the import has ${describe(b)}${at(p.path)} where the export '
+                'has $exportDesc, and they differ in their transitions --- '
+                'only the export\'s has $l');
+          }
+          queue.add(_Pair(_Side(true, own[l]!), t, p.argument, [...p.path, l]));
+        }
         deferred.add(_Pair(a, b, p.argument, p.path));
         continue;
       }
-      final vb = view(b)!;
 
       if (p.argument == 0) {
         // The declaration's own state: the two must have the same arguments
@@ -730,18 +785,36 @@ DeclarationDisagreement? importExportDisagreement({
     if (deferred.isEmpty) return null;
     // A parameter the export inlines as a bare alternative waits for its
     // binding at another position.
-    final retry = deferred.where((p) => view(p.export) != null).toList();
+    var retry = deferred.where((p) => view(p.export) != null).toList();
     if (retry.isEmpty) {
-      final p = deferred.first;
-      final unbound = (ee.inlinedHoles[p.export.state] ?? const {})
-          .map((h) => h.$1)
-          .where((n) => !theta.containsKey(n))
-          .map((n) => n.substring(abstractTypePrefix.length))
-          .join(', ');
-      return DeclarationDisagreement(p.argument,
-          'the export\'s parameter $unbound${at(p.path)} is a bare alternative '
-          'of a type and occurs nowhere else, so matching finds no instance '
-          'of it to compare with the import\'s ${describe(p.import)}');
+      // It occurs nowhere else: bind it as an instantiation would, to what
+      // the import's states have in common at every place it is inlined,
+      // each viewed at the produced mode (see above).
+      final places = <String, List<_View>>{};
+      for (final p in deferred) {
+        for (final h in ee.inlinedHoles[p.export.state] ?? const {}) {
+          if (theta.containsKey(h.$1)) continue;
+          (places[h.$1] ??= []).add(flipView(view(p.import)!, h.$2));
+        }
+      }
+      for (final e in places.entries) {
+        final first = e.value.first;
+        final rest = e.value.skip(1);
+        final name = '$instancePrefix${e.key}';
+        instances[name] = _View(
+          '${_initialClass(_State.type(name, false))}',
+          {
+            for (final m in first.marks)
+              if (rest.every((v) => v.marks.contains(m))) m,
+          },
+          {
+            for (final l in first.out.entries)
+              if (rest.every((v) => v.out.containsKey(l.key))) l.key: l.value,
+          },
+        );
+        theta[e.key] = _State.type(name, false);
+      }
+      retry = deferred;
     }
     deferred = deferred.where((p) => !retry.contains(p)).toList();
     for (final p in retry) {

@@ -1,0 +1,7 @@
+%% See self.glp.  The export is parameterised, its parameter X occurring
+%% only as a bare alternative of Opt(X).
+
+Opt(X) ::= none ; X.
+
+exported procedure(X) get(Opt(X)?, Opt(X)).
+get(O, O?).

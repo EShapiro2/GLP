@@ -54,6 +54,15 @@ void main() {
       _admitted('import_agreement/param_instance');
     });
 
+    test('at an instance of a parameter occurring only as a bare alternative',
+        () {
+      // The link, where the import is compared with its export.  The
+      // checker's instantiation of the call that follows finds no type for
+      // X here, a separate gap reported to GLP on 2026-10-13.
+      final dir = _fixture('import_agreement/bare_param_instance');
+      expect(() => linkProgram(_modules(dir), rootDir: dir), returnsNormally);
+    });
+
     test('holding a parameter of a parameterised export open', () {
       _admitted('param_import_linked');
     });
@@ -80,6 +89,16 @@ void main() {
         'imported procedure lib#pick(Colour, Colour).',
         'argument 1: the import declares it produced where the export '
             'declares it consumed (?)',
+      ]);
+    });
+
+    test('at no instance of a parameter occurring only as a bare alternative',
+        () {
+      _refused('import_agreement/bare_param_neg', [
+        'imported procedure lib#get(Colour?, Colour).',
+        'exported procedure(X) get(Opt(X)?, Opt(X)).',
+        'argument 1: the import has Colour?',
+        'only the export\'s has',
       ]);
     });
 
