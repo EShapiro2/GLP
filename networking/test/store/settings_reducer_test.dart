@@ -10,15 +10,12 @@ class _UnknownAction extends SettingsAction {}
 void main() {
   group('settingsReducer', () {
     group('default state', () {
-      test('initial state has bluetoothEnabled=true and udpEnabled=true', () {
+      test('initial state runs both BLE roles and is closed on every underlay',
+          () {
         const state = SettingsState.initial;
 
-        expect(state.bluetoothEnabled, isTrue);
-        expect(state.udpEnabled, isTrue);
-        expect(state.transportPriority, [
-          TransportProtocol.bluetooth,
-          TransportProtocol.udp,
-        ]);
+        expect(state.bleRoleMode, BleRoleMode.auto);
+        expect(state.coldCallTrustLevels, SettingsState.closedOnEveryUnderlay);
       });
 
       test('unknown action returns the same state unchanged', () {
@@ -29,214 +26,51 @@ void main() {
       });
     });
 
-    group('SetBluetoothEnabledAction', () {
-      test('sets bluetoothEnabled to true', () {
-        const state = SettingsState(bluetoothEnabled: false);
-        final result = settingsReducer(
-          state,
-          SetBluetoothEnabledAction(true),
-        );
+    group('SetBleRoleModeAction', () {
+      test('sets the role mode and leaves the trust levels untouched', () {
+        final open = SettingsState.initial
+            .withTrustLevel(ProximityUnderlay.lan, ColdCallTrustLevel.open);
+        final result =
+            settingsReducer(open, SetBleRoleModeAction(BleRoleMode.centralOnly));
 
-        expect(result.bluetoothEnabled, isTrue);
-      });
-
-      test('sets bluetoothEnabled to false', () {
-        const state = SettingsState(bluetoothEnabled: true);
-        final result = settingsReducer(
-          state,
-          SetBluetoothEnabledAction(false),
-        );
-
-        expect(result.bluetoothEnabled, isFalse);
-      });
-
-      test('preserves udpEnabled and transportPriority', () {
-        const state = SettingsState(
-          bluetoothEnabled: true,
-          udpEnabled: false,
-          transportPriority: [TransportProtocol.udp],
-        );
-        final result = settingsReducer(
-          state,
-          SetBluetoothEnabledAction(false),
-        );
-
-        expect(result.bluetoothEnabled, isFalse);
-        expect(result.udpEnabled, isFalse);
-        expect(result.transportPriority, [TransportProtocol.udp]);
+        expect(result.bleRoleMode, BleRoleMode.centralOnly);
+        expect(result.coldCallTrustLevels, open.coldCallTrustLevels);
       });
     });
 
-    group('SetUdpEnabledAction', () {
-      test('sets udpEnabled to true', () {
-        const state = SettingsState(udpEnabled: false);
-        final result = settingsReducer(
-          state,
-          SetUdpEnabledAction(true),
-        );
-
-        expect(result.udpEnabled, isTrue);
+    group('the persisted blob, read with no tolerance', () {
+      test('round-trips the role mode and the levels', () {
+        final state = SettingsState.initial
+            .copyWith(bleRoleMode: BleRoleMode.peripheralOnly)
+            .withTrustLevel(ProximityUnderlay.pan, ColdCallTrustLevel.open);
+        expect(SettingsState.fromJson(state.toJson()), state);
+        expect(state.toJson().keys.toSet(), {'bleRoleMode', 'coldCallTrustLevels'});
       });
 
-      test('sets udpEnabled to false', () {
-        const state = SettingsState(udpEnabled: true);
-        final result = settingsReducer(
-          state,
-          SetUdpEnabledAction(false),
-        );
-
-        expect(result.udpEnabled, isFalse);
+      test('a blob carrying the transport toggles is malformed', () {
+        // The underlays and the rendezvous servers are constructor arguments
+        // since 2026-10-12 (GNA §Instantiation); a blob written before then
+        // carries the toggles and the servers, and is discarded whole.
+        final old = SettingsState.initial.toJson()
+          ..['bluetoothEnabled'] = true
+          ..['udpEnabled'] = true;
+        expect(() => SettingsState.fromJson(old), throwsFormatException);
       });
 
-      test('preserves bluetoothEnabled and transportPriority', () {
-        const state = SettingsState(
-          bluetoothEnabled: false,
-          udpEnabled: true,
-          transportPriority: [
-            TransportProtocol.udp,
-            TransportProtocol.bluetooth,
-          ],
-        );
-        final result = settingsReducer(
-          state,
-          SetUdpEnabledAction(false),
-        );
-
-        expect(result.udpEnabled, isFalse);
-        expect(result.bluetoothEnabled, isFalse);
-        expect(result.transportPriority, [
-          TransportProtocol.udp,
-          TransportProtocol.bluetooth,
-        ]);
-      });
-    });
-
-    group('UpdateTransportSettingsAction', () {
-      test('updates multiple settings at once', () {
-        const state = SettingsState.initial;
-        final result = settingsReducer(
-          state,
-          UpdateTransportSettingsAction(
-            bluetoothEnabled: false,
-            udpEnabled: false,
-          ),
-        );
-
-        expect(result.bluetoothEnabled, isFalse);
-        expect(result.udpEnabled, isFalse);
-        // transportPriority not provided, so it should remain at default
-        expect(result.transportPriority, [
-          TransportProtocol.bluetooth,
-          TransportProtocol.udp,
-        ]);
+      test('a blob carrying rendezvous servers is malformed', () {
+        final old = SettingsState.initial.toJson()
+          ..['rendezvousServers'] = <Object>[];
+        expect(() => SettingsState.fromJson(old), throwsFormatException);
       });
 
-      test('can change transport priority order', () {
-        const state = SettingsState.initial;
-        final result = settingsReducer(
-          state,
-          UpdateTransportSettingsAction(
-            transportPriority: [
-              TransportProtocol.udp,
-              TransportProtocol.bluetooth,
-            ],
-          ),
-        );
-
-        expect(result.transportPriority, [
-          TransportProtocol.udp,
-          TransportProtocol.bluetooth,
-        ]);
-        // Fields not provided in the action should remain unchanged
-        expect(result.bluetoothEnabled, isTrue);
-        expect(result.udpEnabled, isTrue);
+      test('a blob lacking the role mode is malformed', () {
+        final blob = SettingsState.initial.toJson()..remove('bleRoleMode');
+        expect(() => SettingsState.fromJson(blob), throwsFormatException);
       });
 
-      test('updates all fields simultaneously', () {
-        const state = SettingsState.initial;
-        final result = settingsReducer(
-          state,
-          UpdateTransportSettingsAction(
-            bluetoothEnabled: false,
-            udpEnabled: true,
-            transportPriority: [TransportProtocol.udp],
-          ),
-        );
-
-        expect(result.bluetoothEnabled, isFalse);
-        expect(result.udpEnabled, isTrue);
-        expect(result.transportPriority, [TransportProtocol.udp]);
-      });
-    });
-
-    group('rendezvous server actions', () {
-      const serverA = RendezvousServerSettings(
-        address: '[2001:db8::10]:9516',
-        pubkeyHex:
-            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-      );
-      const serverB = RendezvousServerSettings(
-        address: '198.51.100.20:9514',
-        pubkeyHex:
-            'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
-      );
-
-      test('SetRendezvousServersAction stores multiple configured servers', () {
-        const state = SettingsState.initial;
-        final result = settingsReducer(
-          state,
-          SetRendezvousServersAction(const [serverA, serverB]),
-        );
-
-        expect(result.configuredRendezvousServers,
-            equals(const [serverA, serverB]));
-        expect(result.anchorAddress, equals(serverA.address));
-        expect(result.anchorPubkeyHex, equals(serverA.pubkeyHex));
-      });
-
-      test('AddRendezvousServerAction deduplicates matching server', () {
-        final state = SettingsState(
-          rendezvousServers: const [serverA],
-          anchorAddress: serverA.address,
-          anchorPubkeyHex: serverA.pubkeyHex,
-        );
-
-        final result = settingsReducer(
-          state,
-          AddRendezvousServerAction(serverA),
-        );
-
-        expect(result.configuredRendezvousServers, equals(const [serverA]));
-      });
-
-      test('RemoveRendezvousServerAction removes only matching server', () {
-        final state = SettingsState(
-          rendezvousServers: const [serverA, serverB],
-          anchorAddress: serverA.address,
-          anchorPubkeyHex: serverA.pubkeyHex,
-        );
-
-        final result = settingsReducer(
-          state,
-          RemoveRendezvousServerAction(serverA),
-        );
-
-        expect(result.configuredRendezvousServers, equals(const [serverB]));
-        expect(result.anchorAddress, equals(serverB.address));
-        expect(result.anchorPubkeyHex, equals(serverB.pubkeyHex));
-      });
-
-      test('SetAnchorServerAction still hydrates legacy single server', () {
-        const state = SettingsState.initial;
-        final result = settingsReducer(
-          state,
-          SetAnchorServerAction(
-            anchorAddress: serverA.address,
-            anchorPubkeyHex: serverA.pubkeyHex,
-          ),
-        );
-
-        expect(result.configuredRendezvousServers, equals(const [serverA]));
+      test('a blob naming no role mode is malformed', () {
+        final blob = SettingsState.initial.toJson()..['bleRoleMode'] = 'both';
+        expect(() => SettingsState.fromJson(blob), throwsFormatException);
       });
     });
 
@@ -263,8 +97,7 @@ void main() {
 
         expect(result.trustLevelOf(ProximityUnderlay.pan),
             ColdCallTrustLevel.open);
-        expect(result.bluetoothEnabled, state.bluetoothEnabled);
-        expect(result.udpEnabled, state.udpEnabled);
+        expect(result.bleRoleMode, state.bleRoleMode);
       });
 
       test('leaves the other medium\'s level untouched', () {
@@ -365,69 +198,34 @@ void main() {
     group('HydrateSettingsAction', () {
       test('replaces entire settings state', () {
         const state = SettingsState.initial;
-        const hydratedState = SettingsState(
-          bluetoothEnabled: false,
-          udpEnabled: false,
-        );
+        final hydratedState = SettingsState.initial
+            .copyWith(bleRoleMode: BleRoleMode.centralOnly)
+            .withTrustLevel(ProximityUnderlay.lan, ColdCallTrustLevel.open);
         final result = settingsReducer(
           state,
           HydrateSettingsAction(hydratedState),
         );
 
         expect(result, equals(hydratedState));
-        expect(result.bluetoothEnabled, isFalse);
-        expect(result.udpEnabled, isFalse);
-      });
-
-      test('handles custom transport priority', () {
-        const state = SettingsState.initial;
-        const hydratedState = SettingsState(
-          bluetoothEnabled: true,
-          udpEnabled: false,
-          transportPriority: [
-            TransportProtocol.udp,
-            TransportProtocol.bluetooth,
-          ],
-        );
-        final result = settingsReducer(
-          state,
-          HydrateSettingsAction(hydratedState),
-        );
-
-        expect(result.transportPriority, [
-          TransportProtocol.udp,
-          TransportProtocol.bluetooth,
-        ]);
-        expect(result.bluetoothEnabled, isTrue);
-        expect(result.udpEnabled, isFalse);
+        expect(result.bleRoleMode, BleRoleMode.centralOnly);
+        expect(result.trustLevelOf(ProximityUnderlay.lan),
+            ColdCallTrustLevel.open);
       });
 
       test('completely discards previous state', () {
-        const previousState = SettingsState(
-          bluetoothEnabled: false,
-          udpEnabled: false,
-          transportPriority: [TransportProtocol.udp],
-        );
-        const hydratedState = SettingsState(
-          bluetoothEnabled: true,
-          udpEnabled: true,
-          transportPriority: [
-            TransportProtocol.bluetooth,
-            TransportProtocol.udp,
-          ],
-        );
+        final previousState = SettingsState.initial
+            .copyWith(bleRoleMode: BleRoleMode.peripheralOnly)
+            .withTrustLevel(ProximityUnderlay.pan, ColdCallTrustLevel.open);
+        const hydratedState = SettingsState.initial;
         final result = settingsReducer(
           previousState,
           HydrateSettingsAction(hydratedState),
         );
 
         expect(result, equals(hydratedState));
-        expect(result.bluetoothEnabled, isTrue);
-        expect(result.udpEnabled, isTrue);
-        expect(result.transportPriority, [
-          TransportProtocol.bluetooth,
-          TransportProtocol.udp,
-        ]);
+        expect(result.bleRoleMode, BleRoleMode.auto);
+        expect(result.trustLevelOf(ProximityUnderlay.pan),
+            ColdCallTrustLevel.closed);
       });
     });
   });

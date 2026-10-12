@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:grassroots_networking/src/store/persistence_service.dart';
 import 'package:grassroots_networking_core/src/store/known_peers_state.dart';
+import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/store/settings_state.dart';
 import 'package:grassroots_networking_core/src/store/messages_state.dart';
 import 'package:grassroots_networking_core/src/store/app_state.dart';
@@ -52,16 +53,10 @@ void main() {
       'aabbccdd11223344aabbccdd11223344aabbccdd11223344aabbccdd11223344';
   const peerB =
       'eeff00112233445566778899aabbccddeeff00112233445566778899aabbccdd';
-  const rendezvousA = RendezvousServerSettings(
-    address: '[2001:db8::10]:9516',
-    pubkeyHex:
-        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-  );
-  const rendezvousB = RendezvousServerSettings(
-    address: '198.51.100.20:9514',
-    pubkeyHex:
-        'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
-  );
+  // A non-default settings state: a role mode and an open level.
+  final customSettings = const SettingsState()
+      .copyWith(bleRoleMode: BleRoleMode.centralOnly)
+      .withTrustLevel(ProximityUnderlay.lan, ColdCallTrustLevel.open);
 
   late PersistenceService service;
 
@@ -137,41 +132,19 @@ void main() {
     test('returns default SettingsState when no data stored', () async {
       final result = await service.loadSettings();
 
-      expect(result.bluetoothEnabled, isTrue);
-      expect(result.udpEnabled, isTrue);
-      expect(
-          result.transportPriority,
-          equals(const [
-            TransportProtocol.bluetooth,
-            TransportProtocol.udp,
-          ]));
+      expect(result, equals(const SettingsState()));
     });
 
     test('loads settings from v2 key', () async {
-      const settings = SettingsState(
-        bluetoothEnabled: false,
-        udpEnabled: true,
-        transportPriority: [
-          TransportProtocol.udp,
-          TransportProtocol.bluetooth,
-        ],
-      );
-
       SharedPreferences.setMockInitialValues({
-        'grassroots_settings_v2': jsonEncode(settings.toJson()),
+        'grassroots_settings_v2': jsonEncode(customSettings.toJson()),
       });
       service = PersistenceService();
 
       final result = await service.loadSettings();
 
-      expect(result.bluetoothEnabled, isFalse);
-      expect(result.udpEnabled, isTrue);
-      expect(
-          result.transportPriority,
-          equals(const [
-            TransportProtocol.udp,
-            TransportProtocol.bluetooth,
-          ]));
+      expect(result, equals(customSettings));
+      expect(result.bleRoleMode, BleRoleMode.centralOnly);
     });
 
     test('returns default SettingsState on corrupt data', () async {
@@ -182,17 +155,14 @@ void main() {
 
       final result = await service.loadSettings();
 
-      expect(result.bluetoothEnabled, isTrue);
-      expect(result.udpEnabled, isTrue);
+      expect(result, equals(const SettingsState()));
     });
 
-    test('handles partial settings JSON gracefully', () async {
-      // Only bluetoothEnabled present, rest should use defaults. The
-      // per-underlay trust levels are required, not defaulted — a blob without
-      // them is malformed (spec §Trust levels; no tolerant decoder).
+    test('discards a partial settings blob whole', () async {
+      // No tolerant decoder: a blob lacking the role mode is malformed and is
+      // discarded whole, leaving the defaults, rather than read past.
       final partialJson = {
-        'bluetoothEnabled': false,
-        'coldCallTrustLevels': {'pan': 'closed', 'lan': 'closed'},
+        'coldCallTrustLevels': {'pan': 'open', 'lan': 'closed'},
       };
 
       SharedPreferences.setMockInitialValues({
@@ -202,40 +172,36 @@ void main() {
 
       final result = await service.loadSettings();
 
-      expect(result.bluetoothEnabled, isFalse);
-      // Defaults for missing fields
-      expect(result.udpEnabled, isTrue);
-      expect(
-          result.transportPriority,
-          equals(const [
-            TransportProtocol.bluetooth,
-            TransportProtocol.udp,
-          ]));
+      expect(result, equals(const SettingsState()));
     });
 
-    test('loads multiple rendezvous servers and merges legacy single server',
+    test('discards a blob carrying the toggles and rendezvous servers whole',
         () async {
-      final settingsJson = {
-        'anchorAddress': rendezvousA.address,
-        'anchorPubkeyHex': rendezvousA.pubkeyHex,
+      // Before 2026-10-12 the blob carried the transport toggles and the
+      // rendezvous servers; they are constructor arguments now (GNA
+      // §Instantiation), and such a blob is malformed.
+      final oldJson = {
+        'bluetoothEnabled': false,
+        'udpEnabled': true,
         'rendezvousServers': [
-          rendezvousA.toJson(),
-          rendezvousB.toJson(),
+          {
+            'address': '[2001:db8::10]:9516',
+            'pubkeyHex':
+                'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          },
         ],
-        'coldCallTrustLevels': {'pan': 'closed', 'lan': 'closed'},
+        'bleRoleMode': 'centralOnly',
+        'coldCallTrustLevels': {'pan': 'open', 'lan': 'closed'},
       };
 
       SharedPreferences.setMockInitialValues({
-        'grassroots_settings_v2': jsonEncode(settingsJson),
+        'grassroots_settings_v2': jsonEncode(oldJson),
       });
       service = PersistenceService();
 
       final result = await service.loadSettings();
 
-      expect(
-        result.configuredRendezvousServers,
-        equals(const [rendezvousA, rendezvousB]),
-      );
+      expect(result, equals(const SettingsState()));
     });
   });
 
@@ -423,10 +389,7 @@ void main() {
   group('flush', () {
     test('persists all state sections immediately', () async {
       final knownPeersState = KnownPeersState(known: {peerA: '1.2.3.4:4001'});
-      const settingsState = SettingsState(
-        bluetoothEnabled: false,
-        udpEnabled: true,
-      );
+      final settingsState = customSettings;
       final msg = makeMessage(
         sender: peerA,
         recipient: peerB,
@@ -472,51 +435,14 @@ void main() {
     });
 
     test('round-trip: flush then load returns same settings', () async {
-      const settings = SettingsState(
-        bluetoothEnabled: false,
-        udpEnabled: false,
-        transportPriority: [
-          TransportProtocol.udp,
-          TransportProtocol.bluetooth,
-        ],
-      );
-
-      final state = makeAppState(settings: settings);
+      final state = makeAppState(settings: customSettings);
       await service.flush(state);
 
       final loadService = PersistenceService();
       final loaded = await loadService.loadSettings();
       loadService.dispose();
 
-      expect(loaded.bluetoothEnabled, isFalse);
-      expect(loaded.udpEnabled, isFalse);
-      expect(
-          loaded.transportPriority,
-          equals(const [
-            TransportProtocol.udp,
-            TransportProtocol.bluetooth,
-          ]));
-    });
-
-    test('round-trip: flush then load returns same rendezvous servers',
-        () async {
-      final settings = SettingsState(
-        anchorAddress: rendezvousA.address,
-        anchorPubkeyHex: rendezvousA.pubkeyHex,
-        rendezvousServers: const [rendezvousA, rendezvousB],
-      );
-
-      final state = makeAppState(settings: settings);
-      await service.flush(state);
-
-      final loadService = PersistenceService();
-      final loaded = await loadService.loadSettings();
-      loadService.dispose();
-
-      expect(
-        loaded.configuredRendezvousServers,
-        equals(const [rendezvousA, rendezvousB]),
-      );
+      expect(loaded, equals(customSettings));
     });
 
     test('round-trip: flush then load returns same conversations', () async {
@@ -583,8 +509,8 @@ void main() {
       expect(knownPeersJson['known'], isEmpty);
 
       final settingsJson = jsonDecode(settingsData!) as Map<String, dynamic>;
-      expect(settingsJson['bluetoothEnabled'], isTrue);
-      expect(settingsJson['udpEnabled'], isTrue);
+      expect(settingsJson['bleRoleMode'], 'auto');
+      expect(settingsJson['coldCallTrustLevels'], {'pan': 'closed', 'lan': 'closed'});
 
       final conversationsJson =
           jsonDecode(conversationsData!) as Map<String, dynamic>;
@@ -697,9 +623,7 @@ void main() {
       await prefs.remove('grassroots_unread_counts_v2');
 
       fakeAsync((async) {
-        final newState = makeAppState(
-          settings: const SettingsState(bluetoothEnabled: false),
-        );
+        final newState = makeAppState(settings: customSettings);
         service.onStateChanged(newState);
 
         async.elapse(const Duration(milliseconds: 600));
@@ -784,7 +708,7 @@ void main() {
       // Create state with data in all sections
       final state = makeAppState(
         knownPeers: KnownPeersState(known: {peerA: null}),
-        settings: const SettingsState(bluetoothEnabled: false),
+        settings: customSettings,
         messages: MessagesState(
           conversations: {
             peerB: [
@@ -810,7 +734,7 @@ void main() {
       // Verify contents
       final settingsJson = jsonDecode(prefs.getString('grassroots_settings_v2')!)
           as Map<String, dynamic>;
-      expect(settingsJson['bluetoothEnabled'], isFalse);
+      expect(settingsJson['bleRoleMode'], 'centralOnly');
 
       final unreadJson =
           jsonDecode(prefs.getString('grassroots_unread_counts_v2')!)

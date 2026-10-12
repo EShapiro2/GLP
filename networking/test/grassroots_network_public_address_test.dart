@@ -12,6 +12,7 @@ import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 
 import 'helpers/sodium_test_bootstrap.dart';
+import 'package:grassroots_networking_core/src/models/underlay.dart';
 
 /// Hermetic host candidates (see the glare test).
 Future<List<InternetAddress>> _loopbackHostAddresses() async =>
@@ -61,12 +62,12 @@ void main() {
   Future<GrassrootsNetwork> startNode(GrassrootsIdentity id) async {
     final store = Store<AppState>(
       appReducer,
-      initialState: const AppState(
-        settings: SettingsState(bluetoothEnabled: false),
-      ),
+      initialState: const AppState(),
     );
     final network = GrassrootsNetwork(
       identity: id,
+      underlays: const {Underlay.lan, Underlay.wan},
+      rendezvousServers: const [],
       store: store,
       sodium: sodium,
       localHostAddressReader: _loopbackHostAddresses,

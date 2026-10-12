@@ -43,7 +43,11 @@ Future<void> main(List<String> args) async {
     keyPair: await Ed25519().newKeyPairFromSeed(seed),
     nickname: 'agent',
   );
-  final layer = HeadlessGrassrootsNetwork(identity: identity, sodium: sodium);
+  final layer = HeadlessGrassrootsNetwork(
+    identity: identity,
+    rendezvousServers: const [],
+    sodium: sodium,
+  );
   final network = HeadlessGlpNetwork(layer);
 
   network.onPeerConnected = (pk, underlay, attested) =>

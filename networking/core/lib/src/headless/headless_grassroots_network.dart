@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 import '../models/identity.dart';
 import '../models/packet.dart';
 import '../models/peer.dart';
+import '../models/rendezvous_server.dart';
 import '../models/underlay.dart';
 import '../platform/compat.dart';
 import '../protocol/fragment_handler.dart';
@@ -23,6 +24,40 @@ import '../transport/address_utils.dart';
 import '../transport/udp_transport_service.dart';
 import 'known_peers_persistence.dart';
 
+/// A server's listen port and static public `ip:port`, one optional pair (GNA
+/// §Instantiation, "Server address: listen port and static public ip:port, or
+/// none --- A rendezvous server's; none on a smartphone, which learns its
+/// public address from a rendezvous server").  Only the headless profile takes
+/// it (GNA, 2026-10-11, Q4).
+@immutable
+class ServerAddress {
+  /// The UDP port the server binds: the port of its published address.
+  final int listenPort;
+
+  /// The server's static public `ip:port`, canonical; what
+  /// [HeadlessGrassrootsNetwork.getPublicAddress] returns.
+  final String publicAddress;
+
+  const ServerAddress._(this.listenPort, this.publicAddress);
+
+  /// Throws [ArgumentError] on a port outside 0..65535 or an unparseable
+  /// address.
+  factory ServerAddress({
+    required int listenPort,
+    required String publicAddress,
+  }) {
+    if (listenPort < 0 || listenPort > 65535) {
+      throw ArgumentError.value(listenPort, 'listenPort', 'not a UDP port');
+    }
+    final parsed = parseAddressString(publicAddress);
+    if (parsed == null) {
+      throw ArgumentError.value(
+          publicAddress, 'publicAddress', 'not a valid ip:port');
+    }
+    return ServerAddress._(listenPort, parsed.toAddressString());
+  }
+}
+
 /// Pure-Dart, IP-only server profile of the Grassroots networking layer
 /// (spec `GLP_Networking_API`; GPW cross-project request, Answer 2).
 ///
@@ -34,16 +69,23 @@ import 'known_peers_persistence.dart';
 /// the WAN underlay alone (spec §Networking API: "a server-side agent ...
 /// realizes the WAN underlay alone, headless, with proximity discovery
 /// absent"), so every callback reports [Underlay.wan]: no BLE, no mDNS, no
-/// connectivity plugin — the public address is static configuration
-/// ([staticPublicAddress]), as on a globally routable server.
+/// connectivity plugin.
+///
+/// Instantiation (spec §Instantiation): the key pair, the rendezvous servers,
+/// the attestation, and a server's listen port and static public address as
+/// one optional pair ([ServerAddress]).  It runs [Underlay.wan] alone, so it
+/// takes no underlays; it has no location service, so it takes none (GNA,
+/// 2026-10-11, Q3).  It holds a session with each rendezvous server, dialing
+/// it at [start] and again on the heartbeat tick while none stands (Q2); a
+/// rendezvous server passes an empty list.
 ///
 /// This profile has no proximity underlay and therefore no trust level (spec
 /// §Trust levels — a level is held per `ProximityUnderlay`, and this profile
 /// has none). Unsolicited inbound IP contact is governed by no level: an inbound
-/// ANNOUNCE or Noise handshake from a key not in the known set is rejected, so
-/// an unknown caller cannot be answered at all. [putKnownPeer] registers a key,
-/// [removeKnownPeer] revokes it; a service that must accept a caller registers
-/// its key first.
+/// ANNOUNCE or Noise handshake from a key neither in the known set nor a
+/// configured rendezvous server's is rejected, so an unknown caller cannot be
+/// answered at all. [putKnownPeer] registers a key, [removeKnownPeer] revokes
+/// it; a service that must accept a caller registers its key first.
 ///
 /// Known peers persist through [HeadlessKnownPeersStore] — file-backed
 /// ([FileKnownPeersStore]) or in-memory ([MemoryKnownPeersStore]) — replacing
@@ -51,18 +93,14 @@ import 'known_peers_persistence.dart';
 class HeadlessGrassrootsNetwork {
   HeadlessGrassrootsNetwork({
     required this.identity,
-    required this.sodium,
-    this.listenPort = 0,
-    this.staticPublicAddress,
+    required List<RendezvousServer> rendezvousServers,
     this.attestation = const NoPlatformAttestation(),
+    this.serverAddress,
+    required this.sodium,
     HeadlessKnownPeersStore? knownPeersStore,
-  }) : _knownPeersStore = knownPeersStore ?? MemoryKnownPeersStore() {
-    store = Store<AppState>(
-      appReducer,
-      initialState: const AppState(
-        settings: SettingsState(bluetoothEnabled: false),
-      ),
-    );
+  })  : rendezvousServers = List.unmodifiable(rendezvousServers),
+        _knownPeersStore = knownPeersStore ?? MemoryKnownPeersStore() {
+    store = Store<AppState>(appReducer, initialState: const AppState());
     _protocolHandler = ProtocolHandler(identity: identity, sodium: sodium);
     _fragmentHandler = FragmentHandler();
     _noiseSessions = NoiseSessionManager(identity: identity, sodium: sodium);
@@ -84,13 +122,13 @@ class HeadlessGrassrootsNetwork {
   final GrassrootsIdentity identity;
   final SodiumSumo sodium;
 
-  /// Fixed UDP port to bind (the port of the service's published address);
-  /// 0 binds an ephemeral port (initiator profile).
-  final int listenPort;
+  /// The rendezvous servers this agent holds a session with (spec
+  /// §Instantiation); empty on a rendezvous server itself.
+  final List<RendezvousServer> rendezvousServers;
 
-  /// The agent's static public `ip:port`, as configured for a globally
-  /// routable server. Returned by [getPublicAddress]; no discovery runs.
-  final String? staticPublicAddress;
+  /// A server's listen port and static public address, or null: then an
+  /// ephemeral port is bound and [getPublicAddress] answers null.
+  final ServerAddress? serverAddress;
 
   /// This profile's platform attestation service. A headless server has none
   /// to offer (spec §Rendezvous Server: "Having no platform attestation to
@@ -181,12 +219,12 @@ class HeadlessGrassrootsNetwork {
   /// `onPeerDisconnected(pk, underlay)`).
   void Function(Uint8List pk, Underlay underlay)? onPeerDisconnected;
 
-  /// The agent's current public `ip:port` — static configuration in this
-  /// profile — or null when none was configured.
-  String? getPublicAddress() => staticPublicAddress;
+  /// The agent's current public `ip:port` — the static address of its
+  /// [serverAddress] in this profile — or null when it was given none.
+  String? getPublicAddress() => serverAddress?.publicAddress;
 
-  /// The actually bound UDP port (after [start]); useful when [listenPort]
-  /// was 0.
+  /// The actually bound UDP port (after [start]); useful when no
+  /// [serverAddress] was given and an ephemeral port was bound.
   int? get boundPort =>
       _udpService?.localPortForAddressType(InternetAddressType.IPv4) ??
       _udpService?.localPortForAddressType(InternetAddressType.IPv6);
@@ -236,15 +274,16 @@ class HeadlessGrassrootsNetwork {
 
   // ===== Lifecycle =====
 
-  /// Bind the UDP socket(s) (on [listenPort]) and start accepting and
-  /// dialing. Returns false when no socket could be bound.
+  /// Bind the UDP socket(s) (on the [serverAddress]'s listen port, or an
+  /// ephemeral one) and start accepting and dialing; dial each rendezvous
+  /// server. Returns false when no socket could be bound.
   Future<bool> start() async {
     if (_udpService != null) return true;
     final udp = UdpTransportService(
       identity: identity,
       store: store,
       protocolHandler: _protocolHandler,
-      listenPort: listenPort,
+      listenPort: serverAddress?.listenPort ?? 0,
     );
     if (!await udp.initialize()) {
       return false;
@@ -253,12 +292,49 @@ class HeadlessGrassrootsNetwork {
     _setupUdpCallbacks(udp);
     await udp.start();
     _heartbeatTimer = Timer.periodic(heartbeatInterval, (_) {
+      _holdRendezvousSessions();
       for (final hex in _outboundQueue.keys.toList()) {
         _drainQueueFor(_bytes(hex));
       }
     });
     debugPrint('[headless] listening on UDP port $boundPort '
         '(${_hex(identity.publicKey).substring(0, 8)}…)');
+    _holdRendezvousSessions();
+    return true;
+  }
+
+  /// Dial each rendezvous server with no connection standing (spec
+  /// §Instantiation; §Connectivity and Address: "The heartbeat sweep
+  /// therefore re-initiates connections to the known peers and the
+  /// configured rendezvous servers").  The dial sequence is a send's: our
+  /// signed ANNOUNCE, and the server, accepting, initiates the handshake.
+  void _holdRendezvousSessions() {
+    final udp = _udpService;
+    if (udp == null) return;
+    for (final server in rendezvousServers) {
+      if (udp.getPeerIdForPubkey(server.publicKey) != null) continue;
+      unawaited(() async {
+        if (!await _dial(server.publicKey, server.address)) {
+          debugPrint('[headless][rendezvous] could not dial $server');
+        }
+      }());
+    }
+  }
+
+  /// Open a UDP path to [pubkey] at [address] and send our signed ANNOUNCE
+  /// (the dial sequence, spec Implementation Notes): the accepting endpoint,
+  /// having verified it, initiates the Noise handshake.
+  Future<bool> _dial(Uint8List pubkey, String address) async {
+    final udp = _udpService;
+    if (udp == null) return false;
+    final parsed = parseAddressString(address);
+    if (parsed == null) return false;
+    final hex = _hex(pubkey);
+    _dialedPeers.add(hex);
+    if (!await udp.connectToPeer(hex, parsed.ip, parsed.port)) {
+      return false;
+    }
+    await udp.sendToPeer(hex, _signedAnnounceBytes());
     return true;
   }
 
@@ -328,16 +404,7 @@ class HeadlessGrassrootsNetwork {
       final address = store.state.peers.getPeerByPubkeyHex(hex)?.udpAddress ??
           store.state.knownPeers.known[hex];
       if (address == null) return false;
-      final parsed = parseAddressString(address);
-      if (parsed == null) return false;
-      _dialedPeers.add(hex);
-      if (!await udp.connectToPeer(hex, parsed.ip, parsed.port)) {
-        return false;
-      }
-      // The dial sequence (spec Implementation Notes): the dialer sends its
-      // signed ANNOUNCE; the accepting endpoint, having verified it,
-      // initiates the Noise handshake.
-      await udp.sendToPeer(hex, _signedAnnounceBytes());
+      if (!await _dial(recipientPubkey, address)) return false;
     }
 
     // Establish the session up front (the dialer waits for the acceptor's
@@ -442,12 +509,19 @@ class HeadlessGrassrootsNetwork {
   bool _isKnown(Uint8List pubkey) =>
       store.state.knownPeers.known.containsKey(_hex(pubkey));
 
+  bool _isRendezvousServer(Uint8List pubkey) {
+    final hex = _hex(pubkey);
+    return rendezvousServers.any((server) => server.pubkeyHex == hex);
+  }
+
   /// Unsolicited inbound IP contact is governed by no trust level (spec §Trust
   /// levels): it is refused unless the peer is in the known-peer set or
   /// presents a valid invite. This profile has no proximity underlay — no BLE,
   /// no LAN discovery — and no invite support, so the known-peer set is the
-  /// whole of it.
-  bool _acceptsContactFrom(Uint8List pubkey) => _isKnown(pubkey);
+  /// whole of it, with the configured rendezvous servers, infrastructure this
+  /// agent itself dials.
+  bool _acceptsContactFrom(Uint8List pubkey) =>
+      _isKnown(pubkey) || _isRendezvousServer(pubkey);
 
   // ===== Wiring (mirrors the Flutter coordinator's IP path) =====
 

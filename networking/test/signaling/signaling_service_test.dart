@@ -5,6 +5,7 @@ import 'package:redux/redux.dart';
 import 'package:grassroots_networking/src/signaling/signaling_service.dart';
 import 'package:grassroots_networking/src/signaling/signaling_codec.dart';
 import 'package:grassroots_networking_core/src/models/peer.dart';
+import 'package:grassroots_networking_core/src/models/rendezvous_server.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 
 // ===== Helpers =====
@@ -17,19 +18,18 @@ Uint8List _testPubkey(int seed) {
   return key;
 }
 
+Uint8List _keyFromHex(String hex) => Uint8List.fromList([
+      for (var i = 0; i < hex.length; i += 2)
+        int.parse(hex.substring(i, i + 2), radix: 16),
+    ]);
+
 String _pubkeyHex(Uint8List key) =>
     key.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
-Store<AppState> _storeWithPeers(
-  Map<String, PeerState> peers, {
-  SettingsState settings = const SettingsState(),
-}) {
+Store<AppState> _storeWithPeers(Map<String, PeerState> peers) {
   return Store<AppState>(
     appReducer,
-    initialState: AppState(
-      peers: PeersState(peers: peers),
-      settings: settings,
-    ),
+    initialState: AppState(peers: PeersState(peers: peers)),
   );
 }
 
@@ -55,14 +55,12 @@ void main() {
   const directPunchIp = '2400::13';
   const codec = SignalingCodec();
 
-  SettingsState settingsWithAnchors(List<(String, String)> anchors) {
-    return SettingsState(
-      rendezvousServers: [
-        for (final (address, hex) in anchors)
-          RendezvousServerSettings(address: address, pubkeyHex: hex),
-      ],
-    );
-  }
+  /// The layer's rendezvous servers, a constructor argument of the service
+  /// since 2026-10-12 (GNA §Instantiation).
+  List<RendezvousServer> anchors(List<(String, String)> servers) => [
+        for (final (address, hex) in servers)
+          RendezvousServer(address, _keyFromHex(hex)),
+      ];
 
   // ==========================================================================
   // Outgoing: fanOutReconnect / fanOutAvailable
@@ -70,14 +68,11 @@ void main() {
 
   group('fanOutReconnect', () {
     test('sends RECONNECT to every configured rendezvous server', () async {
-      final store = _storeWithPeers(
-        {bobHex: _knownPeer(bobKey)},
-        settings: settingsWithAnchors([
+      final store = _storeWithPeers({bobHex: _knownPeer(bobKey)});
+      final service = SignalingService(store: store, rendezvousServers: anchors([
           (anchorAddress, anchorHex),
           (anchor2Address, anchor2Hex),
-        ]),
-      );
-      final service = SignalingService(store: store);
+        ]));
 
       final sentTo = <String>[];
       service.sendSignaling = (recipient, payload) async {
@@ -99,7 +94,7 @@ void main() {
 
     test('returns 0 when no rendezvous servers are configured', () async {
       final store = _storeWithPeers({bobHex: _knownPeer(bobKey)});
-      final service = SignalingService(store: store);
+      final service = SignalingService(store: store, rendezvousServers: const []);
 
       var sends = 0;
       service.sendSignaling = (recipient, payload) async {
@@ -119,13 +114,10 @@ void main() {
     test('excludes the target itself from the server set', () async {
       // A rendezvous server that IS the target must not receive a RECONNECT
       // asking to be reconnected to itself.
-      final store = _storeWithPeers(
-        const {},
-        settings: settingsWithAnchors([
+      final store = _storeWithPeers(const {});
+      final service = SignalingService(store: store, rendezvousServers: anchors([
           (anchorAddress, anchorHex),
-        ]),
-      );
-      final service = SignalingService(store: store);
+        ]));
 
       var sends = 0;
       service.sendSignaling = (recipient, payload) async {
@@ -143,15 +135,12 @@ void main() {
     });
 
     test('orders servers lexicographically by pubkey hex', () async {
-      final store = _storeWithPeers(
-        {bobHex: _knownPeer(bobKey)},
-        settings: settingsWithAnchors([
+      final store = _storeWithPeers({bobHex: _knownPeer(bobKey)});
+      final service = SignalingService(store: store, rendezvousServers: anchors([
           // Configured in reverse lexicographic order.
           (anchor2Address, anchor2Hex),
           (anchorAddress, anchorHex),
-        ]),
-      );
-      final service = SignalingService(store: store);
+        ]));
 
       final sentTo = <String>[];
       service.sendSignaling = (recipient, payload) async {
@@ -166,14 +155,11 @@ void main() {
     });
 
     test('counts only successful sends', () async {
-      final store = _storeWithPeers(
-        {bobHex: _knownPeer(bobKey)},
-        settings: settingsWithAnchors([
+      final store = _storeWithPeers({bobHex: _knownPeer(bobKey)});
+      final service = SignalingService(store: store, rendezvousServers: anchors([
           (anchorAddress, anchorHex),
           (anchor2Address, anchor2Hex),
-        ]),
-      );
-      final service = SignalingService(store: store);
+        ]));
 
       service.sendSignaling = (recipient, payload) async {
         return _pubkeyHex(recipient) == anchorHex;
@@ -190,14 +176,11 @@ void main() {
 
   group('fanOutAvailable', () {
     test('sends AVAILABLE to every configured rendezvous server', () async {
-      final store = _storeWithPeers(
-        {bobHex: _knownPeer(bobKey)},
-        settings: settingsWithAnchors([
+      final store = _storeWithPeers({bobHex: _knownPeer(bobKey)});
+      final service = SignalingService(store: store, rendezvousServers: anchors([
           (anchorAddress, anchorHex),
           (anchor2Address, anchor2Hex),
-        ]),
-      );
-      final service = SignalingService(store: store);
+        ]));
 
       final sentTo = <String>[];
       service.sendSignaling = (recipient, payload) async {
@@ -215,7 +198,7 @@ void main() {
 
     test('returns 0 when no rendezvous servers are configured', () async {
       final store = _storeWithPeers({bobHex: _knownPeer(bobKey)});
-      final service = SignalingService(store: store);
+      final service = SignalingService(store: store, rendezvousServers: const []);
 
       var sends = 0;
       service.sendSignaling = (recipient, payload) async {
@@ -237,7 +220,7 @@ void main() {
   group('requestDirectPunch', () {
     test('sends PUNCH_INITIATE directly to a known peer record', () async {
       final store = _storeWithPeers({bobHex: _knownPeer(bobKey)});
-      final service = SignalingService(store: store);
+      final service = SignalingService(store: store, rendezvousServers: const []);
 
       Uint8List? sentTo;
       PunchInitiateMessage? sentMsg;
@@ -263,7 +246,7 @@ void main() {
 
     test('returns false when the target has no peer record', () async {
       final store = _storeWithPeers(const {});
-      final service = SignalingService(store: store);
+      final service = SignalingService(store: store, rendezvousServers: const []);
 
       var sends = 0;
       service.sendSignaling = (recipient, payload) async {
@@ -284,7 +267,7 @@ void main() {
 
     test('uses the direct-only send path when required', () async {
       final store = _storeWithPeers({bobHex: _knownPeer(bobKey)});
-      final service = SignalingService(store: store);
+      final service = SignalingService(store: store, rendezvousServers: const []);
 
       var directSends = 0;
       var normalSends = 0;
@@ -318,7 +301,7 @@ void main() {
   group('processSignaling trust filter', () {
     test('drops signaling from an unknown, non-rendezvous sender', () {
       final store = _storeWithPeers(const {});
-      final service = SignalingService(store: store);
+      final service = SignalingService(store: store, rendezvousServers: const []);
 
       var fired = false;
       service.onPunchInitiate = (peer, ip, port, readyRecipient) {
@@ -339,7 +322,7 @@ void main() {
 
     test('accepts signaling from an identified peer', () {
       final store = _storeWithPeers({bobHex: _knownPeer(bobKey)});
-      final service = SignalingService(store: store);
+      final service = SignalingService(store: store, rendezvousServers: const []);
 
       var fired = false;
       service.onPunchInitiate = (peer, ip, port, readyRecipient) {
@@ -359,11 +342,8 @@ void main() {
     });
 
     test('accepts signaling from a configured rendezvous server', () {
-      final store = _storeWithPeers(
-        const {},
-        settings: settingsWithAnchors([(anchorAddress, anchorHex)]),
-      );
-      final service = SignalingService(store: store);
+      final store = _storeWithPeers(const {});
+      final service = SignalingService(store: store, rendezvousServers: anchors([(anchorAddress, anchorHex)]));
 
       var fired = false;
       service.onPunchInitiate = (peer, ip, port, readyRecipient) {
@@ -389,11 +369,8 @@ void main() {
 
   group('PunchInitiate callback', () {
     test('fires onPunchInitiate with correct params', () {
-      final store = _storeWithPeers(
-        const {},
-        settings: settingsWithAnchors([(anchorAddress, anchorHex)]),
-      );
-      final service = SignalingService(store: store);
+      final store = _storeWithPeers(const {});
+      final service = SignalingService(store: store, rendezvousServers: anchors([(anchorAddress, anchorHex)]));
 
       Uint8List? punchPeer;
       String? punchIp;
@@ -425,11 +402,8 @@ void main() {
 
   group('PunchReady callback', () {
     test('fires onPunchReady with the ready peer', () {
-      final store = _storeWithPeers(
-        const {},
-        settings: settingsWithAnchors([(anchorAddress, anchorHex)]),
-      );
-      final service = SignalingService(store: store);
+      final store = _storeWithPeers(const {});
+      final service = SignalingService(store: store, rendezvousServers: anchors([(anchorAddress, anchorHex)]));
 
       Uint8List? readyPeer;
       service.onPunchReady = (peer) => readyPeer = peer;
@@ -445,11 +419,8 @@ void main() {
 
   group('AddrReflect callback', () {
     test('fires onAddrReflected with reflected address', () {
-      final store = _storeWithPeers(
-        const {},
-        settings: settingsWithAnchors([(anchorAddress, anchorHex)]),
-      );
-      final service = SignalingService(store: store);
+      final store = _storeWithPeers(const {});
+      final service = SignalingService(store: store, rendezvousServers: anchors([(anchorAddress, anchorHex)]));
 
       Uint8List? reflector;
       String? ip;
@@ -478,7 +449,7 @@ void main() {
   group('server-bound messages', () {
     test('ignores RECONNECT — agents do not run the matcher', () {
       final store = _storeWithPeers({bobHex: _knownPeer(bobKey)});
-      final service = SignalingService(store: store);
+      final service = SignalingService(store: store, rendezvousServers: const []);
 
       var sends = 0;
       service.sendSignaling = (recipient, payload) async {
@@ -501,7 +472,7 @@ void main() {
 
     test('ignores AVAILABLE — agents do not run the matcher', () {
       final store = _storeWithPeers({bobHex: _knownPeer(bobKey)});
-      final service = SignalingService(store: store);
+      final service = SignalingService(store: store, rendezvousServers: const []);
 
       var sends = 0;
       service.sendSignaling = (recipient, payload) async {

@@ -44,14 +44,17 @@ void main() {
     }
     final service = HeadlessGrassrootsNetwork(
       identity: await identityFromSeed(0x22, 'service'),
+      rendezvousServers: const [],
       sodium: sodium!,
     );
     final pusher = HeadlessGrassrootsNetwork(
       identity: await identityFromSeed(0x11, 'pusher'),
+      rendezvousServers: const [],
       sodium: sodium!,
     );
     final stranger = HeadlessGrassrootsNetwork(
       identity: await identityFromSeed(0x33, 'stranger'),
+      rendezvousServers: const [],
       sodium: sodium!,
     );
     addTearDown(() async {
@@ -138,10 +141,12 @@ void main() {
     }
     final service = HeadlessGrassrootsNetwork(
       identity: await identityFromSeed(0x44, 'registering-service'),
+      rendezvousServers: const [],
       sodium: sodium!,
     );
     final caller = HeadlessGrassrootsNetwork(
       identity: await identityFromSeed(0x55, 'caller'),
+      rendezvousServers: const [],
       sodium: sodium!,
     );
     addTearDown(() async {

@@ -12,7 +12,7 @@
 ///
 /// Usage:
 ///   glp_net_service --port 9600 --identity service-identity.json \
-///     [--public-address 203.0.113.7:9600] \
+///     --public-address 203.0.113.7:9600 \
 ///     [--known-peer <pubkey-hex>]... [--known-peers-file peers.json] \
 ///     [--trust closed|open]
 library;
@@ -33,8 +33,10 @@ Future<void> main(List<String> argv) async {
         defaultsTo: 'service-identity.json',
         help: 'Path to identity file (created on first run)')
     ..addOption('public-address',
+        mandatory: true,
         help: 'The service\'s static public ip:port (reported by '
-            'getPublicAddress)')
+            'getPublicAddress); with --port, the server address of GNA '
+            '§Instantiation, one pair')
     ..addMultiOption('known-peer',
         help: 'Public key (64 hex chars) this service will answer; '
             'repeatable. Unsolicited contact from any other key is refused')
@@ -68,8 +70,12 @@ Future<void> main(List<String> argv) async {
   final network = HeadlessGrassrootsNetwork(
     identity: identity,
     sodium: sodium,
-    listenPort: int.parse(args['port'] as String),
-    staticPublicAddress: args['public-address'] as String?,
+    // A service holds no session with a rendezvous server.
+    rendezvousServers: const [],
+    serverAddress: ServerAddress(
+      listenPort: int.parse(args['port'] as String),
+      publicAddress: args['public-address'] as String,
+    ),
     knownPeersStore: knownPeersFile != null
         ? FileKnownPeersStore(knownPeersFile)
         : MemoryKnownPeersStore(),

@@ -57,8 +57,10 @@ void main() {
       if (sodiumUnavailable != null) return;
       layer = HeadlessGrassrootsNetwork(
         identity: await identityFromSeed(seedOf(0x21)),
+        rendezvousServers: const [],
         sodium: sodium!,
-        staticPublicAddress: '203.0.113.7:9600',
+        serverAddress: ServerAddress(
+            listenPort: 9600, publicAddress: '203.0.113.7:9600'),
       );
       network = HeadlessGlpNetwork(layer);
       peer = glp.PubKey.fromList(
@@ -139,16 +141,31 @@ void main() {
       expect(() => network.peerUnderlays(peer), throwsUnsupportedError);
       expect(() => network.sign(bytes), throwsUnsupportedError);
       expect(() => network.verify(peer, bytes, bytes), throwsUnsupportedError);
-      expect(() => network.getPeers(), throwsUnsupportedError);
-      expect(
-          () => network.setTrustLevel(
-              glp.ProximityUnderlay.pan, glp.TrustLevel.open),
-          throwsUnsupportedError);
       expect(() => network.networkIdentity(), throwsUnsupportedError);
       expect(() => network.generatePeerLink(), throwsUnsupportedError);
       expect(() => network.consumePeerLink('x'), throwsUnsupportedError);
       expect(() => network.observedPeerAddress(peer), throwsUnsupportedError);
       expect(() => network.punchUdp('127.0.0.1:9'), throwsUnsupportedError);
+    });
+
+    test(
+        'no proximity underlay and no location service: getPeers is empty, '
+        'setTrustLevel and the places are refused as unsupported', () {
+      // GNA, 2026-10-11, the adapter's Q1; Section "Instantiation", Location
+      // service: "none on a headless server".
+      if (sodiumUnavailable != null) {
+        markTestSkipped(sodiumUnavailable!);
+        return;
+      }
+      expect(network.getPeers(), isEmpty);
+      expect(
+          () => network.setTrustLevel(
+              glp.ProximityUnderlay.pan, glp.TrustLevel.open),
+          throwsUnsupportedError);
+      expect(
+          () => network.setTrustLevel(
+              glp.ProximityUnderlay.lan, glp.TrustLevel.closed),
+          throwsUnsupportedError);
       expect(() => network.declarePlace('home', 50), throwsUnsupportedError);
       expect(() => network.removePlace('home'), throwsUnsupportedError);
     });
@@ -247,8 +264,11 @@ answer(forty_two).
       final calleeAddress = '127.0.0.1:${ready[1]}';
 
       // This process: the caller over its own headless layer.
-      final layer =
-          HeadlessGrassrootsNetwork(identity: callerIdentity, sodium: sodium!);
+      final layer = HeadlessGrassrootsNetwork(
+        identity: callerIdentity,
+        rendezvousServers: const [],
+        sodium: sodium!,
+      );
       addTearDown(layer.dispose);
       final network = HeadlessGlpNetwork(layer);
       final connected = <String>[];

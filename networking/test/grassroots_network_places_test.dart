@@ -12,6 +12,7 @@ import 'package:grassroots_networking_core/src/places/place_registry.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 
 import 'helpers/sodium_test_bootstrap.dart';
+import 'package:grassroots_networking_core/src/models/underlay.dart';
 
 class _FakeGeofenceBackend implements PlaceGeofenceBackend {
   final Set<String> live = {};
@@ -88,6 +89,8 @@ void main() {
     );
     return GrassrootsNetwork(
       identity: await identity,
+      underlays: const {Underlay.pan, Underlay.lan, Underlay.wan},
+      rendezvousServers: const [],
       store: Store<AppState>(appReducer, initialState: const AppState()),
       sodium: sodium,
       placeGeofenceBackend: backend,

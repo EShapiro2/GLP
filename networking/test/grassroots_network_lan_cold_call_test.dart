@@ -57,12 +57,12 @@ void main() {
   Future<GrassrootsNetwork> startNode(GrassrootsIdentity id) async {
     final store = Store<AppState>(
       appReducer,
-      initialState: const AppState(
-        settings: SettingsState(bluetoothEnabled: false),
-      ),
+      initialState: const AppState(),
     );
     final network = GrassrootsNetwork(
       identity: id,
+      underlays: const {Underlay.lan, Underlay.wan},
+      rendezvousServers: const [],
       store: store,
       sodium: sodium,
       localHostAddressReader: _loopbackHostAddresses,

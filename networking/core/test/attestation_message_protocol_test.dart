@@ -204,11 +204,13 @@ void main() {
   ) async {
     final service = HeadlessGrassrootsNetwork(
       identity: await identityFromSeed(seed, 'service'),
+      rendezvousServers: const [],
       sodium: sodium!,
       attestation: serviceAttestation,
     );
     final caller = HeadlessGrassrootsNetwork(
       identity: await identityFromSeed(seed + 1, 'caller'),
+      rendezvousServers: const [],
       sodium: sodium!,
       attestation: callerAttestation,
     );
@@ -417,9 +419,7 @@ void main() {
       final router = MessageRouter(
         store: Store<AppState>(
           appReducer,
-          initialState: const AppState(
-            settings: SettingsState(bluetoothEnabled: false),
-          ),
+          initialState: const AppState(),
         ),
         protocolHandler: ProtocolHandler(identity: receiverId, sodium: sodium!),
         fragmentHandler: FragmentHandler(),

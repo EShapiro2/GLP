@@ -13,6 +13,7 @@ import 'package:sodium_libs/sodium_libs_sumo.dart';
 import 'dart:async';
 import 'chat_screen.dart';
 import 'chat_models.dart';
+import 'network_preferences.dart';
 import 'settings_screen.dart';
 
 // Global notification plugin instance
@@ -300,6 +301,11 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
     with TickerProviderStateMixin, WidgetsBindingObserver {
   GrassrootsIdentity? _identity;
   GrassrootsNetwork? _grassroots;
+
+  /// The underlays and rendezvous servers the layer is instantiated with;
+  /// a change rebuilds the layer ([_applyPreferences]).
+  NetworkPreferences _preferences = NetworkPreferences.defaults;
+  final NetworkPreferencesStore _preferencesStore = NetworkPreferencesStore();
   Timer? _refreshTimer;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   int _currentIndex = 1; // Start on "Around" tab (center)
@@ -398,26 +404,60 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
     }
   }
 
+  /// Instantiate the layer under [identity] with the current preferences
+  /// (spec §Instantiation: the key pair, the underlays, the rendezvous
+  /// servers, the attestation, the location service).
+  GrassrootsNetwork _buildLayer(GrassrootsIdentity identity) {
+    final grassroots = GrassrootsNetwork(
+      identity: identity,
+      underlays: _preferences.underlays,
+      rendezvousServers: _preferences.rendezvousServers,
+      // Attestation needs the platform's secure element, which only the
+      // app embedding has (spec §Session Establishment).
+      platformAttestation: _platformAttestation(),
+      // The place predicates need the platform's location service, which
+      // only the app embedding has (spec §System Predicates).
+      placeGeofenceBackend: PlatformPlaceGeofenceBackend(),
+      store: appStore,
+      sodium: appSodium,
+    );
+    grassroots.onMessageReceived =
+        (senderPubkey, payload, messageId, underlay) {
+      _handleIncomingMessage(messageId, senderPubkey, payload, underlay);
+    };
+    return grassroots;
+  }
+
+  /// Persist [preferences] and rebuild the layer with them: the underlays and
+  /// the rendezvous servers are constructor arguments, fixed for a layer's
+  /// lifetime (spec §Instantiation), so a change is a new layer.
+  Future<void> _applyPreferences(NetworkPreferences preferences) async {
+    if (preferences == _preferences) return;
+    await _preferencesStore.save(preferences);
+    final identity = _identity;
+    final oldGrassroots = _grassroots;
+    setState(() {
+      _preferences = preferences;
+      _grassroots = null;
+    });
+    await oldGrassroots?.dispose();
+    if (identity == null || !mounted) return;
+
+    final grassroots = _buildLayer(identity);
+    setState(() => _grassroots = grassroots);
+    if (!await grassroots.initialize()) {
+      debugPrint('Grassroots initialization failed after a preferences change');
+      return;
+    }
+    _hydrateKnownPeers(grassroots);
+  }
+
   Future<void> _initialize() async {
     try {
       final identity = await _initIdentity();
+      _preferences = await _preferencesStore.load();
 
-      final grassroots = GrassrootsNetwork(
-        identity: identity,
-        store: appStore,
-        sodium: appSodium,
-        // The place predicates need the platform's location service, which
-        // only the app embedding has (spec §System Predicates).
-        placeGeofenceBackend: PlatformPlaceGeofenceBackend(),
-        // Attestation needs the platform's secure element, which only the
-        // app embedding has (spec §Session Establishment).
-        platformAttestation: _platformAttestation(),
-      );
-
-      grassroots.onMessageReceived =
-          (senderPubkey, payload, messageId, underlay) {
-        _handleIncomingMessage(messageId, senderPubkey, payload, underlay);
-      };
+      final grassroots = _buildLayer(identity);
 
       // Friend presence is handled at the transport layer; no app-layer
       // callback needed for UDP initialization.
@@ -2114,7 +2154,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
               icon: Icons.bluetooth,
               iconColor: Colors.blue,
               name: 'Bluetooth',
-              enabled: appStore.state.settings.bluetoothEnabled,
+              enabled: _preferences.underlays.contains(Underlay.pan),
               available: _bleAvailable,
             ),
             const SizedBox(height: 8),
@@ -2123,8 +2163,9 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
             _buildTransportStatusRow(
               icon: Icons.public,
               iconColor: Colors.green,
-              name: 'Internet (UDP)',
-              enabled: appStore.state.settings.udpEnabled,
+              name: 'Local network and Internet',
+              enabled: _preferences.underlays.contains(Underlay.lan) ||
+                  _preferences.underlays.contains(Underlay.wan),
               available: _udpAvailable,
             ),
 
@@ -2209,18 +2250,8 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
           onSettingsChanged: () {
             setState(() {});
           },
-          onAddRendezvousServer: _grassroots == null
-              ? null
-              : (address, pubkeyHex) => _grassroots!.addRendezvousServer(
-                    address: address,
-                    pubkeyHex: pubkeyHex,
-                  ),
-          onRemoveRendezvousServer: _grassroots == null
-              ? null
-              : (address, pubkeyHex) => _grassroots!.removeRendezvousServer(
-                    address: address,
-                    pubkeyHex: pubkeyHex,
-                  ),
+          preferences: _preferences,
+          onPreferencesChanged: _applyPreferences,
           onBleRoleModeChanged: _grassroots == null
               ? null
               : (mode) => _grassroots!.setBleRoleMode(mode),
@@ -2390,17 +2421,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
     await IdentityStore.putIdentity(newIdentity);
 
     // Rebuild the transport with the new identity (mirrors _initialize).
-    final newGrassroots = GrassrootsNetwork(
-      identity: newIdentity,
-      store: appStore,
-      sodium: appSodium,
-      placeGeofenceBackend: PlatformPlaceGeofenceBackend(),
-      platformAttestation: _platformAttestation(),
-    );
-    newGrassroots.onMessageReceived =
-        (senderPubkey, payload, messageId, underlay) {
-      _handleIncomingMessage(messageId, senderPubkey, payload, underlay);
-    };
+    final newGrassroots = _buildLayer(newIdentity);
 
     if (!mounted) return;
     setState(() {

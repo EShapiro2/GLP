@@ -8,6 +8,7 @@ import 'package:grassroots_networking_core/src/store/peers_actions.dart';
 import 'package:grassroots_networking_core/src/store/messages_actions.dart';
 import 'package:grassroots_networking_core/src/store/known_peers_actions.dart';
 import 'package:grassroots_networking_core/src/store/settings_actions.dart';
+import 'package:grassroots_networking_core/src/store/settings_state.dart';
 import 'package:grassroots_networking_core/src/store/transports_actions.dart';
 import 'package:grassroots_networking_core/src/store/transports_state.dart';
 import 'package:grassroots_networking_core/src/store/peers_state.dart';
@@ -86,14 +87,15 @@ void main() {
 
       test('SettingsAction routes to settingsReducer', () {
         const initial = AppState.initial;
-        // Default bluetoothEnabled is true, so setting it to false should change state
-        final action = SetBluetoothEnabledAction(false);
+        // The default role mode is auto, so setting another should change
+        // state
+        final action = SetBleRoleModeAction(BleRoleMode.centralOnly);
 
         final result = appReducer(initial, action);
 
         // The settings state should have changed
         expect(result.settings, isNot(equals(initial.settings)));
-        expect(result.settings.bluetoothEnabled, isFalse);
+        expect(result.settings.bleRoleMode, BleRoleMode.centralOnly);
 
         // Other state sections remain unchanged
         expect(result.peers, equals(initial.peers));

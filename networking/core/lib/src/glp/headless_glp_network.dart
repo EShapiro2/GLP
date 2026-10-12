@@ -15,13 +15,17 @@
 /// application identity of `onPeerConnected` travels as the layer reports it,
 /// since "the runtime relies on none of it" (IGLP, The contract).
 ///
-/// A function of the API the headless layer does not have throws
-/// [UnsupportedError], the interface's statement that a realisation does not
-/// provide it, naming the layer's want: getPeers, setTrustLevel, peerUnderlays,
-/// sign, verify, networkIdentity, generatePeerLink, consumePeerLink,
-/// observedPeerAddress, punchUdp, declarePlace and removePlace.  A callback the
-/// layer has no event for --- onPeerDiscovered, onConnectivityStatusChanged,
-/// onNetworkChanged, onPlaceEvent --- is held and never fires.
+/// The profile has no proximity underlay and no location service (GNA,
+/// Section "Instantiation": "Location service ... none on a headless server"),
+/// so `getPeers` is empty, there being no proximity underlay to find a nearby
+/// agent on, and `setTrustLevel` and the place functions are refused as
+/// unsupported, throwing [UnsupportedError] (GNA, 2026-10-11, the adapter's
+/// Q1).  A function of the API the headless layer does not yet have throws the
+/// same, naming the layer's want: peerUnderlays, sign, verify,
+/// networkIdentity, generatePeerLink, consumePeerLink, observedPeerAddress and
+/// punchUdp.  A callback the layer has no event for --- onPeerDiscovered,
+/// onConnectivityStatusChanged, onNetworkChanged, onPlaceEvent --- is held and
+/// never fires.
 library;
 
 import 'dart:async';
@@ -136,8 +140,9 @@ class HeadlessGlpNetwork implements glp.GlpNetwork {
 
   // --- Proximity underlays (absent from this profile) ---
 
+  /// Empty: the profile has no proximity underlay to scan or browse.
   @override
-  List<glp.DiscoveredPeer> getPeers() => _absent('getPeers');
+  List<glp.DiscoveredPeer> getPeers() => const [];
 
   @override
   void Function(glp.PubKey pk, glp.ProximityUnderlay underlay)?

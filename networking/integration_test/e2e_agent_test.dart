@@ -30,6 +30,7 @@ import 'package:sodium_libs/sodium_libs_sumo.dart';
 
 import 'package:grassroots_networking/src/grassroots_network.dart';
 import 'package:grassroots_networking_core/src/models/identity.dart';
+import 'package:grassroots_networking_core/src/models/rendezvous_server.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 
@@ -117,7 +118,9 @@ class Agent {
   final disconnects = <(String, Underlay, DateTime)>[];
   final redemptions = <String>[];
 
-  static Future<Agent> spawn(String nickname) async {
+  /// [rendezvous]: whether the agent is instantiated with the anchor as its
+  /// rendezvous server (GNA §Instantiation) --- A and B are, C is not.
+  static Future<Agent> spawn(String nickname, {bool rendezvous = false}) async {
     final sodium = await SodiumSumoInit.init();
     final identity = await GrassrootsIdentity.create(
       keyPair: await Ed25519().newKeyPair(),
@@ -127,12 +130,14 @@ class Agent {
       appReducer,
       // Simulators have no usable BLE; IP-only run. Closed trust is the
       // default (spec: until set, the level is Closed) — left untouched.
-      initialState: const AppState(
-        settings: SettingsState(bluetoothEnabled: false),
-      ),
+      initialState: const AppState(),
     );
     final network = GrassrootsNetwork(
       identity: identity,
+      underlays: const {Underlay.lan, Underlay.wan},
+      rendezvousServers: [
+        if (rendezvous) RendezvousServer(anchorAddr, pubkeyFromHex(anchorPk)),
+      ],
       store: store,
       sodium: sodium,
     );
@@ -219,7 +224,7 @@ bool isBigPayload(Uint8List p, int length) {
 // ===== Roles =====
 
 Future<void> runA() async {
-  final agent = await Agent.spawn('A');
+  final agent = await Agent.spawn('A', rendezvous: true);
   final myHex = hexOf(agent.identity.publicKey);
   await bbPut('pk_A', myHex);
 
@@ -230,13 +235,10 @@ Future<void> runA() async {
   note('item1: distinct identities OK (A=${myHex.substring(0, 8)}, '
       'B=${bHex.substring(0, 8)})');
 
-  // Item 2: rendezvous + peer link.
-  final rvOk = await agent.network.addRendezvousServer(
-    address: anchorAddr,
-    pubkeyHex: anchorPk,
-  );
-  expect(rvOk, isTrue, reason: 'anchor must respond');
-  note('rendezvous server configured');
+  // Item 2: rendezvous + peer link. The anchor, a constructor argument,
+  // answers by reflecting our address.
+  await agent.loopbackAddress();
+  note('rendezvous server answered');
 
   final link = await agent.network.generatePeerLink();
   note('peer link minted (${link.length} chars)');
@@ -308,7 +310,7 @@ Future<void> runA() async {
 }
 
 Future<void> runB() async {
-  final agent = await Agent.spawn('B');
+  final agent = await Agent.spawn('B', rendezvous: true);
   final myHex = hexOf(agent.identity.publicKey);
   // Redemption dials the rendezvous server named in the link, which needs
   // our local address candidates — wait for address discovery first.
@@ -324,14 +326,10 @@ Future<void> runB() async {
       reason: 'link must name A as the inviter');
   note('item2: link redeemed; inviter is A');
 
-  // GLP-level acceptance: supply A\'s key; configure the same rendezvous
-  // server so reconnect discovery can pair with A\'s AVAILABLE.
+  // GLP-level acceptance: supply A\'s key; B holds the same rendezvous
+  // server, from its instantiation, so reconnect discovery can pair with A\'s
+  // AVAILABLE.
   agent.network.putKnownPeer(inviterPk);
-  final rvOk = await agent.network.addRendezvousServer(
-    address: anchorAddr,
-    pubkeyHex: anchorPk,
-  );
-  expect(rvOk, isTrue);
 
   // Item 3 driver: sending with no dial-book address forces the
   // rendezvous-coordinated path; the message drains once the session is up.

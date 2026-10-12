@@ -60,15 +60,17 @@ void main() {
   }
 
   Future<(GrassrootsNetwork, Store<AppState>)> startNode(
-      GrassrootsIdentity id) async {
+    GrassrootsIdentity id, {
+    Set<Underlay> underlays = const {Underlay.lan, Underlay.wan},
+  }) async {
     final store = Store<AppState>(
       appReducer,
-      initialState: const AppState(
-        settings: SettingsState(bluetoothEnabled: false),
-      ),
+      initialState: const AppState(),
     );
     final network = GrassrootsNetwork(
       identity: id,
+      underlays: underlays,
+      rendezvousServers: const [],
       store: store,
       sodium: sodium,
       localHostAddressReader: _loopbackHostAddresses,
@@ -82,6 +84,16 @@ void main() {
     );
     expect(await network.initialize(), isTrue,
         reason: 'UDP must initialize on loopback');
+    // The layer reads the attached local network once at construction, in
+    // the background. A test that injects prefixes before that read lands has
+    // them overwritten by the machine's real ones, so wait for it: a machine
+    // with any non-loopback interface reports a fingerprint, and one with none
+    // reads nothing that would overwrite the injection.
+    final readBy = DateTime.now().add(const Duration(seconds: 5));
+    while (store.state.localNetwork.networkId == null &&
+        DateTime.now().isBefore(readBy)) {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
     return (network, store);
   }
 
@@ -249,13 +261,16 @@ void main() {
       })> receiverReportOfKnownCaller({
     required int seed,
     required LocalNetwork receiverLocalNetwork,
+    Set<Underlay> receiverUnderlays = const {Underlay.lan, Underlay.wan},
+    bool expectDelivery = true,
   }) async {
     final callerId = await identityFromSeed(seed, 'known-caller');
     final receiverId = await identityFromSeed(seed + 1, 'known-receiver');
     final callerHex = hexOf(callerId.publicKey);
 
     final (caller, _) = await startNode(callerId);
-    final (receiver, receiverStore) = await startNode(receiverId);
+    final (receiver, receiverStore) =
+        await startNode(receiverId, underlays: receiverUnderlays);
     addTearDown(() async {
       await caller.dispose();
       await receiver.dispose();
@@ -289,11 +304,16 @@ void main() {
       Uint8List.fromList(utf8.encode('which underlay')),
     );
 
-    final deadline = DateTime.now().add(const Duration(seconds: 12));
-    while (received.isEmpty && DateTime.now().isBefore(deadline)) {
+    final deadline = DateTime.now()
+        .add(Duration(seconds: expectDelivery ? 12 : 6));
+    while ((received.isEmpty || !expectDelivery) &&
+        DateTime.now().isBefore(deadline)) {
       await Future<void>.delayed(const Duration(milliseconds: 200));
     }
-    expect(received, isNotEmpty, reason: 'the known caller must get through');
+    if (expectDelivery) {
+      expect(received, isNotEmpty,
+          reason: 'the known caller must get through');
+    }
     expect(
       receiverStore.state.localNetwork.network,
       receiverLocalNetwork,
@@ -331,6 +351,51 @@ void main() {
     expect(report.received, everyElement(Underlay.wan));
     expect(report.discovered, isEmpty);
     expect(report.reachable, [Underlay.wan]);
+  }, timeout: const Timeout(Duration(minutes: 2)));
+
+  // GNA, 2026-10-11, Q1: "an IP session's underlay is lan when LAN runs and
+  // the address is local, else wan when WAN runs, else no session".
+
+  test(
+      'a layer running the WAN alone takes a peer within a local prefix as '
+      'WAN, and finds no LAN discovery', () async {
+    final report = await receiverReportOfKnownCaller(
+      seed: 0x75,
+      receiverLocalNetwork: loopbackIsLocal,
+      receiverUnderlays: const {Underlay.wan},
+    );
+    expect(report.connected, [Underlay.wan]);
+    expect(report.received, everyElement(Underlay.wan));
+    expect(report.discovered, isEmpty);
+    expect(report.reachable, [Underlay.wan]);
+  }, timeout: const Timeout(Duration(minutes: 2)));
+
+  test(
+      'a layer running the LAN alone holds no session with a peer outside '
+      'every local prefix, known though it is', () async {
+    final report = await receiverReportOfKnownCaller(
+      seed: 0x77,
+      receiverLocalNetwork: elsewhereIsLocal,
+      receiverUnderlays: const {Underlay.lan},
+      expectDelivery: false,
+    );
+    expect(report.connected, isEmpty);
+    expect(report.received, isEmpty);
+    expect(report.discovered, isEmpty);
+    expect(report.reachable, isEmpty);
+  }, timeout: const Timeout(Duration(minutes: 2)));
+
+  test(
+      'a layer running the LAN alone takes a peer within a local prefix as '
+      'LAN', () async {
+    final report = await receiverReportOfKnownCaller(
+      seed: 0x79,
+      receiverLocalNetwork: loopbackIsLocal,
+      receiverUnderlays: const {Underlay.lan},
+    );
+    expect(report.connected, [Underlay.lan]);
+    expect(report.received, everyElement(Underlay.lan));
+    expect(report.reachable, [Underlay.lan]);
   }, timeout: const Timeout(Duration(minutes: 2)));
 }
 

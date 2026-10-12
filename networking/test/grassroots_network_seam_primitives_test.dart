@@ -11,6 +11,7 @@ import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 
 import 'helpers/sodium_test_bootstrap.dart';
+import 'package:grassroots_networking_core/src/models/underlay.dart';
 
 /// The three layer functions the runtime seam needs and the layer did not
 /// expose: `sign` and `verify` (GLP Networking API §System Predicates — the
@@ -49,6 +50,8 @@ void main() {
 
   GrassrootsNetwork networkFor(GrassrootsIdentity self) => GrassrootsNetwork(
         identity: self,
+        underlays: const {Underlay.pan, Underlay.lan, Underlay.wan},
+        rendezvousServers: const [],
         store: Store<AppState>(appReducer, initialState: const AppState()),
         sodium: sodium,
       );

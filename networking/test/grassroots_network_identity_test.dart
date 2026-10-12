@@ -12,6 +12,7 @@ import 'package:grassroots_networking_core/src/store/store.dart';
 import 'package:grassroots_networking_core/src/transport/local_network.dart';
 
 import 'helpers/sodium_test_bootstrap.dart';
+import 'package:grassroots_networking_core/src/models/underlay.dart';
 
 /// Spec conformance for the local-network identity calls (GLP Networking API
 /// §Local Network Identity): `networkIdentity()` returns an opaque fingerprint
@@ -52,8 +53,13 @@ void main() {
   test('networkIdentity reports the held fingerprint', () async {
     final self = await identity('Self');
     final store = Store<AppState>(appReducer, initialState: const AppState());
-    final network =
-        GrassrootsNetwork(identity: self, store: store, sodium: sodium);
+    final network = GrassrootsNetwork(
+      identity: self,
+      underlays: const {Underlay.pan, Underlay.lan, Underlay.wan},
+      rendezvousServers: const [],
+      store: store,
+      sodium: sodium,
+    );
 
     final home = networkOf('192.168.1.5');
     store.dispatch(LocalNetworkChangedAction(home));
@@ -65,8 +71,13 @@ void main() {
   test('networkIdentity is null when attached to no local network', () async {
     final self = await identity('Self');
     final store = Store<AppState>(appReducer, initialState: const AppState());
-    final network =
-        GrassrootsNetwork(identity: self, store: store, sodium: sodium);
+    final network = GrassrootsNetwork(
+      identity: self,
+      underlays: const {Underlay.pan, Underlay.lan, Underlay.wan},
+      rendezvousServers: const [],
+      store: store,
+      sodium: sodium,
+    );
 
     store.dispatch(LocalNetworkChangedAction(LocalNetwork.none));
 
@@ -77,8 +88,13 @@ void main() {
   test('the fingerprint is independent of the public address', () async {
     final self = await identity('Self');
     final store = Store<AppState>(appReducer, initialState: const AppState());
-    final network =
-        GrassrootsNetwork(identity: self, store: store, sodium: sodium);
+    final network = GrassrootsNetwork(
+      identity: self,
+      underlays: const {Underlay.pan, Underlay.lan, Underlay.wan},
+      rendezvousServers: const [],
+      store: store,
+      sodium: sodium,
+    );
 
     final home = networkOf('192.168.1.5');
     store.dispatch(LocalNetworkChangedAction(home));
@@ -99,8 +115,13 @@ void main() {
   test('the layer reads the attached local network at construction', () async {
     final self = await identity('Self');
     final store = Store<AppState>(appReducer, initialState: const AppState());
-    final network =
-        GrassrootsNetwork(identity: self, store: store, sodium: sodium);
+    final network = GrassrootsNetwork(
+      identity: self,
+      underlays: const {Underlay.pan, Underlay.lan, Underlay.wan},
+      rendezvousServers: const [],
+      store: store,
+      sodium: sodium,
+    );
 
     final expected = await readLocalNetwork();
     // The constructor's read is in flight; give it a moment to land.
@@ -115,8 +136,13 @@ void main() {
   test('a public-address change does not fire onNetworkChanged', () async {
     final self = await identity('Self');
     final store = Store<AppState>(appReducer, initialState: const AppState());
-    final network =
-        GrassrootsNetwork(identity: self, store: store, sodium: sodium);
+    final network = GrassrootsNetwork(
+      identity: self,
+      underlays: const {Underlay.pan, Underlay.lan, Underlay.wan},
+      rendezvousServers: const [],
+      store: store,
+      sodium: sodium,
+    );
 
     // Let the construction-time read settle before watching for changes.
     for (var i = 0; i < 50 && network.networkIdentity() == null; i++) {
@@ -136,8 +162,13 @@ void main() {
   test('onNetworkChanged fires with the old and new fingerprint', () async {
     final self = await identity('Self');
     final store = Store<AppState>(appReducer, initialState: const AppState());
-    final network =
-        GrassrootsNetwork(identity: self, store: store, sodium: sodium);
+    final network = GrassrootsNetwork(
+      identity: self,
+      underlays: const {Underlay.pan, Underlay.lan, Underlay.wan},
+      rendezvousServers: const [],
+      store: store,
+      sodium: sodium,
+    );
 
     final changes = <(String?, String?)>[];
     network.onNetworkChanged = (oldId, newId) => changes.add((oldId, newId));

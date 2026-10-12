@@ -21,6 +21,7 @@ import 'package:grassroots_networking_core/src/transport/udp_transport_service.d
 import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:grassroots_networking_core/src/models/peer.dart';
 import 'package:grassroots_networking_core/src/models/packet.dart';
+import 'package:grassroots_networking_core/src/models/rendezvous_server.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/protocol/protocol_handler.dart';
 import 'package:grassroots_networking_core/src/protocol/fragment_handler.dart';
@@ -52,12 +53,6 @@ class GrassrootsNetworkConfig {
   /// Interval for periodic BLE scanning (to discover new devices)
   final Duration scanInterval;
 
-  /// Whether to enable BLE transport (can be overridden by TransportSettingsStore)
-  final bool enableBle;
-
-  /// Whether to enable UDP transport (can be overridden by TransportSettingsStore)
-  final bool enableUdp;
-
   /// How long to wait for an end-to-end ACK after a message is sent before
   /// treating it as lost and re-queueing it for the next drain. Covers two
   /// failure modes that `sendToPeer` cannot detect synchronously:
@@ -83,21 +78,7 @@ class GrassrootsNetworkConfig {
     this.localName,
     this.announceInterval = const Duration(seconds: 10),
     this.scanInterval = const Duration(seconds: 10),
-    this.enableBle = true,
-    this.enableUdp = true,
     this.ackTimeout = const Duration(seconds: 5),
-  });
-}
-
-class _RendezvousConfig {
-  final String address;
-  final Uint8List pubkey;
-  final String pubkeyHex;
-
-  const _RendezvousConfig({
-    required this.address,
-    required this.pubkey,
-    required this.pubkeyHex,
   });
 }
 
@@ -177,57 +158,6 @@ class _AckPendingMessage {
   })  : recipientPubkey = Uint8List.fromList(recipientPubkey),
         payload = Uint8List.fromList(payload);
 }
-
-@visibleForTesting
-bool shouldAcceptRendezvousReply(
-  String pubkeyHex, {
-  required SettingsState settings,
-  required Iterable<String> pendingResponsePubkeys,
-}) {
-  final normalizedPubkeyHex = pubkeyHex.toLowerCase();
-
-  for (final server in settings.configuredRendezvousServers) {
-    if (server.pubkeyHex.isNotEmpty &&
-        server.pubkeyHex.toLowerCase() == normalizedPubkeyHex) {
-      return true;
-    }
-  }
-
-  for (final pendingPubkeyHex in pendingResponsePubkeys) {
-    if (pendingPubkeyHex == normalizedPubkeyHex) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-/// Whether a settings change that just brought a transport up must complete a
-/// deferred [GrassrootsNetwork.start].
-///
-/// The wedge this guards against: with `autoStart` on, the first `initialize()`
-/// can still find no usable transport (e.g. BLE permission denied and UDP off),
-/// in which case it returns without ever calling `start()`, leaving `_started`
-/// false. When the user later enables a transport from settings, the service
-/// initializes but the warm-path per-transport `start()` calls are gated on the
-/// stack already being started — so without this the transport is live but
-/// inert (no advertising, scanning, or announce/scan timers) until the app
-/// restarts.
-///
-/// True only when auto-start was requested, nothing was started yet, and a
-/// transport is now usable. With `autoStart` off the caller manages `start()`
-/// itself, so an unrelated settings change must not start on its behalf; the
-/// disable paths (no transport available) and the warm path (already started)
-/// also return false.
-@visibleForTesting
-bool shouldColdStartAfterSettingsChange({
-  required bool autoStart,
-  required bool wasStarted,
-  required bool startedNow,
-  required bool bleAvailable,
-  required bool udpAvailable,
-}) =>
-    autoStart && !wasStarted && !startedNow && (bleAvailable || udpAvailable);
 
 /// Actions that mirror a known peer's live UDP address (peers slice, which
 /// is not persisted) into the known-peers slice (which is), so the last-known
@@ -327,7 +257,13 @@ Set<String> computeStaleBlePeerPubkeys({
 ///   nickname: 'Alice',
 /// );
 ///
-/// final grassroots = GrassrootsNetwork(identity: identity);
+/// final grassroots = GrassrootsNetwork(
+///   identity: identity,
+///   underlays: {Underlay.pan, Underlay.lan, Underlay.wan},
+///   rendezvousServers: [RendezvousServer('203.0.113.7:9514', serverKey)],
+///   store: store,
+///   sodium: sodium,
+/// );
 ///
 /// grassroots.onMessageReceived = (sender, payload, messageId, underlay) {
 ///   // Handle incoming GSG block
@@ -360,11 +296,20 @@ class GrassrootsNetwork {
   /// here. SUMO is required for `crypto_sign_ed25519_*_to_curve25519`.
   final SodiumSumo sodium;
 
+  /// The underlays this layer runs (spec §Instantiation, "a subset of PAN,
+  /// LAN, WAN"): [Underlay.pan] runs BLE; [Underlay.lan] runs LAN discovery
+  /// and IP sessions on the local network; [Underlay.wan] runs IP sessions
+  /// with the Internet at large and the rendezvous servers.  An underlay not
+  /// run is "simply absent from discovery and peerUnderlays" (§Networking
+  /// API).
+  final Set<Underlay> underlays;
+
+  /// The rendezvous servers this layer connects to over the WAN (spec
+  /// §Instantiation); fixed for the layer's lifetime.
+  final List<RendezvousServer> rendezvousServers;
+
   /// Subscription for listening to store changes
   StreamSubscription<AppState>? _storeSubscription;
-
-  /// Last known settings state for detecting changes
-  SettingsState? _lastSettingsState;
 
   /// Per-peer set of reachable underlays from the previous store tick. Used
   /// by the reachability subscriber to detect, per underlay, underlays that
@@ -660,7 +605,6 @@ class GrassrootsNetwork {
   final Map<String, DateTime> _rendezvousRetryAfter = {};
   final Map<String, UdpConnectFailureKind?> _rendezvousLastFailureKind = {};
   final Map<String, String> _lastRendezvousSuppressionLogKey = {};
-  final Map<String, Set<Completer<void>>> _rendezvousResponseWaiters = {};
 
   static const _rendezvousNetworkUnreachableBackoff = Duration(seconds: 15);
   static const _rendezvousHandshakeTimeoutBackoff = Duration(seconds: 20);
@@ -776,15 +720,32 @@ class GrassrootsNetwork {
   /// (`NativePlatformAttestation`).
   final PlatformAttestation _attestation;
 
+  /// Instantiate the layer with everything it needs to run (spec
+  /// §Instantiation: "The layer is created once per agent, with everything it
+  /// needs to run; nothing in it changes for the layer's lifetime"): the key
+  /// pair ([identity]), the [underlays] it runs, the [rendezvousServers] it
+  /// connects to over the WAN (may be empty), the platform attestation or
+  /// none, and the platform geofencing or none.  A server's listen port and
+  /// static public address are the headless profile's alone (GNA, 2026-10-11,
+  /// Q4).  The Redux [store], [sodium] and the host-address reader are
+  /// implementation arguments.
+  ///
+  /// To change the underlays or the rendezvous servers, an embedding disposes
+  /// the layer and instantiates another; there are no toggles and no call that
+  /// adds or removes a server.
   GrassrootsNetwork({
     required this.identity,
-    this.config = const GrassrootsNetworkConfig(),
+    required Set<Underlay> underlays,
+    required List<RendezvousServer> rendezvousServers,
+    PlatformAttestation? platformAttestation,
+    PlaceGeofenceBackend? placeGeofenceBackend,
     required this.store,
     required this.sodium,
+    this.config = const GrassrootsNetworkConfig(),
     LocalHostAddressReader? localHostAddressReader,
-    PlaceGeofenceBackend? placeGeofenceBackend,
-    PlatformAttestation? platformAttestation,
-  })  : _readLocalHostAddresses =
+  })  : underlays = Set.unmodifiable(underlays),
+        rendezvousServers = List.unmodifiable(rendezvousServers),
+        _readLocalHostAddresses =
             localHostAddressReader ?? readLocalHostAddresses,
         _attestation = platformAttestation ?? const NoPlatformAttestation(),
         _places = placeGeofenceBackend == null
@@ -798,7 +759,10 @@ class GrassrootsNetwork {
       protocolHandler: _protocolHandler,
       fragmentHandler: _fragmentHandler,
     );
-    _signalingService = SignalingService(store: store);
+    _signalingService = SignalingService(
+      store: store,
+      rendezvousServers: this.rendezvousServers,
+    );
     _setupRouterCallbacks();
     _setupSignalingCallbacks();
 
@@ -809,14 +773,7 @@ class GrassrootsNetwork {
     _seedConnectivityState();
     unawaited(_refreshLocalNetwork());
 
-    // Listen to Redux store changes for settings updates
-    _lastSettingsState = store.state.settings;
     _storeSubscription = store.onChange.listen((state) {
-      final previousSettings = _lastSettingsState;
-      if (previousSettings != null && state.settings != previousSettings) {
-        _lastSettingsState = state.settings;
-        _onTransportSettingsChanged(previousSettings, state.settings);
-      }
       // Mirror known peers' live UDP addresses into the persisted known-peers
       // slice so the last-known address survives restart. Converges in one
       // extra change notification: the mirror dispatch updates the slice,
@@ -984,14 +941,13 @@ class GrassrootsNetwork {
     final nowMs = DateTime.now().millisecondsSinceEpoch;
     _outstandingInvites.removeWhere((_, inv) => inv.expiresAtMs < nowMs);
 
-    final servers = store.state.settings.configuredRendezvousServers;
-    if (servers.isEmpty) {
+    if (rendezvousServers.isEmpty) {
       throw StateError(
         'generatePeerLink requires a configured rendezvous server',
       );
     }
-    final rv = servers.first;
-    final rvPubkey = _hexToBytes(rv.normalizedPubkeyHex);
+    final rv = rendezvousServers.first;
+    final rvPubkey = rv.publicKey;
 
     final nonce = sodium.randombytes.buf(32);
     final expiresAtMs =
@@ -1030,7 +986,7 @@ class GrassrootsNetwork {
 
     final inviteIdHex = _pubkeyToHex(inviteId);
     _outstandingInvites[inviteIdHex] = _OutstandingInvite(
-      rvPubkeyHex: rv.normalizedPubkeyHex,
+      rvPubkeyHex: rv.pubkeyHex,
       expiresAtMs: expiresAtMs,
     );
     debugPrint('[peer-link] registered invite '
@@ -1116,11 +1072,11 @@ class GrassrootsNetwork {
     return peer?.rssi;
   }
 
-  /// Whether BLE is currently enabled and available
-  bool get isBleEnabled => _bleAvailable && _isBleEnabledInSettings;
+  /// Whether BLE — the PAN underlay's carrier — runs and is available.
+  bool get isBleEnabled => _bleAvailable;
 
-  /// Whether UDP is currently enabled and available
-  bool get isUdpEnabled => _udpAvailable && _isUdpEnabledInSettings;
+  /// Whether UDP — the LAN and WAN underlays' carrier — runs and is available.
+  bool get isUdpEnabled => _udpAvailable;
 
   /// The cold-call trust level of [underlay] (spec §Trust levels). Closed
   /// until GLP sets it with [setTrustLevel]. The two proximity underlays carry
@@ -1145,7 +1101,12 @@ class GrassrootsNetwork {
   /// call, and solicited contact — an ANNOUNCE arriving on a connection this
   /// agent dialed, which is keyed by the dialed key (unsolicited inbound
   /// carries a temp connection id until identified).
+  ///
+  /// Contact whose source falls under no underlay this layer runs is refused
+  /// outright: there is no session to be had with it (GNA, 2026-10-11, Q1).
   bool _acceptsUdpContactFrom(Uint8List senderPubkey, {String? udpPeerId}) {
+    final underlay = _ipUnderlayOfConnection(udpPeerId);
+    if (underlay == null) return false;
     if (_isKnownPeerPubkey(senderPubkey)) return true;
     final hex = _pubkeyToHex(senderPubkey);
     if (_isRendezvousPubkeyHex(hex)) return true;
@@ -1154,23 +1115,45 @@ class GrassrootsNetwork {
         _udpService?.getPeerIdForPubkey(senderPubkey) != null) {
       return true;
     }
-    if (trustLevelOf(ProximityUnderlay.lan) == ColdCallTrustLevel.open &&
-        _isLanSource(udpPeerId)) {
+    if (underlay == Underlay.lan &&
+        trustLevelOf(ProximityUnderlay.lan) == ColdCallTrustLevel.open) {
       return true;
     }
     return false;
   }
 
-  /// Whether contact carried on [udpPeerId] came from within one of the
-  /// agent's own local address prefixes. This is the whole of how the layer
-  /// tells LAN contact from contact from the Internet at large; the prefixes
-  /// come from the interface enumeration behind [networkIdentity].
-  bool _isLanSource(String? udpPeerId) {
-    if (udpPeerId == null) return false;
-    final remote = _udpService?.getRemoteAddress(udpPeerId);
-    if (remote == null) return false;
-    return store.state.localNetwork.network.containsAddress(remote.ip);
+  bool get _runsPan => underlays.contains(Underlay.pan);
+  bool get _runsLan => underlays.contains(Underlay.lan);
+  bool get _runsWan => underlays.contains(Underlay.wan);
+
+  /// Whether the layer runs an IP underlay, and so the UDP carrier.
+  bool get _runsIp => _runsLan || _runsWan;
+
+  /// The underlay of an IP session with a peer at [address] (GNA, 2026-10-11,
+  /// Q1): [Underlay.lan] when the layer runs the LAN and the address lies
+  /// within one of the agent's own local prefixes, else [Underlay.wan] when it
+  /// runs the WAN, else none --- the layer holds no session with that peer.
+  /// "A LAN connection and a WAN connection are both IP connections; the layer
+  /// tells them apart by whether the peer's address is on the agent's own
+  /// local network" (spec §Networking API); the prefixes come from the
+  /// interface enumeration behind [networkIdentity], and an address not known
+  /// is not known to be local.
+  Underlay? _ipUnderlayFor(InternetAddress? address) {
+    if (_runsLan &&
+        address != null &&
+        store.state.localNetwork.network.containsAddress(address)) {
+      return Underlay.lan;
+    }
+    if (_runsWan) return Underlay.wan;
+    return null;
   }
+
+  /// The underlay of the IP contact carried on [udpPeerId], by its source
+  /// address ([_ipUnderlayFor]).  This is the whole of how the layer tells
+  /// LAN contact from contact from the Internet at large.
+  Underlay? _ipUnderlayOfConnection(String? udpPeerId) => _ipUnderlayFor(
+        udpPeerId == null ? null : _udpService?.getRemoteAddress(udpPeerId)?.ip,
+      );
 
   /// The underlay of [pk]'s session on [carrier] (spec §Networking API): a
   /// GATT session is [Underlay.pan], and a UDP session is [_udpUnderlayOf].
@@ -1182,18 +1165,10 @@ class GrassrootsNetwork {
         PeerTransport.webrtc => null,
       };
 
-  /// The underlay of [pk]'s UDP session: [Underlay.lan] when the peer's
-  /// address lies within one of the agent's own local prefixes, and
-  /// [Underlay.wan] otherwise — "the layer tells them apart by whether the
-  /// peer's address is on the agent's own local network" (spec §Networking
-  /// API), by the test the LAN trust level uses ([_isLanSource]).
-  Underlay _udpUnderlayOf(Uint8List pk) =>
-      _isLanSource(_udpService?.getPeerIdForPubkey(pk))
-          ? Underlay.lan
-          : Underlay.wan;
-
-  List<RendezvousServerSettings> get configuredRendezvousServers =>
-      store.state.settings.configuredRendezvousServers;
+  /// The underlay of [pk]'s UDP session ([_ipUnderlayFor] of its address), or
+  /// null when it falls under no underlay this layer runs.
+  Underlay? _udpUnderlayOf(Uint8List pk) =>
+      _ipUnderlayOfConnection(_udpService?.getPeerIdForPubkey(pk));
 
   /// Our public UDP address, as a rendezvous server observed it.
   ///
@@ -1204,49 +1179,6 @@ class GrassrootsNetwork {
 
   /// Whether currently scanning for BLE devices
   bool get isScanning => _bleService?.isScanning ?? false;
-
-  bool get _isBleEnabledInSettings => store.state.settings.bluetoothEnabled;
-
-  bool get _isUdpEnabledInSettings => store.state.settings.udpEnabled;
-
-  Future<bool> addRendezvousServer({
-    required String address,
-    required String pubkeyHex,
-  }) async {
-    final config = _parseRendezvousConfig(
-      address: address,
-      pubkeyHex: pubkeyHex,
-    );
-    if (config == null) return false;
-
-    if (_hasConfiguredRendezvousServer(config)) {
-      return true;
-    }
-
-    final responded = await _verifyRendezvousServerResponds(config);
-    if (!responded) return false;
-
-    store.dispatch(
-      AddRendezvousServerAction(
-        RendezvousServerSettings(
-          address: config.address,
-          pubkeyHex: config.pubkeyHex,
-        ),
-      ),
-    );
-    return true;
-  }
-
-  Future<void> removeRendezvousServer({
-    required String address,
-    required String pubkeyHex,
-  }) async {
-    store.dispatch(
-      RemoveRendezvousServerAction(
-        RendezvousServerSettings(address: address, pubkeyHex: pubkeyHex),
-      ),
-    );
-  }
 
   // ===== Lifecycle =====
 
@@ -1270,14 +1202,14 @@ class GrassrootsNetwork {
     bool anyTransportInitialized = false;
 
     try {
-      // Initialize BLE if enabled
-      if (_isBleEnabledInSettings) {
+      // BLE carries the PAN.
+      if (_runsPan) {
         anyTransportInitialized =
             await _initializeBle() || anyTransportInitialized;
       }
 
-      // Initialize UDP if enabled
-      if (_isUdpEnabledInSettings) {
+      // UDP carries the LAN and the WAN.
+      if (_runsIp) {
         anyTransportInitialized =
             await _initializeUdp() || anyTransportInitialized;
       }
@@ -1443,7 +1375,7 @@ class GrassrootsNetwork {
       try {
         await _udpService!.start();
         debugPrint('UDP transport started');
-        await _startLanDiscovery();
+        if (_runsLan) await _startLanDiscovery();
       } catch (e) {
         debugPrint('Failed to start UDP: $e');
       }
@@ -1494,22 +1426,6 @@ class GrassrootsNetwork {
     }
   }
 
-  /// Handle transport settings changes.
-  /// Serializes updates so overlapping init/dispose sequences cannot occur.
-  void _onTransportSettingsChanged(
-    SettingsState previousSettings,
-    SettingsState currentSettings,
-  ) {
-    debugPrint('Transport settings changed');
-    final previous = _transportUpdateLock ?? Future.value();
-    _transportUpdateLock = previous.then(
-      (_) => _updateTransportsFromSettings(
-        previousSettings: previousSettings,
-        currentSettings: currentSettings,
-      ),
-    );
-  }
-
   static Uint8List _hexToBytes(String hex) {
     final bytes = <int>[];
     for (var i = 0; i < hex.length; i += 2) {
@@ -1518,94 +1434,24 @@ class GrassrootsNetwork {
     return Uint8List.fromList(bytes);
   }
 
-  _RendezvousConfig? _parseRendezvousConfig({
-    required String address,
-    required String pubkeyHex,
-  }) {
-    final normalizedAddress = _normalizeAnnouncedUdpAddress(
-      address,
-      context: 'rendezvous',
-    );
-    if (normalizedAddress == null) {
-      debugPrint('[rendezvous] Ignoring invalid configured address: $address');
-      return null;
-    }
-
-    try {
-      final normalizedPubkeyHex = pubkeyHex.toLowerCase();
-      return _RendezvousConfig(
-        address: normalizedAddress,
-        pubkey: _hexToBytes(normalizedPubkeyHex),
-        pubkeyHex: normalizedPubkeyHex,
-      );
-    } catch (e) {
-      debugPrint('[rendezvous] Ignoring invalid configured pubkey: $e');
-      return null;
-    }
-  }
-
-  List<_RendezvousConfig> _configuredRendezvousServers([
-    SettingsState? settings,
-  ]) {
-    final configured = settings ?? store.state.settings;
-    final configs = <_RendezvousConfig>[];
-    final seen = <String>{};
-
-    for (final server in configured.configuredRendezvousServers) {
-      final parsed = _parseRendezvousConfig(
-        address: server.address,
-        pubkeyHex: server.pubkeyHex,
-      );
-      if (parsed == null) continue;
-
-      final key = _rendezvousConfigKey(parsed);
-      if (seen.add(key)) {
-        configs.add(parsed);
-      }
-    }
-
-    return configs;
-  }
-
-  _RendezvousConfig? _configuredRendezvousForPubkeyHex(
-    String pubkeyHex, {
-    SettingsState? settings,
-  }) {
-    for (final config in _configuredRendezvousServers(settings)) {
-      if (config.pubkeyHex == pubkeyHex) {
-        return config;
-      }
+  /// The configured rendezvous server holding [pubkeyHex], or null.
+  RendezvousServer? _rendezvousServerFor(String pubkeyHex) {
+    for (final server in rendezvousServers) {
+      if (server.pubkeyHex == pubkeyHex) return server;
     }
     return null;
   }
 
-  bool _hasConfiguredRendezvousServer(
-    _RendezvousConfig config, {
-    SettingsState? settings,
-  }) {
-    final targetKey = _rendezvousConfigKey(config);
-    for (final existing in _configuredRendezvousServers(settings)) {
-      if (_rendezvousConfigKey(existing) == targetKey) {
-        return true;
-      }
-    }
-    return false;
-  }
+  bool _isRendezvousPubkeyHex(String pubkeyHex) =>
+      _rendezvousServerFor(pubkeyHex.toLowerCase()) != null;
 
-  bool _isRendezvousPubkeyHex(String pubkeyHex, {SettingsState? settings}) {
-    return shouldAcceptRendezvousReply(
-      pubkeyHex,
-      settings: settings ?? store.state.settings,
-      pendingResponsePubkeys: _rendezvousResponseWaiters.keys,
-    );
-  }
-
-  String _rendezvousConfigKey(_RendezvousConfig config) =>
-      '${config.pubkeyHex}@${config.address}';
+  String _rendezvousConfigKey(RendezvousServer server) =>
+      '${server.pubkeyHex}@${server.address}';
 
   bool _canDialUdpAddress(AddressInfo address) =>
       _udpService != null &&
       _udpAvailable &&
+      _ipUnderlayFor(address.ip) != null &&
       _connectionService.selectBestPairFromAddresses(
             localAddresses: _connectionLocalCandidates(),
             remoteAddresses: [address.toAddressString()],
@@ -1671,7 +1517,7 @@ class GrassrootsNetwork {
     }
   }
 
-  bool _isRendezvousBackoffActive(_RendezvousConfig rendezvous, String reason) {
+  bool _isRendezvousBackoffActive(RendezvousServer rendezvous, String reason) {
     final configKey = _rendezvousConfigKey(rendezvous);
     final retryAfter = _rendezvousRetryAfter[configKey];
     if (retryAfter == null) return false;
@@ -1708,69 +1554,14 @@ class GrassrootsNetwork {
     return completer.future;
   }
 
-  void _completeRendezvousResponseWaiters(String pubkeyHex) {
-    final waiters = _rendezvousResponseWaiters.remove(pubkeyHex);
-    if (waiters == null) return;
-
-    for (final waiter in waiters) {
-      if (!waiter.isCompleted) {
-        waiter.complete();
-      }
-    }
-  }
-
-  void _removeRendezvousResponseWaiter(
-    String pubkeyHex,
-    Completer<void> waiter,
-  ) {
-    final waiters = _rendezvousResponseWaiters[pubkeyHex];
-    if (waiters == null) return;
-    waiters.remove(waiter);
-    if (waiters.isEmpty) {
-      _rendezvousResponseWaiters.remove(pubkeyHex);
-    }
-  }
-
-  Future<bool> _verifyRendezvousServerResponds(
-    _RendezvousConfig config, {
-    Duration timeout = const Duration(seconds: 8),
-    String reason = 'settings-save',
-  }) async {
-    final waiter = Completer<void>();
-    _rendezvousResponseWaiters
-        .putIfAbsent(config.pubkeyHex, () => <Completer<void>>{})
-        .add(waiter);
-
-    try {
-      final synced = await _syncConfiguredRendezvous(
-        config: config,
-        reason: reason,
-      );
-      if (!synced) {
-        return false;
-      }
-
-      await waiter.future.timeout(timeout);
-      return true;
-    } on TimeoutException {
-      debugPrint(
-        '[rendezvous] Timed out waiting for server response '
-        '(${config.pubkeyHex.substring(0, 8)}...)',
-      );
-      return false;
-    } finally {
-      _removeRendezvousResponseWaiter(config.pubkeyHex, waiter);
-    }
-  }
-
   Future<bool> _syncConfiguredRendezvous({
-    List<_RendezvousConfig>? configs,
-    _RendezvousConfig? config,
+    List<RendezvousServer>? configs,
+    RendezvousServer? config,
     String reason = 'sync',
   }) async {
     final targets = config != null
-        ? <_RendezvousConfig>[config]
-        : (configs ?? _configuredRendezvousServers());
+        ? <RendezvousServer>[config]
+        : (configs ?? rendezvousServers);
     if (targets.isEmpty) {
       return Future.value(false);
     }
@@ -1870,88 +1661,6 @@ class GrassrootsNetwork {
     }
 
     return results.any((result) => result);
-  }
-
-  Future<bool> _disconnectConfiguredRendezvous({
-    List<_RendezvousConfig>? configs,
-    _RendezvousConfig? config,
-    String reason = 'disconnect',
-  }) async {
-    final targets = config != null
-        ? <_RendezvousConfig>[config]
-        : (configs ?? _configuredRendezvousServers());
-    if (targets.isEmpty) {
-      return Future.value(false);
-    }
-
-    final results = <bool>[];
-    for (final rendezvous in targets) {
-      results.add(
-        await _enqueueRendezvousTask(() async {
-          if (_udpService == null) return false;
-          if (_udpService!.getPeerIdForPubkey(rendezvous.pubkey) == null) {
-            return false;
-          }
-
-          debugPrint(
-            '[rendezvous] Closing UDP session '
-            '(${rendezvous.pubkeyHex.substring(0, 8)}..., $reason)',
-          );
-          await _udpService!.disconnectFromPeer(rendezvous.pubkeyHex);
-          return true;
-        }),
-      );
-    }
-
-    return results.any((result) => result);
-  }
-
-  Future<void> _handleRendezvousSettingsChange({
-    required SettingsState previousSettings,
-    required SettingsState currentSettings,
-  }) async {
-    final previousRendezvous = _configuredRendezvousServers(previousSettings);
-    final currentRendezvous = _configuredRendezvousServers(currentSettings);
-
-    final previousByKey = <String, _RendezvousConfig>{
-      for (final config in previousRendezvous)
-        _rendezvousConfigKey(config): config,
-    };
-    final currentByKey = <String, _RendezvousConfig>{
-      for (final config in currentRendezvous)
-        _rendezvousConfigKey(config): config,
-    };
-
-    final removed = <_RendezvousConfig>[];
-    for (final entry in previousByKey.entries) {
-      if (!currentByKey.containsKey(entry.key)) {
-        removed.add(entry.value);
-      }
-    }
-
-    final added = <_RendezvousConfig>[];
-    for (final entry in currentByKey.entries) {
-      if (!previousByKey.containsKey(entry.key)) {
-        added.add(entry.value);
-      }
-    }
-
-    if (removed.isEmpty && added.isEmpty) return;
-
-    for (final rendezvous in removed) {
-      _resetRendezvousBackoff(_rendezvousConfigKey(rendezvous));
-    }
-
-    if (removed.isNotEmpty) {
-      await _disconnectConfiguredRendezvous(
-        configs: removed,
-        reason: 'settings-changed',
-      );
-    }
-
-    if (added.isNotEmpty && _udpService != null && _udpAvailable) {
-      await _syncConfiguredRendezvous(configs: added, reason: 'settings-saved');
-    }
   }
 
   /// Read the attached local network and, if it differs from the held one,
@@ -2073,10 +1782,10 @@ class GrassrootsNetwork {
       return;
     }
 
-    if (!_isUdpEnabledInSettings) {
+    if (!_runsIp) {
       debugPrint(
-        'Network changed while UDP is disabled — cleared cached '
-        'public connectivity and will rediscover on re-enable',
+        'Network changed while the layer runs no IP underlay — cleared '
+        'cached public connectivity',
       );
       return;
     }
@@ -2094,7 +1803,7 @@ class GrassrootsNetwork {
 
   /// Restart UDP transport after a network change.
   Future<void> _restartUdpAfterNetworkChange() async {
-    if (!_isUdpEnabledInSettings) return;
+    if (!_runsIp) return;
     if (!_started) return;
 
     for (final completer in _holePunchCompleters.values) {
@@ -2142,7 +1851,7 @@ class GrassrootsNetwork {
 
     if (_udpAvailable) {
       await _udpService!.start();
-      await _startLanDiscovery();
+      if (_runsLan) await _startLanDiscovery();
     }
 
     await _waitForLocalHostAddresses();
@@ -2175,7 +1884,7 @@ class GrassrootsNetwork {
 
     // Fan out RECONNECT for known peers still unreachable. Rendezvous servers
     // pair this with the peer's AVAILABLE.
-    if (_configuredRendezvousServers().isEmpty) return;
+    if (rendezvousServers.isEmpty) return;
 
     for (final pubkeyHex in dialBook.keys) {
       final pubkey = _hexToBytes(pubkeyHex);
@@ -2360,6 +2069,10 @@ class GrassrootsNetwork {
       return;
     }
     final canonical = parsed.toAddressString();
+    if (_ipUnderlayFor(parsed.ip) == null) {
+      debugPrint('[lan] $canonical falls under no underlay this layer runs');
+      return;
+    }
     // A path to that address already exists — identified, or a temp one from
     // their datagram having arrived first. Dialing again would only duplicate
     // it, and whichever ANNOUNCE lands first identifies the peer either way.
@@ -2405,127 +2118,6 @@ class GrassrootsNetwork {
       if (sortedA[i] != sortedB[i]) return false;
     }
     return true;
-  }
-
-  /// Update transports based on current settings
-  Future<void> _updateTransportsFromSettings({
-    required SettingsState previousSettings,
-    required SettingsState currentSettings,
-  }) async {
-    final wasStarted = _started;
-
-    // Handle BLE enable/disable
-    if (_isBleEnabledInSettings && !_bleAvailable) {
-      // BLE was enabled, try to initialize
-      // Dispose old service first to clean up native state (GATT server, subscriptions)
-      if (_bleService != null) {
-        debugPrint('Disposing old BLE service before re-initialization');
-        _noiseSessions.resetTransport(PeerTransport.bleDirect);
-        await _bleService!.dispose();
-        _bleService = null;
-      }
-      await _initializeBle();
-      if (wasStarted && _bleAvailable) {
-        await _bleService!.start();
-      }
-    } else if (!_isBleEnabledInSettings && _bleAvailable) {
-      // BLE was disabled, dispose service and clean up
-      debugPrint('BLE disabled from settings, cleaning up...');
-
-      if (_bleService != null) {
-        await _bleService!.dispose();
-        _bleService = null;
-      }
-      _noiseSessions.resetTransport(PeerTransport.bleDirect);
-
-      // Reset Redux state so _bleAvailable returns false
-      store.dispatch(
-        BleTransportStateChangedAction(TransportState.uninitialized),
-      );
-
-      // Clear all discovered BLE peers from Redux
-      store.dispatch(ClearDiscoveredBlePeersAction());
-
-      // Disconnect all peers that were connected via BLE
-      for (final peer in _peersState.peersList) {
-        if (peer.hasBleConnection) {
-          store.dispatch(PeerBleDisconnectedAction(peer.publicKey));
-        }
-      }
-
-      debugPrint('BLE cleanup complete');
-    }
-
-    // Handle UDP enable/disable
-    if (_isUdpEnabledInSettings && !_udpAvailable) {
-      // UDP was enabled, try to initialize
-      await _initializeUdp();
-      if (wasStarted && _udpAvailable) {
-        await _udpService!.start();
-        await _startLanDiscovery();
-        await _reconnectKnownPeers(reason: 'settings-enabled');
-      }
-    } else if (!_isUdpEnabledInSettings && _udpAvailable) {
-      // UDP was disabled, dispose service and clean up
-      debugPrint('UDP disabled from settings, cleaning up...');
-      await _stopLanDiscovery();
-
-      for (final service in _holePunchServices.values) {
-        service.dispose();
-      }
-      _holePunchServices.clear();
-
-      if (_udpService != null) {
-        _noiseSessions.resetTransport(PeerTransport.udp);
-        await _udpService!.dispose();
-        _udpService = null;
-      }
-
-      _clearDiscoveredPublicConnectivity();
-
-      // Reset Redux state so _udpAvailable returns false
-      store.dispatch(
-        UdpTransportStateChangedAction(TransportState.uninitialized),
-      );
-
-      // Disconnect all peers that were connected via UDP
-      for (final peer in _peersState.peersList) {
-        if (_udpCandidatesForPeer(peer).isNotEmpty) {
-          store.dispatch(PeerUdpDisconnectedAction(peer.publicKey));
-        }
-      }
-
-      debugPrint('UDP cleanup complete');
-    }
-
-    // Cold-start recovery: if the transport was never started (e.g. the first
-    // initialize() found no usable transport because BLE permission was denied
-    // and UDP was off, so it returned without calling start()) and a transport
-    // has now come up via this settings change, do a full start. Otherwise the
-    // service is live but inert — no advertising, no scanning, no announce/scan
-    // timers, no started flag — until the app restarts. The per-transport
-    // start() calls above only cover the warm path (wasStarted == true); start()
-    // itself is guarded by _started, so this cannot double-start.
-    if (shouldColdStartAfterSettingsChange(
-      autoStart: config.autoStart,
-      wasStarted: wasStarted,
-      startedNow: _started,
-      bleAvailable: _bleAvailable,
-      udpAvailable: _udpAvailable,
-    )) {
-      debugPrint(
-        'Transport came up from settings while never started — starting now',
-      );
-      await start();
-      if (_udpAvailable) {
-        await _reconnectKnownPeers(reason: 'settings-enabled-cold-start');
-      }
-    }
-
-    await _handleRendezvousSettingsChange(
-      previousSettings: previousSettings,
-      currentSettings: currentSettings,
-    );
   }
 
   /// Apply a debug change to which BLE roles this device runs.
@@ -2727,10 +2319,7 @@ class GrassrootsNetwork {
 
     // --- Try BLE first (preferred for nearby peers) ---
     final bleDeviceId = _connectedBleDeviceIdForPeer(peer);
-    if (_isBleEnabledInSettings &&
-        _bleAvailable &&
-        _bleService != null &&
-        bleDeviceId != null) {
+    if (_bleAvailable && _bleService != null && bleDeviceId != null) {
       debugPrint('Sending via BLE to ${peer.displayName}');
 
       final success = await _bleMessageSender.sendMessage(
@@ -2754,7 +2343,7 @@ class GrassrootsNetwork {
     }
 
     // --- Try UDP (direct connection or connect-on-demand) ---
-    if (_isUdpEnabledInSettings && _udpAvailable && _udpService != null) {
+    if (_udpAvailable && _udpService != null) {
       // Re-read peer — state may have changed during BLE attempt.
       final resolvedPeer = _peersState.getPeerByPubkey(recipientPubkey) ?? peer;
 
@@ -2781,7 +2370,8 @@ class GrassrootsNetwork {
           }
         }
       }
-      if (havePath &&
+      final pathUnderlay = havePath ? _udpUnderlayOf(recipientPubkey) : null;
+      if (pathUnderlay != null &&
           await _udpMessageSender.sendMessage(
             resolvedPeer.pubkeyHex,
             messageId,
@@ -2791,7 +2381,7 @@ class GrassrootsNetwork {
           messageId: messageId,
           recipientPubkey: recipientPubkey,
           payload: payload,
-          underlay: _udpUnderlayOf(recipientPubkey),
+          underlay: pathUnderlay,
           bleDeviceId: null,
         );
         return true;
@@ -2810,10 +2400,13 @@ class GrassrootsNetwork {
           final freshCandidates = _udpCandidatesForPeer(freshPeer);
           if (freshPeer != null && freshCandidates.isNotEmpty) {
             debugPrint('[send] Discovery succeeded, sending via UDP');
-            if (await _ensureUdpConnection(
-                  freshPeer.pubkeyHex,
-                  freshPeer.udpAddress ?? freshCandidates.first,
-                ) &&
+            final connected = await _ensureUdpConnection(
+              freshPeer.pubkeyHex,
+              freshPeer.udpAddress ?? freshCandidates.first,
+            );
+            final freshUnderlay =
+                connected ? _udpUnderlayOf(recipientPubkey) : null;
+            if (freshUnderlay != null &&
                 await _udpMessageSender.sendMessage(
                   freshPeer.pubkeyHex,
                   messageId,
@@ -2823,7 +2416,7 @@ class GrassrootsNetwork {
                 messageId: messageId,
                 recipientPubkey: recipientPubkey,
                 payload: payload,
-                underlay: _udpUnderlayOf(recipientPubkey),
+                underlay: freshUnderlay,
                 bleDeviceId: null,
               );
               return true;
@@ -3156,7 +2749,7 @@ class GrassrootsNetwork {
     );
 
     // Try BLE first
-    if (_isBleEnabledInSettings && _bleAvailable && _bleService != null) {
+    if (_bleAvailable && _bleService != null) {
       final bleDeviceId = _connectedBleDeviceIdForPeer(peer);
       if (peer != null && bleDeviceId != null) {
         final bytes = await _packetBytesForTransport(
@@ -3173,7 +2766,7 @@ class GrassrootsNetwork {
     }
 
     // Fall back to UDP
-    if (_isUdpEnabledInSettings && _udpAvailable && _udpService != null) {
+    if (_udpAvailable && _udpService != null) {
       final udpCandidates = _udpCandidatesForPeer(peer);
       if (peer != null && udpCandidates.isNotEmpty) {
         if (await _sendPacketViaUdp(
@@ -3195,7 +2788,7 @@ class GrassrootsNetwork {
   Future<void> broadcast(Uint8List payload) async {
     // Broadcast as individually encrypted unicast packets, one Noise session
     // per peer per transport medium.
-    if (_isBleEnabledInSettings && _bleAvailable && _bleService != null) {
+    if (_bleAvailable && _bleService != null) {
       try {
         for (final peerId in _bleService!.connectedPeerIds) {
           final pubkey = _bleService!.getPubkeyForPeerId(peerId);
@@ -3211,7 +2804,7 @@ class GrassrootsNetwork {
       }
     }
 
-    if (_isUdpEnabledInSettings && _udpAvailable && _udpService != null) {
+    if (_udpAvailable && _udpService != null) {
       try {
         for (final peer in _peersState.peersList) {
           if (_udpService!.getPeerIdForPubkey(peer.publicKey) == null) {
@@ -3480,7 +3073,16 @@ class GrassrootsNetwork {
     PeerTransport transport,
   ) async {
     final underlay = _underlayOf(transport, senderPubkey);
-    if (underlay == null) return;
+    if (underlay == null) {
+      // An IP session whose peer's address falls under no underlay this layer
+      // runs is no session (GNA, 2026-10-11, Q1).
+      _tearDownForAttestation(
+        transport,
+        senderPubkey,
+        'the session falls under no underlay this layer runs',
+      );
+      return;
+    }
     final peerShort = _pubkeyToHex(senderPubkey).substring(0, 8);
 
     final digest = _attestationDigestFor(transport, senderPubkey, senderPubkey);
@@ -4018,6 +3620,15 @@ class GrassrootsNetwork {
     }
     final addr = pair.remote;
     final selectedAddress = addr.toAddressString();
+    if (_ipUnderlayFor(addr.ip) == null) {
+      // No session over an underlay this layer does not run (GNA, 2026-10-11,
+      // Q1).
+      debugPrint(
+        '[udp-send] $selectedAddress for $peerShort falls under no underlay '
+        'this layer runs ($underlays); not dialing',
+      );
+      return false;
+    }
 
     // Datagrams need no stream (spec §IP Connection): associating the path
     // has no simultaneous-open hazard, so both sides may do it freely; the
@@ -4421,7 +4032,7 @@ class GrassrootsNetwork {
     final pubkeyHex = peer.pubkeyHex;
     final name = peer.displayName;
 
-    if (_configuredRendezvousServers().isEmpty) {
+    if (rendezvousServers.isEmpty) {
       debugPrint('[discover] No rendezvous servers configured');
       return false;
     }
@@ -4482,7 +4093,7 @@ class GrassrootsNetwork {
       return; // Need UDP to establish the connection
     }
 
-    if (_configuredRendezvousServers().isEmpty) return;
+    if (rendezvousServers.isEmpty) return;
 
     final now = DateTime.now();
 
@@ -4717,10 +4328,6 @@ class GrassrootsNetwork {
       final pubkeyHex =
           data.publicKey.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
       // debugPrint('Announce inc');
-      if (_isRendezvousPubkeyHex(pubkeyHex)) {
-        _completeRendezvousResponseWaiters(pubkeyHex);
-      }
-
       // ANNOUNCE is identity beacon and heartbeat only (spec §ANNOUNCE and
       // Liveness): it carries no addresses, so nothing is registered from it.
       // Peer addresses reach the layer via putPeerAddress, fed by GLP;
@@ -4750,8 +4357,9 @@ class GrassrootsNetwork {
       // discoverable peer.
       final discoveredOn = switch (transport) {
         PeerTransport.bleDirect => ProximityUnderlay.pan,
-        PeerTransport.udp =>
-          _isLanSource(udpPeerId) ? ProximityUnderlay.lan : null,
+        PeerTransport.udp => _ipUnderlayOfConnection(udpPeerId) == Underlay.lan
+            ? ProximityUnderlay.lan
+            : null,
         PeerTransport.webrtc => null,
       };
       if (discoveredOn != null &&
@@ -4829,7 +4437,7 @@ class GrassrootsNetwork {
       final pubkeyHex = _pubkeyToHex(recipientPubkey);
       final isRendezvous = _isRendezvousPubkeyHex(pubkeyHex);
       final rendezvousConfig =
-          isRendezvous ? _configuredRendezvousForPubkeyHex(pubkeyHex) : null;
+          isRendezvous ? _rendezvousServerFor(pubkeyHex) : null;
 
       // Rendezvous anchors are UDP-only and reached via a configured address.
       // They share the wire encryption (Noise-wrapped `secureSignaling`) with
@@ -5003,21 +4611,13 @@ class GrassrootsNetwork {
     // The corrected address will be broadcast to all friends on the next
     // periodic ANNOUNCE cycle.
     _signalingService.onAddrReflected = (senderPubkey, ip, port) {
-      // TODO: why is server ANONUNNCE needed? why need to block verifyRendezvousServerResponds?
-      // The GLP-spec response to a registration ANNOUNCE is an addrReflect.
-      // If the sender is a configured (or in-flight) rendezvous server,
-      // treat it as authoritative proof of the round-trip and unblock
-      // _verifyRendezvousServerResponds. The server's separate ANNOUNCE-back
-      // is informational — relying on it is fragile because that send path
-      // is fire-and-forget and can be dropped on stream tear-down.
       final senderHex =
           senderPubkey.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
       if (_isRendezvousPubkeyHex(senderHex)) {
         debugPrint(
-          '[rendezvous] Server ${senderHex.substring(0, 8)}... acknowledged '
-          'via addrReflect',
+          '[rendezvous] Server ${senderHex.substring(0, 8)}... reflected our '
+          'address',
         );
-        _completeRendezvousResponseWaiters(senderHex);
       }
 
       final reflectedIp = InternetAddress.tryParse(ip);
@@ -5354,7 +4954,7 @@ class GrassrootsNetwork {
     // live transport drops. This handler only owns UDP-specific recovery —
     // fanning out AVAILABLE so the rendezvous servers can help re-establish.
 
-    if (_configuredRendezvousServers().isEmpty) return;
+    if (rendezvousServers.isEmpty) return;
 
     debugPrint(
       '[reconnect] UDP path to ${peer.displayName} dropped — fanning out AVAILABLE',
@@ -5477,12 +5077,29 @@ class GrassrootsNetwork {
     }
   }
 
+  /// Re-dial each rendezvous server with no connection standing (spec
+  /// §Connectivity and Address: "The heartbeat sweep therefore re-initiates
+  /// connections to the known peers and the configured rendezvous servers").
+  /// The per-server backoff in [_syncConfiguredRendezvous] spaces the
+  /// attempts.
+  void _holdRendezvousSessions() {
+    final udp = _udpService;
+    if (udp == null || !_udpAvailable) return;
+    final down = [
+      for (final server in rendezvousServers)
+        if (udp.getPeerIdForPubkey(server.publicKey) == null) server,
+    ];
+    if (down.isEmpty) return;
+    unawaited(_syncConfiguredRendezvous(configs: down, reason: 'heartbeat'));
+  }
+
   /// Start the periodic ANNOUNCE timer
   void _startAnnounceTimer() {
     _announceTimer?.cancel();
     _announceTimer = Timer.periodic(config.announceInterval, (_) {
       _broadcastAnnounce();
       _broadcastAnnounceViaUdp();
+      _holdRendezvousSessions();
       _removeStalePeers();
       _discoverUnreachableKnownPeers();
       _refireAvailableForUnreachableKnownPeers();

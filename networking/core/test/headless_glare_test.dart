@@ -59,6 +59,7 @@ void main() {
 
     final acceptor = HeadlessGrassrootsNetwork(
       identity: acceptorId,
+      rendezvousServers: const [],
       sodium: sodium!,
     );
     final dialer = _PhoneStyleDialer(dialerId, sodium!);
@@ -136,9 +137,7 @@ class _PhoneStyleDialer {
   _PhoneStyleDialer(this.identity, this.sodium) {
     store = Store<AppState>(
       appReducer,
-      initialState: const AppState(
-        settings: SettingsState(bluetoothEnabled: false),
-      ),
+      initialState: const AppState(),
     );
     protocol = ProtocolHandler(identity: identity, sodium: sodium);
     sessions = NoiseSessionManager(identity: identity, sodium: sodium);

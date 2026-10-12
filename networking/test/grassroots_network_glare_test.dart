@@ -12,6 +12,7 @@ import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 
 import 'helpers/sodium_test_bootstrap.dart';
+import 'package:grassroots_networking_core/src/models/underlay.dart';
 
 /// Hermetic host candidates: the node's own address is loopback, so peers dial
 /// exactly where it listens. The real reader enumerates the machine's
@@ -63,12 +64,12 @@ void main() {
   Future<GrassrootsNetwork> startNode(GrassrootsIdentity id) async {
     final store = Store<AppState>(
       appReducer,
-      initialState: const AppState(
-        settings: SettingsState(bluetoothEnabled: false),
-      ),
+      initialState: const AppState(),
     );
     final network = GrassrootsNetwork(
       identity: id,
+      underlays: const {Underlay.lan, Underlay.wan},
+      rendezvousServers: const [],
       store: store,
       sodium: sodium,
       localHostAddressReader: _loopbackHostAddresses,

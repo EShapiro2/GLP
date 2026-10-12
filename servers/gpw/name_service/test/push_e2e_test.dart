@@ -49,6 +49,7 @@ void main() {
     // The mirroring service agent.
     final serviceNet = HeadlessGrassrootsNetwork(
       identity: await GrassrootsIdentity.generate(nickname: 'gpw-mirror'),
+      rendezvousServers: const [],
       sodium: sodium!,
     );
     final mirrors = Directory('${tmp.path}/mirrors')..createSync();
@@ -81,7 +82,7 @@ void main() {
     await signArea(area, person, 'me.$zone', 1);
 
     final phone = HeadlessGrassrootsNetwork(
-        identity: personIdentity, sodium: sodium!);
+        identity: personIdentity, rendezvousServers: const [], sodium: sodium!);
     addTearDown(() async {
       await phone.dispose();
       await serviceNet.dispose();
@@ -115,6 +116,7 @@ void main() {
     // A stranger cannot complete a session, so nothing reaches the writer.
     final stranger = HeadlessGrassrootsNetwork(
         identity: await GrassrootsIdentity.generate(nickname: 'stranger'),
+        rendezvousServers: const [],
         sodium: sodium!);
     addTearDown(() => stranger.dispose());
     var strangerLinked = false;

@@ -109,16 +109,22 @@ void main() {
 
     // The callee's layer, which answers no unsolicited contact from a key
     // outside its known-peer set (GNA, "Cold Calls", Trust levels).
-    final calleeLayer =
-        HeadlessGrassrootsNetwork(identity: calleeId, sodium: sodium!);
+    final calleeLayer = HeadlessGrassrootsNetwork(
+      identity: calleeId,
+      rendezvousServers: const [],
+      sodium: sodium!,
+    );
     addTearDown(calleeLayer.dispose);
     final calleeNet = HeadlessGlpNetwork(calleeLayer);
     calleeNet.putKnownPeer(callerKp.pub);
 
     // The caller's layer, given the callee's key and address: what
     // peer_declare/1 and address_declare/2 give it.
-    final callerLayer =
-        HeadlessGrassrootsNetwork(identity: callerId, sodium: sodium!);
+    final callerLayer = HeadlessGrassrootsNetwork(
+      identity: callerId,
+      rendezvousServers: const [],
+      sodium: sodium!,
+    );
     addTearDown(callerLayer.dispose);
     final callerNet = HeadlessGlpNetwork(callerLayer);
 
