@@ -1,5 +1,12 @@
 /// The runtime's network interface over the networking layer: GNA's backend
-/// glue for an agent on a phone.
+/// glue for an agent on a phone.  [GrassrootsGlpNetwork] implements
+/// glp_runtime's `GlpNetwork` over [GrassrootsNetwork].
+///
+/// A library of the glue package, beside the layer's core and depending on
+/// the layer and the runtime, so that neither the core nor the Flutter package
+/// carries the GLP runtime (GNA, 2026-10-11); and a library of its own, so
+/// that the layer's library does not carry the runtime's names, several of
+/// which (`Underlay`, `ProximityUnderlay`, `PlaceEvent`) the two share.
 ///
 /// IGLP, Implementation Notes, "Networking Seam", One interface: "The
 /// multiagent runtime reaches the network through one interface, the one the
@@ -29,7 +36,7 @@ import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
 import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/store/settings_state.dart';
 
-import '../grassroots_network.dart';
+import 'package:grassroots_networking/src/grassroots_network.dart';
 
 /// [glp.GlpNetwork] over a [GrassrootsNetwork].
 class GrassrootsGlpNetwork implements glp.GlpNetwork {

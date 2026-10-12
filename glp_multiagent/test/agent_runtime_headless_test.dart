@@ -7,8 +7,8 @@
 ///
 /// A cold call crosses from the caller to the callee over UDP on the loopback,
 /// and an assignment crosses back, as they cross in GNA's adapter test
-/// (networking/core/test/glp_adapter_test.dart), whose agents its own helper
-/// hosts; here the host is the runtime's.
+/// (networking/glue/test/headless_glp_network_test.dart), whose agents its
+/// own helper hosts; here the host is the runtime's.
 ///
 /// Needs a native libsodium, as GNA's headless tests do; self-skips when it
 /// is absent.
@@ -22,7 +22,7 @@ import 'package:cryptography/cryptography.dart' show Ed25519;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
-import 'package:grassroots_networking_core/glp_adapter.dart';
+import 'package:grassroots_networking_glue/headless_glp_network.dart';
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 import 'package:sodium/sodium_sumo.dart';
 

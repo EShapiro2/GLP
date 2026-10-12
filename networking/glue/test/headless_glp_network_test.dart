@@ -6,9 +6,9 @@ import 'dart:typed_data';
 import 'package:cryptography/cryptography.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
 import 'package:sodium/sodium_sumo.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
-import 'package:grassroots_networking_core/glp_adapter.dart';
+import 'package:grassroots_networking_glue/headless_glp_network.dart';
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 
 import 'helpers/glp_adapter_host.dart';
@@ -220,7 +220,7 @@ answer(forty_two).
           glp.PubKey.fromList((await identityFromSeed(calleeSeed)).publicKey);
 
       // The second process: the callee over its own headless layer.
-      final child = await Process.start(Platform.resolvedExecutable, [
+      final child = await Process.start(_dartExecutable(), [
         'run',
         'test/helpers/glp_adapter_agent.dart',
         _hex(calleeSeed),
@@ -315,6 +315,18 @@ answer(forty_two).
       await fromChild((l) => l == 'CONNECTED ${caller.hex} wan null');
     }, timeout: const Timeout(Duration(minutes: 3)));
   });
+}
+
+/// The Dart that runs the second process.  The test runs under
+/// `flutter test`, in flutter_tester, whose executable is not Dart's: the
+/// Flutter SDK's own Dart is used, and failing that the Dart on the path.
+String _dartExecutable() {
+  final root = Platform.environment['FLUTTER_ROOT'];
+  if (root != null) {
+    final dart = File('$root/bin/dart');
+    if (dart.existsSync()) return dart.path;
+  }
+  return 'dart';
 }
 
 String _hex(List<int> bytes) =>

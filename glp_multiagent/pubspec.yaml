@@ -30,10 +30,12 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^4.0.0
 
-  # The runtime's host over GNA's headless layer, through the adapter
-  # (test/agent_runtime_headless_test.dart).
+  # The runtime's host over GNA's headless layer, through the adapter, GNA's
+  # backend glue (test/agent_runtime_headless_test.dart).
   grassroots_networking_core:
     path: ../networking/core
+  grassroots_networking_glue:
+    path: ../networking/glue
   sodium: ^3.4.6
 
 flutter:

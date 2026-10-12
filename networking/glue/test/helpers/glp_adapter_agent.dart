@@ -1,5 +1,5 @@
 /// One madGLP agent over its own headless layer through the adapter, in a
-/// process of its own: the second process of `glp_adapter_test.dart`.
+/// process of its own: the second process of `headless_glp_network_test.dart`.
 ///
 ///   dart run test/helpers/glp_adapter_agent.dart <seed-hex> <root-self.glp>
 ///       <program> <entry> <known-peer-hex>
@@ -23,7 +23,7 @@ import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
-import 'package:grassroots_networking_core/glp_adapter.dart';
+import 'package:grassroots_networking_glue/headless_glp_network.dart';
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 
 import 'glp_adapter_host.dart';

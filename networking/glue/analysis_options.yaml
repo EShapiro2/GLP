@@ -1,0 +1,8 @@
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    # The glue composes the layer's internals (grassroots_networking_core's
+    # src/ libraries) directly, as the Flutter package does: both are this
+    # repo's own packages under networking/.
+    implementation_imports: false

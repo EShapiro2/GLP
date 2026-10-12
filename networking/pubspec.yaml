@@ -15,11 +15,6 @@ dependencies:
   # routing, Redux state, UDP transport). Shared with headless embeddings.
   grassroots_networking_core:
     path: core
-
-  # The runtime's network interface, GlpNetwork, which the backend glue
-  # (lib/glp_adapter.dart, GNA Appendix B) implements over the layer.
-  glp_runtime:
-    path: ../glp_runtime
   
   # Unified BLE transport (central + peripheral, bondless). Requires >= 0.3.0
   # for the advertised/GATT service-UUID decoupling (gattServiceUuid) that the

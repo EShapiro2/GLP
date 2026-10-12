@@ -1,5 +1,12 @@
 /// The runtime's network interface over the headless layer: GNA's backend
-/// glue for a server-side agent.
+/// glue for a server-side agent.  [HeadlessGlpNetwork] implements
+/// glp_runtime's `GlpNetwork` over [HeadlessGrassrootsNetwork].
+///
+/// A library of the glue package, beside the layer's core and depending on
+/// both the core and the runtime, so that the core and its users carry no GLP
+/// runtime (GNA, 2026-10-11); and a library of its own, so that the layer's
+/// library does not carry the runtime's names, several of which (`Underlay`,
+/// `ProximityUnderlay`, `PlaceEvent`) the two share.
 ///
 /// IGLP, Implementation Notes, "Networking Seam", One interface: "The
 /// multiagent runtime reaches the network through one interface, the one the
@@ -33,8 +40,8 @@ import 'dart:typed_data';
 
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
 
-import '../headless/headless_grassroots_network.dart';
-import '../models/underlay.dart';
+import 'package:grassroots_networking_core/src/headless/headless_grassroots_network.dart';
+import 'package:grassroots_networking_core/src/models/underlay.dart';
 
 /// [glp.GlpNetwork] over a [HeadlessGrassrootsNetwork].
 class HeadlessGlpNetwork implements glp.GlpNetwork {
