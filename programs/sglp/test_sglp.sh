@@ -162,7 +162,7 @@
 #       reading it.
 # (xiv) a run with positions the person writes inside an argument the program
 #       writes (tests/panel; sGLP's Q1 of 2026-10-10 09:33 UTC): Panel ::=
-#       panel(Cards), Card ::= card(Integer, YesNo?), in writer mode, a panel
+#       panel(List(Card)), Card ::= card(Integer, YesNo?), in writer mode, a panel
 #       of three cards; the log each card's answer as a question of its own,
 #       the program reading them.
 #
@@ -567,7 +567,7 @@ check "a reader-mode type with an argument the program writes is translated: the
 # naming ans/1 a predicate of the compiled program.
 PV="[type('Status', [sent, read]), type('Line', [line('String', dual('Status'))]), type('Post', [post('Integer', dual('Line'))]), volitional('Post', post_w, poster('Integer'))]"
 PP="person(p), binds('Post', p_post), decl(p_post(dual('Post'), dual('Integer'))), clause(p_post(post(var('_'), line(hi, var('_'))), var('_')), [], []), run(1, [mix(d, [share(p, 1.0)])], 1, day, 1)"
-NV="[type('YesNo', [yes, no]), type('Card', [card('Integer', dual('YesNo'))]), type('Cards', [[], ['Card' | 'Cards']]), type('Panel', [panel('Cards')]), volitional('Panel', panel_w, show('Integer'))]"
+NV="[type('YesNo', [yes, no]), type('Card', [card('Integer', dual('YesNo'))]), type('Panel', [panel('List'('Card'))]), type('List'('X'), [[], ['X' | 'List'('X')]]), volitional('Panel', panel_w, show('Integer'))]"
 NP="person(p), binds('Panel', p_panel), decl(p_panel(dual('Panel'), dual('Integer'))), clause(p_panel(var('_'), var('_')), [], []), run(1, [mix(d, [share(p, 1.0)])], 1, day, 1)"
 QV="[type('A', [a]), type('Q2', [q2(dual('A'), dual('A'))]), volitional('Q2', q2_w, ask2('Integer'))]"
 QP="person(p), binds('Q2', p_q2), decl(p_q2(dual('Q2'), dual('Integer'))), clause(p_q2(var('X'), var('_')), [], [rated(ans2(var('X?')), rate(1, day))]), decl(ans2(dual('Q2'))), clause(ans2(q2(a, a)), [], []), run(1, [mix(d, [share(p, 1.0)])], 1, day, 1)"
@@ -598,7 +598,7 @@ tr '\n' ' ' < "$WORK/txmoded.2" > "$WORK/txmoded.2.flat"
     grep -q '^p_panel(panel(\[\]), K?, Mon?)$' "$WORK/txmoded.2" &&
     grep -q "person(A, profiles(p), Mon, Seed, Log, \[ask(Type, panel_w(panel(\[card(Z1, Z2?) | Z4\]))) | As\]) :- ground(Z1?) | random(Seed?, 2147483646, K, S) , profiles # p_panel(panel(\[card(Z1?, Z3) | Z5?\]), K?, Mon?) , answer_1(A?, Type?, Z1?, Z3?, Z2, Mon?, Log?) , present_1(A?, Type?, Z4?, Z5, Mon?, Log?) , person(A?, profiles(p), Mon?, S?, Log?, As?) \. " "$WORK/txmoded.2.flat" &&
     grep -q "answer_1 ( Integer? , Constant? , Integer? , YesNo ? , YesNo , MutualRef? , MutualRef? ) \. answer_1(A, Type, V1, Y, Y?, Mon, Log) :- ground(Y?) | stream_append(time(Time), Mon?, _) , stream_append(entry(Time?, A?, Type?, panel(\[card(V1?, Y?) | '_'\])), Log?, _) \. " "$WORK/txmoded.2.flat" &&
-    grep -q "present_1 ( Integer? , Constant? , Cards ? , Cards , MutualRef? , MutualRef? ) \. present_1(_, _, \[\], \[\], _, _) \. present_1(A, Type, \[card(Z1, Z2?) | Z4\], \[card(Z1?, Z3) | Z5?\], Mon, Log) :- ground(Z1?) | answer_2(A?, Type?, Z1?, Z3?, Z2, Mon?, Log?) , present_1(A?, Type?, Z4?, Z5, Mon?, Log?) \. " "$WORK/txmoded.2.flat" &&
+    grep -q "present_1 ( Integer? , Constant? , List(Card) ? , List(Card) , MutualRef? , MutualRef? ) \. present_1(_, _, \[\], \[\], _, _) \. present_1(A, Type, \[card(Z1, Z2?) | Z4\], \[card(Z1?, Z3) | Z5?\], Mon, Log) :- ground(Z1?) | answer_2(A?, Type?, Z1?, Z3?, Z2, Mon?, Log?) , present_1(A?, Type?, Z4?, Z5, Mon?, Log?) \. " "$WORK/txmoded.2.flat" &&
     grep -q "answer_2(A, Type, V1, Y, Y?, Mon, Log) :- ground(Y?) | stream_append(time(Time), Mon?, _) , stream_append(entry(Time?, A?, Type?, \[card(V1?, Y?) | '_'\]), Log?, _) \. " "$WORK/txmoded.2.flat"
 check "a writer-mode type with positions the person writes inside an argument the program writes is translated: shown once the positions the program writes are ground, the cards an element at a time by the present procedure of Cards, each card's answer a question of its own, logged in the question as shown" $?
 grep -q '^%% not transformed: a clause that is not single-answer, of(key(ans2, 1))$' "$WORK/txmoded.3" &&
@@ -705,7 +705,7 @@ check "the log: the three messages, the acknowledgement of the one read, read(ac
 grep '^entry(\|^clock(\|^Rs = ' "$WORK/receipt.lines" | sed 's/^/        /'
 
 echo "--- (xiv) a run with positions the person writes inside an argument the program writes"
-# tests/panel: Panel ::= panel(Cards), Card ::= card(Integer, YesNo?), in
+# tests/panel: Panel ::= panel(List(Card)), Card ::= card(Integer, YesNo?), in
 # writer mode (sGLP's Q1 of 2026-10-10 09:33 UTC; Section 4, "The person
 # process": the person process "shows the person goal the question once the
 # positions the program writes are ground, the positions the person writes
