@@ -1,0 +1,18 @@
+%% unfolded_guard.glp --- a parameterised procedure whose clause matches its
+%% input through a defined guard.  TGLP appendix-root-self.tex: a defined guard
+%% is unfolded by the partial evaluator "at compile time, before type
+%% checking", so p/2 is certified on its clauses as unfolded, where recv's
+%% match [Msg|N] stands in p's head, and is parametrically well-typed
+%% (parameterized-types.tex, Definition "Parametrically Well-Typed").  The
+%% load certifies it so; a goal posted to it is checked against the same
+%% certification: p([a,b], O) runs, O = [a,b].
+%%
+%% Run (from glp_runtime/):
+%%   printf 'load ../programs/tests/goal_cert/unfolded_guard.glp\np([a,b], O).\n:quit\n' | bin/glpc
+
+procedure(X) recv(X, OpenStream(X)?, Stream(X)).
+recv(Msg?, [Msg|N], N?).
+
+procedure(X) p(Stream(X)?, Stream(X)).
+p(In, [M?|Out?]) :- recv(M, In?, In1) | p(In1?, Out).
+p([], []).

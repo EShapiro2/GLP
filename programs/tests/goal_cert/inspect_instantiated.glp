@@ -1,0 +1,23 @@
+%% inspect_instantiated.glp --- inspect_neg.glp's pskip/1 with a call that
+%% instantiates it: run/1 calls it at Stream(Tok), so the program checks it per
+%% instantiation and loads (TGLP parameterized-types.tex, "Modular Checking via
+%% Abstract Parameters").  Unfolded (appendix-root-self.tex), pskip/1 is still
+%% not parametrically well-typed, so a goal posted to it that supplies no type
+%% for its parameter is refused (appendix-implementation-notes.tex, "The
+%% instantiation of a call": "otherwise the call is refused"), and a goal
+%% posted to run/1 runs.
+%%
+%% Run (from glp_runtime/):
+%%   printf 'load ../programs/tests/goal_cert/inspect_instantiated.glp\nrun([done]).\npskip([done]).\n:quit\n' | bin/glpc
+
+Tok ::= done.
+
+procedure isdone(Tok?).
+isdone(done).
+
+procedure(X) pskip(Stream(X)?).
+pskip([X|Xs]) :- isdone(X?) | pskip(Xs?).
+pskip([]).
+
+procedure run(Stream(Tok)?).
+run(Xs) :- pskip(Xs?).
