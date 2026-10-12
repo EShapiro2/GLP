@@ -33,7 +33,7 @@ dependencies:
   # UUID generation
   uuid: ^4.2.0
   
-  # Collection utilities (for bloom filter, queues)
+  # Collection utilities (queues)
   collection: ^1.18.0
   
   # Logging

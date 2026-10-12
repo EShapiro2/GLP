@@ -87,10 +87,6 @@ void main() {
       otherPubkey = otherIdentity.publicKey;
     });
 
-    tearDown(() {
-      router.dispose();
-    });
-
     /// Self-signed ANNOUNCE payload from the other peer's perspective.
     Uint8List otherAnnouncePayload() {
       return buildAnnouncePayload(
@@ -552,9 +548,11 @@ void main() {
     // BLE Packet Processing - Deduplication
     // =========================================================================
 
-    group('processPacket - deduplication', () {
-      test('delivers a re-sent MESSAGE only once (dedup by messageId)',
-          () async {
+    group('processPacket - delivery at least once', () {
+      // GNA, 2026-10-11, Task B: the duplicate filter is gone. "A re-send
+      // after a lost acknowledgment ... may deliver a message twice, which
+      // madGLP tolerates" (spec §Message Protocol).
+      test('a re-sent MESSAGE is delivered every time it arrives', () async {
         stubSession();
 
         int messageCount = 0;
@@ -581,48 +579,18 @@ void main() {
           rssi: -60,
         );
 
-        expect(messageCount, equals(1));
-      });
-
-      test('markSeen prevents delivery of a pre-marked messageId', () async {
-        stubSession();
-
-        int messageCount = 0;
-        router.onMessageReceived = (_, __, ___, ____) => messageCount++;
-
-        const messageId = '33333333-3333-3333-3333-333333333333';
-        router.markSeen(messageId);
-
-        final p = secureMessagePacket(
-          messageId: messageId,
-          body: Uint8List.fromList([1]),
-        );
-
-        await router.processPacket(
-          p,
-          transport: PeerTransport.bleDirect,
-          rssi: -60,
-        );
-
-        expect(messageCount, equals(0));
-      });
-
-      test('isDuplicate returns correct results', () {
-        expect(router.isDuplicate('never-seen'), isFalse);
-
-        router.markSeen('seen-id');
-        expect(router.isDuplicate('seen-id'), isTrue);
+        expect(messageCount, equals(3));
       });
 
       test(
-          'duplicate MESSAGE re-ACKs without re-firing onMessageReceived. '
-          'This is what stops the sender\'s watchdog from looping forever '
-          'when its original ACK was lost.', () async {
+          'a payload delivered twice reaches onMessageReceived twice, and is '
+          'acknowledged each time so the sender stops', () async {
         stubSession();
 
-        int deliveries = 0;
+        final deliveries = <String>[];
         final ackRequests = <String>[];
-        router.onMessageReceived = (_, __, ___, ____) => deliveries++;
+        router.onMessageReceived =
+            (messageId, __, ___, ____) => deliveries.add(messageId);
         router.onAckRequested =
             (_, __, messageId) => ackRequests.add(messageId);
 
@@ -635,17 +603,36 @@ void main() {
         await router.processPacket(p,
             transport: PeerTransport.bleDirect, rssi: -60);
         await router.processPacket(p,
-            transport: PeerTransport.bleDirect, rssi: -60);
-        await router.processPacket(p,
-            transport: PeerTransport.bleDirect, rssi: -60);
+            transport: PeerTransport.udp, rssi: -60);
 
-        expect(deliveries, equals(1),
-            reason: 'Recipient must not double-deliver to the app.');
-        expect(ackRequests, hasLength(3),
-            reason:
-                'Recipient must re-ACK every duplicate so the sender can stop '
-                'retrying.');
-        expect(ackRequests, everyElement(messageId));
+        expect(deliveries, [messageId, messageId]);
+        expect(ackRequests, [messageId, messageId]);
+      });
+
+      test('a fresh message is never dropped', () async {
+        // Ten thousand distinct messages: the capacity at which the Bloom
+        // filter that was the duplicate filter took about one fresh message
+        // in a hundred for a duplicate, and dropped it.
+        stubSession();
+
+        final delivered = <String>{};
+        router.onMessageReceived =
+            (messageId, __, ___, ____) => delivered.add(messageId);
+
+        const count = 10000;
+        for (var i = 0; i < count; i++) {
+          final messageId =
+              '00000000-0000-4000-8000-${i.toRadixString(16).padLeft(12, '0')}';
+          await router.processPacket(
+            secureMessagePacket(
+              messageId: messageId,
+              body: Uint8List.fromList([i & 0xff]),
+            ),
+            transport: PeerTransport.udp,
+          );
+        }
+
+        expect(delivered, hasLength(count));
       });
     });
 
@@ -1171,21 +1158,6 @@ void main() {
           () => GrassrootsPacket.deserialize(data),
           throwsA(isA<ArgumentError>()),
         );
-      });
-    });
-
-    // =========================================================================
-    // Dispose
-    // =========================================================================
-
-    group('dispose', () {
-      test('cleans up without errors', () {
-        expect(() => router.dispose(), returnsNormally);
-      });
-
-      test('double dispose is safe', () {
-        router.dispose();
-        expect(() => router.dispose(), returnsNormally);
       });
     });
   });

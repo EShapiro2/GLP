@@ -364,7 +364,6 @@ class HeadlessGrassrootsNetwork {
     await _storeSubscription?.cancel();
     _storeSubscription = null;
     _noiseSessions.dispose();
-    _messageRouter.dispose();
   }
 
   // ===== Send =====
@@ -1015,6 +1014,13 @@ class HeadlessGrassrootsNetwork {
     if (!_isCurrentSession(senderPubkey, handshakeHash)) {
       debugPrint('[headless][attest] $peerShort attestation arrived on a '
           'session no longer current; dropped');
+      return;
+    }
+    // Delivery is at least once, so a re-sent attestation can arrive again;
+    // on a session already attested it is ignored (GNA, 2026-10-11, Task B).
+    if (_sameBytes(_attestedOn[_hex(senderPubkey)], handshakeHash)) {
+      debugPrint('[headless][attest] $peerShort attestation again on a '
+          'session already attested; ignored');
       return;
     }
     final digest = attestationDigest(

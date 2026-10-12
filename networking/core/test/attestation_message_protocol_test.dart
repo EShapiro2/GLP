@@ -131,6 +131,12 @@ class _LossyRelay {
   /// Picks the caller's datagrams that are lost on the way to the service.
   bool Function(Uint8List datagram) dropTowardService = (_) => false;
 
+  /// Picks the service's datagrams that are lost on the way to the caller.
+  bool Function(Uint8List datagram) dropTowardCaller = (_) => false;
+
+  /// Datagrams lost on the way to the caller.
+  int droppedTowardCaller = 0;
+
   /// Attestation fragments the caller sent toward the service, lost or not.
   int attestationFragmentsSeen = 0;
 
@@ -150,6 +156,10 @@ class _LossyRelay {
     final fromService = d.port == _servicePort &&
         d.address.address == InternetAddress.loopbackIPv4.address;
     if (fromService) {
+      if (dropTowardCaller(d.data)) {
+        droppedTowardCaller++;
+        return;
+      }
       final address = _callerAddress;
       final port = _callerPort;
       if (address != null && port != null) _socket.send(d.data, address, port);
@@ -199,6 +209,36 @@ class _SilentProducer implements PlatformAttestation {
         digest: digest,
         peerIdentityKey: peerIdentityKey,
       );
+}
+
+/// A platform with nothing to offer, as the default, that counts the
+/// attestations it is asked to judge.
+class _CountingVerifier implements PlatformAttestation {
+  int verifications = 0;
+
+  @override
+  Future<Uint8List?> attestationFor(Uint8List identityPublicKey) async => null;
+
+  @override
+  Future<Uint8List?> signSessionDigest({
+    required Uint8List identityPublicKey,
+    required Uint8List digest,
+  }) async =>
+      null;
+
+  @override
+  Future<AttestationVerdict> verify({
+    required AttestationEvidence? evidence,
+    required Uint8List digest,
+    required Uint8List peerIdentityKey,
+  }) {
+    verifications++;
+    return const NoPlatformAttestation().verify(
+      evidence: evidence,
+      digest: digest,
+      peerIdentityKey: peerIdentityKey,
+    );
+  }
 }
 
 bool _isAttestationFragment(Uint8List datagram) =>
@@ -583,6 +623,69 @@ void main() {
     }, timeout: const Timeout(Duration(minutes: 2)));
   });
 
+  // GNA, 2026-10-11, Task B: no duplicate filter; a duplicate payload is
+  // delivered, and a second attestation on a session already attested is
+  // ignored.
+  group('delivery at least once, headless over UDP', () {
+    test(
+        'an attestation re-sent after its acknowledgment was lost is ignored '
+        'on the session it already attested', () async {
+      if (sodiumUnavailable != null) {
+        markTestSkipped(sodiumUnavailable!);
+        return;
+      }
+      final serviceAttestation = _CountingVerifier();
+      final (service, caller) = await pair(
+          serviceAttestation, const NoPlatformAttestation(), 0x87);
+      final relay = await _LossyRelay.start(service.boundPort!);
+      addTearDown(relay.close);
+
+      // The service's acknowledgments of the caller's attestation — its
+      // fragment's and the whole message's, the first of each the service
+      // sends — are lost, so the caller sends it again and the service,
+      // which has it, receives it twice.
+      var fragmentAckLost = false;
+      var messageAckLost = false;
+      relay.dropTowardCaller = (datagram) {
+        if (datagram.isEmpty) return false;
+        if (!fragmentAckLost &&
+            datagram.first == PacketType.secureFragmentAck.value) {
+          return fragmentAckLost = true;
+        }
+        if (!messageAckLost && datagram.first == PacketType.secureAck.value) {
+          return messageAckLost = true;
+        }
+        return false;
+      };
+
+      var serviceConnects = 0;
+      service.onPeerConnected = (_, __, ___) => serviceConnects++;
+      final delivered = Completer<void>();
+      service.onMessageReceived = (_, payload, __, ___) {
+        if (!delivered.isCompleted) delivered.complete();
+      };
+
+      await dial(caller, service, relay.port);
+      await delivered.future.timeout(const Duration(seconds: 15));
+      // Past the caller's retransmission of its attestation.
+      final settle = Stopwatch()..start();
+      while (relay.attestationFragmentsSeen < 2 &&
+          settle.elapsed < const Duration(seconds: 10)) {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      }
+      await Future<void>.delayed(const Duration(seconds: 1));
+
+      expect(relay.droppedTowardCaller, 2);
+      expect(relay.attestationFragmentsSeen, greaterThanOrEqualTo(2),
+          reason: 'the attestation reached the service twice');
+      expect(serviceAttestation.verifications, 1,
+          reason: 'the second attestation was ignored, not judged again');
+      expect(serviceConnects, 1);
+      expect(service.isPeerReachable(caller.identity.publicKey), isTrue,
+          reason: 'and the session it already attested stands');
+    });
+  });
+
   group('the GATT carrier', () {
     test(
         'fragments the attestation, retransmits a lost fragment, and delivers '
@@ -601,7 +704,6 @@ void main() {
         protocolHandler: ProtocolHandler(identity: receiverId, sodium: sodium!),
         fragmentHandler: FragmentHandler(),
       );
-      addTearDown(router.dispose);
 
       // The session layer stands in as the identity transform: the clear
       // fragment travels as its session-encrypted type, and decrypting is

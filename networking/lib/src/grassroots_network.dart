@@ -3153,6 +3153,14 @@ class GrassrootsNetwork {
           'longer current; dropped');
       return;
     }
+    // Delivery is at least once, so a re-sent attestation can arrive again;
+    // on a session already attested it is ignored (GNA, 2026-10-11, Task B).
+    final attestedOn = _attestedOn[_handshakePairKey(transport, senderPubkey)];
+    if (attestedOn != null && listEquals(attestedOn, handshakeHash)) {
+      debugPrint('[attest] $peerShort attestation again on a session already '
+          'attested; ignored');
+      return;
+    }
     final underlay = _underlayOf(transport, senderPubkey);
     if (underlay == null) {
       // An IP session whose peer's address falls under no underlay this layer
@@ -5156,7 +5164,6 @@ class GrassrootsNetwork {
     }
     _attestationDeadlines.clear();
 
-    _messageRouter.dispose();
     _signalingService.dispose();
     _noiseSessions.dispose();
 

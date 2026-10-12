@@ -1,7 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grassroots_networking/grassroots_networking.dart';
-import 'package:grassroots_networking_core/src/mesh/bloom_filter.dart';
 import 'package:grassroots_networking_core/src/protocol/fragment_handler.dart';
 
 void main() {
@@ -23,66 +22,6 @@ void main() {
 
       expect(deserialized.type, equals(packet.type));
       expect(deserialized.payload, equals(packet.payload));
-    });
-  });
-
-  group('BloomFilter', () {
-    test('returns false for items not added', () {
-      final filter = BloomFilter();
-      expect(filter.mightContain('test-item'), isFalse);
-    });
-
-    test('returns true for added items', () {
-      final filter = BloomFilter();
-      filter.add('test-item');
-      expect(filter.mightContain('test-item'), isTrue);
-    });
-
-    test('checkAndAdd returns correct values', () {
-      final filter = BloomFilter();
-
-      // First time - not present
-      expect(filter.checkAndAdd('item1'), isFalse);
-
-      // Second time - already present
-      expect(filter.checkAndAdd('item1'), isTrue);
-
-      // Different item - not present
-      expect(filter.checkAndAdd('item2'), isFalse);
-    });
-
-    test('clears correctly', () {
-      final filter = BloomFilter();
-      filter.add('test-item');
-      expect(filter.mightContain('test-item'), isTrue);
-
-      filter.clear();
-      expect(filter.mightContain('test-item'), isFalse);
-    });
-
-    test('handles many items without excessive false positives', () {
-      final filter = BloomFilter();
-
-      // Add 1000 items
-      for (var i = 0; i < 1000; i++) {
-        filter.add('item-$i');
-      }
-
-      // All added items should be found
-      for (var i = 0; i < 1000; i++) {
-        expect(filter.mightContain('item-$i'), isTrue);
-      }
-
-      // Check false positive rate on items NOT added
-      var falsePositives = 0;
-      for (var i = 1000; i < 2000; i++) {
-        if (filter.mightContain('item-$i')) {
-          falsePositives++;
-        }
-      }
-
-      // False positive rate should be low (< 5%)
-      expect(falsePositives, lessThan(50));
     });
   });
 

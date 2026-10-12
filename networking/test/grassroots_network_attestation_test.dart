@@ -220,6 +220,10 @@ void main() {
       connected = true;
       attestedIdentity = identity;
     };
+    // Each side judges the other's half on its own schedule: what the callee
+    // verified is asserted below, so wait for the callee as well.
+    var calleeConnected = false;
+    callee.onPeerConnected = (_, __, ___) => calleeConnected = true;
 
     final calleeAddress = await listeningAddress(callee);
     caller.putKnownPeer(calleeId.publicKey);
@@ -230,7 +234,7 @@ void main() {
       Uint8List.fromList(utf8.encode('hello')),
     );
 
-    expect(await waitFor(() => connected), isTrue);
+    expect(await waitFor(() => connected && calleeConnected), isTrue);
     expect(attestedIdentity,
         const IosApplicationIdentity('ABCDE12345.com.eshapiro.callee'),
         reason: 'onPeerConnected carries the attested application identity');

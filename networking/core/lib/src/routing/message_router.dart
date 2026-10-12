@@ -1,5 +1,4 @@
 import 'package:redux/redux.dart';
-import '../mesh/bloom_filter.dart';
 import '../models/packet.dart';
 import '../models/peer.dart';
 import '../protocol/fragment_handler.dart';
@@ -21,17 +20,23 @@ import '../platform/compat.dart';
 /// are dropped.
 ///
 /// Responsibilities:
-/// - Message delivery deduplication (via BloomFilter, keyed by messageId)
 /// - ANNOUNCE decoding and Redux dispatch
 /// - Fragment reassembly delegation
 /// - Callback dispatch to application layer
 ///
 /// All transports feed into [processPacket] — one entry point, one format.
+///
+/// Delivery is at least once (spec §Message Protocol: "A re-send after a lost
+/// acknowledgment, possibly over another underlay, may deliver a message
+/// twice, which madGLP tolerates"; §Networking Assumptions: "possibly more
+/// than once"): a message is delivered every time it is reassembled, and
+/// acknowledged every time. There is no duplicate filter (GNA, 2026-10-11,
+/// Task B): the Bloom filter that was one took a fresh message for a
+/// duplicate about 1% of the time near its capacity, and dropped it.
 class MessageRouter {
   final Store<AppState> store;
   final ProtocolHandler protocolHandler;
   final FragmentHandler fragmentHandler;
-  final BloomFilter _seenPackets = BloomFilter();
 
   /// Called when a message is received. [transport] is the transport the packet
   /// actually arrived on — authoritative, taken from the receive path rather
@@ -448,13 +453,6 @@ class MessageRouter {
       fragment.index,
     );
 
-    // A fragment of an already-delivered message: the sender missed the
-    // delivery ACK — re-issue it rather than rebuffering.
-    if (_seenPackets.mightContain(fragment.messageId)) {
-      onAckRequested?.call(transport, peerId, fragment.messageId);
-      return;
-    }
-
     final reassembled = fragmentHandler.addFragment(fragment);
     if (reassembled == null) return;
 
@@ -497,27 +495,16 @@ class MessageRouter {
     required Uint8List handshakeHash,
     String? peerId,
   }) {
-    // Dedup by messageId: only deliver to the app once, but ACK every time
-    // so the sender's watchdog and BLE-disconnect re-queue stop retrying
-    // when the original ACK got lost. Retries are fresh encryptions
-    // (possibly over a different medium), so the session's replay window
-    // cannot catch them — this id is what makes redelivery detectable.
-    final firstSeen = !_seenPackets.checkAndAdd(messageId);
-    if (firstSeen) {
-      // The attestation exchange rides the same protocol as payloads (spec
-      // §Message Protocol) and goes to the coordinator, never to the
-      // application.
-      if (type == PacketType.attestationFragment) {
-        onAttestationReceived?.call(
-            senderPubkey, body, transport, handshakeHash);
-      } else {
-        onMessageReceived?.call(messageId, senderPubkey, body, transport);
-      }
+    // Delivered every time it is reassembled: a re-send after a lost
+    // acknowledgment is delivered again (at least once, spec §Message
+    // Protocol), and acknowledged again below so the sender stops. The
+    // attestation exchange rides the same protocol as payloads and goes to
+    // the coordinator, never to the application; a second attestation on a
+    // session already attested is the coordinator's to ignore.
+    if (type == PacketType.attestationFragment) {
+      onAttestationReceived?.call(senderPubkey, body, transport, handshakeHash);
     } else {
-      debugPrint(
-        'Duplicate message ${messageId.length >= 8 ? messageId.substring(0, 8) : messageId}; '
-        're-ACKing without re-delivering.',
-      );
+      onMessageReceived?.call(messageId, senderPubkey, body, transport);
     }
 
     // Send ACK back to confirm delivery. The sender waits for this to
@@ -575,23 +562,4 @@ class MessageRouter {
 
   static String _pubkeyToHex(Uint8List pubkey) =>
       pubkey.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-
-  // ===== Deduplication API =====
-
-  /// Mark a message ID as delivered (e.g., for locally-originated messages)
-  void markSeen(String messageId) {
-    _seenPackets.add(messageId);
-  }
-
-  /// Check if a message ID has been delivered before
-  bool isDuplicate(String messageId) {
-    return _seenPackets.mightContain(messageId);
-  }
-
-  // ===== Lifecycle =====
-
-  /// Clean up resources
-  void dispose() {
-    _seenPackets.clear();
-  }
 }

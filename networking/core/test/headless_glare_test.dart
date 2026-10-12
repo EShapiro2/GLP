@@ -318,7 +318,6 @@ class _PhoneStyleDialer {
   Future<void> dispose() async {
     await udp?.dispose();
     sessions.dispose();
-    router.dispose();
   }
 }
 

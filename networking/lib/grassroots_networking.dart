@@ -4,7 +4,6 @@
 /// It handles:
 /// - BLE Central/Peripheral dual-mode operation
 /// - Packet fragmentation and reassembly
-/// - Duplicate detection via Bloom filter
 /// - Local queueing of our own outbound messages for offline peers
 /// 
 /// ## Usage
