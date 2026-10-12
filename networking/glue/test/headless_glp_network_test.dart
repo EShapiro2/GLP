@@ -132,20 +132,39 @@ void main() {
       expect(layer.onMessageReceived, isNull);
     });
 
-    test('what the headless layer does not have throws UnsupportedError', () {
+    test(
+        'the WAN functions and the cryptography pass straight through (GNA, '
+        '2026-10-11, Task C; until then they threw UnsupportedError)',
+        () async {
       if (sodiumUnavailable != null) {
         markTestSkipped(sodiumUnavailable!);
         return;
       }
-      final bytes = Uint8List.fromList([1]);
-      expect(() => network.peerUnderlays(peer), throwsUnsupportedError);
-      expect(() => network.sign(bytes), throwsUnsupportedError);
-      expect(() => network.verify(peer, bytes, bytes), throwsUnsupportedError);
-      expect(() => network.networkIdentity(), throwsUnsupportedError);
-      expect(() => network.generatePeerLink(), throwsUnsupportedError);
-      expect(() => network.consumePeerLink('x'), throwsUnsupportedError);
-      expect(() => network.observedPeerAddress(peer), throwsUnsupportedError);
-      expect(() => network.punchUdp('127.0.0.1:9'), throwsUnsupportedError);
+      final message = Uint8List.fromList('attest(alice, bob)'.codeUnits);
+      final signature = network.sign(message);
+      expect(signature, layer.sign(message));
+      expect(network.verify(network.getIdentity(), message, signature), isTrue);
+      expect(network.verify(peer, message, signature), isFalse);
+
+      expect(network.peerUnderlays(peer), isEmpty);
+      expect(network.observedPeerAddress(peer), isNull,
+          reason: 'the peer is not connected');
+      expect(network.networkIdentity(), layer.networkIdentity());
+      expect(() => network.punchUdp('nowhere'), throwsArgumentError,
+          reason: "the layer's refusal of an unparseable address, unchanged");
+      await expectLater(network.generatePeerLink(), throwsStateError,
+          reason: 'the layer has no rendezvous server to register with');
+      await expectLater(network.consumePeerLink('x'), throwsFormatException,
+          reason: "the layer's refusal of a malformed link, unchanged");
+
+      final events = <String>[];
+      network.onConnectivityStatusChanged =
+          (oldAddress, newAddress) => events.add('address $oldAddress $newAddress');
+      network.onNetworkChanged =
+          (oldId, newId) => events.add('network $oldId $newId');
+      layer.onConnectivityStatusChanged!(null, '203.0.113.7:9600');
+      layer.onNetworkChanged!(null, 'n-1');
+      expect(events, ['address null 203.0.113.7:9600', 'network null n-1']);
     });
 
     test(

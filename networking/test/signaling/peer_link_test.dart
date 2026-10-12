@@ -2,8 +2,8 @@ import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:grassroots_networking/src/signaling/peer_link.dart';
-import 'package:grassroots_networking/src/signaling/signaling_codec.dart';
+import 'package:grassroots_networking_core/src/signaling/peer_link.dart';
+import 'package:grassroots_networking_core/src/signaling/signaling_codec.dart';
 
 Uint8List _bytes(int seed, [int length = 32]) =>
     Uint8List.fromList(List<int>.generate(length, (i) => (seed + i) & 0xff));

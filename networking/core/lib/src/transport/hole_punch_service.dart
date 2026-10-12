@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
+import 'dart:typed_data';
+
+import '../platform/compat.dart';
 
 /// A UDP hole-punch packet.
 ///

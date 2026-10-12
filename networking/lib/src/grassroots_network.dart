@@ -7,15 +7,15 @@ import 'package:sodium_libs/sodium_libs_sumo.dart';
 import 'package:uuid/uuid.dart';
 import 'ble/permission_handler.dart';
 import 'platform/transport_foreground_service.dart';
-import 'signaling/peer_link.dart';
-import 'signaling/signaling_codec.dart';
+import 'package:grassroots_networking_core/src/signaling/peer_link.dart';
+import 'package:grassroots_networking_core/src/signaling/signaling_codec.dart';
 import 'signaling/signaling_service.dart';
 import 'package:grassroots_networking_core/src/transport/address_utils.dart';
 import 'package:grassroots_networking_core/src/transport/local_network.dart';
 import 'package:grassroots_networking_core/src/places/place_registry.dart';
 import 'transport/ble_transport_service.dart';
 import 'transport/connection_service.dart';
-import 'transport/hole_punch_service.dart';
+import 'package:grassroots_networking_core/src/transport/hole_punch_service.dart';
 import 'transport/lan_discovery_service.dart';
 import 'package:grassroots_networking_core/src/transport/udp_transport_service.dart';
 import 'package:grassroots_networking_core/src/models/identity.dart';
@@ -660,12 +660,11 @@ class GrassrootsNetwork {
   /// Called when UDP transport becomes available
   void Function()? onUdpInitialized;
 
-  /// Spec: `docs/GLP_Networking_API/sections/api.tex` §onConnectivityStatus
-  /// (named `onConnectivityStatusChanged` here — the spec name reads like a
-  /// status getter; this is a change-event callback).
-  /// "Callback when the networking layer detects a change in the agent's
-  /// public IP address. Triggers the rendezvous protocol. Fired on startup
-  /// and on address change."
+  /// Spec §Connectivity and Address, `onConnectivityStatusChanged(old?,
+  /// new?)`: "Callback when the networking layer detects a change in the
+  /// agent's public IP address ... Fired on startup and on every address
+  /// change." Fired at [start] with the address as it stands, on each
+  /// address a rendezvous server reflects, and on its loss.
   ///
   /// Receives `(oldAddress, newAddress)` as `ip:port` strings (or null when
   /// no public address is available). The caller derives the kind of
@@ -803,13 +802,19 @@ class GrassrootsNetwork {
   /// PubKey`. The private key is held internally and never returned here.
   Uint8List getIdentity() => identity.publicKey;
 
-  /// Currently reachable peers — spec `docs/GLP_Networking_API/sections/api.tex`
-  /// §getPeers: "Discover currently reachable peers." Returns only peers
-  /// where `isReachable` is true (i.e. at least one transport is live).
-  /// Callers that need the full list of known peers (including offline ones)
-  /// can read `store.state.peers.peersList` directly.
-  List<PeerState> getPeers() =>
-      _peersState.peersList.where((p) => p.isReachable).toList();
+  /// The nearby Grassroots agents on the proximity underlays (spec §Concepts
+  /// and Principles, Discovery, `getPeers() → List<Peer>`: "Scan and browse
+  /// the proximity underlays for nearby Grassroots agents"), limited to them
+  /// (GNA, 2026-10-11, Task C): one entry per peer and proximity underlay it
+  /// is reachable over, PAN before LAN. A peer reachable over the WAN alone is
+  /// not nearby. Until 2026-10-12 this answered every reachable peer.
+  List<({Uint8List publicKey, ProximityUnderlay underlay})> getPeers() => [
+        for (final peer in _peersState.peersList)
+          for (final underlay in ProximityUnderlay.values)
+            if (peer.reachableUnderlays
+                .contains(Underlay.values.byName(underlay.name)))
+              (publicKey: peer.publicKey, underlay: underlay),
+      ];
 
   /// Check if a peer is reachable via any transport
   bool isPeerReachable(Uint8List pubkey) => _peersState.isPeerReachable(pubkey);
@@ -838,12 +843,26 @@ class GrassrootsNetwork {
   /// Calls), and GLP is given the fingerprint, never the addresses.
   String? networkIdentity() => store.state.localNetwork.networkId;
 
-  /// The last known public `ip:port` for [pubkey], or null if unknown.
-  ///
-  /// This is the observed/stored peer address (dial-book entry), not our own
-  /// address. For the local agent's address use [getPublicAddress].
-  String? peerAddress(Uint8List pubkey) =>
-      _peersState.getPeerByPubkey(pubkey)?.udpAddress;
+  /// The public `ip:port` at which the layer observes the connected peer — the
+  /// source address of its live, attested UDP session — or null when the peer
+  /// is reachable over no IP underlay (spec §Connectivity and Address,
+  /// `observedPeerAddress(pk)`, behind `peer_address/2`). Not the dial-book
+  /// address, which GLP supplies or a session observed earlier (GNA,
+  /// 2026-10-11, Task C); until 2026-10-12 `peerAddress` answered that.
+  String? observedPeerAddress(Uint8List pubkey) {
+    final peer = _peersState.getPeerByPubkey(pubkey);
+    if (peer == null ||
+        !peer.reachableUnderlays.any((u) => u != Underlay.pan)) {
+      return null;
+    }
+    final udp = _udpService;
+    final peerId = udp?.getPeerIdForPubkey(pubkey);
+    if (udp == null || peerId == null) return null;
+    final remote = udp.getRemoteAddress(peerId);
+    return remote == null
+        ? null
+        : AddressInfo(remote.ip, remote.port).toAddressString();
+  }
 
   /// Feed the networking layer a peer's current public `ip:port`, learned at
   /// the GLP level (from a rendezvous agent or a BLE-adjacent friend). The
@@ -1382,6 +1401,9 @@ class GrassrootsNetwork {
     }
 
     _started = true;
+    // "Fired on startup" (spec §Connectivity and Address): the public address
+    // as it stands, none until a rendezvous server reflects one.
+    onConnectivityStatusChanged?.call(null, _publicAddress);
     // Keep the Android process unfrozen while transports run — a frozen Dart
     // VM goes ANNOUNCE-silent and never dials reverse BLE legs, while its
     // radio links stay up (peers then flap us through their stale sweeps).
@@ -1736,10 +1758,14 @@ class GrassrootsNetwork {
 
   void _clearDiscoveredPublicConnectivity() {
     _localHostAddressGeneration++;
+    final lost = _publicAddress;
     _publicAddress = null;
     _localHostAddresses = const [];
     _localHostAddressFuture = null;
     store.dispatch(ClearPublicConnectivityAction());
+    // Spec §Connectivity and Address: "loss: new=null" --- every address
+    // change is reported, a loss included.
+    if (lost != null) onConnectivityStatusChanged?.call(lost, null);
   }
 
   /// Handle network connectivity changes (WiFi ↔ cellular, etc.).

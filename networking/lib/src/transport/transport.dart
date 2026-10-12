@@ -14,7 +14,7 @@ library;
 export 'package:grassroots_networking_core/src/transport/transport_service.dart';
 export 'ble_transport_service.dart';
 export 'package:grassroots_networking_core/src/transport/udp_transport_service.dart';
-export 'hole_punch_service.dart';
+export 'package:grassroots_networking_core/src/transport/hole_punch_service.dart';
 export 'lan_discovery_service.dart';
 export 'package:grassroots_networking_core/src/transport/address_utils.dart';
 export 'connection_service.dart';

@@ -50,9 +50,10 @@ PlatformAttestation _platformAttestation() => NativePlatformAttestation(
     );
 
 Future<GrassrootsIdentity> _initIdentity() async {
-  // Spec putIdentity/getIdentity (docs/GLP_Networking_API/sections/api.tex
-  // §Identity): restore the persisted identity, or generate-and-persist one on
-  // first launch so the same Ed25519 key pair is reused every session.
+  // The key pair is generated and persisted above the layer and supplied to
+  // its constructor (spec §Identity): restore the persisted identity, or
+  // generate-and-persist one on first launch so the same Ed25519 key pair is
+  // reused every session.
   final existing = await IdentityStore.getIdentity();
   if (existing != null) {
     debugPrint('Identity found in secure storage.');

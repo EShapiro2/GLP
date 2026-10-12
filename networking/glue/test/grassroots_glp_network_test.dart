@@ -110,7 +110,7 @@ void main() {
     network.putKnownPeer(peer);
     expect(layer.store.state.knownPeers.known.containsKey(peer.hex), isTrue);
     network.putPeerAddress(peer, '198.51.100.4:9601');
-    expect(layer.peerAddress(peer.bytes), '198.51.100.4:9601');
+    expect(layer.store.state.knownPeers.known[peer.hex], '198.51.100.4:9601');
     expect(() => network.putPeerAddress(peer, 'nowhere'), throwsArgumentError,
         reason: "the layer's refusal of an unparseable address, unchanged");
     network.removeKnownPeer(peer);
@@ -214,14 +214,20 @@ void main() {
     await layer.dispose();
   });
 
-  test('what the layer does not have as GNA specifies it throws '
-      'UnsupportedError', () async {
+  test(
+      'getPeers and observedPeerAddress pass straight through (GNA, '
+      '2026-10-11, Task C; until then they threw UnsupportedError)', () async {
     final layer = await layerFor(await identity('self'));
     final network = GrassrootsGlpNetwork(layer);
     final peer = glp.PubKey.fromList((await identity('peer')).publicKey);
 
-    expect(() => network.getPeers(), throwsUnsupportedError);
-    expect(() => network.observedPeerAddress(peer), throwsUnsupportedError);
+    // Nothing is nearby and nothing is connected: the layer's answers.
+    expect(network.getPeers(), isEmpty);
+    expect(layer.getPeers(), isEmpty);
+    network.putPeerAddress(peer, '198.51.100.4:9601');
+    expect(network.observedPeerAddress(peer), isNull,
+        reason: 'the dial-book address is no observed one');
+    expect(layer.observedPeerAddress(peer.bytes), isNull);
 
     await layer.dispose();
   });

@@ -19,8 +19,12 @@ import '../routing/message_router.dart';
 import '../session/application_identity.dart';
 import '../session/noise_session_manager.dart';
 import '../session/platform_attestation.dart';
+import '../signaling/peer_link.dart';
+import '../signaling/signaling_codec.dart';
 import '../store/store.dart';
 import '../transport/address_utils.dart';
+import '../transport/hole_punch_service.dart';
+import '../transport/local_network.dart';
 import '../transport/udp_transport_service.dart';
 import 'known_peers_persistence.dart';
 
@@ -63,9 +67,13 @@ class ServerAddress {
 ///
 /// A headless embedding of the same session, framing, and router internals
 /// the Flutter package runs — no reimplementation and no fork — exposing the
-/// spec's API surface: construction with identity, [putKnownPeer] /
-/// [removeKnownPeer] / [putPeerAddress], [send], [onMessageReceived],
-/// [onPeerConnected] / [onPeerDisconnected], [getPublicAddress]. It realizes
+/// spec's API for the WAN underlay (GNA, 2026-10-11, Task C): construction
+/// with identity, [getIdentity]; [putKnownPeer] / [removeKnownPeer] /
+/// [putPeerAddress]; [onPeerConnected] / [onPeerDisconnected],
+/// [isPeerReachable], [peerUnderlays]; [send], [onMessageReceived]; [sign],
+/// [verify]; [onConnectivityStatusChanged], [getPublicAddress],
+/// [networkIdentity], [onNetworkChanged], [generatePeerLink],
+/// [consumePeerLink], [observedPeerAddress], [punchUdp]. It realizes
 /// the WAN underlay alone (spec §Networking API: "a server-side agent ...
 /// realizes the WAN underlay alone, headless, with proximity discovery
 /// absent"), so every callback reports [Underlay.wan]: no BLE, no mDNS, no
@@ -223,6 +231,296 @@ class HeadlessGrassrootsNetwork {
   /// [serverAddress] in this profile — or null when it was given none.
   String? getPublicAddress() => serverAddress?.publicAddress;
 
+  /// The agent's own public key (spec §Identity, `getIdentity() → PubKey`).
+  Uint8List getIdentity() => identity.publicKey;
+
+  /// Callback when the layer detects a change in the agent's public address
+  /// (spec §Connectivity and Address, `onConnectivityStatusChanged(old?,
+  /// new?)`): "Fired on startup and on every address change." This profile's
+  /// address is static, its [serverAddress]'s or none, so it fires once, at
+  /// [start], with `old` null.
+  void Function(String? oldAddress, String? newAddress)?
+      onConnectivityStatusChanged;
+
+  /// Callback when the fingerprint of the attached local network changes
+  /// (spec §Local Network Identity, `onNetworkChanged(oldId?, newId?)`).
+  void Function(String? oldId, String? newId)? onNetworkChanged;
+
+  /// Fired when a peer link minted by [generatePeerLink] is redeemed: the
+  /// rendezvous server forwarded the redeemer's identity (spec §WAN
+  /// Cold-Call). Receives the redeemer's key, whose first contact the link
+  /// authorizes; what to do with it is GLP's.
+  void Function(Uint8List redeemerPubkey)? onPeerLinkRedeemed;
+
+  /// An opaque fingerprint of the local network the agent is attached to, or
+  /// null (spec §Local Network Identity, `networkIdentity()`).
+  String? networkIdentity() => store.state.localNetwork.networkId;
+
+  /// The underlays [pubkey] is reachable over (spec §Connection and
+  /// Reachability, `peerUnderlays(pk)`): [Underlay.wan], this profile's one,
+  /// while its session stands attested; empty otherwise.
+  List<Underlay> peerUnderlays(Uint8List pubkey) =>
+      isPeerReachable(pubkey) ? const [Underlay.wan] : const [];
+
+  /// The public `ip:port` at which the layer observes the connected peer — the
+  /// source address of its live session — or null when it is not connected
+  /// (spec §Connectivity and Address, `observedPeerAddress(pk)`).
+  String? observedPeerAddress(Uint8List pubkey) {
+    if (!isPeerReachable(pubkey)) return null;
+    final udp = _udpService;
+    final peerId = udp?.getPeerIdForPubkey(pubkey);
+    if (udp == null || peerId == null) return null;
+    final remote = udp.getRemoteAddress(peerId);
+    return remote == null
+        ? null
+        : AddressInfo(remote.ip, remote.port).toAddressString();
+  }
+
+  /// Detached Ed25519 signature over [message] under the agent's key (spec
+  /// §The Seam, Signatures, `sign(bytes)`).
+  Uint8List sign(Uint8List message) => _protocolHandler.signBytes(message);
+
+  /// Whether [signature] is [signer]'s Ed25519 signature over [message]
+  /// (spec, `verify(pk, bytes, signature)`); false on malformed input.
+  bool verify(Uint8List signer, Uint8List message, Uint8List signature) =>
+      _protocolHandler.verifyBytes(
+        signature: signature,
+        message: message,
+        publicKey: signer,
+      );
+
+  /// Hole-punch services, one per IP family the UDP socket is bound to.
+  final Map<InternetAddressType, HolePunchService> _holePunchServices = {};
+
+  /// Send a short burst of UDP datagrams toward [address], opening the NAT
+  /// mapping, and return at once (spec §Connectivity and Address,
+  /// `punchUdp(address)`, behind `punch_udp/1`). Throws [ArgumentError] on an
+  /// unparseable address; toward a family this layer has no socket for it is
+  /// a no-op.
+  void punchUdp(String address) {
+    final parsed = parseAddressString(address);
+    if (parsed == null) {
+      throw ArgumentError.value(address, 'address', 'not a valid ip:port');
+    }
+    final service = _holePunchServices[parsed.ip.type];
+    if (service == null) {
+      debugPrint('[headless][punch-udp] No socket for ${parsed.ip.type.name}; '
+          'ignoring punch toward ${parsed.toAddressString()}');
+      return;
+    }
+    unawaited(service.punch(parsed.ip, parsed.port));
+  }
+
+  /// Keys whose first contact a peer link authorizes (spec §Cold Calls:
+  /// "Invitation links carry that invite as their own authorization"): the
+  /// inviter, recorded at redemption, and the redeemer, recorded when the
+  /// rendezvous server's redeemed notification arrives.
+  final Set<String> _inviteAuthorized = {};
+
+  /// Invites minted by [generatePeerLink] and not yet redeemed, by InviteId
+  /// hex: the rendezvous server each was registered with, and its expiry.
+  final Map<String, ({String rvPubkeyHex, int expiresAtMs})>
+      _outstandingInvites = {};
+
+  /// Produce a signed, one-time, rendezvous-mediated invite link and register
+  /// the invite with a rendezvous server (spec §WAN Cold-Call,
+  /// `generatePeerLink() → URI`): the first configured server, over this
+  /// agent's session with it. Throws [StateError] when there is no rendezvous
+  /// server or the registration cannot be delivered.
+  Future<String> generatePeerLink() async {
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    _outstandingInvites.removeWhere((_, invite) => invite.expiresAtMs < nowMs);
+    if (rendezvousServers.isEmpty) {
+      throw StateError(
+          'generatePeerLink requires a configured rendezvous server');
+    }
+    final rv = rendezvousServers.first;
+    final nonce = sodium.randombytes.buf(32);
+    final expiresAtMs =
+        DateTime.now().add(inviteLifetime).millisecondsSinceEpoch;
+    final invite = PeerLinkInvite.create(
+      identityPubkey: identity.publicKey,
+      rvPubkey: rv.publicKey,
+      rvAddress: rv.address,
+      nonce: nonce,
+      expiresAtMs: expiresAtMs,
+      sign: _protocolHandler.signBytes,
+    );
+    final inviteId = deriveInviteId(nonce);
+    final inviteKey = await deriveInviteKey(
+      nonce: nonce,
+      inviterPubkey: identity.publicKey,
+      rvPubkey: rv.publicKey,
+      rvAddress: rv.address,
+      expiresAtMs: expiresAtMs,
+    );
+    final registration = const SignalingCodec().encode(RegisterInviteMessage(
+      inviteId: inviteId,
+      inviteKey: inviteKey,
+      expiresAtMs: expiresAtMs,
+    ));
+    if (!await _sendSignaling(rv.publicKey, rv.address, registration)) {
+      throw StateError(
+          'Could not register invite with rendezvous server ${rv.address}');
+    }
+    _outstandingInvites[_hex(inviteId)] =
+        (rvPubkeyHex: rv.pubkeyHex, expiresAtMs: expiresAtMs);
+    return invite.toUri();
+  }
+
+  /// Redeem a peer link received out of band (spec §WAN Cold-Call,
+  /// `consumePeerLink(uri) → PubKey`): verify the inviter's signature and the
+  /// expiration, register the inviter's identity locally, and submit the
+  /// redemption claim to the rendezvous server named in the link. Returns the
+  /// inviter's key. Throws [FormatException] for a malformed or
+  /// signature-invalid link and [StateError] for an expired or self-issued
+  /// link or an unreachable rendezvous server.
+  Future<Uint8List> consumePeerLink(String uri) async {
+    final invite = PeerLinkInvite.fromUri(uri);
+    if (!invite.verifySignature(sodium)) {
+      throw const FormatException('Invite signature verification failed');
+    }
+    if (invite.isExpired) {
+      throw StateError('Invite link has expired');
+    }
+    if (_hex(invite.inviterPubkey) == _hex(identity.publicKey)) {
+      throw StateError('Cannot redeem an invite issued by this identity');
+    }
+    // The link authorizes the inviter's first contact (spec §Cold Calls).
+    _inviteAuthorized.add(_hex(invite.inviterPubkey));
+    store.dispatch(PeerIdentityRegisteredAction(publicKey: invite.inviterPubkey));
+
+    final inviteId = deriveInviteId(invite.nonce);
+    final inviteKey = await deriveInviteKey(
+      nonce: invite.nonce,
+      inviterPubkey: invite.inviterPubkey,
+      rvPubkey: invite.rvPubkey,
+      rvAddress: invite.rvAddress,
+      expiresAtMs: invite.expiresAtMs,
+    );
+    final redeemerNonce = sodium.randombytes.buf(32);
+    final mac = await computeRedemptionMac(
+      inviteKey: inviteKey,
+      inviterPubkey: invite.inviterPubkey,
+      redeemerPubkey: identity.publicKey,
+      inviteId: inviteId,
+      redeemerNonce: redeemerNonce,
+    );
+    final claim = const SignalingCodec().encode(RedeemInviteMessage(
+      inviteId: inviteId,
+      redeemerNonce: redeemerNonce,
+      mac: mac,
+    ));
+    if (!await _sendSignaling(invite.rvPubkey, invite.rvAddress, claim)) {
+      throw StateError('Could not submit redemption to rendezvous server '
+          '${invite.rvAddress}');
+    }
+    return invite.inviterPubkey;
+  }
+
+  /// Send a signaling payload to [pubkey] at [address] over this agent's
+  /// session with it, dialing and establishing one where none stands.
+  Future<bool> _sendSignaling(
+    Uint8List pubkey,
+    String address,
+    Uint8List payload,
+  ) async {
+    final udp = _udpService;
+    if (udp == null) return false;
+    if (udp.getPeerIdForPubkey(pubkey) == null &&
+        !await _dial(pubkey, address)) {
+      return false;
+    }
+    if (!await _ensureUdpSession(pubkey)) return false;
+    final bytes = await _sessionPacketBytes(
+      GrassrootsPacket(type: PacketType.signaling, payload: payload),
+      pubkey,
+    );
+    if (bytes == null) return false;
+    return await _udpService?.sendToPeer(_hex(pubkey), bytes) ?? false;
+  }
+
+  /// A signaling payload arrived over a session. This profile acts on one
+  /// kind: a rendezvous server's notice that an invite this agent minted was
+  /// redeemed (spec §WAN Cold-Call, Redemption). The reconnection signaling
+  /// of the Flutter profile is not this profile's (it holds no punch
+  /// coordination), and server-bound messages are an agent's never.
+  void _onSignalingReceived(Uint8List senderPubkey, Uint8List payload) {
+    debugOnSignaling?.call(senderPubkey, payload);
+    final SignalingMessage message;
+    try {
+      message = const SignalingCodec().decode(payload);
+    } catch (e) {
+      debugPrint('[headless][signaling] Undecodable signaling: $e');
+      return;
+    }
+    if (message is! InviteRedeemedMessage) {
+      debugPrint('[headless][signaling] Ignoring ${message.runtimeType}');
+      return;
+    }
+    final senderHex = _hex(senderPubkey);
+    final inviteIdHex = _hex(message.inviteId);
+    final shortId = inviteIdHex.substring(0, 8);
+    if (!_isRendezvousServer(senderPubkey)) {
+      debugPrint('[headless][peer-link] redeemed notice for $shortId from a '
+          'sender that is no configured rendezvous server; dropped');
+      return;
+    }
+    // Acknowledged whatever its fate, so the server stops retrying.
+    unawaited(_sendSignaling(
+      senderPubkey,
+      _rendezvousAddressOf(senderHex),
+      const SignalingCodec()
+          .encode(InviteRedeemedAckMessage(inviteId: message.inviteId)),
+    ));
+    final outstanding = _outstandingInvites[inviteIdHex];
+    if (outstanding == null || outstanding.rvPubkeyHex != senderHex) {
+      debugPrint('[headless][peer-link] redeemed notice for unknown, handled '
+          'or another server\'s invite $shortId; acknowledged');
+      return;
+    }
+    // Single use locally, as the server's flip is.
+    _outstandingInvites.remove(inviteIdHex);
+    _inviteAuthorized.add(_hex(message.redeemerPubkey));
+    store.dispatch(
+        PeerIdentityRegisteredAction(publicKey: message.redeemerPubkey));
+    onPeerLinkRedeemed?.call(message.redeemerPubkey);
+  }
+
+  String _rendezvousAddressOf(String pubkeyHex) => rendezvousServers
+      .firstWhere((server) => server.pubkeyHex == pubkeyHex)
+      .address;
+
+  /// Every signaling payload this layer receives, before it acts on it; for
+  /// tests that stand a rendezvous server up on a headless layer.
+  @visibleForTesting
+  void Function(Uint8List senderPubkey, Uint8List payload)? debugOnSignaling;
+
+  /// Send a signaling payload to a peer over this layer's session with it;
+  /// for tests that stand a rendezvous server up on a headless layer.
+  @visibleForTesting
+  Future<bool> debugSendSignaling(Uint8List pubkey, Uint8List payload) async {
+    final udp = _udpService;
+    if (udp == null || udp.getPeerIdForPubkey(pubkey) == null) return false;
+    final bytes = await _sessionPacketBytes(
+      GrassrootsPacket(type: PacketType.signaling, payload: payload),
+      pubkey,
+    );
+    if (bytes == null) return false;
+    return udp.sendToPeer(_hex(pubkey), bytes);
+  }
+
+  /// Read the attached local network and, if it differs from the held one,
+  /// record it and tell the runtime (spec §Local Network Identity). At
+  /// [start] and on the heartbeat tick.
+  Future<void> _refreshLocalNetwork() async {
+    final network = await readLocalNetwork();
+    final previous = store.state.localNetwork.network;
+    if (network == previous) return;
+    store.dispatch(LocalNetworkChangedAction(network));
+    onNetworkChanged?.call(previous.networkId, network.networkId);
+  }
+
   /// The actually bound UDP port (after [start]); useful when no
   /// [serverAddress] was given and an ephemeral port was bound.
   int? get boundPort =>
@@ -291,12 +589,23 @@ class HeadlessGrassrootsNetwork {
     _udpService = udp;
     _setupUdpCallbacks(udp);
     await udp.start();
+    for (final entry in udp.rawSocketsByType.entries) {
+      _holePunchServices[entry.key] = HolePunchService(
+        socket: entry.value,
+        senderPubkey: identity.publicKey,
+      );
+    }
     _heartbeatTimer = Timer.periodic(heartbeatInterval, (_) {
       _holdRendezvousSessions();
+      unawaited(_refreshLocalNetwork());
       for (final hex in _outboundQueue.keys.toList()) {
         _drainQueueFor(_bytes(hex));
       }
     });
+    // "Fired on startup" (spec §Connectivity and Address): the static
+    // address, or none.
+    onConnectivityStatusChanged?.call(null, getPublicAddress());
+    await _refreshLocalNetwork();
     debugPrint('[headless] listening on UDP port $boundPort '
         '(${_hex(identity.publicKey).substring(0, 8)}…)');
     _holdRendezvousSessions();
@@ -343,6 +652,10 @@ class HeadlessGrassrootsNetwork {
     _udpService = null;
     _heartbeatTimer?.cancel();
     _heartbeatTimer = null;
+    for (final service in _holePunchServices.values) {
+      service.dispose();
+    }
+    _holePunchServices.clear();
     await _connectionSub?.cancel();
     _connectionSub = null;
     _noiseSessions.resetTransport(PeerTransport.udp);
@@ -549,11 +862,17 @@ class HeadlessGrassrootsNetwork {
   /// Unsolicited inbound IP contact is governed by no trust level (spec §Trust
   /// levels): it is refused unless the peer is in the known-peer set or
   /// presents a valid invite. This profile has no proximity underlay — no BLE,
-  /// no LAN discovery — and no invite support, so the known-peer set is the
-  /// whole of it, with the configured rendezvous servers, infrastructure this
-  /// agent itself dials.
-  bool _acceptsContactFrom(Uint8List pubkey) =>
-      _isKnown(pubkey) || _isRendezvousServer(pubkey);
+  /// no LAN discovery — so the known-peer set and the keys a peer link
+  /// authorized are the whole of it, with the configured rendezvous servers,
+  /// infrastructure this agent itself dials, and contact this agent solicited
+  /// by dialing it.
+  bool _acceptsContactFrom(Uint8List pubkey) {
+    final hex = _hex(pubkey);
+    return _isKnown(pubkey) ||
+        _isRendezvousServer(pubkey) ||
+        _inviteAuthorized.contains(hex) ||
+        _dialedPeers.contains(hex);
+  }
 
   // ===== Wiring (mirrors the Flutter coordinator's IP path) =====
 
@@ -653,6 +972,10 @@ class HeadlessGrassrootsNetwork {
         debugPrint('[headless][noise] Dropping handshake packet: $e');
       }
     };
+
+    _messageRouter.onSignalingReceived =
+        (senderPubkey, payload, {observedIp, observedPort}) =>
+            _onSignalingReceived(senderPubkey, payload);
 
     _messageRouter.onAttestationReceived =
         (senderPubkey, payload, transport, handshakeHash) {

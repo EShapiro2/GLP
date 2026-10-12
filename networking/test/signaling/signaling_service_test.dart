@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:redux/redux.dart';
 import 'package:grassroots_networking/src/signaling/signaling_service.dart';
-import 'package:grassroots_networking/src/signaling/signaling_codec.dart';
+import 'package:grassroots_networking_core/src/signaling/signaling_codec.dart';
 import 'package:grassroots_networking_core/src/models/peer.dart';
 import 'package:grassroots_networking_core/src/models/rendezvous_server.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';

@@ -59,7 +59,11 @@ void main() {
     );
   }
 
-  Future<GrassrootsNetwork> startNode(GrassrootsIdentity id) async {
+  Future<GrassrootsNetwork> startNode(
+    GrassrootsIdentity id, {
+    void Function(String? oldAddress, String? newAddress)?
+        onConnectivityStatusChanged,
+  }) async {
     final store = Store<AppState>(
       appReducer,
       initialState: const AppState(),
@@ -75,6 +79,7 @@ void main() {
         announceInterval: Duration(seconds: 2),
       ),
     );
+    network.onConnectivityStatusChanged = onConnectivityStatusChanged;
     expect(await network.initialize(), isTrue,
         reason: 'UDP must initialize on loopback');
     return network;
@@ -88,6 +93,21 @@ void main() {
     }
     return network.debugLocalCandidates();
   }
+
+  test(
+      'onConnectivityStatusChanged fires on startup, with the public address '
+      'as it stands (GNA, 2026-10-11, Task C)', () async {
+    final reports = <(String?, String?)>[];
+    final node = await startNode(
+      await identityFromSeed(0x7b, 'node'),
+      onConnectivityStatusChanged: (oldAddress, newAddress) =>
+          reports.add((oldAddress, newAddress)),
+    );
+    addTearDown(node.dispose);
+    // Spec §Connectivity and Address: "startup: old=null"; no rendezvous
+    // server has reflected an address, so none stands.
+    expect(reports, [(null, null)]);
+  });
 
   test('no public address until a rendezvous server reflects one', () async {
     final node = await startNode(await identityFromSeed(0x71, 'node'));

@@ -258,6 +258,9 @@ void main() {
         List<Underlay> received,
         List<ProximityUnderlay> discovered,
         List<Underlay> reachable,
+        List<ProximityUnderlay> nearby,
+        String? observed,
+        String callerAddress,
       })> receiverReportOfKnownCaller({
     required int seed,
     required LocalNetwork receiverLocalNetwork,
@@ -276,7 +279,8 @@ void main() {
       await receiver.dispose();
     });
 
-    expect(await listeningAddress(caller), isNotNull);
+    final callerAddress = await listeningAddress(caller);
+    expect(callerAddress, isNotNull);
     final receiverAddress = await listeningAddress(receiver);
     expect(receiverAddress, isNotNull);
 
@@ -324,6 +328,12 @@ void main() {
       received: received,
       discovered: discovered,
       reachable: receiver.peerUnderlays(callerId.publicKey),
+      nearby: [
+        for (final peer in receiver.getPeers())
+          if (hexOf(peer.publicKey) == callerHex) peer.underlay,
+      ],
+      observed: receiver.observedPeerAddress(callerId.publicKey),
+      callerAddress: callerAddress!,
     );
   }
 
@@ -338,6 +348,10 @@ void main() {
     expect(report.received, everyElement(Underlay.lan));
     expect(report.discovered, [ProximityUnderlay.lan]);
     expect(report.reachable, [Underlay.lan]);
+    // GNA, 2026-10-11, Task C: a LAN peer is nearby, and the layer observes
+    // it at the source address of its session.
+    expect(report.nearby, [ProximityUnderlay.lan]);
+    expect(report.observed, report.callerAddress);
   }, timeout: const Timeout(Duration(minutes: 2)));
 
   test(
@@ -351,6 +365,9 @@ void main() {
     expect(report.received, everyElement(Underlay.wan));
     expect(report.discovered, isEmpty);
     expect(report.reachable, [Underlay.wan]);
+    // GNA, 2026-10-11, Task C: a WAN peer is not nearby, and is observed.
+    expect(report.nearby, isEmpty);
+    expect(report.observed, report.callerAddress);
   }, timeout: const Timeout(Duration(minutes: 2)));
 
   // GNA, 2026-10-11, Q1: "an IP session's underlay is lan when LAN runs and
@@ -383,6 +400,8 @@ void main() {
     expect(report.received, isEmpty);
     expect(report.discovered, isEmpty);
     expect(report.reachable, isEmpty);
+    expect(report.nearby, isEmpty);
+    expect(report.observed, isNull);
   }, timeout: const Timeout(Duration(minutes: 2)));
 
   test(
