@@ -1555,21 +1555,25 @@ procedure keep_set(YesNo?, Peers?, PeerSets?, PeerSets).
 keep_set(yes, _, M, M?).
 keep_set(no, X, M, [X?|M?]).
 %% The opener of an unguarded class: the least, in the order of identifiers,
-%% of the people in the first role of its schema-bindings.
+%% of the people in the first role of its unguarded schema-bindings, those
+%% with no marked role (vGLP 2026-10-12 08:26 UTC, Q-B), so that the tick,
+%% which finds the classes of the unguarded schemas with the agent in their
+%% first role, finds every class its agent opens.
 procedure mates_opener(Mates?, Opener).
 mates_opener(Ms, Op?) :- ground(Ms?) |
     mates_gsets(Ms?, G),
     only_empty(G?, Ug),
-    mates_firsts(Ms?, Fs),
+    unguarded_firsts(Ms?, Fs),
     sort_peers(Fs?, Ss),
     mates_opener1(Ug?, Ss?, Op).
 procedure mates_opener1(YesNo?, Peers?, Opener).
 mates_opener1(yes, [P|_], opener(P?)).
 mates_opener1(yes, [], guarded_class).
 mates_opener1(no, _, guarded_class).
-procedure mates_firsts(Mates?, Peers).
-mates_firsts([], []).
-mates_firsts([mate(_, _, _, F)|Ms], [F?|Fs?]) :- mates_firsts(Ms?, Fs).
+procedure unguarded_firsts(Mates?, Peers).
+unguarded_firsts([], []).
+unguarded_firsts([mate(_, _, [], F)|Ms], [F?|Fs?]) :- unguarded_firsts(Ms?, Fs).
+unguarded_firsts([mate(_, _, [_|_], _)|Ms], Fs?) :- unguarded_firsts(Ms?, Fs).
 
 %% ===========================================================================
 %% Atoms, bindings and matching

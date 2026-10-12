@@ -3527,7 +3527,7 @@ echo ""
 # initiating agent, and Section 5.4, "The canonical platform is structured"
 # and the paragraph on act schemas; vGLP's Task C, reworked to the five
 # handlers of vGLP 8d56915 and the answers of 158ec9b).  Jurix's social graph
-# and currency (programs/jurix) and vGLP's nudge and introduce
+# and currency (programs/jurix) and vGLP's nudge, introduce and gnudge
 # (programs/vglp/cva/contracts.glp) compiled, the committed modules held to
 # what the compiler prints; the contracts it refuses, not local, without
 # simple guards or not effective; and the plays of each platform, two agents
@@ -3547,6 +3547,7 @@ check "CVA compiler: the social graph's platform is what the compiler prints" "s
 check "CVA compiler: the currency's platform, its classes guarded by their minimal guard sets, is what the compiler prints" "currency/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's nudge, certified by Jurix's check/2, compiled to the platform it prints" "nudge/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's introduce, certified by Jurix's check/2, compiled to the platform it prints" "introduce/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's gnudge, certified by Jurix's check/2, compiled to the platform it prints" "gnudge/platform.vglp: as printed" "$cva_print"
 check_not "CVA compiler: no contract refused or missing" "^fault\|^missing\|NOT as printed" "$cva_print"
 
 cva_refuse=$("$REPL_RUN" <<HEREDOC
@@ -3739,6 +3740,36 @@ check_not "CVA introduce: ... and the card closed by the program, her yes takes 
 check "CVA introduce: asked again, both answer yes, and alice tallies both" "A = \[.*propose(attempt(alice, 4, introduce(alice, bob, carol))), tally(attempt(alice, 4, introduce(alice, bob, carol))), tally(attempt(alice, 4, introduce(alice, bob, carol)))" "$cva_intro"
 check "CVA introduce: ... and tells bob commit" "sent(alice, bob, outcome(attempt(alice, 4, introduce(alice, bob, carol)), commit))" "$cva_intro"
 check "CVA introduce: ... and carol" "sent(alice, carol, outcome(attempt(alice, 4, introduce(alice, bob, carol)), commit))" "$cva_intro"
+
+# vGLP's contract gnudge (programs/vglp/cva/contracts.glp): nudge with a
+# second schema g, nudge(a, b) and g(b?, a) determining the same transactions,
+# g guarded at its first role.  The opener of an unguarded class is the least
+# person in the first role of its unguarded schema-bindings (vGLP's 2026-10-12
+# 08:26 UTC, Q-B, Udi approved): alice preceding bob, bob opens the class of
+# nudge(bob, alice), which the least person in the first role of all its
+# schema-bindings, g(alice, bob)'s alice, would leave unopened, alice's tick
+# finding only the classes of the unguarded schemas with her in their first
+# role.
+cva_gnudge_load=$("$REPL_RUN" <<HEREDOC
+$CVA/gnudge/
+:quit
+HEREDOC
+2>&1)
+check "CVA gnudge: the platform and its play load, compiled by the canonical compilation" "Loaded program: .*cva/gnudge" "$cva_gnudge_load"
+check_not "CVA gnudge: no type errors" "Type checking failed" "$cva_gnudge_load"
+
+cva_gnudge=$("$REPL_RUN" <<HEREDOC
+$CVA/gnudge/
+:limit 600000
+play_gnudge(A, B, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA gnudge: alice and bob befriended, committed at both" "sent(alice, bob, outcome(attempt(alice, 1, befriend(alice, bob)), commit))" "$cva_gnudge"
+check "CVA gnudge: bob, the least person in the first role of the unguarded schema-bindings of nudge(bob, alice), opens it on a tick once befriended, though alice precedes him" "B = \[.*outcome(attempt(alice, 1, befriend(alice, bob))).*propose(attempt(bob, 1, nudge(bob, alice)))" "$cva_gnudge"
+check "CVA gnudge: ... its start told to alice, whose machine votes on it, no person asked" "sent(alice, bob, vote(attempt(bob, 1, nudge(bob, alice)), " "$cva_gnudge"
+check_not "CVA gnudge: alice, preceding bob, proposes nothing of the class of nudge(bob, alice)" "propose(attempt(alice, [0-9]*, nudge(bob, alice)))\|propose(attempt(alice, [0-9]*, g(" "$cva_gnudge"
+check_not "CVA gnudge: no person answers for the unguarded class" "answer(attempt([a-z]*, [0-9]*, nudge\|answer(attempt([a-z]*, [0-9]*, g(" "$cva_gnudge"
 echo ""
 
 

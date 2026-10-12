@@ -41,6 +41,26 @@
 %% one guard set is its three participants; the friend atoms its first role
 %% requires join its role graph.  introduce/self.glp plays it among three
 %% agents.
+%%
+%% gnudge is nudge with a second schema g determining the same transactions,
+%% nudge(a, b) and g(b?, a), g guarded at its first role, so that an unguarded
+%% class has a guarded schema-binding whose first role is another person (vGLP
+%% 2026-10-12 08:26 UTC, Q-B):
+%%
+%%   befriend(p?, q?) :  not friend(q), +friend(q)    not friend(p), +friend(p)
+%%   nudge(p, q)      :  friend(q), not nudged(q),    friend(p), +nudged_by(p)
+%%                       +nudged(q)
+%%   g(q?, p)         :  friend(p), +nudged_by(p)     friend(q), not nudged(q),
+%%                                                    +nudged(q)
+%%
+%% The class of nudge(a, b) is unguarded, the empty set its one minimal guard
+%% set, and its schema-bindings nudge(a, b) and g(b, a) require and forbid the
+%% same atoms at each participant, so the contract is effective.  Its opener is
+%% the least person in the first role of its unguarded schema-bindings, a alone
+%% (Q-B), and not the least of a and b, which the person in g's first role
+%% would make b where b precedes a: b's tick, which finds the classes of the
+%% unguarded schemas with b in their first role, would never find the class,
+%% and no agent would open it.  gnudge/self.glp plays it.
 %% ---------------------------------------------------------------------------
 
 %% The contract, as programs/jurix/self.glp writes it.
@@ -67,6 +87,7 @@ Declared  ::= Contract ; reflexive(Preds, Contract).
 procedure contract_named(Constant?, Declared).
 contract_named(nudge, C?) :- nudge(C).
 contract_named(introduce, C?) :- introduce(C).
+contract_named(gnudge, C?) :- gnudge(C).
 
 procedure nudge(Contract).
 nudge([schema(befriend,
@@ -87,3 +108,18 @@ introduce([schema(befriend,
                           [atom(friend, [role(2)]), atom(friend, [role(3)])], []),
               rs(guarded, [atom(friend, [role(3)])], [], [], [atom(friend, [role(3)])]),
               rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])])])]).
+
+procedure gnudge(Contract).
+gnudge([schema(befriend,
+          [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
+           rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
+        schema(nudge,
+          [rs(unguarded, [atom(nudged, [role(2)])], [], [atom(friend, [role(2)])],
+                         [atom(nudged, [role(2)])]),
+           rs(unguarded, [atom(nudged_by, [role(1)])], [], [atom(friend, [role(1)])],
+                         [])]),
+        schema(g,
+          [rs(guarded, [atom(nudged_by, [role(2)])], [], [atom(friend, [role(2)])],
+                       []),
+           rs(unguarded, [atom(nudged, [role(1)])], [], [atom(friend, [role(1)])],
+                         [atom(nudged, [role(1)])])])]).

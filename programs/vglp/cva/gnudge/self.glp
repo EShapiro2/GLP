@@ -1,0 +1,65 @@
+%% ---------------------------------------------------------------------------
+%% The play of the canonical CVA platform of vGLP's contract gnudge
+%% (../contracts.glp, contract_named(gnudge, C): nudge with a second schema g,
+%% nudge(a, b) and g(b?, a) determining the same transactions), platform.vglp,
+%% which programs/vglp/cva/compile.sh prints from it: two-phase commit
+%% coordinated by the initiating agent (vGLP, Section 3.2, Definition
+%% "Canonical CVA Platform").  It runs two agents, alice and bob, alice
+%% preceding bob in the order of identifiers, their persons scripted and paced
+%% on their threads (../self.glp), and gives each person's log, the thread with
+%% gave(K, A) where the person answers a card, and the network's log of the
+%% cargoes it carries.
+%%
+%% play_gnudge: alice proposes befriending bob, bob is asked and answers yes,
+%%   and it commits.  The class of nudge(bob, alice) is then unguarded, with
+%%   the unguarded schema-binding nudge(bob, alice) and the guarded g(alice,
+%%   bob), and its opener is bob, the least person in the first role of its
+%%   unguarded schema-bindings (vGLP 2026-10-12 08:26 UTC, Q-B), though alice
+%%   precedes him: bob's machine proposes it on a tick, the attempt asking
+%%   nobody and alice's machine voting on its start.  alice opens the class of
+%%   nudge(alice, bob) likewise.
+%%
+%% The types of platform.vglp, written again for the declarations of the
+%% procedures imported from its compiled module.
+%% ---------------------------------------------------------------------------
+
+Class    ::= befriend(Peer, Peer) ; nudge(Peer, Peer) ; g(Peer, Peer).
+Request  ::= propose(Class) ; known(Peer).
+YesNo    ::= yes ; no.
+Decision ::= commit ; abort.
+Attempt  ::= attempt(Peer, Integer, Class).
+Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision).
+Content  ::= hello(Peer) ; cargo(Peer, Integer, Cargo).
+Net      ::= msg(Peer, Content).
+Txn      ::= propose(Attempt) ; start(Attempt) ; answer(Attempt)
+           ; tally(Attempt) ; outcome(Attempt) ; discover(Peer).
+Session  ::= session(Stream(Request)?, Stream(Txn)).
+Card     ::= card(Attempt, YesNo?).
+Question ::= session_w(Session) ; card_w(Card).
+Ask(Q)   ::= ask(Constant, Q).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+
+exported procedure play_gnudge(Stream(_), Stream(_), Stream(Sent(Cargo))).
+play_gnudge(LA?, LB?, N?) :-
+    pair([req(known(bob)), wait(discover(bob)),
+          req(propose(befriend(alice, bob)))],
+         [req(known(alice)), wait(discover(alice)),
+          card(befriend(alice, bob), yes)],
+         LA, LB, N).
+
+%% alice and bob, each with its dispatcher and scripted person, their networks
+%% joined.
+procedure pair(Steps?, Steps?, Stream(_), Stream(_), Stream(Sent(Cargo))).
+pair(SA, SB, LA?, LB?, N?) :-
+    platform # agent(alice, InA?, OutA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), _),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), _),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    merge(OutA?, OutB?, Net),
+    route(Net?, alice, InA, bob, InB, N).
