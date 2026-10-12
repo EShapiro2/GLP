@@ -62,6 +62,22 @@ DuoCast castFor(String role) => switch (role) {
       _ => const DuoCast('bob', 'eve', []), // solo: dana spawned extra below
     };
 
+/// The duo's attestation (GNA, api.tex, "Attestation": "neither peer is
+/// reported reachable until the exchange succeeds"): the platform's native
+/// producer --- App Attest on iOS, registered by the Runner
+/// (ios/Runner/AppDelegate.swift, PlatformAttestationPlugin) --- and the
+/// layer's verifier, wired as the networking layer's demo app wires them
+/// (networking/lib/main.dart).  The duo is development-signed, as that app
+/// is, so an App Attest key it generates is attested in Apple's development
+/// sandbox and a peer running it offers a sandbox attestation, which it
+/// therefore accepts from its peers.  Where the platform provides none --- the
+/// simulator, macOS --- the producer answers none and the peer is reported
+/// unattested.  Until 2026-10-12 the duo had no producer, and every peer of
+/// it was unattested.
+PlatformAttestation _platformAttestation() => NativePlatformAttestation(
+      verifier: const AttestationVerifier(allowAppAttestDevelopment: true),
+    );
+
 /// Fixed demo seed per phone role — both phones derive both identities, so
 /// name→pubkey needs no exchange. Demo-only, obviously not a key ceremony.
 Uint8List seedFor(String role) {
@@ -187,6 +203,7 @@ class _DuoScreenState extends State<DuoScreen> {
         identity: myIdentity,
         store: store,
         sodium: sodium,
+        platformAttestation: _platformAttestation(),
       );
       network.onMessageReceived = (sender, payload, messageId, underlay) {
         final env = decodeEnvelope(payload);
