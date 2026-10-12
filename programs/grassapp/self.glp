@@ -347,6 +347,14 @@ imported procedure play_not_a_friend_headless # play_not_a_friend.
 exported procedure play_not_a_friend.
 play_not_a_friend :- play_not_a_friend_headless # play_not_a_friend.
 
+imported procedure play_not_a_friend_sends_headless # play_not_a_friend_sends.
+exported procedure play_not_a_friend_sends.
+play_not_a_friend_sends :- play_not_a_friend_sends_headless # play_not_a_friend_sends.
+
+imported procedure play_not_a_friend_sends_headless # play_not_a_friend_escrow.
+exported procedure play_not_a_friend_escrow.
+play_not_a_friend_escrow :- play_not_a_friend_sends_headless # play_not_a_friend_escrow.
+
 imported procedure play_grassapp_duo # agent_init(Key?, Stream(UserCmd)?, NetInStream?).
 exported procedure agent_init(Key?, Stream(UserCmd)?, NetInStream?).
 agent_init(Id, UserIn, NetIn) :- play_grassapp_duo # agent_init(Id?, UserIn?, NetIn?).

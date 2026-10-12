@@ -5663,6 +5663,54 @@ check "SG grassapp not_a_friend: a send to someone not a friend is not sent, and
 check "SG grassapp not_a_friend: a later message to a friend is delivered" "tagged(alice, not_a_friend(carol)).*tagged(bob, received(alice, hi_bob))" "$(echo "$sg_naf_ga" | tr '\n' ' ')"
 check_not "SG grassapp not_a_friend no failed play" "→ failed" "$sg_naf_ga"
 
+# The same at grassapp's other friend sends (play_not_a_friend_sends_headless.glp):
+# alice mints 5 of her own coins, then pays dave, proposes a trade to eve,
+# escrows for frank and invites grace to a group, none of them her friend, and
+# is told not_a_friend of each; she befriends carol and unfriends her, and
+# carol's payment, arriving after the unfriend and not alice's coin, cannot be
+# returned to her and is not taken: not_a_friend(carol).  The bonds each act
+# selected stay in the holdings, 5 alice coins before and after, and no escrow
+# is opened.  The output's lines are joined for the two ordered checks.
+sg_nafs_ga=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/grassapp
+:limit 5000000
+play_not_a_friend_sends.
+:quit
+HEREDOC
+2>&1)
+sg_nafs_ga_line=$(echo "$sg_nafs_ga" | tr '\n' ' ')
+check "SG grassapp not_a_friend sends: a payment to someone not a friend is not sent, and the person is told not_a_friend" "tagged(alice, not_a_friend(dave))" "$sg_nafs_ga"
+check "SG grassapp not_a_friend sends: a trade proposed to someone not a friend is not sent, and the person is told not_a_friend" "tagged(alice, not_a_friend(eve))" "$sg_nafs_ga"
+check "SG grassapp not_a_friend sends: an escrow offered to someone not a friend is not sent, and the person is told not_a_friend" "tagged(alice, not_a_friend(frank))" "$sg_nafs_ga"
+check "SG grassapp not_a_friend sends: a group invitation to someone not a friend is not sent, and the person is told not_a_friend" "tagged(alice, not_a_friend(grace))" "$sg_nafs_ga"
+check "SG grassapp not_a_friend sends: a refused payment's return to someone no longer a friend is not sent, and the person is told not_a_friend" "tagged(alice, not_a_friend(carol))" "$sg_nafs_ga"
+check "SG grassapp not_a_friend sends: the holdings before, 5 of alice's own coins" "tagged(alice, balance_report(alice, alice, 0, 5)).*tagged(alice, not_a_friend(dave))" "$sg_nafs_ga_line"
+check "SG grassapp not_a_friend sends: the holdings after, the same 5" "tagged(alice, not_a_friend(carol)).*tagged(alice, balance_report(alice, alice, 0, 5))" "$sg_nafs_ga_line"
+check_not "SG grassapp not_a_friend sends: no bond the acts selected leaves the holdings" "balance_report(alice, alice, 0, [0-4])" "$sg_nafs_ga"
+check_not "SG grassapp not_a_friend sends: the refused payment is not taken" "balance_report(alice, carol" "$sg_nafs_ga"
+check_not "SG grassapp not_a_friend sends: no escrow is opened" "escrow_deposited" "$sg_nafs_ga"
+check_not "SG grassapp not_a_friend sends no failed play" "→ failed" "$sg_nafs_ga"
+
+# A deposit not sent conveys nothing, and leaves the agent's date to an escrow
+# already open (play_not_a_friend_escrow, the same file): alice escrows 2 of her
+# 4 coins for bob, her friend, until 30, then 2 for dave, not her friend, and is
+# told not_a_friend(dave); she advances her date to 30, and the escrow for bob
+# releases.  She holds the 2 for dave still, and bob the 2 released to him.
+sg_nafe_ga=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/grassapp
+:limit 5000000
+play_not_a_friend_escrow.
+:quit
+HEREDOC
+2>&1)
+sg_nafe_ga_line=$(echo "$sg_nafe_ga" | tr '\n' ' ')
+check "SG grassapp not_a_friend escrow: a deposit for someone not a friend is not sent, and the person is told not_a_friend" "tagged(alice, not_a_friend(dave))" "$sg_nafe_ga"
+check "SG grassapp not_a_friend escrow: the escrow already open releases on its date after it" "tagged(alice, not_a_friend(dave)).*tagged(bob, escrow_released(alice))" "$sg_nafe_ga_line"
+check "SG grassapp not_a_friend escrow: and expires at the depositor" "tagged(alice, not_a_friend(dave)).*tagged(alice, escrow_expired(bob))" "$sg_nafe_ga_line"
+check "SG grassapp not_a_friend escrow: the holdings after, the 2 for dave never having left" "tagged(alice, escrow_expired(bob)).*tagged(alice, balance_report(alice, alice, 0, 2))" "$sg_nafe_ga_line"
+check "SG grassapp not_a_friend escrow: bob holds the 2 released to him" "tagged(bob, balance_report(bob, alice, 0, 2))" "$sg_nafe_ga"
+check_not "SG grassapp not_a_friend escrow no failed play" "→ failed" "$sg_nafe_ga"
+
 sg_village=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/grassapp
 :limit 5000000

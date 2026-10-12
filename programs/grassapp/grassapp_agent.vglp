@@ -93,11 +93,10 @@
 %% not a list, because a list goes stale and this one did.  Two helpers are the
 %% exception and are restated below, because the person's will reaches them:
 %% trade_dispatch, whose normal-trade clause spawns a responder instead of
-%% sending the offer to the mediator, and do_deposit_escrow_result, whose ok
-%% clause spawns the cancel responder instead of handing the cancel signal to the
-%% mediator.  AgentContent is restated because it loses the four ask
-%% constructors, and the types that carry it — AgentMsg, OutputEntry, OutputsList
-%% — with it.
+%% sending the offer to the mediator, and escrow_step, whose found clause spawns
+%% the cancel responder instead of handing the cancel signal to the mediator.
+%% AgentContent is restated because it loses the four ask constructors, and the
+%% types that carry it — AgentMsg, OutputEntry, OutputsList — with it.
 
 
 %% Agent-to-person content: self.glp's AgentContent minus the four asks
@@ -236,11 +235,15 @@ trade_dispatch(normal, Id, From, WantSpec, OfferedBonds, TradeResp?,
     merge(Ans?, UserIn?, UserIn1),
     agent(Id?, UserIn1?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?, DateW).
 
-%% Open the escrow.  The cancel signal is the person's to bind, so it goes to a
-%% responder rather than to the mediator's pending table.
-procedure do_deposit_escrow_result(Status?, Key?, Key?, Constant?, Constant?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)?, Integer?, Constant?, UserInStream?, NetInStream?, OutputsList?).
-do_deposit_escrow_result(ok, Id, Target, ReleaseTime, Coin, Maturity, Amount, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs) :-
-    ground(Coin?), ground(Maturity?), ground(Amount?) |
+%% Open the escrow where the beneficiary is a friend (GSG Section 5.1; the
+%% lookup is do_deposit_escrow_result's, grassapp_agent.glp).  The cancel signal
+%% is the person's to bind, so it goes to a responder rather than to the
+%% mediator's pending table.  Where the beneficiary is not a friend no escrow is
+%% opened and no responder spawned: the offer is not sent, the person is told
+%% not_a_friend(Target), the selected bonds stay in the holdings, and the
+%% agent's date stream goes on.
+procedure escrow_step(AnchorFriend?, Key?, Key?, Constant?, Constant?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)?, Integer?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+escrow_step(found(_), Id, Target, ReleaseTime, Coin, Maturity, Amount, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs, []) :-
     escrow(ReleaseTime?, EscrowDates?, Selected?, CancelSignal?, BenResult, DepResult),
     respond_escrow_cancel(offer(Target?), CancelSignal),
     inject_escrow_dep_result(DepResult?, Target?, UserIn?, UserIn1),
@@ -248,10 +251,10 @@ do_deposit_escrow_result(ok, Id, Target, ReleaseTime, Coin, Maturity, Amount, Se
         msg(Id?, Target?, escrow_offer(ReleaseTime?, Coin?, Maturity?, Amount?, BenResult?)),
         Outs?, Outs1),
     after_change(Id?, Remaining?, NextSerial?, Clock?, UserIn1?, NetIn?, Outs1?, EscrowDates).
-do_deposit_escrow_result(fail, Id, Target, _, _, _, _, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs) :-
+escrow_step(none, Id, Target, _, _, _, _, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     append(Selected?, Remaining?, OrigHoldings),
-    send_person(msg(agent, person, escrow_failed(Target?)), Outs?, Outs1),
-    after_change(Id?, OrigHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?, _).
+    send_person(msg(agent, person, not_a_friend(Target?)), Outs?, Outs1),
+    after_change(Id?, OrigHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?, DateW).
 
 %% =============================================================================
 %% AGENT/8 — the main loop.  Argument 8 is the agent's own date as a stream, so
@@ -516,13 +519,13 @@ agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
               Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
 
 %% Deposit an escrow: lock bonds for a friend until ReleaseTime, cancellable
-%% until then by the responder do_deposit_escrow_result spawns.
+%% until then by the responder escrow_step spawns.
 *(Friend, Coin, Maturity, Amount, ReleaseTime)
-agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, []) :-
+agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(Friend?),
     ground(Coin?), ground(Maturity?), ground(Amount?), ground(ReleaseTime?) |
     do_deposit_escrow(Id?, Friend?, lot(Coin?, Maturity?, Amount?), ReleaseTime?,
-                      Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
+                      Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
 
 %% --- Volitional: social transactions the person originates ---
 %% Compiled form: UserCmds connect/1, unfriend/1, send/2.
@@ -567,14 +570,16 @@ agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     send_person(msg(agent, person, group_joined(group_id(Id?, Name?))), Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn1?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
 
-%% Invite a friend to a group.
+%% Invite a friend to a group: an invitation the person addresses to someone who
+%% is not their friend is not sent, and the agent tells the person so (GSG
+%% Section 5.1): the lookup of the outputs list and the dispatch on its answer
+%% (anchor_friend/4 and invite_step/8, grassapp_agent.glp).
 *(GroupId, Invitee)
 agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
-    ground(Id?), ground(GroupId?), ground(Invitee?), new_channel(InviteeCh, CreatorCh) |
-    lookup_send(Invitee?, msg(Id?, Invitee?, group_invite(GroupId?, InviteeCh?)), Outs?, Outs1),
-    group_await_join(GroupId?, Invitee?, CreatorCh?, Result),
-    inject_group_result(Result?, UserIn?, UserIn1),
-    agent(Id?, UserIn1?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
+    ground(Id?), ground(GroupId?), ground(Invitee?) |
+    anchor_friend(Invitee?, Outs?, Outs1, F),
+    invite_step(F?, Id?, GroupId?, Invitee?, UserIn?, Outs1?, Outs2, UserIn1),
+    agent(Id?, UserIn1?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% Post to a group — send on the member-to-hub channel.
 *(GroupId, Text)
