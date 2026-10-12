@@ -1436,6 +1436,11 @@ echo "=== Section B: Positive Type Check Tests ==="
 echo ""
 
 POSITIVE_FILES=(
+    # --- book ---
+    # Rejected until GLP's book task of 2026-10-12 21:18 UTC re-declared them:
+    # cooperative.glp over Stream(Item), merge_dynamic.glp over Msg.
+    "$BOOK/streams/producers_consumers/cooperative.glp"
+    "$BOOK/streams/producers_consumers/merge_dynamic.glp"
     # --- typechecker/positive ---
     # Structural identity in the duality check (§20.3): a Stream<A> stored into a
     # field typed by the named alias AStream must type-check (false positive before
@@ -1896,11 +1901,7 @@ NEGATIVE_FILES=(
     # moved to POSITIVE_FILES. That sweep did NOT unskip ui_mediator_test, which
     # this comment used to predict; that test was removed on 2026-08-03 (Udi's
     # instruction) rather than repaired, and known-issues Issue 20 says why.
-    # The two streams entries are GLP-ICLP's, expected rejections until they
-    # re-declare or prune them.
     "$AGENT_RT/channel.glp"
-    "$BOOK/streams/producers_consumers/cooperative.glp"
-    "$BOOK/streams/producers_consumers/merge_dynamic.glp"
 
     # The recv2x2 probe directory reduced to one file, bodies and declarations
     # unchanged: boot_b_outfed and boot_d_outfed hand-build ch(S?, OutW?), a
