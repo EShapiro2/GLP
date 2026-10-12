@@ -177,30 +177,30 @@ twice(R) :- is_mutual_ref(R?) | take(R?), take(R?).
 '''), isEmpty);
     });
 
-    test('no guard licenses a repeated WRITER, is_mutual_ref nor ground', () {
-      // "If the success of a guard implies that X? is bound to a ground term,
-      // then X? may occur multiple times in the clause; X occurs once, as
-      // ever" (GLP-Spec glp.tex, Remark "Guards and SRSW", bbff21d), and the
-      // type licence is the reader's alone.  So a writer in the head and again
-      // at a produced position of the body is refused under is_mutual_ref,
-      // "Ground: no", and under ground/1, "Ground: yes", alike.  Until
-      // 2026-10-02 the grounding mark licensed both X and X?, and the clause
-      // under ground/1 loaded.  A writer twice in the HEAD is refused whatever
-      // the guards (GLP-Spec glp.tex, Definition "GLP Program"; GLP #3 Cowork,
-      // 2026-10-02 08:40 UTC, G).
+    test('is_mutual_ref licenses no repeated WRITER; ground/1 does', () {
+      // The type licence is the reader's alone, SRSW* being SRSW "with that
+      // same permission, its paired writer occurring once" (TGLP
+      // typed-glp.tex), and is_mutual_ref is "Ground: no".  ground/1 is
+      // "Ground: yes": "if the success of a guard implies that X? is bound to
+      // a ground term, then both X and X? may occur multiple times in the
+      // clause" (GLP-Spec glp.tex, Remark "Guards and SRSW", 831f315).  So a
+      // writer in the head and again at a produced position of the body, or
+      // twice in the head, is refused under is_mutual_ref and loads under
+      // ground/1.  From 2026-10-02 (b4cd4191, 905a9ed8, on GLP-Spec bbff21d,
+      // undone by 831f315) it was refused under both.
       expect(refusal('''
 procedure sink_w(_).
 sink_w(X?) :- X = done.
 procedure two(MutualRef?).
 two(R) :- is_mutual_ref(R?) | sink_w(R).
-'''), contains('Writer variable "R" occurs 2 times; a writer occurs once, whatever the guards'));
+'''), contains(
+          'Writer variable "R" occurs 2 times without a groundness-implying guard'));
       expect(refusal('''
 procedure sink_w(_).
 sink_w(X?) :- X = done.
 procedure two(_?).
 two(R) :- ground(R?) | sink_w(R).
-'''), contains('Writer variable "R" occurs 2 times; a writer occurs once, whatever the guards'));
-      // Twice in the head, under either guard: refused.
+'''), isEmpty);
       expect(refusal('''
 procedure two(MutualRef?, MutualRef?).
 two(R, R) :- is_mutual_ref(R?) | true.
@@ -208,7 +208,7 @@ two(R, R) :- is_mutual_ref(R?) | true.
       expect(refusal('''
 procedure two(_?, _?).
 two(R, R) :- ground(R?) | true.
-'''), contains('Writer variable "R" occurs 2 times in the head'));
+'''), isEmpty);
     });
 
     test("the root's mwm/2 runs, its Ref declared MutualRef?", () async {

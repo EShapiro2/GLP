@@ -221,16 +221,27 @@ k(X, Y?) :- real(X?) | pair(X?, X?, Y).
     expect(program, isNotNull);
   });
 
-  test('real/1 licenses no writer twice: X occurs once, as ever', () {
+  test('real/1, "Ground: yes", licenses a writer twice', () {
+    // "If the success of a guard implies that X? is bound to a ground term,
+    // then both X and X? may occur multiple times in the clause" (GLP-Spec
+    // glp.tex, Remark "Guards and SRSW", 831f315).  From 2026-10-02 (905a9ed8,
+    // on bbff21d, undone by 831f315) it was refused.
+    final program = GlpCompiler().compile('''
+procedure w(_?, _).
+w(X, Y?) :- real(X?) | Y = s(X).
+''');
+    expect(program, isNotNull);
+  });
+
+  test('without a groundness-implying guard the writer twice is refused', () {
     expect(
         () => GlpCompiler().compile('''
 procedure w(_?, _).
-w(X, Y?) :- real(X?) | Y = s(X).
+w(X, Y?) :- known(X?) | Y = s(X).
 '''),
         throwsA(predicate(
-            (e) => '$e'.contains(
-                'Writer variable "X" occurs 2 times; a writer occurs once, '
-                'whatever the guards'),
+            (e) => '$e'.contains('Writer variable "X" occurs 2 times without '
+                'a groundness-implying guard'),
             'the writer twice refused')));
   });
 }

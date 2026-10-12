@@ -1636,12 +1636,15 @@ POSITIVE_FILES=(
     "$GLP_DIR/programs/tests/param_decl_list.glp"
 
     # --- SRSW relaxations (glp.tex Remark "Guards and SRSW") ---
-    # Both must be ACCEPTED; their negative counterpart is srsw/known_not_ground
-    # in Section D. A guard occurrence counts toward SRSW, so X? in a guard plus
-    # once in the body is legal; and a groundness-implying guard licenses
-    # multiple occurrences of both halves.
+    # All must be ACCEPTED; their negative counterparts are srsw/known_not_ground
+    # and srsw/writer_twice_no_ground in Section D. A guard occurrence counts
+    # toward SRSW, so X? in a guard plus once in the body is legal; and a
+    # groundness-implying guard licenses multiple occurrences of both halves,
+    # the reader X? (ground_guard_multi_ok) and the writer X, in the head as in
+    # the body (ground_writer_multi_ok; GLP-Spec 831f315).
     "$GLP_DIR/programs/tests/srsw/guard_occurrence_ok.glp"
     "$GLP_DIR/programs/tests/srsw/ground_guard_multi_ok.glp"
+    "$GLP_DIR/programs/tests/srsw/ground_writer_multi_ok.glp"
 
     # Moved here from NEGATIVE_FILES on 2026-08-03, the day the fixture was
     # swept. It was rejected standalone because agent/4 and inject_msg/5 were
@@ -1982,9 +1985,11 @@ SRSW_FILES=(
     # Nor does =?\=, Ground "no" (GLP-Spec appendix-guards.tex, bbff21d): A13's
     # neq_pair, which read each argument twice after it, until 2026-10-02.
     "$GLP_DIR/programs/tests/srsw/neq_not_ground.glp"
-    # And no guard licenses a repeated writer: "X occurs once, as ever" (glp.tex
-    # Remark "Guards and SRSW", bbff21d), integer/1 here.
-    "$GLP_DIR/programs/tests/srsw/ground_writer_once.glp"
+    # And without a groundness-implying guard a writer occurs once: "if the
+    # success of a guard implies that X? is bound to a ground term, then both X
+    # and X? may occur multiple times in the clause" (glp.tex Remark "Guards
+    # and SRSW", 831f315) --- here under known/1, and with no guard.
+    "$GLP_DIR/programs/tests/srsw/writer_twice_no_ground.glp"
 )
 
 for f in "${SRSW_FILES[@]}"; do
@@ -2012,11 +2017,30 @@ check "pairing: a variable with no writer" "Variable \"Y\" has no writer" "$srsw
 srsw_neq=$(echo -e "$GLP_DIR/programs/tests/srsw/neq_not_ground.glp\n:quit" | "$REPL_RUN" 2>&1)
 check "=?\\= grounds nothing: a reader twice after it is refused" "Reader variable \"X?\" occurs 2 times" "$srsw_neq"
 
-# No guard licenses a repeated writer (glp.tex Remark "Guards and SRSW",
-# bbff21d): the writer twice under integer/1 is refused, and the diagnostic
-# says so.
-srsw_wonce=$(echo -e "$GLP_DIR/programs/tests/srsw/ground_writer_once.glp\n:quit" | "$REPL_RUN" 2>&1)
-check "a writer twice under a groundness-implying guard is refused" "Writer variable \"X\" occurs 2 times; a writer occurs once, whatever the guards" "$srsw_wonce"
+# A groundness-implying guard licenses a repeated writer, in the head as in
+# the body (glp.tex Remark "Guards and SRSW", 831f315): without one it is
+# refused, and the diagnostic says so; with one the clause loads
+# (ground_writer_multi_ok, Section B) and its goal reduces only where the
+# occurrences meet one term, the writer mgu of the goal and the head
+# (Definitions "Writer MGU", "GLP Goal/Clause Reduction").
+srsw_wtwice=$(echo -e "$GLP_DIR/programs/tests/srsw/writer_twice_no_ground.glp\n:quit" | "$REPL_RUN" 2>&1)
+check "a writer twice without a groundness-implying guard is refused" "Writer variable \"X\" occurs 2 times without a groundness-implying guard" "$srsw_wtwice"
+check "a writer twice in the head without a guard is refused" "Writer variable \"R\" occurs 2 times in the head of the clause two(R, R) without a groundness-implying guard" "$srsw_wtwice"
+srsw_wmulti=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/srsw/ground_writer_multi_ok.glp
+w(3, Yw1).
+same_ground(3, 3, Sg1).
+same_ground(3, 4, Sg2).
+same_ground(f(1), f(1), Sg3).
+same_ground(f(1), f(2), Sg4).
+:quit
+HEREDOC
+2>&1)
+check "a writer in the head and the body under integer/1 runs" "Yw1 = s(3)" "$srsw_wmulti"
+check "a writer twice in the head: one term reduces" "Sg1 = yes" "$srsw_wmulti"
+check "a writer twice in the head: two terms do not" "Sg2 = no" "$srsw_wmulti"
+check "a writer twice in the head: one structure reduces" "Sg3 = yes" "$srsw_wmulti"
+check "a writer twice in the head: two structures do not" "Sg4 = no" "$srsw_wmulti"
 
 # merge_with_reader: the one entry of this section that is rejected by the SRSW
 # pass rather than by the type checker, so it is the only test that speaks for
