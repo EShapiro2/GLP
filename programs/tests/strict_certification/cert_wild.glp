@@ -1,0 +1,15 @@
+%% An abstract type is below itself alone, and not below the wildcard: "As the
+%% endpoint of a simple prefix it matches only itself (Definition Prefix
+%% Acceptance), and not the wildcard" (TGLP parameterized-types.tex, Definition
+%% "Abstract Type").  pass/1 hands A?, at X, to sink/1, which declares `_?`:
+%% by its abstract instance the head/body pair of A is not well-typed with
+%% subtyping, the dual of A's head type, X, not being below `_`, so pass/1 is
+%% not parametrically well-typed (Definition "Parametrically Well-Typed").  No
+%% call instantiates it, so the program is rejected.  The reason: an
+%% instantiation may put a structured type where X was, and by Definition
+%% "Subtyping" a structured type is not below `_`.  Until 2026-10-12 an
+%% abstract type was below the wildcard and pass/1 was certified.
+procedure sink(_?).
+sink(_).
+procedure(X) pass(X?).
+pass(A) :- sink(A?).

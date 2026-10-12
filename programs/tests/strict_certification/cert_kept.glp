@@ -1,0 +1,13 @@
+%% A procedure that hands its parameter through unchanged is parametrically
+%% well-typed: by its abstract instance every pair of relay2/2's clause is
+%% well-typed with subtyping, T standing for T throughout and an abstract type
+%% a subtype of itself (TGLP parameterized-types.tex, Definitions "Abstract
+%% Type" and "Parametrically Well-Typed"), so it is certified and a call
+%% leaving T open is checked with it open.  go/1 hands out a wildcard, which
+%% supplies no type for T.  Expected: go(X) gives X = 5.
+procedure(T) id(T?, T).
+id(X, X?).
+procedure(T) relay2(T?, T).
+relay2(A, B?) :- id(A?, B).
+procedure go(_).
+go(S?) :- relay2(5, S).

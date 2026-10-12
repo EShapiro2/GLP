@@ -74,6 +74,23 @@ bool _isSubtype(DFAState stateA, DFAState stateB, ProgramDFA dfa,
   // Both must be output types (not dual)
   assert(!stateA.isDual && !stateB.isDual);
 
+  // An abstract type (TGLP parameterized-types.tex, Definition "Abstract
+  // Type"): "As the endpoint of a simple prefix it matches only itself
+  // (Definition Prefix Acceptance), and not the wildcard."  Its one simple
+  // prefix ends at itself, so by Definition "Subtyping", condition 1, it is
+  // below itself alone --- not below `_`, not below another abstract type
+  // (Definition "Parametrically Well-Typed": "a distinct abstract type" for
+  // each parameter) --- and no other type, whose simple prefixes end at
+  // something else, is below it.  The pair identical returned above; here
+  // either side abstract is a pair of two types.  Until 2026-10-12 an
+  // abstract type, with no simple prefix of its own, was below every type, the
+  // wildcard among them, and two were one type by their automata: a
+  // parameter's value was certified where a concrete type, `_` or another
+  // parameter was declared (programs/tests/strict_certification/).
+  if (stateA.isAbstractType || stateB.isAbstractType) {
+    return stateA.baseName == stateB.baseName;
+  }
+
   // Wildcard/final handling (spec 4.4)
   // At a prefix endpoint `_` matches only `_` (Definition "Prefix Acceptance"),
   // so `_` is top: every output type is below it, and it is below nothing else.

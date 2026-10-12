@@ -1,0 +1,17 @@
+%% Two parameters are two distinct abstract types: "The abstract instance of a
+%% parameterised procedure declaration replaces each type parameter by a
+%% distinct abstract type" (TGLP parameterized-types.tex, Definition
+%% "Parametrically Well-Typed"), and an abstract type "matches only itself"
+%% (Definition "Abstract Type").  cast/2 hands A?, at X, through id/2 to B, at
+%% Y: no instantiation of id/2 makes both pairs well-typed with subtyping, so
+%% cast/2 is not parametrically well-typed, and go/1's call, which supplies
+%% String for Y and no type for X, is refused.  Until 2026-10-12 the two
+%% abstract types, each with an empty automaton, were one type by automata
+%% alone: cast/2 was certified, X left open, and go(S) gave S = 5, an Integer
+%% where go/1 hands out a String.
+procedure(T) id(T?, T).
+id(X, X?).
+procedure(X, Y) cast(X?, Y).
+cast(A, B?) :- id(A?, B).
+procedure go(String).
+go(S?) :- cast(5, S).

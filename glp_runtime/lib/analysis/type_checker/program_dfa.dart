@@ -5,6 +5,7 @@
 
 import 'type_ast.dart';
 import 'mode.dart';
+import 'param_expansion.dart' show abstractTypePrefix;
 import '../../compiler/glp_printer.dart' show constantSource;
 import '../../runtime/terms.dart' show Nil, nil;
 
@@ -92,6 +93,19 @@ class DFAState {
 
   /// True for `_FINAL_` (anonymous final for constant/literal matches)
   bool get isAnonymousFinal => baseName == '_FINAL_';
+
+  /// True for an abstract type (TGLP parameterized-types.tex, Definition
+  /// "Abstract Type"): the state a type parameter stands at in a procedure's
+  /// abstract instance, "a type-automaton state with no outgoing transitions,
+  /// distinct from the wildcard" (param_expansion.dart,
+  /// [buildAbstractInstance]).  "As the endpoint of a simple prefix it matches
+  /// only itself (Definition Prefix Acceptance), and not the wildcard", so by
+  /// Definition "Subtyping" it is a subtype of itself and of nothing else, and
+  /// nothing else is a subtype of it (subtyping.dart, [isSubtype]); and the
+  /// abstract instance "replaces each type parameter by a distinct abstract
+  /// type" (Definition "Parametrically Well-Typed"), so two abstract types are
+  /// two types, although every abstract type has the same, empty, automaton.
+  bool get isAbstractType => baseName.startsWith(abstractTypePrefix);
 
   // Fix 3.2: Computed properties for type classification
   /// True for the primitive types: `_`, Integer, Real, String, Module, MutualRef.

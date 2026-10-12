@@ -258,6 +258,11 @@ Map<String, TypeDef> materializeInstantiations(
 // abstract instance, and certified for every instantiation.
 // ============================================================================
 
+/// The prefix of the name of the abstract type a parameter `X` stands at in an
+/// abstract instance, `$abstract_X` ([buildAbstractInstance];
+/// [DFAState.isAbstractType]).
+const String abstractTypePrefix = r'$abstract_';
+
 /// The abstract instance of a parameterised procedure declaration: each type
 /// parameter is replaced by a distinct *abstract type* — a synthesized
 /// zero-alternative type whose automaton is empty, so a variable at a parameter
@@ -278,7 +283,7 @@ AbstractInstance buildAbstractInstance(
     ProcDecl paramTemplate, List<String> typeParams, Map<String, TypeDef> templates,
     {Set<String> knownMonoTypes = const {}}) {
   final abstractOf = <String, String>{
-    for (final tp in typeParams) tp: '\$abstract_$tp',
+    for (final tp in typeParams) tp: '$abstractTypePrefix$tp',
   };
   final subst = <String, TypeExpr>{
     for (final e in abstractOf.entries) e.key: TypeRef(e.value, 0, 0),
