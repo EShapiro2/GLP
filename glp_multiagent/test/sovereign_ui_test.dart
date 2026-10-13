@@ -33,25 +33,43 @@ import 'package:glp_multiagent/ui_runtime/term.dart';
 import 'fixture_term.dart';
 
 /// The widget of the agent's question as `sovereign_agent.glp` draws it,
-/// each field `field(L, W)`, labelled by the name of its declared type, a
-/// `Key` a peer field (vGLP, Definition "Widget Declaration, Default
-/// Widget").
-const _c = "field('Constant', text)";
-const _i = "field('Integer', number)";
-const _k = "field('Key', peer)";
-const _requestForm = 'input_box(menu(['
-    'form(mint, [$_c, $_i]), '
-    'form(mint, [$_c, $_i, $_i]), '
-    'form(swap, [$_k, $_c, $_k, $_c, $_i, $_k, $_c, $_i]), '
-    'form(accept, [$_c, $_k, $_i]), '
-    'form(pay, [$_k, $_c, $_i]), '
-    'form(payout, [$_k, $_c, $_i]), '
-    'form(spend, [$_k, $_k, $_c, $_i]), '
-    'form(redeem, [$_k, $_c, $_k, $_c]), '
-    'form(mature, [$_k, $_c, $_i]), '
-    'form(deposit, [$_k, $_c, $_k, $_c, $_i]), '
-    'form(release, [$_k, $_c, $_k, $_c, $_i]), '
-    'form(return, [$_k, $_c, $_k, $_c, $_i])]))';
+/// each field `field(L, W)`, labelled by the name of its declared type, each
+/// named by the variable its clause gives it, a `Key` a peer field, a
+/// `Constant` a text field and an `Integer` a number field (vGLP, Definition
+/// "Widget Declaration, Default Widget"; the request forms' field names,
+/// Currencies, 2026-10-12): the forms as the compiler emits them.
+String _f(String label, String widget) => "field('$label', $widget)";
+final _requestFields = <String, List<String>>{
+  'mint/2': [_f('Denomination', 'text'), _f('Amount', 'number')],
+  'mint/3': [_f('Denomination', 'text'), _f('Amount', 'number'), _f('Maturity', 'number')],
+  'swap/8': [_f('Friend', 'peer'), _f('Denomination', 'text'), _f('GiveIssuer', 'peer'), _f('GiveDue', 'text'), _f('GiveAmount', 'number'), _f('WantIssuer', 'peer'), _f('WantDue', 'text'), _f('WantAmount', 'number')],
+  'accept/3': [_f('Denomination', 'text'), _f('Issuer', 'peer'), _f('Limit', 'number')],
+  'pay/3': [_f('Friend', 'peer'), _f('Denomination', 'text'), _f('Amount', 'number')],
+  'payout/3': [_f('Friend', 'peer'), _f('Denomination', 'text'), _f('Amount', 'number')],
+  'spend/4': [_f('Friend', 'peer'), _f('Issuer', 'peer'), _f('Denomination', 'text'), _f('Amount', 'number')],
+  'redeem/4': [_f('Friend', 'peer'), _f('Denomination', 'text'), _f('WantIssuer', 'peer'), _f('WantDue', 'text')],
+  'mature/3': [_f('Friend', 'peer'), _f('Denomination', 'text'), _f('Maturity', 'number')],
+  'deposit/5': [_f('EscrowAgent', 'peer'), _f('Denomination', 'text'), _f('Issuer', 'peer'), _f('Due', 'text'), _f('Amount', 'number')],
+  'release/5': [_f('Beneficiary', 'peer'), _f('Denomination', 'text'), _f('Issuer', 'peer'), _f('Due', 'text'), _f('Amount', 'number')],
+  'return/5': [_f('Depositor', 'peer'), _f('Denomination', 'text'), _f('Issuer', 'peer'), _f('Due', 'text'), _f('Amount', 'number')],
+};
+final _requestForms = [
+  ('mint', _requestFields['mint/2']!),
+  ('mint', _requestFields['mint/3']!),
+  ('swap', _requestFields['swap/8']!),
+  ('accept', _requestFields['accept/3']!),
+  ('pay', _requestFields['pay/3']!),
+  ('payout', _requestFields['payout/3']!),
+  ('spend', _requestFields['spend/4']!),
+  ('redeem', _requestFields['redeem/4']!),
+  ('mature', _requestFields['mature/3']!),
+  ('deposit', _requestFields['deposit/5']!),
+  ('release', _requestFields['release/5']!),
+  ('return', _requestFields['return/5']!),
+];
+final _requestForm = 'input_box(menu(['
+    '${_requestForms.map((e) => 'form(${e.$1}, [${e.$2.join(', ')}])').join(', ')}'
+    ']))';
 
 /// The widget of each responder's question: the offer shown, labelled by its
 /// type, and the buttons yes and no --- the offer, a tuple the program
@@ -157,20 +175,7 @@ void main() {
           '${formatTerm(ctorArgs(f).$2[0])}/${(ctorArgs(f).$2[1] as GList).items.length}':
               (ctorArgs(f).$2[1] as GList).items.map(formatTerm).toList(),
       };
-      expect(fields, {
-        'mint/2': [_c, _i],
-        'mint/3': [_c, _i, _i],
-        'swap/8': [_k, _c, _k, _c, _i, _k, _c, _i],
-        'accept/3': [_c, _k, _i],
-        'pay/3': [_k, _c, _i],
-        'payout/3': [_k, _c, _i],
-        'spend/4': [_k, _k, _c, _i],
-        'redeem/4': [_k, _c, _k, _c],
-        'mature/3': [_k, _c, _i],
-        'deposit/5': [_k, _c, _k, _c, _i],
-        'release/5': [_k, _c, _k, _c, _i],
-        'return/5': [_k, _c, _k, _c, _i],
-      });
+      expect(fields, _requestFields);
     });
   });
 
