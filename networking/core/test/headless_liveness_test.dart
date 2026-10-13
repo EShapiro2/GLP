@@ -101,7 +101,7 @@ void main() {
     expect(atB, ['up', 'down', 'up'],
         reason: 'the stale session reset, then the fresh one attested');
     expect(b.observedPeerAddress(a.identity.publicKey),
-        anyOf('127.0.0.1:${a.boundPort}', '[::ffff:127.0.0.1]:${a.boundPort}'));
+        '127.0.0.1:${a.boundPort}');
   }, timeout: const Timeout(Duration(minutes: 1)));
 
   test(
@@ -125,6 +125,28 @@ void main() {
         isTrue,
         reason: 'within a heartbeat interval or two');
   }, timeout: const Timeout(Duration(minutes: 1)));
+
+  for (final (first, second) in [(0xc9, 0xca), (0xcb, 0xcc)]) {
+    test(
+        'two known peers with each other\'s address, nothing sent, connect '
+        'by their heartbeat sweeps, both dialing (seeds $first, $second)',
+        () async {
+      if (skip()) return;
+      final a = await node(first);
+      final b = await node(second);
+      a.putPeerAddress(b.identity.publicKey, '127.0.0.1:${b.boundPort}');
+      b.putPeerAddress(a.identity.publicKey, '127.0.0.1:${a.boundPort}');
+      expect(
+          await waitFor(
+              () =>
+                  a.isPeerReachable(b.identity.publicKey) &&
+                  b.isPeerReachable(a.identity.publicKey),
+              seconds: 40),
+          isTrue,
+          reason: 'simultaneous reconnection settles on the deterministic '
+              'initiator');
+    }, timeout: const Timeout(Duration(minutes: 1)));
+  }
 
   test(
       'a session silent for two intervals is torn down, feeding '

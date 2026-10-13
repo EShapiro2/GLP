@@ -4,6 +4,23 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:grassroots_networking_core/src/transport/address_utils.dart';
 
 void main() {
+  group('observedAddressString', () {
+    test('an IPv4-mapped IPv6 source is named in its IPv4 form', () {
+      expect(
+          observedAddressString(InternetAddress('::ffff:127.0.0.1'), 4242),
+          '127.0.0.1:4242');
+      expect(
+          observedAddressString(InternetAddress('::ffff:203.0.113.7'), 9516),
+          '203.0.113.7:9516');
+    });
+    test('IPv4 and other IPv6 sources are named as they are', () {
+      expect(observedAddressString(InternetAddress('198.51.100.4'), 1),
+          '198.51.100.4:1');
+      expect(observedAddressString(InternetAddress('2001:db8::1'), 2),
+          '[2001:db8::1]:2');
+    });
+  });
+
   // =========================================================================
   // parseAddressString
   // =========================================================================

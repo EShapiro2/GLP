@@ -813,7 +813,7 @@ class GrassrootsNetwork {
     final remote = udp.getRemoteAddress(peerId);
     return remote == null
         ? null
-        : AddressInfo(remote.ip, remote.port).toAddressString();
+        : observedAddressString(remote.ip, remote.port);
   }
 
   /// Feed the networking layer a peer's current public `ip:port`, learned at

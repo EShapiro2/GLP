@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 /// Parsed IP address and port pair.
 ///
@@ -245,6 +246,21 @@ bool isGloballyRoutableAddress(String addrString) {
     return isGloballyRoutableIPv6(parsed.ip);
   }
   return isGloballyRoutableIPv4(parsed.ip);
+}
+
+/// The `ip:port` a datagram's source names, an IPv4-mapped IPv6 source
+/// (`::ffff:x.x.x.x`, as a dual-stack IPv6 socket reports an IPv4 sender) in
+/// its IPv4 form: the address the sender is at, which a peer told it dials
+/// from its IPv4 socket, the one the sender sent from.
+String observedAddressString(InternetAddress ip, int port) {
+  if (ip.type == InternetAddressType.IPv6 && _isIPv4Mapped(ip.rawAddress)) {
+    final raw = ip.rawAddress;
+    return AddressInfo(
+      InternetAddress.fromRawAddress(Uint8List.fromList(raw.sublist(12))),
+      port,
+    ).toAddressString();
+  }
+  return AddressInfo(ip, port).toAddressString();
 }
 
 // --- Private helpers ---

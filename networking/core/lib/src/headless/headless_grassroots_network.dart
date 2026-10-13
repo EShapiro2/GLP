@@ -304,7 +304,7 @@ class HeadlessGrassrootsNetwork {
     final remote = udp.getRemoteAddress(peerId);
     return remote == null
         ? null
-        : AddressInfo(remote.ip, remote.port).toAddressString();
+        : observedAddressString(remote.ip, remote.port);
   }
 
   /// Detached Ed25519 signature over [message] under the agent's key (spec
@@ -735,6 +735,16 @@ class HeadlessGrassrootsNetwork {
     }
   }
 
+  /// How long a dialing deterministic initiator waits for the acceptor's
+  /// handshake before it starts one itself, both having dialed.
+  static const Duration _simultaneousDialWait = Duration(seconds: 2);
+
+  /// Whether this endpoint is the deterministic initiator toward [peerHex]
+  /// (spec §WAN Connection): the one with the lexicographically smaller
+  /// public key.
+  bool _isDeterministicInitiator(String peerHex) =>
+      _hex(identity.publicKey).compareTo(peerHex) < 0;
+
   /// A verified ANNOUNCE from [pubkey] arrived on [udpPeerId], a path not yet
   /// identified, while the layer holds a path to the same key at another
   /// address: the peer's address changed, and the session on the old path
@@ -1070,9 +1080,24 @@ class HeadlessGrassrootsNetwork {
       }
       // The ACCEPTING endpoint initiates the Noise handshake (spec
       // Implementation Notes); toward a peer this endpoint dialed, the
-      // handshake is the acceptor's to start.
+      // handshake is the acceptor's to start.  Where both dialed, as the
+      // heartbeat sweeps of two known peers may, neither is the acceptor,
+      // and "the deterministic initiator is the endpoint with the
+      // lexicographically smaller public key" (spec §WAN Connection): it
+      // starts the handshake once the acceptor's has had its time to arrive
+      // and none has.
       if (!_dialedPeers.contains(hex)) {
         unawaited(_ensureSessionWith(data.publicKey));
+      } else if (_isDeterministicInitiator(hex)) {
+        Timer(_simultaneousDialWait, () {
+          if (_noiseSessions.hasSession(PeerTransport.udp, data.publicKey) ||
+              _noiseSessions.handshakeRetransmitPayload(
+                      PeerTransport.udp, data.publicKey) !=
+                  null) {
+            return;
+          }
+          unawaited(_ensureSessionWith(data.publicKey));
+        });
       }
     };
 
