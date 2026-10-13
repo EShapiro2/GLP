@@ -1125,7 +1125,13 @@ procedure (Menu)*ask(Peers?, Wallet?, Request).
 ''');
       expect(
           c.widgets['Menu'],
-          "form(menu, [field('Peers', thread), field('Wallet', thread), "
+          // Wallet's elements are tuples the program writes, each a form
+          // labelled by its arguments' declared types (Definition "Widget
+          // Declaration, Default Widget"; vGLP #8 Cowork, 2026-10-13 08:15
+          // UTC).
+          "form(menu, [field('Peers', thread), field('Wallet', "
+          "thread(form(holding, [field('Peer', shown), field('Integer', "
+          "shown)]))), "
           "field('Request', menu([form(pay, [field('Peer', peer), "
           "field('Integer', number)]), form(swap, [field('Peer', peer), "
           "field('Integer', number)])]))])");
@@ -1150,8 +1156,13 @@ Card ::= card(Offer, YesNo?).
 procedure (Card)*see(Offer?, YesNo).
 (card(O?, A))*see(O, A?).
 ''', dispatcher: dispatcher, scope: inScope);
-      expect(c.widgets['Card'],
-          "form(card, [field('Offer', shown), field('YesNo', buttons([yes, no]))])");
+      // The offer the program writes, a tuple, a form labelled by its
+      // arguments' declared types (vGLP #8 Cowork, 2026-10-13 08:15 UTC).
+      expect(
+          c.widgets['Card'],
+          "form(card, [field('Offer', form(offer, [field('Integer', shown), "
+          "field('Stream(Integer)', thread)])), "
+          "field('YesNo', buttons([yes, no]))])");
     });
 
     test('the type _ at a position the person writes is refused, none of the '
@@ -1464,6 +1475,68 @@ procedure (Tag?)*tag(Tag).
           c.widgets['Tag?'],
           "form(tag, [field('Constant', text), field('Module', text), "
           "field('String', text)])");
+    });
+  });
+
+  // A tuple the program writes: "a form with one field per argument, each
+  // labelled by the name of its declared type", and "a value the program
+  // writes: shown and not edited" (vGLP, Definition "Widget Declaration,
+  // Default Widget"); a tuple inside it a form of its own, by the induction
+  // of Proposition "Default Widgets" (vGLP #8 Cowork, 2026-10-13 08:15 UTC,
+  // item b).
+  group('a tuple the program writes is a form of shown fields, each labelled',
+      () {
+    test('coins\' card: the offer, its lot and its coins, each field '
+        'labelled by its declared type', () {
+      final c = compile('''
+YesNo ::= yes ; no.
+Coin ::= coin(Key, Integer).
+Lot ::= lot(Key, Integer).
+Offer ::= offer(Key, Lot, Stream(Coin)).
+Card ::= card(Offer, YesNo?).
+procedure (Card)*see(Offer?, YesNo).
+(card(O?, A))*see(O, A?).
+''');
+      expect(
+          c.widgets['Card'],
+          "form(card, [field('Offer', form(offer, [field('Key', shown), "
+          "field('Lot', form(lot, [field('Key', shown), field('Integer', "
+          "shown)])), field('Stream(Coin)', thread(form(coin, "
+          "[field('Key', shown), field('Integer', shown)])))])), "
+          "field('YesNo', buttons([yes, no]))])");
+    });
+
+    test('a union the program writes is a menu, each alternative by its '
+        'widget; one of constants and primitives alone stays shown', () {
+      final c = compile('''
+YesNo ::= yes ; no.
+Kind ::= big ; small.
+Item ::= coin(Key, Integer) ; bond(Key, Integer, Integer) ; none.
+Offer ::= offer(Kind, Item).
+Card ::= card(Offer, YesNo?).
+procedure (Card)*see(Offer?, YesNo).
+(card(O?, A))*see(O, A?).
+''');
+      expect(
+          c.widgets['Card'],
+          "form(card, [field('Offer', form(offer, [field('Kind', shown), "
+          "field('Item', menu([form(coin, [field('Key', shown), "
+          "field('Integer', shown)]), form(bond, [field('Key', shown), "
+          "field('Integer', shown), field('Integer', shown)]), shown]))])), "
+          "field('YesNo', buttons([yes, no]))])");
+    });
+
+    test('a form the person writes is labelled as before', () {
+      final c = compile('''
+Lot ::= lot(Key, Integer).
+Swap ::= swap(Key, Lot).
+procedure (Swap?)*ask(Swap).
+(S)*ask(S?).
+''');
+      expect(
+          c.widgets['Swap?'],
+          "form(swap, [field('Key', peer), field('Lot', form(lot, "
+          "[field('Key', peer), field('Integer', number)]))])");
     });
   });
 

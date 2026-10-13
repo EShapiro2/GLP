@@ -1638,7 +1638,27 @@ class _Generator {
     final t = n.type;
     if (!n.person) {
       if (!_hasQuestion(n)) {
-        return _streamElement(n) != null ? 'thread' : 'shown';
+        // A value the program writes, "shown and not edited", drawn by the
+        // widget its type's constructors build, as one the person writes is:
+        // a tuple a form, "one field per argument, each labelled by the name
+        // of its declared type", a tuple inside it a form of its own, by the
+        // induction of Proposition "Default Widgets"; a union a menu, "each
+        // drawn by its widget"; a stream a thread, thread(W) where its
+        // elements are tuples, W their form; a constant or a primitive
+        // shown (Definition "Widget Declaration, Default Widget"; vGLP #8
+        // Cowork, 2026-10-13 08:15 UTC).  So the declared types of a written
+        // value reach the bridge, each field's label its type's name.
+        final seq = _seqOf(n);
+        if (seq != null) {
+          final w = _widget(n.child(seq.elem), visiting);
+          return w == 'shown' ? 'thread' : 'thread($w)';
+        }
+        if (_streamElement(n) != null) return 'thread';
+        final alts = _nodeAlts(n);
+        final ws = [for (final a in alts) _altWidget(n, a, visiting)];
+        if (ws.every((w) => w == 'shown')) return 'shown';
+        if (alts.length == 1) return ws.single;
+        return 'menu([${ws.join(', ')}])';
       }
       // A stream or a list the program writes whose elements hold
       // questions: a thread of its elements, each drawn by the widget of
@@ -1688,7 +1708,6 @@ class _Generator {
     }
     if (a is _NilAlt) return n.person ? 'button([])' : 'shown';
     if (a is _LeafAlt) return n.person ? _leafWidget(a.leaf) : 'shown';
-    if (!n.person && !_altHasQuestion(n, a)) return 'shown';
     if (a is _ConsAlt) {
       // A list cell holding a question outside a Stream or a List is
       // refused, the type not flat (_checkFlat): no widget is form('.',
