@@ -74,7 +74,7 @@ Loading a project: enter the directory path at the prompt; the project linker re
 
 | Suite | Command (from the worktree root) | Tests |
 |---|---|---|
-| Full suite (canonical) | `bash test/run_all_tests.sh` | 4137 passed, 0 failed, `KNOWN_RED_CHECKS` 93 (CSSN's, with its artefact's 8; GSG's spm 20 green since `61edc6ee`) and `KNOWN_RED` Dart entries as listed --- at GLP `b90d5415`, 2026-10-13; Section Q keeps its raw output (`tmp/suite_q_dart.txt`, `suite_q_flutter.txt`) |
+| Full suite (canonical) | `bash test/run_all_tests.sh` | 4144 passed, 0 failed, `KNOWN_RED_CHECKS` 93 (CSSN's, with its artefact's 8; GSG's spm 20 green since `61edc6ee`) and `KNOWN_RED` Dart entries as listed --- at GLP `8edcc46c`, 2026-10-13; Section Q keeps its raw output (`tmp/suite_q_dart.txt`, `suite_q_flutter.txt`) |
 | Dart unit tests alone | `cd glp_runtime && dart test` | glp_runtime only |
 | Flutter package alone | `cd glp_multiagent && flutter test` | glp_multiagent only |
 
