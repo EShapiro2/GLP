@@ -2931,7 +2931,7 @@ HEREDOC
 check "Bonds village: no runtime error" "→ suspended" "$n3_run"
 check_not "Bonds village: no failed goal" "ERROR" "$n3_run"
 check "Bonds village: the conversations open" "tagged(frank, opened(escrow))" "$n3_run"
-check "Bonds village: Alice's holdings" "tagged(alice, holdings(\[lot(bob, now, 5), lot(alice, now, 8), lot(charlie, now, 15), lot(frank, now, 4)\]))" "$n3_run"
+check "Bonds village: Alice's holdings" "tagged(alice, holdings(\[lot(bob, now, 5), lot(charlie, now, 15), lot(alice, now, 8), lot(frank, now, 4)\]))" "$n3_run"
 check "Bonds village: Bob's holdings" "tagged(bob, holdings(\[lot(alice, now, 10), lot(diana, now, 20)\]))" "$n3_run"
 check "Bonds village: Charlie's holdings" "tagged(charlie, holdings(\[lot(alice, now, 10), lot(eve, now, 10), lot(charlie, now, 6)\]))" "$n3_run"
 check "Bonds village: Diana's holdings" "tagged(diana, holdings(\[lot(bob, 25, 24), lot(frank, 28, 12), lot(diana, now, 8), lot(frank, now, 1)\]))" "$n3_run"
@@ -3283,7 +3283,7 @@ HEREDOC
 check "Denominated village: no runtime error" "→ suspended" "$n4_run"
 check_not "Denominated village: no failed goal" "ERROR" "$n4_run"
 check "Denominated village: the conversations open" "tagged(frank, opened(escrow))" "$n4_run"
-check "Denominated village: Alice's holdings, denominated" "tagged(alice, holdings(\[lot(bob, usd, now, 5), lot(alice, usd, now, 8), lot(charlie, usd, now, 15), lot(frank, usd, now, 4)\]))" "$n4_run"
+check "Denominated village: Alice's holdings, denominated" "tagged(alice, holdings(\[lot(bob, usd, now, 5), lot(charlie, usd, now, 15), lot(alice, usd, now, 8), lot(frank, usd, now, 4)\]))" "$n4_run"
 check "Denominated village: Bob's holdings, denominated" "tagged(bob, holdings(\[lot(alice, usd, now, 10), lot(diana, usd, now, 20)\]))" "$n4_run"
 check "Denominated village: Charlie's holdings, denominated" "tagged(charlie, holdings(\[lot(alice, usd, now, 10), lot(eve, usd, now, 10), lot(charlie, usd, now, 6)\]))" "$n4_run"
 check "Denominated village: Diana's holdings, denominated" "tagged(diana, holdings(\[lot(bob, usd, 25, 24), lot(frank, usd, 28, 12), lot(diana, usd, now, 8), lot(frank, usd, now, 1)\]))" "$n4_run"
@@ -3471,7 +3471,7 @@ echo "=== Section VG: Canonical compilation, one-clause procedures ==="
 echo ""
 
 ONECLAUSE="$GLP_DIR/programs/tests/vglp/one_clause"
-VG_CARD="drawn(0, form(card, \[field('Peer', shown), field('YesNo', buttons(\[yes, no\]))\]), card(bob, input(\[2\]))), withdrawn(0) |"
+VG_CARD="drawn(1, form(card, \[field('Peer', shown), field('YesNo', buttons(\[yes, no\]))\]), card(bob, input(\[2\]))), withdrawn(1) |"
 
 vg_load=$("$REPL_RUN" <<HEREDOC
 $ONECLAUSE
@@ -3489,7 +3489,7 @@ HEREDOC
 2>&1)
 check_not "One-clause: answer, no failed goal" "ERROR" "$vg_answer"
 check "One-clause: the answer reaches its clause" "D = \[decided(yes, bob)\]" "$vg_answer"
-check "One-clause: the card is drawn, the offering peer shown and the person's position marked, and withdraws once answered" "L = \[$VG_CARD" "$vg_answer"
+check "One-clause: the card is drawn, the offering peer shown and the person's position marked, and withdraws once answered" "L = \[drawn(0, thread(.*), \[\]), $VG_CARD" "$vg_answer"
 
 vg_decline=$("$REPL_RUN" <<HEREDOC
 $ONECLAUSE
@@ -3499,7 +3499,7 @@ HEREDOC
 2>&1)
 check_not "One-clause: decline, no failed goal" "ERROR" "$vg_decline"
 check "One-clause: the person's decline is an answer, no, which the clause takes" "D = \[decided(no, bob)\]" "$vg_decline"
-check "One-clause: the declined card withdraws once answered" "L = \[$VG_CARD" "$vg_decline"
+check "One-clause: the declined card withdraws once answered" "L = \[drawn(0, thread(.*), \[\]), $VG_CARD" "$vg_decline"
 
 vg_mismatch=$("$REPL_RUN" <<HEREDOC
 $ONECLAUSE
@@ -3509,7 +3509,7 @@ HEREDOC
 2>&1)
 check_not "One-clause: mismatch, no failed goal" "ERROR" "$vg_mismatch"
 check "One-clause: a grant that forms no YesNo answers nothing, the next one reaches its clause" "D = \[decided(yes, bob)\]" "$vg_mismatch"
-check "One-clause: the card stays through the refused grant and withdraws once answered" "L = \[$VG_CARD" "$vg_mismatch"
+check "One-clause: the card stays through the refused grant and withdraws once answered" "L = \[drawn(0, thread(.*), \[\]), $VG_CARD" "$vg_mismatch"
 
 vg_greet=$("$REPL_RUN" <<HEREDOC
 $ONECLAUSE
@@ -3518,7 +3518,7 @@ play_greet(D, L).
 HEREDOC
 2>&1)
 check_not "One-clause: greet, no failed goal" "ERROR" "$vg_greet"
-check "One-clause: greet's card is drawn before the person gives a name, its clause guarded on what the program writes" "L = \[drawn(0, form(greeting, \[field('Peer', shown), field('Name', text)\]), greeting(bob, input(\[2\]))), withdrawn(0) |" "$vg_greet"
+check "One-clause: greet's card is drawn before the person gives a name, its clause guarded on what the program writes" "L = \[drawn(0, thread(.*), \[\]), drawn(1, form(greeting, \[field('Peer', shown), field('Name', text)\]), greeting(bob, input(\[2\]))), withdrawn(1) |" "$vg_greet"
 check "One-clause: the name the person gives reaches greet's clause" "D = \[greeted(alice, bob)\]" "$vg_greet"
 
 vg_pick=$("$REPL_RUN" <<HEREDOC
@@ -3528,7 +3528,7 @@ play_pick(D, L).
 HEREDOC
 2>&1)
 check_not "One-clause: pick, no failed goal" "ERROR" "$vg_pick"
-check "One-clause: pick's card is drawn, the offering peer shown" "L = \[drawn(0, form(choice, \[field('Peer', shown), field('Constant', text)\]), choice(bob, input(\[2\]))), withdrawn(0) |" "$vg_pick"
+check "One-clause: pick's card is drawn, the offering peer shown" "L = \[drawn(0, thread(.*), \[\]), drawn(1, form(choice, \[field('Peer', shown), field('Constant', text)\]), choice(bob, input(\[2\]))), withdrawn(1) |" "$vg_pick"
 check "One-clause: pick's one clause takes the person's choice" "D = \[picked(go)\]" "$vg_pick"
 echo ""
 
@@ -5521,14 +5521,14 @@ check "SG super-app: a send between the acceptance and the conveyance is told no
 sg_home=$("$REPL_RUN" <<HEREDOC
 $SG_CORE
 :limit 5000000
-superapp_ui(alice, [input(0, [], connect(bob)) | G?], []).
+superapp_ui(alice, [input(1, [], connect(bob)) | G?], []).
 load $SG_CORE/home.glp
-home(alice, [msg(agent, person, befriend(bob, error))], C, A), dispatch(A?, ch([input(1, [2], yes) | G1?], D), M).
+home(alice, [msg(agent, person, befriend(bob, error))], C, A), dispatch(A?, ch([input(2, [2], yes) | G1?], D), M).
 :quit
 HEREDOC
 2>&1)
-check "SG super-app home: the request form, a menu of the four acts, drawn on the person channel" "draw(0, input_box(menu(\[form(trust, \[field(CompilerKey, peer)\]), form(install, \[field(AppName, text), field(Artefact, text)\]), form(invite, \[field(AppName, text), field(Friend, peer)\]), form(connect, \[field(Friend, peer)\])\])), input(\[\]))" "$sg_home"
-check "SG super-app home: a Connect granted reaches the agent, and connected(bob) is shown on the person channel" "^msg(agent, person, connected(bob))$" "$sg_home"
+check "SG super-app home: the request form, a menu of the four acts, drawn on the person channel" "draw(1, input_box(menu(\[form(trust, \[field(CompilerKey, peer)\]), form(install, \[field(AppName, text), field(Artefact, text)\]), form(invite, \[field(AppName, text), field(Friend, peer)\]), form(connect, \[field(Friend, peer)\])\])), input(\[\]))" "$sg_home"
+check "SG super-app home: a Connect granted reaches the agent, and connected(bob) is shown on the person channel" "^draw(0, thread(.*), \[msg(agent, person, connected(bob))\])$" "$sg_home"
 check "SG super-app home: a friend's request to connect raises respond_friend's card, the friend shown" "ask('FriendRequest', friendRequest_w(from(bob, yes)))" "$sg_home"
 check "SG super-app home: yes on the card is the person's decision, the pending value passed back" "C = \[msg(person, alice, decision(yes, bob, error))\]" "$sg_home"
 check_not "SG super-app home: no failed goal" "→ failed" "$sg_home"
