@@ -19,6 +19,8 @@ library;
 import 'dart:io';
 import 'package:test/test.dart';
 import 'package:glp_runtime/compiler/program_linker.dart';
+import 'package:glp_runtime/engine/glp_engine.dart';
+import 'package:glp_runtime/runtime/terms.dart' as rt;
 
 String _fixture(String name) =>
     Directory('../programs/tests/$name').absolute.path;
@@ -55,12 +57,20 @@ void main() {
     });
 
     test('at an instance of a parameter occurring only as a bare alternative',
-        () {
-      // The link, where the import is compared with its export.  The
-      // checker's instantiation of the call that follows finds no type for
-      // X here, a separate gap reported to GLP on 2026-10-13.
+        () async {
+      // The link, where the import is compared with its export, and the
+      // load: the whole-program check instantiates the call lib:get(O?, P),
+      // binding X as the import check binds it (TGLP
+      // appendix-implementation-notes.tex, "The instantiation of a call").
       final dir = _fixture('import_agreement/bare_param_instance');
       expect(() => linkProgram(_modules(dir), rootDir: dir), returnsNormally);
+      final engine =
+          GlpEngine(rootSelfGlpPath: File('../programs/self.glp').absolute.path);
+      expect(engine.loadProgram(dir), isTrue);
+      final r = await engine.runGoal('go(3, P)');
+      expect(r.succeeded, isTrue, reason: r.error ?? '');
+      final p = engine.runtime.heap.dereference(r.bindings['P']!);
+      expect(p, isA<rt.ConstTerm>().having((t) => t.value, 'value', 3));
     });
 
     test('holding a parameter of a parameterised export open', () {

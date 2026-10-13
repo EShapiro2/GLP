@@ -1,0 +1,16 @@
+%% A parameter occurring only as a bare alternative of a type is bound at a
+%% call as the check of an import binds it (TGLP appendix-implementation-
+%% notes.tex, "The instantiation of a call": "A parameter that occurs only as
+%% a bare alternative of a type is bound as the check of an import binds
+%% it").  Definition "Instantiation" asks only that some instantiation make
+%% the call well-typed: the sites of get(O?, P) are typed MaybeInt, whose
+%% automaton is that of Opt(Integer), and X is bound to what they have there.
+
+Opt(X) ::= none ; X.
+MaybeInt ::= none ; Integer.
+
+procedure(X) get(Opt(X)?, Opt(X)).
+get(O, O?).
+
+procedure go(MaybeInt?, MaybeInt).
+go(O, P?) :- get(O?, P).

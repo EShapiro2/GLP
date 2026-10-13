@@ -378,6 +378,34 @@ class _Expansion {
   }
 }
 
+/// The parameters among [params] that the type [typeName], viewed at [dual],
+/// inlines as bare alternatives (`Opt(X) ::= none ; X`), directly or through
+/// a bare type-name alternative it inherits, each with the mode it is viewed
+/// at there (true: consumed).  [params] name abstract types standing for type
+/// parameters, defined in [types] with no alternatives.
+///
+/// This is the expansion [importExportDisagreement] binds such a parameter
+/// by, shared with the instantiation of a call (well_typed_clause.dart,
+/// `_supplied`): TGLP appendix-implementation-notes.tex, "The instantiation
+/// of a call": "A parameter that occurs only as a bare alternative of a type
+/// is bound as the check of an import binds it".  Empty where [typeName] is
+/// not in [types] or names a type not in scope.
+Set<(String, bool)> bareInlinedParameters(
+    Map<String, TypeDef> types, Set<String> params, String typeName,
+    {bool dual = false}) {
+  if (params.isEmpty || !types.containsKey(typeName)) return const {};
+  final e = _Expansion(types, holes: params);
+  final s = _State.type(typeName, dual);
+  try {
+    e.of(s);
+  } on UnknownTypeError {
+    return const {};
+  } on StateError {
+    return const {};
+  }
+  return e.inlinedHoles[s] ?? const {};
+}
+
 // =============================================================================
 // Step 2 — minimisation
 // =============================================================================

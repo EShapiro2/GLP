@@ -24,6 +24,7 @@ import 'meet.dart';
 import 'type_ast.dart';
 import 'root_scope.dart';
 import 'param_expansion.dart';
+import 'type_identity.dart' show bareInlinedParameters;
 import '../../compiler/ast.dart' as ast;
 
 // =============================================================================
@@ -2489,7 +2490,25 @@ class _Probe {
   /// The abstract type standing for each parameter, to the parameter.
   final Map<String, String> paramOf;
 
-  _Probe(this.decl, this.dfa, this.paramOf);
+  /// The type definitions [dfa] is built from.
+  final Map<String, TypeDef> types;
+
+  _Probe(this.decl, this.dfa, this.paramOf, this.types);
+
+  final Map<String, Set<(String, bool)>> _inlined = {};
+
+  /// The parameters the type of [state] inlines as bare alternatives
+  /// (`Opt(X) ::= none ; X`), each with the mode it is viewed at there (true:
+  /// consumed): a parameter that is no state of its own there, but adds its
+  /// instance's transitions to [state].  Found by the expansion the check of
+  /// an import binds such a parameter by ([bareInlinedParameters]).
+  Set<(String, bool)> inlinedAt(DFAState state) =>
+      _inlined[state.name] ??= {
+        for (final (abstract, dual) in bareInlinedParameters(
+            types, paramOf.keys.toSet(), state.baseName,
+            dual: state.isDual))
+          (paramOf[abstract]!, dual)
+      };
 }
 
 /// The probes built in an environment, by template: a probe names only the
@@ -2529,16 +2548,18 @@ _Probe? _probeOf(ProcDecl template, TypeEnvironment env) {
       probeTypes.addAll(materializeInstantiations(
           needed, env.typeTemplates, {...env.types.keys, ...paramOf.keys}));
     }
+    final types = {...env.types, ...probeTypes};
     probe = _Probe(
         decl,
         buildProgramDFA(TypeEnvironment(
-          {...env.types, ...probeTypes},
+          types,
           env.procedures,
           paramProcDecls: env.paramProcDecls,
           typeTemplates: env.typeTemplates,
           typeOrigins: env.typeOrigins,
         )),
-        paramOf);
+        paramOf,
+        types);
   } on UnknownTypeError {
     probe = null; // a type the declaration names is not in scope
   }
@@ -2546,12 +2567,14 @@ _Probe? _probeOf(ProcDecl template, TypeEnvironment env) {
   return probe;
 }
 
-/// Whether some parameter of [probe] is reached from [state].
+/// Whether some parameter of [probe] is reached from [state], as a state of
+/// its own or inlined as a bare alternative ([_Probe.inlinedAt]).
 bool _reachesParam(DFAState state, _Probe probe) {
   final seen = <String>{};
   bool walk(DFAState s) {
     if (probe.paramOf.containsKey(s.baseName)) return true;
     if (!seen.add(s.name)) return false;
+    if (probe.inlinedAt(s).isNotEmpty) return true;
     final automaton = probe.dfa.automata[s.name];
     if (automaton == null) return false;
     for (final e in automaton.transitions.entries) {
@@ -2597,6 +2620,16 @@ Map<String, DFAState?> _sitesOf(ast.Goal goal, _Probe probe) {
     }
     final automaton = probe.dfa.automata[state.name];
     if (automaton == null) return;
+    // A term the type's own transitions do not take, where the type inlines
+    // a parameter as a bare alternative, stands within that parameter's
+    // instance: its variables supply nothing, as at the parameter itself.
+    if (probe.inlinedAt(state).isNotEmpty &&
+        !_takenByOwnTransitions(term, automaton, state)) {
+      for (final k in _termVarKeys(term)) {
+        out.putIfAbsent(k, () => null);
+      }
+      return;
+    }
     if (term is ast.StructTerm) {
       for (var i = 0; i < term.args.length; i++) {
         final next =
@@ -2618,6 +2651,18 @@ Map<String, DFAState?> _sitesOf(ast.Goal goal, _Probe probe) {
   return out;
 }
 
+/// Whether [term], not a variable, starts with a transition of [state]'s own
+/// in [automaton].
+bool _takenByOwnTransitions(ast.Term term, Automaton automaton, DFAState state) {
+  if (term is ast.StructTerm) {
+    return _stepTo(automaton, state, term.functor, term.args.length, 1) != null;
+  }
+  if (term is ast.ListTerm && !term.isNil) {
+    return _stepTo(automaton, state, '[|]', 2, 1) != null;
+  }
+  return false;
+}
+
 /// The types the partner type [actual] supplies for the parameters of [probe]
 /// at a site whose probe state is [state]: walking the two automata together,
 /// label by label, [actual] in the clause's [dfa], each parameter reached is
@@ -2625,24 +2670,43 @@ Map<String, DFAState?> _sitesOf(ast.Goal goal, _Probe probe) {
 /// opposite polarities.  The wildcard names no type of the program, and is not
 /// supplied: binding a parameter to it is the unsound reading
 /// (parameterized-types.tex, sec:programs-and-modules).
+///
+/// A parameter the type of [state] inlines as a bare alternative
+/// ([_Probe.inlinedAt]) is no state of its own: it is given [actual], the
+/// partner's type at the place it is inlined, as the check of an import binds
+/// it (TGLP appendix-implementation-notes.tex, "The instantiation of a call":
+/// "A parameter that occurs only as a bare alternative of a type is bound as
+/// the check of an import binds it"; "An import against its export": "bound
+/// to the transitions the import's states share at every place it is
+/// inlined").  Each place a site reaches supplies its own, and the binding
+/// that serves is taken among them ([_instantiateCalls]).
 void _supplied(DFAState state, DFAState actual, _Probe probe, ProgramDFA dfa,
     void Function(String param, String type) emit,
     [Set<String>? seen]) {
   final visited = seen ?? <String>{};
   if (!visited.add('${state.name}|${actual.name}')) return;
+  // Nor is a type built from a parameter's abstract type, which no type of
+  // the program is: `Opt<$param_X>`, the type of a callee's own head
+  // occurrence where [_calleeFixedTypes] reads its clauses.
+  final suppliesNothing = actual.isWildcard ||
+      actual.isAnonymousFinal ||
+      probe.paramOf.containsKey(actual.baseName) ||
+      actual.baseName.contains(_paramProbePrefix) ||
+      actual.baseName.contains(_openParamPrefix);
   final param = probe.paramOf[state.baseName];
   if (param != null) {
-    if (actual.isWildcard ||
-        actual.isAnonymousFinal ||
-        probe.paramOf.containsKey(actual.baseName) ||
-        actual.baseName.startsWith(_openParamPrefix)) {
-      return;
-    }
+    if (suppliesNothing) return;
     emit(param,
         state.isDual != actual.isDual ? '${actual.baseName}?' : actual.baseName);
     return;
   }
   if (!_reachesParam(state, probe)) return;
+  if (!suppliesNothing) {
+    for (final (inlined, dual) in probe.inlinedAt(state)) {
+      emit(inlined,
+          dual != actual.isDual ? '${actual.baseName}?' : actual.baseName);
+    }
+  }
   final declared = probe.dfa.automata[state.name];
   final given = dfa.automata[actual.name];
   if (declared == null || given == null) return;
@@ -3333,7 +3397,7 @@ Map<String, List<String>> _calleeFixedTypes(ProcDecl template,
         {for (final p in unbound) p: flip}, paramOf.keys.toSet(), env);
     if (built == null) continue;
     final (decl, probeEnv, probeDfa) = built;
-    final probe = _Probe(decl, probeDfa, paramOf);
+    final probe = _Probe(decl, probeDfa, paramOf, probeEnv.types);
     void emit(String param, String type) {
       // [_supplied] reads the polarity off a probe standing at the
       // parameter's own polarity; at its input type, the other.

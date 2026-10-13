@@ -189,4 +189,26 @@ void main() {
           '[msg(a, b)]');
     });
   });
+
+  // "A parameter that occurs only as a bare alternative of a type is bound as
+  // the check of an import binds it" (TGLP appendix-implementation-notes.tex,
+  // "The instantiation of a call"; GLP, 2026-10-13 08:02 UTC, item 1).
+  group('a parameter occurring only as a bare alternative', () {
+    test('a site at an instance supplies it: the call loads and runs',
+        () async {
+      expect(await _answer('bare_param.glp', 'go(3, P)', 'P'), '3');
+      expect(await _answer('bare_param.glp', 'go(none, P)', 'P'), 'none');
+    });
+
+    test('a site at no instance: the bindings conflict and the call is '
+        'refused', () {
+      final err = _refusal('bare_param_refused.glp');
+      expect(err, contains('The bindings tried for the call get(O?, P) '
+          'conflict'));
+      expect(err, contains('(X: Colour)'));
+      expect(err, contains('under X = Colour the occurrence P is not '
+          'well-typed with subtyping with its pair in the clause'));
+      expect(err, isNot(contains('no site of the call supplies')));
+    });
+  });
 }

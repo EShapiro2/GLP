@@ -1,0 +1,15 @@
+%% A call to a procedure whose parameter occurs only as a bare alternative,
+%% at a site that is no instance of it, is refused (TGLP parameterized-
+%% types.tex, Definition "Instantiation"; appendix-implementation-notes.tex,
+%% "The instantiation of a call": "where types are supplied or fixed and none
+%% serves, the bindings conflict and the call is refused").  P is to hold
+%% Opt(X), which has none whatever X is, and Colour has no none.
+
+Opt(X) ::= none ; X.
+Colour ::= red ; green.
+
+procedure(X) get(Opt(X)?, Opt(X)).
+get(O, O?).
+
+procedure go(Colour?, Colour).
+go(O, P?) :- get(O?, P).
