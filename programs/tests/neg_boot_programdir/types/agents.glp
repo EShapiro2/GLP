@@ -1,0 +1,9 @@
+%% programs/tests/neg_boot_programdir/types/agents.glp --- the agent; its body
+%% atom passes the constant hello where takes_integer/1 declares Integer.  See
+%% self.glp.
+
+exported procedure agent_init(_?, _?).
+agent_init(_, _) :- takes_integer(hello).
+
+procedure takes_integer(Integer?).
+takes_integer(_).

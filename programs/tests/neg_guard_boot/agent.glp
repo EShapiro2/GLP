@@ -1,0 +1,7 @@
+%% programs/tests/neg_guard_boot/agent.glp --- the agent program of
+%% agent_boot.glp as a module file, the one program an AgentRuntime runs; the
+%% same invalid guard (GLP-Spec glp.tex, Definition "Guarded Clause": "G is a
+%% conjunction of guard predicates"; true is none).
+
+procedure agent_init(_?, _?).
+agent_init(Id, _) :- true | send_to_user([hello(Id?)]).

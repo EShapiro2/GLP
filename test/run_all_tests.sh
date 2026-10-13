@@ -1940,6 +1940,23 @@ echo ""
 echo "Section C: $C_PASS passed, $C_FAIL failed"
 echo ""
 
+# NEG: one negative per check and load path (Integration 2026-10-11 15:53 UTC,
+# item 5), so that no check passes by never running.  Types on the
+# multi-isolate path with a program directory: ":boot <f>_boot.glp" loads <f>/
+# in every agent's isolate (IsolateManager with programDir), and the fault is
+# in a module of that directory, not in the boot source --- TGLP
+# well-typing.tex, Definition "Well-Typed Clause", condition 2
+# (programs/tests/neg_boot_programdir/types/self.glp).
+NEG_BOOT="$GLP_DIR/programs/tests/neg_boot_programdir"
+neg_boot_types=$("$REPL_RUN" <<HEREDOC
+:boot $NEG_BOOT/types_boot.glp
+:quit
+HEREDOC
+2>&1)
+check "NEG types / :boot with a program directory: the agent's load is refused by the type check" "Agent alice failed to initialize: Exception: Type checking failed for module(s) of the program:" "$neg_boot_types"
+check "NEG types / :boot with a program directory: the refusal names the module and the atom" "types/agents.glp:6: Body atom 0 (takes_integer) is not well-typed" "$neg_boot_types"
+check_not "NEG types / :boot with a program directory: the boot does not settle" "Boot settled" "$neg_boot_types"
+
 # =============================================================================
 # SECTION D: SRSW VIOLATION TESTS
 # =============================================================================
@@ -2037,6 +2054,31 @@ else
     FAIL=$((FAIL + 1))
 fi
 
+# NEG: one negative per check and load path (Integration 2026-10-11 15:53 UTC,
+# item 5).  SRSW on the multi-isolate path: an agent program with Id? twice in
+# its body (GLP-Spec glp.tex, Definitions "Single-Occurrence (SO) Invariant"
+# and "GLP Program, Goals"), booted with no program directory --- the agent
+# program follows the boot clause (programs/tests/neg_srsw_boot/) --- and as a
+# module of the program directory the agent loads
+# (programs/tests/neg_boot_programdir/srsw/, IsolateManager with programDir).
+# The AgentRuntime path is glp_runtime/test/multiagent/neg_check_paths_test.dart.
+neg_srsw_inline=$("$REPL_RUN" <<HEREDOC
+:boot $GLP_DIR/programs/tests/neg_srsw_boot/agent_boot.glp
+:quit
+HEREDOC
+2>&1)
+check "NEG SRSW / :boot, no program directory: the agent's load is refused by the SRSW pass" "Agent alice failed to initialize: \[semantic\] SRSW violations found:" "$neg_srsw_inline"
+check "NEG SRSW / :boot, no program directory: the refusal names the reader occurring twice" "agent_init/2: Line 18: Reader variable \"Id?\" occurs 2 times" "$neg_srsw_inline"
+check_not "NEG SRSW / :boot, no program directory: the boot does not settle" "Boot settled" "$neg_srsw_inline"
+neg_srsw_dir=$("$REPL_RUN" <<HEREDOC
+:boot $GLP_DIR/programs/tests/neg_boot_programdir/srsw_boot.glp
+:quit
+HEREDOC
+2>&1)
+check "NEG SRSW / :boot with a program directory: the agent's load is refused by the SRSW pass" "Agent alice failed to initialize: \[semantic\] SRSW violations found:" "$neg_srsw_dir"
+check "NEG SRSW / :boot with a program directory: the refusal names the module's reader occurring twice" "neg_boot_programdir/srsw/agents:agent_init/2: Line 5: Reader variable \"Id?\" occurs 2 times" "$neg_srsw_dir"
+check_not "NEG SRSW / :boot with a program directory: the boot does not settle" "Boot settled" "$neg_srsw_dir"
+
 echo ""
 
 # =============================================================================
@@ -2076,6 +2118,36 @@ for case in "${guard_cases[@]}"; do
         FAIL=$((FAIL + 1))
     fi
 done
+
+# NEG: one negative per check and load path (Integration 2026-10-11 15:53 UTC,
+# item 5).  The invalid guard of true_in_guard.glp --- true in guard position,
+# no guard predicate (GLP-Spec glp.tex, Definition "Guarded Clause") --- on
+# every other load path: a program directory, the fault in its own self.glp
+# (neg_guard_dir/); a linked program of two modules, the fault in the module
+# the export reaches by a cross-module call (neg_guard_linked/); a boot with no
+# program directory, the agent program following the boot clause
+# (neg_guard_boot/); and a boot whose agents load a program directory with the
+# fault in one of its modules (neg_boot_programdir/guard/, IsolateManager with
+# programDir).  The AgentRuntime path is
+# glp_runtime/test/multiagent/neg_check_paths_test.dart.
+neg_guard_dir=$(echo -e "$GLP_DIR/programs/tests/neg_guard_dir\n:quit" | "$REPL_RUN" 2>&1)
+check "NEG guards / directory: an invalid guard in the program's self.glp is refused" "Error loading project $GLP_DIR/programs/tests/neg_guard_dir: \[semantic\] \"true\" is not a guard - it can only appear in body position at Line 12" "$neg_guard_dir"
+neg_guard_linked=$(echo -e "$GLP_DIR/programs/tests/neg_guard_linked\n:quit" | "$REPL_RUN" 2>&1)
+check "NEG guards / linked: an invalid guard in the module a cross-module call reaches is refused" "Error loading project $GLP_DIR/programs/tests/neg_guard_linked: \[semantic\] \"true\" is not a guard - it can only appear in body position at Line 4" "$neg_guard_linked"
+neg_guard_inline=$("$REPL_RUN" <<HEREDOC
+:boot $GLP_DIR/programs/tests/neg_guard_boot/agent_boot.glp
+:quit
+HEREDOC
+2>&1)
+check "NEG guards / :boot, no program directory: the agent's load is refused for the guard" "Agent alice failed to initialize: \[semantic\] \"true\" is not a guard - it can only appear in body position at Line 16" "$neg_guard_inline"
+check_not "NEG guards / :boot, no program directory: the boot does not settle" "Boot settled" "$neg_guard_inline"
+neg_guard_bootdir=$("$REPL_RUN" <<HEREDOC
+:boot $GLP_DIR/programs/tests/neg_boot_programdir/guard_boot.glp
+:quit
+HEREDOC
+2>&1)
+check "NEG guards / :boot with a program directory: the agent's load is refused for the module's guard" "Agent alice failed to initialize: \[semantic\] \"true\" is not a guard - it can only appear in body position at Line 5" "$neg_guard_bootdir"
+check_not "NEG guards / :boot with a program directory: the boot does not settle" "Boot settled" "$neg_guard_bootdir"
 
 echo ""
 

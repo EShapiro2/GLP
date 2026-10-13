@@ -1,0 +1,16 @@
+%% programs/tests/neg_boot_programdir/srsw/self.glp
+%%
+%% Negative fixture: an SRSW violation in the PROGRAM DIRECTORY an agent loads
+%% under a multi-isolate boot --- REPL ":boot srsw_boot.glp", which is
+%% IsolateManager with programDir, srsw/ beside the boot file.  The boot source
+%% is sound; the fault is in agents.glp, a module of this program, which the
+%% export below reaches.  GLP-Spec glp.tex, Definition "GLP Program, Goals": "A
+%% clause C satisfies the single-reader/single-writer (SRSW) restriction if it
+%% satisfies SO", and Definition "Single-Occurrence (SO) Invariant": "every
+%% variable occurs in it at most once" --- Id? occurs twice in the body, under
+%% no guard that implies it ground (Remark "Guards and SRSW").  The agent's
+%% load is refused, and the boot fails before any agent runs.
+
+imported procedure agents#agent_init(_?, _?).
+exported procedure agent_init(_?, _?).
+agent_init(Id, In) :- agents # agent_init(Id?, In?).

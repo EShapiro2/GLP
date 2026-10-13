@@ -1,0 +1,7 @@
+%% programs/tests/neg_srsw_boot/agent.glp --- the agent program of
+%% agent_boot.glp as a module file, the one program an AgentRuntime runs; the
+%% same SRSW violation (GLP-Spec glp.tex, Definition "Single-Occurrence (SO)
+%% Invariant": "every variable occurs in it at most once"; Id? occurs twice).
+
+procedure agent_init(_?, _?).
+agent_init(Id, _) :- send_to_user([hello(Id?), again(Id?)]).

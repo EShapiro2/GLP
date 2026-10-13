@@ -1,0 +1,12 @@
+%% programs/tests/neg_guard_linked/self.glp
+%%
+%% Negative fixture: an invalid guard in a LINKED program of two modules.  The
+%% program's self.glp forwards its one export by a cross-module call to m.glp,
+%% whose clause carries true in guard position, so the faulty clause is in the
+%% linked program as m:p.  GLP-Spec glp.tex, Definition "Guarded Clause": "G is
+%% a conjunction of guard predicates"; true is no guard predicate of the
+%% catalogue (GLP-Spec appendix-guards.tex) and no unit clause defines it.
+
+imported procedure m#p(_?, _).
+exported procedure p(_?, _).
+p(X, Y?) :- m # p(X?, Y).

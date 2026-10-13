@@ -1,0 +1,4 @@
+%% programs/tests/neg_guard_linked/m.glp --- the one module; see self.glp.
+
+exported procedure p(_?, _).
+p(X, Y?) :- true | Y = X?.

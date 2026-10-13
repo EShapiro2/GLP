@@ -1,0 +1,5 @@
+%% programs/tests/neg_boot_programdir/srsw/agents.glp --- the agent; Id? occurs
+%% twice in its body.  See self.glp.
+
+exported procedure agent_init(_?, _?).
+agent_init(Id, _) :- send_to_user([hello(Id?), again(Id?)]).

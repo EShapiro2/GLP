@@ -1,0 +1,16 @@
+%% programs/tests/neg_guard_boot/agent_boot.glp
+%%
+%% Negative fixture: an invalid guard in the agent program of a multi-isolate
+%% boot with no program directory --- REPL :boot, IsolateManager on a
+%% BootConfig alone --- the agent program being what follows the boot clause.
+%% GLP-Spec glp.tex, Definition "Guarded Clause": "G is a conjunction of guard
+%% predicates"; true is no guard predicate of the catalogue (GLP-Spec
+%% appendix-guards.tex) and no unit clause defines it, so the agent's load is
+%% refused and the boot fails.  agent.glp beside it is the same agent program
+%% as a module file, the one program an AgentRuntime runs.
+
+procedure boot.
+boot :- agent_init(alice, _)@alice.
+
+procedure agent_init(_?, _?).
+agent_init(Id, _) :- true | send_to_user([hello(Id?)]).

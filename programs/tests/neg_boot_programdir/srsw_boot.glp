@@ -1,0 +1,7 @@
+%% programs/tests/neg_boot_programdir/srsw_boot.glp --- the boot of the program
+%% directory srsw/ beside it, whose module agents.glp carries the fault; see
+%% srsw/self.glp.  ":boot srsw_boot.glp" loads srsw/ as the program of every
+%% agent (IsolateManager with programDir) with this boot clause on top.
+
+procedure boot.
+boot :- agent_init(alice, _)@alice.

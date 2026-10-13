@@ -1,0 +1,5 @@
+%% programs/tests/neg_boot_programdir/guard/agents.glp --- the agent; true in
+%% guard position.  See self.glp.
+
+exported procedure agent_init(_?, _?).
+agent_init(Id, _) :- true | send_to_user([hello(Id?)]).

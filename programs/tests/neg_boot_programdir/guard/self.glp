@@ -1,0 +1,14 @@
+%% programs/tests/neg_boot_programdir/guard/self.glp
+%%
+%% Negative fixture: an invalid guard in the PROGRAM DIRECTORY an agent loads
+%% under a multi-isolate boot --- REPL ":boot guard_boot.glp", which is
+%% IsolateManager with programDir, guard/ beside the boot file.  The boot
+%% source is sound; the fault is in agents.glp, a module of this program, which
+%% the export below reaches.  GLP-Spec glp.tex, Definition "Guarded Clause": "G
+%% is a conjunction of guard predicates"; true is no guard predicate of the
+%% catalogue (GLP-Spec appendix-guards.tex) and no unit clause defines it.  The
+%% agent's load is refused, and the boot fails before any agent runs.
+
+imported procedure agents#agent_init(_?, _?).
+exported procedure agent_init(_?, _?).
+agent_init(Id, In) :- agents # agent_init(Id?, In?).

@@ -1,0 +1,7 @@
+%% programs/tests/neg_boot_programdir/guard_boot.glp --- the boot of the program
+%% directory guard/ beside it, whose module agents.glp carries the fault; see
+%% guard/self.glp.  ":boot guard_boot.glp" loads guard/ as the program of every
+%% agent (IsolateManager with programDir) with this boot clause on top.
+
+procedure boot.
+boot :- agent_init(alice, _)@alice.

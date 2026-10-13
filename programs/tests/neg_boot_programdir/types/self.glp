@@ -1,0 +1,15 @@
+%% programs/tests/neg_boot_programdir/types/self.glp
+%%
+%% Negative fixture: a type error in the PROGRAM DIRECTORY an agent loads under
+%% a multi-isolate boot --- REPL ":boot types_boot.glp", which is
+%% IsolateManager with programDir, types/ beside the boot file.  The boot
+%% source is sound; the fault is in agents.glp, a module of this program, which
+%% the export below reaches.  TGLP well-typing.tex, Definition "Well-Typed
+%% Clause", condition 2: "For each unit goal A in B, the produced moded term A'
+%% corresponding to A is well-typed by D" --- takes_integer(hello) passes a
+%% constant where the declaration says Integer.  The agent's load is refused,
+%% and the boot fails before any agent runs.
+
+imported procedure agents#agent_init(_?, _?).
+exported procedure agent_init(_?, _?).
+agent_init(Id, In) :- agents # agent_init(Id?, In?).

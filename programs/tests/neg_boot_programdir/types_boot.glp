@@ -1,0 +1,7 @@
+%% programs/tests/neg_boot_programdir/types_boot.glp --- the boot of the program
+%% directory types/ beside it, whose module agents.glp carries the fault; see
+%% types/self.glp.  ":boot types_boot.glp" loads types/ as the program of every
+%% agent (IsolateManager with programDir) with this boot clause on top.
+
+procedure boot.
+boot :- agent_init(alice, _)@alice.

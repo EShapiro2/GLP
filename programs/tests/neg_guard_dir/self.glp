@@ -1,0 +1,12 @@
+%% programs/tests/neg_guard_dir/self.glp
+%%
+%% Negative fixture: an invalid guard in a program DIRECTORY, the fault in the
+%% program's own self.glp.  GLP-Spec glp.tex, Definition "Guarded Clause": "G
+%% is a conjunction of guard predicates"; true is no guard predicate of the
+%% catalogue (GLP-Spec appendix-guards.tex) and no unit clause defines it, so
+%% in guard position the clause is refused, as guards_invalid/true_in_guard.glp
+%% is refused as a file.  The procedure is declared and the clause is otherwise
+%% well-typed, so it is the guard that is refused.
+
+exported procedure p(_?, _).
+p(X, Y?) :- true | Y = X?.
