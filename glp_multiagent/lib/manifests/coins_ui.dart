@@ -23,40 +23,25 @@
 /// forms, its cards and their answers --- is named here: none of it reaches
 /// this program.
 ///
-/// What is named here is the agent's own output to its person, `msg(agent,
-/// person, C)` with `C` a `ScreenContent` (`programs/currencies/coins/
-/// self.glp`), which the dispatcher merges with the draws: "the lists the
-/// program writes --- the friends, the chat threads, the balances --- which
-/// the runtime renders as GLP renders every message to the person" (vGLP,
-/// sections/ui-primitives.tex).  The holdings, tallied by issuer after every
-/// change, are the balances view, each tally replacing the last; every other
-/// message is a line of the screen, shown by its default display.
+/// The agent's own output to its person, `msg(agent, person, C)` with `C` a
+/// `ScreenContent`, is of the type the program declares by the reserved name
+/// `Output ::= ScreenMsg` (`programs/currencies/coins/self.glp`), and reaches
+/// the person only as the thread of construct 0, its elements drawn by
+/// Output's widget: "A vGLP program declares the type of its output to its
+/// person by defining the type Output, a reserved name; the dispatcher draws
+/// that output as a thread whose elements are drawn by the widget of Output"
+/// (vGLP 169b008, Definition "Canonical Compilation"; vGLP, 2026-10-13 19:25
+/// UTC, items 2 and 3).  No view here names a message or a type.
 library;
 
 import '../ui_runtime/manifest.dart';
 
-/// Panel `coins`: the constructs the bridge holds open, then the balances
-/// view, then the screen, which takes every message of the agent's the
-/// balances view leaves.
+/// Panel `coins`: the constructs the bridge holds open, the output thread
+/// among them.
 const _coinsPanel = Panel(
   id: 'coins',
   name: 'coins',
-  views: [
-    ScreenView(
-      pattern: 'msg(agent, person, holdings(Lots))',
-      content: 'Lots',
-      kind: ViewKind.balances,
-      label: 'Balances',
-      store: 'balances',
-    ),
-    ScreenView(
-      pattern: 'msg(agent, person, S)',
-      content: 'S',
-      kind: ViewKind.list,
-      label: 'Screen',
-      store: 'screen',
-    ),
-  ],
+  constructs: true,
 );
 
 /// The currency mini-app's manifest.

@@ -165,19 +165,27 @@ void main() {
     // The person types `Hi there` and submits it.
     ui.bridge.grant(text.id, const GList([]), const GString('Hi there'));
 
+    // The program's answer reaches the person as an element of the output
+    // thread, construct 0 (vGLP 169b008, Definition "Canonical Compilation";
+    // vGLP, 2026-10-13 19:25 UTC, items 2 and 3).
+    List<GTerm> output() {
+      final v = ui.bridge.construct(0)?.view;
+      return v is GList ? v.items : const [];
+    }
+
     expect(
         await until(() =>
-            notifies.any((t) => formatTerm(t) == "got(text, 'Hi there')")),
+            output().any((t) => formatTerm(t) == "got(text, 'Hi there')")),
         isTrue,
         reason: 'got(text, ...) never arrived: '
             '${notifies.map(formatTerm).toList()}');
     final got =
-        notifies.firstWhere((t) => formatTerm(t) == "got(text, 'Hi there')")
+        output().firstWhere((t) => formatTerm(t) == "got(text, 'Hi there')")
             as GStruct;
     expect(got.args[1], isA<GAtom>());
     expect((got.args[1] as GAtom).name, 'Hi there');
-    expect(ui.store.lists['screen']!.map(formatTerm),
-        contains("got(text, 'Hi there')"));
+    expect(formatTerm(ui.bridge.construct(0)!.widget), startsWith('thread('));
+    expect(ui.store.lists['screen'], isEmpty);
     expect(displayText(got), 'text Hi there');
   });
 

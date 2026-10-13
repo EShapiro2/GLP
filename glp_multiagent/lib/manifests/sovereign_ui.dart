@@ -1,7 +1,6 @@
 /// The sovereign mini-app's screen: the panel the Dart bridge draws the
 /// constructs of `programs/currencies/sovereign/denominated/
-/// sovereign_agent.vglp` in, and the views of what the agent writes to its
-/// person.
+/// sovereign_agent.vglp` in, the output thread among them.
 ///
 /// The program runs by its bridge entry, `sovereign_ui(cb, Grants, _)`
 /// (`programs/currencies/sovereign/play_ui.glp`, `(Id, UserIn, NetIn)`),
@@ -23,39 +22,24 @@
 /// card vocabulary --- its forms, its cards and their answers --- is named
 /// here: none of it reaches this program.
 ///
-/// What is named here is the agent's own output to its person, `msg(agent,
-/// person, C)`, which the dispatcher merges with the draws: "the lists the
-/// program writes --- the friends, the chat threads, the balances --- which
-/// the runtime renders as GLP renders every message to the person" (vGLP,
-/// sections/ui-primitives.tex).  The holdings, tallied by lot after every
-/// change, are the balances view, each tally replacing the last; every other
-/// message is a line of the screen, shown by its default display.
+/// The program's output to its person reaches the person only as the
+/// thread of construct 0, its elements drawn by the widget of the type the
+/// program declares by the reserved name Output (`Output ::= ScreenMsg`, `programs/currencies/sovereign/self.glp`): "A vGLP program
+/// declares the type of its output to its person by defining the type
+/// Output, a reserved name; the dispatcher draws that output as a thread
+/// whose elements are drawn by the widget of Output" (vGLP 169b008,
+/// Definition "Canonical Compilation"; vGLP, 2026-10-13 19:25 UTC, items 2
+/// and 3).  No view here names a message or a type.
 library;
 
 import '../ui_runtime/manifest.dart';
 
-/// Panel `sovereign`: the constructs the bridge holds open, then the balances
-/// view, then the screen, which takes every message of the agent's the
-/// balances view leaves.
+/// Panel `sovereign`: the constructs the bridge holds open, the output
+/// thread among them.
 const _sovereignPanel = Panel(
   id: 'sovereign',
   name: 'sovereign',
-  views: [
-    ScreenView(
-      pattern: 'msg(agent, person, holdings(Lots))',
-      content: 'Lots',
-      kind: ViewKind.balances,
-      label: 'Balances',
-      store: 'balances',
-    ),
-    ScreenView(
-      pattern: 'msg(agent, person, S)',
-      content: 'S',
-      kind: ViewKind.list,
-      label: 'Screen',
-      store: 'screen',
-    ),
-  ],
+  constructs: true,
 );
 
 /// The sovereign mini-app's manifest.

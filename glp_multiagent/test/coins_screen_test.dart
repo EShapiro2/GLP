@@ -181,21 +181,80 @@ void main() {
         "field('WantCoin', peer), field('WantAmount', number)]), "
         "form(pay, [field('Friend', peer), field('Amount', number)]), "
         "form(redeem, [field('Friend', peer), field('WantCoin', peer)])]))";
-    expect(r.bridge.constructs.map((c) => formatTerm(c.widget)), [requestForm]);
-    final form = r.bridge.constructs.single;
+    // The agent's output to its person, msg(agent, person, C), reaches her
+    // only as the thread of construct 0, drawn at dispatch start, each
+    // message by the widget of the reserved type Output ::= ScreenMsg, a
+    // form headed msg whose ScreenContent is a menu of the screen's forms,
+    // each headed by its functor and its fields labelled by their declared
+    // types; the questions are numbered from 1 (vGLP 169b008, Definition
+    // "Canonical Compilation"; vGLP, 2026-10-13 19:25 UTC, items 2 and 3).
+    final out = r.bridge.construct(0)!;
+    expect(formatTerm(out.widget), startsWith('thread(form(msg, '));
+    /// What the agent has written to her, each message's content.
+    List<String> screen() {
+      final v = r.bridge.construct(0)!.view;
+      return [
+        if (v is GList)
+          for (final m in v.items) formatTerm(ctorArgs(m).$2[2])
+      ];
+    }
+
+    /// Her latest holdings.
+    String holdings() =>
+        screen().lastWhere((m) => m.startsWith('holdings('), orElse: () => '');
+
+    /// The questions' constructs: all but the output thread.
+    List<OpenConstruct> questions() =>
+        [for (final c in r.bridge.constructs) if (c.id != 0) c];
+
+    expect(questions().map((c) => formatTerm(c.widget)), [requestForm]);
+    final form = questions().single;
+    expect(form.id, 1);
     expect(formatTerm(form.view), 'input([])');
-    expect(r.store.lists['screen']!.map(formatTerm), contains('opened(bob)'));
+    expect(screen(), contains('opened(bob)'));
 
     await tester.pumpWidget(_phoneApp(AgentSurface(agentId: 'alice', runtime: r)));
     await tester.pumpAndSettle();
 
+    /// Bring [f] on screen: the surface scrolls, the output thread above the
+    /// questions growing with every message.
+    Future<void> show(Finder f) async {
+      if (f.evaluate().isEmpty) {
+        await tester.scrollUntilVisible(f, 200,
+            scrollable: find.byType(Scrollable).first);
+      }
+      await tester.ensureVisible(f);
+      await tester.pumpAndSettle();
+    }
+
     Finder inForm(Finder f) =>
         find.descendant(of: find.byKey(constructKey(form.id)), matching: f);
+    Finder inOutput(Finder f) =>
+        find.descendant(of: find.byKey(constructKey(0)), matching: f);
+
+    /// The message [k] of the output thread, from 0: headed msg, its content
+    /// a form headed [heading] whose fields are [fields], label and value.
+    void message(int k, String heading, List<(String, String)> fields) {
+      final at = elementAt(const [], k);
+      Finder headed(List<int> at, String h) => find.descendant(
+          of: find.byKey(nodeKey(0, 'heading', at)), matching: find.text(h));
+      expect(headed(at, 'msg'), findsOneWidget, reason: 'msg at $at');
+      final content = [...at, 3];
+      expect(headed(content, heading), findsOneWidget, reason: heading);
+      final form = find.byKey(nodeKey(0, 'form', content));
+      for (final (label, value) in fields) {
+        expect(find.descendant(of: form, matching: find.text(label)),
+            findsWidgets, reason: '$heading: $label');
+        expect(find.descendant(of: form, matching: find.text(value)),
+            findsWidgets, reason: '$heading: $value');
+      }
+    }
 
     /// Choose one of the menu's forms, fill its fields, and send it: one
     /// request on the request form, one element of the stream.
     Future<void> request(String alternative, Map<List<int>, (String, String)> fields,
         {String? formShot}) async {
+      await show(inForm(find.widgetWithText(ChoiceChip, alternative)));
       await tester.tap(inForm(find.widgetWithText(ChoiceChip, alternative)));
       await tester.pumpAndSettle();
       expect(inForm(find.byType(TextField)), findsNWidgets(fields.length));
@@ -214,7 +273,9 @@ void main() {
               of: find.byKey(nodeKey(form.id, 'heading', const [])),
               matching: find.text(alternative)),
           findsOneWidget);
+      await show(find.byKey(constructKey(form.id)));
       if (formShot != null) await _shot(tester, formShot);
+      await show(find.byKey(submitKey(form.id, const [])));
       await tester.tap(find.byKey(submitKey(form.id, const [])));
       await tester.pumpAndSettle();
       await settle();
@@ -232,16 +293,17 @@ void main() {
     await request('mint', {
       [1]: ('number', '2')
     });
-    expect(r.store.lists['screen']!.map(formatTerm), contains('minted(2)'));
-    expect(
-        r.store.balances['balances']!
-            .map((k, v) => MapEntry(k, formatTerm(v))),
-        {'alice': '2'});
-    expect(find.text('BALANCES'), findsOneWidget);
-    // The default display shows the message as its scalars, never as a term
-    // (vGLP Section 6.3).
-    expect(find.text('SCREEN'), findsOneWidget);
-    expect(find.text('minted(2)'), findsNothing);
+    expect(screen(), contains('minted(2)'));
+    expect(holdings(), 'holdings([lot(alice, 2)])');
+    // The messages read with their functors and labelled fields, and never
+    // as terms: opened(bob), its Key bob; minted(2), its Integer 2.
+    expect(screen().take(2), ['opened(bob)', 'minted(2)']);
+    message(0, 'opened', [('Key', 'bob')]);
+    message(1, 'minted', [('Integer', '2')]);
+    expect(find.textContaining('opened(bob)'), findsNothing);
+    expect(find.textContaining('minted(2)'), findsNothing);
+    expect(find.text('BALANCES'), findsNothing);
+    expect(find.text('SCREEN'), findsNothing);
     await _shot(tester, '/private/tmp/coins-minted.png');
 
     // The question stands: a stream question takes one element per
@@ -264,11 +326,10 @@ void main() {
           [5]: ('number', '2'),
         },
         formShot: '/private/tmp/coins-swap-form.png');
-    expect(r.store.lists['screen']!.map(formatTerm), contains('swap_done(bob)'));
-    expect(
-        r.store.balances['balances']!
-            .map((k, v) => MapEntry(k, formatTerm(v))),
-        {'bob': '2'});
+    expect(screen(), contains('swap_done(bob)'));
+    expect(holdings(), 'holdings([lot(bob, 2)])');
+    message(screen().indexOf('swap_done(bob)'), 'swap_done', [('Key', 'bob')]);
+    expect(find.textContaining('swap_done(bob)'), findsNothing);
 
     // --- The card: bob proposes the reverse swap, and the swap responder's
     // question, Card ::= card(Offer, YesNo?) in writer mode, is one construct:
@@ -296,6 +357,8 @@ void main() {
     expect(formatTerm(cardArgs[1]), 'input([2])');
     Finder inCard(Finder f) =>
         find.descendant(of: find.byKey(constructKey(card.id)), matching: f);
+    // The card below the output thread and the request form: scrolled to.
+    await show(find.byKey(constructKey(card.id)));
     // The card shows the offer as its scalars, never as its term.
     expect(inCard(find.textContaining('lot(bob, 2)')), findsNothing);
     expect(inCard(find.textContaining('offer(')), findsNothing);
@@ -344,8 +407,10 @@ void main() {
     expect(find.text('swap_done(bob)'), findsNothing);
     expect(inCard(find.widgetWithText(ElevatedButton, 'yes')), findsOneWidget);
     expect(inCard(find.widgetWithText(ElevatedButton, 'no')), findsOneWidget);
+    await show(find.byKey(constructKey(card.id)));
     await _shot(tester, '/private/tmp/coins-card.png');
 
+    await show(inCard(find.widgetWithText(ElevatedButton, 'yes')));
     await tester.tap(inCard(find.widgetWithText(ElevatedButton, 'yes')));
     await tester.pumpAndSettle();
     await settle();
@@ -353,11 +418,8 @@ void main() {
     // Answered, the card is withdrawn; the request form stands.
     expect(r.bridge.construct(card.id), isNull);
     expect(find.byKey(constructKey(card.id)), findsNothing);
-    expect(r.bridge.constructs.map((c) => c.id), [form.id]);
-    expect(
-        r.store.balances['balances']!
-            .map((k, v) => MapEntry(k, formatTerm(v))),
-        {'alice': '2'});
+    expect(questions().map((c) => c.id), [form.id]);
+    expect(holdings(), 'holdings([lot(alice, 2)])');
     await _shot(tester, '/private/tmp/coins-accepted.png');
   });
 }

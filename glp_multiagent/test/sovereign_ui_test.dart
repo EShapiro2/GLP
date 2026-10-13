@@ -269,12 +269,16 @@ void main() {
     });
   });
 
-  group('the views of the agent\'s output', () {
-    test('every screen message but holdings lands in the default display', () {
+  // The agent's output to its person reaches the person only as the thread
+  // of construct 0; no view of the manifest names a message (vGLP 169b008,
+  // Definition "Canonical Compilation"; vGLP, 2026-10-13 19:25 UTC, item 2).
+  group('the agent\'s output', () {
+    test('a screen message on the channel reaches no view: the manifest names '
+        'none', () {
       r.handle(fixtureTerm('msg(agent, person, minted(2, 30))'));
       r.handle(fixtureTerm('msg(agent, person, transferred(release, frank))'));
-      expect(r.store.lists['screen']!.map(formatTerm),
-          ['minted(2, 30)', 'transferred(release, frank)']);
+      expect(r.store.lists['screen'], isNull);
+      expect(r.store.balances, isEmpty);
     });
   });
 

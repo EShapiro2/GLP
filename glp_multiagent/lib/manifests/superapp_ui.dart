@@ -1,6 +1,6 @@
 /// The Grassroots Super-App's own screen: the panel the Dart bridge draws the
-/// constructs of `programs/social/graph/core/home.vglp` in, and the views of
-/// what the super-app tells its person.
+/// constructs of `programs/social/graph/core/home.vglp` in, the output thread
+/// among them.
 ///
 /// The program runs by its bridge entry, `superapp_ui(alice, Grants, _)`
 /// (`programs/social/graph/core/home_ui.glp`, `(Id, UserIn, NetIn)`), which
@@ -24,38 +24,26 @@
 /// deployed mediator's vocabulary --- its forms, its cards and their answers
 /// --- is named here: none of it reaches this program.
 ///
-/// What is named here is what the super-app tells its person, `msg(agent,
-/// person, C)` with `C` an `AgentContent` (`programs/social/graph/self.glp`),
-/// which `superapp/3` sends onto the program's end of the person channel and
-/// the dispatcher merges with the draws: the friends the person connects
-/// with, the friends view, and every other message a line of the screen,
-/// shown by its default display.
+/// The program's output to its person reaches the person only as the
+/// thread of construct 0, its elements drawn by the widget of the type the
+/// program declares by the reserved name Output (`Output ::= Notice`, `programs/social/graph/core/self.glp`, each
+/// notice what the agent tells the person with the pending value of a
+/// befriending dropped (GSG, 2026-10-13 20:16 UTC)): "A vGLP program
+/// declares the type of its output to its person by defining the type
+/// Output, a reserved name; the dispatcher draws that output as a thread
+/// whose elements are drawn by the widget of Output" (vGLP 169b008,
+/// Definition "Canonical Compilation"; vGLP, 2026-10-13 19:25 UTC, items 2
+/// and 3).  No view here names a message or a type.
 library;
 
 import '../ui_runtime/manifest.dart';
 
-/// Panel `apps`: the constructs the bridge holds open, then the friends
-/// view, then the screen, which takes every message of the super-app's the
-/// friends view leaves.
+/// Panel `apps`: the constructs the bridge holds open, the output thread
+/// among them.
 const _appsPanel = Panel(
   id: 'apps',
   name: 'apps',
-  views: [
-    ScreenView(
-      pattern: 'msg(agent, person, connected(Friend))',
-      content: 'Friend',
-      kind: ViewKind.friends,
-      label: 'Friends',
-      store: 'friends',
-    ),
-    ScreenView(
-      pattern: 'msg(agent, person, S)',
-      content: 'S',
-      kind: ViewKind.list,
-      label: 'Screen',
-      store: 'screen',
-    ),
-  ],
+  constructs: true,
 );
 
 /// The Grassroots Super-App's manifest.

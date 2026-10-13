@@ -1894,4 +1894,69 @@ ask(1, t).
 '''), throwsA(isA<CompileError>().having((e) => e.line, 'line', 5)));
     });
   });
+  // "A vGLP program declares the type of its output to its person by
+  // defining the type Output, a reserved name; the dispatcher draws that
+  // output as a thread whose elements are drawn by the widget of Output"
+  // (vGLP 169b008, Definition "Canonical Compilation"); a program whose
+  // output end is anonymous defines none and draws nothing, the output thread
+  // is construct 0 and the questions are numbered from 1, and an Output with
+  // a position the person writes is refused, naming it (vGLP, 2026-10-13
+  // 19:25 UTC, items 1, 3 and 4).
+  group('the output to the person, of the reserved type Output', () {
+    test('defined: dispatch/3 typed Stream(Output), the dispatcher given the '
+        'thread of Output\'s widget, each tuple a form headed by its functor',
+        () {
+      final c = compile('''$card
+Output ::= said(Peer) ; heard(Peer, Integer) ; ok.
+''');
+      expect(c.widgets['Output'],
+          "thread(menu([form(said, [field('Peer', shown)]), "
+          "form(heard, [field('Peer', shown), field('Integer', shown)]), "
+          "shown]))");
+      expect(
+          c.source,
+          contains("dispatch(Stream(Ask(Question))?, "
+              "Channel(PersonIn, Stream(_))?, "
+              "Channel(Stream(_), Stream(Output)))."));
+      expect(
+          c.source,
+          contains("dispatch(Asks, PCh, MCh?) :- dispatch(Asks?, PCh?, MCh, "
+              "thread(menu(["));
+      // The generic dispatcher draws the output as construct 0 and numbers
+      // the questions from 1.
+      expect(c.source, contains('output(W?, MOut?, ODs)'));
+      expect(c.source, contains('[draw(0, W?, []) | Ds?]'));
+      expect(c.source, contains('[], [], 1, Ss)'));
+    });
+
+    test('undefined: dispatch/3 calls the dispatcher that draws nothing of the '
+        'output', () {
+      final c = compile(card);
+      expect(c.widgets.containsKey('Output'), isFalse);
+      expect(
+          c.source,
+          contains("Channel(PersonIn, Stream(_))?, "
+              "Channel(Stream(_), Stream(_)))."));
+      expect(c.source,
+          contains('dispatch(Asks, PCh, MCh?) :- dispatch(Asks?, PCh?, MCh, Ss)'));
+    });
+
+    test('a primitive Output: a thread of shown elements', () {
+      final c = compile('''$card
+Output ::= String.
+''');
+      expect(c.widgets['Output'], 'thread');
+    });
+
+    test('an Output with a position the person writes is refused, naming it',
+        () {
+      expect(
+          () => compile('''$card
+Output ::= ask(Peer, YesNo?).
+'''),
+          refused('The type Output, the type of the program\'s output to its '
+              'person, has a position the person writes'));
+    });
+  });
 }
+

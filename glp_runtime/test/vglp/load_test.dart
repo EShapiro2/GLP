@@ -553,4 +553,51 @@ pong(b).
               allOf(contains('self.vglp'), contains('and nothing else')))));
     });
   });
+  // "A vGLP program declares the type of its output to its person by
+  // defining the type Output, a reserved name" (vGLP 169b008, Definition
+  // "Canonical Compilation"): a program that writes to its person and defines
+  // none is refused, at the call of its dispatcher in the GLP module forming
+  // its initial goal, naming Output; one whose output end is anonymous
+  // defines none (vGLP, 2026-10-13 19:25 UTC, item 1).
+  group('a program writing to its person defines Output', () {
+    test('a call of the dispatcher giving the program its end of the person '
+        'channel, with no Output defined, is refused, naming it', () {
+      write('asker.vglp', '''
+YesNo ::= yes ; no.
+exported procedure (YesNo?)*yn(Channel(Stream(_), Stream(_))?).
+(A)*yn(ch(_, Out?)) :- said(A?, Out).
+procedure said(_?, Stream(_)).
+said(A, [A?]) :- ground(A?) | true.
+''');
+      write('self.glp', '''
+YesNo ::= yes ; no.
+Question ::= yesNo_r(YesNo?).
+Ask(Q) ::= ask(Constant, Q).
+PersonIn ::= [_ | PersonIn].
+imported procedure asker#yn(Channel(Stream(_), Stream(_))?, Stream(Ask(Question))).
+imported procedure asker#dispatch(Stream(Ask(Question))?, Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+exported procedure go(PersonIn?, Stream(_)).
+go(Gs, Ds?) :- asker # yn(MCh?, Asks), asker # dispatch(Asks?, ch(Gs?, Ds), MCh).
+''');
+      expect(
+          () => typeCheckProgram(
+              discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp),
+              rootDir: fixture.path),
+          throwsA(isA<CompileError>().having(
+              (e) => e.message,
+              'message',
+              allOf(contains('asker # dispatch(Asks?, ch(Gs?, Ds), MCh)'),
+                  contains('defines no type Output')))));
+    });
+
+    test('a program whose output end is anonymous defines none and loads', () {
+      const dir = '$_programs/tests/vglp/fragments';
+      expect(
+          () => typeCheckProgram(
+              discoverProgram(dir, rootSelfGlpPath: _rootSelfGlp),
+              rootDir: dir),
+          returnsNormally);
+    });
+  });
 }
+

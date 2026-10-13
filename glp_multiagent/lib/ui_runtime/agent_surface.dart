@@ -232,7 +232,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
       Badge(isLabelVisible: count > 0, label: Text('$count'), child: child);
 
   Widget _panelBody(Panel p) {
-    if (p.views.isNotEmpty) return _screenPanel(p);
+    if (p.views.isNotEmpty || p.constructs) return _screenPanel(p);
     if (p.wallet != null) return _walletPanel(p);
     if (p.chat != null) return _chatPanel(p);
     return _friendsPanel(p);

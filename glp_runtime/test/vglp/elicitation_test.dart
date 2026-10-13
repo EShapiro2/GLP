@@ -168,8 +168,8 @@ void main() {
       expect(r['Resp'], 'accept(bob)');
       expect(
           r['Log'],
-          '[drawn(0, form(card, [field(Peer, shown), field(YesNo, '
-          'buttons([yes, no]))]), card(bob, input([2]))), withdrawn(0) | _]');
+          '[drawn(1, form(card, [field(Peer, shown), field(YesNo, '
+          'buttons([yes, no]))]), card(bob, input([2]))), withdrawn(1) | _]');
     });
 
     test('a grant that forms no term of the question\'s type answers nothing, '
@@ -177,7 +177,7 @@ void main() {
       final r = await _play('fragments', 'play_card_refused(Resp, Log)');
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       expect(r['Resp'], '_');
-      expect(r['Log'], '[drawn(0, card(bob, input([2]))) | _]');
+      expect(r['Log'], '[drawn(1, card(bob, input([2]))) | _]');
     });
 
     test('a refused grant leaves its question open, and the next grant that '
@@ -187,7 +187,7 @@ void main() {
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       // maybe answered nothing; yes, the next grant, answered the card.
       expect(r['Resp'], 'accept(bob)');
-      expect(r['Log'], '[drawn(0, card(bob, input([2]))), withdrawn(0) | _]');
+      expect(r['Log'], '[drawn(1, card(bob, input([2]))), withdrawn(1) | _]');
     });
   });
 
@@ -201,7 +201,7 @@ void main() {
           '[msg(bob, hello), msg(bob, world) | _]');
       // One construct, drawn once, an input box that stays open, the
       // stream's own position the root, [].
-      expect(r['Log'], '[drawn(0, input_box(text), input([])) | _]');
+      expect(r['Log'], '[drawn(1, input_box(text), input([])) | _]');
       expect(r['Log'], isNot(contains('withdrawn')));
     });
 
@@ -210,7 +210,7 @@ void main() {
       final r = await _play('stream', 'play_chat_two(Out, Log)');
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       expect(r['Out'], '[msg(carol, one), msg(carol, two) | _]');
-      expect(r['Log'], '[drawn(0, input_box(text), input([])) | _]');
+      expect(r['Log'], '[drawn(1, input_box(text), input([])) | _]');
     });
 
     test('the agent\'s message clause reads no request: it reduces on an '
@@ -221,10 +221,10 @@ void main() {
       final log = r['Log'];
       expect(
           log,
-          contains('drawn(0, input_box(menu([form(post, [field(String, '
+          contains('drawn(1, input_box(menu([form(post, [field(String, '
               'text)]), button(quit)])), input([]))'));
       expect(log,
-          contains('drawn(1, form(card, [field(Peer, shown), field(YesNo, '
+          contains('drawn(2, form(card, [field(Peer, shown), field(YesNo, '
               'buttons([yes, no]))]), card(carol, input([2])))'));
       expect(log, isNot(contains('withdrawn')));
     });
@@ -237,7 +237,7 @@ void main() {
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       expect(r['Outs'], '[hi]');
       expect(r['Log'],
-          '[drawn(0, input_box(menu([form(post, [field(String, text)]), '
+          '[drawn(1, input_box(menu([form(post, [field(String, text)]), '
           'button(quit)])), input([])) | _]');
     });
   });
@@ -253,7 +253,7 @@ void main() {
       // nothing; carol's card took its own no.
       expect(r['R1'], 'accept(bob)');
       expect(r['R2'], 'refuse(carol)');
-      for (final e in ['drawn(0)', 'withdrawn(0)', 'drawn(1)', 'withdrawn(1)']) {
+      for (final e in ['drawn(1)', 'withdrawn(1)', 'drawn(2)', 'withdrawn(2)']) {
         expect(r['Log'], contains(e));
       }
       expect(r['Log'], endsWith('| _]'));
@@ -346,8 +346,8 @@ pricing_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       expect(r['P'], 'price(2.5)');
       expect(r['Log'],
-          '[drawn(0, form(price, [field(Real, number)]), input([])), '
-          'withdrawn(0) | _]');
+          '[drawn(1, form(price, [field(Real, number)]), input([])), '
+          'withdrawn(1) | _]');
     });
   });
 
@@ -416,8 +416,8 @@ picking_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       final r = _Run(await engine.runGoal('play_pick(P, Log)'), engine);
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       expect(r['P'], 'odd one(b)');
-      expect(r['Log'], startsWith('[drawn(0, '));
-      expect(r['Log'], endsWith(', input([])), withdrawn(0) | _]'));
+      expect(r['Log'], startsWith('[drawn(1, '));
+      expect(r['Log'], endsWith(', input([])), withdrawn(1) | _]'));
     });
   });
 
@@ -655,7 +655,7 @@ write_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       expect(r['Ns'], '[1, 2]');
       expect(r['Log'],
-          '[drawn(0, input_list(number), input([])), withdrawn(0) | _]');
+          '[drawn(1, input_list(number), input([])), withdrawn(1) | _]');
     });
 
     test('(1) a stream the person writes is not ended: a grant of [end] or '
@@ -663,7 +663,7 @@ write_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       final r = await play('play_counts(Cs, Log)');
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       expect(r['Cs'], '[1, 2 | _]');
-      expect(r['Log'], '[drawn(0, input_box(number), input([])) | _]');
+      expect(r['Log'], '[drawn(1, input_box(number), input([])) | _]');
     });
 
     test('(1) the end\'s grant is no element\'s: a list whose element type '
@@ -673,8 +673,8 @@ write_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       expect(r['Os'], '[none, []]');
       expect(r['Log'],
-          '[drawn(0, input_list(menu([button(none), button([])])), '
-          'input([])), withdrawn(0) | _]');
+          '[drawn(1, input_list(menu([button(none), button([])])), '
+          'input([])), withdrawn(1) | _]');
     });
 
     test('an alias of a stream draws as the stream it names and is answered '
@@ -682,7 +682,7 @@ write_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       final r = await play('play_write(Ls, Log)');
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       expect(r['Ls'], '[one, two | _]');
-      expect(r['Log'], '[drawn(0, input_box(text), input([])) | _]');
+      expect(r['Log'], '[drawn(1, input_box(text), input([])) | _]');
     });
 
     test('(3) a stream inside a form: the form answered with a fresh stream, '
@@ -693,10 +693,10 @@ write_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       expect(r['P'], 'post(hi, [x, y | _])');
       expect(
           r['Log'],
-          "[drawn(0, menu([form(post, [field(String, text), "
+          "[drawn(1, menu([form(post, [field(String, text), "
           "question(Stream(String), input_box(text))]), form(tags, "
           "[question(List(Constant), input_list(text))]), button(quit)]), "
-          'input([])), drawn(0, post(hi, input([2]))) | _]');
+          'input([])), drawn(1, post(hi, input([2]))) | _]');
     });
 
     test('(3) a list inside a form: answered, then ended, and the construct '
@@ -705,7 +705,7 @@ write_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       expect(r['P'], 'tags([a])');
       expect(r['Log'],
-          '[drawn(0, input([])), drawn(0, tags(input([1]))), withdrawn(0) | _]');
+          '[drawn(1, input([])), drawn(1, tags(input([1]))), withdrawn(1) | _]');
     });
 
     test('(3) in a question of a structure the program writes: the card drawn '
@@ -715,8 +715,8 @@ write_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       expect(r['R'], 'reply(hi, [x | _])');
       expect(
           r['Log'],
-          '[drawn(0, card(bob, input([2]))), '
-          'drawn(0, card(bob, reply(hi, input([2, 2])))) | _]');
+          '[drawn(1, card(bob, input([2]))), '
+          'drawn(1, card(bob, reply(hi, input([2, 2])))) | _]');
     });
 
     test('(5) and (6) a key is a peer field, each field labelled by its '
@@ -726,8 +726,8 @@ write_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       expect(r['L'], 'lot(0a1b, 5)');
       expect(
           r['Log'],
-          '[drawn(0, form(lot, [field(Issuer, peer), field(Integer, '
-          'number)]), input([])), withdrawn(0) | _]');
+          '[drawn(1, form(lot, [field(Issuer, peer), field(Integer, '
+          'number)]), input([])), withdrawn(1) | _]');
     });
   });
 
@@ -873,9 +873,9 @@ nest_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       expect(r['B'], 'both(bob, yes, no)');
       expect(
           r['Log'],
-          '[drawn(0, form(card, [field(Peer, shown), field(YesNo, '
+          '[drawn(1, form(card, [field(Peer, shown), field(YesNo, '
           'buttons([yes, no])), field(YesNo, buttons([yes, no]))]), '
-          'card(bob, input([2]), input([3]))), withdrawn(0) | _]');
+          'card(bob, input([2]), input([3]))), withdrawn(1) | _]');
     });
 
     test('a grant at the second question answers it and leaves the first, '
@@ -883,7 +883,7 @@ nest_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       final r = await play('play_second(B, Log)');
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       expect(r['B'], 'both(bob, _, no)');
-      expect(r['Log'], '[drawn(0, card(bob, input([2]), input([3]))) | _]');
+      expect(r['Log'], '[drawn(1, card(bob, input([2]), input([3]))) | _]');
     });
 
     test('a grant with a position at which the construct has no question is '
@@ -891,7 +891,7 @@ nest_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       final r = await play('play_nowhere(B, Log)');
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       expect(r['B'], 'both(bob, _, _)');
-      expect(r['Log'], '[drawn(0, card(bob, input([2]), input([3]))) | _]');
+      expect(r['Log'], '[drawn(1, card(bob, input([2]), input([3]))) | _]');
     });
 
     test('a question below the root of a structure the program writes is at '
@@ -901,8 +901,8 @@ nest_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       expect(r['B'], 'both(carol, yes, no)');
       expect(
           r['Log'],
-          '[drawn(0, nest(carol, card(carol, input([2, 2]), '
-          'input([2, 3])))), withdrawn(0) | _]');
+          '[drawn(1, nest(carol, card(carol, input([2, 2]), '
+          'input([2, 3])))), withdrawn(1) | _]');
     });
   });
 
@@ -926,10 +926,10 @@ nest_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       final r = await _play('cards', 'play_panel(Log)');
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       final log = r['Log'];
-      expect(log, startsWith('[both(0, [1, 1, 2], [1, 2, 1, 2]), '));
+      expect(log, startsWith('[both(1, [1, 1, 2], [1, 2, 1, 2]), '));
       expect(log, contains('got(1, yes)'));
       expect(log, contains('got(2, no)'));
-      expect(log, contains('withdrawn(0)'));
+      expect(log, contains('withdrawn(1)'));
     });
 
     test('a stream of cards: the third drawn only once the first two are '
@@ -950,7 +950,7 @@ nest_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
         expect(log, contains(got));
       }
       expect(log.indexOf('got(3, no)'), greaterThan(log.indexOf('three(')));
-      expect(log, contains('withdrawn(0)'));
+      expect(log, contains('withdrawn(1)'));
     });
   });
 
@@ -974,7 +974,7 @@ nest_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       // The Peer pending at [1], the question at [2]; the person sends bob,
       // the card is drawn again with bob in it, and the person answers yes.
       expect(r['Log'],
-          '[pending(0, [1], [2]), whole(0, [2]), got(0, yes), withdrawn(0) | _]');
+          '[pending(1, [1], [2]), whole(1, [2]), got(0, yes), withdrawn(1) | _]');
     });
 
     test('its question is answerable at once: answered while its Peer is '
@@ -982,7 +982,7 @@ nest_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
         'withdraws, holding no question', () async {
       final r = await _play('pending', 'play_late_answered(Log)');
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
-      expect(r['Log'], '[pending(0, [1], [2]), got(0, no), withdrawn(0) | _]');
+      expect(r['Log'], '[pending(1, [1], [2]), got(0, no), withdrawn(1) | _]');
     });
 
     test('a stream partly written: its first element pending, its second\'s '
@@ -999,7 +999,7 @@ nest_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
           r['Log'],
           '[third([1], [2, 1, 1], [2, 1, 2], [2, 2, 1, 2]), got(3, yes), '
           'second([1, 2], [2, 1, 1], [2, 1, 2]), got(2, no), first([1, 2]), '
-          'got(1, yes), withdrawn(0) | _]');
+          'got(1, yes), withdrawn(1) | _]');
     });
 
     test('a thread element written before its argument is bound: drawn '
@@ -1010,8 +1010,8 @@ nest_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       // The second note at [1, 2, 1]: the thread at [1], its second cell at
       // [1, 2], that cell's element at [1, 2, 1].
       expect(r['Log'],
-          '[pending(0, [1, 2, 1], [2]), whole(0, [2]), got(0, yes), '
-          'withdrawn(0) | _]');
+          '[pending(1, [1, 2, 1], [2]), whole(1, [2]), got(0, yes), '
+          'withdrawn(1) | _]');
     });
   });
 }

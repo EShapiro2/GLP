@@ -13,9 +13,9 @@
 /// its interactive type (Definition "Widget Declaration, Default Widget"),
 /// and alice's submissions on it go back as her grants, `input(Id, P, R)`
 /// (vGLP, sections/elicitation.tex, the paragraph "The implementation"); what
-/// the super-app tells her comes back on the same channel, merged with the
-/// draws, to the friends view and the default display.  Nothing is simulated
-/// and no term is hand-fed.
+/// the super-app tells her comes back on the same channel as the thread of
+/// construct 0, each notice drawn by the widget of the reserved type Output
+/// ::= Notice.  Nothing is simulated and no term is hand-fed.
 ///
 /// The same renderer and the same shell as the currency mini-app's screen; the
 /// only thing that differs is the program, and the manifest of what its agent
@@ -35,6 +35,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/manifests/superapp_ui.dart';
 import 'package:glp_multiagent/ui_runtime/agent_surface.dart';
+import 'package:glp_multiagent/ui_runtime/bridge.dart';
 import 'package:glp_multiagent/ui_runtime/construct_family.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
@@ -178,8 +179,26 @@ void main() {
         "form(install, [field('AppName', text), field('Artefact', text)]), "
         "form(invite, [field('AppName', text), field('Friend', peer)]), "
         "form(connect, [field('Friend', peer)])]))";
-    expect(r.bridge.constructs.map((c) => formatTerm(c.widget)), [requestForm]);
-    final form = r.bridge.constructs.single;
+    // What the super-app tells its person reaches her only as the thread of
+    // construct 0, each notice by the widget of the reserved type Output ::=
+    // Notice; the questions are numbered from 1 (vGLP 169b008, Definition
+    // "Canonical Compilation"; vGLP, 2026-10-13 19:25 UTC, items 2 and 3;
+    // GSG, 2026-10-13 20:16 UTC).
+    expect(formatTerm(r.bridge.construct(0)!.widget),
+        startsWith('thread(form(msg, '));
+    List<OpenConstruct> questions() =>
+        [for (final c in r.bridge.constructs) if (c.id != 0) c];
+    /// Each notice's content, as the thread shows it.
+    List<String> notices() {
+      final v = r.bridge.construct(0)!.view;
+      return [
+        if (v is GList)
+          for (final m in v.items) formatTerm(ctorArgs(m).$2[2])
+      ];
+    }
+
+    expect(questions().map((c) => formatTerm(c.widget)), [requestForm]);
+    final form = questions().single;
     expect(formatTerm(form.view), 'input([])');
 
     await tester.pumpWidget(_phoneApp(AgentSurface(agentId: 'alice', runtime: r)));
@@ -188,10 +207,22 @@ void main() {
     Finder inForm(Finder f) =>
         find.descendant(of: find.byKey(constructKey(form.id)), matching: f);
 
+    /// Bring [f] on screen: the surface scrolls, the output thread above the
+    /// questions growing with every notice.
+    Future<void> show(Finder f) async {
+      if (f.evaluate().isEmpty) {
+        await tester.scrollUntilVisible(f, 200,
+            scrollable: find.byType(Scrollable).first);
+      }
+      await tester.ensureVisible(f);
+      await tester.pumpAndSettle();
+    }
+
     /// Choose one of the menu's forms, fill its fields, and send it: one
     /// request on the request form, one element of the stream.
     Future<void> request(String alternative, Map<List<int>, (String, String)> fields,
         {String? formShot}) async {
+      await show(inForm(find.widgetWithText(ChoiceChip, alternative)));
       await tester.tap(inForm(find.widgetWithText(ChoiceChip, alternative)));
       await tester.pumpAndSettle();
       expect(inForm(find.byType(TextField)), findsNWidgets(fields.length));
@@ -204,7 +235,9 @@ void main() {
             text);
       }
       await tester.pumpAndSettle();
+      await show(find.byKey(constructKey(form.id)));
       if (formShot != null) await _shot(tester, formShot);
+      await show(find.byKey(submitKey(form.id, const [])));
       await tester.tap(find.byKey(submitKey(form.id, const [])));
       await tester.pumpAndSettle();
       await settle();
@@ -235,7 +268,8 @@ void main() {
     await request('connect', {
       [1]: ('peer', 'bob')
     });
-    expect((r.store.lists['friends'] ?? const []).map(formatTerm), ['bob']);
+    expect(notices(), contains('connected(bob)'));
+    expect(r.store.lists, isEmpty);
     await _shot(tester, '/private/tmp/superapp-connected.png');
 
     // --- Invite him to the mini-app now that they are friends. -------------
@@ -243,15 +277,22 @@ void main() {
       [1]: ('text', 'currency'),
       [2]: ('peer', 'bob'),
     });
-    expect(find.text('FRIENDS'), findsOneWidget);
-    expect(find.text('Bob'), findsOneWidget);
+    // The notice reads with its functor and its labelled field.
+    expect(find.text('FRIENDS'), findsNothing);
+    await show(find.descendant(
+        of: find.byKey(constructKey(0)), matching: find.text('connected')));
+    expect(
+        find.descendant(
+            of: find.byKey(constructKey(0)), matching: find.text('Constant')),
+        findsWidgets);
     await _shot(tester, '/private/tmp/superapp-invited.png');
 
     // The question stands: a stream question takes one element per
     // submission and stays open while its stream does (vGLP, Remark
     // "Persistence"), so the same construct takes every request, and it is
     // the only one open.
-    expect(r.bridge.constructs.map((c) => c.id), [form.id]);
+    expect(questions().map((c) => c.id), [form.id]);
+    await show(find.byKey(constructKey(form.id)));
     expect(find.byKey(constructKey(form.id)), findsOneWidget);
   }, timeout: const Timeout(Duration(minutes: 3)));
 }

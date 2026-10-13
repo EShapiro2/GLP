@@ -27,12 +27,16 @@ import 'package:glp_runtime/multiagent/agent_runtime.dart';
 import 'fixture_term.dart';
 import 'programs_dir.dart';
 
-/// One panel, whose one view is the default display: every screen message
-/// the program writes, shown as its scalars.
+/// One panel, a compiled vGLP program's: the constructs the bridge holds
+/// open, the program's output to its person among them as the thread of
+/// construct 0 (vGLP 169b008, Definition "Canonical Compilation"; vGLP,
+/// 2026-10-13 19:25 UTC, items 2 and 3); and one view, of whatever else
+/// reaches the screen that is no draw of the bridge's, which a compiled
+/// program sends none of.
 const _manifest = Manifest(
   title: 'bridge',
   panels: [
-    Panel(id: 'screen', name: 'screen', views: [
+    Panel(id: 'screen', name: 'screen', constructs: true, views: [
       ScreenView(
           pattern: 'S',
           content: 'S',
@@ -123,9 +127,17 @@ class _Person {
     return cs.single;
   }
 
-  /// What the program has written to the person, beside the draws.
-  List<String> get screen =>
-      [for (final t in ui.store.lists['screen'] ?? const <GTerm>[]) formatTerm(t)];
+  /// What the program has written to the person: the elements of the output
+  /// thread, construct 0, drawn by the dispatcher.
+  List<String> get screen {
+    final v = ui.bridge.construct(0)?.view;
+    return [if (v is GList) for (final t in v.items) formatTerm(t)];
+  }
+
+  /// The constructs of the program's questions: every open construct but the
+  /// output thread, construct 0.
+  List<OpenConstruct> get questions =>
+      [for (final c in ui.bridge.constructs) if (c.id != 0) c];
 
   Finder inside(OpenConstruct c, Finder f) =>
       find.descendant(of: find.byKey(constructKey(c.id)), matching: f);
@@ -182,8 +194,8 @@ void main() {
     final p = await _Person.boot(tester, 'inputs_init');
 
     // Seven questions open at once, each the person's whole variable, [].
-    expect(p.ui.bridge.constructs, hasLength(7));
-    for (final c in p.ui.bridge.constructs) {
+    expect(p.questions, hasLength(7));
+    for (final c in p.questions) {
       expect(formatTerm(c.view), 'input([])');
     }
     final button = p.the('button(ok)');
@@ -273,7 +285,7 @@ void main() {
 
     // Every question answered and every construct withdrawn; the program's
     // own output shown in its view, and no draw among it.
-    expect(p.ui.bridge.constructs, isEmpty);
+    expect(p.questions, isEmpty);
     expect(p.screen, hasLength(7));
     expect(find.text('hello world'), findsOneWidget);
     expect(find.text('carol'), findsOneWidget);
@@ -292,7 +304,7 @@ void main() {
     final feed = p.the("form(feed, [field('Stream(String)', thread), "
         "field('YesNo', buttons([yes, no]))])");
     final box = p.the('input_box(text)');
-    expect(p.ui.bridge.constructs, hasLength(5));
+    expect(p.questions, hasLength(5));
 
     // A form: one field per argument, granted as the tuple.
     expect(find.byKey(nodeKey(form.id, 'form', [])), findsOneWidget);
@@ -365,7 +377,7 @@ void main() {
     expect(p.grants.last, 'input(${box.id}, [], second)');
     expect(p.screen, contains('got(line, second)'));
     p.open(box);
-    expect(p.ui.bridge.constructs.map((c) => c.id), [box.id]);
+    expect(p.questions.map((c) => c.id), [box.id]);
   });
 
   testWidgets(
@@ -407,7 +419,7 @@ void main() {
       'input(${second.id}, [2], no)',
       'input(${first.id}, [2], yes)',
     ]);
-    expect(p.ui.bridge.constructs, isEmpty);
+    expect(p.questions, isEmpty);
   });
 
   // vGLP #8 Cowork, 2026-10-11 15:47 UTC, item 2, Task D: a stream or a list
@@ -437,7 +449,7 @@ void main() {
       final p = await _Person.boot(tester, 'panel_init', dir: 'cards');
       final panel =
           p.the("form(panel, [field('List(Card)', thread($card))])");
-      expect(p.ui.bridge.constructs, hasLength(1));
+      expect(p.questions, hasLength(1));
       // The two cards presented at once, the second while the first's
       // question is open: the k-th card's answer at the path through the
       // list cells, [1, 1, 2] and [1, 2, 1, 2].
@@ -686,7 +698,7 @@ void main() {
         "field('Name', text)])");
     final choice = p.the("form(choice, [field('Peer', shown), "
         "field('Constant', text)])");
-    expect(p.ui.bridge.constructs, hasLength(3));
+    expect(p.questions, hasLength(3));
     expect(formatTerm(card.view), 'card(bob, input([2]))');
     expect(formatTerm(greeting.view), 'greeting(carol, input([2]))');
     expect(formatTerm(choice.view), 'choice(dana, input([2]))');
@@ -719,7 +731,7 @@ void main() {
     expect(p.screen, contains('picked(go)'));
     p.withdrawn(choice);
 
-    expect(p.ui.bridge.constructs, isEmpty);
+    expect(p.questions, isEmpty);
     expect(p.screen, hasLength(3));
   });
 
@@ -1099,8 +1111,8 @@ ask_init(_, Gs, _) :-
         'drawn', (tester) async {
       write('_');
       final p = await _Person.boot(tester, 'ask_init', dir: name);
-      expect(p.ui.bridge.constructs, hasLength(1));
-      expect(formatTerm(p.ui.bridge.constructs.single.view),
+      expect(p.questions, hasLength(1));
+      expect(formatTerm(p.questions.single.view),
           'card(bob, input([2]))');
     });
   });

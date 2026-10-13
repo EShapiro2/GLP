@@ -46,6 +46,28 @@ const _offer = "field('Offer', form(offer, [field('From', shown), "
     "field('Serial', shown)])))]))";
 const _card = "form(card, [$_offer, field('YesNo', buttons([yes, no]))])";
 
+/// The widget of the agent's output to its person, as `coins_agent.glp`
+/// draws it: a thread whose elements are drawn by the widget of the reserved
+/// type `Output ::= ScreenMsg`, a form headed msg, its ScreenContent a menu of
+/// the screen's forms, each field labelled by its declared type (vGLP
+/// 169b008, Definition "Canonical Compilation").
+const _output =
+    "thread(form(msg, [field('Constant', shown), field('Constant', shown), "
+    "field('ScreenContent', menu([form(holdings, [field('Stream(Lot)', thre"
+    "ad(form(lot, [field('Issuer', shown), field('Amount', shown)])))]), fo"
+    "rm(opened, [field('Key', shown)]), form(minted, [field('Integer', show"
+    "n)]), form(paid, [field('Key', shown), field('Integer', shown)]), form"
+    "(received, [field('Key', shown), field('Integer', shown)]), form(retur"
+    "ned, [field('Key', shown), field('Integer', shown)]), form(swap_done, "
+    "[field('Key', shown)]), form(swap_declined, [field('Key', shown)]), fo"
+    "rm(swap_failed, [field('Key', shown)]), form(declined, [field('Key', s"
+    "hown)]), form(redeemed, [field('Key', shown), field('Key', shown)]), f"
+    "orm(menu, [field('Key', shown), field('Stream(Key)', thread)]), form(p"
+    "resented, [field('Key', shown), field('Key', shown)]), form(unfulfille"
+    "d, [field('Key', shown), field('Key', shown)]), form(refused, [field('"
+    "Key', shown)]), form(lacking, [field('Key', shown), field('Integer', s"
+    "hown)]), form(no_conversation, [field('Key', shown)])]))]))";
+
 void main() {
   late List<String> sent;
   late UiRuntime r;
@@ -194,33 +216,38 @@ void main() {
     });
   });
 
-  group('the views of the agent\'s output', () {
-    test('the balances view is fed by its pattern and replaces its rows', () {
+  // The agent's output to its person, msg(agent, person, C), reaches the
+  // person only as the thread of construct 0, drawn at dispatch start and
+  // again with every message so far, each by the widget of the reserved type
+  // Output (`Output ::= ScreenMsg`); no view of the manifest names a message
+  // (vGLP 169b008, Definition "Canonical Compilation"; vGLP, 2026-10-13 19:25
+  // UTC, items 2 and 3).
+  group('the agent\'s output: the thread of construct 0', () {
+    test('the thread is a construct, its view the messages so far', () {
+      r.handle(fixtureTerm('draw(0, $_output, [])'));
+      r.handle(fixtureTerm('draw(0, $_output, [msg(agent, person, '
+          'opened(bob)), msg(agent, person, minted(3))])'));
+      final c = r.bridge.construct(0)!;
+      expect(formatTerm(c.widget), _output);
+      expect(formatTerm(c.view),
+          '[msg(agent, person, opened(bob)), msg(agent, person, minted(3))]');
+      expect(r.store.lists, isEmpty);
+      expect(r.store.balances, isEmpty);
+    });
+
+    test('a screen message on the channel reaches no view: the manifest names '
+        'none', () {
+      r.handle(fixtureTerm('msg(agent, person, minted(3))'));
       r.handle(fixtureTerm(
           'msg(agent, person, holdings([lot(alice, 3), lot(bob, 2)]))'));
-      expect(r.store.balances['balances']!.map((k, v) => MapEntry(k, formatTerm(v))),
-          {'alice': '3', 'bob': '2'});
-      r.handle(fixtureTerm('msg(agent, person, holdings([lot(bob, 2)]))'));
-      expect(r.store.balances['balances']!.keys, ['bob']);
-    });
-
-    test('every other screen message lands in the default display', () {
-      r.handle(fixtureTerm('msg(agent, person, minted(3))'));
-      r.handle(fixtureTerm('msg(agent, person, swap_done(bob))'));
-      r.handle(fixtureTerm('msg(agent, person, opened(bob))'));
-      expect(r.store.lists['screen']!.map(formatTerm),
-          ['minted(3)', 'swap_done(bob)', 'opened(bob)']);
-    });
-
-    test('a holdings message does not also reach the default display', () {
-      r.handle(fixtureTerm('msg(agent, person, holdings([lot(alice, 1)]))'));
-      expect(r.store.lists['screen'], isEmpty);
+      expect(r.store.lists['screen'], isNull);
+      expect(r.store.balances, isEmpty);
     });
 
     test('a draw is the bridge\'s, and reaches no view', () {
-      drawRequestForm();
-      r.handle(fixtureTerm('withdraw(0)'));
-      expect(r.store.lists['screen'], isEmpty);
+      drawRequestForm(id: 1);
+      r.handle(fixtureTerm('withdraw(1)'));
+      expect(r.store.lists, isEmpty);
       expect(r.store.balances, isEmpty);
     });
   });

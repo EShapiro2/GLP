@@ -584,6 +584,16 @@ class Panel {
   /// and leaves this empty.
   final List<ScreenView> views;
 
+  /// Whether this is a compiled vGLP program's panel: the constructs the
+  /// bridge holds open, the program's output to its person among them as the
+  /// thread of construct 0 ("A vGLP program declares the type of its output
+  /// to its person by defining the type Output, a reserved name; the
+  /// dispatcher draws that output as a thread whose elements are drawn by the
+  /// widget of Output", vGLP 169b008, Definition "Canonical Compilation"), so
+  /// that no view of [views] names a message (vGLP, 2026-10-13 19:25 UTC,
+  /// item 2: the manifests' msg views retire).
+  final bool constructs;
+
   const Panel({
     required this.id,
     required this.name,
@@ -594,6 +604,7 @@ class Panel {
     this.commands = const [],
     this.inbox = const [],
     this.views = const [],
+    this.constructs = false,
   });
 }
 

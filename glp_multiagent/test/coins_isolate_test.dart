@@ -122,14 +122,31 @@ void main() {
       return done();
     }
 
-    /// The balances panel as owner-to-amount, sorted — the state the
-    /// assertions below are on. A tally message replaces the panel whole, so
-    /// during a swap the panel is empty between her coins leaving and bob's
-    /// arriving: a wait on "alice is named" sees the panel mid-swap.
+    /// What the agent has written to her, each message's content: the
+    /// elements of the output thread, construct 0, which is how her screen
+    /// reaches her (vGLP 169b008, Definition "Canonical Compilation"; vGLP,
+    /// 2026-10-13 19:25 UTC, items 2 and 3).
+    List<GTerm> screen() {
+      final v = r.bridge.construct(0)?.view;
+      return [if (v is GList) for (final m in v.items) ctorArgs(m).$2[2]];
+    }
+
+    /// Her latest holdings as issuer-to-amount, sorted --- the state the
+    /// assertions below are on.  A tally message replaces the last whole, so
+    /// during a swap it is empty between her coins leaving and bob's
+    /// arriving: a wait on "alice is named" sees it mid-swap.
     String balances() {
-      final b = r.store.balances['balances'] ?? const <String, GTerm>{};
-      final keys = b.keys.toList()..sort();
-      return [for (final k in keys) '$k=${formatTerm(b[k]!)}'].join(' ');
+      final hs = [
+        for (final m in screen())
+          if (ctorArgs(m).$1 == 'holdings') m
+      ];
+      if (hs.isEmpty) return '';
+      final lots = ctorArgs(hs.last).$2.single as GList;
+      final pairs = [
+        for (final l in lots.items)
+          '${formatTerm(ctorArgs(l).$2[0])}=${formatTerm(ctorArgs(l).$2[1])}'
+      ]..sort();
+      return pairs.join(' ');
     }
 
     /// The person's grants, each `input(Id, P, R)` as the bridge returns it,
@@ -181,8 +198,8 @@ void main() {
         form.id, p, tryParseTerm('swap(bob, alice, 2, bob, 2)')!);
     await send();
     expect(
-        await until(() => r.store.lists['screen']!
-            .any((t) => formatTerm(t) == 'swap_done(bob)')),
+        await until(() =>
+            screen().any((t) => formatTerm(t) == 'swap_done(bob)')),
         isTrue);
     await until(() => balances() == 'bob=2');
     expect(balances(), 'bob=2');
@@ -221,6 +238,6 @@ void main() {
     // Answered, the card is withdrawn; the request form stands.
     expect(await until(() => r.bridge.construct(offer.id) == null), isTrue,
         reason: 'the answered card is withdrawn');
-    expect(r.bridge.constructs.map((c) => c.id), [form.id]);
+    expect(r.bridge.constructs.map((c) => c.id), [0, form.id]);
   }, timeout: const Timeout(Duration(minutes: 2)));
 }
