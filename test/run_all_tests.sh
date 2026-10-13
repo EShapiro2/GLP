@@ -3996,7 +3996,7 @@ echo ""
 echo "=== Section J: SecureBonds ==="
 echo ""
 
-SECUREBONDS="$GLP_DIR/programs/currencies/bonds_v2/secure"
+SECUREBONDS="$GLP_DIR/programs/currencies/secure"
 
 # Loading
 sb_load=$("$REPL_RUN" <<HEREDOC
