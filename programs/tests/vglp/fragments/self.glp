@@ -162,8 +162,9 @@ posting_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
 %% is asked once the first is answered.  The person, its screen behind,
 %% grants no to the first card after its withdrawal, and then no to the
 %% second: the stale grant reaches the dispatcher after the withdrawal, when
-%% construct 0's route is dead and construct 1's live, and the grant to
-%% construct 1 answers it.
+%% construct 1's route is dead and construct 2's live, and the grant to
+%% construct 2 answers it, the identifier 0 being the output thread's and
+%% the questions numbered from 1 (vGLP, 2026-10-13 19:25 UTC, item 3).
 %% ---------------------------------------------------------------------------
 
 exported procedure play_inflight(Response, Response, Stream(_)).
@@ -185,23 +186,23 @@ next_card(refuse(P), refuse(P?), R2?, A2?) :-
 
 %% The person grants yes to the first card, at its question's position, [2].
 procedure first_card_person(_?, PersonIn, Stream(_)).
-first_card_person([draw(0, _, card(bob, input([2]))) | Ds],
-                  [input(0, [2], yes) | Gs?], [drawn(0) | Log?]) :-
+first_card_person([draw(1, _, card(bob, input([2]))) | Ds],
+                  [input(1, [2], yes) | Gs?], [drawn(1) | Log?]) :-
     awaiting_person(Ds?, no, no, Gs, Log).
 
 %% awaiting_person(Ds?, Withdrawn?, Drawn?, Gs, Log): the person waits until
 %% the first card has withdrawn and the second is drawn, in either order, and
 %% then grants no to the first, now dead, and no to the second.
 procedure awaiting_person(_?, YesNo?, YesNo?, PersonIn, Stream(_)).
-awaiting_person([withdraw(0) | Ds], no, no, Gs?, [withdrawn(0) | Log?]) :-
+awaiting_person([withdraw(1) | Ds], no, no, Gs?, [withdrawn(1) | Log?]) :-
     awaiting_person(Ds?, yes, no, Gs, Log).
-awaiting_person([draw(1, _, card(carol, input([2]))) | Ds], no, no, Gs?,
-                [drawn(1) | Log?]) :-
+awaiting_person([draw(2, _, card(carol, input([2]))) | Ds], no, no, Gs?,
+                [drawn(2) | Log?]) :-
     awaiting_person(Ds?, no, yes, Gs, Log).
-awaiting_person([withdraw(0) | Ds], no, yes,
-                [input(0, [2], no), input(1, [2], no) | Gs?],
-                [withdrawn(0) | Log?]) :-
+awaiting_person([withdraw(1) | Ds], no, yes,
+                [input(1, [2], no), input(2, [2], no) | Gs?],
+                [withdrawn(1) | Log?]) :-
     watching_person(Ds?, Gs, Log).
-awaiting_person([draw(1, _, card(carol, input([2]))) | Ds], yes, no,
-                [input(0, [2], no), input(1, [2], no) | Gs?], [drawn(1) | Log?]) :-
+awaiting_person([draw(2, _, card(carol, input([2]))) | Ds], yes, no,
+                [input(1, [2], no), input(2, [2], no) | Gs?], [drawn(2) | Log?]) :-
     watching_person(Ds?, Gs, Log).
