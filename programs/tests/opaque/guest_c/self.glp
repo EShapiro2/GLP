@@ -1,0 +1,7 @@
+%% A guest: its entry is the host's template entry/2 (../self.glp) at Bid,
+%% a type other than guest_a's Move.
+Bid ::= bid(Integer) ; pass.
+
+exported procedure entry(Stream(Bid)?, Stream(Bid)).
+entry([B|Bs], [B?|Os?]) :- entry(Bs?, Os).
+entry([], []).

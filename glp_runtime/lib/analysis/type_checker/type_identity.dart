@@ -41,10 +41,19 @@
 //     already fixed on both sides by the table key `p/n`.  Abstracting it is
 //     what structural compatibility asks for: two declarations with the same
 //     argument types are compatible whatever they are called.
-//   - A parameterised declaration has no type identity.  It is a template, not
-//     a type (TGLP "Parameterised Procedure Declarations": it is checked once
-//     per instantiation); `find_type` on one is an error.  Such keys are
-//     collected in [TypeIdentityTables.parametric] and appear in neither table.
+//   - A parameterised declaration has no type identity of its own.  It is a
+//     template, not a type (TGLP "Parameterised Procedure Declarations": it is
+//     checked once per instantiation); `find_type/2` on one is an error.  Such
+//     keys are collected in [TypeIdentityTables.parametric] and appear in
+//     neither table.  It has an identity at each opaque instance
+//     ([opaqueInstanceIdentityHex]; TGLP modules.tex, Definition "Type Identity
+//     of a Type, Opaque Instance").
+//
+// The same construction gives the type identity of a type
+// ([typeIdentityOfTypeHex]) and of an opaque instance: only the start state of
+// the walk, and the opaque states, differ (Definition "Type Identity of a Type,
+// Opaque Instance": "as for a procedure declaration"; "its type identity is
+// that of the resulting declaration").
 
 library;
 
@@ -84,6 +93,14 @@ enum _Kind {
 
   /// The final state ✓, reached by a constant transition.
   check,
+
+  /// An opaque type labelled with a type identity, [_State.name] the label:
+  /// a state with no outgoing transitions (TGLP parameterized-types.tex,
+  /// Definition "Opaque Type"), two of which are one state exactly when their
+  /// labels are equal (modules.tex, Definition "Type Identity of a Type,
+  /// Opaque Instance").  It is one state at both modes: the mode of a position
+  /// is in the label of the transition that reaches it.
+  opaque,
 }
 
 class _State {
@@ -98,6 +115,7 @@ class _State {
   static _State wildcard(bool dual) => _State(_Kind.wildcard, '', dual);
   static _State type(String name, bool dual) => _State(_Kind.type, name, dual);
   static _State prim(String name, bool dual) => _State(_Kind.prim, name, dual);
+  static _State opaque(String label) => _State(_Kind.opaque, label, false);
 
   @override
   bool operator ==(Object other) =>
@@ -127,6 +145,10 @@ int _initialClass(_State s) {
     case _Kind.type:
     case _Kind.prim:
       return 3;
+    case _Kind.opaque:
+      // Each label is a class of its own ([_minimise] numbers them 4, 5, ...);
+      // this is the first of them.
+      return 4;
   }
 }
 
@@ -142,6 +164,11 @@ String _kindSuffix(_State s) {
     case _Kind.type:
     case _Kind.prim:
       return '';
+    case _Kind.opaque:
+      // "An opaque type printed as its label" (Definition "Type Identity of a
+      // Type, Opaque Instance").  A label is a lowercase hex hash, never one
+      // of the words above.
+      return ' ${s.name}';
   }
 }
 
@@ -211,7 +238,12 @@ class _Expansion {
   final Map<_State, Set<(String, bool)>> inlinedHoles = {};
   Set<(String, bool)>? _inlining;
 
-  _Expansion(this.types, {this.holes = const {}});
+  /// Abstract types standing for type parameters ([abstractTypePrefix]), each
+  /// replaced by the opaque state labelled with its type identity: the opaque
+  /// instance of [opaqueInstanceIdentityHex].  Empty everywhere else.
+  final Map<String, String> opaque;
+
+  _Expansion(this.types, {this.holes = const {}, this.opaque = const {}});
 
   /// The transitions of [s], computed on first use: a state the walk of
   /// [importExportDisagreement] reaches by instantiating a parameter need not
@@ -238,6 +270,19 @@ class _Expansion {
     }
   }
 
+  /// The sub-automaton reachable from [start], a type's state: the expansion
+  /// step of the type identity of a type.
+  void expandFrom(_State start) {
+    final work = <_State>[start];
+    while (work.isNotEmpty) {
+      final s = work.removeLast();
+      if (transitions.containsKey(s)) continue;
+      final t = _transitionsOf(s);
+      transitions[s] = t;
+      work.addAll(t.values);
+    }
+  }
+
   Map<String, _State> _procTransitions(ProcDecl decl) {
     final out = <String, _State>{};
     for (var i = 0; i < decl.arity; i++) {
@@ -252,6 +297,7 @@ class _Expansion {
     switch (s.kind) {
       case _Kind.check:
       case _Kind.wildcard:
+      case _Kind.opaque:
         return const {};
       case _Kind.prim:
         return {_primLabel(s.name, s.dual): _State.check};
@@ -322,6 +368,15 @@ class _Expansion {
             'parameterised type reference survived expansion: ${alt.name}');
       }
       final d = alt.isInput != dual; // XOR
+      if (opaque.containsKey(alt.name)) {
+        // An opaque type has no transitions, so as a bare alternative it
+        // would add none and leave no trace of its label: the opaque instance
+        // of a declaration whose parameter occurs as an alternative of a type
+        // definition is not one TGLP defines (Proposition "Opaque Activation"
+        // excludes it), and has no identity here.
+        throw OpaqueAlternativeError(
+            alt.name.substring(abstractTypePrefix.length));
+      }
       if (TypeRef.builtins.contains(alt.name)) {
         out.putIfAbsent(_primLabel(alt.name, d), () => _State.check);
         return;
@@ -368,6 +423,8 @@ class _Expansion {
             'parameterised type reference survived expansion: ${e.name}');
       }
       final d = e.isInput != dual; // XOR
+      final label = opaque[e.name];
+      if (label != null) return _State.opaque(label);
       if (TypeRef.builtins.contains(e.name)) return _State.prim(e.name, d);
       if (!types.containsKey(e.name)) {
         throw UnknownTypeError(e.name, e.line, e.column);
@@ -412,8 +469,18 @@ Set<(String, bool)> bareInlinedParameters(
 
 /// Moore partition refinement.  Returns each state's block number.
 Map<_State, int> _minimise(Map<_State, Map<String, _State>> transitions) {
+  // An opaque state's class is its label's: 4, 5, ... in label order.
+  final labels = {
+    for (final s in transitions.keys)
+      if (s.kind == _Kind.opaque) s.name
+  }.toList()
+    ..sort();
+  final labelClass = {
+    for (var i = 0; i < labels.length; i++) labels[i]: _initialClass(_State.opaque('')) + i,
+  };
   var block = <_State, int>{
-    for (final s in transitions.keys) s: _initialClass(s),
+    for (final s in transitions.keys)
+      s: s.kind == _Kind.opaque ? labelClass[s.name]! : _initialClass(s),
   };
 
   while (true) {
@@ -449,7 +516,13 @@ Map<_State, int> _minimise(Map<_State, Map<String, _State>> transitions) {
 /// against [env]'s type definitions.
 String canonicalTypeAutomatonPrint(ProcDecl decl, TypeEnvironment env) {
   final expansion = _Expansion(env.types)..expand(decl);
-  final transitions = expansion.transitions;
+  return _canonicalPrint(expansion.transitions, _State.proc);
+}
+
+/// Steps 2 and 3 over an expanded automaton: minimise [transitions] and print
+/// the quotient breadth-first from [startState]'s block.
+String _canonicalPrint(
+    Map<_State, Map<String, _State>> transitions, _State startState) {
   final block = _minimise(transitions);
 
   // Quotient: one representative's transitions per block, targets as blocks.
@@ -469,7 +542,7 @@ String canonicalTypeAutomatonPrint(ProcDecl decl, TypeEnvironment env) {
 
   // Breadth-first walk from the start block, transitions in sorted label order,
   // states numbered in visit order.
-  final start = block[_State.proc]!;
+  final start = block[startState]!;
   final number = <int, int>{start: 0};
   final order = <int>[start];
   for (var i = 0; i < order.length; i++) {
@@ -504,6 +577,153 @@ Uint8List typeIdentity(ProcDecl decl, TypeEnvironment env) =>
 /// The type identity of [decl] as lowercase hex — the form the tables carry.
 String typeIdentityHex(ProcDecl decl, TypeEnvironment env) =>
     hex(typeIdentity(decl, env));
+
+// =============================================================================
+// The type identity of a type, and of an opaque instance
+// =============================================================================
+
+/// The canonical print of the minimised type automaton of the type [type] —
+/// a type name or a primitive, at the produced mode — expanded against
+/// [types].  TGLP modules.tex, Definition "Type Identity of a Type, Opaque
+/// Instance": "The type identity ι(T) of a type T is the hash of its type
+/// automaton in canonical minimised form, as for a procedure declaration."
+/// The construction is the declaration's, from T's state rather than from a
+/// procedure's.
+String canonicalTypePrint(TypeExpr type, Map<String, TypeDef> types) {
+  final e = _Expansion(types);
+  // T at the produced mode: `T?` names the same type, consumed.
+  var start = e._resolve(type, false);
+  if (start.dual) start = _State(start.kind, start.name, false);
+  e.expandFrom(start);
+  return _canonicalPrint(e.transitions, start);
+}
+
+/// ι([type]): the type identity of a type, as lowercase hex.
+String typeIdentityOfTypeHex(TypeExpr type, Map<String, TypeDef> types) =>
+    hex(hashOfPrint(canonicalTypePrint(type, types)));
+
+/// The canonical print of the opaque instance D⟨h_1, ..., h_k⟩ of the
+/// parameterised declaration [template] (D) at the type identities [labels],
+/// expanded against [env], the scope D is declared in.
+///
+/// TGLP modules.tex, Definition "Type Identity of a Type, Opaque Instance":
+/// "The opaque instance D⟨h_1, ..., h_k⟩ replaces each X_i by an opaque type
+/// labelled h_i, two such opaque types being one state exactly when their
+/// labels are equal; its type identity is that of the resulting declaration,
+/// an opaque type printed as its label."  Each parameter stands as its
+/// abstract type ([buildAbstractInstance]), whose state the expansion replaces
+/// by the opaque state labelled h_i.  Throws [OpaqueAlternativeError] where a
+/// parameter occurs as an alternative of a type definition.
+String canonicalOpaqueInstancePrint(
+    ProcDecl template, List<String> labels, TypeEnvironment env) {
+  if (labels.length != template.typeParams.length) {
+    throw ArgumentError('${template.key} has ${template.typeParams.length} '
+        'type parameters, given ${labels.length} type identities');
+  }
+  final inst = buildAbstractInstance(
+      template, template.typeParams, env.typeTemplates,
+      knownMonoTypes: env.types.keys.toSet());
+  final e = _Expansion({...env.types, ...inst.typeDefs}, opaque: {
+    for (var i = 0; i < labels.length; i++)
+      '$abstractTypePrefix${template.typeParams[i]}': labels[i],
+  })
+    ..expand(inst.decl);
+  return _canonicalPrint(e.transitions, _State.proc);
+}
+
+/// The type identity of the opaque instance D⟨[labels]⟩ of [template], as
+/// lowercase hex ([canonicalOpaqueInstancePrint]).
+String opaqueInstanceIdentityHex(
+        ProcDecl template, List<String> labels, TypeEnvironment env) =>
+    hex(hashOfPrint(canonicalOpaqueInstancePrint(template, labels, env)));
+
+/// A type parameter that occurs as an alternative of a type definition, where
+/// an opaque instance replaces it by an opaque type.
+class OpaqueAlternativeError implements Exception {
+  final String parameter;
+  OpaqueAlternativeError(this.parameter);
+
+  @override
+  String toString() => 'OpaqueAlternativeError: the type parameter '
+      '$parameter occurs as an alternative of a type definition, so the '
+      'opaque instance at it has no identity';
+}
+
+/// What a guest's exports record for an entry declared as the instance of a
+/// one-parameter declaration D at its type T: [entry], the type identity of
+/// D⟨ι(T)⟩, and [type], ι(T) itself (TGLP modules.tex, Dynamic Activation,
+/// "Opaque types": "A guest M whose entry is the template D's instance at its
+/// type T records in its exports, for its entry, the type identity of
+/// D⟨ι(T)⟩, and with it ι(T)").
+class OpaqueEntry {
+  final String entry;
+  final String type;
+  const OpaqueEntry({required this.entry, required this.type});
+
+  @override
+  bool operator ==(Object other) =>
+      other is OpaqueEntry && other.entry == entry && other.type == type;
+
+  @override
+  int get hashCode => Object.hash(entry, type);
+
+  @override
+  String toString() => 'OpaqueEntry(entry: $entry, type: $type)';
+}
+
+/// The record of [entry], a monomorphic declaration in [entryEnv], where it
+/// is the instance of [template] (D, declared in [templateEnv], D's scope) at
+/// some type T; null where it is the instance of D at no type.
+///
+/// It is the instance at T when its automaton equals D's with D's parameter
+/// instantiated to T: the agreement of an imported declaration with an
+/// exported one ([importExportDisagreement]; modules.tex, "Cross-module type
+/// checking": "their type automata are equal (structural type compatibility)
+/// once the exported declaration's type parameters, if any, are
+/// instantiated"), [entry] in the import's place and D in the export's, whose
+/// walk finds T as the state of [entry] where D has its parameter.  ι(T) is
+/// then taken in [entryEnv], where T is defined, and D⟨ι(T)⟩ in
+/// [templateEnv], where it need not be.
+///
+/// The record is defined for a template with one type parameter, the entry
+/// template of "Opaque types"; one with another number has none here.  A
+/// parameter that occurs in D only as a bare alternative of a type is bound
+/// to no type of [entry]'s, and one that occurs as an alternative at all has
+/// no opaque instance ([OpaqueAlternativeError]): neither has a record.
+OpaqueEntry? opaqueEntryOf({
+  required ProcDecl entry,
+  required TypeEnvironment entryEnv,
+  required ProcDecl template,
+  required TypeEnvironment templateEnv,
+}) {
+  if (template.typeParams.length != 1 || entry.isParameterized) return null;
+  final inst = buildAbstractInstance(
+      template, template.typeParams, templateEnv.typeTemplates,
+      knownMonoTypes: templateEnv.types.keys.toSet());
+  final param = '$abstractTypePrefix${template.typeParams.single}';
+  final (found, theta) = _agreement(
+    imported: entry,
+    importedTypes: entryEnv.types,
+    exported: inst.decl,
+    exportedTypes: {...templateEnv.types, ...inst.typeDefs},
+    exportedParams: inst.abstractTypeNames,
+  );
+  if (found != null) return null;
+  final t = theta[param];
+  if (t == null) return null;
+  if (t.kind == _Kind.type && t.name.startsWith(_instancePrefix)) return null;
+  if (t.kind == _Kind.check || t.kind == _Kind.proc) return null;
+
+  final e = _Expansion(entryEnv.types)..expandFrom(t);
+  final typeId = hex(hashOfPrint(_canonicalPrint(e.transitions, t)));
+  final String entryId;
+  try {
+    entryId = opaqueInstanceIdentityHex(template, [typeId], templateEnv);
+  } on OpaqueAlternativeError {
+    return null;
+  }
+  return OpaqueEntry(entry: entryId, type: typeId);
+}
 
 /// Lowercase hex of a hash.
 String hex(Uint8List bytes) =>
@@ -577,6 +797,31 @@ DeclarationDisagreement? importExportDisagreement({
   required ProcDecl exported,
   required Map<String, TypeDef> exportedTypes,
   Set<String> exportedParams = const {},
+}) =>
+    _agreement(
+      imported: imported,
+      importedTypes: importedTypes,
+      importedParams: importedParams,
+      exported: exported,
+      exportedTypes: exportedTypes,
+      exportedParams: exportedParams,
+    ).$1;
+
+/// The name of the state [importExportDisagreement] binds a parameter that
+/// occurs only as a bare alternative to: no type name, so it collides with
+/// none.
+const _instancePrefix = '#instance:';
+
+/// [importExportDisagreement]'s walk, returning with the disagreement the
+/// instantiation it found: each export parameter bound to a state of the
+/// import, at the produced view.
+(DeclarationDisagreement?, Map<String, _State>) _agreement({
+  required ProcDecl imported,
+  required Map<String, TypeDef> importedTypes,
+  Set<String> importedParams = const {},
+  required ProcDecl exported,
+  required Map<String, TypeDef> exportedTypes,
+  Set<String> exportedParams = const {},
 }) {
   final ie = _Expansion(importedTypes, holes: importedParams)..expand(imported);
   final ee = _Expansion(exportedTypes, holes: exportedParams)..expand(exported);
@@ -595,6 +840,8 @@ DeclarationDisagreement? importExportDisagreement({
       case _Kind.check:
       case _Kind.proc:
         return null;
+      case _Kind.opaque:
+        return s;
     }
   }
 
@@ -610,7 +857,7 @@ DeclarationDisagreement? importExportDisagreement({
   // The instance of a parameter that occurs only as a bare alternative, as a
   // state of the import of its own, `#instance:X`, viewed at the produced
   // mode.  The name is no type name, so it collides with none.
-  const instancePrefix = '#instance:';
+  const instancePrefix = _instancePrefix;
   final instances = <String, _View>{};
 
   _State flipTarget(_State s) => flip(s, true) ?? s;
@@ -672,6 +919,7 @@ DeclarationDisagreement? importExportDisagreement({
           }
         case _Kind.check:
         case _Kind.proc:
+        case _Kind.opaque:
           break;
       }
     }
@@ -692,6 +940,8 @@ DeclarationDisagreement? importExportDisagreement({
         return '_$q';
       case _Kind.prim:
         return '${s.name}$q';
+      case _Kind.opaque:
+        return 'the opaque type ${s.name}';
       case _Kind.type:
         if (s.name.startsWith(instancePrefix)) {
           final x = s.name.substring(instancePrefix.length);
@@ -736,9 +986,9 @@ DeclarationDisagreement? importExportDisagreement({
         if (bound == null) {
           final instance = flip(b.state, a.state.dual);
           if (instance == null) {
-            return DeclarationDisagreement(p.argument,
+            return (DeclarationDisagreement(p.argument,
                 'the import has ${describe(b)}${at(p.path)} where the export '
-                'has its parameter ${describe(a)}');
+                'has its parameter ${describe(a)}'), theta);
           }
           theta[a.state.name] = instance;
           continue;
@@ -758,10 +1008,10 @@ DeclarationDisagreement? importExportDisagreement({
         for (final l in own.keys.toList()..sort()) {
           final t = vb.out[l];
           if (t == null) {
-            return DeclarationDisagreement(p.argument,
+            return (DeclarationDisagreement(p.argument,
                 'the import has ${describe(b)}${at(p.path)} where the export '
                 'has $exportDesc, and they differ in their transitions --- '
-                'only the export\'s has $l');
+                'only the export\'s has $l'), theta);
           }
           queue.add(_Pair(_Side(true, own[l]!), t, p.argument, [...p.path, l]));
         }
@@ -780,8 +1030,8 @@ DeclarationDisagreement? importExportDisagreement({
             if (ia[i] != ib[i]) {
               final ma = ia[i]!.endsWith(':down') ? 'consumed (?)' : 'produced';
               final mb = ib[i]!.endsWith(':down') ? 'consumed (?)' : 'produced';
-              return DeclarationDisagreement(i,
-                  'the import declares it $mb where the export declares it $ma');
+              return (DeclarationDisagreement(i,
+                  'the import declares it $mb where the export declares it $ma'), theta);
             }
           }
         }
@@ -792,25 +1042,25 @@ DeclarationDisagreement? importExportDisagreement({
       }
 
       if (va.cls != vb.cls || !_sameSet(va.marks, vb.marks)) {
-        return DeclarationDisagreement(p.argument,
+        return (DeclarationDisagreement(p.argument,
             'the import has ${describe(b)}${at(p.path)} where the export has '
-            '$exportDesc');
+            '$exportDesc'), theta);
       }
       final la = va.out.keys.toSet(), lb = vb.out.keys.toSet();
       if (!_sameSet(la, lb)) {
         final onlyI = (lb.difference(la).toList()..sort()).join(', ');
         final onlyE = (la.difference(lb).toList()..sort()).join(', ');
-        return DeclarationDisagreement(p.argument,
+        return (DeclarationDisagreement(p.argument,
             'the import has ${describe(b)}${at(p.path)} where the export has '
             '$exportDesc, and they differ in their transitions'
             '${onlyI.isEmpty ? '' : ' --- only the import\'s has $onlyI'}'
-            '${onlyE.isEmpty ? '' : ' --- only the export\'s has $onlyE'}');
+            '${onlyE.isEmpty ? '' : ' --- only the export\'s has $onlyE'}'), theta);
       }
       for (final l in la.toList()..sort()) {
         queue.add(_Pair(va.out[l]!, vb.out[l]!, p.argument, [...p.path, l]));
       }
     }
-    if (deferred.isEmpty) return null;
+    if (deferred.isEmpty) return (null, theta);
     // A parameter the export inlines as a bare alternative waits for its
     // binding at another position.
     var retry = deferred.where((p) => view(p.export) != null).toList();
@@ -901,18 +1151,36 @@ class _Pair {
 /// `find_type` on it is an error.  A key in [unresolved] names a declaration
 /// whose signature references a type the scope does not define; it too is in
 /// neither table.
+///
+/// [opaque] is recorded beside [exported]: for each export that is a guest's
+/// entry, declared as the instance of a parameterised declaration D of an
+/// ancestor scope at its type T, the type identity of D⟨ι(T)⟩ and ι(T)
+/// ([OpaqueEntry]; TGLP modules.tex, Dynamic Activation, "Opaque types").  Its
+/// key is in [exported] too, at the entry's own identity, as before.
 class TypeIdentityTables {
   final Map<String, String> declared;
   final Map<String, String> exported;
   final Set<String> parametric;
   final Set<String> unresolved;
+  final Map<String, OpaqueEntry> opaque;
 
   const TypeIdentityTables({
     required this.declared,
     required this.exported,
     required this.parametric,
     required this.unresolved,
+    this.opaque = const {},
   });
+
+  /// These tables with [opaque] recorded beside them.
+  TypeIdentityTables withOpaque(Map<String, OpaqueEntry> opaque) =>
+      TypeIdentityTables(
+        declared: declared,
+        exported: exported,
+        parametric: parametric,
+        unresolved: unresolved,
+        opaque: opaque,
+      );
 
   /// The identity `find_type(P/N, Type)` yields, or null when `P/N` has none —
   /// undeclared, parametric, or unresolved.
@@ -1041,6 +1309,15 @@ String artefactInterfaceText({
 /// the declared table is.  `find_type/2` reads the running module's declared
 /// table, built by [linkedTypeIdentityTables]; `run/3` compares against the
 /// exported table this function derives.
+///
+/// An entry declared as the instance of a parameterised declaration D of an
+/// ancestor scope carries D's declaration in its declaration text, after its
+/// own and unexported ([entryTemplateDeclarationText] in wire/flattening.dart),
+/// with the types D reaches in the type definitions: an interface carries
+/// exports only, so an unexported parameterised declaration of an export's key
+/// is that export's template.  It is taken out before the tables are built,
+/// which are therefore what they are without it, and [TypeIdentityTables.opaque]
+/// records D⟨ι(T)⟩ and ι(T) for the entry ([opaqueEntryOf]).
 TypeIdentityTables interfaceTypeIdentityTables({
   required String typeDefsText,
   required Iterable<String> exportDeclarationTexts,
@@ -1053,7 +1330,30 @@ TypeIdentityTables interfaceTypeIdentityTables({
         declared: {}, exported: {}, parametric: {}, unresolved: {});
   }
 
-  final iface = Parser(Lexer(text).tokenize()).parseInterface();
+  final parsed = Parser(Lexer(text).tokenize()).parseInterface();
+  final exportedKeys = {
+    for (final d in parsed.procDeclarations)
+      if (d.exported && !d.imported) d.key
+  };
+  final templates = <String, ProcDecl>{
+    for (final d in parsed.procDeclarations)
+      if (!d.exported &&
+          !d.imported &&
+          d.isParameterized &&
+          exportedKeys.contains(d.key))
+        d.key: d
+  };
+  final iface = templates.isEmpty
+      ? parsed
+      : ast.Module(
+          typeDefs: parsed.typeDefs,
+          procDeclarations: [
+            for (final d in parsed.procDeclarations)
+              if (!identical(templates[d.key], d)) d
+          ],
+          line: parsed.line,
+          column: parsed.column,
+        );
 
   final base = TypeEnvironment.empty();
   final expanded = expandParameterizedTypes(iface,
@@ -1072,10 +1372,32 @@ TypeIdentityTables interfaceTypeIdentityTables({
   }
 
   final tables = buildTypeIdentityTables(env, decls: own);
+  final opaque = <String, OpaqueEntry>{};
+  // The scope the templates are expanded in: the interface's, with its
+  // parameterised type definitions, which expansion removed from it, carried
+  // as templates, as the compiled path carries them
+  // (buildModuleTypeEnvironment).
+  final templateEnv = templates.isEmpty
+      ? env
+      : buildTypeEnvironment(expanded, ancestorScope: base, typeTemplates: {
+          for (final td in iface.typeDefs)
+            if (td.isParameterized) td.name: td,
+        });
+  for (final t in templates.entries) {
+    final entry = env.procedures[t.key];
+    if (entry == null || !tables.exported.containsKey(t.key)) continue;
+    final record = opaqueEntryOf(
+        entry: entry,
+        entryEnv: env,
+        template: t.value,
+        templateEnv: templateEnv);
+    if (record != null) opaque[t.key] = record;
+  }
   return TypeIdentityTables(
     declared: const {},
     exported: tables.exported,
     parametric: tables.parametric,
     unresolved: tables.unresolved,
+    opaque: opaque,
   );
 }

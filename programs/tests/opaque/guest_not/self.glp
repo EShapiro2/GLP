@@ -1,0 +1,8 @@
+%% Not a guest of the template: its entry/2 is no instance of the host's
+%% entry/2 (../self.glp), its two streams being of two types.
+Move ::= rock ; paper ; scissors.
+Count ::= count(Integer).
+
+exported procedure entry(Stream(Move)?, Stream(Count)).
+entry([_|Ms], [count(1)|Os?]) :- entry(Ms?, Os).
+entry([], []).

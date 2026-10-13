@@ -1,0 +1,7 @@
+%% A guest: its entry is the host's template entry/2 (../self.glp) at Hand,
+%% whose automaton is Move's (guest_a): two names, one type.
+Hand ::= rock ; paper ; scissors.
+
+exported procedure entry(Stream(Hand)?, Stream(Hand)).
+entry([H|Hs], [H?|Os?]) :- entry(Hs?, Os).
+entry([], []).

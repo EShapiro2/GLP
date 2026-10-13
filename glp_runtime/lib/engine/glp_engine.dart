@@ -44,6 +44,7 @@ import 'package:glp_runtime/vglp/canonical.dart'
 import 'package:glp_runtime/wire/flattening.dart'
     show
         canonicalPrint,
+        entryTemplateDeclarationText,
         exportDeclarationText,
         hashOfPrint,
         interfaceTypeDefsText;
@@ -500,7 +501,7 @@ class GlpEngine {
           typeEnv: linked.checkedEnv);
       // This unit's module value — its artefact: h(M) + code.
       moduleValue = _moduleValueOf(_baseName(name), program, linked, modules,
-          directory: File(name).parent.absolute.path);
+          directory: File(name).parent.absolute.path, singleModulePath: name);
     } else {
       // The source and the root: the source checked in step 2 in the scope it
       // is handed over in, the root against the primitives; the source's
@@ -1224,6 +1225,7 @@ class GlpEngine {
     LinkResult linked,
     List<DiscoveredModule> modules, {
     String? directory,
+    String? singleModulePath,
   }) {
     final typeDefs = <String, TypeDef>{};
     for (final mod in modules) {
@@ -1253,16 +1255,36 @@ class GlpEngine {
       for (final d in linked.procDeclarations)
         if (!d.name.contains(':')) '${d.name}/${d.arity}': d,
     };
+    //
+    // An entry declared as the instance of a parameterised declaration D of an
+    // ancestor scope carries D's declaration after its own, and the interface
+    // the types D reaches, so that the loader derives the record of D⟨ι(T)⟩
+    // and ι(T) beside the exported table (TGLP modules.tex, Dynamic
+    // Activation, "Opaque types"; [entryTemplateDeclarationText]).  Every
+    // other export's text is as it was.
+    final entryTemplates = directory == null
+        ? const <String, EntryTemplate>{}
+        : entryTemplatesOf(modules,
+            rootDir: directory, singleModulePath: singleModulePath);
     final exports = <ArtefactExport>[];
     final exportDecls = <ProcDecl>[];
     for (final p in linked.program.procedures) {
       if (p.name.contains(':')) continue;
-      final decl = declByKey['${p.name}/${p.arity}'];
+      final key = '${p.name}/${p.arity}';
+      final decl = declByKey[key];
       // An export with no declaration contributes no interface text; it is
       // undeclared in the source too, so there is nothing to derive from.
       if (decl != null) exportDecls.add(decl);
+      final template = decl == null ? null : entryTemplates[key]?.template;
+      if (template != null) exportDecls.add(template);
       exports.add(ArtefactExport(
-          p.name, p.arity, decl == null ? '' : exportDeclarationText(decl)));
+          p.name,
+          p.arity,
+          decl == null
+              ? ''
+              : template == null
+                  ? exportDeclarationText(decl)
+                  : entryTemplateDeclarationText(decl, template)));
     }
     // The certificate (code format §Program Artefact; SGSG Section 3 and G1):
     // written at every compilation under the compiling person's key, and
@@ -1301,7 +1323,8 @@ class GlpEngine {
     // without a table, find_type then erring on every key.
     final TypeIdentityTables declaredTypes;
     try {
-      declaredTypes = linkedTypeIdentityTables(modules, linked);
+      declaredTypes = linkedTypeIdentityTables(modules, linked,
+          entryTemplates: entryTemplates);
     } catch (e) {
       throw CompileError(
           '$moduleName: the type-identity tables cannot be built: $e', 0, 0,

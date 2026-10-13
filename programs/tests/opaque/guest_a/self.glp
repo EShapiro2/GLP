@@ -1,0 +1,6 @@
+%% A guest: its entry is the host's template entry/2 (../self.glp) at Move.
+Move ::= rock ; paper ; scissors.
+
+exported procedure entry(Stream(Move)?, Stream(Move)).
+entry([M|Ms], [M?|Os?]) :- entry(Ms?, Os).
+entry([], []).

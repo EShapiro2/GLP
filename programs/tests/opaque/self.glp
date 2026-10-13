@@ -1,0 +1,16 @@
+%% TGLP fixture for opaque types (modules.tex, Dynamic Activation: Definition
+%% "Type Identity of a Type, Opaque Instance", the paragraph "Opaque types").
+%%
+%% This directory is the host's scope: entry/2 below is its entry template, a
+%% parameterised procedure whose type parameter types the channel between two
+%% executions of a guest.  Each guest_* directory below is a guest program, in
+%% this scope, declaring its entry as the template's instance at its own type:
+%%
+%%   guest_a  at Move ::= rock ; paper ; scissors
+%%   guest_b  at Hand ::= rock ; paper ; scissors   (the same automaton as Move)
+%%   guest_c  at Bid  ::= bid(Integer) ; pass        (a different one)
+%%   guest_not  declares entry/2 at no instance of the template
+
+procedure(X) entry(Stream(X)?, Stream(X)).
+entry([X|Xs], [X?|Ys?]) :- entry(Xs?, Ys).
+entry([], []).

@@ -14,7 +14,9 @@ import 'dart:io';
 import 'package:test/test.dart';
 import 'package:glp_runtime/analysis/type_checker/type_identity.dart';
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart'
-    show TypeEnvironment;
+    show TypeEnvironment, TypeRef;
+import 'package:glp_runtime/analysis/type_checker/type_checker.dart'
+    show buildModuleTypeEnvironment;
 import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/compiler/program_linker.dart';
@@ -455,6 +457,161 @@ measure(_).
                   typeDefsText: '', exportDeclarationTexts: const [])
               .exported,
           isEmpty);
+    });
+  });
+
+  // ===========================================================================
+  // Opaque types: the type identity of a type, the opaque instance, and the
+  // record of a guest's entry
+  // ===========================================================================
+  //
+  // TGLP modules.tex, Dynamic Activation: Definition "Type Identity of a Type,
+  // Opaque Instance", and the paragraph "Opaque types": "A guest M whose entry
+  // is the template D's instance at its type T records in its exports, for its
+  // entry, the type identity of D<iota(T)>, and with it iota(T).  The host
+  // obtains iota(T) from the module value and computes the type identity of
+  // D<iota(T)> from its own declaration of D."
+  //
+  // programs/tests/opaque/self.glp is the host's scope and declares the
+  // template entry/2; guest_a, guest_b and guest_c below it declare their
+  // entries as its instances at Move, Hand (Move's automaton under another
+  // name) and Bid; guest_not's entry/2 is the instance of no type.
+  group('opaque types', () {
+    const dir = '../programs/tests/opaque';
+
+    /// The guest's tables on the two paths: compiled, and derived from its
+    /// artefact's interface text.
+    ({TypeIdentityTables compiled, TypeIdentityTables derived}) guest(
+        String name) {
+      final engine = GlpEngine(rootSelfGlpPath: rootSelfGlp.absolute.path);
+      engine.loadProgram('$dir/$name');
+      final art = engine.appModule!.artefact as Artefact;
+      return (
+        compiled: engine.appModule!.declaredTypes as TypeIdentityTables,
+        derived: interfaceTypeIdentityTables(
+          typeDefsText: art.typeDefsText,
+          exportDeclarationTexts: art.exports.map((e) => e.declarationText),
+        ),
+      );
+    }
+
+    /// The host's scope: the root self.glp and the template's self.glp, which
+    /// defines none of the guests' types.
+    TypeEnvironment hostScope() {
+      final src = File('$dir/self.glp').readAsStringSync();
+      return buildModuleTypeEnvironment(
+          Parser(Lexer(src).tokenize()).parseModule(),
+          ancestorScope: _scope);
+    }
+
+    test('two guests at equal T record equal entry identities', () {
+      if (!hasRootScope) return;
+      final a = guest('guest_a').derived.opaque['entry/2'];
+      final b = guest('guest_b').derived.opaque['entry/2'];
+      expect(a, isNotNull);
+      expect(b, isNotNull);
+      expect(a!.type, b!.type);
+      expect(a.entry, b.entry);
+    });
+
+    test('two guests at different T record different entry identities', () {
+      if (!hasRootScope) return;
+      final a = guest('guest_a').derived.opaque['entry/2']!;
+      final c = guest('guest_c').derived.opaque['entry/2']!;
+      expect(a.type, isNot(c.type));
+      expect(a.entry, isNot(c.entry));
+    });
+
+    test('the identity of D<iota(T)> computed from D and iota(T) alone, T '
+        'absent from the scope, equals the guest\'s record', () {
+      if (!hasRootScope) return;
+      final host = hostScope();
+      final template = host.paramProcDecls['entry/2'];
+      expect(template, isNotNull);
+      for (final g in ['guest_a', 'guest_b', 'guest_c']) {
+        final record = guest(g).derived.opaque['entry/2']!;
+        expect(opaqueInstanceIdentityHex(template!, [record.type], host),
+            record.entry,
+            reason: g);
+      }
+      for (final t in ['Move', 'Hand', 'Bid']) {
+        expect(host.types, isNot(contains(t)));
+      }
+    });
+
+    test('the record is beside the exported table, which is as before', () {
+      if (!hasRootScope) return;
+      for (final g in ['guest_a', 'guest_b', 'guest_c', 'guest_not']) {
+        final r = guest(g);
+        // The entry keeps its own identity in the exported table.
+        expect(r.derived.exported['entry/2'], isNotNull, reason: g);
+        expect(r.derived.exported, equals(r.compiled.exported), reason: g);
+        expect(r.derived.opaque, equals(r.compiled.opaque), reason: g);
+        expect(r.derived.parametric, isNot(contains('entry/2')), reason: g);
+      }
+    });
+
+    test('an entry that is the instance of no type has no record', () {
+      if (!hasRootScope) return;
+      final r = guest('guest_not');
+      expect(r.derived.opaque, isEmpty);
+      expect(r.compiled.opaque, isEmpty);
+    });
+
+    test('iota(T) is the hash of T\'s minimised automaton', () {
+      if (!hasRootScope) return;
+      TypeEnvironment envOf(String src) => buildModuleTypeEnvironment(
+          Parser(Lexer(src).tokenize()).parseModule(),
+          ancestorScope: _scope);
+      final move = envOf('Move ::= rock ; paper ; scissors.\n');
+      final hand = envOf('Hand ::= scissors ; rock ; paper.\n');
+      final bid = envOf('Bid ::= bid(Integer) ; pass.\n');
+      final idMove = typeIdentityOfTypeHex(TypeRef('Move', 0, 0), move.types);
+      expect(typeIdentityOfTypeHex(TypeRef('Hand', 0, 0), hand.types), idMove);
+      expect(typeIdentityOfTypeHex(TypeRef('Move', 0, 0, isInput: true),
+          move.types), idMove, reason: 'T? names the type T');
+      expect(typeIdentityOfTypeHex(TypeRef('Bid', 0, 0), bid.types),
+          isNot(idMove));
+      expect(guest('guest_a').derived.opaque['entry/2']!.type, idMove);
+    });
+
+    test('opaque states are one state exactly when their labels are equal, '
+        'printed as the label', () {
+      if (!hasRootScope) return;
+      final env = buildModuleTypeEnvironment(
+          Parser(Lexer('''
+procedure(X, Y) pair(Stream(X)?, Stream(Y)).
+pair([A|As], [A?|Bs?]) :- pair(As?, Bs).
+pair([], []).
+''').tokenize()).parseModule(),
+          ancestorScope: _scope);
+      final d = env.paramProcDecls['pair/2']!;
+      final h1 = 'a' * 64, h2 = 'b' * 64;
+      final same = canonicalOpaqueInstancePrint(d, [h1, h1], env);
+      final apart = canonicalOpaqueInstancePrint(d, [h1, h2], env);
+      final lines = same.split('\n');
+      expect(lines.where((l) => l.endsWith(' $h1')).length, 1,
+          reason: 'two opaque types labelled h1 are one state:\n$same');
+      expect(apart.split('\n').where((l) => l.endsWith(' $h1')).length, 1);
+      expect(apart.split('\n').where((l) => l.endsWith(' $h2')).length, 1);
+      expect(opaqueInstanceIdentityHex(d, [h1, h1], env),
+          isNot(opaqueInstanceIdentityHex(d, [h1, h2], env)));
+      expect(opaqueInstanceIdentityHex(d, [h1, h2], env),
+          isNot(opaqueInstanceIdentityHex(d, [h2, h1], env)));
+    });
+
+    test('a parameter as an alternative of a type has no opaque instance', () {
+      if (!hasRootScope) return;
+      final env = buildModuleTypeEnvironment(
+          Parser(Lexer('''
+Opt(X) ::= none ; X.
+procedure(X) keep(Opt(X)?).
+keep(_).
+''').tokenize()).parseModule(),
+          ancestorScope: _scope);
+      final d = env.paramProcDecls['keep/1']!;
+      expect(() => opaqueInstanceIdentityHex(d, ['a' * 64], env),
+          throwsA(isA<OpaqueAlternativeError>()));
     });
   });
 }

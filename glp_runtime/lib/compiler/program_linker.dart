@@ -1277,11 +1277,99 @@ Module linkedFlatModule(List<DiscoveredModule> modules, LinkResult linked,
 /// so the automata are the checked program's. Nothing on the load path calls
 /// this: the kernels that consume the tables (`'_find_type'`, `'_run'`/3) are
 /// step 2 of `/Grassroots/docs/typed-dynamic-activation-plan.md` and are IGLP's.
+///
+/// [entryTemplates] are the program's entries declared as instances of a
+/// parameterised declaration of an ancestor scope ([entryTemplatesOf]); for
+/// each, the exported table has beside it the type identity of D⟨ι(T)⟩ and
+/// ι(T) ([TypeIdentityTables.opaque]; TGLP modules.tex, Dynamic Activation,
+/// "Opaque types"), which the interface text's derivation records too.  The
+/// tables are otherwise as they are without it.
 TypeIdentityTables linkedTypeIdentityTables(
-        List<DiscoveredModule> modules, LinkResult linked) =>
-    typeIdentityTablesForModule(
-        linkedFlatModule(modules, linked, allDeclarations: true),
-        ancestorScope: primitiveScope());
+    List<DiscoveredModule> modules, LinkResult linked,
+    {Map<String, EntryTemplate> entryTemplates = const {}}) {
+  final tables = typeIdentityTablesForModule(
+      linkedFlatModule(modules, linked, allDeclarations: true),
+      ancestorScope: primitiveScope());
+  if (entryTemplates.isEmpty) return tables;
+  final opaque = <String, OpaqueEntry>{};
+  for (final e in entryTemplates.entries) {
+    if (!tables.exported.containsKey(e.key)) continue;
+    final record = opaqueEntryOf(
+        entry: e.value.entry,
+        entryEnv: e.value.entryEnv,
+        template: e.value.template,
+        templateEnv: e.value.templateEnv);
+    if (record != null) opaque[e.key] = record;
+  }
+  return tables.withOpaque(opaque);
+}
+
+/// An entry of a program declared, in the module whose exports are the
+/// program's entry points, as the instance at a type of a parameterised
+/// declaration of that module's ancestor scope of its key: the [entry]'s
+/// declaration in its module's scope [entryEnv], and the [template] D in the
+/// ancestor scope [templateEnv] that declares it (TGLP modules.tex, Dynamic
+/// Activation, "Opaque types": "A guest declares its entry as the template's
+/// instance at its own type").  Whether the entry is D's instance at a type,
+/// and at which, is [opaqueEntryOf]'s.
+class EntryTemplate {
+  final ProcDecl entry;
+  final TypeEnvironment entryEnv;
+  final ProcDecl template;
+  final TypeEnvironment templateEnv;
+  const EntryTemplate(
+      {required this.entry,
+      required this.entryEnv,
+      required this.template,
+      required this.templateEnv});
+}
+
+/// The program's entries declared as the instance at a type of a
+/// parameterised declaration of their module's ancestor scope of their key,
+/// by key ([opaqueEntryOf]).  An entry that shares its key with such a
+/// declaration and is its instance at no type is not one of them: it shadows
+/// the declaration, as before.  The entry module is
+/// the one whose exports are the program's entry points (modules.tex,
+/// Compilation, fifth step): a directory program's `self.glp` at [rootDir],
+/// whose exported declarations are its entries, or the single module at
+/// [singleModulePath], every declaration of which is one.  A parameterised
+/// entry is a template of its own and is not one of them.
+Map<String, EntryTemplate> entryTemplatesOf(List<DiscoveredModule> modules,
+    {required String rootDir, String? singleModulePath}) {
+  final singleNorm = singleModulePath == null ? null : _normPath(singleModulePath);
+  final rootNorm = _normPath(rootDir);
+  final out = <String, EntryTemplate>{};
+  for (final m in modules) {
+    final isEntryModule = singleNorm != null
+        ? _normPath(m.filePath) == singleNorm
+        : m.isSelfGlp && _normPath(File(m.filePath).parent.path) == rootNorm;
+    if (!isEntryModule) continue;
+    TypeEnvironment? env;
+    for (final d in m.ast.procDeclarations) {
+      if (d.imported || d.isParameterized) continue;
+      if (singleNorm == null && !d.exported) continue;
+      final template = m.ancestorScope.paramProcDecls[d.key];
+      if (template == null) continue;
+      env ??= buildModuleTypeEnvironment(m.ast, ancestorScope: m.ancestorScope);
+      final entry = env.procedures[d.key];
+      if (entry == null) continue;
+      if (opaqueEntryOf(
+              entry: entry,
+              entryEnv: env,
+              template: template,
+              templateEnv: m.ancestorScope) ==
+          null) {
+        continue;
+      }
+      out[d.key] = EntryTemplate(
+          entry: entry,
+          entryEnv: env,
+          template: template,
+          templateEnv: m.ancestorScope);
+    }
+  }
+  return out;
+}
 
 /// Whole-program type-check gate (paper: modules §Static Linking — "the unit of
 /// compilation and execution is a program ... only a well-typed program is

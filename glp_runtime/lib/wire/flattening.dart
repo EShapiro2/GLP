@@ -146,6 +146,25 @@ String exportDeclarationText(ProcDecl d) {
   return 'exported procedure${_printTypeParams(d)} ${d.name}($args).';
 }
 
+/// The declaration text an artefact's interface table carries for an export
+/// that is a guest's entry, declared as the instance of [template], a
+/// parameterised declaration D of an ancestor scope: the entry's own
+/// declaration ([exportDeclarationText]) followed by D's, unexported.
+///
+/// TGLP modules.tex, Dynamic Activation, "Opaque types": "A guest M whose
+/// entry is the template D's instance at its type T records in its exports,
+/// for its entry, the type identity of D⟨ι(T)⟩, and with it ι(T)."  The loader
+/// derives the exported table from the interface text rather than taking it
+/// shipped (Implementation Notes, "Deriving the exported table when the
+/// artefact is read"), so the text carries D, from which the record is
+/// derived with the rest ([interfaceTypeIdentityTables]).  An export with no
+/// template carries its declaration alone, as before.
+String entryTemplateDeclarationText(ProcDecl entry, ProcDecl template) {
+  final args = template.argTypes.map((t) => t.toString()).join(', ');
+  return '${exportDeclarationText(entry)}\n'
+      'procedure${_printTypeParams(template)} ${template.name}($args).';
+}
+
 /// The type-definition string an artefact's interface table carries: the type
 /// definitions reachable from [exportDecls], in canonical print, one per line,
 /// lexicographically by type name (§5, interface table; §6 order (i)).
