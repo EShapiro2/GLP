@@ -194,7 +194,7 @@ class PeerState {
   final String? udpAddress;
 
   /// When we last successfully reached this peer at [udpAddress] over UDP
-  /// without a prior hole-punch coordination — i.e. the address accepted
+  /// without a prior punch toward it — i.e. the address accepted
   /// unsolicited inbound.
   ///
   /// Bound to [udpAddress]: cleared whenever the UDP address changes, since

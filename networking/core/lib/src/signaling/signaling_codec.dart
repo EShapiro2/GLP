@@ -1,42 +1,22 @@
 import 'dart:typed_data';
 
-/// Signaling message types for the rendezvous reconnection protocol.
+/// Signaling message types between an agent's layer and a rendezvous
+/// server's: the address the server observes the agent at, and the invite
+/// registration and redemption of a WAN cold call (spec §WAN Cold-Call).
 ///
 /// These ride inside [GrassrootsPacket] payloads with [PacketType.signaling].
 /// Authentication is handled by the outer GrassrootsPacket's Ed25519 signature.
 ///
-/// Wire byte values are stable; gaps reflect deprecated message types
-/// (ADDR_QUERY/ADDR_RESPONSE/PUNCH_REQUEST were removed when the rendezvous
-/// flow switched to RECONNECT/AVAILABLE matching; RV_LIST/FRIEND_LIST at
-/// 0x0a/0x0b were removed with friend-driven signaling — the layer holds no
-/// social graph).
+/// Wire byte values are stable; gaps reflect retired message types
+/// (ADDR_QUERY/ADDR_RESPONSE/PUNCH_REQUEST; RV_LIST/FRIEND_LIST at 0x0a/0x0b,
+/// with friend-driven signaling, the layer holding no social graph; and
+/// PUNCH_INITIATE, PUNCH_READY, RECONNECT and AVAILABLE at 0x05, 0x06, 0x08
+/// and 0x09, the transport's reconnection protocol, retired 2026-10-13 for
+/// the GLP rendezvous agent, GNA §4.2 and §6).
 enum SignalingType {
-  /// "Start sending UDP to ip:port Y for hole-punch" — facilitator → agent
-  /// (also used for direct friend-to-friend punch coordination)
-  punchInitiate(0x05),
-
-  /// "I've opened my NAT, tell the other side" — agent → facilitator → peer
-  punchReady(0x06),
-
-  /// "Your actual public address is ip:port" — facilitator → agent
-  /// (STUN-equivalent reflection, triggered by ANNOUNCE)
+  /// "Your actual public address is ip:port" — rendezvous server → agent
+  /// (STUN-equivalent reflection, on the session coming up)
   addrReflect(0x07),
-
-  /// "I want to reconnect to peer X" — agent → rendezvous facilitator
-  ///
-  /// Cold-call message sent when the agent's connectivity changed and it
-  /// wants the facilitator to coordinate a hole-punch with peer X. The
-  /// facilitator observes the sender's source IP/port and waits for a
-  /// matching AVAILABLE from peer X.
-  reconnect(0x08),
-
-  /// "I'm available to peer X" — agent → rendezvous facilitator
-  ///
-  /// Cold-call message sent when the agent detects peer X went silent and
-  /// wants to remain reachable for X's reconnect attempts. The facilitator
-  /// observes the sender's source IP/port and matches against any pending
-  /// RECONNECT from peer X.
-  available(0x09),
 
   /// "Store this invite as unused" — inviter A → rendezvous server.
   ///
@@ -85,54 +65,9 @@ sealed class SignalingMessage {
   SignalingType get type;
 }
 
-/// Well-connected friend tells agent to start hole-punching to a peer.
-class PunchInitiateMessage extends SignalingMessage {
-  @override
-  SignalingType get type => SignalingType.punchInitiate;
-
-  /// The public key of the peer to punch toward (32 bytes).
-  final Uint8List peerPubkey;
-
-  /// The peer's IP address to send punch packets to.
-  final String ip;
-
-  /// The peer's UDP port to send punch packets to.
-  final int port;
-
-  PunchInitiateMessage({
-    required this.peerPubkey,
-    required this.ip,
-    required this.port,
-  });
-
-  @override
-  String toString() =>
-      'PunchInitiate(peer: ${peerPubkey.sublist(0, 4).map((b) => b.toRadixString(16).padLeft(2, '0')).join()}..., '
-      '$ip:$port)';
-}
-
-/// Agent tells a well-connected friend that its NAT is open.
-class PunchReadyMessage extends SignalingMessage {
-  @override
-  SignalingType get type => SignalingType.punchReady;
-
-  /// The public key of the peer we're punching toward (32 bytes).
-  final Uint8List peerPubkey;
-
-  PunchReadyMessage({required this.peerPubkey});
-
-  @override
-  String toString() =>
-      'PunchReady(peer: ${peerPubkey.sublist(0, 4).map((b) => b.toRadixString(16).padLeft(2, '0')).join()}...)';
-}
-
-/// Well-connected friend reflects the agent's observed public address.
-///
-/// When a well-connected friend receives an ANNOUNCE over UDP, it compares
-/// the claimed address in the payload with the observed source address on the
-/// UDX connection. If they differ, it sends ADDR_REFLECT back with the actual
-/// address — letting the agent learn its true NAT-translated address,
-/// including the correct external port.
+/// A rendezvous server reflects the agent's observed public address: the
+/// source address of the agent's packets, NAT-translated, with the external
+/// port (spec §Connectivity and Address).
 class AddrReflectMessage extends SignalingMessage {
   @override
   SignalingType get type => SignalingType.addrReflect;
@@ -147,48 +82,6 @@ class AddrReflectMessage extends SignalingMessage {
 
   @override
   String toString() => 'AddrReflect($ip:$port)';
-}
-
-/// Agent asks a rendezvous facilitator to coordinate reconnection with a peer.
-///
-/// The agent's source address is observed by the facilitator from the
-/// containing UDP packet — no address is carried in the payload.
-class ReconnectMessage extends SignalingMessage {
-  @override
-  SignalingType get type => SignalingType.reconnect;
-
-  /// The public key of the reconnect initiator (32 bytes).
-  ///
-  /// This duplicates the authenticated outer packet sender for protocol
-  /// clarity. Receivers must reject it if it does not match the outer sender.
-  final Uint8List initiatorPubkey;
-
-  /// The public key of the peer we want to reconnect to (32 bytes).
-  final Uint8List peerPubkey;
-
-  ReconnectMessage({required this.initiatorPubkey, required this.peerPubkey});
-
-  @override
-  String toString() =>
-      'Reconnect(initiator: ${initiatorPubkey.sublist(0, 4).map((b) => b.toRadixString(16).padLeft(2, '0')).join()}, peer: ${peerPubkey.sublist(0, 4).map((b) => b.toRadixString(16).padLeft(2, '0')).join()}...)';
-}
-
-/// Agent declares availability to a peer at a rendezvous facilitator.
-///
-/// The agent's source address is observed by the facilitator from the
-/// containing UDP packet — no address is carried in the payload.
-class AvailableMessage extends SignalingMessage {
-  @override
-  SignalingType get type => SignalingType.available;
-
-  /// The public key of the peer we want to be reachable from (32 bytes).
-  final Uint8List peerPubkey;
-
-  AvailableMessage({required this.peerPubkey});
-
-  @override
-  String toString() =>
-      'Available(peer: ${peerPubkey.sublist(0, 4).map((b) => b.toRadixString(16).padLeft(2, '0')).join()}...)';
 }
 
 /// Inviter A registers a cold-call invite with a rendezvous server.
@@ -311,11 +204,7 @@ String _hexPrefix(Uint8List bytes) => bytes
 /// Wire formats:
 ///
 /// ```
-/// PUNCH_INITIATE : type(1) + peerPubkey(32) + ipLen(2) + ipBytes + port(2)
-/// PUNCH_READY    : type(1) + peerPubkey(32)
 /// ADDR_REFLECT   : type(1) + ipLen(2) + ipBytes + port(2)
-/// RECONNECT      : type(1) + initiatorPubkey(32) + peerPubkey(32)
-/// AVAILABLE      : type(1) + peerPubkey(32)
 /// REGISTER_INVITE: type(1) + inviteId(32) + inviteKey(32) + expiresAtMs(8)
 /// REDEEM_INVITE  : type(1) + inviteId(32) + redeemerNonce(32) + mac(32)
 /// INVITE_REDEEMED: type(1) + inviteId(32) + redeemerPubkey(32)
@@ -327,34 +216,12 @@ class SignalingCodec {
 
   Uint8List encode(SignalingMessage msg) {
     return switch (msg) {
-      PunchInitiateMessage() => _encodePunchInitiate(msg),
-      PunchReadyMessage() => _encodePunchReady(msg),
       AddrReflectMessage() => _encodeAddrReflect(msg),
-      ReconnectMessage() => _encodeReconnect(msg),
-      AvailableMessage() => _encodeAvailable(msg),
       RegisterInviteMessage() => _encodeRegisterInvite(msg),
       RedeemInviteMessage() => _encodeRedeemInvite(msg),
       InviteRedeemedMessage() => _encodeInviteRedeemed(msg),
       InviteRedeemedAckMessage() => _encodeInviteRedeemedAck(msg),
     };
-  }
-
-  Uint8List _encodePunchInitiate(PunchInitiateMessage msg) {
-    final buffer = BytesBuilder();
-    buffer.addByte(SignalingType.punchInitiate.value);
-    buffer.add(msg.peerPubkey);
-    final ipBytes = Uint8List.fromList(msg.ip.codeUnits);
-    _writeUint16(buffer, ipBytes.length);
-    buffer.add(ipBytes);
-    _writeUint16(buffer, msg.port);
-    return buffer.toBytes();
-  }
-
-  Uint8List _encodePunchReady(PunchReadyMessage msg) {
-    final buffer = BytesBuilder();
-    buffer.addByte(SignalingType.punchReady.value);
-    buffer.add(msg.peerPubkey);
-    return buffer.toBytes();
   }
 
   Uint8List _encodeAddrReflect(AddrReflectMessage msg) {
@@ -364,21 +231,6 @@ class SignalingCodec {
     _writeUint16(buffer, ipBytes.length);
     buffer.add(ipBytes);
     _writeUint16(buffer, msg.port);
-    return buffer.toBytes();
-  }
-
-  Uint8List _encodeReconnect(ReconnectMessage msg) {
-    final buffer = BytesBuilder();
-    buffer.addByte(SignalingType.reconnect.value);
-    buffer.add(msg.initiatorPubkey);
-    buffer.add(msg.peerPubkey);
-    return buffer.toBytes();
-  }
-
-  Uint8List _encodeAvailable(AvailableMessage msg) {
-    final buffer = BytesBuilder();
-    buffer.addByte(SignalingType.available.value);
-    buffer.add(msg.peerPubkey);
     return buffer.toBytes();
   }
 
@@ -429,40 +281,12 @@ class SignalingCodec {
     final payload = Uint8List.sublistView(data, 1);
 
     return switch (type) {
-      SignalingType.punchInitiate => _decodePunchInitiate(payload),
-      SignalingType.punchReady => _decodePunchReady(payload),
       SignalingType.addrReflect => _decodeAddrReflect(payload),
-      SignalingType.reconnect => _decodeReconnect(payload),
-      SignalingType.available => _decodeAvailable(payload),
       SignalingType.registerInvite => _decodeRegisterInvite(payload),
       SignalingType.redeemInvite => _decodeRedeemInvite(payload),
       SignalingType.inviteRedeemed => _decodeInviteRedeemed(payload),
       SignalingType.inviteRedeemedAck => _decodeInviteRedeemedAck(payload),
     };
-  }
-
-  PunchInitiateMessage _decodePunchInitiate(Uint8List data) {
-    if (data.length < 36) {
-      throw const FormatException('PunchInitiate payload too short');
-    }
-    final peerPubkey = Uint8List.fromList(data.sublist(0, 32));
-    var offset = 32;
-    final ipLen = _readUint16(data, offset);
-    offset += 2;
-    final ip = String.fromCharCodes(data.sublist(offset, offset + ipLen));
-    offset += ipLen;
-    final port = _readUint16(data, offset);
-
-    return PunchInitiateMessage(peerPubkey: peerPubkey, ip: ip, port: port);
-  }
-
-  PunchReadyMessage _decodePunchReady(Uint8List data) {
-    if (data.length < 32) {
-      throw const FormatException('PunchReady payload too short');
-    }
-    return PunchReadyMessage(
-      peerPubkey: Uint8List.fromList(data.sublist(0, 32)),
-    );
   }
 
   AddrReflectMessage _decodeAddrReflect(Uint8List data) {
@@ -473,25 +297,6 @@ class SignalingCodec {
     offset += ipLen;
     final port = _readUint16(data, offset);
     return AddrReflectMessage(ip: ip, port: port);
-  }
-
-  ReconnectMessage _decodeReconnect(Uint8List data) {
-    if (data.length != 64) {
-      throw const FormatException('Reconnect payload has invalid length');
-    }
-    return ReconnectMessage(
-      initiatorPubkey: Uint8List.fromList(data.sublist(0, 32)),
-      peerPubkey: Uint8List.fromList(data.sublist(32, 64)),
-    );
-  }
-
-  AvailableMessage _decodeAvailable(Uint8List data) {
-    if (data.length < 32) {
-      throw const FormatException('Available payload too short');
-    }
-    return AvailableMessage(
-      peerPubkey: Uint8List.fromList(data.sublist(0, 32)),
-    );
   }
 
   RegisterInviteMessage _decodeRegisterInvite(Uint8List data) {

@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io' show InternetAddressType;
+import 'dart:io' show InternetAddress, InternetAddressType;
 import 'dart:typed_data';
 
 import 'package:redux/redux.dart';
@@ -242,18 +242,26 @@ class HeadlessGrassrootsNetwork {
   /// `onPeerDisconnected(pk, underlay)`).
   void Function(Uint8List pk, Underlay underlay)? onPeerDisconnected;
 
-  /// The agent's current public `ip:port` — the static address of its
-  /// [serverAddress] in this profile — or null when it was given none.
-  String? getPublicAddress() => serverAddress?.publicAddress;
+  /// The agent's current public `ip:port`: the static address of its
+  /// [serverAddress], or else the address a configured rendezvous server last
+  /// reflected (spec §Connectivity and Address: "an agent learns it from a
+  /// rendezvous server, which observes the source address of the agent's
+  /// packets"), or null when there is neither.
+  String? getPublicAddress() =>
+      serverAddress?.publicAddress ?? _reflectedAddress;
+
+  /// The address a configured rendezvous server last reflected, or null.
+  String? _reflectedAddress;
 
   /// The agent's own public key (spec §Identity, `getIdentity() → PubKey`).
   Uint8List getIdentity() => identity.publicKey;
 
   /// Callback when the layer detects a change in the agent's public address
   /// (spec §Connectivity and Address, `onConnectivityStatusChanged(old?,
-  /// new?)`): "Fired on startup and on every address change." This profile's
-  /// address is static, its [serverAddress]'s or none, so it fires once, at
-  /// [start], with `old` null.
+  /// new?)`): "Fired on startup and on every address change."  It fires at
+  /// [start], with `old` null and the static address of the [serverAddress]
+  /// or none; and, on an agent with no server address, whenever a configured
+  /// rendezvous server reflects an address other than the one held.
   void Function(String? oldAddress, String? newAddress)?
       onConnectivityStatusChanged;
 
@@ -455,11 +463,11 @@ class HeadlessGrassrootsNetwork {
     return await _udpService?.sendToPeer(_hex(pubkey), bytes) ?? false;
   }
 
-  /// A signaling payload arrived over a session. This profile acts on one
-  /// kind: a rendezvous server's notice that an invite this agent minted was
-  /// redeemed (spec §WAN Cold-Call, Redemption). The reconnection signaling
-  /// of the Flutter profile is not this profile's (it holds no punch
-  /// coordination), and server-bound messages are an agent's never.
+  /// A signaling payload arrived over a session. This profile acts on two
+  /// kinds, each from a configured rendezvous server: the address the server
+  /// observes this agent at (spec §Connectivity and Address), and the notice
+  /// that an invite this agent minted was redeemed (spec §WAN Cold-Call,
+  /// Redemption).  Server-bound messages are an agent's never.
   void _onSignalingReceived(Uint8List senderPubkey, Uint8List payload) {
     debugOnSignaling?.call(senderPubkey, payload);
     final SignalingMessage message;
@@ -467,6 +475,10 @@ class HeadlessGrassrootsNetwork {
       message = const SignalingCodec().decode(payload);
     } catch (e) {
       debugPrint('[headless][signaling] Undecodable signaling: $e');
+      return;
+    }
+    if (message is AddrReflectMessage) {
+      _onAddressReflected(senderPubkey, message);
       return;
     }
     if (message is! InviteRedeemedMessage) {
@@ -500,6 +512,47 @@ class HeadlessGrassrootsNetwork {
     store.dispatch(
         PeerIdentityRegisteredAction(publicKey: message.redeemerPubkey));
     onPeerLinkRedeemed?.call(message.redeemerPubkey);
+  }
+
+  /// A configured rendezvous server reflected the address it observes this
+  /// agent at: on an agent with no server address of its own, that is its
+  /// public address (spec §Connectivity and Address).  From any other sender
+  /// it is dropped.
+  void _onAddressReflected(Uint8List senderPubkey, AddrReflectMessage message) {
+    if (!_isRendezvousServer(senderPubkey)) {
+      debugPrint('[headless][reflect] an address reflected by a sender that '
+          'is no configured rendezvous server; dropped');
+      return;
+    }
+    if (serverAddress != null) return;
+    final ip = InternetAddress.tryParse(message.ip);
+    if (ip == null) return;
+    final reflected = AddressInfo(ip, message.port).toAddressString();
+    final previous = _reflectedAddress;
+    if (reflected == previous) return;
+    _reflectedAddress = reflected;
+    debugPrint('[headless][reflect] public address $previous → $reflected');
+    onConnectivityStatusChanged?.call(previous, reflected);
+  }
+
+  /// On a rendezvous server: reflect to [pubkey] the address its session is
+  /// observed at, so that an agent learns its public address from the server
+  /// (spec §Rendezvous Server, "Address observation"; §Connectivity and
+  /// Address).
+  void _reflectAddressTo(Uint8List pubkey) {
+    final observed = observedPeerAddress(pubkey);
+    final parsed = observed == null ? null : parseAddressString(observed);
+    if (parsed == null) return;
+    final payload = const SignalingCodec()
+        .encode(AddrReflectMessage(ip: parsed.ip.address, port: parsed.port));
+    unawaited(() async {
+      final bytes = await _sessionPacketBytes(
+        GrassrootsPacket(type: PacketType.signaling, payload: payload),
+        pubkey,
+      );
+      if (bytes == null) return;
+      await _udpService?.sendToPeer(_hex(pubkey), bytes);
+    }());
   }
 
   String _rendezvousAddressOf(String pubkeyHex) => rendezvousServers
@@ -1413,6 +1466,7 @@ class HeadlessGrassrootsNetwork {
     if (_reachablePeers.add(_hex(pubkey))) {
       onPeerConnected?.call(pubkey, Underlay.wan, attestation.identity);
     }
+    if (rendezvousServer) _reflectAddressTo(pubkey);
     _drainQueueFor(pubkey);
   }
 

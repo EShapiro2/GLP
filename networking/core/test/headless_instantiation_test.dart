@@ -261,6 +261,56 @@ void main() {
         reason: 'a rendezvous server is answered as configured, not as a '
             'known peer');
   }, timeout: const Timeout(Duration(minutes: 1)));
+
+  test(
+      'a rendezvous server reflects the address it observes an agent at, and '
+      'the agent, which has no server address, takes it as its public '
+      'address (GNA §4.2, §6 "Address observation")', () async {
+    if (sodiumUnavailable != null) {
+      markTestSkipped(sodiumUnavailable!);
+      return;
+    }
+    final serverId = await identityFromSeed(0x85, 'rendezvous');
+    final port = await freePort();
+    final server = HeadlessGrassrootsNetwork(
+      identity: serverId,
+      rendezvousServers: const [],
+      serverAddress:
+          ServerAddress(listenPort: port, publicAddress: '203.0.113.9:$port'),
+      rendezvousServer: true,
+      sodium: sodium!,
+    );
+    addTearDown(server.dispose);
+    expect(await server.start(), isTrue);
+
+    final agent = HeadlessGrassrootsNetwork(
+      identity: await identityFromSeed(0x86, 'agent'),
+      rendezvousServers: [
+        RendezvousServer('127.0.0.1:${server.boundPort}', serverId.publicKey),
+      ],
+      sodium: sodium!,
+    );
+    addTearDown(agent.dispose);
+    final changes = <String>[];
+    final reflected = Completer<String>();
+    agent.onConnectivityStatusChanged = (oldAddress, newAddress) {
+      changes.add('$oldAddress -> $newAddress');
+      if (newAddress != null && !reflected.isCompleted) {
+        reflected.complete(newAddress);
+      }
+    };
+    expect(await agent.start(), isTrue);
+
+    final address =
+        await reflected.future.timeout(const Duration(seconds: 15));
+    expect(address,
+        server.observedPeerAddress(agent.identity.publicKey),
+        reason: 'the address the server observes the agent at');
+    expect(address, endsWith(':${agent.boundPort}'));
+    expect(agent.getPublicAddress(), address);
+    expect(changes, ['null -> null', 'null -> $address'],
+        reason: 'none at startup, then the reflected one');
+  }, timeout: const Timeout(Duration(minutes: 1)));
 }
 
 String _hex(Uint8List bytes) =>
