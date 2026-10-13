@@ -25,7 +25,8 @@
 %%   initiator, does not precede alice in the order of identifiers, so her
 %%   Start refuses his start, where it would defer the start of an initiator
 %%   preceding her (vGLP 2026-10-12 08:26 UTC, Q-A); bob answers alice's card
-%%   no, the else-branch, and her swap aborts; bob proposes the pay again, and
+%%   no, the else-branch, his Vote votes no on his next tick, and her swap
+%%   aborts; bob proposes the pay again, and
 %%   alice's machine votes yes.
 %% play_declined: alice proposes a swap for a coin bob does not hold; bob, not
 %%   ready, votes no without asking his person, and it aborts at both.
@@ -44,7 +45,7 @@ Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision).
 Content  ::= hello(Peer) ; cargo(Peer, Integer, Cargo).
 Net      ::= msg(Peer, Content).
 Txn      ::= propose(Attempt) ; start(Attempt) ; answer(Attempt)
-           ; tally(Attempt) ; outcome(Attempt) ; discover(Peer).
+           ; vote(Attempt) ; tally(Attempt) ; outcome(Attempt) ; discover(Peer).
 Session  ::= session(Stream(Request)?, Stream(Txn)).
 Card     ::= card(Attempt, YesNo?).
 Question ::= session_w(Session) ; card_w(Card).

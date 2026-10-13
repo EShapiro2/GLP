@@ -90,7 +90,7 @@ Cargo     ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
 Content   ::= hello(Peer) ; cargo(Peer, Integer, Cargo).
 Net       ::= msg(Peer, Content).
 Txn       ::= propose(Attempt) ; start(Attempt) ; answer(Attempt)
-            ; tally(Attempt) ; outcome(Attempt) ; discover(Peer).
+            ; vote(Attempt) ; tally(Attempt) ; outcome(Attempt) ; discover(Peer).
 Session   ::= session(Stream(Request)?, Stream(Txn)).
 Card      ::= card(Attempt, YesNo?).
 Close     ::= close.
@@ -147,17 +147,18 @@ ClassRes  ::= cls(Info) ; nocls.
 %% agent has initiated, the lock, unlocked or the attempt it holds prepared,
 %% and the record.  The agent state: its identifier, the app state, the local
 %% date, the peers hello has been sent to and received from, the number of the
-%% next message, the tick since which each opening class its ticks have met has
-%% waited, the classes met, and the messages pending: on a peer not yet known,
-%% pend(Q, M), or a start deferred, deferred(M).
+%% next message, the tick since which each class its ticks have met has waited,
+%% an opening class op([t]) and the Vote on an attempt vt(At), the classes met,
+%% and the messages pending: on a peer not yet known, pend(Q, M), or a start
+%% deferred, deferred(M).
 Lock      ::= unlocked ; held(Attempt).
-Rec       ::= asked(Attempt) ; voted(Attempt, YesNo) ; got(Attempt, Peer, YesNo)
-            ; closed(Attempt).
+Rec       ::= asked(Attempt) ; answered(Attempt, YesNo) ; voted(Attempt, YesNo)
+            ; got(Attempt, Peer, YesNo) ; closed(Attempt).
 Recs      ::= [] ; [Rec | Recs].
 App       ::= app(GAtoms, Integer, Lock, Recs).
 Pend      ::= pend(Peer, Net) ; deferred(Net).
 Pends     ::= [] ; [Pend | Pends].
-WKey      ::= op(Class).
+WKey      ::= op(Class) ; vt(Attempt).
 Wait      ::= w(WKey, Integer).
 Waits     ::= [] ; [Wait | Waits].
 WFound    ::= at(Integer) ; unseen.
@@ -168,7 +169,7 @@ Send      ::= to(Peer, Cargo).
 Sends     ::= [] ; [Send | Sends].
 Cand      ::= cand(WKey, Info).
 Cands     ::= [] ; [Cand | Cands].
-Choice    ::= take(Info) ; none.
+Choice    ::= take(WKey, Info) ; none.
 PKey      ::= key(WKey) ; nokey.
 Cond      ::= go(Info) ; drop.
 MCond     ::= mgo(Info) ; mpend(Peer) ; mdefer ; mdrop.
@@ -533,8 +534,8 @@ spawn(card_for(At), Cs, [oc(At?, Cl)|Cs?], Ans?, Ans1) :- ground(At?) |
     merge(R?, Ans1?, Ans).
 
 %% --- Answer, on the person's answer to the card Start raises ---------------
-%% Its condition: the attempt a question pending at the agent, its initiator
-%% known, as Start's condition made it.
+%% Its condition: the attempt a question pending at the agent, and no answer
+%% to it recorded.  It sends nothing, so it needs no peer known.
 procedure answer_cond(Attempt?, St?, Cond, St).
 answer_cond(At, St, Cd?, St2?) :- ground(At?), ground(St?) |
     attempt_class(At?, C),
@@ -545,24 +546,23 @@ answer_cond1(nocls, _, St, drop, St?).
 answer_cond1(cls(I), At, St, Cd?, St?) :- ground(I?), ground(At?), ground(St?) |
     st_app(St?, Ap),
     app_recs(Ap?, R),
-    pending_rec(At?, R?, P),
-    attempt_id(At?, Q),
-    st_sent(St?, Se),
-    st_recd(St?, Rc),
-    known_peer(Q?, Se?, Rc?, Kn),
-    and(P?, Kn?, Ok),
+    unanswered(At?, R?, Ok),
     go_or_drop(Ok?, I?, Cd).
+procedure unanswered(Attempt?, Recs?, YesNo).
+unanswered(At, R, B?) :- ground(At?), ground(R?) |
+    pending_rec(At?, R?, P),
+    has_answer(At?, R?, H),
+    neg(H?, Un),
+    and(P?, Un?, B).
 
 procedure dispatch_answer(Cond?, YesNo?, Attempt?, Then?, App?, Stream(Trigger)?,
     Stream(Trigger)?, Stream(Trigger), Stream(Demand), Stream(Txn), Stream(Net),
     OpenCards?, St?).
-dispatch_answer(go(I), YN, At, Th, Ap0, Ls, In, Ans?, Dem?, [answer(At?)|Thr?],
+dispatch_answer(go(_), YN, At, Th, Ap0, Ls, In, Ans?, Dem?, [answer(At?)|Thr?],
         Out?, Cards, St) :-
     ground(At?) |
-    answer_effect(I?, YN?, At?, St?, Ss, St1),
-    send_all(Ss?, St1?, Ms, St2),
-    put_all(Ms?, Out, Out1?),
-    next(Th?, no, Ap0?, [], Ls?, In?, Ans, Dem, Thr, Out1, Cards?, St2?).
+    answer_effect(YN?, At?, St?, St1),
+    next(Th?, no, Ap0?, [], Ls?, In?, Ans, Dem, Thr, Out, Cards?, St1?).
 dispatch_answer(drop, _, _, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
     next(Th?, no, Ap0?, [], Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
 
@@ -590,10 +590,12 @@ procedure close_one(YesNo?, Attempt?, Close, OpenCards?, Recs?, OpenCards).
 close_one(no, _, close, Cs, R, Cs1?) :- close_cards(Cs?, R?, Cs1).
 close_one(yes, At, Cl?, Cs, R, [oc(At?, Cl)|Cs1?]) :- close_cards(Cs?, R?, Cs1).
 
-%% --- The tick: Propose of the opening classes ------------------------------
-%% It advances the date and takes, among the opening classes of the agent
-%% whose Propose's condition holds, one of the class that has waited longest,
-%% ties broken in the order the classes are opened.
+%% --- The tick: Propose of the opening classes, and Vote --------------------
+%% It advances the date and takes, among the Propose of the opening classes of
+%% the agent and the Votes on the answered questions pending at it whose
+%% condition holds, one of the class that has waited longest, ties broken in
+%% a fixed order: the opening classes in the order they are opened, then the
+%% Votes in the order of their answers.
 procedure tick(Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger),
     Stream(Demand), Stream(Txn), Stream(Net), OpenCards?, St?).
 tick(Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :- ground(St?) |
@@ -608,10 +610,18 @@ tick_cond(St, Ch?, St2?) :- ground(St?) |
     tick_cond1(Is?, St1?, Ch, St2).
 procedure tick_cond1(Infos?, St?, Choice, St).
 tick_cond1(Is, St, Ch?, St1?) :- ground(Is?), ground(St?) |
-    op_cands(Is?, St?, Cs),
+    op_cands(Is?, St?, Cs1),
+    st_app(St?, Ap),
+    app_recs(Ap?, R),
+    vote_cands0(R?, St?, Cs2, St2),
+    tick_cond2(Cs1?, Cs2?, St2?, Ch, St1).
+procedure tick_cond2(Cands?, Cands?, St?, Choice, St).
+tick_cond2(Cs1, Cs2, St, Ch?, St1?) :- ground(Cs2?), ground(St?) |
+    app(Cs1?, Cs2?, Cs),
     st_waits(St?, W),
+    prune_waits(W?, Cs2?, W0),
     st_date(St?, D),
-    choose(Cs?, W?, D?, Ch, W1),
+    choose(Cs?, W0?, D?, Ch, W1),
     set_waits(St?, W1?, St1).
 
 %% Propose of an unguarded class, by its opener: the class unguarded, the agent
@@ -636,15 +646,65 @@ procedure keep_cand(YesNo?, Info?, Cands?, Cands).
 keep_cand(yes, I, Cs, [cand(op(C?), I?)|Cs?]) :- ground(I?) | info_name(I?, C).
 keep_cand(no, _, Cs, Cs?).
 
+%% Vote on an attempt: a question pending at the agent, its answer recorded,
+%% and its initiator, to whom Vote sends, known.  The record is newest first,
+%% so the instances are gathered oldest answer first.
+procedure vote_cands0(Recs?, St?, Cands, St).
+vote_cands0(R, St, Cs?, St1?) :- ground(R?) | vote_cands(R?, R?, St?, [], Cs, St1).
+procedure vote_cands(Recs?, Recs?, St?, Cands?, Cands, St).
+vote_cands([], _, St, Cs, Cs?, St?).
+vote_cands([answered(At, _)|Rs], R, St, Acc, Cs?, St2?) :-
+    ground(At?), ground(R?), ground(St?) |
+    pending_rec(At?, R?, P),
+    attempt_id(At?, Q),
+    st_sent(St?, Se),
+    st_recd(St?, Rc),
+    known_peer(Q?, Se?, Rc?, Kn),
+    and(P?, Kn?, B),
+    attempt_class(At?, C),
+    st_class(C?, St?, Cr, St1),
+    vote_cand(B?, Cr?, At?, Acc?, Acc1),
+    vote_cands(Rs?, R?, St1?, Acc1?, Cs, St2).
+vote_cands([_|Rs], R, St, Acc, Cs?, St1?) :- otherwise |
+    vote_cands(Rs?, R?, St?, Acc?, Cs, St1).
+procedure vote_cand(YesNo?, ClassRes?, Attempt?, Cands?, Cands).
+vote_cand(yes, cls(I), At, Acc, [cand(vt(At?), I?)|Acc?]).
+vote_cand(yes, nocls, _, Acc, Acc?).
+vote_cand(no, _, _, Acc, Acc?).
+
+%% A Vote once taken, or its attempt closed, never holds again: its wait is
+%% forgotten when it is no longer an instance.
+procedure prune_waits(Waits?, Cands?, Waits).
+prune_waits([], _, []).
+prune_waits([w(op(C), T)|Ws], Cs, [w(op(C?), T?)|Ws1?]) :- prune_waits(Ws?, Cs?, Ws1).
+prune_waits([w(vt(A), T)|Ws], Cs, Ws1?) :- ground(A?), ground(Cs?) |
+    is_cand(vt(A?), Cs?, B),
+    prune_waits(Ws?, Cs?, Rest),
+    prune_wait(B?, w(vt(A?), T?), Rest?, Ws1).
+procedure prune_wait(YesNo?, Wait?, Waits?, Waits).
+prune_wait(yes, X, Ws, [X?|Ws?]).
+prune_wait(no, _, Ws, Ws?).
+procedure is_cand(WKey?, Cands?, YesNo).
+is_cand(_, [], no).
+is_cand(K, [cand(K1, _)|_], yes) :- K? =?= K1? | true.
+is_cand(K, [_|Cs], B?) :- otherwise | is_cand(K?, Cs?, B).
+
 procedure dispatch_tick(Choice?, App?, Stream(Trigger)?, Stream(Trigger)?,
     Stream(Trigger), Stream(Demand), Stream(Txn), Stream(Net), OpenCards?, St?).
 dispatch_tick(none, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
     next(done, yes, Ap0?, [], Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
-dispatch_tick(take(I), Ap0, Ls, In, Ans?, Dem?, [propose(At?)|Thr?], Out?, Cards,
-        St) :-
+dispatch_tick(take(op(_), I), Ap0, Ls, In, Ans?, Dem?, [propose(At?)|Thr?], Out?,
+        Cards, St) :-
     ground(I?) |
     info_name(I?, C),
     propose_effect(I?, C?, St?, At, Ss, St1),
+    send_all(Ss?, St1?, Ms, St2),
+    put_all(Ms?, Out, Out1?),
+    next(done, yes, Ap0?, [], Ls?, In?, Ans, Dem, Thr, Out1, Cards?, St2?).
+dispatch_tick(take(vt(At), I), Ap0, Ls, In, Ans?, Dem?, [vote(At?)|Thr?], Out?,
+        Cards, St) :-
+    ground(At?), ground(I?) |
+    vote_effect(I?, At?, St?, Ss, St1),
     send_all(Ss?, St1?, Ms, St2),
     put_all(Ms?, Out, Out1?),
     next(done, yes, Ap0?, [], Ls?, In?, Ans, Dem, Thr, Out1, Cards?, St2?).
@@ -734,7 +794,7 @@ pick([cand(K, I)|Cs], W, Ch?, Ky?) :- ground(K?), ground(W?) |
     tick_at(K?, W?, T),
     best(Cs?, W?, T?, K?, I?, Ch, Ky).
 procedure best(Cands?, Waits?, Integer?, WKey?, Info?, Choice, PKey).
-best([], _, _, K, I, take(I?), key(K?)).
+best([], _, _, K, I, take(K?, I?), key(K?)) :- ground(K?) | true.
 best([cand(K2, I2)|Cs], W, T, K, I, Ch?, Ky?) :- ground(K2?), ground(W?) |
     tick_at(K2?, W?, T2),
     best1(T2?, T?, K2?, I2?, K?, I?, Cs?, W?, Ch, Ky).
@@ -873,21 +933,33 @@ procedure gset_of1(YesNo?, Peers?, PeerSets?, Peer?, Peers).
 gset_of1(yes, G, _, _, G?).
 gset_of1(no, _, Gs, P, R?) :- gset_of(Gs?, P?, R).
 
-%% Answer: on yes, yes where the agent holds nothing prepared and its state is
-%% in the domain of its effect, and no otherwise; on no, its else-branch, no.
-procedure answer_effect(Info?, YesNo?, Attempt?, St?, Sends, St).
-answer_effect(I, YN, At, St, Ss?, St1?) :- ground(St?) |
+%% Answer: the person's answer recorded, answered(At, yes) by its then-branch
+%% and answered(At, no) by its else-branch; it sends nothing and votes nothing.
+procedure answer_effect(YesNo?, Attempt?, St?, St).
+answer_effect(YN, At, St, St1?) :- ground(St?) |
+    st_app(St?, Ap),
+    answer_app(YN?, At?, Ap?, Ap1),
+    set_app(St?, Ap1?, St1).
+procedure answer_app(YesNo?, Attempt?, App?, App).
+answer_app(YN, At, app(S, K, L, R), app(S?, K?, L?, [answered(At?, YN?)|R?])).
+
+%% Vote, on a tick: yes where the answer is yes, the agent holds nothing
+%% prepared and its state is in the domain of its effect, and no otherwise.
+procedure vote_effect(Info?, Attempt?, St?, Sends, St).
+vote_effect(I, At, St, Ss?, St1?) :- ground(St?) |
     st_id(St?, Id),
     st_app(St?, Ap),
-    answer_app(YN?, I?, At?, Id?, Ap?, Ss, Ap1),
+    vote_app0(I?, At?, Id?, Ap?, Ss, Ap1),
     set_app(St?, Ap1?, St1).
-procedure answer_app(YesNo?, Info?, Attempt?, Peer?, App?, Sends, App).
-answer_app(yes, I, At, Id, Ap, Ss?, Ap1?) :- ground(Ap?) |
-    answer_yes(I?, Id?, Ap?, Y),
+procedure vote_app0(Info?, Attempt?, Peer?, App?, Sends, App).
+vote_app0(I, At, Id, Ap, Ss?, Ap1?) :- ground(At?), ground(Ap?) |
+    app_recs(Ap?, R),
+    answer_of(At?, R?, YN),
+    vote_yes(YN?, I?, Id?, Ap?, Y),
     vote_app(At?, Y?, Ap?, Ss, Ap1).
-answer_app(no, _, At, _, Ap, Ss?, Ap1?) :- vote_app(At?, no, Ap?, Ss, Ap1).
-procedure answer_yes(Info?, Peer?, App?, YesNo).
-answer_yes(I, Id, app(S, _, L, _), Y?) :-
+procedure vote_yes(YesNo?, Info?, Peer?, App?, YesNo).
+vote_yes(no, _, _, _, no).
+vote_yes(yes, I, Id, app(S, _, L, _), Y?) :-
     unlocked(L?, B1),
     dom_ok(I?, Id?, S?, B2),
     and(B1?, B2?, Y).
@@ -1031,6 +1103,16 @@ procedure has_vote(Attempt?, Recs?, YesNo).
 has_vote(_, [], no).
 has_vote(At, [voted(A, _)|_], yes) :- At? =?= A? | true.
 has_vote(At, [_|Rs], B?) :- otherwise | has_vote(At?, Rs?, B).
+
+%% An answer recorded to an attempt, and which.
+procedure has_answer(Attempt?, Recs?, YesNo).
+has_answer(_, [], no).
+has_answer(At, [answered(A, _)|_], yes) :- At? =?= A? | true.
+has_answer(At, [_|Rs], B?) :- otherwise | has_answer(At?, Rs?, B).
+procedure answer_of(Attempt?, Recs?, YesNo).
+answer_of(_, [], no).
+answer_of(At, [answered(A, Y)|_], Y?) :- At? =?= A? | true.
+answer_of(At, [_|Rs], Y?) :- otherwise | answer_of(At?, Rs?, Y).
 
 %% Whether an attempt's class is the class of an entry: the same participants
 %% and the same atoms deleted and added at each.

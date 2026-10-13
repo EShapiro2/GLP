@@ -9,15 +9,16 @@
 %% and the network's log of the cargoes it carries.
 %%
 %% play_befriend: alice proposes befriending bob; bob, in its guard set, is
-%%   asked on his card and answers yes; alice tallies his yes and commits, and
-%%   bob's Outcome commits.
+%%   asked on his card and answers yes, and his Vote votes yes on his next tick;
+%%   alice tallies his yes and commits, and bob's Outcome commits.
 %% play_unfriend: befriended, bob proposes unfriending alice; unfriend is one
 %%   class guarded by either party, its guard sets {alice} and {bob} (vGLP,
 %%   Section 5.4, the paragraph on act schemas), so the attempt asks nobody and
 %%   alice's machine votes yes; befriended again, alice proposes unfriending
 %%   bob, and bob's machine votes yes.
 %% play_refused: alice proposes befriending bob and bob answers no; the
-%%   else-branch votes no and the attempt aborts at both; alice proposes it
+%%   else-branch records his no, his Vote votes no on his next tick, and the
+%%   attempt aborts at both; alice proposes it
 %%   again, bob is asked again and answers yes, and it commits.
 %% play_pending: the network holds alice's hello to bob until her first cargo
 %%   to him has passed, so her start reaches bob before he knows her; his
@@ -40,7 +41,7 @@ Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision).
 Content  ::= hello(Peer) ; cargo(Peer, Integer, Cargo).
 Net      ::= msg(Peer, Content).
 Txn      ::= propose(Attempt) ; start(Attempt) ; answer(Attempt)
-           ; tally(Attempt) ; outcome(Attempt) ; discover(Peer).
+           ; vote(Attempt) ; tally(Attempt) ; outcome(Attempt) ; discover(Peer).
 Session  ::= session(Stream(Request)?, Stream(Txn)).
 Card     ::= card(Attempt, YesNo?).
 Question ::= session_w(Session) ; card_w(Card).

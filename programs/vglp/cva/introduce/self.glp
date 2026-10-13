@@ -31,7 +31,7 @@ Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision).
 Content  ::= hello(Peer) ; cargo(Peer, Integer, Cargo).
 Net      ::= msg(Peer, Content).
 Txn      ::= propose(Attempt) ; start(Attempt) ; answer(Attempt)
-           ; tally(Attempt) ; outcome(Attempt) ; discover(Peer).
+           ; vote(Attempt) ; tally(Attempt) ; outcome(Attempt) ; discover(Peer).
 Session  ::= session(Stream(Request)?, Stream(Txn)).
 Card     ::= card(Attempt, YesNo?).
 Question ::= session_w(Session) ; card_w(Card).
