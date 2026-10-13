@@ -32,14 +32,18 @@ Question ::= panel_w(Panel) ; stream_card_w(Stream(Card))
 Ask(Q)   ::= ask(Constant, Q).
 PersonIn ::= [_ | PersonIn].
 
-imported procedure cards#panel(Channel(Stream(_), Stream(_))?,
+%% The program's output to its person, the reserved type Output (vGLP
+%% 169b008, Definition "Canonical Compilation"): each answer, got(N, X).
+Output   ::= got(Integer, YesNo).
+
+imported procedure cards#panel(Channel(Stream(_), Stream(Output))?,
     Stream(Ask(Question))).
-imported procedure cards#deal(Channel(Stream(_), Stream(_))?,
+imported procedure cards#deal(Channel(Stream(_), Stream(Output))?,
     Stream(Ask(Question))).
-imported procedure cards#votes(Channel(Stream(_), Stream(_))?,
+imported procedure cards#votes(Channel(Stream(_), Stream(Output))?,
     Stream(Ask(Question))).
 imported procedure cards#dispatch(Stream(Ask(Question))?,
-    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(Output))).
 
 %% ---------------------------------------------------------------------------
 %% The bridge's entries
@@ -76,7 +80,8 @@ exported procedure play_panel(Stream(_)).
 play_panel(Log?) :-
     cards # panel(MCh?, Asks),
     cards # dispatch(Asks?, ch(Gs?, Ds), MCh),
-    panel_person(Ds?, Gs, Log).
+    outputs(Ds?, Es),
+    panel_person(Es?, Gs, Log).
 
 procedure panel_person(_?, PersonIn, Stream(_)).
 panel_person([draw(Id, _, panel([card(1, input(Q1)), card(2, input(Q2))])) | Ds],
@@ -98,7 +103,8 @@ exported procedure play_deal(Stream(_)).
 play_deal(Log?) :-
     cards # deal(MCh?, Asks),
     cards # dispatch(Asks?, ch(Gs?, Ds), MCh),
-    deal_person(Ds?, Gs, Log).
+    outputs(Ds?, Es),
+    deal_person(Es?, Gs, Log).
 
 procedure deal_person(_?, PersonIn, Stream(_)).
 deal_person([draw(Id, _, [card(1, input(Q1)), card(2, input(Q2))]) | Ds],
@@ -118,3 +124,22 @@ deal_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     deal_person(Ds?, Gs, Log).
 deal_person([got(N, X) | Ds], Gs?, [got(N?, X?) | Log?]) :-
     deal_person(Ds?, Gs, Log).
+
+%% ---------------------------------------------------------------------------
+%% The program's output, read off the thread of construct 0
+%% ---------------------------------------------------------------------------
+
+%% outputs(Ds?, Es): what the person channel carries, with the program's
+%% output to the person read off the thread the dispatcher draws it as,
+%% construct 0, drawn again with every element so far as each arrives: its
+%% newest element is the one that came, and the draw with none is no event
+%% (vGLP 169b008, Definition "Canonical Compilation"; vGLP, 2026-10-13 19:25
+%% UTC, items 2 and 3).  Every other draw and withdrawal passes as it came.
+procedure outputs(_?, Stream(_)).
+outputs([draw(0, thread(_), Ms) | Ds], Es?) :- newest(Ms?, Ds?, Es).
+outputs([E | Ds], [E? | Es?]) :- otherwise | outputs(Ds?, Es).
+
+procedure newest(_?, _?, Stream(_)).
+newest([], Ds, Es?) :- outputs(Ds?, Es).
+newest([M], Ds, [M? | Es?]) :- outputs(Ds?, Es).
+newest([_, M1 | Ms], Ds, Es?) :- newest([M1? | Ms?], Ds?, Es).

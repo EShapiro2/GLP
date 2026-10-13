@@ -32,15 +32,15 @@ Panel   ::= panel(List(Card)).
 %% ---------------------------------------------------------------------------
 
 %% A panel of two cards.
-exported procedure panel(Channel(Stream(_), Stream(_))?).
+exported procedure panel(Channel(Stream(_), Stream(Output))?).
 panel(ch(_, Out?)) :- show(Out).
 
 %% A stream of three cards.
-exported procedure deal(Channel(Stream(_), Stream(_))?).
+exported procedure deal(Channel(Stream(_), Stream(Output))?).
 deal(ch(_, Out?)) :- cards(Out).
 
 %% A stream of two yes-or-no questions.
-exported procedure votes(Channel(Stream(_), Stream(_))?).
+exported procedure votes(Channel(Stream(_), Stream(Output))?).
 votes(ch(_, Out?)) :- ballot(Out).
 
 %% ---------------------------------------------------------------------------
@@ -49,26 +49,26 @@ votes(ch(_, Out?)) :- ballot(Out).
 
 %% The panel shows both cards at once, and the program reads each answer as
 %% the person gives it.
-procedure (Panel)*show(Stream(_)).
+procedure (Panel)*show(Stream(Output)).
 (panel([card(1, A1), card(2, A2)]))*show(Out?) :-
     answered(1, A1?, O1), answered(2, A2?, O2), merge(O1?, O2?, Out).
 
 %% The stream shows two cards, and a third once both are answered; then it
 %% ends.
-procedure (Stream(Card))*cards(Stream(_)).
+procedure (Stream(Card))*cards(Stream(Output)).
 ([card(1, A1), card(2, A2) | Cs?])*cards(Out?) :-
     third(A1?, A2?, Cs, Out).
 
-procedure third(YesNo?, YesNo?, Stream(Card), Stream(_)).
+procedure third(YesNo?, YesNo?, Stream(Card), Stream(Output)).
 third(A1, A2, [card(3, A3)], [got(1, A1?), got(2, A2?) | Out?]) :-
     ground(A1?), ground(A2?) | answered(3, A3?, Out).
 
 %% The stream of two questions, each element the person's to write.
-procedure (Stream(YesNo?))*ballot(Stream(_)).
+procedure (Stream(YesNo?))*ballot(Stream(Output)).
 ([A1, A2])*ballot(Out?) :-
     answered(1, A1?, O1), answered(2, A2?, O2), merge(O1?, O2?, Out).
 
 %% answered(N?, X?, Out): once the person has answered X, write got(N, X) on
 %% the program's output to the person, which then closes.
-procedure answered(Integer?, YesNo?, Stream(_)).
+procedure answered(Integer?, YesNo?, Stream(Output)).
 answered(N, X, [got(N?, X?)]) :- ground(X?) | true.

@@ -41,14 +41,22 @@ Question ::= ok_r(Ok?) ; yesNo_r(YesNo?) ; string_r(String?)
 Ask(Q)   ::= ask(Constant, Q).
 PersonIn ::= [_ | PersonIn].
 
-imported procedure widgets#inputs(Channel(Stream(_), Stream(_))?,
+%% The program's output to its person, the reserved type Output (vGLP
+%% 169b008, Definition "Canonical Compilation"): each answer, got(Q, X), Q the
+%% question's name and X the term the person's answer formed, of the
+%% question's type: a constant (Ok, YesNo, String, Integer, Real, Date and
+%% Peer, all of them Constant), a Pay or a Request.
+Answer   ::= Constant ; Pay ; Request.
+Output   ::= got(Constant, Answer).
+
+imported procedure widgets#inputs(Channel(Stream(_), Stream(Output))?,
     Stream(Ask(Question))).
-imported procedure widgets#forms(Channel(Stream(_), Stream(_))?,
+imported procedure widgets#forms(Channel(Stream(_), Stream(Output))?,
     Stream(Ask(Question))).
-imported procedure widgets#cards(Channel(Stream(_), Stream(_))?,
+imported procedure widgets#cards(Channel(Stream(_), Stream(Output))?,
     Stream(Ask(Question))).
 imported procedure widgets#dispatch(Stream(Ask(Question))?,
-    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(Output))).
 
 %% The primitive and constant questions.
 exported procedure inputs_init(Constant?, PersonIn?, Stream(_)?).

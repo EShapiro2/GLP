@@ -50,6 +50,10 @@ Ask(Q)   ::= ask(Constant, Q).
 PersonIn ::= [_ | PersonIn].
 Path     ::= [] ; [Integer | Path].
 
+%% The program's output to its person, the reserved type Output (vGLP
+%% 169b008, Definition "Canonical Compilation"): the decisions.
+Output   ::= Decision.
+
 imported procedure responder#respond(Offer?, Stream(Decision),
     Stream(Ask(Question))).
 imported procedure responder#greet(Offer?, Stream(Decision),
@@ -57,7 +61,7 @@ imported procedure responder#greet(Offer?, Stream(Decision),
 imported procedure responder#pick(Offer?, Stream(Decision),
     Stream(Ask(Question))).
 imported procedure responder#dispatch(Stream(Ask(Question))?,
-    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(Output))).
 
 %% ---------------------------------------------------------------------------
 %% The plays
@@ -179,5 +183,5 @@ answered([], []).
 
 %% to_person(MCh?, O?): the program's own output to the person, O, on its end
 %% of the person channel.
-procedure to_person(Channel(Stream(_), Stream(_))?, Stream(_)?).
+procedure to_person(Channel(Stream(_), Stream(Output))?, Stream(Decision)?).
 to_person(ch(_, O?), O).

@@ -36,16 +36,16 @@ Fin   ::= fin.
 %% ---------------------------------------------------------------------------
 
 %% A card whose Peer the person's word names.
-exported procedure late(Channel(Stream(_), Stream(_))?).
+exported procedure late(Channel(Stream(_), Stream(Output))?).
 late(ch(In, Out?)) :- peer_of(In?, Peer), respond(Peer?, Out).
 
 %% A stream of three cards, the second's Peer the person's word.
-exported procedure deal(Channel(Stream(_), Stream(_))?).
+exported procedure deal(Channel(Stream(_), Stream(Output))?).
 deal(ch(In, Out?)) :- peer_of(In?, Peer), cards(Peer?, Out).
 
 %% A thread of notes beside a question, the second note's argument the
 %% person's word.
-exported procedure board(Channel(Stream(_), Stream(_))?).
+exported procedure board(Channel(Stream(_), Stream(Output))?).
 board(ch(In, Out?)) :- word_of(In?, W), notes(W?, Out).
 
 %% ---------------------------------------------------------------------------
@@ -53,14 +53,14 @@ board(ch(In, Out?)) :- word_of(In?, W), notes(W?, Out).
 %% ---------------------------------------------------------------------------
 
 %% The card is written at once, its Peer whenever the person's word comes.
-procedure (Card)*respond(Peer?, Stream(_)).
+procedure (Card)*respond(Peer?, Stream(Output)).
 (card(Peer?, A))*respond(Peer, Out?) :- answered(0, A?, Out, _).
 
 %% The stream: its first card unwritten, its second with the Peer still to
 %% come, its third whole, and its tail unwritten.  Once the third is
 %% answered the program writes the first; once the first and the second are
 %% answered, it closes the stream.
-procedure (Stream(Card))*cards(Peer?, Stream(_)).
+procedure (Stream(Card))*cards(Peer?, Stream(Output)).
 ([X1?, card(Peer?, A2), card(bob, A3) | Cs?])*cards(Peer, Out?) :-
     answered(3, A3?, O3, F3),
     first(F3?, X1, O1, F1),
@@ -71,7 +71,7 @@ procedure (Stream(Card))*cards(Peer?, Stream(_)).
 
 %% The thread: its first note whole, its second written before its argument
 %% is, and its tail closed once the question is answered.
-procedure (Board)*notes(Constant?, Stream(_)).
+procedure (Board)*notes(Constant?, Stream(Output)).
 (board([note(first), note(W?) | Ns?], A))*notes(W, Out?) :-
     answered(0, A?, Out, F),
     end_notes(F?, Ns).
@@ -97,12 +97,12 @@ word_of([], none).
 
 %% answered(N?, X?, Out, F): once the person has answered X, got(N, X) on
 %% the program's output to the person, which then closes, and F fin.
-procedure answered(Integer?, YesNo?, Stream(_), Fin).
+procedure answered(Integer?, YesNo?, Stream(Output), Fin).
 answered(N, X, [got(N?, X?)], fin) :- ground(X?) | true.
 
 %% first(F?, X, Out, F1): once F is fin, X the first card, card(carol, A),
 %% and its answer awaited as answered/4 awaits one.
-procedure first(Fin?, Card, Stream(_), Fin).
+procedure first(Fin?, Card, Stream(Output), Fin).
 first(fin, card(carol, A), Out?, F?) :- answered(1, A?, Out, F).
 
 %% close(F1?, F2?, Cs): the stream closed once both are fin.

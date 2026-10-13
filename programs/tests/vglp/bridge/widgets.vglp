@@ -43,7 +43,7 @@ Feed    ::= feed(Stream(String), YesNo?).
 %% ---------------------------------------------------------------------------
 
 %% The primitive and constant questions.
-exported procedure inputs(Channel(Stream(_), Stream(_))?).
+exported procedure inputs(Channel(Stream(_), Stream(Output))?).
 inputs(ch(_, Out?)) :-
     button_q(O1), buttons_q(O2), text_q(O3), integer_q(O4), real_q(O5),
     date_q(O6), peer_q(O7),
@@ -52,7 +52,7 @@ inputs(ch(_, Out?)) :-
 
 %% The structured questions: a form, a menu of forms, a picker, a thread and
 %% an input box.
-exported procedure forms(Channel(Stream(_), Stream(_))?).
+exported procedure forms(Channel(Stream(_), Stream(Output))?).
 forms(ch(_, Out?)) :-
     form_q(O1), menu_q(O2), pick_q([alice, bob, carol], O3),
     feed_q(["one", "two"], O4), lines_q(O5),
@@ -60,7 +60,7 @@ forms(ch(_, Out?)) :-
     merge(M3?, O5?, Out).
 
 %% Two responders' cards, open at once.
-exported procedure cards(Channel(Stream(_), Stream(_))?).
+exported procedure cards(Channel(Stream(_), Stream(Output))?).
 cards(ch(_, Out?)) :-
     card_q(alice, O1), card_q(bob, O2),
     merge(O1?, O2?, Out).
@@ -69,57 +69,61 @@ cards(ch(_, Out?)) :-
 %% The questions
 %% ---------------------------------------------------------------------------
 
-procedure (Ok?)*button_q(Stream(_)).
+procedure (Ok?)*button_q(Stream(Output)).
 (X)*button_q(Out?) :- answered(button, X?, Out).
 
-procedure (YesNo?)*buttons_q(Stream(_)).
+procedure (YesNo?)*buttons_q(Stream(Output)).
 (X)*buttons_q(Out?) :- answered(buttons, X?, Out).
 
-procedure (String?)*text_q(Stream(_)).
+procedure (String?)*text_q(Stream(Output)).
 (X)*text_q(Out?) :- answered(text, X?, Out).
 
-procedure (Integer?)*integer_q(Stream(_)).
+procedure (Integer?)*integer_q(Stream(Output)).
 (X)*integer_q(Out?) :- answered(integer, X?, Out).
 
-procedure (Real?)*real_q(Stream(_)).
+procedure (Real?)*real_q(Stream(Output)).
 (X)*real_q(Out?) :- answered(real, X?, Out).
 
-procedure (Date?)*date_q(Stream(_)).
+procedure (Date?)*date_q(Stream(Output)).
 (X)*date_q(Out?) :- answered(date, X?, Out).
 
-procedure (Peer?)*peer_q(Stream(_)).
+procedure (Peer?)*peer_q(Stream(Output)).
 (X)*peer_q(Out?) :- answered(peer, X?, Out).
 
-procedure (Pay?)*form_q(Stream(_)).
+procedure (Pay?)*form_q(Stream(Output)).
 (X)*form_q(Out?) :- answered(form, X?, Out).
 
-procedure (Request?)*menu_q(Stream(_)).
+procedure (Request?)*menu_q(Stream(Output)).
 (X)*menu_q(Out?) :- answered(menu, X?, Out).
 
 %% The card shows the offering peer, and the person answers yes or no.
-procedure (Card)*card_q(Peer?, Stream(_)).
+procedure (Card)*card_q(Peer?, Stream(Output)).
 (card(P?, A))*card_q(P, Out?) :- ground(P?) | answered(P?, A?, Out).
 
 %% The picker offers the peers the program lists.
-procedure (Choice)*pick_q(Stream(Peer)?, Stream(_)).
+procedure (Choice)*pick_q(Stream(Peer)?, Stream(Output)).
 (choose(Ps?, C))*pick_q(Ps, Out?) :- answered(pick, C?, Out).
 
 %% The thread shows the lines the program writes, and the person answers yes
 %% or no.
-procedure (Feed)*feed_q(Stream(String)?, Stream(_)).
+procedure (Feed)*feed_q(Stream(String)?, Stream(Output)).
 (feed(Ls?, A))*feed_q(Ls, Out?) :- answered(feed, A?, Out).
 
 %% The input box takes one line per submission, and each line is answered.
-procedure (Stream(String)?)*lines_q(Stream(_)).
+procedure (Stream(String)?)*lines_q(Stream(Output)).
 (Ls)*lines_q(Out?) :- lines(Ls?, Out).
 
-procedure lines(Stream(String)?, Stream(_)).
-lines([L | Ls], [got(line, L?) | Out?]) :- ground(L?) | lines(Ls?, Out).
+procedure lines(Stream(String)?, Stream(Output)).
+lines([L | Ls], [G? | Out?]) :- ground(L?) | got(line, L?, G), lines(Ls?, Out).
 lines([], []).
+
+%% got(Q?, X?, G): the output got(Q, X), each answer an Answer (self.glp).
+procedure got(Constant?, Answer?, Output).
+got(Q, X, got(Q?, X?)).
 
 %% answered(Q?, X?, Out): once the person has answered X, write got(Q, X) on
 %% the program's output to the person, which then closes.  Written only once
 %% X is ground, so that the output reaches the person whole and holds up
 %% nothing behind it.
-procedure answered(Constant?, _?, Stream(_)).
+procedure answered(Constant?, Answer?, Stream(Output)).
 answered(Q, X, [got(Q?, X?)]) :- ground(X?) | true.
