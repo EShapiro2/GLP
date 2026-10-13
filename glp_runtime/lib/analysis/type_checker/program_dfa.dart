@@ -5,7 +5,7 @@
 
 import 'type_ast.dart';
 import 'mode.dart';
-import 'param_expansion.dart' show abstractTypePrefix;
+import 'param_expansion.dart' show abstractTypePrefix, runOpaqueTypePrefix;
 import '../../compiler/glp_printer.dart' show constantSource;
 import '../../runtime/terms.dart' show Nil, nil;
 
@@ -106,6 +106,24 @@ class DFAState {
   /// type" (Definition "Parametrically Well-Typed"), so two abstract types are
   /// two types, although every abstract type has the same, empty, automaton.
   bool get isAbstractType => baseName.startsWith(abstractTypePrefix);
+
+  /// True for the opaque type labelled with the type identity a goal that
+  /// `run/3` activates was obtained under by `find_type/3`
+  /// ([runOpaqueTypeName]): an abstract type ([isAbstractType]) in every
+  /// respect, and the one place a variable of type `Opaque` may stand (TGLP
+  /// modules.tex, "Opaque types": "in a goal that run activates at an opaque
+  /// instance at h, a variable of type Opaque may stand at a position typed by
+  /// the opaque type labelled h"; subtyping.dart, [isSubtype]).
+  bool get isRunOpaqueType => baseName.startsWith(runOpaqueTypePrefix);
+
+  /// True for the built-in type `Opaque`, the union of all opaque types (TGLP
+  /// parameterized-types.tex, Definition "Opaque Type"): "a state with no
+  /// outgoing transitions, distinct from the wildcard and from every opaque
+  /// type, matched by itself and by every opaque type, and by nothing else".
+  /// Not a primitive ([isPrimitiveType]), no constant type
+  /// ([isConstantType]), and its automaton has no transition, so only a
+  /// variable is consistent with it (Definition "Consistent Paths").
+  bool get isOpaqueUnion => baseName == TypeRef.opaqueUnion;
 
   // Fix 3.2: Computed properties for type classification
   /// True for the primitive types: `_`, Integer, Real, String, Module, MutualRef.
@@ -297,6 +315,12 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
   states['MutualRef'] = DFAState('MutualRef', isDual: false, isFinal: false);
   states['MutualRef?'] = DFAState('MutualRef', isDual: true, isFinal: false);
   states['_FINAL_'] = DFAState('_FINAL_', isDual: false, isFinal: true);
+  // `Opaque`, the union of all opaque types: a state with no outgoing
+  // transitions (TGLP parameterized-types.tex, Definition "Opaque Type").
+  states[TypeRef.opaqueUnion] =
+      DFAState(TypeRef.opaqueUnion, isDual: false, isFinal: false);
+  states['${TypeRef.opaqueUnion}?'] =
+      DFAState(TypeRef.opaqueUnion, isDual: true, isFinal: false);
 
   // Create automata for system types
   automata['_'] = _finalAutomaton(states['_']!);
@@ -311,6 +335,9 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
   automata['Module?'] = _primitiveTypeAutomaton(states['Module?']!, states['_FINAL_']!);
   automata['MutualRef'] = _primitiveTypeAutomaton(states['MutualRef']!, states['_FINAL_']!);
   automata['MutualRef?'] = _primitiveTypeAutomaton(states['MutualRef?']!, states['_FINAL_']!);
+  automata[TypeRef.opaqueUnion] = _finalAutomaton(states[TypeRef.opaqueUnion]!);
+  automata['${TypeRef.opaqueUnion}?'] =
+      _finalAutomaton(states['${TypeRef.opaqueUnion}?']!);
 
   // Create states for ALL defined types FIRST
   // (Automata may reference other types, so all states must exist before building automata)
@@ -690,6 +717,8 @@ bool isConstantType(DFAState state, Map<String, TypeDef> types) {
   // "a mutual reference holds the writer of a stream tail, so it is neither
   // ground nor a constant type" (TGLP sec:type-declarations).
   if (state.isMutualRefType) return false;
+  // `Opaque` is no primitive and has no alternative: no constant type.
+  if (state.isOpaqueUnion) return false;
   // `_FINAL_` is where a constant alternative's path ends: a constant.
   if (state.isAnonymousFinal) return true;
   // Integer, Real, String, Module --- the wildcard and MutualRef are already out.
@@ -887,6 +916,16 @@ LeafConsistencyResult checkLeafConsistency(
   if (state.isMutualRefType) {
     return LeafConsistencyResult.inconsistent(
         'MutualRef type requires a mutual reference term');
+  }
+
+  // `Opaque` has no outgoing transition, so no constant is consistent with
+  // it: "a clause holds only a variable at an Opaque position" (TGLP
+  // parameterized-types.tex, Definition "Opaque Type", and the paragraph
+  // after it; GLP, 2026-10-13 12:52 UTC, O1 1).
+  if (state.isOpaqueUnion) {
+    return LeafConsistencyResult.inconsistent(
+        'Opaque, the union of all opaque types, holds only a variable: '
+        'no constant is consistent with it');
   }
 
   // Case 2c: At wildcard state

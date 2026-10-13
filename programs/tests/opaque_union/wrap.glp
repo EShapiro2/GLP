@@ -1,0 +1,16 @@
+%% As store.glp, through wrap/2, a certified procedure calling store/3:
+%% refused at wrap's instantiation at A.
+
+A ::= a(Integer).
+
+procedure(X) wrap(X?, Stream(Opaque)).
+wrap(E, S?) :- store(E?, [], S).
+
+procedure(X) store(X?, Stream(Opaque)?, Stream(Opaque)).
+store(E, Es, S?) :- push(E?, Es?, S).
+
+procedure push(Opaque?, Stream(Opaque)?, Stream(Opaque)).
+push(E, Es, [E? | Es?]).
+
+procedure host(A?, Stream(Opaque)).
+host(X, S?) :- wrap(X?, S).

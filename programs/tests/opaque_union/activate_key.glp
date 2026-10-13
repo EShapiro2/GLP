@@ -1,0 +1,14 @@
+%% The activating goal with one Opaque variable at the template's parameter,
+%% admitted, and another at its Key position, refused: the one step back is
+%% at the parameter only.
+
+procedure(X) entry(Key?, X?, X).
+entry(_, E, E?).
+
+Inv ::= inv(Module, Opaque, Opaque).
+
+procedure host(Inv?, Stream(Opaque)).
+host(inv(M, E, F), [O?]) :-
+    opaque_type(entry/3, M?, H),
+    find_type(entry/3, H?, T),
+    run(entry(E?, F?, O), T?, M?).

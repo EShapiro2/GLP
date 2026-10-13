@@ -26,6 +26,7 @@ import 'root_scope.dart';
 import 'param_expansion.dart';
 import 'type_identity.dart' show bareInlinedParameters;
 import '../../compiler/ast.dart' as ast;
+import '../../compiler/glp_printer.dart' show constantSource;
 
 // =============================================================================
 // Per-instantiation collection (clause-template rule)
@@ -412,10 +413,15 @@ ClauseCheckResult checkClause(
   // clause is typed (Step 5).
   final uninstantiated = <(int, ast.Goal, ProcDecl)>[];
 
+  // The goals `run/3` activates under a type identity `find_type/3` obtained
+  // at h, each read by its template's opaque instance at h, by the index of
+  // its run/3 goal ([_opaqueActivations]).
+  final activations = _opaqueActivations(clause, dfa, env);
+
   // Step 2: Check each body atom
   for (int i = 0; i < clause.bodyAtoms.length; i++) {
     final atom = clause.bodyAtoms[i];
-    final (atomResult, modedAtomTerm) = _checkBodyAtomWithTerm(atom, i, dfa, env,
+    var (atomResult, modedAtomTerm) = _checkBodyAtomWithTerm(atom, i, dfa, env,
         callerVarTypes: allVariableTypes, collector: collector,
         activeInstantiations: activeInstantiations,
         callee: callee,
@@ -432,10 +438,42 @@ ClauseCheckResult checkClause(
       errors.add(BodyAtomError(atom.functor, i, atomResult.errors));
     }
 
+    // The goal this run/3 goal activates, where it is one of [activations]:
+    // checked by the template's opaque instance at h, and its occurrences
+    // typed by it and merged with the run/3 goal's own, each marked
+    // [_activatedMark] so that the pair checks below take the one step back
+    // at it ([_stepBack]).
+    final activation = activations[i];
+    var activated = const <String>{};
+    if (activation != null) {
+      final goalResult = _checkActivatedGoal(activation, dfa);
+      if (!goalResult.isWellTyped) {
+        errors.add(BodyAtomError(
+            'run/3 activating ${activation.goal.functor}/'
+            '${activation.goal.arity} at the opaque instance of '
+            '${activation.template.key} at ${activation.label}',
+            i,
+            goalResult.errors));
+      }
+      activated = {
+        for (final k in goalResult.variableTypes.keys)
+          if (!atomResult.variableTypes.containsKey(k)) k
+      };
+      atomResult = WellTypedResult(
+        isWellTyped: atomResult.isWellTyped,
+        variableTypes: {
+          ...atomResult.variableTypes,
+          for (final k in activated) k: goalResult.variableTypes[k]!,
+        },
+        errors: atomResult.errors,
+      );
+    }
+
     // Merge variable types with consistency checking
     for (final entry in atomResult.variableTypes.entries) {
       final varKey = entry.key;
       final newInfo = entry.value;
+      final mark = activated.contains(varKey) ? _activatedMark : '';
 
       if (allVariableTypes.containsKey(varKey)) {
         // A key the head already carries is this occurrence's partner in the
@@ -452,7 +490,7 @@ ClauseCheckResult checkClause(
         // occurrence, but it is one with the body occurrence of its partner,
         // so it is kept for condition 3(a) ([_checkBodyBodyPairs]).
         if (variableLocations[varKey] != 'head') {
-          bodyOccurrences[varKey]?.add((newInfo, 'body atom $i'));
+          bodyOccurrences[varKey]?.add((newInfo, 'body atom $i$mark'));
         }
         if (variableLocations[varKey] == 'head') {
           if (i < clause.guardAtoms.length) {
@@ -477,14 +515,16 @@ ClauseCheckResult checkClause(
             // The body goal is named, not just numbered: a 3(b) refusal is
             // almost always a DECLARATION at fault, and the reader has to know
             // which procedure's declaration to look at.
-            headBodyPairs.putIfAbsent(varKey, () => []).add(
-                (newInfo, '${atom.functor}/${atom.arity} (body atom $i)'));
+            headBodyPairs.putIfAbsent(varKey, () => []).add((
+              newInfo,
+              '${atom.functor}/${atom.arity} (body atom $i)$mark'
+            ));
           }
         }
       } else {
         allVariableTypes[varKey] = newInfo;
-        variableLocations[varKey] = 'body atom $i';
-        bodyOccurrences[varKey] = [(newInfo, 'body atom $i')];
+        variableLocations[varKey] = 'body atom $i$mark';
+        bodyOccurrences[varKey] = [(newInfo, 'body atom $i$mark')];
       }
     }
   }
@@ -535,6 +575,176 @@ ClauseCheckResult checkClause(
     modedHead: constructedModedHead,
     modedBodyAtoms: constructedModedBodyAtoms,
   );
+}
+
+// =============================================================================
+// The one step back from Opaque: a goal run/3 activates at an opaque instance
+// =============================================================================
+
+/// The suffix of the location of an occurrence in a goal that `run/3`
+/// activates at an opaque instance ([_opaqueActivations]), which the pair
+/// checks read for the one step back ([_stepBack]).
+const String _activatedMark = ', in the goal run/3 activates';
+
+/// The one step back from `Opaque` (TGLP modules.tex, "Opaque types": "The
+/// type checker takes a term of type Opaque back to one opaque type in one
+/// place: in a goal that run activates at an opaque instance at h, a variable
+/// of type Opaque may stand at a position typed by the opaque type labelled
+/// h"; GLP-Spec appendix-guards.tex, "Dynamic activation": "At a position the
+/// template's parameter types, Goal may hold a variable of type Opaque").
+///
+/// Whether a pair whose one occurrence, of type [sub], must be within the
+/// other's, [sup], at [supLocation], holds by it: [sub] is `Opaque`, [sup] is
+/// the opaque type labelled h ([DFAState.isRunOpaqueType]), and the
+/// occurrence at [sup] is in the goal run/3 activates.  Nowhere else: the
+/// labelled opaque type is no subtype of `Opaque`'s anywhere
+/// (subtyping.dart, [isSubtype]), and it is a variable that stands there,
+/// since a pair is of a variable's two occurrences.
+bool _stepBack(DFAState sub, DFAState sup, String supLocation) =>
+    sub.isOpaqueUnion &&
+    sup.isRunOpaqueType &&
+    supLocation.endsWith(_activatedMark);
+
+/// A goal that `run/3` activates under a type identity `find_type/3`
+/// obtained at h, read by its template's opaque instance at h.
+class _OpaqueActivation {
+  /// The goal, the first argument of the run/3 goal.
+  final ast.Goal goal;
+
+  /// The template D: the caller's parameterised declaration `find_type/3`
+  /// names, with one type parameter.
+  final ProcDecl template;
+
+  /// h as the clause writes it: the variable `find_type/3` reads it from, or
+  /// the constant it is.
+  final String label;
+
+  /// D⟨h⟩: the template with its parameter replaced by the opaque type
+  /// labelled h ([runOpaqueTypeName]).
+  final ProcDecl decl;
+
+  /// The environment D⟨h⟩ is checked in: the clause's, with the opaque type
+  /// and the types D⟨h⟩ reaches.
+  final TypeEnvironment env;
+
+  _OpaqueActivation(this.goal, this.template, this.label, this.decl, this.env);
+}
+
+/// The goals of [clause] that `run/3` activates at an opaque instance, by the
+/// index of their run/3 goal among the clause's body atoms.
+///
+/// "In a goal that run activates at an opaque instance at h" (TGLP
+/// modules.tex, "Opaque types"); the construct is the GLP language paper's
+/// (GLP-Spec appendix-guards.tex, "Dynamic activation"): a host activates a
+/// guest "by opaque_type(P/N, M, H), find_type(P/N, H, Type) and run(Goal,
+/// Type, M)", `find_type(P/N, H, Type)` assigning Type "the type identity of
+/// the opaque instance at H of the caller's parameterised declaration of
+/// P/N".  So a goal is one of them where the clause's body has
+/// `find_type(P/N, H, Type)`, P/N a ground reference to a parameterised
+/// declaration of the clause's scope with exactly one type parameter and
+/// Type a writer, and `run(Goal, Type?, M)` with Goal a goal of P/N: Goal is
+/// then authored for D⟨h⟩, h being what H holds, and is read by it, the
+/// parameter an opaque type labelled by H as the clause writes it --- two
+/// such being one exactly when H is.  A run/3 goal under any other type
+/// identity is read as before, its goal at `_?`.
+Map<int, _OpaqueActivation> _opaqueActivations(
+    TypedClause clause, ProgramDFA dfa, TypeEnvironment env) {
+  final atoms = clause.bodyAtoms;
+  // The writer Type of each find_type/3 goal: its template and its h.
+  final identities = <String, (ProcDecl, String)>{};
+  for (final g in atoms) {
+    if (!namesRoot(g.functor, 'find_type') || g.arity != 3) continue;
+    final ref = g.args[0];
+    final type = g.args[2];
+    if (ref is! ast.StructTerm || ref.functor != '/' || ref.args.length != 2) {
+      continue;
+    }
+    final name = ref.args[0];
+    final arity = ref.args[1];
+    if (name is! ast.ConstTerm || name.value is! String) continue;
+    if (arity is! ast.ConstTerm || arity.value is! int) continue;
+    if (type is! ast.VarTerm || type.isReader) continue;
+    final template = env.paramProcDecls['${name.value}/${arity.value}'];
+    if (template == null || template.typeParams.length != 1) continue;
+    final h = g.args[1];
+    final label = switch (h) {
+      ast.VarTerm(:final name) => name,
+      ast.ConstTerm(:final value) when value != null => constantSource(value),
+      _ => null,
+    };
+    if (label == null) continue;
+    identities[type.name] = (template, label);
+  }
+  if (identities.isEmpty) return const {};
+
+  final out = <int, _OpaqueActivation>{};
+  for (var i = 0; i < atoms.length; i++) {
+    final r = atoms[i];
+    if (!namesRoot(r.functor, 'run') || r.arity != 3) continue;
+    final type = r.args[1];
+    if (type is! ast.VarTerm || !type.isReader) continue;
+    final identity = identities[type.name];
+    if (identity == null) continue;
+    final (template, label) = identity;
+    final goal = switch (r.args[0]) {
+      ast.StructTerm(:final functor, :final args) =>
+        ast.Goal(functor, args, r.line, r.column),
+      ast.ConstTerm(:final value) when value is String =>
+        ast.Goal(value, const [], r.line, r.column),
+      _ => null,
+    };
+    if (goal == null) continue;
+    // The template's name as its module carries it, and as the goal names
+    // the entry it posts: bare.
+    final bare = template.name.contains(':')
+        ? template.name.substring(template.name.lastIndexOf(':') + 1)
+        : template.name;
+    if (goal.functor != bare || goal.arity != template.arity) continue;
+
+    final inst = buildAbstractInstance(
+        template, template.typeParams, env.typeTemplates,
+        knownMonoTypes: env.types.keys.toSet(),
+        names: {template.typeParams.single: runOpaqueTypeName(label)});
+    final fresh = {
+      for (final e in inst.typeDefs.entries)
+        if (!env.types.containsKey(e.key)) e.key: e.value
+    };
+    var into = env;
+    if (fresh.isNotEmpty) {
+      try {
+        env.types.addAll(fresh);
+      } on UnsupportedError {
+        into = TypeEnvironment(
+          {...env.types, ...fresh},
+          env.procedures,
+          paramProcDecls: env.paramProcDecls,
+          typeTemplates: env.typeTemplates,
+          typeOrigins: env.typeOrigins,
+        );
+      }
+      addTypesToProgramDFA(dfa, fresh.values, into.types);
+    }
+    out[i] = _OpaqueActivation(goal, template, label, inst.decl, into);
+  }
+  return out;
+}
+
+/// The goal of [activation], checked by D⟨h⟩ as a body goal is by its
+/// declaration (Definition "Well-Typed Clause", condition 2).
+WellTypedResult _checkActivatedGoal(
+    _OpaqueActivation activation, ProgramDFA dfa) {
+  try {
+    final moded = producedTerm(activation.goal, activation.decl,
+        typeEnv: activation.env);
+    return _checkModedTermPerArg(moded, activation.decl, dfa);
+  } on ArityMismatchError catch (e) {
+    return WellTypedResult.failure([
+      InconsistentPathError(
+        ModedPath([PathStep(symbol: e.message, argIndex: 0, mode: Mode.produce)]),
+        e.message,
+      ),
+    ]);
+  }
 }
 
 /// The errors of a clause's or a goal's calls to parameterised procedures, by
@@ -1881,7 +2091,9 @@ List<ClauseDualityError> _checkClauseDuality(
         final bodyInfo = writerNormLoc == 'head' ? readerInfo : writerInfo;
         final headOutput = dfa.getState(headInfo.typeState.baseName);
         final bodyOutput = dfa.getState(bodyInfo.typeState.baseName);
-        if (!isSubtype(headOutput, bodyOutput, dfa)) {
+        final bodyLoc = writerNormLoc == 'head' ? readerLoc : writerLoc;
+        if (!isSubtype(headOutput, bodyOutput, dfa) &&
+            !_stepBack(headOutput, bodyOutput, bodyLoc)) {
           errors.add(ClauseDualityError(
             baseName,
             writerInfo,
@@ -1915,6 +2127,7 @@ ClauseDualityError? _bodyBodyPairError(
   final readerDualState = readerInfo.typeState;   // T? (dual)
   final readerOutputState = dfa.getState(readerDualState.baseName); // T (output)
   if (isSubtype(writerOutputState, readerOutputState, dfa)) return null;
+  if (_stepBack(writerOutputState, readerOutputState, readerLoc)) return null;
   return ClauseDualityError(
     baseName,
     writerInfo,
@@ -2029,6 +2242,7 @@ List<ClauseDualityError> _checkHeadBodyPair(
   final consumed = headInfo.typeState.isDual;
   final (sub, sup) = consumed ? (headBase, bodyBase) : (bodyBase, headBase);
   if (isSubtype(sub, sup, dfa)) return const [];
+  if (consumed && _stepBack(sub, sup, bodyLocation)) return const [];
 
   final baseName =
       varKey.endsWith('?') ? varKey.substring(0, varKey.length - 1) : varKey;

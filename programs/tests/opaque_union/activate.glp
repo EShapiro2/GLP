@@ -1,0 +1,27 @@
+%% A host activating two guests under the type identities find_type/3 gives
+%% at H1 and H2, each activating goal holding an Opaque variable at the
+%% template's parameter, and storing the two guests' ends, of the opaque types
+%% labelled H1 and H2, in one Stream(Opaque).  Loads (GLP, 2026-10-13
+%% 12:52 UTC, O1 2 and 3; TGLP modules.tex, "Opaque types").
+
+procedure(X) entry(X?, X).
+entry(E, E?).
+
+Inv ::= inv(Module, Opaque).
+
+procedure(X) store(X?, Stream(Opaque)?, Stream(Opaque)).
+store(E, Es, S?) :- push(E?, Es?, S).
+
+procedure push(Opaque?, Stream(Opaque)?, Stream(Opaque)).
+push(E, Es, [E? | Es?]).
+
+procedure host(Inv?, Inv?, Stream(Opaque)).
+host(inv(M1, E1), inv(M2, E2), S?) :-
+    opaque_type(entry/2, M1?, H1),
+    find_type(entry/2, H1?, T1),
+    run(entry(E1?, O1), T1?, M1?),
+    opaque_type(entry/2, M2?, H2),
+    find_type(entry/2, H2?, T2),
+    run(entry(E2?, O2), T2?, M2?),
+    store(O1?, [], S1),
+    store(O2?, S1?, S).

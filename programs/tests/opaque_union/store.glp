@@ -1,0 +1,16 @@
+%% A host putting its own terms of two concrete types, A and B, at Opaque
+%% through store/3, which is parametrically well-typed only because its
+%% parameter's term stands at Opaque: refused, the Parametricity Lemma
+%% certifying it at opaque instantiations only.
+
+A ::= a(Integer).
+B ::= b ; c.
+
+procedure(X) store(X?, Stream(Opaque)?, Stream(Opaque)).
+store(E, Es, S?) :- push(E?, Es?, S).
+
+procedure push(Opaque?, Stream(Opaque)?, Stream(Opaque)).
+push(E, Es, [E? | Es?]).
+
+procedure host(A?, B?, Stream(Opaque)).
+host(X, Y, S?) :- store(X?, [], S1), store(Y?, S1?, S).

@@ -1,0 +1,10 @@
+%% A term of type Opaque passed on at Opaque, and through a parametric
+%% procedure instantiated at it (TGLP Definition "Opaque Type").  Loads.
+
+procedure pass(Opaque?, Stream(Opaque)).
+pass(E, [E?]).
+procedure(X) relay(Stream(X)?, Stream(X)).
+relay([X|Xs], [X?|Ys?]) :- relay(Xs?, Ys).
+relay([], []).
+procedure go(Stream(Opaque)?, Stream(Opaque)).
+go(In, Out?) :- relay(In?, Out).

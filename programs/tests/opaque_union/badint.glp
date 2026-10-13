@@ -1,0 +1,5 @@
+%% A host clause putting an Integer constant at an Opaque position: refused,
+%% a clause holding only a variable there (GLP, 2026-10-13 12:52 UTC, O1 1).
+
+procedure bad(Stream(Opaque)).
+bad([1]).

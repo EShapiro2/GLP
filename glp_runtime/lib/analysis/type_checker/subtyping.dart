@@ -53,6 +53,26 @@ bool sameBaseType(String baseA, String baseB, ProgramDFA dfa) {
   return isSubtype(a, b, dfa) && isSubtype(b, a, dfa);
 }
 
+/// Whether a parameter's abstract type is below `Opaque`, as every opaque type
+/// is ([isSubtype]); false only inside [withParametersNotBelowOpaque].
+bool _parameterBelowOpaque = true;
+
+/// [f] run with a parameter's abstract type below `Opaque` no longer: the
+/// probe by which certification finds whether a parametrically well-typed
+/// procedure is so only because a parameter's term stands at an `Opaque`
+/// position (type_checker.dart, [certifyParametricProcedures]).  An opaque
+/// type labelled h at which a goal run/3 activates is read
+/// ([DFAState.isRunOpaqueType]) stays below it: it is no parameter's.
+T withParametersNotBelowOpaque<T>(T Function() f) {
+  final was = _parameterBelowOpaque;
+  _parameterBelowOpaque = false;
+  try {
+    return f();
+  } finally {
+    _parameterBelowOpaque = was;
+  }
+}
+
 /// Core coinductive subtyping algorithm.
 ///
 /// Spec section 4.1: isSubtype(stateA, stateB, dfa, visited)
@@ -87,6 +107,24 @@ bool _isSubtype(DFAState stateA, DFAState stateB, ProgramDFA dfa,
   // wildcard among them, and two were one type by their automata: a
   // parameter's value was certified where a concrete type, `_` or another
   // parameter was declared (programs/tests/strict_certification/).
+  //
+  // `Opaque`, the union of all opaque types (Definition "Opaque Type"): "a
+  // state with no outgoing transitions, distinct from the wildcard and from
+  // every opaque type, matched by itself and by every opaque type, and by
+  // nothing else".  So every opaque type --- a parameter's abstract type, an
+  // opaque type labelled h --- is below it, and nothing else is: not `_`, not
+  // a concrete type, whose simple prefixes end at something else.  And it is
+  // below itself alone: not below `_`, as an opaque type is not ("a program
+  // can only pass a term of it on", GLP-Spec appendix-guards.tex, "Predefined
+  // types"), and not below any one opaque type --- the one step back from it,
+  // in a goal that run/3 activates, is the clause check's
+  // (well_typed_clause.dart, [checkClause]), not a subtyping.
+  if (stateA.isOpaqueUnion || stateB.isOpaqueUnion) {
+    return stateB.isOpaqueUnion &&
+        stateA.isAbstractType &&
+        (_parameterBelowOpaque || stateA.isRunOpaqueType);
+  }
+
   if (stateA.isAbstractType || stateB.isAbstractType) {
     return stateA.baseName == stateB.baseName;
   }

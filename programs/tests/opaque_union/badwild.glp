@@ -1,0 +1,5 @@
+%% A term of type Opaque passed on at the wildcard: refused, Opaque being
+%% below itself alone ("a program can only pass a term of it on").
+
+procedure pass(Opaque?, Stream(_)).
+pass(E, [E?]).

@@ -77,7 +77,22 @@ class TypeRef extends TypeExpr {
   /// root self.glp — and `MutualRef` is not among THEM either: "a mutual
   /// reference holds the writer of a stream tail, so it is neither ground nor a
   /// constant type" (see [constantPrimitives]).
-  static const builtins = {'Integer', 'Real', 'String', 'Module', 'MutualRef'};
+  ///
+  /// `Opaque` is among them as a name every scope knows and none defines: the
+  /// union of all opaque types, "built into the type checker: a program can
+  /// only pass a term of it on" (GLP-Spec appendix-guards.tex, "Predefined
+  /// types"; TGLP parameterized-types.tex, Definition "Opaque Type").  It is
+  /// no primitive of the runtime --- no term is of it but a term of an opaque
+  /// type --- and [DFAState.isPrimitiveType] does not count it.
+  static const builtins = {
+    'Integer', 'Real', 'String', 'Module', 'MutualRef', opaqueUnion,
+  };
+
+  /// The built-in type `Opaque`, the union of all opaque types (TGLP
+  /// parameterized-types.tex, Definition "Opaque Type": "a state with no
+  /// outgoing transitions, distinct from the wildcard and from every opaque
+  /// type, matched by itself and by every opaque type, and by nothing else").
+  static const opaqueUnion = 'Opaque';
 
   /// The primitive types Definition (Constant Type) names: "each of its
   /// alternatives is a constant, one of the primitive types Integer, Real,

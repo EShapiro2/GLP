@@ -377,6 +377,14 @@ class _Expansion {
         throw OpaqueAlternativeError(
             alt.name.substring(abstractTypePrefix.length));
       }
+      if (alt.name == TypeRef.opaqueUnion) {
+        // `Opaque` has no transitions either, and as a bare alternative it
+        // would leave no trace: a union with it is not one TGLP defines
+        // (Definition "Opaque Type" defines it as a state, not as an
+        // alternative), and has no identity here.
+        throw StateError('Opaque, the union of all opaque types, occurs as '
+            'an alternative of a type definition, which has no type identity');
+      }
       if (TypeRef.builtins.contains(alt.name)) {
         out.putIfAbsent(_primLabel(alt.name, d), () => _State.check);
         return;
@@ -425,6 +433,13 @@ class _Expansion {
       final d = e.isInput != dual; // XOR
       final label = opaque[e.name];
       if (label != null) return _State.opaque(label);
+      // `Opaque`, the union of all opaque types: "a state with no outgoing
+      // transitions, distinct from the wildcard and from every opaque type"
+      // (TGLP parameterized-types.tex, Definition "Opaque Type").  It is the
+      // opaque state labelled [opaqueUnionLabel], which no type identity is:
+      // a label is a lowercase hex hash.  One state at both modes, as an
+      // opaque type is.
+      if (e.name == TypeRef.opaqueUnion) return _State.opaque(opaqueUnionLabel);
       if (TypeRef.builtins.contains(e.name)) return _State.prim(e.name, d);
       if (!types.containsKey(e.name)) {
         throw UnknownTypeError(e.name, e.line, e.column);
@@ -597,6 +612,10 @@ String canonicalTypePrint(TypeExpr type, Map<String, TypeDef> types) {
   e.expandFrom(start);
   return _canonicalPrint(e.transitions, start);
 }
+
+/// The label the canonical print gives `Opaque`, the union of all opaque
+/// types ([_Expansion]): never a type identity's, which is lowercase hex.
+const String opaqueUnionLabel = 'Opaque';
 
 /// ι([type]): the type identity of a type, as lowercase hex.
 String typeIdentityOfTypeHex(TypeExpr type, Map<String, TypeDef> types) =>
@@ -861,6 +880,13 @@ const _instancePrefix = '#instance:';
       exportedParams.contains(x.state.name);
 
   String abstractMark(_State s) => 'abstract:${s.name}:${s.dual}';
+
+  // A state's class in a view: its initial class, and for an opaque state its
+  // label too, two opaque states being one exactly when their labels are
+  // equal (`Opaque` among them, [opaqueUnionLabel]).
+  String viewClass(_State s) => s.kind == _Kind.opaque
+      ? '${_initialClass(s)}:${s.name}'
+      : '${_initialClass(s)}';
   bool isImportAbstract(_State s) =>
       s.kind == _Kind.type && importedParams.contains(s.name);
 
@@ -895,8 +921,7 @@ const _instancePrefix = '#instance:';
       for (final h in ie.inlinedHoles[s] ?? const <(String, bool)>{})
         abstractMark(_State.type(h.$1, h.$2)),
     };
-    final base =
-        isImportAbstract(s) ? abstractMark(s) : '${_initialClass(s)}';
+    final base = isImportAbstract(s) ? abstractMark(s) : viewClass(s);
     return _View(base, marks, {
       for (final e in ie.of(s).entries) e.key: _Side(false, e.value),
     });
@@ -933,7 +958,7 @@ const _instancePrefix = '#instance:';
           break;
       }
     }
-    return _View('${_initialClass(s)}', marks, out);
+    return _View(viewClass(s), marks, out);
   }
 
   _View? view(_Side x) => x.export ? exportView(x.state) : importView(x.state);

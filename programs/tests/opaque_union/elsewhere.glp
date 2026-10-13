@@ -1,0 +1,8 @@
+%% An Opaque variable at a position an opaque type types outside the goal
+%% run/3 activates: refused ("Nowhere else").
+
+procedure(X) back(Opaque?, X).
+back(E, X?) :- relay(E?, X).
+
+procedure(X) relay(X?, X).
+relay(E, E?).

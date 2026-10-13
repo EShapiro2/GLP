@@ -12,6 +12,7 @@
 import 'type_ast.dart';
 import 'param_expansion.dart';
 import 'program_dfa.dart';
+import 'subtyping.dart' show withParametersNotBelowOpaque;
 import 'mode.dart';
 import 'type_environment_builder.dart';
 import 'well_typed_clause.dart' as wtc;
@@ -1073,6 +1074,7 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
     localCollector,
     (procKey) => clausesByKey[procKey],
     certifiedKeys: cert.certifiedKeys,
+    opaqueOnlyKeys: cert.opaqueOnlyKeys,
     writtenClauses: (procKey) => writtenByKey[procKey],
     definedGuards: definedGuards,
     isParametric: isParametric,
@@ -1208,8 +1210,21 @@ class ParametricCertification {
   final List<TypeWarning> warnings;
   final Set<String> certifiedKeys;
   final Map<String, List<TypeError>> abstractInstanceErrors;
+
+  /// The certified procedures whose abstract instance is well-typed only
+  /// because a parameter's term stands at a position of type `Opaque`, every
+  /// opaque type being below it.  The Parametricity Lemma certifies them at
+  /// an instantiation "by opaque types, where a term of a parameter's type
+  /// may stand at a position of type Opaque" (TGLP parameterized-types.tex,
+  /// Lemma "Parametricity"), and at no other: a concrete type is not below
+  /// `Opaque`.  So their instantiations are checked and reported as an
+  /// uncertified procedure's are ([checkInstantiationsClosed]): at an opaque
+  /// type the check is the abstract instance's own, and holds; at any other
+  /// it is refused where a term of the type stands at `Opaque`.
+  final Set<String> opaqueOnlyKeys;
   ParametricCertification(this.errors, this.warnings, this.certifiedKeys,
-      [this.abstractInstanceErrors = const {}]);
+      [this.abstractInstanceErrors = const {},
+      this.opaqueOnlyKeys = const {}]);
 }
 
 /// Phase A — modular checking via abstract parameters
@@ -1320,7 +1335,11 @@ ParametricCertification _certifyAbstractRoute(
   final warnings = <TypeWarning>[];
   final certified = <String>{};
   final failed = <String, List<TypeError>>{};
+  final opaqueOnly = <String>{};
   final templates = typeEnv.typeTemplates;
+  // Whether `Opaque` occurs in the scope at all: where it does not, no
+  // abstract instance can rest on it, and the probe below is not run.
+  final mentionsOpaque = _mentionsOpaque(typeEnv);
 
   for (final key in route) {
     final paramDecl = typeEnv.paramProcDecls[key]!;
@@ -1348,26 +1367,59 @@ ParametricCertification _certifyAbstractRoute(
         key, ai.decl, aiEnv, buildProgramDFA(aiEnv));
     final seed = wtc.InstantiationCollector();
     seed.record(inst);
+    final seedSigKey = '${inst.procKey}#${inst.signature}';
+    List<TypeError> seedErrorsOf(List<InstantiationCheckResult> results) => [
+          for (final r in results)
+            if ('${r.inst.procKey}#${r.inst.signature}' == seedSigKey)
+              ...r.result.errors
+        ];
     final results = checkInstantiationsClosed(seed, definingClauses,
         isParametric: isParametric);
-    final seedSigKey = '${inst.procKey}#${inst.signature}';
-    final seedErrors = <TypeError>[];
+    final seedErrors = seedErrorsOf(results);
     final seedWarnings = <TypeWarning>[];
     for (final r in results) {
       if ('${r.inst.procKey}#${r.inst.signature}' == seedSigKey) {
-        seedErrors.addAll(r.result.errors);
         seedWarnings.addAll(r.result.warnings);
       }
     }
     if (seedErrors.isEmpty) {
       warnings.addAll(seedWarnings);
       certified.add(key);
+      // Certified at opaque instantiations only, where the abstract instance
+      // is well-typed only because a parameter's term stands at an `Opaque`
+      // position ([ParametricCertification.opaqueOnlyKeys]): checked again
+      // with no parameter below `Opaque`.
+      if (mentionsOpaque) {
+        final probe = wtc.InstantiationCollector()..record(inst);
+        final without = withParametersNotBelowOpaque(() =>
+            checkInstantiationsClosed(probe, definingClauses,
+                isParametric: isParametric));
+        if (seedErrorsOf(without).isNotEmpty) opaqueOnly.add(key);
+      }
     } else {
       failed[key] = seedErrors;
     }
   }
 
-  return ParametricCertification(errors, warnings, certified, failed);
+  return ParametricCertification(
+      errors, warnings, certified, failed, opaqueOnly);
+}
+
+/// Whether `Opaque` occurs in a type definition or a procedure declaration of
+/// [env].
+bool _mentionsOpaque(TypeEnvironment env) {
+  bool inExpr(TypeExpr e) => switch (e) {
+        TypeRef() =>
+          e.name == TypeRef.opaqueUnion || e.typeArgs.any(inExpr),
+        StructAlt() => e.args.any(inExpr),
+        ListConsAlt() => inExpr(e.head) || inExpr(e.tail),
+        DiffListAlt() => inExpr(e.content) || inExpr(e.hole),
+        _ => false,
+      };
+  return env.types.values.any((t) => t.alternatives.any(inExpr)) ||
+      env.typeTemplates.values.any((t) => t.alternatives.any(inExpr)) ||
+      env.procedures.values.any((d) => d.argTypes.any(inExpr)) ||
+      env.paramProcDecls.values.any((d) => d.argTypes.any(inExpr));
 }
 
 /// Whether the procedure of a "name/arity" key is parametrically well-typed,
@@ -1462,6 +1514,7 @@ List<InstantiationCheckResult> checkInstantiationsClosed(
   wtc.InstantiationCollector seed,
   List<ast.Clause>? Function(String procKey) definingClauses, {
   Set<String> certifiedKeys = const {},
+  Set<String> opaqueOnlyKeys = const {},
   List<ast.Clause>? Function(String procKey)? writtenClauses,
   Set<String> definedGuards = const {},
   bool Function(String procKey)? isParametric,
@@ -1564,7 +1617,12 @@ List<InstantiationCheckResult> checkInstantiationsClosed(
       // lemma's sigma replaces a parameter "by a type of the same mode", so it
       // certifies nothing there, and the clauses are checked at the binding as
       // Definition (Instantiation) requires (parameterized-types.tex).
-      if (!certifiedKeys.contains(inst.procKey) || inst.bindsInputType) {
+      // And except a procedure certified at opaque instantiations only
+      // ([ParametricCertification.opaqueOnlyKeys]): the lemma certifies it
+      // where its parameters are opaque types, and its check is reported.
+      if (!certifiedKeys.contains(inst.procKey) ||
+          inst.bindsInputType ||
+          opaqueOnlyKeys.contains(inst.procKey)) {
         results.add(InstantiationCheckResult(inst, res));
       }
 

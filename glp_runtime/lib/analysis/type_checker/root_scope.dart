@@ -25,6 +25,7 @@ const Set<String> predefinedTypeNames = {
   'String',   // Primitive builtin
   'Module',   // Primitive builtin
   'MutualRef', // Primitive builtin
+  'Opaque',   // The union of all opaque types, built into the type checker
   'Number',   // Root self.glp union: Integer ; Real
   'Constant', // Root self.glp union: Number ; String ; Module
   'Exp',      // Root self.glp union: arithmetic expressions

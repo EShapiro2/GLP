@@ -1,0 +1,5 @@
+%% A host clause putting an Integer variable at an Opaque position: refused,
+%% Integer being no opaque type (Definition "Opaque Type").
+
+procedure bad(Integer?, Stream(Opaque)).
+bad(N, [N?]).

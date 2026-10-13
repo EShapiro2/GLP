@@ -263,6 +263,17 @@ Map<String, TypeDef> materializeInstantiations(
 /// [DFAState.isAbstractType]).
 const String abstractTypePrefix = r'$abstract_';
 
+/// The prefix of the name of the opaque type labelled h at which the type
+/// checker reads a goal that `run/3` activates under a type identity
+/// `find_type/3` obtained at h, `$abstract_@<h>` ([runOpaqueTypeName]).  It
+/// is an abstract type's prefix, so the state is an opaque type in every
+/// respect ([DFAState.isAbstractType]); `@` occurs in no type parameter's
+/// name, so it is none of a parameter's.
+const String runOpaqueTypePrefix = '$abstractTypePrefix@';
+
+/// The name of the opaque type labelled [label] ([runOpaqueTypePrefix]).
+String runOpaqueTypeName(String label) => '$runOpaqueTypePrefix$label';
+
 /// The abstract instance of a parameterised procedure declaration: each type
 /// parameter is replaced by a distinct *abstract type* — a synthesized
 /// zero-alternative type whose automaton is empty, so a variable at a parameter
@@ -279,11 +290,17 @@ class AbstractInstance {
 }
 
 /// Build the abstract instance of [paramTemplate] with parameters [typeParams].
+///
+/// [names] gives a parameter's abstract type a name of its own in place of
+/// `$abstract_X`, an abstract type's name all the same ([abstractTypePrefix]):
+/// the opaque type labelled h at which a goal `run/3` activates is read
+/// ([runOpaqueTypeName]).
 AbstractInstance buildAbstractInstance(
     ProcDecl paramTemplate, List<String> typeParams, Map<String, TypeDef> templates,
-    {Set<String> knownMonoTypes = const {}}) {
+    {Set<String> knownMonoTypes = const {},
+    Map<String, String> names = const {}}) {
   final abstractOf = <String, String>{
-    for (final tp in typeParams) tp: '$abstractTypePrefix$tp',
+    for (final tp in typeParams) tp: names[tp] ?? '$abstractTypePrefix$tp',
   };
   final subst = <String, TypeExpr>{
     for (final e in abstractOf.entries) e.key: TypeRef(e.value, 0, 0),
