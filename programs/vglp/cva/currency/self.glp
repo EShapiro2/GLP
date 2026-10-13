@@ -41,11 +41,13 @@ Request  ::= propose(Class) ; known(Peer).
 YesNo    ::= yes ; no.
 Decision ::= commit ; abort.
 Attempt  ::= attempt(Peer, Integer, Class).
-Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision).
-Content  ::= hello(Peer) ; cargo(Peer, Cargo).
+Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
+           ; seek(Class) ; intro(Peer).
+Content  ::= hello(Peer) ; ihello(Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
-Txn      ::= propose(Attempt) ; start(Attempt) ; answer(Attempt)
-           ; vote(Attempt) ; tally(Attempt) ; outcome(Attempt) ; discover(Peer).
+Txn      ::= propose(Attempt) ; seek(Class) ; refer(Class) ; start(Attempt)
+           ; answer(Attempt) ; vote(Attempt) ; tally(Attempt) ; outcome(Attempt)
+           ; discover(Peer).
 Session  ::= session(Stream(Request)?, Stream(Txn)).
 Card     ::= card(Attempt, YesNo?).
 Question ::= session_w(Session) ; card_w(Card).

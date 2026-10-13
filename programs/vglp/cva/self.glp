@@ -3,17 +3,17 @@
 %% canonical CVA platform in vGLP (compiler/, compile.sh), vGLP's contracts
 %% beside Jurix's (contracts.glp), the platforms it prints
 %% (social_graph/platform.vglp, currency/platform.vglp, nudge/platform.vglp,
-%% introduce/platform.vglp, gnudge/platform.vglp, each beside its plays) and
-%% what the plays of all of them share, here: a scripted person and a network
-%% between two agents or three.
+%% introduce/platform.vglp, gnudge/platform.vglp, childsafe/platform.vglp,
+%% each beside its plays) and what the plays of all of them share, here: a
+%% scripted person and a network between two agents, three or four.
 %%
 %% A play runs the agents of a compiled platform, each the agent of the module
 %% with its ask stream and its dispatcher on that stream and on its person
 %% channel, as whatever spawns an agent's initial goal does (vGLP, Definition
 %% "Canonical Compilation"), its person scripted, and their networks joined by
-%% route/6 or route3/8.  The person reads what its dispatcher draws (vGLP, the
-%% construct process, draw(Id, W, V) and withdraw(Id); a grant input(Id, P,
-%% R)): the session, the agent's question, whose thread it logs as the program
+%% route/6, route3/8 or route4/10.  The person reads what its dispatcher
+%% draws (vGLP, the construct process, draw(Id, W, V) and withdraw(Id); a
+%% grant input(Id, P, R)): the session, the agent's question, whose thread it logs as the program
 %% writes it, each element once written whole, and the cards Start raises.
 %% The plays pace the persons on the thread, on which the agent goal writes
 %% each app transaction it takes, its schema applied to its attempt, and
@@ -36,7 +36,7 @@
 %% ---------------------------------------------------------------------------
 
 Peer       ::= Key.
-Carried(X) ::= hello(Peer) ; cargo(Peer, X).
+Carried(X) ::= hello(Peer) ; ihello(Peer) ; cargo(Peer, X).
 Msg(X)     ::= msg(Peer, Carried(X)).
 Sent(X)    ::= sent(Peer, Peer, X).
 PersonIn   ::= [_ | PersonIn].
@@ -84,9 +84,34 @@ route3([msg(_, _)|Ms], A, OA?, B, OB?, C, OC?, Log?) :- otherwise |
     route3(Ms?, A?, OA, B?, OB, C?, OC, Log).
 route3([], _, [], _, [], _, [], []).
 
-%% A cargo, logged with its sender and its recipient; a hello, not.
+%% The network between four agents A, B, C and D.
+procedure(X) route4(Stream(Msg(X))?, Peer?, Stream(Msg(X)), Peer?, Stream(Msg(X)),
+    Peer?, Stream(Msg(X)), Peer?, Stream(Msg(X)), Stream(Sent(X))).
+route4([msg(To, M)|Ms], A, [msg(To?, M?)|OA?], B, OB?, C, OC?, D, OD?, Log?) :-
+    ground(To?), ground(M?), ground(A?), ground(B?), ground(C?), ground(D?), To? =?= A? |
+    note(M?, To?, Log, Log1?),
+    route4(Ms?, A?, OA, B?, OB, C?, OC, D?, OD, Log1).
+route4([msg(To, M)|Ms], A, OA?, B, [msg(To?, M?)|OB?], C, OC?, D, OD?, Log?) :-
+    ground(To?), ground(M?), ground(A?), ground(B?), ground(C?), ground(D?), To? =?= B? |
+    note(M?, To?, Log, Log1?),
+    route4(Ms?, A?, OA, B?, OB, C?, OC, D?, OD, Log1).
+route4([msg(To, M)|Ms], A, OA?, B, OB?, C, [msg(To?, M?)|OC?], D, OD?, Log?) :-
+    ground(To?), ground(M?), ground(A?), ground(B?), ground(C?), ground(D?), To? =?= C? |
+    note(M?, To?, Log, Log1?),
+    route4(Ms?, A?, OA, B?, OB, C?, OC, D?, OD, Log1).
+route4([msg(To, M)|Ms], A, OA?, B, OB?, C, OC?, D, [msg(To?, M?)|OD?], Log?) :-
+    ground(To?), ground(M?), ground(A?), ground(B?), ground(C?), ground(D?), To? =?= D? |
+    note(M?, To?, Log, Log1?),
+    route4(Ms?, A?, OA, B?, OB, C?, OC, D?, OD, Log1).
+route4([msg(_, _)|Ms], A, OA?, B, OB?, C, OC?, D, OD?, Log?) :- otherwise |
+    route4(Ms?, A?, OA, B?, OB, C?, OC, D?, OD, Log).
+route4([], _, [], _, [], _, [], _, [], []).
+
+%% A cargo, logged with its sender and its recipient; a hello of either kind,
+%% not.
 procedure(X) note(Carried(X)?, Peer?, Stream(Sent(X)), Stream(Sent(X))?).
 note(hello(_), _, Log1?, Log1).
+note(ihello(_), _, Log1?, Log1).
 note(cargo(F, X), To, [sent(F?, To?, X?)|Log1?], Log1).
 
 %% The person.

@@ -3540,7 +3540,7 @@ echo ""
 # and the paragraph on act schemas; vGLP's Task C, reworked to the five
 # handlers of vGLP 8d56915 and the answers of 158ec9b; Answer recording the
 # person's answer and Vote voting on it on a tick, vGLP c3b2191).  Jurix's social graph
-# and currency (programs/jurix) and vGLP's nudge, introduce and gnudge
+# and currency (programs/jurix) and vGLP's nudge, introduce, gnudge and childsafe
 # (programs/vglp/cva/contracts.glp) compiled, the committed modules held to
 # what the compiler prints; the contracts it refuses, not local, without
 # simple guards or not effective; and the plays of each platform, two agents
@@ -3561,6 +3561,7 @@ check "CVA compiler: the currency's platform, its classes guarded by their minim
 check "CVA compiler: vGLP's nudge, certified by Jurix's check/2, compiled to the platform it prints" "nudge/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's introduce, certified by Jurix's check/2, compiled to the platform it prints" "introduce/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's gnudge, certified by Jurix's check/2, compiled to the platform it prints" "gnudge/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's childsafe, certified by Jurix's check/2, compiled to the platform it prints" "childsafe/platform.vglp: as printed" "$cva_print"
 check_not "CVA compiler: no contract refused or missing" "^fault\|^missing\|NOT as printed" "$cva_print"
 
 cva_refuse=$("$REPL_RUN" <<HEREDOC
@@ -3794,6 +3795,52 @@ check_not "CVA gnudge: ... and bob never refuses alice's start" "sent(bob, alice
 check "CVA gnudge: alice's nudge committed at both" "sent(alice, bob, outcome(attempt(alice, 2, nudge(alice, bob)), commit))" "$cva_gnudge"
 check "CVA gnudge: bob's nudge, the class he opens, committed at both" "sent(bob, alice, outcome(attempt(bob, 2, nudge(bob, alice)), commit))" "$cva_gnudge"
 check_not "CVA gnudge: nothing aborted for ever: no third attempt at either nudge" "attempt(alice, 3, nudge\|attempt(bob, 3, nudge" "$cva_gnudge"
+
+# vGLP's contract childsafe (programs/vglp/cva/contracts.glp): befriend, enrol
+# and a four-party cbefriend guarded by all four (vGLP 2026-10-13 12:05 UTC,
+# item 5; vGLP 8a61139, Definition "Canonical CVA Platform", Seek and Refer,
+# and Definition "CVA Platform, App Transaction", Introduce).  alice, proposing
+# cbefriend(carol, dave, alice, bob), knows carol and bob but not dave: her
+# request takes Seek, bob refers her to dave and dave to her, and their
+# introduced hellos make them known, no person asked to discover; her request
+# again is proposed and commits at all four.  play_shared: a Discover between
+# agents that share a peer is still taken on both requests.
+cva_cs_load=$("$REPL_RUN" <<HEREDOC
+$CVA/childsafe/
+:quit
+HEREDOC
+2>&1)
+check "CVA childsafe: the platform and its plays load, compiled by the canonical compilation" "Loaded program: .*cva/childsafe" "$cva_cs_load"
+check_not "CVA childsafe: no type errors" "Type checking failed" "$cva_cs_load"
+
+cva_cs=$("$REPL_RUN" <<HEREDOC
+$CVA/childsafe/
+:limit 1500000
+play_childsafe(A, B, C, D, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA childsafe: alice, not knowing dave, takes Seek on her request, and seeks carol and bob" "A = \[.*outcome(attempt(bob, 2, befriend(bob, alice))), seek(cbefriend(carol, dave, alice, bob)), discover(dave)" "$cva_cs"
+check "CVA childsafe: ... the seeks to carol and bob" "sent(alice, carol, seek(cbefriend(carol, dave, alice, bob))), sent(alice, bob, seek(cbefriend(carol, dave, alice, bob)))" "$cva_cs"
+check "CVA childsafe: bob, knowing dave, refers: intro(dave) to alice and intro(alice) to dave" "sent(bob, alice, intro(dave)), sent(bob, dave, intro(alice))" "$cva_cs"
+check "CVA childsafe: carol, knowing no other participant, refers nobody" "C = \[.*refer(cbefriend(carol, dave, alice, bob))" "$cva_cs"
+check_not "CVA childsafe: ... carol sends no introduction" "sent(carol, [a-z]*, intro(" "$cva_cs"
+check "CVA childsafe: dave comes to know alice by the introduction, his person requesting nothing" "D = \[discover(bob), .*outcome(attempt(bob, 1, enrol(bob, dave))), discover(alice), start(attempt(alice, 2, cbefriend(carol, dave, alice, bob)))" "$cva_cs"
+check "CVA childsafe: alice, knowing dave now, proposes cbefriend and tallies the three yeses" "A = \[.*discover(dave), propose(attempt(alice, 2, cbefriend(carol, dave, alice, bob))), tally(attempt(alice, 2, cbefriend(carol, dave, alice, bob))), tally(attempt(alice, 2, cbefriend(carol, dave, alice, bob))), tally(attempt(alice, 2, cbefriend(carol, dave, alice, bob)))" "$cva_cs"
+check "CVA childsafe: ... and it commits at carol" "sent(alice, carol, outcome(attempt(alice, 2, cbefriend(carol, dave, alice, bob)), commit))" "$cva_cs"
+check "CVA childsafe: ... at dave" "sent(alice, dave, outcome(attempt(alice, 2, cbefriend(carol, dave, alice, bob)), commit))" "$cva_cs"
+check "CVA childsafe: ... and at bob" "sent(alice, bob, outcome(attempt(alice, 2, cbefriend(carol, dave, alice, bob)), commit))" "$cva_cs"
+
+cva_cs_shared=$("$REPL_RUN" <<HEREDOC
+$CVA/childsafe/
+:limit 600000
+play_shared(A, B, C, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA shared peer: bob, knowing alice, discovers carol on the two requests" "B = \[discover(alice), discover(carol)" "$cva_cs_shared"
+check "CVA shared peer: ... and carol discovers bob" "C = \[discover(alice), discover(bob)" "$cva_cs_shared"
+check_not "CVA shared peer: ... by the plain hellos, no seek or introduction sent" "seek(\|intro(" "$cva_cs_shared"
 echo ""
 
 

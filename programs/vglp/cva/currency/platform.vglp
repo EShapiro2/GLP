@@ -95,7 +95,8 @@ val_peer(pvar(r), B?, D?, V3)
 
 %% An attempt (i, k, [t]) (Definition "Attempt, Message, App State, Question,
 %% Ready"): its initiator, its number and a term of the request type naming its
-%% class.  The cargoes are its start, a vote on it and its outcome; the thread
+%% class.  The cargoes are its start, a vote on it and its outcome, a seek of a
+%% class and an introduction intro(Q); the thread
 %% names each app transaction by its schema applied to its attempt, and
 %% discover(Q) for each peer Q the agent comes to know.
 Peer      ::= Key.
@@ -104,11 +105,13 @@ Request   ::= propose(Class) ; known(Peer).
 YesNo     ::= yes ; no.
 Decision  ::= commit ; abort.
 Attempt   ::= attempt(Peer, Integer, Class).
-Cargo     ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision).
-Content   ::= hello(Peer) ; cargo(Peer, Cargo).
+Cargo     ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
+            ; seek(Class) ; intro(Peer).
+Content   ::= hello(Peer) ; ihello(Peer) ; cargo(Peer, Cargo).
 Net       ::= msg(Peer, Content).
-Txn       ::= propose(Attempt) ; start(Attempt) ; answer(Attempt)
-            ; vote(Attempt) ; tally(Attempt) ; outcome(Attempt) ; discover(Peer).
+Txn       ::= propose(Attempt) ; seek(Class) ; refer(Class) ; start(Attempt)
+            ; answer(Attempt) ; vote(Attempt) ; tally(Attempt) ; outcome(Attempt)
+            ; discover(Peer).
 Session   ::= session(Stream(Request)?, Stream(Txn)).
 Card      ::= card(Attempt, YesNo?).
 Close     ::= close.
@@ -164,13 +167,14 @@ ClassRes  ::= cls(Info) ; nocls.
 %% The app state (s, k, L, R): the machine state, the number of attempts the
 %% agent has initiated, the lock, unlocked or the attempt it holds prepared,
 %% and the record.  The agent state: its identifier, the app state, the local
-%% date, the peers hello has been sent to and received from, the tick since
+%% date, the hellos sent and received, plain h(Q) or introduced ih(Q), the tick since
 %% which each class its ticks have met has waited, an opening class op([t]) and
 %% the Vote on an attempt vt(At), the classes met, and the starts it defers,
 %% deferred(M).
 Lock      ::= unlocked ; held(Attempt).
 Rec       ::= asked(Attempt) ; answered(Attempt, YesNo) ; voted(Attempt, YesNo)
-            ; got(Attempt, Peer, YesNo) ; closed(Attempt).
+            ; got(Attempt, Peer, YesNo) ; closed(Attempt) ; sought(Class, Peer)
+            ; introduced(Peer, Peer).
 Recs      ::= [] ; [Rec | Recs].
 App       ::= app(GAtoms, Integer, Lock, Recs).
 Pend      ::= deferred(Net).
@@ -179,7 +183,9 @@ WKey      ::= op(Class) ; vt(Attempt).
 Wait      ::= w(WKey, Integer).
 Waits     ::= [] ; [Wait | Waits].
 WFound    ::= at(Integer) ; unseen.
-St        ::= st(Peer, App, Integer, Peers, Peers, Waits, Infos, Pends).
+Hl        ::= h(Peer) ; ih(Peer).
+Hls       ::= [] ; [Hl | Hls].
+St        ::= st(Peer, App, Integer, Hls, Hls, Waits, Infos, Pends).
 OpenCard  ::= oc(Attempt, Close?).
 OpenCards ::= [] ; [OpenCard | OpenCards].
 Send      ::= to(Peer, Cargo).
@@ -189,7 +195,9 @@ Cands     ::= [] ; [Cand | Cands].
 Choice    ::= take(WKey, Info) ; none.
 PKey      ::= key(WKey) ; nokey.
 Cond      ::= go(Info) ; drop.
-MCond     ::= mgo(Info) ; mdefer ; nopart.
+PCond     ::= go(Info) ; seek_go(Info) ; drop.
+MCond     ::= mgo(Info) ; mdefer ; mintro(Peer) ; nopart.
+CKind     ::= cl(Class) ; intro_of(Peer).
 Known     ::= allknown ; unknown(Peer).
 Then      ::= own ; done.
 CardRes   ::= card_for(Attempt) ; nocard.
@@ -265,8 +273,13 @@ step(req(known(Q)), Th, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
 step(net(msg(_, hello(P))), Th, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
     ground(P?), ground(St?) |
     st_app(St?, Ap0),
-    hello_cond(P?, St?, Cd),
-    dispatch_hello(Cd?, P?, Th?, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
+    hello_cond(h(P?), St?, Cd),
+    dispatch_hello(Cd?, h(P?), Th?, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
+step(net(msg(_, ihello(P))), Th, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
+    ground(P?), ground(St?) |
+    st_app(St?, Ap0),
+    hello_cond(ih(P?), St?, Cd),
+    dispatch_hello(Cd?, ih(P?), Th?, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
 step(net(msg(To, cargo(F, X))), Th, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
     ground(To?), ground(F?), ground(X?), ground(St?) |
     st_app(St?, Ap0),
@@ -324,32 +337,76 @@ procedure pend_triggers(Pends?, Stream(Trigger)).
 pend_triggers([], []).
 pend_triggers([deferred(M)|Ps], [net(M?)|Ts?]) :- pend_triggers(Ps?, Ts).
 
-%% --- Propose of a guarded class, on the request propose([t]) ---------------
-%% Its condition: the class is guarded, the agent a guard of it, ready for it
-%% and knowing every other participant, and clear: no start of an initiator
-%% preceding the agent waiting among the starts it defers.  It is taken where
-%% its condition holds, and the request dropped otherwise.
-procedure propose_cond(Class?, St?, Cond, St).
+%% --- Propose or Seek of a guarded class, on the request propose([t]) -------
+%% Propose's condition: the class is guarded, the agent a guard of it, ready
+%% for it and knowing every other participant, and clear: no start of an
+%% initiator preceding the agent waiting among the starts it defers.  Where it
+%% fails, Seek's: the agent a guard of the guarded class, ready for it and
+%% clear, and some participant it knows not yet sought.  Propose is taken where
+%% its condition holds, otherwise Seek where its condition holds, and the
+%% request dropped otherwise.
+procedure propose_cond(Class?, St?, PCond, St).
 propose_cond(C, St, Cd?, St2?) :- ground(C?), ground(St?) |
     st_class(C?, St?, R, St1),
     propose_cond1(R?, St1?, Cd, St2).
-procedure propose_cond1(ClassRes?, St?, Cond, St).
+procedure propose_cond1(ClassRes?, St?, PCond, St).
 propose_cond1(nocls, St, drop, St?).
 propose_cond1(cls(I), St, Cd?, St?) :- ground(I?), ground(St?) |
     unguarded_i(I?, Ug),
     neg(Ug?, Gd),
     guard_of_i(I?, St?, IsG),
+    and(Gd?, IsG?, B),
+    prop_or_seek(B?, I?, St?, Cd).
+
+%% prop_or_seek(Initiates?, I?, St?, Cond): where the agent may initiate the
+%% class, Propose where its condition holds, else Seek where its holds, else
+%% drop.
+procedure prop_or_seek(YesNo?, Info?, St?, PCond).
+prop_or_seek(no, _, _, drop).
+prop_or_seek(yes, I, St, Cd?) :- ground(I?), ground(St?) |
     ready_i(I?, St?, Rd),
+    no_prior_start(St?, Np),
+    and(Rd?, Np?, RC),
     others_known(I?, St?, K),
     known_ok(K?, Kn),
-    no_prior_start(St?, Np),
-    and(Gd?, IsG?, B1),
-    and(B1?, Rd?, B2),
-    and(B2?, Kn?, B3),
-    and(B3?, Np?, B),
-    go_or_drop(B?, I?, Cd).
+    unsought(I?, St?, Us),
+    prop_or_seek1(RC?, Kn?, Us?, I?, Cd).
+procedure prop_or_seek1(YesNo?, YesNo?, Peers?, Info?, PCond).
+prop_or_seek1(no, _, _, _, drop).
+prop_or_seek1(yes, yes, _, I, go(I?)).
+prop_or_seek1(yes, no, [], _, drop).
+prop_or_seek1(yes, no, [_|_], I, seek_go(I?)).
 
-procedure dispatch_propose(Cond?, Class?, Then?, App?, Stream(Trigger)?,
+%% The participants the agent knows, itself excepted, to which it has not sent
+%% a seek of the class.
+procedure unsought(Info?, St?, Peers).
+unsought(I, St, Qs?) :- ground(I?), ground(St?) |
+    info_q(I?, Q),
+    info_name(I?, C),
+    st_id(St?, Id),
+    st_sent(St?, Se),
+    st_recd(St?, Rc),
+    st_app(St?, Ap),
+    app_recs(Ap?, R),
+    unsought1(Q?, C?, Id?, Se?, Rc?, R?, Qs).
+procedure unsought1(Peers?, Class?, Peer?, Hls?, Hls?, Recs?, Peers).
+unsought1([], _, _, _, _, _, []).
+unsought1([P|Ps], C, Id, Se, Rc, R, Qs?) :-
+    ground(P?), ground(C?), ground(Id?), ground(Se?), ground(Rc?), ground(R?) |
+    same(P?, Id?, Me),
+    known_peer(P?, Se?, Rc?, Kn),
+    mem(sought(C?, P?), R?, So),
+    neg(Me?, NMe),
+    neg(So?, NSo),
+    and(NMe?, Kn?, B1),
+    and(B1?, NSo?, B),
+    unsought1(Ps?, C?, Id?, Se?, Rc?, R?, Qs1),
+    keep_peer(B?, P?, Qs1?, Qs).
+procedure keep_peer(YesNo?, Peer?, Peers?, Peers).
+keep_peer(yes, P, Ps, [P?|Ps?]).
+keep_peer(no, _, Ps, Ps?).
+
+procedure dispatch_propose(PCond?, Class?, Then?, App?, Stream(Trigger)?,
     Stream(Trigger)?, Stream(Trigger), Stream(Demand), Stream(Txn), Stream(Net),
     OpenCards?, St?).
 dispatch_propose(go(I), C, Th, Ap0, Ls, In, Ans?, Dem?, [propose(At?)|Thr?], Out?,
@@ -359,21 +416,61 @@ dispatch_propose(go(I), C, Th, Ap0, Ls, In, Ans?, Dem?, [propose(At?)|Thr?], Out
     send_all(Ss?, St1?, Ms, St2),
     put_all(Ms?, Out, Out1?),
     next(Th?, Ap0?, Ls?, In?, Ans, Dem, Thr, Out1, Cards?, St2?).
+dispatch_propose(seek_go(I), _, Th, Ap0, Ls, In, Ans?, Dem?, [seek(C?)|Thr?], Out?,
+        Cards, St) :-
+    ground(I?) |
+    info_name(I?, C),
+    seek_effect(I?, St?, Ss, St1),
+    send_all(Ss?, St1?, Ms, St2),
+    put_all(Ms?, Out, Out1?),
+    next(Th?, Ap0?, Ls?, In?, Ans, Dem, Thr, Out1, Cards?, St2?).
 dispatch_propose(drop, _, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
     next(Th?, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
 
-%% --- Discover: the hellos ---------------------------------------------------
-%% On the request known(Q) the agent sends Q hello, unless it already has or Q
-%% is itself; on an arriving hello it records its sender; on whichever of the
-%% two comes second it writes discover(Q) on the thread.
+%% Seek: seek([t]) sent to every participant the agent knows and has not sent
+%% it, each recorded sought([t], Q).
+procedure seek_effect(Info?, St?, Sends, St).
+seek_effect(I, St, Ss?, St1?) :- ground(I?), ground(St?) |
+    unsought(I?, St?, Qs),
+    info_name(I?, C),
+    st_app(St?, Ap),
+    seek_app(Qs?, C?, Ap?, Ss, Ap1),
+    set_app(St?, Ap1?, St1).
+procedure seek_app(Peers?, Class?, App?, Sends, App).
+seek_app([], _, Ap, [], Ap?).
+seek_app([Q|Qs], C, app(S, K, L, R), [to(Q?, seek(C?))|Ss?], Ap1?) :-
+    ground(Q?), ground(C?) |
+    seek_app(Qs?, C?, app(S?, K?, L?, [sought(C?, Q?)|R?]), Ss, Ap1).
+
+%% --- Discover and Introduce: the hellos, plain and introduced --------------
+%% A peer is known once hellos of one kind, plain h(Q) or introduced ih(Q),
+%% have been sent to it and received from it.  On the request known(Q) the
+%% agent sends Q a plain hello, unless Q is itself, known, or sent one already;
+%% on an arriving introduction intro(Q) it sends Q an introduced hello, unless
+%% Q is itself, known, or sent one already; an arriving hello of either kind is
+%% recorded by its kind; and where a peer becomes known the agent writes
+%% discover(Q) on the thread.  An introduction is the machines' own: no person
+%% is asked (Definition "CVA Platform, App Transaction", Introduce).
 procedure known_cond(Peer?, St?, YesNo).
 known_cond(Q, St, R?) :- ground(Q?), ground(St?) |
+    hello_due(h(Q?), St?, R).
+procedure hello_due(Hl?, St?, YesNo).
+hello_due(H, St, R?) :- ground(H?), ground(St?) |
+    hl_peer(H?, Q),
+    hello_due1(Q?, H?, St?, R).
+procedure hello_due1(Peer?, Hl?, St?, YesNo).
+hello_due1(Q, H, St, R?) :- ground(Q?), ground(H?), ground(St?) |
     st_id(St?, Id),
     st_sent(St?, Se),
     same(Q?, Id?, S1),
-    mem(Q?, Se?, S2),
-    or(S1?, S2?, S),
+    mem(H?, Se?, S2),
+    known_at(Q?, St?, S3),
+    or(S1?, S2?, S12),
+    or(S12?, S3?, S),
     neg(S?, R).
+procedure hl_peer(Hl?, Peer).
+hl_peer(h(Q), Q?).
+hl_peer(ih(Q), Q?).
 
 procedure dispatch_known(YesNo?, Peer?, Then?, App?, Stream(Trigger)?,
     Stream(Trigger)?, Stream(Trigger), Stream(Demand), Stream(Txn), Stream(Net),
@@ -382,35 +479,55 @@ dispatch_known(yes, Q, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, [msg(Q?, hello(Id?))|O
         Cards, St) :-
     ground(Q?), ground(St?) |
     st_id(St?, Id),
-    add_sent(Q?, St?, St1),
-    discovered(Q?, St1?, Thr, Thr1?, St2),
+    add_sent(h(Q?), St?, St1),
+    discovered(Q?, St?, St1?, Thr, Thr1?, St2),
     next(Th?, Ap0?, Ls?, In?, Ans, Dem, Thr1, Out, Cards?, St2?).
 dispatch_known(no, _, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
     next(Th?, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
 
-procedure hello_cond(Peer?, St?, YesNo).
-hello_cond(P, St, R?) :- ground(St?) |
-    st_recd(St?, Rc),
-    mem(P?, Rc?, B),
-    neg(B?, R).
-
-procedure dispatch_hello(YesNo?, Peer?, Then?, App?, Stream(Trigger)?,
+%% On an introduction intro(Q): an introduced hello to Q where one is due.
+procedure dispatch_intro(YesNo?, Peer?, Then?, App?, Stream(Trigger)?,
     Stream(Trigger)?, Stream(Trigger), Stream(Demand), Stream(Txn), Stream(Net),
     OpenCards?, St?).
-dispatch_hello(yes, P, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
-    ground(P?) |
-    add_recd(P?, St?, St1),
-    discovered(P?, St1?, Thr, Thr1?, St2),
+dispatch_intro(yes, Q, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, [msg(Q?, ihello(Id?))|Out?],
+        Cards, St) :-
+    ground(Q?), ground(St?) |
+    st_id(St?, Id),
+    add_sent(ih(Q?), St?, St1),
+    discovered(Q?, St?, St1?, Thr, Thr1?, St2),
+    next(Th?, Ap0?, Ls?, In?, Ans, Dem, Thr1, Out, Cards?, St2?).
+dispatch_intro(no, _, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
+    next(Th?, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
+
+%% An arriving hello of either kind, recorded unless recorded already.
+procedure hello_cond(Hl?, St?, YesNo).
+hello_cond(H, St, R?) :- ground(St?) |
+    st_recd(St?, Rc),
+    mem(H?, Rc?, B),
+    neg(B?, R).
+
+procedure dispatch_hello(YesNo?, Hl?, Then?, App?, Stream(Trigger)?,
+    Stream(Trigger)?, Stream(Trigger), Stream(Demand), Stream(Txn), Stream(Net),
+    OpenCards?, St?).
+dispatch_hello(yes, H, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
+    ground(H?), ground(St?) |
+    hl_peer(H?, P),
+    add_recd(H?, St?, St1),
+    discovered(P?, St?, St1?, Thr, Thr1?, St2),
     next(Th?, Ap0?, Ls?, In?, Ans, Dem, Thr1, Out, Cards?, St2?).
 dispatch_hello(no, _, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
     next(Th?, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
 
-procedure discovered(Peer?, St?, Stream(Txn), Stream(Txn)?, St).
-discovered(Q, St, Thr?, Thr1, St?) :- ground(Q?), ground(St?) |
-    second(Q?, St?, Sc),
-    discover_q(Sc?, Q?, Thr, Thr1?).
-procedure second(Peer?, St?, YesNo).
-second(Q, St, B?) :- ground(St?) |
+%% discover(Q) on the thread where Q, not known before, is known now.
+procedure discovered(Peer?, St?, St?, Stream(Txn), Stream(Txn)?, St).
+discovered(Q, St0, St, Thr?, Thr1, St?) :- ground(Q?), ground(St0?), ground(St?) |
+    known_at(Q?, St0?, B0),
+    known_at(Q?, St?, B1),
+    neg(B0?, N0),
+    and(N0?, B1?, B),
+    discover_q(B?, Q?, Thr, Thr1?).
+procedure known_at(Peer?, St?, YesNo).
+known_at(Q, St, B?) :- ground(St?) |
     st_sent(St?, Se),
     st_recd(St?, Rc),
     known_peer(Q?, Se?, Rc?, B).
@@ -418,18 +535,25 @@ procedure discover_q(YesNo?, Peer?, Stream(Txn), Stream(Txn)?).
 discover_q(yes, Q, [discover(Q?)|Thr1?], Thr1).
 discover_q(no, _, Thr1?, Thr1).
 
-%% --- Start, Tally and Outcome, on the arriving message ----------------------
+%% --- Start, Tally, Outcome and Refer, and an introduction, on the arriving
+%% message ---------------------------------------------------------------
 %% One schema to a cargo, none needing a peer known: the initiator's hello
-%% precedes its start on one stream, and an initiator knows every other
-%% participant from its Propose.  Start defers, and does not refuse, the start
+%% precedes its start on one stream, an initiator knows every other
+%% participant from its Propose, and a seeker's hello precedes its seek.  An
+%% introduction intro(Q) is no app transaction: the agent sends Q an
+%% introduced hello where one is due (Introduce).  Start defers, and does not refuse, the start
 %% of an initiator that precedes the agent in the order of identifiers while
 %% the agent holds prepared an attempt it initiated, the attempt not closed
 %% (Definition "Attempt, Message, App State, Question, Ready, Deferred,
 %% Clear"): the start is recorded as deferred, and put up again after every
 %% dispatch that changes the app state.
 procedure message_cond(Cargo?, St?, MCond, St).
-message_cond(X, St, Cd?, St2?) :- ground(X?), ground(St?) |
-    cargo_class(X?, C),
+message_cond(X, St, Cd?, St1?) :- ground(X?), ground(St?) |
+    cargo_kind(X?, K),
+    message_cond0(K?, X?, St?, Cd, St1).
+procedure message_cond0(CKind?, Cargo?, St?, MCond, St).
+message_cond0(intro_of(Q), _, St, mintro(Q?), St?).
+message_cond0(cl(C), X, St, Cd?, St2?) :- ground(St?) |
     st_class(C?, St?, R, St1),
     message_cond1(R?, X?, St1?, Cd, St2).
 procedure message_cond1(ClassRes?, Cargo?, St?, MCond, St).
@@ -444,6 +568,7 @@ message_cond1(cls(I), start(At), St, Cd?, St?) :- ground(At?), ground(St?) |
     defer_cond1(D?, I?, Cd).
 message_cond1(cls(I), vote(_, _), St, mgo(I?), St?).
 message_cond1(cls(I), outcome(_, _), St, mgo(I?), St?).
+message_cond1(cls(I), seek(_), St, mgo(I?), St?).
 procedure defer_cond1(YesNo?, Info?, MCond).
 defer_cond1(yes, _, mdefer).
 defer_cond1(no, I, mgo(I?)).
@@ -459,16 +584,31 @@ defers(At, Id, app(_, _, L, R), D?) :- ground(At?), ground(Id?), ground(R?) |
 procedure own_held(Lock?, Peer?, YesNo).
 own_held(unlocked, _, no).
 own_held(held(A), Id, B?) :- attempt_id(A?, P), same(P?, Id?, B).
-procedure cargo_class(Cargo?, Class).
-cargo_class(start(attempt(_, _, C)), C?).
-cargo_class(vote(attempt(_, _, C), _), C?).
-cargo_class(outcome(attempt(_, _, C), _), C?).
+procedure cargo_kind(Cargo?, CKind).
+cargo_kind(start(attempt(_, _, C)), cl(C?)).
+cargo_kind(vote(attempt(_, _, C), _), cl(C?)).
+cargo_kind(outcome(attempt(_, _, C), _), cl(C?)).
+cargo_kind(seek(C), cl(C?)).
+cargo_kind(intro(Q), intro_of(Q?)).
 
 procedure dispatch_message(MCond?, Net?, Peer?, Cargo?, Then?, App?,
     Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Demand),
     Stream(Txn), Stream(Net), OpenCards?, St?).
 dispatch_message(nopart, _, _, _, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
     next(Th?, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
+dispatch_message(mintro(Q), _, _, _, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Cards,
+        St) :-
+    ground(Q?), ground(St?) |
+    hello_due(ih(Q?), St?, D),
+    dispatch_intro(D?, Q?, Th?, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
+dispatch_message(mgo(I), _, F, seek(_), Th, Ap0, Ls, In, Ans?, Dem?,
+        [refer(C?)|Thr?], Out?, Cards, St) :-
+    ground(I?) |
+    info_name(I?, C),
+    refer_effect(I?, F?, St?, Ss, St1),
+    send_all(Ss?, St1?, Ms, St2),
+    put_all(Ms?, Out, Out1?),
+    next(Th?, Ap0?, Ls?, In?, Ans, Dem, Thr, Out1, Cards?, St2?).
 dispatch_message(mdefer, M, _, _, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Cards,
         St) :-
     add_pend(deferred(M?), St?, St1),
@@ -594,27 +734,22 @@ tick_cond2(Cs1, Cs2, St, Ch?, St1?) :- ground(Cs2?), ground(St?) |
     choose(Cs?, W0?, D?, Ch, W1),
     set_waits(St?, W1?, St1).
 
-%% Propose of an unguarded class, by its opener: the class unguarded, the agent
-%% its opener, ready for it and knowing every other participant, and clear: no
-%% start of an initiator preceding the agent waiting among the starts it defers.
+%% Propose of an unguarded class, by its opener, or, where its condition fails,
+%% its Seek: the class unguarded and the agent its opener, and then the
+%% conditions of Propose and Seek as on a request (prop_or_seek).
 procedure op_cands(Infos?, St?, Cands).
 op_cands([], _, []).
 op_cands([I|Is], St, Cs?) :- ground(I?), ground(St?) |
     unguarded_i(I?, Ug),
     opener_i(I?, St?, Op),
-    ready_i(I?, St?, Rd),
-    others_known(I?, St?, K),
-    known_ok(K?, Kn),
-    no_prior_start(St?, Np),
-    and(Ug?, Op?, B1),
-    and(B1?, Rd?, B2),
-    and(B2?, Kn?, B3),
-    and(B3?, Np?, B),
+    and(Ug?, Op?, B),
+    prop_or_seek(B?, I?, St?, Cd),
     op_cands(Is?, St?, Cs1),
-    keep_cand(B?, I?, Cs1?, Cs).
-procedure keep_cand(YesNo?, Info?, Cands?, Cands).
-keep_cand(yes, I, Cs, [cand(op(C?), I?)|Cs?]) :- ground(I?) | info_name(I?, C).
-keep_cand(no, _, Cs, Cs?).
+    keep_cand(Cd?, Cs1?, Cs).
+procedure keep_cand(PCond?, Cands?, Cands).
+keep_cand(go(I), Cs, [cand(op(C?), I?)|Cs?]) :- ground(I?) | info_name(I?, C).
+keep_cand(seek_go(I), Cs, [cand(op(C?), I?)|Cs?]) :- ground(I?) | info_name(I?, C).
+keep_cand(drop, Cs, Cs?).
 
 %% Vote on an attempt: a question pending at the agent, its answer recorded,
 %% and its initiator, to whom Vote sends, known.  The record is newest first,
@@ -663,14 +798,11 @@ procedure dispatch_tick(Choice?, App?, Stream(Trigger)?, Stream(Trigger)?,
     Stream(Trigger), Stream(Demand), Stream(Txn), Stream(Net), OpenCards?, St?).
 dispatch_tick(none, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
     next(done, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
-dispatch_tick(take(op(_), I), Ap0, Ls, In, Ans?, Dem?, [propose(At?)|Thr?], Out?,
-        Cards, St) :-
-    ground(I?) |
+dispatch_tick(take(op(_), I), Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
+    ground(I?), ground(St?) |
+    prop_or_seek(yes, I?, St?, Cd),
     info_name(I?, C),
-    propose_effect(I?, C?, St?, At, Ss, St1),
-    send_all(Ss?, St1?, Ms, St2),
-    put_all(Ms?, Out, Out1?),
-    next(done, Ap0?, Ls?, In?, Ans, Dem, Thr, Out1, Cards?, St2?).
+    dispatch_propose(Cd?, C?, done, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
 dispatch_tick(take(vt(At), I), Ap0, Ls, In, Ans?, Dem?, [vote(At?)|Thr?], Out?,
         Cards, St) :-
     ground(At?), ground(I?) |
@@ -1006,6 +1138,43 @@ release(unlocked, _, unlocked).
 release(held(A), At, unlocked) :- A? =?= At? | true.
 release(held(A), _, held(A?)) :- otherwise | true.
 
+%% Refer, on seek([t]) from F: for every participant R of [t] the agent knows,
+%% neither F nor itself, with introduced(F, R) not recorded, intro(R) to F and
+%% intro(F) to R, and the pair recorded, unordered.
+procedure refer_effect(Info?, Peer?, St?, Sends, St).
+refer_effect(I, F, St, Ss?, St1?) :- ground(I?), ground(F?), ground(St?) |
+    info_q(I?, Q),
+    st_id(St?, Id),
+    st_sent(St?, Se),
+    st_recd(St?, Rc),
+    st_app(St?, Ap),
+    refer_app(Q?, F?, Id?, Se?, Rc?, Ap?, Ss, Ap1),
+    set_app(St?, Ap1?, St1).
+procedure refer_app(Peers?, Peer?, Peer?, Hls?, Hls?, App?, Sends, App).
+refer_app([], _, _, _, _, Ap, [], Ap?).
+refer_app([R|Rs], F, Id, Se, Rc, app(S, K, L, Rs0), Ss?, Ap1?) :-
+    ground(R?), ground(F?), ground(Id?), ground(Se?), ground(Rc?), ground(Rs0?) |
+    same(R?, F?, IsF),
+    same(R?, Id?, Me),
+    known_peer(R?, Se?, Rc?, Kn),
+    pair_of(F?, R?, Pr),
+    refer_one(IsF?, Me?, Kn?, Pr?, R?, F?, Rs0?, Ss1, Rs1),
+    refer_app(Rs?, F?, Id?, Se?, Rc?, app(S?, K?, L?, Rs1?), Ss2, Ap1),
+    app(Ss1?, Ss2?, Ss).
+procedure refer_one(YesNo?, YesNo?, YesNo?, Rec?, Peer?, Peer?, Recs?, Sends, Recs).
+refer_one(no, no, yes, Pr, R, F, Rs, Ss?, Rs1?) :- ground(Pr?), ground(Rs?) |
+    mem(Pr?, Rs?, Done),
+    refer_one1(Done?, Pr?, R?, F?, Rs?, Ss, Rs1).
+refer_one(_, _, _, _, _, _, Rs, [], Rs?) :- otherwise | true.
+procedure refer_one1(YesNo?, Rec?, Peer?, Peer?, Recs?, Sends, Recs).
+refer_one1(yes, _, _, _, Rs, [], Rs?).
+refer_one1(no, Pr, R, F, Rs, [to(F?, intro(R?)), to(R?, intro(F?))], [Pr?|Rs?]) :-
+    ground(R?), ground(F?) | true.
+%% The unordered pair {Q, R} as introduced(Lesser, Greater).
+procedure pair_of(Peer?, Peer?, Rec).
+pair_of(Q, R, introduced(Q?, R?)) :- Q? @< R? | true.
+pair_of(Q, R, introduced(R?, Q?)) :- otherwise | true.
+
 %% The messages a transaction sends, each carrying its sender; an agent sends
 %% a cargo to a recipient at most once, so a message needs no number.
 procedure send_all(Sends?, St?, Nets, St).
@@ -1105,18 +1274,23 @@ others_known(I, St, K?) :- ground(St?) |
     st_sent(St?, Se),
     st_recd(St?, Rc),
     first_unknown(Q?, Id?, Se?, Rc?, K).
-procedure first_unknown(Peers?, Peer?, Peers?, Peers?, Known).
+procedure first_unknown(Peers?, Peer?, Hls?, Hls?, Known).
 first_unknown([], _, _, _, allknown).
 first_unknown([P|Ps], Id, Se, Rc, K?) :- ground(P?), ground(Id?), ground(Se?), ground(Rc?) |
     same(P?, Id?, Me),
     known_peer(P?, Se?, Rc?, Kn),
     or(Me?, Kn?, Ok),
     first_unknown1(Ok?, P?, Ps?, Id?, Se?, Rc?, K).
-procedure first_unknown1(YesNo?, Peer?, Peers?, Peer?, Peers?, Peers?, Known).
+procedure first_unknown1(YesNo?, Peer?, Peers?, Peer?, Hls?, Hls?, Known).
 first_unknown1(yes, _, Ps, Id, Se, Rc, K?) :- first_unknown(Ps?, Id?, Se?, Rc?, K).
 first_unknown1(no, P, _, _, _, _, unknown(P?)).
-procedure known_peer(Peer?, Peers?, Peers?, YesNo).
-known_peer(P, Se, Rc, B?) :- ground(P?) |
+procedure known_peer(Peer?, Hls?, Hls?, YesNo).
+known_peer(P, Se, Rc, B?) :- ground(P?), ground(Se?), ground(Rc?) |
+    known_kind(h(P?), Se?, Rc?, B1),
+    known_kind(ih(P?), Se?, Rc?, B2),
+    or(B1?, B2?, B).
+procedure known_kind(Hl?, Hls?, Hls?, YesNo).
+known_kind(P, Se, Rc, B?) :- ground(P?) |
     mem(P?, Se?, B1),
     mem(P?, Rc?, B2),
     and(B1?, B2?, B).
@@ -1817,9 +1991,9 @@ procedure st_app(St?, App).
 st_app(st(_, Ap, _, _, _, _, _, _), Ap?).
 procedure st_date(St?, Integer).
 st_date(st(_, _, D, _, _, _, _, _), D?).
-procedure st_sent(St?, Peers).
+procedure st_sent(St?, Hls).
 st_sent(st(_, _, _, Se, _, _, _, _), Se?).
-procedure st_recd(St?, Peers).
+procedure st_recd(St?, Hls).
 st_recd(st(_, _, _, _, Rc, _, _, _), Rc?).
 procedure st_waits(St?, Waits).
 st_waits(st(_, _, _, _, _, W, _, _), W?).
@@ -1835,10 +2009,10 @@ procedure add_pend(Pend?, St?, St).
 add_pend(X, st(Id, Ap, D, Se, Rc, W, Ca, Pd),
         st(Id?, Ap?, D?, Se?, Rc?, W?, Ca?, Pd1?)) :-
     app(Pd?, [X?], Pd1).
-procedure add_sent(Peer?, St?, St).
+procedure add_sent(Hl?, St?, St).
 add_sent(Q, st(Id, Ap, D, Se, Rc, W, Ca, Pd),
         st(Id?, Ap?, D?, [Q?|Se?], Rc?, W?, Ca?, Pd?)).
-procedure add_recd(Peer?, St?, St).
+procedure add_recd(Hl?, St?, St).
 add_recd(P, st(Id, Ap, D, Se, Rc, W, Ca, Pd),
         st(Id?, Ap?, D?, Se?, [P?|Rc?], W?, Ca?, Pd?)).
 procedure advance(St?, St).

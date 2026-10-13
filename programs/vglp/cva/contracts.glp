@@ -61,6 +61,27 @@
 %% would make b where b precedes a: b's tick, which finds the classes of the
 %% unguarded schemas with b in their first role, would never find the class,
 %% and no agent would open it.  gnudge/self.glp plays it.
+%%
+%% childsafe is a child-safe-like contract (vGLP, Appendix A, "An Example:
+%% Child-Safe Befriending"), so that a contract compiled here has a class of
+%% four participants whose initiator need not know them all: a parent enrols a
+%% child, and two children befriend under their two parents, who are friends,
+%% guarded by all four (vGLP 2026-10-13 12:05 UTC, item 5):
+%%
+%%   befriend(p?, q?)      :  at p  not friend(q), +friend(q)
+%%                             at q  not friend(p), +friend(p)
+%%   enrol(p?, r?)         :  at p  not child(r), +child(r)
+%%                             at r  not parent(p), +parent(p)
+%%   cbefriend(r?, s?, p?, q?) :
+%%                             at r  parent(p), not friend(s), +friend(s)
+%%                             at s  parent(q), not friend(r), +friend(r)
+%%                             at p  child(r), friend(q), +approved(r, s)
+%%                             at q  child(s), friend(p), +approved(s, r)
+%%
+%% A parent proposing cbefriend knows its child and the other parent but not
+%% the other child, and reaches it through an introduction by the other parent
+%% (vGLP, Definition "Canonical CVA Platform", Seek and Refer), no person asked
+%% to discover it.  childsafe/self.glp plays it.
 %% ---------------------------------------------------------------------------
 
 %% The contract, as programs/jurix/self.glp writes it.
@@ -88,6 +109,7 @@ procedure contract_named(Constant?, Declared).
 contract_named(nudge, C?) :- nudge(C).
 contract_named(introduce, C?) :- introduce(C).
 contract_named(gnudge, C?) :- gnudge(C).
+contract_named(childsafe, C?) :- childsafe(C).
 
 procedure nudge(Contract).
 nudge([schema(befriend,
@@ -123,3 +145,20 @@ gnudge([schema(befriend,
                        []),
            rs(unguarded, [atom(nudged, [role(1)])], [], [atom(friend, [role(1)])],
                          [atom(nudged, [role(1)])])])]).
+
+procedure childsafe(Contract).
+childsafe([schema(befriend,
+             [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
+              rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
+           schema(enrol,
+             [rs(guarded, [atom(child, [role(2)])], [], [], [atom(child, [role(2)])]),
+              rs(guarded, [atom(parent, [role(1)])], [], [], [atom(parent, [role(1)])])]),
+           schema(cbefriend,
+             [rs(guarded, [atom(friend, [role(2)])], [], [atom(parent, [role(3)])],
+                          [atom(friend, [role(2)])]),
+              rs(guarded, [atom(friend, [role(1)])], [], [atom(parent, [role(4)])],
+                          [atom(friend, [role(1)])]),
+              rs(guarded, [atom(approved, [role(1), role(2)])], [],
+                          [atom(child, [role(1)]), atom(friend, [role(4)])], []),
+              rs(guarded, [atom(approved, [role(2), role(1)])], [],
+                          [atom(child, [role(2)]), atom(friend, [role(3)])], [])])]).

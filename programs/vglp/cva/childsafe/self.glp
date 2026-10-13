@@ -1,0 +1,127 @@
+%% ---------------------------------------------------------------------------
+%% The plays of the canonical CVA platform of vGLP's contract childsafe
+%% (../contracts.glp, contract_named(childsafe, C): befriend, enrol and a
+%% four-party cbefriend guarded by all four), platform.vglp, which
+%% programs/vglp/cva/compile.sh prints from it: two-phase commit coordinated by
+%% the initiating agent, an initiator that does not know every participant
+%% first seeking them (vGLP, Section 3.2, Definition "Canonical CVA Platform",
+%% Seek and Refer; Definition "CVA Platform, App Transaction", Introduce).
+%% Each runs its agents, their persons scripted and paced on their threads
+%% (../self.glp), and gives each person's log, the thread with gave(K, A)
+%% where the person answers a card, and the network's log of the cargoes it
+%% carries.
+%%
+%% play_childsafe: four agents, alice and bob parents, carol alice's child and
+%%   dave bob's.  alice enrols carol and bob dave, each child asked on its
+%%   card; bob then befriends alice, who is asked.  alice knows carol and bob
+%%   but not dave, so her request cbefriend(carol, dave, alice, bob) takes
+%%   Seek: seek to carol and bob.  carol knows no other participant and refers
+%%   nobody; bob knows dave, and refers: intro(dave) to alice and intro(alice)
+%%   to dave, whose introduced hellos make them known to each other, no person
+%%   asked.  alice requests cbefriend again, it is proposed, carol, dave and
+%%   bob are asked and answer yes, and it commits at all four.
+%% play_shared: three agents; bob and carol each know alice, and then each
+%%   requests the other: the Discover between agents that share a peer is
+%%   still taken on both requests, by the plain hellos, no seek or
+%%   introduction sent.
+%%
+%% The types of platform.vglp, written again for the declarations of the
+%% procedures imported from its compiled module.
+%% ---------------------------------------------------------------------------
+
+Class    ::= befriend(Peer, Peer) ; enrol(Peer, Peer)
+           ; cbefriend(Peer, Peer, Peer, Peer).
+Request  ::= propose(Class) ; known(Peer).
+YesNo    ::= yes ; no.
+Decision ::= commit ; abort.
+Attempt  ::= attempt(Peer, Integer, Class).
+Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
+           ; seek(Class) ; intro(Peer).
+Content  ::= hello(Peer) ; ihello(Peer) ; cargo(Peer, Cargo).
+Net      ::= msg(Peer, Content).
+Txn      ::= propose(Attempt) ; seek(Class) ; refer(Class) ; start(Attempt)
+           ; answer(Attempt) ; vote(Attempt) ; tally(Attempt) ; outcome(Attempt)
+           ; discover(Peer).
+Session  ::= session(Stream(Request)?, Stream(Txn)).
+Card     ::= card(Attempt, YesNo?).
+Question ::= session_w(Session) ; card_w(Card).
+Ask(Q)   ::= ask(Constant, Q).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+
+exported procedure play_childsafe(Stream(_), Stream(_), Stream(_), Stream(_),
+    Stream(Sent(Cargo))).
+play_childsafe(LA?, LB?, LC?, LD?, N?) :-
+    quartet([req(known(carol)), wait(discover(carol)),
+             req(propose(enrol(alice, carol))),
+             wait(tally(attempt(alice, 1, enrol(alice, carol)))),
+             req(known(bob)),
+             card(befriend(bob, alice), yes),
+             wait(outcome(attempt(bob, 2, befriend(bob, alice)))),
+             req(propose(cbefriend(carol, dave, alice, bob))),
+             wait(discover(dave)),
+             req(propose(cbefriend(carol, dave, alice, bob)))],
+            [req(known(dave)), wait(discover(dave)),
+             req(propose(enrol(bob, dave))),
+             wait(tally(attempt(bob, 1, enrol(bob, dave)))),
+             req(known(alice)), wait(discover(alice)),
+             req(propose(befriend(bob, alice))),
+             wait(tally(attempt(bob, 2, befriend(bob, alice)))),
+             card(cbefriend(carol, dave, alice, bob), yes)],
+            [req(known(alice)),
+             card(enrol(alice, carol), yes),
+             card(cbefriend(carol, dave, alice, bob), yes)],
+            [req(known(bob)),
+             card(enrol(bob, dave), yes),
+             card(cbefriend(carol, dave, alice, bob), yes)],
+            LA, LB, LC, LD, N).
+
+exported procedure play_shared(Stream(_), Stream(_), Stream(_),
+    Stream(Sent(Cargo))).
+play_shared(LA?, LB?, LC?, N?) :-
+    trio([req(known(bob)), req(known(carol))],
+         [req(known(alice)), wait(discover(alice)), req(known(carol))],
+         [req(known(alice)), wait(discover(alice)), req(known(bob))],
+         LA, LB, LC, N).
+
+%% alice, bob, carol and dave, each with its dispatcher and scripted person,
+%% their networks joined.
+procedure quartet(Steps?, Steps?, Steps?, Steps?, Stream(_), Stream(_),
+    Stream(_), Stream(_), Stream(Sent(Cargo))).
+quartet(SA, SB, SC, SD, LA?, LB?, LC?, LD?, N?) :-
+    platform # agent(alice, InA?, OutA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), _),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), _),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    platform # agent(carol, InC?, OutC, AsC),
+    platform # dispatch(AsC?, ch(GC?, DC), _),
+    person(DC?, GC, ps(nosess, [], [], SC?), LC),
+    platform # agent(dave, InD?, OutD, AsD),
+    platform # dispatch(AsD?, ch(GD?, DD), _),
+    person(DD?, GD, ps(nosess, [], [], SD?), LD),
+    merge(OutA?, OutB?, Net1),
+    merge(OutC?, OutD?, Net2),
+    merge(Net1?, Net2?, Net),
+    route4(Net?, alice, InA, bob, InB, carol, InC, dave, InD, N).
+
+%% alice, bob and carol, likewise.
+procedure trio(Steps?, Steps?, Steps?, Stream(_), Stream(_), Stream(_),
+    Stream(Sent(Cargo))).
+trio(SA, SB, SC, LA?, LB?, LC?, N?) :-
+    platform # agent(alice, InA?, OutA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), _),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), _),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    platform # agent(carol, InC?, OutC, AsC),
+    platform # dispatch(AsC?, ch(GC?, DC), _),
+    person(DC?, GC, ps(nosess, [], [], SC?), LC),
+    merge(OutA?, OutB?, Net1),
+    merge(Net1?, OutC?, Net),
+    route3(Net?, alice, InA, bob, InB, carol, InC, N).
