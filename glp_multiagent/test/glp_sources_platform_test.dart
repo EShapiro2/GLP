@@ -61,7 +61,6 @@ void main() {
     // super-app's own directory is where a mini-app artefact is read from, and
     // the currency's directory is derived from the root self.glp.
     final returned = <String, String>{
-      'grassappDir': glp.grassappDir,
       'graphDir': glp.graphDir,
       'cssnDir': glp.cssnDir,
       'rootSelfGlp': glp.rootSelfGlp,
@@ -69,6 +68,7 @@ void main() {
       'pingappDir': glp.pingappDir,
       'coinsDir': glp.coinsDir,
       'sovereignDir': glp.sovereignDir,
+      'bondsDir': glp.bondsDir,
     };
     returned.forEach((name, p) {
       expect(p, startsWith('${docs.path}/'),
@@ -104,10 +104,10 @@ void main() {
     var vglp = false;
     for (final tree in [
       repo.graphDir,
-      repo.grassappDir,
       repo.cssnDir,
       repo.coinsDir,
       repo.sovereignDir,
+      repo.bondsDir,
     ]) {
       expect(tree.startsWith('$programs/'), isTrue, reason: tree);
       for (var d = Directory(tree).parent;

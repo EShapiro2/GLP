@@ -6,7 +6,7 @@
 
 | App | Entry point | Build target |
 |---|---|---|
-| Interactive SG (multi-window) | `lib/main.dart` | default |
+| The Grassroots Super-App (`programs/social/graph/core`) | `lib/main.dart`, which runs `lib/main_superapp.dart` | default |
 | CSSN group plays (REPL subprocess) | `lib/main_cssg.dart` | `--target=lib/main_cssg.dart` |
 
 The two madGLP multi-isolate apps, `lib/main_sg_mad.dart` and
@@ -113,9 +113,9 @@ dart test test/multiagent/
 
 ## Architecture
 
-- **Interactive SG** (`main.dart`): Coordinator spawns agent windows via
-  `desktop_multi_window`, routes madGLP binary messages between them via
-  `MadRouter`. Each window runs `AgentRuntime` + `MadContext`.
+- **The Grassroots Super-App** (`main.dart`, running `main_superapp.dart`):
+  `runVglpApp` (`vglp_app.dart`) runs `programs/social/graph/core` at
+  `superapp_ui/3` in an agent isolate and renders it through `AgentSurface`.
 - **CSSN group plays** (`main_cssg.dart`): Spawns `glp_repl` subprocess, parses
   tagged output, routes to per-agent panels.
 
@@ -123,7 +123,7 @@ dart test test/multiagent/
 
 | File | Purpose |
 |---|---|
-| `lib/main.dart` | Interactive SG — coordinator + agent windows |
+| `lib/main.dart` | The default: the Grassroots Super-App, by `lib/main_superapp.dart` |
 | `lib/main_cssg.dart` | CSSN group plays via REPL subprocess |
 | `lib/isolate_protocol.dart` | Isolate protocol: message types, lifecycle, entry point |
 | `lib/mad_router.dart` | `IsolateRouter` — cross-isolate MAD message routing |

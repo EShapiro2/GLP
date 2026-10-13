@@ -9,7 +9,7 @@ own GLP program and uses its own execution backend and agent topology.
 
 | Entry point | App | Agents | Backend | Status |
 |---|---|---|---|---|
-| `lib/main.dart` | Interactive SG | Alice, Bob, Charlie | Multi-window (`desktop_multi_window`) | Working |
+| `lib/main.dart` | The Grassroots Super-App (`programs/social/graph/core`), the phone app's default; it runs `lib/main_superapp.dart` | alice, with a scripted bob | `runVglpApp` (`lib/vglp_app.dart`) | Working |
 
 `main_sg_mad.dart`, `main_cssg_mad.dart` and `main_cssg_mad_modules.dart` were
 retired on 2026-08-01: each named a program directory that no longer exists
@@ -18,11 +18,12 @@ programs they ran are removed with `programs/book/cssg` (Udi, 2026-08-01).  The
 table above lists only the entry points this file documents; `lib/` holds
 others.
 
-### Interactive SG (`main.dart`)
+### The default (`main.dart`)
 
-The person acts through the inbox cards and compose forms of the agent's
-screen, and each act (`connect`, `decision`, `send`, `introduce`,
-`accept_intro`, ...) reaches the agent as a ground term
+The Grassroots Super-App, whose mini-apps are each platform's own program run
+as a mini-app (GSG, Section 7).  The GrassApp entry points, `main_grassapp_village.dart`
+and `main_grassapp_duo.dart`, went with `programs/grassapp` on 2026-10-13.
+The person's acts reach the agent as ground terms
 (`lib/isolate_protocol.dart`, `UserInput`), never as typed text: the agent
 runtime parses nothing the person sends (2026-10-02).
 
@@ -35,7 +36,7 @@ runtime parses nothing the person sends (2026-10-02).
 
 ## Two-phase deferred-start protocol
 
-Used by `main_grassapp_duo.dart`.  Documented in `isolate_protocol.dart`.
+Used by the multi-isolate tests (`test/roundtrip_isolate_test.dart`, `test/mad_w_*_test.dart`); `main_grassapp_duo.dart`, its one app, went on 2026-10-13.  Documented in `isolate_protocol.dart`.
 
 1. **Phase 1 — Spawn**: Main spawns all agent isolates with `deferStart: true`.
    Each isolate creates its `AgentRuntime`, sends `AgentReady` (with its
@@ -51,7 +52,7 @@ sends network messages, so no message can be dropped due to a missing target.
 
 ## GLP source files
 
-Each app names its own.  `main.dart` and the grassapp apps take theirs from
+Each app names its own.  `main.dart` and the `vglp_app.dart` entries take theirs from
 `lib/glp_sources.dart`.  The apps that ran plays by spawning a `glp_repl`
 subprocess --- `main_cssg.dart`, retired on 2026-08-02, and
 `main_cssn_village.dart`, deleted on 2026-10-02 with the `ReplPlayRunner` it
@@ -62,8 +63,8 @@ ran on --- are in git.
 ### madGLP plays stall after introduction step (OPEN)
 
 Observed in `main_sg_mad.dart`, retired 2026-08-01; recorded here because the
-mechanism it names is live and the cross-isolate path is `main_grassapp_duo`'s
-as much as it was that app's.
+mechanism it names is live and the cross-isolate path is the multi-isolate
+tests' as much as it was that app's.
 
 SG Play 1 (multi-isolate) stops after the introduction step.  Cold calls and
 friend messages work — Alice sends `connect(bob)`, Bob accepts, they exchange

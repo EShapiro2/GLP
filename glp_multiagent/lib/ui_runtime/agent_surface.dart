@@ -1,7 +1,7 @@
-/// GrassApp — one app, one panel per platform (paper §7, Figure fig:grassapp).
+/// The agent's surface: one panel per platform its manifest declares.
 ///
-/// The bottom bar is the panels — Friends (social graph), Currencies, Chats (social
-/// network) — each reached by an icon badged with that panel's pending alerts.
+/// The bottom bar is the panels, each reached by an icon badged with that
+/// panel's pending alerts.
 /// The app bar reads the active panel's name. Each panel renders the two
 /// constructs and the screen (paper §6): compose forms (its "+", the
 /// Request-shaped clauses) and inbox cards (the Respond-shaped pending
@@ -26,15 +26,6 @@ class AgentSurface extends StatefulWidget {
   final String agentId;
   final UiRuntime runtime;
 
-  /// Panel shown first (index into the manifest's panels). The single-phone app
-  /// opens on Friends (0); a village grid opens each phone on Currencies.
-  final int initialPanel;
-
-  /// Open straight into the agent's own wallet ("Your wallet") — the
-  /// own-holdings view, which lists this one agent's holdings in full and only
-  /// those, over the platform bar. Used to capture the village-market figure.
-  final bool openSelfWallet;
-
   /// Suppress the transient "…completed" snackbars. Used for the figure
   /// capture, where a toast floating over the wallets is noise.
   final bool muteNotices;
@@ -46,8 +37,6 @@ class AgentSurface extends StatefulWidget {
       {super.key,
       required this.agentId,
       required this.runtime,
-      this.initialPanel = 0,
-      this.openSelfWallet = false,
       this.muteNotices = false,
       this.family = ConstructFamily.standard});
 
@@ -57,7 +46,7 @@ class AgentSurface extends StatefulWidget {
 
 class _AgentSurfaceState extends State<AgentSurface> {
   /// The active panel (index into the manifest's panels).
-  late int _panel = widget.initialPanel;
+  int _panel = 0;
 
   /// Drill-down within the active panel: an open chat peer or wallet person
   /// (null = the panel's list).
@@ -105,7 +94,6 @@ class _AgentSurfaceState extends State<AgentSurface> {
   void initState() {
     super.initState();
     _subscribe();
-    if (widget.openSelfWallet) _openItem = widget.agentId.toLowerCase();
     if (!widget.muteNotices) {
       widget.runtime.onNotice = (message) {
         if (!mounted) return;

@@ -30,12 +30,10 @@ import 'package:path_provider/path_provider.dart';
 
 /// Resolved locations of the GLP source tree.
 class GlpPaths {
-  final String grassappDir; // .../programs/grassapp
   final String graphDir; // .../programs/social/graph
   final String cssnDir; // .../programs/cssn
   final String rootSelfGlp; // .../programs/self.glp
-  const GlpPaths(
-      this.grassappDir, this.graphDir, this.cssnDir, this.rootSelfGlp);
+  const GlpPaths(this.graphDir, this.cssnDir, this.rootSelfGlp);
 
   /// The Grassroots Super-App's program, and the mini-app it installs. A
   /// mini-app's certified artefact is read by `load_file/2` from the super-app's
@@ -55,6 +53,11 @@ class GlpPaths {
   /// run it. Derived from the root self.glp, as [coinsDir] is.
   String get sovereignDir =>
       '${File(rootSelfGlp).parent.path}/currencies/sovereign';
+
+  /// The bonds program (Currencies): programs/currencies/bonds, which holds the
+  /// certified mini-app dated/ --- the dated bonds and the escrow. Derived from
+  /// the root self.glp, as [coinsDir] is.
+  String get bondsDir => '${File(rootSelfGlp).parent.path}/currencies/bonds';
 }
 
 /// The bundle's manifest, generated with the bundle by tool/sync_glp_assets.sh
@@ -103,16 +106,14 @@ Future<GlpPaths> resolveGlpPaths({bool? sandboxed}) async {
   if (sandboxed ?? _platformIsSandboxed) return _fromBundle();
 
   // Desktop dev: the repo is reachable on disk — read it directly.
-  final rel = Directory('../programs/grassapp');
+  final rel = Directory('../programs/social/graph');
   if (rel.existsSync()) {
     final base = Directory('../programs').absolute.path;
-    return GlpPaths('$base/grassapp', '$base/social/graph', '$base/cssn',
-        '$base/self.glp');
+    return GlpPaths('$base/social/graph', '$base/cssn', '$base/self.glp');
   }
   const repo = '/Users/udi/Grassroots/GLP/programs';
-  if (Directory('$repo/grassapp').existsSync()) {
-    return GlpPaths('$repo/grassapp', '$repo/social/graph', '$repo/cssn',
-        '$repo/self.glp');
+  if (Directory('$repo/social/graph').existsSync()) {
+    return GlpPaths('$repo/social/graph', '$repo/cssn', '$repo/self.glp');
   }
 
   // A desktop build with no repo on disk — a released macOS app — carries the
@@ -135,6 +136,5 @@ Future<GlpPaths> _fromBundle() async {
     await out.writeAsBytes(data.buffer
         .asUint8List(data.offsetInBytes, data.lengthInBytes));
   }
-  return GlpPaths('$base/grassapp', '$base/social/graph', '$base/cssn',
-      '$base/self.glp');
+  return GlpPaths('$base/social/graph', '$base/cssn', '$base/self.glp');
 }

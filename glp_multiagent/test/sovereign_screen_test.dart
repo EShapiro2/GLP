@@ -56,8 +56,8 @@ void main() {
     // checkout — this checkout's `programs/` and no other — so that the
     // program directory is the app's own `sovereignDir`.
     final repo = programsDir();
-    final glp = GlpPaths(
-        '$repo/grassapp', '$repo/social/graph', '$repo/cssn', '$repo/self.glp');
+    final glp =
+        GlpPaths('$repo/social/graph', '$repo/cssn', '$repo/self.glp');
 
     final lines = <String>[];
     final agent = AgentRuntime(

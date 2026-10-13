@@ -29,7 +29,7 @@ SRC=../programs
 OUT=assets/glp
 DST=$OUT/programs
 # The trees the app loads: GlpPaths's directories, with the root self.glp.
-TREES="social/graph grassapp cssn currencies/coins currencies/sovereign"
+TREES="social/graph cssn currencies/coins currencies/sovereign currencies/bonds"
 rm -rf "$OUT"
 mkdir -p "$DST"
 
@@ -69,7 +69,8 @@ fi
 ( cd ../glp_runtime && for prog in ../programs/social/graph/pingapp \
                                    ../programs/currencies/coins/currency \
                                    ../programs/cssn/childsafe \
-                                   ../programs/currencies/sovereign/denominated; do
+                                   ../programs/currencies/sovereign/denominated \
+                                   ../programs/currencies/bonds/dated; do
     printf ':artefact %s %s\n:quit\n' \
       "$prog" "../glp_multiagent/$DST/social/graph/core" | bin/glpc
   done ) | grep -E '(✓ Wrote|Artefact failed|Error:)' || true
@@ -86,7 +87,7 @@ while read -r p; do
   printf '%s\t%s\n' "$name" "$p" >> "$OUT/manifest.txt"
 done < <(cd "$OUT" && find programs -type f | sort)
 
-for a in pingapp currency childsafe denominated; do
+for a in pingapp currency childsafe denominated dated; do
   test -s "$DST/social/graph/core/$a.glpw" \
     || { echo "sync_glp_assets: $a.glpw was not written" >&2; exit 1; }
 done
