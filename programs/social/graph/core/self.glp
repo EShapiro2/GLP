@@ -45,7 +45,7 @@ HomeQuestion      ::= friendRequest_w(HomeFriendRequest) ; stream_request_r(Stre
 %% request to connect.  The draws leave by send_to_user/1, and the network
 %% stream by send_to_net/1.
 imported procedure home#home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(HomeQuestion))).
-imported procedure home#dispatch(Stream(Ask(HomeQuestion))?, Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+imported procedure home#dispatch(Stream(Ask(HomeQuestion))?, Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(Output))).
 imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 exported procedure superapp(Key?, PersonIn?, NetInStream?).
 superapp(Id, Grants, NetIn) :-
@@ -65,17 +65,47 @@ procedure tee_out(AgentToUserStream?, AgentToUserStream, AgentToUserStream).
 tee_out([X | Xs], [X? | Ys?], [X? | Zs?]) :- ground(X?) | tee_out(Xs?, Ys, Zs).
 tee_out([], [], []).
 
+%% The super-app's output to its person, of the reserved type Output: "A
+%% vGLP program declares the type of its output to its person by defining
+%% the type Output, a reserved name; the dispatcher draws that output as a
+%% thread whose elements are drawn by the widget of Output" (vGLP 169b008,
+%% Definition "Canonical Compilation").  A notice informs: it is what the
+%% agent tells the person, AgentContent, with the pending value of a
+%% befriending dropped, its consent asked by home's own card,
+%% FriendRequest ::= from(Friend, Decision?), and nowhere else (GSG,
+%% 2026-10-13 20:16 UTC, Udi: yes); befriend_intro likewise.
+Notice ::= msg(Constant, Constant, NoticeContent).
+NoticeContent ::= befriend(Key)
+                ; befriend_intro(Constant, Key)
+                ; connected(Constant)
+                ; rejected
+                ; rejected(Constant)
+                ; unfriended(Constant)
+                ; received(Key, Constant)
+                ; not_a_friend(Key).
+Output ::= Notice.
+
 %% What the agent tells the person, onto the program's output to the person,
-%% which the dispatcher's channel to the program carries as any term; the
-%% person's input other than grants is not read.  superapp_ui/3 reaches it by
-%% scope.
-procedure show_notices(Channel(Stream(_), Stream(_))?, AgentToUserStream?).
+%% each message as its notice; the person's input other than grants is not
+%% read.  superapp_ui/3 reaches it by scope.
+procedure show_notices(Channel(Stream(_), Stream(Output))?, AgentToUserStream?).
 show_notices(ch(_, Out?), Shown) :- relay(Shown?, Out).
 
-%% Each message as it comes, read as any term.
-procedure relay(_?, Stream(_)).
-relay([M | Ms], [M? | Out?]) :- relay(Ms?, Out).
+%% Each message as it comes, as its notice.
+procedure relay(AgentToUserStream?, Stream(Output)).
+relay([M | Ms], [N? | Out?]) :- notice(M?, N), relay(Ms?, Out).
 relay([], []).
+
+%% The notice of a message the agent tells the person.
+procedure notice(AgentToUserMsg?, Notice).
+notice(msg(A, P, befriend(K, _)), msg(A?, P?, befriend(K?))).
+notice(msg(A, P, befriend_intro(C, K, _)), msg(A?, P?, befriend_intro(C?, K?))).
+notice(msg(A, P, connected(C)), msg(A?, P?, connected(C?))).
+notice(msg(A, P, rejected), msg(A?, P?, rejected)).
+notice(msg(A, P, rejected(C)), msg(A?, P?, rejected(C?))).
+notice(msg(A, P, unfriended(C)), msg(A?, P?, unfriended(C?))).
+notice(msg(A, P, received(K, C)), msg(A?, P?, received(K?, C?))).
+notice(msg(A, P, not_a_friend(K)), msg(A?, P?, not_a_friend(K?))).
 
 %% The agent, exported for the parent's UI boot plays (../boot.glp,
 %% ../play_ui_boot.glp), which call it as core # agent: a call into this
