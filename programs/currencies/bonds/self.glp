@@ -129,6 +129,13 @@ ScreenContent ::= holdings(Stream(Lot))
                 ; no_conversation(Key).
 ScreenMsg ::= msg(Constant, Constant, ScreenContent).
 
+%% The type of the agent's output to its person, the reserved name Output:
+%% "A vGLP program declares the type of its output to its person by defining
+%% the type Output, a reserved name; the dispatcher draws that output as a
+%% thread whose elements are drawn by the widget of Output" (vGLP 169b008,
+%% Definition "Canonical Compilation").  The agent writes its screen messages.
+Output ::= ScreenMsg.
+
 %% The agent's own input: the answers its responders inject, and the results
 %% of the acts it proposed.
 UserInMsg ::= accept_swap(Key, Lot, Stream(Instrument), SwapResponse?)

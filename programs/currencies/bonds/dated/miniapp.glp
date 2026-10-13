@@ -20,7 +20,7 @@
 %% on a date later than 0, and no bond of its own is mature by its date.
 
 imported procedure bonds_agent#agent(Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Integer?, Stream(Ask(Question))).
-imported procedure bonds_agent#dispatch(Stream(Ask(Question))?, Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+imported procedure bonds_agent#dispatch(Stream(Ask(Question))?, Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(Output))).
 
 %% The mini-app the super-app activates: no clock, so no date ever advances.
 exported procedure bonds(Key?, Channel(PersonIn, Stream(_))?, Stream(Conversation)?).
@@ -42,10 +42,10 @@ bonds(Id, Ui, Convs, Cal) :-
 %% The screen, onto the program's output to the person, which the
 %% dispatcher's channel to the program carries as any term; the person's
 %% input other than grants is not read.
-procedure show_screen(Channel(Stream(_), Stream(_))?, Stream(ScreenMsg)?).
+procedure show_screen(Channel(Stream(_), Stream(Output))?, Stream(ScreenMsg)?).
 show_screen(ch(_, Out?), Screen) :- relay(Screen?, Out).
 
 %% Each message as it comes, read as any term.
-procedure relay(_?, Stream(_)).
+procedure relay(Stream(ScreenMsg)?, Stream(Output)).
 relay([M|Ms], [M?|Out?]) :- relay(Ms?, Out).
 relay([], []).

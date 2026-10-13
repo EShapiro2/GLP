@@ -60,12 +60,21 @@ person(Id, Ds, Gs?, Cal?, Script, Ag, Screen?) :-
     person(Id?, Es?, Gs, Cal, Script?, [], no_form, [], [], idle, Ag?, [], Screen).
 
 %% What the person channel carries, as one stream of events: the dispatcher's
-%% draws and withdrawals, and the screen it merges in.  The channel's stream
-%% never closes, and is read as any term.
+%% draws and withdrawals, the screen among them as the thread of construct 0.
+%% The channel's stream never closes, and is read as any term.
 procedure events(_?, Events).
-events([draw(I, W, V)|Ds], [draw(I?, W?, V?)|Es?]) :- events(Ds?, Es).
+events([draw(0, thread(_), Ms)|Ds], Es?) :- newest(Ms?, Ds?, Es).
+events([draw(I, W, V)|Ds], [draw(I?, W?, V?)|Es?]) :- otherwise | events(Ds?, Es).
 events([withdraw(I)|Ds], [withdraw(I?)|Es?]) :- events(Ds?, Es).
-events([msg(A, P, M)|Ds], [msg(A?, P?, M?)|Es?]) :- events(Ds?, Es).
+
+%% The agent's screen reaches the person only as the thread the dispatcher
+%% draws as the construct 0, drawn again with every message so far as each
+%% arrives (vGLP, 2026-10-13 19:25 UTC, items 2 and 3): its newest element is
+%% the message that came, msg(A, P, M), and the draw with none is no event.
+procedure newest(_?, _?, Events).
+newest([], Ds, Es?) :- events(Ds?, Es).
+newest([M], Ds, [M?|Es?]) :- events(Ds?, Es).
+newest([_, M1|Ms], Ds, Es?) :- newest([M1?|Ms?], Ds?, Es).
 
 %% person(Id, Events, Grants, Cal, Script, Todo, Form, Swaps, Transfers,
 %% Pending, Agreement, Seen, Screen).  A step is done when the screen shows its

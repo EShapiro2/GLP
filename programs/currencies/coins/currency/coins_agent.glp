@@ -103,7 +103,24 @@ Ask(Q) ::= ask(Constant, Q).
 Spawn(Q) ::= spawn(Integer, Q, Inputs, Stream(Draw)?).
 
 procedure(Q) dispatch(Stream(Ask(Q))?, Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_)), Stream(Spawn(Q))).
-dispatch(Asks, ch(PIn, POut?), ch(MIn?, MOut), Ss?) :- split_grants(PIn?, Inputs, MIn), merge(MOut?, DOut?, POut), serve_1(Asks?, Inputs?, COut?, COut, DOut, [], [], 0, Ss).
+dispatch(Asks, ch(PIn, POut?), ch(MIn?, _), Ss?) :- split_grants(PIn?, Inputs, MIn), serve_1(Asks?, Inputs?, COut?, COut, POut, [], [], 1, Ss).
+
+procedure(Q) dispatch(Stream(Ask(Q))?, Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_)), _?, Stream(Spawn(Q))).
+dispatch(Asks, ch(PIn, POut?), ch(MIn?, MOut), W, Ss?) :- split_grants(PIn?, Inputs, MIn), output(W?, MOut?, ODs), merge(ODs?, DOut?, POut), serve_1(Asks?, Inputs?, COut?, COut, DOut, [], [], 1, Ss).
+
+procedure output(_?, Stream(_)?, Stream(_)).
+output(W, Ms, [draw(0, W?, []) | Ds?]) :- ground(W?) | output_more(W?, Ms?, [], Ds).
+
+procedure output_more(_?, Stream(_)?, _?, Stream(_)).
+output_more(W, [M | Ms], Es, Ds?) :- ground(M?), ground(Es?) | output_add(Es?, M?, Es1), output_draw(W?, Ms?, Es1?, Ds).
+output_more(_, [], _, []).
+
+procedure output_draw(_?, Stream(_)?, _?, Stream(_)).
+output_draw(W, Ms, Es, [draw(0, W?, Es?) | Ds?]) :- ground(W?), ground(Es?) | output_more(W?, Ms?, Es?, Ds).
+
+procedure output_add(_?, _?, _).
+output_add([E | Es], M, [E? | Es1?]) :- output_add(Es?, M?, Es1).
+output_add([], M, [M?]).
 
 procedure split_grants(PersonIn?, Inputs, Stream(_)).
 split_grants([input(Id, P, R) | Gs], [input(Id?, P?, R?) | Is?], Ms?) :- split_grants(Gs?, Is, Ms).
@@ -196,8 +213,8 @@ form_module(_, refused) :- otherwise | true.
 
 %% --- the construct process of each interactive type ---
 
-exported procedure dispatch(Stream(Ask(Question))?, Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
-dispatch(Asks, PCh, MCh?) :- dispatch(Asks?, PCh?, MCh, Ss), constructs(Ss?).
+exported procedure dispatch(Stream(Ask(Question))?, Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(Output))).
+dispatch(Asks, PCh, MCh?) :- dispatch(Asks?, PCh?, MCh, thread(form(msg, [field('Constant', shown), field('Constant', shown), field('ScreenContent', menu([form(holdings, [field('Stream(Lot)', thread(form(lot, [field('Issuer', shown), field('Amount', shown)])))]), form(opened, [field('Key', shown)]), form(minted, [field('Integer', shown)]), form(paid, [field('Key', shown), field('Integer', shown)]), form(received, [field('Key', shown), field('Integer', shown)]), form(returned, [field('Key', shown), field('Integer', shown)]), form(swap_done, [field('Key', shown)]), form(swap_declined, [field('Key', shown)]), form(swap_failed, [field('Key', shown)]), form(declined, [field('Key', shown)]), form(redeemed, [field('Key', shown), field('Key', shown)]), form(menu, [field('Key', shown), field('Stream(Key)', thread)]), form(presented, [field('Key', shown), field('Key', shown)]), form(unfulfilled, [field('Key', shown), field('Key', shown)]), form(refused, [field('Key', shown)]), form(lacking, [field('Key', shown), field('Integer', shown)]), form(no_conversation, [field('Key', shown)])]))])), Ss), constructs(Ss?).
 
 procedure constructs(Stream(Spawn(Question))?).
 constructs([spawn(Id, Q, Gs, Ds?) | Ss]) :- construct(Id?, Q?, Gs?, Ds), constructs(Ss?).

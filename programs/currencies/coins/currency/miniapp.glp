@@ -13,7 +13,7 @@
 %% reaches the network or the person --- so the program is certified.
 
 imported procedure coins_agent#agent(Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?, Stream(Ask(Question))).
-imported procedure coins_agent#dispatch(Stream(Ask(Question))?, Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+imported procedure coins_agent#dispatch(Stream(Ask(Question))?, Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(Output))).
 
 %% The agent with its dispatcher, the calls of the canonical compilation
 %% (vGLP, Definition "Canonical Compilation"): the agent starts with no
@@ -31,10 +31,10 @@ coins(Id, Ui, Convs) :-
 %% The screen, onto the program's output to the person, which the
 %% dispatcher's channel to the program carries as any term; the person's
 %% input other than grants is not read.
-procedure show_screen(Channel(Stream(_), Stream(_))?, Stream(ScreenMsg)?).
+procedure show_screen(Channel(Stream(_), Stream(Output))?, Stream(ScreenMsg)?).
 show_screen(ch(_, Out?), Screen) :- relay(Screen?, Out).
 
 %% Each message as it comes, read as any term.
-procedure relay(_?, Stream(_)).
+procedure relay(Stream(ScreenMsg)?, Stream(Output)).
 relay([M|Ms], [M?|Out?]) :- relay(Ms?, Out).
 relay([], []).
