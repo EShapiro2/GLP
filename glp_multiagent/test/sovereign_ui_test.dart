@@ -58,23 +58,27 @@ const _requestForm = 'input_box(menu(['
 /// writes, a form of shown fields each labelled by its declared type's name,
 /// its lot a form of its own and its instruments a thread of their forms, as
 /// the compiler emits it (programs/currencies/sovereign/denominated/
-/// sovereign_agent.glp; vGLP #8 Cowork, 2026-10-13 08:15 UTC, item b).
+/// sovereign_agent.glp; vGLP #8 Cowork, 2026-10-13 08:15 UTC, item b), each
+/// field's type named by the variable its clause gives it: SwapOffer ::=
+/// offer(From, Want, Offered), TransferOffer ::= offer_transfer(Kind, From,
+/// Given), Lot ::= lot(Issuer, Denomination, Due, Amount), and the coin and
+/// the bond with Issuer, Denomination, Maturity and Serial (Currencies,
+/// 2026-10-13 10:33 UTC).
 const _swapCard =
-    "form(card, [field('SwapOffer', form(offer, [field('Key', shown), f"
-    "ield('Lot', form(lot, [field('Key', shown), field('Constant', show"
-    "n), field('Constant', shown), field('Integer', shown)])), field('S"
-    "tream(Instrument)', thread(menu([form(coin, [field('Key', shown), "
-    "field('Constant', shown), field('Integer', shown)]), form(bond, [f"
-    "ield('Key', shown), field('Constant', shown), field('Integer', sho"
-    "wn), field('Integer', shown)])])))])), field('YesNo', buttons([yes"
-    ", no]))])";
+    "form(card, [field('SwapOffer', form(offer, [field('From', shown), "
+    "field('Want', form(lot, [field('Issuer', shown), field('Denomination', "
+    "shown), field('Due', shown), field('Amount', shown)])), field('Offered', "
+    "thread(menu([form(coin, [field('Issuer', shown), field('Denomination', "
+    "shown), field('Serial', shown)]), form(bond, [field('Issuer', shown), "
+    "field('Denomination', shown), field('Maturity', shown), field('Serial', "
+    "shown)])])))])), field('YesNo', buttons([yes, no]))])";
 const _transferCard =
-    "form(card, [field('TransferOffer', form(offer_transfer, [field('Ki"
-    "nd', shown), field('Key', shown), field('Stream(Instrument)', thre"
-    "ad(menu([form(coin, [field('Key', shown), field('Constant', shown)"
-    ", field('Integer', shown)]), form(bond, [field('Key', shown), fiel"
-    "d('Constant', shown), field('Integer', shown), field('Integer', sh"
-    "own)])])))])), field('YesNo', buttons([yes, no]))])";
+    "form(card, [field('TransferOffer', form(offer_transfer, [field('Kind', "
+    "shown), field('From', shown), field('Given', thread(menu([form(coin, "
+    "[field('Issuer', shown), field('Denomination', shown), field('Serial', "
+    "shown)]), form(bond, [field('Issuer', shown), field('Denomination', "
+    "shown), field('Maturity', shown), field('Serial', shown)])])))])), "
+    "field('YesNo', buttons([yes, no]))])";
 
 void main() {
   late List<String> sent;
@@ -287,9 +291,10 @@ void main() {
           find.descendant(of: find.byKey(constructKey(24)), matching: f);
 
       // The offer, a form, each field labelled by its declared type's name:
-      // the offerer, a Key; the lot wanted, Lot ::= lot(Key, Constant,
-      // Constant, Integer), a form of its own; and the two bonds offered,
-      // each a form of its own in the thread of Stream(Instrument).
+      // the offerer, From; the lot wanted, Want ::= Lot and Lot ::=
+      // lot(Issuer, Denomination, Due, Amount), a form of its own; and the
+      // two bonds offered, each a form of its own in the thread of Offered,
+      // bond(Issuer, Denomination, Maturity, Serial).
       expect(find.byKey(nodeKey(24, 'form', const [1])), findsOneWidget);
       expect(find.byKey(nodeKey(24, 'form', const [1, 2])), findsOneWidget);
       expect(find.byKey(nodeKey(24, 'thread', const [1, 3])), findsOneWidget);
@@ -297,11 +302,15 @@ void main() {
       expect(find.byKey(nodeKey(24, 'form', const [1, 3, 2, 1])), findsOneWidget);
       for (final (label, n) in [
         ('SwapOffer', 1),
-        ('Lot', 1),
-        ('Stream(Instrument)', 1),
-        ('Key', 4),
-        ('Constant', 4),
-        ('Integer', 5),
+        ('From', 1),
+        ('Want', 1),
+        ('Offered', 1),
+        ('Issuer', 3),
+        ('Denomination', 3),
+        ('Due', 1),
+        ('Amount', 1),
+        ('Maturity', 2),
+        ('Serial', 2),
         ('YesNo', 1),
       ]) {
         expect(inCard(find.text(label)), findsNWidgets(n), reason: label);

@@ -40,10 +40,10 @@ const _requestForm = "input_box(menu([form(mint, [field('Amount', number)]), "
 /// labelled by its declared type's name, its lot and its coins forms of their
 /// own, as the compiler emits it (programs/currencies/coins/currency/
 /// coins_agent.glp; vGLP #8 Cowork, 2026-10-13 08:15 UTC, item b).
-const _offer = "field('Offer', form(offer, [field('Key', shown), "
-    "field('Lot', form(lot, [field('Key', shown), field('Integer', shown)])), "
-    "field('Stream(Coin)', thread(form(coin, [field('Key', shown), "
-    "field('Integer', shown)])))]))";
+const _offer = "field('Offer', form(offer, [field('From', shown), "
+    "field('Want', form(lot, [field('Issuer', shown), field('Amount', shown)])), "
+    "field('Offered', thread(form(coin, [field('Issuer', shown), "
+    "field('Serial', shown)])))]))";
 const _card = "form(card, [$_offer, field('YesNo', buttons([yes, no]))])";
 
 void main() {

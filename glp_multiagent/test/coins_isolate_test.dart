@@ -194,9 +194,9 @@ void main() {
     // lot and its coins forms of their own (Definition "Widget Declaration,
     // Default Widget"; vGLP #8 Cowork, 2026-10-13 08:15 UTC, item b).
     const card = "form(card, [field('Offer', form(offer, "
-        "[field('Key', shown), field('Lot', form(lot, [field('Key', shown), "
-        "field('Integer', shown)])), field('Stream(Coin)', thread(form(coin, "
-        "[field('Key', shown), field('Integer', shown)])))])), "
+        "[field('From', shown), field('Want', form(lot, [field('Issuer', shown), "
+        "field('Amount', shown)])), field('Offered', thread(form(coin, "
+        "[field('Issuer', shown), field('Serial', shown)])))])), "
         "field('YesNo', buttons([yes, no]))])";
     await until(() => drawn(card).length == 1);
     expect(drawn(card), hasLength(1));

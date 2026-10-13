@@ -273,16 +273,18 @@ void main() {
     // --- The card: bob proposes the reverse swap, and the swap responder's
     // question, Card ::= card(Offer, YesNo?) in writer mode, is one construct:
     // the offer shown, and the buttons yes and no at its answer.  The offer
-    // is a tuple the program writes, Offer ::= offer(Key, Lot, Stream(Coin)):
+    // is a tuple the program writes, Offer ::= offer(From, Want, Offered):
     // "a form with one field per argument, each labelled by the name of its
-    // declared type", shown and not edited, its lot, Lot ::= lot(Key,
-    // Integer), a form of its own, and its coins, Coin ::= coin(Key,
-    // Integer), a thread of forms (Definition "Widget Declaration, Default
-    // Widget"; vGLP #8 Cowork, 2026-10-13 08:15 UTC, item b). -------------
+    // declared type", shown and not edited, its lot, Want ::= Lot and Lot ::=
+    // lot(Issuer, Amount), a form of its own, and its coins, Offered ::=
+    // Stream(Coin) and Coin ::= coin(Issuer, Serial), a thread of forms, each
+    // field's type named by the variable its clause gives it (Definition
+    // "Widget Declaration, Default Widget"; vGLP #8 Cowork, 2026-10-13 08:15
+    // UTC, item b; Currencies, 2026-10-13 10:33 UTC). --------------------
     const cardWidget = "form(card, [field('Offer', form(offer, "
-        "[field('Key', shown), field('Lot', form(lot, [field('Key', shown), "
-        "field('Integer', shown)])), field('Stream(Coin)', thread(form(coin, "
-        "[field('Key', shown), field('Integer', shown)])))])), "
+        "[field('From', shown), field('Want', form(lot, [field('Issuer', shown), "
+        "field('Amount', shown)])), field('Offered', thread(form(coin, "
+        "[field('Issuer', shown), field('Serial', shown)])))])), "
         "field('YesNo', buttons([yes, no]))])";
     final cards = drawn(cardWidget);
     expect(cards, hasLength(1));
@@ -299,14 +301,16 @@ void main() {
     expect(inCard(find.textContaining('offer(')), findsNothing);
     expect(find.byKey(nodeKey(card.id, 'form', const [1])), findsOneWidget);
     // Each field of the offer labelled by its declared type's name: the
-    // offer's Key, Lot and Stream(Coin); the lot's Key and Integer; and each
-    // coin's Key and Integer.
+    // offer's From, Want and Offered; the lot's Issuer and Amount; and each
+    // coin's Issuer and Serial.
     for (final (label, n) in [
       ('Offer', 1),
-      ('Lot', 1),
-      ('Stream(Coin)', 1),
-      ('Key', 4),
-      ('Integer', 3),
+      ('From', 1),
+      ('Want', 1),
+      ('Offered', 1),
+      ('Issuer', 3),
+      ('Amount', 1),
+      ('Serial', 2),
     ]) {
       expect(inCard(find.text(label)), findsNWidgets(n), reason: label);
     }
