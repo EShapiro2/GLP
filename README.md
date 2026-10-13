@@ -26,12 +26,11 @@ GLP/
     ├── examples/             # small programs by topic
     ├── p99/                  # the 99 Prolog problems in GLP
     ├── social/               # the social layer
-    │   ├── graph/            # the social graph and the Grassroots Super-App (core/, pingapp/, ui/, routing/)
+    │   ├── graph/            # the social graph and the Grassroots Super-App (core/, pingapp/, ui/, routing/, budget/)
     │   └── spm/              # securing people and their machines (cva/, gsg/, secure_gsg/)
     ├── currencies/           # the grassroots currencies: coins/, bonds/, sovereign/, secure/
     ├── cssn/                 # the child-safe social network
     ├── federation/           # the grassroots federation platform (GFWC)
-    ├── grassapp/             # the GrassApp programs
     ├── jurix/                # legal contracts
     ├── vglp/                 # vGLP sources
     ├── sglp/                 # sGLP simulation (sGLP)

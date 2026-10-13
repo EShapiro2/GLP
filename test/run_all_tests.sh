@@ -5309,13 +5309,11 @@ echo ""
 # =============================================================================
 # Section SG: SGSG's programs --- the SPM programs (programs/social/spm: the CVA
 # substrate, the social graph and its secure version, with Restore and
-# Unfriend), the super-app prototype (programs/grassapp, a program since
-# 2026-09-07), and the resource-bounded meta-interpreter of the SGSG paper's
-# Section 6.3 (programs/grassapp/budget).  The three headless grassapp plays
-# assert the lines the glp_multiagent tests assert; the village run takes
-# about a minute.
+# Unfriend), the super-app (programs/social/graph/core) and its mini-apps, and
+# the resource-bounded meta-interpreter of the SGSG paper's Section 6.3
+# (programs/social/graph/budget).
 # =============================================================================
-echo "=== Section SG: SGSG programs (spm, grassapp, budget) ==="
+echo "=== Section SG: SGSG programs (spm, super-app, budget) ==="
 echo ""
 
 sg_spm=$("$REPL_RUN" <<HEREDOC
@@ -5656,116 +5654,8 @@ check "SG child-safe platform on two smartphones: bob is connected to alice" "\[
 check "SG child-safe platform on two smartphones: alice's message reaches bob" "\[bob\] received(alice, hello)" "$sg_cssn"
 rm -f "$SG_CORE"/*.glpw
 
-sg_ga=$("$REPL_RUN" <<HEREDOC
-$GLP_DIR/programs/grassapp
-:quit
-HEREDOC
-2>&1)
-check "SG grassapp loads as a program" "Loaded program" "$sg_ga"
-check_not "SG grassapp no type errors" "Type checking failed" "$sg_ga"
-
-sg_loan=$("$REPL_RUN" <<HEREDOC
-$GLP_DIR/programs/grassapp
-:limit 5000000
-play_loan.
-:quit
-HEREDOC
-2>&1)
-check "SG grassapp loan: alice holds 3 of her own" "balance_report(alice, alice, 0, 3)" "$sg_loan"
-check "SG grassapp loan: alice holds bob's dated bonds" "balance_report(alice, bob, 10, 2)" "$sg_loan"
-check "SG grassapp loan: bob holds 3 of his own" "balance_report(bob, bob, 10, 3)" "$sg_loan"
-
-sg_escrow=$("$REPL_RUN" <<HEREDOC
-$GLP_DIR/programs/grassapp
-:limit 5000000
-play_escrow.
-:quit
-HEREDOC
-2>&1)
-check "SG grassapp escrow: released to the beneficiary" "tagged(frank, escrow_released(charlie))" "$sg_escrow"
-check "SG grassapp escrow: expired at the depositor" "tagged(charlie, escrow_expired(frank))" "$sg_escrow"
-
-# A message the person addresses to someone who is not their friend is not
-# sent, and the agent tells the person so (GSG paper, Section 5.1), in the
-# super-app prototype as in the social graph (play_not_a_friend_headless.glp):
-# alice's person sends carol, not her friend, a message and is shown
-# not_a_friend(carol); only then does she call bob, and once they are friends
-# her message to him reaches him.  The output's lines are joined so that the
-# second check holds the two in their order.
-sg_naf_ga=$("$REPL_RUN" <<HEREDOC
-$GLP_DIR/programs/grassapp
-:limit 5000000
-play_not_a_friend.
-:quit
-HEREDOC
-2>&1)
-check "SG grassapp not_a_friend: a send to someone not a friend is not sent, and the person is told not_a_friend" "tagged(alice, not_a_friend(carol))" "$sg_naf_ga"
-check "SG grassapp not_a_friend: a later message to a friend is delivered" "tagged(alice, not_a_friend(carol)).*tagged(bob, received(alice, hi_bob))" "$(echo "$sg_naf_ga" | tr '\n' ' ')"
-check_not "SG grassapp not_a_friend no failed play" "→ failed" "$sg_naf_ga"
-
-# The same at grassapp's other friend sends (play_not_a_friend_sends_headless.glp):
-# alice mints 5 of her own coins, then pays dave, proposes a trade to eve,
-# escrows for frank and invites grace to a group, none of them her friend, and
-# is told not_a_friend of each; she befriends carol and unfriends her, and
-# carol's payment, arriving after the unfriend and not alice's coin, cannot be
-# returned to her and is not taken: not_a_friend(carol).  The bonds each act
-# selected stay in the holdings, 5 alice coins before and after, and no escrow
-# is opened.  The output's lines are joined for the two ordered checks.
-sg_nafs_ga=$("$REPL_RUN" <<HEREDOC
-$GLP_DIR/programs/grassapp
-:limit 5000000
-play_not_a_friend_sends.
-:quit
-HEREDOC
-2>&1)
-sg_nafs_ga_line=$(echo "$sg_nafs_ga" | tr '\n' ' ')
-check "SG grassapp not_a_friend sends: a payment to someone not a friend is not sent, and the person is told not_a_friend" "tagged(alice, not_a_friend(dave))" "$sg_nafs_ga"
-check "SG grassapp not_a_friend sends: a trade proposed to someone not a friend is not sent, and the person is told not_a_friend" "tagged(alice, not_a_friend(eve))" "$sg_nafs_ga"
-check "SG grassapp not_a_friend sends: an escrow offered to someone not a friend is not sent, and the person is told not_a_friend" "tagged(alice, not_a_friend(frank))" "$sg_nafs_ga"
-check "SG grassapp not_a_friend sends: a group invitation to someone not a friend is not sent, and the person is told not_a_friend" "tagged(alice, not_a_friend(grace))" "$sg_nafs_ga"
-check "SG grassapp not_a_friend sends: a refused payment's return to someone no longer a friend is not sent, and the person is told not_a_friend" "tagged(alice, not_a_friend(carol))" "$sg_nafs_ga"
-check "SG grassapp not_a_friend sends: the holdings before, 5 of alice's own coins" "tagged(alice, balance_report(alice, alice, 0, 5)).*tagged(alice, not_a_friend(dave))" "$sg_nafs_ga_line"
-check "SG grassapp not_a_friend sends: the holdings after, the same 5" "tagged(alice, not_a_friend(carol)).*tagged(alice, balance_report(alice, alice, 0, 5))" "$sg_nafs_ga_line"
-check_not "SG grassapp not_a_friend sends: no bond the acts selected leaves the holdings" "balance_report(alice, alice, 0, [0-4])" "$sg_nafs_ga"
-check_not "SG grassapp not_a_friend sends: the refused payment is not taken" "balance_report(alice, carol" "$sg_nafs_ga"
-check_not "SG grassapp not_a_friend sends: no escrow is opened" "escrow_deposited" "$sg_nafs_ga"
-check_not "SG grassapp not_a_friend sends no failed play" "→ failed" "$sg_nafs_ga"
-
-# A deposit not sent conveys nothing, and leaves the agent's date to an escrow
-# already open (play_not_a_friend_escrow, the same file): alice escrows 2 of her
-# 4 coins for bob, her friend, until 30, then 2 for dave, not her friend, and is
-# told not_a_friend(dave); she advances her date to 30, and the escrow for bob
-# releases.  She holds the 2 for dave still, and bob the 2 released to him.
-sg_nafe_ga=$("$REPL_RUN" <<HEREDOC
-$GLP_DIR/programs/grassapp
-:limit 5000000
-play_not_a_friend_escrow.
-:quit
-HEREDOC
-2>&1)
-sg_nafe_ga_line=$(echo "$sg_nafe_ga" | tr '\n' ' ')
-check "SG grassapp not_a_friend escrow: a deposit for someone not a friend is not sent, and the person is told not_a_friend" "tagged(alice, not_a_friend(dave))" "$sg_nafe_ga"
-check "SG grassapp not_a_friend escrow: the escrow already open releases on its date after it" "tagged(alice, not_a_friend(dave)).*tagged(bob, escrow_released(alice))" "$sg_nafe_ga_line"
-check "SG grassapp not_a_friend escrow: and expires at the depositor" "tagged(alice, not_a_friend(dave)).*tagged(alice, escrow_expired(bob))" "$sg_nafe_ga_line"
-check "SG grassapp not_a_friend escrow: the holdings after, the 2 for dave never having left" "tagged(alice, escrow_expired(bob)).*tagged(alice, balance_report(alice, alice, 0, 2))" "$sg_nafe_ga_line"
-check "SG grassapp not_a_friend escrow: bob holds the 2 released to him" "tagged(bob, balance_report(bob, alice, 0, 2))" "$sg_nafe_ga"
-check_not "SG grassapp not_a_friend escrow no failed play" "→ failed" "$sg_nafe_ga"
-
-sg_village=$("$REPL_RUN" <<HEREDOC
-$GLP_DIR/programs/grassapp
-:limit 5000000
-play_village.
-:quit
-HEREDOC
-2>&1)
-check "SG grassapp village: the eighth edge" "tagged(frank, connected(eve))" "$sg_village"
-check "SG grassapp village: the last trade" "tagged(alice, trade_completed(eve))" "$sg_village"
-check "SG grassapp village: escrow released" "tagged(frank, escrow_released(charlie))" "$sg_village"
-check "SG grassapp village: closing balance (diana, bob)" "balance_report(diana, bob, 25, 24)" "$sg_village"
-check "SG grassapp village: closing balance (frank, eve)" "balance_report(frank, eve, 0, 10)" "$sg_village"
-
 sg_budget=$("$REPL_RUN" <<HEREDOC
-$GLP_DIR/programs/grassapp/budget
+$GLP_DIR/programs/social/graph/budget
 :limit 1000000
 play_meta(Out).
 play_residual(Out2).
