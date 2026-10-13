@@ -263,11 +263,18 @@ Script ::= [] ; [Step | Script].
 %% lots, one transfer per lot, and once every lot of both is held the escrow
 %% agent releases them crosswise, so all the lots change hands or none do.  It
 %% realises the balloon loan, the fixed-payment loan and the interest rate
-%% swap (loans.glp).
+%% swap (loans.glp).  Several agreements held at once by one escrow agent are
+%% agreements([...]): the escrow agent is one party whose volitions are those
+%% of the escrow programs of the agreements it holds, so a deposit is accepted,
+%% and taken when it arrives, by the first agreement that provides for it, and
+%% every other message of its screen, an advance of its date among them, goes
+%% to every agreement (Currencies, 2026-10-13 08:01 UTC).
 Agreement ::= none
             ; dated_escrow(Key, Key, Lot, Integer, Phase, Integer)
             ; credit_line(Key, Key, Integer, Integer, Integer, Integer, Integer, Phase, Integer)
-            ; packaged(Key, Key, Stream(Lot), Stream(Lot), Stream(Lot), Phase, Integer).
+            ; packaged(Key, Key, Stream(Lot), Stream(Lot), Stream(Lot), Phase, Integer)
+            ; agreements(Agreements).
+Agreements ::= [] ; [Agreement | Agreements].
 Phase ::= awaiting ; deposited ; released ; opening ; open ; closed.
 
 %% =============================================================================
@@ -504,6 +511,10 @@ show(C, Outs, Outs1?) :- send_user(msg(agent, person, C?), Outs?, Outs1).
 imported procedure village#market.
 exported procedure village.
 village :- village # market.
+
+imported procedure village#two_escrows.
+exported procedure two_escrows.
+two_escrows :- village # two_escrows.
 
 imported procedure credit_line#run.
 exported procedure credit_line.

@@ -114,6 +114,34 @@ market :-
     escrow_agent(escrow, SG?, dated_escrow(charlie, frank, lot(frank, now, 5), 30, awaiting, 0),
                  [conversation(charlie, ch(GC?, CG)), conversation(frank, ch(GF?, FG))]).
 
+%% =============================================================================
+%% Two escrows open at once
+%% =============================================================================
+%%
+%% Charlie and Frank swap 4 of their coins, and Charlie deposits 2 frank-coins
+%% with the escrow agent for Frank until day 30, then 2 more: two date-based
+%% escrows, each its own agreement, held by the one escrow agent at once.  The
+%% escrow agent's date reaches 30 once both deposits are held, and it releases
+%% both to Frank.  Three conversations, one root channel each: charlie-frank,
+%% charlie-escrow and escrow-frank.
+%%
+%% Entry point: two_escrows/0, exported by self.glp.
+
+exported procedure two_escrows.
+two_escrows :-
+    villager(charlie, [mint(4), swap(frank, charlie, now, 4, frank, now, 4),
+                       deposit(escrow, frank, now, 2), deposit(escrow, frank, now, 2)],
+             [conversation(frank, ch(CF?, FC)), conversation(escrow, ch(CG?, GC))]),
+    villager(frank, [mint(4), accept(charlie), accept_transfer(escrow), accept_transfer(escrow)],
+             [conversation(charlie, ch(FC?, CF)), conversation(escrow, ch(FG?, GF))]),
+    escrow_agent(escrow,
+                 [await(received_transfer(deposit, charlie, [lot(frank, now, 2)])),
+                  await(received_transfer(deposit, charlie, [lot(frank, now, 2)])),
+                  advance(30)],
+                 agreements([dated_escrow(charlie, frank, lot(frank, now, 2), 30, awaiting, 0),
+                             dated_escrow(charlie, frank, lot(frank, now, 2), 30, awaiting, 0)]),
+                 [conversation(charlie, ch(GC?, CG)), conversation(frank, ch(GF?, FG))]).
+
 %% One villager: the mini-app, activated with its person channel, its
 %% conversations and its calendar; the scripted person on the other end of the
 %% channel, under no agreement; and its screen logged.

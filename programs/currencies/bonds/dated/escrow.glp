@@ -65,6 +65,24 @@ accepts(packaged(P, Q, Xs, Ys, Got, Ph, Date), _, _, _, no,
         packaged(P?, Q?, Xs?, Ys?, Got?, Ph?, Date?)) :-
     otherwise | true.
 
+%% Several agreements: the transfer is accepted by the first that provides for
+%% it, and by none if none does.
+accepts(agreements(Ags), Kind, From, Lots, V?, agreements(Ags1?)) :-
+    accepts_first(Ags?, Kind?, From?, Lots?, V, Ags1).
+
+procedure accepts_first(Agreements?, Kind?, Key?, Stream(Lot)?, Constant, Agreements).
+accepts_first([Ag|Ags], Kind, From, Lots, V?, Ags2?) :-
+    ground(Kind?), ground(From?), ground(Lots?) |
+    accepts(Ag?, Kind?, From?, Lots?, V1, Ag1),
+    accepts_next(V1?, Ag1?, Ags?, Kind?, From?, Lots?, V, Ags2).
+accepts_first([], _, _, _, no, []).
+
+procedure accepts_next(Constant?, Agreement?, Agreements?, Kind?, Key?, Stream(Lot)?, Constant, Agreements).
+accepts_next(yes, Ag, Ags, _, _, _, yes, [Ag?|Ags?]).
+accepts_next(_, Ag, Ags, Kind, From, Lots, V?, [Ag?|Ags1?]) :-
+    otherwise |
+    accepts_first(Ags?, Kind?, From?, Lots?, V, Ags1).
+
 procedure line_accepts(Key?, Key?, Integer?, Integer?, Integer?, Integer?, Integer?, Phase?, Key?, Key?, Constant?, Integer?, Constant).
 line_accepts(P, _, K, _, _, _, _, opening, From, U, now, N, yes) :-
     P? =?= From?, P? =?= U?, K? =:= N? | true.
@@ -121,6 +139,43 @@ react(packaged(P, Q, Xs, Ys, Got, Ph, Date), received_transfer(deposit, From, [L
 react(packaged(P, Q, Xs, Ys, Got, Ph, Date), _, [],
       packaged(P?, Q?, Xs?, Ys?, Got?, Ph?, Date?)) :-
     otherwise | true.
+
+%% Several agreements: a deposit received is taken by the first agreement
+%% that provides for it, which reacts to it, and by none if none does; every
+%% other message, an advance of the date among them, goes to every agreement,
+%% and the acts they will are performed in the order of the agreements.
+react(agreements(Ags), received_transfer(deposit, From, Lots), Steps?, agreements(Ags1?)) :-
+    ground(From?), ground(Lots?) |
+    take_deposit(Ags?, From?, Lots?, Steps, Ags1).
+react(agreements(Ags), M, Steps?, agreements(Ags1?)) :-
+    otherwise |
+    react_all(Ags?, M?, Steps, Ags1).
+
+procedure take_deposit(Agreements?, Key?, Stream(Lot)?, Script, Agreements).
+take_deposit([Ag|Ags], From, Lots, Steps?, Ags2?) :-
+    ground(From?), ground(Lots?) |
+    accepts(Ag?, deposit, From?, Lots?, V, Ag1),
+    take_or_pass(V?, Ag1?, Ags?, From?, Lots?, Steps, Ags2).
+take_deposit([], _, _, [], []).
+
+procedure take_or_pass(Constant?, Agreement?, Agreements?, Key?, Stream(Lot)?, Script, Agreements).
+take_or_pass(yes, Ag, Ags, From, Lots, Steps?, [Ag1?|Ags?]) :-
+    react(Ag?, received_transfer(deposit, From?, Lots?), Steps, Ag1).
+take_or_pass(_, Ag, Ags, From, Lots, Steps?, [Ag?|Ags1?]) :-
+    otherwise |
+    take_deposit(Ags?, From?, Lots?, Steps, Ags1).
+
+procedure react_all(Agreements?, ScreenContent?, Script, Agreements).
+react_all([Ag|Ags], M, Steps?, [Ag1?|Ags1?]) :-
+    ground(M?) |
+    react(Ag?, M?, S1, Ag1),
+    react_all(Ags?, M?, S2, Ags1),
+    join_steps(S1?, S2?, Steps).
+react_all([], _, [], []).
+
+procedure join_steps(Script?, Script?, Script).
+join_steps([S|Ss], New, [S?|Rest?]) :- join_steps(Ss?, New?, Rest).
+join_steps([], New, New?).
 
 procedure dated_check(Integer?, Integer?, Key?, Key?, Lot?, Phase?, Script, Agreement).
 dated_check(Date, T, Dep, Ben, lot(U, D, K), deposited, [release(Ben?, U?, D?, K?)],

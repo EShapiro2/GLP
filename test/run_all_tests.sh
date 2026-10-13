@@ -2948,6 +2948,29 @@ check_not "Bonds village: Mature records no date warranty, so no warranty( line 
 check "Bonds village: the escrow agent's date reaches the release date" "tagged(escrow, date_advanced(30))" "$n3_run"
 check "Bonds village: the escrow releases to the beneficiary" "tagged(frank, received_transfer(release, escrow, \[lot(frank, now, 5)\]))" "$n3_run"
 
+echo "--- Bonds two escrows open at once (two_escrows) ---"
+
+# One escrow agent holding two date-based agreements at once, agreements([...])
+# (Currencies 2026-10-13 08:01 UTC): Charlie deposits 2 frank-coins for Frank
+# until day 30, then 2 more; both are held together, the escrow agent's date
+# reaches 30, and each agreement releases its own deposit to Frank --- the
+# case that failed on the retired bonds_v2 (tmp/gsgsend7-twoesc.txt).
+n3_esc2=$("$REPL_RUN" <<HEREDOC
+$BONDS
+:limit 50000000
+two_escrows.
+:quit
+HEREDOC
+2>&1)
+
+check "Bonds two escrows: no runtime error" "→ suspended" "$n3_esc2"
+check_not "Bonds two escrows: no failed goal" "ERROR" "$n3_esc2"
+check "Bonds two escrows: the escrow agent holds both deposits at once" "tagged(escrow, holdings(\[lot(frank, now, 4)\]))" "$n3_esc2"
+check "Bonds two escrows: the escrow agent's date reaches the release date" "tagged(escrow, date_advanced(30))" "$n3_esc2"
+check "Bonds two escrows: the first release reaches the beneficiary" "tagged(frank, holdings(\[lot(charlie, now, 4), lot(frank, now, 2)\]))" "$n3_esc2"
+check "Bonds two escrows: the second release reaches the beneficiary" "tagged(frank, holdings(\[lot(charlie, now, 4), lot(frank, now, 4)\]))" "$n3_esc2"
+check "Bonds two escrows: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_esc2"
+
 echo "--- Bonds credit line (credit_line), Proposition prop:credit-line ---"
 
 n3_cl=$("$REPL_RUN" <<HEREDOC
