@@ -1266,16 +1266,32 @@ class GlpEngine {
         ? const <String, EntryTemplate>{}
         : entryTemplatesOf(modules,
             rootDir: directory, singleModulePath: singleModulePath);
+    // Such an entry's text, its own declaration and the template's, names
+    // every type qualified by the scope that defines it, so that the
+    // template's types and the guest's own are kept apart in the interface
+    // text ([qualifiedEntryInterfaces]); the definitions of the qualified
+    // types join the interface's.  The source identity, over the program's
+    // own definitions, is as it was.
+    final qualified = qualifiedEntryInterfaces(modules, linked, entryTemplates);
+    final interfaceTypeDefs = <String, TypeDef>{
+      ...typeDefs,
+      for (final q in qualified.values) ...q.typeDefs,
+    };
     final exports = <ArtefactExport>[];
     final exportDecls = <ProcDecl>[];
     for (final p in linked.program.procedures) {
       if (p.name.contains(':')) continue;
       final key = '${p.name}/${p.arity}';
-      final decl = declByKey[key];
+      var decl = declByKey[key];
+      var template = decl == null ? null : entryTemplates[key]?.template;
+      final q = template == null ? null : qualified[key];
+      if (q != null) {
+        decl = q.entry;
+        template = q.template;
+      }
       // An export with no declaration contributes no interface text; it is
       // undeclared in the source too, so there is nothing to derive from.
       if (decl != null) exportDecls.add(decl);
-      final template = decl == null ? null : entryTemplates[key]?.template;
       if (template != null) exportDecls.add(template);
       exports.add(ArtefactExport(
           p.name,
@@ -1308,8 +1324,8 @@ class GlpEngine {
       hM: hM,
       moduleName: moduleName,
       isaVersion: glpIsaVersion,
-      typeDefsText:
-          interfaceTypeDefsText(exportDecls: exportDecls, typeDefs: typeDefs),
+      typeDefsText: interfaceTypeDefsText(
+          exportDecls: exportDecls, typeDefs: interfaceTypeDefs),
       exports: exports,
       signer: offending.isEmpty ? identity : null,
     );

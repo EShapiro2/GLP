@@ -1317,11 +1317,24 @@ class EntryTemplate {
   final TypeEnvironment entryEnv;
   final ProcDecl template;
   final TypeEnvironment templateEnv;
+
+  /// The file of the entry's module, and of the ancestor `self.glp` that
+  /// declares the template, the nearest that does; null where no module of
+  /// the program declares it (a template an `-expose` lifts).  Each is the
+  /// scope its declaration's types are resolved in ([qualifiedEntryInterfaces]).
+  final String? entryFile;
+  final String? templateFile;
+
+  /// The entry's declaration as its module writes it, its types unexpanded.
+  final ProcDecl? entrySource;
   const EntryTemplate(
       {required this.entry,
       required this.entryEnv,
       required this.template,
-      required this.templateEnv});
+      required this.templateEnv,
+      this.entryFile,
+      this.templateFile,
+      this.entrySource});
 }
 
 /// The program's entries declared as the instance at a type of a
@@ -1361,14 +1374,182 @@ Map<String, EntryTemplate> entryTemplatesOf(List<DiscoveredModule> modules,
           null) {
         continue;
       }
+      String? templateFile;
+      for (final s in _ancestorSelfGlps(m, modules)) {
+        if (s.ast.procDeclarations.any(
+                (t) => !t.imported && t.isParameterized && t.key == d.key) ||
+            s.ast.paramProcDecls.any((t) => !t.imported && t.key == d.key)) {
+          templateFile = s.filePath;
+          break;
+        }
+      }
       out[d.key] = EntryTemplate(
           entry: entry,
           entryEnv: env,
           template: template,
-          templateEnv: m.ancestorScope);
+          templateEnv: m.ancestorScope,
+          entryFile: m.filePath,
+          templateFile: templateFile,
+          entrySource: d);
     }
   }
   return out;
+}
+
+/// An opaque guest's entry and its template as its artefact's interface text
+/// carries them ([qualifiedEntryInterfaces]): every type name qualified by
+/// the scope that defines it.
+class QualifiedEntryInterface {
+  final ProcDecl entry;
+  final ProcDecl template;
+
+  /// The definitions of the qualified types, by name: those the two
+  /// declarations reach, and every type those reach.
+  final Map<String, TypeDef> typeDefs;
+  const QualifiedEntryInterface(this.entry, this.template, this.typeDefs);
+}
+
+/// The entry and the template of each of [entryTemplates] with every type
+/// name qualified by the scope that defines it, so that in the interface text
+/// an opaque guest's record carries, the template's types and the guest's own
+/// cannot be one: a guest's own type of the name of a type the template
+/// reaches is another name there (GLP #6, 2026-10-13 11:57 UTC: "it is the
+/// implementation's to keep the template's types and the guest's apart in the
+/// interface text (qualify the template's by their scope), compliance with
+/// TGLP's identity, which is of automata, not names").
+///
+/// The qualification is the linker's own (TGLP modules.tex, Compilation,
+/// third and fourth steps): each declaration's types are resolved in its own
+/// module's scope, the entry's in the entry module's and the template's in
+/// the `self.glp` that declares it, to `M:T`, M the path from the root of the
+/// module defining T, the root's the empty path ([renameDeclTypes],
+/// [_renamedTypeDefs]).  The text is GLP source, which has no `:` in a type
+/// name, so `M:T` is spelt `T__M`, every character of M that is not a letter
+/// or a digit a `_` --- `:SgChannel` is `SgChannel__`, `tests/opaque:Move`
+/// `Move__tests_opaque` --- and where that spelling is a name the program's
+/// modules define, or another qualified type's, `_` is appended until it is
+/// neither, the qualified names taken in sorted order.  The identities, of
+/// automata, do not turn on it (TGLP Implementation Notes, "The identity of
+/// an opaque instance").
+///
+/// An entry whose template no module of the program declares, or whose
+/// renamed declaration the link does not carry, is left out, and its text is
+/// as before.
+Map<String, QualifiedEntryInterface> qualifiedEntryInterfaces(
+    List<DiscoveredModule> modules,
+    LinkResult linked,
+    Map<String, EntryTemplate> entryTemplates) {
+  if (entryTemplates.isEmpty) return const {};
+  final owners = typeOwnersByModule(modules);
+  final renamed = <String, TypeDef>{};
+  for (final mod in [...modules, ..._outerModules(modules)]) {
+    final o = owners[mod.filePath];
+    if (o == null) continue;
+    for (final td in _renamedTypeDefs(mod, o)) {
+      renamed.putIfAbsent(td.name, () => td);
+    }
+  }
+  final bareNames = <String>{
+    ...TypeRef.builtins,
+    for (final mod in modules)
+      for (final td in mod.ast.typeDefs) td.name,
+  };
+
+  // The two renamed declarations of each entry.
+  final pairs = <String, (ProcDecl, ProcDecl)>{};
+  for (final e in entryTemplates.entries) {
+    final t = e.value;
+    final entryOwners = t.entryFile == null ? null : owners[t.entryFile];
+    final templateOwners =
+        t.templateFile == null ? null : owners[t.templateFile];
+    final source = t.entrySource;
+    if (entryOwners == null || templateOwners == null || source == null) {
+      continue;
+    }
+    final entry = ProcDecl(source.name, renameDeclTypes(source, entryOwners),
+        source.line, source.column,
+        typeParams: source.typeParams, exported: true);
+    final template = ProcDecl(t.template.name,
+        renameDeclTypes(t.template, templateOwners), t.template.line,
+        t.template.column,
+        typeParams: t.template.typeParams);
+    pairs[e.key] = (entry, template);
+  }
+  if (pairs.isEmpty) return const {};
+
+  // The qualified names the declarations reach, through the renamed
+  // definitions, and their spellings.
+  final reached = <String>{};
+  void reach(TypeExpr t) {
+    if (t is TypeRef) {
+      if (t.name.contains(':') && reached.add(t.name)) {
+        final td = renamed[t.name];
+        if (td != null) td.alternatives.forEach(reach);
+      }
+      t.typeArgs.forEach(reach);
+    } else if (t is StructAlt) {
+      t.args.forEach(reach);
+    } else if (t is ListConsAlt) {
+      reach(t.head);
+      reach(t.tail);
+    } else if (t is DiffListAlt) {
+      reach(t.content);
+      reach(t.hole);
+    }
+  }
+
+  for (final (entry, template) in pairs.values) {
+    entry.argTypes.forEach(reach);
+    template.argTypes.forEach(reach);
+  }
+  final spelt = <String, String>{};
+  final used = <String>{...bareNames};
+  for (final q in reached.toList()..sort()) {
+    final colon = q.lastIndexOf(':');
+    final scope = q.substring(0, colon).replaceAll(RegExp(r'[^A-Za-z0-9]'), '_');
+    var name = '${q.substring(colon + 1)}__$scope';
+    while (used.contains(name)) {
+      name = '${name}_';
+    }
+    used.add(name);
+    spelt[q] = name;
+  }
+  TypeExpr spell(TypeExpr t) {
+    if (t is TypeRef) {
+      return TypeRef(spelt[t.name] ?? t.name, t.line, t.column,
+          isInput: t.isInput, typeArgs: [for (final a in t.typeArgs) spell(a)]);
+    }
+    if (t is StructAlt) {
+      return StructAlt(
+          t.functor, [for (final a in t.args) spell(a)], t.line, t.column);
+    }
+    if (t is ListConsAlt) {
+      return ListConsAlt(spell(t.head), spell(t.tail), t.line, t.column);
+    }
+    if (t is DiffListAlt) {
+      return DiffListAlt(spell(t.content), spell(t.hole), t.line, t.column);
+    }
+    return t;
+  }
+
+  ProcDecl spellDecl(ProcDecl d) => ProcDecl(
+      d.name, [for (final a in d.argTypes) spell(a)], d.line, d.column,
+      typeParams: d.typeParams, exported: d.exported);
+  final defs = <String, TypeDef>{
+    for (final q in reached)
+      if (renamed[q] != null)
+        spelt[q]!: TypeDef(
+            spelt[q]!,
+            [for (final a in renamed[q]!.alternatives) spell(a)],
+            renamed[q]!.line,
+            renamed[q]!.column,
+            typeParams: renamed[q]!.typeParams),
+  };
+  return {
+    for (final e in pairs.entries)
+      e.key: QualifiedEntryInterface(
+          spellDecl(e.value.$1), spellDecl(e.value.$2), defs),
+  };
 }
 
 /// Whole-program type-check gate (paper: modules §Static Linking — "the unit of

@@ -1,0 +1,10 @@
+%% A guest at Move whose own type Inner shares its name with the host's
+%% Inner(X), which its entry reaches through the host's Box(X).
+Move ::= rock ; paper ; scissors.
+Inner ::= other(Integer).
+
+exported procedure entry(Box(Move)?, Box(Move)).
+entry(B, B?).
+
+exported procedure other(Inner?, Inner).
+other(I, I?).

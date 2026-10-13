@@ -1,0 +1,5 @@
+%% A guest at Move with no type of the host's names.
+Move ::= rock ; paper ; scissors.
+
+exported procedure entry(Box(Move)?, Box(Move)).
+entry(B, B?).

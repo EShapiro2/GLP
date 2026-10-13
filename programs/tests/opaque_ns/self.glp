@@ -1,0 +1,13 @@
+%% The interface text of an opaque guest keeps the template's types apart
+%% from the guest's own (GLP #6, 2026-10-13 11:57 UTC: "qualify the
+%% template's by their scope").  This directory is the host's scope: its entry
+%% template entry/2 reaches Box(X) and, through it, Inner(X).
+%%
+%%   guest_own    at Move, defining a type Inner of its own
+%%   guest_plain  at Move, defining none
+
+Box(X) ::= box(Inner(X)).
+Inner(X) ::= inner(X).
+
+procedure(X) entry(Box(X)?, Box(X)).
+entry(B, B?).
