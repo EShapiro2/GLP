@@ -27,13 +27,14 @@ Class    ::= befriend(Peer, Peer) ; introduce(Peer, Peer, Peer).
 Request  ::= propose(Class) ; known(Peer).
 YesNo    ::= yes ; no.
 Decision ::= commit ; abort.
-Attempt  ::= attempt(Peer, Integer, Class).
+Attempt  ::= attempt(Peer, Integer, Integer, Class).
 Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
-           ; seek(Class) ; intro(Peer).
+           ; yield(Attempt) ; seek(Class) ; intro(Peer).
 Content  ::= hello(Peer) ; ihello(Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Txn      ::= propose(Attempt) ; seek(Class) ; refer(Class) ; start(Attempt)
-           ; answer(Attempt) ; vote(Attempt) ; tally(Attempt) ; outcome(Attempt)
+           ; answer(Attempt) ; vote(Attempt) ; tally(Attempt) ; commit(Attempt)
+           ; yield(Attempt) ; wound(Attempt, Attempt) ; outcome(Attempt)
            ; discover(Peer).
 Session  ::= session(Stream(Request)?, Stream(Txn)).
 Card     ::= card(Attempt, YesNo?).
@@ -51,21 +52,21 @@ play_introduce(LA?, LB?, LC?, N?) :-
     trio([req(known(bob)), req(known(carol)),
           wait(discover(bob)), wait(discover(carol)),
           req(propose(befriend(alice, bob))),
-          wait(tally(attempt(alice, 1, befriend(alice, bob)))),
+          wait(commit(attempt(alice, 1, 1, befriend(alice, bob)))),
           req(propose(befriend(alice, carol))),
-          wait(tally(attempt(alice, 2, befriend(alice, carol)))),
+          wait(commit(attempt(alice, 2, 2, befriend(alice, carol)))),
           req(propose(introduce(alice, bob, carol))),
-          wait(tally(attempt(alice, 3, introduce(alice, bob, carol)))),
+          wait(tally(attempt(alice, 3, 3, introduce(alice, bob, carol)))),
           req(propose(introduce(alice, bob, carol)))],
          [req(known(alice)), wait(discover(alice)),
           card(befriend(alice, bob), yes),
-          card(attempt(alice, 3, introduce(alice, bob, carol)), no),
-          card(attempt(alice, 4, introduce(alice, bob, carol)), yes)],
+          card(attempt(alice, 3, 3, introduce(alice, bob, carol)), no),
+          card(attempt(alice, 4, 4, introduce(alice, bob, carol)), yes)],
          [req(known(alice)), wait(discover(alice)),
           card(befriend(alice, carol), yes),
-          wait(outcome(attempt(alice, 3, introduce(alice, bob, carol)))),
-          card(attempt(alice, 3, introduce(alice, bob, carol)), yes),
-          card(attempt(alice, 4, introduce(alice, bob, carol)), yes)],
+          wait(outcome(attempt(alice, 3, 3, introduce(alice, bob, carol)))),
+          card(attempt(alice, 3, 3, introduce(alice, bob, carol)), yes),
+          card(attempt(alice, 4, 4, introduce(alice, bob, carol)), yes)],
          LA, LB, LC, N).
 
 %% alice, bob and carol, each with its dispatcher and scripted person, their

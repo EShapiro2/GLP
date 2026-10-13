@@ -21,13 +21,12 @@
 %% play_busy: bob having minted twice, swapped as above and alice minted
 %%   again, alice proposes a swap and bob, asked, leaves his card open, alice
 %%   holding her attempt prepared; bob proposes paying alice her coin back, and
-%%   alice's machine votes no, its lock held, and the pay aborts: bob, its
-%%   initiator, does not precede alice in the order of identifiers, so her
-%%   Start refuses his start, where it would defer the start of an initiator
-%%   preceding her (vGLP 2026-10-12 08:26 UTC, Q-A); bob answers alice's card
-%%   no, the else-branch, his Vote votes no on his next tick, and her swap
-%%   aborts; bob proposes the pay again, and
-%%   alice's machine votes yes.
+%%   alice holds the pay's start waiting, her lock set by her swap, which has
+%%   priority over the pay, so she wounds nothing and votes no on nothing for
+%%   contention (vGLP 49cd9f7, wound-wait); bob answers alice's card no, the
+%%   else-branch, his Vote votes no on his next tick, and her swap aborts;
+%%   alice then takes the pay's start, her machine votes yes, and the pay
+%%   commits at its first attempt.
 %% play_declined: alice proposes a swap for a coin bob does not hold; bob, not
 %%   ready, votes no without asking his person, and it aborts at both.
 %%
@@ -40,13 +39,14 @@ Class    ::= mint(Peer) ; swap(Peer, Peer, Peer, Peer) ; pay(Peer, Peer)
 Request  ::= propose(Class) ; known(Peer).
 YesNo    ::= yes ; no.
 Decision ::= commit ; abort.
-Attempt  ::= attempt(Peer, Integer, Class).
+Attempt  ::= attempt(Peer, Integer, Integer, Class).
 Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
-           ; seek(Class) ; intro(Peer).
+           ; yield(Attempt) ; seek(Class) ; intro(Peer).
 Content  ::= hello(Peer) ; ihello(Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Txn      ::= propose(Attempt) ; seek(Class) ; refer(Class) ; start(Attempt)
-           ; answer(Attempt) ; vote(Attempt) ; tally(Attempt) ; outcome(Attempt)
+           ; answer(Attempt) ; vote(Attempt) ; tally(Attempt) ; commit(Attempt)
+           ; yield(Attempt) ; wound(Attempt, Attempt) ; outcome(Attempt)
            ; discover(Peer).
 Session  ::= session(Stream(Request)?, Stream(Txn)).
 Card     ::= card(Attempt, YesNo?).
@@ -60,51 +60,49 @@ imported procedure platform#dispatch(Stream(Ask(Question))?,
 
 exported procedure play_pay_swap(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_pay_swap(LA?, LB?, N?) :-
-    pair([req(propose(mint(alice))), wait(propose(attempt(alice, 1, mint(alice)))),
+    pair([req(propose(mint(alice))), wait(propose(attempt(alice, 1, 1, mint(alice)))),
           req(known(bob)), wait(discover(bob)),
           req(propose(swap(alice, bob, bob, alice))),
-          wait(tally(attempt(alice, 2, swap(alice, bob, bob, alice)))),
+          wait(commit(attempt(alice, 2, 2, swap(alice, bob, bob, alice)))),
           req(propose(pay(alice, bob)))],
-         [req(propose(mint(bob))), wait(propose(attempt(bob, 1, mint(bob)))),
+         [req(propose(mint(bob))), wait(propose(attempt(bob, 1, 1, mint(bob)))),
           req(known(alice)), wait(discover(alice)),
           card(swap(alice, bob, bob, alice), yes)],
          LA, LB, N).
 
 exported procedure play_redeem(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_redeem(LA?, LB?, N?) :-
-    pair([req(propose(mint(alice))), wait(propose(attempt(alice, 1, mint(alice)))),
+    pair([req(propose(mint(alice))), wait(propose(attempt(alice, 1, 1, mint(alice)))),
           req(known(bob)), wait(discover(bob)),
           req(propose(swap(alice, bob, bob, alice))),
-          wait(tally(attempt(alice, 2, swap(alice, bob, bob, alice)))),
+          wait(commit(attempt(alice, 2, 2, swap(alice, bob, bob, alice)))),
           req(propose(swap(alice, bob, alice, bob)))],
-         [req(propose(mint(bob))), wait(propose(attempt(bob, 1, mint(bob)))),
+         [req(propose(mint(bob))), wait(propose(attempt(bob, 1, 1, mint(bob)))),
           req(known(alice)), wait(discover(alice)),
           card(swap(alice, bob, bob, alice), yes)],
          LA, LB, N).
 
 exported procedure play_busy(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_busy(LA?, LB?, N?) :-
-    pair([req(propose(mint(alice))), wait(propose(attempt(alice, 1, mint(alice)))),
+    pair([req(propose(mint(alice))), wait(propose(attempt(alice, 1, 1, mint(alice)))),
           req(known(bob)), wait(discover(bob)),
           req(propose(swap(alice, bob, bob, alice))),
-          wait(tally(attempt(alice, 2, swap(alice, bob, bob, alice)))),
-          req(propose(mint(alice))), wait(propose(attempt(alice, 3, mint(alice)))),
+          wait(commit(attempt(alice, 2, 2, swap(alice, bob, bob, alice)))),
+          req(propose(mint(alice))), wait(propose(attempt(alice, 3, 3, mint(alice)))),
           req(propose(swap(alice, bob, bob, alice)))],
-         [req(propose(mint(bob))), wait(propose(attempt(bob, 1, mint(bob)))),
-          req(propose(mint(bob))), wait(propose(attempt(bob, 2, mint(bob)))),
+         [req(propose(mint(bob))), wait(propose(attempt(bob, 1, 1, mint(bob)))),
+          req(propose(mint(bob))), wait(propose(attempt(bob, 2, 2, mint(bob)))),
           req(known(alice)), wait(discover(alice)),
           card(swap(alice, bob, bob, alice), yes),
-          wait(start(attempt(alice, 4, swap(alice, bob, bob, alice)))),
+          wait(start(attempt(alice, 4, 4, swap(alice, bob, bob, alice)))),
           req(propose(pay(bob, alice))),
-          wait(tally(attempt(bob, 3, pay(bob, alice)))),
-          card(attempt(alice, 4, swap(alice, bob, bob, alice)), no),
-          wait(outcome(attempt(alice, 4, swap(alice, bob, bob, alice)))),
-          req(propose(pay(bob, alice)))],
+          wait(propose(attempt(bob, 5, 5, pay(bob, alice)))),
+          card(attempt(alice, 4, 4, swap(alice, bob, bob, alice)), no)],
          LA, LB, N).
 
 exported procedure play_declined(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_declined(LA?, LB?, N?) :-
-    pair([req(propose(mint(alice))), wait(propose(attempt(alice, 1, mint(alice)))),
+    pair([req(propose(mint(alice))), wait(propose(attempt(alice, 1, 1, mint(alice)))),
           req(known(bob)), wait(discover(bob)),
           req(propose(swap(alice, bob, carol, alice)))],
          [req(known(alice))],

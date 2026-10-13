@@ -82,6 +82,22 @@
 %% the other child, and reaches it through an introduction by the other parent
 %% (vGLP, Definition "Canonical CVA Platform", Seek and Refer), no person asked
 %% to discover it.  childsafe/self.glp plays it.
+%%
+%% link is a three-party act guarded at its initiator alone, so that two
+%% initiators can propose attempts whose participants meet in two agents
+%% outside both initiators, each prepared on another's attempt: the deadlock
+%% that wound-wait resolves (vGLP 2026-10-13 17:53 UTC, item 7; vGLP 49cd9f7,
+%% Definition "Canonical CVA Platform", Wound and Yield):
+%%
+%%   befriend(p?, q?) :  at p  not friend(q), +friend(q)
+%%                       at q  not friend(p), +friend(p)
+%%   link(p?, q, r)   :  at p  friend(q), friend(r), +linked(q, r)
+%%                       at q  friend(p), +via(p, r)
+%%                       at r  friend(p), +via(p, q)
+%%
+%% The persons in q and r are not asked: their machines vote, the friendship
+%% each required of p its consent.  link/self.glp
+%% plays it.
 %% ---------------------------------------------------------------------------
 
 %% The contract, as programs/jurix/self.glp writes it.
@@ -110,6 +126,7 @@ contract_named(nudge, C?) :- nudge(C).
 contract_named(introduce, C?) :- introduce(C).
 contract_named(gnudge, C?) :- gnudge(C).
 contract_named(childsafe, C?) :- childsafe(C).
+contract_named(link, C?) :- link(C).
 
 procedure nudge(Contract).
 nudge([schema(befriend,
@@ -162,3 +179,13 @@ childsafe([schema(befriend,
                           [atom(child, [role(1)]), atom(friend, [role(4)])], []),
               rs(guarded, [atom(approved, [role(2), role(1)])], [],
                           [atom(child, [role(2)]), atom(friend, [role(3)])], [])])]).
+
+procedure link(Contract).
+link([schema(befriend,
+        [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
+         rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
+      schema(link,
+        [rs(guarded, [atom(linked, [role(2), role(3)])], [],
+                     [atom(friend, [role(2)]), atom(friend, [role(3)])], []),
+         rs(unguarded, [atom(via, [role(1), role(3)])], [], [atom(friend, [role(1)])], []),
+         rs(unguarded, [atom(via, [role(1), role(2)])], [], [atom(friend, [role(1)])], [])])]).

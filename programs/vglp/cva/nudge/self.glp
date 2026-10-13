@@ -14,13 +14,14 @@
 %%   schemas), and its machine proposes it on a tick (Section 5.4, Definition
 %%   "Compilation of the Canonical Platform": Propose of an unguarded class, by
 %%   its opener, on a tick), the attempt asking nobody and the other's machine
-%%   voting on its start.  Both propose at once.  bob, holding his own attempt
-%%   prepared, defers the start of alice, who precedes him in the order of
-%%   identifiers, and does not refuse it; alice's machine votes no on bob's,
-%%   which aborts; alice's start, put up again, bob's machine votes yes, and
-%%   her nudge commits at both; bob, proposing only once no start of an
-%%   initiator preceding him waits, proposes again, and his nudge commits at
-%%   both (vGLP 2026-10-12 08:26 UTC, Q-A).
+%%   voting on its start.  Both propose at once, their attempts of one rank,
+%%   alice's with priority, she preceding bob in the order of identifiers
+%%   (vGLP 49cd9f7, Definition "Attempt, Priority, ..."): bob, holding his own
+%%   attempt prepared, holds alice's start waiting and wounds his attempt,
+%%   which aborts; alice holds his start waiting, her lock set, and takes it,
+%%   the attempt closed, after its abort.  bob then takes her start and votes
+%%   yes, and her nudge commits at both; bob proposes again, his attempt
+%%   keeping the rank of the wounded one, and it commits at both.
 %%
 %% The types of platform.vglp, written again for the declarations of the
 %% procedures imported from its compiled module.
@@ -30,13 +31,14 @@ Class    ::= befriend(Peer, Peer) ; nudge(Peer, Peer).
 Request  ::= propose(Class) ; known(Peer).
 YesNo    ::= yes ; no.
 Decision ::= commit ; abort.
-Attempt  ::= attempt(Peer, Integer, Class).
+Attempt  ::= attempt(Peer, Integer, Integer, Class).
 Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
-           ; seek(Class) ; intro(Peer).
+           ; yield(Attempt) ; seek(Class) ; intro(Peer).
 Content  ::= hello(Peer) ; ihello(Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Txn      ::= propose(Attempt) ; seek(Class) ; refer(Class) ; start(Attempt)
-           ; answer(Attempt) ; vote(Attempt) ; tally(Attempt) ; outcome(Attempt)
+           ; answer(Attempt) ; vote(Attempt) ; tally(Attempt) ; commit(Attempt)
+           ; yield(Attempt) ; wound(Attempt, Attempt) ; outcome(Attempt)
            ; discover(Peer).
 Session  ::= session(Stream(Request)?, Stream(Txn)).
 Card     ::= card(Attempt, YesNo?).

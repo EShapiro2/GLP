@@ -4,7 +4,7 @@
 %% beside Jurix's (contracts.glp), the platforms it prints
 %% (social_graph/platform.vglp, currency/platform.vglp, nudge/platform.vglp,
 %% introduce/platform.vglp, gnudge/platform.vglp, childsafe/platform.vglp,
-%% each beside its plays) and what the plays of all of them share, here: a
+%% link/platform.vglp, each beside its plays) and what the plays of all of them share, here: a
 %% scripted person and a network between two agents, three or four.
 %%
 %% A play runs the agents of a compiled platform, each the agent of the module
@@ -172,7 +172,7 @@ find_card1(_, [], _, nocard).
 find_card1(K, [seen(Id, P, At)|Cs], Done, card_at(Id?, P?, Rest?)) :-
     ground(At?), ground(K?), K? =?= At? |
     rev_seen(Done?, Cs?, Rest).
-find_card1(K, [seen(Id, P, attempt(_, _, C))|Cs], Done, card_at(Id?, P?, Rest?)) :-
+find_card1(K, [seen(Id, P, attempt(_, _, _, C))|Cs], Done, card_at(Id?, P?, Rest?)) :-
     ground(C?), ground(K?), K? =?= C? |
     rev_seen(Done?, Cs?, Rest).
 find_card1(K, [S|Cs], Done, F?) :- otherwise | find_card1(K?, Cs?, [S?|Done?], F).

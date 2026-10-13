@@ -1,0 +1,157 @@
+%% ---------------------------------------------------------------------------
+%% The play of the canonical CVA platform of vGLP's contract link
+%% (../contracts.glp, contract_named(link, C): befriend and a three-party link
+%% guarded at its initiator alone), platform.vglp, which
+%% programs/vglp/cva/compile.sh prints from it: two-phase commit coordinated by
+%% the initiating agent, wound-wait against deadlock (vGLP, Section 3.2,
+%% Definition "Canonical CVA Platform", Start, Wound, Yield and Commit;
+%% Definition "Attempt, Priority, Message, App State, Question, Ready,
+%% Waiting, Clear").  It runs four agents, their persons scripted and paced on
+%% their threads (../self.glp), and gives each person's log, the thread with
+%% gave(K, A) where the person answers a card, and the network's log of the
+%% cargoes it carries.
+%%
+%% play_deadlock: Idit's deadlock, two initiators outside the intersection of
+%% their attempts' participants.  carol and dave each befriend alice and then
+%% bob.  alice proposes link(alice, carol, dave) and bob link(bob, carol,
+%% dave); the network delivers alice's start to carol first and bob's to dave
+%% first, so carol holds alice's attempt prepared and dave bob's, and each
+%% holds the other's start waiting: without wound-wait, neither ever votes.
+%% alice's attempt has priority, its rank the smaller, so dave's machine
+%% wounds bob's: it sends bob yield, and bob, not every yes recorded, aborts
+%% his attempt, wounded.  dave's lock released, alice's start is taken, and
+%% her attempt commits.  bob proposes again, his retried attempt keeping the
+%% rank of the wounded one, and it commits once alice's has.
+%%
+%% The network holds three starts, each until a message is delivered: alice's
+%% start to carol until carol's befriending of bob commits, so that carol is
+%% free when it arrives; alice's start to dave until bob's start to dave; and
+%% bob's start to carol until alice's start to carol.
+%%
+%% The types of platform.vglp, written again for the declarations of the
+%% procedures imported from its compiled module.
+%% ---------------------------------------------------------------------------
+
+Class    ::= befriend(Peer, Peer) ; link(Peer, Peer, Peer).
+Request  ::= propose(Class) ; known(Peer).
+YesNo    ::= yes ; no.
+Decision ::= commit ; abort.
+Attempt  ::= attempt(Peer, Integer, Integer, Class).
+Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
+           ; yield(Attempt) ; seek(Class) ; intro(Peer).
+Content  ::= hello(Peer) ; ihello(Peer) ; cargo(Peer, Cargo).
+Net      ::= msg(Peer, Content).
+Txn      ::= propose(Attempt) ; seek(Class) ; refer(Class) ; start(Attempt)
+           ; answer(Attempt) ; vote(Attempt) ; tally(Attempt) ; commit(Attempt)
+           ; yield(Attempt) ; wound(Attempt, Attempt) ; outcome(Attempt)
+           ; discover(Peer).
+Session  ::= session(Stream(Request)?, Stream(Txn)).
+Card     ::= card(Attempt, YesNo?).
+Question ::= session_w(Session) ; card_w(Card).
+Ask(Q)   ::= ask(Constant, Q).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+
+exported procedure play_deadlock(Stream(_), Stream(_), Stream(_), Stream(_),
+    Stream(Sent(Cargo))).
+play_deadlock(LA?, LB?, LC?, LD?, N?) :-
+    quartet([req(known(carol)), req(known(dave)),
+             card(befriend(carol, alice), yes),
+             card(befriend(dave, alice), yes),
+             wait(outcome(attempt(carol, 1, 1, befriend(carol, alice)))),
+             wait(outcome(attempt(dave, 1, 1, befriend(dave, alice)))),
+             req(propose(link(alice, carol, dave)))],
+            [req(known(carol)), req(known(dave)),
+             card(befriend(carol, bob), yes),
+             card(befriend(dave, bob), yes),
+             wait(outcome(attempt(carol, 2, 2, befriend(carol, bob)))),
+             wait(outcome(attempt(dave, 2, 2, befriend(dave, bob)))),
+             req(propose(link(bob, carol, dave))),
+             wait(yield(attempt(bob, 3, 3, link(bob, carol, dave)))),
+             req(propose(link(bob, carol, dave)))],
+            [req(known(alice)), req(known(bob)), wait(discover(alice)),
+             req(propose(befriend(carol, alice))),
+             wait(commit(attempt(carol, 1, 1, befriend(carol, alice)))),
+             wait(discover(bob)),
+             req(propose(befriend(carol, bob)))],
+            [req(known(alice)), req(known(bob)), wait(discover(alice)),
+             req(propose(befriend(dave, alice))),
+             wait(commit(attempt(dave, 1, 1, befriend(dave, alice)))),
+             wait(discover(bob)),
+             req(propose(befriend(dave, bob)))],
+            LA, LB, LC, LD, N).
+
+%% alice, bob, carol and dave, each with its dispatcher and scripted person,
+%% their networks joined through the reordering below.
+procedure quartet(Steps?, Steps?, Steps?, Steps?, Stream(_), Stream(_),
+    Stream(_), Stream(_), Stream(Sent(Cargo))).
+quartet(SA, SB, SC, SD, LA?, LB?, LC?, LD?, N?) :-
+    platform # agent(alice, InA?, OutA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), _),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), _),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    platform # agent(carol, InC?, OutC, AsC),
+    platform # dispatch(AsC?, ch(GC?, DC), _),
+    person(DC?, GC, ps(nosess, [], [], SC?), LC),
+    platform # agent(dave, InD?, OutD, AsD),
+    platform # dispatch(AsD?, ch(GD?, DD), _),
+    person(DD?, GD, ps(nosess, [], [], SD?), LD),
+    merge(OutA?, OutB?, Net1),
+    merge(OutC?, OutD?, Net2),
+    merge(Net1?, Net2?, Net),
+    reorder(Net?, s(open, open, open), Net3),
+    route4(Net3?, alice, InA, bob, InB, carol, InC, dave, InD, N).
+
+%% reorder(In?, Slots?, Out): each message passed on, but one held by a rule
+%% whose slot is open, kept in the slot until a message releasing the rule
+%% passes, and then passed on after it.
+Slot  ::= open ; held(Net) ; passed.
+Slots ::= s(Slot, Slot, Slot).
+procedure reorder(Stream(Net)?, Slots?, Stream(Net)).
+reorder([M|Ms], Ss, Out?) :- ground(M?), ground(Ss?) |
+    hold_rule(M?, H),
+    slot_of(H?, Ss?, S),
+    reorder1(S?, H?, M?, Ms?, Ss?, Out).
+reorder([], _, []).
+procedure reorder1(Slot?, Integer?, Net?, Stream(Net)?, Slots?, Stream(Net)).
+reorder1(open, H, M, Ms, Ss, Out?) :- H? > 0 |
+    set_slot(H?, Ss?, held(M?), Ss1),
+    reorder(Ms?, Ss1?, Out).
+reorder1(_, _, M, Ms, Ss, [M?|Out?]) :- otherwise, ground(M?) |
+    rel_rule(M?, R),
+    released(R?, Ss?, Ms?, Ms1, Ss1),
+    reorder(Ms1?, Ss1?, Out).
+procedure released(Integer?, Slots?, Stream(Net)?, Stream(Net), Slots).
+released(0, Ss, Ms, Ms?, Ss?).
+released(R, Ss, Ms, Ms1?, Ss1?) :- R? > 0, ground(Ss?) |
+    slot_of(R?, Ss?, S),
+    set_slot(R?, Ss?, passed, Ss1),
+    released1(S?, Ms?, Ms1).
+procedure released1(Slot?, Stream(Net)?, Stream(Net)).
+released1(held(H), Ms, [H?|Ms?]).
+released1(open, Ms, Ms?).
+released1(passed, Ms, Ms?).
+procedure hold_rule(Net?, Integer).
+hold_rule(msg(carol, cargo(alice, start(attempt(_, _, _, link(_, _, _))))), 1).
+hold_rule(msg(dave, cargo(alice, start(attempt(_, _, _, link(_, _, _))))), 2).
+hold_rule(msg(carol, cargo(bob, start(attempt(_, _, _, link(_, _, _))))), 3).
+hold_rule(_, 0) :- otherwise | true.
+procedure rel_rule(Net?, Integer).
+rel_rule(msg(bob, cargo(carol, outcome(attempt(_, _, _, befriend(carol, bob)), commit))), 1).
+rel_rule(msg(dave, cargo(bob, start(attempt(_, _, _, link(_, _, _))))), 2).
+rel_rule(msg(carol, cargo(alice, start(attempt(_, _, _, link(_, _, _))))), 3).
+rel_rule(_, 0) :- otherwise | true.
+procedure slot_of(Integer?, Slots?, Slot).
+slot_of(0, _, passed).
+slot_of(1, s(S, _, _), S?).
+slot_of(2, s(_, S, _), S?).
+slot_of(3, s(_, _, S), S?).
+procedure set_slot(Integer?, Slots?, Slot?, Slots).
+set_slot(1, s(_, B, C), S, s(S?, B?, C?)).
+set_slot(2, s(A, _, C), S, s(A?, S?, C?)).
+set_slot(3, s(A, B, _), S, s(A?, B?, S?)).

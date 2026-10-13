@@ -31,13 +31,14 @@ Class    ::= befriend(Peer, Peer) ; unfriend(Peer, Peer) ; sign(Peer, Speech)
 Request  ::= propose(Class) ; known(Peer).
 YesNo    ::= yes ; no.
 Decision ::= commit ; abort.
-Attempt  ::= attempt(Peer, Integer, Class).
+Attempt  ::= attempt(Peer, Integer, Integer, Class).
 Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
-           ; seek(Class) ; intro(Peer).
+           ; yield(Attempt) ; seek(Class) ; intro(Peer).
 Content  ::= hello(Peer) ; ihello(Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Txn      ::= propose(Attempt) ; seek(Class) ; refer(Class) ; start(Attempt)
-           ; answer(Attempt) ; vote(Attempt) ; tally(Attempt) ; outcome(Attempt)
+           ; answer(Attempt) ; vote(Attempt) ; tally(Attempt) ; commit(Attempt)
+           ; yield(Attempt) ; wound(Attempt, Attempt) ; outcome(Attempt)
            ; discover(Peer).
 Session  ::= session(Stream(Request)?, Stream(Txn)).
 Card     ::= card(Attempt, YesNo?).
@@ -61,27 +62,27 @@ exported procedure play_unfriend(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_unfriend(LA?, LB?, N?) :-
     pair([req(known(bob)), wait(discover(bob)),
           req(propose(befriend(alice, bob))),
-          wait(tally(attempt(alice, 1, befriend(alice, bob)))),
-          wait(outcome(attempt(bob, 1, unfriend(bob, alice)))),
+          wait(commit(attempt(alice, 1, 1, befriend(alice, bob)))),
+          wait(outcome(attempt(bob, 2, 2, unfriend(bob, alice)))),
           req(propose(befriend(alice, bob))),
-          wait(tally(attempt(alice, 2, befriend(alice, bob)))),
+          wait(commit(attempt(alice, 3, 3, befriend(alice, bob)))),
           req(propose(unfriend(alice, bob)))],
          [req(known(alice)), wait(discover(alice)),
-          card(attempt(alice, 1, befriend(alice, bob)), yes),
-          wait(outcome(attempt(alice, 1, befriend(alice, bob)))),
+          card(attempt(alice, 1, 1, befriend(alice, bob)), yes),
+          wait(outcome(attempt(alice, 1, 1, befriend(alice, bob)))),
           req(propose(unfriend(bob, alice))),
-          card(attempt(alice, 2, befriend(alice, bob)), yes)],
+          card(attempt(alice, 3, 3, befriend(alice, bob)), yes)],
          LA, LB, N).
 
 exported procedure play_refused(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_refused(LA?, LB?, N?) :-
     pair([req(known(bob)), wait(discover(bob)),
           req(propose(befriend(alice, bob))),
-          wait(tally(attempt(alice, 1, befriend(alice, bob)))),
+          wait(tally(attempt(alice, 1, 1, befriend(alice, bob)))),
           req(propose(befriend(alice, bob)))],
          [req(known(alice)), wait(discover(alice)),
-          card(attempt(alice, 1, befriend(alice, bob)), no),
-          card(attempt(alice, 2, befriend(alice, bob)), yes)],
+          card(attempt(alice, 1, 1, befriend(alice, bob)), no),
+          card(attempt(alice, 2, 2, befriend(alice, bob)), yes)],
          LA, LB, N).
 
 %% alice and bob, each with its dispatcher and scripted person, their networks

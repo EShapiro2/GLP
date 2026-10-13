@@ -34,13 +34,14 @@ Class    ::= befriend(Peer, Peer) ; enrol(Peer, Peer)
 Request  ::= propose(Class) ; known(Peer).
 YesNo    ::= yes ; no.
 Decision ::= commit ; abort.
-Attempt  ::= attempt(Peer, Integer, Class).
+Attempt  ::= attempt(Peer, Integer, Integer, Class).
 Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
-           ; seek(Class) ; intro(Peer).
+           ; yield(Attempt) ; seek(Class) ; intro(Peer).
 Content  ::= hello(Peer) ; ihello(Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Txn      ::= propose(Attempt) ; seek(Class) ; refer(Class) ; start(Attempt)
-           ; answer(Attempt) ; vote(Attempt) ; tally(Attempt) ; outcome(Attempt)
+           ; answer(Attempt) ; vote(Attempt) ; tally(Attempt) ; commit(Attempt)
+           ; yield(Attempt) ; wound(Attempt, Attempt) ; outcome(Attempt)
            ; discover(Peer).
 Session  ::= session(Stream(Request)?, Stream(Txn)).
 Card     ::= card(Attempt, YesNo?).
@@ -57,19 +58,19 @@ exported procedure play_childsafe(Stream(_), Stream(_), Stream(_), Stream(_),
 play_childsafe(LA?, LB?, LC?, LD?, N?) :-
     quartet([req(known(carol)), wait(discover(carol)),
              req(propose(enrol(alice, carol))),
-             wait(tally(attempt(alice, 1, enrol(alice, carol)))),
+             wait(commit(attempt(alice, 1, 1, enrol(alice, carol)))),
              req(known(bob)),
              card(befriend(bob, alice), yes),
-             wait(outcome(attempt(bob, 2, befriend(bob, alice)))),
+             wait(outcome(attempt(bob, 2, 2, befriend(bob, alice)))),
              req(propose(cbefriend(carol, dave, alice, bob))),
              wait(discover(dave)),
              req(propose(cbefriend(carol, dave, alice, bob)))],
             [req(known(dave)), wait(discover(dave)),
              req(propose(enrol(bob, dave))),
-             wait(tally(attempt(bob, 1, enrol(bob, dave)))),
+             wait(commit(attempt(bob, 1, 1, enrol(bob, dave)))),
              req(known(alice)), wait(discover(alice)),
              req(propose(befriend(bob, alice))),
-             wait(tally(attempt(bob, 2, befriend(bob, alice)))),
+             wait(commit(attempt(bob, 2, 2, befriend(bob, alice)))),
              card(cbefriend(carol, dave, alice, bob), yes)],
             [req(known(alice)),
              card(enrol(alice, carol), yes),
