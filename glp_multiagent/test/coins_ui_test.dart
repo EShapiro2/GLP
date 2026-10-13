@@ -131,11 +131,11 @@ void main() {
       expect(sent, ['input(0, [], mint(3))']);
     });
 
-    test('the swap request carries its peer and its two lots', () {
+    test('the swap request carries its friend, the coin and amount given and the coin and amount wanted', () {
       drawRequestForm();
       r.bridge.grant(
-          0, position(0, []), tryParseTerm('swap(bob, lot(alice, 2), lot(bob, 2))')!);
-      expect(sent, ['input(0, [], swap(bob, lot(alice, 2), lot(bob, 2)))']);
+          0, position(0, []), tryParseTerm('swap(bob, alice, 2, bob, 2)')!);
+      expect(sent, ['input(0, [], swap(bob, alice, 2, bob, 2))']);
     });
 
     test('a card\'s answer is granted at the position its view marks', () {
