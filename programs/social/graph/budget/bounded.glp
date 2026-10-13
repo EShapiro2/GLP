@@ -21,7 +21,7 @@
 %% whatever budget the super-app assigns to N1.  A conjunction splits its budget
 %% between its conjuncts and merges their request streams.
 
-procedure bounded(_?, Integer?, Stream(Request)).
+procedure bounded(_?, Integer?, Stream(BudgetRequest)).
 bounded(true, _, []).
 bounded((A, B), N, Rs?) :-
     N1 := N? // 2, N2 := N? - N1?,
@@ -36,7 +36,7 @@ bounded(G, N, [more(N1)|Rs?]) :-
 %% The request streams of two conjuncts joined into one; when either closes the
 %% merged stream continues as the other, so a chain of merges left by a
 %% recursive goal shortens as its conjuncts terminate.
-procedure merge(Stream(Request)?, Stream(Request)?, Stream(Request)).
+procedure merge(Stream(BudgetRequest)?, Stream(BudgetRequest)?, Stream(BudgetRequest)).
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge([], Ys, Ys?).
@@ -61,7 +61,7 @@ reduce(count([], _, []), true).
 %% decrement; each predicate one clause that requests a budget when it has
 %% none.  The body of the first clause is a single user goal, so no merge
 %% remains; a body of k user goals would keep k-1 merges.
-procedure count(Stream(Integer)?, Integer?, Stream(Integer), Integer?, Stream(Request)).
+procedure count(Stream(Integer)?, Integer?, Stream(Integer), Integer?, Stream(BudgetRequest)).
 count([_|Xs], N, [N1?|Out?], B, Rs?) :-
     B? > 0 |
     B1 := B? - 1, N1 := N? + 1, count(Xs?, N1?, Out, B1?, Rs).
@@ -75,7 +75,7 @@ count(Xs, N, Out?, B, [more(B1)|Rs?]) :-
 %% =============================================================================
 %% grant(Rs, K) assigns K to every request on Rs: a super-app granting a fixed
 %% budget at the rate at which the mini-app asks.
-procedure grant(Stream(Request)?, Integer?).
+procedure grant(Stream(BudgetRequest)?, Integer?).
 grant([more(K?)|Rs], K) :- grant(Rs?, K?).
 grant([], _).
 
@@ -136,7 +136,7 @@ last([], 0).
 %% (play_abort_waiting succeeds).  Logix could put clause/2 in the guard; GLP
 %% cannot.
 
-procedure execute(_?, Integer?, Stream(Request), Stream(Constant)?).
+procedure execute(_?, Integer?, Stream(BudgetRequest), Stream(Constant)?).
 execute(true, _, [], _).
 execute((A, B), N, Rs?, Cs) :-
     N1 := N? // 2, N2 := N? - N1?,
@@ -166,7 +166,7 @@ distribute([], [], []).
 %% which takes a waiting goal as it takes a running one.  The abort clause
 %% closes the goal's output stream: a head has no anonymous writer at an
 %% output position, so the paper's `_` there is `[]` here.
-procedure count(Stream(Integer)?, Integer?, Stream(Integer), Integer?, Stream(Request), Stream(Constant)?).
+procedure count(Stream(Integer)?, Integer?, Stream(Integer), Integer?, Stream(BudgetRequest), Stream(Constant)?).
 count([_|Xs], N, [N1?|Out?], B, Rs?, Cs) :-
     unknown(Cs?), B? > 0 |
     B1 := B? - 1, N1 := N? + 1,
@@ -200,7 +200,7 @@ third([], none).
 %% counts the super-app writes abort; the counter, waiting on its stream, ends
 %% and its request stream closes, and with it the counter's input stream.
 %% Out = [1, 2, 3], Rs = [], → succeeds.
-exported procedure play_abort_waiting(Stream(Integer), Stream(Request)).
+exported procedure play_abort_waiting(Stream(Integer), Stream(BudgetRequest)).
 play_abort_waiting(Out?, Rs?) :-
     open_three(Xs, Rs1?),
     count(Xs?, 0, Out0, 10, Rs0, Cs?),
@@ -211,23 +211,23 @@ play_abort_waiting(Out?, Rs?) :-
 
 %% open_three(Xs, Rs): three elements and a tail that closes when the abort has
 %% taken effect, which the request stream Rs closing shows.
-procedure open_three(Stream(Integer), Stream(Request)?).
+procedure open_three(Stream(Integer), Stream(BudgetRequest)?).
 open_three([1, 2, 3 | Tail?], Rs) :- close_when_done(Rs?, Tail).
 
 %% close_when_done(Rs, Tail): Tail closes when Rs does.
-procedure close_when_done(Stream(Request)?, Stream(Integer)).
+procedure close_when_done(Stream(BudgetRequest)?, Stream(Integer)).
 close_when_done([_ | Rs], Tail?) :- close_when_done(Rs?, Tail).
 close_when_done([], []).
 
 %% open_three(Xs, Rs, Rest, W): as open_three/2, and before the tail closes it
 %% records in W whether Rest, the counter's output past its third element, is
 %% still unwritten when Rs closes: waiting where it is, ended otherwise.
-procedure open_three(Stream(Integer), Stream(Request)?, Stream(Integer)?, Constant).
+procedure open_three(Stream(Integer), Stream(BudgetRequest)?, Stream(Integer)?, Constant).
 open_three([1, 2, 3 | Tail?], Rs, Rest, W?) :- witness_when_done(Rs?, Rest?, W, Tail).
 
 %% witness_when_done(Rs, Rest, W, Tail): when Rs closes, W is waiting if Rest
 %% is unwritten and ended otherwise, and only then Tail closes.
-procedure witness_when_done(Stream(Request)?, Stream(Integer)?, Constant, Stream(Integer)).
+procedure witness_when_done(Stream(BudgetRequest)?, Stream(Integer)?, Constant, Stream(Integer)).
 witness_when_done([_ | Rs], Rest, W?, Tail?) :- witness_when_done(Rs?, Rest?, W, Tail).
 witness_when_done([], Rest, waiting, []) :- unknown(Rest?) | true.
 witness_when_done([], _, ended, []) :- otherwise | true.
@@ -242,7 +242,7 @@ tee([], [], []).
 %% 2, the control stream never written: clean termination, the request stream
 %% closing with nothing on the control stream.  Out = [1,2,3,4,5], Rs = [],
 %% → succeeds.
-exported procedure play_clean(Stream(Integer), Stream(Request)).
+exported procedure play_clean(Stream(Integer), Stream(BudgetRequest)).
 play_clean(Out?, Rs?) :-
     count([1, 2, 3, 4, 5], 0, Out, 2, Rs0, Cs?),
     grant_seen(Rs0?, 2, Rs, Cs).
@@ -250,7 +250,7 @@ play_clean(Out?, Rs?) :-
 %% grant_seen(Rs0, K, Rs, Cs): the super-app grants K to every request; when
 %% the request stream closes it closes its copy Rs, for the caller to see, and
 %% the control stream Cs, on which it wrote nothing (Appendix D).
-procedure grant_seen(Stream(Request)?, Integer?, Stream(Request), Stream(Constant)).
+procedure grant_seen(Stream(BudgetRequest)?, Integer?, Stream(BudgetRequest), Stream(Constant)).
 grant_seen([more(K?) | Rs0], K, Rs?, Cs?) :- grant_seen(Rs0?, K?, Rs, Cs).
 grant_seen([], _, [], []).
 
@@ -263,7 +263,7 @@ grant_seen([], _, [], []).
 %% witness W, waiting, and only then closes the counter's input, on which the
 %% waiting goal ends by count([], _, []) and its output closes.
 %% W = waiting, Out = [1, 2, 3], Rs = [], → succeeds.
-exported procedure play_abort_interpreted(Stream(Integer), Stream(Request), Constant).
+exported procedure play_abort_interpreted(Stream(Integer), Stream(BudgetRequest), Constant).
 play_abort_interpreted(Out?, Rs?, W?) :-
     open_three(Xs, Rs1?, Rest?, W),
     execute(count(Xs?, 0, Out0), 10, Rs0, Cs?),

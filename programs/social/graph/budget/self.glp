@@ -6,7 +6,7 @@
 %% A request for more budget.  The mini-app writes more(N1) with N1 unbound and
 %% keeps N1?; the super-app, reading the stream, assigns N1.  The position
 %% therefore carries the writer (typed-glp-manual 15B).
-Request ::= more(Integer?).
+BudgetRequest ::= more(Integer?).
 
 %% What bench/4 counts under: the mini-app unbudgeted (plain), the residual
 %% program under grants (residual), or bounded/3 under grants (meta).
@@ -24,14 +24,14 @@ imported procedure bounded # bench(BenchKind?, Integer?, Integer?, Integer).
 exported procedure bench(BenchKind?, Integer?, Integer?, Integer).
 bench(Which, N, K, Last?) :- bounded # bench(Which?, N?, K?, Last).
 
-imported procedure bounded # play_abort_waiting(Stream(Integer), Stream(Request)).
-exported procedure play_abort_waiting(Stream(Integer), Stream(Request)).
+imported procedure bounded # play_abort_waiting(Stream(Integer), Stream(BudgetRequest)).
+exported procedure play_abort_waiting(Stream(Integer), Stream(BudgetRequest)).
 play_abort_waiting(Out?, Rs?) :- bounded # play_abort_waiting(Out, Rs).
 
-imported procedure bounded # play_clean(Stream(Integer), Stream(Request)).
-exported procedure play_clean(Stream(Integer), Stream(Request)).
+imported procedure bounded # play_clean(Stream(Integer), Stream(BudgetRequest)).
+exported procedure play_clean(Stream(Integer), Stream(BudgetRequest)).
 play_clean(Out?, Rs?) :- bounded # play_clean(Out, Rs).
 
-imported procedure bounded # play_abort_interpreted(Stream(Integer), Stream(Request), Constant).
-exported procedure play_abort_interpreted(Stream(Integer), Stream(Request), Constant).
+imported procedure bounded # play_abort_interpreted(Stream(Integer), Stream(BudgetRequest), Constant).
+exported procedure play_abort_interpreted(Stream(Integer), Stream(BudgetRequest), Constant).
 play_abort_interpreted(Out?, Rs?, W?) :- bounded # play_abort_interpreted(Out, Rs, W).
