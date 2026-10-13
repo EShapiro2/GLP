@@ -181,9 +181,17 @@ class HeadlessGrassrootsNetwork {
   StreamSubscription<dynamic>? _connectionSub;
   Timer? _heartbeatTimer;
 
-  /// Queued-message replay period (Implementation Notes: queued messages
-  /// replay on the heartbeat tick).
-  static const Duration heartbeatInterval = Duration(seconds: 30);
+  /// The heartbeat (spec §ANNOUNCE and Liveness, Heartbeat): "ANNOUNCE is
+  /// exchanged upon connection establishment and then repeats periodically
+  /// (every 10 s in the implementation) on every live connection of every
+  /// underlay."  The same tick drives the sweep and the queue's replay.
+  static const Duration heartbeatInterval = Duration(seconds: 10);
+
+  /// When authenticated traffic was last heard from each peer with a
+  /// session, by pubkey hex: a verified ANNOUNCE or a packet its session
+  /// decrypted (spec §ANNOUNCE and Liveness: "The staleness clock counts any
+  /// authenticated traffic").
+  final Map<String, DateTime> _lastHeard = {};
 
   final HeadlessKnownPeersStore _knownPeersStore;
   Map<String, String?>? _lastPersistedKnown;
@@ -664,7 +672,10 @@ class HeadlessGrassrootsNetwork {
       );
     }
     _heartbeatTimer = Timer.periodic(heartbeatInterval, (_) {
+      _announceOnLiveSessions();
+      _tearDownSilentSessions();
       _holdRendezvousSessions();
+      _sweepKnownPeers();
       unawaited(_refreshLocalNetwork());
       for (final hex in _outboundQueue.keys.toList()) {
         _drainQueueFor(_bytes(hex));
@@ -678,6 +689,86 @@ class HeadlessGrassrootsNetwork {
         '(${_hex(identity.publicKey).substring(0, 8)}…)');
     _holdRendezvousSessions();
     return true;
+  }
+
+  /// ANNOUNCE on every live session (spec §ANNOUNCE and Liveness, Heartbeat:
+  /// it "repeats periodically ... on every live connection"), which is the
+  /// floor of authenticated traffic an idle session has.
+  void _announceOnLiveSessions() {
+    final udp = _udpService;
+    if (udp == null) return;
+    final announce = _signedAnnounceBytes();
+    for (final hex in _reachablePeers.toList()) {
+      unawaited(udp.sendToPeer(hex, announce));
+    }
+  }
+
+  /// Tear down each session silent for two consecutive intervals (spec
+  /// §ANNOUNCE and Liveness, Over LAN and WAN: "a session silent for two
+  /// consecutive intervals is torn down, feeding onPeerDisconnected").
+  void _tearDownSilentSessions() {
+    final now = DateTime.now();
+    for (final hex in _reachablePeers.toList()) {
+      final heard = _lastHeard[hex];
+      if (heard != null && now.difference(heard) <= heartbeatInterval * 2) {
+        continue;
+      }
+      debugPrint('[headless][liveness] ${hex.substring(0, 8)} silent for two '
+          'intervals; tearing the session down');
+      _tearDownSession(_bytes(hex));
+    }
+  }
+
+  /// Re-initiate a connection to each known peer with a recorded address
+  /// that is not reachable (spec §Connectivity and Address, Address-change
+  /// recovery: "The heartbeat sweep therefore re-initiates connections to
+  /// the known peers and the configured rendezvous servers"; §ANNOUNCE and
+  /// Liveness, Heartbeat: the tick "drives reconnection attempts towards
+  /// unreachable known peers").
+  void _sweepKnownPeers() {
+    if (_udpService == null) return;
+    for (final entry in store.state.knownPeers.known.entries) {
+      if (entry.value == null) continue;
+      if (_reachablePeers.contains(entry.key)) continue;
+      if (_connecting.containsKey(entry.key)) continue;
+      unawaited(_connect(_bytes(entry.key)));
+    }
+  }
+
+  /// A verified ANNOUNCE from [pubkey] arrived on [udpPeerId], a path not yet
+  /// identified, while the layer holds a path to the same key at another
+  /// address: the peer's address changed, and the session on the old path
+  /// is one the peer no longer holds (spec §Connectivity and Address,
+  /// Address-change recovery: "its established UDP paths break and their
+  /// sessions are torn down"; §Session Establishment: "a peer that resumes
+  /// after a restart proves itself again before it is reachable").  The
+  /// session is reset and the peer reported unreachable, so the handshake
+  /// is run afresh on the new path, this endpoint accepting.
+  void _resetIfMoved(Uint8List pubkey, String? udpPeerId) {
+    final udp = _udpService;
+    if (udp == null || udpPeerId == null || !udpPeerId.contains(':')) return;
+    final hex = _hex(pubkey);
+    final standing = udp.getRemoteAddress(hex);
+    if (standing == null) return;
+    if (AddressInfo(standing.ip, standing.port).toAddressString() ==
+        udpPeerId) {
+      return;
+    }
+    debugPrint('[headless][liveness] ${hex.substring(0, 8)} announced from '
+        'a new address $udpPeerId; resetting its session');
+    _attestedOn.remove(hex);
+    _attestationDeadlines.remove(hex)?.timer.cancel();
+    _noiseSessions.reset(PeerTransport.udp, pubkey);
+    _dialedPeers.remove(hex);
+    _announcedTo.remove(hex);
+    _lastHeard.remove(hex);
+    store.dispatch(PeerUdpConnectionChangedAction(
+      pubkeyHex: hex,
+      connected: false,
+    ));
+    if (_reachablePeers.remove(hex)) {
+      onPeerDisconnected?.call(pubkey, Underlay.wan);
+    }
   }
 
   /// Dial each rendezvous server with no connection standing (spec
@@ -732,6 +823,7 @@ class HeadlessGrassrootsNetwork {
     }
     _reachablePeers.clear();
     _announcedTo.clear();
+    _lastHeard.clear();
     _attestedOn.clear();
     for (final deadline in _attestationDeadlines.values) {
       deadline.timer.cancel();
@@ -952,8 +1044,12 @@ class HeadlessGrassrootsNetwork {
       onMessageReceived?.call(senderPubkey, payload, messageId, Underlay.wan);
     };
 
-    _messageRouter.shouldAcceptUdpAnnounce = (senderPubkey, {udpPeerId}) =>
-        _acceptsContactFrom(senderPubkey);
+    _messageRouter.shouldAcceptUdpAnnounce = (senderPubkey, {udpPeerId}) {
+      if (!_acceptsContactFrom(senderPubkey)) return false;
+      // Before the router re-keys the new path to the key.
+      _resetIfMoved(senderPubkey, udpPeerId);
+      return true;
+    };
 
     _messageRouter.onUdpAnnounceRejected = (senderPubkey, udpPeerId) {
       // Closed trust: unregistered keys cannot complete a session.
@@ -967,6 +1063,7 @@ class HeadlessGrassrootsNetwork {
     _messageRouter.onPeerAnnounced =
         (data, transport, {bool isNew = false, String? udpPeerId}) {
       final hex = _hex(data.publicKey);
+      _lastHeard[hex] = DateTime.now();
       // Answer with our own ANNOUNCE once per connection.
       if (_announcedTo.add(hex)) {
         unawaited(_udpService?.sendToPeer(hex, _signedAnnounceBytes()));
@@ -1062,12 +1159,14 @@ class HeadlessGrassrootsNetwork {
         if (peerId != null && !peerId.contains(':') && peerId.length == 64) {
           remotePubkey = _bytes(peerId);
         }
-        return await _noiseSessions.decryptPacket(
+        final decrypted = await _noiseSessions.decryptPacket(
           packet,
           transport: transport,
           peerId: peerId,
           remotePubkey: remotePubkey,
         );
+        _lastHeard[_hex(decrypted.$2)] = DateTime.now();
+        return decrypted;
       } catch (e) {
         debugPrint('[headless][noise] Failed to decrypt packet: $e');
         return null;
@@ -1252,6 +1351,7 @@ class HeadlessGrassrootsNetwork {
   }
 
   void _onSessionEstablished(Uint8List pubkey) {
+    _lastHeard[_hex(pubkey)] = DateTime.now();
     store.dispatch(PeerUdpConnectionChangedAction(
       pubkeyHex: _hex(pubkey),
       connected: true,
