@@ -28,7 +28,9 @@ import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 /// from the layer by `peer_address/2`, and relays to each the address it
 /// observes for the other, whereupon each declares it (`address_declare/2`)
 /// and punches toward it (`punch_udp/1`).  A request whose signature is the
-/// requester's own is refused.
+/// requester's own is refused.  And, item 3 of GNA's task of 2026-10-09,
+/// the same after one friend changes address, the two reconnecting (the
+/// second test, whose comment says what the loopback can and cannot show).
 ///
 /// The friends' program is the smallest stand-in for the social graph's part
 /// (GSG's): it mints the friendship signature on request and sends the
@@ -158,21 +160,16 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
         nickname: 'friend',
       );
 
-  test(
-      'two friends, each over its own headless layer, are matched by the GLP '
-      'rendezvous agent on the server and told the address it observes for '
-      'the other; a request carrying its own signature is refused', () async {
-    if (sodiumUnavailable != null) {
-      markTestSkipped(sodiumUnavailable!);
-      return;
-    }
-
+  /// The server, a process of its own, and two friends, each a madGLP agent
+  /// over its own headless layer configured with it, holding each other's
+  /// signature over their pair; each friend's layer started.
+  Future<_World> standUp(int rvFill, int aFill, int bFill) async {
     // The server's port, and its key pair as an identity file.
     final probe = await RawDatagramSocket.bind(InternetAddress.loopbackIPv4, 0);
     final rvPort = probe.port;
     probe.close();
-    final rvSeed = Uint8List.fromList(List.filled(32, 0x7e));
-    final rvIdentityFile = File('${dir.path}/rv-identity.json')
+    final rvSeed = Uint8List.fromList(List.filled(32, rvFill));
+    final rvIdentityFile = File('${dir.path}/rv-$rvFill.json')
       ..writeAsStringSync(
           jsonEncode({'seed': _hex(rvSeed), 'nickname': 'rendezvous'}));
     final rvKey = glp.PubKey.fromList(
@@ -209,8 +206,8 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
       return f;
     }
 
-    final a = await friend(0x3a, 'a');
-    final b = await friend(0x4b, 'b');
+    final a = await friend(aFill, 'a');
+    final b = await friend(bFill, 'b');
 
     // Each signs the pair and the signatures change hands, as on befriending.
     await a.agent.injectUserInput(_struct('attest', [_const(b.key.hex)]));
@@ -262,6 +259,26 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
     // The friends' layers start, and each holds a session with the server.
     expect(await a.layer.start(), isTrue);
     expect(await b.layer.start(), isTrue);
+    return (
+      rvKey: rvKey,
+      a: a,
+      b: b,
+      sigA: sigA,
+      sigB: sigB,
+      serverLines: serverLines,
+    );
+  }
+
+  test(
+      'two friends, each over its own headless layer, are matched by the GLP '
+      'rendezvous agent on the server and told the address it observes for '
+      'the other; a request carrying its own signature is refused', () async {
+    if (sodiumUnavailable != null) {
+      markTestSkipped(sodiumUnavailable!);
+      return;
+    }
+    final (:rvKey, :a, :b, :sigA, :sigB, :serverLines) =
+        await standUp(0x7e, 0x3a, 0x4b);
 
     // A requests reconnection to B with B's signature; B notices A with A's.
     await a.agent.injectUserInput(
@@ -270,9 +287,7 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
         _struct('available', [_const(rvKey.hex), _const(a.key.hex), sigA]));
 
     // Each is told the address the server observes for the other: the port
-    // the other's layer is bound to, on the loopback.  The server's layer
-    // listens on a dual-stack socket, so it observes an IPv4 source in its
-    // IPv4-mapped IPv6 form.
+    // the other's layer is bound to, on the loopback.
     final punchedA = await a.saidOne('punched');
     final punchedB = await b.saidOne('punched');
     final toB = _value(punchedA.args[1]);
@@ -298,7 +313,108 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
     expect(serverLines, contains('CONNECTED ${a.key.hex}'));
     expect(serverLines, contains('CONNECTED ${b.key.hex}'));
   }, timeout: const Timeout(Duration(minutes: 4)));
+
+  // GNA's task of 2026-10-09, item 3: two headless agents behind distinct
+  // addresses, one changing address, reconnect through the GLP rendezvous
+  // agent, the friends' signed attest(PkA, PkB) verified and both punched.
+  //
+  // On the loopback the two addresses are two ports of 127.0.0.1, and the
+  // change is simulated by stopping the mover's layer and starting it again
+  // on a new port, as headless_liveness_test.dart does.  What the loopback
+  // shows: after the move, the rendezvous agent matches the pair, verifies
+  // both signatures, observes the mover at its new address and relays it to
+  // the friend, the friend declares it and punches toward it, and the two
+  // are reachable again with the friend observing the mover there.  What it
+  // cannot show: that the rendezvous path is necessary.  There is no NAT on
+  // the loopback, so the mover's own heartbeat sweep, dialing the friend at
+  // its unchanged address, would reconnect the pair without it (GNA §4.2:
+  // "the endpoint that moved reconnects"); the rendezvous agent is what
+  // lets two agents both behind NAT do so, and no test here stands a NAT up.
+  test(
+      'an agent changes address and it and its friend reconnect through the '
+      'GLP rendezvous agent, each signature verified and both punched',
+      () async {
+    if (sodiumUnavailable != null) {
+      markTestSkipped(sodiumUnavailable!);
+      return;
+    }
+    final (:rvKey, :a, :b, :sigA, :sigB, :serverLines) =
+        await standUp(0x7d, 0x3c, 0x4d);
+
+    // The friends know each other at their addresses, as the social graph
+    // tells their layers (peer_declare/1, address_declare/2), and connect.
+    a.layer.putPeerAddress(b.key.bytes, '127.0.0.1:${b.layer.boundPort}');
+    b.layer.putPeerAddress(a.key.bytes, '127.0.0.1:${a.layer.boundPort}');
+    expect(
+        await _until(() =>
+            a.layer.isPeerReachable(b.key.bytes) &&
+            b.layer.isPeerReachable(a.key.bytes)),
+        isTrue,
+        reason: 'the heartbeat sweep connects the two');
+
+    // A changes address: its layer stops and starts on a new port, its
+    // sessions gone, its known peers and its server kept.
+    final oldPort = a.layer.boundPort;
+    await a.layer.stop();
+    expect(await a.layer.start(), isTrue);
+    final newPort = a.layer.boundPort!;
+    expect(newPort, isNot(oldPort));
+
+    // A asks the server to reconnect it to B with B's signature; B, which
+    // A's move cost its path, tells the server it is available to A with
+    // A's.
+    await a.agent.injectUserInput(
+        _struct('reconnect', [_const(rvKey.hex), _const(b.key.hex), sigB]));
+    await b.agent.injectUserInput(
+        _struct('available', [_const(rvKey.hex), _const(a.key.hex), sigA]));
+
+    // Both admitted, so both signatures verified; each told the address the
+    // server observes for the other: B's unchanged, and A's new.
+    final punchedA = await a.saidOne('punched');
+    final punchedB = await b.saidOne('punched');
+    final toB = _value(punchedA.args[1]);
+    final toA = _value(punchedB.args[1]);
+    expect(_loopback(toB, b.layer.boundPort!), isTrue, reason: toB);
+    expect(_loopback(toA, newPort), isTrue,
+        reason: 'B is told A\'s new address: $toA');
+    expect(a.said.whereType<rt.StructTerm>().map((t) => t.functor),
+        isNot(contains('rejected')));
+    expect(b.said.whereType<rt.StructTerm>().map((t) => t.functor),
+        isNot(contains('rejected')));
+
+    // B declared A's new address (address_declare/2), and the two are
+    // reachable again, B observing A there.
+    expect(b.layer.store.state.knownPeers.known[a.key.hex], toA);
+    expect(
+        await _until(() =>
+            a.layer.isPeerReachable(b.key.bytes) &&
+            b.layer.isPeerReachable(a.key.bytes)),
+        isTrue,
+        reason: 'reconnected');
+    expect(_loopback(b.layer.observedPeerAddress(a.key.bytes)!, newPort),
+        isTrue);
+    expect(serverLines, contains('CONNECTED ${a.key.hex}'));
+  }, timeout: const Timeout(Duration(minutes: 4)));
 }
+
+/// Whether [predicate] holds within 40 seconds, four heartbeat intervals.
+Future<bool> _until(bool Function() predicate) async {
+  final deadline = DateTime.now().add(const Duration(seconds: 40));
+  while (!predicate() && DateTime.now().isBefore(deadline)) {
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+  }
+  return predicate();
+}
+
+/// What [standUp] stands up.
+typedef _World = ({
+  glp.PubKey rvKey,
+  _Friend a,
+  _Friend b,
+  rt.Term sigA,
+  rt.Term sigB,
+  List<String> serverLines,
+});
 
 /// One friend: its key, its layer, its agent, and what the agent said to its
 /// person.
@@ -364,10 +480,10 @@ String _dartExecutable() {
   return 'dart';
 }
 
-/// Whether [address] is the loopback at [port], in IPv4 or IPv4-mapped IPv6
-/// form.
-bool _loopback(String address, int port) =>
-    address == '127.0.0.1:$port' || address == '[::ffff:127.0.0.1]:$port';
+/// Whether [address] is the loopback at [port].  The server's layer listens
+/// on a dual-stack socket, which reports an IPv4 source in its IPv4-mapped
+/// IPv6 form; the layer names it in its IPv4 form (`observedAddressString`).
+bool _loopback(String address, int port) => address == '127.0.0.1:$port';
 
 String _hex(List<int> bytes) =>
     bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
