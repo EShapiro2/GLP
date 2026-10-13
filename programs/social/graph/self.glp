@@ -272,8 +272,16 @@ ScreenContent ::= holdings(Stream(Lot))
                 ; no_conversation(Key).
 %% The agent's questions: the person's requests, its interactive type in
 %% reader mode, and the responder's card, in writer mode.
-Peer     ::= Key.
-Request  ::= mint(Integer) ; swap(Peer, Lot, Lot) ; pay(Peer, Integer) ; redeem(Peer, Peer).
+Amount     ::= Integer.
+Friend     ::= Key.
+GiveCoin   ::= Key.
+GiveAmount ::= Integer.
+WantCoin   ::= Key.
+WantAmount ::= Integer.
+Request  ::= mint(Amount)
+           ; swap(Friend, GiveCoin, GiveAmount, WantCoin, WantAmount)
+           ; pay(Friend, Amount)
+           ; redeem(Friend, WantCoin).
 YesNo    ::= yes ; no.
 COffer   ::= offer(Key, Lot, Stream(Coin)).
 Card     ::= card(COffer, YesNo?).
@@ -337,7 +345,7 @@ SvPayResponse ::= pay_taken ; pay_returned(Stream(SvInstrument)).
 SvRedeemResponse ::= redeem_give(SvInstrument)
                    ; redeem_menu(SvInstrument, Stream(SvLot))
                    ; redeem_declined(SvInstrument).
-SvMatureResponse ::= mature_give(SvInstrument, Integer) ; mature_declined(SvInstrument).
+SvMatureResponse ::= mature_give(SvInstrument) ; mature_declined(SvInstrument).
 SvTransferResponse ::= transfer_accept ; transfer_decline(Stream(SvInstrument)).
 SvContent ::= pay(Stream(SvInstrument), SvPayResponse?)
             ; payout(Constant, Stream(SvInstrument), SvPayResponse?)
@@ -354,7 +362,6 @@ SvScreenContent ::= holdings(Stream(SvLot))
                   ; acceptances(Stream(SvAccepting))
                   ; opened(Key)
                   ; date_advanced(Integer)
-                  ; warranty(Key, Integer)
                   ; minted(Integer, Constant)
                   ; accepted(Key, Constant, Integer)
                   ; not_held(Key, Constant)
