@@ -28,12 +28,11 @@ import 'fixture_term.dart';
 /// `Request`, each field `field(L, W)`, labelled by the name of its declared
 /// type, a `Key` a peer field (vGLP, Definition "Widget Declaration, Default
 /// Widget").
-const _requestForm = "input_box(menu([form(mint, [field('Integer', number)]), "
-    "form(swap, [field('Peer', peer), "
-    "field('Lot', form(lot, [field('Key', peer), field('Integer', number)])), "
-    "field('Lot', form(lot, [field('Key', peer), field('Integer', number)]))]), "
-    "form(pay, [field('Peer', peer), field('Integer', number)]), "
-    "form(redeem, [field('Peer', peer), field('Peer', peer)])]))";
+const _requestForm = "input_box(menu([form(mint, [field('Amount', number)]), "
+    "form(swap, [field('Friend', peer), field('GiveCoin', peer), field('GiveAmount', number), "
+    "field('WantCoin', peer), field('WantAmount', number)]), "
+    "form(pay, [field('Friend', peer), field('Amount', number)]), "
+    "form(redeem, [field('Friend', peer), field('WantCoin', peer)])]))";
 
 /// The widget of the swap responder's question, `Card ::= card(Offer,
 /// YesNo?)` in writer mode: the offer shown, and the buttons yes and no.

@@ -155,12 +155,11 @@ void main() {
     // input box of a menu of the four forms of Request --- over the view
     // input([]), the whole variable hers to write; each field labelled by
     // the name of its declared type, a Key a peer field.
-    const requestForm = "input_box(menu([form(mint, [field('Integer', number)]), "
-        "form(swap, [field('Peer', peer), "
-        "field('Lot', form(lot, [field('Key', peer), field('Integer', number)])), "
-        "field('Lot', form(lot, [field('Key', peer), field('Integer', number)]))]), "
-        "form(pay, [field('Peer', peer), field('Integer', number)]), "
-        "form(redeem, [field('Peer', peer), field('Peer', peer)])]))";
+    const requestForm = "input_box(menu([form(mint, [field('Amount', number)]), "
+        "form(swap, [field('Friend', peer), field('GiveCoin', peer), field('GiveAmount', number), "
+        "field('WantCoin', peer), field('WantAmount', number)]), "
+        "form(pay, [field('Friend', peer), field('Amount', number)]), "
+        "form(redeem, [field('Friend', peer), field('WantCoin', peer)])]))";
     expect(await until(() => drawn(requestForm).length == 1), isTrue,
         reason: 'the request form, drawn once');
     final form = drawn(requestForm).single;
@@ -179,7 +178,7 @@ void main() {
     expect(r.bridge.construct(form.id), isNotNull,
         reason: 'the request form stays open, one request per submission');
     r.bridge.grant(
-        form.id, p, tryParseTerm('swap(bob, lot(alice, 2), lot(bob, 2))')!);
+        form.id, p, tryParseTerm('swap(bob, alice, 2, bob, 2)')!);
     await send();
     expect(
         await until(() => r.store.lists['screen']!
