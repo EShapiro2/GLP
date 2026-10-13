@@ -155,12 +155,10 @@ const listEnd = '[end]';
 
 /// A moded interactive type of the program: its type as written, its mode,
 /// the functor the compilation gives it in Question, and the type parameters
-/// of the procedure that declares it.  One of another module N, which an
-/// import brings (vGLP at 66b6500, Definition "Canonical Compilation": "the
-/// interactive types of N join those of M, each with the functor and the
-/// widget its export gives it, M declaring no widget for a type it
-/// imports"), carries the module it is [from] and the [widget] N gives it;
-/// [alsoOwn] where a volitional procedure of the program's own has it too.
+/// of the procedure that declares it.  Every one is the program's own: "No
+/// vGLP module imports from another module a procedure that reaches a
+/// question, so the questions of a program are those of one module" (vGLP,
+/// Definition "Canonical Compilation").
 class InteractiveType {
   final TypeExpr type;
   final bool readerMode;
@@ -168,36 +166,11 @@ class InteractiveType {
   final List<String> params;
   final int line, column;
 
-  /// The widget term the type's module gives it, where it is another
-  /// module's; null for the program's own, whose widget is the one in its
-  /// scope.
-  final String? widget;
-
-  /// The module whose export brings the type, or null for the program's own.
-  final String? from;
-
-  /// Whether a volitional procedure of the program's own has this imported
-  /// type too: the two are one alternative of the questions, of one
-  /// functor, and one construct process serves both.
-  final bool alsoOwn;
-
   InteractiveType(this.type, this.readerMode, this.functor, this.params,
-      this.line, this.column,
-      {this.widget, this.from, this.alsoOwn = false});
+      this.line, this.column);
 
   /// The moded type as written, `Card` or `Request?`.
   String get written => typeSource(type);
-
-  /// The same type with [widget] as its widget.
-  InteractiveType withWidget(String? widget) =>
-      InteractiveType(type, readerMode, functor, params, line, column,
-          widget: widget, from: from, alsoOwn: alsoOwn);
-
-  /// The same imported type, a volitional procedure of the program's own
-  /// having it too.
-  InteractiveType withOwn() =>
-      InteractiveType(type, readerMode, functor, params, line, column,
-          widget: widget, from: from, alsoOwn: true);
 }
 
 /// A type's name as a lowercase atom stem, `Stream(String)` stream_string,
@@ -486,18 +459,9 @@ class _Generator {
     return ConstructProcesses('$hook$_out', widgets);
   }
 
-  /// The widget of interactive type [t], whose root is [root]: the one its
-  /// module gives it where it is another module's, the importer declaring
-  /// none for it, a volitional procedure of the program's own of the type
-  /// included ("the interactive types of N join those of M, each with the
-  /// functor and the widget its export gives it, M declaring no widget for
-  /// a type it imports", vGLP at 66b6500, Definition "Canonical
-  /// Compilation"; vGLP #7 Cowork, 2026-10-11 14:19 UTC, item 1: "the
-  /// widget travels with the type from the module that exports it, as the
-  /// functor does"); and the one in the program's scope where it is the
-  /// program's own.
-  String _typeWidget(InteractiveType t, _Node root) =>
-      t.widget ?? _widget(root, {});
+  /// The widget of interactive type [t], whose root is [root]: the one in the
+  /// program's scope.
+  String _typeWidget(InteractiveType t, _Node root) => _widget(root, {});
 
   // --- the construct clause -------------------------------------------------
 
