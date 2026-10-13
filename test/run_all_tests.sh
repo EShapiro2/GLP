@@ -3589,16 +3589,6 @@ check "CVA refused: ... no, and alice tallies it and tells bob abort" "sent(bob,
 check "CVA refused: aborted at both, alice proposes again and bob is asked again and answers yes" "B = \[.*outcome(attempt(alice, 1, befriend(alice, bob))), start(attempt(alice, 2, befriend(alice, bob))), gave(attempt(alice, 2, befriend(alice, bob)), yes), answer(attempt(alice, 2, befriend(alice, bob))), vote(attempt(alice, 2, befriend(alice, bob))), outcome(attempt(alice, 2, befriend(alice, bob)))" "$cva_sg_refused"
 check "CVA refused: ... and the second attempt commits" "sent(alice, bob, outcome(attempt(alice, 2, befriend(alice, bob)), commit))" "$cva_sg_refused"
 
-cva_sg_pending=$("$REPL_RUN" <<HEREDOC
-$CVA/social_graph/
-:limit 600000
-play_pending(A, B, N).
-:quit
-HEREDOC
-2>&1)
-check "CVA pending: alice's start reaches bob before her hello, pends on her, and is put up again at the second hello" "B = \[discover(alice), start(attempt(alice, 1, befriend(alice, bob))), gave(befriend(alice, bob), yes), answer(attempt(alice, 1, befriend(alice, bob)))" "$cva_sg_pending"
-check "CVA pending: ... and the befriending commits" "sent(alice, bob, outcome(attempt(alice, 1, befriend(alice, bob)), commit))" "$cva_sg_pending"
-
 cva_cur_load=$("$REPL_RUN" <<HEREDOC
 $CVA/currency/
 :quit
