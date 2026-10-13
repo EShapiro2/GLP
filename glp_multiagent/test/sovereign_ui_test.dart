@@ -54,11 +54,27 @@ const _requestForm = 'input_box(menu(['
     'form(return, [$_k, $_c, $_k, $_c, $_i])]))';
 
 /// The widget of each responder's question: the offer shown, labelled by its
-/// type, and the buttons yes and no.
+/// type, and the buttons yes and no --- the offer, a tuple the program
+/// writes, a form of shown fields each labelled by its declared type's name,
+/// its lot a form of its own and its instruments a thread of their forms, as
+/// the compiler emits it (programs/currencies/sovereign/denominated/
+/// sovereign_agent.glp; vGLP #8 Cowork, 2026-10-13 08:15 UTC, item b).
 const _swapCard =
-    "form(card, [field('SwapOffer', shown), field('YesNo', buttons([yes, no]))])";
-const _transferCard = "form(card, [field('TransferOffer', shown), "
-    "field('YesNo', buttons([yes, no]))])";
+    "form(card, [field('SwapOffer', form(offer, [field('Key', shown), f"
+    "ield('Lot', form(lot, [field('Key', shown), field('Constant', show"
+    "n), field('Constant', shown), field('Integer', shown)])), field('S"
+    "tream(Instrument)', thread(menu([form(coin, [field('Key', shown), "
+    "field('Constant', shown), field('Integer', shown)]), form(bond, [f"
+    "ield('Key', shown), field('Constant', shown), field('Integer', sho"
+    "wn), field('Integer', shown)])])))])), field('YesNo', buttons([yes"
+    ", no]))])";
+const _transferCard =
+    "form(card, [field('TransferOffer', form(offer_transfer, [field('Ki"
+    "nd', shown), field('Key', shown), field('Stream(Instrument)', thre"
+    "ad(menu([form(coin, [field('Key', shown), field('Constant', shown)"
+    ", field('Integer', shown)]), form(bond, [field('Key', shown), fiel"
+    "d('Constant', shown), field('Integer', shown), field('Integer', sh"
+    "own)])])))])), field('YesNo', buttons([yes, no]))])";
 
 void main() {
   late List<String> sent;
@@ -253,8 +269,8 @@ void main() {
     });
   });
 
-  group('a compound offer is shown as its scalars', () {
-    testWidgets('a lot and a list of bonds show their scalars, not their terms',
+  group('a compound offer is shown as a form, each field labelled by its type', () {
+    testWidgets('a lot and a list of bonds show their fields, each labelled, not their terms',
         (tester) async {
       tester.view.physicalSize = const Size(600, 1200);
       tester.view.devicePixelRatio = 1.0;
@@ -270,10 +286,40 @@ void main() {
       Finder inCard(Finder f) =>
           find.descendant(of: find.byKey(constructKey(24)), matching: f);
 
-      // The offer: bob, the lot wanted --- its four scalars --- and the two
-      // bonds offered, one group of four per bond.
-      expect(inCard(find.text('bob alice usd 0 2, bob usd 30 7, bob usd 30 8')),
-          findsOneWidget);
+      // The offer, a form, each field labelled by its declared type's name:
+      // the offerer, a Key; the lot wanted, Lot ::= lot(Key, Constant,
+      // Constant, Integer), a form of its own; and the two bonds offered,
+      // each a form of its own in the thread of Stream(Instrument).
+      expect(find.byKey(nodeKey(24, 'form', const [1])), findsOneWidget);
+      expect(find.byKey(nodeKey(24, 'form', const [1, 2])), findsOneWidget);
+      expect(find.byKey(nodeKey(24, 'thread', const [1, 3])), findsOneWidget);
+      expect(find.byKey(nodeKey(24, 'form', const [1, 3, 1])), findsOneWidget);
+      expect(find.byKey(nodeKey(24, 'form', const [1, 3, 2, 1])), findsOneWidget);
+      for (final (label, n) in [
+        ('SwapOffer', 1),
+        ('Lot', 1),
+        ('Stream(Instrument)', 1),
+        ('Key', 4),
+        ('Constant', 4),
+        ('Integer', 5),
+        ('YesNo', 1),
+      ]) {
+        expect(inCard(find.text(label)), findsNWidgets(n), reason: label);
+      }
+      for (final (value, n) in [
+        ('bob', 3),
+        ('alice', 1),
+        ('usd', 3),
+        ('0', 1),
+        ('2', 1),
+        ('30', 2),
+        ('7', 1),
+        ('8', 1),
+      ]) {
+        expect(inCard(find.text(value)), findsNWidgets(n), reason: value);
+      }
+      // Shown and not edited.
+      expect(inCard(find.byType(TextField)), findsNothing);
       // No term, of the offer or of any part of it.
       for (final term in [
         'offer(',

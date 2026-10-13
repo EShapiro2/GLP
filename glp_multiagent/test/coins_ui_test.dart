@@ -35,9 +35,16 @@ const _requestForm = "input_box(menu([form(mint, [field('Amount', number)]), "
     "form(redeem, [field('Friend', peer), field('WantCoin', peer)])]))";
 
 /// The widget of the swap responder's question, `Card ::= card(Offer,
-/// YesNo?)` in writer mode: the offer shown, and the buttons yes and no.
-const _card =
-    "form(card, [field('Offer', shown), field('YesNo', buttons([yes, no]))])";
+/// YesNo?)` in writer mode: the offer shown, and the buttons yes and no ---
+/// the offer, a tuple the program writes, a form of shown fields each
+/// labelled by its declared type's name, its lot and its coins forms of their
+/// own, as the compiler emits it (programs/currencies/coins/currency/
+/// coins_agent.glp; vGLP #8 Cowork, 2026-10-13 08:15 UTC, item b).
+const _offer = "field('Offer', form(offer, [field('Key', shown), "
+    "field('Lot', form(lot, [field('Key', shown), field('Integer', shown)])), "
+    "field('Stream(Coin)', thread(form(coin, [field('Key', shown), "
+    "field('Integer', shown)])))]))";
+const _card = "form(card, [$_offer, field('YesNo', buttons([yes, no]))])";
 
 void main() {
   late List<String> sent;
@@ -99,8 +106,8 @@ void main() {
       expect(form, 'form');
       final ws = (fields[1] as GList).items;
       expect(formatTerm(fields[0]), 'card');
-      expect(formatTerm(ws[0]), "field('Offer', shown)",
-          reason: 'the offer, shown');
+      expect(formatTerm(ws[0]), _offer,
+          reason: 'the offer, shown, each field labelled by its type');
       expect(formatTerm(ws[1]), "field('YesNo', buttons([yes, no]))",
           reason: 'YesNo ::= yes ; no, a row of buttons');
     });
