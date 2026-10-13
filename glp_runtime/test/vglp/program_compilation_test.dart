@@ -199,7 +199,7 @@ display respond *(Answer=yes, From?) : panel(inbox), label('"x"'), transient.
     // a mini-app --- social/graph/core, coins/currency and cssn/childsafe ---
     // since a lone .vglp is compiled by the loader and must stand beside its
     // .glp.  They all PARSE as vGLP.  coins/currency/coins_agent.vglp,
-    // bonds/bonds_agent.vglp and sovereign/denominated/sovereign_agent.vglp
+    // bonds/dated/bonds_agent.vglp and sovereign/denominated/sovereign_agent.vglp
     // also COMPILE and RUN --- Sections N2, N3 and N4 of test/run_all_tests.sh
     // load their emitted .glp and run the village market; social/graph/core/
     // home.vglp compiles, its home.glp being the compiler's output, which
