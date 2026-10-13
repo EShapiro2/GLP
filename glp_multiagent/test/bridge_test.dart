@@ -11,6 +11,8 @@
 // Declaration, Default Widget"), answered through the screen, returned as
 // input(Id, P, R), received by the module's goal --- which writes got(Q, X)
 // on its output to the person --- and withdrawn.
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/isolate_protocol.dart';
@@ -1004,6 +1006,86 @@ void main() {
       expect(tryParseTerm('-1.5e-3'), isA<GReal>());
       expect(tryParseTerm('7'), isA<GInt>());
       expect(formatTerm(const GReal(2.5)), '2.5');
+    });
+  });
+  group('the initial goal: every call of a volitional procedure holds a '
+      'writer at each output position', () {
+    // vGLP, Definition "Volitional Procedure, Interactive Type, Interactive
+    // Term, Ordinary Clause, vGLP Program": "every call of a volitional
+    // procedure, in a clause body or in the initial goal, holds a writer at
+    // each output position"; Definition "Canonical Compilation": "the GLP
+    // module that forms the program's initial goal imports that module's
+    // compiled procedures".  The bridge's goal, M # q(...), is the body of the
+    // entry the host posts, and is checked when the program links (IGLP's
+    // Task 1 of GLP 2026-10-13 08:11 UTC; GLP 2026-10-13 09:20 UTC, item 2).
+    // The program is written under programs/tests/vglp/ for the run and
+    // removed after, as glp_runtime's initial_goal_test's is.
+    late String name;
+    late Directory fixture;
+    void write(String answers) {
+      name = 'initgoal_bridge_${pid}_${DateTime.now().microsecondsSinceEpoch}';
+      fixture = Directory('${programsDir()}/tests/vglp/$name')..createSync();
+      File('${fixture.path}/asker.vglp').writeAsStringSync('''
+Peer  ::= Constant.
+YesNo ::= yes ; no.
+Card  ::= card(Peer, YesNo?).
+
+exported procedure (Card)*ask(Peer?, Stream(YesNo)).
+(card(P?, A))*ask(P, [A?]) :- ground(P?) | true.
+''');
+      File('${fixture.path}/self.glp').writeAsStringSync('''
+Peer     ::= Constant.
+YesNo    ::= yes ; no.
+Card     ::= card(Peer, YesNo?).
+Question ::= card_w(Card).
+Ask(Q)   ::= ask(Constant, Q).
+PersonIn ::= [_ | PersonIn].
+
+imported procedure asker#ask(Peer?, Stream(YesNo), Stream(Ask(Question))).
+imported procedure asker#dispatch(Stream(Ask(Question))?,
+    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+
+exported procedure ask_init(Constant?, PersonIn?, Stream(_)?).
+ask_init(_, Gs, _) :-
+    asker # ask(bob, $answers, Asks),
+    asker # dispatch(Asks?, ch(Gs?, Ds), _),
+    send_to_user(Ds?).
+''');
+    }
+
+    tearDown(() {
+      if (fixture.existsSync()) fixture.deleteSync(recursive: true);
+    });
+
+    test('a constant at the output position: the agent is refused at load, '
+        'the call, its clause and the position named', () async {
+      write('[yes]');
+      final programs = programsDir();
+      final agent = AgentRuntime(
+        agentId: 'bob',
+        program: '$programs/tests/vglp/$name',
+        goalLabel: 'ask_init/3',
+        rootSelfGlpPath: '$programs/self.glp',
+      );
+      agent.onLog = (_, __) {};
+      agent.onSendMadMessage = (_, __) async {};
+      await expectLater(
+          agent.initialize(),
+          throwsA(predicate((e) =>
+              e.toString().contains('The call asker # ask(bob, [yes], '
+                  'Asks) of the volitional procedure asker#ask/2, in the '
+                  'clause ask_init(_, Gs, _) at line 13') &&
+              e.toString().contains('holds [yes] at output position 2, '
+                  'which is not a writer'))));
+    });
+
+    testWidgets('a writer at the output position: admitted, and the card '
+        'drawn', (tester) async {
+      write('_');
+      final p = await _Person.boot(tester, 'ask_init', dir: name);
+      expect(p.ui.bridge.constructs, hasLength(1));
+      expect(formatTerm(p.ui.bridge.constructs.single.view),
+          'card(bob, input([2]))');
     });
   });
 }

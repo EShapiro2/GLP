@@ -12,6 +12,7 @@ import 'dart:io';
 import 'package:path/path.dart' as ppath;
 import 'analyzer.dart' show Analyzer;
 import 'ast.dart';
+import 'glp_printer.dart';
 import 'lexer.dart';
 import 'parser.dart';
 import 'partial_evaluator.dart';
@@ -25,7 +26,12 @@ import '../analysis/type_checker/param_expansion.dart'
 import '../analysis/type_checker/program_dfa.dart' show UnknownTypeError;
 import '../runtime/module_hierarchy.dart';
 import '../vglp/mediator.dart';
-import '../vglp/canonical.dart' show isPaperSyntaxSource;
+import '../vglp/canonical.dart'
+    show
+        VolitionalCall,
+        checkWritersAtOutputs,
+        isPaperSyntaxSource,
+        volitionalRecord;
 import '../vglp/program_compilation.dart';
 
 /// A discovered module in the program tree.
@@ -82,6 +88,15 @@ class DiscoveredModule {
   /// carries those its declarations and types reference ([linkedFlatModule]);
   /// their procedures are not linked.  Empty for every other module.
   final List<DiscoveredModule> outerScope;
+
+  /// The volitional procedures of the module, where it is compiled from a
+  /// `.vglp` source --- the source the loader compiles, or the one beside a
+  /// compiled module committed in its place --- by the signature of each
+  /// asking clause, `q/(n+1)` ([volitionalRecord]): what a call of one from
+  /// another module is checked by ([_CrossModuleResolver.checkVolitionalCalls]),
+  /// the compiled declarations carrying no mark of volition.  Empty for every
+  /// other module.  Set by [_attachVolitionalRecords].
+  Map<String, VolitionalCall> volitional = const {};
 
   DiscoveredModule({
     required this.filePath,
@@ -217,8 +232,37 @@ List<DiscoveredModule> discoverProgram(String rootDir,
   // position it occurs at and those positions are often arguments of an exposed
   // procedure — `send_net` and the rest of social/graph/routing.
   _addVglpModules(modules, root, programsDir, rootSelfGlpPath, rs);
+  _attachVolitionalRecords(modules);
   _rootLast(modules);
   return modules;
+}
+
+/// Each module compiled from a `.vglp` source given the record of its
+/// volitional procedures, read off that source ([volitionalRecord]): a module
+/// the loader compiled from `N.vglp`, and a compiled `N.glp` committed beside
+/// its `N.vglp` (its first line the compiler's header), which the loader links
+/// in the source's place.  "Every call of a volitional procedure, in a clause
+/// body or in the initial goal, holds a writer at each output position"
+/// (vGLP, Definition "Volitional Procedure, ..., vGLP Program"), and "the GLP
+/// module that forms the program's initial goal imports that module's
+/// compiled procedures" (Definition "Canonical Compilation"): the record is
+/// what the calls of that module are checked by.
+void _attachVolitionalRecords(List<DiscoveredModule> modules) {
+  for (final m in modules) {
+    final path = m.filePath;
+    if (path.endsWith('.vglp')) {
+      m.volitional = volitionalRecord(File(path).readAsStringSync());
+    } else if (path.endsWith('.glp') && !isSelfGlpFile(path)) {
+      final source = File('${path.substring(0, path.length - 4)}.vglp');
+      if (!source.existsSync()) continue;
+      final compiled = File(path);
+      if (!compiled.existsSync() ||
+          !compiled.readAsStringSync().startsWith(compiledHeader)) {
+        continue;
+      }
+      m.volitional = volitionalRecord(source.readAsStringSync());
+    }
+  }
 }
 
 /// `Π ⊔ d_1` for the root at [rootSelfGlpPath], or null where there is none.
@@ -471,6 +515,7 @@ List<DiscoveredModule> discoverSingleModule(String filePath,
 
   _addAncestorContextAndExposes(
       modules, dir, programsDir, rootSelfGlpPath, nameRoot, rs);
+  _attachVolitionalRecords(modules);
   return modules;
 }
 
@@ -1475,6 +1520,7 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
       final renamedClauses = <Clause>[];
 
       for (final clause in proc.clauses) {
+        resolver.checkVolitionalCalls(mod, clause);
         final renamedHead = keepBare
             ? clause.head
             : Atom('${mod.moduleName}:${clause.head.functor}',
@@ -1872,16 +1918,7 @@ class _CrossModuleResolver {
     }
 
     final callerDir = _normPath(File(caller.filePath).parent.path);
-    final dirSelf = ppath.join(callerDir, q, 'self.glp');
-    final glpFile = ppath.join(callerDir, '$q.glp');
-    final vglpFile = ppath.join(callerDir, '$q.vglp');
-    final candidates = <String>[
-      if (File(dirSelf).existsSync()) dirSelf,
-      if (File(glpFile).existsSync())
-        glpFile
-      else if (File(vglpFile).existsSync())
-        vglpFile,
-    ];
+    final candidates = _candidates(caller, q);
     if (candidates.isEmpty) {
       final bareDir = Directory(ppath.join(callerDir, q)).existsSync()
           ? ' (${ppath.join(callerDir, q)}/ has no self.glp, through which a '
@@ -1911,6 +1948,62 @@ class _CrossModuleResolver {
       _checkAgreement(caller, target, q, inner);
     }
     return target.moduleName;
+  }
+
+  /// The files the qualifier [q] of a call made in [caller] may name:
+  /// `<caller's directory>/q/self.glp`, and `<caller's directory>/q.glp` or,
+  /// where there is none, the `q.vglp` source compiled as that module.
+  List<String> _candidates(DiscoveredModule caller, String q) {
+    final callerDir = _normPath(File(caller.filePath).parent.path);
+    final dirSelf = ppath.join(callerDir, q, 'self.glp');
+    final glpFile = ppath.join(callerDir, '$q.glp');
+    final vglpFile = ppath.join(callerDir, '$q.vglp');
+    return <String>[
+      if (File(dirSelf).existsSync()) dirSelf,
+      if (File(glpFile).existsSync())
+        glpFile
+      else if (File(vglpFile).existsSync())
+        vglpFile,
+    ];
+  }
+
+  /// Every call `N # q(...)` in the body of [clause], a clause of [caller],
+  /// of a volitional procedure of the module N names --- the compiled asking
+  /// clause, its ask stream last --- holds a writer at each output position:
+  /// "every call of a volitional procedure, in a clause body or in the
+  /// initial goal, holds a writer at each output position" (vGLP, Definition
+  /// "Volitional Procedure, Interactive Type, Interactive Term, Ordinary
+  /// Clause, vGLP Program"), and "the GLP module that forms the program's
+  /// initial goal imports that module's compiled procedures" (Definition
+  /// "Canonical Compilation").  By the rule of the `.vglp` front,
+  /// [checkWritersAtOutputs], over the record N's source gives
+  /// ([DiscoveredModule.volitional]); a refusal, a [CompileError], names the
+  /// call, the clause, its file and the position.  A qualifier that names no
+  /// one module is left to [resolve] to report.
+  void checkVolitionalCalls(DiscoveredModule caller, Clause clause) {
+    Iterable<RemoteGoal> remotes(Goal g) sync* {
+      if (g is RemoteGoal) {
+        yield g;
+      } else if (g is SpawnGoal) {
+        yield* remotes(g.innerGoal);
+      }
+    }
+
+    for (final g in clause.body ?? const <Goal>[]) {
+      for (final call in remotes(g)) {
+        final inner = call.goal;
+        if (inner is RemoteGoal) continue;
+        final candidates = _candidates(caller, call.staticModuleName);
+        if (candidates.length != 1) continue;
+        final target = _byPath[_normPath(candidates.single)];
+        final v = target?.volitional['${inner.functor}/${inner.arity}'];
+        if (v == null) continue;
+        checkWritersAtOutputs(call, inner.args, v,
+            calledAs: '${call.staticModuleName}#${v.name}',
+            where: 'in the clause ${GlpPrinter().printAtom(clause.head)} at '
+                'line ${clause.line} of ${caller.filePath}');
+      }
+    }
   }
 
   /// The scope [m] is checked in ([checkModule]'s environment).

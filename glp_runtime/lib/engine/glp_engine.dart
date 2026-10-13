@@ -39,6 +39,8 @@ import 'package:glp_runtime/analysis/type_checker/well_typed_clause.dart' as wtc
 import 'package:glp_runtime/runtime/module_hierarchy.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/compiler/program_linker.dart';
+import 'package:glp_runtime/vglp/canonical.dart'
+    show VolitionalCall, checkWritersAtOutputs;
 import 'package:glp_runtime/wire/flattening.dart'
     show
         canonicalPrint,
@@ -131,7 +133,17 @@ class _UnitEntryPoints {
   final TypeEnvironment Function() _declaringScope;
   late final TypeEnvironment declaringScope = _declaringScope();
 
-  _UnitEntryPoints(this.keys, this._declaringScope);
+  /// The entry points that are volitional procedures, by key, each with its
+  /// output positions ([VolitionalCall]): those of a module compiled from a
+  /// `.vglp` source loaded as a single-module program, whose procedures are
+  /// its entry points, read off its source ([DiscoveredModule.volitional]).
+  /// A directory program's entry points are its self.glp's procedures, which
+  /// are ordinary.  What a goal posted to the unit is checked by besides its
+  /// type ([GlpEngine._checkGoalWellTyped]).
+  final Map<String, VolitionalCall> volitional;
+
+  _UnitEntryPoints(this.keys, this._declaringScope,
+      {this.volitional = const {}});
 }
 
 /// Module info for tracking loaded modules
@@ -530,8 +542,11 @@ class GlpEngine {
     // was checked in ([scope]), which is what a goal posted to it is checked
     // against ([_checkGoalWellTyped]).
     final declaredIn = ancestorScope!;
+    final loaded = discovered?.firstWhere((m) => m.filePath == name,
+        orElse: () => discovered!.first);
     _unitEntryPoints[name] = _UnitEntryPoints(_plainProcedures(program),
-        () => mergeModuleIntoScope(declaredIn, module, label: moduleInfo.name));
+        () => mergeModuleIntoScope(declaredIn, module, label: moduleInfo.name),
+        volitional: loaded?.volitional ?? const {});
 
     return true;
   }
@@ -1094,6 +1109,29 @@ class GlpEngine {
     }
     if (atoms.isEmpty) {
       return 'Goal does not parse as a clause body: $trimmed';
+    }
+
+    // "Every call of a volitional procedure, in a clause body or in the
+    // initial goal, holds a writer at each output position" (vGLP,
+    // Definition "Volitional Procedure, Interactive Type, Interactive Term,
+    // Ordinary Clause, vGLP Program"): a conjunct calling an entry point that
+    // is a volitional procedure ([_UnitEntryPoints.volitional]) is checked by
+    // the rule of the .vglp front, [checkWritersAtOutputs], and refused,
+    // naming the call, the goal and the position.
+    final volitional = <String, VolitionalCall>{
+      for (final u in _unitEntryPoints.values) ...u.volitional,
+    };
+    if (volitional.isNotEmpty) {
+      for (final a in atoms) {
+        final v = volitional['${a.functor}/${a.args.length}'];
+        if (v == null) continue;
+        try {
+          checkWritersAtOutputs(a, a.args, v,
+              calledAs: v.name, where: 'in the posted goal $trimmed');
+        } on CompileError catch (e) {
+          return e.message;
+        }
+      }
     }
 
     // The goal is checked in the root and the loaded units' entry points
