@@ -221,7 +221,7 @@ display respond *(Answer=yes, From?) : panel(inbox), label('"x"'), transient.
     // home.vglp, its item 1, in the one merge of the two.
     for (final path in [
       'currencies/coins/currency/coins_agent.vglp',
-      'currencies/bonds/bonds_agent.vglp',
+      'currencies/bonds/dated/bonds_agent.vglp',
       'currencies/sovereign/denominated/sovereign_agent.vglp',
       'social/graph/core/agent.vglp',
       'social/graph/core/home.vglp',
