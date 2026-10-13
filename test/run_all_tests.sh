@@ -5258,6 +5258,16 @@ check "RV agent test22: the available's signature verifies, A's own over the pai
 check "RV agent test22: the admitted available reaches the layer, which observes no address for B" "^:peer_address(bob, none) :- true$" "$(_rv_answer 37)"
 check "RV agent test22: no address observed for B, the admitted available is rejected" "^RB22 = rejected$" "$(_rv_answer 37)"
 check "RV agent test22: no address observed for B, the waiting A is told nothing" "^RA22 = <unbound>$" "$(_rv_answer 37)"
+
+# rv_server/3, the entry the rendezvous server boots the agent on
+# (networking/glue/bin/rendezvous_server.dart): the module loaded as the
+# program, and a network input of one msg(Id, M) envelope, whose M reaches the
+# agent; an unsigned reconnect is refused.  The server itself, over the layer,
+# is networking/glue/test/rendezvous_server_test.dart's.
+rv_server_out=$(printf 'load %s\nrv_server(rv, g, [msg(rv, reconnect(alice, bob, sig, RS))]).\n:quit\n' \
+    "$GLP_DIR/programs/examples/rendezvous/rv_agent.glp" | "$REPL_RUN" 2>&1)
+check "RV rv_server loads as the server's program" "Loaded: .*rv_agent.glp" "$rv_server_out"
+check "RV rv_server: the envelope is taken off, and an unsigned reconnect refused" "^GLP> RS = rejected$" "$rv_server_out"
 echo ""
 
 # =============================================================================
