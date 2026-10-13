@@ -666,6 +666,7 @@ _Elicitation _elicitation(
     resolve: resolve,
     declared: widgets,
     fresh: freshProc,
+    output: resolve(outputTypeName),
   );
 
   // The generic procedures emitted: those reached from the dispatcher's entry

@@ -287,11 +287,19 @@ ConstructProcesses buildConstructs({
   required TypeDef? Function(String name) resolve,
   required Map<String, String> declared,
   required String Function(String stem) fresh,
+  TypeDef? output,
 }) {
   final g = _Generator(
       generic, resolve, declared, fresh, questionType, constructName);
-  return g.build(types);
+  return g.build(types, output: output);
 }
+
+/// The reserved name of the type of a program's output to its person: "A
+/// vGLP program declares the type of its output to its person by defining
+/// the type Output, a reserved name; the dispatcher draws that output as a
+/// thread whose elements are drawn by the widget of Output" (vGLP 169b008,
+/// Definition "Canonical Compilation").
+const outputTypeName = 'Output';
 
 // ---------------------------------------------------------------------------
 // The type walk
@@ -423,21 +431,33 @@ class _Generator {
   _Generator(this.gen, this.resolve, this.declared, this.fresh,
       this.questionType, this.constructName);
 
-  ConstructProcesses build(List<InteractiveType> types) {
+  ConstructProcesses build(List<InteractiveType> types, {TypeDef? output}) {
     final hook = StringBuffer();
     final params = <String>{for (final t in types) ...t.params};
     final qt = params.isEmpty
         ? questionType
         : '$questionType(${params.join(', ')})';
     final p = params.isEmpty ? '' : '(${params.join(', ')})';
-    const ch = 'Channel(Stream(_), Stream(_))';
+    // The program's output to its person, of the type Output where the
+    // program defines it: drawn by the dispatcher as the thread of its
+    // elements, construct 0, its widget thread(W), W Output's; where the
+    // program defines no Output, its output end is anonymous and nothing is
+    // drawn (vGLP 169b008, Definition "Canonical Compilation"; vGLP,
+    // 2026-10-13 19:25 UTC, items 1, 3 and 4, Udi: yes).
+    final outputWidget = output == null ? null : _outputWidget(output);
+    final ch = output == null
+        ? 'Channel(Stream(_), Stream(_))'
+        : 'Channel(Stream(_), Stream($outputTypeName))';
     final d = gen.dispatch, cs = gen.constructs;
     hook
       // dispatch/3: the dispatcher on the ask stream and the person channel,
       // and constructs/1 on the spawns it writes.
       ..writeln('exported procedure$p $d(Stream(${gen.askType}($qt))?, '
           'Channel(${gen.personInType}, Stream(_))?, $ch).')
-      ..writeln('$d(Asks, PCh, MCh?) :- $d(Asks?, PCh?, MCh, Ss), $cs(Ss?).')
+      ..writeln(outputWidget == null
+          ? '$d(Asks, PCh, MCh?) :- $d(Asks?, PCh?, MCh, Ss), $cs(Ss?).'
+          : '$d(Asks, PCh, MCh?) :- '
+              '$d(Asks?, PCh?, MCh, $outputWidget, Ss), $cs(Ss?).')
       ..writeln()
       // constructs/1: the construct process of each spawn.
       ..writeln('procedure$p $cs(Stream(${gen.spawnType}($qt))?).')
@@ -455,8 +475,34 @@ class _Generator {
       widgets[t.written] = w;
       hook.writeln(_constructClause(t, root, w));
     }
+    if (outputWidget != null) widgets[outputTypeName] = outputWidget;
     hook.writeln();
     return ConstructProcesses('$hook$_out', widgets);
+  }
+
+  /// The widget the program's output is drawn by: a thread whose elements
+  /// are drawn by the widget of Output, `thread(W)`, or `thread` where W is
+  /// `shown`.  Output is a value the program writes, refused where it is not
+  /// flat, as an interactive type is (_checkFlat), and refused, naming it,
+  /// where the person writes a position of it: the output is "outside a
+  /// question" (vGLP, 2026-10-13 19:25 UTC, item 4).
+  String _outputWidget(TypeDef output) {
+    final t = TypeRef(outputTypeName, output.line, output.column);
+    final it = InteractiveType(t, false, 'output', const [], output.line,
+        output.column);
+    final root = _Node(t, false, const {});
+    _checkFlat(it, root);
+    if (_hasQuestion(root)) {
+      throw CompileError(
+          'The type $outputTypeName, the type of the program\'s output to its '
+          'person, has a position the person writes, and the output is outside '
+          'a question: the dispatcher draws it as a thread whose elements are '
+          'drawn by the widget of $outputTypeName (vGLP 169b008, Definition '
+          '"Canonical Compilation"; vGLP, 2026-10-13 19:25 UTC, item 4)',
+          output.line, output.column, phase: 'analyzer');
+    }
+    final w = _widget(root, {});
+    return w == 'shown' ? 'thread' : 'thread($w)';
   }
 
   /// The widget of interactive type [t], whose root is [root]: the one in the

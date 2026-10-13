@@ -123,23 +123,65 @@ Spawn(Q) ::= spawn(Integer, Q, Inputs, Stream(Draw)?).
 %% The dispatcher
 %% ---------------------------------------------------------------------------
 
-%% dispatch(Asks?, PersonCh?, MCh, Spawns): the dispatcher of one agent,
-%% spawned with the agent's initial goal by whatever spawns it --- the
-%% bridge, or a play --- through the compiled program's dispatch/3, which
-%% spawns the program's constructs/1 on Spawns beside it.  It reads the ask
-%% stream of the initial goal and holds the person channel; it gives the
-%% program, in MCh, its own end of a person channel, passes every grant that
-%% is not input(Id, P, R) to it, and merges the program's output to the person
-%% with the constructs' draws (vGLP, 2026-10-01 23:55 UTC, E, Q4).  The
-%% program's person input keeps its own type; the dispatcher writes it and
-%% never closes it.
+%% dispatch(Asks?, PersonCh?, MCh, Spawns): the dispatcher of one agent
+%% whose program writes nothing to its person, its output end anonymous;
+%% dispatch(Asks?, PersonCh?, MCh, W, Spawns), of one whose program does, W
+%% the widget of the thread it is drawn as.  Each is spawned with the agent's
+%% initial goal by whatever spawns it --- the bridge, or a play --- through
+%% the compiled program's dispatch/3, which spawns the program's constructs/1
+%% on Spawns beside it.  It reads the ask stream of the initial goal and
+%% holds the person channel; it gives the program, in MCh, its own end of a
+%% person channel, and passes every grant that is not input(Id, P, R) to it.
+%% "A vGLP program declares the type of its output to its person by defining
+%% the type Output, a reserved name; the dispatcher draws that output as a
+%% thread whose elements are drawn by the widget of Output" (vGLP 169b008,
+%% Definition "Canonical Compilation"): the output reaches the person only as
+%% that thread, one standing construct drawn at dispatch start with the
+%% identifier 0, and the questions are numbered from 1 (vGLP, 2026-10-13
+%% 19:25 UTC, items 1--3, Udi: yes).  The program's person input keeps its
+%% own type; the dispatcher writes it and never closes it.
 exported procedure(Q) dispatch(Stream(Ask(Q))?,
     Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_)),
     Stream(Spawn(Q))).
-dispatch(Asks, ch(PIn, POut?), ch(MIn?, MOut), Ss?) :-
+dispatch(Asks, ch(PIn, POut?), ch(MIn?, _), Ss?) :-
     split_grants(PIn?, Inputs, MIn),
-    merge(MOut?, DOut?, POut),
-    serve(Asks?, Inputs?, COut?, COut, DOut, [], [], 0, Ss).
+    serve(Asks?, Inputs?, COut?, COut, POut, [], [], 1, Ss).
+
+exported procedure(Q) dispatch(Stream(Ask(Q))?,
+    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_)), _?,
+    Stream(Spawn(Q))).
+dispatch(Asks, ch(PIn, POut?), ch(MIn?, MOut), W, Ss?) :-
+    split_grants(PIn?, Inputs, MIn),
+    output(W?, MOut?, ODs),
+    merge(ODs?, DOut?, POut),
+    serve(Asks?, Inputs?, COut?, COut, DOut, [], [], 1, Ss).
+
+%% output(W?, Out?, Draws): the program's output to its person, drawn as the
+%% construct 0 by its widget W, a thread: drawn at once with no element, and
+%% again with the elements so far as each arrives whole.  It holds no
+%% question and never withdraws while the output stream stands open.
+procedure output(_?, Stream(_)?, Stream(_)).
+output(W, Ms, [draw(0, W?, []) | Ds?]) :-
+    ground(W?) |
+    output_more(W?, Ms?, [], Ds).
+
+procedure output_more(_?, Stream(_)?, _?, Stream(_)).
+output_more(W, [M | Ms], Es, Ds?) :-
+    ground(M?), ground(Es?) |
+    output_add(Es?, M?, Es1),
+    output_draw(W?, Ms?, Es1?, Ds).
+output_more(_, [], _, []).
+
+procedure output_draw(_?, Stream(_)?, _?, Stream(_)).
+output_draw(W, Ms, Es, [draw(0, W?, Es?) | Ds?]) :-
+    ground(W?), ground(Es?) |
+    output_more(W?, Ms?, Es?, Ds).
+
+%% output_add(Es?, M?, Es1): Es with M after its last element.
+procedure output_add(_?, _?, _).
+output_add([E | Es], M, [E? | Es1?]) :-
+    output_add(Es?, M?, Es1).
+output_add([], M, [M?]).
 
 %% split_grants(Grants?, Inputs, Others): the person's grants to a construct,
 %% and every other grant, for the program.

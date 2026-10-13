@@ -12,6 +12,7 @@ import 'dart:io';
 import 'package:path/path.dart' as ppath;
 import 'analyzer.dart' show Analyzer;
 import 'ast.dart';
+import 'error.dart' show CompileError;
 import 'glp_printer.dart';
 import 'lexer.dart';
 import 'parser.dart';
@@ -97,6 +98,18 @@ class DiscoveredModule {
   /// the compiled declarations carrying no mark of volition.  Empty for every
   /// other module.  Set by [_attachVolitionalRecords].
   Map<String, VolitionalCall> volitional = const {};
+
+  /// The compiled dispatcher entry `d/3` of the module, where it is compiled
+  /// from a `.vglp` source whose program defines no type Output: its output
+  /// end is anonymous and the dispatcher draws nothing of it ("A vGLP program
+  /// declares the type of its output to its person by defining the type
+  /// Output, a reserved name", vGLP 169b008, Definition "Canonical
+  /// Compilation"; a program that writes to its person and defines none is
+  /// refused, vGLP, 2026-10-13 19:25 UTC, item 1).  A call of it giving a
+  /// variable for the program's end of the person channel is refused
+  /// ([_CrossModuleResolver.checkVolitionalCalls]).  Null for every other
+  /// module.  Set by [_attachVolitionalRecords].
+  String? silentDispatch;
 
   DiscoveredModule({
     required this.filePath,
@@ -262,7 +275,26 @@ void _attachVolitionalRecords(List<DiscoveredModule> modules) {
       }
       m.volitional = volitionalRecord(source.readAsStringSync());
     }
+    if (m.volitional.isNotEmpty || path.endsWith('.vglp')) {
+      m.silentDispatch = _silentDispatch(m.ast);
+    }
   }
+}
+
+/// The compiled dispatcher entry of a module compiled from a `.vglp` source
+/// whose program defines no Output: its procedure `d/3`, whose one clause
+/// calls the dispatcher `d/4`, which draws nothing of the program's output;
+/// a program defining Output has its `d/3` call `d/5`, the widget of Output
+/// added (constructs.dart, `_Generator.build`).  Null where there is none.
+String? _silentDispatch(Module ast) {
+  final procs = {for (final p in ast.procedures) p.signature: p};
+  for (final p in ast.procedures) {
+    if (p.arity != 3 || p.clauses.length != 1) continue;
+    if (!procs.containsKey('${p.name}/4')) continue;
+    final body = p.clauses.single.body ?? const <Goal>[];
+    if (body.any((g) => g.functor == p.name && g.arity == 4)) return p.name;
+  }
+  return null;
 }
 
 /// `Π ⊔ d_1` for the root at [rootSelfGlpPath], or null where there is none.
@@ -2265,6 +2297,10 @@ class _CrossModuleResolver {
         final candidates = _candidates(caller, call.staticModuleName);
         if (candidates.length != 1) continue;
         final target = _byPath[_normPath(candidates.single)];
+        if (target?.silentDispatch == inner.functor && inner.arity == 3) {
+          _checkSilentOutput(call, inner, clause, caller);
+          continue;
+        }
         final v = target?.volitional['${inner.functor}/${inner.arity}'];
         if (v == null) continue;
         checkWritersAtOutputs(call, inner.args, v,
@@ -2273,6 +2309,28 @@ class _CrossModuleResolver {
                 'line ${clause.line} of ${caller.filePath}');
       }
     }
+  }
+
+  /// A call `N # d(Asks, PCh, MCh)` of the dispatcher of a program that
+  /// defines no Output gives it the program's end of the person channel,
+  /// MCh: anonymous, the program writing nothing to its person, or refused,
+  /// naming Output (vGLP 169b008, Definition "Canonical Compilation"; vGLP,
+  /// 2026-10-13 19:25 UTC, item 1).
+  void _checkSilentOutput(
+      RemoteGoal call, Goal inner, Clause clause, DiscoveredModule caller) {
+    if (inner.args[2] is UnderscoreTerm) return;
+    throw CompileError(
+        'The call ${GlpPrinter().printGoal(call)}, in the clause '
+        '${GlpPrinter().printAtom(clause.head)} at line ${clause.line} of '
+        '${caller.filePath}, gives the program of ${call.staticModuleName} '
+        'its end of the person channel, '
+        '${GlpPrinter().printTerm(inner.args[2])}, and that program defines '
+        'no type Output: a vGLP program declares the type of its output to '
+        'its person by defining the type Output, a reserved name, and one '
+        'whose output end is not anonymous and defines none is refused (vGLP '
+        '169b008, Definition "Canonical Compilation"; vGLP, 2026-10-13 19:25 '
+        'UTC, item 1)',
+        call.line, call.column, phase: 'analyzer');
   }
 
   /// The scope [m] is checked in ([checkModule]'s environment).
