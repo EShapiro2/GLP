@@ -204,7 +204,7 @@ constructs([spawn(Id, Q, Gs, Ds?) | Ss]) :- construct(Id?, Q?, Gs?, Ds), constru
 constructs([]).
 
 procedure construct(Integer?, Question?, Inputs?, Stream(Draw)).
-construct(Id, card_w(X), Gs, Ds?) :- present_card([], X?, Gs?, _, Vs, Done), run(Id?, form(card, [field('Offer', form(offer, [field('Key', shown), field('Lot', form(lot, [field('Key', shown), field('Integer', shown)])), field('Stream(Coin)', thread(form(coin, [field('Key', shown), field('Integer', shown)])))])), field('YesNo', buttons([yes, no]))]), Vs?, Done?, Ds).
+construct(Id, card_w(X), Gs, Ds?) :- present_card([], X?, Gs?, _, Vs, Done), run(Id?, form(card, [field('Offer', form(offer, [field('From', shown), field('Want', form(lot, [field('Issuer', shown), field('Amount', shown)])), field('Offered', thread(form(coin, [field('Issuer', shown), field('Serial', shown)])))])), field('YesNo', buttons([yes, no]))]), Vs?, Done?, Ds).
 construct(Id, stream_request_r(X?), Gs, Ds?) :- answer_stream_request([], X, Gs?, _, Done), run(Id?, input_box(menu([form(mint, [field('Amount', number)]), form(swap, [field('Friend', peer), field('GiveCoin', peer), field('GiveAmount', number), field('WantCoin', peer), field('WantAmount', number)]), form(pay, [field('Friend', peer), field('Amount', number)]), form(redeem, [field('Friend', peer), field('WantCoin', peer)])])), [input([])], Done?, Ds).
 
 procedure form_yesNo(_?, Formed(YesNo)).

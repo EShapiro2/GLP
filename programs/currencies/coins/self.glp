@@ -15,10 +15,16 @@
 %% A coin is coin(Issuer, Serial): the atom cent(u) of the act schemas, with the
 %% serial a practical implementation gives each coin.  A party's holdings are a
 %% multiset of coins, Stream(Coin).  A lot is k coins of one issuer,
-%% lot(Issuer, K): the cent^k_u of Section 3.2.
+%% lot(Issuer, K): the cent^k_u of Section 3.2.  Each field is a named type
+%% over its base type, named by the variable its clause gives it, so that
+%% vGLP labels the field by it where a coin or a lot is drawn (Definition
+%% "Widget Declaration, Default Widget"): an issuer is an agent identifier, a
+%% Key; a serial an Integer; the Amount is the request's.
 
-Coin ::= coin(Key, Integer).
-Lot  ::= lot(Key, Integer).
+Coin   ::= coin(Issuer, Serial).
+Lot    ::= lot(Issuer, Amount).
+Issuer ::= Key.
+Serial ::= Integer.
 
 %% The counterparty's answer to a swap: the coins it gives, or the offered coins
 %% returned.
@@ -101,8 +107,12 @@ UserInMsg ::= accept_swap(Key, Lot, Stream(Coin), SwapResponse?)
             ; redeem_declined_by(Key, Coin).
 
 %% The offer a swap responder carries: the proposer, the lot it wants, the
-%% coins it offers.
-Offer ::= offer(Key, Lot, Stream(Coin)).
+%% coins it offers, each field named by the variable its clause gives it, as
+%% the request's are, so that the card labels it From, Want and Offered.
+Offer   ::= offer(From, Want, Offered).
+From    ::= Key.
+Want    ::= Lot.
+Offered ::= Stream(Coin).
 
 %% =============================================================================
 %% The agent's questions (vGLP, Definition "Guarded Clause, Volitional

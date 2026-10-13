@@ -32,8 +32,9 @@
 %% atom accepts(u, f) of the schemas: the holder's acceptance of one coin of
 %% that issuer in that denomination in payment, the acceptances a multiset.
 
-Instrument ::= coin(Key, Constant, Integer) ; bond(Key, Constant, Integer, Integer).
-Lot        ::= lot(Key, Constant, Constant, Integer).
+Instrument ::= coin(Issuer, Denomination, Serial) ; bond(Issuer, Denomination, Maturity, Serial).
+Lot        ::= lot(Issuer, Denomination, Due, Amount).
+Serial     ::= Integer.
 Acceptance ::= accepts(Key, Constant).
 Accepting  ::= accepting(Key, Constant, Integer).
 
@@ -184,9 +185,17 @@ UserInMsg ::= accept_swap(Key, Lot, Stream(Instrument), SwapResponse?)
 
 %% The offer a swap responder carries: the proposer, the lot it wants, the
 %% instruments it offers.  The offer a transfer responder carries: the kind,
-%% the giver, the instruments.
-SwapOffer     ::= offer(Key, Lot, Stream(Instrument)).
-TransferOffer ::= offer_transfer(Kind, Key, Stream(Instrument)).
+%% the giver, the instruments.  Each field is named by the variable its clause
+%% gives it, as a request's are, so that vGLP labels it by that name on the
+%% card (Definition "Widget Declaration, Default Widget"); so are the fields
+%% of an instrument and of a lot, above, over the named types of the
+%% requests below and Serial ::= Integer.
+SwapOffer     ::= offer(From, Want, Offered).
+TransferOffer ::= offer_transfer(Kind, From, Given).
+From          ::= Key.
+Want          ::= Lot.
+Offered       ::= Stream(Instrument).
+Given         ::= Stream(Instrument).
 
 %% =============================================================================
 %% The agent's questions (vGLP, Definition "Guarded Clause, Volitional
