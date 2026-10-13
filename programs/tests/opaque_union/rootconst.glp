@@ -1,0 +1,8 @@
+%% A clause putting a term with a constant at an Opaque position inside
+%% RootChannel(Opaque): refused, a clause holding only a variable there (GLP,
+%% 2026-10-13 20:04 UTC, point 3).
+
+RootChannel(X) ::= rc(Stream(X), Stream(X)?).
+
+procedure bad(RootChannel(Opaque)).
+bad(rc([1], _)).

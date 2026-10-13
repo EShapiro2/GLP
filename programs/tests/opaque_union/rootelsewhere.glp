@@ -1,0 +1,12 @@
+%% A RootChannel(Opaque) variable at a position typed RootChannel(X), an
+%% opaque type inside it, outside the goal run/3 activates: refused (GLP,
+%% 2026-10-13 20:04 UTC, point 3: "Opaque at an h position outside the run
+%% goal is refused").
+
+RootChannel(X) ::= rc(Stream(X), Stream(X)?).
+
+procedure(X) back(RootChannel(Opaque)?, RootChannel(X)).
+back(E, X?) :- relay(E?, X).
+
+procedure(X) relay(RootChannel(X)?, RootChannel(X)).
+relay(E, E?).

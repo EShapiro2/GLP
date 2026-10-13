@@ -1,0 +1,29 @@
+%% A host storing a guest's end, of type RootChannel(h), in a
+%% Stream(RootChannel(Opaque)) through store/3, parametrically well-typed
+%% through its parameter at RootChannel(Opaque), the activating goal holding a
+%% RootChannel(Opaque) end at the template's RootChannel(X)?: certifies (GLP,
+%% 2026-10-13 20:04 UTC, point 3; TGLP Definition "Opaque Type": T <: T°;
+%% modules.tex, "Opaque types": in the goal run activates at h, a variable of
+%% type T° may stand at a position typed T).
+
+RootChannel(X) ::= rc(Stream(X), Stream(X)?).
+
+procedure(X) entry(RootChannel(X)?, RootChannel(X)).
+entry(E, E?).
+
+Inv ::= inv(Module, RootChannel(Opaque)).
+
+procedure(X) store(RootChannel(X)?, Stream(RootChannel(Opaque))?,
+    Stream(RootChannel(Opaque))).
+store(E, Es, S?) :- push(E?, Es?, S).
+
+procedure push(RootChannel(Opaque)?, Stream(RootChannel(Opaque))?,
+    Stream(RootChannel(Opaque))).
+push(E, Es, [E? | Es?]).
+
+procedure host(Inv?, Stream(RootChannel(Opaque))).
+host(inv(M, E), S?) :-
+    opaque_type(entry/2, M?, H),
+    find_type(entry/2, H?, T),
+    run(entry(E?, O), T?, M?),
+    store(O?, [], S).

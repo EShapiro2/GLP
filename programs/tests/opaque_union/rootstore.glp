@@ -1,0 +1,19 @@
+%% A host putting its own RootChannel(A) end at RootChannel(Opaque) through
+%% store/3, parametrically well-typed only because its parameter's term
+%% stands at RootChannel(Opaque): refused, the Parametricity Lemma certifying
+%% it at an instantiation by opaque types, where a term of type S may stand at
+%% a position of type S°, and A is no opaque type.
+
+RootChannel(X) ::= rc(Stream(X), Stream(X)?).
+A ::= a(Integer).
+
+procedure(X) store(RootChannel(X)?, Stream(RootChannel(Opaque))?,
+    Stream(RootChannel(Opaque))).
+store(E, Es, S?) :- push(E?, Es?, S).
+
+procedure push(RootChannel(Opaque)?, Stream(RootChannel(Opaque))?,
+    Stream(RootChannel(Opaque))).
+push(E, Es, [E? | Es?]).
+
+procedure host(RootChannel(A)?, Stream(RootChannel(Opaque))).
+host(X, S?) :- store(X?, [], S).

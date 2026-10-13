@@ -27,7 +27,35 @@ import 'program_dfa.dart';
 /// Paper Reference: Definition 4.7 (Subtyping)
 bool isSubtype(DFAState stateA, DFAState stateB, ProgramDFA dfa,
     {Set<String> open = const {}}) {
-  return _isSubtype(stateA, stateB, dfa, <String>{}, open);
+  return _isSubtype(stateA, stateB, dfa, <String>{}, open, null);
+}
+
+/// Whether output type [stateA], with `Opaque` replaced throughout by the
+/// opaque type [labelled] (an opaque type labelled h, [DFAState.isRunOpaqueType]),
+/// is a subtype of output type [stateB]: the one step back from `Opaque`
+/// (TGLP modules.tex, "Opaque types": "in a goal that run activates at an
+/// opaque instance at h, a variable of type T° may stand at a position typed
+/// T, for a type T whose opaque types are labelled h"; GLP, 2026-10-13 20:04
+/// UTC, point 3: "the step back substitutes Opaque -> h throughout the type of
+/// the run goal's argument").  The replacement follows [stateA]'s own
+/// structure through every mode inversion, where the comparison reverses
+/// (well_typed_clause.dart, `_stepBack`).
+bool isSubtypeWithOpaqueAs(
+    DFAState stateA, DFAState stateB, DFAState labelled, ProgramDFA dfa) {
+  return _isSubtype(
+      stateA, stateB, dfa, <String>{}, const {}, _OpaqueAs(labelled, true));
+}
+
+/// The replacement of `Opaque` by an opaque type labelled h on one side of a
+/// comparison ([isSubtypeWithOpaqueAs]): on the left where [onLeft], and the
+/// side changes at each mode inversion, where the comparison reverses.
+class _OpaqueAs {
+  final DFAState labelled;
+  final bool onLeft;
+  const _OpaqueAs(this.labelled, this.onLeft);
+  _OpaqueAs get reversed => _OpaqueAs(labelled, !onLeft);
+  DFAState left(DFAState s) => onLeft && s.isOpaqueUnion ? labelled : s;
+  DFAState right(DFAState s) => !onLeft && s.isOpaqueUnion ? labelled : s;
 }
 
 /// Structural type identity (TGLP sections/modules.tex, "Structural type
@@ -73,18 +101,143 @@ T withParametersNotBelowOpaque<T>(T Function() f) {
   }
 }
 
-/// Core coinductive subtyping algorithm.
+/// The subtyping relation of TGLP well-typing.tex, Definition "Subtyping",
+/// extended by T <: T° for every type T (parameterized-types.tex, Definition
+/// "Opaque Type": "For a type T, T° is T with every opaque type replaced by
+/// Opaque, and the subtyping relation of Definition Subtyping is extended by
+/// T <: T° for every type T"; GLP, 2026-10-13 20:04 UTC, point 3).  The
+/// extension holds at every pair the simulation compares, a mode inversion's
+/// reversed pair among them, as condition 2 of Definition "Subtyping" asks
+/// "B' is a subtype of A'" of the relation so extended: so
+/// `RootChannel(h) <: RootChannel(Opaque)` though `Stream(Opaque)` is not below
+/// `Stream(h)` at the channel's input position (Opaque <: h does NOT follow).
+bool _isSubtype(DFAState stateA, DFAState stateB, ProgramDFA dfa,
+    Set<String> visited, Set<String> open, _OpaqueAs? as) {
+  if (as != null) {
+    stateA = as.left(stateA);
+    stateB = as.right(stateB);
+  }
+  if (_isSubtypeCore(stateA, stateB, dfa, visited, open, as)) return true;
+  if (open.contains(stateA.baseName) || open.contains(stateB.baseName)) {
+    return false;
+  }
+  return _reachesOpaque(stateB, dfa) &&
+      _isOpaqueClosureOf(stateA, stateB, dfa, <String>{});
+}
+
+/// Whether [stateB] is [stateA]° (Definition "Opaque Type"): [stateA] with
+/// every opaque type --- a parameter's abstract type, an opaque type labelled
+/// h --- replaced by `Opaque`, and nothing else changed, at every position and
+/// at both modes.  Two states with the same transitions are one type here, by
+/// their automata (TGLP modules.tex, "Structural type compatibility").  A
+/// parameter's abstract type counts as an opaque type except inside
+/// [withParametersNotBelowOpaque], as it does at a bare position ([_isSubtypeCore]).
+bool _isOpaqueClosureOf(
+    DFAState a, DFAState b, ProgramDFA dfa, Set<String> visited) {
+  if (a.isDual != b.isDual) return false;
+  if (a.isDual) {
+    final DFAState oa, ob;
+    try {
+      oa = dfa.getState(a.baseName);
+      ob = dfa.getState(b.baseName);
+    } on StateError {
+      return false;
+    }
+    return _isOpaqueClosureOf(oa, ob, dfa, visited);
+  }
+  if (!visited.add('${a.name}:${b.name}')) return true;
+  if (a.isAbstractType) {
+    return b.isOpaqueUnion && (_parameterBelowOpaque || a.isRunOpaqueType);
+  }
+  if (a.isOpaqueUnion || b.isOpaqueUnion) return a.isOpaqueUnion && b.isOpaqueUnion;
+  if (b.isAbstractType) return false;
+  if (a.isPrimitiveType || a.isAnonymousFinal || a.isProcedure ||
+      b.isPrimitiveType || b.isAnonymousFinal || b.isProcedure) {
+    return a == b;
+  }
+  final automA = dfa.automata[a.name];
+  final automB = dfa.automata[b.name];
+  if (automA == null || automB == null) return false;
+  if (automA.acceptedPrimitives.length != automB.acceptedPrimitives.length ||
+      !automA.acceptedPrimitives.containsAll(automB.acceptedPrimitives)) {
+    return false;
+  }
+  final fromA = {
+    for (final e in automA.transitions.entries)
+      if (e.key.$1 == a) e.key.$2: e.value
+  };
+  final fromB = {
+    for (final e in automB.transitions.entries)
+      if (e.key.$1 == b) e.key.$2: e.value
+  };
+  if (fromA.length != fromB.length) return false;
+  for (final e in fromA.entries) {
+    final tb = fromB[e.key];
+    if (tb == null) return false;
+    if (!_isOpaqueClosureOf(e.value, tb, dfa, visited)) return false;
+  }
+  return true;
+}
+
+/// Whether `Opaque` occurs in output type [s] at some position, at either
+/// mode: where it does not, no type has [s] for its T° but [s] itself, which
+/// the simulation decides already.  Memoised per program DFA by state name,
+/// a DFA growing only by new states ([addTypesToProgramDFA]).
+bool _reachesOpaque(DFAState s, ProgramDFA dfa) {
+  final memo = _reachesOpaqueMemo[dfa] ??= <String, bool>{};
+  final known = memo[s.name];
+  if (known != null) return known;
+  final seen = <String>{};
+  final stack = <DFAState>[s];
+  var found = false;
+  while (stack.isNotEmpty && !found) {
+    var x = stack.removeLast();
+    if (x.isDual) {
+      final o = dfa.states[x.baseName];
+      if (o == null) continue;
+      x = o;
+    }
+    if (!seen.add(x.name)) continue;
+    if (x.isOpaqueUnion) {
+      found = true;
+      break;
+    }
+    final m = memo[x.name];
+    if (m == true) {
+      found = true;
+      break;
+    }
+    if (m == false) continue;
+    final autom = dfa.automata[x.name];
+    if (autom == null) continue;
+    for (final e in autom.transitions.entries) {
+      if (e.key.$1 == x) stack.add(e.value);
+    }
+  }
+  memo[s.name] = found;
+  return found;
+}
+
+final Expando<Map<String, bool>> _reachesOpaqueMemo = Expando();
+
+/// Core coinductive subtyping algorithm: Definition "Subtyping"'s two
+/// conditions, each pair below compared by [_isSubtype], the relation the
+/// extension by T <: T° completes.
 ///
 /// Spec section 4.1: isSubtype(stateA, stateB, dfa, visited)
-bool _isSubtype(DFAState stateA, DFAState stateB, ProgramDFA dfa,
-    Set<String> visited, Set<String> open) {
+bool _isSubtypeCore(DFAState stateA, DFAState stateB, ProgramDFA dfa,
+    Set<String> visited, Set<String> open, _OpaqueAs? as) {
   // Coinductive: if we've already assumed this pair, succeed (spec 4.5)
-  final pairKey = '${stateA.name}:${stateB.name}';
+  final pairKey =
+      '${stateA.name}:${stateB.name}${as == null ? '' : ':${as.onLeft}'}';
   if (visited.contains(pairKey)) return true;
   visited.add(pairKey);
 
-  // Reflexivity
-  if (stateA == stateB) return true;
+  // Reflexivity.  Under a replacement of `Opaque` ([isSubtypeWithOpaqueAs])
+  // only where no `Opaque` lies below, which the replacement would change.
+  if (stateA == stateB && (as == null || !_reachesOpaque(stateA, dfa))) {
+    return true;
+  }
 
   // A parameter no map has bound yet matches whatever stands opposite it.
   if (open.contains(stateA.baseName) || open.contains(stateB.baseName)) {
@@ -241,11 +394,18 @@ bool _isSubtype(DFAState stateA, DFAState stateB, ProgramDFA dfa,
       return false;
     }
 
-    // Skip trivially equal targets
-    if (targetA == targetB) continue;
+    // Skip trivially equal targets, except under a replacement of `Opaque`
+    // where one lies below them ([isSubtypeWithOpaqueAs]).
+    if (targetA == targetB &&
+        (as == null ||
+            !_reachesOpaque(
+                targetA.isDual ? dfa.getState(targetA.baseName) : targetA,
+                dfa))) {
+      continue;
+    }
 
     // Check target compatibility (spec 4.2)
-    if (!_checkTargetSubtype(targetA, targetB, dfa, visited, open)) {
+    if (!_checkTargetSubtype(targetA, targetB, dfa, visited, open, as)) {
       return false;
     }
   }
@@ -273,7 +433,7 @@ DFAState? _transitionIgnoringMode(
 ///
 /// Handles covariance for output positions and contravariance at mode inversions.
 bool _checkTargetSubtype(DFAState targetA, DFAState targetB, ProgramDFA dfa,
-    Set<String> visited, Set<String> open) {
+    Set<String> visited, Set<String> open, _OpaqueAs? as) {
   // A parameter no map has bound yet, at either polarity: a map may bind it to
   // an input type as well as an output one, so it matches either.
   if (open.contains(targetA.baseName) || open.contains(targetB.baseName)) {
@@ -282,14 +442,15 @@ bool _checkTargetSubtype(DFAState targetA, DFAState targetB, ProgramDFA dfa,
 
   // Case 1: Both output types → covariant recursion
   if (!targetA.isDual && !targetB.isDual) {
-    return _isSubtype(targetA, targetB, dfa, visited, open);
+    return _isSubtype(targetA, targetB, dfa, visited, open, as);
   }
 
   // Case 2: Both dual types → contravariant recursion (reversed)
   if (targetA.isDual && targetB.isDual) {
     final innerA = dfa.getState(targetA.baseName); // output type A'
     final innerB = dfa.getState(targetB.baseName); // output type B'
-    return _isSubtype(innerB, innerA, dfa, visited, open); // REVERSED
+    return _isSubtype(
+        innerB, innerA, dfa, visited, open, as?.reversed); // REVERSED
   }
 
   // Case 3: Mixed → incompatible mode structure

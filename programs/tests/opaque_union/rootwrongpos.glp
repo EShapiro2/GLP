@@ -1,0 +1,16 @@
+%% In the activating goal, a RootChannel(Opaque) end at a position typed
+%% Stream(X), whose T° is Stream(Opaque), not RootChannel(Opaque): refused,
+%% the step back admitting a variable of type T° at a position typed T only.
+
+RootChannel(X) ::= rc(Stream(X), Stream(X)?).
+
+procedure(X) entry(Stream(X)?, RootChannel(X)).
+entry(_, rc([], [])).
+
+Inv ::= inv(Module, RootChannel(Opaque)).
+
+procedure host(Inv?, RootChannel(Opaque)).
+host(inv(M, E), O?) :-
+    opaque_type(entry/2, M?, H),
+    find_type(entry/2, H?, T),
+    run(entry(E?, O), T?, M?).

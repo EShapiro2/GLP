@@ -587,23 +587,63 @@ ClauseCheckResult checkClause(
 const String _activatedMark = ', in the goal run/3 activates';
 
 /// The one step back from `Opaque` (TGLP modules.tex, "Opaque types": "The
-/// type checker takes a term of type Opaque back to one opaque type in one
-/// place: in a goal that run activates at an opaque instance at h, a variable
-/// of type Opaque may stand at a position typed by the opaque type labelled
-/// h"; GLP-Spec appendix-guards.tex, "Dynamic activation": "At a position the
-/// template's parameter types, Goal may hold a variable of type Opaque").
+/// type checker takes Opaque back to one opaque type in one place: in a goal
+/// that run activates at an opaque instance at h, a variable of type T° may
+/// stand at a position typed T, for a type T whose opaque types are labelled
+/// h"; GLP-Spec appendix-guards.tex, "Dynamic activation": "At a position
+/// whose type has the template's parameter in it, Goal may hold a variable
+/// whose type has Opaque in its place"; GLP, 2026-10-13 20:04 UTC, point 3:
+/// "the step back substitutes Opaque -> h throughout the type of the run
+/// goal's argument --- the whole end, not only a bare Opaque").
 ///
 /// Whether a pair whose one occurrence, of type [sub], must be within the
-/// other's, [sup], at [supLocation], holds by it: [sub] is `Opaque`, [sup] is
-/// the opaque type labelled h ([DFAState.isRunOpaqueType]), and the
-/// occurrence at [sup] is in the goal run/3 activates.  Nowhere else: the
-/// labelled opaque type is no subtype of `Opaque`'s anywhere
-/// (subtyping.dart, [isSubtype]), and it is a variable that stands there,
-/// since a pair is of a variable's two occurrences.
-bool _stepBack(DFAState sub, DFAState sup, String supLocation) =>
-    sub.isOpaqueUnion &&
-    sup.isRunOpaqueType &&
-    supLocation.endsWith(_activatedMark);
+/// other's, [sup], at [supLocation], holds by it: the occurrence at [sup] is
+/// in the goal run/3 activates, the opaque types of [sup] are labelled h, one
+/// h ([_labelledOpaqueOf]), and [sub] with `Opaque` replaced throughout by the
+/// opaque type labelled h is below [sup] (subtyping.dart,
+/// [isSubtypeWithOpaqueAs]) --- of which [sub] = [sup]° is the case the
+/// paper names.  Nowhere else: outside that goal `Opaque` is below no opaque
+/// type (subtyping.dart, [isSubtype]), and it is a variable that stands
+/// there, since a pair is of a variable's two occurrences.
+bool _stepBack(
+    DFAState sub, DFAState sup, String supLocation, ProgramDFA dfa) {
+  if (!supLocation.endsWith(_activatedMark)) return false;
+  final labelled = _labelledOpaqueOf(sup, dfa);
+  if (labelled == null) return false;
+  return isSubtypeWithOpaqueAs(sub, sup, labelled, dfa);
+}
+
+/// The opaque type labelled h ([DFAState.isRunOpaqueType]) that output type
+/// [t] has at some position, at either mode, where every opaque type of [t]
+/// is that one: "a type T whose opaque types are labelled h" (TGLP
+/// modules.tex, "Opaque types").  Null where [t] has no opaque type, or one
+/// that is not that one.
+DFAState? _labelledOpaqueOf(DFAState t, ProgramDFA dfa) {
+  DFAState? found;
+  final seen = <String>{};
+  final stack = <DFAState>[t];
+  while (stack.isNotEmpty) {
+    var x = stack.removeLast();
+    if (x.isDual) {
+      final o = dfa.states[x.baseName];
+      if (o == null) continue;
+      x = o;
+    }
+    if (!seen.add(x.name)) continue;
+    if (x.isAbstractType) {
+      if (!x.isRunOpaqueType) return null;
+      if (found != null && found != x) return null;
+      found = x;
+      continue;
+    }
+    final autom = dfa.automata[x.name];
+    if (autom == null) continue;
+    for (final e in autom.transitions.entries) {
+      if (e.key.$1 == x) stack.add(e.value);
+    }
+  }
+  return found;
+}
 
 /// A goal that `run/3` activates under a type identity `find_type/3`
 /// obtained at h, read by its template's opaque instance at h.
@@ -2093,7 +2133,7 @@ List<ClauseDualityError> _checkClauseDuality(
         final bodyOutput = dfa.getState(bodyInfo.typeState.baseName);
         final bodyLoc = writerNormLoc == 'head' ? readerLoc : writerLoc;
         if (!isSubtype(headOutput, bodyOutput, dfa) &&
-            !_stepBack(headOutput, bodyOutput, bodyLoc)) {
+            !_stepBack(headOutput, bodyOutput, bodyLoc, dfa)) {
           errors.add(ClauseDualityError(
             baseName,
             writerInfo,
@@ -2127,7 +2167,9 @@ ClauseDualityError? _bodyBodyPairError(
   final readerDualState = readerInfo.typeState;   // T? (dual)
   final readerOutputState = dfa.getState(readerDualState.baseName); // T (output)
   if (isSubtype(writerOutputState, readerOutputState, dfa)) return null;
-  if (_stepBack(writerOutputState, readerOutputState, readerLoc)) return null;
+  if (_stepBack(writerOutputState, readerOutputState, readerLoc, dfa)) {
+    return null;
+  }
   return ClauseDualityError(
     baseName,
     writerInfo,
@@ -2242,7 +2284,7 @@ List<ClauseDualityError> _checkHeadBodyPair(
   final consumed = headInfo.typeState.isDual;
   final (sub, sup) = consumed ? (headBase, bodyBase) : (bodyBase, headBase);
   if (isSubtype(sub, sup, dfa)) return const [];
-  if (consumed && _stepBack(sub, sup, bodyLocation)) return const [];
+  if (consumed && _stepBack(sub, sup, bodyLocation, dfa)) return const [];
 
   final baseName =
       varKey.endsWith('?') ? varKey.substring(0, varKey.length - 1) : varKey;
