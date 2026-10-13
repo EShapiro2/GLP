@@ -176,6 +176,8 @@ const Set<String> builtinProcedures = {
   '_run/2',
   '_run/3',
   '_find_type/2',
+  '_find_type/3',
+  '_opaque_type/3',
   '_load_file/2',
   // I/O
   '_output/1',

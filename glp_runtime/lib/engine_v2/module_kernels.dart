@@ -24,7 +24,10 @@ import '../runtime/machine_state.dart' show GoalRef;
 import '../wire/artefact.dart' show Artefact;
 import '../bytecode/runner.dart' show CallEnv;
 import '../analysis/type_checker/type_identity.dart'
-    show TypeIdentityTables, interfaceTypeIdentityTables;
+    show
+        OpaqueInstanceRefusal,
+        TypeIdentityTables,
+        interfaceTypeIdentityTables;
 import 'code_image.dart' show CodeImage;
 import 'interp.dart' show ByteRunner;
 
@@ -32,12 +35,16 @@ import 'interp.dart' show ByteRunner;
 /// Called from the `GlpEngine` constructor, after the runtime is built.
 ///
 /// `_run`/2 is the untyped activation; `_run`/3 activates under a required
-/// type identity and `_find_type`/2 obtains one (GLP-Spec catalogue, "Dynamic
-/// activation"; TGLP §Dynamic Activation).
+/// type identity and `_find_type`/2 obtains one; `_opaque_type`/3 obtains the
+/// type a module records for its entry and `_find_type`/3 the identity of an
+/// opaque instance at it (GLP-Spec catalogue, "Dynamic activation"; TGLP
+/// §Dynamic Activation).
 void registerModuleKernels(GlpRuntime rt) {
   rt.bodyKernels.register('_run', 2, runKernel);
   rt.bodyKernels.register('_run', 3, runTypedKernel);
   rt.bodyKernels.register('_find_type', 2, findTypeKernel);
+  rt.bodyKernels.register('_find_type', 3, findTypeOpaqueKernel);
+  rt.bodyKernels.register('_opaque_type', 3, opaqueTypeKernel);
 }
 
 /// Follow a top-level VarRef to its bound value (shallow dereference).
@@ -87,9 +94,9 @@ BodyKernelResult runTypedKernel(GlpRuntime rt, List<Object?> args) {
   return _activate(rt, '_run/3', args[0], args[2], requiredType: required);
 }
 
-/// The type identity of a signature in a module's exported table, deriving and
-/// caching the table on the module value.
-String? _exportedIdentity(ModuleTerm module, Artefact artefact, String sig) {
+/// A module's exported tables, derived from its artefact's interface text and
+/// cached on the module value.
+TypeIdentityTables _exportedTables(ModuleTerm module, Artefact artefact) {
   var tables = module.exportedTypesCache;
   if (tables is! TypeIdentityTables) {
     tables = interfaceTypeIdentityTables(
@@ -98,7 +105,7 @@ String? _exportedIdentity(ModuleTerm module, Artefact artefact, String sig) {
     );
     module.exportedTypesCache = tables;
   }
-  return tables.exported[sig];
+  return tables;
 }
 
 /// Activate [moduleArg] and post [goalArg] to it — the START primitive shared by
@@ -180,16 +187,24 @@ BodyKernelResult _activate(
     return BodyKernelResult.abort;
   }
 
+  // The exports record for an entry its own identity, and, for a guest's
+  // entry declared as the instance of a parameterised declaration D at its
+  // type T, the identity of D<iota(T)> beside it (TGLP modules.tex, Dynamic
+  // Activation, "Opaque types": "run activates M where the two are equal").
+  // The required identity is to equal one of them.
   if (requiredType != null) {
-    final recorded = _exportedIdentity(module, artefact, sig);
-    if (recorded == null) {
+    final tables = _exportedTables(module, artefact);
+    final recorded = tables.exported[sig];
+    final opaque = tables.opaque[sig]?.entry;
+    if (recorded == null && opaque == null) {
       print('[ABORT] $kernel: the exports of module ${module.name} record no '
           'type identity for $sig');
       return BodyKernelResult.abort;
     }
-    if (recorded != requiredType) {
+    if (recorded != requiredType && opaque != requiredType) {
       print('[ABORT] $kernel: type identity mismatch for $sig in module '
-          '${module.name}: required $requiredType, exports record $recorded');
+          '${module.name}: required $requiredType, exports record '
+          '${[recorded, opaque].whereType<String>().join(' and ')}');
       return BodyKernelResult.abort;
     }
   }
@@ -275,15 +290,116 @@ BodyKernelResult findTypeKernel(GlpRuntime rt, List<Object?> args) {
   return _bind(rt, args[1], ConstTerm(identity));
 }
 
+/// A procedure reference `P/N` as its key `p/n`, or null where [ref] is none.
+String? _procedureKey(GlpRuntime rt, Object? ref) {
+  final r = _deref(rt, ref);
+  if (r is StructTerm && r.functor == '/' && r.args.length == 2) {
+    final n = _deref(rt, r.args[0]);
+    final a = _deref(rt, r.args[1]);
+    if (n is ConstTerm && n.value is String && a is ConstTerm && a.value is int) {
+      return '${n.value}/${a.value}';
+    }
+  }
+  return null;
+}
+
+/// A type identity: a ground string, or null.
+String? _identity(GlpRuntime rt, Object? arg) {
+  final t = _deref(rt, arg);
+  if (t is ConstTerm && t.value is String) return t.value as String;
+  if (t is String) return t;
+  return null;
+}
+
+/// `_find_type(P/N, H, Type)`/3 — the type identity of the opaque instance at
+/// `H` of the caller's parameterised declaration of `P/N` (GLP-Spec catalogue,
+/// "Dynamic activation"; TGLP modules.tex, Definition "Type Identity of a
+/// Type, Opaque Instance"), and an error where `P/N` is not declared there or
+/// its declaration has not exactly one type parameter.  The caller's scope is
+/// the declared tables' of the module the calling goal points to, `P/N` keyed
+/// as the compiled module carries the declaration, as for `_find_type`/2.
+BodyKernelResult findTypeOpaqueKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 3) {
+    print('[ABORT] _find_type/3: expected 3 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  final key = _procedureKey(rt, args[0]);
+  if (key == null) {
+    print('[ABORT] _find_type/3: first argument is not a procedure reference '
+        'P/N, got ${_deref(rt, args[0])}');
+    return BodyKernelResult.abort;
+  }
+  final label = _identity(rt, args[1]);
+  if (label == null) {
+    print('[ABORT] _find_type/3: second argument is not a type identity '
+        '(a ground string), got ${_deref(rt, args[1])}');
+    return BodyKernelResult.abort;
+  }
+  final goalId = rt.currentGoalId;
+  final module = goalId == null ? null : rt.getGoalModule(goalId);
+  final tables = module is ModuleTerm ? module.declaredTypes : null;
+  if (tables is! TypeIdentityTables) {
+    print('[ABORT] _find_type/3: the calling goal\'s module carries no '
+        'declared table, so $key is not declared in the caller\'s scope');
+    return BodyKernelResult.abort;
+  }
+  final String identity;
+  try {
+    identity = tables.opaqueInstanceIdentity(key, label);
+  } on OpaqueInstanceRefusal catch (e) {
+    print('[ABORT] _find_type/3: $e');
+    return BodyKernelResult.abort;
+  }
+  return _bind(rt, args[2], ConstTerm(identity), '_find_type/3');
+}
+
+/// `_opaque_type(P/N, Module, H)`/3 — the type identity of the type at which
+/// `Module`'s exports record its entry `P/N` as the instance of a
+/// parameterised declaration (GLP-Spec catalogue, "Dynamic activation"; TGLP
+/// modules.tex, Dynamic Activation, "Opaque types": "The host obtains iota(T)
+/// from the module value"), and an error where they record none.  The record
+/// is derived with the exported table from the artefact's interface text and
+/// cached on the module value, as `_run`/3's is.
+BodyKernelResult opaqueTypeKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 3) {
+    print('[ABORT] _opaque_type/3: expected 3 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  final key = _procedureKey(rt, args[0]);
+  if (key == null) {
+    print('[ABORT] _opaque_type/3: first argument is not a procedure '
+        'reference P/N, got ${_deref(rt, args[0])}');
+    return BodyKernelResult.abort;
+  }
+  final module = _deref(rt, args[1]);
+  if (module is! ModuleTerm) {
+    print('[ABORT] _opaque_type/3: second argument is not a module value');
+    return BodyKernelResult.abort;
+  }
+  final artefact = module.artefact;
+  if (artefact is! Artefact) {
+    print('[ABORT] _opaque_type/3: module carries no artefact');
+    return BodyKernelResult.abort;
+  }
+  final record = _exportedTables(module, artefact).opaque[key];
+  if (record == null) {
+    print('[ABORT] _opaque_type/3: the exports of module ${module.name} '
+        'record $key as the instance of no parameterised declaration');
+    return BodyKernelResult.abort;
+  }
+  return _bind(rt, args[2], ConstTerm(record.type), '_opaque_type/3');
+}
+
 /// Bind the writer at [outputArg] to [value], enqueueing the goals the binding
 /// wakes — the module kernels' copy of body_kernels.dart's binding idiom.
-BodyKernelResult _bind(GlpRuntime rt, Object? outputArg, Term value) {
+BodyKernelResult _bind(GlpRuntime rt, Object? outputArg, Term value,
+    [String kernel = '_find_type/2']) {
   if (outputArg is VarRef && rt.heap.isWriter(outputArg.addr)) {
     for (final act in rt.heap.bindVariable(outputArg.addr, value)) {
       rt.gq.enqueue(act);
     }
     return BodyKernelResult.success;
   }
-  print('[ABORT] _find_type/2: output argument is not a writer');
+  print('[ABORT] $kernel: output argument is not a writer');
   return BodyKernelResult.abort;
 }

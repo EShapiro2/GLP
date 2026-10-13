@@ -637,6 +637,16 @@ String opaqueInstanceIdentityHex(
         ProcDecl template, List<String> labels, TypeEnvironment env) =>
     hex(hashOfPrint(canonicalOpaqueInstancePrint(template, labels, env)));
 
+/// Why `find_type(P/N, H, Type)` assigns no identity
+/// ([TypeIdentityTables.opaqueInstanceIdentity]).
+class OpaqueInstanceRefusal implements Exception {
+  final String reason;
+  OpaqueInstanceRefusal(this.reason);
+
+  @override
+  String toString() => reason;
+}
+
 /// A type parameter that occurs as an alternative of a type definition, where
 /// an opaque instance replaces it by an opaque type.
 class OpaqueAlternativeError implements Exception {
@@ -1164,13 +1174,21 @@ class TypeIdentityTables {
   final Set<String> unresolved;
   final Map<String, OpaqueEntry> opaque;
 
-  const TypeIdentityTables({
+  /// The scope [declared] was built in, with its parameterised declarations
+  /// and type templates, for the opaque instances of
+  /// [opaqueInstanceIdentity]; built on first use, and absent from tables
+  /// derived from an interface, which say nothing of a module's scope.
+  final TypeEnvironment Function()? _scope;
+  TypeEnvironment? _scopeBuilt;
+
+  TypeIdentityTables({
     required this.declared,
     required this.exported,
     required this.parametric,
     required this.unresolved,
     this.opaque = const {},
-  });
+    TypeEnvironment Function()? scope,
+  }) : _scope = scope;
 
   /// These tables with [opaque] recorded beside them.
   TypeIdentityTables withOpaque(Map<String, OpaqueEntry> opaque) =>
@@ -1180,7 +1198,43 @@ class TypeIdentityTables {
         parametric: parametric,
         unresolved: unresolved,
         opaque: opaque,
+        scope: _scope,
       );
+
+  /// The type identity of the opaque instance at [label] of the parameterised
+  /// declaration of [nameArity] in this scope: what `find_type(P/N, H, Type)`
+  /// yields (GLP-Spec appendix-guards, "Dynamic activation"; TGLP modules.tex,
+  /// Definition "Type Identity of a Type, Opaque Instance").  Throws
+  /// [OpaqueInstanceRefusal] where [nameArity] is not declared in this scope,
+  /// or its declaration has not exactly one type parameter, or the instance
+  /// has no identity ([OpaqueAlternativeError]).
+  String opaqueInstanceIdentity(String nameArity, String label) {
+    final build = _scope;
+    if (build == null) {
+      throw OpaqueInstanceRefusal(
+          '$nameArity: the tables carry no scope to declare it in');
+    }
+    final scope = _scopeBuilt ??= build();
+    final template = scope.paramProcDecls[nameArity];
+    if (template == null) {
+      if (declared.containsKey(nameArity) ||
+          unresolved.contains(nameArity)) {
+        throw OpaqueInstanceRefusal('$nameArity is declared in the caller\'s '
+            'scope with no type parameter, not exactly one');
+      }
+      throw OpaqueInstanceRefusal(
+          '$nameArity is not declared in the caller\'s scope');
+    }
+    if (template.typeParams.length != 1) {
+      throw OpaqueInstanceRefusal('the declaration of $nameArity has '
+          '${template.typeParams.length} type parameters, not exactly one');
+    }
+    try {
+      return opaqueInstanceIdentityHex(template, [label], scope);
+    } on OpaqueAlternativeError catch (e) {
+      throw OpaqueInstanceRefusal('$nameArity: $e');
+    }
+  }
 
   /// The identity `find_type(P/N, Type)` yields, or null when `P/N` has none —
   /// undeclared, parametric, or unresolved.
@@ -1242,8 +1296,22 @@ TypeIdentityTables typeIdentityTablesForModule(ast.Module module,
   final expanded = expandParameterizedTypes(module,
       knownTypeNames: base.types.keys.toSet(),
       externalTemplates: base.typeTemplates);
-  return buildTypeIdentityTables(
-      buildTypeEnvironment(expanded, ancestorScope: base));
+  final tables =
+      buildTypeIdentityTables(buildTypeEnvironment(expanded, ancestorScope: base));
+  // The same scope, carrying the module's parameterised type definitions as
+  // templates (buildModuleTypeEnvironment), for find_type/3's opaque
+  // instances; built only where one is asked for.
+  return TypeIdentityTables(
+    declared: tables.declared,
+    exported: tables.exported,
+    parametric: tables.parametric,
+    unresolved: tables.unresolved,
+    scope: () => buildTypeEnvironment(expanded, ancestorScope: base,
+        typeTemplates: {
+          for (final td in module.typeDefs)
+            if (td.isParameterized) td.name: td,
+        }),
+  );
 }
 
 // =============================================================================
@@ -1326,7 +1394,7 @@ TypeIdentityTables interfaceTypeIdentityTables({
       typeDefsText: typeDefsText,
       exportDeclarationTexts: exportDeclarationTexts);
   if (text.trim().isEmpty) {
-    return const TypeIdentityTables(
+    return TypeIdentityTables(
         declared: {}, exported: {}, parametric: {}, unresolved: {});
   }
 

@@ -245,6 +245,8 @@ procedure '_decompose_module'(Module?, Key, Hash, Hash).
 procedure '_run'(_?, Module?).
 procedure '_run'(_?, Constant?, Module?).
 procedure '_find_type'(_?, Constant).
+procedure '_find_type'(_?, Constant?, Constant).
+procedure '_opaque_type'(_?, Module?, Constant).
 procedure '_load_file'(String?, Content).
 
 % I/O
@@ -606,7 +608,8 @@ procedure '_univ_compose'(Stream(_)?, Stream(_)?, Stream(_), _).
 Y? ..= X :- compound(X?) | '_tuple_to_list'(X?, Y).
 
 % =============================================================================
-% MODULE AS A VALUE (self_module/1, run/2, run/3, find_type/2, load_file/2)
+% MODULE AS A VALUE (self_module/1, run/2, run/3, find_type/2, find_type/3,
+% opaque_type/3, load_file/2)
 % =============================================================================
 % Wrappers over the '_self_module', '_run' and '_find_type' kernels (GLP-Spec
 % appendix-guards, "Module as a value" and "Dynamic activation").  run(Goal,
@@ -641,6 +644,22 @@ run(G, T, M) :- known(T?), known(M?) | '_run'(G?, T?, M?).
 
 procedure find_type(_?, Constant).
 find_type(P, T?) :- ground(P?) | '_find_type'(P?, T).
+
+%% find_type(P/N, H, Type) assigns Type the type identity of the opaque
+%% instance at H of the caller's parameterised declaration of P/N, and errs
+%% where P/N is not declared there or its declaration has not exactly one type
+%% parameter.  opaque_type(P/N, Module, H) assigns H the type identity of the
+%% type at which Module's exports record its entry P/N as the instance of a
+%% parameterised declaration, and errs where they record none.  A host
+%% activates a guest it was not compiled with by opaque_type(P/N, M, H),
+%% find_type(P/N, H, Type) and run(Goal, Type, M), holding no declaration of
+%% the guest's own types (GLP-Spec appendix-guards, "Dynamic activation"; the
+%% opaque instance is TGLP's, modules.tex, Dynamic Activation).
+procedure find_type(_?, Constant?, Constant).
+find_type(P, H, T?) :- ground(P?), known(H?) | '_find_type'(P?, H?, T).
+
+procedure opaque_type(_?, Module?, Constant).
+opaque_type(P, M, H?) :- ground(P?), known(M?) | '_opaque_type'(P?, M?, H).
 
 %% load_file/2 - read the file Name names and assign Content the module that
 %% file holds where it is a certified compiled program, and its text otherwise

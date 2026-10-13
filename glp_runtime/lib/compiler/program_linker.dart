@@ -2281,13 +2281,19 @@ Goal _resolveGoal(Goal goal, String moduleName, Set<String> localSigs,
   // The call itself is then resolved as any call is: find_type/2 is the root
   // self.glp's, and resolves to its renamed form; '_find_type' is the kernel
   // and stays bare.
+  //
+  // find_type(P/N, H, T) names the caller's parameterised declaration of P/N
+  // (GLP-Spec catalogue, "Dynamic activation"), resolved the same way.
+  // opaque_type(P/N, Module, H) names an entry of Module's exports, not a
+  // declaration of the caller's scope, and its P/N is not resolved.
   if ((goal.functor == 'find_type' || goal.functor == '_find_type') &&
-      goal.arity == 2) {
+      (goal.arity == 2 || goal.arity == 3)) {
     final ref = _resolveProcedureRef(
         goal.args[0], moduleName, localSigs, ancestorSelfProcs,
         keepLocalBare: keepLocalBare);
     if (!identical(ref, goal.args[0])) {
-      goal = Goal(goal.functor, [ref, goal.args[1]], goal.line, goal.column);
+      goal = Goal(goal.functor, [ref, ...goal.args.skip(1)], goal.line,
+          goal.column);
     }
   }
 

@@ -1,0 +1,29 @@
+%% The host (GLP-Spec appendix-guards, "Dynamic activation"; TGLP modules.tex,
+%% Dynamic Activation, "Opaque types").  Its scope, ../self.glp, declares the
+%% entry template entry/2; it holds no declaration of any guest's types.
+%%
+%% activate(File, Done) reads a guest's module from File in this directory,
+%% obtains the type at which the guest's exports record its entry entry/2 as
+%% the template's instance (opaque_type/3), the type identity of the
+%% template's opaque instance at it (find_type/3), and activates the guest
+%% under that identity (run/3), handing it the empty stream on the channel and
+%% reporting done when the guest closes the other end, which it passes over
+%% and never inspects (closed/2 is parametrically well-typed).  A guest whose entry is
+%% the instance of no type is refused by opaque_type/3.
+
+Done ::= done.
+
+exported procedure activate(String?, Done).
+activate(F, D?) :- load_file(F?, C), start(C?, D).
+
+procedure start(Content?, Done).
+start(M, D?) :-
+    module(M?) |
+    opaque_type(entry/2, M?, H),
+    find_type(entry/2, H?, T),
+    run(entry([], Out), T?, M?),
+    closed(Out?, D).
+
+procedure(X) closed(Stream(X)?, Done).
+closed([_|Xs], D?) :- closed(Xs?, D).
+closed([], done).
