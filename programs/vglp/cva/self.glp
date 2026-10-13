@@ -17,8 +17,8 @@
 %% writes it, each element once written whole, and the cards Start raises.
 %% The plays pace the persons on the thread, on which the agent goal writes
 %% each app transaction it takes, its schema applied to its attempt, and
-%% discover(Q) once it knows Q (vGLP, Definition "Compilation of a Structured
-%% Platform").
+%% discover(Q) once it knows Q (vGLP, Definition "Compilation of the
+%% Canonical Platform").
 %%
 %% The person's script is a list of steps: req(R) grants the request R on the
 %% session's request stream; wait(T) waits until the transaction T is on the
@@ -36,7 +36,7 @@
 %% ---------------------------------------------------------------------------
 
 Peer       ::= Key.
-Carried(X) ::= hello(Peer) ; cargo(Peer, Integer, X).
+Carried(X) ::= hello(Peer) ; cargo(Peer, X).
 Msg(X)     ::= msg(Peer, Carried(X)).
 Sent(X)    ::= sent(Peer, Peer, X).
 PersonIn   ::= [_ | PersonIn].
@@ -87,7 +87,7 @@ route3([], _, [], _, [], _, [], []).
 %% A cargo, logged with its sender and its recipient; a hello, not.
 procedure(X) note(Carried(X)?, Peer?, Stream(Sent(X)), Stream(Sent(X))?).
 note(hello(_), _, Log1?, Log1).
-note(cargo(F, _, X), To, [sent(F?, To?, X?)|Log1?], Log1).
+note(cargo(F, X), To, [sent(F?, To?, X?)|Log1?], Log1).
 
 %% The person.
 procedure person(_?, PersonIn, PSt?, Stream(_)).

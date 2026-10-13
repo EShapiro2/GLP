@@ -1,7 +1,8 @@
 #!/bin/bash
 # The compiler from an act-schema contract to its canonical CVA platform in
 # vGLP (programs/vglp/cva/compiler; vGLP, Section 3.2, the paragraph on act
-# schemas, and Section 5.4, "The canonical platform is structured"), run on
+# schemas, and Section 5.4, Definition "Compilation of the Canonical
+# Platform"), run on
 # the contracts of programs/jurix and of contracts.glp through the REPL.
 #
 #   bash programs/vglp/cva/compile.sh            print into programs/vglp/cva/<contract>/platform.vglp

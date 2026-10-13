@@ -23,8 +23,8 @@
 %% unguarded and its opener the person in its first role (Section 5.4, the
 %% paragraph on act schemas), whose machine proposes it on a tick, the attempt
 %% asking nobody and the other participant voting by its machine (Section 5.4,
-%% "The canonical platform is structured"; Definition "Canonical CVA
-%% Platform", Propose and Start).  nudge/self.glp plays it.
+%% Definition "Compilation of the Canonical Platform"; Definition "Canonical
+%% CVA Platform", Propose and Start).  nudge/self.glp plays it.
 %%
 %% introduce is befriend with a three-party act, by which a person introduces
 %% two of its friends to each other, so that a contract compiled here has a

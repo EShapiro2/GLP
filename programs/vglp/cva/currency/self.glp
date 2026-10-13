@@ -42,7 +42,7 @@ YesNo    ::= yes ; no.
 Decision ::= commit ; abort.
 Attempt  ::= attempt(Peer, Integer, Class).
 Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision).
-Content  ::= hello(Peer) ; cargo(Peer, Integer, Cargo).
+Content  ::= hello(Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Txn      ::= propose(Attempt) ; start(Attempt) ; answer(Attempt)
            ; vote(Attempt) ; tally(Attempt) ; outcome(Attempt) ; discover(Peer).

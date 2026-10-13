@@ -38,7 +38,7 @@ YesNo    ::= yes ; no.
 Decision ::= commit ; abort.
 Attempt  ::= attempt(Peer, Integer, Class).
 Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision).
-Content  ::= hello(Peer) ; cargo(Peer, Integer, Cargo).
+Content  ::= hello(Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Txn      ::= propose(Attempt) ; start(Attempt) ; answer(Attempt)
            ; vote(Attempt) ; tally(Attempt) ; outcome(Attempt) ; discover(Peer).
@@ -126,10 +126,10 @@ procedure(X) route_late(Stream(Msg(X))?, Peer?, Stream(Msg(X)), Peer?, Stream(Ms
 route_late([msg(To, hello(F))|Ms], A, OA?, B, OB?, holding, Log?) :-
     ground(To?), ground(F?), ground(B?), To? =?= B? |
     route_late(Ms?, A?, OA, B?, OB, held(msg(To?, hello(F?))), Log).
-route_late([msg(To, cargo(F, K, X))|Ms], A, OA?, B,
-        [msg(To?, cargo(F?, K?, X?)), H?|OB?], held(H), Log?) :-
-    ground(To?), ground(F?), ground(K?), ground(X?), ground(B?), To? =?= B? |
-    note(cargo(F?, K?, X?), To?, Log, Log1?),
+route_late([msg(To, cargo(F, X))|Ms], A, OA?, B,
+        [msg(To?, cargo(F?, X?)), H?|OB?], held(H), Log?) :-
+    ground(To?), ground(F?), ground(X?), ground(B?), To? =?= B? |
+    note(cargo(F?, X?), To?, Log, Log1?),
     route(Ms?, A?, OA, B?, OB, Log1).
 route_late([msg(To, C)|Ms], A, [msg(To?, C?)|OA?], B, OB?, Hd, Log?) :-
     ground(To?), ground(C?), ground(A?), To? =?= A? |

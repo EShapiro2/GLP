@@ -7,9 +7,8 @@
 %% "Local Specification, Opener", "Attempt, Message, App State, Question,
 %% Ready" and "Canonical CVA Platform", two-phase commit coordinated by the
 %% initiating agent; Section 5.4, sections/cva-implementation.tex, Definitions
-%% "Structured CVA Platform", "Compilation of a Structured Platform" and
-%% "Effective Local Specification", the paragraph "The canonical platform is
-%% structured", and the paragraph on act schemas with the sentence after it,
+%% "Effective Local Specification" and "Compilation of the Canonical
+%% Platform", and the paragraph on act schemas with the sentence after it,
 %% which say when a contract of act schemas is a local specification and when
 %% it is effective.  Jurix (/Grassroots/Jurix), Sections 3 and 5:
 %% Definitions "Act schema", "Binding", "Compilation" and "Realisation of a

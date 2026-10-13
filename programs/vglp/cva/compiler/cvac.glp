@@ -1,7 +1,7 @@
 %% cvac.glp --- compile(Name, Contract, Verdict): the canonical CVA platform of
 %% an act-schema contract, printed as a .vglp module (vGLP, Section 3.2,
-%% Definition "Canonical CVA Platform"; Section 5.4, the paragraphs "The
-%% canonical platform is structured" and "Act schemas"; self.glp says more).
+%% Definition "Canonical CVA Platform"; Section 5.4, Definition "Compilation of
+%% the Canonical Platform" and the paragraph "Act schemas"; self.glp says more).
 %%
 %% A contract is compiled when programs/jurix certifies it syntactically
 %% grassroots, every role a party role (Jurix, Section 5: "the compilation is
@@ -156,9 +156,9 @@ module_lines(Nm, C, Rf, Ls?) :- ground(Nm?), ground(C?), ground(Rf?) |
     lapp(['%% Printed by programs/vglp/cva/compiler from the contract named below, in the',
          '%% term form programs/jurix reads (Jurix, Sections 3 and 5): the canonical CVA',
          '%% platform of the contract (vGLP, Section 3.2, Definition "Canonical CVA',
-         '%% Platform"), two-phase commit coordinated by the initiating agent, in the',
-         '%% structured form of vGLP Section 5.4 and written in vGLP (Section 5.4, the',
-         '%% paragraph on act schemas).  Edit the contract or the compiler and run',
+         '%% Platform"), two-phase commit coordinated by the initiating agent, compiled',
+         '%% into vGLP by Definition "Compilation of the Canonical Platform" (Section',
+         '%% 5.4).  Edit the contract or the compiler and run',
          '%% programs/vglp/cva/compile.sh, not this file.',
          H?,
          '',

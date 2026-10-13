@@ -14,7 +14,8 @@
 %%   set and asked, each on a card.  bob answers no, so alice tallies his no
 %%   and aborts, and tells the outcome to both; carol's question is no longer
 %%   pending once her Outcome closes the attempt, so her card is closed by the
-%%   program (vGLP, Section 5.4, "The canonical platform is structured"), and
+%%   program (vGLP, Section 5.4, Definition "Compilation of the Canonical
+%%   Platform"), and
 %%   the yes she gives it after takes no Answer.  alice proposes it again, both
 %%   answer yes, and it commits at all three.
 %%
@@ -28,7 +29,7 @@ YesNo    ::= yes ; no.
 Decision ::= commit ; abort.
 Attempt  ::= attempt(Peer, Integer, Class).
 Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision).
-Content  ::= hello(Peer) ; cargo(Peer, Integer, Cargo).
+Content  ::= hello(Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Txn      ::= propose(Attempt) ; start(Attempt) ; answer(Attempt)
            ; vote(Attempt) ; tally(Attempt) ; outcome(Attempt) ; discover(Peer).

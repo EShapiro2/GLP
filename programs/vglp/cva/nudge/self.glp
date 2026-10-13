@@ -11,9 +11,9 @@
 %% play_nudge: alice proposes befriending bob, bob is asked and answers yes,
 %%   and it commits.  Each is then the opener of the unguarded class of nudge
 %%   whose first role it is in (vGLP, Section 5.4, the paragraph on act
-%%   schemas), and its machine proposes it on a tick (Section 5.4, "The
-%%   canonical platform is structured": Propose of an unguarded class, by its
-%%   opener, on a tick), the attempt asking nobody and the other's machine
+%%   schemas), and its machine proposes it on a tick (Section 5.4, Definition
+%%   "Compilation of the Canonical Platform": Propose of an unguarded class, by
+%%   its opener, on a tick), the attempt asking nobody and the other's machine
 %%   voting on its start.  Both propose at once.  bob, holding his own attempt
 %%   prepared, defers the start of alice, who precedes him in the order of
 %%   identifiers, and does not refuse it; alice's machine votes no on bob's,
@@ -32,7 +32,7 @@ YesNo    ::= yes ; no.
 Decision ::= commit ; abort.
 Attempt  ::= attempt(Peer, Integer, Class).
 Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision).
-Content  ::= hello(Peer) ; cargo(Peer, Integer, Cargo).
+Content  ::= hello(Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Txn      ::= propose(Attempt) ; start(Attempt) ; answer(Attempt)
            ; vote(Attempt) ; tally(Attempt) ; outcome(Attempt) ; discover(Peer).
