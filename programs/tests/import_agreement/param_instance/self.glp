@@ -1,0 +1,14 @@
+%% An imported declaration at an instance of a parameterised export is
+%% admitted (TGLP modules.tex, "Cross-module type checking": their type
+%% automata are equal "once the exported declaration's type parameters, if
+%% any, are instantiated (Definition Instantiation)"), as p99/lists/p24.glp
+%% imports p23#rnd_select at IntList.  Here X is instantiated to Integer, and
+%% IntList, defined here, has the automaton of Stream(Integer).  The fixture
+%% is its own root.
+
+IntList ::= [] ; [Integer | IntList].
+
+imported procedure lib#pass(IntList?, IntList).
+
+exported procedure go(IntList?, IntList).
+go(L, R?) :- lib # pass(L?, R).

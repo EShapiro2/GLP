@@ -1,0 +1,13 @@
+%% An imported declaration equal to a monomorphic export is admitted (TGLP
+%% modules.tex, "Cross-module type checking": "The imported declaration must
+%% agree with the declaration M exports: their type automata are equal
+%% (structural type compatibility)").  The import names Hue, defined here and
+%% not in lib.glp: its automaton is Colour's, so the two agree whatever the
+%% types are called.  The fixture is its own root.
+
+Hue ::= red ; green ; blue.
+
+imported procedure lib#pick(Hue?, Hue).
+
+exported procedure go(Hue?, Hue).
+go(C, D?) :- lib # pick(C?, D).

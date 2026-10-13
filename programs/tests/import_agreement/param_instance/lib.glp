@@ -1,0 +1,6 @@
+%% See self.glp.  The export is parameterised.
+
+Stream(X) ::= [] ; [X | Stream(X)].
+
+exported procedure(X) pass(Stream(X)?, Stream(X)).
+pass(Xs, Xs?).

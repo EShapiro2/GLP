@@ -1,0 +1,14 @@
+%% An imported declaration at an instance of a parameterised export whose
+%% parameter occurs only as a bare alternative is admitted (TGLP modules.tex,
+%% "Cross-module type checking": their type automata are equal "once the
+%% exported declaration's type parameters, if any, are instantiated
+%% (Definition Instantiation)"; GLP, 2026-10-12 22:31 UTC, item 2: such a
+%% parameter is bound as an instantiation would bind it).  MaybeInt, defined
+%% here, has the automaton of Opt(Integer).  The fixture is its own root.
+
+MaybeInt ::= none ; Integer.
+
+imported procedure lib#get(MaybeInt?, MaybeInt).
+
+exported procedure go(MaybeInt?, MaybeInt).
+go(O, P?) :- lib # get(O?, P).

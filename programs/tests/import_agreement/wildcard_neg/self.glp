@@ -1,0 +1,12 @@
+%% An imported declaration at _? against a concrete export type is refused
+%% (TGLP modules.tex, "Cross-module type checking": "their type automata are
+%% equal"), as social/graph/core/home_ui.glp imports home#home.  The import
+%% declares the first argument _?, which accepts any consumed term, where the
+%% export declares Colour?.  The fixture is its own root.
+
+Colour ::= red ; green ; blue.
+
+imported procedure lib#pick(_?, Colour).
+
+exported procedure go(Colour?, Colour).
+go(C, D?) :- lib # pick(C?, D).

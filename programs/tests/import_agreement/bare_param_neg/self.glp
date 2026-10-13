@@ -1,0 +1,13 @@
+%% An imported declaration that is no instance of a parameterised export
+%% whose parameter occurs only as a bare alternative is refused (TGLP
+%% modules.tex, "Cross-module type checking": their type automata are equal
+%% "once the exported declaration's type parameters, if any, are
+%% instantiated (Definition Instantiation)").  Colour has no `none`, so no
+%% instance of Opt(X) has its automaton.  The fixture is its own root.
+
+Colour ::= red ; green.
+
+imported procedure lib#get(Colour?, Colour).
+
+exported procedure go(Colour?, Colour).
+go(O, P?) :- lib # get(O?, P).

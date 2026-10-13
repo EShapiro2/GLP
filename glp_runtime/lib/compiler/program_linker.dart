@@ -20,7 +20,8 @@ import '../analysis/type_checker/type_ast.dart';
 import '../analysis/type_checker/type_checker.dart';
 import '../analysis/type_checker/type_identity.dart';
 import '../analysis/type_checker/param_expansion.dart'
-    show UndefinedDeclarationTypeError;
+    show UndefinedDeclarationTypeError, buildAbstractInstance;
+import '../analysis/type_checker/program_dfa.dart' show UnknownTypeError;
 import '../runtime/module_hierarchy.dart';
 import '../vglp/mediator.dart';
 import '../vglp/canonical.dart' show isPaperSyntaxSource;
@@ -1805,9 +1806,17 @@ void _requireDistinctModuleNames(List<DiscoveredModule> modules) {
 /// ancestor `self.glp` above the program's directory calling into a sibling of
 /// it --- is renamed by the same path; the procedure is not in the program, and
 /// a call to it that the entry points reach is undefined in the linked program.
+///
+/// Where the call resolves, the imported declaration that types it is compared
+/// with the declaration its module exports ([_checkAgreement]), and an import
+/// that does not agree with its export is recorded the same way and rejects the
+/// program ([throwIfUnresolved]).
 class _CrossModuleResolver {
   final Map<String, DiscoveredModule> _byPath = {};
   final List<String> _unresolved = [];
+  final List<String> _disagreeing = [];
+  final Set<String> _compared = {};
+  final Map<DiscoveredModule, TypeEnvironment> _envs = {};
 
   _CrossModuleResolver(List<DiscoveredModule> modules) {
     for (final m in modules) {
@@ -1867,13 +1876,128 @@ class _CrossModuleResolver {
     if (!exported) {
       _unresolved.add('  $where: $q # $sig: ${target.filePath} does not '
           'export $sig');
+    } else {
+      _checkAgreement(caller, target, q, inner);
     }
     return target.moduleName;
   }
 
-  /// Rejects the program if any call [resolve] was given does not resolve.
+  /// The scope [m] is checked in ([checkModule]'s environment).
+  TypeEnvironment _envOf(DiscoveredModule m) => _envs.putIfAbsent(
+      m, () => buildModuleTypeEnvironment(m.ast, ancestorScope: m.ancestorScope));
+
+  /// The imported declaration of `q # p` in [caller]'s scope against the
+  /// declaration [target] exports (TGLP modules.tex, "Cross-module type
+  /// checking": "The imported declaration must agree with the declaration M
+  /// exports: their type automata are equal (structural type compatibility)
+  /// once the exported declaration's type parameters, if any, are
+  /// instantiated (Definition Instantiation); subtyping applies to the
+  /// arguments of a call, not between the two declarations").
+  ///
+  /// The imported declaration is the one the checker types the call by
+  /// (well_typed_clause.dart, `_checkRemoteGoal`): `q#p/n` in the caller's
+  /// scope, its parameterised template where it names type parameters.  A
+  /// call with none is refused by that check ("No imported declaration"), and
+  /// is not compared here.  Each declaration is expanded against its own
+  /// module's scope, a parameter of either standing as an abstract type
+  /// ([buildAbstractInstance]): the export's are instantiated by matching, and
+  /// the import's are the ones "the importing module holds open", which "stay
+  /// open across the module boundary" ([importExportDisagreement]).
+  void _checkAgreement(DiscoveredModule caller, DiscoveredModule target,
+      String q, Goal inner) {
+    final key = '$q#${inner.functor}/${inner.arity}';
+    if (!_compared.add('${_normPath(caller.filePath)}|$key')) return;
+
+    final callerEnv = _envOf(caller);
+    final importTemplate = callerEnv.paramProcDecls[key];
+    final importDecl = importTemplate ?? callerEnv.procedures[key];
+    if (importDecl == null) return;
+
+    final targetEnv = _envOf(target);
+    final exportKey = '${inner.functor}/${inner.arity}';
+    final exportTemplate = targetEnv.paramProcDecls[exportKey];
+    final exportDecl = exportTemplate ?? targetEnv.procedures[exportKey];
+    if (exportDecl == null) return;
+
+    // The source declarations, as written, for the report.
+    ProcDecl? source(DiscoveredModule m, bool Function(ProcDecl) test) {
+      for (final d in m.ast.procDeclarations) {
+        if (test(d)) return d;
+      }
+      return null;
+    }
+
+    final importSource = source(
+        caller,
+        (d) =>
+            d.imported &&
+            d.modulePath == q &&
+            d.name == inner.functor &&
+            d.arity == inner.arity);
+    final exportSource = source(
+        target,
+        (d) =>
+            d.exported &&
+            !d.imported &&
+            d.name == inner.functor &&
+            d.arity == inner.arity);
+
+    (ProcDecl, Map<String, TypeDef>, Set<String>) instance(
+        ProcDecl decl, bool parameterised, TypeEnvironment env) {
+      if (!parameterised) return (decl, env.types, const {});
+      final inst = buildAbstractInstance(
+          decl, decl.typeParams, env.typeTemplates,
+          knownMonoTypes: env.types.keys.toSet());
+      return (
+        inst.decl,
+        {...env.types, ...inst.typeDefs},
+        inst.abstractTypeNames
+      );
+    }
+
+    final where = importSource != null
+        ? '${caller.filePath}:${importSource.line}'
+        : '${caller.filePath} (in its scope, line ${importDecl.line})';
+    final importText = _declarationText(importSource ?? importDecl);
+    final exportText = _declarationText(exportSource ?? exportDecl);
+    final exportWhere =
+        '${target.filePath}:${(exportSource ?? exportDecl).line}';
+
+    final DeclarationDisagreement? found;
+    try {
+      final (iDecl, iTypes, iParams) =
+          instance(importDecl, importTemplate != null, callerEnv);
+      final (eDecl, eTypes, eParams) =
+          instance(exportDecl, exportTemplate != null, targetEnv);
+      found = importExportDisagreement(
+        imported: iDecl,
+        importedTypes: iTypes,
+        importedParams: iParams,
+        exported: eDecl,
+        exportedTypes: eTypes,
+        exportedParams: eParams,
+      );
+    } on UnknownTypeError catch (e) {
+      _disagreeing.add('  $where: $importText\n'
+          '    against $exportWhere: $exportText\n'
+          '    the automaton of one of them names the undefined type '
+          '${e.typeName}');
+      return;
+    }
+    if (found == null) return;
+    _disagreeing.add('  $where: $importText\n'
+        '    does not agree with $exportWhere: $exportText\n'
+        '    ${found.argument == 0 ? found.detail : 'argument ${found.argument}: ${found.detail}'}');
+  }
+
+  /// Rejects the program if any call [resolve] was given does not resolve, or
+  /// resolves to an export its imported declaration does not agree with.
   void throwIfUnresolved() {
-    if (_unresolved.isEmpty) return;
+    if (_unresolved.isEmpty) {
+      _throwIfDisagreeing();
+      return;
+    }
+
     throw Exception(
         'Cross-module calls that resolve to no exported procedure '
         '(modules.tex, Compilation, fourth step: a call M # p, whose '
@@ -1883,6 +2007,27 @@ class _CrossModuleResolver {
         'module file through its own exported declarations):\n'
         '${_unresolved.join('\n')}');
   }
+
+  void _throwIfDisagreeing() {
+    if (_disagreeing.isEmpty) return;
+    throw Exception(
+        'Imported declarations that do not agree with the declarations their '
+        'modules export (modules.tex, Cross-module type checking: "The '
+        'imported declaration must agree with the declaration M exports: '
+        'their type automata are equal (structural type compatibility) once '
+        'the exported declaration\'s type parameters, if any, are '
+        'instantiated (Definition Instantiation); subtyping applies to the '
+        'arguments of a call, not between the two declarations"):\n'
+        '${_disagreeing.join('\n')}');
+  }
+}
+
+/// [d] as written: its kind, its parameter list, its name and its argument
+/// types.
+String _declarationText(ProcDecl d) {
+  final kind = d.imported ? 'imported ' : (d.exported ? 'exported ' : '');
+  final params = d.typeParams.isEmpty ? '' : '(${d.typeParams.join(', ')})';
+  return '${kind}procedure$params ${d.qualifiedName}(${d.argTypes.join(', ')}).';
 }
 
 /// Resolve a single goal in a clause body.

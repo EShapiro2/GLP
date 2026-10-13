@@ -1,0 +1,12 @@
+%% An imported declaration that is a subtype of its export is refused (TGLP
+%% modules.tex, "Cross-module type checking": "subtyping applies to the
+%% arguments of a call, not between the two declarations").  The import
+%% declares the second argument Warm, a subtype of the export's Colour.  The
+%% fixture is its own root.
+
+Warm ::= red.
+
+imported procedure lib#pick(Warm?, Warm).
+
+exported procedure go(Warm?, Warm).
+go(C, D?) :- lib # pick(C?, D).
