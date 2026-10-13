@@ -86,7 +86,7 @@ String get _chainFile =>
     File('../programs/tests/module_self_procs/worker.glp').absolute.path;
 
 /// The program of programs/tests/boot_scope/ and its boot sources, which sit
-/// outside it as bonds_v2's do (programs/tests/bonds_v2_boots/).
+/// outside it.
 const _bootScopeProgram = '../programs/tests/boot_scope/program';
 String _bootScopeBoot(String name) =>
     File('../programs/tests/boot_scope/boots/$name.glp').absolute.path;

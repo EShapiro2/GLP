@@ -80,7 +80,7 @@ Found ::= found(Instrument) ; not_found.
 %% of the payee (own_coins), whether a conversation with a counterparty is open
 %% (has_peer), whether the screen shows a step's effect, and whether a lot is
 %% one of a list, is owed, or every lot of a list is held (dated/escrow.glp).  The
-%% name is the one bonds_v2 and the social graph give the same two constants.
+%% name is the one the social graph gives the same two constants.
 Decision ::= yes ; no.
 
 %% Whether k instruments of an issuer and due were selected out of the

@@ -43,7 +43,7 @@ Reorganised 2026-09-16 (Udi).  `README.md` carries the directory map; what moved
 | Was | Is |
 |---|---|
 | `programs/spm/` | `programs/social/spm/` |
-| `programs/currencies/` (the program) | `programs/currencies/bonds_v2/` |
+| `programs/currencies/` (the program) | `programs/currencies/bonds/`, the one bonds program since 2026-10-13, its `secure/` at `programs/currencies/secure/` |
 | `programs/coins/`, `programs/bonds/`, `programs/sovereign/` | `programs/currencies/coins/`, `.../bonds/`, `.../sovereign/` |
 | `programs/multiagent_tests/`, `programs/vglp_tests/` | `programs/tests/multiagent/`, `programs/tests/vglp/` |
 | `programs/social/linkprobe*/`, `probeapp/`, `runprobe/` and their boot files | `programs/tests/linkprobes/` |

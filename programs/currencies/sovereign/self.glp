@@ -99,7 +99,7 @@ Found ::= found(Instrument) ; not_found.
 %% holder (own_coins), whether an instrument of an issuer in a denomination is
 %% held (holds), whether a conversation with a counterparty is open
 %% (has_peer), whether the screen shows a step's effect.  The name is the one
-%% bonds_v2 and the social graph give the same two constants.
+%% the social graph gives the same two constants.
 Decision ::= yes ; no.
 
 %% Whether k instruments of an issuer, denomination and due were selected out
