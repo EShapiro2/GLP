@@ -27,8 +27,9 @@
 ///   - `String`, a number (`Integer` or `Real`), `Date` and an agent
 ///     identifier: a text field, a number field, a date picker and a peer
 ///     field, `text`, `number`, `date` and `peer`;
-///   - a tuple: a form with one field per argument, each labelled by the
-///     name of its declared type, `form(F, [E1, ..., En])`, each `Ei`
+///   - a tuple: a form headed by its functor, with one field per argument,
+///     each labelled by the name of its declared type, `form(F, [E1, ...,
+///     En])`, `F` the heading, in both modes (vGLP f9b63d6), each `Ei`
 ///     `field(L, W)`, `L` that name; a stream or list inside a form the
 ///     person writes: submitted as a question of its own and drawn under the
 ///     form, its entry `question(L, W)` and no field of the form; a union of
@@ -260,14 +261,35 @@ class _ConstructViewState extends State<ConstructView> {
         if (vf != f || vs.length != entries.length) break;
         // The form's fields, each labelled, and under them its questions of
         // their own, each drawn once the form's answer leaves it open.
-        Widget entry(int i) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 3),
-              child: _labelled(
-                  entries[i].label, _node(entries[i].widget, vs[i], [...at, i + 1])),
-            );
+        // A shown scalar sits beside its label, on one line; anything else
+        // under it.
+        Widget entry(int i) {
+          final w = entries[i].widget;
+          final node = _node(w, vs[i], [...at, i + 1]);
+          final scalar = w is GAtom && w.name == 'shown';
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 3),
+            child: scalar
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(entries[i].label,
+                          style: const TextStyle(fontSize: 12)),
+                      const SizedBox(width: 8),
+                      Flexible(child: node),
+                    ],
+                  )
+                : _labelled(entries[i].label, node),
+          );
+        }
+        // "a form headed by its functor" (vGLP f9b63d6, Definition "Widget
+        // Declaration, Default Widget"), as the person's form is headed in
+        // its editor: the heading, then the fields.
         final fields = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _keyed('heading', at, _heading(f)),
             for (var i = 0; i < entries.length; i++)
               if (!entries[i].own) entry(i),
             for (var i = 0; i < entries.length; i++)
@@ -515,8 +537,7 @@ class _ConstructViewState extends State<ConstructView> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(_name(ws[0]),
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    _keyed('heading', at, _heading(_name(ws[0]))),
                     for (var i = 0; i < entries.length; i++)
                       if (!entries[i].own)
                         Padding(
@@ -677,6 +698,11 @@ class _ConstructViewState extends State<ConstructView> {
             own: ctorArgs(e).$1 == 'question',
           )
       ];
+
+  /// A form's heading, its functor (vGLP f9b63d6, Definition "Widget
+  /// Declaration, Default Widget": "a tuple: a form headed by its functor").
+  static Widget _heading(String functor) => Text(functor,
+      style: const TextStyle(fontWeight: FontWeight.bold));
 
   /// [child] under [label], where there is one.
   static Widget _labelled(String? label, Widget child) => label == null

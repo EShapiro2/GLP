@@ -929,6 +929,22 @@ void main() {
       for (final v in ['bob', 'alice', 'dan', '7', '1', '5', '30']) {
         expect(inside(11, find.text(v)), findsOneWidget, reason: v);
       }
+      // Each form headed by its functor, nested ones and a thread's elements
+      // too (vGLP f9b63d6).
+      for (final (heading, at) in [
+        ('card', const <int>[]),
+        ('offer', const [1]),
+        ('lot', const [1, 2]),
+        ('coin', const [1, 3, 1]),
+        ('bond', const [1, 3, 2, 1]),
+      ]) {
+        expect(
+            find.descendant(
+                of: find.byKey(nodeKey(11, 'heading', at)),
+                matching: find.text(heading)),
+            findsOneWidget,
+            reason: '$heading at $at');
+      }
       // Shown and not edited: nothing but the answer's buttons takes input.
       expect(inside(11, find.byType(TextField)), findsNothing);
       expect(inside(11, find.byType(ElevatedButton)), findsNWidgets(2));

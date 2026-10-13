@@ -208,6 +208,12 @@ void main() {
             text);
       }
       await tester.pumpAndSettle();
+      // The person's form headed by its functor, as the program's are.
+      expect(
+          find.descendant(
+              of: find.byKey(nodeKey(form.id, 'heading', const [])),
+              matching: find.text(alternative)),
+          findsOneWidget);
       if (formShot != null) await _shot(tester, formShot);
       await tester.tap(find.byKey(submitKey(form.id, const [])));
       await tester.pumpAndSettle();
@@ -311,6 +317,24 @@ void main() {
     expect(inCard(find.text('alice')), findsNWidgets(2));
     expect(inCard(find.text('2')), findsNWidgets(2));
     expect(inCard(find.text('1')), findsOneWidget);
+    // Each form headed by its functor (vGLP f9b63d6, Definition "Widget
+    // Declaration, Default Widget": "a tuple: a form headed by its
+    // functor"): the card, its offer, the offer's lot and each coin.
+    for (final (heading, at) in [
+      ('card', const <int>[]),
+      ('offer', const [1]),
+      ('lot', const [1, 2]),
+      ('coin', const [1, 3, 1]),
+      ('coin', const [1, 3, 2, 1]),
+    ]) {
+      expect(
+          find.descendant(
+              of: find.byKey(nodeKey(card.id, 'heading', at)),
+              matching: find.text(heading)),
+          findsOneWidget,
+          reason: '$heading at $at');
+    }
+    expect(inCard(find.text('coin')), findsNWidgets(2));
     // Shown and not edited: no field of the card takes text.
     expect(inCard(find.byType(TextField)), findsNothing);
     expect(find.text('swap_done(bob)'), findsNothing);
