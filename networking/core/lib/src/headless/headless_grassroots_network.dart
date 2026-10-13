@@ -79,21 +79,24 @@ class ServerAddress {
 /// absent"), so every callback reports [Underlay.wan]: no BLE, no mDNS, no
 /// connectivity plugin.
 ///
-/// Instantiation (spec §Instantiation): the key pair, the rendezvous servers,
-/// the attestation, and a server's listen port and static public address as
-/// one optional pair ([ServerAddress]).  It runs [Underlay.wan] alone, so it
-/// takes no underlays; it has no location service, so it takes none (GNA,
-/// 2026-10-11, Q3).  It holds a session with each rendezvous server, dialing
-/// it at [start] and again on the heartbeat tick while none stands (Q2); a
-/// rendezvous server passes an empty list.
+/// Instantiation (GNA §2.2): the key pair, the rendezvous servers, the
+/// attestation, a server's listen port and static public address as one
+/// optional pair ([ServerAddress]), and whether the agent is a rendezvous
+/// server ([rendezvousServer]).  It runs [Underlay.wan] alone, so it takes no
+/// underlays; it has no location service, so it takes none (GNA, 2026-10-11,
+/// Q3).  It holds a session with each rendezvous server, dialing it at [start]
+/// and again on the heartbeat tick while none stands (Q2); a rendezvous server
+/// passes an empty list.
 ///
-/// This profile has no proximity underlay and therefore no trust level (spec
-/// §Trust levels — a level is held per `ProximityUnderlay`, and this profile
-/// has none). Unsolicited inbound IP contact is governed by no level: an inbound
-/// ANNOUNCE or Noise handshake from a key neither in the known set nor a
-/// configured rendezvous server's is rejected, so an unknown caller cannot be
-/// answered at all. [putKnownPeer] registers a key, [removeKnownPeer] revokes
-/// it; a service that must accept a caller registers its key first.
+/// This profile has no proximity underlay and therefore no trust level (GNA
+/// §2.7 — a level is held per `ProximityUnderlay`, and this profile has none).
+/// Unsolicited inbound WAN contact is governed by no level (GNA §2.5, §2.7):
+/// an inbound ANNOUNCE or Noise handshake from a key neither in the known set
+/// nor a configured rendezvous server's nor one an invite authorized is
+/// rejected, so an unknown caller cannot be answered at all --- except on a
+/// rendezvous server, which answers any key.  [putKnownPeer] registers a key,
+/// [removeKnownPeer] revokes it; a service that must accept a caller registers
+/// its key first.
 ///
 /// Known peers persist through [HeadlessKnownPeersStore] — file-backed
 /// ([FileKnownPeersStore]) or in-memory ([MemoryKnownPeersStore]) — replacing
@@ -104,10 +107,16 @@ class HeadlessGrassrootsNetwork {
     required List<RendezvousServer> rendezvousServers,
     this.attestation = const NoPlatformAttestation(),
     this.serverAddress,
+    this.rendezvousServer = false,
     required this.sodium,
     HeadlessKnownPeersStore? knownPeersStore,
   })  : rendezvousServers = List.unmodifiable(rendezvousServers),
         _knownPeersStore = knownPeersStore ?? MemoryKnownPeersStore() {
+    // GNA §2.2: a rendezvous server is one having a server address.
+    if (rendezvousServer && serverAddress == null) {
+      throw ArgumentError.value(rendezvousServer, 'rendezvousServer',
+          'a rendezvous server has a server address, and none was given');
+    }
     store = Store<AppState>(appReducer, initialState: const AppState());
     _protocolHandler = ProtocolHandler(identity: identity, sodium: sodium);
     _fragmentHandler = FragmentHandler();
@@ -137,6 +146,12 @@ class HeadlessGrassrootsNetwork {
   /// A server's listen port and static public address, or null: then an
   /// ephemeral port is bound and [getPublicAddress] answers null.
   final ServerAddress? serverAddress;
+
+  /// Whether this agent is a rendezvous server (GNA §2.2, "Rendezvous server,
+  /// yes or no"): one having a [serverAddress], whose layer answers
+  /// unsolicited WAN contact from any key (GNA §2.5, §2.7), since it cannot
+  /// know its clients in advance (GNA §6).
+  final bool rendezvousServer;
 
   /// This profile's platform attestation service. A headless server has none
   /// to offer (spec §Rendezvous Server: "Having no platform attestation to
@@ -859,14 +874,16 @@ class HeadlessGrassrootsNetwork {
     return rendezvousServers.any((server) => server.pubkeyHex == hex);
   }
 
-  /// Unsolicited inbound IP contact is governed by no trust level (spec §Trust
-  /// levels): it is refused unless the peer is in the known-peer set or
-  /// presents a valid invite. This profile has no proximity underlay — no BLE,
-  /// no LAN discovery — so the known-peer set and the keys a peer link
-  /// authorized are the whole of it, with the configured rendezvous servers,
+  /// Unsolicited inbound WAN contact is governed by no trust level (GNA
+  /// §2.7): it is refused unless the peer is in the known-peer set or
+  /// presents a valid invite (GNA §2.5), except on a rendezvous server, which
+  /// answers any key. This profile has no proximity underlay — no BLE, no LAN
+  /// discovery — so the known-peer set and the keys a peer link authorized
+  /// are the whole of it, with the configured rendezvous servers,
   /// infrastructure this agent itself dials, and contact this agent solicited
   /// by dialing it.
   bool _acceptsContactFrom(Uint8List pubkey) {
+    if (rendezvousServer) return true;
     final hex = _hex(pubkey);
     return _isKnown(pubkey) ||
         _isRendezvousServer(pubkey) ||
