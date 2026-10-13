@@ -10,8 +10,8 @@ Grassroots Networking is a **peer-to-peer messaging transport** — a thin layer
 **Core principles:**
 
 - **Direct delivery only.** Messages go straight from sender to recipient — never through an intermediary. The sender's transport MAY queue its own outbound messages locally when the recipient is temporarily unreachable and replay them once a path opens (madGLP "fair message delivery"), but no intermediary ever holds, caches, or relays another peer's traffic.
-- **Identity is a key pair.** Every device holds an Ed25519 key pair. The public key *is* the peer's identity — nicknames are cosmetic. All trust decisions flow from cryptographic verification.
-- **Two transports, one interface.** BLE covers nearby peers without Internet; UDP covers the globe. Both transports surface the same abstraction to the coordinator: connect, send, receive, disconnect. BLE is preferred when both are available.
+- **Identity is a key pair.** Every device holds an Ed25519 key pair. The public key *is* the peer's identity. All trust decisions flow from cryptographic verification.
+- **One overlay, three underlays.** PAN, LAN and WAN surface one interface to the runtime (GNA Section 2); see "Transport Layer" below.
 - **Clean breaks, not compatibility shims.** When refactoring, fully replace old code. No legacy wrappers, no "kept for compatibility" comments, no dead code. Update every call site. There are no installed apps in the wild — you are free to rename, restructure, and break wire formats whenever it improves the design.
 
 ## No Legacy or Compatibility Code
@@ -60,12 +60,9 @@ The Redux state is a strict projection of facts emitted by the transport layers 
 
 ## Transport Layer
 
-Two transports are available, toggled independently in settings:
+The layer is one overlay over three underlays (GNA Section 2): the PAN, over BLE (GNA Section 3); the LAN, discovered by DNS-SD (GNA Section 3); and the WAN, over UDP through rendezvous servers (GNA Sections 4 and 6).  The ones that run are fixed when the layer is instantiated (GNA Section 2.2): there is no settings toggle and no preference among them.  The demo app's switches (`lib/network_preferences.dart`) are the app's choice of what to instantiate the layer with, not settings of the layer.
 
-- **Bluetooth (BLE)** — local, no Internet required. Preferred when both are available.
-- **Internet (UDP)** — global reach, requires Internet. Datagrams carrying the shared message transport (paper §Message Transport); hole-punching for NAT traversal.
-
-The `TransportState` lifecycle for each transport is: `uninitialized → initializing → ready → active` (plus `error` and `disposed`). A transport is "usable" when it is `ready` or `active`.
+The `TransportState` lifecycle of each transport service, BLE and UDP, is: `uninitialized → initializing → ready → active` (plus `error` and `disposed`). A transport is "usable" when it is `ready` or `active`.
 
 User-facing UI strings should say "Internet", not "UDP" or internal protocol names.
 
@@ -107,6 +104,6 @@ GLP feeds peer addresses into the layer's dial book via `putPeerAddress(pk, addr
 
 ## Transport Independence
 
-BLE and UDP are independent transports. Disabling or losing one must have **zero effect** on the other's connection state, peer reachability, or online status. A peer connected via UDP remains online regardless of BLE state. The stale peer logic, the UI, and the reducer must all respect this: never let a BLE disconnection degrade UDP-derived state.
+BLE and UDP are independent transports. Losing one must have **zero effect** on the other's connection state, peer reachability, or online status. A peer connected via UDP remains online regardless of BLE state. The stale peer logic, the UI, and the reducer must all respect this: never let a BLE disconnection degrade UDP-derived state.
 
-Application-level callbacks (`onPeerConnected`, `onPeerDisconnected`) report reachability **per underlay**, matching the spec (GNA §Connection and Reachability): each fires with the peer's public key and the `Underlay` whose authenticated and attested session came up or went down — `pan` for the GATT session, and for the UDP session `lan` when the peer's address lies within one of the agent's own local prefixes, `wan` otherwise. A peer reachable over the PAN and over IP fires two connects; losing one of two live underlays fires a disconnect for that underlay while the peer stays reachable over the other. `peerUnderlays(pubkey)` returns the underlays a peer is currently reachable over (empty if unreachable), and `isPeerReachable(pubkey)` stays the any-underlay predicate. Exposing the underlay is what lets GLP compute proximity (nearby friends = friends ∩ peers reachable over the PAN). The per-transport independence still holds end-to-end: a BLE disconnect never degrades UDP-derived state.
+Application-level callbacks (`onPeerConnected`, `onPeerDisconnected`) report reachability **per underlay**, matching the spec (GNA §Connection and Reachability): each fires with the peer's public key and the `Underlay` whose authenticated and attested session came up or went down — `pan` for the GATT session, and for the UDP session the underlay GNA Section 2 gives an IP connection: `lan` only where the layer runs the LAN, `wan` only where it runs the WAN, and no connection where neither applies. A peer reachable over the PAN and over IP fires two connects; losing one of two live underlays fires a disconnect for that underlay while the peer stays reachable over the other. `peerUnderlays(pubkey)` returns the underlays a peer is currently reachable over (empty if unreachable), and `isPeerReachable(pubkey)` stays the any-underlay predicate. Exposing the underlay is what lets GLP compute proximity (nearby friends = friends ∩ peers reachable over the PAN). The per-transport independence still holds end-to-end: a BLE disconnect never degrades UDP-derived state.

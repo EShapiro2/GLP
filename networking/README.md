@@ -1,231 +1,59 @@
-# Bitchat Transport for GSG
+# The Grassroots networking layer
 
-A Flutter/Dart implementation of the Bitchat BLE mesh transport layer, designed for use with the Grassroots Social Graph (GSG) protocol.
+This directory is the networking layer of Grassroots: the transport by which madGLP agents reach one another.  It is specified by GNA, the GLP Networking API paper (repository `GLP-Networking-API`, on disc at `/Users/udi/Grassroots/GNA`).  The paper is the specification and this directory its implementation; where the two differ, the paper governs.  The record of the implementation against the paper --- conformance, known deviations, what is not yet implemented --- is GNA's `docs/implementation-notes.md`, and the rules for working here are `CLAUDE.md`.
 
-## Overview
+The interface the layer offers the runtime is GNA Section 2; the proximity underlays, PAN and LAN, are Section 3; the WAN is Section 4; the system predicates over the layer are Section 5; the rendezvous server is Section 6.
 
-This package provides a BLE mesh networking layer based on the [Bitchat protocol](https://github.com/permissionlesstech/bitchat). It enables peer-to-peer communication between nearby devices without requiring internet connectivity.
+The code was subtree-imported from Dan Bachar's `grassroots-networking`.
 
-### Features
+## Packages
 
-- **Dual-mode BLE**: Operates as both Central (scanner) and Peripheral (advertiser) simultaneously
-- **Mesh Routing**: Multi-hop message relay (up to 7 hops)
-- **Fragmentation**: Automatic chunking and reassembly of large messages
-- **Store-and-Forward**: Caches messages for offline peers (12hr retention)
-- **Protocol Compatible**: Works with other Bitchat implementations
+| Directory | Package | What it holds |
+|---|---|---|
+| `core/` | `grassroots_networking_core` | Pure Dart, no Flutter.  Identity, the wire format, Noise sessions, the message protocol, routing, the Redux store, the UDP transport, signaling and peer links, attestation verification, the place registry; and the headless profile, `HeadlessGrassrootsNetwork`, which runs the WAN alone (GNA Sections 2 and 2.2), with two command-line entry points, `bin/glp_net_service.dart` and `bin/glp_net_push.dart`. |
+| `.` | `grassroots_networking` | The Flutter package: `GrassrootsNetwork`, the layer over all three underlays, with BLE (`lib/src/transport/ble_transport_service.dart`) and LAN discovery (`lib/src/transport/lan_discovery_service.dart`); the platform attestation producers and the geofencing backends (`android/`, `ios/`); and a demo app (`lib/main.dart`).  It depends on the core and re-exports it. |
+| `glue/` | `grassroots_networking_glue` | The backend glue: the runtime's network interface, `GlpNetwork`, implemented over the layer --- `HeadlessGlpNetwork` over the headless profile, `GrassrootsGlpNetwork` over `GrassrootsNetwork`.  It depends on the core, the Flutter package and `glp_runtime`, so that neither the core nor its users carry the GLP runtime. |
+| `bootstrap_anchor/` | `bootstrap_anchor` | The Dart rendezvous server.  It is retired: the GLP rendezvous agent, `programs/examples/rendezvous/`, replaces it within GNA's reconnection task, and the directory is deleted when that is done. |
 
-### Architecture
+## Building and testing
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                      GSG Layer                          │
-│   (Blocklace, Friendship Protocol, Cordial Dissem.)    │
-├─────────────────────────────────────────────────────────┤
-│                   Bitchat API                           │
-│         (send, broadcast, onMessageReceived)            │
-├─────────────────────────────────────────────────────────┤
-│                   Mesh Router                           │
-│   (Routing, Relay, Fragmentation, Store-and-Forward)   │
-├─────────────────────────────────────────────────────────┤
-│                   BLE Manager                           │
-│           (Central + Peripheral Services)               │
-├─────────────────────────────────────────────────────────┤
-│              BLE Hardware (iOS/Android)                 │
-└─────────────────────────────────────────────────────────┘
-```
+The core and the headless profile need the native libsodium: `brew install libsodium` on macOS, `apt-get install libsodium23` on Debian, or `LIBSODIUM_PATH` naming the shared library.  A test that needs it skips itself when it is absent.
 
-## Installation
+Each package is tested in its own directory, by the runner its pubspec calls for.  The repository suite, `test/run_all_tests.sh`, does not run these tests.
 
-Add to your `pubspec.yaml`:
+| Package | Build | Test |
+|---|---|---|
+| core | `cd networking/core && dart pub get`; a server entry point compiles with `dart compile exe bin/glp_net_service.dart -o glp_net_service` | `cd networking/core && dart test` |
+| Flutter package | `cd networking && flutter pub get`; the demo app runs with `flutter run` | `cd networking && flutter test` |
+| glue | `cd networking/glue && flutter pub get` | `cd networking/glue && flutter test` (a Flutter test, since the package depends on the Flutter package) |
+| bootstrap_anchor | `cd networking/bootstrap_anchor && dart pub get` | `cd networking/bootstrap_anchor && dart test` |
 
-```yaml
-dependencies:
-  bitchat_transport:
-    path: ../bitchat_transport  # Or publish to pub.dev
-```
+`integration_test/` holds on-device tests, run with `flutter test integration_test/<file>` against a simulator or a device; `e2e_agent_test.dart` coordinates its agents through the host blackboard, `dart run tool/e2e_blackboard.dart`, and its header names the roles.
 
-### Platform Setup
+## Platform setup
 
-#### Android
+What an application must declare to run the layer, as the demo app declares it.
 
-Add to `android/app/src/main/AndroidManifest.xml`:
+### Android
 
-```xml
-<!-- Bluetooth permissions (Android 12+) -->
-<uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
-<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-<uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+From `android/app/src/main/AndroidManifest.xml`:
 
-<!-- Location (required for BLE scanning) -->
-<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+- `INTERNET`, for the LAN and the WAN.
+- `BLUETOOTH_SCAN` with `usesPermissionFlags="neverForLocation"`, `BLUETOOTH_CONNECT` and `BLUETOOTH_ADVERTISE`, for the PAN on Android 12 and later; `BLUETOOTH` and `BLUETOOTH_ADMIN` with `maxSdkVersion="30"` before it.
+- `ACCESS_FINE_LOCATION` and `ACCESS_COARSE_LOCATION`, for the place functions on every version and for BLE scanning on Android 6 to 11.  `ACCESS_BACKGROUND_LOCATION` is deliberately absent: location is foreground-only.
+- `FOREGROUND_SERVICE` and `FOREGROUND_SERVICE_CONNECTED_DEVICE`, with the service `.TransportForegroundService` declared with `foregroundServiceType="connectedDevice"`, which keeps the layer running when the application is in the background; and `POST_NOTIFICATIONS`, on Android 13 and later, for that service's notification.
+- The receiver `.GeofenceBroadcastReceiver`, not exported, which receives the platform's geofence crossings.
+- The feature `android.hardware.bluetooth_le`, required.
 
-<!-- Required features -->
-<uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
-```
+The demo app also declares `android.hardware.camera` as not required, for its own photo messages; the layer does not need it.
 
-#### iOS
+### iOS
 
-Add to `ios/Runner/Info.plist`:
+From `ios/Runner/Info.plist`:
 
-```xml
-<key>NSBluetoothAlwaysUsageDescription</key>
-<string>This app uses Bluetooth to communicate with nearby devices.</string>
-<key>NSBluetoothPeripheralUsageDescription</key>
-<string>This app uses Bluetooth to communicate with nearby devices.</string>
-<key>NSLocationWhenInUseUsageDescription</key>
-<string>Location is used to improve Bluetooth connectivity.</string>
-<key>UIBackgroundModes</key>
-<array>
-    <string>bluetooth-central</string>
-    <string>bluetooth-peripheral</string>
-</array>
-```
+- `NSBluetoothAlwaysUsageDescription` and `NSBluetoothPeripheralUsageDescription`, for the PAN, and `UIBackgroundModes` with `bluetooth-central` and `bluetooth-peripheral`.
+- `NSLocalNetworkUsageDescription` and `NSBonjourServices` with `_grassroots._udp`, for LAN discovery.
+- `NSLocationWhenInUseUsageDescription`, for the place functions, while in use only.
+- `GrassrootsAppIdentifierPrefix`, set to `$(AppIdentifierPrefix)`, from which the attestation producer forms the application identity.
 
-## Usage
-
-### Basic Setup
-
-```dart
-import 'package:bitchat_transport/bitchat_transport.dart';
-
-// Identity is provided by GSG layer
-final identity = BitchatIdentity(
-  publicKey: myEd25519PublicKey,   // 32 bytes
-  privateKey: myEd25519PrivateKey, // 64 bytes
-  nickname: 'Alice',
-);
-
-// Create Bitchat instance
-final bitchat = Bitchat(identity: identity);
-
-// Set up callbacks
-bitchat.onMessageReceived = (senderPubkey, payload) {
-  print('Received ${payload.length} bytes from ${senderPubkey}');
-  // Handle GSG block
-};
-
-bitchat.onPeerConnected = (peer) {
-  print('Peer connected: ${peer.displayName}');
-  // Start cordial dissemination
-};
-
-bitchat.onPeerDisconnected = (peer) {
-  print('Peer disconnected: ${peer.displayName}');
-};
-
-// Initialize (requests permissions, starts BLE)
-final success = await bitchat.initialize();
-if (!success) {
-  print('Failed to initialize: ${bitchat.status}');
-  return;
-}
-
-// Transport is now active and will auto-discover peers
-```
-
-### Sending Messages
-
-```dart
-// Send to specific peer
-final sent = await bitchat.send(recipientPubkey, gsgBlockData);
-
-// Broadcast to all peers
-await bitchat.broadcast(gsgBlockData);
-```
-
-### Peer Management
-
-```dart
-// Get all known peers
-final peers = bitchat.peers;
-
-// Get connected peers only
-final connected = bitchat.connectedPeers;
-
-// Check if a peer is reachable
-final reachable = bitchat.isPeerReachable(pubkey);
-
-// Get specific peer
-final peer = bitchat.getPeer(pubkey);
-```
-
-### Lifecycle
-
-```dart
-// Stop BLE activity (saves battery)
-await bitchat.stop();
-
-// Resume
-await bitchat.start();
-
-// Trigger new scan
-await bitchat.scan(timeout: Duration(seconds: 30));
-
-// Clean up
-await bitchat.dispose();
-```
-
-## Protocol Details
-
-### Packet Format
-
-```
-[0]      : Packet type (1 byte)
-[1]      : TTL (1 byte, max 7)
-[2-5]    : Timestamp (4 bytes)
-[6-37]   : Sender public key (32 bytes)
-[38-69]  : Recipient public key (32 bytes, zeros for broadcast)
-[70-71]  : Payload length (2 bytes)
-[72-87]  : Packet ID (16 bytes, UUID)
-[88-151] : Signature (64 bytes)
-[152-N]  : Payload (variable)
-```
-
-### Packet Types
-
-| Type | Value | Description |
-|------|-------|-------------|
-| ANNOUNCE | 0x01 | Peer identity exchange |
-| MESSAGE | 0x02 | Application data (GSG blocks) |
-| FRAGMENT_START | 0x03 | Start of fragmented message |
-| FRAGMENT_CONTINUE | 0x04 | Continuation fragment |
-| FRAGMENT_END | 0x05 | Final fragment |
-| ACK | 0x06 | Delivery acknowledgment |
-| NACK | 0x07 | Request for data (GSG-level) |
-
-### Fragmentation
-
-Messages > 500 bytes are automatically fragmented:
-
-1. `FRAGMENT_START`: Contains metadata (total size, count) + first chunk
-2. `FRAGMENT_CONTINUE`: Intermediate chunks
-3. `FRAGMENT_END`: Final chunk, triggers reassembly
-
-Inter-fragment delay: 20ms
-
-### Mesh Routing
-
-- TTL starts at 7, decremented at each hop
-- Packets with TTL=0 are not relayed
-- ANNOUNCE packets are not relayed (direct only)
-
-## Future Transport Layers
-
-The Nostr bridge from original Bitchat has been removed. See `TODO_TRANSPORT.md` for plans to implement:
-
-- WebRTC for internet-based P2P
-- STUN/TURN for NAT traversal
-- Other transport options
-
-## Dependencies
-
-- `flutter_blue_plus` - BLE Central mode
-- `ble_peripheral` - BLE Peripheral mode
-- `permission_handler` - Runtime permissions
-- `cryptography` - Ed25519 signing
-- `uuid` - Packet ID generation
-- `logger` - Logging
-
-## License
-
-MIT License - see LICENSE file
+The demo app's `NSCameraUsageDescription` and `NSPhotoLibraryUsageDescription` are for its own photo messages; the layer does not need them.  The iOS deployment target is 13.0 (`ios/Podfile`).
