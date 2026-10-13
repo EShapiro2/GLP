@@ -196,9 +196,25 @@ BodyKernelResult _activate(
 
   rt.runners.putIfAbsent(key, () => ByteRunner(image));
 
+  // A goal's argument registers hold variables (runtime specification
+  // v2.16.3 §1.1: "CallEnv arguments must be VarRefs"): a ground argument of
+  // the posted goal --- run(entry([], Out), T, M) --- is put in a fresh
+  // variable bound to it, its reader in the register, as the engine sets up
+  // the arguments of an initial goal (glp_engine.dart, _setupArgument).  Until
+  // 2026-10-13 the term itself was put there, and the goal's first reduction
+  // failed the runner's assertion.
   final slots = <int, Term>{};
   for (var i = 0; i < bootArgs.length; i++) {
-    slots[i] = bootArgs[i];
+    final arg = bootArgs[i];
+    if (arg is VarRef) {
+      slots[i] = arg;
+      continue;
+    }
+    final (writer, reader) = rt.heap.allocateVariable();
+    for (final act in rt.heap.bindVariable(writer, arg)) {
+      rt.gq.enqueue(act);
+    }
+    slots[i] = VarRef(reader);
   }
 
   final newGoalId = rt.nextGoalId++;

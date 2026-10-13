@@ -261,6 +261,30 @@ void main() {
       expect(rt.gq.length, equals(before),
           reason: 'a failed resolution enqueues nothing');
     });
+
+    test('a ground argument of the posted goal is put in a variable bound to '
+        'it', () {
+      // Runtime specification v2.16.3 §1.1: a goal's argument registers hold
+      // variables.  Until 2026-10-13 run/2 and run/3 put a ground argument
+      // there as it was, and run(entry([], Out), T, M) failed the runner's
+      // assertion at the goal's first reduction.
+      final rt = GlpRuntime();
+      registerModuleKernels(rt);
+      final (y, _) = rt.heap.allocateVariable();
+      final kernel = rt.bodyKernels.lookup('_run', 2)!;
+      expect(
+          kernel(rt, [
+            StructTerm('go', [ConstTerm(41), VarRef(y)]),
+            projectModule
+          ]),
+          equals(BodyKernelResult.success));
+      final env = rt.getGoalEnv(rt.gq.items.last.id)!;
+      final first = env.arg(0);
+      expect(first, isA<VarRef>());
+      final bound = rt.heap.getValue((first as VarRef).addr);
+      expect(bound is ConstTerm ? bound.value : bound, 41);
+      expect(env.arg(1), isA<VarRef>());
+    });
   });
 
   group('the module value carries the artefact — h(M) and code', () {
