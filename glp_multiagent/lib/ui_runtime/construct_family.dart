@@ -35,7 +35,12 @@
 ///     tuples: a menu of forms, `menu([W1, ..., Wn])`, each alternative's
 ///     chip naming its functor, and its arity where two share a functor
 ///     (Remark "Construct Families");
-///   - a value the program writes: shown and not edited, `shown`; a list the
+///   - a value the program writes: shown and not edited, `shown` where it is
+///     a constant or a primitive, and otherwise by the widget its type's
+///     constructors build --- a tuple a form of shown fields, each labelled
+///     by the name of its declared type, a tuple inside it a form of its own
+///     set in under a rule, a union a menu, a stream `thread(W)` where its
+///     elements are tuples (vGLP #8 Cowork, 2026-10-13 08:15 UTC); a list the
 ///     program writes, with a choice coming back: a picker, `picker`;
 ///   - a stream the person writes: the widget of its element type, kept
 ///     open, one element per submission, `input_box(W)`; a list the person
@@ -260,18 +265,31 @@ class _ConstructViewState extends State<ConstructView> {
               child: _labelled(
                   entries[i].label, _node(entries[i].widget, vs[i], [...at, i + 1])),
             );
+        final fields = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var i = 0; i < entries.length; i++)
+              if (!entries[i].own) entry(i),
+            for (var i = 0; i < entries.length; i++)
+              if (entries[i].own) entry(i),
+          ],
+        );
+        // A form inside the construct's term --- a tuple the program wrote
+        // inside a tuple, or an element of a thread --- is set in under a
+        // rule, so that its fields read as its own and not its parent's.
         return _keyed(
             'form',
             at,
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (var i = 0; i < entries.length; i++)
-                  if (!entries[i].own) entry(i),
-                for (var i = 0; i < entries.length; i++)
-                  if (entries[i].own) entry(i),
-              ],
-            ));
+            at.isEmpty
+                ? fields
+                : Container(
+                    padding: const EdgeInsets.only(left: 10),
+                    decoration: BoxDecoration(
+                        border: Border(
+                            left: BorderSide(
+                                color: Colors.grey.shade400, width: 2))),
+                    child: fields,
+                  ));
       case 'menu' when ws.length == 1 && ws[0] is GList:
         // The program wrote one alternative: its form, where one has its
         // functor and arity, or a value shown.

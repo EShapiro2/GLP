@@ -642,7 +642,10 @@ void main() {
         'pending at its own position beside the question, then whole',
         (tester) async {
       final p = await _Person.boot(tester, 'board_init', dir: 'pending');
-      final b = p.the("form(board, [field('Stream(Note)', thread), "
+      // Each note a tuple the program writes, a form labelled by its
+      // argument's declared type (vGLP #8 Cowork, 2026-10-13 08:15 UTC).
+      final b = p.the("form(board, [field('Stream(Note)', "
+          "thread(form(note, [field('Constant', shown)]))), "
           "field('YesNo', buttons([yes, no]))])");
       expect(formatTerm(b.view), 'board([note(first), pending([1, 2, 1])], '
           'input([2]))');
@@ -879,6 +882,57 @@ void main() {
       for (final kind in ['peer', 'number', 'date', 'text']) {
         expect(inside(6, find.text(kind)), findsNothing, reason: kind);
       }
+    });
+
+    testWidgets(
+        'a tuple the program writes is a form of shown fields, each labelled '
+        'by the name of its declared type, a tuple inside it a form of its '
+        'own, a union drawn by its alternative\'s form, and nothing edited '
+        '(Definition "Widget Declaration, Default Widget"; vGLP #8 Cowork, '
+        '2026-10-13 08:15 UTC, item b)', (tester) async {
+      const coin = "form(coin, [field('Key', shown), field('Integer', shown)])";
+      r.handle(fixtureTerm("draw(11, form(card, [field('Offer', form(offer, "
+          "[field('Key', shown), field('Lot', form(lot, [field('Key', shown), "
+          "field('Integer', shown)])), field('Stream(Item)', thread(menu(["
+          "$coin, form(bond, [field('Key', shown), field('Integer', shown), "
+          "field('Date', shown)]), shown])))])), "
+          "field('YesNo', buttons([yes, no]))]), "
+          "card(offer(bob, lot(carol, 7), [coin(alice, 1), bond(dan, 5, 30), "
+          "none]), input([2])))"));
+      await surface(tester);
+      for (final (label, n) in [
+        ('Offer', 1),
+        ('Lot', 1),
+        ('Stream(Item)', 1),
+        ('Key', 4),
+        ('Integer', 3),
+        ('Date', 1),
+        ('YesNo', 1),
+      ]) {
+        expect(inside(11, find.text(label)), findsNWidgets(n), reason: label);
+      }
+      // The lot a form of its own, inside the offer's.
+      expect(find.byKey(nodeKey(11, 'form', [1])), findsOneWidget);
+      expect(find.byKey(nodeKey(11, 'form', [1, 2])), findsOneWidget);
+      expect(
+          find.descendant(
+              of: find.byKey(nodeKey(11, 'shown', [1, 2, 1])),
+              matching: find.text('carol')),
+          findsOneWidget);
+      // Each element of the stream drawn by its alternative's form, a
+      // constant alternative shown.
+      expect(find.byKey(nodeKey(11, 'form', [1, 3, 1])), findsOneWidget);
+      expect(find.byKey(nodeKey(11, 'form', [1, 3, 2, 1])), findsOneWidget);
+      expect(inside(11, find.text('none')), findsOneWidget);
+      for (final v in ['bob', 'alice', 'dan', '7', '1', '5', '30']) {
+        expect(inside(11, find.text(v)), findsOneWidget, reason: v);
+      }
+      // Shown and not edited: nothing but the answer's buttons takes input.
+      expect(inside(11, find.byType(TextField)), findsNothing);
+      expect(inside(11, find.byType(ElevatedButton)), findsNWidgets(2));
+      await tester.tap(inside(11, find.widgetWithText(ElevatedButton, 'yes')));
+      await tester.pump();
+      expect(sent, ['input(11, [2], yes)']);
     });
 
     testWidgets(

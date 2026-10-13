@@ -266,9 +266,18 @@ void main() {
 
     // --- The card: bob proposes the reverse swap, and the swap responder's
     // question, Card ::= card(Offer, YesNo?) in writer mode, is one construct:
-    // the offer shown, and the buttons yes and no at its answer. -------------
-    const cardWidget =
-        "form(card, [field('Offer', shown), field('YesNo', buttons([yes, no]))])";
+    // the offer shown, and the buttons yes and no at its answer.  The offer
+    // is a tuple the program writes, Offer ::= offer(Key, Lot, Stream(Coin)):
+    // "a form with one field per argument, each labelled by the name of its
+    // declared type", shown and not edited, its lot, Lot ::= lot(Key,
+    // Integer), a form of its own, and its coins, Coin ::= coin(Key,
+    // Integer), a thread of forms (Definition "Widget Declaration, Default
+    // Widget"; vGLP #8 Cowork, 2026-10-13 08:15 UTC, item b). -------------
+    const cardWidget = "form(card, [field('Offer', form(offer, "
+        "[field('Key', shown), field('Lot', form(lot, [field('Key', shown), "
+        "field('Integer', shown)])), field('Stream(Coin)', thread(form(coin, "
+        "[field('Key', shown), field('Integer', shown)])))])), "
+        "field('YesNo', buttons([yes, no]))])";
     final cards = drawn(cardWidget);
     expect(cards, hasLength(1));
     final card = cards.single;
@@ -282,7 +291,28 @@ void main() {
     // The card shows the offer as its scalars, never as its term.
     expect(inCard(find.textContaining('lot(bob, 2)')), findsNothing);
     expect(inCard(find.textContaining('offer(')), findsNothing);
-    expect(find.byKey(nodeKey(card.id, 'shown', const [1])), findsOneWidget);
+    expect(find.byKey(nodeKey(card.id, 'form', const [1])), findsOneWidget);
+    // Each field of the offer labelled by its declared type's name: the
+    // offer's Key, Lot and Stream(Coin); the lot's Key and Integer; and each
+    // coin's Key and Integer.
+    for (final (label, n) in [
+      ('Offer', 1),
+      ('Lot', 1),
+      ('Stream(Coin)', 1),
+      ('Key', 4),
+      ('Integer', 3),
+    ]) {
+      expect(inCard(find.text(label)), findsNWidgets(n), reason: label);
+    }
+    expect(find.byKey(nodeKey(card.id, 'form', const [1, 2])), findsOneWidget);
+    expect(find.byKey(nodeKey(card.id, 'shown', const [1, 1])), findsOneWidget);
+    expect(find.byKey(nodeKey(card.id, 'thread', const [1, 3])), findsOneWidget);
+    expect(inCard(find.text('bob')), findsNWidgets(2));
+    expect(inCard(find.text('alice')), findsNWidgets(2));
+    expect(inCard(find.text('2')), findsNWidgets(2));
+    expect(inCard(find.text('1')), findsOneWidget);
+    // Shown and not edited: no field of the card takes text.
+    expect(inCard(find.byType(TextField)), findsNothing);
     expect(find.text('swap_done(bob)'), findsNothing);
     expect(inCard(find.widgetWithText(ElevatedButton, 'yes')), findsOneWidget);
     expect(inCard(find.widgetWithText(ElevatedButton, 'no')), findsOneWidget);

@@ -189,9 +189,15 @@ void main() {
 
     // Bob proposes the reverse swap: one card, the swap responder's question,
     // Card ::= card(Offer, YesNo?) in writer mode --- the offer shown and her
-    // answer at position [2].
-    const card =
-        "form(card, [field('Offer', shown), field('YesNo', buttons([yes, no]))])";
+    // answer at position [2].  The offer, a tuple the program writes, is a
+    // form of shown fields, each labelled by its declared type's name, its
+    // lot and its coins forms of their own (Definition "Widget Declaration,
+    // Default Widget"; vGLP #8 Cowork, 2026-10-13 08:15 UTC, item b).
+    const card = "form(card, [field('Offer', form(offer, "
+        "[field('Key', shown), field('Lot', form(lot, [field('Key', shown), "
+        "field('Integer', shown)])), field('Stream(Coin)', thread(form(coin, "
+        "[field('Key', shown), field('Integer', shown)])))])), "
+        "field('YesNo', buttons([yes, no]))])";
     await until(() => drawn(card).length == 1);
     expect(drawn(card), hasLength(1));
     final offer = drawn(card).single;
