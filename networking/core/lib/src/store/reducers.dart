@@ -9,8 +9,6 @@ import 'local_network_actions.dart';
 import 'local_network_reducer.dart';
 import 'settings_actions.dart';
 import 'settings_reducer.dart';
-import 'signaling_actions.dart';
-import 'signaling_reducer.dart';
 import 'transports_actions.dart';
 import 'transports_reducer.dart';
 
@@ -55,13 +53,6 @@ AppState appReducer(AppState state, dynamic action) {
   if (action is LocalNetworkAction) {
     return state.copyWith(
       localNetwork: localNetworkReducer(state.localNetwork, action),
-    );
-  }
-
-  // Handle signaling actions via signalingReducer
-  if (action is SignalingAction) {
-    return state.copyWith(
-      signaling: signalingReducer(state.signaling, action),
     );
   }
 

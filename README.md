@@ -28,7 +28,7 @@ GLP/
     ├── social/               # the social layer
     │   ├── graph/            # the social graph and the Grassroots Super-App (core/, pingapp/, ui/, routing/)
     │   └── spm/              # securing people and their machines (cva/, gsg/, secure_gsg/)
-    ├── currencies/           # the grassroots currencies: bonds_v2/, coins/, bonds/, sovereign/
+    ├── currencies/           # the grassroots currencies: coins/, bonds/, sovereign/, secure/
     ├── cssn/                 # the child-safe social network
     ├── federation/           # the grassroots federation platform (GFWC)
     ├── grassapp/             # the GrassApp programs

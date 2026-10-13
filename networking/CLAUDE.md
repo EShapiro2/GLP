@@ -10,8 +10,8 @@ Grassroots Networking is a **peer-to-peer messaging transport** — a thin layer
 **Core principles:**
 
 - **Direct delivery only.** Messages go straight from sender to recipient — never through an intermediary. The sender's transport MAY queue its own outbound messages locally when the recipient is temporarily unreachable and replay them once a path opens (madGLP "fair message delivery"), but no intermediary ever holds, caches, or relays another peer's traffic.
-- **Identity is a key pair.** Every device holds an Ed25519 key pair. The public key *is* the peer's identity — nicknames are cosmetic. All trust decisions flow from cryptographic verification.
-- **Two transports, one interface.** BLE covers nearby peers without Internet; UDP covers the globe. Both transports surface the same abstraction to the coordinator: connect, send, receive, disconnect. BLE is preferred when both are available.
+- **Identity is a key pair.** Every device holds an Ed25519 key pair. The public key *is* the peer's identity. All trust decisions flow from cryptographic verification.
+- **One overlay, three underlays.** PAN, LAN and WAN surface one interface to the runtime (GNA Section 2); see "Transport Layer" below.
 - **Clean breaks, not compatibility shims.** When refactoring, fully replace old code. No legacy wrappers, no "kept for compatibility" comments, no dead code. Update every call site. There are no installed apps in the wild — you are free to rename, restructure, and break wire formats whenever it improves the design.
 
 ## No Legacy or Compatibility Code
@@ -44,13 +44,7 @@ When a platform behavior is **unknown** (e.g. whether an iOS↔iOS reverse leg w
 
 ## Rendezvous Servers & Hole-Punching
 
-Most mobile devices sit behind NAT and cannot accept incoming UDP connections from the public Internet. **Rendezvous servers** (spec §Rendezvous Server; implemented in `bootstrap_anchor/`) give NAT-bound agents a fixed point they can always reach outbound. The reconnection flow:
-
-1. Agent A (whose IP changed) sends RECONNECT(peer=B) to the configured rendezvous servers; each server observes A's source address.
-2. Agent B, on detecting A went silent, sends AVAILABLE(peer=A) to the same servers.
-3. A server matches the pair and sends each side a PUNCH_INITIATE carrying the other side's observed address; both sides punch their NATs and the deterministic initiator connects.
-
-A rendezvous server relays *signaling metadata* (addresses, punch timing), never message content — it is not a TURN relay. It has no friends list and accepts connections from any agent. A direct peer-to-peer PUNCH_INITIATE over an existing control path (usually BLE) covers the BLE-adjacent case without any third party.
+A rendezvous server is GNA Section 6: the headless layer, instantiated as a rendezvous server (GNA Section 2.2), with the GLP rendezvous agent `programs/examples/rendezvous/rv_agent.glp` over it through the adapter, built from `glue/bin/rendezvous_server.dart` (`dart build cli`, the glue package's Flutter dependencies carrying a build hook `dart compile exe` refuses).  Address-change recovery is GNA Section 4.2, and the reconnection request, the match, the signature check and the relay of observed addresses are the agent's GLP (GNA Section 6, "Reconnection"); the layer's part is what those sections give it --- the heartbeat sweep to known peers and the configured servers, `observedPeerAddress` behind `peer_address/2`, and `punchUdp` behind `punch_udp/1`.  The layer carries no reconnection protocol of its own: RECONNECT, AVAILABLE and PUNCH_INITIATE went on 2026-10-13.  Signaling (`PacketType.signaling`) is between an agent and its configured rendezvous servers alone: the address the server observes the agent at (ADDR_REFLECT, below) and the invite registration and redemption of a WAN cold call (GNA Section 4.4).
 
 ## Redux Architecture
 
@@ -60,12 +54,9 @@ The Redux state is a strict projection of facts emitted by the transport layers 
 
 ## Transport Layer
 
-Two transports are available, toggled independently in settings:
+The layer is one overlay over three underlays (GNA Section 2): the PAN, over BLE (GNA Section 3); the LAN, discovered by DNS-SD (GNA Section 3); and the WAN, over UDP through rendezvous servers (GNA Sections 4 and 6).  The ones that run are fixed when the layer is instantiated (GNA Section 2.2): there is no settings toggle and no preference among them.  The demo app's switches (`lib/network_preferences.dart`) are the app's choice of what to instantiate the layer with, not settings of the layer.
 
-- **Bluetooth (BLE)** — local, no Internet required. Preferred when both are available.
-- **Internet (UDP)** — global reach, requires Internet. Datagrams carrying the shared message transport (paper §Message Transport); hole-punching for NAT traversal.
-
-The `TransportState` lifecycle for each transport is: `uninitialized → initializing → ready → active` (plus `error` and `disposed`). A transport is "usable" when it is `ready` or `active`.
+The `TransportState` lifecycle of each transport service, BLE and UDP, is: `uninitialized → initializing → ready → active` (plus `error` and `disposed`). A transport is "usable" when it is `ready` or `active`.
 
 User-facing UI strings should say "Internet", not "UDP" or internal protocol names.
 
@@ -101,12 +92,12 @@ Gotchas, learned the hard way:
 
 ## Peer Address Persistence
 
-Never unilaterally clear a peer's stored UDP address. Update it when a new valid address arrives (from `putPeerAddress`, signaling, or observation), and clear it only when the peer explicitly tells us they no longer have one. Stale peer cleanup, our-side disconnects, and transport restarts must not null out `udpAddress` — it is the last known location and the only way to attempt reconnection.
+Never unilaterally clear a peer's stored UDP address. Update it when a new valid address arrives (from `putPeerAddress` or observation), and clear it only when the peer explicitly tells us they no longer have one. Stale peer cleanup, our-side disconnects, and transport restarts must not null out `udpAddress` — it is the last known location and the only way to attempt reconnection.
 
 GLP feeds peer addresses into the layer's dial book via `putPeerAddress(pk, address)` (spec `GLP_Networking_API` §Connectivity and Address): it validates the `ip:port`, **creates a dial-book entry even for a peer never seen before**, and is supply-only — it never clears an address (an unparseable address throws). Supplying an address also supplies the key: the peer joins the known set (`KnownPeersState`, persisted), which is what Closed-mode recognition, per-slot scan filters, and the reconnection sweeps range over. A `putPeerAddress`-created peer is not `isReachable` until a session authenticates.
 
 ## Transport Independence
 
-BLE and UDP are independent transports. Disabling or losing one must have **zero effect** on the other's connection state, peer reachability, or online status. A peer connected via UDP remains online regardless of BLE state. The stale peer logic, the UI, and the reducer must all respect this: never let a BLE disconnection degrade UDP-derived state.
+BLE and UDP are independent transports. Losing one must have **zero effect** on the other's connection state, peer reachability, or online status. A peer connected via UDP remains online regardless of BLE state. The stale peer logic, the UI, and the reducer must all respect this: never let a BLE disconnection degrade UDP-derived state.
 
-Application-level callbacks (`onPeerConnected`, `onPeerDisconnected`) report reachability **per underlay**, matching the spec (GNA §Connection and Reachability): each fires with the peer's public key and the `Underlay` whose authenticated and attested session came up or went down — `pan` for the GATT session, and for the UDP session `lan` when the peer's address lies within one of the agent's own local prefixes, `wan` otherwise. A peer reachable over the PAN and over IP fires two connects; losing one of two live underlays fires a disconnect for that underlay while the peer stays reachable over the other. `peerUnderlays(pubkey)` returns the underlays a peer is currently reachable over (empty if unreachable), and `isPeerReachable(pubkey)` stays the any-underlay predicate. Exposing the underlay is what lets GLP compute proximity (nearby friends = friends ∩ peers reachable over the PAN). The per-transport independence still holds end-to-end: a BLE disconnect never degrades UDP-derived state.
+Application-level callbacks (`onPeerConnected`, `onPeerDisconnected`) report reachability **per underlay**, matching the spec (GNA §Connection and Reachability): each fires with the peer's public key and the `Underlay` whose authenticated and attested session came up or went down — `pan` for the GATT session, and for the UDP session the underlay GNA Section 2 gives an IP connection: `lan` only where the layer runs the LAN, `wan` only where it runs the WAN, and no connection where neither applies. A peer reachable over the PAN and over IP fires two connects; losing one of two live underlays fires a disconnect for that underlay while the peer stays reachable over the other. `peerUnderlays(pubkey)` returns the underlays a peer is currently reachable over (empty if unreachable), and `isPeerReachable(pubkey)` stays the any-underlay predicate. Exposing the underlay is what lets GLP compute proximity (nearby friends = friends ∩ peers reachable over the PAN). The per-transport independence still holds end-to-end: a BLE disconnect never degrades UDP-derived state.

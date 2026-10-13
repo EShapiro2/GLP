@@ -3,9 +3,9 @@ description: >-
   GNA's backend glue: glp_runtime's network interface, GlpNetwork,
   implemented over the networking layer --- HeadlessGlpNetwork over the
   headless profile, GrassrootsGlpNetwork over the layer of the Flutter
-  package.  A package of its own beside the core, depending on both the
-  layer and the runtime, so that the core and its users (GPW's servers, the
-  bootstrap anchor) carry no GLP runtime (GNA, 2026-10-11).
+  package --- and the rendezvous server, the headless layer with the GLP
+  rendezvous agent over it (bin/rendezvous_server.dart).  A package of its own beside the core, depending on both the
+  layer and the runtime, so that the core and its users (GPW's servers) carry no GLP runtime (GNA, 2026-10-11).
 version: 1.0.0
 publish_to: none
 
@@ -29,6 +29,10 @@ dependencies:
     path: ../core
   grassroots_networking:
     path: ..
+
+  # The rendezvous server's entrypoint (bin/rendezvous_server.dart): its
+  # command line.
+  args: ^2.4.0
 
 dev_dependencies:
   flutter_test:

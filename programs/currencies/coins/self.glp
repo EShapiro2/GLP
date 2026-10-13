@@ -55,8 +55,8 @@ Found ::= found(Coin) ; not_found.
 %% The answer to a question the agent asks of its state: whether every coin of
 %% a payment is the payee's own (own_coins), whether a conversation with a
 %% counterparty is open (has_peer), whether the screen shows a step's effect
-%% (the scripted person's done).  The name is the one bonds_v2 and the social
-%% graph give the same two constants.
+%% (the scripted person's done).  The name is the one the social graph gives
+%% the same two constants.
 Decision ::= yes ; no.
 
 %% Whether k coins of an issuer were selected out of the holdings: ok, or fail

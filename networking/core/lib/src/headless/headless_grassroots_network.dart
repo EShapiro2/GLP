@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io' show InternetAddressType;
+import 'dart:io' show InternetAddress, InternetAddressType;
 import 'dart:typed_data';
 
 import 'package:redux/redux.dart';
@@ -79,21 +79,24 @@ class ServerAddress {
 /// absent"), so every callback reports [Underlay.wan]: no BLE, no mDNS, no
 /// connectivity plugin.
 ///
-/// Instantiation (spec §Instantiation): the key pair, the rendezvous servers,
-/// the attestation, and a server's listen port and static public address as
-/// one optional pair ([ServerAddress]).  It runs [Underlay.wan] alone, so it
-/// takes no underlays; it has no location service, so it takes none (GNA,
-/// 2026-10-11, Q3).  It holds a session with each rendezvous server, dialing
-/// it at [start] and again on the heartbeat tick while none stands (Q2); a
-/// rendezvous server passes an empty list.
+/// Instantiation (GNA §2.2): the key pair, the rendezvous servers, the
+/// attestation, a server's listen port and static public address as one
+/// optional pair ([ServerAddress]), and whether the agent is a rendezvous
+/// server ([rendezvousServer]).  It runs [Underlay.wan] alone, so it takes no
+/// underlays; it has no location service, so it takes none (GNA, 2026-10-11,
+/// Q3).  It holds a session with each rendezvous server, dialing it at [start]
+/// and again on the heartbeat tick while none stands (Q2); a rendezvous server
+/// passes an empty list.
 ///
-/// This profile has no proximity underlay and therefore no trust level (spec
-/// §Trust levels — a level is held per `ProximityUnderlay`, and this profile
-/// has none). Unsolicited inbound IP contact is governed by no level: an inbound
-/// ANNOUNCE or Noise handshake from a key neither in the known set nor a
-/// configured rendezvous server's is rejected, so an unknown caller cannot be
-/// answered at all. [putKnownPeer] registers a key, [removeKnownPeer] revokes
-/// it; a service that must accept a caller registers its key first.
+/// This profile has no proximity underlay and therefore no trust level (GNA
+/// §2.7 — a level is held per `ProximityUnderlay`, and this profile has none).
+/// Unsolicited inbound WAN contact is governed by no level (GNA §2.5, §2.7):
+/// an inbound ANNOUNCE or Noise handshake from a key neither in the known set
+/// nor a configured rendezvous server's nor one an invite authorized is
+/// rejected, so an unknown caller cannot be answered at all --- except on a
+/// rendezvous server, which answers any key.  [putKnownPeer] registers a key,
+/// [removeKnownPeer] revokes it; a service that must accept a caller registers
+/// its key first.
 ///
 /// Known peers persist through [HeadlessKnownPeersStore] — file-backed
 /// ([FileKnownPeersStore]) or in-memory ([MemoryKnownPeersStore]) — replacing
@@ -104,10 +107,16 @@ class HeadlessGrassrootsNetwork {
     required List<RendezvousServer> rendezvousServers,
     this.attestation = const NoPlatformAttestation(),
     this.serverAddress,
+    this.rendezvousServer = false,
     required this.sodium,
     HeadlessKnownPeersStore? knownPeersStore,
   })  : rendezvousServers = List.unmodifiable(rendezvousServers),
         _knownPeersStore = knownPeersStore ?? MemoryKnownPeersStore() {
+    // GNA §2.2: a rendezvous server is one having a server address.
+    if (rendezvousServer && serverAddress == null) {
+      throw ArgumentError.value(rendezvousServer, 'rendezvousServer',
+          'a rendezvous server has a server address, and none was given');
+    }
     store = Store<AppState>(appReducer, initialState: const AppState());
     _protocolHandler = ProtocolHandler(identity: identity, sodium: sodium);
     _fragmentHandler = FragmentHandler();
@@ -138,6 +147,12 @@ class HeadlessGrassrootsNetwork {
   /// ephemeral port is bound and [getPublicAddress] answers null.
   final ServerAddress? serverAddress;
 
+  /// Whether this agent is a rendezvous server (GNA §2.2, "Rendezvous server,
+  /// yes or no"): one having a [serverAddress], whose layer answers
+  /// unsolicited WAN contact from any key (GNA §2.5, §2.7), since it cannot
+  /// know its clients in advance (GNA §6).
+  final bool rendezvousServer;
+
   /// This profile's platform attestation service. A headless server has none
   /// to offer (spec §Rendezvous Server: "Having no platform attestation to
   /// offer, a rendezvous server is reported unattested"), which is the
@@ -166,9 +181,17 @@ class HeadlessGrassrootsNetwork {
   StreamSubscription<dynamic>? _connectionSub;
   Timer? _heartbeatTimer;
 
-  /// Queued-message replay period (Implementation Notes: queued messages
-  /// replay on the heartbeat tick).
-  static const Duration heartbeatInterval = Duration(seconds: 30);
+  /// The heartbeat (spec §ANNOUNCE and Liveness, Heartbeat): "ANNOUNCE is
+  /// exchanged upon connection establishment and then repeats periodically
+  /// (every 10 s in the implementation) on every live connection of every
+  /// underlay."  The same tick drives the sweep and the queue's replay.
+  static const Duration heartbeatInterval = Duration(seconds: 10);
+
+  /// When authenticated traffic was last heard from each peer with a
+  /// session, by pubkey hex: a verified ANNOUNCE or a packet its session
+  /// decrypted (spec §ANNOUNCE and Liveness: "The staleness clock counts any
+  /// authenticated traffic").
+  final Map<String, DateTime> _lastHeard = {};
 
   final HeadlessKnownPeersStore _knownPeersStore;
   Map<String, String?>? _lastPersistedKnown;
@@ -227,18 +250,26 @@ class HeadlessGrassrootsNetwork {
   /// `onPeerDisconnected(pk, underlay)`).
   void Function(Uint8List pk, Underlay underlay)? onPeerDisconnected;
 
-  /// The agent's current public `ip:port` — the static address of its
-  /// [serverAddress] in this profile — or null when it was given none.
-  String? getPublicAddress() => serverAddress?.publicAddress;
+  /// The agent's current public `ip:port`: the static address of its
+  /// [serverAddress], or else the address a configured rendezvous server last
+  /// reflected (spec §Connectivity and Address: "an agent learns it from a
+  /// rendezvous server, which observes the source address of the agent's
+  /// packets"), or null when there is neither.
+  String? getPublicAddress() =>
+      serverAddress?.publicAddress ?? _reflectedAddress;
+
+  /// The address a configured rendezvous server last reflected, or null.
+  String? _reflectedAddress;
 
   /// The agent's own public key (spec §Identity, `getIdentity() → PubKey`).
   Uint8List getIdentity() => identity.publicKey;
 
   /// Callback when the layer detects a change in the agent's public address
   /// (spec §Connectivity and Address, `onConnectivityStatusChanged(old?,
-  /// new?)`): "Fired on startup and on every address change." This profile's
-  /// address is static, its [serverAddress]'s or none, so it fires once, at
-  /// [start], with `old` null.
+  /// new?)`): "Fired on startup and on every address change."  It fires at
+  /// [start], with `old` null and the static address of the [serverAddress]
+  /// or none; and, on an agent with no server address, whenever a configured
+  /// rendezvous server reflects an address other than the one held.
   void Function(String? oldAddress, String? newAddress)?
       onConnectivityStatusChanged;
 
@@ -273,7 +304,7 @@ class HeadlessGrassrootsNetwork {
     final remote = udp.getRemoteAddress(peerId);
     return remote == null
         ? null
-        : AddressInfo(remote.ip, remote.port).toAddressString();
+        : observedAddressString(remote.ip, remote.port);
   }
 
   /// Detached Ed25519 signature over [message] under the agent's key (spec
@@ -440,11 +471,11 @@ class HeadlessGrassrootsNetwork {
     return await _udpService?.sendToPeer(_hex(pubkey), bytes) ?? false;
   }
 
-  /// A signaling payload arrived over a session. This profile acts on one
-  /// kind: a rendezvous server's notice that an invite this agent minted was
-  /// redeemed (spec §WAN Cold-Call, Redemption). The reconnection signaling
-  /// of the Flutter profile is not this profile's (it holds no punch
-  /// coordination), and server-bound messages are an agent's never.
+  /// A signaling payload arrived over a session. This profile acts on two
+  /// kinds, each from a configured rendezvous server: the address the server
+  /// observes this agent at (spec §Connectivity and Address), and the notice
+  /// that an invite this agent minted was redeemed (spec §WAN Cold-Call,
+  /// Redemption).  Server-bound messages are an agent's never.
   void _onSignalingReceived(Uint8List senderPubkey, Uint8List payload) {
     debugOnSignaling?.call(senderPubkey, payload);
     final SignalingMessage message;
@@ -452,6 +483,10 @@ class HeadlessGrassrootsNetwork {
       message = const SignalingCodec().decode(payload);
     } catch (e) {
       debugPrint('[headless][signaling] Undecodable signaling: $e');
+      return;
+    }
+    if (message is AddrReflectMessage) {
+      _onAddressReflected(senderPubkey, message);
       return;
     }
     if (message is! InviteRedeemedMessage) {
@@ -485,6 +520,47 @@ class HeadlessGrassrootsNetwork {
     store.dispatch(
         PeerIdentityRegisteredAction(publicKey: message.redeemerPubkey));
     onPeerLinkRedeemed?.call(message.redeemerPubkey);
+  }
+
+  /// A configured rendezvous server reflected the address it observes this
+  /// agent at: on an agent with no server address of its own, that is its
+  /// public address (spec §Connectivity and Address).  From any other sender
+  /// it is dropped.
+  void _onAddressReflected(Uint8List senderPubkey, AddrReflectMessage message) {
+    if (!_isRendezvousServer(senderPubkey)) {
+      debugPrint('[headless][reflect] an address reflected by a sender that '
+          'is no configured rendezvous server; dropped');
+      return;
+    }
+    if (serverAddress != null) return;
+    final ip = InternetAddress.tryParse(message.ip);
+    if (ip == null) return;
+    final reflected = AddressInfo(ip, message.port).toAddressString();
+    final previous = _reflectedAddress;
+    if (reflected == previous) return;
+    _reflectedAddress = reflected;
+    debugPrint('[headless][reflect] public address $previous → $reflected');
+    onConnectivityStatusChanged?.call(previous, reflected);
+  }
+
+  /// On a rendezvous server: reflect to [pubkey] the address its session is
+  /// observed at, so that an agent learns its public address from the server
+  /// (spec §Rendezvous Server, "Address observation"; §Connectivity and
+  /// Address).
+  void _reflectAddressTo(Uint8List pubkey) {
+    final observed = observedPeerAddress(pubkey);
+    final parsed = observed == null ? null : parseAddressString(observed);
+    if (parsed == null) return;
+    final payload = const SignalingCodec()
+        .encode(AddrReflectMessage(ip: parsed.ip.address, port: parsed.port));
+    unawaited(() async {
+      final bytes = await _sessionPacketBytes(
+        GrassrootsPacket(type: PacketType.signaling, payload: payload),
+        pubkey,
+      );
+      if (bytes == null) return;
+      await _udpService?.sendToPeer(_hex(pubkey), bytes);
+    }());
   }
 
   String _rendezvousAddressOf(String pubkeyHex) => rendezvousServers
@@ -596,7 +672,10 @@ class HeadlessGrassrootsNetwork {
       );
     }
     _heartbeatTimer = Timer.periodic(heartbeatInterval, (_) {
+      _announceOnLiveSessions();
+      _tearDownSilentSessions();
       _holdRendezvousSessions();
+      _sweepKnownPeers();
       unawaited(_refreshLocalNetwork());
       for (final hex in _outboundQueue.keys.toList()) {
         _drainQueueFor(_bytes(hex));
@@ -610,6 +689,96 @@ class HeadlessGrassrootsNetwork {
         '(${_hex(identity.publicKey).substring(0, 8)}…)');
     _holdRendezvousSessions();
     return true;
+  }
+
+  /// ANNOUNCE on every live session (spec §ANNOUNCE and Liveness, Heartbeat:
+  /// it "repeats periodically ... on every live connection"), which is the
+  /// floor of authenticated traffic an idle session has.
+  void _announceOnLiveSessions() {
+    final udp = _udpService;
+    if (udp == null) return;
+    final announce = _signedAnnounceBytes();
+    for (final hex in _reachablePeers.toList()) {
+      unawaited(udp.sendToPeer(hex, announce));
+    }
+  }
+
+  /// Tear down each session silent for two consecutive intervals (spec
+  /// §ANNOUNCE and Liveness, Over LAN and WAN: "a session silent for two
+  /// consecutive intervals is torn down, feeding onPeerDisconnected").
+  void _tearDownSilentSessions() {
+    final now = DateTime.now();
+    for (final hex in _reachablePeers.toList()) {
+      final heard = _lastHeard[hex];
+      if (heard != null && now.difference(heard) <= heartbeatInterval * 2) {
+        continue;
+      }
+      debugPrint('[headless][liveness] ${hex.substring(0, 8)} silent for two '
+          'intervals; tearing the session down');
+      _tearDownSession(_bytes(hex));
+    }
+  }
+
+  /// Re-initiate a connection to each known peer with a recorded address
+  /// that is not reachable (spec §Connectivity and Address, Address-change
+  /// recovery: "The heartbeat sweep therefore re-initiates connections to
+  /// the known peers and the configured rendezvous servers"; §ANNOUNCE and
+  /// Liveness, Heartbeat: the tick "drives reconnection attempts towards
+  /// unreachable known peers").
+  void _sweepKnownPeers() {
+    if (_udpService == null) return;
+    for (final entry in store.state.knownPeers.known.entries) {
+      if (entry.value == null) continue;
+      if (_reachablePeers.contains(entry.key)) continue;
+      if (_connecting.containsKey(entry.key)) continue;
+      unawaited(_connect(_bytes(entry.key)));
+    }
+  }
+
+  /// How long a dialing deterministic initiator waits for the acceptor's
+  /// handshake before it starts one itself, both having dialed.
+  static const Duration _simultaneousDialWait = Duration(seconds: 2);
+
+  /// Whether this endpoint is the deterministic initiator toward [peerHex]
+  /// (spec §WAN Connection): the one with the lexicographically smaller
+  /// public key.
+  bool _isDeterministicInitiator(String peerHex) =>
+      _hex(identity.publicKey).compareTo(peerHex) < 0;
+
+  /// A verified ANNOUNCE from [pubkey] arrived on [udpPeerId], a path not yet
+  /// identified, while the layer holds a path to the same key at another
+  /// address: the peer's address changed, and the session on the old path
+  /// is one the peer no longer holds (spec §Connectivity and Address,
+  /// Address-change recovery: "its established UDP paths break and their
+  /// sessions are torn down"; §Session Establishment: "a peer that resumes
+  /// after a restart proves itself again before it is reachable").  The
+  /// session is reset and the peer reported unreachable, so the handshake
+  /// is run afresh on the new path, this endpoint accepting.
+  void _resetIfMoved(Uint8List pubkey, String? udpPeerId) {
+    final udp = _udpService;
+    if (udp == null || udpPeerId == null || !udpPeerId.contains(':')) return;
+    final hex = _hex(pubkey);
+    final standing = udp.getRemoteAddress(hex);
+    if (standing == null) return;
+    if (AddressInfo(standing.ip, standing.port).toAddressString() ==
+        udpPeerId) {
+      return;
+    }
+    debugPrint('[headless][liveness] ${hex.substring(0, 8)} announced from '
+        'a new address $udpPeerId; resetting its session');
+    _attestedOn.remove(hex);
+    _attestationDeadlines.remove(hex)?.timer.cancel();
+    _noiseSessions.reset(PeerTransport.udp, pubkey);
+    _dialedPeers.remove(hex);
+    _announcedTo.remove(hex);
+    _lastHeard.remove(hex);
+    store.dispatch(PeerUdpConnectionChangedAction(
+      pubkeyHex: hex,
+      connected: false,
+    ));
+    if (_reachablePeers.remove(hex)) {
+      onPeerDisconnected?.call(pubkey, Underlay.wan);
+    }
   }
 
   /// Dial each rendezvous server with no connection standing (spec
@@ -664,6 +833,7 @@ class HeadlessGrassrootsNetwork {
     }
     _reachablePeers.clear();
     _announcedTo.clear();
+    _lastHeard.clear();
     _attestedOn.clear();
     for (final deadline in _attestationDeadlines.values) {
       deadline.timer.cancel();
@@ -859,14 +1029,16 @@ class HeadlessGrassrootsNetwork {
     return rendezvousServers.any((server) => server.pubkeyHex == hex);
   }
 
-  /// Unsolicited inbound IP contact is governed by no trust level (spec §Trust
-  /// levels): it is refused unless the peer is in the known-peer set or
-  /// presents a valid invite. This profile has no proximity underlay — no BLE,
-  /// no LAN discovery — so the known-peer set and the keys a peer link
-  /// authorized are the whole of it, with the configured rendezvous servers,
+  /// Unsolicited inbound WAN contact is governed by no trust level (GNA
+  /// §2.7): it is refused unless the peer is in the known-peer set or
+  /// presents a valid invite (GNA §2.5), except on a rendezvous server, which
+  /// answers any key. This profile has no proximity underlay — no BLE, no LAN
+  /// discovery — so the known-peer set and the keys a peer link authorized
+  /// are the whole of it, with the configured rendezvous servers,
   /// infrastructure this agent itself dials, and contact this agent solicited
   /// by dialing it.
   bool _acceptsContactFrom(Uint8List pubkey) {
+    if (rendezvousServer) return true;
     final hex = _hex(pubkey);
     return _isKnown(pubkey) ||
         _isRendezvousServer(pubkey) ||
@@ -882,8 +1054,12 @@ class HeadlessGrassrootsNetwork {
       onMessageReceived?.call(senderPubkey, payload, messageId, Underlay.wan);
     };
 
-    _messageRouter.shouldAcceptUdpAnnounce = (senderPubkey, {udpPeerId}) =>
-        _acceptsContactFrom(senderPubkey);
+    _messageRouter.shouldAcceptUdpAnnounce = (senderPubkey, {udpPeerId}) {
+      if (!_acceptsContactFrom(senderPubkey)) return false;
+      // Before the router re-keys the new path to the key.
+      _resetIfMoved(senderPubkey, udpPeerId);
+      return true;
+    };
 
     _messageRouter.onUdpAnnounceRejected = (senderPubkey, udpPeerId) {
       // Closed trust: unregistered keys cannot complete a session.
@@ -897,15 +1073,31 @@ class HeadlessGrassrootsNetwork {
     _messageRouter.onPeerAnnounced =
         (data, transport, {bool isNew = false, String? udpPeerId}) {
       final hex = _hex(data.publicKey);
+      _lastHeard[hex] = DateTime.now();
       // Answer with our own ANNOUNCE once per connection.
       if (_announcedTo.add(hex)) {
         unawaited(_udpService?.sendToPeer(hex, _signedAnnounceBytes()));
       }
       // The ACCEPTING endpoint initiates the Noise handshake (spec
       // Implementation Notes); toward a peer this endpoint dialed, the
-      // handshake is the acceptor's to start.
+      // handshake is the acceptor's to start.  Where both dialed, as the
+      // heartbeat sweeps of two known peers may, neither is the acceptor,
+      // and "the deterministic initiator is the endpoint with the
+      // lexicographically smaller public key" (spec §WAN Connection): it
+      // starts the handshake once the acceptor's has had its time to arrive
+      // and none has.
       if (!_dialedPeers.contains(hex)) {
         unawaited(_ensureSessionWith(data.publicKey));
+      } else if (_isDeterministicInitiator(hex)) {
+        Timer(_simultaneousDialWait, () {
+          if (_noiseSessions.hasSession(PeerTransport.udp, data.publicKey) ||
+              _noiseSessions.handshakeRetransmitPayload(
+                      PeerTransport.udp, data.publicKey) !=
+                  null) {
+            return;
+          }
+          unawaited(_ensureSessionWith(data.publicKey));
+        });
       }
     };
 
@@ -992,12 +1184,14 @@ class HeadlessGrassrootsNetwork {
         if (peerId != null && !peerId.contains(':') && peerId.length == 64) {
           remotePubkey = _bytes(peerId);
         }
-        return await _noiseSessions.decryptPacket(
+        final decrypted = await _noiseSessions.decryptPacket(
           packet,
           transport: transport,
           peerId: peerId,
           remotePubkey: remotePubkey,
         );
+        _lastHeard[_hex(decrypted.$2)] = DateTime.now();
+        return decrypted;
       } catch (e) {
         debugPrint('[headless][noise] Failed to decrypt packet: $e');
         return null;
@@ -1182,6 +1376,7 @@ class HeadlessGrassrootsNetwork {
   }
 
   void _onSessionEstablished(Uint8List pubkey) {
+    _lastHeard[_hex(pubkey)] = DateTime.now();
     store.dispatch(PeerUdpConnectionChangedAction(
       pubkeyHex: _hex(pubkey),
       connected: true,
@@ -1396,6 +1591,7 @@ class HeadlessGrassrootsNetwork {
     if (_reachablePeers.add(_hex(pubkey))) {
       onPeerConnected?.call(pubkey, Underlay.wan, attestation.identity);
     }
+    if (rendezvousServer) _reflectAddressTo(pubkey);
     _drainQueueFor(pubkey);
   }
 

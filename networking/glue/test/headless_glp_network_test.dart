@@ -4,14 +4,13 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
+import 'package:glp_runtime/multiagent/agent_runtime.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
 import 'package:sodium/sodium_sumo.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:grassroots_networking_glue/headless_glp_network.dart';
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
-
-import 'helpers/glp_adapter_host.dart';
 
 /// The adapter over the headless layer: the runtime's `GlpNetwork`
 /// implemented by [HeadlessGlpNetwork] over [HeadlessGrassrootsNetwork] (GNA's
@@ -22,9 +21,10 @@ import 'helpers/glp_adapter_host.dart';
 /// function the layer has reaches it, each callback the layer fires reaches
 /// the runtime with its arguments as the layer gave them, and each function
 /// of the API the headless layer does not have throws [UnsupportedError].  The
-/// second runs two madGLP runtimes, each over its own headless layer through
-/// the adapter, in two processes: a cold call crosses from the first to the
-/// second, and an assignment crosses back.
+/// second runs two madGLP runtimes, each hosted by the runtime's own host,
+/// `AgentRuntime`, over its own headless layer through the adapter, in two
+/// processes: a cold call crosses from the first to the second, and an
+/// assignment crosses back.
 ///
 /// Needs a native libsodium, as `headless_e2e_test.dart` does; self-skips
 /// when absent.
@@ -235,6 +235,7 @@ answer(forty_two).
       final calleeSeed = seedOf(0x6b);
       final callerIdentity = await identityFromSeed(callerSeed);
       final caller = glp.PubKey.fromList(callerIdentity.publicKey);
+      final callerPriv = Uint8List.fromList(callerIdentity.privateKey);
       final callee =
           glp.PubKey.fromList((await identityFromSeed(calleeSeed)).publicKey);
 
@@ -245,7 +246,7 @@ answer(forty_two).
         _hex(calleeSeed),
         rootSelfGlpPath,
         program,
-        'callee_init',
+        'callee_init/2',
         caller.hex,
       ]);
       addTearDown(() async {
@@ -290,9 +291,22 @@ answer(forty_two).
       );
       addTearDown(layer.dispose);
       final network = HeadlessGlpNetwork(layer);
+      final host = AgentRuntime(
+        agentId: 'caller',
+        program: program,
+        rootSelfGlpPath: rootSelfGlpPath,
+        goalLabel: 'caller_init/3',
+        extraArgs: [callee.hex],
+        keyPair: (pub: caller, priv: callerPriv),
+        network: network,
+      );
+      addTearDown(host.dispose);
+      final transcript = <String>[];
+      host.onOutput = transcript.add;
       final connected = <String>[];
-      network.onPeerConnected = (pk, underlay, attested) =>
+      host.onPeerConnected = (pk, underlay, attested) =>
           connected.add('${pk.hex} $underlay $attested');
+      expect(host.name, caller.hex);
       expect(await layer.start(), isTrue);
       // The callee's key and address, through the adapter: what peer_declare/1
       // and address_declare/2 give the layer, which the runtime does not yet
@@ -300,15 +314,15 @@ answer(forty_two).
       network.putKnownPeer(callee);
       network.putPeerAddress(callee, calleeAddress);
 
-      final host = GlpAdapterHost.boot(
-        rootSelfGlpPath: rootSelfGlpPath,
-        program: program,
-        identity: callerIdentity,
-        network: network,
-        entry: 'caller_init',
-        constants: [callee.hex],
-      );
-      expect(host.name, caller.hex);
+      // The host binds the adapter as it boots; each delivery is recorded
+      // too, then handed to the host.
+      await host.initialize();
+      final receivedFrom = <String>[];
+      final deliver = network.onMessageReceived!;
+      network.onMessageReceived = (sender, payload, messageId, underlay) {
+        receivedFrom.add(sender.hex);
+        deliver(sender, payload, messageId, underlay);
+      };
 
       // The cold call crosses: the callee's program receives it on its
       // network input, addressed to its own name.
@@ -320,11 +334,10 @@ answer(forty_two).
 
       // The assignment crosses back: the caller's writer, assigned by the
       // callee, reaches the caller's program.
-      final answered = await host.line((l) => l.contains('answered('));
+      final answered =
+          await _line(transcript, (l) => l.startsWith('< answered('));
       expect(answered, contains('forty_two'));
-      expect(host.sentTo, contains(callee.hex),
-          reason: 'the cold call left through the adapter');
-      expect(host.receivedFrom, contains(callee.hex),
+      expect(receivedFrom, contains(callee.hex),
           reason: 'the assignment arrived through the adapter');
 
       // Each side's adapter reported the other connected over the WAN, the
@@ -334,6 +347,21 @@ answer(forty_two).
       await fromChild((l) => l == 'CONNECTED ${caller.hex} wan null');
     }, timeout: const Timeout(Duration(minutes: 3)));
   });
+}
+
+/// The first line of [lines] that [test] accepts, waiting up to 90 seconds
+/// for it to come.
+Future<String> _line(List<String> lines, bool Function(String) test) async {
+  final deadline = DateTime.now().add(const Duration(seconds: 90));
+  while (true) {
+    for (final l in lines) {
+      if (test(l)) return l;
+    }
+    if (DateTime.now().isAfter(deadline)) {
+      throw TimeoutException('no line came: ${lines.join(' | ')}');
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+  }
 }
 
 /// The Dart that runs the second process.  The test runs under

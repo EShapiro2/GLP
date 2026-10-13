@@ -43,7 +43,7 @@ Reorganised 2026-09-16 (Udi).  `README.md` carries the directory map; what moved
 | Was | Is |
 |---|---|
 | `programs/spm/` | `programs/social/spm/` |
-| `programs/currencies/` (the program) | `programs/currencies/bonds_v2/` |
+| `programs/currencies/` (the program) | `programs/currencies/bonds/`, the one bonds program since 2026-10-13, its `secure/` at `programs/currencies/secure/` |
 | `programs/coins/`, `programs/bonds/`, `programs/sovereign/` | `programs/currencies/coins/`, `.../bonds/`, `.../sovereign/` |
 | `programs/multiagent_tests/`, `programs/vglp_tests/` | `programs/tests/multiagent/`, `programs/tests/vglp/` |
 | `programs/social/linkprobe*/`, `probeapp/`, `runprobe/` and their boot files | `programs/tests/linkprobes/` |
@@ -74,7 +74,7 @@ Loading a project: enter the directory path at the prompt; the project linker re
 
 | Suite | Command (from the worktree root) | Tests |
 |---|---|---|
-| Full suite (canonical) | `bash test/run_all_tests.sh` | 4179 passed, 0 failed, `KNOWN_RED_CHECKS` 93 (CSSN's, with its artefact's 8; GSG's spm 20 green since `61edc6ee`) and `KNOWN_RED` Dart entries as listed --- at GLP `ba3003df`, 2026-10-13; Section Q keeps its raw output (`tmp/suite_q_dart.txt`, `suite_q_flutter.txt`) |
+| Full suite (canonical) | `bash test/run_all_tests.sh` | 4139 passed, 0 failed, `KNOWN_RED_CHECKS` 93 (CSSN's, with its artefact's 8; GSG's spm 20 green since `61edc6ee`) and `KNOWN_RED` Dart entries as listed --- at GLP `1058731a`, 2026-10-13; Section Q keeps its raw output (`tmp/suite_q_dart.txt`, `suite_q_flutter.txt`) |
 | Dart unit tests alone | `cd glp_runtime && dart test` | glp_runtime only |
 | Flutter package alone | `cd glp_multiagent && flutter test` | glp_multiagent only |
 

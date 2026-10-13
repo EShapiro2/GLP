@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io' show InternetAddress;
+import 'dart:io' show InternetAddress, RawDatagramSocket;
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/services.dart';
@@ -13,6 +13,9 @@ import 'package:grassroots_networking_core/src/store/store.dart';
 
 import 'helpers/sodium_test_bootstrap.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
+import 'package:grassroots_networking_core/src/models/rendezvous_server.dart';
+import 'package:grassroots_networking_core/src/headless/headless_grassroots_network.dart';
+import 'package:grassroots_networking_core/src/signaling/signaling_codec.dart';
 
 /// Hermetic host candidates (see the glare test).
 Future<List<InternetAddress>> _loopbackHostAddresses() async =>
@@ -63,6 +66,7 @@ void main() {
     GrassrootsIdentity id, {
     void Function(String? oldAddress, String? newAddress)?
         onConnectivityStatusChanged,
+    List<RendezvousServer> rendezvousServers = const [],
   }) async {
     final store = Store<AppState>(
       appReducer,
@@ -71,7 +75,7 @@ void main() {
     final network = GrassrootsNetwork(
       identity: id,
       underlays: const {Underlay.lan, Underlay.wan},
-      rendezvousServers: const [],
+      rendezvousServers: rendezvousServers,
       store: store,
       sodium: sodium,
       localHostAddressReader: _loopbackHostAddresses,
@@ -184,4 +188,90 @@ void main() {
     expect(caller.getPublicAddress(), isNull,
         reason: 'a peer session is not a rendezvous reflection');
   });
+
+  /// A rendezvous server: the headless layer marked one, on the loopback.
+  Future<HeadlessGrassrootsNetwork> rendezvousServer(int fill) async {
+    final probe = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
+    final port = probe.port;
+    probe.close();
+    final server = HeadlessGrassrootsNetwork(
+      identity: await identityFromSeed(fill, 'rendezvous'),
+      rendezvousServers: const [],
+      serverAddress:
+          ServerAddress(listenPort: port, publicAddress: '127.0.0.1:$port'),
+      rendezvousServer: true,
+      sodium: sodium,
+    );
+    addTearDown(server.dispose);
+    expect(await server.start(), isTrue);
+    return server;
+  }
+
+  test(
+      'a configured rendezvous server reflects the address it observes the '
+      'agent at, and that is the agent\'s public address (GNA §4.2, §6 '
+      '"Address observation")', () async {
+    final server = await rendezvousServer(0x75);
+    final reports = <(String?, String?)>[];
+    final node = await startNode(
+      await identityFromSeed(0x76, 'node'),
+      onConnectivityStatusChanged: (oldAddress, newAddress) =>
+          reports.add((oldAddress, newAddress)),
+      rendezvousServers: [
+        RendezvousServer(
+            '127.0.0.1:${server.boundPort}', server.identity.publicKey),
+      ],
+    );
+    addTearDown(node.dispose);
+    await node.start();
+
+    final deadline = DateTime.now().add(const Duration(seconds: 20));
+    while (node.getPublicAddress() == null &&
+        DateTime.now().isBefore(deadline)) {
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    }
+    final observed = server.observedPeerAddress(node.identity.publicKey);
+    expect(observed, isNotNull);
+    expect(node.getPublicAddress(), observed,
+        reason: 'the address the server observes, reflected');
+    expect(reports, [(null, null), (null, observed)]);
+  }, timeout: const Timeout(Duration(minutes: 1)));
+
+  test(
+      'signaling from a peer that is no configured rendezvous server is '
+      'dropped: a reflected address from it is not the agent\'s', () async {
+    final peerId = await identityFromSeed(0x77, 'peer');
+    final nodeId = await identityFromSeed(0x78, 'node');
+    final node = await startNode(nodeId);
+    addTearDown(node.dispose);
+    await node.start();
+    final peer = HeadlessGrassrootsNetwork(
+      identity: peerId,
+      rendezvousServers: const [],
+      sodium: sodium,
+    );
+    addTearDown(peer.dispose);
+    expect(await peer.start(), isTrue);
+
+    // A known peer, connected over a session.
+    node.putKnownPeer(peerId.publicKey);
+    peer.putPeerAddress(nodeId.publicKey, (await localCandidates(node)).first);
+    await peer.send(nodeId.publicKey, Uint8List.fromList([1]));
+    final deadline = DateTime.now().add(const Duration(seconds: 20));
+    while (!peer.isPeerReachable(nodeId.publicKey) &&
+        DateTime.now().isBefore(deadline)) {
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    }
+    expect(peer.isPeerReachable(nodeId.publicKey), isTrue);
+
+    expect(
+        await peer.debugSendSignaling(
+            nodeId.publicKey,
+            const SignalingCodec()
+                .encode(AddrReflectMessage(ip: '203.0.113.5', port: 4242))),
+        isTrue);
+    await Future<void>.delayed(const Duration(seconds: 2));
+    expect(node.getPublicAddress(), isNull,
+        reason: 'only a configured rendezvous server reflects an address');
+  }, timeout: const Timeout(Duration(minutes: 1)));
 }

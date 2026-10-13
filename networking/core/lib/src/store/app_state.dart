@@ -4,7 +4,6 @@ import 'messages_state.dart';
 import 'known_peers_state.dart';
 import 'local_network_state.dart';
 import 'settings_state.dart';
-import 'signaling_state.dart';
 import 'transports_state.dart';
 
 /// Main application state for redux
@@ -25,9 +24,6 @@ class AppState {
   /// Settings state (transport settings)
   final SettingsState settings;
 
-  /// Signaling state (address registration, hole-punch attempts)
-  final SignalingState signaling;
-
   /// The attached local network — its fingerprint and address prefixes.
   /// Independent of the public address in [transports].
   final LocalNetworkState localNetwork;
@@ -38,7 +34,6 @@ class AppState {
     this.messages = const MessagesState(),
     this.knownPeers = const KnownPeersState(),
     this.settings = const SettingsState(),
-    this.signaling = const SignalingState(),
     this.localNetwork = const LocalNetworkState(),
   });
 
@@ -68,7 +63,6 @@ class AppState {
     MessagesState? messages,
     KnownPeersState? knownPeers,
     SettingsState? settings,
-    SignalingState? signaling,
     LocalNetworkState? localNetwork,
   }) {
     return AppState(
@@ -77,7 +71,6 @@ class AppState {
       messages: messages ?? this.messages,
       knownPeers: knownPeers ?? this.knownPeers,
       settings: settings ?? this.settings,
-      signaling: signaling ?? this.signaling,
       localNetwork: localNetwork ?? this.localNetwork,
     );
   }
@@ -92,7 +85,6 @@ class AppState {
           messages == other.messages &&
           knownPeers == other.knownPeers &&
           settings == other.settings &&
-          signaling == other.signaling &&
           localNetwork == other.localNetwork;
 
   @override
@@ -102,7 +94,6 @@ class AppState {
         messages,
         knownPeers,
         settings,
-        signaling,
         localNetwork,
       );
 }

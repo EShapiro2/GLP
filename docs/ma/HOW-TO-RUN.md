@@ -119,12 +119,6 @@ cd glp_runtime && dart test test/multiagent/multiagent_glp_test.dart
 `+12: All tests passed!`: the twelve `programs/tests/multiagent/` programs, each by its boot file.
 
 ```bash
-cd glp_runtime && dart test test/multiagent/bonds_v2_isolate_test.dart
-```
-
-`+12: All tests passed!`: Section O's, the Bonds V2 plays across isolates.
-
-```bash
 cd glp_runtime && dart test test/multiagent/
 ```
 

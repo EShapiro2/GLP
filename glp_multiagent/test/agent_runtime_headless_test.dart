@@ -7,8 +7,8 @@
 ///
 /// A cold call crosses from the caller to the callee over UDP on the loopback,
 /// and an assignment crosses back, as they cross in GNA's adapter test
-/// (networking/glue/test/headless_glp_network_test.dart), whose agents its
-/// own helper hosts; here the host is the runtime's.
+/// (networking/glue/test/headless_glp_network_test.dart), which hosts its
+/// agents through `AgentRuntime` too since GNA's Task E (1739a459).
 ///
 /// Needs a native libsodium, as GNA's headless tests do; self-skips when it
 /// is absent.

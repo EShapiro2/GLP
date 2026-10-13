@@ -275,7 +275,7 @@ A harness that delivers two messages of a pair in reverse order (the `_r(p, i) :
 
 Verify the plays do not rely on per-sender cold-call order. Established channels are unaffected — each message carries its continuation, so they are dataflow-ordered under any delivery order — but two cold-calls from the same sender may now arrive in either order.
 
-**Inspection result (2026-06-10):** All test-exercised plays were inspected (cssn_modules_v2 3-adult and 6-agent village; bonds_v2 actors p2–p11 and play12; social_graph typed_actors / typed_ui_actors). No play relies on per-sender cold-call arrival order: in each play every sender's cold-calls go to *distinct* recipients (a recipient may receive cold-calls from several *different* senders, which were always unordered). The only repeated `connect(X)` occurrences are comments or alternative committed-choice clauses (one fires). No agent issues two order-dependent cold-calls to the same recipient. Plays pass over the reverse-capable simulation router.
+**Inspection result (2026-06-10):** All test-exercised plays were inspected (cssn_modules_v2 3-adult and 6-agent village; the bonds program's actors p2–p11 and play12, since deleted; social_graph typed_actors / typed_ui_actors). No play relies on per-sender cold-call arrival order: in each play every sender's cold-calls go to *distinct* recipients (a recipient may receive cold-calls from several *different* senders, which were always unordered). The only repeated `connect(X)` occurrences are comments or alternative committed-choice clauses (one fires). No agent issues two order-dependent cold-calls to the same recipient. Plays pass over the reverse-capable simulation router.
 
 ---
 
@@ -598,7 +598,7 @@ Make the stream merged into NetIn genuinely canonical-free, e.g. carry the `cano
 ## Issue 17: `glp_runtime` `dart test` baseline carries 6 reds — 4 stale rot, 2 the live Issue-13 strand
 
 **Update (2026-06-22) — RESOLVED.** All six reds are now retired (skip-with-reason) — every one was legacy `tests/agent_roundtrip` rot, not a runtime defect:
-- `isolate_manager_test` ×2 — boot-config scope omission (`UnknownTypeError: Response`), not the "Issue-13 strand"; multi-isolate path covered green by `cssn_v2`/`bonds_v2`.
+- `isolate_manager_test` ×2 — boot-config scope omission (`UnknownTypeError: Response`), not the "Issue-13 strand"; multi-isolate path covered green by `cssn_v2` and, until its deletion on 2026-10-13, the old bonds program's isolate test.
 - `clause_select_probe_test` ×1 — rotted Issue-15 scaffolding (superseded by the now-eliminated probe15).
 - `ui_mediator_test` ×3 — inline `_output` fixed (now routes through root `send_to_user`), but the test loads `typed_social_agent`/`typed_ui_mediator` without their `tests/agent_roundtrip/self.glp` scope, so the goal-check hard-fails on `Unresolved type: Response`; canonical mediator covered by live cssn/social-graph.  **Disposition 2026-08-03: the test is REMOVED** (Udi's instruction) — see Issue 20's third instalment.  `typed_ui_mediator.glp` stays and is exposed by `agent_roundtrip/self.glp`.
 

@@ -42,12 +42,14 @@ void main() {
     int fill, {
     List<RendezvousServer> rendezvousServers = const [],
     ServerAddress? serverAddress,
+    bool rendezvousServer = false,
     bool start = true,
   }) async {
     final layer = HeadlessGrassrootsNetwork(
       identity: await identityFromSeed(fill, 'node'),
       rendezvousServers: rendezvousServers,
       serverAddress: serverAddress,
+      rendezvousServer: rendezvousServer,
       sodium: sodium!,
     );
     addTearDown(layer.dispose);
@@ -232,10 +234,14 @@ void main() {
         'and answers its first contact', () async {
       skipWithoutSodium();
       if (sodiumUnavailable != null) return;
-      // A rendezvous server stood up on a headless layer, which records the
-      // signaling it receives: the registration and the claim are what it
-      // would act on.
-      final rv = await node(0xb5);
+      // A rendezvous server stood up on a headless layer, marked one (GNA
+      // §2.2) so it answers both clients' keys unsupplied (GNA §2.7), which
+      // records the signaling it receives: the registration and the claim are
+      // what its rendezvous agent would act on.
+      final rv = await node(0xb5,
+          serverAddress:
+              ServerAddress(listenPort: 0, publicAddress: '203.0.113.9:9600'),
+          rendezvousServer: true);
       final rvSaw = <(String, SignalingMessage)>[];
       rv.debugOnSignaling = (sender, payload) => rvSaw.add((
             sender.map((b) => b.toRadixString(16).padLeft(2, '0')).join(),
@@ -244,13 +250,9 @@ void main() {
       final rvServer = RendezvousServer(
           '127.0.0.1:${rv.boundPort}', rv.identity.publicKey);
 
-      // A headless layer answers the known-peer set alone, so this stand-in
-      // is told both keys before the inviter, starting, dials it.
       final inviter =
           await node(0xb6, rendezvousServers: [rvServer], start: false);
       final holder = await node(0xb7);
-      rv.putKnownPeer(inviter.identity.publicKey);
-      rv.putKnownPeer(holder.identity.publicKey);
       expect(await inviter.start(), isTrue);
       final redeemed = Completer<Uint8List>();
       inviter.onPeerLinkRedeemed = redeemed.complete;

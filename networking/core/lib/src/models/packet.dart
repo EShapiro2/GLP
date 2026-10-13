@@ -20,7 +20,8 @@ enum PacketType {
   /// Read receipt (recipient has read the message)
   readReceipt(0x08),
 
-  /// Signaling (address registration, query, hole-punch coordination)
+  /// Signaling between an agent and a rendezvous server (the reflected
+  /// address; invite registration and redemption)
   signaling(0x09),
 
   /// Noise XX handshake message.

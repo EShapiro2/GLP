@@ -2734,165 +2734,6 @@ echo "   cssn_v2_isolate_test.dart here as well would only double-count it)"
 echo ""
 
 # =============================================================================
-# Section N: Currencies Modules (project-directory loading, plays 1-12)
-# =============================================================================
-echo "=== Section N: Currencies Modules ==="
-echo ""
-
-BONDS_V2="$GLP_DIR/programs/currencies/bonds_v2"
-
-# Loading
-n_load=$("$REPL_RUN" <<HEREDOC
-$BONDS_V2
-:quit
-HEREDOC
-2>&1)
-
-check "Currencies project loads" "Loaded program" "$n_load"
-check_not "Currencies no type errors" "Type checking failed" "$n_load"
-
-# fplay1: solo mint
-echo "--- Currencies solo mint (fplay1) ---"
-
-n_fp1=$("$REPL_RUN" <<HEREDOC
-$BONDS_V2
-fplay1.
-:quit
-HEREDOC
-2>&1)
-
-check "Currencies fplay1 succeeds" "succeeds" "$n_fp1"
-check "Currencies fplay1 minted" "tagged(alice.*minted" "$n_fp1"
-
-# fplay2: befriend + trade
-echo "--- Currencies befriend + trade (fplay2) ---"
-
-n_fp2=$("$REPL_RUN" <<HEREDOC
-$BONDS_V2
-fplay2.
-:quit
-HEREDOC
-2>&1)
-
-check "Currencies fplay2 succeeds" "succeeds" "$n_fp2"
-check "Currencies fplay2 connected" "tagged(alice.*connected(bob)" "$n_fp2"
-check "Currencies fplay2 trade_completed" "trade_completed" "$n_fp2"
-
-# fplay3-6: trade variations
-echo "--- Currencies trade plays (fplay3-fplay6) ---"
-
-for play_num in 3 4 5 6; do
-    n_fpN=$("$REPL_RUN" <<HEREDOC
-$BONDS_V2
-fplay${play_num}.
-:quit
-HEREDOC
-2>&1)
-    check "Currencies fplay${play_num} succeeds" "succeeds" "$n_fpN"
-done
-
-# fplay4b: time-dependent trade
-echo "--- Currencies time-dependent trade (fplay4b) ---"
-
-n_fp4b=$("$REPL_RUN" <<HEREDOC
-$BONDS_V2
-fplay4b.
-:quit
-HEREDOC
-2>&1)
-
-check "Currencies fplay4b succeeds" "succeeds" "$n_fp4b"
-
-# fplay8-9: buyback + symmetric trade
-echo "--- Currencies buyback + symmetric (fplay8-fplay9) ---"
-
-for play_num in 8 9; do
-    n_fpN=$("$REPL_RUN" <<HEREDOC
-$BONDS_V2
-fplay${play_num}.
-:quit
-HEREDOC
-2>&1)
-    check "Currencies fplay${play_num} succeeds" "succeeds" "$n_fpN"
-done
-
-# fplay10-11: escrow
-echo "--- Currencies escrow plays (fplay10-fplay11) ---"
-
-n_fp10=$("$REPL_RUN" <<HEREDOC
-$BONDS_V2
-fplay10.
-:quit
-HEREDOC
-2>&1)
-
-check "Currencies fplay10 succeeds" "succeeds" "$n_fp10"
-# The escrow's release as the play prints it on main 76cf9059: a bare "escrow"
-# also matched the load's own refusal text (inject_escrow_dep_result), a false
-# pass while bonds_v2 was refused (Currencies #7 Cowork, 2026-10-02 13:40 UTC).
-check "Currencies fplay10 escrow" "notify(escrow_released(alice))" "$n_fp10"
-
-n_fp11=$("$REPL_RUN" <<HEREDOC
-$BONDS_V2
-fplay11.
-:quit
-HEREDOC
-2>&1)
-
-check "Currencies fplay11 succeeds" "succeeds" "$n_fp11"
-check "Currencies fplay11 escrow_cancelled" "escrow_cancelled" "$n_fp11"
-
-# fplay12: village market (6 agents)
-echo "--- Currencies village market (fplay12) ---"
-
-n_fp12=$("$REPL_RUN" <<HEREDOC
-$BONDS_V2
-:limit 5000000
-fplay12.
-:quit
-HEREDOC
-2>&1)
-
-check "Currencies fplay12 succeeds" "succeeds" "$n_fp12"
-check "Currencies fplay12 tagged output" "tagged(" "$n_fp12"
-
-# fplay13: loan then issuer-dated redemption on per-agent local clocks
-echo "--- Currencies loan then issuer-dated redemption (fplay13) ---"
-
-n_fp13=$("$REPL_RUN" <<HEREDOC
-$BONDS_V2
-:limit 5000000
-fplay13.
-:quit
-HEREDOC
-2>&1)
-
-check "Currencies fplay13 succeeds" "succeeds" "$n_fp13"
-check "Currencies fplay13 early presentation reaches the issuer as a normal offer (reclassified, not refused)" "trade_proposed(alice, \[lot(alice, 0, 3)" "$n_fp13"
-check "Currencies fplay13 issuer advances its own date past maturity" "date_advanced(11)" "$n_fp13"
-check "Currencies fplay13 redemption set-off returns lender's own coins" "bond(alice, 0, 1)" "$n_fp13"
-
-# fplay_cl: credit line (paper §5 item 7), checked against Proposition prop:credit-line
-echo "--- Currencies credit line (fplay_cl) ---"
-
-n_clc=$("$REPL_RUN" <<HEREDOC
-$BONDS_V2
-:limit 5000000
-fplay_cl.
-:quit
-HEREDOC
-2>&1)
-
-check "Currencies credit line succeeds" "succeeds" "$n_clc"
-check "Currencies credit line: draw forwards the borrower's bonds to the lender" "tagged(alice, notify(trade_proposed(charlie" "$n_clc"
-check "Currencies credit line: expiry judged by the escrow's own date d_e*" "date_advanced(26)" "$n_clc"
-check "Currencies credit line: at expiry the escrow holds nothing (line fully returned)" "tagged(charlie, notify(balance_report(\[\])))" "$n_clc"
-check "Currencies credit line: borrower has its principal bond back at T=25" "tagged(bob, notify(balance_report(\[bond(bob, 25, 1), bond(bob, 25, 2), bond(bob, 25, 3), bond(bob, 25, 4)\])))" "$n_clc"
-check "Currencies credit line: at k_d=0 lender holds the full line plus interest, no bond at T" "tagged(alice, notify(balance_report(\[bond(bob, 20, 5), bond(bob, 20, 6), bond(alice, 0, 5)" "$n_clc"
-
-echo ""
-
-# =============================================================================
 # Section N2: The coins program (programs/currencies/coins): the vGLP currency agent of
 # the Grassroots Currencies paper as a mini-app of the Grassroots Super-App.
 # programs/currencies/coins/currency is the certified program --- the agent
@@ -3926,8 +3767,7 @@ echo ""
 
 echo "=== Section O: Currencies Multi-Isolate Tests ==="
 echo ""
-echo "  (folded into Section Q, which runs the whole Dart tree — running"
-echo "   bonds_v2_isolate_test.dart here as well would only double-count it)"
+echo "  (folded into Section Q, which runs the whole Dart tree)"
 echo ""
 
 # =============================================================================
@@ -4151,20 +3991,22 @@ HEREDOC
 check "S3 integer instantiation" "Zi = \[1, 4, 2, 5, 3, 6\]" "$s3"
 check "S3 constant instantiation" "Zc = \[a, c, b, d\]" "$s3"
 
-# --- S4: currencies/play12 is a program (TGLP Definition "Program") ---
+# --- S4: sovereign/denominated is a program (TGLP Definition "Program") ---
 # TGLP Definition "Program" (parameterized-types.tex:164, TGLP 9b29563): "a directory
 # carrying a self.glp, or a self-contained module, with one or more concrete initial
-# goals".  play12 is a directory carrying a self.glp that exports six procedures, each
-# declared at concrete types, so it is a program, and it loads through its self.glp
-# (Coordination #3's ruling, 2026-10-04 16:05 UTC).  The I-1
-# regression, an ancestor type failing to resolve through the directory load, is kept.
-echo "--- S4: currencies/play12 is a program ---"
+# goals".  denominated is a directory carrying a self.glp that exports its procedures,
+# each declared at concrete types, so it is a program, and it loads through its
+# self.glp (Coordination #3's ruling, 2026-10-04 16:05 UTC).  Its types are its
+# ancestor's, programs/currencies/sovereign/self.glp, so the I-1 regression, an
+# ancestor type failing to resolve through the directory load, is kept.  Until
+# 2026-10-13 S4 loaded the play12 directory of the retired bonds program.
+echo "--- S4: sovereign/denominated is a program ---"
 s4=$("$REPL_RUN" <<HEREDOC
-$GLP_DIR/programs/currencies/bonds_v2/play12
+$GLP_DIR/programs/currencies/sovereign/denominated
 :quit
 HEREDOC
 2>&1)
-check "S4 play12 is a program: it loads" "Loaded program" "$s4"
+check "S4 denominated is a program: it loads" "Loaded program" "$s4"
 check_not "S4 no unknown type error" "UnknownType" "$s4"
 
 # --- S5: opaque pass-through walker ---
@@ -4420,7 +4262,7 @@ echo ""
 # directory walk reached first became every module's: `inner/self.glp`'s two-
 # argument Lot was what `txn.glp` — a module of the program ABOVE it — was
 # checked against, and the program did not load.  Reported by Currencies Code
-# on 2026-09-03 against programs/currencies/bonds_v2 with programs/currencies/bonds_v2/coins
+# on 2026-09-03 against the bonds program of that day with its coins/ directory
 # under it.  Steps 3 and 4 of modules.tex §Compilation now rename each module's
 # types to `M:T` and resolve every reference to the nearest scope defining it,
 # so this holds whichever order the walk takes.  The goal is the second half:
@@ -5416,6 +5258,16 @@ check "RV agent test22: the available's signature verifies, A's own over the pai
 check "RV agent test22: the admitted available reaches the layer, which observes no address for B" "^:peer_address(bob, none) :- true$" "$(_rv_answer 37)"
 check "RV agent test22: no address observed for B, the admitted available is rejected" "^RB22 = rejected$" "$(_rv_answer 37)"
 check "RV agent test22: no address observed for B, the waiting A is told nothing" "^RA22 = <unbound>$" "$(_rv_answer 37)"
+
+# rv_server/3, the entry the rendezvous server boots the agent on
+# (networking/glue/bin/rendezvous_server.dart): the module loaded as the
+# program, and a network input of one msg(Id, M) envelope, whose M reaches the
+# agent; an unsigned reconnect is refused.  The server itself, over the layer,
+# is networking/glue/test/rendezvous_server_test.dart's.
+rv_server_out=$(printf 'load %s\nrv_server(rv, g, [msg(rv, reconnect(alice, bob, sig, RS))]).\n:quit\n' \
+    "$GLP_DIR/programs/examples/rendezvous/rv_agent.glp" | "$REPL_RUN" 2>&1)
+check "RV rv_server loads as the server's program" "Loaded: .*rv_agent.glp" "$rv_server_out"
+check "RV rv_server: the envelope is taken off, and an unsigned reconnect refused" "^GLP> RS = rejected$" "$rv_server_out"
 echo ""
 
 # =============================================================================

@@ -71,7 +71,7 @@ class MessageRouter {
       onAckRequested;
 
   /// Called when a signaling packet is received.
-  /// The coordinator routes this to [SignalingService.processSignaling].
+  /// The coordinator acts on what a rendezvous server sends.
   /// [observedIp] / [observedPort] carry the UDP source address observed by
   /// the transport layer (null for BLE-arrived signaling).
   void Function(

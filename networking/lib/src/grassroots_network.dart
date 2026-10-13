@@ -9,7 +9,6 @@ import 'ble/permission_handler.dart';
 import 'platform/transport_foreground_service.dart';
 import 'package:grassroots_networking_core/src/signaling/peer_link.dart';
 import 'package:grassroots_networking_core/src/signaling/signaling_codec.dart';
-import 'signaling/signaling_service.dart';
 import 'package:grassroots_networking_core/src/transport/address_utils.dart';
 import 'package:grassroots_networking_core/src/transport/local_network.dart';
 import 'package:grassroots_networking_core/src/places/place_registry.dart';
@@ -476,9 +475,6 @@ class GrassrootsNetwork {
   /// Hole-punch services for NAT traversal, keyed by IP family.
   final Map<InternetAddressType, HolePunchService> _holePunchServices = {};
 
-  /// Signaling service for address registration, queries, and hole-punch coordination
-  late final SignalingService _signalingService;
-
   /// Reads the agent's own interface addresses — its host candidates for
   /// dialing. Injectable so a hermetic test can name the addresses its nodes
   /// listen on; the default is the platform's interface list.
@@ -533,26 +529,6 @@ class GrassrootsNetwork {
   /// Per-peer, per-transport Noise XX sessions for payload encryption.
   late final NoiseSessionManager _noiseSessions;
 
-  /// Pending hole-punch completers: pubkeyHex → completer that resolves
-  /// to true (connected) or false (failed) when the punch finishes.
-  final Map<String, Completer<bool>> _holePunchCompleters = {};
-
-  /// The target address we last punched toward for each peer.
-  final Map<String, AddressInfo> _holePunchTargets = {};
-
-  /// Whether we have finished our local punch for the peer.
-  final Set<String> _holePunchLocalReady = {};
-
-  /// Whether the remote peer has explicitly reported readiness.
-  final Set<String> _holePunchRemoteReady = {};
-
-  /// Prevent duplicate connect attempts while a punch is in flight.
-  final Set<String> _holePunchConnectionInProgress = {};
-
-  /// Keep punch traffic flowing while the initiator transitions from
-  /// coordination into the actual UDX connect attempt.
-  final Set<String> _holePunchKeepAliveInProgress = {};
-
   /// Deduplicate in-flight UDX connection attempts across all callers.
   final Map<String, Future<bool>> _udpConnectInFlight = {};
 
@@ -561,28 +537,9 @@ class GrassrootsNetwork {
   final Map<String, String> _autoUdpLastAddress = {};
   final Map<String, DateTime> _autoUdpRetryAfter = {};
 
-  /// Tracks when we last attempted discovery for each unreachable friend.
-  /// Prevents hammering discovery every announce tick (10s) for the same peer.
-  final Map<String, DateTime> _lastDiscoveryAttempt = {};
-
-  /// Minimum interval between discovery attempts for the same peer.
-  static const _discoveryRetryInterval = Duration(seconds: 60);
-
-  /// When we last fan-ed out an AVAILABLE for each unreachable friend.
-  /// Used to periodically re-fire AVAILABLE on the next announce tick so the
-  /// pairing window at the friend's RV stays open while the friend is mid-
-  /// reconnect (their stale-cache may stall their RECONNECT for tens of
-  /// seconds). Cleared when the friend becomes UDP-reachable again.
-  final Map<String, DateTime> _availableFanOutLastFiredAt = {};
-
-  /// Minimum interval between AVAILABLE re-fires for the same friend while
-  /// they remain UDP-unreachable.
-  static const _availableRefireInterval = Duration(minutes: 5);
-
   /// Back off briefly after a failed proactive UDP attempt so repeated BLE
   /// ANNOUNCEs don't start a fresh UDX handshake every few seconds.
   static const _autoUdpRetryBackoff = Duration(seconds: 15);
-  static const _holePunchKeepAliveDuration = Duration(seconds: 3);
 
   /// FIFO outbound message queues keyed by recipient public-key hex.
   ///
@@ -758,12 +715,7 @@ class GrassrootsNetwork {
       protocolHandler: _protocolHandler,
       fragmentHandler: _fragmentHandler,
     );
-    _signalingService = SignalingService(
-      store: store,
-      rendezvousServers: this.rendezvousServers,
-    );
     _setupRouterCallbacks();
-    _setupSignalingCallbacks();
 
     // Listen to network connectivity changes (WiFi ↔ cellular, etc.)
     _connectivitySubscription = Connectivity().onConnectivityChanged.listen(
@@ -861,7 +813,7 @@ class GrassrootsNetwork {
     final remote = udp.getRemoteAddress(peerId);
     return remote == null
         ? null
-        : AddressInfo(remote.ip, remote.port).toAddressString();
+        : observedAddressString(remote.ip, remote.port);
   }
 
   /// Feed the networking layer a peer's current public `ip:port`, learned at
@@ -995,8 +947,7 @@ class GrassrootsNetwork {
       expiresAtMs: expiresAtMs,
     ));
     final delivered =
-        await _signalingService.sendSignaling?.call(rvPubkey, registration) ??
-            false;
+        await _sendSignalingToRendezvous(rvPubkey, rv.address, registration);
     if (!delivered) {
       throw StateError(
         'Could not register invite with rendezvous server ${rv.address}',
@@ -1068,9 +1019,8 @@ class GrassrootsNetwork {
       redeemerNonce: redeemerNonce,
       mac: mac,
     ));
-    final delivered = await _signalingService.sendSignalingToAddress
-            ?.call(invite.rvPubkey, invite.rvAddress, claim) ??
-        false;
+    final delivered = await _sendSignalingToRendezvous(
+        invite.rvPubkey, invite.rvAddress, claim);
     if (!delivered) {
       throw StateError(
         'Could not submit redemption to rendezvous server ${invite.rvAddress}',
@@ -1832,17 +1782,6 @@ class GrassrootsNetwork {
     if (!_runsIp) return;
     if (!_started) return;
 
-    for (final completer in _holePunchCompleters.values) {
-      if (!completer.isCompleted) {
-        completer.complete(false);
-      }
-    }
-    _holePunchCompleters.clear();
-    _holePunchTargets.clear();
-    _holePunchLocalReady.clear();
-    _holePunchRemoteReady.clear();
-    _holePunchConnectionInProgress.clear();
-
     // Tear down old UDP service completely
     for (final service in _holePunchServices.values) {
       service.dispose();
@@ -1885,9 +1824,9 @@ class GrassrootsNetwork {
     await _reconnectKnownPeers(reason: 'connectivity-changed');
   }
 
-  /// Walk every known peer with a dial-book address and bring it back online.
-  /// Direct-dial known addresses; fan out RECONNECT to the configured
-  /// rendezvous servers for peers we couldn't reach directly. Idempotent —
+  /// Walk every known peer with a dial-book address and bring it back online
+  /// by dialing its recorded address (spec §Connectivity and Address,
+  /// "Address-change recovery"). Idempotent —
   /// already-connected peers are skipped by [_connectToPeerViaUdp] and by the
   /// second-pass [getPeerIdForPubkey] guard. (Spec §Heartbeat: the heartbeat
   /// tick drives reconnection attempts toward unreachable peers the layer has
@@ -1906,25 +1845,6 @@ class GrassrootsNetwork {
       final peerAddress =
           _peersState.getPeerByPubkeyHex(entry.key)?.udpAddress ?? entry.value;
       await _connectToPeerViaUdp(entry.key, peerAddress);
-    }
-
-    // Fan out RECONNECT for known peers still unreachable. Rendezvous servers
-    // pair this with the peer's AVAILABLE.
-    if (rendezvousServers.isEmpty) return;
-
-    for (final pubkeyHex in dialBook.keys) {
-      final pubkey = _hexToBytes(pubkeyHex);
-      if (_udpService?.getPeerIdForPubkey(pubkey) != null) continue;
-      debugPrint(
-        '[reconnect] Fanning out RECONNECT for '
-        '${pubkeyHex.substring(0, 8)}... after IP change',
-      );
-      unawaited(
-        _signalingService.fanOutReconnect(
-          pubkey,
-          initiatorPubkey: identity.publicKey,
-        ),
-      );
     }
   }
 
@@ -2290,7 +2210,7 @@ class GrassrootsNetwork {
   /// The message status can be tracked via store.state.messages.
   ///
   /// Transport selection: tries BLE first (preferred for nearby peers),
-  /// falls back to UDP, then attempts discovery via well-connected friends.
+  /// falls back to UDP; a peer reachable over neither is queued for.
   /// Delivery is confirmed by an application-level ACK, not the transport write.
   Future<String?> send(
     Uint8List recipientPubkey,
@@ -2416,9 +2336,10 @@ class GrassrootsNetwork {
 
   /// Bring a session with [pubkey] up where none is attested: over a GATT
   /// link already standing, start its handshake; over IP, connect on demand
-  /// from the dial book — or, for a known peer with no usable address, by
-  /// rendezvous-coordinated discovery — introduce ourselves by ANNOUNCE, and
-  /// start the handshake. The attestation exchange follows each session
+  /// from the dial book, introduce ourselves by ANNOUNCE, and start the
+  /// handshake.  A peer with no usable address waits for one: who learns an
+  /// address is the social graph's, and it enters the layer by
+  /// putPeerAddress (spec §Connectivity and Address). The attestation exchange follows each session
   /// ([_onNoiseSessionEstablished]); its completion makes the peer reachable
   /// and drains the queue.
   Future<void> _openPathsTo(Uint8List pubkey) {
@@ -2482,18 +2403,7 @@ class GrassrootsNetwork {
     }
 
     if (await dial(peer)) return;
-
-    // No usable address — try rendezvous-coordinated discovery.
-    if (!_isKnownPeerPubkey(pubkey)) return;
-    debugPrint(
-      '[send] No direct path to ${peer.displayName}, '
-      'attempting discovery via rendezvous servers...',
-    );
-    if (await _discoverPeerViaRendezvous(peer)) {
-      final freshPeer = _peersState.getPeerByPubkey(pubkey);
-      if (freshPeer != null && await dial(freshPeer)) return;
-    }
-    debugPrint('[send] Discovery failed for ${peer.displayName}');
+    debugPrint('[send] No direct path to ${peer.displayName}');
   }
 
   void _queueOutboundMessage({
@@ -2961,9 +2871,6 @@ class GrassrootsNetwork {
 
     return null;
   }
-
-  bool _hasLiveBlePath(PeerState? peer) =>
-      _connectedBleDeviceIdForPeer(peer) != null;
 
   static String _pubkeyToHex(Uint8List pubkey) =>
       pubkey.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
@@ -3465,166 +3372,6 @@ class GrassrootsNetwork {
     return pair;
   }
 
-  GrassrootsPacket _createSignalingPacket(Uint8List signalingPayload) {
-    return GrassrootsPacket(
-      type: PacketType.signaling,
-      payload: signalingPayload,
-    );
-  }
-
-  Future<bool> _sendDirectSignalingOverLiveBle(
-    Uint8List recipientPubkey,
-    Uint8List signalingPayload,
-  ) async {
-    if (_bleService == null || !_bleAvailable) {
-      return false;
-    }
-
-    final pubkeyHex =
-        recipientPubkey.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-    final peer = store.state.peers.getPeerByPubkeyHex(pubkeyHex);
-    final deviceId = _connectedBleDeviceIdForPeer(peer);
-    if (deviceId == null) {
-      return false;
-    }
-
-    final packet = _createSignalingPacket(signalingPayload);
-    final bytes = await _packetBytesForTransport(
-      packet: packet,
-      transport: PeerTransport.bleDirect,
-      recipientPubkey: recipientPubkey,
-      peerId: deviceId,
-    );
-    if (bytes == null) return false;
-    return _bleService!.sendToPeer(deviceId, bytes);
-  }
-
-  Future<void> _sustainHolePunchTraffic(
-    String peerHex,
-    AddressInfo target, {
-    required String phase,
-  }) async {
-    final punchService = _holePunchServiceFor(target.ip);
-    if (punchService == null ||
-        _holePunchKeepAliveInProgress.contains(peerHex)) {
-      return;
-    }
-
-    _holePunchKeepAliveInProgress.add(peerHex);
-    debugPrint(
-      '[hole-punch] Sustaining punch traffic toward '
-      '${target.toAddressString()} during $phase...',
-    );
-    try {
-      await punchService.punch(
-        target.ip,
-        target.port,
-        duration: _holePunchKeepAliveDuration,
-      );
-    } finally {
-      _holePunchKeepAliveInProgress.remove(peerHex);
-    }
-  }
-
-  void _beginHolePunchAttempt(String peerHex, {bool dispatchStarted = true}) {
-    _holePunchTargets.remove(peerHex);
-    _holePunchLocalReady.remove(peerHex);
-    _holePunchRemoteReady.remove(peerHex);
-    _holePunchConnectionInProgress.remove(peerHex);
-    _holePunchKeepAliveInProgress.remove(peerHex);
-    _holePunchCompleters.putIfAbsent(peerHex, () => Completer<bool>());
-    if (dispatchStarted) {
-      store.dispatch(HolePunchStartedAction(peerHex));
-    }
-  }
-
-  void _clearHolePunchState(String peerHex, {bool clearCompleter = false}) {
-    _holePunchTargets.remove(peerHex);
-    _holePunchLocalReady.remove(peerHex);
-    _holePunchRemoteReady.remove(peerHex);
-    _holePunchConnectionInProgress.remove(peerHex);
-    _holePunchKeepAliveInProgress.remove(peerHex);
-    if (clearCompleter) {
-      _holePunchCompleters.remove(peerHex);
-    }
-  }
-
-  void _failHolePunchAttempt(String peerHex, String reason) {
-    store.dispatch(HolePunchFailedAction(peerHex, reason));
-    final completer = _holePunchCompleters.remove(peerHex);
-    if (completer != null && !completer.isCompleted) {
-      completer.complete(false);
-    }
-    _clearHolePunchState(peerHex);
-  }
-
-  Future<void> _maybeEstablishPunchConnection(String peerHex) async {
-    if (!_holePunchLocalReady.contains(peerHex) ||
-        !_holePunchRemoteReady.contains(peerHex)) {
-      return;
-    }
-    if (_holePunchConnectionInProgress.contains(peerHex)) {
-      return;
-    }
-
-    final target = _holePunchTargets[peerHex];
-    if (target == null) {
-      debugPrint(
-        '[hole-punch] Both sides are ready for $peerHex but no target '
-        'address is cached yet.',
-      );
-      return;
-    }
-
-    final myPubkeyHex = identity.publicKey
-        .map((b) => b.toRadixString(16).padLeft(2, '0'))
-        .join();
-    final iAmInitiator = myPubkeyHex.compareTo(peerHex) < 0;
-    if (!iAmInitiator) {
-      unawaited(
-        _sustainHolePunchTraffic(peerHex, target, phase: 'responder-wait'),
-      );
-      debugPrint(
-        '[hole-punch] Both sides are ready; waiting for initiator '
-        '$peerHex to connect.',
-      );
-      return;
-    }
-    if (_udpService == null) {
-      _failHolePunchAttempt(
-        peerHex,
-        'UDP service unavailable during hole-punch connect',
-      );
-      return;
-    }
-
-    _holePunchConnectionInProgress.add(peerHex);
-    debugPrint(
-      '[hole-punch] Both sides ready; initiator connecting to '
-      '${target.toAddressString()}...',
-    );
-    unawaited(
-      _sustainHolePunchTraffic(peerHex, target, phase: 'initiator-connect'),
-    );
-
-    final announce = await _createSignedAnnounce();
-    final connected = await _sendViaUdp(
-      peerHex,
-      target.toAddressString(),
-      announce,
-      allowBleAssistedFallback: false,
-      performPreConnectPunch: false,
-    );
-    _holePunchConnectionInProgress.remove(peerHex);
-
-    if (!connected) {
-      _failHolePunchAttempt(
-        peerHex,
-        'UDX connection failed after both peers reported ready',
-      );
-    }
-  }
-
   // ===== UDP Connect-on-Demand =====
 
   /// Send data to a peer via UDP, connecting first if needed.
@@ -3636,8 +3383,6 @@ class GrassrootsNetwork {
     String udpAddress,
     Uint8List data, {
     bool isRendezvous = false,
-    bool allowBleAssistedFallback = true,
-    bool performPreConnectPunch = true,
   }) async {
     if (_udpService == null) return false;
     final peerShort = pubkeyHex.substring(0, 8);
@@ -3652,8 +3397,6 @@ class GrassrootsNetwork {
       pubkeyHex,
       udpAddress,
       isRendezvous: isRendezvous,
-      allowBleAssistedFallback: allowBleAssistedFallback,
-      performPreConnectPunch: performPreConnectPunch,
     );
     if (!connected) return false;
 
@@ -3667,8 +3410,6 @@ class GrassrootsNetwork {
     required GrassrootsPacket packet,
     required Uint8List recipientPubkey,
     bool isRendezvous = false,
-    bool allowBleAssistedFallback = true,
-    bool performPreConnectPunch = true,
   }) async {
     if (_udpService == null) return false;
 
@@ -3678,8 +3419,6 @@ class GrassrootsNetwork {
               pubkeyHex,
               udpAddress,
               isRendezvous: isRendezvous,
-              allowBleAssistedFallback: allowBleAssistedFallback,
-              performPreConnectPunch: performPreConnectPunch,
             );
     if (!connected) return false;
 
@@ -3698,8 +3437,6 @@ class GrassrootsNetwork {
     String pubkeyHex,
     String udpAddress, {
     bool isRendezvous = false,
-    bool allowBleAssistedFallback = true,
-    bool performPreConnectPunch = true,
   }) async {
     if (_udpService == null) return false;
     if (_udpService!.getPeerIdForPubkey(_hexToBytes(pubkeyHex)) != null) {
@@ -3708,15 +3445,10 @@ class GrassrootsNetwork {
     final peerShort = pubkeyHex.substring(0, 8);
     final peer = store.state.peers.getPeerByPubkeyHex(pubkeyHex);
 
-    // After coordinated hole-punching, both sides punched a specific target.
-    // Keep the UDX connect on that target instead of re-selecting a different
-    // advertised candidate that did not just get its NAT mapping opened.
-    final remoteCandidates = performPreConnectPunch
-        ? _udpCandidatesForPeer(
-            peer,
-            fallbackAddress: udpAddress,
-          )
-        : normalizeAddressStrings([udpAddress]);
+    final remoteCandidates = _udpCandidatesForPeer(
+      peer,
+      fallbackAddress: udpAddress,
+    );
     // First dials can race the interface read: with no local candidates no
     // compatible pair exists and the dial fails spuriously — this is how a
     // rendezvous probe or an invite redemption issued right after initialize()
@@ -3762,12 +3494,10 @@ class GrassrootsNetwork {
 
     late final Future<bool> connectFuture;
     connectFuture = () async {
-      // Hole-punch to open NAT mappings before UDX connection attempt.
+      // Hole-punch to open NAT mappings before the path is associated.
       // Skip for peers with publicly routable addresses — punching is wasted
-      // when no NAT mapping is needed. If the direct attempt fails, the
-      // caller's fallback path will retry with a punch via signaling.
-      if (performPreConnectPunch &&
-          !isRendezvous &&
+      // when no NAT mapping is needed.
+      if (!isRendezvous &&
           _holePunchServiceFor(addr.ip) != null &&
           peer != null &&
           !peer.hasPublicUdpAddress) {
@@ -3796,18 +3526,6 @@ class GrassrootsNetwork {
     debugPrint(
       '[udp-send] Path setup failed to $peerShort at $selectedAddress',
     );
-
-    if (allowBleAssistedFallback &&
-        !isRendezvous &&
-        peer != null &&
-        _isKnownPeerPubkey(peer.publicKey) &&
-        _hasLiveBlePath(peer)) {
-      debugPrint(
-        '[udp-send] Trying direct BLE-assisted hole-punch to $peerShort...',
-      );
-      return _attemptDirectPunchWithPeer(peer, pair);
-    }
-
     return false;
   }
 
@@ -3866,46 +3584,13 @@ class GrassrootsNetwork {
           );
           _autoUdpRetryAfter.remove(pubkeyHex);
         } else {
-          // Direct connection failed (likely NAT/firewall). Try a direct
-          // BLE-assisted punch when a live control path exists, then
-          // rendezvous-coordinated discovery.
-          final peer = _peersState.getPeerByPubkeyHex(pubkeyHex);
-          if (peer != null && _isKnownPeerPubkey(peer.publicKey)) {
-            if (_hasLiveBlePath(peer)) {
-              final pair = _selectUdpCandidatePair(
-                _udpCandidatesForPeer(
-                  peer,
-                  fallbackAddress: normalizedAddress,
-                ),
-                context: 'auto-udp-direct-punch',
-                peerLabel: peer.displayName,
-              );
-              if (pair != null) {
-                debugPrint(
-                  '[auto-udp] Direct connect to '
-                  '${pubkeyHex.substring(0, 8)} failed, trying direct BLE-assisted hole-punch...',
-                );
-                if (await _attemptDirectPunchWithPeer(peer, pair)) {
-                  _autoUdpRetryAfter.remove(pubkeyHex);
-                  return;
-                }
-              }
-            }
-
-            debugPrint(
-              '[auto-udp] Direct connect to '
-              '${pubkeyHex.substring(0, 8)} failed, trying rendezvous discovery...',
-            );
-            if (await _discoverPeerViaRendezvous(peer)) {
-              _autoUdpRetryAfter.remove(pubkeyHex);
-              return;
-            }
-          } else {
-            debugPrint(
-              '[auto-udp] Proactive UDP connection to '
-              '${pubkeyHex.substring(0, 8)} failed',
-            );
-          }
+          // Direct connection failed (likely NAT/firewall): the address
+          // reaches the layer again from the social graph, by putPeerAddress
+          // (spec §Connectivity and Address, "Address-change recovery").
+          debugPrint(
+            '[auto-udp] Proactive UDP connection to '
+            '${pubkeyHex.substring(0, 8)} failed',
+          );
           _autoUdpRetryAfter[pubkeyHex] = DateTime.now().add(
             _autoUdpRetryBackoff,
           );
@@ -3928,329 +3613,6 @@ class GrassrootsNetwork {
       if (identical(_autoUdpConnectInFlight[pubkeyHex], task)) {
         _autoUdpConnectInFlight.remove(pubkeyHex);
       }
-    }
-  }
-
-  /// Ask a BLE-connected peer to start punching toward us, then punch locally.
-  ///
-  /// This is a direct peer-to-peer fallback for the case where we already
-  /// have a control channel (usually BLE) to the target, but direct UDX to
-  /// their dial-book UDP address timed out.
-  Future<bool> _attemptDirectPunchWithPeer(
-    PeerState peer,
-    AddressCandidatePair candidatePair,
-  ) async {
-    final peerHex = peer.pubkeyHex;
-    final peerName = peer.displayName;
-    final myAddr = candidatePair.local;
-    final targetAddr = candidatePair.remote;
-
-    if (_udpService == null || !_udpAvailable) {
-      debugPrint(
-        '[direct-punch] UDP unavailable, cannot coordinate with $peerName',
-      );
-      return false;
-    }
-    if (_holePunchServiceFor(targetAddr.ip) == null) {
-      debugPrint(
-        '[direct-punch] Hole-punch service unavailable, cannot coordinate with $peerName',
-      );
-      return false;
-    }
-    if (!_hasLiveBlePath(peer)) {
-      debugPrint(
-        '[direct-punch] No live BLE path to $peerName, skipping direct punch',
-      );
-      return false;
-    }
-
-    if (_holePunchCompleters.containsKey(peerHex)) {
-      debugPrint(
-        '[direct-punch] Reusing in-flight hole-punch attempt for $peerName',
-      );
-    } else {
-      _beginHolePunchAttempt(peerHex);
-    }
-
-    debugPrint(
-      '[direct-punch] Asking $peerName to punch toward '
-      '${myAddr.toAddressString()} '
-      'via direct friend signaling...',
-    );
-    final sent = await _signalingService.requestDirectPunch(
-      peer.publicKey,
-      requesterPubkey: identity.publicKey,
-      requesterIp: myAddr.ip.address,
-      requesterPort: myAddr.port,
-      requireDirectTransport: true,
-    );
-    if (!sent) {
-      _failHolePunchAttempt(peerHex, 'Could not signal target directly');
-      return false;
-    }
-
-    await _executePunchInitiate(
-      peer.publicKey,
-      targetAddr.ip.address,
-      targetAddr.port,
-      readyRecipientPubkey: peer.publicKey,
-    );
-
-    final completer = _holePunchCompleters[peerHex];
-    if (completer == null) return false;
-
-    final succeeded = await completer.future.timeout(
-      const Duration(seconds: 15),
-      onTimeout: () {
-        debugPrint(
-          '[direct-punch] Timed out waiting for UDP connection to $peerName',
-        );
-        _failHolePunchAttempt(
-          peerHex,
-          'Timed out waiting for direct punch connection',
-        );
-        return false;
-      },
-    );
-
-    if (succeeded) {
-      debugPrint('[direct-punch] Established UDP path to $peerName');
-    }
-    return succeeded;
-  }
-
-  /// Execute the local side of a PUNCH_INITIATE instruction.
-  Future<void> _executePunchInitiate(
-    Uint8List peerPubkey,
-    String ip,
-    int port, {
-    Uint8List? readyRecipientPubkey,
-  }) async {
-    final peerHex =
-        peerPubkey.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-    final peerShort = peerHex.substring(0, 8);
-    final hasPendingSend = _holePunchCompleters.containsKey(peerHex);
-
-    // Idempotency: a duplicate PUNCH_INITIATE arrives whenever both peers
-    // independently requested punches for the same pair. If we're already
-    // handling a punch toward the same target, skip — another round would
-    // just produce redundant packets and duplicate PUNCH_READY messages.
-    final incomingIp = InternetAddress.tryParse(ip);
-    final existing = _holePunchTargets[peerHex];
-    if (existing != null &&
-        incomingIp != null &&
-        existing.ip.address == incomingIp.address &&
-        existing.port == port &&
-        (_holePunchLocalReady.contains(peerHex) ||
-            _holePunchConnectionInProgress.contains(peerHex))) {
-      debugPrint(
-        '[hole-punch] Ignoring duplicate PUNCH_INITIATE for '
-        '$peerShort at $ip:$port — punch already in progress '
-        '(pendingSend=$hasPendingSend)',
-      );
-      return;
-    }
-
-    debugPrint(
-      '[hole-punch] PUNCH_INITIATE received: '
-      'target=$peerShort at $ip:$port, '
-      'pendingSend=$hasPendingSend',
-    );
-
-    store.dispatch(HolePunchPunchingAction(peerHex));
-
-    final targetIp = incomingIp;
-    if (targetIp == null) {
-      debugPrint('[hole-punch] Invalid address in punch initiate: $ip:$port');
-      _failHolePunchAttempt(peerHex, 'Invalid punch target address');
-      return;
-    }
-    final targetAddress = AddressInfo(targetIp, port);
-    if (_udpService == null ||
-        _connectionService.selectBestPairFromAddresses(
-              localAddresses: _connectionLocalCandidates(),
-              remoteAddresses: [targetAddress.toAddressString()],
-            ) ==
-            null) {
-      debugPrint(
-        '[hole-punch] Unsupported address family in punch initiate: '
-        '$ip:$port. No local advertised candidate can use '
-        '${targetIp.type == InternetAddressType.IPv6 ? "IPv6" : "IPv4"}.',
-      );
-      _failHolePunchAttempt(peerHex, 'Unsupported address family');
-      return;
-    }
-
-    final punchService = _holePunchServiceFor(targetIp);
-    if (punchService == null) {
-      debugPrint('[hole-punch] Hole-punch service unavailable');
-      _failHolePunchAttempt(peerHex, 'Hole-punch service unavailable');
-      return;
-    }
-
-    _holePunchTargets[peerHex] = targetAddress;
-
-    // Send punch packets to open NAT mappings on both sides.
-    debugPrint('[hole-punch] Sending punch packets to $ip:$port...');
-    await punchService.punch(targetIp, port);
-    debugPrint('[hole-punch] Punch packets sent.');
-
-    _holePunchLocalReady.add(peerHex);
-
-    if (readyRecipientPubkey != null) {
-      final readyRecipientHex = readyRecipientPubkey
-          .map((b) => b.toRadixString(16).padLeft(2, '0'))
-          .join();
-      debugPrint(
-        '[hole-punch] Reporting local punch readiness for '
-        '$peerShort...',
-      );
-      final readySent = await _signalingService.sendPunchReady(
-        readyRecipientPubkey,
-        identity.publicKey,
-        requireDirectTransport: readyRecipientHex == peerHex,
-      );
-      if (!readySent) {
-        _failHolePunchAttempt(
-          peerHex,
-          'Could not deliver PUNCH_READY to the remote coordinator',
-        );
-        return;
-      }
-    }
-
-    // After punching, only the INITIATOR (smaller pubkey) establishes the
-    // UDX connection, and only after the other side explicitly confirms
-    // readiness via PUNCH_READY.
-    final myPubkeyHex = identity.publicKey
-        .map((b) => b.toRadixString(16).padLeft(2, '0'))
-        .join();
-    final iAmInitiator = myPubkeyHex.compareTo(peerHex) < 0;
-
-    if (iAmInitiator) {
-      debugPrint(
-        '[hole-punch] Local punch complete for $peerShort; waiting for '
-        'explicit PUNCH_READY before connecting...',
-      );
-      await _maybeEstablishPunchConnection(peerHex);
-    } else if (!iAmInitiator) {
-      // We punched but we're not the initiator — wait for incoming UDX connection.
-      debugPrint('[hole-punch] Punched, waiting for initiator to connect...');
-    }
-  }
-
-  /// Try to reach a peer through the configured rendezvous servers.
-  ///
-  /// The servers receive RECONNECT and match it against the peer's AVAILABLE
-  /// (spec §Rendezvous Server). We then wait for the coordinated punch to
-  /// complete.
-  ///
-  /// Returns true if a UDP path to the peer was established.
-  Future<bool> _discoverPeerViaRendezvous(PeerState peer) async {
-    final pubkeyBytes = peer.publicKey;
-    final pubkeyHex = peer.pubkeyHex;
-    final name = peer.displayName;
-
-    if (rendezvousServers.isEmpty) {
-      debugPrint('[discover] No rendezvous servers configured');
-      return false;
-    }
-
-    _beginHolePunchAttempt(pubkeyHex);
-
-    final sent = await _signalingService.fanOutReconnect(
-      pubkeyBytes,
-      initiatorPubkey: identity.publicKey,
-    );
-    if (sent == 0) {
-      debugPrint('[discover] Could not reach any rendezvous server for $name');
-      _failHolePunchAttempt(pubkeyHex, 'Could not reach any rendezvous server');
-      return false;
-    }
-
-    final completer = _holePunchCompleters[pubkeyHex];
-    if (completer == null) {
-      debugPrint('[discover] Hole-punch state vanished for $name');
-      return false;
-    }
-
-    debugPrint(
-      '[discover] RECONNECT sent for $name ($sent server(s)); '
-      'waiting for PUNCH_INITIATE (timeout: 15s)...',
-    );
-
-    final succeeded = await completer.future.timeout(
-      const Duration(seconds: 15),
-      onTimeout: () {
-        debugPrint('[discover] Hole-punch timed out for $name');
-        _failHolePunchAttempt(
-          pubkeyHex,
-          'Timed out waiting for coordinated hole-punch',
-        );
-        return false;
-      },
-    );
-
-    if (succeeded) {
-      debugPrint('[discover] Successfully established path to $name');
-    }
-    return succeeded;
-  }
-
-  // ===== Internal setup =====
-
-  /// Periodically try to discover unreachable known peers via the configured
-  /// rendezvous servers.
-  ///
-  /// On each announce tick, find known peers that we can't currently reach
-  /// via any transport and send RECONNECT to the configured rendezvous
-  /// servers (the bootstrap RECONNECT/AVAILABLE match).
-  ///
-  /// Throttled: each peer is attempted at most once per [_discoveryRetryInterval].
-  void _discoverUnreachableKnownPeers() {
-    if (!_udpAvailable) {
-      return; // Need UDP to establish the connection
-    }
-
-    if (rendezvousServers.isEmpty) return;
-
-    final now = DateTime.now();
-
-    for (final pubkeyHex in store.state.knownPeers.knownPubkeyHexes) {
-      final peer = _peersState.getPeerByPubkeyHex(pubkeyHex);
-      if (peer == null) continue;
-      // Skip peers we can already reach
-      if (_hasLiveBlePath(peer)) continue;
-      if (_udpService?.getPeerIdForPubkey(peer.publicKey) != null) continue;
-
-      // Skip if we attempted discovery recently
-      final lastAttempt = _lastDiscoveryAttempt[pubkeyHex];
-      if (lastAttempt != null &&
-          now.difference(lastAttempt) < _discoveryRetryInterval) {
-        continue;
-      }
-
-      debugPrint(
-        '[discover] Known peer ${peer.displayName} is unreachable, '
-        'trying rendezvous discovery...',
-      );
-      _lastDiscoveryAttempt[pubkeyHex] = now;
-
-      // Fire-and-forget — don't block the announce tick
-      _discoverPeerViaRendezvous(peer).then((success) {
-        if (success) {
-          debugPrint(
-            '[discover] Successfully reached ${peer.displayName} '
-            'via rendezvous',
-          );
-          _lastDiscoveryAttempt.remove(pubkeyHex);
-        } else {
-          debugPrint(
-            '[discover] Discovery failed for ${peer.displayName}, '
-            'will retry in ${_discoveryRetryInterval.inSeconds}s',
-          );
-        }
-      });
     }
   }
 
@@ -4542,248 +3904,186 @@ class GrassrootsNetwork {
       }
     };
 
-    // Signaling packet received — delegate to SignalingService.
+    // Signaling packet received from a rendezvous server.
     _messageRouter.onSignalingReceived =
-        (senderPubkey, payload, {observedIp, observedPort}) {
-      _signalingService.processSignaling(
-        senderPubkey,
-        payload,
-        observedIp: observedIp,
-        observedPort: observedPort,
-      );
-    };
+        (senderPubkey, payload, {observedIp, observedPort}) =>
+            _onSignalingReceived(senderPubkey, payload);
   }
 
-  /// Set up SignalingService callbacks
-  void _setupSignalingCallbacks() {
-    // SignalingService sends signaling payloads through us (wrapped in GrassrootsPacket)
-    _signalingService.sendSignaling =
-        (recipientPubkey, signalingPayload) async {
-      final packet = _createSignalingPacket(signalingPayload);
-
-      final pubkeyHex = _pubkeyToHex(recipientPubkey);
-      final isRendezvous = _isRendezvousPubkeyHex(pubkeyHex);
-      final rendezvousConfig =
-          isRendezvous ? _rendezvousServerFor(pubkeyHex) : null;
-
-      // Rendezvous anchors are UDP-only and reached via a configured address.
-      // They share the wire encryption (Noise-wrapped `secureSignaling`) with
-      // peer-to-peer signaling — the only specialisation here is the
-      // RV-aware connection-management path (`_syncConfiguredRendezvous`),
-      // which knows about per-RV backoff and the ANNOUNCE primer.
-      if (isRendezvous) {
-        if (_udpService == null || !_udpAvailable) return false;
-        final synced = await _syncConfiguredRendezvous(
-          config: rendezvousConfig,
-          reason: 'signaling-primer',
-        );
-        if (!synced) return false;
-        final udpAddr = rendezvousConfig?.address;
-        if (udpAddr == null || udpAddr.isEmpty) return false;
-        return _sendPacketViaUdp(
-          pubkeyHex: pubkeyHex,
-          udpAddress: udpAddr,
-          packet: packet,
-          recipientPubkey: recipientPubkey,
-          isRendezvous: true,
-        );
-      }
-
-      // Try BLE first
-      if (_bleService != null && _bleAvailable) {
-        final peerId = _bleService!.getPeerIdForPubkey(recipientPubkey);
-        if (peerId != null) {
-          final bytes = await _packetBytesForTransport(
-            packet: packet,
-            transport: PeerTransport.bleDirect,
-            recipientPubkey: recipientPubkey,
-            peerId: peerId,
-          );
-          if (bytes != null && await _bleService!.sendToPeer(peerId, bytes)) {
-            return true;
-          }
-        }
-      }
-
-      // Fall back to UDP
-      if (_udpService != null && _udpAvailable) {
-        if (_udpService!.getPeerIdForPubkey(recipientPubkey) != null) {
-          final bytes = await _packetBytesForTransport(
-            packet: packet,
-            transport: PeerTransport.udp,
-            recipientPubkey: recipientPubkey,
-            peerId: pubkeyHex,
-          );
-          if (bytes != null &&
-              await _udpService!.sendToPeer(pubkeyHex, bytes)) {
-            return true;
-          }
-        }
-
-        // Not connected via UDP yet — try connect-on-demand
-        final peer = store.state.peers.getPeerByPubkeyHex(pubkeyHex);
-        final candidates = _udpCandidatesForPeer(
-          peer,
-          fallbackAddress: rendezvousConfig?.address,
-        );
-        final udpAddr = peer?.udpAddress ??
-            rendezvousConfig?.address ??
-            (candidates.isNotEmpty ? candidates.first : null);
-        if (udpAddr != null && udpAddr.isNotEmpty) {
-          return _sendPacketViaUdp(
-            pubkeyHex: pubkeyHex,
-            udpAddress: udpAddr,
-            packet: packet,
-            recipientPubkey: recipientPubkey,
-            isRendezvous: isRendezvous,
-          );
-        }
-      }
-
-      return false;
-    };
-    _signalingService.sendDirectSignaling = _sendDirectSignalingOverLiveBle;
-
-    // Address-aware send: target an RV at an explicit ip:port even if we
-    // haven't otherwise registered or connected to it. Used by AVAILABLE
-    // fan-out for RVs we learned about from a friend (RV_LIST). The recipient
-    // is always an RV here — always go through the Noise-encrypted
-    // `_sendPacketViaUdp` path; the anchor only accepts secureSignaling.
-    _signalingService.sendSignalingToAddress =
-        (recipientPubkey, address, signalingPayload) async {
-      if (_udpService == null || !_udpAvailable) return false;
-      final packet = _createSignalingPacket(signalingPayload);
-      final pubkeyHex = _pubkeyToHex(recipientPubkey);
-      return _sendPacketViaUdp(
-        pubkeyHex: pubkeyHex,
-        udpAddress: address,
-        packet: packet,
-        recipientPubkey: recipientPubkey,
-        isRendezvous: true,
+  /// A signaling payload arrived over a session.  Signaling is between an
+  /// agent and its rendezvous servers alone, so it is taken from a configured
+  /// rendezvous server and from no one else; two kinds are an agent's: the
+  /// address the server observes it at (spec §Connectivity and Address), and
+  /// the notice that an invite this agent minted, registered with that
+  /// server, was redeemed (spec §WAN Cold-Call, Redemption).  The others are
+  /// a rendezvous server's.
+  void _onSignalingReceived(Uint8List senderPubkey, Uint8List payload) {
+    final senderHex = _pubkeyToHex(senderPubkey);
+    if (!_isRendezvousPubkeyHex(senderHex)) {
+      debugPrint(
+        'Dropping signaling from untrusted sender '
+        '${senderHex.substring(0, 8)}...',
       );
-    };
+      return;
+    }
+    final SignalingMessage message;
+    try {
+      message = const SignalingCodec().decode(payload);
+    } catch (e) {
+      debugPrint('Failed to decode signaling message: $e');
+      return;
+    }
+    switch (message) {
+      case AddrReflectMessage(:final ip, :final port):
+        _onAddrReflected(senderPubkey, ip, port);
+      case InviteRedeemedMessage(:final inviteId, :final redeemerPubkey):
+        _onInviteRedeemed(senderPubkey, inviteId, redeemerPubkey);
+      case RegisterInviteMessage():
+      case RedeemInviteMessage():
+      case InviteRedeemedAckMessage():
+        debugPrint(
+          'Ignoring ${message.runtimeType} from ${senderHex.substring(0, 8)}... '
+          '(rendezvous-server-bound message)',
+        );
+    }
+  }
 
-    // A rendezvous server forwarded a redeemed cold-call invite: validate it
-    // against our locally-recorded outstanding invites, register the
-    // redeemer's identity, and surface it (spec §IP Cold-Call — everything
-    // beyond this is GLP-level).
-    _signalingService.onInviteRedeemed = (rvPubkey, inviteId, redeemerPubkey) {
-      final inviteIdHex = _pubkeyToHex(inviteId);
-      final shortId = inviteIdHex.substring(0, 8);
+  /// Send a signaling payload to the rendezvous server [recipientPubkey] at
+  /// [address], over a UDP session with it, establishing one where none
+  /// stands: a configured server through its connection management (per-
+  /// server backoff and the ANNOUNCE primer), and the server an invite names
+  /// directly.
+  Future<bool> _sendSignalingToRendezvous(
+    Uint8List recipientPubkey,
+    String address,
+    Uint8List signalingPayload,
+  ) async {
+    if (_udpService == null || !_udpAvailable) return false;
+    final pubkeyHex = _pubkeyToHex(recipientPubkey);
+    final config = _rendezvousServerFor(pubkeyHex);
+    if (config != null) {
+      final synced = await _syncConfiguredRendezvous(
+        config: config,
+        reason: 'signaling-primer',
+      );
+      if (!synced) return false;
+    }
+    return _sendPacketViaUdp(
+      pubkeyHex: pubkeyHex,
+      udpAddress: address,
+      packet: GrassrootsPacket(
+        type: PacketType.signaling,
+        payload: signalingPayload,
+      ),
+      recipientPubkey: recipientPubkey,
+      isRendezvous: true,
+    );
+  }
 
-      // Acknowledge to the sender so it stops retrying, regardless of whether
-      // this notification is actionable here (unknown/duplicate) — the sender
-      // already cleared SignalingService's trust gate, and the ack carries no
-      // secret. Without this, a lost first ack would loop the RV's retries.
-      unawaited(_signalingService.sendSignaling?.call(
+  /// A rendezvous server forwarded a redeemed cold-call invite: validate it
+  /// against our locally-recorded outstanding invites, register the
+  /// redeemer's identity, and surface it (spec §IP Cold-Call — everything
+  /// beyond this is GLP-level).
+  void _onInviteRedeemed(
+    Uint8List rvPubkey,
+    Uint8List inviteId,
+    Uint8List redeemerPubkey,
+  ) {
+    final inviteIdHex = _pubkeyToHex(inviteId);
+    final shortId = inviteIdHex.substring(0, 8);
+
+    // Acknowledge to the sender so it stops retrying, regardless of whether
+    // this notification is actionable here (unknown/duplicate) — the sender
+    // already cleared the signaling trust gate, and the ack carries no
+    // secret. Without this, a lost first ack would loop the RV's retries.
+    final rvAddress = _rendezvousServerFor(_pubkeyToHex(rvPubkey))?.address;
+    if (rvAddress != null) {
+      unawaited(_sendSignalingToRendezvous(
         rvPubkey,
+        rvAddress,
         const SignalingCodec().encode(
           InviteRedeemedAckMessage(inviteId: inviteId),
         ),
       ));
+    }
 
-      final outstanding = _outstandingInvites[inviteIdHex];
-      if (outstanding == null) {
-        debugPrint(
-          '[peer-link] redeemed notification for unknown/already-handled '
-          'invite $shortId... (acked)',
-        );
-        return;
-      }
-      final rvHex = _pubkeyToHex(rvPubkey);
-      if (rvHex != outstanding.rvPubkeyHex) {
-        debugPrint(
-          '[peer-link] dropping redeemed notification for $shortId...: '
-          'sender is not the rendezvous server the invite was registered with',
-        );
-        return;
-      }
-      // Single-use locally, mirroring the server-side atomic flip. Expiry is
-      // the rendezvous server's call (it validated the redemption against the
-      // signed ExpiresAt) — we do not second-guess it against our own clock,
-      // which could differ.
-      _outstandingInvites.remove(inviteIdHex);
-      // The redeemed link authorizes the redeemer's first contact
-      // regardless of trust level (spec §Cold Calls).
-      _inviteAuthorizedPubkeys.add(_pubkeyToHex(redeemerPubkey));
-      store.dispatch(
-        PeerIdentityRegisteredAction(publicKey: redeemerPubkey),
-      );
-      debugPrint('[peer-link] invite $shortId... redeemed by '
-          '${_pubkeyToHex(redeemerPubkey).substring(0, 8)}...');
-      onPeerLinkRedeemed?.call(redeemerPubkey);
-    };
-
-    // Hole-punch initiation: a well-connected friend told us to start punching
-    _signalingService.onPunchInitiate =
-        (peerPubkey, ip, port, readyRecipientPubkey) async {
-      await _executePunchInitiate(
-        peerPubkey,
-        ip,
-        port,
-        readyRecipientPubkey: readyRecipientPubkey,
-      );
-    };
-
-    _signalingService.onPunchReady = (peerPubkey) async {
-      final peerHex =
-          peerPubkey.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-      _holePunchRemoteReady.add(peerHex);
-      await _maybeEstablishPunchConnection(peerHex);
-    };
-
-    // Address reflection: a well-connected friend told us our real public address.
-    // This replaces the HTTP-discovered IP + guessed port with the actual
-    // NAT-translated address the friend observed — correct external port included.
-    // The corrected address will be broadcast to all friends on the next
-    // periodic ANNOUNCE cycle.
-    _signalingService.onAddrReflected = (senderPubkey, ip, port) {
-      final senderHex =
-          senderPubkey.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-      if (_isRendezvousPubkeyHex(senderHex)) {
-        debugPrint(
-          '[rendezvous] Server ${senderHex.substring(0, 8)}... reflected our '
-          'address',
-        );
-      }
-
-      final reflectedIp = InternetAddress.tryParse(ip);
-      if (reflectedIp == null) return;
-
-      // Always update the display IP with the reflected address (IPv6 > IPv4).
-      final currentIp = store.state.transports.publicIp;
-      final isUpgrade =
-          reflectedIp.type == InternetAddressType.IPv6 || currentIp == null;
-      if (isUpgrade || ip == currentIp) {
-        store.dispatch(PublicIpUpdatedAction(ip));
-      }
-
-      if (_udpService == null ||
-          !_udpAvailable ||
-          !_udpService!.canDialAddress(reflectedIp)) {
-        debugPrint(
-          'Reflected ${reflectedIp.type == InternetAddressType.IPv6 ? "IPv6" : "IPv4"} '
-          'address $ip:$port — noted for display, but the current UDP '
-          'socket cannot use that family.',
-        );
-        return;
-      }
-
-      final reflected = AddressInfo(reflectedIp, port).toAddressString();
-      final previous = _publicAddress;
-      if (reflected == previous) return; // No change
-
+    final outstanding = _outstandingInvites[inviteIdHex];
+    if (outstanding == null) {
       debugPrint(
-        'Public address updated via reflection: $previous → $reflected',
+        '[peer-link] redeemed notification for unknown/already-handled '
+        'invite $shortId... (acked)',
       );
-      _publicAddress = reflected;
-      store.dispatch(PublicAddressUpdatedAction(reflected));
-      _resetRendezvousBackoff();
-      _resetAutoUdpBackoff();
-      unawaited(_syncConfiguredRendezvous(reason: 'reflected-address-updated'));
-      // Spec onConnectivityStatus: RV-reflection-driven address change.
-      onConnectivityStatusChanged?.call(previous, reflected);
-    };
+      return;
+    }
+    final rvHex = _pubkeyToHex(rvPubkey);
+    if (rvHex != outstanding.rvPubkeyHex) {
+      debugPrint(
+        '[peer-link] dropping redeemed notification for $shortId...: '
+        'sender is not the rendezvous server the invite was registered with',
+      );
+      return;
+    }
+    // Single-use locally, mirroring the server-side atomic flip. Expiry is
+    // the rendezvous server's call (it validated the redemption against the
+    // signed ExpiresAt) — we do not second-guess it against our own clock,
+    // which could differ.
+    _outstandingInvites.remove(inviteIdHex);
+    // The redeemed link authorizes the redeemer's first contact
+    // regardless of trust level (spec §Cold Calls).
+    _inviteAuthorizedPubkeys.add(_pubkeyToHex(redeemerPubkey));
+    store.dispatch(
+      PeerIdentityRegisteredAction(publicKey: redeemerPubkey),
+    );
+    debugPrint('[peer-link] invite $shortId... redeemed by '
+        '${_pubkeyToHex(redeemerPubkey).substring(0, 8)}...');
+    onPeerLinkRedeemed?.call(redeemerPubkey);
+  }
+
+  /// Address reflection: a rendezvous server told us the address it observes
+  /// us at — the NAT-translated address, external port included (spec
+  /// §Connectivity and Address).
+  void _onAddrReflected(Uint8List senderPubkey, String ip, int port) {
+    debugPrint(
+      '[rendezvous] Server ${_pubkeyToHex(senderPubkey).substring(0, 8)}... '
+      'reflected our address',
+    );
+
+    final reflectedIp = InternetAddress.tryParse(ip);
+    if (reflectedIp == null) return;
+
+    // Always update the display IP with the reflected address (IPv6 > IPv4).
+    final currentIp = store.state.transports.publicIp;
+    final isUpgrade =
+        reflectedIp.type == InternetAddressType.IPv6 || currentIp == null;
+    if (isUpgrade || ip == currentIp) {
+      store.dispatch(PublicIpUpdatedAction(ip));
+    }
+
+    if (_udpService == null ||
+        !_udpAvailable ||
+        !_udpService!.canDialAddress(reflectedIp)) {
+      debugPrint(
+        'Reflected ${reflectedIp.type == InternetAddressType.IPv6 ? "IPv6" : "IPv4"} '
+        'address $ip:$port — noted for display, but the current UDP '
+        'socket cannot use that family.',
+      );
+      return;
+    }
+
+    final reflected = AddressInfo(reflectedIp, port).toAddressString();
+    final previous = _publicAddress;
+    if (reflected == previous) return; // No change
+
+    debugPrint(
+      'Public address updated via reflection: $previous → $reflected',
+    );
+    _publicAddress = reflected;
+    store.dispatch(PublicAddressUpdatedAction(reflected));
+    _resetRendezvousBackoff();
+    _resetAutoUdpBackoff();
+    unawaited(_syncConfiguredRendezvous(reason: 'reflected-address-updated'));
+    // Spec onConnectivityStatus: RV-reflection-driven address change.
+    onConnectivityStatusChanged?.call(previous, reflected);
   }
 
   /// Diff each peer's set of reachable transports against the previous store
@@ -4920,43 +4220,7 @@ class GrassrootsNetwork {
       if (event.connected) {
         debugPrint('UDP peer connected: ${event.peerId}');
         store.dispatch(PeerUdpSeenAction(_hexToBytes(event.peerId)));
-        // The peer is reachable again — reset the AVAILABLE re-fire clock so
-        // the next disconnect triggers a fresh fan-out immediately rather than
-        // waiting out the previous-cycle backoff.
-        _availableFanOutLastFiredAt.remove(event.peerId);
-
-        final wasPunching = _holePunchTargets.containsKey(event.peerId) ||
-            _holePunchLocalReady.contains(event.peerId) ||
-            _holePunchRemoteReady.contains(event.peerId);
-        final completer = _holePunchCompleters.remove(event.peerId);
-        if (wasPunching) {
-          final remote = _udpService!.getRemoteAddress(event.peerId);
-          if (remote != null) {
-            store.dispatch(
-              HolePunchSucceededAction(
-                event.peerId,
-                remote.ip.address,
-                remote.port,
-              ),
-            );
-          } else {
-            final peer = _peersState.getPeerByPubkeyHex(event.peerId);
-            final parsed = peer?.udpAddress != null
-                ? parseAddressString(peer!.udpAddress!)
-                : null;
-            if (parsed != null) {
-              store.dispatch(
-                HolePunchSucceededAction(
-                  event.peerId,
-                  parsed.ip.address,
-                  parsed.port,
-                ),
-              );
-            }
-          }
-        } else {
-          // Connection succeeded with no prior hole-punch coordination.
-          //
+        {
           // Incoming: a peer reached us at our public address without us
           // first opening a NAT mapping for them. Record that our current
           // address accepted unsolicited inbound.
@@ -5016,25 +4280,8 @@ class GrassrootsNetwork {
             }
           }
         }
-        if (completer != null && !completer.isCompleted) {
-          completer.complete(true);
-        }
-        _clearHolePunchState(event.peerId);
       } else {
         debugPrint('UDP peer disconnected: ${event.peerId}');
-        final hadPendingPunch =
-            _holePunchCompleters.containsKey(event.peerId) ||
-                _holePunchTargets.containsKey(event.peerId) ||
-                _holePunchLocalReady.contains(event.peerId) ||
-                _holePunchRemoteReady.contains(event.peerId);
-        if (hadPendingPunch) {
-          _failHolePunchAttempt(
-            event.peerId,
-            event.reason ?? 'UDP disconnected during hole-punch',
-          );
-        } else {
-          _clearHolePunchState(event.peerId);
-        }
         final disconnectedPeer = _peersState.getPeerByPubkeyHex(event.peerId);
         if (disconnectedPeer != null) {
           _onUdpPeerDisconnected(disconnectedPeer);
@@ -5066,65 +4313,19 @@ class GrassrootsNetwork {
     });
   }
 
-  /// Fired when a UDP stream ended or the ANNOUNCE keepalive timed out.
-  ///
-  /// Per the rendezvous reconnection algorithm, when we detect a known peer
-  /// went silent we fan out AVAILABLE to the configured rendezvous servers.
-  /// The peer (which presumably had its IP change) will send RECONNECT, the
-  /// server will match the pair, and a coordinated hole-punch follows.
+  /// Fired when a UDP path ended or the ANNOUNCE keepalive timed out: the
+  /// session goes with it.  Overall reachability is tracked by the
+  /// reachability subscriber on the store, which fires the consolidated
+  /// onPeerDisconnected when the last live transport drops; recovery is the
+  /// heartbeat sweep's and the social graph's (spec §Connectivity and
+  /// Address, "Address-change recovery").
   void _onUdpPeerDisconnected(PeerState peer) {
     _noiseSessions.reset(PeerTransport.udp, peer.publicKey);
-    if (!_isKnownPeerPubkey(peer.publicKey)) return;
-
-    // Overall reachability is tracked by the reachability subscriber on the
-    // store, which fires the consolidated onPeerDisconnected when the last
-    // live transport drops. This handler only owns UDP-specific recovery —
-    // fanning out AVAILABLE so the rendezvous servers can help re-establish.
-
-    if (rendezvousServers.isEmpty) return;
-
-    debugPrint(
-      '[reconnect] UDP path to ${peer.displayName} dropped — fanning out AVAILABLE',
-    );
-    _availableFanOutLastFiredAt[peer.pubkeyHex] = DateTime.now();
-    unawaited(_signalingService.fanOutAvailable(peer.publicKey));
-  }
-
-  /// Periodically re-fire AVAILABLE for known peers that remain
-  /// UDP-unreachable.
-  ///
-  /// The RV holds AVAILABLE entries for a finite expiry window (~5 minutes).
-  /// If the peer takes longer than that window to deliver its matching
-  /// RECONNECT (e.g. its client is stalled on a stale-cache false-positive
-  /// direct dial), the RV will have dropped our AVAILABLE and no pairing can
-  /// complete. Re-firing every cycle keeps the pairing window open until the
-  /// peer is reachable or we give up the path.
-  void _refireAvailableForUnreachableKnownPeers({bool force = false}) {
-    if (_udpService == null || !_udpAvailable) return;
-    final now = DateTime.now();
-    for (final pubkeyHex in store.state.knownPeers.knownPubkeyHexes) {
-      final pubkey = _hexToBytes(pubkeyHex);
-      // Skip peers we already have a live UDP connection to.
-      if (_udpService!.getPeerIdForPubkey(pubkey) != null) continue;
-
-      final last = _availableFanOutLastFiredAt[pubkeyHex];
-      if (!force &&
-          last != null &&
-          now.difference(last) < _availableRefireInterval) {
-        continue;
-      }
-      debugPrint(
-        '[reconnect] Re-firing AVAILABLE for ${pubkeyHex.substring(0, 8)}... '
-        '(UDP-unreachable for ${last == null ? "unknown" : "${now.difference(last).inSeconds}s"}${force ? ", forced" : ""})',
-      );
-      _availableFanOutLastFiredAt[pubkeyHex] = now;
-      unawaited(_signalingService.fanOutAvailable(pubkey));
-    }
   }
 
   /// Called by the host app when it returns to the foreground.
   ///
-  /// Three steps, in order:
+  /// Two steps, in order:
   ///   1. Probe the raw UDP sockets and rebind the transport if the OS
   ///      poisoned them while we were backgrounded (Android in particular
   ///      EPERMs background sends and leaves the socket FD in a permanently
@@ -5132,9 +4333,6 @@ class GrassrootsNetwork {
   ///   2. Re-sync configured rendezvous servers (existing UDX sessions may
   ///      be talking to a stale CID, or the rebind in step 1 just dropped
   ///      every session).
-  ///   3. Force-refire AVAILABLE for unreachable friends, bypassing the
-  ///      5-minute throttle. Waking up is a strong signal the user is about
-  ///      to interact; latency matters more than RV bandwidth here.
   Future<void> onAppResumed() async {
     debugPrint('[lifecycle] App resumed — probing sockets, re-syncing RVs');
     if (_udpService != null && _udpAvailable) {
@@ -5144,7 +4342,6 @@ class GrassrootsNetwork {
       }
     }
     unawaited(_syncConfiguredRendezvous(reason: 'app-resumed'));
-    _refireAvailableForUnreachableKnownPeers(force: true);
     _drainQueuedMessagesForLivePeers();
   }
 
@@ -5168,16 +4365,6 @@ class GrassrootsNetwork {
 
     await stop();
 
-    // Complete any pending hole-punch waiters so send() callers don't hang
-    for (final completer in _holePunchCompleters.values) {
-      if (!completer.isCompleted) completer.complete(false);
-    }
-    _holePunchCompleters.clear();
-    _holePunchTargets.clear();
-    _holePunchLocalReady.clear();
-    _holePunchRemoteReady.clear();
-    _holePunchConnectionInProgress.clear();
-    _availableFanOutLastFiredAt.clear();
     _outboundMessageQueue.clear();
     _outboundQueueDrainsInProgress.clear();
 
@@ -5190,7 +4377,6 @@ class GrassrootsNetwork {
     }
     _attestationDeadlines.clear();
 
-    _signalingService.dispose();
     _noiseSessions.dispose();
 
     if (_bleService != null) {
@@ -5231,8 +4417,6 @@ class GrassrootsNetwork {
       _broadcastAnnounceViaUdp();
       _holdRendezvousSessions();
       _removeStalePeers();
-      _discoverUnreachableKnownPeers();
-      _refireAvailableForUnreachableKnownPeers();
       _drainQueuedMessagesForLivePeers();
       unawaited(_refreshLocalNetwork());
       // The same tick catches an interface address the platform reported

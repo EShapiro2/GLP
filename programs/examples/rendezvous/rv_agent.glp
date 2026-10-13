@@ -89,6 +89,32 @@ PendingEntry ::= needs(Key, Key, String, SignalReply?)
                  %% ready(B_pk, A_pk, AddrB, ReplyB?) — B is available for A
 PendingList ::= [] ; [PendingEntry | PendingList].
 
+%% A message as it arrives on the agent's network input: msg(Q, M), Q the
+%% agent's own key, to which the sender addressed it, and M the message
+RvNetMsg ::= msg(Key, SignalMsg).
+RvNetIn ::= [] ; [RvNetMsg | RvNetIn].
+SignalIn ::= [] ; [SignalMsg | SignalIn].
+
+%% =============================================================================
+%% THE SERVER'S ENTRY
+%% =============================================================================
+
+%% rv_server(Id, Graph, NetIn): the rendezvous server's agent, as a GLP
+%% runtime over the headless layer boots it (networking/glue/bin/
+%% rendezvous_server.dart): Id is the agent's own key, Graph the social
+%% graph's source identity, and NetIn the network input, each element
+%% msg(Id, M) with M a reconnect or available sent to this agent.  The
+%% envelope is taken off and the agent runs over what it carried, with
+%% nothing pending.
+exported procedure rv_server(Key?, Hash?, RvNetIn?).
+rv_server(_, Graph, NetIn) :-
+    rv_unwrap(NetIn?, In),
+    rv_agent(Graph?, In?, []).
+
+procedure rv_unwrap(RvNetIn?, SignalIn).
+rv_unwrap([msg(_, M) | Ms], [M? | In?]) :- rv_unwrap(Ms?, In).
+rv_unwrap([], []).
+
 %% =============================================================================
 %% MAIN LOOP
 %% =============================================================================
