@@ -27,12 +27,11 @@
 %%
 %% Entry point: run/0, exported by self.glp as credit_line/0.
 
-imported procedure village#villager(Key?, Script?, Stream(NetInMsg)?, Stream(NetOutMsg)).
-imported procedure village#escrow_agent(Key?, Script?, Agreement?, Stream(NetInMsg)?, Stream(NetOutMsg)).
+imported procedure village#villager(Key?, Script?, Stream(Conversation)?).
+imported procedure village#escrow_agent(Key?, Script?, Agreement?, Stream(Conversation)?).
 
 exported procedure run.
 run :-
-    network3(AOut?, BOut?, GOut?, AIn, BIn, GIn),
     village # villager(alice,
         [mint(20), deposit(escrow, alice, now, 20),
          accept_transfer(escrow), accept_transfer(escrow),
@@ -44,7 +43,7 @@ run :-
          await(presented(bob, bob, 25)),
          deposit(escrow, alice, now, 5),
          accept_transfer(escrow)],
-        AIn?, AOut),
+        [conversation(bob, ch(AB?, BA)), conversation(escrow, ch(AG?, GA))]),
     village # villager(bob,
         [mint(8, 25), mint(2, 20),
          deposit(escrow, bob, 25, 8), deposit(escrow, bob, 20, 2),
@@ -52,22 +51,8 @@ run :-
          redeem(alice, bob, 25), redeem(alice, bob, 25), redeem(alice, bob, 25),
          redeem(alice, bob, 25), redeem(alice, bob, 25), redeem(alice, bob, 25),
          redeem(alice, bob, 25), redeem(alice, bob, 25)],
-        BIn?, BOut),
+        [conversation(alice, ch(BA?, AB)), conversation(escrow, ch(BG?, GB))]),
     village # escrow_agent(escrow,
         [await(received_transfer(deposit, alice, [lot(alice, now, 5)])), advance(25)],
         credit_line(alice, bob, 20, 25, 20, 0, 0, opening, 0),
-        GIn?, GOut).
-
-%% --- The network: first contacts, routed by addressee ---
-
-procedure route3(Stream(NetOutMsg)?, Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg)).
-route3([msg(alice, C)|Rest], [msg(alice, C?)|A?], B?, G?) :- route3(Rest?, A, B, G).
-route3([msg(bob, C)|Rest], A?, [msg(bob, C?)|B?], G?) :- route3(Rest?, A, B, G).
-route3([msg(escrow, C)|Rest], A?, B?, [msg(escrow, C?)|G?]) :- route3(Rest?, A, B, G).
-route3([], [], [], []).
-
-procedure network3(Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg)).
-network3(AOut, BOut, GOut, AIn?, BIn?, GIn?) :-
-    merge(AOut?, BOut?, AB),
-    merge(AB?, GOut?, All),
-    route3(All?, AIn, BIn, GIn).
+        [conversation(alice, ch(GA?, AG)), conversation(bob, ch(GB?, BG))]).

@@ -1,0 +1,35 @@
+%% dated/self.glp --- the bonds program as a certified program of its own: the
+%% bond agent (bonds_agent.vglp, its compilation bonds_agent.glp), the
+%% mini-app entry bonds/3 (miniapp.glp), a scripted person (person.glp) with
+%% the escrow programs it answers by (escrow.glp), and the plays that activate
+%% the mini-app by run/3 (plays.glp); the types and the helpers are the
+%% parent's (../self.glp, an ancestor scope).  It is a program of its own
+%% because the certificate of a program is refused where any entry point
+%% reaches the person or the network, and the parent's plays do
+%% (send_to_user/1): loaded here, without them, the program is certified, and
+%% its module value is the mini-app the super-app installs and activates by
+%% run/3.  The parent's plays (../village.glp, ../credit_line.glp and the
+%% instruments' plays) call bonds/4, the mini-app with its calendar, and the
+%% scripted person/7 through this directory, which exports both (TGLP
+%% modules.tex: a qualifier is a single child directory, entered through its
+%% self.glp).
+
+imported procedure miniapp#bonds(Key?, Channel(PersonIn, Stream(_))?, Stream(Conversation)?).
+exported procedure bonds(Key?, Channel(PersonIn, Stream(_))?, Stream(Conversation)?).
+bonds(Id, Ui, Convs) :- miniapp # bonds(Id?, Ui?, Convs?).
+
+imported procedure miniapp#bonds(Key?, Channel(PersonIn, Stream(_))?, Stream(Conversation)?, Stream(Integer)?).
+exported procedure bonds(Key?, Channel(PersonIn, Stream(_))?, Stream(Conversation)?, Stream(Integer)?).
+bonds(Id, Ui, Convs, Cal) :- miniapp # bonds(Id?, Ui?, Convs?, Cal?).
+
+imported procedure person#person(Key?, _?, PersonIn, Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
+exported procedure person(Key?, _?, PersonIn, Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
+person(Id, Draws, Grants?, Cal?, Script, Ag, Screen?) :- person # person(Id?, Draws?, Grants, Cal, Script?, Ag?, Screen).
+
+imported procedure plays#play_mint(Stream(ScreenContent)).
+exported procedure play_mint(Stream(ScreenContent)).
+play_mint(S?) :- plays # play_mint(S).
+
+imported procedure plays#play_swap(Stream(ScreenContent), Stream(ScreenContent)).
+exported procedure play_swap(Stream(ScreenContent), Stream(ScreenContent)).
+play_swap(A?, B?) :- plays # play_swap(A, B).

@@ -13,7 +13,7 @@
 %% Entry points, exported by self.glp: insurance_claimed/0, insurance_expired/0,
 %% cds_event/0, cds_no_event/0, letter_of_credit/0.
 
-imported procedure village#villager(Key?, Script?, Stream(NetInMsg)?, Stream(NetOutMsg)).
+imported procedure village#villager(Key?, Script?, Stream(Conversation)?).
 
 %% =============================================================================
 %% Insurance (item 4): insurer Bob's reserve of 20, Alice's premium of 2
@@ -21,35 +21,33 @@ imported procedure village#villager(Key?, Script?, Stream(NetInMsg)?, Stream(Net
 
 exported procedure insurance_claimed.
 insurance_claimed :-
-    network3c(AOut?, BOut?, GOut?, AIn, BIn, GIn),
     village # villager(alice,
         [mint(2), deposit(escrow, alice, now, 2), accept_transfer(escrow)],
-        AIn?, AOut),
+        [conversation(escrow, ch(AG?, GA))]),
     village # villager(bob,
         [mint(20), deposit(escrow, bob, now, 20), accept_transfer(escrow)],
-        BIn?, BOut),
+        [conversation(escrow, ch(BG?, GB))]),
     village # villager(escrow,
         [accept_transfer(bob), accept_transfer(alice),
          release(alice, bob, now, 20),
          release(bob, alice, now, 2)],
-        GIn?, GOut).
+        [conversation(alice, ch(GA?, AG)), conversation(bob, ch(GB?, BG))]).
 
 exported procedure insurance_expired.
 insurance_expired :-
-    network3c(AOut?, BOut?, GOut?, AIn, BIn, GIn),
     village # villager(alice,
         [mint(2), deposit(escrow, alice, now, 2)],
-        AIn?, AOut),
+        [conversation(escrow, ch(AG?, GA))]),
     village # villager(bob,
         [mint(20), deposit(escrow, bob, now, 20),
          accept_transfer(escrow), accept_transfer(escrow)],
-        BIn?, BOut),
+        [conversation(escrow, ch(BG?, GB))]),
     village # villager(escrow,
         [accept_transfer(bob), accept_transfer(alice),
          advance(31),
          release(bob, alice, now, 2),
          return(bob, bob, now, 20)],
-        GIn?, GOut).
+        [conversation(alice, ch(GA?, AG)), conversation(bob, ch(GB?, BG))]).
 
 %% =============================================================================
 %% Credit default swap (item 5): Bob's reserve of 20, Alice's premium bonds of
@@ -59,39 +57,37 @@ insurance_expired :-
 
 exported procedure cds_event.
 cds_event :-
-    network3c(AOut?, BOut?, GOut?, AIn, BIn, GIn),
     village # villager(alice,
         [mint(1, 10), mint(1, 20),
          deposit(escrow, alice, 10, 1), deposit(escrow, alice, 20, 1),
          accept_transfer(escrow)],
-        AIn?, AOut),
+        [conversation(escrow, ch(AG?, GA))]),
     village # villager(bob,
         [mint(20), deposit(escrow, bob, now, 20),
          accept_transfer(escrow), accept_transfer(escrow)],
-        BIn?, BOut),
+        [conversation(escrow, ch(BG?, GB))]),
     village # villager(escrow,
         [accept_transfer(bob), accept_transfer(alice), accept_transfer(alice),
          release(bob, alice, 10, 1), release(bob, alice, 20, 1),
          release(alice, bob, now, 20)],
-        GIn?, GOut).
+        [conversation(alice, ch(GA?, AG)), conversation(bob, ch(GB?, BG))]).
 
 exported procedure cds_no_event.
 cds_no_event :-
-    network3c(AOut?, BOut?, GOut?, AIn, BIn, GIn),
     village # villager(alice,
         [mint(1, 10), mint(1, 20),
          deposit(escrow, alice, 10, 1), deposit(escrow, alice, 20, 1)],
-        AIn?, AOut),
+        [conversation(escrow, ch(AG?, GA))]),
     village # villager(bob,
         [mint(20), deposit(escrow, bob, now, 20),
          accept_transfer(escrow), accept_transfer(escrow), accept_transfer(escrow)],
-        BIn?, BOut),
+        [conversation(escrow, ch(BG?, GB))]),
     village # villager(escrow,
         [accept_transfer(bob), accept_transfer(alice), accept_transfer(alice),
          release(bob, alice, 10, 1), release(bob, alice, 20, 1),
          advance(31),
          return(bob, bob, now, 20)],
-        GIn?, GOut).
+        [conversation(alice, ch(GA?, AG)), conversation(bob, ch(GB?, BG))]).
 
 %% =============================================================================
 %% Letter of credit (item 6): the bank's 10 coins for seller Alice, reimbursed
@@ -110,47 +106,18 @@ cds_no_event :-
 
 exported procedure letter_of_credit.
 letter_of_credit :-
-    network4c(KOut?, AOut?, BOut?, GOut?, KIn, AIn, BIn, GIn),
     village # villager(bank,
         [mint(10), deposit(escrow, bank, now, 10), accept_transfer(escrow)],
-        KIn?, KOut),
+        [conversation(escrow, ch(KG?, GK))]),
     village # villager(alice,
         [accept_transfer(escrow)],
-        AIn?, AOut),
+        [conversation(escrow, ch(AG?, GA))]),
     village # villager(bob,
         [mint(10, 30), deposit(escrow, bob, 30, 10)],
-        BIn?, BOut),
+        [conversation(escrow, ch(BG?, GB))]),
     village # villager(escrow,
         [accept_transfer(bank),
          release(alice, bank, now, 10),
          accept_transfer(bob),
          release(bank, bob, 30, 10)],
-        GIn?, GOut).
-
-%% --- The networks: first contacts, routed by addressee ---
-
-procedure route3c(Stream(NetOutMsg)?, Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg)).
-route3c([msg(alice, C)|Rest], [msg(alice, C?)|A?], B?, G?) :- route3c(Rest?, A, B, G).
-route3c([msg(bob, C)|Rest], A?, [msg(bob, C?)|B?], G?) :- route3c(Rest?, A, B, G).
-route3c([msg(escrow, C)|Rest], A?, B?, [msg(escrow, C?)|G?]) :- route3c(Rest?, A, B, G).
-route3c([], [], [], []).
-
-procedure network3c(Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg)).
-network3c(AOut, BOut, GOut, AIn?, BIn?, GIn?) :-
-    merge(AOut?, BOut?, AB),
-    merge(AB?, GOut?, All),
-    route3c(All?, AIn, BIn, GIn).
-
-procedure route4c(Stream(NetOutMsg)?, Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg)).
-route4c([msg(bank, C)|Rest], [msg(bank, C?)|K?], A?, B?, G?) :- route4c(Rest?, K, A, B, G).
-route4c([msg(alice, C)|Rest], K?, [msg(alice, C?)|A?], B?, G?) :- route4c(Rest?, K, A, B, G).
-route4c([msg(bob, C)|Rest], K?, A?, [msg(bob, C?)|B?], G?) :- route4c(Rest?, K, A, B, G).
-route4c([msg(escrow, C)|Rest], K?, A?, B?, [msg(escrow, C?)|G?]) :- route4c(Rest?, K, A, B, G).
-route4c([], [], [], [], []).
-
-procedure network4c(Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg)).
-network4c(KOut, AOut, BOut, GOut, KIn?, AIn?, BIn?, GIn?) :-
-    merge(KOut?, AOut?, KA),
-    merge(BOut?, GOut?, BG),
-    merge(KA?, BG?, All),
-    route4c(All?, KIn, AIn, BIn, GIn).
+        [conversation(bank, ch(GK?, KG)), conversation(alice, ch(GA?, AG)), conversation(bob, ch(GB?, BG))]).

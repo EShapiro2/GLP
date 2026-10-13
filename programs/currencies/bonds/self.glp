@@ -5,10 +5,14 @@
 %% derived from the transactions of its Section 3.4, Definition "The
 %% Transactions of Grassroots Bonds".  It extends the coins program
 %% (programs/currencies/coins) by what dates add.  This file holds the types shared by the
-%% agent (bonds_agent.vglp, compiled by the vGLP canonical compilation into
-%% bonds_agent.glp beside it), the escrow programs (escrow.glp) and the plays
-%% (village.glp, credit_line.glp), and the helpers over holdings, dates and
-%% channels that the agent calls.
+%% agent (dated/bonds_agent.vglp, compiled by the vGLP canonical compilation
+%% into dated/bonds_agent.glp beside it), the escrow programs (dated/escrow.glp)
+%% and the plays (village.glp, credit_line.glp and the instruments' plays), and
+%% the helpers over holdings, dates and conversations that the agent calls.
+%% The certified program, the mini-app of the Grassroots Super-App, is
+%% dated/; this directory adds the plays that stand in for the super-app and
+%% its persons, which reach the person (send_to_user/1) and so are not part of
+%% the certified program.
 %%
 %% A coin and a bond are two instruments.  A coin is coin(Issuer, Serial), a
 %% unit of its issuer's debt due now, carrying no date: the atom cent(u, bot)
@@ -62,26 +66,20 @@ PeerContent ::= pay(Stream(Instrument), PayResponse?)
 PeerMsg     ::= msg(Key, Key, PeerContent).
 PeerChannel ::= ch(Stream(PeerMsg), Stream(PeerMsg)?).
 
-%% First contact.  An act sent to a party the sender has no channel to carries
-%% the receiver's end of a fresh channel, on which the two transact thereafter.
-NetCall   ::= call(Key, PeerContent, PeerChannel).
-NetOutMsg ::= msg(Key, NetCall).
-NetInMsg  ::= msg(Key, NetCall)
-            ; msg(Key, Key, PeerContent).
-
-%% A channel held for a swap or a transfer proposed at first contact ---
-%% adopted when it is accepted, closed when it is declined --- or linked, an
-%% established channel.
-Link ::= link(PeerChannel) ; linked.
+%% What the social graph hands the mini-app on its channel to the social graph
+%% (Grassroots Social Graph paper, Section 3): at each invitation, one end of
+%% the root channel of a conversation with a friend's execution of this
+%% program.  Two agents transact over that channel and over nothing else.
+Conversation ::= conversation(Key, PeerChannel).
 
 %% Whether an instrument was found in the holdings.
 Found ::= found(Instrument) ; not_found.
 
 %% The answer to a question the agent, the scripted person or the escrow
 %% program asks of its state: whether every instrument of a payment is a coin
-%% of the payee (own_coins), whether a channel to a counterparty is open
+%% of the payee (own_coins), whether a conversation with a counterparty is open
 %% (has_peer), whether the screen shows a step's effect, and whether a lot is
-%% one of a list, is owed, or every lot of a list is held (escrow.glp).  The
+%% one of a list, is owed, or every lot of a list is held (dated/escrow.glp).  The
 %% name is the one bonds_v2 and the social graph give the same two constants.
 Decision ::= yes ; no.
 
@@ -90,18 +88,17 @@ Decision ::= yes ; no.
 %% 3.4 does not hold.
 Status ::= ok ; fail.
 
-%% The agent's outputs: the screen, the network, and a channel per
-%% counterparty, keyed by its name.  The routers send_user, send_net,
-%% send_friend and add_friend_output are those of lib/routing, exposed from the
-%% root scope.
+%% The agent's outputs: the screen, and a channel per counterparty, keyed by
+%% its name.  The routers send_user, send_friend and add_friend_output are
+%% those of social/graph/routing, exposed from the root scope.
 OutputEntry ::= user_output(Stream(ScreenMsg)?)
-              ; net_output(Stream(NetOutMsg)?)
               ; friend_output(Key, Stream(PeerMsg)?).
 
 %% The screen: the holdings, tallied by issuer and due, after every change of
 %% them; the date after every advance; and what each act came to.  A due is `now` for coins and the maturity date for
 %% bonds.
 ScreenContent ::= holdings(Stream(Lot))
+                ; opened(Key)
                 ; date_advanced(Integer)
                 ; minted(Integer, Constant)
                 ; paying(Key, Integer)
@@ -127,15 +124,16 @@ ScreenContent ::= holdings(Stream(Lot))
                 ; transfer_declined(Kind, Key)
                 ; received_transfer(Kind, Key, Stream(Lot))
                 ; declined_transfer(Kind, Key)
-                ; lacking(Key, Constant, Integer).
+                ; lacking(Key, Constant, Integer)
+                ; no_conversation(Key).
 ScreenMsg ::= msg(Constant, Constant, ScreenContent).
 
 %% The agent's own input: the answers its responders inject, and the results
 %% of the acts it proposed.
-UserInMsg ::= accept_swap(Key, Lot, Stream(Instrument), SwapResponse?, Link)
-            ; decline_swap(Key, Stream(Instrument), SwapResponse?, Link)
-            ; swap_accepted(Key, Stream(Instrument), Link)
-            ; swap_declined_by(Key, Stream(Instrument), Link)
+UserInMsg ::= accept_swap(Key, Lot, Stream(Instrument), SwapResponse?)
+            ; decline_swap(Key, Stream(Instrument), SwapResponse?)
+            ; swap_accepted(Key, Stream(Instrument))
+            ; swap_declined_by(Key, Stream(Instrument))
             ; pay_taken_by(Key, Integer)
             ; pay_returned_by(Key, Stream(Instrument))
             ; redeem_given(Key, Key, Constant, Instrument)
@@ -143,10 +141,10 @@ UserInMsg ::= accept_swap(Key, Lot, Stream(Instrument), SwapResponse?, Link)
             ; redeem_declined_by(Key, Instrument)
             ; matured_by(Key, Integer, Instrument)
             ; not_matured_by(Key, Instrument)
-            ; accept_transfer(Kind, Key, Stream(Instrument), TransferResponse?, Link)
-            ; decline_transfer(Kind, Key, Stream(Instrument), TransferResponse?, Link)
-            ; transfer_accepted(Kind, Key, Link)
-            ; transfer_declined_by(Kind, Key, Stream(Instrument), Link).
+            ; accept_transfer(Kind, Key, Stream(Instrument), TransferResponse?)
+            ; decline_transfer(Kind, Key, Stream(Instrument), TransferResponse?)
+            ; transfer_accepted(Kind, Key)
+            ; transfer_declined_by(Kind, Key, Stream(Instrument)).
 
 %% The offer a swap responder carries: the proposer, the lot it wants, the
 %% instruments it offers.  The offer a transfer responder carries: the kind,
@@ -207,7 +205,7 @@ TransferCard ::= card(TransferOffer, YesNo?).
 %% The vocabulary of the compiled agent's dispatcher, so that the plays can
 %% type the goals they spawn: the union of the agent's questions and the asks
 %% its goals send, as the canonical compilation emits them into
-%% bonds_agent.glp, and the person channel's input, as programs/vglp/
+%% dated/bonds_agent.glp, and the person channel's input, as programs/vglp/
 %% dispatcher.glp gives it.  The compiled module's own definitions shadow
 %% these within it, and the two must agree.
 %% =============================================================================
@@ -251,7 +249,7 @@ Step ::= mint(Integer)
        ; await(ScreenContent).
 Script ::= [] ; [Step | Script].
 
-%% An escrow agreement, run by the escrow program of escrow.glp as the will of
+%% An escrow agreement, run by the escrow program of dated/escrow.glp as the will of
 %% the escrow agent, with its state: none, for a party under no agreement; a
 %% date-based escrow --- the depositor, the beneficiary, the lot, the date of
 %% the escrow agent at which it releases, its phase, and the escrow agent's
@@ -392,10 +390,10 @@ menu_of(Id, [bond(I, M, _)|Rest], Acc, Menu?) :-
 menu_of(_, [], Acc, Acc?).
 
 %% =============================================================================
-%% Channels to counterparties
+%% Conversations with counterparties
 %% =============================================================================
 
-%% Whether a channel to Q is among the outputs.
+%% Whether a conversation with Q is open: Q's output entry is among the outputs.
 procedure has_peer(Key?, Stream(OutputEntry)?, Stream(OutputEntry), Decision).
 has_peer(Q, [friend_output(K, Out?)|Rest], [friend_output(K?, Out)|Rest?], yes) :-
     Q? =?= K? | true.
@@ -404,34 +402,26 @@ has_peer(Q, [E|Rest], [E?|Rest1?], Known?) :-
     has_peer(Q?, Rest?, Rest1, Known).
 has_peer(_, [], [], no).
 
-%% Adopt a channel to Q: its write side becomes Q's output entry and its read
-%% side joins the network input.  An established link adopts nothing.
-procedure adopt(Link?, Key?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg)).
-adopt(link(ch(In, Out?)), Q, Outs, Outs1?, NetIn, NetIn1?) :-
+%% Adopt the channel of a conversation with Q: its write side becomes Q's
+%% output entry and its read side joins the input from counterparties.
+procedure adopt(Key?, PeerChannel?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(PeerMsg)?, Stream(PeerMsg)).
+adopt(Q, ch(In, Out?), Outs, Outs1?, PeerIn, PeerIn1?) :-
     ground(Q?) |
     add_friend_output(Q?, Out, Outs?, Outs1),
-    merge(NetIn?, In?, NetIn1).
-adopt(linked, _, Outs, Outs?, NetIn, NetIn?).
-
-%% A channel held for a declined swap or transfer: its write side closes.  An
-%% established link stays.
-procedure drop_link(Link?).
-drop_link(link(ch(_, []))).
-drop_link(linked).
+    merge(PeerIn?, In?, PeerIn1).
 
 %% =============================================================================
 %% Results injected into the agent's input
 %% =============================================================================
 
-%% The counterparty's answer to a proposed swap, when it comes, with the link
-%% the proposal was made on.
-procedure inject_swap_result(SwapResponse?, Key?, Link?, Stream(UserInMsg)?, Stream(UserInMsg)).
-inject_swap_result(swap_accept(Given), Q, Link, Ys, [swap_accepted(Q?, Given?, Link?)|Ys?]) :-
+%% The counterparty's answer to a proposed swap, when it comes.
+procedure inject_swap_result(SwapResponse?, Key?, Stream(UserInMsg)?, Stream(UserInMsg)).
+inject_swap_result(swap_accept(Given), Q, Ys, [swap_accepted(Q?, Given?)|Ys?]) :-
     ground(Q?), ground(Given?) | true.
-inject_swap_result(swap_decline(Given), Q, Link, Ys, [swap_declined_by(Q?, Given?, Link?)|Ys?]) :-
+inject_swap_result(swap_decline(Given), Q, Ys, [swap_declined_by(Q?, Given?)|Ys?]) :-
     ground(Q?), ground(Given?) | true.
-inject_swap_result(R, Q, Link, [Y|Ys], [Y?|Ys1?]) :-
-    inject_swap_result(R?, Q?, Link?, Ys?, Ys1).
+inject_swap_result(R, Q, [Y|Ys], [Y?|Ys1?]) :-
+    inject_swap_result(R?, Q?, Ys?, Ys1).
 
 %% The payee's answer to a payment of K coins, when it comes.
 procedure inject_pay_result(PayResponse?, Key?, Integer?, Stream(UserInMsg)?, Stream(UserInMsg)).
@@ -463,31 +453,30 @@ inject_mature_result(mature_declined(Bond), Q, _, Ys, [not_matured_by(Q?, Bond?)
 inject_mature_result(Resp, Q, D, [Y|Ys], [Y?|Ys1?]) :-
     inject_mature_result(Resp?, Q?, D?, Ys?, Ys1).
 
-%% The receiver's answer to a proposed transfer, when it comes, with the link
-%% the proposal was made on.
-procedure inject_transfer_result(TransferResponse?, Kind?, Key?, Link?, Stream(UserInMsg)?, Stream(UserInMsg)).
-inject_transfer_result(transfer_accept, Kind, Q, Link, Ys, [transfer_accepted(Kind?, Q?, Link?)|Ys?]) :-
+%% The receiver's answer to a proposed transfer, when it comes.
+procedure inject_transfer_result(TransferResponse?, Kind?, Key?, Stream(UserInMsg)?, Stream(UserInMsg)).
+inject_transfer_result(transfer_accept, Kind, Q, Ys, [transfer_accepted(Kind?, Q?)|Ys?]) :-
     ground(Kind?), ground(Q?) | true.
-inject_transfer_result(transfer_decline(Given), Kind, Q, Link, Ys, [transfer_declined_by(Kind?, Q?, Given?, Link?)|Ys?]) :-
+inject_transfer_result(transfer_decline(Given), Kind, Q, Ys, [transfer_declined_by(Kind?, Q?, Given?)|Ys?]) :-
     ground(Kind?), ground(Q?), ground(Given?) | true.
-inject_transfer_result(R, Kind, Q, Link, [Y|Ys], [Y?|Ys1?]) :-
-    inject_transfer_result(R?, Kind?, Q?, Link?, Ys?, Ys1).
+inject_transfer_result(R, Kind, Q, [Y|Ys], [Y?|Ys1?]) :-
+    inject_transfer_result(R?, Kind?, Q?, Ys?, Ys1).
 
 %% The bodies of the swap responder's two answers (decide_swap): the
 %% acceptance, on yes, and the decline, on no.  Each hands the agent the offer
-%% with the response writer and the link.
-procedure accept_answer(Key?, Lot?, Stream(Instrument)?, SwapResponse, Link?, Stream(UserInMsg)).
-accept_answer(From, Want, Offered, Resp?, Link, [accept_swap(From?, Want?, Offered?, Resp, Link?)]).
+%% with the response writer.
+procedure accept_answer(Key?, Lot?, Stream(Instrument)?, SwapResponse, Stream(UserInMsg)).
+accept_answer(From, Want, Offered, Resp?, [accept_swap(From?, Want?, Offered?, Resp)]).
 
-procedure decline_answer(Key?, Stream(Instrument)?, SwapResponse, Link?, Stream(UserInMsg)).
-decline_answer(From, Offered, Resp?, Link, [decline_swap(From?, Offered?, Resp, Link?)]).
+procedure decline_answer(Key?, Stream(Instrument)?, SwapResponse, Stream(UserInMsg)).
+decline_answer(From, Offered, Resp?, [decline_swap(From?, Offered?, Resp)]).
 
 %% The same for the transfer responder (decide_transfer).
-procedure accept_transfer_answer(Kind?, Key?, Stream(Instrument)?, TransferResponse, Link?, Stream(UserInMsg)).
-accept_transfer_answer(Kind, From, Given, Resp?, Link, [accept_transfer(Kind?, From?, Given?, Resp, Link?)]).
+procedure accept_transfer_answer(Kind?, Key?, Stream(Instrument)?, TransferResponse, Stream(UserInMsg)).
+accept_transfer_answer(Kind, From, Given, Resp?, [accept_transfer(Kind?, From?, Given?, Resp)]).
 
-procedure decline_transfer_answer(Kind?, Key?, Stream(Instrument)?, TransferResponse, Link?, Stream(UserInMsg)).
-decline_transfer_answer(Kind, From, Given, Resp?, Link, [decline_transfer(Kind?, From?, Given?, Resp, Link?)]).
+procedure decline_transfer_answer(Kind?, Key?, Stream(Instrument)?, TransferResponse, Stream(UserInMsg)).
+decline_transfer_answer(Kind, From, Given, Resp?, [decline_transfer(Kind?, From?, Given?, Resp)]).
 
 %% Binding a declined swap's response: the offered instruments go back.
 procedure decline(SwapResponse, Stream(Instrument)?).

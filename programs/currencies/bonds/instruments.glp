@@ -32,7 +32,7 @@
 %% contract as the payment of a fiat coin does (Udi, 2026-09-15).  See
 %% collateral.glp, which carries the same note.
 
-imported procedure village#villager(Key?, Script?, Stream(NetInMsg)?, Stream(NetOutMsg)).
+imported procedure village#villager(Key?, Script?, Stream(Conversation)?).
 
 %% =============================================================================
 %% The forward contract
@@ -40,23 +40,12 @@ imported procedure village#villager(Key?, Script?, Stream(NetInMsg)?, Stream(Net
 
 exported procedure forward.
 forward :-
-    network2(AOut?, BOut?, AIn, BIn),
     village # villager(alice,
         [mint(10, 30), swap(bob, alice, 30, 10, bob, 30, 12)],
-        AIn?, AOut),
+        [conversation(bob, ch(AB?, BA))]),
     village # villager(bob,
         [mint(12, 30), accept(alice)],
-        BIn?, BOut).
-
-procedure route2(Stream(NetOutMsg)?, Stream(NetInMsg), Stream(NetInMsg)).
-route2([msg(alice, C)|Rest], [msg(alice, C?)|A?], B?) :- route2(Rest?, A, B).
-route2([msg(bob, C)|Rest], A?, [msg(bob, C?)|B?]) :- route2(Rest?, A, B).
-route2([], [], []).
-
-procedure network2(Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetInMsg), Stream(NetInMsg)).
-network2(AOut, BOut, AIn?, BIn?) :-
-    merge(AOut?, BOut?, All),
-    route2(All?, AIn, BIn).
+        [conversation(alice, ch(BA?, AB))]).
 
 %% =============================================================================
 %% The guarantee
@@ -64,7 +53,6 @@ network2(AOut, BOut, AIn?, BIn?) :-
 
 exported procedure guarantee.
 guarantee :-
-    network4g(AOut?, BOut?, GaOut?, GOut?, AIn, BIn, GaIn, GIn),
     village # villager(alice,
         [mint(5), swap(bob, alice, now, 5, bob, 20, 6),
          await(presented(bob, bob, 20)), await(presented(bob, bob, 20)),
@@ -72,36 +60,22 @@ guarantee :-
          await(presented(bob, bob, 20)),
          mint(5), swap(bob, alice, now, 5, bob, 30, 6),
          accept_transfer(escrow)],
-        AIn?, AOut),
+        [conversation(bob, ch(AB?, BA)), conversation(escrow, ch(AG?, GA))]),
     village # villager(bob,
         [mint(6, 20), accept(alice),
          redeem(alice, bob, 20), redeem(alice, bob, 20),
          redeem(alice, bob, 20), redeem(alice, bob, 20),
          redeem(alice, bob, 20),
          mint(6, 30), accept(alice)],
-        BIn?, BOut),
+        [conversation(alice, ch(BA?, AB))]),
     village # villager(gary,
         [mint(6), deposit(escrow, gary, now, 3),
          accept_transfer(escrow),
          deposit(escrow, gary, now, 3)],
-        GaIn?, GaOut),
+        [conversation(escrow, ch(GaG?, GGa))]),
     village # villager(escrow,
         [accept_transfer(gary),
          return(gary, gary, now, 3),
          accept_transfer(gary),
          release(alice, gary, now, 3)],
-        GIn?, GOut).
-
-procedure route4g(Stream(NetOutMsg)?, Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg)).
-route4g([msg(alice, C)|Rest], [msg(alice, C?)|A?], B?, Ga?, G?) :- route4g(Rest?, A, B, Ga, G).
-route4g([msg(bob, C)|Rest], A?, [msg(bob, C?)|B?], Ga?, G?) :- route4g(Rest?, A, B, Ga, G).
-route4g([msg(gary, C)|Rest], A?, B?, [msg(gary, C?)|Ga?], G?) :- route4g(Rest?, A, B, Ga, G).
-route4g([msg(escrow, C)|Rest], A?, B?, Ga?, [msg(escrow, C?)|G?]) :- route4g(Rest?, A, B, Ga, G).
-route4g([], [], [], [], []).
-
-procedure network4g(Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg)).
-network4g(AOut, BOut, GaOut, GOut, AIn?, BIn?, GaIn?, GIn?) :-
-    merge(AOut?, BOut?, AB),
-    merge(GaOut?, GOut?, GaG),
-    merge(AB?, GaG?, All),
-    route4g(All?, AIn, BIn, GaIn, GIn).
+        [conversation(alice, ch(GA?, AG)), conversation(gary, ch(GGa?, GaG))]).

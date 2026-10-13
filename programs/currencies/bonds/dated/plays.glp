@@ -1,0 +1,37 @@
+%% plays.glp --- the mini-app activated as the super-app activates it
+%% (Grassroots Social Graph paper, Section 3): by run/3, under the type
+%% identity of its entry bonds/3, with exactly its two channels; and, for two
+%% executions, with the two ends of one root channel handed to them as their
+%% conversation.  The certified mini-app is this program, whose module value
+%% is the one the REPL can obtain; the persons are scripted (person.glp) and
+%% under no escrow agreement, and each play returns their screens.  A run
+%% does not end --- the agent's question, the stream of requests, stays open,
+%% and the person channel never closes --- so a play's result is read off a
+%% partial stream.
+
+imported procedure person#person(Key?, _?, PersonIn, Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
+
+%% play_mint(Screen): alice, alone, mints 3 coins of her own.
+%% Expected: Screen = [minted(3, now), holdings([lot(alice, now, 3)]) | _].
+exported procedure play_mint(Stream(ScreenContent)).
+play_mint(Screen?) :-
+    self_module(M),
+    find_type(bonds/3, T),
+    run(bonds(alice, ch(Grants?, Draws), []), T?, M?),
+    person # person(alice, Draws?, Grants, _, [mint(3)], none, Screen).
+
+%% play_swap(ScreenA, ScreenB): alice and bob with one conversation between
+%% their two executions; alice mints 2 coins and bob 2 bonds maturing day 30,
+%% alice offers her 2 coins for bob's 2 bonds, and bob accepts.
+%% Expected: ScreenA = [opened(bob), minted(2, now), holdings([lot(alice, now, 2)]),
+%%   holdings([]), swap_done(bob), holdings([lot(bob, 30, 2)]) | _],
+%%   ScreenB = [opened(alice), minted(2, 30), holdings([lot(bob, 30, 2)]),
+%%   swap_done(alice), holdings([lot(alice, now, 2)]) | _].
+exported procedure play_swap(Stream(ScreenContent), Stream(ScreenContent)).
+play_swap(ScreenA?, ScreenB?) :-
+    self_module(M),
+    find_type(bonds/3, T),
+    run(bonds(alice, ch(GrantsA?, DrawsA), [conversation(bob, ch(AB?, BA))]), T?, M?),
+    person # person(alice, DrawsA?, GrantsA, _, [mint(2), swap(bob, alice, now, 2, bob, 30, 2)], none, ScreenA),
+    run(bonds(bob, ch(GrantsB?, DrawsB), [conversation(alice, ch(BA?, AB))]), T?, M?),
+    person # person(bob, DrawsB?, GrantsB, _, [mint(2, 30), accept(alice)], none, ScreenB).

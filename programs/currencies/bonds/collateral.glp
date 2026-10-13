@@ -38,11 +38,10 @@
 %%
 %% Entry point: run/0, exported by self.glp as collateral/0.
 
-imported procedure village#villager(Key?, Script?, Stream(NetInMsg)?, Stream(NetOutMsg)).
+imported procedure village#villager(Key?, Script?, Stream(Conversation)?).
 
 exported procedure run.
 run :-
-    network4(AOut?, BOut?, COut?, GOut?, AIn, BIn, CIn, GIn),
     village # villager(alice,
         [mint(5), swap(bob, alice, now, 5, bob, 20, 6),
          await(presented(bob, bob, 20)), await(presented(bob, bob, 20)),
@@ -50,7 +49,7 @@ run :-
          await(presented(bob, bob, 20)),
          mint(5), swap(bob, alice, now, 5, bob, 30, 6),
          accept_transfer(escrow)],
-        AIn?, AOut),
+        [conversation(bob, ch(AB?, BA)), conversation(escrow, ch(AG?, GA))]),
     village # villager(bob,
         [mint(6), accept(carol),
          mint(6, 20), accept(alice),
@@ -61,29 +60,13 @@ run :-
          accept_transfer(escrow),
          mint(6, 30), accept(alice),
          deposit(escrow, carol, now, 3)],
-        BIn?, BOut),
+        [conversation(alice, ch(BA?, AB)), conversation(carol, ch(BC?, CB)), conversation(escrow, ch(BG?, GB))]),
     village # villager(carol,
         [mint(6), swap(bob, carol, now, 6, bob, now, 6)],
-        CIn?, COut),
+        [conversation(bob, ch(CB?, BC))]),
     village # villager(escrow,
         [accept_transfer(bob),
          return(bob, carol, now, 3),
          accept_transfer(bob),
          release(alice, carol, now, 3)],
-        GIn?, GOut).
-
-%% --- The network: first contacts, routed by addressee ---
-
-procedure route4(Stream(NetOutMsg)?, Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg)).
-route4([msg(alice, C)|Rest], [msg(alice, C?)|A?], B?, Ca?, G?) :- route4(Rest?, A, B, Ca, G).
-route4([msg(bob, C)|Rest], A?, [msg(bob, C?)|B?], Ca?, G?) :- route4(Rest?, A, B, Ca, G).
-route4([msg(carol, C)|Rest], A?, B?, [msg(carol, C?)|Ca?], G?) :- route4(Rest?, A, B, Ca, G).
-route4([msg(escrow, C)|Rest], A?, B?, Ca?, [msg(escrow, C?)|G?]) :- route4(Rest?, A, B, Ca, G).
-route4([], [], [], [], []).
-
-procedure network4(Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg)).
-network4(AOut, BOut, COut, GOut, AIn?, BIn?, CIn?, GIn?) :-
-    merge(AOut?, BOut?, AB),
-    merge(COut?, GOut?, CG),
-    merge(AB?, CG?, All),
-    route4(All?, AIn, BIn, CIn, GIn).
+        [conversation(bob, ch(GB?, BG)), conversation(alice, ch(GA?, AG))]).

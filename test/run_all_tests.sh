@@ -2931,15 +2931,37 @@ echo ""
 
 # =============================================================================
 # Section N3: The bonds program (programs/currencies/bonds): the vGLP bond agent of the
-# Grassroots Bonds paper, its canonical compilation bonds_agent.glp (emitted by
-# glpc :emit), the escrow programs, the seven-party village market of the
-# paper's Section 7, and the credit line of its Section 5.  As for N2 the runs
-# need the reduction limit raised.
+# Grassroots Bonds paper as a mini-app of the Grassroots Super-App.
+# programs/currencies/bonds/dated is the certified program --- the agent
+# bonds_agent.vglp, its canonical compilation bonds_agent.glp (emitted by glpc
+# :emit; the .vglp beside it is skipped by the loader while the .glp stands),
+# the mini-app entry bonds/3, the scripted person with the escrow programs it
+# answers by, and the mini-app's own two plays --- and programs/currencies/bonds
+# adds the plays that stand in for the super-app, opening the conversations
+# between the parties who transact: the seven-party village market of the
+# paper's Section 7, the credit line of its Section 5, and the instruments of
+# its Sections 4 and 5 and Appendix C.  As for N2 the runs need the reduction
+# limit raised.
 # =============================================================================
 echo "=== Section N3: Bonds program (Grassroots Bonds) ==="
 echo ""
 
 BONDS="$GLP_DIR/programs/currencies/bonds"
+BONDSD="$BONDS/dated"
+
+# The certified program: loads, type-checks, and carries the compiler's
+# certificate, since no entry point reaches the network or the person.
+n3_core=$("$REPL_RUN" <<HEREDOC
+$BONDSD
+self_module(M), decompose_module(M?, K, S, C).
+:quit
+HEREDOC
+2>&1)
+
+check "Bonds mini-app loads as a program" "Loaded program" "$n3_core"
+check_not "Bonds mini-app no type errors" "Type checking failed" "$n3_core"
+check_not "Bonds mini-app is certified" "CERTIFICATE REFUSED" "$n3_core"
+check "Bonds mini-app: its certificate carries the compiler's key" "K = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$n3_core"
 
 n3_load=$("$REPL_RUN" <<HEREDOC
 $BONDS
@@ -2952,12 +2974,12 @@ check_not "Bonds program no type errors" "Type checking failed" "$n3_load"
 
 n3_emit=$("$REPL_RUN" <<HEREDOC
 $BONDS
-:emit $BONDS
+:emit $BONDSD
 :quit
 HEREDOC
 2>&1)
-check "Bonds program: :emit re-emits bonds_agent.glp" "wrote $BONDS/bonds_agent.glp" "$n3_emit"
-n3_emit_diff=$(cd "$GLP_DIR" && git diff --stat -- programs/currencies/bonds/bonds_agent.glp)
+check "Bonds program: :emit re-emits bonds_agent.glp" "wrote $BONDSD/bonds_agent.glp" "$n3_emit"
+n3_emit_diff=$(cd "$GLP_DIR" && git diff --stat -- programs/currencies/bonds/dated/bonds_agent.glp)
 check_not "Bonds program: committed bonds_agent.glp is the compiler's output" "bonds_agent.glp" "$n3_emit_diff"
 
 echo "--- Bonds village market (village) ---"
@@ -2972,6 +2994,7 @@ HEREDOC
 
 check "Bonds village: no runtime error" "→ suspended" "$n3_run"
 check_not "Bonds village: no failed goal" "ERROR" "$n3_run"
+check "Bonds village: the conversations open" "tagged(frank, opened(escrow))" "$n3_run"
 check "Bonds village: Alice's holdings" "tagged(alice, holdings(\[lot(bob, now, 5), lot(alice, now, 8), lot(charlie, now, 15), lot(frank, now, 4)\]))" "$n3_run"
 check "Bonds village: Bob's holdings" "tagged(bob, holdings(\[lot(alice, now, 10), lot(diana, now, 20)\]))" "$n3_run"
 check "Bonds village: Charlie's holdings" "tagged(charlie, holdings(\[lot(alice, now, 10), lot(eve, now, 10), lot(charlie, now, 6)\]))" "$n3_run"
@@ -3198,6 +3221,31 @@ check_not "Bonds letter of credit: no failed goal" "ERROR" "$n3_loc"
 check "Bonds letter of credit: the seller is paid in the bank's coins" "tagged(alice, holdings(\[lot(bank, now, 10)\]))" "$n3_loc"
 check "Bonds letter of credit: the bank holds the buyer's reimbursement bonds" "tagged(bank, holdings(\[lot(bob, 30, 10)\]))" "$n3_loc"
 check "Bonds letter of credit: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_loc"
+
+echo "--- The bonds mini-app's own plays (play_mint, play_swap) ---"
+
+n3_pm=$("$REPL_RUN" <<HEREDOC
+$BONDSD
+:limit 5000000
+play_mint(S).
+:quit
+HEREDOC
+2>&1)
+
+check_not "Bonds mini-app play_mint: no failed goal" "ERROR" "$n3_pm"
+check "Bonds mini-app play_mint: alice mints 3 of her own" "S = \[minted(3, now), holdings(\[lot(alice, now, 3)\])" "$n3_pm"
+
+n3_ps=$("$REPL_RUN" <<HEREDOC
+$BONDSD
+:limit 5000000
+play_swap(A, B).
+:quit
+HEREDOC
+2>&1)
+
+check_not "Bonds mini-app play_swap: no failed goal" "ERROR" "$n3_ps"
+check "Bonds mini-app play_swap: the proposer's screen, her conversation opened and her coins swapped for bonds" "A = \[opened(bob), minted(2, now), holdings(\[lot(alice, now, 2)\]), holdings(\[\]), swap_done(bob), holdings(\[lot(bob, 30, 2)\])" "$n3_ps"
+check "Bonds mini-app play_swap: the counterparty's screen" "B = \[opened(alice), minted(2, 30), holdings(\[lot(bob, 30, 2)\]), swap_done(alice), holdings(\[lot(alice, now, 2)\])" "$n3_ps"
 echo ""
 
 # =============================================================================
