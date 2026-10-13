@@ -44,13 +44,7 @@ When a platform behavior is **unknown** (e.g. whether an iOS↔iOS reverse leg w
 
 ## Rendezvous Servers & Hole-Punching
 
-Most mobile devices sit behind NAT and cannot accept incoming UDP connections from the public Internet. **Rendezvous servers** (spec §Rendezvous Server; implemented in `bootstrap_anchor/`) give NAT-bound agents a fixed point they can always reach outbound. The reconnection flow:
-
-1. Agent A (whose IP changed) sends RECONNECT(peer=B) to the configured rendezvous servers; each server observes A's source address.
-2. Agent B, on detecting A went silent, sends AVAILABLE(peer=A) to the same servers.
-3. A server matches the pair and sends each side a PUNCH_INITIATE carrying the other side's observed address; both sides punch their NATs and the deterministic initiator connects.
-
-A rendezvous server relays *signaling metadata* (addresses, punch timing), never message content — it is not a TURN relay. It has no friends list and accepts connections from any agent. A direct peer-to-peer PUNCH_INITIATE over an existing control path (usually BLE) covers the BLE-adjacent case without any third party.
+A rendezvous server is GNA Section 6: the headless layer, instantiated as a rendezvous server (GNA Section 2.2), with the GLP rendezvous agent `programs/examples/rendezvous/rv_agent.glp` over it through the adapter, built from `glue/bin/rendezvous_server.dart` (`dart build cli`, the glue package's Flutter dependencies carrying a build hook `dart compile exe` refuses).  Address-change recovery is GNA Section 4.2, and the reconnection request, the match, the signature check and the relay of observed addresses are the agent's GLP (GNA Section 6, "Reconnection"); the layer's part is what those sections give it --- the heartbeat sweep to known peers and the configured servers, `observedPeerAddress` behind `peer_address/2`, and `punchUdp` behind `punch_udp/1`.  The headless profile has the sweep to its rendezvous servers but neither the sweep to known peers nor the liveness of GNA Section 2.5, so a headless agent does not yet recover from an address change (found 2026-10-13, reported to GNA).  The layer carries no reconnection protocol of its own: RECONNECT, AVAILABLE and PUNCH_INITIATE went on 2026-10-13.  Signaling (`PacketType.signaling`) is between an agent and its configured rendezvous servers alone: the address the server observes the agent at (ADDR_REFLECT, below) and the invite registration and redemption of a WAN cold call (GNA Section 4.4).
 
 ## Redux Architecture
 
@@ -98,7 +92,7 @@ Gotchas, learned the hard way:
 
 ## Peer Address Persistence
 
-Never unilaterally clear a peer's stored UDP address. Update it when a new valid address arrives (from `putPeerAddress`, signaling, or observation), and clear it only when the peer explicitly tells us they no longer have one. Stale peer cleanup, our-side disconnects, and transport restarts must not null out `udpAddress` — it is the last known location and the only way to attempt reconnection.
+Never unilaterally clear a peer's stored UDP address. Update it when a new valid address arrives (from `putPeerAddress` or observation), and clear it only when the peer explicitly tells us they no longer have one. Stale peer cleanup, our-side disconnects, and transport restarts must not null out `udpAddress` — it is the last known location and the only way to attempt reconnection.
 
 GLP feeds peer addresses into the layer's dial book via `putPeerAddress(pk, address)` (spec `GLP_Networking_API` §Connectivity and Address): it validates the `ip:port`, **creates a dial-book entry even for a peer never seen before**, and is supply-only — it never clears an address (an unparseable address throws). Supplying an address also supplies the key: the peer joins the known set (`KnownPeersState`, persisted), which is what Closed-mode recognition, per-slot scan filters, and the reconnection sweeps range over. A `putPeerAddress`-created peer is not `isReachable` until a session authenticates.
 
