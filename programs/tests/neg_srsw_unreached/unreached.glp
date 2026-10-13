@@ -1,0 +1,8 @@
+%% programs/tests/neg_srsw_unreached/unreached.glp --- no entry point reaches
+%% it; X? occurs twice in its body, under no guard that implies it ground
+%% (GLP-Spec glp.tex, Definition "Single-Occurrence (SO) Invariant": "every
+%% variable occurs in it at most once"; Remark "Guards and SRSW").  See
+%% self.glp.
+
+exported procedure twice(_?, _).
+twice(X, Y?) :- Y = pair(X?, X?).

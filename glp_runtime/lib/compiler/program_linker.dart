@@ -10,6 +10,7 @@ library;
 
 import 'dart:io';
 import 'package:path/path.dart' as ppath;
+import 'analyzer.dart' show Analyzer;
 import 'ast.dart';
 import 'lexer.dart';
 import 'parser.dart';
@@ -839,9 +840,10 @@ List<String> _ancestorSelfGlpFiles(String rootDir, String programsDir) {
   return result;
 }
 
-/// Step 2 of static linking (modules.tex §Static Linking): "each module is
-/// type-checked independently against its ancestor scope, exactly as for
-/// single-file compilation". It runs after discovery (step 1) and before
+/// Step 2 of compilation (TGLP modules.tex, Compilation): "each module is
+/// checked against its scope---for SRSW, its guards and its types---exactly
+/// as a single-module program is, whether or not an entry point reaches it".
+/// It runs after discovery (step 1) and before
 /// renaming (step 3), so every error names the module's own file and line, and
 /// it covers every discovered module — including one that no entry point
 /// reaches, which step 5 (dead-code elimination) drops before the linked check
@@ -872,8 +874,25 @@ List<String> _ancestorSelfGlpFiles(String rootDir, String programsDir) {
 /// with no declarations was skipped here and on the single-file path, so its
 /// clauses were compiled and run with no check.
 ///
-/// Throws on type errors, naming each offending module's file path.
-void checkModulesIndependently(List<DiscoveredModule> modules) {
+/// SRSW and the guards are checked per module after the types, by the pass
+/// every compiled program runs ([Analyzer.checkSRSWAndGuards]), in the
+/// module's own scope ([buildModuleTypeEnvironment]), where the relaxations
+/// of a typed program are decided: a single-module program is a GLP program,
+/// so each clause of it satisfies SRSW (GLP-Spec glp.tex, Definition "GLP
+/// Program, Goals") and calls only guard predicates in its guards
+/// (Definition "Guarded Clause"), and a module no entry point reaches is
+/// refused for either as for a type (GLP, 2026-10-13 08:02 UTC, item 2).
+/// Until 2026-10-13 they ran on the linked program alone, after step 5 had
+/// dropped every module no entry point reaches, so such a module was checked
+/// for its types and for nothing else.  A procedure is named in a violation
+/// as step 3 names it in the linked program ([singleModulePath]'s own
+/// procedures bare, every other `M:p`), so a violation reads as it did there.
+///
+/// Throws on type errors, naming each offending module's file path; then, on
+/// the first module that violates SRSW or calls a non-guard in a guard, the
+/// pass's [CompileError].
+void checkModulesIndependently(List<DiscoveredModule> modules,
+    {String? singleModulePath}) {
   final failures = <String>[];
 
   for (final mod in modules) {
@@ -906,6 +925,18 @@ void checkModulesIndependently(List<DiscoveredModule> modules) {
   if (failures.isNotEmpty) {
     throw Exception('Type checking failed for module(s) of the program:\n'
         '${failures.join('\n')}');
+  }
+
+  final singleNorm =
+      singleModulePath != null ? _normPath(singleModulePath) : null;
+  for (final mod in modules) {
+    final keepBare = singleNorm != null && _normPath(mod.filePath) == singleNorm;
+    Analyzer().checkSRSWAndGuards(
+      Program(mod.ast.procedures, mod.ast.line, mod.ast.column),
+      typeEnv: buildModuleTypeEnvironment(mod.ast,
+          ancestorScope: mod.ancestorScope),
+      procedurePrefix: keepBare ? '' : '${mod.moduleName}:',
+    );
   }
 }
 
@@ -966,7 +997,7 @@ LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
   // Step 2 (modules.tex §Static Linking): after discovery, before renaming,
   // each module is type-checked independently against its ancestor scope. The
   // linked check below is an addition to it, not a replacement.
-  checkModulesIndependently(modules);
+  checkModulesIndependently(modules, singleModulePath: singleModulePath);
 
   // Soundness is established on the LINKED program (paper: modules §Module-System
   // Design "Self-contained type checking", §Static Linking; def:program). We link

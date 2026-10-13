@@ -1,0 +1,20 @@
+%% programs/tests/neg_srsw_unreached/self.glp
+%%
+%% Negative fixture: an SRSW violation in a module of a program directory that
+%% no entry point reaches.  This self.glp exports one entry point, reaching
+%% reached.glp and nothing else; unreached.glp is a module of the program
+%% (TGLP modules.tex, Compilation, first step: "the compiler collects every
+%% .glp file of the program's directory tree") and its one clause is
+%% well-typed and violates SRSW.  GLP-Spec glp.tex, Definition "GLP Program,
+%% Goals": "A clause C satisfies the single-reader/single-writer (SRSW)
+%% restriction if it satisfies SO ... A GLP program is a finite sequence of
+%% clauses satisfying SRSW"; TGLP modules.tex, Compilation, second step: "each
+%% module is checked against its scope---for SRSW, its guards and its
+%% types---exactly as a single-module program is, whether or not an entry
+%% point reaches it".  The types counterpart is unreachable_neg/, the guards
+%% counterpart neg_guard_unreached/.
+
+imported procedure reached#echo(_?, _).
+
+exported procedure p(_?, _).
+p(X, Y?) :- reached # echo(X?, Y).

@@ -1,0 +1,6 @@
+%% programs/tests/neg_guard_unreached/unreached.glp --- no entry point reaches
+%% it; its one clause has true in guard position (GLP-Spec glp.tex,
+%% Definition "Guarded Clause").  See self.glp.
+
+exported procedure q(_?, _).
+q(X, Y?) :- true | Y = X?.

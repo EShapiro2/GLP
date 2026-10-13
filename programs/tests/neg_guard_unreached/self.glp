@@ -1,0 +1,20 @@
+%% programs/tests/neg_guard_unreached/self.glp
+%%
+%% Negative fixture: an invalid guard in a module of a program directory that
+%% no entry point reaches.  This self.glp exports one entry point, reaching
+%% reached.glp and nothing else; unreached.glp is a module of the program
+%% (TGLP modules.tex, Compilation, first step: "the compiler collects every
+%% .glp file of the program's directory tree") and its one clause is
+%% well-typed, satisfies SRSW and carries true in guard position.  GLP-Spec
+%% glp.tex, Definition "Guarded Clause": "G is a conjunction of guard
+%% predicates"; true is no guard predicate of the catalogue (GLP-Spec
+%% appendix-guards.tex) and no unit clause defines it.  TGLP modules.tex,
+%% Compilation, second step: "each module is checked against its scope---for
+%% SRSW, its guards and its types---exactly as a single-module program is,
+%% whether or not an entry point reaches it".  The SRSW counterpart is
+%% neg_srsw_unreached/, the types counterpart unreachable_neg/.
+
+imported procedure reached#echo(_?, _).
+
+exported procedure p(_?, _).
+p(X, Y?) :- reached # echo(X?, Y).

@@ -1,0 +1,5 @@
+%% programs/tests/neg_srsw_unreached/reached.glp --- the one module the entry
+%% point reaches; sound, so the fixture's failure is the unreachable module's.
+
+exported procedure echo(_?, _).
+echo(X, X?).

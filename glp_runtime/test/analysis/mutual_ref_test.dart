@@ -62,18 +62,34 @@ void main() {
 
     test("p99/self.glp's mwm/2 type-checks, and the seven p99 directories with it",
         () {
-      for (final name in const [
-        'arithmetic',
-        'lists',
-        'btrees',
-        'graphs',
-        'misc',
-        'codes',
-        'mtrees',
-      ]) {
+      // checkedLinkedProgram checks each module for its types and then for
+      // SRSW and its guards, reached or not (TGLP modules.tex, Compilation,
+      // second step), and then the linked program.  Four directories load.
+      for (final name in const ['arithmetic', 'lists', 'codes', 'mtrees']) {
         final dir = Directory('../programs/p99/$name').absolute.path;
         final modules = discoverProgram(dir, rootSelfGlpPath: rootSelfPath);
         expect(() => checkedLinkedProgram(modules, rootDir: dir), returnsNormally,
+            reason: 'p99/$name');
+      }
+      // Three pass the type check and are refused for SRSW at a named clause:
+      // P99's faults, routed to P99 through Integration on 2026-10-12 (P99 is
+      // dormant).  This assertion flips when P99 fixes them, and each is then
+      // to load with the four above.
+      for (final (name, words) in const [
+        ('btrees', 'p99/btrees/p60:pairsplits/4: Line 66: Variable "M" has no reader'),
+        ('graphs', 'p99/graphs/p84:better/3: Line 44: Variable "X2" has no reader'),
+        ('misc', 'p99/misc/p92:getnum/3: Line 118: Variable "K" has no reader'),
+      ]) {
+        final dir = Directory('../programs/p99/$name').absolute.path;
+        final modules = discoverProgram(dir, rootSelfGlpPath: rootSelfPath);
+        expect(
+            () => checkedLinkedProgram(modules, rootDir: dir),
+            throwsA(predicate((e) {
+              final s = e.toString();
+              return s.contains('SRSW violations found:') &&
+                  s.contains(words) &&
+                  !s.contains('Type checking failed');
+            }, 'refused for SRSW, not for a type: $words')),
             reason: 'p99/$name');
       }
     });

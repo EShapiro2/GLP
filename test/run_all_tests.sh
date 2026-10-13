@@ -2079,6 +2079,18 @@ check "NEG SRSW / :boot with a program directory: the agent's load is refused by
 check "NEG SRSW / :boot with a program directory: the refusal names the module's reader occurring twice" "neg_boot_programdir/srsw/agents:agent_init/2: Line 5: Reader variable \"Id?\" occurs 2 times" "$neg_srsw_dir"
 check_not "NEG SRSW / :boot with a program directory: the boot does not settle" "Boot settled" "$neg_srsw_dir"
 
+# NEG: SRSW in a module of the program's tree that no entry point reaches
+# (programs/tests/neg_srsw_unreached/): TGLP modules.tex, Compilation, second
+# step, "each module is checked against its scope---for SRSW, its guards and
+# its types---exactly as a single-module program is, whether or not an entry
+# point reaches it" (GLP, 2026-10-13 08:02 UTC, item 2).  Until 2026-10-13
+# SRSW ran on the linked program alone, after step 5 had dropped the module,
+# and the program loaded.
+neg_srsw_unreached=$(echo -e "$GLP_DIR/programs/tests/neg_srsw_unreached\n:quit" | "$REPL_RUN" 2>&1)
+check "NEG SRSW / unreached module: the program is refused by the SRSW pass" "Error loading project $GLP_DIR/programs/tests/neg_srsw_unreached: \[semantic\] SRSW violations found:" "$neg_srsw_unreached"
+check "NEG SRSW / unreached module: the refusal names the unreached module's reader occurring twice" "tests/neg_srsw_unreached/unreached:twice/2: Line 8: Reader variable \"X?\" occurs 2 times" "$neg_srsw_unreached"
+check_not "NEG SRSW / unreached module: the program does not load" "Loaded program" "$neg_srsw_unreached"
+
 echo ""
 
 # =============================================================================
@@ -2148,6 +2160,17 @@ HEREDOC
 2>&1)
 check "NEG guards / :boot with a program directory: the agent's load is refused for the module's guard" "Agent alice failed to initialize: \[semantic\] \"true\" is not a guard - it can only appear in body position at Line 5" "$neg_guard_bootdir"
 check_not "NEG guards / :boot with a program directory: the boot does not settle" "Boot settled" "$neg_guard_bootdir"
+
+# NEG: an invalid guard in a module of the program's tree that no entry point
+# reaches (programs/tests/neg_guard_unreached/): TGLP modules.tex,
+# Compilation, second step, "each module is checked against its scope---for
+# SRSW, its guards and its types---exactly as a single-module program is,
+# whether or not an entry point reaches it" (GLP, 2026-10-13 08:02 UTC, item
+# 2).  Until 2026-10-13 the guard check ran on the linked program alone, after
+# step 5 had dropped the module, and the program loaded.
+neg_guard_unreached=$(echo -e "$GLP_DIR/programs/tests/neg_guard_unreached\n:quit" | "$REPL_RUN" 2>&1)
+check "NEG guards / unreached module: an invalid guard in a module no entry point reaches is refused" "Error loading project $GLP_DIR/programs/tests/neg_guard_unreached: \[semantic\] \"true\" is not a guard - it can only appear in body position at Line 6" "$neg_guard_unreached"
+check_not "NEG guards / unreached module: the program does not load" "Loaded program" "$neg_guard_unreached"
 
 echo ""
 

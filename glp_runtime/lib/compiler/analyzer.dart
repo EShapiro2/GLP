@@ -366,19 +366,7 @@ class Analyzer {
     // the body at each produced one (program_linker.dart, _makeAliasClause).
     // Until 2026-09-18 a `skipGlobalSRSW` flag let a linked program bypass the
     // pass on the claim that the aliases could not satisfy it.
-    {
-      final allViolations = <String>[];
-      for (final proc in program.procedures) {
-        final violations = _collectSRSWViolationsForProcedure(proc);
-        allViolations.addAll(violations);
-      }
-
-      // Report SRSW violations early (before partial evaluation)
-      if (allViolations.isNotEmpty) {
-        final message = 'SRSW violations found:\n${allViolations.map((v) => '  • $v').join('\n')}';
-        throw CompileError(message, 0, 0, phase: 'analyzer');
-      }
-    }
+    _checkSRSWAndGuards(program);
 
     // STEP 2: Transform defined guards via partial evaluation
     // After SRSW validation passes, we can safely transform defined guards.
@@ -403,8 +391,45 @@ class Analyzer {
     return AnnotatedProgram(transformed, annotatedProcs);
   }
 
+  /// The SRSW pass and the guard check of [program], with no compilation:
+  /// each clause satisfies SRSW (GLP-Spec glp.tex, Definition "GLP Program,
+  /// Goals", with Remark "Guards and SRSW"), the relaxations of a typed
+  /// program decided in [typeEnv], and calls only guard predicates in its
+  /// guards (Definition "Guarded Clause").  Step 1 of [analyze], the pass
+  /// every program compiled runs, given to the linker so that each module of
+  /// a program's tree is checked by it, reached or not (TGLP modules.tex,
+  /// Compilation, second step: "each module is checked against its
+  /// scope---for SRSW, its guards and its types---exactly as a single-module
+  /// program is, whether or not an entry point reaches it").  A procedure is
+  /// named in a violation as [procedurePrefix] followed by its name: the
+  /// linker passes the name step 3 gives it.
+  ///
+  /// Throws [CompileError] where a clause violates either.
+  void checkSRSWAndGuards(Program program,
+      {TypeEnvironment? typeEnv, String procedurePrefix = ''}) {
+    _typeEnv = typeEnv;
+    _dfa = null;
+    _dfaBuilt = false;
+    _checkSRSWAndGuards(program, procedurePrefix: procedurePrefix);
+  }
+
+  void _checkSRSWAndGuards(Program program, {String procedurePrefix = ''}) {
+    final allViolations = <String>[];
+    for (final proc in program.procedures) {
+      allViolations.addAll(
+          _collectSRSWViolationsForProcedure(proc, procedurePrefix));
+    }
+
+    // Report SRSW violations early (before partial evaluation)
+    if (allViolations.isNotEmpty) {
+      final message = 'SRSW violations found:\n${allViolations.map((v) => '  • $v').join('\n')}';
+      throw CompileError(message, 0, 0, phase: 'analyzer');
+    }
+  }
+
   /// Collect SRSW violations for a procedure (for early validation before partial eval)
-  List<String> _collectSRSWViolationsForProcedure(Procedure proc) {
+  List<String> _collectSRSWViolationsForProcedure(Procedure proc,
+      [String procedurePrefix = '']) {
     final allViolations = <String>[];
 
     for (final clause in proc.clauses) {
@@ -429,7 +454,7 @@ class Analyzer {
 
       // Collect SRSW violations
       final violations = _srswViolations(clause, varTable);
-      final contextViolations = violations.map((v) => '${proc.name}/${proc.arity}: $v').toList();
+      final contextViolations = violations.map((v) => '$procedurePrefix${proc.name}/${proc.arity}: $v').toList();
       allViolations.addAll(contextViolations);
     }
 
