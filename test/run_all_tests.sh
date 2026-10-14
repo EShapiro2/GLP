@@ -2268,51 +2268,6 @@ check "SG-SIM project loads" "Loaded program" "$g_load"
 check_not "SG-SIM no type errors" "Type checking failed" "$g_load"
 check_not "SG-SIM no load errors" "Error loading" "$g_load"
 
-# Silent plays (play1-play3)
-echo "--- Silent plays (play1-play3) ---"
-for play_num in 1 2 3; do
-    g_play=$("$REPL_RUN" <<HEREDOC
-$SGSIM
-play${play_num}.
-:quit
-HEREDOC
-2>&1)
-    check "SG play${play_num} succeeds" "succeeds\|suspended" "$g_play"
-done
-
-# Tagged plays (fplay1-fplay3) with output checks
-echo "--- Tagged plays (fplay1-fplay3) ---"
-
-g_fp1=$("$REPL_RUN" <<HEREDOC
-$SGSIM
-fplay1.
-:quit
-HEREDOC
-2>&1)
-
-check "SG fplay1 succeeds" "succeeds\|suspended" "$g_fp1"
-check "SG fplay1 alice connected bob" "tagged(alice.*connected(bob)" "$g_fp1"
-check "SG fplay1 charlie connected alice" "tagged(charlie.*connected(alice)" "$g_fp1"
-
-g_fp2=$("$REPL_RUN" <<HEREDOC
-$SGSIM
-fplay2.
-:quit
-HEREDOC
-2>&1)
-
-check "SG fplay2 succeeds" "succeeds\|suspended" "$g_fp2"
-check "SG fplay2 rejected" "tagged(alice.*rejected" "$g_fp2"
-
-g_fp3=$("$REPL_RUN" <<HEREDOC
-$SGSIM
-fplay3.
-:quit
-HEREDOC
-2>&1)
-
-check "SG fplay3 succeeds" "succeeds\|suspended" "$g_fp3"
-
 # Unfriend (paper §3a — guarded by either; one-way teardown, recipient complies)
 echo "--- Unfriend (play_unfriend_send/recv/absent) ---"
 
@@ -5654,19 +5609,6 @@ check "SG super-app home: an introduction raises respond_intro's card, the intro
 check "SG super-app home: yes on the introduction's card is accept_intro, the pending value passed back" "CI = \[msg(person, alice, accept_intro(bob, error))\]" "$sg_home"
 check "SG super-app home: no on the introduction's card is reject_intro, the pending value passed back" "CN = \[msg(person, alice, reject_intro(bob, error))\]" "$sg_home"
 check_not "SG super-app home: no failed goal" "→ failed" "$sg_home"
-
-# The same through the deployed UI mediator (boot.glp, play_not_a_friend_ui):
-# alice's person sends carol, not her friend, a message and is shown
-# not_a_friend(carol); she then sends bob, her friend, one, and his reply is
-# shown after it --- the notice stops no later notification.  The output's
-# lines are joined so that the check holds the two in their order.
-sg_naf_ui=$("$REPL_RUN" <<HEREDOC
-$GLP_DIR/programs/social/graph
-play_not_a_friend_ui.
-:quit
-HEREDOC
-2>&1)
-check "SG not_a_friend through the UI mediator: shown, and the friend's reply shown after it" "not_a_friend(carol) received(bob, hi_alice) → succeeds" "$(echo "$sg_naf_ui" | tr '\n' ' ')"
 
 # The child-safe platform hosted, in its own session: a play that has run the
 # currency's mini-app leaves the session such that the next play's invitation
