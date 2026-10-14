@@ -77,7 +77,10 @@ OutputEntry ::= user_output(Stream(ScreenMsg)?)
 
 %% The screen: the holdings, tallied by issuer, after every change, and what
 %% each act came to.
-ScreenContent ::= holdings(Stream(Lot))
+%% The holdings, each lot a field of its own (Udi, 2026-10-12: a field is
+%% named by its type; Currencies, 2026-10-14 08:48 UTC, item 3).
+Holdings ::= Stream(Lot).
+ScreenContent ::= holdings(Holdings)
                 ; opened(Key)
                 ; minted(Integer)
                 ; paid(Key, Integer)
@@ -100,8 +103,10 @@ ScreenMsg ::= msg(Constant, Constant, ScreenContent).
 %% "A vGLP program declares the type of its output to its person by defining
 %% the type Output, a reserved name; the dispatcher draws that output as a
 %% thread whose elements are drawn by the widget of Output" (vGLP 169b008,
-%% Definition "Canonical Compilation").  The agent writes its screen messages.
-Output ::= ScreenMsg.
+%% Definition "Canonical Compilation").  The output is the content, not the
+%% envelope: the relay strips msg(agent, person, C) to C (Currencies,
+%% 2026-10-14 08:48 UTC, item 2).
+Output ::= ScreenContent.
 
 %% The agent's own input: the answers its swap responders inject, and the
 %% results of the acts it proposed.

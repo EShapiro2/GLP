@@ -76,10 +76,11 @@ events([withdraw(I)|Ds], [withdraw(I?)|Es?]) :- events(Ds?, Es).
 %% The agent's screen reaches the person only as the thread the dispatcher
 %% draws as the construct 0, drawn again with every message so far as each
 %% arrives (vGLP, 2026-10-13 19:25 UTC, items 2 and 3): its newest element is
-%% the message that came, msg(A, P, M), and the draw with none is no event.
+%% the content that came, M, the event msg(agent, person, M), and the draw
+%% with none is no event.
 procedure newest(_?, _?, Events).
 newest([], Ds, Es?) :- events(Ds?, Es).
-newest([M], Ds, [M?|Es?]) :- events(Ds?, Es).
+newest([M], Ds, [msg(agent, person, M?)|Es?]) :- events(Ds?, Es).
 newest([_, M1|Ms], Ds, Es?) :- newest([M1?|Ms?], Ds?, Es).
 
 %% person(Id, Events, Grants, Cal, Script, Todo, Form, Swaps, Transfers,

@@ -45,7 +45,8 @@ sovereign(Id, Ui, Convs, Cal) :-
 procedure show_screen(Channel(Stream(_), Stream(Output))?, Stream(ScreenMsg)?).
 show_screen(ch(_, Out?), Screen) :- relay(Screen?, Out).
 
-%% Each message as it comes, read as any term.
+%% Each message as it comes, its content: the envelope msg(agent, person, C)
+%% stripped (Currencies, 2026-10-14 08:48 UTC, item 2).
 procedure relay(Stream(ScreenMsg)?, Stream(Output)).
-relay([M|Ms], [M?|Out?]) :- relay(Ms?, Out).
+relay([msg(_, _, C)|Ms], [C?|Out?]) :- relay(Ms?, Out).
 relay([], []).
