@@ -569,9 +569,6 @@ UserCmdStream    ::= [] ; [UserCmd | UserCmdStream].
 UserNotifyStream ::= [] ; [UserNotify | UserNotifyStream].
 UserChannel      ::= ch(UserCmdStream, UserNotifyStream?).
 
-%% Actor's view of the user channel (reversed)
-ActorChannel ::= ch(UserNotifyStream, UserCmdStream?).
-
 %% Agent ↔ mediator precise streams
 AgentToUserMsg        ::= msg(Constant, Constant, AgentContent).
 AgentToUserStream     ::= [] ; [AgentToUserMsg | AgentToUserStream].
