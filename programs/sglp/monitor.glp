@@ -23,8 +23,10 @@
 %% configuration, and the monitor sets the clock to the least activation time
 %% and binds that request's token to go --- Release.  The clock moves only
 %% there.  The monitor stops when the least activation time is past the horizon
-%% (the horizon is inclusive) or the queue is empty with the machine at rest,
-%% and its last act appends clock(T) to the log, T the time of its last Release.
+%% (the horizon is inclusive), binding every pending token to stop, which ends
+%% the rated goal waiting on it, or when the queue is empty with the machine at
+%% rest, and its last act appends clock(T) to the log, T the time of its last
+%% Release (sGLP 463aa48, Section 4, "The monitor", Appendix B and Appendix C).
 %% The clauses are in the order the task gives: the requests first, when_idle
 %% last.
 %%
@@ -37,7 +39,7 @@
 
 TimeUnit ::= second ; minute ; hour ; day ; week ; year.
 Rate     ::= /(Number, TimeUnit).
-Token    ::= go.
+Token    ::= go ; stop.
 Request  ::= rated(Rate, Token?) ; time(Number?).
 Queue    ::= nil ; node(Number, Integer, Token?, Queue, Queue).
 Clock    ::= clock(Number).
@@ -67,14 +69,22 @@ monitor(In, _, node(T, _, go, L, R), Seed, Seq, Horizon, Log) :-
     when_idle, T? =< Horizon? |
     qmerge(L?, R?, Q),
     monitor(In?, T?, Q?, Seed?, Seq?, Horizon?, Log?).
-%% Stop: the least activation time is past the horizon.
-monitor(_, Clock, node(T, _, _?, _, _), _, _, Horizon, Log) :-
+%% Stop: the least activation time is past the horizon; every pending token
+%% is bound to stop.
+monitor(_, Clock, node(T, S, K?, L, R), _, _, Horizon, Log) :-
     when_idle, T? > Horizon? |
+    stop_all(node(T?, S?, K, L?, R?)),
     stream_append(clock(Clock?), Log?, _).
 %% Stop: nothing is pending.
 monitor(_, Clock, nil, _, _, _, Log) :-
     when_idle |
     stream_append(clock(Clock?), Log?, _).
+
+%% stop_all(Q?): every token of the queue Q bound to stop.
+procedure stop_all(Queue?).
+stop_all(nil).
+stop_all(node(_, _, stop, L, R)) :-
+    stop_all(L?), stop_all(R?).
 
 %% delay(N/U?, K?, D): D = -ln(K/2147483647) / (N per U), in seconds.
 procedure delay(Rate?, Integer?, Number).

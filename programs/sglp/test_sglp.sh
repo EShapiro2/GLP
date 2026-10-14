@@ -139,10 +139,13 @@
 #       program writes, shown once the positions the program writes are
 #       ground, the cards an element at a time, each card's answer a question
 #       of its own, logged in the question as shown (sGLP's Q1 of 09:33 UTC,
-#       where task 6 refused it); and the checks of (b): a clause answering two
-#       questions refused as not single-answer, and a profile whose predicate is
-#       the compiled program's refused (Section 3, Definition "Single-Answer,
-#       Well-Formed").
+#       where task 6 refused it); a rated goal's procedure given a stop clause
+#       dropping its arguments, and a rated goal whose procedure has an output
+#       argument refused (Section 4, "The transformation"; sGLP's task of
+#       2026-10-14 09:54 UTC, item 2, where the single-answer check of task 6,
+#       (b), is removed with Definition "Single-Answer"); and a profile whose
+#       predicate is the compiled program's refused (Section 3, Definition
+#       "Well-Formed").
 # (xi)  a run with an interactive type in reader mode (tests/reader): five
 #       ratings of the person, each logged once in the order of time and read
 #       by the program; the population printed by transform.sh before the
@@ -199,10 +202,10 @@ repl() {
 
 echo "--- (i) a token is bound only when the machine rests"
 repl "$WORK/busy.out" ':limit 1000000000000' "$HERE/tests/busy" \
-    'busy(100000, O).' 'busy_late(100000, O).'
+    'busy(100000).' 'busy_late(100000).'
 grep -q '✓ Loaded program' "$WORK/busy.out"
 check "tests/busy loads" $?
-[ "$(grep -c '^\(GLP> \)*O = after$' "$WORK/busy.out")" -eq 2 ]
+[ "$(grep -c '^\(GLP> \)*after$' "$WORK/busy.out")" -eq 2 ] && ! grep -q '^\(GLP> \)*before$' "$WORK/busy.out"
 check "the rated goal, spawned before and after count(100000, Z), is released after it" $?
 
 echo "--- (ii) the times between releases are exponential with the rates' sum"
@@ -504,6 +507,7 @@ grep -q '^%% not transformed: the probabilities of a dimension (one to nine prof
 check "a source with a dimension not summing to one and a profile in no dimension is refused with those faults, nothing printed" $?
 ! grep -q '^%% not transformed' "$WORK/txgood.lines" &&
     grep -q '^ans(go, q(a))$' "$WORK/txgood.lines" &&
+    grep -A 1 '^ans(stop, _)$' "$WORK/txgood.lines" | tr '\n' ' ' | grep -q '^ans(stop, _) \. $' &&
     grep -q '^p_q(X, _, Mon)$' "$WORK/txgood.lines" &&
     grep -q "^stream_append(rated('/'(1, day), Tok), Mon?, _)$" "$WORK/txgood.lines" &&
     grep -q '^ans(Tok?, X?)$' "$WORK/txgood.lines" &&
@@ -516,13 +520,14 @@ check "a source with a dimension not summing to one and a profile in no dimensio
     ! grep -q '^random(Seed?, 1, _, S)$' "$WORK/txgood.lines" &&
     grep -q '^declaration(2, 1, day, 1)$' "$WORK/txgood.lines" &&
     grep -q '^d(_, p)$' "$WORK/txgood.lines"
-check "the mended source is translated: the token, the monitor's reference, the asks, the person process's clause on an ask and its seeding, the declaration and the draw" $?
+check "the mended source is translated: the token, its stop clause dropping the arguments, the monitor's reference, the asks, the person process's clause on an ask and its seeding, the declaration and the draw" $?
 # Reader mode: one interactive type Rating in reader mode, (Rating?)*rate, the
 # person procedure fair_rating of profile fair writing the whole term, a
-# rating of 1..5, after a rated goal of give; and BV, a reader-mode type Bid
+# rating of 1..5, after a rated goal of give, which receives the writer in a
+# slot it reads (sGLP's paper, Section 4, at 3007ad5); and BV, a reader-mode type Bid
 # with an argument the program writes, Reply?.
 RV="[type('Rating', [rating('Integer')]), volitional(dual('Rating'), rating_r, rate('Integer'))]"
-RP="person(fair), binds('Rating', fair_rating), decl(fair_rating('Rating', dual('Integer'))), clause(fair_rating(var('R?'), var('S')), [], [random(var('S?'), 5, var('K'), var('_')), rated(give(var('K?'), var('R')), rate(1, day))]), decl(give(dual('Integer'), 'Rating')), clause(give(var('K'), rating(var('K?'))), [], []), run(1, [mix(rater, [share(fair, 1.0)])], 30, days, 20260927)"
+RP="person(fair), binds('Rating', fair_rating), decl(fair_rating('Rating', dual('Integer'))), clause(fair_rating(var('R?'), var('S')), [], [random(var('S?'), 5, var('K'), var('_')), rated(give(var('K?'), slot(var('R'))), rate(1, day))]), decl(give(dual('Integer'), dual('Slot'('Rating')))), clause(give(var('K'), slot(rating(var('K?')))), [], []), run(1, [mix(rater, [share(fair, 1.0)])], 30, days, 20260927)"
 BV="[type('Reply', [ok, no]), type('Bid', [bid('Integer', dual('Reply'))]), volitional(dual('Bid'), bid_r, offer('Integer'))]"
 BP="person(fair), binds('Bid', fair_bid), decl(fair_bid('Bid', dual('Integer'))), clause(fair_bid(bid(1, var('_')), var('_')), [], []), run(1, [mix(bidder, [share(fair, 1.0)])], 30, days, 1)"
 repl "$WORK/txreader.out" ':limit 1000000000000' "$HERE" \
@@ -562,20 +567,21 @@ check "a reader-mode type with an argument the program writes is translated: the
 # task 6 of 2026-10-10 07:59 UTC, (a) and (b), Q1 and task 8 of 09:33 UTC):
 # PV, a writer-mode type Post whose answer Line? holds a position the program
 # writes, Status?; NV, a writer-mode type Panel whose argument the program
-# writes, List(Card), holds positions the person writes, each card's YesNo?; QV and
-# ans2, a clause answering two questions; CV, the mended source's interface
-# naming ans/1 a predicate of the compiled program.
+# writes, List(Card), holds positions the person writes, each card's YesNo?; OP,
+# RP with give writing the rating as an output argument, a rated goal's
+# procedure taking inputs only (sGLP's paper, Section 4, "The transformation";
+# sGLP's task of 2026-10-14 09:54 UTC, item 2); CV, the mended source's
+# interface naming ans/1 a predicate of the compiled program.
 PV="[type('Status', [sent, read]), type('Line', [line('String', dual('Status'))]), type('Post', [post('Integer', dual('Line'))]), volitional('Post', post_w, poster('Integer'))]"
 PP="person(p), binds('Post', p_post), decl(p_post(dual('Post'), dual('Integer'))), clause(p_post(post(var('_'), line(hi, var('_'))), var('_')), [], []), run(1, [mix(d, [share(p, 1.0)])], 1, day, 1)"
 NV="[type('YesNo', [yes, no]), type('Card', [card('Integer', dual('YesNo'))]), type('Panel', [panel('List'('Card'))]), type('List'('X'), [[], ['X' | 'List'('X')]]), volitional('Panel', panel_w, show('Integer'))]"
 NP="person(p), binds('Panel', p_panel), decl(p_panel(dual('Panel'), dual('Integer'))), clause(p_panel(var('_'), var('_')), [], []), run(1, [mix(d, [share(p, 1.0)])], 1, day, 1)"
-QV="[type('A', [a]), type('Q2', [q2(dual('A'), dual('A'))]), volitional('Q2', q2_w, ask2('Integer'))]"
-QP="person(p), binds('Q2', p_q2), decl(p_q2(dual('Q2'), dual('Integer'))), clause(p_q2(var('X'), var('_')), [], [rated(ans2(var('X?')), rate(1, day))]), decl(ans2(dual('Q2'))), clause(ans2(q2(a, a)), [], []), run(1, [mix(d, [share(p, 1.0)])], 1, day, 1)"
+OP="person(fair), binds('Rating', fair_rating), decl(fair_rating('Rating', dual('Integer'))), clause(fair_rating(var('R?'), var('S')), [], [random(var('S?'), 5, var('K'), var('_')), rated(give(var('K?'), var('R')), rate(1, day))]), decl(give(dual('Integer'), 'Rating')), clause(give(var('K'), rating(var('K?'))), [], []), run(1, [mix(rater, [share(fair, 1.0)])], 30, days, 20260927)"
 CV="[type('A', [a]), type('Q', [q(dual('A'))]), volitional('Q', q_w, ask(dual('A'))), compiled(ask, 2), compiled(ask1, 3), compiled(ans, 1)]"
 repl "$WORK/txmoded.out" ':limit 1000000000000' "$HERE" \
     "transform_terms($PV, [$PP], population)." \
     "transform_terms($NV, [$NP], population)." \
-    "transform_terms($QV, [$QP], population)." \
+    "transform_terms($RV, [$OP], population)." \
     "transform_terms($CV, [$P, run(2, [mix(d, [share(p, 1.0)])], 1, day, 1)], population)."
 sed 's/^\(GLP> \)*//' "$WORK/txmoded.out" > "$WORK/txmoded.lines"
 for k in 1 2 3 4; do
@@ -601,9 +607,9 @@ tr '\n' ' ' < "$WORK/txmoded.2" > "$WORK/txmoded.2.flat"
     grep -q "present_1 ( Integer? , Constant? , List(Card) ? , List(Card) , MutualRef? , MutualRef? ) \. present_1(_, _, \[\], \[\], _, _) \. present_1(A, Type, \[card(Z1, Z2?) | Z4\], \[card(Z1?, Z3) | Z5?\], Mon, Log) :- ground(Z1?) | answer_2(A?, Type?, Z1?, Z3?, Z2, Mon?, Log?) , present_1(A?, Type?, Z4?, Z5, Mon?, Log?) \. " "$WORK/txmoded.2.flat" &&
     grep -q "answer_2(A, Type, V1, Y, Y?, Mon, Log) :- ground(Y?) | stream_append(time(Time), Mon?, _) , stream_append(entry(Time?, A?, Type?, \[card(V1?, Y?) | '_'\]), Log?, _) \. " "$WORK/txmoded.2.flat"
 check "a writer-mode type with positions the person writes inside an argument the program writes is translated: shown once the positions the program writes are ground, the cards an element at a time by the present procedure of List(Card), each card's answer a question of its own, logged in the question as shown" $?
-grep -q '^%% not transformed: a clause that is not single-answer, of(key(ans2, 1))$' "$WORK/txmoded.3" &&
+grep -q '^%% not transformed: a rated goal of a procedure with an output argument(key(give, 2))$' "$WORK/txmoded.3" &&
     [ "$(grep -c '^%% not transformed' "$WORK/txmoded.3")" -eq 1 ] && ! grep -q '^person(' "$WORK/txmoded.3"
-check "a profile clause answering two questions is refused as not single-answer, nothing printed" $?
+check "a rated goal whose procedure has an output argument is refused, nothing printed" $?
 grep -q "^%% not transformed: a predicate of a profile's program that is the compiled program's(key(ans, 1))$" "$WORK/txmoded.4" &&
     [ "$(grep -c '^%% not transformed' "$WORK/txmoded.4")" -eq 1 ] && ! grep -q '^person(' "$WORK/txmoded.4"
 check "a profile whose predicate is the compiled program's is refused with that fault, nothing printed" $?

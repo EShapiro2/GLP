@@ -3,42 +3,50 @@
 %% bound only after when_idle has succeeded.  A rated goal and an unrated busy
 %% goal: the busy goal runs to rest first.
 %%
-%%   busy(N, O)       the rated goal spawned before count(N, Z)    O = after
-%%   busy_late(N, O)  the rated goal spawned after it               O = after
+%%   busy(N)       the rated goal spawned before count(N, Z)    prints after
+%%   busy_late(N)  the rated goal spawned after it               prints after
 %%
 %% The rated goal requests rated(1/second, Tok) of the monitor (programs/sglp/
 %% monitor.glp, exposed by programs/sglp/self.glp) and waits on Tok; released,
-%% it finds Z assigned (after) or not (before).  Were a token bound before the
-%% machine rested, it would find count/2 still counting.
+%% it finds Z assigned (after) or not (before), and appends which through a
+%% mutual reference, the test reading the stream the reference was allocated
+%% on by send_to_user/1, as the monitor writes its log.  Were a token bound
+%% before the machine rested, it would find count/2 still counting.  The
+%% probe takes inputs only and its stop clause drops them, as the
+%% transformation prints a rated goal's procedure (sGLP's paper, Section 4,
+%% "The transformation"; sGLP's answer of 2026-10-14 11:40 UTC, 2).
 
-Order ::= before ; after.
-
-exported procedure busy(Integer?, Order).
-busy(N, O?) :-
+exported procedure busy(Integer?).
+busy(N) :-
     allocate_mutual_reference(Mon, Requests),
     allocate_mutual_reference(Log, _),
+    allocate_mutual_reference(Out, Os),
+    send_to_user(Os?),
     monitor(Requests?, 20260927, 3600, Log?),
-    rated_probe(Mon?, Z?, O),
+    rated_probe(Mon?, Z?, Out?),
     count(N?, Z).
 
-exported procedure busy_late(Integer?, Order).
-busy_late(N, O?) :-
+exported procedure busy_late(Integer?).
+busy_late(N) :-
     allocate_mutual_reference(Mon, Requests),
     allocate_mutual_reference(Log, _),
+    allocate_mutual_reference(Out, Os),
+    send_to_user(Os?),
     count(N?, Z),
     monitor(Requests?, 20260927, 3600, Log?),
-    rated_probe(Mon?, Z?, O).
+    rated_probe(Mon?, Z?, Out?).
 
-%% rated_probe(Mon?, Z?, O): a goal of rate 1/second, translated as the
+%% rated_probe(Mon?, Z?, Out?): a goal of rate 1/second, translated as the
 %% transformation translates G @ 1/second.
-procedure rated_probe(MutualRef?, Integer?, Order).
-rated_probe(Mon, Z, O?) :-
+procedure rated_probe(MutualRef?, Integer?, MutualRef?).
+rated_probe(Mon, Z, Out) :-
     stream_append(rated(1/second, Tok), Mon?, _),
-    probe(Tok?, Z?, O).
+    probe(Tok?, Z?, Out?).
 
-procedure probe(Token?, Integer?, Order).
-probe(go, Z, after) :- known(Z?) | true.
-probe(go, Z, before) :- unknown(Z?) | true.
+procedure probe(Token?, Integer?, MutualRef?).
+probe(go, Z, Out) :- known(Z?) | stream_append(after, Out?, _).
+probe(go, Z, Out) :- unknown(Z?) | stream_append(before, Out?, _).
+probe(stop, _, _).
 
 procedure count(Integer?, Integer).
 count(0, 0).

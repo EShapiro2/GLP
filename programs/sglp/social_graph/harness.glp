@@ -60,7 +60,7 @@ imported procedure population#person(Integer?, Profiles?, MutualRef?, Integer?,
 
 exported procedure run(Integer?, Number?, Span?, Integer?, Integer?, Integer?).
 run(N, C, U, Seed, Hom, Wary) :-
-    N? >= 2, N? mod 2 =:= 0,
+    N? >= 4, N? mod 2 =:= 0,
     Hom? >= 0, Hom? =< 100, Wary? >= 0, Wary? =< 100 |
     span(U?, Secs),
     H := C? * Secs?,
@@ -105,7 +105,7 @@ agents(A, _, N, _, _, _, [], [], _, _) :-
 %% change to the one is a change to the other.
 exported procedure draw(Integer?, Integer?, Integer?, Integer?, Draw).
 draw(N, Seed, Hom, Wary, draw(H?, I?, W?, S?, As?)) :-
-    N? >= 2, N? mod 2 =:= 0,
+    N? >= 4, N? mod 2 =:= 0,
     Hom? >= 0, Hom? =< 100, Wary? >= 0, Wary? =< 100 |
     random(Seed?, 2147483646, Base, _),
     tally(1, N?, Base?, Hom?, Wary?, 0, 0, 0, 0, As, H, I, W, S).
@@ -164,21 +164,35 @@ skip(J, S, S1?) :-
 
 %% peers(A?, H?, N?, Ss, Os, D): Ss the other agents of A's sex, Os the agents
 %% of the other sex, in increasing order, and D done once both are built;
-%% agents 1..H are of one sex, H = N/2.
-procedure peers(Integer?, Integer?, Integer?, Stream(Integer), Stream(Integer),
+%% agents 1..H are of one sex, H = N/2.  N is even and at least 4, so that both
+%% lists are non-empty, as Peers is (sGLP's paper, Appendix B, at f1640df),
+%% each built by first/5.
+procedure peers(Integer?, Integer?, Integer?, NonEmpty(Integer), NonEmpty(Integer),
                 Done).
 peers(A, H, N, Ss?, Os?, D?) :-
     A? =< H? |
     H1 := H? + 1,
-    range(1, H?, A?, Ss, D1),
-    range(H1?, N?, 0, Os, D2),
+    first(1, H?, A?, Ss, D1),
+    first(H1?, N?, 0, Os, D2),
     both(D1?, D2?, D).
 peers(A, H, N, Ss?, Os?, D?) :-
     A? > H? |
     H1 := H? + 1,
-    range(H1?, N?, A?, Ss, D1),
-    range(1, H?, 0, Os, D2),
+    first(H1?, N?, A?, Ss, D1),
+    first(1, H?, 0, Os, D2),
     both(D1?, D2?, D).
+
+%% first(Lo?, Hi?, Skip?, L, D): L is Lo..Hi without Skip, non-empty, its first
+%% element found here and the rest built by range/5, and D done once L is built.
+procedure first(Integer?, Integer?, Integer?, NonEmpty(Integer), Done).
+first(Lo, Hi, Skip, L?, D?) :-
+    Lo? =< Hi?, Lo? =:= Skip? |
+    Lo1 := Lo? + 1,
+    first(Lo1?, Hi?, Skip?, L, D).
+first(Lo, Hi, Skip, [Lo?|L?], D?) :-
+    Lo? =< Hi?, Lo? =\= Skip? |
+    Lo1 := Lo? + 1,
+    range(Lo1?, Hi?, Skip?, L, D).
 
 %% both(D1?, D2?, D): D is done once D1 and D2 are.
 procedure both(Done?, Done?, Done).

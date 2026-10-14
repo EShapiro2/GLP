@@ -27,7 +27,7 @@ source(
   %% The vGLP program's interface (Sections 5 and 6).
   [type('Peer', ['Constant']),
    type('YesNo', [yes, no]),
-   type('Peers', ['List'('Peer')]),
+   type('Peers', [['Peer' | 'List'('Peer')]]),
    type('Holding', [holding('Peer', 'Integer')]),
    type('Wallet', ['List'('Holding')]),
    type('Request', [pay('Peer', 'Integer'), swap('Peer', 'Integer')]),

@@ -13,8 +13,8 @@
 #
 # loads programs/sglp and calls social_graph(<agents>, <count>, <unit>, <seed>),
 # <until> being "<count> <unit>", the unit singular or plural: the run
-# declaration's population (harness.glp) with <agents> agents, an even number,
-# until <until> of simulated time from seed <seed>.  Given <hom>, and <wary>
+# declaration's population (harness.glp) with <agents> agents, an even number of at
+# least 4, until <until> of simulated time from seed <seed>.  Given <hom>, and <wary>
 # after it, integers 0..100, it calls social_graph(<agents>, <count>, <unit>,
 # <seed>, <hom>, <wary>) instead: the population with that mix, an agent being
 # homophile for its first draw K =< <hom> and wary for its second K =< <wary>,

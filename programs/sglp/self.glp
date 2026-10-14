@@ -61,12 +61,26 @@ span(years, 31557600).
 
 %% one_of, length and nth, ordinary GLP, shared by the examples' profiles (the
 %% social graph's, moved here from social_graph/graph.glp for coins among
-%% friends, sGLP's code task of 2026-10-02 15:24 UTC, item 2): nth's clause for
-%% the end of the list in the form that checks, nth(_, [], _?) (TGLP,
-%% "Anonymous variables": an output the clause never produces).
+%% friends, sGLP's code task of 2026-10-02 15:24 UTC, item 2).  one_of and the
+%% nth it calls take a non-empty list, of the type [X | List(X)], and each has
+%% a clause for every list of that type, as TGLP's Definition "Instantiation"
+%% requires of every input path (sGLP's paper, Appendix B, at f1640df; sGLP's
+%% answer of 2026-10-14 11:40 UTC, 1), an anonymous reader being permitted in
+%% no clause (GLP-Spec 297db75, Remark "Anonymous Variables").
+
+%% A rated goal that writes an answer receives its writer inside a term it
+%% reads, its procedure taking inputs only (sGLP's paper, Section 4, at
+%% 3007ad5): slot(W), W the writer, of type Slot(X)?, W at the position X? the
+%% goal writes; the run tests' profiles use it (tests/reader, tests/delivery,
+%% tests/receipt, tests/panel).
+Slot(X) ::= slot(X?).
+
+%% A non-empty list, the type [X | List(X)], named, a procedure declaration's
+%% argument being a type's name.
+NonEmpty(X) ::= [X | List(X)].
 
 %% one_of(Xs?, S?, X): X is drawn uniformly from Xs by random from the seed S.
-procedure(X) one_of(Stream(X)?, Integer?, X).
+procedure(X) one_of(NonEmpty(X)?, Integer?, X).
 one_of(Xs, S, X?) :- ground(Xs?) |
     length(Xs?, N), random(S?, N?, K, _), nth(K?, Xs?, X).
 
@@ -82,12 +96,12 @@ procedure(X) length(Stream(X)?, Integer?, Integer).
 length([], A, A?).
 length([_|Xs], A, N?) :- A1 := A? + 1, length(Xs?, A1?, N).
 
-%% nth(K?, Xs?, X): X is the K-th element of Xs, counting from 1.  Past the
-%% end of Xs nothing is assigned to X.
-procedure(X) nth(Integer?, Stream(X)?, X).
-nth(1, [X|_], X?).
-nth(K, [_|Xs], X?) :- K? > 1 | K1 := K? - 1, nth(K1?, Xs?, X).
-nth(_, [], _?).
+%% nth(K?, Xs?, X): X is the K-th element of Xs, counting from 1, the last
+%% where K is past the end; one_of draws K of 1..the length of Xs.
+procedure(X) nth(Integer?, NonEmpty(X)?, X).
+nth(_, [X], X?).
+nth(1, [X, _|_], X?).
+nth(K, [_, Y|Ys], X?) :- K? > 1 | K1 := K? - 1, nth(K1?, [Y?|Ys?], X).
 
 %% social_graph(Agents?, Count?, Unit?, Seed?): the social graph's run with
 %% Agents agents until Count Units from seed Seed, with the run declaration's
@@ -152,7 +166,7 @@ social_graph_draw(N, Seed, Hom, Wary, D?) :-
 %% children's (TGLP, "Declaration parameters" and Definition "Root, Scope";
 %% sGLP's code task of 2026-10-03 21:09 UTC).
 Peer  ::= Constant.
-Peers ::= List(Peer).
+Peers ::= [Peer | List(Peer)].
 
 imported procedure coins#run(Integer?, Stream(Peers)?, Number?, Span?, Integer?,
                              Integer?, Integer?).

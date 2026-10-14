@@ -20,7 +20,7 @@ random(S?, 5, K, _)
 ,
 stream_append(rated('/'(1, day), Tok), Mon?, _)
 ,
-give(Tok?, K?, R)
+give(Tok?, K?, slot(R))
 .
 procedure
 give
@@ -29,8 +29,11 @@ Token?
 ,
 Integer?
 ,
-Rating
+Slot(Rating)
+?
 )
 .
-give(go, K, rating(K?))
+give(stop, _, _)
+.
+give(go, K, slot(rating(K?)))
 .

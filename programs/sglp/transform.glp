@@ -559,7 +559,10 @@ items([I|Is], An, Tl, Ls?) :- otherwise, ground(I?) | items(Is?, An?, Tl?, Ls).
 %% tdecl(H?, An?, Tail?, Ls): a procedure declaration translated: Token? first
 %% for a procedure a rated goal calls, MutualRef? last for one that takes the
 %% monitor's reference, and exported for a person procedure, which the person
-%% process calls from the module beside.
+%% process calls from the module beside; and, after the declaration of a
+%% procedure a rated goal calls, the clause that ends its goal once the monitor
+%% has bound the token to stop, dropping its arguments (Section 4, "The
+%% transformation"; Appendix C).
 procedure tdecl(_?, _?, Terms?, Terms).
 tdecl(H, an(Ps, Rs, Ms), Tl, Ls?) :- ground(H?) |
     key(H?, K), tdecl1(K?, H?, Ps?, Rs?, Ms?, Tl?, Ls).
@@ -568,10 +571,22 @@ tdecl1(K, H, Ps, Rs, Ms, Tl, Ls?) :- ground(K?) |
     member(K?, Ps?, AP), member(K?, Rs?, AR), member(K?, Ms?, AM),
     tdecl2(AP?, AR?, AM?, H?, Tl?, Ls).
 procedure tdecl2(Ans?, Ans?, Ans?, _?, Terms?, Terms).
-tdecl2(AP, AR, AM, H, Tl, Ls?) :-
+tdecl2(AP, AR, AM, H, Tl, Ls?) :- ground(AR?), ground(AM?), ground(H?) |
     prefix(AP?, Pre), front(AR?, [dual('Token')], Fr), back(AM?, [dual('MutualRef')], Bk),
     parts(H?, Nm, Ts), append(Ts?, Bk?, Ts1), append(Fr?, Ts1?, Ts2),
-    decl(Pre?, Nm?, Ts2?, Tl?, Ls).
+    stop_clause(AR?, AM?, H?, Tl?, Tl1),
+    decl(Pre?, Nm?, Ts2?, Tl1?, Ls).
+%% stop_clause(AR?, AM?, H?, Tail?, Ls): where AR is yes, the clause
+%% Nm(stop, _, ..., _) of the procedure H, a _ for each of its arguments and
+%% for the monitor's reference where AM is yes.
+procedure stop_clause(Ans?, Ans?, _?, Terms?, Terms).
+stop_clause(no, _, _, Tl, Tl?).
+stop_clause(yes, AM, H, Tl, Ls?) :- ground(H?) |
+    parts(H?, Nm, Ts), back(AM?, [var('_')], Bk), blanks(Ts?, Us), append(Us?, Bk?, As),
+    compose(Nm?, [stop|As?], H1), clause(H1?, [], [], Tl?, Ls).
+procedure blanks(Terms?, Terms).
+blanks([], []).
+blanks([_|Ts], [var('_')|Us?]) :- blanks(Ts?, Us).
 procedure prefix(Ans?, Terms).
 prefix(yes, ['exported procedure']).
 prefix(no, ['procedure']).
@@ -1138,7 +1153,7 @@ wa_items([wa(A, Hs)|Was], T, Is?) :- ground(A?), ground(T?) |
 wa_items([wf(A)|Was], T, [r(T?, A?)|Is?]) :- ground(T?) | wa_items(Was?, T?, Is).
 procedure hole_items(Terms?, Terms?, Terms).
 hole_items([], _, []).
-hole_items([h(J, _)|Hs], Ts, [a(U?)|Is?]) :- ground(Ts?) | nth(J?, Ts?, D), undual(D?, U), hole_items(Hs?, Ts?, Is).
+hole_items([h(J, _)|Hs], Ts, [a(U?)|Is?]) :- ground(Ts?) | nth_or_none(J?, Ts?, D), undual(D?, U), hole_items(Hs?, Ts?, Is).
 %% rd_needs(Rs?, Ns): n(hp, T) for each interactive type T in reader mode, its
 %% answer procedure named with the roots.
 procedure rd_needs(Terms?, Terms).
@@ -1243,7 +1258,7 @@ procedure dims(Terms?, Integer?, Terms).
 dims([], _, []).
 dims([mix(D, Ss)|Ms], J, [dim(J?, D?, Qs?, Ts?, Nm?)|Ds?]) :- integer(J?) |
     shares(Ss?, Qs, Ps), thresholds(Ps?, 0, Ts),
-    dimension_names(DNs), nth(J?, DNs?, Nm),
+    dimension_names(DNs), nth_or_none(J?, DNs?, Nm),
     J1 := J? + 1, dims(Ms?, J1?, Ds).
 procedure shares(Terms?, Terms, Stream(Integer)).
 shares([], [], []).
@@ -1585,7 +1600,7 @@ pp_proc(pp(T, Nm), All, Tys, Tl, Ls?) :- ground(T?), ground(Nm?), ground(All?), 
 procedure pp_wp(_?, Terms?, Integer?, _?, Terms?, Terms?, Terms?, Terms).
 pp_wp(F, As, K, Nm, All, Tys, Tl, Ls?) :- ground(As?), ground(Nm?), integer(K?) |
     length(As?, NA), x_names(Xs0), y_names(Ys0), take(NA?, Xs0?, Xs), take(NA?, Ys0?, Ys),
-    answer_types(As?, K?, 1, ATs), nth(K?, As?, DK), undual(DK?, WT),
+    answer_types(As?, K?, 1, ATs), nth_or_none(K?, As?, DK), undual(DK?, WT),
     append(ATs?, [WT?, dual('MutualRef'), dual('MutualRef')], Ts2),
     decl(['procedure'], Nm?, [dual('Integer'), dual('Constant')|Ts2?], Ls1?, Ls),
     z_names(Zs), wvariants(As?, Xs?, Ys?, K?, 1, Tys?, Zs?, WVs),
@@ -1865,10 +1880,10 @@ procedure dim_guards(Integer?, Integer?, Terms?, Terms).
 dim_guards(I, NT, Tn, Gs?) :- ground(Tn?) | above(I?, Tn?, G1), upto(I?, NT?, Tn?, G2), append(G1?, G2?, Gs).
 procedure above(Integer?, Terms?, Terms).
 above(I, _, []) :- I? =< 1 | true.
-above(I, Tn, ['>'(var('K?'), var(R?))]) :- I? > 1 | I1 := I? - 1, nth(I1?, Tn?, N), reader_of(N?, R).
+above(I, Tn, ['>'(var('K?'), var(R?))]) :- I? > 1 | I1 := I? - 1, nth_or_none(I1?, Tn?, N), reader_of(N?, R).
 procedure upto(Integer?, Integer?, Terms?, Terms).
 upto(I, NT, _, []) :- I? > NT? | true.
-upto(I, NT, Tn, ['=<'(var('K?'), var(R?))]) :- I? =< NT? | nth(I?, Tn?, N), reader_of(N?, R).
+upto(I, NT, Tn, ['=<'(var('K?'), var(R?))]) :- I? =< NT? | nth_or_none(I?, Tn?, N), reader_of(N?, R).
 procedure reader_of(_?, _).
 reader_of(n(_, R), R?).
 %% A threshold the clause's guards do not read is _ in its head, and so is K
@@ -1915,11 +1930,10 @@ check_runs([run(N, Ms, C, U, Seed)], Its0, Tys, CKs, Bs, Ps, Hs, Cs, Es?) :-
     check_names(Cs?, E8),
     check_decls(Hs?, E9),
     check_compiled(Hs?, Cs?, CKs?, E10),
-    check_single(Cs?, Hs?, Tys?, E11),
     append(E0?, E1?, A1), append(A1?, E2?, A2), append(A2?, E3?, A3),
     append(A3?, E4?, A4), append(A4?, E5?, A5), append(A5?, E6?, A6),
     append(A6?, E7?, A7), append(A7?, E8?, A8), append(A8?, E9?, A9),
-    append(A9?, E10?, A10), append(A10?, E11?, Es).
+    append(A9?, E10?, Es).
 check_runs([], _, _, _, _, _, _, _, ['%% not transformed: no run declaration']).
 check_runs([_, _|_], _, _, _, _, _, _, _, ['%% not transformed: more than one run declaration']).
 
@@ -2146,8 +2160,8 @@ was_named1(yes, Was, T, Tys, R?) :- was_named(Was?, T?, Tys?, R).
 was_named1(no, _, _, _, no).
 
 %% The predicates of the profiles' programs distinct from those of the vGLP
-%% program's canonical compilation (Section 3, Definition "Single-Answer,
-%% Well-Formed"), which the interface names, compiled(Name, Arity) each, the
+%% program's canonical compilation (Section 3, Definition "Well-Formed"),
+%% which the interface names, compiled(Name, Arity) each, the
 %% transformation having no reader of that program.
 procedure compileds(Terms?, Terms).
 compileds([], []).
@@ -2167,85 +2181,6 @@ clash(no, _, Ks, CKs, Es?) :- clashes(Ks?, CKs?, Es).
 clash(yes, K, Ks, CKs, [E?|Es?]) :-
     E =.. ['%% not transformed: a predicate of a profile\'s program that is the compiled program\'s', K?],
     clashes(Ks?, CKs?, Es).
-
-%% Every clause of a profile's program single-answer (Section 3, Definition
-%% "Single-Answer, Well-Formed": "of the positions the person writes in the
-%% arguments of its head, by the moded types of the arguments, at most one
-%% holds a term that is not a variable"): a position the person writes, one
-%% that answers a question, is an argument of the clause's procedure's type T,
-%% which the person writes, or a position of a type T? in an argument of type
-%% T?, which the program writes, or in a position the person writes, and so
-%% on down; the positions below a position the person writes that the person
-%% writes too are of the same answer.
-procedure check_single(Terms?, Terms?, Terms?, Terms).
-check_single([], _, _, []).
-check_single([cl(H, _, _)|Cs], Hs, Tys, Es?) :- ground(H?), ground(Hs?), ground(Tys?) |
-    key(H?, K), check_single1(K?, H?, Hs?, Tys?, E1), check_single(Cs?, Hs?, Tys?, E2), append(E1?, E2?, Es).
-procedure check_single1(_?, _?, Terms?, Terms?, Terms).
-check_single1(K, H, Hs, Tys, Es?) :- ground(K?) | decl_of(K?, Hs?, D), single(D?, H?, Tys?, K?, Es).
-procedure decl_of(_?, Terms?, _).
-decl_of(_, [], none).
-decl_of(K, [H|Hs], D?) :- ground(H?), ground(K?) | key(H?, K1), decl_of1(K1?, K?, H?, Hs?, D).
-procedure decl_of1(_?, _?, _?, Terms?, _).
-decl_of1(K1, K, H, _, H?) :- K1? =?= K? | true.
-decl_of1(K1, K, _, Hs, D?) :- K1? =?\= K? | decl_of(K?, Hs?, D).
-procedure single(_?, _?, Terms?, _?, Terms).
-single(none, _, _, K, [E?]) :- ground(K?) |
-    E =.. ['%% not transformed: a clause of an undeclared procedure', K?].
-single(D, H, Tys, K, Es?) :- otherwise, ground(D?), ground(H?) |
-    parts(D?, _, Ts), parts(H?, _, As), arg_answers(As?, Ts?, Tys?, 0, N), single1(N?, K?, Es).
-procedure single1(Integer?, _?, Terms).
-single1(N, _, []) :- N? =< 1 | true.
-single1(N, K, [E?]) :- N? > 1, ground(K?) |
-    E =.. ['%% not transformed: a clause that is not single-answer, of', K?].
-procedure arg_answers(Terms?, Terms?, Terms?, Integer?, Integer).
-arg_answers([], _, _, N, N?).
-arg_answers([_|_], [], _, N, N?).
-arg_answers([A|As], [dual(T)|Ts], Tys, N0, N?) :- ground(Tys?) |
-    answers(A?, T?, program, root, Tys?, N1), N2 := N0? + N1?, arg_answers(As?, Ts?, Tys?, N2?, N).
-arg_answers([A|As], [T|Ts], Tys, N0, N?) :- otherwise, ground(Tys?) |
-    answers(A?, T?, person, root, Tys?, N1), N2 := N0? + N1?, arg_answers(As?, Ts?, Tys?, N2?, N).
-%% answers(T?, Ty?, O?, P?, Tys?, N): N is the number of positions the person
-%% writes that answer a question, in the term T at a position of type Ty that
-%% O writes, its parent position written by P, holding a term that is not a
-%% variable, there and below.
-procedure answers(_?, _?, _?, _?, Terms?, Integer).
-answers(var(_), _, _, _, _, 0).
-answers(T, Ty, O, P, Tys, N?) :- otherwise, ground(T?), ground(Ty?), ground(O?), ground(Tys?) |
-    here(O?, P?, N0), flat_alts(Ty?, Tys?, [], As), match_alt(T?, As?, M),
-    below(M?, T?, O?, Tys?, N1), N := N0? + N1?.
-procedure here(_?, _?, Integer).
-here(person, P, 1) :- P? =?\= person | true.
-here(_, _, 0) :- otherwise | true.
-procedure match_alt(_?, Terms?, _).
-match_alt(_, [], leaf).
-match_alt(T, ['$prim'(_)|_], leaf) :- constant(T?) | true.
-match_alt(T, [A|As], M?) :- otherwise, ground(T?) | match_one(T?, A?, R), match_alt1(R?, T?, As?, M).
-procedure match_alt1(_?, _?, Terms?, _).
-match_alt1(no, T, As, M?) :- match_alt(T?, As?, M).
-match_alt1(R, _, _, R?) :- otherwise, ground(R?) | true.
-procedure match_one(_?, _?, _).
-match_one(T, A, R?) :- compound(T?), compound(A?), ground(T?), ground(A?) |
-    parts_n(T?, F, _, N), parts_n(A?, F2, Ts, N2), match_one1(F?, N?, F2?, N2?, Ts?, R).
-match_one(T, A, leaf) :- constant(T?), constant(A?), T? =?= A? | true.
-match_one(_, _, no) :- otherwise | true.
-procedure match_one1(_?, Integer?, _?, Integer?, Terms?, _).
-match_one1(F, N, F2, N2, Ts, args(Ts?)) :- F? =?= F2?, N? =:= N2? | true.
-match_one1(_, _, _, _, _, no) :- otherwise | true.
-procedure below(_?, _?, _?, Terms?, Integer).
-below(leaf, _, _, _, 0).
-below(args(Ts), T, O, Tys, N?) :- ground(T?) | parts(T?, _, As), child_answers(As?, Ts?, O?, Tys?, 0, N).
-procedure child_answers(Terms?, Terms?, _?, Terms?, Integer?, Integer).
-child_answers([], _, _, _, N, N?).
-child_answers([_|_], [], _, _, N, N?).
-child_answers([A|As], [dual(T)|Ts], O, Tys, N0, N?) :- ground(O?), ground(Tys?) |
-    flip(O?, O1), answers(A?, T?, O1?, O?, Tys?, N1), N2 := N0? + N1?,
-    child_answers(As?, Ts?, O?, Tys?, N2?, N).
-child_answers([A|As], [T|Ts], O, Tys, N0, N?) :- otherwise, ground(O?), ground(Tys?) |
-    answers(A?, T?, O?, O?, Tys?, N1), N2 := N0? + N1?, child_answers(As?, Ts?, O?, Tys?, N2?, N).
-procedure flip(_?, _).
-flip(person, program).
-flip(program, person).
 
 %% The person declarations: each in a profile, of an interactive type, the
 %% type once in its profile.
@@ -2340,11 +2275,17 @@ check_person_type(_, _, P, [E?]) :- otherwise, ground(P?) |
 
 %% The rated goals: each of a procedure the source declares, which no goal
 %% calls unrated and which is no person procedure, the person process calling
-%% those without a token.
+%% those without a token; and each of a procedure taking inputs only, its goal
+%% ended on stop by a clause dropping its arguments (Section 4, "The
+%% transformation": "a rated goal's procedure taking inputs only, which the
+%% transformation checks").
 procedure check_rated(Terms?, Terms?, Terms?, Terms).
-check_rated(Cs, Hs, Bs, Es?) :- ground(Cs?) |
+check_rated(Cs, Hs, Bs, Es?) :- ground(Cs?), ground(Hs?) |
     rated_keys(Cs?, Rs0), dedup(Rs0?, Rs), unrated_keys(Cs?, Us0), person_keys(Bs?, Ps),
-    append(Us0?, Ps?, Us), decl_keys(Hs?, Ds), check_rated1(Rs?, Us?, Ds?, Es).
+    append(Us0?, Ps?, Us), decl_keys(Hs?, Ds), check_rated0(Rs?, Us?, Ds?, Hs?, Es).
+procedure check_rated0(Terms?, Terms?, Terms?, Terms?, Terms).
+check_rated0(Rs, Us, Ds, Hs, Es?) :- ground(Rs?) |
+    check_rated1(Rs?, Us?, Ds?, E1), check_inputs(Rs?, Hs?, E2), append(E1?, E2?, Es).
 procedure decl_keys(Terms?, Terms).
 decl_keys([], []).
 decl_keys([H|Hs], [K?|Ks?]) :- key(H?, K), decl_keys(Hs?, Ks).
@@ -2357,6 +2298,34 @@ check_rated2(no, yes, _, []).
 check_rated2(AU, AD, K, [E?]) :- otherwise, ground(AU?), ground(AD?), ground(K?) |
     E =.. ['%% not transformed: a rated goal of an undeclared procedure, or of one also called unrated or a person procedure', K?].
 
+%% check_inputs(Rs?, Hs?, Es): a fault for each procedure of a rated goal
+%% declared with an argument of a type that is not of the form T?, an output.
+procedure check_inputs(Terms?, Terms?, Terms).
+check_inputs([], _, []).
+check_inputs([K|Ks], Hs, Es?) :- ground(K?), ground(Hs?) |
+    decl_of(K?, Hs?, D), inputs_only(D?, A), check_inputs1(A?, K?, Ks?, Hs?, Es).
+procedure check_inputs1(Ans?, _?, Terms?, Terms?, Terms).
+check_inputs1(yes, _, Ks, Hs, Es?) :- check_inputs(Ks?, Hs?, Es).
+check_inputs1(no, K, Ks, Hs, [E?|Es?]) :- ground(K?) |
+    E =.. ['%% not transformed: a rated goal of a procedure with an output argument', K?],
+    check_inputs(Ks?, Hs?, Es).
+%% inputs_only(D?, A): A is yes where every argument type of the declaration
+%% head D is of the form T?, and where D is none, no declaration being
+%% check_rated1's fault.
+procedure inputs_only(_?, Ans).
+inputs_only(none, yes).
+inputs_only(D, A?) :- otherwise, ground(D?) | parts(D?, _, Ts), all_dual(Ts?, A).
+procedure all_dual(Terms?, Ans).
+all_dual([], yes).
+all_dual([dual(_)|Ts], A?) :- all_dual(Ts?, A).
+all_dual([T|_], no) :- otherwise, ground(T?) | true.
+
+procedure decl_of(_?, Terms?, _).
+decl_of(_, [], none).
+decl_of(K, [H|Hs], D?) :- ground(H?), ground(K?) | key(H?, K1), decl_of1(K1?, K?, H?, Hs?, D).
+procedure decl_of1(_?, _?, _?, Terms?, _).
+decl_of1(K1, K, H, _, H?) :- K1? =?= K? | true.
+decl_of1(K1, K, _, Hs, D?) :- K1? =?\= K? | decl_of(K?, Hs?, D).
 %% The names: the monitor's reference and a token for each rated goal of a
 %% clause, among the names the clause does not write.
 procedure check_names(Terms?, Terms).

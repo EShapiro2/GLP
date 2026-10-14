@@ -7,11 +7,11 @@
 %%   judge_panel(panel(Cs), S) :- judge(Cs?, S?).
 %%   procedure judge(List(Card)?, Integer?).
 %%   judge([card(_, A?) | Cs], S) :-
-%%       random(S?, 2, K, S1), verdict(K?, A) @ 1/hour, judge(Cs?, S1?).
+%%       random(S?, 2, K, S1), verdict(K?, slot(A)) @ 1/hour, judge(Cs?, S1?).
 %%   judge([], _).
-%%   procedure verdict(Integer?, YesNo).
-%%   verdict(1, yes).
-%%   verdict(2, no).
+%%   procedure verdict(Integer?, Slot(YesNo)?).
+%%   verdict(1, slot(yes)).
+%%   verdict(2, slot(no)).
 %%
 %%   run 1 agents [judging ~ (judge : 1.0)] until 1 week seed 20260927.
 %%
@@ -44,11 +44,11 @@ source(
    clause(judge_panel(panel(var('Cs')), var('S')), [], [judge(var('Cs?'), var('S?'))]),
    decl(judge(dual('List'('Card')), dual('Integer'))),
    clause(judge([card(var('_'), var('A?')) | var('Cs')], var('S')), [],
-          [random(var('S?'), 2, var('K'), var('S1')), rated(verdict(var('K?'), var('A')), rate(1, hour)),
+          [random(var('S?'), 2, var('K'), var('S1')), rated(verdict(var('K?'), slot(var('A'))), rate(1, hour)),
            judge(var('Cs?'), var('S1?'))]),
    clause(judge([], var('_')), [], []),
-   decl(verdict(dual('Integer'), 'YesNo')),
-   clause(verdict(1, yes), [], []),
-   clause(verdict(2, no), [], []),
+   decl(verdict(dual('Integer'), dual('Slot'('YesNo')))),
+   clause(verdict(1, slot(yes)), [], []),
+   clause(verdict(2, slot(no)), [], []),
 
    run(1, [mix(judging, [share(judge, 1.0)])], 1, week, 20260927)]).

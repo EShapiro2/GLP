@@ -26,7 +26,7 @@ source(
   %% The vGLP program's interface (Section 5).
   [type('Peer', ['Constant']),
    type('YesNo', [yes, no]),
-   type('Peers', ['List'('Peer')]),
+   type('Peers', [['Peer' | 'List'('Peer')]]),
    type('Choice', [same('Peer'), other('Peer')]),
    type('Menu', [menu('Peers', 'Peers', dual('Choice'))]),
    type('Card', [card('Peer', dual('YesNo'))]),

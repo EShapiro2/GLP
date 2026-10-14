@@ -4,15 +4,15 @@
 %%   person talker.
 %%   Stream(Msg) =::= talk.
 %%   procedure talk(Stream(Msg), Integer?).
-%%   talk(Ms?, _) :- say(1, Ms) @ 1/hour.
-%%   procedure say(Integer?, Stream(Msg)).
-%%   say(I, [msg(T?, St) | Ms?]) :- I? =< 3 | text(I?, T), next(St?, I?, Ms).
-%%   say(I, []) :- I? > 3 | true.
+%%   talk(Ms?, _) :- say(1, slot(Ms)) @ 1/hour.
+%%   procedure say(Integer?, Slot(Stream(Msg))?).
+%%   say(I, slot([msg(T?, St) | Ms?])) :- I? =< 3 | text(I?, T), next(St?, I?, Ms).
+%%   say(I, slot([])) :- I? > 3 | true.
 %%   procedure next(Status?, Integer?, Stream(Msg)).
-%%   next(sent, I, Ms?) :- I1 := I? + 1, say(I1?, Ms) @ 1/hour.
-%%   next(read(Q?), I, Ms?) :- acknowledge(I?, Q, Ms) @ 1/hour.
-%%   procedure acknowledge(Integer?, Ack, Stream(Msg)).
-%%   acknowledge(I, ack, Ms?) :- I1 := I? + 1, say(I1?, Ms) @ 1/hour.
+%%   next(sent, I, Ms?) :- I1 := I? + 1, say(I1?, slot(Ms)) @ 1/hour.
+%%   next(read(Q?), I, Ms?) :- acknowledge(I?, slot(Q), slot(Ms)) @ 1/hour.
+%%   procedure acknowledge(Integer?, Slot(Ack)?, Slot(Stream(Msg))?).
+%%   acknowledge(I, slot(ack), slot(Ms?)) :- I1 := I? + 1, say(I1?, slot(Ms)) @ 1/hour.
 %%   procedure text(Integer?, String).
 %%   text(1, hello).  text(2, there).  text(3, bye).
 %%
@@ -50,19 +50,19 @@ source(
    binds('Stream'('Msg'), talk),
    decl(talk('Stream'('Msg'), dual('Integer'))),
    clause(talk(var('Ms?'), var('_')), [],
-          [rated(say(1, var('Ms')), rate(1, hour))]),
-   decl(say(dual('Integer'), 'Stream'('Msg'))),
-   clause(say(var('I'), [msg(var('T?'), var('St')) | var('Ms?')]), ['=<'(var('I?'), 3)],
+          [rated(say(1, slot(var('Ms'))), rate(1, hour))]),
+   decl(say(dual('Integer'), dual('Slot'('Stream'('Msg'))))),
+   clause(say(var('I'), slot([msg(var('T?'), var('St')) | var('Ms?')])), ['=<'(var('I?'), 3)],
           [text(var('I?'), var('T')), next(var('St?'), var('I?'), var('Ms'))]),
-   clause(say(var('I'), []), ['>'(var('I?'), 3)], [true]),
+   clause(say(var('I'), slot([])), ['>'(var('I?'), 3)], [true]),
    decl(next(dual('Status'), dual('Integer'), 'Stream'('Msg'))),
    clause(next(sent, var('I'), var('Ms?')), [],
-          [':='(var('I1'), '+'(var('I?'), 1)), rated(say(var('I1?'), var('Ms')), rate(1, hour))]),
+          [':='(var('I1'), '+'(var('I?'), 1)), rated(say(var('I1?'), slot(var('Ms'))), rate(1, hour))]),
    clause(next(read(var('Q?')), var('I'), var('Ms?')), [],
-          [rated(acknowledge(var('I?'), var('Q'), var('Ms')), rate(1, hour))]),
-   decl(acknowledge(dual('Integer'), 'Ack', 'Stream'('Msg'))),
-   clause(acknowledge(var('I'), ack, var('Ms?')), [],
-          [':='(var('I1'), '+'(var('I?'), 1)), rated(say(var('I1?'), var('Ms')), rate(1, hour))]),
+          [rated(acknowledge(var('I?'), slot(var('Q')), slot(var('Ms'))), rate(1, hour))]),
+   decl(acknowledge(dual('Integer'), dual('Slot'('Ack')), dual('Slot'('Stream'('Msg'))))),
+   clause(acknowledge(var('I'), slot(ack), slot(var('Ms?'))), [],
+          [':='(var('I1'), '+'(var('I?'), 1)), rated(say(var('I1?'), slot(var('Ms'))), rate(1, hour))]),
    decl(text(dual('Integer'), 'String')),
    clause(text(1, hello), [], []),
    clause(text(2, there), [], []),

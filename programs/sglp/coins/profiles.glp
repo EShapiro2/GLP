@@ -12,6 +12,8 @@ Menu
 ?
 )
 .
+request(stop, _, _)
+.
 request(go, S, menu(Fs, [], swap(F?, 10)))
 :-
 ground(Fs?)
@@ -110,6 +112,8 @@ Offer
 ?
 )
 .
+weigh(stop, _)
+.
 weigh(go, offer(_, _, Held, yes))
 :-
 '=<'(Held?, 20)
@@ -150,6 +154,8 @@ Token?
 Offer
 ?
 )
+.
+accept(stop, _)
 .
 accept(go, offer(_, _, _, yes))
 .

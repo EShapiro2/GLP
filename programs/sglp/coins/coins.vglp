@@ -16,7 +16,7 @@
 
 Peer    ::= Constant.
 YesNo   ::= yes ; no.
-Peers   ::= List(Peer).
+Peers   ::= [Peer | List(Peer)].
 
 Holding ::= holding(Peer, Integer).
 Wallet  ::= List(Holding).
