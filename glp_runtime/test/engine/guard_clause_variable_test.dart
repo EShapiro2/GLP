@@ -24,6 +24,11 @@
 /// and no_readers(X?) succeeded.  Each =?= case runs on both paths: 0x45, both
 /// operands variables, and the generic guard call, one operand built in the
 /// guard.
+///
+/// he2, hq2 and hw2's otherwise clauses write the first argument they hold,
+/// none, where until 2026-10-14 they held `_?`: anonymous readers are not
+/// permitted in a clause (GLP-Spec glp.tex, Remark "Anonymous Variables",
+/// 297db75; TGLP 2424f4c).
 library;
 
 import 'dart:io';
@@ -44,15 +49,15 @@ hw(f(X), Y, yes) :- X? =?\= Y? | true.
 
 exported procedure he2(_, _?, Constant).
 he2(f(X), Y, yes) :- X? =?= Y? | true.
-he2(_?, _, no) :- otherwise | true.
+he2(none, _, no) :- otherwise | true.
 
 exported procedure hq2(_, _?, Constant).
 hq2(f(X), Y, yes) :- X? =?= w(Y?) | true.
-hq2(_?, _, no) :- otherwise | true.
+hq2(none, _, no) :- otherwise | true.
 
 exported procedure hw2(_, _?, Constant).
 hw2(f(X), Y, yes) :- X? =?\= Y? | true.
-hw2(_?, _, no) :- otherwise | true.
+hw2(none, _, no) :- otherwise | true.
 
 exported procedure hg(_, Constant).
 hg(f(X), yes) :- ground(X?) | true.
