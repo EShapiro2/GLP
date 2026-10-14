@@ -245,23 +245,20 @@ List<(Mode, TypeExpr?)> _getSubtermModes(
     return defaultModes;
   }
 
-  // Get the base type definition
-  final typeDef = typeEnv.getType(typeName);
-  if (typeDef == null) {
-    return defaultModes;
-  }
-
-  // Find matching structure alternative in type definition
-  for (final alt in typeDef.alternatives) {
+  // The matching structure alternative, among the type's own alternatives
+  // and, through each alternative that is a type name S or S?, among S's
+  // ([_alternativesOf]).
+  for (final (alt, flip) in _alternativesOf(typeName, typeEnv)) {
     if (alt is StructAlt && alt.functor == functor && alt.arity == arity) {
       // Found matching constructor - compute combined modes for each arg
       final result = <(Mode, TypeExpr?)>[];
       for (final argType in alt.args) {
-        final embeddedMode = _getEmbeddedMode(argType);
+        var embeddedMode = _getEmbeddedMode(argType);
+        if (flip) embeddedMode = embeddedMode.flip;
         // Combine with parent mode via involution
         final combinedMode = combineMode(parentMode, embeddedMode);
         // For dual types, flip the subterm type for DFA leaf checking
-        final subtermType = isDual ? _dualType(argType) : argType;
+        final subtermType = (isDual != flip) ? _dualType(argType) : argType;
         result.add((combinedMode, subtermType));
       }
       return result;
@@ -269,12 +266,16 @@ List<(Mode, TypeExpr?)> _getSubtermModes(
 
     // Handle DiffList: \ operator
     if (alt is DiffListAlt && functor == r'\' && arity == 2) {
-      final contentMode = _getEmbeddedMode(alt.content);
-      final holeMode = _getEmbeddedMode(alt.hole);
+      var contentMode = _getEmbeddedMode(alt.content);
+      var holeMode = _getEmbeddedMode(alt.hole);
+      if (flip) {
+        contentMode = contentMode.flip;
+        holeMode = holeMode.flip;
+      }
       final contentCombined = combineMode(parentMode, contentMode);
       final holeCombined = combineMode(parentMode, holeMode);
-      final contentType = isDual ? _dualType(alt.content) : alt.content;
-      final holeType = isDual ? _dualType(alt.hole) : alt.hole;
+      final contentType = (isDual != flip) ? _dualType(alt.content) : alt.content;
+      final holeType = (isDual != flip) ? _dualType(alt.hole) : alt.hole;
       return [
         (contentCombined, contentType),
         (holeCombined, holeType),
@@ -283,6 +284,38 @@ List<(Mode, TypeExpr?)> _getSubtermModes(
   }
 
   return defaultModes;
+}
+
+/// The alternatives of the type [typeName], each with whether it is reached
+/// through an odd number of complemented type-name alternatives: its own
+/// alternatives unflipped, and for each alternative that is a type name S or
+/// S?, S's alternatives in their turn, flipped once more where it is S?.
+/// TGLP appendix-type-automaton.tex, "Type definition transitions": "If A_j
+/// references another type S or S?: transitions are inherited from S or S?
+/// respectively"; typed-glp.tex: "An alternative in a type definition may also
+/// be a type name S, providing type union for types with disjoint top-level
+/// functors".  The automaton is built so (program_dfa.dart,
+/// _addTypeTransitions); the moded term of a head or a body atom must be read
+/// by the same alternatives, or a term of a type a union names is given its
+/// parent's mode at every argument, and a mode-inverted argument of it
+/// disagrees with the automaton's transition.  A definition cycle is cut.
+List<(TypeExpr, bool)> _alternativesOf(String typeName, TypeEnvironment typeEnv) {
+  final out = <(TypeExpr, bool)>[];
+  void walk(String name, bool flip, Set<String> seen) {
+    if (!seen.add(name)) return;
+    final def = typeEnv.getType(name);
+    if (def == null) return;
+    for (final alt in def.alternatives) {
+      if (alt is TypeRef && !alt.isParameterized &&
+          !TypeRef.builtins.contains(alt.name)) {
+        walk(alt.name, flip != alt.isInput, {...seen});
+        continue;
+      }
+      out.add((alt, flip));
+    }
+  }
+  walk(typeName, false, <String>{});
+  return out;
 }
 
 /// Get subterm modes for list [H|T] by looking up type definition.
@@ -314,24 +347,23 @@ List<(Mode, TypeExpr?)> _getSubtermModes(
     return defaultResult;
   }
 
-  // Get the base type definition
-  final typeDef = typeEnv.getType(typeName);
-  if (typeDef == null) {
-    return defaultResult;
-  }
-
-  // Find ListConsAlt in type definition
-  for (final alt in typeDef.alternatives) {
+  // Find ListConsAlt among the type's alternatives, through each that is a
+  // type name ([_alternativesOf]).
+  for (final (alt, flip) in _alternativesOf(typeName, typeEnv)) {
     if (alt is ListConsAlt) {
-      final headEmbeddedMode = _getEmbeddedMode(alt.head);
-      final tailEmbeddedMode = _getEmbeddedMode(alt.tail);
+      var headEmbeddedMode = _getEmbeddedMode(alt.head);
+      var tailEmbeddedMode = _getEmbeddedMode(alt.tail);
+      if (flip) {
+        headEmbeddedMode = headEmbeddedMode.flip;
+        tailEmbeddedMode = tailEmbeddedMode.flip;
+      }
       // Combine with parent mode via involution
       final headMode = combineMode(parentMode, headEmbeddedMode);
       final tailMode = combineMode(parentMode, tailEmbeddedMode);
 
       // For dual types, flip the subterm types for DFA leaf checking
-      final headType = isDual ? _dualType(alt.head) : alt.head;
-      final tailType = isDual ? _dualType(alt.tail) : alt.tail;
+      final headType = (isDual != flip) ? _dualType(alt.head) : alt.head;
+      final tailType = (isDual != flip) ? _dualType(alt.tail) : alt.tail;
 
       return (
         (headMode, headType),
