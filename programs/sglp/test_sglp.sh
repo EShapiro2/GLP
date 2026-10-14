@@ -168,6 +168,11 @@
 #       panel(List(Card)), Card ::= card(Integer, YesNo?), in writer mode, a panel
 #       of three cards; the log each card's answer as a question of its own,
 #       the program reading them.
+# (xv)  a run with a stream the person writes whose element type holds no
+#       position the program writes (tests/numbers; sGLP's task of 2026-10-14
+#       09:46 UTC, items 2 and 3): Stream(Integer)? in reader mode, the person
+#       writing 1, 2 and 3; the relay and the log one element at a time, then
+#       the stream's end, the program reading their sum.
 #
 # Prints one line per check and a summary line, "=== P passed, F failed ===";
 # exits non-zero if any check fails.  The runs of (iii) and (iv) take some
@@ -739,6 +744,34 @@ awk '
     }' "$WORK/panel.lines"
 check "the log: each card answered as a question of its own, card 1 in the panel as shown and cards 2 and 3 in the cards as shown, in the order of time; the program reads the three answers logged; the clock last" $?
 grep '^entry(\|^clock(\|^As = ' "$WORK/panel.lines" | sed 's/^/        /'
+
+echo "--- (xv) a run with a stream the person writes, its element type holding no position the program writes"
+# tests/numbers: the person's Stream(Integer)? in reader mode, the person
+# writing 1, 2 and 3 and closing the stream; the relay hands it over one
+# element at a time, [E | Z?], Z the next question, though Integer holds no
+# position the program writes (Definition "Copy, Relay"; sGLP's task of
+# 2026-10-14 09:46 UTC, items 2 and 3), where it was waited on with ground
+# and handed over whole.
+D="$HERE/tests/numbers/population.glp"
+tr '\n' ' ' < "$D" | grep -q "answer_1(A, Type, \[\], \[\], Mon, Log) :- stream_append(time(Time), Mon?, _) , stream_append(entry(Time?, A?, Type?, \[\]), Log?, _) \." &&
+    tr '\n' ' ' < "$D" | grep -q "answer_1(A, Type, \[Z1 | Z2\], \[Z1? | Z3?\], Mon, Log) :- ground(Z1?) | stream_append(time(Time), Mon?, _) , stream_append(entry(Time?, A?, Type?, \[Z1? | '_'\]), Log?, _) , answer_1(A?, Type?, Z2?, Z3, Mon?, Log?) \." &&
+    ! tr '\n' ' ' < "$D" | grep -q "answer_1(A, Type, Y, Y?, Mon, Log)"
+check "the printed relay: a Stream(Integer) the person writes handed over one element at a time, the tail the next answer, and the stream's end" $?
+repl "$WORK/numbers.out" ':limit 1000000000000' "$HERE/tests/numbers" 'numbers_run(S).'
+sed 's/^\(GLP> \)*//' "$WORK/numbers.out" > "$WORK/numbers.lines"
+grep -q '^✓ Loaded program' "$WORK/numbers.out"
+check "tests/numbers loads, its population printed before the run" $?
+awk '
+    /^entry\(/ { e[++n] = $0; t = substr($0, 7, index($0, ",") - 7) + 0; if (t < last) bad++; last = t }
+    /^S = 6$/ { sum = 1 }
+    /^clock\(/ { c = substr($0, 7, length($0) - 7) + 0; seen = 1 }
+    END {
+        for (i = 1; i <= 3; i++) if (e[i] !~ ("^entry\\([0-9.]+, 1, Stream\\(Integer\\)\\?, \\[" i " \\| _\\]\\)$")) bad++
+        if (e[4] !~ /^entry\([0-9.]+, 1, Stream\(Integer\)\?, \[\]\)$/) bad++
+        exit !(n == 4 && sum && seen && c == last && !bad)
+    }' "$WORK/numbers.lines"
+check "the log: each integer as an element of its own, then the stream's end, in the order of time; the program reads their sum, 6; the clock last" $?
+grep '^entry(\|^clock(\|^S = ' "$WORK/numbers.lines" | sed 's/^/        /'
 
 echo ""
 echo "=== $PASS passed, $FAIL failed ==="

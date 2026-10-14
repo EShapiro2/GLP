@@ -54,6 +54,7 @@ imported procedure tests#reader_source(SglpTerms, SglpTerms).
 imported procedure tests#delivery_source(SglpTerms, SglpTerms).
 imported procedure tests#receipt_source(SglpTerms, SglpTerms).
 imported procedure tests#panel_source(SglpTerms, SglpTerms).
+imported procedure tests#numbers_source(SglpTerms, SglpTerms).
 
 Terms ::= [] ; [_ | Terms].
 Sets  ::= [] ; [Terms | Sets].
@@ -65,8 +66,8 @@ Ans   ::= yes ; no.
 
 %% transform(Program?, Part?): print Part, profiles or population, of the
 %% translation of Program, social_graph, coins or the run tests' reader,
-%% delivery, receipt and panel (tests/reader, tests/delivery, tests/receipt,
-%% tests/panel), between the lines %% transform begin and %% transform end,
+%% delivery, receipt, panel and numbers (tests/reader, tests/delivery,
+%% tests/receipt, tests/panel, tests/numbers), between the lines %% transform begin and %% transform end,
 %% which transform.sh drops.
 exported procedure transform(Constant?, Constant?).
 transform(Prog, Part) :- Prog? =?= social_graph |
@@ -81,6 +82,8 @@ transform(Prog, Part) :- Prog? =?= receipt |
     tests # receipt_source(V, S), part(receipt, Part?, V?, S?).
 transform(Prog, Part) :- Prog? =?= panel |
     tests # panel_source(V, S), part(panel, Part?, V?, S?).
+transform(Prog, Part) :- Prog? =?= numbers |
+    tests # numbers_source(V, S), part(numbers, Part?, V?, S?).
 transform(Prog, _) :- otherwise, ground(Prog?) |
     C =.. ['%% not transformed: no sGLP source of', Prog?],
     send_to_user(['%% transform begin', C?, '%% transform end']).
@@ -875,11 +878,29 @@ name_of(none, [], nonames, nonames, []).
 %% question as shown, its log L, where the position is marked '$hole'(Key) and
 %% each position the program writes that it shows '$leaf'(R, T2), R its reader
 %% and T2 its type.
+%% A stream or a list the person writes in an answer is taken alternative by
+%% alternative even where its element type holds no position the program
+%% writes, so that it is handed over one element at a time, [E | Z?], Z the
+%% next question (Definition "Copy, Relay": "a list cell or [] where the writer
+%% is of a stream or list type"; sGLP's task of 2026-10-14 09:46 UTC, item 2).
 procedure expand(_?, _?, Terms?, Terms?, _?, Terms?, Terms).
 expand(Sd, T, Tys, Path, Root, Ns, Vs?) :-
     ground(Sd?), ground(T?), ground(Tys?), ground(Path?), ground(Root?), ground(Ns?) |
-    mixed(T?, Tys?, [], M), member(T?, Path?, On),
+    mixed(T?, Tys?, [], M0), list_type(Sd?, T?, Tys?, L), either(M0?, L?, M),
+    member(T?, Path?, On),
     expand1(M?, On?, Sd?, T?, Tys?, Path?, Root?, Ns?, Vs).
+%% list_type(Sd?, T?, Tys?, L): L is yes where Sd is answer and T is a stream
+%% or list type, one of whose alternatives is a list cell whose tail is of T.
+procedure list_type(_?, _?, Terms?, Ans).
+list_type(answer, T, Tys, L?) :- ground(T?) | flat_alts(T?, Tys?, [], As), has_cons(As?, T?, L).
+list_type(present, _, _, no).
+procedure has_cons(Terms?, _?, Ans).
+has_cons([], _, no).
+has_cons([[_|U]|_], T, yes) :- U? =?= T? | true.
+has_cons([_|As], T, L?) :- otherwise | has_cons(As?, T?, L).
+procedure either(Ans?, Ans?, Ans).
+either(yes, _, yes).
+either(no, L, L?).
 procedure expand1(Ans?, Ans?, _?, _?, Terms?, Terms?, _?, Terms?, Terms).
 expand1(no, _, Sd, T, _, _, Root, Ns, Vs?) :-
     name_of(Root?, Ns?, W, R, Ns1), leaf_variant(Sd?, T?, W?, R?, ground, Ns1?, Vs).

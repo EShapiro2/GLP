@@ -1,0 +1,45 @@
+%% The item-2 test's sGLP source, in the term form the transformation reads
+%% (programs/sglp/README.md, "The term form").  Its surface form:
+%%
+%%   person counter.
+%%   Stream(Integer) =::= count.
+%%   procedure count(Stream(Integer), Integer?).
+%%   count(Ns?, _) :- step(1, slot(Ns)) @ 1/hour.
+%%   procedure step(Integer?, Slot(Stream(Integer))?).
+%%   step(I, slot([I? | Ns?])) :- I? =< 3 | I1 := I? + 1, step(I1?, slot(Ns)) @ 1/hour.
+%%   step(I, slot([])) :- I? > 3 | true.
+%%
+%%   run 1 agents [counting ~ (counter : 1.0)] until 1 week seed 20260927.
+%%
+%% Stream(Integer) is in reader mode (procedure (Stream(Integer)?)*total(...),
+%% total.vglp), so its person procedure is declared with its dual,
+%% Stream(Integer), in writer mode (Section 3, Definition "Dual, Person
+%% Procedure, Person Declaration"): the person writes 1, 2 and 3, an hour
+%% apart on average, and then closes the stream, each rated goal receiving
+%% the writer of the stream's tail in a slot it reads (Section 4, "The
+%% transformation").  The element type, Integer, holds no position the program
+%% writes, and the relay hands the stream over one element at a time
+%% (Definition "Copy, Relay"; sGLP's task of 2026-10-14 09:46 UTC, item 2).
+%%
+%% transform.sh prints from it profiles.glp and population.glp, beside it.
+
+exported procedure source(SglpTerms, SglpTerms).
+source(
+  %% The vGLP program's interface (total.vglp; Stream, the root's) and its
+  %% compiled program's predicates (total.glp).
+  [type('Stream'('X'), [[], ['X' | 'Stream'('X')]]),
+   volitional(dual('Stream'('Integer')), stream_integer_r, total('Integer')),
+   compiled(total, 2), compiled(total1, 3), compiled(sum, 3)],
+
+  %% The profile and the run declaration.
+  [person(counter),
+   binds('Stream'('Integer'), count),
+   decl(count('Stream'('Integer'), dual('Integer'))),
+   clause(count(var('Ns?'), var('_')), [],
+          [rated(step(1, slot(var('Ns'))), rate(1, hour))]),
+   decl(step(dual('Integer'), dual('Slot'('Stream'('Integer'))))),
+   clause(step(var('I'), slot([var('I?') | var('Ns?')])), ['=<'(var('I?'), 3)],
+          [':='(var('I1'), '+'(var('I?'), 1)), rated(step(var('I1?'), slot(var('Ns'))), rate(1, hour))]),
+   clause(step(var('I'), slot([])), ['>'(var('I?'), 3)], [true]),
+
+   run(1, [mix(counting, [share(counter, 1.0)])], 1, week, 20260927)]).

@@ -1,0 +1,14 @@
+%% The item-2 test's vGLP program (sGLP's task of 2026-10-14 09:46 UTC, items 2
+%% and 3): the person's integers a question of type Stream(Integer)? in reader
+%% mode, which the program sums.  Its canonical compilation (vGLP, Definition
+%% "Canonical Compilation") is total.glp, by hand; the program loader skips a
+%% .vglp beside a .glp of its name, so this source is not loaded.
+
+%% The person's integers, read one at a time: S their sum.
+exported procedure (Stream(Integer)?)*total(Integer).
+(Ns)*total(S?) :- sum(Ns?, 0, S).
+
+%% sum(Ns?, A?, S): S is A plus the sum of Ns.
+procedure sum(Stream(Integer)?, Integer?, Integer).
+sum([N | Ns], A, S?) :- A1 := A? + N?, sum(Ns?, A1?, S).
+sum([], A, A?).

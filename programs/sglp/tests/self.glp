@@ -10,6 +10,7 @@ imported procedure reader#source(SglpTerms, SglpTerms).
 imported procedure delivery#source(SglpTerms, SglpTerms).
 imported procedure receipt#source(SglpTerms, SglpTerms).
 imported procedure panel#source(SglpTerms, SglpTerms).
+imported procedure numbers#source(SglpTerms, SglpTerms).
 
 exported procedure reader_source(SglpTerms, SglpTerms).
 reader_source(V?, S?) :- reader # source(V, S).
@@ -22,3 +23,6 @@ receipt_source(V?, S?) :- receipt # source(V, S).
 
 exported procedure panel_source(SglpTerms, SglpTerms).
 panel_source(V?, S?) :- panel # source(V, S).
+
+exported procedure numbers_source(SglpTerms, SglpTerms).
+numbers_source(V?, S?) :- numbers # source(V, S).
