@@ -582,7 +582,7 @@ sg_init(alice, warm, NetIn) :-
     load_file("pingapp.glpw", C),
     certified(C?, CK, CSig),
     send_to_user(Ui?),
-    warm_home(alice, Out?, Script, ScriptCmds?, In),
+    scripted_home(alice, Out?, Script, ScriptCmds?, In),
     alice_warm(C?, CK?, CSig?, Ui, Script?, ScriptCmds).
 sg_init(bob, warm, NetIn) :-
     agent # agent(bob, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
@@ -590,7 +590,7 @@ sg_init(bob, warm, NetIn) :-
     load_file("pingapp.glpw", C),
     certified(C?, CK, CSig),
     send_to_user(Ui?),
-    warm_home(bob, Out?, Script, ScriptCmds?, In),
+    scripted_home(bob, Out?, Script, ScriptCmds?, In),
     bob_warm(C?, CK?, CSig?, Ui, Script?, ScriptCmds).
 sg_init(carol, warm, NetIn) :-
     agent # agent(carol, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
@@ -598,36 +598,8 @@ sg_init(carol, warm, NetIn) :-
     load_file("pingapp.glpw", C),
     certified(C?, CK, CSig),
     send_to_user(Ui?),
-    carol_warm(C?, CK?, CSig?, Ui, Out?, In).
-
-%% The super-app's person interface for a warm-call person (home.vglp): what
-%% the agent tells the person is split by split_out/3 (self.glp), each message
-%% whole to home, which raises the card of an introduction, and its notice to
-%% the person's script; the script's commands and home's reach the agent
-%% merged; and the person, scripted on what the dispatcher draws, answers yes
-%% on each introduction's card.  The notice informs; the consent is asked by
-%% the card only (GSG, 2026-10-14 09:24 UTC, item 1).
-procedure warm_home(Key?, AgentToUserStream?, Stream(Output), UserInStream?, UserInStream).
-warm_home(Id, Out, Notices?, ScriptCmds, In?) :-
-    ground(Id?) |
-    split_out(Out?, Notices, Seen),
-    home # home(Id?, Seen?, Home, Asks),
-    home # dispatch(Asks?, ch(Grants?, Draws), MCh),
-    hold_output(MCh?),
-    intro_person(Draws?, Grants),
-    merge(ScriptCmds?, Home?, In).
-
-%% The program's output to the person: the notices go to the script instead.
-procedure hold_output(Channel(Stream(_), Stream(Output))?).
-hold_output(ch(_, [])).
-
-%% The person: yes on each introduction's card, at the path of its decision,
-%% once the card is drawn with it.  The person channel never closes, so the
-%% person holds its grant writer for good.
-procedure intro_person(_?, PersonIn).
-intro_person([draw(N, _, from(_, _, input(Q))) | Ds], [input(N?, Q?, yes) | Gs?]) :-
-    ground(N?), ground(Q?) | intro_person(Ds?, Gs).
-intro_person([_ | Ds], Gs?) :- otherwise | intro_person(Ds?, Gs).
+    scripted_home(carol, Out?, Script, ScriptCmds?, In),
+    carol_warm(C?, CK?, CSig?, Ui, Script?, ScriptCmds).
 
 %% alice's person: install; consent in advance to a warm call from bob;
 %% cold-call carol, invite her once connected; consent on its card to carol's
@@ -679,9 +651,9 @@ bob_warm_run([_ | Outs], Cmds?) :- otherwise | bob_warm_run(Outs?, Cmds).
 bob_warm_run([], []).
 
 %% carol's person: install; consent in advance to alice's invitation and allow
-%% the introduction of bob to alice; accept both cold calls; invite bob once
-%% connected.
-procedure carol_warm(Content?, String?, String?, AppUiStream, AgentToUserStream?, UserInStream).
+%% the introduction of bob to alice; consent on their cards to both cold
+%% calls; invite bob once connected.
+procedure carol_warm(Content?, String?, String?, AppUiStream, Stream(Output)?, UserInStream).
 carol_warm(C, CK, CSig, Ui?, Outs,
            [msg(person, carol, trust(CK?)),
             msg(person, carol, install(ping, C?, CSig?, Ui)),
@@ -689,9 +661,8 @@ carol_warm(C, CK, CSig, Ui?, Outs,
             msg(person, carol, allow_intro(bob, alice)) | Cmds?]) :-
     carol_warm_run(Outs?, Cmds).
 
-procedure carol_warm_run(AgentToUserStream?, UserInStream).
-carol_warm_run([msg(agent, person, befriend(Who, P)) | Outs],
-               [msg(person, carol, decision(yes, Who?, P?)) | Cmds?]) :-
+procedure carol_warm_run(Stream(Output)?, UserInStream).
+carol_warm_run([msg(agent, person, befriend(Who)) | Outs], Cmds?) :-
     ground(Who?) |
     send_to_user([sg(cold_call(Who?))]),
     carol_warm_run(Outs?, Cmds).

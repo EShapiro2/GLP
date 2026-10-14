@@ -77,9 +77,8 @@ FriendRequest ::= from(Friend, Decision?).
 
 %% The card of an introduction: the introducer and the other party, which the
 %% program writes for the person to see, and the person's answer, yes or no.
-%% Each field is typed as the agent's notice carries it, befriend_intro(Constant,
-%% Key) (GSG, 2026-10-14 09:24 UTC, item 1).
-Introducer ::= Constant.
+%% Each is an agent's name, its key (GSG, 2026-10-14 11:38 UTC, (a)).
+Introducer ::= Key.
 Other      ::= Key.
 IntroRequest ::= from(Introducer, Other, Decision?).
 
@@ -106,7 +105,7 @@ decide_friend(no, Id, From, P, [msg(person, Id?, decision(no, From?, P?))]).
 %% =============================================================================
 
 %% The pending value of the introduction is passed back as it came.
-procedure (IntroRequest)*respond_intro(Key?, Constant?, Key?, PendingValue?, Stream(UserInMsg)).
+procedure (IntroRequest)*respond_intro(Key?, Key?, Key?, PendingValue?, Stream(UserInMsg)).
 
 %% Show the person the introducer and the other party, and pass their answer
 %% on.
@@ -115,14 +114,10 @@ procedure (IntroRequest)*respond_intro(Key?, Constant?, Key?, PendingValue?, Str
     decide_intro(Answer?, Id?, Other?, P?, Cmds).
 
 %% yes consents and no refuses: the agent binds its consent variable to
-%% yes(...) or no by the pending value passed back as it came.  The refusal
-%% names the other party as a Constant, as UserContent's reject_intro does.
+%% yes(...) or no by the pending value passed back as it came.
 procedure decide_intro(Decision?, Key?, Key?, PendingValue?, Stream(UserInMsg)).
 decide_intro(yes, Id, Other, P, [msg(person, Id?, accept_intro(Other?, P?))]).
-decide_intro(no, Id, Other, P, Cmds?) :- refuse_intro(Id?, Other?, P?, Cmds).
-
-procedure refuse_intro(Key?, Constant?, PendingValue?, Stream(UserInMsg)).
-refuse_intro(Id, Other, P, [msg(person, Id?, reject_intro(Other?, P?))]).
+decide_intro(no, Id, Other, P, [msg(person, Id?, reject_intro(Other?, P?))]).
 
 %% =============================================================================
 %% The person's own acts on their super-app

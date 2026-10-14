@@ -8,7 +8,7 @@ AppName ::= String.
 Artefact ::= String.
 Request ::= trust(CompilerKey) ; install(AppName, Artefact) ; invite(AppName, Friend) ; connect(Friend).
 FriendRequest ::= from(Friend, Decision?).
-Introducer ::= Constant.
+Introducer ::= Key.
 Other ::= Key.
 IntroRequest ::= from(Introducer, Other, Decision?).
 
@@ -24,18 +24,15 @@ procedure decide_friend(Decision?, Key?, Key?, PendingValue?, Stream(UserInMsg))
 decide_friend(yes, Id, From, P, [msg(person, Id?, decision(yes, From?, P?))]).
 decide_friend(no, Id, From, P, [msg(person, Id?, decision(no, From?, P?))]).
 
-procedure respond_intro(Key?, Constant?, Key?, PendingValue?, Stream(UserInMsg), Stream(Ask(Question))).
+procedure respond_intro(Key?, Key?, Key?, PendingValue?, Stream(UserInMsg), Stream(Ask(Question))).
 respond_intro(S1, S2, S3, S4, S5?, [ask('IntroRequest', introRequest_w(X?)) | D?]) :- respond_intro1(S1?, S2?, S3?, S4?, S5, X, D).
 
-procedure respond_intro1(Key?, Constant?, Key?, PendingValue?, Stream(UserInMsg), IntroRequest, Stream(Ask(Question))).
+procedure respond_intro1(Key?, Key?, Key?, PendingValue?, Stream(UserInMsg), IntroRequest, Stream(Ask(Question))).
 respond_intro1(Id, From, Other, P, Cmds?, from(From?, Other?, Answer), []) :- ground(Id?), ground(From?), ground(Other?) | decide_intro(Answer?, Id?, Other?, P?, Cmds).
 
 procedure decide_intro(Decision?, Key?, Key?, PendingValue?, Stream(UserInMsg)).
 decide_intro(yes, Id, Other, P, [msg(person, Id?, accept_intro(Other?, P?))]).
-decide_intro(no, Id, Other, P, Cmds?) :- refuse_intro(Id?, Other?, P?, Cmds).
-
-procedure refuse_intro(Key?, Constant?, PendingValue?, Stream(UserInMsg)).
-refuse_intro(Id, Other, P, [msg(person, Id?, reject_intro(Other?, P?))]).
+decide_intro(no, Id, Other, P, [msg(person, Id?, reject_intro(Other?, P?))]).
 
 exported procedure home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
 home(S1, S2, S3?, [ask('Stream(Request)?', stream_request_r(X)) | D?]) :- home1(S1?, S2?, S3, X?, D).
@@ -200,7 +197,7 @@ form_module(_, refused) :- otherwise | true.
 %% --- the construct process of each interactive type ---
 
 exported procedure dispatch(Stream(Ask(Question))?, Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(Output))).
-dispatch(Asks, PCh, MCh?) :- dispatch(Asks?, PCh?, MCh, thread(form(msg, [field('Constant', shown), field('Constant', shown), field('NoticeContent', menu([form(befriend, [field('Key', shown)]), form(befriend_intro, [field('Constant', shown), field('Key', shown)]), form(connected, [field('Constant', shown)]), shown, form(rejected, [field('Constant', shown)]), form(unfriended, [field('Constant', shown)]), form(received, [field('Key', shown), field('Constant', shown)]), form(not_a_friend, [field('Key', shown)])]))])), Ss), constructs(Ss?).
+dispatch(Asks, PCh, MCh?) :- dispatch(Asks?, PCh?, MCh, thread(form(msg, [field('Constant', shown), field('Constant', shown), field('NoticeContent', menu([form(befriend, [field('Key', shown)]), form(befriend_intro, [field('Key', shown), field('Key', shown)]), form(connected, [field('Constant', shown)]), shown, form(rejected, [field('Constant', shown)]), form(unfriended, [field('Constant', shown)]), form(received, [field('Key', shown), field('Constant', shown)]), form(not_a_friend, [field('Key', shown)])]))])), Ss), constructs(Ss?).
 
 procedure constructs(Stream(Spawn(Question))?).
 constructs([spawn(Id, Q, Gs, Ds?) | Ss]) :- construct(Id?, Q?, Gs?, Ds), constructs(Ss?).

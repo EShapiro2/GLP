@@ -40,15 +40,16 @@ superapp_ui(alice, Grants, _) :-
     show_notices(MCh?, Shown?),
     send_to_user(Draws?),
     agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
-    bob_answers(BobOut?, BobIn).
+    scripted_home(bob, BobOut?, BobNotices, BobCmds?, BobIn),
+    bob_answers(BobNotices?, BobCmds).
 
-%% Bob, scripted: he consents to alice's request to connect, passing the
-%% pending value back as it came, and accepts whatever mini-app she invites
-%% him to, so her Connect and Invite have someone to reach.
-procedure bob_answers(AgentToUserStream?, UserInStream).
-bob_answers([msg(agent, person, befriend(From, P)) | Outs],
-            [msg(person, bob, decision(yes, From?, P?)),
-             msg(person, bob, accept_invite(ping, From?)) | Cmds?]) :-
+%% Bob, scripted on his super-app's person interface (scripted_home/5,
+%% self.glp's): he consents on its card to alice's request to connect, and,
+%% told of it, accepts whatever mini-app she invites him to, so her Connect
+%% and Invite have someone to reach.
+procedure bob_answers(Stream(Output)?, UserInStream).
+bob_answers([msg(agent, person, befriend(From)) | Outs],
+            [msg(person, bob, accept_invite(ping, From?)) | Cmds?]) :-
     ground(From?) |
     bob_answers(Outs?, Cmds).
 bob_answers([_ | Outs], Cmds?) :- otherwise | bob_answers(Outs?, Cmds).

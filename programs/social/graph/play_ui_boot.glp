@@ -2,7 +2,9 @@
 %%
 %% Bob is the live-UI agent: his UserCmd stream comes from the person through
 %% the Dart bridge (agent_init/3's UserIn) and his UserNotify stream returns to
-%% the person through send_to_user.  Alice and Charlie are actors: each
+%% the person through send_to_user.  Alice and Charlie are actors, each on the
+%% super-app's person interface (core # scripted_home/5), consenting on its
+%% cards: each
 %% cold-calls Bob and, once he accepts, messages him; Charlie then unfriends
 %% him, so Bob's screen shows the Integrate-unfriend path.  An in-heap crossbar
 %% routes '_net' cold calls by addressee; friend channels are in-heap.
@@ -19,6 +21,19 @@
 %% "Module System": a qualifier names a child directory of the caller's,
 %% entered through its self.glp)
 imported procedure core#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
+%% The notices core # scripted_home/5 gives an actor's script, declared here
+%% as core/self.glp declares them (Notice), structurally: types are not
+%% exported (TGLP, "Cross-module type checking").
+ActorNoticeContent ::= befriend(Key)
+                     ; befriend_intro(Key, Key)
+                     ; connected(Constant)
+                     ; rejected
+                     ; rejected(Constant)
+                     ; unfriended(Constant)
+                     ; received(Key, Constant)
+                     ; not_a_friend(Key).
+ActorNotice ::= msg(Constant, Constant, ActorNoticeContent).
+imported procedure core#scripted_home(Key?, AgentToUserStream?, Stream(ActorNotice), UserInStream?, UserInStream).
 
 %% From ui/, its self.glp forwarding to ui/mediator.glp
 imported procedure ui#ui_mediator(Key?, AgentChannel?, UserChannel?, PendingList?, Integer?).
@@ -44,36 +59,35 @@ route([msg(charlie, C) | Rest], A?, B?, [msg(charlie, C?) | Ch?]) :-
 route([], [], [], []).
 
 %% =============================================================================
-%% ACTORS — cold-call Bob; accept offers and introductions
+%% ACTORS — cold-call Bob; consent on their super-apps' cards
 %% =============================================================================
 
-%% Alice: cold-call Bob; once connected, message him.
-procedure ui_alice(UserNotifyStream?, UserCmdStream).
-ui_alice(Ns, [connect(bob) | Cs?]) :- ui_alice_run(Ns?, Cs).
+%% Alice and Charlie each run the super-app's person interface (home.vglp)
+%% through core # scripted_home/5: a friend's request to connect and an
+%% introduction raise home's cards, on which each consents; their scripts
+%% read the notices, which inform, and answer none (GSG, 2026-10-14 11:38
+%% UTC).
 
-procedure ui_alice_run(UserNotifyStream?, UserCmdStream).
-ui_alice_run([connected(bob) | Ns], [send(bob, hello) | Cs?]) :-
+%% Alice: cold-call Bob; once connected, message him.
+procedure ui_alice(Stream(ActorNotice)?, UserInStream).
+ui_alice(Ns, [msg(person, alice, connect(bob)) | Cs?]) :- ui_alice_run(Ns?, Cs).
+
+procedure ui_alice_run(Stream(ActorNotice)?, UserInStream).
+ui_alice_run([msg(agent, person, connected(bob)) | Ns], [msg(person, alice, send(bob, hello)) | Cs?]) :-
     ui_drain(alice, Ns?, Cs).
-ui_alice_run([befriend(Who, Req) | Ns], [decision(yes, Who?, Req?) | Cs?]) :-
-    ground(Who?), ground(Req?) | ui_alice_run(Ns?, Cs).
-ui_alice_run([befriend_intro(_, Other, Req) | Ns], [accept_intro(Other?, Req?) | Cs?]) :-
-    ground(Other?), ground(Req?) | ui_alice_run(Ns?, Cs).
 ui_alice_run([_ | Ns], Cs?) :- otherwise | ui_alice_run(Ns?, Cs).
 ui_alice_run([], []).
 
 %% Charlie: cold-call Bob; once connected, message him and then unfriend him
 %% (End friend at the peer; Bob's screen shows unfriended(charlie) via the
 %% Integrate-unfriend path).
-procedure ui_charlie(UserNotifyStream?, UserCmdStream).
-ui_charlie(Ns, [connect(bob) | Cs?]) :- ui_charlie_run(Ns?, Cs).
+procedure ui_charlie(Stream(ActorNotice)?, UserInStream).
+ui_charlie(Ns, [msg(person, charlie, connect(bob)) | Cs?]) :- ui_charlie_run(Ns?, Cs).
 
-procedure ui_charlie_run(UserNotifyStream?, UserCmdStream).
-ui_charlie_run([connected(bob) | Ns], [send(bob, hi) | [unfriend(bob) | Cs?]]) :-
+procedure ui_charlie_run(Stream(ActorNotice)?, UserInStream).
+ui_charlie_run([msg(agent, person, connected(bob)) | Ns],
+               [msg(person, charlie, send(bob, hi)), msg(person, charlie, unfriend(bob)) | Cs?]) :-
     ui_drain(charlie, Ns?, Cs).
-ui_charlie_run([befriend(Who, Req) | Ns], [decision(yes, Who?, Req?) | Cs?]) :-
-    ground(Who?), ground(Req?) | ui_charlie_run(Ns?, Cs).
-ui_charlie_run([befriend_intro(_, Other, Req) | Ns], [accept_intro(Other?, Req?) | Cs?]) :-
-    ground(Other?), ground(Req?) | ui_charlie_run(Ns?, Cs).
 ui_charlie_run([_ | Ns], Cs?) :- otherwise | ui_charlie_run(Ns?, Cs).
 ui_charlie_run([], []).
 
@@ -82,17 +96,13 @@ procedure reply_of(Constant?, Constant).
 reply_of(alice, so_nice_to_hear_from_you_bob).
 reply_of(charlie, cheers_bob).
 
-%% Steady state: answer Bob's chat messages, accept friend offers and
-%% introductions, ignore the rest.
-procedure ui_drain(Constant?, UserNotifyStream?, UserCmdStream).
-ui_drain(Me, [received(From, _) | Ns], [send(From?, R?) | Cs?]) :-
+%% Steady state: answer Bob's chat messages and ignore the rest; friend
+%% requests and introductions are consented to on home's cards.
+procedure ui_drain(Key?, Stream(ActorNotice)?, UserInStream).
+ui_drain(Me, [msg(agent, person, received(From, _)) | Ns], [msg(person, Me?, send(From?, R?)) | Cs?]) :-
     ground(Me?), ground(From?) |
     reply_of(Me?, R),
     ui_drain(Me?, Ns?, Cs).
-ui_drain(Me, [befriend(Who, Req) | Ns], [decision(yes, Who?, Req?) | Cs?]) :-
-    ground(Me?), ground(Who?), ground(Req?) | ui_drain(Me?, Ns?, Cs).
-ui_drain(Me, [befriend_intro(_, Other, Req) | Ns], [accept_intro(Other?, Req?) | Cs?]) :-
-    ground(Me?), ground(Other?), ground(Req?) | ui_drain(Me?, Ns?, Cs).
 ui_drain(Me, [_ | Ns], Cs?) :- ground(Me?), otherwise | ui_drain(Me?, Ns?, Cs).
 ui_drain(_, [], []).
 
@@ -109,12 +119,10 @@ agent_init(bob, UserIn, _) :-
     send_to_user(BUserOut?),
     core # agent(alice, AAgentIn?, ANetIn?,
           [user_output(AA2U), net_output(ANetOut)]),
-    ui # ui_mediator(alice, ch(AA2U?, AAgentIn),
-                ch(ACmds?, AUserOut), [], 1),
-    ui_alice(AUserOut?, ACmds),
+    core # scripted_home(alice, AA2U?, ANotices, ACmds?, AAgentIn),
+    ui_alice(ANotices?, ACmds),
     core # agent(charlie, CAgentIn?, CNetIn?,
           [user_output(CA2U), net_output(CNetOut)]),
-    ui # ui_mediator(charlie, ch(CA2U?, CAgentIn),
-                ch(CCmds?, CUserOut), [], 1),
-    ui_charlie(CUserOut?, CCmds),
+    core # scripted_home(charlie, CA2U?, CNotices, CCmds?, CAgentIn),
+    ui_charlie(CNotices?, CCmds),
     crossbar(ANetOut?, BNetOut?, CNetOut?, ANetIn, BNetIn, CNetIn).
