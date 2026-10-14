@@ -64,6 +64,12 @@ PeerAddress ::= address(String) ; none.
 % scope since 2026-09-18; programs/system/mad_predicates.glp defined it before.
 GlobalName ::= '_r'(Key, Integer) ; '_w'(Key, Integer).
 
+% A message to the network (GLP-Spec appendix-guards, "Output to the network
+% (send_to_net/1)"): msg(Q, T), Q the key of the agent it is sent to.  Declared
+% at what send_to_net/1's clause reads (GLP, 2026-10-13 20:39 UTC; GLP-Spec
+% b063ec9).
+NetMsg(X) ::= msg(Key, X).
+
 % The answer authorise_link/2 gives to a held link (GLP-Spec appendix-guards,
 % "Held links").
 Answer ::= authorise ; refuse.
@@ -224,7 +230,7 @@ procedure(X) '_stream_append'(MutualRef?, X?, MutualRef).
 procedure '_close_mutual_reference'(MutualRef?).
 
 % Network
-procedure '_send'(_?, GlobalName?, Key?).
+procedure(X) '_send'(X?, GlobalName?, Key?).
 procedure '_authorise_link'(_?, _?).
 procedure '_peer_address'(Key?, PeerAddress).
 procedure '_punch_udp'(String?).
@@ -311,7 +317,7 @@ send_to_user([]).
 % stream ends.  The guard ground(Q?) licenses Q's several occurrences.  A module
 % reaches the network through this predicate, the '_send' call being admitted
 % only to a system module, which this file is.
-procedure send_to_net(Stream(_)?).
+procedure(X) send_to_net(Stream(NetMsg(X))?).
 send_to_net([msg(Q, T) | In]) :- ground(Q?) |
     '_send'(msg(Q?, T?), '_w'(Q?, 0), Q?), send_to_net(In?).
 send_to_net([]).
@@ -325,7 +331,7 @@ send_to_net([]).
 % its definition.  A root helper outside the catalogue, like mwm1/4 (GLP-Spec
 % appendix-guards: "a system module may define others for its own use"); its
 % declaration is the '_send' kernel's.
-procedure global_send(_?, GlobalName?, Key?).
+procedure(X) global_send(X?, GlobalName?, Key?).
 global_send(T, G, Q) :- known(T?) | '_send'(T?, G?, Q?).
 
 % =============================================================================

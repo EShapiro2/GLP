@@ -455,22 +455,33 @@ ClauseCheckResult checkClause(
             i,
             goalResult.errors));
       }
-      activated = {
-        for (final k in goalResult.variableTypes.keys)
-          if (!atomResult.variableTypes.containsKey(k)) k
-      };
+      // The goal's occurrences are typed by D⟨h⟩, in place of the `_?` the
+      // run/3 goal's first argument gives them (Definition "Type
+      // Assignment"): the goal run/3 activates is read by D⟨h⟩.
+      activated = goalResult.variableTypes.keys.toSet();
       atomResult = WellTypedResult(
         isWellTyped: atomResult.isWellTyped,
         variableTypes: {
-          ...atomResult.variableTypes,
-          for (final k in activated) k: goalResult.variableTypes[k]!,
+          for (final e in atomResult.variableTypes.entries)
+            if (!activated.contains(e.key)) e.key: e.value,
+          ...goalResult.variableTypes,
         },
         errors: atomResult.errors,
+        repeats: {
+          for (final e in atomResult.repeats.entries)
+            if (!activated.contains(e.key)) e.key: e.value,
+          ...goalResult.repeats,
+        },
       );
     }
 
-    // Merge variable types with consistency checking
-    for (final entry in atomResult.variableTypes.entries) {
+    // Merge variable types with consistency checking: every occurrence, the
+    // first of a key in this atom and its repeats ([WellTypedResult.repeats]).
+    for (final entry in [
+      ...atomResult.variableTypes.entries,
+      for (final r in atomResult.repeats.entries)
+        for (final info in r.value) MapEntry(r.key, info),
+    ]) {
       final varKey = entry.key;
       final newInfo = entry.value;
       final mark = activated.contains(varKey) ? _activatedMark : '';
@@ -546,6 +557,16 @@ ClauseCheckResult checkClause(
     headBodyPairs,
     dfa,
   ));
+  // And each further head occurrence of a key, typed by its own position, with
+  // every body occurrence of its partner ([WellTypedResult.repeats]).
+  for (final r in headResult.repeats.entries) {
+    final pairs = headBodyPairs[r.key];
+    if (pairs == null) continue;
+    for (final info in r.value) {
+      errors.addAll(_checkHeadBodyPairs(
+          {r.key: info}, variableLocations, {r.key: pairs}, dfa));
+    }
+  }
 
   // Step 5: the calls to parameterised procedures whose bindings conflict, or
   // for which no instantiation is found ([_callPlanErrors]).  A head
@@ -560,6 +581,10 @@ ClauseCheckResult checkClause(
         : null;
     return [
       if (head != null) (head, true),
+      if (head != null)
+        for (final info in headResult.repeats[own] ??
+            const <VariableTypeInfo>[])
+          (info, true),
       for (final (info, _) in bodyOccurrences[other] ??
           const <(VariableTypeInfo, String)>[])
         (info, false),
@@ -1915,6 +1940,7 @@ WellTypedResult _checkModedTermPerArg(
 }) {
   final errors = <WellTypedError>[];
   final variableTypes = <String, VariableTypeInfo>{};
+  final repeats = <String, List<VariableTypeInfo>>{};
 
   // modedTerm should be a ModedCompound with args
   if (modedTerm is! ModedCompound) {
@@ -1958,15 +1984,16 @@ WellTypedResult _checkModedTermPerArg(
       } else if (result.variableAssignment != null) {
         final varKey = path.leaf.symbol;
         if (variableTypes.containsKey(varKey)) {
-          final had = variableTypes[varKey]!;
-          final now = result.variableAssignment!;
-          if (open.contains(had.typeState.baseName) ||
-              open.contains(now.typeState.baseName)) {
-            continue;
-          }
-          if (!sameOccurrenceType(had, now, dfa)) {
-            errors.add(InconsistentVariableError(varKey, had, now));
-          }
+          // The same variable again: typed by its own position (TGLP
+          // well-typing.tex, Definition "Type Assignment"), and paired as
+          // every occurrence is, under condition 3 of Definition "Well-Typed
+          // Clause with Subtyping" ([WellTypedResult.repeats]).  TGLP has no
+          // rule that every occurrence of one variable has one type (GLP,
+          // 2026-10-14 08:34 UTC): until 2026-10-14 a second occurrence at
+          // another type was refused here (InconsistentVariableError), and
+          // the root's send_to_net/1, reading Q? at `_?` inside msg(Q?, T?)
+          // and at Key?, with it.
+          repeats.putIfAbsent(varKey, () => []).add(result.variableAssignment!);
         } else {
           variableTypes[varKey] = result.variableAssignment!;
         }
@@ -1974,14 +2001,32 @@ WellTypedResult _checkModedTermPerArg(
     }
   }
 
-  // Check duality within this term
-  final dualityErrors = _checkTermDuality(variableTypes, dfa, open);
-  errors.addAll(dualityErrors);
+  // Check duality within this term, every occurrence of a writer against
+  // every occurrence of its reader.
+  errors.addAll(_checkTermDuality(variableTypes, dfa, open));
+  for (final e in repeats.entries) {
+    final key = e.key;
+    final reader = key.endsWith('?');
+    final base = reader ? key.substring(0, key.length - 1) : key;
+    final partnerKey = reader ? base : '$base?';
+    final partners = [
+      if (variableTypes[partnerKey] != null) variableTypes[partnerKey]!,
+      // A pair of two repeats is compared once, from the reader's side.
+      if (reader) ...?repeats[partnerKey],
+    ];
+    for (final info in e.value) {
+      for (final p in partners) {
+        errors.addAll(
+            _checkTermDuality({key: info, partnerKey: p}, dfa, open));
+      }
+    }
+  }
 
   return WellTypedResult(
     isWellTyped: errors.isEmpty,
     variableTypes: variableTypes,
     errors: errors,
+    repeats: repeats,
   );
 }
 

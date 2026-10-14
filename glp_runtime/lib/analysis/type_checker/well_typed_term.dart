@@ -29,11 +29,26 @@ class WellTypedResult {
   /// List of errors found during checking
   final List<WellTypedError> errors;
 
+  /// The occurrences of a key after its first, [variableTypes] holding the
+  /// first: each occurrence is typed by its own position (TGLP
+  /// well-typing.tex, Definition "Type Assignment"), and each is a pair with
+  /// every occurrence of its partner under condition 3 of Definition
+  /// "Well-Typed Clause with Subtyping".  No rule makes the occurrences of one
+  /// variable one type (GLP, 2026-10-14 08:34 UTC).
+  final Map<String, List<VariableTypeInfo>> repeats;
+
   WellTypedResult({
     required this.isWellTyped,
     required this.variableTypes,
     required this.errors,
+    this.repeats = const {},
   });
+
+  /// Every occurrence of [key], its first and its [repeats].
+  List<VariableTypeInfo> occurrencesOf(String key) => [
+        if (variableTypes[key] != null) variableTypes[key]!,
+        ...?repeats[key],
+      ];
 
   factory WellTypedResult.success(Map<String, VariableTypeInfo> variableTypes) {
     return WellTypedResult(
@@ -103,36 +118,6 @@ class InconsistentPathError extends WellTypedError {
   String toString() => message;
 }
 
-/// Whether two occurrences of one variable in one term have the same type.
-///
-/// Type identity is structural: two types with the same type automaton are one
-/// type, whatever their names or defining modules (TGLP parameterized-types.tex,
-/// after Definition (Instantiation); modules.tex).  So the two occurrences are
-/// compared by their automata --- the same polarity and output types that are
-/// structurally one ([sameBaseType]) --- and not by the names of their states.
-bool sameOccurrenceType(
-    VariableTypeInfo a, VariableTypeInfo b, ProgramDFA dfa) =>
-    a.typeState.name == b.typeState.name ||
-    (a.typeState.isDual == b.typeState.isDual &&
-        sameBaseType(a.typeState.baseName, b.typeState.baseName, dfa));
-
-/// Error: same variable has different types at different occurrences
-class InconsistentVariableError extends WellTypedError {
-  final String variableName;
-  final VariableTypeInfo firstOccurrence;
-  final VariableTypeInfo secondOccurrence;
-
-  InconsistentVariableError(
-      this.variableName, this.firstOccurrence, this.secondOccurrence);
-
-  @override
-  String get message =>
-      'Variable $variableName has inconsistent types: $firstOccurrence vs $secondOccurrence';
-
-  @override
-  String toString() => message;
-}
-
 /// Error: variable pair (X, X?) not dual
 class NonDualError extends WellTypedError {
   final String baseName;
@@ -196,6 +181,7 @@ class PathCheckResult {
 WellTypedResult checkModedTerm(ModedTerm term, Automaton automaton, ProgramDFA dfa) {
   final errors = <WellTypedError>[];
   final variableTypes = <String, VariableTypeInfo>{};
+  final repeats = <String, List<VariableTypeInfo>>{};
 
   // Step 1: Extract and check all paths
   final termPaths = paths(term);
@@ -210,26 +196,38 @@ WellTypedResult checkModedTerm(ModedTerm term, Automaton automaton, ProgramDFA d
       final varKey = _variableKey(path.leaf);
 
       if (variableTypes.containsKey(varKey)) {
-        // Same variable appears multiple times - types must match
-        final existing = variableTypes[varKey]!;
-        if (!sameOccurrenceType(existing, result.variableAssignment!, dfa)) {
-          errors.add(InconsistentVariableError(
-              varKey, existing, result.variableAssignment!));
-        }
+        // The same variable again: typed by its own position, and paired as
+        // every occurrence is ([WellTypedResult.repeats]).
+        repeats.putIfAbsent(varKey, () => []).add(result.variableAssignment!);
       } else {
         variableTypes[varKey] = result.variableAssignment!;
       }
     }
   }
 
-  // Step 2: Check variable pair duality
-  final dualityErrors = _checkDuality(variableTypes, dfa);
-  errors.addAll(dualityErrors);
+  // Step 2: Check variable pair duality, every occurrence of the writer
+  // against every occurrence of the reader.
+  errors.addAll(_checkDuality(variableTypes, dfa));
+  for (final e in repeats.entries) {
+    final key = e.key;
+    final base = key.endsWith('?') ? key.substring(0, key.length - 1) : key;
+    final partnerKey = key.endsWith('?') ? base : '$base?';
+    final partners = [
+      if (variableTypes[partnerKey] != null) variableTypes[partnerKey]!,
+      ...?repeats[partnerKey],
+    ];
+    for (final info in e.value) {
+      for (final p in partners) {
+        errors.addAll(_checkDuality({key: info, partnerKey: p}, dfa));
+      }
+    }
+  }
 
   return WellTypedResult(
     isWellTyped: errors.isEmpty,
     variableTypes: variableTypes,
     errors: errors,
+    repeats: repeats,
   );
 }
 
