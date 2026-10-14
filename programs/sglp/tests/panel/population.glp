@@ -36,33 +36,48 @@ MutualRef?
 
 %% The person process (sGLP's paper, Section 4, "The person process").
 exported procedure person(Integer?, Profiles?, MutualRef?, Integer?, MutualRef?, Stream(Ask)?).
-person(A, profiles(judge), Mon, Seed, Log, [ask(_, panel_w(panel([]))) | As])
+person(A, profiles(judge), Mon, Seed, Log, [ask('Panel', panel_w(E)) | As])
 :-
 random(Seed?, 2147483646, K, S)
 ,
 profiles
 #
-judge_panel(panel([]), K?, Mon?)
+judge_panel(Y?, K?, Mon?)
 ,
-person(A?, profiles(judge), Mon?, S?, Log?, As?)
-.
-person(A, profiles(judge), Mon, Seed, Log, [ask(Type, panel_w(panel([card(Z1, Z2?) | Z4]))) | As])
-:-
-ground(Z1?)
-|
-random(Seed?, 2147483646, K, S)
-,
-profiles
-#
-judge_panel(panel([card(Z1?, Z3) | Z5?]), K?, Mon?)
-,
-answer_1(A?, Type?, Z1?, Z3?, Z2, Mon?, Log?)
-,
-present_1(A?, Type?, Z4?, Z5, Mon?, Log?)
+relay_1(A?, 'Panel', E?, Y, Mon?, Log?)
 ,
 person(A?, profiles(judge), Mon?, S?, Log?, As?)
 .
 person(_, _, _, _, _, []).
+
+%% The relay of an interactive type (Definition "Copy, Relay").
+procedure
+relay_1
+(
+Integer?
+,
+Constant?
+,
+Panel
+?
+,
+Panel
+,
+MutualRef?
+,
+MutualRef?
+)
+.
+relay_1(_, _, panel([]), panel([]), _, _)
+.
+relay_1(A, Type, panel([card(Z1, Z2?) | Z4]), panel([card(Z1?, Z3) | Z5?]), Mon, Log)
+:-
+ground(Z1?)
+|
+answer_1(A?, Type?, Z1?, Z3?, Z2, Mon?, Log?)
+,
+present_1(A?, Type?, Z4?, Z5, Mon?, Log?)
+.
 
 %% The answer to a question shown, handed over and logged in it (Section 4, "The person process" and "The log").
 procedure

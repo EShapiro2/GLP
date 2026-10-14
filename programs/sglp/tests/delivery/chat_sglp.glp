@@ -36,7 +36,7 @@ source(
   [type('Status', [sent, delivered, read]),
    type('Msg', [msg('String', dual('Status'))]),
    type('Stream'('X'), [[], ['X' | 'Stream'('X')]]),
-   volitional(dual('Stream'('Msg')), stream_msg_r, chat('Stream'('String'))),
+   volitional(dual('Stream'('Msg')), '\'Stream(Msg)?\'', stream_msg_r, chat('Stream'('String'))),
    compiled(chat, 2), compiled(chat1, 3), compiled(deliver, 3), compiled(status, 2)],
 
   %% The profile and the run declaration.

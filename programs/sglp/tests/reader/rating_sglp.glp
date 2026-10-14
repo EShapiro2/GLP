@@ -24,7 +24,7 @@ source(
   %% The vGLP program's interface (rating.vglp) and its compiled program's
   %% predicates (rating.glp).
   [type('Rating', [rating('Integer')]),
-   volitional(dual('Rating'), rating_r, rate('Integer')),
+   volitional(dual('Rating'), '\'Rating?\'', rating_r, rate('Integer')),
    compiled(rate, 2), compiled(rate1, 3), compiled(rates, 3)],
 
   %% The profile and the run declaration.

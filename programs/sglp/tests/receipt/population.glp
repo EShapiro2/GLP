@@ -39,7 +39,7 @@ MutualRef?
 
 %% The person process (sGLP's paper, Section 4, "The person process").
 exported procedure person(Integer?, Profiles?, MutualRef?, Integer?, MutualRef?, Stream(Ask)?).
-person(A, profiles(talker), Mon, Seed, Log, [ask(Type, stream_msg_r(X?)) | As])
+person(A, profiles(talker), Mon, Seed, Log, [ask('Stream(Msg)?', stream_msg_r(E?)) | As])
 :-
 random(Seed?, 2147483646, K, S)
 ,
@@ -47,11 +47,34 @@ profiles
 #
 talk(Y, K?, Mon?)
 ,
-answer_1(A?, Type?, Y?, X, Mon?, Log?)
+relay_1(A?, 'Stream(Msg)?', E, Y?, Mon?, Log?)
 ,
 person(A?, profiles(talker), Mon?, S?, Log?, As?)
 .
 person(_, _, _, _, _, []).
+
+%% The relay of an interactive type (Definition "Copy, Relay").
+procedure
+relay_1
+(
+Integer?
+,
+Constant?
+,
+Stream(Msg)
+,
+Stream(Msg)
+?
+,
+MutualRef?
+,
+MutualRef?
+)
+.
+relay_1(A, Type, X?, Y, Mon, Log)
+:-
+answer_1(A?, Type?, Y?, X, Mon?, Log?)
+.
 
 %% The answer, handed over and logged (Section 4, "The person process" and "The log").
 procedure

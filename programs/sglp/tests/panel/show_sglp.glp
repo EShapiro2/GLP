@@ -34,7 +34,7 @@ source(
    type('Panel', [panel('List'('Card'))]),
    %% List, the root's (programs/self.glp), given in the interface that uses it.
    type('List'('X'), [[], ['X' | 'List'('X')]]),
-   volitional('Panel', panel_w, show(dual('Integer'), 'Stream'('YesNo'))),
+   volitional('Panel', '\'Panel\'', panel_w, show(dual('Integer'), 'Stream'('YesNo'))),
    compiled(show, 3), compiled(show1, 4), compiled(cards, 4)],
 
   %% The profile and the run declaration.

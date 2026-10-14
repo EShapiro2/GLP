@@ -28,7 +28,7 @@ source(
   %% The vGLP program's interface (total.vglp; Stream, the root's) and its
   %% compiled program's predicates (total.glp).
   [type('Stream'('X'), [[], ['X' | 'Stream'('X')]]),
-   volitional(dual('Stream'('Integer')), stream_integer_r, total('Integer')),
+   volitional(dual('Stream'('Integer')), '\'Stream(Integer)?\'', stream_integer_r, total('Integer')),
    compiled(total, 2), compiled(total1, 3), compiled(sum, 3)],
 
   %% The profile and the run declaration.
