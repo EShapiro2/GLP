@@ -64,9 +64,8 @@
 %%
 %% childsafe is a child-safe-like contract (vGLP, Appendix A, "An Example:
 %% Child-Safe Befriending"), so that a contract compiled here has a class of
-%% four participants whose initiator need not know them all: a parent enrols a
-%% child, and two children befriend under their two parents, who are friends,
-%% guarded by all four (vGLP 2026-10-13 12:05 UTC, item 5):
+%% four participants: a parent enrols a child, and two children befriend under
+%% their two parents, who are friends, guarded by all four (vGLP 2026-10-13 12:05 UTC, item 5):
 %%
 %%   befriend(p?, q?)      :  at p  not friend(q), +friend(q)
 %%                             at q  not friend(p), +friend(p)
@@ -78,10 +77,9 @@
 %%                             at p  child(r), friend(q), +approved(r, s)
 %%                             at q  child(s), friend(p), +approved(s, r)
 %%
-%% A parent proposing cbefriend knows its child and the other parent but not
-%% the other child, and reaches it through an introduction by the other parent
-%% (vGLP, Definition "Canonical CVA Platform", Seek and Refer), no person asked
-%% to discover it.  childsafe/self.glp plays it.
+%% A parent proposing cbefriend must know every participant, the other child
+%% included, before it proposes (vGLP, Definition "Canonical CVA Platform",
+%% Propose).  childsafe/self.glp plays it.
 %%
 %% link is a three-party act guarded at its initiator alone, so that two
 %% initiators can propose attempts whose participants meet in two agents

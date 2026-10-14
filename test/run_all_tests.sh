@@ -3852,13 +3852,9 @@ check_not "CVA gnudge: nothing aborted for ever: no third attempt at either nudg
 
 # vGLP's contract childsafe (programs/vglp/cva/contracts.glp): befriend, enrol
 # and a four-party cbefriend guarded by all four (vGLP 2026-10-13 12:05 UTC,
-# item 5; vGLP 8a61139, Definition "Canonical CVA Platform", Seek and Refer,
-# and Definition "CVA Platform, App Transaction", Introduce).  alice, proposing
-# cbefriend(carol, dave, alice, bob), knows carol and bob but not dave: her
-# request takes Seek, bob refers her to dave and dave to her, and their
-# introduced hellos make them known, no person asked to discover; her request
-# again is proposed and commits at all four.  play_shared: a Discover between
-# agents that share a peer is still taken on both requests.
+# item 5).  Seek and Refer removed (vGLP ac065e0): alice and dave request each
+# other known before alice proposes cbefriend(carol, dave, alice, bob), which
+# commits at all four.
 cva_cs_load=$("$REPL_RUN" <<HEREDOC
 $CVA/childsafe/
 :quit
@@ -3874,27 +3870,13 @@ play_childsafe(A, B, C, D, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA childsafe: alice, not knowing dave, takes Seek on her request, and seeks carol and bob" "A = \[.*outcome(attempt(bob, 2, 2, befriend(bob, alice))), seek(cbefriend(carol, dave, alice, bob)), discover(dave)" "$cva_cs"
-check "CVA childsafe: ... the seeks to carol and bob" "sent(alice, carol, seek(cbefriend(carol, dave, alice, bob))), sent(alice, bob, seek(cbefriend(carol, dave, alice, bob)))" "$cva_cs"
-check "CVA childsafe: bob, knowing dave, refers: intro(dave) to alice and intro(alice) to dave" "sent(bob, alice, intro(dave)), sent(bob, dave, intro(alice))" "$cva_cs"
-check "CVA childsafe: carol, knowing no other participant, refers nobody" "C = \[.*refer(cbefriend(carol, dave, alice, bob))" "$cva_cs"
-check_not "CVA childsafe: ... carol sends no introduction" "sent(carol, [a-z]*, intro(" "$cva_cs"
-check "CVA childsafe: dave comes to know alice by the introduction, his person requesting nothing" "D = \[discover(bob), .*outcome(attempt(bob, 1, 1, enrol(bob, dave))), discover(alice), start(attempt(alice, 3, 3, cbefriend(carol, dave, alice, bob)))" "$cva_cs"
-check "CVA childsafe: alice, knowing dave now, proposes cbefriend and tallies the three yeses" "A = \[.*discover(dave), propose(attempt(alice, 3, 3, cbefriend(carol, dave, alice, bob))), tally(attempt(alice, 3, 3, cbefriend(carol, dave, alice, bob))), tally(attempt(alice, 3, 3, cbefriend(carol, dave, alice, bob))), tally(attempt(alice, 3, 3, cbefriend(carol, dave, alice, bob)))" "$cva_cs"
+check "CVA childsafe: alice, knowing carol and bob, comes to know dave by her request and his, and then proposes cbefriend" "A = \[.*outcome(attempt(bob, 2, 2, befriend(bob, alice))), discover(dave), propose(attempt(alice, 3, 3, cbefriend(carol, dave, alice, bob)))" "$cva_cs"
+check "CVA childsafe: dave, knowing bob, comes to know alice" "D = \[discover(bob), .*discover(alice).*start(attempt(alice, 3, 3, cbefriend(carol, dave, alice, bob)))" "$cva_cs"
+check_not "CVA childsafe: no seek and no introduction" "seek(\|refer(\|intro(" "$cva_cs"
+check "CVA childsafe: alice tallies the three yeses and commits" "A = \[.*propose(attempt(alice, 3, 3, cbefriend(carol, dave, alice, bob))), tally(attempt(alice, 3, 3, cbefriend(carol, dave, alice, bob))), tally(attempt(alice, 3, 3, cbefriend(carol, dave, alice, bob))), tally(attempt(alice, 3, 3, cbefriend(carol, dave, alice, bob))), commit(attempt(alice, 3, 3, cbefriend(carol, dave, alice, bob)))" "$cva_cs"
 check "CVA childsafe: ... and it commits at carol" "sent(alice, carol, outcome(attempt(alice, 3, 3, cbefriend(carol, dave, alice, bob)), commit))" "$cva_cs"
 check "CVA childsafe: ... at dave" "sent(alice, dave, outcome(attempt(alice, 3, 3, cbefriend(carol, dave, alice, bob)), commit))" "$cva_cs"
 check "CVA childsafe: ... and at bob" "sent(alice, bob, outcome(attempt(alice, 3, 3, cbefriend(carol, dave, alice, bob)), commit))" "$cva_cs"
-
-cva_cs_shared=$("$REPL_RUN" <<HEREDOC
-$CVA/childsafe/
-:limit 600000
-play_shared(A, B, C, N).
-:quit
-HEREDOC
-2>&1)
-check "CVA shared peer: bob, knowing alice, discovers carol on the two requests" "B = \[discover(alice), discover(carol)" "$cva_cs_shared"
-check "CVA shared peer: ... and carol discovers bob" "C = \[discover(alice), discover(bob)" "$cva_cs_shared"
-check_not "CVA shared peer: ... by the plain hellos, no seek or introduction sent" "seek(\|intro(" "$cva_cs_shared"
 
 # vGLP's contract link (programs/vglp/cva/contracts.glp): befriend and a
 # three-party link guarded at its initiator alone (vGLP 2026-10-13 17:53 UTC,

@@ -36,7 +36,7 @@
 %% ---------------------------------------------------------------------------
 
 Peer       ::= Key.
-Carried(X) ::= hello(Peer) ; ihello(Peer) ; cargo(Peer, X).
+Carried(X) ::= hello(Peer) ; cargo(Peer, X).
 Msg(X)     ::= msg(Peer, Carried(X)).
 Sent(X)    ::= sent(Peer, Peer, X).
 PersonIn   ::= [_ | PersonIn].
@@ -107,11 +107,9 @@ route4([msg(_, _)|Ms], A, OA?, B, OB?, C, OC?, D, OD?, Log?) :- otherwise |
     route4(Ms?, A?, OA, B?, OB, C?, OC, D?, OD, Log).
 route4([], _, [], _, [], _, [], _, [], []).
 
-%% A cargo, logged with its sender and its recipient; a hello of either kind,
-%% not.
+%% A cargo, logged with its sender and its recipient; a hello, not.
 procedure(X) note(Carried(X)?, Peer?, Stream(Sent(X)), Stream(Sent(X))?).
 note(hello(_), _, Log1?, Log1).
-note(ihello(_), _, Log1?, Log1).
 note(cargo(F, X), To, [sent(F?, To?, X?)|Log1?], Log1).
 
 %% The person.

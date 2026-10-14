@@ -29,12 +29,11 @@ YesNo    ::= yes ; no.
 Decision ::= commit ; abort.
 Attempt  ::= attempt(Peer, Integer, Integer, Class).
 Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
-           ; yield(Attempt) ; seek(Class) ; intro(Peer).
-Content  ::= hello(Peer) ; ihello(Peer) ; cargo(Peer, Cargo).
+           ; yield(Attempt).
+Content  ::= hello(Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
-Txn      ::= propose(Attempt) ; seek(Class) ; refer(Class) ; start(Attempt)
-           ; answer(Attempt) ; vote(Attempt) ; tally(Attempt) ; commit(Attempt)
-           ; yield(Attempt) ; wound(Attempt, Attempt) ; outcome(Attempt)
+Txn      ::= propose(Attempt) ; start(Attempt) ; answer(Attempt) ; vote(Attempt)
+           ; tally(Attempt) ; commit(Attempt) ; yield(Attempt) ; wound(Attempt, Attempt) ; outcome(Attempt)
            ; discover(Peer).
 Session  ::= session(Stream(Request)?, Stream(Txn)).
 Card     ::= card(Attempt, YesNo?).

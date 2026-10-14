@@ -3,27 +3,19 @@
 %% (../contracts.glp, contract_named(childsafe, C): befriend, enrol and a
 %% four-party cbefriend guarded by all four), platform.vglp, which
 %% programs/vglp/cva/compile.sh prints from it: two-phase commit coordinated by
-%% the initiating agent, an initiator that does not know every participant
-%% first seeking them (vGLP, Section 3.2, Definition "Canonical CVA Platform",
-%% Seek and Refer; Definition "CVA Platform, App Transaction", Introduce).
-%% Each runs its agents, their persons scripted and paced on their threads
+%% the initiating agent (vGLP, Section 3.2, Definition "Canonical CVA
+%% Platform"), whose initiator knows every participant before it proposes.
+%% It runs its agents, their persons scripted and paced on their threads
 %% (../self.glp), and gives each person's log, the thread with gave(K, A)
 %% where the person answers a card, and the network's log of the cargoes it
 %% carries.
 %%
 %% play_childsafe: four agents, alice and bob parents, carol alice's child and
 %%   dave bob's.  alice enrols carol and bob dave, each child asked on its
-%%   card; bob then befriends alice, who is asked.  alice knows carol and bob
-%%   but not dave, so her request cbefriend(carol, dave, alice, bob) takes
-%%   Seek: seek to carol and bob.  carol knows no other participant and refers
-%%   nobody; bob knows dave, and refers: intro(dave) to alice and intro(alice)
-%%   to dave, whose introduced hellos make them known to each other, no person
-%%   asked.  alice requests cbefriend again, it is proposed, carol, dave and
-%%   bob are asked and answer yes, and it commits at all four.
-%% play_shared: three agents; bob and carol each know alice, and then each
-%%   requests the other: the Discover between agents that share a peer is
-%%   still taken on both requests, by the plain hellos, no seek or
-%%   introduction sent.
+%%   card; bob then befriends alice, who is asked.  alice and dave each
+%%   request the other known, the Discover the initiator needs before it
+%%   proposes; alice proposes cbefriend(carol, dave, alice, bob), carol, dave
+%%   and bob are asked and answer yes, and it commits at all four.
 %%
 %% The types of platform.vglp, written again for the declarations of the
 %% procedures imported from its compiled module.
@@ -36,12 +28,11 @@ YesNo    ::= yes ; no.
 Decision ::= commit ; abort.
 Attempt  ::= attempt(Peer, Integer, Integer, Class).
 Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
-           ; yield(Attempt) ; seek(Class) ; intro(Peer).
-Content  ::= hello(Peer) ; ihello(Peer) ; cargo(Peer, Cargo).
+           ; yield(Attempt).
+Content  ::= hello(Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
-Txn      ::= propose(Attempt) ; seek(Class) ; refer(Class) ; start(Attempt)
-           ; answer(Attempt) ; vote(Attempt) ; tally(Attempt) ; commit(Attempt)
-           ; yield(Attempt) ; wound(Attempt, Attempt) ; outcome(Attempt)
+Txn      ::= propose(Attempt) ; start(Attempt) ; answer(Attempt) ; vote(Attempt)
+           ; tally(Attempt) ; commit(Attempt) ; yield(Attempt) ; wound(Attempt, Attempt) ; outcome(Attempt)
            ; discover(Peer).
 Session  ::= session(Stream(Request)?, Stream(Txn)).
 Card     ::= card(Attempt, YesNo?).
@@ -62,8 +53,7 @@ play_childsafe(LA?, LB?, LC?, LD?, N?) :-
              req(known(bob)),
              card(befriend(bob, alice), yes),
              wait(outcome(attempt(bob, 2, 2, befriend(bob, alice)))),
-             req(propose(cbefriend(carol, dave, alice, bob))),
-             wait(discover(dave)),
+             req(known(dave)), wait(discover(dave)),
              req(propose(cbefriend(carol, dave, alice, bob)))],
             [req(known(dave)), wait(discover(dave)),
              req(propose(enrol(bob, dave))),
@@ -75,18 +65,10 @@ play_childsafe(LA?, LB?, LC?, LD?, N?) :-
             [req(known(alice)),
              card(enrol(alice, carol), yes),
              card(cbefriend(carol, dave, alice, bob), yes)],
-            [req(known(bob)),
+            [req(known(bob)), req(known(alice)),
              card(enrol(bob, dave), yes),
              card(cbefriend(carol, dave, alice, bob), yes)],
             LA, LB, LC, LD, N).
-
-exported procedure play_shared(Stream(_), Stream(_), Stream(_),
-    Stream(Sent(Cargo))).
-play_shared(LA?, LB?, LC?, N?) :-
-    trio([req(known(bob)), req(known(carol))],
-         [req(known(alice)), wait(discover(alice)), req(known(carol))],
-         [req(known(alice)), wait(discover(alice)), req(known(bob))],
-         LA, LB, LC, N).
 
 %% alice, bob, carol and dave, each with its dispatcher and scripted person,
 %% their networks joined.
@@ -109,20 +91,3 @@ quartet(SA, SB, SC, SD, LA?, LB?, LC?, LD?, N?) :-
     merge(OutC?, OutD?, Net2),
     merge(Net1?, Net2?, Net),
     route4(Net?, alice, InA, bob, InB, carol, InC, dave, InD, N).
-
-%% alice, bob and carol, likewise.
-procedure trio(Steps?, Steps?, Steps?, Stream(_), Stream(_), Stream(_),
-    Stream(Sent(Cargo))).
-trio(SA, SB, SC, LA?, LB?, LC?, N?) :-
-    platform # agent(alice, InA?, OutA, AsA),
-    platform # dispatch(AsA?, ch(GA?, DA), _),
-    person(DA?, GA, ps(nosess, [], [], SA?), LA),
-    platform # agent(bob, InB?, OutB, AsB),
-    platform # dispatch(AsB?, ch(GB?, DB), _),
-    person(DB?, GB, ps(nosess, [], [], SB?), LB),
-    platform # agent(carol, InC?, OutC, AsC),
-    platform # dispatch(AsC?, ch(GC?, DC), _),
-    person(DC?, GC, ps(nosess, [], [], SC?), LC),
-    merge(OutA?, OutB?, Net1),
-    merge(Net1?, OutC?, Net),
-    route3(Net?, alice, InA, bob, InB, carol, InC, N).
