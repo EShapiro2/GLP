@@ -34,7 +34,7 @@ exported procedure superapp_ui(Key?, PersonIn?, NetInStream?).
 superapp_ui(alice, Grants, _) :-
     crossbar(AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
     agent # agent(alice, Cmds?, AliceNetIn?, [user_output(Outs), net_output(AliceNetOut)]),
-    tee_out(Outs?, Shown, Seen),
+    split_out(Outs?, Shown, Seen),
     home # home(alice, Seen?, Cmds, Asks),
     home # dispatch(Asks?, ch(Grants?, Draws), MCh),
     show_notices(MCh?, Shown?),
@@ -54,9 +54,9 @@ bob_answers([msg(agent, person, befriend(From, P)) | Outs],
 bob_answers([_ | Outs], Cmds?) :- otherwise | bob_answers(Outs?, Cmds).
 bob_answers([], []).
 
-%% The network between the two.  The person's stream is shown as well as read
-%% by tee_out/3, and sent onto the person channel by show_notices/2, both
-%% self.glp's.
+%% The network between the two.  The person's stream is split by split_out/3,
+%% each message whole to the person interface and its notice sent onto the
+%% person channel by show_notices/2, both self.glp's.
 procedure crossbar(NetOutStream?, NetOutStream?, NetInStream, NetInStream).
 crossbar(AOut, BOut, AIn?, BIn?) :-
     merge(AOut?, BOut?, All),

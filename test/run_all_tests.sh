@@ -5630,13 +5630,19 @@ check "SG super-app: a send between the acceptance and the conveyance is told no
 # (superapp_ui/3, alice with a scripted bob).  A friend's request to connect
 # raises respond_friend's card, the friend shown, and the person's yes on it
 # is their decision, with the pending value passed back as it came (home.glp
-# alone, its dispatcher with a scripted grant).
+# alone, its dispatcher with a scripted grant).  An introduction raises
+# respond_intro's card, the introducer and the other party shown, and the
+# person's yes or no on it is accept_intro or reject_intro of the other party,
+# the pending value passed back as it came (GSG paper, Section 5.2; GSG,
+# 2026-10-14 09:24 UTC, item 1).
 sg_home=$("$REPL_RUN" <<HEREDOC
 $SG_CORE
 :limit 5000000
 superapp_ui(alice, [input(1, [], connect(bob)) | G?], []).
 load $SG_CORE/home.glp
 home(alice, [msg(agent, person, befriend(bob, error))], C, A), dispatch(A?, ch([input(2, [2], yes) | G1?], D), M).
+home(alice, [msg(agent, person, befriend_intro(carol, bob, error))], CI, AI), dispatch(AI?, ch([input(2, [3], yes) | GI?], DI), MI).
+home(alice, [msg(agent, person, befriend_intro(carol, bob, error))], CN, AN), dispatch(AN?, ch([input(2, [3], no) | GN?], DN), MN).
 :quit
 HEREDOC
 2>&1)
@@ -5644,6 +5650,9 @@ check "SG super-app home: the request form, a menu of the four acts, drawn on th
 check "SG super-app home: a Connect granted reaches the agent, and connected(bob) is shown on the person channel" "^draw(0, thread(.*), \[msg(agent, person, connected(bob))\])$" "$sg_home"
 check "SG super-app home: a friend's request to connect raises respond_friend's card, the friend shown" "ask('FriendRequest', friendRequest_w(from(bob, yes)))" "$sg_home"
 check "SG super-app home: yes on the card is the person's decision, the pending value passed back" "C = \[msg(person, alice, decision(yes, bob, error))\]" "$sg_home"
+check "SG super-app home: an introduction raises respond_intro's card, the introducer and the other party shown" "ask('IntroRequest', introRequest_w(from(carol, bob, yes)))" "$sg_home"
+check "SG super-app home: yes on the introduction's card is accept_intro, the pending value passed back" "CI = \[msg(person, alice, accept_intro(bob, error))\]" "$sg_home"
+check "SG super-app home: no on the introduction's card is reject_intro, the pending value passed back" "CN = \[msg(person, alice, reject_intro(bob, error))\]" "$sg_home"
 check_not "SG super-app home: no failed goal" "→ failed" "$sg_home"
 
 # The same through the deployed UI mediator (boot.glp, play_not_a_friend_ui):
@@ -5733,7 +5742,8 @@ check "SG super-app on two smartphones: alice greeted" "\[alice\] greeted(bob)" 
 # variable, carol's forwards it to bob's, bob's assigns it, bob's runtime holds
 # the assignment and reports the held link, bob's mini-app asks for a warm
 # call, bob's social graph asks carol to introduce him to the anchor, carol's
-# person consents, alice and bob befriend, each end authorises the links its
+# person consents, alice's and bob's persons each consent on home's card of
+# the introduction (home.vglp, respond_intro), alice and bob befriend, each end authorises the links its
 # own person's volition covers, and the value reaches alice's execution.
 # A held link is authorised at BOTH of its ends, and the traffic one
 # authorisation lets through is itself held at the other, so the reports come
