@@ -2977,7 +2977,7 @@ HEREDOC
 check "Bonds village: no runtime error" "→ suspended" "$n3_run"
 check_not "Bonds village: no failed goal" "ERROR" "$n3_run"
 check "Bonds village: the conversations open" "tagged(frank, opened(escrow))" "$n3_run"
-check "Bonds village: Alice's holdings" "tagged(alice, holdings(\[lot(bob, now, 5), lot(charlie, now, 15), lot(alice, now, 8), lot(frank, now, 4)\]))" "$n3_run"
+check "Bonds village: Alice's holdings" "tagged(alice, holdings(\[lot(bob, now, 5), lot(alice, now, 8), lot(charlie, now, 15), lot(frank, now, 4)\]))" "$n3_run"
 check "Bonds village: Bob's holdings" "tagged(bob, holdings(\[lot(alice, now, 10), lot(diana, now, 20)\]))" "$n3_run"
 check "Bonds village: Charlie's holdings" "tagged(charlie, holdings(\[lot(alice, now, 10), lot(eve, now, 10), lot(charlie, now, 6)\]))" "$n3_run"
 check "Bonds village: Diana's holdings" "tagged(diana, holdings(\[lot(bob, 25, 24), lot(frank, 28, 12), lot(diana, now, 8), lot(frank, now, 1)\]))" "$n3_run"
@@ -3332,7 +3332,7 @@ HEREDOC
 check "Denominated village: no runtime error" "→ suspended" "$n4_run"
 check_not "Denominated village: no failed goal" "ERROR" "$n4_run"
 check "Denominated village: the conversations open" "tagged(frank, opened(escrow))" "$n4_run"
-check "Denominated village: Alice's holdings, denominated" "tagged(alice, holdings(\[lot(bob, usd, now, 5), lot(charlie, usd, now, 15), lot(alice, usd, now, 8), lot(frank, usd, now, 4)\]))" "$n4_run"
+check "Denominated village: Alice's holdings, denominated" "tagged(alice, holdings(\[lot(bob, usd, now, 5), lot(alice, usd, now, 8), lot(charlie, usd, now, 15), lot(frank, usd, now, 4)\]))" "$n4_run"
 check "Denominated village: Bob's holdings, denominated" "tagged(bob, holdings(\[lot(alice, usd, now, 10), lot(diana, usd, now, 20)\]))" "$n4_run"
 check "Denominated village: Charlie's holdings, denominated" "tagged(charlie, holdings(\[lot(alice, usd, now, 10), lot(eve, usd, now, 10), lot(charlie, usd, now, 6)\]))" "$n4_run"
 check "Denominated village: Diana's holdings, denominated" "tagged(diana, holdings(\[lot(bob, usd, 25, 24), lot(frank, usd, 28, 12), lot(diana, usd, now, 8), lot(frank, usd, now, 1)\]))" "$n4_run"
@@ -5567,7 +5567,8 @@ check "SG super-app: a send between the acceptance and the conveyance is told no
 # (superapp_ui/3, alice with a scripted bob).  A friend's request to connect
 # raises respond_friend's card, the friend shown, and the person's yes on it
 # is their decision, with the pending value passed back as it came (home.glp
-# alone, its dispatcher with a scripted grant).  An introduction raises
+# with its dispatcher and a scripted person who grants on the card once it is
+# drawn, play_home/5).  An introduction raises
 # respond_intro's card, the introducer and the other party shown, and the
 # person's yes or no on it is accept_intro or reject_intro of the other party,
 # the pending value passed back as it came (GSG paper, Section 5.2; GSG,
@@ -5576,18 +5577,17 @@ sg_home=$("$REPL_RUN" <<HEREDOC
 $SG_CORE
 :limit 5000000
 superapp_ui(alice, [input(1, [], connect(bob)) | G?], []).
-load $SG_CORE/home.glp
-home(alice, [msg(agent, person, befriend(bob, error))], C, A), dispatch(A?, ch([input(2, [2], yes) | G1?], D), M).
-home(alice, [msg(agent, person, befriend_intro(carol, bob, error))], CI, AI), dispatch(AI?, ch([input(2, [3], yes) | GI?], DI), MI).
-home(alice, [msg(agent, person, befriend_intro(carol, bob, error))], CN, AN), dispatch(AN?, ch([input(2, [3], no) | GN?], DN), MN).
+play_home(alice, yes, [msg(agent, person, befriend(bob, error))], C, L).
+play_home(alice, yes, [msg(agent, person, befriend_intro(carol, bob, error))], CI, LI).
+play_home(alice, no, [msg(agent, person, befriend_intro(carol, bob, error))], CN, LN).
 :quit
 HEREDOC
 2>&1)
 check "SG super-app home: the request form, a menu of the four acts, drawn on the person channel" "draw(1, input_box(menu(\[form(trust, \[field(CompilerKey, peer)\]), form(install, \[field(AppName, text), field(Artefact, text)\]), form(invite, \[field(AppName, text), field(Friend, peer)\]), form(connect, \[field(Friend, peer)\])\])), stream_request_r(input(\[\])))" "$sg_home"
 check "SG super-app home: a Connect granted reaches the agent, and connected(bob) is shown on the person channel" "^draw(0, thread(.*), output(\[msg(agent, person, connected(bob))\]))$" "$sg_home"
-check "SG super-app home: a friend's request to connect raises respond_friend's card, the friend shown" "ask('FriendRequest', friendRequest_w(from(bob, yes)))" "$sg_home"
+check "SG super-app home: a friend's request to connect raises respond_friend's card, the friend shown" "L = \[card(bob) | " "$sg_home"
 check "SG super-app home: yes on the card is the person's decision, the pending value passed back" "C = \[msg(person, alice, decision(yes, bob, error))\]" "$sg_home"
-check "SG super-app home: an introduction raises respond_intro's card, the introducer and the other party shown" "ask('IntroRequest', introRequest_w(from(carol, bob, yes)))" "$sg_home"
+check "SG super-app home: an introduction raises respond_intro's card, the introducer and the other party shown" "LI = \[card(carol, bob) | " "$sg_home"
 check "SG super-app home: yes on the introduction's card is accept_intro, the pending value passed back" "CI = \[msg(person, alice, accept_intro(bob, error))\]" "$sg_home"
 check "SG super-app home: no on the introduction's card is reject_intro, the pending value passed back" "CN = \[msg(person, alice, reject_intro(bob, error))\]" "$sg_home"
 check_not "SG super-app home: no failed goal" "→ failed" "$sg_home"
