@@ -24,12 +24,14 @@ ping(_, [], _).
 %% ../self.glp's Question and Request are the currency's.  Types are not
 %% exported: a caller declares what it passes in its own scope, and the
 %% imported declarations below carry exactly the types of home.glp's exports,
-%% structurally (TGLP, "Cross-module type checking").  Ask(Q) and PersonIn are
-%% ../self.glp's, as home.glp's own.
+%% structurally (TGLP, "Cross-module type checking").  HomeDrawn is home.glp's
+%% Drawn, the type its person channel carries.  Ask(Q) is ../self.glp's, as
+%% home.glp's own, and the person channel's types the root's.
 HomeRequest       ::= trust(Key) ; install(String, String) ; invite(String, Key) ; connect(Key).
 HomeFriendRequest ::= from(Key, Decision?).
 HomeIntroRequest  ::= from(Key, Key, Decision?).
 HomeQuestion      ::= friendRequest_w(HomeFriendRequest) ; introRequest_w(HomeIntroRequest) ; stream_request_r(Stream(HomeRequest)?).
+HomeDrawn         ::= friendRequest_w(_) ; introRequest_w(_) ; stream_request_r(_) ; output(List(Output)) ; Decision ; HomeRequest.
 
 %% The super-app (GSG paper, Section 5.1): the one goal the runtime posts,
 %% with the person's public key, the stream of the person's acts and the
@@ -46,9 +48,9 @@ HomeQuestion      ::= friendRequest_w(HomeFriendRequest) ; introRequest_w(HomeIn
 %% whole, for a friend's request to connect and an introduction.  The draws leave by send_to_user/1, and the network
 %% stream by send_to_net/1.
 imported procedure home#home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(HomeQuestion))).
-imported procedure home#dispatch(Stream(Ask(HomeQuestion))?, Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(Output))).
+imported procedure home#dispatch(Stream(Ask(HomeQuestion))?, PersonChannel(HomeDrawn)?, Channel(Stream(_), Stream(Output))).
 imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
-exported procedure superapp(Key?, PersonIn?, NetInStream?).
+exported procedure superapp(Key?, PersonIn(HomeDrawn)?, NetInStream?).
 superapp(Id, Grants, NetIn) :-
     ground(Id?) |
     agent # agent(Id?, Cmds?, NetIn?, [user_output(Outs), net_output(NetOut)]),
@@ -97,10 +99,10 @@ hold_output(ch(_, [])).
 %% introduction, at the path of its decision, once the card is drawn with it.
 %% The person channel never closes, so the person holds its grant writer for
 %% good.
-procedure yes_person(_?, PersonIn).
-yes_person([draw(N, _, from(_, input(Q))) | Ds], [input(N?, Q?, yes) | Gs?]) :-
+procedure yes_person(_?, PersonIn(HomeDrawn)).
+yes_person([draw(N, _, friendRequest_w(from(_, input(Q)))) | Ds], [input(N?, Q?, yes) | Gs?]) :-
     ground(N?), ground(Q?) | yes_person(Ds?, Gs).
-yes_person([draw(N, _, from(_, _, input(Q))) | Ds], [input(N?, Q?, yes) | Gs?]) :-
+yes_person([draw(N, _, introRequest_w(from(_, _, input(Q)))) | Ds], [input(N?, Q?, yes) | Gs?]) :-
     ground(N?), ground(Q?) | yes_person(Ds?, Gs).
 yes_person([_ | Ds], Gs?) :- otherwise | yes_person(Ds?, Gs).
 
@@ -165,8 +167,8 @@ agent(Id, UserIn, NetIn, Outs) :- agent # agent(Id?, UserIn?, NetIn?, Outs?).
 
 %% The super-app as a play, alice with a scripted Bob: what the Flutter agent
 %% runtime starts (home_ui.glp).
-imported procedure home_ui#superapp_ui(Key?, PersonIn?, NetInStream?).
-exported procedure superapp_ui(Key?, PersonIn?, NetInStream?).
+imported procedure home_ui#superapp_ui(Key?, PersonIn(HomeDrawn)?, NetInStream?).
+exported procedure superapp_ui(Key?, PersonIn(HomeDrawn)?, NetInStream?).
 superapp_ui(Id, Grants, NetIn) :- home_ui # superapp_ui(Id?, Grants?, NetIn?).
 
 imported procedure superapp_plays#play_invite(AppUiStream, AppUiStream).

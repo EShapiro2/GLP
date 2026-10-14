@@ -557,11 +557,11 @@ procedure install_step(Verdict?, Constant?, String?, AppUiStream, AppList?, AppL
 install_step(ok(M), App, CSig, Ui?, Apps, [app(App?, M?, CSig?, idle(Ui)) | Apps?]).
 install_step(refused, _, _, [], Apps, Apps?).
 
-procedure install_coins_step(Verdict?, Constant?, String?, Channel(PersonIn, Stream(_))?, AppList?, AppList).
+procedure install_coins_step(Verdict?, Constant?, String?, PersonChannel(Drawn)?, AppList?, AppList).
 install_coins_step(ok(M), App, CSig, Ui, Apps, [app(App?, M?, CSig?, idle_coins(Ui?)) | Apps?]).
 install_coins_step(refused, _, _, _, Apps, Apps?).
 
-procedure install_sovereign_step(Verdict?, Constant?, String?, Channel(PersonIn, Stream(_))?, AppList?, AppList).
+procedure install_sovereign_step(Verdict?, Constant?, String?, PersonChannel(SvDrawn)?, AppList?, AppList).
 install_sovereign_step(ok(M), App, CSig, Ui, Apps, [app(App?, M?, CSig?, idle_sovereign(Ui?)) | Apps?]).
 install_sovereign_step(refused, _, _, _, Apps, Apps?).
 
@@ -624,7 +624,7 @@ entry_type(ping, T?) :- find_type(ping/3, T).
 entry_type(sovereign, T?) :- find_type(sovereign/3, T).
 
 %% The currency's entry, declared here for find_type/2 (never run).
-procedure coins(Key?, Channel(PersonIn, Stream(_))?, Stream(Conversation)?).
+procedure coins(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
 coins(_, _, _).
 
 %% The child-safe platform's entry, likewise.
@@ -634,7 +634,7 @@ cssn(_, _, _).
 %% The denominated currencies' entry, likewise.  Currencies' miniapp.glp also
 %% exports sovereign/4, the same with the agent's calendar; that fourth
 %% argument is the headless plays', and run/3 activates the three.
-procedure sovereign(Key?, Channel(PersonIn, Stream(_))?, Stream(SvConversation)?).
+procedure sovereign(Key?, PersonChannel(SvDrawn)?, Stream(SvConversation)?).
 sovereign(_, _, _).
 
 %% --- The inviter ---
@@ -922,13 +922,21 @@ close_host(host(Apps, _, _, _)) :- close_apps(Apps?).
 procedure close_apps(AppList?).
 close_apps([app(_, _, _, idle([])) | Rest]) :- close_apps(Rest?).
 close_apps([app(_, _, _, running([])) | Rest]) :- close_apps(Rest?).
-close_apps([app(_, _, _, idle_coins(ch(_, []))) | Rest]) :- close_apps(Rest?).
+close_apps([app(_, _, _, idle_coins(Ui)) | Rest]) :- idle_channel(Ui?), close_apps(Rest?).
 close_apps([app(_, _, _, running_coins([])) | Rest]) :- close_apps(Rest?).
 close_apps([app(_, _, _, idle_cssn(ch(_, []))) | Rest]) :- close_apps(Rest?).
 close_apps([app(_, _, _, running_cssn([])) | Rest]) :- close_apps(Rest?).
-close_apps([app(_, _, _, idle_sovereign(ch(_, []))) | Rest]) :- close_apps(Rest?).
+close_apps([app(_, _, _, idle_sovereign(Ui)) | Rest]) :- idle_channel(Ui?), close_apps(Rest?).
 close_apps([app(_, _, _, running_sovereign([])) | Rest]) :- close_apps(Rest?).
 close_apps([]).
+
+%% idle_channel(Ui?): the person channel of a mini-app never activated, which
+%% never ends in either direction (vGLP, Section 6.3, Definition "Person
+%% Channel, Person Writer, GLP with Persons, Grant"; vGLP 2026-10-14 21:48
+%% UTC): read the person's grants for good, passing the draws' writer on,
+%% and suspend when none comes.
+procedure(T) idle_channel(PersonChannel(T)?).
+idle_channel(ch([_ | Gs], Ds?)) :- idle_channel(ch(Gs?, Ds)).
 
 procedure app_names(AppList?, AppList, Stream(Constant)).
 app_names([app(A, M, C, St) | Rest], [app(A?, M?, C?, St?) | Rest1?], [A? | Names?]) :-
