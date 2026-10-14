@@ -21,6 +21,9 @@
 #   O - Currencies Multi-Isolate Tests (dart test, one isolate per agent)
 #   P - Module Boundary Enforcement Tests (exported vs private procedures)
 #   GF - Grassroots federation records, transactions and platform (GFWC)
+#
+# Every section runs unless GLP_SECTIONS names a subset ("Section selection"
+# below); test/run_fast.sh runs the fast tier.
 
 set -e
 
@@ -47,6 +50,55 @@ AGENT_RT="$GLP_DIR/programs/tests/agent_roundtrip"
 TC_DIR="$GLP_DIR/programs/tests/typechecker"
 MODED="$GLP_DIR/programs/tests/moded_types"
 
+# Section selection: the two tiers (Udi, 2026-10-14: a fast suite per merge on
+# main, the full suite on main every 3-4 hours).  GLP_SECTIONS names the
+# sections to run, space-separated, in any order; unset, empty or "all" runs
+# every section, and only that run is the full suite.  "fast" is the fast tier,
+# FAST_SECTIONS below, and test/run_fast.sh runs it; a merge adds the sections
+# its branches touch, GLP_SECTIONS="fast VG N3".  "Q" is both halves of Section
+# Q: QD, `dart test` over glp_runtime, and QF, the asset step and `flutter test`
+# over glp_multiagent.  A name that is no section stops the run before it
+# starts.  Sections run in the file's order whatever the order named.  A section
+# not run calls none of its checks, so a KNOWN_RED_CHECKS entry of it is neither
+# red nor a rot, and Section Q's rot guard reads only the KNOWN_RED entries of
+# the half that ran.  Every section stands alone: the REPL build below is made
+# for every run, and the asset step is QF's own.
+ALL_SECTIONS="A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG GF JX SGLP QD QF"
+FAST_SECTIONS="A B C D E G I K L M N2 N3 N4 O P J S X Y Z ZG RM SK MB SL MA RV SG GF JX"
+GLP_SECTIONS="${GLP_SECTIONS:-all}"
+RUN_FAST=0
+RUN_WANTED=" "
+for s in $GLP_SECTIONS; do
+    case "$s" in
+        all)  RUN_WANTED+="$ALL_SECTIONS " ;;
+        fast) RUN_WANTED+="$FAST_SECTIONS "; RUN_FAST=1 ;;
+        Q)    RUN_WANTED+="QD QF " ;;
+        *)    case " $ALL_SECTIONS " in
+                  *" $s "*) RUN_WANTED+="$s " ;;
+                  *) echo "GLP_SECTIONS: no section '$s'; the sections are: $ALL_SECTIONS (and fast, Q, all)"
+                     exit 3 ;;
+              esac ;;
+    esac
+done
+RUN_SECTIONS=""
+for s in $ALL_SECTIONS; do
+    case "$RUN_WANTED" in *" $s "*) RUN_SECTIONS+="${RUN_SECTIONS:+ }$s" ;; esac
+done
+if [ -z "$RUN_SECTIONS" ]; then
+    echo "GLP_SECTIONS=\"$GLP_SECTIONS\" names no section"
+    exit 3
+elif [ "$RUN_SECTIONS" = "$ALL_SECTIONS" ]; then
+    RUN_TIER="FULL"
+elif [ $RUN_FAST -eq 1 ]; then
+    RUN_TIER="FAST"
+else
+    RUN_TIER="PARTIAL"
+fi
+_section() {
+    case " $RUN_SECTIONS " in *" $1 "*) return 0 ;; esac
+    return 1
+}
+
 cd "$GLP_RUNTIME"
 
 # Compile the REPL to a native AOT binary for fast startup (Issue 11/12).
@@ -64,6 +116,11 @@ REPL_RUN="./$REPL_EXE"
 echo "======================================"
 echo "   GLP Unified Test Suite v1.0        "
 echo "======================================"
+if [ "$RUN_TIER" = "FULL" ]; then
+    echo "Sections: all (the full suite)"
+else
+    echo "Sections ($RUN_TIER, GLP_SECTIONS=\"$GLP_SECTIONS\"): $RUN_SECTIONS"
+fi
 echo ""
 
 PASS=0
@@ -231,6 +288,7 @@ check_not() {
     fi
 }
 
+if _section A; then
 # =============================================================================
 # SECTION A: TYPED RUNTIME TESTS (load + type-check + run queries)
 # =============================================================================
@@ -1428,6 +1486,9 @@ echo ""
 echo "Section A: $SECTION_A_PASS passed, $SECTION_A_FAIL failed"
 echo ""
 
+fi  # Section A
+
+if _section B; then
 # =============================================================================
 # SECTION B: TYPE-CHECK-ONLY POSITIVE TESTS
 # (Load each file, verify "Loaded:" message, use :clear between files)
@@ -1689,6 +1750,9 @@ if [ ${#FAILED_POSITIVE[@]} -gt 0 ]; then
 fi
 echo ""
 
+fi  # Section B
+
+if _section C; then
 # =============================================================================
 # SECTION C: NEGATIVE TYPE TESTS (must be rejected)
 # =============================================================================
@@ -1957,6 +2021,9 @@ check "NEG types / :boot with a program directory: the agent's load is refused b
 check "NEG types / :boot with a program directory: the refusal names the module and the atom" "types/agents.glp:6: Body atom 0 (takes_integer) is not well-typed" "$neg_boot_types"
 check_not "NEG types / :boot with a program directory: the boot does not settle" "Boot settled" "$neg_boot_types"
 
+fi  # Section C
+
+if _section D; then
 # =============================================================================
 # SECTION D: SRSW VIOLATION TESTS
 # =============================================================================
@@ -2093,6 +2160,9 @@ check_not "NEG SRSW / unreached module: the program does not load" "Loaded progr
 
 echo ""
 
+fi  # Section D
+
+if _section E; then
 # =============================================================================
 # SECTION E: INVALID GUARD TEST
 # =============================================================================
@@ -2174,6 +2244,9 @@ check_not "NEG guards / unreached module: the program does not load" "Loaded pro
 
 echo ""
 
+fi  # Section E
+
+if _section G; then
 # Section F (old-gen CSSG Modules) retired in A5 — CSSG v2 coverage is Section J.
 
 # =============================================================================
@@ -2306,6 +2379,9 @@ check_not "SG introduce: no failed play" "→ failed" "$g_intro"
 
 echo ""
 
+fi  # Section G
+
+if _section I; then
 # Section H (old-gen CSSN Modules) retired in A5 — CSSN v2 coverage is Section K.
 
 # =============================================================================
@@ -2366,6 +2442,9 @@ check_not "self.glp type error not loaded" "Loaded program" "$i4"
 
 echo ""
 
+fi  # Section I
+
+if _section K; then
 # =============================================================================
 # Section K: CSSN v2 Modules (child_agent with blocking consent)
 #
@@ -2702,6 +2781,9 @@ check "CSSN v2 fplay12 tagged output" "tagged(" "$k_fp12"
 
 echo ""
 
+fi  # Section K
+
+if _section L; then
 # =============================================================================
 # Section L: Static Cross-Module Call Tests
 # =============================================================================
@@ -2746,6 +2828,9 @@ check "test_add_ten(7, X) = 17" "X = 17" "$l3"
 
 echo ""
 
+fi  # Section L
+
+if _section M; then
 # =============================================================================
 # Section M: Multi-Isolate (madGLP) Tests
 # =============================================================================
@@ -2756,6 +2841,9 @@ echo "  (folded into Section Q, which runs the whole Dart tree — running"
 echo "   cssn_v2_isolate_test.dart here as well would only double-count it)"
 echo ""
 
+fi  # Section M
+
+if _section N2; then
 # =============================================================================
 # Section N2: The coins program (programs/currencies/coins): the vGLP currency agent of
 # the Grassroots Currencies paper as a mini-app of the Grassroots Super-App.
@@ -2865,6 +2953,9 @@ check "Coins mini-app play_swap: the proposer's screen, her conversation opened 
 check "Coins mini-app play_swap: the counterparty's screen" "B = \[opened(alice), minted(2), holdings(\[lot(bob, 2)\]), swap_done(alice), holdings(\[lot(alice, 2)\])" "$n2_ps"
 echo ""
 
+fi  # Section N2
+
+if _section N3; then
 # =============================================================================
 # Section N3: The bonds program (programs/currencies/bonds): the vGLP bond agent of the
 # Grassroots Bonds paper as a mini-app of the Grassroots Super-App.
@@ -3207,6 +3298,9 @@ check "Bonds mini-app play_swap: the proposer's screen, her conversation opened 
 check "Bonds mini-app play_swap: the counterparty's screen" "B = \[opened(alice), minted(2, 30), holdings(\[lot(bob, 30, 2)\]), swap_done(alice), holdings(\[lot(alice, now, 2)\])" "$n3_ps"
 echo ""
 
+fi  # Section N3
+
+if _section N4; then
 # =============================================================================
 # Section N4: The denominated program (programs/currencies/sovereign): the bond agent of
 # grassroots bonds with the denomination added, as the act schemas of
@@ -3447,6 +3541,9 @@ check "Denominated mini-app play_swap: the proposer's screen, her conversation o
 check "Denominated mini-app play_swap: the counterparty's screen" "B = \[opened(alice), minted(2, now), holdings(\[lot(bob, usd, now, 2)\]), swap_done(alice), holdings(\[lot(alice, usd, now, 2)\])" "$n4_ps"
 echo ""
 
+fi  # Section N4
+
+if _section VG; then
 # =============================================================================
 # Section VG: The canonical compilation on one-clause procedures
 # (programs/tests/vglp/one_clause): every procedure of responder.vglp is
@@ -3879,6 +3976,9 @@ check_not "CVA deadlock: no vote no and no person asked for a link" "vote(attemp
 echo ""
 
 
+fi  # Section VG
+
+if _section O; then
 # =============================================================================
 # Section O: Currencies Multi-Isolate Tests
 # =============================================================================
@@ -3888,6 +3988,9 @@ echo ""
 echo "  (folded into Section Q, which runs the whole Dart tree)"
 echo ""
 
+fi  # Section O
+
+if _section P; then
 # =============================================================================
 # SECTION P: MODULE BOUNDARY ENFORCEMENT TESTS
 # =============================================================================
@@ -4021,6 +4124,9 @@ check "forwarded root export is an entry point" "Y = 42" "$output"
 
 echo ""
 
+fi  # Section P
+
+if _section J; then
 # =============================================================================
 # Section J: SecureBonds (project-directory loading)
 # =============================================================================
@@ -4064,6 +4170,9 @@ check "SecureBonds play_recover succeeds" "succeeds" "$sb_recover"
 
 echo ""
 
+fi  # Section J
+
+if _section S; then
 # =============================================================================
 # Section S: Ancestor self.glp Scope Chain (A3 module-system amendment)
 # =============================================================================
@@ -4222,6 +4331,9 @@ check_not "S10 directory not taken for a program" 'has no entry points' "$s10d"
 
 echo ""
 
+fi  # Section S
+
+if _section X; then
 # =============================================================================
 # Section X: The -expose directive
 # =============================================================================
@@ -4516,6 +4628,9 @@ check "X17 goal outside T refused" "not well-typed" "$x17"
 
 echo ""
 
+fi  # Section X
+
+if _section Y; then
 # =============================================================================
 # SECTION Y: GLP-ICLP PAPER PROGRAMS (techniques + metainterpreters)
 # =============================================================================
@@ -4597,6 +4712,9 @@ check "Y2 runtime-control meta dumps on abort" "Rd = \[merge(\[1, 2\], \[3\]" "$
 
 echo ""
 
+fi  # Section Y
+
+if _section Z; then
 # =============================================================================
 # Section Z: Engine regression — high-arity clause dispatch
 # =============================================================================
@@ -4638,6 +4756,9 @@ check "Z4 trace prints all args of an arity-11 goal (11th not truncated)" "9, \[
 
 echo ""
 
+fi  # Section Z
+
+if _section ZG; then
 # =============================================================================
 # Section ZG: Guard/type agreement (string/1, constant/1)
 # =============================================================================
@@ -4684,6 +4805,9 @@ check "ZG4 constant(5) succeeds" "R = yes" "$zg4"
 
 echo ""
 
+fi  # Section ZG
+
+if _section RM; then
 # =============================================================================
 # SECTION RM: Module-as-value kernels (self_module/1, run/2)
 # =============================================================================
@@ -4785,6 +4909,9 @@ HEREDOC
 check "RM9 an activated module reaches a root-scope procedure in its body" "Z = \[a, b\]" "$rm9"
 
 echo ""
+fi  # Section RM
+
+if _section SK; then
 # =============================================================================
 # SECTION SK: Identity, signature and the certificate (self_key/1, sign/3,
 # signature/2, decompose_module/4; the OS-privileged refusal)
@@ -4877,6 +5004,9 @@ check "SK6 a wrapper reaching send_to_user/1 does not pass" "app:wrapper/1 calls
 check "SK6 the refused module has no compiler's key" "_decompose_module/4: module cert_refused carries no certificate" "$sk6"
 
 echo ""
+fi  # Section SK
+
+if _section MB; then
 # =============================================================================
 # SECTION MB: multi-agent boot programs run from the REPL (:boot)
 # =============================================================================
@@ -5055,6 +5185,9 @@ check_not "MB5 linkprobe14 nothing passes on a held link neither side authorises
 rm -f "$LP_DIR"/runprobe/*.glpw
 
 echo ""
+fi  # Section MB
+
+if _section SL; then
 # =============================================================================
 # SECTION SL: load_file/2 and the artefact on disc (:artefact)
 # =============================================================================
@@ -5122,35 +5255,9 @@ check "SL2 under :boot an agent loads the artefact from its program's directory 
 rm -f "$SL_DIR"/*.glpw "$SL_MAD"/*.glpw
 echo ""
 
-# =============================================================================
-# Section Q: Dart unit tests (whole tree)
-# =============================================================================
-#
-# Runs `dart test` over glp_runtime/test and `flutter test` over
-# glp_multiagent/test, both in full.  Before this section existed the suite
-# invoked `dart test` on exactly two named multiagent files, so "ALL TESTS
-# PASSED!" said nothing about test/engine_v2/, test/compiler/, or anything else
-# in the tree — four tests sat red there, unseen, for as long as anyone had been
-# reading this suite as the gate.  Sections M and O are folded in here rather
-# than run twice.
-#
-# glp_multiagent was added on 2026-08-02 and until then the section's title was
-# false: it ran `dart test` in glp_runtime alone, so all fifteen files in
-# glp_multiagent/test/ were outside the gate.  Seven of them were red from
-# 2026-08-01 afternoon and nobody could see it, because every count anyone
-# quoted — 1155, 1160, 1162, 1171 — was silent about them.  The two packages
-# need different runners: glp_multiagent is a Flutter package, so `dart test`
-# cannot run it at all.  This also matters for what the suite gates: the
-# multi-isolate load path is covered by those fifteen files and by nothing in
-# glp_runtime, so a change to it landed before this extension would have gone
-# green here and proved nothing.
-#
-# The gate is the one in root claude.md: the green count plus the KNOWN RED set
-# unchanged.  A test listed below may be red without failing the suite; any
-# other red fails it.  A listed test that PASSES also fails the suite, so the
-# list cannot rot into a permanent exception — it must be removed the moment its
-# fix lands.
+fi  # Section SL
 
+if _section MA; then
 # =============================================================================
 # SECTION MA: tests/multiagent program directories load under strict types
 # =============================================================================
@@ -5194,6 +5301,9 @@ HEREDOC
 done
 echo ""
 
+fi  # Section MA
+
+if _section RV; then
 # =============================================================================
 # Section RV: the rendezvous example (GNA's, programs/examples/rendezvous)
 # =============================================================================
@@ -5388,6 +5498,9 @@ check "RV rv_server loads as the server's program" "Loaded: .*rv_agent.glp" "$rv
 check "RV rv_server: the envelope is taken off, and an unsigned reconnect refused" "^GLP> RS = rejected$" "$rv_server_out"
 echo ""
 
+fi  # Section RV
+
+if _section SG; then
 # =============================================================================
 # Section SG: SGSG's programs --- the SPM programs (programs/social/spm: the CVA
 # substrate, the social graph and its secure version, with Restore and
@@ -5764,6 +5877,9 @@ check_not "SG budget no failed play" "→ failed" "$sg_budget"
 
 echo ""
 
+fi  # Section SG
+
+if _section GF; then
 # =============================================================================
 # Section GF: Grassroots federation records, transactions and platform
 # =============================================================================
@@ -6299,6 +6415,9 @@ check "GF platform: and the community that federated has the new one as a parent
 
 echo ""
 
+fi  # Section GF
+
+if _section JX; then
 # =============================================================================
 # Section JX: The Jurix checker and compiler (programs/jurix)
 # =============================================================================
@@ -6340,6 +6459,9 @@ fi
 
 echo ""
 
+fi  # Section JX
+
+if _section SGLP; then
 # =============================================================================
 # Section SGLP: sGLP in GLP (programs/sglp)
 # =============================================================================
@@ -6373,6 +6495,39 @@ else
 fi
 
 echo ""
+
+fi  # Section SGLP
+
+if _section QD || _section QF; then
+# =============================================================================
+# Section Q: Dart unit tests (whole tree)
+# =============================================================================
+#
+# Runs `dart test` over glp_runtime/test and `flutter test` over
+# glp_multiagent/test, both in full.  Before this section existed the suite
+# invoked `dart test` on exactly two named multiagent files, so "ALL TESTS
+# PASSED!" said nothing about test/engine_v2/, test/compiler/, or anything else
+# in the tree — four tests sat red there, unseen, for as long as anyone had been
+# reading this suite as the gate.  Sections M and O are folded in here rather
+# than run twice.
+#
+# glp_multiagent was added on 2026-08-02 and until then the section's title was
+# false: it ran `dart test` in glp_runtime alone, so all fifteen files in
+# glp_multiagent/test/ were outside the gate.  Seven of them were red from
+# 2026-08-01 afternoon and nobody could see it, because every count anyone
+# quoted — 1155, 1160, 1162, 1171 — was silent about them.  The two packages
+# need different runners: glp_multiagent is a Flutter package, so `dart test`
+# cannot run it at all.  This also matters for what the suite gates: the
+# multi-isolate load path is covered by those fifteen files and by nothing in
+# glp_runtime, so a change to it landed before this extension would have gone
+# green here and proved nothing.
+#
+# The gate is the one in root claude.md: the green count plus the KNOWN RED set
+# unchanged.  A test listed below may be red without failing the suite; any
+# other red fails it.  A listed test that PASSES also fails the suite, so the
+# list cannot rot into a permanent exception — it must be removed the moment its
+# fix lands.
+
 
 # Known-red tests.  One entry per line, matched against "<file>: <test name>".
 # Each entry names the owning project and what blocks it.
@@ -6453,8 +6608,10 @@ echo ""
 # lines --- which the parsing below would read as zero passed and nothing red.
 # Generate them here rather than trusting every session to remember: the script
 # is idempotent and the tree it writes is gitignored, so it cannot move the
-# tree-change guard.
-if [ -f "$GLP_DIR/glp_multiagent/tool/sync_glp_assets.sh" ]; then
+# tree-change guard.  It is QF's: only flutter test reads the bundle.
+if ! _section QF; then
+    :
+elif [ -f "$GLP_DIR/glp_multiagent/tool/sync_glp_assets.sh" ]; then
     SYNC_RESULT=$(cd "$GLP_DIR/glp_multiagent" && bash tool/sync_glp_assets.sh 2>&1) || true
     # Each certified mini-app the script builds is a check of its own, so that
     # an artefact its owner's source cannot yet give --- CSSN's, while CSSN is
@@ -6503,9 +6660,14 @@ Q_RAW_DIR="/Users/udi/Grassroots/tmp"
 Q_RAW_DART="$Q_RAW_DIR/suite_q_dart.txt"
 Q_RAW_FLUTTER="$Q_RAW_DIR/suite_q_flutter.txt"
 mkdir -p "$Q_RAW_DIR" 2>/dev/null || true
+if _section QD; then
 DART_TREE_RESULT=$(cd "$GLP_RUNTIME" && "$DART" test 2>&1) && DART_TREE_STATUS=0 || DART_TREE_STATUS=$?
 printf '%s\n' "$DART_TREE_RESULT" > "$Q_RAW_DART" 2>/dev/null \
     || echo "  (dart test's output could not be written to $Q_RAW_DART)"
+else
+    DART_TREE_RESULT=""
+    DART_TREE_STATUS=0
+fi
 
 # Strip ANSI colour and CR so the reporter's in-place updates become lines.
 DART_TREE_CLEAN=$(printf '%s' "$DART_TREE_RESULT" | sed 's/\x1b\[[0-9;]*m//g' | tr '\r' '\n') || true
@@ -6524,7 +6686,10 @@ DART_TREE_FAILS=$(printf '%s' "$DART_TREE_CLEAN" \
 # needs `flutter test`; `dart test` cannot run it.  A missing flutter is a hard
 # failure and not a skip — silently omitting half the tree is the defect this
 # extension exists to remove.
-if ! command -v flutter >/dev/null 2>&1; then
+if ! _section QF; then
+    MA_PASSED=0
+    MA_FAILS=""
+elif ! command -v flutter >/dev/null 2>&1; then
     echo "  FAIL: flutter is not on PATH, so glp_multiagent/test/ cannot run"
     echo "        Half the Dart tree would go unmeasured; the suite reports no"
     echo "        result rather than a green one."
@@ -6607,8 +6772,14 @@ fi
 # Rot guard: a known-red entry that no longer fails must be removed from the
 # list.  Leaving it would turn the list into a standing exception that silently
 # covers a future regression in the same test.
+# An entry of the half not run is neither red nor a rot: glp_multiagent's are
+# QF's, the rest QD's.
 Q_STALE=0
 for known in "${KNOWN_RED[@]}"; do
+    case "$known" in
+        glp_multiagent/*) _section QF || continue ;;
+        *)                _section QD || continue ;;
+    esac
     if ! printf '%s\n' "$DART_TREE_FAILS" | grep -qxF "$known"; then
         echo "  FAIL: known-red entry now PASSES — remove it from KNOWN_RED:"
         echo "        $known"
@@ -6631,6 +6802,8 @@ fi
 
 echo ""
 
+fi  # Section Q
+
 # =============================================================================
 # SUMMARY
 # =============================================================================
@@ -6646,7 +6819,11 @@ if [ "$START_HEAD" != "$END_HEAD" ] || [ "$START_DIRTY" != "$END_DIRTY" ]; then
 fi
 
 echo "======================================"
-echo "Total: $TOTAL | Passed: $PASS | Failed: $FAIL"
+if [ "$RUN_TIER" = "FULL" ]; then
+    echo "Total: $TOTAL | Passed: $PASS | Failed: $FAIL"
+else
+    echo "$RUN_TIER Total: $TOTAL | Passed: $PASS | Failed: $FAIL | Sections: $RUN_SECTIONS"
+fi
 if [ $KR_CHECKS -gt 0 ]; then
     echo "Known red, REPL checks (KNOWN_RED_CHECKS, not counted above): $KR_CHECKS"
 fi
@@ -6668,8 +6845,11 @@ if [ $TREE_MOVED -eq 1 ]; then
     exit 2
 fi
 
-if [ $FAIL -eq 0 ]; then
+if [ $FAIL -eq 0 ] && [ "$RUN_TIER" = "FULL" ]; then
     echo "ALL TESTS PASSED!"
+    exit 0
+elif [ $FAIL -eq 0 ]; then
+    echo "$RUN_TIER: ALL TESTS OF THESE SECTIONS PASSED (not the full suite)"
     exit 0
 else
     echo "SOME TESTS FAILED"
