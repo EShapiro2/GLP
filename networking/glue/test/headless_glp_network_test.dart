@@ -197,7 +197,7 @@ void main() {
     // (TGLP modules.tex, "Scope construction": "A program lies at or below the
     // root"), as glp_runtime's agent_runtime_test.dart writes its play.
     const play = r'''
-procedure caller_init(_?, _?, _?).
+procedure caller_init(_?, Key?, _?).
 caller_init(_, Callee, _) :-
     send_to_net([msg(Callee?, ask(Answer))]),
     answered(Answer?).

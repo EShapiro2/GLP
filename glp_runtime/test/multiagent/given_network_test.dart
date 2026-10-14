@@ -32,7 +32,7 @@ import 'package:glp_runtime/multiagent/simulation_network.dart';
 /// The agents' one program: GNA's adapter test's, the caller naming the
 /// callee by the key its host passes it.
 const String _play = r'''
-procedure caller_init(_?, _?, _?).
+procedure caller_init(_?, Key?, _?).
 caller_init(_, Callee, _) :-
     send_to_net([msg(Callee?, ask(Answer))]),
     answered(Answer?).
