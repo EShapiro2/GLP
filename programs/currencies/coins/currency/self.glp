@@ -12,12 +12,12 @@
 %% modules.tex: a qualifier is a single child directory, entered through its
 %% self.glp).
 
-imported procedure miniapp#coins(Key?, Channel(PersonIn, Stream(_))?, Stream(Conversation)?).
-exported procedure coins(Key?, Channel(PersonIn, Stream(_))?, Stream(Conversation)?).
+imported procedure miniapp#coins(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
+exported procedure coins(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
 coins(Id, Ui, Convs) :- miniapp # coins(Id?, Ui?, Convs?).
 
-imported procedure person#person(Key?, _?, PersonIn, Script?, Stream(ScreenContent)).
-exported procedure person(Key?, _?, PersonIn, Script?, Stream(ScreenContent)).
+imported procedure person#person(Key?, _?, PersonIn(Drawn), Script?, Stream(ScreenContent)).
+exported procedure person(Key?, _?, PersonIn(Drawn), Script?, Stream(ScreenContent)).
 person(Id, Draws, Grants?, Script, Screen?) :- person # person(Id?, Draws?, Grants, Script?, Screen).
 
 imported procedure plays#play_mint(Stream(ScreenContent)).

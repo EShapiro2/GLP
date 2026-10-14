@@ -279,14 +279,17 @@ TransferCard ::= card(TransferOffer, YesNo?).
 %% The vocabulary of the compiled agent's dispatcher, so that the mini-app
 %% entry and the plays can type the goals they spawn: the union of the
 %% agent's questions and the asks its goals send, as the canonical
-%% compilation emits them into denominated/sovereign_agent.glp, and the person
-%% channel's input, as programs/vglp/dispatcher.glp gives it.  The compiled
+%% compilation emits them into denominated/sovereign_agent.glp, and Drawn,
+%% the type its person channel carries, the values the dispatcher draws under
+%% the functors of the asks and the grants' raw inputs (vGLP, Definition
+%% "Construct Process"); the person channel's types are the root's
+%% (programs/self.glp).  The compiled
 %% module's own definitions shadow these within it, and the two must agree.
 %% =============================================================================
 
 Question ::= swapCard_w(SwapCard) ; transferCard_w(TransferCard) ; stream_request_r(Stream(Request)?).
+Drawn ::= swapCard_w(_) ; transferCard_w(_) ; stream_request_r(_) ; output(List(Output)) ; YesNo ; Request.
 Ask(Q)   ::= ask(Constant, Q).
-PersonIn ::= [_ | PersonIn].
 
 %% =============================================================================
 %% The plays' vocabulary: what a person sees, and the agreements the escrow
@@ -296,9 +299,9 @@ PersonIn ::= [_ | PersonIn].
 %% What a person sees on the mini-app's person channel: the constructs the
 %% dispatcher draws and withdraws, draw(Id, W, V) and withdraw(Id), each a
 %% term of any type the bridge would render, and the screen the agent writes,
-%% which the dispatcher merges in.  The person channel never closes, and
-%% neither do the events.
-Event ::= draw(_, _, _)
+%% which the dispatcher draws as the thread of construct 0.  The person
+%% channel never ends, and neither do the events.
+Event ::= draw(Integer, _, _)
         ; withdraw(_)
         ; msg(Constant, Constant, ScreenContent).
 Events ::= [Event | Events].
@@ -677,8 +680,8 @@ credit_line :- credit_line # run.
 %% input; and the same run with its taps scripted, for the test suite
 %% =============================================================================
 
-imported procedure play_ui#sovereign_ui(Key?, PersonIn?, Stream(_)?).
-exported procedure sovereign_ui(Key?, PersonIn?, Stream(_)?).
+imported procedure play_ui#sovereign_ui(Key?, PersonIn(Drawn)?, Stream(_)?).
+exported procedure sovereign_ui(Key?, PersonIn(Drawn)?, Stream(_)?).
 sovereign_ui(Id, Grants, NetIn) :- play_ui # sovereign_ui(Id?, Grants?, NetIn?).
 
 imported procedure play_ui#play_sovereign_ui.

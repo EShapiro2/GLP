@@ -27,10 +27,10 @@
 %% contract; superapp/3 is the super-app.
 
 imported procedure home#home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(HomeQuestion))).
-imported procedure home#dispatch(Stream(Ask(HomeQuestion))?, Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(Output))).
+imported procedure home#dispatch(Stream(Ask(HomeQuestion))?, PersonChannel(HomeDrawn)?, Channel(Stream(_), Stream(Output))).
 imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 
-exported procedure superapp_ui(Key?, PersonIn?, NetInStream?).
+exported procedure superapp_ui(Key?, PersonIn(HomeDrawn)?, NetInStream?).
 superapp_ui(alice, Grants, _) :-
     crossbar(AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
     agent # agent(alice, Cmds?, AliceNetIn?, [user_output(Outs), net_output(AliceNetOut)]),

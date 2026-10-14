@@ -53,8 +53,8 @@
 %% Entry points: market/0, exported by self.glp as village/0; and
 %% sovereign_market/0, exported as sovereign_village/0.
 
-imported procedure denominated#sovereign(Key?, Channel(PersonIn, Stream(_))?, Stream(Conversation)?, Stream(Integer)?).
-imported procedure denominated#person(Key?, _?, PersonIn, Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
+imported procedure denominated#sovereign(Key?, PersonChannel(Drawn)?, Stream(Conversation)?, Stream(Integer)?).
+imported procedure denominated#person(Key?, _?, PersonIn(Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
 
 %% =============================================================================
 %% The scripts

@@ -20,10 +20,10 @@
 %% later than 0, and no bond of its own is mature by its date.
 
 imported procedure sovereign_agent#agent(Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Acceptance)?, Integer?, Stream(Ask(Question))).
-imported procedure sovereign_agent#dispatch(Stream(Ask(Question))?, Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(Output))).
+imported procedure sovereign_agent#dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
 
 %% The mini-app the super-app activates: no clock, so no date ever advances.
-exported procedure sovereign(Key?, Channel(PersonIn, Stream(_))?, Stream(Conversation)?).
+exported procedure sovereign(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
 sovereign(Id, Ui, Convs) :- sovereign(Id?, Ui?, Convs?, []).
 
 %% The agent with its dispatcher, the calls of the canonical compilation
@@ -32,7 +32,7 @@ sovereign(Id, Ui, Convs) :- sovereign(Id?, Ui?, Convs?, []).
 %% its screen, and its asks go to the dispatcher, which reads the person
 %% channel; the screen goes to the person on the dispatcher's channel to the
 %% program, which merges it with the constructs' draws.
-exported procedure sovereign(Key?, Channel(PersonIn, Stream(_))?, Stream(Conversation)?, Stream(Integer)?).
+exported procedure sovereign(Key?, PersonChannel(Drawn)?, Stream(Conversation)?, Stream(Integer)?).
 sovereign(Id, Ui, Convs, Cal) :-
     ground(Id?) |
     sovereign_agent # agent(Id?, [], [], Convs?, Cal?, [user_output(Screen)], [], 0, [], 1, Asks),

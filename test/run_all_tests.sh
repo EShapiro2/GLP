@@ -3415,9 +3415,9 @@ HEREDOC
 check "Sovereign harness: no runtime error" "→ suspended" "$n4_ui"
 check_not "Sovereign harness: no failed goal" "ERROR" "$n4_ui"
 check "Sovereign harness: the central bank's Mint coins form stands" "draw([0-9][0-9]*, input_box(menu(\[form(mint, \[field(Denomination, text), field(Amount, number)\]), " "$n4_ui"
-check "Sovereign harness: and its Return form, the twelfth" "input_box(menu(\[\(form([a-z]*, \[[A-Za-z(), ]*\]), \)\{11\}form(return, \[field(Depositor, peer), field(Denomination, text), field(Issuer, peer), field(Due, text), field(Amount, number)\])\])), input(\[\]))" "$n4_ui"
-check "Sovereign harness: its conversation with the community bank reaches its screen" "^draw(0, thread(.*), \\[.*opened(diana)" "$n4_ui"
-check "Sovereign harness: and with the household" "^draw(0, thread(.*), \\[.*opened(frank)" "$n4_ui"
+check "Sovereign harness: and its Return form, the twelfth" "input_box(menu(\[\(form([a-z]*, \[[A-Za-z(), ]*\]), \)\{11\}form(return, \[field(Depositor, peer), field(Denomination, text), field(Issuer, peer), field(Due, text), field(Amount, number)\])\])), stream_request_r(input(\[\])))" "$n4_ui"
+check "Sovereign harness: its conversation with the community bank reaches its screen" "^draw(0, thread(.*), output(\\[.*opened(diana)" "$n4_ui"
+check "Sovereign harness: and with the household" "^draw(0, thread(.*), output(\\[.*opened(frank)" "$n4_ui"
 check "Sovereign harness: the peers' screens are tagged" "tagged(diana, minted(10, now))" "$n4_ui"
 check_not "Sovereign harness: and nothing of theirs reaches the central bank's screen" "msg(agent, person, minted(10, now))" "$n4_ui"
 
@@ -5583,8 +5583,8 @@ home(alice, [msg(agent, person, befriend_intro(carol, bob, error))], CN, AN), di
 :quit
 HEREDOC
 2>&1)
-check "SG super-app home: the request form, a menu of the four acts, drawn on the person channel" "draw(1, input_box(menu(\[form(trust, \[field(CompilerKey, peer)\]), form(install, \[field(AppName, text), field(Artefact, text)\]), form(invite, \[field(AppName, text), field(Friend, peer)\]), form(connect, \[field(Friend, peer)\])\])), input(\[\]))" "$sg_home"
-check "SG super-app home: a Connect granted reaches the agent, and connected(bob) is shown on the person channel" "^draw(0, thread(.*), \[msg(agent, person, connected(bob))\])$" "$sg_home"
+check "SG super-app home: the request form, a menu of the four acts, drawn on the person channel" "draw(1, input_box(menu(\[form(trust, \[field(CompilerKey, peer)\]), form(install, \[field(AppName, text), field(Artefact, text)\]), form(invite, \[field(AppName, text), field(Friend, peer)\]), form(connect, \[field(Friend, peer)\])\])), stream_request_r(input(\[\])))" "$sg_home"
+check "SG super-app home: a Connect granted reaches the agent, and connected(bob) is shown on the person channel" "^draw(0, thread(.*), output(\[msg(agent, person, connected(bob))\]))$" "$sg_home"
 check "SG super-app home: a friend's request to connect raises respond_friend's card, the friend shown" "ask('FriendRequest', friendRequest_w(from(bob, yes)))" "$sg_home"
 check "SG super-app home: yes on the card is the person's decision, the pending value passed back" "C = \[msg(person, alice, decision(yes, bob, error))\]" "$sg_home"
 check "SG super-app home: an introduction raises respond_intro's card, the introducer and the other party shown" "ask('IntroRequest', introRequest_w(from(carol, bob, yes)))" "$sg_home"

@@ -35,17 +35,24 @@ import '../compiler/parser.dart';
 import '../analysis/type_checker/type_ast.dart';
 
 /// The generic source's types the compilation names: the asks on the ask
-/// stream, Ask(Q); the spawns of the construct processes, Spawn(Q); a grant,
-/// Input, input(Id, P, R); the position P of a question in its construct,
-/// Path (vGLP #5 Cowork, 2026-10-04 09:05 UTC, C); a construct's grants,
-/// Inputs; and the person channel's input, PersonIn, the last two never
-/// closing (vGLP #5 Cowork, 2026-10-03 21:13 UTC, Q1).
+/// stream, Ask(Q); the spawns of the construct processes, Spawn(Q, T); and a
+/// construct's grants, Inputs(T), never closing (vGLP #5 Cowork, 2026-10-03
+/// 21:13 UTC, Q1).  T is the type of what the person channel carries, which
+/// the compilation forms (vGLP, Definition "Construct Process").
 const askTypeName = 'Ask';
 const spawnTypeName = 'Spawn';
+const inputsTypeName = 'Inputs';
+
+/// The root's types of the person channel (programs/self.glp; vGLP, Section
+/// 6.3, Definition "Person Channel, Person Writer, GLP with Persons, Grant"):
+/// the channel, PersonChannel(T) ::= Channel(PersonIn(T), PersonOut(T)), a
+/// grant, Input(T) ::= input(Integer, Path, T), its path, Path, and a draw,
+/// Draw(T) ::= draw(Integer, _, T) ; withdraw(Integer).  Every program names
+/// them from the root, the ancestor scope of every program.
+const personChannelTypeName = 'PersonChannel';
 const inputTypeName = 'Input';
 const pathTypeName = 'Path';
-const inputsTypeName = 'Inputs';
-const personInTypeName = 'PersonIn';
+const drawTypeName = 'Draw';
 
 /// The dispatcher's entry point, dispatch(Asks?, PersonCh?, MCh, Spawns); the
 /// compiled program's dispatch/3, which the bridge or a play spawns beside

@@ -11,10 +11,14 @@
 %% The person channel never closes (vGLP, Definition "Person Channel, Person
 %% Writer, GLP with Persons, Grant"), so neither does a log.  The person
 %% grants input(Id, P, R), P the path the view marks input(P), and sends the
-%% program its word, peer(P) or word(W), a grant that is not input/3, which
-%% the dispatcher passes to the program (programs/vglp/dispatcher.glp,
-%% split_grants/3).  A view marks a widget position the program has not yet
-%% written whole pending(P).
+%% program its word, peer(P) or word(W).  The person channel carries the
+%% grants alone, PersonIn(T) ::= [Input(T) | PersonIn(T)] (vGLP, Section 6.3,
+%% Definition "Person Channel, Person Writer, GLP with Persons, Grant"), so
+%% the word is not on it: each entry and each play splits what the person
+%% sends, the grants onto the person channel and the words onto the program's
+%% own input, split_words/3, and gives the program its end, program_end/3.  A
+%% view marks a widget position the program has not yet written whole
+%% pending(P).
 %%
 %% The types of pending.vglp and those its compilation adds, written again
 %% for the declarations of the procedures imported from its compiled module.
@@ -26,7 +30,7 @@ Note     ::= note(Constant).
 Board    ::= board(Stream(Note), YesNo?).
 Question ::= card_w(Card) ; stream_card_w(Stream(Card)) ; board_w(Board).
 Ask(Q)   ::= ask(Constant, Q).
-PersonIn ::= [_ | PersonIn].
+Drawn    ::= card_w(_) ; stream_card_w(_) ; board_w(_) ; output(List(Output)) ; YesNo.
 
 %% The program's output to its person, the reserved type Output (vGLP
 %% 169b008, Definition "Canonical Compilation"): each answer, got(N, X).
@@ -39,31 +43,37 @@ imported procedure pending#deal(Channel(Stream(_), Stream(Output))?,
 imported procedure pending#board(Channel(Stream(_), Stream(Output))?,
     Stream(Ask(Question))).
 imported procedure pending#dispatch(Stream(Ask(Question))?,
-    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(Output))).
+    PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
 
 %% ---------------------------------------------------------------------------
 %% The bridge's entries
 %% ---------------------------------------------------------------------------
 
 %% The card whose Peer the person's word names.
-exported procedure late_init(Constant?, PersonIn?, Stream(_)?).
-late_init(_, Gs, _) :-
-    pending # late(MCh?, Asks),
+exported procedure late_init(Constant?, Stream(_)?, Stream(_)?).
+late_init(_, Us, _) :-
+    split_words(Us?, Gs, Ws),
+    pending # late(PCh?, Asks),
     pending # dispatch(Asks?, ch(Gs?, Ds), MCh),
+    program_end(MCh?, Ws?, PCh),
     send_to_user(Ds?).
 
 %% The stream of three cards.
-exported procedure deal_init(Constant?, PersonIn?, Stream(_)?).
-deal_init(_, Gs, _) :-
-    pending # deal(MCh?, Asks),
+exported procedure deal_init(Constant?, Stream(_)?, Stream(_)?).
+deal_init(_, Us, _) :-
+    split_words(Us?, Gs, Ws),
+    pending # deal(PCh?, Asks),
     pending # dispatch(Asks?, ch(Gs?, Ds), MCh),
+    program_end(MCh?, Ws?, PCh),
     send_to_user(Ds?).
 
 %% The thread of notes beside a question.
-exported procedure board_init(Constant?, PersonIn?, Stream(_)?).
-board_init(_, Gs, _) :-
-    pending # board(MCh?, Asks),
+exported procedure board_init(Constant?, Stream(_)?, Stream(_)?).
+board_init(_, Us, _) :-
+    split_words(Us?, Gs, Ws),
+    pending # board(PCh?, Asks),
     pending # dispatch(Asks?, ch(Gs?, Ds), MCh),
+    program_end(MCh?, Ws?, PCh),
     send_to_user(Ds?).
 
 %% ---------------------------------------------------------------------------
@@ -75,21 +85,32 @@ board_init(_, Gs, _) :-
 %% yes.
 exported procedure play_late(Stream(_)).
 play_late(Log?) :-
-    pending # late(MCh?, Asks),
+    pending # late(PCh?, Asks),
     pending # dispatch(Asks?, ch(Gs?, Ds), MCh),
+    program_end(MCh?, Ws?, PCh),
     outputs(Ds?, Es),
-    late_person(Es?, Gs, Log).
+    split_words(Us?, Gs, Ws),
+    late_person(Es?, Us, Log).
 
-procedure late_person(_?, PersonIn, Stream(_)).
-late_person([draw(Id, _, card(pending(P), input(Q))) | Ds],
+procedure late_person(_?, Stream(_), Stream(_)).
+late_person([draw(Id, _, card_w(card(pending(P), input(Q)))) | Ds],
             [peer(bob) | Gs?], [pending(Id?, P?, Q?) | Log?]) :-
     ground(Id?), ground(P?), ground(Q?) |
     late_person(Ds?, Gs, Log).
-late_person([draw(Id, _, card(bob, input(Q))) | Ds],
+late_person([draw(Id, _, card_w(card(bob, input(Q)))) | Ds],
             [input(Id?, Q?, yes) | Gs?], [whole(Id?, Q?) | Log?]) :-
     ground(Id?), ground(Q?) |
     late_person(Ds?, Gs, Log).
-late_person([draw(_, _, V) | Ds], Gs?, [view(V?) | Log?]) :-
+late_person([draw(_, _, card_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
+    otherwise |
+    late_person(Ds?, Gs, Log).
+late_person([draw(_, _, stream_card_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
+    otherwise |
+    late_person(Ds?, Gs, Log).
+late_person([draw(_, _, board_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
+    otherwise |
+    late_person(Ds?, Gs, Log).
+late_person([draw(_, _, output(V)) | Ds], Gs?, [view(V?) | Log?]) :-
     otherwise |
     late_person(Ds?, Gs, Log).
 late_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
@@ -102,17 +123,28 @@ late_person([got(N, X) | Ds], Gs?, [got(N?, X?) | Log?]) :-
 %% the peer.
 exported procedure play_late_answered(Stream(_)).
 play_late_answered(Log?) :-
-    pending # late(MCh?, Asks),
+    pending # late(PCh?, Asks),
     pending # dispatch(Asks?, ch(Gs?, Ds), MCh),
+    program_end(MCh?, Ws?, PCh),
     outputs(Ds?, Es),
-    early_person(Es?, Gs, Log).
+    split_words(Us?, Gs, Ws),
+    early_person(Es?, Us, Log).
 
-procedure early_person(_?, PersonIn, Stream(_)).
-early_person([draw(Id, _, card(pending(P), input(Q))) | Ds],
+procedure early_person(_?, Stream(_), Stream(_)).
+early_person([draw(Id, _, card_w(card(pending(P), input(Q)))) | Ds],
              [input(Id?, Q?, no) | Gs?], [pending(Id?, P?, Q?) | Log?]) :-
     ground(Id?), ground(P?), ground(Q?) |
     early_person(Ds?, Gs, Log).
-early_person([draw(_, _, V) | Ds], Gs?, [view(V?) | Log?]) :-
+early_person([draw(_, _, card_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
+    otherwise |
+    early_person(Ds?, Gs, Log).
+early_person([draw(_, _, stream_card_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
+    otherwise |
+    early_person(Ds?, Gs, Log).
+early_person([draw(_, _, board_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
+    otherwise |
+    early_person(Ds?, Gs, Log).
+early_person([draw(_, _, output(V)) | Ds], Gs?, [view(V?) | Log?]) :-
     otherwise |
     early_person(Ds?, Gs, Log).
 early_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
@@ -127,31 +159,42 @@ early_person([got(N, X) | Ds], Gs?, [got(N?, X?) | Log?]) :-
 %% again with dave in it, answers the first, yes.
 exported procedure play_deal(Stream(_)).
 play_deal(Log?) :-
-    pending # deal(MCh?, Asks),
+    pending # deal(PCh?, Asks),
     pending # dispatch(Asks?, ch(Gs?, Ds), MCh),
+    program_end(MCh?, Ws?, PCh),
     outputs(Ds?, Es),
-    deal_person(Es?, Gs, Log).
+    split_words(Us?, Gs, Ws),
+    deal_person(Es?, Us, Log).
 
-procedure deal_person(_?, PersonIn, Stream(_)).
-deal_person([draw(Id, _, [pending(P1), card(pending(P2), input(Q2)),
-                         card(bob, input(Q3))]) | Ds],
+procedure deal_person(_?, Stream(_), Stream(_)).
+deal_person([draw(Id, _, stream_card_w([pending(P1), card(pending(P2), input(Q2)),
+                         card(bob, input(Q3))])) | Ds],
             [input(Id?, Q3?, yes) | Gs?],
             [third(P1?, P2?, Q2?, Q3?) | Log?]) :-
     ground(Id?), ground(P1?), ground(P2?), ground(Q2?), ground(Q3?) |
     deal_person(Ds?, Gs, Log).
-deal_person([draw(Id, _, [card(carol, input(Q1)), card(pending(P2), input(Q2)),
-                         card(bob, _)]) | Ds],
+deal_person([draw(Id, _, stream_card_w([card(carol, input(Q1)), card(pending(P2), input(Q2)),
+                         card(bob, _)])) | Ds],
             [input(Id?, Q2?, no) | Gs?],
             [second(Q1?, P2?, Q2?) | Log?]) :-
     ground(Id?), ground(Q1?), ground(P2?), ground(Q2?) |
     deal_person(Ds?, Gs, Log).
-deal_person([draw(Id, _, [card(carol, input(Q1)), card(dave, _),
-                         card(bob, _)]) | Ds],
+deal_person([draw(Id, _, stream_card_w([card(carol, input(Q1)), card(dave, _),
+                         card(bob, _)])) | Ds],
             [input(Id?, Q1?, yes) | Gs?],
             [first(Q1?) | Log?]) :-
     ground(Id?), ground(Q1?) |
     deal_person(Ds?, Gs, Log).
-deal_person([draw(_, _, V) | Ds], Gs?, [view(V?) | Log?]) :-
+deal_person([draw(_, _, card_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
+    otherwise |
+    deal_person(Ds?, Gs, Log).
+deal_person([draw(_, _, stream_card_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
+    otherwise |
+    deal_person(Ds?, Gs, Log).
+deal_person([draw(_, _, board_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
+    otherwise |
+    deal_person(Ds?, Gs, Log).
+deal_person([draw(_, _, output(V)) | Ds], Gs?, [view(V?) | Log?]) :-
     otherwise |
     deal_person(Ds?, Gs, Log).
 deal_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
@@ -167,21 +210,32 @@ deal_person([got(N, X) | Ds], Gs?, [got(N?, X?) | Log?]) :-
 %% answers yes.
 exported procedure play_board(Stream(_)).
 play_board(Log?) :-
-    pending # board(MCh?, Asks),
+    pending # board(PCh?, Asks),
     pending # dispatch(Asks?, ch(Gs?, Ds), MCh),
+    program_end(MCh?, Ws?, PCh),
     outputs(Ds?, Es),
-    board_person(Es?, Gs, Log).
+    split_words(Us?, Gs, Ws),
+    board_person(Es?, Us, Log).
 
-procedure board_person(_?, PersonIn, Stream(_)).
-board_person([draw(Id, _, board([note(first), pending(P)], input(Q))) | Ds],
+procedure board_person(_?, Stream(_), Stream(_)).
+board_person([draw(Id, _, board_w(board([note(first), pending(P)], input(Q)))) | Ds],
              [word(second) | Gs?], [pending(Id?, P?, Q?) | Log?]) :-
     ground(Id?), ground(P?), ground(Q?) |
     board_person(Ds?, Gs, Log).
-board_person([draw(Id, _, board([note(first), note(second)], input(Q))) | Ds],
+board_person([draw(Id, _, board_w(board([note(first), note(second)], input(Q)))) | Ds],
              [input(Id?, Q?, yes) | Gs?], [whole(Id?, Q?) | Log?]) :-
     ground(Id?), ground(Q?) |
     board_person(Ds?, Gs, Log).
-board_person([draw(_, _, V) | Ds], Gs?, [view(V?) | Log?]) :-
+board_person([draw(_, _, card_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
+    otherwise |
+    board_person(Ds?, Gs, Log).
+board_person([draw(_, _, stream_card_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
+    otherwise |
+    board_person(Ds?, Gs, Log).
+board_person([draw(_, _, board_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
+    otherwise |
+    board_person(Ds?, Gs, Log).
+board_person([draw(_, _, output(V)) | Ds], Gs?, [view(V?) | Log?]) :-
     otherwise |
     board_person(Ds?, Gs, Log).
 board_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
@@ -200,10 +254,32 @@ board_person([got(N, X) | Ds], Gs?, [got(N?, X?) | Log?]) :-
 %% (vGLP 169b008, Definition "Canonical Compilation"; vGLP, 2026-10-13 19:25
 %% UTC, items 2 and 3).  Every other draw and withdrawal passes as it came.
 procedure outputs(_?, Stream(_)).
-outputs([draw(0, thread(_), Ms) | Ds], Es?) :- newest(Ms?, Ds?, Es).
+outputs([draw(0, thread(_), output(Ms)) | Ds], Es?) :- newest(Ms?, Ds?, Es).
 outputs([E | Ds], [E? | Es?]) :- otherwise | outputs(Ds?, Es).
 
 procedure newest(_?, _?, Stream(_)).
 newest([], Ds, Es?) :- outputs(Ds?, Es).
 newest([M], Ds, [M? | Es?]) :- outputs(Ds?, Es).
 newest([_, M1 | Ms], Ds, Es?) :- newest([M1? | Ms?], Ds?, Es).
+
+%% ---------------------------------------------------------------------------
+%% What the person sends: its grants, and its word to the program
+%% ---------------------------------------------------------------------------
+
+%% split_words(Us?, Gs, Ws): what the person sends, its grants input(Id, P,
+%% R) onto the person channel, Gs, and every other term, its word, onto the
+%% program's own input, Ws.
+procedure split_words(_?, PersonIn(Drawn), Stream(_)).
+split_words([input(Id, P, R) | Us], [input(Id?, P?, R?) | Gs?], Ws?) :-
+    split_words(Us?, Gs, Ws).
+split_words([W | Us], Gs?, [W? | Ws?]) :-
+    otherwise |
+    split_words(Us?, Gs, Ws).
+
+%% program_end(MCh?, Ws?, PCh): the program's end of the person channel, as
+%% the dispatcher gives it, with the person's words for its input: its output
+%% to the person goes to the dispatcher, which draws it as the thread of
+%% construct 0.
+procedure program_end(Channel(Stream(_), Stream(Output))?, Stream(_)?,
+    Channel(Stream(_), Stream(Output))).
+program_end(ch(_, Out?), Ws, ch(Ws?, Out)).

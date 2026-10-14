@@ -13,7 +13,7 @@
 %% reaches the network or the person --- so the program is certified.
 
 imported procedure coins_agent#agent(Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?, Stream(Ask(Question))).
-imported procedure coins_agent#dispatch(Stream(Ask(Question))?, Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(Output))).
+imported procedure coins_agent#dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
 
 %% The agent with its dispatcher, the calls of the canonical compilation
 %% (vGLP, Definition "Canonical Compilation"): the agent starts with no
@@ -21,7 +21,7 @@ imported procedure coins_agent#dispatch(Stream(Ask(Question))?, Channel(PersonIn
 %% dispatcher, which reads the person channel; the screen goes to the person
 %% on the dispatcher's channel to the program, which merges it with the
 %% constructs' draws.
-exported procedure coins(Key?, Channel(PersonIn, Stream(_))?, Stream(Conversation)?).
+exported procedure coins(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
 coins(Id, Ui, Convs) :-
     ground(Id?) |
     coins_agent # agent(Id?, [], [], Convs?, [user_output(Screen)], [], 1, Asks),

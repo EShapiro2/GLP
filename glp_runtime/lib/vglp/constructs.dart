@@ -45,7 +45,14 @@
 //     (vGLP #5 Cowork, 2026-10-04 09:05 UTC, C); a grant forms a term of its
 //     type and binds it, a stream type taking one element per grant, an
 //     input box;
-//   - the views are drawn as they change, draw(Id, W, V), W the widget of T;
+//   - the views are drawn as they change, draw(Id, W, f(V)), W the widget of
+//     T and f the functor of its ask, so that every drawn value is of the
+//     program's T, the type of its person channel: the union of the values
+//     drawn, each under its ask's functor, construct 0's under output, and of
+//     the grants' raw inputs, the types of its questions (vGLP, Definition
+//     "Construct Process"; vGLP 2026-10-14 11:36 UTC, Udi: yes).  The drawn
+//     value under each functor is typed _: the views are built by
+//     procedures typed at _;
 //   - the grants routed to the construct arrive whole, input(Id, P, R), each
 //     naming its question by P, which the bridge sends back from the view; a
 //     construct may hold two questions of one type, and each takes only the
@@ -62,8 +69,8 @@
 //     suspended, as the semantics has it (vGLP #5 Cowork, 2026-10-03 08:16
 //     UTC, item 3, and 21:13 UTC, Q1);
 //   - it withdraws when every question it holds is answered and none is
-//     still to come, and on nothing else (run/5 in
-//     programs/vglp/dispatcher.glp): "The construct process withdraws when
+//     still to come, and on nothing else (run_f/5, f its ask's functor,
+//     each drawn view under f): "The construct process withdraws when
 //     every question it holds is answered.  A reader the program drops leaves
 //     its construct on screen, showing what the program writes into it"
 //     (sections/elicitation.tex, the paragraph before Definition "Canonical
@@ -191,7 +198,15 @@ String _typeStem(TypeExpr t) {
 class GenericNames {
   final String dispatch;
   final String constructs;
-  final String run;
+
+  /// The drawing of construct processes of the ask functor f, run_f/5, a
+  /// name fresh against the program's for each f; and run_end/3.
+  final String Function(String functor) run;
+  final String runEnd;
+
+  /// A procedure name fresh against the program's, for the drawing of the
+  /// program's output.
+  final String Function(String stem) output;
   final String shown;
   final String thread;
   final String consViews;
@@ -200,11 +215,15 @@ class GenericNames {
   final Map<_Leaf, String> _leafFormers;
   final String formedType;
   final String doneType;
+  /// The type of what the person channel carries, T, the union the
+  /// compilation forms; and the types at T the construct processes name:
+  /// Draw(T), Input(T), Inputs(T), Path and PersonChannel(T) as applied.
+  final String drawn;
   final String drawType;
   final String inputType;
   final String inputsType;
   final String pathType;
-  final String personInType;
+  final String personChannelType;
   final String spawnType;
   final String askType;
 
@@ -212,6 +231,8 @@ class GenericNames {
       {required this.dispatch,
       required this.constructs,
       required this.run,
+      required this.runEnd,
+      required this.output,
       required this.shown,
       required this.thread,
       required this.consViews,
@@ -225,11 +246,12 @@ class GenericNames {
       required String formModule,
       required this.formedType,
       required this.doneType,
+      required this.drawn,
       required this.drawType,
       required this.inputType,
       required this.inputsType,
       required this.pathType,
-      required this.personInType,
+      required this.personChannelType,
       required this.spawnType,
       required this.askType})
       : _leafFormers = {
@@ -245,7 +267,7 @@ class GenericNames {
   /// generic names: the roots, with the dispatcher's entry point, of what the
   /// compilation emits of the generic source.
   static const used = [
-    'run',
+    'run_end',
     'shown',
     'thread',
     'cons_views',
@@ -428,6 +450,16 @@ class _Generator {
   final _suffixesUsed = <String, Set<String>>{};
   final _nestedMemo = <String, bool>{};
 
+  /// The types of the grants' raw inputs, R in input(Id, P, R): each
+  /// question's type, or its element type where it is a stream or a list,
+  /// and the end button's grant of a list (vGLP, Definition "Construct
+  /// Process": "the grants' raw inputs are of the types of its questions").
+  final _rTypes = <String, _Node>{};
+  var _rListEnd = false;
+
+  /// The drawing procedure of each ask functor, run_f/5.
+  final _runs = <String, String>{};
+
   _Generator(this.gen, this.resolve, this.declared, this.fresh,
       this.questionType, this.constructName);
 
@@ -449,18 +481,24 @@ class _Generator {
         ? 'Channel(Stream(_), Stream(_))'
         : 'Channel(Stream(_), Stream($outputTypeName))';
     final d = gen.dispatch, cs = gen.constructs;
+    // The drawing of the program's output, construct 0, by procedures typed
+    // at the program's T, its value under the functor output (vGLP,
+    // Definition "Construct Process": "the output thread's value is under
+    // the functor output").
+    final out = outputWidget == null ? null : _outputDrawing();
     hook
       // dispatch/3: the dispatcher on the ask stream and the person channel,
       // and constructs/1 on the spawns it writes.
       ..writeln('exported procedure$p $d(Stream(${gen.askType}($qt))?, '
-          'Channel(${gen.personInType}, Stream(_))?, $ch).')
-      ..writeln(outputWidget == null
+          '${gen.personChannelType}?, $ch).')
+      ..writeln(out == null
           ? '$d(Asks, PCh, MCh?) :- $d(Asks?, PCh?, MCh, Ss), $cs(Ss?).'
-          : '$d(Asks, PCh, MCh?) :- '
-              '$d(Asks?, PCh?, MCh, $outputWidget, Ss), $cs(Ss?).')
+          : '$d(Asks, PCh, ch(MIn?, MOut)) :- '
+              '$d(Asks?, PCh?, MIn, ODs?, Ss), '
+              '$out($outputWidget, MOut?, ODs), $cs(Ss?).')
       ..writeln()
       // constructs/1: the construct process of each spawn.
-      ..writeln('procedure$p $cs(Stream(${gen.spawnType}($qt))?).')
+      ..writeln('procedure$p $cs(Stream(${gen.spawnType}($qt, ${gen.drawn}))?).')
       ..writeln('$cs([spawn(Id, Q, Gs, Ds?) | Ss]) :- '
           '$constructName(Id?, Q?, Gs?, Ds), $cs(Ss?).')
       ..writeln('$cs([]).')
@@ -468,17 +506,180 @@ class _Generator {
       ..writeln('procedure$p $constructName(Integer?, $qt?, '
           '${gen.inputsType}?, Stream(${gen.drawType})).');
     final widgets = <String, String>{};
+    final drawnAlts = <String>[];
     for (final t in types) {
       final root = _Node(t.type, t.readerMode, t.params.toSet());
       _checkFlat(t, root);
       final w = _typeWidget(t, root);
       widgets[t.written] = w;
       hook.writeln(_constructClause(t, root, w));
+      drawnAlts.add('${t.functor}(${_drawnOf(root)})');
     }
-    if (outputWidget != null) widgets[outputTypeName] = outputWidget;
+    if (outputWidget != null) {
+      widgets[outputTypeName] = outputWidget;
+      drawnAlts.add('output(List($outputTypeName))');
+    }
+    drawnAlts.addAll(_rUnion(drawnAlts));
     hook.writeln();
-    return ConstructProcesses('$hook$_out', widgets);
+    // T, the type of what the person channel carries: the values the program
+    // draws, each construct's under the functor of its ask and construct 0's
+    // under output, and the grants' raw inputs, of the types of its
+    // questions (vGLP, Definition "Construct Process"; vGLP 2026-10-14 11:36
+    // UTC, Udi: yes).
+    // The end button's grant of a list, [end], as a type: a list cell of the
+    // constant end and [].
+    final endDefs = drawnAlts.contains('[${gen.drawn}End | ${gen.drawn}Nil]')
+        ? '${gen.drawn}End ::= end.\n${gen.drawn}Nil ::= [].\n'
+        : '';
+    final drawnDef =
+        '${gen.drawn} ::= ${drawnAlts.join(' ; ')}.\n$endDefs\n';
+    return ConstructProcesses('$drawnDef$hook$_out', widgets);
   }
+
+  /// run_f(Id?, W?, Views?, Done?, Ds): draw each view V of construct Id
+  /// with its widget W as it arrives, under the functor f of its ask,
+  /// draw(Id, W, f(V)) (vGLP, Definition "Construct Process": "with V under
+  /// the functor t of its ask"); withdraw when Done is bound, every question
+  /// the construct holds answered and no question still to come, and on
+  /// nothing else; once the views end, wait to withdraw (run_end/3).
+  String _runFor(String f) {
+    final known = _runs[f];
+    if (known != null) return known;
+    final r = gen.run(f);
+    _runs[f] = r;
+    _out
+      ..writeln('procedure $r(Integer?, _?, Stream(_)?, ${gen.doneType}?, '
+          'Stream(${gen.drawType})).')
+      ..writeln('$r(Id, _, _, done, [withdraw(Id?)]).')
+      ..writeln('$r(Id, W, [V | Vs], Done, [draw(Id?, W?, $f(V?)) | Ds?]) :- '
+          'ground(W?), ground(V?) | $r(Id?, W?, Vs?, Done?, Ds).')
+      ..writeln('$r(Id, _, [], Done, Ds?) :- ${gen.runEnd}(Id?, Done?, Ds).')
+      ..writeln();
+    return r;
+  }
+
+  /// output(W?, Out?, Draws): the program's output to its person, drawn as
+  /// the construct 0 by its widget W, a thread, its value the elements so far
+  /// under the functor output: drawn at once with no element, and again as
+  /// each element arrives whole.  It holds no question and never withdraws
+  /// while the output stream stands open (vGLP 169b008, Definition
+  /// "Canonical Compilation"; Definition "Construct Process").
+  String _outputDrawing() {
+    final o = gen.output('output');
+    final more = gen.output('output_more');
+    final draw = gen.output('output_draw');
+    final add = gen.output('output_add');
+    const ms = 'Stream($outputTypeName)';
+    const es = 'List($outputTypeName)';
+    final ds = 'Stream(${gen.drawType})';
+    _out
+      ..writeln('procedure $o(_?, $ms?, $ds).')
+      ..writeln('$o(W, Ms, [draw(0, W?, output([])) | Ds?]) :- '
+          'ground(W?) | $more(W?, Ms?, [], Ds).')
+      ..writeln()
+      ..writeln('procedure $more(_?, $ms?, $es?, $ds).')
+      ..writeln('$more(W, [M | Ms], Es, Ds?) :- ground(M?), ground(Es?) | '
+          '$add(Es?, M?, Es1), $draw(W?, Ms?, Es1?, Ds).')
+      ..writeln('$more(_, [], _, []).')
+      ..writeln()
+      ..writeln('procedure $draw(_?, $ms?, $es?, $ds).')
+      ..writeln('$draw(W, Ms, Es, [draw(0, W?, output(Es?)) | Ds?]) :- '
+          'ground(W?), ground(Es?) | $more(W?, Ms?, Es?, Ds).')
+      ..writeln()
+      ..writeln('procedure $add($es?, $outputTypeName?, $es).')
+      ..writeln('$add([E | Es], M, [E? | Es1?]) :- $add(Es?, M?, Es1).')
+      ..writeln('$add([], M, [M?]).')
+      ..writeln();
+    return o;
+  }
+
+  /// The terms each alternative of [n]'s type covers, for telling whether
+  /// two alternatives of a union overlap: a primitive by its kind, a
+  /// constant by its value, a structure by its functor and arity.
+  Set<String> _covers(_Node n) {
+    final out = <String>{};
+    for (final a in _nodeAlts(n)) {
+      if (a is _ConstAlt) {
+        out.add('c:${constantSource(a.value)}');
+      } else if (a is _StructAlt) {
+        out.add('f:${a.functor}/${a.args.length}');
+      } else if (a is _NilAlt) {
+        out.add('[]');
+      } else if (a is _ConsAlt) {
+        out.add('.');
+      } else if (a is _LeafAlt) {
+        switch (a.leaf) {
+          case _Leaf.integer:
+            out.add('integer');
+          case _Leaf.real:
+            out.add('real');
+          case _Leaf.number:
+            out.addAll(['integer', 'real']);
+          case _Leaf.string:
+            out.add('string');
+          case _Leaf.module:
+            out.add('module');
+          case _Leaf.constant:
+            out.addAll(['integer', 'real', 'string', 'module']);
+          default:
+            out.add('any');
+        }
+      }
+    }
+    return out;
+  }
+
+  /// The grants' raw inputs as alternatives of T: the type of each question,
+  /// or its element type where it is a stream or a list, and the end
+  /// button's grant of a list.  A type whose terms another already covers is
+  /// that other's (Date beside Integer); one covering others replaces them
+  /// (Constant beside String), so that no two alternatives of T overlap.
+  /// Two that overlap and neither covers the other are refused, naming them,
+  /// as are an ask functor and a raw input of one functor.
+  List<String> _rUnion(List<String> drawnAlts) {
+    final kept = <(String, Set<String>)>[];
+    for (final MapEntry(key: name, value: node) in _rTypes.entries) {
+      final c = _covers(node);
+      final all = {for (final k in kept) ...k.$2};
+      if (all.containsAll(c)) continue;
+      kept.removeWhere((k) => c.containsAll(k.$2));
+      for (final k in kept) {
+        if (k.$2.intersection(c).isNotEmpty) {
+          throw CompileError(
+              'The person\'s raw inputs to questions of types ${k.$1} and '
+              '$name overlap, and neither type holds the other\'s, so the '
+              'type of the person channel, their union, is not formed (vGLP, '
+              'Definition "Construct Process")',
+              0, 0, phase: 'analyzer');
+        }
+      }
+      kept.add((name, c));
+    }
+    final asks = {
+      for (final d in drawnAlts) d.substring(0, d.indexOf('(')),
+    };
+    for (final k in kept) {
+      for (final f in k.$2) {
+        if (f.startsWith('f:') && asks.contains(f.substring(2, f.indexOf('/')))) {
+          throw CompileError(
+              'The person\'s raw input to a question of type ${k.$1} has the '
+              'functor ${f.substring(2)} of an ask, so the type of the person '
+              'channel is not formed (vGLP, Definition "Construct Process")',
+              0, 0, phase: 'analyzer');
+        }
+      }
+    }
+    final covered = {for (final k in kept) ...k.$2};
+    return [
+      for (final k in kept) k.$1,
+      if (_rListEnd && !covered.contains('.'))
+        '[${gen.drawn}End | ${gen.drawn}Nil]',
+    ];
+  }
+
+  /// The drawn type of the interactive type whose root is [root]: the type
+  /// of the views its construct draws, each under the functor of its ask.
+  String _drawnOf(_Node root) => '_';
 
   /// The widget the program's output is drawn by: a thread whose elements
   /// are drawn by the widget of Output, `thread(W)`, or `thread` where W is
@@ -523,11 +724,11 @@ class _Generator {
         // question of its own drawn under it: the view after the answer.
         return '$constructName(Id, $f(X?), Gs, Ds?) :- '
             '$answer([], X, Gs?, _, Vs, Done), '
-            '${gen.run}(Id?, $w, [input([]) | Vs?], Done?, Ds).';
+            '${_runFor(f)}(Id?, $w, [input([]) | Vs?], Done?, Ds).';
       }
       return '$constructName(Id, $f(X?), Gs, Ds?) :- '
           '$answer([], X, Gs?, _, Done), '
-          '${gen.run}(Id?, $w, [input([])], Done?, Ds).';
+          '${_runFor(f)}(Id?, $w, [input([])], Done?, Ds).';
     }
     if (!_hasQuestion(root)) {
       // A type the person writes nowhere holds no question, so its construct
@@ -539,7 +740,7 @@ class _Generator {
     final present = _present(root, t);
     return '$constructName(Id, $f(X), Gs, Ds?) :- '
         '$present([], X?, Gs?, _, Vs, Done), '
-        '${gen.run}(Id?, $w, Vs?, Done?, Ds).';
+        '${_runFor(f)}(Id?, $w, Vs?, Done?, Ds).';
   }
 
   // --- types ------------------------------------------------------------------
@@ -1044,6 +1245,8 @@ class _Generator {
     final vsOut = nested ? ', Vs?' : '';
     final vsType = nested ? ', Stream(_)' : '';
     final form = _former(e ?? n);
+    _rTypes.putIfAbsent((e ?? n).typeKey, () => e ?? n);
+    if (seq != null && seq.list) _rListEnd = true;
     final open = nested ? _open(n) : null;
     _out.writeln('procedure$p $name($pt?, $t, $gs?, $gs$vsType, $done).');
     if (seq != null && seq.list) {

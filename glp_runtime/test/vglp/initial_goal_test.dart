@@ -58,13 +58,13 @@ YesNo    ::= yes ; no.
 Card     ::= card(Peer, YesNo?).
 Question ::= card_w(Card).
 Ask(Q)   ::= ask(Constant, Q).
-PersonIn ::= [_ | PersonIn].
+Drawn    ::= card_w(_) ; YesNo.
 
 imported procedure asker#ask(Peer?, Stream(YesNo), Stream(Ask(Question))).
 imported procedure asker#dispatch(Stream(Ask(Question))?,
-    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+    PersonChannel(Drawn)?, Channel(Stream(_), Stream(_))).
 
-exported procedure ask_init(Constant?, PersonIn?, Stream(_)?).
+exported procedure ask_init(Constant?, PersonIn(Drawn)?, Stream(_)?).
 ask_init(_, Gs, _) :-
     asker # ask(bob, $answers, Asks),
     asker # dispatch(Asks?, ch(Gs?, Ds), _),

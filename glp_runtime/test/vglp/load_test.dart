@@ -483,7 +483,7 @@ YesNo? =::= toggle.
           onSkip: skipped.add);
       expect(written.map((w) => w.split('/').last), ['asker.glp']);
       expect(skipped, isEmpty);
-      expect(emitted('asker'), contains('run(Id?, toggle, [input([])], Done?, Ds)'));
+      expect(emitted('asker'), contains('run_yesNo_r(Id?, toggle, [input([])], Done?, Ds)'));
       final modules =
           discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp);
       expect(modules.any((m) => m.filePath.endsWith('self.vglp')), isFalse);
@@ -496,7 +496,7 @@ YesNo? =::= toggle.
       write('asker.vglp', 'YesNo? =::= lamp.\n$asker');
       emitVglpSources(fixture.path,
           rootSelfGlpPath: File(_rootSelfGlp).absolute.path);
-      expect(emitted('asker'), contains('run(Id?, lamp, [input([])], Done?, Ds)'));
+      expect(emitted('asker'), contains('run_yesNo_r(Id?, lamp, [input([])], Done?, Ds)'));
     });
 
     test('a nested directory\'s self.vglp overrides its ancestor\'s, and holds '
@@ -512,8 +512,8 @@ pong(b).
       write('sub/inner.vglp', asker);
       emitVglpSources(fixture.path,
           rootSelfGlpPath: File(_rootSelfGlp).absolute.path);
-      expect(emitted('sub/inner'), contains('run(Id?, dial, [input([])], Done?, Ds)'));
-      expect(emitted('asker'), contains('run(Id?, toggle, [input([])], Done?, Ds)'));
+      expect(emitted('sub/inner'), contains('run_yesNo_r(Id?, dial, [input([])], Done?, Ds)'));
+      expect(emitted('asker'), contains('run_yesNo_r(Id?, toggle, [input([])], Done?, Ds)'));
     });
 
     test('the root\'s self.vglp holds for every program, a directory with no '
@@ -573,10 +573,10 @@ said(A, [A?]) :- ground(A?) | true.
 YesNo ::= yes ; no.
 Question ::= yesNo_r(YesNo?).
 Ask(Q) ::= ask(Constant, Q).
-PersonIn ::= [_ | PersonIn].
+Drawn ::= yesNo_r(_) ; YesNo.
 imported procedure asker#yn(Channel(Stream(_), Stream(_))?, Stream(Ask(Question))).
-imported procedure asker#dispatch(Stream(Ask(Question))?, Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
-exported procedure go(PersonIn?, Stream(_)).
+imported procedure asker#dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(_), Stream(_))).
+exported procedure go(PersonIn(Drawn)?, PersonOut(Drawn)).
 go(Gs, Ds?) :- asker # yn(MCh?, Asks), asker # dispatch(Asks?, ch(Gs?, Ds), MCh).
 ''');
       expect(

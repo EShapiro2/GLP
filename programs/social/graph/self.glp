@@ -51,9 +51,9 @@ UserContent ::= connect(Key)
               %% attestation: read back the attestation minted at
               %% the befriending (Section 5.5).
               ; install(Constant, Content, String, AppUiStream?)
-              ; install_coins(Constant, Content, String, Channel(PersonIn, Stream(_)))
+              ; install_coins(Constant, Content, String, PersonChannel(Drawn))
               ; install_cssn(Constant, Content, String, Channel(Stream(CsAppCmd), Stream(CsAppNotify)))
-              ; install_sovereign(Constant, Content, String, Channel(PersonIn, Stream(_)))
+              ; install_sovereign(Constant, Content, String, PersonChannel(SvDrawn))
               ; invite(Constant, Key)
               ; accept_invite(Constant, Key)
               ; decline_invite(Constant, Key)
@@ -193,9 +193,9 @@ CreatorCert ::= creator_cert(String, Stream(Constant), Constant).
 %%   run/3 has activated it, SgEnd the super-app's writer of the mini-app's
 %%   social-graph stream.
 AppStatus ::= idle(AppUiStream?) ; running(SgToAppStream?)
-            ; idle_coins(Channel(PersonIn, Stream(_))) ; running_coins(Stream(Conversation)?)
+            ; idle_coins(PersonChannel(Drawn)) ; running_coins(Stream(Conversation)?)
             ; idle_cssn(Channel(Stream(CsAppCmd), Stream(CsAppNotify))) ; running_cssn(Stream(CsConversation)?)
-            ; idle_sovereign(Channel(PersonIn, Stream(_))) ; running_sovereign(Stream(SvConversation)?).
+            ; idle_sovereign(PersonChannel(SvDrawn)) ; running_sovereign(Stream(SvConversation)?).
 App       ::= app(Constant, Module, String, AppStatus).
 AppList   ::= [] ; [App | AppList].
 Attest     ::= att(Key, String).
@@ -292,9 +292,9 @@ Card     ::= card(COffer, YesNo?).
 %% screen the agent writes.  The person channel never closes, and neither do
 %% the events.
 Question ::= card_w(Card) ; stream_request_r(Stream(Request)?).
+Drawn    ::= card_w(_) ; stream_request_r(_) ; output(List(ScreenContent)) ; YesNo ; Request.
 Ask(Q)   ::= ask(Constant, Q).
-PersonIn ::= [_ | PersonIn].
-Event    ::= draw(_, _, _)
+Event    ::= draw(Integer, _, _)
            ; withdraw(_)
            ; msg(Constant, Constant, ScreenContent).
 Events   ::= [Event | Events].
@@ -309,11 +309,11 @@ Events   ::= [Event | Events].
 %% draws is a term of any type.
 CoinStep   ::= mint(Integer) ; swap(Key, Key, Integer, Key, Integer) ; accept(Key).
 CoinScript ::= [] ; [CoinStep | CoinScript].
-Form       ::= no_form ; form(_, _).
-OpenOffer  ::= open_offer(_, _, _).
+Form       ::= no_form ; form(Integer, Path).
+OpenOffer  ::= open_offer(_, Integer, Path).
 OpenOffers ::= [] ; [OpenOffer | OpenOffers].
 Sent       ::= idle ; sent.
-Choice     ::= grant(_, _, _) ; wait.
+Choice     ::= grant(Integer, Path, Drawn) ; wait.
 
 %% =============================================================================
 %% THE INTERFACE OF THE DENOMINATED CURRENCIES MINI-APP
@@ -419,11 +419,12 @@ SvSwapCard     ::= card(SvSwapOffer, YesNo?).
 SvTransferCard ::= card(SvTransferOffer, YesNo?).
 %% The vocabulary of the compiled agent's dispatcher: the union of the
 %% agent's questions, whose asks are of the currency's Ask(Q), and the person
-%% channel's input, the currency's PersonIn; and what the person sees on the
+%% channel's input, the root's PersonIn; and what the person sees on the
 %% channel, the constructs the dispatcher draws and withdraws and the screen
 %% the agent writes.
 SvQuestion ::= swapCard_w(SvSwapCard) ; transferCard_w(SvTransferCard) ; stream_request_r(Stream(SvRequest)?).
-SvEvent    ::= draw(_, _, _)
+SvDrawn    ::= swapCard_w(_) ; transferCard_w(_) ; stream_request_r(_) ; output(List(SvScreenContent)) ; YesNo ; SvRequest.
+SvEvent    ::= draw(Integer, _, _)
              ; withdraw(_)
              ; msg(Constant, Constant, SvScreenContent).
 SvEvents   ::= [SvEvent | SvEvents].

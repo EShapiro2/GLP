@@ -47,8 +47,7 @@ Greeting ::= greeting(Peer, Name?).
 Choice   ::= choice(Peer, Constant?).
 Question ::= card_w(Card) ; greeting_w(Greeting) ; choice_w(Choice).
 Ask(Q)   ::= ask(Constant, Q).
-PersonIn ::= [_ | PersonIn].
-Path     ::= [] ; [Integer | Path].
+Drawn    ::= card_w(_) ; greeting_w(_) ; choice_w(_) ; output(List(Output)) ; YesNo ; Name.
 
 %% The program's output to its person, the reserved type Output (vGLP
 %% 169b008, Definition "Canonical Compilation"): the decisions.
@@ -61,7 +60,7 @@ imported procedure responder#greet(Offer?, Stream(Decision),
 imported procedure responder#pick(Offer?, Stream(Decision),
     Stream(Ask(Question))).
 imported procedure responder#dispatch(Stream(Ask(Question))?,
-    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(Output))).
+    PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
 
 %% ---------------------------------------------------------------------------
 %% The plays
@@ -106,23 +105,32 @@ play_pick(D?, Log?) :-
 %% person(Ds?, Rs?, Gs, Log): at the first draw of a card with the person's
 %% position marked input(Q), grant each of Rs in turn at Q, and log every
 %% draw and withdrawal.
-procedure person(_?, List(_)?, PersonIn, Stream(_)).
-person([draw(Id, W, card(P, input(Q))) | Ds], Rs, Gs?,
+procedure person(_?, List(Drawn)?, PersonIn(Drawn), Stream(_)).
+person([draw(Id, W, card_w(card(P, input(Q)))) | Ds], Rs, Gs?,
        [drawn(Id?, W?, card(P?, input(Q?))) | Log?]) :-
     ground(Id?), ground(Q?) |
     grant(Id?, Q?, Rs?, Gs, Gs1?),
     watching(Ds?, Gs1, Log).
-person([draw(Id, W, greeting(P, input(Q))) | Ds], Rs, Gs?,
+person([draw(Id, W, greeting_w(greeting(P, input(Q)))) | Ds], Rs, Gs?,
        [drawn(Id?, W?, greeting(P?, input(Q?))) | Log?]) :-
     ground(Id?), ground(Q?) |
     grant(Id?, Q?, Rs?, Gs, Gs1?),
     watching(Ds?, Gs1, Log).
-person([draw(Id, W, choice(P, input(Q))) | Ds], Rs, Gs?,
+person([draw(Id, W, choice_w(choice(P, input(Q)))) | Ds], Rs, Gs?,
        [drawn(Id?, W?, choice(P?, input(Q?))) | Log?]) :-
     ground(Id?), ground(Q?) |
     grant(Id?, Q?, Rs?, Gs, Gs1?),
     watching(Ds?, Gs1, Log).
-person([draw(Id, W, V) | Ds], Rs, Gs?, [drawn(Id?, W?, V?) | Log?]) :-
+person([draw(Id, W, card_w(V)) | Ds], Rs, Gs?, [drawn(Id?, W?, V?) | Log?]) :-
+    otherwise |
+    person(Ds?, Rs?, Gs, Log).
+person([draw(Id, W, greeting_w(V)) | Ds], Rs, Gs?, [drawn(Id?, W?, V?) | Log?]) :-
+    otherwise |
+    person(Ds?, Rs?, Gs, Log).
+person([draw(Id, W, choice_w(V)) | Ds], Rs, Gs?, [drawn(Id?, W?, V?) | Log?]) :-
+    otherwise |
+    person(Ds?, Rs?, Gs, Log).
+person([draw(Id, W, output(V)) | Ds], Rs, Gs?, [drawn(Id?, W?, V?) | Log?]) :-
     otherwise |
     person(Ds?, Rs?, Gs, Log).
 person([withdraw(Id) | Ds], Rs, Gs?, [withdrawn(Id?) | Log?]) :-
@@ -130,7 +138,7 @@ person([withdraw(Id) | Ds], Rs, Gs?, [withdrawn(Id?) | Log?]) :-
 
 %% grant(Id?, Q?, Rs?, Gs, Gs1?): grant each of Rs at position Q of construct
 %% Id, the person's grants going on as Gs1.
-procedure grant(Integer?, Path?, List(_)?, PersonIn, PersonIn?).
+procedure grant(Integer?, Path?, List(Drawn)?, PersonIn(Drawn), PersonIn(Drawn)?).
 grant(Id, Q, [R | Rs], [input(Id?, Q?, R?) | Gs?], Gs1) :-
     ground(Id?), ground(Q?) |
     grant(Id?, Q?, Rs?, Gs, Gs1?).
@@ -138,8 +146,14 @@ grant(_, _, [], Gs1?, Gs1).
 
 %% watching(Ds?, Gs, Log): grant nothing more, and log every draw and
 %% withdrawal.
-procedure watching(_?, PersonIn, Stream(_)).
-watching([draw(Id, W, V) | Ds], Gs?, [drawn(Id?, W?, V?) | Log?]) :-
+procedure watching(_?, PersonIn(Drawn), Stream(_)).
+watching([draw(Id, W, card_w(V)) | Ds], Gs?, [drawn(Id?, W?, V?) | Log?]) :-
+    watching(Ds?, Gs, Log).
+watching([draw(Id, W, greeting_w(V)) | Ds], Gs?, [drawn(Id?, W?, V?) | Log?]) :-
+    watching(Ds?, Gs, Log).
+watching([draw(Id, W, choice_w(V)) | Ds], Gs?, [drawn(Id?, W?, V?) | Log?]) :-
+    watching(Ds?, Gs, Log).
+watching([draw(Id, W, output(V)) | Ds], Gs?, [drawn(Id?, W?, V?) | Log?]) :-
     watching(Ds?, Gs, Log).
 watching([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     watching(Ds?, Gs, Log).
@@ -155,7 +169,7 @@ watching([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
 %% with the program's own output to the person --- the decisions --- go to
 %% the person by send_to_user/1.  The program reaches no network, and the
 %% entry drops its input.
-exported procedure responder_init(Constant?, PersonIn?, Stream(_)?).
+exported procedure responder_init(Constant?, PersonIn(Drawn)?, Stream(_)?).
 responder_init(_, Gs, _) :-
     responder # respond(offer(bob), D1, A1),
     responder # greet(offer(carol), D2, A2),

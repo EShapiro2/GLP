@@ -118,17 +118,22 @@ Done ::= done.
 % parameter occurs as an alternative of a type definition (TGLP Definition
 % "Type Identity of a Type, Opaque Instance").
 %
-% The person channel (vGLP, 2026-10-13 20:23 UTC and 2026-10-14 09:29 UTC):
-% the mini-app's end reads the person's grants, input(Id, P, R), Id the
+% The person channel (vGLP, Section 6.3, Definition "Person Channel, Person
+% Writer, GLP with Persons, Grant"; vGLP 2026-10-14 09:29, 21:48 and 22:32
+% UTC): the mini-app's end reads the person's grants, input(Id, P, R), Id the
 % construct, P the path of the position in it the grant writes, R the person's
 % input, and writes what the mini-app draws for its person, draw(Id, W, V), W
 % the widget, untyped, and V at T, and withdraw(Id); nothing merged, a
 % program's output reaching the person as the elements of the output thread,
-% construct 0.
-Path ::= [] ; [Integer | Path].
+% construct 0.  Neither stream ends: the person and the program stay
+% connected, and a goal standing for the person waits on the draws when it
+% has nothing to grant.
+PersonChannel(T) ::= Channel(PersonIn(T), PersonOut(T)).
+PersonIn(T) ::= [Input(T) | PersonIn(T)].
+PersonOut(T) ::= [Draw(T) | PersonOut(T)].
 Input(T) ::= input(Integer, Path, T).
+Path ::= [] ; [Integer | Path].
 Draw(T) ::= draw(Integer, _, T) ; withdraw(Integer).
-PersonChannel(T) ::= Channel(Stream(Input(T)), Stream(Draw(T))).
 
 % The channel to the social graph (GSG, 2026-10-13 11:57 UTC, Udi: approved):
 % down it the social graph hands the mini-app each conversation, the peer's
@@ -360,7 +365,7 @@ miniapp(_, _, _, _).
 % of the person channel, and the screen it reports.  The super-app's plays
 % activate it from the module value as they activate the entry.  Never run
 % here.
-procedure(T) miniapp_person(Key?, Constant?, Channel(Stream(Draw(T)), Stream(Input(T)))?, Stream(T)).
+procedure(T) miniapp_person(Key?, Constant?, Channel(PersonOut(T), PersonIn(T))?, Stream(T)).
 miniapp_person(_, _, _, []).
 
 % send_to_net/1 — the seam predicate to the network (GLP-Spec appendix-guards,

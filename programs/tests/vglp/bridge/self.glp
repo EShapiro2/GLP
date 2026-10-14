@@ -39,7 +39,7 @@ Question ::= ok_r(Ok?) ; yesNo_r(YesNo?) ; string_r(String?)
            ; card_w(Card) ; choice_w(Choice) ; feed_w(Feed)
            ; stream_string_r(Stream(String)?).
 Ask(Q)   ::= ask(Constant, Q).
-PersonIn ::= [_ | PersonIn].
+Drawn    ::= ok_r(_) ; yesNo_r(_) ; string_r(_) ; integer_r(_) ; real_r(_) ; date_r(_) ; peer_r(_) ; pay_r(_) ; request_r(_) ; card_w(_) ; choice_w(_) ; feed_w(_) ; stream_string_r(_) ; output(List(Output)) ; Ok ; YesNo ; Peer ; Pay ; Request.
 
 %% The program's output to its person, the reserved type Output (vGLP
 %% 169b008, Definition "Canonical Compilation"): each answer, got(Q, X), Q the
@@ -56,24 +56,24 @@ imported procedure widgets#forms(Channel(Stream(_), Stream(Output))?,
 imported procedure widgets#cards(Channel(Stream(_), Stream(Output))?,
     Stream(Ask(Question))).
 imported procedure widgets#dispatch(Stream(Ask(Question))?,
-    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(Output))).
+    PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
 
 %% The primitive and constant questions.
-exported procedure inputs_init(Constant?, PersonIn?, Stream(_)?).
+exported procedure inputs_init(Constant?, PersonIn(Drawn)?, Stream(_)?).
 inputs_init(_, Gs, _) :-
     widgets # inputs(MCh?, Asks),
     widgets # dispatch(Asks?, ch(Gs?, Ds), MCh),
     send_to_user(Ds?).
 
 %% The structured questions.
-exported procedure forms_init(Constant?, PersonIn?, Stream(_)?).
+exported procedure forms_init(Constant?, PersonIn(Drawn)?, Stream(_)?).
 forms_init(_, Gs, _) :-
     widgets # forms(MCh?, Asks),
     widgets # dispatch(Asks?, ch(Gs?, Ds), MCh),
     send_to_user(Ds?).
 
 %% Two cards open at once.
-exported procedure cards_init(Constant?, PersonIn?, Stream(_)?).
+exported procedure cards_init(Constant?, PersonIn(Drawn)?, Stream(_)?).
 cards_init(_, Gs, _) :-
     widgets # cards(MCh?, Asks),
     widgets # dispatch(Asks?, ch(Gs?, Ds), MCh),

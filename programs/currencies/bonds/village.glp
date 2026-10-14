@@ -48,8 +48,8 @@
 %%
 %% Entry point: market/0, exported by self.glp as village/0.
 
-imported procedure dated#bonds(Key?, Channel(PersonIn, Stream(_))?, Stream(Conversation)?, Stream(Integer)?).
-imported procedure dated#person(Key?, _?, PersonIn, Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
+imported procedure dated#bonds(Key?, PersonChannel(Drawn)?, Stream(Conversation)?, Stream(Integer)?).
+imported procedure dated#person(Key?, _?, PersonIn(Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
 
 %% =============================================================================
 %% The scripts

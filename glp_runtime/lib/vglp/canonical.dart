@@ -380,6 +380,12 @@ CanonicalProgram compileCanonical(String text,
   // without the generic source, the compilation's own Ask(Q), the same.
   final typeNames = {for (final td in m.typeDefs) td.name};
   final question = _freshType('Question', typeNames);
+  // The type of what the person channel carries, the union of the values the
+  // program draws, each under the functor of its ask, construct 0's under
+  // output, and of the grants' raw inputs: the parameter T of the program's
+  // person channel (vGLP, Definition "Construct Process"; vGLP 2026-10-14
+  // 11:36 UTC, Udi: yes).
+  final drawn = _freshType('Drawn', typeNames);
   final procTaken = {...taken};
   final inst = dispatcher == null
       ? null
@@ -435,7 +441,8 @@ CanonicalProgram compileCanonical(String text,
         added,
         procTaken,
         {...scopeWidgets, ...widgetDecls.byModedType},
-        scope);
+        scope,
+        drawn);
   } else if (widgetDecls.byModedType.isNotEmpty) {
     final d = widgetDecls.positions.first;
     throw CompileError(
@@ -608,7 +615,8 @@ _Elicitation _elicitation(
     _AddedTypes added,
     Set<String> procTaken,
     Map<String, String> widgets,
-    TypeEnvironment? scope) {
+    TypeEnvironment? scope,
+    String drawn) {
   // Every name is fresh against the program's and against the names the
   // compilation has already given.
   String freshProc(String stem) => _fresh(stem, procTaken);
@@ -618,7 +626,8 @@ _Elicitation _elicitation(
   final generic = GenericNames(
     dispatch: inst.proc(dispatchEntry),
     constructs: constructsName,
-    run: inst.proc('run'),
+    runEnd: inst.proc('run_end'),
+    run: (f) => freshProc('run_$f'),
     shown: inst.proc('shown'),
     thread: inst.proc('thread'),
     consViews: inst.proc('cons_views'),
@@ -632,12 +641,14 @@ _Elicitation _elicitation(
     formModule: inst.proc('form_module'),
     formedType: inst.type('Formed'),
     doneType: inst.type('Done'),
-    drawType: inst.type('Draw'),
-    inputType: inst.type(inputTypeName),
-    inputsType: inst.type(inputsTypeName),
-    pathType: inst.type(pathTypeName),
-    personInType: inst.type(personInTypeName),
+    drawn: drawn,
+    drawType: '$drawTypeName($drawn)',
+    inputType: '$inputTypeName($drawn)',
+    inputsType: '${inst.type(inputsTypeName)}($drawn)',
+    pathType: pathTypeName,
+    personChannelType: '$personChannelTypeName($drawn)',
     spawnType: inst.type(spawnTypeName),
+    output: (stem) => freshProc(stem),
     askType: added.ask,
   );
 
