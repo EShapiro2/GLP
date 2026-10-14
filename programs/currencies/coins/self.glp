@@ -80,23 +80,28 @@ OutputEntry ::= user_output(Stream(ScreenMsg)?)
 %% The holdings, each lot a field of its own (Udi, 2026-10-12: a field is
 %% named by its type; Currencies, 2026-10-14 08:48 UTC, item 3).
 Holdings ::= Stream(Lot).
+%% The fields of the screen's messages, each named by what it is: a field is
+%% labelled by the name of its declared type, and the type is named for what
+%% the field is (Udi, 2026-10-12; Currencies, 2026-10-14 09:24 UTC,
+%% SGC/docs/screen-field-names-2026-10-14.md).  The shapes are unchanged.
 ScreenContent ::= holdings(Holdings)
-                ; opened(Key)
-                ; minted(Integer)
-                ; paid(Key, Integer)
-                ; received(Key, Integer)
-                ; returned(Key, Integer)
-                ; swap_done(Key)
-                ; swap_declined(Key)
-                ; swap_failed(Key)
-                ; declined(Key)
-                ; redeemed(Key, Key)
-                ; menu(Key, Stream(Key))
-                ; presented(Key, Key)
-                ; unfulfilled(Key, Key)
-                ; refused(Key)
-                ; lacking(Key, Integer)
-                ; no_conversation(Key).
+                ; opened(Friend)
+                ; minted(Amount)
+                ; paid(Friend, Amount)
+                ; received(From, Amount)
+                ; returned(From, Amount)
+                ; swap_done(Friend)
+                ; swap_declined(Friend)
+                ; swap_failed(From)
+                ; declined(From)
+                ; redeemed(Friend, WantCoin)
+                ; menu(Friend, Issuers)
+                ; presented(From, WantCoin)
+                ; unfulfilled(From, WantCoin)
+                ; refused(Friend)
+                ; lacking(Issuer, Amount)
+                ; no_conversation(Friend).
+Issuers ::= Stream(Issuer).
 ScreenMsg ::= msg(Constant, Constant, ScreenContent).
 
 %% The type of the agent's output to its person, the reserved name Output:

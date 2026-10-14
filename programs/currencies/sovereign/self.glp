@@ -36,7 +36,7 @@ Instrument ::= coin(Issuer, Denomination, Serial) ; bond(Issuer, Denomination, M
 Lot        ::= lot(Issuer, Denomination, Due, Amount).
 Serial     ::= Integer.
 Acceptance ::= accepts(Key, Constant).
-Accepting  ::= accepting(Key, Constant, Integer).
+Accepting  ::= accepting(Issuer, Denomination, Remaining).
 
 %% The three escrow transfers of clause 9: a deposit by the depositor with the
 %% escrow agent, a release by the escrow agent to the beneficiary, a return by
@@ -124,47 +124,58 @@ OutputEntry ::= user_output(Stream(ScreenMsg)?)
 %% The holdings, each lot a field of its own (Udi, 2026-10-12: a field is
 %% named by its type; Currencies, 2026-10-14 08:48 UTC, item 3).
 Holdings ::= Stream(Lot).
+%% The fields of the screen's messages, each named by what it is: a field is
+%% labelled by the name of its declared type, and the type is named for what
+%% the field is (Udi, 2026-10-12; Currencies, 2026-10-14 09:24 UTC,
+%% SGC/docs/screen-field-names-2026-10-14.md).  The shapes are unchanged.
 ScreenContent ::= holdings(Holdings)
-                ; acceptances(Stream(Accepting))
-                ; opened(Key)
-                ; date_advanced(Integer)
-                ; minted(Integer, Constant)
-                ; accepted(Key, Constant, Integer)
-                ; not_held(Key, Constant)
-                ; paying(Key, Integer)
-                ; paid(Key, Integer)
-                ; paying_out(Key, Integer)
-                ; paid_out(Key, Integer)
-                ; spending(Key, Key, Integer)
-                ; spent_at(Key, Key, Integer)
-                ; not_accepted(Key, Integer)
-                ; received(Key, Integer)
-                ; refused_payment(Key, Integer)
-                ; received_from(Key, Key, Integer)
-                ; refused_from(Key, Key, Integer)
-                ; countersigned(Key, Key, Integer)
-                ; spend_returned(Key, Key, Integer)
-                ; swap_done(Key)
-                ; swap_declined(Key)
-                ; swap_failed(Key)
-                ; declined(Key)
-                ; redeemed(Key, Key, Constant)
-                ; menu(Key, Stream(Lot))
-                ; refused(Key)
-                ; presented(Key, Key, Constant)
-                ; unfulfilled(Key, Key, Constant)
-                ; matured(Key, Integer)
-                ; not_mature(Key, Integer)
-                ; matured_for(Key, Integer)
-                ; not_mature_for(Key, Integer)
-                ; offered_transfer(Kind, Key, Lot)
-                ; transferred(Kind, Key)
-                ; transfer_declined(Kind, Key)
-                ; received_transfer(Kind, Key, Stream(Lot))
-                ; declined_transfer(Kind, Key)
-                ; lacking(Key, Constant, Integer)
-                ; no_conversation(Key)
-                ; fiat_handed(Key, Integer).
+                ; acceptances(Acceptances)
+                ; opened(Friend)
+                ; date_advanced(Date)
+                ; minted(Amount, Due)
+                ; accepted(Issuer, Denomination, Limit)
+                ; not_held(Issuer, Denomination)
+                ; paying(Friend, Amount)
+                ; paid(Friend, Amount)
+                ; paying_out(Friend, Amount)
+                ; paid_out(Friend, Amount)
+                ; spending(Friend, Issuer, Amount)
+                ; spent_at(Friend, Issuer, Amount)
+                ; not_accepted(Friend, Amount)
+                ; received(From, Amount)
+                ; refused_payment(From, Amount)
+                ; received_from(From, Issuer, Amount)
+                ; refused_from(From, Issuer, Amount)
+                ; countersigned(Payer, Payee, Amount)
+                ; spend_returned(Payer, Payee, Amount)
+                ; swap_done(Friend)
+                ; swap_declined(Friend)
+                ; swap_failed(From)
+                ; declined(From)
+                ; redeemed(Friend, WantIssuer, WantDue)
+                ; menu(Friend, Menu)
+                ; refused(Friend)
+                ; presented(From, WantIssuer, WantDue)
+                ; unfulfilled(From, WantIssuer, WantDue)
+                ; matured(Friend, Maturity)
+                ; not_mature(Friend, Maturity)
+                ; matured_for(From, Maturity)
+                ; not_mature_for(From, Maturity)
+                ; offered_transfer(Kind, Friend, Lot)
+                ; transferred(Kind, Friend)
+                ; transfer_declined(Kind, Friend)
+                ; received_transfer(Kind, From, Lots)
+                ; declined_transfer(Kind, From)
+                ; lacking(Issuer, Due, Amount)
+                ; no_conversation(Friend)
+                ; fiat_handed(Friend, Amount).
+Date ::= Integer.
+Menu ::= Stream(Lot).
+Lots ::= Stream(Lot).
+Acceptances ::= Stream(Accepting).
+Payer ::= Key.
+Payee ::= Key.
+Remaining ::= Integer.
 ScreenMsg ::= msg(Constant, Constant, ScreenContent).
 
 %% The type of the agent's output to its person, the reserved name Output:

@@ -28,18 +28,19 @@ import 'fixture_term.dart';
 const _output =
     "thread(menu([form(holdings, [field('Holdings', thread(form(lot, [field"
     "('Issuer', shown), field('Amount', shown)])))]), form(opened, [field('"
-    "Key', shown)]), form(minted, [field('Integer', shown)]), form(paid, [f"
-    "ield('Key', shown), field('Integer', shown)]), form(received, [field('"
-    "Key', shown), field('Integer', shown)]), form(returned, [field('Key', "
-    "shown), field('Integer', shown)]), form(swap_done, [field('Key', shown"
-    ")]), form(swap_declined, [field('Key', shown)]), form(swap_failed, [fi"
-    "eld('Key', shown)]), form(declined, [field('Key', shown)]), form(redee"
-    "med, [field('Key', shown), field('Key', shown)]), form(menu, [field('K"
-    "ey', shown), field('Stream(Key)', thread)]), form(presented, [field('K"
-    "ey', shown), field('Key', shown)]), form(unfulfilled, [field('Key', sh"
-    "own), field('Key', shown)]), form(refused, [field('Key', shown)]), for"
-    "m(lacking, [field('Key', shown), field('Integer', shown)]), form(no_co"
-    "nversation, [field('Key', shown)])]))";
+    "Friend', shown)]), form(minted, [field('Amount', shown)]), form(paid, "
+    "[field('Friend', shown), field('Amount', shown)]), form(received, [fie"
+    "ld('From', shown), field('Amount', shown)]), form(returned, [field('Fr"
+    "om', shown), field('Amount', shown)]), form(swap_done, [field('Friend'"
+    ", shown)]), form(swap_declined, [field('Friend', shown)]), form(swap_f"
+    "ailed, [field('From', shown)]), form(declined, [field('From', shown)])"
+    ", form(redeemed, [field('Friend', shown), field('WantCoin', shown)]), "
+    "form(menu, [field('Friend', shown), field('Issuers', thread)]), form(p"
+    "resented, [field('From', shown), field('WantCoin', shown)]), form(unfu"
+    "lfilled, [field('From', shown), field('WantCoin', shown)]), form(refus"
+    "ed, [field('Friend', shown)]), form(lacking, [field('Issuer', shown), "
+    "field('Amount', shown)]), form(no_conversation, [field('Friend', shown"
+    ")])]))";
 
 void main() {
   late UiRuntime r;
@@ -109,8 +110,10 @@ void main() {
             findsOneWidget,
             reason: '$heading at $at');
       }
-      expect(inOutput(find.text('Stream(Key)')), findsOneWidget);
-      expect(inOutput(find.text('Key')), findsNWidgets(2));
+      // Each field named by what it is (Currencies, 2026-10-14 09:24 UTC):
+      // the menu's Friend and Issuers, and opened's Friend.
+      expect(inOutput(find.text('Issuers')), findsOneWidget);
+      expect(inOutput(find.text('Friend')), findsNWidgets(2));
       for (final v in ['carol', 'dave', 'erin', 'frank']) {
         expect(inOutput(find.text(v)), findsOneWidget, reason: v);
       }
