@@ -8,8 +8,11 @@ AppName ::= String.
 Artefact ::= String.
 Request ::= trust(CompilerKey) ; install(AppName, Artefact) ; invite(AppName, Friend) ; connect(Friend).
 FriendRequest ::= from(Friend, Decision?).
+Introducer ::= Constant.
+Other ::= Key.
+IntroRequest ::= from(Introducer, Other, Decision?).
 
-Question ::= friendRequest_w(FriendRequest) ; stream_request_r(Stream(Request)?).
+Question ::= friendRequest_w(FriendRequest) ; introRequest_w(IntroRequest) ; stream_request_r(Stream(Request)?).
 
 procedure respond_friend(Key?, Key?, PendingValue?, Stream(UserInMsg), Stream(Ask(Question))).
 respond_friend(S1, S2, S3, S4?, [ask('FriendRequest', friendRequest_w(X?)) | D?]) :- respond_friend1(S1?, S2?, S3?, S4, X, D).
@@ -21,6 +24,19 @@ procedure decide_friend(Decision?, Key?, Key?, PendingValue?, Stream(UserInMsg))
 decide_friend(yes, Id, From, P, [msg(person, Id?, decision(yes, From?, P?))]).
 decide_friend(no, Id, From, P, [msg(person, Id?, decision(no, From?, P?))]).
 
+procedure respond_intro(Key?, Constant?, Key?, PendingValue?, Stream(UserInMsg), Stream(Ask(Question))).
+respond_intro(S1, S2, S3, S4, S5?, [ask('IntroRequest', introRequest_w(X?)) | D?]) :- respond_intro1(S1?, S2?, S3?, S4?, S5, X, D).
+
+procedure respond_intro1(Key?, Constant?, Key?, PendingValue?, Stream(UserInMsg), IntroRequest, Stream(Ask(Question))).
+respond_intro1(Id, From, Other, P, Cmds?, from(From?, Other?, Answer), []) :- ground(Id?), ground(From?), ground(Other?) | decide_intro(Answer?, Id?, Other?, P?, Cmds).
+
+procedure decide_intro(Decision?, Key?, Key?, PendingValue?, Stream(UserInMsg)).
+decide_intro(yes, Id, Other, P, [msg(person, Id?, accept_intro(Other?, P?))]).
+decide_intro(no, Id, Other, P, Cmds?) :- refuse_intro(Id?, Other?, P?, Cmds).
+
+procedure refuse_intro(Key?, Constant?, PendingValue?, Stream(UserInMsg)).
+refuse_intro(Id, Other, P, [msg(person, Id?, reject_intro(Other?, P?))]).
+
 exported procedure home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
 home(S1, S2, S3?, [ask('Stream(Request)?', stream_request_r(X)) | D?]) :- home1(S1?, S2?, S3, X?, D).
 
@@ -29,6 +45,7 @@ home1(Id, Outs, Cmds?, Reqs, D?) :- serve(Reqs?, Id?, Outs?, Cmds, D).
 
 procedure serve(Stream(Request)?, Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
 serve(Reqs, Id, [msg(agent, person, befriend(From, P)) | Outs], Cmds?, D?) :- ground(Id?), ground(From?) | respond_friend(Id?, From?, P?, Answer, D1), merge(Answer?, Cmds1?, Cmds), serve(Reqs?, Id?, Outs?, Cmds1, D2), merge(D1?, D2?, D).
+serve(Reqs, Id, [msg(agent, person, befriend_intro(From, Other, P)) | Outs], Cmds?, D?) :- ground(Id?), ground(From?), ground(Other?) | respond_intro(Id?, From?, Other?, P?, Answer, D1), merge(Answer?, Cmds1?, Cmds), serve(Reqs?, Id?, Outs?, Cmds1, D2), merge(D1?, D2?, D).
 serve(Reqs, Id, [_ | Outs], Cmds?, D?) :- ground(Id?), otherwise | serve(Reqs?, Id?, Outs?, Cmds, D).
 serve(_, _, [], [], []).
 serve([trust(Key) | Reqs], Id, Outs, Cmds?, D?) :- ground(Id?), ground(Key?) | trust_act(Key?, Id?, Reqs?, Outs?, Cmds, D).
@@ -191,6 +208,7 @@ constructs([]).
 
 procedure construct(Integer?, Question?, Inputs?, Stream(Draw)).
 construct(Id, friendRequest_w(X), Gs, Ds?) :- present_friendRequest([], X?, Gs?, _, Vs, Done), run(Id?, form(from, [field('Friend', shown), field('Decision', buttons([yes, no]))]), Vs?, Done?, Ds).
+construct(Id, introRequest_w(X), Gs, Ds?) :- present_introRequest([], X?, Gs?, _, Vs, Done), run(Id?, form(from, [field('Introducer', shown), field('Other', shown), field('Decision', buttons([yes, no]))]), Vs?, Done?, Ds).
 construct(Id, stream_request_r(X?), Gs, Ds?) :- answer_stream_request([], X, Gs?, _, Done), run(Id?, input_box(menu([form(trust, [field('CompilerKey', peer)]), form(install, [field('AppName', text), field('Artefact', text)]), form(invite, [field('AppName', text), field('Friend', peer)]), form(connect, [field('Friend', peer)])])), [input([])], Done?, Ds).
 
 procedure form_decision(_?, Formed(Decision)).
@@ -222,6 +240,25 @@ present_friendRequest(P, X, Gs, Gs1?, [pending(P?) | Vs?], Done?) :- ground(P?) 
 procedure present_friendRequest_wait(Path?, FriendRequest?, Inputs?, Inputs, Stream(_), Done).
 present_friendRequest_wait(P, from(H1, H2?), Gs, Gs1?, Vs?, Done?) :- present_friendRequest(P?, from(H1?, H2), Gs?, Gs1, Vs, Done).
 present_friendRequest_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, Done?) :- present_friendRequest_wait(P?, X?, Gs?, Gs1, Vs, Done).
+
+procedure start_introRequest_from_3(Stream(_)?, Stream(_)?, Stream(_)?, Stream(_)).
+start_introRequest_from_3([V1 | S1], [V2 | S2], [V3 | S3], [from(V1?, V2?, V3?) | Vs?]) :- ground(V1?), ground(V2?), ground(V3?) | comb_introRequest_from_3(V1?, V2?, V3?, S1?, S2?, S3?, Vs).
+start_introRequest_from_3([], _, _, []).
+start_introRequest_from_3(_, [], _, []).
+start_introRequest_from_3(_, _, [], []).
+
+procedure comb_introRequest_from_3(_?, _?, _?, Stream(_)?, Stream(_)?, Stream(_)?, Stream(_)).
+comb_introRequest_from_3(_, V2, V3, [V1 | S1], S2, S3, [from(V1?, V2?, V3?) | Vs?]) :- ground(V1?), ground(V2?), ground(V3?) | comb_introRequest_from_3(V1?, V2?, V3?, S1?, S2?, S3?, Vs).
+comb_introRequest_from_3(V1, _, V3, S1, [V2 | S2], S3, [from(V1?, V2?, V3?) | Vs?]) :- ground(V1?), ground(V2?), ground(V3?) | comb_introRequest_from_3(V1?, V2?, V3?, S1?, S2?, S3?, Vs).
+comb_introRequest_from_3(_, _, _, [], [], [], []).
+
+procedure present_introRequest(Path?, IntroRequest?, Inputs?, Inputs, Stream(_), Done).
+present_introRequest(P, from(H1, H2, H3?), Gs, Gs1?, Vs?, D3?) :- ground(P?) | path(P?, 1, Q1), shown(Q1?, H1?, V1), path(P?, 2, Q2), shown(Q2?, H2?, V2), path(P?, 3, M3), path(P?, 3, Q3), answer_decision(Q3?, H3, Gs?, Gs1, D3), start_introRequest_from_3(V1?, V2?, [input(M3?)], Vs).
+present_introRequest(P, X, Gs, Gs1?, [pending(P?) | Vs?], Done?) :- ground(P?) | present_introRequest_wait(P?, X?, Gs?, Gs1, Vs, Done).
+
+procedure present_introRequest_wait(Path?, IntroRequest?, Inputs?, Inputs, Stream(_), Done).
+present_introRequest_wait(P, from(H1, H2, H3?), Gs, Gs1?, Vs?, Done?) :- present_introRequest(P?, from(H1?, H2?, H3), Gs?, Gs1, Vs, Done).
+present_introRequest_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, Done?) :- present_introRequest_wait(P?, X?, Gs?, Gs1, Vs, Done).
 
 procedure join_request_trust_1(Formed(CompilerKey)?, Formed(Request)).
 join_request_trust_1(formed(X1), formed(trust(X1?))).

@@ -11,6 +11,8 @@
 %% :boot, go to the person.
 
 imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
+imported procedure home#home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(HomeQuestion))).
+imported procedure home#dispatch(Stream(Ask(HomeQuestion))?, Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(Output))).
 
 procedure crossbar2(NetOutStream?, NetOutStream?, NetInStream, NetInStream).
 crossbar2(AOut, BOut, AIn?, BIn?) :-
@@ -580,14 +582,16 @@ sg_init(alice, warm, NetIn) :-
     load_file("pingapp.glpw", C),
     certified(C?, CK, CSig),
     send_to_user(Ui?),
-    alice_warm(C?, CK?, CSig?, Ui, Out?, In).
+    warm_home(alice, Out?, Script, ScriptCmds?, In),
+    alice_warm(C?, CK?, CSig?, Ui, Script?, ScriptCmds).
 sg_init(bob, warm, NetIn) :-
     agent # agent(bob, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
     send_to_net(NetOut?),
     load_file("pingapp.glpw", C),
     certified(C?, CK, CSig),
     send_to_user(Ui?),
-    bob_warm(C?, CK?, CSig?, Ui, Out?, In).
+    warm_home(bob, Out?, Script, ScriptCmds?, In),
+    bob_warm(C?, CK?, CSig?, Ui, Script?, ScriptCmds).
 sg_init(carol, warm, NetIn) :-
     agent # agent(carol, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
     send_to_net(NetOut?),
@@ -596,10 +600,39 @@ sg_init(carol, warm, NetIn) :-
     send_to_user(Ui?),
     carol_warm(C?, CK?, CSig?, Ui, Out?, In).
 
+%% The super-app's person interface for a warm-call person (home.vglp): what
+%% the agent tells the person is split by split_out/3 (self.glp), each message
+%% whole to home, which raises the card of an introduction, and its notice to
+%% the person's script; the script's commands and home's reach the agent
+%% merged; and the person, scripted on what the dispatcher draws, answers yes
+%% on each introduction's card.  The notice informs; the consent is asked by
+%% the card only (GSG, 2026-10-14 09:24 UTC, item 1).
+procedure warm_home(Key?, AgentToUserStream?, Stream(Output), UserInStream?, UserInStream).
+warm_home(Id, Out, Notices?, ScriptCmds, In?) :-
+    ground(Id?) |
+    split_out(Out?, Notices, Seen),
+    home # home(Id?, Seen?, Home, Asks),
+    home # dispatch(Asks?, ch(Grants?, Draws), MCh),
+    hold_output(MCh?),
+    intro_person(Draws?, Grants),
+    merge(ScriptCmds?, Home?, In).
+
+%% The program's output to the person: the notices go to the script instead.
+procedure hold_output(Channel(Stream(_), Stream(Output))?).
+hold_output(ch(_, [])).
+
+%% The person: yes on each introduction's card, at the path of its decision,
+%% once the card is drawn with it.  The person channel never closes, so the
+%% person holds its grant writer for good.
+procedure intro_person(_?, PersonIn).
+intro_person([draw(N, _, from(_, _, input(Q))) | Ds], [input(N?, Q?, yes) | Gs?]) :-
+    ground(N?), ground(Q?) | intro_person(Ds?, Gs).
+intro_person([_ | Ds], Gs?) :- otherwise | intro_person(Ds?, Gs).
+
 %% alice's person: install; consent in advance to a warm call from bob;
-%% cold-call carol, invite her once connected; accept carol's introduction to
-%% bob.
-procedure alice_warm(Content?, String?, String?, AppUiStream, AgentToUserStream?, UserInStream).
+%% cold-call carol, invite her once connected; consent on its card to carol's
+%% introduction to bob.
+procedure alice_warm(Content?, String?, String?, AppUiStream, Stream(Output)?, UserInStream).
 alice_warm(C, CK, CSig, Ui?, Outs,
            [msg(person, alice, trust(CK?)),
             msg(person, alice, install(ping, C?, CSig?, Ui)),
@@ -607,7 +640,7 @@ alice_warm(C, CK, CSig, Ui?, Outs,
             msg(person, alice, connect(carol)) | Cmds?]) :-
     alice_warm_run(Outs?, Cmds).
 
-procedure alice_warm_run(AgentToUserStream?, UserInStream).
+procedure alice_warm_run(Stream(Output)?, UserInStream).
 alice_warm_run([msg(agent, person, connected(carol)) | Outs],
                [msg(person, alice, invite(ping, carol)) | Cmds?]) :-
     send_to_user([sg(connected(carol))]),
@@ -615,17 +648,16 @@ alice_warm_run([msg(agent, person, connected(carol)) | Outs],
 alice_warm_run([msg(agent, person, connected(bob)) | Outs], Cmds?) :-
     send_to_user([sg(connected(bob))]),
     alice_warm_run(Outs?, Cmds).
-alice_warm_run([msg(agent, person, befriend_intro(carol, bob, P)) | Outs],
-               [msg(person, alice, accept_intro(bob, P?)) | Cmds?]) :-
+alice_warm_run([msg(agent, person, befriend_intro(carol, bob)) | Outs], Cmds?) :-
     send_to_user([sg(intro_from(carol, bob))]),
     alice_warm_run(Outs?, Cmds).
 alice_warm_run([_ | Outs], Cmds?) :- otherwise | alice_warm_run(Outs?, Cmds).
 alice_warm_run([], []).
 
 %% bob's person: install; consent in advance to carol's and alice's
-%% invitations and to a warm call with alice; cold-call carol; accept carol's
-%% introduction to alice.
-procedure bob_warm(Content?, String?, String?, AppUiStream, AgentToUserStream?, UserInStream).
+%% invitations and to a warm call with alice; cold-call carol; consent on its
+%% card to carol's introduction to alice.
+procedure bob_warm(Content?, String?, String?, AppUiStream, Stream(Output)?, UserInStream).
 bob_warm(C, CK, CSig, Ui?, Outs,
          [msg(person, bob, trust(CK?)),
           msg(person, bob, install(ping, C?, CSig?, Ui)),
@@ -635,9 +667,8 @@ bob_warm(C, CK, CSig, Ui?, Outs,
           msg(person, bob, connect(carol)) | Cmds?]) :-
     bob_warm_run(Outs?, Cmds).
 
-procedure bob_warm_run(AgentToUserStream?, UserInStream).
-bob_warm_run([msg(agent, person, befriend_intro(carol, alice, P)) | Outs],
-             [msg(person, bob, accept_intro(alice, P?)) | Cmds?]) :-
+procedure bob_warm_run(Stream(Output)?, UserInStream).
+bob_warm_run([msg(agent, person, befriend_intro(carol, alice)) | Outs], Cmds?) :-
     send_to_user([sg(intro_from(carol, alice))]),
     bob_warm_run(Outs?, Cmds).
 bob_warm_run([msg(agent, person, connected(Who)) | Outs], Cmds?) :-

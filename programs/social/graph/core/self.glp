@@ -28,7 +28,8 @@ ping(_, [], _).
 %% ../self.glp's, as home.glp's own.
 HomeRequest       ::= trust(Key) ; install(String, String) ; invite(String, Key) ; connect(Key).
 HomeFriendRequest ::= from(Key, Decision?).
-HomeQuestion      ::= friendRequest_w(HomeFriendRequest) ; stream_request_r(Stream(HomeRequest)?).
+HomeIntroRequest  ::= from(Constant, Key, Decision?).
+HomeQuestion      ::= friendRequest_w(HomeFriendRequest) ; introRequest_w(HomeIntroRequest) ; stream_request_r(Stream(HomeRequest)?).
 
 %% The super-app (GSG paper, Section 5.1): the one goal the runtime posts,
 %% with the person's public key, the stream of the person's acts and the
@@ -41,8 +42,8 @@ HomeQuestion      ::= friendRequest_w(HomeFriendRequest) ; stream_request_r(Stre
 %% it, and it draws the constructs of home's questions.  What the agent tells
 %% the person goes to her on the dispatcher's channel to the program, which
 %% merges it with the draws, as miniapp.glp of programs/currencies/coins/
-%% currency does with its screen; home reads the same stream for a friend's
-%% request to connect.  The draws leave by send_to_user/1, and the network
+%% currency does with its screen; home reads the same stream, each message
+%% whole, for a friend's request to connect and an introduction.  The draws leave by send_to_user/1, and the network
 %% stream by send_to_net/1.
 imported procedure home#home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(HomeQuestion))).
 imported procedure home#dispatch(Stream(Ask(HomeQuestion))?, Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(Output))).
@@ -52,18 +53,22 @@ superapp(Id, Grants, NetIn) :-
     ground(Id?) |
     agent # agent(Id?, Cmds?, NetIn?, [user_output(Outs), net_output(NetOut)]),
     send_to_net(NetOut?),
-    tee_out(Outs?, Shown, Seen),
+    split_out(Outs?, Shown, Seen),
     home # home(Id?, Seen?, Cmds, Asks),
     home # dispatch(Asks?, ch(Grants?, Draws), MCh),
     show_notices(MCh?, Shown?),
     send_to_user(Draws?).
 
-%% What the agent tells the person, shown to her and read by the person
-%% interface: superapp/3 above and superapp_ui/3 (home_ui.glp) reach it by
-%% scope.
-procedure tee_out(AgentToUserStream?, AgentToUserStream, AgentToUserStream).
-tee_out([X | Xs], [X? | Ys?], [X? | Zs?]) :- ground(X?) | tee_out(Xs?, Ys, Zs).
-tee_out([], [], []).
+%% What the agent tells the person, split: each message whole to the person
+%% interface, and its notice to the person.  A message is never copied whole:
+%% the pending value of a befriending or an introduction holds the agent's
+%% consent writer, which home's card answers, and which one reader alone may
+%% hold; until it is answered the message is not ground, so a copy of it
+%% would wait for the very answer it carries the card for.  superapp/3 above
+%% and superapp_ui/3 (home_ui.glp) reach it by scope.
+procedure split_out(AgentToUserStream?, Stream(Output), AgentToUserStream).
+split_out([M | Ms], [N? | Ns?], [M1? | Seen?]) :- notice(M?, N, M1), split_out(Ms?, Ns, Seen).
+split_out([], [], []).
 
 %% The super-app's output to its person, of the reserved type Output: "A
 %% vGLP program declares the type of its output to its person by defining
@@ -73,7 +78,9 @@ tee_out([], [], []).
 %% agent tells the person, AgentContent, with the pending value of a
 %% befriending dropped, its consent asked by home's own card,
 %% FriendRequest ::= from(Friend, Decision?), and nowhere else (GSG,
-%% 2026-10-13 20:16 UTC, Udi: yes); befriend_intro likewise.
+%% 2026-10-13 20:16 UTC, Udi: yes); befriend_intro likewise, its consent
+%% asked by home's card IntroRequest ::= from(Introducer, Other, Decision?)
+%% (GSG, 2026-10-14 09:24 UTC, item 1).
 Notice ::= msg(Constant, Constant, NoticeContent).
 NoticeContent ::= befriend(Key)
                 ; befriend_intro(Constant, Key)
@@ -85,27 +92,35 @@ NoticeContent ::= befriend(Key)
                 ; not_a_friend(Key).
 Output ::= Notice.
 
-%% What the agent tells the person, onto the program's output to the person,
-%% each message as its notice; the person's input other than grants is not
-%% read.  superapp_ui/3 reaches it by scope.
-procedure show_notices(Channel(Stream(_), Stream(Output))?, AgentToUserStream?).
+%% The notices, onto the program's output to the person; the person's input
+%% other than grants is not read.  superapp_ui/3 reaches it by scope.
+procedure show_notices(Channel(Stream(_), Stream(Output))?, Stream(Output)?).
 show_notices(ch(_, Out?), Shown) :- relay(Shown?, Out).
 
-%% Each message as it comes, as its notice.
-procedure relay(AgentToUserStream?, Stream(Output)).
-relay([M | Ms], [N? | Out?]) :- notice(M?, N), relay(Ms?, Out).
+%% Each notice as it comes.
+procedure relay(Stream(Output)?, Stream(Output)).
+relay([N | Ns], [N? | Out?]) :- relay(Ns?, Out).
 relay([], []).
 
-%% The notice of a message the agent tells the person.
-procedure notice(AgentToUserMsg?, Notice).
-notice(msg(A, P, befriend(K, _)), msg(A?, P?, befriend(K?))).
-notice(msg(A, P, befriend_intro(C, K, _)), msg(A?, P?, befriend_intro(C?, K?))).
-notice(msg(A, P, connected(C)), msg(A?, P?, connected(C?))).
-notice(msg(A, P, rejected), msg(A?, P?, rejected)).
-notice(msg(A, P, rejected(C)), msg(A?, P?, rejected(C?))).
-notice(msg(A, P, unfriended(C)), msg(A?, P?, unfriended(C?))).
-notice(msg(A, P, received(K, C)), msg(A?, P?, received(K?, C?))).
-notice(msg(A, P, not_a_friend(K)), msg(A?, P?, not_a_friend(K?))).
+%% The notice of a message the agent tells the person, and the message, whole,
+%% for the person interface: the pending value goes with the message alone.
+procedure notice(AgentToUserMsg?, Notice, AgentToUserMsg).
+notice(msg(A, P, befriend(K, V)), msg(A?, P?, befriend(K?)), msg(A?, P?, befriend(K?, V?))) :-
+    ground(A?), ground(P?), ground(K?) | true.
+notice(msg(A, P, befriend_intro(C, K, V)), msg(A?, P?, befriend_intro(C?, K?)), msg(A?, P?, befriend_intro(C?, K?, V?))) :-
+    ground(A?), ground(P?), ground(C?), ground(K?) | true.
+notice(msg(A, P, connected(C)), msg(A?, P?, connected(C?)), msg(A?, P?, connected(C?))) :-
+    ground(A?), ground(P?), ground(C?) | true.
+notice(msg(A, P, rejected), msg(A?, P?, rejected), msg(A?, P?, rejected)) :-
+    ground(A?), ground(P?) | true.
+notice(msg(A, P, rejected(C)), msg(A?, P?, rejected(C?)), msg(A?, P?, rejected(C?))) :-
+    ground(A?), ground(P?), ground(C?) | true.
+notice(msg(A, P, unfriended(C)), msg(A?, P?, unfriended(C?)), msg(A?, P?, unfriended(C?))) :-
+    ground(A?), ground(P?), ground(C?) | true.
+notice(msg(A, P, received(K, C)), msg(A?, P?, received(K?, C?)), msg(A?, P?, received(K?, C?))) :-
+    ground(A?), ground(P?), ground(K?), ground(C?) | true.
+notice(msg(A, P, not_a_friend(K)), msg(A?, P?, not_a_friend(K?)), msg(A?, P?, not_a_friend(K?))) :-
+    ground(A?), ground(P?), ground(K?) | true.
 
 %% The agent, exported for the parent's UI boot plays (../boot.glp,
 %% ../play_ui_boot.glp), which call it as core # agent: a call into this

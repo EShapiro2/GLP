@@ -107,6 +107,41 @@ MwmInput(X) ::= [] ; [MwmStream(X) | MwmInput(X)].
 % Short-circuit termination token, threaded through mwm1/4 and mwm_copy/4.
 Done ::= done.
 
+% The super-app's entry templates and the types they name (GSG paper, Section
+% "The Grassroots Super-App", "Activation and joining" and "What the super-app
+% grants a mini-app"; TGLP modules.tex, Dynamic Activation, "Opaque types").
+% The super-app holds no declaration of a mini-app's types: it declares one
+% entry template, whose one type parameter T is the mini-app's own type, and
+% every mini-app declares its entry as the template's instance at T.  Declared
+% here, above every program, the lowest common ancestor of the super-app and
+% the mini-apps (GLP, 2026-10-13 12:52 UTC, O2; 20:04 UTC, item 2).  No type
+% parameter occurs as an alternative of a type definition (TGLP Definition
+% "Type Identity of a Type, Opaque Instance").
+%
+% The person channel (vGLP, 2026-10-13 20:23 UTC and 2026-10-14 09:29 UTC):
+% the mini-app's end reads the person's grants, input(Id, P, R), Id the
+% construct, P the path of the position in it the grant writes, R the person's
+% input, and writes what the mini-app draws for its person, draw(Id, W, V), W
+% the widget, untyped, and V at T, and withdraw(Id); nothing merged, a
+% program's output reaching the person as the elements of the output thread,
+% construct 0.
+Path ::= [] ; [Integer | Path].
+Input(T) ::= input(Integer, Path, T).
+Draw(T) ::= draw(Integer, _, T) ; withdraw(Integer).
+PersonChannel(T) ::= Channel(Stream(Input(T)), Stream(Draw(T))).
+
+% The channel to the social graph (GSG, 2026-10-13 11:57 UTC, Udi: approved):
+% down it the social graph hands the mini-app each conversation, the peer's
+% key and one end of the root channel to the execution of the same mini-app
+% at the peer, and reports a held end by its global name (GSG paper, Section
+% "Distribution and Activation", "Contact between two participants"); up it
+% the mini-app asks for a warm call to the anchor of a held end.
+RootChannel(T) ::= ch(Stream(T), Stream(T)?).
+Conversation(T) ::= conversation(Key, RootChannel(T)).
+SgToApp(T) ::= Conversation(T) ; held(GlobalName).
+AppToSg ::= warm_call(GlobalName).
+SgChannel(T) ::= ch(Stream(SgToApp(T)), Stream(AppToSg)?).
+
 % =============================================================================
 % BUILTIN PROCEDURE DECLARATIONS (no clauses - implemented by runtime)
 % =============================================================================
@@ -308,6 +343,25 @@ merge(Xs, [], Xs?).
 procedure send_to_user(Stream(_)?).
 send_to_user([T | In]) :- ground(T?) | '_output'(T?), send_to_user(In?).
 send_to_user([]).
+
+% The super-app's entry template (GSG, 2026-10-13 11:57 UTC and 20:24 UTC;
+% the calendar, 20:59 UTC; Udi: approved): the person's key, the person
+% channel, the channel to the social graph, and the calendar, a stream of
+% dates the super-app writes from the device's clock, one a day, which a
+% mini-app that keeps no dates ignores (GSG paper, "What the super-app grants
+% a mini-app").  One entry name for every mini-app; never run here.
+procedure(T) miniapp(Key?, PersonChannel(T)?, SgChannel(T)?, Stream(Integer)?).
+miniapp(_, _, _, _).
+
+% The mini-app's scripted person (GSG, 2026-10-13 18:52 UTC, O5, and 20:22
+% UTC; Udi: approved): a mini-app exports it beside its entry, as this
+% template's instance at the T of its miniapp/4 instance: the person's key, a
+% role choosing the script among the mini-app's own plays, the person-side end
+% of the person channel, and the screen it reports.  The super-app's plays
+% activate it from the module value as they activate the entry.  Never run
+% here.
+procedure(T) miniapp_person(Key?, Constant?, Channel(Stream(Draw(T)), Stream(Input(T)))?, Stream(T)).
+miniapp_person(_, _, _, []).
 
 % send_to_net/1 — the seam predicate to the network (GLP-Spec appendix-guards,
 % the seam-predicate row and "Output to the network (send_to_net/1)"; IGLP
