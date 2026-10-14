@@ -39,14 +39,13 @@ Peer       ::= Key.
 Carried(X) ::= hello(Peer) ; cargo(Peer, X).
 Msg(X)     ::= msg(Peer, Carried(X)).
 Sent(X)    ::= sent(Peer, Peer, X).
-PersonIn   ::= [_ | PersonIn].
-Step       ::= req(_) ; wait(_) ; card(_, _).
-Steps      ::= [] ; [Step | Steps].
-Sess       ::= nosess ; sess(Integer, _).
-Seen       ::= seen(Integer, _, _).
+Step(T)    ::= req(T) ; wait(_) ; card(_, T).
+Steps(T)   ::= [] ; [Step(T) | Steps(T)].
+Sess       ::= nosess ; sess(Integer, Path).
+Seen       ::= seen(Integer, Path, _).
 Seens      ::= [] ; [Seen | Seens].
-PSt        ::= ps(Sess, Stream(_), Seens, Steps).
-CardAt     ::= card_at(Integer, _, Seens) ; nocard.
+PSt(T)     ::= ps(Sess, Stream(_), Seens, Steps(T)).
+CardAt     ::= card_at(Integer, Path, Seens) ; nocard.
 YN         ::= y ; n.
 
 %% The network between two agents A and B: each message to its recipient, each
@@ -113,13 +112,13 @@ note(hello(_), _, Log1?, Log1).
 note(cargo(F, X), To, [sent(F?, To?, X?)|Log1?], Log1).
 
 %% The person.
-procedure person(_?, PersonIn, PSt?, Stream(_)).
-person([draw(Id, _, session(input(P), T))|Ds], Gs?, ps(_, Old, Cs, Ss), Log?) :-
+procedure(T) person(_?, PersonIn(T), PSt(T)?, Stream(_)).
+person([draw(Id, _, session_w(session(input(P), T)))|Ds], Gs?, ps(_, Old, Cs, Ss), Log?) :-
     ground(Id?), ground(P?), ground(T?) |
     list_of(T?, L),
     session_seen(Id?, P?, Old?, L?, Cs?, Ss?, Gs, Gs1?, St1, Log, Log1?),
     person(Ds?, Gs1, St1?, Log1).
-person([draw(Id, _, card(At, input(P)))|Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :-
+person([draw(Id, _, card_w(card(At, input(P))))|Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :-
     ground(Id?), ground(P?), ground(At?) |
     advance(ps(Se?, T?, [seen(Id?, P?, At?)|Cs?], Ss?), Gs, Gs1?, St1, Log, Log1?),
     person(Ds?, Gs1, St1?, Log1).
@@ -128,15 +127,16 @@ person([withdraw(Id)|Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :- ground(Id?) |
     person(Ds?, Gs, ps(Se?, T?, Cs1?, Ss?), Log).
 person([_|Ds], Gs?, St, Log?) :- otherwise | person(Ds?, Gs, St?, Log).
 
-procedure session_seen(Integer?, _?, Stream(_)?, Stream(_)?, Seens?, Steps?,
-    PersonIn, PersonIn?, PSt, Stream(_), Stream(_)?).
+procedure(T) session_seen(Integer?, Path?, Stream(_)?, Stream(_)?, Seens?,
+    Steps(T)?, PersonIn(T), PersonIn(T)?, PSt(T), Stream(_), Stream(_)?).
 session_seen(Id, P, Old, L, Cs, Ss, Gs?, Gs1, St1?, Log?, Log1) :- ground(L?) |
     log_new(Old?, L?, Log, Log2?),
     advance(ps(sess(Id?, P?), L?, Cs?, Ss?), Gs, Gs1?, St1, Log2, Log1?).
 
 %% advance(St?, Gs, Gs1?, St1, Log, Log1?): take the script's steps as far as
 %% they can be taken, the grants written on Gs, continuing at Gs1.
-procedure advance(PSt?, PersonIn, PersonIn?, PSt, Stream(_), Stream(_)?).
+procedure(T) advance(PSt(T)?, PersonIn(T), PersonIn(T)?, PSt(T), Stream(_),
+    Stream(_)?).
 advance(ps(sess(Id, P), T, Cs, [req(R)|Ss]), [input(Id?, P?, R?)|Gs?], Gs1, St1?, Log?, Log1) :-
     ground(Id?), ground(P?) |
     advance(ps(sess(Id?, P?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
@@ -149,12 +149,14 @@ advance(ps(Se, T, Cs, [card(K, A)|Ss]), Gs?, Gs1, St1?, Log?, Log1) :- ground(Cs
     carded(F?, ps(Se?, T?, Cs?, [card(K?, A?)|Ss?]), Gs, Gs1?, St1, Log, Log1?).
 advance(ps(Se, T, Cs, []), Gs1?, Gs1, ps(Se?, T?, Cs?, []), Log1?, Log1).
 
-procedure waited(YN?, PSt?, PersonIn, PersonIn?, PSt, Stream(_), Stream(_)?).
+procedure(T) waited(YN?, PSt(T)?, PersonIn(T), PersonIn(T)?, PSt(T), Stream(_),
+    Stream(_)?).
 waited(y, ps(Se, T, Cs, [_|Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
     advance(ps(Se?, T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
 waited(n, St, Gs1?, Gs1, St?, Log1?, Log1).
 
-procedure carded(CardAt?, PSt?, PersonIn, PersonIn?, PSt, Stream(_), Stream(_)?).
+procedure(T) carded(CardAt?, PSt(T)?, PersonIn(T), PersonIn(T)?, PSt(T),
+    Stream(_), Stream(_)?).
 carded(card_at(Id, P, Cs1), ps(Se, T, _, [card(K, A)|Ss]),
        [input(Id?, P?, A?)|Gs?], Gs1, St1?, [gave(K?, A?)|Log?], Log1) :-
     ground(K?), ground(A?) |

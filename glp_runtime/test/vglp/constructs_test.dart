@@ -95,8 +95,12 @@ decide(no, From, refuse(From?)).
       };
       expect(calls, isNot(contains('construct')));
       expect(dispatcher.module.typeDefs.map((t) => t.name),
-          containsAll(['Ask', 'Spawn', 'Input', 'Path', 'Draw', 'PersonIn',
-              'Inputs', 'Deads']));
+          containsAll(['Ask', 'Spawn', 'Inputs', 'Route', 'Routes', 'Deads']));
+      // The person channel, a grant, its path and a draw are the root's
+      // (programs/self.glp; vGLP, Section 6.3).
+      expect(dispatcher.module.typeDefs.map((t) => t.name),
+          isNot(anyOf(contains('Input'), contains('Path'), contains('Draw'),
+              contains('PersonIn'), contains('PersonOut'))));
       expect(dispatcher.module.typeDefs.map((t) => t.name),
           isNot(contains('Handle')));
     });
@@ -110,25 +114,28 @@ decide(no, From, refuse(From?)).
       expect(
           c.source,
           contains('exported procedure dispatch(Stream(Ask(Question))?, '
-              'Channel(PersonIn, Stream(_))?, Channel(Stream(_), '
-              'Stream(_))).'));
+              'PersonChannel(Drawn)?, Channel(Stream(_), Stream(_))).'));
       expect(
           c.source,
           contains('dispatch(Asks, PCh, MCh?) :- dispatch(Asks?, PCh?, MCh, '
               'Ss), constructs(Ss?).'));
-      // The generic dispatch/4, parameterised in the questions, unexported.
+      // The generic dispatch/4, parameterised in the questions and in the
+      // person channel's type, unexported.
       expect(
           c.source,
-          contains('\nprocedure(Q) dispatch(Stream(Ask(Q))?, '
-              'Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_)), '
-              'Stream(Spawn(Q))).'));
-      expect(c.source, contains('Draw ::= draw(Integer, _, _) ; '
-          'withdraw(Integer).'));
+          contains('\nprocedure(Q, T) dispatch(Stream(Ask(Q))?, '
+              'PersonChannel(T)?, Channel(Stream(_), Stream(_)), '
+              'Stream(Spawn(Q, T))).'));
+      expect(c.source, isNot(contains('Draw ::= ')));
       expect(c.source, contains('Ask(Q) ::= ask(Constant, Q).'));
       expect(
           c.source,
-          contains('Spawn(Q) ::= spawn(Integer, Q, Inputs, '
-              'Stream(Draw)?).'));
+          contains('Spawn(Q, T) ::= spawn(Integer, Q, Inputs(T), '
+              'Stream(Draw(T))?).'));
+      // The person channel's type, the values the program draws under the
+      // functors of its asks and the grants' raw inputs (vGLP, Definition
+      // "Construct Process").
+      expect(c.source, contains('Drawn ::= card_w(_) ; YesNo.'));
       // On an ask it writes the spawn of the construct process with the next
       // identifier, keeping the writer of its grants and the reader of its
       // draws; constructs/1 calls construct/4 on each spawn.
@@ -144,8 +151,8 @@ decide(no, From, refuse(From?)).
       expect(c.source, contains('constructs([]).'));
       // A grant is input(Id, P, R), routed whole by Id, and the question at
       // P reads the input from it (C).
-      expect(c.source, contains('Input ::= input(_, _, _).'));
-      expect(c.source, contains('Path ::= [] ; [Integer | Path].'));
+      expect(c.source, isNot(contains('Input ::= ')));
+      expect(c.source, isNot(contains('Path ::= ')));
       expect(
           c.source,
           contains('split_grants([input(Id, P, R) | Gs], '
@@ -167,17 +174,19 @@ decide(no, From, refuse(From?)).
         'typed without [], no clause reads a [] of them, and a withdrawn '
         'construct\'s grant writer goes to Deads (Q1)', () {
       final c = compile(card);
-      expect(c.source, contains('PersonIn ::= [_ | PersonIn].'));
-      expect(c.source, contains('Inputs ::= [Input | Inputs].'));
-      expect(c.source, contains('Route ::= route(Integer, Inputs?).'));
-      expect(c.source, contains('Deads ::= [] ; [Inputs? | Deads].'));
+      expect(c.source, contains('Inputs(T) ::= [Input(T) | Inputs(T)].'));
+      expect(c.source, contains('Route(T) ::= route(Integer, Inputs(T)?).'));
       expect(c.source,
-          contains('procedure split_grants(PersonIn?, Inputs, Stream(_)).'));
+          contains('Deads(T) ::= [] ; [Inputs(T)? | Deads(T)].'));
       expect(
           c.source,
-          contains('procedure(Q) serve(Stream(Ask(Q))?, Inputs?, '
-              'Stream(Draw)?, Stream(Draw), Stream(_), Routes?, Deads?, '
-              'Integer?, Stream(Spawn(Q))).'));
+          contains('procedure(T) split_grants(PersonIn(T)?, Inputs(T), '
+              'Stream(_)).'));
+      expect(
+          c.source,
+          contains('procedure(Q, T) serve(Stream(Ask(Q))?, Inputs(T)?, '
+              'Stream(Draw(T))?, Stream(Draw(T)), PersonOut(T), Routes(T)?, '
+              'Deads(T)?, Integer?, Stream(Spawn(Q, T))).'));
       // No clause for a closed person channel or closed grants, and nothing
       // that closes a construct's grants.
       expect(c.source, isNot(contains('split_grants([], ')));
@@ -224,12 +233,10 @@ run(_).
       expect(c.constructName, 'construct_1');
       expect(c.askType, 'Ask_1');
       expect(c.source, contains('exported procedure dispatch_1('));
-      expect(c.source, contains('procedure(Q) dispatch_1('));
-      expect(c.source, contains('Draw_1 ::= draw(Integer, _, _) ; '
-          'withdraw(Integer).'));
+      expect(c.source, contains('procedure(Q, T) dispatch_1('));
       expect(c.source, contains('Ask_1(Q) ::= ask(Constant, Q).'));
-      expect(c.source, contains('procedure run_1(Integer?, _?, Stream(_)?, '
-          'Done?, Stream(Draw_1)).'));
+      expect(c.source, contains('procedure run_t_r(Integer?, _?, Stream(_)?, '
+          'Done?, Stream(Draw(Drawn))).'));
       expect(c.source, contains('constructs_1([spawn(Id, Q, Gs, Ds?) | Ss]) '
           ':- construct_1(Id?, Q?, Gs?, Ds), constructs_1(Ss?).'));
       expect(c.source, contains('construct_1(Id, t_r(X?), Gs, Ds?) :- '));
@@ -248,9 +255,9 @@ procedure (T?)*p.
 (t)*p.
 ''');
       expect(c.source, contains('procedure construct(Integer?, Question?, '
-          'Inputs?, Stream(Draw)).'));
+          'Inputs(Drawn)?, Stream(Draw(Drawn))).'));
       expect(c.source,
-          contains('procedure constructs(Stream(Spawn(Question))?).'));
+          contains('procedure constructs(Stream(Spawn(Question, Drawn))?).'));
     });
 
     test('is not emitted without the generic source, and the compilation '
@@ -275,7 +282,7 @@ procedure (T?)*p.
           s,
           contains('construct(Id, card_w(X), Gs, Ds?) :- '
               'present_card([], X?, Gs?, _, Vs, Done), '
-              'run(Id?, form(card, [field(\'Peer\', shown), field(\'YesNo\', '
+              'run_card_w(Id?, form(card, [field(\'Peer\', shown), field(\'YesNo\', '
               'buttons([yes, no]))]), Vs?, Done?, '
               'Ds).'));
       // The peer is shown at its position, [1], pending(P) until the
@@ -327,7 +334,7 @@ procedure (T?)*p.
       expect(
           s,
           contains('procedure take_yesNo(Formed(YesNo)?, Path?, YesNo, '
-              'Input?, Inputs?, Inputs, Done).'));
+              'Input(Drawn)?, Inputs(Drawn)?, Inputs(Drawn), Done).'));
       expect(s, contains('take_yesNo(formed(V), _, V?, _, Gs, Gs?, done).'));
       expect(
           s,
@@ -335,8 +342,8 @@ procedure (T?)*p.
               'answer_yesNo(P?, X, Gs?, Gs1, Done).'));
       expect(
           s,
-          contains('procedure answer_yesNo(Path?, YesNo, Inputs?, Inputs, '
-              'Done).'));
+          contains('procedure answer_yesNo(Path?, YesNo, Inputs(Drawn)?, '
+              'Inputs(Drawn), Done).'));
       // A grant for another position goes on through take_N's refused
       // clause, rebuilt whole (C).
       expect(
@@ -359,7 +366,7 @@ procedure (Request?)*agent(Integer?).
       expect(
           s,
           contains('construct(Id, request_r(X?), Gs, Ds?) :- '
-              'answer_request([], X, Gs?, _, Done), run(Id?, menu([form(post, '
+              'answer_request([], X, Gs?, _, Done), run_request_r(Id?, menu([form(post, '
               "[field('String', text)]), button(quit)]), [input([])], Done?, "
               'Ds).'));
       expect(s,
@@ -424,7 +431,8 @@ send_all(_, [], []).
           s,
           contains('construct(Id, stream_string_r(X?), Gs, Ds?) :- '
               'answer_stream_string([], X, Gs?, _, Done), '
-              'run(Id?, input_box(text), [input([])], Done?, Ds).'));
+              'run_stream_string_r(Id?, input_box(text), [input([])], Done?, '
+              'Ds).'));
       expect(
           s,
           contains('take_stream_string(formed(V), P, [V? | X1?], _, Gs, Gs1?, '
@@ -549,7 +557,7 @@ Pick ::= pick(Peers, Peer?).
 procedure (Pick)*choose(Peer).
 (pick([bob, carol], P))*choose(P?).
 ''').source;
-      expect(s, contains('run(Id?, picker, Vs?, Done?, Ds)'));
+      expect(s, contains('run_pick_w(Id?, picker, Vs?, Done?, Ds)'));
     });
 
     test('a structure the program writes holding one with a question', () {
@@ -1374,7 +1382,7 @@ procedure (Post?)*poster(Post).
       expect(
           s,
           contains('construct(Id, post_r(X?), Gs, Ds?) :- '
-              'answer_post([], X, Gs?, _, Vs, Done), run(Id?, menu('));
+              'answer_post([], X, Gs?, _, Vs, Done), run_post_r(Id?, menu('));
       expect(s, contains('[input([]) | Vs?], Done?, Ds).'));
       // Formed with [] there, not from the input.
       expect(
@@ -1686,7 +1694,7 @@ deal([]).
           s,
           contains('construct(Id, stream_card_w(X), Gs, Ds?) :- '
               'present_stream_card([], X?, Gs?, _, Vs, Done), '
-              'run(Id?, thread($card), Vs?, Done?, Ds).'));
+              'run_stream_card_w(Id?, thread($card), Vs?, Done?, Ds).'));
       // The views, the elements' so far: a cell as it is written; [] for
       // the stream closed with none; and the unwritten tail not drawn, []
       // where no element is written yet, its grants passed on until it is
@@ -1916,17 +1924,22 @@ Output ::= said(Peer) ; heard(Peer, Integer) ; ok.
       expect(
           c.source,
           contains("dispatch(Stream(Ask(Question))?, "
-              "Channel(PersonIn, Stream(_))?, "
+              "PersonChannel(Drawn)?, "
               "Channel(Stream(_), Stream(Output)))."));
+      // The compiled program draws its output as construct 0, its value
+      // under output, and hands the draws to the generic dispatcher, which
+      // numbers the questions from 1 (vGLP, Definition "Construct Process").
       expect(
           c.source,
-          contains("dispatch(Asks, PCh, MCh?) :- dispatch(Asks?, PCh?, MCh, "
-              "thread(menu(["));
-      // The generic dispatcher draws the output as construct 0 and numbers
-      // the questions from 1.
-      expect(c.source, contains('output(W?, MOut?, ODs)'));
-      expect(c.source, contains('[draw(0, W?, []) | Ds?]'));
+          contains("dispatch(Asks, PCh, ch(MIn?, MOut)) :- dispatch(Asks?, "
+              "PCh?, MIn, ODs?, Ss), output(thread(menu(["));
+      expect(c.source, contains('MOut?, ODs), constructs(Ss?).'));
+      expect(c.source, contains('[draw(0, W?, output([])) | Ds?]'));
+      expect(c.source, contains('[draw(0, W?, output(Es?)) | Ds?]'));
+      expect(c.source, contains('merge_draws(ODs?, DOut?, POut)'));
       expect(c.source, contains('[], [], 1, Ss)'));
+      expect(c.source, contains('Drawn ::= card_w(_) ; output(List(Output)) ; '
+          'YesNo.'));
     });
 
     test('undefined: dispatch/3 calls the dispatcher that draws nothing of the '
@@ -1935,7 +1948,7 @@ Output ::= said(Peer) ; heard(Peer, Integer) ; ok.
       expect(c.widgets.containsKey('Output'), isFalse);
       expect(
           c.source,
-          contains("Channel(PersonIn, Stream(_))?, "
+          contains("PersonChannel(Drawn)?, "
               "Channel(Stream(_), Stream(_)))."));
       expect(c.source,
           contains('dispatch(Asks, PCh, MCh?) :- dispatch(Asks?, PCh?, MCh, Ss)'));

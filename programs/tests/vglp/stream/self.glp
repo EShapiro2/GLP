@@ -9,7 +9,8 @@
 %% that stream and on the person channel; the goal has no person channel of
 %% its own, so the program's end of one is dropped.  The person sees the
 %% input box, its position marked input(Q), Q the stream's own path, [], and
-%% submits three times at Q, a number among two texts (vGLP #5 Cowork,
+%% submits three times at Q, among two texts a term of the person channel's
+%% type that forms no text, which answers nothing (vGLP #5 Cowork,
 %% 2026-10-04 09:05 UTC, C: a grant is input(Id, P, R)).
 %%
 %% The person never closes its grants, the person channel never closing
@@ -25,11 +26,11 @@ Peer     ::= Key.
 Msg      ::= msg(Peer, String).
 Question ::= stream_string_r(Stream(String)?).
 Ask(Q)   ::= ask(Constant, Q).
-PersonIn ::= [_ | PersonIn].
+Drawn    ::= stream_string_r(_) ; String.
 
 imported procedure chat#chat(Peer?, Stream(Msg), Stream(Ask(Question))).
 imported procedure chat#dispatch(Stream(Ask(Question))?,
-    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+    PersonChannel(Drawn)?, Channel(Stream(_), Stream(_))).
 
 exported procedure play_chat(Stream(Msg), Stream(_)).
 play_chat(Out?, Log?) :-
@@ -37,9 +38,9 @@ play_chat(Out?, Log?) :-
     chat # dispatch(Asks?, ch(Gs?, Ds), _),
     chatting_person(Ds?, Gs, Log).
 
-procedure chatting_person(_?, PersonIn, Stream(_)).
-chatting_person([draw(Id, W, input(Q)) | Ds],
-                [input(Id?, Q?, "hello"), input(Id?, Q?, 7),
+procedure chatting_person(_?, PersonIn(Drawn), Stream(_)).
+chatting_person([draw(Id, W, stream_string_r(input(Q))) | Ds],
+                [input(Id?, Q?, "hello"), input(Id?, Q?, stream_string_r(7)),
                  input(Id?, Q?, "world") | Gs?],
                 [drawn(Id?, W?, input(Q?)) | Log?]) :-
     ground(Id?), ground(W?), ground(Q?) |
@@ -57,8 +58,8 @@ play_chat_two(Out?, Log?) :-
     chat # dispatch(Asks?, ch(Gs?, Ds), _),
     two_texts_person(Ds?, Gs, Log).
 
-procedure two_texts_person(_?, PersonIn, Stream(_)).
-two_texts_person([draw(Id, W, input(Q)) | Ds],
+procedure two_texts_person(_?, PersonIn(Drawn), Stream(_)).
+two_texts_person([draw(Id, W, stream_string_r(input(Q))) | Ds],
                  [input(Id?, Q?, "one"), input(Id?, Q?, "two") | Gs?],
                  [drawn(Id?, W?, input(Q?)) | Log?]) :-
     ground(Id?), ground(W?), ground(Q?) |

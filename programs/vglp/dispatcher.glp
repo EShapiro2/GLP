@@ -41,64 +41,70 @@
 %% program, as it emitted the mediator before it: a module path resolves from
 %% the program root downward, so no compiled program can name this directory.
 %% It names each type and procedure here fresh against the program's, and
-%% supplies two things of its own, one per program (vGLP #4 Cowork,
-%% 2026-10-02 21:02 UTC, B; vGLP #5 Cowork, 2026-10-03 08:16 UTC, item 2):
+%% supplies what is its own, one per program (vGLP #4 Cowork, 2026-10-02
+%% 21:02 UTC, B; vGLP #5 Cowork, 2026-10-03 08:16 UTC, item 2):
 %%   Question  the union of the program's questions, one functor per moded
 %%             interactive type, the person's end of its variable inside: the
 %%             type parameter Q of Ask, Spawn, dispatch/4 and serve/9;
+%%   the person channel's T, the union of the values it draws and of the
+%%             grants' raw inputs (below): the type parameter T;
 %%   construct(Id?, Q?, Gs?, Ds), the construct process of each interactive
 %%             type, one clause per functor of Question, which reads the
 %%             person's input from its grants, forms the person's answers by
-%%             clauses typed at the question's type and calls run/5 below.
-%% Neither is named here, so this module loads and type-checks by itself
+%%             clauses typed at the question's type and draws its views by
+%%             its run_f/5, f the functor;
+%%   the drawing of the program's output, construct 0, where it has one.
+%% None is named here, so this module loads and type-checks by itself
 %% (TGLP, "Declaration parameters"): the dispatcher calls no construct/4 but
 %% writes spawn(Id, Q, Gs?, Ds) on the fourth argument of dispatch/4, and the
 %% compiled program's constructs/1 reads that stream and calls construct/4 on
 %% each, its dispatch/3 spawning both.
 %%
-%% THE PERSON CHANNEL NEVER CLOSES.  vGLP at 7838827, Definition "Person
-%% Channel, Person Writer, GLP with Persons, Grant": a grant takes the person
-%% writer U to [c | U1?], U1 the person writer after it, and no transition
-%% closes the channel.  So [] is not an input path of the person channel,
-%% PersonIn, nor of a construct's grant stream, Inputs, which carries the
-%% person's grants on; no clause here or in a construct process reads a []
-%% of either, and the dispatcher never terminates, reading a channel that
-%% never closes (vGLP #5 Cowork, 2026-10-03 21:13 UTC, Q1).  A withdrawn
-%% construct's grant writer can be neither closed nor dropped (GLP-Spec's
-%% Remark "Anonymous Variables", c3d3fc6: "a clause writes every writer it
-%% holds"): remove_route moves it to Deads, which serve carries and never
-%% reads, one entry per withdrawn construct.
+%% THE PERSON CHANNEL NEVER ENDS, IN EITHER DIRECTION.  vGLP, Section 6.3,
+%% Definition "Person Channel, Person Writer, GLP with Persons, Grant", and
+%% the root's types (programs/self.glp): PersonChannel(T) ::=
+%% Channel(PersonIn(T), PersonOut(T)), PersonIn(T) ::= [Input(T) |
+%% PersonIn(T)], PersonOut(T) ::= [Draw(T) | PersonOut(T)]; "Neither stream
+%% ends: the person and the program stay connected" (vGLP 2026-10-14 21:48
+%% UTC, Udi: "make the person suspend indefinitely").  So no clause here or
+%% in a construct process reads a [] of the person's grants or of a
+%% construct's grant stream, Inputs(T), which carries them on; and the
+%% dispatcher never closes the draws: when its asks end it goes on serving
+%% the grants and the constructs' draws.  A withdrawn construct's grant
+%% writer can be neither closed nor dropped (GLP-Spec's Remark "Anonymous
+%% Variables", c3d3fc6: "a clause writes every writer it holds"):
+%% remove_route moves it to Deads, which serve carries and never reads, one
+%% entry per withdrawn construct.
+%%
+%% THE TYPE OF WHAT CROSSES.  The person channel is typed at the program's
+%% T, the type parameter T here: "the values a program draws are of one type,
+%% the union of these, and the grants' raw inputs are of the types of its
+%% questions; the compilation forms the union of both, the parameter T of the
+%% program's person channel" (vGLP, Definition "Construct Process"): each
+%% construct's drawn value under the functor of its ask, construct 0's under
+%% output (vGLP 2026-10-14 11:36 UTC, Udi: yes).  The compilation forms T and
+%% emits what writes a value of it: the drawing of each construct process,
+%% and the drawing of the program's output as the thread of construct 0,
+%% which it hands this dispatcher as a stream of draws.
 
 %% ---------------------------------------------------------------------------
 %% The vocabulary
 %% ---------------------------------------------------------------------------
 
-%% A construct to the bridge: draw construct Id with widget W and view V; or
-%% withdraw it.
-Draw ::= draw(Integer, _, _) ; withdraw(Integer).
-
-%% The person channel's input: the person's grants, which never close.
-PersonIn ::= [_ | PersonIn].
-
-%% A grant the dispatcher routes to a construct, whole: the construct's
-%% identifier, the position of the question in it, and the person's raw
-%% input.
-Input ::= input(_, _, _).
-
-%% The position of a question in its construct: the path of argument indices
-%% from the root of the interactive variable's term, [] the root.
-Path ::= [] ; [Integer | Path].
+%% The person channel, a grant input(Id, P, R), its path P and a draw
+%% draw(Id, W, V) or withdraw(Id) are the root's: PersonChannel(T),
+%% PersonIn(T), PersonOut(T), Input(T), Path and Draw(T) (programs/self.glp).
 
 %% A construct's grants, carried on from the person channel: never closed.
-Inputs ::= [Input | Inputs].
+Inputs(T) ::= [Input(T) | Inputs(T)].
 
 %% A construct's identifier and the writer of its grant stream.
-Route ::= route(Integer, Inputs?).
-Routes ::= [] ; [Route | Routes].
+Route(T) ::= route(Integer, Inputs(T)?).
+Routes(T) ::= [] ; [Route(T) | Routes(T)].
 
 %% The grant writers of the withdrawn constructs, which serve carries and
 %% never reads.
-Deads ::= [] ; [Inputs? | Deads].
+Deads(T) ::= [] ; [Inputs(T)? | Deads(T)].
 
 %% Whether a grant formed a term of a question's type: the term formed, or
 %% refused.  The result carries the term, so every clause writes what it holds
@@ -117,7 +123,7 @@ Ask(Q) ::= ask(Constant, Q).
 %% A construct process for the program to spawn: its identifier, its
 %% question, its grant stream and its draw stream, the dispatcher keeping the
 %% writer of the grants and the reader of the draws.
-Spawn(Q) ::= spawn(Integer, Q, Inputs, Stream(Draw)?).
+Spawn(Q, T) ::= spawn(Integer, Q, Inputs(T), Stream(Draw(T))?).
 
 %% ---------------------------------------------------------------------------
 %% The dispatcher
@@ -125,71 +131,54 @@ Spawn(Q) ::= spawn(Integer, Q, Inputs, Stream(Draw)?).
 
 %% dispatch(Asks?, PersonCh?, MCh, Spawns): the dispatcher of one agent
 %% whose program writes nothing to its person, its output end anonymous;
-%% dispatch(Asks?, PersonCh?, MCh, W, Spawns), of one whose program does, W
-%% the widget of the thread it is drawn as.  Each is spawned with the agent's
-%% initial goal by whatever spawns it --- the bridge, or a play --- through
-%% the compiled program's dispatch/3, which spawns the program's constructs/1
-%% on Spawns beside it.  It reads the ask stream of the initial goal and
-%% holds the person channel; it gives the program, in MCh, its own end of a
-%% person channel, and passes every grant that is not input(Id, P, R) to it.
-%% "A vGLP program declares the type of its output to its person by defining
-%% the type Output, a reserved name; the dispatcher draws that output as a
-%% thread whose elements are drawn by the widget of Output" (vGLP 169b008,
-%% Definition "Canonical Compilation"): the output reaches the person only as
-%% that thread, one standing construct drawn at dispatch start with the
-%% identifier 0, and the questions are numbered from 1 (vGLP, 2026-10-13
-%% 19:25 UTC, items 1--3, Udi: yes).  The program's person input keeps its
-%% own type; the dispatcher writes it and never closes it.
-exported procedure(Q) dispatch(Stream(Ask(Q))?,
-    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_)),
-    Stream(Spawn(Q))).
+%% dispatch(Asks?, PersonCh?, MIn, ODs?, Spawns), of one whose program does,
+%% ODs the draws of its output, the thread of construct 0, which the
+%% compiled program draws (vGLP 169b008, Definition "Canonical
+%% Compilation": "the dispatcher draws that output as a thread whose
+%% elements are drawn by the widget of Output"; the output thread drawn at
+%% dispatch start with the identifier 0 and the questions numbered from 1,
+%% vGLP, 2026-10-13 19:25 UTC, items 1--3, Udi: yes).  Each is spawned with
+%% the agent's initial goal by whatever spawns it --- the bridge, or a play
+%% --- through the compiled program's dispatch/3, which spawns the program's
+%% constructs/1 on Spawns beside it.  It reads the ask stream of the initial
+%% goal and holds the person channel; it gives the program its own person
+%% input, and passes every grant that is not input(Id, P, R) to it, which
+%% with grants of the root's Input(T) is idle (vGLP, Section 6.3).  The
+%% program's person input keeps its own type; the dispatcher writes it and
+%% never closes it.
+exported procedure(Q, T) dispatch(Stream(Ask(Q))?, PersonChannel(T)?,
+    Channel(Stream(_), Stream(_)), Stream(Spawn(Q, T))).
 dispatch(Asks, ch(PIn, POut?), ch(MIn?, _), Ss?) :-
     split_grants(PIn?, Inputs, MIn),
     serve(Asks?, Inputs?, COut?, COut, POut, [], [], 1, Ss).
 
-exported procedure(Q) dispatch(Stream(Ask(Q))?,
-    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_)), _?,
-    Stream(Spawn(Q))).
-dispatch(Asks, ch(PIn, POut?), ch(MIn?, MOut), W, Ss?) :-
+exported procedure(Q, T) dispatch(Stream(Ask(Q))?, PersonChannel(T)?,
+    Stream(_), Stream(Draw(T))?, Stream(Spawn(Q, T))).
+dispatch(Asks, ch(PIn, POut?), MIn?, ODs, Ss?) :-
     split_grants(PIn?, Inputs, MIn),
-    output(W?, MOut?, ODs),
-    merge(ODs?, DOut?, POut),
+    merge_draws(ODs?, DOut?, POut),
     serve(Asks?, Inputs?, COut?, COut, DOut, [], [], 1, Ss).
 
-%% output(W?, Out?, Draws): the program's output to its person, drawn as the
-%% construct 0 by its widget W, a thread: drawn at once with no element, and
-%% again with the elements so far as each arrives whole.  It holds no
-%% question and never withdraws while the output stream stands open.
-procedure output(_?, Stream(_)?, Stream(_)).
-output(W, Ms, [draw(0, W?, []) | Ds?]) :-
-    ground(W?) |
-    output_more(W?, Ms?, [], Ds).
+%% merge_draws(ODs?, Ds?, POut): the draws of the output thread merged with
+%% the constructs' draws onto the person channel, which never ends: merge/3
+%% at the two streams' types, the one that ends and the one that never does,
+%% taking each in turn as merge/3 does.
+procedure(T) merge_draws(Stream(Draw(T))?, PersonOut(T)?, PersonOut(T)).
+merge_draws([X | Xs], Ys, [X? | Zs?]) :- merge_draws_(Ys?, Xs?, Zs).
+merge_draws(Xs, [Y | Ys], [Y? | Zs?]) :- merge_draws(Xs?, Ys?, Zs).
+merge_draws([], Ys, Ys?).
 
-procedure output_more(_?, Stream(_)?, _?, Stream(_)).
-output_more(W, [M | Ms], Es, Ds?) :-
-    ground(M?), ground(Es?) |
-    output_add(Es?, M?, Es1),
-    output_draw(W?, Ms?, Es1?, Ds).
-output_more(_, [], _, []).
+procedure(T) merge_draws_(PersonOut(T)?, Stream(Draw(T))?, PersonOut(T)).
+merge_draws_([X | Xs], Ys, [X? | Zs?]) :- merge_draws(Ys?, Xs?, Zs).
+merge_draws_(Xs, [Y | Ys], [Y? | Zs?]) :- merge_draws_(Xs?, Ys?, Zs).
+merge_draws_(Xs, [], Xs?).
 
-procedure output_draw(_?, Stream(_)?, _?, Stream(_)).
-output_draw(W, Ms, Es, [draw(0, W?, Es?) | Ds?]) :-
-    ground(W?), ground(Es?) |
-    output_more(W?, Ms?, Es?, Ds).
-
-%% output_add(Es?, M?, Es1): Es with M after its last element.
-procedure output_add(_?, _?, _).
-output_add([E | Es], M, [E? | Es1?]) :-
-    output_add(Es?, M?, Es1).
-output_add([], M, [M?]).
-
-%% split_grants(Grants?, Inputs, Others): the person's grants to a construct,
-%% and every other grant, for the program.
-procedure split_grants(PersonIn?, Inputs, Stream(_)).
+%% split_grants(Grants?, Inputs, Others): the person's grants to a construct;
+%% the program's person input, Others, is never written, every term on the
+%% person channel being a grant input(Id, P, R) of the root's Input(T), so
+%% that passing the others on is idle (vGLP, Section 6.3).
+procedure(T) split_grants(PersonIn(T)?, Inputs(T), Stream(_)).
 split_grants([input(Id, P, R) | Gs], [input(Id?, P?, R?) | Is?], Ms?) :-
-    split_grants(Gs?, Is, Ms).
-split_grants([G | Gs], Is?, [G? | Ms?]) :-
-    otherwise |
     split_grants(Gs?, Is, Ms).
 
 %% serve(Asks?, Inputs?, COut?, CInto, DOut, Routes?, Deads?, N?, Spawns): on
@@ -198,9 +187,11 @@ split_grants([G | Gs], Is?, [G? | Ms?]) :-
 %% stream and the writer of its own output stream, merged into COut by CInto;
 %% route each grant, whole, by identifier; pass the constructs' output on to
 %% the person, and move a construct's route, once it has withdrawn, from the
-%% live routes to Deads.
-procedure(Q) serve(Stream(Ask(Q))?, Inputs?, Stream(Draw)?,
-    Stream(Draw), Stream(_), Routes?, Deads?, Integer?, Stream(Spawn(Q))).
+%% live routes to Deads.  It has no clause for the asks' end: the grants and
+%% the constructs' draws are served for good, and DOut never ends.
+procedure(Q, T) serve(Stream(Ask(Q))?, Inputs(T)?, Stream(Draw(T))?,
+    Stream(Draw(T)), PersonOut(T), Routes(T)?, Deads(T)?, Integer?,
+    Stream(Spawn(Q, T))).
 serve([ask(_, Q) | Asks], Is, COut, CInto?, DOut?, Rs, Xs, N,
       [spawn(N?, Q?, Gs?, Ds) | Ss?]) :-
     ground(N?) |
@@ -223,7 +214,7 @@ serve(Asks, Is, [withdraw(Id) | COut], CInto?, [withdraw(Id?) | DOut?], Rs,
 %% route_grant(G?, Routes?, Routes1): send the grant G = input(Id, P, R),
 %% whole, on the grant stream of construct Id; a grant for no live construct,
 %% one withdrawn, reaches none.
-procedure route_grant(Input?, Routes?, Routes).
+procedure(T) route_grant(Input(T)?, Routes(T)?, Routes(T)).
 route_grant(input(Id, P, R), [route(Id1, [input(Id?, P?, R?) | Gs1?]) | Rs],
             [route(Id1?, Gs1) | Rs?]) :-
     Id? =?= Id1? | true.
@@ -234,7 +225,8 @@ route_grant(_, [], []).
 
 %% remove_route(Id?, Routes?, Routes1, Deads?, Deads1): move the route of
 %% construct Id from the live routes to the dead, its grant writer with it.
-procedure remove_route(Integer?, Routes?, Routes, Deads?, Deads).
+procedure(T) remove_route(Integer?, Routes(T)?, Routes(T), Deads(T)?,
+    Deads(T)).
 remove_route(Id, [route(Id1, Gs?) | Rs], Rs?, Xs, [Gs | Xs?]) :-
     Id? =?= Id1? | true.
 remove_route(Id, [route(Id1, Gs?) | Rs], [route(Id1?, Gs) | Rs1?], Xs,
@@ -247,20 +239,16 @@ remove_route(_, [], [], Xs, Xs?).
 %% The construct process: what is common to every interactive type
 %% ---------------------------------------------------------------------------
 
-%% run(Id?, W?, Views?, Done?, Ds): draw each view of construct Id with its
-%% widget W as it arrives; withdraw when Done is bound, every question the
+%% The drawing of each construct process, run_f(Id?, W?, Views?, Done?, Ds),
+%% is the compilation's, one per functor f of the program's questions: it
+%% draws each view V of construct Id with its widget W as it arrives, as
+%% draw(Id, W, f(V)), V under the functor of its ask (vGLP, Definition
+%% "Construct Process"), and withdraws when Done is bound, every question the
 %% construct holds answered and no question still to come, and on nothing
-%% else.
-procedure run(Integer?, _?, Stream(_)?, Done?, Stream(Draw)).
-run(Id, _, _, done, [withdraw(Id?)]).
-run(Id, W, [V | Vs], Done, [draw(Id?, W?, V?) | Ds?]) :-
-    ground(W?), ground(V?) |
-    run(Id?, W?, Vs?, Done?, Ds).
-run(Id, _, [], Done, Ds?) :-
-    run_end(Id?, Done?, Ds).
+%% else; once the views end it waits to withdraw, by run_end/3.
 
 %% run_end(Id?, Done?, Ds): the view is final; wait to withdraw.
-procedure run_end(Integer?, Done?, Stream(Draw)).
+procedure(T) run_end(Integer?, Done?, Stream(Draw(T))).
 run_end(Id, done, [withdraw(Id?)]).
 
 %% all_done(Dones?, Done): done when each is.

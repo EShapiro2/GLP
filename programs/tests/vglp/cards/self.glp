@@ -30,7 +30,7 @@ Panel    ::= panel(List(Card)).
 Question ::= panel_w(Panel) ; stream_card_w(Stream(Card))
            ; stream_yesNo_w(Stream(YesNo?)).
 Ask(Q)   ::= ask(Constant, Q).
-PersonIn ::= [_ | PersonIn].
+Drawn    ::= panel_w(_) ; stream_card_w(_) ; stream_yesNo_w(_) ; output(List(Output)) ; YesNo.
 
 %% The program's output to its person, the reserved type Output (vGLP
 %% 169b008, Definition "Canonical Compilation"): each answer, got(N, X).
@@ -43,28 +43,28 @@ imported procedure cards#deal(Channel(Stream(_), Stream(Output))?,
 imported procedure cards#votes(Channel(Stream(_), Stream(Output))?,
     Stream(Ask(Question))).
 imported procedure cards#dispatch(Stream(Ask(Question))?,
-    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(Output))).
+    PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
 
 %% ---------------------------------------------------------------------------
 %% The bridge's entries
 %% ---------------------------------------------------------------------------
 
 %% The panel of two cards.
-exported procedure panel_init(Constant?, PersonIn?, Stream(_)?).
+exported procedure panel_init(Constant?, PersonIn(Drawn)?, Stream(_)?).
 panel_init(_, Gs, _) :-
     cards # panel(MCh?, Asks),
     cards # dispatch(Asks?, ch(Gs?, Ds), MCh),
     send_to_user(Ds?).
 
 %% The stream of three cards.
-exported procedure deal_init(Constant?, PersonIn?, Stream(_)?).
+exported procedure deal_init(Constant?, PersonIn(Drawn)?, Stream(_)?).
 deal_init(_, Gs, _) :-
     cards # deal(MCh?, Asks),
     cards # dispatch(Asks?, ch(Gs?, Ds), MCh),
     send_to_user(Ds?).
 
 %% The stream of two yes-or-no questions.
-exported procedure votes_init(Constant?, PersonIn?, Stream(_)?).
+exported procedure votes_init(Constant?, PersonIn(Drawn)?, Stream(_)?).
 votes_init(_, Gs, _) :-
     cards # votes(MCh?, Asks),
     cards # dispatch(Asks?, ch(Gs?, Ds), MCh),
@@ -83,13 +83,19 @@ play_panel(Log?) :-
     outputs(Ds?, Es),
     panel_person(Es?, Gs, Log).
 
-procedure panel_person(_?, PersonIn, Stream(_)).
-panel_person([draw(Id, _, panel([card(1, input(Q1)), card(2, input(Q2))])) | Ds],
+procedure panel_person(_?, PersonIn(Drawn), Stream(_)).
+panel_person([draw(Id, _, panel_w(panel([card(1, input(Q1)), card(2, input(Q2))]))) | Ds],
              [input(Id?, Q2?, no), input(Id?, Q1?, yes) | Gs?],
              [both(Id?, Q1?, Q2?) | Log?]) :-
     ground(Id?), ground(Q1?), ground(Q2?) |
     panel_person(Ds?, Gs, Log).
-panel_person([draw(_, _, V) | Ds], Gs?, [view(V?) | Log?]) :-
+panel_person([draw(_, _, panel_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
+    otherwise |
+    panel_person(Ds?, Gs, Log).
+panel_person([draw(_, _, stream_card_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
+    otherwise |
+    panel_person(Ds?, Gs, Log).
+panel_person([draw(_, _, output(V)) | Ds], Gs?, [view(V?) | Log?]) :-
     otherwise |
     panel_person(Ds?, Gs, Log).
 panel_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
@@ -106,18 +112,24 @@ play_deal(Log?) :-
     outputs(Ds?, Es),
     deal_person(Es?, Gs, Log).
 
-procedure deal_person(_?, PersonIn, Stream(_)).
-deal_person([draw(Id, _, [card(1, input(Q1)), card(2, input(Q2))]) | Ds],
+procedure deal_person(_?, PersonIn(Drawn), Stream(_)).
+deal_person([draw(Id, _, stream_card_w([card(1, input(Q1)), card(2, input(Q2))])) | Ds],
             [input(Id?, Q1?, yes), input(Id?, Q2?, yes) | Gs?],
             [two(Q1?, Q2?) | Log?]) :-
     ground(Id?), ground(Q1?), ground(Q2?) |
     deal_person(Ds?, Gs, Log).
-deal_person([draw(Id, _, [card(1, _), card(2, _), card(3, input(Q3))]) | Ds],
+deal_person([draw(Id, _, stream_card_w([card(1, _), card(2, _), card(3, input(Q3))])) | Ds],
             [input(Id?, Q3?, no) | Gs?],
             [three(Q3?) | Log?]) :-
     ground(Id?), ground(Q3?) |
     deal_person(Ds?, Gs, Log).
-deal_person([draw(_, _, V) | Ds], Gs?, [view(V?) | Log?]) :-
+deal_person([draw(_, _, panel_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
+    otherwise |
+    deal_person(Ds?, Gs, Log).
+deal_person([draw(_, _, stream_card_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
+    otherwise |
+    deal_person(Ds?, Gs, Log).
+deal_person([draw(_, _, output(V)) | Ds], Gs?, [view(V?) | Log?]) :-
     otherwise |
     deal_person(Ds?, Gs, Log).
 deal_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
@@ -136,7 +148,7 @@ deal_person([got(N, X) | Ds], Gs?, [got(N?, X?) | Log?]) :-
 %% (vGLP 169b008, Definition "Canonical Compilation"; vGLP, 2026-10-13 19:25
 %% UTC, items 2 and 3).  Every other draw and withdrawal passes as it came.
 procedure outputs(_?, Stream(_)).
-outputs([draw(0, thread(_), Ms) | Ds], Es?) :- newest(Ms?, Ds?, Es).
+outputs([draw(0, thread(_), output(Ms)) | Ds], Es?) :- newest(Ms?, Ds?, Es).
 outputs([E | Ds], [E? | Es?]) :- otherwise | outputs(Ds?, Es).
 
 procedure newest(_?, _?, Stream(_)).

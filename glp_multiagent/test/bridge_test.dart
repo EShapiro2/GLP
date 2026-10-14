@@ -765,6 +765,23 @@ void main() {
       expect(r.store.lists['screen']!.map(formatTerm), ['got(x, 1)']);
     });
 
+    test('a drawn value under its ask\'s functor, or construct 0\'s under '
+        'output, is drawn as the view under it (vGLP, Definition "Construct '
+        'Process")', () {
+      r.handle(fixtureTerm('draw(4, picker, choice_w(choose([alice], '
+          'input([2]))))'));
+      expect(formatTerm(r.bridge.construct(4)!.view),
+          'choose([alice], input([2]))');
+      r.handle(fixtureTerm('draw(5, input_box(text), '
+          'stream_string_r(input([])))'));
+      expect(formatTerm(r.bridge.construct(5)!.view), 'input([])');
+      r.handle(fixtureTerm('draw(0, thread, output([opened(bob)]))'));
+      expect(formatTerm(r.bridge.construct(0)!.view), '[opened(bob)]');
+      // A value under no ask's functor is the view itself.
+      r.handle(fixtureTerm('draw(6, text, input([]))'));
+      expect(formatTerm(r.bridge.construct(6)!.view), 'input([])');
+    });
+
     test('a draw or a withdraw naming no construct identifier is not the '
         'bridge\'s', () {
       r.handle(fixtureTerm('draw(alice, text, input([]))'));
@@ -1067,13 +1084,13 @@ YesNo    ::= yes ; no.
 Card     ::= card(Peer, YesNo?).
 Question ::= card_w(Card).
 Ask(Q)   ::= ask(Constant, Q).
-PersonIn ::= [_ | PersonIn].
+Drawn    ::= card_w(_) ; YesNo.
 
 imported procedure asker#ask(Peer?, Stream(YesNo), Stream(Ask(Question))).
 imported procedure asker#dispatch(Stream(Ask(Question))?,
-    Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(_))).
+    PersonChannel(Drawn)?, Channel(Stream(_), Stream(_))).
 
-exported procedure ask_init(Constant?, PersonIn?, Stream(_)?).
+exported procedure ask_init(Constant?, PersonIn(Drawn)?, Stream(_)?).
 ask_init(_, Gs, _) :-
     asker # ask(bob, $answers, Asks),
     asker # dispatch(Asks?, ch(Gs?, Ds), _),

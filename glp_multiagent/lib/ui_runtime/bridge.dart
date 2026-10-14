@@ -12,8 +12,9 @@
 /// returns.  What crosses is the vocabulary of the compiled dispatcher
 /// (`programs/vglp/dispatcher.glp`):
 ///
-///   - `draw(Id, W, V)`: draw construct `Id` with the widget `W` names in
-///     the construct family in use, over the view `V`, each position the
+///   - `draw(Id, W, f(V))`: draw construct `Id` with the widget `W` names in
+///     the construct family in use, over the view `V`, under the functor `f`
+///     of its ask, construct 0's under `output`, each position the
 ///     person writes marked `input(P)`, `P` its path, and each widget
 ///     position the program has not yet written whole marked `pending(P)`,
 ///     a stream shown as its elements so far, its unwritten tail not shown
@@ -39,8 +40,9 @@ library;
 import 'term.dart';
 
 /// The constructors of the person channel of a compiled module, its draws
-/// and its grants (`programs/vglp/dispatcher.glp`: `Draw ::= draw(Integer, _,
-/// _) ; withdraw(Integer).`, `Input ::= input(_, _, _).`).
+/// and its grants (the root's `Draw(T) ::= draw(Integer, _, T) ;
+/// withdraw(Integer).` and `Input(T) ::= input(Integer, Path, T).`,
+/// `programs/self.glp`).
 const String drawCtor = 'draw';
 const String withdrawCtor = 'withdraw';
 const String inputCtor = 'input';
@@ -96,13 +98,14 @@ class Bridge {
     final (ctor, args) = ctorArgs(t);
     if (ctor == drawCtor && args.length == 3 && args[0] is GInt) {
       final id = (args[0] as GInt).value;
+      final view = drawnView(args[2]);
       final open = _open[id];
       if (open == null) {
-        _open[id] = OpenConstruct(id, args[1], args[2]);
+        _open[id] = OpenConstruct(id, args[1], view);
       } else {
         open
           ..widget = args[1]
-          ..view = args[2];
+          ..view = view;
       }
       return true;
     }
@@ -121,6 +124,27 @@ class Bridge {
     onGrant(GStruct(inputCtor, [GInt(id), path, raw]));
   }
 }
+
+/// The view a draw carries, `V` of `draw(Id, W, f(V))`: every drawn value is
+/// under the functor of its construct's ask, construct 0's under `output`,
+/// so that what the person channel carries is of one type, the program's T
+/// (vGLP, Definition "Construct Process": "with V under the functor t of its
+/// ask; the output thread's value is under the functor output").  An ask's
+/// functor is the name of its interactive type in lowercase, its type
+/// arguments appended, with `_w` for writer mode and `_r` for reader mode
+/// (vGLP, Definition "Canonical Compilation", the asking clause), so the
+/// wrapper is told by its name; a value under no such functor is the view
+/// itself.
+GTerm drawnView(GTerm drawn) => drawn is GStruct &&
+        drawn.args.length == 1 &&
+        (drawn.functor == outputCtor ||
+            drawn.functor.endsWith('_w') ||
+            drawn.functor.endsWith('_r'))
+    ? drawn.args.single
+    : drawn;
+
+/// The functor of the program's output thread's value, construct 0's.
+const String outputCtor = 'output';
 
 /// The position `P` of the question a view marks, where [view] is `input(P)`
 /// and `P` a path of argument indices; null for any other view, a position
