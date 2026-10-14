@@ -729,11 +729,12 @@ events([withdraw(I) | Ds], [withdraw(I?) | Es?]) :- events(Ds?, Es).
 %% The mini-app's screen reaches the person only as the thread the
 %% dispatcher draws as the construct 0, drawn again with every message so far
 %% as each arrives (vGLP, 2026-10-13 19:25 UTC, items 2 and 3): its newest
-%% element is the message that came, msg(A, P, M), and the draw with none is
-%% no event.
+%% element is the content that came, M, the event msg(agent, person, M)
+%% (Currencies, 2026-10-14 08:48 UTC, item 2), and the draw with none is no
+%% event.
 procedure newest(_?, _?, Events).
 newest([], Ds, Es?) :- events(Ds?, Es).
-newest([M], Ds, [M? | Es?]) :- events(Ds?, Es).
+newest([M], Ds, [msg(agent, person, M?) | Es?]) :- events(Ds?, Es).
 newest([_, M1 | Ms], Ds, Es?) :- newest([M1? | Ms?], Ds?, Es).
 
 procedure alice_coins_person(Content?, String?, Channel(PersonIn, Stream(_))?, AgentToUserStream?, UserInStream).
@@ -1215,7 +1216,7 @@ sv_events([withdraw(I) | Ds], [withdraw(I?) | Es?]) :- sv_events(Ds?, Es).
 %% The newest element of the screen's thread, as newest/3 reads it.
 procedure sv_newest(_?, _?, SvEvents).
 sv_newest([], Ds, Es?) :- sv_events(Ds?, Es).
-sv_newest([M], Ds, [M? | Es?]) :- sv_events(Ds?, Es).
+sv_newest([M], Ds, [msg(agent, person, M?) | Es?]) :- sv_events(Ds?, Es).
 sv_newest([_, M1 | Ms], Ds, Es?) :- sv_newest([M1? | Ms?], Ds?, Es).
 
 procedure alice_sv_person(Content?, String?, Channel(PersonIn, Stream(_))?, AgentToUserStream?, UserInStream).
