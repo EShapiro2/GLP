@@ -242,13 +242,23 @@ agent(Id, [declined(Other)|UserIn], NetIn, Outs, Host) :-
 %% verdict that the contract is grassroots.  signature/2 assigns unsigned on a
 %% forged certification, and the super-app refuses to install it (Section 6.1).
 %% Every mini-app is installed alike: its grants are its end of its person
-%% channel, at Opaque, and its calendar (Section 3, "What the super-app grants
-%% a mini-app"), held until its activation.
-agent(Id, [msg(person, Id1, install(App, M, CSig, Ui, Cal))|UserIn], NetIn, Outs,
+%% channel, at Opaque, and a calendar the super-app writes (Section 3, "What
+%% the super-app grants a mini-app"), held until its activation.
+agent(Id, [msg(person, Id1, install(App, M, CSig, Ui))|UserIn], NetIn, Outs,
       host(Apps, Atts, Pend, Trusted)) :-
     Id? =?= Id1?, ground(App?), ground(Trusted?) |
     verify_install(M?, CSig?, Trusted?, V),
-    install_step(V?, App?, CSig?, Ui?, Cal?, Apps?, Apps1),
+    install_step(V?, App?, CSig?, Ui?, Apps?, Apps1),
+    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
+
+%% Today's date, from the device's clock (superapp/3) or a play's script:
+%% written on the calendar of every mini-app installed, one date a day (GSG
+%% paper, Section 3: "a calendar, a stream of dates the super-app writes from
+%% the smartphone's clock, one a day").
+agent(Id, [msg(person, Id1, date(D))|UserIn], NetIn, Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1?, integer(D?) |
+    date_apps(D?, Apps?, Apps1),
     agent(Id?, UserIn?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
 
 %% Invite a friend to the instance of a mini-app (Section 3, "Distribution
@@ -544,12 +554,24 @@ procedure cert_check(_?, String?, Module?, Verdict).
 cert_check(creator_cert(Src1, _, grassroots), Src, M, ok(M?)) :- Src? =?= Src1? | true.
 cert_check(_, _, _, refused) :- otherwise | true.
 
-%% install_step(V, App, CSig, Ui, Cal, Apps, Apps1): a mini-app installed is
-%% held idle with its two grants; one refused has its person channel read for
-%% good, the channel never ending (idle_channel/1).
-procedure install_step(Verdict?, Constant?, String?, PersonChannel(Opaque)?, Stream(Integer)?, AppList?, AppList).
-install_step(ok(M), App, CSig, Ui, Cal, Apps, [app(App?, M?, CSig?, idle(Ui?, Cal?)) | Apps?]).
-install_step(refused, _, _, Ui, _, Apps, Apps?) :- idle_channel(Ui?).
+%% install_step(V, App, CSig, Ui, Apps, Apps1): a mini-app installed is held
+%% idle with its grants, its end of its person channel and a fresh calendar,
+%% whose writer the super-app keeps; one refused has its person channel read
+%% for good, the channel never ending (idle_channel/1).
+procedure install_step(Verdict?, Constant?, String?, PersonChannel(Opaque)?, AppList?, AppList).
+install_step(ok(M), App, CSig, Ui, Apps, [app(App?, M?, CSig?, idle(Ui?, Cal?, Cal)) | Apps?]).
+install_step(refused, _, _, Ui, Apps, Apps?) :- idle_channel(Ui?).
+
+%% date_apps(D, Apps, Apps1): the date D on the calendar of each mini-app.
+procedure date_apps(Integer?, AppList?, AppList).
+date_apps(D, [app(A, M, C, St) | Rest], [app(A?, M?, C?, St1?) | Rest1?]) :-
+    date_status(D?, St?, St1),
+    date_apps(D?, Rest?, Rest1).
+date_apps(_, [], []).
+
+procedure date_status(Integer?, AppStatus?, AppStatus).
+date_status(D, idle(Ui, Cal, [D? | Ds?]), idle(Ui?, Cal?, Ds)).
+date_status(D, running(Sg?, Cal, [D? | Ds?]), running(Sg, Cal?, Ds)).
 
 %% app_idle(App, Apps, Apps1): the mini-app's entry returns from running to
 %% idle.  The end of the person channel the entry held at installation went
@@ -559,7 +581,7 @@ install_step(refused, _, _, Ui, _, Apps, Apps?) :- idle_channel(Ui?).
 %% running is left as it is, so a report that arrives twice, or for a mini-app
 %% never activated, changes nothing.
 procedure app_idle(Constant?, AppList?, AppList).
-app_idle(App, [app(A, M, C, running([], Cal)) | Rest], [app(A?, M?, C?, idle(Ui?, Cal?)) | Rest?]) :-
+app_idle(App, [app(A, M, C, running([], Cal, Ds?)) | Rest], [app(A?, M?, C?, idle(Ui?, Cal?, Ds)) | Rest?]) :-
     App? =?= A? |
     new_channel(Ui, Person),
     hold_person(Person?).
@@ -868,15 +890,15 @@ accept_root_step(_, I, Id, _, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
 %% runs already the new conversation goes to that execution (Section 3,
 %% "Activation and joining").
 procedure deliver(Constant?, Key?, RootChannel(Opaque)?, Key?, Module?, AppList?, AppList, UserInStream?, UserInStream).
-deliver(App, Friend, End, Id, M, [app(A, M1, C, idle(Ui, Cal)) | Rest],
-        [app(A?, M1?, C?, running(Sg1, Kept?)) | Rest?], UserIn, UserIn1?) :-
+deliver(App, Friend, End, Id, M, [app(A, M1, C, idle(Ui, Cal, Ds?)) | Rest],
+        [app(A?, M1?, C?, running(Sg1, Kept?, Ds)) | Rest?], UserIn, UserIn1?) :-
     App? =?= A? |
     copy_calendar(Cal?, Given, Kept),
     activate(M?, Id?, Ui?, Sg?, Up, Given?),
     open_conv(Friend?, End?, Sg, Sg1?),
     inject_requests(App?, Up?, UserIn?, UserIn1).
-deliver(App, Friend, End, _, _, [app(A, M1, C, running(Sg?, Cal)) | Rest],
-        [app(A?, M1?, C?, running(Sg1, Cal?)) | Rest?], UserIn, UserIn?) :-
+deliver(App, Friend, End, _, _, [app(A, M1, C, running(Sg?, Cal, Ds?)) | Rest],
+        [app(A?, M1?, C?, running(Sg1, Cal?, Ds)) | Rest?], UserIn, UserIn?) :-
     App? =?= A? |
     open_conv(Friend?, End?, Sg, Sg1?).
 deliver(App, Friend, End, Id, M, [E | Rest], [E? | Rest1?], UserIn, UserIn1?) :-
@@ -945,8 +967,8 @@ close_pending([_ | Rest]) :- otherwise | close_pending(Rest?).
 close_pending([]).
 
 procedure close_apps(AppList?).
-close_apps([app(_, _, _, idle(Ui, _)) | Rest]) :- idle_channel(Ui?), close_apps(Rest?).
-close_apps([app(_, _, _, running([], _)) | Rest]) :- close_apps(Rest?).
+close_apps([app(_, _, _, idle(Ui, _, [])) | Rest]) :- idle_channel(Ui?), close_apps(Rest?).
+close_apps([app(_, _, _, running([], _, [])) | Rest]) :- close_apps(Rest?).
 close_apps([]).
 
 %% idle_channel(Ui?): the person channel of a mini-app never activated, which
@@ -1175,7 +1197,7 @@ pending_step(false, Name, S, Id, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted)
 %% mini-app, the name handed on as Name1 to be remembered: a reader of a type
 %% that is not constant is read once.
 procedure forward_pending(GlobalName?, Key?, AppList?, AppList, GlobalName).
-forward_pending(Name, S, [app(A, M, C, running(Sg?, Cal)) | Rest], [app(A?, M?, C?, running(Sg1, Cal?)) | Rest1?], Name1?) :-
+forward_pending(Name, S, [app(A, M, C, running(Sg?, Cal, Ds?)) | Rest], [app(A?, M?, C?, running(Sg1, Cal?, Ds)) | Rest1?], Name1?) :-
     ground(Name?) |
     push_down(held(Name?, S?), Sg, Sg1?),
     forward_pending(Name?, S?, Rest?, Rest1, Name1).

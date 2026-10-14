@@ -47,17 +47,19 @@ UserContent ::= connect(Key)
               ; unfriend(Key)
               %% The super-app (GSG paper, Section 3).  install: the person
               %% installs a certified mini-app --- its module value, its
-              %% creator's certification, the mini-app's end of its person
+              %% creator's certification, and the mini-app's end of its person
               %% channel (the super-app user interface holds the other end; in
-              %% a play, the play does), and its calendar, a stream of dates
-              %% (the super-app writes it from the device's clock, a play from
-              %% its script; GSG, 2026-10-13 20:59 UTC).  The person channel is
-              %% at the template's parameter, opaque to the super-app, which
-              %% holds it at Opaque (TGLP modules.tex, "Opaque types").
-              %% invite: offer a friend the mini-app.  accept_invite /
-              %% decline_invite: the invitee's volition.  attestation: read
-              %% back the attestation minted at the befriending (Section 5.5).
-              ; install(Constant, Content, String, PersonChannel(Opaque), Stream(Integer))
+              %% a play, the play does), at the template's parameter, opaque to
+              %% the super-app, which holds it at Opaque (TGLP modules.tex,
+              %% "Opaque types").  date: today's date, which the super-app
+              %% writes on the calendar of every mini-app installed, from the
+              %% device's clock (superapp/3), a play from its script (GSG,
+              %% 2026-10-13 20:59 UTC).  invite: offer a friend the mini-app.
+              %% accept_invite / decline_invite: the invitee's volition.
+              %% attestation: read back the attestation minted at the
+              %% befriending (Section 5.5).
+              ; install(Constant, Content, String, PersonChannel(Opaque))
+              ; date(Integer)
               ; invite(Constant, Key)
               ; accept_invite(Constant, Key)
               ; decline_invite(Constant, Key)
@@ -166,15 +168,16 @@ CreatorCert ::= creator_cert(String, Stream(Constant), Constant).
 %% befriending, the invitations pending a volition, and the keys of the
 %% compilers the person trusts (the bundled compilers' by installation).
 %%   app(Name, Content, CreatorSig, Status), Content the module value load_file/2
-%%   gave (a Module where the certificate verified): Status is idle(Ui, Cal),
-%%   holding the mini-app's end of its person channel and its calendar until
-%%   activation, or running(SgEnd, Cal) once run/3 has activated it, SgEnd the
-%%   super-app's writer of the mini-app's social-graph stream and Cal the
-%%   calendar kept for its next activation.  Every mini-app is held alike, at
-%%   Opaque: the super-app holds no declaration of a mini-app's types (GSG
-%%   paper, Section 3, "Activation and joining").
-AppStatus ::= idle(PersonChannel(Opaque), Stream(Integer))
-            ; running(Stream(SgToApp(Opaque))?, Stream(Integer)).
+%%   gave (a Module where the certificate verified): Status is idle(Ui, Cal,
+%%   Dates), holding the mini-app's end of its person channel and its calendar
+%%   until activation, or running(SgEnd, Cal, Dates) once run/3 has activated
+%%   it, SgEnd the super-app's writer of the mini-app's social-graph stream and
+%%   Cal the calendar kept for its next activation; in both, Dates the writer
+%%   of the calendar, on which the super-app writes each date.  Every mini-app
+%%   is held alike, at Opaque: the super-app holds no declaration of a
+%%   mini-app's types (GSG paper, Section 3, "Activation and joining").
+AppStatus ::= idle(PersonChannel(Opaque), Stream(Integer), Stream(Integer)?)
+            ; running(Stream(SgToApp(Opaque))?, Stream(Integer), Stream(Integer)?).
 App       ::= app(Constant, Module, String, AppStatus).
 AppList   ::= [] ; [App | AppList].
 Attest     ::= att(Key, String).

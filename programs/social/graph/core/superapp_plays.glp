@@ -120,14 +120,13 @@ play_invite_declined(AliceUi?, BobUi?) :-
     tee(BobScreen?, BobUi, BobSeen),
     bob_person(C?, CSig?, no, BobApp?, BobOut?, BobSeen?, BobIn).
 
-%% Alice's person: install the mini-app, with its end of the person channel
-%% and an empty calendar, the mini-app keeping no dates, cold-call bob, and
-%% once connected invite him.  Wait = yes: keep the person stream open until
+%% Alice's person: install the mini-app, with its end of the person channel,
+%% cold-call bob, and once connected invite him.  Wait = yes: keep the person stream open until
 %% the mini-app's person has seen her execution greeted, its screen closing;
 %% no: close it after inviting.
 procedure alice_person(Content?, String?, Decision?, PersonChannel(Opaque)?, AgentToUserStream?, Stream(Opaque)?, UserInStream).
 alice_person(M, CSig, Wait, Ui, Outs, Seen,
-             [msg(person, alice, install(ping, M?, CSig?, Ui?, [])),
+             [msg(person, alice, install(ping, M?, CSig?, Ui?)),
               msg(person, alice, connect(bob)) | Cmds?]) :-
     alice_wait(Wait?, Outs?, Seen?, Cmds).
 
@@ -153,11 +152,11 @@ person_done([], []).
 %% screen to close, or close.
 procedure bob_person(Content?, String?, Decision?, PersonChannel(Opaque)?, AgentToUserStream?, Stream(Opaque)?, UserInStream).
 bob_person(M, CSig, yes, Ui, Outs, Seen,
-           [msg(person, bob, install(ping, M?, CSig?, Ui?, [])),
+           [msg(person, bob, install(ping, M?, CSig?, Ui?)),
             msg(person, bob, accept_invite(ping, alice)) | Cmds?]) :-
     bob_wait(yes, Outs?, Seen?, Cmds).
 bob_person(M, CSig, no, Ui, Outs, Seen,
-           [msg(person, bob, install(ping, M?, CSig?, Ui?, [])),
+           [msg(person, bob, install(ping, M?, CSig?, Ui?)),
             msg(person, bob, decline_invite(ping, alice)) | Cmds?]) :-
     bob_wait(no, Outs?, Seen?, Cmds).
 
@@ -356,7 +355,7 @@ sink([]).
 %% invitation.
 procedure alice_person_timed(Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, Stream(Opaque)?, Integer, UserInStream).
 alice_person_timed(M, CSig, Ui, Outs, Seen, T0?,
-                   [msg(person, alice, install(ping, M?, CSig?, Ui?, [])),
+                   [msg(person, alice, install(ping, M?, CSig?, Ui?)),
                     msg(person, alice, connect(bob)) | Cmds?]) :-
     alice_wait_timed(Outs?, Seen?, T0, Cmds).
 
@@ -385,14 +384,14 @@ opened_at([], _, 0).
 procedure alice_person_boot(Content?, String?, String?, PersonChannel(Opaque)?, AgentToUserStream?, Stream(Opaque)?, UserInStream).
 alice_person_boot(M, CK, CSig, Ui, Outs, Seen,
                   [msg(person, alice, trust(CK?)),
-                   msg(person, alice, install(ping, M?, CSig?, Ui?, [])),
+                   msg(person, alice, install(ping, M?, CSig?, Ui?)),
                    msg(person, alice, connect(bob)) | Cmds?]) :-
     alice_wait(yes, Outs?, Seen?, Cmds).
 
 procedure bob_person_boot(Content?, String?, String?, PersonChannel(Opaque)?, AgentToUserStream?, Stream(Opaque)?, UserInStream).
 bob_person_boot(M, CK, CSig, Ui, Outs, Seen,
                 [msg(person, bob, trust(CK?)),
-                 msg(person, bob, install(ping, M?, CSig?, Ui?, [])),
+                 msg(person, bob, install(ping, M?, CSig?, Ui?)),
                  msg(person, bob, accept_invite(ping, alice)) | Cmds?]) :-
     bob_wait(yes, Outs?, Seen?, Cmds).
 
@@ -423,7 +422,7 @@ play_install(N, App, Installed?) :-
     load_file(N?, C),
     certified_or_not(C?, CSig),
     new_channel(Ui, Person),
-    agent # agent(alice, [msg(person, alice, install(App?, C?, CSig?, Ui?, [])),
+    agent # agent(alice, [msg(person, alice, install(App?, C?, CSig?, Ui?)),
                           msg(person, alice, installed(Installed))],
                   [], [user_output(Out), net_output(NetOut)]),
     hold_person(Person?), sink(Out?), sink(NetOut?).
@@ -454,7 +453,7 @@ exported procedure play_forged_cert(Stream(Constant)).
 play_forged_cert(Installed?) :-
     load_file("pingapp.glpw", C),
     new_channel(Ui, Person),
-    agent # agent(alice, [msg(person, alice, install(ping, C?, forged, Ui?, [])),
+    agent # agent(alice, [msg(person, alice, install(ping, C?, forged, Ui?)),
                           msg(person, alice, installed(Installed))],
                   [], [user_output(Out), net_output(NetOut)]),
     hold_person(Person?), sink(Out?), sink(NetOut?).
@@ -676,7 +675,7 @@ sg_init(carol, warm, NetIn) :-
 procedure alice_warm(Content?, String?, String?, PersonChannel(Opaque)?, Stream(Output)?, UserInStream).
 alice_warm(C, CK, CSig, Ui, Outs,
            [msg(person, alice, trust(CK?)),
-            msg(person, alice, install(ping, C?, CSig?, Ui?, [])),
+            msg(person, alice, install(ping, C?, CSig?, Ui?)),
             msg(person, alice, accept_warm_call(bob)),
             msg(person, alice, connect(carol)) | Cmds?]) :-
     alice_warm_run(Outs?, Cmds).
@@ -701,7 +700,7 @@ alice_warm_run([], []).
 procedure bob_warm(Content?, String?, String?, PersonChannel(Opaque)?, Stream(Output)?, UserInStream).
 bob_warm(C, CK, CSig, Ui, Outs,
          [msg(person, bob, trust(CK?)),
-          msg(person, bob, install(ping, C?, CSig?, Ui?, [])),
+          msg(person, bob, install(ping, C?, CSig?, Ui?)),
           msg(person, bob, accept_invite(ping, carol)),
           msg(person, bob, accept_invite(ping, alice)),
           msg(person, bob, accept_warm_call(alice)),
@@ -725,7 +724,7 @@ bob_warm_run([], []).
 procedure carol_warm(Content?, String?, String?, PersonChannel(Opaque)?, Stream(Output)?, UserInStream).
 carol_warm(C, CK, CSig, Ui, Outs,
            [msg(person, carol, trust(CK?)),
-            msg(person, carol, install(ping, C?, CSig?, Ui?, [])),
+            msg(person, carol, install(ping, C?, CSig?, Ui?)),
             msg(person, carol, accept_invite(ping, alice)),
             msg(person, carol, allow_intro(bob, alice)) | Cmds?]) :-
     carol_warm_run(Outs?, Cmds).
@@ -778,10 +777,10 @@ play_coins(ScreenA?, ScreenB?) :-
     miniapp_person_run(C?, bob, bob, PersonEndB?, ScreenB).
 
 %% The installers of play_coins: each installs the currency with its end of
-%% its person channel and an empty calendar, the currency keeping no dates.
+%% its person channel; the play writes no date, the currency keeping none.
 procedure alice_coins_person(Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 alice_coins_person(C, CSig, AppEnd, Outs,
-                   [msg(person, alice, install(currency, C?, CSig?, AppEnd?, [])),
+                   [msg(person, alice, install(currency, C?, CSig?, AppEnd?)),
                     msg(person, alice, connect(bob)) | Cmds?]) :-
     alice_coins_run(Outs?, Cmds).
 
@@ -794,7 +793,7 @@ alice_coins_run([], []).
 
 procedure bob_coins_person(Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 bob_coins_person(C, CSig, AppEnd, Outs,
-                 [msg(person, bob, install(currency, C?, CSig?, AppEnd?, [])),
+                 [msg(person, bob, install(currency, C?, CSig?, AppEnd?)),
                   msg(person, bob, accept_invite(currency, alice)) | Cmds?]) :-
     bob_coins_run(Outs?, Cmds).
 
@@ -811,16 +810,16 @@ bob_coins_run([], []).
 procedure alice_both_boot(String?, Content?, String?, PersonChannel(Opaque)?, Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 alice_both_boot(CK, CC, CCSig, CoinsEnd, CS, CSSig, CssnEnd, Outs,
                 [msg(person, alice, trust(CK?)),
-                 msg(person, alice, install(currency, CC?, CCSig?, CoinsEnd?, [])),
-                 msg(person, alice, install(childsafe, CS?, CSSig?, CssnEnd?, [])),
+                 msg(person, alice, install(currency, CC?, CCSig?, CoinsEnd?)),
+                 msg(person, alice, install(childsafe, CS?, CSSig?, CssnEnd?)),
                  msg(person, alice, connect(bob)) | Cmds?]) :-
     alice_both_run(Outs?, Cmds).
 
 procedure bob_both_boot(String?, Content?, String?, PersonChannel(Opaque)?, Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 bob_both_boot(CK, CC, CCSig, CoinsEnd, CS, CSSig, CssnEnd, Outs,
               [msg(person, bob, trust(CK?)),
-               msg(person, bob, install(currency, CC?, CCSig?, CoinsEnd?, [])),
-               msg(person, bob, install(childsafe, CS?, CSSig?, CssnEnd?, [])),
+               msg(person, bob, install(currency, CC?, CCSig?, CoinsEnd?)),
+               msg(person, bob, install(childsafe, CS?, CSSig?, CssnEnd?)),
                msg(person, bob, accept_invite(currency, alice)),
                msg(person, bob, accept_invite(childsafe, alice)) | Cmds?]) :-
     bob_both_run(Outs?, Cmds).
@@ -829,14 +828,14 @@ bob_both_boot(CK, CC, CCSig, CoinsEnd, CS, CSSig, CssnEnd, Outs,
 procedure alice_cssn_boot(Content?, String?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 alice_cssn_boot(C, CK, CSig, AppEnd, Outs,
                 [msg(person, alice, trust(CK?)),
-                 msg(person, alice, install(childsafe, C?, CSig?, AppEnd?, [])),
+                 msg(person, alice, install(childsafe, C?, CSig?, AppEnd?)),
                  msg(person, alice, connect(bob)) | Cmds?]) :-
     alice_cssn_run(Outs?, Cmds).
 
 procedure bob_cssn_boot(Content?, String?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 bob_cssn_boot(C, CK, CSig, AppEnd, Outs,
               [msg(person, bob, trust(CK?)),
-               msg(person, bob, install(childsafe, C?, CSig?, AppEnd?, [])),
+               msg(person, bob, install(childsafe, C?, CSig?, AppEnd?)),
                msg(person, bob, accept_invite(childsafe, alice)) | Cmds?]) :-
     bob_cssn_run(Outs?, Cmds).
 
@@ -844,14 +843,14 @@ bob_cssn_boot(C, CK, CSig, AppEnd, Outs,
 procedure alice_coins_boot(Content?, String?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 alice_coins_boot(C, CK, CSig, AppEnd, Outs,
                  [msg(person, alice, trust(CK?)),
-                  msg(person, alice, install(currency, C?, CSig?, AppEnd?, [])),
+                  msg(person, alice, install(currency, C?, CSig?, AppEnd?)),
                   msg(person, alice, connect(bob)) | Cmds?]) :-
     alice_coins_run(Outs?, Cmds).
 
 procedure bob_coins_boot(Content?, String?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 bob_coins_boot(C, CK, CSig, AppEnd, Outs,
                [msg(person, bob, trust(CK?)),
-                msg(person, bob, install(currency, C?, CSig?, AppEnd?, [])),
+                msg(person, bob, install(currency, C?, CSig?, AppEnd?)),
                 msg(person, bob, accept_invite(currency, alice)) | Cmds?]) :-
     bob_coins_run(Outs?, Cmds).
 
@@ -887,7 +886,7 @@ play_cssn(SeenA?, SeenB?) :-
 
 procedure alice_cssn_person(Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 alice_cssn_person(C, CSig, AppEnd, Outs,
-                  [msg(person, alice, install(childsafe, C?, CSig?, AppEnd?, [])),
+                  [msg(person, alice, install(childsafe, C?, CSig?, AppEnd?)),
                    msg(person, alice, connect(bob)) | Cmds?]) :-
     alice_cssn_run(Outs?, Cmds).
 
@@ -900,7 +899,7 @@ alice_cssn_run([], []).
 
 procedure bob_cssn_person(Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 bob_cssn_person(C, CSig, AppEnd, Outs,
-                [msg(person, bob, install(childsafe, C?, CSig?, AppEnd?, [])),
+                [msg(person, bob, install(childsafe, C?, CSig?, AppEnd?)),
                  msg(person, bob, accept_invite(childsafe, alice)) | Cmds?]) :-
     bob_cssn_run(Outs?, Cmds).
 
@@ -948,8 +947,8 @@ play_both(ScreenA?, ScreenB?, SeenA?, SeenB?) :-
 %% they are friends.
 procedure alice_both_person(Content?, String?, PersonChannel(Opaque)?, Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 alice_both_person(CC, CCSig, CoinsEnd, CS, CSSig, CssnEnd, Outs,
-                  [msg(person, alice, install(currency, CC?, CCSig?, CoinsEnd?, [])),
-                   msg(person, alice, install(childsafe, CS?, CSSig?, CssnEnd?, [])),
+                  [msg(person, alice, install(currency, CC?, CCSig?, CoinsEnd?)),
+                   msg(person, alice, install(childsafe, CS?, CSSig?, CssnEnd?)),
                    msg(person, alice, connect(bob)) | Cmds?]) :-
     alice_both_run(Outs?, Cmds).
 
@@ -965,8 +964,8 @@ alice_both_run([], []).
 %% invitations.
 procedure bob_both_person(Content?, String?, PersonChannel(Opaque)?, Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 bob_both_person(CC, CCSig, CoinsEnd, CS, CSSig, CssnEnd, Outs,
-                [msg(person, bob, install(currency, CC?, CCSig?, CoinsEnd?, [])),
-                 msg(person, bob, install(childsafe, CS?, CSSig?, CssnEnd?, [])),
+                [msg(person, bob, install(currency, CC?, CCSig?, CoinsEnd?)),
+                 msg(person, bob, install(childsafe, CS?, CSSig?, CssnEnd?)),
                  msg(person, bob, accept_invite(currency, alice)),
                  msg(person, bob, accept_invite(childsafe, alice)) | Cmds?]) :-
     bob_both_run(Outs?, Cmds).
@@ -1020,7 +1019,7 @@ play_reinvite(AliceUi?, BobUi?) :-
 %% Alice's person: install the mini-app and cold-call bob.
 procedure alice_reinvite(Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, Stream(Opaque)?, Stream(Opaque)?, UserInStream).
 alice_reinvite(M, CSig, Ui, Outs, Seen, BobSeen,
-               [msg(person, alice, install(ping, M?, CSig?, Ui?, [])),
+               [msg(person, alice, install(ping, M?, CSig?, Ui?)),
                 msg(person, alice, connect(bob)) | Cmds?]) :-
     alice_reinvite_wait(Outs?, Seen?, BobSeen?, Cmds).
 
@@ -1065,7 +1064,7 @@ after_items(N, [], []) :- N? > 0 | true.
 %% stack in the pending list and each offer takes one.
 procedure bob_reinvite(Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 bob_reinvite(M, CSig, Ui, Outs,
-             [msg(person, bob, install(ping, M?, CSig?, Ui?, [])),
+             [msg(person, bob, install(ping, M?, CSig?, Ui?)),
               msg(person, bob, accept_invite(ping, alice)),
               msg(person, bob, accept_invite(ping, alice)) | Cmds?]) :-
     bob_reinvite_wait(Outs?, Cmds).
@@ -1123,7 +1122,7 @@ play_sovereign(ScreenA?, ScreenB?) :-
 
 procedure alice_sv_person(Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 alice_sv_person(C, CSig, AppEnd, Outs,
-                [msg(person, alice, install(denominated, C?, CSig?, AppEnd?, [])),
+                [msg(person, alice, install(denominated, C?, CSig?, AppEnd?)),
                  msg(person, alice, connect(bob)) | Cmds?]) :-
     alice_sv_run(Outs?, Cmds).
 
@@ -1136,7 +1135,7 @@ alice_sv_run([], []).
 
 procedure bob_sv_person(Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 bob_sv_person(C, CSig, AppEnd, Outs,
-              [msg(person, bob, install(denominated, C?, CSig?, AppEnd?, [])),
+              [msg(person, bob, install(denominated, C?, CSig?, AppEnd?)),
                msg(person, bob, accept_invite(denominated, alice)) | Cmds?]) :-
     bob_sv_run(Outs?, Cmds).
 

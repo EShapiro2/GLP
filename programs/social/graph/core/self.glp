@@ -50,7 +50,10 @@ imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 exported procedure superapp(Key?, PersonIn(HomeDrawn)?, NetInStream?).
 superapp(Id, Grants, NetIn) :-
     ground(Id?) |
-    agent # agent(Id?, Cmds?, NetIn?, [user_output(Outs), net_output(NetOut)]),
+    agent # agent(Id?, In?, NetIn?, [user_output(Outs), net_output(NetOut)]),
+    calendar(Dates),
+    date_msgs(Id?, Dates?, DateMsgs),
+    merge(Cmds?, DateMsgs?, In),
     send_to_net(NetOut?),
     split_out(Outs?, Shown, Seen),
     home # home(Id?, Seen?, Cmds, Asks),
@@ -189,13 +192,14 @@ procedure hold_draws(Stream(Draw(Opaque))?).
 hold_draws([_ | Ds]) :- hold_draws(Ds?).
 hold_draws([]).
 
-%% calendar(Cal): a mini-app's calendar, written from the device's clock, one
-%% date a day: today's, the day since the Unix epoch the runtime's clock now/1
-%% reads, at once, and each next one at the start of its day (GSG paper,
-%% Section 3, "What the super-app grants a mini-app": "a calendar, a stream of
-%% dates the super-app writes from the smartphone's clock, one a day"; GB
-%% appendix-derivation.tex: "on a device the clock writes it").  The plays
-%% write a calendar from their script instead.  home.vglp reaches it by scope.
+%% calendar(Dates): the dates of the device's clock, one a day: today's, the
+%% day since the Unix epoch the runtime's clock now/1 reads, at once, and each
+%% next one at the start of its day (GSG paper, Section 3, "What the super-app
+%% grants a mini-app": "a calendar, a stream of dates the super-app writes
+%% from the smartphone's clock, one a day"; GB appendix-derivation.tex: "on a
+%% device the clock writes it").  superapp/3 gives each to the agent, which
+%% writes it on the calendar of every mini-app installed; a play gives the
+%% agent its dates from its script instead.
 procedure calendar(Stream(Integer)).
 calendar(Cal?) :- now(T), D := T? // 86400000, dates(D?, Cal).
 
@@ -204,6 +208,12 @@ dates(D, [D? | Cal?]) :- N := (D? + 1) * 86400000, next_date(N?, D?, Cal).
 
 procedure next_date(Integer?, Integer?, Stream(Integer)).
 next_date(N, D, Cal?) :- wait_until(N?) | D1 := D? + 1, dates(D1?, Cal).
+
+%% date_msgs(Id, Dates, Msgs): each date the person's act date(D) to the agent.
+procedure date_msgs(Key?, Stream(Integer)?, UserInStream).
+date_msgs(Id, [D | Ds], [msg(person, Id?, date(D?)) | Ms?]) :-
+    ground(Id?), integer(D?) | date_msgs(Id?, Ds?, Ms).
+date_msgs(_, [], []).
 
 %% The agent, exported for the parent's UI boot plays (../boot.glp,
 %% ../play_ui_boot.glp), which call it as core # agent: a call into this
