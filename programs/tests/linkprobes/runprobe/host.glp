@@ -12,7 +12,7 @@
 
 %% The mini-app's entry, declared here for find_type/2 (never run here).
 procedure pa(InnerChannel?, String).
-pa(_, _?).
+pa(_, none).
 
 exported procedure alice_init(_?, NetStream?).
 alice_init(_, In) :-
@@ -51,7 +51,7 @@ procedure send_chan(InnerChannel?).
 send_chan(C) :- send_to_net([msg(alice, chan(C?))]).
 
 procedure read_end(InnerChannel?).
-read_end(ch(In, _?)) :- read_inner(In?).
+read_end(ch(In, [])) :- read_inner(In?).
 
 procedure read_inner(InnerStream?).
 read_inner([hello | S]) :- send_to_user([saw(hello)]), read_inner(S?).

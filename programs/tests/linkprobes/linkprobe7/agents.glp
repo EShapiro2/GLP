@@ -58,7 +58,7 @@ read_outer([chan(C) | S]) :- send_to_user([saw(chan)]), read_mid(C?), read_outer
 read_outer([]).
 
 procedure read_mid(MidChannel?).
-read_mid(ch(In, _?)) :- read_mid_stream(In?).
+read_mid(ch(In, [])) :- read_mid_stream(In?).
 
 procedure read_mid_stream(MidStream?).
 read_mid_stream([midping | S]) :- send_to_user([saw(midping)]), read_mid_stream(S?).
@@ -66,7 +66,7 @@ read_mid_stream([root(C) | S]) :- send_to_user([saw(root)]), read_end(C?), read_
 read_mid_stream([]).
 
 procedure read_end(InnerChannel?).
-read_end(ch(In, _?)) :- read_inner(In?).
+read_end(ch(In, [])) :- read_inner(In?).
 
 procedure read_inner(InnerStream?).
 read_inner([hello | S]) :- send_to_user([saw(hello)]), read_inner(S?).
