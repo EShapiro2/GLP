@@ -105,7 +105,7 @@ Future<_Run> _play(String program, String goal) async {
   return _Run(await engine.runGoal(goal), engine);
 }
 
-/// A traced run of [goal] in [program], and the dispatcher's serve/9 as it
+/// A traced run of [goal] in [program], and the dispatcher's serve/7 as it
 /// last suspended: its arguments as the trace prints them.
 Future<(_Run, List<String>)> _servedPlay(String program, String goal) async {
   final engine = GlpEngine(rootSelfGlpPath: _root)
@@ -122,9 +122,9 @@ Future<(_Run, List<String>)> _servedPlay(String program, String goal) async {
     final m = call.firstMatch(l);
     if (m == null) continue;
     final args = _args(l.substring(m.end - 1, l.length - ' → suspended'.length));
-    if (args.length == 9) serve = args;
+    if (args.length == 7) serve = args;
   }
-  expect(serve, isNotNull, reason: 'the dispatcher\'s serve/9 never suspended');
+  expect(serve, isNotNull, reason: 'the dispatcher\'s serve/7 never suspended');
   return (_Run(result, engine), serve!);
 }
 
@@ -260,11 +260,11 @@ void main() {
       // No live route is left, and Deads holds one grant writer per
       // withdrawn construct, neither written after its withdrawal: the stale
       // grant reached no construct.
-      expect(serve[5], '[]');
-      final deads = _elements(serve[6]);
-      expect(deads, hasLength(2), reason: serve[6]);
+      expect(serve[3], '[]');
+      final deads = _elements(serve[4]);
+      expect(deads, hasLength(2), reason: serve[4]);
       for (final d in deads) {
-        expect(d, matches(RegExp(r'^X\d+$')), reason: serve[6]);
+        expect(d, matches(RegExp(r'^X\d+$')), reason: serve[4]);
       }
     });
 
@@ -273,21 +273,49 @@ void main() {
       final (card, s1) =
           await _servedPlay('fragments', 'play_card(Resp, Log)');
       expect(card['Resp'], 'accept(bob)');
-      expect(_elements(s1[6]), hasLength(1), reason: s1[6]);
-      expect(s1[5], '[]');
+      expect(_elements(s1[4]), hasLength(1), reason: s1[4]);
+      expect(s1[3], '[]');
       // A card refused and so never withdrawn: its route live, Deads empty.
       final (refused, s2) =
           await _servedPlay('fragments', 'play_card_refused(Resp, Log)');
       expect(refused['Resp'], '_');
-      expect(s2[6], '[]');
-      expect(_elements(s2[5]), hasLength(1), reason: s2[5]);
+      expect(s2[4], '[]');
+      expect(_elements(s2[3]), hasLength(1), reason: s2[3]);
       // The request form, a stream question, and a card nobody answers: two
       // live routes, none dead.
       final (offer, s3) =
           await _servedPlay('fragments', 'play_offer(Outs, Log)');
       expect(offer.status, isNot(ExecutionStatus.failed));
-      expect(s3[6], '[]');
-      expect(_elements(s3[5]), hasLength(2), reason: s3[5]);
+      expect(s3[4], '[]');
+      expect(_elements(s3[3]), hasLength(2), reason: s3[3]);
+    });
+  });
+
+  group('the dispatcher takes asks, grants and draws in turn (vGLP '
+      '2026-10-14 23:05 UTC)', () {
+    // "The dispatcher takes asks, grants and draws in turn, so a grant is
+    // routed and a draw is passed on however many asks arrive" (vGLP,
+    // Section 6.3): fair/5 of programs/vglp/dispatcher.glp, which merges the
+    // three into the one stream serve/7 reads, takes the input whose turn it
+    // is, else the next after it that has come.  Asks keep arriving, the
+    // stream's tail open, a grant and a draw and a withdrawal waiting.
+    test('with asks arriving without end, the grant and the draws are taken '
+        'between them, not after them', () async {
+      final engine = GlpEngine(rootSelfGlpPath: _root);
+      expect(
+          engine.loadFile(
+              File('../programs/vglp/dispatcher.glp').absolute.path),
+          isTrue);
+      final r = _Run(
+          await engine.runGoal('fair(ask, [ask(a, 1), ask(a, 2), ask(a, 3), '
+              'ask(a, 4), ask(a, 5) | As?], [input(1, [], yes) | Is?], '
+              '[draw(1, w, v), withdraw(1) | Ds?], Es)'),
+          engine);
+      expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
+      expect(
+          r['Es'],
+          '[ask(a, 1), input(1, [], yes), draw(1, w, v), ask(a, 2), '
+          'withdraw(1), ask(a, 3), ask(a, 4), ask(a, 5) | _]');
     });
   });
 

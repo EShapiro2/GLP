@@ -141,9 +141,13 @@ decide(no, From, refuse(From?)).
       // draws; constructs/1 calls construct/4 on each spawn.
       expect(
           c.source,
-          contains('serve([ask(_, Q) | Asks], Is, COut, CInto?, DOut?, Rs, Xs, '
-              'N, [spawn(N?, Q?, Gs?, Ds) | Ss?]) :- ground(N?) | '
+          contains('serve([ask(_, Q) | Es], CInto?, DOut?, Rs, Xs, N, '
+              '[spawn(N?, Q?, Gs?, Ds) | Ss?]) :- ground(N?) | '
               'merge(Ds?, CInto1?, CInto)'));
+      // The asks, the grants and the draws taken in turn, merged into one
+      // stream by fair/5 (vGLP 2026-10-14 23:05 UTC).
+      expect(c.source,
+          contains('fair(ask, Asks?, Inputs?, COut?, Es), serve(Es?, COut, '));
       expect(
           c.source,
           contains('constructs([spawn(Id, Q, Gs, Ds?) | Ss]) :- '
@@ -184,9 +188,9 @@ decide(no, From, refuse(From?)).
               'Stream(_)).'));
       expect(
           c.source,
-          contains('procedure(Q, T) serve(Stream(Ask(Q))?, Inputs(T)?, '
-              'Stream(Draw(T))?, Stream(Draw(T)), PersonOut(T), Routes(T)?, '
-              'Deads(T)?, Integer?, Stream(Spawn(Q, T))).'));
+          contains('procedure(Q, T) serve(Events(Q, T)?, Stream(Draw(T)), '
+              'PersonOut(T), Routes(T)?, Deads(T)?, Integer?, '
+              'Stream(Spawn(Q, T))).'));
       // No clause for a closed person channel or closed grants, and nothing
       // that closes a construct's grants.
       expect(c.source, isNot(contains('split_grants([], ')));

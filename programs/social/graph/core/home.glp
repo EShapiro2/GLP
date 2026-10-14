@@ -80,12 +80,15 @@ Formed(X) ::= formed(X) ; refused.
 Done ::= done.
 Ask(Q) ::= ask(Constant, Q).
 Spawn(Q, T) ::= spawn(Integer, Q, Inputs(T), Stream(Draw(T))?).
+Event(Q, T) ::= Ask(Q) ; Input(T) ; Draw(T).
+Events(Q, T) ::= [Event(Q, T) | Events(Q, T)].
+Turn ::= ask ; grant ; draw.
 
 procedure(Q, T) dispatch(Stream(Ask(Q))?, PersonChannel(T)?, Channel(Stream(_), Stream(_)), Stream(Spawn(Q, T))).
-dispatch(Asks, ch(PIn, POut?), ch(MIn?, _), Ss?) :- split_grants(PIn?, Inputs, MIn), serve_1(Asks?, Inputs?, COut?, COut, POut, [], [], 1, Ss).
+dispatch(Asks, ch(PIn, POut?), ch(MIn?, _), Ss?) :- split_grants(PIn?, Inputs, MIn), fair(ask, Asks?, Inputs?, COut?, Es), serve_1(Es?, COut, POut, [], [], 1, Ss).
 
 procedure(Q, T) dispatch(Stream(Ask(Q))?, PersonChannel(T)?, Stream(_), Stream(Draw(T))?, Stream(Spawn(Q, T))).
-dispatch(Asks, ch(PIn, POut?), MIn?, ODs, Ss?) :- split_grants(PIn?, Inputs, MIn), merge_draws(ODs?, DOut?, POut), serve_1(Asks?, Inputs?, COut?, COut, DOut, [], [], 1, Ss).
+dispatch(Asks, ch(PIn, POut?), MIn?, ODs, Ss?) :- split_grants(PIn?, Inputs, MIn), merge_draws(ODs?, DOut?, POut), fair(ask, Asks?, Inputs?, COut?, Es), serve_1(Es?, COut, DOut, [], [], 1, Ss).
 
 procedure(T) merge_draws(Stream(Draw(T))?, PersonOut(T)?, PersonOut(T)).
 merge_draws([X | Xs], Ys, [X? | Zs?]) :- merge_draws_(Ys?, Xs?, Zs).
@@ -100,11 +103,22 @@ merge_draws_(Xs, [], Xs?).
 procedure(T) split_grants(PersonIn(T)?, Inputs(T), Stream(_)).
 split_grants([input(Id, P, R) | Gs], [input(Id?, P?, R?) | Is?], Ms?) :- split_grants(Gs?, Is, Ms).
 
-procedure(Q, T) serve_1(Stream(Ask(Q))?, Inputs(T)?, Stream(Draw(T))?, Stream(Draw(T)), PersonOut(T), Routes(T)?, Deads(T)?, Integer?, Stream(Spawn(Q, T))).
-serve_1([ask(_, Q) | Asks], Is, COut, CInto?, DOut?, Rs, Xs, N, [spawn(N?, Q?, Gs?, Ds) | Ss?]) :- ground(N?) | merge(Ds?, CInto1?, CInto), N1 := (N? + 1), serve_1(Asks?, Is?, COut?, CInto1, DOut, [route(N?, Gs) | Rs?], Xs?, N1?, Ss).
-serve_1(Asks, [G | Is], COut, CInto?, DOut?, Rs, Xs, N, Ss?) :- route_grant(G?, Rs?, Rs1), serve_1(Asks?, Is?, COut?, CInto, DOut, Rs1?, Xs?, N?, Ss).
-serve_1(Asks, Is, [draw(Id, W, V) | COut], CInto?, [draw(Id?, W?, V?) | DOut?], Rs, Xs, N, Ss?) :- serve_1(Asks?, Is?, COut?, CInto, DOut, Rs?, Xs?, N?, Ss).
-serve_1(Asks, Is, [withdraw(Id) | COut], CInto?, [withdraw(Id?) | DOut?], Rs, Xs, N, Ss?) :- ground(Id?) | remove_route(Id?, Rs?, Rs1, Xs?, Xs1), serve_1(Asks?, Is?, COut?, CInto, DOut, Rs1?, Xs1?, N?, Ss).
+procedure(Q, T) fair(Turn?, Stream(Ask(Q))?, Inputs(T)?, Stream(Draw(T))?, Events(Q, T)).
+fair(ask, [A | As], Is, Ds, Es?) :- Es = [A? | Es1?], fair(grant, As?, Is?, Ds?, Es1).
+fair(grant, As, [I | Is], Ds, Es?) :- Es = [I? | Es1?], fair(draw, As?, Is?, Ds?, Es1).
+fair(draw, As, Is, [D | Ds], Es?) :- Es = [D? | Es1?], fair(ask, As?, Is?, Ds?, Es1).
+fair(ask, As, [I | Is], Ds, Es?) :- Es = [I? | Es1?], fair(draw, As?, Is?, Ds?, Es1).
+fair(grant, As, Is, [D | Ds], Es?) :- Es = [D? | Es1?], fair(ask, As?, Is?, Ds?, Es1).
+fair(draw, [A | As], Is, Ds, Es?) :- Es = [A? | Es1?], fair(grant, As?, Is?, Ds?, Es1).
+fair(ask, As, Is, [D | Ds], Es?) :- Es = [D? | Es1?], fair(ask, As?, Is?, Ds?, Es1).
+fair(grant, [A | As], Is, Ds, Es?) :- Es = [A? | Es1?], fair(grant, As?, Is?, Ds?, Es1).
+fair(draw, As, [I | Is], Ds, Es?) :- Es = [I? | Es1?], fair(draw, As?, Is?, Ds?, Es1).
+
+procedure(Q, T) serve_1(Events(Q, T)?, Stream(Draw(T)), PersonOut(T), Routes(T)?, Deads(T)?, Integer?, Stream(Spawn(Q, T))).
+serve_1([ask(_, Q) | Es], CInto?, DOut?, Rs, Xs, N, [spawn(N?, Q?, Gs?, Ds) | Ss?]) :- ground(N?) | merge(Ds?, CInto1?, CInto), N1 := (N? + 1), serve_1(Es?, CInto1, DOut, [route(N?, Gs) | Rs?], Xs?, N1?, Ss).
+serve_1([input(Id, P, R) | Es], CInto?, DOut?, Rs, Xs, N, Ss?) :- route_grant(input(Id?, P?, R?), Rs?, Rs1), serve_1(Es?, CInto, DOut, Rs1?, Xs?, N?, Ss).
+serve_1([draw(Id, W, V) | Es], CInto?, [draw(Id?, W?, V?) | DOut?], Rs, Xs, N, Ss?) :- serve_1(Es?, CInto, DOut, Rs?, Xs?, N?, Ss).
+serve_1([withdraw(Id) | Es], CInto?, [withdraw(Id?) | DOut?], Rs, Xs, N, Ss?) :- ground(Id?) | remove_route(Id?, Rs?, Rs1, Xs?, Xs1), serve_1(Es?, CInto, DOut, Rs1?, Xs1?, N?, Ss).
 
 procedure(T) route_grant(Input(T)?, Routes(T)?, Routes(T)).
 route_grant(input(Id, P, R), [route(Id1, [input(Id?, P?, R?) | Gs1?]) | Rs], [route(Id1?, Gs1) | Rs?]) :- (Id? =?= Id1?) | true.

@@ -45,7 +45,7 @@
 %% 21:02 UTC, B; vGLP #5 Cowork, 2026-10-03 08:16 UTC, item 2):
 %%   Question  the union of the program's questions, one functor per moded
 %%             interactive type, the person's end of its variable inside: the
-%%             type parameter Q of Ask, Spawn, dispatch/4 and serve/9;
+%%             type parameter Q of Ask, Spawn, dispatch/4 and serve/7;
 %%   the person channel's T, the union of the values it draws and of the
 %%             grants' raw inputs (below): the type parameter T;
 %%   construct(Id?, Q?, Gs?, Ds), the construct process of each interactive
@@ -150,14 +150,16 @@ exported procedure(Q, T) dispatch(Stream(Ask(Q))?, PersonChannel(T)?,
     Channel(Stream(_), Stream(_)), Stream(Spawn(Q, T))).
 dispatch(Asks, ch(PIn, POut?), ch(MIn?, _), Ss?) :-
     split_grants(PIn?, Inputs, MIn),
-    serve(Asks?, Inputs?, COut?, COut, POut, [], [], 1, Ss).
+    fair(ask, Asks?, Inputs?, COut?, Es),
+    serve(Es?, COut, POut, [], [], 1, Ss).
 
 exported procedure(Q, T) dispatch(Stream(Ask(Q))?, PersonChannel(T)?,
     Stream(_), Stream(Draw(T))?, Stream(Spawn(Q, T))).
 dispatch(Asks, ch(PIn, POut?), MIn?, ODs, Ss?) :-
     split_grants(PIn?, Inputs, MIn),
     merge_draws(ODs?, DOut?, POut),
-    serve(Asks?, Inputs?, COut?, COut, DOut, [], [], 1, Ss).
+    fair(ask, Asks?, Inputs?, COut?, Es),
+    serve(Es?, COut, DOut, [], [], 1, Ss).
 
 %% merge_draws(ODs?, Ds?, POut): the draws of the output thread merged with
 %% the constructs' draws onto the person channel, which never ends: merge/3
@@ -181,35 +183,54 @@ procedure(T) split_grants(PersonIn(T)?, Inputs(T), Stream(_)).
 split_grants([input(Id, P, R) | Gs], [input(Id?, P?, R?) | Is?], Ms?) :-
     split_grants(Gs?, Is, Ms).
 
-%% serve(Asks?, Inputs?, COut?, CInto, DOut, Routes?, Deads?, N?, Spawns): on
-%% an ask, have the construct process of its question spawned, writing on
-%% Spawns its next identifier N, its question, the reader of its own grant
-%% stream and the writer of its own output stream, merged into COut by CInto;
-%% route each grant, whole, by identifier; pass the constructs' output on to
-%% the person, and move a construct's route, once it has withdrawn, from the
-%% live routes to Deads.  It has no clause for the asks' end: the grants and
-%% the constructs' draws are served for good, and DOut never ends.
-procedure(Q, T) serve(Stream(Ask(Q))?, Inputs(T)?, Stream(Draw(T))?,
-    Stream(Draw(T)), PersonOut(T), Routes(T)?, Deads(T)?, Integer?,
-    Stream(Spawn(Q, T))).
-serve([ask(_, Q) | Asks], Is, COut, CInto?, DOut?, Rs, Xs, N,
+%% fair(Turn?, Asks?, Grants?, Draws?, Es): the asks, the grants and the
+%% constructs' draws merged into one stream, taken in turn: the input whose
+%% turn it is, else the next after it that has come, the turn passing to the
+%% input after the one taken, so that a grant is routed and a draw is passed on
+%% however many asks arrive (vGLP 2026-10-14 23:05 UTC; vGLP, Example "Fair
+%% Merge").  Each is told in Es by its own functor, ask/2, input/3, draw/3 or
+%% withdraw/1.  The grants and the draws never end, and neither does Es.
+Event(Q, T) ::= Ask(Q) ; Input(T) ; Draw(T).
+Events(Q, T) ::= [Event(Q, T) | Events(Q, T)].
+Turn ::= ask ; grant ; draw.
+
+procedure(Q, T) fair(Turn?, Stream(Ask(Q))?, Inputs(T)?, Stream(Draw(T))?,
+    Events(Q, T)).
+fair(ask, [A | As], Is, Ds, Es?) :- Es = [A? | Es1?], fair(grant, As?, Is?, Ds?, Es1).
+fair(grant, As, [I | Is], Ds, Es?) :- Es = [I? | Es1?], fair(draw, As?, Is?, Ds?, Es1).
+fair(draw, As, Is, [D | Ds], Es?) :- Es = [D? | Es1?], fair(ask, As?, Is?, Ds?, Es1).
+fair(ask, As, [I | Is], Ds, Es?) :- Es = [I? | Es1?], fair(draw, As?, Is?, Ds?, Es1).
+fair(grant, As, Is, [D | Ds], Es?) :- Es = [D? | Es1?], fair(ask, As?, Is?, Ds?, Es1).
+fair(draw, [A | As], Is, Ds, Es?) :- Es = [A? | Es1?], fair(grant, As?, Is?, Ds?, Es1).
+fair(ask, As, Is, [D | Ds], Es?) :- Es = [D? | Es1?], fair(ask, As?, Is?, Ds?, Es1).
+fair(grant, [A | As], Is, Ds, Es?) :- Es = [A? | Es1?], fair(grant, As?, Is?, Ds?, Es1).
+fair(draw, As, [I | Is], Ds, Es?) :- Es = [I? | Es1?], fair(draw, As?, Is?, Ds?, Es1).
+
+%% serve(Es?, CInto, DOut, Routes?, Deads?, N?, Spawns): on an ask,
+%% have the construct process of its question spawned, writing on Spawns its
+%% next identifier N, its question, the reader of its own grant stream and
+%% the writer of its draws, merged into the constructs' draws by CInto; route
+%% each grant, whole, by identifier; pass the constructs' draws on to the
+%% person, and move a construct's route, once it has withdrawn, from the live
+%% routes to Deads.  Es never ends, and neither does DOut.
+procedure(Q, T) serve(Events(Q, T)?, Stream(Draw(T)), PersonOut(T),
+    Routes(T)?, Deads(T)?, Integer?, Stream(Spawn(Q, T))).
+serve([ask(_, Q) | Es], CInto?, DOut?, Rs, Xs, N,
       [spawn(N?, Q?, Gs?, Ds) | Ss?]) :-
     ground(N?) |
     merge(Ds?, CInto1?, CInto),
     N1 := N? + 1,
-    serve(Asks?, Is?, COut?, CInto1, DOut, [route(N?, Gs) | Rs?], Xs?, N1?,
-          Ss).
-serve(Asks, [G | Is], COut, CInto?, DOut?, Rs, Xs, N, Ss?) :-
-    route_grant(G?, Rs?, Rs1),
-    serve(Asks?, Is?, COut?, CInto, DOut, Rs1?, Xs?, N?, Ss).
-serve(Asks, Is, [draw(Id, W, V) | COut], CInto?, [draw(Id?, W?, V?) | DOut?],
-      Rs, Xs, N, Ss?) :-
-    serve(Asks?, Is?, COut?, CInto, DOut, Rs?, Xs?, N?, Ss).
-serve(Asks, Is, [withdraw(Id) | COut], CInto?, [withdraw(Id?) | DOut?], Rs,
-      Xs, N, Ss?) :-
+    serve(Es?, CInto1, DOut, [route(N?, Gs) | Rs?], Xs?, N1?, Ss).
+serve([input(Id, P, R) | Es], CInto?, DOut?, Rs, Xs, N, Ss?) :-
+    route_grant(input(Id?, P?, R?), Rs?, Rs1),
+    serve(Es?, CInto, DOut, Rs1?, Xs?, N?, Ss).
+serve([draw(Id, W, V) | Es], CInto?, [draw(Id?, W?, V?) | DOut?], Rs, Xs, N,
+      Ss?) :-
+    serve(Es?, CInto, DOut, Rs?, Xs?, N?, Ss).
+serve([withdraw(Id) | Es], CInto?, [withdraw(Id?) | DOut?], Rs, Xs, N, Ss?) :-
     ground(Id?) |
     remove_route(Id?, Rs?, Rs1, Xs?, Xs1),
-    serve(Asks?, Is?, COut?, CInto, DOut, Rs1?, Xs1?, N?, Ss).
+    serve(Es?, CInto, DOut, Rs1?, Xs1?, N?, Ss).
 
 %% route_grant(G?, Routes?, Routes1): send the grant G = input(Id, P, R),
 %% whole, on the grant stream of construct Id; a grant for no live construct,

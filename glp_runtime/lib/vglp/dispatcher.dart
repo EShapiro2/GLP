@@ -17,7 +17,7 @@
 //
 // The generic source is a module that loads and type-checks by itself: it is
 // parameterised in the program's questions, Q of Ask(Q), Spawn(Q),
-// dispatch/4 and serve/9, and calls no construct process, writing a spawn on
+// dispatch/4 and serve/7, and calls no construct process, writing a spawn on
 // dispatch/4's fourth argument instead.  The compilation supplies the
 // questions, Question, and the construct process of each interactive type,
 // construct/4, with constructs/1, which reads the spawns and calls
