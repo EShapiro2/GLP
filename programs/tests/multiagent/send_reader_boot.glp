@@ -10,8 +10,13 @@
 %
 % The agent code is the program directory send_reader/, which this boot spawns
 % into; BootConfig.programDir loads it and this boot clause on top.
+%
+% Each agent's second argument is `_`, as in every other boot here: until
+% 2026-10-14 the receiver's was `_?`, an anonymous reader, which a clause may
+% not hold (GLP-Spec glp.tex, Remark "Anonymous Variables"); what the test
+% exercises is the sender's unbound reader X?, not that argument.
 
 procedure boot.
 boot :-
     sender_init(agent1, _)@agent1,
-    receiver_init(agent2, _?)@agent2.
+    receiver_init(agent2, _)@agent2.
