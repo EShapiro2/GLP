@@ -28,7 +28,7 @@ ping(_, [], _).
 %% ../self.glp's, as home.glp's own.
 HomeRequest       ::= trust(Key) ; install(String, String) ; invite(String, Key) ; connect(Key).
 HomeFriendRequest ::= from(Key, Decision?).
-HomeIntroRequest  ::= from(Constant, Key, Decision?).
+HomeIntroRequest  ::= from(Key, Key, Decision?).
 HomeQuestion      ::= friendRequest_w(HomeFriendRequest) ; introRequest_w(HomeIntroRequest) ; stream_request_r(Stream(HomeRequest)?).
 
 %% The super-app (GSG paper, Section 5.1): the one goal the runtime posts,
@@ -70,6 +70,40 @@ procedure split_out(AgentToUserStream?, Stream(Output), AgentToUserStream).
 split_out([M | Ms], [N? | Ns?], [M1? | Seen?]) :- notice(M?, N, M1), split_out(Ms?, Ns, Seen).
 split_out([], [], []).
 
+%% A scripted person on the super-app's person interface (home.vglp), for
+%% the plays (superapp_plays.glp, home_ui.glp, ../play_ui_boot.glp): what the
+%% agent tells the person is split by split_out/3, each message whole to home,
+%% which raises the card of a friend's request to connect and of an
+%% introduction, and its notice to the person's script; the script's commands
+%% and home's reach the agent merged; and the person, scripted on what the
+%% dispatcher draws, answers yes on each card.  A notice informs; a consent is
+%% asked by home's card only, and no play answers off a notice (GSG,
+%% 2026-10-14 09:24 UTC, item 1, and 11:38 UTC).
+exported procedure scripted_home(Key?, AgentToUserStream?, Stream(Output), UserInStream?, UserInStream).
+scripted_home(Id, Out, Notices?, ScriptCmds, In?) :-
+    ground(Id?) |
+    split_out(Out?, Notices, Seen),
+    home # home(Id?, Seen?, Home, Asks),
+    home # dispatch(Asks?, ch(Grants?, Draws), MCh),
+    hold_output(MCh?),
+    yes_person(Draws?, Grants),
+    merge(ScriptCmds?, Home?, In).
+
+%% The program's output to the person: the notices go to the script instead.
+procedure hold_output(Channel(Stream(_), Stream(Output))?).
+hold_output(ch(_, [])).
+
+%% The person: yes on each card, a friend's request to connect or an
+%% introduction, at the path of its decision, once the card is drawn with it.
+%% The person channel never closes, so the person holds its grant writer for
+%% good.
+procedure yes_person(_?, PersonIn).
+yes_person([draw(N, _, from(_, input(Q))) | Ds], [input(N?, Q?, yes) | Gs?]) :-
+    ground(N?), ground(Q?) | yes_person(Ds?, Gs).
+yes_person([draw(N, _, from(_, _, input(Q))) | Ds], [input(N?, Q?, yes) | Gs?]) :-
+    ground(N?), ground(Q?) | yes_person(Ds?, Gs).
+yes_person([_ | Ds], Gs?) :- otherwise | yes_person(Ds?, Gs).
+
 %% The super-app's output to its person, of the reserved type Output: "A
 %% vGLP program declares the type of its output to its person by defining
 %% the type Output, a reserved name; the dispatcher draws that output as a
@@ -83,7 +117,7 @@ split_out([], [], []).
 %% (GSG, 2026-10-14 09:24 UTC, item 1).
 Notice ::= msg(Constant, Constant, NoticeContent).
 NoticeContent ::= befriend(Key)
-                ; befriend_intro(Constant, Key)
+                ; befriend_intro(Key, Key)
                 ; connected(Constant)
                 ; rejected
                 ; rejected(Constant)

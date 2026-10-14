@@ -40,7 +40,7 @@ UserContent ::= connect(Key)
               ; send(Key, Constant)
               ; introduce(Key, Key)
               ; accept_intro(Key, PendingValue)
-              ; reject_intro(Constant, PendingValue)
+              ; reject_intro(Key, PendingValue)
               ; unfriend(Key)
               %% The super-app (SGSG paper, Section 3).  install: the person
               %% installs a certified mini-app --- its module value, its
@@ -73,7 +73,7 @@ UserContent ::= connect(Key)
 %% befriend and befriend_intro carry the pending value, which the person's
 %% answer passes back as it came.
 AgentContent ::= befriend(Key, PendingValue)
-               ; befriend_intro(Constant, Key, PendingValue)
+               ; befriend_intro(Key, Key, PendingValue)
                ; connected(Constant)
                ; rejected
                ; rejected(Constant)
@@ -548,7 +548,7 @@ ReqId ::= req(Integer).
 %% User -> Mediator
 UserCmd ::= decision(Decision, Key, ReqId)
           ; accept_intro(Key, ReqId)
-          ; reject_intro(Constant, ReqId)
+          ; reject_intro(Key, ReqId)
           ; connect(Key)
           ; send(Key, Constant)
           ; introduce(Key, Key)
@@ -556,7 +556,7 @@ UserCmd ::= decision(Decision, Key, ReqId)
 
 %% Mediator -> User
 UserNotify ::= befriend(Key, ReqId)
-             ; befriend_intro(Constant, Key, ReqId)
+             ; befriend_intro(Key, Key, ReqId)
              ; connected(Constant)
              ; rejected
              ; rejected(Constant)
