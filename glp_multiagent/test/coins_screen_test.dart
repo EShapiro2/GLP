@@ -298,10 +298,11 @@ void main() {
     expect(screen(), contains('minted(2)'));
     expect(holdings(), 'holdings([lot(alice, 2)])');
     // The messages read with their functors and labelled fields, and never
-    // as terms: opened(bob), its Key bob; minted(2), its Integer 2.
+    // as terms, each field named by what it is (Currencies, 2026-10-14 09:24
+    // UTC): opened(bob), its Friend bob; minted(2), its Amount 2.
     expect(screen().take(2), ['opened(bob)', 'minted(2)']);
-    await message(0, 'opened', [('Key', 'bob')]);
-    await message(1, 'minted', [('Integer', '2')]);
+    await message(0, 'opened', [('Friend', 'bob')]);
+    await message(1, 'minted', [('Amount', '2')]);
     expect(find.textContaining('opened(bob)'), findsNothing);
     expect(find.textContaining('minted(2)'), findsNothing);
     expect(find.text('BALANCES'), findsNothing);
@@ -330,7 +331,7 @@ void main() {
         formShot: '/private/tmp/coins-swap-form.png');
     expect(screen(), contains('swap_done(bob)'));
     expect(holdings(), 'holdings([lot(bob, 2)])');
-    await message(screen().indexOf('swap_done(bob)'), 'swap_done', [('Key', 'bob')]);
+    await message(screen().indexOf('swap_done(bob)'), 'swap_done', [('Friend', 'bob')]);
     expect(find.textContaining('swap_done(bob)'), findsNothing);
 
     // --- The card: bob proposes the reverse swap, and the swap responder's

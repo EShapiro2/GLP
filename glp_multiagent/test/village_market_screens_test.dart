@@ -37,10 +37,10 @@
 /// each message drawn by the widget of the reserved type Output ::=
 /// ScreenContent (vGLP 169b008, Definition "Canonical Compilation"; vGLP,
 /// 2026-10-13 19:25 UTC, items 2 and 3); the manifest names no view.  Each
-/// phone shows the request form and under it that thread, and is cut just
-/// below its latest holdings message, and the test checks those holdings
-/// against GC's Table 1, at Currencies' request of 2026-10-14 08:48 UTC,
-/// item 1.  Each shell closes its lower edge with the bezel and corner radius
+/// phone shows its app bar and under it its latest holdings message alone,
+/// nothing of the thread above it, the six phones the same height, and the
+/// test checks those holdings against GC's Table 1, at Currencies' requests
+/// of 2026-10-14 08:48 UTC, item 1, and 09:25 UTC.  Each shell closes its lower edge with the bezel and corner radius
 /// of its upper edge.
 library;
 
@@ -104,9 +104,11 @@ Future<void> _loadFonts() async {
 
 /// The phone shell of `coins_screen_test.dart`, which took the Swap form and
 /// the proposal card already in the paper: the same width, bezel, corner
-/// radius and theme, and within it the screen, [height] less the bezel above
-/// and below, the shell closing its lower edge as its upper edge is closed.
-Widget _phone(Widget surface, {required double height}) => Container(
+/// radius and theme, and within it the screen, [screen] points tall where it
+/// is given and otherwise [height] less the bezel above and below, white
+/// under it, the shell closing its lower edge as its upper edge is closed.
+Widget _phone(Widget surface, {required double height, double? screen}) =>
+    Container(
       width: 360,
       height: height,
       padding: const EdgeInsets.all(10),
@@ -116,7 +118,10 @@ Widget _phone(Widget surface, {required double height}) => Container(
         borderRadius: BorderRadius.circular(30),
         child: Container(
           color: Colors.white,
-          child: MaterialApp(
+          alignment: Alignment.topCenter,
+          child: SizedBox(
+            height: screen ?? height - 20,
+            child: MaterialApp(
             debugShowCheckedModeBanner: false,
             theme: ThemeData(
                 fontFamily: 'AppFont',
@@ -128,15 +133,17 @@ Widget _phone(Widget surface, {required double height}) => Container(
                         foregroundColor: Colors.white))),
             home: surface,
           ),
+          ),
         ),
       ),
     );
 
-Widget _cell(_Villager v, UiRuntime r, double height) => Column(
+Widget _cell(_Villager v, UiRuntime r, double height, {double? screen}) =>
+    Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         _phone(AgentSurface(agentId: v.id, runtime: r, muteNotices: true),
-            height: height),
+            height: height, screen: screen),
         const SizedBox(height: 10),
         Text(v.name,
             style: const TextStyle(
@@ -196,14 +203,15 @@ void main() {
       runtimes[v.id] = r;
     }
 
-    Widget grid(Map<String, double> heights) {
+    Widget grid(Map<String, double> heights, [Map<String, double>? screens]) {
       Widget row(Iterable<_Villager> vs) => Row(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               for (final v in vs) ...[
                 if (v != vs.first) const SizedBox(width: 18),
-                _cell(v, runtimes[v.id]!, heights[v.id]!),
+                _cell(v, runtimes[v.id]!, heights[v.id]!,
+                    screen: screens?[v.id]),
               ]
             ],
           );
@@ -227,45 +235,76 @@ void main() {
     Finder surfaceOf(_Villager v) =>
         find.byWidgetPredicate((w) => w is AgentSurface && w.agentId == v.id);
 
+    /// The latest holdings message on [v]'s screen.
+    Finder latestOf(_Villager v) => find.descendant(
+        of: surfaceOf(v),
+        matching:
+            find.byKey(_formKey(_elementAt(_latestHoldings(runtimes[v.id]!)))));
+
     // The cut, measured from the layout: each phone laid out tall enough to
-    // hold its whole screen, and its latest holdings message found in the
-    // thread; each shell is cut just below it.
+    // hold its whole screen, its app bar and its latest holdings message
+    // measured; every phone is then as tall as its app bar and the tallest of
+    // those messages, and shows its app bar and its latest holdings message
+    // alone, nothing of the thread above it (Currencies, 2026-10-14 09:25
+    // UTC).
     const tall = 6000.0;
     tester.view.physicalSize = const Size(1160, 2 * tall + 200);
     await tester.pumpWidget(grid({for (final v in _villagers) v.id: tall}));
     await tester.pumpAndSettle();
-    final heights = <String, double>{};
+    var bar = 0.0;
+    final messages = <String, double>{};
     for (final v in _villagers) {
-      final top = tester.getRect(surfaceOf(v)).top;
-      final k = _latestHoldings(runtimes[v.id]!);
-      final at = _elementAt(k);
-      final message = find.descendant(
-          of: surfaceOf(v), matching: find.byKey(_formKey(at)));
-      expect(message, findsOneWidget,
+      expect(latestOf(v), findsOneWidget,
           reason: '${v.id}: its latest holdings message is drawn');
-      final bottom = tester.getRect(message).bottom - top;
-      // The screen's top, 10 points of bezel above it, the message's card
-      // margin and padding below it, and the bezel under the screen.
-      heights[v.id] = (bottom + 16 + 10 + 10).ceilToDouble();
+      bar = math.max(
+          bar,
+          tester
+              .getRect(find.descendant(
+                  of: surfaceOf(v), matching: find.byType(AppBar)))
+              .height);
+      messages[v.id] = tester.getRect(latestOf(v)).height;
     }
+    final message = messages.values.reduce(math.max);
+    // Each screen as tall as its app bar and its own message, so that the
+    // message can stand at its top, 8 points under it; every phone as tall
+    // as the tallest screen and the bezel above and below, 10 points each.
+    final screens = {
+      for (final v in _villagers)
+        v.id: (bar + messages[v.id]! + 8).ceilToDouble()
+    };
+    final height = (bar + message + 8 + 20).ceilToDouble();
     // ignore: avoid_print
-    print('[cut] each phone is cut below its latest holdings message: '
-        '$heights');
+    print('[cut] the app bar is $bar points and the tallest latest holdings '
+        'message $message, so every phone is $height points tall');
 
-    final tallest = heights.values.reduce(math.max);
-    tester.view.physicalSize = Size(1160, 2 * tallest + 200);
-    await tester.pumpWidget(grid(heights));
+    tester.view.physicalSize = Size(1160, 2 * height + 200);
+    await tester.pumpWidget(
+        grid({for (final v in _villagers) v.id: height}, screens));
     await tester.pumpAndSettle();
+    // Each phone scrolled to its latest holdings message, its top under the
+    // app bar.
+    for (final v in _villagers) {
+      final list = find
+          .descendant(of: surfaceOf(v), matching: find.byType(Scrollable))
+          .first;
+      if (latestOf(v).evaluate().isEmpty) {
+        await tester.scrollUntilVisible(latestOf(v), 200, scrollable: list);
+      }
+      await tester.ensureVisible(latestOf(v));
+      await tester.pumpAndSettle();
+      final appBar = tester.getRect(
+          find.descendant(of: surfaceOf(v), matching: find.byType(AppBar)));
+      expect(tester.getRect(latestOf(v)).top, closeTo(appBar.bottom, 0.5),
+          reason: '${v.id}: its latest holdings message stands under the app '
+              'bar, nothing of the thread above it');
+    }
     // No phone has a + button: the panel has no compose form, the request
     // form being a construct the bridge draws.
     expect(find.byType(FloatingActionButton), findsNothing);
     // Each phone shows its holdings, headed by the functor, the field named
     // Holdings, each lot a form of its own.
     for (final v in _villagers) {
-      final latest = find.descendant(
-          of: surfaceOf(v),
-          matching:
-              find.byKey(_formKey(_elementAt(_latestHoldings(runtimes[v.id]!)))));
+      final latest = latestOf(v);
       expect(find.descendant(of: latest, matching: find.text('holdings')),
           findsOneWidget, reason: v.id);
       expect(find.descendant(of: latest, matching: find.text('Holdings')),
