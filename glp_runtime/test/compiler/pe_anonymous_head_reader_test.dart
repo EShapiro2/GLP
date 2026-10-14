@@ -1,98 +1,73 @@
 // glp_runtime/test/compiler/pe_anonymous_head_reader_test.dart
 //
-// The partial evaluator's term matching against a unit clause's ANONYMOUS
-// head reader `_?`.  TGLP typed-glp.tex, "Anonymous variables": at a produced
-// head position `_?` "denotes an output the clause never produces", the
-// placeholder `Out?` of a writer the clause never names; so it is a head
-// reader, matched by GLP-Spec appendix-term-matching.tex, Definition "Term
-// Matching", column "Reader X2?": a goal writer is assigned it, a goal reader
-// and a goal term fail.  A defined guard is "unfolded to the term matching of
-// T1 with S1, ..., Tn with Sn" (GLP-Spec appendix-guards.tex, "Defined guard
-// predicates"), so a call meeting `_?` with a term or a reader can never
-// succeed.  Until 2026-10-02 both copies passed over any anonymous variable
-// on either side, so `pick2(A?, 2)` reduced against `pick2(1, _?)`.  GLP's
-// task of 2026-10-02 08:40 UTC, B.  The two copies --- partial_evaluator.dart's,
-// which the engine and the linker run, and analyzer.dart's, which GlpCompiler
-// runs --- are both asked, as pe_head_reader_test.dart asks them of a named
-// head reader.
+// A unit clause's ANONYMOUS head reader `_?` met by the partial evaluator.
+// GLP-Spec glp.tex, Remark "Anonymous Variables" (297db75), and TGLP
+// "Anonymous variables" (2424f4c): "Anonymous readers (`_?`, `_Name?`) are
+// not permitted in a clause, in the head or the body".  From 2026-10-02 until
+// 2026-10-14 both copies of the partial evaluator's term matching ---
+// partial_evaluator.dart's, which the engine and the linker run, and
+// analyzer.dart's, which GlpCompiler runs --- matched a unit clause's `_?` as
+// a head reader (GLP's task of 2026-10-02 08:40 UTC, B), and this file held
+// that matching.  The branch is gone with the rule (GLP, 2026-10-14 09:35
+// UTC, item 3), and this file holds that a program whose unit clause has
+// `_?` is refused on both paths whatever calls it, the unit clause reached by
+// a defined guard only among them: by the type checker on the engine's load
+// path, and by codegen in GlpCompiler, which compiles without the checker.
+
+import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/compiler/compiler.dart';
-import 'package:glp_runtime/compiler/lexer.dart';
-import 'package:glp_runtime/compiler/parser.dart';
-import 'package:glp_runtime/compiler/ast.dart';
-import 'package:glp_runtime/compiler/partial_evaluator.dart';
+import 'package:glp_runtime/engine/glp_engine.dart';
 
 /// Unit clauses with `_?` at an argument, inside a structure, as a list's
 /// tail, and written with a name, `_X?`.
-const _units =
-    'pick2(1, _?).\n'
-    'pick3(ch(_, _?)).\n'
-    'pick4([1 | _?]).\n'
-    'pick5(1, _X?).\n';
+const _units = <String, String>{
+  'at an argument': 'pick2(1, _?).\n',
+  'inside a structure': 'pick3(ch(_, _?)).\n',
+  'as a list tail': 'pick4([1 | _?]).\n',
+  'named, `_X?`': 'pick5(1, _X?).\n',
+};
 
-String _peError(String source) {
-  final module = Parser(Lexer(source).tokenize()).parseModule();
-  try {
-    PartialEvaluator().transformDefinedGuards(
-      Program(module.procedures, module.line, module.column),
-    );
-  } catch (e) {
-    return e.toString();
-  }
-  return '';
-}
+/// Each unit clause's declaration, for the engine's typed load path, where a
+/// declaration is followed by its clauses.
+const _decls = <String, String>{
+  'at an argument': 'procedure pick2(Integer?, Integer).\n',
+  'inside a structure': 'Ch ::= ch(Integer, Integer?).\nprocedure pick3(Ch?).\n',
+  'as a list tail': 'procedure pick4(Stream(Integer)).\n',
+  'named, `_X?`': 'procedure pick5(Integer?, Integer).\n',
+};
 
-String _compilerError(String source) {
-  try {
-    GlpCompiler().compile(source);
-  } catch (e) {
-    return e.toString();
-  }
-  return '';
-}
+/// Each unit clause's guard call, the unit clause reached by it alone.
+const _guardCalls = <String, String>{
+  'at an argument':
+      'procedure t(Integer?).\nt(A) :- pick2(A?, B) | use(B?).\n',
+  'inside a structure': 'procedure t(Integer?).\nt(A) :- pick3(ch(A?, B)) | use(B?).\n',
+  'as a list tail':
+      'procedure t(Integer?).\nt(_) :- pick4([1 | B]) | use(B?).\n',
+  'named, `_X?`':
+      'procedure t(Integer?).\nt(A) :- pick5(A?, B) | use(B?).\n',
+};
+
+const _use = 'procedure use(_?).\nuse(_).\n';
+
+Matcher get _refused => throwsA(predicate((Object e) =>
+    '$e'.contains('(anonymous reader) is not permitted in program clauses')));
 
 void main() {
-  final failing = {
-    'a constant at an argument': 't(A) :- pick2(A?, 2) | true.\n',
-    'a structure at an argument': 't(A) :- pick2(A?, f(2)) | true.\n',
-    'a list at an argument': 't(A) :- pick2(A?, [2]) | true.\n',
-    'a goal reader at an argument': 't(A, B) :- pick2(A?, B?) | true.\n',
-    'a constant inside a structure': 't :- pick3(ch(1, 2)) | true.\n',
-    'a constant as a list tail': 't :- pick4([1 | []]) | true.\n',
-    'a constant at a named `_X?`': 't(A) :- pick5(A?, 2) | true.\n',
-  };
-
-  for (final MapEntry(key: what, value: clause) in failing.entries) {
-    test('`_?` against $what fails: partial_evaluator.dart', () {
-      final e = _peError(_units + clause);
-      expect(e, contains('can never succeed'), reason: e);
-      expect(e, contains('head reader'), reason: e);
+  for (final MapEntry(key: where, value: unit) in _units.entries) {
+    test('a unit clause with `_?` $where is refused: GlpCompiler', () {
+      expect(() => GlpCompiler().compile(unit), _refused);
     });
 
-    test('`_?` against $what fails: analyzer.dart', () {
-      final e = _compilerError(_units + clause);
-      expect(e, contains('can never succeed'), reason: e);
-      expect(e, contains('head reader'), reason: e);
-    });
-  }
-
-  final assigned = {
-    'at an argument': 't(A, B?) :- pick2(A?, B) | true.\n',
-    'inside a structure': 't(B?) :- pick3(ch(1, B)) | true.\n',
-    'as a list tail': 't(B?) :- pick4([1 | B]) | true.\n',
-    'at a named `_X?`': 't(A, B?) :- pick5(A?, B) | true.\n',
-  };
-
-  for (final MapEntry(key: where, value: clause) in assigned.entries) {
-    test('a goal writer $where is assigned `_?`, as the table has it: '
-        'partial_evaluator.dart', () {
-      expect(_peError(_units + clause), isEmpty);
-    });
-
-    test('a goal writer $where is assigned `_?`, as the table has it: '
-        'analyzer.dart', () {
-      expect(_compilerError(_units + clause), isEmpty);
+    test('a unit clause with `_?` $where, reached by a defined guard only, is '
+        'refused: the engine', () {
+      final engine = GlpEngine(
+          rootSelfGlpPath: File('../programs/self.glp').absolute.path);
+      expect(
+          () => engine.loadSource(
+              '${_decls[where]}$unit$_use${_guardCalls[where]}'),
+          _refused);
     });
   }
 }
