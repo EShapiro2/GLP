@@ -3,19 +3,16 @@
 %% The directory holds the agent (agent.glp) and the super-app plays
 %% (superapp_plays.glp); the types are the parent's (../self.glp, an ancestor
 %% scope).  The certified mini-apps it hosts are programs of their own
-%% (../pingapp; programs/currencies/coins/currency), whose artefacts the REPL's :artefact
-%% writes here, the one place the agent's load_file/2 resolves a name.  Loaded
-%% as part of ../ (the UI boot plays), the agent is called as core # agent,
-%% through the forwarder below; under :boot (../../superapp_boot.glp)
-%% sg_init/3 runs one super-app per isolate.
-
-%% The super-app plays (superapp_plays.glp) and the test mini-app's entry,
-%% exported so that run/3 finds it among the program's exports.
-%% The interface of the mini-app the super-app hosts, declared in the
-%% super-app's own scope so that find_type/2 has its type identity: structural,
-%% so the same declaration in pingapp/ has the same identity.  Never run.
-procedure ping(Constant?, AppUiStream, SgChannel?).
-ping(_, [], _).
+%% (../pingapp, ../endapp; programs/currencies/coins/currency, ...), whose
+%% artefacts the REPL's :artefact writes here, the one place the agent's
+%% load_file/2 resolves a name.  The super-app holds no declaration of a
+%% mini-app's types: each mini-app's entry is the instance of the entry
+%% template miniapp/4, declared once in the root programs/self.glp, at the
+%% mini-app's own type, and the super-app activates it by the template's
+%% opaque instance at that type (GSG paper, Sections 3 and 4).  Loaded as part
+%% of ../ (the UI boot plays), the agent is called as core # agent, through
+%% the forwarder below; under :boot (../../superapp_boot.glp) sg_init/3 runs
+%% one super-app per isolate.
 
 %% The questions of the super-app's own person interface (home.vglp), as its
 %% compilation home.glp carries them (vGLP, Definition "Canonical
@@ -179,6 +176,35 @@ notice(msg(A, P, received(K, C)), msg(A?, P?, received(K?, C?)), msg(A?, P?, rec
 notice(msg(A, P, not_a_friend(K)), msg(A?, P?, not_a_friend(K?)), msg(A?, P?, not_a_friend(K?))) :-
     ground(A?), ground(P?), ground(K?) | true.
 
+%% The person's end of a mini-app's person channel that no screen shows ---
+%% a re-idled mini-app's fresh one (agent.glp, app_idle/3), or one a play
+%% installs a mini-app with and does not watch: its draws read to their
+%% close, written by the mini-app's execution or closed by the super-app, and
+%% its grants closed, no person granting on it.  agent.glp and
+%% superapp_plays.glp reach it by scope.
+procedure hold_person(Channel(Stream(Draw(Opaque)), Stream(Input(Opaque)))?).
+hold_person(ch(Ds, [])) :- hold_draws(Ds?).
+
+procedure hold_draws(Stream(Draw(Opaque))?).
+hold_draws([_ | Ds]) :- hold_draws(Ds?).
+hold_draws([]).
+
+%% calendar(Cal): a mini-app's calendar, written from the device's clock, one
+%% date a day: today's, the day since the Unix epoch the runtime's clock now/1
+%% reads, at once, and each next one at the start of its day (GSG paper,
+%% Section 3, "What the super-app grants a mini-app": "a calendar, a stream of
+%% dates the super-app writes from the smartphone's clock, one a day"; GB
+%% appendix-derivation.tex: "on a device the clock writes it").  The plays
+%% write a calendar from their script instead.  home.vglp reaches it by scope.
+procedure calendar(Stream(Integer)).
+calendar(Cal?) :- now(T), D := T? // 86400000, dates(D?, Cal).
+
+procedure dates(Integer?, Stream(Integer)).
+dates(D, [D? | Cal?]) :- N := (D? + 1) * 86400000, next_date(N?, D?, Cal).
+
+procedure next_date(Integer?, Integer?, Stream(Integer)).
+next_date(N, D, Cal?) :- wait_until(N?) | D1 := D? + 1, dates(D1?, Cal).
+
 %% The agent, exported for the parent's UI boot plays (../boot.glp,
 %% ../play_ui_boot.glp), which call it as core # agent: a call into this
 %% directory resolves only to what this file exports (TGLP, Section "Module
@@ -192,12 +218,12 @@ imported procedure home_ui#superapp_ui(Key?, PersonIn(HomeDrawn)?, NetInStream?)
 exported procedure superapp_ui(Key?, PersonIn(HomeDrawn)?, NetInStream?).
 superapp_ui(Id, Grants, NetIn) :- home_ui # superapp_ui(Id?, Grants?, NetIn?).
 
-imported procedure superapp_plays#play_invite(AppUiStream, AppUiStream).
-exported procedure play_invite(AppUiStream, AppUiStream).
+imported procedure superapp_plays#play_invite(Stream(Opaque), Stream(Opaque)).
+exported procedure play_invite(Stream(Opaque), Stream(Opaque)).
 play_invite(A?, B?) :- superapp_plays # play_invite(A, B).
 
-imported procedure superapp_plays#play_invite_declined(AppUiStream, AppUiStream).
-exported procedure play_invite_declined(AppUiStream, AppUiStream).
+imported procedure superapp_plays#play_invite_declined(Stream(Opaque), Stream(Opaque)).
+exported procedure play_invite_declined(Stream(Opaque), Stream(Opaque)).
 play_invite_declined(A?, B?) :- superapp_plays # play_invite_declined(A, B).
 
 imported procedure superapp_plays#play_attest(String, String, String, _).
@@ -246,22 +272,22 @@ imported procedure superapp_plays#play_forged_root(AgentToUserStream).
 exported procedure play_forged_root(AgentToUserStream).
 play_forged_root(O?) :- superapp_plays # play_forged_root(O).
 
-imported procedure superapp_plays#play_coins(Stream(ScreenContent), Stream(ScreenContent)).
-exported procedure play_coins(Stream(ScreenContent), Stream(ScreenContent)).
+imported procedure superapp_plays#play_coins(Stream(Opaque), Stream(Opaque)).
+exported procedure play_coins(Stream(Opaque), Stream(Opaque)).
 play_coins(A?, B?) :- superapp_plays # play_coins(A, B).
 
-imported procedure superapp_plays#play_cssn(Stream(CsAppNotify), Stream(CsAppNotify)).
-exported procedure play_cssn(Stream(CsAppNotify), Stream(CsAppNotify)).
+imported procedure superapp_plays#play_cssn(Stream(Opaque), Stream(Opaque)).
+exported procedure play_cssn(Stream(Opaque), Stream(Opaque)).
 play_cssn(A?, B?) :- superapp_plays # play_cssn(A, B).
 
-imported procedure superapp_plays#play_both(Stream(ScreenContent), Stream(ScreenContent), Stream(CsAppNotify), Stream(CsAppNotify)).
-exported procedure play_both(Stream(ScreenContent), Stream(ScreenContent), Stream(CsAppNotify), Stream(CsAppNotify)).
+imported procedure superapp_plays#play_both(Stream(Opaque), Stream(Opaque), Stream(Opaque), Stream(Opaque)).
+exported procedure play_both(Stream(Opaque), Stream(Opaque), Stream(Opaque), Stream(Opaque)).
 play_both(A?, B?, C?, D?) :- superapp_plays # play_both(A, B, C, D).
 
-imported procedure superapp_plays#play_reinvite(AppUiStream, AppUiStream).
-exported procedure play_reinvite(AppUiStream, AppUiStream).
+imported procedure superapp_plays#play_reinvite(Stream(Opaque), Stream(Opaque)).
+exported procedure play_reinvite(Stream(Opaque), Stream(Opaque)).
 play_reinvite(A?, B?) :- superapp_plays # play_reinvite(A, B).
 
-imported procedure superapp_plays#play_sovereign(Stream(SvScreenContent), Stream(SvScreenContent)).
-exported procedure play_sovereign(Stream(SvScreenContent), Stream(SvScreenContent)).
+imported procedure superapp_plays#play_sovereign(Stream(Opaque), Stream(Opaque)).
+exported procedure play_sovereign(Stream(Opaque), Stream(Opaque)).
 play_sovereign(A?, B?) :- superapp_plays # play_sovereign(A, B).

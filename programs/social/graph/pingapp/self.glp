@@ -1,14 +1,53 @@
 %% pingapp/self.glp --- the test mini-app of the super-app as a certified
-%% program of its own: ping/3 (miniapp.glp), its types the parent's
-%% (../self.glp, an ancestor scope).  The REPL's :artefact writes its certified
-%% artefact, pingapp.glpw, into ../core, where the super-app's agent reads it
-%% with load_file/2, verifies its two certifications, installs it, and
-%% activates it by run/3 (SGSG paper, Section 3).
+%% program of its own.  The REPL's :artefact writes its certified artefact,
+%% pingapp.glpw, into ../core, where the super-app's agent reads it with
+%% load_file/2, verifies its two certifications, installs it, and activates it
+%% by run/3 (GSG paper, Section 3).
+%%
+%% Its entry is the super-app's entry template miniapp/4, declared once in
+%% the root programs/self.glp, at its own type Ping, and its scripted person
+%% the second template miniapp_person/4 at the same type (TGLP modules.tex,
+%% Dynamic Activation, "Opaque types": "A guest declares its entry as the
+%% template's instance at its own type"; GSG, 2026-10-13 18:52 UTC, O5, and
+%% 20:22 UTC, H).  The super-app holds no declaration of these types: it
+%% holds the mini-app's ends at Opaque and passes them on.
+
+%% The root channel's messages between two executions: a greeting, and the
+%% probe of the warm call, which carries the writer of the probe's value.
+PingMsg     ::= hello(Key) ; probe(ProbeValue?).
+%% The probe's value (miniapp.glp): what the far side assigns, or
+%% unreachable, which the sender writes where the probe reaches nobody.
+ProbeValue  ::= value(String) ; unreachable.
+
+%% What the mini-app shows its person, one item at a time.
+AppUi       ::= opened(Key) ; greeted(Key) ; got(String)
+              ; probed(Key) ; forwarded(Key) ; answered ; held_link(Key)
+              ; no_conv(Key).
+
+%% The mini-app's own type, the template's parameter: its root channel's
+%% messages, what it draws for its person --- its output thread, construct 0,
+%% wrapped in output(...) (vGLP, 2026-10-14 11:36 UTC, Udi: yes to (b)) ---
+%% and what its scripted person reports it sees, the items of that thread,
+%% each a term of this type.
+Ping ::= PingMsg ; output(Stream(Ping)) ; AppUi.
+
+%% The relay's bookkeeping (miniapp.glp): the events of its conversations,
+%% their write ends, and probes held for a conversation.
+EvMsg    ::= greeted(Key, Key) ; probe_from(Key, ProbeValue?) ; got(String).
+EvStream ::= [] ; [EvMsg | EvStream].
+ConvEnd  ::= conv(Key, Stream(Ping)?).
+ConvList ::= [] ; [ConvEnd | ConvList].
+HeldProbe ::= held(ProbeValue?).
+HeldList  ::= [] ; [HeldProbe | HeldList].
 
 %% What became of a probe (miniapp.glp, probe_on/5 and report/3): sent on the
 %% conversation with the friend, or none, there being no such conversation.
 ProbeStatus ::= sent ; none.
 
-imported procedure miniapp#ping(Constant?, AppUiStream, SgChannel?).
-exported procedure ping(Constant?, AppUiStream, SgChannel?).
-ping(Id, Ui?, Sg) :- miniapp # ping(Id?, Ui, Sg?).
+imported procedure miniapp#miniapp(Key?, PersonChannel(Ping)?, SgChannel(Ping)?, Stream(Integer)?).
+exported procedure miniapp(Key?, PersonChannel(Ping)?, SgChannel(Ping)?, Stream(Integer)?).
+miniapp(Id, Ui, Sg, Cal) :- miniapp # miniapp(Id?, Ui?, Sg?, Cal?).
+
+imported procedure person#miniapp_person(Key?, Constant?, Channel(Stream(Draw(Ping)), Stream(Input(Ping)))?, Stream(Ping)).
+exported procedure miniapp_person(Key?, Constant?, Channel(Stream(Draw(Ping)), Stream(Input(Ping)))?, Stream(Ping)).
+miniapp_person(Id, Role, PEnd, Screen?) :- person # miniapp_person(Id?, Role?, PEnd?, Screen).

@@ -49,7 +49,8 @@
 %% request clauses follow every otherwise clause of serve.
 %%
 %% The types not declared here --- Decision, PendingValue, UserInMsg,
-%% AgentToUserStream, Content, AppUiStream --- are those of ../self.glp.
+%% AgentToUserStream, Content --- are those of ../self.glp, and the person
+%% channel's, PersonChannel(T), the root's.
 
 %% =============================================================================
 %% The questions (vGLP, Definition "Volitional Procedure, Interactive Type,
@@ -165,8 +166,9 @@ serve([trust(Key) | Reqs], Id, Outs, Cmds?) :-
 
 %% Install a certified mini-app: the artefact beside this program is read, its
 %% creator's certification signed over its source identity, and the mini-app
-%% installed under the name the person gives it, with the channel on which it
-%% will show its person its own screen.
+%% installed under the name the person gives it, with its end of the person
+%% channel on which it will show its person its own screen, and its calendar,
+%% written from the device's clock.
 serve([install(App, Name) | Reqs], Id, Outs, Cmds?) :-
     ground(Id?), ground(App?), ground(Name?) |
     load_file(Name?, C),
@@ -196,13 +198,18 @@ connect_act(Friend, Id, Reqs, Outs, [msg(person, Id?, connect(Friend?)) | Cmds?]
     ground(Friend?) | serve(Reqs?, Id?, Outs?, Cmds).
 
 %% install_act(Content, App, Id, Reqs, Outs, Cmds): a certified artefact is
-%% installed under the person's name for it; anything else is not installed,
-%% and the person's stream carries on.
+%% installed under the person's name for it, with the mini-app's end of a
+%% fresh person channel, at Opaque, the super-app holding no declaration of a
+%% mini-app's types, and its calendar (GSG paper, Section 3, "What the
+%% super-app grants a mini-app"); anything else is not installed, and the
+%% person's stream carries on.
 procedure install_act(Content?, Constant?, Key?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg)).
-install_act(M, App, Id, Reqs, Outs, [msg(person, Id?, install(App?, M?, CSig?, Ui)) | Cmds?]) :-
+install_act(M, App, Id, Reqs, Outs, [msg(person, Id?, install(App?, M?, CSig?, Ui?, Cal?)) | Cmds?]) :-
     module(M?) |
     creator_certification(M?, CSig),
-    hold_ui(Ui?),
+    new_channel(Ui, Person),
+    hold_person(Person?),
+    calendar(Cal),
     serve(Reqs?, Id?, Outs?, Cmds).
 install_act(S, _, Id, Reqs, Outs, Cmds?) :-
     string(S?) |
@@ -216,10 +223,7 @@ creator_certification(M, CSig?) :-
     self_key(K),
     sign(creator_cert(Src?, [friendship, ending_a_friendship], grassroots), K?, CSig).
 
-%% The mini-app's user-interface stream: the super-app user interface holds its
-%% reader; here it is held until there is a screen to show it on, and read to
-%% its close, which the mini-app's execution writes, or the super-app's
+%% The person's end of the mini-app's person channel is held by hold_person/1
+%% (self.glp) until there is a screen to show it on, its draws read to their
+%% close, which the mini-app's execution writes, or the super-app's
 %% close_apps/1 where the mini-app is never activated.
-procedure hold_ui(AppUiStream?).
-hold_ui([_ | Xs]) :- hold_ui(Xs?).
-hold_ui([]).

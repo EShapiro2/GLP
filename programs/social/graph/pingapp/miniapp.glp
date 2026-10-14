@@ -1,15 +1,23 @@
-%% miniapp.glp --- the test mini-app of the super-app plays: ping/3.
+%% miniapp.glp --- the test mini-app of the super-app plays: its entry
+%% miniapp/4, the super-app's entry template at the mini-app's own type Ping
+%% (self.glp).
 %%
 %% A mini-app holds, at activation, the variables the super-app posted with
-%% its goal, and afterwards only what arrives on them (SGSG paper, Section 3):
-%% Ui, its stream to the super-app user interface, and Sg, its channel to the
-%% social graph, on which the social graph hands it, at each invitation and
-%% each warm call, one end of a root channel to the execution of the same
-%% mini-app at a friend, and reports a held link, and on which the mini-app
-%% asks for a warm call (Section 5.2).  On each conversation the execution
-%% reports to its person that it opened, greets the other over the root
-%% channel, and reports the greeting it receives.  The mini-app calls no
-%% system predicate reaching the network or the person, so the program is
+%% its goal, and afterwards only what arrives on them (GSG paper, Section 3,
+%% "What the super-app grants a mini-app"): its end of the person channel, on
+%% which it shows its person what it draws; its channel to the social graph,
+%% on which the social graph hands it, at each invitation and each warm call,
+%% one end of a root channel to the execution of the same mini-app at a
+%% friend, and reports a held link, and on which the mini-app asks for a warm
+%% call (Section 5.4); and the calendar, which it keeps no dates for and
+%% ignores.  On each conversation the execution reports to its person that it
+%% opened, greets the other over the root channel, and reports the greeting
+%% it receives.  What it reports reaches the person as its output thread,
+%% construct 0, drawn again with every item so far as each arrives (vGLP,
+%% Definition "Canonical Compilation": "the dispatcher draws that output as a
+%% thread"), wrapped in output(...) (vGLP, 2026-10-14 11:36 UTC).  It asks
+%% its person nothing, so it reads no grant.  The mini-app calls no system
+%% predicate reaching the network or the person, so the program is
 %% certified.
 %%
 %% THE RELAY, for the warm call: the execution at alice, once greeted by carol,
@@ -18,20 +26,46 @@
 %% holds it until that conversation opens); the execution at bob assigns W.
 %% The end reached bob under alice's name from carol, so bob's runtime holds
 %% the assignment and reports pending_link(Name, carol) to bob's super-app,
-%% which reports it here; the mini-app asks its social graph for a warm call
-%% to the anchor through carol, and, the warm call done, alice's execution
-%% reads the value and reports got(V).
+%% which reports it here as held(Name, carol); the mini-app asks its social
+%% graph for a warm call to the anchor through carol, warm_call(Name, carol)
+%% (GSG, 2026-10-14 11:36 UTC, items 2 and 3), and, the warm call done,
+%% alice's execution reads the value and reports got(V).
 
-exported procedure ping(Constant?, AppUiStream, SgChannel?).
-ping(Id, Ui?, ch(Down, Up?)) :-
+exported procedure miniapp(Key?, PersonChannel(Ping)?, SgChannel(Ping)?, Stream(Integer)?).
+miniapp(Id, ch(_, Draws?), ch(Down, Up?), _) :-
     ground(Id?) |
-    loop(Id?, Down?, [], Ui, Up, [], []).
+    loop(Id?, Down?, [], Ui, Up, [], []),
+    show(Ui?, Draws).
+
+%% show(Ui, Draws): the person's items as the output thread, construct 0:
+%% drawn at once with no item, and again with the items so far as each
+%% arrives whole; closed when the items close, the execution having ended.
+procedure show(Stream(Ping)?, Stream(Draw(Ping))).
+show(Ui, [draw(0, thread(shown), output([])) | Ds?]) :-
+    show_more(Ui?, [], Ds).
+
+procedure show_more(Stream(Ping)?, Stream(Ping)?, Stream(Draw(Ping))).
+show_more([U | Us], Es, Ds?) :-
+    ground(U?), ground(Es?) |
+    add_item(Es?, U?, Es1),
+    show_draw(Us?, Es1?, Ds).
+show_more([], _, []).
+
+procedure show_draw(Stream(Ping)?, Stream(Ping)?, Stream(Draw(Ping))).
+show_draw(Us, Es, [draw(0, thread(shown), output(Es?)) | Ds?]) :-
+    ground(Es?) |
+    show_more(Us?, Es?, Ds).
+
+%% add_item(Es, U, Es1): Es with U after its last item.
+procedure add_item(Stream(Ping)?, Ping?, Stream(Ping)).
+add_item([E | Es], U, [E? | Es1?]) :- add_item(Es?, U?, Es1).
+add_item([], U, [U?]).
 
 %% loop(Id, Down, Ev, Ui, Up, Convs, Held): Down the social graph's stream,
 %% Ev the events of the conversations' readers (merged), Ui the person's
 %% stream, Up the requests to the social graph, Convs the conversations' write
 %% ends, Held the probes waiting for a conversation with bob.
-procedure loop(Constant?, SgToAppStream?, EvStream?, AppUiStream, AppToSgStream, ConvList?, HeldList?).
+procedure loop(Key?, Stream(SgToApp(Ping))?, EvStream?, Stream(Ping), Stream(AppToSg), ConvList?, HeldList?).
 
 %% A conversation opens: report it, greet the friend, read the friend's stream
 %% into the events, and flush a held probe if this is the conversation it
@@ -45,7 +79,7 @@ loop(Id, [conversation(F, ch(In, Out?)) | Down], Ev, [opened(F?) | Ui?], Up?, Co
 
 %% The social graph reports a held link: ask it for a warm call to the anchor
 %% through the friend that forwarded the end.
-loop(Id, [pending_link(Name, Via) | Down], Ev, [held_link(Via?) | Ui?], [warm_call(Name?, Via?) | Up?], Convs, Held) :-
+loop(Id, [held(Name, Via) | Down], Ev, [held_link(Via?) | Ui?], [warm_call(Name?, Via?) | Up?], Convs, Held) :-
     ground(Via?) |
     loop(Id?, Down?, Ev?, Ui, Up, Convs?, Held?).
 
@@ -84,18 +118,23 @@ loop(Id, Down, [got(V) | Ev], [got(V?) | Ui?], Up?, Convs, Held) :-
 %% The social graph closes the stream: close everything.
 loop(_, [], _, [], [], Convs, _) :- close_convs(Convs?).
 
-%% talk(Id, F, In, Ev): read the friend's stream into events.
-procedure talk(Constant?, Constant?, PingStream?, EvStream).
+%% talk(Id, F, In, Ev): read the friend's stream into events.  The root
+%% channel is typed at the mini-app's own type, Ping, of which an execution
+%% of this program sends only the messages PingMsg; anything else is passed
+%% over.
+procedure talk(Key?, Key?, Stream(Ping)?, EvStream).
 talk(Id, F, [hello(Who) | In], [greeted(F?, Who?) | Ev?]) :-
     ground(Who?) | talk(Id?, F?, In?, Ev).
 talk(Id, F, [probe(W?) | In], [probe_from(F?, W) | Ev?]) :-
     talk(Id?, F?, In?, Ev).
+talk(Id, F, [_ | In], Ev?) :-
+    otherwise | talk(Id?, F?, In?, Ev).
 talk(_, _, [], []).
 
 %% open_out(F, Id, Held, Held1, Out, Out2): the conversation's write stream
 %% opens with the greeting and, on the conversation with bob, a held probe;
 %% the caller keeps the writer of the rest, Out2.
-procedure open_out(Constant?, Constant?, HeldList?, HeldList, PingStream, PingStream?).
+procedure open_out(Key?, Key?, HeldList?, HeldList, Stream(Ping), Stream(Ping)?).
 open_out(bob, Id, [held(W?) | Held], Held?, [hello(Id?), probe(W) | Out2?], Out2).
 open_out(_, Id, Held, Held?, [hello(Id?) | Out2?], Out2) :- otherwise | true.
 
@@ -106,14 +145,14 @@ open_out(_, Id, Held, Held?, [hello(Id?) | Out2?], Out2) :- otherwise | true.
 %% not carry an assignment back across a link (programs/tests/linkprobes/linkprobe
 %% beside programs/tests/linkprobes/linkprobe3).  With no conversation with F
 %% the probe reaches nobody, and is answered unreachable rather than held.
-procedure probe_on(Constant?, ConvList?, ConvList, ProbeValue, ProbeStatus).
+procedure probe_on(Key?, ConvList?, ConvList, ProbeValue, ProbeStatus).
 probe_on(F, [conv(F1, [probe(W) | Out1?]) | Rest], [conv(F1?, Out1) | Rest?], W?, sent) :-
     F? =?= F1? | true.
 probe_on(F, [C | Rest], [C? | Rest1?], V?, St?) :- otherwise | probe_on(F?, Rest?, Rest1, V, St).
 probe_on(_, [], [], unreachable, none).
 
 %% report(St, Ui, Ui2): what became of the probe, on the person's stream.
-procedure report(ProbeStatus?, AppUiStream, AppUiStream?).
+procedure report(ProbeStatus?, Stream(Ping), Stream(Ping)?).
 report(sent, [probed(carol) | Ui2?], Ui2).
 report(none, [no_conv(carol) | Ui2?], Ui2).
 

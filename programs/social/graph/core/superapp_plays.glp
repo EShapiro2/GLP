@@ -1,14 +1,22 @@
 %% superapp_plays.glp --- distribution with an invitation, the handshake,
-%% activation by run/3 with the two grants, and the attestation (SGSG paper,
-%% Sections 3 and 5.5), played by two social-graph agents in one heap, the
-%% network a two-way crossbar for cold calls, and under :boot (../../superapp_boot.glp)
-%% by two isolates with their own keys.  The certified mini-apps are ../pingapp,
-%% of the one-way user-interface stream, and Currencies' ../../../currencies/coins/currency,
-%% of the person channel (play_coins); the super-app reads their
-%% artefacts with load_file/2.  The persons are scripted on the agents' person
-%% streams --- the mediator's cards for an invitation are vGLP's to add --- and
-%% the mini-apps' user-interface streams come back to the caller, or, under
-%% :boot, go to the person.
+%% activation by run/3 with the three grants, and the attestation (GSG paper,
+%% Sections 3, 4, 5.5 and 6), played by two social-graph agents in one heap,
+%% the network a two-way crossbar for cold calls, and under :boot
+%% (../../superapp_boot.glp) by two isolates with their own keys.  The
+%% certified mini-apps are GSG's ../pingapp and ../endapp, Currencies'
+%% currency and denominated, and CSSN's childsafe; the super-app reads their
+%% artefacts with load_file/2.  The persons are scripted on the agents'
+%% person streams.
+%%
+%% The super-app holds no declaration of a mini-app's types.  A play mints a
+%% mini-app's person channel at Opaque, installs the mini-app with one end and
+%% hands the other to the mini-app's own scripted person, the instance at the
+%% mini-app's type of the second template miniapp_person/4, activated from the
+%% same module value as the entry (miniapp_person_run/5); the screen it reports
+%% comes back to the caller at Opaque, or, under :boot, goes to the person
+%% (GSG, 2026-10-13 18:52 UTC, O5, Udi: approved).  A play never inspects
+%% what a screen carries: it passes it on, and reads only that an item came
+%% or that the screen closed.
 
 imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 imported procedure home#home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(HomeQuestion))).
@@ -28,6 +36,32 @@ procedure(X) tee(Stream(X)?, Stream(X), Stream(X)).
 tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
 tee([], [], []).
 
+%% miniapp_person_run(M, Id, Role, PEnd, Screen): the mini-app M's scripted
+%% person activated, from the module value, by run/3 at the type identity of
+%% the second template's opaque instance at the type its exports record for
+%% miniapp_person/4, as the agent activates the entry (agent.glp,
+%% activate/6), on the person's end PEnd of the person channel whose other end
+%% the play installs the mini-app with; Screen the screen it reports, at
+%% Opaque.  The play mints the channel and hands its two ends to two
+%% activations of one module value, so it checks that the module records the
+%% entry and the person at one type (TGLP modules.tex, "The invitation
+%% discipline": "opaque_type yields one identity for the two entries, which the
+%% host checks"; GLP, 2026-10-13 20:22 UTC, C).  Where they are not, no person
+%% runs: its grants close and its screen is empty.
+procedure miniapp_person_run(Content?, Key?, Constant?, Channel(Stream(Draw(Opaque)), Stream(Input(Opaque)))?, Stream(Opaque)).
+miniapp_person_run(M, Id, Role, PEnd, Screen?) :-
+    module(M?) |
+    opaque_type(miniapp/4, M?, H0),
+    opaque_type(miniapp_person/4, M?, H),
+    person_at(H0?, H?, M?, Id?, Role?, PEnd?, Screen).
+
+procedure person_at(Constant?, Constant?, Module?, Key?, Constant?, Channel(Stream(Draw(Opaque)), Stream(Input(Opaque)))?, Stream(Opaque)).
+person_at(H0, H, M, Id, Role, PEnd, Screen?) :-
+    H0? =?= H? |
+    find_type(miniapp_person/4, H?, T),
+    run(miniapp_person(Id?, Role?, PEnd?, Screen), T?, M?).
+person_at(_, _, _, _, _, ch(_, []), []) :- otherwise | true.
+
 %% The certified mini-app: pingapp.glpw beside this program, written by the
 %% REPL's :artefact from ../pingapp and read with load_file/2 --- a Module
 %% where its certificate verifies, its text otherwise.  certified/4 gives the
@@ -44,48 +78,60 @@ certified(M, CK?, CSig?) :-
 %% =============================================================================
 %% play_invite: alice installs the mini-app, befriends bob and invites him;
 %% bob installs it and consents; the handshake opens the root channel and the
-%% two executions greet each other.
-%% Expected: AliceUi = [greeted(bob)], BobUi = [greeted(alice)], → succeeds.
+%% two executions greet each other.  Each person's screen is the mini-app's
+%% scripted person's, under its role greet, which stops at the greeting.
+%% Expected: AliceUi = [opened(bob), greeted(bob)], BobUi = [opened(alice),
+%% greeted(alice)], → succeeds.
 %% =============================================================================
-exported procedure play_invite(AppUiStream, AppUiStream).
+exported procedure play_invite(Stream(Opaque), Stream(Opaque)).
 play_invite(AliceUi?, BobUi?) :-
     crossbar2(AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
     load_file("pingapp.glpw", C),
     certified(C?, _, CSig),
     agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
-    tee(AliceUiRaw?, AliceUi, AliceSeen),
-    alice_person(C?, CSig?, yes, AliceUiRaw, AliceOut?, AliceSeen?, AliceIn),
+    new_channel(AliceApp, AlicePerson),
+    miniapp_person_run(C?, alice, greet, AlicePerson?, AliceScreen),
+    tee(AliceScreen?, AliceUi, AliceSeen),
+    alice_person(C?, CSig?, yes, AliceApp?, AliceOut?, AliceSeen?, AliceIn),
     agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
-    tee(BobUiRaw?, BobUi, BobSeen),
-    bob_person(C?, CSig?, yes, BobUiRaw, BobOut?, BobSeen?, BobIn).
+    new_channel(BobApp, BobPerson),
+    miniapp_person_run(C?, bob, greet, BobPerson?, BobScreen),
+    tee(BobScreen?, BobUi, BobSeen),
+    bob_person(C?, CSig?, yes, BobApp?, BobOut?, BobSeen?, BobIn).
 
 %% =============================================================================
 %% play_invite_declined: as above, but bob's person declines; no conversation
 %% opens and neither execution is activated.
 %% Expected: AliceUi = [], BobUi = [], → succeeds.
 %% =============================================================================
-exported procedure play_invite_declined(AppUiStream, AppUiStream).
+exported procedure play_invite_declined(Stream(Opaque), Stream(Opaque)).
 play_invite_declined(AliceUi?, BobUi?) :-
     crossbar2(AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
     load_file("pingapp.glpw", C),
     certified(C?, _, CSig),
     agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
-    tee(AliceUiRaw?, AliceUi, AliceSeen),
-    alice_person(C?, CSig?, no, AliceUiRaw, AliceOut?, AliceSeen?, AliceIn),
+    new_channel(AliceApp, AlicePerson),
+    miniapp_person_run(C?, alice, greet, AlicePerson?, AliceScreen),
+    tee(AliceScreen?, AliceUi, AliceSeen),
+    alice_person(C?, CSig?, no, AliceApp?, AliceOut?, AliceSeen?, AliceIn),
     agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
-    tee(BobUiRaw?, BobUi, BobSeen),
-    bob_person(C?, CSig?, no, BobUiRaw, BobOut?, BobSeen?, BobIn).
+    new_channel(BobApp, BobPerson),
+    miniapp_person_run(C?, bob, greet, BobPerson?, BobScreen),
+    tee(BobScreen?, BobUi, BobSeen),
+    bob_person(C?, CSig?, no, BobApp?, BobOut?, BobSeen?, BobIn).
 
-%% Alice's person: install the mini-app, cold-call bob, and once connected
-%% invite him.  Wait = yes: keep the person stream open until her execution
-%% has been greeted; no: close it after inviting.
-procedure alice_person(Content?, String?, Decision?, AppUiStream, AgentToUserStream?, AppUiStream?, UserInStream).
-alice_person(M, CSig, Wait, Ui?, Outs, Seen,
-             [msg(person, alice, install(ping, M?, CSig?, Ui)),
+%% Alice's person: install the mini-app, with its end of the person channel
+%% and an empty calendar, the mini-app keeping no dates, cold-call bob, and
+%% once connected invite him.  Wait = yes: keep the person stream open until
+%% the mini-app's person has seen her execution greeted, its screen closing;
+%% no: close it after inviting.
+procedure alice_person(Content?, String?, Decision?, PersonChannel(Opaque)?, AgentToUserStream?, Stream(Opaque)?, UserInStream).
+alice_person(M, CSig, Wait, Ui, Outs, Seen,
+             [msg(person, alice, install(ping, M?, CSig?, Ui?, [])),
               msg(person, alice, connect(bob)) | Cmds?]) :-
     alice_wait(Wait?, Outs?, Seen?, Cmds).
 
-procedure alice_wait(Decision?, AgentToUserStream?, AppUiStream?, UserInStream).
+procedure alice_wait(Decision?, AgentToUserStream?, Stream(Opaque)?, UserInStream).
 alice_wait(yes, [msg(agent, person, connected(bob)) | _], Seen,
            [msg(person, alice, invite(ping, bob)) | Cmds?]) :-
     person_done(Seen?, Cmds).
@@ -94,25 +140,28 @@ alice_wait(no, [msg(agent, person, connected(bob)) | _], _,
 alice_wait(W, [_ | Outs], Seen, Cmds?) :- otherwise | alice_wait(W?, Outs?, Seen?, Cmds).
 alice_wait(_, [], _, []).
 
-%% Close the person stream once the mini-app has been greeted, or closed.
-procedure person_done(AppUiStream?, UserInStream).
-person_done([greeted(_) | _], []).
-person_done([_ | Seen], Cmds?) :- otherwise | person_done(Seen?, Cmds).
+%% Close the person stream once the mini-app's screen has closed: under the
+%% role greet its person stops at the greeting (../pingapp/person.glp), and
+%% the screen closes too where the mini-app ends.  The screen's items are
+%% passed over, never inspected.
+procedure person_done(Stream(Opaque)?, UserInStream).
+person_done([_ | Seen], Cmds?) :- person_done(Seen?, Cmds).
 person_done([], []).
 
 %% Bob's person: install the mini-app and give (or refuse) consent before the
-%% offer arrives; answer alice's cold call; then wait to be greeted, or close.
-procedure bob_person(Content?, String?, Decision?, AppUiStream, AgentToUserStream?, AppUiStream?, UserInStream).
-bob_person(M, CSig, yes, Ui?, Outs, Seen,
-           [msg(person, bob, install(ping, M?, CSig?, Ui)),
+%% offer arrives; answer alice's cold call; then wait for the mini-app's
+%% screen to close, or close.
+procedure bob_person(Content?, String?, Decision?, PersonChannel(Opaque)?, AgentToUserStream?, Stream(Opaque)?, UserInStream).
+bob_person(M, CSig, yes, Ui, Outs, Seen,
+           [msg(person, bob, install(ping, M?, CSig?, Ui?, [])),
             msg(person, bob, accept_invite(ping, alice)) | Cmds?]) :-
     bob_wait(yes, Outs?, Seen?, Cmds).
-bob_person(M, CSig, no, Ui?, Outs, Seen,
-           [msg(person, bob, install(ping, M?, CSig?, Ui)),
+bob_person(M, CSig, no, Ui, Outs, Seen,
+           [msg(person, bob, install(ping, M?, CSig?, Ui?, [])),
             msg(person, bob, decline_invite(ping, alice)) | Cmds?]) :-
     bob_wait(no, Outs?, Seen?, Cmds).
 
-procedure bob_wait(Decision?, AgentToUserStream?, AppUiStream?, UserInStream).
+procedure bob_wait(Decision?, AgentToUserStream?, Stream(Opaque)?, UserInStream).
 bob_wait(yes, [msg(agent, person, befriend(alice, P)) | _], Seen,
          [msg(person, bob, decision(yes, alice, P?)) | Cmds?]) :-
     person_done(Seen?, Cmds).
@@ -279,8 +328,9 @@ naf_record([], [], []).
 %% =============================================================================
 %% play_invite_timed(Ms): play_invite, timed --- the milliseconds from the
 %% moment alice's person sends the invitation to the moment the root
-%% channel's end reaches bob's execution of the mini-app (its opened/1 on the
-%% user-interface stream); the clock is now/1, in milliseconds.
+%% channel's end reaches bob's execution of the mini-app: the first item on
+%% its screen, its opened/1 (../pingapp/miniapp.glp), read as an item come and
+%% not inspected; the clock is now/1, in milliseconds.
 %% =============================================================================
 exported procedure play_invite_timed(Integer).
 play_invite_timed(Ms?) :-
@@ -288,12 +338,14 @@ play_invite_timed(Ms?) :-
     load_file("pingapp.glpw", C),
     certified(C?, _, CSig),
     agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
-    tee(AliceUiRaw?, AliceUi, AliceSeen),
-    alice_person_timed(C?, CSig?, AliceUiRaw, AliceOut?, AliceSeen?, T0, AliceIn),
-    sink(AliceUi?),
+    new_channel(AliceApp, AlicePerson),
+    miniapp_person_run(C?, alice, greet, AlicePerson?, AliceSeen),
+    alice_person_timed(C?, CSig?, AliceApp?, AliceOut?, AliceSeen?, T0, AliceIn),
     agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
-    tee(BobUiRaw?, BobUi, BobSeen),
-    bob_person(C?, CSig?, yes, BobUiRaw, BobOut?, BobSeen?, BobIn),
+    new_channel(BobApp, BobPerson),
+    miniapp_person_run(C?, bob, greet, BobPerson?, BobScreen),
+    tee(BobScreen?, BobUi, BobSeen),
+    bob_person(C?, CSig?, yes, BobApp?, BobOut?, BobSeen?, BobIn),
     opened_at(BobUi?, T0?, Ms).
 
 procedure(X) sink(Stream(X)?).
@@ -302,13 +354,13 @@ sink([]).
 
 %% Alice's person as in play_invite, reading the clock as she sends the
 %% invitation.
-procedure alice_person_timed(Content?, String?, AppUiStream, AgentToUserStream?, AppUiStream?, Integer, UserInStream).
-alice_person_timed(M, CSig, Ui?, Outs, Seen, T0?,
-                   [msg(person, alice, install(ping, M?, CSig?, Ui)),
+procedure alice_person_timed(Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, Stream(Opaque)?, Integer, UserInStream).
+alice_person_timed(M, CSig, Ui, Outs, Seen, T0?,
+                   [msg(person, alice, install(ping, M?, CSig?, Ui?, [])),
                     msg(person, alice, connect(bob)) | Cmds?]) :-
     alice_wait_timed(Outs?, Seen?, T0, Cmds).
 
-procedure alice_wait_timed(AgentToUserStream?, AppUiStream?, Integer, UserInStream).
+procedure alice_wait_timed(AgentToUserStream?, Stream(Opaque)?, Integer, UserInStream).
 alice_wait_timed([msg(agent, person, connected(bob)) | _], Seen, T0?,
                  [msg(person, alice, invite(ping, bob)) | Cmds?]) :-
     now(T0),
@@ -316,10 +368,10 @@ alice_wait_timed([msg(agent, person, connected(bob)) | _], Seen, T0?,
 alice_wait_timed([_ | Outs], Seen, T0?, Cmds?) :- otherwise | alice_wait_timed(Outs?, Seen?, T0, Cmds).
 alice_wait_timed([], _, 0, []).
 
-%% opened_at(Ui, T0, Ms): the clock at bob's opened/1, less T0.
-procedure opened_at(AppUiStream?, Integer?, Integer).
-opened_at([opened(_) | _], T0, Ms?) :- now(T1), Ms := T1? - T0?.
-opened_at([_ | Ui], T0, Ms?) :- otherwise | opened_at(Ui?, T0?, Ms).
+%% opened_at(Ui, T0, Ms): the clock at the first item on bob's screen, his
+%% opened/1, less T0.
+procedure opened_at(Stream(Opaque)?, Integer?, Integer).
+opened_at([_ | _], T0, Ms?) :- now(T1), Ms := T1? - T0?.
 opened_at([], _, 0).
 
 %% =============================================================================
@@ -330,17 +382,17 @@ opened_at([], _, 0).
 %% invites, bob consents.  What the mini-app shows its person goes to the
 %% person (send_to_user/1), printed by the harness as [agent] term.
 %% =============================================================================
-procedure alice_person_boot(Content?, String?, String?, AppUiStream, AgentToUserStream?, AppUiStream?, UserInStream).
-alice_person_boot(M, CK, CSig, Ui?, Outs, Seen,
+procedure alice_person_boot(Content?, String?, String?, PersonChannel(Opaque)?, AgentToUserStream?, Stream(Opaque)?, UserInStream).
+alice_person_boot(M, CK, CSig, Ui, Outs, Seen,
                   [msg(person, alice, trust(CK?)),
-                   msg(person, alice, install(ping, M?, CSig?, Ui)),
+                   msg(person, alice, install(ping, M?, CSig?, Ui?, [])),
                    msg(person, alice, connect(bob)) | Cmds?]) :-
     alice_wait(yes, Outs?, Seen?, Cmds).
 
-procedure bob_person_boot(Content?, String?, String?, AppUiStream, AgentToUserStream?, AppUiStream?, UserInStream).
-bob_person_boot(M, CK, CSig, Ui?, Outs, Seen,
+procedure bob_person_boot(Content?, String?, String?, PersonChannel(Opaque)?, AgentToUserStream?, Stream(Opaque)?, UserInStream).
+bob_person_boot(M, CK, CSig, Ui, Outs, Seen,
                 [msg(person, bob, trust(CK?)),
-                 msg(person, bob, install(ping, M?, CSig?, Ui)),
+                 msg(person, bob, install(ping, M?, CSig?, Ui?, [])),
                  msg(person, bob, accept_invite(ping, alice)) | Cmds?]) :-
     bob_wait(yes, Outs?, Seen?, Cmds).
 
@@ -370,10 +422,11 @@ exported procedure play_install(String?, Constant?, Stream(Constant)).
 play_install(N, App, Installed?) :-
     load_file(N?, C),
     certified_or_not(C?, CSig),
-    agent # agent(alice, [msg(person, alice, install(App?, C?, CSig?, Ui)),
+    new_channel(Ui, Person),
+    agent # agent(alice, [msg(person, alice, install(App?, C?, CSig?, Ui?, [])),
                           msg(person, alice, installed(Installed))],
                   [], [user_output(Out), net_output(NetOut)]),
-    sink(Ui?), sink(Out?), sink(NetOut?).
+    hold_person(Person?), sink(Out?), sink(NetOut?).
 
 procedure certified_or_not(Content?, String).
 certified_or_not(M, CSig?) :- module(M?) | certified(M?, _, CSig).
@@ -400,20 +453,23 @@ certified_or_not(S, none) :- string(S?) | true.
 exported procedure play_forged_cert(Stream(Constant)).
 play_forged_cert(Installed?) :-
     load_file("pingapp.glpw", C),
-    agent # agent(alice, [msg(person, alice, install(ping, C?, forged, Ui)),
+    new_channel(Ui, Person),
+    agent # agent(alice, [msg(person, alice, install(ping, C?, forged, Ui?, [])),
                           msg(person, alice, installed(Installed))],
                   [], [user_output(Out), net_output(NetOut)]),
-    sink(Ui?), sink(Out?), sink(NetOut?).
+    hold_person(Person?), sink(Out?), sink(NetOut?).
 
 %% play_forged_invite(Out): bob's super-app receives from alice an invitation
-%% that is not a signed term, and then a text.
+%% that is not a signed term, with one end of a root channel, and then a
+%% text.
 %% Expected: Out = [msg(agent, person, received(alice, hello))] --- the offer
 %% was refused, nothing was delivered for it, and the text that followed
 %% arrived; → succeeds.
 exported procedure play_forged_invite(AgentToUserStream).
 play_forged_invite(Out?) :-
+    root_end(End),
     agent # agent(bob, BobIn?,
-                  [msg(alice, bob, invite(ping, src, t, forged)),
+                  [msg(alice, bob, invite(src, forged, End?)),
                    msg(alice, bob, text(hello))],
                   [user_output(BobOut), net_output(NetOut)]),
     until_received(BobOut?, Out, BobIn),
@@ -427,23 +483,22 @@ play_forged_invite(Out?) :-
 exported procedure play_forged_join(AgentToUserStream).
 play_forged_join(Out?) :-
     agent # agent(alice, AliceIn?,
-                  [msg(bob, alice, join(ping, src, t, forged)),
+                  [msg(bob, alice, join(src, t, forged)),
                    msg(bob, alice, text(hello))],
                   [user_output(AliceOut), net_output(NetOut)]),
     until_received(AliceOut?, Out, AliceIn),
     sink(NetOut?).
 
 %% play_forged_root(Out): bob's super-app, the invitee, receives from alice
-%% one end of a root channel under an undertaking that is not a signed term,
-%% and then a text.
+%% her answer to a join under an undertaking that is not a signed term, and
+%% then a text.
 %% Expected: Out = [msg(agent, person, received(alice, hello))] --- the end
 %% was not accepted, nothing was delivered, and the text that followed
 %% arrived; → succeeds.
 exported procedure play_forged_root(AgentToUserStream).
 play_forged_root(Out?) :-
-    root_end(End),
     agent # agent(bob, BobIn?,
-                  [msg(alice, bob, root(ping, src, t, forged, End?)),
+                  [msg(alice, bob, root(src, t, forged)),
                    msg(alice, bob, text(hello))],
                   [user_output(BobOut), net_output(NetOut)]),
     until_received(BobOut?, Out, BobIn),
@@ -459,10 +514,10 @@ until_received([M | Outs], [M? | Seen?], Cmds?) :-
     otherwise | until_received(Outs?, Seen, Cmds).
 until_received([], [], []).
 
-%% root_end(End): one end of a fresh root channel of the test mini-app's
-%% protocol, as root_ends/3 makes it, the other end dropped.
-procedure root_end(RootEnd).
-root_end(ping_end(E?)) :- new_channel(E, _) | true.
+%% root_end(End): one end of a fresh root channel, at Opaque, as root_step/13
+%% makes it, the other end dropped.
+procedure root_end(RootChannel(Opaque)).
+root_end(E?) :- new_channel(E, _) | true.
 
 %% =============================================================================
 %% The warm call on three smartphones (../../superapp3_boot.glp): alice, bob
@@ -486,22 +541,27 @@ sg_init(alice, invite, NetIn) :-
     send_to_net(NetOut?),
     load_file("pingapp.glpw", C),
     certified(C?, CK, CSig),
-    tee(Ui?, Show, Seen),
+    new_channel(App, Person),
+    miniapp_person_run(C?, alice, greet, Person?, Screen),
+    tee(Screen?, Show, Seen),
     send_to_user(Show?),
-    alice_person_boot(C?, CK?, CSig?, Ui, Out?, Seen?, AliceIn).
+    alice_person_boot(C?, CK?, CSig?, App?, Out?, Seen?, AliceIn).
 sg_init(bob, consent, NetIn) :-
     agent # agent(bob, BobIn?, NetIn?, [user_output(Out), net_output(NetOut)]),
     send_to_net(NetOut?),
     load_file("pingapp.glpw", C),
     certified(C?, CK, CSig),
-    tee(Ui?, Show, Seen),
+    new_channel(App, Person),
+    miniapp_person_run(C?, bob, greet, Person?, Screen),
+    tee(Screen?, Show, Seen),
     send_to_user(Show?),
-    bob_person_boot(C?, CK?, CSig?, Ui, Out?, Seen?, BobIn).
+    bob_person_boot(C?, CK?, CSig?, App?, Out?, Seen?, BobIn).
 
 %% The currency on two smartphones (../../coins_boot.glp): each person trusts
 %% the compiler's key, installs the certified currency with its own end of a
-%% person channel, and scripts the swap of play_coins; what the
-%% currency shows a person goes to the person, printed by the harness.
+%% person channel, and its scripted person, Currencies' own, plays the swap of
+%% play_coins under its role; what the currency shows a person goes to the
+%% person, printed by the harness.
 sg_init(alice, coins, NetIn) :-
     agent # agent(alice, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
     send_to_net(NetOut?),
@@ -509,7 +569,7 @@ sg_init(alice, coins, NetIn) :-
     certified(C?, CK, CSig),
     new_channel(AppEnd, PersonEnd),
     alice_coins_boot(C?, CK?, CSig?, AppEnd?, Out?, In),
-    coin_person(alice, PersonEnd?, [mint(2), swap(bob, alice, 2, bob, 2)], Screen),
+    miniapp_person_run(C?, alice, alice, PersonEnd?, Screen),
     send_to_user(Screen?).
 sg_init(bob, coins, NetIn) :-
     agent # agent(bob, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
@@ -518,13 +578,14 @@ sg_init(bob, coins, NetIn) :-
     certified(C?, CK, CSig),
     new_channel(AppEnd, PersonEnd),
     bob_coins_boot(C?, CK?, CSig?, AppEnd?, Out?, In),
-    coin_person(bob, PersonEnd?, [mint(2), accept(alice)], Screen),
+    miniapp_person_run(C?, bob, bob, PersonEnd?, Screen),
     send_to_user(Screen?).
 
 %% The child-safe platform on two smartphones (../../cssn_boot.glp), as the
 %% currency's clauses above: each person trusts the compiler's key, installs
-%% the certified platform with its own end of a commands-and-notifications
-%% channel, and alice's greets bob once the conversation is adopted.
+%% the certified platform with its own end of a person channel, and its
+%% scripted person, CSSN's own, greets bob under the role greeter once the
+%% conversation is adopted, or watches under the role onlooker.
 sg_init(alice, cssn, NetIn) :-
     agent # agent(alice, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
     send_to_net(NetOut?),
@@ -532,7 +593,7 @@ sg_init(alice, cssn, NetIn) :-
     certified(C?, CK, CSig),
     new_channel(AppEnd, PersonEnd),
     alice_cssn_boot(C?, CK?, CSig?, AppEnd?, Out?, In),
-    cssn_greeter(bob, PersonEnd?, Seen),
+    miniapp_person_run(C?, alice, greeter, PersonEnd?, Seen),
     send_to_user(Seen?).
 sg_init(bob, cssn, NetIn) :-
     agent # agent(bob, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
@@ -541,12 +602,12 @@ sg_init(bob, cssn, NetIn) :-
     certified(C?, CK, CSig),
     new_channel(AppEnd, PersonEnd),
     bob_cssn_boot(C?, CK?, CSig?, AppEnd?, Out?, In),
-    cssn_onlooker(PersonEnd?, Seen),
+    miniapp_person_run(C?, bob, onlooker, PersonEnd?, Seen),
     send_to_user(Seen?).
 
 %% Both mini-apps on two smartphones (../../both_boot.glp): each person trusts
 %% the compiler's key, installs both certified mini-apps with their own
-%% user-interface grants, and runs both platforms over the one friendship.
+%% person channels, and runs both platforms over the one friendship.
 sg_init(alice, both, NetIn) :-
     agent # agent(alice, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
     send_to_net(NetOut?),
@@ -557,9 +618,9 @@ sg_init(alice, both, NetIn) :-
     new_channel(CoinsEnd, CoinsPerson),
     new_channel(CssnEnd, CssnPerson),
     alice_both_boot(CK?, CC?, CCSig?, CoinsEnd?, CS?, CSSig?, CssnEnd?, Out?, In),
-    coin_person(alice, CoinsPerson?, [mint(2), swap(bob, alice, 2, bob, 2)], Screen),
+    miniapp_person_run(CC?, alice, alice, CoinsPerson?, Screen),
     send_to_user(Screen?),
-    cssn_greeter(bob, CssnPerson?, Seen),
+    miniapp_person_run(CS?, alice, greeter, CssnPerson?, Seen),
     send_to_user(Seen?).
 sg_init(bob, both, NetIn) :-
     agent # agent(bob, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
@@ -571,43 +632,51 @@ sg_init(bob, both, NetIn) :-
     new_channel(CoinsEnd, CoinsPerson),
     new_channel(CssnEnd, CssnPerson),
     bob_both_boot(CK?, CC?, CCSig?, CoinsEnd?, CS?, CSSig?, CssnEnd?, Out?, In),
-    coin_person(bob, CoinsPerson?, [mint(2), accept(alice)], Screen),
+    miniapp_person_run(CC?, bob, bob, CoinsPerson?, Screen),
     send_to_user(Screen?),
-    cssn_onlooker(CssnPerson?, Seen),
+    miniapp_person_run(CS?, bob, onlooker, CssnPerson?, Seen),
     send_to_user(Seen?).
 
+%% The warm call: each person's screen is the mini-app's scripted person's,
+%% under its role watch, every item to the person.
 sg_init(alice, warm, NetIn) :-
     agent # agent(alice, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
     send_to_net(NetOut?),
     load_file("pingapp.glpw", C),
     certified(C?, CK, CSig),
-    send_to_user(Ui?),
+    new_channel(App, Person),
+    miniapp_person_run(C?, alice, watch, Person?, Screen),
+    send_to_user(Screen?),
     scripted_home(alice, Out?, Script, ScriptCmds?, In),
-    alice_warm(C?, CK?, CSig?, Ui, Script?, ScriptCmds).
+    alice_warm(C?, CK?, CSig?, App?, Script?, ScriptCmds).
 sg_init(bob, warm, NetIn) :-
     agent # agent(bob, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
     send_to_net(NetOut?),
     load_file("pingapp.glpw", C),
     certified(C?, CK, CSig),
-    send_to_user(Ui?),
+    new_channel(App, Person),
+    miniapp_person_run(C?, bob, watch, Person?, Screen),
+    send_to_user(Screen?),
     scripted_home(bob, Out?, Script, ScriptCmds?, In),
-    bob_warm(C?, CK?, CSig?, Ui, Script?, ScriptCmds).
+    bob_warm(C?, CK?, CSig?, App?, Script?, ScriptCmds).
 sg_init(carol, warm, NetIn) :-
     agent # agent(carol, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
     send_to_net(NetOut?),
     load_file("pingapp.glpw", C),
     certified(C?, CK, CSig),
-    send_to_user(Ui?),
+    new_channel(App, Person),
+    miniapp_person_run(C?, carol, watch, Person?, Screen),
+    send_to_user(Screen?),
     scripted_home(carol, Out?, Script, ScriptCmds?, In),
-    carol_warm(C?, CK?, CSig?, Ui, Script?, ScriptCmds).
+    carol_warm(C?, CK?, CSig?, App?, Script?, ScriptCmds).
 
 %% alice's person: install; consent in advance to a warm call from bob;
 %% cold-call carol, invite her once connected; consent on its card to carol's
 %% introduction to bob.
-procedure alice_warm(Content?, String?, String?, AppUiStream, Stream(Output)?, UserInStream).
-alice_warm(C, CK, CSig, Ui?, Outs,
+procedure alice_warm(Content?, String?, String?, PersonChannel(Opaque)?, Stream(Output)?, UserInStream).
+alice_warm(C, CK, CSig, Ui, Outs,
            [msg(person, alice, trust(CK?)),
-            msg(person, alice, install(ping, C?, CSig?, Ui)),
+            msg(person, alice, install(ping, C?, CSig?, Ui?, [])),
             msg(person, alice, accept_warm_call(bob)),
             msg(person, alice, connect(carol)) | Cmds?]) :-
     alice_warm_run(Outs?, Cmds).
@@ -629,10 +698,10 @@ alice_warm_run([], []).
 %% bob's person: install; consent in advance to carol's and alice's
 %% invitations and to a warm call with alice; cold-call carol; consent on its
 %% card to carol's introduction to alice.
-procedure bob_warm(Content?, String?, String?, AppUiStream, Stream(Output)?, UserInStream).
-bob_warm(C, CK, CSig, Ui?, Outs,
+procedure bob_warm(Content?, String?, String?, PersonChannel(Opaque)?, Stream(Output)?, UserInStream).
+bob_warm(C, CK, CSig, Ui, Outs,
          [msg(person, bob, trust(CK?)),
-          msg(person, bob, install(ping, C?, CSig?, Ui)),
+          msg(person, bob, install(ping, C?, CSig?, Ui?, [])),
           msg(person, bob, accept_invite(ping, carol)),
           msg(person, bob, accept_invite(ping, alice)),
           msg(person, bob, accept_warm_call(alice)),
@@ -653,10 +722,10 @@ bob_warm_run([], []).
 %% carol's person: install; consent in advance to alice's invitation and allow
 %% the introduction of bob to alice; consent on their cards to both cold
 %% calls; invite bob once connected.
-procedure carol_warm(Content?, String?, String?, AppUiStream, Stream(Output)?, UserInStream).
-carol_warm(C, CK, CSig, Ui?, Outs,
+procedure carol_warm(Content?, String?, String?, PersonChannel(Opaque)?, Stream(Output)?, UserInStream).
+carol_warm(C, CK, CSig, Ui, Outs,
            [msg(person, carol, trust(CK?)),
-            msg(person, carol, install(ping, C?, CSig?, Ui)),
+            msg(person, carol, install(ping, C?, CSig?, Ui?, [])),
             msg(person, carol, accept_invite(ping, alice)),
             msg(person, carol, allow_intro(bob, alice)) | Cmds?]) :-
     carol_warm_run(Outs?, Cmds).
@@ -677,15 +746,16 @@ carol_warm_run([_ | Outs], Cmds?) :- otherwise | carol_warm_run(Outs?, Cmds).
 carol_warm_run([], []).
 
 %% =============================================================================
-%% play_coins(ScreenA, ScreenB): the currency mini-app (programs/currencies/coins/currency,
-%% its artefact currency.glpw beside this program) hosted by the super-app:
-%% alice and bob install it with its two certifications, alice befriends bob
-%% and invites him, and the handshake opens a root channel of the currency
-%% protocol between their two executions, each activated by run/3 with its
-%% person channel and its conversations.  The persons hold the other ends of
-%% the person channels, scripted on what the dispatchers draw: each mints 2,
-%% alice offers her 2 for bob's 2 and bob accepts --- the currency's own swap
-%% (its play_swap) over the conversation the social graph delivered.
+%% play_coins(ScreenA, ScreenB): the currency mini-app (Currencies'
+%% programs/currencies/coins/currency, its artefact currency.glpw beside this
+%% program) hosted by the super-app: alice and bob install it with its two
+%% certifications, alice befriends bob and invites him, and the handshake
+%% opens a root channel of the currency's protocol between their two
+%% executions, each activated by run/3 with its three grants.  The persons
+%% hold the other ends of the person channels: each is the currency's own
+%% scripted person, activated from the same module value under its role ---
+%% alice mints 2 and offers her 2 for bob's 2, bob mints 2 and accepts ---
+%% the currency's own swap over the conversation the social graph delivered.
 %% Expected: ScreenA = [opened(bob), minted(2), holdings([lot(alice, 2)]),
 %% holdings([]), swap_done(bob), holdings([lot(bob, 2)]) | _], ScreenB =
 %% [opened(alice), minted(2), holdings([lot(bob, 2)]), swap_done(alice),
@@ -693,7 +763,7 @@ carol_warm_run([], []).
 %% stay open and the person channels never close).
 %% ../../coins_boot.glp runs the same swap on two smartphones.
 %% =============================================================================
-exported procedure play_coins(Stream(ScreenContent), Stream(ScreenContent)).
+exported procedure play_coins(Stream(Opaque), Stream(Opaque)).
 play_coins(ScreenA?, ScreenB?) :-
     crossbar2(AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
     load_file("currency.glpw", C),
@@ -702,50 +772,16 @@ play_coins(ScreenA?, ScreenB?) :-
     new_channel(AppEndB, PersonEndB),
     agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
     alice_coins_person(C?, CSig?, AppEndA?, AliceOut?, AliceIn),
-    coin_person(alice, PersonEndA?, [mint(2), swap(bob, alice, 2, bob, 2)], ScreenA),
+    miniapp_person_run(C?, alice, alice, PersonEndA?, ScreenA),
     agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
     bob_coins_person(C?, CSig?, AppEndB?, BobOut?, BobIn),
-    coin_person(bob, PersonEndB?, [mint(2), accept(alice)], ScreenB).
+    miniapp_person_run(C?, bob, bob, PersonEndB?, ScreenB).
 
-%% The person's end of the currency's person channel, read for its screen:
-%% the screen messages off the events, no construct granted on; the person
-%% channel never closes, so the person holds its grant writer for good.
-procedure screen_of(Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(ScreenContent)).
-screen_of(ch(Ds, Gs?), Screen?) :-
-    events(Ds?, Es),
-    screen_events(Es?, Gs, Screen).
-
-procedure screen_events(Events?, PersonIn(Drawn), Stream(ScreenContent)).
-screen_events([msg(_, _, X) | Es], Gs?, [X? | Screen?]) :- ground(X?) | screen_events(Es?, Gs, Screen).
-screen_events([draw(_, _, _) | Es], Gs?, Screen?) :- screen_events(Es?, Gs, Screen).
-screen_events([withdraw(_) | Es], Gs?, Screen?) :- screen_events(Es?, Gs, Screen).
-
-%% What the person channel carries, as one stream of events: the dispatcher's
-%% draws and withdrawals, the mini-app's screen among them as the thread of
-%% construct 0, each drawn value under the functor of its construct's ask and
-%% construct 0's under output (vGLP, Definition "Construct Process"), the
-%% event the view under it.  The channel's stream never ends, and is read for
-%% good.
-procedure events(_?, Events).
-events([draw(0, thread(_), output(Ms)) | Ds], Es?) :- newest(Ms?, Ds?, Es).
-events([draw(I, W, card_w(V)) | Ds], [draw(I?, W?, V?) | Es?]) :- events(Ds?, Es).
-events([draw(I, W, stream_request_r(V)) | Ds], [draw(I?, W?, V?) | Es?]) :- events(Ds?, Es).
-events([withdraw(I) | Ds], [withdraw(I?) | Es?]) :- events(Ds?, Es).
-
-%% The mini-app's screen reaches the person only as the thread the
-%% dispatcher draws as the construct 0, drawn again with every message so far
-%% as each arrives (vGLP, 2026-10-13 19:25 UTC, items 2 and 3): its newest
-%% element is the content that came, M, the event msg(agent, person, M)
-%% (Currencies, 2026-10-14 08:48 UTC, item 2), and the draw with none is no
-%% event.
-procedure newest(_?, _?, Events).
-newest([], Ds, Es?) :- events(Ds?, Es).
-newest([M], Ds, [msg(agent, person, M?) | Es?]) :- events(Ds?, Es).
-newest([_, M1 | Ms], Ds, Es?) :- newest([M1? | Ms?], Ds?, Es).
-
-procedure alice_coins_person(Content?, String?, PersonChannel(Drawn)?, AgentToUserStream?, UserInStream).
+%% The installers of play_coins: each installs the currency with its end of
+%% its person channel and an empty calendar, the currency keeping no dates.
+procedure alice_coins_person(Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 alice_coins_person(C, CSig, AppEnd, Outs,
-                   [msg(person, alice, install_coins(currency, C?, CSig?, AppEnd?)),
+                   [msg(person, alice, install(currency, C?, CSig?, AppEnd?, [])),
                     msg(person, alice, connect(bob)) | Cmds?]) :-
     alice_coins_run(Outs?, Cmds).
 
@@ -756,9 +792,9 @@ alice_coins_run([msg(agent, person, connected(bob)) | Outs],
 alice_coins_run([_ | Outs], Cmds?) :- otherwise | alice_coins_run(Outs?, Cmds).
 alice_coins_run([], []).
 
-procedure bob_coins_person(Content?, String?, PersonChannel(Drawn)?, AgentToUserStream?, UserInStream).
+procedure bob_coins_person(Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 bob_coins_person(C, CSig, AppEnd, Outs,
-                 [msg(person, bob, install_coins(currency, C?, CSig?, AppEnd?)),
+                 [msg(person, bob, install(currency, C?, CSig?, AppEnd?, [])),
                   msg(person, bob, accept_invite(currency, alice)) | Cmds?]) :-
     bob_coins_run(Outs?, Cmds).
 
@@ -772,69 +808,70 @@ bob_coins_run([], []).
 
 %% The two persons of both platforms under :boot, each trusting the compiler's
 %% key once for the two artefacts it signed.
-procedure alice_both_boot(String?, Content?, String?, PersonChannel(Drawn)?, Content?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AgentToUserStream?, UserInStream).
+procedure alice_both_boot(String?, Content?, String?, PersonChannel(Opaque)?, Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 alice_both_boot(CK, CC, CCSig, CoinsEnd, CS, CSSig, CssnEnd, Outs,
                 [msg(person, alice, trust(CK?)),
-                 msg(person, alice, install_coins(currency, CC?, CCSig?, CoinsEnd?)),
-                 msg(person, alice, install_cssn(childsafe, CS?, CSSig?, CssnEnd?)),
+                 msg(person, alice, install(currency, CC?, CCSig?, CoinsEnd?, [])),
+                 msg(person, alice, install(childsafe, CS?, CSSig?, CssnEnd?, [])),
                  msg(person, alice, connect(bob)) | Cmds?]) :-
     alice_both_run(Outs?, Cmds).
 
-procedure bob_both_boot(String?, Content?, String?, PersonChannel(Drawn)?, Content?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AgentToUserStream?, UserInStream).
+procedure bob_both_boot(String?, Content?, String?, PersonChannel(Opaque)?, Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 bob_both_boot(CK, CC, CCSig, CoinsEnd, CS, CSSig, CssnEnd, Outs,
               [msg(person, bob, trust(CK?)),
-               msg(person, bob, install_coins(currency, CC?, CCSig?, CoinsEnd?)),
-               msg(person, bob, install_cssn(childsafe, CS?, CSSig?, CssnEnd?)),
+               msg(person, bob, install(currency, CC?, CCSig?, CoinsEnd?, [])),
+               msg(person, bob, install(childsafe, CS?, CSSig?, CssnEnd?, [])),
                msg(person, bob, accept_invite(currency, alice)),
                msg(person, bob, accept_invite(childsafe, alice)) | Cmds?]) :-
     bob_both_run(Outs?, Cmds).
 
 %% The child-safe platform's two persons under :boot.
-procedure alice_cssn_boot(Content?, String?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AgentToUserStream?, UserInStream).
+procedure alice_cssn_boot(Content?, String?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 alice_cssn_boot(C, CK, CSig, AppEnd, Outs,
                 [msg(person, alice, trust(CK?)),
-                 msg(person, alice, install_cssn(childsafe, C?, CSig?, AppEnd?)),
+                 msg(person, alice, install(childsafe, C?, CSig?, AppEnd?, [])),
                  msg(person, alice, connect(bob)) | Cmds?]) :-
     alice_cssn_run(Outs?, Cmds).
 
-procedure bob_cssn_boot(Content?, String?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AgentToUserStream?, UserInStream).
+procedure bob_cssn_boot(Content?, String?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 bob_cssn_boot(C, CK, CSig, AppEnd, Outs,
               [msg(person, bob, trust(CK?)),
-               msg(person, bob, install_cssn(childsafe, C?, CSig?, AppEnd?)),
+               msg(person, bob, install(childsafe, C?, CSig?, AppEnd?, [])),
                msg(person, bob, accept_invite(childsafe, alice)) | Cmds?]) :-
     bob_cssn_run(Outs?, Cmds).
 
 %% The same two persons under :boot, each trusting the compiler's key first.
-procedure alice_coins_boot(Content?, String?, String?, PersonChannel(Drawn)?, AgentToUserStream?, UserInStream).
+procedure alice_coins_boot(Content?, String?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 alice_coins_boot(C, CK, CSig, AppEnd, Outs,
                  [msg(person, alice, trust(CK?)),
-                  msg(person, alice, install_coins(currency, C?, CSig?, AppEnd?)),
+                  msg(person, alice, install(currency, C?, CSig?, AppEnd?, [])),
                   msg(person, alice, connect(bob)) | Cmds?]) :-
     alice_coins_run(Outs?, Cmds).
 
-procedure bob_coins_boot(Content?, String?, String?, PersonChannel(Drawn)?, AgentToUserStream?, UserInStream).
+procedure bob_coins_boot(Content?, String?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 bob_coins_boot(C, CK, CSig, AppEnd, Outs,
                [msg(person, bob, trust(CK?)),
-                msg(person, bob, install_coins(currency, C?, CSig?, AppEnd?)),
+                msg(person, bob, install(currency, C?, CSig?, AppEnd?, [])),
                 msg(person, bob, accept_invite(currency, alice)) | Cmds?]) :-
     bob_coins_run(Outs?, Cmds).
 
 %% =============================================================================
-%% play_cssn(SeenA, SeenB): the child-safe platform (programs/cssn/childsafe,
-%% its artefact childsafe.glpw beside this program) hosted by the super-app,
-%% as play_coins hosts the currency.  alice and bob install it with its two
-%% certifications, alice befriends bob and invites him, and the handshake opens
-%% a root channel of that platform's protocol between their two executions,
-%% each activated by run/3 with its commands-and-notifications channel and its
-%% conversations.  Adopting a conversation IS befriending under that contract,
-%% so each execution tells its person it is connected; alice's person then
-%% sends bob one message of the platform, and bob's execution shows it.
+%% play_cssn(SeenA, SeenB): the child-safe platform (CSSN's
+%% programs/cssn/childsafe, its artefact childsafe.glpw beside this program)
+%% hosted by the super-app, as play_coins hosts the currency.  alice and bob
+%% install it with its two certifications, alice befriends bob and invites
+%% him, and the handshake opens a root channel of that platform's protocol
+%% between their two executions, each activated by run/3 with its three
+%% grants.  Adopting a conversation IS befriending under that contract, so
+%% each execution tells its person it is connected; alice's person, CSSN's
+%% scripted person under the role greeter, then sends bob one message of the
+%% platform, and bob's, under the role onlooker, shows it.
 %% Expected: SeenA = [connected(bob) | _], SeenB = [connected(alice),
 %% received(alice, hello) | _], → suspended (the executions pend on their
 %% persons and their friends).  ../../cssn_boot.glp runs the same on two
 %% smartphones.
 %% =============================================================================
-exported procedure play_cssn(Stream(CsAppNotify), Stream(CsAppNotify)).
+exported procedure play_cssn(Stream(Opaque), Stream(Opaque)).
 play_cssn(SeenA?, SeenB?) :-
     crossbar2(AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
     load_file("childsafe.glpw", C),
@@ -843,14 +880,14 @@ play_cssn(SeenA?, SeenB?) :-
     new_channel(AppEndB, PersonEndB),
     agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
     alice_cssn_person(C?, CSig?, AppEndA?, AliceOut?, AliceIn),
-    cssn_greeter(bob, PersonEndA?, SeenA),
+    miniapp_person_run(C?, alice, greeter, PersonEndA?, SeenA),
     agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
     bob_cssn_person(C?, CSig?, AppEndB?, BobOut?, BobIn),
-    cssn_onlooker(PersonEndB?, SeenB).
+    miniapp_person_run(C?, bob, onlooker, PersonEndB?, SeenB).
 
-procedure alice_cssn_person(Content?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AgentToUserStream?, UserInStream).
+procedure alice_cssn_person(Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 alice_cssn_person(C, CSig, AppEnd, Outs,
-                  [msg(person, alice, install_cssn(childsafe, C?, CSig?, AppEnd?)),
+                  [msg(person, alice, install(childsafe, C?, CSig?, AppEnd?, [])),
                    msg(person, alice, connect(bob)) | Cmds?]) :-
     alice_cssn_run(Outs?, Cmds).
 
@@ -861,9 +898,9 @@ alice_cssn_run([msg(agent, person, connected(bob)) | Outs],
 alice_cssn_run([_ | Outs], Cmds?) :- otherwise | alice_cssn_run(Outs?, Cmds).
 alice_cssn_run([], []).
 
-procedure bob_cssn_person(Content?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AgentToUserStream?, UserInStream).
+procedure bob_cssn_person(Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 bob_cssn_person(C, CSig, AppEnd, Outs,
-                [msg(person, bob, install_cssn(childsafe, C?, CSig?, AppEnd?)),
+                [msg(person, bob, install(childsafe, C?, CSig?, AppEnd?, [])),
                  msg(person, bob, accept_invite(childsafe, alice)) | Cmds?]) :-
     bob_cssn_run(Outs?, Cmds).
 
@@ -874,47 +911,20 @@ bob_cssn_run([msg(agent, person, befriend(alice, P)) | Outs],
 bob_cssn_run([_ | Outs], Cmds?) :- otherwise | bob_cssn_run(Outs?, Cmds).
 bob_cssn_run([], []).
 
-%% The person on the mini-app's own channel: told it is connected to the
-%% friend, it sends that friend one message of the platform.
-procedure cssn_greeter(Key?, Channel(Stream(CsAppNotify), Stream(CsAppCmd))?, Stream(CsAppNotify)).
-cssn_greeter(F, ch(Notify, Cmds?), Seen?) :-
-    ground(F?) |
-    cg(F?, Notify?, Cmds, Seen).
-
-procedure cg(Key?, Stream(CsAppNotify)?, Stream(CsAppCmd), Stream(CsAppNotify)).
-cg(F, [connected(F1) | Ns], [send(F1?, hello) | Cmds?], [connected(F1?) | Seen?]) :-
-    F? =?= F1? |
-    cg_rest(Ns?, Cmds, Seen).
-cg(F, [N | Ns], Cmds?, [N? | Seen?]) :- otherwise | cg(F?, Ns?, Cmds, Seen).
-cg(_, [], [], []).
-
-procedure cg_rest(Stream(CsAppNotify)?, Stream(CsAppCmd), Stream(CsAppNotify)).
-cg_rest([N | Ns], Cmds?, [N? | Seen?]) :- ground(N?) | cg_rest(Ns?, Cmds, Seen).
-cg_rest([], [], []).
-
-%% The person who only watches, and commands nothing: her commands close when
-%% the notifications close.
-procedure cssn_onlooker(Channel(Stream(CsAppNotify), Stream(CsAppCmd))?, Stream(CsAppNotify)).
-cssn_onlooker(ch(Notify, Cmds?), Seen?) :- pass_notify(Notify?, Seen, Cmds).
-
-procedure pass_notify(Stream(CsAppNotify)?, Stream(CsAppNotify), Stream(CsAppCmd)).
-pass_notify([N | Ns], [N? | Seen?], Cmds?) :- ground(N?) | pass_notify(Ns?, Seen, Cmds).
-pass_notify([], [], []).
-
 %% =============================================================================
 %% play_both(ScreenA, ScreenB, SeenA, SeenB): ONE super-app hosting BOTH
-%% mini-apps at once (SGSG paper, Section 7, and Theorem 6.5, which is about
-%% two mini-apps on one smartphone).  alice and bob each install the currency
-%% and the child-safe platform, each with its own user-interface grant; alice
-%% invites bob to both; the two handshakes open a root channel of each
-%% platform's own protocol, and each super-app activates both entries by run/3,
-%% each with its own conversations.  Then both platforms run at once over the
-%% one friendship: alice and bob mint and swap under the currency's contract,
-%% and alice greets bob under the child-safe platform's.  Expected: ScreenA and
-%% ScreenB as in play_coins, SeenA = [connected(bob) | _], SeenB =
+%% mini-apps at once (GSG paper, Section 7).  alice and bob each install the
+%% currency and the child-safe platform, each with its own person channel;
+%% alice invites bob to both; the two handshakes open a root channel of each
+%% platform's own protocol, and each super-app activates both entries by
+%% run/3, each at its own opaque instance and with its own conversations.
+%% Then both platforms run at once over the one friendship: alice and bob
+%% mint and swap under the currency's contract, and alice greets bob under
+%% the child-safe platform's, each person the mini-app's own.  Expected:
+%% ScreenA and ScreenB as in play_coins, SeenA = [connected(bob) | _], SeenB =
 %% [connected(alice), received(alice, hello) | _], → suspended.
 %% =============================================================================
-exported procedure play_both(Stream(ScreenContent), Stream(ScreenContent), Stream(CsAppNotify), Stream(CsAppNotify)).
+exported procedure play_both(Stream(Opaque), Stream(Opaque), Stream(Opaque), Stream(Opaque)).
 play_both(ScreenA?, ScreenB?, SeenA?, SeenB?) :-
     crossbar2(AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
     load_file("currency.glpw", CC),
@@ -927,19 +937,19 @@ play_both(ScreenA?, ScreenB?, SeenA?, SeenB?) :-
     new_channel(CssnEndB, CssnPersonB),
     agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
     alice_both_person(CC?, CCSig?, CoinsEndA?, CS?, CSSig?, CssnEndA?, AliceOut?, AliceIn),
-    coin_person(alice, CoinsPersonA?, [mint(2), swap(bob, alice, 2, bob, 2)], ScreenA),
-    cssn_greeter(bob, CssnPersonA?, SeenA),
+    miniapp_person_run(CC?, alice, alice, CoinsPersonA?, ScreenA),
+    miniapp_person_run(CS?, alice, greeter, CssnPersonA?, SeenA),
     agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
     bob_both_person(CC?, CCSig?, CoinsEndB?, CS?, CSSig?, CssnEndB?, BobOut?, BobIn),
-    coin_person(bob, CoinsPersonB?, [mint(2), accept(alice)], ScreenB),
-    cssn_onlooker(CssnPersonB?, SeenB).
+    miniapp_person_run(CC?, bob, bob, CoinsPersonB?, ScreenB),
+    miniapp_person_run(CS?, bob, onlooker, CssnPersonB?, SeenB).
 
 %% alice's person: install both, cold-call bob, and invite him to both once
 %% they are friends.
-procedure alice_both_person(Content?, String?, PersonChannel(Drawn)?, Content?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AgentToUserStream?, UserInStream).
+procedure alice_both_person(Content?, String?, PersonChannel(Opaque)?, Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 alice_both_person(CC, CCSig, CoinsEnd, CS, CSSig, CssnEnd, Outs,
-                  [msg(person, alice, install_coins(currency, CC?, CCSig?, CoinsEnd?)),
-                   msg(person, alice, install_cssn(childsafe, CS?, CSSig?, CssnEnd?)),
+                  [msg(person, alice, install(currency, CC?, CCSig?, CoinsEnd?, [])),
+                   msg(person, alice, install(childsafe, CS?, CSSig?, CssnEnd?, [])),
                    msg(person, alice, connect(bob)) | Cmds?]) :-
     alice_both_run(Outs?, Cmds).
 
@@ -953,10 +963,10 @@ alice_both_run([], []).
 
 %% bob's person: install both, consent to the friendship, and accept both
 %% invitations.
-procedure bob_both_person(Content?, String?, PersonChannel(Drawn)?, Content?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AgentToUserStream?, UserInStream).
+procedure bob_both_person(Content?, String?, PersonChannel(Opaque)?, Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 bob_both_person(CC, CCSig, CoinsEnd, CS, CSSig, CssnEnd, Outs,
-                [msg(person, bob, install_coins(currency, CC?, CCSig?, CoinsEnd?)),
-                 msg(person, bob, install_cssn(childsafe, CS?, CSSig?, CssnEnd?)),
+                [msg(person, bob, install(currency, CC?, CCSig?, CoinsEnd?, [])),
+                 msg(person, bob, install(childsafe, CS?, CSSig?, CssnEnd?, [])),
                  msg(person, bob, accept_invite(currency, alice)),
                  msg(person, bob, accept_invite(childsafe, alice)) | Cmds?]) :-
     bob_both_run(Outs?, Cmds).
@@ -967,113 +977,6 @@ bob_both_run([msg(agent, person, befriend(alice, P)) | Outs],
     bob_both_run(Outs?, Cmds).
 bob_both_run([_ | Outs], Cmds?) :- otherwise | bob_both_run(Outs?, Cmds).
 bob_both_run([], []).
-
-%% =============================================================================
-%% coin_person(Id, PersonEnd, Script, Screen): a scripted person on the
-%% super-app's end of the currency's person channel, after Currencies'
-%% currency/person.glp.  It reads what the channel carries --- the constructs
-%% the dispatcher draws and withdraws, and the screen the agent writes --- and
-%% grants its acts on the constructs, the person's taps and submissions, in
-%% the order of its script, each when the one before it has taken effect on
-%% the screen.  A step waits for the draw of its clause's construct and grants
-%% input(Id, P, R) with the step's term R at the position P the draw marks
-%% input: mint and swap on the agent's request form, which is drawn once and
-%% stays on screen, the agent's requests being one construct, its question the
-%% stream of requests; accept on the proposer's respond_swap card, drawn per
-%% proposed swap and withdrawn once answered.  A step is done when the screen
-%% shows its effect, and the screen messages come out on its last argument.
-%% The person channel never closes, so the person holds its grant writer for
-%% good.
-%% =============================================================================
-procedure coin_person(Key?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, CoinScript?, Stream(ScreenContent)).
-coin_person(Id, ch(Ds, Gs?), Script, Screen?) :-
-    ground(Id?) |
-    events(Ds?, Es),
-    cp(Id?, Es?, Gs, Script?, no_form, [], idle, Screen).
-
-%% path_of(P?, Path): the path a draw marks, input(P), read off what the
-%% construct shows, which the dispatcher draws as a term of any type inside
-%% the functor of its ask: a list of argument indices.
-procedure path_of(_?, Path).
-path_of([I | Is], P?) :- integer(I?) | P = [I? | P1?], path_of(Is?, P1).
-path_of([], []).
-
-procedure cp(Key?, Events?, PersonIn(Drawn), CoinScript?, Form?, OpenOffers?, Sent?, Stream(ScreenContent)).
-%% The request form: its question is the stream of requests, at position P.
-cp(Id, [draw(C, _, input(P)) | Es], Gs?, Script, _, Swaps, S, Screen?) :-
-    ground(C?), ground(P?) |
-    path_of(P?, P1),
-    try_step(Id?, Es?, Gs, Script?, form(C?, P1?), Swaps?, S?, Screen).
-%% The card of a proposed swap, kept until the script reaches it.
-cp(Id, [draw(C, _, card(offer(From, _, _), input(P))) | Es], Gs?, Script, Form, Swaps, S, Screen?) :-
-    ground(C?), ground(From?), ground(P?) |
-    path_of(P?, P1),
-    try_step(Id?, Es?, Gs, Script?, Form?, [open_offer(From?, C?, P1?) | Swaps?], S?, Screen).
-%% Any other construct is left; the dispatcher draws none, every construct of
-%% the agent being caught above.
-cp(Id, [draw(_, _, _) | Es], Gs?, Script, Form, Swaps, S, Screen?) :-
-    otherwise |
-    cp(Id?, Es?, Gs, Script?, Form?, Swaps?, S?, Screen).
-%% A card withdrawn: the person's answer to it took effect, and it is no
-%% longer on screen.  A step in flight is left alone: it leaves sent when the
-%% screen shows its effect.
-cp(Id, [withdraw(_) | Es], Gs?, Script, Form, Swaps, S, Screen?) :-
-    try_step(Id?, Es?, Gs, Script?, Form?, Swaps?, S?, Screen).
-%% The screen: passed on; the current step is done when it shows its effect.
-cp(Id, [msg(_, _, X) | Es], Gs?, [Step | Script], Form, Swaps, S, [X? | Screen?]) :-
-    ground(X?), ground(Step?) |
-    done(Step?, X?, D),
-    advance(D?, Id?, Es?, Gs, Step?, Script?, Form?, Swaps?, S?, Screen).
-cp(Id, [msg(_, _, X) | Es], Gs?, [], Form, Swaps, S, [X? | Screen?]) :-
-    ground(X?) |
-    cp(Id?, Es?, Gs, [], Form?, Swaps?, S?, Screen).
-
-%% Whether the screen shows the step's effect.
-procedure done(CoinStep?, ScreenContent?, Decision).
-done(mint(K), minted(K1), yes) :- K? =:= K1? | true.
-done(swap(Q, _, _, _, _), swap_done(Q1), yes) :- Q? =?= Q1? | true.
-done(accept(Q), swap_done(Q1), yes) :- Q? =?= Q1? | true.
-done(_, _, no) :- otherwise | true.
-
-procedure advance(Decision?, Key?, Events?, PersonIn(Drawn), CoinStep?, CoinScript?, Form?, OpenOffers?, Sent?, Stream(ScreenContent)).
-advance(yes, Id, Es, Gs?, _, Script, Form, Swaps, _, Screen?) :-
-    try_step(Id?, Es?, Gs, Script?, Form?, Swaps?, idle, Screen).
-advance(no, Id, Es, Gs?, Step, Script, Form, Swaps, S, Screen?) :-
-    cp(Id?, Es?, Gs, [Step? | Script?], Form?, Swaps?, S?, Screen).
-
-%% Grant the current step, if its construct is on screen and no grant is out.
-procedure try_step(Key?, Events?, PersonIn(Drawn), CoinScript?, Form?, OpenOffers?, Sent?, Stream(ScreenContent)).
-try_step(Id, Es, Gs?, [], Form, Swaps, S, Screen?) :-
-    cp(Id?, Es?, Gs, [], Form?, Swaps?, S?, Screen).
-try_step(Id, Es, Gs?, [Step | Script], Form, Swaps, sent, Screen?) :-
-    cp(Id?, Es?, Gs, [Step? | Script?], Form?, Swaps?, sent, Screen).
-try_step(Id, Es, Gs?, [Step | Script], Form, Swaps, idle, Screen?) :-
-    ground(Step?), ground(Form?), ground(Swaps?) |
-    pick(Step?, Form?, Swaps?, Choice, Swaps1),
-    act(Choice?, Id?, Es?, Gs, [Step? | Script?], Form?, Swaps1?, Screen).
-
-%% A request is granted on the request form, once it is drawn: the step's
-%% term, the request; an acceptance yes on the proposer's card.
-procedure pick(CoinStep?, Form?, OpenOffers?, Choice, OpenOffers).
-pick(mint(K), form(C, P), Swaps, grant(C?, P?, mint(K?)), Swaps?).
-pick(swap(Q, U, K, V, K1), form(C, P), Swaps, grant(C?, P?, swap(Q?, U?, K?, V?, K1?)), Swaps?).
-pick(accept(From), _, Swaps, Choice?, Swaps1?) :-
-    ground(From?) | find_offer(From?, Swaps?, Choice, Swaps1).
-pick(_, _, Swaps, wait, Swaps?) :- otherwise | true.
-
-procedure find_offer(Key?, OpenOffers?, Choice, OpenOffers).
-find_offer(From, [open_offer(F, C, P) | Rest], grant(C?, P?, yes), Rest?) :-
-    From? =?= F? | true.
-find_offer(From, [O | Rest], Choice?, [O? | Rest1?]) :-
-    otherwise | find_offer(From?, Rest?, Choice, Rest1).
-find_offer(_, [], wait, []).
-
-procedure act(Choice?, Key?, Events?, PersonIn(Drawn), CoinScript?, Form?, OpenOffers?, Stream(ScreenContent)).
-%% A grant, on the request form or on a card.
-act(grant(C, P, X), Id, Es, [input(C?, P?, X?) | Gs?], Script, Form, Swaps, Screen?) :-
-    cp(Id?, Es?, Gs, Script?, Form?, Swaps?, sent, Screen).
-act(wait, Id, Es, Gs?, Script, Form, Swaps, Screen?) :-
-    cp(Id?, Es?, Gs, Script?, Form?, Swaps?, idle, Screen).
 
 %% =============================================================================
 %% play_reinvite: the registry's return from running to idle (Section 3,
@@ -1098,27 +1001,31 @@ act(wait, Id, Es, Gs?, Script, Form, Swaps, Screen?) :-
 %% ended; B = [opened(alice), greeted(alice), opened(alice), greeted(alice) | _],
 %% → suspended (bob's execution and his person stand).
 %% =============================================================================
-exported procedure play_reinvite(AppUiStream, AppUiStream).
+exported procedure play_reinvite(Stream(Opaque), Stream(Opaque)).
 play_reinvite(AliceUi?, BobUi?) :-
     crossbar2(AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
     load_file("endapp.glpw", C),
     certified(C?, _, CSig),
     agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
-    tee(AliceUiRaw?, AliceUi, AliceSeen),
-    alice_reinvite(C?, CSig?, AliceUiRaw, AliceOut?, AliceSeen?, BobSeen?, AliceIn),
+    new_channel(AliceApp, AlicePerson),
+    miniapp_person_run(C?, alice, watch, AlicePerson?, AliceScreen),
+    tee(AliceScreen?, AliceUi, AliceSeen),
+    alice_reinvite(C?, CSig?, AliceApp?, AliceOut?, AliceSeen?, BobSeen?, AliceIn),
     agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
-    tee(BobUiRaw?, BobUi, BobSeen),
-    bob_reinvite(C?, CSig?, BobUiRaw, BobOut?, BobIn).
+    new_channel(BobApp, BobPerson),
+    miniapp_person_run(C?, bob, watch, BobPerson?, BobScreen),
+    tee(BobScreen?, BobUi, BobSeen),
+    bob_reinvite(C?, CSig?, BobApp?, BobOut?, BobIn).
 
 %% Alice's person: install the mini-app and cold-call bob.
-procedure alice_reinvite(Content?, String?, AppUiStream, AgentToUserStream?, AppUiStream?, AppUiStream?, UserInStream).
-alice_reinvite(M, CSig, Ui?, Outs, Seen, BobSeen,
-               [msg(person, alice, install(ping, M?, CSig?, Ui)),
+procedure alice_reinvite(Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, Stream(Opaque)?, Stream(Opaque)?, UserInStream).
+alice_reinvite(M, CSig, Ui, Outs, Seen, BobSeen,
+               [msg(person, alice, install(ping, M?, CSig?, Ui?, [])),
                 msg(person, alice, connect(bob)) | Cmds?]) :-
     alice_reinvite_wait(Outs?, Seen?, BobSeen?, Cmds).
 
 %% Once connected, invite bob.
-procedure alice_reinvite_wait(AgentToUserStream?, AppUiStream?, AppUiStream?, UserInStream).
+procedure alice_reinvite_wait(AgentToUserStream?, Stream(Opaque)?, Stream(Opaque)?, UserInStream).
 alice_reinvite_wait([msg(agent, person, connected(bob)) | _], Seen, BobSeen,
                     [msg(person, alice, invite(ping, bob)) | Cmds?]) :-
     alice_after_end(Seen?, BobSeen?, Cmds).
@@ -1126,32 +1033,39 @@ alice_reinvite_wait([_ | Outs], Seen, BobSeen, Cmds?) :-
     otherwise | alice_reinvite_wait(Outs?, Seen?, BobSeen?, Cmds).
 alice_reinvite_wait([], _, _, []).
 
-%% Her mini-app's person stream has closed: the execution ended, so her entry
-%% has returned to idle.  Invite bob again, and keep her own stream open until
-%% the play's last observation.
-procedure alice_after_end(AppUiStream?, AppUiStream?, UserInStream).
+%% Her mini-app's screen has closed: the execution ended, its draws closing,
+%% so her entry has returned to idle.  Invite bob again, and keep her own
+%% stream open until the play's last observation.
+procedure alice_after_end(Stream(Opaque)?, Stream(Opaque)?, UserInStream).
 alice_after_end([], BobSeen, [msg(person, alice, invite(ping, bob)) | Cmds?]) :-
     alice_after_last(BobSeen?, Cmds).
 alice_after_end([_ | Seen], BobSeen, Cmds?) :-
     otherwise | alice_after_end(Seen?, BobSeen?, Cmds).
 
-%% The play's last observation, bob's second opened(alice), greeted(alice):
-%% the second root channel has reached bob.  Her stream then closes and her
-%% super-app ends (GSG Section 5.1), her agent closing its friend channels and
-%% the channels of every mini-app it hosts, whose peers see a crash
-%% (agent.glp's termination clause, close_outputs/1, close_host/1); where his
-%% screen shows anything else, or closes first, the observation cannot come,
-%% and her stream closes all the same.
-procedure alice_after_last(AppUiStream?, UserInStream).
-alice_after_last([opened(alice), greeted(alice), opened(alice), greeted(alice) | _], []).
-alice_after_last(_, []) :- otherwise | true.
+%% The play's last observation, bob's fourth item, his second greeted(alice)
+%% after his second opened(alice) (../endapp/miniapp.glp): the second root
+%% channel has reached bob.  The play counts his screen's items and inspects
+%% none.  Her stream then closes and her super-app ends (GSG Section 5.1), her
+%% agent closing its friend channels and the channels of every mini-app it
+%% hosts, whose peers see a crash (agent.glp's termination clause,
+%% close_outputs/1, close_host/1); where his screen closes first, the
+%% observation cannot come, and her stream closes all the same.
+procedure alice_after_last(Stream(Opaque)?, UserInStream).
+alice_after_last(Seen, Cmds?) :- after_items(4, Seen?, Cmds).
+
+%% after_items(N, Seen, Cmds): Cmds closed once N items of Seen have come, or
+%% Seen has closed first.
+procedure after_items(Integer?, Stream(Opaque)?, UserInStream).
+after_items(0, _, []).
+after_items(N, [_ | Seen], Cmds?) :- N? > 0 | N1 := N? - 1, after_items(N1?, Seen?, Cmds).
+after_items(N, [], []) :- N? > 0 | true.
 
 %% Bob's person: install the mini-app and consent to BOTH invitations before
 %% either offer arrives, as bob_person consents once --- the two consents
 %% stack in the pending list and each offer takes one.
-procedure bob_reinvite(Content?, String?, AppUiStream, AgentToUserStream?, UserInStream).
-bob_reinvite(M, CSig, Ui?, Outs,
-             [msg(person, bob, install(ping, M?, CSig?, Ui)),
+procedure bob_reinvite(Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
+bob_reinvite(M, CSig, Ui, Outs,
+             [msg(person, bob, install(ping, M?, CSig?, Ui?, [])),
               msg(person, bob, accept_invite(ping, alice)),
               msg(person, bob, accept_invite(ping, alice)) | Cmds?]) :-
     bob_reinvite_wait(Outs?, Cmds).
@@ -1174,26 +1088,26 @@ bob_until_closed([_ | Outs], Cmds?) :- bob_until_closed(Outs?, Cmds).
 bob_until_closed([], []).
 
 %% =============================================================================
-%% play_sovereign: the denominated currencies mini-app (programs/currencies/sovereign/
-%% denominated, its artefact denominated.glpw beside this program) hosted by
-%% the super-app.  alice and bob install it with its two certifications, alice
-%% befriends bob and invites him, the handshake opens a root channel of the
-%% denominated protocol between their two executions, and each is activated by
-%% run/3 with its person channel and its conversations.
+%% play_sovereign: the denominated currencies mini-app (Currencies'
+%% programs/currencies/sovereign/denominated, its artefact denominated.glpw
+%% beside this program) hosted by the super-app.  alice and bob install it
+%% with its two certifications, alice befriends bob and invites him, the
+%% handshake opens a root channel of the denominated protocol between their
+%% two executions, and each is activated by run/3 with its three grants.
 %%
 %% What this play is for is the ACTIVATION, not the acts: run/3 admits the
-%% mini-app only if the entry's type identity in this scope is the one its
-%% module carries, and this scope's copy of the denominated channel is written
-%% by hand in ../self.glp.  So the play fences the copy: if a constructor of
-%% it drifts from Currencies' own, run/3 refuses the mini-app and the screens
-%% stay empty.  The acts over the conversation are the mini-app's own and are
-%% exercised in its Section N4, so nothing is granted here: each person reads
-%% the screen off what its dispatcher draws.
+%% mini-app only if the type identity of the entry template's opaque instance
+%% at the type its exports record is the one find_type/3 gives at it, and the
+%% super-app holds no copy of the denominated currencies' types.  The acts
+%% over the conversation are the mini-app's own and are exercised in its
+%% Section N4, so nothing is granted here: each person is the mini-app's own
+%% scripted person under its role watch, which reads the screen off what its
+%% dispatcher draws (GSG, 2026-10-13 20:22 UTC, G).
 %% Expected: ScreenA = [opened(bob) | _], ScreenB = [opened(alice) | _],
 %% → suspended (the agents' request forms stay open and the person channels
 %% never close).
 %% =============================================================================
-exported procedure play_sovereign(Stream(SvScreenContent), Stream(SvScreenContent)).
+exported procedure play_sovereign(Stream(Opaque), Stream(Opaque)).
 play_sovereign(ScreenA?, ScreenB?) :-
     crossbar2(AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
     load_file("denominated.glpw", C),
@@ -1202,43 +1116,14 @@ play_sovereign(ScreenA?, ScreenB?) :-
     new_channel(AppEndB, PersonEndB),
     agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
     alice_sv_person(C?, CSig?, AppEndA?, AliceOut?, AliceIn),
-    sv_screen_of(PersonEndA?, ScreenA),
+    miniapp_person_run(C?, alice, watch, PersonEndA?, ScreenA),
     agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
     bob_sv_person(C?, CSig?, AppEndB?, BobOut?, BobIn),
-    sv_screen_of(PersonEndB?, ScreenB).
+    miniapp_person_run(C?, bob, watch, PersonEndB?, ScreenB).
 
-%% The person's end of the denominated currencies' person channel, as
-%% screen_of/2 is for the currency: the screen messages read off the events,
-%% no construct granted on; the person channel never closes, so the person
-%% holds its grant writer for good.
-procedure sv_screen_of(Channel(PersonOut(SvDrawn), PersonIn(SvDrawn))?, Stream(SvScreenContent)).
-sv_screen_of(ch(Ds, Gs?), Screen?) :-
-    sv_events(Ds?, Es),
-    sv_screen_events(Es?, Gs, Screen).
-
-procedure sv_screen_events(SvEvents?, PersonIn(SvDrawn), Stream(SvScreenContent)).
-sv_screen_events([msg(_, _, X) | Es], Gs?, [X? | Screen?]) :- ground(X?) | sv_screen_events(Es?, Gs, Screen).
-sv_screen_events([draw(_, _, _) | Es], Gs?, Screen?) :- sv_screen_events(Es?, Gs, Screen).
-sv_screen_events([withdraw(_) | Es], Gs?, Screen?) :- sv_screen_events(Es?, Gs, Screen).
-
-%% What the person channel carries, as events/2 reads it for the currency, at
-%% the denominated currencies' screen.
-procedure sv_events(_?, SvEvents).
-sv_events([draw(0, thread(_), output(Ms)) | Ds], Es?) :- sv_newest(Ms?, Ds?, Es).
-sv_events([draw(I, W, swapCard_w(V)) | Ds], [draw(I?, W?, V?) | Es?]) :- sv_events(Ds?, Es).
-sv_events([draw(I, W, transferCard_w(V)) | Ds], [draw(I?, W?, V?) | Es?]) :- sv_events(Ds?, Es).
-sv_events([draw(I, W, stream_request_r(V)) | Ds], [draw(I?, W?, V?) | Es?]) :- sv_events(Ds?, Es).
-sv_events([withdraw(I) | Ds], [withdraw(I?) | Es?]) :- sv_events(Ds?, Es).
-
-%% The newest element of the screen's thread, as newest/3 reads it.
-procedure sv_newest(_?, _?, SvEvents).
-sv_newest([], Ds, Es?) :- sv_events(Ds?, Es).
-sv_newest([M], Ds, [msg(agent, person, M?) | Es?]) :- sv_events(Ds?, Es).
-sv_newest([_, M1 | Ms], Ds, Es?) :- sv_newest([M1? | Ms?], Ds?, Es).
-
-procedure alice_sv_person(Content?, String?, PersonChannel(SvDrawn)?, AgentToUserStream?, UserInStream).
+procedure alice_sv_person(Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 alice_sv_person(C, CSig, AppEnd, Outs,
-                [msg(person, alice, install_sovereign(denominated, C?, CSig?, AppEnd?)),
+                [msg(person, alice, install(denominated, C?, CSig?, AppEnd?, [])),
                  msg(person, alice, connect(bob)) | Cmds?]) :-
     alice_sv_run(Outs?, Cmds).
 
@@ -1249,9 +1134,9 @@ alice_sv_run([msg(agent, person, connected(bob)) | Outs],
 alice_sv_run([_ | Outs], Cmds?) :- otherwise | alice_sv_run(Outs?, Cmds).
 alice_sv_run([], []).
 
-procedure bob_sv_person(Content?, String?, PersonChannel(SvDrawn)?, AgentToUserStream?, UserInStream).
+procedure bob_sv_person(Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 bob_sv_person(C, CSig, AppEnd, Outs,
-              [msg(person, bob, install_sovereign(denominated, C?, CSig?, AppEnd?)),
+              [msg(person, bob, install(denominated, C?, CSig?, AppEnd?, [])),
                msg(person, bob, accept_invite(denominated, alice)) | Cmds?]) :-
     bob_sv_run(Outs?, Cmds).
 

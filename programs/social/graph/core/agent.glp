@@ -70,15 +70,15 @@ cold_call(Id, Target, UserIn, UserIn1?, Outs, Outs1?) :-
 %% attestation of Section 5.5, the signature of attest(Id, Other) under the
 %% person's key, into which the runtime puts this program's source identity,
 %% so no mini-app can mint one, and sends a warm call under way to Other.
-procedure consented_step(Decision?, Key?, Key?, Conveyance(FriendChannel), OutputsList?, OutputsList, NetInStream?, NetInStream, AttestList?, AttestList, PendingInv?).
-consented_step(yes, _, Other, Conv?, Outs, Outs1?, NetIn, NetIn1?, Atts, Atts?, _) :-
+procedure consented_step(Decision?, Key?, Key?, Conveyance(FriendChannel), OutputsList?, OutputsList, NetInStream?, NetInStream, AttestList?, AttestList, PendingInv?, PendingInv).
+consented_step(yes, _, Other, Conv?, Outs, Outs1?, NetIn, NetIn1?, Atts, Atts?, Pend, Pend?) :-
     convey(yes, Other?, Conv, Outs?, Outs1, NetIn?, NetIn1).
-consented_step(no, Id, Other, Conv?, Outs, Outs2?, NetIn, NetIn1?, Atts, [att(Other?, S?) | Atts?], Pend) :-
+consented_step(no, Id, Other, Conv?, Outs, Outs2?, NetIn, NetIn1?, Atts, [att(Other?, S?) | Atts?], Pend, Pend1?) :-
     ground(Id?), ground(Other?) |
     convey(no, Other?, Conv, Outs?, Outs1, NetIn?, NetIn1),
     self_key(K),
     sign(attest(Id?, Other?), K?, S),
-    warm_after_commit(Id?, Other?, Pend?, Outs1?, Outs2).
+    warm_after_commit(Id?, Other?, Pend?, Pend1, Outs1?, Outs2).
 
 %% =============================================================================
 %% AGENT/4
@@ -207,23 +207,25 @@ agent(Id, [msg(person, Id1, reject_intro(_, accept(no, _)))|UserIn], NetIn, Outs
     agent(Id?, UserIn?, NetIn?, Outs1?, Host?).
 
 %% The other consented (injected by await_consent), at the proposer: test
-%% already_friend and convey (consented_step/11).
+%% already_friend and convey (consented_step/12), the pending list passed
+%% through: it holds the ends of root channels kept for a handshake, so it is
+%% not ground, and is read once.
 agent(Id, [consented(Other, Conv?)|UserIn], NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
-    ground(Id?), ground(Other?), ground(Pend?) |
+    ground(Id?), ground(Other?) |
     already_friend(Other?, Outs?, Outs1, D),
-    consented_step(D?, Id?, Other?, Conv, Outs1?, Outs2, NetIn?, NetIn1, Atts?, Atts1, Pend?),
-    agent(Id?, UserIn?, NetIn1?, Outs2?, host(Apps?, Atts1?, Pend?, Trusted?)).
+    consented_step(D?, Id?, Other?, Conv, Outs1?, Outs2, NetIn?, NetIn1, Atts?, Atts1, Pend?, Pend1),
+    agent(Id?, UserIn?, NetIn1?, Outs2?, host(Apps?, Atts1?, Pend1?, Trusted?)).
 
 %% The friend channel conveyed (injected by await_conveyance), at the
 %% acceptor: install it, mint the attestation and send a warm call under way,
 %% as the proposer does.
 agent(Id, [adopt(Other, Ch)|UserIn], NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
-    ground(Id?), ground(Other?), ground(Pend?) |
+    ground(Id?), ground(Other?) |
     adopt(Other?, Ch?, Outs?, Outs1, NetIn?, NetIn1),
     self_key(K),
     sign(attest(Id?, Other?), K?, S),
-    warm_after_commit(Id?, Other?, Pend?, Outs1?, Outs2),
-    agent(Id?, UserIn?, NetIn1?, Outs2?, host(Apps?, [att(Other?, S?) | Atts?], Pend?, Trusted?)).
+    warm_after_commit(Id?, Other?, Pend?, Pend1, Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn1?, Outs2?, host(Apps?, [att(Other?, S?) | Atts?], Pend1?, Trusted?)).
 
 %% The other declined (injected by either await): tell the person.
 agent(Id, [declined(Other)|UserIn], NetIn, Outs, Host) :-
@@ -239,46 +241,21 @@ agent(Id, [declined(Other)|UserIn], NetIn, Outs, Host) :-
 %% certification must be signed over this source identity with the checker's
 %% verdict that the contract is grassroots.  signature/2 assigns unsigned on a
 %% forged certification, and the super-app refuses to install it (Section 6.1).
-agent(Id, [msg(person, Id1, install(App, M, CSig, Ui?))|UserIn], NetIn, Outs,
+%% Every mini-app is installed alike: its grants are its end of its person
+%% channel, at Opaque, and its calendar (Section 3, "What the super-app grants
+%% a mini-app"), held until its activation.
+agent(Id, [msg(person, Id1, install(App, M, CSig, Ui, Cal))|UserIn], NetIn, Outs,
       host(Apps, Atts, Pend, Trusted)) :-
     Id? =?= Id1?, ground(App?), ground(Trusted?) |
     verify_install(M?, CSig?, Trusted?, V),
-    install_step(V?, App?, CSig?, Ui, Apps?, Apps1),
+    install_step(V?, App?, CSig?, Ui?, Cal?, Apps?, Apps1),
     agent(Id?, UserIn?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
 
-%% Install a certified mini-app of the currency's interface: its
-%% user-interface grant is its end of its person channel (vGLP, Definition
-%% "Person Channel, Person Writer, GLP with Persons, Grant").
-agent(Id, [msg(person, Id1, install_coins(App, M, CSig, Ui))|UserIn], NetIn, Outs,
-      host(Apps, Atts, Pend, Trusted)) :-
-    Id? =?= Id1?, ground(App?), ground(Trusted?) |
-    verify_install(M?, CSig?, Trusted?, V),
-    install_coins_step(V?, App?, CSig?, Ui?, Apps?, Apps1),
-    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
-
-%% Install a certified mini-app of the denominated currencies' interface: its
-%% user-interface grant is its end of its person channel, of the currency's
-%% type, the two differing in what the dispatcher draws and not in shape.
-agent(Id, [msg(person, Id1, install_sovereign(App, M, CSig, Ui))|UserIn], NetIn, Outs,
-      host(Apps, Atts, Pend, Trusted)) :-
-    Id? =?= Id1?, ground(App?), ground(Trusted?) |
-    verify_install(M?, CSig?, Trusted?, V),
-    install_sovereign_step(V?, App?, CSig?, Ui?, Apps?, Apps1),
-    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
-
-%% Install a certified mini-app of the child-safe platform's interface: its
-%% user-interface grant is its end of a channel of commands and notifications.
-agent(Id, [msg(person, Id1, install_cssn(App, M, CSig, Ui))|UserIn], NetIn, Outs,
-      host(Apps, Atts, Pend, Trusted)) :-
-    Id? =?= Id1?, ground(App?), ground(Trusted?) |
-    verify_install(M?, CSig?, Trusted?, V),
-    install_cssn_step(V?, App?, CSig?, Ui?, Apps?, Apps1),
-    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
-
-%% Invite a friend to the instance of a mini-app: over the friend channel, the
-%% mini-app's source identity, the type identity of the root channel (that of
-%% its entry, ping/3), and the social graph's signed invitation over the
-%% source identity and the friend.
+%% Invite a friend to the instance of a mini-app (Section 3, "Distribution
+%% with an invitation"): over the friend channel, two things and nothing else,
+%% the mini-app's source identity and one end of a fresh root channel, at
+%% Opaque, with the social graph's invitation signed over the source identity
+%% and the friend.  The other end is kept until the handshake succeeds.
 agent(Id, [msg(person, Id1, invite(App, Friend))|UserIn], NetIn, Outs,
       host(Apps, Atts, Pend, Trusted)) :-
     Id? =?= Id1?, ground(App?), ground(Friend?) |
@@ -286,23 +263,24 @@ agent(Id, [msg(person, Id1, invite(App, Friend))|UserIn], NetIn, Outs,
     invite_step(L?, Id?, App?, Friend?, UserIn?, NetIn?, Outs?,
                 host(Apps1?, Atts?, Pend?, Trusted?)).
 
-%% The person's consent to an offer: the volitional guard of joining.  Where
-%% the offer has arrived, join; where it has not, the consent waits for it.
+%% The person's consent to an offer of the mini-app installed here as App: the
+%% volitional guard of joining.  Where the offer of its source identity has
+%% arrived, join; where it has not, the consent waits for it.
 agent(Id, [msg(person, Id1, accept_invite(App, From))|UserIn], NetIn, Outs,
       host(Apps, Atts, Pend, Trusted)) :-
     Id? =?= Id1?, ground(App?), ground(From?) |
-    take_offer(App?, From?, Pend?, Pend1, Offer),
-    consent_step(Offer?, Id?, App?, From?, UserIn?, NetIn?, Outs?,
-                 host(Apps?, Atts?, Pend1?, Trusted?)).
+    app_module(App?, Apps?, Apps1, L),
+    consent_lookup(L?, Id?, App?, From?, UserIn?, NetIn?, Outs?,
+                   host(Apps1?, Atts?, Pend?, Trusted?)).
 
 %% The person declines an offer that has arrived; a decline before the offer
 %% is nothing.
 agent(Id, [msg(person, Id1, decline_invite(App, From))|UserIn], NetIn, Outs,
       host(Apps, Atts, Pend, Trusted)) :-
     Id? =?= Id1?, ground(App?), ground(From?) |
-    take_offer(App?, From?, Pend?, Pend1, Offer),
-    decline_step(Offer?, Id?, App?, From?, UserIn?, NetIn?, Outs?,
-                 host(Apps?, Atts?, Pend1?, Trusted?)).
+    app_module(App?, Apps?, Apps1, L),
+    decline_lookup(L?, Id?, From?, UserIn?, NetIn?, Outs?,
+                   host(Apps1?, Atts?, Pend?, Trusted?)).
 
 %% Reconnection (Section 5.5) is not here: the social graph would call the
 %% layer's peer_address/2 and punch_udp/1 under the attestation minted at
@@ -429,41 +407,54 @@ agent(Id, UserIn, [msg(From, Id1, introduce_accept(Other, Mine?, Theirs))|NetIn]
     agent(Id?, UserIn?, NetIn?, Outs1?,
           host(Apps?, Atts?, [intro_via(Other?, From?) | Pend?], Trusted?)).
 
-%% --- The handshake over the friend channel (Section 3, "Activation and
-%% joining"; Section 6.1, Mechanisms) ---
+%% --- The invitation and the handshake over the friend channel (Section 3,
+%% "Distribution with an invitation" and "Activation and joining"; Section 6,
+%% Mechanisms) ---
 
-%% An offer from a friend: the invitation must be the social graph's signature
-%% over the offered source identity and this agent.  Where the person has
-%% consented already, join; otherwise the offer waits for the person.  A term
-%% that is not a signed term is refused (Section 6.1; invite_signed/11).
-agent(Id, UserIn, [msg(From, Id1, invite(App, Src, T, InvSig))|NetIn], Outs,
+%% An offer from a friend: the mini-app's source identity and one end of the
+%% root channel, the invitation the social graph's signature over the offered
+%% source identity and this agent.  Where the person has consented already,
+%% join; otherwise the offer waits for the person.  A term that is not a
+%% signed term is refused (Section 6.1; invite_signed/9), and its end closed.
+agent(Id, UserIn, [msg(From, Id1, invite(Src, InvSig, End))|NetIn], Outs,
       host(Apps, Atts, Pend, Trusted)) :-
-    Id? =?= Id1?, ground(From?), ground(App?) |
+    Id? =?= Id1?, ground(From?), ground(Src?) |
     signature(InvSig?, Sg),
-    invite_signed(Sg?, Id?, From?, App?, Src?, T?, InvSig?, UserIn?, NetIn?, Outs?,
+    invite_signed(Sg?, Id?, From?, Src?, InvSig?, End?, UserIn?, NetIn?, Outs?,
                   host(Apps?, Atts?, Pend?, Trusted?)).
 
-%% The invitee joins: its undertaking must be signed over the source identity,
-%% and the mini-app installed here must have that identity and that root
-%% channel type.  Then the root channel is created, this side's undertaking
-%% and one end go to the invitee, and the other end goes to this side's
-%% execution of the mini-app.
-agent(Id, UserIn, [msg(From, Id1, join(App, Src, T, U))|NetIn], Outs,
+%% The handshake, at the inviter: the invitee joins with its undertaking,
+%% which must be signed over the source identity, and the type identity of the
+%% entry template's opaque instance at the mini-app's type, as its super-app
+%% computes it; the mini-app this agent invited it to must have that source
+%% identity and that type identity.  Then this side's undertaking and type
+%% identity go to the invitee, and the end kept at the invitation goes to this
+%% side's execution of the mini-app.
+agent(Id, UserIn, [msg(From, Id1, join(Src, T, U))|NetIn], Outs,
       host(Apps, Atts, Pend, Trusted)) :-
-    Id? =?= Id1?, ground(From?), ground(App?) |
+    Id? =?= Id1?, ground(From?), ground(Src?) |
     signature(U?, Sg),
-    join_signed(Sg?, Id?, From?, App?, Src?, T?, UserIn?, NetIn?, Outs?,
+    join_signed(Sg?, Id?, From?, Src?, T?, UserIn?, NetIn?, Outs?,
                 Apps?, Atts?, Pend?, Trusted?).
 
-%% The root channel arrives with the inviter's undertaking: verify it and the
-%% two identities against the mini-app installed here; on success hand the end
-%% to this side's execution, on mismatch deliver nothing --- to the mini-app an
-%% aborted conversation is silent.
-agent(Id, UserIn, [msg(From, Id1, root(App, Src, T, Up, End))|NetIn], Outs,
+%% The invitee declined, or could not join: the end kept at the invitation is
+%% closed.
+agent(Id, UserIn, [msg(From, Id1, decline(Src))|NetIn], Outs,
       host(Apps, Atts, Pend, Trusted)) :-
-    Id? =?= Id1?, ground(From?), ground(App?) |
+    Id? =?= Id1?, ground(From?), ground(Src?) |
+    take_invited(From?, Src?, Pend?, Pend1, I),
+    close_kept(I?),
+    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, Pend1?, Trusted?)).
+
+%% The handshake, at the invitee: the inviter's undertaking and type identity
+%% arrive; verify them against the mini-app this agent joined; on success hand
+%% the end the invitation carried to this side's execution, on mismatch
+%% deliver nothing --- to the mini-app an aborted conversation is silent.
+agent(Id, UserIn, [msg(From, Id1, root(Src, T, Up))|NetIn], Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1?, ground(From?), ground(Src?) |
     signature(Up?, Sg),
-    root_signed(Sg?, Id?, From?, App?, Src?, T?, End?, UserIn?, NetIn?, Outs?,
+    root_signed(Sg?, Id?, From?, Src?, T?, UserIn?, NetIn?, Outs?,
                 Apps?, Atts?, Pend?, Trusted?).
 
 %% The runtime reports a held link: an end that reached this agent under an
@@ -553,51 +544,29 @@ procedure cert_check(_?, String?, Module?, Verdict).
 cert_check(creator_cert(Src1, _, grassroots), Src, M, ok(M?)) :- Src? =?= Src1? | true.
 cert_check(_, _, _, refused) :- otherwise | true.
 
-procedure install_step(Verdict?, Constant?, String?, AppUiStream, AppList?, AppList).
-install_step(ok(M), App, CSig, Ui?, Apps, [app(App?, M?, CSig?, idle(Ui)) | Apps?]).
-install_step(refused, _, _, [], Apps, Apps?).
-
-procedure install_coins_step(Verdict?, Constant?, String?, PersonChannel(Drawn)?, AppList?, AppList).
-install_coins_step(ok(M), App, CSig, Ui, Apps, [app(App?, M?, CSig?, idle_coins(Ui?)) | Apps?]).
-install_coins_step(refused, _, _, _, Apps, Apps?).
-
-procedure install_sovereign_step(Verdict?, Constant?, String?, PersonChannel(SvDrawn)?, AppList?, AppList).
-install_sovereign_step(ok(M), App, CSig, Ui, Apps, [app(App?, M?, CSig?, idle_sovereign(Ui?)) | Apps?]).
-install_sovereign_step(refused, _, _, _, Apps, Apps?).
-
-procedure install_cssn_step(Verdict?, Constant?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AppList?, AppList).
-install_cssn_step(ok(M), App, CSig, Ui, Apps, [app(App?, M?, CSig?, idle_cssn(Ui?)) | Apps?]).
-install_cssn_step(refused, _, _, _, Apps, Apps?).
+%% install_step(V, App, CSig, Ui, Cal, Apps, Apps1): a mini-app installed is
+%% held idle with its two grants; one refused has its person channel read for
+%% good, the channel never ending (idle_channel/1).
+procedure install_step(Verdict?, Constant?, String?, PersonChannel(Opaque)?, Stream(Integer)?, AppList?, AppList).
+install_step(ok(M), App, CSig, Ui, Cal, Apps, [app(App?, M?, CSig?, idle(Ui?, Cal?)) | Apps?]).
+install_step(refused, _, _, Ui, _, Apps, Apps?) :- idle_channel(Ui?).
 
 %% app_idle(App, Apps, Apps1): the mini-app's entry returns from running to
-%% idle.  The user-interface writer the entry held at installation went to the
-%% execution that has now ended, so the entry takes a fresh one, as it did at
-%% installation; the next activation posts that one with the entry goal.  An
-%% entry that is not running is left as it is, so a report that arrives twice,
-%% or for a mini-app never activated, changes nothing.
+%% idle.  The end of the person channel the entry held at installation went
+%% to the execution that has now ended, so the entry takes a fresh one, as it
+%% did at installation, and the calendar kept for its next activation; the
+%% next activation posts the two with the entry goal.  An entry that is not
+%% running is left as it is, so a report that arrives twice, or for a mini-app
+%% never activated, changes nothing.
 procedure app_idle(Constant?, AppList?, AppList).
-app_idle(App, [app(A, M, C, running([])) | Rest], [app(A?, M?, C?, idle(Ui)) | Rest?]) :-
-    App? =?= A? | hold_app_ui(Ui?).
+app_idle(App, [app(A, M, C, running([], Cal)) | Rest], [app(A?, M?, C?, idle(Ui?, Cal?)) | Rest?]) :-
+    App? =?= A? |
+    new_channel(Ui, Person),
+    hold_person(Person?).
 app_idle(App, [E | Rest], [E? | Rest1?]) :-
     otherwise | app_idle(App?, Rest?, Rest1).
 app_idle(_, [], []).
 
-%% The fresh user-interface stream of a re-idled mini-app, which no screen
-%% shows: its reader, held, as the person interface holds the one it makes at
-%% installation, and read to its close --- by the mini-app's next execution,
-%% which writes it, or by close_apps/1, where the super-app ends with the entry
-%% still idle.
-procedure hold_app_ui(AppUiStream?).
-hold_app_ui([_ | Xs]) :- hold_app_ui(Xs?).
-hold_app_ui([]).
-
-%% app_kind(App, Kind): the interface a hosted mini-app has, by its name ---
-%% the currency's, the child-safe platform's, or the test mini-app's.
-procedure app_kind(Constant?, Constant).
-app_kind(currency, coins).
-app_kind(childsafe, cssn).
-app_kind(denominated, sovereign).
-app_kind(_, ping) :- otherwise | true.
 
 %% app_module(App, Apps, Apps1, L): the installed mini-app's module value, the
 %% list passed through.
@@ -608,90 +577,123 @@ app_module(App, [E | Rest], [E? | Rest1?], L?) :-
     otherwise | app_module(App?, Rest?, Rest1, L).
 app_module(_, [], [], missing).
 
-%% identities(App, M, Src, T): the mini-app's source identity, from its
-%% certificate, and the type identity of its entry in this scope --- ping/3, or
-%% coins/3 for the currency.
-procedure identities(Constant?, Module?, String, Constant).
-identities(App, M, Src?, T?) :-
+%% identities(M, Src, T): the mini-app's source identity, from its
+%% certificate, and the root channel's type identity: that of the entry
+%% template's opaque instance at the type at which the mini-app's exports
+%% record its entry miniapp/4 as the template's instance (GSG paper, Sections
+%% 4 and 6; TGLP modules.tex, Definition "Type Identity of a Type, Opaque
+%% Instance").  The super-app holds no declaration of the mini-app's types:
+%% the template miniapp/4 is the root's, and opaque_type/3 reads the type's
+%% identity off the module value.
+procedure identities(Module?, String, Constant).
+identities(M, Src?, T?) :-
     decompose_module(M?, _, Src, _),
-    app_kind(App?, K),
-    entry_type(K?, T).
-
-procedure entry_type(Constant?, Constant).
-entry_type(coins, T?) :- find_type(coins/3, T).
-entry_type(cssn, T?) :- find_type(cssn/3, T).
-entry_type(ping, T?) :- find_type(ping/3, T).
-entry_type(sovereign, T?) :- find_type(sovereign/3, T).
-
-%% The currency's entry, declared here for find_type/2 (never run).
-procedure coins(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
-coins(_, _, _).
-
-%% The child-safe platform's entry, likewise.
-procedure cssn(Constant?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, Stream(CsConversation)?).
-cssn(_, _, _).
-
-%% The denominated currencies' entry, likewise.  Currencies' miniapp.glp also
-%% exports sovereign/4, the same with the agent's calendar; that fourth
-%% argument is the headless plays', and run/3 activates the three.
-procedure sovereign(Key?, PersonChannel(SvDrawn)?, Stream(SvConversation)?).
-sovereign(_, _, _).
+    opaque_type(miniapp/4, M?, H),
+    find_type(miniapp/4, H?, T).
 
 %% --- The inviter ---
 
+%% invite_step(L, Id, App, Friend, ...): the invitation, where the mini-app is
+%% installed: its source identity and one end of a fresh root channel, signed;
+%% the other end kept, with the friend and the source identity, until the
+%% handshake.
 procedure invite_step(AppLookup?, Key?, Constant?, Key?, UserInStream?, NetInStream?, OutputsList?, Host?).
-invite_step(found(M), Id, App, Friend, UserIn, NetIn, Outs, Host) :-
-    identities(App?, M?, Src, T),
+invite_step(found(M), Id, App, Friend, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
+    decompose_module(M?, _, Src, _),
+    new_channel(Mine, Theirs),
     self_key(K),
     sign(invitation(Src?, Friend?), K?, InvSig),
-    send_friend(Friend?, msg(Id?, Friend?, invite(App?, Src?, T?, InvSig?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Host?).
+    send_friend(Friend?, msg(Id?, Friend?, invite(Src?, InvSig?, Theirs?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?,
+          host(Apps?, Atts?, [invited(App?, Friend?, Src?, Mine?) | Pend?], Trusted?)).
 invite_step(missing, Id, _, _, UserIn, NetIn, Outs, Host) :-
     agent(Id?, UserIn?, NetIn?, Outs?, Host?).
 
+%% take_invited(From, Src, Pend, Pend1, I): the invitation of From to the
+%% mini-app of source identity Src, removed: the mini-app's name here and the
+%% end kept, or none.
+procedure take_invited(Key?, String?, PendingInv?, PendingInv, Kept).
+take_invited(From, Src, [invited(A, F, S, Mine) | Rest], Rest?, kept(A?, Mine?)) :-
+    From? =?= F?, Src? =?= S? | true.
+take_invited(From, Src, [P | Rest], [P? | Rest1?], I?) :-
+    otherwise | take_invited(From?, Src?, Rest?, Rest1, I).
+take_invited(_, _, [], [], none).
+
+%% close_kept(I): an end kept that no execution will take, closed: what this
+%% side would have written on it, nothing.
+procedure close_kept(Kept?).
+close_kept(kept(_, ch(_, []))).
+close_kept(none).
+
 %% --- The invitee ---
 
-%% take_offer(App, From, Pend, Pend1, Offer): the offer pending from From for
-%% App, removed; none where there is none.
-procedure take_offer(Constant?, Constant?, PendingInv?, PendingInv, Offer).
-take_offer(App, From, [offered(F, A, Src, T, S) | Rest], Rest?, offer(Src?, T?, S?)) :-
-    App? =?= A?, From? =?= F? | true.
-take_offer(App, From, [P | Rest], [P? | Rest1?], O?) :-
-    otherwise | take_offer(App?, From?, Rest?, Rest1, O).
+%% consent_lookup(L, Id, App, From, ...): the person's consent, for the
+%% mini-app installed here as App, by its source identity: where the offer of
+%% it from From has arrived, join; where it has not, the consent waits for it.
+%% A mini-app not installed here is nothing to consent to.
+procedure consent_lookup(AppLookup?, Key?, Constant?, Key?, UserInStream?, NetInStream?, OutputsList?, Host?).
+consent_lookup(found(M), Id, App, From, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
+    decompose_module(M?, _, Src, _),
+    take_offer(Src?, From?, Pend?, Pend1, Offer),
+    consent_step(Offer?, Id?, App?, From?, Src?, UserIn?, NetIn?, Outs?,
+                 host(Apps?, Atts?, Pend1?, Trusted?)).
+consent_lookup(missing, Id, _, _, UserIn, NetIn, Outs, Host) :-
+    agent(Id?, UserIn?, NetIn?, Outs?, Host?).
+
+%% decline_lookup(L, Id, From, ...): the person declines the offer from From
+%% of the mini-app installed here, by its source identity.
+procedure decline_lookup(AppLookup?, Key?, Key?, UserInStream?, NetInStream?, OutputsList?, Host?).
+decline_lookup(found(M), Id, From, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
+    decompose_module(M?, _, Src, _),
+    take_offer(Src?, From?, Pend?, Pend1, Offer),
+    decline_step(Offer?, Id?, From?, Src?, UserIn?, NetIn?, Outs?,
+                 host(Apps?, Atts?, Pend1?, Trusted?)).
+decline_lookup(missing, Id, _, UserIn, NetIn, Outs, Host) :-
+    agent(Id?, UserIn?, NetIn?, Outs?, Host?).
+
+%% take_offer(Src, From, Pend, Pend1, Offer): the offer from From of the
+%% mini-app of source identity Src, removed, with the end it carried; none
+%% where there is none.
+procedure take_offer(String?, Key?, PendingInv?, PendingInv, Offer).
+take_offer(Src, From, [offered(F, S, _, End) | Rest], Rest?, offer(End?)) :-
+    Src? =?= S?, From? =?= F? | true.
+take_offer(Src, From, [P | Rest], [P? | Rest1?], O?) :-
+    otherwise | take_offer(Src?, From?, Rest?, Rest1, O).
 take_offer(_, _, [], [], none).
 
-%% take_consent(App, From, Pend, Pend1, C): whether the person has consented
-%% already, the consent removed.
-procedure take_consent(Constant?, Constant?, PendingInv?, PendingInv, Constant).
-take_consent(App, From, [consented(A, F) | Rest], Rest?, true) :-
-    App? =?= A?, From? =?= F? | true.
-take_consent(App, From, [P | Rest], [P? | Rest1?], C?) :-
-    otherwise | take_consent(App?, From?, Rest?, Rest1, C).
-take_consent(_, _, [], [], false).
+%% take_consent(Src, From, Pend, Pend1, C): the person's consent given
+%% already to an offer from From of the mini-app of source identity Src,
+%% removed: the name it is installed under here, or none.
+procedure take_consent(String?, Key?, PendingInv?, PendingInv, Consent).
+take_consent(Src, From, [consented(S, F, A) | Rest], Rest?, app(A?)) :-
+    Src? =?= S?, From? =?= F? | true.
+take_consent(Src, From, [P | Rest], [P? | Rest1?], C?) :-
+    otherwise | take_consent(Src?, From?, Rest?, Rest1, C).
+take_consent(_, _, [], [], none).
 
-procedure consent_step(Offer?, Key?, Constant?, Key?, UserInStream?, NetInStream?, OutputsList?, Host?).
-consent_step(none, Id, App, From, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
-    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, [consented(App?, From?) | Pend?], Trusted?)).
-consent_step(offer(Src, T, _), Id, App, From, UserIn, NetIn, Outs, Host) :-
-    do_join(Id?, App?, From?, Src?, T?, UserIn?, NetIn?, Outs?, Host?).
+procedure consent_step(Offer?, Key?, Constant?, Key?, String?, UserInStream?, NetInStream?, OutputsList?, Host?).
+consent_step(none, Id, App, From, Src, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
+    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, [consented(Src?, From?, App?) | Pend?], Trusted?)).
+consent_step(offer(End), Id, App, From, Src, UserIn, NetIn, Outs, Host) :-
+    do_join(Id?, App?, From?, Src?, End?, UserIn?, NetIn?, Outs?, Host?).
 
-procedure decline_step(Offer?, Key?, Constant?, Key?, UserInStream?, NetInStream?, OutputsList?, Host?).
+procedure decline_step(Offer?, Key?, Key?, String?, UserInStream?, NetInStream?, OutputsList?, Host?).
 decline_step(none, Id, _, _, UserIn, NetIn, Outs, Host) :-
     agent(Id?, UserIn?, NetIn?, Outs?, Host?).
-decline_step(offer(_, _, _), Id, App, From, UserIn, NetIn, Outs, Host) :-
-    send_friend(From?, msg(Id?, From?, decline(App?)), Outs?, Outs1),
+decline_step(offer(ch(_, [])), Id, From, Src, UserIn, NetIn, Outs, Host) :-
+    send_friend(From?, msg(Id?, From?, decline(Src?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, Host?).
 
 %% invite_signed(Sg, ...): the invitation taken apart.  Where it verifies it
 %% is checked and the offer proceeds; where it is unsigned --- a forgery ---
 %% the offer is refused by the path an invitation that does not check takes,
-%% and nothing is delivered (Section 6.1).
-procedure invite_signed(Signature?, Key?, Key?, Constant?, String?, Constant?, String?, UserInStream?, NetInStream?, OutputsList?, Host?).
-invite_signed(signed(_, _, Inv), Id, From, App, Src, T, InvSig, UserIn, NetIn, Outs, Host) :-
+%% its end closed, and nothing is delivered (Section 6.1).
+procedure invite_signed(Signature?, Key?, Key?, String?, String?, RootChannel(Opaque)?, UserInStream?, NetInStream?, OutputsList?, Host?).
+invite_signed(signed(_, _, Inv), Id, From, Src, InvSig, End, UserIn, NetIn, Outs, Host) :-
     invite_check(Inv?, Src?, Id?, Ok),
-    offer_step(Ok?, Id?, From?, App?, Src?, T?, InvSig?, UserIn?, NetIn?, Outs?, Host?).
-invite_signed(unsigned, Id, From, App, Src, T, InvSig, UserIn, NetIn, Outs, Host) :-
-    offer_step(false, Id?, From?, App?, Src?, T?, InvSig?, UserIn?, NetIn?, Outs?, Host?).
+    offer_step(Ok?, Id?, From?, Src?, InvSig?, End?, UserIn?, NetIn?, Outs?, Host?).
+invite_signed(unsigned, Id, From, Src, InvSig, End, UserIn, NetIn, Outs, Host) :-
+    offer_step(false, Id?, From?, Src?, InvSig?, End?, UserIn?, NetIn?, Outs?, Host?).
 
 %% The signed invitation is untyped; it must name the offered source identity
 %% and this agent.
@@ -699,191 +701,214 @@ procedure invite_check(_?, String?, Constant?, Constant).
 invite_check(invitation(Src1, Me), Src, Id, true) :- Src? =?= Src1?, Me? =?= Id? | true.
 invite_check(_, _, _, false) :- otherwise | true.
 
-procedure offer_step(Constant?, Key?, Key?, Constant?, String?, Constant?, String?, UserInStream?, NetInStream?, OutputsList?, Host?).
-offer_step(true, Id, From, App, Src, T, InvSig, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
-    take_consent(App?, From?, Pend?, Pend1, C),
-    offer_consent(C?, Id?, From?, App?, Src?, T?, InvSig?, UserIn?, NetIn?, Outs?,
+procedure offer_step(Constant?, Key?, Key?, String?, String?, RootChannel(Opaque)?, UserInStream?, NetInStream?, OutputsList?, Host?).
+offer_step(true, Id, From, Src, InvSig, End, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
+    take_consent(Src?, From?, Pend?, Pend1, C),
+    offer_consent(C?, Id?, From?, Src?, InvSig?, End?, UserIn?, NetIn?, Outs?,
                   host(Apps?, Atts?, Pend1?, Trusted?)).
-offer_step(false, Id, _, _, _, _, _, UserIn, NetIn, Outs, Host) :-
+offer_step(false, Id, _, _, _, ch(_, []), UserIn, NetIn, Outs, Host) :-
     agent(Id?, UserIn?, NetIn?, Outs?, Host?).
 
-procedure offer_consent(Constant?, Key?, Key?, Constant?, String?, Constant?, String?, UserInStream?, NetInStream?, OutputsList?, Host?).
-offer_consent(true, Id, From, App, Src, T, _, UserIn, NetIn, Outs, Host) :-
-    do_join(Id?, App?, From?, Src?, T?, UserIn?, NetIn?, Outs?, Host?).
-offer_consent(false, Id, From, App, Src, T, InvSig, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
+procedure offer_consent(Consent?, Key?, Key?, String?, String?, RootChannel(Opaque)?, UserInStream?, NetInStream?, OutputsList?, Host?).
+offer_consent(app(App), Id, From, Src, _, End, UserIn, NetIn, Outs, Host) :-
+    do_join(Id?, App?, From?, Src?, End?, UserIn?, NetIn?, Outs?, Host?).
+offer_consent(none, Id, From, Src, InvSig, End, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
     agent(Id?, UserIn?, NetIn?, Outs?,
-          host(Apps?, Atts?, [offered(From?, App?, Src?, T?, InvSig?) | Pend?], Trusted?)).
+          host(Apps?, Atts?, [offered(From?, Src?, InvSig?, End?) | Pend?], Trusted?)).
 
 %% do_join: the person having consented, where the mini-app is installed here
-%% with the offered identities, sign the undertaking to keep its contract and
-%% run its certified code, and send it; otherwise decline.  (Shipping the
-%% certified program to an invitee that lacks it is not implemented: such an
-%% invitee declines.)
-procedure do_join(Key?, Constant?, Key?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
-do_join(Id, App, From, Src, T, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
+%% with the offered source identity, sign the undertaking to keep its contract
+%% and run its certified code, and send it with the type identity of the entry
+%% template's opaque instance at the mini-app's type, the end the invitation
+%% carried kept until the inviter answers; otherwise decline, the end closed.
+%% (Shipping the certified program to an invitee that lacks it is not
+%% implemented: such an invitee declines.)
+procedure do_join(Key?, Constant?, Key?, String?, RootChannel(Opaque)?, UserInStream?, NetInStream?, OutputsList?, Host?).
+do_join(Id, App, From, Src, End, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
     app_module(App?, Apps?, Apps1, L),
-    join_verify(true, L?, App?, Src?, T?, Ok),
-    join_step(Ok?, Id?, App?, From?, Src?, T?, UserIn?, NetIn?, Outs?,
+    join_verify(L?, Src?, Ok),
+    join_step(Ok?, Id?, App?, From?, Src?, End?, UserIn?, NetIn?, Outs?,
               host(Apps1?, Atts?, Pend?, Trusted?)).
 
-procedure join_step(Verdict?, Key?, Constant?, Key?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
-join_step(ok(_), Id, App, From, Src, T, UserIn, NetIn, Outs, Host) :-
+procedure join_step(Joined?, Key?, Constant?, Key?, String?, RootChannel(Opaque)?, UserInStream?, NetInStream?, OutputsList?, Host?).
+join_step(ok(T), Id, App, From, Src, End, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
     self_key(K),
     sign(undertaking(Src?), K?, U),
-    send_friend(From?, msg(Id?, From?, join(App?, Src?, T?, U?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Host?).
-join_step(refused, Id, App, From, _, _, UserIn, NetIn, Outs, Host) :-
-    send_friend(From?, msg(Id?, From?, decline(App?)), Outs?, Outs1),
+    send_friend(From?, msg(Id?, From?, join(Src?, T?, U?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?,
+          host(Apps?, Atts?, [joining(App?, From?, Src?, End?) | Pend?], Trusted?)).
+join_step(refused, Id, _, From, Src, ch(_, []), UserIn, NetIn, Outs, Host) :-
+    send_friend(From?, msg(Id?, From?, decline(Src?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, Host?).
 
-%% --- The handshake's checks ---
+%% join_verify(L, Src, Ok): the mini-app installed here, of source identity
+%% Src: the type identity of the entry template's opaque instance at its type.
+procedure join_verify(AppLookup?, String?, Joined).
+join_verify(found(M), Src, Ok?) :-
+    identities(M?, Src1, T1),
+    source_match(Src?, Src1?, T1?, Ok).
+join_verify(missing, _, refused).
+
+procedure source_match(String?, String?, Constant?, Joined).
+source_match(Src, Src1, T, ok(T?)) :- Src? =?= Src1? | true.
+source_match(_, _, _, refused) :- otherwise | true.
+
+%% take_joining(From, Src, Pend, Pend1, I): the join of this agent to From's
+%% mini-app of source identity Src, removed: its name here and the end the
+%% invitation carried, or none.
+procedure take_joining(Key?, String?, PendingInv?, PendingInv, Kept).
+take_joining(From, Src, [joining(A, F, S, End) | Rest], Rest?, kept(A?, End?)) :-
+    From? =?= F?, Src? =?= S? | true.
+take_joining(From, Src, [P | Rest], [P? | Rest1?], I?) :-
+    otherwise | take_joining(From?, Src?, Rest?, Rest1, I).
+take_joining(_, _, [], [], none).
+
+%% --- The handshake's checks (Section 6, Mechanisms: "the two super-apps
+%% exchange and compare the mini-app's source identity and the root channel's
+%% type identity, the type identity of the entry template's opaque instance at
+%% the mini-app's type, which must be equal at both ends") ---
 
 %% The signed undertaking is untyped; it must name the source identity.
 procedure undertaking_check(_?, String?, Constant).
 undertaking_check(undertaking(Src1), Src, true) :- Src? =?= Src1? | true.
 undertaking_check(_, _, false) :- otherwise | true.
 
-%% join_verify(Ok0, L, Src, T, Ok): the peer's term checked, the mini-app
-%% installed, and its identities equal to the peer's at both ends.
-procedure join_verify(Constant?, AppLookup?, Constant?, String?, Constant?, Verdict).
-join_verify(true, found(M), App, Src, T, Ok?) :-
-    identities(App?, M?, Src1, T1),
+%% handshake(Ok0, I, Apps, Apps1, Src, T, Ok, I1): the peer's undertaking
+%% checked, an end kept for the conversation, the mini-app it was kept for
+%% installed here, and its two identities equal to the peer's; the kept end
+%% handed on as I1, a reader of a type that is not constant being read once.
+procedure handshake(Constant?, Kept?, AppList?, AppList, String?, Constant?, Verdict, Kept).
+handshake(true, kept(App, End), Apps, Apps1?, Src, T, Ok?, kept(App?, End?)) :-
+    ground(App?) |
+    app_module(App?, Apps?, Apps1, L),
+    identity_check(L?, Src?, T?, Ok).
+handshake(_, I, Apps, Apps?, _, _, refused, I?) :- otherwise | true.
+
+procedure identity_check(AppLookup?, String?, Constant?, Verdict).
+identity_check(found(M), Src, T, Ok?) :-
+    identities(M?, Src1, T1),
     identity_match(Src?, Src1?, T?, T1?, M?, Ok).
-join_verify(_, _, _, _, _, refused) :- otherwise | true.
+identity_check(missing, _, _, refused).
 
 procedure identity_match(String?, String?, Constant?, Constant?, Module?, Verdict).
 identity_match(Src, Src1, T, T1, M, ok(M?)) :- Src? =?= Src1?, T? =?= T1? | true.
 identity_match(_, _, _, _, _, refused) :- otherwise | true.
 
-%% --- The inviter, on the invitee's undertaking: the root channel ---
+%% --- The inviter, on the invitee's undertaking ---
 
 %% join_signed(Sg, ...): the invitee's undertaking taken apart.  Where it
-%% verifies it is checked against the mini-app installed here and the root
-%% channel is created; where it is unsigned --- a forgery --- the join is
-%% refused and no root channel is created (Section 6.1).
-procedure join_signed(Signature?, Key?, Key?, Constant?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
-join_signed(signed(_, _, Und), Id, From, App, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
+%% verifies it is checked, with the invitee's type identity, against the
+%% mini-app installed here, and the conversation opens; where it is unsigned
+%% --- a forgery --- the join is refused, the end kept closed, and no
+%% conversation opens (Section 6.1).
+procedure join_signed(Signature?, Key?, Key?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
+join_signed(signed(_, _, Und), Id, From, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
     undertaking_check(Und?, Src?, Ok0),
-    app_module(App?, Apps?, Apps1, L),
-    join_verify(Ok0?, L?, App?, Src?, T?, Ok),
-    root_step(Ok?, Id?, From?, App?, Src?, T?, UserIn?, NetIn?, Outs?,
-              Apps1?, Atts?, Pend?, Trusted?).
-join_signed(unsigned, Id, From, App, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
-    root_step(refused, Id?, From?, App?, Src?, T?, UserIn?, NetIn?, Outs?,
-              Apps?, Atts?, Pend?, Trusted?).
+    take_invited(From?, Src?, Pend?, Pend1, I),
+    handshake(Ok0?, I?, Apps?, Apps1, Src?, T?, Ok, I1),
+    root_step(Ok?, I1?, Id?, From?, Src?, T?, UserIn?, NetIn?, Outs?,
+              Apps1?, Atts?, Pend1?, Trusted?).
+join_signed(unsigned, Id, From, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
+    take_invited(From?, Src?, Pend?, Pend1, I),
+    root_step(refused, I?, Id?, From?, Src?, T?, UserIn?, NetIn?, Outs?,
+              Apps?, Atts?, Pend1?, Trusted?).
 
-procedure root_step(Verdict?, Key?, Key?, Constant?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
-root_step(ok(M), Id, From, App, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
-    ground(App?) |
-    app_kind(App?, Kind),
-    root_ends(Kind?, Mine, Theirs),
+procedure root_step(Verdict?, Kept?, Key?, Key?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
+root_step(ok(M), kept(App, Mine), Id, From, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
     self_key(K),
     sign(undertaking(Src?), K?, Up),
-    send_friend(From?, msg(Id?, From?, root(App?, Src?, T?, Up?, Theirs?)), Outs?, Outs1),
-    deliver(App?, From?, Mine?, Id?, T?, M?, Apps?, Apps1, UserIn?, UserIn1),
+    send_friend(From?, msg(Id?, From?, root(Src?, T?, Up?)), Outs?, Outs1),
+    deliver(App?, From?, Mine?, Id?, M?, Apps?, Apps1, UserIn?, UserIn1),
     agent(Id?, UserIn1?, NetIn?, Outs1?, host(Apps1?, Atts?, Pend?, Trusted?)).
-
-root_step(refused, Id, _, _, _, _, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
+%% A handshake that failed closes the end kept for it.
+root_step(_, I, Id, _, _, _, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
+    otherwise |
+    close_kept(I?),
     agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, Pend?, Trusted?)).
 
-%% root_ends(Kind, Mine, Theirs): the two ends of a fresh root channel of the
-%% mini-app's protocol, wrapped for the friend channel.
-procedure root_ends(Constant?, RootEnd, RootEnd).
-root_ends(ping, ping_end(Mine?), ping_end(Theirs?)) :- new_channel(Mine, Theirs) | true.
-root_ends(coins, coins_end(Mine?), coins_end(Theirs?)) :- new_channel(Mine, Theirs) | true.
-root_ends(cssn, cssn_end(Mine?), cssn_end(Theirs?)) :- new_channel(Mine, Theirs) | true.
-root_ends(sovereign, sovereign_end(Mine?), sovereign_end(Theirs?)) :- new_channel(Mine, Theirs) | true.
-
-%% --- The invitee, on the root channel ---
+%% --- The invitee, on the inviter's undertaking ---
 
 %% root_signed(Sg, ...): the inviter's undertaking taken apart.  Where it
-%% verifies it is checked against the mini-app installed here and the end is
-%% accepted; where it is unsigned --- a forgery --- no end is accepted and
-%% nothing is delivered (Section 6.1).
-procedure root_signed(Signature?, Key?, Key?, Constant?, String?, Constant?, RootEnd?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
-root_signed(signed(_, _, Und), Id, From, App, Src, T, End, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
+%% verifies it is checked, with the inviter's type identity, against the
+%% mini-app installed here and the end the invitation carried is accepted;
+%% where it is unsigned --- a forgery --- no end is accepted, the end is
+%% closed, and nothing is delivered (Section 6.1).
+procedure root_signed(Signature?, Key?, Key?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
+root_signed(signed(_, _, Und), Id, From, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
     undertaking_check(Und?, Src?, Ok0),
-    app_module(App?, Apps?, Apps1, L),
-    join_verify(Ok0?, L?, App?, Src?, T?, Ok),
-    accept_root_step(Ok?, Id?, From?, App?, T?, End?, UserIn?, NetIn?, Outs?,
-                     Apps1?, Atts?, Pend?, Trusted?).
-root_signed(unsigned, Id, From, App, _, T, End, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
-    accept_root_step(refused, Id?, From?, App?, T?, End?, UserIn?, NetIn?, Outs?,
-                     Apps?, Atts?, Pend?, Trusted?).
+    take_joining(From?, Src?, Pend?, Pend1, I),
+    handshake(Ok0?, I?, Apps?, Apps1, Src?, T?, Ok, I1),
+    accept_root_step(Ok?, I1?, Id?, From?, UserIn?, NetIn?, Outs?,
+                     Apps1?, Atts?, Pend1?, Trusted?).
+root_signed(unsigned, Id, From, Src, _, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
+    take_joining(From?, Src?, Pend?, Pend1, I),
+    accept_root_step(refused, I?, Id?, From?, UserIn?, NetIn?, Outs?,
+                     Apps?, Atts?, Pend1?, Trusted?).
 
-procedure accept_root_step(Verdict?, Key?, Key?, Constant?, Constant?, RootEnd?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
-accept_root_step(ok(M), Id, From, App, T, End, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
-    deliver(App?, From?, End?, Id?, T?, M?, Apps?, Apps1, UserIn?, UserIn1),
+procedure accept_root_step(Verdict?, Kept?, Key?, Key?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
+accept_root_step(ok(M), kept(App, End), Id, From, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
+    ground(App?) |
+    deliver(App?, From?, End?, Id?, M?, Apps?, Apps1, UserIn?, UserIn1),
     release_held(App?, From?, Pend?, Pend1),
     agent(Id?, UserIn1?, NetIn?, Outs?, host(Apps1?, Atts?, Pend1?, Trusted?)).
-accept_root_step(refused, Id, _, _, _, _, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
+accept_root_step(_, I, Id, _, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
+    otherwise |
+    close_kept(I?),
     agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, Pend?, Trusted?)).
 
 %% --- Activation and the grants (Section 3, "What the super-app grants a
 %% mini-app") ---
 
-%% deliver(App, Friend, End, Id, T, M, Apps, Apps1): hand the mini-app one end
-%% of the root channel of its conversation with Friend, on its social-graph
-%% channel.  An idle mini-app is activated first by run/3 under the type
-%% identity of its entry, with exactly its two channels: the user-interface
-%% channel held since installation, and the social-graph channel.
-procedure deliver(Constant?, Key?, RootEnd?, Key?, Constant?, Module?, AppList?, AppList, UserInStream?, UserInStream).
-deliver(App, Friend, ping_end(End), Id, T, M, [app(A, M1, C, idle(Ui?)) | Rest],
-        [app(A?, M1?, C?, running(Sg1)) | Rest?], UserIn, UserIn1?) :-
+%% deliver(App, Friend, End, Id, M, Apps, Apps1, UserIn, UserIn1): hand the
+%% mini-app one end of the root channel of its conversation with Friend, on its
+%% social-graph channel.  An idle mini-app is activated first, with exactly its
+%% three grants: the end of its person channel and the calendar held since
+%% installation, and the social-graph channel; the calendar is copied, the
+%% copy kept for its next activation should this execution end.  Where it
+%% runs already the new conversation goes to that execution (Section 3,
+%% "Activation and joining").
+procedure deliver(Constant?, Key?, RootChannel(Opaque)?, Key?, Module?, AppList?, AppList, UserInStream?, UserInStream).
+deliver(App, Friend, End, Id, M, [app(A, M1, C, idle(Ui, Cal)) | Rest],
+        [app(A?, M1?, C?, running(Sg1, Kept?)) | Rest?], UserIn, UserIn1?) :-
     App? =?= A? |
-    run(ping(Id?, Ui, ch(Sg?, Up)), T?, M?),
+    copy_calendar(Cal?, Given, Kept),
+    activate(M?, Id?, Ui?, Sg?, Up, Given?),
     open_conv(Friend?, End?, Sg, Sg1?),
     inject_requests(App?, Up?, UserIn?, UserIn1).
-deliver(App, Friend, ping_end(End), _, _, _, [app(A, M1, C, running(Sg?)) | Rest],
-        [app(A?, M1?, C?, running(Sg1)) | Rest?], UserIn, UserIn?) :-
+deliver(App, Friend, End, _, _, [app(A, M1, C, running(Sg?, Cal)) | Rest],
+        [app(A?, M1?, C?, running(Sg1, Cal?)) | Rest?], UserIn, UserIn?) :-
     App? =?= A? |
     open_conv(Friend?, End?, Sg, Sg1?).
-%% The currency: activated with its two channels, the person channel held
-%% since installation and the conversations stream; each conversation handed
-%% to it on the latter.
-deliver(App, Friend, coins_end(End), Id, T, M, [app(A, M1, C, idle_coins(Ui)) | Rest],
-        [app(A?, M1?, C?, running_coins(Convs1)) | Rest?], UserIn, UserIn?) :-
-    App? =?= A? |
-    run(coins(Id?, Ui?, Convs?), T?, M?),
-    open_conv_coins(Friend?, End?, Convs, Convs1?).
-deliver(App, Friend, coins_end(End), _, _, _, [app(A, M1, C, running_coins(Convs?)) | Rest],
-        [app(A?, M1?, C?, running_coins(Convs1)) | Rest?], UserIn, UserIn?) :-
-    App? =?= A? |
-    open_conv_coins(Friend?, End?, Convs, Convs1?).
-%% The child-safe platform: activated with its two channels, the commands and
-%% notifications channel held since installation and the conversations stream;
-%% each conversation handed to it on the latter, and adopting one is the
-%% friendship under its contract.
-deliver(App, Friend, cssn_end(End), Id, T, M, [app(A, M1, C, idle_cssn(Ui)) | Rest],
-        [app(A?, M1?, C?, running_cssn(Convs1)) | Rest?], UserIn, UserIn?) :-
-    App? =?= A? |
-    run(cssn(Id?, Ui?, Convs?), T?, M?),
-    open_conv_cssn(Friend?, End?, Convs, Convs1?).
-deliver(App, Friend, cssn_end(End), _, _, _, [app(A, M1, C, running_cssn(Convs?)) | Rest],
-        [app(A?, M1?, C?, running_cssn(Convs1)) | Rest?], UserIn, UserIn?) :-
-    App? =?= A? |
-    open_conv_cssn(Friend?, End?, Convs, Convs1?).
-%% The denominated currencies: activated with its two channels exactly as the
-%% currency is --- the person channel held since installation and the
-%% conversations stream --- each conversation handed to it on the latter.
-deliver(App, Friend, sovereign_end(End), Id, T, M, [app(A, M1, C, idle_sovereign(Ui)) | Rest],
-        [app(A?, M1?, C?, running_sovereign(Convs1)) | Rest?], UserIn, UserIn?) :-
-    App? =?= A? |
-    run(sovereign(Id?, Ui?, Convs?), T?, M?),
-    open_conv_sovereign(Friend?, End?, Convs, Convs1?).
-deliver(App, Friend, sovereign_end(End), _, _, _, [app(A, M1, C, running_sovereign(Convs?)) | Rest],
-        [app(A?, M1?, C?, running_sovereign(Convs1)) | Rest?], UserIn, UserIn?) :-
-    App? =?= A? |
-    open_conv_sovereign(Friend?, End?, Convs, Convs1?).
-deliver(App, Friend, End, Id, T, M, [E | Rest], [E? | Rest1?], UserIn, UserIn1?) :-
-    otherwise | deliver(App?, Friend?, End?, Id?, T?, M?, Rest?, Rest1, UserIn?, UserIn1).
-deliver(_, _, _, _, _, _, [], [], UserIn, UserIn?).
+deliver(App, Friend, End, Id, M, [E | Rest], [E? | Rest1?], UserIn, UserIn1?) :-
+    otherwise | deliver(App?, Friend?, End?, Id?, M?, Rest?, Rest1, UserIn?, UserIn1).
+deliver(_, _, _, _, _, [], [], UserIn, UserIn?).
+
+%% activate(M, Id, Ui, Sg, Up, Cal): the mini-app activated by run/3 at the
+%% type identity of the entry template's opaque instance at the type its
+%% exports record (GSG paper, Section 4, "Compiled programs as values"; TGLP
+%% modules.tex, Dynamic Activation, "Opaque types"): opaque_type/3 reads that
+%% type's identity off the module value, find_type/3 gives the opaque
+%% instance's, and run/3 posts the one goal shape every mini-app is activated
+%% by, its grants held at Opaque standing at the positions of the template's
+%% parameter (the one step back).
+procedure activate(Module?, Key?, PersonChannel(Opaque)?, Stream(SgToApp(Opaque))?, Stream(AppToSg), Stream(Integer)?).
+activate(M, Id, Ui, Sg, Up?, Cal) :-
+    opaque_type(miniapp/4, M?, H),
+    find_type(miniapp/4, H?, T),
+    run(miniapp(Id?, Ui?, ch(Sg?, Up), Cal?), T?, M?).
+
+%% copy_calendar(Cal, Given, Kept): each date, as it comes, to the execution
+%% activated and to the copy the entry keeps.
+procedure copy_calendar(Stream(Integer)?, Stream(Integer), Stream(Integer)).
+copy_calendar([D | Ds], [D? | Gs?], [D? | Ks?]) :-
+    integer(D?) | copy_calendar(Ds?, Gs, Ks).
+copy_calendar([], [], []).
 
 %% inject_requests(App, Up, UserIn, UserIn1): the mini-app's requests up its
 %% social-graph channel, tagged with its name, injected into the agent's person
 %% stream as they come (as inject_msg does a response); the stream closes when
 %% the person's does, whatever the mini-app still asks.
-procedure inject_requests(Constant?, AppToSgStream?, UserInStream?, UserInStream).
+procedure inject_requests(Constant?, Stream(AppToSg)?, UserInStream?, UserInStream).
 inject_requests(App, [warm_call(N, V) | Up], Ys, [app_request(App?, warm_call(N?, V?)) | Ys1?]) :-
     ground(V?) | inject_requests(App?, Up?, Ys?, Ys1).
 inject_requests(App, Up, [Y | Ys], [Y? | Ys1?]) :-
@@ -895,17 +920,8 @@ inject_requests(_, _, [], []).
 inject_requests(App, [], Ys, [app_ended(App?) | Ys?]) :- ground(App?) | true.
 
 %% open_conv(Friend, End, Sg, Sg1): Sg := [conversation(Friend, End) | Sg1].
-procedure open_conv(Constant?, RootChannel?, SgToAppStream, SgToAppStream?).
+procedure open_conv(Key?, RootChannel(Opaque)?, Stream(SgToApp(Opaque)), Stream(SgToApp(Opaque))?).
 open_conv(Friend, End, [conversation(Friend?, End?) | Sg1?], Sg1).
-
-procedure open_conv_coins(Key?, PeerChannel?, Stream(Conversation), Stream(Conversation)?).
-open_conv_coins(Friend, End, [conversation(Friend?, End?) | Convs1?], Convs1).
-
-procedure open_conv_cssn(Constant?, CsChannel?, Stream(CsConversation), Stream(CsConversation)?).
-open_conv_cssn(Friend, End, [conversation(Friend?, End?) | Convs1?], Convs1).
-
-procedure open_conv_sovereign(Key?, SvChannel?, Stream(SvConversation), Stream(SvConversation)?).
-open_conv_sovereign(Friend, End, [conversation(Friend?, End?) | Convs1?], Convs1).
 
 %% --- Attestations (Section 5.5) ---
 
@@ -917,17 +933,20 @@ lookup_att(_, [], [], none).
 %% --- Termination: the mini-apps' streams close with the agent's ---
 
 procedure close_host(Host?).
-close_host(host(Apps, _, _, _)) :- close_apps(Apps?).
+close_host(host(Apps, _, Pend, _)) :- close_apps(Apps?), close_pending(Pend?).
+
+%% close_pending(Pend): the ends kept for an invitation or a join that has not
+%% reached its handshake, closed with the agent; every other entry dropped.
+procedure close_pending(PendingInv?).
+close_pending([invited(_, _, _, ch(_, [])) | Rest]) :- close_pending(Rest?).
+close_pending([offered(_, _, _, ch(_, [])) | Rest]) :- close_pending(Rest?).
+close_pending([joining(_, _, _, ch(_, [])) | Rest]) :- close_pending(Rest?).
+close_pending([_ | Rest]) :- otherwise | close_pending(Rest?).
+close_pending([]).
 
 procedure close_apps(AppList?).
-close_apps([app(_, _, _, idle([])) | Rest]) :- close_apps(Rest?).
-close_apps([app(_, _, _, running([])) | Rest]) :- close_apps(Rest?).
-close_apps([app(_, _, _, idle_coins(Ui)) | Rest]) :- idle_channel(Ui?), close_apps(Rest?).
-close_apps([app(_, _, _, running_coins([])) | Rest]) :- close_apps(Rest?).
-close_apps([app(_, _, _, idle_cssn(ch(_, []))) | Rest]) :- close_apps(Rest?).
-close_apps([app(_, _, _, running_cssn([])) | Rest]) :- close_apps(Rest?).
-close_apps([app(_, _, _, idle_sovereign(Ui)) | Rest]) :- idle_channel(Ui?), close_apps(Rest?).
-close_apps([app(_, _, _, running_sovereign([])) | Rest]) :- close_apps(Rest?).
+close_apps([app(_, _, _, idle(Ui, _)) | Rest]) :- idle_channel(Ui?), close_apps(Rest?).
+close_apps([app(_, _, _, running([], _)) | Rest]) :- close_apps(Rest?).
 close_apps([]).
 
 %% idle_channel(Ui?): the person channel of a mini-app never activated, which
@@ -1010,23 +1029,24 @@ warm_consent_step(none, Id, Who, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Tru
 warm_consent_step(wait(App, Name, Via), Id, Who, UserIn, NetIn, Outs, Host) :-
     warm_step(yes(Who?), Id?, App?, Name?, Via?, UserIn?, NetIn?, Outs?, Host?).
 
-%% warm_after_commit(Id, Friend, Pend, Outs, Outs1): a friendship just made
-%% with the anchor of a warm call under way: send the warm call.
-procedure warm_after_commit(Key?, Key?, PendingInv?, OutputsList?, OutputsList).
-warm_after_commit(Id, Friend, [warm(App, Name) | Rest], Outs, Outs1?) :-
-    ground(Name?) |
+%% warm_after_commit(Id, Friend, Pend, Pend1, Outs, Outs1): a friendship just
+%% made with the anchor of a warm call under way: send the warm call.  The
+%% pending list is passed through unchanged.
+procedure warm_after_commit(Key?, Key?, PendingInv?, PendingInv, OutputsList?, OutputsList).
+warm_after_commit(Id, Friend, [warm(App, Name) | Rest], [warm(App?, Name?) | Rest1?], Outs, Outs1?) :-
+    ground(App?), ground(Name?) |
     Parts ..= Name?,
     anchor_is(Parts?, Friend?, B, _),
-    wac_step(B?, Id?, Friend?, App?, Name?, Rest?, Outs?, Outs1).
-warm_after_commit(Id, Friend, [_ | Rest], Outs, Outs1?) :-
-    otherwise | warm_after_commit(Id?, Friend?, Rest?, Outs?, Outs1).
-warm_after_commit(_, _, [], Outs, Outs?).
+    wac_step(B?, Id?, Friend?, App?, Rest?, Rest1, Outs?, Outs1).
+warm_after_commit(Id, Friend, [P | Rest], [P? | Rest1?], Outs, Outs1?) :-
+    otherwise | warm_after_commit(Id?, Friend?, Rest?, Rest1, Outs?, Outs1).
+warm_after_commit(_, _, [], [], Outs, Outs?).
 
-procedure wac_step(Constant?, Key?, Key?, Constant?, GlobalName?, PendingInv?, OutputsList?, OutputsList).
-wac_step(true, Id, Friend, App, _, _, Outs, Outs1?) :-
+procedure wac_step(Constant?, Key?, Key?, Constant?, PendingInv?, PendingInv, OutputsList?, OutputsList).
+wac_step(true, Id, Friend, App, Rest, Rest?, Outs, Outs1?) :-
     send_friend(Friend?, msg(Id?, Friend?, warm_call(App?)), Outs?, Outs1).
-wac_step(false, Id, Friend, _, _, Rest, Outs, Outs1?) :-
-    warm_after_commit(Id?, Friend?, Rest?, Outs?, Outs1).
+wac_step(false, Id, Friend, _, Rest, Rest1?, Outs, Outs1?) :-
+    warm_after_commit(Id?, Friend?, Rest?, Rest1, Outs?, Outs1).
 
 %% release_held(App, From, Pend, Pend1): the handshake with the anchor done,
 %% the held end is released, and the value goes to the anchor.
@@ -1155,15 +1175,15 @@ pending_step(false, Name, S, Id, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted)
 %% mini-app, the name handed on as Name1 to be remembered: a reader of a type
 %% that is not constant is read once.
 procedure forward_pending(GlobalName?, Key?, AppList?, AppList, GlobalName).
-forward_pending(Name, S, [app(A, M, C, running(Sg?)) | Rest], [app(A?, M?, C?, running(Sg1)) | Rest1?], Name1?) :-
+forward_pending(Name, S, [app(A, M, C, running(Sg?, Cal)) | Rest], [app(A?, M?, C?, running(Sg1, Cal?)) | Rest1?], Name1?) :-
     ground(Name?) |
-    push_down(pending_link(Name?, S?), Sg, Sg1?),
+    push_down(held(Name?, S?), Sg, Sg1?),
     forward_pending(Name?, S?, Rest?, Rest1, Name1).
 forward_pending(Name, S, [E | Rest], [E? | Rest1?], Name1?) :-
     otherwise | forward_pending(Name?, S?, Rest?, Rest1, Name1).
 forward_pending(Name, _, [], [], Name?).
 
-procedure push_down(SgToApp?, SgToAppStream, SgToAppStream?).
+procedure push_down(SgToApp(Opaque)?, Stream(SgToApp(Opaque)), Stream(SgToApp(Opaque))?).
 push_down(Msg, [Msg? | Sg1?], Sg1).
 
 procedure warm_call_step(Constant?, Key?, Key?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
