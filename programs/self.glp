@@ -135,16 +135,21 @@ Input(T) ::= input(Integer, Path, T).
 Path ::= [] ; [Integer | Path].
 Draw(T) ::= draw(Integer, _, T) ; withdraw(Integer).
 
-% The channel to the social graph (GSG, 2026-10-13 11:57 UTC, Udi: approved):
-% down it the social graph hands the mini-app each conversation, the peer's
-% key and one end of the root channel to the execution of the same mini-app
-% at the peer, and reports a held end by its global name (GSG paper, Section
-% "Distribution and Activation", "Contact between two participants"); up it
-% the mini-app asks for a warm call to the anchor of a held end.
+% The channel to the social graph (GSG, 2026-10-13 11:57 UTC, Udi: approved;
+% the held report and the warm call, GSG 2026-10-14 11:36 UTC, item 3, Udi:
+% "IGLP rules"): down it the social graph hands the mini-app each
+% conversation, the peer's key and one end of the root channel to the
+% execution of the same mini-app at the peer, and reports a held end by its
+% global name and the friend that passed it the end (IGLP madglp-spec, "Held
+% Links": the report pending_link(G, S), S the agent the name came from); up
+% it the mini-app, on its person's consent, asks for a warm call: an
+% introduction, by the friend that passed it the end, to the anchor the name
+% carries (GSG paper, Section "Distribution and Activation", "Contact between
+% two participants").
 RootChannel(T) ::= ch(Stream(T), Stream(T)?).
 Conversation(T) ::= conversation(Key, RootChannel(T)).
-SgToApp(T) ::= Conversation(T) ; held(GlobalName).
-AppToSg ::= warm_call(GlobalName).
+SgToApp(T) ::= Conversation(T) ; held(GlobalName, Key).
+AppToSg ::= warm_call(GlobalName, Key).
 SgChannel(T) ::= ch(Stream(SgToApp(T)), Stream(AppToSg)?).
 
 % =============================================================================
@@ -295,8 +300,11 @@ procedure '_find_type'(_?, Stream(Constant)?, Constant).
 procedure '_opaque_type'(_?, Module?, Stream(Constant)).
 procedure '_load_file'(String?, Content).
 
-% I/O
-procedure '_output'(_?).
+% I/O: the output kernel takes a term of any type, a parameter, so that a
+% stream of an opaque type reaches the person through send_to_user/1 (GLP,
+% 2026-10-14 11:15 UTC, item 1; GLP-Spec cd6fd8c, appendix-guards.tex, the
+% catalogue row).
+procedure(X) '_output'(X?).
 
 % =============================================================================
 % SINGLE-UNIT-CLAUSE PROCEDURES (DEFINED GUARDS)
@@ -345,7 +353,10 @@ merge(Xs, [], Xs?).
 % send_to_user/1 — system predicate emitting each ground term of the stream via
 % the _output kernel. Application modules reach user output by calling this (or a
 % local helper that calls it) rather than naming the reserved '_output' kernel.
-procedure send_to_user(Stream(_)?).
+% Its element a parameter (GLP, 2026-10-13 20:22 UTC, D; GLP-Spec d690de8,
+% appendix-guards.tex): a host's stream of opaque terms reaches the person
+% as any other; the clause is unchanged, ground on the element.
+procedure(X) send_to_user(Stream(X)?).
 send_to_user([T | In]) :- ground(T?) | '_output'(T?), send_to_user(In?).
 send_to_user([]).
 
