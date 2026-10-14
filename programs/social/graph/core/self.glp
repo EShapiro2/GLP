@@ -106,6 +106,27 @@ yes_person([draw(N, _, introRequest_w(from(_, _, input(Q)))) | Ds], [input(N?, Q
     ground(N?), ground(Q?) | yes_person(Ds?, Gs).
 yes_person([_ | Ds], Gs?) :- otherwise | yes_person(Ds?, Gs).
 
+%% play_home(Id?, Answer?, Notices?, Cmds, Log): home/4 on the agent's notices,
+%% with its dispatcher, and a person who answers each card, a friend's request
+%% to connect or an introduction, with Answer once it is drawn, logging the
+%% card it answered; the commands home writes to the agent come out on Cmds.
+%% The person grants only on a card drawn: the dispatcher takes the asks, the
+%% grants and the draws in turn (programs/vglp/dispatcher.glp, fair/5), and a
+%% grant for a construct not yet asked reaches none.
+exported procedure play_home(Key?, HomeDrawn?, AgentToUserStream?, Stream(UserInMsg), Stream(_)).
+play_home(Id, Ans, Notices, Cmds?, Log?) :-
+    ground(Id?) |
+    home # home(Id?, Notices?, Cmds, Asks),
+    home # dispatch(Asks?, ch(Grants?, Draws), _),
+    answering(Ans?, Draws?, Grants, Log).
+
+procedure answering(HomeDrawn?, _?, PersonIn(HomeDrawn), Stream(_)).
+answering(A, [draw(N, _, friendRequest_w(from(F, input(Q)))) | Ds], [input(N?, Q?, A?) | Gs?], [card(F?) | Log?]) :-
+    ground(A?), ground(N?), ground(F?), ground(Q?) | answering(A?, Ds?, Gs, Log).
+answering(A, [draw(N, _, introRequest_w(from(I, F, input(Q)))) | Ds], [input(N?, Q?, A?) | Gs?], [card(I?, F?) | Log?]) :-
+    ground(A?), ground(N?), ground(I?), ground(F?), ground(Q?) | answering(A?, Ds?, Gs, Log).
+answering(A, [_ | Ds], Gs?, Log?) :- otherwise | answering(A?, Ds?, Gs, Log).
+
 %% The super-app's output to its person, of the reserved type Output: "A
 %% vGLP program declares the type of its output to its person by defining
 %% the type Output, a reserved name; the dispatcher draws that output as a
