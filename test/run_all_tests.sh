@@ -5230,7 +5230,12 @@ check_not "SG spm no failed play" "→ failed" "$sg_spm"
 # mini-apps are programs of their own --- graph/pingapp, coins/currency ---
 # whose artefacts :artefact writes into core, where the agent's load_file/2
 # reads them; cssn's artefact carries no certificate (its boot glue reaches the
-# person) and loads as text, which the super-app does not install.  The
+# person) and loads as text, which the super-app does not install.  Each
+# mini-app is the instance of the root's entry template miniapp/4 at its own
+# type, activated at the template's opaque instance, and each person of a
+# mini-app is its own scripted person, the second template miniapp_person/4's
+# instance, the plays holding every screen at Opaque (GSG 2026-10-13 10:29
+# and 18:52 UTC).  The
 # artefacts are written in the session that runs the plays: a certificate is
 # accepted under a key the person trusts, and the REPL's key is that person's.
 # The four forgery plays present, at each of the super-app's four sites that
@@ -5468,17 +5473,16 @@ check "SG registry: the entry returns to idle and the second invitation is activ
 check_not "SG registry no failed play" "→ failed" "$sg_reinvite"
 
 # The denominated currencies mini-app (programs/currencies/sovereign/denominated, Currencies'
-# own) hosted by the super-app: the fourth deliver/10 pair.  The super-app hosts
-# each mini-app by name --- its own end constructor, its own pair of registry
-# states, and its own structural copy of the mini-app's channel type in
-# social/graph/self.glp, since find_type/2 resolves the entry's declaration in
-# the caller's scope.  This play fences that copy rather than the acts, which
-# are the mini-app's own and are exercised in Section N4: run/3 admits the
-# mini-app only if the identity matches, so a constructor that drifts from
-# Currencies' own refuses it outright and both screens stay unbound.  Measured
-# on 2026-09-15 by dropping the maturity from redeem in the super-app's copy:
-# "[ABORT] _run/3: type identity mismatch for sovereign/3 in module denominated"
-# and the play failed.  Its own session, as the mini-app plays above are.
+# own) hosted by the super-app.  The super-app holds no declaration of a
+# mini-app's types: it activates every mini-app alike, by run/3 at the type
+# identity of the root's entry template miniapp/4 at the opaque instance of
+# the type the mini-app's exports record (GSG paper, Sections 3 and 4; TGLP
+# modules.tex, Dynamic Activation, "Opaque types"; GSG 2026-10-13 10:29 UTC).
+# This play fences that activation rather than the acts, which are the
+# mini-app's own and are exercised in Section N4: run/3 admits the mini-app
+# only if the identities match, and the persons are the mini-app's own
+# scripted persons, under the role watch.  Its own session, as the mini-app
+# plays above are.
 sg_sovereign=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/currencies/sovereign/denominated $SG_CORE
 $SG_CORE
