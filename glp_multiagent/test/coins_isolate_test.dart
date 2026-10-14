@@ -122,13 +122,13 @@ void main() {
       return done();
     }
 
-    /// What the agent has written to her, each message's content: the
+    /// What the agent has written to her, its screen's content: the
     /// elements of the output thread, construct 0, which is how her screen
     /// reaches her (vGLP 169b008, Definition "Canonical Compilation"; vGLP,
     /// 2026-10-13 19:25 UTC, items 2 and 3).
     List<GTerm> screen() {
       final v = r.bridge.construct(0)?.view;
-      return [if (v is GList) for (final m in v.items) ctorArgs(m).$2[2]];
+      return [if (v is GList) ...v.items];
     }
 
     /// Her latest holdings as issuer-to-amount, sorted --- the state the

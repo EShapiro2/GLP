@@ -260,7 +260,16 @@ class _AgentSurfaceState extends State<AgentSurface> {
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 8),
       children: [
-        for (final c in _r.bridge.constructs)
+        // The questions' constructs first, in the order drawn, and the
+        // program's output to its person, the thread of construct 0, under
+        // them, so that what the person is asked stands at the top while the
+        // thread grows below (vGLP 169b008, Definition "Canonical
+        // Compilation"; the layout is the construct family's, Remark
+        // "Construct Families").
+        for (final c in [
+          for (final c in _r.bridge.constructs) if (c.id != 0) c,
+          for (final c in _r.bridge.constructs) if (c.id == 0) c,
+        ])
           ConstructView(
             key: constructKey(c.id),
             construct: c,

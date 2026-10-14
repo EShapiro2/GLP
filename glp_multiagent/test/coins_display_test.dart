@@ -26,21 +26,20 @@ import 'fixture_term.dart';
 
 /// The widget of the agent's output, as `coins_agent.glp` draws it.
 const _output =
-    "thread(form(msg, [field('Constant', shown), field('Constant', shown), "
-    "field('ScreenContent', menu([form(holdings, [field('Stream(Lot)', thre"
-    "ad(form(lot, [field('Issuer', shown), field('Amount', shown)])))]), fo"
-    "rm(opened, [field('Key', shown)]), form(minted, [field('Integer', show"
-    "n)]), form(paid, [field('Key', shown), field('Integer', shown)]), form"
-    "(received, [field('Key', shown), field('Integer', shown)]), form(retur"
-    "ned, [field('Key', shown), field('Integer', shown)]), form(swap_done, "
-    "[field('Key', shown)]), form(swap_declined, [field('Key', shown)]), fo"
-    "rm(swap_failed, [field('Key', shown)]), form(declined, [field('Key', s"
-    "hown)]), form(redeemed, [field('Key', shown), field('Key', shown)]), f"
-    "orm(menu, [field('Key', shown), field('Stream(Key)', thread)]), form(p"
-    "resented, [field('Key', shown), field('Key', shown)]), form(unfulfille"
-    "d, [field('Key', shown), field('Key', shown)]), form(refused, [field('"
-    "Key', shown)]), form(lacking, [field('Key', shown), field('Integer', s"
-    "hown)]), form(no_conversation, [field('Key', shown)])]))]))";
+    "thread(menu([form(holdings, [field('Holdings', thread(form(lot, [field"
+    "('Issuer', shown), field('Amount', shown)])))]), form(opened, [field('"
+    "Key', shown)]), form(minted, [field('Integer', shown)]), form(paid, [f"
+    "ield('Key', shown), field('Integer', shown)]), form(received, [field('"
+    "Key', shown), field('Integer', shown)]), form(returned, [field('Key', "
+    "shown), field('Integer', shown)]), form(swap_done, [field('Key', shown"
+    ")]), form(swap_declined, [field('Key', shown)]), form(swap_failed, [fi"
+    "eld('Key', shown)]), form(declined, [field('Key', shown)]), form(redee"
+    "med, [field('Key', shown), field('Key', shown)]), form(menu, [field('K"
+    "ey', shown), field('Stream(Key)', thread)]), form(presented, [field('K"
+    "ey', shown), field('Key', shown)]), form(unfulfilled, [field('Key', sh"
+    "own), field('Key', shown)]), form(refused, [field('Key', shown)]), for"
+    "m(lacking, [field('Key', shown), field('Integer', shown)]), form(no_co"
+    "nversation, [field('Key', shown)])]))";
 
 void main() {
   late UiRuntime r;
@@ -64,11 +63,12 @@ void main() {
           "field('YesNo', buttons([yes, no]))]), "
           'card(offer(bob, lot(bob, 2), [coin(alice, 3)]), input([2])))'));
       // Two messages of the agent's output, drawn as the thread of construct
-      // 0 by the widget of Output ::= ScreenMsg (vGLP 169b008, Definition
-      // "Canonical Compilation"): a menu, whose second argument is a list,
+      // 0 by the widget of Output ::= ScreenContent (vGLP 169b008, Definition
+      // "Canonical Compilation"; Currencies, 2026-10-14 08:48 UTC, item 2): a
+      // menu, whose second argument is a list,
       // and a message of one scalar.
-      r.handle(fixtureTerm('draw(0, $_output, [msg(agent, person, '
-          'menu(carol, [dave, erin])), msg(agent, person, opened(frank))])'));
+      r.handle(fixtureTerm(
+          'draw(0, $_output, [menu(carol, [dave, erin]), opened(frank)])'));
 
       await tester.pumpWidget(MaterialApp(
           home: AgentSurface(agentId: 'alice', runtime: r, muteNotices: true)));
@@ -99,10 +99,8 @@ void main() {
       expect(find.textContaining('menu(carol'), findsNothing);
       expect(find.textContaining('opened(frank)'), findsNothing);
       for (final (heading, at) in [
-        ('msg', const [1]),
-        ('menu', const [1, 3]),
-        ('msg', const [2, 1]),
-        ('opened', const [2, 1, 3]),
+        ('menu', const [1]),
+        ('opened', const [2, 1]),
       ]) {
         expect(
             find.descendant(

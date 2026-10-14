@@ -33,20 +33,15 @@
 /// test requires that no construct but the request form, whose stream
 /// question stays open, stands on any phone at the end of the run.
 ///
-/// The SCREEN view is suppressed in this test, at Currencies' request of
-/// 2026-09-24: it shows each screen message by its arguments with the functor
-/// dropped, and GC makes no claim about it.  Each phone is rendered from
-/// [_balancesOnly], a manifest local to this test: `coinsManifest`'s one panel
-/// with that view left out, and the same BALANCES view.  No library code is
-/// changed.  The bridge reads the draws before the runtime tries any view,
-/// and the runtime ignores a screen message no view matches, so the holdings
-/// and the constructs are those of `coinsManifest`; the test checks this
-/// against a runtime under `coinsManifest` fed the same lines.
-///
-/// The phones are cut below the balances, at Currencies' request of
-/// 2026-09-24: each shell is laid out as tall as the longest list, four rows,
-/// and one row's height under it, measured from the layout, and closes its
-/// lower edge with the bezel and corner radius of its upper edge.
+/// The agent's screen reaches the person only as the thread of construct 0,
+/// each message drawn by the widget of the reserved type Output ::=
+/// ScreenContent (vGLP 169b008, Definition "Canonical Compilation"; vGLP,
+/// 2026-10-13 19:25 UTC, items 2 and 3); the manifest names no view.  Each
+/// phone shows the request form and under it that thread, and is cut just
+/// below its latest holdings message, and the test checks those holdings
+/// against GC's Table 1, at Currencies' request of 2026-10-14 08:48 UTC,
+/// item 1.  Each shell closes its lower edge with the bezel and corner radius
+/// of its upper edge.
 library;
 
 import 'dart:io';
@@ -83,7 +78,8 @@ const _villagers = <_Villager>[
   _Villager('frank', 'Frank', ['diana', 'eve']),
 ];
 
-/// The holdings the run must end at, Currencies' own list.
+/// The holdings the run must end at, GC's Table 1 (Currencies, 2026-10-14
+/// 08:48 UTC, item 1).
 const _expected = <String, Map<String, String>>{
   'alice': {'bob': '5', 'charlie': '15', 'alice': '8', 'frank': '4'},
   'bob': {'alice': '10', 'diana': '20'},
@@ -92,31 +88,6 @@ const _expected = <String, Map<String, String>>{
   'eve': {'charlie': '4', 'frank': '1', 'alice': '2', 'bob': '10'},
   'frank': {'diana': '7', 'eve': '10', 'frank': '5'},
 };
-
-/// `coinsManifest` with its SCREEN view, the list view of the default display,
-/// left out, and every other element of it kept as the same object: the
-/// panel's id and name and its BALANCES view.
-final Manifest _balancesOnly = () {
-  final p = coinsManifest.panels.single;
-  return Manifest(
-    title: coinsManifest.title,
-    panels: [
-      Panel(
-        id: p.id,
-        name: p.name,
-        friends: p.friends,
-        wallet: p.wallet,
-        chat: p.chat,
-        groups: p.groups,
-        commands: p.commands,
-        inbox: p.inbox,
-        views: [for (final v in p.views) if (v.store != 'screen') v],
-      ),
-    ],
-    activity: coinsManifest.activity,
-    state: coinsManifest.state,
-  );
-}();
 
 Future<void> _loadFonts() async {
   Future<void> add(FontLoader l, String p) async =>
@@ -131,15 +102,10 @@ Future<void> _loadFonts() async {
   await mi.load();
 }
 
-/// The height of the screen within the shell of `coins_screen_test.dart`: its
-/// 740 points less the 10-point bezel above and below.
-const _screen = 720.0;
-
 /// The phone shell of `coins_screen_test.dart`, which took the Swap form and
-/// the proposal card already in the paper: the same width, bezel, corner radius
-/// and theme, and within it the same screen, laid out [_screen] points tall.
-/// The shell there is 740 points tall; a shorter [height] shows the top of that
-/// screen, and the shell closes its lower edge as its upper edge is closed.
+/// the proposal card already in the paper: the same width, bezel, corner
+/// radius and theme, and within it the screen, [height] less the bezel above
+/// and below, the shell closing its lower edge as its upper edge is closed.
 Widget _phone(Widget surface, {required double height}) => Container(
       width: 360,
       height: height,
@@ -148,24 +114,19 @@ Widget _phone(Widget surface, {required double height}) => Container(
           color: Colors.black, borderRadius: BorderRadius.circular(40)),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(30),
-        child: OverflowBox(
-          alignment: Alignment.topCenter,
-          minHeight: _screen,
-          maxHeight: _screen,
-          child: Container(
-            color: Colors.white,
-            child: MaterialApp(
-              debugShowCheckedModeBanner: false,
-              theme: ThemeData(
-                  fontFamily: 'AppFont',
-                  useMaterial3: true,
-                  colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
-                  elevatedButtonTheme: ElevatedButtonThemeData(
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white))),
-              home: surface,
-            ),
+        child: Container(
+          color: Colors.white,
+          child: MaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: ThemeData(
+                fontFamily: 'AppFont',
+                useMaterial3: true,
+                colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
+                elevatedButtonTheme: ElevatedButtonThemeData(
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white))),
+            home: surface,
           ),
         ),
       ),
@@ -210,11 +171,7 @@ void main() {
         ..maxCycles = 50000000;
       engine.runtime.outputTermCallback = (t) => notifies.add(screenTermOf(t));
 
-      final r = UiRuntime(manifest: _balancesOnly, onSend: (_) {});
-      // The same lines under the app's manifest, SCREEN view included, so that
-      // the test shows that leaving the view out changes no holding and no
-      // construct.
-      final full = UiRuntime(manifest: coinsManifest, onSend: (_) {});
+      final r = UiRuntime(manifest: coinsManifest, onSend: (_) {});
       final result = (await tester.runAsync(() async {
         engine.loadProgram('$repo/currencies/coins');
         return engine.runGoal('market_ui(${v.id})');
@@ -226,38 +183,27 @@ void main() {
               '${result.status.name} ${result.error ?? ''}');
       for (final t in notifies) {
         r.handle(t);
-        full.handle(t);
       }
-      String state(UiRuntime x) => [
-            x.store.balances.map((s, b) =>
-                MapEntry(s, b.map((k, a) => MapEntry(k, formatTerm(a))))),
-            [
-              for (final c in x.bridge.constructs)
-                '${c.id} ${formatTerm(c.widget)} ${formatTerm(c.view)}'
-            ],
-          ].toString();
-      expect(state(r), state(full),
-          reason: '${v.id}: leaving the SCREEN view out changed the holdings '
-              'or the constructs');
-      // The screen is the agent's report of its own holdings, and it is
-      // Currencies' list: the figure is checked against it, never fitted to it.
-      expect(
-          r.store.balances['balances']!
-              .map((k, v2) => MapEntry(k, formatTerm(v2))),
-          _expected[v.id],
-          reason: '${v.id}: the screen does not report the holdings of the '
-              'paper (Currencies, 2026-09-20 12:44 UTC)');
+      // The manifest names no view: nothing but the bridge's constructs.
+      expect(r.store.lists, isEmpty);
+      expect(r.store.balances, isEmpty);
+      // The screen is the agent's report of its own holdings, its latest
+      // holdings message, and it is Currencies' list: the figure is checked
+      // against it, never fitted to it.
+      expect(_holdingsOf(r), _expected[v.id],
+          reason: '${v.id}: the screen does not report the holdings of GC\'s '
+              'Table 1 (Currencies, 2026-10-14 08:48 UTC)');
       runtimes[v.id] = r;
     }
 
-    Widget grid(double height) {
+    Widget grid(Map<String, double> heights) {
       Widget row(Iterable<_Villager> vs) => Row(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               for (final v in vs) ...[
                 if (v != vs.first) const SizedBox(width: 18),
-                _cell(v, runtimes[v.id]!, height),
+                _cell(v, runtimes[v.id]!, heights[v.id]!),
               ]
             ],
           );
@@ -281,40 +227,52 @@ void main() {
     Finder surfaceOf(_Villager v) =>
         find.byWidgetPredicate((w) => w is AgentSurface && w.agentId == v.id);
 
-    // The cut, measured from the layout: the phones laid out 740 points tall,
-    // as in `coins_screen_test.dart`, and each balance row found on each
-    // screen.  The shell is cut one row's height below the lowest last row.
-    await tester.pumpWidget(grid(740));
+    // The cut, measured from the layout: each phone laid out tall enough to
+    // hold its whole screen, and its latest holdings message found in the
+    // thread; each shell is cut just below it.
+    const tall = 6000.0;
+    tester.view.physicalSize = const Size(1160, 2 * tall + 200);
+    await tester.pumpWidget(grid({for (final v in _villagers) v.id: tall}));
     await tester.pumpAndSettle();
-    final rowHeights = <double>{};
-    var balancesEnd = 0.0;
+    final heights = <String, double>{};
     for (final v in _villagers) {
       final top = tester.getRect(surfaceOf(v)).top;
-      final rows =
-          find.descendant(of: surfaceOf(v), matching: find.byType(ListTile));
-      expect(rows, findsNWidgets(_expected[v.id]!.length),
-          reason: '${v.id}: a balance row per holding');
-      for (var i = 0; i < _expected[v.id]!.length; i++) {
-        final rect = tester.getRect(rows.at(i));
-        rowHeights.add(rect.height);
-        balancesEnd = math.max(balancesEnd, rect.bottom - top);
-      }
+      final k = _latestHoldings(runtimes[v.id]!);
+      final at = _elementAt(k);
+      final message = find.descendant(
+          of: surfaceOf(v), matching: find.byKey(_formKey(at)));
+      expect(message, findsOneWidget,
+          reason: '${v.id}: its latest holdings message is drawn');
+      final bottom = tester.getRect(message).bottom - top;
+      // The screen's top, 10 points of bezel above it, the message's card
+      // margin and padding below it, and the bezel under the screen.
+      heights[v.id] = (bottom + 16 + 10 + 10).ceilToDouble();
     }
-    expect(rowHeights, hasLength(1), reason: 'the balance rows differ in height');
-    final rowHeight = rowHeights.single;
-    final height = (balancesEnd + rowHeight + 20).ceilToDouble();
     // ignore: avoid_print
-    print('[cut] the balances end $balancesEnd points down the screen, a row '
-        'is $rowHeight points, so the phone is $height points tall');
+    print('[cut] each phone is cut below its latest holdings message: '
+        '$heights');
 
-    await tester.pumpWidget(grid(height));
+    final tallest = heights.values.reduce(math.max);
+    tester.view.physicalSize = Size(1160, 2 * tallest + 200);
+    await tester.pumpWidget(grid(heights));
     await tester.pumpAndSettle();
-    // Every phone shows its BALANCES view, and none shows a SCREEN view.
-    expect(find.text('BALANCES'), findsNWidgets(_villagers.length));
-    expect(find.text('SCREEN'), findsNothing);
     // No phone has a + button: the panel has no compose form, the request
     // form being a construct the bridge draws.
     expect(find.byType(FloatingActionButton), findsNothing);
+    // Each phone shows its holdings, headed by the functor, the field named
+    // Holdings, each lot a form of its own.
+    for (final v in _villagers) {
+      final latest = find.descendant(
+          of: surfaceOf(v),
+          matching:
+              find.byKey(_formKey(_elementAt(_latestHoldings(runtimes[v.id]!)))));
+      expect(find.descendant(of: latest, matching: find.text('holdings')),
+          findsOneWidget, reason: v.id);
+      expect(find.descendant(of: latest, matching: find.text('Holdings')),
+          findsOneWidget, reason: v.id);
+      expect(find.descendant(of: latest, matching: find.text('lot')),
+          findsNWidgets(_expected[v.id]!.length), reason: v.id);
+    }
 
     final boundary = tester.renderObject<RenderRepaintBoundary>(
         find.byType(RepaintBoundary).first);
@@ -326,16 +284,17 @@ void main() {
     File('/private/tmp/village-market-coins.png').writeAsBytesSync(bytes!);
 
     // The stale-card census: a card the dispatcher did not withdraw would
-    // stand above the BALANCES view, so the figure requires none on any
-    // phone --- every construct open at the end is the request form, the
-    // agent's one question, Stream(Request)?, which stays open while its
-    // stream does.
+    // stand above the thread, so the figure requires none on any phone ---
+    // every construct open at the end is the request form, the agent's one
+    // question, Stream(Request)?, which stays open while its stream does, and
+    // the output thread, construct 0.
     final census = {
       for (final v in _villagers)
         v.name: runtimes[v.id]!
             .bridge
             .constructs
-            .where((c) => !formatTerm(c.widget).startsWith('input_box('))
+            .where((c) =>
+                c.id != 0 && !formatTerm(c.widget).startsWith('input_box('))
             .length
     };
     // ignore: avoid_print
@@ -344,10 +303,40 @@ void main() {
     expect(stale, isEmpty,
         reason: 'cards the app never retired: $stale --- the image just '
             'written is not the figure');
-    // And the request form stands on every phone, once.
+    // And the request form stands on every phone, once, beside the thread.
     for (final v in _villagers) {
-      expect(runtimes[v.id]!.bridge.constructs, hasLength(1),
-          reason: '${v.id}: the request form, and nothing else, stands');
+      expect(runtimes[v.id]!.bridge.constructs.map((c) => c.id).toSet(),
+          {0, 1},
+          reason: '${v.id}: the output thread and the request form, and '
+              'nothing else, stand');
     }
   }, timeout: const Timeout(Duration(minutes: 15)));
 }
+
+/// The elements of the output thread, construct 0, of [r].
+List<GTerm> _output(UiRuntime r) {
+  final v = r.bridge.construct(0)?.view;
+  return v is GList ? v.items : const [];
+}
+
+/// The index of the latest holdings message in [r]'s output thread.
+int _latestHoldings(UiRuntime r) =>
+    _output(r).lastIndexWhere((m) => ctorArgs(m).$1 == 'holdings');
+
+/// The holdings [r]'s latest holdings message reports, issuer to amount.
+Map<String, String> _holdingsOf(UiRuntime r) {
+  final k = _latestHoldings(r);
+  if (k < 0) return const {};
+  final lots = ctorArgs(_output(r)[k]).$2.single as GList;
+  return {
+    for (final l in lots.items)
+      formatTerm(ctorArgs(l).$2[0]): formatTerm(ctorArgs(l).$2[1])
+  };
+}
+
+/// The position of element [k], from 0, of the thread at the root: 2 for
+/// each element before it and then 1 (construct_family.dart, elementAt).
+List<int> _elementAt(int k) => [for (var j = 0; j < k; j++) 2, 1];
+
+/// The key of the form drawn at [at] of construct 0.
+ValueKey<String> _formKey(List<int> at) => ValueKey('0:form:[${at.join(', ')}]');

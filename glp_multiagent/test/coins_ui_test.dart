@@ -48,25 +48,25 @@ const _card = "form(card, [$_offer, field('YesNo', buttons([yes, no]))])";
 
 /// The widget of the agent's output to its person, as `coins_agent.glp`
 /// draws it: a thread whose elements are drawn by the widget of the reserved
-/// type `Output ::= ScreenMsg`, a form headed msg, its ScreenContent a menu of
-/// the screen's forms, each field labelled by its declared type (vGLP
-/// 169b008, Definition "Canonical Compilation").
+/// type `Output ::= ScreenContent`, a menu of the screen's forms, each headed
+/// by its functor and its fields labelled by their declared types, the
+/// envelope stripped (vGLP 169b008, Definition "Canonical Compilation";
+/// Currencies, 2026-10-14 08:48 UTC, item 2).
 const _output =
-    "thread(form(msg, [field('Constant', shown), field('Constant', shown), "
-    "field('ScreenContent', menu([form(holdings, [field('Stream(Lot)', thre"
-    "ad(form(lot, [field('Issuer', shown), field('Amount', shown)])))]), fo"
-    "rm(opened, [field('Key', shown)]), form(minted, [field('Integer', show"
-    "n)]), form(paid, [field('Key', shown), field('Integer', shown)]), form"
-    "(received, [field('Key', shown), field('Integer', shown)]), form(retur"
-    "ned, [field('Key', shown), field('Integer', shown)]), form(swap_done, "
-    "[field('Key', shown)]), form(swap_declined, [field('Key', shown)]), fo"
-    "rm(swap_failed, [field('Key', shown)]), form(declined, [field('Key', s"
-    "hown)]), form(redeemed, [field('Key', shown), field('Key', shown)]), f"
-    "orm(menu, [field('Key', shown), field('Stream(Key)', thread)]), form(p"
-    "resented, [field('Key', shown), field('Key', shown)]), form(unfulfille"
-    "d, [field('Key', shown), field('Key', shown)]), form(refused, [field('"
-    "Key', shown)]), form(lacking, [field('Key', shown), field('Integer', s"
-    "hown)]), form(no_conversation, [field('Key', shown)])]))]))";
+    "thread(menu([form(holdings, [field('Holdings', thread(form(lot, [field"
+    "('Issuer', shown), field('Amount', shown)])))]), form(opened, [field('"
+    "Key', shown)]), form(minted, [field('Integer', shown)]), form(paid, [f"
+    "ield('Key', shown), field('Integer', shown)]), form(received, [field('"
+    "Key', shown), field('Integer', shown)]), form(returned, [field('Key', "
+    "shown), field('Integer', shown)]), form(swap_done, [field('Key', shown"
+    ")]), form(swap_declined, [field('Key', shown)]), form(swap_failed, [fi"
+    "eld('Key', shown)]), form(declined, [field('Key', shown)]), form(redee"
+    "med, [field('Key', shown), field('Key', shown)]), form(menu, [field('K"
+    "ey', shown), field('Stream(Key)', thread)]), form(presented, [field('K"
+    "ey', shown), field('Key', shown)]), form(unfulfilled, [field('Key', sh"
+    "own), field('Key', shown)]), form(refused, [field('Key', shown)]), for"
+    "m(lacking, [field('Key', shown), field('Integer', shown)]), form(no_co"
+    "nversation, [field('Key', shown)])]))";
 
 void main() {
   late List<String> sent;
@@ -216,21 +216,19 @@ void main() {
     });
   });
 
-  // The agent's output to its person, msg(agent, person, C), reaches the
+  // The agent's output to its person, its screen's content C, reaches the
   // person only as the thread of construct 0, drawn at dispatch start and
   // again with every message so far, each by the widget of the reserved type
-  // Output (`Output ::= ScreenMsg`); no view of the manifest names a message
+  // Output (`Output ::= ScreenContent`); no view of the manifest names a message
   // (vGLP 169b008, Definition "Canonical Compilation"; vGLP, 2026-10-13 19:25
   // UTC, items 2 and 3).
   group('the agent\'s output: the thread of construct 0', () {
     test('the thread is a construct, its view the messages so far', () {
       r.handle(fixtureTerm('draw(0, $_output, [])'));
-      r.handle(fixtureTerm('draw(0, $_output, [msg(agent, person, '
-          'opened(bob)), msg(agent, person, minted(3))])'));
+      r.handle(fixtureTerm('draw(0, $_output, [opened(bob), minted(3)])'));
       final c = r.bridge.construct(0)!;
       expect(formatTerm(c.widget), _output);
-      expect(formatTerm(c.view),
-          '[msg(agent, person, opened(bob)), msg(agent, person, minted(3))]');
+      expect(formatTerm(c.view), '[opened(bob), minted(3)]');
       expect(r.store.lists, isEmpty);
       expect(r.store.balances, isEmpty);
     });

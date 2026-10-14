@@ -181,21 +181,22 @@ void main() {
         "field('WantCoin', peer), field('WantAmount', number)]), "
         "form(pay, [field('Friend', peer), field('Amount', number)]), "
         "form(redeem, [field('Friend', peer), field('WantCoin', peer)])]))";
-    // The agent's output to its person, msg(agent, person, C), reaches her
+    // The agent's output to its person, its screen's content, reaches her
     // only as the thread of construct 0, drawn at dispatch start, each
-    // message by the widget of the reserved type Output ::= ScreenMsg, a
-    // form headed msg whose ScreenContent is a menu of the screen's forms,
-    // each headed by its functor and its fields labelled by their declared
-    // types; the questions are numbered from 1 (vGLP 169b008, Definition
-    // "Canonical Compilation"; vGLP, 2026-10-13 19:25 UTC, items 2 and 3).
+    // message by the widget of the reserved type Output ::= ScreenContent, a
+    // menu of the screen's forms, each headed by its functor and its fields
+    // labelled by their declared types, the envelope msg(agent, person, C)
+    // stripped; the questions are numbered from 1 (vGLP 169b008, Definition
+    // "Canonical Compilation"; vGLP, 2026-10-13 19:25 UTC, items 2 and 3;
+    // Currencies, 2026-10-14 08:48 UTC, item 2).
     final out = r.bridge.construct(0)!;
-    expect(formatTerm(out.widget), startsWith('thread(form(msg, '));
+    expect(formatTerm(out.widget), startsWith('thread(menu([form(holdings, '));
     /// What the agent has written to her, each message's content.
     List<String> screen() {
       final v = r.bridge.construct(0)!.view;
       return [
         if (v is GList)
-          for (final m in v.items) formatTerm(ctorArgs(m).$2[2])
+          for (final m in v.items) formatTerm(m)
       ];
     }
 
@@ -232,14 +233,15 @@ void main() {
     Finder inOutput(Finder f) =>
         find.descendant(of: find.byKey(constructKey(0)), matching: f);
 
-    /// The message [k] of the output thread, from 0: headed msg, its content
-    /// a form headed [heading] whose fields are [fields], label and value.
-    void message(int k, String heading, List<(String, String)> fields) {
-      final at = elementAt(const [], k);
+    /// The message [k] of the output thread, from 0: a form headed
+    /// [heading] whose fields are [fields], label and value.
+    Future<void> message(
+        int k, String heading, List<(String, String)> fields) async {
+      final content = elementAt(const [], k);
+      // The thread stands under the questions: scrolled to.
+      await show(find.byKey(nodeKey(0, 'form', content)));
       Finder headed(List<int> at, String h) => find.descendant(
           of: find.byKey(nodeKey(0, 'heading', at)), matching: find.text(h));
-      expect(headed(at, 'msg'), findsOneWidget, reason: 'msg at $at');
-      final content = [...at, 3];
       expect(headed(content, heading), findsOneWidget, reason: heading);
       final form = find.byKey(nodeKey(0, 'form', content));
       for (final (label, value) in fields) {
@@ -298,8 +300,8 @@ void main() {
     // The messages read with their functors and labelled fields, and never
     // as terms: opened(bob), its Key bob; minted(2), its Integer 2.
     expect(screen().take(2), ['opened(bob)', 'minted(2)']);
-    message(0, 'opened', [('Key', 'bob')]);
-    message(1, 'minted', [('Integer', '2')]);
+    await message(0, 'opened', [('Key', 'bob')]);
+    await message(1, 'minted', [('Integer', '2')]);
     expect(find.textContaining('opened(bob)'), findsNothing);
     expect(find.textContaining('minted(2)'), findsNothing);
     expect(find.text('BALANCES'), findsNothing);
@@ -328,7 +330,7 @@ void main() {
         formShot: '/private/tmp/coins-swap-form.png');
     expect(screen(), contains('swap_done(bob)'));
     expect(holdings(), 'holdings([lot(bob, 2)])');
-    message(screen().indexOf('swap_done(bob)'), 'swap_done', [('Key', 'bob')]);
+    await message(screen().indexOf('swap_done(bob)'), 'swap_done', [('Key', 'bob')]);
     expect(find.textContaining('swap_done(bob)'), findsNothing);
 
     // --- The card: bob proposes the reverse swap, and the swap responder's
