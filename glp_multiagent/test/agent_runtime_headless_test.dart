@@ -31,7 +31,7 @@ import 'programs_dir.dart';
 /// GNA's adapter test's play: the caller cold-calls the callee, naming it by
 /// the key its host passes, with a writer; the callee assigns the writer.
 const String _play = r'''
-procedure caller_init(_?, _?, _?).
+procedure caller_init(_?, Key?, _?).
 caller_init(_, Callee, _) :-
     send_to_net([msg(Callee?, ask(Answer))]),
     answered(Answer?).
