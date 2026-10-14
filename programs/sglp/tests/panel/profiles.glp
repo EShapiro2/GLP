@@ -36,7 +36,7 @@ random(S?, 2, K, S1)
 ,
 stream_append(rated('/'(1, hour), Tok), Mon?, _)
 ,
-verdict(Tok?, K?, A)
+verdict(Tok?, K?, slot(A))
 ,
 judge(Cs?, S1?, Mon?)
 .
@@ -49,10 +49,13 @@ Token?
 ,
 Integer?
 ,
-YesNo
+Slot(YesNo)
+?
 )
 .
-verdict(go, 1, yes)
+verdict(stop, _, _)
 .
-verdict(go, 2, no)
+verdict(go, 1, slot(yes))
+.
+verdict(go, 2, slot(no))
 .

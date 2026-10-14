@@ -1,14 +1,14 @@
-/// The printer prints the anonymous variable as it is written: `_`, and `_?`,
-/// TGLP's anonymous output.
+/// The printer prints the anonymous variable as it is written: `_`, and `_?`.
 ///
-/// TGLP typed-glp.tex, "Anonymous variables": "In a clause head, where a
-/// produced position carries an output placeholder rather than a writer, an
-/// anonymous variable is written `_?` there and denotes an output the clause
-/// never produces".  Until 2026-10-02 GlpPrinter printed every anonymous
-/// variable `_`, so a head's `_?` came out as a writer at a produced position,
-/// a clause the type checker refuses, in the canonical print that h(M) hashes
-/// (wire/flattening.dart) and in the GLP the old-syntax vGLP compilation emits
-/// (GLP Cowork's task of 2026-10-02 08:40 UTC, F).
+/// Until 2026-10-02 GlpPrinter printed every anonymous variable `_`, so a
+/// head's `_?` came out as a writer (GLP Cowork's task of 2026-10-02 08:40
+/// UTC, F); it prints each as written.  Since 2026-10-14 an anonymous reader
+/// is not permitted in a clause (GLP-Spec glp.tex, Remark "Anonymous
+/// Variables", 297db75; TGLP "Anonymous variables", 2424f4c): "a clause
+/// writes every writer it holds, closing a stream it does not extend".  So the
+/// clauses below that load and are hashed close their stream with [] and write
+/// their Handle, and a clause printed with `_?` is refused on load as its
+/// source is (GLP, 2026-10-14 09:35 UTC, item 2).
 library;
 
 import 'dart:io';
@@ -26,9 +26,13 @@ const _rootSelf = '../programs/self.glp';
 const _handle = 'Handle ::= withdraw.\n';
 const _decl = 'procedure p(Integer?, Handle, Stream(Integer)).\n';
 
-/// p's clauses: `_?` at the produced Handle position, `_` at the consumed
-/// Integer position.
-const _clauses = 'p(0, _?, []).\np(_, withdraw, []).\n';
+/// p's clauses as they were until 2026-10-14: `_?` at the produced Handle
+/// position, `_` at the consumed Integer position.
+const _anonClauses = 'p(0, _?, []).\np(_, withdraw, []).\n';
+
+/// p's clauses: each writes the Handle it holds and closes its stream with
+/// [], `_` at the consumed Integer position.
+const _clauses = 'p(0, withdraw, []).\np(_, withdraw, []).\n';
 
 /// The clauses of [source] as GlpPrinter prints them.
 List<String> _printed(String source) {
@@ -49,9 +53,24 @@ void main() {
     expect(GlpPrinter().printTerm(UnderscoreTerm(1, 1, isReader: true)), '_?');
   });
 
-  test('a clause prints with its anonymous output', () {
-    expect(_printed('$_handle$_decl$_clauses'),
+  test('a clause prints with its anonymous reader as written', () {
+    expect(_printed('$_handle$_decl$_anonClauses'),
         ['p(0, _?, []).', 'p(_, withdraw, []).']);
+  });
+
+  test('the printed `_?` is refused on load, as the source is', () {
+    final printed = _printed('$_handle$_decl$_anonClauses').join('\n');
+    for (final text in [_anonClauses, printed]) {
+      expect(
+          () => _engine().loadSource('$_handle$_decl$text\n'),
+          throwsA(predicate((Object e) => '$e'.contains(
+              '_? (anonymous reader) is not permitted in program clauses'))));
+    }
+  });
+
+  test('a clause closing with [] prints as written', () {
+    expect(_printed('$_handle$_decl$_clauses'),
+        ['p(0, withdraw, []).', 'p(_, withdraw, []).']);
   });
 
   test('the printed clauses load, as the source does', () {
@@ -59,7 +78,7 @@ void main() {
     expect(_engine().loadSource('$_handle$_decl$printed\n'), isTrue);
   });
 
-  test('the canonical print carries the anonymous output', () {
+  test('the canonical print carries the clause closing with []', () {
     // The program lies under the root, programs/ (TGLP modules.tex, "Scope
     // construction": "A program lies at or below the root"), so its
     // self.glp is in main.glp's scope and defines Handle there.  Until
@@ -83,8 +102,8 @@ go(N, H?, Out?) :- p(N?, H, Out).
 
 $_decl$_clauses''');
       final print = flattenProject(dir.path, rootSelfGlpPath: _rootSelf).print;
-      expect(print, contains('(0, _?, []).'));
-      expect(print, isNot(contains('(0, _, []).')));
+      expect(print, contains('(0, withdraw, []).'));
+      expect(print, contains('(_, withdraw, []).'));
     } finally {
       dir.deleteSync(recursive: true);
     }

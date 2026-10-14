@@ -18,7 +18,7 @@ talk(Ms?, _, Mon)
 :-
 stream_append(rated('/'(1, hour), Tok), Mon?, _)
 ,
-say(Tok?, 1, Ms, Mon?)
+say(Tok?, 1, slot(Ms), Mon?)
 .
 procedure
 say
@@ -27,12 +27,15 @@ Token?
 ,
 Integer?
 ,
-Stream(Msg)
+Slot(Stream(Msg))
+?
 ,
 MutualRef?
 )
 .
-say(go, I, [msg(T?, St) | Ms?], Mon)
+say(stop, _, _, _)
+.
+say(go, I, slot([msg(T?, St) | Ms?]), Mon)
 :-
 '=<'(I?, 3)
 |
@@ -40,7 +43,7 @@ text(I?, T)
 ,
 next(St?, I?, Ms, Mon?)
 .
-say(go, I, [], _)
+say(go, I, slot([]), _)
 :-
 '>'(I?, 3)
 |
@@ -67,7 +70,7 @@ known(St?)
 ,
 stream_append(rated('/'(1, hour), Tok), Mon?, _)
 ,
-say(Tok?, I1?, Ms, Mon?)
+say(Tok?, I1?, slot(Ms), Mon?)
 .
 procedure
 text

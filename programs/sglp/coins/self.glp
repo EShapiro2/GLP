@@ -35,7 +35,7 @@
 %% decline(From) are a swap proposed and declined.
 Peer    ::= Constant.
 YesNo   ::= yes ; no.
-Peers   ::= List(Peer).
+Peers   ::= [Peer | List(Peer)].
 Holding ::= holding(Peer, Integer).
 Wallet  ::= List(Holding).
 Request ::= pay(Peer, Integer) ; swap(Peer, Integer).

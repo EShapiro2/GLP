@@ -1,0 +1,35 @@
+%% The item-2 test of sGLP in GLP (sGLP's task of 2026-10-14 09:46 UTC, items 2
+%% and 3; sGLP's paper, Section 3, Definition "Copy, Relay", and Section 4,
+%% "The person process"): a vGLP program whose interactive type is the
+%% person's Stream(Integer)?, in reader mode, its element type holding no
+%% position the program writes; a profile writing 1, 2 and 3 and closing the
+%% stream; and its run, the relay handing the stream over and the log showing
+%% it one element at a time.
+%%
+%%   total.vglp       the vGLP program;
+%%   total.glp        its canonical compilation, written by hand;
+%%   total_sglp.glp   the sGLP source in the term form (programs/sglp/README.md);
+%%   profiles.glp and population.glp  printed from total_sglp.glp by
+%%                    programs/sglp/transform.sh, and not edited;
+%%   harness.glp      the run, by hand, as tests/delivery's.
+%%
+%%   numbers_run(S)    the run of the run declaration; S the sum the program read
+
+%% The type of the asks, which the canonical compilation adds:
+%% Stream(Integer) is in reader mode, so its alternative of Question is
+%% stream_integer_r(Stream(Integer)?), the ask carrying the writer.
+Ask      ::= ask(Constant, Question).
+Question ::= stream_integer_r(Stream(Integer)?).
+
+%% A stochastic person, one profile in the one dimension.
+Counting ::= counter.
+Profiles ::= profiles(Counting).
+
+imported procedure harness#run(Integer).
+exported procedure numbers_run(Integer).
+numbers_run(S?) :- harness # run(S).
+
+%% The sGLP source in the term form, total_sglp.glp, for the transformation.
+imported procedure total_sglp#source(SglpTerms, SglpTerms).
+exported procedure source(SglpTerms, SglpTerms).
+source(V?, S?) :- total_sglp # source(V, S).

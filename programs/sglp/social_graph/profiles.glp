@@ -36,6 +36,8 @@ Menu
 ?
 )
 .
+homophile_pick(stop, _, _, _)
+.
 homophile_pick(go, K, S, menu(Ss, _, same(P?)))
 :-
 '=<'(K?, 98)
@@ -87,6 +89,8 @@ Menu
 ?
 )
 .
+indifferent_pick(stop, _, _, _)
+.
 indifferent_pick(go, K, S, menu(Ss, _, same(P?)))
 :-
 '=<'(K?, 50)
@@ -136,6 +140,8 @@ Card
 ?
 )
 .
+wary_answer(stop, _, _)
+.
 wary_answer(go, K, card(_, yes))
 :-
 '=<'(K?, 20)
@@ -180,6 +186,8 @@ Integer?
 Card
 ?
 )
+.
+sociable_answer(stop, _, _)
 .
 sociable_answer(go, K, card(_, yes))
 :-

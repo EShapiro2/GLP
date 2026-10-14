@@ -1,0 +1,22 @@
+%% The item-2 test's compiled program, written by hand: the canonical
+%% compilation of total.vglp by vGLP's Definition "Canonical Compilation", as
+%% tests/delivery/chat.glp is chat.vglp's.  total reaches a question, and has
+%% one more argument, last, its ask stream; sum reaches none and is as the
+%% source has it.  The asking clause keeps total's name and the guarded clause
+%% takes total1; the ask is ask('Stream(Integer)?', stream_integer_r(X)), the
+%% interactive type in its mode as a constant and the functor the compilation
+%% gives it, its name in lowercase with its type argument appended and _r for
+%% reader mode: the ask carries the writer X and the program holds the reader;
+%% total's argument S is at an output position, so the head carries S? and the
+%% call S.  The types are the directory's (self.glp).
+
+%% (Ns)*total(S?): the asking clause and the guarded clause.
+exported procedure total(Integer, Stream(Ask)).
+total(S?, [ask('Stream(Integer)?', stream_integer_r(X))|D?]) :- total1(S, X?, D).
+exported procedure total1(Integer, Stream(Integer)?, Stream(Ask)).
+total1(S?, Ns, []) :- sum(Ns?, 0, S).
+
+%% sum(Ns?, A?, S): S is A plus the sum of Ns.
+procedure sum(Stream(Integer)?, Integer?, Integer).
+sum([N | Ns], A, S?) :- A1 := A? + N?, sum(Ns?, A1?, S).
+sum([], A, A?).

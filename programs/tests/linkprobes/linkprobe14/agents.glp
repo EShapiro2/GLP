@@ -27,7 +27,7 @@ bob_init(_, _) :-
     greet(bob, Mine?).
 
 procedure put(OuterStream, GreetChannel?).
-put([chan(C?) | _?], C).
+put([chan(C?)], C).
 
 %% carol: forward what bob sent her to alice, on a stream of her own.
 exported procedure carol_init(_?, _?).
@@ -36,7 +36,7 @@ carol_init(_, [msg(_, stream(S)) | _]) :-
     forward(S?, S1).
 
 procedure forward(OuterStream?, OuterStream).
-forward([chan(C) | _], [chan(C?) | _?]).
+forward([chan(C) | _], [chan(C?)]).
 forward([], []).
 
 %% alice: greet on the end that reached her through carol.
@@ -54,7 +54,7 @@ greet(Me, ch(In, Out?)) :-
     listen(In?).
 
 procedure say(Constant?, GreetStream).
-say(Me, [hello(Me?) | _?]).
+say(Me, [hello(Me?)]).
 
 procedure listen(GreetStream?).
 listen([hello(Who) | In]) :- ground(Who?) | send_to_user([saw(hello_from(Who?))]), listen(In?).

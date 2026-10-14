@@ -267,25 +267,32 @@ class CodeGenerator {
       }
 
     } else if (term is UnderscoreTerm) {
-      if (term.isReader) {
-        // `_?`: "an output the clause never produces" (TGLP typed-glp.tex,
-        // "Anonymous variables"), the placeholder `Out?` of a variable whose
-        // writer occurs nowhere in the clause --- a head reader of a variable
-        // of its own.  So the table's column "Reader X2?" matches it
-        // (GLP-Spec appendix-term-matching.tex, Definition "Term Matching"):
-        // a goal writer is assigned it, a goal reader and a goal term fail.
-        // It was compiled as `_` is, to nothing, so `p(_, _?)` took `p(1, 2)`.
-        ctx.emit(bc.GetVariable(ctx.allocateTemp(), argSlot, isReader: true));
-      } else {
-        // `_`: a head writer of a variable of its own, its value discarded
-        // (glp.tex, Remark "Anonymous Variables": "each occurrence denotes a
-        // fresh writer with no paired reader ... an input a clause does not
-        // read is dropped").  So the table's column "Writer X2" matches it: a
-        // goal reader or term is assigned it, and a goal writer fails (row
-        // "Writer X1").  It was compiled to nothing, so `s(_)` took a goal
-        // writer.
-        ctx.emit(bc.GetVariable(ctx.allocateTemp(), argSlot, isReader: false));
-      }
+      _refuseAnonymousReader(term);
+      // `_`: a head writer of a variable of its own, its value discarded
+      // (glp.tex, Remark "Anonymous Variables": "each occurrence denotes a
+      // fresh writer with no paired reader ... an input a clause does not
+      // read is dropped").  So the table's column "Writer X2" matches it: a
+      // goal reader or term is assigned it, and a goal writer fails (row
+      // "Writer X1").  It was compiled to nothing, so `s(_)` took a goal
+      // writer.
+      ctx.emit(bc.GetVariable(ctx.allocateTemp(), argSlot, isReader: false));
+    }
+  }
+
+  /// An anonymous reader in a clause head is refused: GLP-Spec glp.tex,
+  /// Remark "Anonymous Variables" (297db75), and TGLP "Anonymous variables"
+  /// (2424f4c): "Anonymous readers (`_?`, `_Name?`) are not permitted in a
+  /// clause, in the head or the body".  The type checker refuses it on every
+  /// load path; a source compiled without the checker meets the same refusal
+  /// here.  From 2026-10-02 until 2026-10-14 a head `_?` was compiled as a
+  /// head reader of a variable of its own.
+  static void _refuseAnonymousReader(UnderscoreTerm term) {
+    if (term.isReader) {
+      throw CompileError(
+          '_? (anonymous reader) is not permitted in program clauses',
+          term.line,
+          term.column,
+          phase: 'codegen');
     }
   }
 
@@ -356,17 +363,9 @@ class CodeGenerator {
       }
 
     } else if (term is UnderscoreTerm) {
-      if (term.isReader) {
-        // `_?` in a head structure: a head reader of a variable of its own, as
-        // at an argument above.  unify_void, which `_` compiles to, passes
-        // over whatever the goal holds here, and in a structure built for a
-        // goal writer places a fresh writer where the clause's output
-        // placeholder stands.
-        ctx.emit(bc.UnifyVariable(ctx.allocateTemp(), isReader: true));
-      } else {
-        // `_` in a head structure: a fresh writer, its value discarded.
-        ctx.emit(bc.UnifyVoid(count: 1));
-      }
+      _refuseAnonymousReader(term);
+      // `_` in a head structure: a fresh writer, its value discarded.
+      ctx.emit(bc.UnifyVoid(count: 1));
     }
   }
 

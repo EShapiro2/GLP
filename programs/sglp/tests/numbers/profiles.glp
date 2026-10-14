@@ -1,0 +1,53 @@
+%% Printed by programs/sglp/transform.glp from the sGLP source in the term form
+%% (README.md, "The term form"); edit the source and run transform.sh, not this file.
+%% transform(numbers, profiles)
+
+%% person(counter)
+%% binds(Stream(Integer), count)
+exported procedure
+count
+(
+Stream(Integer)
+,
+Integer?
+,
+MutualRef?
+)
+.
+count(Ns?, _, Mon)
+:-
+stream_append(rated('/'(1, hour), Tok), Mon?, _)
+,
+step(Tok?, 1, slot(Ns), Mon?)
+.
+procedure
+step
+(
+Token?
+,
+Integer?
+,
+Slot(Stream(Integer))
+?
+,
+MutualRef?
+)
+.
+step(stop, _, _, _)
+.
+step(go, I, slot([I? | Ns?]), Mon)
+:-
+'=<'(I?, 3)
+|
+':='(I1, '+'(I?, 1))
+,
+stream_append(rated('/'(1, hour), Tok), Mon?, _)
+,
+step(Tok?, I1?, slot(Ns), Mon?)
+.
+step(go, I, slot([]), _)
+:-
+'>'(I?, 3)
+|
+true
+.

@@ -1,6 +1,8 @@
 %% recv2x2 — disambiguation probe for Issue 13's receive/3 otherwise-strand.
 %% 2x2: channel Out bound (closed) vs unbound (_); the continuation discarded
-%% (_ and _? in the head) vs named-and-used (ch(In?, Out)).  Single heap, plain
+%% (`_`, and the Out written closed, in the head) vs named-and-used
+%% (ch(In?, Out)).  Until 2026-10-14 the discarded Out was `_?`, which a clause
+%% may not hold (GLP-Spec glp.tex, Remark "Anonymous Variables").  Single heap, plain
 %% local writer, late-feed (consumer's head runs first on an unbound stream,
 %% feeder binds it later) — the shape that mirrors mad_w_probe / boot_anon_late.
 
@@ -28,12 +30,13 @@ dropch(_).
 
 %% A: Out=closed (bound), continuation discarded
 procedure cons_a(Channel(Stream(Item), Closed)?).
-cons_a(ch([it(_, R?)|_], _?)) :- stash([keep(R)]), send_to_user([a_matched]).
+cons_a(ch([it(_, R?)|_], closed)) :- stash([keep(R)]), send_to_user([a_matched]).
 cons_a(_)  :- otherwise | send_to_user([a_otherwise]).
 
-%% B: Out=_ (unbound), continuation discarded
-procedure(W) cons_b(Channel(Stream(Item), W)?).
-cons_b(ch([it(_, R?)|_], _?)) :- stash([keep(R)]), send_to_user([b_matched]).
+%% B: Out=_ (unbound), continuation discarded.  The clause writes the Out it
+%% holds, so its type is Closed, not a parameter no constant has.
+procedure cons_b(Channel(Stream(Item), Closed)?).
+cons_b(ch([it(_, R?)|_], closed)) :- stash([keep(R)]), send_to_user([b_matched]).
 cons_b(_)  :- otherwise | send_to_user([b_otherwise]).
 
 %% C: Out=closed (bound), continuation named-and-used
@@ -88,8 +91,8 @@ boot_d_outfed :- feeder(S), out_feeder(OutW), cons_d(ch(S?, OutW?)).
 procedure(Z) feed_chan(Channel(Z, Stream(Item))?).
 feed_chan(Ch) :- send(it(bob, _), Ch?, _).
 
-procedure(W) drain_chan(Channel(Stream(Item), W)?).
-drain_chan(ch([it(_, R?)|_], _?)) :- stash([keep(R)]), send_to_user([real_matched]).
+procedure drain_chan(Channel(Stream(Item), Closed)?).
+drain_chan(ch([it(_, R?)|_], closed)) :- stash([keep(R)]), send_to_user([real_matched]).
 drain_chan(_)  :- otherwise | send_to_user([real_otherwise]).
 
 exported procedure boot_real.

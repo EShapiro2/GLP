@@ -50,10 +50,11 @@ read_outer([ping | S]) :- send_to_user([saw(ping)]), read_outer(S?).
 read_outer([chan(C) | S]) :- send_to_user([saw(chan)]), read_end(C?), read_outer(S?).
 read_outer([]).
 
-%% The write side of bob's end, which he never writes, is `_?` at its produced
-%% position: an output the clause never produces, which leaves the stream open.
+%% The write side of bob's end, which he does not extend, he closes with []: a
+%% clause writes every writer it holds (GLP-Spec glp.tex, Remark "Anonymous
+%% Variables").
 procedure read_end(InnerChannel?).
-read_end(ch(In, _?)) :- read_inner(In?).
+read_end(ch(In, [])) :- read_inner(In?).
 
 procedure read_inner(InnerStream?).
 read_inner([hello | S]) :- send_to_user([saw(hello)]), read_inner(S?).

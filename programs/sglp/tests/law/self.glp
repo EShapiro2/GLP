@@ -44,6 +44,9 @@ released(go, Mon, Times, R) :-
     stream_append(time(T), Mon?, Mon1),
     stream_append(T?, Times?, _),
     pending(Mon1?, Times?, R?).
+%% At the horizon the monitor binds the pending tokens to stop, which ends the
+%% goal waiting on each (sGLP's paper, Appendix C).
+released(stop, _, _, _).
 
 %% stats(Ts?, K?, Prev?, N?, Sum?, SumSq?, S): the first K differences of the
 %% release times Ts, Prev the time before the next.

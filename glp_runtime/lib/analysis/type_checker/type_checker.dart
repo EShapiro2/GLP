@@ -160,18 +160,13 @@ class TypeChecker {
 
     // =======================================================================
     // Phase 0: Validate clause terms (anonymous variable restrictions)
-    // TGLP sections/typed-glp.tex "Anonymous variables": an anonymous reader
-    // is accepted at a produced position of a clause head and nowhere else.
+    // GLP-Spec Remark "Anonymous Variables" and TGLP "Anonymous variables":
+    // an anonymous reader is not permitted in a clause, in the head or the
+    // body, at any position.
     // =======================================================================
     for (final clause in clauses) {
       try {
-        // Validate the head against its declaration, which gives each
-        // position its mode (TGLP Definition "Moded Head").
-        validateClauseHead(
-          clause.head,
-          typeEnv.getProcedure(clause.head.functor, clause.head.arity),
-          typeEnv,
-        );
+        validateClauseHead(clause.head);
         // Validate guard arguments
         if (clause.guards != null) {
           for (final guard in clause.guards!) {

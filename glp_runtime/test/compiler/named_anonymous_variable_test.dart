@@ -99,14 +99,17 @@ h(_A, _A, 1).
 ''',
     {'h(1, "s", N)': ('N', '1')}
   ),
-  // vGLP's compiled reader-mode clause, its interactive term _Answer.
+  // vGLP's compiled reader-mode clause, its interactive term _Answer.  Its
+  // first clause writes the Handle it holds, withdraw, where until 2026-10-14
+  // it held `_?`: anonymous readers are not permitted in a clause (GLP-Spec
+  // glp.tex, Remark "Anonymous Variables", 297db75; TGLP 2424f4c).
   "vGLP's (_Answer) clause": (
     '''
 YesNo ::= yes ; no.
 Handle ::= withdraw.
 
 procedure ask1(Integer?, Integer, YesNo?, Handle, Stream(Integer)).
-ask1(N, N?, yes, _?, []).
+ask1(N, N?, yes, withdraw, []).
 ask1(_, 0, _Answer, withdraw, []).
 ''',
     {'ask1(1, N, no, W, D)': ('N', '0')}
@@ -137,6 +140,21 @@ void main() {
         GlpEngine(rootSelfGlpPath: File('../programs/self.glp').absolute.path);
     expect(() => engine.loadSource('procedure out(Integer).\nout(_R).\n'),
         throwsA(predicate((Object e) => '$e'.contains('(_R#1?'))));
+  });
+
+  // A named anonymous reader is refused in a clause as `_?` is, at a produced
+  // head position too: GLP-Spec glp.tex, Remark "Anonymous Variables".
+  test('ask1(N, N?, yes, _Answer?, []) is refused', () {
+    final engine =
+        GlpEngine(rootSelfGlpPath: File('../programs/self.glp').absolute.path);
+    expect(
+        () => engine.loadSource('YesNo ::= yes ; no.\nHandle ::= withdraw.\n'
+            'procedure ask1(Integer?, Integer, YesNo?, Handle, '
+            'Stream(Integer)).\n'
+            'ask1(N, N?, yes, _Answer?, []).\n'),
+        throwsA(predicate((Object e) => '$e'.contains(
+            '_Answer? (anonymous reader) is not permitted in program '
+            'clauses'))));
   });
 
   for (final MapEntry(key: name, value: (source, goals)) in _cases.entries) {

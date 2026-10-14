@@ -4,12 +4,12 @@
 %%   person talker.
 %%   Stream(Msg) =::= talk.
 %%   procedure talk(Stream(Msg), Integer?).
-%%   talk(Ms?, _) :- say(1, Ms) @ 1/hour.
-%%   procedure say(Integer?, Stream(Msg)).
-%%   say(I, [msg(T?, St) | Ms?]) :- I? =< 3 | text(I?, T), next(St?, I?, Ms).
-%%   say(I, []) :- I? > 3 | true.
+%%   talk(Ms?, _) :- say(1, slot(Ms)) @ 1/hour.
+%%   procedure say(Integer?, Slot(Stream(Msg))?).
+%%   say(I, slot([msg(T?, St) | Ms?])) :- I? =< 3 | text(I?, T), next(St?, I?, Ms).
+%%   say(I, slot([])) :- I? > 3 | true.
 %%   procedure next(Status?, Integer?, Stream(Msg)).
-%%   next(St, I, Ms?) :- known(St?) | I1 := I? + 1, say(I1?, Ms) @ 1/hour.
+%%   next(St, I, Ms?) :- known(St?) | I1 := I? + 1, say(I1?, slot(Ms)) @ 1/hour.
 %%   procedure text(Integer?, String).
 %%   text(1, hello).  text(2, there).  text(3, bye).
 %%
@@ -36,7 +36,7 @@ source(
   [type('Status', [sent, delivered, read]),
    type('Msg', [msg('String', dual('Status'))]),
    type('Stream'('X'), [[], ['X' | 'Stream'('X')]]),
-   volitional(dual('Stream'('Msg')), stream_msg_r, chat('Stream'('String'))),
+   volitional(dual('Stream'('Msg')), '\'Stream(Msg)?\'', stream_msg_r, chat('Stream'('String'))),
    compiled(chat, 2), compiled(chat1, 3), compiled(deliver, 3), compiled(status, 2)],
 
   %% The profile and the run declaration.
@@ -44,14 +44,14 @@ source(
    binds('Stream'('Msg'), talk),
    decl(talk('Stream'('Msg'), dual('Integer'))),
    clause(talk(var('Ms?'), var('_')), [],
-          [rated(say(1, var('Ms')), rate(1, hour))]),
-   decl(say(dual('Integer'), 'Stream'('Msg'))),
-   clause(say(var('I'), [msg(var('T?'), var('St')) | var('Ms?')]), ['=<'(var('I?'), 3)],
+          [rated(say(1, slot(var('Ms'))), rate(1, hour))]),
+   decl(say(dual('Integer'), dual('Slot'('Stream'('Msg'))))),
+   clause(say(var('I'), slot([msg(var('T?'), var('St')) | var('Ms?')])), ['=<'(var('I?'), 3)],
           [text(var('I?'), var('T')), next(var('St?'), var('I?'), var('Ms'))]),
-   clause(say(var('I'), []), ['>'(var('I?'), 3)], [true]),
+   clause(say(var('I'), slot([])), ['>'(var('I?'), 3)], [true]),
    decl(next(dual('Status'), dual('Integer'), 'Stream'('Msg'))),
    clause(next(var('St'), var('I'), var('Ms?')), [known(var('St?'))],
-          [':='(var('I1'), '+'(var('I?'), 1)), rated(say(var('I1?'), var('Ms')), rate(1, hour))]),
+          [':='(var('I1'), '+'(var('I?'), 1)), rated(say(var('I1?'), slot(var('Ms'))), rate(1, hour))]),
    decl(text(dual('Integer'), 'String')),
    clause(text(1, hello), [], []),
    clause(text(2, there), [], []),

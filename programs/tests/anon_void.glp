@@ -1,10 +1,13 @@
-% An anonymous variable is a fresh writer with no paired reader (TGLP
-% typed-glp.tex, "Anonymous variables"), and at a produced position of a clause
-% head complementation makes `_?` exactly that.  `unknown/1` on the slot an
-% anonymous variable leaves therefore reports it unbound, as a genuinely
-% unbound tail is and as a closed list is not.  Expected, one goal per driver:
+% An anonymous variable is a fresh writer with no paired reader (GLP-Spec
+% glp.tex, Remark "Anonymous Variables"; TGLP "Anonymous variables"), and an
+% anonymous reader is not permitted in a clause: a clause writes every writer it
+% holds, closing a stream it does not extend.  `unknown/1` on a genuinely
+% unbound tail reports it, and on a closed list does not; a `_` inside a term
+% the body constructs completes that term.  Expected, one goal per driver:
 % unbound_tail(G?, A) gives A = open (and suspends), closed_tail(A) gives
-% A = other, anon_head(A) gives A = open, anon_body(A) gives A = open.
+% A = other, anon_body(A) gives A = other.  Until 2026-10-14 a driver
+% anon_head had `_?` at a produced head position leave a stream open;
+% unify_void_test.dart now holds that clause refused.
 Elem ::= hello(Constant).
 Stream ::= [] ; [Elem | Stream].
 Chan ::= ch(Stream, Stream?).
@@ -34,16 +37,10 @@ closed([hello(me) | []]).
 exported procedure closed_tail(Answer).
 closed_tail(A?) :- closed(S), probe(S?, A).
 
-% `_?` at a produced position of a clause head: the stream is left open.
-procedure say(Constant?, Stream).
-say(Me, [hello(Me?) | _?]).
-
-exported procedure anon_head(Answer).
-anon_head(A?) :- say(me, S), probe(S?, A).
-
-% `_` at a produced position inside a term the body constructs.
+% `_` at a produced position inside a term the body constructs; look/2 closes
+% the stream it does not extend.
 procedure look(Chan?, Answer).
-look(ch(In, _?), A?) :- probe(In?, A).
+look(ch(In, []), A?) :- probe(In?, A).
 
 exported procedure anon_body(Answer).
-anon_body(A?) :- say(me, S), look(ch(S?, _), A).
+anon_body(A?) :- closed(S), look(ch(S?, _), A).

@@ -4,9 +4,9 @@
 %%   person fair.
 %%   Rating =::= fair_rating.
 %%   procedure fair_rating(Rating, Integer?).
-%%   fair_rating(R?, S) :- random(S?, 5, K, _), give(K?, R) @ 1/day.
-%%   procedure give(Integer?, Rating).
-%%   give(K, rating(K?)).
+%%   fair_rating(R?, S) :- random(S?, 5, K, _), give(K?, slot(R)) @ 1/day.
+%%   procedure give(Integer?, Slot(Rating)?).
+%%   give(K, slot(rating(K?))).
 %%
 %%   run 1 agents [rater ~ (fair : 1.0)] until 30 days seed 20260927.
 %%
@@ -24,7 +24,7 @@ source(
   %% The vGLP program's interface (rating.vglp) and its compiled program's
   %% predicates (rating.glp).
   [type('Rating', [rating('Integer')]),
-   volitional(dual('Rating'), rating_r, rate('Integer')),
+   volitional(dual('Rating'), '\'Rating?\'', rating_r, rate('Integer')),
    compiled(rate, 2), compiled(rate1, 3), compiled(rates, 3)],
 
   %% The profile and the run declaration.
@@ -33,8 +33,8 @@ source(
    decl(fair_rating('Rating', dual('Integer'))),
    clause(fair_rating(var('R?'), var('S')), [],
           [random(var('S?'), 5, var('K'), var('_')),
-           rated(give(var('K?'), var('R')), rate(1, day))]),
-   decl(give(dual('Integer'), 'Rating')),
-   clause(give(var('K'), rating(var('K?'))), [], []),
+           rated(give(var('K?'), slot(var('R'))), rate(1, day))]),
+   decl(give(dual('Integer'), dual('Slot'('Rating')))),
+   clause(give(var('K'), slot(rating(var('K?')))), [], []),
 
    run(1, [mix(rater, [share(fair, 1.0)])], 30, days, 20260927)]).

@@ -11,8 +11,11 @@ procedure stash(PendList?).
 stash(_).
 
 %% --- the channel read in the head, the form a receive/3 guard unfolds to ---
+%% Its Out, a produced position of type Closed, the clause writes closed: a
+%% clause writes every writer it holds (GLP-Spec glp.tex, Remark "Anonymous
+%% Variables"); until 2026-10-14 it was `_?`.
 procedure cons_guard(Channel(Stream(Item), Closed)?).
-cons_guard(ch([it(_, R?)|_], _?)) :- stash([keep(R)]), send_to_user([g_matched]).
+cons_guard(ch([it(_, R?)|_], closed)) :- stash([keep(R)]), send_to_user([g_matched]).
 cons_guard(_)  :- otherwise | send_to_user([g_otherwise]).
 
 %% --- ordinary clause-head match path, same nested reader pattern ---
@@ -25,7 +28,7 @@ cons_head(_)               :- otherwise | send_to_user([h_otherwise]).
 %% paths above do NOT model — the element arrives AFTER the head suspends,
 %% as in the real roundtrip. No `_w`, single process, plain writer.
 procedure consumer(Channel(Stream(Item), Closed)?).
-consumer(ch([it(_, R?)|_], _?)) :- stash([keep(R)]), send_to_user([late_matched]).
+consumer(ch([it(_, R?)|_], closed)) :- stash([keep(R)]), send_to_user([late_matched]).
 consumer(_)  :- otherwise | send_to_user([late_otherwise]).
 
 %% feeder produces the stream element only when run (concurrent with consumer).

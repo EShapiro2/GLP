@@ -18,7 +18,7 @@ talk(Ms?, _, Mon)
 :-
 stream_append(rated('/'(1, hour), Tok), Mon?, _)
 ,
-say(Tok?, 1, Ms, Mon?)
+say(Tok?, 1, slot(Ms), Mon?)
 .
 procedure
 say
@@ -27,12 +27,15 @@ Token?
 ,
 Integer?
 ,
-Stream(Msg)
+Slot(Stream(Msg))
+?
 ,
 MutualRef?
 )
 .
-say(go, I, [msg(T?, St) | Ms?], Mon)
+say(stop, _, _, _)
+.
+say(go, I, slot([msg(T?, St) | Ms?]), Mon)
 :-
 '=<'(I?, 3)
 |
@@ -40,7 +43,7 @@ text(I?, T)
 ,
 next(St?, I?, Ms, Mon?)
 .
-say(go, I, [], _)
+say(go, I, slot([]), _)
 :-
 '>'(I?, 3)
 |
@@ -65,13 +68,13 @@ next(sent, I, Ms?, Mon)
 ,
 stream_append(rated('/'(1, hour), Tok), Mon?, _)
 ,
-say(Tok?, I1?, Ms, Mon?)
+say(Tok?, I1?, slot(Ms), Mon?)
 .
 next(read(Q?), I, Ms?, Mon)
 :-
 stream_append(rated('/'(1, hour), Tok), Mon?, _)
 ,
-acknowledge(Tok?, I?, Q, Ms, Mon?)
+acknowledge(Tok?, I?, slot(Q), slot(Ms), Mon?)
 .
 procedure
 acknowledge
@@ -80,20 +83,24 @@ Token?
 ,
 Integer?
 ,
-Ack
+Slot(Ack)
+?
 ,
-Stream(Msg)
+Slot(Stream(Msg))
+?
 ,
 MutualRef?
 )
 .
-acknowledge(go, I, ack, Ms?, Mon)
+acknowledge(stop, _, _, _, _)
+.
+acknowledge(go, I, slot(ack), slot(Ms?), Mon)
 :-
 ':='(I1, '+'(I?, 1))
 ,
 stream_append(rated('/'(1, hour), Tok), Mon?, _)
 ,
-say(Tok?, I1?, Ms, Mon?)
+say(Tok?, I1?, slot(Ms), Mon?)
 .
 procedure
 text

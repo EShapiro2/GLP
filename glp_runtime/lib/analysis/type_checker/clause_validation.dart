@@ -1,86 +1,50 @@
 // lib/analysis/type_checker/clause_validation.dart
 //
 // Validates Term AST nodes in program clause contexts.
-// Specification: TGLP (Moded-Types), sections/typed-glp.tex, "Anonymous
-// variables" under SRSW Relaxations, and sections/well-typing.tex
-// Definition "Moded Head".
+// Specification: GLP-Spec sections/glp.tex, Remark "Anonymous Variables"
+// (297db75), and TGLP sections/full/typed-anonymous-variables.tex,
+// "Anonymous variables" (2424f4c).
 
 import '../../compiler/ast.dart';
 import '../../compiler/error.dart';
-import 'mode.dart';
-import 'moded_head.dart';
-import 'moded_term.dart';
-import 'type_ast.dart';
 
 /// Validates a clause head.
 ///
-/// TGLP "Anonymous variables": an anonymous variable denotes a fresh writer
-/// with no paired reader.  In a clause head a produced position carries an
-/// output placeholder rather than a writer, so an anonymous variable is
-/// written `_?` there and denotes an output the clause never produces;
-/// complementation (Definition "Moded Head", step 2) makes it that fresh
-/// writer.  An anonymous reader at a consumed position remains forbidden: a
-/// reader with no writer is a goal that can never be satisfied.
+/// GLP-Spec Remark "Anonymous Variables" and TGLP "Anonymous variables":
+/// "Anonymous readers (`_?`, `_Name?`) are not permitted in a clause, in the
+/// head or the body: a reader whose writer is never written is a goal that can
+/// never be satisfied, so a clause writes every writer it holds, closing a
+/// stream it does not extend."  So an anonymous reader is refused at every
+/// position of a head, a produced position included, whatever the
+/// declaration.  The initial state of an agent, `agent(ch(_?,_),ch(_?,_))`, is
+/// a goal and not a clause, and the runtime writes its anonymous readers
+/// (GLP-Spec maGLP): it is never validated here.
 ///
-/// The position's mode is the mode of the moded head, so the declaration is
-/// what decides: without one no position has a mode and every anonymous
-/// reader is refused.
-void validateClauseHead(Atom head, ProcDecl? decl, TypeEnvironment? typeEnv) {
-  final moded = _modedHeadOrNull(head, decl, typeEnv);
-  if (moded == null) {
-    for (final arg in head.args) {
-      _checkAnonymousReader(arg, null);
-    }
-    return;
-  }
-  for (int i = 0; i < head.args.length; i++) {
-    _checkAnonymousReader(head.args[i], moded.args[i]);
+/// Until 2026-10-14 an anonymous reader was admitted at a produced head
+/// position, as TGLP's text before 2424f4c had it.
+void validateClauseHead(Atom head) {
+  for (final arg in head.args) {
+    _checkAnonymousReader(arg);
   }
 }
 
-/// Validates a term in clause body context.
-///
-/// Rejects an anonymous reader, which in a body would be a reader with no
-/// writer at a consumed position.  Allows `_` (anonymous writer).
+/// Validates a term in clause body context: an anonymous reader is refused,
+/// by the same remark.  `_` (anonymous writer) is allowed.
 void validateClauseBody(Term term) {
-  _checkAnonymousReader(term, null);
+  _checkAnonymousReader(term);
 }
 
 /// Validates a term in guard context.
 ///
 /// A guard is type-checked as part of the body (TGLP "Type checking of
-/// guards"), so an anonymous reader is rejected there too.
+/// guards"), so an anonymous reader is refused there too.
 void validateGuard(Term term) {
-  _checkAnonymousReader(term, null);
+  _checkAnonymousReader(term);
 }
 
-/// The moded head for [head], or null where it cannot be built — no
-/// declaration, a mismatched arity, or a term shape the construction does not
-/// know.  A null moded head gives no position a mode.
-ModedCompound? _modedHeadOrNull(
-    Atom head, ProcDecl? decl, TypeEnvironment? typeEnv) {
-  if (decl == null || head.arity != decl.arity) return null;
-  ModedTerm built;
-  try {
-    built = modedHead(
-        Goal(head.functor, head.args, head.line, head.column), decl,
-        typeEnv: typeEnv);
-  } on ArityMismatchError {
-    return null;
-  } on InvalidHeadError {
-    return null;
-  }
-  if (built is! ModedCompound) return null;
-  if (built.args.length != head.args.length) return null;
-  return built;
-}
-
-/// Walk [term] beside its moded counterpart [moded], refusing every anonymous
-/// reader whose position is not produced.  [moded] is null where the position
-/// has no mode, and then every anonymous reader below it is refused.
-void _checkAnonymousReader(Term term, ModedTerm? moded) {
+/// Walk [term], refusing every anonymous reader in it.
+void _checkAnonymousReader(Term term) {
   if (_isAnonymousReader(term)) {
-    if (moded != null && moded.mode == Mode.produce) return;
     throw CompileError(
       '${_spelling(term)} (anonymous reader) is not permitted in program clauses',
       term.line,
@@ -90,38 +54,21 @@ void _checkAnonymousReader(Term term, ModedTerm? moded) {
   }
 
   if (term is StructTerm) {
-    final args = _modedArgs(moded, term.functor, term.arity);
-    for (int i = 0; i < term.args.length; i++) {
-      _checkAnonymousReader(term.args[i], args == null ? null : args[i]);
+    for (final arg in term.args) {
+      _checkAnonymousReader(arg);
     }
     return;
   }
 
   if (term is ListTerm) {
-    if (term.head == null && term.tail == null) return;
-    final args = _modedArgs(moded, '[|]', 2);
-    if (term.head != null) {
-      _checkAnonymousReader(term.head!, args == null ? null : args[0]);
-    }
-    if (term.tail != null) {
-      _checkAnonymousReader(term.tail!, args == null ? null : args[1]);
-    }
+    if (term.head != null) _checkAnonymousReader(term.head!);
+    if (term.tail != null) _checkAnonymousReader(term.tail!);
   }
 }
 
-/// The moded arguments of [moded] when it is the compound [functor]/[arity],
-/// and null otherwise — the moded term and the source term having parted
-/// company, no position below carries a mode.
-List<ModedTerm>? _modedArgs(ModedTerm? moded, String functor, int arity) {
-  if (moded is! ModedCompound) return null;
-  if (moded.functor != functor || moded.arity != arity) return null;
-  if (moded.args.length != arity) return null;
-  return moded.args;
-}
-
 /// An anonymous variable in its reader form: bare `_?`, or a named anonymous
-/// reader such as `_Out?` — an anonymous variable being any variable whose
-/// name begins with `_` (TGLP "Anonymous variables").
+/// reader such as `_Out?` --- an anonymous variable being any variable whose
+/// name begins with `_` (GLP-Spec Remark "Anonymous Variables").
 bool _isAnonymousReader(Term term) {
   if (term is UnderscoreTerm) return term.isReader;
   if (term is VarTerm) return term.name.startsWith('_') && term.isReader;
