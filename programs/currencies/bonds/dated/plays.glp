@@ -9,7 +9,7 @@
 %% and the person channel never closes --- so a play's result is read off a
 %% partial stream.
 
-imported procedure person#person(Key?, _?, PersonIn, Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
+imported procedure person#person(Key?, _?, PersonIn(Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
 
 %% play_mint(Screen): alice, alone, mints 3 coins of her own.
 %% Expected: Screen = [minted(3, now), holdings([lot(alice, now, 3)]) | _].

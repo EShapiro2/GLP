@@ -38,8 +38,8 @@
 %% renders.  The app's interface code therefore draws that villager's screen
 %% from the run, while its scripted person grants its acts as before.
 
-imported procedure currency#coins(Key?, Channel(PersonIn, Stream(_))?, Stream(Conversation)?).
-imported procedure currency#person(Key?, _?, PersonIn, Script?, Stream(ScreenContent)).
+imported procedure currency#coins(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
+imported procedure currency#person(Key?, _?, PersonIn(Drawn), Script?, Stream(ScreenContent)).
 
 %% =============================================================================
 %% The scripts

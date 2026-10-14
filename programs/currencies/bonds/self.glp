@@ -233,14 +233,16 @@ TransferCard ::= card(TransferOffer, YesNo?).
 %% The vocabulary of the compiled agent's dispatcher, so that the plays can
 %% type the goals they spawn: the union of the agent's questions and the asks
 %% its goals send, as the canonical compilation emits them into
-%% dated/bonds_agent.glp, and the person channel's input, as programs/vglp/
-%% dispatcher.glp gives it.  The compiled module's own definitions shadow
+%% dated/bonds_agent.glp.  Drawn is the type its person channel carries, the
+%% values the dispatcher draws under the functors of the asks and the grants'
+%% raw inputs (vGLP, Definition "Construct Process"); the person channel's
+%% types are the root's (programs/self.glp).  The compiled module's own definitions shadow
 %% these within it, and the two must agree.
 %% =============================================================================
 
 Question ::= swapCard_w(SwapCard) ; transferCard_w(TransferCard) ; stream_request_r(Stream(Request)?).
+Drawn ::= swapCard_w(_) ; transferCard_w(_) ; stream_request_r(_) ; output(List(Output)) ; YesNo ; Request.
 Ask(Q)   ::= ask(Constant, Q).
-PersonIn ::= [_ | PersonIn].
 
 %% =============================================================================
 %% The plays' vocabulary: what a person sees, and the agreements the escrow
@@ -251,7 +253,7 @@ PersonIn ::= [_ | PersonIn].
 %% draw(Id, W, V) and withdraw(Id), each a term of any type the bridge would
 %% render; and the screen.  The dispatcher's stream never closes, as the
 %% person channel never does, and neither do the events.
-Event ::= draw(_, _, _)
+Event ::= draw(Integer, _, _)
         ; withdraw(_)
         ; msg(Constant, Constant, ScreenContent).
 Events ::= [Event | Events].

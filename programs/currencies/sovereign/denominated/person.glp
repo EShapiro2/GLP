@@ -37,15 +37,15 @@ imported procedure escrow#react(Agreement?, ScreenContent?, Script, Agreement).
 %% position of its question; a transfer card with what it offers, for the
 %% escrow program.  What the dispatcher draws is a term of any type, and the
 %% person reads the transfer it shows at the types the escrow program reads.
-Form ::= no_form ; form(_, _).
-OpenOffer ::= open_offer(_, _, _).
+Form ::= no_form ; form(Integer, Path).
+OpenOffer ::= open_offer(_, Integer, Path).
 OpenOffers ::= [] ; [OpenOffer | OpenOffers].
-OpenTransfer ::= open_transfer(Kind, Key, Stream(Lot), _, _).
+OpenTransfer ::= open_transfer(Kind, Key, Stream(Lot), Integer, Path).
 OpenTransfers ::= [] ; [OpenTransfer | OpenTransfers].
 
 %% The rest of the grant stream, handed back by answer_transfers after the
 %% grants it wrote: a writer forwarded through a structure (manual, 15B).
-GrantTail ::= tail(PersonIn?).
+GrantTail ::= tail(PersonIn(Drawn)?).
 
 %% Whether a step is out: a grant on the request form or on a card, from the
 %% script or from the escrow program's queue, or a date written to the
@@ -54,12 +54,12 @@ Src ::= script ; todo.
 Pending ::= idle ; sent(Src) ; calendar_out.
 
 %% What a step can do now.
-Choice ::= grant(_, _, _) ; calendar(Integer) ; fiat(Key, Integer) ; wait.
+Choice ::= grant(Integer, Path, Drawn) ; calendar(Integer) ; fiat(Key, Integer) ; wait.
 
 %% person(Id, Draws, Grants, Cal, Script, Agreement, Screen): the person's
 %% grants and calendar on the mini-app's channels, and the screen messages as
 %% they come.
-exported procedure person(Key?, _?, PersonIn, Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
+exported procedure person(Key?, _?, PersonIn(Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
 person(Id, Ds, Gs?, Cal?, Script, Ag, Screen?) :-
     ground(Id?) |
     events(Ds?, Es),
@@ -67,10 +67,15 @@ person(Id, Ds, Gs?, Cal?, Script, Ag, Screen?) :-
 
 %% What the person channel carries, as one stream of events: the dispatcher's
 %% draws and withdrawals, the screen among them as the thread of construct 0.
-%% The channel's stream never closes, and is read as any term.
+%% Each drawn value is under the functor of its construct's ask, construct
+%% 0's under output (vGLP, Definition "Construct Process"), and the event is
+%% the view under it.  The channel's stream never ends, and the person reads
+%% it for good, suspending when no draw comes.
 procedure events(_?, Events).
-events([draw(0, thread(_), Ms)|Ds], Es?) :- newest(Ms?, Ds?, Es).
-events([draw(I, W, V)|Ds], [draw(I?, W?, V?)|Es?]) :- otherwise | events(Ds?, Es).
+events([draw(0, thread(_), output(Ms))|Ds], Es?) :- newest(Ms?, Ds?, Es).
+events([draw(I, W, swapCard_w(V))|Ds], [draw(I?, W?, V?)|Es?]) :- events(Ds?, Es).
+events([draw(I, W, transferCard_w(V))|Ds], [draw(I?, W?, V?)|Es?]) :- events(Ds?, Es).
+events([draw(I, W, stream_request_r(V))|Ds], [draw(I?, W?, V?)|Es?]) :- events(Ds?, Es).
 events([withdraw(I)|Ds], [withdraw(I?)|Es?]) :- events(Ds?, Es).
 
 %% The agent's screen reaches the person only as the thread the dispatcher
@@ -90,17 +95,26 @@ newest([_, M1|Ms], Ds, Es?) :- newest([M1?|Ms?], Ds?, Es).
 %% over once the screen has shown its message, whatever else was in flight
 %% when it did.
 
-procedure person(Key?, Events?, PersonIn, Stream(Integer), Script?, Script?, Form?, OpenOffers?, OpenTransfers?, Pending?, Agreement?, Stream(ScreenContent)?, Stream(ScreenContent)).
+%% path_of(P?, Path): the path a draw marks, input(P), read off what the
+%% construct shows, which the dispatcher draws as a term of any type inside
+%% the functor of its ask: a list of argument indices.
+procedure path_of(_?, Path).
+path_of([I | Is], P?) :- integer(I?) | P = [I? | P1?], path_of(Is?, P1).
+path_of([], []).
+
+procedure person(Key?, Events?, PersonIn(Drawn), Stream(Integer), Script?, Script?, Form?, OpenOffers?, OpenTransfers?, Pending?, Agreement?, Stream(ScreenContent)?, Stream(ScreenContent)).
 
 %% The request form: its question is the stream of requests, at position P.
 person(Id, [draw(C, _, input(P))|Es], Gs?, Cal?, Script, Todo, _, Swaps, Ts, Pending, Ag, Seen, Screen?) :-
     ground(C?), ground(P?) |
-    try_step(Id?, Es?, Gs, Cal, Script?, Todo?, form(C?, P?), Swaps?, Ts?, Pending?, Ag?, Seen?, Screen).
+    path_of(P?, P1),
+    try_step(Id?, Es?, Gs, Cal, Script?, Todo?, form(C?, P1?), Swaps?, Ts?, Pending?, Ag?, Seen?, Screen).
 
 %% The card of a proposed swap, kept until the script reaches it.
 person(Id, [draw(C, _, card(offer(From, _, _), input(P)))|Es], Gs?, Cal?, Script, Todo, Form, Swaps, Ts, Pending, Ag, Seen, Screen?) :-
     ground(C?), ground(From?), ground(P?) |
-    try_step(Id?, Es?, Gs, Cal, Script?, Todo?, Form?, [open_offer(From?, C?, P?)|Swaps?], Ts?, Pending?, Ag?, Seen?, Screen).
+    path_of(P?, P1),
+    try_step(Id?, Es?, Gs, Cal, Script?, Todo?, Form?, [open_offer(From?, C?, P1?)|Swaps?], Ts?, Pending?, Ag?, Seen?, Screen).
 
 %% The card of a proposed transfer: under an agreement the escrow program
 %% answers it when its state allows, now or after a later change of state;
@@ -138,8 +152,9 @@ person(Id, [msg(_, _, M)|Es], Gs?, Cal?, Script, Todo, Form, Swaps, Ts, Pending,
 
 %% A transfer card as the escrow program reads it: the kind, the giver and the
 %% lots, read off what the card shows.
-procedure read_transfer(_?, _?, _?, _?, _?, OpenTransfer).
-read_transfer(K, F, G, C, P, open_transfer(Kind?, From?, Lots?, C?, P?)) :-
+procedure read_transfer(_?, _?, _?, Integer?, _?, OpenTransfer).
+read_transfer(K, F, G, C, P, open_transfer(Kind?, From?, Lots?, C?, P1?)) :-
+    path_of(P?, P1),
     kind_of(K?, Kind),
     key_of(F?, From),
     instruments_of(G?, Given),
@@ -167,14 +182,14 @@ instruments_of([], []).
 %% The open transfer cards put to the escrow program: each it accepts is
 %% granted yes and consumed, the others stay open.  Under no agreement every
 %% card stays, for the script.
-procedure answer_transfers(Agreement?, OpenTransfers?, PersonIn, GrantTail, OpenTransfers, Agreement).
+procedure answer_transfers(Agreement?, OpenTransfers?, PersonIn(Drawn), GrantTail, OpenTransfers, Agreement).
 answer_transfers(Ag, [open_transfer(Kind, From, Lots, C, P)|Ts], Gs?, Tail?, Ts1?, Ag2?) :-
     ground(Kind?), ground(From?), ground(Lots?), ground(C?), ground(P?) |
     escrow # accepts(Ag?, Kind?, From?, Lots?, Verdict, Ag1),
     on_offer(Verdict?, Kind?, From?, Lots?, C?, P?, Ts?, Gs, Tail, Ts1, Ag1?, Ag2).
 answer_transfers(Ag, [], Gs?, tail(Gs), [], Ag?).
 
-procedure on_offer(Constant?, Kind?, Key?, Stream(Lot)?, _?, _?, OpenTransfers?, PersonIn, GrantTail, OpenTransfers, Agreement?, Agreement).
+procedure on_offer(Constant?, Kind?, Key?, Stream(Lot)?, Integer?, Path?, OpenTransfers?, PersonIn(Drawn), GrantTail, OpenTransfers, Agreement?, Agreement).
 on_offer(yes, _, _, _, C, P, Ts, [input(C?, P?, yes)|Gs?], Tail?, Ts1?, Ag, Ag1?) :-
     answer_transfers(Ag?, Ts?, Gs, Tail, Ts1, Ag1).
 on_offer(_, Kind, From, Lots, C, P, Ts, Gs?, Tail?, [open_transfer(Kind?, From?, Lots?, C?, P?)|Ts1?], Ag, Ag1?) :-
@@ -269,7 +284,7 @@ done(_, _, no) :- otherwise | true.
 %% Grant the current step, if its construct is on screen and no grant is out:
 %% the escrow program's queue first, then the script; a wait at the head of
 %% the script waits.
-procedure try_step(Key?, Events?, PersonIn, Stream(Integer), Script?, Script?, Form?, OpenOffers?, OpenTransfers?, Pending?, Agreement?, Stream(ScreenContent)?, Stream(ScreenContent)).
+procedure try_step(Key?, Events?, PersonIn(Drawn), Stream(Integer), Script?, Script?, Form?, OpenOffers?, OpenTransfers?, Pending?, Agreement?, Stream(ScreenContent)?, Stream(ScreenContent)).
 try_step(Id, Es, Gs?, Cal?, Script, Todo, Form, Swaps, Ts, sent(Src), Ag, Seen, Screen?) :-
     person(Id?, Es?, Gs, Cal, Script?, Todo?, Form?, Swaps?, Ts?, sent(Src?), Ag?, Seen?, Screen).
 try_step(Id, Es, Gs?, Cal?, Script, Todo, Form, Swaps, Ts, calendar_out, Ag, Seen, Screen?) :-
@@ -326,7 +341,7 @@ find_transfer(From, [O|Rest], Ch?, [O?|Rest1?]) :-
     find_transfer(From?, Rest?, Ch, Rest1).
 find_transfer(_, [], wait, []).
 
-procedure act(Choice?, Src?, Key?, Events?, PersonIn, Stream(Integer), Script?, Script?, Form?, OpenOffers?, OpenTransfers?, Agreement?, Stream(ScreenContent)?, Stream(ScreenContent)).
+procedure act(Choice?, Src?, Key?, Events?, PersonIn(Drawn), Stream(Integer), Script?, Script?, Form?, OpenOffers?, OpenTransfers?, Agreement?, Stream(ScreenContent)?, Stream(ScreenContent)).
 %% A grant, on the request form or on a card.
 act(grant(C, P, X), Src, Id, Es, [input(C?, P?, X?)|Gs?], Cal?, Script, Todo, Form, Swaps, Ts, Ag, Seen, Screen?) :-
     person(Id?, Es?, Gs, Cal, Script?, Todo?, Form?, Swaps?, Ts?, sent(Src?), Ag?, Seen?, Screen).

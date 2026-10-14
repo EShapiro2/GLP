@@ -20,10 +20,10 @@
 %% on a date later than 0, and no bond of its own is mature by its date.
 
 imported procedure bonds_agent#agent(Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Integer?, Stream(Ask(Question))).
-imported procedure bonds_agent#dispatch(Stream(Ask(Question))?, Channel(PersonIn, Stream(_))?, Channel(Stream(_), Stream(Output))).
+imported procedure bonds_agent#dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
 
 %% The mini-app the super-app activates: no clock, so no date ever advances.
-exported procedure bonds(Key?, Channel(PersonIn, Stream(_))?, Stream(Conversation)?).
+exported procedure bonds(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
 bonds(Id, Ui, Convs) :- bonds(Id?, Ui?, Convs?, []).
 
 %% The agent with its dispatcher, the calls of the canonical compilation
@@ -32,7 +32,7 @@ bonds(Id, Ui, Convs) :- bonds(Id?, Ui?, Convs?, []).
 %% go to the dispatcher, which reads the person channel; the screen goes to
 %% the person on the dispatcher's channel to the program, which merges it with
 %% the constructs' draws.
-exported procedure bonds(Key?, Channel(PersonIn, Stream(_))?, Stream(Conversation)?, Stream(Integer)?).
+exported procedure bonds(Key?, PersonChannel(Drawn)?, Stream(Conversation)?, Stream(Integer)?).
 bonds(Id, Ui, Convs, Cal) :-
     ground(Id?) |
     bonds_agent # agent(Id?, [], [], Convs?, Cal?, [user_output(Screen)], [], 0, 1, Asks),
