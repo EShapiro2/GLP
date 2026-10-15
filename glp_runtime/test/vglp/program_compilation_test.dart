@@ -206,9 +206,10 @@ display respond *(Answer=yes, From?) : panel(inbox), label('"x"'), transient.
     // Section SG runs on the dispatcher (superapp_ui/3); social/graph/core/
     // agent.vglp compiles, beside the hand-written agent.glp the program
     // loads.  The
-    // cssn sources compile since CSSN's port: agent.vglp and child_agent.vglp,
-    // two modules that call each other, with the cards of their self.vglp;
-    // Section K re-emits the two and runs the village on them.
+    // cssn sources compile since CSSN's port: adult.vglp, parent.vglp and
+    // child.vglp, three modules that hand a party to one another, with the
+    // cards of their self.vglp; Section K re-emits them and runs the village
+    // on them.
     //
     // A currency source is asked what vGLP's Definition "Guarded Clause,
     // Volitional Procedure, Interactive Type, Interactive Term, Ordinary
@@ -227,7 +228,8 @@ display respond *(Answer=yes, From?) : panel(inbox), label('"x"'), transient.
       'currencies/sovereign/denominated/sovereign_agent.vglp',
       'social/graph/core/agent.vglp',
       'social/graph/core/home.vglp',
-      'cssn/childsafe/agent.vglp',
+      'cssn/childsafe/adult.vglp',
+      'cssn/childsafe/child.vglp',
       'cssn/childsafe/self.vglp',
     ]) {
       test('$path parses as vGLP and holds a volitional procedure', () {
@@ -239,13 +241,13 @@ display respond *(Answer=yes, From?) : panel(inbox), label('"x"'), transient.
         expect(m.procedures.where((p) => p.isVolitional), isNotEmpty);
       });
     }
-    // The child agent declares no volitional procedure of its own: it asks the
-    // cards its self.vglp shares with the adult agent, and is a vGLP module
-    // because it reaches their questions (vGLP a89a751,
+    // The parent agent declares no volitional procedure of its own: it asks
+    // the cards its self.vglp shares with the adult and child agents, and is
+    // a vGLP module because it reaches their questions (vGLP a89a751,
     // canonical-compilation.tex: "the questions of a program are those of
     // all its modules").
-    test('cssn/childsafe/child_agent.vglp parses as vGLP and asks the cards of its self.vglp', () {
-      final file = File('$_programs/cssn/childsafe/child_agent.vglp');
+    test('cssn/childsafe/parent.vglp parses as vGLP and asks the cards of its self.vglp', () {
+      final file = File('$_programs/cssn/childsafe/parent.vglp');
       expect(file.existsSync(), isTrue);
       final m = Parser(Lexer(file.readAsStringSync()).tokenize(), vglp: true)
           .parseModule();
@@ -257,7 +259,7 @@ display respond *(Answer=yes, From?) : panel(inbox), label('"x"'), transient.
         for (final c in m.procedures.expand((p) => p.clauses))
           if (c.body != null) for (final g in c.body!) g.functor
       };
-      expect(calls, containsAll(['accept', 'approve', 'accept_parent']));
+      expect(calls, containsAll(['approve', 'approve_join', 'join_group']));
     });
   });
 }

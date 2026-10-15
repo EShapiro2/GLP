@@ -3,7 +3,7 @@
 /// Tests discovery, type checking, renaming, call resolution, entry-point
 /// aliasing (§3.4: exported root-level procedures only), and end-to-end
 /// compilation of the cssn program (a live multi-module platform that consumes
-/// the routing modules exposed from the root self.glp; its two vGLP agents,
+/// the routing modules exposed from the root self.glp; its three vGLP agents,
 /// compiled beside their sources, are modules of it as any .glp is). Module-local
 /// name-collision handling is covered by the dedicated ../programs/tests/linker_collision
 /// fixture; the nested-subprogram entry-alias rule by ../programs/tests/linker_nested.
@@ -41,14 +41,14 @@ void main() {
     test('discovers all modules in cssn', () {
       final modules = discoverProgram(cssnRoot, rootSelfGlpPath: rootSelfPath);
 
-      // The program's own modules: the certified program's (the two agents,
+      // The program's own modules: the certified program's (the three agents,
       // compiled from their vGLP sources, the mini-app entry, childsafe) and
       // the plays' (plays, person, superapp, cssn) --- plus the 4 routing
       // modules exposed from the root self.glp
       // (social/graph/routing/{output,inject,intro,befriend}), discovered as
       // linkable across the whole programs/ subtree (module-system spec §3.3).
       final names = modules.map((m) => m.moduleName).toSet();
-      for (final n in ['agent', 'child_agent', 'miniapp', 'childsafe', 'cssn',
+      for (final n in ['adult', 'parent', 'child', 'miniapp', 'childsafe', 'cssn',
           'plays', 'person', 'superapp', 'output', 'inject', 'intro',
           'befriend']) {
         expect(names.any((m) => m == n || m.endsWith('/$n')), isTrue,
@@ -115,8 +115,9 @@ void main() {
 
     test('procedures are renamed with module prefix', () {
       final procNames = linked.procedures.map((p) => p.name).toSet();
-      expect(procNames, contains('cssn/childsafe/agent:adult'));
-      expect(procNames, contains('cssn/childsafe/child_agent:child'));
+      expect(procNames, contains('cssn/childsafe/adult:adult'));
+      expect(procNames, contains('cssn/childsafe/parent:parent'));
+      expect(procNames, contains('cssn/childsafe/child:child'));
       expect(procNames, contains('cssn/plays:village'));
       expect(procNames, contains('cssn/plays:party'));
       expect(procNames, contains('cssn/person:person'));
@@ -136,9 +137,12 @@ void main() {
       expect(body, contains('cssn/person:person'));
       expect(body, isNot(contains('#')),
           reason: 'No RemoteGoal # dispatch should remain');
-      // The adult agent hands a party to the child agent, across modules.
-      expect(bodyOf('cssn/childsafe/agent:adult'),
-          contains('cssn/childsafe/child_agent:child'));
+      // The adult agent hands a party to the parent agent, and the parent
+      // agent hands it back, across modules.
+      expect(bodyOf('cssn/childsafe/adult:adult'),
+          contains('cssn/childsafe/parent:parent'));
+      expect(bodyOf('cssn/childsafe/parent:after_kids'),
+          contains('cssn/childsafe/adult:adult'));
     });
 
     test('local calls are resolved', () {
