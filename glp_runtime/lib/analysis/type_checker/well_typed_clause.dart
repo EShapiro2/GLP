@@ -2409,9 +2409,10 @@ bool _areDualTypes(VariableTypeInfo writerInfo, VariableTypeInfo readerInfo, Pro
   if (isSubtype(a, b, dfa)) return (true, null);
   return (
     false,
-    'the occurrence that receives ${a.name} hands it out at ${b.name}, and '
-        '${a.name} is not a subtype of ${b.name} (TGLP well-typing.tex, '
-        'Definition "Well-Typed Clause with Subtyping", clause (a))'
+    '${w.name} vs ${r.name}: the occurrence that receives ${a.name} hands '
+        'it out at ${b.name}, and ${a.name} is not a subtype of ${b.name} '
+        '(TGLP well-typing.tex, Definition "Well-Typed Clause with '
+        'Subtyping", clause (a))'
   );
 }
 
@@ -3178,8 +3179,12 @@ class _Reading {
   final bool complete;
   final List<String> unsupplied;
   final Map<String, List<String>> tried;
+
+  /// The bindings that serve, in the order tried: the first alone, [taken],
+  /// unless every one was asked for (the search of [_instantiateCalls]).
+  final List<_Binding> serving;
   _Reading(this.taken, this.nearest, this.complete, this.unsupplied,
-      this.tried);
+      this.tried, {this.serving = const []});
 }
 
 /// The instantiation of each call to a parameterised procedure in [clause],
@@ -3264,7 +3269,7 @@ _ClauseReading _instantiateCalls(
       ? <String, VariableTypeInfo>{}
       : _checkHeadWithTerm(clause, procDecl, dfa, env).$1.variableTypes;
   final narrowed = <String, VariableTypeInfo>{};
-  final body = <String, List<(VariableTypeInfo, int)>>{};
+  var body = <String, List<(VariableTypeInfo, int)>>{};
   void take(int i, Map<String, VariableTypeInfo> types) {
     for (final e in types.entries) {
       if (!head.containsKey(e.key)) {
@@ -3290,8 +3295,8 @@ _ClauseReading _instantiateCalls(
   // The `:=` goals, typed by the occurrences typed so far, and typed again
   // where a later reading decides one's writer an `Integer`: its earlier
   // occurrences are dropped first, so that each body occurrence is read once.
-  final integerAssignments = <int>{};
-  final assignmentTyped = <int>{};
+  var integerAssignments = <int>{};
+  var assignmentTyped = <int>{};
   void typeAssignments() {
     final decided = _integerAssignments(clause.bodyAtoms, assignments, [
       for (final e in head.entries) (e.key, e.value),
@@ -3423,7 +3428,9 @@ _ClauseReading _instantiateCalls(
         defining);
   }
 
-  _Reading read(int i, Set<int> pending) {
+  // [all]: every binding that serves is collected in the reading's
+  // [_Reading.serving], not only the first.
+  _Reading read(int i, Set<int> pending, {bool all = false}) {
     final call = calls[i]!;
     final probe = probes[i];
     final params = call.template.typeParams;
@@ -3484,6 +3491,7 @@ _ClauseReading _instantiateCalls(
 
     _Binding? nearest;
     _Binding? taken;
+    final serving = <_Binding>[];
     for (final binding in _bindingsOf(params, tried)) {
       final b = bind(call, i, binding);
       if (b == null) continue;
@@ -3495,10 +3503,12 @@ _ClauseReading _instantiateCalls(
         b.calleeFails = true;
         continue;
       }
-      taken = b;
-      break;
+      taken ??= b;
+      serving.add(b);
+      if (!all) break;
     }
-    return _Reading(taken, nearest, complete, const [], tried);
+    return _Reading(taken, nearest, complete, const [], tried,
+        serving: serving);
   }
 
   // The partners of the call at [i]'s argument variable [name], of the
@@ -3519,52 +3529,158 @@ _ClauseReading _instantiateCalls(
         ];
       };
 
-  final plans = <int, _CallPlan>{};
-  final pending = calls.keys.toSet();
-  var last = <int, _Reading>{};
-  while (pending.isNotEmpty) {
-    final readings = {for (final i in pending) i: read(i, pending)};
-    last = readings;
-    List<int> where(bool Function(_Reading r) test) => [
-          for (final e in readings.entries)
-            if (test(e.value)) e.key
+  // One run of the rounds.  With [choices] null, each round decides every call
+  // a binding serves --- those whose every site's partner is typed first,
+  // failing any those some of whose sites' partners stand in another call
+  // still to be read, each at the first binding serving its typed sites.
+  //
+  // That first binding may be the wrong one: a call whose output feeds another
+  // call still to be read sees only the types its typed sites supply, and the
+  // first of those that serves them commits the parameter before the other
+  // call can supply the type that would make the clause well-typed.
+  // `merge(As?, Is?, Es1), merge(Es1?, Ds?, Es)` with Es at Event(Q, T) took
+  // X = Draw(T) for the second merge, Ds? supplying it first and it serving
+  // Ds? and Es, and then the first merge, Es1 at Draw(T), had no binding (GLP,
+  // 2026-10-15 11:00 UTC, item 1).  Definition "Instantiation" asks only that
+  // some theta make the clause and the callees' clauses well-typed with
+  // subtyping, and the checker "tries the types the sites supply and the types
+  // the callee's clauses fix" (TGLP appendix-implementation-notes.tex, "The
+  // instantiation of a call").  So where that run leaves a call refused, the
+  // rounds are run again ([choices] given), searching the choices: where no
+  // call with every site's partner typed has a binding that serves, one call
+  // is decided at one serving binding --- each call and each of its serving
+  // bindings an option, [choices] naming the option taken at each such point
+  // in turn, the first where it names none --- and the reading taken is the
+  // first run in which no call is refused.  The run reports the number of
+  // options at each point, for the next choice.
+  ({
+    Map<int, _CallPlan> plans,
+    Set<int> pending,
+    Map<int, _Reading> last,
+    bool served,
+    List<int> options
+  }) rounds(List<int>? choices) {
+    final plans = <int, _CallPlan>{};
+    final pending = calls.keys.toSet();
+    var last = <int, _Reading>{};
+    var served = true;
+    final options = <int>[];
+    while (pending.isNotEmpty) {
+      final search = choices != null;
+      final readings = {
+        for (final i in pending) i: read(i, pending, all: search)
+      };
+      last = readings;
+      List<int> where(bool Function(_Reading r) test) => [
+            for (final e in readings.entries)
+              if (test(e.value)) e.key
+          ];
+      var decided = where((r) => r.taken != null && r.complete);
+      _Binding? chosen;
+      if (decided.isEmpty && search) {
+        final opts = [
+          for (final i in (readings.keys.toList()..sort()))
+            for (final b in readings[i]!.serving) (i, b)
         ];
-    var decided = where((r) => r.taken != null && r.complete);
-    if (decided.isEmpty) decided = where((r) => r.taken != null);
-    if (decided.isEmpty) {
-      decided = where((r) => r.nearest != null && r.complete);
-    }
-    if (decided.isEmpty) decided = where((r) => r.nearest != null);
-    if (decided.isEmpty) break;
-    for (final i in decided) {
-      final r = readings[i]!;
-      final call = calls[i]!;
-      if (r.taken == null && !call.remote) {
-        // No binding tried serves.  Where no map of the parameters can make
-        // the call well-typed either, the call is refused by the argument no
-        // expansion admits, as a call with no instantiation is ([checkClause],
-        // Step 5).
-        final refutation = _noInstantiationReason(
-            call.goal, call.template, openPartnersOf(i), env);
-        if (refutation != null) {
-          plans[i] = _CallPlan(call.goal, call.template, null, false,
-              refutation: refutation, tried: r.tried);
-          pending.remove(i);
-          continue;
+        if (opts.isNotEmpty) {
+          final k = options.length;
+          final c = k < choices.length ? choices[k] : 0;
+          options.add(opts.length);
+          decided = [opts[c].$1];
+          chosen = opts[c].$2;
         }
       }
-      final b = r.taken ?? r.nearest!;
-      plans[i] = _CallPlan(call.goal, call.template, b.decl, b.bindsInputType,
-          conflict: r.taken == null ? b.reason : null,
-          tried: r.tried,
-          calleeRead: definingOf(call) != null);
-      take(i, b.types);
-      pending.remove(i);
-    }
-    // The occurrences this round typed may make a `:=` goal's expression an
-    // integer expression.
-    typeAssignments();
+      if (decided.isEmpty) decided = where((r) => r.taken != null);
+      if (decided.isEmpty) {
+        decided = where((r) => r.nearest != null && r.complete);
+      }
+      if (decided.isEmpty) decided = where((r) => r.nearest != null);
+      if (decided.isEmpty) break;
+      for (final i in decided) {
+        final r = readings[i]!;
+        final call = calls[i]!;
+        if (r.taken == null && !call.remote) {
+          // No binding tried serves.  Where no map of the parameters can make
+          // the call well-typed either, the call is refused by the argument no
+          // expansion admits, as a call with no instantiation is ([checkClause],
+          // Step 5).
+          final refutation = _noInstantiationReason(
+              call.goal, call.template, openPartnersOf(i), env);
+          if (refutation != null) {
+            plans[i] = _CallPlan(call.goal, call.template, null, false,
+                refutation: refutation, tried: r.tried);
+            pending.remove(i);
+            served = false;
+            continue;
+          }
+        }
+        if (r.taken == null) served = false;
+        final b = chosen ?? r.taken ?? r.nearest!;
+        plans[i] = _CallPlan(call.goal, call.template, b.decl, b.bindsInputType,
+            conflict: r.taken == null ? b.reason : null,
+            tried: r.tried,
+            calleeRead: definingOf(call) != null);
+        take(i, b.types);
+        pending.remove(i);
+      }
+      // The occurrences this round typed may make a `:=` goal's expression an
+      // integer expression.
+      typeAssignments();
   }
+  return (
+    plans: plans,
+    pending: pending,
+    last: last,
+    served: served,
+    options: options
+  );
+  }
+
+  // The occurrences typed before the rounds, restored before each run.
+  final bodyBefore = {
+    for (final e in body.entries) e.key: [...e.value]
+  };
+  final integerBefore = {...integerAssignments};
+  final typedBefore = {...assignmentTyped};
+  void restore() {
+    body = {for (final e in bodyBefore.entries) e.key: [...e.value]};
+    integerAssignments = {...integerBefore};
+    assignmentTyped = {...typedBefore};
+  }
+
+  var run = rounds(null);
+  if (!run.served) {
+    var found = false;
+    var choices = <int>[];
+    // A bound on the runs searched; a clause's calls are few.
+    for (var budget = 0; budget < 256; budget++) {
+      restore();
+      final s = rounds(choices);
+      if (s.served) {
+        run = s;
+        found = true;
+        break;
+      }
+      final full = [
+        for (var k = 0; k < s.options.length; k++)
+          k < choices.length ? choices[k] : 0
+      ];
+      var k = full.length - 1;
+      while (k >= 0 && full[k] + 1 >= s.options[k]) {
+        k--;
+      }
+      if (k < 0) break;
+      choices = [...full.sublist(0, k), full[k] + 1];
+    }
+    if (!found) {
+      // No choice serves: the first run's reading, and its refusals, stand.
+      restore();
+      run = rounds(null);
+    }
+  }
+  final plans = run.plans;
+  final pending = run.pending;
+  final last = run.last;
   // The calls some parameter of which has no type supplied or fixed for it,
   // read against every occurrence the rounds typed: "A parameter for which no
   // type is supplied or fixed is left open where the callee is parametrically
