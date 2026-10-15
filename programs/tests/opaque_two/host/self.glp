@@ -1,0 +1,21 @@
+%% The host of ../self.glp's two-parameter template t/2.  start/4 obtains the
+%% list of the two types at which a guest's exports record its entry t/2 as
+%% the template's instance (opaque_type/3), the type identity of the
+%% template's opaque instance at them (find_type/3), and activates the guest
+%% under it (run/3), handing it a person channel and a social graph channel it
+%% holds at Opaque: the step back admits each at the position typed by the
+%% opaque type of its own parameter.  PROVISIONAL (Udi, 2026-10-15), pending
+%% GLP-Spec's final form.
+
+Done ::= done.
+
+exported procedure activate(String?, PersonChannel(Opaque)?,
+    SgChannel(Opaque)?, Done).
+activate(F, P, S, D?) :- load_file(F?, C), start(C?, P?, S?, D).
+
+procedure start(Content?, PersonChannel(Opaque)?, SgChannel(Opaque)?, Done).
+start(M, P, S, done) :-
+    module(M?) |
+    opaque_type(t/2, M?, Hs),
+    find_type(t/2, Hs?, T),
+    run(t(P?, S?), T?, M?).

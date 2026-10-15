@@ -1,0 +1,12 @@
+% test: head_pair_integer_to_constant
+% expected: pass
+% description: A variable copied within a head: the input's type within the
+%   output's (TGLP b927b41, Definition "Well-Typed Clause with Subtyping",
+%   clause (a): "if both occur in the head, the dual of the type of X is a
+%   subtype of the type of X?").  Copying an Integer input to a Constant
+%   output is well-typed, Integer <: Constant.  Negative twin:
+%   negative/subtyping/head_pair_constant_to_integer.glp.
+%   Constant is the root self.glp union Number ; String ; Module.
+
+procedure elem(Integer?, Constant).
+elem(X, X?).

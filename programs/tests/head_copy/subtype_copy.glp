@@ -1,0 +1,13 @@
+%% A variable copied within a head: an Ask taken from the input stream placed
+%% into an output stream of a union containing Ask.  TGLP well-typing.tex,
+%% Definition "Well-Typed Clause with Subtyping", clause (a), b927b41: "if both
+%% occur in the head, the dual of the type of X is a subtype of the type of
+%% X?" --- here Ask(String), the input's type, within Event(String, Integer),
+%% the output's.  GLP, 2026-10-15 11:00 UTC, item 2.
+Ask(Q) ::= ask(Integer, Q).
+Input(T) ::= input(Integer, T).
+Event(Q, T) ::= Ask(Q) ; Input(T).
+
+procedure relay(Stream(Ask(String))?, Stream(Event(String, Integer))).
+relay([A|As], [A?|Es?]) :- relay(As?, Es).
+relay([], []).

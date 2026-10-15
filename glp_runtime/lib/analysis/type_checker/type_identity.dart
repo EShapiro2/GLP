@@ -679,57 +679,67 @@ class OpaqueAlternativeError implements Exception {
 }
 
 /// What a guest's exports record for an entry declared as the instance of a
-/// one-parameter declaration D at its type T: [entry], the type identity of
-/// D⟨ι(T)⟩, and [type], ι(T) itself (TGLP modules.tex, Dynamic Activation,
-/// "Opaque types": "A guest M whose entry is the template D's instance at its
-/// type T records in its exports, for its entry, the type identity of
-/// D⟨ι(T)⟩, and with it ι(T)").
+/// declaration D with type parameters X_1, ..., X_k at its types T_1, ...,
+/// T_k: [entry], the type identity of D⟨ι(T_1), ..., ι(T_k)⟩, and [types],
+/// ι(T_1), ..., ι(T_k) in the order of D's parameters (TGLP modules.tex,
+/// Dynamic Activation, "Opaque types": "A guest M whose entry is the template
+/// D's instance at its type T records in its exports, for its entry, the type
+/// identity of D⟨ι(T)⟩, and with it ι(T)").
+///
+/// PROVISIONAL (Udi, 2026-10-15), pending GLP-Spec's final form: the papers
+/// define the record for a one-parameter template; a template of k
+/// parameters records the list of k identities, one per parameter in
+/// declaration order, a one-parameter template the list of one.
 class OpaqueEntry {
   final String entry;
-  final String type;
-  const OpaqueEntry({required this.entry, required this.type});
+  final List<String> types;
+  const OpaqueEntry({required this.entry, required this.types});
 
   @override
   bool operator ==(Object other) =>
-      other is OpaqueEntry && other.entry == entry && other.type == type;
+      other is OpaqueEntry &&
+      other.entry == entry &&
+      other.types.length == types.length &&
+      [for (var i = 0; i < types.length; i++) other.types[i] == types[i]]
+          .every((b) => b);
 
   @override
-  int get hashCode => Object.hash(entry, type);
+  int get hashCode => Object.hash(entry, Object.hashAll(types));
 
   @override
-  String toString() => 'OpaqueEntry(entry: $entry, type: $type)';
+  String toString() => 'OpaqueEntry(entry: $entry, types: $types)';
 }
 
 /// The record of [entry], a monomorphic declaration in [entryEnv], where it
 /// is the instance of [template] (D, declared in [templateEnv], D's scope) at
-/// some type T; null where it is the instance of D at no type.
+/// some types T_1, ..., T_k; null where it is the instance of D at none.
 ///
-/// It is the instance at T when its automaton equals D's with D's parameter
-/// instantiated to T: the agreement of an imported declaration with an
+/// It is the instance at T_1, ..., T_k when its automaton equals D's with D's
+/// parameters instantiated to them: the agreement of an imported declaration with an
 /// exported one ([importExportDisagreement]; modules.tex, "Cross-module type
 /// checking": "their type automata are equal (structural type compatibility)
 /// once the exported declaration's type parameters, if any, are
 /// instantiated"), [entry] in the import's place and D in the export's, whose
-/// walk finds T as the state of [entry] where D has its parameter.  ι(T) is
-/// then taken in [entryEnv], where T is defined, and D⟨ι(T)⟩ in
-/// [templateEnv], where it need not be.
+/// walk finds T_i as the state of [entry] where D has its parameter X_i.
+/// Each ι(T_i) is then taken in [entryEnv], where T_i is defined, and
+/// D⟨ι(T_1), ..., ι(T_k)⟩ in [templateEnv], where it need not be.
 ///
-/// The record is defined for a template with one type parameter, the entry
-/// template of "Opaque types"; one with another number has none here.  A
-/// parameter that occurs in D only as a bare alternative of a type is bound
-/// to no type of [entry]'s, and one that occurs as an alternative at all has
-/// no opaque instance ([OpaqueAlternativeError]): neither has a record.
+/// PROVISIONAL (Udi, 2026-10-15), pending GLP-Spec's final form: "Opaque
+/// types" defines the record for a template with one type parameter; a
+/// template with k records the k identities ([OpaqueEntry]).  A parameter
+/// that occurs in D only as a bare alternative of a type is bound to no type
+/// of [entry]'s, and one that occurs as an alternative at all has no opaque
+/// instance ([OpaqueAlternativeError]): neither has a record.
 OpaqueEntry? opaqueEntryOf({
   required ProcDecl entry,
   required TypeEnvironment entryEnv,
   required ProcDecl template,
   required TypeEnvironment templateEnv,
 }) {
-  if (template.typeParams.length != 1 || entry.isParameterized) return null;
+  if (template.typeParams.isEmpty || entry.isParameterized) return null;
   final inst = buildAbstractInstance(
       template, template.typeParams, templateEnv.typeTemplates,
       knownMonoTypes: templateEnv.types.keys.toSet());
-  final param = '$abstractTypePrefix${template.typeParams.single}';
   final (found, theta) = _agreement(
     imported: entry,
     importedTypes: entryEnv.types,
@@ -738,20 +748,24 @@ OpaqueEntry? opaqueEntryOf({
     exportedParams: inst.abstractTypeNames,
   );
   if (found != null) return null;
-  final t = theta[param];
-  if (t == null) return null;
-  if (t.kind == _Kind.type && t.name.startsWith(_instancePrefix)) return null;
-  if (t.kind == _Kind.check || t.kind == _Kind.proc) return null;
-
-  final e = _Expansion(entryEnv.types)..expandFrom(t);
-  final typeId = hex(hashOfPrint(_canonicalPrint(e.transitions, t)));
+  final typeIds = <String>[];
+  for (final p in template.typeParams) {
+    final t = theta['$abstractTypePrefix$p'];
+    if (t == null) return null;
+    if (t.kind == _Kind.type && t.name.startsWith(_instancePrefix)) {
+      return null;
+    }
+    if (t.kind == _Kind.check || t.kind == _Kind.proc) return null;
+    final e = _Expansion(entryEnv.types)..expandFrom(t);
+    typeIds.add(hex(hashOfPrint(_canonicalPrint(e.transitions, t))));
+  }
   final String entryId;
   try {
-    entryId = opaqueInstanceIdentityHex(template, [typeId], templateEnv);
+    entryId = opaqueInstanceIdentityHex(template, typeIds, templateEnv);
   } on OpaqueAlternativeError {
     return null;
   }
-  return OpaqueEntry(entry: entryId, type: typeId);
+  return OpaqueEntry(entry: entryId, types: typeIds);
 }
 
 /// Lowercase hex of a hash.
@@ -1226,14 +1240,19 @@ class TypeIdentityTables {
         scope: _scope,
       );
 
-  /// The type identity of the opaque instance at [label] of the parameterised
-  /// declaration of [nameArity] in this scope: what `find_type(P/N, H, Type)`
-  /// yields (GLP-Spec appendix-guards, "Dynamic activation"; TGLP modules.tex,
-  /// Definition "Type Identity of a Type, Opaque Instance").  Throws
-  /// [OpaqueInstanceRefusal] where [nameArity] is not declared in this scope,
-  /// or its declaration has not exactly one type parameter, or the instance
-  /// has no identity ([OpaqueAlternativeError]).
-  String opaqueInstanceIdentity(String nameArity, String label) {
+  /// The type identity of the opaque instance at [labels] of the
+  /// parameterised declaration of [nameArity] in this scope: what
+  /// `find_type(P/N, Hs, Type)` yields (GLP-Spec appendix-guards, "Dynamic
+  /// activation"; TGLP modules.tex, Definition "Type Identity of a Type,
+  /// Opaque Instance").  Throws [OpaqueInstanceRefusal] where [nameArity] is
+  /// not declared in this scope, or its declaration has not one type
+  /// parameter for each label, or the instance has no identity
+  /// ([OpaqueAlternativeError]).
+  ///
+  /// PROVISIONAL (Udi, 2026-10-15), pending GLP-Spec's final form: [labels]
+  /// is the list of type identities, one per type parameter of the template
+  /// in declaration order, a one-parameter template's the list of one.
+  String opaqueInstanceIdentity(String nameArity, List<String> labels) {
     final build = _scope;
     if (build == null) {
       throw OpaqueInstanceRefusal(
@@ -1245,17 +1264,18 @@ class TypeIdentityTables {
       if (declared.containsKey(nameArity) ||
           unresolved.contains(nameArity)) {
         throw OpaqueInstanceRefusal('$nameArity is declared in the caller\'s '
-            'scope with no type parameter, not exactly one');
+            'scope with no type parameter, not ${labels.length}');
       }
       throw OpaqueInstanceRefusal(
           '$nameArity is not declared in the caller\'s scope');
     }
-    if (template.typeParams.length != 1) {
+    if (template.typeParams.length != labels.length) {
       throw OpaqueInstanceRefusal('the declaration of $nameArity has '
-          '${template.typeParams.length} type parameters, not exactly one');
+          '${template.typeParams.length} type parameters, and '
+          '${labels.length} type identities are given');
     }
     try {
-      return opaqueInstanceIdentityHex(template, [label], scope);
+      return opaqueInstanceIdentityHex(template, labels, scope);
     } on OpaqueAlternativeError catch (e) {
       throw OpaqueInstanceRefusal('$nameArity: $e');
     }

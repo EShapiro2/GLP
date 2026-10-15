@@ -630,21 +630,28 @@ const String _activatedMark = ', in the goal run/3 activates';
 /// paper names.  Nowhere else: outside that goal `Opaque` is below no opaque
 /// type (subtyping.dart, [isSubtype]), and it is a variable that stands
 /// there, since a pair is of a variable's two occurrences.
+///
+/// PROVISIONAL (Udi, 2026-10-15), pending GLP-Spec's final form: a template
+/// of k type parameters is activated at the opaque types labelled h_1, ...,
+/// h_k, and `Opaque` is admitted at each position typed by the opaque type
+/// labelled h_i: [sup]'s opaque types are those labelled h_1, ..., h_k, and
+/// `Opaque` in [sub] is taken back to the one [sup] has at the same position
+/// ([isSubtypeWithOpaqueAs]).
 bool _stepBack(
     DFAState sub, DFAState sup, String supLocation, ProgramDFA dfa) {
   if (!supLocation.endsWith(_activatedMark)) return false;
-  final labelled = _labelledOpaqueOf(sup, dfa);
-  if (labelled == null) return false;
+  final labelled = _labelledOpaquesOf(sup, dfa);
+  if (labelled == null || labelled.isEmpty) return false;
   return isSubtypeWithOpaqueAs(sub, sup, labelled, dfa);
 }
 
-/// The opaque type labelled h ([DFAState.isRunOpaqueType]) that output type
-/// [t] has at some position, at either mode, where every opaque type of [t]
-/// is that one: "a type T whose opaque types are labelled h" (TGLP
-/// modules.tex, "Opaque types").  Null where [t] has no opaque type, or one
-/// that is not that one.
-DFAState? _labelledOpaqueOf(DFAState t, ProgramDFA dfa) {
-  DFAState? found;
+/// The opaque types labelled h ([DFAState.isRunOpaqueType]) that output type
+/// [t] has at its positions, at either mode: "a type T whose opaque types are
+/// labelled h" (TGLP modules.tex, "Opaque types"), each h one of the labels a
+/// run/3 activation names.  Empty where [t] has no opaque type, and null where
+/// it has one that is not labelled so.
+Set<DFAState>? _labelledOpaquesOf(DFAState t, ProgramDFA dfa) {
+  final found = <DFAState>{};
   final seen = <String>{};
   final stack = <DFAState>[t];
   while (stack.isNotEmpty) {
@@ -657,8 +664,7 @@ DFAState? _labelledOpaqueOf(DFAState t, ProgramDFA dfa) {
     if (!seen.add(x.name)) continue;
     if (x.isAbstractType) {
       if (!x.isRunOpaqueType) return null;
-      if (found != null && found != x) return null;
-      found = x;
+      found.add(x);
       continue;
     }
     final autom = dfa.automata[x.name];
@@ -677,15 +683,14 @@ class _OpaqueActivation {
   final ast.Goal goal;
 
   /// The template D: the caller's parameterised declaration `find_type/3`
-  /// names, with one type parameter.
+  /// names.
   final ProcDecl template;
 
-  /// h as the clause writes it: the variable `find_type/3` reads it from, or
-  /// the constant it is.
+  /// h_1, ..., h_k as the clause writes them ([_activationLabels]), printed.
   final String label;
 
-  /// D⟨h⟩: the template with its parameter replaced by the opaque type
-  /// labelled h ([runOpaqueTypeName]).
+  /// D⟨h_1, ..., h_k⟩: the template with each parameter replaced by the
+  /// opaque type labelled with its h ([runOpaqueTypeName]).
   final ProcDecl decl;
 
   /// The environment D⟨h⟩ is checked in: the clause's, with the opaque type
@@ -712,11 +717,17 @@ class _OpaqueActivation {
 /// parameter an opaque type labelled by H as the clause writes it --- two
 /// such being one exactly when H is.  A run/3 goal under any other type
 /// identity is read as before, its goal at `_?`.
+///
+/// PROVISIONAL (Udi, 2026-10-15), pending GLP-Spec's final form:
+/// `find_type(P/N, Hs, Type)` takes the list of type identities, one per type
+/// parameter of the template in declaration order, and the template may have
+/// any number k of them; each parameter X_i is replaced by an opaque type
+/// labelled h_i ([_activationLabels]).
 Map<int, _OpaqueActivation> _opaqueActivations(
     TypedClause clause, ProgramDFA dfa, TypeEnvironment env) {
   final atoms = clause.bodyAtoms;
   // The writer Type of each find_type/3 goal: its template and its h.
-  final identities = <String, (ProcDecl, String)>{};
+  final identities = <String, (ProcDecl, List<String>)>{};
   for (final g in atoms) {
     if (!namesRoot(g.functor, 'find_type') || g.arity != 3) continue;
     final ref = g.args[0];
@@ -730,15 +741,10 @@ Map<int, _OpaqueActivation> _opaqueActivations(
     if (arity is! ast.ConstTerm || arity.value is! int) continue;
     if (type is! ast.VarTerm || type.isReader) continue;
     final template = env.paramProcDecls['${name.value}/${arity.value}'];
-    if (template == null || template.typeParams.length != 1) continue;
-    final h = g.args[1];
-    final label = switch (h) {
-      ast.VarTerm(:final name) => name,
-      ast.ConstTerm(:final value) when value != null => constantSource(value),
-      _ => null,
-    };
-    if (label == null) continue;
-    identities[type.name] = (template, label);
+    if (template == null || template.typeParams.isEmpty) continue;
+    final labels = _activationLabels(g.args[1], template.typeParams.length);
+    if (labels == null) continue;
+    identities[type.name] = (template, labels);
   }
   if (identities.isEmpty) return const {};
 
@@ -750,7 +756,7 @@ Map<int, _OpaqueActivation> _opaqueActivations(
     if (type is! ast.VarTerm || !type.isReader) continue;
     final identity = identities[type.name];
     if (identity == null) continue;
-    final (template, label) = identity;
+    final (template, labels) = identity;
     final goal = switch (r.args[0]) {
       ast.StructTerm(:final functor, :final args) =>
         ast.Goal(functor, args, r.line, r.column),
@@ -769,7 +775,10 @@ Map<int, _OpaqueActivation> _opaqueActivations(
     final inst = buildAbstractInstance(
         template, template.typeParams, env.typeTemplates,
         knownMonoTypes: env.types.keys.toSet(),
-        names: {template.typeParams.single: runOpaqueTypeName(label)});
+        names: {
+          for (var k = 0; k < labels.length; k++)
+            template.typeParams[k]: runOpaqueTypeName(labels[k])
+        });
     final fresh = {
       for (final e in inst.typeDefs.entries)
         if (!env.types.containsKey(e.key)) e.key: e.value
@@ -789,8 +798,39 @@ Map<int, _OpaqueActivation> _opaqueActivations(
       }
       addTypesToProgramDFA(dfa, fresh.values, into.types);
     }
-    out[i] = _OpaqueActivation(goal, template, label, inst.decl, into);
+    out[i] = _OpaqueActivation(goal, template,
+        labels.length == 1 ? labels.single : '[${labels.join(', ')}]',
+        inst.decl, into);
   }
+  return out;
+}
+
+/// The labels h_1, ..., h_k of the [k] opaque types a `find_type(P/N, Hs,
+/// Type)` goal's [hs] names, one per type parameter: each element as the
+/// clause writes it --- a variable's name, or a constant's source --- where
+/// [hs] is a list of k elements; the i-th element of the list a variable `H`
+/// holds, `H[i]`, where it is a variable, or `H` itself where k is 1; null
+/// otherwise.  Two labels are one exactly when the clause writes them alike.
+/// PROVISIONAL (Udi, 2026-10-15), pending GLP-Spec's final form.
+List<String>? _activationLabels(ast.Term hs, int k) {
+  String? one(ast.Term t) => switch (t) {
+        ast.VarTerm(:final name) => name,
+        ast.ConstTerm(:final value) when value != null =>
+          constantSource(value),
+        _ => null,
+      };
+  if (hs is ast.VarTerm) {
+    return k == 1 ? [hs.name] : [for (var i = 1; i <= k; i++) '${hs.name}[$i]'];
+  }
+  final out = <String>[];
+  ast.Term? t = hs;
+  while (t is ast.ListTerm && !t.isNil) {
+    final e = t.head == null ? null : one(t.head!);
+    if (e == null) return null;
+    out.add(e);
+    t = t.tail;
+  }
+  if (t is! ast.ListTerm || out.length != k) return null;
   return out;
 }
 
@@ -1470,7 +1510,8 @@ WellTypedResult _checkHead(
     final modedHeadTerm = modedHead(clause.head, procDecl, typeEnv: env);
 
     // Check each argument against its declared type's automaton
-    final result = _checkModedTermPerArg(modedHeadTerm, procDecl, dfa);
+    final result =
+        _checkModedTermPerArg(modedHeadTerm, procDecl, dfa, head: true);
     return (result, modedHeadTerm);
   } on ArityMismatchError catch (e) {
     return (WellTypedResult.failure([
@@ -1932,11 +1973,16 @@ WellTypedResult _checkArgumentModes(
 /// with open ([_noInstantiationReason]): a path reaching one is consistent
 /// ([checkPathAgainstAutomaton]), and two occurrences one of which is typed by
 /// one are not compared, a map being free to bind the parameter as they need.
+///
+/// [head] says that [modedTerm] is a moded head, whose pairs are compared by
+/// clause (a)'s head rule ([_headPairWithReason]); a body goal's are compared
+/// for duality.
 WellTypedResult _checkModedTermPerArg(
   ModedTerm modedTerm,
   ProcDecl decl,
   ProgramDFA dfa, {
   Set<String> open = const {},
+  bool head = false,
 }) {
   final errors = <WellTypedError>[];
   final variableTypes = <String, VariableTypeInfo>{};
@@ -2003,7 +2049,7 @@ WellTypedResult _checkModedTermPerArg(
 
   // Check duality within this term, every occurrence of a writer against
   // every occurrence of its reader.
-  errors.addAll(_checkTermDuality(variableTypes, dfa, open));
+  errors.addAll(_checkTermDuality(variableTypes, dfa, open, head));
   for (final e in repeats.entries) {
     final key = e.key;
     final reader = key.endsWith('?');
@@ -2017,7 +2063,7 @@ WellTypedResult _checkModedTermPerArg(
     for (final info in e.value) {
       for (final p in partners) {
         errors.addAll(
-            _checkTermDuality({key: info, partnerKey: p}, dfa, open));
+            _checkTermDuality({key: info, partnerKey: p}, dfa, open, head));
       }
     }
   }
@@ -2032,10 +2078,11 @@ WellTypedResult _checkModedTermPerArg(
 
 /// Check duality within a term (same logic as well_typed_term.dart).  A pair
 /// one occurrence of which is typed by an open type of [open] is not compared
-/// ([_checkModedTermPerArg]).
+/// ([_checkModedTermPerArg]).  Where [head], the term is a moded head and each
+/// pair is compared by clause (a)'s head rule ([_headPairWithReason]).
 List<NonDualError> _checkTermDuality(
     Map<String, VariableTypeInfo> variableTypes, ProgramDFA dfa,
-    [Set<String> open = const {}]) {
+    [Set<String> open = const {}, bool head = false]) {
   final errors = <NonDualError>[];
 
   // Group by base name (X and X? share base "X")
@@ -2069,7 +2116,13 @@ List<NonDualError> _checkTermDuality(
         continue;
       }
 
-      if (!_areDualTypes(writerInfo, readerInfo, dfa)) {
+      if (head) {
+        final (holds, reason) =
+            _headPairWithReason(writerInfo, readerInfo, dfa);
+        if (!holds) {
+          errors.add(NonDualError(baseName, writerInfo, readerInfo, reason));
+        }
+      } else if (!_areDualTypes(writerInfo, readerInfo, dfa)) {
         errors.add(NonDualError(baseName, writerInfo, readerInfo));
       }
     }
@@ -2139,8 +2192,9 @@ List<ClauseDualityError> _checkClauseDuality(
       // Apply location-dependent rule (spec v0.9, Definition 4.10 condition 3)
       if (writerNormLoc == readerNormLoc) {
         if (writerNormLoc == 'head') {
-          // Both in head: require exact DUAL types (unchanged)
-          final (isCompat, reason) = _areDualTypesWithReason(writerInfo, readerInfo, dfa);
+          // Both in head: clause (a)'s head rule ([_headPairWithReason]).
+          final (isCompat, reason) =
+              _headPairWithReason(writerInfo, readerInfo, dfa);
           if (!isCompat) {
             errors.add(ClauseDualityError(
               baseName,
@@ -2148,7 +2202,7 @@ List<ClauseDualityError> _checkClauseDuality(
               readerInfo,
               writerLoc,
               readerLoc,
-              'Variables in same clause part (head) must have dual types: $reason',
+              'Variables both in the head: $reason',
             ));
           }
         } else {
@@ -2356,6 +2410,50 @@ List<ClauseDualityError> _checkHeadBodyPair(
 bool _areDualTypes(VariableTypeInfo writerInfo, VariableTypeInfo readerInfo, ProgramDFA dfa) {
   final (isCompat, _) = _areDualTypesWithReason(writerInfo, readerInfo, dfa);
   return isCompat;
+}
+
+/// Clause (a) of Definition "Well-Typed Clause with Subtyping" on a pair both
+/// of whose occurrences are in the head: "if both occur in the head, the dual
+/// of the type of X is a subtype of the type of X?" (TGLP well-typing.tex,
+/// b927b41) --- the input's type within the output's.  Until 2026-10-15 the
+/// pair had to be exactly dual, and a head could not place an Ask taken from
+/// its input into an output stream of a union containing Ask (GLP, 2026-10-15
+/// 11:00 UTC, item 2).
+///
+/// [writerInfo] and [readerInfo] are the moded head's occurrences, keyed as it
+/// keys them, each variable complemented (Definition "Moded Head", step 2):
+/// one stands at an input type A? --- the occurrence that receives a term ---
+/// and the other at an output type B --- the occurrence that hands it out ---
+/// whichever of the two keys each is.  Taking the paper's X at A?, its dual A
+/// is to be a subtype of B; taking it at B, B? is to be a subtype of A?, which
+/// complementation (Section "Subtyping": A? <: B? if B <: A) makes the same
+/// A <: B.  Exact duality, the same base at opposite polarities, is the case
+/// A = B.
+(bool, String?) _headPairWithReason(VariableTypeInfo writerInfo,
+    VariableTypeInfo readerInfo, ProgramDFA dfa) {
+  if (writerInfo.mode != Mode.produce) {
+    return (false, 'Writer must have produce mode');
+  }
+  if (readerInfo.mode != Mode.consume) {
+    return (false, 'Reader must have consume mode');
+  }
+  final w = writerInfo.typeState;
+  final r = readerInfo.typeState;
+  if (w.isDual == r.isDual) {
+    return (false, 'One must be dual, other not: ${w.name} vs ${r.name}');
+  }
+  final received = w.isDual ? w : r;
+  final handed = w.isDual ? r : w;
+  final a = dfa.getState(received.baseName);
+  final b = dfa.getState(handed.baseName);
+  if (isSubtype(a, b, dfa)) return (true, null);
+  return (
+    false,
+    '${w.name} vs ${r.name}: the occurrence that receives ${a.name} hands '
+        'it out at ${b.name}, and ${a.name} is not a subtype of ${b.name} '
+        '(TGLP well-typing.tex, Definition "Well-Typed Clause with '
+        'Subtyping", clause (a))'
+  );
 }
 
 // _areSameTypeWithReason is gone with the head-body equality check it served.
@@ -3121,8 +3219,12 @@ class _Reading {
   final bool complete;
   final List<String> unsupplied;
   final Map<String, List<String>> tried;
+
+  /// The bindings that serve, in the order tried: the first alone, [taken],
+  /// unless every one was asked for (the search of [_instantiateCalls]).
+  final List<_Binding> serving;
   _Reading(this.taken, this.nearest, this.complete, this.unsupplied,
-      this.tried);
+      this.tried, {this.serving = const []});
 }
 
 /// The instantiation of each call to a parameterised procedure in [clause],
@@ -3207,7 +3309,7 @@ _ClauseReading _instantiateCalls(
       ? <String, VariableTypeInfo>{}
       : _checkHeadWithTerm(clause, procDecl, dfa, env).$1.variableTypes;
   final narrowed = <String, VariableTypeInfo>{};
-  final body = <String, List<(VariableTypeInfo, int)>>{};
+  var body = <String, List<(VariableTypeInfo, int)>>{};
   void take(int i, Map<String, VariableTypeInfo> types) {
     for (final e in types.entries) {
       if (!head.containsKey(e.key)) {
@@ -3233,8 +3335,8 @@ _ClauseReading _instantiateCalls(
   // The `:=` goals, typed by the occurrences typed so far, and typed again
   // where a later reading decides one's writer an `Integer`: its earlier
   // occurrences are dropped first, so that each body occurrence is read once.
-  final integerAssignments = <int>{};
-  final assignmentTyped = <int>{};
+  var integerAssignments = <int>{};
+  var assignmentTyped = <int>{};
   void typeAssignments() {
     final decided = _integerAssignments(clause.bodyAtoms, assignments, [
       for (final e in head.entries) (e.key, e.value),
@@ -3366,7 +3468,9 @@ _ClauseReading _instantiateCalls(
         defining);
   }
 
-  _Reading read(int i, Set<int> pending) {
+  // [all]: every binding that serves is collected in the reading's
+  // [_Reading.serving], not only the first.
+  _Reading read(int i, Set<int> pending, {bool all = false}) {
     final call = calls[i]!;
     final probe = probes[i];
     final params = call.template.typeParams;
@@ -3427,6 +3531,7 @@ _ClauseReading _instantiateCalls(
 
     _Binding? nearest;
     _Binding? taken;
+    final serving = <_Binding>[];
     for (final binding in _bindingsOf(params, tried)) {
       final b = bind(call, i, binding);
       if (b == null) continue;
@@ -3438,10 +3543,12 @@ _ClauseReading _instantiateCalls(
         b.calleeFails = true;
         continue;
       }
-      taken = b;
-      break;
+      taken ??= b;
+      serving.add(b);
+      if (!all) break;
     }
-    return _Reading(taken, nearest, complete, const [], tried);
+    return _Reading(taken, nearest, complete, const [], tried,
+        serving: serving);
   }
 
   // The partners of the call at [i]'s argument variable [name], of the
@@ -3462,52 +3569,158 @@ _ClauseReading _instantiateCalls(
         ];
       };
 
-  final plans = <int, _CallPlan>{};
-  final pending = calls.keys.toSet();
-  var last = <int, _Reading>{};
-  while (pending.isNotEmpty) {
-    final readings = {for (final i in pending) i: read(i, pending)};
-    last = readings;
-    List<int> where(bool Function(_Reading r) test) => [
-          for (final e in readings.entries)
-            if (test(e.value)) e.key
+  // One run of the rounds.  With [choices] null, each round decides every call
+  // a binding serves --- those whose every site's partner is typed first,
+  // failing any those some of whose sites' partners stand in another call
+  // still to be read, each at the first binding serving its typed sites.
+  //
+  // That first binding may be the wrong one: a call whose output feeds another
+  // call still to be read sees only the types its typed sites supply, and the
+  // first of those that serves them commits the parameter before the other
+  // call can supply the type that would make the clause well-typed.
+  // `merge(As?, Is?, Es1), merge(Es1?, Ds?, Es)` with Es at Event(Q, T) took
+  // X = Draw(T) for the second merge, Ds? supplying it first and it serving
+  // Ds? and Es, and then the first merge, Es1 at Draw(T), had no binding (GLP,
+  // 2026-10-15 11:00 UTC, item 1).  Definition "Instantiation" asks only that
+  // some theta make the clause and the callees' clauses well-typed with
+  // subtyping, and the checker "tries the types the sites supply and the types
+  // the callee's clauses fix" (TGLP appendix-implementation-notes.tex, "The
+  // instantiation of a call").  So where that run leaves a call refused, the
+  // rounds are run again ([choices] given), searching the choices: where no
+  // call with every site's partner typed has a binding that serves, one call
+  // is decided at one serving binding --- each call and each of its serving
+  // bindings an option, [choices] naming the option taken at each such point
+  // in turn, the first where it names none --- and the reading taken is the
+  // first run in which no call is refused.  The run reports the number of
+  // options at each point, for the next choice.
+  ({
+    Map<int, _CallPlan> plans,
+    Set<int> pending,
+    Map<int, _Reading> last,
+    bool served,
+    List<int> options
+  }) rounds(List<int>? choices) {
+    final plans = <int, _CallPlan>{};
+    final pending = calls.keys.toSet();
+    var last = <int, _Reading>{};
+    var served = true;
+    final options = <int>[];
+    while (pending.isNotEmpty) {
+      final search = choices != null;
+      final readings = {
+        for (final i in pending) i: read(i, pending, all: search)
+      };
+      last = readings;
+      List<int> where(bool Function(_Reading r) test) => [
+            for (final e in readings.entries)
+              if (test(e.value)) e.key
+          ];
+      var decided = where((r) => r.taken != null && r.complete);
+      _Binding? chosen;
+      if (decided.isEmpty && search) {
+        final opts = [
+          for (final i in (readings.keys.toList()..sort()))
+            for (final b in readings[i]!.serving) (i, b)
         ];
-    var decided = where((r) => r.taken != null && r.complete);
-    if (decided.isEmpty) decided = where((r) => r.taken != null);
-    if (decided.isEmpty) {
-      decided = where((r) => r.nearest != null && r.complete);
-    }
-    if (decided.isEmpty) decided = where((r) => r.nearest != null);
-    if (decided.isEmpty) break;
-    for (final i in decided) {
-      final r = readings[i]!;
-      final call = calls[i]!;
-      if (r.taken == null && !call.remote) {
-        // No binding tried serves.  Where no map of the parameters can make
-        // the call well-typed either, the call is refused by the argument no
-        // expansion admits, as a call with no instantiation is ([checkClause],
-        // Step 5).
-        final refutation = _noInstantiationReason(
-            call.goal, call.template, openPartnersOf(i), env);
-        if (refutation != null) {
-          plans[i] = _CallPlan(call.goal, call.template, null, false,
-              refutation: refutation, tried: r.tried);
-          pending.remove(i);
-          continue;
+        if (opts.isNotEmpty) {
+          final k = options.length;
+          final c = k < choices.length ? choices[k] : 0;
+          options.add(opts.length);
+          decided = [opts[c].$1];
+          chosen = opts[c].$2;
         }
       }
-      final b = r.taken ?? r.nearest!;
-      plans[i] = _CallPlan(call.goal, call.template, b.decl, b.bindsInputType,
-          conflict: r.taken == null ? b.reason : null,
-          tried: r.tried,
-          calleeRead: definingOf(call) != null);
-      take(i, b.types);
-      pending.remove(i);
-    }
-    // The occurrences this round typed may make a `:=` goal's expression an
-    // integer expression.
-    typeAssignments();
+      if (decided.isEmpty) decided = where((r) => r.taken != null);
+      if (decided.isEmpty) {
+        decided = where((r) => r.nearest != null && r.complete);
+      }
+      if (decided.isEmpty) decided = where((r) => r.nearest != null);
+      if (decided.isEmpty) break;
+      for (final i in decided) {
+        final r = readings[i]!;
+        final call = calls[i]!;
+        if (r.taken == null && !call.remote) {
+          // No binding tried serves.  Where no map of the parameters can make
+          // the call well-typed either, the call is refused by the argument no
+          // expansion admits, as a call with no instantiation is ([checkClause],
+          // Step 5).
+          final refutation = _noInstantiationReason(
+              call.goal, call.template, openPartnersOf(i), env);
+          if (refutation != null) {
+            plans[i] = _CallPlan(call.goal, call.template, null, false,
+                refutation: refutation, tried: r.tried);
+            pending.remove(i);
+            served = false;
+            continue;
+          }
+        }
+        if (r.taken == null) served = false;
+        final b = chosen ?? r.taken ?? r.nearest!;
+        plans[i] = _CallPlan(call.goal, call.template, b.decl, b.bindsInputType,
+            conflict: r.taken == null ? b.reason : null,
+            tried: r.tried,
+            calleeRead: definingOf(call) != null);
+        take(i, b.types);
+        pending.remove(i);
+      }
+      // The occurrences this round typed may make a `:=` goal's expression an
+      // integer expression.
+      typeAssignments();
   }
+  return (
+    plans: plans,
+    pending: pending,
+    last: last,
+    served: served,
+    options: options
+  );
+  }
+
+  // The occurrences typed before the rounds, restored before each run.
+  final bodyBefore = {
+    for (final e in body.entries) e.key: [...e.value]
+  };
+  final integerBefore = {...integerAssignments};
+  final typedBefore = {...assignmentTyped};
+  void restore() {
+    body = {for (final e in bodyBefore.entries) e.key: [...e.value]};
+    integerAssignments = {...integerBefore};
+    assignmentTyped = {...typedBefore};
+  }
+
+  var run = rounds(null);
+  if (!run.served) {
+    var found = false;
+    var choices = <int>[];
+    // A bound on the runs searched; a clause's calls are few.
+    for (var budget = 0; budget < 256; budget++) {
+      restore();
+      final s = rounds(choices);
+      if (s.served) {
+        run = s;
+        found = true;
+        break;
+      }
+      final full = [
+        for (var k = 0; k < s.options.length; k++)
+          k < choices.length ? choices[k] : 0
+      ];
+      var k = full.length - 1;
+      while (k >= 0 && full[k] + 1 >= s.options[k]) {
+        k--;
+      }
+      if (k < 0) break;
+      choices = [...full.sublist(0, k), full[k] + 1];
+    }
+    if (!found) {
+      // No choice serves: the first run's reading, and its refusals, stand.
+      restore();
+      run = rounds(null);
+    }
+  }
+  final plans = run.plans;
+  final pending = run.pending;
+  final last = run.last;
   // The calls some parameter of which has no type supplied or fixed for it,
   // read against every occurrence the rounds typed: "A parameter for which no
   // type is supplied or fixed is left open where the callee is parametrically
