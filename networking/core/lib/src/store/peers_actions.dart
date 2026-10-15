@@ -251,10 +251,9 @@ class AssociateUdpAddressAction extends PeerAction {
   AssociateUdpAddressAction({required this.publicKey, required this.address});
 }
 
-/// Register a peer identity learned out-of-band, without any address or live
-/// connection — e.g. the inviter named in a cold-call peer link, or the
-/// redeemer forwarded by a rendezvous server (spec §IP Cold-Call). Creates a
-/// minimal disconnected entry for an unknown peer; a no-op for a known one.
+/// Register a peer identity supplied by GLP, without any address or live
+/// connection (`putKnownPeer`, spec §Known Peers). Creates a minimal
+/// disconnected entry for an unknown peer; a no-op for a known one.
 class PeerIdentityRegisteredAction extends PeerAction {
   final Uint8List publicKey;
 

@@ -7,7 +7,6 @@ import 'package:sodium_libs/sodium_libs_sumo.dart';
 import 'package:uuid/uuid.dart';
 import 'ble/permission_handler.dart';
 import 'platform/transport_foreground_service.dart';
-import 'package:grassroots_networking_core/src/signaling/peer_link.dart';
 import 'package:grassroots_networking_core/src/signaling/signaling_codec.dart';
 import 'package:grassroots_networking_core/src/transport/address_utils.dart';
 import 'package:grassroots_networking_core/src/transport/local_network.dart';
@@ -78,22 +77,6 @@ class GrassrootsNetworkConfig {
     this.announceInterval = const Duration(seconds: 10),
     this.scanInterval = const Duration(seconds: 10),
     this.ackTimeout = const Duration(seconds: 5),
-  });
-}
-
-/// Local record of an invite minted by [GrassrootsNetwork.generatePeerLink],
-/// pending redemption ("records the invite locally as unused" — spec
-/// §IP Cold-Call). Used to validate the rendezvous server's redeemed
-/// notification and enforce local single-use.
-class _OutstandingInvite {
-  /// The rendezvous server the invite was registered with — the only sender
-  /// whose redeemed notification is accepted for it.
-  final String rvPubkeyHex;
-  final int expiresAtMs;
-
-  const _OutstandingInvite({
-    required this.rvPubkeyHex,
-    required this.expiresAtMs,
   });
 }
 
@@ -335,13 +318,6 @@ class GrassrootsNetwork {
   /// UDP transport service (null if UDP is disabled)
   UdpTransportService? _udpService;
   LanDiscoveryService? _lanDiscovery;
-
-  /// Keys authorized by an explicit deep-link cold call (spec §Cold Calls:
-  /// deep links carry their own authorization and are unaffected by the
-  /// trust level): the redeemer, recorded when the rendezvous server's
-  /// redeemed notification arrives, and the inviter, recorded at
-  /// redemption.
-  final Set<String> _inviteAuthorizedPubkeys = {};
 
   /// Per-connection receive chains (spec §Session Establishment: a receiver
   /// processes each connection's inbound bytes in arrival order). Without
@@ -648,20 +624,6 @@ class GrassrootsNetwork {
   /// of it; what to do with that is GLP's decision, not the layer's.
   void Function(String? oldId, String? newId)? onNetworkChanged;
 
-  /// Fired when a peer link minted by [generatePeerLink] is redeemed: the
-  /// rendezvous server verified the holder's claim, atomically marked the
-  /// invite used, and forwarded the redeemer's identity (spec §IP Cold-Call).
-  /// Receives the redeemer's public key. Everything beyond this point —
-  /// whether to accept, the signaling that follows, the resulting NAT
-  /// traversal — is GLP-level and not the transport's concern.
-  void Function(Uint8List redeemerPubkey)? onPeerLinkRedeemed;
-
-  /// Outstanding invites minted by [generatePeerLink], keyed by lowercase
-  /// InviteId hex. Held in-memory only: an invite is a short-lived (1 hour)
-  /// secret-adjacent artifact — deliberately NOT in the Redux store, which is
-  /// persisted to disk. Lost invites simply expire server-side.
-  final Map<String, _OutstandingInvite> _outstandingInvites = {};
-
   // ===== Convenience accessors for Redux state =====
 
   PeersState get _peersState => store.state.peers;
@@ -893,145 +855,6 @@ class GrassrootsNetwork {
         publicKey: signer,
       );
 
-  /// Produce a signed, one-time, rendezvous-mediated invite link and register
-  /// the invite with a chosen rendezvous server. Spec
-  /// `GLP_Networking_API` §IP Cold-Call: `generatePeerLink() -> URI`.
-  ///
-  /// Picks the first configured rendezvous server, mints a fresh 256-bit
-  /// nonce, signs the invite record, derives the opaque InviteId/InviteKey,
-  /// records the invite locally as unused, and registers it (id + proof key +
-  /// expiry) with the server over the existing authenticated connection. The
-  /// raw nonce travels only inside the returned link.
-  ///
-  /// Throws [StateError] when no rendezvous server is configured or the
-  /// registration cannot be delivered (an unregistered link is unredeemable,
-  /// so it is never returned).
-  Future<String> generatePeerLink() async {
-    // Drop links that expired without ever being redeemed so the map can't
-    // grow unbounded over a long-lived session.
-    final nowMs = DateTime.now().millisecondsSinceEpoch;
-    _outstandingInvites.removeWhere((_, inv) => inv.expiresAtMs < nowMs);
-
-    if (rendezvousServers.isEmpty) {
-      throw StateError(
-        'generatePeerLink requires a configured rendezvous server',
-      );
-    }
-    final rv = rendezvousServers.first;
-    final rvPubkey = rv.publicKey;
-
-    final nonce = sodium.randombytes.buf(32);
-    final expiresAtMs =
-        DateTime.now().add(inviteLifetime).millisecondsSinceEpoch;
-    final invite = PeerLinkInvite.create(
-      identityPubkey: identity.publicKey,
-      rvPubkey: rvPubkey,
-      rvAddress: rv.address,
-      nonce: nonce,
-      expiresAtMs: expiresAtMs,
-      sign: _protocolHandler.signBytes,
-    );
-
-    final inviteId = deriveInviteId(nonce);
-    final inviteKey = await deriveInviteKey(
-      nonce: nonce,
-      inviterPubkey: identity.publicKey,
-      rvPubkey: rvPubkey,
-      rvAddress: rv.address,
-      expiresAtMs: expiresAtMs,
-    );
-
-    final registration = const SignalingCodec().encode(RegisterInviteMessage(
-      inviteId: inviteId,
-      inviteKey: inviteKey,
-      expiresAtMs: expiresAtMs,
-    ));
-    final delivered =
-        await _sendSignalingToRendezvous(rvPubkey, rv.address, registration);
-    if (!delivered) {
-      throw StateError(
-        'Could not register invite with rendezvous server ${rv.address}',
-      );
-    }
-
-    final inviteIdHex = _pubkeyToHex(inviteId);
-    _outstandingInvites[inviteIdHex] = _OutstandingInvite(
-      rvPubkeyHex: rv.pubkeyHex,
-      expiresAtMs: expiresAtMs,
-    );
-    debugPrint('[peer-link] registered invite '
-        '${inviteIdHex.substring(0, 8)}... with RV ${rv.address}');
-    return invite.toUri();
-  }
-
-  /// Redeem a peer link received out-of-band. Spec `GLP_Networking_API`
-  /// §IP Cold-Call: `consumePeerLink(uri) -> PubKey`.
-  ///
-  /// Verifies the inviter's signature and the expiration, registers the
-  /// inviter's identity locally, re-derives InviteId/InviteKey from the
-  /// link's nonce, and submits the redemption claim (InviteId, our identity
-  /// as the authenticated sender, MAC under InviteKey) to the rendezvous
-  /// server named in the link. Returns the inviter's public key.
-  ///
-  /// Throws [FormatException] for a malformed or signature-invalid link and
-  /// [StateError] for an expired/self-issued link or an unreachable
-  /// rendezvous server.
-  Future<Uint8List> consumePeerLink(String uri) async {
-    final invite = PeerLinkInvite.fromUri(uri);
-    if (!invite.verifySignature(sodium)) {
-      throw const FormatException('Invite signature verification failed');
-    }
-    if (invite.isExpired) {
-      throw StateError('Invite link has expired');
-    }
-    if (listEquals(invite.inviterPubkey, identity.publicKey)) {
-      throw StateError('Cannot redeem an invite issued by this identity');
-    }
-
-    // Register the inviter's identity locally (spec) — reachability and
-    // addresses follow later through the GLP-driven connection flow. The
-    // link authorizes the inviter's first contact regardless of trust
-    // level (spec §Cold Calls).
-    _inviteAuthorizedPubkeys.add(_pubkeyToHex(invite.inviterPubkey));
-    store.dispatch(
-      PeerIdentityRegisteredAction(publicKey: invite.inviterPubkey),
-    );
-
-    final inviteId = deriveInviteId(invite.nonce);
-    final inviteKey = await deriveInviteKey(
-      nonce: invite.nonce,
-      inviterPubkey: invite.inviterPubkey,
-      rvPubkey: invite.rvPubkey,
-      rvAddress: invite.rvAddress,
-      expiresAtMs: invite.expiresAtMs,
-    );
-    final redeemerNonce = sodium.randombytes.buf(32);
-    final mac = await computeRedemptionMac(
-      inviteKey: inviteKey,
-      inviterPubkey: invite.inviterPubkey,
-      redeemerPubkey: identity.publicKey,
-      inviteId: inviteId,
-      redeemerNonce: redeemerNonce,
-    );
-
-    final claim = const SignalingCodec().encode(RedeemInviteMessage(
-      inviteId: inviteId,
-      redeemerNonce: redeemerNonce,
-      mac: mac,
-    ));
-    final delivered = await _sendSignalingToRendezvous(
-        invite.rvPubkey, invite.rvAddress, claim);
-    if (!delivered) {
-      throw StateError(
-        'Could not submit redemption to rendezvous server ${invite.rvAddress}',
-      );
-    }
-    debugPrint('[peer-link] redeemed invite from '
-        '${_pubkeyToHex(invite.inviterPubkey).substring(0, 8)}... '
-        'via RV ${invite.rvAddress}');
-    return invite.inviterPubkey;
-  }
-
   /// Get peer by public key - from Redux store
   PeerState? getPeer(Uint8List pubkey) => _peersState.getPeerByPubkey(pubkey);
 
@@ -1059,15 +882,14 @@ class GrassrootsNetwork {
   ///
   /// Unsolicited inbound IP contact from outside the agent's own local network
   /// is governed by no trust level: it is refused unless the peer is in the
-  /// known-peer set or presents a valid invite. LAN contact arrives on this
+  /// known-peer set. LAN contact arrives on this
   /// same path, a LAN session being an IP session, so the two are told apart
   /// by the source address alone — a source within one of the agent's own
   /// local address prefixes is LAN contact, governed by the LAN level; any
   /// other source is governed by no level.
   ///
   /// Independent of every level: configured rendezvous servers (infrastructure
-  /// this agent itself dials), keys authorized by an explicit deep-link cold
-  /// call, and solicited contact — an ANNOUNCE arriving on a connection this
+  /// this agent itself dials) and solicited contact — an ANNOUNCE arriving on a connection this
   /// agent dialed, which is keyed by the dialed key (unsolicited inbound
   /// carries a temp connection id until identified).
   ///
@@ -1079,7 +901,6 @@ class GrassrootsNetwork {
     if (_isKnownPeerPubkey(senderPubkey)) return true;
     final hex = _pubkeyToHex(senderPubkey);
     if (_isRendezvousPubkeyHex(hex)) return true;
-    if (_inviteAuthorizedPubkeys.contains(hex)) return true;
     if (udpPeerId == hex &&
         _udpService?.getPeerIdForPubkey(senderPubkey) != null) {
       return true;
@@ -1528,12 +1349,9 @@ class GrassrootsNetwork {
 
   Future<bool> _syncConfiguredRendezvous({
     List<RendezvousServer>? configs,
-    RendezvousServer? config,
     String reason = 'sync',
   }) async {
-    final targets = config != null
-        ? <RendezvousServer>[config]
-        : (configs ?? rendezvousServers);
+    final targets = configs ?? rendezvousServers;
     if (targets.isEmpty) {
       return Future.value(false);
     }
@@ -3451,7 +3269,7 @@ class GrassrootsNetwork {
     );
     // First dials can race the interface read: with no local candidates no
     // compatible pair exists and the dial fails spuriously — this is how a
-    // rendezvous probe or an invite redemption issued right after initialize()
+    // rendezvous probe issued right after initialize()
     // used to fail. Wait for the in-flight read before giving up on candidate
     // selection.
     if (_connectionLocalCandidates().isEmpty) {
@@ -3912,11 +3730,8 @@ class GrassrootsNetwork {
 
   /// A signaling payload arrived over a session.  Signaling is between an
   /// agent and its rendezvous servers alone, so it is taken from a configured
-  /// rendezvous server and from no one else; two kinds are an agent's: the
-  /// address the server observes it at (spec §Connectivity and Address), and
-  /// the notice that an invite this agent minted, registered with that
-  /// server, was redeemed (spec §WAN Cold-Call, Redemption).  The others are
-  /// a rendezvous server's.
+  /// rendezvous server and from no one else: the address the server observes
+  /// this agent at (spec §Connectivity and Address).
   void _onSignalingReceived(Uint8List senderPubkey, Uint8List payload) {
     final senderHex = _pubkeyToHex(senderPubkey);
     if (!_isRendezvousPubkeyHex(senderHex)) {
@@ -3936,107 +3751,7 @@ class GrassrootsNetwork {
     switch (message) {
       case AddrReflectMessage(:final ip, :final port):
         _onAddrReflected(senderPubkey, ip, port);
-      case InviteRedeemedMessage(:final inviteId, :final redeemerPubkey):
-        _onInviteRedeemed(senderPubkey, inviteId, redeemerPubkey);
-      case RegisterInviteMessage():
-      case RedeemInviteMessage():
-      case InviteRedeemedAckMessage():
-        debugPrint(
-          'Ignoring ${message.runtimeType} from ${senderHex.substring(0, 8)}... '
-          '(rendezvous-server-bound message)',
-        );
     }
-  }
-
-  /// Send a signaling payload to the rendezvous server [recipientPubkey] at
-  /// [address], over a UDP session with it, establishing one where none
-  /// stands: a configured server through its connection management (per-
-  /// server backoff and the ANNOUNCE primer), and the server an invite names
-  /// directly.
-  Future<bool> _sendSignalingToRendezvous(
-    Uint8List recipientPubkey,
-    String address,
-    Uint8List signalingPayload,
-  ) async {
-    if (_udpService == null || !_udpAvailable) return false;
-    final pubkeyHex = _pubkeyToHex(recipientPubkey);
-    final config = _rendezvousServerFor(pubkeyHex);
-    if (config != null) {
-      final synced = await _syncConfiguredRendezvous(
-        config: config,
-        reason: 'signaling-primer',
-      );
-      if (!synced) return false;
-    }
-    return _sendPacketViaUdp(
-      pubkeyHex: pubkeyHex,
-      udpAddress: address,
-      packet: GrassrootsPacket(
-        type: PacketType.signaling,
-        payload: signalingPayload,
-      ),
-      recipientPubkey: recipientPubkey,
-      isRendezvous: true,
-    );
-  }
-
-  /// A rendezvous server forwarded a redeemed cold-call invite: validate it
-  /// against our locally-recorded outstanding invites, register the
-  /// redeemer's identity, and surface it (spec §IP Cold-Call — everything
-  /// beyond this is GLP-level).
-  void _onInviteRedeemed(
-    Uint8List rvPubkey,
-    Uint8List inviteId,
-    Uint8List redeemerPubkey,
-  ) {
-    final inviteIdHex = _pubkeyToHex(inviteId);
-    final shortId = inviteIdHex.substring(0, 8);
-
-    // Acknowledge to the sender so it stops retrying, regardless of whether
-    // this notification is actionable here (unknown/duplicate) — the sender
-    // already cleared the signaling trust gate, and the ack carries no
-    // secret. Without this, a lost first ack would loop the RV's retries.
-    final rvAddress = _rendezvousServerFor(_pubkeyToHex(rvPubkey))?.address;
-    if (rvAddress != null) {
-      unawaited(_sendSignalingToRendezvous(
-        rvPubkey,
-        rvAddress,
-        const SignalingCodec().encode(
-          InviteRedeemedAckMessage(inviteId: inviteId),
-        ),
-      ));
-    }
-
-    final outstanding = _outstandingInvites[inviteIdHex];
-    if (outstanding == null) {
-      debugPrint(
-        '[peer-link] redeemed notification for unknown/already-handled '
-        'invite $shortId... (acked)',
-      );
-      return;
-    }
-    final rvHex = _pubkeyToHex(rvPubkey);
-    if (rvHex != outstanding.rvPubkeyHex) {
-      debugPrint(
-        '[peer-link] dropping redeemed notification for $shortId...: '
-        'sender is not the rendezvous server the invite was registered with',
-      );
-      return;
-    }
-    // Single-use locally, mirroring the server-side atomic flip. Expiry is
-    // the rendezvous server's call (it validated the redemption against the
-    // signed ExpiresAt) — we do not second-guess it against our own clock,
-    // which could differ.
-    _outstandingInvites.remove(inviteIdHex);
-    // The redeemed link authorizes the redeemer's first contact
-    // regardless of trust level (spec §Cold Calls).
-    _inviteAuthorizedPubkeys.add(_pubkeyToHex(redeemerPubkey));
-    store.dispatch(
-      PeerIdentityRegisteredAction(publicKey: redeemerPubkey),
-    );
-    debugPrint('[peer-link] invite $shortId... redeemed by '
-        '${_pubkeyToHex(redeemerPubkey).substring(0, 8)}...');
-    onPeerLinkRedeemed?.call(redeemerPubkey);
   }
 
   /// Address reflection: a rendezvous server told us the address it observes
@@ -4188,10 +3903,9 @@ class GrassrootsNetwork {
     };
 
     // Trust gate for unsolicited IP contact (spec §Cold Calls, Trust
-    // levels — uniform across media): under Closed an unknown key's
-    // ANNOUNCE is dropped. Solicited contact (a connection this agent
-    // dialed), configured rendezvous servers, and deep-link-authorized
-    // keys pass.
+    // levels): an unknown key's ANNOUNCE is dropped unless it is LAN contact
+    // under Open. Known peers, solicited contact (a connection this agent
+    // dialed) and configured rendezvous servers pass.
     _messageRouter.shouldAcceptUdpAnnounce = (senderPubkey, {udpPeerId}) =>
         _acceptsUdpContactFrom(senderPubkey, udpPeerId: udpPeerId);
 

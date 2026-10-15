@@ -152,10 +152,6 @@ void main() {
       expect(network.networkIdentity(), layer.networkIdentity());
       expect(() => network.punchUdp('nowhere'), throwsArgumentError,
           reason: "the layer's refusal of an unparseable address, unchanged");
-      await expectLater(network.generatePeerLink(), throwsStateError,
-          reason: 'the layer has no rendezvous server to register with');
-      await expectLater(network.consumePeerLink('x'), throwsFormatException,
-          reason: "the layer's refusal of a malformed link, unchanged");
 
       final events = <String>[];
       network.onConnectivityStatusChanged =

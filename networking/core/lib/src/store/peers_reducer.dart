@@ -488,7 +488,7 @@ PeersState peersReducer(PeersState state, dynamic action) {
   if (action is PeerIdentityRegisteredAction) {
     final pubkeyHex = _pubkeyToHex(action.publicKey);
     if (state.peers.containsKey(pubkeyHex)) return state;
-    // Identity learned out-of-band (cold-call invite): a minimal disconnected
+    // Identity supplied by GLP (putKnownPeer): a minimal disconnected
     // entry with no address — reachability and addresses arrive later via
     // sessions, ANNOUNCE, or putPeerAddress.
     final created = PeerState(

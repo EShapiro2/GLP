@@ -139,10 +139,6 @@ class _SeamNetwork extends GlpNetwork {
   String? getPublicAddress() => throw UnimplementedError();
   @override
   String? networkIdentity() => throw UnimplementedError();
-  @override
-  Future<String> generatePeerLink() => throw UnimplementedError();
-  @override
-  Future<PubKey> consumePeerLink(String uri) => throw UnimplementedError();
 }
 
 /// A MadContext over a bare runtime, with [network] bound.
