@@ -379,8 +379,6 @@ void main() {
       );
       expect(() => client.getPublicAddress(), throwsUnsupportedError);
       expect(() => client.networkIdentity(), throwsUnsupportedError);
-      expect(() => client.generatePeerLink(), throwsUnsupportedError);
-      expect(() => client.consumePeerLink('x'), throwsUnsupportedError);
       final bobPk = generateKeyPair().pub;
       client.putPeerAddress(bobPk, '203.0.113.7:41234');
       expect(client.isKnownPeer(bobPk), isFalse,

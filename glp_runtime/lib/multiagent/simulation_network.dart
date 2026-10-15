@@ -473,14 +473,6 @@ class SimulationNetworkClient extends GlpNetwork {
       throw UnsupportedError('the WAN underlay is not provided in '
           'SimulationNetwork');
 
-  @override
-  Future<String> generatePeerLink() =>
-      throw UnsupportedError('peer links not supported in SimulationNetwork');
-
-  @override
-  Future<PubKey> consumePeerLink(String uri) =>
-      throw UnsupportedError('peer links not supported in SimulationNetwork');
-
   /// Does nothing: "the effect of address_declare/2" is not provided (IGLP,
   /// "Simulation realisation"), the WAN underlay being absent, so an address
   /// is taken and has no effect.
