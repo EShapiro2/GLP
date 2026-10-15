@@ -15,7 +15,7 @@
 //
 // Coordination runs over the host blackboard (tool/e2e_blackboard.dart);
 // simulators share the host network, so 127.0.0.1 reaches the host. The
-// rendezvous server is bootstrap_anchor on the host.
+// rendezvous server runs on the host (glue/bin/rendezvous_server.dart).
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';

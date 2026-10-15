@@ -79,7 +79,7 @@ The on-device test bed is the GrassApp duo (`glp_multiagent/lib/main_grassapp_du
 
 Bundle id `com.eshapiro.grassapp`; launch after install with `xcrun devicectl device process launch --device <UUID> com.eshapiro.grassapp`.
 
-Build + install (from `glp_multiagent`; first `bash tool/sync_glp_assets.sh`): `flutter build ios --release -t lib/main_grassapp_duo.dart --dart-define=DUO_ROLE=phone1 --dart-define=DUO_ANCHOR_ADDR=<mac-lan-ip>:9516 --dart-define=DUO_ANCHOR_PK=b83e2276d995c0a9afd74c939bc9390b2d3a3606f9110e5a5c91b9b62601d350`, then `xcrun devicectl device install app --device <UUID> build/ios/iphoneos/Runner.app`; repeat with `DUO_ROLE=phone2` for the other phone.  Anchor (optional fallback): `dart run bootstrap_anchor` in `GLP/networking/bootstrap_anchor` with identity file `{"seed":"7a8e99d6182579f0c8d9b39cca74c1bfd49bcfd796d53d9e47c4b8c92db2812b","nickname":"rendezvous"}`; check the Mac's LAN IP with `ifconfig en0`.
+Build + install (from `glp_multiagent`; first `bash tool/sync_glp_assets.sh`): `flutter build ios --release -t lib/main_grassapp_duo.dart --dart-define=DUO_ROLE=phone1`, then `xcrun devicectl device install app --device <UUID> build/ios/iphoneos/Runner.app`; repeat with `DUO_ROLE=phone2` for the other phone.
 
 Gotchas, learned the hard way:
 

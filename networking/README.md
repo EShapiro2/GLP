@@ -13,7 +13,6 @@ The code was subtree-imported from Dan Bachar's `grassroots-networking`.
 | `core/` | `grassroots_networking_core` | Pure Dart, no Flutter.  Identity, the wire format, Noise sessions, the message protocol, routing, the Redux store, the UDP transport, signaling and peer links, attestation verification, the place registry; and the headless profile, `HeadlessGrassrootsNetwork`, which runs the WAN alone (GNA Sections 2 and 2.2), with two command-line entry points, `bin/glp_net_service.dart` and `bin/glp_net_push.dart`. |
 | `.` | `grassroots_networking` | The Flutter package: `GrassrootsNetwork`, the layer over all three underlays, with BLE (`lib/src/transport/ble_transport_service.dart`) and LAN discovery (`lib/src/transport/lan_discovery_service.dart`); the platform attestation producers and the geofencing backends (`android/`, `ios/`); and a demo app (`lib/main.dart`).  It depends on the core and re-exports it. |
 | `glue/` | `grassroots_networking_glue` | The backend glue: the runtime's network interface, `GlpNetwork`, implemented over the layer --- `HeadlessGlpNetwork` over the headless profile, `GrassrootsGlpNetwork` over `GrassrootsNetwork`.  It depends on the core, the Flutter package and `glp_runtime`, so that neither the core nor its users carry the GLP runtime. |
-| `bootstrap_anchor/` | `bootstrap_anchor` | The Dart rendezvous server.  It is retired: the GLP rendezvous agent, `programs/examples/rendezvous/`, replaces it within GNA's reconnection task, and the directory is deleted when that is done. |
 
 ## Building and testing
 
@@ -26,7 +25,6 @@ Each package is tested in its own directory, by the runner its pubspec calls for
 | core | `cd networking/core && dart pub get`; a server entry point compiles with `dart compile exe bin/glp_net_service.dart -o glp_net_service` | `cd networking/core && dart test` |
 | Flutter package | `cd networking && flutter pub get`; the demo app runs with `flutter run` | `cd networking && flutter test` |
 | glue | `cd networking/glue && flutter pub get` | `cd networking/glue && flutter test` (a Flutter test, since the package depends on the Flutter package) |
-| bootstrap_anchor | `cd networking/bootstrap_anchor && dart pub get` | `cd networking/bootstrap_anchor && dart test` |
 
 `integration_test/` holds on-device tests, run with `flutter test integration_test/<file>` against a simulator or a device; `e2e_agent_test.dart` coordinates its agents through the host blackboard, `dart run tool/e2e_blackboard.dart`, and its header names the roles.
 
