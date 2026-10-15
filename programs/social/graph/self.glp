@@ -22,14 +22,17 @@
 %% TGLP's (Definition "Moded Head", "Well-Typed Clause with Subtyping"): a
 %% position marked ? is written by the term's receiver, so the sender places a
 %% writer there and keeps its reader.
-Conveyance ::= friend(FriendChannel) ; already_friends ; declined.
-ProposerConsent ::= yes(Conveyance) ; no.
+%% The two are generic in the friend channel's type F, so that a mini-app
+%% befriending its own parties through the routing below (CSSN Section 8.4)
+%% mints a channel of its own type; this program's is FriendChannel.
+Conveyance(F) ::= friend(F) ; already_friends ; declined.
+ProposerConsent(F) ::= yes(Conveyance(F)) ; no.
 AcceptorConsent ::= yes ; no.
 Decision ::= yes ; no.
 %% The two ends an agent holds for a befriending its person has not yet
 %% answered, by role: its own consent, to write, and the other's, to read.
-PendingValue ::= propose(ProposerConsent?, AcceptorConsent)
-               ; accept(AcceptorConsent?, ProposerConsent)
+PendingValue ::= propose(ProposerConsent(FriendChannel)?, AcceptorConsent)
+               ; accept(AcceptorConsent?, ProposerConsent(FriendChannel))
                ; error.
 
 %% --- Content types for messages ---
@@ -87,16 +90,16 @@ AgentContent ::= befriend(Key, PendingValue)
 %% Network content (2-arg cold-call: msg(Dest, Content)): the caller, the
 %% caller's consent, bound before sending, and the callee's consent, for the
 %% callee to write --- by the callee's role, the smaller identity proposing.
-NetColdCall ::= befriend_propose(Key, AcceptorConsent, ProposerConsent?)
-              ; befriend_accept(Key, ProposerConsent, AcceptorConsent?).
+NetColdCall ::= befriend_propose(Key, AcceptorConsent, ProposerConsent(FriendChannel)?)
+              ; befriend_accept(Key, ProposerConsent(FriendChannel), AcceptorConsent?).
 
 %% Friend-to-friend content (3-arg: msg(From, To, Content)).  An introduction
 %% from a mutual friend carries the other party, the recipient's own consent,
 %% for it to write, and the reader of the other's, by the recipient's role.
 FriendContent ::= text(Constant)
                 ; unfriend
-                ; introduce_propose(Key, ProposerConsent?, AcceptorConsent)
-                ; introduce_accept(Key, AcceptorConsent?, ProposerConsent)
+                ; introduce_propose(Key, ProposerConsent(FriendChannel)?, AcceptorConsent)
+                ; introduce_accept(Key, AcceptorConsent?, ProposerConsent(FriendChannel))
                 %% Distribution with an invitation and the handshake (SGSG
                 %% paper, Section 3): the offer carries the mini-app's source
                 %% identity, the root channel's type identity and the social
@@ -584,7 +587,7 @@ UserInMsg    ::= msg(Constant, Key, UserContent)
                %% with the conveyance this agent, the proposer, is to write;
                %% the friend channel conveyed to this agent, the acceptor;
                %% the other declined.
-               ; consented(Key, Conveyance?)
+               ; consented(Key, Conveyance(FriendChannel)?)
                ; adopt(Key, FriendChannel)
                ; declined(Key)
                %% A running mini-app's request up its social-graph channel.

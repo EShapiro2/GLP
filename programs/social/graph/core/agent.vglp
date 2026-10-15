@@ -61,7 +61,7 @@ OutputsList ::= [] ; [OutputEntry | OutputsList].
 %% UserIn carries the decisions the responders inject and the outcomes the
 %% awaits inject (await_consent, await_conveyance).
 UserInMsg      ::= decision(Decision, Key, PendingValue)
-                 ; consented(Key, Conveyance?)
+                 ; consented(Key, Conveyance(FriendChannel)?)
                  ; adopt(Key, FriendChannel)
                  ; declined(Key).
 UserInStream   ::= [] ; [UserInMsg | UserInStream].

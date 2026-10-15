@@ -12,6 +12,9 @@ imported procedure(M, Ent) output#add_friend_output(Key?, Stream(M), Stream(Ent)
 %% channel per pair, whatever else is under way.  The agent with the larger
 %% identity, on reading friend(Ch), installs it by adopt/6.  Parameters,
 %% inferred at each call:
+%%   F   --- the friend channel's type, over the caller's own friend
+%%           messages, so that the channel minted is the caller's (CSSN
+%%           Section 8.4 befriends children through this routing).
 %%   Ent --- the output-entry union (must have friend_output and the agent
 %%           message used by connected/1).
 %%   NIM --- the network-input alphabet.  The friend channel's read side is
@@ -44,7 +47,7 @@ close_friend(Name, [E|Rest], [E?|Rest1?]) :-
 %% nothing, merge nothing.  Not yet a friend: mint a fresh friend channel,
 %% convey its peer end, install the local end (add_friend_output), tell the
 %% person, and merge its read side into NetIn.
-exported procedure(Ent, NIM) convey(Decision?, Key?, Conveyance, Stream(Ent)?, Stream(Ent), Stream(NIM)?, Stream(NIM)).
+exported procedure(Ent, NIM, F) convey(Decision?, Key?, Conveyance(F), Stream(Ent)?, Stream(Ent), Stream(NIM)?, Stream(NIM)).
 convey(yes, _, already_friends, Outs, Outs?, NetIn, NetIn?).
 convey(no, Other, friend(PeerEnd?), Outs, Outs2?, NetIn, NetIn1?) :-
     ground(Other?), new_channel(PeerEnd, ch(FIn, FOut?)) |
@@ -54,7 +57,7 @@ convey(no, Other, friend(PeerEnd?), Outs, Outs2?, NetIn, NetIn1?) :-
 
 %% The acceptor's adoption of the friend channel conveyed: install its write
 %% end, tell the person, and merge its read side into NetIn.
-exported procedure(Ent, NIM) adopt(Key?, FriendChannel?, Stream(Ent)?, Stream(Ent), Stream(NIM)?, Stream(NIM)).
+exported procedure(Ent, NIM, F) adopt(Key?, F?, Stream(Ent)?, Stream(Ent), Stream(NIM)?, Stream(NIM)).
 adopt(Other, ch(FIn, FOut?), Outs, Outs2?, NetIn, NetIn1?) :-
     ground(Other?) |
     output # add_friend_output(Other?, FOut, Outs?, Outs1),
