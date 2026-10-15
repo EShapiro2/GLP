@@ -1,6 +1,6 @@
 # How to Run GLP Multi-Agent Programs
 
-**Updated: 2026-10-12**
+**Updated: 2026-10-15**
 
 These are the routes by which `test/run_all_tests.sh` runs multi-agent programs, one section per route, each naming the harness section it comes from.  Every command below was run on 2026-10-12 on a tree at GLP `main` `11744d09`, and what it printed is quoted as it printed it.  Commands start at the root of a worktree (Code: the clone at `/Users/udi/Grassroots/GLP`).
 
@@ -122,7 +122,7 @@ cd glp_runtime && dart test test/multiagent/multiagent_glp_test.dart
 cd glp_runtime && dart test test/multiagent/
 ```
 
-`+249 ~6 -13: Some tests failed.`  The thirteen red are `cssn_v2_isolate_test.dart`'s, Section M's, each an entry of the harness's `KNOWN_RED`.
+Runs every test file of `glp_runtime/test/multiagent/`; none of them is an entry of the harness's `KNOWN_RED`.
 
 ---
 

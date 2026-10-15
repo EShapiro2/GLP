@@ -1,6 +1,6 @@
 # Multi-Agent GLP (madGLP) Documentation
 
-**Last updated:** 2026-10-02
+**Last updated:** 2026-10-15
 
 This directory contains the specifications for the multi-agent GLP runtime — agents running in separate Dart isolates that communicate via message-passing with serialised payloads.  Where IGLP states a part of them, IGLP governs.  Earlier "irmaGLP" work, phase handovers and bug-investigation notes have been removed; git holds them.
 
@@ -10,7 +10,7 @@ This directory contains the specifications for the multi-agent GLP runtime — a
 |----------|-------------|
 | [`madGLP-spec.md`](madGLP-spec.md) | Core multi-agent runtime (isolates, variable tables, message queues, globalise/localise) |
 | [`agent-runtime-spec.md`](agent-runtime-spec.md) | Agent process inside an isolate |
-| [`isolate-boot-spec.md`](isolate-boot-spec.md) | Multi-isolate boot orchestration (used by `mad_boot/mad_fplayN.glp`) |
+| [`isolate-boot-spec.md`](isolate-boot-spec.md) | Multi-isolate boot orchestration |
 | [`multi-agent-trace-spec.md`](multi-agent-trace-spec.md) | Trace format for multi-agent runs |
 | [`HOW-TO-RUN.md`](HOW-TO-RUN.md) | How to run multi-agent plays |
 

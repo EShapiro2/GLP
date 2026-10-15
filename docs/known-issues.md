@@ -570,7 +570,7 @@ Full: `glp_multiagent/test/scenario_single_isolate_test.dart` (phase 2 — `befr
 
 ## Issue 16: CSSN v2 (`programs/social/network`) is type-incorrect — surfaced by correct parametric typing
 
-**Status**: Open — owned by a separate CSSN session. The type-system correctness work that surfaced it has landed; CSSN v2 is intentionally left failing (Udi: "ignore cssn, another conversation will fix it when the type system is correct"). **Section K (CSSN v2) of `run_all_tests.sh` and `cssn_v2_isolate_test.dart` are expected-failing until CSSN is retyped.**
+**Status (2026-10-15)**: `programs/social/network` is now `programs/cssn`, which CSSN ported on 2026-10-09.  Section K of `run_all_tests.sh` checks that it loads with no type errors, and none of Section K's checks is known red.
 **Discovered**: 2026-06-17
 
 ### Summary

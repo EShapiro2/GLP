@@ -135,13 +135,9 @@ FAIL=0
 # the commit that turns it green.  Udi's rulings put a dormant project's
 # failures here, since no session exists to repair them.
 KNOWN_RED_CHECKS=(
-# GSG's hosting of CSSN's mini-app (CSSN's port of 2026-10-09 19:37 UTC, on
-# CSSN-port): cssn/3 now takes the person channel, PersonChannel(Drawn), and
-# GSG's super-app still installs and activates it at the retired mediator's
-# channel (social/graph/core: install_cssn, Channel(CsAppCmd, CsAppNotify),
-# and the plays play_cssn, play_both and both_boot.glp, cssn_boot.glp), so
-# run/3 aborts on the type identity of cssn/3.  GSG's to port, as it hosts the
-# currency's mini-app at its person channel; each entry comes off with it.
+# The super-app's hosting of CSSN's ported mini-app (CSSN's port of
+# 2026-10-09): GSG's to port, as it hosts the currency's mini-app at its
+# person channel; each entry comes off with that port.
     "SG two mini-apps at once: bob connected and greeted under it"
     "SG two mini-apps on two smartphones: and its message arrives"
     "SG super-app hosts the child-safe platform: alice connected to bob"
