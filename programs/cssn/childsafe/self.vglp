@@ -1,0 +1,92 @@
+%% self.vglp --- what the three agents, adult (adult.vglp), parent
+%% (parent.vglp) and child (child.vglp), share: the cards, each a volitional
+%% procedure whose interactive type is in writer mode, and the ordinary
+%% procedures that read a card's answer and hand the agent what it is to do
+%% (CSSN Section 6.1; vGLP, canonical-compilation.tex: "the self.vglp of a
+%% directory holds the procedures, volitional or not, and the widget
+%% declarations shared by every module in that directory and below it").  A
+%% card is shared where more than one agent answers it: a child accepts an
+%% introduction and a parent approves one; an adult, a parent and a child
+%% each answer an invitation into a group.
+%%
+%% The types are ../self.glp's.
+
+%% =============================================================================
+%% THE CARDS
+%% =============================================================================
+
+%% Child befriending (CSSN Section 6.1, "Child befriending in vGLP"): at the
+%% other parent, approving for its child; at each of the two children,
+%% accepting.  The card shows the introduction as the introducing parent made
+%% it, and takes yes or no.
+procedure (Card)*approve(Intro?, YesNo).
+(card(I?, A))*approve(I, A?).
+
+procedure (Card)*accept(Intro?, YesNo).
+(card(I?, A))*accept(I, A?).
+
+%% Joining a group, at the party invited.
+procedure (GroupCard)*join_group(GroupOffer?, YesNo).
+(card(O?, A))*join_group(O, A?).
+
+%% A child of one's own joining a group, at its parent.
+procedure (JoinCard)*approve_join(JoinOffer?, YesNo).
+(card(O?, A))*approve_join(O, A?).
+
+%% A child of one's own, the creator of a group, inviting a member, at its
+%% parent.
+procedure (InviteCard)*approve_invite(InviteOffer?, YesNo).
+(card(O?, A))*approve_invite(O, A?).
+
+%% =============================================================================
+%% READING THE ANSWERS
+%% =============================================================================
+
+%% A child accepting an introduction from its parent P binds its consent and
+%% awaits the other's (Section 6.4, steps 3 and 4), by the social graph's
+%% routing: the child proposing reads the other's consent and is handed the
+%% conveyance to write, the child accepting reads the conveyance.  Each
+%% outcome reaches the agent tagged with P, at whom the befriending's
+%% approval is counted.  Declining binds its consent to no.
+procedure accepted(YesNo?, Key?, Consents?, Key?, Stream(AgentIn)).
+accepted(yes, Peer, propose(Mine?, Theirs), P, Out?) :-
+    ground(Peer?) |
+    Mine = yes(C?),
+    await_consent(Peer?, Theirs?, C, [], Os),
+    tag(P?, Os?, Out).
+accepted(yes, Peer, accept(Mine?, Theirs), P, Out?) :-
+    ground(Peer?) |
+    Mine = yes,
+    await_conveyance(Peer?, Theirs?, [], Os),
+    tag(P?, Os?, Out).
+accepted(no, _, propose(Mine?, _), _, []) :- Mine = no.
+accepted(no, _, accept(Mine?, _), _, []) :- Mine = no.
+
+procedure tag(Key?, Stream(BefriendOutcome)?, Stream(AgentIn)).
+tag(P, [O|Os], [outcome(P?, O?)|Out?]) :- tag(P?, Os?, Out).
+tag(_, [], []).
+
+%% The other parent's answer (Section 6.4, step 2): on yes the introduction is
+%% forwarded to its child; on no it goes no further, the child's consent
+%% written no on the child's behalf.
+procedure approved(YesNo?, Intro?, Consents?, Stream(AgentIn)).
+approved(yes, intro(P, R, S), Cs, [forward_intro(S?, intro(P?, R?, S?), Cs?)]).
+approved(no, _, propose(Mine?, _), []) :- Mine = no.
+approved(no, _, accept(Mine?, _), []) :- Mine = no.
+
+%% The answer of a party invited into a group: on yes it hands the creator the
+%% writer of its end of the group channel, and joins once the creator writes
+%% it, counting the approval at P, the parent whose approval its joining took
+%% (the party itself where none did); on no it declines.
+procedure joined(YesNo?, GroupId?, Key?, GroupReply, Stream(AgentIn)).
+joined(yes, G, P, yes(X), Out?) :- await_group(G?, P?, X?, Out).
+joined(no, _, _, no, []).
+
+procedure await_group(GroupId?, Key?, GroupChannel?, Stream(AgentIn)).
+await_group(G, P, ch(In, Out?), [group_joined(G?, P?, ch(In?, Out))]) :- true.
+
+%% A parent's answer to a creator inviting its child: on yes the invitation is
+%% forwarded to the child, who answers it; on no it goes no further.
+procedure forward_join(YesNo?, Key?, GroupId?, GroupReply, Stream(AgentIn)).
+forward_join(yes, C, G, R?, [forward_group(C?, G?, R)]).
+forward_join(no, _, _, no, []).

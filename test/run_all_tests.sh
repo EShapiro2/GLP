@@ -135,86 +135,15 @@ FAIL=0
 # the commit that turns it green.  Udi's rulings put a dormant project's
 # failures here, since no session exists to repair them.
 KNOWN_RED_CHECKS=(
-# CSSN, dormant (Udi, 2026-09-28, through Integration Cowork 2026-09-28 19:08 UTC):
-# its failures on `gap` stand here until CSSN wakes, and nobody repairs its
-# files.  Section K entire, and the SG checks that need the `cssn` or
-# `childsafe` artefact, measured at gap 2c18023e.
+# GSG's hosting of CSSN's mini-app (CSSN's port of 2026-10-09 19:37 UTC, on
+# CSSN-port): cssn/3 now takes the person channel, PersonChannel(Drawn), and
+# GSG's super-app still installs and activates it at the retired mediator's
+# channel (social/graph/core: install_cssn, Channel(CsAppCmd, CsAppNotify),
+# and the plays play_cssn, play_both and both_boot.glp, cssn_boot.glp), so
+# run/3 aborts on the type identity of cssn/3.  GSG's to port, as it hosts the
+# currency's mini-app at its person channel; each entry comes off with it.
     "SG two mini-apps at once: bob connected and greeted under it"
     "SG two mini-apps on two smartphones: and its message arrives"
-    "CSSN mini-app loads as a program"
-    "CSSN mini-app: its certificate carries the compiler's key"
-    "CSSN mini-app: run/3 activates it, and adopting the conversation is the friendship"
-    "CSSN mini-app: the friend's execution sees it too, and the greeting crosses"
-    "CSSN mini-app: becoming parent and child travels the conversation"
-    "CSSN mini-app: and the child holds its parent"
-    "CSSN v2 project loads"
-    "CSSN v2 fplay1 succeeds"
-    "CSSN v2 fplay2 succeeds"
-    "CSSN v2 fplay3 succeeds"
-    "CSSN v2 fplay4 succeeds"
-    "CSSN v2 fplay4 carol connected dave"
-    "CSSN v2 fplay5 succeeds"
-    "CSSN v2 fplay6 succeeds"
-    "CSSN v2 fplay7 succeeds"
-    "CSSN v2 fplay14 succeeds"
-    "CSSN v2 fplay14 alice issued two child_introduces"
-    "CSSN v2 fplay14 carol connected(dave) emitted exactly once"
-    "CSSN v2 fplay14 dave connected(carol) emitted exactly once"
-    "CSSN v2 fplay15 succeeds"
-    "CSSN v2 fplay15 both agents issued connect"
-    "CSSN v2 fplay15 alice connected(bob) emitted exactly once"
-    "CSSN v2 fplay15 bob connected(alice) emitted exactly once"
-    "CSSN v3 fplay13 act 1 every agent starts an adult and the act is the parenting"
-    "CSSN v3 fplay13 act 1 becoming parent and child is an act of both"
-    "CSSN v3 fplay13 act 1 the parent holds the child"
-    "CSSN v3 fplay13 act 2 adult friendship"
-    "CSSN v3 fplay13 act 3 child befriending"
-    "CSSN v3 fplay13 act 3 the sibling case"
-    "CSSN v3 fplay13 act 4 child-managed group"
-    "CSSN v3 fplay13 act 5 adult-managed group"
-    "CSSN v3 fplay13 act 6 child unfriending"
-    "CSSN v3 fplay13 act 6 parent-initiated removal"
-    "CSSN v3 fplay13 act 7 ending the parenting is owed and given"
-    "CSSN v3 fplay13 act 7 no parent on record is what being an adult is"
-    "CSSN v3 fplay13 act 5 a member joining late is owed what was posted before"
-    "CSSN v3 fplay13 act 7 befriending with no parent among the guards"
-    "CSSN v3 fplay13 narrative is 85 lines"
-    "CSSN v3 fplay16 succeeds"
-    "CSSN v3 fplay16 becoming a parent asks nothing of either party"
-    "CSSN v3 fplay16 enrol creates the parent-child channel"
-    "CSSN v3 fplay16 the child holds its parent"
-    "CSSN v3 fplay16 ending the parenting tears the channel down"
-    "CSSN v3 fplay16 an empty rho is what being an adult is"
-    "CSSN v3 fplay16 a released child takes up a conversation a child refuses"
-    "CSSN v3 fplay17 succeeds"
-    "CSSN v3 fplay17 the member on the list at the post receives it"
-    "CSSN v3 fplay17 the late joiner is owed it too"
-    "CSSN v3 fplay17 a member joining after two posts is owed the first"
-    "CSSN v3 fplay17 and the second"
-    "CSSN v3 fplay17 no member receives the post twice"
-    "CSSN v3 fplay17 the catch-up is in the order the posts were made"
-    "CSSN v3 fplay18 succeeds"
-    "CSSN v3 fplay18 bob becomes a child"
-    "CSSN v3 fplay18 a child offers to become a parent"
-    "CSSN v3 fplay18 and holds the child it gained"
-    "CSSN v3 fplay18 a child ends a parenting of its own"
-    "CSSN v3 fplay18 a child that is a parent ends the parenting"
-    "CSSN v3 fplay19 succeeds"
-    "CSSN v3 fplay19 the creator's parent wills the removal"
-    "CSSN v3 fplay19 and it reaches the removed child through the creator"
-    "CSSN v3 fplay19 the creator's own role still ends a membership"
-    "CSSN v3 fplay19 and reaches that member too"
-    "CSSN v2 fplay8 succeeds"
-    "CSSN v2 fplay8 group_joined"
-    "CSSN v2 fplay9 succeeds"
-    "CSSN v2 fplay10 succeeds"
-    "CSSN v2 fplay11 succeeds"
-    "CSSN v2 fplay11 tagged output"
-    "CSSN v2 fplay12 succeeds"
-    "CSSN v2 fplay12 tagged output"
-    "SG super-app: cssn's artefact is refused a certificate"
-    "SG super-app: load_file gives cssn's artefact as text"
-    "SG super-app: the child-safe platform's artefact is certified"
     "SG super-app hosts the child-safe platform: alice connected to bob"
     "SG super-app hosts the child-safe platform: bob connected and greeted"
     "SG super-app hosts the child-safe platform: no failed play"
@@ -223,22 +152,7 @@ KNOWN_RED_CHECKS=(
     "SG child-safe platform on two smartphones: alice is connected to bob"
     "SG child-safe platform on two smartphones: bob is connected to alice"
     "SG child-safe platform on two smartphones: alice's message reaches bob"
-# CSSN, dormant (Udi, 2026-10-01, to Integration Code: "Ignore CSSN stuff till
-# I ask differently"): its childsafe artefact, refused at its source for the
-# guard negation GLP removed (15ba4b7e), measured at gap 80265f7c.
-    "Q asset step writes childsafe.glpw"
-# CSSN's artefact: the SG blocks that host the child-safe platform beside a
-# currency, red while childsafe.glpw is not written (the guard negation
-# above); taken onto the list when gap merged into main (2026-10-10, main
-# 372f062e); CSSN's port of 2026-10-09 19:37 UTC turns them green.
-    "SG super-app no failed play"
-    "SG super-app: the super-app installs no text"
-    "SG two mini-apps at once: alice's swap settles"
-    "SG two mini-apps at once: bob's swap settles"
     "SG two mini-apps at once: no failed play"
-    "SG two mini-apps on two smartphones: alice's swap settles"
-    "SG two mini-apps on two smartphones: bob's swap settles"
-    "SG two mini-apps on two smartphones: the currency's conversation opens"
 )
 KR_CHECKS=0
 
@@ -2402,25 +2316,23 @@ fi  # Section I
 
 if _section K; then
 # =============================================================================
-# Section K: CSSN v2 Modules (child_agent with blocking consent)
-#
-# (Former Section J "CSSG v2 Modules" — programs/social/child_safe — was removed
-# 2026-06-21: child_safe is retired in favour of cssn, and this section's
-# child_agent fplay4-7 coverage is a strict subset of Section K below.)
+# Section K: the child-safe social network (programs/cssn), CSSN Section 6:
+# the adult, parent and child agents, three vGLP modules compiled beside their
+# sources, as a certified mini-app of the Grassroots Super-App, and its plays
+# --- the village of Section 6.3 and one play per further act or condition ---
+# each party a scripted person on the mini-app's person channel and a
+# stand-in for the super-app.
 # =============================================================================
-echo "=== Section K: CSSN v2 Modules ==="
+echo "=== Section K: CSSN, the child-safe social network ==="
 echo ""
 
 CSSN_V2="$GLP_DIR/programs/cssn"
 CSSN_APP="$CSSN_V2/childsafe"
 
-# The certified program: the platform as a mini-app of the Grassroots Super-App
-# (SGSG paper, Section 3).  programs/cssn/childsafe is the two agents, the UI
-# mediator and the entry cssn/3 the super-app activates with exactly its two
+# The certified program: programs/cssn/childsafe is the three agents, the
+# cards they share and the entries that activate the mini-app with its two
 # channels; it holds no network entry and reaches neither the network nor the
-# person, so it carries the compiler's certificate.  programs/cssn adds the play
-# glue and the stand-in for the super-app, which befriends and hands each
-# execution the conversations it opens.
+# person, so it carries the compiler's certificate.
 echo "--- CSSN mini-app (programs/cssn/childsafe) ---"
 
 k_app=$("$REPL_RUN" <<HEREDOC
@@ -2433,307 +2345,139 @@ HEREDOC
 check "CSSN mini-app loads as a program" "Loaded program" "$k_app"
 check_not "CSSN mini-app no type errors" "Type checking failed" "$k_app"
 check_not "CSSN mini-app is certified" "CERTIFICATE REFUSED" "$k_app"
-check "CSSN mini-app: its certificate carries the compiler's key" "K = [0-9a-f]\{64\}" "$k_app"
+check "CSSN mini-app: its certificate carries the compiler's key" "K = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$k_app"
 
-# The two plays activate the mini-app as the super-app does: by run/3, under the
-# type identity of cssn/3, with its two channels; and, for two executions, with
-# the two ends of one root channel handed to them as their conversation.
-k_app_plays=$("$REPL_RUN" <<HEREDOC
-$CSSN_APP
-:limit 5000000
-play_open(A, B).
-play_enrol(C, D).
+# The committed adult.glp, parent.glp and child.glp must be the compiler's
+# own output: :emit rewrites them from their .vglp sources, and the working
+# tree must be unchanged.
+k_emit=$("$REPL_RUN" <<HEREDOC
+$CSSN_V2
+:emit $CSSN_V2
 :quit
 HEREDOC
 2>&1)
+check "CSSN: :emit re-emits adult.glp" "wrote $CSSN_APP/adult.glp" "$k_emit"
+check "CSSN: :emit re-emits parent.glp" "wrote $CSSN_APP/parent.glp" "$k_emit"
+check "CSSN: :emit re-emits child.glp" "wrote $CSSN_APP/child.glp" "$k_emit"
+k_emit_diff=$(cd "$GLP_DIR" && git diff --stat -- programs/cssn/childsafe/adult.glp programs/cssn/childsafe/parent.glp programs/cssn/childsafe/child.glp)
+check_not "CSSN: the committed agents are the compiler's output" "\.glp" "$k_emit_diff"
 
-check "CSSN mini-app: run/3 activates it, and adopting the conversation is the friendship" "A = \[connected(bob)" "$k_app_plays"
-check "CSSN mini-app: the friend's execution sees it too, and the greeting crosses" "B = \[connected(alice), received(alice, hello)" "$k_app_plays"
-check "CSSN mini-app: becoming parent and child travels the conversation" "C = \[connected(carol), enrolled(carol)" "$k_app_plays"
-check "CSSN mini-app: and the child holds its parent" "D = \[connected(alice), enrol_offer(alice, req(1)), enrolled(alice)" "$k_app_plays"
-
-# Loading
 k_load=$("$REPL_RUN" <<HEREDOC
 $CSSN_V2
 :quit
 HEREDOC
 2>&1)
+check "CSSN program loads" "Loaded program" "$k_load"
+check_not "CSSN program no type errors" "Type checking failed" "$k_load"
 
-check "CSSN v2 project loads" "Loaded program" "$k_load"
-check_not "CSSN v2 no type errors" "Type checking failed" "$k_load"
-
-# fplay1-3: Basic social graph (adult-only, unchanged)
-echo "--- CSSN v2 basic social graph (fplay1-fplay3) ---"
-
-for play_num in 1 2 3; do
-    k_fpN=$("$REPL_RUN" <<HEREDOC
+# One play: its log, tagged(Party, M), M a screen message or did(Step).
+k_play() {
+    "$REPL_RUN" <<HEREDOC
 $CSSN_V2
-fplay${play_num}.
+:limit 50000000
+$1.
 :quit
 HEREDOC
-2>&1)
-    check "CSSN v2 fplay${play_num} succeeds" "succeeds\|suspended" "$k_fpN"
-done
+}
 
-# fplay4-7: child_agent befriending
-echo "--- CSSN v2 child_agent befriending (fplay4-fplay7) ---"
-
-k_fp4=$("$REPL_RUN" <<HEREDOC
-$CSSN_V2
-fplay4.
-:quit
-HEREDOC
-2>&1)
-
-check "CSSN v2 fplay4 succeeds" "succeeds\|suspended" "$k_fp4"
-check "CSSN v2 fplay4 carol connected dave" "tagged(carol.*connected(dave)" "$k_fp4"
-
-for play_num in 5 6 7; do
-    k_fpN=$("$REPL_RUN" <<HEREDOC
-$CSSN_V2
-fplay${play_num}.
-:quit
-HEREDOC
-2>&1)
-    check "CSSN v2 fplay${play_num} succeeds" "succeeds\|suspended" "$k_fpN"
-done
-
-# fplay14: Idempotent befriend commit — redundant child_introduce.
-# Alice issues child_introduce(carol, bob, dave) TWICE.  Each child accepts both
-# child_befriend notifications.  Idempotency suppresses the second commit, so
-# `connected(dave)` is emitted exactly once on carol's side and `connected(carol)`
-# exactly once on dave's side.
-echo "--- CSSN v2 idempotent befriend commit (fplay14) ---"
-k_fp14=$("$REPL_RUN" <<HEREDOC
-$CSSN_V2
-fplay14.
-:quit
-HEREDOC
-2>&1)
-check "CSSN v2 fplay14 succeeds" "succeeds\|suspended" "$k_fp14"
-fp14_alice_introduces=$(echo "$k_fp14" | grep -c "tagged(alice, cmd(child_introduce(carol, bob, dave))" || true)
-fp14_carol_connected=$(echo "$k_fp14" | grep -c "tagged(carol, notify(connected(dave))" || true)
-fp14_dave_connected=$(echo "$k_fp14" | grep -c "tagged(dave, notify(connected(carol))" || true)
-if [ "$fp14_alice_introduces" = "2" ]; then
-    _check_pass "CSSN v2 fplay14 alice issued two child_introduces"
+# The village (Section 6.3), act by act.  The parties' messages interleave in
+# any order; every check is of a line, or of a count that only grows.
+echo "--- CSSN village, seven acts ---"
+k_v=$(k_play village 2>&1)
+check_not "CSSN village: no failed goal" "→ failed\|ERROR" "$k_v"
+check "CSSN village act 1: a child enters with its parent, at the parent" "tagged(alice, child(carol))" "$k_v"
+check "CSSN village act 1: and at the child" "tagged(carol, parent(alice))" "$k_v"
+check "CSSN village act 1: a parent of two" "tagged(bob, child(eve))" "$k_v"
+check "CSSN village act 2: adult friendship" "tagged(alice, connected(frank))" "$k_v"
+check "CSSN village act 2: a direct message" "tagged(bob, received(alice, Hello Bob))" "$k_v"
+check "CSSN village act 3: child befriending" "tagged(carol, connected(dave))" "$k_v"
+check "CSSN village act 3: the sibling case" "tagged(dave, connected(eve))" "$k_v"
+check "CSSN village act 3: the third friendship" "tagged(eve, connected(carol))" "$k_v"
+check "CSSN village act 4: a child creator's group" "tagged(carol, member_joined(group_id(carol, kids_chat), eve))" "$k_v"
+check "CSSN village act 4: the children's messages, sent on by the creator" "tagged(dave, group_received(group_id(carol, kids_chat), eve, Hi from Eve))" "$k_v"
+check "CSSN village act 4: Eve leaves" "tagged(eve, group_left(group_id(carol, kids_chat)))" "$k_v"
+check "CSSN village act 5: an adult creator's group, a child joining through its parent" "tagged(frank, member_joined(group_id(frank, study), carol))" "$k_v"
+check "CSSN village act 5: a member joining late is owed what was posted before" "tagged(carol, group_received(group_id(frank, study), dave, Hi from Dave!))" "$k_v"
+check "CSSN village act 6: parent-initiated removal" "tagged(dave, group_left(group_id(frank, study)))" "$k_v"
+check "CSSN village act 6: child unfriending" "tagged(dave, unfriended(carol))" "$k_v"
+check "CSSN village act 7: declaring of age, at the parent" "tagged(bob, child_of_age(eve))" "$k_v"
+check "CSSN village act 7: and at the child, an adult" "tagged(eve, of_age)" "$k_v"
+check "CSSN village act 7: befriending with no parent among the guards" "tagged(eve, connected(frank))" "$k_v"
+check "CSSN village: Alice's approvals, one per act of her child" "tagged(alice, approvals(5))" "$k_v"
+check_not "CSSN village: and no more" "tagged(alice, approvals(6))" "$k_v"
+check "CSSN village: Bob's approvals, the sibling befriending counted once" "tagged(bob, approvals(6))" "$k_v"
+check_not "CSSN village: and no more" "tagged(bob, approvals(7))" "$k_v"
+check "CSSN village: Alice's withdrawals, Carol's unfriending and Eve's leaving her group" "tagged(alice, withdrawals(2))" "$k_v"
+check "CSSN village: Bob's withdrawals" "tagged(bob, withdrawals(3))" "$k_v"
+check_not "CSSN village: and no more" "tagged(bob, withdrawals(4))" "$k_v"
+k_v_n=$(echo "$k_v" | grep -c "tagged(" || true)
+if [ "$k_v_n" = "140" ]; then
+    _check_pass "CSSN village: the log is 140 lines"
 else
-    _check_fail "CSSN v2 fplay14 alice issued two child_introduces" "CSSN v2 fplay14 alice issued $fp14_alice_introduces child_introduces (expected 2)"
-fi
-if [ "$fp14_carol_connected" = "1" ]; then
-    _check_pass "CSSN v2 fplay14 carol connected(dave) emitted exactly once"
-else
-    _check_fail "CSSN v2 fplay14 carol connected(dave) emitted exactly once" "CSSN v2 fplay14 carol connected(dave) emitted $fp14_carol_connected times (expected 1)"
-fi
-if [ "$fp14_dave_connected" = "1" ]; then
-    _check_pass "CSSN v2 fplay14 dave connected(carol) emitted exactly once"
-else
-    _check_fail "CSSN v2 fplay14 dave connected(carol) emitted exactly once" "CSSN v2 fplay14 dave connected(carol) emitted $fp14_dave_connected times (expected 1)"
+    _check_fail "CSSN village: the log is 140 lines" "the log is $k_v_n lines (expected 140)"
 fi
 
-# fplay15: Idempotent befriend commit — simultaneous bilateral cold-call.
-# Alice and Bob cold-call each other simultaneously, both accept.  The smaller-name
-# tie-break converges both sides on a single canonical channel; the other commit
-# is suppressed.  Each side emits exactly one connected/2 notification.
-echo "--- CSSN v2 bilateral cold-call (fplay15) ---"
-k_fp15=$("$REPL_RUN" <<HEREDOC
-$CSSN_V2
-fplay15.
-:quit
-HEREDOC
-2>&1)
-check "CSSN v2 fplay15 succeeds" "succeeds\|suspended" "$k_fp15"
-fp15_alice_connect=$(echo "$k_fp15" | grep -c "tagged(alice, cmd(connect(bob))" || true)
-fp15_bob_connect=$(echo "$k_fp15" | grep -c "tagged(bob, cmd(connect(alice))" || true)
-fp15_alice_connected=$(echo "$k_fp15" | grep -c "tagged(alice, notify(connected(bob))" || true)
-fp15_bob_connected=$(echo "$k_fp15" | grep -c "tagged(bob, notify(connected(alice))" || true)
-if [ "$fp15_alice_connect" = "1" ] && [ "$fp15_bob_connect" = "1" ]; then
-    _check_pass "CSSN v2 fplay15 both agents issued connect"
+echo "--- CSSN entering with two parents, declaring of age ---"
+k_tp=$(k_play play_two_parents 2>&1)
+check "CSSN two parents: a child enters with two" "tagged(carol, parent(bob))" "$k_tp"
+check "CSSN two parents: at each parent" "tagged(bob, child(carol))" "$k_tp"
+check "CSSN two parents: a child is no parent" "tagged(carol, not_my_child(carol))" "$k_tp"
+check "CSSN two parents: a child refuses a conversation" "tagged(carol, refused(dave))" "$k_tp"
+check "CSSN two parents: one parent declares the child of age" "tagged(alice, child_of_age(carol))" "$k_tp"
+check "CSSN two parents: which ends the other's parenting too" "tagged(bob, child_of_age(carol))" "$k_tp"
+check "CSSN two parents: the child is an adult" "tagged(carol, of_age)" "$k_tp"
+check "CSSN two parents: its parents are adults again" "tagged(alice, not_my_child(carol))" "$k_tp"
+check "CSSN two parents: both of them" "tagged(bob, not_my_child(carol))" "$k_tp"
+check "CSSN two parents: and the child befriends directly" "tagged(carol, connected(dave))" "$k_tp"
+
+echo "--- CSSN two introductions at once ---"
+k_tw=$(k_play play_twice 2>&1)
+k_tw_c=$(echo "$k_tw" | grep -c "tagged(carol, connected(dave))" || true)
+k_tw_d=$(echo "$k_tw" | grep -c "tagged(dave, connected(carol))" || true)
+if [ "$k_tw_c" = "1" ] && [ "$k_tw_d" = "1" ]; then
+    _check_pass "CSSN twice: two introductions establish one friend channel"
 else
-    _check_fail "CSSN v2 fplay15 both agents issued connect" "CSSN v2 fplay15 connects: alice=$fp15_alice_connect bob=$fp15_bob_connect (expected 1 each)"
+    _check_fail "CSSN twice: two introductions establish one friend channel" "carol connected $k_tw_c times, dave $k_tw_d (expected 1 each)"
 fi
-if [ "$fp15_alice_connected" = "1" ]; then
-    _check_pass "CSSN v2 fplay15 alice connected(bob) emitted exactly once"
+check "CSSN twice: one approval at each parent" "tagged(bob, approvals(1))" "$k_tw"
+check_not "CSSN twice: and no second" "approvals(2)" "$k_tw"
+
+echo "--- CSSN two adults befriending each other at once ---"
+k_bw=$(k_play play_both_ways 2>&1)
+k_bw_a=$(echo "$k_bw" | grep -c "tagged(alice, connected(bob))" || true)
+k_bw_b=$(echo "$k_bw" | grep -c "tagged(bob, connected(alice))" || true)
+if [ "$k_bw_a" = "1" ] && [ "$k_bw_b" = "1" ]; then
+    _check_pass "CSSN both ways: one friendship"
 else
-    _check_fail "CSSN v2 fplay15 alice connected(bob) emitted exactly once" "CSSN v2 fplay15 alice connected(bob) emitted $fp15_alice_connected times (expected 1)"
-fi
-if [ "$fp15_bob_connected" = "1" ]; then
-    _check_pass "CSSN v2 fplay15 bob connected(alice) emitted exactly once"
-else
-    _check_fail "CSSN v2 fplay15 bob connected(alice) emitted exactly once" "CSSN v2 fplay15 bob connected(alice) emitted $fp15_bob_connected times (expected 1)"
+    _check_fail "CSSN both ways: one friendship" "alice connected $k_bw_a times, bob $k_bw_b (expected 1 each)"
 fi
 
-# fplay13: the village scenario's seven acts.  The actors are order-independent —
-# one state each, every notification acted on has its own clause — so these hold
-# whatever order the six agents' messages interleave in.  Checked act by act
-# because a chained actor used to pass "suspended" while silently dropping a
-# notification and stopping halfway.
-echo "--- CSSN v3 village scenario, seven acts (fplay13) ---"
-k_fp13=$("$REPL_RUN" <<HEREDOC
-$CSSN_V2
-fplay13.
-:quit
-HEREDOC
-2>&1)
-check "CSSN v3 fplay13 act 1 every agent starts an adult and the act is the parenting" "tagged(alice, act(Becoming the parent of Carol))" "$k_fp13"
-check "CSSN v3 fplay13 act 1 becoming parent and child is an act of both" "tagged(carol, act(Accepting Alice as my parent))" "$k_fp13"
-check "CSSN v3 fplay13 act 1 the parent holds the child" "tagged(bob, event(Eve is my child))" "$k_fp13"
-check "CSSN v3 fplay13 act 2 adult friendship" "tagged(alice, friend(frank))" "$k_fp13"
-check "CSSN v3 fplay13 act 3 child befriending" "tagged(carol, friend(dave))" "$k_fp13"
-check "CSSN v3 fplay13 act 3 the sibling case" "tagged(dave, friend(eve))" "$k_fp13"
-check "CSSN v3 fplay13 act 4 child-managed group" "tagged(carol, event(Eve joined kids_chat))" "$k_fp13"
-check "CSSN v3 fplay13 act 5 adult-managed group" "tagged(frank, event(Carol joined study group))" "$k_fp13"
-check "CSSN v3 fplay13 act 6 child unfriending" "tagged(dave, event(Unfriended by Carol))" "$k_fp13"
-check "CSSN v3 fplay13 act 6 parent-initiated removal" "tagged(dave, event(Removed from study group))" "$k_fp13"
-check "CSSN v3 fplay13 act 7 ending the parenting is owed and given" "tagged(bob, act(Ending the parenting of Eve))" "$k_fp13"
-check "CSSN v3 fplay13 act 7 no parent on record is what being an adult is" "tagged(eve, event(No parent on record, so an adult))" "$k_fp13"
-check "CSSN v3 fplay13 act 5 a member joining late is owed what was posted before" "tagged(carol, notify(group_received(group_id(frank, study), dave, Hi from Dave!)))" "$k_fp13"
-check "CSSN v3 fplay13 act 7 befriending with no parent among the guards" "tagged(eve, friend(frank))" "$k_fp13"
-fp13_narr=$(echo "$k_fp13" | grep -cE "tagged\((alice|bob|frank|carol|dave|eve), (act|event|friend|say)\(" || true)
-if [ "$fp13_narr" = "85" ]; then
-    _check_pass "CSSN v3 fplay13 narrative is 85 lines"
+echo "--- CSSN a late joiner is owed the earlier posts ---"
+k_lj=$(k_play play_late_join 2>&1)
+check "CSSN late join: the member on the list at the post receives it" "tagged(bob, group_received(group_id(alice, late_join), alice, Posted before Carol joined))" "$k_lj"
+check "CSSN late join: the late joiner is owed it too" "tagged(carol, group_received(group_id(alice, late_join), alice, Posted before Carol joined))" "$k_lj"
+check "CSSN late join: a member joining after two posts is owed the first" "tagged(dave, group_received(group_id(alice, late_join), alice, Posted before Carol joined))" "$k_lj"
+check "CSSN late join: and the second" "tagged(dave, group_received(group_id(alice, late_join), alice, Posted before Dave joined))" "$k_lj"
+k_lj_b=$(echo "$k_lj" | grep -c "tagged(bob, group_received(group_id(alice, late_join), alice, Posted before Carol joined))" || true)
+if [ "$k_lj_b" = "1" ]; then
+    _check_pass "CSSN late join: no member receives the post twice"
 else
-    _check_fail "CSSN v3 fplay13 narrative is 85 lines" "CSSN v3 fplay13 narrative is $fp13_narr lines (expected 85)"
+    _check_fail "CSSN late join: no member receives the post twice" "bob received it $k_lj_b times (expected 1)"
 fi
-
-# fplay16: the two acts of the child-safe social graph — becoming parent and
-# child, and ending it — driven at the agent level.  Alice offers to become Bob's
-# parent; Bob accepts and so becomes a child; Bob asks her to end it and she
-# does; Bob, holding no parent and so an adult, befriends Alice directly, with no
-# parent among the guards.  The drivers stand in for ui/mediator.glp, which is
-# vGLP's and does not yet route these acts.
-echo "--- CSSN v3 becoming parent and child, and ending it (fplay16) ---"
-k_fp16=$("$REPL_RUN" <<HEREDOC
-$CSSN_V2
-fplay16.
-:quit
-HEREDOC
-2>&1)
-check "CSSN v3 fplay16 succeeds" "succeeds\|suspended" "$k_fp16"
-check "CSSN v3 fplay16 becoming a parent asks nothing of either party" "tagged(alice, act(Becoming the parent of Bob))" "$k_fp16"
-check "CSSN v3 fplay16 enrol creates the parent-child channel" "tagged(alice, event(Bob is my child))" "$k_fp16"
-check "CSSN v3 fplay16 the child holds its parent" "tagged(bob, event(Alice is my parent))" "$k_fp16"
-check "CSSN v3 fplay16 ending the parenting tears the channel down" "tagged(alice, event(Bob is no longer my child))" "$k_fp16"
-check "CSSN v3 fplay16 an empty rho is what being an adult is" "tagged(bob, event(No parent on record, so an adult))" "$k_fp16"
-check "CSSN v3 fplay16 a released child takes up a conversation a child refuses" "tagged(bob, friend(charlie))" "$k_fp16"
-
-# fplay17: a member that joins after a post was made.  There is no delivery index
-# and no queue: a member is owed a post while it is on the member list and the
-# creator has not already sent it that item, so Carol, who joins after Alice
-# posts, is owed that post.  Under the index this was impossible, and the run
-# above measured it: before this change Carol received nothing.
-echo "--- CSSN v3 a late joiner is owed the earlier posts (fplay17) ---"
-k_fp17=$("$REPL_RUN" <<HEREDOC
-$CSSN_V2
-fplay17.
-:quit
-HEREDOC
-2>&1)
-check "CSSN v3 fplay17 succeeds" "succeeds\|suspended" "$k_fp17"
-check "CSSN v3 fplay17 the member on the list at the post receives it" "tagged(bob, notify(group_received(group_id(alice, late_join), alice, Posted before Carol joined)))" "$k_fp17"
-check "CSSN v3 fplay17 the late joiner is owed it too" "tagged(carol, notify(group_received(group_id(alice, late_join), alice, Posted before Carol joined)))" "$k_fp17"
-check "CSSN v3 fplay17 a member joining after two posts is owed the first" "tagged(dave, notify(group_received(group_id(alice, late_join), alice, Posted before Carol joined)))" "$k_fp17"
-check "CSSN v3 fplay17 and the second" "tagged(dave, notify(group_received(group_id(alice, late_join), alice, Posted before Dave joined)))" "$k_fp17"
-fp17_bob=$(echo "$k_fp17" | grep -c "tagged(bob, notify(group_received(group_id(alice, late_join), alice, Posted before Carol joined)))" || true)
-if [ "$fp17_bob" = "1" ]; then
-    _check_pass "CSSN v3 fplay17 no member receives the post twice"
-else
-    _check_fail "CSSN v3 fplay17 no member receives the post twice" "CSSN v3 fplay17 bob received the post $fp17_bob times (expected 1)"
-fi
-# The catch-up hands the posts over in the order they were made, so Dave's first
-# line is the earlier post and his second the later one.
-fp17_dave_order=$(echo "$k_fp17" | grep "tagged(dave, notify(group_received(group_id(alice, late_join)" | head -2 | tr '\n' '|')
-case "$fp17_dave_order" in
+k_lj_order=$(echo "$k_lj" | grep "tagged(dave, group_received(group_id(alice, late_join)" | head -2 | tr '\n' '|')
+case "$k_lj_order" in
     *"Posted before Carol joined"*"Posted before Dave joined"*)
-        _check_pass "CSSN v3 fplay17 the catch-up is in the order the posts were made" ;;
+        _check_pass "CSSN late join: the catch-up is in the order the posts were made" ;;
     *)
-        _check_fail "CSSN v3 fplay17 the catch-up is in the order the posts were made" "CSSN v3 fplay17 catch-up order was: $fp17_dave_order" ;;
+        _check_fail "CSSN late join: the catch-up is in the order the posts were made" "order was: $k_lj_order" ;;
 esac
 
-# fplay18: a child that is a parent.  Becoming a parent asks nothing of the party
-# that becomes one --- it is the act by which two strangers come into relation,
-# and no clause of a grassroots contract may gate it --- so a party holding a
-# parent may hold a child at the same time.
-echo "--- CSSN v3 a child may be a parent (fplay18) ---"
-k_fp18=$("$REPL_RUN" <<HEREDOC
-$CSSN_V2
-fplay18.
-:quit
-HEREDOC
-2>&1)
-check "CSSN v3 fplay18 succeeds" "succeeds\|suspended" "$k_fp18"
-check "CSSN v3 fplay18 bob becomes a child" "tagged(bob, notify(enrolled(alice)))" "$k_fp18"
-check "CSSN v3 fplay18 a child offers to become a parent" "tagged(bob, cmd(enrol_child(carol)))" "$k_fp18"
-check "CSSN v3 fplay18 and holds the child it gained" "tagged(bob, notify(enrolled(carol)))" "$k_fp18"
-check "CSSN v3 fplay18 a child ends a parenting of its own" "tagged(bob, notify(released(carol)))" "$k_fp18"
-check "CSSN v3 fplay18 a child that is a parent ends the parenting" "tagged(carol, notify(released(bob)))" "$k_fp18"
-
-# fplay19: ending a child's membership at two of the four roles of child_leave_2.
-# Carol, a child, created kids_chat and holds Dave and Eve on its list.  Carol
-# removes Dave, which is the creator's role; Alice, Carol's parent, removes Eve,
-# which is the role of the creator's parent --- the fourth, and the one that had
-# no route before 2026-08-17.  Alice holds no member list, so the only thing she
-# can do is tell Carol, and the two roles reach the same commit.
-echo "--- CSSN v3 ending a child's membership, creator and creator's parent (fplay19) ---"
-k_fp19=$("$REPL_RUN" <<HEREDOC
-$CSSN_V2
-fplay19.
-:quit
-HEREDOC
-2>&1)
-check "CSSN v3 fplay19 succeeds" "succeeds\|suspended" "$k_fp19"
-check "CSSN v3 fplay19 the creator's parent wills the removal" "tagged(alice, cmd(remove_child_member(carol, group_id(carol, kids_chat), eve)))" "$k_fp19"
-check "CSSN v3 fplay19 and it reaches the removed child through the creator" "tagged(eve, notify(group_removed(group_id(carol, kids_chat))))" "$k_fp19"
-check "CSSN v3 fplay19 the creator's own role still ends a membership" "tagged(carol, cmd(remove_from_group(group_id(carol, kids_chat), dave)))" "$k_fp19"
-check "CSSN v3 fplay19 and reaches that member too" "tagged(dave, notify(group_removed(group_id(carol, kids_chat))))" "$k_fp19"
-
-# fplay8-10: CSSN groups
-echo "--- CSSN v2 group plays (fplay8-fplay10) ---"
-
-k_fp8=$("$REPL_RUN" <<HEREDOC
-$CSSN_V2
-fplay8.
-:quit
-HEREDOC
-2>&1)
-
-check "CSSN v2 fplay8 succeeds" "succeeds\|suspended" "$k_fp8"
-check "CSSN v2 fplay8 group_joined" "tagged(alice.*group_joined" "$k_fp8"
-
-for play_num in 9 10; do
-    k_fpN=$("$REPL_RUN" <<HEREDOC
-$CSSN_V2
-fplay${play_num}.
-:quit
-HEREDOC
-2>&1)
-    check "CSSN v2 fplay${play_num} succeeds" "succeeds\|suspended" "$k_fpN"
-done
-
-# fplay11: child-managed group with blocking consent
-echo "--- CSSN v2 blocking consent play (fplay11) ---"
-
-k_fp11=$("$REPL_RUN" <<HEREDOC
-$CSSN_V2
-fplay11.
-:quit
-HEREDOC
-2>&1)
-
-check "CSSN v2 fplay11 succeeds" "succeeds\|suspended" "$k_fp11"
-check "CSSN v2 fplay11 tagged output" "tagged(" "$k_fp11"
-
-# fplay12: adult-managed group with children
-echo "--- CSSN v2 adult-managed group play (fplay12) ---"
-
-k_fp12=$("$REPL_RUN" <<HEREDOC
-$CSSN_V2
-fplay12.
-:quit
-HEREDOC
-2>&1)
-
-check "CSSN v2 fplay12 succeeds" "succeeds\|suspended" "$k_fp12"
-check "CSSN v2 fplay12 tagged output" "tagged(" "$k_fp12"
+echo "--- CSSN ending a child's membership of a child's group ---"
+k_cl=$(k_play play_child_leave 2>&1)
+check "CSSN child leave: the creator's role" "tagged(dave, group_removed(group_id(carol, kids_chat)))" "$k_cl"
+check "CSSN child leave: the creator's parent's role" "tagged(eve, group_removed(group_id(carol, kids_chat)))" "$k_cl"
+check "CSSN child leave: a withdrawal at each parent for each" "tagged(alice, withdrawals(2))" "$k_cl"
+check "CSSN child leave: and at the members' parent" "tagged(bob, withdrawals(2))" "$k_cl"
 
 echo ""
 
@@ -2794,7 +2538,7 @@ if _section M; then
 echo "=== Section M: Multi-Isolate (madGLP) Tests ==="
 echo ""
 echo "  (folded into Section Q, which runs the whole Dart tree — running"
-echo "   cssn_v2_isolate_test.dart here as well would only double-count it)"
+echo "   the madGLP Dart tests here as well would only double-count them)"
 echo ""
 
 fi  # Section M
@@ -6490,46 +6234,6 @@ if _section QD || _section QF; then
 # twelve forms and their labels are GLP's to write.  SGC shows no screen, so this
 # does not hold SGC.
 KNOWN_RED=(
-    # CSSN, dormant (Udi, 2026-09-28): program_linker_test's three, on CSSN's
-    # program, and cssn_v2_isolate_test's thirteen, measured at gap 2c18023e.
-    # CSSN's guard negation refused by the parser since GLP's 15ba4b7e (the
-    # language has no ~G): twelve more, measured at gap 8b8cc800.
-    "test/compiler/program_linker_test.dart: Program discovery discovers all modules in cssn"
-    "test/compiler/program_linker_test.dart: Program discovery excludes self.glp from modules"
-    # Rewritten 2026-10-03 to TGLP modules.tex's first step (GLP #3 Cowork,
-    # 21:18 UTC, "16:01. 6"), it was "excludes boot_direct.glp from modules";
-    # still red on CSSN's guard negation, cssn/childsafe/child_agent.glp:169.
-    "test/compiler/program_linker_test.dart: Program discovery collects every .glp file of the tree, mad_boot/ among them"
-    "test/compiler/program_linker_test.dart: Program discovery modules have correct ancestor scopes"
-    "test/compiler/program_linker_test.dart: Linking procedures are renamed with module prefix"
-    "test/compiler/program_linker_test.dart: Linking cross-module calls are resolved"
-    "test/compiler/program_linker_test.dart: Linking local calls are resolved"
-    "test/compiler/program_linker_test.dart: Linking prelude calls are preserved unprefixed"
-    "test/compiler/program_linker_test.dart: Linking entry-point aliases exist for the root self.glp forwarded entries"
-    "test/compiler/program_linker_test.dart: Linking entry point alias calls renamed procedure"
-    "test/vglp/program_compilation_test.dart: the deployed sources cssn/childsafe/agent.vglp parses as vGLP"
-    "test/vglp/program_compilation_test.dart: the deployed sources cssn/childsafe/child_agent.vglp parses as vGLP"
-    "test/compiler/program_linker_test.dart: End-to-end compilation fplay1 produces correct output"
-    "test/compiler/program_linker_test.dart: End-to-end compilation linked program compiles to bytecode"
-    "test/compiler/program_linker_test.dart: Type checking all modules type-check successfully"
-    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay1 runs across isolates (3 adults)"
-    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay10 runs across isolates (3 agents)"
-    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay11 runs across isolates (6 agents)"
-    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay12 runs across isolates (5 agents)"
-    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay13 runs across isolates (village, 6 agents)"
-    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay2 runs across isolates (3 adults)"
-    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay3 runs across isolates (3 adults)"
-    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay4 runs across isolates (4 agents)"
-    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay5 runs across isolates (4 agents)"
-    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay6 runs across isolates (4 agents)"
-    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay7 runs across isolates (4 agents)"
-    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay8 runs across isolates (2 adults)"
-    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay9 runs across isolates (3 agents)"
-    # CSSN, dormant (Udi, 2026-10-01, to Integration Code: "Ignore CSSN stuff
-    # till I ask differently"): the sandboxed-bundle test, which fails only on
-    # CSSN's childsafe.glpw, refused at its source and so not in the bundle
-    # ("Unable to load asset: .../core/childsafe.glpw"), measured at gap 5d39387f.
-    "glp_multiagent/test/glp_sources_platform_test.dart: a sandboxed build reads its bundle, never a desktop path"
     "glp_multiagent/test/sovereign_screen_test.dart: the sovereign mini-app: the central bank boots, its seven forms stand, it mints and opens the credit line through its screen, and the play runs on to the chain redemption and the fiat payment"
 )
 

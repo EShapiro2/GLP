@@ -3,7 +3,8 @@
 %% Sections 5.1 and 5.2, app:code), each walking the agent's input stream and
 %% inserting the befriending's outcome into it as inject_msg (inject.glp)
 %% inserts a response, once the other party's consent is known.  Generalised
-%% over the agent input stream type S, inferred at each call: the clauses
+%% over the agent input stream type S and the friend channel's type F,
+%% inferred at each call: the clauses
 %% construct consented/2, adopt/2 and declined/1 into the S stream, so
 %% per-instantiation checking verifies that S carries those shapes.
 
@@ -13,7 +14,7 @@
 %% and the conveyance written declined: a clause writes every writer it holds
 %% (GLP-Spec, Remark "Anonymous Variables"), and nobody reads it, the other
 %% having declined (GSG paper, Section 5.1).
-exported procedure(S) await_consent(Key?, AcceptorConsent?, Conveyance, Stream(S)?, Stream(S)).
+exported procedure(S, F) await_consent(Key?, AcceptorConsent?, Conveyance(F), Stream(S)?, Stream(S)).
 await_consent(Other, yes, C?, Ys, [consented(Other?, C)|Ys?]).
 await_consent(Other, no, declined, Ys, [declined(Other?)|Ys?]).
 await_consent(Other, Theirs, C?, [Y|Ys], [Y?|Ys1?]) :-
@@ -23,7 +24,7 @@ await_consent(Other, Theirs, C?, [Y|Ys], [Y?|Ys1?]) :-
 %% On friend(Ch), adopt(Other, Ch), on which the agent installs the channel
 %% (befriend.glp, adopt/6); on already_friends nothing, the stream passing
 %% through; on no, declined(Other).
-exported procedure(S) await_conveyance(Key?, ProposerConsent?, Stream(S)?, Stream(S)).
+exported procedure(S, F) await_conveyance(Key?, ProposerConsent(F)?, Stream(S)?, Stream(S)).
 await_conveyance(Other, yes(friend(Ch)), Ys, [adopt(Other?, Ch?)|Ys?]).
 await_conveyance(_, yes(already_friends), Ys, Ys?).
 await_conveyance(Other, no, Ys, [declined(Other?)|Ys?]).

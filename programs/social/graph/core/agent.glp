@@ -70,7 +70,7 @@ cold_call(Id, Target, UserIn, UserIn1?, Outs, Outs1?) :-
 %% attestation of Section 5.5, the signature of attest(Id, Other) under the
 %% person's key, into which the runtime puts this program's source identity,
 %% so no mini-app can mint one, and sends a warm call under way to Other.
-procedure consented_step(Decision?, Key?, Key?, Conveyance, OutputsList?, OutputsList, NetInStream?, NetInStream, AttestList?, AttestList, PendingInv?).
+procedure consented_step(Decision?, Key?, Key?, Conveyance(FriendChannel), OutputsList?, OutputsList, NetInStream?, NetInStream, AttestList?, AttestList, PendingInv?).
 consented_step(yes, _, Other, Conv?, Outs, Outs1?, NetIn, NetIn1?, Atts, Atts?, _) :-
     convey(yes, Other?, Conv, Outs?, Outs1, NetIn?, NetIn1).
 consented_step(no, Id, Other, Conv?, Outs, Outs2?, NetIn, NetIn1?, Atts, [att(Other?, S?) | Atts?], Pend) :-

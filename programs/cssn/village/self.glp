@@ -1,6 +1,0 @@
-%% self.glp — Village scenario module declaration
-%%
-%% All CSSN protocol types (UserCmd, UserNotify, ActorChannel, etc.)
-%% and NarrativeStream types are inherited from the parent
-%% network/self.glp via ancestor scoping.
-

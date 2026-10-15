@@ -1,31 +1,53 @@
-%% miniapp.glp --- the child-safe social networking platform as a mini-app of
-%% the Grassroots Super-App (Grassroots Social Graph paper, Section 3).
+%% miniapp.glp --- the child-safe social network as a mini-app of the
+%% Grassroots Super-App (CSSN Section 8.1; GSG paper, Section 3).
 %%
 %% cssn(Id, Ui, Convs) is the goal the super-app activates by run/3, with
-%% exactly its two channels.  Ui is the channel to the super-app user interface:
-%% on it the mini-app shows this platform's notifications and receives the
-%% person's commands, which is precisely the person's side of the UI mediator.
-%% Convs is the channel to the social graph, on which the social graph hands the
-%% mini-app, at each invitation, one end of the root channel of a conversation
-%% with the execution of this program at a friend.  The mini-app holds nothing
-%% else --- no network entry, and no call to a predicate that reaches the network
-%% or the person --- so the program is certified.
+%% exactly its two channels.  Ui is the person channel (vGLP, Definition
+%% "Person Channel, Person Writer, GLP with Persons, Grant"): on it the
+%% mini-app receives the person's grants, input(Id, P, R), and shows the
+%% constructs its dispatcher draws and withdraws and the screen its agent
+%% writes.  Convs is the channel to the social graph, on which the social
+%% graph hands the mini-app, at each invitation, one end of the root channel of
+%% a conversation with the execution of this program at a friend.  The
+%% mini-app holds nothing else --- no network entry, and no call to a
+%% predicate that reaches the network or the person --- so the program is
+%% certified.
 %%
-%% A party is activated as an adult, because that is what holding no parent is:
-%% childhood is not given, it is made by an act (enrol), and the agent hands
-%% itself over to the child agent when that act is taken.
-%%
-%% The agent's input from the parties it is in relation with starts empty and
-%% unclosed: it has no writer here, because every stream that ever joins it ---
-%% a conversation's read end, a parent-child channel, a group's hub stream --- is
-%% merged into it by the act that creates that relation.
+%% A party enters as an adult, in the adult module, and cssn/3 activates it;
+%% or as a child, with one or two of its parents on record, at the setup of
+%% its phone (CSSN Appendix C.3, Enter), in the child module, and
+%% cssn_child/4 activates it with the child's end of each parent's
+%% parent-child channel.  The setup is the parents' act; the app shows no form
+%% or card for it.
 
-imported procedure agent#agent(Constant?, AgentState?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Conversation)?, Stream(OutputEntry)?).
-imported procedure mediator#ui_mediator(Constant?, Channel(Stream(AgentToUserMsg), Stream(MediatorToAgentMsg))?, Channel(Stream(AppCmd), Stream(AppNotify))?, Stream(PendingEntry)?, Constant?).
+imported procedure adult#agent(Key?, Stream(AgentIn)?, Stream(FriendMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, AgentState?, Stream(Ask(Question))).
+imported procedure child#child_agent(Key?, ParentEnds?, Stream(AgentIn)?, Stream(FriendMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, AgentState?, Stream(Ask(Question))).
+imported procedure adult#dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
 
-exported procedure cssn(Constant?, Channel(Stream(AppCmd), Stream(AppNotify))?, Stream(Conversation)?).
+%% The agent with its dispatcher, the calls of the canonical compilation: the
+%% agent starts with nothing of its own and its screen, and its asks --- its
+%% own and the child agent's, one stream --- go to the dispatcher, which reads
+%% the person channel; the screen goes to the person on the dispatcher's
+%% channel to the program.
+exported procedure cssn(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
 cssn(Id, Ui, Convs) :-
     ground(Id?) |
-    agent # agent(Id?, state(0, 0, [], []), AgentIn?, FriendIn?, Convs?,
-                  [user_output(AgentToUser)]),
-    mediator # ui_mediator(Id?, ch(AgentToUser?, AgentIn), Ui?, [], 1).
+    adult # agent(Id?, [], [], Convs?, [user_output(Screen)], state(0, 0, [], []), Asks),
+    adult # dispatch(Asks?, Ui?, MCh),
+    show_screen(MCh?, Screen?).
+
+exported procedure cssn_child(Key?, ParentEnds?, PersonChannel(Drawn)?, Stream(Conversation)?).
+cssn_child(Id, Es, Ui, Convs) :-
+    ground(Id?) |
+    child # child_agent(Id?, Es?, [], [], Convs?, [user_output(Screen)], state(0, 0, [], []), Asks),
+    adult # dispatch(Asks?, Ui?, MCh),
+    show_screen(MCh?, Screen?).
+
+%% The screen onto the program's output to the person: each message's
+%% content, the envelope msg(agent, person, C) stripped.
+procedure show_screen(Channel(Stream(_), Stream(Output))?, Stream(ScreenMsg)?).
+show_screen(ch(_, Out?), Screen) :- relay(Screen?, Out).
+
+procedure relay(Stream(ScreenMsg)?, Stream(Output)).
+relay([msg(_, _, C)|Ms], [C?|Out?]) :- relay(Ms?, Out).
+relay([], []).
