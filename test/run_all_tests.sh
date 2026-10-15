@@ -1647,6 +1647,7 @@ POSITIVE_FILES=(
 
     # --- subtyping positive tests ---
     "$TC_DIR/positive/subtyping/basic_readop_fileop.glp"
+    "$TC_DIR/positive/subtyping/head_pair_integer_to_constant.glp"
     "$TC_DIR/positive/subtyping/constants_fewer_alternatives.glp"
     "$TC_DIR/positive/subtyping/contravariant_response_slot.glp"
     "$TC_DIR/positive/subtyping/direct_constant_subtype.glp"
@@ -1654,7 +1655,7 @@ POSITIVE_FILES=(
     # Subtyping through the root self.glp unions Number ::= Integer ; Real. and
     # Constant ::= Number ; String ; Module.  Negative twins:
     # negative/subtyping/{constant_to_integer_reverse,integer_to_string_disjoint,
-    # head_pair_integer_to_constant,compound_to_constant}.glp.
+    # head_pair_constant_to_integer,compound_to_constant}.glp.
     "$TC_DIR/positive/subtyping/constant_accepts_all_literals.glp"
     "$TC_DIR/positive/subtyping/integer_below_number_and_constant.glp"
     "$TC_DIR/positive/subtyping/int_list_to_constant_list.glp"
@@ -1863,7 +1864,7 @@ NEGATIVE_FILES=(
     "$TC_DIR/negative/subtyping/constant_to_integer_reverse.glp"
     "$TC_DIR/negative/subtyping/integer_to_string_disjoint.glp"
     "$TC_DIR/negative/subtyping/compound_to_constant.glp"
-    "$TC_DIR/negative/subtyping/head_pair_integer_to_constant.glp"
+    "$TC_DIR/negative/subtyping/head_pair_constant_to_integer.glp"
 
     # --- CSSN Issue 16: control token merged into a narrower network-input reader ---
     # Stream(Ctl) (carries `canonical`) merged into Stream(NetLike); the (Both,Both?)
