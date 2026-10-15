@@ -1,6 +1,6 @@
 %% miniapp.glp --- the test mini-app of the super-app plays: its entry
-%% miniapp/4, the super-app's entry template at the mini-app's own type Ping
-%% (self.glp).
+%% miniapp/4, the super-app's entry template at the mini-app's own types
+%% PingShown and PingMsg (self.glp).
 %%
 %% A mini-app holds, at activation, the variables the super-app posted with
 %% its goal, and afterwards only what arrives on them (GSG paper, Section 3,
@@ -16,7 +16,9 @@
 %% construct 0, drawn again with every item so far as each arrives (vGLP,
 %% Definition "Canonical Compilation": "the dispatcher draws that output as a
 %% thread"), wrapped in output(...) (vGLP, 2026-10-14 11:36 UTC).  It asks
-%% its person nothing, so it reads no grant.  The mini-app calls no system
+%% its person nothing, so no grant comes; the person channel never ends
+%% (vGLP, Section 6.3; vGLP 2026-10-14 21:48 UTC), and once the items close
+%% it reads the grants for good, passing the draws' writer on.  The mini-app calls no system
 %% predicate reaching the network or the person, so the program is
 %% certified.
 %%
@@ -31,33 +33,39 @@
 %% (GSG, 2026-10-14 11:36 UTC, items 2 and 3), and, the warm call done,
 %% alice's execution reads the value and reports got(V).
 
-exported procedure miniapp(Key?, PersonChannel(Ping)?, SgChannel(Ping)?, Stream(Integer)?).
-miniapp(Id, ch(_, Draws?), ch(Down, Up?), _) :-
+exported procedure miniapp(Key?, PersonChannel(PingShown)?, SgChannel(PingMsg)?, Stream(Integer)?).
+miniapp(Id, ch(Gs, Draws?), ch(Down, Up?), _) :-
     ground(Id?) |
     loop(Id?, Down?, [], Ui, Up, [], []),
-    show(Ui?, Draws).
+    show(Ui?, Gs?, Draws).
 
-%% show(Ui, Draws): the person's items as the output thread, construct 0:
+%% show(Ui, Gs, Draws): the person's items as the output thread, construct 0:
 %% drawn at once with no item, and again with the items so far as each
-%% arrives whole; closed when the items close, the execution having ended.
-procedure show(Stream(Ping)?, Stream(Draw(Ping))).
-show(Ui, [draw(0, thread(shown), output([])) | Ds?]) :-
-    show_more(Ui?, [], Ds).
+%% arrives whole; once the items close, the execution having ended, the
+%% grants read for good (keep/2), the draws never closing.
+procedure show(Stream(AppUi)?, PersonIn(PingShown)?, PersonOut(PingShown)).
+show(Ui, Gs, [draw(0, thread(shown), output([])) | Ds?]) :-
+    show_more(Ui?, [], Gs?, Ds).
 
-procedure show_more(Stream(Ping)?, Stream(Ping)?, Stream(Draw(Ping))).
-show_more([U | Us], Es, Ds?) :-
+procedure show_more(Stream(AppUi)?, Stream(AppUi)?, PersonIn(PingShown)?, PersonOut(PingShown)).
+show_more([U | Us], Es, Gs, Ds?) :-
     ground(U?), ground(Es?) |
     add_item(Es?, U?, Es1),
-    show_draw(Us?, Es1?, Ds).
-show_more([], _, []).
+    show_draw(Us?, Es1?, Gs?, Ds).
+show_more([], _, Gs, Ds?) :- keep(Gs?, Ds).
 
-procedure show_draw(Stream(Ping)?, Stream(Ping)?, Stream(Draw(Ping))).
-show_draw(Us, Es, [draw(0, thread(shown), output(Es?)) | Ds?]) :-
+procedure show_draw(Stream(AppUi)?, Stream(AppUi)?, PersonIn(PingShown)?, PersonOut(PingShown)).
+show_draw(Us, Es, Gs, [draw(0, thread(shown), output(Es?)) | Ds?]) :-
     ground(Es?) |
-    show_more(Us?, Es?, Ds).
+    show_more(Us?, Es?, Gs?, Ds).
+
+%% keep(Gs, Ds): the grants read for good, none coming, the draws' writer
+%% passed on; the goal suspends.
+procedure keep(PersonIn(PingShown)?, PersonOut(PingShown)).
+keep([_ | Gs], Ds?) :- keep(Gs?, Ds).
 
 %% add_item(Es, U, Es1): Es with U after its last item.
-procedure add_item(Stream(Ping)?, Ping?, Stream(Ping)).
+procedure add_item(Stream(AppUi)?, AppUi?, Stream(AppUi)).
 add_item([E | Es], U, [E? | Es1?]) :- add_item(Es?, U?, Es1).
 add_item([], U, [U?]).
 
@@ -65,7 +73,7 @@ add_item([], U, [U?]).
 %% Ev the events of the conversations' readers (merged), Ui the person's
 %% stream, Up the requests to the social graph, Convs the conversations' write
 %% ends, Held the probes waiting for a conversation with bob.
-procedure loop(Key?, Stream(SgToApp(Ping))?, EvStream?, Stream(Ping), Stream(AppToSg), ConvList?, HeldList?).
+procedure loop(Key?, Stream(SgToApp(PingMsg))?, EvStream?, Stream(AppUi), Stream(AppToSg), ConvList?, HeldList?).
 
 %% A conversation opens: report it, greet the friend, read the friend's stream
 %% into the events, and flush a held probe if this is the conversation it
@@ -119,22 +127,18 @@ loop(Id, Down, [got(V) | Ev], [got(V?) | Ui?], Up?, Convs, Held) :-
 loop(_, [], _, [], [], Convs, _) :- close_convs(Convs?).
 
 %% talk(Id, F, In, Ev): read the friend's stream into events.  The root
-%% channel is typed at the mini-app's own type, Ping, of which an execution
-%% of this program sends only the messages PingMsg; anything else is passed
-%% over.
-procedure talk(Key?, Key?, Stream(Ping)?, EvStream).
+%% channel is typed at the mini-app's own type, PingMsg.
+procedure talk(Key?, Key?, Stream(PingMsg)?, EvStream).
 talk(Id, F, [hello(Who) | In], [greeted(F?, Who?) | Ev?]) :-
     ground(Who?) | talk(Id?, F?, In?, Ev).
 talk(Id, F, [probe(W?) | In], [probe_from(F?, W) | Ev?]) :-
     talk(Id?, F?, In?, Ev).
-talk(Id, F, [_ | In], Ev?) :-
-    otherwise | talk(Id?, F?, In?, Ev).
 talk(_, _, [], []).
 
 %% open_out(F, Id, Held, Held1, Out, Out2): the conversation's write stream
 %% opens with the greeting and, on the conversation with bob, a held probe;
 %% the caller keeps the writer of the rest, Out2.
-procedure open_out(Key?, Key?, HeldList?, HeldList, Stream(Ping), Stream(Ping)?).
+procedure open_out(Key?, Key?, HeldList?, HeldList, Stream(PingMsg), Stream(PingMsg)?).
 open_out(bob, Id, [held(W?) | Held], Held?, [hello(Id?), probe(W) | Out2?], Out2).
 open_out(_, Id, Held, Held?, [hello(Id?) | Out2?], Out2) :- otherwise | true.
 
@@ -152,7 +156,7 @@ probe_on(F, [C | Rest], [C? | Rest1?], V?, St?) :- otherwise | probe_on(F?, Rest
 probe_on(_, [], [], unreachable, none).
 
 %% report(St, Ui, Ui2): what became of the probe, on the person's stream.
-procedure report(ProbeStatus?, Stream(Ping), Stream(Ping)?).
+procedure report(ProbeStatus?, Stream(AppUi), Stream(AppUi)?).
 report(sent, [probed(carol) | Ui2?], Ui2).
 report(none, [no_conv(carol) | Ui2?], Ui2).
 

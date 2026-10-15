@@ -1,6 +1,6 @@
 %% miniapp.glp --- the test mini-app that ENDS OF ITS OWN ACCORD: its entry
-%% miniapp/4, the super-app's entry template at the mini-app's own type End
-%% (self.glp), which the super-app hosts as it hosts every mini-app, by the
+%% miniapp/4, the super-app's entry template at the mini-app's own types
+%% EndShown and EndMsg (self.glp), which the super-app hosts as it hosts every mini-app, by the
 %% template's opaque instance at that type.
 %%
 %% It exists to fence the registry's return from running to idle (SGSG paper,
@@ -13,7 +13,9 @@
 %%
 %% Here the execution AT ALICE ends once it has been greeted: it closes its
 %% person stream, its stream up to the social graph and its conversation, and
-%% every goal of it terminates.  The execution at anyone else does not end, so
+%% every goal of it terminates but the one that holds its end of the person
+%% channel, which never ends (vGLP, Section 6.3; vGLP 2026-10-14 21:48 UTC):
+%% it reads the grants for good, none coming, and suspends.  The execution at anyone else does not end, so
 %% alice's second invitation reaches bob's live execution, and bob's person
 %% stream records both conversations while alice's records one and closes.
 %% The asymmetry is by identity, as ../pingapp's relay is.
@@ -25,40 +27,46 @@
 %% are the meta-interpreter's, and activation does not yet post a control
 %% stream (Section 7).
 
-exported procedure miniapp(Key?, PersonChannel(End)?, SgChannel(End)?, Stream(Integer)?).
-miniapp(Id, ch(_, Draws?), ch(Down, Up?), _) :-
+exported procedure miniapp(Key?, PersonChannel(EndShown)?, SgChannel(EndMsg)?, Stream(Integer)?).
+miniapp(Id, ch(Gs, Draws?), ch(Down, Up?), _) :-
     ground(Id?) |
     loop(Id?, Down?, [], Ui, Up, []),
-    show(Ui?, Draws).
+    show(Ui?, Gs?, Draws).
 
-%% show(Ui, Draws): the person's items as the output thread, construct 0:
+%% show(Ui, Gs, Draws): the person's items as the output thread, construct 0:
 %% drawn at once with no item, and again with the items so far as each
-%% arrives whole; closed when the items close, the execution having ended.
-procedure show(Stream(End)?, Stream(Draw(End))).
-show(Ui, [draw(0, thread(shown), output([])) | Ds?]) :-
-    show_more(Ui?, [], Ds).
+%% arrives whole; once the items close, the execution having ended, the
+%% grants read for good (keep/2), the draws never closing.
+procedure show(Stream(EndUi)?, PersonIn(EndShown)?, PersonOut(EndShown)).
+show(Ui, Gs, [draw(0, thread(shown), output([])) | Ds?]) :-
+    show_more(Ui?, [], Gs?, Ds).
 
-procedure show_more(Stream(End)?, Stream(End)?, Stream(Draw(End))).
-show_more([U | Us], Es, Ds?) :-
+procedure show_more(Stream(EndUi)?, Stream(EndUi)?, PersonIn(EndShown)?, PersonOut(EndShown)).
+show_more([U | Us], Es, Gs, Ds?) :-
     ground(U?), ground(Es?) |
     add_item(Es?, U?, Es1),
-    show_draw(Us?, Es1?, Ds).
-show_more([], _, []).
+    show_draw(Us?, Es1?, Gs?, Ds).
+show_more([], _, Gs, Ds?) :- keep(Gs?, Ds).
 
-procedure show_draw(Stream(End)?, Stream(End)?, Stream(Draw(End))).
-show_draw(Us, Es, [draw(0, thread(shown), output(Es?)) | Ds?]) :-
+procedure show_draw(Stream(EndUi)?, Stream(EndUi)?, PersonIn(EndShown)?, PersonOut(EndShown)).
+show_draw(Us, Es, Gs, [draw(0, thread(shown), output(Es?)) | Ds?]) :-
     ground(Es?) |
-    show_more(Us?, Es?, Ds).
+    show_more(Us?, Es?, Gs?, Ds).
+
+%% keep(Gs, Ds): the grants read for good, none coming, the draws' writer
+%% passed on; the goal suspends.
+procedure keep(PersonIn(EndShown)?, PersonOut(EndShown)).
+keep([_ | Gs], Ds?) :- keep(Gs?, Ds).
 
 %% add_item(Es, U, Es1): Es with U after its last item.
-procedure add_item(Stream(End)?, End?, Stream(End)).
+procedure add_item(Stream(EndUi)?, EndUi?, Stream(EndUi)).
 add_item([E | Es], U, [E? | Es1?]) :- add_item(Es?, U?, Es1).
 add_item([], U, [U?]).
 
 %% loop(Id, Down, Ev, Ui, Up, Convs): Down the social graph's stream, Ev the
 %% events of the conversations' readers (merged), Ui the person's stream, Up
 %% the requests to the social graph, Convs the conversations' write ends.
-procedure loop(Key?, Stream(SgToApp(End))?, EndEvs?, Stream(End), Stream(AppToSg), EndConvs?).
+procedure loop(Key?, Stream(SgToApp(EndMsg))?, EndEvs?, Stream(EndUi), Stream(AppToSg), EndConvs?).
 
 %% A conversation opens: report it, greet the friend, and read the friend's
 %% stream into the events.
@@ -88,18 +96,15 @@ loop(Id, Down, [greeted(_, Who) | Ev], [greeted(Who?) | Ui?], Up?, Convs) :-
 loop(_, [], _, [], [], Convs) :- close_convs(Convs?).
 
 %% talk(F, In, Ev): read the friend's stream into events.  The root channel
-%% is typed at the mini-app's own type, End, of which an execution of this
-%% program sends only the greeting; anything else is passed over.
-procedure talk(Key?, Stream(End)?, EndEvs).
+%% is typed at the mini-app's own type, EndMsg, the greeting.
+procedure talk(Key?, Stream(EndMsg)?, EndEvs).
 talk(F, [hello(Who) | In], [greeted(F?, Who?) | Ev?]) :-
     ground(Who?) | talk(F?, In?, Ev).
-talk(F, [_ | In], Ev?) :-
-    otherwise | talk(F?, In?, Ev).
 talk(_, [], []).
 
 %% greet(Id, Out, Out2): the conversation's write stream opens with the
 %% greeting; the caller keeps the writer of the rest, Out2.
-procedure greet(Key?, Stream(End), Stream(End)?).
+procedure greet(Key?, Stream(EndMsg), Stream(EndMsg)?).
 greet(Id, [hello(Id?) | Out2?], Out2).
 
 procedure close_convs(EndConvs?).

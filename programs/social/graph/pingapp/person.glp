@@ -1,5 +1,5 @@
 %% person.glp --- the test mini-app's scripted person: miniapp_person/4, the
-%% super-app's second template at the mini-app's own type Ping (self.glp;
+%% super-app's second template at the mini-app's own type PingShown (self.glp;
 %% GSG, 2026-10-13 18:52 UTC, O5, and 20:22 UTC, H).  The super-app's plays
 %% activate it from the mini-app's module value, as they activate the entry,
 %% and hold the screen it reports at Opaque.
@@ -7,29 +7,33 @@
 %% It reads what the mini-app draws on the person-side end of its person
 %% channel and reports on its screen each item of the output thread, construct
 %% 0, as it arrives: the newest item of each draw.  The mini-app asks its
-%% person nothing, so the person grants nothing, and closes its grants at
-%% once.  The role chooses the script:
-%%   greet  reports until the execution reports a greeting, and then stops,
-%%          its screen closing: the plays that wait for the greeting read the
-%%          screen's close (../core/superapp_plays.glp);
-%%   watch  reports every item until the draws close, the execution having
-%%          ended or the super-app having closed it.
+%% person nothing, so the person grants nothing; the person channel never
+%% ends (vGLP, Section 6.3; vGLP 2026-10-14 21:48 UTC), so the person reads
+%% the draws for good, passing its grant writer on, and suspends when none
+%% comes.  The role chooses the script:
+%%   greet  reports until the execution reports a greeting, and then stops
+%%          reporting, its screen closing: the plays that wait for the
+%%          greeting read the screen's close (../core/superapp_plays.glp);
+%%   watch  reports every item.
 
-exported procedure miniapp_person(Key?, Constant?, Channel(Stream(Draw(Ping)), Stream(Input(Ping)))?, Stream(Ping)).
-miniapp_person(_, Role, ch(Ds, []), Screen?) :- watch(Role?, Ds?, Screen).
+exported procedure miniapp_person(Key?, Constant?, Channel(PersonOut(PingShown), PersonIn(PingShown))?, Stream(PingShown)).
+miniapp_person(_, Role, ch(Ds, Gs?), Screen?) :- watch(Role?, Ds?, Gs, Screen).
 
-%% watch(Role, Ds, Screen): each draw of the output thread read for its newest
-%% item; any other draw passed over.
-procedure watch(Constant?, Stream(Draw(Ping))?, Stream(Ping)).
-watch(Role, [draw(0, _, output(Es)) | Ds], Screen?) :- newest(Role?, Es?, Ds?, Screen).
-watch(Role, [_ | Ds], Screen?) :- otherwise | watch(Role?, Ds?, Screen).
-watch(_, [], []).
+%% watch(Role, Ds, Gs, Screen): each draw of the output thread read for its
+%% newest item; any other draw passed over.
+procedure watch(Constant?, PersonOut(PingShown)?, PersonIn(PingShown), Stream(PingShown)).
+watch(Role, [draw(0, _, output(Es)) | Ds], Gs?, Screen?) :- newest(Role?, Es?, Ds?, Gs, Screen).
+watch(Role, [_ | Ds], Gs?, Screen?) :- otherwise | watch(Role?, Ds?, Gs, Screen).
 
-%% newest(Role, Es, Ds, Screen): the newest item of the thread drawn, Es, onto
-%% the screen; the draw with no item is none.  Under the role greet, a
-%% greeting is the last item reported.
-procedure newest(Constant?, Stream(Ping)?, Stream(Draw(Ping))?, Stream(Ping)).
-newest(Role, [], Ds, Screen?) :- watch(Role?, Ds?, Screen).
-newest(greet, [greeted(W)], _, [greeted(W?)]).
-newest(Role, [U], Ds, [U? | Screen?]) :- otherwise | watch(Role?, Ds?, Screen).
-newest(Role, [_, U1 | Us], Ds, Screen?) :- newest(Role?, [U1? | Us?], Ds?, Screen).
+%% newest(Role, Es, Ds, Gs, Screen): the newest item of the thread drawn, Es,
+%% onto the screen; the draw with no item is none.  Under the role greet, a
+%% greeting is the last item reported, and the draws are then read for good.
+procedure newest(Constant?, Stream(AppUi)?, PersonOut(PingShown)?, PersonIn(PingShown), Stream(PingShown)).
+newest(Role, [], Ds, Gs?, Screen?) :- watch(Role?, Ds?, Gs, Screen).
+newest(greet, [greeted(W)], Ds, Gs?, [greeted(W?)]) :- drain(Ds?, Gs).
+newest(Role, [U], Ds, Gs?, [U? | Screen?]) :- otherwise | watch(Role?, Ds?, Gs, Screen).
+newest(Role, [_, U1 | Us], Ds, Gs?, Screen?) :- newest(Role?, [U1? | Us?], Ds?, Gs, Screen).
+
+%% drain(Ds, Gs): the draws read for good, the grant writer passed on.
+procedure drain(PersonOut(PingShown)?, PersonIn(PingShown)).
+drain([_ | Ds], Gs?) :- drain(Ds?, Gs).

@@ -7,8 +7,9 @@
 %% It exists because ../pingapp cannot fence the registry's return from
 %% running to idle: see miniapp.glp.  Its entry is the super-app's entry
 %% template miniapp/4, declared once in the root programs/self.glp, at its own
-%% type End, and its scripted person the second template miniapp_person/4 at
-%% the same type (TGLP modules.tex, Dynamic Activation, "Opaque types"; GSG,
+%% two types, EndShown what it draws for its person and EndMsg its root
+%% channels' messages (vGLP, 2026-10-14 13:21 UTC, S2), and its scripted person
+%% the second template miniapp_person/4 at EndShown (TGLP modules.tex, Dynamic Activation, "Opaque types"; GSG,
 %% 2026-10-13 18:52 UTC, O5, and 20:22 UTC, H).
 
 %% The root channel's one message between two executions: a greeting.
@@ -17,23 +18,22 @@ EndMsg ::= hello(Key).
 %% What the mini-app shows its person, one item at a time.
 EndUi       ::= opened(Key) ; greeted(Key).
 
-%% The mini-app's own type, the template's parameter: its root channel's
-%% messages, what it draws for its person --- its output thread, construct 0,
-%% wrapped in output(...) (vGLP, 2026-10-14 11:36 UTC) --- and what its
-%% scripted person reports it sees, the items of that thread, each a term of
-%% this type.
-End ::= EndMsg ; output(Stream(End)) ; EndUi.
+%% What the mini-app draws for its person, the template's first parameter:
+%% its output thread, construct 0, wrapped in output(...) (vGLP, 2026-10-14
+%% 11:36 UTC), and what its scripted person reports it sees, the items of
+%% that thread.  Its root channels' messages, EndMsg, are the second.
+EndShown ::= output(Stream(EndUi)) ; EndUi.
 
 %% The events of its conversations' readers, and their write ends.
 EndEv     ::= greeted(Key, Key).
 EndEvs    ::= [] ; [EndEv | EndEvs].
-EndConv   ::= conv(Key, Stream(End)?).
+EndConv   ::= conv(Key, Stream(EndMsg)?).
 EndConvs  ::= [] ; [EndConv | EndConvs].
 
-imported procedure miniapp#miniapp(Key?, PersonChannel(End)?, SgChannel(End)?, Stream(Integer)?).
-exported procedure miniapp(Key?, PersonChannel(End)?, SgChannel(End)?, Stream(Integer)?).
+imported procedure miniapp#miniapp(Key?, PersonChannel(EndShown)?, SgChannel(EndMsg)?, Stream(Integer)?).
+exported procedure miniapp(Key?, PersonChannel(EndShown)?, SgChannel(EndMsg)?, Stream(Integer)?).
 miniapp(Id, Ui, Sg, Cal) :- miniapp # miniapp(Id?, Ui?, Sg?, Cal?).
 
-imported procedure person#miniapp_person(Key?, Constant?, Channel(Stream(Draw(End)), Stream(Input(End)))?, Stream(End)).
-exported procedure miniapp_person(Key?, Constant?, Channel(Stream(Draw(End)), Stream(Input(End)))?, Stream(End)).
+imported procedure person#miniapp_person(Key?, Constant?, Channel(PersonOut(EndShown), PersonIn(EndShown))?, Stream(EndShown)).
+exported procedure miniapp_person(Key?, Constant?, Channel(PersonOut(EndShown), PersonIn(EndShown))?, Stream(EndShown)).
 miniapp_person(Id, Role, PEnd, Screen?) :- person # miniapp_person(Id?, Role?, PEnd?, Screen).

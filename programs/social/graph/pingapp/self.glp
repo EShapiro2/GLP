@@ -5,8 +5,10 @@
 %% by run/3 (GSG paper, Section 3).
 %%
 %% Its entry is the super-app's entry template miniapp/4, declared once in
-%% the root programs/self.glp, at its own type Ping, and its scripted person
-%% the second template miniapp_person/4 at the same type (TGLP modules.tex,
+%% the root programs/self.glp, at its own two types, PingShown what it draws
+%% for its person and PingMsg its root channels' messages (vGLP, 2026-10-14
+%% 13:21 UTC, S2: a hand-written mini-app chooses both), and its scripted
+%% person the second template miniapp_person/4 at PingShown (TGLP modules.tex,
 %% Dynamic Activation, "Opaque types": "A guest declares its entry as the
 %% template's instance at its own type"; GSG, 2026-10-13 18:52 UTC, O5, and
 %% 20:22 UTC, H).  The super-app holds no declaration of these types: it
@@ -24,18 +26,18 @@ AppUi       ::= opened(Key) ; greeted(Key) ; got(String)
               ; probed(Key) ; forwarded(Key) ; answered ; held_link(Key)
               ; no_conv(Key).
 
-%% The mini-app's own type, the template's parameter: its root channel's
-%% messages, what it draws for its person --- its output thread, construct 0,
-%% wrapped in output(...) (vGLP, 2026-10-14 11:36 UTC, Udi: yes to (b)) ---
-%% and what its scripted person reports it sees, the items of that thread,
-%% each a term of this type.
-Ping ::= PingMsg ; output(Stream(Ping)) ; AppUi.
+%% What the mini-app draws for its person, the template's first parameter:
+%% its output thread, construct 0, wrapped in output(...) (vGLP, 2026-10-14
+%% 11:36 UTC, Udi: yes to (b)), and what its scripted person reports it sees,
+%% the items of that thread.  Its root channels' messages, PingMsg, are the
+%% second.
+PingShown ::= output(Stream(AppUi)) ; AppUi.
 
 %% The relay's bookkeeping (miniapp.glp): the events of its conversations,
 %% their write ends, and probes held for a conversation.
 EvMsg    ::= greeted(Key, Key) ; probe_from(Key, ProbeValue?) ; got(String).
 EvStream ::= [] ; [EvMsg | EvStream].
-ConvEnd  ::= conv(Key, Stream(Ping)?).
+ConvEnd  ::= conv(Key, Stream(PingMsg)?).
 ConvList ::= [] ; [ConvEnd | ConvList].
 HeldProbe ::= held(ProbeValue?).
 HeldList  ::= [] ; [HeldProbe | HeldList].
@@ -44,10 +46,10 @@ HeldList  ::= [] ; [HeldProbe | HeldList].
 %% conversation with the friend, or none, there being no such conversation.
 ProbeStatus ::= sent ; none.
 
-imported procedure miniapp#miniapp(Key?, PersonChannel(Ping)?, SgChannel(Ping)?, Stream(Integer)?).
-exported procedure miniapp(Key?, PersonChannel(Ping)?, SgChannel(Ping)?, Stream(Integer)?).
+imported procedure miniapp#miniapp(Key?, PersonChannel(PingShown)?, SgChannel(PingMsg)?, Stream(Integer)?).
+exported procedure miniapp(Key?, PersonChannel(PingShown)?, SgChannel(PingMsg)?, Stream(Integer)?).
 miniapp(Id, Ui, Sg, Cal) :- miniapp # miniapp(Id?, Ui?, Sg?, Cal?).
 
-imported procedure person#miniapp_person(Key?, Constant?, Channel(Stream(Draw(Ping)), Stream(Input(Ping)))?, Stream(Ping)).
-exported procedure miniapp_person(Key?, Constant?, Channel(Stream(Draw(Ping)), Stream(Input(Ping)))?, Stream(Ping)).
+imported procedure person#miniapp_person(Key?, Constant?, Channel(PersonOut(PingShown), PersonIn(PingShown))?, Stream(PingShown)).
+exported procedure miniapp_person(Key?, Constant?, Channel(PersonOut(PingShown), PersonIn(PingShown))?, Stream(PingShown)).
 miniapp_person(Id, Role, PEnd, Screen?) :- person # miniapp_person(Id?, Role?, PEnd?, Screen).

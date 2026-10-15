@@ -181,16 +181,13 @@ notice(msg(A, P, not_a_friend(K)), msg(A?, P?, not_a_friend(K?)), msg(A?, P?, no
 
 %% The person's end of a mini-app's person channel that no screen shows ---
 %% a re-idled mini-app's fresh one (agent.glp, app_idle/3), or one a play
-%% installs a mini-app with and does not watch: its draws read to their
-%% close, written by the mini-app's execution or closed by the super-app, and
-%% its grants closed, no person granting on it.  agent.glp and
+%% installs a mini-app with and does not watch.  The person channel never
+%% ends in either direction (vGLP, Section 6.3; vGLP 2026-10-14 21:48 UTC):
+%% the draws are read for good, the grant writer passed on, no person
+%% granting on it, and the goal suspends when no draw comes.  agent.glp and
 %% superapp_plays.glp reach it by scope.
-procedure hold_person(Channel(Stream(Draw(Opaque)), Stream(Input(Opaque)))?).
-hold_person(ch(Ds, [])) :- hold_draws(Ds?).
-
-procedure hold_draws(Stream(Draw(Opaque))?).
-hold_draws([_ | Ds]) :- hold_draws(Ds?).
-hold_draws([]).
+procedure hold_person(Channel(PersonOut(Opaque), PersonIn(Opaque))?).
+hold_person(ch([_ | Ds], Gs?)) :- hold_person(ch(Ds?, Gs)).
 
 %% calendar(Dates): the dates of the device's clock, one a day: today's, the
 %% day since the Unix epoch the runtime's clock now/1 reads, at once, and each

@@ -44,23 +44,25 @@ tee([], [], []).
 %% the play installs the mini-app with; Screen the screen it reports, at
 %% Opaque.  The play mints the channel and hands its two ends to two
 %% activations of one module value, so it checks that the module records the
-%% entry and the person at one type (TGLP modules.tex, "The invitation
-%% discipline": "opaque_type yields one identity for the two entries, which the
-%% host checks"; GLP, 2026-10-13 20:22 UTC, C).  Where they are not, no person
-%% runs: its grants close and its screen is empty.
-procedure miniapp_person_run(Content?, Key?, Constant?, Channel(Stream(Draw(Opaque)), Stream(Input(Opaque)))?, Stream(Opaque)).
+%% entry's person-channel type and the person's at one type, the first of the
+%% entry's two identities and the person's one (TGLP modules.tex, "The
+%% invitation discipline": "opaque_type yields one identity for the two
+%% entries, which the host checks"; GLP, 2026-10-13 20:22 UTC, C; vGLP
+%% 2026-10-14 13:21 UTC, S2).  Where they are not, no person runs: its end of
+%% the person channel is held for good (hold_person/1) and its screen is empty.
+procedure miniapp_person_run(Content?, Key?, Constant?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
 miniapp_person_run(M, Id, Role, PEnd, Screen?) :-
     module(M?) |
     opaque_type(miniapp/4, M?, H0),
     opaque_type(miniapp_person/4, M?, H),
     person_at(H0?, H?, M?, Id?, Role?, PEnd?, Screen).
 
-procedure person_at(Constant?, Constant?, Module?, Key?, Constant?, Channel(Stream(Draw(Opaque)), Stream(Input(Opaque)))?, Stream(Opaque)).
-person_at(H0, H, M, Id, Role, PEnd, Screen?) :-
-    H0? =?= H? |
-    find_type(miniapp_person/4, H?, T),
+procedure person_at(Stream(Constant)?, Stream(Constant)?, Module?, Key?, Constant?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
+person_at([D0, _], [D], M, Id, Role, PEnd, Screen?) :-
+    D0? =?= D? |
+    find_type(miniapp_person/4, [D?], T),
     run(miniapp_person(Id?, Role?, PEnd?, Screen), T?, M?).
-person_at(_, _, _, _, _, ch(_, []), []) :- otherwise | true.
+person_at(_, _, _, _, _, PEnd, []) :- otherwise | hold_person(PEnd?).
 
 %% The certified mini-app: pingapp.glpw beside this program, written by the
 %% REPL's :artefact from ../pingapp and read with load_file/2 --- a Module
@@ -101,8 +103,10 @@ play_invite(AliceUi?, BobUi?) :-
 
 %% =============================================================================
 %% play_invite_declined: as above, but bob's person declines; no conversation
-%% opens and neither execution is activated.
-%% Expected: AliceUi = [], BobUi = [], → succeeds.
+%% opens and neither execution is activated, so neither person's screen
+%% shows an item; the person channel never ends (vGLP, Section 6.3), so
+%% neither screen closes either.
+%% Expected: AliceUi and BobUi unbound, → suspended.
 %% =============================================================================
 exported procedure play_invite_declined(Stream(Opaque), Stream(Opaque)).
 play_invite_declined(AliceUi?, BobUi?) :-
@@ -1007,7 +1011,7 @@ play_reinvite(AliceUi?, BobUi?) :-
     certified(C?, _, CSig),
     agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
     new_channel(AliceApp, AlicePerson),
-    miniapp_person_run(C?, alice, watch, AlicePerson?, AliceScreen),
+    miniapp_person_run(C?, alice, greet, AlicePerson?, AliceScreen),
     tee(AliceScreen?, AliceUi, AliceSeen),
     alice_reinvite(C?, CSig?, AliceApp?, AliceOut?, AliceSeen?, BobSeen?, AliceIn),
     agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
@@ -1032,8 +1036,9 @@ alice_reinvite_wait([_ | Outs], Seen, BobSeen, Cmds?) :-
     otherwise | alice_reinvite_wait(Outs?, Seen?, BobSeen?, Cmds).
 alice_reinvite_wait([], _, _, []).
 
-%% Her mini-app's screen has closed: the execution ended, its draws closing,
-%% so her entry has returned to idle.  Invite bob again, and keep her own
+%% Her mini-app's screen has closed: her scripted person, under its role
+%% greet, stops reporting at the greeting, with which her execution ends of its
+%% own accord, so her entry has returned to idle.  Invite bob again, and keep her own
 %% stream open until the play's last observation.
 procedure alice_after_end(Stream(Opaque)?, Stream(Opaque)?, UserInStream).
 alice_after_end([], BobSeen, [msg(person, alice, invite(ping, bob)) | Cmds?]) :-
