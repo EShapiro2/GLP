@@ -463,8 +463,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             'trusted place says nothing about the network you are on, and '
             'being on a trusted network says nothing about where you are. '
             'Contact from the Internet at large is never opened by either — '
-            'it is answered only for peers you already know or who hold an '
-            'invite link.',
+            'it is answered only for peers you already know.',
             style: TextStyle(fontSize: 12, color: Colors.black54),
           ),
           const SizedBox(height: 12),

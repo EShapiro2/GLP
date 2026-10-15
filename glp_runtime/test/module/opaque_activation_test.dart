@@ -1,6 +1,6 @@
 /// Opaque activation: a host activates a guest it was not compiled with,
-/// holding no declaration of the guest's types, by opaque_type(P/N, M, H),
-/// find_type(P/N, H, Type) and run(Goal, Type, M) (GLP-Spec appendix-guards,
+/// holding no declaration of the guest's types, by opaque_type(P/N, M, Hs),
+/// find_type(P/N, Hs, Type) and run(Goal, Type, M) (GLP-Spec appendix-guards,
 /// "Dynamic activation"; TGLP modules.tex, Dynamic Activation, "Opaque types"
 /// and Proposition "Opaque Activation").
 ///
@@ -9,6 +9,10 @@
 /// at Bid, and at no type.  A guest's module reaches the host as a file of its
 /// directory, read by load_file/2, written here from the guest's compiled
 /// artefact and removed after.
+///
+/// PROVISIONAL (Udi, 2026-10-15), pending GLP-Spec's final form: Hs is the
+/// list of type identities, one per type parameter of the template in
+/// declaration order, a one-parameter template's the list of one.
 library;
 
 import 'dart:io';
@@ -95,7 +99,29 @@ void main() {
     return (result, v is ConstTerm ? v.value : v);
   }
 
-  test('opaque_type/3 gives the type the exports record; find_type/3 the '
+  /// [ids] as a GLP list of constants.
+  Term list(List<String> ids) {
+    Term t = ConstTerm(nil);
+    for (final id in ids.reversed) {
+      t = StructTerm('.', [ConstTerm(id), t]);
+    }
+    return t;
+  }
+
+  /// The list of constants [t] is, by value.
+  List<Object?> values(GlpRuntime rt, Object? t) {
+    final out = <Object?>[];
+    var c = t;
+    while (c is StructTerm && c.functor == '.') {
+      final h = rt.heap.dereference(c.args[0]);
+      out.add(h is ConstTerm ? h.value : h);
+      c = rt.heap.dereference(c.args[1]);
+    }
+    return out;
+  }
+
+  test('opaque_type/3 gives the list of the one type the exports record; '
+      'find_type/3 the '
       'identity of the opaque instance at it, which run/3 activates under',
       () {
     final rt = inHost();
@@ -107,12 +133,13 @@ void main() {
       exportDeclarationTexts:
           (a.artefact as Artefact).exports.map((e) => e.declarationText),
     ).opaque['entry/2']!;
-    expect(h, record.type);
+    expect(record.types, hasLength(1));
+    expect(values(rt, h), record.types);
 
     // The host's declaration of entry/2 is its ancestor's, the key the
     // compiled module carries it under.
-    final (r2, t) =
-        call(rt, '_find_type', [ref('tests/opaque:entry', 2), ConstTerm(h)]);
+    final (r2, t) = call(rt, '_find_type',
+        [ref('tests/opaque:entry', 2), list(record.types)]);
     expect(r2, BodyKernelResult.success);
     expect(t, record.entry);
 
@@ -137,9 +164,9 @@ void main() {
   });
 
   test('find_type/3 errs where P/N is not declared in the caller\'s scope or '
-      'has not exactly one type parameter', () {
+      'has not one type parameter for each identity given', () {
     final rt = inHost();
-    final h = ConstTerm('a' * 64);
+    final h = list(['a' * 64]);
     // Not declared.
     expect(call(rt, '_find_type', [ref('nothing', 2), h]).$1,
         BodyKernelResult.abort);
@@ -149,5 +176,14 @@ void main() {
     // closed/2 is the host's own parameterised declaration, with one.
     expect(call(rt, '_find_type', [ref('tests/opaque/host:closed', 2), h]).$1,
         BodyKernelResult.success);
+    // Two identities for its one parameter, and a bare identity, not a list.
+    expect(
+        call(rt, '_find_type',
+            [ref('tests/opaque/host:closed', 2), list(['a' * 64, 'b' * 64])]).$1,
+        BodyKernelResult.abort);
+    expect(
+        call(rt, '_find_type',
+            [ref('tests/opaque/host:closed', 2), ConstTerm('a' * 64)]).$1,
+        BodyKernelResult.abort);
   });
 }

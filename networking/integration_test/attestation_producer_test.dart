@@ -61,7 +61,7 @@ void main() {
       case AppAttestContent(:final appId, :final attestationObject):
         debugPrint('[attestation_producer_test] App Attest under $appId, '
             '${attestationObject.length} bytes');
-        expect(appId, endsWith('.com.example.bitchatTransport'));
+        expect(appId, endsWith('.com.example.grassrootsNetworking'));
         expect(attestationObject, isNotEmpty);
       case AndroidKeyAttestationContent(:final chain):
         debugPrint('[attestation_producer_test] key attestation, '

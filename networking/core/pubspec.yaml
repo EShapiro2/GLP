@@ -1,7 +1,8 @@
 name: grassroots_networking_core
 description: >-
-  Pure-Dart core of the Grassroots networking layer: identity, wire format,
-  Noise sessions, message routing, Redux state, and the UDP/UDX transport.
+  Pure-Dart core of GNA's networking layer: identity, wire format, Noise
+  sessions, attestation, message routing, Redux state, and the UDP transport
+  of the LAN and WAN underlays.
   No Flutter dependencies — embeddable in headless servers (dart compile exe)
   and re-exported by the grassroots_networking Flutter package.
 version: 1.0.0

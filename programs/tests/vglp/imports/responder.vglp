@@ -1,0 +1,29 @@
+%% responder.vglp --- the module the imports program imports from: respond,
+%% volitional, the person answering a friend offer yes or no; offer_from,
+%% ordinary, which reaches a question through respond; echo, which reaches
+%% none (vGLP's task of 2026-10-15 18:28 UTC, item 4).  "A procedure that
+%% reaches a question is exported, imported and shared as any procedure is,
+%% with its ask stream added" (vGLP at a89a751, sections/parts/
+%% canonical-compilation.tex).
+
+Peer     ::= Constant.
+YesNo    ::= yes ; no.
+Offer    ::= offer(Peer).
+Response ::= accept(Peer) ; refuse(Peer).
+
+%% The person sees who offers and answers yes or no.
+Card     ::= card(Peer, YesNo?).
+
+exported procedure (Card)*respond(Offer?, Response).
+(card(From?, Answer))*respond(offer(From), Resp?) :-
+    ground(From?) | decide(Answer?, From?, Resp).
+
+procedure decide(YesNo?, Peer?, Response).
+decide(yes, From, accept(From?)).
+decide(no, From, refuse(From?)).
+
+exported procedure offer_from(Peer?, Response).
+offer_from(P, R?) :- ground(P?) | respond(offer(P?), R).
+
+exported procedure echo(Peer?, Peer).
+echo(P, P?).

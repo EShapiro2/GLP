@@ -1,0 +1,43 @@
+%% Streams of disjoint types merged into a stream of their union through the
+%% root's procedure(X) merge(Stream(X)?, Stream(X)?, Stream(X)), as vGLP's
+%% dispatcher merges its asks, grants and draws (programs/vglp/dispatcher.glp,
+%% fair/5).  Neither input type is a supertype of the other; X = Event(Q, T),
+%% which the output site supplies, makes each merge well-typed with subtyping
+%% (TGLP parameterized-types.tex, Definition "Instantiation";
+%% appendix-implementation-notes.tex, "The instantiation of a call": "For each
+%% parameter it tries the types the sites supply and the types the callee's
+%% clauses fix for it ... and takes one under which the clause and the
+%% callee's clauses are well-typed with subtyping").  GLP, 2026-10-15 11:00
+%% UTC, item 1.
+%%
+%% join3/4 chains two merges: the second's output site supplies Event(Q, T)
+%% and its draw site Draw(T), both of which serve its typed sites; until
+%% 2026-10-15 the checker committed it to Draw(T), the first, and the first
+%% merge, its output read at Draw(T), then had no binding.
+Ask(Q) ::= ask(Constant, Q).
+Event(Q, T) ::= Ask(Q) ; Input(T) ; Draw(T).
+
+procedure join(Stream(Ask(String))?, Stream(Input(Integer))?,
+    Stream(Event(String, Integer))).
+join(Asks, Ins, Events?) :- merge(Asks?, Ins?, Events).
+
+procedure(Q, T) join_param(Stream(Ask(Q))?, Stream(Input(T))?,
+    Stream(Event(Q, T))).
+join_param(Asks, Ins, Events?) :- merge(Asks?, Ins?, Events).
+
+procedure(Q, T) join3(Stream(Ask(Q))?, Stream(Input(T))?, Stream(Draw(T))?,
+    Stream(Event(Q, T))).
+join3(Asks, Ins, Draws, Events?) :-
+    merge(Asks?, Ins?, Events1), merge(Events1?, Draws?, Events).
+
+procedure join3_concrete(Stream(Ask(String))?, Stream(Input(Integer))?,
+    Stream(Draw(Integer))?, Stream(Event(String, Integer))).
+join3_concrete(Asks, Ins, Draws, Events?) :-
+    merge(Asks?, Ins?, Events1), merge(Events1?, Draws?, Events).
+
+procedure go(Stream(Event(String, Integer))).
+go(Events?) :- join_param([ask(a, "q")], [input(2, [], 3)], Events).
+
+procedure go3(Stream(Event(String, Integer))).
+go3(Events?) :-
+    join3([ask(a, "q")], [input(2, [], 3)], [withdraw(4)], Events).

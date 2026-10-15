@@ -1,0 +1,37 @@
+%% home.vglp --- a module that imports from responder.vglp a volitional
+%% procedure, respond, and an ordinary procedure that reaches a question,
+%% offer_from, and asks a question of its own, confirm, whose type it
+%% defines alone (vGLP's task of 2026-10-15 18:28 UTC, item 4).  Each import
+%% is an import as any is, its ask stream added, and each call of it is given
+%% a fresh ask stream, merged with those of the module's own calls (vGLP at
+%% a89a751, sections/parts/canonical-compilation.tex).  The questions of the
+%% program are those of both modules, ok_w(Ok) and card_w(Card), one type
+%% in each compiled module.
+
+Peer     ::= Constant.
+YesNo    ::= yes ; no.
+Offer    ::= offer(Peer).
+Response ::= accept(Peer) ; refuse(Peer).
+Card     ::= card(Peer, YesNo?).
+Fact     ::= met(Response) ; heard(Response) ; confirmed(Peer, YesNo).
+
+%% The person confirms the meeting with a peer.
+Ok       ::= ok(Peer, YesNo?).
+
+imported procedure (Card)*responder#respond(Offer?, Response).
+imported procedure responder#offer_from(Peer?, Response).
+imported procedure responder#echo(Peer?, Peer).
+
+procedure (Ok)*confirm(Peer?, Stream(Fact)).
+(ok(P?, A))*confirm(P, [confirmed(P?, A?)]) :- ground(P?) | true.
+
+%% befriend(P1?, P2?, Fs): P1's offer answered by the person, P2's heard
+%% through offer_from, the meeting with P1 confirmed; echo reaches no
+%% question, and its call is a call as in GLP.
+exported procedure befriend(Peer?, Peer?, Stream(Fact)).
+befriend(P1, P2, [met(R1?), heard(R2?) | Fs?]) :-
+    ground(P1?), ground(P2?) |
+    responder # respond(offer(P1?), R1),
+    responder # echo(P2?, P3),
+    responder # offer_from(P3?, R2),
+    confirm(P1?, Fs).

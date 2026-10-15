@@ -29,8 +29,11 @@ import '../runtime/module_hierarchy.dart';
 import '../vglp/mediator.dart';
 import '../vglp/canonical.dart'
     show
+        CanonicalContext,
+        VglpFront,
         VolitionalCall,
         checkWritersAtOutputs,
+        compileCanonical,
         isPaperSyntaxSource,
         volitionalRecord;
 import '../vglp/program_compilation.dart';
@@ -237,17 +240,300 @@ List<DiscoveredModule> discoverProgram(String rootDir,
       ? File(rootSelfGlpPath).parent.absolute.path
       : null;
   final rs = rootScope ?? _rootScopeOf(rootSelfGlpPath);
-  final modules = _discoverGlpModules(root, programsDir, rootSelfGlpPath, rs);
+
+  // The program's vGLP sources, read before any module is compiled, and the
+  // self.vglp layers, compiled first: each joins the module of the self.glp
+  // beside it, which every module of its directory and below has in scope
+  // (vGLP at a89a751, sections/parts/canonical-compilation.tex).
+  final program = _vglpProgramOf(root, programsDir);
+  final layers = program == null
+      ? const <String, Module>{}
+      : _compileLayers(program, root, programsDir, rootSelfGlpPath, rs);
+  final modules = _discoverGlpModules(root, programsDir, rootSelfGlpPath, rs,
+      layers: layers);
 
   // A .vglp source is compiled and joins the program as the module of its own
   // name (vGLP, Definition "Canonical Compilation").  This runs AFTER the
   // exposes are resolved, because the compilation types an answer writer by the
   // position it occurs at and those positions are often arguments of an exposed
   // procedure — `send_net` and the rest of social/graph/routing.
-  _addVglpModules(modules, root, programsDir, rootSelfGlpPath, rs);
-  _attachVolitionalRecords(modules);
+  _addVglpModules(modules, root, programsDir, rootSelfGlpPath, rs,
+      program: program, layers: layers);
+  _attachVolitionalRecords(modules, program);
   _rootLast(modules);
   return modules;
+}
+
+/// The program's vGLP sources ([VglpProgram]), or null where it has none:
+/// the self.vglp of each directory of the tree, and of each directory above
+/// it below the root, that holds a procedure, a declaration or a type --- a
+/// layer of its directory --- and each .vglp module source of the tree that
+/// joins the program, compiled on load or standing as its committed compiled
+/// module; a source beside a hand-written module of its name does not join
+/// it, the hand-written module standing.  The root's self.vglp holds widget
+/// declarations, for every program ([scopeWidgetDeclarations]); one holding
+/// more is refused, the root's self.glp being the language's first layer
+/// (TGLP modules.tex, Definition "Root, Scope") and compiled once for every
+/// program.
+VglpProgram? _vglpProgramOf(Directory root, String? programsDir) {
+  if (!root.existsSync()) return null;
+  final files = root
+      .listSync(recursive: true)
+      .whereType<File>()
+      .where((f) => f.path.endsWith('.vglp'))
+      .toList();
+  final programsNorm = programsDir == null ? null : _normPath(programsDir);
+  final layers = <String>{};
+  final sources = <String>[];
+  void rootSelfVglp(String path) {
+    final front = VglpFront.of(File(path).readAsStringSync());
+    if (front != null && _holds(front)) {
+      throw CompileError(
+          '$path holds procedures, declarations or types: the root\'s '
+          'self.vglp holds the widget declarations of every program, and the '
+          'root\'s self.glp, the first layer of every scope, is compiled once '
+          'for every program (TGLP modules.tex, Definition "Root, Scope")',
+          1, 1, phase: 'analyzer');
+    }
+  }
+
+  for (final f in files) {
+    final name = ppath.basename(f.path);
+    if (name == selfVglp) {
+      if (programsNorm != null && _normPath(f.parent.path) == programsNorm) {
+        rootSelfVglp(f.path);
+      } else {
+        layers.add(_normPath(f.path));
+      }
+      continue;
+    }
+    final glp = File(ppath.join(
+        f.parent.path, '${name.substring(0, name.length - '.vglp'.length)}.glp'));
+    if (glp.existsSync() &&
+        !glp.readAsStringSync().startsWith(compiledHeader)) {
+      continue;  // the hand-written module stands
+    }
+    sources.add(_normPath(f.path));
+  }
+  if (programsNorm != null) {
+    var dir = _normPath(root.parent.path);
+    while (dir != programsNorm && ppath.isWithin(programsNorm, dir)) {
+      final f = File(ppath.join(dir, selfVglp));
+      if (f.existsSync()) layers.add(_normPath(f.path));
+      dir = _normPath(ppath.dirname(dir));
+    }
+    final rootLayer = File(ppath.join(programsNorm, selfVglp));
+    if (rootLayer.existsSync() && !files.any((f) => _normPath(f.path) == _normPath(rootLayer.path))) {
+      rootSelfVglp(rootLayer.path);
+    }
+  }
+  final held = [
+    for (final l in layers)
+      if (_holdsAt(l)) l
+  ]..sort((a, b) {
+      final d = _depth(ppath.dirname(a)).compareTo(_depth(ppath.dirname(b)));
+      return d != 0 ? d : a.compareTo(b);
+    });
+  if (held.isEmpty && sources.isEmpty) return null;
+  return VglpProgram.of(
+      layers: held, modules: sources, programsDir: programsDir);
+}
+
+/// Whether the self.vglp at [path] holds a procedure, a declaration or a
+/// type: one of widget declarations alone is no layer.
+bool _holdsAt(String path) {
+  final front = VglpFront.of(File(path).readAsStringSync());
+  return front != null && _holds(front);
+}
+
+bool _holds(VglpFront front) =>
+    front.own.isNotEmpty ||
+    front.types.isNotEmpty ||
+    front.importedVolitional.isNotEmpty;
+
+/// Compile each self.vglp layer of [program], outermost first, by the
+/// canonical compilation, its questions the program's, with neither
+/// dispatcher nor construct processes, its names fresh against those of the
+/// self.glp beside it, whose module it joins ([_withLayer]): the module of
+/// each layer, by its directory.
+Map<String, Module> _compileLayers(VglpProgram program, Directory root,
+    String? programsDir, String? rootSelfGlpPath, TypeEnvironment? rs) {
+  final layers = <String, Module>{};
+  final resolveIn = _sourceTypes(program, root, programsDir, rootSelfGlpPath,
+      rs, layers);
+  for (final path in program.layers) {
+    final dir = _normPath(File(path).parent.path);
+    final selfGlp = ppath.join(dir, 'self.glp');
+    final self = _parseFile(selfGlp);
+    final above = _layeredScope(selfGlp, root.absolute.path, programsDir,
+        rootSelfGlpPath, rs, layers);
+    final selfTypes = {for (final td in self.typeDefs) td.name};
+    final context = program.contextFor(path,
+        resolvable: (n) =>
+            selfTypes.contains(n) ||
+            above.types.containsKey(n) ||
+            above.typeTemplates.containsKey(n),
+        resolveIn: resolveIn,
+        reservedTypes: selfTypes,
+        reservedProcedures: {
+          for (final d in self.procDeclarations) d.name,
+          for (final p in self.procedures) p.name,
+        });
+    final String text;
+    try {
+      text = compileCanonical(File(path).readAsStringSync(),
+              reachingOf: program.readerFor(path), context: context)
+          .source;
+    } on CompileError catch (e) {
+      throw CompileError('$path: ${e.message}', e.line, e.column,
+          category: e.category);
+    }
+    final module = Parser(Lexer(text).tokenize()).parseModule();
+    _withLayer(self, module, selfGlp, path);
+    layers[dir] = module;
+  }
+  return layers;
+}
+
+/// The type a name denotes in the scope of a source of [program], the
+/// source's own definitions first: a layer's, then those of the self.glp
+/// beside it and the scope above; a module's, then its scope's.  Null where
+/// none defines it, or where its scope cannot be built yet.
+TypeDef? Function(String source, String name) _sourceTypes(
+    VglpProgram program,
+    Directory root,
+    String? programsDir,
+    String? rootSelfGlpPath,
+    TypeEnvironment? rs,
+    Map<String, Module> layers) {
+  final scopes = <String, TypeEnvironment?>{};
+  return (source, name) {
+    final own = program.fronts[source]?.types[name];
+    if (own != null) return own;
+    final isLayer = program.layers.contains(source);
+    final target = isLayer
+        ? ppath.join(File(source).parent.path, 'self.glp')
+        : source;
+    if (isLayer) {
+      final self = _parseFile(target);
+      for (final td in self.typeDefs) {
+        if (td.name == name) return td;
+      }
+    }
+    final scope = scopes.putIfAbsent(target, () {
+      try {
+        return _layeredScope(target, root.absolute.path, programsDir,
+            rootSelfGlpPath, rs, layers);
+      } catch (_) {
+        return null;
+      }
+    });
+    return scope?.typeTemplates[name] ?? scope?.types[name];
+  };
+}
+
+/// The context of the module source at [path] ([CanonicalContext]), [scope]
+/// its scope.
+CanonicalContext _contextFor(VglpProgram program, String path,
+        TypeEnvironment scope, TypeDef? Function(String, String) resolveIn) =>
+    program.contextFor(path,
+        resolvable: (n) =>
+            scope.types.containsKey(n) || scope.typeTemplates.containsKey(n),
+        resolveIn: resolveIn);
+
+Module _parseFile(String path) =>
+    Parser(Lexer(File(path).readAsStringSync()).tokenize()).parseModule();
+
+/// The module of the self.glp [self], at [selfPath], with the compiled text
+/// of the self.vglp beside it, [layer], at [layerPath]: one module, one layer
+/// of every scope below it, "as its self.glp holds those of GLP" (vGLP,
+/// sections/parts/canonical-compilation.tex).  A type, a procedure or a
+/// declaration of one name in both is refused, naming both files, as one
+/// module's would be.
+Module _withLayer(Module self, Module layer, String selfPath, String layerPath) {
+  final selfTypes = {for (final td in self.typeDefs) td.name};
+  final selfProcs = {
+    for (final p in self.procedures) p.signature,
+    for (final d in self.procDeclarations)
+      if (!d.imported) d.key,
+  };
+  String? clash;
+  for (final td in layer.typeDefs) {
+    if (selfTypes.contains(td.name)) clash ??= 'the type ${td.name}';
+  }
+  for (final p in layer.procedures) {
+    if (selfProcs.contains(p.signature)) {
+      clash ??= 'the procedure ${p.signature}';
+    }
+  }
+  if (clash != null) {
+    throw CompileError(
+        '$selfPath and $layerPath both define $clash: the self.vglp of a '
+        'directory joins its self.glp, one layer of the scope (vGLP, '
+        'sections/parts/canonical-compilation.tex), and one name is defined '
+        'once in it',
+        1, 1, phase: 'analyzer');
+  }
+  return Module(
+    typeDefs: [...self.typeDefs, ...layer.typeDefs],
+    procDeclarations: [...self.procDeclarations, ...layer.procDeclarations],
+    paramProcDecls: [...self.paramProcDecls, ...layer.paramProcDecls],
+    procedures: [...self.procedures, ...layer.procedures],
+    compileMode: self.compileMode,
+    exposes: self.exposes,
+    displayDecls: self.displayDecls,
+    volitionalDeclarations: self.volitionalDeclarations,
+    line: self.line,
+    column: self.column,
+  );
+}
+
+/// The scope of the file at [targetFile] over its chain ([discoverSelfChain],
+/// [buildAncestorScope]), each directory's layer ([layers]) merged with the
+/// self.glp it joins, one module: the language primitives and the root, then
+/// each self.glp of the chain, outermost first.  With no layer on the chain,
+/// [buildAncestorScope]'s.
+TypeEnvironment _layeredScope(String targetFile, String rootDir,
+    String? programsDir, String? rootSelfGlpPath, TypeEnvironment? rs,
+    Map<String, Module> layers) {
+  final chain = discoverSelfChain(
+    targetFile: File(targetFile).absolute.path,
+    rootDir: rootDir,
+    programsDir: programsDir,
+  );
+  if (layers.isEmpty ||
+      !chain.any((p) => layers.containsKey(_normPath(File(p).parent.path)))) {
+    return buildAncestorScope(
+        chain: chain, rootSelfGlpPath: rootSelfGlpPath, rootScope: rs);
+  }
+  var env = buildAncestorScope(
+      chain: const [], rootSelfGlpPath: rootSelfGlpPath, rootScope: rs);
+  final rootSelf = rootSelfGlpPath != null && File(rootSelfGlpPath).existsSync()
+      ? File(rootSelfGlpPath)
+      : null;
+  final r = rootSelf?.parent.path;
+  for (final p in chain) {
+    if (rootSelf != null &&
+        File(p).absolute.path == rootSelf.absolute.path) {
+      continue;
+    }
+    final layer = layers[_normPath(File(p).parent.path)];
+    if (layer == null) {
+      env = mergeSelfGlpFileIntoScope(env, p, root: r);
+      continue;
+    }
+    final combined = _withLayer(_parseFile(p), layer, p, p);
+    try {
+      env = mergeModuleIntoScope(
+          liftExposedTypes(env, combined, p, root: r), combined,
+          label: r != null
+              ? modulePathName(p, r)
+              : ppath.basename(File(p).absolute.parent.path));
+    } on UndefinedDeclarationTypeError catch (e) {
+      throw e.inFile(p);
+    }
+  }
+  return env;
 }
 
 /// Each module compiled from a `.vglp` source given the record of its
@@ -260,9 +546,23 @@ List<DiscoveredModule> discoverProgram(String rootDir,
 /// module that forms the program's initial goal imports that module's
 /// compiled procedures" (Definition "Canonical Compilation"): the record is
 /// what the calls of that module are checked by.
-void _attachVolitionalRecords(List<DiscoveredModule> modules) {
+void _attachVolitionalRecords(List<DiscoveredModule> modules,
+    [VglpProgram? program]) {
   for (final m in modules) {
     final path = m.filePath;
+    if (program != null && isSelfGlpFile(path)) {
+      // A self.glp with its layer: the layer's volitional procedures.
+      final front = program.fronts[
+          _normPath(ppath.join(File(path).parent.path, selfVglp))];
+      if (front != null &&
+          program.layers.contains(
+              _normPath(ppath.join(File(path).parent.path, selfVglp)))) {
+        m.volitional = {
+          for (final v in front.volitional.values) v.compiledKey: v
+        };
+      }
+      continue;
+    }
     if (path.endsWith('.vglp')) {
       m.volitional = volitionalRecord(File(path).readAsStringSync());
     } else if (path.endsWith('.glp') && !isSelfGlpFile(path)) {
@@ -324,7 +624,8 @@ String _nameRoot(String? programsDir, String programRoot) =>
 /// resolved: everything of [discoverProgram] but the compiled `.vglp` sources,
 /// which `:emit` compiles in this same scope and writes out instead.
 List<DiscoveredModule> _discoverGlpModules(Directory root, String? programsDir,
-    String? rootSelfGlpPath, TypeEnvironment? rs) {
+    String? rootSelfGlpPath, TypeEnvironment? rs,
+    {Map<String, Module> layers = const {}}) {
   if (!root.existsSync()) {
     throw ArgumentError('Program root directory not found: ${root.path}');
   }
@@ -359,23 +660,28 @@ List<DiscoveredModule> _discoverGlpModules(Directory root, String? programsDir,
     final lexer = Lexer(source);
     final tokens = lexer.tokenize();
     final parser = Parser(tokens);
-    final module = parser.parseModule();
+    var module = parser.parseModule();
 
     // Enforce "Admission to the Primitive Layer" (Rule A / Rule B) at load time.
     enforcePrimitiveLayer(file.path, module, rootSelfGlpPath);
+
+    // A self.glp with the self.vglp beside it: one module ([_withLayer]).
+    final layer = filename == 'self.glp'
+        ? layers[_normPath(file.parent.path)]
+        : null;
+    if (layer != null) {
+      module = _withLayer(module, layer, file.path,
+          ppath.join(file.parent.path, selfVglp));
+    }
 
     // The module's name is its path from the root: a self.glp's is its
     // directory's, any other module's its directory's and its file name.
     final moduleName = modulePathName(file.path, nameRoot);
 
-    // Build ancestor scope chain (extends up to programs/ when known)
-    final chain = discoverSelfChain(
-      targetFile: file.absolute.path,
-      rootDir: root.absolute.path,
-      programsDir: programsDir,
-    );
-    final ancestorScope = buildAncestorScope(
-        chain: chain, rootSelfGlpPath: rootSelfGlpPath, rootScope: rs);
+    // Build ancestor scope chain (extends up to programs/ when known), each
+    // directory's layer with its self.glp.
+    final ancestorScope = _layeredScope(file.path, root.absolute.path,
+        programsDir, rootSelfGlpPath, rs, layers);
 
     modules.add(DiscoveredModule(
       filePath: file.path,
@@ -389,7 +695,8 @@ List<DiscoveredModule> _discoverGlpModules(Directory root, String? programsDir,
   // Add the program's filesystem context (ancestor self.glp above the root) and
   // resolve -expose directives.
   _addAncestorContextAndExposes(
-      modules, root.absolute.path, programsDir, rootSelfGlpPath, nameRoot, rs);
+      modules, root.absolute.path, programsDir, rootSelfGlpPath, nameRoot, rs,
+      layers: layers);
   return modules;
 }
 
@@ -406,13 +713,16 @@ List<DiscoveredModule> _discoverGlpModules(Directory root, String? programsDir,
 /// the generic mediator, and is not compiled where the mediator is missing, as
 /// before (compileVglpSource).
 void _addVglpModules(List<DiscoveredModule> modules, Directory root,
-    String? programsDir, String? rootSelfGlpPath, TypeEnvironment? rs) {
+    String? programsDir, String? rootSelfGlpPath, TypeEnvironment? rs,
+    {VglpProgram? program, Map<String, Module> layers = const {}}) {
   final vglpFiles = root
       .listSync(recursive: true)
       .whereType<File>()
       .where((f) => f.path.endsWith('.vglp'))
       .where((f) {
     final filename = f.path.split(Platform.pathSeparator).last;
+    // A self.vglp is no module: its layer joins its self.glp's.
+    if (filename == selfVglp) return false;
     final stem = filename.substring(0, filename.length - '.vglp'.length);
     // the hand-written module stands
     return !File('${f.parent.path}${Platform.pathSeparator}$stem.glp')
@@ -424,20 +734,28 @@ void _addVglpModules(List<DiscoveredModule> modules, Directory root,
   final texts = {for (final f in vglpFiles) f.path: f.readAsStringSync()};
   final nameRoot = _nameRoot(programsDir, root.path);
 
+  final resolveIn = program == null
+      ? null
+      : _sourceTypes(program, root, programsDir, rootSelfGlpPath, rs, layers);
   for (final file in vglpFiles) {
     final text = texts[file.path]!;
-    final paper = isPaperSyntaxSource(text);
+    final paper =
+        isPaperSyntaxSource(text) || (program?.reaches(file.path) ?? false);
     if (!paper && mediator == null) continue;
 
-    final ancestorScope =
-        _vglpScope(file, modules, root, programsDir, rootSelfGlpPath, rs);
+    final ancestorScope = _vglpScope(
+        file, modules, root, programsDir, rootSelfGlpPath, rs, layers);
 
     final String compiledSource;
     try {
       compiledSource = compileVglpSource(text,
           mediator: mediator,
           scope: ancestorScope,
-          path: file.path);
+          path: file.path,
+          reachingOf: program?.readerFor(file.path),
+          context: program == null
+              ? null
+              : _contextFor(program, file.path, ancestorScope, resolveIn!));
     } on UndefinedDeclarationTypeError catch (e) {
       throw e.inFile(file.path);
     }
@@ -461,14 +779,9 @@ void _addVglpModules(List<DiscoveredModule> modules, Directory root,
 /// the emitted text is what the load produces in memory.
 TypeEnvironment _vglpScope(File file, List<DiscoveredModule> modules,
     Directory root, String? programsDir, String? rootSelfGlpPath,
-    TypeEnvironment? rs) {
-  final chain = discoverSelfChain(
-    targetFile: file.absolute.path,
-    rootDir: root.absolute.path,
-    programsDir: programsDir,
-  );
-  final scope = buildAncestorScope(
-      chain: chain, rootSelfGlpPath: rootSelfGlpPath, rootScope: rs);
+    TypeEnvironment? rs, [Map<String, Module> layers = const {}]) {
+  final scope = _layeredScope(file.path, root.absolute.path, programsDir,
+      rootSelfGlpPath, rs, layers);
   return _withExposedProcedures(file.path, scope, modules,
       modules.where((m) => m.exposingDir != null).toList());
 }
@@ -564,23 +877,24 @@ void _addAncestorContextAndExposes(
     String? programsDir,
     String? rootSelfGlpPath,
     String nameRoot,
-    TypeEnvironment? rs) {
+    TypeEnvironment? rs,
+    {Map<String, Module> layers = const {}}) {
   if (programsDir != null) {
     for (final selfPath in _ancestorSelfGlpFiles(rootAbsPath, programsDir)) {
-      final selfModule =
+      var selfModule =
           Parser(Lexer(File(selfPath).readAsStringSync()).tokenize())
               .parseModule();
-      final chain = discoverSelfChain(
-        targetFile: selfPath,
-        rootDir: File(selfPath).parent.path,
-        programsDir: programsDir,
-      );
+      final layer = layers[_normPath(File(selfPath).parent.path)];
+      if (layer != null) {
+        selfModule = _withLayer(selfModule, layer, selfPath,
+            ppath.join(File(selfPath).parent.path, selfVglp));
+      }
       modules.add(DiscoveredModule(
         filePath: selfPath,
         moduleName: modulePathName(selfPath, nameRoot),
         ast: selfModule,
-        ancestorScope: buildAncestorScope(
-            chain: chain, rootSelfGlpPath: rootSelfGlpPath, rootScope: rs),
+        ancestorScope: _layeredScope(selfPath, File(selfPath).parent.path,
+            programsDir, rootSelfGlpPath, rs, layers),
         isSelfGlp: true,
       ));
     }
@@ -597,7 +911,8 @@ void _addAncestorContextAndExposes(
     modules.add(rootModule);
   }
 
-  _resolveExposes(modules, programsDir, rootSelfGlpPath, nameRoot, rs);
+  _resolveExposes(modules, programsDir, rootSelfGlpPath, nameRoot, rs,
+      layers: layers);
   _rootLast(modules);
 }
 
@@ -628,7 +943,8 @@ bool _dirUnder(String childDir, String ancestorDir) =>
 /// scope, and merged into the ancestorScope of every module in the exposing
 /// directory's subtree.
 void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
-    String? rootSelfGlpPath, String nameRoot, TypeEnvironment? rs) {
+    String? rootSelfGlpPath, String nameRoot, TypeEnvironment? rs,
+    {Map<String, Module> layers = const {}}) {
   final pending = <DiscoveredModule>[
     ...modules.where((m) => m.ast.exposes.isNotEmpty),
   ];
@@ -660,8 +976,10 @@ void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
         return DiscoveredModule(
           filePath: self,
           moduleName: modulePathName(self, nameRoot),
-          ast: Module(
-              typeDefs: full.typeDefs, line: full.line, column: full.column),
+          ast: Module(typeDefs: [
+            ...full.typeDefs,
+            ...?layers[_normPath(File(self).parent.path)]?.typeDefs,
+          ], line: full.line, column: full.column),
           ancestorScope: TypeEnvironment.empty(),
           isSelfGlp: true,
           collectedByExpose: true,
@@ -724,17 +1042,12 @@ void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
         continue;
       }
 
-      final chain = discoverSelfChain(
-        targetFile: file.absolute.path,
-        rootDir: file.parent.path,
-        programsDir: programsDir,
-      );
       final exposedDM = DiscoveredModule(
         filePath: file.path,
         moduleName: exposedName,
         ast: exposedAst,
-        ancestorScope: buildAncestorScope(
-            chain: chain, rootSelfGlpPath: rootSelfGlpPath, rootScope: rs),
+        ancestorScope: _layeredScope(file.path, file.parent.path, programsDir,
+            rootSelfGlpPath, rs, layers),
         isSelfGlp: false,
         exposingDir: exposingDirNorm,
         collectedByExpose: true,
@@ -1804,6 +2117,7 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
   // Step 4's cross-module calls, resolved from the caller's directory, and
   // the calls that resolve to nothing, every one of them reported together.
   final resolver = _CrossModuleResolver(modules);
+  final byName = {for (final m in modules) m.moduleName: m};
 
   // Process each module
   for (final mod in modules) {
@@ -1822,6 +2136,8 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
 
       for (final clause in proc.clauses) {
         resolver.checkVolitionalCalls(mod, clause);
+        _checkScopeVolitionalCalls(mod, clause, localSigs, modAncestorProcs,
+            byName);
         final renamedHead = keepBare
             ? clause.head
             : Atom('${mod.moduleName}:${clause.head.functor}',
@@ -2158,6 +2474,46 @@ void _requireDistinctModuleNames(List<DiscoveredModule> modules) {
           'root of both $prev and $path, so the renaming of modules.tex, '
           'Compilation, third step (every procedure and type renamed M:p and '
           'M:T, M the module\'s path from the root) cannot tell them apart.');
+    }
+  }
+}
+
+/// Every call `q(...)` in the body of [clause], a clause of [caller], of a
+/// volitional procedure of a self.vglp in the caller's scope --- the
+/// compiled asking clause, its ask stream last, which the self.glp's module
+/// it joins holds ([DiscoveredModule.volitional]) --- holds a writer at each
+/// output position, as a call `N # q(...)` does
+/// ([_CrossModuleResolver.checkVolitionalCalls]): "every call of a
+/// volitional procedure, in a clause body or in the initial goal, holds a
+/// writer at each output position" (vGLP, Definition "Volitional
+/// Procedure, ..., vGLP Program").  A call the caller's own procedure
+/// answers is not one.
+void _checkScopeVolitionalCalls(
+    DiscoveredModule caller,
+    Clause clause,
+    Set<String> localSigs,
+    Map<String, String> ancestorProcs,
+    Map<String, DiscoveredModule> byName) {
+  Iterable<Goal> calls(Goal g) sync* {
+    if (g is SpawnGoal) {
+      yield* calls(g.innerGoal);
+    } else if (g is! RemoteGoal) {
+      yield g;
+    }
+  }
+
+  for (final g in clause.body ?? const <Goal>[]) {
+    for (final call in calls(g)) {
+      final sig = '${call.functor}/${call.arity}';
+      if (localSigs.contains(sig)) continue;
+      final owner = ancestorProcs[sig];
+      if (owner == null) continue;
+      final v = byName[owner]?.volitional[sig];
+      if (v == null) continue;
+      checkWritersAtOutputs(call, call.args, v,
+          calledAs: v.name,
+          where: 'in the clause ${GlpPrinter().printAtom(clause.head)} at '
+              'line ${clause.line} of ${caller.filePath}');
     }
   }
 }
@@ -2895,9 +3251,22 @@ List<String> emitVglpSources(String rootDir,
   final mediator = _mediatorSource(programsDir);
 
   final rs = _rootScopeOf(rootSelfGlpPath);
-  final modules = _discoverGlpModules(root, programsDir, rootSelfGlpPath, rs);
+  final program = _vglpProgramOf(root, programsDir);
+  final layers = program == null
+      ? const <String, Module>{}
+      : _compileLayers(program, root, programsDir, rootSelfGlpPath, rs);
+  final modules = _discoverGlpModules(root, programsDir, rootSelfGlpPath, rs,
+      layers: layers);
+  TypeEnvironment scopeFor(String vglpPath) => _vglpScope(File(vglpPath),
+      modules, root, programsDir, rootSelfGlpPath, rs, layers);
+  final resolveIn = program == null
+      ? null
+      : _sourceTypes(program, root, programsDir, rootSelfGlpPath, rs, layers);
   return emitCompiledVglp(root.path, mediator,
-      scopeFor: (vglpPath) => _vglpScope(
-          File(vglpPath), modules, root, programsDir, rootSelfGlpPath, rs),
+      scopeFor: scopeFor,
+      contextFor: program == null
+          ? null
+          : (p) => _contextFor(program, p, scopeFor(p), resolveIn!),
+      readerFor: program?.readerFor,
       onSkip: onSkip);
 }

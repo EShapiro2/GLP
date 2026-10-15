@@ -247,15 +247,6 @@ abstract class GlpNetwork {
   /// either may be null.
   void Function(String? oldId, String? newId)? onNetworkChanged;
 
-  /// `generatePeerLink() → URI`: produce a signed, one-time, RV-mediated
-  /// invite link and register the invite with a rendezvous server.
-  Future<String> generatePeerLink();
-
-  /// `consumePeerLink(uri) → PubKey`: verify the inviter's signature, register
-  /// the inviter's identity, submit the redemption claim, and return the
-  /// inviter's public key.
-  Future<PubKey> consumePeerLink(String uri);
-
   /// `putPeerAddress(pk, address)`: inform the layer of peer [pk]'s current
   /// public `ip:port`, learned at the GLP level; the layer records it with the
   /// known peer.  Backs `address_declare/2`.

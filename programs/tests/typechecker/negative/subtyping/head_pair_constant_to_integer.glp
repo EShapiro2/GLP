@@ -1,0 +1,10 @@
+% test: head_pair_constant_to_integer
+% expected: fail (the input's type is not within the output's)
+% description: A variable copied within a head must have its input's type
+%   within its output's (TGLP b927b41, Definition "Well-Typed Clause with
+%   Subtyping", clause (a)).  Copying a Constant input to an Integer output
+%   is refused: Constant is not a subtype of Integer.  Positive twin:
+%   positive/subtyping/head_pair_integer_to_constant.glp.
+
+procedure elem(Constant?, Integer).
+elem(X, X?).

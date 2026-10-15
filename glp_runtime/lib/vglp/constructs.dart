@@ -162,10 +162,9 @@ const listEnd = '[end]';
 
 /// A moded interactive type of the program: its type as written, its mode,
 /// the functor the compilation gives it in Question, and the type parameters
-/// of the procedure that declares it.  Every one is the program's own: "No
-/// vGLP module imports from another module a procedure that reaches a
-/// question, so the questions of a program are those of one module" (vGLP,
-/// Definition "Canonical Compilation").
+/// of the procedure that declares it.  They are the linked program's, every
+/// module's: "the questions of a program are those of all its modules" (vGLP
+/// at a89a751, sections/parts/canonical-compilation.tex).
 class InteractiveType {
   final TypeExpr type;
   final bool readerMode;

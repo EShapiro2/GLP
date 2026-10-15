@@ -544,13 +544,19 @@ pong(b).
       }
     });
 
-    test('a self.vglp holding anything but widget declarations is refused, '
-        'naming it', () {
-      write('self.vglp', 'YesNo? =::= toggle.\nping(a).\n');
-      expect(
-          () => readSelfVglp('${fixture.path}/self.vglp'),
-          throwsA(isA<CompileError>().having((e) => e.message, 'message',
-              allOf(contains('self.vglp'), contains('and nothing else')))));
+    // A self.vglp holds procedures, volitional or not, beside its widget
+    // declarations (vGLP at a89a751, sections/parts/canonical-
+    // compilation.tex; vGLP's task of 2026-10-15 18:28 UTC, item 2): until
+    // then one holding anything but widget declarations was refused here.
+    test('a self.vglp holding procedures and types beside its widget '
+        'declarations: its widget declarations are read off it', () {
+      write('self.vglp', '''
+YesNo? =::= toggle.
+YesNo ::= yes ; no.
+procedure (YesNo?)*ok(Integer?).
+(yes)*ok(_).
+''');
+      expect(readSelfVglp('${fixture.path}/self.vglp'), {'YesNo?': 'toggle'});
     });
   });
   // "A vGLP program declares the type of its output to its person by

@@ -10,15 +10,15 @@ import '../platform/compat.dart';
 /// Format: `[magic(4)] [senderPubkey(32)]` = 36 bytes total.
 ///
 /// The magic bytes identify this as a Grassroots punch packet so receivers
-/// can distinguish it from UDX traffic or other UDP packets.
+/// can distinguish it from the layer's packets and other UDP traffic.
 ///
 /// Punch packets serve one purpose: to create a NAT mapping. The receiver
 /// doesn't need to process them — the act of sending opens our NAT.
 /// But if the receiver's multiplexer hasn't started yet, it can read them
 /// to detect that the hole is open.
 class PunchPacket {
-  /// Magic bytes: "BCPU" (BitChat Punch UDP)
-  static const List<int> magic = [0x42, 0x43, 0x50, 0x55];
+  /// Magic bytes: "GRPU" (Grassroots Punch UDP)
+  static const List<int> magic = [0x47, 0x52, 0x50, 0x55];
 
   /// Expected total packet size
   static const int packetSize = 4 + 32;

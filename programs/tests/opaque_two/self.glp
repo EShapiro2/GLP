@@ -1,0 +1,14 @@
+%% TGLP fixture for opaque activation at a template of two type parameters
+%% (modules.tex, Dynamic Activation, "Opaque types"; GLP-Spec appendix-guards,
+%% "Dynamic activation").  PROVISIONAL (Udi, 2026-10-15), pending GLP-Spec's
+%% final form: opaque_type(P/N, M, Hs) gives the list of type identities, one
+%% per type parameter of the template in declaration order, and
+%% find_type(P/N, Hs, Type) takes it.
+%%
+%% This directory is the host's scope: t/2 below is its entry template, its
+%% parameters D and T typing the person channel and the social graph channel.
+%% guest/ declares its entry as the template's instance at Colour and Note;
+%% host/ activates it holding no declaration of either.
+
+procedure(D, T) t(PersonChannel(D)?, SgChannel(T)?).
+t(_, _).

@@ -211,4 +211,36 @@ void main() {
       expect(err, isNot(contains('no site of the call supplies')));
     });
   });
+  // Merge over a union: the binding is searched for, not committed to the
+  // first type that serves a call's typed sites (TGLP parameterized-types.tex,
+  // Definition "Instantiation"; appendix-implementation-notes.tex, "The
+  // instantiation of a call"; GLP, 2026-10-15 11:00 UTC, item 1).
+  group('merge over a union', () {
+    test('a Stream(Ask(Q)) and a Stream(Input(T)) merged into a '
+        'Stream(Event(Q, T)) load and run', () async {
+      expect(await _answer('union_merge.glp', 'go(E)', 'E'),
+          '[ask(a, q), input(2, [], 3)]');
+    });
+
+    test('two merges chained into a Stream(Event(Q, T)) load and run, the '
+        'second not committed to the draws\' type', () async {
+      expect(await _answer('union_merge.glp', 'go3(E)', 'E'),
+          '[ask(a, q), withdraw(4), input(2, [], 3)]');
+      expect(
+          await _answer(
+              'union_merge.glp',
+              'join3_concrete([ask(a, "q")], [input(2, [], 3)], '
+                  '[withdraw(4)], E)',
+              'E'),
+          '[ask(a, q), withdraw(4), input(2, [], 3)]');
+    });
+
+    test('with the output at Ask(Q) the merges are refused', () {
+      final err = _refusal('union_merge_refused.glp');
+      expect(err, contains('The bindings tried for the call '
+          'merge(Asks?, Ins?, Events) conflict'));
+      expect(err, contains('The bindings tried for the call '
+          'merge(Events1?, Draws?, Events) conflict'));
+    });
+  });
 }

@@ -1,0 +1,17 @@
+%% The merges of union_merge.glp with the output at Ask(Q): the sites supply
+%% Ask(String), Input(Integer) and Draw(Integer), and under no binding are the
+%% clause and merge's clauses well-typed with subtyping, Input(Integer) being
+%% within no Ask, so the bindings conflict and the call is refused (TGLP
+%% appendix-implementation-notes.tex, "The instantiation of a call": "where
+%% types are supplied or fixed and none serves, the bindings conflict and the
+%% call is refused").  GLP, 2026-10-15 11:00 UTC, item 1.
+Ask(Q) ::= ask(Constant, Q).
+
+procedure join(Stream(Ask(String))?, Stream(Input(Integer))?,
+    Stream(Ask(String))).
+join(Asks, Ins, Events?) :- merge(Asks?, Ins?, Events).
+
+procedure join3_concrete(Stream(Ask(String))?, Stream(Input(Integer))?,
+    Stream(Draw(Integer))?, Stream(Ask(String))).
+join3_concrete(Asks, Ins, Draws, Events?) :-
+    merge(Asks?, Ins?, Events1), merge(Events1?, Draws?, Events).

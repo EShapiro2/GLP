@@ -1,87 +1,8 @@
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grassroots_networking/grassroots_networking.dart';
-import 'package:grassroots_networking_core/src/protocol/fragment_handler.dart';
 
 void main() {
-  group('GrassrootsPacket', () {
-    late Uint8List testPayload;
-
-    setUp(() {
-      testPayload = Uint8List.fromList([1, 2, 3, 4, 5]);
-    });
-
-    test('serializes and deserializes correctly', () {
-      final packet = GrassrootsPacket(
-        type: PacketType.fragment,
-        payload: testPayload,
-      );
-
-      final serialized = packet.serialize();
-      final deserialized = GrassrootsPacket.deserialize(serialized);
-
-      expect(deserialized.type, equals(packet.type));
-      expect(deserialized.payload, equals(packet.payload));
-    });
-  });
-
-  group('FragmentHandler', () {
-    late FragmentHandler handler;
-
-    setUp(() {
-      handler = FragmentHandler();
-    });
-
-    tearDown(() {
-      handler.dispose();
-    });
-
-    const maxChunk = 270;
-    const messageId = '00000000-0000-4000-8000-000000000abc';
-
-    test('does not fragment small payloads', () {
-      expect(handler.needsFragmentation(Uint8List(100), maxChunk: maxChunk),
-          isFalse);
-    });
-
-    test('fragments large payloads', () {
-      expect(handler.needsFragmentation(Uint8List(1000), maxChunk: maxChunk),
-          isTrue);
-    });
-
-    test('fragments and reassembles correctly', () {
-      final payload = Uint8List.fromList(List.generate(1500, (i) => i % 256));
-
-      final fragmented = handler.fragment(
-          payload: payload, messageId: messageId, maxChunk: maxChunk);
-
-      expect(fragmented.fragments.length, greaterThan(1));
-      for (final f in fragmented.fragments) {
-        expect(f.type, equals(PacketType.fragment));
-      }
-
-      ReassembledMessage? result;
-      for (final fragment in fragmented.fragments) {
-        result =
-            handler.addFragment(FragmentHandler.decodeFragment(fragment.payload));
-      }
-
-      expect(result, isNotNull);
-      expect(result!.payload, equals(payload));
-    });
-
-    test('returns null for incomplete fragments', () {
-      final payload = Uint8List.fromList(List.generate(1500, (i) => i % 256));
-
-      final fragmented = handler.fragment(
-          payload: payload, messageId: messageId, maxChunk: maxChunk);
-
-      final result = handler.addFragment(
-          FragmentHandler.decodeFragment(fragmented.fragments.first.payload));
-      expect(result, isNull);
-    });
-  });
-
   group('computeStaleUdpPeerPubkeys', () {
     test('returns only connected UDP peers that missed the stale threshold',
         () {

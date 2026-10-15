@@ -21,7 +21,7 @@ Future<List<InternetAddress>> _loopbackHostAddresses() async =>
 
 /// Unsolicited inbound IP contact from outside the agent's own local network
 /// is governed by no trust level (spec §Trust levels): it is refused unless
-/// the peer is in the known-peer set or presents a valid invite. LAN contact
+/// the peer is in the known-peer set. LAN contact
 /// arrives on the same path, a LAN session being an IP session, so the layer
 /// tells the two apart by the source address alone — a source within one of
 /// the agent's own local address prefixes is LAN contact, governed by the LAN
@@ -204,6 +204,53 @@ void main() {
       ),
       isFalse,
     );
+  }, timeout: const Timeout(Duration(minutes: 2)));
+
+  test(
+      'over the WAN an unknown key is refused at the contact gate, and a key '
+      'given by putKnownPeer is answered (GNA §2.5, §2.7)', () async {
+    // A layer running the WAN alone: no level governs its IP contact, so the
+    // known-peer set alone decides.
+    final strangerId = await identityFromSeed(0x65, 'wan-stranger');
+    final knownId = await identityFromSeed(0x66, 'wan-known');
+    final receiverId = await identityFromSeed(0x67, 'wan-receiver');
+
+    final (stranger, _) = await startNode(strangerId);
+    final (known, _) = await startNode(knownId);
+    final (receiver, receiverStore) =
+        await startNode(receiverId, underlays: const {Underlay.wan});
+    addTearDown(() async {
+      await stranger.dispose();
+      await known.dispose();
+      await receiver.dispose();
+    });
+
+    expect(await listeningAddress(stranger), isNotNull);
+    expect(await listeningAddress(known), isNotNull);
+    final receiverAddress = await listeningAddress(receiver);
+    expect(receiverAddress, isNotNull);
+    receiverStore.dispatch(LocalNetworkChangedAction(elsewhereIsLocal));
+    receiver.putKnownPeer(knownId.publicKey);
+
+    Future<bool> answered(GrassrootsNetwork caller, Uint8List callerKey,
+        {required int seconds}) async {
+      caller.putPeerAddress(receiverId.publicKey, receiverAddress!);
+      await caller.send(
+          receiverId.publicKey, Uint8List.fromList(utf8.encode('wan call')));
+      final deadline = DateTime.now().add(Duration(seconds: seconds));
+      while (!receiver.isPeerReachable(callerKey) &&
+          DateTime.now().isBefore(deadline)) {
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+      }
+      return receiver.isPeerReachable(callerKey);
+    }
+
+    expect(await answered(stranger, strangerId.publicKey, seconds: 6), isFalse,
+        reason: 'an unknown key');
+    expect(await answered(known, knownId.publicKey, seconds: 12), isTrue,
+        reason: 'a key given by putKnownPeer');
+    expect(receiver.peerUnderlays(knownId.publicKey), [Underlay.wan]);
+    expect(receiver.isPeerReachable(strangerId.publicKey), isFalse);
   }, timeout: const Timeout(Duration(minutes: 2)));
 
   test('the BLE level does not open the IP path', () async {

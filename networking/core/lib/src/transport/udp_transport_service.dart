@@ -6,6 +6,7 @@ import 'package:redux/redux.dart';
 import '../platform/compat.dart';
 import '../transport/transport_service.dart';
 import '../transport/address_utils.dart';
+import '../transport/hole_punch_service.dart';
 import '../models/identity.dart';
 import '../models/packet.dart';
 import '../protocol/protocol_handler.dart';
@@ -498,13 +499,12 @@ class UdpTransportService extends TransportService {
 
   void _handleDatagram(Datagram datagram) {
     final data = datagram.data;
-    // Punch packets (36 bytes, magic "BCPU") open NAT mappings; nothing to
-    // route.
-    if (data.length == 36 &&
-        data[0] == 0x42 &&
-        data[1] == 0x43 &&
-        data[2] == 0x50 &&
-        data[3] == 0x55) {
+    // Punch packets open NAT mappings; nothing to route.
+    if (data.length == PunchPacket.packetSize &&
+        data[0] == PunchPacket.magic[0] &&
+        data[1] == PunchPacket.magic[1] &&
+        data[2] == PunchPacket.magic[2] &&
+        data[3] == PunchPacket.magic[3]) {
       return;
     }
     if (data.length < GrassrootsPacket.headerSize) return;

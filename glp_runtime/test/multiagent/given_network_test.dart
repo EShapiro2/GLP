@@ -138,10 +138,6 @@ class _WireNetwork extends GlpNetwork {
   @override
   String? networkIdentity() => null;
   @override
-  Future<String> generatePeerLink() => throw UnimplementedError();
-  @override
-  Future<PubKey> consumePeerLink(String uri) => throw UnimplementedError();
-  @override
   void putPeerAddress(PubKey pk, String address) {}
   @override
   String? observedPeerAddress(PubKey pk) => null;
@@ -241,10 +237,6 @@ class _PortNetwork extends GlpNetwork {
   String? getPublicAddress() => null;
   @override
   String? networkIdentity() => null;
-  @override
-  Future<String> generatePeerLink() => throw UnimplementedError();
-  @override
-  Future<PubKey> consumePeerLink(String uri) => throw UnimplementedError();
   @override
   void putPeerAddress(PubKey pk, String address) {}
   @override

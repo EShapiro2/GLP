@@ -9,7 +9,7 @@ import '../models/identity.dart';
 
 /// Load a [GrassrootsIdentity] from a JSON identity file
 /// (`{"seed": <hex>, "nickname": <string>}`), creating the file with a fresh
-/// random seed on first run — the same format `bootstrap_anchor` uses.
+/// random seed on first run.
 Future<GrassrootsIdentity> loadOrCreateIdentity(
   String path, {
   String nickname = 'headless',

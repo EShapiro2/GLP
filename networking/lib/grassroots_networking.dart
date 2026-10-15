@@ -1,8 +1,9 @@
-/// Grassroots Networking Layer for GSG Protocol
-/// 
-/// This package provides a BLE mesh transport layer based on the Grassroots protocol.
+/// GNA's networking layer beneath madGLP, as a Flutter package.
+///
+/// One overlay over three underlays: the PAN over BLE (dual-role), the LAN
+/// discovered by DNS-SD, and the WAN over UDP through rendezvous servers.
 /// It handles:
-/// - BLE Central/Peripheral dual-mode operation
+/// - Noise XX sessions between Ed25519 keys, and attestation, on every underlay
 /// - Packet fragmentation and reassembly
 /// - Local queueing of our own outbound messages for offline peers
 /// 
