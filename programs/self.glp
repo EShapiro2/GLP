@@ -11,6 +11,12 @@
 -expose(social#graph#routing#intro).
 -expose(social#graph#routing#befriend).
 
+% The sGLP monitor (programs/sglp/monitor.glp).  Exposed from the root because
+% it is the only common ancestor of programs/cssn and programs/sglp: CSSN's
+% simulation spawns it as sGLP's harnesses do (TGLP modules.tex, "The -expose
+% directive").
+-expose(sglp#monitor).
+
 % =============================================================================
 % TYPE DEFINITIONS
 % =============================================================================
