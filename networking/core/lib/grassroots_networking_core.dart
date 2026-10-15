@@ -1,7 +1,7 @@
 /// Pure-Dart core of the Grassroots networking layer.
 ///
 /// Everything protocol-bearing lives here — identity, wire format, Noise
-/// sessions, message routing, Redux state, and the UDP/UDX transport — with
+/// sessions, attestation, message routing, Redux state, and the UDP transport — with
 /// no Flutter dependency, so the same internals serve the Flutter package
 /// (which re-exports this library) and headless server embeddings
 /// (`dart compile exe`; see `HeadlessGrassrootsNetwork` and `bin/`).

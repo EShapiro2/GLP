@@ -1,5 +1,10 @@
 name: grassroots_networking
-description: BLE mesh transport layer for GSG protocol. Grassroots protocol.
+description: >-
+  GNA's networking layer beneath madGLP, as a Flutter package: one overlay
+  over three underlays --- the PAN over BLE, the LAN discovered by DNS-SD,
+  and the WAN over UDP through rendezvous servers --- with a Noise XX session
+  between Ed25519 keys and attestation on every underlay.  It re-exports the
+  pure-Dart core, grassroots_networking_core.
 version: 0.1.0
 publish_to: none
 
