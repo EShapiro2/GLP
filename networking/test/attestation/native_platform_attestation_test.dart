@@ -35,14 +35,14 @@ void main() {
       () async {
     answer((call) async => {
           'platform': 'ios',
-          'appId': 'ABCDE12345.com.example.bitchatTransport',
+          'appId': 'ABCDE12345.com.example.grassrootsNetworking',
           'attestationObject': Uint8List.fromList([0xa3, 1, 2]),
         });
     final bytes = await NativePlatformAttestation().attestationFor(pk);
     final content = decodePlatformAttestation(bytes!);
     expect(content, isA<AppAttestContent>());
     content as AppAttestContent;
-    expect(content.appId, 'ABCDE12345.com.example.bitchatTransport');
+    expect(content.appId, 'ABCDE12345.com.example.grassrootsNetworking');
     expect(content.attestationObject, [0xa3, 1, 2]);
     expect(calls.single.method, 'attest');
     expect(calls.single.arguments['identityPublicKey'], pk,

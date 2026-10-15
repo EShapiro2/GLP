@@ -238,7 +238,7 @@ void main() {
         await service.start();
         expect(service.rawSocket, isNotNull);
         final sent = service.rawSocket!.send(
-          Uint8List.fromList(const [0x42, 0x43, 0x50, 0x55]),
+          Uint8List.fromList(const [0x47, 0x52, 0x50, 0x55]),
           _loopbackFor(service),
           service.localPort!,
         );

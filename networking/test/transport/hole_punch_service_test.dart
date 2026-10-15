@@ -14,9 +14,9 @@ void main() {
       final packet = PunchPacket.create(pubkey);
       final bytes = packet.serialize();
 
-      // Magic: "BCPU" (0x42, 0x43, 0x50, 0x55)
-      expect(bytes[0], equals(0x42));
-      expect(bytes[1], equals(0x43));
+      // Magic: "GRPU" (0x47, 0x52, 0x50, 0x55)
+      expect(bytes[0], equals(0x47));
+      expect(bytes[1], equals(0x52));
       expect(bytes[2], equals(0x50));
       expect(bytes[3], equals(0x55));
     });
