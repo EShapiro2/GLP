@@ -510,7 +510,7 @@ measure(_).
       final b = guest('guest_b').derived.opaque['entry/2'];
       expect(a, isNotNull);
       expect(b, isNotNull);
-      expect(a!.type, b!.type);
+      expect(a!.types, b!.types);
       expect(a.entry, b.entry);
     });
 
@@ -518,7 +518,7 @@ measure(_).
       if (!hasRootScope) return;
       final a = guest('guest_a').derived.opaque['entry/2']!;
       final c = guest('guest_c').derived.opaque['entry/2']!;
-      expect(a.type, isNot(c.type));
+      expect(a.types, isNot(c.types));
       expect(a.entry, isNot(c.entry));
     });
 
@@ -530,7 +530,7 @@ measure(_).
       expect(template, isNotNull);
       for (final g in ['guest_a', 'guest_b', 'guest_c']) {
         final record = guest(g).derived.opaque['entry/2']!;
-        expect(opaqueInstanceIdentityHex(template!, [record.type], host),
+        expect(opaqueInstanceIdentityHex(template!, record.types, host),
             record.entry,
             reason: g);
       }
@@ -572,7 +572,7 @@ measure(_).
           move.types), idMove, reason: 'T? names the type T');
       expect(typeIdentityOfTypeHex(TypeRef('Bid', 0, 0), bid.types),
           isNot(idMove));
-      expect(guest('guest_a').derived.opaque['entry/2']!.type, idMove);
+      expect(guest('guest_a').derived.opaque['entry/2']!.types, [idMove]);
     });
 
     test('opaque states are one state exactly when their labels are equal, '

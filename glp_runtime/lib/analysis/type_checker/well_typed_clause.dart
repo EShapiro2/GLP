@@ -630,21 +630,28 @@ const String _activatedMark = ', in the goal run/3 activates';
 /// paper names.  Nowhere else: outside that goal `Opaque` is below no opaque
 /// type (subtyping.dart, [isSubtype]), and it is a variable that stands
 /// there, since a pair is of a variable's two occurrences.
+///
+/// PROVISIONAL (Udi, 2026-10-15), pending GLP-Spec's final form: a template
+/// of k type parameters is activated at the opaque types labelled h_1, ...,
+/// h_k, and `Opaque` is admitted at each position typed by the opaque type
+/// labelled h_i: [sup]'s opaque types are those labelled h_1, ..., h_k, and
+/// `Opaque` in [sub] is taken back to the one [sup] has at the same position
+/// ([isSubtypeWithOpaqueAs]).
 bool _stepBack(
     DFAState sub, DFAState sup, String supLocation, ProgramDFA dfa) {
   if (!supLocation.endsWith(_activatedMark)) return false;
-  final labelled = _labelledOpaqueOf(sup, dfa);
-  if (labelled == null) return false;
+  final labelled = _labelledOpaquesOf(sup, dfa);
+  if (labelled == null || labelled.isEmpty) return false;
   return isSubtypeWithOpaqueAs(sub, sup, labelled, dfa);
 }
 
-/// The opaque type labelled h ([DFAState.isRunOpaqueType]) that output type
-/// [t] has at some position, at either mode, where every opaque type of [t]
-/// is that one: "a type T whose opaque types are labelled h" (TGLP
-/// modules.tex, "Opaque types").  Null where [t] has no opaque type, or one
-/// that is not that one.
-DFAState? _labelledOpaqueOf(DFAState t, ProgramDFA dfa) {
-  DFAState? found;
+/// The opaque types labelled h ([DFAState.isRunOpaqueType]) that output type
+/// [t] has at its positions, at either mode: "a type T whose opaque types are
+/// labelled h" (TGLP modules.tex, "Opaque types"), each h one of the labels a
+/// run/3 activation names.  Empty where [t] has no opaque type, and null where
+/// it has one that is not labelled so.
+Set<DFAState>? _labelledOpaquesOf(DFAState t, ProgramDFA dfa) {
+  final found = <DFAState>{};
   final seen = <String>{};
   final stack = <DFAState>[t];
   while (stack.isNotEmpty) {
@@ -657,8 +664,7 @@ DFAState? _labelledOpaqueOf(DFAState t, ProgramDFA dfa) {
     if (!seen.add(x.name)) continue;
     if (x.isAbstractType) {
       if (!x.isRunOpaqueType) return null;
-      if (found != null && found != x) return null;
-      found = x;
+      found.add(x);
       continue;
     }
     final autom = dfa.automata[x.name];
@@ -677,15 +683,14 @@ class _OpaqueActivation {
   final ast.Goal goal;
 
   /// The template D: the caller's parameterised declaration `find_type/3`
-  /// names, with one type parameter.
+  /// names.
   final ProcDecl template;
 
-  /// h as the clause writes it: the variable `find_type/3` reads it from, or
-  /// the constant it is.
+  /// h_1, ..., h_k as the clause writes them ([_activationLabels]), printed.
   final String label;
 
-  /// D⟨h⟩: the template with its parameter replaced by the opaque type
-  /// labelled h ([runOpaqueTypeName]).
+  /// D⟨h_1, ..., h_k⟩: the template with each parameter replaced by the
+  /// opaque type labelled with its h ([runOpaqueTypeName]).
   final ProcDecl decl;
 
   /// The environment D⟨h⟩ is checked in: the clause's, with the opaque type
@@ -712,11 +717,17 @@ class _OpaqueActivation {
 /// parameter an opaque type labelled by H as the clause writes it --- two
 /// such being one exactly when H is.  A run/3 goal under any other type
 /// identity is read as before, its goal at `_?`.
+///
+/// PROVISIONAL (Udi, 2026-10-15), pending GLP-Spec's final form:
+/// `find_type(P/N, Hs, Type)` takes the list of type identities, one per type
+/// parameter of the template in declaration order, and the template may have
+/// any number k of them; each parameter X_i is replaced by an opaque type
+/// labelled h_i ([_activationLabels]).
 Map<int, _OpaqueActivation> _opaqueActivations(
     TypedClause clause, ProgramDFA dfa, TypeEnvironment env) {
   final atoms = clause.bodyAtoms;
   // The writer Type of each find_type/3 goal: its template and its h.
-  final identities = <String, (ProcDecl, String)>{};
+  final identities = <String, (ProcDecl, List<String>)>{};
   for (final g in atoms) {
     if (!namesRoot(g.functor, 'find_type') || g.arity != 3) continue;
     final ref = g.args[0];
@@ -730,15 +741,10 @@ Map<int, _OpaqueActivation> _opaqueActivations(
     if (arity is! ast.ConstTerm || arity.value is! int) continue;
     if (type is! ast.VarTerm || type.isReader) continue;
     final template = env.paramProcDecls['${name.value}/${arity.value}'];
-    if (template == null || template.typeParams.length != 1) continue;
-    final h = g.args[1];
-    final label = switch (h) {
-      ast.VarTerm(:final name) => name,
-      ast.ConstTerm(:final value) when value != null => constantSource(value),
-      _ => null,
-    };
-    if (label == null) continue;
-    identities[type.name] = (template, label);
+    if (template == null || template.typeParams.isEmpty) continue;
+    final labels = _activationLabels(g.args[1], template.typeParams.length);
+    if (labels == null) continue;
+    identities[type.name] = (template, labels);
   }
   if (identities.isEmpty) return const {};
 
@@ -750,7 +756,7 @@ Map<int, _OpaqueActivation> _opaqueActivations(
     if (type is! ast.VarTerm || !type.isReader) continue;
     final identity = identities[type.name];
     if (identity == null) continue;
-    final (template, label) = identity;
+    final (template, labels) = identity;
     final goal = switch (r.args[0]) {
       ast.StructTerm(:final functor, :final args) =>
         ast.Goal(functor, args, r.line, r.column),
@@ -769,7 +775,10 @@ Map<int, _OpaqueActivation> _opaqueActivations(
     final inst = buildAbstractInstance(
         template, template.typeParams, env.typeTemplates,
         knownMonoTypes: env.types.keys.toSet(),
-        names: {template.typeParams.single: runOpaqueTypeName(label)});
+        names: {
+          for (var k = 0; k < labels.length; k++)
+            template.typeParams[k]: runOpaqueTypeName(labels[k])
+        });
     final fresh = {
       for (final e in inst.typeDefs.entries)
         if (!env.types.containsKey(e.key)) e.key: e.value
@@ -789,8 +798,39 @@ Map<int, _OpaqueActivation> _opaqueActivations(
       }
       addTypesToProgramDFA(dfa, fresh.values, into.types);
     }
-    out[i] = _OpaqueActivation(goal, template, label, inst.decl, into);
+    out[i] = _OpaqueActivation(goal, template,
+        labels.length == 1 ? labels.single : '[${labels.join(', ')}]',
+        inst.decl, into);
   }
+  return out;
+}
+
+/// The labels h_1, ..., h_k of the [k] opaque types a `find_type(P/N, Hs,
+/// Type)` goal's [hs] names, one per type parameter: each element as the
+/// clause writes it --- a variable's name, or a constant's source --- where
+/// [hs] is a list of k elements; the i-th element of the list a variable `H`
+/// holds, `H[i]`, where it is a variable, or `H` itself where k is 1; null
+/// otherwise.  Two labels are one exactly when the clause writes them alike.
+/// PROVISIONAL (Udi, 2026-10-15), pending GLP-Spec's final form.
+List<String>? _activationLabels(ast.Term hs, int k) {
+  String? one(ast.Term t) => switch (t) {
+        ast.VarTerm(:final name) => name,
+        ast.ConstTerm(:final value) when value != null =>
+          constantSource(value),
+        _ => null,
+      };
+  if (hs is ast.VarTerm) {
+    return k == 1 ? [hs.name] : [for (var i = 1; i <= k; i++) '${hs.name}[$i]'];
+  }
+  final out = <String>[];
+  ast.Term? t = hs;
+  while (t is ast.ListTerm && !t.isNil) {
+    final e = t.head == null ? null : one(t.head!);
+    if (e == null) return null;
+    out.add(e);
+    t = t.tail;
+  }
+  if (t is! ast.ListTerm || out.length != k) return null;
   return out;
 }
 

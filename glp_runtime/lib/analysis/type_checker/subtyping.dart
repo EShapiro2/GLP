@@ -40,22 +40,37 @@ bool isSubtype(DFAState stateA, DFAState stateB, ProgramDFA dfa,
 /// the run goal's argument").  The replacement follows [stateA]'s own
 /// structure through every mode inversion, where the comparison reverses
 /// (well_typed_clause.dart, `_stepBack`).
-bool isSubtypeWithOpaqueAs(
-    DFAState stateA, DFAState stateB, DFAState labelled, ProgramDFA dfa) {
+///
+/// PROVISIONAL (Udi, 2026-10-15), pending GLP-Spec's final form: [labelled]
+/// holds the opaque types labelled h_1, ..., h_k of a template of k type
+/// parameters, and `Opaque` is taken back to the one of them the other side
+/// has at the same position; with one, to it wherever `Opaque` stands, as
+/// before.
+bool isSubtypeWithOpaqueAs(DFAState stateA, DFAState stateB,
+    Set<DFAState> labelled, ProgramDFA dfa) {
   return _isSubtype(
       stateA, stateB, dfa, <String>{}, const {}, _OpaqueAs(labelled, true));
 }
 
 /// The replacement of `Opaque` by an opaque type labelled h on one side of a
 /// comparison ([isSubtypeWithOpaqueAs]): on the left where [onLeft], and the
-/// side changes at each mode inversion, where the comparison reverses.
+/// side changes at each mode inversion, where the comparison reverses.  The h
+/// is the one of [labelled] the other side has at that position; where the
+/// other side has none of them, the one of [labelled] if there is one.
 class _OpaqueAs {
-  final DFAState labelled;
+  final Set<DFAState> labelled;
   final bool onLeft;
   const _OpaqueAs(this.labelled, this.onLeft);
   _OpaqueAs get reversed => _OpaqueAs(labelled, !onLeft);
-  DFAState left(DFAState s) => onLeft && s.isOpaqueUnion ? labelled : s;
-  DFAState right(DFAState s) => !onLeft && s.isOpaqueUnion ? labelled : s;
+  DFAState _as(DFAState other) => labelled.contains(other)
+      ? other
+      : labelled.length == 1
+          ? labelled.single
+          : other;
+  DFAState left(DFAState s, DFAState other) =>
+      onLeft && s.isOpaqueUnion ? _as(other) : s;
+  DFAState right(DFAState s, DFAState other) =>
+      !onLeft && s.isOpaqueUnion ? _as(other) : s;
 }
 
 /// Structural type identity (TGLP sections/modules.tex, "Structural type
@@ -114,8 +129,9 @@ T withParametersNotBelowOpaque<T>(T Function() f) {
 bool _isSubtype(DFAState stateA, DFAState stateB, ProgramDFA dfa,
     Set<String> visited, Set<String> open, _OpaqueAs? as) {
   if (as != null) {
-    stateA = as.left(stateA);
-    stateB = as.right(stateB);
+    final a = stateA;
+    stateA = as.left(a, stateB);
+    stateB = as.right(stateB, a);
   }
   if (_isSubtypeCore(stateA, stateB, dfa, visited, open, as)) return true;
   if (open.contains(stateA.baseName) || open.contains(stateB.baseName)) {

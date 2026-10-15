@@ -1,0 +1,7 @@
+%% A guest: its entry is the host's template t/2 (../self.glp) at D = Colour
+%% and T = Note.
+Colour ::= red ; blue.
+Note ::= note(String).
+
+exported procedure t(PersonChannel(Colour)?, SgChannel(Note)?).
+t(_, _).

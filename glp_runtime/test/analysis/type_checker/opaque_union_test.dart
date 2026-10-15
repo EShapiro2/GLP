@@ -144,11 +144,11 @@ void main() {
 
     test('the step back: RootChannel(Opaque) with Opaque as h is below '
         'RootChannel(h), and nothing else is', () {
-      expect(isSubtypeWithOpaqueAs(s('RO'), s('RC'), s(r'$abstract_@H'), dfa),
+      expect(isSubtypeWithOpaqueAs(s('RO'), s('RC'), {s(r'$abstract_@H')}, dfa),
           isTrue);
-      expect(isSubtypeWithOpaqueAs(s('RI'), s('RC'), s(r'$abstract_@H'), dfa),
+      expect(isSubtypeWithOpaqueAs(s('RI'), s('RC'), {s(r'$abstract_@H')}, dfa),
           isFalse);
-      expect(isSubtypeWithOpaqueAs(s('RO'), s('RX'), s(r'$abstract_@H'), dfa),
+      expect(isSubtypeWithOpaqueAs(s('RO'), s('RX'), {s(r'$abstract_@H')}, dfa),
           isFalse);
     });
 
