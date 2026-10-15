@@ -617,15 +617,18 @@ go(N) :- q(N?).
     });
   });
 
-  group('no vGLP module imports from another module a procedure that reaches '
-      'a question (vGLP at f56fc7b, Definition "Canonical Compilation"; '
-      'vGLP\'s task of 2026-10-13 00:43 UTC)', () {
-    // "No vGLP module imports from another module a procedure that reaches a
-    // question, so the questions of a program are those of one module; the
-    // GLP module that forms the program's initial goal imports that module's
-    // compiled procedures, ask streams included, and the dispatcher."  The
-    // compiler refuses such an import, naming the procedure and the module;
-    // an import of a procedure that reaches none compiles as in GLP.
+  group('a procedure that reaches a question is imported as any procedure '
+      'is, with its ask stream added (vGLP at a89a751, sections/parts/'
+      'canonical-compilation.tex; vGLP\'s task of 2026-10-15 18:28 UTC)', () {
+    // "A procedure that reaches a question is exported, imported and shared
+    // as any procedure is, with its ask stream added, so the questions of a
+    // program are those of all its modules."  The one-module rule of
+    // 2026-10-13 00:43 UTC, under which the compiler refused such an import,
+    // is lifted: the import of a volitional procedure is the import of its
+    // asking clause, the import of an ordinary procedure that reaches a
+    // question has its ask stream added, and each call of either is given a
+    // fresh ask stream, merged as a call within the module is; an import of a
+    // procedure that reaches none compiles as in GLP.
     const types = '''
 Peer     ::= Constant.
 YesNo    ::= yes ; no.
@@ -652,16 +655,6 @@ echo(P, P?).
 ''';
     final reaching = _reachingOf({'responder': responder});
 
-    Matcher refused(String procedure, String module) => throwsA(
-        isA<CompileError>().having(
-            (e) => e.message,
-            'message',
-            allOf(
-                contains('imports the '),
-                contains('$procedure of the module $module, which reaches a '
-                    'question: no vGLP module imports from another module a '
-                    'procedure that reaches a question'))));
-
     test('the procedures of N that reach a question, read off its source, by '
         'their source signatures and those of their compiled procedures', () {
       final r = reachingSignatures(responder)!;
@@ -675,45 +668,86 @@ echo(P, P?).
       expect(reachingSignatures('procedure p(Integer?).\np(_).\n'), isNull);
     });
 
-    test('an import of a volitional procedure is refused, naming it and its '
-        'module, with or without N\'s source', () {
+    test('a procedure of N reaches a question through the procedures N '
+        'imports, read off the sources of the modules they are of', () {
+      // relay imports offer_from from responder, and so reaches one; an
+      // ordinary source, it is in neither syntax.
+      const relay = '''
+$types
+imported procedure responder#offer_from(Peer?, Response).
+exported procedure relay(Peer?, Response).
+relay(P, R?) :- ground(P?) | responder # offer_from(P?, R).
+exported procedure idle(Peer?, Peer).
+idle(P, P?).
+''';
+      final r = reachingSignatures(relay, reachingOf: reaching)!;
+      expect(r['relay/2'], 'relay/2');
+      expect(r['relay/3'], 'relay/2');
+      expect(r.containsKey('idle/2'), isFalse);
+      expect(reachingSignatures(relay), isNull);
+    });
+
+    test('an import of a volitional procedure is the import of its asking '
+        'clause, and its call is given an ask stream, with or without N\'s '
+        'source; its interactive type is a question of the importer', () {
       const home = '''
 $types
 imported procedure (Card)*responder#respond(Offer?, Response).
 exported procedure befriend(Peer?, Response).
 befriend(P, R?) :- ground(P?) | responder # respond(offer(P?), R).
 ''';
-      expect(() => compileCanonical(home), refused('volitional procedure '
-          'respond/2', 'responder'));
-      expect(() => compileCanonical(home, reachingOf: reaching),
-          refused('volitional procedure respond/2', 'responder'));
+      for (final s in [
+        compileCanonical(home).source,
+        compileCanonical(home, reachingOf: reaching).source,
+      ]) {
+        expect(
+            s,
+            contains('imported procedure responder#respond(Offer?, Response, '
+                'Stream(Ask(Question))).'));
+        expect(
+            s,
+            contains('exported procedure befriend(Peer?, Response, '
+                'Stream(Ask(Question))).'));
+        expect(
+            s,
+            contains('befriend(P, R?, D?) :- ground(P?) | '
+                'responder # respond(offer(P?), R, D).'));
+        expect(s, contains('Question ::= card_w(Card).'));
+      }
     });
 
-    test('an import of an ordinary procedure that calls a volitional one, '
-        'and so reaches a question, is refused, naming it and its module', () {
-      expect(
-          () => compileCanonical('''
+    test('an import of an ordinary procedure that reaches a question has its '
+        'ask stream added, and its calls, merged with the module\'s own', () {
+      final s = compileCanonical('''
 $types
 procedure (YesNo?)*ok(Peer?).
 (yes)*ok(_).
 imported procedure responder#offer_from(Peer?, Response).
 exported procedure befriend(Peer?, Response).
-befriend(P, R?) :- ground(P?) | responder # offer_from(P?, R).
-''', reachingOf: reaching),
-          refused('procedure offer_from/2', 'responder'));
+befriend(P, R?) :- ground(P?) | ok(P?), responder # offer_from(P?, R).
+''', reachingOf: reaching).source;
+      expect(
+          s,
+          contains('imported procedure responder#offer_from(Peer?, Response, '
+              'Stream(Ask(Question))).'));
+      expect(
+          s,
+          contains('befriend(P, R?, D?) :- ground(P?) | ok(P?, D1), '
+              'responder # offer_from(P?, R, D2), merge(D1?, D2?, D).'));
     });
 
-    test('an import of a volitional procedure as an ordinary one, in vGLP '
-        'arity or with its ask stream, is refused', () {
-      for (final decl in [
-        'imported procedure responder#respond(Offer?, Response, Card).',
-        'imported procedure responder#respond(Offer?, Response, '
-            'Stream(Ask(Question))).',
-      ]) {
-        expect(
-            () => checkNoReachingImport('$types$decl\n', reaching),
-            refused('procedure respond/2', 'responder'));
-      }
+    test('a call of a volitional procedure the source imports holds a writer '
+        'at each output position', () {
+      expect(
+          () => compileCanonical('''
+$types
+imported procedure (Card)*responder#respond(Offer?, Response).
+exported procedure befriend(Peer?, Response?).
+befriend(P, R) :- ground(P?) | responder # respond(offer(P?), R?).
+'''),
+          throwsA(isA<CompileError>().having((e) => e.message, 'message',
+              allOf(contains('responder#respond/2'),
+                  contains('which is not a writer')))));
     });
 
     test('an import of a procedure that reaches no question compiles as in '
@@ -742,12 +776,7 @@ go(P, Q?) :- responder # echo(P?, Q).
         return f.path;
       }
 
-      test('the module file N.vglp beside it, and its compiled module N.glp '
-          'beside that: an import of a procedure of it that reaches a '
-          'question is refused; an N.glp written by hand stands, a GLP '
-          'module', () {
-        write('responder.vglp', responder);
-        const home = '''
+      const home = '''
 $types
 procedure (YesNo?)*ok(Peer?).
 (yes)*ok(_).
@@ -755,12 +784,18 @@ imported procedure responder#offer_from(Peer?, Response).
 exported procedure befriend(Peer?, Response).
 befriend(P, R?) :- ground(P?) | responder # offer_from(P?, R).
 ''';
+      const extended = 'imported procedure responder#offer_from(Peer?, '
+          'Response, Stream(Ask(Question))).';
+
+      test('the module file N.vglp beside it, and its compiled module N.glp '
+          'beside that: an import of a procedure of it that reaches a '
+          'question has its ask stream added; an N.glp written by hand '
+          'stands, a GLP module', () {
+        write('responder.vglp', responder);
         final path = write('home.vglp', home);
-        expect(() => compileVglpSource(home, path: path),
-            refused('procedure offer_from/2', 'responder'));
+        expect(compileVglpSource(home, path: path), contains(extended));
         write('responder.glp', compileVglpSource(responder));
-        expect(() => compileVglpSource(home, path: path),
-            refused('procedure offer_from/2', 'responder'));
+        expect(compileVglpSource(home, path: path), contains(extended));
         write('responder.glp', '%% written by hand\n');
         expect(compileVglpSource(home, path: path),
             contains('imported procedure responder#offer_from(Peer?, '
@@ -768,7 +803,8 @@ befriend(P, R?) :- ground(P?) | responder # offer_from(P?, R).
       });
 
       test('a source in neither syntax that imports a procedure reaching a '
-          'question is refused', () {
+          'question reaches one, and is compiled by the canonical '
+          'compilation', () {
         write('responder.vglp', responder);
         const plain = '''
 $types
@@ -776,8 +812,11 @@ imported procedure responder#offer_from(Peer?, Response).
 exported procedure befriend(Peer?, Response).
 befriend(P, R?) :- ground(P?) | responder # offer_from(P?, R).
 ''';
-        expect(() => compileVglpSource(plain, path: write('home.vglp', plain)),
-            refused('procedure offer_from/2', 'responder'));
+        final s = compileVglpSource(plain, path: write('home.vglp', plain));
+        expect(s, startsWith(compiledHeader));
+        expect(s, contains(extended));
+        expect(s, contains('befriend(P, R?, D?) :- ground(P?) | '
+            'responder # offer_from(P?, R, D).'));
       });
     });
   });

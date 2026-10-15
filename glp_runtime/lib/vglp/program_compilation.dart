@@ -22,8 +22,9 @@ import '../compiler/error.dart';
 import '../compiler/lexer.dart';
 import '../compiler/parser.dart';
 import '../compiler/glp_printer.dart';
-import '../compiler/token.dart';
 import '../analysis/type_checker/type_ast.dart';
+import 'package:path/path.dart' as ppath;
+
 import '../runtime/module_hierarchy.dart' show discoverSelfChain;
 import 'canonical.dart';
 import 'clause_compilation.dart';
@@ -185,27 +186,42 @@ String _emit(ast.Module module, CompiledTypes types, InstantiatedMediator med,
 /// (scopeWidgetDeclarations), the root being the parent of the [mediator]'s
 /// directory, programs/.
 ///
-/// "No vGLP module imports from another module a procedure that reaches a
-/// question" (vGLP, Definition "Canonical Compilation"): a source at [path]
-/// that imports one, by the source of the module beside it that its import
-/// names (_reachingBeside), is refused, in either syntax the canonical
-/// compilation reads.
+/// "A procedure that reaches a question is exported, imported and shared as
+/// any procedure is, with its ask stream added" (vGLP at a89a751,
+/// sections/parts/canonical-compilation.tex): a source at [path] that imports
+/// one, by the source of the module beside it that its import names
+/// (_reachingBeside), or by [reachingOf] where the loader gives it, gives it
+/// and each call of it an ask stream; a source in neither syntax that so
+/// reaches a question, through a procedure it imports or calls from its
+/// scope, is compiled by the canonical compilation, as one in the paper's
+/// syntax is.  [context] is the linked program the source is a module of
+/// ([CanonicalContext]), where the loader compiles it.
 String compileVglpSource(String text,
-    {MediatorSource? mediator, TypeEnvironment? scope, String? path}) {
-  final ReachingReader? reachingOf =
-      path == null ? null : (module) => _reachingBeside(path, module);
-  if (isPaperSyntaxSource(text)) {
+    {MediatorSource? mediator,
+    TypeEnvironment? scope,
+    String? path,
+    ReachingReader? reachingOf,
+    CanonicalContext? context}) {
+  final ReachingReader? reader = reachingOf ??
+      (path == null ? null : (module) => _reachingBeside(path, module));
+  if (isPaperSyntaxSource(text) ||
+      (reachingSignatures(text,
+                  reachingOf: reader,
+                  scopeReaching: context?.scopeReaching ?? const {}) ??
+              const {})
+          .isNotEmpty) {
     final dir = mediator?.directory;
+    final layer = context?.layer ?? false;
     return compileCanonical(text,
-            dispatcher: mediator?.dispatcher,
+            dispatcher: layer ? null : mediator?.dispatcher,
             scope: scope,
             scopeWidgets: path != null && dir != null
                 ? scopeWidgetDeclarations(path, Directory(dir).parent.path)
                 : const {},
-            reachingOf: reachingOf)
+            reachingOf: reader,
+            context: context)
         .source;
   }
-  if (reachingOf != null) checkNoReachingImport(text, reachingOf);
   if (mediator == null) {
     throw StateError('${path ?? 'The source'} is in the old syntax, and the '
         'generic mediator source it compiles against is missing');
@@ -253,8 +269,15 @@ Map<String, String>? _reachingBeside(String importer, String module) {
 /// and a `<stem>.glp` that exists and does not carry the compiler's header is
 /// left alone and reported: switching a deployed program onto its compiled
 /// agent is its own change.
+///
+/// [contextFor] and [readerFor] give, where the loader knows the program, the
+/// linked program each source is a module of and the procedures of the
+/// modules it imports from that reach a question, as the load gives them, so
+/// that the text written is the one the load compiles.
 List<String> emitCompiledVglp(String rootDir, MediatorSource? mediator,
     {required TypeEnvironment Function(String vglpPath) scopeFor,
+    CanonicalContext? Function(String vglpPath)? contextFor,
+    ReachingReader? Function(String vglpPath)? readerFor,
     void Function(String message)? onSkip}) {
   final root = Directory(rootDir);
   if (!root.existsSync()) {
@@ -269,8 +292,12 @@ List<String> emitCompiledVglp(String rootDir, MediatorSource? mediator,
       .toList();
 
   for (final file in sources) {
-    // A self.vglp holds the widget declarations of its self.glp's scope and
-    // is no module (scopeWidgetDeclarations).
+    // A self.vglp is no module: its widget declarations are those of its
+    // self.glp's scope (scopeWidgetDeclarations), and its procedures and
+    // types join its self.glp's module as the program loads, in memory
+    // (program_linker.dart, the self.vglp layers): the one file GLP gives a
+    // directory's shared holdings is its self.glp, which is hand-written and
+    // never overwritten.
     if (file.uri.pathSegments.last == selfVglp) continue;
     final target = '${file.path.substring(0, file.path.length - 5)}.glp';
     final existing = File(target);
@@ -286,7 +313,9 @@ List<String> emitCompiledVglp(String rootDir, MediatorSource? mediator,
         // The old compilation reads types off the checker in this scope; the
         // canonical compilation builds the construct processes from it.
         scope: scopeFor(file.path),
-        path: file.path));
+        path: file.path,
+        reachingOf: readerFor?.call(file.path),
+        context: contextFor?.call(file.path)));
     written.add(target);
   }
   return written;
@@ -324,29 +353,233 @@ Map<String, String> scopeWidgetDeclarations(String path, String programsDir) {
   return out;
 }
 
-/// The widget declarations of the self.vglp at [path], a file of `T =::= W.`
-/// declarations and comments only; anything else in it is refused, naming
-/// the file.
+/// The widget declarations of the self.vglp at [path], `T =::= W.`, by moded
+/// type.  The self.vglp of a directory "holds the procedures, volitional or
+/// not, and the widget declarations shared by every module in that directory
+/// and below it" (vGLP at a89a751, sections/parts/canonical-compilation.tex);
+/// its procedures and types are compiled as its directory's layer
+/// ([VglpProgram]), and only its widget declarations are read here.
 Map<String, String> readSelfVglp(String path) {
-  final WidgetDeclarations w;
   try {
-    w = extractWidgetDeclarations(File(path).readAsStringSync());
+    return extractWidgetDeclarations(File(path).readAsStringSync())
+        .byModedType;
   } on CompileError catch (e) {
     throw CompileError('$path: ${e.message}', e.line, e.column,
         category: e.category);
   }
-  final rest = Lexer(w.stripped)
-      .tokenize()
-      .where((t) => t.type != TokenType.EOF)
-      .toList();
-  if (rest.isNotEmpty) {
-    throw CompileError(
-        '$path holds the widget declarations of its self.glp\'s scope, '
-        '"T =::= W.", and nothing else (vGLP #5 Cowork, 2026-10-03 08:16 UTC, '
-        'item 7)',
-        rest.first.line,
-        rest.first.column,
-        phase: 'parser');
+}
+
+// ---------------------------------------------------------------------------
+// The program: every module's questions, and the self.vglp layers
+// ---------------------------------------------------------------------------
+//
+// "A vGLP program is organised in modules as a GLP program is.  A .vglp
+// source in the directory tree of a program is compiled into a module of that
+// program, as a .glp source is, and the self.vglp of a directory holds the
+// procedures, volitional or not, and the widget declarations shared by every
+// module in that directory and below it, as its self.glp holds those of GLP.
+// A procedure that reaches a question is exported, imported and shared as
+// any procedure is, with its ask stream added, so the questions of a program
+// are those of all its modules.  The compilation forms the type of the asks,
+// the construct processes and the dispatcher for the linked program" (vGLP at
+// a89a751, sections/parts/canonical-compilation.tex).
+//
+// The program's vGLP sources are read before any module is compiled: the
+// self.vglp of each directory on the program's chains that holds a
+// procedure, a declaration or a type --- its LAYER, which joins the module
+// of the self.glp beside it --- and each .vglp module source of the tree,
+// one the loader compiles or one whose compiled module, committed beside it,
+// stands for it.  Their interactive types, in that order --- the layers
+// outermost first, then the modules by path --- are the program's
+// questions, which every compiled module's questions, construct processes
+// and dispatcher are formed over, so that the asks of every module are of
+// one type and its dispatcher serves them all; and which of their
+// procedures reach a question is the least fixpoint over the calls of all of
+// them ([programReaching]).  A program of one module with no layer has that
+// module's questions, as before.
+
+/// The vGLP sources of a program, read before any of its modules is
+/// compiled ([VglpFront]), with the procedures of each that reach a question.
+class VglpProgram {
+  /// The self.vglp layers, outermost first.
+  final List<String> layers;
+
+  /// The module sources, by path.
+  final List<String> modules;
+
+  final Map<String, VglpFront> fronts;
+  final Map<String, Set<String>> reaching;
+
+  /// The device's root, programs/, above which no scope reaches.
+  final String? programsDir;
+
+  final Map<String, Set<String>> _selfGlpSigs = {};
+
+  VglpProgram._(this.layers, this.modules, this.fronts, this.reaching,
+      this.programsDir);
+
+  /// The program of the sources at [layers] and [modules], each by its path:
+  /// those read by the front end, a source in the old syntax keeping its old
+  /// compilation and joining none.  A layer whose directory has no self.glp
+  /// is refused: a directory is a scope by its self.glp (TGLP modules.tex,
+  /// Definition "Root, Scope"), and the layer joins its module.
+  static VglpProgram of(
+      {required List<String> layers,
+      required List<String> modules,
+      String? programsDir}) {
+    final fronts = <String, VglpFront>{};
+    final layerPaths = <String>[];
+    for (final path in layers) {
+      final front = VglpFront.of(File(path).readAsStringSync());
+      if (front == null) continue;
+      if (!File(ppath.join(File(path).parent.path, 'self.glp')).existsSync()) {
+        throw CompileError(
+            '$path holds procedures, declarations or types, and its directory '
+            'has no self.glp: the self.vglp of a directory holds those shared '
+            'by every module in that directory and below it, as its self.glp '
+            'holds those of GLP (vGLP, sections/parts/canonical-'
+            'compilation.tex), and they join the module of the self.glp '
+            'beside it',
+            1, 1, phase: 'analyzer');
+      }
+      fronts[_norm(path)] = front;
+      layerPaths.add(_norm(path));
+    }
+    final modulePaths = <String>[];
+    for (final path in [...modules]..sort()) {
+      final front = VglpFront.of(File(path).readAsStringSync());
+      if (front == null) continue;
+      fronts[_norm(path)] = front;
+      modulePaths.add(_norm(path));
+    }
+    final program = VglpProgram._(layerPaths, modulePaths, fronts, {},
+        programsDir == null ? null : _norm(programsDir));
+    program.reaching.addAll(programReaching(fronts, target: program._target));
+    return program;
   }
-  return w.byModedType;
+
+  static String _norm(String p) => ppath.normalize(File(p).absolute.path);
+
+  /// Whether the source at [path] is of the program and a procedure of it
+  /// reaches a question.
+  bool reaches(String path) => reaching[_norm(path)]?.isNotEmpty ?? false;
+
+  /// The procedure of another source of the program that the call [g] of the
+  /// source [key] names, as its key and signature, or null.  A call N # p
+  /// names the p of the qualifier N: a child directory with a self.glp,
+  /// entered through it and so through its layer, or a module file N.vglp
+  /// beside the caller (TGLP modules.tex, "Cross-module type checking").  A
+  /// call p names the nearest p of the caller's scope, a directory's self.glp
+  /// and its layer one module: a self.glp's p, GLP's, reaches none.
+  (String, String)? _target(String key, ast.Goal g) {
+    final dir = File(key).parent.path;
+    if (g is ast.RemoteGoal) {
+      final inner = g.goal;
+      if (inner is ast.RemoteGoal) return null;
+      final q = g.staticModuleName;
+      final sig = '${inner.functor}/${inner.arity}';
+      final layer = _norm(ppath.join(dir, q, selfVglp));
+      if (File(ppath.join(dir, q, 'self.glp')).existsSync()) {
+        return fronts.containsKey(layer) && layers.contains(layer)
+            ? (layer, sig)
+            : null;
+      }
+      final module = _norm(ppath.join(dir, '$q.vglp'));
+      return modules.contains(module) ? (module, sig) : null;
+    }
+    final sig = '${g.functor}/${g.args.length}';
+    final isLayer = layers.contains(key);
+    var d = _norm(dir);
+    var first = true;
+    while (true) {
+      if (_selfGlpDefines(d, sig)) return null;
+      final layer = _norm(ppath.join(d, selfVglp));
+      if (!(first && isLayer) &&
+          layers.contains(layer) &&
+          fronts[layer]!.own.contains(sig)) {
+        return (layer, sig);
+      }
+      first = false;
+      if (programsDir == null || d == programsDir) return null;
+      if (!ppath.isWithin(programsDir!, d)) return null;
+      d = ppath.dirname(d);
+    }
+  }
+
+  /// Whether the self.glp of [dir] defines or declares [sig].
+  bool _selfGlpDefines(String dir, String sig) =>
+      _selfGlpSigs.putIfAbsent(dir, () {
+        final f = File(ppath.join(dir, 'self.glp'));
+        if (!f.existsSync()) return const {};
+        final m = Parser(Lexer(f.readAsStringSync()).tokenize()).parseModule();
+        return {
+          for (final d in m.procDeclarations)
+            if (!d.imported) d.key,
+          for (final p in m.procedures) p.signature,
+        };
+      }).contains(sig);
+
+  /// The procedures of the scope of the source at [path] that reach a
+  /// question, by the signature a call names them by, each with its record
+  /// where it is volitional ([CanonicalContext.scopeReaching]).
+  Map<String, VolitionalCall?> scopeReachingFor(String path) {
+    final key = _norm(path);
+    final out = <String, VolitionalCall?>{};
+    final sigs = {
+      for (final l in layers)
+        if (l != key) ...reaching[l]!
+    };
+    for (final sig in sigs) {
+      final slash = sig.lastIndexOf('/');
+      final n = int.parse(sig.substring(slash + 1));
+      final t = _target(
+          key,
+          ast.Goal(sig.substring(0, slash),
+              [for (var i = 0; i < n; i++) ast.UnderscoreTerm(0, 0)],
+              0, 0));
+      if (t == null || !reaching[t.$1]!.contains(t.$2)) continue;
+      out[sig] = fronts[t.$1]!.volitional[t.$2];
+    }
+    return out;
+  }
+
+  /// The procedures that reach a question of the module a call of the source
+  /// at [path] names by its qualifier ([ReachingReader]): by their source
+  /// signatures, each to itself.
+  ReachingReader readerFor(String path) {
+    final key = _norm(path);
+    return (module) {
+      final t = _target(
+          key,
+          ast.RemoteGoal(ast.ConstTerm(module, 0, 0),
+              ast.Goal('_', const [], 0, 0), 0, 0));
+      if (t == null) return null;
+      return {for (final s in reaching[t.$1]!) s: s};
+    };
+  }
+
+  /// The context of the source at [path] ([CanonicalContext]): the
+  /// program's interactive types, each resolving its names by [resolveIn]
+  /// in the scope of the source declaring it; [resolvable] says which names
+  /// the source's own scope defines.
+  CanonicalContext contextFor(String path,
+      {required bool Function(String name) resolvable,
+      required TypeDef? Function(String source, String name) resolveIn,
+      Set<String> reservedTypes = const {},
+      Set<String> reservedProcedures = const {}}) {
+    final key = _norm(path);
+    return CanonicalContext(
+      interactive: [
+        for (final s in [...layers, ...modules])
+          for (final t in fronts[s]!.interactive)
+            ProgramInteractive(t.$1, t.$2, t.$3, t.$4, t.$5,
+                (name) => resolveIn(s, name)),
+      ],
+      scopeReaching: scopeReachingFor(key),
+      resolvable: resolvable,
+      reservedTypes: reservedTypes,
+      reservedProcedures: reservedProcedures,
+      layer: layers.contains(key),
+    );
+  }
 }
