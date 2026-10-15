@@ -6495,20 +6495,12 @@ KNOWN_RED=(
     # CSSN's guard negation refused by the parser since GLP's 15ba4b7e (the
     # language has no ~G): twelve more, measured at gap 8b8cc800.
     "test/compiler/program_linker_test.dart: Program discovery discovers all modules in cssn"
-    "test/compiler/program_linker_test.dart: Program discovery excludes self.glp from modules"
-    # Rewritten 2026-10-03 to TGLP modules.tex's first step (GLP #3 Cowork,
-    # 21:18 UTC, "16:01. 6"), it was "excludes boot_direct.glp from modules";
-    # still red on CSSN's guard negation, cssn/childsafe/child_agent.glp:169.
-    "test/compiler/program_linker_test.dart: Program discovery collects every .glp file of the tree, mad_boot/ among them"
-    "test/compiler/program_linker_test.dart: Program discovery modules have correct ancestor scopes"
     "test/compiler/program_linker_test.dart: Linking procedures are renamed with module prefix"
     "test/compiler/program_linker_test.dart: Linking cross-module calls are resolved"
     "test/compiler/program_linker_test.dart: Linking local calls are resolved"
     "test/compiler/program_linker_test.dart: Linking prelude calls are preserved unprefixed"
     "test/compiler/program_linker_test.dart: Linking entry-point aliases exist for the root self.glp forwarded entries"
     "test/compiler/program_linker_test.dart: Linking entry point alias calls renamed procedure"
-    "test/vglp/program_compilation_test.dart: the deployed sources cssn/childsafe/agent.vglp parses as vGLP"
-    "test/vglp/program_compilation_test.dart: the deployed sources cssn/childsafe/child_agent.vglp parses as vGLP"
     "test/compiler/program_linker_test.dart: End-to-end compilation fplay1 produces correct output"
     "test/compiler/program_linker_test.dart: End-to-end compilation linked program compiles to bytecode"
     "test/compiler/program_linker_test.dart: Type checking all modules type-check successfully"
