@@ -22,8 +22,8 @@
 %%
 %% Entry points: balloon/0 and fixed_payment/0, exported by self.glp.
 
-imported procedure village#villager(Key?, Script?, Stream(Conversation)?).
-imported procedure village#escrow_agent(Key?, Script?, Agreement?, Stream(Conversation)?).
+imported procedure village#villager(Key?, Script?, Stream(Conversation(PeerMsg))?).
+imported procedure village#escrow_agent(Key?, Script?, Agreement?, Stream(Conversation(PeerMsg))?).
 
 exported procedure balloon.
 balloon :-

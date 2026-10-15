@@ -50,7 +50,7 @@
 %% certified program is denominated/, which this directory is not (see
 %% self.glp).
 
-imported procedure denominated#sovereign(Key?, PersonChannel(Drawn)?, Stream(Conversation)?, Stream(Integer)?).
+imported procedure denominated#sovereign(Key?, PersonChannel(Drawn)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?).
 imported procedure denominated#person(Key?, _?, PersonIn(Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
 
 exported procedure sovereign_ui(Key?, PersonIn(Drawn)?, Stream(_)?).
@@ -83,7 +83,7 @@ market(Ui) :-
 %% logged, so the run is observable in the app's trace while nothing of the
 %% peers' reaches the central bank's own screen: its manifest views the
 %% messages matching msg(agent, person, S) and nothing else.
-procedure peer(Key?, Script?, Stream(Conversation)?).
+procedure peer(Key?, Script?, Stream(Conversation(PeerMsg))?).
 peer(Id, Script, Convs) :-
     ground(Id?) |
     denominated # sovereign(Id?, ch(Grants?, Draws), Convs?, Cal?),

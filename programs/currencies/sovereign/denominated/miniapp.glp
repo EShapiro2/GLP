@@ -1,8 +1,8 @@
 %% miniapp.glp --- the denominated program as a mini-app of the Grassroots
 %% Super-App (Grassroots Social Graph paper, Section 3).
 %%
-%% sovereign(Id, Ui, Convs) is the goal the super-app activates by run/3, with
-%% exactly its two channels.  Ui is the person channel (vGLP, Definition
+%% sovereign(Id, Ui, Convs) is the mini-app with two of its channels, which its
+%% plays activate by run/3 and miniapp/4 below calls for the super-app.  Ui is the person channel (vGLP, Definition
 %% "Person Channel, Person Writer, GLP with Persons, Grant"): on it the
 %% mini-app receives the person's grants, input(Id, P, R), and shows the
 %% constructs its dispatcher draws and withdraws and the screen of its agent.
@@ -14,16 +14,17 @@
 %%
 %% sovereign/4 is the same with the agent's calendar, a stream of dates, which
 %% on a device the clock writes and which the headless plays write themselves
-%% (../village.glp, ../credit_line.glp, plays.glp).  The super-app grants the
-%% two channels and no clock, so sovereign/3 gives the agent an empty
-%% calendar: its date stands at 0, so a bond it mints matures on a date
-%% later than 0, and no bond of its own is mature by its date.
+%% (../village.glp, ../credit_line.glp, plays.glp).  sovereign/3 gives the
+%% agent an empty calendar: its date stands at 0, so a bond it mints matures
+%% on a date later than 0, and no bond of its own is mature by its date.  The
+%% super-app activates miniapp/4 below, with the calendar it writes from the
+%% device's clock.
 
-imported procedure sovereign_agent#agent(Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Acceptance)?, Integer?, Stream(Ask(Question))).
+imported procedure sovereign_agent#agent(Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Acceptance)?, Integer?, Stream(Ask(Question))).
 imported procedure sovereign_agent#dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
 
-%% The mini-app the super-app activates: no clock, so no date ever advances.
-exported procedure sovereign(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
+%% With no clock, no date ever advances.
+exported procedure sovereign(Key?, PersonChannel(Drawn)?, Stream(Conversation(PeerMsg))?).
 sovereign(Id, Ui, Convs) :- sovereign(Id?, Ui?, Convs?, []).
 
 %% The agent with its dispatcher, the calls of the canonical compilation
@@ -32,7 +33,7 @@ sovereign(Id, Ui, Convs) :- sovereign(Id?, Ui?, Convs?, []).
 %% its screen, and its asks go to the dispatcher, which reads the person
 %% channel; the screen goes to the person on the dispatcher's channel to the
 %% program, which merges it with the constructs' draws.
-exported procedure sovereign(Key?, PersonChannel(Drawn)?, Stream(Conversation)?, Stream(Integer)?).
+exported procedure sovereign(Key?, PersonChannel(Drawn)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?).
 sovereign(Id, Ui, Convs, Cal) :-
     ground(Id?) |
     sovereign_agent # agent(Id?, [], [], Convs?, Cal?, [user_output(Screen)], [], 0, [], 1, Asks),
@@ -50,3 +51,26 @@ show_screen(ch(_, Out?), Screen) :- relay(Screen?, Out).
 procedure relay(Stream(ScreenMsg)?, Stream(Output)).
 relay([msg(_, _, C)|Ms], [C?|Out?]) :- relay(Ms?, Out).
 relay([], []).
+
+%% The entry the super-app activates: the root's entry template miniapp/4
+%% (programs/self.glp) at the mini-app's own two types, Drawn, what its
+%% dispatcher draws for its person, and PeerMsg, the messages of its root
+%% channels, both opaque to the super-app (TGLP modules.tex, Dynamic
+%% Activation, "Opaque types"; vGLP 2026-10-14 13:21 UTC, S2; Currencies
+%% 2026-10-13 20:09 UTC, item 1).  Its grants: the person's key, the person
+%% channel, the channel to the social graph, and the calendar the super-app writes from the device's clock, one date a day, the agent's (Currencies
+%% 2026-10-13 20:21 UTC; GSG 2026-10-13 20:59 UTC).  The social graph's stream
+%% gives each conversation to the agent; a held link is passed over, the
+%% mini-app making no warm call, and its stream up to the social graph closes
+%% when the social graph's closes.
+exported procedure miniapp(Key?, PersonChannel(Drawn)?, SgChannel(PeerMsg)?, Stream(Integer)?).
+miniapp(Id, Ui, ch(Down, Up?), Cal) :-
+    sg_conversations(Down?, Convs, Up),
+    sovereign(Id?, Ui?, Convs?, Cal?).
+
+procedure sg_conversations(Stream(SgToApp(PeerMsg))?, Stream(Conversation(PeerMsg)), Stream(AppToSg)).
+sg_conversations([conversation(K, Ch) | Down], [conversation(K?, Ch?) | Convs?], Up?) :-
+    sg_conversations(Down?, Convs, Up).
+sg_conversations([held(_, _) | Down], Convs?, Up?) :-
+    sg_conversations(Down?, Convs, Up).
+sg_conversations([], [], []).

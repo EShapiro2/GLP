@@ -13,7 +13,7 @@
 %% Entry points, exported by self.glp: insurance_claimed/0, insurance_expired/0,
 %% cds_event/0, cds_no_event/0, letter_of_credit/0.
 
-imported procedure village#villager(Key?, Script?, Stream(Conversation)?).
+imported procedure village#villager(Key?, Script?, Stream(Conversation(PeerMsg))?).
 
 %% =============================================================================
 %% Insurance (item 4): insurer Bob's reserve of 20, Alice's premium of 2

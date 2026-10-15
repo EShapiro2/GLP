@@ -22,7 +22,7 @@
 %% This file is the harness of the app, not part of the currency: the certified
 %% program is currency/, which this directory is not (see self.glp).
 
-imported procedure currency#coins(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
+imported procedure currency#coins(Key?, PersonChannel(Drawn)?, Stream(Conversation(PeerMsg))?).
 imported procedure currency#person(Key?, _?, PersonIn(Drawn), Script?, Stream(ScreenContent)).
 
 exported procedure coins_ui(Key?, PersonIn(Drawn)?, Stream(_)?).

@@ -32,7 +32,7 @@
 %% contract as the payment of a fiat coin does (Udi, 2026-09-15).  See
 %% collateral.glp, which carries the same note.
 
-imported procedure village#villager(Key?, Script?, Stream(Conversation)?).
+imported procedure village#villager(Key?, Script?, Stream(Conversation(PeerMsg))?).
 
 %% =============================================================================
 %% The forward contract

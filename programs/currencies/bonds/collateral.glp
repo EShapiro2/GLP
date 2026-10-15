@@ -38,7 +38,7 @@
 %%
 %% Entry point: run/0, exported by self.glp as collateral/0.
 
-imported procedure village#villager(Key?, Script?, Stream(Conversation)?).
+imported procedure village#villager(Key?, Script?, Stream(Conversation(PeerMsg))?).
 
 exported procedure run.
 run :-

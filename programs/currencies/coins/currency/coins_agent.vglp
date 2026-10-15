@@ -70,7 +70,7 @@ decide_swap(no, From, _, Offered, Resp?, Ans?) :-
 %% and its machine state --- holdings, and the serial its next coin takes.
 %% Its question is the stream of the person's requests.
 
-exported procedure (Stream(Request)?)*agent(Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
+exported procedure (Stream(Request)?)*agent(Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
 
 %% Ask the person for their requests, once, and serve them.
 (Reqs)*agent(Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :-
@@ -79,7 +79,7 @@ exported procedure (Stream(Request)?)*agent(Key?, Stream(UserInMsg)?, Stream(Pee
 %% serve(Reqs, Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial): the agent,
 %% with the rest of the person's requests.
 
-procedure serve(Stream(Request)?, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
+procedure serve(Stream(Request)?, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
 
 %% --- Reactive: acts arriving from counterparties, on their conversations ---
 
@@ -203,7 +203,7 @@ serve([redeem(Friend, WantCoin)|Reqs], Id, UserIn, PeerIn, Convs, Outs, Holdings
 %% An arriving act, on the conversation it came on
 %% =============================================================================
 
-procedure on_act(PeerContent?, Key?, Key?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
+procedure on_act(PeerContent?, Key?, Key?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
 
 %% Pay_{p,q}(k) at q: the coins are q's own, so they are taken.
 on_act(pay(Coins), From, Id, Reqs, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :-
@@ -234,7 +234,7 @@ on_act(return(Coins), From, Id, Reqs, UserIn, PeerIn, Convs, Outs, Holdings, Ser
 
 %% A payment of my own coins is taken; coins that are not mine are no payment
 %% of clause 3, and go back.
-procedure take_payment(Decision?, Key?, Key?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
+procedure take_payment(Decision?, Key?, Key?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
 take_payment(yes, Id, From, Coins, Reqs, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :-
     ground(Coins?) |
     append_coins(Holdings?, Coins?, Holdings1),
@@ -247,7 +247,7 @@ take_payment(no, Id, From, Coins, Reqs, UserIn, PeerIn, Convs, Outs, Holdings, S
 
 %% A presentation: my coin is taken back and an R-coin given, if held; else the
 %% coin goes back with the issuers of the coins I hold; a coin not mine goes back.
-procedure fulfil(Coin?, Key?, RedeemResponse, Key?, Key?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
+procedure fulfil(Coin?, Key?, RedeemResponse, Key?, Key?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
 fulfil(coin(I, S), R, Resp?, Id, From, Reqs, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :-
     I? =?= Id? |
     take_coin(R?, Holdings?, Found, Rest),
@@ -257,7 +257,7 @@ fulfil(coin(I, S), _, redeem_declined(coin(I?, S?)), Id, From, Reqs, UserIn, Pee
     show(refused(From?), Outs?, Outs1),
     serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Holdings?, Serial?).
 
-procedure give(Found?, Coin?, Key?, RedeemResponse, Key?, Key?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
+procedure give(Found?, Coin?, Key?, RedeemResponse, Key?, Key?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
 give(found(C), Mine, R, redeem_give(C?), Id, From, Reqs, UserIn, PeerIn, Convs, Outs, Rest, Serial) :-
     append_coins(Rest?, [Mine?], Holdings1),
     show(presented(From?, R?), Outs?, Outs1),
@@ -270,7 +270,7 @@ give(not_found, Mine, R, redeem_menu(Mine?, Menu?), Id, From, Reqs, UserIn, Peer
 
 %% An accepted swap is filled: the wanted coins go and the offered ones come;
 %% wanted coins not held decline it.
-procedure fill_swap(Status?, Key?, Key?, SwapResponse, Stream(Coin)?, Stream(Coin)?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Integer?).
+procedure fill_swap(Status?, Key?, Key?, SwapResponse, Stream(Coin)?, Stream(Coin)?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Integer?).
 fill_swap(ok, Id, From, swap_accept(Give?), Give, Offered, Rest, Reqs, UserIn, PeerIn, Convs, Outs, Serial) :-
     append_coins(Rest?, Offered?, Holdings1),
     show(swap_done(From?), Outs?, Outs1),
@@ -285,7 +285,7 @@ fill_swap(fail, Id, From, swap_decline(Offered?), Give, Offered, Rest, Reqs, Use
 %% =============================================================================
 
 %% Swap: the proposal, with the coins given set aside until the answer.
-procedure propose_swap(Status?, Key?, Key?, Lot?, Lot?, Stream(Coin)?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Integer?).
+procedure propose_swap(Status?, Key?, Key?, Lot?, Lot?, Stream(Coin)?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Integer?).
 propose_swap(ok, Id, Q, _, Want, Give, Rest, Reqs, UserIn, PeerIn, Convs, Outs, Serial) :-
     ground(Q?), ground(Want?), ground(Give?) |
     has_peer(Q?, Outs?, Outs1, Known),
@@ -297,7 +297,7 @@ propose_swap(fail, Id, _, lot(U, K), _, Give, Rest, Reqs, UserIn, PeerIn, Convs,
 
 %% On the conversation with Q, holding the coins given until Q answers; with
 %% no conversation open, the coins stay.
-procedure send_swap(Decision?, Key?, Key?, Lot?, Stream(Coin)?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Integer?).
+procedure send_swap(Decision?, Key?, Key?, Lot?, Stream(Coin)?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Integer?).
 send_swap(yes, Id, Q, Want, Give, Rest, Reqs, UserIn, PeerIn, Convs, Outs, Serial) :-
     ground(Q?) |
     send_friend(Q?, msg(Id?, Q?, swap(Want?, Give?, Resp)), Outs?, Outs1),
@@ -309,7 +309,7 @@ send_swap(no, Id, Q, _, Give, Rest, Reqs, UserIn, PeerIn, Convs, Outs, Serial) :
     serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Orig?, Serial?).
 
 %% Pay: the coins go to Q.
-procedure do_pay(Status?, Key?, Key?, Integer?, Stream(Coin)?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Integer?).
+procedure do_pay(Status?, Key?, Key?, Integer?, Stream(Coin)?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Integer?).
 do_pay(ok, Id, Q, K, Give, Rest, Reqs, UserIn, PeerIn, Convs, Outs, Serial) :-
     ground(Q?) |
     has_peer(Q?, Outs?, Outs1, Known),
@@ -320,7 +320,7 @@ do_pay(fail, Id, Q, K, Give, Rest, Reqs, UserIn, PeerIn, Convs, Outs, Serial) :-
     serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Orig?, Serial?).
 
 %% On the conversation with Q; with no conversation open, the coins stay.
-procedure send_pay(Decision?, Key?, Key?, Integer?, Stream(Coin)?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Integer?).
+procedure send_pay(Decision?, Key?, Key?, Integer?, Stream(Coin)?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Integer?).
 send_pay(yes, Id, Q, K, Give, Rest, Reqs, UserIn, PeerIn, Convs, Outs, Serial) :-
     ground(Q?) |
     send_friend(Q?, msg(Id?, Q?, pay(Give?)), Outs?, Outs1),
@@ -332,7 +332,7 @@ send_pay(no, Id, Q, _, Give, Rest, Reqs, UserIn, PeerIn, Convs, Outs, Serial) :-
     serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Orig?, Serial?).
 
 %% Redeem: the coin is presented to Q, with the issuer wanted.
-procedure do_redeem(Found?, Key?, Key?, Key?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Integer?).
+procedure do_redeem(Found?, Key?, Key?, Key?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Integer?).
 do_redeem(found(C), Id, Q, R, Rest, Reqs, UserIn, PeerIn, Convs, Outs, Serial) :-
     ground(Q?) |
     has_peer(Q?, Outs?, Outs1, Known),
@@ -342,7 +342,7 @@ do_redeem(not_found, Id, Q, _, Holdings, Reqs, UserIn, PeerIn, Convs, Outs, Seri
     serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Holdings?, Serial?).
 
 %% On the conversation with Q; with no conversation open, the coin stays.
-procedure send_redeem(Decision?, Key?, Key?, Key?, Coin?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Integer?).
+procedure send_redeem(Decision?, Key?, Key?, Key?, Coin?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Integer?).
 send_redeem(yes, Id, Q, R, C, Rest, Reqs, UserIn, PeerIn, Convs, Outs, Serial) :-
     ground(Q?) |
     send_friend(Q?, msg(Id?, Q?, redeem(C?, R?, Resp)), Outs?, Outs1),
@@ -354,7 +354,7 @@ send_redeem(no, Id, Q, _, C, Rest, Reqs, UserIn, PeerIn, Convs, Outs, Serial) :-
     serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Orig?, Serial?).
 
 %% After a change of holdings: the screen shows them, and the agent continues.
-procedure after_change(Stream(Request)?, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
+procedure after_change(Stream(Request)?, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
 after_change(Reqs, Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :-
     ground(Holdings?) |
     tally(Holdings?, [], Lots),

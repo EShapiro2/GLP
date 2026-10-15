@@ -48,7 +48,7 @@
 %%
 %% Entry point: market/0, exported by self.glp as village/0.
 
-imported procedure dated#bonds(Key?, PersonChannel(Drawn)?, Stream(Conversation)?, Stream(Integer)?).
+imported procedure dated#bonds(Key?, PersonChannel(Drawn)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?).
 imported procedure dated#person(Key?, _?, PersonIn(Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
 
 %% =============================================================================
@@ -145,14 +145,14 @@ two_escrows :-
 %% One villager: the mini-app, activated with its person channel, its
 %% conversations and its calendar; the scripted person on the other end of the
 %% channel, under no agreement; and its screen logged.
-exported procedure villager(Key?, Script?, Stream(Conversation)?).
+exported procedure villager(Key?, Script?, Stream(Conversation(PeerMsg))?).
 villager(Id, Script, Convs) :-
     ground(Id?) |
     escrow_agent(Id?, Script?, none, Convs?).
 
 %% A party under an agreement: the same, with the escrow program answering its
 %% transfer cards and willing its releases and returns.
-exported procedure escrow_agent(Key?, Script?, Agreement?, Stream(Conversation)?).
+exported procedure escrow_agent(Key?, Script?, Agreement?, Stream(Conversation(PeerMsg))?).
 escrow_agent(Id, Script, Ag, Convs) :-
     ground(Id?) |
     dated # bonds(Id?, ch(Grants?, Draws), Convs?, Cal?),

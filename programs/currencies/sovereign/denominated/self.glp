@@ -14,13 +14,17 @@
 %% both (TGLP modules.tex: a qualifier is a single child directory, entered
 %% through its self.glp).
 
-imported procedure miniapp#sovereign(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
-exported procedure sovereign(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
+imported procedure miniapp#sovereign(Key?, PersonChannel(Drawn)?, Stream(Conversation(PeerMsg))?).
+exported procedure sovereign(Key?, PersonChannel(Drawn)?, Stream(Conversation(PeerMsg))?).
 sovereign(Id, Ui, Convs) :- miniapp # sovereign(Id?, Ui?, Convs?).
 
-imported procedure miniapp#sovereign(Key?, PersonChannel(Drawn)?, Stream(Conversation)?, Stream(Integer)?).
-exported procedure sovereign(Key?, PersonChannel(Drawn)?, Stream(Conversation)?, Stream(Integer)?).
+imported procedure miniapp#sovereign(Key?, PersonChannel(Drawn)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?).
+exported procedure sovereign(Key?, PersonChannel(Drawn)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?).
 sovereign(Id, Ui, Convs, Cal) :- miniapp # sovereign(Id?, Ui?, Convs?, Cal?).
+
+imported procedure miniapp#miniapp(Key?, PersonChannel(Drawn)?, SgChannel(PeerMsg)?, Stream(Integer)?).
+exported procedure miniapp(Key?, PersonChannel(Drawn)?, SgChannel(PeerMsg)?, Stream(Integer)?).
+miniapp(Id, Ui, Sg, Cal) :- miniapp # miniapp(Id?, Ui?, Sg?, Cal?).
 
 imported procedure person#person(Key?, _?, PersonIn(Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
 exported procedure person(Key?, _?, PersonIn(Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).

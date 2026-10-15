@@ -14,13 +14,17 @@
 %% modules.tex: a qualifier is a single child directory, entered through its
 %% self.glp).
 
-imported procedure miniapp#bonds(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
-exported procedure bonds(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
+imported procedure miniapp#bonds(Key?, PersonChannel(Drawn)?, Stream(Conversation(PeerMsg))?).
+exported procedure bonds(Key?, PersonChannel(Drawn)?, Stream(Conversation(PeerMsg))?).
 bonds(Id, Ui, Convs) :- miniapp # bonds(Id?, Ui?, Convs?).
 
-imported procedure miniapp#bonds(Key?, PersonChannel(Drawn)?, Stream(Conversation)?, Stream(Integer)?).
-exported procedure bonds(Key?, PersonChannel(Drawn)?, Stream(Conversation)?, Stream(Integer)?).
+imported procedure miniapp#bonds(Key?, PersonChannel(Drawn)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?).
+exported procedure bonds(Key?, PersonChannel(Drawn)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?).
 bonds(Id, Ui, Convs, Cal) :- miniapp # bonds(Id?, Ui?, Convs?, Cal?).
+
+imported procedure miniapp#miniapp(Key?, PersonChannel(Drawn)?, SgChannel(PeerMsg)?, Stream(Integer)?).
+exported procedure miniapp(Key?, PersonChannel(Drawn)?, SgChannel(PeerMsg)?, Stream(Integer)?).
+miniapp(Id, Ui, Sg, Cal) :- miniapp # miniapp(Id?, Ui?, Sg?, Cal?).
 
 imported procedure person#person(Key?, _?, PersonIn(Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
 exported procedure person(Key?, _?, PersonIn(Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).

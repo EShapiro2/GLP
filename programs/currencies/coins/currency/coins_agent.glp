@@ -15,13 +15,13 @@ procedure decide_swap(YesNo?, Key?, Lot?, Stream(Coin)?, SwapResponse, Stream(Us
 decide_swap(yes, From, Want, Offered, Resp?, Ans?) :- accept_answer(From?, Want?, Offered?, Resp, Ans).
 decide_swap(no, From, _, Offered, Resp?, Ans?) :- decline_answer(From?, Offered?, Resp, Ans).
 
-exported procedure agent(Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?, Stream(Ask(Question))).
+exported procedure agent(Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Stream(Coin)?, Integer?, Stream(Ask(Question))).
 agent(S1, S2, S3, S4, S5, S6, S7, [ask('Stream(Request)?', stream_request_r(X)) | D?]) :- agent1(S1?, S2?, S3?, S4?, S5?, S6?, S7?, X?, D).
 
-exported procedure agent1(Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?, Stream(Request)?, Stream(Ask(Question))).
+exported procedure agent1(Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Stream(Coin)?, Integer?, Stream(Request)?, Stream(Ask(Question))).
 agent1(Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial, Reqs, D?) :- serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs?, Holdings?, Serial?, D).
 
-procedure serve(Stream(Request)?, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?, Stream(Ask(Question))).
+procedure serve(Stream(Request)?, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Stream(Coin)?, Integer?, Stream(Ask(Question))).
 serve(Reqs, Id, UserIn, [msg(From, Id1, Act) | PeerIn], Convs, Outs, Holdings, Serial, D?) :- (Id? =?= Id1?), ground(From?) | on_act(Act?, From?, Id?, Reqs?, UserIn?, PeerIn?, Convs?, Outs?, Holdings?, Serial?, D).
 serve(Reqs, Id, UserIn, [_ | PeerIn], Convs, Outs, Holdings, Serial, D?) :- ground(Id?), otherwise | serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs?, Holdings?, Serial?, D).
 serve(Reqs, Id, UserIn, PeerIn, [conversation(Q, Ch) | Convs], Outs, Holdings, Serial, D?) :- ground(Id?), ground(Q?) | adopt(Q?, Ch?, Outs?, Outs1, PeerIn?, PeerIn1), show(opened(Q?), Outs1?, Outs2), serve(Reqs?, Id?, UserIn?, PeerIn1?, Convs?, Outs2?, Holdings?, Serial?, D).
@@ -38,53 +38,53 @@ serve([swap(Friend, GiveCoin, GiveAmount, WantCoin, WantAmount) | Reqs], Id, Use
 serve([pay(Friend, Amount) | Reqs], Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial, D?) :- ground(Id?), ground(Friend?), integer(Amount?), (Amount? >= 1) | select_coins(Friend?, Amount?, Holdings?, Status, Give, Rest), do_pay(Status?, Id?, Friend?, Amount?, Give?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Outs?, Serial?, D).
 serve([redeem(Friend, WantCoin) | Reqs], Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial, D?) :- ground(Id?), ground(Friend?), ground(WantCoin?) | take_coin(Friend?, Holdings?, Found, Rest), do_redeem(Found?, Id?, Friend?, WantCoin?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Outs?, Serial?, D).
 
-procedure on_act(PeerContent?, Key?, Key?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?, Stream(Ask(Question))).
+procedure on_act(PeerContent?, Key?, Key?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Stream(Coin)?, Integer?, Stream(Ask(Question))).
 on_act(pay(Coins), From, Id, Reqs, UserIn, PeerIn, Convs, Outs, Holdings, Serial, D?) :- ground(Coins?) | own_coins(Id?, Coins?, Own), take_payment(Own?, Id?, From?, Coins?, Reqs?, UserIn?, PeerIn?, Convs?, Outs?, Holdings?, Serial?, D).
 on_act(redeem(Coin, R, Resp?), From, Id, Reqs, UserIn, PeerIn, Convs, Outs, Holdings, Serial, D?) :- ground(Coin?), ground(R?) | fulfil(Coin?, R?, Resp, Id?, From?, Reqs?, UserIn?, PeerIn?, Convs?, Outs?, Holdings?, Serial?, D).
 on_act(swap(Want, Offered, Resp?), From, Id, Reqs, UserIn, PeerIn, Convs, Outs, Holdings, Serial, D?) :- ground(Want?), ground(Offered?) | respond_swap(offer(From?, Want?, Offered?), Resp, Ans, D1), merge(Ans?, UserIn?, UserIn1), serve(Reqs?, Id?, UserIn1?, PeerIn?, Convs?, Outs?, Holdings?, Serial?, D2), merge(D1?, D2?, D).
 on_act(return(Coins), From, Id, Reqs, UserIn, PeerIn, Convs, Outs, Holdings, Serial, D?) :- ground(Coins?) | append_coins(Holdings?, Coins?, Holdings1), count_coins(Coins?, 0, K), show(returned(From?, K?), Outs?, Outs1), after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Holdings1?, Serial?, D).
 
-procedure take_payment(Decision?, Key?, Key?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?, Stream(Ask(Question))).
+procedure take_payment(Decision?, Key?, Key?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Stream(Coin)?, Integer?, Stream(Ask(Question))).
 take_payment(yes, Id, From, Coins, Reqs, UserIn, PeerIn, Convs, Outs, Holdings, Serial, D?) :- ground(Coins?) | append_coins(Holdings?, Coins?, Holdings1), count_coins(Coins?, 0, K), show(received(From?, K?), Outs?, Outs1), after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Holdings1?, Serial?, D).
 take_payment(no, Id, From, Coins, Reqs, UserIn, PeerIn, Convs, Outs, Holdings, Serial, D?) :- send_friend(From?, msg(Id?, From?, return(Coins?)), Outs?, Outs1), serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Holdings?, Serial?, D).
 
-procedure fulfil(Coin?, Key?, RedeemResponse, Key?, Key?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?, Stream(Ask(Question))).
+procedure fulfil(Coin?, Key?, RedeemResponse, Key?, Key?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Stream(Coin)?, Integer?, Stream(Ask(Question))).
 fulfil(coin(I, S), R, Resp?, Id, From, Reqs, UserIn, PeerIn, Convs, Outs, Holdings, Serial, D?) :- (I? =?= Id?) | take_coin(R?, Holdings?, Found, Rest), give(Found?, coin(I?, S?), R?, Resp, Id?, From?, Reqs?, UserIn?, PeerIn?, Convs?, Outs?, Rest?, Serial?, D).
 fulfil(coin(I, S), _, redeem_declined(coin(I?, S?)), Id, From, Reqs, UserIn, PeerIn, Convs, Outs, Holdings, Serial, D?) :- otherwise | show(refused(From?), Outs?, Outs1), serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Holdings?, Serial?, D).
 
-procedure give(Found?, Coin?, Key?, RedeemResponse, Key?, Key?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?, Stream(Ask(Question))).
+procedure give(Found?, Coin?, Key?, RedeemResponse, Key?, Key?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Stream(Coin)?, Integer?, Stream(Ask(Question))).
 give(found(C), Mine, R, redeem_give(C?), Id, From, Reqs, UserIn, PeerIn, Convs, Outs, Rest, Serial, D?) :- append_coins(Rest?, [Mine?], Holdings1), show(presented(From?, R?), Outs?, Outs1), after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Holdings1?, Serial?, D).
 give(not_found, Mine, R, redeem_menu(Mine?, Menu?), Id, From, Reqs, UserIn, PeerIn, Convs, Outs, Rest, Serial, D?) :- ground(Rest?) | menu_of(Id?, Rest?, [], Menu), show(unfulfilled(From?, R?), Outs?, Outs1), serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Rest?, Serial?, D).
 
-procedure fill_swap(Status?, Key?, Key?, SwapResponse, Stream(Coin)?, Stream(Coin)?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Integer?, Stream(Ask(Question))).
+procedure fill_swap(Status?, Key?, Key?, SwapResponse, Stream(Coin)?, Stream(Coin)?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Integer?, Stream(Ask(Question))).
 fill_swap(ok, Id, From, swap_accept(Give?), Give, Offered, Rest, Reqs, UserIn, PeerIn, Convs, Outs, Serial, D?) :- append_coins(Rest?, Offered?, Holdings1), show(swap_done(From?), Outs?, Outs1), after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Holdings1?, Serial?, D).
 fill_swap(fail, Id, From, swap_decline(Offered?), Give, Offered, Rest, Reqs, UserIn, PeerIn, Convs, Outs, Serial, D?) :- append_coins(Give?, Rest?, Orig), show(swap_failed(From?), Outs?, Outs1), serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Orig?, Serial?, D).
 
-procedure propose_swap(Status?, Key?, Key?, Lot?, Lot?, Stream(Coin)?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Integer?, Stream(Ask(Question))).
+procedure propose_swap(Status?, Key?, Key?, Lot?, Lot?, Stream(Coin)?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Integer?, Stream(Ask(Question))).
 propose_swap(ok, Id, Q, _, Want, Give, Rest, Reqs, UserIn, PeerIn, Convs, Outs, Serial, D?) :- ground(Q?), ground(Want?), ground(Give?) | has_peer(Q?, Outs?, Outs1, Known), send_swap(Known?, Id?, Q?, Want?, Give?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Outs1?, Serial?, D).
 propose_swap(fail, Id, _, lot(U, K), _, Give, Rest, Reqs, UserIn, PeerIn, Convs, Outs, Serial, D?) :- append_coins(Give?, Rest?, Orig), show(lacking(U?, K?), Outs?, Outs1), serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Orig?, Serial?, D).
 
-procedure send_swap(Decision?, Key?, Key?, Lot?, Stream(Coin)?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Integer?, Stream(Ask(Question))).
+procedure send_swap(Decision?, Key?, Key?, Lot?, Stream(Coin)?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Integer?, Stream(Ask(Question))).
 send_swap(yes, Id, Q, Want, Give, Rest, Reqs, UserIn, PeerIn, Convs, Outs, Serial, D?) :- ground(Q?) | send_friend(Q?, msg(Id?, Q?, swap(Want?, Give?, Resp)), Outs?, Outs1), inject_swap_result(Resp?, Q?, UserIn?, UserIn1), after_change(Reqs?, Id?, UserIn1?, PeerIn?, Convs?, Outs1?, Rest?, Serial?, D).
 send_swap(no, Id, Q, _, Give, Rest, Reqs, UserIn, PeerIn, Convs, Outs, Serial, D?) :- append_coins(Give?, Rest?, Orig), show(no_conversation(Q?), Outs?, Outs1), serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Orig?, Serial?, D).
 
-procedure do_pay(Status?, Key?, Key?, Integer?, Stream(Coin)?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Integer?, Stream(Ask(Question))).
+procedure do_pay(Status?, Key?, Key?, Integer?, Stream(Coin)?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Integer?, Stream(Ask(Question))).
 do_pay(ok, Id, Q, K, Give, Rest, Reqs, UserIn, PeerIn, Convs, Outs, Serial, D?) :- ground(Q?) | has_peer(Q?, Outs?, Outs1, Known), send_pay(Known?, Id?, Q?, K?, Give?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Outs1?, Serial?, D).
 do_pay(fail, Id, Q, K, Give, Rest, Reqs, UserIn, PeerIn, Convs, Outs, Serial, D?) :- append_coins(Give?, Rest?, Orig), show(lacking(Q?, K?), Outs?, Outs1), serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Orig?, Serial?, D).
 
-procedure send_pay(Decision?, Key?, Key?, Integer?, Stream(Coin)?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Integer?, Stream(Ask(Question))).
+procedure send_pay(Decision?, Key?, Key?, Integer?, Stream(Coin)?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Integer?, Stream(Ask(Question))).
 send_pay(yes, Id, Q, K, Give, Rest, Reqs, UserIn, PeerIn, Convs, Outs, Serial, D?) :- ground(Q?) | send_friend(Q?, msg(Id?, Q?, pay(Give?)), Outs?, Outs1), show(paid(Q?, K?), Outs1?, Outs2), after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs2?, Rest?, Serial?, D).
 send_pay(no, Id, Q, _, Give, Rest, Reqs, UserIn, PeerIn, Convs, Outs, Serial, D?) :- append_coins(Give?, Rest?, Orig), show(no_conversation(Q?), Outs?, Outs1), serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Orig?, Serial?, D).
 
-procedure do_redeem(Found?, Key?, Key?, Key?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Integer?, Stream(Ask(Question))).
+procedure do_redeem(Found?, Key?, Key?, Key?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Integer?, Stream(Ask(Question))).
 do_redeem(found(C), Id, Q, R, Rest, Reqs, UserIn, PeerIn, Convs, Outs, Serial, D?) :- ground(Q?) | has_peer(Q?, Outs?, Outs1, Known), send_redeem(Known?, Id?, Q?, R?, C?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Outs1?, Serial?, D).
 do_redeem(not_found, Id, Q, _, Holdings, Reqs, UserIn, PeerIn, Convs, Outs, Serial, D?) :- show(lacking(Q?, 1), Outs?, Outs1), serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Holdings?, Serial?, D).
 
-procedure send_redeem(Decision?, Key?, Key?, Key?, Coin?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Integer?, Stream(Ask(Question))).
+procedure send_redeem(Decision?, Key?, Key?, Key?, Coin?, Stream(Coin)?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Integer?, Stream(Ask(Question))).
 send_redeem(yes, Id, Q, R, C, Rest, Reqs, UserIn, PeerIn, Convs, Outs, Serial, D?) :- ground(Q?) | send_friend(Q?, msg(Id?, Q?, redeem(C?, R?, Resp)), Outs?, Outs1), inject_redeem_result(Resp?, Q?, UserIn?, UserIn1), after_change(Reqs?, Id?, UserIn1?, PeerIn?, Convs?, Outs1?, Rest?, Serial?, D).
 send_redeem(no, Id, Q, _, C, Rest, Reqs, UserIn, PeerIn, Convs, Outs, Serial, D?) :- append_coins(Rest?, [C?], Orig), show(no_conversation(Q?), Outs?, Outs1), serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Orig?, Serial?, D).
 
-procedure after_change(Stream(Request)?, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?, Stream(Ask(Question))).
+procedure after_change(Stream(Request)?, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Stream(Coin)?, Integer?, Stream(Ask(Question))).
 after_change(Reqs, Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial, D?) :- ground(Holdings?) | tally(Holdings?, [], Lots), show(holdings(Lots?), Outs?, Outs1), serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Holdings?, Serial?, D).
 
 %% --- the dispatcher (programs/vglp/dispatcher.glp) ---

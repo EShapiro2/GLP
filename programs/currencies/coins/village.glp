@@ -38,7 +38,7 @@
 %% renders.  The app's interface code therefore draws that villager's screen
 %% from the run, while its scripted person grants its acts as before.
 
-imported procedure currency#coins(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
+imported procedure currency#coins(Key?, PersonChannel(Drawn)?, Stream(Conversation(PeerMsg))?).
 imported procedure currency#person(Key?, _?, PersonIn(Drawn), Script?, Stream(ScreenContent)).
 
 %% =============================================================================
@@ -93,10 +93,10 @@ market(V) :-
 %% conversations, the scripted person on the other end of the channel, and its
 %% screen logged.  The villager on the app's path has its events sent to the
 %% user as well.
-exported procedure villager(Key?, Script?, Stream(Conversation)?).
+exported procedure villager(Key?, Script?, Stream(Conversation(PeerMsg))?).
 villager(Id, Script, Convs) :- villager(none, Id?, Script?, Convs?).
 
-procedure villager(Constant?, Key?, Script?, Stream(Conversation)?).
+procedure villager(Constant?, Key?, Script?, Stream(Conversation(PeerMsg))?).
 villager(V, Id, Script, Convs) :-
     V? =?= Id? |
     currency # coins(Id?, ch(Grants?, Events), Convs?),

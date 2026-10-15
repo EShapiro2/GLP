@@ -53,7 +53,7 @@
 %% Entry points: market/0, exported by self.glp as village/0; and
 %% sovereign_market/0, exported as sovereign_village/0.
 
-imported procedure denominated#sovereign(Key?, PersonChannel(Drawn)?, Stream(Conversation)?, Stream(Integer)?).
+imported procedure denominated#sovereign(Key?, PersonChannel(Drawn)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?).
 imported procedure denominated#person(Key?, _?, PersonIn(Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
 
 %% =============================================================================
@@ -226,14 +226,14 @@ sov_script(P, S?) :- otherwise | script(P?, S).
 %% One villager: the mini-app, activated with its person channel, its
 %% conversations and its calendar; the scripted person on the other end of the
 %% channel, under no agreement; and its screen logged.
-exported procedure villager(Key?, Script?, Stream(Conversation)?).
+exported procedure villager(Key?, Script?, Stream(Conversation(PeerMsg))?).
 villager(Id, Script, Convs) :-
     ground(Id?) |
     escrow_agent(Id?, Script?, none, Convs?).
 
 %% A party under an agreement: the same, with the escrow program answering its
 %% transfer cards and willing its releases and returns.
-exported procedure escrow_agent(Key?, Script?, Agreement?, Stream(Conversation)?).
+exported procedure escrow_agent(Key?, Script?, Agreement?, Stream(Conversation(PeerMsg))?).
 escrow_agent(Id, Script, Ag, Convs) :-
     ground(Id?) |
     denominated # sovereign(Id?, ch(Grants?, Draws), Convs?, Cal?),

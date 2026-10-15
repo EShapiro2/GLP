@@ -65,13 +65,12 @@ PeerContent ::= pay(Stream(Instrument), PayResponse?)
               ; mature(Instrument, MatureResponse?)
               ; transfer(Kind, Stream(Instrument), TransferResponse?).
 PeerMsg     ::= msg(Key, Key, PeerContent).
-PeerChannel ::= ch(Stream(PeerMsg), Stream(PeerMsg)?).
 
 %% What the social graph hands the mini-app on its channel to the social graph
-%% (Grassroots Social Graph paper, Section 3): at each invitation, one end of
-%% the root channel of a conversation with a friend's execution of this
-%% program.  Two agents transact over that channel and over nothing else.
-Conversation ::= conversation(Key, PeerChannel).
+%% is the root's Conversation(T) at the mini-app's own type, PeerMsg, and the
+%% root channel the root's RootChannel(PeerMsg) (programs/self.glp; GLP,
+%% 2026-10-13 20:04 UTC, item 2: the root takes each name, every duplicate
+%% deleted).  Two agents transact over that channel and over nothing else.
 
 %% Whether an instrument was found in the holdings.
 Found ::= found(Instrument) ; not_found.
@@ -441,7 +440,7 @@ has_peer(_, [], [], no).
 
 %% Adopt the channel of a conversation with Q: its write side becomes Q's
 %% output entry and its read side joins the input from counterparties.
-procedure adopt(Key?, PeerChannel?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(PeerMsg)?, Stream(PeerMsg)).
+procedure adopt(Key?, RootChannel(PeerMsg)?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(PeerMsg)?, Stream(PeerMsg)).
 adopt(Q, ch(In, Out?), Outs, Outs1?, PeerIn, PeerIn1?) :-
     ground(Q?) |
     add_friend_output(Q?, Out, Outs?, Outs1),
