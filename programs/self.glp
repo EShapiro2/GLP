@@ -111,8 +111,10 @@ Done ::= done.
 % "The Grassroots Super-App", "Activation and joining" and "What the super-app
 % grants a mini-app"; TGLP modules.tex, Dynamic Activation, "Opaque types").
 % The super-app holds no declaration of a mini-app's types: it declares one
-% entry template, whose one type parameter T is the mini-app's own type, and
-% every mini-app declares its entry as the template's instance at T.  Declared
+% entry template, whose two type parameters D and T are the mini-app's own,
+% D what it draws for its person and T its root channels' messages (vGLP,
+% 2026-10-14 13:21 UTC, S2), and every mini-app declares its entry as the
+% template's instance at its D and T.  Declared
 % here, above every program, the lowest common ancestor of the super-app and
 % the mini-apps (GLP, 2026-10-13 12:52 UTC, O2; 20:04 UTC, item 2).  No type
 % parameter occurs as an alternative of a type definition (TGLP Definition
@@ -365,18 +367,23 @@ send_to_user([]).
 % channel, the channel to the social graph, and the calendar, a stream of
 % dates the super-app writes from the device's clock, one a day, which a
 % mini-app that keeps no dates ignores (GSG paper, "What the super-app grants
-% a mini-app").  One entry name for every mini-app; never run here.
-procedure(T) miniapp(Key?, PersonChannel(T)?, SgChannel(T)?, Stream(Integer)?).
+% a mini-app").  Two type parameters, one per channel (vGLP, 2026-10-14 13:21
+% UTC, S2; Udi: yes): D, what the mini-app draws for its person, formed by
+% vGLP's compiler from the wrapped drawn types and the grants' R types, and
+% T, the mini-app's own type, the messages of its root channels; neither
+% contains the other, and a hand-written mini-app chooses both.  One entry
+% name for every mini-app; never run here.
+procedure(D, T) miniapp(Key?, PersonChannel(D)?, SgChannel(T)?, Stream(Integer)?).
 miniapp(_, _, _, _).
 
 % The mini-app's scripted person (GSG, 2026-10-13 18:52 UTC, O5, and 20:22
 % UTC; Udi: approved): a mini-app exports it beside its entry, as this
-% template's instance at the T of its miniapp/4 instance: the person's key, a
-% role choosing the script among the mini-app's own plays, the person-side end
-% of the person channel, and the screen it reports.  The super-app's plays
-% activate it from the module value as they activate the entry.  Never run
-% here.
-procedure(T) miniapp_person(Key?, Constant?, Channel(PersonOut(T), PersonIn(T))?, Stream(T)).
+% template's instance at the D of its miniapp/4 instance (vGLP, 2026-10-14
+% 13:21 UTC, S2): the person's key, a role choosing the script among the
+% mini-app's own plays, the person-side end of the person channel, and the
+% screen it reports.  The super-app's plays activate it from the module value
+% as they activate the entry.  Never run here.
+procedure(D) miniapp_person(Key?, Constant?, Channel(PersonOut(D), PersonIn(D))?, Stream(D)).
 miniapp_person(_, _, _, []).
 
 % send_to_net/1 — the seam predicate to the network (GLP-Spec appendix-guards,
