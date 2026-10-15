@@ -11,12 +11,12 @@
 #   E - Invalid Guard Test (true in guard rejected)
 #   F - CSSG Modules (modular play tests via project-directory loading)
 #   G - Social Graph Simulated UI Modules (project-directory loading)
-#   H - CSSN Modules (project-directory loading, plays 1-12)
+#   H - retired (old-generation CSSN modules); CSSN is Section K
 #   I - self.glp Procedure Tests (shared procs, shadowing, local shadow, type error)
 #   J - CSSG v2 Modules (child_agent with parent(X) output keys)
-#   K - CSSN v2 Modules (child_agent with blocking consent)
+#   K - CSSN, the child-safe social network (programs/cssn), as ported on 2026-10-09
 #   L - Dynamic Module Dispatch Tests (activate + M # goal)
-#   M - Multi-Isolate (madGLP) Tests (dart test, CSSN v2, one isolate per agent)
+#   M - Multi-Isolate (madGLP) Tests (dart test, one isolate per agent; run in Section Q)
 #   N - Currencies Modules (project-directory loading, plays 1-12)
 #   O - Currencies Multi-Isolate Tests (dart test, one isolate per agent)
 #   P - Module Boundary Enforcement Tests (exported vs private procedures)
@@ -2248,7 +2248,7 @@ echo ""
 fi  # Section G
 
 if _section I; then
-# Section H (old-gen CSSN Modules) retired in A5 — CSSN v2 coverage is Section K.
+# Section H (old-generation CSSN modules) retired in A5; CSSN's checks are Section K.
 
 # =============================================================================
 # Section I: self.glp Procedure Tests
@@ -6249,8 +6249,8 @@ if ! _section QF; then
 elif [ -f "$GLP_DIR/glp_multiagent/tool/sync_glp_assets.sh" ]; then
     SYNC_RESULT=$(cd "$GLP_DIR/glp_multiagent" && bash tool/sync_glp_assets.sh 2>&1) || true
     # Each certified mini-app the script builds is a check of its own, so that
-    # an artefact its owner's source cannot yet give --- CSSN's, while CSSN is
-    # dormant --- is known red, not the whole step.  The script stops at the
+    # an artefact its owner's source cannot yet give is known red, not the
+    # whole step.  The script stops at the
     # first artefact missing, so each is looked for on disc; its list is the
     # script's own.
     SYNC_ARTEFACTS=$(sed -n 's/^for a in \(.*\); do$/\1/p' "$GLP_DIR/glp_multiagent/tool/sync_glp_assets.sh")

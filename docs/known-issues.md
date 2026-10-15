@@ -568,7 +568,7 @@ Full: `glp_multiagent/test/scenario_single_isolate_test.dart` (phase 2 — `befr
 
 ---
 
-## Issue 16: CSSN v2 (`programs/social/network`) is type-incorrect — surfaced by correct parametric typing
+## Issue 16: CSSN v2 (`programs/social/network`, now `programs/cssn`) was type-incorrect — surfaced by correct parametric typing
 
 **Status (2026-10-15)**: `programs/social/network` is now `programs/cssn`, which CSSN ported on 2026-10-09.  Section K of `run_all_tests.sh` checks that it loads with no type errors, and none of Section K's checks is known red.
 **Discovered**: 2026-06-17

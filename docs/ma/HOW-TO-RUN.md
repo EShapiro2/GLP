@@ -134,7 +134,7 @@ Section Q generates the bundled GLP assets, then runs `flutter test` over all of
 cd glp_multiagent && bash tool/sync_glp_assets.sh
 ```
 
-Writes `pingapp.glpw`, `currency.glpw` and `denominated.glpw`, and exits 1 with `sync_glp_assets: childsafe.glpw was not written`: CSSN's artefact, a known-red check of Section Q's asset step.
+Writes `pingapp.glpw`, `currency.glpw`, `childsafe.glpw`, `denominated.glpw` and `dated.glpw`, the script's list, and exits 1 with `sync_glp_assets: <name>.glpw was not written` at the first it does not write.  Section Q's asset step checks each of them on disc, and none of those checks is known red.
 
 ```bash
 cd glp_multiagent && flutter test test/roundtrip_isolate_test.dart
@@ -146,7 +146,7 @@ cd glp_multiagent && flutter test test/roundtrip_isolate_test.dart
 cd glp_multiagent && flutter test
 ```
 
-`+116 -2: Some tests failed.`  The two red are entries of `KNOWN_RED`.
+`KNOWN_RED` lists one test of this package, in `test/sovereign_screen_test.dart`; any other red test fails the suite.
 
 Section Q writes each runner's whole output to `/Users/udi/Grassroots/tmp/suite_q_dart.txt` and `/Users/udi/Grassroots/tmp/suite_q_flutter.txt` on every run.  The full suite is run only by Code, on `main`: `GLP/CLAUDE.md`, "Test suites".
 
