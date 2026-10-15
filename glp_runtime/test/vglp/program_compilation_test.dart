@@ -206,8 +206,9 @@ display respond *(Answer=yes, From?) : panel(inbox), label('"x"'), transient.
     // Section SG runs on the dispatcher (superapp_ui/3); social/graph/core/
     // agent.vglp compiles, beside the hand-written agent.glp the program
     // loads.  The
-    // two cssn sources do not yet compile, the edits being CSSN's.  Each
-    // parse test becomes the compilation test as its source is repaired.
+    // cssn sources compile since CSSN's port: agent.vglp and child_agent.vglp,
+    // two modules that call each other, with the cards of their self.vglp;
+    // Section K re-emits the two and runs the village on them.
     //
     // A currency source is asked what vGLP's Definition "Guarded Clause,
     // Volitional Procedure, Interactive Type, Interactive Term, Ordinary
@@ -226,6 +227,8 @@ display respond *(Answer=yes, From?) : panel(inbox), label('"x"'), transient.
       'currencies/sovereign/denominated/sovereign_agent.vglp',
       'social/graph/core/agent.vglp',
       'social/graph/core/home.vglp',
+      'cssn/childsafe/agent.vglp',
+      'cssn/childsafe/self.vglp',
     ]) {
       test('$path parses as vGLP and holds a volitional procedure', () {
         final file = File('$_programs/$path');
@@ -236,22 +239,25 @@ display respond *(Answer=yes, From?) : panel(inbox), label('"x"'), transient.
         expect(m.procedures.where((p) => p.isVolitional), isNotEmpty);
       });
     }
-    for (final path in [
-      'cssn/childsafe/agent.vglp',
-      'cssn/childsafe/child_agent.vglp',
-    ]) {
-      test('$path parses as vGLP', () {
-        final file = File('$_programs/$path');
-        expect(file.existsSync(), isTrue, reason: '$path is not on disc');
-        final m = Parser(Lexer(file.readAsStringSync()).tokenize(), vglp: true)
-            .parseModule();
-        expect(m.procedures, isNotEmpty);
-        expect(
-            m.procedures
-                .expand((p) => p.clauses)
-                .any((c) => c.isVolitionGuarded),
-            isTrue);
-      });
-    }
+    // The child agent declares no volitional procedure of its own: it asks the
+    // cards its self.vglp shares with the adult agent, and is a vGLP module
+    // because it reaches their questions (vGLP a89a751,
+    // canonical-compilation.tex: "the questions of a program are those of
+    // all its modules").
+    test('cssn/childsafe/child_agent.vglp parses as vGLP and asks the cards of its self.vglp', () {
+      final file = File('$_programs/cssn/childsafe/child_agent.vglp');
+      expect(file.existsSync(), isTrue);
+      final m = Parser(Lexer(file.readAsStringSync()).tokenize(), vglp: true)
+          .parseModule();
+      expect(m.procedures, isNotEmpty);
+      expect(
+          m.procedures.expand((p) => p.clauses).any((c) => c.isVolitionGuarded),
+          isFalse);
+      final calls = {
+        for (final c in m.procedures.expand((p) => p.clauses))
+          if (c.body != null) for (final g in c.body!) g.functor
+      };
+      expect(calls, containsAll(['accept', 'approve', 'accept_parent']));
+    });
   });
 }

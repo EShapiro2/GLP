@@ -3,7 +3,8 @@
 /// Tests discovery, type checking, renaming, call resolution, entry-point
 /// aliasing (§3.4: exported root-level procedures only), and end-to-end
 /// compilation of the cssn program (a live multi-module platform that consumes
-/// the routing modules exposed from the root self.glp). Module-local
+/// the routing modules exposed from the root self.glp; its two vGLP agents,
+/// compiled beside their sources, are modules of it as any .glp is). Module-local
 /// name-collision handling is covered by the dedicated ../programs/tests/linker_collision
 /// fixture; the nested-subprogram entry-alias rule by ../programs/tests/linker_nested.
 library;
@@ -40,31 +41,19 @@ void main() {
     test('discovers all modules in cssn', () {
       final modules = discoverProgram(cssnRoot, rootSelfGlpPath: rootSelfPath);
 
-      // The program's own modules: the certified program's (agent, child_agent,
-      // mediator, miniapp, plays, childsafe) and the play glue's (actors, boot,
-      // superapp, cssn) — plus the 4 routing modules exposed from the root self.glp
-      // (social/graph/routing/{output,inject,intro,befriend}), discovered as linkable
-      // across the whole programs/ subtree (module-system spec §3.3).  Any left
-      // unreachable are pruned by DCE at compile time; discovery still lists them.
+      // The program's own modules: the certified program's (the two agents,
+      // compiled from their vGLP sources, the mini-app entry, childsafe) and
+      // the plays' (plays, person, superapp, cssn) --- plus the 4 routing
+      // modules exposed from the root self.glp
+      // (social/graph/routing/{output,inject,intro,befriend}), discovered as
+      // linkable across the whole programs/ subtree (module-system spec §3.3).
       final names = modules.map((m) => m.moduleName).toSet();
-      expect(names, contains('agent'));
-      expect(names, contains('child_agent'));
-      expect(names, contains('mediator'));
-      expect(names, contains('actors'));
-      expect(names, contains('boot'));
-      expect(names, contains('cssn'));
-      expect(names, contains('childsafe'));
-      expect(names, contains('miniapp'));
-      expect(names, contains('superapp'));
-      // -module removed: module names derive from the filename, so the routing
-      // modules are output/inject/intro/befriend (social/graph/routing/<name>.glp).
-      expect(names, contains('output'));
-      expect(names, contains('inject'));
-      expect(names, contains('intro'));
-      expect(names, contains('befriend'));
-      // At least the 10 own modules + 4 exposed routing modules; cssn also carries
-      // a village/ subtree of actor scenarios, so the total is larger.
-      expect(names.length, greaterThanOrEqualTo(10));
+      for (final n in ['agent', 'child_agent', 'miniapp', 'childsafe', 'cssn',
+          'plays', 'person', 'superapp', 'output', 'inject', 'intro',
+          'befriend']) {
+        expect(names.any((m) => m == n || m.endsWith('/$n')), isTrue,
+            reason: '$n is a module of the program: $names');
+      }
     });
 
     test('excludes self.glp from modules', () {
@@ -76,21 +65,19 @@ void main() {
     // TGLP modules.tex, Compilation, first step: "the compiler collects every
     // .glp file of the program's directory tree".  Until 2026-10-03 this test
     // was "excludes boot_direct.glp from modules", asserting the skip the
-    // paper forbids --- of boot_direct.glp, mad_boot.glp and every file under
-    // a mad_boot/ directory --- which discovery no longer makes (b7923f9e);
-    // rewritten to the paper (GLP #3 Cowork, 2026-10-03 21:18 UTC, "16:01.
-    // 6").  cssn/mad_boot/'s boots are among the files it collects.
-    test('collects every .glp file of the tree, mad_boot/ among them', () {
+    // paper forbids (GLP #3 Cowork, 2026-10-03 21:18 UTC, "16:01. 6"); until
+    // CSSN's port it named cssn/mad_boot/, which the port retired.
+    test('collects every .glp file of the tree', () {
       final modules = discoverProgram(cssnRoot, rootSelfGlpPath: rootSelfPath);
       final discovered =
           modules.map((m) => File(m.filePath).absolute.path).toSet();
       final files = Directory(cssnRoot)
           .listSync(recursive: true)
           .whereType<File>()
-          .where((f) => f.path.endsWith('.glp'))
+          .where((f) => f.path.endsWith('.glp') && !f.path.endsWith('/self.glp'))
           .map((f) => f.absolute.path)
           .toList();
-      expect(files.where((f) => f.contains('/mad_boot/')), isNotEmpty);
+      expect(files, isNotEmpty);
       expect(discovered, containsAll(files),
           reason: 'every .glp file of the tree is a module');
     });
@@ -128,135 +115,72 @@ void main() {
 
     test('procedures are renamed with module prefix', () {
       final procNames = linked.procedures.map((p) => p.name).toSet();
-
-      // agent.glp procedures should have agent: prefix
-      expect(procNames, contains('agent:agent'));
-
-      // boot.glp procedures should have boot: prefix
-      expect(procNames, contains('boot:tee'));
-      expect(procNames, contains('boot:fplay1'));
-
-      // mediator.glp procedures should have mediator: prefix
-      expect(procNames, contains('mediator:ui_mediator'));
-
-      // actors.glp procedures should have actors: prefix
-      expect(procNames, contains('actors:alice1'));
-      expect(procNames, contains('actors:bob1'));
+      expect(procNames, contains('cssn/childsafe/agent:adult'));
+      expect(procNames, contains('cssn/childsafe/child_agent:child'));
+      expect(procNames, contains('cssn/plays:village'));
+      expect(procNames, contains('cssn/plays:party'));
+      expect(procNames, contains('cssn/person:person'));
+      expect(procNames, contains('cssn/superapp:superapp'));
     });
 
+    List<String> bodyOf(String name) => [
+          for (final c in linked.procedures.firstWhere((p) => p.name == name).clauses)
+            if (c.body != null) for (final g in c.body!) g.functor
+        ];
+
     test('cross-module calls are resolved', () {
-      // Find boot:fplay1 and check that its body has agent:agent, not # dispatch
-      final bootPlay1 = linked.procedures
-          .firstWhere((p) => p.name == 'boot:fplay1');
-
-      // Collect all goal functors in the body
-      final bodyFunctors = <String>{};
-      for (final clause in bootPlay1.clauses) {
-        if (clause.body != null) {
-          for (final goal in clause.body!) {
-            bodyFunctors.add(goal.functor);
-          }
-        }
-      }
-
-      // Cross-module calls should be resolved
-      expect(bodyFunctors, contains('actors:alice1'),
-          reason: 'actors # alice1 should become actors:alice1');
-      expect(bodyFunctors, contains('childsafe:agent'),
-          reason: 'childsafe # agent should become childsafe:agent');
-      expect(bodyFunctors, contains('childsafe:ui_mediator'),
-          reason: 'childsafe # ui_mediator should become childsafe:ui_mediator');
-      expect(bodyFunctors, contains('superapp:superapp'),
-          reason: 'superapp # superapp should become superapp:superapp');
-
-      // No # dispatch should remain
-      expect(bodyFunctors, isNot(contains('#')),
+      final body = bodyOf('cssn/plays:party').toSet();
+      expect(body, contains('cssn/childsafe:cssn'),
+          reason: 'childsafe # cssn should become childsafe:cssn');
+      expect(body, contains('cssn/superapp:superapp'));
+      expect(body, contains('cssn/person:person'));
+      expect(body, isNot(contains('#')),
           reason: 'No RemoteGoal # dispatch should remain');
+      // The adult agent hands a party to the child agent, across modules.
+      expect(bodyOf('cssn/childsafe/agent:adult'),
+          contains('cssn/childsafe/child_agent:child'));
     });
 
     test('local calls are resolved', () {
-      // boot:fplay1 calls tee/merge_in/send_to_user_tagged, local to boot —
-      // each should be prefixed boot:.
-      final bootPlay1 = linked.procedures
-          .firstWhere((p) => p.name == 'boot:fplay1');
-
-      final bodyFunctors = <String>{};
-      for (final clause in bootPlay1.clauses) {
-        if (clause.body != null) {
-          for (final goal in clause.body!) {
-            bodyFunctors.add(goal.functor);
-          }
-        }
-      }
-
-      expect(bodyFunctors, contains('boot:tee'),
-          reason: 'Local tee call should become boot:tee');
-      expect(bodyFunctors, contains('boot:send_to_user_tagged'),
-          reason: 'Local send_to_user_tagged call should become boot:send_to_user_tagged');
-      // The simulated platform network is gone: this platform is a mini-app and
-      // makes no first contact, so the switch a play carries is the super-app's
-      // (superapp:sg_switch), and boot's own locals are the display helpers.
+      final body = bodyOf('cssn/plays:village').toSet();
+      expect(body, contains('cssn/plays:party'));
+      expect(body, contains('cssn/plays:village_script'));
     });
 
-    test('prelude calls are preserved unprefixed', () {
-      // send_to_user_tagged calls send_to_user, a root self.glp system predicate
-      // — it must stay unprefixed (linker leaves prelude calls bare).
-      final sendTagged = linked.procedures
-          .firstWhere((p) => p.name == 'boot:send_to_user_tagged');
-
-      final bodyFunctors = <String>{};
-      for (final clause in sendTagged.clauses) {
-        if (clause.body != null) {
-          for (final goal in clause.body!) {
-            bodyFunctors.add(goal.functor);
-          }
-        }
-      }
-
-      expect(bodyFunctors, contains('send_to_user'),
-          reason: 'send_to_user prelude call should remain unprefixed');
+    test('a root procedure is called by the root\'s name for it', () {
+      // log calls send_to_user, a procedure of the root self.glp, which the
+      // linker names by the root's path from itself, the empty one
+      // (modules.tex, Compilation, third step): :send_to_user.
+      final body = bodyOf('cssn/plays:log');
+      expect(body, contains(':send_to_user'), reason: '$body');
     });
 
     test('entry-point aliases exist for the root self.glp forwarded entries', () {
       // modules.tex sec:static-linking step 5: the entry points are the root
-      // self.glp's exports, here forwarders for each boot play, so every boot
-      // play has a bare alias (and the non-exported helper tee has none).
-      final bootModule = modules.firstWhere((m) => m.moduleName == 'boot');
-      final exported = bootModule.ast.procDeclarations
+      // self.glp's exports, here forwarders for each play, so every play has
+      // a bare alias (and the non-exported helper party has none).
+      final plays = modules.firstWhere((m) => m.moduleName == 'cssn/plays');
+      final exported = plays.ast.procDeclarations
           .where((d) => d.exported)
           .map((d) => d.name)
           .toSet();
-      expect(exported, contains('fplay1'));
-      expect(exported, contains('fplay2'));
-
+      expect(exported, contains('village'));
+      expect(exported, contains('play_twice'));
       for (final name in exported) {
-        final aliases = linked.procedures
-            .where((p) => p.name == name && !p.name.contains(':'))
-            .toList();
-        expect(aliases, isNotEmpty,
+        expect(linked.procedures.where((p) => p.name == name), isNotEmpty,
             reason: 'Entry point alias should exist for exported $name');
       }
-
-      // A non-exported boot helper (tee) must NOT receive a bare alias.
-      final teeAlias = linked.procedures
-          .where((p) => p.name == 'tee' && !p.name.contains(':'))
-          .toList();
-      expect(teeAlias, isEmpty,
-          reason: 'non-exported boot:tee must not be bare-aliased');
+      expect(linked.procedures.where((p) => p.name == 'party'), isEmpty,
+          reason: 'non-exported plays:party must not be bare-aliased');
     });
 
     test('entry point alias calls renamed procedure', () {
-      // The entry point is the root self.glp's exported fplay1, so the bare
-      // alias calls cssn:fplay1 (the root self.glp's forwarder, which in turn
-      // calls boot:fplay1). modules.tex sec:static-linking step 5.
-      final play1Alias = linked.procedures
-          .firstWhere((p) => p.name == 'fplay1');
-      expect(play1Alias.clauses.length, equals(1));
-
-      final body = play1Alias.clauses.first.body;
+      final alias = linked.procedures.firstWhere((p) => p.name == 'village');
+      expect(alias.clauses.length, equals(1));
+      final body = alias.clauses.first.body;
       expect(body, isNotNull);
       expect(body!.length, equals(1));
-      expect(body.first.functor, equals('cssn:fplay1'));
+      expect(body.first.functor, equals('cssn:village'));
     });
   });
 
@@ -524,83 +448,58 @@ void main() {
 
   group('End-to-end compilation', () {
     test('linked program compiles to bytecode', () {
+      // The object compiled is the checked linked program, compiled in the
+      // environment it was checked in, as the engine compiles a program
+      // (TGLP modules.tex, Compilation).
       final modules = discoverProgram(cssnRoot, rootSelfGlpPath: rootSelfPath);
-      final result = linkProgram(modules, rootDir: cssnRoot);
+      final linked = checkedLinkedProgram(modules, rootDir: cssnRoot);
 
       final compiler = GlpCompiler();
       final bytecode = compiler.compileProgram(
-        result.program,
-        procDeclarations: result.procDeclarations,
+        linked.program,
+        procDeclarations: linked.procDeclarations,
+        typeEnv: linked.checkedEnv,
       );
 
-      // Should have procedure labels
       expect(bytecode.labels, isNotEmpty);
-      expect(bytecode.labels.containsKey('boot:fplay1/0'), isTrue);
-      expect(bytecode.labels.containsKey('fplay1/0'), isTrue,
+      expect(bytecode.labels.containsKey('cssn/plays:village/0'), isTrue);
+      expect(bytecode.labels.containsKey('village/0'), isTrue,
           reason: 'Entry point alias should be in bytecode');
     });
 
-    test('fplay1 produces correct output', () {
+    test('play_both_ways produces correct output', () {
+      // Two adults befriend each other at once, each through its super-app
+      // stand-in; each mini-app adopts one conversation (programs/cssn,
+      // plays.glp).
       final modules = discoverProgram(cssnRoot, rootSelfGlpPath: rootSelfPath);
-      final result = linkProgram(modules, rootDir: cssnRoot);
+      final linked = checkedLinkedProgram(modules, rootDir: cssnRoot);
       final compiler = GlpCompiler();
       final bytecode = compiler.compileProgram(
-        result.program,
-        procDeclarations: result.procDeclarations,
+        linked.program,
+        procDeclarations: linked.procDeclarations,
+        typeEnv: linked.checkedEnv,
       );
-
-      // Compile self.glp (root stdlib) and merge
       final stdlibProg = compiler.compile(
           File('../programs/self.glp').readAsStringSync());
-      var program = bytecode.merge(stdlibProg);
+      final program = bytecode.merge(stdlibProg);
 
-      // Set up runtime
       final rt = GlpRuntime();
       final output = <String>[];
       rt.outputCallback = (s) => output.add(s);
-
-      // Register runner
       final image = codeImageFromProgram(program);
       rt.runners[program] = ByteRunner(image);
-
-      // Create scheduler
       final scheduler = Scheduler(rt: rt);
-
-      // Set up fplay1 goal
       final goalId = rt.nextGoalId++;
-      final env = CallEnv(args: {});
-      rt.setGoalEnv(goalId, env);
+      rt.setGoalEnv(goalId, CallEnv(args: {}));
       rt.setGoalProgram(goalId, program);
-
-      // Enqueue via entry point alias
-      final fplayPc = image.entryOffsetOf('fplay1/0')!;
-      rt.gq.enqueue(GoalRef(goalId, fplayPc));
-
-      // Run
-      final execResult = scheduler.drainWithStatus(maxCycles: 50000);
-
-      // Print output for diagnostics
-      if (output.isNotEmpty) {
-        print('=== Static link fplay1 output (${output.length} lines) ===');
-        for (final line in output) {
-          print('  $line');
-        }
-      } else {
-        print('=== Static link fplay1 produced no output ===');
-        print('Status: ${execResult.status}');
-      }
-
-      // Verify output
-      expect(output, isNotEmpty,
-          reason: 'fplay1 should produce tagged output');
+      rt.gq.enqueue(GoalRef(goalId, image.entryOffsetOf('play_both_ways/0')!));
+      scheduler.drainWithStatus(maxCycles: 500000);
 
       final outputStr = output.join('\n');
-      expect(outputStr, contains('tagged(alice'),
-          reason: 'Output should contain tagged messages for alice');
-      expect(outputStr, contains('connected(bob)'),
-          reason: 'Alice should get connected(bob)');
-      expect(outputStr, contains('connected(alice)'),
-          reason: 'Charlie should get connected(alice)');
+      expect(outputStr, contains('tagged(alice, connected(bob))'),
+          reason: outputStr);
+      expect(outputStr, contains('tagged(bob, connected(alice))'),
+          reason: outputStr);
     });
   });
 }

@@ -2557,7 +2557,7 @@ if _section M; then
 echo "=== Section M: Multi-Isolate (madGLP) Tests ==="
 echo ""
 echo "  (folded into Section Q, which runs the whole Dart tree — running"
-echo "   cssn_v2_isolate_test.dart here as well would only double-count it)"
+echo "   the madGLP Dart tests here as well would only double-count them)"
 echo ""
 
 fi  # Section M
@@ -6253,38 +6253,6 @@ if _section QD || _section QF; then
 # twelve forms and their labels are GLP's to write.  SGC shows no screen, so this
 # does not hold SGC.
 KNOWN_RED=(
-    # CSSN, dormant (Udi, 2026-09-28): program_linker_test's three, on CSSN's
-    # program, and cssn_v2_isolate_test's thirteen, measured at gap 2c18023e.
-    # CSSN's guard negation refused by the parser since GLP's 15ba4b7e (the
-    # language has no ~G): twelve more, measured at gap 8b8cc800.
-    "test/compiler/program_linker_test.dart: Program discovery discovers all modules in cssn"
-    "test/compiler/program_linker_test.dart: Linking procedures are renamed with module prefix"
-    "test/compiler/program_linker_test.dart: Linking cross-module calls are resolved"
-    "test/compiler/program_linker_test.dart: Linking local calls are resolved"
-    "test/compiler/program_linker_test.dart: Linking prelude calls are preserved unprefixed"
-    "test/compiler/program_linker_test.dart: Linking entry-point aliases exist for the root self.glp forwarded entries"
-    "test/compiler/program_linker_test.dart: Linking entry point alias calls renamed procedure"
-    "test/compiler/program_linker_test.dart: End-to-end compilation fplay1 produces correct output"
-    "test/compiler/program_linker_test.dart: End-to-end compilation linked program compiles to bytecode"
-    "test/compiler/program_linker_test.dart: Type checking all modules type-check successfully"
-    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay1 runs across isolates (3 adults)"
-    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay10 runs across isolates (3 agents)"
-    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay11 runs across isolates (6 agents)"
-    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay12 runs across isolates (5 agents)"
-    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay13 runs across isolates (village, 6 agents)"
-    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay2 runs across isolates (3 adults)"
-    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay3 runs across isolates (3 adults)"
-    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay4 runs across isolates (4 agents)"
-    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay5 runs across isolates (4 agents)"
-    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay6 runs across isolates (4 agents)"
-    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay7 runs across isolates (4 agents)"
-    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay8 runs across isolates (2 adults)"
-    "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay9 runs across isolates (3 agents)"
-    # CSSN, dormant (Udi, 2026-10-01, to Integration Code: "Ignore CSSN stuff
-    # till I ask differently"): the sandboxed-bundle test, which fails only on
-    # CSSN's childsafe.glpw, refused at its source and so not in the bundle
-    # ("Unable to load asset: .../core/childsafe.glpw"), measured at gap 5d39387f.
-    "glp_multiagent/test/glp_sources_platform_test.dart: a sandboxed build reads its bundle, never a desktop path"
     "glp_multiagent/test/sovereign_screen_test.dart: the sovereign mini-app: the central bank boots, its seven forms stand, it mints and opens the credit line through its screen, and the play runs on to the chain redemption and the fiat payment"
 )
 

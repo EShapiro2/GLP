@@ -836,10 +836,13 @@ befriend(P, R?) :- ground(P?) | responder # offer_from(P?, R).
       for (final f in sources) {
         final text = f.readAsStringSync();
         final old = _holdsVolitionGuard(text);
+        // A source holding a volition guard is in the old syntax; one
+        // declaring a volitional procedure is in the paper's.  A source may
+        // be neither and still a vGLP module: "the questions of a program are
+        // those of all its modules" (vGLP a89a751, canonical-compilation.tex),
+        // so a module may ask questions it does not declare ---
+        // cssn/childsafe/child_agent.vglp asks the cards of its self.vglp.
         final paper = !old && _declaresVolitionalProcedure(text);
-        expect(old || paper, isTrue,
-            reason: '${f.path} holds no volition guard and declares no '
-                'volitional procedure');
         expect(isPaperSyntaxSource(text), paper, reason: f.path);
       }
     });
