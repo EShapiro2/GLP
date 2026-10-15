@@ -1086,6 +1086,19 @@ HEREDOC
 2>&1)
 check "single-module: -expose collision rejected at link time" "expose collision" "$a26f_col"
 
+# The root self.glp exposes sglp#monitor, the root being the only common
+# ancestor of programs/cssn and programs/sglp (modules.tex §-expose): a program
+# outside programs/sglp calls monitor/4 by name, with the types it carries.
+a26f_mon=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/expose_root_monitor/run.glp
+clock(T).
+released(K).
+:quit
+HEREDOC
+2>&1)
+check "root -expose(sglp#monitor): time request answered (T = 0)" "T = 0" "$a26f_mon"
+check "root -expose(sglp#monitor): rated request released (K = go)" "K = go" "$a26f_mon"
+
 # --- A29: Struct terms inside lists in goal arguments (Issue 0b regression) ---
 echo "--- A29: Structs in list goal args ---"
 a29=$("$REPL_RUN" <<HEREDOC

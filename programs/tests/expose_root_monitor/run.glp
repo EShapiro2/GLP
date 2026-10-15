@@ -1,0 +1,20 @@
+%% The root programs/self.glp exposes sglp#monitor (TGLP modules.tex, "The
+%% -expose directive"), so a program outside programs/sglp calls monitor/4 by
+%% name, the types its signature carries with it (programs/sglp/monitor.glp).
+%%
+%%   clock(T)     a time request answered at once: T = 0
+%%   released(K)  a rated request released by the monitor: K = go
+
+exported procedure clock(Number).
+clock(T?) :-
+    allocate_mutual_reference(Mon, Requests),
+    allocate_mutual_reference(Log, _),
+    monitor(Requests?, 20260927, 3600, Log?),
+    stream_append(time(T), Mon?, _).
+
+exported procedure released(Token).
+released(K?) :-
+    allocate_mutual_reference(Mon, Requests),
+    allocate_mutual_reference(Log, _),
+    monitor(Requests?, 20260927, 3600, Log?),
+    stream_append(rated(1/second, K), Mon?, _).
