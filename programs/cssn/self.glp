@@ -551,3 +551,39 @@ inject_group_reply(G, M, P, R, Ys, [group_reply(G?, M?, P?, R?)|Ys?]) :-
     known(R?) | true.
 inject_group_reply(G, M, P, R, [Y|Ys], [Y?|Ys1?]) :-
     inject_group_reply(G?, M?, P?, R?, Ys?, Ys1).
+
+%% =============================================================================
+%% THE PLAYS (plays.glp), by name
+%% =============================================================================
+
+imported procedure plays#village.
+exported procedure village.
+village :- plays # village.
+
+imported procedure plays#play_parenting.
+exported procedure play_parenting.
+play_parenting :- plays # play_parenting.
+
+imported procedure plays#play_twice.
+exported procedure play_twice.
+play_twice :- plays # play_twice.
+
+imported procedure plays#play_both_ways.
+exported procedure play_both_ways.
+play_both_ways :- plays # play_both_ways.
+
+imported procedure plays#play_late_join.
+exported procedure play_late_join.
+play_late_join :- plays # play_late_join.
+
+imported procedure plays#play_child_parent.
+exported procedure play_child_parent.
+play_child_parent :- plays # play_child_parent.
+
+imported procedure plays#play_child_leave.
+exported procedure play_child_leave.
+play_child_leave :- plays # play_child_leave.
+
+imported procedure plays#play_two_parents.
+exported procedure play_two_parents.
+play_two_parents :- plays # play_two_parents.
