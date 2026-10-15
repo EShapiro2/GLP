@@ -2,13 +2,15 @@
 //
 // One agent role per invocation, selected with --dart-define=E2E_ROLE=<role>:
 //
-//   A   — phase 1 initiator on simulator 1: mints the peer link, observes
-//         redemption, exchanges messages, verifies heartbeat stability and
-//         silent-death teardown, then observes the stranger C (Closed trust).
-//   B   — phase 1 responder on simulator 2: redeems the link, exchanges
-//         messages, then goes silent (the host kills the app).
+//   A   — phase 1 callee on simulator 1: declares B's key (GNA §4.4, a WAN
+//         cold call between agents that have declared each other's keys),
+//         publishes its address, exchanges messages, verifies heartbeat
+//         stability and silent-death teardown, then observes the stranger C.
+//   B   — phase 1 caller on simulator 2: declares A's key, dials A at its
+//         address, exchanges messages, then goes silent (the host kills the
+//         app).
 //   C   — stranger on simulator 2: knows A's address+key out-of-band, is
-//         unknown to A, and attempts contact without an invite.
+//         unknown to A, and attempts contact (refused, GNA §2.5, §2.7).
 //   A2  — phase 2 dialer on simulator 1: putPeerAddress-driven direct dial,
 //         no rendezvous server running.
 //   B2  — phase 2 listener on simulator 2.
@@ -116,7 +118,6 @@ class Agent {
   final messages = <(String, Uint8List)>[];
   final connects = <(String, Underlay, DateTime)>[];
   final disconnects = <(String, Underlay, DateTime)>[];
-  final redemptions = <String>[];
 
   /// [rendezvous]: whether the agent is instantiated with the anchor as its
   /// rendezvous server (GNA §Instantiation) --- A and B are, C is not.
@@ -154,10 +155,6 @@ class Agent {
     network.onPeerDisconnected = (pubkey, underlay) {
       agent.disconnects.add((hexOf(pubkey), underlay, DateTime.now()));
       note('onPeerDisconnected ${hexOf(pubkey).substring(0, 8)} via $underlay');
-    };
-    network.onPeerLinkRedeemed = (redeemer) {
-      agent.redemptions.add(hexOf(redeemer));
-      note('onPeerLinkRedeemed by ${hexOf(redeemer).substring(0, 8)}');
     };
 
     final ok = await network.initialize();
@@ -235,20 +232,14 @@ Future<void> runA() async {
   note('item1: distinct identities OK (A=${myHex.substring(0, 8)}, '
       'B=${bHex.substring(0, 8)})');
 
-  // Item 2: rendezvous + peer link. The anchor, a constructor argument,
-  // answers by reflecting our address.
-  await agent.loopbackAddress();
+  // Item 2: the WAN cold call (GNA §4.4). The rendezvous server, a
+  // constructor argument, answers by reflecting our address; A declares B's
+  // key and publishes where it can be dialed.
+  final myAddr = await agent.loopbackAddress();
   note('rendezvous server answered');
-
-  final link = await agent.network.generatePeerLink();
-  note('peer link minted (${link.length} chars)');
-  await bbPut('peer_link', link);
-
-  await agent.waitFor(() => agent.redemptions.contains(bHex),
-      'peer link redeemed by B', timeoutSeconds: 180);
-  // The redemption decision is GLP's: accept B by supplying the key.
   agent.network.putKnownPeer(pubkeyFromHex(bHex));
-  note('accepted redeemer: putKnownPeer(B)');
+  note('declared B: putKnownPeer(B)');
+  await bbPut('a_cold_call_addr', myAddr);
 
   await agent.waitFor(() => agent.udpConnectedTo(bHex),
       'onPeerConnected(B, IP)', timeoutSeconds: 180);
@@ -312,29 +303,24 @@ Future<void> runA() async {
 Future<void> runB() async {
   final agent = await Agent.spawn('B', rendezvous: true);
   final myHex = hexOf(agent.identity.publicKey);
-  // Redemption dials the rendezvous server named in the link, which needs
-  // our local address candidates — wait for address discovery first.
+  // Dialing needs our local address candidates — wait for address discovery
+  // first.
   await agent.loopbackAddress();
   note('address discovery done');
   await bbPut('pk_B', myHex);
   final aHex = await bbWait('pk_A');
 
-  // Item 2: redeem the peer link via the rendezvous server named in it.
-  final link = await bbWait('peer_link', timeoutSeconds: 180);
-  final inviterPk = await agent.network.consumePeerLink(link);
-  expect(hexOf(inviterPk), equals(aHex),
-      reason: 'link must name A as the inviter');
-  note('item2: link redeemed; inviter is A');
+  // Item 2: the WAN cold call (GNA §4.4): B declares A's key and dials A at
+  // the address A published.
+  final aPk = pubkeyFromHex(aHex);
+  agent.network.putKnownPeer(aPk);
+  final aAddr = await bbWait('a_cold_call_addr', timeoutSeconds: 180);
+  agent.network.putPeerAddress(aPk, aAddr);
+  note('item2: declared A and dialing it at $aAddr');
 
-  // GLP-level acceptance: supply A\'s key; B holds the same rendezvous
-  // server, from its instantiation, so reconnect discovery can pair with A\'s
-  // AVAILABLE.
-  agent.network.putKnownPeer(inviterPk);
-
-  // Item 3 driver: sending with no dial-book address forces the
-  // rendezvous-coordinated path; the message drains once the session is up.
+  // Item 3 driver: the message drains once the session is up.
   final helloId = await agent.network.send(
-      inviterPk, Uint8List.fromList(utf8.encode('hello-from-B')));
+      aPk, Uint8List.fromList(utf8.encode('hello-from-B')));
   note('sent hello-from-B (id=$helloId)');
 
   await agent.waitFor(() => agent.udpConnectedTo(aHex),
@@ -369,11 +355,11 @@ Future<void> runC() async {
   final aAddr = await bbWait('a_addr');
   await bbPut('pk_C', myHex);
 
-  // The stranger knows A\'s key and address out-of-band — no invite, no
-  // rendezvous server, unknown to A.
+  // The stranger knows A\'s key and address out-of-band — no rendezvous
+  // server, unknown to A.
   final aPk = pubkeyFromHex(aHex);
   agent.network.putPeerAddress(aPk, aAddr);
-  note('item6: dialing A at $aAddr without an invite...');
+  note('item6: dialing A at $aAddr, unknown to it...');
   final sendId = await agent.network
       .send(aPk, Uint8List.fromList(utf8.encode('stranger-hello')));
   note('item6: send returned ${sendId == null ? 'null' : 'id'} '
@@ -481,9 +467,7 @@ Widget _viewer() {
                     final line = lines[lines.length - 1 - i];
                     final milestone = line.contains('item') ||
                         line.contains('onPeer') ||
-                        line.contains('onMessage') ||
-                        line.contains('Redeemed') ||
-                        line.contains('minted');
+                        line.contains('onMessage');
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 3),
                       child: Text(

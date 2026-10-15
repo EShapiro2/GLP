@@ -192,13 +192,6 @@ class HeadlessGlpNetwork implements glp.GlpNetwork {
   }
 
   @override
-  Future<String> generatePeerLink() => layer.generatePeerLink();
-
-  @override
-  Future<glp.PubKey> consumePeerLink(String uri) =>
-      layer.consumePeerLink(uri).then(_key);
-
-  @override
   void putPeerAddress(glp.PubKey pk, String address) =>
       layer.putPeerAddress(pk.bytes, address);
 

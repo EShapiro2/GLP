@@ -162,8 +162,8 @@ class ProtocolHandler {
 
   /// Detached Ed25519 signature over arbitrary [message] bytes under the
   /// identity key. Used for the self-contained signed records that carry
-  /// identity now that the wire frame does not: ANNOUNCE payloads, Noise
-  /// handshake identity claims, and cold-call invites (spec §IP Cold-Call).
+  /// identity now that the wire frame does not: ANNOUNCE payloads and Noise
+  /// handshake identity claims.
   /// Native libsodium (~5-10ms on Android, ~1-3ms on iOS).
   Uint8List signBytes(Uint8List message) {
     // The identity's `privateKey` is the standard 64-byte Ed25519 secret

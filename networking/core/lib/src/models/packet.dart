@@ -21,7 +21,7 @@ enum PacketType {
   readReceipt(0x08),
 
   /// Signaling between an agent and a rendezvous server (the reflected
-  /// address; invite registration and redemption)
+  /// address)
   signaling(0x09),
 
   /// Noise XX handshake message.
