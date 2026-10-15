@@ -426,7 +426,7 @@ agent(Id, St, UserIn, NetIn, Outs) :-
 *(MyChild, Friend, FriendChild)
 agent(Id, St, UserIn, NetIn, Outs) :-
     ground(Id?), ground(MyChild?), ground(Friend?), ground(FriendChild?),
-    ~(Friend? =?= Id?), new_channel(C1Ch, C2Ch) |
+    Friend? =?\= Id?, new_channel(C1Ch, C2Ch) |
     send_child(MyChild?, msg(Id?, MyChild?, child_intro(FriendChild?, C1Ch?)), Outs?, Outs1),
     send_friend(Friend?, msg(Id?, Friend?, child_intro(MyChild?, C2Ch?)), Outs1?, Outs2),
     agent(Id?, St?, UserIn?, NetIn?, Outs2?).

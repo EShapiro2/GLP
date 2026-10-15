@@ -353,7 +353,7 @@ child_agent(Id, ParentId, St, UserIn, NetIn, Outs) :-
 %% input.
 *(MyChild, Friend, FriendChild)
 child_agent(Id, ParentId, St, UserIn, NetIn, Outs) :-
-    ground(Id?), ~(Friend? =?= Id?),
+    ground(Id?), Friend? =?\= Id?,
     ground(MyChild?), ground(Friend?), ground(FriendChild?),
     new_channel(C1Ch, C2Ch) |
     send_child(MyChild?, msg(Id?, MyChild?, child_intro(FriendChild?, C1Ch?)), Outs?, Outs1),
@@ -480,7 +480,7 @@ child_agent(Id, ParentId, St, UserIn, [msg(From, Id1, group_invite(GroupId, Ch))
 %% parent-child channel, and child_consent_wait spawns the responder if it comes.
 %% Two persons' wills, in order, and the child's is the second.
 child_agent(Id, ParentId, St, UserIn, [msg(From, Id1, group_invite(GroupId, Ch))|NetIn], Outs) :-
-    Id? =?= Id1?, ~(From? =?= ParentId?), ground(GroupId?) |
+    Id? =?= Id1?, From? =?\= ParentId?, ground(GroupId?) |
     send_parent(ParentId?,
         msg(Id?, ParentId?, group_consent_req(GroupId?, Consent)), Outs?, Outs1),
     child_consent_wait(Consent?, Id?, ParentId?, St?, GroupId?, Ch?,
@@ -489,7 +489,7 @@ child_agent(Id, ParentId, St, UserIn, [msg(From, Id1, group_invite(GroupId, Ch))
 %% A friend introduces a child of theirs to a child of ours: spawn a responder.
 %% Without this the approve branch could never be reached.
 child_agent(Id, ParentId, St, UserIn, [msg(From, Id1, child_intro(Other, Ch))|NetIn], Outs) :-
-    Id? =?= Id1?, ~(From? =?= ParentId?), ground(Other?) |
+    Id? =?= Id1?, From? =?\= ParentId?, ground(Other?) |
     respond_child_intro(Id?, offer(Other?), Ch?, Ans),
     merge(Ans?, UserIn?, UserIn1),
     child_agent(Id?, ParentId?, St?, UserIn1?, NetIn?, Outs?).

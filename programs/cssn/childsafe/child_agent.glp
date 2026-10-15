@@ -166,7 +166,7 @@ child_agent(Id, ParentId, St, [msg(person, Id1, child_introduce(Child1, Friend, 
 
 %% Introduce a child of our own to a child of a friend.
 child_agent(Id, ParentId, St, [msg(person, Id1, child_introduce(MyChild, Friend, FriendChild))|UserIn], NetIn, Convs, Outs) :-
-    Id? =?= Id1?, ~(Friend? =?= Id?),
+    Id? =?= Id1?, Friend? =?\= Id?,
     ground(MyChild?), ground(Friend?), ground(FriendChild?),
     new_channel(C1Ch, C2Ch) |
     send_child(MyChild?, msg(Id?, MyChild?, child_intro(FriendChild?, C1Ch?)), Outs?, Outs1),
@@ -450,7 +450,7 @@ child_agent(Id, ParentId, St, UserIn, [msg(Child, Id1, group_consent_req(GroupId
 %% module that lets a child become a parent and not act as one has gated the
 %% introductory act by half.
 child_agent(Id, ParentId, St, UserIn, [msg(From, Id1, child_intro(Other, Ch))|NetIn], Convs, Outs) :-
-    Id? =?= Id1?, ~(From? =?= ParentId?), ground(Other?) |
+    Id? =?= Id1?, From? =?\= ParentId?, ground(Other?) |
     send_user( msg(agent, person, child_befriend(From?, Other?, Ch?)), Outs?, Outs1),
     child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs1?).
 
@@ -469,7 +469,7 @@ child_agent(Id, ParentId, St, UserIn, [msg(From, Id1, text(Text))|NetIn], Convs,
 
 %% Friend sends group_invite — child-managed group, need parental consent (consent flow 3)
 child_agent(Id, ParentId, St, UserIn, [msg(From, Id1, group_invite(GroupId, Ch))|NetIn], Convs, Outs) :-
-    Id? =?= Id1?, ~(From? =?= ParentId?), ground(GroupId?) |
+    Id? =?= Id1?, From? =?\= ParentId?, ground(GroupId?) |
     send_parent(ParentId?,
         msg(Id?, ParentId?, group_consent_req(GroupId?, Consent)),
         Outs?, Outs1),
