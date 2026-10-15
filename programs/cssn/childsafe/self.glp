@@ -1,10 +1,10 @@
 %% childsafe/self.glp --- the child-safe social network as a certified program
-%% of its own (CSSN Section 8.1): the adult agent (agent.vglp) and the child
-%% agent (child_agent.vglp), two vGLP modules that hand a party over to each
-%% other, compiled beside their sources into agent.glp and child_agent.glp;
-%% the cards they share (self.vglp, which joins this module as the program
-%% loads); the mini-app entry cssn/3 (miniapp.glp); and the scripted person
-%% (person.glp).  The types and the helpers are the parent's (../self.glp, an
+%% of its own (CSSN Section 6.1): the three agents, adult, parent and child
+%% (adult.vglp, parent.vglp, child.vglp), three vGLP modules that hand a party
+%% over to each other, compiled beside their sources; the cards they share
+%% (self.vglp, which joins this module as the program loads); and the
+%% mini-app's entries, cssn/3 for a party entering as an adult and
+%% cssn_child/4 for one entering as a child with its parents (miniapp.glp).  The types and the helpers are the parent's (../self.glp, an
 %% ancestor scope).
 %%
 %% It is a program of its own because the certificate of a program is refused
@@ -16,3 +16,7 @@
 imported procedure miniapp#cssn(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
 exported procedure cssn(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
 cssn(Id, Ui, Convs) :- miniapp # cssn(Id?, Ui?, Convs?).
+
+imported procedure miniapp#cssn_child(Key?, ParentEnds?, PersonChannel(Drawn)?, Stream(Conversation)?).
+exported procedure cssn_child(Key?, ParentEnds?, PersonChannel(Drawn)?, Stream(Conversation)?).
+cssn_child(Id, Es, Ui, Convs) :- miniapp # cssn_child(Id?, Es?, Ui?, Convs?).

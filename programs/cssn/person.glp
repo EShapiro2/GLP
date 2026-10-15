@@ -117,8 +117,6 @@ seen(_, [], wait).
 %% draws under the functor of its ask.
 procedure card_of(_?, OpenCard).
 card_of(card_w(V), O?) :- open_of(V?, O).
-card_of(parentCard_w(V), O?) :- open_of(V?, O).
-card_of(releaseCard_w(V), O?) :- open_of(V?, O).
 card_of(groupCard_w(V), O?) :- open_of(V?, O).
 card_of(joinCard_w(V), O?) :- open_of(V?, O).
 card_of(inviteCard_w(V), O?) :- open_of(V?, O).

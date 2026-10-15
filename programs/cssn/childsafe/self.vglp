@@ -1,13 +1,13 @@
-%% self.vglp --- what the adult agent (agent.vglp) and the child agent
-%% (child_agent.vglp) share: the cards, each a volitional procedure whose
-%% interactive type is in writer mode, and the ordinary procedures that read
-%% a card's answer and hand the agent what it is to do (vGLP,
-%% canonical-compilation.tex: "the self.vglp of a directory holds the
-%% procedures, volitional or not, and the widget declarations shared by every
-%% module in that directory and below it").  Both agents carry the parent's
-%% role, a child being able to become a parent (CSSN Section 8.1), so every
-%% card a parent answers is shared; so is every card a party answers as the
-%% one invited, an adult and a child alike.
+%% self.vglp --- what the three agents, adult (adult.vglp), parent
+%% (parent.vglp) and child (child.vglp), share: the cards, each a volitional
+%% procedure whose interactive type is in writer mode, and the ordinary
+%% procedures that read a card's answer and hand the agent what it is to do
+%% (CSSN Section 6.1; vGLP, canonical-compilation.tex: "the self.vglp of a
+%% directory holds the procedures, volitional or not, and the widget
+%% declarations shared by every module in that directory and below it").  A
+%% card is shared where more than one agent answers it: a child accepts an
+%% introduction and a parent approves one; an adult, a parent and a child
+%% each answer an invitation into a group.
 %%
 %% The types are ../self.glp's.
 
@@ -15,7 +15,7 @@
 %% THE CARDS
 %% =============================================================================
 
-%% Child befriending (CSSN Section 8.1, "Child befriending in vGLP"): at the
+%% Child befriending (CSSN Section 6.1, "Child befriending in vGLP"): at the
 %% other parent, approving for its child; at each of the two children,
 %% accepting.  The card shows the introduction as the introducing parent made
 %% it, and takes yes or no.
@@ -24,14 +24,6 @@ procedure (Card)*approve(Intro?, YesNo).
 
 procedure (Card)*accept(Intro?, YesNo).
 (card(I?, A))*accept(I, A?).
-
-%% Becoming parent and child, at the party offered a parent (Section 8.2).
-procedure (ParentCard)*accept_parent(ParentOffer?, YesNo).
-(card(O?, A))*accept_parent(O, A?).
-
-%% Ending it, at the parent a child asks (Section 8.2).
-procedure (ReleaseCard)*agree_release(ReleaseOffer?, YesNo).
-(card(O?, A))*agree_release(O, A?).
 
 %% Joining a group, at the party invited.
 procedure (GroupCard)*join_group(GroupOffer?, YesNo).
@@ -51,7 +43,7 @@ procedure (InviteCard)*approve_invite(InviteOffer?, YesNo).
 %% =============================================================================
 
 %% A child accepting an introduction from its parent P binds its consent and
-%% awaits the other's (Section 8.4, steps 3 and 4), by the social graph's
+%% awaits the other's (Section 6.4, steps 3 and 4), by the social graph's
 %% routing: the child proposing reads the other's consent and is handed the
 %% conveyance to write, the child accepting reads the conveyance.  Each
 %% outcome reaches the agent tagged with P, at whom the befriending's
@@ -74,24 +66,13 @@ procedure tag(Key?, Stream(BefriendOutcome)?, Stream(AgentIn)).
 tag(P, [O|Os], [outcome(P?, O?)|Out?]) :- tag(P?, Os?, Out).
 tag(_, [], []).
 
-%% The other parent's answer (Section 8.4, step 2): on yes the introduction is
+%% The other parent's answer (Section 6.4, step 2): on yes the introduction is
 %% forwarded to its child; on no it goes no further, the child's consent
 %% written no on the child's behalf.
 procedure approved(YesNo?, Intro?, Consents?, Stream(AgentIn)).
 approved(yes, intro(P, R, S), Cs, [forward_intro(S?, intro(P?, R?, S?), Cs?)]).
 approved(no, _, propose(Mine?, _), []) :- Mine = no.
 approved(no, _, accept(Mine?, _), []) :- Mine = no.
-
-%% The answer to an offer of a parent: on yes the agent becomes a child of P,
-%% conveying the parent-child channel; on no the offer is declined.
-procedure parent_answer(YesNo?, Key?, EnrolResponse, Stream(AgentIn)).
-parent_answer(yes, P, Resp?, [become_child(P?, Resp)]).
-parent_answer(no, _, enrol_no, []).
-
-%% A parent's answer to its child asking to end the parenting.
-procedure release_answer(YesNo?, Key?, Stream(AgentIn)).
-release_answer(yes, C, [release(C?)]).
-release_answer(no, _, []).
 
 %% The answer of a party invited into a group: on yes it hands the creator the
 %% writer of its end of the group channel, and joins once the creator writes

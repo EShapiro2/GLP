@@ -1,26 +1,29 @@
 %% self.glp --- the child-safe social network: the types and helpers shared by
 %% the certified program (childsafe/) and the plays of this directory.
 %%
-%% The program (CSSN paper, Section 8) is the adult agent
-%% (childsafe/agent.vglp) and the child agent (childsafe/child_agent.vglp),
-%% two vGLP modules that hand a party over to each other when it becomes a
-%% child and when its last parenting ends, with the cards they share
-%% (childsafe/self.vglp), the mini-app entry cssn/3 (childsafe/miniapp.glp) and
-%% a scripted person (childsafe/person.glp).  This directory adds the stand-in
-%% for the super-app (superapp.glp) and the plays (plays.glp), the village of
-%% Section 8.3 among them.
+%% The program (CSSN paper, Section 6) is three agents, adult, parent and
+%% child (childsafe/adult.vglp, parent.vglp, child.vglp), three vGLP modules
+%% whose states exclude one another and which hand a party over to each other
+%% --- an adult to the parent module when a child enters with it, a parent back
+%% when its last child is declared of age, a child to the adult module when it
+%% is declared of age --- with the cards they share (childsafe/self.vglp) and
+%% the mini-app's entries (childsafe/miniapp.glp).  This directory adds a
+%% scripted person (person.glp), the stand-in for the super-app
+%% (superapp.glp) and the plays (plays.glp), the village of Section 6.3 among
+%% them.
 %%
 %% A party's records are its channels and its state (Section 8.1, "The module
 %% is the state"): the friend set c_p is the friend_output entries of its
 %% outputs, the parents rho_p the parent_output entries --- and the child
 %% agent's list of its parents --- and the children kappa_p the child_output
-%% entries.  What no channel stands for is the state: alpha_p and omega_p, the
+%% entries, with the parent agent's list of them and their co-parents
+%% (gamma_p).  What no channel stands for is the state: alpha_p and omega_p, the
 %% approvals and withdrawals a parent's children's acts leave at it, and the
 %% posts a group's creator holds with its record of what it has sent to whom
 %% (pi_p^g and delta_p^g).
 
 %% =============================================================================
-%% THE PERSON'S REQUESTS --- the agents' question, Stream(Request)? (Section 8.1)
+%% THE PERSON'S REQUESTS --- the agents' question, Stream(Request)? (Section 6.1)
 %% =============================================================================
 
 %% The fields, each a named type over its base type, named for what it is, so
@@ -39,15 +42,14 @@ Text         ::= Constant.
 %% A group is named by its creator and the name the creator gave it.
 GroupId ::= group_id(Creator, Name).
 
-%% One alternative per request clause of the agents: becoming a parent;
-%% introducing a child of one's own to a child of a friend, or to another
-%% child of one's own when the friend named is oneself (Section 8.4); a
-%% message to a friend; asking a parent to end the parenting; ending a
-%% friendship, one's own or a child's; and the group acts.
-Request ::= become_parent(MyChild)
-          ; introduce(MyChild, Friend, FriendsChild)
+%% One alternative per request clause of the agents: introducing a child of
+%% one's own to a child of a friend, or to another child of one's own when the
+%% friend named is oneself (Section 6.4); declaring a child of one's own of
+%% age, a parent's act alone; a message to a friend; ending a friendship, one's
+%% own or a child's; and the group acts.
+Request ::= introduce(MyChild, Friend, FriendsChild)
+          ; declare_of_age(MyChild)
           ; send(Friend, Text)
-          ; end_parenting(Parent)
           ; unfriend(Friend)
           ; unfriend_child(MyChild, Friend)
           ; create_group(Name)
@@ -66,19 +68,11 @@ Request ::= become_parent(MyChild)
 
 YesNo ::= yes ; no.
 
-%% Child befriending (Section 8.1): the introduction as the introducing parent
+%% Child befriending (Section 6.1): the introduction as the introducing parent
 %% made it --- that parent, its child, the other child --- approved by the
 %% other parent and accepted by each child.
 Intro ::= intro(Parent, Child, OtherChild).
 Card  ::= card(Intro, YesNo?).
-
-%% Becoming parent and child: the card at the party offered a parent.
-ParentOffer ::= parent(Parent).
-ParentCard  ::= card(ParentOffer, YesNo?).
-
-%% Ending it: the card at the parent a child asks.
-ReleaseOffer ::= release(Child).
-ReleaseCard  ::= card(ReleaseOffer, YesNo?).
 
 %% Joining a group: the card at the party invited.
 GroupOffer ::= group(GroupId).
@@ -112,10 +106,6 @@ AcceptorConsent    ::= yes ; no.
 Consents ::= propose(ProposerConsent(FriendChannel)?, AcceptorConsent)
            ; accept(AcceptorConsent?, ProposerConsent(FriendChannel)).
 
-%% Becoming parent and child is answered by conveying the parent-child
-%% channel, which the child allocates.
-EnrolResponse ::= enrol_accept(FriendChannel) ; enrol_no.
-
 %% A group invitation is answered by the invitee's yes, carrying the writer of
 %% the member's end of the group channel, which the creator binds.
 GroupReply ::= yes(GroupChannel?) ; no.
@@ -125,9 +115,8 @@ GroupReply ::= yes(GroupChannel?) ; no.
 FriendContent ::= text(Text)
                 ; unfriend
                 ; child_intro(Intro, Consents)
-                ; enrol(Parent, EnrolResponse?)
-                ; release_request
-                ; release_grant
+                ; of_age
+                ; of_age_notice
                 ; approval
                 ; withdrawal
                 ; unfriend_child(Friend)
@@ -154,8 +143,20 @@ GroupChannel ::= ch(Stream(GroupMsg), Stream(GroupMsg)?).
 %% What the social graph hands the mini-app on its channel to the social graph
 %% (GSG paper, Section 3): at each invitation, one end of the root channel of
 %% a conversation with a friend's execution of this program.  Adopting it is
-%% an adult's befriending; a child refuses it.
-Conversation ::= conversation(Key, FriendChannel).
+%% an adult's befriending; a child refuses it.  And, at the setup of a child's
+%% phone (Appendix C.3, Enter), the parent's end of the parent-child channel,
+%% with the child's other parent where it has two.
+Conversation ::= conversation(Key, FriendChannel)
+               ; entered(Child, FriendChannel, Stream(Parent)).
+
+%% The parents a child enters with, each with the child's end of its
+%% parent-child channel.
+ParentEnd  ::= parent(Parent, FriendChannel).
+ParentEnds ::= [] ; [ParentEnd | ParentEnds].
+
+%% A parent's children, each with its co-parents (kappa_p and gamma_p).
+Kid  ::= kid(Child, Stream(Parent)).
+Kids ::= [] ; [Kid | Kids].
 
 %% =============================================================================
 %% THE AGENT'S OWN INPUT AND ITS RECORDS
@@ -168,17 +169,13 @@ BefriendOutcome ::= consented(Key, Conveyance(FriendChannel)?)
 
 %% What the agent's cards and awaits hand it: a child befriending's outcome,
 %% with the parent whose introduction it was; an introduction the person
-%% approved for a child of its own, to forward; an offer of a parent the
-%% person accepted; a child's answer to becoming one; a parenting the person
-%% agreed to end; a group invitation's reply, at the creator; a group joined,
+%% approved for a child of its own, to forward; a group invitation's reply, at
+%% the creator, with the parent whose consent it took; a group joined,
 %% with the parent whose approval it took (the party itself where none did);
 %% a group invitation a parent approved for its child, to forward; a parent's
 %% consent to a child creator's invitation, which the child then sends.
 AgentIn ::= outcome(Parent, BefriendOutcome)
           ; forward_intro(Child, Intro, Consents)
-          ; become_child(Parent, EnrolResponse?)
-          ; enrol_response(Child, EnrolResponse)
-          ; release(Child)
           ; group_reply(GroupId, Member, Parent, GroupReply)
           ; group_joined(GroupId, Parent, GroupChannel)
           ; forward_group(Child, GroupId, GroupReply?)
@@ -202,12 +199,11 @@ Screen ::= connected(Key)
          ; refused(Key)
          ; no_conversation(Key)
          ; declined(Key)
-         ; not_my_parent(Key)
-         ; my_parent(Key)
+         ; not_my_child(Key)
          ; parent(Key)
          ; child(Key)
-         ; parent_ended(Key)
-         ; child_ended(Key)
+         ; of_age
+         ; child_of_age(Key)
          ; adult
          ; approvals(Integer)
          ; withdrawals(Integer)
@@ -245,12 +241,10 @@ Decision ::= yes ; no.
 %% own definitions shadow these within them, and the two agree.
 Question ::= stream_request_r(Stream(Request)?)
            ; card_w(Card)
-           ; parentCard_w(ParentCard)
-           ; releaseCard_w(ReleaseCard)
            ; groupCard_w(GroupCard)
            ; joinCard_w(JoinCard)
            ; inviteCard_w(InviteCard).
-Drawn ::= stream_request_r(_) ; card_w(_) ; parentCard_w(_) ; releaseCard_w(_)
+Drawn ::= stream_request_r(_) ; card_w(_)
         ; groupCard_w(_) ; joinCard_w(_) ; inviteCard_w(_)
         ; output(List(Output)) ; YesNo ; Request.
 Ask(Q) ::= ask(Constant, Q).
@@ -262,7 +256,7 @@ Ask(Q) ::= ask(Constant, Q).
 %% A step of a person's script: a request on the request form; an answer on
 %% the card showing an offer; a wait for a screen message; and, at the
 %% super-app, asking a party to befriend and accepting a party's offer.
-Offer ::= Intro ; ParentOffer ; ReleaseOffer ; GroupOffer ; JoinOffer ; InviteOffer.
+Offer ::= Intro ; GroupOffer ; JoinOffer ; InviteOffer.
 Step ::= req(Request)
        ; answer(Offer, YesNo)
        ; await(Screen)
@@ -328,21 +322,23 @@ show(S, Outs, Outs1?) :- send_user(msg(agent, person, S?), Outs?, Outs1).
 
 %% The parent-child channel, at the parent: its write end becomes the child's
 %% output and its read end joins the input.
-procedure enrol_commit(Key?, FriendChannel?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(FriendMsg)?, Stream(FriendMsg)).
-enrol_commit(Child, ch(FromChild, ToChild?), Outs, Outs2?, NetIn, NetIn1?) :-
+procedure enter_parent_side(Key?, FriendChannel?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(FriendMsg)?, Stream(FriendMsg)).
+enter_parent_side(Child, ch(FromChild, ToChild?), Outs, Outs2?, NetIn, NetIn1?) :-
     ground(Child?) |
     add_child_output(Child?, ToChild, Outs?, Outs1),
     show(child(Child?), Outs1?, Outs2),
     merge(NetIn?, FromChild?, NetIn1).
 
-%% At the child: the channel allocated, the parent's end conveyed in the
-%% answer, the child's own end kept.
-procedure enrol_child_side(Key?, EnrolResponse, Stream(OutputEntry)?, Stream(OutputEntry), Stream(FriendMsg)?, Stream(FriendMsg)).
-enrol_child_side(Parent, enrol_accept(ParentEnd?), Outs, Outs2?, NetIn, NetIn1?) :-
-    ground(Parent?), new_channel(ParentEnd, ch(FromParent, ToParent?)) |
-    add_parent_output(Parent?, ToParent, Outs?, Outs1),
-    show(parent(Parent?), Outs1?, Outs2),
-    merge(NetIn?, FromParent?, NetIn1).
+%% At the child: each parent's channel installed, its write end the parent's
+%% output and its read end merged into the input; the parents' names listed.
+procedure enter_child_side(ParentEnds?, Stream(Key), Stream(OutputEntry)?, Stream(OutputEntry), Stream(FriendMsg)?, Stream(FriendMsg)).
+enter_child_side([parent(P, ch(FromParent, ToParent?))|Es], [P?|Ps?], Outs, Outs3?, NetIn, NetIn2?) :-
+    ground(P?) |
+    add_parent_output(P?, ToParent, Outs?, Outs1),
+    show(parent(P?), Outs1?, Outs2),
+    merge(NetIn?, FromParent?, NetIn1),
+    enter_child_side(Es?, Ps, Outs2?, Outs3, NetIn1?, NetIn2).
+enter_child_side([], [], Outs, Outs?, NetIn, NetIn?).
 
 procedure add_child_output(Key?, Stream(FriendMsg), Stream(OutputEntry)?, Stream(OutputEntry)).
 add_child_output(Name, Out?, Outs, [child_output(Name?, Out)|Outs?]).
@@ -366,14 +362,7 @@ close_parent(Name, [E|Rest], [E?|Rest1?]) :-
     otherwise |
     close_parent(Name?, Rest?, Rest1).
 
-%% The child's answer to an offer of a parent, when it comes.
-procedure inject_enrol_response(EnrolResponse?, Key?, Stream(AgentIn)?, Stream(AgentIn)).
-inject_enrol_response(Resp, Child, Ys, [enrol_response(Child?, Resp?)|Ys?]) :-
-    known(Resp?) | true.
-inject_enrol_response(Resp, Child, [Y|Ys], [Y?|Ys1?]) :-
-    inject_enrol_response(Resp?, Child?, Ys?, Ys1).
-
-%% The two introductions a parent sends for child befriending (Section 8.4,
+%% The two introductions a parent sends for child befriending (Section 6.4,
 %% step 1): the two consent variables minted, the child whose name sorts first
 %% proposing.  R is the parent's own child, S the other.
 procedure mint_consents(Key?, Key?, Consents, Consents).
@@ -560,9 +549,9 @@ imported procedure plays#village.
 exported procedure village.
 village :- plays # village.
 
-imported procedure plays#play_parenting.
-exported procedure play_parenting.
-play_parenting :- plays # play_parenting.
+imported procedure plays#play_two_parents.
+exported procedure play_two_parents.
+play_two_parents :- plays # play_two_parents.
 
 imported procedure plays#play_twice.
 exported procedure play_twice.
@@ -576,14 +565,6 @@ imported procedure plays#play_late_join.
 exported procedure play_late_join.
 play_late_join :- plays # play_late_join.
 
-imported procedure plays#play_child_parent.
-exported procedure play_child_parent.
-play_child_parent :- plays # play_child_parent.
-
 imported procedure plays#play_child_leave.
 exported procedure play_child_leave.
 play_child_leave :- plays # play_child_leave.
-
-imported procedure plays#play_two_parents.
-exported procedure play_two_parents.
-play_two_parents :- plays # play_two_parents.

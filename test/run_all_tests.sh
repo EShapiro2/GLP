@@ -2316,10 +2316,10 @@ fi  # Section I
 
 if _section K; then
 # =============================================================================
-# Section K: the child-safe social network (programs/cssn), CSSN Section 8:
-# the adult agent and the child agent, two vGLP modules compiled beside their
+# Section K: the child-safe social network (programs/cssn), CSSN Section 6:
+# the adult, parent and child agents, three vGLP modules compiled beside their
 # sources, as a certified mini-app of the Grassroots Super-App, and its plays
-# --- the village of Section 8.3 and one play per further act or condition ---
+# --- the village of Section 6.3 and one play per further act or condition ---
 # each party a scripted person on the mini-app's person channel and a
 # stand-in for the super-app.
 # =============================================================================
@@ -2329,8 +2329,8 @@ echo ""
 CSSN_V2="$GLP_DIR/programs/cssn"
 CSSN_APP="$CSSN_V2/childsafe"
 
-# The certified program: programs/cssn/childsafe is the two agents, the cards
-# they share and the entry cssn/3 the super-app activates with exactly its two
+# The certified program: programs/cssn/childsafe is the three agents, the
+# cards they share and the entries that activate the mini-app with its two
 # channels; it holds no network entry and reaches neither the network nor the
 # person, so it carries the compiler's certificate.
 echo "--- CSSN mini-app (programs/cssn/childsafe) ---"
@@ -2347,19 +2347,20 @@ check_not "CSSN mini-app no type errors" "Type checking failed" "$k_app"
 check_not "CSSN mini-app is certified" "CERTIFICATE REFUSED" "$k_app"
 check "CSSN mini-app: its certificate carries the compiler's key" "K = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$k_app"
 
-# The committed agent.glp and child_agent.glp must be the compiler's own
-# output: :emit rewrites them from their .vglp sources, and the working tree
-# must be unchanged.
+# The committed adult.glp, parent.glp and child.glp must be the compiler's
+# own output: :emit rewrites them from their .vglp sources, and the working
+# tree must be unchanged.
 k_emit=$("$REPL_RUN" <<HEREDOC
 $CSSN_V2
 :emit $CSSN_V2
 :quit
 HEREDOC
 2>&1)
-check "CSSN: :emit re-emits agent.glp" "wrote $CSSN_APP/agent.glp" "$k_emit"
-check "CSSN: :emit re-emits child_agent.glp" "wrote $CSSN_APP/child_agent.glp" "$k_emit"
-k_emit_diff=$(cd "$GLP_DIR" && git diff --stat -- programs/cssn/childsafe/agent.glp programs/cssn/childsafe/child_agent.glp)
-check_not "CSSN: the committed agents are the compiler's output" "agent.glp" "$k_emit_diff"
+check "CSSN: :emit re-emits adult.glp" "wrote $CSSN_APP/adult.glp" "$k_emit"
+check "CSSN: :emit re-emits parent.glp" "wrote $CSSN_APP/parent.glp" "$k_emit"
+check "CSSN: :emit re-emits child.glp" "wrote $CSSN_APP/child.glp" "$k_emit"
+k_emit_diff=$(cd "$GLP_DIR" && git diff --stat -- programs/cssn/childsafe/adult.glp programs/cssn/childsafe/parent.glp programs/cssn/childsafe/child.glp)
+check_not "CSSN: the committed agents are the compiler's output" "\.glp" "$k_emit_diff"
 
 k_load=$("$REPL_RUN" <<HEREDOC
 $CSSN_V2
@@ -2379,12 +2380,12 @@ $1.
 HEREDOC
 }
 
-# The village (Section 8.3), act by act.  The parties' messages interleave in
+# The village (Section 6.3), act by act.  The parties' messages interleave in
 # any order; every check is of a line, or of a count that only grows.
 echo "--- CSSN village, seven acts ---"
 k_v=$(k_play village 2>&1)
 check_not "CSSN village: no failed goal" "→ failed\|ERROR" "$k_v"
-check "CSSN village act 1: becoming parent and child, at the parent" "tagged(alice, child(carol))" "$k_v"
+check "CSSN village act 1: a child enters with its parent, at the parent" "tagged(alice, child(carol))" "$k_v"
 check "CSSN village act 1: and at the child" "tagged(carol, parent(alice))" "$k_v"
 check "CSSN village act 1: a parent of two" "tagged(bob, child(eve))" "$k_v"
 check "CSSN village act 2: adult friendship" "tagged(alice, connected(frank))" "$k_v"
@@ -2399,8 +2400,8 @@ check "CSSN village act 5: an adult creator's group, a child joining through its
 check "CSSN village act 5: a member joining late is owed what was posted before" "tagged(carol, group_received(group_id(frank, study), dave, Hi from Dave!))" "$k_v"
 check "CSSN village act 6: parent-initiated removal" "tagged(dave, group_left(group_id(frank, study)))" "$k_v"
 check "CSSN village act 6: child unfriending" "tagged(dave, unfriended(carol))" "$k_v"
-check "CSSN village act 7: ending the parenting, at the parent" "tagged(bob, child_ended(eve))" "$k_v"
-check "CSSN village act 7: no parent on record is what being an adult is" "tagged(eve, adult)" "$k_v"
+check "CSSN village act 7: declaring of age, at the parent" "tagged(bob, child_of_age(eve))" "$k_v"
+check "CSSN village act 7: and at the child, an adult" "tagged(eve, of_age)" "$k_v"
 check "CSSN village act 7: befriending with no parent among the guards" "tagged(eve, connected(frank))" "$k_v"
 check "CSSN village: Alice's approvals, one per act of her child" "tagged(alice, approvals(5))" "$k_v"
 check_not "CSSN village: and no more" "tagged(alice, approvals(6))" "$k_v"
@@ -2410,44 +2411,24 @@ check "CSSN village: Alice's withdrawals, Carol's unfriending and Eve's leaving 
 check "CSSN village: Bob's withdrawals" "tagged(bob, withdrawals(3))" "$k_v"
 check_not "CSSN village: and no more" "tagged(bob, withdrawals(4))" "$k_v"
 k_v_n=$(echo "$k_v" | grep -c "tagged(" || true)
-if [ "$k_v_n" = "163" ]; then
-    _check_pass "CSSN village: the log is 163 lines"
+if [ "$k_v_n" = "140" ]; then
+    _check_pass "CSSN village: the log is 140 lines"
 else
-    _check_fail "CSSN village: the log is 163 lines" "the log is $k_v_n lines (expected 163)"
+    _check_fail "CSSN village: the log is 140 lines" "the log is $k_v_n lines (expected 140)"
 fi
 
-echo "--- CSSN two parents, the forbidden parent(r), coming of age ---"
+echo "--- CSSN entering with two parents, declaring of age ---"
 k_tp=$(k_play play_two_parents 2>&1)
-check "CSSN two parents: the first" "tagged(alice, child(carol))" "$k_tp"
-check "CSSN two parents: the second" "tagged(carol, parent(bob))" "$k_tp"
+check "CSSN two parents: a child enters with two" "tagged(carol, parent(bob))" "$k_tp"
+check "CSSN two parents: at each parent" "tagged(bob, child(carol))" "$k_tp"
+check "CSSN two parents: a child is no parent" "tagged(carol, not_my_child(carol))" "$k_tp"
 check "CSSN two parents: a child refuses a conversation" "tagged(carol, refused(dave))" "$k_tp"
-check "CSSN two parents: a child may not become a parent of its parent" "tagged(carol, my_parent(alice))" "$k_tp"
-check_not "CSSN two parents: and does not" "tagged(alice, parent(carol))" "$k_tp"
-check "CSSN two parents: one parenting ended" "tagged(carol, parent_ended(alice))" "$k_tp"
-check "CSSN two parents: an adult when the last ends" "tagged(carol, adult)" "$k_tp"
-check "CSSN two parents: and befriends directly" "tagged(carol, connected(dave))" "$k_tp"
-k_tp_order=$(echo "$k_tp" | grep -E "tagged\(carol, (parent_ended\(alice\)|adult|parent_ended\(bob\))\)" | tr '\n' '|')
-case "$k_tp_order" in
-    "tagged(carol, parent_ended(alice))|tagged(carol, parent_ended(bob))|tagged(carol, adult)|")
-        _check_pass "CSSN two parents: still a child after the first ends" ;;
-    *)
-        _check_fail "CSSN two parents: still a child after the first ends" "order was: $k_tp_order" ;;
-esac
-
-echo "--- CSSN ending the parenting ---"
-k_pa=$(k_play play_parenting 2>&1)
-check "CSSN parenting: becoming parent and child" "tagged(alice, child(bob))" "$k_pa"
-check "CSSN parenting: a child refuses a conversation" "tagged(bob, refused(charlie))" "$k_pa"
-check "CSSN parenting: ending it tears the channel down" "tagged(alice, child_ended(bob))" "$k_pa"
-check "CSSN parenting: an empty rho is what being an adult is" "tagged(bob, adult)" "$k_pa"
-check "CSSN parenting: a released child takes up a conversation" "tagged(bob, connected(charlie))" "$k_pa"
-
-echo "--- CSSN a child may be a parent ---"
-k_cp=$(k_play play_child_parent 2>&1)
-check "CSSN child parent: Bob becomes a child" "tagged(bob, parent(alice))" "$k_cp"
-check "CSSN child parent: a child becomes a parent" "tagged(bob, child(carol))" "$k_cp"
-check "CSSN child parent: a child that is a parent ends the parenting" "tagged(carol, parent_ended(bob))" "$k_cp"
-check "CSSN child parent: and its own ends" "tagged(bob, adult)" "$k_cp"
+check "CSSN two parents: one parent declares the child of age" "tagged(alice, child_of_age(carol))" "$k_tp"
+check "CSSN two parents: which ends the other's parenting too" "tagged(bob, child_of_age(carol))" "$k_tp"
+check "CSSN two parents: the child is an adult" "tagged(carol, of_age)" "$k_tp"
+check "CSSN two parents: its parents are adults again" "tagged(alice, not_my_child(carol))" "$k_tp"
+check "CSSN two parents: both of them" "tagged(bob, not_my_child(carol))" "$k_tp"
+check "CSSN two parents: and the child befriends directly" "tagged(carol, connected(dave))" "$k_tp"
 
 echo "--- CSSN two introductions at once ---"
 k_tw=$(k_play play_twice 2>&1)

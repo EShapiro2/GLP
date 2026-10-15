@@ -1,27 +1,57 @@
 %% plays.glp --- the plays of the child-safe social network, the village of
-%% CSSN Section 8.3 first.
+%% CSSN Section 6.3 first.
 %%
 %% Each party runs the mini-app (childsafe/miniapp.glp), the compiled agents
-%% with their dispatcher, activated with its two channels; a stand-in for the
-%% super-app (superapp.glp) beside it, which befriends over a network of its
-%% own and hands the mini-app the conversations it opens; and a scripted
-%% person (person.glp) on the other end of both, which takes the steps of its
-%% script as what each needs comes on screen.  Every screen message and every
-%% step taken is logged, tagged(Party, M), so the run is observable.
+%% with their dispatcher; a stand-in for the super-app (superapp.glp) beside
+%% it, which befriends over a network of its own and hands the mini-app the
+%% conversations it opens; and a scripted person (person.glp) on the other end
+%% of both, which takes the steps of its script as what each needs comes on
+%% screen.  A party enters as an adult, or as a child with one or two of its
+%% parents on record (Appendix C.3, Enter): the play stands in for the setup
+%% of the child's phone, which is its parents' act and shows no form or card,
+%% making the parent-child channel to each parent, activating the child's
+%% mini-app with its ends, and handing each parent's mini-app its end, with
+%% the other parent, on its channel to the social graph.  Every screen message
+%% and every step taken is logged, tagged(Party, M), so the run is observable.
 
 imported procedure childsafe#cssn(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
+imported procedure childsafe#cssn_child(Key?, ParentEnds?, PersonChannel(Drawn)?, Stream(Conversation)?).
 imported procedure superapp#superapp(Key?, Stream(SgCmd)?, Stream(SgNotify), Stream(Conversation), SgOutStream, SgInStream?, Stream(SgPending)?, Integer?).
 imported procedure superapp#sg_switch(SgOutStream?, Stream(SgEntry)?).
 imported procedure person#person(Key?, _?, PersonIn(Drawn), Stream(SgNotify)?, Stream(SgCmd), Script?, Stream(_)).
 
-%% One party: the mini-app, its super-app and its person, and its log.
-procedure party(Key?, Script?, SgInStream?, SgOutStream).
-party(Id, Script, SgIn, SgOut?) :-
+%% An adult party: the mini-app, its super-app, its person and its log; Setup
+%% is what the setup of its children's phones hands it.
+procedure party(Key?, Script?, Stream(Conversation)?, SgInStream?, SgOutStream).
+party(Id, Script, Setup, SgIn, SgOut?) :-
     ground(Id?) |
     superapp # superapp(Id?, Cmds?, Notes, Convs, SgOut, SgIn?, [], 1),
-    childsafe # cssn(Id?, ch(Gs?, Ds), Convs?),
+    merge(Setup?, Convs?, Convs1),
+    childsafe # cssn(Id?, ch(Gs?, Ds), Convs1?),
     person # person(Id?, Ds?, Gs, Notes?, Cmds, Script?, Log),
     log(Id?, Log?).
+
+%% A party entering as a child, with the ends of its parents' channels.
+procedure child_party(Key?, ParentEnds?, Script?, SgInStream?, SgOutStream).
+child_party(Id, Es, Script, SgIn, SgOut?) :-
+    ground(Id?) |
+    superapp # superapp(Id?, Cmds?, Notes, Convs, SgOut, SgIn?, [], 1),
+    childsafe # cssn_child(Id?, Es?, ch(Gs?, Ds), Convs?),
+    person # person(Id?, Ds?, Gs, Notes?, Cmds, Script?, Log),
+    log(Id?, Log?).
+
+%% Enter(p, r): the setup of r's phone with its parent P, the channel made and
+%% its two ends handed out.
+procedure enter(Key?, Key?, ParentEnds, Stream(Conversation)).
+enter(P, R, [parent(P?, CEnd?)], [entered(R?, PEnd?, [])]) :-
+    new_channel(CEnd, PEnd).
+
+%% Enter with two parents(p, q, r).
+procedure enter2(Key?, Key?, Key?, ParentEnds, Stream(Conversation), Stream(Conversation)).
+enter2(P, Q, R, [parent(P?, CP?), parent(Q?, CQ?)], [entered(R?, PEnd?, [Q?])], [entered(R?, QEnd?, [P?])]) :-
+    ground(P?), ground(Q?), ground(R?) |
+    new_channel(CP, PEnd),
+    new_channel(CQ, QEnd).
 
 %% What a party logs, tagged(Party, M), one term to a line.
 procedure log(Key?, Stream(_)?).
@@ -29,34 +59,37 @@ log(Id, [M|Ms]) :- ground(M?) | send_to_user([tagged(Id?, M?)]), log(Id?, Ms?).
 log(_, []).
 
 %% =============================================================================
-%% THE VILLAGE (Section 8.3): Alice, Bob and Frank, and Carol, Dave and Eve,
+%% THE VILLAGE (Section 6.3): Alice, Bob and Frank, and Carol, Dave and Eve,
 %% in seven acts.
 %% =============================================================================
 
+%% Act 1, coming into the contract: Carol enters with her parent Alice, and
+%% Dave and Eve with their parent Bob; Alice, Bob and Frank enter as adults.
 exported procedure village.
 village :-
-    village_script(alice, SA), party(alice, SA?, AIn?, AOut),
-    village_script(bob, SB), party(bob, SB?, BIn?, BOut),
-    village_script(frank, SF), party(frank, SF?, FIn?, FOut),
-    village_script(carol, SC), party(carol, SC?, CIn?, COut),
-    village_script(dave, SD), party(dave, SD?, DIn?, DOut),
-    village_script(eve, SE), party(eve, SE?, EIn?, EOut),
+    enter(alice, carol, CE, AS),
+    enter(bob, dave, DE, BS1),
+    enter(bob, eve, EE, BS2),
+    merge(BS1?, BS2?, BS),
+    village_script(alice, SA), party(alice, SA?, AS?, AIn?, AOut),
+    village_script(bob, SB), party(bob, SB?, BS?, BIn?, BOut),
+    village_script(frank, SF), party(frank, SF?, [], FIn?, FOut),
+    village_script(carol, SC), child_party(carol, CE?, SC?, CIn?, COut),
+    village_script(dave, SD), child_party(dave, DE?, SD?, DIn?, DOut),
+    village_script(eve, SE), child_party(eve, EE?, SE?, EIn?, EOut),
     merge(AOut?, BOut?, O1), merge(O1?, FOut?, O2), merge(O2?, COut?, O3),
     merge(O3?, DOut?, O4), merge(O4?, EOut?, Os),
     superapp # sg_switch(Os?, [sg_entry(alice, AIn), sg_entry(bob, BIn), sg_entry(frank, FIn),
                                sg_entry(carol, CIn), sg_entry(dave, DIn), sg_entry(eve, EIn)]).
 
-%% The scripts.  Act 1, coming into the contract: every party starts an adult,
-%% and becoming parent and child travels the conversation between the two, so
-%% each parent first befriends its child-to-be.  Act 2, adult friendships.
-%% Act 3, child introductions, the sibling case among them.  Act 4, Carol's
-%% group, a child creator's.  Act 5, Frank's study group.  Act 6, Bob removes
-%% Dave from it, and Carol unfriends Dave.  Act 7, Eve comes of age and
+%% The scripts.  Act 2, adult friendships.  Act 3, child introductions, the
+%% sibling case among them.  Act 4, Carol's group, a child creator's.  Act 5,
+%% Frank's study group; Frank tells Bob when Dave has posted in it.  Act 6,
+%% Bob removes Dave from it, and Carol unfriends Dave.  Act 7, Bob declares
+%% Eve of age once his three withdrawals are in, and Eve, an adult,
 %% befriends Frank directly.
 procedure village_script(Key?, Script).
 village_script(alice, [
-    befriend(carol), await(connected(carol)),
-    req(become_parent(carol)), await(child(carol)),
     befriend(bob), befriend(frank), await(connected(bob)), await(connected(frank)),
     req(send(bob, 'Hello Bob')),
     req(introduce(carol, bob, dave)),
@@ -65,8 +98,6 @@ village_script(alice, [
     answer(invite(group_id(carol, kids_chat), eve), yes),
     answer(join(group_id(frank, study), carol), yes)]).
 village_script(bob, [
-    befriend(dave), befriend(eve), await(connected(dave)), await(connected(eve)),
-    req(become_parent(dave)), req(become_parent(eve)), await(child(dave)), await(child(eve)),
     accept_friend(alice), befriend(frank), await(connected(frank)),
     answer(intro(alice, carol, dave), yes),
     req(introduce(dave, bob, eve)),
@@ -74,9 +105,10 @@ village_script(bob, [
     answer(join(group_id(carol, kids_chat), dave), yes),
     answer(join(group_id(carol, kids_chat), eve), yes),
     answer(join(group_id(frank, study), dave), yes),
-    await(received(dave, 'Posted in the study group')),
+    await(received(frank, 'Dave posted')),
     req(leave_child(dave, group_id(frank, study))),
-    answer(release(eve), yes)]).
+    await(withdrawals(3)),
+    req(declare_of_age(eve))]).
 village_script(frank, [
     accept_friend(alice), accept_friend(bob),
     req(create_group(study)),
@@ -84,9 +116,10 @@ village_script(frank, [
     await(member_joined(group_id(frank, study), dave)),
     await(member_joined(group_id(frank, study), carol)),
     req(post(group_id(frank, study), 'Welcome to the study group')),
+    await(group_received(group_id(frank, study), dave, 'Hi from Dave!')),
+    req(send(bob, 'Dave posted')),
     accept_friend(eve)]).
 village_script(carol, [
-    accept_friend(alice), answer(parent(alice), yes),
     answer(intro(alice, carol, dave), yes), answer(intro(alice, carol, eve), yes),
     await(connected(dave)), await(connected(eve)),
     req(create_group(kids_chat)),
@@ -99,117 +132,80 @@ village_script(carol, [
     req(post(group_id(frank, study), 'Hi from Carol!')),
     req(unfriend(dave))]).
 village_script(dave, [
-    accept_friend(bob), answer(parent(bob), yes),
     answer(intro(alice, carol, dave), yes), answer(intro(bob, dave, eve), yes),
     answer(group(group_id(carol, kids_chat)), yes),
     await(group_received(group_id(carol, kids_chat), carol, 'Hi from Carol')),
     req(post(group_id(carol, kids_chat), 'Hi from Dave')),
     answer(group(group_id(frank, study)), yes),
-    req(post(group_id(frank, study), 'Hi from Dave!')),
-    req(send(bob, 'Posted in the study group'))]).
+    await(group_joined(group_id(frank, study))),
+    req(post(group_id(frank, study), 'Hi from Dave!'))]).
 village_script(eve, [
-    accept_friend(bob), answer(parent(bob), yes),
     answer(intro(bob, dave, eve), yes), answer(intro(alice, carol, eve), yes),
     answer(group(group_id(carol, kids_chat)), yes),
     await(group_received(group_id(carol, kids_chat), dave, 'Hi from Dave')),
     req(post(group_id(carol, kids_chat), 'Hi from Eve')),
     await(group_received(group_id(carol, kids_chat), eve, 'Hi from Eve')),
     req(leave(group_id(carol, kids_chat))),
-    req(end_parenting(bob)), await(adult),
+    await(of_age),
     befriend(frank), await(connected(frank))]).
 
 %% =============================================================================
 %% THE OTHER PLAYS, each one act or one condition of the contract
 %% =============================================================================
 
-%% Becoming parent and child and ending it, with two parents (Sections 5, 6
-%% and 8.1): Alice and Bob each befriend Carol and become her parent, the
-%% offer travelling the conversation between the two; Carol, a child, refuses
-%% a conversation Dave opens with her; she may not become a parent of a
-%% parent of her own (the forbidden parent(r)); she asks Alice to end the
-%% parenting and is still a child, of Bob; she asks Bob and is an adult, and
-%% befriends Dave directly.
+%% Entering with two parents and declaring of age (Appendix C.3): Carol
+%% enters with Alice and Bob; she is no parent, and refuses a conversation
+%% Dave opens with her, a child; Dave, an adult, befriends Alice, which tells
+%% Alice it is done; Alice declares Carol of age, which ends Bob's parenting
+%% too; Alice and Bob are adults again, no longer her parents; and Carol, an
+%% adult, befriends Dave directly.
 exported procedure play_two_parents.
 play_two_parents :-
-    party(alice, [befriend(carol), await(connected(carol)), req(become_parent(carol)),
-                  await(child(carol)), answer(release(carol), yes)], AIn?, AOut),
-    party(bob, [befriend(carol), await(connected(carol)), req(become_parent(carol)),
-                await(child(carol)), answer(release(carol), yes)], BIn?, BOut),
-    party(carol, [accept_friend(alice), accept_friend(bob),
-                  answer(parent(alice), yes), answer(parent(bob), yes),
-                  accept_friend(dave), await(refused(dave)),
-                  req(become_parent(alice)), await(my_parent(alice)),
-                  req(end_parenting(alice)), await(parent_ended(alice)),
-                  req(end_parenting(bob)), await(adult),
-                  befriend(dave), await(connected(dave))], CIn?, COut),
-    party(dave, [befriend(carol), accept_friend(carol)], DIn?, DOut),
+    enter2(alice, bob, carol, CE, AS, BS),
+    party(alice, [await(child(carol)), accept_friend(dave), await(connected(dave)),
+                  req(declare_of_age(carol)), await(child_of_age(carol)),
+                  req(declare_of_age(carol)), await(not_my_child(carol))], AS?, AIn?, AOut),
+    party(bob, [await(child_of_age(carol)), req(declare_of_age(carol)),
+                await(not_my_child(carol))], BS?, BIn?, BOut),
+    child_party(carol, CE?, [req(introduce(carol, alice, dave)), await(not_my_child(carol)),
+                             accept_friend(dave), await(refused(dave)),
+                             await(of_age), befriend(dave), await(connected(dave))], CIn?, COut),
+    party(dave, [befriend(carol), await(connected(carol)), befriend(alice),
+                 accept_friend(carol)], [], DIn?, DOut),
     merge(AOut?, BOut?, O1), merge(O1?, COut?, O2), merge(O2?, DOut?, Os),
     superapp # sg_switch(Os?, [sg_entry(alice, AIn), sg_entry(bob, BIn),
                                sg_entry(carol, CIn), sg_entry(dave, DIn)]).
 
-%% Ending the parenting (Section 8.1, act 7 of the village in small): Alice
-%% becomes Bob's parent; Bob, a child, refuses a conversation Charlie opens
-%% with him; he asks Alice to end the parenting and she does; Bob, an adult
-%% again, befriends Charlie directly, with no parent among the guards.
-exported procedure play_parenting.
-play_parenting :-
-    party(alice, [befriend(bob), await(connected(bob)), req(become_parent(bob)),
-                  await(child(bob)), answer(release(bob), yes)], AIn?, AOut),
-    party(bob, [accept_friend(alice), answer(parent(alice), yes), await(parent(alice)),
-                accept_friend(charlie), await(refused(charlie)),
-                req(end_parenting(alice)), await(adult),
-                befriend(charlie), await(connected(charlie))], BIn?, BOut),
-    party(charlie, [befriend(bob), accept_friend(bob)], CIn?, COut),
-    merge(AOut?, BOut?, O1), merge(O1?, COut?, Os),
-    superapp # sg_switch(Os?, [sg_entry(alice, AIn), sg_entry(bob, BIn), sg_entry(charlie, CIn)]).
-
-%% A child may be a parent (Appendix A, "No Gatekeeping"): Bob, a child of
-%% Alice, becomes Carol's parent; Carol asks Bob to end it and he does; Bob
-%% asks Alice and she does.
-exported procedure play_child_parent.
-play_child_parent :-
-    party(alice, [befriend(bob), await(connected(bob)), req(become_parent(bob)),
-                  await(child(bob)), answer(release(bob), yes)], AIn?, AOut),
-    party(bob, [accept_friend(alice), befriend(carol), await(connected(carol)),
-                answer(parent(alice), yes), await(parent(alice)),
-                req(become_parent(carol)), await(child(carol)),
-                answer(release(carol), yes), await(child_ended(carol)),
-                req(end_parenting(alice)), await(adult)], BIn?, BOut),
-    party(carol, [accept_friend(bob), answer(parent(bob), yes), await(parent(bob)),
-                  req(end_parenting(bob)), await(adult)], CIn?, COut),
-    merge(AOut?, BOut?, O1), merge(O1?, COut?, Os),
-    superapp # sg_switch(Os?, [sg_entry(alice, AIn), sg_entry(bob, BIn), sg_entry(carol, CIn)]).
-
 %% Two introductions of the same two children under way at once establish one
-%% friend channel (Section 8.4, step 5): Alice introduces Carol to Dave through
+%% friend channel (Section 6.4, step 5): Alice introduces Carol to Dave through
 %% Bob twice, and every guard answers both.
 exported procedure play_twice.
 play_twice :-
-    party(alice, [befriend(carol), befriend(bob), await(connected(carol)), await(connected(bob)),
-                  req(become_parent(carol)), await(child(carol)),
-                  req(introduce(carol, bob, dave)), req(introduce(carol, bob, dave))], AIn?, AOut),
-    party(bob, [befriend(dave), accept_friend(alice), await(connected(dave)),
-                req(become_parent(dave)), await(child(dave)),
-                answer(intro(alice, carol, dave), yes), answer(intro(alice, carol, dave), yes)], BIn?, BOut),
-    party(carol, [accept_friend(alice), answer(parent(alice), yes),
-                  answer(intro(alice, carol, dave), yes), answer(intro(alice, carol, dave), yes)], CIn?, COut),
-    party(dave, [accept_friend(bob), answer(parent(bob), yes),
-                 answer(intro(alice, carol, dave), yes), answer(intro(alice, carol, dave), yes)], DIn?, DOut),
+    enter(alice, carol, CE, AS),
+    enter(bob, dave, DE, BS),
+    party(alice, [befriend(bob), await(connected(bob)),
+                  req(introduce(carol, bob, dave)), req(introduce(carol, bob, dave))], AS?, AIn?, AOut),
+    party(bob, [accept_friend(alice),
+                answer(intro(alice, carol, dave), yes), answer(intro(alice, carol, dave), yes)], BS?, BIn?, BOut),
+    child_party(carol, CE?, [answer(intro(alice, carol, dave), yes),
+                             answer(intro(alice, carol, dave), yes)], CIn?, COut),
+    child_party(dave, DE?, [answer(intro(alice, carol, dave), yes),
+                            answer(intro(alice, carol, dave), yes)], DIn?, DOut),
     merge(AOut?, BOut?, O1), merge(O1?, COut?, O2), merge(O2?, DOut?, Os),
     superapp # sg_switch(Os?, [sg_entry(alice, AIn), sg_entry(bob, BIn),
                                sg_entry(carol, CIn), sg_entry(dave, DIn)]).
 
 %% Two adults befriending each other at once: two conversations open, and
-%% each adopts one, the second closed (Section 8.1).
+%% each adopts one, the second closed.
 exported procedure play_both_ways.
 play_both_ways :-
-    party(alice, [befriend(bob), accept_friend(bob)], AIn?, AOut),
-    party(bob, [befriend(alice), accept_friend(alice)], BIn?, BOut),
+    party(alice, [befriend(bob), accept_friend(bob)], [], AIn?, AOut),
+    party(bob, [befriend(alice), accept_friend(alice)], [], BIn?, BOut),
     merge(AOut?, BOut?, Os),
     superapp # sg_switch(Os?, [sg_entry(alice, AIn), sg_entry(bob, BIn)]).
 
 %% A member is owed a post while it is on the member list and the creator has
-%% not sent it that item (Appendix A3, delivery): Carol, joining after Alice
+%% not sent it that item (Appendix C.3, delivery): Carol, joining after Alice
 %% posts, receives that post, and Dave, joining after two, receives both, in
 %% the order they were made; Bob receives the first once.
 exported procedure play_late_join.
@@ -224,47 +220,46 @@ play_late_join :-
                   await(member_joined(group_id(alice, late_join), carol)),
                   req(post(group_id(alice, late_join), 'Posted before Dave joined')),
                   await(group_received(group_id(alice, late_join), alice, 'Posted before Dave joined')),
-                  req(invite(late_join, dave))], AIn?, AOut),
-    party(bob, [accept_friend(alice), answer(group(group_id(alice, late_join)), yes)], BIn?, BOut),
-    party(carol, [accept_friend(alice), answer(group(group_id(alice, late_join)), yes)], CIn?, COut),
-    party(dave, [accept_friend(alice), answer(group(group_id(alice, late_join)), yes)], DIn?, DOut),
+                  req(invite(late_join, dave))], [], AIn?, AOut),
+    party(bob, [accept_friend(alice), answer(group(group_id(alice, late_join)), yes)], [], BIn?, BOut),
+    party(carol, [accept_friend(alice), answer(group(group_id(alice, late_join)), yes)], [], CIn?, COut),
+    party(dave, [accept_friend(alice), answer(group(group_id(alice, late_join)), yes)], [], DIn?, DOut),
     merge(AOut?, BOut?, O1), merge(O1?, COut?, O2), merge(O2?, DOut?, Os),
     superapp # sg_switch(Os?, [sg_entry(alice, AIn), sg_entry(bob, BIn),
                                sg_entry(carol, CIn), sg_entry(dave, DIn)]).
 
 %% Ending a child's membership of a group a child created, at two of the four
-%% roles of child_leave_2 (Appendix A2): Carol, a child of Alice, created
-%% kids_chat and holds Dave and Eve, children of Bob, on its list; Carol
+%% roles of child_leave_2 (Appendix C.3): Carol, entered with Alice, created
+%% kids_chat and holds Dave and Eve, entered with Bob, on its list; Carol
 %% removes Dave, the creator's role; Alice removes Eve, the role of the
-%% creator's parent.  The children befriend as adults, before they become
-%% children, and each tells Carol when it is one.
+%% creator's parent.
 exported procedure play_child_leave.
 play_child_leave :-
-    party(alice, [befriend(carol), await(connected(carol)), req(become_parent(carol)),
-                  await(child(carol)),
+    enter(alice, carol, CE, AS),
+    enter(bob, dave, DE, BS1),
+    enter(bob, eve, EE, BS2),
+    merge(BS1?, BS2?, BS),
+    party(alice, [befriend(bob), await(connected(bob)),
+                  req(introduce(carol, bob, dave)), req(introduce(carol, bob, eve)),
                   answer(invite(group_id(carol, kids_chat), dave), yes),
                   answer(invite(group_id(carol, kids_chat), eve), yes),
-                  await(approvals(2)),
-                  req(remove_child_member(carol, kids_chat, eve))], AIn?, AOut),
-    party(bob, [befriend(dave), befriend(eve), await(connected(dave)), await(connected(eve)),
-                req(become_parent(dave)), req(become_parent(eve)),
+                  await(approvals(4)),
+                  req(remove_child_member(carol, kids_chat, eve))], AS?, AIn?, AOut),
+    party(bob, [accept_friend(alice),
+                answer(intro(alice, carol, dave), yes), answer(intro(alice, carol, eve), yes),
                 answer(join(group_id(carol, kids_chat), dave), yes),
-                answer(join(group_id(carol, kids_chat), eve), yes)], BIn?, BOut),
-    party(carol, [accept_friend(alice), befriend(dave), befriend(eve),
-                  await(connected(dave)), await(connected(eve)),
-                  answer(parent(alice), yes),
-                  await(received(dave, 'A child now')), await(received(eve, 'A child now')),
-                  req(create_group(kids_chat)),
-                  req(invite(kids_chat, dave)), req(invite(kids_chat, eve)),
-                  await(member_joined(group_id(carol, kids_chat), dave)),
-                  await(member_joined(group_id(carol, kids_chat), eve)),
-                  req(remove(kids_chat, dave))], CIn?, COut),
-    party(dave, [accept_friend(bob), accept_friend(carol), answer(parent(bob), yes),
-                 await(parent(bob)), req(send(carol, 'A child now')),
-                 answer(group(group_id(carol, kids_chat)), yes)], DIn?, DOut),
-    party(eve, [accept_friend(bob), accept_friend(carol), answer(parent(bob), yes),
-                await(parent(bob)), req(send(carol, 'A child now')),
-                answer(group(group_id(carol, kids_chat)), yes)], EIn?, EOut),
+                answer(join(group_id(carol, kids_chat), eve), yes)], BS?, BIn?, BOut),
+    child_party(carol, CE?, [answer(intro(alice, carol, dave), yes), answer(intro(alice, carol, eve), yes),
+                             await(connected(dave)), await(connected(eve)),
+                             req(create_group(kids_chat)),
+                             req(invite(kids_chat, dave)), req(invite(kids_chat, eve)),
+                             await(member_joined(group_id(carol, kids_chat), dave)),
+                             await(member_joined(group_id(carol, kids_chat), eve)),
+                             req(remove(kids_chat, dave))], CIn?, COut),
+    child_party(dave, DE?, [answer(intro(alice, carol, dave), yes),
+                            answer(group(group_id(carol, kids_chat)), yes)], DIn?, DOut),
+    child_party(eve, EE?, [answer(intro(alice, carol, eve), yes),
+                           answer(group(group_id(carol, kids_chat)), yes)], EIn?, EOut),
     merge(AOut?, BOut?, O1), merge(O1?, COut?, O2), merge(O2?, DOut?, O3), merge(O3?, EOut?, Os),
     superapp # sg_switch(Os?, [sg_entry(alice, AIn), sg_entry(bob, BIn), sg_entry(carol, CIn),
                                sg_entry(dave, DIn), sg_entry(eve, EIn)]).
