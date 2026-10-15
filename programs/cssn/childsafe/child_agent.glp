@@ -1,516 +1,529 @@
-%% child_agent.glp — Child agent module (CSSN, full groups + blocking consent)
-%%
-%% Exports: child_agent/6
-%% Types and helpers (merge, setup_group_*, approvals): from self.glp (ancestor
-%% scoping)
-%% await_group_channel, child_consent_wait: local (call child_agent recursively)
-%%
-%% It runs as a mini-app of the Grassroots Super-App (miniapp.glp) and holds no
-%% network entry: every act of the contract travels a channel this party already
-%% holds --- the parent-child channel, a friend channel a parent's introduction
-%% created, or a group's.  A conversation the social graph opens with a child is
-%% refused, which is the child-safety invariant meeting the super-app.
-%%
-%% CSSN child_agent handles befriending via parental introductions, messaging,
-%% group creation/inviting/joining/messaging, and blocking parental consent
-%% for child-managed group invites (consent flow 3).
-%%
-%% Childhood is not given:
-%%   - A party does not boot as a child.  It becomes one by accepting the offer
-%%     to become parent and child, which is where agent hands over to this
-%%     module, and stops being one when the parenting ends, which is where this
-%%     module hands back.  ParentId is therefore set by the act, not by boot, and
-%%     rho_r is the parent_output entry the act created.  There is no declaring
-%%     of age: a party is a child exactly while it holds a parent.
-%%   - A child friendship or membership that commits, and one that ends, are
-%%     reported to the parent as a bare approval or withdrawal, naming nobody.
-%%   - A CHILD MAY BE A PARENT.  Becoming a parent asks nothing of the party that
-%%     becomes one, and no clause of a grassroots contract may gate the act by
-%%     which two strangers come into relation, so this module carries the whole
-%%     parent role as well: offering, adopting the channel the child conveys,
-%%     ending the parenting, and the counts its own children's acts leave here.
-
-%% =============================================================================
-%% IMPORTED PROCEDURES
-%% =============================================================================
-
-%% Release hands the agent back to the adult agent; enrol hands it here.  The
-%% two modules import each other.
-imported procedure agent#agent(Constant?, AgentState?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Conversation)?, Stream(OutputEntry)?).
-
-%% =============================================================================
-%% AWAIT_GROUP_CHANNEL — local (calls merge and child_agent)
-%% =============================================================================
-
-%% A child's membership commits here, and a parent of the child is a party to it,
-%% so the parent's approval count advances --- at the commit, and naming nobody.
-procedure await_group_channel(Constant?, Constant?, AgentState?, GroupId?, Stream(GroupSetupResponse)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Conversation)?, Stream(OutputEntry)?).
-await_group_channel(Id, ParentId, St, GroupId, [group_channel(ch(FromHub, ToHub?))|_],
-        UserIn, NetIn, Convs, Outs) :-
-    ground(Id?), ground(GroupId?) |
-    add_group_output(group(GroupId?), ToHub, Outs?, Outs1),
-    merge(NetIn?, FromHub?, NetIn1),
-    send_user( msg(agent, person, group_joined(GroupId?)),
-        Outs1?, Outs2),
-    send_parent(ParentId?, msg(Id?, ParentId?, approval), Outs2?, Outs3),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn1?, Convs?, Outs3?).
-await_group_channel(_, _, _, _, [], _, _, _, _) :- true.
-
-%% =============================================================================
-%% CHILD_CONSENT_WAIT/9 — blocking consent for child-managed group invites
-%% =============================================================================
-
-procedure child_consent_wait(Decision?, Constant?, Constant?, AgentState?, GroupId?,
-    Channel(Stream(GroupSetupResponse), Stream(IntroContent))?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Conversation)?, Stream(OutputEntry)?).
-
-%% Parent approved — present invite to child's UI
-child_consent_wait(yes, Id, ParentId, St, GroupId, Ch, UserIn, NetIn, Convs, Outs) :-
-    ground(Id?) |
-    send_user( msg(agent, person, group_invite(GroupId?, Ch?)),
-        Outs?, Outs1),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs1?).
-
-%% Parent rejected — nack the invite channel, move on
-child_consent_wait(no, Id, ParentId, St, _, ch(_, [nack|[]]), UserIn, NetIn, Convs, Outs) :-
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs?).
-
-%% =============================================================================
-%% DECLINING WHAT A CHILD MAY NOT TAKE FOR ITSELF
-%% =============================================================================
-
-procedure decline_enrol(EnrolResponse).
-decline_enrol(enrol_no).
-
-procedure offer_enrol_child(Decision?, Constant?, Constant?, Constant?, AgentState?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Conversation)?, Stream(OutputEntry)?).
-offer_enrol_child(yes, Id, ParentId, Child, St, UserIn, NetIn, Convs, Outs) :-
-    ground(Id?), ground(Child?) |
-    send_friend(Child?, msg(Id?, Child?, enrol(Id?, Resp)), Outs?, Outs1),
-    inject_enrol_response(Resp?, Child?, UserIn?, UserIn1),
-    child_agent(Id?, ParentId?, St?, UserIn1?, NetIn?, Convs?, Outs1?).
-offer_enrol_child(no, Id, ParentId, Child, St, UserIn, NetIn, Convs, Outs) :-
-    ground(Id?), ground(Child?) |
-    send_user( msg(agent, person, no_conversation(Child?)), Outs?, Outs1),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs1?).
-
-%% =============================================================================
-%% CHILD_AGENT/7 — the main loop of the child agent
-%% =============================================================================
-
-exported procedure child_agent(Constant?, Constant?, AgentState?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Conversation)?, Stream(OutputEntry)?).
-
-%% --- Ending the parenting ---
-
-%% The child asks its parent to end it.  The parent owes it and answers on the
-%% parent-child channel; a refusal is an act not taken and leaves no record.
-child_agent(Id, ParentId, St, [msg(person, Id1, request_release)|UserIn], NetIn, Convs, Outs) :-
-    Id? =?= Id1? |
-    send_parent(ParentId?, msg(Id?, ParentId?, release_request), Outs?, Outs1),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs1?).
-
-%% Ended.  rho_r loses the parent and so is empty, which IS being an adult: the
-%% agent is an adult agent again, and nothing is counted or declared to make it
-%% one.  That is what lets it befriend with no parent among the guards.
-child_agent(Id, ParentId, St, UserIn, [msg(From, Id1, release_grant)|NetIn], Convs, Outs) :-
-    Id? =?= Id1?, From? =?= ParentId? |
-    close_parent(ParentId?, Outs?, Outs1),
-    send_user( msg(agent, person, released(ParentId?)), Outs1?, Outs2),
-    agent # agent(Id?, St?, UserIn?, NetIn?, Convs?, Outs2?).
-
-%% --- The parent role, which a child may hold too ---
-%%
-%% Becoming a parent asks nothing of the party that becomes one, and Section
-%% "No Gatekeeping" shows no clause of a grassroots contract may gate the act by
-%% which two strangers come into relation.  So a party that is a child carries
-%% the whole parent role, and these clauses are its half of it.  Its own parent
-%% is reached by send_parent and its children by send_child: rho_r and kappa_r
-%% are different entries of the outputs list and never collide.
-%%
-%% Where the adult agent uses `otherwise` to separate the sibling case of an
-%% introduction, this module uses negated equality: an `otherwise` here would
-%% wait on the clauses reading this child's own network input.
-
-%% Offer to become a parent of another party, on the conversation with it.
-child_agent(Id, ParentId, St, [msg(person, Id1, enrol_child(Child))|UserIn], NetIn, Convs, Outs) :-
-    Id? =?= Id1?, ground(Child?) |
-    has_friend(Child?, Outs?, Outs1, Open),
-    offer_enrol_child(Open?, Id?, ParentId?, Child?, St?, UserIn?, NetIn?, Convs?, Outs1?).
-
-%% The other party accepted: adopt the channel it conveyed.  kappa_r gains it.
-child_agent(Id, ParentId, St, [enrol_response(Child, enrol_accept(Ch))|UserIn], NetIn, Convs, Outs) :-
-    ground(Id?), ground(Child?) |
-    enrol_commit(Child?, Ch?, Outs?, Outs1, NetIn?, NetIn1),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn1?, Convs?, Outs1?).
-
-%% It declined.
-child_agent(Id, ParentId, St, [enrol_response(Child, enrol_no)|UserIn], NetIn, Convs, Outs) :-
-    ground(Id?) |
-    send_user( msg(agent, person, rejected(Child?)), Outs?, Outs1),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs1?).
-
-%% End the parenting of a child of ours.
-child_agent(Id, ParentId, St, [msg(person, Id1, approve_release(Child))|UserIn], NetIn, Convs, Outs) :-
-    Id? =?= Id1?, ground(Child?) |
-    send_child(Child?, msg(Id?, Child?, release_grant), Outs?, Outs1),
-    close_child(Child?, Outs1?, Outs2),
-    send_user( msg(agent, person, released(Child?)), Outs2?, Outs3),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs3?).
-
-%% Introduce two children of our own to each other.
-child_agent(Id, ParentId, St, [msg(person, Id1, child_introduce(Child1, Friend, Child2))|UserIn], NetIn, Convs, Outs) :-
-    Id? =?= Id1?, Friend? =?= Id?,
-    ground(Child1?), ground(Child2?),
-    new_channel(C1Ch, C2Ch) |
-    send_child(Child1?, msg(Id?, Child1?, child_intro(Child2?, C1Ch?)), Outs?, Outs1),
-    send_child(Child2?, msg(Id?, Child2?, child_intro(Child1?, C2Ch?)), Outs1?, Outs2),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs2?).
-
-%% Introduce a child of our own to a child of a friend.
-child_agent(Id, ParentId, St, [msg(person, Id1, child_introduce(MyChild, Friend, FriendChild))|UserIn], NetIn, Convs, Outs) :-
-    Id? =?= Id1?, Friend? =?\= Id?,
-    ground(MyChild?), ground(Friend?), ground(FriendChild?),
-    new_channel(C1Ch, C2Ch) |
-    send_child(MyChild?, msg(Id?, MyChild?, child_intro(FriendChild?, C1Ch?)), Outs?, Outs1),
-    send_friend(Friend?, msg(Id?, Friend?, child_intro(MyChild?, C2Ch?)), Outs1?, Outs2),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs2?).
-
-%% Approve an introduction for a child of our own — forward it on.
-child_agent(Id, ParentId, St, [msg(person, Id1, approve_child_intro(OtherChild, MyChild, channel(Ch)))|UserIn], NetIn, Convs, Outs) :-
-    Id? =?= Id1?, ground(OtherChild?), ground(MyChild?) |
-    send_child(MyChild?, msg(Id?, MyChild?, child_intro(OtherChild?, Ch?)), Outs?, Outs1),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs1?).
-
-%% Approve a group invite for a child of our own — forward it on.
-child_agent(Id, ParentId, St, [msg(person, Id1, approve_group(Child, GroupId, group_channel(Ch)))|UserIn],
-        NetIn, Convs, Outs) :-
-    Id? =?= Id1?, ground(GroupId?), ground(Child?) |
-    send_child(Child?, msg(Id?, Child?, group_invite(GroupId?, Ch?)), Outs?, Outs1),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs1?).
-
-%% Answer a consent request from a child of our own.
-child_agent(Id, ParentId, St, [msg(person, Id1, approve_child_group(_, _, consent(yes)))|UserIn],
-        NetIn, Convs, Outs) :-
-    Id? =?= Id1? |
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs?).
-
-child_agent(Id, ParentId, St, [msg(person, Id1, reject_child_group(_, _, consent(no)))|UserIn],
-        NetIn, Convs, Outs) :-
-    Id? =?= Id1? |
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs?).
-
-%% Tell a child of our own to leave a group.
-child_agent(Id, ParentId, St, [msg(person, Id1, leave_child_group(Child, GroupId))|UserIn], NetIn, Convs, Outs) :-
-    Id? =?= Id1?, ground(Child?), ground(GroupId?) |
-    send_child(Child?, msg(Id?, Child?, leave_group(GroupId?)), Outs?, Outs1),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs1?).
-
-%% End a friendship of a child of our own.  Nothing is looked up and nothing
-%% checked: our approvals name nobody.
-child_agent(Id, ParentId, St, [msg(person, Id1, unfriend_child_of(MyChild, Target))|UserIn], NetIn, Convs, Outs) :-
-    Id? =?= Id1?, ground(MyChild?), ground(Target?) |
-    send_child(MyChild?, msg(Id?, MyChild?, unfriend_child(Target?)), Outs?, Outs1),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs1?).
-
-%% End a child's membership of a group a child of our own created: the fourth
-%% role of child_leave_2.  A party that is a child carries this like every other
-%% part of the parent role --- the creator it names is a child of ITS OWN, and
-%% its own parent is a different entry of the outputs list.  Nothing is looked up:
-%% the member list belongs to the creator, so this clause tells it and the
-%% creator's clause carries the removal out.
-child_agent(Id, ParentId, St, [msg(person, Id1, remove_child_member(MyChild, GroupId, Member))|UserIn], NetIn, Convs, Outs) :-
-    Id? =?= Id1?, ground(MyChild?), ground(GroupId?), ground(Member?) |
-    send_child(MyChild?, msg(Id?, MyChild?, remove_member(GroupId?, Member?)), Outs?, Outs1),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs1?).
-
-%% --- User messages ---
-
-%% Send text to friend
-child_agent(Id, ParentId, St, [msg(person, Id1, send(Target, Text))|UserIn], NetIn, Convs, Outs) :-
-    Id? =?= Id1?, ground(Target?) |
-    send_friend(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs1?).
-
-%% Accept child intro — send ack, await peer
-child_agent(Id, ParentId, St, [msg(person, Id1, accept_child_intro(Other, channel(Ch)))|UserIn], NetIn, Convs, Outs) :-
-    Id? =?= Id1?, ground(Other?),
-    send(ack(Id?), Ch?, Ch1) |
-    intro_await_peer(Other?, Ch1?, Result),
-    inject_intro_result(Result?, UserIn?, UserIn1),
-    child_agent(Id?, ParentId?, St?, UserIn1?, NetIn?, Convs?, Outs?).
-
-%% Reject child intro — send nack
-child_agent(Id, ParentId, St, [msg(person, Id1, reject_child_intro(_, channel(ch(_, [nack|[]]))))|UserIn], NetIn, Convs, Outs) :-
-    Id? =?= Id1? |
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs?).
-
-%% --- Group user messages ---
-
-%% Child creates a group
-child_agent(Id, ParentId, St, [msg(person, Id1, create_group(Name))|UserIn], NetIn, Convs, Outs) :-
-    Id? =?= Id1?, ground(Name?) |
-    setup_group_creator(group_id(Id?, Name?),
-        Outs?, Outs1, NetIn?, NetIn1),
-    send_user( msg(agent, person, group_joined(group_id(Id?, Name?))),
-        Outs1?, Outs2),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn1?, Convs?, Outs2?).
-
-%% Child invites friend to group
-child_agent(Id, ParentId, St, [msg(person, Id1, invite_group(GroupId, Invitee))|UserIn], NetIn, Convs, Outs) :-
-    Id? =?= Id1?, ground(GroupId?), ground(Invitee?),
-    new_channel(InviteeCh, CreatorCh) |
-    send_friend(Invitee?,
-        msg(Id?, Invitee?, group_invite(GroupId?, InviteeCh?)), Outs?, Outs1),
-    group_await_join(GroupId?, Invitee?, CreatorCh?, Result),
-    inject_group_result(Result?, UserIn?, UserIn1),
-    child_agent(Id?, ParentId?, St?, UserIn1?, NetIn?, Convs?, Outs1?).
-
-%% Child accepts group invite
-child_agent(Id, ParentId, St, [msg(person, Id1, accept_group(GroupId,
-        group_channel(ch(ChRead, [ack(Id?)|[]]))))|UserIn],
-        NetIn, Convs, Outs) :-
-    Id? =?= Id1?, ground(GroupId?) |
-    await_group_channel(Id?, ParentId?, St?, GroupId?, ChRead?, UserIn?, NetIn?, Convs?, Outs?).
-
-%% Child rejects group invite — send nack, close channel
-child_agent(Id, ParentId, St, [msg(person, Id1, reject_group(_, group_channel(ch(_, [nack|[]]))))|UserIn],
-        NetIn, Convs, Outs) :-
-    Id? =?= Id1? |
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs?).
-
-%% Child sends group message
-child_agent(Id, ParentId, St, [msg(person, Id1, send_group(GroupId, Text))|UserIn], NetIn, Convs, Outs) :-
-    Id? =?= Id1?, ground(GroupId?), ground(Text?) |
-    lookup_send_group(group(GroupId?),
-        msg(Id?, Id?, group_msg(GroupId?, Id?, Text?)), Outs?, Outs1),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs1?).
-
-%% The creator of a group of ours removes a member.  This is the creator's role
-%% of child_leave_2, the four-role ending of child_join_2: a child that created
-%% a group is one of the four who may end a child's membership of it, and until
-%% now it was the one that could not.  Our own parent takes a withdrawal, the
-%% removed child's parent taking the other when group_removed reaches it.
-child_agent(Id, ParentId, St, [msg(person, Id1, remove_from_group(GroupId, Member))|UserIn], NetIn, Convs, Outs) :-
-    Id? =?= Id1?, ground(GroupId?), ground(Member?) |
-    remove_member_commit(Id?, ParentId?, GroupId?, Member?, Outs?, Outs1),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs1?).
-
-%% Child leaves group (own choice).  A child's leaving is guarded by any one of
-%% the creator, the child and a parent of it, and advances that parent's
-%% withdrawal count whichever of them willed it.
-child_agent(Id, ParentId, St, [msg(person, Id1, leave_group(GroupId))|UserIn], NetIn, Convs, Outs) :-
-    Id? =?= Id1?, ground(GroupId?) |
-    lookup_send_group(group(GroupId?),
-        msg(Id?, Id?, group_leave(GroupId?, Id?)), Outs?, Outs1),
-    close_output(group(GroupId?), Outs1?, Outs2),
-    send_user( msg(agent, person, group_left(GroupId?)), Outs2?, Outs3),
-    send_parent(ParentId?, msg(Id?, ParentId?, withdrawal), Outs3?, Outs4),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs4?).
-
-%% Child initiates unfriend.  The parent is told, and its withdrawal count
-%% advances; it names nobody, so nothing it holds says which friendship ended.
-child_agent(Id, ParentId, St, [msg(person, Id1, unfriend_child(Target))|UserIn], NetIn, Convs, Outs) :-
-    Id? =?= Id1?, ground(Target?) |
-    send_friend(Target?, msg(Id?, Target?, unfriend), Outs?, Outs1),
-    close_friend(Target?, Outs1?, Outs2),
-    send_parent(ParentId?, msg(Id?, ParentId?, withdrawal), Outs2?, Outs3),
-    send_user( msg(agent, person, unfriended(Target?)), Outs3?, Outs4),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs4?).
-
-%% --- Injected intro results ---
-
-%% Intro result: peer acked — idempotent befriend commit with smaller-name
-%% tie-break, then tell the parent, whose approval is part of the same
-%% transaction.
-child_agent(Id, ParentId, St, [intro_result(Other, Ch)|UserIn], NetIn, Convs, Outs) :-
-    ground(Id?), ground(Other?) |
-    befriend_commit(Id?, Other?, Ch?, Outs?, Outs1, NetIn?, NetIn1),
-    send_parent(ParentId?, msg(Id?, ParentId?, approval), Outs1?, Outs2),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn1?, Convs?, Outs2?).
-
-%% Intro result: peer nacked — notify rejected
-child_agent(Id, ParentId, St, [intro_rejected(Other)|UserIn], NetIn, Convs, Outs) :-
-    ground(Id?) |
-    send_user( msg(agent, person, rejected(Other?)), Outs?, Outs1),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs1?).
-
-%% --- Injected group results ---
-
-%% Group join ack — creator wires hub-side, sends member-end channel, and writes
-%% on it every post of the group this creator holds: the joiner is owed them.
-child_agent(Id, ParentId, state(Al, Om, Ps, Sn), [group_join_ack(GroupId, Invitee, ch(_, [group_channel(MemberEnd?)|[]]))|UserIn],
-        NetIn, Convs, Outs) :-
-    ground(Id?), ground(GroupId?), ground(Invitee?) |
-    setup_group_hub_side(GroupId?, Invitee?, Ps?, Ps1, Sn?, Sn1, Outs?, Outs1, NetIn?, NetIn1, MemberEnd),
-    send_user( msg(agent, person, group_joined_member(GroupId?, Invitee?)),
-        Outs1?, Outs2),
-    child_agent(Id?, ParentId?, state(Al?, Om?, Ps1?, Sn1?), UserIn?, NetIn1?, Convs?, Outs2?).
-
-%% Group join nack — nothing to clean up
-child_agent(Id, ParentId, St, [group_join_nack(_, _)|UserIn], NetIn, Convs, Outs) :-
-    ground(Id?) |
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs?).
-
-%% --- What a child does not take for itself ---
-
-%% A conversation the social graph opens with a child is NOT a friendship of
-%% this contract.  A child's friendships are established through its parents,
-%% and the social graph knows nothing of childhood, so the conversation is left
-%% unadopted, its write end closed, and the person told the friendship was
-%% refused.  This is where the child-safety invariant meets the super-app: what
-%% keeps a child's friend set to what its parents approved is this clause, and
-%% the adult agent's absence of it is what makes an adult's friendships its own.
-child_agent(Id, ParentId, St, UserIn, NetIn, [conversation(Q, ch(_, []))|Convs], Outs) :-
-    ground(Id?), ground(Q?) |
-    send_user( msg(agent, person, rejected(Q?)), Outs?, Outs1),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs1?).
-
-%% A party already enrolled declines a further enrolment.
-child_agent(Id, ParentId, St, UserIn, [msg(_, Id1, enrol(_, Resp?))|NetIn], Convs, Outs) :-
-    Id? =?= Id1? |
-    decline_enrol(Resp),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs?).
-
-%% --- Network messages from parent (From =?= ParentId) ---
-
-%% Parent sends child_intro — present to UI
-child_agent(Id, ParentId, St, UserIn, [msg(From, Id1, child_intro(Other, Ch))|NetIn], Convs, Outs) :-
-    Id? =?= Id1?, From? =?= ParentId?, ground(Other?) |
-    send_user( msg(agent, person, child_befriend(From?, Other?, Ch?)), Outs?, Outs1),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs1?).
-
-%% Parent forwards group_invite — parent already consented (consent flow 2)
-child_agent(Id, ParentId, St, UserIn, [msg(From, Id1, group_invite(GroupId, Ch))|NetIn], Convs, Outs) :-
-    Id? =?= Id1?, From? =?= ParentId?, ground(GroupId?) |
-    send_user( msg(agent, person, group_invite(GroupId?, Ch?)), Outs?, Outs1),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs1?).
-
-%% Parent tells child to leave group
-child_agent(Id, ParentId, St, UserIn, [msg(From, Id1, leave_group(GroupId))|NetIn], Convs, Outs) :-
-    Id? =?= Id1?, From? =?= ParentId?, ground(GroupId?) |
-    lookup_send_group(group(GroupId?),
-        msg(Id?, Id?, group_leave(GroupId?, Id?)), Outs?, Outs1),
-    close_output(group(GroupId?), Outs1?, Outs2),
-    send_user( msg(agent, person, group_left(GroupId?)), Outs2?, Outs3),
-    send_parent(ParentId?, msg(Id?, ParentId?, withdrawal), Outs3?, Outs4),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs4?).
-
-%% Our parent tells us, the creator of a group, to remove a member of it: the
-%% fourth role of child_leave_2 arriving at the creator.  It is the same act the
-%% clause above carries out when we will it ourselves, so it is the same body ---
-%% the member is told, dropped from the list, and our parent takes the
-%% withdrawal, which is the parent that willed it here.  Our approvals name
-%% nobody, so there is nothing to check: any parent of ours may end any
-%% membership of a group of ours.
-child_agent(Id, ParentId, St, UserIn, [msg(From, Id1, remove_member(GroupId, Member))|NetIn], Convs, Outs) :-
-    Id? =?= Id1?, From? =?= ParentId?, ground(GroupId?), ground(Member?) |
-    remove_member_commit(Id?, ParentId?, GroupId?, Member?, Outs?, Outs1),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs1?).
-
-%% Parent tells child to unfriend.  ANY parent of either child may will this, so
-%% the parent that sent it need not be the one that approved the friendship ---
-%% and this child's own parent is the one whose withdrawal count advances.
-child_agent(Id, ParentId, St, UserIn, [msg(From, Id1, unfriend_child(Target))|NetIn], Convs, Outs) :-
-    Id? =?= Id1?, From? =?= ParentId?, ground(Target?) |
-    send_friend(Target?, msg(Id?, Target?, unfriend), Outs?, Outs1),
-    close_friend(Target?, Outs1?, Outs2),
-    send_parent(ParentId?, msg(Id?, ParentId?, withdrawal), Outs2?, Outs3),
-    send_user( msg(agent, person, unfriended(Target?)), Outs3?, Outs4),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs4?).
-
-%% --- Network messages from a child of our own ---
-
-%% A child of ours asks us to end the parenting.
-child_agent(Id, ParentId, St, UserIn, [msg(Child, Id1, release_request)|NetIn], Convs, Outs) :-
-    Id? =?= Id1?, ground(Child?) |
-    send_user( msg(agent, person, release_asked(Child?)), Outs?, Outs1),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs1?).
-
-%% A friendship or membership of a child of ours has been established, or ended.
-child_agent(Id, ParentId, state(Al, Om, Ps, Sn), UserIn, [msg(_, Id1, approval)|NetIn], Convs, Outs) :-
-    Id? =?= Id1? |
-    Al1 := Al? + 1,
-    child_agent(Id?, ParentId?, state(Al1?, Om?, Ps?, Sn?), UserIn?, NetIn?, Convs?, Outs?).
-
-child_agent(Id, ParentId, state(Al, Om, Ps, Sn), UserIn, [msg(_, Id1, withdrawal)|NetIn], Convs, Outs) :-
-    Id? =?= Id1? |
-    Om1 := Om? + 1,
-    child_agent(Id?, ParentId?, state(Al?, Om1?, Ps?, Sn?), UserIn?, NetIn?, Convs?, Outs?).
-
-%% A child of ours asks our consent for a group invite it received.
-child_agent(Id, ParentId, St, UserIn, [msg(Child, Id1, group_consent_req(GroupId, Consent?))|NetIn], Convs, Outs) :-
-    Id? =?= Id1?, ground(Child?), ground(GroupId?) |
-    send_user( msg(agent, person,
-        child_group_consent(Child?, GroupId?, Consent)), Outs?, Outs1),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs1?).
-
-%% --- Network messages from friends (otherwise) ---
-
-%% A friend introduces a child of theirs to a child of ours.  A party that is
-%% both a child and a parent is delivered this exactly as an adult parent is:
-%% without it the approve_child_intro clause above could never be reached, and a
-%% module that lets a child become a parent and not act as one has gated the
-%% introductory act by half.
-child_agent(Id, ParentId, St, UserIn, [msg(From, Id1, child_intro(Other, Ch))|NetIn], Convs, Outs) :-
-    Id? =?= Id1?, From? =?\= ParentId?, ground(Other?) |
-    send_user( msg(agent, person, child_befriend(From?, Other?, Ch?)), Outs?, Outs1),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs1?).
-
-%% A creator invites a child of ours into a group.  Delivered here for the same
-%% reason, and it is what makes the approve_group clause above reachable.
-child_agent(Id, ParentId, St, UserIn, [msg(_, Id1, group_invite_child(GroupId, Child, Ch))|NetIn], Convs, Outs) :-
-    Id? =?= Id1?, ground(GroupId?), ground(Child?) |
-    send_user( msg(agent, person, group_invite_child(GroupId?, Child?, Ch?)), Outs?, Outs1),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs1?).
-
-%% Friend sends text — notify UI
-child_agent(Id, ParentId, St, UserIn, [msg(From, Id1, text(Text))|NetIn], Convs, Outs) :-
-    Id? =?= Id1? |
-    send_user( msg(agent, person, received(From?, Text?)), Outs?, Outs1),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs1?).
-
-%% Friend sends group_invite — child-managed group, need parental consent (consent flow 3)
-child_agent(Id, ParentId, St, UserIn, [msg(From, Id1, group_invite(GroupId, Ch))|NetIn], Convs, Outs) :-
-    Id? =?= Id1?, From? =?\= ParentId?, ground(GroupId?) |
-    send_parent(ParentId?,
-        msg(Id?, ParentId?, group_consent_req(GroupId?, Consent)),
-        Outs?, Outs1),
-    child_consent_wait(Consent?, Id?, ParentId?, St?, GroupId?, Ch?,
-        UserIn?, NetIn?, Convs?, Outs1?).
-
-%% Group message from group channel — hold it, distribute to the members on the
-%% list now, and notify the user.
-child_agent(Id, ParentId, state(Al, Om, Ps, Sn), UserIn, [msg(_, _, group_msg(GroupId, Author, Text))|NetIn], Convs, Outs) :-
-    ground(Id?), ground(GroupId?), ground(Author?), ground(Text?) |
-    add_post(post(GroupId?, Author?, Text?), Ps?, Ps1),
-    distribute_group_msg(GroupId?,
-        msg(Author?, Author?, group_msg(GroupId?, Author?, Text?)), Sn?, Sn1, Outs?, Outs1),
-    send_user( msg(agent, person, group_received(GroupId?, Author?, Text?)),
-        Outs1?, Outs2),
-    child_agent(Id?, ParentId?, state(Al?, Om?, Ps1?, Sn1?), UserIn?, NetIn?, Convs?, Outs2?).
-
-%% Creator removes child from group — the third party that may will a child's
-%% leaving, and it advances the parent's withdrawal count like the other two.
-child_agent(Id, ParentId, St, UserIn, [msg(_, Id1, group_removed(GroupId))|NetIn], Convs, Outs) :-
-    Id? =?= Id1?, ground(GroupId?) |
-    close_output(group(GroupId?), Outs?, Outs1),
-    send_user( msg(agent, person, group_removed(GroupId?)), Outs1?, Outs2),
-    send_parent(ParentId?, msg(Id?, ParentId?, withdrawal), Outs2?, Outs3),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs3?).
-
-%% Creator receives leave notification from child member
-child_agent(Id, ParentId, St, UserIn, [msg(Member, _, group_leave(GroupId, Member1))|NetIn], Convs, Outs) :-
-    ground(Id?), ground(GroupId?), ground(Member?), Member? =?= Member1? |
-    close_output(group_member(GroupId?, Member?), Outs?, Outs1),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs1?).
-
-%% Receive unfriend from friend — close friend channel, tell the parent, notify UI
-child_agent(Id, ParentId, St, UserIn, [msg(From, Id1, unfriend)|NetIn], Convs, Outs) :-
-    Id? =?= Id1?, ground(From?) |
-    close_friend(From?, Outs?, Outs1),
-    send_parent(ParentId?, msg(Id?, ParentId?, withdrawal), Outs1?, Outs2),
-    send_user( msg(agent, person, unfriended(From?)), Outs2?, Outs3),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Convs?, Outs3?).
-
-%% --- Termination ---
-
-child_agent(_, _, _, [], _, Convs, Outs) :- close_outputs(Outs?).
-child_agent(_, _, _, _, [], Convs, Outs) :- close_outputs(Outs?).
+%% Compiled from vGLP by the canonical compilation
+%% (vGLP, Definition "Canonical Compilation").  Do not edit: edit
+%% the .vglp source and compile again.
+
+ConsentAsk ::= none ; ask(GroupId, YesNo?).
+
+Question ::= card_w(Card) ; parentCard_w(ParentCard) ; releaseCard_w(ReleaseCard) ; groupCard_w(GroupCard) ; joinCard_w(JoinCard) ; inviteCard_w(InviteCard) ; stream_request_r(Stream(Request)?).
+
+imported procedure agent#adult(Stream(Request)?, Key?, Stream(AgentIn)?, Stream(FriendMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, AgentState?, Stream(Ask(Question))).
+
+exported procedure child(Stream(Request)?, Key?, Stream(Key)?, Stream(AgentIn)?, Stream(FriendMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, AgentState?, Stream(Ask(Question))).
+child(Reqs, Id, Ps, [outcome(P, consented(Peer, C?)) | AgentIn], NetIn, Convs, Outs, St, D?) :- ground(Peer?), ground(P?) | already_friend(Peer?, Outs?, Outs1, Known), commit_proposer(Known?, P?, Peer?, C, Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?, D).
+child(Reqs, Id, Ps, [outcome(P, adopt(Peer, Ch)) | AgentIn], NetIn, Convs, Outs, St, D?) :- ground(Id?), ground(Peer?), ground(P?) | adopt(Peer?, Ch?, Outs?, Outs1, NetIn?, NetIn1), count_at(P?, Id?, approval, Outs1?, Outs2), child(Reqs?, Id?, Ps?, AgentIn?, NetIn1?, Convs?, Outs2?, St?, D).
+child(Reqs, Id, Ps, [outcome(_, declined(Peer)) | AgentIn], NetIn, Convs, Outs, St, D?) :- ground(Peer?) | show(declined(Peer?), Outs?, Outs1), child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?, D).
+child(Reqs, Id, Ps, [forward_intro(C, I, Cs) | AgentIn], NetIn, Convs, Outs, St, D?) :- ground(Id?), ground(C?) | send_child(C?, msg(Id?, C?, child_intro(I?, Cs?)), Outs?, Outs1), child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?, D).
+child(Reqs, Id, Ps, [become_child(P, Resp?) | AgentIn], NetIn, Convs, Outs, St, D?) :- ground(P?) | enrol_child_side(P?, Resp, Outs?, Outs1, NetIn?, NetIn1), child(Reqs?, Id?, [P? | Ps?], AgentIn?, NetIn1?, Convs?, Outs1?, St?, D).
+child(Reqs, Id, Ps, [enrol_response(C, enrol_accept(Ch)) | AgentIn], NetIn, Convs, Outs, St, D?) :- ground(C?) | enrol_commit(C?, Ch?, Outs?, Outs1, NetIn?, NetIn1), child(Reqs?, Id?, Ps?, AgentIn?, NetIn1?, Convs?, Outs1?, St?, D).
+child(Reqs, Id, Ps, [enrol_response(C, enrol_no) | AgentIn], NetIn, Convs, Outs, St, D?) :- ground(C?) | show(declined(C?), Outs?, Outs1), child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?, D).
+child(Reqs, Id, Ps, [release(C) | AgentIn], NetIn, Convs, Outs, St, D?) :- ground(Id?), ground(C?) | send_child(C?, msg(Id?, C?, release_grant), Outs?, Outs1), close_child(C?, Outs1?, Outs2), show(child_ended(C?), Outs2?, Outs3), child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs3?, St?, D).
+child(Reqs, Id, Ps, [group_reply(G, M, P, yes(X?)) | AgentIn], NetIn, Convs, Outs, state(Al, Om, Gs, Sn), D?) :- ground(Id?), ground(G?), ground(M?), ground(P?) | setup_group_hub_side(G?, M?, Gs?, Gs1, Sn?, Sn1, Outs?, Outs1, NetIn?, NetIn1, X), show(member_joined(G?, M?), Outs1?, Outs2), count_at(P?, Id?, approval, Outs2?, Outs3), child(Reqs?, Id?, Ps?, AgentIn?, NetIn1?, Convs?, Outs3?, state(Al?, Om?, Gs1?, Sn1?), D).
+child(Reqs, Id, Ps, [group_reply(_, M, _, no) | AgentIn], NetIn, Convs, Outs, St, D?) :- ground(M?) | show(declined(M?), Outs?, Outs1), child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?, D).
+child(Reqs, Id, Ps, [group_joined(G, P, Ch) | AgentIn], NetIn, Convs, Outs, St, D?) :- ground(Id?), ground(P?) | join_commit(G?, Ch?, Outs?, Outs1, NetIn?, NetIn1), count_at(P?, Id?, approval, Outs1?, Outs2), child(Reqs?, Id?, Ps?, AgentIn?, NetIn1?, Convs?, Outs2?, St?, D).
+child(Reqs, Id, Ps, [forward_group(C, G, R?) | AgentIn], NetIn, Convs, Outs, St, D?) :- ground(Id?), ground(C?) | send_child(C?, msg(Id?, C?, group_invite(G?, R)), Outs?, Outs1), child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?, D).
+child(Reqs, Id, Ps, [invite_now(G, M, P) | AgentIn], NetIn, Convs, Outs, St, D?) :- ground(Id?), ground(G?), ground(M?), ground(P?) | send_friend(M?, msg(Id?, M?, group_invite(G?, R)), Outs?, Outs1), inject_group_reply(G?, M?, P?, R?, AgentIn?, AgentIn1), child(Reqs?, Id?, Ps?, AgentIn1?, NetIn?, Convs?, Outs1?, St?, D).
+child(Reqs, Id, Ps, AgentIn, NetIn, [conversation(Q, ch(_, [])) | Convs], Outs, St, D?) :- ground(Q?) | show(refused(Q?), Outs?, Outs1), child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?, D).
+child(Reqs, Id, Ps, AgentIn, [msg(From, To, text(T)) | NetIn], Convs, Outs, St, D?) :- (Id? =?= To?), ground(From?) | show(received(From?, T?), Outs?, Outs1), child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?, D).
+child(Reqs, Id, [P | Ps], AgentIn, [msg(From, To, unfriend) | NetIn], Convs, Outs, St, D?) :- (Id? =?= To?), ground(From?), ground(P?) | close_friend(From?, Outs?, Outs1), show(unfriended(From?), Outs1?, Outs2), count_at(P?, Id?, withdrawal, Outs2?, Outs3), child(Reqs?, Id?, [P? | Ps?], AgentIn?, NetIn?, Convs?, Outs3?, St?, D).
+child(Reqs, Id, Ps, AgentIn, [msg(From, To, child_intro(I, Cs)) | NetIn], Convs, Outs, St, D?) :- (Id? =?= To?), ground(From?), ground(I?), ground(Ps?) | member_of(From?, Ps?, FromParent), on_intro(FromParent?, From?, I?, Cs?, Id?, Out, D1), merge(Out?, AgentIn?, AgentIn1), child(Reqs?, Id?, Ps?, AgentIn1?, NetIn?, Convs?, Outs?, St?, D2), merge(D1?, D2?, D).
+child(Reqs, Id, Ps, AgentIn, [msg(_, To, enrol(P, Resp?)) | NetIn], Convs, Outs, St, D?) :- (Id? =?= To?), ground(P?), ground(Ps?) | member_of(P?, Ps?, Already), on_enrol(Already?, P?, Resp, Out, D1), merge(Out?, AgentIn?, AgentIn1), child(Reqs?, Id?, Ps?, AgentIn1?, NetIn?, Convs?, Outs?, St?, D2), merge(D1?, D2?, D).
+child(Reqs, Id, Ps, AgentIn, [msg(P, To, release_grant) | NetIn], Convs, Outs, St, D?) :- (Id? =?= To?), ground(P?), ground(Ps?) | close_parent(P?, Outs?, Outs1), show(parent_ended(P?), Outs1?, Outs2), remove_key(P?, Ps?, Ps1), after_release(Ps1?, Reqs?, Id?, AgentIn?, NetIn?, Convs?, Outs2?, St?, D).
+child(Reqs, Id, Ps, AgentIn, [msg(P, To, unfriend_child(F)) | NetIn], Convs, Outs, St, D?) :- (Id? =?= To?), ground(P?), ground(F?) | send_friend(F?, msg(Id?, F?, unfriend), Outs?, Outs1), close_friend(F?, Outs1?, Outs2), show(unfriended(F?), Outs2?, Outs3), count_at(P?, Id?, withdrawal, Outs3?, Outs4), child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs4?, St?, D).
+child(Reqs, Id, Ps, AgentIn, [msg(P, To, leave_group(G)) | NetIn], Convs, Outs, St, D?) :- (Id? =?= To?), ground(P?), ground(G?) | leave_group_commit(Id?, G?, Outs?, Outs1), count_at(P?, Id?, withdrawal, Outs1?, Outs2), child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs2?, St?, D).
+child(Reqs, Id, Ps, AgentIn, [msg(P, To, remove_member(G, M)) | NetIn], Convs, Outs, St, D?) :- (Id? =?= To?), ground(P?), ground(G?), ground(M?) | remove_member(Id?, G?, M?, Outs?, Outs1), count_at(P?, Id?, withdrawal, Outs1?, Outs2), child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs2?, St?, D).
+child(Reqs, Id, Ps, AgentIn, [msg(C, To, release_request) | NetIn], Convs, Outs, St, D?) :- (Id? =?= To?), ground(C?) | agree_release(release(C?), A, D1), release_answer(A?, C?, Out), merge(Out?, AgentIn?, AgentIn1), child(Reqs?, Id?, Ps?, AgentIn1?, NetIn?, Convs?, Outs?, St?, D2), merge(D1?, D2?, D).
+child(Reqs, Id, Ps, AgentIn, [msg(_, To, approval) | NetIn], Convs, Outs, state(Al, Om, Gs, Sn), D?) :- (Id? =?= To?) | Al1 := (Al? + 1), show(approvals(Al1?), Outs?, Outs1), child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, state(Al1?, Om?, Gs?, Sn?), D).
+child(Reqs, Id, Ps, AgentIn, [msg(_, To, withdrawal) | NetIn], Convs, Outs, state(Al, Om, Gs, Sn), D?) :- (Id? =?= To?) | Om1 := (Om? + 1), show(withdrawals(Om1?), Outs?, Outs1), child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, state(Al?, Om1?, Gs?, Sn?), D).
+child(Reqs, Id, [P | Ps], AgentIn, [msg(From, To, group_invite(G, R?)) | NetIn], Convs, Outs, St, D?) :- (Id? =?= To?), ground(From?), ground(G?), ground(P?), ground(Ps?) | member_of(From?, [P? | Ps?], FromParent), on_group_invite(FromParent?, From?, P?, G?, Id?, R, Out, Ask, D1), send_consent_req(Ask?, P?, Id?, Outs?, Outs1), merge(Out?, AgentIn?, AgentIn1), child(Reqs?, Id?, [P? | Ps?], AgentIn1?, NetIn?, Convs?, Outs1?, St?, D2), merge(D1?, D2?, D).
+child(Reqs, Id, Ps, AgentIn, [msg(_, To, group_invite_child(G, C, R?)) | NetIn], Convs, Outs, St, D?) :- (Id? =?= To?), ground(G?), ground(C?) | approve_join(join(G?, C?), A, D1), forward_join(A?, C?, G?, R, Out), merge(Out?, AgentIn?, AgentIn1), child(Reqs?, Id?, Ps?, AgentIn1?, NetIn?, Convs?, Outs?, St?, D2), merge(D1?, D2?, D).
+child(Reqs, Id, Ps, AgentIn, [msg(C, To, group_consent_req(G, Consent?)) | NetIn], Convs, Outs, St, D?) :- (Id? =?= To?), ground(G?), ground(C?) | approve_join(join(G?, C?), Consent, D1), child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs?, St?, D2), merge(D1?, D2?, D).
+child(Reqs, Id, Ps, AgentIn, [msg(_, To, invite_consent_req(G, M, Consent?)) | NetIn], Convs, Outs, St, D?) :- (Id? =?= To?), ground(G?), ground(M?) | approve_invite(invite(G?, M?), Consent, D1), child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs?, St?, D2), merge(D1?, D2?, D).
+child(Reqs, Id, Ps, AgentIn, [msg(_, _, group_msg(G, A, T)) | NetIn], Convs, Outs, state(Al, Om, Gs, Sn), D?) :- ground(G?), ground(A?), ground(T?) | add_post(post(G?, A?, T?), Gs?, Gs1), distribute_group_msg(G?, msg(A?, A?, group_msg(G?, A?, T?)), Sn?, Sn1, Outs?, Outs1), show(group_received(G?, A?, T?), Outs1?, Outs2), child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs2?, state(Al?, Om?, Gs1?, Sn1?), D).
+child(Reqs, Id, [P | Ps], AgentIn, [msg(M, _, group_leave(G, M1)) | NetIn], Convs, Outs, St, D?) :- ground(Id?), ground(G?), ground(M?), (M? =?= M1?), ground(P?) | close_output(group_member(G?, M?), Outs?, Outs1), show(member_left(G?, M?), Outs1?, Outs2), count_at(P?, Id?, withdrawal, Outs2?, Outs3), child(Reqs?, Id?, [P? | Ps?], AgentIn?, NetIn?, Convs?, Outs3?, St?, D).
+child(Reqs, Id, [P | Ps], AgentIn, [msg(_, To, group_removed(G)) | NetIn], Convs, Outs, St, D?) :- (Id? =?= To?), ground(G?), ground(P?) | close_output(group(G?), Outs?, Outs1), show(group_removed(G?), Outs1?, Outs2), count_at(P?, Id?, withdrawal, Outs2?, Outs3), child(Reqs?, Id?, [P? | Ps?], AgentIn?, NetIn?, Convs?, Outs3?, St?, D).
+child([become_parent(R) | Reqs], Id, Ps, AgentIn, NetIn, Convs, Outs, St, D?) :- ground(R?), ground(Ps?) | member_of(R?, Ps?, Mine), offer_parent(Mine?, R?, Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs?, St?, D).
+child([introduce(R, Q, S) | Reqs], Id, Ps, AgentIn, NetIn, Convs, Outs, St, D?) :- ground(Id?), ground(R?), ground(Q?), ground(S?) | mint_consents(R?, S?, CR, CS), introduce(Id?, R?, Q?, S?, CR?, CS?, Outs?, Outs1), child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?, D).
+child([send(F, T) | Reqs], Id, Ps, AgentIn, NetIn, Convs, Outs, St, D?) :- ground(Id?), ground(F?) | send_friend(F?, msg(Id?, F?, text(T?)), Outs?, Outs1), child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?, D).
+child([end_parenting(P) | Reqs], Id, Ps, AgentIn, NetIn, Convs, Outs, St, D?) :- ground(P?), ground(Ps?) | member_of(P?, Ps?, Mine), ask_release(Mine?, P?, Id?, Outs?, Outs1), child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?, D).
+child([unfriend(F) | Reqs], Id, [P | Ps], AgentIn, NetIn, Convs, Outs, St, D?) :- ground(Id?), ground(F?), ground(P?) | send_friend(F?, msg(Id?, F?, unfriend), Outs?, Outs1), close_friend(F?, Outs1?, Outs2), show(unfriended(F?), Outs2?, Outs3), count_at(P?, Id?, withdrawal, Outs3?, Outs4), child(Reqs?, Id?, [P? | Ps?], AgentIn?, NetIn?, Convs?, Outs4?, St?, D).
+child([unfriend_child(R, F) | Reqs], Id, Ps, AgentIn, NetIn, Convs, Outs, St, D?) :- ground(Id?), ground(R?), ground(F?) | send_child(R?, msg(Id?, R?, unfriend_child(F?)), Outs?, Outs1), child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?, D).
+child([create_group(N) | Reqs], Id, Ps, AgentIn, NetIn, Convs, Outs, St, D?) :- ground(Id?), ground(N?) | setup_group_creator(group_id(Id?, N?), Outs?, Outs1, NetIn?, NetIn1), show(group_joined(group_id(Id?, N?)), Outs1?, Outs2), child(Reqs?, Id?, Ps?, AgentIn?, NetIn1?, Convs?, Outs2?, St?, D).
+child([invite(N, F) | Reqs], Id, [P | Ps], AgentIn, NetIn, Convs, Outs, St, D?) :- ground(Id?), ground(N?), ground(F?), ground(P?) | send_parent(P?, msg(Id?, P?, invite_consent_req(group_id(Id?, N?), F?, Consent)), Outs?, Outs1), invite_after(Consent?, group_id(Id?, N?), F?, P?, Out), merge(Out?, AgentIn?, AgentIn1), child(Reqs?, Id?, [P? | Ps?], AgentIn1?, NetIn?, Convs?, Outs1?, St?, D).
+child([invite_child(N, C, Q) | Reqs], Id, [P | Ps], AgentIn, NetIn, Convs, Outs, St, D?) :- ground(Id?), ground(N?), ground(C?), ground(Q?), ground(P?) | send_parent(P?, msg(Id?, P?, invite_consent_req(group_id(Id?, N?), C?, Consent)), Outs?, Outs1), invite_child_after(Consent?, group_id(Id?, N?), C?, Q?, P?, Id?, Outs1?, Outs2, AgentIn?, AgentIn1), child(Reqs?, Id?, [P? | Ps?], AgentIn1?, NetIn?, Convs?, Outs2?, St?, D).
+child([post(G, T) | Reqs], Id, Ps, AgentIn, NetIn, Convs, Outs, St, D?) :- ground(Id?), ground(G?), ground(T?) | lookup_send_group(group(G?), msg(Id?, Id?, group_msg(G?, Id?, T?)), Outs?, Outs1), child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?, D).
+child([leave(G) | Reqs], Id, [P | Ps], AgentIn, NetIn, Convs, Outs, St, D?) :- ground(Id?), ground(G?), ground(P?) | leave_group_commit(Id?, G?, Outs?, Outs1), count_at(P?, Id?, withdrawal, Outs1?, Outs2), child(Reqs?, Id?, [P? | Ps?], AgentIn?, NetIn?, Convs?, Outs2?, St?, D).
+child([remove(N, M) | Reqs], Id, [P | Ps], AgentIn, NetIn, Convs, Outs, St, D?) :- ground(Id?), ground(N?), ground(M?), ground(P?) | remove_member(Id?, group_id(Id?, N?), M?, Outs?, Outs1), count_at(P?, Id?, withdrawal, Outs1?, Outs2), child(Reqs?, Id?, [P? | Ps?], AgentIn?, NetIn?, Convs?, Outs2?, St?, D).
+child([leave_child(R, G) | Reqs], Id, Ps, AgentIn, NetIn, Convs, Outs, St, D?) :- ground(Id?), ground(R?), ground(G?) | send_child(R?, msg(Id?, R?, leave_group(G?)), Outs?, Outs1), child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?, D).
+child([remove_child_member(R, N, M) | Reqs], Id, Ps, AgentIn, NetIn, Convs, Outs, St, D?) :- ground(Id?), ground(R?), ground(N?), ground(M?) | send_child(R?, msg(Id?, R?, remove_member(group_id(R?, N?), M?)), Outs?, Outs1), child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?, D).
+
+procedure count_at(Key?, Key?, FriendContent?, Stream(OutputEntry)?, Stream(OutputEntry)).
+count_at(P, Id, What, Outs, Outs1?) :- ground(P?), ground(Id?), (P? =?\= Id?) | send_parent(P?, msg(Id?, P?, What?), Outs?, Outs1).
+count_at(P, Id, _, Outs, Outs?) :- (P? =?= Id?) | true.
+
+procedure commit_proposer(Decision?, Key?, Key?, Conveyance(FriendChannel), Stream(Request)?, Key?, Stream(Key)?, Stream(AgentIn)?, Stream(FriendMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, AgentState?, Stream(Ask(Question))).
+commit_proposer(no, P, Peer, C?, Reqs, Id, Ps, AgentIn, NetIn, Convs, Outs, St, D?) :- ground(Id?) | convey(no, Peer?, C, Outs?, Outs1, NetIn?, NetIn1), count_at(P?, Id?, approval, Outs1?, Outs2), child(Reqs?, Id?, Ps?, AgentIn?, NetIn1?, Convs?, Outs2?, St?, D).
+commit_proposer(yes, _, Peer, C?, Reqs, Id, Ps, AgentIn, NetIn, Convs, Outs, St, D?) :- convey(yes, Peer?, C, Outs?, Outs1, NetIn?, NetIn1), child(Reqs?, Id?, Ps?, AgentIn?, NetIn1?, Convs?, Outs1?, St?, D).
+
+procedure on_intro(Decision?, Key?, Intro?, Consents?, Key?, Stream(AgentIn), Stream(Ask(Question))).
+on_intro(yes, P, intro(P0, R, S), Cs, Id, Out?, D?) :- ground(Id?), ground(R?), ground(S?), ground(P0?) | peer_of(Id?, R?, S?, Peer), counted_parent(Id?, R?, P0?, P?, Counted), accept(intro(P0?, R?, S?), A, D), accepted(A?, Peer?, Cs?, Counted?, Out).
+on_intro(no, _, I, Cs, _, Out?, D?) :- ground(I?) | approve(I?, A, D), approved(A?, I?, Cs?, Out).
+
+procedure counted_parent(Key?, Key?, Key?, Key?, Key).
+counted_parent(Id, R, P0, _, P0?) :- (Id? =?= R?) | true.
+counted_parent(Id, R, P0, P, Id?) :- ground(Id?), (Id? =?\= R?), (P? =?= P0?) | true.
+counted_parent(Id, R, P0, P, P?) :- (Id? =?\= R?), (P? =?\= P0?) | true.
+
+procedure peer_of(Key?, Key?, Key?, Key).
+peer_of(Id, R, S, S?) :- (Id? =?= R?) | true.
+peer_of(Id, R, _, R?) :- (Id? =?\= R?) | true.
+
+procedure on_enrol(Decision?, Key?, EnrolResponse, Stream(AgentIn), Stream(Ask(Question))).
+on_enrol(yes, _, enrol_no, [], []).
+on_enrol(no, P, Resp?, Out?, D?) :- accept_parent(parent(P?), A, D), parent_answer(A?, P?, Resp, Out).
+
+procedure on_group_invite(Decision?, Key?, Key?, GroupId?, Key?, GroupReply, Stream(AgentIn), ConsentAsk, Stream(Ask(Question))).
+on_group_invite(yes, From, _, G, _, R?, Out?, none, D?) :- ground(G?) | join_group(group(G?), A, D), joined(A?, G?, From?, R, Out).
+on_group_invite(no, _, P, G, _, R?, Out?, ask(G?, Consent), D?) :- ground(G?) | consented_join(Consent?, G?, P?, R, Out, D).
+
+procedure send_consent_req(ConsentAsk?, Key?, Key?, Stream(OutputEntry)?, Stream(OutputEntry)).
+send_consent_req(none, _, _, Outs, Outs?).
+send_consent_req(ask(G, Consent?), P, Id, Outs, Outs1?) :- ground(P?), ground(Id?) | send_parent(P?, msg(Id?, P?, group_consent_req(G?, Consent)), Outs?, Outs1).
+
+procedure consented_join(YesNo?, GroupId?, Key?, GroupReply, Stream(AgentIn), Stream(Ask(Question))).
+consented_join(yes, G, P, R?, Out?, D?) :- ground(G?) | join_group(group(G?), A, D), joined(A?, G?, P?, R, Out).
+consented_join(no, _, _, no, [], []).
+
+procedure invite_after(YesNo?, GroupId?, Key?, Key?, Stream(AgentIn)).
+invite_after(yes, G, M, P, [invite_now(G?, M?, P?)]).
+invite_after(no, _, _, _, []).
+
+procedure invite_child_after(YesNo?, GroupId?, Key?, Key?, Key?, Key?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(AgentIn)?, Stream(AgentIn)).
+invite_child_after(yes, G, C, Q, P, Id, Outs, Outs1?, AgentIn, AgentIn1?) :- ground(Q?), ground(Id?), ground(G?), ground(C?) | send_friend(Q?, msg(Id?, Q?, group_invite_child(G?, C?, R)), Outs?, Outs1), inject_group_reply(G?, C?, P?, R?, AgentIn?, AgentIn1).
+invite_child_after(no, _, _, _, _, _, Outs, Outs?, AgentIn, AgentIn?).
+
+procedure ask_release(Decision?, Key?, Key?, Stream(OutputEntry)?, Stream(OutputEntry)).
+ask_release(yes, P, Id, Outs, Outs1?) :- ground(Id?) | send_parent(P?, msg(Id?, P?, release_request), Outs?, Outs1).
+ask_release(no, P, _, Outs, Outs1?) :- show(not_my_parent(P?), Outs?, Outs1).
+
+procedure after_release(Stream(Key)?, Stream(Request)?, Key?, Stream(AgentIn)?, Stream(FriendMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, AgentState?, Stream(Ask(Question))).
+after_release([], Reqs, Id, AgentIn, NetIn, Convs, Outs, St, D?) :- show(adult, Outs?, Outs1), agent # adult(Reqs?, Id?, AgentIn?, NetIn?, Convs?, Outs1?, St?, D).
+after_release([P | Ps], Reqs, Id, AgentIn, NetIn, Convs, Outs, St, D?) :- child(Reqs?, Id?, [P? | Ps?], AgentIn?, NetIn?, Convs?, Outs?, St?, D).
+
+procedure offer_parent(Decision?, Key?, Stream(Request)?, Key?, Stream(Key)?, Stream(AgentIn)?, Stream(FriendMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, AgentState?, Stream(Ask(Question))).
+offer_parent(yes, R, Reqs, Id, Ps, AgentIn, NetIn, Convs, Outs, St, D?) :- show(my_parent(R?), Outs?, Outs1), child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?, D).
+offer_parent(no, R, Reqs, Id, Ps, AgentIn, NetIn, Convs, Outs, St, D?) :- ground(R?) | has_friend(R?, Outs?, Outs1, Open), send_offer(Open?, R?, Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?, D).
+
+procedure send_offer(Decision?, Key?, Stream(Request)?, Key?, Stream(Key)?, Stream(AgentIn)?, Stream(FriendMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, AgentState?, Stream(Ask(Question))).
+send_offer(yes, R, Reqs, Id, Ps, AgentIn, NetIn, Convs, Outs, St, D?) :- ground(Id?) | send_friend(R?, msg(Id?, R?, enrol(Id?, Resp)), Outs?, Outs1), inject_enrol_response(Resp?, R?, AgentIn?, AgentIn1), child(Reqs?, Id?, Ps?, AgentIn1?, NetIn?, Convs?, Outs1?, St?, D).
+send_offer(no, R, Reqs, Id, Ps, AgentIn, NetIn, Convs, Outs, St, D?) :- show(no_conversation(R?), Outs?, Outs1), child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?, D).
+
+%% --- the dispatcher (programs/vglp/dispatcher.glp) ---
+
+Inputs(T) ::= [Input(T) | Inputs(T)].
+Route(T) ::= route(Integer, Inputs(T)?).
+Routes(T) ::= [] ; [Route(T) | Routes(T)].
+Deads(T) ::= [] ; [Inputs(T)? | Deads(T)].
+Formed(X) ::= formed(X) ; refused.
+Done ::= done.
+Ask(Q) ::= ask(Constant, Q).
+Spawn(Q, T) ::= spawn(Integer, Q, Inputs(T), Stream(Draw(T))?).
+Event(Q, T) ::= Ask(Q) ; Input(T) ; Draw(T).
+Events(Q, T) ::= [Event(Q, T) | Events(Q, T)].
+Turn ::= ask ; grant ; draw.
+
+procedure(Q, T) dispatch(Stream(Ask(Q))?, PersonChannel(T)?, Channel(Stream(_), Stream(_)), Stream(Spawn(Q, T))).
+dispatch(Asks, ch(PIn, POut?), ch(MIn?, _), Ss?) :- split_grants(PIn?, Inputs, MIn), fair(ask, Asks?, Inputs?, COut?, Es), serve(Es?, COut, POut, [], [], 1, Ss).
+
+procedure(Q, T) dispatch(Stream(Ask(Q))?, PersonChannel(T)?, Stream(_), Stream(Draw(T))?, Stream(Spawn(Q, T))).
+dispatch(Asks, ch(PIn, POut?), MIn?, ODs, Ss?) :- split_grants(PIn?, Inputs, MIn), merge_draws(ODs?, DOut?, POut), fair(ask, Asks?, Inputs?, COut?, Es), serve(Es?, COut, DOut, [], [], 1, Ss).
+
+procedure(T) merge_draws(Stream(Draw(T))?, PersonOut(T)?, PersonOut(T)).
+merge_draws([X | Xs], Ys, [X? | Zs?]) :- merge_draws_(Ys?, Xs?, Zs).
+merge_draws(Xs, [Y | Ys], [Y? | Zs?]) :- merge_draws(Xs?, Ys?, Zs).
+merge_draws([], Ys, Ys?).
+
+procedure(T) merge_draws_(PersonOut(T)?, Stream(Draw(T))?, PersonOut(T)).
+merge_draws_([X | Xs], Ys, [X? | Zs?]) :- merge_draws(Ys?, Xs?, Zs).
+merge_draws_(Xs, [Y | Ys], [Y? | Zs?]) :- merge_draws_(Xs?, Ys?, Zs).
+merge_draws_(Xs, [], Xs?).
+
+procedure(T) split_grants(PersonIn(T)?, Inputs(T), Stream(_)).
+split_grants([input(Id, P, R) | Gs], [input(Id?, P?, R?) | Is?], Ms?) :- split_grants(Gs?, Is, Ms).
+
+procedure(Q, T) fair(Turn?, Stream(Ask(Q))?, Inputs(T)?, Stream(Draw(T))?, Events(Q, T)).
+fair(ask, [A | As], Is, Ds, Es?) :- Es = [A? | Es1?], fair(grant, As?, Is?, Ds?, Es1).
+fair(grant, As, [I | Is], Ds, Es?) :- Es = [I? | Es1?], fair(draw, As?, Is?, Ds?, Es1).
+fair(draw, As, Is, [D | Ds], Es?) :- Es = [D? | Es1?], fair(ask, As?, Is?, Ds?, Es1).
+fair(ask, As, [I | Is], Ds, Es?) :- Es = [I? | Es1?], fair(draw, As?, Is?, Ds?, Es1).
+fair(grant, As, Is, [D | Ds], Es?) :- Es = [D? | Es1?], fair(ask, As?, Is?, Ds?, Es1).
+fair(draw, [A | As], Is, Ds, Es?) :- Es = [A? | Es1?], fair(grant, As?, Is?, Ds?, Es1).
+fair(ask, As, Is, [D | Ds], Es?) :- Es = [D? | Es1?], fair(ask, As?, Is?, Ds?, Es1).
+fair(grant, [A | As], Is, Ds, Es?) :- Es = [A? | Es1?], fair(grant, As?, Is?, Ds?, Es1).
+fair(draw, As, [I | Is], Ds, Es?) :- Es = [I? | Es1?], fair(draw, As?, Is?, Ds?, Es1).
+
+procedure(Q, T) serve(Events(Q, T)?, Stream(Draw(T)), PersonOut(T), Routes(T)?, Deads(T)?, Integer?, Stream(Spawn(Q, T))).
+serve([ask(_, Q) | Es], CInto?, DOut?, Rs, Xs, N, [spawn(N?, Q?, Gs?, Ds) | Ss?]) :- ground(N?) | merge(Ds?, CInto1?, CInto), N1 := (N? + 1), serve(Es?, CInto1, DOut, [route(N?, Gs) | Rs?], Xs?, N1?, Ss).
+serve([input(Id, P, R) | Es], CInto?, DOut?, Rs, Xs, N, Ss?) :- route_grant(input(Id?, P?, R?), Rs?, Rs1), serve(Es?, CInto, DOut, Rs1?, Xs?, N?, Ss).
+serve([draw(Id, W, V) | Es], CInto?, [draw(Id?, W?, V?) | DOut?], Rs, Xs, N, Ss?) :- serve(Es?, CInto, DOut, Rs?, Xs?, N?, Ss).
+serve([withdraw(Id) | Es], CInto?, [withdraw(Id?) | DOut?], Rs, Xs, N, Ss?) :- ground(Id?) | remove_route(Id?, Rs?, Rs1, Xs?, Xs1), serve(Es?, CInto, DOut, Rs1?, Xs1?, N?, Ss).
+
+procedure(T) route_grant(Input(T)?, Routes(T)?, Routes(T)).
+route_grant(input(Id, P, R), [route(Id1, [input(Id?, P?, R?) | Gs1?]) | Rs], [route(Id1?, Gs1) | Rs?]) :- (Id? =?= Id1?) | true.
+route_grant(G, [route(Id1, Gs?) | Rs], [route(Id1?, Gs) | Rs1?]) :- otherwise | route_grant(G?, Rs?, Rs1).
+route_grant(_, [], []).
+
+procedure(T) remove_route(Integer?, Routes(T)?, Routes(T), Deads(T)?, Deads(T)).
+remove_route(Id, [route(Id1, Gs?) | Rs], Rs?, Xs, [Gs | Xs?]) :- (Id? =?= Id1?) | true.
+remove_route(Id, [route(Id1, Gs?) | Rs], [route(Id1?, Gs) | Rs1?], Xs, Xs1?) :- otherwise | remove_route(Id?, Rs?, Rs1, Xs?, Xs1).
+remove_route(_, [], [], Xs, Xs?).
+
+procedure(T) run_end(Integer?, Done?, Stream(Draw(T))).
+run_end(Id, done, [withdraw(Id?)]).
+
+procedure all_done(Stream(Done)?, Done).
+all_done([done | Ds], D?) :- all_done(Ds?, D).
+all_done([], done).
+
+procedure shown(Path?, _?, Stream(_)).
+shown(_, X, [X?]) :- ground(X?) | true.
+shown(P, X, [pending(P?) | Vs?]) :- shown_whole(X?, Vs).
+
+procedure shown_whole(_?, Stream(_)).
+shown_whole(X, [X?]) :- ground(X?) | true.
+
+procedure thread(Path?, Stream(_)?, Stream(Stream(_))).
+thread(P, [X | Xs], Vs?) :- thread_cell(P?, X?, Xs?, Vs).
+thread(_, [], [[]]).
+thread(P, Xs, [[] | Vs?]) :- thread_tail(P?, Xs?, Vs).
+
+procedure thread_tail(Path?, Stream(_)?, Stream(Stream(_))).
+thread_tail(P, [X | Xs], Vs?) :- thread_cell(P?, X?, Xs?, Vs).
+thread_tail(_, [], []).
+
+procedure thread_cell(Path?, _?, Stream(_)?, Stream(Stream(_))).
+thread_cell(P, X, Xs, Vs?) :- ground(P?) | path(P?, 1, P1), path(P?, 2, P2), shown(P1?, X?, V1), thread(P2?, Xs?, V2), cons_views(V1?, V2?, Vs).
+
+procedure cons_views(Stream(_)?, Stream(Stream(_))?, Stream(Stream(_))).
+cons_views([E | Es], [T | Ts], [[E? | T?] | Vs?]) :- ground(E?), ground(T?) | cons_more(E?, T?, Es?, Ts?, Vs).
+cons_views([], _, []).
+cons_views(_, [], []).
+
+procedure cons_more(_?, Stream(_)?, Stream(_)?, Stream(Stream(_))?, Stream(Stream(_))).
+cons_more(_, T, [E | Es], Ts, [[E? | T?] | Vs?]) :- ground(E?), ground(T?) | cons_more(E?, T?, Es?, Ts?, Vs).
+cons_more(E, _, Es, [T | Ts], [[E? | T?] | Vs?]) :- ground(E?), ground(T?) | cons_more(E?, T?, Es?, Ts?, Vs).
+cons_more(_, _, [], [], []).
+
+procedure path(Path?, Integer?, Path).
+path([I | P], J, [I? | Q?]) :- path(P?, J?, Q).
+path([], J, [J?]).
+
+procedure form_string(_?, Formed(String)).
+form_string(R, F?) :- string(R?) | F = formed(R?).
+form_string(_, refused) :- otherwise | true.
+
+procedure form_integer(_?, Formed(Integer)).
+form_integer(R, F?) :- integer(R?) | F = formed(R?).
+form_integer(_, refused) :- otherwise | true.
+
+procedure form_number(_?, Formed(Number)).
+form_number(R, F?) :- number(R?) | F = formed(R?).
+form_number(_, refused) :- otherwise | true.
+
+procedure form_real(_?, Formed(Real)).
+form_real(R, F?) :- real(R?) | F = formed(R?).
+form_real(_, refused) :- otherwise | true.
+
+procedure form_constant(_?, Formed(Constant)).
+form_constant(R, F?) :- constant(R?) | F = formed(R?).
+form_constant(_, refused) :- otherwise | true.
+
+procedure form_module(_?, Formed(Module)).
+form_module(R, F?) :- module(R?) | F = formed(R?).
+form_module(_, refused) :- otherwise | true.
+
+%% --- the construct process of each interactive type ---
+
+Drawn ::= card_w(_) ; parentCard_w(_) ; releaseCard_w(_) ; groupCard_w(_) ; joinCard_w(_) ; inviteCard_w(_) ; stream_request_r(_) ; output(List(Output)) ; YesNo ; Request.
+
+exported procedure dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
+dispatch(Asks, PCh, ch(MIn?, MOut)) :- dispatch(Asks?, PCh?, MIn, ODs?, Ss), output(thread(menu([form(connected, [field('Key', shown)]), form(unfriended, [field('Key', shown)]), form(received, [field('Key', shown), field('Text', shown)]), form(refused, [field('Key', shown)]), form(no_conversation, [field('Key', shown)]), form(declined, [field('Key', shown)]), form(not_my_parent, [field('Key', shown)]), form(my_parent, [field('Key', shown)]), form(parent, [field('Key', shown)]), form(child, [field('Key', shown)]), form(parent_ended, [field('Key', shown)]), form(child_ended, [field('Key', shown)]), shown, form(approvals, [field('Integer', shown)]), form(withdrawals, [field('Integer', shown)]), form(group_joined, [field('GroupId', form(group_id, [field('Creator', shown), field('Name', shown)]))]), form(member_joined, [field('GroupId', form(group_id, [field('Creator', shown), field('Name', shown)])), field('Key', shown)]), form(group_left, [field('GroupId', form(group_id, [field('Creator', shown), field('Name', shown)]))]), form(member_left, [field('GroupId', form(group_id, [field('Creator', shown), field('Name', shown)])), field('Key', shown)]), form(group_removed, [field('GroupId', form(group_id, [field('Creator', shown), field('Name', shown)]))]), form(group_received, [field('GroupId', form(group_id, [field('Creator', shown), field('Name', shown)])), field('Key', shown), field('Text', shown)])])), MOut?, ODs), constructs(Ss?).
+
+procedure constructs(Stream(Spawn(Question, Drawn))?).
+constructs([spawn(Id, Q, Gs, Ds?) | Ss]) :- construct(Id?, Q?, Gs?, Ds), constructs(Ss?).
+constructs([]).
+
+procedure construct(Integer?, Question?, Inputs(Drawn)?, Stream(Draw(Drawn))).
+construct(Id, card_w(X), Gs, Ds?) :- present_card([], X?, Gs?, _, Vs, Done), run_card_w(Id?, form(card, [field('Intro', form(intro, [field('Parent', shown), field('Child', shown), field('OtherChild', shown)])), field('YesNo', buttons([yes, no]))]), Vs?, Done?, Ds).
+construct(Id, parentCard_w(X), Gs, Ds?) :- present_parentCard([], X?, Gs?, _, Vs, Done), run_parentCard_w(Id?, form(card, [field('ParentOffer', form(parent, [field('Parent', shown)])), field('YesNo', buttons([yes, no]))]), Vs?, Done?, Ds).
+construct(Id, releaseCard_w(X), Gs, Ds?) :- present_releaseCard([], X?, Gs?, _, Vs, Done), run_releaseCard_w(Id?, form(card, [field('ReleaseOffer', form(release, [field('Child', shown)])), field('YesNo', buttons([yes, no]))]), Vs?, Done?, Ds).
+construct(Id, groupCard_w(X), Gs, Ds?) :- present_groupCard([], X?, Gs?, _, Vs, Done), run_groupCard_w(Id?, form(card, [field('GroupOffer', form(group, [field('GroupId', form(group_id, [field('Creator', shown), field('Name', shown)]))])), field('YesNo', buttons([yes, no]))]), Vs?, Done?, Ds).
+construct(Id, joinCard_w(X), Gs, Ds?) :- present_joinCard([], X?, Gs?, _, Vs, Done), run_joinCard_w(Id?, form(card, [field('JoinOffer', form(join, [field('GroupId', form(group_id, [field('Creator', shown), field('Name', shown)])), field('Child', shown)])), field('YesNo', buttons([yes, no]))]), Vs?, Done?, Ds).
+construct(Id, inviteCard_w(X), Gs, Ds?) :- present_inviteCard([], X?, Gs?, _, Vs, Done), run_inviteCard_w(Id?, form(card, [field('InviteOffer', form(invite, [field('GroupId', form(group_id, [field('Creator', shown), field('Name', shown)])), field('Member', shown)])), field('YesNo', buttons([yes, no]))]), Vs?, Done?, Ds).
+construct(Id, stream_request_r(X?), Gs, Ds?) :- answer_stream_request([], X, Gs?, _, Done), run_stream_request_r(Id?, input_box(menu([form(become_parent, [field('MyChild', peer)]), form(introduce, [field('MyChild', peer), field('Friend', peer), field('FriendsChild', peer)]), form(send, [field('Friend', peer), field('Text', text)]), form(end_parenting, [field('Parent', peer)]), form(unfriend, [field('Friend', peer)]), form(unfriend_child, [field('MyChild', peer), field('Friend', peer)]), form(create_group, [field('Name', text)]), form(invite, [field('Name', text), field('Friend', peer)]), form(invite_child, [field('Name', text), field('FriendsChild', peer), field('Friend', peer)]), form(post, [field('GroupId', form(group_id, [field('Creator', peer), field('Name', text)])), field('Text', text)]), form(leave, [field('GroupId', form(group_id, [field('Creator', peer), field('Name', text)]))]), form(remove, [field('Name', text), field('Member', peer)]), form(leave_child, [field('MyChild', peer), field('GroupId', form(group_id, [field('Creator', peer), field('Name', text)]))]), form(remove_child_member, [field('MyChild', peer), field('Name', text), field('Member', peer)])])), [input([])], Done?, Ds).
+
+procedure output(_?, Stream(Output)?, Stream(Draw(Drawn))).
+output(W, Ms, [draw(0, W?, output([])) | Ds?]) :- ground(W?) | output_more(W?, Ms?, [], Ds).
+
+procedure output_more(_?, Stream(Output)?, List(Output)?, Stream(Draw(Drawn))).
+output_more(W, [M | Ms], Es, Ds?) :- ground(M?), ground(Es?) | output_add(Es?, M?, Es1), output_draw(W?, Ms?, Es1?, Ds).
+output_more(_, [], _, []).
+
+procedure output_draw(_?, Stream(Output)?, List(Output)?, Stream(Draw(Drawn))).
+output_draw(W, Ms, Es, [draw(0, W?, output(Es?)) | Ds?]) :- ground(W?), ground(Es?) | output_more(W?, Ms?, Es?, Ds).
+
+procedure output_add(List(Output)?, Output?, List(Output)).
+output_add([E | Es], M, [E? | Es1?]) :- output_add(Es?, M?, Es1).
+output_add([], M, [M?]).
+
+procedure form_yesNo(_?, Formed(YesNo)).
+form_yesNo(yes, formed(yes)).
+form_yesNo(no, formed(no)).
+form_yesNo(_, refused) :- otherwise | true.
+
+procedure answer_yesNo(Path?, YesNo, Inputs(Drawn)?, Inputs(Drawn), Done).
+answer_yesNo(P, X?, [input(Id, P1, R) | Gs], Gs1?, Done?) :- P1? =?= P?, ground(R?) | form_yesNo(R?, F), take_yesNo(F?, P?, X, input(Id?, P1?, R?), Gs?, Gs1, Done).
+answer_yesNo(P, X?, [input(Id, P1, R) | Gs], Gs1?, Done?) :- otherwise | take_yesNo(refused, P?, X, input(Id?, P1?, R?), Gs?, Gs1, Done).
+
+procedure take_yesNo(Formed(YesNo)?, Path?, YesNo, Input(Drawn)?, Inputs(Drawn)?, Inputs(Drawn), Done).
+take_yesNo(formed(V), _, V?, _, Gs, Gs?, done).
+take_yesNo(refused, P, X?, G, Gs, [G? | Gs1?], Done?) :- answer_yesNo(P?, X, Gs?, Gs1, Done).
+
+procedure start_card_card_2(Stream(_)?, Stream(_)?, Stream(_)).
+start_card_card_2([V1 | S1], [V2 | S2], [card(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_card_card_2(V1?, V2?, S1?, S2?, Vs).
+start_card_card_2([], _, []).
+start_card_card_2(_, [], []).
+
+procedure comb_card_card_2(_?, _?, Stream(_)?, Stream(_)?, Stream(_)).
+comb_card_card_2(_, V2, [V1 | S1], S2, [card(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_card_card_2(V1?, V2?, S1?, S2?, Vs).
+comb_card_card_2(_, _, [], [], []).
+
+procedure present_card(Path?, Card?, Inputs(Drawn)?, Inputs(Drawn), Stream(_), Done).
+present_card(P, card(H1, H2?), Gs, Gs1?, Vs?, D2?) :- ground(P?) | path(P?, 1, Q1), shown(Q1?, H1?, V1), path(P?, 2, M2), path(P?, 2, Q2), answer_yesNo(Q2?, H2, Gs?, Gs1, D2), start_card_card_2(V1?, [input(M2?)], Vs).
+present_card(P, X, Gs, Gs1?, [pending(P?) | Vs?], Done?) :- ground(P?) | present_card_wait(P?, X?, Gs?, Gs1, Vs, Done).
+
+procedure present_card_wait(Path?, Card?, Inputs(Drawn)?, Inputs(Drawn), Stream(_), Done).
+present_card_wait(P, card(H1, H2?), Gs, Gs1?, Vs?, Done?) :- present_card(P?, card(H1?, H2), Gs?, Gs1, Vs, Done).
+present_card_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, Done?) :- present_card_wait(P?, X?, Gs?, Gs1, Vs, Done).
+
+procedure run_card_w(Integer?, _?, Stream(_)?, Done?, Stream(Draw(Drawn))).
+run_card_w(Id, _, _, done, [withdraw(Id?)]).
+run_card_w(Id, W, [V | Vs], Done, [draw(Id?, W?, card_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_card_w(Id?, W?, Vs?, Done?, Ds).
+run_card_w(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
+
+procedure start_parentCard_card_2(Stream(_)?, Stream(_)?, Stream(_)).
+start_parentCard_card_2([V1 | S1], [V2 | S2], [card(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_parentCard_card_2(V1?, V2?, S1?, S2?, Vs).
+start_parentCard_card_2([], _, []).
+start_parentCard_card_2(_, [], []).
+
+procedure comb_parentCard_card_2(_?, _?, Stream(_)?, Stream(_)?, Stream(_)).
+comb_parentCard_card_2(_, V2, [V1 | S1], S2, [card(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_parentCard_card_2(V1?, V2?, S1?, S2?, Vs).
+comb_parentCard_card_2(_, _, [], [], []).
+
+procedure present_parentCard(Path?, ParentCard?, Inputs(Drawn)?, Inputs(Drawn), Stream(_), Done).
+present_parentCard(P, card(H1, H2?), Gs, Gs1?, Vs?, D2?) :- ground(P?) | path(P?, 1, Q1), shown(Q1?, H1?, V1), path(P?, 2, M2), path(P?, 2, Q2), answer_yesNo(Q2?, H2, Gs?, Gs1, D2), start_parentCard_card_2(V1?, [input(M2?)], Vs).
+present_parentCard(P, X, Gs, Gs1?, [pending(P?) | Vs?], Done?) :- ground(P?) | present_parentCard_wait(P?, X?, Gs?, Gs1, Vs, Done).
+
+procedure present_parentCard_wait(Path?, ParentCard?, Inputs(Drawn)?, Inputs(Drawn), Stream(_), Done).
+present_parentCard_wait(P, card(H1, H2?), Gs, Gs1?, Vs?, Done?) :- present_parentCard(P?, card(H1?, H2), Gs?, Gs1, Vs, Done).
+present_parentCard_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, Done?) :- present_parentCard_wait(P?, X?, Gs?, Gs1, Vs, Done).
+
+procedure run_parentCard_w(Integer?, _?, Stream(_)?, Done?, Stream(Draw(Drawn))).
+run_parentCard_w(Id, _, _, done, [withdraw(Id?)]).
+run_parentCard_w(Id, W, [V | Vs], Done, [draw(Id?, W?, parentCard_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_parentCard_w(Id?, W?, Vs?, Done?, Ds).
+run_parentCard_w(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
+
+procedure start_releaseCard_card_2(Stream(_)?, Stream(_)?, Stream(_)).
+start_releaseCard_card_2([V1 | S1], [V2 | S2], [card(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_releaseCard_card_2(V1?, V2?, S1?, S2?, Vs).
+start_releaseCard_card_2([], _, []).
+start_releaseCard_card_2(_, [], []).
+
+procedure comb_releaseCard_card_2(_?, _?, Stream(_)?, Stream(_)?, Stream(_)).
+comb_releaseCard_card_2(_, V2, [V1 | S1], S2, [card(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_releaseCard_card_2(V1?, V2?, S1?, S2?, Vs).
+comb_releaseCard_card_2(_, _, [], [], []).
+
+procedure present_releaseCard(Path?, ReleaseCard?, Inputs(Drawn)?, Inputs(Drawn), Stream(_), Done).
+present_releaseCard(P, card(H1, H2?), Gs, Gs1?, Vs?, D2?) :- ground(P?) | path(P?, 1, Q1), shown(Q1?, H1?, V1), path(P?, 2, M2), path(P?, 2, Q2), answer_yesNo(Q2?, H2, Gs?, Gs1, D2), start_releaseCard_card_2(V1?, [input(M2?)], Vs).
+present_releaseCard(P, X, Gs, Gs1?, [pending(P?) | Vs?], Done?) :- ground(P?) | present_releaseCard_wait(P?, X?, Gs?, Gs1, Vs, Done).
+
+procedure present_releaseCard_wait(Path?, ReleaseCard?, Inputs(Drawn)?, Inputs(Drawn), Stream(_), Done).
+present_releaseCard_wait(P, card(H1, H2?), Gs, Gs1?, Vs?, Done?) :- present_releaseCard(P?, card(H1?, H2), Gs?, Gs1, Vs, Done).
+present_releaseCard_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, Done?) :- present_releaseCard_wait(P?, X?, Gs?, Gs1, Vs, Done).
+
+procedure run_releaseCard_w(Integer?, _?, Stream(_)?, Done?, Stream(Draw(Drawn))).
+run_releaseCard_w(Id, _, _, done, [withdraw(Id?)]).
+run_releaseCard_w(Id, W, [V | Vs], Done, [draw(Id?, W?, releaseCard_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_releaseCard_w(Id?, W?, Vs?, Done?, Ds).
+run_releaseCard_w(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
+
+procedure start_groupCard_card_2(Stream(_)?, Stream(_)?, Stream(_)).
+start_groupCard_card_2([V1 | S1], [V2 | S2], [card(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_groupCard_card_2(V1?, V2?, S1?, S2?, Vs).
+start_groupCard_card_2([], _, []).
+start_groupCard_card_2(_, [], []).
+
+procedure comb_groupCard_card_2(_?, _?, Stream(_)?, Stream(_)?, Stream(_)).
+comb_groupCard_card_2(_, V2, [V1 | S1], S2, [card(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_groupCard_card_2(V1?, V2?, S1?, S2?, Vs).
+comb_groupCard_card_2(_, _, [], [], []).
+
+procedure present_groupCard(Path?, GroupCard?, Inputs(Drawn)?, Inputs(Drawn), Stream(_), Done).
+present_groupCard(P, card(H1, H2?), Gs, Gs1?, Vs?, D2?) :- ground(P?) | path(P?, 1, Q1), shown(Q1?, H1?, V1), path(P?, 2, M2), path(P?, 2, Q2), answer_yesNo(Q2?, H2, Gs?, Gs1, D2), start_groupCard_card_2(V1?, [input(M2?)], Vs).
+present_groupCard(P, X, Gs, Gs1?, [pending(P?) | Vs?], Done?) :- ground(P?) | present_groupCard_wait(P?, X?, Gs?, Gs1, Vs, Done).
+
+procedure present_groupCard_wait(Path?, GroupCard?, Inputs(Drawn)?, Inputs(Drawn), Stream(_), Done).
+present_groupCard_wait(P, card(H1, H2?), Gs, Gs1?, Vs?, Done?) :- present_groupCard(P?, card(H1?, H2), Gs?, Gs1, Vs, Done).
+present_groupCard_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, Done?) :- present_groupCard_wait(P?, X?, Gs?, Gs1, Vs, Done).
+
+procedure run_groupCard_w(Integer?, _?, Stream(_)?, Done?, Stream(Draw(Drawn))).
+run_groupCard_w(Id, _, _, done, [withdraw(Id?)]).
+run_groupCard_w(Id, W, [V | Vs], Done, [draw(Id?, W?, groupCard_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_groupCard_w(Id?, W?, Vs?, Done?, Ds).
+run_groupCard_w(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
+
+procedure start_joinCard_card_2(Stream(_)?, Stream(_)?, Stream(_)).
+start_joinCard_card_2([V1 | S1], [V2 | S2], [card(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_joinCard_card_2(V1?, V2?, S1?, S2?, Vs).
+start_joinCard_card_2([], _, []).
+start_joinCard_card_2(_, [], []).
+
+procedure comb_joinCard_card_2(_?, _?, Stream(_)?, Stream(_)?, Stream(_)).
+comb_joinCard_card_2(_, V2, [V1 | S1], S2, [card(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_joinCard_card_2(V1?, V2?, S1?, S2?, Vs).
+comb_joinCard_card_2(_, _, [], [], []).
+
+procedure present_joinCard(Path?, JoinCard?, Inputs(Drawn)?, Inputs(Drawn), Stream(_), Done).
+present_joinCard(P, card(H1, H2?), Gs, Gs1?, Vs?, D2?) :- ground(P?) | path(P?, 1, Q1), shown(Q1?, H1?, V1), path(P?, 2, M2), path(P?, 2, Q2), answer_yesNo(Q2?, H2, Gs?, Gs1, D2), start_joinCard_card_2(V1?, [input(M2?)], Vs).
+present_joinCard(P, X, Gs, Gs1?, [pending(P?) | Vs?], Done?) :- ground(P?) | present_joinCard_wait(P?, X?, Gs?, Gs1, Vs, Done).
+
+procedure present_joinCard_wait(Path?, JoinCard?, Inputs(Drawn)?, Inputs(Drawn), Stream(_), Done).
+present_joinCard_wait(P, card(H1, H2?), Gs, Gs1?, Vs?, Done?) :- present_joinCard(P?, card(H1?, H2), Gs?, Gs1, Vs, Done).
+present_joinCard_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, Done?) :- present_joinCard_wait(P?, X?, Gs?, Gs1, Vs, Done).
+
+procedure run_joinCard_w(Integer?, _?, Stream(_)?, Done?, Stream(Draw(Drawn))).
+run_joinCard_w(Id, _, _, done, [withdraw(Id?)]).
+run_joinCard_w(Id, W, [V | Vs], Done, [draw(Id?, W?, joinCard_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_joinCard_w(Id?, W?, Vs?, Done?, Ds).
+run_joinCard_w(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
+
+procedure start_inviteCard_card_2(Stream(_)?, Stream(_)?, Stream(_)).
+start_inviteCard_card_2([V1 | S1], [V2 | S2], [card(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_inviteCard_card_2(V1?, V2?, S1?, S2?, Vs).
+start_inviteCard_card_2([], _, []).
+start_inviteCard_card_2(_, [], []).
+
+procedure comb_inviteCard_card_2(_?, _?, Stream(_)?, Stream(_)?, Stream(_)).
+comb_inviteCard_card_2(_, V2, [V1 | S1], S2, [card(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_inviteCard_card_2(V1?, V2?, S1?, S2?, Vs).
+comb_inviteCard_card_2(_, _, [], [], []).
+
+procedure present_inviteCard(Path?, InviteCard?, Inputs(Drawn)?, Inputs(Drawn), Stream(_), Done).
+present_inviteCard(P, card(H1, H2?), Gs, Gs1?, Vs?, D2?) :- ground(P?) | path(P?, 1, Q1), shown(Q1?, H1?, V1), path(P?, 2, M2), path(P?, 2, Q2), answer_yesNo(Q2?, H2, Gs?, Gs1, D2), start_inviteCard_card_2(V1?, [input(M2?)], Vs).
+present_inviteCard(P, X, Gs, Gs1?, [pending(P?) | Vs?], Done?) :- ground(P?) | present_inviteCard_wait(P?, X?, Gs?, Gs1, Vs, Done).
+
+procedure present_inviteCard_wait(Path?, InviteCard?, Inputs(Drawn)?, Inputs(Drawn), Stream(_), Done).
+present_inviteCard_wait(P, card(H1, H2?), Gs, Gs1?, Vs?, Done?) :- present_inviteCard(P?, card(H1?, H2), Gs?, Gs1, Vs, Done).
+present_inviteCard_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, Done?) :- present_inviteCard_wait(P?, X?, Gs?, Gs1, Vs, Done).
+
+procedure run_inviteCard_w(Integer?, _?, Stream(_)?, Done?, Stream(Draw(Drawn))).
+run_inviteCard_w(Id, _, _, done, [withdraw(Id?)]).
+run_inviteCard_w(Id, W, [V | Vs], Done, [draw(Id?, W?, inviteCard_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_inviteCard_w(Id?, W?, Vs?, Done?, Ds).
+run_inviteCard_w(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
+
+procedure join_request_become_parent_1(Formed(MyChild)?, Formed(Request)).
+join_request_become_parent_1(formed(X1), formed(become_parent(X1?))).
+join_request_become_parent_1(refused, refused).
+
+procedure join_request_introduce_3(Formed(MyChild)?, Formed(Friend)?, Formed(FriendsChild)?, Formed(Request)).
+join_request_introduce_3(formed(X1), formed(X2), formed(X3), formed(introduce(X1?, X2?, X3?))).
+join_request_introduce_3(refused, _, _, refused).
+join_request_introduce_3(_, refused, _, refused).
+join_request_introduce_3(_, _, refused, refused).
+
+procedure join_request_send_2(Formed(Friend)?, Formed(Text)?, Formed(Request)).
+join_request_send_2(formed(X1), formed(X2), formed(send(X1?, X2?))).
+join_request_send_2(refused, _, refused).
+join_request_send_2(_, refused, refused).
+
+procedure join_request_end_parenting_1(Formed(Parent)?, Formed(Request)).
+join_request_end_parenting_1(formed(X1), formed(end_parenting(X1?))).
+join_request_end_parenting_1(refused, refused).
+
+procedure join_request_unfriend_1(Formed(Friend)?, Formed(Request)).
+join_request_unfriend_1(formed(X1), formed(unfriend(X1?))).
+join_request_unfriend_1(refused, refused).
+
+procedure join_request_unfriend_child_2(Formed(MyChild)?, Formed(Friend)?, Formed(Request)).
+join_request_unfriend_child_2(formed(X1), formed(X2), formed(unfriend_child(X1?, X2?))).
+join_request_unfriend_child_2(refused, _, refused).
+join_request_unfriend_child_2(_, refused, refused).
+
+procedure join_request_create_group_1(Formed(Name)?, Formed(Request)).
+join_request_create_group_1(formed(X1), formed(create_group(X1?))).
+join_request_create_group_1(refused, refused).
+
+procedure join_request_invite_2(Formed(Name)?, Formed(Friend)?, Formed(Request)).
+join_request_invite_2(formed(X1), formed(X2), formed(invite(X1?, X2?))).
+join_request_invite_2(refused, _, refused).
+join_request_invite_2(_, refused, refused).
+
+procedure join_request_invite_child_3(Formed(Name)?, Formed(FriendsChild)?, Formed(Friend)?, Formed(Request)).
+join_request_invite_child_3(formed(X1), formed(X2), formed(X3), formed(invite_child(X1?, X2?, X3?))).
+join_request_invite_child_3(refused, _, _, refused).
+join_request_invite_child_3(_, refused, _, refused).
+join_request_invite_child_3(_, _, refused, refused).
+
+procedure join_groupId_group_id_2(Formed(Creator)?, Formed(Name)?, Formed(GroupId)).
+join_groupId_group_id_2(formed(X1), formed(X2), formed(group_id(X1?, X2?))).
+join_groupId_group_id_2(refused, _, refused).
+join_groupId_group_id_2(_, refused, refused).
+
+procedure form_groupId(_?, Formed(GroupId)).
+form_groupId(group_id(R1, R2), F?) :- form_string(R1?, F1), form_constant(R2?, F2), join_groupId_group_id_2(F1?, F2?, F).
+form_groupId(_, refused) :- otherwise | true.
+
+procedure join_request_post_2(Formed(GroupId)?, Formed(Text)?, Formed(Request)).
+join_request_post_2(formed(X1), formed(X2), formed(post(X1?, X2?))).
+join_request_post_2(refused, _, refused).
+join_request_post_2(_, refused, refused).
+
+procedure join_request_leave_1(Formed(GroupId)?, Formed(Request)).
+join_request_leave_1(formed(X1), formed(leave(X1?))).
+join_request_leave_1(refused, refused).
+
+procedure join_request_remove_2(Formed(Name)?, Formed(Member)?, Formed(Request)).
+join_request_remove_2(formed(X1), formed(X2), formed(remove(X1?, X2?))).
+join_request_remove_2(refused, _, refused).
+join_request_remove_2(_, refused, refused).
+
+procedure join_request_leave_child_2(Formed(MyChild)?, Formed(GroupId)?, Formed(Request)).
+join_request_leave_child_2(formed(X1), formed(X2), formed(leave_child(X1?, X2?))).
+join_request_leave_child_2(refused, _, refused).
+join_request_leave_child_2(_, refused, refused).
+
+procedure join_request_remove_child_member_3(Formed(MyChild)?, Formed(Name)?, Formed(Member)?, Formed(Request)).
+join_request_remove_child_member_3(formed(X1), formed(X2), formed(X3), formed(remove_child_member(X1?, X2?, X3?))).
+join_request_remove_child_member_3(refused, _, _, refused).
+join_request_remove_child_member_3(_, refused, _, refused).
+join_request_remove_child_member_3(_, _, refused, refused).
+
+procedure form_request(_?, Formed(Request)).
+form_request(become_parent(R1), F?) :- form_string(R1?, F1), join_request_become_parent_1(F1?, F).
+form_request(introduce(R1, R2, R3), F?) :- form_string(R1?, F1), form_string(R2?, F2), form_string(R3?, F3), join_request_introduce_3(F1?, F2?, F3?, F).
+form_request(send(R1, R2), F?) :- form_string(R1?, F1), form_constant(R2?, F2), join_request_send_2(F1?, F2?, F).
+form_request(end_parenting(R1), F?) :- form_string(R1?, F1), join_request_end_parenting_1(F1?, F).
+form_request(unfriend(R1), F?) :- form_string(R1?, F1), join_request_unfriend_1(F1?, F).
+form_request(unfriend_child(R1, R2), F?) :- form_string(R1?, F1), form_string(R2?, F2), join_request_unfriend_child_2(F1?, F2?, F).
+form_request(create_group(R1), F?) :- form_constant(R1?, F1), join_request_create_group_1(F1?, F).
+form_request(invite(R1, R2), F?) :- form_constant(R1?, F1), form_string(R2?, F2), join_request_invite_2(F1?, F2?, F).
+form_request(invite_child(R1, R2, R3), F?) :- form_constant(R1?, F1), form_string(R2?, F2), form_string(R3?, F3), join_request_invite_child_3(F1?, F2?, F3?, F).
+form_request(post(R1, R2), F?) :- form_groupId(R1?, F1), form_constant(R2?, F2), join_request_post_2(F1?, F2?, F).
+form_request(leave(R1), F?) :- form_groupId(R1?, F1), join_request_leave_1(F1?, F).
+form_request(remove(R1, R2), F?) :- form_constant(R1?, F1), form_string(R2?, F2), join_request_remove_2(F1?, F2?, F).
+form_request(leave_child(R1, R2), F?) :- form_string(R1?, F1), form_groupId(R2?, F2), join_request_leave_child_2(F1?, F2?, F).
+form_request(remove_child_member(R1, R2, R3), F?) :- form_string(R1?, F1), form_constant(R2?, F2), form_string(R3?, F3), join_request_remove_child_member_3(F1?, F2?, F3?, F).
+form_request(_, refused) :- otherwise | true.
+
+procedure answer_stream_request(Path?, Stream(Request), Inputs(Drawn)?, Inputs(Drawn), Done).
+answer_stream_request(P, X?, [input(Id, P1, R) | Gs], Gs1?, Done?) :- P1? =?= P?, ground(R?) | form_request(R?, F), take_stream_request(F?, P?, X, input(Id?, P1?, R?), Gs?, Gs1, Done).
+answer_stream_request(P, X?, [input(Id, P1, R) | Gs], Gs1?, Done?) :- otherwise | take_stream_request(refused, P?, X, input(Id?, P1?, R?), Gs?, Gs1, Done).
+
+procedure take_stream_request(Formed(Request)?, Path?, Stream(Request), Input(Drawn)?, Inputs(Drawn)?, Inputs(Drawn), Done).
+take_stream_request(formed(V), P, [V? | X1?], _, Gs, Gs1?, Done?) :- answer_stream_request(P?, X1, Gs?, Gs1, Done).
+take_stream_request(refused, P, X?, G, Gs, [G? | Gs1?], Done?) :- answer_stream_request(P?, X, Gs?, Gs1, Done).
+
+procedure run_stream_request_r(Integer?, _?, Stream(_)?, Done?, Stream(Draw(Drawn))).
+run_stream_request_r(Id, _, _, done, [withdraw(Id?)]).
+run_stream_request_r(Id, W, [V | Vs], Done, [draw(Id?, W?, stream_request_r(V?)) | Ds?]) :- ground(W?), ground(V?) | run_stream_request_r(Id?, W?, Vs?, Done?, Ds).
+run_stream_request_r(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
+
