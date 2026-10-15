@@ -1470,7 +1470,8 @@ WellTypedResult _checkHead(
     final modedHeadTerm = modedHead(clause.head, procDecl, typeEnv: env);
 
     // Check each argument against its declared type's automaton
-    final result = _checkModedTermPerArg(modedHeadTerm, procDecl, dfa);
+    final result =
+        _checkModedTermPerArg(modedHeadTerm, procDecl, dfa, head: true);
     return (result, modedHeadTerm);
   } on ArityMismatchError catch (e) {
     return (WellTypedResult.failure([
@@ -1932,11 +1933,16 @@ WellTypedResult _checkArgumentModes(
 /// with open ([_noInstantiationReason]): a path reaching one is consistent
 /// ([checkPathAgainstAutomaton]), and two occurrences one of which is typed by
 /// one are not compared, a map being free to bind the parameter as they need.
+///
+/// [head] says that [modedTerm] is a moded head, whose pairs are compared by
+/// clause (a)'s head rule ([_headPairWithReason]); a body goal's are compared
+/// for duality.
 WellTypedResult _checkModedTermPerArg(
   ModedTerm modedTerm,
   ProcDecl decl,
   ProgramDFA dfa, {
   Set<String> open = const {},
+  bool head = false,
 }) {
   final errors = <WellTypedError>[];
   final variableTypes = <String, VariableTypeInfo>{};
@@ -2003,7 +2009,7 @@ WellTypedResult _checkModedTermPerArg(
 
   // Check duality within this term, every occurrence of a writer against
   // every occurrence of its reader.
-  errors.addAll(_checkTermDuality(variableTypes, dfa, open));
+  errors.addAll(_checkTermDuality(variableTypes, dfa, open, head));
   for (final e in repeats.entries) {
     final key = e.key;
     final reader = key.endsWith('?');
@@ -2017,7 +2023,7 @@ WellTypedResult _checkModedTermPerArg(
     for (final info in e.value) {
       for (final p in partners) {
         errors.addAll(
-            _checkTermDuality({key: info, partnerKey: p}, dfa, open));
+            _checkTermDuality({key: info, partnerKey: p}, dfa, open, head));
       }
     }
   }
@@ -2032,10 +2038,11 @@ WellTypedResult _checkModedTermPerArg(
 
 /// Check duality within a term (same logic as well_typed_term.dart).  A pair
 /// one occurrence of which is typed by an open type of [open] is not compared
-/// ([_checkModedTermPerArg]).
+/// ([_checkModedTermPerArg]).  Where [head], the term is a moded head and each
+/// pair is compared by clause (a)'s head rule ([_headPairWithReason]).
 List<NonDualError> _checkTermDuality(
     Map<String, VariableTypeInfo> variableTypes, ProgramDFA dfa,
-    [Set<String> open = const {}]) {
+    [Set<String> open = const {}, bool head = false]) {
   final errors = <NonDualError>[];
 
   // Group by base name (X and X? share base "X")
@@ -2069,7 +2076,13 @@ List<NonDualError> _checkTermDuality(
         continue;
       }
 
-      if (!_areDualTypes(writerInfo, readerInfo, dfa)) {
+      if (head) {
+        final (holds, reason) =
+            _headPairWithReason(writerInfo, readerInfo, dfa);
+        if (!holds) {
+          errors.add(NonDualError(baseName, writerInfo, readerInfo, reason));
+        }
+      } else if (!_areDualTypes(writerInfo, readerInfo, dfa)) {
         errors.add(NonDualError(baseName, writerInfo, readerInfo));
       }
     }
@@ -2139,8 +2152,9 @@ List<ClauseDualityError> _checkClauseDuality(
       // Apply location-dependent rule (spec v0.9, Definition 4.10 condition 3)
       if (writerNormLoc == readerNormLoc) {
         if (writerNormLoc == 'head') {
-          // Both in head: require exact DUAL types (unchanged)
-          final (isCompat, reason) = _areDualTypesWithReason(writerInfo, readerInfo, dfa);
+          // Both in head: clause (a)'s head rule ([_headPairWithReason]).
+          final (isCompat, reason) =
+              _headPairWithReason(writerInfo, readerInfo, dfa);
           if (!isCompat) {
             errors.add(ClauseDualityError(
               baseName,
@@ -2148,7 +2162,7 @@ List<ClauseDualityError> _checkClauseDuality(
               readerInfo,
               writerLoc,
               readerLoc,
-              'Variables in same clause part (head) must have dual types: $reason',
+              'Variables both in the head: $reason',
             ));
           }
         } else {
@@ -2356,6 +2370,49 @@ List<ClauseDualityError> _checkHeadBodyPair(
 bool _areDualTypes(VariableTypeInfo writerInfo, VariableTypeInfo readerInfo, ProgramDFA dfa) {
   final (isCompat, _) = _areDualTypesWithReason(writerInfo, readerInfo, dfa);
   return isCompat;
+}
+
+/// Clause (a) of Definition "Well-Typed Clause with Subtyping" on a pair both
+/// of whose occurrences are in the head: "if both occur in the head, the dual
+/// of the type of X is a subtype of the type of X?" (TGLP well-typing.tex,
+/// b927b41) --- the input's type within the output's.  Until 2026-10-15 the
+/// pair had to be exactly dual, and a head could not place an Ask taken from
+/// its input into an output stream of a union containing Ask (GLP, 2026-10-15
+/// 11:00 UTC, item 2).
+///
+/// [writerInfo] and [readerInfo] are the moded head's occurrences, keyed as it
+/// keys them, each variable complemented (Definition "Moded Head", step 2):
+/// one stands at an input type A? --- the occurrence that receives a term ---
+/// and the other at an output type B --- the occurrence that hands it out ---
+/// whichever of the two keys each is.  Taking the paper's X at A?, its dual A
+/// is to be a subtype of B; taking it at B, B? is to be a subtype of A?, which
+/// complementation (Section "Subtyping": A? <: B? if B <: A) makes the same
+/// A <: B.  Exact duality, the same base at opposite polarities, is the case
+/// A = B.
+(bool, String?) _headPairWithReason(VariableTypeInfo writerInfo,
+    VariableTypeInfo readerInfo, ProgramDFA dfa) {
+  if (writerInfo.mode != Mode.produce) {
+    return (false, 'Writer must have produce mode');
+  }
+  if (readerInfo.mode != Mode.consume) {
+    return (false, 'Reader must have consume mode');
+  }
+  final w = writerInfo.typeState;
+  final r = readerInfo.typeState;
+  if (w.isDual == r.isDual) {
+    return (false, 'One must be dual, other not: ${w.name} vs ${r.name}');
+  }
+  final received = w.isDual ? w : r;
+  final handed = w.isDual ? r : w;
+  final a = dfa.getState(received.baseName);
+  final b = dfa.getState(handed.baseName);
+  if (isSubtype(a, b, dfa)) return (true, null);
+  return (
+    false,
+    'the occurrence that receives ${a.name} hands it out at ${b.name}, and '
+        '${a.name} is not a subtype of ${b.name} (TGLP well-typing.tex, '
+        'Definition "Well-Typed Clause with Subtyping", clause (a))'
+  );
 }
 
 // _areSameTypeWithReason is gone with the head-body equality check it served.

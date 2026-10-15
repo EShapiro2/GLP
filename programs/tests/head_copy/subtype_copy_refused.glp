@@ -1,0 +1,13 @@
+%% The converse of subtype_copy.glp: an element of the union Event(String,
+%% Integer) taken from the input stream placed into an output stream of Ask:
+%% the input's type, Event(String, Integer), is not within the output's,
+%% Ask(String), so the clause is refused (TGLP well-typing.tex, Definition
+%% "Well-Typed Clause with Subtyping", clause (a), b927b41).  GLP, 2026-10-15
+%% 11:00 UTC, item 2.
+Ask(Q) ::= ask(Integer, Q).
+Input(T) ::= input(Integer, T).
+Event(Q, T) ::= Ask(Q) ; Input(T).
+
+procedure relay(Stream(Event(String, Integer))?, Stream(Ask(String))).
+relay([A|As], [A?|Es?]) :- relay(As?, Es).
+relay([], []).
