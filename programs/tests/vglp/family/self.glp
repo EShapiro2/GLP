@@ -1,0 +1,93 @@
+%% self.glp --- the plays of the family program, its two modules, parent and
+%% child, each asking the chore card that self.vglp beside this file shares
+%% with both, and each a question of its own, put to a scripted person
+%% through one dispatcher (vGLP at a89a751, sections/parts/
+%% canonical-compilation.tex; vGLP's task of 2026-10-15 18:28 UTC, item 4).
+%%
+%% "A vGLP program is organised in modules as a GLP program is ... the
+%% self.vglp of a directory holds the procedures, volitional or not, and the
+%% widget declarations shared by every module in that directory and below
+%% it, as its self.glp holds those of GLP.  A procedure that reaches a
+%% question is exported, imported and shared as any procedure is, with its
+%% ask stream added, so the questions of a program are those of all its
+%% modules.  The compilation forms the type of the asks, the construct
+%% processes and the dispatcher for the linked program, and the GLP module
+%% that forms the program's initial goal imports the compiled procedures it
+%% calls, ask streams included, and the dispatcher."
+%%
+%% The self.vglp joins this module as the program loads: its types, Chore,
+%% YesNo and Done, are this module's, and its procedure approve, compiled
+%% with its ask stream, is in scope in parent.vglp and child.vglp.  The
+%% questions of the program are the chore, the child's wish and the
+%% parent's allowance, and every compiled module's asks are of their one
+%% type, Question below, written again for the declarations of the
+%% procedures imported from the compiled modules: type identity is
+%% structural.  Each compiled module carries the dispatcher of the linked
+%% program, and either serves every question of the program.
+%%
+%% A grant is input(Id, P, R), P the position the view marks input(P).  The
+%% person approves the dishes and not the homework, gives an allowance of 5
+%% and wishes for a bike, and logs what it sees.  The person channel never
+%% closes, so neither does a log.
+
+Wish      ::= wish(Constant?).
+Allowance ::= allowance(Integer?).
+Question  ::= chore_w(Chore) ; wish_w(Wish) ; allowance_w(Allowance).
+Ask(Q)    ::= ask(Constant, Q).
+Drawn     ::= chore_w(_) ; wish_w(_) ; allowance_w(_) ; YesNo ; Constant.
+
+imported procedure parent#parent(Stream(Done), Stream(Ask(Question))).
+imported procedure child#child(Stream(Done), Stream(Ask(Question))).
+imported procedure parent#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(_), Stream(_))).
+imported procedure child#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(_), Stream(_))).
+
+%% ---------------------------------------------------------------------------
+%% The plays
+%% ---------------------------------------------------------------------------
+
+%% Both modules at once, their ask streams merged, served by the child's
+%% dispatcher: P the parent's reports, C the child's.
+exported procedure play_family(Stream(Done), Stream(Done), Stream(_)).
+play_family(P?, C?, Log?) :-
+    parent # parent(P, A1),
+    child # child(C, A2),
+    merge(A1?, A2?, Asks),
+    child # dispatch(Asks?, ch(Gs?, Ds), _),
+    person(Ds?, Gs, Log).
+
+%% The parent's module alone, served by its own dispatcher.
+exported procedure play_parent(Stream(Done), Stream(_)).
+play_parent(P?, Log?) :-
+    parent # parent(P, Asks),
+    parent # dispatch(Asks?, ch(Gs?, Ds), _),
+    person(Ds?, Gs, Log).
+
+%% person(Ds?, Gs, Log): at the draw of each question with the person's
+%% position marked input(Q), grant its answer at Q; log every draw and
+%% withdrawal.
+procedure person(_?, PersonIn(Drawn), Stream(_)).
+person([draw(Id, _, chore_w(chore(C, input(Q)))) | Ds],
+       [input(Id?, Q?, R?) | Gs?], [chore(C?) | Log?]) :-
+    ground(Id?), ground(C?), ground(Q?) |
+    verdict(C?, R),
+    person(Ds?, Gs, Log).
+person([draw(Id, _, wish_w(wish(input(Q)))) | Ds],
+       [input(Id?, Q?, bike) | Gs?], [wish | Log?]) :-
+    ground(Id?), ground(Q?) |
+    person(Ds?, Gs, Log).
+person([draw(Id, _, allowance_w(allowance(input(Q)))) | Ds],
+       [input(Id?, Q?, 5) | Gs?], [allowance | Log?]) :-
+    ground(Id?), ground(Q?) |
+    person(Ds?, Gs, Log).
+person([draw(_, _, V) | Ds], Gs?, [drawn(V?) | Log?]) :-
+    otherwise |
+    person(Ds?, Gs, Log).
+person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    person(Ds?, Gs, Log).
+
+%% The person approves the dishes and not the homework.
+procedure verdict(Constant?, YesNo).
+verdict(dishes, yes).
+verdict(homework, no).

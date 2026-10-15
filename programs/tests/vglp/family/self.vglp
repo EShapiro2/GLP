@@ -1,0 +1,18 @@
+%% self.vglp --- what the two modules of the family program share: the
+%% chore card, approve, which each of them calls, its types and the type of
+%% what the program reports (vGLP at a89a751, sections/parts/
+%% canonical-compilation.tex: "the self.vglp of a directory holds the
+%% procedures, volitional or not, and the widget declarations shared by every
+%% module in that directory and below it, as its self.glp holds those of
+%% GLP"; vGLP's task of 2026-10-15 18:28 UTC, item 4).  It joins the module
+%% of self.glp beside it as the program loads.
+
+YesNo  ::= yes ; no.
+Done   ::= done(Constant, YesNo) ; allowed(Integer) ; wished(Constant).
+
+%% The chore card: the program shows the chore, and the person approves it
+%% or not.
+Chore  ::= chore(Constant, YesNo?).
+
+procedure (Chore)*approve(Constant?, Stream(Done)).
+(chore(C?, A))*approve(C, [done(C?, A?)]) :- ground(C?) | true.

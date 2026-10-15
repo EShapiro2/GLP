@@ -1,0 +1,59 @@
+%% self.glp --- the play of the imports program: home.vglp imports from
+%% responder.vglp a volitional procedure, respond, and an ordinary procedure
+%% that reaches a question, offer_from, and asks a question of its own;
+%% a scripted person answers every question through home's dispatcher,
+%% which serves the questions of both modules (vGLP at a89a751, sections/
+%% parts/canonical-compilation.tex; vGLP's task of 2026-10-15 18:28 UTC,
+%% item 4).
+%%
+%% The types of the two modules and those their compilation adds, written
+%% again for the declarations of the procedures imported from home's
+%% compiled module: type identity is structural.  The person answers bob's
+%% offer yes, carol's no, and confirms the meeting with bob, and logs what it
+%% sees; the person channel never closes, so neither does the log.
+
+Peer     ::= Constant.
+YesNo    ::= yes ; no.
+Offer    ::= offer(Peer).
+Response ::= accept(Peer) ; refuse(Peer).
+Card     ::= card(Peer, YesNo?).
+Ok       ::= ok(Peer, YesNo?).
+Fact     ::= met(Response) ; heard(Response) ; confirmed(Peer, YesNo).
+Question ::= ok_w(Ok) ; card_w(Card).
+Ask(Q)   ::= ask(Constant, Q).
+Drawn    ::= ok_w(_) ; card_w(_) ; YesNo.
+
+imported procedure home#befriend(Peer?, Peer?, Stream(Fact),
+    Stream(Ask(Question))).
+imported procedure home#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(_), Stream(_))).
+
+exported procedure play_befriend(Stream(Fact), Stream(_)).
+play_befriend(F?, Log?) :-
+    home # befriend(bob, carol, F, Asks),
+    home # dispatch(Asks?, ch(Gs?, Ds), _),
+    person(Ds?, Gs, Log).
+
+%% person(Ds?, Gs, Log): at the draw of each question with the person's
+%% position marked input(Q), grant its answer at Q; log every draw and
+%% withdrawal.
+procedure person(_?, PersonIn(Drawn), Stream(_)).
+person([draw(Id, _, card_w(card(P, input(Q)))) | Ds],
+       [input(Id?, Q?, R?) | Gs?], [card(P?) | Log?]) :-
+    ground(Id?), ground(P?), ground(Q?) |
+    answer(P?, R),
+    person(Ds?, Gs, Log).
+person([draw(Id, _, ok_w(ok(P, input(Q)))) | Ds],
+       [input(Id?, Q?, yes) | Gs?], [ok(P?) | Log?]) :-
+    ground(Id?), ground(Q?) |
+    person(Ds?, Gs, Log).
+person([draw(_, _, V) | Ds], Gs?, [drawn(V?) | Log?]) :-
+    otherwise |
+    person(Ds?, Gs, Log).
+person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    person(Ds?, Gs, Log).
+
+%% The person answers bob's offer yes and carol's no.
+procedure answer(Peer?, YesNo).
+answer(bob, yes).
+answer(carol, no).

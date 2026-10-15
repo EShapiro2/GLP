@@ -1,0 +1,15 @@
+%% parent.vglp --- the parent's module of the family program: it asks the
+%% shared chore card of self.vglp, approve, and a question of its own, the
+%% allowance, whose type it defines alone (vGLP's task of 2026-10-15 18:28
+%% UTC, item 4).  Its questions are the program's: the chore, the child's
+%% wish and its own allowance, one type of asks for every module (vGLP at
+%% a89a751, sections/parts/canonical-compilation.tex).
+
+%% The person gives the allowance.
+Allowance ::= allowance(Integer?).
+
+procedure (Allowance)*allow(Stream(Done)).
+(allowance(N))*allow([allowed(N?)]).
+
+exported procedure parent(Stream(Done)).
+parent(Ds?) :- approve(dishes, D1), allow(D2), merge(D1?, D2?, Ds).
