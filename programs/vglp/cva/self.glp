@@ -4,7 +4,7 @@
 %% beside Jurix's (contracts.glp), the platforms it prints
 %% (social_graph/platform.vglp, currency/platform.vglp, nudge/platform.vglp,
 %% introduce/platform.vglp, gnudge/platform.vglp, childsafe/platform.vglp,
-%% link/platform.vglp, each beside its plays) and what the plays of all of them share, here: a
+%% link/platform.vglp, friends/platform.vglp, each beside its plays) and what the plays of all of them share, here: a
 %% scripted person and a network between two agents, three or four.
 %%
 %% A play runs the agents of a compiled platform, each the agent of the module
@@ -14,7 +14,8 @@
 %% Compilation"), its person scripted, and their networks joined by route/6,
 %% route3/8 or route4/10.  The person reads what its dispatcher draws (vGLP,
 %% the construct process, draw(Id, W, V) and withdraw(Id); a grant input(Id,
-%% P, R)): the agent's question, the stream of its requests; the thread, the
+%% P, R)): the agent's request questions, each showing the persons the agent
+%% knows and taking one request (vGLP ca78e11, Section 5.4); the thread, the
 %% program's output, construct 0, drawn element by element, which it logs;
 %% and the approval questions Start raises.  The plays pace the persons on
 %% the thread, on which the agent goal writes each app transaction it takes,
@@ -22,7 +23,9 @@
 %% 56d898f, Section 5.4).
 %%
 %% The person's script is a list of steps: req(R) grants the request R on the
-%% agent's request stream; wait(T) waits until the transaction T is on the
+%% request question open, once one is drawn; look logs menu(Ks), Ks the
+%% persons the request question open shows, once one is drawn; wait(T) waits
+%% until the transaction T is on the
 %% thread; approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an
 %% attempt of the class K, once it is drawn.  Its log is the thread, each
 %% transaction once, with gave(K, A) where it answers an approval question.  It reads what
@@ -37,12 +40,12 @@
 %% ---------------------------------------------------------------------------
 
 Peer       ::= Key.
-Carried(X) ::= hello(Peer) ; cargo(Peer, X).
+Carried(X) ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, X).
 Msg(X)     ::= msg(Peer, Carried(X)).
-Sent(X)    ::= sent(Peer, Peer, X).
-Step(T)    ::= req(T) ; wait(_) ; approval(_, T).
+Sent(X)    ::= sent(Peer, Peer, X) ; intro(Peer, Peer, Peer).
+Step(T)    ::= req(T) ; look ; wait(_) ; approval(_, T).
 Steps(T)   ::= [] ; [Step(T) | Steps(T)].
-Sess       ::= nosess ; sess(Integer, Path).
+Sess       ::= nosess ; sess(Integer, Path, List(Peer)).
 Seen       ::= seen(Integer, Path, _).
 Seens      ::= [] ; [Seen | Seens].
 PSt(T)     ::= ps(Sess, Stream(_), Seens, Steps(T)).
@@ -107,9 +110,12 @@ route4([msg(_, _)|Ms], A, OA?, B, OB?, C, OC?, D, OD?, Log?) :- otherwise |
     route4(Ms?, A?, OA, B?, OB, C?, OC, D?, OD, Log).
 route4([], _, [], _, [], _, [], _, [], []).
 
-%% A cargo, logged with its sender and its recipient; a hello, not.
+%% A cargo, logged with its sender and its recipient, and an introduction,
+%% intro(From, To, Q), From introducing Q to To; a hello or an ihello, not.
 procedure(X) note(Carried(X)?, Peer?, Stream(Sent(X)), Stream(Sent(X))?).
 note(hello(_), _, Log1?, Log1).
+note(ihello(_), _, Log1?, Log1).
+note(intro(F, Q), To, [intro(F?, To?, Q?)|Log1?], Log1).
 note(cargo(F, X), To, [sent(F?, To?, X?)|Log1?], Log1).
 
 %% The program's output to its person, the thread, on its end of the person
@@ -125,9 +131,9 @@ person([draw(0, _, output(T))|Ds], Gs?, ps(Se, Old, Cs, Ss), Log?) :-
     list_of(T?, L),
     thread_seen(Se?, Old?, L?, Cs?, Ss?, Gs, Gs1?, St1, Log, Log1?),
     person(Ds?, Gs1, St1?, Log1).
-person([draw(Id, _, stream_request_r(input(P)))|Ds], Gs?, ps(_, T, Cs, Ss), Log?) :-
-    ground(Id?), ground(P?) |
-    advance(ps(sess(Id?, P?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?),
+person([draw(Id, _, menu_w(menu(Ks, input(P))))|Ds], Gs?, ps(_, T, Cs, Ss), Log?) :-
+    ground(Id?), ground(P?), ground(Ks?) |
+    advance(ps(sess(Id?, P?, Ks?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?),
     person(Ds?, Gs1, St1?, Log1).
 person([draw(Id, _, approval_w(approval(At, input(P))))|Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :-
     ground(Id?), ground(P?), ground(At?) |
@@ -148,10 +154,14 @@ thread_seen(Se, Old, L, Cs, Ss, Gs?, Gs1, St1?, Log?, Log1) :- ground(L?) |
 %% they can be taken, the grants written on Gs, continuing at Gs1.
 procedure(T) advance(PSt(T)?, PersonIn(T), PersonIn(T)?, PSt(T), Stream(_),
     Stream(_)?).
-advance(ps(sess(Id, P), T, Cs, [req(R)|Ss]), [input(Id?, P?, R?)|Gs?], Gs1, St1?, Log?, Log1) :-
+advance(ps(sess(Id, P, _), T, Cs, [req(R)|Ss]), [input(Id?, P?, R?)|Gs?], Gs1, St1?, Log?, Log1) :-
     ground(Id?), ground(P?) |
-    advance(ps(sess(Id?, P?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
+    advance(ps(nosess, T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
 advance(ps(nosess, T, Cs, [req(R)|Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [req(R?)|Ss?]), Log1?, Log1).
+advance(ps(sess(Id, P, Ks), T, Cs, [look|Ss]), Gs?, Gs1, St1?, [menu(Ks?)|Log?], Log1) :-
+    ground(Id?), ground(P?), ground(Ks?) |
+    advance(ps(sess(Id?, P?, Ks?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
+advance(ps(nosess, T, Cs, [look|Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [look|Ss?]), Log1?, Log1).
 advance(ps(Se, T, Cs, [wait(X)|Ss]), Gs?, Gs1, St1?, Log?, Log1) :- ground(T?), ground(X?) |
     among(X?, T?, B),
     waited(B?, ps(Se?, T?, Cs?, [wait(X?)|Ss?]), Gs, Gs1?, St1, Log, Log1?).
