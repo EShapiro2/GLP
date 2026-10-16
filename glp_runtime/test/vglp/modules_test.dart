@@ -327,8 +327,11 @@ procedure (Stream(Card)?)*cards(Stream(Card)).
 exported procedure parent(Stream(Card)).
 parent(Cs?) :- cards(Cs).
 ''');
+      // The child's Card another type, of another functor, so that the
+      // person's raw inputs to the two questions, a card of each, form a
+      // union (vGLP, sections/parts/dispatcher.tex, after the dispatcher).
       File('${fixture.path}/child.vglp').writeAsStringSync('''
-Card ::= card(Integer).
+Card ::= number(Integer).
 procedure (Stream(Card)?)*cards(Stream(Card)).
 (Cs)*cards(Cs?).
 exported procedure child(Stream(Card)).

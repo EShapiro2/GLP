@@ -743,6 +743,56 @@ procedure (A(B)?)*g(Integer?).
     });
   });
 
+  // "The union is formed over the alternatives of these types, an
+  // alternative common to two of them taken once, and the compilation
+  // refuses a program two of whose alternatives have one functor and arity
+  // and differ, since the alternatives of a union have distinct functors"
+  // (vGLP, sections/parts/dispatcher.tex, after the dispatcher; vGLP,
+  // 2026-10-16 12:05 UTC, Udi: yes).
+  group('the union of the person channel\'s type over the alternatives of '
+      'the raw inputs\' types', () {
+    test('YesNo and Pick in one program give yes ; no ; yes(MyChild), the '
+        'common no taken once, and the program loads', () {
+      final c = compile('''
+YesNo ::= yes ; no.
+MyChild ::= Constant.
+Pick ::= yes(MyChild) ; no.
+procedure (YesNo?)*ok(Stream(YesNo)).
+(A)*ok([A?]).
+procedure (Pick?)*pick(Stream(Pick)).
+(P)*pick([P?]).
+''');
+      expect(c.source,
+          contains('Drawn ::= yesNo_r(_) ; pick_r(_) ; YesNo ; yes(MyChild).'));
+      final f = File('$_programs/vglp_union_fixture_${pid}_'
+          '${DateTime.now().microsecondsSinceEpoch}.glp');
+      try {
+        f.writeAsStringSync(c.source);
+        final engine = GlpEngine(
+            rootSelfGlpPath: File('$_programs/self.glp').absolute.path);
+        expect(engine.loadFile(f.absolute.path), isTrue);
+      } finally {
+        if (f.existsSync()) f.deleteSync();
+      }
+    });
+
+    test('two alternatives of one functor and arity that differ are refused, '
+        'naming the two', () {
+      expect(
+          () => compile('''
+MyChild ::= Constant.
+Pick ::= yes(MyChild) ; no.
+Count ::= yes(Integer) ; none.
+procedure (Pick?)*pick(Stream(Pick)).
+(P)*pick([P?]).
+procedure (Count?)*count(Stream(Count)).
+(N)*count([N?]).
+'''),
+          refused('have the alternatives yes(MyChild) and yes(Integer), of '
+              'one functor and arity, which differ'));
+    });
+  });
+
   group('a functor that is not a name (vGLP #6 Cowork, 2026-10-11 12:55 UTC, '
       'Task A)', () {
     test('names its join and start procedures by its characters made a name, '
