@@ -25,7 +25,7 @@ import '../compiler/glp_printer.dart';
 import '../analysis/type_checker/type_ast.dart';
 import 'package:path/path.dart' as ppath;
 
-import '../runtime/module_hierarchy.dart' show discoverSelfChain;
+import '../runtime/module_hierarchy.dart' show discoverSelfChain, hasSelfGlp;
 import 'canonical.dart';
 import 'clause_compilation.dart';
 import 'mediator.dart';
@@ -295,9 +295,9 @@ List<String> emitCompiledVglp(String rootDir, MediatorSource? mediator,
     // A self.vglp is no module: its widget declarations are those of its
     // self.glp's scope (scopeWidgetDeclarations), and its procedures and
     // types join its self.glp's module as the program loads, in memory
-    // (program_linker.dart, the self.vglp layers): the one file GLP gives a
-    // directory's shared holdings is its self.glp, which is hand-written and
-    // never overwritten.
+    // (program_linker.dart, the self.vglp layers).  A hand-written self.glp
+    // is never overwritten; where the directory has none, or one the
+    // compiler wrote, emitVglpSources writes the layer as its self.glp.
     if (file.uri.pathSegments.last == selfVglp) continue;
     final target = '${file.path.substring(0, file.path.length - 5)}.glp';
     final existing = File(target);
@@ -347,7 +347,9 @@ Map<String, String> scopeWidgetDeclarations(String path, String programsDir) {
   for (final selfGlp in chain) {
     final file = File(
         '${File(selfGlp).parent.path}${Platform.pathSeparator}$selfVglp');
-    if (!File(selfGlp).existsSync() || !file.existsSync()) continue;
+    if (!hasSelfGlp(File(selfGlp).parent.path) || !file.existsSync()) {
+      continue;
+    }
     out.addAll(readSelfVglp(file.path));
   }
   return out;
@@ -421,8 +423,8 @@ class VglpProgram {
   /// The program of the sources at [layers] and [modules], each by its path:
   /// those read by the front end, a source in the old syntax keeping its old
   /// compilation and joining none.  A layer whose directory has no self.glp
-  /// is refused: a directory is a scope by its self.glp (TGLP modules.tex,
-  /// Definition "Root, Scope"), and the layer joins its module.
+  /// joins the empty module of its virtual self.glp, which `:emit` writes as
+  /// that directory's self.glp (module_hierarchy.dart, isVirtualSelfGlp).
   static VglpProgram of(
       {required List<String> layers,
       required List<String> modules,
@@ -432,16 +434,6 @@ class VglpProgram {
     for (final path in layers) {
       final front = VglpFront.of(File(path).readAsStringSync());
       if (front == null) continue;
-      if (!File(ppath.join(File(path).parent.path, 'self.glp')).existsSync()) {
-        throw CompileError(
-            '$path holds procedures, declarations or types, and its directory '
-            'has no self.glp: the self.vglp of a directory holds those shared '
-            'by every module in that directory and below it, as its self.glp '
-            'holds those of GLP (vGLP, sections/parts/canonical-'
-            'compilation.tex), and they join the module of the self.glp '
-            'beside it',
-            1, 1, phase: 'analyzer');
-      }
       fronts[_norm(path)] = front;
       layerPaths.add(_norm(path));
     }
@@ -479,7 +471,7 @@ class VglpProgram {
       final q = g.staticModuleName;
       final sig = '${inner.functor}/${inner.arity}';
       final layer = _norm(ppath.join(dir, q, selfVglp));
-      if (File(ppath.join(dir, q, 'self.glp')).existsSync()) {
+      if (hasSelfGlp(ppath.join(dir, q))) {
         return fronts.containsKey(layer) && layers.contains(layer)
             ? (layer, sig)
             : null;
@@ -506,12 +498,16 @@ class VglpProgram {
     }
   }
 
-  /// Whether the self.glp of [dir] defines or declares [sig].
+  /// Whether the self.glp of [dir] defines or declares [sig]: one written by
+  /// the compiler from the self.vglp beside it, its first line the
+  /// compiler's header, stands for that self.vglp, which is the source read.
   bool _selfGlpDefines(String dir, String sig) =>
       _selfGlpSigs.putIfAbsent(dir, () {
         final f = File(ppath.join(dir, 'self.glp'));
         if (!f.existsSync()) return const {};
-        final m = Parser(Lexer(f.readAsStringSync()).tokenize()).parseModule();
+        final text = f.readAsStringSync();
+        if (text.startsWith(compiledHeader)) return const {};
+        final m = Parser(Lexer(text).tokenize()).parseModule();
         return {
           for (final d in m.procDeclarations)
             if (!d.imported) d.key,

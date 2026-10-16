@@ -211,16 +211,21 @@ go_b(Xs?) :- pick_b(Xs).
           returnsNormally);
     });
 
+    // Until 2026-10-16 refused; "A self.vglp holding procedures in a
+    // directory with no self.glp: yes ... :emit writes it as that
+    // directory's self.glp, with the compiler's header, linked as N.glp is
+    // for N.vglp" (vGLP Cowork, 2026-10-16 11:25 UTC, item 1; vself_test).
     test('a self.vglp holding procedures in a directory with no self.glp is '
-        'refused, naming it', () {
+        'that directory\'s self.glp, a module of the program', () {
       Directory('${fixture.path}/sub').createSync();
       write('self.glp', 'exported procedure ping(Constant).\nping(a).\n');
       write('sub/self.vglp', a);
-      expect(
-          () => discoverProgram(fixture.path, rootSelfGlpPath: _root),
-          throwsA(isA<CompileError>().having((e) => e.message, 'message',
-              allOf(contains('sub/self.vglp'),
-                  contains('its directory has no self.glp')))));
+      final sub = discoverProgram(fixture.path, rootSelfGlpPath: _root)
+          .singleWhere((m) => m.filePath.endsWith('/sub/self.glp'));
+      expect(sub.isSelfGlp, isTrue);
+      expect(sub.ast.procedures.map((p) => p.signature),
+          containsAll(['go_a/2', 'pick_a/2']));
+      expect(File('${fixture.path}/sub/self.glp').existsSync(), isFalse);
     });
 
     test('a call of a self.vglp\'s volitional procedure from a GLP module '

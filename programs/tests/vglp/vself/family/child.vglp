@@ -1,0 +1,11 @@
+%% child.vglp --- the child's module: it asks the chore card of the
+%% self.vglp above, approve, and a question of its own, a wish.
+
+%% The person names a wish.
+Wish ::= wish(Constant?).
+
+procedure (Wish)*wish(Stream(Done)).
+(wish(W))*wish([wished(W?)]).
+
+exported procedure child(Stream(Done)).
+child(Ds?) :- approve(homework, D1), wish(D2), merge(D1?, D2?, Ds).
