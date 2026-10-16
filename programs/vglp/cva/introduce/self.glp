@@ -7,13 +7,13 @@
 %% "Canonical CVA Platform").  It runs three agents, alice, bob and carol,
 %% their persons scripted and paced on their threads (../self.glp), and gives
 %% each person's log, the thread with gave(K, A) where the person answers a
-%% card, and the network's log of the cargoes it carries.
+%% approval question, and the network's log of the cargoes it carries.
 %%
 %% play_introduce: alice befriends bob and carol, each asked and answering
 %%   yes.  She proposes introducing bob and carol; both are in its one guard
-%%   set and asked, each on a card.  bob answers no, so alice tallies his no
+%%   set and asked, each on an approval question.  bob answers no, so alice tallies his no
 %%   and aborts, and tells the outcome to both; carol's question is no longer
-%%   pending once her Outcome closes the attempt, so her card is closed by the
+%%   pending once her Outcome closes the attempt, so her approval question is closed by the
 %%   program (vGLP, Section 5.4, Definition "Compilation of the Canonical
 %%   Platform"), and
 %%   the yes she gives it after takes no Answer.  alice proposes it again, both
@@ -36,9 +36,9 @@ Txn      ::= propose(Attempt) ; start(Attempt) ; answer(Attempt) ; vote(Attempt)
            ; tally(Attempt) ; commit(Attempt) ; yield(Attempt) ; wound(Attempt, Attempt) ; outcome(Attempt)
            ; discover(Peer).
 Session  ::= session(Stream(Request)?, Stream(Txn)).
-Card     ::= card(Attempt, YesNo?).
-Question ::= session_w(Session) ; card_w(Card).
-Drawn    ::= session_w(_) ; card_w(_) ; Request ; YesNo.
+Approval ::= approval(Attempt, YesNo?).
+Question ::= session_w(Session) ; approval_w(Approval).
+Drawn    ::= session_w(_) ; approval_w(_) ; Request ; YesNo.
 Ask(Q)   ::= ask(Constant, Q).
 
 imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
@@ -59,14 +59,14 @@ play_introduce(LA?, LB?, LC?, N?) :-
           wait(tally(attempt(alice, 3, 3, introduce(alice, bob, carol)))),
           req(propose(introduce(alice, bob, carol)))],
          [req(known(alice)), wait(discover(alice)),
-          card(befriend(alice, bob), yes),
-          card(attempt(alice, 3, 3, introduce(alice, bob, carol)), no),
-          card(attempt(alice, 4, 4, introduce(alice, bob, carol)), yes)],
+          approval(befriend(alice, bob), yes),
+          approval(attempt(alice, 3, 3, introduce(alice, bob, carol)), no),
+          approval(attempt(alice, 4, 4, introduce(alice, bob, carol)), yes)],
          [req(known(alice)), wait(discover(alice)),
-          card(befriend(alice, carol), yes),
+          approval(befriend(alice, carol), yes),
           wait(outcome(attempt(alice, 3, 3, introduce(alice, bob, carol)))),
-          card(attempt(alice, 3, 3, introduce(alice, bob, carol)), yes),
-          card(attempt(alice, 4, 4, introduce(alice, bob, carol)), yes)],
+          approval(attempt(alice, 3, 3, introduce(alice, bob, carol)), yes),
+          approval(attempt(alice, 4, 4, introduce(alice, bob, carol)), yes)],
          LA, LB, LC, N).
 
 %% alice, bob and carol, each with its dispatcher and scripted person, their

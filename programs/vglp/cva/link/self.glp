@@ -8,7 +8,7 @@
 %% Definition "Attempt, Priority, Message, App State, Question, Ready,
 %% Waiting, Clear").  It runs four agents, their persons scripted and paced on
 %% their threads (../self.glp), and gives each person's log, the thread with
-%% gave(K, A) where the person answers a card, and the network's log of the
+%% gave(K, A) where the person answers an approval question, and the network's log of the
 %% cargoes it carries.
 %%
 %% play_deadlock: Idit's deadlock, two initiators outside the intersection of
@@ -45,9 +45,9 @@ Txn      ::= propose(Attempt) ; start(Attempt) ; answer(Attempt) ; vote(Attempt)
            ; tally(Attempt) ; commit(Attempt) ; yield(Attempt) ; wound(Attempt, Attempt) ; outcome(Attempt)
            ; discover(Peer).
 Session  ::= session(Stream(Request)?, Stream(Txn)).
-Card     ::= card(Attempt, YesNo?).
-Question ::= session_w(Session) ; card_w(Card).
-Drawn    ::= session_w(_) ; card_w(_) ; Request ; YesNo.
+Approval ::= approval(Attempt, YesNo?).
+Question ::= session_w(Session) ; approval_w(Approval).
+Drawn    ::= session_w(_) ; approval_w(_) ; Request ; YesNo.
 Ask(Q)   ::= ask(Constant, Q).
 
 imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
@@ -59,14 +59,14 @@ exported procedure play_deadlock(Stream(_), Stream(_), Stream(_), Stream(_),
     Stream(Sent(Cargo))).
 play_deadlock(LA?, LB?, LC?, LD?, N?) :-
     quartet([req(known(carol)), req(known(dave)),
-             card(befriend(carol, alice), yes),
-             card(befriend(dave, alice), yes),
+             approval(befriend(carol, alice), yes),
+             approval(befriend(dave, alice), yes),
              wait(outcome(attempt(carol, 1, 1, befriend(carol, alice)))),
              wait(outcome(attempt(dave, 1, 1, befriend(dave, alice)))),
              req(propose(link(alice, carol, dave)))],
             [req(known(carol)), req(known(dave)),
-             card(befriend(carol, bob), yes),
-             card(befriend(dave, bob), yes),
+             approval(befriend(carol, bob), yes),
+             approval(befriend(dave, bob), yes),
              wait(outcome(attempt(carol, 2, 2, befriend(carol, bob)))),
              wait(outcome(attempt(dave, 2, 2, befriend(dave, bob)))),
              req(propose(link(bob, carol, dave))),
