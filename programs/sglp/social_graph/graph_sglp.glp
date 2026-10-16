@@ -38,7 +38,8 @@ source(
    %% The predicates of its compiled program, graph.glp.
    compiled(ask, 4), compiled(ask1, 5), compiled(respond, 3), compiled(respond1, 4),
    compiled(agent, 9), compiled(start, 6), compiled(answered, 5),
-   compiled(meet, 13), compiled(add_all, 4), compiled(insert, 3),
+   compiled(meet, 13), compiled(add_all, 4), compiled(union, 4),
+   compiled(drop_self, 3), compiled(insert, 3),
    compiled(insert_list, 3)],
 
   %% The profiles and the run declaration.

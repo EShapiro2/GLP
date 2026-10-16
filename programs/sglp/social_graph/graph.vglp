@@ -125,13 +125,38 @@ meet(other, Id, From, XSs, XOs, Ss, Os, FSs, FOs, Ss1?, Os2?, FSs?, FOs1?) :-
     add_all(Ss?, XOs?, Id?, Ss1),
     insert_list(FOs?, From?, FOs1).
 
-%% add_all(Ks?, Xs?, Self?, Ks1): Ks1 is Ks with each of Xs but Self inserted.
+%% add_all(Ks?, Xs?, Self?, Ks1): Ks1 is Ks with each of Xs but Self in its
+%% place, Xs being in increasing order too: the two merged in one walk.
 procedure add_all(Peers?, List(Peer)?, Peer?, Peers).
-add_all(Ks, [], _, Ks?).
-add_all(Ks, [X|Xs], Self, Ks1?) :-
-    X? =:= Self? | add_all(Ks?, Xs?, Self?, Ks1).
-add_all(Ks, [X|Xs], Self, Ks2?) :-
-    X? =\= Self? | insert(Ks?, X?, Ks1), add_all(Ks1?, Xs?, Self?, Ks2).
+add_all([K|Ks], [], _, [K?|Ks?]).
+add_all([K|Ks], [X|Xs], Self, Ks1?) :-
+    X? =:= Self? | add_all([K?|Ks?], Xs?, Self?, Ks1).
+add_all([K|Ks], [X|Xs], Self, [X?|Ks1?]) :-
+    X? =\= Self?, X? < K? | union([K?|Ks?], Xs?, Self?, Ks1).
+add_all([K|Ks], [X|Xs], Self, [K?|Ks1?]) :-
+    X? =\= Self?, X? =:= K? | union(Ks?, Xs?, Self?, Ks1).
+add_all([K|Ks], [X|Xs], Self, [K?|Ks1?]) :-
+    X? =\= Self?, X? > K? | union(Ks?, [X?|Xs?], Self?, Ks1).
+
+%% union(Ks?, Xs?, Self?, Ys): add_all/4 on lists that may be empty.
+procedure union(List(Peer)?, List(Peer)?, Peer?, List(Peer)).
+union([], Xs, Self, Ys?) :- drop_self(Xs?, Self?, Ys).
+union([K|Ks], [], _, [K?|Ks?]).
+union([K|Ks], [X|Xs], Self, Ys?) :-
+    X? =:= Self? | union([K?|Ks?], Xs?, Self?, Ys).
+union([K|Ks], [X|Xs], Self, [X?|Ys?]) :-
+    X? =\= Self?, X? < K? | union([K?|Ks?], Xs?, Self?, Ys).
+union([K|Ks], [X|Xs], Self, [K?|Ys?]) :-
+    X? =\= Self?, X? =:= K? | union(Ks?, Xs?, Self?, Ys).
+union([K|Ks], [X|Xs], Self, [K?|Ys?]) :-
+    X? =\= Self?, X? > K? | union(Ks?, [X?|Xs?], Self?, Ys).
+
+%% drop_self(Xs?, Self?, Ys): Ys is Xs without Self.
+procedure drop_self(List(Peer)?, Peer?, List(Peer)).
+drop_self([], _, []).
+drop_self([X|Xs], Self, Ys?) :- X? =:= Self? | drop_self(Xs?, Self?, Ys).
+drop_self([X|Xs], Self, [X?|Ys?]) :-
+    X? =\= Self? | drop_self(Xs?, Self?, Ys).
 
 %% insert(Ks?, P?, Ks1): Ks1 is the list Ks, in increasing order without
 %% repetition, with P in its place, Ks itself where P is in it.
