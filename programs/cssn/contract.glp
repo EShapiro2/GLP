@@ -1,0 +1,251 @@
+%% ---------------------------------------------------------------------------
+%% contract.glp --- the child-safe social contract (CSSN, Section 2) as its act
+%% schemas (Appendix B.2; their tables in Appendix C.2,
+%% sections/artefact-schemas.tex, at SGLP f8d56d3), in
+%% the term form programs/jurix reads (its README, "Writing a contract"), for
+%% programs/vglp/cva/compiler to compile into its canonical CVA platform
+%% (CSSN, Section 6.1, "The program"; Appendix C.5).  compile.sh beside this
+%% file has Jurix's checker give its verdict and then runs the compiler on it.
+%%
+%% Twenty-three schemas over seventeen predicates.  unfriend and leave carry
+%% no ? and each stands for one schema per role, guarded at that role (CSSN,
+%% Appendix C.2), so the term holds twenty-five, unfriend_p, unfriend_q,
+%% leave_a and leave_q named by the role that carries the mark, as Jurix's
+%% contract cssn names them.  friend is reflexive (Appendix B.2).  Every role
+%% requires identity, except the role of establish and the child's role of
+%% enter and enter_2, which forbid it and add it (Appendix B.2); the tables
+%% leave that requirement out and the term writes it in.  A role is its index
+%% in the schema, in the order of the schema's parameters; a, b and f are
+%% party variables, pvar, and x, an item, and n, a group's name, speech-act
+%% variables, svar (Appendix C.2, after the tables).  A role is
+%% rs(Guard, Add, Del, Keep, Forb), its +(i), -(i), =(i) and not(i).
+%% ---------------------------------------------------------------------------
+
+%% The contract, as programs/jurix/self.glp writes it.
+NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
+            ; ext(NameTerm, Constant).
+Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm).
+Args      ::= [] ; [Arg | Args].
+Atom      ::= atom(Constant, Args).
+Atoms     ::= [] ; [Atom | Atoms].
+Guard     ::= guarded ; unguarded ; guarded_at(Constant).
+RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant).
+RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
+            ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
+RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
+Reach     ::= reach(NameTerm, Constant, NameTerm).
+Reaches   ::= [] ; [Reach | Reaches].
+Schema    ::= schema(Constant, RoleSpecs) ; cschema(Constant, Reaches, RoleSpecs).
+Contract  ::= [] ; [Schema | Contract].
+Preds     ::= [] ; [Constant | Preds].
+Declared  ::= Contract ; reflexive(Preds, Contract).
+
+%% contract_named(cssn, C): the contract.
+procedure contract_named(Constant?, Declared).
+contract_named(cssn, reflexive([friend], C?)) :- cssn_schemas(C).
+
+procedure cssn_schemas(Contract).
+cssn_schemas(C?) :-
+    parenting_schemas(C1),
+    friendship_schemas(C2),
+    group_schemas(C3),
+    item_schemas(C4),
+    app(C3?, C4?, C34),
+    app(C2?, C34?, C234),
+    app(C1?, C234?, C).
+
+procedure app(Contract?, Contract?, Contract).
+app([], Ys, Ys?).
+app([X|Xs], Ys, [X?|Zs?]) :- app(Xs?, Ys?, Zs).
+
+%% Clause 8: establish(p), enter(p, r), enter_2(p, q, r), of_age(p, r),
+%% of_age_2(p, q, r).
+procedure parenting_schemas(Contract).
+parenting_schemas([
+    schema(establish,
+      [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]),
+    schema(enter,
+      [rs(guarded, [atom(parenting, [role(2)]), atom(parental, []),
+                    atom(friend, [role(2)])], [],
+                   [atom(identity, [])], [atom(child, [])]),
+       rs(guarded, [atom(identity, []), atom(parent, [role(1)]), atom(child, []),
+                    atom(friend, [role(1)])], [],
+                   [], [atom(identity, [])])]),
+    schema(enter_2,
+      [rs(guarded, [atom(parenting, [role(3)]), atom(parental, []),
+                    atom(coparent, [role(2)]), atom(friend, [role(3)])], [],
+                   [atom(identity, [])], [atom(child, [])]),
+       rs(guarded, [atom(parenting, [role(3)]), atom(parental, []),
+                    atom(coparent, [role(1)]), atom(friend, [role(3)])], [],
+                   [atom(identity, [])], [atom(child, [])]),
+       rs(guarded, [atom(identity, []), atom(parent, [role(1)]),
+                    atom(parent, [role(2)]), atom(child, []), atom(child, []),
+                    atom(coparented, []), atom(friend, [role(1)]),
+                    atom(friend, [role(2)])], [],
+                   [], [atom(identity, [])])]),
+    schema(of_age,
+      [rs(guarded, [], [atom(parenting, [role(2)]), atom(parental, [])],
+                   [atom(identity, [])], []),
+       rs(unguarded, [], [atom(parent, [role(1)]), atom(child, [])],
+                     [atom(identity, [])], [atom(coparented, [])])]),
+    schema(of_age_2,
+      [rs(guarded, [], [atom(parenting, [role(3)]), atom(parental, []),
+                        atom(coparent, [role(2)])],
+                   [atom(identity, [])], []),
+       rs(unguarded, [], [atom(parenting, [role(3)]), atom(parental, []),
+                          atom(coparent, [role(1)])],
+                     [atom(identity, [])], []),
+       rs(unguarded, [], [atom(parent, [role(1)]), atom(parent, [role(2)]),
+                          atom(child, []), atom(child, []), atom(coparented, [])],
+                     [atom(identity, [])], [])])]).
+
+%% Clauses 1, 2, 9, 10 and 11: befriend(p, q), unfriend(p, q) as unfriend_p
+%% and unfriend_q, child_befriend(r, s, p, q), child_adult_befriend(r, a, p),
+%% child_unfriend(r, s, p).
+procedure friendship_schemas(Contract).
+friendship_schemas([
+    schema(befriend,
+      [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, [])],
+                   [atom(child, []), atom(friend, [role(2)])]),
+       rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])],
+                   [atom(child, []), atom(friend, [role(1)])])]),
+    schema(unfriend_p,
+      [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []),
+       rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]),
+    schema(unfriend_q,
+      [rs(unguarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []),
+       rs(guarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]),
+    schema(child_befriend,
+      [rs(guarded, [atom(friend, [role(2)])], [],
+                   [atom(identity, []), atom(parent, [role(3)])],
+                   [atom(friend, [role(2)])]),
+       rs(guarded, [atom(friend, [role(1)])], [],
+                   [atom(identity, []), atom(parent, [role(4)])],
+                   [atom(friend, [role(1)])]),
+       rs(guarded, [atom(approval, [])], [],
+                   [atom(identity, []), atom(parenting, [role(1)]),
+                    atom(friend, [role(4)])], []),
+       rs(guarded, [atom(approval, [])], [],
+                   [atom(identity, []), atom(parenting, [role(2)]),
+                    atom(friend, [role(3)])], [])]),
+    schema(child_adult_befriend,
+      [rs(guarded, [atom(friend, [role(2)])], [],
+                   [atom(identity, []), atom(parent, [role(3)])],
+                   [atom(friend, [role(2)])]),
+       rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])],
+                   [atom(child, []), atom(friend, [role(1)])]),
+       rs(guarded, [atom(approval, [])], [],
+                   [atom(identity, []), atom(parenting, [role(1)]),
+                    atom(friend, [role(2)])], [])]),
+    schema(child_unfriend,
+      [rs(unguarded, [], [atom(friend, [role(2)])],
+                     [atom(identity, []), atom(parent, [role(3)])], []),
+       rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], []),
+       rs(guarded, [atom(withdrawal, [])], [],
+                   [atom(identity, []), atom(parenting, [role(1)])], [])])]).
+
+%% Clauses 3, 4, 5 and 12: create(a; n), close(a; n), child_close(r, p; n),
+%% join(a, q; n), child_join(a, s, p; n), child_join_2(r, s, p, q; n),
+%% leave(a, q; n) as leave_a and leave_q, child_leave(a, s, p; n).
+procedure group_schemas(Contract).
+group_schemas([
+    schema(create,
+      [rs(guarded, [atom(member, [role(1), svar(n)]),
+                    atom(listed, [role(1), svar(n)])], [],
+                   [atom(identity, [])],
+                   [atom(member, [role(1), svar(n)]), atom(closed, [svar(n)])])]),
+    schema(close,
+      [rs(guarded, [atom(closed, [svar(n)])],
+                   [atom(member, [role(1), svar(n)]),
+                    atom(listed, [role(1), svar(n)])],
+                   [atom(identity, [])], [])]),
+    schema(child_close,
+      [rs(unguarded, [atom(closed, [svar(n)])],
+                     [atom(member, [role(1), svar(n)]),
+                      atom(listed, [role(1), svar(n)])],
+                     [atom(identity, []), atom(parent, [role(2)])], []),
+       rs(guarded, [atom(withdrawal, [])], [],
+                   [atom(identity, []), atom(parenting, [role(1)])], [])]),
+    schema(join,
+      [rs(guarded, [atom(listed, [role(2), svar(n)])], [],
+                   [atom(identity, []), atom(member, [role(1), svar(n)]),
+                    atom(friend, [role(2)])], []),
+       rs(guarded, [atom(member, [role(1), svar(n)])], [],
+                   [atom(identity, []), atom(friend, [role(1)])],
+                   [atom(child, []), atom(member, [role(1), svar(n)])])]),
+    schema(child_join,
+      [rs(guarded, [atom(listed, [role(2), svar(n)])], [],
+                   [atom(identity, []), atom(member, [role(1), svar(n)]),
+                    atom(friend, [role(2)])],
+                   [atom(child, [])]),
+       rs(guarded, [atom(member, [role(1), svar(n)])], [],
+                   [atom(identity, []), atom(parent, [role(3)]),
+                    atom(friend, [role(1)])],
+                   [atom(member, [role(1), svar(n)])]),
+       rs(guarded, [atom(approval, [])], [],
+                   [atom(identity, []), atom(parenting, [role(2)])], [])]),
+    schema(child_join_2,
+      [rs(guarded, [atom(listed, [role(2), svar(n)])], [],
+                   [atom(identity, []), atom(member, [role(1), svar(n)]),
+                    atom(friend, [role(2)]), atom(parent, [role(3)])], []),
+       rs(guarded, [atom(member, [role(1), svar(n)])], [],
+                   [atom(identity, []), atom(parent, [role(4)]),
+                    atom(friend, [role(1)])],
+                   [atom(member, [role(1), svar(n)])]),
+       rs(guarded, [atom(approval, [])], [],
+                   [atom(identity, []), atom(parenting, [role(1)])], []),
+       rs(guarded, [atom(approval, [])], [],
+                   [atom(identity, []), atom(parenting, [role(2)])], [])]),
+    schema(leave_a,
+      [rs(guarded, [], [atom(listed, [role(2), svar(n)])],
+                   [atom(identity, [])], []),
+       rs(unguarded, [], [atom(member, [role(1), svar(n)])],
+                     [atom(identity, [])], [])]),
+    schema(leave_q,
+      [rs(unguarded, [], [atom(listed, [role(2), svar(n)])],
+                     [atom(identity, [])], []),
+       rs(guarded, [], [atom(member, [role(1), svar(n)])],
+                   [atom(identity, [])], [])]),
+    schema(child_leave,
+      [rs(unguarded, [], [atom(listed, [role(2), svar(n)])],
+                     [atom(identity, [])], []),
+       rs(unguarded, [], [atom(member, [role(1), svar(n)])],
+                     [atom(identity, []), atom(parent, [role(3)])], []),
+       rs(guarded, [atom(withdrawal, [])], [],
+                   [atom(identity, []), atom(parenting, [role(2)])], [])])]).
+
+%% Clauses 6 and 7: sign(p; x), send(p, q; x, a, f), post_own(a; x, b, f, n),
+%% post(p, a; x, b, f, n), deliver(a, q; x, b, f, n).
+procedure item_schemas(Contract).
+item_schemas([
+    schema(sign,
+      [rs(guarded, [atom(item, [svar(x), role(1), role(1)])], [],
+                   [atom(identity, [])], [])]),
+    schema(send,
+      [rs(guarded, [atom(sent, [svar(x), role(2)])], [],
+                   [atom(identity, []), atom(item, [svar(x), pvar(a), pvar(f)])], []),
+       rs(unguarded, [atom(item, [svar(x), pvar(a), role(1)])], [],
+                     [atom(identity, []), atom(friend, [role(1)])], [])]),
+    schema(post_own,
+      [rs(guarded, [atom(posted, [svar(x), svar(n)])], [],
+                   [atom(identity, []), atom(item, [svar(x), pvar(b), pvar(f)]),
+                    atom(member, [role(1), svar(n)])],
+                   [atom(posted, [svar(x), svar(n)])])]),
+    schema(post,
+      [rs(guarded, [atom(sent, [svar(x), role(2)])], [],
+                   [atom(identity, []), atom(item, [svar(x), pvar(b), pvar(f)]),
+                    atom(member, [role(2), svar(n)])], []),
+       rs(unguarded, [atom(item, [svar(x), pvar(b), role(1)]),
+                      atom(posted, [svar(x), svar(n)])], [],
+                     [atom(identity, []), atom(member, [role(2), svar(n)]),
+                      atom(listed, [role(1), svar(n)])],
+                     [atom(posted, [svar(x), svar(n)])])]),
+    schema(deliver,
+      [rs(unguarded, [atom(delivered, [svar(x), role(2), svar(n)])], [],
+                     [atom(identity, []), atom(item, [svar(x), pvar(b), pvar(f)]),
+                      atom(member, [role(1), svar(n)]),
+                      atom(posted, [svar(x), svar(n)]),
+                      atom(listed, [role(2), svar(n)])],
+                     [atom(delivered, [svar(x), role(2), svar(n)])]),
+       rs(unguarded, [atom(item, [svar(x), pvar(b), role(1)])], [],
+                     [atom(identity, []), atom(member, [role(1), svar(n)])], [])])]).

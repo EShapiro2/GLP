@@ -2379,6 +2379,18 @@ HEREDOC
 check "CSSN program loads" "Loaded program" "$k_load"
 check_not "CSSN program no type errors" "Type checking failed" "$k_load"
 
+# The contract's act schemas (CSSN Appendix B.2), programs/cssn/contract.glp,
+# in the term form programs/jurix reads: Jurix's verdict on it is Proposition
+# "Provenance and volition" --- traceable provenance and volition, and no
+# unobstructed introductory act.
+echo "--- CSSN contract, Jurix's verdict ---"
+k_contract=$(bash "$CSSN_V2/compile.sh" "$(mktemp -d)" 2>&1 || true)
+check "CSSN contract: Jurix gives a verdict" "verdict: " "$k_contract"
+check "CSSN contract: no unobstructed introductory act" "verdict: not_grassroots(\[obstructed(" "$k_contract"
+check_not "CSSN contract: its predicates have traceable provenance" "untraceable(" "$k_contract"
+check_not "CSSN contract: it satisfies volition" "volition(" "$k_contract"
+check_not "CSSN contract: it is not malformed" "malformed(" "$k_contract"
+
 # One play: its log, tagged(Party, M), M a screen message or did(Step).
 k_play() {
     "$REPL_RUN" <<HEREDOC
