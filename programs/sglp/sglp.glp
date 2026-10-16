@@ -1,0 +1,59 @@
+%% programs/sglp/sglp.glp: the types and procedures that the transformation,
+%% the programs it prints and their harnesses share (sGLP's paper, Appendix B,
+%% at sGLP 2a15405; sGLP's answers of 2026-10-16 11:25 and 12:32 UTC): the
+%% units of a horizon, the slot in which a rated goal receives the writer of
+%% its answer, and the term form.  programs/sglp/self.glp exposes it to the
+%% subtree, and the root programs/self.glp beside sglp#monitor, for a
+%% simulation outside programs/sglp (transform.sh --source).  An exposed
+%% module lifts its exported procedures and the types their signatures carry
+%% (TGLP modules.tex, "The -expose directive"), so each type here is carried
+%% by a procedure exported here: Span by span/2, Slot by fill/2, SglpTerms by
+%% terms_length/2.
+
+%% The horizon of a run declaration, `until <number> <unit>`: the unit singular
+%% or plural (Appendix B).
+Span ::= TimeUnit ; seconds ; minutes ; hours ; days ; weeks ; years.
+
+%% span(U?, S): S is the number of seconds in one U, a year being 365.25 days.
+exported procedure span(Span?, Integer).
+span(second, 1).
+span(seconds, 1).
+span(minute, 60).
+span(minutes, 60).
+span(hour, 3600).
+span(hours, 3600).
+span(day, 86400).
+span(days, 86400).
+span(week, 604800).
+span(weeks, 604800).
+span(year, 31557600).
+span(years, 31557600).
+
+%% A rated goal that writes an answer receives its writer inside a term it
+%% reads, its procedure taking inputs only (sGLP's paper, Section 4, at
+%% 3007ad5): slot(W), W the writer, of type Slot(X)?, W at the position X? the
+%% goal writes; the run tests' profiles use it (tests/reader, tests/delivery,
+%% tests/receipt, tests/panel).
+Slot(X) ::= slot(X?).
+
+%% fill(Slot?, X?): writes the slot's writer with the reader X? given, the
+%% step a rated goal that writes an answer takes.
+exported procedure(X) fill(Slot(X)?, X?).
+fill(slot(X?), X).
+
+%% The term form of an sGLP program (README.md, "The term form"): a list of
+%% terms, one per declaration and clause, in GLP-Spec's term syntax; its
+%% elements are terms of any form, the source's heads and goals among them, so
+%% they are typed _, as a meta-interpreter's are (docs/typed-glp-manual.md,
+%% 18.3).
+SglpTerms ::= [] ; [_ | SglpTerms].
+
+%% terms_length(Ts?, N): N is the number of declarations and clauses in the
+%% term form Ts, counted in an accumulator by terms_length/3.
+exported procedure terms_length(SglpTerms?, Integer).
+terms_length(Ts, N?) :- terms_length(Ts?, 0, N).
+
+%% terms_length(Ts?, A?, N): N is A plus the number of terms in Ts.
+procedure terms_length(SglpTerms?, Integer?, Integer).
+terms_length([], A, A?).
+terms_length([_|Ts], A, N?) :- A1 := A? + 1, terms_length(Ts?, A1?, N).

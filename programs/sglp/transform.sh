@@ -10,6 +10,10 @@
 #                                              <dir>/tests/receipt/, <dir>/tests/panel/ and
 #                                              <dir>/tests/numbers/
 #   bash programs/sglp/transform.sh --check    print into a scratch directory and compare
+#   bash programs/sglp/transform.sh --source <src> [--check]
+#                                              print <src>/profiles.glp and <src>/population.glp
+#                                              from the sGLP source in <src>, a directory
+#                                              outside programs/sglp, or with --check compare
 #
 # In one REPL session it loads programs/sglp and calls transform(P, Part) for
 # P social_graph, coins, reader, delivery, receipt, panel and numbers and Part profiles
@@ -31,39 +35,96 @@
 # of the checks (a line "%% not transformed: ..."), and, with --check, each is
 # byte for byte the file in place; 1 otherwise, the faults or the differing
 # files named; 2 on a bad argument.
+#
+# With --source <src> it transforms a program whose directory is outside
+# programs/sglp, as CSSN's simulation (Integration's ruling of 2026-10-16 10:52
+# UTC, item 1, with sGLP's agreement of 2026-10-15 21:28 UTC): the sGLP source
+# is <src>'s one file *_sglp.glp, in the term form (README.md, "The term
+# form"), holding the declaration exported procedure source(SglpTerms,
+# SglpTerms) and the unit clause source(V, S) and nothing else but comments; in
+# the same REPL session it calls transform_terms(V, S, Part) for Part profiles
+# and population, V and S the clause's arguments as written, and writes the two
+# parts to <src>, or with --check compares them with those in <src>.  The
+# printed modules call the monitor and name sglp.glp's Span and Slot, which the
+# root programs/self.glp exposes, as it exposes sglp.glp's span/2 to the harness.
 
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 GLP_DIR="$(cd "$HERE/../.." && pwd)"
 RT="$GLP_DIR/glp_runtime"
 
-CHECK=0
-if [ $# -gt 1 ]; then
-    echo "usage: transform.sh [<dir> | --check]" >&2
+usage() {
+    echo "usage: transform.sh [<dir> | --check | --source <src> [--check]]" >&2
     exit 2
+}
+CHECK=0
+SRC=
+if [ $# -ge 1 ] && [ "$1" = "--source" ]; then
+    { [ $# -eq 2 ] || { [ $# -eq 3 ] && [ "$3" = "--check" ]; }; } || usage
+    [ -d "$2" ] || { echo "transform.sh: no directory $2" >&2; exit 2; }
+    SRC="$(cd "$2" && pwd)"
+    [ $# -eq 3 ] && CHECK=1
+elif [ $# -gt 1 ]; then
+    usage
 fi
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
-if [ $# -eq 0 ]; then
-    OUT="$HERE"
-elif [ "$1" = "--check" ]; then
-    CHECK=1
-    OUT="$WORK/out"
-else
-    OUT="$1"
-fi
-mkdir -p "$OUT/social_graph" "$OUT/coins" "$OUT/tests/reader" "$OUT/tests/delivery" "$OUT/tests/receipt" "$OUT/tests/panel" "$OUT/tests/numbers" || exit 2
 
-PARTS="social_graph/profiles social_graph/population coins/profiles coins/population tests/reader/profiles tests/reader/population tests/delivery/profiles tests/delivery/population tests/receipt/profiles tests/receipt/population tests/panel/profiles tests/panel/population tests/numbers/profiles tests/numbers/population"
-{
-    echo ':limit 1000000000000000'
-    echo "$HERE"
-    for p in $PARTS; do
-        prog=${p%/*}
-        echo "transform(${prog##*/}, ${p##*/})."
-    done
-    echo ':quit'
-} > "$WORK/input"
+if [ -n "$SRC" ]; then
+    # The source: <src>'s one *_sglp.glp, its comments dropped and its
+    # whitespace one space, quoted atoms and strings kept as written; what is
+    # left must be the declaration and the clause source(V, S), whose arguments
+    # are the goal's.
+    set -- "$SRC"/*_sglp.glp
+    if [ $# -ne 1 ] || [ ! -f "$1" ]; then
+        echo "transform.sh: $SRC holds no single *_sglp.glp" >&2
+        exit 2
+    fi
+    VS=$(perl -0777 -ne '
+        my $q = qr/\x27(?:[^\x27\\]|\\.)*\x27|"(?:[^"\\]|\\.)*"/;
+        s/($q)|%[^\n]*|(\s+)/defined $1 ? $1 : defined $2 ? " " : ""/ge;
+        s/^\s*(?:exported\s+)?procedure\s+source\s*\(\s*SglpTerms\s*,\s*SglpTerms\s*\)\s*\.//;
+        print $1 if /^\s*source\s*\((.*)\)\s*\.\s*$/s;
+    ' "$1")
+    if [ -z "$VS" ]; then
+        echo "transform.sh: $1 is not the declaration and the clause source(V, S)" >&2
+        exit 2
+    fi
+    if [ "$CHECK" = 1 ]; then OUT="$WORK/out"; else OUT="$SRC"; fi
+    BASE="$SRC"
+    mkdir -p "$OUT" || exit 2
+    PARTS="profiles population"
+    {
+        echo ':limit 1000000000000000'
+        echo "$HERE"
+        for p in $PARTS; do
+            echo "transform_terms($VS, $p)."
+        done
+        echo ':quit'
+    } > "$WORK/input"
+else
+    if [ $# -eq 0 ]; then
+        OUT="$HERE"
+    elif [ "$1" = "--check" ]; then
+        CHECK=1
+        OUT="$WORK/out"
+    else
+        OUT="$1"
+    fi
+    BASE="$HERE"
+    mkdir -p "$OUT/social_graph" "$OUT/coins" "$OUT/tests/reader" "$OUT/tests/delivery" "$OUT/tests/receipt" "$OUT/tests/panel" "$OUT/tests/numbers" || exit 2
+
+    PARTS="social_graph/profiles social_graph/population coins/profiles coins/population tests/reader/profiles tests/reader/population tests/delivery/profiles tests/delivery/population tests/receipt/profiles tests/receipt/population tests/panel/profiles tests/panel/population tests/numbers/profiles tests/numbers/population"
+    {
+        echo ':limit 1000000000000000'
+        echo "$HERE"
+        for p in $PARTS; do
+            prog=${p%/*}
+            echo "transform(${prog##*/}, ${p##*/})."
+        done
+        echo ':quit'
+    } > "$WORK/input"
+fi
 
 (cd "$RT" && bin/glpc < "$WORK/input" > "$WORK/repl.out" 2>&1)
 
@@ -90,11 +151,11 @@ fi
 for p in $PARTS; do
     f="$OUT/$p.glp"
     if [ "$CHECK" = 1 ]; then
-        if [ -f "$f" ] && cmp -s "$f" "$HERE/$p.glp"; then
+        if [ -f "$f" ] && cmp -s "$f" "$BASE/$p.glp"; then
             echo "$p.glp: as printed"
         else
             echo "$p.glp: NOT as printed"
-            [ -f "$f" ] && diff "$HERE/$p.glp" "$f" | head -20
+            [ -f "$f" ] && diff "$BASE/$p.glp" "$f" | head -20
             OK=0
         fi
     elif [ -f "$f" ]; then

@@ -1,0 +1,39 @@
+%% An sGLP program outside programs/sglp, transformed there by
+%% programs/sglp/transform.sh --source (Integration's ruling of 2026-10-16
+%% 10:52 UTC, item 1): one question, Poll, in writer mode, the program writing
+%% the poll's number and the person its answer; one person, agreeable; and a
+%% run of a few asks.  The printed modules call the monitor, which the root
+%% programs/self.glp exposes, as CSSN's simulation does.
+%%
+%%   poll.glp       the compiled program, by hand, as vGLP's Definition
+%%                  "Canonical Compilation" compiles
+%%                  procedure (Poll)*ask(Integer?, YesNo).
+%%                  (poll(N?, A))*ask(N, A?).
+%%                  and polls/2, which asks K polls;
+%%   poll_sglp.glp  the sGLP source in the term form (programs/sglp/README.md);
+%%   profiles.glp and population.glp  printed from poll_sglp.glp by
+%%                  bash programs/sglp/transform.sh --source programs/tests/sglp_outside,
+%%                  and not edited;
+%%   harness.glp    the run, by hand: the monitor, the log's sink, the one
+%%                  agent's initial goal and its person process.
+%%
+%%   poll_run(K, As)   the run of the run declaration with K asks; As the
+%%                     answers the program read, in the order asked
+
+%% The vGLP program's types.
+YesNo ::= yes ; no.
+Poll  ::= poll(Integer, YesNo?).
+
+%% The type of the asks, which the canonical compilation adds: Poll is in
+%% writer mode, so its alternative of Question is poll_w(Poll).
+Ask      ::= ask(Constant, Question).
+Question ::= poll_w(Poll).
+
+%% A stochastic person, one profile in the one dimension, as the harness hands
+%% it from the population's draw to the person process (population.glp).
+Voter    ::= agreeable.
+Profiles ::= profiles(Voter).
+
+imported procedure harness#run(Integer?, Stream(YesNo)).
+exported procedure poll_run(Integer?, Stream(YesNo)).
+poll_run(K, As?) :- harness # run(K?, As).

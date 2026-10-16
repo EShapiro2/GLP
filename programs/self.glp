@@ -17,6 +17,14 @@
 % directive").
 -expose(sglp#monitor).
 
+% sGLP's shared module (programs/sglp/sglp.glp): the units of a horizon (Span,
+% span/2), the slot (Slot, fill/2) and the term form (SglpTerms,
+% terms_length/2).  Exposed from the root for the same reason as the monitor:
+% a simulation outside programs/sglp, as CSSN's, names Span and Slot in the
+% modules transform.sh --source prints and calls span/2 in its harness (TGLP
+% modules.tex, "The -expose directive").
+-expose(sglp#sglp).
+
 % =============================================================================
 % TYPE DEFINITIONS
 % =============================================================================
