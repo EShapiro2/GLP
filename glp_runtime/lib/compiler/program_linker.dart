@@ -15,6 +15,7 @@ import 'ast.dart';
 import 'error.dart' show CompileError;
 import 'glp_printer.dart';
 import 'lexer.dart';
+import 'token.dart' show TokenType;
 import 'parser.dart';
 import 'partial_evaluator.dart';
 import 'primitive_layer.dart';
@@ -30,10 +31,10 @@ import '../vglp/mediator.dart';
 import '../vglp/canonical.dart'
     show
         CanonicalContext,
-        VglpFront,
         VolitionalCall,
         checkWritersAtOutputs,
         compileCanonical,
+        extractWidgetDeclarations,
         isPaperSyntaxSource,
         volitionalRecord;
 import '../vglp/program_compilation.dart';
@@ -270,11 +271,11 @@ List<DiscoveredModule> discoverProgram(String rootDir,
 /// layer of its directory --- and each .vglp module source of the tree that
 /// joins the program, compiled on load or standing as its committed compiled
 /// module; a source beside a hand-written module of its name does not join
-/// it, the hand-written module standing.  The root's self.vglp holds widget
-/// declarations, for every program ([scopeWidgetDeclarations]); one holding
-/// more is refused, the root's self.glp being the language's first layer
-/// (TGLP modules.tex, Definition "Root, Scope") and compiled once for every
-/// program.
+/// it, the hand-written module standing.  "The self.vglp of the root holds
+/// widget declarations only" (vGLP, Section 6.3, sections/parts/
+/// canonical-compilation.tex): one holding anything else --- a procedure, a
+/// declaration, a type, a clause, or text the front end does not read --- is
+/// refused, naming the rule ([_refuseRootSelfVglp]).
 VglpProgram? _vglpProgramOf(Directory root, String? programsDir) {
   if (!root.existsSync()) return null;
   final files = root
@@ -285,23 +286,11 @@ VglpProgram? _vglpProgramOf(Directory root, String? programsDir) {
   final programsNorm = programsDir == null ? null : _normPath(programsDir);
   final layers = <String>{};
   final sources = <String>[];
-  void rootSelfVglp(String path) {
-    final front = VglpFront.of(File(path).readAsStringSync());
-    if (front != null && _holds(front)) {
-      throw CompileError(
-          '$path holds procedures, declarations or types: the root\'s '
-          'self.vglp holds the widget declarations of every program, and the '
-          'root\'s self.glp, the first layer of every scope, is compiled once '
-          'for every program (TGLP modules.tex, Definition "Root, Scope")',
-          1, 1, phase: 'analyzer');
-    }
-  }
-
   for (final f in files) {
     final name = ppath.basename(f.path);
     if (name == selfVglp) {
       if (programsNorm != null && _normPath(f.parent.path) == programsNorm) {
-        rootSelfVglp(f.path);
+        _refuseRootSelfVglp(f.path);
       } else {
         layers.add(_normPath(f.path));
       }
@@ -324,7 +313,7 @@ VglpProgram? _vglpProgramOf(Directory root, String? programsDir) {
     }
     final rootLayer = File(ppath.join(programsNorm, selfVglp));
     if (rootLayer.existsSync() && !files.any((f) => _normPath(f.path) == _normPath(rootLayer.path))) {
-      rootSelfVglp(rootLayer.path);
+      _refuseRootSelfVglp(rootLayer.path);
     }
   }
   final held = [
@@ -339,32 +328,61 @@ VglpProgram? _vglpProgramOf(Directory root, String? programsDir) {
       layers: held, modules: sources, programsDir: programsDir);
 }
 
-/// Whether the self.vglp at [path] holds a procedure, a declaration or a
-/// type: one of widget declarations alone is no layer.
-bool _holdsAt(String path) {
-  final front = VglpFront.of(File(path).readAsStringSync());
-  return front != null && _holds(front);
+/// Refuse the root's self.vglp at [path] unless it holds widget declarations
+/// and nothing else: "the self.vglp of the root holds widget declarations
+/// only" (vGLP, Section 6.3, sections/parts/canonical-compilation.tex).  What
+/// is left of it once its widget declarations are taken out is comments and
+/// blank space, or it is refused, whether or not the vGLP front end reads it.
+void _refuseRootSelfVglp(String path) {
+  final text = File(path).readAsStringSync();
+  String? found;
+  try {
+    final rest = Lexer(extractWidgetDeclarations(text).stripped).tokenize();
+    final t = rest.firstWhere((t) => t.type != TokenType.EOF,
+        orElse: () => rest.last);
+    if (t.type != TokenType.EOF) found = 'line ${t.line}: ${t.lexeme}';
+  } on CompileError catch (e) {
+    found = 'line ${e.line}: ${e.message}';
+  }
+  if (found == null) return;
+  throw CompileError(
+      '$path holds more than widget declarations ($found): "the self.vglp '
+      'of the root holds widget declarations only" (vGLP, Section 6.3, '
+      'sections/parts/canonical-compilation.tex)',
+      1, 1, phase: 'analyzer');
 }
 
-bool _holds(VglpFront front) =>
-    front.own.isNotEmpty ||
-    front.types.isNotEmpty ||
-    front.importedVolitional.isNotEmpty;
+/// Whether the self.vglp at [path] holds a procedure, a declaration or a
+/// type: one of widget declarations alone is no layer.
+bool _holdsAt(String path) => selfVglpHoldsAt(path);
 
 /// Compile each self.vglp layer of [program], outermost first, by the
 /// canonical compilation, its questions the program's, with neither
 /// dispatcher nor construct processes, its names fresh against those of the
 /// self.glp beside it, whose module it joins ([_withLayer]): the module of
 /// each layer, by its directory.
+///
+/// A layer in a directory with no self.glp joins the empty module of its
+/// virtual self.glp ([isVirtualSelfGlp]).  One beside a self.glp the compiler
+/// wrote from it, its first line the compiler's header, is not compiled: that
+/// self.glp is loaded as the directory's own, "linked as N.glp is for
+/// N.vglp" (vGLP Cowork, 2026-10-16 11:25 UTC, item 1), the self.vglp
+/// staying a source of [program].  Where [emitted] is given, for `:emit`,
+/// each layer of a directory with no self.glp or with one the compiler wrote
+/// is compiled, the latter as if it had none, and its text is recorded there
+/// by the path of that self.glp ([emitVglpSources]).
 Map<String, Module> _compileLayers(VglpProgram program, Directory root,
-    String? programsDir, String? rootSelfGlpPath, TypeEnvironment? rs) {
+    String? programsDir, String? rootSelfGlpPath, TypeEnvironment? rs,
+    {Map<String, String>? emitted}) {
   final layers = <String, Module>{};
   final resolveIn = _sourceTypes(program, root, programsDir, rootSelfGlpPath,
       rs, layers);
   for (final path in program.layers) {
     final dir = _normPath(File(path).parent.path);
     final selfGlp = ppath.join(dir, 'self.glp');
-    final self = _parseFile(selfGlp);
+    final compiled = _isCompiledSelfGlp(selfGlp);
+    if (compiled && emitted == null) continue;
+    final self = compiled ? Module(line: 1, column: 1) : _parseFile(selfGlp);
     final above = _layeredScope(selfGlp, root.absolute.path, programsDir,
         rootSelfGlpPath, rs, layers);
     final selfTypes = {for (final td in self.typeDefs) td.name};
@@ -390,9 +408,19 @@ Map<String, Module> _compileLayers(VglpProgram program, Directory root,
     }
     final module = Parser(Lexer(text).tokenize()).parseModule();
     _withLayer(self, module, selfGlp, path);
-    layers[dir] = module;
+    if (emitted != null && (compiled || isVirtualSelfGlp(selfGlp))) {
+      emitted[selfGlp] = text;
+    }
+    if (!compiled) layers[dir] = module;
   }
   return layers;
+}
+
+/// Whether the self.glp at [path] is on disc and the compiler wrote it, its
+/// first line the compiler's header.
+bool _isCompiledSelfGlp(String path) {
+  final f = File(path);
+  return f.existsSync() && f.readAsStringSync().startsWith(compiledHeader);
 }
 
 /// The type a name denotes in the scope of a source of [program], the
@@ -414,7 +442,9 @@ TypeDef? Function(String source, String name) _sourceTypes(
     final target = isLayer
         ? ppath.join(File(source).parent.path, 'self.glp')
         : source;
-    if (isLayer) {
+    // A self.glp the compiler wrote from the layer stands for it, and is no
+    // part of the layer's scope ([_compileLayers]).
+    if (isLayer && !_isCompiledSelfGlp(target)) {
       final self = _parseFile(target);
       for (final td in self.typeDefs) {
         if (td.name == name) return td;
@@ -441,8 +471,13 @@ CanonicalContext _contextFor(VglpProgram program, String path,
             scope.types.containsKey(n) || scope.typeTemplates.containsKey(n),
         resolveIn: resolveIn);
 
-Module _parseFile(String path) =>
-    Parser(Lexer(File(path).readAsStringSync()).tokenize()).parseModule();
+/// The module of the file at [path]; a virtual self.glp's is empty
+/// ([selfGlpSource]).
+Module _parseFile(String path) => Parser(Lexer(isSelfGlpFile(path)
+            ? selfGlpSource(path)
+            : File(path).readAsStringSync())
+        .tokenize())
+    .parseModule();
 
 /// The module of the self.glp [self], at [selfPath], with the compiled text
 /// of the self.vglp beside it, [layer], at [layerPath]: one module, one layer
@@ -640,12 +675,17 @@ List<DiscoveredModule> _discoverGlpModules(Directory root, String? programsDir,
   // The root `programs/` directory bounds the ancestor scope chain. When known,
   // discovery extends above the program root up to (excluding) this directory.
 
-  // Recursively find all .glp files
-  final glpFiles = root
-      .listSync(recursive: true)
-      .whereType<File>()
-      .where((f) => f.path.endsWith('.glp'))
-      .toList();
+  // Recursively find all .glp files, and the virtual self.glp of each
+  // directory of the tree that has one ([isVirtualSelfGlp]): a module of the
+  // program as one on disc is, the self.vglp's layer joining it.
+  final listed = root.listSync(recursive: true).whereType<File>().toList();
+  final glpFiles = [
+    ...listed.where((f) => f.path.endsWith('.glp')),
+    for (final f in listed)
+      if (ppath.basename(f.path) == selfVglp &&
+          isVirtualSelfGlp(ppath.join(f.parent.path, 'self.glp')))
+        File(ppath.join(f.parent.path, 'self.glp')),
+  ];
 
   // Every .glp file of the tree is a module of the program, and none is
   // skipped (TGLP modules.tex, Compilation, first step: "the compiler collects
@@ -656,7 +696,9 @@ List<DiscoveredModule> _discoverGlpModules(Directory root, String? programsDir,
     final filename = file.path.split(Platform.pathSeparator).last;
 
     // Parse the module
-    final source = file.readAsStringSync();
+    final source = filename == 'self.glp'
+        ? selfGlpSource(file.path)
+        : file.readAsStringSync();
     final lexer = Lexer(source);
     final tokens = lexer.tokenize();
     final parser = Parser(tokens);
@@ -882,8 +924,7 @@ void _addAncestorContextAndExposes(
   if (programsDir != null) {
     for (final selfPath in _ancestorSelfGlpFiles(rootAbsPath, programsDir)) {
       var selfModule =
-          Parser(Lexer(File(selfPath).readAsStringSync()).tokenize())
-              .parseModule();
+          Parser(Lexer(selfGlpSource(selfPath)).tokenize()).parseModule();
       final layer = layers[_normPath(File(selfPath).parent.path)];
       if (layer != null) {
         selfModule = _withLayer(selfModule, layer, selfPath,
@@ -971,7 +1012,7 @@ void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
       if (modules.any((m) => _normPath(m.filePath) == norm)) continue;
       final above = [...scope];
       scope.add(outer.putIfAbsent(norm, () {
-        final full = Parser(Lexer(File(self).readAsStringSync()).tokenize())
+        final full = Parser(Lexer(selfGlpSource(self)).tokenize())
             .parseModule();
         return DiscoveredModule(
           filePath: self,
@@ -1202,7 +1243,8 @@ TypeEnvironment _mergeExposed(TypeEnvironment base, TypeEnvironment exposed,
 }
 
 /// Collect `self.glp` files in ancestor directories ABOVE [rootDir], walking up
-/// to but NOT including [programsDir]. Returns absolute paths, innermost-first.
+/// to but NOT including [programsDir], a virtual one ([isVirtualSelfGlp])
+/// among them. Returns absolute paths, innermost-first.
 List<String> _ancestorSelfGlpFiles(String rootDir, String programsDir) {
   // Normalize for comparison: absolute + resolve `..`/`.` (callers may pass
   // paths containing `..`) + strip trailing slash.
@@ -1221,7 +1263,7 @@ List<String> _ancestorSelfGlpFiles(String rootDir, String programsDir) {
     if (dn == programsNorm) break; // exclude programs/self.glp
     if (!dn.startsWith(programsNorm)) break; // above programs/ — stop
     final selfGlp = File('$dir${Platform.pathSeparator}self.glp');
-    if (selfGlp.existsSync()) result.add(selfGlp.absolute.path);
+    if (hasSelfGlp(dir)) result.add(selfGlp.absolute.path);
     final parent = Directory(dir).parent.path;
     if (parent == dir) break; // filesystem root safety
     dir = parent;
@@ -2608,15 +2650,16 @@ class _CrossModuleResolver {
   }
 
   /// The files the qualifier [q] of a call made in [caller] may name:
-  /// `<caller's directory>/q/self.glp`, and `<caller's directory>/q.glp` or,
-  /// where there is none, the `q.vglp` source compiled as that module.
+  /// `<caller's directory>/q/self.glp`, on disc or virtual
+  /// ([isVirtualSelfGlp]), and `<caller's directory>/q.glp` or, where there
+  /// is none, the `q.vglp` source compiled as that module.
   List<String> _candidates(DiscoveredModule caller, String q) {
     final callerDir = _normPath(File(caller.filePath).parent.path);
     final dirSelf = ppath.join(callerDir, q, 'self.glp');
     final glpFile = ppath.join(callerDir, '$q.glp');
     final vglpFile = ppath.join(callerDir, '$q.vglp');
     return <String>[
-      if (File(dirSelf).existsSync()) dirSelf,
+      if (hasSelfGlp(ppath.join(callerDir, q))) dirSelf,
       if (File(glpFile).existsSync())
         glpFile
       else if (File(vglpFile).existsSync())
@@ -3240,6 +3283,14 @@ TypeExpr _renameTypeExpr(
 /// the root scope, its ancestor `self.glp` chain and whatever an ancestor
 /// `-expose`s — so the emitted text is exactly what the load produces in
 /// memory (vGLP, Definition "Canonical Compilation").
+///
+/// The self.vglp of a directory under [rootDir] that holds procedures,
+/// declarations or types, in a directory with no self.glp or with one the
+/// compiler wrote, is written as that directory's self.glp, the compiler's
+/// header its first line (vGLP Cowork, 2026-10-16 11:25 UTC, item 1: ":emit
+/// writes it as that directory's self.glp, with the compiler's header,
+/// linked as N.glp is for N.vglp").  A hand-written self.glp is never
+/// overwritten: its self.vglp joins it in memory as the program loads.
 List<String> emitVglpSources(String rootDir,
     {required String rootSelfGlpPath,
     void Function(String message)? onSkip}) {
@@ -3252,9 +3303,11 @@ List<String> emitVglpSources(String rootDir,
 
   final rs = _rootScopeOf(rootSelfGlpPath);
   final program = _vglpProgramOf(root, programsDir);
+  final selfTexts = <String, String>{};
   final layers = program == null
       ? const <String, Module>{}
-      : _compileLayers(program, root, programsDir, rootSelfGlpPath, rs);
+      : _compileLayers(program, root, programsDir, rootSelfGlpPath, rs,
+          emitted: selfTexts);
   final modules = _discoverGlpModules(root, programsDir, rootSelfGlpPath, rs,
       layers: layers);
   TypeEnvironment scopeFor(String vglpPath) => _vglpScope(File(vglpPath),
@@ -3262,11 +3315,19 @@ List<String> emitVglpSources(String rootDir,
   final resolveIn = program == null
       ? null
       : _sourceTypes(program, root, programsDir, rootSelfGlpPath, rs, layers);
-  return emitCompiledVglp(root.path, mediator,
+  final written = emitCompiledVglp(root.path, mediator,
       scopeFor: scopeFor,
       contextFor: program == null
           ? null
           : (p) => _contextFor(program, p, scopeFor(p), resolveIn!),
       readerFor: program?.readerFor,
       onSkip: onSkip);
+  final rootNorm = _normPath(root.path);
+  for (final e in selfTexts.entries) {
+    final dir = _normPath(File(e.key).parent.path);
+    if (dir != rootNorm && !ppath.isWithin(rootNorm, dir)) continue;
+    File(e.key).writeAsStringSync(e.value);
+    written.add(e.key);
+  }
+  return written;
 }

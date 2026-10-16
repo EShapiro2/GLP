@@ -1,0 +1,11 @@
+%% parent.vglp --- the parent's module: it asks the chore card of the
+%% self.vglp above, approve, and a question of its own, the allowance.
+
+%% The person gives the allowance.
+Allowance ::= allowance(Integer?).
+
+procedure (Allowance)*allow(Stream(Done)).
+(allowance(N))*allow([allowed(N?)]).
+
+exported procedure parent(Stream(Done)).
+parent(Ds?) :- approve(dishes, D1), allow(D2), merge(D1?, D2?, Ds).

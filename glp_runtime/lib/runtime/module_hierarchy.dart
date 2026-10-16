@@ -17,6 +17,7 @@ import 'package:glp_runtime/compiler/partial_evaluator.dart'
     show PartialEvaluator;
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
 import 'package:glp_runtime/analysis/type_checker/param_expansion.dart';
+import 'package:glp_runtime/vglp/canonical.dart' show VglpFront;
 
 /// The name of the module held by the file at [filePath]: its path from the
 /// root [rootDir] (TGLP modules.tex, Compilation, third step: every procedure
@@ -90,6 +91,51 @@ String moduleDirectoryName(String name, {required bool isSelfGlp}) {
   final slash = name.lastIndexOf('/');
   return slash < 0 ? '' : name.substring(0, slash);
 }
+
+/// Whether the self.vglp at [path] holds a procedure, a declaration or a
+/// type, and is so a layer of its directory: one of widget declarations
+/// alone is none, and nor is a source the vGLP front end does not read.
+bool selfVglpHoldsAt(String path) {
+  final f = File(path);
+  if (!f.existsSync()) return false;
+  final front = VglpFront.of(f.readAsStringSync());
+  return front != null && vglpFrontHolds(front);
+}
+
+/// Whether [front] holds a procedure, a declaration or a type.
+bool vglpFrontHolds(VglpFront front) =>
+    front.own.isNotEmpty ||
+    front.types.isNotEmpty ||
+    front.importedVolitional.isNotEmpty;
+
+/// Whether the self.glp at [path] is VIRTUAL: none is on disc, and the
+/// self.vglp beside it holds procedures, declarations or types.  "The
+/// self.vglp of a directory holds the procedures, volitional or not, and the
+/// widget declarations shared by every module in that directory and below
+/// it, as its self.glp holds those of GLP" (vGLP, Section 6.3, sections/
+/// parts/canonical-compilation.tex), and a self.vglp holding procedures in a
+/// directory with no self.glp is written by `:emit` as that directory's
+/// self.glp, linked as N.glp is for N.vglp (vGLP Cowork, 2026-10-16 11:25
+/// UTC, item 1; Udi's approval).  Until it is written the directory has the
+/// self.glp the load compiles from it in memory: an empty module, which its
+/// layer joins (program_linker.dart, the self.vglp layers).
+bool isVirtualSelfGlp(String path) =>
+    ppath.basename(path) == 'self.glp' &&
+    !File(path).existsSync() &&
+    selfVglpHoldsAt(ppath.join(File(path).parent.path, 'self.vglp'));
+
+/// Whether the directory [dir] has a self.glp, on disc or virtual
+/// ([isVirtualSelfGlp]).
+bool hasSelfGlp(String dir) {
+  final path = ppath.join(dir, 'self.glp');
+  return File(path).existsSync() || isVirtualSelfGlp(path);
+}
+
+/// The source of the self.glp at [path]: the file's, and empty where it is
+/// virtual ([isVirtualSelfGlp]), the layer joining it where the program's
+/// layers are known.
+String selfGlpSource(String path) =>
+    isVirtualSelfGlp(path) ? '' : File(path).readAsStringSync();
 
 /// Discover the self.glp chain from root to target file's directory.
 ///
@@ -168,8 +214,10 @@ List<String> discoverSelfChain({
       }
     }
 
+    // A virtual self.glp ([isVirtualSelfGlp]) is a link of the chain as one
+    // on disc is.
     final selfGlp = File('$currentDir${Platform.pathSeparator}self.glp');
-    if (selfGlp.existsSync()) {
+    if (hasSelfGlp(currentDir)) {
       chain.add(selfGlp.absolute.path);
     }
 
@@ -442,7 +490,7 @@ TypeEnvironment _carriedDeclarations(
 /// every later layer resolve them.
 TypeEnvironment mergeSelfGlpFileIntoScope(TypeEnvironment env, String path,
     {String? root, String? label}) {
-  final source = File(path).readAsStringSync();
+  final source = selfGlpSource(path);
   final module = Parser(Lexer(source).tokenize()).parseModule();
   final lifted = liftExposedTypes(env, module, path, root: root);
   try {

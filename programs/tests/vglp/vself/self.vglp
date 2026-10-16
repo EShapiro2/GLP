@@ -1,0 +1,20 @@
+%% self.vglp --- what the modules below this directory share: the chore
+%% card, approve, its types and the type of what the program reports.  The
+%% directory has no self.glp: "the self.vglp of a directory holds the
+%% procedures, volitional or not, and the widget declarations shared by every
+%% module in that directory and below it, as its self.glp holds those of GLP"
+%% (vGLP, Section 6.3, sections/parts/canonical-compilation.tex), and a
+%% self.vglp holding procedures in a directory with no self.glp is written by
+%% :emit as that directory's self.glp, with the compiler's header, linked as
+%% N.glp is for N.vglp (vGLP Cowork, 2026-10-16 11:25 UTC, item 1).  Until
+%% then the load compiles it in memory as the directory's self.glp.
+
+YesNo  ::= yes ; no.
+Done   ::= done(Constant, YesNo) ; allowed(Integer) ; wished(Constant).
+
+%% The chore card: the program shows the chore, and the person approves it
+%% or not.
+Chore  ::= chore(Constant, YesNo?).
+
+procedure (Chore)*approve(Constant?, Stream(Done)).
+(chore(C?, A))*approve(C, [done(C?, A?)]) :- ground(C?) | true.
