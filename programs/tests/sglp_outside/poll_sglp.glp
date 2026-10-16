@@ -1,0 +1,36 @@
+%% The sGLP source, in the term form the transformation reads
+%% (programs/sglp/README.md, "The term form").  Its surface form:
+%%
+%%   person agreeable.
+%%   Poll =::= agreeable_poll.
+%%   procedure agreeable_poll(Poll?, Integer?).
+%%   agreeable_poll(P, S) :- random(S?, 100, K, _), agreeable_answer(K?, P?) @ 1/day.
+%%   procedure agreeable_answer(Integer?, Poll?).
+%%   agreeable_answer(K, poll(_, yes)) :- K? =< 80 | true.
+%%   agreeable_answer(K, poll(_, no)) :- K? > 80 | true.
+%%
+%%   run 1 agents [voter ~ (agreeable : 1.0)] until 30 days seed 20260927.
+%%
+%% bash programs/sglp/transform.sh --source programs/tests/sglp_outside prints
+%% from it profiles.glp and population.glp, beside it.
+
+exported procedure source(SglpTerms, SglpTerms).
+source(
+  %% The vGLP program's interface and its compiled program's predicates.
+  [type('YesNo', [yes, no]),
+   type('Poll', [poll('Integer', dual('YesNo'))]),
+   volitional('Poll', '\'Poll\'', poll_w, ask(dual('Integer'), 'YesNo')),
+   compiled(ask, 3), compiled(ask1, 4), compiled(polls, 3)],
+
+  %% The profile and the run declaration.
+  [person(agreeable),
+   binds('Poll', agreeable_poll),
+   decl(agreeable_poll(dual('Poll'), dual('Integer'))),
+   clause(agreeable_poll(var('P'), var('S')), [],
+          [random(var('S?'), 100, var('K'), var('_')),
+           rated(agreeable_answer(var('K?'), var('P?')), rate(1, day))]),
+   decl(agreeable_answer(dual('Integer'), dual('Poll'))),
+   clause(agreeable_answer(var('K'), poll(var('_'), yes)), ['=<'(var('K?'), 80)], [true]),
+   clause(agreeable_answer(var('K'), poll(var('_'), no)), ['>'(var('K?'), 80)], [true]),
+
+   run(1, [mix(voter, [share(agreeable, 1.0)])], 30, days, 20260927)]).

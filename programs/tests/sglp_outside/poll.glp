@@ -1,0 +1,25 @@
+%% The compiled program, by hand: the canonical compilation (vGLP, Definition
+%% "Canonical Compilation") of
+%%
+%%   procedure (Poll)*ask(Integer?, YesNo).
+%%   (poll(N?, A))*ask(N, A?).
+%%
+%% and of polls/2, which asks K polls.  ask and polls reach a question and take
+%% one more argument, last, their ask stream; Poll is in writer mode, so the
+%% asking clause's ask carries the reader X? and the guarded clause, ask1,
+%% writes the question.
+
+procedure ask(Integer?, YesNo, Stream(Ask)).
+ask(N, A?, [ask('Poll', poll_w(X?))|D?]) :- ask1(N?, A, X, D).
+procedure ask1(Integer?, YesNo, Poll, Stream(Ask)).
+ask1(N, A?, poll(N?, A), []).
+
+%% polls(K?, As, D): K polls, As their answers in the order asked.
+exported procedure polls(Integer?, Stream(YesNo), Stream(Ask)).
+polls(0, [], []).
+polls(K, [A?|As?], D?) :-
+    K? > 0 |
+    ask(K?, A, D1),
+    K1 := K? - 1,
+    polls(K1?, As, D2),
+    merge(D1?, D2?, D).

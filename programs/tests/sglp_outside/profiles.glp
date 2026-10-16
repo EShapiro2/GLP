@@ -1,0 +1,50 @@
+%% Printed by programs/sglp/transform.glp from the sGLP source in the term form
+%% (README.md, "The term form"); edit the source and run transform.sh, not this file.
+%% transform(given, profiles)
+
+%% person(agreeable)
+%% binds(Poll, agreeable_poll)
+exported procedure
+agreeable_poll
+(
+Poll
+?
+,
+Integer?
+,
+MutualRef?
+)
+.
+agreeable_poll(P, S, Mon)
+:-
+random(S?, 100, K, _)
+,
+stream_append(rated('/'(1, day), Tok), Mon?, _)
+,
+agreeable_answer(Tok?, K?, P?)
+.
+procedure
+agreeable_answer
+(
+Token?
+,
+Integer?
+,
+Poll
+?
+)
+.
+agreeable_answer(stop, _, _)
+.
+agreeable_answer(go, K, poll(_, yes))
+:-
+'=<'(K?, 80)
+|
+true
+.
+agreeable_answer(go, K, poll(_, no))
+:-
+'>'(K?, 80)
+|
+true
+.

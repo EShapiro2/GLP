@@ -1,0 +1,35 @@
+%% The run, by hand, as programs/sglp's run tests' harnesses: the run
+%% declaration of poll_sglp.glp, one agent, its initial goal polls/3 of
+%% poll.glp with K asks, and its person process (population.glp, person/6)
+%% reading polls/3's ask stream in the dispatcher's place (sGLP's paper,
+%% Section 3, Definition "Simulation Program"); the monitor, which the root
+%% programs/self.glp exposes, with the run's seed and the horizon in seconds;
+%% and the log's sink, send_to_user/1, which prints each entry on its own line
+%% and the monitor's clock last.
+
+imported procedure poll#polls(Integer?, Stream(YesNo), Stream(Ask)).
+imported procedure population#declaration(Integer, Number, Span, Integer).
+imported procedure population#stochastic_person(Integer?, Profiles, Integer).
+imported procedure population#person(Integer?, Profiles?, MutualRef?, Integer?,
+                                     MutualRef?, Stream(Ask)?).
+
+%% run(K?, As): the run declaration's run with K asks, As the answers read.
+exported procedure run(Integer?, Stream(YesNo)).
+run(K, As?) :-
+    population # declaration(N, C, U, Seed),
+    run(N?, C?, U?, Seed?, K?, As).
+
+%% run(N?, C?, U?, Seed?, K?, As): the run of one agent until C Us from Seed.
+procedure run(Integer?, Number?, Span?, Integer?, Integer?, Stream(YesNo)).
+run(1, C, U, Seed, K, As?) :-
+    number(C?), integer(Seed?), K? >= 0 |
+    span(U?, Secs),
+    H := C? * Secs?,
+    allocate_mutual_reference(Mon, Requests),
+    allocate_mutual_reference(Log, Entries),
+    send_to_user(Entries?),
+    monitor(Requests?, Seed?, H?, Log?),
+    random(Seed?, 2147483646, Base, _),
+    population # stochastic_person(Base?, P, S),
+    poll # polls(K?, As, Asks),
+    population # person(1, P?, Mon?, S?, Log?, Asks?).

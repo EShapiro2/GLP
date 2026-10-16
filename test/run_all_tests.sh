@@ -6182,6 +6182,26 @@ else
     fi
 fi
 
+# A simulation outside programs/sglp (Integration's ruling of 2026-10-16 10:52
+# UTC, item 1; sGLP's answers of 11:25 and 12:32 UTC): programs/tests/sglp_outside
+# is transformed by transform.sh --source, its printed modules as printed, and it
+# loads and runs with the monitor and sglp.glp exposed from the root
+# programs/self.glp (TGLP modules.tex, "The -expose directive").
+sglp_out_tx=$(bash "$GLP_DIR/programs/sglp/transform.sh" --source "$GLP_DIR/programs/tests/sglp_outside" --check 2>&1; echo "exit $?")
+check "sglp outside: transform.sh --source --check, profiles.glp as printed" "^profiles.glp: as printed$" "$sglp_out_tx"
+check "sglp outside: transform.sh --source --check, population.glp as printed" "^population.glp: as printed$" "$sglp_out_tx"
+check "sglp outside: transform.sh --source --check exits 0" "^exit 0$" "$sglp_out_tx"
+sglp_out_run=$("$REPL_RUN" <<HEREDOC
+:limit 1000000000000
+$GLP_DIR/programs/tests/sglp_outside
+poll_run(5, As).
+:quit
+HEREDOC
+2>&1)
+check "sglp outside: the program loads" "Loaded program" "$sglp_out_run"
+check "sglp outside: the person answers each poll, logged with the monitor's clock" "entry(14916.00387843316, 1, Poll, poll(2, yes))" "$sglp_out_run"
+check "sglp outside: the program reads the five answers" "As = \[yes, yes, yes, yes, yes\]" "$sglp_out_run"
+
 echo ""
 
 fi  # Section SGLP
