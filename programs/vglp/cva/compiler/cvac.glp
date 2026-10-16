@@ -3,13 +3,14 @@
 %% Definition "Canonical CVA Platform"; Section 5.4, Definition "Compilation of
 %% the Canonical Platform" and the paragraph "Act schemas"; self.glp says more).
 %%
-%% A contract is compiled when programs/jurix certifies it syntactically
-%% grassroots, every role a party role (Jurix, Section 5: "the compilation is
-%% defined for syntactically grassroots contracts"), and when it is a local and
-%% effective specification with simple guards, by the paragraph on act schemas
-%% and the sentence after it and by Definition "Volition-Guarded
-%% Specification, Participants, Guard Sets, Simple Guards", which local.glp
-%% decides.  Otherwise it prints the lines saying why and nothing else.
+%% A contract is compiled when programs/jurix finds it syntactically
+%% grassroots or finds no fault in it but its introductory acts, so with
+%% traceable provenance and volition (verdict_lines below), every role a party
+%% role, and when it is a local and effective specification with simple
+%% guards, by the paragraph on act schemas and the sentence after it and by
+%% Definition "Volition-Guarded Specification, Participants, Guard Sets,
+%% Simple Guards", which local.glp decides.  Otherwise it prints the lines
+%% saying why and nothing else.
 %%
 %% The module is the contract's own part, printed here, and the text every
 %% contract shares, text.glp.  The contract's part is the type Class, one
@@ -90,18 +91,39 @@ decl_reflexive([], []).
 decl_reflexive([_|_], []).
 decl_reflexive(reflexive(Rf, _), Rf?).
 
-%% Jurix, Section 5: the compilation is defined for syntactically grassroots
-%% contracts; a contract with community roles has no canonical platform here,
-%% its roles' extents being no participants of a binding.
+%% vGLP, Section 5.4, the paragraph on act schemas, asks of a contract that it
+%% be a local and effective specification with simple guards, and nothing of
+%% its being grassroots; its schemas compile to transactions by the
+%% realisation, which CSSN (Appendix B.4) takes for a contract with traceable
+%% provenance that satisfies volition by the definition Jurix gives for a
+%% syntactically grassroots one.  So a contract is compiled where Jurix's
+%% checker certifies it syntactically grassroots, or finds no fault in it but
+%% its introductory acts (vGLP 2026-10-16 13:53 UTC, C, as Code #9 gives it:
+%% "the compiler takes a contract with traceable provenance and volition"); a
+%% contract with community roles has no canonical platform here, its roles'
+%% extents being no participants of a binding.
 procedure verdict_lines(Verdict?, Constant?, Stream(_)).
 verdict_lines(syntactically_grassroots, _, []).
-verdict_lines(not_grassroots(_), Nm, [H?, '%% it is not syntactically grassroots; check_named in programs/jurix gives the faults.']) :-
-    ground(Nm?) | H =.. ['%% not compiled', Nm?].
+verdict_lines(not_grassroots(Fs), Nm, L?) :- ground(Fs?), ground(Nm?) |
+    realisable(Fs?, B),
+    realisable_lines(B?, Nm?, L).
 verdict_lines(malformed(_), Nm, [H?, '%% it is malformed; check_named in programs/jurix gives the faults.']) :-
     ground(Nm?) | H =.. ['%% not compiled', Nm?].
 verdict_lines(conditions_met, Nm, [H?, '%% it has community roles, which the canonical platform of vGLP Section 3.2 does not take.']) :-
     ground(Nm?) | H =.. ['%% not compiled', Nm?].
 verdict_lines(conditions_failed(_), Nm, [H?, '%% it has community roles, which the canonical platform of vGLP Section 3.2 does not take.']) :-
+    ground(Nm?) | H =.. ['%% not compiled', Nm?].
+procedure realisable(Faults?, YesNo).
+realisable([], yes).
+realisable([no_introductory_act|Fs], B?) :- realisable(Fs?, B).
+realisable([obstructed(_, _, _, _)|Fs], B?) :- realisable(Fs?, B).
+realisable([untraceable(_)|_], no).
+realisable([volition(_, _, _)|_], no).
+realisable([cohesion(_, _, _)|_], no).
+realisable([reflexive(_, _, _)|_], no).
+procedure realisable_lines(YesNo?, Constant?, Stream(_)).
+realisable_lines(yes, _, []).
+realisable_lines(no, Nm, [H?, '%% it lacks traceable provenance or volition, or is otherwise faulty; check_named in programs/jurix gives the faults.']) :-
     ground(Nm?) | H =.. ['%% not compiled', Nm?].
 
 procedure community_lines(Contract?, Constant?, Stream(_)).

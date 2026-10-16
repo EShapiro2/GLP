@@ -3379,7 +3379,8 @@ $CVA/compiler/
 compile(two_reqs, [schema(s1, [rs(guarded, [atom(x, [])], [], [atom(r1, [])], []), rs(guarded, [atom(y, [])], [], [atom(r2, [])], [])]), schema(s2, [rs(guarded, [atom(x, [])], [], [atom(r3, [])], []), rs(guarded, [atom(y, [])], [], [atom(r4, [])], [])])], syntactically_grassroots).
 compile(free_x, [schema(s, [rs(guarded, [atom(x1, [])], [], [atom(r, [pvar(x)])], []), rs(guarded, [atom(y1, [])], [], [atom(t, [pvar(x)])], [])])], syntactically_grassroots).
 compile(uneff, [schema(u, [rs(unguarded, [atom(x, [role(2)])], [], [], []), rs(unguarded, [atom(y, [role(1)])], [], [], [])])], syntactically_grassroots).
-compile(gossip, [], not_grassroots([no_introductory_act])).
+compile(gossip, [], not_grassroots([untraceable([p])])).
+compile(nointro, [], not_grassroots([no_introductory_act])).
 compile(federated, [], conditions_met).
 compile(one_req, [schema(s1, [rs(guarded, [atom(x, [])], [], [atom(r1, [])], []), rs(guarded, [atom(y, [])], [], [atom(r2, [])], [])]), schema(s2, [rs(guarded, [atom(x, [])], [], [atom(r3, [])], []), rs(guarded, [atom(y, [])], [], [atom(r2, [])], [])])], syntactically_grassroots).
 compile(two_gsets, [schema(s1, [rs(guarded, [atom(x, [])], [], [], []), rs(guarded, [atom(y, [])], [], [], []), rs(unguarded, [atom(z, [])], [], [], [])]), schema(s2, [rs(unguarded, [atom(x, [])], [], [], []), rs(guarded, [atom(y, [])], [], [], []), rs(guarded, [atom(z, [])], [], [], [])])], syntactically_grassroots).
@@ -3397,7 +3398,8 @@ check "CVA compiler: two schemas of one class requiring different atoms at both 
 check "CVA compiler: ... the two schema-bindings named" "%% the schema-binding(s1(person(0), person(1)))" "$cva_refuse"
 check "CVA compiler: a variable of no changed atom required at two participants, refused" "%% and the schema-binding(s(person(0), person(1), free))" "$cva_refuse"
 check "CVA compiler: an unguarded schema whose first role names no other role, refused as not effective" "%% the schema(u)" "$cva_refuse"
-check "CVA compiler: a contract not syntactically grassroots is not compiled" "%% not compiled(gossip)" "$cva_refuse"
+check "CVA compiler: a contract without traceable provenance is not compiled" "%% not compiled(gossip)" "$cva_refuse"
+check "CVA compiler: a contract whose one fault is that it has no unobstructed introductory act, traceable provenance and volition met, compiled (vGLP, Section 5.4, asks locality and effectiveness alone; CSSN, Appendix B.4)" "%% the canonical CVA platform of the contract(nointro)" "$cva_refuse"
 check "CVA compiler: a contract with community roles is not compiled" "%% not compiled(federated)" "$cva_refuse"
 check "CVA compiler: requirements differing at one participant only, compiled" "%% the canonical CVA platform of the contract(one_req)" "$cva_refuse"
 check_not "CVA compiler: ... and not refused" "%% not compiled(one_req)" "$cva_refuse"
