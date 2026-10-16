@@ -72,12 +72,14 @@ val_peer(role(4), B?, D?, V4)
 .
 
 %% ===========================================================================
-%% The agent (Definition "Compilation of the Canonical Platform"): a volitional
-%% procedure whose question is the stream of its person's requests alone.  It
-%% asks once and calls the agent goal on the fair merge of the requests, the
-%% arriving messages, the answers of its responders and the ticks of its clock;
-%% the agent goal writes the thread on the program's output to its person,
-%% Output, construct 0 (vGLP 56d898f, Section 5.4).
+%% The agent (Definition "Compilation of the Canonical Platform"): it calls the
+%% agent goal on the fair merge of the answers to its request questions, the
+%% arriving messages, the answers of its responders and the ticks of its clock.
+%% A request question is a goal of a volitional procedure whose question,
+%% Menu, shows the persons the agent knows and takes one request; the agent
+%% asks one when it starts and the agent goal the next when it reads the
+%% answer to the last.  The agent goal writes the thread on the program's
+%% output to its person, Output, construct 0 (vGLP ca78e11, Section 5.4).
 %% ===========================================================================
 
 %% An attempt (i, k, pi, [t]) (Definition "Attempt, Priority, Message, App
@@ -102,6 +104,7 @@ Txn       ::= propose(Attempt) ; start(Attempt) ; answer(Attempt) ; vote(Attempt
             ; discover(Peer).
 Output    ::= Txn.
 Approval  ::= approval(Attempt, YesNo?).
+Menu      ::= menu(List(Key), Request?).
 Close     ::= close.
 Demand    ::= more.
 Trigger   ::= req(Request) ; net(Net) ; tick ; answered(Attempt, YesNo) ; recheck.
@@ -190,10 +193,9 @@ Known     ::= allknown ; unknown(Peer).
 Then      ::= own ; done.
 ApprovalRes ::= approval_for(Attempt) ; noapproval.
 
-exported procedure (Stream(Request)?)*agent(Peer?, Stream(Net)?, Stream(Net),
-    Stream(Output)).
-(Reqs)*agent(Id, NetIn, Out?, Thr?) :- ground(Id?) |
-    tag_requests(Reqs?, Rq),
+exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output)).
+agent(Id, NetIn, Out?, Thr?) :- ground(Id?) |
+    request([], Rq),
     tag_net(NetIn?, Nt),
     clock(Dem?, Tk),
     merge(Rq?, Nt?, M1),
@@ -202,9 +204,22 @@ exported procedure (Stream(Request)?)*agent(Peer?, Stream(Net)?, Stream(Net),
     agent_goal([], In?, Ans, Dem, Thr, Out, [],
         st(Id?, app([], 0, unlocked, []), 0, [], [], [], [], [])).
 
-procedure tag_requests(Stream(Request)?, Stream(Trigger)).
-tag_requests([R|Rs], [req(R?)|Ts?]) :- tag_requests(Rs?, Ts).
-tag_requests([], []).
+%% A request question: the persons the agent knows, in the order of
+%% identifiers, and the person's one request, put up once it is made.
+procedure (Menu)*request(List(Key)?, Stream(Trigger)).
+(menu(Ks?, R))*request(Ks, Out?) :- ground(Ks?) |
+    await_request(R?, Out).
+procedure await_request(Request?, Stream(Trigger)).
+await_request(propose(C), [req(propose(C?))]).
+await_request(known(Q), [req(known(Q?))]).
+
+%% The next request question, asked on reading the answer to the last, its
+%% answers joining the agent goal's input.
+procedure ask_next(St?, Stream(Trigger), Stream(Trigger)?).
+ask_next(St, Ans?, Ans1) :- ground(St?) |
+    st_known(St?, Ks),
+    request(Ks?, R),
+    merge(R?, Ans1?, Ans).
 
 procedure tag_net(Stream(Net)?, Stream(Trigger)).
 tag_net([M|Ms], [net(M?)|Ts?]) :- tag_net(Ms?, Ts).
@@ -252,13 +267,15 @@ procedure step(Trigger?, Then?, Stream(Trigger)?, Stream(Trigger)?,
 step(req(propose(C)), Th, Ls, In, Ans?, Dem?, Thr?, Out?, Approvals, St) :-
     ground(C?), ground(St?) |
     st_app(St?, Ap0),
+    ask_next(St?, Ans, Ans1?),
     propose_cond(C?, St?, Cd, St1),
-    dispatch_propose(Cd?, C?, Th?, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Approvals?, St1?).
+    dispatch_propose(Cd?, C?, Th?, Ap0?, Ls?, In?, Ans1, Dem, Thr, Out, Approvals?, St1?).
 step(req(known(Q)), Th, Ls, In, Ans?, Dem?, Thr?, Out?, Approvals, St) :-
     ground(Q?), ground(St?) |
     st_app(St?, Ap0),
+    ask_next(St?, Ans, Ans1?),
     known_cond(Q?, St?, Cd),
-    dispatch_known(Cd?, Q?, Th?, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Approvals?, St?).
+    dispatch_known(Cd?, Q?, Th?, Ap0?, Ls?, In?, Ans1, Dem, Thr, Out, Approvals?, St?).
 step(net(msg(_, hello(P))), Th, Ls, In, Ans?, Dem?, Thr?, Out?, Approvals, St) :-
     ground(P?), ground(St?) |
     st_app(St?, Ap0),
@@ -2225,6 +2242,25 @@ procedure st_sent(St?, Peers).
 st_sent(st(_, _, _, Se, _, _, _, _), Se?).
 procedure st_recd(St?, Peers).
 st_recd(st(_, _, _, _, Rc, _, _, _), Rc?).
+%% The persons the agent knows, in the order of identifiers.
+procedure st_known(St?, List(Key)).
+st_known(St, Ks?) :- ground(St?) |
+    st_sent(St?, Se),
+    st_recd(St?, Rc),
+    known_sorted(Se?, Rc?, Ks).
+procedure known_sorted(Peers?, Peers?, List(Key)).
+known_sorted(Se, Rc, Ks?) :- ground(Se?) |
+    known_of(Se?, Se?, Rc?, K0),
+    sort_peers(K0?, Ks).
+procedure known_of(Peers?, Peers?, Peers?, Peers).
+known_of([], _, _, []).
+known_of([P|Ps], Se, Rc, Ks?) :- ground(P?), ground(Se?), ground(Rc?) |
+    known_peer(P?, Se?, Rc?, B),
+    known_of(Ps?, Se?, Rc?, K1),
+    keep_peer(B?, P?, K1?, Ks).
+procedure keep_peer(YesNo?, Peer?, Peers?, Peers).
+keep_peer(yes, P, Ks, [P?|Ks?]).
+keep_peer(no, _, Ks, Ks?).
 procedure st_waits(St?, Waits).
 st_waits(st(_, _, _, _, _, W, _, _), W?).
 procedure st_pends(St?, Pends).

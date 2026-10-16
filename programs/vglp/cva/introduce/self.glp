@@ -37,8 +37,9 @@ Txn      ::= propose(Attempt) ; start(Attempt) ; answer(Attempt) ; vote(Attempt)
            ; discover(Peer).
 Output   ::= Txn.
 Approval ::= approval(Attempt, YesNo?).
-Question ::= stream_request_r(Stream(Request)?) ; approval_w(Approval).
-Drawn    ::= stream_request_r(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
+Menu     ::= menu(List(Key), Request?).
+Question ::= menu_w(Menu) ; approval_w(Approval).
+Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
 Ask(Q)   ::= ask(Constant, Q).
 
 imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),

@@ -3399,20 +3399,38 @@ check "CVA compiler: ... the schema-bindings of the two guard sets named" "%% an
 check "CVA compiler: an unguarded class whose schema-bindings require different atoms at one participant, refused as not effective" "%% not compiled(unguarded_reqs)" "$cva_refuse"
 check "CVA compiler: ... the two schema-bindings of the unguarded class named" "%% and the schema-binding(u2(person(1), person(0)))" "$cva_refuse"
 
-# The compiled agent's question is the stream of its person's requests alone,
-# and its agent goal writes the thread on the program's output to its person,
-# Output, construct 0 (vGLP 56d898f, Section 5.4; vGLP 2026-10-16 12:17 UTC,
-# item 3): the plays' persons read the thread from construct 0's draws,
-# draw(0, W, output(T)), and from nowhere else.
+# The compiled agent is no longer volitional: it asks for requests by request
+# questions, goals of a volitional procedure whose question, Menu ::=
+# menu(List(Key), Request?), shows the persons the agent knows, asked when the
+# agent starts and again when the agent goal reads each answer (vGLP ca78e11,
+# Section 5.4; vGLP 2026-10-16 13:53 UTC, C.1); and its agent goal writes the
+# thread on the program's output to its person, Output, construct 0 (vGLP
+# 56d898f, Section 5.4; vGLP 2026-10-16 12:17 UTC, item 3): the plays'
+# persons read the thread from construct 0's draws, draw(0, W, output(T)),
+# and from nowhere else.
 for c in social_graph currency; do
     cva_agent=$(cat "$CVA/$c/platform.vglp")
-    check "CVA $c: the agent's question is the stream of its person's requests alone" "^exported procedure (Stream(Request)?)\*agent(Peer?, Stream(Net)?, Stream(Net),$" "$cva_agent"
+    check "CVA $c: the agent is an ordinary procedure, no longer volitional" "^exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output))\.$" "$cva_agent"
+    check "CVA $c: the request question, Menu, shows the persons the agent knows and takes one request" "^Menu      ::= menu(List(Key), Request?)\.$" "$cva_agent"
+    check "CVA $c: ... asked by a volitional procedure" "^procedure (Menu)\*request(List(Key)?, Stream(Trigger))\.$" "$cva_agent"
+    check_not "CVA $c: no stream of requests as the agent's question" "(Stream(Request)?)\*agent" "$cva_agent"
     check "CVA $c: the thread is the program's output to its person, Output" "^Output    ::= Txn\.$" "$cva_agent"
     check_not "CVA $c: no session question" "Session" "$cva_agent"
 done
 cva_person=$(cat "$CVA/self.glp")
 check "CVA plays: the person reads the thread from construct 0" "^person(\[draw(0, _, output(T))|Ds\]" "$cva_person"
 check_not "CVA plays: ... and no session" "session_w" "$cva_person"
+check "CVA plays: the person reads the request questions" "^person(\[draw(Id, _, menu_w(menu(Ks, input(P))))|Ds\]" "$cva_person"
+
+cva_sg_menu=$("$REPL_RUN" <<HEREDOC
+$CVA/social_graph/
+:limit 600000
+play_menu(A, B, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA request question: the first, asked when the agent starts, shows no person known" "A = \[menu(\[\]), discover(bob)" "$cva_sg_menu"
+check "CVA request question: the one asked on reading the request to befriend bob, once bob is known, shows bob" "commit(attempt(alice, 1, 1, befriend(alice, bob))), menu(\[bob\])" "$cva_sg_menu"
 
 cva_sg_load=$("$REPL_RUN" <<HEREDOC
 $CVA/social_graph/
@@ -3670,7 +3688,7 @@ play_deadlock(A, B, C, D, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA deadlock: carol votes yes on alice's link and holds bob's start waiting" "sent(alice, carol, start(attempt(alice, 2, 2, link(alice, carol, dave)))), sent(carol, alice, vote(attempt(alice, 2, 2, link(alice, carol, dave)), yes))" "$cva_link"
+check "CVA deadlock: carol votes yes on alice's link and holds bob's start waiting" "sent(alice, carol, start(attempt(alice, 2, 2, link(alice, carol, dave)))), .*sent(carol, alice, vote(attempt(alice, 2, 2, link(alice, carol, dave)), yes)), .*sent(bob, carol, start(attempt(bob, 3, 3, link(bob, carol, dave))))" "$cva_link"
 check "CVA deadlock: dave votes yes on bob's link and holds alice's start waiting, blocked by bob's" "sent(dave, bob, vote(attempt(bob, 3, 3, link(bob, carol, dave)), yes)), sent(dave, bob, yield(attempt(bob, 3, 3, link(bob, carol, dave))))" "$cva_link"
 check "CVA deadlock: dave wounds bob's attempt in favour of alice's, of the smaller rank, before taking her start" "D = \[.*start(attempt(bob, 3, 3, link(bob, carol, dave))), wound(attempt(alice, 2, 2, link(alice, carol, dave)), attempt(bob, 3, 3, link(bob, carol, dave))), outcome(attempt(bob, 3, 3, link(bob, carol, dave))), start(attempt(alice, 2, 2, link(alice, carol, dave)))" "$cva_link"
 check "CVA deadlock: bob, not every yes recorded, yields: his attempt aborted at carol and dave" "B = \[.*tally(attempt(bob, 3, 3, link(bob, carol, dave))), yield(attempt(bob, 3, 3, link(bob, carol, dave))), propose(attempt(bob, 4, 3, link(bob, carol, dave)))" "$cva_link"
