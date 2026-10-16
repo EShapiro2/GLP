@@ -385,11 +385,13 @@ miniapp(_, _, _, _).
 % The mini-app's scripted person (GSG, 2026-10-13 18:52 UTC, O5, and 20:22
 % UTC; Udi: approved): a mini-app exports it beside its entry, as this
 % template's instance at the D of its miniapp/4 instance (vGLP, 2026-10-14
-% 13:21 UTC, S2): the person's key, a role choosing the script among the
-% mini-app's own plays, the person-side end of the person channel, and the
-% screen it reports.  The super-app's plays activate it from the module value
-% as they activate the entry.  Never run here.
-procedure(D) miniapp_person(Key?, Constant?, Channel(PersonOut(D), PersonIn(D))?, Stream(D)).
+% 13:21 UTC, S2) and at S, the type of the screen it reports, chosen by the
+% mini-app (vGLP 2026-10-16 11:25 UTC, item 4; Udi: approved): the person's
+% key, a role choosing the script among the mini-app's own plays, the
+% person-side end of the person channel, and the screen it reports.  The
+% super-app's plays activate it from the module value as they activate the
+% entry.  Never run here.
+procedure(D, S) miniapp_person(Key?, Constant?, Channel(PersonOut(D), PersonIn(D))?, Stream(S)).
 miniapp_person(_, _, _, []).
 
 % send_to_net/1 — the seam predicate to the network (GLP-Spec appendix-guards,
