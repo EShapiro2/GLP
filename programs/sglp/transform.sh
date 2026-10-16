@@ -45,7 +45,8 @@
 # the same REPL session it calls transform_terms(V, S, Part) for Part profiles
 # and population, V and S the clause's arguments as written, and writes the two
 # parts to <src>, or with --check compares them with those in <src>.  The
-# printed modules call the monitor, which the root programs/self.glp exposes.
+# printed modules call the monitor and name sglp.glp's Span and Slot, which the
+# root programs/self.glp exposes, as it exposes sglp.glp's span/2 to the harness.
 
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
