@@ -45,7 +45,8 @@ tee([], [], []).
 %% Opaque.  The play mints the channel and hands its two ends to two
 %% activations of one module value, so it checks that the module records the
 %% entry's person-channel type and the person's at one type, the first of the
-%% entry's two identities and the person's one (TGLP modules.tex, "The
+%% entry's two identities and the first of the person's two, its second the
+%% screen's type, the mini-app's own (vGLP 2026-10-16 11:25 UTC, item 4; TGLP modules.tex, "The
 %% invitation discipline": "opaque_type yields one identity for the two
 %% entries, which the host checks"; GLP, 2026-10-13 20:22 UTC, C; vGLP
 %% 2026-10-14 13:21 UTC, S2).  Where they are not, no person runs: its end of
@@ -58,9 +59,9 @@ miniapp_person_run(M, Id, Role, PEnd, Screen?) :-
     person_at(H0?, H?, M?, Id?, Role?, PEnd?, Screen).
 
 procedure person_at(Stream(Constant)?, Stream(Constant)?, Module?, Key?, Constant?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
-person_at([D0, _], [D], M, Id, Role, PEnd, Screen?) :-
+person_at([D0, _], [D, S], M, Id, Role, PEnd, Screen?) :-
     D0? =?= D? |
-    find_type(miniapp_person/4, [D?], T),
+    find_type(miniapp_person/4, [D?, S?], T),
     run(miniapp_person(Id?, Role?, PEnd?, Screen), T?, M?).
 person_at(_, _, _, _, _, PEnd, []) :- otherwise | hold_person(PEnd?).
 
