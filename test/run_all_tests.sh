@@ -3370,6 +3370,7 @@ check "CVA compiler: vGLP's introduce, certified by Jurix's check/2, compiled to
 check "CVA compiler: vGLP's gnudge, certified by Jurix's check/2, compiled to the platform it prints" "gnudge/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's childsafe, certified by Jurix's check/2, compiled to the platform it prints" "childsafe/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's link, certified by Jurix's check/2, compiled to the platform it prints" "link/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's friends, its introduction predicate friend, compiled to the platform it prints" "friends/platform.vglp: as printed" "$cva_print"
 check_not "CVA compiler: no contract refused or missing" "^fault\|^missing\|NOT as printed" "$cva_print"
 
 cva_refuse=$("$REPL_RUN" <<HEREDOC
@@ -3697,6 +3698,41 @@ check "CVA deadlock: dave, his lock released, votes yes on alice's link" "sent(d
 check "CVA deadlock: alice's link commits at carol and dave" "sent(alice, carol, outcome(attempt(alice, 2, 2, link(alice, carol, dave)), commit)), sent(alice, dave, outcome(attempt(alice, 2, 2, link(alice, carol, dave)), commit))" "$cva_link"
 check "CVA deadlock: bob's retried attempt, keeping the wounded rank 3, commits at carol and dave" "sent(bob, carol, outcome(attempt(bob, 4, 3, link(bob, carol, dave)), commit)), sent(bob, dave, outcome(attempt(bob, 4, 3, link(bob, carol, dave)), commit))" "$cva_link"
 check_not "CVA deadlock: no vote no and no person asked for a link" "vote(attempt([a-z]*, [0-9]*, [0-9]*, link([a-z, ]*)), no)\|answer(attempt([a-z]*, [0-9]*, [0-9]*, link" "$cva_link"
+
+# vGLP's contract friends (programs/vglp/cva/contracts.glp): befriend, friend
+# reflexive and the contract's introduction predicate, so its platform has an
+# introduction rule: an agent introduces every two of its friends to each
+# other by Introduce peers, and each, on reading the introduction, sends the
+# other ihello, an exchange of which is CVA's Introduce (vGLP, Section 3.2,
+# Definition "Introduction Rule, Introduce Peers"; Section 5.4, the
+# compilation and the paragraph on act schemas; vGLP 2026-10-16 13:53 UTC,
+# C.3).  The network logs an introduction as intro(From, To, Q).
+cva_friends_text=$(cat "$CVA/friends/platform.vglp")
+check "CVA friends: the contract's introduction predicate printed with its platform" "^introduction_preds(\[friend\])$" "$cva_friends_text"
+cva_sg_text=$(cat "$CVA/social_graph/platform.vglp")
+check "CVA social graph: a contract naming no introduction predicate has none" "^introduction_preds(\[\])$" "$cva_sg_text"
+
+cva_friends_load=$("$REPL_RUN" <<HEREDOC
+$CVA/friends/
+:quit
+HEREDOC
+2>&1)
+check "CVA friends: the platform and its play load, compiled by the canonical compilation" "Loaded program: .*cva/friends" "$cva_friends_load"
+check_not "CVA friends: no type errors" "Type checking failed" "$cva_friends_load"
+
+cva_friends=$("$REPL_RUN" <<HEREDOC
+$CVA/friends/
+:limit 1500000
+play_friends(A, B, C, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA introduce peers: alice, a friend of bob and of carol, takes Introduce peers {bob, carol} on a tick" "A = \[.*commit(attempt(alice, 2, 2, befriend(alice, carol))).*introduce_peers(bob, carol)" "$cva_friends"
+check "CVA introduce peers: ... sending bob intro(carol) and carol intro(bob)" "intro(alice, bob, carol), intro(alice, carol, bob)" "$cva_friends"
+check "CVA introduce peers: bob comes to know carol by the ihellos, never having requested her known, and his request question shows her" "B = \[.*outcome(attempt(alice, 1, 1, befriend(alice, bob))), discover(carol), menu(\[alice, carol\]), propose(attempt(bob, 2, 2, befriend(bob, carol)))" "$cva_friends"
+check "CVA introduce peers: carol comes to know bob, is asked, answers yes, and the friends of a friend are friends" "C = \[.*discover(bob), start(attempt(bob, 2, 2, befriend(bob, carol))), gave(befriend(bob, carol), yes), answer(attempt(bob, 2, 2, befriend(bob, carol))), vote(attempt(bob, 2, 2, befriend(bob, carol))), outcome(attempt(bob, 2, 2, befriend(bob, carol)))" "$cva_friends"
+check "CVA introduce peers: ... it commits" "sent(bob, carol, outcome(attempt(bob, 2, 2, befriend(bob, carol)), commit))" "$cva_friends"
+check_not "CVA introduce peers: no pair introduced twice by one agent" "intro(alice, bob, carol), .*intro(alice, bob, carol)" "$cva_friends"
 echo ""
 
 

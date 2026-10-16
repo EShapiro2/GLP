@@ -96,6 +96,19 @@
 %% The persons in q and r are not asked: their machines vote, the friendship
 %% each required of p its consent.  link/self.glp
 %% plays it.
+%%
+%% friends is befriend with friend declared reflexive and named the contract's
+%% introduction predicate, so that a contract compiled here has an
+%% introduction rule: it gives each person p every two persons q and r other
+%% than p with friend(q) and friend(r) in p's state, whose agents p's agent
+%% introduces to each other by Introduce peers (vGLP, Section 3.2, Definition
+%% "Introduction Rule, Introduce Peers"; Section 5.4, the paragraph on act
+%% schemas; vGLP 2026-10-16 13:53 UTC, C.3):
+%%
+%%   befriend(p?, q?) :  at p  not friend(q), +friend(q)
+%%                       at q  not friend(p), +friend(p)
+%%
+%% friends/self.glp plays it.
 %% ---------------------------------------------------------------------------
 
 %% The contract, as programs/jurix/self.glp writes it.
@@ -125,6 +138,19 @@ contract_named(introduce, C?) :- introduce(C).
 contract_named(gnudge, C?) :- gnudge(C).
 contract_named(childsafe, C?) :- childsafe(C).
 contract_named(link, C?) :- link(C).
+contract_named(friends, reflexive([friend], C?)) :- friends(C).
+
+%% introduction_named(Name, I): the introduction predicate the contract named
+%% names, introduction(e), or none, no_introduction (vGLP, Section 5.4, the
+%% paragraph on act schemas).
+Intro     ::= no_introduction ; introduction(Constant).
+procedure introduction_named(Constant?, Intro).
+introduction_named(nudge, no_introduction).
+introduction_named(introduce, no_introduction).
+introduction_named(gnudge, no_introduction).
+introduction_named(childsafe, no_introduction).
+introduction_named(link, no_introduction).
+introduction_named(friends, introduction(friend)).
 
 procedure nudge(Contract).
 nudge([schema(befriend,
@@ -187,3 +213,8 @@ link([schema(befriend,
                      [atom(friend, [role(2)]), atom(friend, [role(3)])], []),
          rs(unguarded, [atom(via, [role(1), role(3)])], [], [atom(friend, [role(1)])], []),
          rs(unguarded, [atom(via, [role(1), role(2)])], [], [atom(friend, [role(1)])], [])])]).
+
+procedure friends(Contract).
+friends([schema(befriend,
+           [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
+            rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])])]).

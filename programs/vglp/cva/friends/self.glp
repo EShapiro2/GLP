@@ -1,0 +1,87 @@
+%% ---------------------------------------------------------------------------
+%% The play of the canonical CVA platform of vGLP's contract friends
+%% (../contracts.glp, contract_named(friends, C): befriend, friend reflexive
+%% and the contract's introduction predicate; vGLP 2026-10-16 13:53 UTC, C.3),
+%% platform.vglp, which programs/vglp/cva/compile.sh prints from it with its
+%% introduction rule (vGLP, Section 3.2, Definition "Introduction Rule,
+%% Introduce Peers"; Section 5.4, the paragraph on act schemas).  It runs
+%% three agents, alice, bob and carol, their persons scripted and paced on
+%% their threads (../self.glp), and gives each person's log, the thread with
+%% gave(K, A) where the person answers an approval question, and the
+%% network's log of the cargoes it carries.
+%%
+%% play_friends: alice befriends bob and carol, each asked and answering yes.
+%%   The introduction rule then gives alice the pair {bob, carol}, both known
+%%   to her, and on a tick her agent takes Introduce peers {bob, carol},
+%%   sending bob intro(carol) and carol intro(bob).  Each, on reading it,
+%%   sends the other ihello, and on the second of the two each comes to know
+%%   the other, no person asked (Section 5.4).  bob, never having requested
+%%   carol known, proposes befriending her, and the request question asked on
+%%   reading that request shows alice and carol; carol answers yes and it
+%%   commits.
+%%
+%% The types of platform.vglp, written again for the declarations of the
+%% procedures imported from its compiled module.
+%% ---------------------------------------------------------------------------
+
+Class    ::= befriend(Peer, Peer).
+Request  ::= propose(Class) ; known(Peer).
+YesNo    ::= yes ; no.
+Decision ::= commit ; abort.
+Attempt  ::= attempt(Peer, Integer, Integer, Class).
+Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
+           ; yield(Attempt).
+Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Net      ::= msg(Peer, Content).
+Txn      ::= propose(Attempt) ; start(Attempt) ; answer(Attempt) ; vote(Attempt)
+           ; tally(Attempt) ; commit(Attempt) ; yield(Attempt) ; wound(Attempt, Attempt) ; outcome(Attempt)
+           ; introduce_peers(Peer, Peer) ; discover(Peer).
+Output   ::= Txn.
+Approval ::= approval(Attempt, YesNo?).
+Menu     ::= menu(List(Key), Request?).
+Question ::= menu_w(Menu) ; approval_w(Approval).
+Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
+Ask(Q)   ::= ask(Constant, Q).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Output), Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
+
+exported procedure play_friends(Stream(_), Stream(_), Stream(_),
+    Stream(Sent(Cargo))).
+play_friends(LA?, LB?, LC?, N?) :-
+    trio([req(known(bob)), req(known(carol)),
+          wait(discover(bob)), wait(discover(carol)),
+          req(propose(befriend(alice, bob))),
+          wait(commit(attempt(alice, 1, 1, befriend(alice, bob)))),
+          req(propose(befriend(alice, carol)))],
+         [req(known(alice)), wait(discover(alice)),
+          approval(befriend(alice, bob), yes),
+          wait(discover(carol)),
+          req(propose(befriend(bob, carol))), look],
+         [req(known(alice)), wait(discover(alice)),
+          approval(befriend(alice, carol), yes),
+          approval(befriend(bob, carol), yes)],
+         LA, LB, LC, N).
+
+%% alice, bob and carol, each with its dispatcher and scripted person, their
+%% networks joined.
+procedure trio(Steps(Drawn)?, Steps(Drawn)?, Steps(Drawn)?, Stream(_), Stream(_), Stream(_),
+    Stream(Sent(Cargo))).
+trio(SA, SB, SC, LA?, LB?, LC?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    platform # agent(carol, InC?, OutC, TC, AsC),
+    platform # dispatch(AsC?, ch(GC?, DC), MC),
+    to_person(MC?, TC?),
+    person(DC?, GC, ps(nosess, [], [], SC?), LC),
+    merge(OutA?, OutB?, Net1),
+    merge(Net1?, OutC?, Net),
+    route3(Net?, alice, InA, bob, InB, carol, InC, N).

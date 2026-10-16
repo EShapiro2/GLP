@@ -38,11 +38,11 @@ Decision ::= commit ; abort.
 Attempt  ::= attempt(Peer, Integer, Integer, Class).
 Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
            ; yield(Attempt).
-Content  ::= hello(Peer) ; cargo(Peer, Cargo).
+Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Txn      ::= propose(Attempt) ; start(Attempt) ; answer(Attempt) ; vote(Attempt)
            ; tally(Attempt) ; commit(Attempt) ; yield(Attempt) ; wound(Attempt, Attempt) ; outcome(Attempt)
-           ; discover(Peer).
+           ; introduce_peers(Peer, Peer) ; discover(Peer).
 Output   ::= Txn.
 Approval ::= approval(Attempt, YesNo?).
 Menu     ::= menu(List(Key), Request?).
