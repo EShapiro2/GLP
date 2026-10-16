@@ -512,8 +512,12 @@ pong(b).
       write('sub/inner.vglp', asker);
       emitVglpSources(fixture.path,
           rootSelfGlpPath: File(_rootSelfGlp).absolute.path);
-      expect(emitted('sub/inner'), contains('run_yesNo_r(Id?, dial, [input([])], Done?, Ds)'));
-      expect(emitted('asker'), contains('run_yesNo_r(Id?, toggle, [input([])], Done?, Ds)'));
+      // asker and inner each define YesNo, an interactive type of one name,
+      // so each functor is prefixed with the name of the module that defines
+      // its type (vGLP at c9a928d, sections/parts/canonical-compilation.tex;
+      // vGLP's task of 2026-10-16 11:25 UTC, item 3).
+      expect(emitted('sub/inner'), contains('run_inner_yesNo_r(Id?, dial, [input([])], Done?, Ds)'));
+      expect(emitted('asker'), contains('run_asker_yesNo_r(Id?, toggle, [input([])], Done?, Ds)'));
     });
 
     test('the root\'s self.vglp holds for every program, a directory with no '

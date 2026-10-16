@@ -568,18 +568,155 @@ class VglpProgram {
       Set<String> reservedTypes = const {},
       Set<String> reservedProcedures = const {}}) {
     final key = _norm(path);
+    final prefixes = _prefixes();
     return CanonicalContext(
       interactive: [
         for (final s in [...layers, ...modules])
-          for (final t in fronts[s]!.interactive)
-            ProgramInteractive(t.$1, t.$2, t.$3, t.$4, t.$5,
-                (name) => resolveIn(s, name)),
+          for (var i = 0; i < fronts[s]!.interactive.length; i++)
+            ProgramInteractive(
+                fronts[s]!.interactive[i].$1,
+                fronts[s]!.interactive[i].$2,
+                fronts[s]!.interactive[i].$3,
+                fronts[s]!.interactive[i].$4,
+                fronts[s]!.interactive[i].$5,
+                (name) => resolveIn(s, name),
+                source: s,
+                prefix: prefixes[(s, i)]),
       ],
       scopeReaching: scopeReachingFor(key),
       resolvable: resolvable,
       reservedTypes: reservedTypes,
       reservedProcedures: reservedProcedures,
       layer: layers.contains(key),
+      self: key,
+      resolveSelf: (name) => resolveIn(key, name),
+      definerOf: definerOf,
     );
   }
+
+  /// The prefix of the functor of each interactive type of the program, by
+  /// its source and its place in the source's interactive types: "t is the
+  /// name of T in lowercase, its type arguments appended, with _w for writer
+  /// mode and _r for reader mode, ..., and, where two modules of M define
+  /// interactive types of one name, prefixed with the name of the module that
+  /// defines it" (vGLP at c9a928d, sections/parts/canonical-compilation.tex).
+  /// The interactive types of a source's own volitional procedures are
+  /// grouped by name, each by the module that defines it ([definerOf]); a
+  /// name two modules define has each of its types prefixed with its
+  /// module's name ([moduleNameOf]).  A volitional procedure a source imports
+  /// asks its exporter's question, and takes its prefix.  None where no two
+  /// modules define one name, so a program with no such name compiles as
+  /// before.
+  Map<(String, int), String> _prefixes() {
+    final definers = <String, Set<String?>>{};
+    final own = <(String, int), (String, String?)>{};
+    for (final s in [...layers, ...modules]) {
+      final f = fronts[s]!;
+      for (var i = 0; i < f.volitional.length; i++) {
+        final t = f.interactive[i];
+        final type = t.$1;
+        if (type is! TypeRef || t.$3.contains(type.name)) continue;
+        final d = definerOf(s, type.name);
+        definers.putIfAbsent(type.name, () => {}).add(d);
+        own[(s, i)] = (type.name, d);
+      }
+    }
+    final out = <(String, int), String>{};
+    String? prefixOf(String source, String name, String? d) {
+      if ((definers[name]?.length ?? 0) < 2) return null;
+      if (d == null || d == programsDir) {
+        throw CompileError(
+            '$source asks a question of the interactive type $name, which '
+            'another module of the program also defines, and the module that '
+            'defines it here is ${d == null ? 'none of the program\'s scope '
+            'chain' : 'the root, whose name is the empty path'}: the functor '
+            'is "prefixed with the name of the module that defines it" (vGLP, '
+            'sections/parts/canonical-compilation.tex), and that module has '
+            'no name to prefix it with',
+            1, 1, phase: 'analyzer');
+      }
+      return moduleNameOf(d);
+    }
+
+    for (final e in own.entries) {
+      final p = prefixOf(e.key.$1, e.value.$1, e.value.$2);
+      if (p != null) out[e.key] = p;
+    }
+    for (final s in [...layers, ...modules]) {
+      final f = fronts[s]!;
+      final imported = f.importedVolitional.keys.toList();
+      for (var j = 0; j < imported.length; j++) {
+        final i = f.volitional.length + j;
+        final type = f.interactive[i].$1;
+        if (type is! TypeRef) continue;
+        final k = imported[j];
+        final hash = k.lastIndexOf('#');
+        final slash = k.lastIndexOf('/');
+        final n = int.parse(k.substring(slash + 1));
+        final t = _target(
+            s,
+            ast.RemoteGoal(
+                ast.ConstTerm(k.substring(0, hash), 0, 0),
+                ast.Goal(k.substring(hash + 1, slash),
+                    [for (var a = 0; a < n; a++) ast.UnderscoreTerm(0, 0)],
+                    0, 0),
+                0,
+                0));
+        if (t == null) continue;
+        final exporter = fronts[t.$1];
+        final v = exporter?.volitional[t.$2];
+        if (exporter == null || v == null) continue;
+        final at = exporter.volitional.keys.toList().indexOf(t.$2);
+        final p = out[(t.$1, at)];
+        if (p != null) out[(s, i)] = p;
+      }
+    }
+    return out;
+  }
+
+  /// The module whose definition the type name [name] denotes in the scope
+  /// of the source at [source], as a key: the source itself, by its path,
+  /// where it defines it; a directory, by its path, where the module of its
+  /// self.glp and its layer defines it, the root's among them; null where no
+  /// module of the source's chain defines it.  A directory's self.glp and
+  /// the self.vglp beside it are one module (vGLP, sections/parts/canonical-
+  /// compilation.tex: "as its self.glp holds those of GLP").
+  String? definerOf(String source, String name) {
+    final key = _norm(source);
+    final isLayer = layers.contains(key);
+    if (fronts[key]?.types.containsKey(name) ?? false) {
+      return isLayer ? ppath.dirname(key) : key;
+    }
+    var d = ppath.dirname(key);
+    while (true) {
+      final layer = _norm(ppath.join(d, selfVglp));
+      if (layer != key &&
+          layers.contains(layer) &&
+          fronts[layer]!.types.containsKey(name)) {
+        return d;
+      }
+      if (_selfGlpTypes(d).contains(name)) return d;
+      if (programsDir == null || d == programsDir) return null;
+      if (!ppath.isWithin(programsDir!, d)) return null;
+      d = ppath.dirname(d);
+    }
+  }
+
+  /// The name of the module [definerOf] gives as [key]: a module file's,
+  /// N for N.vglp, as a call N # p names it; a directory's, its own name, as
+  /// a call of its parent names it.
+  static String moduleNameOf(String key) => key.endsWith('.vglp')
+      ? ppath.basenameWithoutExtension(key)
+      : ppath.basename(key);
+
+  final Map<String, Set<String>> _selfGlpTypeNames = {};
+
+  /// The types the self.glp of [dir] defines.
+  Set<String> _selfGlpTypes(String dir) =>
+      _selfGlpTypeNames.putIfAbsent(dir, () {
+        final f = File(ppath.join(dir, 'self.glp'));
+        if (!f.existsSync()) return const {};
+        final m = Parser(Lexer(f.readAsStringSync()).tokenize()).parseModule();
+        return {for (final td in m.typeDefs) td.name};
+      });
 }

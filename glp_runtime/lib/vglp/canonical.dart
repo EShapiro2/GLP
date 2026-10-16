@@ -200,8 +200,20 @@ class ProgramInteractive {
   final int line, column;
   final TypeDef? Function(String name) resolve;
 
+  /// The source that declares it, by its path.
+  final String? source;
+
+  /// The name of the module that defines it, where another module of the
+  /// program defines an interactive type of its name: its functor is
+  /// prefixed with it (vGLP at c9a928d, sections/parts/canonical-
+  /// compilation.tex: "and, where two modules of M define interactive types
+  /// of one name, prefixed with the name of the module that defines it").
+  /// Null where no other module does.
+  final String? prefix;
+
   ProgramInteractive(this.type, this.readerMode, this.params, this.line,
-      this.column, this.resolve);
+      this.column, this.resolve,
+      {this.source, this.prefix});
 }
 
 /// What the compilation of one source takes from the linked program it is a
@@ -236,13 +248,28 @@ class CanonicalContext {
   /// are its scope's ([scopeWidgetDeclarations]).
   final bool layer;
 
+  /// The source compiled, by its path, and the definition a type name
+  /// denotes in its scope ([resolveSelf]).
+  final String? self;
+  final TypeDef? Function(String name)? resolveSelf;
+
+  /// The module whose definition a type name denotes in the scope of a
+  /// source of the program, as a key, or null where no module of the
+  /// program's chains defines it ([VglpProgram.definerOf]): a question's
+  /// type whose name the source's scope gives another definition is copied
+  /// into it under a fresh name.
+  final String? Function(String source, String name)? definerOf;
+
   CanonicalContext(
       {required this.interactive,
       this.scopeReaching = const {},
       required this.resolvable,
       this.reservedTypes = const {},
       this.reservedProcedures = const {},
-      this.layer = false});
+      this.layer = false,
+      this.self,
+      this.resolveSelf,
+      this.definerOf});
 }
 
 /// The canonical compilation of one source: the GLP module's text, the module
@@ -457,16 +484,118 @@ CanonicalProgram compileCanonical(String text,
           if (e.value != null && !own.contains(e.key)) e.key: e.value!
       });
 
+  // The definitions of the types the program's questions name that the
+  // source's scope does not define, each copied from the scope of the source
+  // that declares the question: a type is its automaton, whatever module
+  // defines it (TGLP modules.tex, "Structural type compatibility").  A name
+  // the source's scope gives another definition than the declaring source's
+  // --- two modules each defining a Card --- is copied under a fresh name,
+  // and the names in the copy that are so renamed are renamed in it, so that
+  // the question is of the declaring module's type.
+  final ownTypes = {for (final td in m.typeDefs) td.name: td};
+  final copies = <String, TypeDef>{};
+  // The emitted type of each question of the linked program, in its order.
+  final emittedTypes = <TypeExpr>[];
+  if (context != null) {
+    // The name each type name of a declaring source is emitted under, by the
+    // module that defines it and the name; and the copy each emitted name
+    // holds, by the declaring source that gave it.
+    final renamed = <String, String>{};
+    final copiedFrom = <String, ProgramInteractive>{};
+    TypeDef? here(String name) =>
+        ownTypes[name] ?? context.resolveSelf?.call(name);
+    bool resolvesHere(String name) =>
+        ownTypes.containsKey(name) || context.resolvable(name);
+    late String Function(ProgramInteractive, String, List<String>) nameIn;
+    TypeExpr renameIn(ProgramInteractive pi, TypeExpr t, List<String> params) =>
+        _renameTypeNames(t, (n) => nameIn(pi, n, params));
+    String freshCopy(String name) {
+      for (var n = 1;; n++) {
+        final c = '${name}_$n';
+        if (!ownTypes.containsKey(c) &&
+            !copies.containsKey(c) &&
+            !context.reservedTypes.contains(c) &&
+            !context.resolvable(c)) {
+          return c;
+        }
+      }
+    }
+
+    void copyAs(String emitted, TypeDef td, ProgramInteractive pi) {
+      copiedFrom[emitted] = pi;
+      copies[emitted] = td;  // its place first, as the copies are ordered
+      final alts = [
+        for (final alt in td.alternatives) renameIn(pi, alt, td.typeParams)
+      ];
+      var same = emitted == td.name;
+      for (var i = 0; same && i < alts.length; i++) {
+        same = identical(alts[i], td.alternatives[i]);
+      }
+      if (!same) {
+        copies[emitted] = TypeDef(emitted, alts, td.line, td.column,
+            typeParams: td.typeParams);
+      }
+    }
+
+    nameIn = (pi, name, params) {
+      if (params.contains(name)) return name;
+      final source = pi.source;
+      final def = source == null ? null : context.definerOf?.call(source, name);
+      final key = '${def ?? '?'}\u0000$name';
+      final known = renamed[key];
+      if (known != null) return known;
+      final td = pi.resolve(name);
+      if (td == null) return renamed[key] = name;
+      if (resolvesHere(name)) {
+        final hereDef = context.self == null
+            ? null
+            : context.definerOf?.call(context.self!, name);
+        if (def == hereDef ||
+            _sameType(here(name), here, td, pi.resolve, <String>{})) {
+          return renamed[key] = name;
+        }
+      } else {
+        final taken = copiedFrom[name];
+        if (taken == null) {
+          renamed[key] = name;
+          copyAs(name, td, pi);
+          return name;
+        }
+        if (_sameType(taken.resolve(name), taken.resolve, td, pi.resolve,
+            <String>{})) {
+          return renamed[key] = name;
+        }
+      }
+      final fresh = freshCopy(name);
+      renamed[key] = fresh;
+      copyAs(fresh, td, pi);
+      return fresh;
+    };
+
+    for (final pi in context.interactive) {
+      emittedTypes.add(renameIn(pi, pi.type, pi.params));
+    }
+  }
+
   // The interactive types the questions are formed over: the linked
   // program's, where the source is compiled as a module of one ("The
   // compilation forms the type of the asks, the construct processes and the
   // dispatcher for the linked program"), the source's own among them; else
   // the source's own and those of the volitional procedures it imports, in
-  // the order of their declarations.
-  final seeds = <(TypeExpr, bool, List<String>, int, int)>[
+  // the order of their declarations.  Each with the type its functor is
+  // named by, as its declaring source writes it, and its functor's prefix.
+  final seeds = <(TypeExpr, bool, List<String>, int, int, TypeExpr, String?)>[
     if (context != null)
-      for (final pi in context.interactive)
-        (pi.type, pi.readerMode, pi.params, pi.line, pi.column),
+      for (var i = 0; i < context.interactive.length; i++)
+        (
+          emittedTypes[i],
+          context.interactive[i].readerMode,
+          context.interactive[i].params,
+          context.interactive[i].line,
+          context.interactive[i].column,
+          context.interactive[i].type,
+          context.interactive[i].prefix
+        ),
   ];
   final seen = {for (final s in seeds) typeSource(s.$1)};
   for (final s in <(TypeExpr, bool, List<String>, int, int)>[
@@ -481,17 +610,26 @@ CanonicalProgram compileCanonical(String text,
         e.$2.column
       ),
   ]) {
-    if (context == null || seen.add(typeSource(s.$1))) seeds.add(s);
+    if (context == null || seen.add(typeSource(s.$1))) {
+      seeds.add((s.$1, s.$2, s.$3, s.$4, s.$5, s.$1, null));
+    }
   }
 
   // The functor of each moded interactive type in Question, in that order:
-  // the Definition's t, two that coincide told apart (vGLP #4 Cowork,
-  // 2026-10-02 08:26 UTC, Q1).
+  // the Definition's t, prefixed with the name of the module that defines it
+  // where two modules of the program define interactive types of one name
+  // (vGLP at c9a928d, sections/parts/canonical-compilation.tex), two that
+  // still coincide told apart (vGLP #4 Cowork, 2026-10-02 08:26 UTC, Q1).
+  // Keyed by the type as emitted, and by the prefix where there is one.
   final functors = <String, String>{};
   final functorsTaken = <String>{};
-  String functorOf(TypeExpr t, bool readerMode) =>
-      functors.putIfAbsent(typeSource(t), () {
-        final stem = questionFunctorStem(t, readerMode);
+  String functorOf(TypeExpr t, TypeExpr named, bool readerMode,
+          String? prefix) =>
+      functors.putIfAbsent(
+          prefix == null ? typeSource(t) : '$prefix#${typeSource(t)}', () {
+        final stem = prefix == null
+            ? questionFunctorStem(named, readerMode)
+            : '${prefix}_${questionFunctorStem(named, readerMode)}';
         var name = stem;
         for (var n = 2; functorsTaken.contains(name); n++) {
           name = '${stem}_$n';
@@ -501,10 +639,19 @@ CanonicalProgram compileCanonical(String text,
       });
   final interactive = <InteractiveType>[
     for (final s in seeds)
-      InteractiveType(s.$1, s.$2, functorOf(s.$1, s.$2), s.$3, s.$4, s.$5)
+      InteractiveType(
+          s.$1, s.$2, functorOf(s.$1, s.$6, s.$2, s.$7), s.$3, s.$4, s.$5)
   ];
+  // A volitional procedure's functor is its own question's: the source's
+  // own type, as the program's order gives its prefix.
+  final ownPrefix = <String, String?>{
+    if (context != null && context.self != null)
+      for (final pi in context.interactive)
+        if (pi.source == context.self) typeSource(pi.type): pi.prefix,
+  };
   for (final v in volitional.values) {
-    v.functor = functorOf(v.interactiveType, v.readerMode);
+    v.functor = functorOf(v.interactiveType, v.interactiveType, v.readerMode,
+        ownPrefix[typeSource(v.interactiveType)]);
   }
 
   // The (n+1)-ary procedures of the volitional procedures, by their parsed
@@ -514,38 +661,6 @@ CanonicalProgram compileCanonical(String text,
   };
   final reaching = _reaching(m, volitional, askedProcs, external);
   bool reaches(Goal g) => _reachesBy(g, reaching, external);
-
-  // The definitions of the types the program's questions name that the
-  // source's scope does not define, each copied from the scope of the source
-  // that declares the question: a type is its automaton, whatever module
-  // defines it (TGLP modules.tex, "Structural type compatibility").
-  final ownTypes = {for (final td in m.typeDefs) td.name: td};
-  final copies = <String, TypeDef>{};
-  if (context != null) {
-    void copy(String name, TypeDef? Function(String) resolve,
-        List<String> params) {
-      if (params.contains(name) ||
-          ownTypes.containsKey(name) ||
-          copies.containsKey(name) ||
-          context.resolvable(name)) {
-        return;
-      }
-      final td = resolve(name);
-      if (td == null) return;
-      copies[name] = td;
-      for (final alt in td.alternatives) {
-        for (final n in _typeNames(alt)) {
-          copy(n, resolve, td.typeParams);
-        }
-      }
-    }
-
-    for (final pi in context.interactive) {
-      for (final n in _typeNames(pi.type)) {
-        copy(n, pi.resolve, pi.params);
-      }
-    }
-  }
 
   // The questions, named fresh against the program's types; the dispatcher's
   // generic source, its names fresh against the program's and those, which
@@ -722,6 +837,64 @@ Iterable<String> _typeNames(TypeExpr t) sync* {
     yield* _typeNames(t.content);
     yield* _typeNames(t.hole);
   }
+}
+
+/// [t] with each type name renamed by [rename], the same object where none
+/// is renamed.
+TypeExpr _renameTypeNames(TypeExpr t, String Function(String) rename) {
+  if (t is TypeRef) {
+    final name = rename(t.name);
+    final args = [for (final a in t.typeArgs) _renameTypeNames(a, rename)];
+    var same = name == t.name;
+    for (var i = 0; same && i < args.length; i++) {
+      same = identical(args[i], t.typeArgs[i]);
+    }
+    return same
+        ? t
+        : TypeRef(name, t.line, t.column, isInput: t.isInput, typeArgs: args);
+  }
+  if (t is StructAlt) {
+    final args = [for (final a in t.args) _renameTypeNames(a, rename)];
+    var same = true;
+    for (var i = 0; same && i < args.length; i++) {
+      same = identical(args[i], t.args[i]);
+    }
+    return same ? t : StructAlt(t.functor, args, t.line, t.column);
+  }
+  if (t is ListConsAlt) {
+    final h = _renameTypeNames(t.head, rename);
+    final tl = _renameTypeNames(t.tail, rename);
+    return identical(h, t.head) && identical(tl, t.tail)
+        ? t
+        : ListConsAlt(h, tl, t.line, t.column);
+  }
+  if (t is DiffListAlt) {
+    final c = _renameTypeNames(t.content, rename);
+    final h = _renameTypeNames(t.hole, rename);
+    return identical(c, t.content) && identical(h, t.hole)
+        ? t
+        : DiffListAlt(c, h, t.line, t.column);
+  }
+  return t;
+}
+
+/// Whether [a], in the scope [ra], and [b], in the scope [rb], are one type:
+/// the same definition, alternative by alternative, each name in it one type
+/// in the two scopes.  Two that are absent are one.
+bool _sameType(TypeDef? a, TypeDef? Function(String) ra, TypeDef? b,
+    TypeDef? Function(String) rb, Set<String> seen) {
+  if (a == null || b == null) return a == null && b == null;
+  if (!seen.add('${a.name}\u0000${b.name}')) return true;
+  String body(TypeDef td) => '${td.typeParams.join(',')}::='
+      '${td.alternatives.map(typeSource).join(' ; ')}';
+  if (body(a) != body(b)) return false;
+  for (final alt in a.alternatives) {
+    for (final n in _typeNames(alt)) {
+      if (a.typeParams.contains(n)) continue;
+      if (!_sameType(ra(n), ra, rb(n), rb, seen)) return false;
+    }
+  }
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -1003,8 +1176,9 @@ _Elicitation _elicitation(
   // (Definition "Canonical Compilation").
   final types = <InteractiveType>[];
   final seen = <String>{};
+  // Each by its functor: two modules' types of one name are two questions.
   for (final t in interactive) {
-    if (!seen.add(t.written)) continue;
+    if (!seen.add(t.functor)) continue;
     types.add(t);
   }
   // A declaration names a moded type and holds wherever a position of an
@@ -2016,7 +2190,7 @@ _AddedTypes _addedTypes(Iterable<InteractiveType> interactive,
   for (final v in interactive) {
     final t = v.type;
     collect(t, v.params);
-    if (seen.add(typeSource(t))) types.add((t, v.functor));
+    if (seen.add(v.functor)) types.add((t, v.functor));
   }
   return _AddedTypes(ask, question, emitAsk, params, types);
 }

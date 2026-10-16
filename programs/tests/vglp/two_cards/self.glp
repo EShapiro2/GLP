@@ -1,0 +1,57 @@
+%% self.glp --- the plays of the two-cards program: two modules, parent and
+%% child, each defining a type Card of its own, another type of one name,
+%% each asking a question of its Card, put to a scripted person through one
+%% dispatcher (vGLP at c9a928d, sections/parts/canonical-compilation.tex: "t
+%% is the name of T in lowercase, its type arguments appended, with _w for
+%% writer mode and _r for reader mode, ..., and, where two modules of M
+%% define interactive types of one name, prefixed with the name of the module
+%% that defines it, so that the asks of M are of one type, the union over
+%% those functors"; vGLP's task of 2026-10-16 11:25 UTC, item 3).
+%%
+%% The questions of the program are parent_card_w, of the parent's Card, and
+%% child_card_w, of the child's; each compiled module carries the other's
+%% Card under a fresh name, and Question below is written again for the
+%% declarations of the procedures imported from the compiled modules: type
+%% identity is structural.
+%%
+%% A grant is input(Id, P, R), P the position the view marks input(P).  The
+%% person approves the dishes and names 7, and logs what it sees.
+
+YesNo      ::= yes ; no.
+ParentCard ::= card(Constant, YesNo?).
+ChildCard  ::= card(Integer?).
+Question   ::= child_card_w(ChildCard) ; parent_card_w(ParentCard).
+Ask(Q)     ::= ask(Constant, Q).
+Drawn      ::= child_card_w(_) ; parent_card_w(_) ; Integer ; YesNo.
+
+imported procedure parent#parent(Stream(YesNo), Stream(Ask(Question))).
+imported procedure child#child(Stream(Integer), Stream(Ask(Question))).
+imported procedure child#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(_), Stream(_))).
+
+%% Both modules at once, their ask streams merged, served by the child's
+%% dispatcher: P the parent's answers, C the child's.
+exported procedure play_cards(Stream(YesNo), Stream(Integer), Stream(_)).
+play_cards(P?, C?, Log?) :-
+    parent # parent(P, A1),
+    child # child(C, A2),
+    merge(A1?, A2?, Asks),
+    child # dispatch(Asks?, ch(Gs?, Ds), _),
+    person(Ds?, Gs, Log).
+
+%% person(Ds?, Gs, Log): at the draw of each card with the person's position
+%% marked input(Q), grant its answer at Q; log every draw and withdrawal.
+procedure person(_?, PersonIn(Drawn), Stream(_)).
+person([draw(Id, _, parent_card_w(card(C, input(Q)))) | Ds],
+       [input(Id?, Q?, yes) | Gs?], [parent(C?) | Log?]) :-
+    ground(Id?), ground(C?), ground(Q?) |
+    person(Ds?, Gs, Log).
+person([draw(Id, _, child_card_w(card(input(Q)))) | Ds],
+       [input(Id?, Q?, 7) | Gs?], [child | Log?]) :-
+    ground(Id?), ground(Q?) |
+    person(Ds?, Gs, Log).
+person([draw(_, _, V) | Ds], Gs?, [drawn(V?) | Log?]) :-
+    otherwise |
+    person(Ds?, Gs, Log).
+person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    person(Ds?, Gs, Log).
