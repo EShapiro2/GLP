@@ -15,6 +15,7 @@ import 'ast.dart';
 import 'error.dart' show CompileError;
 import 'glp_printer.dart';
 import 'lexer.dart';
+import 'token.dart' show TokenType;
 import 'parser.dart';
 import 'partial_evaluator.dart';
 import 'primitive_layer.dart';
@@ -34,6 +35,7 @@ import '../vglp/canonical.dart'
         VolitionalCall,
         checkWritersAtOutputs,
         compileCanonical,
+        extractWidgetDeclarations,
         isPaperSyntaxSource,
         volitionalRecord;
 import '../vglp/program_compilation.dart';
@@ -270,11 +272,11 @@ List<DiscoveredModule> discoverProgram(String rootDir,
 /// layer of its directory --- and each .vglp module source of the tree that
 /// joins the program, compiled on load or standing as its committed compiled
 /// module; a source beside a hand-written module of its name does not join
-/// it, the hand-written module standing.  The root's self.vglp holds widget
-/// declarations, for every program ([scopeWidgetDeclarations]); one holding
-/// more is refused, the root's self.glp being the language's first layer
-/// (TGLP modules.tex, Definition "Root, Scope") and compiled once for every
-/// program.
+/// it, the hand-written module standing.  "The self.vglp of the root holds
+/// widget declarations only" (vGLP, Section 6.3, sections/parts/
+/// canonical-compilation.tex): one holding anything else --- a procedure, a
+/// declaration, a type, a clause, or text the front end does not read --- is
+/// refused, naming the rule ([_refuseRootSelfVglp]).
 VglpProgram? _vglpProgramOf(Directory root, String? programsDir) {
   if (!root.existsSync()) return null;
   final files = root
@@ -285,23 +287,11 @@ VglpProgram? _vglpProgramOf(Directory root, String? programsDir) {
   final programsNorm = programsDir == null ? null : _normPath(programsDir);
   final layers = <String>{};
   final sources = <String>[];
-  void rootSelfVglp(String path) {
-    final front = VglpFront.of(File(path).readAsStringSync());
-    if (front != null && _holds(front)) {
-      throw CompileError(
-          '$path holds procedures, declarations or types: the root\'s '
-          'self.vglp holds the widget declarations of every program, and the '
-          'root\'s self.glp, the first layer of every scope, is compiled once '
-          'for every program (TGLP modules.tex, Definition "Root, Scope")',
-          1, 1, phase: 'analyzer');
-    }
-  }
-
   for (final f in files) {
     final name = ppath.basename(f.path);
     if (name == selfVglp) {
       if (programsNorm != null && _normPath(f.parent.path) == programsNorm) {
-        rootSelfVglp(f.path);
+        _refuseRootSelfVglp(f.path);
       } else {
         layers.add(_normPath(f.path));
       }
@@ -324,7 +314,7 @@ VglpProgram? _vglpProgramOf(Directory root, String? programsDir) {
     }
     final rootLayer = File(ppath.join(programsNorm, selfVglp));
     if (rootLayer.existsSync() && !files.any((f) => _normPath(f.path) == _normPath(rootLayer.path))) {
-      rootSelfVglp(rootLayer.path);
+      _refuseRootSelfVglp(rootLayer.path);
     }
   }
   final held = [
@@ -337,6 +327,30 @@ VglpProgram? _vglpProgramOf(Directory root, String? programsDir) {
   if (held.isEmpty && sources.isEmpty) return null;
   return VglpProgram.of(
       layers: held, modules: sources, programsDir: programsDir);
+}
+
+/// Refuse the root's self.vglp at [path] unless it holds widget declarations
+/// and nothing else: "the self.vglp of the root holds widget declarations
+/// only" (vGLP, Section 6.3, sections/parts/canonical-compilation.tex).  What
+/// is left of it once its widget declarations are taken out is comments and
+/// blank space, or it is refused, whether or not the vGLP front end reads it.
+void _refuseRootSelfVglp(String path) {
+  final text = File(path).readAsStringSync();
+  String? found;
+  try {
+    final rest = Lexer(extractWidgetDeclarations(text).stripped).tokenize();
+    final t = rest.firstWhere((t) => t.type != TokenType.EOF,
+        orElse: () => rest.last);
+    if (t.type != TokenType.EOF) found = 'line ${t.line}: ${t.lexeme}';
+  } on CompileError catch (e) {
+    found = 'line ${e.line}: ${e.message}';
+  }
+  if (found == null) return;
+  throw CompileError(
+      '$path holds more than widget declarations ($found): "the self.vglp '
+      'of the root holds widget declarations only" (vGLP, Section 6.3, '
+      'sections/parts/canonical-compilation.tex)',
+      1, 1, phase: 'analyzer');
 }
 
 /// Whether the self.vglp at [path] holds a procedure, a declaration or a
