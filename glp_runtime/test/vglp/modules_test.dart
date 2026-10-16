@@ -255,4 +255,119 @@ go_b(Xs?) :- pick_b(Xs).
                   'define the type YesNo')))));
     });
   });
+
+  group('two modules each defining its own Card: each functor prefixed with '
+      'the name of the module that defines its type (vGLP at c9a928d, '
+      'sections/parts/canonical-compilation.tex; vGLP\'s task of 2026-10-16 '
+      '11:25 UTC, item 3)', () {
+    late Directory fixture;
+    setUp(() {
+      fixture = Directory('$_programs/vglp_two_cards_fixture_${pid}_'
+          '${DateTime.now().microsecondsSinceEpoch}');
+      fixture.createSync();
+    });
+    tearDown(() {
+      if (fixture.existsSync()) fixture.deleteSync(recursive: true);
+    });
+    String source(String name) =>
+        File('${_program('two_cards')}/$name').readAsStringSync();
+
+    test('each module\'s Question is the union over parent_card_w and '
+        'child_card_w, the other module\'s Card copied under a fresh name, '
+        'and the program is well-typed', () {
+      for (final f in ['parent.vglp', 'child.vglp']) {
+        File('${fixture.path}/$f').writeAsStringSync(source(f));
+      }
+      File('${fixture.path}/self.glp')
+          .writeAsStringSync('exported procedure ping(Constant).\nping(a).\n');
+      emitVglpSources(fixture.path,
+          rootSelfGlpPath: File(_root).absolute.path);
+      final p = File('${fixture.path}/parent.glp').readAsStringSync();
+      final c = File('${fixture.path}/child.glp').readAsStringSync();
+      expect(p, contains('Card ::= card(Constant, YesNo?).'));
+      expect(p, contains('Card_1 ::= card(Integer?).'));
+      expect(p, contains(
+          'Question ::= child_card_w(Card_1) ; parent_card_w(Card).'));
+      expect(p, contains("[ask('Card', parent_card_w(X?)) | D?]"));
+      expect(c, contains('Card ::= card(Integer?).'));
+      expect(c, contains('Card_1 ::= card(Constant, YesNo?).'));
+      expect(c, contains('YesNo ::= yes ; no.'));
+      expect(c, contains(
+          'Question ::= child_card_w(Card) ; parent_card_w(Card_1).'));
+      expect(c, contains("[ask('Card', child_card_w(X?)) | D?]"));
+      // Each module's dispatcher serves both cards.
+      for (final m in [p, c]) {
+        expect(m, contains('child_card_w(X)'));
+        expect(m, contains('parent_card_w(X)'));
+      }
+      File('${fixture.path}/parent.glp').deleteSync();
+      File('${fixture.path}/child.glp').deleteSync();
+      expect(
+          () => typeCheckProgram(
+              discoverProgram(fixture.path, rootSelfGlpPath: _root),
+              rootDir: fixture.path),
+          returnsNormally);
+    });
+
+    test('both cards answered through the child\'s dispatcher', () async {
+      final (status, b) = await _play('two_cards', 'play_cards(P, C, L)');
+      expect(status, isNot(ExecutionStatus.failed));
+      expect(b['P'], '[yes]');
+      expect(b['C'], '[7]');
+      for (final seen in ['parent(dishes)', 'child', 'withdrawn(1)',
+          'withdrawn(2)']) {
+        expect(b['L'], contains(seen));
+      }
+    });
+
+    test('a type argument enters the functor under its own name, prefixed '
+        'where two modules define it: Stream over two Cards gives '
+        'stream_parent_card_r and stream_child_card_r, with no _2 (vGLP '
+        'ed75782, sections/parts/canonical-compilation.tex; vGLP, 2026-10-16 '
+        '12:30 UTC, (b))', () {
+      File('${fixture.path}/parent.vglp').writeAsStringSync('''
+Card ::= card(Constant).
+procedure (Stream(Card)?)*cards(Stream(Card)).
+(Cs)*cards(Cs?).
+exported procedure parent(Stream(Card)).
+parent(Cs?) :- cards(Cs).
+''');
+      // The child's Card another type, of another functor, so that the
+      // person's raw inputs to the two questions, a card of each, form a
+      // union (vGLP, sections/parts/dispatcher.tex, after the dispatcher).
+      File('${fixture.path}/child.vglp').writeAsStringSync('''
+Card ::= number(Integer).
+procedure (Stream(Card)?)*cards(Stream(Card)).
+(Cs)*cards(Cs?).
+exported procedure child(Stream(Card)).
+child(Cs?) :- cards(Cs).
+''');
+      File('${fixture.path}/self.glp')
+          .writeAsStringSync('exported procedure ping(Constant).\nping(a).\n');
+      emitVglpSources(fixture.path,
+          rootSelfGlpPath: File(_root).absolute.path);
+      final p = File('${fixture.path}/parent.glp').readAsStringSync();
+      final c = File('${fixture.path}/child.glp').readAsStringSync();
+      for (final m in [p, c]) {
+        expect(m, contains('stream_child_card_r('));
+        expect(m, contains('stream_parent_card_r('));
+        expect(m, isNot(contains('stream_card_r')));
+        expect(m, isNot(contains('_r_2')));
+      }
+      expect(p, contains("ask('Stream(Card)?', stream_parent_card_r(X))"));
+      expect(c, contains("ask('Stream(Card)?', stream_child_card_r(X))"));
+    });
+
+    test('a name one module alone defines keeps its functor unprefixed', () {
+      File('${fixture.path}/parent.vglp')
+          .writeAsStringSync(source('parent.vglp'));
+      File('${fixture.path}/self.glp')
+          .writeAsStringSync('exported procedure ping(Constant).\nping(a).\n');
+      emitVglpSources(fixture.path,
+          rootSelfGlpPath: File(_root).absolute.path);
+      final p = File('${fixture.path}/parent.glp').readAsStringSync();
+      expect(p, contains('Question ::= card_w(Card).'));
+      expect(p, isNot(contains('parent_card_w')));
+    });
+  });
 }

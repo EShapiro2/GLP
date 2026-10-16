@@ -564,18 +564,215 @@ class VglpProgram {
       Set<String> reservedTypes = const {},
       Set<String> reservedProcedures = const {}}) {
     final key = _norm(path);
+    final stems = _functorStems();
+    final widgets = <String, Map<String, String>>{};
+    Map<String, String>? widgetsAt(String s, int i) {
+      final d = _declaredIn[(s, i)];
+      if (d == null || programsDir == null) return null;
+      return widgets.putIfAbsent(d, () => _widgetsIn(d));
+    }
     return CanonicalContext(
       interactive: [
         for (final s in [...layers, ...modules])
-          for (final t in fronts[s]!.interactive)
-            ProgramInteractive(t.$1, t.$2, t.$3, t.$4, t.$5,
-                (name) => resolveIn(s, name)),
+          for (var i = 0; i < fronts[s]!.interactive.length; i++)
+            ProgramInteractive(
+                fronts[s]!.interactive[i].$1,
+                fronts[s]!.interactive[i].$2,
+                fronts[s]!.interactive[i].$3,
+                fronts[s]!.interactive[i].$4,
+                fronts[s]!.interactive[i].$5,
+                (name) => resolveIn(s, name),
+                source: s,
+                functor: stems[(s, i)],
+                widgets: widgetsAt(s, i)),
       ],
       scopeReaching: scopeReachingFor(key),
       resolvable: resolvable,
       reservedTypes: reservedTypes,
       reservedProcedures: reservedProcedures,
       layer: layers.contains(key),
+      self: key,
+      resolveSelf: (name) => resolveIn(key, name),
+      definerOf: definerOf,
     );
   }
+
+  /// The functor stem of each interactive type of the program, t without its
+  /// mode suffix's coincidence count, by its source and its place in the
+  /// source's interactive types: "t is the name of T in lowercase, the names
+  /// of its type arguments, so formed, appended, with _w for writer mode and
+  /// _r for reader mode ...  Where two modules of M define types of one name,
+  /// the name of each is prefixed with the path of its module" (vGLP ed75782,
+  /// sections/parts/canonical-compilation.tex).  Each name in T, T's own and
+  /// its type arguments', is formed by itself ([_nameInFunctor]), in the
+  /// scope of the source that declares the question: so Stream over two
+  /// Cards gives stream_parent_card_r and stream_child_card_r (vGLP, 2026-10-
+  /// 16 12:30 UTC, (b)).  A volitional procedure a source imports asks its
+  /// exporter's question, and takes its exporter's functor.
+  Map<(String, int), String> _functorStems() {
+    final out = <(String, int), String>{};
+    for (final s in [...layers, ...modules]) {
+      final f = fronts[s]!;
+      for (var i = 0; i < f.volitional.length; i++) {
+        final t = f.interactive[i];
+        _declaredIn[(s, i)] = s;
+        out[(s, i)] = questionFunctorStemBy(
+            t.$1, t.$2, (name) => _nameInFunctor(s, name, t.$3));
+      }
+    }
+    for (final s in [...layers, ...modules]) {
+      final f = fronts[s]!;
+      final imported = f.importedVolitional.keys.toList();
+      for (var j = 0; j < imported.length; j++) {
+        final i = f.volitional.length + j;
+        final t = f.interactive[i];
+        final k = imported[j];
+        final hash = k.lastIndexOf('#');
+        final slash = k.lastIndexOf('/');
+        final n = int.parse(k.substring(slash + 1));
+        final target = _target(
+            s,
+            ast.RemoteGoal(
+                ast.ConstTerm(k.substring(0, hash), 0, 0),
+                ast.Goal(k.substring(hash + 1, slash),
+                    [for (var a = 0; a < n; a++) ast.UnderscoreTerm(0, 0)],
+                    0, 0),
+                0,
+                0));
+        final exporter = target == null ? null : fronts[target.$1];
+        final at = exporter == null
+            ? -1
+            : exporter.volitional.keys.toList().indexOf(target!.$2);
+        if (at >= 0) _declaredIn[(s, i)] = target!.$1;
+        out[(s, i)] = at >= 0
+            ? out[(target!.$1, at)]!
+            : questionFunctorStemBy(
+                t.$1, t.$2, (name) => _nameInFunctor(s, name, t.$3));
+      }
+    }
+    return out;
+  }
+
+  /// The name [name] as it enters a functor of a question the source at
+  /// [source] declares, a type parameter of its procedure among [params]:
+  /// in lowercase, and, where two modules of the program define types of
+  /// that name ([_definers]), prefixed with the module that defines it in
+  /// the source's scope ([definerOf], [modulePrefix]).  The root has no
+  /// name to prefix with, and a clash with it is refused.
+  String _nameInFunctor(String source, String name, List<String> params) {
+    final lower = '${name[0].toLowerCase()}${name.substring(1)}';
+    if (params.contains(name) || _definers(name).length < 2) return lower;
+    final d = definerOf(source, name);
+    if (d == null || d == programsDir) {
+      throw CompileError(
+          '$source asks a question whose type names $name, which two modules '
+          'of the program define, and the module that defines it here is '
+          '${d == null ? 'none of the program\'s scope chain' : 'the root'}: '
+          'the name "is prefixed with the path of its module" (vGLP, '
+          'sections/parts/canonical-compilation.tex), and that module has no '
+          'path to prefix it with',
+          1, 1, phase: 'analyzer');
+    }
+    return '${modulePrefix(d)}_$lower';
+  }
+
+  final Map<String, Set<String?>> _definersOf = {};
+
+  /// The source that declares the volitional procedure asking each
+  /// interactive type of the program, by the source and the type's place in
+  /// its interactive types ([_functorStems]): the source's own, or the
+  /// exporter of one it imports.
+  final Map<(String, int), String> _declaredIn = {};
+
+  /// The widget declarations in scope at the source [source], by moded
+  /// type: its scope's, from the self.vglp beside each self.glp from the
+  /// root down ([scopeWidgetDeclarations]), and its own, which override
+  /// them; a self.vglp's own are its directory's, and so its scope's.
+  Map<String, String> _widgetsIn(String source) => {
+        ...scopeWidgetDeclarations(source, programsDir!),
+        if (!layers.contains(source))
+          ...extractWidgetDeclarations(File(source).readAsStringSync())
+              .byModedType,
+      };
+
+  /// The modules of the program that define a type of the name [name] that
+  /// enters a functor: for each question a source of the program declares
+  /// whose type names it, its own or a type argument's, the module whose
+  /// definition it denotes in that source's scope ([definerOf]).  A module
+  /// whose definition of the name enters no question's type --- a self.glp
+  /// writing a question's types again for the declarations of the
+  /// procedures it imports --- adds no definer, so a type of one definition
+  /// gives one functor (vGLP-mod3, Code #9's subagent's report).
+  Set<String?> _definers(String name) => _definersOf.putIfAbsent(name, () {
+        final out = <String?>{};
+        for (final s in [...layers, ...modules]) {
+          final f = fronts[s]!;
+          for (var i = 0; i < f.volitional.length; i++) {
+            final t = f.interactive[i];
+            if (_typeNamesIn(t.$1).contains(name) && !t.$3.contains(name)) {
+              out.add(definerOf(s, name));
+            }
+          }
+        }
+        return out;
+      });
+
+  static Set<String> _typeNamesIn(TypeExpr t) => t is TypeRef
+      ? {t.name, for (final a in t.typeArgs) ..._typeNamesIn(a)}
+      : const {};
+
+  /// The module whose definition the type name [name] denotes in the scope
+  /// of the source at [source], as a key: the source itself, by its path,
+  /// where it defines it; a directory, by its path, where the module of its
+  /// self.glp and its layer defines it, the root's among them; null where no
+  /// module of the source's chain defines it.  A directory's self.glp and
+  /// the self.vglp beside it are one module (vGLP, sections/parts/canonical-
+  /// compilation.tex: "as its self.glp holds those of GLP").
+  String? definerOf(String source, String name) {
+    final key = _norm(source);
+    final isLayer = layers.contains(key);
+    if (fronts[key]?.types.containsKey(name) ?? false) {
+      return isLayer ? ppath.dirname(key) : key;
+    }
+    var d = ppath.dirname(key);
+    while (true) {
+      final layer = _norm(ppath.join(d, selfVglp));
+      if (layer != key &&
+          layers.contains(layer) &&
+          fronts[layer]!.types.containsKey(name)) {
+        return d;
+      }
+      if (_selfGlpTypes(d).contains(name)) return d;
+      if (programsDir == null || d == programsDir) return null;
+      if (!ppath.isWithin(programsDir!, d)) return null;
+      d = ppath.dirname(d);
+    }
+  }
+
+  /// The name of the module [definerOf] gives as [key]: a module file's,
+  /// N for N.vglp, as a call N # p names it; a directory's, its own name, as
+  /// a call of its parent names it.
+  static String moduleNameOf(String key) => key.endsWith('.vglp')
+      ? ppath.basenameWithoutExtension(key)
+      : ppath.basename(key);
+
+  /// The prefix a name of the module [key] ([definerOf]) takes in a functor.
+  /// The paper's is "the path of its module, the names of its directories
+  /// and its file joined by _" (vGLP ed75782); the base of that path, the
+  /// program's root or the device's, is open (vGLP-mod3, Code #9's subagent's
+  /// report), and the loader gives this compilation no program root, so the
+  /// prefix stays the module's name, the last segment of its path, until it
+  /// is decided.
+  static String modulePrefix(String key) => moduleNameOf(key);
+
+  final Map<String, Set<String>> _selfGlpTypeNames = {};
+
+  /// The types the self.glp of [dir] defines.
+  Set<String> _selfGlpTypes(String dir) =>
+      _selfGlpTypeNames.putIfAbsent(dir, () {
+        final f = File(ppath.join(dir, 'self.glp'));
+        if (!f.existsSync()) return const {};
+        final m = Parser(Lexer(f.readAsStringSync()).tokenize()).parseModule();
+        return {for (final td in m.typeDefs) td.name};
+      });
 }

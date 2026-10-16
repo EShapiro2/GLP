@@ -6,7 +6,7 @@
 %% Section 3.2, Definition "Canonical CVA Platform").  It runs two agents,
 %% alice and bob, their persons scripted and paced on their threads
 %% (../self.glp), and gives each person's log, the thread with gave(K, A) where
-%% the person answers a card, and the network's log of the cargoes it carries.
+%% the person answers an approval question, and the network's log of the cargoes it carries.
 %%
 %% play_nudge: alice proposes befriending bob, bob is asked and answers yes,
 %%   and it commits.  Each is then the opener of the unguarded class of nudge
@@ -39,34 +39,36 @@ Net      ::= msg(Peer, Content).
 Txn      ::= propose(Attempt) ; start(Attempt) ; answer(Attempt) ; vote(Attempt)
            ; tally(Attempt) ; commit(Attempt) ; yield(Attempt) ; wound(Attempt, Attempt) ; outcome(Attempt)
            ; discover(Peer).
-Session  ::= session(Stream(Request)?, Stream(Txn)).
-Card     ::= card(Attempt, YesNo?).
-Question ::= session_w(Session) ; card_w(Card).
-Drawn    ::= session_w(_) ; card_w(_) ; Request ; YesNo.
+Output   ::= Txn.
+Approval ::= approval(Attempt, YesNo?).
+Question ::= stream_request_r(Stream(Request)?) ; approval_w(Approval).
+Drawn    ::= stream_request_r(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
 Ask(Q)   ::= ask(Constant, Q).
 
 imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
-    Stream(Ask(Question))).
+    Stream(Output), Stream(Ask(Question))).
 imported procedure platform#dispatch(Stream(Ask(Question))?,
-    PersonChannel(Drawn)?, Channel(Stream(_), Stream(_))).
+    PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
 
 exported procedure play_nudge(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_nudge(LA?, LB?, N?) :-
     pair([req(known(bob)), wait(discover(bob)),
           req(propose(befriend(alice, bob)))],
          [req(known(alice)), wait(discover(alice)),
-          card(befriend(alice, bob), yes)],
+          approval(befriend(alice, bob), yes)],
          LA, LB, N).
 
 %% alice and bob, each with its dispatcher and scripted person, their networks
 %% joined.
 procedure pair(Steps(Drawn)?, Steps(Drawn)?, Stream(_), Stream(_), Stream(Sent(Cargo))).
 pair(SA, SB, LA?, LB?, N?) :-
-    platform # agent(alice, InA?, OutA, AsA),
-    platform # dispatch(AsA?, ch(GA?, DA), _),
+    platform # agent(alice, InA?, OutA, TA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
     person(DA?, GA, ps(nosess, [], [], SA?), LA),
-    platform # agent(bob, InB?, OutB, AsB),
-    platform # dispatch(AsB?, ch(GB?, DB), _),
+    platform # agent(bob, InB?, OutB, TB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
     person(DB?, GB, ps(nosess, [], [], SB?), LB),
     merge(OutA?, OutB?, Net),
     route(Net?, alice, InA, bob, InB, N).

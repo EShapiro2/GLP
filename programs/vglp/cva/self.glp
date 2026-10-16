@@ -8,23 +8,24 @@
 %% scripted person and a network between two agents, three or four.
 %%
 %% A play runs the agents of a compiled platform, each the agent of the module
-%% with its ask stream and its dispatcher on that stream and on its person
-%% channel, as whatever spawns an agent's initial goal does (vGLP, Definition
-%% "Canonical Compilation"), its person scripted, and their networks joined by
-%% route/6, route3/8 or route4/10.  The person reads what its dispatcher
-%% draws (vGLP, the construct process, draw(Id, W, V) and withdraw(Id); a
-%% grant input(Id, P, R)): the session, the agent's question, whose thread it logs as the program
-%% writes it, each element once written whole, and the cards Start raises.
-%% The plays pace the persons on the thread, on which the agent goal writes
-%% each app transaction it takes, its schema applied to its attempt, and
-%% discover(Q) once it knows Q (vGLP, Definition "Compilation of the
-%% Canonical Platform").
+%% with its ask stream and its dispatcher on that stream, on its person
+%% channel and on the program's output, the agent's thread (to_person/2), as
+%% whatever spawns an agent's initial goal does (vGLP, Definition "Canonical
+%% Compilation"), its person scripted, and their networks joined by route/6,
+%% route3/8 or route4/10.  The person reads what its dispatcher draws (vGLP,
+%% the construct process, draw(Id, W, V) and withdraw(Id); a grant input(Id,
+%% P, R)): the agent's question, the stream of its requests; the thread, the
+%% program's output, construct 0, drawn element by element, which it logs;
+%% and the approval questions Start raises.  The plays pace the persons on
+%% the thread, on which the agent goal writes each app transaction it takes,
+%% its schema applied to its attempt, and discover(Q) once it knows Q (vGLP
+%% 56d898f, Section 5.4).
 %%
 %% The person's script is a list of steps: req(R) grants the request R on the
-%% session's request stream; wait(T) waits until the transaction T is on the
-%% thread; card(K, A) answers A, yes or no, the card of the attempt K, or of an
+%% agent's request stream; wait(T) waits until the transaction T is on the
+%% thread; approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an
 %% attempt of the class K, once it is drawn.  Its log is the thread, each
-%% transaction once, with gave(K, A) where it answers a card.  It reads what
+%% transaction once, with gave(K, A) where it answers an approval question.  It reads what
 %% the dispatcher sends it as any term and its script as terms of any form, the
 %% steps holding the platform's requests, transactions, attempts and classes
 %% (docs/typed-glp-manual.md, 18.3, the play of programs/tests/vglp/fragments
@@ -39,13 +40,13 @@ Peer       ::= Key.
 Carried(X) ::= hello(Peer) ; cargo(Peer, X).
 Msg(X)     ::= msg(Peer, Carried(X)).
 Sent(X)    ::= sent(Peer, Peer, X).
-Step(T)    ::= req(T) ; wait(_) ; card(_, T).
+Step(T)    ::= req(T) ; wait(_) ; approval(_, T).
 Steps(T)   ::= [] ; [Step(T) | Steps(T)].
 Sess       ::= nosess ; sess(Integer, Path).
 Seen       ::= seen(Integer, Path, _).
 Seens      ::= [] ; [Seen | Seens].
 PSt(T)     ::= ps(Sess, Stream(_), Seens, Steps(T)).
-CardAt     ::= card_at(Integer, Path, Seens) ; nocard.
+ApprovalAt ::= approval_at(Integer, Path, Seens) ; noapproval.
 YN         ::= y ; n.
 
 %% The network between two agents A and B: each message to its recipient, each
@@ -111,14 +112,24 @@ procedure(X) note(Carried(X)?, Peer?, Stream(Sent(X)), Stream(Sent(X))?).
 note(hello(_), _, Log1?, Log1).
 note(cargo(F, X), To, [sent(F?, To?, X?)|Log1?], Log1).
 
+%% The program's output to its person, the thread, on its end of the person
+%% channel (vGLP, Definition "Canonical Compilation": the program's output to
+%% its person, of the reserved type Output, drawn as construct 0).
+procedure(X) to_person(Channel(Stream(_), Stream(X))?, Stream(X)?).
+to_person(ch(_, O?), O).
+
 %% The person.
 procedure(T) person(_?, PersonIn(T), PSt(T)?, Stream(_)).
-person([draw(Id, _, session_w(session(input(P), T)))|Ds], Gs?, ps(_, Old, Cs, Ss), Log?) :-
-    ground(Id?), ground(P?), ground(T?) |
+person([draw(0, _, output(T))|Ds], Gs?, ps(Se, Old, Cs, Ss), Log?) :-
+    ground(T?) |
     list_of(T?, L),
-    session_seen(Id?, P?, Old?, L?, Cs?, Ss?, Gs, Gs1?, St1, Log, Log1?),
+    thread_seen(Se?, Old?, L?, Cs?, Ss?, Gs, Gs1?, St1, Log, Log1?),
     person(Ds?, Gs1, St1?, Log1).
-person([draw(Id, _, card_w(card(At, input(P))))|Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :-
+person([draw(Id, _, stream_request_r(input(P)))|Ds], Gs?, ps(_, T, Cs, Ss), Log?) :-
+    ground(Id?), ground(P?) |
+    advance(ps(sess(Id?, P?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?),
+    person(Ds?, Gs1, St1?, Log1).
+person([draw(Id, _, approval_w(approval(At, input(P))))|Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :-
     ground(Id?), ground(P?), ground(At?) |
     advance(ps(Se?, T?, [seen(Id?, P?, At?)|Cs?], Ss?), Gs, Gs1?, St1, Log, Log1?),
     person(Ds?, Gs1, St1?, Log1).
@@ -127,11 +138,11 @@ person([withdraw(Id)|Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :- ground(Id?) |
     person(Ds?, Gs, ps(Se?, T?, Cs1?, Ss?), Log).
 person([_|Ds], Gs?, St, Log?) :- otherwise | person(Ds?, Gs, St?, Log).
 
-procedure(T) session_seen(Integer?, Path?, Stream(_)?, Stream(_)?, Seens?,
+procedure(T) thread_seen(Sess?, Stream(_)?, Stream(_)?, Seens?,
     Steps(T)?, PersonIn(T), PersonIn(T)?, PSt(T), Stream(_), Stream(_)?).
-session_seen(Id, P, Old, L, Cs, Ss, Gs?, Gs1, St1?, Log?, Log1) :- ground(L?) |
+thread_seen(Se, Old, L, Cs, Ss, Gs?, Gs1, St1?, Log?, Log1) :- ground(L?) |
     log_new(Old?, L?, Log, Log2?),
-    advance(ps(sess(Id?, P?), L?, Cs?, Ss?), Gs, Gs1?, St1, Log2, Log1?).
+    advance(ps(Se?, L?, Cs?, Ss?), Gs, Gs1?, St1, Log2, Log1?).
 
 %% advance(St?, Gs, Gs1?, St1, Log, Log1?): take the script's steps as far as
 %% they can be taken, the grants written on Gs, continuing at Gs1.
@@ -144,9 +155,9 @@ advance(ps(nosess, T, Cs, [req(R)|Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [req(R?)|
 advance(ps(Se, T, Cs, [wait(X)|Ss]), Gs?, Gs1, St1?, Log?, Log1) :- ground(T?), ground(X?) |
     among(X?, T?, B),
     waited(B?, ps(Se?, T?, Cs?, [wait(X?)|Ss?]), Gs, Gs1?, St1, Log, Log1?).
-advance(ps(Se, T, Cs, [card(K, A)|Ss]), Gs?, Gs1, St1?, Log?, Log1) :- ground(Cs?), ground(K?) |
-    find_card(K?, Cs?, F),
-    carded(F?, ps(Se?, T?, Cs?, [card(K?, A?)|Ss?]), Gs, Gs1?, St1, Log, Log1?).
+advance(ps(Se, T, Cs, [approval(K, A)|Ss]), Gs?, Gs1, St1?, Log?, Log1) :- ground(Cs?), ground(K?) |
+    find_approval(K?, Cs?, F),
+    approved(F?, ps(Se?, T?, Cs?, [approval(K?, A?)|Ss?]), Gs, Gs1?, St1, Log, Log1?).
 advance(ps(Se, T, Cs, []), Gs1?, Gs1, ps(Se?, T?, Cs?, []), Log1?, Log1).
 
 procedure(T) waited(YN?, PSt(T)?, PersonIn(T), PersonIn(T)?, PSt(T), Stream(_),
@@ -155,27 +166,27 @@ waited(y, ps(Se, T, Cs, [_|Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
     advance(ps(Se?, T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
 waited(n, St, Gs1?, Gs1, St?, Log1?, Log1).
 
-procedure(T) carded(CardAt?, PSt(T)?, PersonIn(T), PersonIn(T)?, PSt(T),
+procedure(T) approved(ApprovalAt?, PSt(T)?, PersonIn(T), PersonIn(T)?, PSt(T),
     Stream(_), Stream(_)?).
-carded(card_at(Id, P, Cs1), ps(Se, T, _, [card(K, A)|Ss]),
+approved(approval_at(Id, P, Cs1), ps(Se, T, _, [approval(K, A)|Ss]),
        [input(Id?, P?, A?)|Gs?], Gs1, St1?, [gave(K?, A?)|Log?], Log1) :-
     ground(K?), ground(A?) |
     advance(ps(Se?, T?, Cs1?, Ss?), Gs, Gs1?, St1, Log, Log1?).
-carded(nocard, St, Gs1?, Gs1, St?, Log1?, Log1).
+approved(noapproval, St, Gs1?, Gs1, St?, Log1?, Log1).
 
-%% The card of the attempt K, or of an attempt of the class K, the earliest
+%% The approval question of the attempt K, or of an attempt of the class K, the earliest
 %% drawn first.
-procedure find_card(_?, Seens?, CardAt).
-find_card(K, Cs, F?) :- ground(Cs?) | rev_seen(Cs?, [], Rs), find_card1(K?, Rs?, [], F).
-procedure find_card1(_?, Seens?, Seens?, CardAt).
-find_card1(_, [], _, nocard).
-find_card1(K, [seen(Id, P, At)|Cs], Done, card_at(Id?, P?, Rest?)) :-
+procedure find_approval(_?, Seens?, ApprovalAt).
+find_approval(K, Cs, F?) :- ground(Cs?) | rev_seen(Cs?, [], Rs), find_approval1(K?, Rs?, [], F).
+procedure find_approval1(_?, Seens?, Seens?, ApprovalAt).
+find_approval1(_, [], _, noapproval).
+find_approval1(K, [seen(Id, P, At)|Cs], Done, approval_at(Id?, P?, Rest?)) :-
     ground(At?), ground(K?), K? =?= At? |
     rev_seen(Done?, Cs?, Rest).
-find_card1(K, [seen(Id, P, attempt(_, _, _, C))|Cs], Done, card_at(Id?, P?, Rest?)) :-
+find_approval1(K, [seen(Id, P, attempt(_, _, _, C))|Cs], Done, approval_at(Id?, P?, Rest?)) :-
     ground(C?), ground(K?), K? =?= C? |
     rev_seen(Done?, Cs?, Rest).
-find_card1(K, [S|Cs], Done, F?) :- otherwise | find_card1(K?, Cs?, [S?|Done?], F).
+find_approval1(K, [S|Cs], Done, F?) :- otherwise | find_approval1(K?, Cs?, [S?|Done?], F).
 procedure rev_seen(Seens?, Seens?, Seens).
 rev_seen([], Acc, Acc?).
 rev_seen([S|Ss], Acc, R?) :- rev_seen(Ss?, [S?|Acc?], R).
@@ -190,10 +201,10 @@ among(_, [], n).
 among(X, [Y|_], y) :- X? =?= Y? | true.
 among(X, [_|Ys], B?) :- otherwise | among(X?, Ys?, B).
 
-%% The thread's written elements as a list: those before the first the
-%% program has not yet written whole, which is drawn pending(P), its
-%% unwritten tail not drawn (vGLP 118e04d, Definition "Construct Process"),
-%% so each transaction is logged once it is written, in the thread's order.
+%% The thread's written elements as a list: construct 0 is drawn element by
+%% element as it arrives, its unwritten tail not drawn (vGLP 56d898f, "The
+%% construct process"), so each transaction is logged once it is written, in
+%% the thread's order.
 procedure list_of(_?, Stream(_)).
 list_of([pending(_)|_], []).
 list_of([X|Xs], [X?|Ys?]) :- otherwise | list_of(Xs?, Ys).

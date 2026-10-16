@@ -69,18 +69,20 @@ val_peer(role(2), B?, D?, V2)
 
 %% ===========================================================================
 %% The agent (Definition "Compilation of the Canonical Platform"): a volitional
-%% procedure whose question is a pair, the stream of the person's requests and
-%% the thread, which the agent goal writes.  It asks once and calls the agent
-%% goal on the fair merge of the requests, the arriving messages, the answers
-%% of its responders and the ticks of its clock.
+%% procedure whose question is the stream of its person's requests alone.  It
+%% asks once and calls the agent goal on the fair merge of the requests, the
+%% arriving messages, the answers of its responders and the ticks of its clock;
+%% the agent goal writes the thread on the program's output to its person,
+%% Output, construct 0 (vGLP 56d898f, Section 5.4).
 %% ===========================================================================
 
 %% An attempt (i, k, pi, [t]) (Definition "Attempt, Priority, Message, App
 %% State, Question, Ready, Waiting, Clear"): its initiator, its number, its
 %% rank and a term of the request type naming its class.  The cargoes are its
-%% start, a vote on it, its outcome and a yield of it; the thread names each
-%% app transaction by its schema applied to its attempt, a Wound to the two attempts, and discover(Q) for
-%% each peer Q the agent comes to know.
+%% start, a vote on it, its outcome and a yield of it; the thread, the
+%% program's output, names each app transaction by its schema applied to its
+%% attempt, a Wound to the two attempts, and discover(Q) for each peer Q the
+%% agent comes to know.
 Peer      ::= Key.
 Speech    ::= speech(String, Peer).
 Request   ::= propose(Class) ; known(Peer).
@@ -94,8 +96,8 @@ Net       ::= msg(Peer, Content).
 Txn       ::= propose(Attempt) ; start(Attempt) ; answer(Attempt) ; vote(Attempt) ; tally(Attempt) ; commit(Attempt)
             ; yield(Attempt) ; wound(Attempt, Attempt) ; outcome(Attempt)
             ; discover(Peer).
-Session   ::= session(Stream(Request)?, Stream(Txn)).
-Card      ::= card(Attempt, YesNo?).
+Output    ::= Txn.
+Approval  ::= approval(Attempt, YesNo?).
 Close     ::= close.
 Demand    ::= more.
 Trigger   ::= req(Request) ; net(Net) ; tick ; answered(Attempt, YesNo) ; recheck.
@@ -167,8 +169,8 @@ Wait      ::= w(WKey, Integer).
 Waits     ::= [] ; [Wait | Waits].
 WFound    ::= at(Integer) ; unseen.
 St        ::= st(Peer, App, Integer, Peers, Peers, Waits, Infos, Pends).
-OpenCard  ::= oc(Attempt, Close?).
-OpenCards ::= [] ; [OpenCard | OpenCards].
+OpenApproval ::= oc(Attempt, Close?).
+OpenApprovals ::= [] ; [OpenApproval | OpenApprovals].
 Send      ::= to(Peer, Cargo).
 Sends     ::= [] ; [Send | Sends].
 Cand      ::= cand(WKey, Info).
@@ -182,10 +184,11 @@ FoundNet  ::= found(Net) ; nonefound.
 Last      ::= last(Attempt) ; nolast.
 Known     ::= allknown ; unknown(Peer).
 Then      ::= own ; done.
-CardRes   ::= card_for(Attempt) ; nocard.
+ApprovalRes ::= approval_for(Attempt) ; noapproval.
 
-exported procedure (Session)*agent(Peer?, Stream(Net)?, Stream(Net)).
-(session(Reqs, Thr?))*agent(Id, NetIn, Out?) :- ground(Id?) |
+exported procedure (Stream(Request)?)*agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Output)).
+(Reqs)*agent(Id, NetIn, Out?, Thr?) :- ground(Id?) |
     tag_requests(Reqs?, Rq),
     tag_net(NetIn?, Nt),
     clock(Dem?, Tk),
@@ -211,13 +214,13 @@ procedure clock1(Stream(Demand)?, Stream(Trigger)).
 clock1([more|Ds], [tick|Ts?]) :- clock1(Ds?, Ts).
 clock1([], []).
 
-%% A responder: the card Start raises shows the attempt and takes yes or no.
+%% A responder: the approval question Start raises shows the attempt and takes yes or no.
 %% The agent goal holds the writer of its close signal and closes it once the
 %% question is no longer pending, as when Outcome closes the attempt first; the
 %% responder then reduces without the answer, dropping the person's reader on
 %% it.
-procedure (Card)*respond(Attempt?, Close?, Stream(Trigger)).
-(card(At?, YN))*respond(At, Cl, Out?) :- ground(At?) |
+procedure (Approval)*respond(Attempt?, Close?, Stream(Trigger)).
+(approval(At?, YN))*respond(At, Cl, Out?) :- ground(At?) |
     await(At?, YN?, Cl?, Out).
 procedure await(Attempt?, YesNo?, Close?, Stream(Trigger)).
 await(At, yes, _, [answered(At?, yes)]).
@@ -233,70 +236,70 @@ await(_, _, close, []).
 %% ===========================================================================
 
 procedure agent_goal(Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger),
-    Stream(Demand), Stream(Txn), Stream(Net), OpenCards?, St?).
-agent_goal([T|Ls], In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
-    step(T?, done, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
-agent_goal([], [T|In], Ans?, Dem?, Thr?, Out?, Cards, St) :-
-    step(T?, own, [], In?, Ans, Dem, Thr, Out, Cards?, St?).
+    Stream(Demand), Stream(Txn), Stream(Net), OpenApprovals?, St?).
+agent_goal([T|Ls], In, Ans?, Dem?, Thr?, Out?, Approvals, St) :-
+    step(T?, done, Ls?, In?, Ans, Dem, Thr, Out, Approvals?, St?).
+agent_goal([], [T|In], Ans?, Dem?, Thr?, Out?, Approvals, St) :-
+    step(T?, own, [], In?, Ans, Dem, Thr, Out, Approvals?, St?).
 agent_goal([], [], [], [], [], [], _, _).
 
 procedure step(Trigger?, Then?, Stream(Trigger)?, Stream(Trigger)?,
-    Stream(Trigger), Stream(Demand), Stream(Txn), Stream(Net), OpenCards?, St?).
-step(req(propose(C)), Th, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
+    Stream(Trigger), Stream(Demand), Stream(Txn), Stream(Net), OpenApprovals?, St?).
+step(req(propose(C)), Th, Ls, In, Ans?, Dem?, Thr?, Out?, Approvals, St) :-
     ground(C?), ground(St?) |
     st_app(St?, Ap0),
     propose_cond(C?, St?, Cd, St1),
-    dispatch_propose(Cd?, C?, Th?, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St1?).
-step(req(known(Q)), Th, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
+    dispatch_propose(Cd?, C?, Th?, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Approvals?, St1?).
+step(req(known(Q)), Th, Ls, In, Ans?, Dem?, Thr?, Out?, Approvals, St) :-
     ground(Q?), ground(St?) |
     st_app(St?, Ap0),
     known_cond(Q?, St?, Cd),
-    dispatch_known(Cd?, Q?, Th?, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
-step(net(msg(_, hello(P))), Th, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
+    dispatch_known(Cd?, Q?, Th?, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Approvals?, St?).
+step(net(msg(_, hello(P))), Th, Ls, In, Ans?, Dem?, Thr?, Out?, Approvals, St) :-
     ground(P?), ground(St?) |
     st_app(St?, Ap0),
     hello_cond(P?, St?, Cd),
-    dispatch_hello(Cd?, P?, Th?, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
-step(net(msg(To, cargo(F, X))), Th, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
+    dispatch_hello(Cd?, P?, Th?, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Approvals?, St?).
+step(net(msg(To, cargo(F, X))), Th, Ls, In, Ans?, Dem?, Thr?, Out?, Approvals, St) :-
     ground(To?), ground(F?), ground(X?), ground(St?) |
     st_app(St?, Ap0),
     message_cond(X?, St?, Cd, St1),
     dispatch_message(Cd?, msg(To?, cargo(F?, X?)), F?, X?, Th?, Ap0?, Ls?,
-        In?, Ans, Dem, Thr, Out, Cards?, St1?).
-step(answered(At, YN), Th, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
+        In?, Ans, Dem, Thr, Out, Approvals?, St1?).
+step(answered(At, YN), Th, Ls, In, Ans?, Dem?, Thr?, Out?, Approvals, St) :-
     ground(At?), ground(YN?), ground(St?) |
     st_app(St?, Ap0),
-    close_card(At?, Cards?, Cards1),
+    close_approval(At?, Approvals?, Approvals1),
     answer_cond(At?, St?, Cd, St1),
     dispatch_answer(Cd?, YN?, At?, Th?, Ap0?, Ls?, In?, Ans, Dem, Thr, Out,
-        Cards1?, St1?).
-step(recheck, Th, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :- ground(St?) |
+        Approvals1?, St1?).
+step(recheck, Th, Ls, In, Ans?, Dem?, Thr?, Out?, Approvals, St) :- ground(St?) |
     st_pends(St?, Pd),
     recheck_find(Pd?, St?, F),
-    recheck1(F?, Th?, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
-step(tick, own, Ls, In, Ans?, [more|Dem?], Thr?, Out?, Cards, St) :-
-    tick(Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
-step(tick, done, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
-    tick(Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
+    recheck1(F?, Th?, Ls?, In?, Ans, Dem, Thr, Out, Approvals?, St?).
+step(tick, own, Ls, In, Ans?, [more|Dem?], Thr?, Out?, Approvals, St) :-
+    tick(Ls?, In?, Ans, Dem, Thr, Out, Approvals?, St?).
+step(tick, done, Ls, In, Ans?, Dem?, Thr?, Out?, Approvals, St) :-
+    tick(Ls?, In?, Ans, Dem, Thr, Out, Approvals?, St?).
 
-%% After a dispatch: where the app state has changed, the cards whose question
+%% After a dispatch: where the app state has changed, the approval questions whose question
 %% the new app state no longer holds pending are closed; where it has, or the
 %% dispatch consumed a start (Kick), the starts held waiting are put up again,
 %% by a recheck; and after a trigger read from the input stream, a tick
 %% excepted, the agent goal takes a tick of its own.
 procedure next(Then?, YesNo?, App?, Stream(Trigger)?, Stream(Trigger)?,
-    Stream(Trigger), Stream(Demand), Stream(Txn), Stream(Net), OpenCards?, St?).
-next(Th, Kick, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
+    Stream(Trigger), Stream(Demand), Stream(Txn), Stream(Net), OpenApprovals?, St?).
+next(Th, Kick, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Approvals, St) :-
     ground(Ap0?), ground(St?) |
     app_changed(Ap0?, St?, Ca1),
     app_changed(Ap0?, St?, Ca2),
     or(Ca2?, Kick?, Re),
-    close_falsified(Ca1?, Cards?, St?, Cards1),
+    close_falsified(Ca1?, Approvals?, St?, Approvals1),
     repend(Re?, St?, Ag, St1),
     own_after(Th?, Ow),
     app(Ag?, Ls?, L1),
     app(L1?, Ow?, L2),
-    agent_goal(L2?, In?, Ans, Dem, Thr, Out, Cards1?, St1?).
+    agent_goal(L2?, In?, Ans, Dem, Thr, Out, Approvals1?, St1?).
 
 procedure app_changed(App?, St?, YesNo).
 app_changed(Ap0, St, C?) :- ground(Ap0?), ground(St?) |
@@ -353,16 +356,16 @@ initiate_cond(yes, I, St, Cd?) :- ground(I?), ground(St?) |
 
 procedure dispatch_propose(Cond?, Class?, Then?, App?, Stream(Trigger)?,
     Stream(Trigger)?, Stream(Trigger), Stream(Demand), Stream(Txn), Stream(Net),
-    OpenCards?, St?).
+    OpenApprovals?, St?).
 dispatch_propose(go(I), C, Th, Ap0, Ls, In, Ans?, Dem?, [propose(At?)|Thr?], Out?,
-        Cards, St) :-
+        Approvals, St) :-
     ground(I?), ground(C?), ground(St?) |
     propose_effect(I?, C?, St?, At, Ss, St1),
     send_all(Ss?, St1?, Ms, St2),
     put_all(Ms?, Out, Out1?),
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out1, Cards?, St2?).
-dispatch_propose(drop, _, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out1, Approvals?, St2?).
+dispatch_propose(drop, _, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Approvals, St) :-
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Approvals?, St?).
 
 %% --- Discover: the hellos ---------------------------------------------------
 %% A peer is known once hello has been sent to it and received from it.  On
@@ -380,16 +383,16 @@ known_cond(Q, St, R?) :- ground(Q?), ground(St?) |
 
 procedure dispatch_known(YesNo?, Peer?, Then?, App?, Stream(Trigger)?,
     Stream(Trigger)?, Stream(Trigger), Stream(Demand), Stream(Txn), Stream(Net),
-    OpenCards?, St?).
+    OpenApprovals?, St?).
 dispatch_known(yes, Q, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, [msg(Q?, hello(Id?))|Out?],
-        Cards, St) :-
+        Approvals, St) :-
     ground(Q?), ground(St?) |
     st_id(St?, Id),
     add_sent(Q?, St?, St1),
     discovered(Q?, St?, St1?, Thr, Thr1?, St2),
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Dem, Thr1, Out, Cards?, St2?).
-dispatch_known(no, _, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Dem, Thr1, Out, Approvals?, St2?).
+dispatch_known(no, _, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Approvals, St) :-
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Approvals?, St?).
 
 %% An arriving hello, recorded unless recorded already.
 procedure hello_cond(Peer?, St?, YesNo).
@@ -400,14 +403,14 @@ hello_cond(P, St, R?) :- ground(St?) |
 
 procedure dispatch_hello(YesNo?, Peer?, Then?, App?, Stream(Trigger)?,
     Stream(Trigger)?, Stream(Trigger), Stream(Demand), Stream(Txn), Stream(Net),
-    OpenCards?, St?).
-dispatch_hello(yes, P, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
+    OpenApprovals?, St?).
+dispatch_hello(yes, P, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Approvals, St) :-
     ground(P?), ground(St?) |
     add_recd(P?, St?, St1),
     discovered(P?, St?, St1?, Thr, Thr1?, St2),
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Dem, Thr1, Out, Cards?, St2?).
-dispatch_hello(no, _, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Dem, Thr1, Out, Approvals?, St2?).
+dispatch_hello(no, _, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Approvals, St) :-
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Approvals?, St?).
 
 %% discover(Q) on the thread where Q, not known before, is known now: on
 %% whichever of the two hellos comes second.
@@ -606,60 +609,60 @@ held_takeable1(cls(I), A, St, T?) :- ground(A?), ground(St?) |
     neg(W?, NW),
     or(Cl?, NW?, T).
 procedure recheck1(FoundNet?, Then?, Stream(Trigger)?, Stream(Trigger)?,
-    Stream(Trigger), Stream(Demand), Stream(Txn), Stream(Net), OpenCards?, St?).
-recheck1(found(M), Th, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
-    step(net(M?), Th?, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
-recheck1(nonefound, Th, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :- ground(St?) |
+    Stream(Trigger), Stream(Demand), Stream(Txn), Stream(Net), OpenApprovals?, St?).
+recheck1(found(M), Th, Ls, In, Ans?, Dem?, Thr?, Out?, Approvals, St) :-
+    step(net(M?), Th?, Ls?, In?, Ans, Dem, Thr, Out, Approvals?, St?).
+recheck1(nonefound, Th, Ls, In, Ans?, Dem?, Thr?, Out?, Approvals, St) :- ground(St?) |
     st_app(St?, Ap0),
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Approvals?, St?).
 
 procedure dispatch_message(MCond?, Net?, Peer?, Cargo?, Then?, App?,
     Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Demand),
-    Stream(Txn), Stream(Net), OpenCards?, St?).
-dispatch_message(nopart, _, _, _, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
-dispatch_message(mdefer, M, _, _, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Cards,
+    Stream(Txn), Stream(Net), OpenApprovals?, St?).
+dispatch_message(nopart, _, _, _, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Approvals, St) :-
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Approvals?, St?).
+dispatch_message(mdefer, M, _, _, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Approvals,
         St) :-
     add_pend_once(deferred(M?), St?, St1),
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St1?).
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Approvals?, St1?).
 dispatch_message(mgo(I), M, _, start(At), Th, Ap0, Ls, In, Ans?, Dem?,
-        [start(At?)|Thr?], Out?, Cards, St) :-
+        [start(At?)|Thr?], Out?, Approvals, St) :-
     ground(At?) |
     drop_pend(deferred(M?), St?, St0),
     start_effect(I?, At?, St0?, Ss, Cr, St1),
     send_all(Ss?, St1?, Ms, St2),
     put_all(Ms?, Out, Out1?),
-    spawn(Cr?, Cards?, Cards1, Ans, Ans1?),
-    next(Th?, yes, Ap0?, Ls?, In?, Ans1, Dem, Thr, Out1, Cards1?, St2?).
+    spawn(Cr?, Approvals?, Approvals1, Ans, Ans1?),
+    next(Th?, yes, Ap0?, Ls?, In?, Ans1, Dem, Thr, Out1, Approvals1?, St2?).
 dispatch_message(mgo(I), _, F, vote(At, Y), Th, Ap0, Ls, In, Ans?, Dem?,
-        [tally(At?)|Thr?], Out?, Cards, St) :-
+        [tally(At?)|Thr?], Out?, Approvals, St) :-
     ground(At?) |
     tally_effect(I?, At?, F?, Y?, St?, Ss, St1),
     send_all(Ss?, St1?, Ms, St2),
     put_all(Ms?, Out, Out1?),
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out1, Cards?, St2?).
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out1, Approvals?, St2?).
 dispatch_message(mgo(I), _, _, yield(At), Th, Ap0, Ls, In, Ans?, Dem?,
-        [yield(At?)|Thr?], Out?, Cards, St) :-
+        [yield(At?)|Thr?], Out?, Approvals, St) :-
     ground(At?) |
     yield_effect(I?, At?, St?, Ss, St1),
     send_all(Ss?, St1?, Ms, St2),
     put_all(Ms?, Out, Out1?),
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out1, Cards?, St2?).
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out1, Approvals?, St2?).
 dispatch_message(mgo(I), _, _, outcome(At, Z), Th, Ap0, Ls, In, Ans?, Dem?,
-        [outcome(At?)|Thr?], Out?, Cards, St) :-
+        [outcome(At?)|Thr?], Out?, Approvals, St) :-
     ground(At?) |
     outcome_effect(I?, At?, Z?, St?, St1),
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St1?).
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Approvals?, St1?).
 
-%% Start raises the card, whose answers join the agent goal's input.
-procedure spawn(CardRes?, OpenCards?, OpenCards, Stream(Trigger),
+%% Start raises the approval question, whose answers join the agent goal's input.
+procedure spawn(ApprovalRes?, OpenApprovals?, OpenApprovals, Stream(Trigger),
     Stream(Trigger)?).
-spawn(nocard, Cs, Cs?, Ans?, Ans).
-spawn(card_for(At), Cs, [oc(At?, Cl)|Cs?], Ans?, Ans1) :- ground(At?) |
+spawn(noapproval, Cs, Cs?, Ans?, Ans).
+spawn(approval_for(At), Cs, [oc(At?, Cl)|Cs?], Ans?, Ans1) :- ground(At?) |
     respond(At?, Cl?, R),
     merge(R?, Ans1?, Ans).
 
-%% --- Answer, on the person's answer to the card Start raises ---------------
+%% --- Answer, on the person's answer to the approval question Start raises ---------------
 %% Its condition: the attempt a question pending at the agent, and no answer
 %% to it recorded.  It sends nothing, so it needs no peer known.  It is taken
 %% where its condition holds, and the answer dropped otherwise.
@@ -684,38 +687,38 @@ unanswered(At, R, B?) :- ground(At?), ground(R?) |
 
 procedure dispatch_answer(Cond?, YesNo?, Attempt?, Then?, App?, Stream(Trigger)?,
     Stream(Trigger)?, Stream(Trigger), Stream(Demand), Stream(Txn), Stream(Net),
-    OpenCards?, St?).
+    OpenApprovals?, St?).
 dispatch_answer(go(_), YN, At, Th, Ap0, Ls, In, Ans?, Dem?, [answer(At?)|Thr?],
-        Out?, Cards, St) :-
+        Out?, Approvals, St) :-
     ground(At?) |
     answer_effect(YN?, At?, St?, St1),
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St1?).
-dispatch_answer(drop, _, _, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
-    next(Th?, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Approvals?, St1?).
+dispatch_answer(drop, _, _, Th, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Approvals, St) :-
+    next(Th?, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Approvals?, St?).
 
-%% A card is closed by binding its close signal, which also forgets it.
-procedure close_card(Attempt?, OpenCards?, OpenCards).
-close_card(_, [], []).
-close_card(At, [oc(B, close)|Cs], Cs?) :- At? =?= B? | true.
-close_card(At, [oc(B, Cl?)|Cs], [oc(B?, Cl)|Cs1?]) :- otherwise |
-    close_card(At?, Cs?, Cs1).
+%% An approval question is closed by binding its close signal, which also forgets it.
+procedure close_approval(Attempt?, OpenApprovals?, OpenApprovals).
+close_approval(_, [], []).
+close_approval(At, [oc(B, close)|Cs], Cs?) :- At? =?= B? | true.
+close_approval(At, [oc(B, Cl?)|Cs], [oc(B?, Cl)|Cs1?]) :- otherwise |
+    close_approval(At?, Cs?, Cs1).
 
-%% The cards whose question is no longer pending, closed, where the app state
+%% The approval questions whose question is no longer pending, closed, where the app state
 %% has changed.
-procedure close_falsified(YesNo?, OpenCards?, St?, OpenCards).
+procedure close_falsified(YesNo?, OpenApprovals?, St?, OpenApprovals).
 close_falsified(no, Cs, _, Cs?).
 close_falsified(yes, Cs, St, Cs1?) :- ground(St?) |
     st_app(St?, Ap),
     app_recs(Ap?, R),
-    close_cards(Cs?, R?, Cs1).
-procedure close_cards(OpenCards?, Recs?, OpenCards).
-close_cards([], _, []).
-close_cards([oc(At, Cl?)|Cs], R, Cs1?) :- ground(At?), ground(R?) |
+    close_approvals(Cs?, R?, Cs1).
+procedure close_approvals(OpenApprovals?, Recs?, OpenApprovals).
+close_approvals([], _, []).
+close_approvals([oc(At, Cl?)|Cs], R, Cs1?) :- ground(At?), ground(R?) |
     pending_rec(At?, R?, P),
     close_one(P?, At?, Cl, Cs?, R?, Cs1).
-procedure close_one(YesNo?, Attempt?, Close, OpenCards?, Recs?, OpenCards).
-close_one(no, _, close, Cs, R, Cs1?) :- close_cards(Cs?, R?, Cs1).
-close_one(yes, At, Cl?, Cs, R, [oc(At?, Cl)|Cs1?]) :- close_cards(Cs?, R?, Cs1).
+procedure close_one(YesNo?, Attempt?, Close, OpenApprovals?, Recs?, OpenApprovals).
+close_one(no, _, close, Cs, R, Cs1?) :- close_approvals(Cs?, R?, Cs1).
+close_one(yes, At, Cl?, Cs, R, [oc(At?, Cl)|Cs1?]) :- close_approvals(Cs?, R?, Cs1).
 
 %% --- The tick: Propose of the opening classes, Vote, Commit, Wound ---------
 %% It advances the date and puts up the Propose of each opening class of the
@@ -729,12 +732,12 @@ close_one(yes, At, Cl?, Cs, R, [oc(At?, Cl)|Cs1?]) :- close_cards(Cs?, R?, Cs1).
 %% each in the order of the record or of the starts held; and drops the tick
 %% where none holds.
 procedure tick(Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger),
-    Stream(Demand), Stream(Txn), Stream(Net), OpenCards?, St?).
-tick(Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :- ground(St?) |
+    Stream(Demand), Stream(Txn), Stream(Net), OpenApprovals?, St?).
+tick(Ls, In, Ans?, Dem?, Thr?, Out?, Approvals, St) :- ground(St?) |
     st_app(St?, Ap0),
     advance(St?, St1),
     tick_cond(St1?, Ch, St2),
-    dispatch_tick(Ch?, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St2?).
+    dispatch_tick(Ch?, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Approvals?, St2?).
 
 procedure tick_cond(St?, Choice, St).
 tick_cond(St, Ch?, St2?) :- ground(St?) |
@@ -949,35 +952,35 @@ dead_key(wd(_, B), R, D?) :- ground(B?), ground(R?) |
     or(Cl?, Yd?, D).
 
 procedure dispatch_tick(Choice?, App?, Stream(Trigger)?, Stream(Trigger)?,
-    Stream(Trigger), Stream(Demand), Stream(Txn), Stream(Net), OpenCards?, St?).
-dispatch_tick(none, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
-    next(done, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
-dispatch_tick(take(op(_), I), Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Cards, St) :-
+    Stream(Trigger), Stream(Demand), Stream(Txn), Stream(Net), OpenApprovals?, St?).
+dispatch_tick(none, Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Approvals, St) :-
+    next(done, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Approvals?, St?).
+dispatch_tick(take(op(_), I), Ap0, Ls, In, Ans?, Dem?, Thr?, Out?, Approvals, St) :-
     ground(I?), ground(St?) |
     initiate_cond(yes, I?, St?, Cd),
     info_name(I?, C),
-    dispatch_propose(Cd?, C?, done, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Cards?, St?).
+    dispatch_propose(Cd?, C?, done, Ap0?, Ls?, In?, Ans, Dem, Thr, Out, Approvals?, St?).
 dispatch_tick(take(vt(At), I), Ap0, Ls, In, Ans?, Dem?, [vote(At?)|Thr?], Out?,
-        Cards, St) :-
+        Approvals, St) :-
     ground(At?), ground(I?) |
     vote_effect(I?, At?, St?, Ss, St1),
     send_all(Ss?, St1?, Ms, St2),
     put_all(Ms?, Out, Out1?),
-    next(done, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out1, Cards?, St2?).
+    next(done, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out1, Approvals?, St2?).
 dispatch_tick(take(cm(At), I), Ap0, Ls, In, Ans?, Dem?, [commit(At?)|Thr?], Out?,
-        Cards, St) :-
+        Approvals, St) :-
     ground(At?), ground(I?) |
     commit_effect(I?, At?, St?, Ss, St1),
     send_all(Ss?, St1?, Ms, St2),
     put_all(Ms?, Out, Out1?),
-    next(done, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out1, Cards?, St2?).
+    next(done, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out1, Approvals?, St2?).
 dispatch_tick(take(wd(A, B), I), Ap0, Ls, In, Ans?, Dem?, [wound(A?, B?)|Thr?], Out?,
-        Cards, St) :-
+        Approvals, St) :-
     ground(A?), ground(B?), ground(I?) |
     wound_effect(I?, B?, St?, Ss, St1),
     send_all(Ss?, St1?, Ms, St2),
     put_all(Ms?, Out, Out1?),
-    next(done, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out1, Cards?, St2?).
+    next(done, no, Ap0?, Ls?, In?, Ans, Dem, Thr, Out1, Approvals?, St2?).
 
 %% The unguarded classes the agent opens at its state: each unguarded schema at
 %% the bindings that send its first role to the agent and meet that role's
@@ -1192,14 +1195,14 @@ vote_app(At, no, app(S, K, L, R), [to(I?, vote(At?, no))],
 
 %% Start: nothing more where the attempt is closed; otherwise no where the
 %% agent's state is not in the domain of its effect, and, where it is, the question recorded
-%% and the card raised where the agent is asked, and yes where it is not.
-procedure start_effect(Info?, Attempt?, St?, Sends, CardRes, St).
+%% and the approval question raised where the agent is asked, and yes where it is not.
+procedure start_effect(Info?, Attempt?, St?, Sends, ApprovalRes, St).
 start_effect(I, At, St, Ss?, Cr?, St1?) :- ground(St?) |
     st_id(St?, Id),
     st_app(St?, Ap),
     start_app(I?, At?, Id?, Ap?, Ss, Cr, Ap1),
     set_app(St?, Ap1?, St1).
-procedure start_app(Info?, Attempt?, Peer?, App?, Sends, CardRes, App).
+procedure start_app(Info?, Attempt?, Peer?, App?, Sends, ApprovalRes, App).
 start_app(I, At, Id, app(S, K, L, R), Ss?, Cr?, Ap1?) :- ground(At?), ground(R?), integer(K?) |
     attempt_k(At?, KA),
     max_int(K?, KA?, K1),
@@ -1208,20 +1211,20 @@ start_app(I, At, Id, app(S, K, L, R), Ss?, Cr?, Ap1?) :- ground(At?), ground(R?)
 procedure max_int(Integer?, Integer?, Integer).
 max_int(A, B, A?) :- A? >= B? | true.
 max_int(A, B, B?) :- A? < B? | true.
-procedure start_app1(YesNo?, Info?, Attempt?, Peer?, App?, Sends, CardRes, App).
-start_app1(yes, _, _, _, Ap, [], nocard, Ap?).
+procedure start_app1(YesNo?, Info?, Attempt?, Peer?, App?, Sends, ApprovalRes, App).
+start_app1(yes, _, _, _, Ap, [], noapproval, Ap?).
 start_app1(no, I, At, Id, Ap, Ss?, Cr?, Ap1?) :-
     ground(I?), ground(At?), ground(Id?), ground(Ap?) |
     app_state(Ap?, S),
     dom_ok(I?, Id?, S?, Rd),
     asked_by(I?, At?, Id?, Ak),
     start_app2(Rd?, Ak?, At?, Ap?, Ss, Cr, Ap1).
-procedure start_app2(YesNo?, YesNo?, Attempt?, App?, Sends, CardRes, App).
-start_app2(no, _, At, Ap, Ss?, nocard, Ap1?) :- vote_app(At?, no, Ap?, Ss, Ap1).
-start_app2(yes, yes, At, app(S, K, L, R), [], card_for(At?),
+procedure start_app2(YesNo?, YesNo?, Attempt?, App?, Sends, ApprovalRes, App).
+start_app2(no, _, At, Ap, Ss?, noapproval, Ap1?) :- vote_app(At?, no, Ap?, Ss, Ap1).
+start_app2(yes, yes, At, app(S, K, L, R), [], approval_for(At?),
         app(S?, K?, L?, [asked(At?)|R?])) :-
     ground(At?) | true.
-start_app2(yes, no, At, Ap, Ss?, nocard, Ap1?) :- vote_app(At?, yes, Ap?, Ss, Ap1).
+start_app2(yes, no, At, Ap, Ss?, noapproval, Ap1?) :- vote_app(At?, yes, Ap?, Ss, Ap1).
 
 %% The agent is asked by an attempt where it is in the attempt's guard set,
 %% the guard set of the class containing the initiator, and is not the

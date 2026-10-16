@@ -172,8 +172,15 @@ class InteractiveType {
   final List<String> params;
   final int line, column;
 
+  /// The widget declarations in scope where the volitional procedure asking
+  /// it is declared, by moded type (vGLP ed75782, Definition "Default
+  /// Widget": "the one named by the widget declaration in scope where the
+  /// volitional procedure asking the question is declared"); null where they
+  /// are those of the source compiled.
+  final Map<String, String>? widgets;
+
   InteractiveType(this.type, this.readerMode, this.functor, this.params,
-      this.line, this.column);
+      this.line, this.column, {this.widgets});
 
   /// The moded type as written, `Card` or `Request?`.
   String get written => typeSource(type);
@@ -435,7 +442,13 @@ TypeExpr _subst(TypeExpr t, Map<String, TypeExpr> m) {
 class _Generator {
   final GenericNames gen;
   final TypeDef? Function(String) resolve;
-  final Map<String, String> declared;
+
+  /// The widget declarations of the source compiled, by moded type, and
+  /// those in force while one question's widget is drawn: the declarations
+  /// in scope where its volitional procedure is declared ([InteractiveType.
+  /// widgets]).
+  final Map<String, String> sourceDeclared;
+  Map<String, String> declared;
   final String Function(String) fresh;
   final String questionType;
   final String constructName;
@@ -459,8 +472,9 @@ class _Generator {
   /// The drawing procedure of each ask functor, run_f/5.
   final _runs = <String, String>{};
 
-  _Generator(this.gen, this.resolve, this.declared, this.fresh,
-      this.questionType, this.constructName);
+  _Generator(this.gen, this.resolve, this.sourceDeclared, this.fresh,
+      this.questionType, this.constructName)
+      : declared = sourceDeclared;
 
   ConstructProcesses build(List<InteractiveType> types, {TypeDef? output}) {
     final hook = StringBuffer();
@@ -509,10 +523,12 @@ class _Generator {
     for (final t in types) {
       final root = _Node(t.type, t.readerMode, t.params.toSet());
       _checkFlat(t, root);
+      declared = t.widgets ?? sourceDeclared;
       final w = _typeWidget(t, root);
       widgets[t.written] = w;
       hook.writeln(_constructClause(t, root, w));
       drawnAlts.add('${t.functor}(${_drawnOf(root)})');
+      declared = sourceDeclared;
     }
     if (outputWidget != null) {
       widgets[outputTypeName] = outputWidget;
@@ -630,29 +646,86 @@ class _Generator {
 
   /// The grants' raw inputs as alternatives of T: the type of each question,
   /// or its element type where it is a stream or a list, and the end
-  /// button's grant of a list.  A type whose terms another already covers is
-  /// that other's (Date beside Integer); one covering others replaces them
-  /// (Constant beside String), so that no two alternatives of T overlap.
-  /// Two that overlap and neither covers the other are refused, naming them,
-  /// as are an ask functor and a raw input of one functor.
+  /// button's grant of a list.  "The union is formed over the alternatives
+  /// of these types, an alternative common to two of them taken once, and
+  /// the compilation refuses a program two of whose alternatives have one
+  /// functor and arity and differ, since the alternatives of a union have
+  /// distinct functors" (vGLP, sections/parts/dispatcher.tex, after the
+  /// dispatcher; vGLP, 2026-10-16 12:05 UTC, Udi: yes).  A type none of whose
+  /// alternatives another has is named whole; one sharing an alternative
+  /// with a type already in the union adds its other alternatives, each by
+  /// itself, so YesNo and Pick ::= yes(MyChild) ; no give YesNo ;
+  /// yes(MyChild), the union yes ; no ; yes(MyChild).  A primitive is no
+  /// functor: a type whose terms another already covers is that other's
+  /// (Date beside Integer), one covering others replaces them (Constant
+  /// beside String), and two primitives that overlap with neither covering
+  /// the other are refused, naming them, as are an ask functor and a raw
+  /// input of one functor.
   List<String> _rUnion(List<String> drawnAlts) {
+    // The union's members, each a type named whole or an alternative by
+    // itself, with the terms it covers.
     final kept = <(String, Set<String>)>[];
+    // Each alternative of a functor, a constant or [] in the union, by what
+    // it covers, as written, with the type it is of.
+    final altOf = <String, (String, String)>{};
     for (final MapEntry(key: name, value: node) in _rTypes.entries) {
+      final alts = [
+        for (final a in _nodeAlts(node)) (a, _altCovers(a), _altText(a))
+      ];
+      for (final (a, c, text) in alts) {
+        if (a is _LeafAlt) continue;
+        final k = c.single;
+        final known = altOf[k];
+        if (known != null && known.$1 != text) {
+          throw CompileError(
+              'The person\'s raw inputs to questions of types ${known.$2} and '
+              '$name have the alternatives ${known.$1} and $text, of one '
+              'functor and arity, which differ: the union of the person '
+              'channel\'s type is formed over the alternatives of these types, '
+              'and the compilation refuses a program two of whose alternatives '
+              'have one functor and arity and differ, since the alternatives '
+              'of a union have distinct functors (vGLP, sections/parts/'
+              'dispatcher.tex)',
+              0, 0, phase: 'analyzer');
+        }
+      }
       final c = _covers(node);
       final all = {for (final k in kept) ...k.$2};
       if (all.containsAll(c)) continue;
       kept.removeWhere((k) => c.containsAll(k.$2));
-      for (final k in kept) {
-        if (k.$2.intersection(c).isNotEmpty) {
+      final shared = {
+        for (final k in kept) ...k.$2.intersection(c)
+      };
+      if (shared.isEmpty) {
+        kept.add((name, c));
+      } else {
+        // An alternative of a functor, a constant or [] common to two
+        // types is taken once; a primitive is none of these.
+        final leaves = <String>{
+          for (final (a, ac, _) in alts)
+            if (a is _LeafAlt) ...ac
+        };
+        final clash = shared.intersection(leaves).isNotEmpty ||
+            shared.any((k) => !altOf.containsKey(k));
+        if (clash) {
+          final other = kept.firstWhere(
+              (k) => k.$2.intersection(c).isNotEmpty);
           throw CompileError(
-              'The person\'s raw inputs to questions of types ${k.$1} and '
+              'The person\'s raw inputs to questions of types ${other.$1} and '
               '$name overlap, and neither type holds the other\'s, so the '
               'type of the person channel, their union, is not formed (vGLP, '
               'Definition "Construct Process")',
               0, 0, phase: 'analyzer');
         }
+        for (final (_, ac, text) in alts) {
+          if (all.containsAll(ac)) continue;
+          kept.add((text, ac));
+        }
       }
-      kept.add((name, c));
+      for (final (a, c, text) in alts) {
+        if (a is _LeafAlt) continue;
+        altOf.putIfAbsent(c.single, () => (text, name));
+      }
     }
     final asks = {
       for (final d in drawnAlts) d.substring(0, d.indexOf('(')),
@@ -674,6 +747,63 @@ class _Generator {
       if (_rListEnd && !covered.contains('.'))
         '[${gen.drawn}End | ${gen.drawn}Nil]',
     ];
+  }
+
+  /// The terms the alternative [a] covers, as [_covers] gives them.
+  Set<String> _altCovers(_Alt a) {
+    if (a is _ConstAlt) return {'c:${constantSource(a.value)}'};
+    if (a is _StructAlt) return {'f:${a.functor}/${a.args.length}'};
+    if (a is _NilAlt) return {'[]'};
+    if (a is _ConsAlt) return {'.'};
+    final leaf = (a as _LeafAlt).leaf;
+    switch (leaf) {
+      case _Leaf.integer:
+        return {'integer'};
+      case _Leaf.real:
+        return {'real'};
+      case _Leaf.number:
+        return {'integer', 'real'};
+      case _Leaf.string:
+        return {'string'};
+      case _Leaf.module:
+        return {'module'};
+      case _Leaf.constant:
+        return {'integer', 'real', 'string', 'module'};
+      default:
+        return {'any'};
+    }
+  }
+
+  /// The alternative [a] as a type definition writes it.
+  String _altText(_Alt a) {
+    if (a is _ConstAlt) return constantSource(a.value);
+    if (a is _StructAlt) {
+      return '${functorNameSource(a.functor)}('
+          '${a.args.map(typeSource).join(', ')})';
+    }
+    if (a is _NilAlt) return '[]';
+    if (a is _ConsAlt) {
+      return '[${typeSource(a.head)} | ${typeSource(a.tail)}]';
+    }
+    final l = a as _LeafAlt;
+    switch (l.leaf) {
+      case _Leaf.integer:
+        return 'Integer';
+      case _Leaf.real:
+        return 'Real';
+      case _Leaf.number:
+        return 'Number';
+      case _Leaf.string:
+        return 'String';
+      case _Leaf.module:
+        return 'Module';
+      case _Leaf.constant:
+        return 'Constant';
+      case _Leaf.param:
+        return l.name!;
+      default:
+        return '_';
+    }
   }
 
   /// The drawn type of the interactive type whose root is [root]: the type
@@ -705,8 +835,8 @@ class _Generator {
     return w == 'shown' ? 'thread' : 'thread($w)';
   }
 
-  /// The widget of interactive type [t], whose root is [root]: the one in the
-  /// program's scope.
+  /// The widget of interactive type [t], whose root is [root]: the one in
+  /// scope where its volitional procedure is declared.
   String _typeWidget(InteractiveType t, _Node root) => _widget(root, {});
 
   // --- the construct clause -------------------------------------------------

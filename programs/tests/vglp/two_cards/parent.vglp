@@ -1,0 +1,18 @@
+%% parent.vglp --- the parent's module of the two-cards program: its own
+%% Card, a chore the person approves or not.  The child's module defines a
+%% Card of its own, so each functor is prefixed with the name of the module
+%% that defines its type, parent_card_w here (vGLP at c9a928d, sections/
+%% parts/canonical-compilation.tex: "and, where two modules of M define
+%% interactive types of one name, prefixed with the name of the module that
+%% defines it"; vGLP's task of 2026-10-16 11:25 UTC, item 3).
+
+YesNo ::= yes ; no.
+
+%% The program shows the chore, and the person approves it or not.
+Card ::= card(Constant, YesNo?).
+
+procedure (Card)*approve(Constant?, Stream(YesNo)).
+(card(C?, A))*approve(C, [A?]) :- ground(C?) | true.
+
+exported procedure parent(Stream(YesNo)).
+parent(As?) :- approve(dishes, As).
