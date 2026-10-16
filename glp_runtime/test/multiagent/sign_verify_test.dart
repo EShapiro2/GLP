@@ -68,21 +68,26 @@ Directory _load(GlpEngine engine, String source) {
   // program lies at or below the root"): a program in the system's temporary
   // directory, outside it, is refused since 2026-10-04.
   final dir = Directory('../programs/tests').createTempSync('glp_sign_');
+  addTearDown(() {
+    if (dir.existsSync()) dir.deleteSync(recursive: true);
+  });
   final f = File('${dir.path}/probe.glp')..writeAsStringSync(source);
   engine.loadFile(f.path);
   return dir;
 }
 
 /// A program that signs `hello` and emits the signed term, and one that takes
-/// any term through signature/2 and emits the signer and the term where it is
-/// a verified signed term, and `unsigned` otherwise.
+/// any term through signature/2 and emits signed(K, H, T) --- the signer, the
+/// module identity and the term, one Signature on a stream of one type
+/// (send_to_user/1 is procedure(X) send_to_user(Stream(X)?)) --- where it is a
+/// verified signed term, and `unsigned` otherwise.
 const String _makeAndCheck = '''
 procedure make.
 make :- self_key(K), sign(hello, K?, S), send_to_user([S?]).
 procedure check(_?).
 check(S) :- signature(S?, Sig), report(Sig?).
 procedure report(Signature?).
-report(signed(K, _, T)) :- send_to_user([K?, T?]).
+report(signed(K, H, T)) :- send_to_user([signed(K?, H?, T?)]).
 report(unsigned) :- send_to_user([unsigned]).
 ''';
 
@@ -102,18 +107,15 @@ procedure round_trip.
 round_trip :- self_key(K), sign(attest(pka, pkb), K?, S), signature(S?, Sig),
     report(Sig?).
 procedure report(Signature?).
-report(signed(K, H, T)) :- send_to_user([K?, H?, T?]).
+report(signed(K, H, T)) :- send_to_user([signed(K?, H?, T?)]).
 report(unsigned) :- send_to_user([unsigned]).
 ''');
       try {
         final result = await engine.runGoal('round_trip');
         expect(result.succeeded, isTrue);
-        expect(out.length, 3);
-        expect(out[0], a.pub.hex);
+        // One Signature term: the signer, the signing module's h(M), the term.
         final hM = (engine.appModule!.artefact as Artefact).hM;
-        expect(out[1], _hex(hM),
-            reason: 'the module identity is the signing module\'s h(M)');
-        expect(out[2], contains('attest'));
+        expect(out, ['signed(${a.pub.hex}, ${_hex(hM)}, attest(pka, pkb))']);
       } finally {
         dir.deleteSync(recursive: true);
       }
@@ -261,9 +263,10 @@ make :- self_key(K), sign(attest(pka, pkb), K?, S), send_to_user([S?]).
         final signed = aliceOut.single;
         final result = await bob.runGoal("check('$signed')");
         expect(result.succeeded, isTrue);
-        expect(bobOut.length, 2);
-        expect(bobOut[0], a.pub.hex);
-        expect(bobOut[1], contains('attest'));
+        // The signer is alice and the module identity her signing module's.
+        final hM = (alice.appModule!.artefact as Artefact).hM;
+        expect(bobOut,
+            ['signed(${a.pub.hex}, ${_hex(hM)}, attest(pka, pkb))']);
       } finally {
         aliceDir.deleteSync(recursive: true);
         bobDir.deleteSync(recursive: true);
@@ -317,6 +320,9 @@ test_suspend :- self_key(K), sign(attest(A?, pkb), K?, S), emit(S?), A = pka.
       final engine = _agent('alice', a, <String>[]);
       final sig = '0' * 128;
       final dir = Directory('../programs/tests').createTempSync('glp_sign_');
+      addTearDown(() {
+        if (dir.existsSync()) dir.deleteSync(recursive: true);
+      });
       try {
         final f = File('${dir.path}/probe.glp')
           ..writeAsStringSync('''
