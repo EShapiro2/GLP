@@ -26,7 +26,7 @@
 
 Lines ::= [] ; [String | Lines].
 imported procedure text#fixed_text(Lines).
-imported procedure local#faults(Contract?, Stream(_)).
+imported procedure local#faults(Contract?, Preds?, Stream(_)).
 
 Found ::= named(Constant, Constant) ; unnamed.
 
@@ -64,8 +64,8 @@ compile1([L|Ls], _, _, _, _) :-
     lapp(Ls?, ['%% compile end'], Ls1).
 
 procedure compile2(Stream(_)?, Constant?, Contract?, Preds?, Preds?).
-compile2([], Nm, C, Rf, E) :- ground(C?) |
-    local # faults(C?, Fs),
+compile2([], Nm, C, Rf, E) :- ground(C?), ground(Rf?) |
+    local # faults(C?, Rf?, Fs),
     compile3(Fs?, Nm?, C?, Rf?, E?).
 compile2([L|Ls], _, _, _, _) :-
     send_to_user(['%% compile begin', L?|Ls1?]),

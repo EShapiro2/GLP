@@ -13,10 +13,14 @@
 
 Class ::=
 befriend(Peer, Peer)
+;
+greet(Peer, Peer)
+;
+cheer(Peer)
 .
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(befriend, [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])])])
+contract_schemas([schema(befriend, [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]), schema(greet, [rs(guarded, [atom(greeted, [])], [], [atom(friend, [role(2)])], []), rs(unguarded, [atom(greeting, [])], [], [], [])]), schema(cheer, [rs(guarded, [atom(cheered, [])], [atom(greeted, [])], [], [])])])
 .
 
 procedure reflexive_preds(Preds).
@@ -30,6 +34,10 @@ introduction_preds([friend])
 procedure binding_of(Class?, Constant, Binding).
 binding_of(befriend(V1, V2), befriend, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
+binding_of(greet(V1, V2), greet, [b(role(1), p(V1?)), b(role(2), p(V2?))])
+.
+binding_of(cheer(V1), cheer, [b(role(1), p(V1?))])
+.
 
 procedure class_of(Constant?, Binding?, Peer?, Class).
 class_of(befriend, B, D, befriend(V1?, V2?))
@@ -41,6 +49,24 @@ ground(D?)
 val_peer(role(1), B?, D?, V1)
 ,
 val_peer(role(2), B?, D?, V2)
+.
+class_of(greet, B, D, greet(V1?, V2?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+.
+class_of(cheer, B, D, cheer(V1?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
 .
 
 %% ===========================================================================

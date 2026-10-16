@@ -107,6 +107,16 @@
 %%
 %%   befriend(p?, q?) :  at p  not friend(q), +friend(q)
 %%                       at q  not friend(p), +friend(p)
+%%   greet(p?, q)     :  at p  friend(q), +greeted
+%%                       at q  +greeting
+%%   cheer(p?)        :  at p  -greeted, +cheered
+%%
+%% greeted, greeting and cheered are of arity zero, so a state holds a count
+%% of each; greet(p, p) sends its two roles to one person, neither adding or
+%% deleting an atom naming the other, so they act together there, friend(p)
+%% holding at p, friend being reflexive, and greeted and greeting both added;
+%% and each cheer deletes one greeted (vGLP, Section 5.4, the paragraph on act
+%% schemas; vGLP 2026-10-16 13:53 UTC, C.4).
 %%
 %% friends/self.glp plays it.
 %% ---------------------------------------------------------------------------
@@ -217,4 +227,9 @@ link([schema(befriend,
 procedure friends(Contract).
 friends([schema(befriend,
            [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
-            rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])])]).
+            rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
+         schema(greet,
+           [rs(guarded, [atom(greeted, [])], [], [atom(friend, [role(2)])], []),
+            rs(unguarded, [atom(greeting, [])], [], [], [])]),
+         schema(cheer,
+           [rs(guarded, [atom(cheered, [])], [atom(greeted, [])], [], [])])]).

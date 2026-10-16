@@ -18,13 +18,18 @@
 %%   the other, no person asked (Section 5.4).  bob, never having requested
 %%   carol known, proposes befriending her, and the request question asked on
 %%   reading that request shows alice and carol; carol answers yes and it
-%%   commits.
+%%   commits.  Meanwhile alice greets herself twice, greet(alice, alice), its
+%%   two roles at her and friend(alice) holding there, friend reflexive: a
+%%   class of one participant, applied at its Propose, adding greeted and
+%%   greeting.  She cheers twice, each cheer deleting one of her two greeted;
+%%   her third cheer finds none, so it is dropped and takes no number; and she
+%%   greets bob, whose machine votes on it.
 %%
 %% The types of platform.vglp, written again for the declarations of the
 %% procedures imported from its compiled module.
 %% ---------------------------------------------------------------------------
 
-Class    ::= befriend(Peer, Peer).
+Class    ::= befriend(Peer, Peer) ; greet(Peer, Peer) ; cheer(Peer).
 Request  ::= propose(Class) ; known(Peer).
 YesNo    ::= yes ; no.
 Decision ::= commit ; abort.
@@ -55,7 +60,18 @@ play_friends(LA?, LB?, LC?, N?) :-
           wait(discover(bob)), wait(discover(carol)),
           req(propose(befriend(alice, bob))),
           wait(commit(attempt(alice, 1, 1, befriend(alice, bob)))),
-          req(propose(befriend(alice, carol)))],
+          req(propose(befriend(alice, carol))),
+          wait(commit(attempt(alice, 2, 2, befriend(alice, carol)))),
+          req(propose(greet(alice, alice))),
+          wait(propose(attempt(alice, 3, 3, greet(alice, alice)))),
+          req(propose(greet(alice, alice))),
+          wait(propose(attempt(alice, 4, 4, greet(alice, alice)))),
+          req(propose(cheer(alice))),
+          wait(propose(attempt(alice, 5, 5, cheer(alice)))),
+          req(propose(cheer(alice))),
+          wait(propose(attempt(alice, 6, 6, cheer(alice)))),
+          req(propose(cheer(alice))),
+          req(propose(greet(alice, bob)))],
          [req(known(alice)), wait(discover(alice)),
           approval(befriend(alice, bob), yes),
           wait(discover(carol)),

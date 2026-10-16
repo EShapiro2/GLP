@@ -3384,6 +3384,12 @@ compile(federated, [], conditions_met).
 compile(one_req, [schema(s1, [rs(guarded, [atom(x, [])], [], [atom(r1, [])], []), rs(guarded, [atom(y, [])], [], [atom(r2, [])], [])]), schema(s2, [rs(guarded, [atom(x, [])], [], [atom(r3, [])], []), rs(guarded, [atom(y, [])], [], [atom(r2, [])], [])])], syntactically_grassroots).
 compile(two_gsets, [schema(s1, [rs(guarded, [atom(x, [])], [], [], []), rs(guarded, [atom(y, [])], [], [], []), rs(unguarded, [atom(z, [])], [], [], [])]), schema(s2, [rs(unguarded, [atom(x, [])], [], [], []), rs(guarded, [atom(y, [])], [], [], []), rs(guarded, [atom(z, [])], [], [], [])])], syntactically_grassroots).
 compile(unguarded_reqs, [schema(u1, [rs(unguarded, [atom(x, [role(2)])], [], [atom(r, [role(2)])], []), rs(unguarded, [atom(y, [role(1)])], [], [atom(w, [role(1)])], [])]), schema(u2, [rs(unguarded, [atom(y, [role(2)])], [], [atom(w, [role(2)])], []), rs(unguarded, [atom(x, [role(1)])], [], [], [])])], syntactically_grassroots).
+compile(refl_own, reflexive([f], [schema(s1, [rs(guarded, [atom(x, [])], [], [atom(f, [role(1)])], []), rs(guarded, [atom(y, [])], [], [atom(f, [role(2)])], [])]), schema(s2, [rs(guarded, [atom(x, [])], [], [], []), rs(guarded, [atom(y, [])], [], [], [])])]), syntactically_grassroots).
+compile(refl_not, [schema(s1, [rs(guarded, [atom(x, [])], [], [atom(f, [role(1)])], []), rs(guarded, [atom(y, [])], [], [atom(f, [role(2)])], [])]), schema(s2, [rs(guarded, [atom(x, [])], [], [], []), rs(guarded, [atom(y, [])], [], [], [])])], syntactically_grassroots).
+compile(contra, [schema(s1, [rs(guarded, [atom(x, []), atom(x2, [])], [], [atom(w, [])], []), rs(guarded, [atom(y, [])], [], [atom(w, [])], [])]), schema(s2, [rs(guarded, [atom(x, [])], [], [], [atom(k, [role(3)])]), rs(guarded, [atom(y, [])], [], [], []), rs(guarded, [atom(x2, [])], [], [atom(k, [role(1)])], [])])], syntactically_grassroots).
+compile(contra_live, [schema(s1, [rs(guarded, [atom(x, []), atom(x2, [])], [], [atom(w, [])], []), rs(guarded, [atom(y, [])], [], [atom(w, [])], [])]), schema(s2, [rs(guarded, [atom(x, [])], [], [], [atom(k, [role(2)])]), rs(guarded, [atom(y, [])], [], [], []), rs(guarded, [atom(x2, [])], [], [atom(k, [role(1)])], [])])], syntactically_grassroots).
+compile(marks, [schema(s1, [rs(guarded, [atom(x, [])], [], [atom(r1, [])], []), rs(unguarded, [atom(y, [])], [], [], [])]), schema(s2, [rs(unguarded, [atom(x, [])], [], [], []), rs(guarded, [atom(y, [])], [], [], [])])], syntactically_grassroots).
+compile(marks_same, [schema(s1, [rs(guarded, [atom(x, [])], [], [atom(r1, [])], []), rs(unguarded, [atom(y, [])], [], [], [])]), schema(s2, [rs(unguarded, [atom(x, [])], [], [atom(r1, [])], []), rs(guarded, [atom(y, [])], [], [], [])])], syntactically_grassroots).
 :quit
 HEREDOC
 2>&1)
@@ -3399,6 +3405,22 @@ check "CVA compiler: a class with two minimal guard sets not both of one person,
 check "CVA compiler: ... the schema-bindings of the two guard sets named" "%% and the schema-binding(s2(person(0), person(1), person(2)))" "$cva_refuse"
 check "CVA compiler: an unguarded class whose schema-bindings require different atoms at one participant, refused as not effective" "%% not compiled(unguarded_reqs)" "$cva_refuse"
 check "CVA compiler: ... the two schema-bindings of the unguarded class named" "%% and the schema-binding(u2(person(1), person(0)))" "$cva_refuse"
+# Act schemas as local specifications (vGLP ca78e11, Section 5.4; vGLP
+# 2026-10-16 13:53 UTC, C.4): an atom of a reflexive predicate naming the
+# participant holds there and requires nothing; a schema-binding whose two
+# roles at one person require and forbid one atom there determines nothing and
+# is of no class; and the third condition, schema-bindings of one class
+# marking different people requiring and forbidding the same atoms at every
+# participant.
+check "CVA compiler: requirements differing at both participants only by the reflexive atom naming each, compiled" "%% the canonical CVA platform of the contract(refl_own)" "$cva_refuse"
+check_not "CVA compiler: ... and not refused" "%% not compiled(refl_own)" "$cva_refuse"
+check "CVA compiler: ... the same, f not declared reflexive, refused" "%% not compiled(refl_not)" "$cva_refuse"
+check "CVA compiler: a schema-binding of two roles at one person requiring and forbidding one atom there is of no class, so the contract is local" "%% the canonical CVA platform of the contract(contra)" "$cva_refuse"
+check_not "CVA compiler: ... and not refused" "%% not compiled(contra)" "$cva_refuse"
+check "CVA compiler: ... its two roles at one person satisfiable there, the schema-binding of the class, which is refused" "%% and the schema-binding(s2(person(0), person(1), person(0)))" "$cva_refuse"
+check "CVA compiler: two schema-bindings of one class marking different people and requiring different atoms at a participant, refused by the third condition" "%% not compiled(marks)" "$cva_refuse"
+check "CVA compiler: ... the third condition named" "%% the third condition): two schema-bindings of one class mark different sets of people" "$cva_refuse"
+check "CVA compiler: ... marking different people and requiring the same atoms, compiled" "%% the canonical CVA platform of the contract(marks_same)" "$cva_refuse"
 
 # The compiled agent is no longer volitional: it asks for requests by request
 # questions, goals of a volitional procedure whose question, Menu ::=
@@ -3733,6 +3755,11 @@ check "CVA introduce peers: bob comes to know carol by the ihellos, never having
 check "CVA introduce peers: carol comes to know bob, is asked, answers yes, and the friends of a friend are friends" "C = \[.*discover(bob), start(attempt(bob, 2, 2, befriend(bob, carol))), gave(befriend(bob, carol), yes), answer(attempt(bob, 2, 2, befriend(bob, carol))), vote(attempt(bob, 2, 2, befriend(bob, carol))), outcome(attempt(bob, 2, 2, befriend(bob, carol)))" "$cva_friends"
 check "CVA introduce peers: ... it commits" "sent(bob, carol, outcome(attempt(bob, 2, 2, befriend(bob, carol)), commit))" "$cva_friends"
 check_not "CVA introduce peers: no pair introduced twice by one agent" "intro(alice, bob, carol), .*intro(alice, bob, carol)" "$cva_friends"
+check "CVA two roles at one person: alice's greet(alice, alice), friend(alice) holding at her, friend reflexive, a class of one participant applied at its Propose" "A = \[.*propose(attempt(alice, 3, 3, greet(alice, alice))).*propose(attempt(alice, 4, 4, greet(alice, alice)))" "$cva_friends"
+check "CVA counts: two cheers, each deleting one of her two greeted" "propose(attempt(alice, 5, 5, cheer(alice))).*propose(attempt(alice, 6, 6, cheer(alice)))" "$cva_friends"
+check "CVA counts: her third cheer, no greeted left, dropped and taking no number: her greet of bob is attempt 7" "propose(attempt(alice, 6, 6, cheer(alice))).*propose(attempt(alice, 7, 7, greet(alice, bob)))" "$cva_friends"
+check_not "CVA counts: ... no third cheer proposed" "propose(attempt(alice, [0-9]*, [0-9]*, cheer(alice))).*propose(attempt(alice, [0-9]*, [0-9]*, cheer(alice))).*propose(attempt(alice, [0-9]*, [0-9]*, cheer(alice)))" "$cva_friends"
+check "CVA two roles at one person: greet(alice, bob), at two people, bob's machine voting on it, commits" "sent(alice, bob, outcome(attempt(alice, 7, 7, greet(alice, bob)), commit))" "$cva_friends"
 echo ""
 
 
