@@ -35,3 +35,15 @@ play_swap(ScreenA?, ScreenB?) :-
     person # person(alice, DrawsA?, GrantsA, _, [mint(2), swap(bob, alice, now, 2, bob, 30, 2)], none, ScreenA),
     run(bonds(bob, ch(GrantsB?, DrawsB), [conversation(alice, ch(BA?, AB))]), T?, M?),
     person # person(bob, DrawsB?, GrantsB, _, [mint(2, 30), accept(alice)], none, ScreenB).
+
+%% The scripted person the super-app's plays activate: the root's second
+%% template miniapp_person/4 (programs/self.glp) at the mini-app's own Drawn,
+%% what its dispatcher draws, and ScreenContent, the screen the person reports
+%% (Currencies 2026-10-13 20:09 UTC, item 2, and 20:21 UTC, item 1; GSG
+%% 2026-10-13 20:22 UTC, G; vGLP 2026-10-16 11:25 UTC, item 4).  The role
+%% chooses the script, the person's acts on its end of the person channel:
+%%   alice  [mint(2), swap(bob, alice, now, 2, bob, 30, 2)]
+%%   bob    [mint(2, 30), accept(alice)]
+exported procedure miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(ScreenContent)).
+miniapp_person(Id, alice, ch(Ds, Gs?), S?) :- person # person(Id?, Ds?, Gs, _, [mint(2), swap(bob, alice, now, 2, bob, 30, 2)], none, S).
+miniapp_person(Id, bob, ch(Ds, Gs?), S?) :- person # person(Id?, Ds?, Gs, _, [mint(2, 30), accept(alice)], none, S).

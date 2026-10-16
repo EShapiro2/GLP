@@ -30,6 +30,10 @@ imported procedure person#person(Key?, _?, PersonIn(Drawn), Stream(Integer), Scr
 exported procedure person(Key?, _?, PersonIn(Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
 person(Id, Draws, Grants?, Cal?, Script, Ag, Screen?) :- person # person(Id?, Draws?, Grants, Cal, Script?, Ag?, Screen).
 
+imported procedure plays#miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(ScreenContent)).
+exported procedure miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(ScreenContent)).
+miniapp_person(Id, Role, PEnd, Screen?) :- plays # miniapp_person(Id?, Role?, PEnd?, Screen).
+
 imported procedure plays#play_mint(Stream(ScreenContent)).
 exported procedure play_mint(Stream(ScreenContent)).
 play_mint(S?) :- plays # play_mint(S).
