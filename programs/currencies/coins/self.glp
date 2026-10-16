@@ -124,7 +124,7 @@ UserInMsg ::= accept_swap(Key, Lot, Stream(Coin), SwapResponse?)
 
 %% The offer a swap responder carries: the proposer, the lot it wants, the
 %% coins it offers, each field named by the variable its clause gives it, as
-%% the request's are, so that the card labels it From, Want and Offered.
+%% the request's are, so that the approval question labels it From, Want and Offered.
 Offer   ::= offer(From, Want, Offered).
 From    ::= Key.
 Want    ::= Lot.
@@ -133,7 +133,7 @@ Offered ::= Stream(Coin).
 %% =============================================================================
 %% The agent's questions (vGLP, Definition "Guarded Clause, Volitional
 %% Procedure, Interactive Type, ..."): the person's requests, the agent's
-%% interactive type in reader mode, and the responder's card, in writer mode.
+%% interactive type in reader mode, and the responder's approval question, in writer mode.
 %% =============================================================================
 
 %% The fields of a request, one named type per meaning over its base type,
@@ -157,10 +157,10 @@ Request ::= mint(Amount)
           ; pay(Friend, Amount)
           ; redeem(Friend, WantCoin).
 
-%% The responder's card: the offer, which the agent writes for the person to
+%% The responder's approval question: the offer, which the agent writes for the person to
 %% see, and the person's answer, yes accepting and no declining.
 YesNo ::= yes ; no.
-Card  ::= card(Offer, YesNo?).
+Approval ::= approval(Offer, YesNo?).
 
 %% =============================================================================
 %% The vocabulary of the compiled agent's dispatcher, so that the mini-app
@@ -173,8 +173,8 @@ Card  ::= card(Offer, YesNo?).
 %% definitions shadow these within it, and the two must agree.
 %% =============================================================================
 
-Question ::= card_w(Card) ; stream_request_r(Stream(Request)?).
-Drawn ::= card_w(_) ; stream_request_r(_) ; output(List(Output)) ; YesNo ; Request.
+Question ::= approval_w(Approval) ; stream_request_r(Stream(Request)?).
+Drawn ::= approval_w(_) ; stream_request_r(_) ; output(List(Output)) ; YesNo ; Request.
 Ask(Q)   ::= ask(Constant, Q).
 
 %% What the person sees on the mini-app's person channel: the constructs the
@@ -189,7 +189,7 @@ Events ::= [Event | Events].
 
 %% A person's script (currency/person.glp): its acts, in order.  A step is a
 %% request, granted on the agent's request form; an acceptance of a swap the
-%% named party proposes, granted on its card; or a wait for a screen message.
+%% named party proposes, granted on its approval question; or a wait for a screen message.
 Step ::= mint(Integer)
        ; swap(Key, Key, Integer, Key, Integer)
        ; pay(Key, Integer)
