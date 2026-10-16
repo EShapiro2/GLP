@@ -22,9 +22,10 @@
 %%
 %%   at each agent a of 1..N, its start goal --- the compiled start/6, with a,
 %%   its two lists in increasing order (agents 1..N/2 are of one sex and the
-%%   rest of the other; the first list is the other agents of a's sex, the
-%%   second the agents of the other sex), its input and output streams and its
-%%   ask stream, spawned once both lists are built --- and its person process
+%%   rest of the other; the first list is the two agents of a's sex it knows at
+%%   the start, the second the two of the other sex, drawn from its block;
+%%   Section 5, Appendix B), its input and output streams and its ask stream
+%%   --- and its person process
 %%   (population.glp, person/6), with its stochastic person and its seed,
 %%   reading that ask stream in the dispatcher's place (Section 3, Definition
 %%   "Simulation Program");
@@ -40,9 +41,15 @@
 %% population's draws are from a second generator, started at the first value
 %% drawn from the run's seed, split into blocks of 4096 consecutive draws:
 %% agent a's block is the a-th.  Its first two draws pick a's profile in each
-%% dimension by the mix (population.glp, stochastic_person/5), and the seed
-%% they leave is its person process's seed, the start of its own generator,
-%% whatever the mix.  An agent's draws stay within its block
+%% dimension by the mix (population.glp, stochastic_person/5); the next is the
+%% seed of its person process, a value of 1..2147483646 drawn from the seed
+%% the profiles leave, random(S?, 2147483646, PSeed, S1), so that the person
+%% process's draws are on a chain of their own, as the person process seeds
+%% each person goal; and from S1 are drawn the two agents of a's sex it knows
+%% at the start, then the two of the other sex, uniformly and without
+%% replacement (known/6; sGLP's answer of 2026-10-16 13:40 UTC), whatever the
+%% mix.  With fewer than 6 agents an agent would have fewer than two others of
+%% its sex, so the run requires N even and at least 6.  An agent's draws stay within its block
 %% while it answers fewer than about 4090 questions; past that they run into
 %% the next agent's.
 %%
@@ -60,7 +67,7 @@ imported procedure population#person(Integer?, Profiles?, MutualRef?, Integer?,
 
 exported procedure run(Integer?, Number?, Span?, Integer?, Integer?, Integer?).
 run(N, C, U, Seed, Hom, Wary) :-
-    N? >= 4, N? mod 2 =:= 0,
+    N? >= 6, N? mod 2 =:= 0,
     Hom? >= 0, Hom? =< 100, Wary? >= 0, Wary? =< 100 |
     span(U?, Secs),
     H := C? * Secs?,
@@ -81,9 +88,10 @@ procedure agents(Integer?, Integer?, Integer?, Integer?, Integer?, Integer?,
                  Stream(Stream(Msg))?, MwmInput(Msg), MutualRef?, MutualRef?).
 agents(A, H, N, B, Hom, Wary, [In|Ins], [merge(Out?)|Ms?], Mon, Log) :-
     A? =< N? |
-    peers(A?, H?, N?, Ss, Os, Done),
-    population # stochastic_person(B?, Hom?, Wary?, P, Seed),
-    start_when(Done?, A?, Ss?, Os?, In?, Out, Asks),
+    population # stochastic_person(B?, Hom?, Wary?, P, S),
+    random(S?, 2147483646, Seed, S1),
+    known(A?, H?, N?, S1?, Ss, Os),
+    graph # start(A?, Ss?, Os?, In?, Out, Asks),
     population # person(A?, P?, Mon?, Seed?, Log?, Asks?),
     skip(4096, B?, B2),
     A1 := A? + 1,
@@ -105,7 +113,7 @@ agents(A, _, N, _, _, _, [], [], _, _) :-
 %% change to the one is a change to the other.
 exported procedure draw(Integer?, Integer?, Integer?, Integer?, Draw).
 draw(N, Seed, Hom, Wary, draw(H?, I?, W?, S?, As?)) :-
-    N? >= 4, N? mod 2 =:= 0,
+    N? >= 6, N? mod 2 =:= 0,
     Hom? >= 0, Hom? =< 100, Wary? >= 0, Wary? =< 100 |
     random(Seed?, 2147483646, Base, _),
     tally(1, N?, Base?, Hom?, Wary?, 0, 0, 0, 0, As, H, I, W, S).
@@ -162,66 +170,79 @@ skip(J, S, S1?) :-
     J1 := J? - 1,
     skip(J1?, S2?, S1).
 
-%% peers(A?, H?, N?, Ss, Os, D): Ss the other agents of A's sex, Os the agents
-%% of the other sex, in increasing order, and D done once both are built;
-%% agents 1..H are of one sex, H = N/2.  N is even and at least 4, so that both
-%% lists are non-empty, as Peers is (sGLP's paper, Appendix B, at f1640df),
-%% each built by first/5.
-procedure peers(Integer?, Integer?, Integer?, NonEmpty(Integer), NonEmpty(Integer),
-                Done).
-peers(A, H, N, Ss?, Os?, D?) :-
+%% known(A?, H?, N?, S?, Ss, Os): Ss the two agents of A's sex, other than A,
+%% and Os the two of the other sex that A knows at the start, each list in
+%% increasing order, drawn from S in that order, agents 1..H being of one sex
+%% and H+1..N of the other.
+procedure known(Integer?, Integer?, Integer?, Integer?, NonEmpty(Integer),
+                NonEmpty(Integer)).
+known(A, H, N, S, Ss?, Os?) :-
     A? =< H? |
     H1 := H? + 1,
-    first(1, H?, A?, Ss, D1),
-    first(H1?, N?, 0, Os, D2),
-    both(D1?, D2?, D).
-peers(A, H, N, Ss?, Os?, D?) :-
+    two(1, H?, A?, S?, Ss, S2),
+    two(H1?, N?, 0, S2?, Os, _).
+known(A, H, N, S, Ss?, Os?) :-
     A? > H? |
     H1 := H? + 1,
-    first(H1?, N?, A?, Ss, D1),
-    first(1, H?, 0, Os, D2),
-    both(D1?, D2?, D).
+    two(H1?, N?, A?, S?, Ss, S2),
+    two(1, H?, 0, S2?, Os, _).
 
-%% first(Lo?, Hi?, Skip?, L, D): L is Lo..Hi without Skip, non-empty, its first
-%% element found here and the rest built by range/5, and D done once L is built.
-procedure first(Integer?, Integer?, Integer?, NonEmpty(Integer), Done).
-first(Lo, Hi, Skip, L?, D?) :-
-    Lo? =< Hi?, Lo? =:= Skip? |
-    Lo1 := Lo? + 1,
-    first(Lo1?, Hi?, Skip?, L, D).
-first(Lo, Hi, Skip, [Lo?|L?], D?) :-
-    Lo? =< Hi?, Lo? =\= Skip? |
-    Lo1 := Lo? + 1,
-    range(Lo1?, Hi?, Skip?, L, D).
+%% two(Lo?, Hi?, Self?, S?, L, S2): L two agents of Lo..Hi other than Self (0
+%% for none), in increasing order, drawn uniformly and without replacement from
+%% S, two draws of random/4, the first of the M agents and the second of the
+%% M - 1 left, S2 the seed they leave.
+procedure two(Integer?, Integer?, Integer?, Integer?, NonEmpty(Integer),
+              Integer).
+two(Lo, Hi, Self, S, L?, S2?) :-
+    Self? > 0, Lo? < Hi? |
+    M := Hi? - Lo?,
+    M1 := Hi? - Lo? - 1,
+    random(S?, M?, K1, S1),
+    random(S1?, M1?, K2, S2),
+    pair(Lo?, K1?, K2?, Self?, L).
+two(Lo, Hi, Self, S, L?, S2?) :-
+    Self? =:= 0, Lo? < Hi? |
+    M := Hi? - Lo? + 1,
+    M1 := Hi? - Lo?,
+    random(S?, M?, K1, S1),
+    random(S1?, M1?, K2, S2),
+    pair(Lo?, K1?, K2?, Self?, L).
 
-%% both(D1?, D2?, D): D is done once D1 and D2 are.
-procedure both(Done?, Done?, Done).
-both(done, done, done).
+%% pair(Lo?, K1?, K2?, Self?, L): the K1-th agent from Lo other than Self, X,
+%% and the K2-th other than Self and X, in increasing order.
+procedure pair(Integer?, Integer?, Integer?, Integer?, NonEmpty(Integer)).
+pair(Lo, K1, K2, Self, L?) :-
+    integer(Lo?), integer(Self?) |
+    X0 := Lo? - 1 + K1?,
+    bump(X0?, Self?, X),
+    Y0 := Lo? - 1 + K2?,
+    second(Y0?, Self?, X?, L).
 
-%% start_when(D?, A?, Ss?, Os?, In?, Out, Asks): agent A's start goal,
-%% graph#start, writing its ask stream Asks, spawned once D is done, its lists
-%% Ss and Os built, so that start/6's guards ground(Ss?) and ground(Os?) walk
-%% each list once, where, spawned with the lists still growing, they re-walked
-%% them from the head at every new element (sGLP's code task of 2026-10-02
-%% 20:58 UTC, S3).
-procedure start_when(Done?, Peer?, Peers?, Peers?, Stream(Msg)?, Stream(Msg),
-                     Stream(Ask)).
-start_when(done, A, Ss, Os, In, Out?, Asks?) :-
-    graph # start(A?, Ss?, Os?, In?, Out, Asks).
+%% second(Y0?, Self?, X?, L): Y0 moved past Self and X, in increasing order,
+%% and paired with X.
+procedure second(Integer?, Integer?, Integer?, NonEmpty(Integer)).
+second(Y0, Self, X, L?) :-
+    integer(Self?), integer(X?), Self? < X? |
+    bump(Y0?, Self?, Y1),
+    bump(Y1?, X?, Y),
+    sorted(X?, Y?, L).
+second(Y0, Self, X, L?) :-
+    integer(Self?), integer(X?), Self? > X? |
+    bump(Y0?, X?, Y1),
+    bump(Y1?, Self?, Y),
+    sorted(X?, Y?, L).
 
-%% range(Lo?, Hi?, Skip?, L, D): L is Lo..Hi without Skip, and D done once L
-%% is built.
-procedure range(Integer?, Integer?, Integer?, Stream(Integer), Done).
-range(Lo, Hi, _, [], done) :-
-    Lo? > Hi? | true.
-range(Lo, Hi, Skip, L?, D?) :-
-    Lo? =< Hi?, Lo? =:= Skip? |
-    Lo1 := Lo? + 1,
-    range(Lo1?, Hi?, Skip?, L, D).
-range(Lo, Hi, Skip, [Lo?|L?], D?) :-
-    Lo? =< Hi?, Lo? =\= Skip? |
-    Lo1 := Lo? + 1,
-    range(Lo1?, Hi?, Skip?, L, D).
+%% bump(V?, E?, V1): V1 is V + 1 where 0 < E =< V, and V otherwise: the V-th
+%% agent counted past an excluded agent E.
+procedure bump(Integer?, Integer?, Integer).
+bump(V, E, V1?) :- E? > 0, E? =< V? | V1 := V? + 1.
+bump(V, E, V?) :- E? =< 0 | true.
+bump(V, E, V?) :- E? > V? | true.
+
+%% sorted(X?, Y?, L): L is [X, Y] in increasing order.
+procedure sorted(Integer?, Integer?, NonEmpty(Integer)).
+sorted(X, Y, [X?, Y?]) :- X? < Y? | true.
+sorted(X, Y, [Y?, X?]) :- X? > Y? | true.
 
 %% The network.  tree(Lo?, Hi?, Ms?, Ins, Rest?): a balanced tree of deliver/4
 %% goals over agents Lo..Hi routing the messages Ms, Ins being the input streams

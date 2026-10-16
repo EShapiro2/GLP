@@ -173,6 +173,17 @@
 #       09:46 UTC, items 2 and 3): Stream(Integer)? in reader mode, the person
 #       writing 1, 2 and 3; the relay and the log one element at a time, then
 #       the stream's end, the program reading their sum.
+# (xvi) the social graph's people meet (sGLP's task of 2026-10-16 12:35 UTC;
+#       Section 5 at sGLP eac5b3b; Appendix B, "Seeds" and "The agents are
+#       numbered"): a run of fewer than 6 agents is refused; on the log of
+#       (iii), seed 20260927, each menu shows the people its agent knows,
+#       each list in increasing order, without repetition, without the agent,
+#       the first of its sex and the second of the other; each agent's first
+#       menu shows two and two; the people an agent knows never decrease; and
+#       a menu asked after a yes between a and b --- the menu answered after
+#       the agent's next menu answer --- shows b and each friend b had before
+#       the yes, a friend's friends coming to know each other, some of them
+#       met only so.
 #
 # Prints one line per check and a summary line, "=== P passed, F failed ===";
 # exits non-zero if any check fails.  The runs of (iii) and (iv) take some
@@ -779,6 +790,62 @@ awk '
     }' "$WORK/numbers.lines"
 check "the log: each integer as an element of its own, then the stream's end, in the order of time; the program reads their sum, 6; the clock last" $?
 grep '^entry(\|^clock(\|^S = ' "$WORK/numbers.lines" | sed 's/^/        /'
+
+echo "--- (xvi) the social graph's people meet through their friends"
+bash "$RUN" 4 '1 day' 1 "$WORK/four.log" > "$WORK/four.out" 2>&1
+st=$?
+[ "$st" -ne 0 ] && ! grep -q '^entry\|Menu' "$WORK/four.log" 2>/dev/null
+check "a run of 4 agents is refused, the harness requiring at least 6 (Appendix B)" $?
+awk -F'\t' -v n=100 '
+    function sex(x) { return x <= n / 2 ? 1 : 2 }
+    function list(str, arr, a, want,   k, p, i, prev) {
+        k = (str == "") ? 0 : split(str, p, ", ")
+        prev = 0
+        for (i = 1; i <= k; i++) {
+            x = p[i] + 0; arr[x] = 1
+            if (x <= prev || x == a || sex(x) != want) bad++
+            prev = x
+        }
+        return k
+    }
+    NF == 4 && $3 == "Menu" {
+        a = $2 + 0; t = $1 + 0
+        match($4, /^menu\(\[[^]]*\]/); s1 = substr($4, 7, RLENGTH - 7)
+        rest = substr($4, RLENGTH + 3); match(rest, /^\[[^]]*\]/); s2 = substr(rest, 2, RLENGTH - 2)
+        split("", K)
+        k1 = list(s1, K, a, sex(a)); k2 = list(s2, K, a, 3 - sex(a))
+        m[a]++
+        if (m[a] == 1) {
+            if (k1 != 2 || k2 != 2) bad++
+            for (x in K) first[a, x] = 1
+            askt = 0
+        } else askt = last[a]
+        last[a] = t
+        for (key in prevk) { split(key, q, SUBSEP); if (q[1] == a) { if (!(q[2] in K)) shrink++; delete prevk[key] } }
+        for (x in K) prevk[a, x] = 1
+        for (j = 1; j <= nr[a]; j++) if (rt[a, j] < askt) {
+            nq = split(rs[a, j], q, " ")
+            for (i = 1; i <= nq; i++) {
+                if (!(q[i] in K)) miss++
+                else if (i > 1 && !((a, q[i]) in first) && !((a, q[i]) in counted)) { met++; counted[a, q[i]] = 1 }
+            }
+            checked++
+        }
+    }
+    NF == 4 && $3 == "Card" && $4 ~ /, yes\)$/ {
+        a = $2 + 0; t = $1 + 0
+        b = substr($4, 6, index($4, ",") - 6) + 0
+        ra = b; for (x in F) { split(x, q, SUBSEP); if (q[1] == b && q[2] != a) ra = ra " " q[2] }
+        rb = a; for (x in F) { split(x, q, SUBSEP); if (q[1] == a && q[2] != b) rb = rb " " q[2] }
+        nr[a]++; rt[a, nr[a]] = t; rs[a, nr[a]] = ra
+        nr[b]++; rt[b, nr[b]] = t; rs[b, nr[b]] = rb
+        F[a, b] = 1; F[b, a] = 1
+    }
+    END {
+        printf "        menus checked against a yes before them %d, people missing %d, met through a friend %d, lists out of order or of the wrong sex %d, lists shrunk %d\n", checked, miss, met, bad, shrink
+        exit !(checked > 0 && miss == 0 && met > 0 && bad == 0 && shrink == 0)
+    }' "$WORK/a.log"
+check "each menu shows the people its agent knows, in increasing order and by sex, two and two at the start, never fewer later; a menu asked after a yes shows the friend and the friend's friends, some met only so (Section 5)" $?
 
 echo ""
 echo "=== $PASS passed, $FAIL failed ==="
