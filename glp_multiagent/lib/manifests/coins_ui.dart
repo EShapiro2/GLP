@@ -17,8 +17,8 @@
 /// `Stream(Request)?`, an input box of a menu of the four forms of `Request
 /// ::= mint(Integer) ; swap(Peer, Lot, Lot) ; pay(Peer, Integer) ;
 /// redeem(Peer, Peer)`, kept open, one request per submission; and the swap
-/// responder's question, `Card ::= card(Offer, YesNo?)` in writer mode, a
-/// card showing the offer with the buttons yes and no, withdrawn once
+/// responder's question, `Approval ::= approval(Offer, YesNo?)` in writer mode, an
+/// approval question showing the offer with the buttons yes and no, withdrawn once
 /// answered.  Nothing of the deployed mediator's card vocabulary --- its
 /// forms, its cards and their answers --- is named here: none of it reaches
 /// this program.

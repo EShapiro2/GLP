@@ -34,7 +34,7 @@ const _requestForm = "input_box(menu([form(mint, [field('Amount', number)]), "
     "form(pay, [field('Friend', peer), field('Amount', number)]), "
     "form(redeem, [field('Friend', peer), field('WantCoin', peer)])]))";
 
-/// The widget of the swap responder's question, `Card ::= card(Offer,
+/// The widget of the swap responder's question, `Approval ::= approval(Offer,
 /// YesNo?)` in writer mode: the offer shown, and the buttons yes and no ---
 /// the offer, a tuple the program writes, a form of shown fields each
 /// labelled by its declared type's name, its lot and its coins forms of their
@@ -44,7 +44,7 @@ const _offer = "field('Offer', form(offer, [field('From', shown), "
     "field('Want', form(lot, [field('Issuer', shown), field('Amount', shown)])), "
     "field('Offered', thread(form(coin, [field('Issuer', shown), "
     "field('Serial', shown)])))]))";
-const _card = "form(card, [$_offer, field('YesNo', buttons([yes, no]))])";
+const _card = "form(approval, [$_offer, field('YesNo', buttons([yes, no]))])";
 
 /// The widget of the agent's output to its person, as `coins_agent.glp`
 /// draws it: a thread whose elements are drawn by the widget of the reserved
@@ -87,7 +87,7 @@ void main() {
   /// shown, the answer the person's at position [2].
   void drawCard(int id, String from, String want, String offered) =>
       r.handle(fixtureTerm(
-          'draw($id, $_card, card(offer($from, $want, $offered), input([2])))'));
+          'draw($id, $_card, approval(offer($from, $want, $offered), input([2])))'));
 
   /// The position of the question construct [id] holds at [at] of its view.
   GList position(int id, List<int> at) {
@@ -128,7 +128,7 @@ void main() {
       final (form, fields) = ctorArgs(r.bridge.construct(7)!.widget);
       expect(form, 'form');
       final ws = (fields[1] as GList).items;
-      expect(formatTerm(fields[0]), 'card');
+      expect(formatTerm(fields[0]), 'approval');
       expect(formatTerm(ws[0]), _offer,
           reason: 'the offer, shown, each field labelled by its type');
       expect(formatTerm(ws[1]), "field('YesNo', buttons([yes, no]))",

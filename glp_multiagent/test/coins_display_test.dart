@@ -60,9 +60,9 @@ void main() {
 
       // The swap card, as the compiled agent draws it: the offer of bob, who
       // wants a lot of his own and offers a list of coins.
-      r.handle(fixtureTerm("draw(7, form(card, [field('Offer', shown), "
+      r.handle(fixtureTerm("draw(7, form(approval, [field('Offer', shown), "
           "field('YesNo', buttons([yes, no]))]), "
-          'card(offer(bob, lot(bob, 2), [coin(alice, 3)]), input([2])))'));
+          'approval(offer(bob, lot(bob, 2), [coin(alice, 3)]), input([2])))'));
       // Two messages of the agent's output, drawn as the thread of construct
       // 0 by the widget of Output ::= ScreenContent (vGLP 169b008, Definition
       // "Canonical Compilation"; Currencies, 2026-10-14 08:48 UTC, item 2): a

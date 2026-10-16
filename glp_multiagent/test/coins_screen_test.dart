@@ -335,7 +335,7 @@ void main() {
     expect(find.textContaining('swap_done(bob)'), findsNothing);
 
     // --- The card: bob proposes the reverse swap, and the swap responder's
-    // question, Card ::= card(Offer, YesNo?) in writer mode, is one construct:
+    // question, Approval ::= approval(Offer, YesNo?) in writer mode, is one construct:
     // the offer shown, and the buttons yes and no at its answer.  The offer
     // is a tuple the program writes, Offer ::= offer(From, Want, Offered):
     // "a form with one field per argument, each labelled by the name of its
@@ -345,7 +345,7 @@ void main() {
     // field's type named by the variable its clause gives it (Definition
     // "Widget Declaration, Default Widget"; vGLP #8 Cowork, 2026-10-13 08:15
     // UTC, item b; Currencies, 2026-10-13 10:33 UTC). --------------------
-    const cardWidget = "form(card, [field('Offer', form(offer, "
+    const cardWidget = "form(approval, [field('Offer', form(offer, "
         "[field('From', shown), field('Want', form(lot, [field('Issuer', shown), "
         "field('Amount', shown)])), field('Offered', thread(form(coin, "
         "[field('Issuer', shown), field('Serial', shown)])))])), "
@@ -391,7 +391,7 @@ void main() {
     // Declaration, Default Widget": "a tuple: a form headed by its
     // functor"): the card, its offer, the offer's lot and each coin.
     for (final (heading, at) in [
-      ('card', const <int>[]),
+      ('approval', const <int>[]),
       ('offer', const [1]),
       ('lot', const [1, 2]),
       ('coin', const [1, 3, 1]),
