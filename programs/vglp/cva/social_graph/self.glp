@@ -39,16 +39,16 @@ Net      ::= msg(Peer, Content).
 Txn      ::= propose(Attempt) ; start(Attempt) ; answer(Attempt) ; vote(Attempt)
            ; tally(Attempt) ; commit(Attempt) ; yield(Attempt) ; wound(Attempt, Attempt) ; outcome(Attempt)
            ; discover(Peer).
-Session  ::= session(Stream(Request)?, Stream(Txn)).
+Output   ::= Txn.
 Approval ::= approval(Attempt, YesNo?).
-Question ::= session_w(Session) ; approval_w(Approval).
-Drawn    ::= session_w(_) ; approval_w(_) ; Request ; YesNo.
+Question ::= stream_request_r(Stream(Request)?) ; approval_w(Approval).
+Drawn    ::= stream_request_r(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
 Ask(Q)   ::= ask(Constant, Q).
 
 imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
-    Stream(Ask(Question))).
+    Stream(Output), Stream(Ask(Question))).
 imported procedure platform#dispatch(Stream(Ask(Question))?,
-    PersonChannel(Drawn)?, Channel(Stream(_), Stream(_))).
+    PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
 
 exported procedure play_befriend(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_befriend(LA?, LB?, N?) :-
@@ -89,11 +89,13 @@ play_refused(LA?, LB?, N?) :-
 %% joined.
 procedure pair(Steps(Drawn)?, Steps(Drawn)?, Stream(_), Stream(_), Stream(Sent(Cargo))).
 pair(SA, SB, LA?, LB?, N?) :-
-    platform # agent(alice, InA?, OutA, AsA),
-    platform # dispatch(AsA?, ch(GA?, DA), _),
+    platform # agent(alice, InA?, OutA, TA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
     person(DA?, GA, ps(nosess, [], [], SA?), LA),
-    platform # agent(bob, InB?, OutB, AsB),
-    platform # dispatch(AsB?, ch(GB?, DB), _),
+    platform # agent(bob, InB?, OutB, TB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
     person(DB?, GB, ps(nosess, [], [], SB?), LB),
     merge(OutA?, OutB?, Net),
     route(Net?, alice, InA, bob, InB, N).

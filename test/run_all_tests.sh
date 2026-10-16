@@ -3399,6 +3399,21 @@ check "CVA compiler: ... the schema-bindings of the two guard sets named" "%% an
 check "CVA compiler: an unguarded class whose schema-bindings require different atoms at one participant, refused as not effective" "%% not compiled(unguarded_reqs)" "$cva_refuse"
 check "CVA compiler: ... the two schema-bindings of the unguarded class named" "%% and the schema-binding(u2(person(1), person(0)))" "$cva_refuse"
 
+# The compiled agent's question is the stream of its person's requests alone,
+# and its agent goal writes the thread on the program's output to its person,
+# Output, construct 0 (vGLP 56d898f, Section 5.4; vGLP 2026-10-16 12:17 UTC,
+# item 3): the plays' persons read the thread from construct 0's draws,
+# draw(0, W, output(T)), and from nowhere else.
+for c in social_graph currency; do
+    cva_agent=$(cat "$CVA/$c/platform.vglp")
+    check "CVA $c: the agent's question is the stream of its person's requests alone" "^exported procedure (Stream(Request)?)\*agent(Peer?, Stream(Net)?, Stream(Net),$" "$cva_agent"
+    check "CVA $c: the thread is the program's output to its person, Output" "^Output    ::= Txn\.$" "$cva_agent"
+    check_not "CVA $c: no session question" "Session" "$cva_agent"
+done
+cva_person=$(cat "$CVA/self.glp")
+check "CVA plays: the person reads the thread from construct 0" "^person(\[draw(0, _, output(T))|Ds\]" "$cva_person"
+check_not "CVA plays: ... and no session" "session_w" "$cva_person"
+
 cva_sg_load=$("$REPL_RUN" <<HEREDOC
 $CVA/social_graph/
 :quit
