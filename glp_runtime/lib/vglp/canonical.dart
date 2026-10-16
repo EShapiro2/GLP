@@ -203,17 +203,24 @@ class ProgramInteractive {
   /// The source that declares it, by its path.
   final String? source;
 
-  /// The name of the module that defines it, where another module of the
-  /// program defines an interactive type of its name: its functor is
-  /// prefixed with it (vGLP at c9a928d, sections/parts/canonical-
-  /// compilation.tex: "and, where two modules of M define interactive types
-  /// of one name, prefixed with the name of the module that defines it").
-  /// Null where no other module does.
-  final String? prefix;
+  /// The stem of its functor, t before any coincidence count, each name in
+  /// it formed in the scope of the source that declares it, a name two
+  /// modules of the program define prefixed (vGLP ed75782, sections/parts/
+  /// canonical-compilation.tex; [VglpProgram]).  Null where the program
+  /// does not give it: then the stem of the type as written.
+  final String? functor;
+
+  /// The widget declarations in scope where the volitional procedure asking
+  /// it is declared, by moded type: "The widget of a question's type is the
+  /// one named by the widget declaration in scope where the volitional
+  /// procedure asking the question is declared" (vGLP ed75782, Definition
+  /// "Default Widget").  Null where the program does not give them: then
+  /// those of the source compiled.
+  final Map<String, String>? widgets;
 
   ProgramInteractive(this.type, this.readerMode, this.params, this.line,
       this.column, this.resolve,
-      {this.source, this.prefix});
+      {this.source, this.functor, this.widgets});
 }
 
 /// What the compilation of one source takes from the linked program it is a
@@ -318,12 +325,21 @@ class CanonicalProgram {
 /// request_r, `Card` card_w, `Stream(String)?` stream_string_r.  The caller
 /// makes two that coincide distinct.
 String questionFunctorStem(TypeExpr t, bool readerMode) =>
-    '${_functorStem(t)}_${readerMode ? 'r' : 'w'}';
+    questionFunctorStemBy(t, readerMode,
+        (name) => '${name[0].toLowerCase()}${name.substring(1)}');
 
-String _functorStem(TypeExpr t) {
+/// The same, each name in [t] formed by [name]: "the name of T in
+/// lowercase, the names of its type arguments, so formed, appended" (vGLP
+/// ed75782, sections/parts/canonical-compilation.tex), a name two modules of
+/// the program define prefixed ([VglpProgram]).
+String questionFunctorStemBy(
+        TypeExpr t, bool readerMode, String Function(String name) name) =>
+    '${_functorStem(t, name)}_${readerMode ? 'r' : 'w'}';
+
+String _functorStem(TypeExpr t, String Function(String name) name) {
   if (t is TypeRef) {
-    final head = '${t.name[0].toLowerCase()}${t.name.substring(1)}';
-    return [head, for (final a in t.typeArgs) _functorStem(a)].join('_');
+    return [name(t.name), for (final a in t.typeArgs) _functorStem(a, name)]
+        .join('_');
   }
   return 'any';
 }
@@ -583,8 +599,10 @@ CanonicalProgram compileCanonical(String text,
   // dispatcher for the linked program"), the source's own among them; else
   // the source's own and those of the volitional procedures it imports, in
   // the order of their declarations.  Each with the type its functor is
-  // named by, as its declaring source writes it, and its functor's prefix.
-  final seeds = <(TypeExpr, bool, List<String>, int, int, TypeExpr, String?)>[
+  // named by, as its declaring source writes it, its functor's stem, and the
+  // widget declarations in scope where it is declared.
+  final seeds = <(TypeExpr, bool, List<String>, int, int, TypeExpr, String?,
+      Map<String, String>?)>[
     if (context != null)
       for (var i = 0; i < context.interactive.length; i++)
         (
@@ -594,7 +612,8 @@ CanonicalProgram compileCanonical(String text,
           context.interactive[i].line,
           context.interactive[i].column,
           context.interactive[i].type,
-          context.interactive[i].prefix
+          context.interactive[i].functor,
+          context.interactive[i].widgets
         ),
   ];
   final seen = {for (final s in seeds) typeSource(s.$1)};
@@ -611,25 +630,25 @@ CanonicalProgram compileCanonical(String text,
       ),
   ]) {
     if (context == null || seen.add(typeSource(s.$1))) {
-      seeds.add((s.$1, s.$2, s.$3, s.$4, s.$5, s.$1, null));
+      seeds.add((s.$1, s.$2, s.$3, s.$4, s.$5, s.$1, null, null));
     }
   }
 
   // The functor of each moded interactive type in Question, in that order:
-  // the Definition's t, prefixed with the name of the module that defines it
-  // where two modules of the program define interactive types of one name
-  // (vGLP at c9a928d, sections/parts/canonical-compilation.tex), two that
+  // the Definition's t, each name in it formed in the scope of the source
+  // that declares the question and prefixed where two modules of the
+  // program define types of that name, as the program gives its stem
+  // (vGLP ed75782, sections/parts/canonical-compilation.tex), two that
   // still coincide told apart (vGLP #4 Cowork, 2026-10-02 08:26 UTC, Q1).
-  // Keyed by the type as emitted, and by the prefix where there is one.
+  // Keyed by the type as emitted, and by the stem where the program gives
+  // one.
   final functors = <String, String>{};
   final functorsTaken = <String>{};
   String functorOf(TypeExpr t, TypeExpr named, bool readerMode,
-          String? prefix) =>
+          String? given) =>
       functors.putIfAbsent(
-          prefix == null ? typeSource(t) : '$prefix#${typeSource(t)}', () {
-        final stem = prefix == null
-            ? questionFunctorStem(named, readerMode)
-            : '${prefix}_${questionFunctorStem(named, readerMode)}';
+          given == null ? typeSource(t) : '$given#${typeSource(t)}', () {
+        final stem = given ?? questionFunctorStem(named, readerMode);
         var name = stem;
         for (var n = 2; functorsTaken.contains(name); n++) {
           name = '${stem}_$n';
@@ -640,18 +659,19 @@ CanonicalProgram compileCanonical(String text,
   final interactive = <InteractiveType>[
     for (final s in seeds)
       InteractiveType(
-          s.$1, s.$2, functorOf(s.$1, s.$6, s.$2, s.$7), s.$3, s.$4, s.$5)
+          s.$1, s.$2, functorOf(s.$1, s.$6, s.$2, s.$7), s.$3, s.$4, s.$5,
+          widgets: s.$8)
   ];
   // A volitional procedure's functor is its own question's: the source's
-  // own type, as the program's order gives its prefix.
-  final ownPrefix = <String, String?>{
+  // own type, as the program gives its stem.
+  final ownStem = <String, String?>{
     if (context != null && context.self != null)
       for (final pi in context.interactive)
-        if (pi.source == context.self) typeSource(pi.type): pi.prefix,
+        if (pi.source == context.self) typeSource(pi.type): pi.functor,
   };
   for (final v in volitional.values) {
     v.functor = functorOf(v.interactiveType, v.interactiveType, v.readerMode,
-        ownPrefix[typeSource(v.interactiveType)]);
+        ownStem[typeSource(v.interactiveType)]);
   }
 
   // The (n+1)-ary procedures of the volitional procedures, by their parsed

@@ -315,6 +315,41 @@ go_b(Xs?) :- pick_b(Xs).
       }
     });
 
+    test('a type argument enters the functor under its own name, prefixed '
+        'where two modules define it: Stream over two Cards gives '
+        'stream_parent_card_r and stream_child_card_r, with no _2 (vGLP '
+        'ed75782, sections/parts/canonical-compilation.tex; vGLP, 2026-10-16 '
+        '12:30 UTC, (b))', () {
+      File('${fixture.path}/parent.vglp').writeAsStringSync('''
+Card ::= card(Constant).
+procedure (Stream(Card)?)*cards(Stream(Card)).
+(Cs)*cards(Cs?).
+exported procedure parent(Stream(Card)).
+parent(Cs?) :- cards(Cs).
+''');
+      File('${fixture.path}/child.vglp').writeAsStringSync('''
+Card ::= card(Integer).
+procedure (Stream(Card)?)*cards(Stream(Card)).
+(Cs)*cards(Cs?).
+exported procedure child(Stream(Card)).
+child(Cs?) :- cards(Cs).
+''');
+      File('${fixture.path}/self.glp')
+          .writeAsStringSync('exported procedure ping(Constant).\nping(a).\n');
+      emitVglpSources(fixture.path,
+          rootSelfGlpPath: File(_root).absolute.path);
+      final p = File('${fixture.path}/parent.glp').readAsStringSync();
+      final c = File('${fixture.path}/child.glp').readAsStringSync();
+      for (final m in [p, c]) {
+        expect(m, contains('stream_child_card_r('));
+        expect(m, contains('stream_parent_card_r('));
+        expect(m, isNot(contains('stream_card_r')));
+        expect(m, isNot(contains('_r_2')));
+      }
+      expect(p, contains("ask('Stream(Card)?', stream_parent_card_r(X))"));
+      expect(c, contains("ask('Stream(Card)?', stream_child_card_r(X))"));
+    });
+
     test('a name one module alone defines keeps its functor unprefixed', () {
       File('${fixture.path}/parent.vglp')
           .writeAsStringSync(source('parent.vglp'));

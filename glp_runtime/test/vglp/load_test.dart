@@ -520,6 +520,29 @@ pong(b).
       expect(emitted('asker'), contains('run_asker_yesNo_r(Id?, toggle, [input([])], Done?, Ds)'));
     });
 
+    test('each question is drawn with the widget declarations in scope where '
+        'its volitional procedure is declared, in every module\'s dispatcher '
+        '(vGLP ed75782, Definition "Default Widget"; vGLP, 2026-10-16 12:30 '
+        'UTC, (c))', () {
+      program();
+      write('asker.vglp', asker);
+      Directory('${fixture.path}/sub').createSync();
+      write('sub/self.glp', '''
+exported procedure pong(Constant).
+pong(b).
+''');
+      write('sub/self.vglp', 'YesNo? =::= dial.\n');
+      write('sub/inner.vglp', asker);
+      emitVglpSources(fixture.path,
+          rootSelfGlpPath: File(_rootSelfGlp).absolute.path);
+      // inner's question in asker's module is drawn by inner's dial, and
+      // asker's in inner's module by asker's toggle.
+      expect(emitted('asker'), contains('run_inner_yesNo_r(Id?, dial, [input([])], Done?, Ds)'));
+      expect(emitted('sub/inner'), contains('run_asker_yesNo_r(Id?, toggle, [input([])], Done?, Ds)'));
+      expect(emitted('asker'), isNot(contains('run_inner_yesNo_r(Id?, toggle')));
+      expect(emitted('sub/inner'), isNot(contains('run_asker_yesNo_r(Id?, dial')));
+    });
+
     test('the root\'s self.vglp holds for every program, a directory with no '
         'self.glp adds nothing, and a more local declaration overrides', () {
       // A tree of its own, so that the root's self.vglp is not programs/'s.

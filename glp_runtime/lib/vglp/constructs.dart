@@ -172,8 +172,15 @@ class InteractiveType {
   final List<String> params;
   final int line, column;
 
+  /// The widget declarations in scope where the volitional procedure asking
+  /// it is declared, by moded type (vGLP ed75782, Definition "Default
+  /// Widget": "the one named by the widget declaration in scope where the
+  /// volitional procedure asking the question is declared"); null where they
+  /// are those of the source compiled.
+  final Map<String, String>? widgets;
+
   InteractiveType(this.type, this.readerMode, this.functor, this.params,
-      this.line, this.column);
+      this.line, this.column, {this.widgets});
 
   /// The moded type as written, `Card` or `Request?`.
   String get written => typeSource(type);
@@ -435,7 +442,13 @@ TypeExpr _subst(TypeExpr t, Map<String, TypeExpr> m) {
 class _Generator {
   final GenericNames gen;
   final TypeDef? Function(String) resolve;
-  final Map<String, String> declared;
+
+  /// The widget declarations of the source compiled, by moded type, and
+  /// those in force while one question's widget is drawn: the declarations
+  /// in scope where its volitional procedure is declared ([InteractiveType.
+  /// widgets]).
+  final Map<String, String> sourceDeclared;
+  Map<String, String> declared;
   final String Function(String) fresh;
   final String questionType;
   final String constructName;
@@ -459,8 +472,9 @@ class _Generator {
   /// The drawing procedure of each ask functor, run_f/5.
   final _runs = <String, String>{};
 
-  _Generator(this.gen, this.resolve, this.declared, this.fresh,
-      this.questionType, this.constructName);
+  _Generator(this.gen, this.resolve, this.sourceDeclared, this.fresh,
+      this.questionType, this.constructName)
+      : declared = sourceDeclared;
 
   ConstructProcesses build(List<InteractiveType> types, {TypeDef? output}) {
     final hook = StringBuffer();
@@ -509,10 +523,12 @@ class _Generator {
     for (final t in types) {
       final root = _Node(t.type, t.readerMode, t.params.toSet());
       _checkFlat(t, root);
+      declared = t.widgets ?? sourceDeclared;
       final w = _typeWidget(t, root);
       widgets[t.written] = w;
       hook.writeln(_constructClause(t, root, w));
       drawnAlts.add('${t.functor}(${_drawnOf(root)})');
+      declared = sourceDeclared;
     }
     if (outputWidget != null) {
       widgets[outputTypeName] = outputWidget;
@@ -705,8 +721,8 @@ class _Generator {
     return w == 'shown' ? 'thread' : 'thread($w)';
   }
 
-  /// The widget of interactive type [t], whose root is [root]: the one in the
-  /// program's scope.
+  /// The widget of interactive type [t], whose root is [root]: the one in
+  /// scope where its volitional procedure is declared.
   String _typeWidget(InteractiveType t, _Node root) => _widget(root, {});
 
   // --- the construct clause -------------------------------------------------
