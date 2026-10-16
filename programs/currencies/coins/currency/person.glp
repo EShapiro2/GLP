@@ -10,13 +10,13 @@
 %%
 %% The agent's request form is drawn once and stays on screen, and every
 %% request of the script is granted on it, input(Id, P, R) with the request at
-%% the position P the draw marks input; a card is drawn per proposed swap, and
+%% the position P the draw marks input; an approval question is drawn per proposed swap, and
 %% withdrawn once answered.  A step is done when the screen shows its effect.
 %% The person channel never closes, so the person holds its grant writer for
 %% good.
 
 %% The agent's request form, once drawn: its construct and the position of
-%% its question, the stream of requests.  The open cards of proposed swaps, by
+%% its question, the stream of requests.  The open approval questions of proposed swaps, by
 %% proposer, each with its construct and the position of its question.  What
 %% the dispatcher draws is a term of any type.
 Form ::= no_form ; form(Integer, Path).
@@ -45,7 +45,7 @@ person(Id, Ds, Gs?, Script, Screen?) :-
 %% it for good, suspending when no draw comes.
 procedure events(_?, Events).
 events([draw(0, thread(_), output(Ms))|Ds], Es?) :- newest(Ms?, Ds?, Es).
-events([draw(I, W, card_w(V))|Ds], [draw(I?, W?, V?)|Es?]) :- events(Ds?, Es).
+events([draw(I, W, approval_w(V))|Ds], [draw(I?, W?, V?)|Es?]) :- events(Ds?, Es).
 events([draw(I, W, stream_request_r(V))|Ds], [draw(I?, W?, V?)|Es?]) :- events(Ds?, Es).
 events([withdraw(I)|Ds], [withdraw(I?)|Es?]) :- events(Ds?, Es).
 
@@ -74,8 +74,8 @@ person(Id, [draw(C, _, input(P))|Es], Gs?, Script, _, Swaps, Pending, Screen?) :
     path_of(P?, P1),
     try_step(Id?, Es?, Gs, Script?, form(C?, P1?), Swaps?, Pending?, Screen).
 
-%% The card of a proposed swap, kept until the script reaches it.
-person(Id, [draw(C, _, card(offer(From, _, _), input(P)))|Es], Gs?, Script, Form, Swaps, Pending, Screen?) :-
+%% The approval question of a proposed swap, kept until the script reaches it.
+person(Id, [draw(C, _, approval(offer(From, _, _), input(P)))|Es], Gs?, Script, Form, Swaps, Pending, Screen?) :-
     ground(C?), ground(From?), ground(P?) |
     path_of(P?, P1),
     try_step(Id?, Es?, Gs, Script?, Form?, [open_offer(From?, C?, P1?)|Swaps?], Pending?, Screen).
@@ -86,7 +86,7 @@ person(Id, [draw(_, _, _)|Es], Gs?, Script, Form, Swaps, Pending, Screen?) :-
     otherwise |
     person(Id?, Es?, Gs, Script?, Form?, Swaps?, Pending?, Screen).
 
-%% A card withdrawn: the person's answer to it took effect, and it is no
+%% An approval question withdrawn: the person's answer to it took effect, and it is no
 %% longer on screen.  A step in flight is left alone: it leaves sent when the
 %% screen shows its effect.
 person(Id, [withdraw(_)|Es], Gs?, Script, Form, Swaps, Pending, Screen?) :-
@@ -129,7 +129,7 @@ try_step(Id, Es, Gs?, [Step|Script], Form, Swaps, idle, Screen?) :-
     act(Choice?, Id?, Es?, Gs, [Step?|Script?], Form?, Swaps1?, Screen).
 
 %% A request is granted on the request form, once it is drawn: the step's
-%% term, the request; an acceptance on the proposer's card.
+%% term, the request; an acceptance on the proposer's approval question.
 procedure pick(Step?, Form?, OpenOffers?, Choice, OpenOffers).
 pick(mint(K), form(C, P), Swaps, grant(C?, P?, mint(K?)), Swaps?).
 pick(swap(Q, U, K, V, K1), form(C, P), Swaps, grant(C?, P?, swap(Q?, U?, K?, V?, K1?)), Swaps?).
@@ -149,7 +149,7 @@ find_offer(From, [O|Rest], Ch?, [O?|Rest1?]) :-
 find_offer(_, [], wait, []).
 
 procedure act(Choice?, Key?, Events?, PersonIn(Drawn), Script?, Form?, OpenOffers?, Stream(ScreenContent)).
-%% A grant, on the request form or on a card.
+%% A grant, on the request form or on an approval question.
 act(grant(C, P, X), Id, Es, [input(C?, P?, X?)|Gs?], Script, Form, Swaps, Screen?) :-
     person(Id?, Es?, Gs, Script?, Form?, Swaps?, sent, Screen).
 act(wait, Id, Es, Gs?, Script, Form, Swaps, Screen?) :-

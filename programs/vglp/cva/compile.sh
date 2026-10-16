@@ -10,14 +10,15 @@
 #   bash programs/vglp/cva/compile.sh --check    print into a scratch directory and compare
 #
 # for <contract> social_graph and currency, Jurix's two (Jurix, Sections 3.3
-# and 3.4), and nudge, introduce, gnudge, childsafe and link, vGLP's, which
-# contracts.glp beside the compiler holds.
+# and 3.4), and nudge, introduce, gnudge, childsafe, link and friends, vGLP's,
+# which contracts.glp beside the compiler holds, with the introduction
+# predicate each names, introduction_named/2, or none (Jurix's two name none).
 # A contract is checked before it is compiled (Jurix, Section 5), so a REPL
 # session on contracts.glp prints each of vGLP's contracts, contract_named/2;
 # one on programs/jurix prints each of Jurix's, contract_named/2, and the
 # checker's verdict on each contract, check_named/2 for Jurix's and check/2 for
-# vGLP's; and one on the compiler calls compile(Name, Contract, Verdict) for
-# each and writes what it prints between its lines "%% compile begin" and
+# vGLP's; and one on the compiler calls compile(Name, Contract, Verdict,
+# Intro) for each and writes what it prints between its lines "%% compile begin" and
 # "%% compile end" to the contract's platform.vglp.  The compiled modules are
 # committed beside their plays, which load them; --check says whether each is
 # what the compiler prints.
@@ -31,7 +32,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 GLP_DIR="$(cd "$HERE/../../.." && pwd)"
 RT="$GLP_DIR/glp_runtime"
 JURIX="social_graph currency"
-OURS="nudge introduce gnudge childsafe link"
+OURS="nudge introduce gnudge childsafe link friends"
 CONTRACTS="$JURIX $OURS"
 
 CHECK=0
@@ -55,10 +56,12 @@ for c in $CONTRACTS; do mkdir -p "$OUT/$c" || exit 2; done
 {
     echo "$HERE/contracts.glp"
     for c in $OURS; do echo "contract_named($c, C)."; done
+    for c in $OURS; do echo "introduction_named($c, I)."; done
     echo ':quit'
 } > "$WORK/ours.in"
 (cd "$RT" && bin/glpc < "$WORK/ours.in" > "$WORK/ours.out" 2>&1)
 sed -e 's/^\(GLP> \)*//' "$WORK/ours.out" | grep -E '^C = ' > "$WORK/ours"
+sed -e 's/^\(GLP> \)*//' "$WORK/ours.out" | grep -E '^I = ' | sed -e 's/^I = //' > "$WORK/intros"
 
 # Jurix's contracts, and the verdicts on all of them, from programs/jurix.
 # The REPL stops a goal at 10000 reductions unless told otherwise; the
@@ -80,7 +83,8 @@ sed -e 's/^\(GLP> \)*//' "$WORK/ours.out" | grep -E '^C = ' > "$WORK/ours"
 (cd "$RT" && bin/glpc < "$WORK/jurix.in" > "$WORK/jurix.out" 2>&1)
 sed -e 's/^\(GLP> \)*//' "$WORK/jurix.out" | grep -E '^(C|V) = ' > "$WORK/jv"
 
-# Each contract's two lines, its C and its V, in the order of CONTRACTS.
+# Each contract's two lines, its C and its V, in the order of CONTRACTS, and
+# its introduction predicate.
 nj=$(echo $JURIX | wc -w)
 {
     head -n $((2 * nj)) "$WORK/jv"
@@ -91,6 +95,10 @@ nj=$(echo $JURIX | wc -w)
         sed -n "$((2 * nj + n))p" "$WORK/jv"
     done
 } > "$WORK/terms"
+{
+    for c in $JURIX; do echo no_introduction; done
+    cat "$WORK/intros"
+} > "$WORK/introductions"
 
 # The compiler, on each contract and its verdict.
 {
@@ -101,7 +109,8 @@ nj=$(echo $JURIX | wc -w)
         n=$((n + 1))
         ct=$(sed -n "$((2 * n - 1))p" "$WORK/terms" | sed -e 's/^C = //')
         vt=$(sed -n "$((2 * n))p" "$WORK/terms" | sed -e 's/^V = //')
-        echo "compile($c, $ct, $vt)."
+        it=$(sed -n "${n}p" "$WORK/introductions")
+        echo "compile($c, $ct, $vt, $it)."
     done
     echo ':quit'
 } > "$WORK/compile.in"

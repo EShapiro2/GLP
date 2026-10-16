@@ -23,7 +23,7 @@
 %% --- and hands each villager its conversations on its channel to the social
 %% graph.  A scripted person (currency/person.glp) stands in for the super-app
 %% user interface: it reads the constructs the dispatcher draws --- the agent's
-%% request form, drawn once and kept on screen, and a card per proposed swap
+%% request form, drawn once and kept on screen, and an approval question per proposed swap
 %% --- and the screen the agent writes, and grants its acts on them --- the
 %% person's taps and submissions --- in the order of its script, each step when
 %% the one before it has taken effect.  The screen messages are logged as

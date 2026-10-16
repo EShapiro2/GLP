@@ -19,7 +19,7 @@
 %% of its transaction reading its request at the head of the stream, and
 %% carries the rest of the stream, Reqs?, through every helper that continues
 %% the agent.  The responder is a volitional procedure whose interactive type,
-%% a card, is in writer mode: its clause writes the card at once, the offer
+%% an approval question, is in writer mode: its clause writes the approval question at once, the offer
 %% for the person to see, and hands the person the writer of their answer,
 %% which a helper reads with a clause per answer.
 %%
@@ -34,7 +34,7 @@
 %% The machine state of a party is its holdings, a multiset of coins, and the
 %% serial its next coin takes.
 %%
-%% The types --- the requests and the card among them --- and the helpers over
+%% The types --- the requests and the approval question among them --- and the helpers over
 %% holdings and channels, are self.glp's.
 
 %% =============================================================================
@@ -43,10 +43,10 @@
 %% parties; this is the counterparty's guard.
 %% =============================================================================
 
-procedure (Card)*respond_swap(Offer?, SwapResponse, Stream(UserInMsg)).
+procedure (Approval)*respond_swap(Offer?, SwapResponse, Stream(UserInMsg)).
 
 %% Show the person the offer, and pass their answer on.
-(card(offer(From?, Want?, Offered?), Answer))*respond_swap(offer(From, Want, Offered), Resp?, Ans?) :-
+(approval(offer(From?, Want?, Offered?), Answer))*respond_swap(offer(From, Want, Offered), Resp?, Ans?) :-
     ground(From?), ground(Want?), ground(Offered?) |
     decide_swap(Answer?, From?, Want?, Offered?, Resp, Ans).
 

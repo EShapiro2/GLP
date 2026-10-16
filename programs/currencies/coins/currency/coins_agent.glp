@@ -3,13 +3,13 @@
 %% the .vglp source and compile again.
 
 
-Question ::= card_w(Card) ; stream_request_r(Stream(Request)?).
+Question ::= approval_w(Approval) ; stream_request_r(Stream(Request)?).
 
 procedure respond_swap(Offer?, SwapResponse, Stream(UserInMsg), Stream(Ask(Question))).
-respond_swap(S1, S2?, S3?, [ask('Card', card_w(X?)) | D?]) :- respond_swap1(S1?, S2, S3, X, D).
+respond_swap(S1, S2?, S3?, [ask('Approval', approval_w(X?)) | D?]) :- respond_swap1(S1?, S2, S3, X, D).
 
-procedure respond_swap1(Offer?, SwapResponse, Stream(UserInMsg), Card, Stream(Ask(Question))).
-respond_swap1(offer(From, Want, Offered), Resp?, Ans?, card(offer(From?, Want?, Offered?), Answer), []) :- ground(From?), ground(Want?), ground(Offered?) | decide_swap(Answer?, From?, Want?, Offered?, Resp, Ans).
+procedure respond_swap1(Offer?, SwapResponse, Stream(UserInMsg), Approval, Stream(Ask(Question))).
+respond_swap1(offer(From, Want, Offered), Resp?, Ans?, approval(offer(From?, Want?, Offered?), Answer), []) :- ground(From?), ground(Want?), ground(Offered?) | decide_swap(Answer?, From?, Want?, Offered?, Resp, Ans).
 
 procedure decide_swap(YesNo?, Key?, Lot?, Stream(Coin)?, SwapResponse, Stream(UserInMsg)).
 decide_swap(yes, From, Want, Offered, Resp?, Ans?) :- accept_answer(From?, Want?, Offered?, Resp, Ans).
@@ -213,7 +213,7 @@ form_module(_, refused) :- otherwise | true.
 
 %% --- the construct process of each interactive type ---
 
-Drawn ::= card_w(_) ; stream_request_r(_) ; output(List(Output)) ; YesNo ; Request.
+Drawn ::= approval_w(_) ; stream_request_r(_) ; output(List(Output)) ; YesNo ; Request.
 
 exported procedure dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
 dispatch(Asks, PCh, ch(MIn?, MOut)) :- dispatch(Asks?, PCh?, MIn, ODs?, Ss), output(thread(menu([form(holdings, [field('Holdings', thread(form(lot, [field('Issuer', shown), field('Amount', shown)])))]), form(opened, [field('Friend', shown)]), form(minted, [field('Amount', shown)]), form(paid, [field('Friend', shown), field('Amount', shown)]), form(received, [field('From', shown), field('Amount', shown)]), form(returned, [field('From', shown), field('Amount', shown)]), form(swap_done, [field('Friend', shown)]), form(swap_declined, [field('Friend', shown)]), form(swap_failed, [field('From', shown)]), form(declined, [field('From', shown)]), form(redeemed, [field('Friend', shown), field('WantCoin', shown)]), form(menu, [field('Friend', shown), field('Issuers', thread)]), form(presented, [field('From', shown), field('WantCoin', shown)]), form(unfulfilled, [field('From', shown), field('WantCoin', shown)]), form(refused, [field('Friend', shown)]), form(lacking, [field('Issuer', shown), field('Amount', shown)]), form(no_conversation, [field('Friend', shown)])])), MOut?, ODs), constructs(Ss?).
@@ -223,7 +223,7 @@ constructs([spawn(Id, Q, Gs, Ds?) | Ss]) :- construct(Id?, Q?, Gs?, Ds), constru
 constructs([]).
 
 procedure construct(Integer?, Question?, Inputs(Drawn)?, Stream(Draw(Drawn))).
-construct(Id, card_w(X), Gs, Ds?) :- present_card([], X?, Gs?, _, Vs, Done), run_card_w(Id?, form(card, [field('Offer', form(offer, [field('From', shown), field('Want', form(lot, [field('Issuer', shown), field('Amount', shown)])), field('Offered', thread(form(coin, [field('Issuer', shown), field('Serial', shown)])))])), field('YesNo', buttons([yes, no]))]), Vs?, Done?, Ds).
+construct(Id, approval_w(X), Gs, Ds?) :- present_approval([], X?, Gs?, _, Vs, Done), run_approval_w(Id?, form(approval, [field('Offer', form(offer, [field('From', shown), field('Want', form(lot, [field('Issuer', shown), field('Amount', shown)])), field('Offered', thread(form(coin, [field('Issuer', shown), field('Serial', shown)])))])), field('YesNo', buttons([yes, no]))]), Vs?, Done?, Ds).
 construct(Id, stream_request_r(X?), Gs, Ds?) :- answer_stream_request([], X, Gs?, _, Done), run_stream_request_r(Id?, input_box(menu([form(mint, [field('Amount', number)]), form(swap, [field('Friend', peer), field('GiveCoin', peer), field('GiveAmount', number), field('WantCoin', peer), field('WantAmount', number)]), form(pay, [field('Friend', peer), field('Amount', number)]), form(redeem, [field('Friend', peer), field('WantCoin', peer)])])), [input([])], Done?, Ds).
 
 procedure output(_?, Stream(Output)?, Stream(Draw(Drawn))).
@@ -253,27 +253,27 @@ procedure take_yesNo(Formed(YesNo)?, Path?, YesNo, Input(Drawn)?, Inputs(Drawn)?
 take_yesNo(formed(V), _, V?, _, Gs, Gs?, done).
 take_yesNo(refused, P, X?, G, Gs, [G? | Gs1?], Done?) :- answer_yesNo(P?, X, Gs?, Gs1, Done).
 
-procedure start_card_card_2(Stream(_)?, Stream(_)?, Stream(_)).
-start_card_card_2([V1 | S1], [V2 | S2], [card(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_card_card_2(V1?, V2?, S1?, S2?, Vs).
-start_card_card_2([], _, []).
-start_card_card_2(_, [], []).
+procedure start_approval_approval_2(Stream(_)?, Stream(_)?, Stream(_)).
+start_approval_approval_2([V1 | S1], [V2 | S2], [approval(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_approval_approval_2(V1?, V2?, S1?, S2?, Vs).
+start_approval_approval_2([], _, []).
+start_approval_approval_2(_, [], []).
 
-procedure comb_card_card_2(_?, _?, Stream(_)?, Stream(_)?, Stream(_)).
-comb_card_card_2(_, V2, [V1 | S1], S2, [card(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_card_card_2(V1?, V2?, S1?, S2?, Vs).
-comb_card_card_2(_, _, [], [], []).
+procedure comb_approval_approval_2(_?, _?, Stream(_)?, Stream(_)?, Stream(_)).
+comb_approval_approval_2(_, V2, [V1 | S1], S2, [approval(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_approval_approval_2(V1?, V2?, S1?, S2?, Vs).
+comb_approval_approval_2(_, _, [], [], []).
 
-procedure present_card(Path?, Card?, Inputs(Drawn)?, Inputs(Drawn), Stream(_), Done).
-present_card(P, card(H1, H2?), Gs, Gs1?, Vs?, D2?) :- ground(P?) | path(P?, 1, Q1), shown(Q1?, H1?, V1), path(P?, 2, M2), path(P?, 2, Q2), answer_yesNo(Q2?, H2, Gs?, Gs1, D2), start_card_card_2(V1?, [input(M2?)], Vs).
-present_card(P, X, Gs, Gs1?, [pending(P?) | Vs?], Done?) :- ground(P?) | present_card_wait(P?, X?, Gs?, Gs1, Vs, Done).
+procedure present_approval(Path?, Approval?, Inputs(Drawn)?, Inputs(Drawn), Stream(_), Done).
+present_approval(P, approval(H1, H2?), Gs, Gs1?, Vs?, D2?) :- ground(P?) | path(P?, 1, Q1), shown(Q1?, H1?, V1), path(P?, 2, M2), path(P?, 2, Q2), answer_yesNo(Q2?, H2, Gs?, Gs1, D2), start_approval_approval_2(V1?, [input(M2?)], Vs).
+present_approval(P, X, Gs, Gs1?, [pending(P?) | Vs?], Done?) :- ground(P?) | present_approval_wait(P?, X?, Gs?, Gs1, Vs, Done).
 
-procedure present_card_wait(Path?, Card?, Inputs(Drawn)?, Inputs(Drawn), Stream(_), Done).
-present_card_wait(P, card(H1, H2?), Gs, Gs1?, Vs?, Done?) :- present_card(P?, card(H1?, H2), Gs?, Gs1, Vs, Done).
-present_card_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, Done?) :- present_card_wait(P?, X?, Gs?, Gs1, Vs, Done).
+procedure present_approval_wait(Path?, Approval?, Inputs(Drawn)?, Inputs(Drawn), Stream(_), Done).
+present_approval_wait(P, approval(H1, H2?), Gs, Gs1?, Vs?, Done?) :- present_approval(P?, approval(H1?, H2), Gs?, Gs1, Vs, Done).
+present_approval_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, Done?) :- present_approval_wait(P?, X?, Gs?, Gs1, Vs, Done).
 
-procedure run_card_w(Integer?, _?, Stream(_)?, Done?, Stream(Draw(Drawn))).
-run_card_w(Id, _, _, done, [withdraw(Id?)]).
-run_card_w(Id, W, [V | Vs], Done, [draw(Id?, W?, card_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_card_w(Id?, W?, Vs?, Done?, Ds).
-run_card_w(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
+procedure run_approval_w(Integer?, _?, Stream(_)?, Done?, Stream(Draw(Drawn))).
+run_approval_w(Id, _, _, done, [withdraw(Id?)]).
+run_approval_w(Id, W, [V | Vs], Done, [draw(Id?, W?, approval_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_approval_w(Id?, W?, Vs?, Done?, Ds).
+run_approval_w(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
 
 procedure join_request_mint_1(Formed(Amount)?, Formed(Request)).
 join_request_mint_1(formed(X1), formed(mint(X1?))).

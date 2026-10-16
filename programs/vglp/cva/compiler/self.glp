@@ -55,9 +55,16 @@ Faults    ::= [] ; [Fault | Faults].
 Verdict   ::= syntactically_grassroots ; not_grassroots(Faults)
             ; conditions_met ; conditions_failed(Faults) ; malformed(Faults).
 
+%% A contract's introduction predicate, where it names one (vGLP, Section 5.4,
+%% the paragraph on act schemas), given to compile/4.
+Intro     ::= no_introduction ; introduction(Constant).
+
 imported procedure cvac#compile(Constant?, Declared?, Verdict?).
 exported procedure compile(Constant?, Declared?, Verdict?).
 compile(Nm, D, V) :- cvac # compile(Nm?, D?, V?).
+imported procedure cvac#compile(Constant?, Declared?, Verdict?, Intro?).
+exported procedure compile(Constant?, Declared?, Verdict?, Intro?).
+compile(Nm, D, V, I) :- cvac # compile(Nm?, D?, V?, I?).
 
 %% ---------------------------------------------------------------------------
 %% Shared by the modules of the compiler

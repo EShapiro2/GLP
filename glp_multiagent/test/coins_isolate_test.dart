@@ -205,12 +205,12 @@ void main() {
     expect(balances(), 'bob=2');
 
     // Bob proposes the reverse swap: one card, the swap responder's question,
-    // Card ::= card(Offer, YesNo?) in writer mode --- the offer shown and her
+    // Approval ::= approval(Offer, YesNo?) in writer mode --- the offer shown and her
     // answer at position [2].  The offer, a tuple the program writes, is a
     // form of shown fields, each labelled by its declared type's name, its
     // lot and its coins forms of their own (Definition "Widget Declaration,
     // Default Widget"; vGLP #8 Cowork, 2026-10-13 08:15 UTC, item b).
-    const card = "form(card, [field('Offer', form(offer, "
+    const card = "form(approval, [field('Offer', form(offer, "
         "[field('From', shown), field('Want', form(lot, [field('Issuer', shown), "
         "field('Amount', shown)])), field('Offered', thread(form(coin, "
         "[field('Issuer', shown), field('Serial', shown)])))])), "
@@ -221,7 +221,7 @@ void main() {
     // The offer, for her to see: bob wants 2 of his own coins back and offers
     // the 2 alice-coins he holds.
     final (cardCtor, cardArgs) = ctorArgs(offer.view);
-    expect(cardCtor, 'card');
+    expect(cardCtor, 'approval');
     final (offerCtor, offerArgs) = ctorArgs(cardArgs[0]);
     expect(offerCtor, 'offer');
     expect(formatTerm(offerArgs[0]), 'bob');
