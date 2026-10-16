@@ -1,6 +1,6 @@
 # How to Run GLP Multi-Agent Programs
 
-**Updated: 2026-10-12**
+**Updated: 2026-10-15**
 
 These are the routes by which `test/run_all_tests.sh` runs multi-agent programs, one section per route, each naming the harness section it comes from.  Every command below was run on 2026-10-12 on a tree at GLP `main` `11744d09`, and what it printed is quoted as it printed it.  Commands start at the root of a worktree (Code: the clone at `/Users/udi/Grassroots/GLP`).
 
@@ -122,7 +122,7 @@ cd glp_runtime && dart test test/multiagent/multiagent_glp_test.dart
 cd glp_runtime && dart test test/multiagent/
 ```
 
-`+249 ~6 -13: Some tests failed.`  The thirteen red are `cssn_v2_isolate_test.dart`'s, Section M's, each an entry of the harness's `KNOWN_RED`.
+Runs every test file of `glp_runtime/test/multiagent/`; none of them is an entry of the harness's `KNOWN_RED`.
 
 ---
 
@@ -134,7 +134,7 @@ Section Q generates the bundled GLP assets, then runs `flutter test` over all of
 cd glp_multiagent && bash tool/sync_glp_assets.sh
 ```
 
-Writes `pingapp.glpw`, `currency.glpw` and `denominated.glpw`, and exits 1 with `sync_glp_assets: childsafe.glpw was not written`: CSSN's artefact, a known-red check of Section Q's asset step.
+Writes `pingapp.glpw`, `currency.glpw`, `childsafe.glpw`, `denominated.glpw` and `dated.glpw`, the script's list, and exits 1 with `sync_glp_assets: <name>.glpw was not written` at the first it does not write.  Section Q's asset step checks each of them on disc, and none of those checks is known red.
 
 ```bash
 cd glp_multiagent && flutter test test/roundtrip_isolate_test.dart
@@ -146,7 +146,7 @@ cd glp_multiagent && flutter test test/roundtrip_isolate_test.dart
 cd glp_multiagent && flutter test
 ```
 
-`+116 -2: Some tests failed.`  The two red are entries of `KNOWN_RED`.
+`KNOWN_RED` lists one test of this package, in `test/sovereign_screen_test.dart`; any other red test fails the suite.
 
 Section Q writes each runner's whole output to `/Users/udi/Grassroots/tmp/suite_q_dart.txt` and `/Users/udi/Grassroots/tmp/suite_q_flutter.txt` on every run.  The full suite is run only by Code, on `main`: `GLP/CLAUDE.md`, "Test suites".
 

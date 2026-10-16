@@ -11,12 +11,12 @@
 #   E - Invalid Guard Test (true in guard rejected)
 #   F - CSSG Modules (modular play tests via project-directory loading)
 #   G - Social Graph Simulated UI Modules (project-directory loading)
-#   H - CSSN Modules (project-directory loading, plays 1-12)
+#   H - retired (old-generation CSSN modules); CSSN is Section K
 #   I - self.glp Procedure Tests (shared procs, shadowing, local shadow, type error)
 #   J - CSSG v2 Modules (child_agent with parent(X) output keys)
-#   K - CSSN v2 Modules (child_agent with blocking consent)
+#   K - CSSN, the child-safe social network (programs/cssn), as ported on 2026-10-09
 #   L - Dynamic Module Dispatch Tests (activate + M # goal)
-#   M - Multi-Isolate (madGLP) Tests (dart test, CSSN v2, one isolate per agent)
+#   M - Multi-Isolate (madGLP) Tests (dart test, one isolate per agent; run in Section Q)
 #   N - Currencies Modules (project-directory loading, plays 1-12)
 #   O - Currencies Multi-Isolate Tests (dart test, one isolate per agent)
 #   P - Module Boundary Enforcement Tests (exported vs private procedures)
@@ -135,13 +135,9 @@ FAIL=0
 # the commit that turns it green.  Udi's rulings put a dormant project's
 # failures here, since no session exists to repair them.
 KNOWN_RED_CHECKS=(
-# GSG's hosting of CSSN's mini-app (CSSN's port of 2026-10-09 19:37 UTC, on
-# CSSN-port): cssn/3 now takes the person channel, PersonChannel(Drawn), and
-# GSG's super-app still installs and activates it at the retired mediator's
-# channel (social/graph/core: install_cssn, Channel(CsAppCmd, CsAppNotify),
-# and the plays play_cssn, play_both and both_boot.glp, cssn_boot.glp), so
-# run/3 aborts on the type identity of cssn/3.  GSG's to port, as it hosts the
-# currency's mini-app at its person channel; each entry comes off with it.
+# The super-app's hosting of CSSN's ported mini-app (CSSN's port of
+# 2026-10-09): GSG's to port, as it hosts the currency's mini-app at its
+# person channel; each entry comes off with that port.
     "SG two mini-apps at once: bob connected and greeted under it"
     "SG two mini-apps on two smartphones: and its message arrives"
     "SG super-app hosts the child-safe platform: alice connected to bob"
@@ -1089,6 +1085,19 @@ $GLP_DIR/programs/tests/expose_collide/leaf.glp
 HEREDOC
 2>&1)
 check "single-module: -expose collision rejected at link time" "expose collision" "$a26f_col"
+
+# The root self.glp exposes sglp#monitor, the root being the only common
+# ancestor of programs/cssn and programs/sglp (modules.tex §-expose): a program
+# outside programs/sglp calls monitor/4 by name, with the types it carries.
+a26f_mon=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/expose_root_monitor/run.glp
+clock(T).
+released(K).
+:quit
+HEREDOC
+2>&1)
+check "root -expose(sglp#monitor): time request answered (T = 0)" "T = 0" "$a26f_mon"
+check "root -expose(sglp#monitor): rated request released (K = go)" "K = go" "$a26f_mon"
 
 # --- A29: Struct terms inside lists in goal arguments (Issue 0b regression) ---
 echo "--- A29: Structs in list goal args ---"
@@ -2252,7 +2261,7 @@ echo ""
 fi  # Section G
 
 if _section I; then
-# Section H (old-gen CSSN Modules) retired in A5 — CSSN v2 coverage is Section K.
+# Section H (old-generation CSSN modules) retired in A5; CSSN's checks are Section K.
 
 # =============================================================================
 # Section I: self.glp Procedure Tests
@@ -6257,8 +6266,8 @@ if ! _section QF; then
 elif [ -f "$GLP_DIR/glp_multiagent/tool/sync_glp_assets.sh" ]; then
     SYNC_RESULT=$(cd "$GLP_DIR/glp_multiagent" && bash tool/sync_glp_assets.sh 2>&1) || true
     # Each certified mini-app the script builds is a check of its own, so that
-    # an artefact its owner's source cannot yet give --- CSSN's, while CSSN is
-    # dormant --- is known red, not the whole step.  The script stops at the
+    # an artefact its owner's source cannot yet give is known red, not the
+    # whole step.  The script stops at the
     # first artefact missing, so each is looked for on disc; its list is the
     # script's own.
     SYNC_ARTEFACTS=$(sed -n 's/^for a in \(.*\); do$/\1/p' "$GLP_DIR/glp_multiagent/tool/sync_glp_assets.sh")
