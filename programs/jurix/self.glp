@@ -805,7 +805,10 @@ has_community([S|Ss], R?) :- ground(S?), ground(Ss?) |
 
 % The directory's interface: each entry point is forwarded to the module that
 % defines it (manual 19.6).  check.glp composes the two halves of
-% def:syntactically-grassroots; contracts.glp holds the contracts to run on.
+% def:syntactically-grassroots.  A contract is given as a term, printed by
+% contract_named/2 in a REPL session on its owner's file (contracts.glp, the
+% header); contracts.glp holds the checker's fixtures, by name, and its
+% variants of a contract, by name and the contract's term.
 
 imported procedure check#check(Declared?, Verdict).
 exported procedure check(Declared?, Verdict).
@@ -815,22 +818,62 @@ imported procedure check#check_named(Constant?, Verdict).
 exported procedure check_named(Constant?, Verdict).
 check_named(Nm, V?) :- check # check_named(Nm?, V).
 
+imported procedure check#check_variant(Constant?, Contract?, Verdict).
+exported procedure check_variant(Constant?, Contract?, Verdict).
+check_variant(Nm, B, V?) :- check # check_variant(Nm?, B?, V).
+
 imported procedure check#traceable_of(Constant?, Preds).
 exported procedure traceable_of(Constant?, Preds).
 traceable_of(Nm, E?) :- check # traceable_of(Nm?, E).
+
+imported procedure check#traceable_preds(Declared?, Preds).
+exported procedure traceable_preds(Declared?, Preds).
+traceable_preds(D, E?) :- check # traceable_preds(D?, E).
+
+imported procedure check#traceable_variant(Constant?, Contract?, Preds).
+exported procedure traceable_variant(Constant?, Contract?, Preds).
+traceable_variant(Nm, B, E?) :- check # traceable_variant(Nm?, B?, E).
 
 imported procedure check#rooted_of(Constant?, Preds).
 exported procedure rooted_of(Constant?, Preds).
 rooted_of(Nm, E?) :- check # rooted_of(Nm?, E).
 
+imported procedure check#rooted_preds(Declared?, Preds).
+exported procedure rooted_preds(Declared?, Preds).
+rooted_preds(D, E?) :- check # rooted_preds(D?, E).
+
+imported procedure check#rooted_variant(Constant?, Contract?, Preds).
+exported procedure rooted_variant(Constant?, Contract?, Preds).
+rooted_variant(Nm, B, E?) :- check # rooted_variant(Nm?, B?, E).
+
 imported procedure contracts#contract(Constant?, Declared).
 exported procedure contract_named(Constant?, Declared).
 contract_named(Nm, C?) :- contracts # contract(Nm?, C).
+
+imported procedure contracts#variant(Constant?, Contract?, Declared).
+exported procedure variant(Constant?, Contract?, Declared).
+variant(Nm, B, C?) :- contracts # variant(Nm?, B?, C).
 
 imported procedure compile#compile_named(Constant?).
 exported procedure compile_named(Constant?).
 compile_named(Nm) :- compile # compile_named(Nm?).
 
+imported procedure compile#compile_contract(Constant?, Declared?).
+exported procedure compile_contract(Constant?, Declared?).
+compile_contract(Nm, D) :- compile # compile_contract(Nm?, D?).
+
+imported procedure compile#compile_variant(Constant?, Contract?).
+exported procedure compile_variant(Constant?, Contract?).
+compile_variant(Nm, B) :- compile # compile_variant(Nm?, B?).
+
 imported procedure compile#compile_schema(Constant?, Constant?).
 exported procedure compile_schema(Constant?, Constant?).
 compile_schema(Nm, Sn) :- compile # compile_schema(Nm?, Sn?).
+
+imported procedure compile#compile_schema_in(Constant?, Declared?, Constant?).
+exported procedure compile_schema_in(Constant?, Declared?, Constant?).
+compile_schema_in(Nm, D, Sn) :- compile # compile_schema_in(Nm?, D?, Sn?).
+
+imported procedure compile#compile_schema_variant(Constant?, Contract?, Constant?).
+exported procedure compile_schema_variant(Constant?, Contract?, Constant?).
+compile_schema_variant(Nm, B, Sn) :- compile # compile_schema_variant(Nm?, B?, Sn?).

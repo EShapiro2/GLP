@@ -2,26 +2,27 @@
 # The compiler from an act-schema contract to its canonical CVA platform in
 # vGLP (programs/vglp/cva/compiler; vGLP, Section 3.2, the paragraph on act
 # schemas, and Section 5.4, Definition "Compilation of the Canonical
-# Platform"), run on
-# the contracts of programs/jurix and of contracts.glp through the REPL.
+# Platform"), run on the social graph's and the currency's contracts, read
+# from their owners' files, and on vGLP's own, contracts.glp, through the REPL.
 #
 #   bash programs/vglp/cva/compile.sh            print into programs/vglp/cva/<contract>/platform.vglp
 #   bash programs/vglp/cva/compile.sh <dir>      print into <dir>/<contract>/platform.vglp
 #   bash programs/vglp/cva/compile.sh --check    print into a scratch directory and compare
 #
 # for <contract> social_graph and currency, Jurix's two (Jurix, Sections 3.3
-# and 3.4), and nudge, introduce, gnudge, childsafe, link and friends, vGLP's,
-# which contracts.glp beside the compiler holds, with the introduction
-# predicate each names, introduction_named/2, or none (Jurix's two name none).
-# A contract is checked before it is compiled (Jurix, Section 5), so a REPL
-# session on contracts.glp prints each of vGLP's contracts, contract_named/2;
-# one on programs/jurix prints each of Jurix's, contract_named/2, and the
-# checker's verdict on each contract, check_named/2 for Jurix's and check/2 for
-# vGLP's; and one on the compiler calls compile(Name, Contract, Verdict,
-# Intro) for each and writes what it prints between its lines "%% compile begin" and
-# "%% compile end" to the contract's platform.vglp.  The compiled modules are
-# committed beside their plays, which load them; --check says whether each is
-# what the compiler prints.
+# and 3.4), each the one copy in its owner's file,
+# programs/social/graph/contract.glp and programs/currencies/coins/contract.glp
+# (claude.md "Sessions", the cascade rule), and nudge, introduce, gnudge,
+# childsafe, link and friends, vGLP's, which contracts.glp beside the compiler
+# holds, with the introduction predicate each names, introduction_named/2, or
+# none (Jurix's two name none).  A contract is checked before it is compiled
+# (Jurix, Section 5), so a REPL session on each owner's file and one on
+# contracts.glp print the contracts, contract_named/2; one on programs/jurix
+# prints the checker's verdict on each, check/2; and one on the compiler calls
+# compile(Name, Contract, Verdict, Intro) for each and writes what it prints
+# between its lines "%% compile begin" and "%% compile end" to the contract's
+# platform.vglp.  The compiled modules are committed beside their plays, which
+# load them; --check says whether each is what the compiler prints.
 #
 # Prints one line per contract.  Exits 0 if each was compiled and, with
 # --check, each is byte for byte the file in place; 1 otherwise, the contract
@@ -34,6 +35,14 @@ RT="$GLP_DIR/glp_runtime"
 JURIX="social_graph currency"
 OURS="nudge introduce gnudge childsafe link friends"
 CONTRACTS="$JURIX $OURS"
+
+contract_file() { # contract_file <contract> ; the file that holds it, its owner's
+    case "$1" in
+        social_graph) echo "$GLP_DIR/programs/social/graph/contract.glp" ;;
+        currency)     echo "$GLP_DIR/programs/currencies/coins/contract.glp" ;;
+        *)            echo "$HERE/contracts.glp" ;;
+    esac
+}
 
 CHECK=0
 if [ $# -gt 1 ]; then
@@ -52,7 +61,15 @@ else
 fi
 for c in $CONTRACTS; do mkdir -p "$OUT/$c" || exit 2; done
 
-# vGLP's contracts, from contracts.glp.
+# Each contract's term, one line per contract in the order of CONTRACTS:
+# Jurix's two from their owners' files, one session each, and vGLP's from
+# contracts.glp, one session, with their introduction predicates.
+: > "$WORK/terms_c"
+for c in $JURIX; do
+    printf '%s\ncontract_named(%s, C).\n:quit\n' "$(contract_file "$c")" "$c" > "$WORK/$c.in"
+    (cd "$RT" && bin/glpc < "$WORK/$c.in" > "$WORK/$c.out" 2>&1)
+    sed -e 's/^\(GLP> \)*//' "$WORK/$c.out" | grep -E '^C = ' | head -1 >> "$WORK/terms_c"
+done
 {
     echo "$HERE/contracts.glp"
     for c in $OURS; do echo "contract_named($c, C)."; done
@@ -60,41 +77,33 @@ for c in $CONTRACTS; do mkdir -p "$OUT/$c" || exit 2; done
     echo ':quit'
 } > "$WORK/ours.in"
 (cd "$RT" && bin/glpc < "$WORK/ours.in" > "$WORK/ours.out" 2>&1)
-sed -e 's/^\(GLP> \)*//' "$WORK/ours.out" | grep -E '^C = ' > "$WORK/ours"
+sed -e 's/^\(GLP> \)*//' "$WORK/ours.out" | grep -E '^C = ' >> "$WORK/terms_c"
 sed -e 's/^\(GLP> \)*//' "$WORK/ours.out" | grep -E '^I = ' | sed -e 's/^I = //' > "$WORK/intros"
 
-# Jurix's contracts, and the verdicts on all of them, from programs/jurix.
-# The REPL stops a goal at 10000 reductions unless told otherwise; the
-# checker takes more.
+# The checker's verdict on each, from programs/jurix.  The REPL stops a goal
+# at 10000 reductions unless told otherwise; the checker takes more.
 {
     echo "$GLP_DIR/programs/jurix/"
     echo ':limit 10000000'
-    for c in $JURIX; do
-        echo "contract_named($c, C)."
-        echo "check_named($c, V)."
-    done
     n=0
-    for c in $OURS; do
+    for c in $CONTRACTS; do
         n=$((n + 1))
-        echo "check($(sed -n "${n}p" "$WORK/ours" | sed -e 's/^C = //'), V)."
+        echo "check($(sed -n "${n}p" "$WORK/terms_c" | sed -e 's/^C = //'), V)."
     done
     echo ':quit'
 } > "$WORK/jurix.in"
 (cd "$RT" && bin/glpc < "$WORK/jurix.in" > "$WORK/jurix.out" 2>&1)
-sed -e 's/^\(GLP> \)*//' "$WORK/jurix.out" | grep -E '^(C|V) = ' > "$WORK/jv"
+sed -e 's/^\(GLP> \)*//' "$WORK/jurix.out" | grep -E '^V = ' > "$WORK/terms_v"
 
 # Each contract's two lines, its C and its V, in the order of CONTRACTS, and
 # its introduction predicate.
-nj=$(echo $JURIX | wc -w)
-{
-    head -n $((2 * nj)) "$WORK/jv"
-    n=0
-    for c in $OURS; do
-        n=$((n + 1))
-        sed -n "${n}p" "$WORK/ours"
-        sed -n "$((2 * nj + n))p" "$WORK/jv"
-    done
-} > "$WORK/terms"
+: > "$WORK/terms"
+n=0
+for c in $CONTRACTS; do
+    n=$((n + 1))
+    sed -n "${n}p" "$WORK/terms_c" >> "$WORK/terms"
+    sed -n "${n}p" "$WORK/terms_v" >> "$WORK/terms"
+done
 {
     for c in $JURIX; do echo no_introduction; done
     cat "$WORK/intros"
@@ -128,7 +137,7 @@ awk -v out="$OUT" -v names="$CONTRACTS" '
 OK=1
 if [ -s "$WORK/status" ]; then
     cat "$WORK/status"
-    grep -E '^(GLP> )*(Error|✗)' "$WORK/ours.out" "$WORK/jurix.out" "$WORK/compile.out" | head -20
+    grep -E '^(GLP> )*(Error|✗)' "$WORK"/*.out | head -20
     OK=0
 fi
 for c in $CONTRACTS; do

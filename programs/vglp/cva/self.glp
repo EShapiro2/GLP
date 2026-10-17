@@ -1,7 +1,7 @@
 %% ---------------------------------------------------------------------------
 %% programs/vglp/cva --- the compiler from an act-schema contract to its
 %% canonical CVA platform in vGLP (compiler/, compile.sh), vGLP's contracts
-%% beside Jurix's (contracts.glp), the platforms it prints
+%% beside Jurix's two, their owners' (contracts.glp), the platforms it prints
 %% (social_graph/platform.vglp, currency/platform.vglp, nudge/platform.vglp,
 %% introduce/platform.vglp, gnudge/platform.vglp, childsafe/platform.vglp,
 %% link/platform.vglp, friends/platform.vglp, each beside its plays) and what the plays of all of them share, here: a

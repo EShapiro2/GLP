@@ -5,17 +5,22 @@
 #   bash programs/jurix/test_jurix.sh
 #
 # The two contracts of /Grassroots/Jurix Sections 3.3 and 3.4, which Section 7
-# certifies by hand, and contracts broken in one place each, one per way of
-# failing the three conjuncts of def:syntactically-grassroots; then contracts
-# declaring a predicate reflexive (the paragraph after def:binding); then the
-# compilation of Section 5, against the two displays of Section 5.2; then the
-# contract of a grassroots federation, /Grassroots/GFWC sections/schemas.tex,
-# against the three conditions of Section 8 of /Grassroots/Jurix, and five
-# contracts changing it in one place each, four against those and one against
-# rootedness, which is none of them; then small contracts on the
-# speech-act variables of traceable provenance and on volition by connected
-# component, in the language of Section 8; then the compilation of Section 8,
-# against its worked box.  Exits non-zero if any check fails.
+# certifies by hand, read from their owners' files
+# (programs/social/graph/contract.glp, programs/currencies/coins/contract.glp),
+# and contracts broken in one place each, one per way of failing the three
+# conjuncts of def:syntactically-grassroots; then contracts declaring a
+# predicate reflexive (the paragraph after def:binding); then the compilation
+# of Section 5, against the two displays of Section 5.2; then the contract of
+# a grassroots federation, /Grassroots/GFWC sections/schemas.tex, read from
+# programs/federation/contract.glp, against the three conditions of Section 8
+# of /Grassroots/Jurix, and five contracts changing it in one place each, four
+# against those and one against rootedness, which is none of them; then small
+# contracts on the speech-act variables of traceable provenance and on
+# volition by connected component, in the language of Section 8; then the
+# compilation of Section 8, against its worked box.  A contract is its owner's
+# and the checker reads its term (contracts.glp, the header): a fixture that
+# changes one is a variant, given by name and the owner's term.  Exits
+# non-zero if any check fails.
 
 set -u
 GLP_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -59,25 +64,51 @@ check_eq() { # check_eq <name> <expected> <actual>
 
 squash() { tr -d ' \t\n'; }
 
-compiled() { # compiled <contract> <schema> ; the display, whitespace removed
-  run "compile_schema($1, $2)." | sed -n '/begin{align/,/end{align/p' \
-    | sed 's/GLP>//' | squash
-}
-
 run() {     # run <goal> ... ; loads the program, then posts each goal
   local goals=""
   for g in "$@"; do goals="$goals$g\n"; done
-  # The REPL's default reduction limit is 10000, which CSSN's twenty-eight
+  # The REPL's default reduction limit is 10000, which cs18's twenty-eight
   # schemas exceed; :limit is the REPL's knob for it.
   (cd "$GLP_DIR/glp_runtime" \
      && printf "%b" "$JURIX\n:limit 1000000\n$goals:quit\n" | bin/glpc 2>&1)
 }
 
+term() {    # term <owner's file> <name> ; the contract's term, as it prints it
+  (cd "$GLP_DIR/glp_runtime" \
+     && printf '%s\ncontract_named(%s, C).\n:quit\n' "$1" "$2" | bin/glpc 2>&1) \
+    | sed -e 's/^\(GLP> \)*//' | grep -E '^C = ' | head -1 | sed -e 's/^C = //'
+}
+
+compiled() { # compiled <fixture> <schema> ; the display, whitespace removed
+  run "compile_schema($1, $2)." | sed -n '/begin{align/,/end{align/p' \
+    | sed 's/GLP>//' | squash
+}
+
+compiled_in() { # compiled_in <name> <term> <schema> ; the display of a contract given as a term
+  run "compile_schema_in($1, $2, $3)." | sed -n '/begin{align/,/end{align/p' \
+    | sed 's/GLP>//' | squash
+}
+
 echo "=== jurix: the syntactically-grassroots checker ==="
+
+# The contracts, each read from its owner's file: one copy, which Jurix's
+# checker and vGLP's compiler load from there.
+SG=$(term "$GLP_DIR/programs/social/graph/contract.glp" social_graph)
+check "the social graph's contract is read from programs/social/graph/contract.glp" \
+      "[schema(befriend, [rs(guarded, [atom(friend, [role(2)])]" "$SG"
+CUR=$(term "$GLP_DIR/programs/currencies/coins/contract.glp" currency)
+check "the currency's contract is read from programs/currencies/coins/contract.glp" \
+      "[schema(mint, [rs(guarded, [atom(coin, [role(1)])]" "$CUR"
+CSSN=$(term "$GLP_DIR/programs/cssn/contract.glp" cssn)
+check "CSSN's contract is read from programs/cssn/contract.glp" \
+      "reflexive([friend], [schema(establish," "$CSSN"
+FED=$(term "$GLP_DIR/programs/federation/contract.glp" federation)
+check "the federation's contract is read from programs/federation/contract.glp" \
+      "[schema(form, [rs(guarded, [atom(seat, [nterm(own(1))])]" "$FED"
 
 # The two worked contracts, certified in Section 7.  One goal per run, so that
 # each verdict is read off its own output.
-out=$(run 'check_named(social_graph, V).' 'traceable_of(social_graph, E).')
+out=$(run "check($SG, V)." "traceable_preds($SG, E).")
 check "the program loads" "Loaded program" "$out"
 check_not "no type error" "Error loading" "$out"
 check "social graph is syntactically grassroots" \
@@ -85,7 +116,7 @@ check "social graph is syntactically grassroots" \
 check "friend, item and sent have traceable provenance" \
       "E = [friend, item, sent]" "$out"
 
-out=$(run 'check_named(currency, V).' 'traceable_of(currency, E).')
+out=$(run "check($CUR, V)." "traceable_preds($CUR, E).")
 check "currency is syntactically grassroots" \
       "V = syntactically_grassroots" "$out"
 check "the coin has traceable provenance" \
@@ -102,14 +133,14 @@ check "one guard dropped: befriend fails volition" \
 # An act that adds the forbidden atom while giving the other party a role, and
 # naming it in what it adds, is excused by clause 2 of def:unobstructed; what
 # rejects it is volition.
-out=$(run 'check_named(sg_imposed, V).')
+out=$(run "check_variant(sg_imposed, $SG, V).")
 check "impose is rejected by volition, not by clause 2" \
       "V = not_grassroots([volition(impose, 1, 2)])" "$out"
 check_not "impose does not obstruct befriend" "obstructed" "$out"
 
 # An act that adds it while sending no role to the other party is not excused:
 # p is left holding friend(q) with q taking no part.
-out=$(run 'check_named(sg_gossip, V).')
+out=$(run "check_variant(sg_gossip, $SG, V).")
 check "gossip blocks befriend at role 1" \
       "obstructed(befriend, 1, atom(friend, [role(2)]), blocked_by(gossip, 1," "$out"
 check "gossip blocks befriend at role 2" \
@@ -123,11 +154,11 @@ check_not "gossip itself satisfies volition" "volition(gossip" "$out"
 # of arity four guarded at one role, whose role graph is the path 1-2-3-4,
 # passes; cutting one edge of the path splits it, and the half {3,4} holds no
 # guarding role.
-out=$(run 'check_named(sg_chain, V).')
+out=$(run "check_variant(sg_chain, $SG, V).")
 check "a path role graph at arity four certifies" \
       "V = syntactically_grassroots" "$out"
 
-out=$(run 'check_named(sg_chain_cut, V).')
+out=$(run "check_variant(sg_chain_cut, $SG, V).")
 check "cutting an edge of the path fails volition" \
       "V = not_grassroots([volition(chain, 1, 3)])" "$out"
 
@@ -135,7 +166,7 @@ check "cutting an edge of the path fails volition" \
 # is guarded neither in all its roles nor connected, its role graph falling
 # into {1,2} and {3}, each holding a guarding role, so it meets def:volition
 # as it meets definition:volition as a cschema (sg_tri_cschema, below).
-out=$(run 'check_named(sg_tri, V).')
+out=$(run "check_variant(sg_tri, $SG, V).")
 check "a guarding role in every connected component meets volition in Section 3" \
       "V = syntactically_grassroots" "$out"
 
@@ -161,64 +192,58 @@ check_not "loose mint: the swap is still unobstructed" "obstructed(swap" "$out"
 # traceable provenance: the clause of def:grounded on speech-act variables
 # drops item, and sent after it, while befriend stays unobstructed and every
 # schema satisfies volition.  The second conjunct alone rejects the contract.
-out=$(run 'check_named(sg_svar_loose, V).' 'traceable_of(sg_svar_loose, E).')
+out=$(run "check_variant(sg_svar_loose, $SG, V)." "traceable_variant(sg_svar_loose, $SG, E).")
 check "a speech act from an untraceable record: only friend keeps provenance" \
       "E = [friend]" "$out"
 check "and the verdict is the second conjunct alone" \
       "V = not_grassroots([untraceable([item, sent, tagged])])" "$out"
 
-# CSSN's child-safe contract, eighteen schemas, twenty-eight expanded,
-# transcribed from their entries of 2026-08-15 20:35 and 21:40 and 2026-08-16
-# 12:37 UTC in Coordination/mail/Legal_inbox.md, with send, parent_child,
-# friend and the five expanded schemas brought to CSSN's paper on 2026-10-09.  Its introductory act is parent_child;
-# befriending is obstructed there by design.
-out=$(run 'check_named(cssn, V).' 'traceable_of(cssn, E).')
-check "CSSN's contract is syntactically grassroots" \
+# cs18, the checker's fixture of eighteen schemas, twenty-eight expanded: a
+# child-safe social contract as CSSN drafted it in Legal's inbox on 2026-08-15
+# and 2026-08-16 and as it was brought to their paper on 2026-10-09, since
+# revised by CSSN (its contract is programs/cssn/contract.glp, below).  Its
+# introductory act is parent_child; befriending is obstructed there by design.
+out=$(run 'check_named(cs18, V).' 'traceable_of(cs18, E).')
+check "cs18 is syntactically grassroots" \
       "V = syntactically_grassroots" "$out"
-check "CSSN's predicates of traceable provenance" \
+check "cs18's predicates of traceable provenance" \
       "E = [parenting, parent, child, friend, approval, withdrawal, member, listed, item, sent, posted, delivered]" \
       "$out"
 
-# send is CSSN's paper's, sections/artefact-schemas.tex:46--47: the sender
-# requires the item it sends and nothing else, the recipient that the sender
-# is its friend (Legal 2026-10-09 18:46 UTC).  Its display in the form of
-# Section 5.2.
-send_cssn=$(cat <<'EOF' | squash
+# send: the sender requires the item it sends and nothing else, the recipient
+# that the sender is its friend.  Its display in the form of Section 5.2.
+send_cs18=$(cat <<'EOF' | squash
 \begin{align*}
 & c'_{\Alice} := c_{\Alice} \uplus \{\mathit{sent}(x,\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{item}(x,a,\Alice)\},\\
 & \text{provided } \mathit{item}(x,a,f) \in c_{\Alice} \text{ and } \mathit{friend}(\Alice) \in c_{\Bob}, \qquad \text{guarded by } \{\Alice\}
 \end{align*}
 EOF
 )
-check_eq "CSSN's send requires at the sender the item it sends and nothing else" \
-         "$send_cssn" "$(compiled cssn send)"
+check_eq "cs18's send requires at the sender the item it sends and nothing else" \
+         "$send_cs18" "$(compiled cs18 send)"
 
-# friend is reflexive, as CSSN's sections/schemas.tex declares it, and
-# parent_child forbids parent(r) at the parent's role, as its
-# sections/artefact-schemas.tex:8 writes it (Legal 2026-10-09 18:43 UTC).
-out=$(run 'contract_named(cssn, C).')
-check "CSSN's contract declares friend reflexive" \
+# friend is reflexive, and parent_child forbids parent(r) at the parent's role.
+out=$(run 'contract_named(cs18, C).')
+check "cs18 declares friend reflexive" \
       "C = reflexive([friend], [schema(parent_child," "$out"
-parent_child_cssn=$(cat <<'EOF' | squash
+parent_child_cs18=$(cat <<'EOF' | squash
 \begin{align*}
 & c'_{\Alice} := c_{\Alice} \uplus \{\mathit{parenting}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{parent}(\Alice),\mathit{child}\},\\
 & \text{provided } \mathit{parent}(\Bob) \notin c_{\Alice} \text{ and } \mathit{parent}(\Alice) \notin c_{\Bob}, \qquad \text{guarded by } \{\Alice,\Bob\}
 \end{align*}
 EOF
 )
-check_eq "CSSN's parent_child forbids parent(r) at the parent's role" \
-         "$parent_child_cssn" "$(compiled cssn parent_child)"
+check_eq "cs18's parent_child forbids parent(r) at the parent's role" \
+         "$parent_child_cs18" "$(compiled cs18 parent_child)"
 
 # unfriend, child_unfriend, leave, child_leave and child_leave_2 each stand for
 # one schema per role, guarded at that role, so the contract is twenty-eight
-# schemas expanded (CSSN's sections/appendix-cascade.tex:24 and :32), every one
-# of them a willed act, where four of the five unexpanded were owed acts,
-# guarded by the empty set (Legal 2026-10-09 19:47 UTC).  The one guarded at
-# the role CSSN's table writes r is <schema>_r, and its display, in the form of
+# schemas expanded, every one of them a willed act.  The one guarded at the
+# role the table writes r is <schema>_r, and its display, in the form of
 # Section 5.2, is guarded by the person at that role alone; deliver is left the
 # one schema no party guards.
-out=$(run 'compile_named(cssn).')
-check_eq "CSSN's contract compiles to twenty-eight displays" "28" \
+out=$(run 'compile_named(cs18).')
+check_eq "cs18 compiles to twenty-eight displays" "28" \
          "$(printf '%s' "$out" | grep -c 'begin{align')"
 check_eq "and deliver's is the one guarded by the empty set" "1" \
          "$(printf '%s' "$out" | grep -cF 'guarded by } \emptyset')"
@@ -249,9 +274,9 @@ IFS= read -r -d '' child_leave_2_body <<'EOF'
 & \text{provided } \mathit{listed}(\Bob,n) \in c_{\Alice} \text{ and } \mathit{member}(\Alice,n) \in c_{\Bob} \text{ and } \mathit{parenting}(\Alice) \in c_{\mathit{Carol}} \text{ and } \mathit{parenting}(\Bob) \in c_{\mathit{Dave}}, \qquad \text{guarded by }
 EOF
 
-expanded() { # expanded <schema> <role as CSSN writes it> <role's person> <body>
-  check_eq "CSSN's $1 is ${1%_*} guarded at $2 alone" \
-           "$(printf '%s' "$4\\{$3\\}\\end{align*}" | squash)" "$(compiled cssn "$1")"
+expanded() { # expanded <schema> <role as the table writes it> <role's person> <body>
+  check_eq "cs18's $1 is ${1%_*} guarded at $2 alone" \
+           "$(printf '%s' "$4\\{$3\\}\\end{align*}" | squash)" "$(compiled cs18 "$1")"
 }
 expanded unfriend_p       p '\Alice'         "$unfriend_body"
 expanded unfriend_q       q '\Bob'           "$unfriend_body"
@@ -269,21 +294,35 @@ expanded child_leave_2_s  s '\Bob'           "$child_leave_2_body"
 expanded child_leave_2_p  p '\mathit{Carol}' "$child_leave_2_body"
 expanded child_leave_2_q  q '\mathit{Dave}'  "$child_leave_2_body"
 
+# CSSN's contract, programs/cssn/contract.glp (CSSN, Appendix B.2): its
+# predicates have traceable provenance and it satisfies volition, and it has
+# no unobstructed introductory act (CSSN, Proposition "Provenance and
+# volition"), so it is not syntactically grassroots and is not compiled.
+out=$(run "check($CSSN, V).")
+check "CSSN's contract has no unobstructed introductory act" \
+      "V = not_grassroots([obstructed(" "$out"
+check_not "CSSN's predicates have traceable provenance" "untraceable(" "$out"
+check_not "CSSN's contract satisfies volition" "volition(" "$out"
+check_not "CSSN's contract is not malformed" "malformed(" "$out"
+out=$(run "compile_contract(cssn, $CSSN).")
+check "and it is not compiled" \
+      "% not compiled: cssn" "$(printf '%s' "$out" | tr '\n' ' ')"
+
 # --- reflexive predicates (the paragraph after def:binding) ----------------
 # A contract may declare a predicate of arity one reflexive.  The social graph
 # with friend declared so certifies as it does without.
-out=$(run 'check_named(sg_reflexive, V).')
+out=$(run "check_variant(sg_reflexive, $SG, V).")
 check "the social graph with friend reflexive is syntactically grassroots" \
       "V = syntactically_grassroots" "$out"
 
 # No schema adds or deletes, at a role, the atom of a reflexive predicate
 # naming that role: a contract in which one does is refused as malformed,
 # naming the schema, the role and the atom, and is not compiled.
-out=$(run 'check_named(sg_refl_malformed, V).')
+out=$(run "check_variant(sg_refl_malformed, $SG, V).")
 check "adding or deleting friend of its own role makes the contract malformed" \
       "V = malformed([reflexive(self_befriend, 1, atom(friend, [role(1)])), reflexive(self_unfriend, 1, atom(friend, [role(1)]))])" \
       "$out"
-out=$(run 'compile_named(sg_refl_malformed).')
+out=$(run "compile_variant(sg_refl_malformed, $SG).")
 check "a malformed contract is not compiled" \
       "% not compiled: sg_refl_malformed is malformed" "$(printf '%s' "$out" | tr '\n' ' ')"
 check_not "and no display is printed for it" "begin{align" "$out"
@@ -291,17 +330,17 @@ check_not "and no display is printed for it" "begin{align" "$out"
 # Clause 1 of def:unobstructed skips a required atom of a reflexive predicate
 # naming the role: befriend requiring friend of each party at its own role is
 # obstructed when friend is not reflexive and unobstructed when it is.
-out=$(run 'check_named(sg_self_required, V).')
+out=$(run "check_variant(sg_self_required, $SG, V).")
 check "friend of its own role required, friend not reflexive: clause 1 fails" \
       "V = not_grassroots([obstructed(befriend, 1, atom(friend, [role(1)]), unobtainable), obstructed(befriend, 2, atom(friend, [role(2)]), unobtainable)])" \
       "$out"
-out=$(run 'check_named(sg_refl_required, V).')
+out=$(run "check_variant(sg_refl_required, $SG, V).")
 check "friend of its own role required, friend reflexive: clause 1 skips it" \
       "V = syntactically_grassroots" "$out"
 
 # Clause 3 of def:unobstructed: the introductory act forbids at a role no atom
 # of a reflexive predicate naming that role.
-out=$(run 'check_named(sg_refl_forbidden, V).')
+out=$(run "check_variant(sg_refl_forbidden, $SG, V).")
 check "friend of its own role forbidden, friend reflexive: clause 3 fails" \
       "V = not_grassroots([obstructed(befriend, 1, atom(friend, [role(1)]), reflexive), obstructed(befriend, 2, atom(friend, [role(2)]), reflexive)])" \
       "$out"
@@ -327,7 +366,7 @@ befriend_paper=$(cat <<'EOF' | squash
 EOF
 )
 check_eq "befriend compiles to the display of Section 5.2" \
-         "$befriend_paper" "$(compiled social_graph befriend)"
+         "$befriend_paper" "$(compiled_in social_graph "$SG" befriend)"
 
 swap_paper=$(cat <<'EOF' | squash
 \begin{align*}
@@ -337,28 +376,28 @@ swap_paper=$(cat <<'EOF' | squash
 EOF
 )
 check_eq "the swap compiles to the display of Section 5.2" \
-         "$swap_paper" "$(compiled currency swap)"
+         "$swap_paper" "$(compiled_in currency "$CUR" swap)"
 
 # A contract compiles schema by schema, and only after it is checked.
-out=$(run 'compile_named(social_graph).')
+out=$(run "compile_contract(social_graph, $SG).")
 check_eq "the social graph compiles to four displays" "4" \
          "$(printf '%s' "$out" | grep -c 'begin{align')"
-out=$(run 'compile_named(currency).')
+out=$(run "compile_contract(currency, $CUR).")
 check_eq "the currency compiles to four displays" "4" \
          "$(printf '%s' "$out" | grep -c 'begin{align')"
 
-out=$(run 'compile_named(sg_gossip).')
+out=$(run "compile_variant(sg_gossip, $SG).")
 check "a contract that fails the conditions is not compiled" \
       "% not compiled: sg_gossip" "$(printf '%s' "$out" | tr '\n' ' ')"
 check_not "and no display is printed for it" "begin{align" "$out"
 
 # A schema with no guarding role compiles to transactions with an empty guard
-# (Section 5.1); CSSN's deliver is unguarded at both roles.
-out=$(run 'compile_schema(cssn, deliver).')
+# (Section 5.1); cs18's deliver is unguarded at both roles.
+out=$(run 'compile_schema(cs18, deliver).')
 check "an unguarded schema compiles to an empty guard" \
       "\\text{guarded by } \\emptyset" "$(printf '%s' "$out" | tr '\n' ' ')"
 
-out=$(run 'compile_schema(cssn, nosuch).')
+out=$(run 'compile_schema(cs18, nosuch).')
 check "a schema the contract does not hold is reported" \
       "% no schema named" "$(printf '%s' "$out" | tr '\n' ' ')"
 
@@ -369,18 +408,18 @@ check "a schema the contract does not hold is reported" \
 # certified in its Section 3.1 by hand against the conditions of Section 8 of
 # /Grassroots/Jurix; the checker returns the same.
 
-out=$(run 'check_named(federation, V).' 'rooted_of(federation, E).')
+out=$(run "check($FED, V)." "rooted_preds($FED, E).")
 check "the federation contract meets the conditions of Section 8" \
       "V = conditions_met" "$out"
 check "seat is rooted" "E = [seat]" "$out"
 
-out=$(run 'traceable_of(federation, E).')
+out=$(run "traceable_preds($FED, E).")
 check "seat and child have traceable provenance" "E = [seat, child]" "$out"
 
 # Seating the assembly in the name of the community itself: the name argument
 # is of least rank zero and at no party role.  Rootedness is no condition on
 # the text.
-out=$(run 'check_named(gf_unrooted, V).' 'rooted_of(gf_unrooted, E).')
+out=$(run "check_variant(gf_unrooted, $FED, V)." "rooted_variant(gf_unrooted, $FED, E).")
 check "the community named without its decision: seat is not rooted" \
       "E = []" "$out"
 check "and the three conditions on the text are still met" \
@@ -390,11 +429,11 @@ check "and the three conditions on the text are still met" \
 # atom names: note loses traceable provenance, seat and child keep it, and the
 # set of predicates occurring in the contract lacks it, the one condition of
 # the three the contract fails.
-out=$(run 'traceable_of(gf_untraceable, E).')
+out=$(run "traceable_variant(gf_untraceable, $FED, E).")
 check "a note nothing traces: seat and child keep traceable provenance" \
       "E = [seat, child]" "$out"
 check_not "and note does not have it" "note" "$out"
-out=$(run 'check_named(gf_untraceable, V).')
+out=$(run "check_variant(gf_untraceable, $FED, V).")
 check "and the contract fails traceable provenance, naming note" \
       "V = conditions_failed([untraceable([note])])" "$out"
 
@@ -403,7 +442,7 @@ check "and the contract fails traceable provenance, naming note" \
 # party role or a seated role, so cohesion asks its question of seat atoms
 # (definition:cohesive).  The same atom costs seat its traceable provenance,
 # so the verdict names seat as untraceable before the cohesion fault.
-out=$(run 'check_named(gf_uncohesive, V).')
+out=$(run "check_variant(gf_uncohesive, $FED, V).")
 check "a seat atom of no role of the schema fails cohesion, and seat traceable provenance" \
       "V = conditions_failed([untraceable([seat]), cohesion(federate, 1, atom(seat, [nterm(nvar(eta))]))])" \
       "$out"
@@ -414,8 +453,8 @@ check "a seat atom of no role of the schema fails cohesion, and seat traceable p
 # it is an argument of the required child atom, so seat keeps traceable
 # provenance; the role graph is one role, so volition holds.  seat stops
 # being rooted, which is no condition.
-out=$(run 'check_named(gf_cohesion_only, V).' 'traceable_of(gf_cohesion_only, T).' \
-          'rooted_of(gf_cohesion_only, E).')
+out=$(run "check_variant(gf_cohesion_only, $FED, V)." "traceable_variant(gf_cohesion_only, $FED, T)." \
+          "rooted_variant(gf_cohesion_only, $FED, E).")
 check "a seat atom in a child the role requires fails cohesion alone" \
       "V = conditions_failed([cohesion(seat_child, 1, atom(seat, [nterm(nvar(eta))]))])" \
       "$out"
@@ -424,7 +463,7 @@ check "and seat is not rooted, which is no condition" "E = []" "$out"
 
 # A join no assembly decides: its two roles are the assemblies of the two
 # communities, nothing joins them, and neither guards.
-out=$(run 'check_named(gf_novolition, V).')
+out=$(run "check_variant(gf_novolition, $FED, V).")
 check "a join with no guarding role fails volition" \
       "V = conditions_failed([volition(join, 1, 2)])" "$out"
 
@@ -463,7 +502,7 @@ check "a speech act carried from a name term of a required atom: cited keeps it"
 # and role 3 has no edge to one; relay_unguarded is relay with its seated role
 # unguarded.  Over the social graph, whose predicates keep in the language of
 # Section 8 the traceable provenance Section 3 gives them.
-out=$(run 'check_named(sg_relay, V).' 'traceable_of(sg_relay, E).')
+out=$(run "check_variant(sg_relay, $SG, V)." "traceable_variant(sg_relay, $SG, E).")
 check_not "a guarding role in every connected component meets volition" \
       "volition(relay," "$out"
 check "and a component holding none fails it" \
@@ -473,13 +512,13 @@ check "the social graph keeps its traceable provenance in Section 8" \
 
 # sg_tri with tri written as a cschema, in the language of Section 8: the
 # same verdict as in Section 3, volition being one condition in both.
-out=$(run 'check_named(sg_tri_cschema, V).')
+out=$(run "check_variant(sg_tri_cschema, $SG, V).")
 check "tri as a cschema meets the conditions of Section 8, as it does in Section 3" \
       "V = conditions_met" "$out"
 
 # Rootedness is a notion of Section 8; a contract of Section 3 is not asked
 # about it, and keeps the verdict of def:syntactically-grassroots.
-out=$(run 'rooted_of(social_graph, E).' 'check_named(social_graph, V).')
+out=$(run "rooted_preds($SG, E)." "check($SG, V).")
 check "a contract of Section 3 is not asked which predicates are rooted" \
       "E = []" "$out"
 check "and keeps the verdict of Section 3" \
@@ -488,13 +527,13 @@ check "and keeps the verdict of Section 3" \
 # The compiled form of a schema with community roles is Definition Compilation
 # of Section 8, which the compiler prints for a contract that meets the
 # conditions on the text and for no other.
-out=$(run 'compile_named(federation).')
+out=$(run "compile_contract(federation, $FED).")
 check "a contract with community roles is compiled" \
       "begin{align" "$out"
 check_not "and not refused" "not compiled" "$out"
 check_not "no role of the federation is a constituent role" '\ast}' "$out"
 
-out=$(run 'compile_named(gf_novolition).')
+out=$(run "compile_variant(gf_novolition, $FED).")
 check "a contract that fails the conditions of Section 8 is not compiled" \
       "% not compiled: gf_novolition" "$(printf '%s' "$out" | tr '\n' ' ')"
 check_not "and no display is printed for it" "begin{align" "$out"
@@ -518,17 +557,17 @@ IFS= read -r -d '' federate_tex <<'EOF'
 EOF
 federate_box=$(printf '%s' "$federate_tex" | squash)
 check_eq "federate compiles to the worked box of Section 8" \
-         "$federate_box" "$(compiled federation federate)"
+         "$federate_box" "$(compiled_in federation "$FED" federate)"
 
 # The five schemas of the contract, in the one form of Section 8.
-out=$(run 'compile_named(federation).')
+out=$(run "compile_contract(federation, $FED).")
 check_eq "the federation compiles to five displays" "5" \
          "$(printf '%s' "$out" | grep -c 'begin{align')"
 
 # form: a party role in the form of Section 8, over its extent, with a proviso
 # line for the seat it forbids, guarded by a part of it larger than the
 # threshold 0; no name term sigma.y, so no line on freshness.
-form=$(compiled federation form)
+form=$(compiled_in federation "$FED" form)
 check "form ranges over the extent of its party role" \
       "(p\\in\\mathrm{ext}_c(\\Alice))" "$form"
 check "form forbids the seat it adds" \
@@ -542,7 +581,7 @@ check_not "form forms no name and prints no freshness line" \
 
 # join: an assignment line and a proviso line per role, the reach condition,
 # and a guard that is the union of two parts, each at its own threshold.
-join=$(compiled federation join)
+join=$(compiled_in federation "$FED" join)
 check_eq "join prints an assignment line per role" "2" \
          "$(printf '%s' "$join" | grep -o "c'_p:=" | wc -l | tr -d ' ')"
 check_eq "join prints a proviso line per role" "2" \
@@ -556,10 +595,10 @@ check "join's guard is the union of two parts" \
 # leave_1 and leave_2 differ only in which assembly guards.
 check "leave_1 is guarded by a supermajority of the parent's assembly" \
       "\\text{guardedby}G,\\G\\subseteq\\mathrm{ext}_c(\\zeta^{\\mathit{seat}})" \
-      "$(compiled federation leave_1)"
+      "$(compiled_in federation "$FED" leave_1)"
 check "leave_2 is guarded by a supermajority of the child's assembly" \
       "\\text{guardedby}G,\\G\\subseteq\\mathrm{ext}_c(\\xi^{\\mathit{seat}})" \
-      "$(compiled federation leave_2)"
+      "$(compiled_in federation "$FED" leave_2)"
 
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]

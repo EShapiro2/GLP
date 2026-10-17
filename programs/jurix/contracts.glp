@@ -1,58 +1,24 @@
 % ---------------------------------------------------------------------------
-% The contracts the checker is run on.
+% The checker's fixtures: contracts broken in one place each, or small
+% contracts that exercise one clause of a condition, which certify nothing
+% but the checker.  Each names in its comment what it changes and which
+% fault, if any, it is meant to raise.
 %
-% social_graph and currency are the two of /Grassroots/Jurix, Sections 3.3 and
-% 3.4, transcribed from the tables there; Section 7 certifies both by hand.
-% The paper writes the currency's predicate as the cent sign, which is not a
-% GLP constant; it is written coin here.
-%
-% The others are contracts broken in one place each, or small contracts that
-% exercise one clause of a condition.  Each names in its comment what it
-% changes and which fault, if any, it is meant to raise.
+% The contracts the checker is for are their owners' and live with their
+% code, one copy each (claude.md "Sessions", the cascade rule; Coordination
+% Appendix C): the social graph's is programs/social/graph/contract.glp
+% (Jurix, Section 3.3), the currency's programs/currencies/coins/contract.glp
+% (Section 3.4), the child-safe social network's programs/cssn/contract.glp
+% and the federation's programs/federation/contract.glp (Section 8).  Each
+% prints its term by contract_named/2 in a REPL session on the file, and
+% test_jurix.sh passes the term to check/2, traceable_preds/2,
+% rooted_preds/2, compile_contract/2 and compile_schema_in/3.  A fixture that
+% changes one of them in one place is a variant: variant/3 takes the owner's
+% term and gives the fixture, so no copy of a contract is kept here.
 %
 % rs(Guard, Add, Del, Keep, Forb) is the role's +(i), -(i), =(i), not(i); a
 % role is named by its index, so role(1) is the schema's first role.
 % ---------------------------------------------------------------------------
-
-% --- the grassroots social network (Section 3.3) ---------------------------
-% befriend(p?, q?) :   not friend(q), +friend(q)      not friend(p), +friend(p)
-% unfriend(p?, q)  :   -friend(q)                     -friend(p)
-% sign(p?; x)      :   +item(x, p, p)
-% forward(p?, q; x, a, f) :
-%                      item(x, a, f), +sent(x, q)
-%                                                     friend(p), +item(x, a, p)
-procedure sg(Contract).
-sg([schema(befriend,
-       [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
-        rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
-    schema(unfriend,
-       [rs(guarded,   [], [atom(friend, [role(2)])], [], []),
-        rs(unguarded, [], [atom(friend, [role(1)])], [], [])]),
-    schema(sign,
-       [rs(guarded, [atom(item, [svar(x), role(1), role(1)])], [], [], [])]),
-    schema(forward,
-       [rs(guarded,   [atom(sent, [svar(x), role(2)])], [],
-                      [atom(item, [svar(x), pvar(a), pvar(f)])], []),
-        rs(unguarded, [atom(item, [svar(x), pvar(a), role(1)])], [],
-                      [atom(friend, [role(1)])], [])])]).
-
-% --- grassroots currencies (Section 3.4) -----------------------------------
-% mint(p?)          :  +coin(p)
-% swap(p?, q?; u, v):  -coin(u), +coin(v)             -coin(v), +coin(u)
-% pay(p?, q)        :  -coin(q)                       +coin(q)
-% redeem(p?, q; r)  :  -coin(q), +coin(r)             -coin(r), +coin(q)
-procedure cur(Contract).
-cur([schema(mint,
-       [rs(guarded, [atom(coin, [role(1)])], [], [], [])]),
-     schema(swap,
-       [rs(guarded, [atom(coin, [pvar(v)])], [atom(coin, [pvar(u)])], [], []),
-        rs(guarded, [atom(coin, [pvar(u)])], [atom(coin, [pvar(v)])], [], [])]),
-     schema(pay,
-       [rs(guarded,   [], [atom(coin, [role(2)])], [], []),
-        rs(unguarded, [atom(coin, [role(2)])], [], [], [])]),
-     schema(redeem,
-       [rs(guarded,   [atom(coin, [pvar(r)])], [atom(coin, [role(2)])], [], []),
-        rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar(r)])], [], [])])]).
 
 % --- negative: befriend guarded in one role only ---------------------------
 % Nothing is then an introductory act, and befriend fails volition too.
@@ -77,9 +43,8 @@ sg_unguarded([schema(befriend,
 % other party a role and the atom it adds names that party -- and volition is
 % what rejects it: two roles, guarded at one, and neither requires an atom of
 % traceable provenance naming the other.
-procedure sg_imposed(Contract).
-sg_imposed(C?) :-
-    sg(S),
+procedure sg_imposed(Contract?, Contract).
+sg_imposed(S, C?) :-
     contract_app(S?,
       [schema(impose,
          [rs(guarded,   [atom(friend, [role(2)])], [], [], []),
@@ -92,9 +57,8 @@ sg_imposed(C?) :-
 % friend(q) without q ever taking part.  friend keeps traceable provenance,
 % u being named by the knows atom the role requires, and gossip is guarded in
 % both its roles, so volition is not what rejects this one.
-procedure sg_gossip(Contract).
-sg_gossip(C?) :-
-    sg(S),
+procedure sg_gossip(Contract?, Contract).
+sg_gossip(S, C?) :-
     contract_app(S?,
       [schema(gossip,
          [rs(guarded, [atom(friend, [pvar(u)])], [],
@@ -106,9 +70,8 @@ sg_gossip(C?) :-
 %                      friend(s), +chained(s)   +chained(r)
 % Guarded at one role, and no pair beyond the path has an edge, so the schema
 % passes on connectedness and would fail on every pair.
-procedure sg_chain(Contract).
-sg_chain(C?) :-
-    sg(S),
+procedure sg_chain(Contract?, Contract).
+sg_chain(S, C?) :-
     contract_app(S?,
       [schema(chain,
          [rs(guarded,   [atom(chained, [role(2)])], [],
@@ -122,9 +85,8 @@ sg_chain(C?) :-
 % --- negative: the same schema with one edge of the path removed -----------
 % Role 2 requires nothing, so the role graph falls into {1,2} and {3,4}, and
 % {3,4} holds no guarding role.
-procedure sg_chain_cut(Contract).
-sg_chain_cut(C?) :-
-    sg(S),
+procedure sg_chain_cut(Contract?, Contract).
+sg_chain_cut(S, C?) :-
     contract_app(S?,
       [schema(chain,
          [rs(guarded,   [atom(chained, [role(2)])], [],
@@ -147,15 +109,13 @@ tri_roles([rs(guarded,   [atom(chained, [role(2)])], [], [], []),
                          [atom(friend, [role(1)])], []),
            rs(guarded,   [atom(chained, [role(1)])], [], [], [])]).
 
-procedure sg_tri(Contract).
-sg_tri(C?) :-
-    sg(S),
+procedure sg_tri(Contract?, Contract).
+sg_tri(S, C?) :-
     tri_roles(Rs),
     contract_app(S?, [schema(tri, Rs?)], C).
 
-procedure sg_tri_cschema(Contract).
-sg_tri_cschema(C?) :-
-    sg(S),
+procedure sg_tri_cschema(Contract?, Contract).
+sg_tri_cschema(S, C?) :-
     tri_roles(Rs),
     contract_app(S?, [cschema(tri, [], Rs?)], C).
 
@@ -182,9 +142,8 @@ cur_no_mint([schema(swap,
 % def:grounded on speech-act variables, and sent after it.  Befriend stays
 % unobstructed and every schema satisfies volition, so what rejects the
 % contract is the second conjunct of def:syntactically-grassroots alone.
-procedure sg_svar_loose(Contract).
-sg_svar_loose(C?) :-
-    sg(S),
+procedure sg_svar_loose(Contract?, Contract).
+sg_svar_loose(S, C?) :-
     contract_app(S?,
       [schema(note,
          [rs(guarded, [atom(tagged, [svar(x), pvar(u)])], [], [], [])]),
@@ -212,25 +171,24 @@ cur_loose_mint([schema(mint,
 % --- reflexive predicates (the paragraph after def:binding) ----------------
 % The social graph with friend declared reflexive: every state is taken to
 % hold friend of its holder, and nothing else changes, so it certifies.
-procedure sg_reflexive(Declared).
-sg_reflexive(reflexive([friend], S?)) :- sg(S).
+procedure sg_reflexive(Contract?, Declared).
+sg_reflexive(S, reflexive([friend], S?)).
 
 % The social graph less befriend, for the variants of befriend below.
 procedure contract_tail(Contract?, Contract).
 contract_tail([], []).
 contract_tail([_|T], T?).
 
-procedure sg_but_befriend(Contract).
-sg_but_befriend(T?) :- sg(S), contract_tail(S?, T).
+procedure sg_but_befriend(Contract?, Contract).
+sg_but_befriend(S, T?) :- contract_tail(S?, T).
 
 % --- negative: a schema adding or deleting friend of its own role ----------
 % self_befriend(p?) : +friend(p)        self_unfriend(p?) : -friend(p)
 % With friend reflexive no schema adds or deletes, at a role, the friend atom
 % naming that role, so the contract is malformed: it is refused, each schema,
 % role and atom named, and no condition is decided.
-procedure sg_refl_malformed(Declared).
-sg_refl_malformed(reflexive([friend], C?)) :-
-    sg(S),
+procedure sg_refl_malformed(Contract?, Declared).
+sg_refl_malformed(S, reflexive([friend], C?)) :-
     contract_app(S?,
       [schema(self_befriend,
          [rs(guarded, [atom(friend, [role(1)])], [], [], [])]),
@@ -250,14 +208,14 @@ self_req_befriend([schema(befriend,
         rs(guarded, [atom(friend, [role(1)])], [], [atom(friend, [role(2)])],
                     [atom(friend, [role(1)])])])]).
 
-procedure sg_self_required(Contract).
-sg_self_required(C?) :-
+procedure sg_self_required(Contract?, Contract).
+sg_self_required(S, C?) :-
     self_req_befriend(B),
-    sg_but_befriend(T),
+    sg_but_befriend(S?, T),
     contract_app(B?, T?, C).
 
-procedure sg_refl_required(Declared).
-sg_refl_required(reflexive([friend], C?)) :- sg_self_required(C).
+procedure sg_refl_required(Contract?, Declared).
+sg_refl_required(S, reflexive([friend], C?)) :- sg_self_required(S?, C).
 
 % --- negative: befriend forbidding friend of each party at its own role ----
 % befriend(p?, q?) :  not friend(p), not friend(q), +friend(q)
@@ -265,9 +223,9 @@ sg_refl_required(reflexive([friend], C?)) :- sg_self_required(C).
 % With friend reflexive every state holds friend of its holder, so clause 3 of
 % def:unobstructed fails at both roles of befriend, the one introductory act;
 % no act adds at a party friend of that party, so clause 2 holds.
-procedure sg_refl_forbidden(Declared).
-sg_refl_forbidden(reflexive([friend], C?)) :-
-    sg_but_befriend(T),
+procedure sg_refl_forbidden(Contract?, Declared).
+sg_refl_forbidden(S, reflexive([friend], C?)) :-
+    sg_but_befriend(S?, T),
     contract_app(
       [schema(befriend,
          [rs(guarded, [atom(friend, [role(2)])], [], [],
@@ -276,40 +234,30 @@ sg_refl_forbidden(reflexive([friend], C?)) :-
                       [atom(friend, [role(2)]), atom(friend, [role(1)])])])],
       T?, C).
 
-% --- CSSN's child-safe social contract -------------------------------------
-% Transcribed from CSSN's entries in Coordination/mail/Legal_inbox.md, as
-% written there and with the guard marks of the source: sixteen schemas on
-% 2026-08-15 20:35 UTC, so deliver is unguarded at both roles -- their
-% decision, in their Section 3.2; post and deliver repaired at 21:40 UTC, which
-% ties an item delivered in a group to a posting of it there; and
-% child_leave_2 and post_own added at 2026-08-16 12:37 UTC, making eighteen.
-% send follows CSSN's paper, sections/artefact-schemas.tex:46--47, the sender
-% requiring the item it sends and nothing else (Legal 2026-10-09 18:46 UTC).
-% friend is reflexive, as CSSN's sections/schemas.tex declares it, and
-% parent_child forbids parent(r) at the parent's role, as its Appendix A2,
-% sections/artefact-schemas.tex:8, writes it (Legal 2026-10-09 18:43 UTC).
+% --- cs18: a child-safe social contract of eighteen schemas ----------------
+% The checker's fixture for expanded schemas, four-party schemas, speech-act
+% variables and a schema no party guards, in one contract: eighteen schemas,
+% twenty-eight expanded, syntactically grassroots, its introductory act
+% parent_child.  It is the child-safe social network's contract as CSSN
+% drafted it in Legal's inbox on 2026-08-15 and 2026-08-16 and as it was
+% brought to their paper on 2026-10-09 (send, parent_child, friend reflexive,
+% the five expanded schemas); CSSN has since revised the contract, and the
+% contract is programs/cssn/contract.glp, CSSN's, which certifies this
+% fixture of nothing.
+%
 % unfriend, child_unfriend, leave, child_leave and child_leave_2 each stand
 % for one schema per role, guarded at that role and differing in nothing
-% else, so the contract is twenty-eight schemas expanded (CSSN's
-% sections/appendix-cascade.tex:24 and :32, sections/schemas.tex:58), and it
-% is written expanded here (Legal 2026-10-09 19:47 UTC): the one guarded at
-% the role CSSN's table writes r is named <schema>_r, so unfriend_p and
-% unfriend_q, leave_a and leave_q, child_leave_a, _s and _p,
-% child_unfriend_r, _s, _p and _q, and child_leave_2_r, _s, _p and _q.
-%
-% n names a group.  A group is no person, so n is a speech-act variable here;
-% that is also the reading CSSN's own provenance set takes, member and listed
-% having traceable provenance only under it.
-%
-% DO NOT REMOVE OR ALTER THIS CONTRACT WITHOUT TELLING CSSN (their 2026-08-15
-% 22:00 UTC).  Their Section 3.3 cites the run over it, and its schemas are the
-% table of their Appendix A2, sections/artefact-schemas.tex; the two have to
-% stay the same eighteen, twenty-eight expanded.
-procedure cssn(Declared).
-cssn(reflexive([friend], S?)) :- cssn_schemas(S).
+% else, and are written expanded: the one guarded at the role the table
+% writes r is named <schema>_r, so unfriend_p and unfriend_q, leave_a and
+% leave_q, child_leave_a, _s and _p, child_unfriend_r, _s, _p and _q, and
+% child_leave_2_r, _s, _p and _q.  n names a group.  A group is no person,
+% so n is a speech-act variable here, member and listed having traceable
+% provenance only under that reading.
+procedure cs18(Declared).
+cs18(reflexive([friend], S?)) :- cs18_schemas(S).
 
-procedure cssn_schemas(Contract).
-cssn_schemas([schema(parent_child,
+procedure cs18_schemas(Contract).
+cs18_schemas([schema(parent_child,
        [rs(guarded, [atom(parenting, [role(2)])], [], [],
                     [atom(parent, [role(2)])]),
         rs(guarded, [atom(parent, [role(1)]), atom(child, [])], [], [],
@@ -449,101 +397,55 @@ cssn_schemas([schema(parent_child,
                      atom(listed, [role(1), svar(n)])], [])])]).
 
 % --- the contracts by name -------------------------------------------------
-% An unknown name is the empty contract, which has no introductory act.
+% A fixture that stands alone, by name.  An unknown name is the empty
+% contract, which has no introductory act.
 exported procedure contract(Constant?, Declared).
-contract(social_graph, C?) :- sg(C).
-contract(currency, C?) :- cur(C).
 contract(sg_unguarded, C?) :- sg_unguarded(C).
-contract(sg_imposed, C?) :- sg_imposed(C).
-contract(sg_gossip, C?) :- sg_gossip(C).
-contract(sg_chain, C?) :- sg_chain(C).
-contract(sg_chain_cut, C?) :- sg_chain_cut(C).
-contract(sg_tri, C?) :- sg_tri(C).
-contract(sg_tri_cschema, C?) :- sg_tri_cschema(C).
-contract(sg_svar_loose, C?) :- sg_svar_loose(C).
-contract(cssn, C?) :- cssn(C).
 contract(cur_no_mint, C?) :- cur_no_mint(C).
 contract(cur_loose_mint, C?) :- cur_loose_mint(C).
-contract(federation, C?) :- federation(C).
-contract(gf_unrooted, C?) :- gf_unrooted(C).
-contract(gf_untraceable, C?) :- gf_untraceable(C).
-contract(gf_uncohesive, C?) :- gf_uncohesive(C).
-contract(gf_novolition, C?) :- gf_novolition(C).
-contract(gf_cohesion_only, C?) :- gf_cohesion_only(C).
+contract(cs18, C?) :- cs18(C).
 contract(sv_signed, C?) :- sv_signed(C).
 contract(sv_loose, C?) :- sv_loose(C).
 contract(sv_in_name_loose, C?) :- sv_in_name_loose(C).
 contract(sv_in_name_carried, C?) :- sv_in_name_carried(C).
-contract(sg_relay, C?) :- sg_relay(C).
-contract(sg_reflexive, C?) :- sg_reflexive(C).
-contract(sg_refl_malformed, C?) :- sg_refl_malformed(C).
-contract(sg_self_required, C?) :- sg_self_required(C).
-contract(sg_refl_required, C?) :- sg_refl_required(C).
-contract(sg_refl_forbidden, C?) :- sg_refl_forbidden(C).
 contract(_, []) :- otherwise | true.
 
-% --- the contract of a grassroots federation -------------------------------
-% GFWC's five act schemas, /Grassroots/GFWC sections/schemas.tex, the table
-% of its Section 3, over the two predicates seat and child; written in the
-% language of Section 8 of /Grassroots/Jurix.  The one role of form is a
-% party role and every role of federate, join and the two leave schemas is a
-% seated role: the contract has no constituent role.  The supermajority
-% threshold is named theta and the decision that forms a community y, as the
-% paper writes them.
-procedure gf_form(Contract).
-gf_form([schema(form,
-       [rs(guarded, [atom(seat, [nterm(own(1))])], [], [],
-                    [atom(seat, [nterm(own(1))])])])]).
-
-procedure gf_federate(Contract).
-gf_federate([cschema(federate, [],
-       [crs(seated(nvar(zeta), seat), guarded_at(theta),
-            [atom(child, [nterm(ext(nvar(zeta), y)), nterm(nvar(zeta))]),
-             atom(seat, [nterm(ext(nvar(zeta), y))])], [], [], [])])]).
-
-procedure gf_rest(Contract).
-gf_rest([cschema(join, [reach(nvar(xi), child, nvar(zeta))],
-       [crs(seated(nvar(zeta), seat), guarded_at(theta),
-            [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], [],
-            [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])]),
-        crs(seated(nvar(xi), seat), guarded_at(theta),
-            [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], [],
-            [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])])]),
-     cschema(leave_1, [],
-       [crs(seated(nvar(zeta), seat), guarded_at(theta),
-            [], [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], []),
-        crs(seated(nvar(xi), seat), unguarded,
-            [], [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], [])]),
-     cschema(leave_2, [],
-       [crs(seated(nvar(zeta), seat), unguarded,
-            [], [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], []),
-        crs(seated(nvar(xi), seat), guarded_at(theta),
-            [], [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], [])])]).
-
-procedure gf_join(Contract?, Contract?, Contract?, Contract).
-gf_join(A, B, C, R?) :- ground(A?), ground(B?), ground(C?) |
-    contract_app(B?, C?, BC),
-    contract_app(A?, BC?, R).
-
-procedure federation(Contract).
-federation(C?) :-
-    gf_form(F),
-    gf_federate(D),
-    gf_rest(S),
-    gf_join(F?, D?, S?, C).
+% A fixture that is a contract changed in one place, by name and the contract
+% it changes, which test_jurix.sh reads from the owner's file: the social
+% graph's for sg_*, the federation's for gf_*.  An unknown name is the empty
+% contract.
+exported procedure variant(Constant?, Contract?, Declared).
+variant(sg_imposed, S, C?) :- sg_imposed(S?, C).
+variant(sg_gossip, S, C?) :- sg_gossip(S?, C).
+variant(sg_chain, S, C?) :- sg_chain(S?, C).
+variant(sg_chain_cut, S, C?) :- sg_chain_cut(S?, C).
+variant(sg_tri, S, C?) :- sg_tri(S?, C).
+variant(sg_tri_cschema, S, C?) :- sg_tri_cschema(S?, C).
+variant(sg_svar_loose, S, C?) :- sg_svar_loose(S?, C).
+variant(sg_reflexive, S, C?) :- sg_reflexive(S?, C).
+variant(sg_refl_malformed, S, C?) :- sg_refl_malformed(S?, C).
+variant(sg_self_required, S, C?) :- sg_self_required(S?, C).
+variant(sg_refl_required, S, C?) :- sg_refl_required(S?, C).
+variant(sg_refl_forbidden, S, C?) :- sg_refl_forbidden(S?, C).
+variant(sg_relay, S, C?) :- sg_relay(S?, C).
+variant(gf_unrooted, F, C?) :- gf_unrooted(F?, C).
+variant(gf_untraceable, F, C?) :- gf_untraceable(F?, C).
+variant(gf_uncohesive, F, C?) :- gf_uncohesive(F?, C).
+variant(gf_cohesion_only, F, C?) :- gf_cohesion_only(F?, C).
+variant(gf_novolition, F, C?) :- gf_novolition(F?, C).
+variant(_, _, []) :- otherwise | true.
 
 % --- negative: the new community named without the decision that formed it --
 % federate seats the assembly in the name of the community itself, of least
 % rank zero and at no party role, so seat is not rooted.
-procedure gf_unrooted(Contract).
-gf_unrooted(C?) :-
-    gf_form(F),
-    gf_rest(S),
-    gf_join(F?,
-      [cschema(federate, [],
+procedure gf_unrooted(Contract?, Contract).
+gf_unrooted([], []).
+gf_unrooted([_], []).
+gf_unrooted([F, _ | R],
+   [F?, cschema(federate, [],
          [crs(seated(nvar(zeta), seat), guarded_at(theta),
               [atom(child, [nterm(ext(nvar(zeta), y)), nterm(nvar(zeta))]),
-               atom(seat, [nterm(nvar(zeta))])], [], [], [])])], S?, C).
+               atom(seat, [nterm(nvar(zeta))])], [], [], [])]) | R?]).
 
 % --- negative: an atom naming a community nothing traces -------------------
 % federate notes a community eta that is the name term of no role and that no
@@ -551,16 +453,15 @@ gf_unrooted(C?) :-
 % child keep it, and the set of predicates occurring in the contract lacks it,
 % the contract's one fault.  note is the predicate of no role, so cohesion is
 % untouched.
-procedure gf_untraceable(Contract).
-gf_untraceable(C?) :-
-    gf_form(F),
-    gf_rest(S),
-    gf_join(F?,
-      [cschema(federate, [],
+procedure gf_untraceable(Contract?, Contract).
+gf_untraceable([], []).
+gf_untraceable([_], []).
+gf_untraceable([F, _ | R],
+   [F?, cschema(federate, [],
          [crs(seated(nvar(zeta), seat), guarded_at(theta),
               [atom(child, [nterm(ext(nvar(zeta), y)), nterm(nvar(zeta))]),
                atom(seat, [nterm(ext(nvar(zeta), y))]),
-               atom(note, [nterm(nvar(eta))])], [], [], [])])], S?, C).
+               atom(note, [nterm(nvar(eta))])], [], [], [])]) | R?]).
 
 % --- negative: a seat atom of a community that is no role of the schema -----
 % federate seats the assembly in eta, the name term of no role of it, in
@@ -570,15 +471,14 @@ gf_untraceable(C?) :-
 % (definition:cohesive), and a child atom naming eta would break nothing.
 % The same atom costs seat its traceable provenance, which the verdict names
 % before the cohesion fault, and its rootedness.
-procedure gf_uncohesive(Contract).
-gf_uncohesive(C?) :-
-    gf_form(F),
-    gf_rest(S),
-    gf_join(F?,
-      [cschema(federate, [],
+procedure gf_uncohesive(Contract?, Contract).
+gf_uncohesive([], []).
+gf_uncohesive([_], []).
+gf_uncohesive([F, _ | R],
+   [F?, cschema(federate, [],
          [crs(seated(nvar(zeta), seat), guarded_at(theta),
               [atom(child, [nterm(ext(nvar(zeta), y)), nterm(nvar(zeta))]),
-               atom(seat, [nterm(nvar(eta))])], [], [], [])])], S?, C).
+               atom(seat, [nterm(nvar(eta))])], [], [], [])]) | R?]).
 
 % --- negative: cohesion alone ---------------------------------------------
 % The federation contract with one schema more,
@@ -591,9 +491,8 @@ gf_uncohesive(C?) :-
 % {seat, child}, so seat keeps traceable provenance (definition:provenance);
 % the role graph is one role, so volition holds.  seat stops being rooted,
 % which is no condition (Legal 2026-10-09 18:31 UTC).
-procedure gf_cohesion_only(Contract).
-gf_cohesion_only(C?) :-
-    federation(F),
+procedure gf_cohesion_only(Contract?, Contract).
+gf_cohesion_only(F, C?) :-
     contract_app(F?,
       [cschema(seat_child, [],
          [crs(seated(nvar(zeta), seat), guarded_at(theta),
@@ -604,18 +503,17 @@ gf_cohesion_only(C?) :-
 % The two roles of join are the assemblies of two communities, of different
 % bases, and neither requires an atom, so nothing joins them; with neither
 % guarding, no part of the role graph holds a guarding role.
-procedure gf_novolition(Contract).
-gf_novolition(C?) :-
-    gf_form(F),
-    gf_federate(D),
-    gf_join(F?, D?,
-      [cschema(join, [reach(nvar(xi), child, nvar(zeta))],
+procedure gf_novolition(Contract?, Contract).
+gf_novolition([], []).
+gf_novolition([_], []).
+gf_novolition([F, D | _],
+   [F?, D?, cschema(join, [reach(nvar(xi), child, nvar(zeta))],
          [crs(seated(nvar(zeta), seat), unguarded,
               [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], [],
               [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])]),
           crs(seated(nvar(xi), seat), unguarded,
               [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], [],
-              [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])])])], C).
+              [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])])])]).
 
 % --- the speech-act variables of definition:provenance (Section 8) ---------
 % Four small contracts of party roles, put in the language of Section 8 by a
@@ -689,9 +587,8 @@ sv_in_name_carried([cschema(found, [],
 % holding a guarding role, and r has no edge to a guarding role: relay meets
 % volition.  relay_unguarded is relay with the assembly unguarded, so that
 % the assembly's component holds no guarding role, and it fails.
-procedure sg_relay(Contract).
-sg_relay(C?) :-
-    sg(S),
+procedure sg_relay(Contract?, Contract).
+sg_relay(S, C?) :-
     contract_app(S?,
       [schema(relay,
          [rs(guarded,   [atom(chained, [role(2)])], [],

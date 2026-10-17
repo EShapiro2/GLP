@@ -1,10 +1,11 @@
 %% ---------------------------------------------------------------------------
 %% vGLP's contracts for the compiler from an act-schema contract to its
 %% canonical CVA platform (compiler/, compile.sh), beside Jurix's two, which
-%% programs/jurix holds.  Each is a contract in the term form programs/jurix
-%% reads (its README, "Writing a contract"), and compile.sh has Jurix's checker,
-%% check/2, certify it before it compiles it, as it does Jurix's.  Both are
-%% test code.
+%% their owners hold (programs/social/graph/contract.glp,
+%% programs/currencies/coins/contract.glp).  Each is a contract in the term
+%% form programs/jurix reads (its README, "Writing a contract"), and compile.sh
+%% has Jurix's checker, check/2, certify it before it compiles it, as it does
+%% Jurix's.  These are test code.
 %%
 %% nudge is the grassroots social network's befriend with an unguarded act of
 %% its own, so that a contract compiled here has an unguarded class, which

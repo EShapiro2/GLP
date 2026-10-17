@@ -1,0 +1,66 @@
+%% ---------------------------------------------------------------------------
+%% contract.glp --- the contract of a grassroots federation, GFWC's (a
+%% contract is its platform's paper's; Coordination Appendix C): its five act
+%% schemas, /Grassroots/GFWC sections/schemas.tex, the table of its Section
+%% 3, over the two predicates seat and child, written in the language of
+%% Section 8 of /Grassroots/Jurix, in the term form programs/jurix reads (its
+%% README, "Writing a contract").  The one copy: Jurix's checker
+%% (programs/jurix/test_jurix.sh) reads it from here, contract_named/2
+%% printing the term.
+%%
+%% The one role of form is a party role and every role of federate, join and
+%% the two leave schemas is a seated role: the contract has no constituent
+%% role.  The supermajority threshold is named theta and the decision that
+%% forms a community y, as the paper writes them.  A party role is
+%% rs(Guard, Add, Del, Keep, Forb) and a seated role
+%% crs(seated(NameTerm, Predicate), Guard, Add, Del, Keep, Forb), its +(i),
+%% -(i), =(i) and not(i); own(1) is the name term of the schema's first role,
+%% nvar a name variable and ext a name term extended by a speech-act variable.
+%% ---------------------------------------------------------------------------
+
+NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
+            ; ext(NameTerm, Constant).
+Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm).
+Args      ::= [] ; [Arg | Args].
+Atom      ::= atom(Constant, Args).
+Atoms     ::= [] ; [Atom | Atoms].
+Guard     ::= guarded ; unguarded ; guarded_at(Constant).
+RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant).
+RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
+            ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
+RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
+Reach     ::= reach(NameTerm, Constant, NameTerm).
+Reaches   ::= [] ; [Reach | Reaches].
+Schema    ::= schema(Constant, RoleSpecs) ; cschema(Constant, Reaches, RoleSpecs).
+Contract  ::= [] ; [Schema | Contract].
+Preds     ::= [] ; [Constant | Preds].
+Declared  ::= Contract ; reflexive(Preds, Contract).
+
+%% contract_named(federation, C): the contract, form, federate, join, leave_1
+%% and leave_2 in that order.
+procedure contract_named(Constant?, Declared).
+contract_named(federation,
+   [schema(form,
+       [rs(guarded, [atom(seat, [nterm(own(1))])], [], [],
+                    [atom(seat, [nterm(own(1))])])]),
+    cschema(federate, [],
+       [crs(seated(nvar(zeta), seat), guarded_at(theta),
+            [atom(child, [nterm(ext(nvar(zeta), y)), nterm(nvar(zeta))]),
+             atom(seat, [nterm(ext(nvar(zeta), y))])], [], [], [])]),
+    cschema(join, [reach(nvar(xi), child, nvar(zeta))],
+       [crs(seated(nvar(zeta), seat), guarded_at(theta),
+            [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], [],
+            [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])]),
+        crs(seated(nvar(xi), seat), guarded_at(theta),
+            [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], [],
+            [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])])]),
+    cschema(leave_1, [],
+       [crs(seated(nvar(zeta), seat), guarded_at(theta),
+            [], [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], []),
+        crs(seated(nvar(xi), seat), unguarded,
+            [], [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], [])]),
+    cschema(leave_2, [],
+       [crs(seated(nvar(zeta), seat), unguarded,
+            [], [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], []),
+        crs(seated(nvar(xi), seat), guarded_at(theta),
+            [], [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], [])])]).

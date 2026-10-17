@@ -3359,7 +3359,8 @@ echo ""
 # handlers of vGLP 8d56915 and the answers of 158ec9b; Answer recording the
 # person's answer and Vote voting on it on a tick, vGLP c3b2191; wound-wait,
 # Commit and Yield, attempts numbered and ranked, vGLP 49cd9f7).  Jurix's social graph
-# and currency (programs/jurix) and vGLP's nudge, introduce, gnudge, childsafe and link
+# and currency (their owners', programs/social/graph/contract.glp and
+# programs/currencies/coins/contract.glp) and vGLP's nudge, introduce, gnudge, childsafe and link
 # (programs/vglp/cva/contracts.glp) compiled, the committed modules held to
 # what the compiler prints; the contracts it refuses, not local, without
 # simple guards or not effective; and the plays of each platform, two agents
@@ -6224,7 +6225,11 @@ if _section JX; then
 # Section JX: The Jurix checker and compiler (programs/jurix)
 # =============================================================================
 # programs/jurix decides whether a contract is syntactically grassroots and
-# compiles the schemas of one that is, against /Grassroots/Jurix; its checks
+# compiles the schemas of one that is, against /Grassroots/Jurix; a contract is
+# read from its owner's file (programs/social/graph/contract.glp,
+# programs/currencies/coins/contract.glp, programs/cssn/contract.glp,
+# programs/federation/contract.glp), one copy each, and the fixtures that
+# change one are programs/jurix/contracts.glp's variants of it.  Its checks
 # were written as programs/jurix/test_jurix.sh, which runs the same REPL binary
 # this suite does and prints one summary line.  The script stays the one place
 # those checks are written --- the paper's owner reads and runs it on its own,

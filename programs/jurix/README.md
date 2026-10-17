@@ -38,24 +38,34 @@ Section 8 (`definition:compile`), and its worked box, the display for
 
 ## Running it
 
-Needs the Dart SDK and this repository; nothing else.  From the repository root:
+Needs the Dart SDK and this repository; nothing else.  A contract is its
+owner's and lives with the owner's code, one copy, in the term form of
+"Writing a contract" below: the social graph's is
+`programs/social/graph/contract.glp`, the currency's
+`programs/currencies/coins/contract.glp`, the child-safe social network's
+`programs/cssn/contract.glp` and the federation's
+`programs/federation/contract.glp`.  A REPL session on the file prints the
+contract's term, and a session on this directory decides it.  From the
+repository root:
 
     cd glp_runtime
-    printf '/path/to/GLP/programs/jurix/\ncheck_named(social_graph, V).\n:quit\n' | bin/glpc
+    printf '/path/to/GLP/programs/social/graph/contract.glp\ncontract_named(social_graph, C).\n:quit\n' | bin/glpc
+    printf '/path/to/GLP/programs/jurix/\ncheck(<the term the first printed>, V).\n:quit\n' | bin/glpc
 
 or interactively, entering the directory path at the prompt to load the program
 and then a goal:
 
     GLP> /path/to/GLP/programs/jurix/
     ✓ Loaded program: /path/to/GLP/programs/jurix/
-    GLP> check_named(social_graph, V).
+    GLP> check([schema(befriend, [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]), schema(unfriend, ...)], V).
     V = syntactically_grassroots
 
-The REPL stops a goal at 10000 reductions unless told otherwise, and CSSN's
-twenty-eight schemas take more: enter `:limit 1000000` before the goal, as the
-test script does.
+The REPL stops a goal at 10000 reductions unless told otherwise, and a contract
+of twenty-eight schemas takes more: enter `:limit 1000000` before the goal, as
+the test script does.
 
-The tests are `bash programs/jurix/test_jurix.sh` from the repository root.
+The tests are `bash programs/jurix/test_jurix.sh` from the repository root; it
+reads each contract from its owner's file and passes the term in.
 
 ## The compiler
 
@@ -107,22 +117,28 @@ signature.  It loads and runs as before.
 
 | Goal | What it gives |
 |---|---|
-| `check(C, V)` | the verdict on the contract `C` |
-| `check_named(Name, V)` | the verdict on one of the contracts of `contracts.glp` |
-| `traceable_of(Name, E)` | its predicates of traceable provenance |
-| `rooted_of(Name, E)` | its rooted predicates, empty for a contract of Section 3 |
-| `contract_named(Name, C)` | the contract itself |
-| `compile_named(Name)` | prints the compiled form of every schema of it |
-| `compile_schema(Name, Schema)` | prints the compiled form of one schema |
+| `check(C, V)` | the verdict on the contract `C`, given as a term |
+| `traceable_preds(C, E)` | its predicates of traceable provenance |
+| `rooted_preds(C, E)` | its rooted predicates, empty for a contract of Section 3 |
+| `compile_contract(Name, C)` | prints the compiled form of every schema of it, refusing it under `Name` |
+| `compile_schema_in(Name, C, Schema)` | prints the compiled form of one schema of it |
+| `check_named(Name, V)` | the verdict on a fixture of `contracts.glp` that stands alone |
+| `traceable_of(Name, E)`, `rooted_of(Name, E)`, `contract_named(Name, C)`, `compile_named(Name)`, `compile_schema(Name, Schema)` | the same of such a fixture |
+| `check_variant(Name, C, V)`, `traceable_variant(Name, C, E)`, `rooted_variant(Name, C, E)`, `variant(Name, C, D)`, `compile_variant(Name, C)`, `compile_schema_variant(Name, C, Schema)` | the same of a fixture that changes the contract `C` in one place |
 
-The names are `social_graph` and `currency`, the two the paper works through;
+The contracts are their owners' (claude.md "Sessions", the cascade rule;
+Coordination Appendix C), read from the owners' files: `social_graph` and
+`currency`, the two the paper works through, `cssn` and `federation`.  The
+fixtures are the checker's own and certify nothing but it:
 `sg_chain`, which certifies and exercises volition above arity two; `sg_tri`,
 which certifies with a role graph that is not connected and a guarding role in
 each connected component of it; and the
 seven broken contracts `sg_unguarded`, `sg_imposed`, `sg_gossip`,
-`sg_chain_cut`, `sg_svar_loose`, `cur_no_mint`, `cur_loose_mint`.
-`federation` is GFWC's five schemas
-(`/Grassroots/GFWC`, `sections/schemas.tex`), whose roles are one party role
+`sg_chain_cut`, `sg_svar_loose`, `cur_no_mint`, `cur_loose_mint`; `cs18`, a
+child-safe social contract of eighteen schemas, twenty-eight expanded, the
+fixture for expanded schemas, four-party schemas, speech-act variables and a
+schema no party guards.  `federation`, GFWC's five schemas
+(`/Grassroots/GFWC`, `sections/schemas.tex`), has roles that are one party role
 and seated roles, none of them a constituent role; `gf_untraceable`,
 `gf_uncohesive` and `gf_novolition` are it broken in one place each, one per
 condition, the one atom `gf_uncohesive` breaks costing `seat` its traceable
@@ -199,7 +215,10 @@ naming the schema, the role and the atom, and no condition is decided for it.
 A contract is a GLP term: the list of its act schemas (`def:schema`), or,
 where it declares predicates of arity one reflexive (the paragraph after
 `def:binding`), `reflexive(Predicates, Schemas)`.  Write it in a file of its
-own, or add a clause to `contracts.glp`.
+own, in its owner's directory, as `programs/social/graph/contract.glp` is
+written: the type declarations below, then `procedure contract_named(Constant?,
+Declared).` and a clause giving the contract under its name.  `contracts.glp`
+holds only the checker's fixtures.
 
     NameTerm ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
                ; ext(NameTerm, Constant).
@@ -252,7 +271,7 @@ fails it as malformed.
 | `community.glp` | the three conditions of Section 8, and the rooted predicates; its volition is `def:volition` of Section 3 too |
 | `check.glp` | `def:syntactically-grassroots`, the two halves together, and the conditions of Section 8 for a contract with community roles; the refusal of a malformed contract |
 | `compile.glp` | `def:compile`, printed as the LaTeX of Section 5.2, and `definition:compile`, printed as the worked box of Section 8 |
-| `contracts.glp` | the contracts to run on |
+| `contracts.glp` | the checker's fixtures: contracts that stand alone, by name, and variants of a contract, by name and the contract's term |
 
 ## Why it terminates
 

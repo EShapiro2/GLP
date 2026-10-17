@@ -21,6 +21,7 @@
 
 imported procedure check#check(Declared?, Verdict).
 imported procedure contracts#contract(Constant?, Declared).
+imported procedure contracts#variant(Constant?, Contract?, Declared).
 
 procedure chunks_app(Chunks?, Chunks?, Chunks).
 chunks_app([], T, T?).
@@ -597,6 +598,18 @@ compile_named(Nm) :- ground(Nm?) |
     contracts # contract(Nm?, C),
     compile_checked(Nm?, C?).
 
+% A contract given as a term, under the name its displays are reported by.
+exported procedure compile_contract(Constant?, Declared?).
+compile_contract(Nm, D) :- ground(Nm?), ground(D?) |
+    compile_checked(Nm?, D?).
+
+% A fixture that changes a contract in one place, by name and the contract it
+% changes (contracts.glp, variant/3).
+exported procedure compile_variant(Constant?, Contract?).
+compile_variant(Nm, B) :- ground(Nm?), ground(B?) |
+    contracts # variant(Nm?, B?, D),
+    compile_checked(Nm?, D?).
+
 procedure compile_s_on(Verdict?, Constant?, Constant?, Contract?).
 compile_s_on(syntactically_grassroots, _, Sn, C) :- ground(Sn?), ground(C?) |
     find_schema(C?, Sn?, S),
@@ -618,3 +631,12 @@ exported procedure compile_schema(Constant?, Constant?).
 compile_schema(Nm, Sn) :- ground(Nm?), ground(Sn?) |
     contracts # contract(Nm?, C),
     compile_s_checked(Nm?, Sn?, C?).
+
+exported procedure compile_schema_in(Constant?, Declared?, Constant?).
+compile_schema_in(Nm, D, Sn) :- ground(Nm?), ground(D?), ground(Sn?) |
+    compile_s_checked(Nm?, Sn?, D?).
+
+exported procedure compile_schema_variant(Constant?, Contract?, Constant?).
+compile_schema_variant(Nm, B, Sn) :- ground(Nm?), ground(B?), ground(Sn?) |
+    contracts # variant(Nm?, B?, D),
+    compile_s_checked(Nm?, Sn?, D?).

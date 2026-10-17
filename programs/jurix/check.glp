@@ -41,6 +41,7 @@ imported procedure community#conditions(Contract?, Faults).
 imported procedure community#traceable(Contract?, Preds).
 imported procedure community#rooted(Contract?, Preds).
 imported procedure contracts#contract(Constant?, Declared).
+imported procedure contracts#variant(Constant?, Contract?, Declared).
 
 procedure verdict(Faults?, Verdict).
 verdict([], syntactically_grassroots).
@@ -137,6 +138,13 @@ check_named(Nm, V?) :- ground(Nm?) |
     contracts # contract(Nm?, D),
     check(D?, V).
 
+% A fixture that changes a contract in one place, by name and the contract it
+% changes (contracts.glp, variant/3).
+exported procedure check_variant(Constant?, Contract?, Verdict).
+check_variant(Nm, B, V?) :- ground(Nm?), ground(B?) |
+    contracts # variant(Nm?, B?, D),
+    check(D?, V).
+
 % The predicates of traceable provenance, for inspection: def:grounded for a
 % contract of Section 3 and definition:provenance for one with community
 % roles.
@@ -155,6 +163,16 @@ traceable_of(Nm, E?) :- ground(Nm?) |
     decl_schemas(D?, C),
     traceable_in(C?, E).
 
+exported procedure traceable_preds(Declared?, Preds).
+traceable_preds(D, E?) :- ground(D?) |
+    decl_schemas(D?, C),
+    traceable_in(C?, E).
+
+exported procedure traceable_variant(Constant?, Contract?, Preds).
+traceable_variant(Nm, B, E?) :- ground(Nm?), ground(B?) |
+    contracts # variant(Nm?, B?, D),
+    traceable_preds(D?, E).
+
 % The predicates that are rooted (definition:rooted).  Rootedness is a notion
 % of Section 8; a contract of Section 3 is not asked about it.
 procedure rooted1(Ans?, Contract?, Preds).
@@ -171,3 +189,13 @@ rooted_of(Nm, E?) :- ground(Nm?) |
     contracts # contract(Nm?, D),
     decl_schemas(D?, C),
     rooted_in(C?, E).
+
+exported procedure rooted_preds(Declared?, Preds).
+rooted_preds(D, E?) :- ground(D?) |
+    decl_schemas(D?, C),
+    rooted_in(C?, E).
+
+exported procedure rooted_variant(Constant?, Contract?, Preds).
+rooted_variant(Nm, B, E?) :- ground(Nm?), ground(B?) |
+    contracts # variant(Nm?, B?, D),
+    rooted_preds(D?, E).

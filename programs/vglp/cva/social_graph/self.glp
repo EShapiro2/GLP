@@ -1,6 +1,6 @@
 %% ---------------------------------------------------------------------------
 %% The plays of the canonical CVA platform of Jurix's social graph
-%% (programs/jurix, contract_named(social_graph, C); Jurix, Section 3.3),
+%% (GSG's, programs/social/graph/contract.glp; Jurix, Section 3.3),
 %% platform.vglp, which programs/vglp/cva/compile.sh prints from it: two-phase
 %% commit coordinated by the initiating agent (vGLP, Section 3.2, Definition
 %% "Canonical CVA Platform").  Each runs two agents, alice and bob, their
