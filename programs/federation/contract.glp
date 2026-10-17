@@ -40,13 +40,20 @@ Declared  ::= Contract ; reflexive(Preds, Contract).
 %% and leave_2 in that order.
 procedure contract_named(Constant?, Declared).
 contract_named(federation,
+%%   form(p?) :
+%%       at p:  not seat(<p>), +seat(<p>)
    [schema(form,
        [rs(guarded, [atom(seat, [nterm(own(1))])], [], [],
                     [atom(seat, [nterm(own(1))])])]),
+%%   federate(zeta^seat ?theta ; y) :
+%%       at zeta^seat:  +child(zeta.y, zeta), +seat(zeta.y)
     cschema(federate, [],
        [crs(seated(nvar(zeta), seat), guarded_at(theta),
             [atom(child, [nterm(ext(nvar(zeta), y)), nterm(nvar(zeta))]),
              atom(seat, [nterm(ext(nvar(zeta), y))])], [], [], [])]),
+%%   join(zeta^seat ?theta, xi^seat ?theta ; xi -/child-> zeta) :
+%%       at zeta^seat:  not child(zeta, xi), +child(zeta, xi)
+%%       at xi^seat:  not child(zeta, xi), +child(zeta, xi)
     cschema(join, [reach(nvar(xi), child, nvar(zeta))],
        [crs(seated(nvar(zeta), seat), guarded_at(theta),
             [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], [],
@@ -54,11 +61,17 @@ contract_named(federation,
         crs(seated(nvar(xi), seat), guarded_at(theta),
             [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], [],
             [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])])]),
+%%   leave_1(zeta^seat ?theta, xi^seat) :
+%%       at zeta^seat:  -child(zeta, xi)
+%%       at xi^seat:  -child(zeta, xi)
     cschema(leave_1, [],
        [crs(seated(nvar(zeta), seat), guarded_at(theta),
             [], [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], []),
         crs(seated(nvar(xi), seat), unguarded,
             [], [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], [])]),
+%%   leave_2(zeta^seat, xi^seat ?theta) :
+%%       at zeta^seat:  -child(zeta, xi)
+%%       at xi^seat:  -child(zeta, xi)
     cschema(leave_2, [],
        [crs(seated(nvar(zeta), seat), unguarded,
             [], [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], []),

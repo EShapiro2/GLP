@@ -18,6 +18,7 @@ GLP/
 ├── networking/               # the transport layer
 ├── servers/gpw/              # grassroots personal websites
 ├── test/run_all_tests.sh     # the canonical suite
+├── cascade.sh                # a run of the cascade on a contract, recorded in programs/<owner>/cascade/
 └── programs/                 # all GLP and vGLP sources
     ├── self.glp              # the root scope: the types and procedures every program inherits
     ├── lib/                  # the standard modules the root scope exposes

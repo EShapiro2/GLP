@@ -62,8 +62,13 @@ app([X|Xs], Ys, [X?|Zs?]) :- app(Xs?, Ys?, Zs).
 %% of_age_2(p, q, r).
 procedure parenting_schemas(Contract).
 parenting_schemas([
+%%   establish(p?) :
+%%       at p:  not identity, +identity
     schema(establish,
       [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]),
+%%   enter(p?, r?) :
+%%       at p:  identity, not child, +parenting(r), +parental, +friend(r)
+%%       at r:  not identity, +identity, +parent(p), +child, +friend(p)
     schema(enter,
       [rs(guarded, [atom(parenting, [role(2)]), atom(parental, []),
                     atom(friend, [role(2)])], [],
@@ -71,6 +76,10 @@ parenting_schemas([
        rs(guarded, [atom(identity, []), atom(parent, [role(1)]), atom(child, []),
                     atom(friend, [role(1)])], [],
                    [], [atom(identity, [])])]),
+%%   enter_2(p?, q?, r?) :
+%%       at p:  identity, not child, +parenting(r), +parental, +coparent(q), +friend(r)
+%%       at q:  identity, not child, +parenting(r), +parental, +coparent(p), +friend(r)
+%%       at r:  not identity, +identity, +parent(p), +parent(q), +child, +child, +coparented, +friend(p), +friend(q)
     schema(enter_2,
       [rs(guarded, [atom(parenting, [role(3)]), atom(parental, []),
                     atom(coparent, [role(2)]), atom(friend, [role(3)])], [],
@@ -83,11 +92,18 @@ parenting_schemas([
                     atom(coparented, []), atom(friend, [role(1)]),
                     atom(friend, [role(2)])], [],
                    [], [atom(identity, [])])]),
+%%   of_age(p?, r) :
+%%       at p:  identity, -parenting(r), -parental
+%%       at r:  identity, not coparented, -parent(p), -child
     schema(of_age,
       [rs(guarded, [], [atom(parenting, [role(2)]), atom(parental, [])],
                    [atom(identity, [])], []),
        rs(unguarded, [], [atom(parent, [role(1)]), atom(child, [])],
                      [atom(identity, [])], [atom(coparented, [])])]),
+%%   of_age_2(p?, q, r) :
+%%       at p:  identity, -parenting(r), -parental, -coparent(q)
+%%       at q:  identity, -parenting(r), -parental, -coparent(p)
+%%       at r:  identity, -parent(p), -parent(q), -child, -child, -coparented
     schema(of_age_2,
       [rs(guarded, [], [atom(parenting, [role(3)]), atom(parental, []),
                         atom(coparent, [role(2)])],
@@ -104,17 +120,31 @@ parenting_schemas([
 %% child_unfriend(r, s, p).
 procedure friendship_schemas(Contract).
 friendship_schemas([
+%%   befriend(p?, q?) :
+%%       at p:  identity, not child, not friend(q), +friend(q)
+%%       at q:  identity, not child, not friend(p), +friend(p)
     schema(befriend,
       [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, [])],
                    [atom(child, []), atom(friend, [role(2)])]),
        rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])],
                    [atom(child, []), atom(friend, [role(1)])])]),
+%%   unfriend_p(p?, q) :
+%%       at p:  identity, -friend(q)
+%%       at q:  identity, -friend(p)
     schema(unfriend_p,
       [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []),
        rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]),
+%%   unfriend_q(p, q?) :
+%%       at p:  identity, -friend(q)
+%%       at q:  identity, -friend(p)
     schema(unfriend_q,
       [rs(unguarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []),
        rs(guarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]),
+%%   child_befriend(r?, s?, p?, q?) :
+%%       at r:  identity, parent(p), not friend(s), +friend(s)
+%%       at s:  identity, parent(q), not friend(r), +friend(r)
+%%       at p:  identity, parenting(r), friend(q), +approval
+%%       at q:  identity, parenting(s), friend(p), +approval
     schema(child_befriend,
       [rs(guarded, [atom(friend, [role(2)])], [],
                    [atom(identity, []), atom(parent, [role(3)])],
@@ -128,6 +158,10 @@ friendship_schemas([
        rs(guarded, [atom(approval, [])], [],
                    [atom(identity, []), atom(parenting, [role(2)]),
                     atom(friend, [role(3)])], [])]),
+%%   child_adult_befriend(r?, a?, p?) :
+%%       at r:  identity, parent(p), not friend(a), +friend(a)
+%%       at a:  identity, not child, not friend(r), +friend(r)
+%%       at p:  identity, parenting(r), friend(a), +approval
     schema(child_adult_befriend,
       [rs(guarded, [atom(friend, [role(2)])], [],
                    [atom(identity, []), atom(parent, [role(3)])],
@@ -137,6 +171,10 @@ friendship_schemas([
        rs(guarded, [atom(approval, [])], [],
                    [atom(identity, []), atom(parenting, [role(1)]),
                     atom(friend, [role(2)])], [])]),
+%%   child_unfriend(r, s, p?) :
+%%       at r:  identity, parent(p), -friend(s)
+%%       at s:  identity, -friend(r)
+%%       at p:  identity, parenting(r), +withdrawal
     schema(child_unfriend,
       [rs(unguarded, [], [atom(friend, [role(2)])],
                      [atom(identity, []), atom(parent, [role(3)])], []),
@@ -149,16 +187,23 @@ friendship_schemas([
 %% leave(a, q; n) as leave_a and leave_q, child_leave(a, s, p; n).
 procedure group_schemas(Contract).
 group_schemas([
+%%   create(a? ; n) :
+%%       at a:  identity, not member(a, n), not closed(n), +member(a, n), +listed(a, n)
     schema(create,
       [rs(guarded, [atom(member, [role(1), svar(n)]),
                     atom(listed, [role(1), svar(n)])], [],
                    [atom(identity, [])],
                    [atom(member, [role(1), svar(n)]), atom(closed, [svar(n)])])]),
+%%   close(a? ; n) :
+%%       at a:  identity, +closed(n), -member(a, n), -listed(a, n)
     schema(close,
       [rs(guarded, [atom(closed, [svar(n)])],
                    [atom(member, [role(1), svar(n)]),
                     atom(listed, [role(1), svar(n)])],
                    [atom(identity, [])], [])]),
+%%   child_close(r, p? ; n) :
+%%       at r:  identity, parent(p), +closed(n), -member(r, n), -listed(r, n)
+%%       at p:  identity, parenting(r), +withdrawal
     schema(child_close,
       [rs(unguarded, [atom(closed, [svar(n)])],
                      [atom(member, [role(1), svar(n)]),
@@ -166,6 +211,9 @@ group_schemas([
                      [atom(identity, []), atom(parent, [role(2)])], []),
        rs(guarded, [atom(withdrawal, [])], [],
                    [atom(identity, []), atom(parenting, [role(1)])], [])]),
+%%   join(a?, q? ; n) :
+%%       at a:  identity, member(a, n), friend(q), +listed(q, n)
+%%       at q:  identity, friend(a), not child, not member(a, n), +member(a, n)
     schema(join,
       [rs(guarded, [atom(listed, [role(2), svar(n)])], [],
                    [atom(identity, []), atom(member, [role(1), svar(n)]),
@@ -173,6 +221,10 @@ group_schemas([
        rs(guarded, [atom(member, [role(1), svar(n)])], [],
                    [atom(identity, []), atom(friend, [role(1)])],
                    [atom(child, []), atom(member, [role(1), svar(n)])])]),
+%%   child_join(a?, s?, p? ; n) :
+%%       at a:  identity, member(a, n), friend(s), not child, +listed(s, n)
+%%       at s:  identity, parent(p), friend(a), not member(a, n), +member(a, n)
+%%       at p:  identity, parenting(s), +approval
     schema(child_join,
       [rs(guarded, [atom(listed, [role(2), svar(n)])], [],
                    [atom(identity, []), atom(member, [role(1), svar(n)]),
@@ -184,6 +236,11 @@ group_schemas([
                    [atom(member, [role(1), svar(n)])]),
        rs(guarded, [atom(approval, [])], [],
                    [atom(identity, []), atom(parenting, [role(2)])], [])]),
+%%   child_join_2(r?, s?, p?, q? ; n) :
+%%       at r:  identity, member(r, n), friend(s), parent(p), +listed(s, n)
+%%       at s:  identity, parent(q), friend(r), not member(r, n), +member(r, n)
+%%       at p:  identity, parenting(r), +approval
+%%       at q:  identity, parenting(s), +approval
     schema(child_join_2,
       [rs(guarded, [atom(listed, [role(2), svar(n)])], [],
                    [atom(identity, []), atom(member, [role(1), svar(n)]),
@@ -196,16 +253,26 @@ group_schemas([
                    [atom(identity, []), atom(parenting, [role(1)])], []),
        rs(guarded, [atom(approval, [])], [],
                    [atom(identity, []), atom(parenting, [role(2)])], [])]),
+%%   leave_a(a?, q ; n) :
+%%       at a:  identity, -listed(q, n)
+%%       at q:  identity, -member(a, n)
     schema(leave_a,
       [rs(guarded, [], [atom(listed, [role(2), svar(n)])],
                    [atom(identity, [])], []),
        rs(unguarded, [], [atom(member, [role(1), svar(n)])],
                      [atom(identity, [])], [])]),
+%%   leave_q(a, q? ; n) :
+%%       at a:  identity, -listed(q, n)
+%%       at q:  identity, -member(a, n)
     schema(leave_q,
       [rs(unguarded, [], [atom(listed, [role(2), svar(n)])],
                      [atom(identity, [])], []),
        rs(guarded, [], [atom(member, [role(1), svar(n)])],
                    [atom(identity, [])], [])]),
+%%   child_leave(a, s, p? ; n) :
+%%       at a:  identity, -listed(s, n)
+%%       at s:  identity, parent(p), -member(a, n)
+%%       at p:  identity, parenting(s), +withdrawal
     schema(child_leave,
       [rs(unguarded, [], [atom(listed, [role(2), svar(n)])],
                      [atom(identity, [])], []),
@@ -218,19 +285,29 @@ group_schemas([
 %% post(p, a; x, b, f, n), deliver(a, q; x, b, f, n).
 procedure item_schemas(Contract).
 item_schemas([
+%%   sign(p? ; x) :
+%%       at p:  identity, +item(x, p, p)
     schema(sign,
       [rs(guarded, [atom(item, [svar(x), role(1), role(1)])], [],
                    [atom(identity, [])], [])]),
+%%   send(p?, q ; x, a, f) :
+%%       at p:  identity, item(x, a, f), +sent(x, q)
+%%       at q:  identity, friend(p), +item(x, a, p)
     schema(send,
       [rs(guarded, [atom(sent, [svar(x), role(2)])], [],
                    [atom(identity, []), atom(item, [svar(x), pvar(a), pvar(f)])], []),
        rs(unguarded, [atom(item, [svar(x), pvar(a), role(1)])], [],
                      [atom(identity, []), atom(friend, [role(1)])], [])]),
+%%   post_own(a? ; x, n, b, f) :
+%%       at a:  identity, item(x, b, f), member(a, n), not posted(x, n), +posted(x, n)
     schema(post_own,
       [rs(guarded, [atom(posted, [svar(x), svar(n)])], [],
                    [atom(identity, []), atom(item, [svar(x), pvar(b), pvar(f)]),
                     atom(member, [role(1), svar(n)])],
                    [atom(posted, [svar(x), svar(n)])])]),
+%%   post(p?, a ; x, b, f, n) :
+%%       at p:  identity, item(x, b, f), member(a, n), +sent(x, a)
+%%       at a:  identity, member(a, n), listed(p, n), not posted(x, n), +item(x, b, p), +posted(x, n)
     schema(post,
       [rs(guarded, [atom(sent, [svar(x), role(2)])], [],
                    [atom(identity, []), atom(item, [svar(x), pvar(b), pvar(f)]),
@@ -240,6 +317,9 @@ item_schemas([
                      [atom(identity, []), atom(member, [role(2), svar(n)]),
                       atom(listed, [role(1), svar(n)])],
                      [atom(posted, [svar(x), svar(n)])])]),
+%%   deliver(a, q ; x, n, b, f) :
+%%       at a:  identity, item(x, b, f), member(a, n), posted(x, n), listed(q, n), not delivered(x, q, n), +delivered(x, q, n)
+%%       at q:  identity, member(a, n), +item(x, b, a)
     schema(deliver,
       [rs(unguarded, [atom(delivered, [svar(x), role(2), svar(n)])], [],
                      [atom(identity, []), atom(item, [svar(x), pvar(b), pvar(f)]),

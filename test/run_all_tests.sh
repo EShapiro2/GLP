@@ -63,7 +63,7 @@ MODED="$GLP_DIR/programs/tests/moded_types"
 # red nor a rot, and Section Q's rot guard reads only the KNOWN_RED entries of
 # the half that ran.  Every section stands alone: the REPL build below is made
 # for every run, and the asset step is QF's own.
-ALL_SECTIONS="A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG GF JX SGLP QD QF"
+ALL_SECTIONS="A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG GF JX CAS SGLP QD QF"
 FAST_SECTIONS="A B C D E G I K L M N2 N3 N4 O P J S X Y Z ZG RM SK MB SL MA RV SG GF JX"
 GLP_SECTIONS="${GLP_SECTIONS:-all}"
 RUN_FAST=0
@@ -6267,6 +6267,41 @@ fi
 echo ""
 
 fi  # Section JX
+
+if _section CAS; then
+# =============================================================================
+# Section CAS: The cascade, recorded whole (cascade.sh)
+# =============================================================================
+# A run of the cascade on a contract is recorded in programs/<owner>/cascade/
+# as one tagged commit (claude.md "Code"; Coordination 5.7): the contract's two
+# files with the checker's verdict, the VMAT form, the canonical platform as
+# .vglp and as .glp, and its run with vGLP's scripted persons, with a manifest.
+# This section re-runs cascade.sh --check on every recorded contract and holds
+# the committed artefacts to what the tools print now; a contract with no
+# record is not run.
+echo "=== Section CAS: The cascade, recorded whole ==="
+echo ""
+
+for cas_c in social_graph currency cssn federation gai; do
+    case "$cas_c" in
+        social_graph) cas_o="programs/social/graph" ;;
+        currency)     cas_o="programs/currencies/coins" ;;
+        cssn)         cas_o="programs/cssn" ;;
+        federation)   cas_o="programs/federation" ;;
+        gai)          cas_o="programs/gai" ;;
+    esac
+    [ -f "$GLP_DIR/$cas_o/cascade/manifest.md" ] || continue
+    cas_out=$(bash "$GLP_DIR/cascade.sh" "$cas_c" --check 2>&1; echo "exit $?")
+    for cas_f in contract.md contract.glp verdict.txt vmat.tex platform.vglp platform.glp run.log; do
+        [ -f "$GLP_DIR/$cas_o/cascade/$cas_f" ] || continue
+        check "cascade $cas_c: $cas_f is what the tools print" "^$cas_f: as printed$" "$cas_out"
+    done
+    check "cascade $cas_c: cascade.sh --check exits 0" "^exit 0$" "$cas_out"
+done
+
+echo ""
+
+fi  # Section CAS
 
 if _section SGLP; then
 # =============================================================================
