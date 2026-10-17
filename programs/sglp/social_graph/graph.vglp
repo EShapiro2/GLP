@@ -15,46 +15,159 @@ YesNo   ::= yes ; no.
 Peers   ::= [Peer | List(Peer)].
 Choice  ::= same(Peer) ; other(Peer).
 Menu    ::= menu(Peers, Peers, Choice?).
-Card    ::= card(Peer, YesNo?).
+Approval ::= approval(Peer, YesNo?).
 
 %% Show the person both lists, and hand them the choice.
 procedure (Menu)*ask(Peers?, Peers?, Choice).
 (menu(Ss?, Os?, C))*ask(Ss, Os, C?).
 
 %% Show the person who offers, and hand them yes or no.
-procedure (Card)*respond(Peer?, YesNo).
-(card(From?, A))*respond(From, A?).
+procedure (Approval)*respond(Peer?, YesNo).
+(approval(From?, A))*respond(From, A?).
 
-%% The messages between agents: an offer of friendship, and the reply to it.
-Content ::= offer(Peer) ; reply(Peer, YesNo).
+%% Whether two agents are of one sex, which an offer carries and the offering
+%% agent knows by the list it picked from; the relation is symmetric.
+Rel     ::= same ; other.
+
+%% The messages between agents: an offer of friendship; its acceptance, sent
+%% once the person answers yes; and the friends each sends the other on a yes,
+%% by sex relative to the sender, friends first from the offerer and
+%% friends_back in answer, so that the exchange ends.
+Content ::= offer(Peer, Rel) ; accepted(Peer, Rel) ;
+            friends(Peer, Rel, List(Peer), List(Peer)) ;
+            friends_back(Peer, Rel, List(Peer), List(Peer)).
 Msg     ::= msg(Peer, Content).
 
-procedure agent(Peer?, Peers?, Peers?, Choice?,
+%% agent(Id, Ss, Os, FSs, FOs, Pick, NetIn, Outs): Ss and Os the people the agent
+%% knows, of its sex and of the other, FSs and FOs its friends likewise, each
+%% list in increasing order, without repetition and without the agent itself;
+%% Pick the person's pending choice.
+procedure agent(Peer?, Peers?, Peers?, List(Peer)?, List(Peer)?, Choice?,
                 Stream(Msg)?, Stream(Msg)).
 
-%% The person picked a peer: offer, and ask again.
-agent(Id, Ss, Os, same(To), NetIn, [msg(To?, offer(Id?))|Outs?]) :-
+%% The person picked a peer: offer, saying whether the two are of one sex, and
+%% ask again, the menu showing the lists as they are.
+agent(Id, Ss, Os, FSs, FOs, same(To), NetIn,
+      [msg(To?, offer(Id?, same))|Outs?]) :-
     ground(Id?), ground(Ss?), ground(Os?), ground(To?) |
     ask(Ss?, Os?, Pick),
-    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs).
-agent(Id, Ss, Os, other(To), NetIn, [msg(To?, offer(Id?))|Outs?]) :-
+    agent(Id?, Ss?, Os?, FSs?, FOs?, Pick?, NetIn?, Outs).
+agent(Id, Ss, Os, FSs, FOs, other(To), NetIn,
+      [msg(To?, offer(Id?, other))|Outs?]) :-
     ground(Id?), ground(Ss?), ground(Os?), ground(To?) |
     ask(Ss?, Os?, Pick),
-    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs).
+    agent(Id?, Ss?, Os?, FSs?, FOs?, Pick?, NetIn?, Outs).
 
-%% An offer arrives: put it to the person, and reply.
-agent(Id, Ss, Os, Pick, [msg(_, offer(From))|NetIn],
-      [msg(From?, reply(Id?, A?))|Outs?]) :-
+%% An offer arrives: put it to the person; the acceptance is sent when the
+%% person answers yes, and nothing when no, the agent not waiting for it.
+agent(Id, Ss, Os, FSs, FOs, Pick, [msg(_, offer(From, Rel))|NetIn], Outs?) :-
     ground(Id?), ground(From?) |
     respond(From?, A),
-    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs).
+    answered(A?, Id?, From?, Rel?, Out1),
+    agent(Id?, Ss?, Os?, FSs?, FOs?, Pick?, NetIn?, Out2),
+    merge(Out1?, Out2?, Outs).
 
-%% A reply to my offer arrives.
-agent(Id, Ss, Os, Pick, [msg(_, reply(_, _))|NetIn], Outs?) :-
-    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs).
+%% My offer was accepted: the two are friends; send my friends.
+agent(Id, Ss, Os, FSs, FOs, Pick, [msg(_, accepted(From, Rel))|NetIn],
+      [msg(From?, friends(Id?, Rel?, FSs?, FOs?))|Outs?]) :-
+    ground(Id?), ground(From?), ground(Rel?), ground(FSs?), ground(FOs?) |
+    meet(Rel?, Id?, From?, [], [], Ss?, Os?, FSs?, FOs?, Ss1, Os1, FSs1, FOs1),
+    agent(Id?, Ss1?, Os1?, FSs1?, FOs1?, Pick?, NetIn?, Outs).
 
-%% The initial goal of an agent: ask the first menu.
+%% The offerer's friends arrive: the two are friends; know them, and send
+%% mine back.
+agent(Id, Ss, Os, FSs, FOs, Pick, [msg(_, friends(From, Rel, XSs, XOs))|NetIn],
+      [msg(From?, friends_back(Id?, Rel?, FSs?, FOs?))|Outs?]) :-
+    ground(Id?), ground(From?), ground(Rel?), ground(FSs?), ground(FOs?) |
+    meet(Rel?, Id?, From?, XSs?, XOs?, Ss?, Os?, FSs?, FOs?, Ss1, Os1, FSs1,
+         FOs1),
+    agent(Id?, Ss1?, Os1?, FSs1?, FOs1?, Pick?, NetIn?, Outs).
+
+%% The friends sent back arrive: know them.
+agent(Id, Ss, Os, FSs, FOs, Pick,
+      [msg(_, friends_back(From, Rel, XSs, XOs))|NetIn], Outs?) :-
+    ground(Id?) |
+    meet(Rel?, Id?, From?, XSs?, XOs?, Ss?, Os?, FSs?, FOs?, Ss1, Os1, FSs1,
+         FOs1),
+    agent(Id?, Ss1?, Os1?, FSs1?, FOs1?, Pick?, NetIn?, Outs).
+
+%% The initial goal of an agent: ask the first menu, knowing Ss and Os and
+%% having no friend.
 exported procedure start(Peer?, Peers?, Peers?, Stream(Msg)?, Stream(Msg)).
 start(Id, Ss, Os, NetIn, Outs?) :- ground(Ss?), ground(Os?) |
     ask(Ss?, Os?, Pick),
-    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs).
+    agent(Id?, Ss?, Os?, [], [], Pick?, NetIn?, Outs).
+
+%% answered(A?, Id?, From?, Rel?, Out): on the person's yes, the acceptance
+%% to From; on no, nothing.
+procedure answered(YesNo?, Peer?, Peer?, Rel?, Stream(Msg)).
+answered(yes, Id, From, Rel, [msg(From?, accepted(Id?, Rel?))]).
+answered(no, _, _, _, []).
+
+%% meet(Rel?, Id?, From?, XSs?, XOs?, Ss?, Os?, FSs?, FOs?, Ss1, Os1, FSs1,
+%% FOs1): agent Id befriends From, of its sex where Rel is same and of the
+%% other where it is other, and comes to know From's friends XSs and XOs, given
+%% by sex relative to From, the two exchanged where the two differ in sex,
+%% leaving out itself and those it knows already.
+procedure meet(Rel?, Peer?, Peer?, List(Peer)?, List(Peer)?, Peers?, Peers?,
+               List(Peer)?, List(Peer)?, Peers, Peers, List(Peer),
+               List(Peer)).
+meet(same, Id, From, XSs, XOs, Ss, Os, FSs, FOs, Ss2?, Os1?, FSs1?, FOs?) :-
+    ground(Id?), ground(From?) |
+    insert(Ss?, From?, Ss1),
+    add_all(Ss1?, XSs?, Id?, Ss2),
+    add_all(Os?, XOs?, Id?, Os1),
+    insert_list(FSs?, From?, FSs1).
+meet(other, Id, From, XSs, XOs, Ss, Os, FSs, FOs, Ss1?, Os2?, FSs?, FOs1?) :-
+    ground(Id?), ground(From?) |
+    insert(Os?, From?, Os1),
+    add_all(Os1?, XSs?, Id?, Os2),
+    add_all(Ss?, XOs?, Id?, Ss1),
+    insert_list(FOs?, From?, FOs1).
+
+%% add_all(Ks?, Xs?, Self?, Ks1): Ks1 is Ks with each of Xs but Self in its
+%% place, Xs being in increasing order too: the two merged in one walk.
+procedure add_all(Peers?, List(Peer)?, Peer?, Peers).
+add_all([K|Ks], [], _, [K?|Ks?]).
+add_all([K|Ks], [X|Xs], Self, Ks1?) :-
+    X? =:= Self? | add_all([K?|Ks?], Xs?, Self?, Ks1).
+add_all([K|Ks], [X|Xs], Self, [X?|Ks1?]) :-
+    X? =\= Self?, X? < K? | union([K?|Ks?], Xs?, Self?, Ks1).
+add_all([K|Ks], [X|Xs], Self, [K?|Ks1?]) :-
+    X? =\= Self?, X? =:= K? | union(Ks?, Xs?, Self?, Ks1).
+add_all([K|Ks], [X|Xs], Self, [K?|Ks1?]) :-
+    X? =\= Self?, X? > K? | union(Ks?, [X?|Xs?], Self?, Ks1).
+
+%% union(Ks?, Xs?, Self?, Ys): add_all/4 on lists that may be empty.
+procedure union(List(Peer)?, List(Peer)?, Peer?, List(Peer)).
+union([], Xs, Self, Ys?) :- drop_self(Xs?, Self?, Ys).
+union([K|Ks], [], _, [K?|Ks?]).
+union([K|Ks], [X|Xs], Self, Ys?) :-
+    X? =:= Self? | union([K?|Ks?], Xs?, Self?, Ys).
+union([K|Ks], [X|Xs], Self, [X?|Ys?]) :-
+    X? =\= Self?, X? < K? | union([K?|Ks?], Xs?, Self?, Ys).
+union([K|Ks], [X|Xs], Self, [K?|Ys?]) :-
+    X? =\= Self?, X? =:= K? | union(Ks?, Xs?, Self?, Ys).
+union([K|Ks], [X|Xs], Self, [K?|Ys?]) :-
+    X? =\= Self?, X? > K? | union(Ks?, [X?|Xs?], Self?, Ys).
+
+%% drop_self(Xs?, Self?, Ys): Ys is Xs without Self.
+procedure drop_self(List(Peer)?, Peer?, List(Peer)).
+drop_self([], _, []).
+drop_self([X|Xs], Self, Ys?) :- X? =:= Self? | drop_self(Xs?, Self?, Ys).
+drop_self([X|Xs], Self, [X?|Ys?]) :-
+    X? =\= Self? | drop_self(Xs?, Self?, Ys).
+
+%% insert(Ks?, P?, Ks1): Ks1 is the list Ks, in increasing order without
+%% repetition, with P in its place, Ks itself where P is in it.
+procedure insert(Peers?, Peer?, Peers).
+insert([K|Ks], P, [P?, K?|Ks?]) :- P? < K? | true.
+insert([K|Ks], P, [K?|Ks?]) :- P? =:= K? | true.
+insert([K|Ks], P, [K?|Ks1?]) :- P? > K? | insert_list(Ks?, P?, Ks1).
+
+%% insert_list(Ks?, P?, Ks1): insert/3 on a list that may be empty.
+procedure insert_list(List(Peer)?, Peer?, List(Peer)).
+insert_list([], P, [P?]).
+insert_list([K|Ks], P, [P?, K?|Ks?]) :- P? < K? | true.
+insert_list([K|Ks], P, [K?|Ks?]) :- P? =:= K? | true.
+insert_list([K|Ks], P, [K?|Ks1?]) :- P? > K? | insert_list(Ks?, P?, Ks1).

@@ -6,10 +6,11 @@
 %% source(V, S): V is the vGLP program's interface as Section 5 prints it, its
 %% types and its two volitional procedure declarations, each with its type's
 %% constant quoted, as the compiled program's asks carry it, and the functor
-%% the canonical compilation gives its interactive type, menu_w and card_w,
-%% which the transformation reads for the person process (which argument of
-%% Menu and Card is the answer, and the asks' functors), and the predicates of
-%% the compiled program, graph.glp, which the profiles' must differ from;
+%% the canonical compilation gives its interactive type, menu_w and
+%% approval_w, which the transformation reads for the person process (which
+%% argument of Menu and Approval is the answer, and the asks' functors), and
+%% the predicates of the compiled program, graph.glp, which the profiles' must
+%% differ from;
 %% S is the sGLP program, the four profiles of graph.vglp at GLP 723d1602 and the
 %% run declaration as Section 5 prints it.  Section 5 prints the homophile's and
 %% the wary profile, with the procedures named pick and answer; four profiles in
@@ -30,14 +31,17 @@ source(
    type('Peers', [['Peer' | 'List'('Peer')]]),
    type('Choice', [same('Peer'), other('Peer')]),
    type('Menu', [menu('Peers', 'Peers', dual('Choice'))]),
-   type('Card', [card('Peer', dual('YesNo'))]),
+   type('Approval', [approval('Peer', dual('YesNo'))]),
    %% List, the root's (programs/self.glp), given in the interface that uses it.
    type('List'('X'), [[], ['X' | 'List'('X')]]),
    volitional('Menu', '\'Menu\'', menu_w, ask(dual('Peers'), dual('Peers'), 'Choice')),
-   volitional('Card', '\'Card\'', card_w, respond(dual('Peer'), 'YesNo')),
+   volitional('Approval', '\'Approval\'', approval_w, respond(dual('Peer'), 'YesNo')),
    %% The predicates of its compiled program, graph.glp.
    compiled(ask, 4), compiled(ask1, 5), compiled(respond, 3), compiled(respond1, 4),
-   compiled(agent, 7), compiled(start, 6)],
+   compiled(agent, 9), compiled(start, 6), compiled(answered, 5),
+   compiled(meet, 13), compiled(add_all, 4), compiled(union, 4),
+   compiled(drop_self, 3), compiled(insert, 3),
+   compiled(insert_list, 3)],
 
   %% The profiles and the run declaration.
   [person(homophile),
@@ -69,24 +73,24 @@ source(
           [one_of(var('Os?'), var('S?'), var('P'))]),
 
    person(wary),
-   binds('Card', wary_card),
-   decl(wary_card(dual('Card'), dual('Integer'))),
-   clause(wary_card(var('C'), var('S')), [],
+   binds('Approval', wary_approval),
+   decl(wary_approval(dual('Approval'), dual('Integer'))),
+   clause(wary_approval(var('C'), var('S')), [],
           [random(var('S?'), 100, var('K'), var('_')),
            rated(wary_answer(var('K?'), var('C?')), rate(1, day))]),
-   decl(wary_answer(dual('Integer'), dual('Card'))),
-   clause(wary_answer(var('K'), card(var('_'), yes)), ['=<'(var('K?'), 20)], [true]),
-   clause(wary_answer(var('K'), card(var('_'), no)), ['>'(var('K?'), 20)], [true]),
+   decl(wary_answer(dual('Integer'), dual('Approval'))),
+   clause(wary_answer(var('K'), approval(var('_'), yes)), ['=<'(var('K?'), 20)], [true]),
+   clause(wary_answer(var('K'), approval(var('_'), no)), ['>'(var('K?'), 20)], [true]),
 
    person(sociable),
-   binds('Card', sociable_card),
-   decl(sociable_card(dual('Card'), dual('Integer'))),
-   clause(sociable_card(var('C'), var('S')), [],
+   binds('Approval', sociable_approval),
+   decl(sociable_approval(dual('Approval'), dual('Integer'))),
+   clause(sociable_approval(var('C'), var('S')), [],
           [random(var('S?'), 100, var('K'), var('_')),
            rated(sociable_answer(var('K?'), var('C?')), rate(1, hour))]),
-   decl(sociable_answer(dual('Integer'), dual('Card'))),
-   clause(sociable_answer(var('K'), card(var('_'), yes)), ['=<'(var('K?'), 90)], [true]),
-   clause(sociable_answer(var('K'), card(var('_'), no)), ['>'(var('K?'), 90)], [true]),
+   decl(sociable_answer(dual('Integer'), dual('Approval'))),
+   clause(sociable_answer(var('K'), approval(var('_'), yes)), ['=<'(var('K?'), 90)], [true]),
+   clause(sociable_answer(var('K'), approval(var('_'), no)), ['>'(var('K?'), 90)], [true]),
 
    run(100,
        [mix(approach, [share(homophile, 0.6), share(indifferent, 0.4)]),

@@ -26,7 +26,7 @@ Question
 ::=
 menu_w(Menu)
 ;
-card_w(Card)
+approval_w(Approval)
 .
 
 %% The person procedures, in the profiles module.
@@ -59,9 +59,9 @@ MutualRef?
 imported procedure
 profiles
 #
-wary_card
+wary_approval
 (
-Card
+Approval
 ?
 ,
 Integer?
@@ -72,9 +72,9 @@ MutualRef?
 imported procedure
 profiles
 #
-sociable_card
+sociable_approval
 (
-Card
+Approval
 ?
 ,
 Integer?
@@ -109,27 +109,27 @@ relay_1(A?, 'Menu', E?, Y, Mon?, Log?)
 ,
 person(A?, profiles(indifferent, D2?), Mon?, S?, Log?, As?)
 .
-person(A, profiles(D1, wary), Mon, Seed, Log, [ask('Card', card_w(E)) | As])
+person(A, profiles(D1, wary), Mon, Seed, Log, [ask('Approval', approval_w(E)) | As])
 :-
 random(Seed?, 2147483646, K, S)
 ,
 profiles
 #
-wary_card(Y?, K?, Mon?)
+wary_approval(Y?, K?, Mon?)
 ,
-relay_2(A?, 'Card', E?, Y, Mon?, Log?)
+relay_2(A?, 'Approval', E?, Y, Mon?, Log?)
 ,
 person(A?, profiles(D1?, wary), Mon?, S?, Log?, As?)
 .
-person(A, profiles(D1, sociable), Mon, Seed, Log, [ask('Card', card_w(E)) | As])
+person(A, profiles(D1, sociable), Mon, Seed, Log, [ask('Approval', approval_w(E)) | As])
 :-
 random(Seed?, 2147483646, K, S)
 ,
 profiles
 #
-sociable_card(Y?, K?, Mon?)
+sociable_approval(Y?, K?, Mon?)
 ,
-relay_2(A?, 'Card', E?, Y, Mon?, Log?)
+relay_2(A?, 'Approval', E?, Y, Mon?, Log?)
 ,
 person(A?, profiles(D1?, sociable), Mon?, S?, Log?, As?)
 .
@@ -170,17 +170,17 @@ Integer?
 ,
 Constant?
 ,
-Card
+Approval
 ?
 ,
-Card
+Approval
 ,
 MutualRef?
 ,
 MutualRef?
 )
 .
-relay_2(A, Type, card(X1, X2?), card(X1?, Y2), Mon, Log)
+relay_2(A, Type, approval(X1, X2?), approval(X1?, Y2), Mon, Log)
 :-
 ground(X1?)
 |
@@ -247,7 +247,7 @@ ground(Y2?)
 |
 stream_append(time(Time), Mon?, _)
 ,
-stream_append(entry(Time?, A?, Type?, card(X1?, Y2?)), Log?, _)
+stream_append(entry(Time?, A?, Type?, approval(X1?, Y2?)), Log?, _)
 .
 
 %% The run declaration: its agents, horizon, seed and thresholds.

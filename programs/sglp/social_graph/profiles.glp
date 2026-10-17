@@ -109,11 +109,11 @@ one_of(Os?, S?, P)
 .
 
 %% person(wary)
-%% binds(Card, wary_card)
+%% binds(Approval, wary_approval)
 exported procedure
-wary_card
+wary_approval
 (
-Card
+Approval
 ?
 ,
 Integer?
@@ -121,7 +121,7 @@ Integer?
 MutualRef?
 )
 .
-wary_card(C, S, Mon)
+wary_approval(C, S, Mon)
 :-
 random(S?, 100, K, _)
 ,
@@ -136,19 +136,19 @@ Token?
 ,
 Integer?
 ,
-Card
+Approval
 ?
 )
 .
 wary_answer(stop, _, _)
 .
-wary_answer(go, K, card(_, yes))
+wary_answer(go, K, approval(_, yes))
 :-
 '=<'(K?, 20)
 |
 true
 .
-wary_answer(go, K, card(_, no))
+wary_answer(go, K, approval(_, no))
 :-
 '>'(K?, 20)
 |
@@ -156,11 +156,11 @@ true
 .
 
 %% person(sociable)
-%% binds(Card, sociable_card)
+%% binds(Approval, sociable_approval)
 exported procedure
-sociable_card
+sociable_approval
 (
-Card
+Approval
 ?
 ,
 Integer?
@@ -168,7 +168,7 @@ Integer?
 MutualRef?
 )
 .
-sociable_card(C, S, Mon)
+sociable_approval(C, S, Mon)
 :-
 random(S?, 100, K, _)
 ,
@@ -183,19 +183,19 @@ Token?
 ,
 Integer?
 ,
-Card
+Approval
 ?
 )
 .
 sociable_answer(stop, _, _)
 .
-sociable_answer(go, K, card(_, yes))
+sociable_answer(go, K, approval(_, yes))
 :-
 '=<'(K?, 90)
 |
 true
 .
-sociable_answer(go, K, card(_, no))
+sociable_answer(go, K, approval(_, no))
 :-
 '>'(K?, 90)
 |

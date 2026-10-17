@@ -21,12 +21,12 @@
 #       write different ones (Section 4, "The run": every draw is from the
 #       run's seed).
 # (iv)  the social graph, 100 agents for one year from seed 20260927: the run
-#       ends with no error and a non-empty log of menus, cards and their
+#       ends with no error and a non-empty log of menus, approvals and their
 #       answers, and its monitor's last line.
 # (v)   the mix as arguments, 100 agents for 30 days from seed 20260927:
 #       social_graph/6 at 60 and 70 writes the log social_graph/4 writes; at 0
 #       and 0 every agent is indifferent and sociable, so over 0.4 of its menu
-#       answers pick the other sex and over 0.8 of its cards are answered yes
+#       answers pick the other sex and over 0.8 of its approvals are answered yes
 #       (the profiles' 0.5 and 0.9); at 100 and 100 every agent is homophile
 #       and wary, so under 0.1 pick the other sex and under 0.3 are answered
 #       yes (0.02 and 0.2).
@@ -37,7 +37,7 @@
 # (vii) the population's draw (the task of 15:44 UTC, and of 2026-10-03
 #       08:58 UTC for each agent's line): the draw run.sh prints for (iv) is
 #       the profiles the log of (iv) shows, each agent's read from its menus'
-#       other-sex share and its cards' yes share; the .draw file beside the
+#       other-sex share and its approvals' yes share; the .draw file beside the
 #       log of (iv) is that counts line, then agents 1..100 in order, the
 #       counts line being their counts; each agent's line is its profiles as
 #       the log of (iv) shows them; at 0 and 0 and at 100 and 100, the draws
@@ -173,6 +173,17 @@
 #       09:46 UTC, items 2 and 3): Stream(Integer)? in reader mode, the person
 #       writing 1, 2 and 3; the relay and the log one element at a time, then
 #       the stream's end, the program reading their sum.
+# (xvi) the social graph's people meet (sGLP's task of 2026-10-16 12:35 UTC;
+#       Section 5 at sGLP eac5b3b; Appendix B, "Seeds" and "The agents are
+#       numbered"): a run of fewer than 6 agents is refused; on the log of
+#       (iii), seed 20260927, each menu shows the people its agent knows,
+#       each list in increasing order, without repetition, without the agent,
+#       the first of its sex and the second of the other; each agent's first
+#       menu shows two and two; the people an agent knows never decrease; and
+#       a menu asked after a yes between a and b --- the menu answered after
+#       the agent's next menu answer --- shows b and each friend b had before
+#       the yes, a friend's friends coming to know each other, some of them
+#       met only so.
 #
 # Prints one line per check and a summary line, "=== P passed, F failed ===";
 # exits non-zero if any check fails.  The runs of (iii) and (iv) take some
@@ -247,18 +258,18 @@ check "100 agents, 1 year, seed 20260927: the run ends with no error" $st
 [ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/y.out"
 [ -s "$WORK/y.log" ]; check "the log is not empty" $?
 grep -q '^unread 0$' "$WORK/y.out" && grep -q '^menu_answers [1-9]' "$WORK/y.out" &&
-    grep -q '^card_answers [1-9]' "$WORK/y.out" && ! grep -q '^clock none$' "$WORK/y.out"
-check "the log is menus, cards and their answers, and the monitor's last line" $?
+    grep -q '^approval_answers [1-9]' "$WORK/y.out" && ! grep -q '^clock none$' "$WORK/y.out"
+check "the log is menus, approvals and their answers, and the monitor's last line" $?
 sed -n '/^wall-clock/p;/^answers/,/^unread/p' "$WORK/y.out" | sed 's/^/        /'
 
 echo "--- (v) the mix as arguments"
-# mix_shares <log>: "<menus> <other> <cards> <yes>", the numbers of menu and
-# card answers, the share of the menus picking the other sex and the share of
-# the cards answered yes.
+# mix_shares <log>: "<menus> <other> <approvals> <yes>", the numbers of menu
+# and approval answers, the share of the menus picking the other sex and the
+# share of the approvals answered yes.
 mix_shares() {
     awk -F'\t' '
         $3 == "Menu" { m++; if ($4 ~ /other\([^()]*\)\)$/) o++ }
-        $3 == "Card" { c++; if ($4 ~ /, yes\)$/) y++ }
+        $3 == "Approval" { c++; if ($4 ~ /, yes\)$/) y++ }
         END { printf "%d %.4f %d %.4f\n", m, m ? o / m : 0, c, c ? y / c : 0 }' "$1"
 }
 for mix in "60 70" "0 0" "100 100"; do
@@ -272,13 +283,13 @@ done
 [ -s "$WORK/a.log" ] && cmp -s "$WORK/a.log" "$WORK/m60-70.log"
 check "social_graph/6 at 60 and 70 writes the log social_graph/4 writes" $?
 read -r M O C Y <<< "$(mix_shares "$WORK/m0-0.log")"
-echo "        mix 0 0: $M menus, other-sex share $O; $C cards, yes share $Y"
+echo "        mix 0 0: $M menus, other-sex share $O; $C approvals, yes share $Y"
 [ "$M" -gt 0 ] && [ "$C" -gt 0 ] && awk -v o="$O" -v y="$Y" 'BEGIN { exit !(o > 0.4 && y > 0.8) }'
-check "at 0 and 0, indifferent and sociable: over 0.4 of the menus pick the other sex, over 0.8 of the cards are answered yes" $?
+check "at 0 and 0, indifferent and sociable: over 0.4 of the menus pick the other sex, over 0.8 of the approvals are answered yes" $?
 read -r M O C Y <<< "$(mix_shares "$WORK/m100-100.log")"
-echo "        mix 100 100: $M menus, other-sex share $O; $C cards, yes share $Y"
+echo "        mix 100 100: $M menus, other-sex share $O; $C approvals, yes share $Y"
 [ "$M" -gt 0 ] && [ "$C" -gt 0 ] && awk -v o="$O" -v y="$Y" 'BEGIN { exit !(o < 0.1 && y < 0.3) }'
-check "at 100 and 100, homophile and wary: under 0.1 of the menus pick the other sex, under 0.3 of the cards are answered yes" $?
+check "at 100 and 100, homophile and wary: under 0.1 of the menus pick the other sex, under 0.3 of the approvals are answered yes" $?
 
 echo "--- (vi) friendship.awk's months"
 awk -v n=100 -v months=12 -f "$HERE/social_graph/friendship.awk" "$WORK/y.log" > "$WORK/y.months" 2>&1
@@ -294,8 +305,8 @@ awk '
     END { exit !(m == 12 && !bad && e == E && c == C && i == I && l == L) }' "$WORK/y.months"
 check "the edges do not decrease, are those within a sex and across, and month 12's graph is the year's" $?
 M1=$(awk -F'\t' '
-    $3 == "Card" && $4 ~ /, yes\)$/ && $1 + 0 < 2629800 {
-        p = substr($4, 6, index($4, ", ") - 6) + 0; a = $2 + 0
+    $3 == "Approval" && $4 ~ /, yes\)$/ && $1 + 0 < 2629800 {
+        p = substr($4, 10, index($4, ", ") - 10) + 0; a = $2 + 0
         if (a != p) print (a < p ? a " " p : p " " a)
     }' "$WORK/y.log" | sort -u | wc -l | tr -d ' ')
 [ "$M1" -gt 0 ] && grep -q "^month 1 at 2629800 edges $M1 " "$WORK/y.months"
@@ -305,12 +316,12 @@ sed -n '/^month /p' "$WORK/y.months" | sed 's/^/        /'
 echo "--- (vii) the population's draw"
 # The draw run.sh printed for (iv), against the profiles the log of (iv) shows:
 # an agent is homophile if under 0.26 of its menus pick the other sex
-# (homophile 0.02, indifferent 0.5), and wary if under 0.55 of its cards are
-# answered yes (wary 0.2, sociable 0.9).
+# (homophile 0.02, indifferent 0.5), and wary if under 0.55 of its approvals
+# are answered yes (wary 0.2, sociable 0.9).
 D=$(sed -n 's/^draw \(homophile [0-9]* indifferent [0-9]* wary [0-9]* sociable [0-9]*\)$/\1/p' "$WORK/y.out")
 L=$(awk -F'\t' '
     NF == 4 && $3 == "Menu" { m[$2]++; if ($4 ~ /other\([^()]*\)\)$/) o[$2]++ }
-    NF == 4 && $3 == "Card" { c[$2]++; if ($4 ~ /, yes\)$/) y[$2]++ }
+    NF == 4 && $3 == "Approval" { c[$2]++; if ($4 ~ /, yes\)$/) y[$2]++ }
     END {
         for (a = 1; a <= 100; a++) {
             if (m[a] && o[a] / m[a] < 0.26) h++; else i++
@@ -338,11 +349,11 @@ draw_file_errors() {
     [ "$(head -n 1 "$WORK/y.draw")" = "draw $D" ]
 check "the .draw file of (iv) is the counts line run.sh prints, then agents 1..100 in order, whose counts it is" $?
 # Each agent's line against its profiles as the log of (iv) shows them, by the
-# shares above; an agent with no menu or no card in the log is not shown.
+# shares above; an agent with no menu or no approval in the log is not shown.
 A=$(awk 'FNR == NR { if ($1 == "agent") line[$2] = $3 " " $4; next }
     { split($0, f, "\t") }
     f[3] == "Menu" { m[f[2]]++; if (f[4] ~ /other\([^()]*\)\)$/) o[f[2]]++ }
-    f[3] == "Card" { c[f[2]]++; if (f[4] ~ /, yes\)$/) y[f[2]]++ }
+    f[3] == "Approval" { c[f[2]]++; if (f[4] ~ /, yes\)$/) y[f[2]]++ }
     END {
         for (a = 1; a <= 100; a++) {
             if (!m[a] || !c[a]) { bad++; continue }
@@ -779,6 +790,62 @@ awk '
     }' "$WORK/numbers.lines"
 check "the log: each integer as an element of its own, then the stream's end, in the order of time; the program reads their sum, 6; the clock last" $?
 grep '^entry(\|^clock(\|^S = ' "$WORK/numbers.lines" | sed 's/^/        /'
+
+echo "--- (xvi) the social graph's people meet through their friends"
+bash "$RUN" 4 '1 day' 1 "$WORK/four.log" > "$WORK/four.out" 2>&1
+st=$?
+[ "$st" -ne 0 ] && ! grep -q '^entry\|Menu' "$WORK/four.log" 2>/dev/null
+check "a run of 4 agents is refused, the harness requiring at least 6 (Appendix B)" $?
+awk -F'\t' -v n=100 '
+    function sex(x) { return x <= n / 2 ? 1 : 2 }
+    function list(str, arr, a, want,   k, p, i, prev) {
+        k = (str == "") ? 0 : split(str, p, ", ")
+        prev = 0
+        for (i = 1; i <= k; i++) {
+            x = p[i] + 0; arr[x] = 1
+            if (x <= prev || x == a || sex(x) != want) bad++
+            prev = x
+        }
+        return k
+    }
+    NF == 4 && $3 == "Menu" {
+        a = $2 + 0; t = $1 + 0
+        match($4, /^menu\(\[[^]]*\]/); s1 = substr($4, 7, RLENGTH - 7)
+        rest = substr($4, RLENGTH + 3); match(rest, /^\[[^]]*\]/); s2 = substr(rest, 2, RLENGTH - 2)
+        split("", K)
+        k1 = list(s1, K, a, sex(a)); k2 = list(s2, K, a, 3 - sex(a))
+        m[a]++
+        if (m[a] == 1) {
+            if (k1 != 2 || k2 != 2) bad++
+            for (x in K) first[a, x] = 1
+            askt = 0
+        } else askt = last[a]
+        last[a] = t
+        for (key in prevk) { split(key, q, SUBSEP); if (q[1] == a) { if (!(q[2] in K)) shrink++; delete prevk[key] } }
+        for (x in K) prevk[a, x] = 1
+        for (j = 1; j <= nr[a]; j++) if (rt[a, j] < askt) {
+            nq = split(rs[a, j], q, " ")
+            for (i = 1; i <= nq; i++) {
+                if (!(q[i] in K)) miss++
+                else if (i > 1 && !((a, q[i]) in first) && !((a, q[i]) in counted)) { met++; counted[a, q[i]] = 1 }
+            }
+            checked++
+        }
+    }
+    NF == 4 && $3 == "Approval" && $4 ~ /, yes\)$/ {
+        a = $2 + 0; t = $1 + 0
+        b = substr($4, 10, index($4, ",") - 10) + 0
+        ra = b; for (x in F) { split(x, q, SUBSEP); if (q[1] == b && q[2] != a) ra = ra " " q[2] }
+        rb = a; for (x in F) { split(x, q, SUBSEP); if (q[1] == a && q[2] != b) rb = rb " " q[2] }
+        nr[a]++; rt[a, nr[a]] = t; rs[a, nr[a]] = ra
+        nr[b]++; rt[b, nr[b]] = t; rs[b, nr[b]] = rb
+        F[a, b] = 1; F[b, a] = 1
+    }
+    END {
+        printf "        menus checked against a yes before them %d, people missing %d, met through a friend %d, lists out of order or of the wrong sex %d, lists shrunk %d\n", checked, miss, met, bad, shrink
+        exit !(checked > 0 && miss == 0 && met > 0 && bad == 0 && shrink == 0)
+    }' "$WORK/a.log"
+check "each menu shows the people its agent knows, in increasing order and by sex, two and two at the start, never fewer later; a menu asked after a yes shows the friend and the friend's friends, some met only so (Section 5)" $?
 
 echo ""
 echo "=== $PASS passed, $FAIL failed ==="

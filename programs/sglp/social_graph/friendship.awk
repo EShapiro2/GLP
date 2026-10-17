@@ -3,7 +3,7 @@
 # (sGLP's paper, the repository svGLP-Stochastic-Volitional-GLP at d2f64b6:
 # Section 4, "The log", and Appendix B, the log's format; Section 5,
 # Definition "Friendship Graph of a Run": {p, q} is an edge at time t iff
-# before t one of them answered yes to a card showing the other).
+# before t one of them answered yes to an approval showing the other).
 #
 #   awk -v n=<agents> [-v edges=<file>] [-v months=<k>] -f friendship.awk <log>
 #
@@ -11,8 +11,8 @@
 # p < q, unsorted, and prints the counts, one per line:
 #
 #   answers <log lines that are answers>
-#   menu_answers <answers to a Menu>      card_answers <answers to a Card>
-#   yes <cards answered yes>
+#   menu_answers <answers to a Menu>      approval_answers <answers to an Approval>
+#   yes <approvals answered yes>
 #   edges <edges>                         components <connected components of 1..n>
 #   isolated <agents with no edge>        largest <agents in the largest component>
 #   clock <the monitor's last line, the time the run ended; none if it did not>
@@ -25,8 +25,8 @@
 #   month <m> at <m * 2629800> edges <e> components <c> isolated <i> largest <l> within <w> across <x>
 #
 # the friendship graph at the month's end, simulated time m * 2629800: its
-# edges are the pairs {p, q} such that p answered yes to a card showing q, or q
-# to one showing p, on a log line whose time is less than the month's end;
+# edges are the pairs {p, q} such that p answered yes to an approval showing q,
+# or q to one showing p, on a log line whose time is less than the month's end;
 # components, isolated and largest are as above, of agents 1..n at that time;
 # within counts the edges between two agents of one sex and across the edges
 # between agents of the two, agents 1..n/2 being of one sex and the rest of the
@@ -35,9 +35,10 @@
 #
 # A log line is "<time>\t<agent>\t<type>\t<term>", the term the question's with
 # the answer in place: menu(Ss, Os, same(P)) or menu(Ss, Os, other(P)) for a
-# Menu, card(P, yes) or card(P, no) for a Card; the monitor's last line is the
-# clock alone.  A yes on a card at <agent> showing P is the edge {<agent>, P}
-# from <time> on.
+# Menu, approval(P, yes) or approval(P, no) for an Approval; the monitor's last
+# line is the clock alone.  A yes on an approval at <agent> showing P is the
+# edge {<agent>, P} from <time> on.  (Approval was named Card until
+# 2026-10-17, so a log written before then counts as unread here.)
 
 BEGIN { FS = "\t"; clock = "none"; MONTH = 2629800 }
 
@@ -51,10 +52,10 @@ $3 == "Menu" {
     next
 }
 
-$3 == "Card" {
-    if (match($4, /^card\([^,()]*, (yes|no)\)$/)) {
-        answers++; card_answers++
-        p = substr($4, 6, index($4, ", ") - 6)
+$3 == "Approval" {
+    if (match($4, /^approval\([^,()]*, (yes|no)\)$/)) {
+        answers++; approval_answers++
+        p = substr($4, 10, index($4, ", ") - 10)
         if ($4 ~ /, yes\)$/) { yes++; edge($2 + 0, p + 0, $1 + 0) }
     } else unread++
     next
@@ -105,8 +106,8 @@ function graph(all, t,    x, k, e, r, r1, r2, half) {
 
 END {
     graph(1, 0)
-    printf "answers %d\nmenu_answers %d\ncard_answers %d\nyes %d\n",
-        answers, menu_answers, card_answers, yes
+    printf "answers %d\nmenu_answers %d\napproval_answers %d\nyes %d\n",
+        answers, menu_answers, approval_answers, yes
     printf "edges %d\ncomponents %d\nisolated %d\nlargest %d\nclock %s\nunread %d\n",
         nedges, g_components, g_isolated, g_largest, clock, unread
     for (m = 1; m <= months + 0; m++) {

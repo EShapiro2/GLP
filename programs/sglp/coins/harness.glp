@@ -42,9 +42,12 @@
 %% run's seed; the population's draws are from a second generator, started at
 %% the first value drawn from the run's seed, split into blocks of 4096
 %% consecutive draws: agent a's block is the a-th.  Its first two draws pick a's
-%% profile in each dimension by the mix (population.glp, stochastic_person/5),
-%% and the seed they leave is its person process's seed, the start of its own
-%% generator, whatever the mix.
+%% profile in each dimension by the mix (population.glp, stochastic_person/5);
+%% the next is the seed of its person process, a value of 1..2147483646 drawn
+%% from the seed the profiles leave, random(S?, 2147483646, Seed, _), so that
+%% the person process's draws are on a chain of their own, as the social
+%% graph's harness draws it (sGLP's answer of 2026-10-16 13:40 UTC), whatever
+%% the mix.
 %%
 %% The log's sink: the run's log is the output stream of a mutual reference that
 %% every person process and the monitor append to; the harness hands it to the
@@ -83,7 +86,8 @@ procedure agents(Integer?, Integer?, Friends?, Integer?, Integer?, Integer?,
 agents(A, N, [Fs|Fss], B, Spend, Cred, [In|Ins], [merge(Out?)|Ms?], Mon,
        Log) :-
     A? =< N? |
-    population # stochastic_person(B?, Spend?, Cred?, P, Seed),
+    population # stochastic_person(B?, Spend?, Cred?, P, S),
+    random(S?, 2147483646, Seed, _),
     coins # start(A?, Fs?, In?, Out, Asks),
     population # person(A?, P?, Mon?, Seed?, Log?, Asks?),
     skip(4096, B?, B2),
