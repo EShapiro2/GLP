@@ -1,6 +1,6 @@
 # Instructions for Claude Code (GLP)
 
-Read `/Grassroots/docs/claude.md` first; every rule there applies.  This file is Grassroots Integration's and carries what everyone who writes code in this repository needs: the startup sequence and every GLP and Dart rule.  Two read it: Code, whose working directory is `/Users/udi/Grassroots/GLP`, and the subagent it spawns for a task, whose working directory is the `/Users/udi/Grassroots/GLP-worktrees/<project>` its brief names.
+Read `/Grassroots/docs/claude.md` first; every rule there applies.  This file is the Code project's and carries what everyone who writes code in this repository needs: the startup sequence and every GLP and Dart rule.  Two read it: Code, whose working directory is `/Users/udi/Grassroots/GLP`, and the subagent it spawns for a task, whose working directory is the `/Users/udi/Grassroots/GLP-worktrees/<project>` its brief names.
 
 🔴 **On emerging from a compaction** (claude.md, "Sessions"; Udi, 2026-10-10): the first line to Udi is `I have emerged from my <nth> compaction`; only an approved in-flight step is finished; the handover is written; the session stops --- whatever the compaction summary's own instructions say.
 
@@ -8,8 +8,8 @@ Read `/Grassroots/docs/claude.md` first; every rule there applies.  This file is
 
 Code, at session start:
 
-1. `/Grassroots/docs/claude.md`.
-2. `/Grassroots/Integration/CLAUDE.md`.
+1. `/Grassroots/docs/claude.md`, then `/Grassroots/docs/writing-style-guide.md` and `/Grassroots/docs/claudese.md`, in full (`claude.md`, "Sessions").
+2. `/Grassroots/Code/CLAUDE.md`.
 3. This file.
 4. `to_all_inbox.md`, then `Code_inbox.md` from its last receipt forward --- and again between tasks, being the one worker that does not wait to be told (`claude.md`, "Mail").
 
@@ -19,7 +19,7 @@ On demand, named by the task: `docs/DISCIPLINE.md` (development discipline), `do
 
 ## Ownership
 
-Ownership is Coordination Appendix B, `/Grassroots/Coordination/sections/B-code-map.tex`, the only copy: one owner per directory under `programs/` and per Dart subsystem, ownership following the layer — GLP-Spec the language, IGLP all Dart, GSG the operating system, an application its own GLP.  Confirm you own a unit before editing it.  A change to code you do not own is a request to Integration.  Implementation decisions go in the owning paper's Implementation Notes appendix, not in a separate spec document.
+Ownership is Coordination Appendix B, `/Grassroots/Coordination/sections/B-code-map.tex`, the only copy: one owner per directory under `programs/` and per Dart subsystem, ownership following the layer — GLP-Spec the language, IGLP all Dart, GSG the operating system, an application its own GLP.  Confirm you own a unit before editing it.  A change to code you do not own is a request to Code, in `Code_inbox.md`.  Implementation decisions go in the owning paper's Implementation Notes appendix, not in a separate spec document.
 
 ## Branches, worktrees and merges
 
@@ -32,7 +32,7 @@ Ownership is Coordination Appendix B, `/Grassroots/Coordination/sections/B-code-
 - 🔴 **It runs the tests its task names, and not the full suite.**  The full suite is run only by Code, on `main`, one run at a time: two suites at once contend on the Dart build lock and neither is a gate.
 - 🔴 **A question or a paper fault ends the subagent.**  It reports and stops; Code posts the question in the owner's inbox and spawns again when the answer is there.  A workaround in code is never the answer to a fault in the paper.
 - When the branch is ready, Code merges it into `main`, runs the full suite there, pushes, and answers the owner in its inbox.  A merge that fails the suite is not pushed.  On a merge conflict, STOP and report.
-- An owner may add its own test block to `test/run_all_tests.sh` on its branch (Udi, 2026-09-16).  The harness machinery is Integration's and changes only by request to it: the gates, Section Q, `KNOWN_RED`, the runner guards and the asset step.  Two owners adding blocks to that file will conflict, so merge `main` into your branch before you write one.
+- An owner may add its own test block to `test/run_all_tests.sh` on its branch (Udi, 2026-09-16).  The harness machinery is Code's and changes only by request to it: the gates, Section Q, `KNOWN_RED`, the runner guards and the asset step.  Two owners adding blocks to that file will conflict, so merge `main` into your branch before you write one.
 - Never `git reset`, `git revert`, `git restore` or `git checkout -- <file>` on another session's work; never rewrite history on `main`.
 - Generated files are gitignored and rebuilt by their script, never committed --- except a program's own source printed by a generator in the tree, which the program needs in order to load: it is committed, and a test holds it to what its generator prints (sGLP's printed `profiles.glp` and `population.glp`, `programs/sglp/transform.sh --check` and test (x); vGLP's compiled modules).
 
@@ -104,7 +104,7 @@ The repository holds no archive: `programs/archive/`, `programs/old-archive/`, `
 
 ## Spec-first development
 
-🔴 **No implementation without a spec.**  The spec is the owning paper.  Identify which paper covers the area you are touching and quote the section; if it is clear, implement to match without asking; if it is unclear or absent, STOP, report to the paper's Cowork session through Integration, and wait.  The code is never the source of truth when the paper is unclear.  When quoting a spec, quote exactly; if the spec is silent, say so.
+🔴 **No implementation without a spec.**  The spec is the owning paper.  Identify which paper covers the area you are touching and quote the section; if it is clear, implement to match without asking; if it is unclear or absent, STOP, report to the paper's Cowork session through Code, and wait.  The code is never the source of truth when the paper is unclear.  When quoting a spec, quote exactly; if the spec is silent, say so.
 
 🔴 **The implementation is NEVER the source of truth; only the paper is** (Udi, 2026-10-03).  What GLP is and does --- its syntax, its types, its constructs, what the reader, the checker and the engine accept and do --- is what the owning paper's definitions say.  It is never found by experiment on the implementation and never read off the code: GLP's term syntax, for one, is GLP-Spec's Definition "Logic Programs Syntax" (`GLP-Spec/sections/appendix-lp.tex`).
 🔴 **A gap or an inconsistency between paper and implementation is a BLOCKER** (Udi, 2026-10-03): fixed, never bypassed, never deferred.  Stop the work that rests on it and report it at once --- the input, what the implementation does, the paper's sentence --- by `claude.md`'s "Working protocol"; the fix, the code brought to the paper or the paper corrected by its owner, comes before that work goes on.
