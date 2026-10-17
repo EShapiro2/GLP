@@ -9,6 +9,7 @@
 #                                         with cascade/<contract>/
 #   bash cascade.sh <contract> --record   run, write, and commit the record as one
 #                                         commit tagged cascade/<contract>/<date>
+#                                         (a later run the same day: <date>-2, -3, ...)
 #
 # The contracts, each its owner's, two files in the owner's directory:
 # contract.md, the clauses, and contract.glp, the act schemas in the term form
@@ -281,11 +282,13 @@ say "written to cascade/$NAME"
 
 # --record: one commit, tagged.
 if [ "$MODE" = "--record" ]; then
+    # A second run on one day is tagged cascade/<contract>/<date>-2, and so on.
     TAG="cascade/$NAME/$(date -u '+%Y-%m-%d')"
-    if git -C "$GLP_DIR" rev-parse -q --verify "refs/tags/$TAG" > /dev/null; then
-        say "the tag $TAG exists; the record is not committed"
-        exit 1
-    fi
+    n=1; T="$TAG"
+    while git -C "$GLP_DIR" rev-parse -q --verify "refs/tags/$T" > /dev/null; do
+        n=$((n + 1)); T="$TAG-$n"
+    done
+    TAG="$T"
     git -C "$GLP_DIR" add "cascade/$NAME" \
         && git -C "$GLP_DIR" commit -q -m "A run of the cascade on $NAME, recorded whole ($TAG): the contract, the verdict $VT, the VMAT form, the platform and its run, by cascade.sh at $GLP_COMMIT" -- "cascade/$NAME" \
         && git -C "$GLP_DIR" tag "$TAG" \

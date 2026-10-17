@@ -8,20 +8,21 @@
 %%
 %% Ten schemas over ten predicates.  unfriend carries no ? and stands for one
 %% schema per role, guarded at that role, unfriend_p and unfriend_q, as CSSN
-%% writes it.  Every role requires identity, except the role of establish and
-%% the AI agent's role of enter, which forbid it and add it.  A role is its
-%% index in the schema, in the order of the schema's parameters; p and q are
+%% writes it.  Every role requires identity, except the role of establish,
+%% which adds it and requires and forbids nothing (Jurix, def:unobstructed,
+%% clause 1), and the AI agent's role of enter, which forbids it and adds it.
+%% A role is its index in the schema, in the order of the schema's parameters; p and q are
 %% persons, r and s AI agents, every role a party role.  A role is
 %% rs(Guard, Add, Del, Keep, Forb), its +(i), -(i), =(i) and not(i).
 %%
-%%   establish(p?)      :  not identity, +identity
+%%   establish(p?)      :  +identity
 %%   befriend(p?, q?)   :  identity, not agent, not friend(q), +friend(q)
 %%                         identity, not agent, not friend(p), +friend(p)
 %%   unfriend_p(p?, q)  :  identity, not retired, -friend(q)
 %%                         identity, -friend(p)
 %%   unfriend_q(p, q?)  :  identity, -friend(q)
 %%                         identity, not retired, -friend(p)
-%%   enter(p?, r)       :  identity, not agent, +principal_of(r), +friend(r)
+%%   enter(p?, r?)      :  identity, not agent, +principal_of(r), +friend(r)
 %%                         not identity, +identity, +agent, +principal(p), +friend(p)
 %%   agent_befriend(r?, q?, p?) :
 %%                         identity, agent, principal(p), not retired, not friend(q), +friend(q)
@@ -39,8 +40,9 @@
 %%   retire(p?, r)      :  identity, principal_of(r), +retired_of(r)
 %%                         identity, agent, principal(p), not retired, +retired
 %%
-%% The ? on an AI agent's role (r in agent_befriend, r and s in agents_befriend)
-%% is taken by the AI agent's program under the principal's standing
+%% The ? on an AI agent's role (r in enter, agent_befriend and agents_befriend,
+%% s in agents_befriend) is taken by the AI agent's program, in enter as the
+%% program the principal set up, and after it under the principal's standing
 %% authorisation of clause 9 (contract.md, "The schemas, and what they
 %% realise").
 %% ---------------------------------------------------------------------------
@@ -68,9 +70,9 @@ Declared  ::= Contract ; reflexive(Preds, Contract).
 procedure contract_named(Constant?, Declared).
 contract_named(gai,
 %%   establish(p?) :
-%%       at p:  not identity, +identity
+%%       at p:  +identity
    [schema(establish,
-       [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]),
+       [rs(guarded, [atom(identity, [])], [], [], [])]),
 %%   befriend(p?, q?) :
 %%       at p:  identity, not agent, not friend(q), +friend(q)
 %%       at q:  identity, not agent, not friend(p), +friend(p)
@@ -93,15 +95,15 @@ contract_named(gai,
        [rs(unguarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []),
         rs(guarded, [], [atom(friend, [role(1)])], [atom(identity, [])],
                     [atom(retired, [])])]),
-%%   enter(p?, r) :
+%%   enter(p?, r?) :
 %%       at p:  identity, not agent, +principal_of(r), +friend(r)
 %%       at r:  not identity, +identity, +agent, +principal(p), +friend(p)
     schema(enter,
        [rs(guarded, [atom(principal_of, [role(2)]), atom(friend, [role(2)])], [],
                     [atom(identity, [])], [atom(agent, [])]),
-        rs(unguarded, [atom(identity, []), atom(agent, []), atom(principal, [role(1)]),
-                       atom(friend, [role(1)])], [],
-                      [], [atom(identity, [])])]),
+        rs(guarded, [atom(identity, []), atom(agent, []), atom(principal, [role(1)]),
+                     atom(friend, [role(1)])], [],
+                    [], [atom(identity, [])])]),
 %%   agent_befriend(r?, q?, p?) :
 %%       at r:  identity, agent, principal(p), not retired, not friend(q), +friend(q)
 %%       at q:  identity, not agent, not friend(r), +friend(r), +agent_of(r, p)
