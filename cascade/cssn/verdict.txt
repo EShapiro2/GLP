@@ -1,0 +1,1 @@
+not_grassroots([obstructed(enter, 1, atom(identity, []), unobtainable), obstructed(enter, 1, atom(child, []), blocked_by(enter, 2, atom(child, []))), obstructed(enter, 2, atom(identity, []), blocked_by(establish, 1, atom(identity, [])))])

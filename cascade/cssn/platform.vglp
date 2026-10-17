@@ -1,0 +1,11 @@
+%% not compiled(cssn)
+%% it is not a local specification (vGLP, Section 5.4, the paragraph on act schemas):
+%% two schema-bindings delete and add the same atoms at each participant and require
+%% or forbid different atoms at two participants, a variable free being sent anywhere:
+%% the schema-binding(child_befriend(person(0), person(1), person(2), person(2)))
+%% and the schema-binding(child_adult_befriend(person(0), person(1), person(2)))
+%% it is not effective (vGLP, Section 5.4, the sentence after the paragraph on act schemas):
+%% two schema-bindings of an unguarded class require or forbid different atoms at a
+%% participant, a variable free being sent anywhere:
+%% the schema-binding(deliver(person(0), person(1), person(0), person(0), sp(0, 0), sp(0, 0)))
+%% and the schema-binding(deliver(person(0), person(1), person(0), free, sp(0, 0), sp(0, 0)))
