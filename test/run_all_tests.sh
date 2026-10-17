@@ -6272,8 +6272,8 @@ if _section CAS; then
 # =============================================================================
 # Section CAS: The cascade, recorded whole (cascade.sh)
 # =============================================================================
-# A run of the cascade on a contract is recorded in programs/<owner>/cascade/
-# as one tagged commit (claude.md "Code"; Coordination 5.7): the contract's two
+# A run of the cascade on a contract is recorded in cascade/<contract>/, at the
+# repository root, as one tagged commit (claude.md "Code"; Coordination 5.7): the contract's two
 # files with the checker's verdict, the VMAT form, the canonical platform as
 # .vglp and as .glp, and its run with vGLP's scripted persons, with a manifest.
 # This section re-runs cascade.sh --check on every recorded contract and holds
@@ -6283,17 +6283,11 @@ echo "=== Section CAS: The cascade, recorded whole ==="
 echo ""
 
 for cas_c in social_graph currency cssn federation gai; do
-    case "$cas_c" in
-        social_graph) cas_o="programs/social/graph" ;;
-        currency)     cas_o="programs/currencies/coins" ;;
-        cssn)         cas_o="programs/cssn" ;;
-        federation)   cas_o="programs/federation" ;;
-        gai)          cas_o="programs/gai" ;;
-    esac
-    [ -f "$GLP_DIR/$cas_o/cascade/manifest.md" ] || continue
+    cas_o="cascade/$cas_c"
+    [ -f "$GLP_DIR/$cas_o/manifest.md" ] || continue
     cas_out=$(bash "$GLP_DIR/cascade.sh" "$cas_c" --check 2>&1; echo "exit $?")
     for cas_f in contract.md contract.glp verdict.txt vmat.tex platform.vglp platform.glp run.log; do
-        [ -f "$GLP_DIR/$cas_o/cascade/$cas_f" ] || continue
+        [ -f "$GLP_DIR/$cas_o/$cas_f" ] || continue
         check "cascade $cas_c: $cas_f is what the tools print" "^$cas_f: as printed$" "$cas_out"
     done
     check "cascade $cas_c: cascade.sh --check exits 0" "^exit 0$" "$cas_out"

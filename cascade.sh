@@ -4,9 +4,9 @@
 # clauses and act schemas in its owner's directory through every tool of the
 # cascade, each in this repository, to the canonical platform and its run.
 #
-#   bash cascade.sh <contract>            run, and write programs/<owner>/cascade/
+#   bash cascade.sh <contract>            run, and write cascade/<contract>/
 #   bash cascade.sh <contract> --check    run into a scratch directory and compare
-#                                         with programs/<owner>/cascade/
+#                                         with cascade/<contract>/
 #   bash cascade.sh <contract> --record   run, write, and commit the record as one
 #                                         commit tagged cascade/<contract>/<date>
 #
@@ -21,7 +21,10 @@
 #   federation     GFWC        programs/federation
 #   gai            GAI         programs/gai
 #
-# The steps, and the six artefacts written to programs/<owner>/cascade/:
+# The steps, and the six artefacts written to cascade/<contract>/ at the
+# repository root --- outside programs/, since every .glp and .vglp under a
+# program's directory is a module of that program to the linker and to :emit,
+# and a record is not a program:
 #   1. contract.md and contract.glp, copied as they stand at the run.
 #   2. verdict.txt: the checker's verdict on the schemas, programs/jurix's
 #      check/2 (Jurix, def:syntactically-grassroots; Section 8's conditions
@@ -71,14 +74,14 @@ case "$NAME" in
     *) echo "cascade.sh: no contract named $NAME" >&2; exit 2 ;;
 esac
 SRC="$GLP_DIR/$OWNER"
-REC="$SRC/cascade"
+REC="$GLP_DIR/cascade/$NAME"
 PLAYS="$GLP_DIR/programs/vglp/cva/$NAME"
 for f in contract.md contract.glp; do
     [ -f "$SRC/$f" ] || { echo "cascade.sh: $OWNER/$f is missing; the contract is its owner's two files" >&2; exit 2; }
 done
 
 WORK=$(mktemp -d)
-EMIT="$GLP_DIR/programs/tests/cascade_emit_$$"
+EMIT="$GLP_DIR/programs/tests/cascade_emit/$NAME"
 trap 'rm -rf "$WORK" "$EMIT"' EXIT
 if [ "$MODE" = "--check" ]; then OUT="$WORK/out"; else OUT="$REC"; fi
 mkdir -p "$OUT" || exit 2
@@ -176,7 +179,7 @@ if [ "$COMPILED" = 1 ]; then
         grep -E '(Error|error|✗|skipped|failed)' "$WORK/e.out" | head -10
         exit 1
     fi
-    rm -rf "$EMIT"
+    rm -rf "$EMIT" "$GLP_DIR/programs/tests/cascade_emit"
 
     # 6. The run with scripted persons: the plays of programs/vglp/cva/<contract>.
     if [ -d "$PLAYS" ] && [ -f "$PLAYS/self.glp" ]; then
@@ -258,7 +261,7 @@ fi
 
 # --check: each artefact in place is what the tools print now.
 if [ "$MODE" = "--check" ]; then
-    [ -d "$REC" ] || { say "no record in $OWNER/cascade"; exit 1; }
+    [ -d "$REC" ] || { say "no record in cascade/$NAME"; exit 1; }
     for f in contract.md contract.glp verdict.txt vmat.tex platform.vglp platform.glp run.log; do
         if [ -f "$OUT/$f" ] || [ -f "$REC/$f" ]; then
             if [ -f "$OUT/$f" ] && [ -f "$REC/$f" ] && cmp -s "$OUT/$f" "$REC/$f"; then
@@ -273,7 +276,7 @@ if [ "$MODE" = "--check" ]; then
     exit $STATUS
 fi
 
-say "written to $OWNER/cascade"
+say "written to cascade/$NAME"
 [ "$STATUS" = 0 ] || exit 1
 
 # --record: one commit, tagged.
@@ -283,8 +286,8 @@ if [ "$MODE" = "--record" ]; then
         say "the tag $TAG exists; the record is not committed"
         exit 1
     fi
-    git -C "$GLP_DIR" add "$OWNER/cascade" \
-        && git -C "$GLP_DIR" commit -q -m "A run of the cascade on $NAME, recorded whole ($TAG): the contract, the verdict $VT, the VMAT form, the platform and its run, by cascade.sh at $GLP_COMMIT" -- "$OWNER/cascade" \
+    git -C "$GLP_DIR" add "cascade/$NAME" \
+        && git -C "$GLP_DIR" commit -q -m "A run of the cascade on $NAME, recorded whole ($TAG): the contract, the verdict $VT, the VMAT form, the platform and its run, by cascade.sh at $GLP_COMMIT" -- "cascade/$NAME" \
         && git -C "$GLP_DIR" tag "$TAG" \
         && say "recorded as $(git -C "$GLP_DIR" rev-parse --short=8 HEAD), tagged $TAG" \
         || { say "the record was not committed"; exit 1; }
