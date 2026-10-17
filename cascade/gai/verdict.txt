@@ -1,0 +1,1 @@
+not_grassroots([obstructed(befriend, 1, atom(identity, []), unobtainable), obstructed(befriend, 1, atom(agent, []), blocked_by(enter, 2, atom(agent, []))), obstructed(befriend, 2, atom(identity, []), unobtainable), obstructed(befriend, 2, atom(agent, []), blocked_by(enter, 2, atom(agent, []))), volition(enter, 1, 2)])
