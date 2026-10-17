@@ -1,0 +1,62 @@
+%% ---------------------------------------------------------------------------
+%% contract.glp --- the grassroots currency's contract, Currencies' (a
+%% contract is its platform's paper's; Coordination Appendix C), as Jurix
+%% prints it (Section 3.4, the table there, which Section 7 certifies by
+%% hand), in the term form programs/jurix reads (its README, "Writing a
+%% contract").  The one copy: Jurix's checker (programs/jurix/test_jurix.sh)
+%% and vGLP's compiler to the canonical CVA platform
+%% (programs/vglp/cva/compile.sh) read it from here, contract_named/2
+%% printing the term.  The paper writes the predicate as the cent sign, which
+%% is not a GLP constant; it is written coin here.  Each schema is in Jurix's
+%% notation above its term, at each role in turn: what the role requires, what
+%% it forbids (not), what it adds (+) and what it deletes (-); a role marked ?
+%% is a guarding role.
+%%
+%% A role is rs(Guard, Add, Del, Keep, Forb), its +(i), -(i), =(i) and not(i),
+%% and is named by its index, role(1) the schema's first role; u, v and r are
+%% party variables, pvar.
+%% ---------------------------------------------------------------------------
+
+NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
+            ; ext(NameTerm, Constant).
+Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm).
+Args      ::= [] ; [Arg | Args].
+Atom      ::= atom(Constant, Args).
+Atoms     ::= [] ; [Atom | Atoms].
+Guard     ::= guarded ; unguarded ; guarded_at(Constant).
+RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant).
+RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
+            ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
+RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
+Reach     ::= reach(NameTerm, Constant, NameTerm).
+Reaches   ::= [] ; [Reach | Reaches].
+Schema    ::= schema(Constant, RoleSpecs) ; cschema(Constant, Reaches, RoleSpecs).
+Contract  ::= [] ; [Schema | Contract].
+Preds     ::= [] ; [Constant | Preds].
+Declared  ::= Contract ; reflexive(Preds, Contract).
+
+%% contract_named(currency, C): the contract.
+procedure contract_named(Constant?, Declared).
+contract_named(currency,
+%%   mint(p?) :
+%%       at p:  +coin(p)
+   [schema(mint,
+       [rs(guarded, [atom(coin, [role(1)])], [], [], [])]),
+%%   swap(p?, q? ; v, u) :
+%%       at p:  +coin(v), -coin(u)
+%%       at q:  +coin(u), -coin(v)
+    schema(swap,
+       [rs(guarded, [atom(coin, [pvar(v)])], [atom(coin, [pvar(u)])], [], []),
+        rs(guarded, [atom(coin, [pvar(u)])], [atom(coin, [pvar(v)])], [], [])]),
+%%   pay(p?, q) :
+%%       at p:  -coin(q)
+%%       at q:  +coin(q)
+    schema(pay,
+       [rs(guarded,   [], [atom(coin, [role(2)])], [], []),
+        rs(unguarded, [atom(coin, [role(2)])], [], [], [])]),
+%%   redeem(p?, q ; r) :
+%%       at p:  +coin(r), -coin(q)
+%%       at q:  +coin(q), -coin(r)
+    schema(redeem,
+       [rs(guarded,   [atom(coin, [pvar(r)])], [atom(coin, [role(2)])], [], []),
+        rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar(r)])], [], [])])]).
