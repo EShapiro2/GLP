@@ -24,10 +24,10 @@
 %% fresh name q1, ask1 and respond1 (vGLP, Definition "Canonical Compilation").
 %% The asking clause writes the ask ask(T, t(X?)) on its ask stream, T the
 %% interactive type as a constant and t the functor the compilation gives it,
-%% the type's name in lowercase with _w for writer mode, menu_w and card_w,
-%% and calls q1 with X and its own ask stream: Menu and Card are in writer
-%% mode, so the guarded clause takes the writer X and the ask carries X?
-%% (README.md, "The vGLP sources and their compilation").
+%% the type's name in lowercase with _w for writer mode, menu_w and
+%% approval_w, and calls q1 with X and its own ask stream: Menu and Approval
+%% are in writer mode, so the guarded clause takes the writer X and the ask
+%% carries X? (README.md, "The vGLP sources and their compilation").
 
 %% (Menu)*ask(Ss, Os, C?): the asking clause and the guarded clause.
 procedure ask(Peers?, Peers?, Choice, Stream(Ask)).
@@ -35,11 +35,12 @@ ask(Ss, Os, C?, [ask('Menu', menu_w(X?))|D?]) :- ask1(Ss?, Os?, C, X, D).
 procedure ask1(Peers?, Peers?, Choice, Menu, Stream(Ask)).
 ask1(Ss, Os, C?, menu(Ss?, Os?, C), []).
 
-%% (Card)*respond(From, A?): the asking clause and the guarded clause.
+%% (Approval)*respond(From, A?): the asking clause and the guarded clause.
 procedure respond(Peer?, YesNo, Stream(Ask)).
-respond(From, A?, [ask('Card', card_w(X?))|D?]) :- respond1(From?, A, X, D).
-procedure respond1(Peer?, YesNo, Card, Stream(Ask)).
-respond1(From, A?, card(From?, A), []).
+respond(From, A?, [ask('Approval', approval_w(X?))|D?]) :-
+    respond1(From?, A, X, D).
+procedure respond1(Peer?, YesNo, Approval, Stream(Ask)).
+respond1(From, A?, approval(From?, A), []).
 
 procedure agent(Peer?, Peers?, Peers?, List(Peer)?, List(Peer)?, Choice?,
                 Stream(Msg)?, Stream(Msg), Stream(Ask)).

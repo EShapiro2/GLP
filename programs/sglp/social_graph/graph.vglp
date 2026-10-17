@@ -15,15 +15,15 @@ YesNo   ::= yes ; no.
 Peers   ::= [Peer | List(Peer)].
 Choice  ::= same(Peer) ; other(Peer).
 Menu    ::= menu(Peers, Peers, Choice?).
-Card    ::= card(Peer, YesNo?).
+Approval ::= approval(Peer, YesNo?).
 
 %% Show the person both lists, and hand them the choice.
 procedure (Menu)*ask(Peers?, Peers?, Choice).
 (menu(Ss?, Os?, C))*ask(Ss, Os, C?).
 
 %% Show the person who offers, and hand them yes or no.
-procedure (Card)*respond(Peer?, YesNo).
-(card(From?, A))*respond(From, A?).
+procedure (Approval)*respond(Peer?, YesNo).
+(approval(From?, A))*respond(From, A?).
 
 %% Whether two agents are of one sex, which an offer carries and the offering
 %% agent knows by the list it picked from; the relation is symmetric.
