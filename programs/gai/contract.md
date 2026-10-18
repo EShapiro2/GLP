@@ -1,6 +1,6 @@
 # The social network with accountable AI agents and digital provenance --- the contract
 
-GAI's contract (Coordination Appendix C), for `programs/gai/contract.md`; its act schemas are `contract.glp` beside it.  The paper, `/Users/udi/Grassroots/GAI/main_characterisation_ArXiv.tex`, sections "A Social Graph with Accountable AI Agents" and "A Social Network with Digital Provenance", quotes it.  Parts A and B are shared word for word with the child-safe social network (CSSN, `programs/cssn/contract.md`), whose part C is for parents and children; the core, B, is CSSN's.  Written by GAI #1 Cowork, 2026-10-17.
+GAI's contract (Coordination Appendix C), the one copy, written by its owner (claude.md "Sessions"); its act schemas are `contract.glp` beside it.  The paper, `/Users/udi/Grassroots/GAI/main_characterisation_ArXiv.tex`, sections "A Social Graph with Accountable AI Agents" and "A Social Network with Digital Provenance", quotes it.  Parts A and B are shared word for word with the child-safe social network (CSSN, `programs/cssn/contract.md`), whose part C is for parents and children; the core, B, is CSSN's, its words as CSSN sent them on 2026-10-18 (SGLP 2a90a2d).  Written by GAI #1 Cowork, 2026-10-17, revised 2026-10-18.
 
 A *party* is a person, natural or legal, with the gender-neutral pronoun `they', or an AI agent; Alice and Bob are variables naming distinct parties.  An *AI agent* is a party that is not a person: a program that holds a key of its own and takes acts of the contract with it.
 
@@ -9,25 +9,25 @@ A *party* is a person, natural or legal, with the gender-neutral pronoun `they',
 1. *Friendship.*  Two persons become friends by an act of both.  Each is thereafter a friend of the other.
 2. *Ending a Friendship.*  Either friend may end the friendship, and it then ends for both.
 
-## B. The supervised-parties core
+## B. The wards core
 
-The core adds supervised parties to a grassroots social contract with relations between parties --- here, friendship.  Here the supervised parties are AI agents, each supervised by the principal who answers for it; in a companion contract in preparation they are children, supervised by their parents, and the core's text is identical in the two.  The intention is that a supervisor is a legally culpable entity: an adult natural person or a legal person.
+The core adds wards to a grassroots social contract with relations between parties --- here, friendship.  Here the wards are AI agents, the guardian of each the principal answerable for it; in a companion contract in preparation the wards are children and their guardians their parents, and the core's text is identical in the two.  The intention is that a guardian is a legally culpable entity: an adult natural person or a legal person.
 
-3. *Supervision.*  A party with a recorded supervisor is a *supervised party*, and a party without is *unsupervised*; only an unsupervised party is a supervisor.  Every act requires its parties to have a genuine digital identity: an unsupervised party establishes its own, and a supervised party's is established by its supervisor, with which the supervised party enters the contract, its supervisor recorded.
-4. *Volition.*  A supervised party that is a person wills its own acts; the acts of a supervised party that is not a person are willed by its supervisor.
-5. *Relations.*  A supervised party enters a relation of the contract with another party by an act of both and of a supervisor of each supervised party among them.
-6. *Ending a Relation.*  Either party to a relation of a supervised party, or a supervisor of that party, may end it, and it then ends for both.
-7. *Ending Supervision.*  Supervision ends by an act of a supervisor and by no act of the supervised party; each extension says what the act is and what follows it.
+3. *Guardianship.*  A party with a recorded guardian is a *ward*; only a party that is not a ward is a guardian.  Every act requires its parties to have a genuine digital identity: a party that is not a ward establishes its own, and a ward's is established by its guardian, with which the ward enters the contract, its guardian recorded.
+4. *Volition.*  A ward that is a person wills its own acts; the acts of a ward that is not a person are willed by its guardian.
+5. *Relations.*  A ward enters a relation of the contract with another party by an act of both and of a guardian of each ward among them.
+6. *Ending a Relation.*  Either party to a relation of a ward, or a guardian of that ward, may end it, and it then ends for both.
+7. *Ending Guardianship.*  Guardianship ends by an act of a guardian and by no act of the ward; each extension says what the act is and what follows it.
 
 ## C. The AI-agents extension
 
-Supervisors are principals and supervised parties their AI agents; the clauses below realise clauses 3 to 7.  An AI agent becomes a friend of a person or of another AI agent by clause 5, its principal a party to the act.
+Guardians are principals and wards their AI agents; the clauses below realise clauses 3 to 7.  An AI agent becomes a friend of a person or of another AI agent by clause 5, its principal a party to the act.
 
 8. *Personhood.*  A party that establishes an identity of its own declares themselves a person, and answers for every act signed with that identity, whoever or whatever took it.
-9. *Principal.*  The supervisor of an AI agent is its *principal*, a person, one per AI agent.  The entering of an AI agent records it as an AI agent, its principal recorded and its first friend, and is the principal's authorisation of every act the AI agent takes under this contract on their behalf.
+9. *Principal.*  The guardian of an AI agent is its *principal*, a person, one per AI agent.  The entering of an AI agent records it as an AI agent, its principal recorded and its first friend, and is the principal's authorisation of every act the AI agent takes under this contract on their behalf.
 10. *Disclosure.*  Every act of an AI agent is signed by it and names its principal.
 11. *Accountability.*  The principal answers for the acts of their AI agent as for their own.
-12. *Retiring.*  The principal may retire their AI agent, after which it takes no act of the contract; its friendships end by clause 6.  No act makes an AI agent an unsupervised party.
+12. *Retiring.*  The principal may retire their AI agent, after which it takes no act of the contract; its friendships end by clause 6.  No act makes an AI agent a party that is not a ward.
 
 ## D. The social-network extension
 
@@ -49,4 +49,4 @@ The schemas are in `contract.glp`, in Jurix's notation above each term.  Twelve 
 - Clauses 13 and 14, items: `sign(p?; x)` adds `item(x, p, p)` at the author, and `send(p?, q; x, a, f)` adds `sent(x, q)` at the sender and `item(x, a, p)` at the receiver, a friend of the sender, as the grassroots social graph's `sign` and `forward` (GSG, `programs/social/graph/contract.glp`) and CSSN's `sign` and `send`; `item(x, a, f)` reads: item `x`, by author `a`, received from `f`.  An AI agent signs and sends under clause 9 and not when retired.
 - Clauses 8 and 11 describe no act: both are undertaken, their record the party's signed undertaking to keep the contract, held by every party it interacts with (Jurix, Section 9).
 
-`befriend` forbids `agent`, which `enter` adds, so the contract has no unobstructed introductory act (Jurix, `def:unobstructed`, clause 2) and is not syntactically grassroots, as CSSN's is not for the same reason; it rests on the certification of contracts with supervised parties that CSSN asked Jurix for (2026-10-15), and is to be proved grassroots directly in the paper until then: two persons can always befriend, every AI agent has a person on its record, its principal, and through its principal it can come to interact with anyone.
+`befriend` forbids `agent`, which `enter` adds, so the contract has no unobstructed introductory act (Jurix, `def:unobstructed`, clause 2) and is not syntactically grassroots, as CSSN's is not for the same reason; it rests on the certification of contracts with wards that CSSN asked Jurix for (2026-10-15), approved in concept by Udi on 2026-10-18 and going into Jurix's paper and then its checker, and is to be proved grassroots directly in the paper until then: two persons can always befriend, every AI agent has a person on its record, its principal, and through its principal it can come to interact with anyone.
