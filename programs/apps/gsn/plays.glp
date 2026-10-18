@@ -1,0 +1,13 @@
+%% plays.glp --- the GSN mini-app activated as the super-app activates it (GSG paper, Section 2, "Activation and joining"): by run/3, under the type identity of its entry miniapp/4, with its grants; and, for two executions, with the two ends of one root channel handed to them as their conversation, the play standing in for the social graph, as ../gsg/plays.glp does.  The persons are scripted (person.glp), each under its role, and the play returns their screens.  A run does not end --- the agent's request question stays open, its clock ticks, and the person channel never closes --- so a play's result is read off a partial stream at the REPL's :limit.  The super-app hosting the mini-app on two smartphones is ../gsn_boot.glp.
+
+imported procedure person#miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
+
+%% play_network(A, B): alice and bob, one conversation between their two executions.  Each asks to know the other; alice offers bob friendship and he answers yes (GSG:2, Friendship); alice sends him a message (GSN:1, Message); she creates a group, friends, and is its leader and first member (GSN:2, Group); she adds bob to it, and he answers yes (GSN:3, Joining); bob sends the group a message, which goes to alice, the leader, who delivers it to every member (GSN:5, Group message); and bob leaves the group (GSN:4, Leaving).
+exported procedure play_network(Stream(Seen), Stream(Seen)).
+play_network(A?, B?) :-
+    self_module(M),
+    find_type(miniapp/4, T),
+    run(miniapp(alice, ch(GA?, DA), ch([conversation(bob, ch(BA?, AB))], _), []), T?, M?),
+    person # miniapp_person(alice, alice, ch(DA?, GA), A),
+    run(miniapp(bob, ch(GB?, DB), ch([conversation(alice, ch(AB?, BA))], _), []), T?, M?),
+    person # miniapp_person(bob, bob, ch(DB?, GB), B).

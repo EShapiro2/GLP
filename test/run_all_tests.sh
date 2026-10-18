@@ -21,7 +21,7 @@
 #   O - Currencies Multi-Isolate Tests (dart test, one isolate per agent)
 #   P - Module Boundary Enforcement Tests (exported vs private procedures)
 #   GF - Grassroots federation records, transactions and platform (GFWC)
-#   APPS - The apps of the contracts (programs/apps), mini-apps compiled down the cascade: GSG's
+#   APPS - The apps of the contracts (programs/apps), mini-apps compiled down the cascade: GSG's and GSN's
 #
 # Every section runs unless GLP_SECTIONS names a subset ("Section selection"
 # below); test/run_fast.sh runs the fast tier.
@@ -5800,7 +5800,7 @@ fi  # Section SG
 
 if _section APPS; then
 # =============================================================================
-# Section APPS: the apps of the contracts (programs/apps), each a mini-app of the Grassroots Super-App compiled down the cascade from its contract's act schemas: the canonical CVA platform vGLP's compiler prints from them, compiled to GLP when the directory loads, under the root's entry template miniapp/4. GSG's app, programs/apps/gsg: its platform held to what the compiler prints from programs/gsc/GSG.glp (programs/apps/compile.sh --check); the program certified by :artefact; its router, which carries the platform's network over the conversations the social graph hands the mini-app, holding a message until the conversation with its recipient opens (play_held); and two executions over one conversation, alice offering bob friendship, bob asked and answering yes, and then bob ending it (play_friends), each person's screen held exactly, an unbound tail written _: the run ends at the REPL's limit, the clock of each agent ticking without end.  The super-app hosting the app on two smartphones, programs/apps/gsg_boot.glp, is not run here: the boot harness reduces each event to quiescence (IGLP, Implementation Notes, "event-driven ... reduces until quiescent"), and the platform's agent never quiesces, its clock goal writing ticks without end (vGLP, Section 5.4).
+# Section APPS: the apps of the contracts (programs/apps), each a mini-app of the Grassroots Super-App compiled down the cascade from its contract's act schemas: the canonical CVA platform vGLP's compiler prints from them, compiled to GLP when the directory loads, under the root's entry template miniapp/4. GSG's app, programs/apps/gsg: its platform held to what the compiler prints from programs/gsc/GSG.glp (programs/apps/compile.sh --check); the program certified by :artefact; its router, which carries the platform's network over the conversations the social graph hands the mini-app, holding a message until the conversation with its recipient opens (play_held); and two executions over one conversation, alice offering bob friendship, bob asked and answering yes, and then bob ending it (play_friends), and GSN's app, programs/apps/gsn, the same host on GSN's platform (play_network), each person's screen held exactly, an unbound tail written _: the run ends at the REPL's limit, the clock of each agent ticking without end.  The super-app hosting the app on two smartphones, programs/apps/gsg_boot.glp and gsn_boot.glp, is not run here: the boot harness reduces each event to quiescence (IGLP, Implementation Notes, "event-driven ... reduces until quiescent"), and the platform's agent never quiesces, its clock goal writing ticks without end (vGLP, Section 5.4).
 # =============================================================================
 echo "=== Section APPS: the apps (programs/apps) ==="
 echo ""
@@ -5839,6 +5839,30 @@ apps_line "APPS gsg friends: alice's screen" "A = [menu([]), discover(bob), menu
 apps_line "APPS gsg friends: bob's screen" "B = [discover(alice), start(attempt(alice, 1, 1, befriend(alice, bob))), gave(befriend(alice, bob), yes), answer(attempt(alice, 1, 1, befriend(alice, bob))), vote(attempt(alice, 1, 1, befriend(alice, bob))), outcome(attempt(alice, 1, 1, befriend(alice, bob))), propose(attempt(bob, 2, 2, unfriend(bob, alice))), tally(attempt(bob, 2, 2, unfriend(bob, alice))), commit(attempt(bob, 2, 2, unfriend(bob, alice))) | _]" "$apps_gsg"
 check_not "APPS gsg: no failed play" "→ failed" "$apps_gsg"
 check_not "APPS gsg: no error" "Error" "$apps_gsg"
+
+# GSN's app, programs/apps/gsn: the same host on GSN's platform, its wrapper the same file as GSG's; two executions over one conversation (play_network): alice and bob become friends, alice sends bob a message, creates the group friends and adds bob to it, bob sends the group a message, which alice delivers to him, and bob leaves the group.
+check "APPS gsn: platform.vglp is what vGLP's compiler prints from GSN.glp" "^gsn/platform.vglp: as printed$" "$apps_print"
+if cmp -s "$GLP_DIR/programs/apps/gsg/miniapp.glp" "$GLP_DIR/programs/apps/gsn/miniapp.glp"; then
+    _check_pass "APPS gsn: miniapp.glp is the same file as GSG's app's"
+else
+    _check_fail "APPS gsn: miniapp.glp is the same file as GSG's app's" "programs/apps/gsn/miniapp.glp differs from programs/apps/gsg/miniapp.glp"
+fi
+APPS_ART=$(mktemp -d)
+apps_gsn=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/apps/gsn $APPS_ART
+$GLP_DIR/programs/apps/gsn
+:limit 2000000
+play_network(A, B).
+:quit
+HEREDOC
+2>&1)
+rm -rf "$APPS_ART"
+check "APPS gsn: the mini-app's artefact is certified" "gsn.glpw --- certified under" "$apps_gsn"
+check "APPS gsn loads" "Loaded program: .*programs/apps/gsn$" "$apps_gsn"
+apps_line "APPS gsn network: alice's screen" "A = [discover(bob), propose(attempt(alice, 1, 1, befriend(alice, bob))), tally(attempt(alice, 1, 1, befriend(alice, bob))), commit(attempt(alice, 1, 1, befriend(alice, bob))), propose(attempt(alice, 2, 2, message(alice, bob, speech(utterance(hello), alice)))), tally(attempt(alice, 2, 2, message(alice, bob, speech(utterance(hello), alice)))), commit(attempt(alice, 2, 2, message(alice, bob, speech(utterance(hello), alice)))), propose(attempt(alice, 3, 3, create(alice, speech(utterance(friends), alice)))), propose(attempt(alice, 4, 4, join(alice, bob, speech(utterance(friends), alice)))), tally(attempt(alice, 4, 4, join(alice, bob, speech(utterance(friends), alice)))), commit(attempt(alice, 4, 4, join(alice, bob, speech(utterance(friends), alice)))), start(attempt(bob, 5, 5, post(bob, alice, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), outcome(attempt(bob, 5, 5, post(bob, alice, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), propose(attempt(alice, 6, 6, deliver(alice, bob, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), tally(attempt(alice, 6, 6, deliver(alice, bob, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), commit(attempt(alice, 6, 6, deliver(alice, bob, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), start(attempt(bob, 7, 7, leave(alice, bob, speech(utterance(friends), alice)))), outcome(attempt(bob, 7, 7, leave(alice, bob, speech(utterance(friends), alice)))) | _]" "$apps_gsn"
+apps_line "APPS gsn network: bob's screen" "B = [discover(alice), start(attempt(alice, 1, 1, befriend(alice, bob))), gave(befriend(alice, bob), yes), answer(attempt(alice, 1, 1, befriend(alice, bob))), vote(attempt(alice, 1, 1, befriend(alice, bob))), outcome(attempt(alice, 1, 1, befriend(alice, bob))), start(attempt(alice, 2, 2, message(alice, bob, speech(utterance(hello), alice)))), outcome(attempt(alice, 2, 2, message(alice, bob, speech(utterance(hello), alice)))), start(attempt(alice, 4, 4, join(alice, bob, speech(utterance(friends), alice)))), gave(join(alice, bob, speech(utterance(friends), alice)), yes), answer(attempt(alice, 4, 4, join(alice, bob, speech(utterance(friends), alice)))), vote(attempt(alice, 4, 4, join(alice, bob, speech(utterance(friends), alice)))), outcome(attempt(alice, 4, 4, join(alice, bob, speech(utterance(friends), alice)))), propose(attempt(bob, 5, 5, post(bob, alice, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), tally(attempt(bob, 5, 5, post(bob, alice, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), commit(attempt(bob, 5, 5, post(bob, alice, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), start(attempt(alice, 6, 6, deliver(alice, bob, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), outcome(attempt(alice, 6, 6, deliver(alice, bob, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), propose(attempt(bob, 7, 7, leave(alice, bob, speech(utterance(friends), alice)))), tally(attempt(bob, 7, 7, leave(alice, bob, speech(utterance(friends), alice)))), commit(attempt(bob, 7, 7, leave(alice, bob, speech(utterance(friends), alice)))) | _]" "$apps_gsn"
+check_not "APPS gsn: no failed play" "→ failed" "$apps_gsn"
+check_not "APPS gsn: no error" "Error" "$apps_gsn"
 
 echo ""
 

@@ -1,0 +1,162 @@
+%% person.glp --- the GSN mini-app's scripted person: the instance of the root's second template miniapp_person/4 (programs/self.glp) at Drawn, what the mini-app's dispatcher draws, and at Seen, the screen the person reports (self.glp).  The super-app's plays activate it from the module value, as they activate the entry (../gsn_boot.glp); the plays of this directory call it beside the entry (plays.glp).  It is GSG's app's person (../gsg/person.glp), with one step more and GSN's scripts.
+%%
+%% The person reads what the dispatcher draws on the person channel (vGLP, "The construct process": draw(Id, W, V) and withdraw(Id); a grant input(Id, P, R)): the agent's request questions, each showing the persons the agent knows and taking one request (vGLP, Section 5.4); the thread, the program's output, construct 0, drawn whole as it grows; and the approval questions Start raises.  Its script is a list of steps: req(R) grants the request R on the request question open, once one is drawn; look reports menu(Ks), Ks the persons the request question open shows, once one is drawn; wait(T) waits until the transaction T is on the thread; after(K, C) waits until the thread shows a transaction K, as propose or commit, on an attempt of the class C, whatever its number; approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an attempt of the class K, once it is drawn.  It reports the thread, each transaction once, with gave(K, A) where it answers an approval question.
+%%
+%% The roles, by which the super-app's plays choose a script; the group is named friends by alice, its leader, and each content is a speech act of its author:
+%%   alice  asks to know bob; once she knows him, offers him friendship; once they are friends, sends him a message; then creates the group, and adds bob to it.
+%%   bob    asks to know alice; once he knows her, answers yes to her offer of friendship; answers yes to her adding him to the group; once he is a member, sends the group a message; once alice has delivered it to him, leaves the group.
+%% Any other role has no script: its person reports the thread and acts on nothing.
+
+Step  ::= req(Request) ; look ; wait(Output) ; after(Constant, Class)
+        ; approval(Asked, YesNo).
+ClassOf ::= of(Constant, Class) ; noclass.
+Steps ::= [] ; [Step | Steps].
+Sess  ::= nosess ; sess(Integer, Path, List(Key)).
+Shown ::= shown(Integer, Path, Attempt).
+Shows ::= [] ; [Shown | Shows].
+PSt   ::= ps(Sess, List(Output), Shows, Steps).
+ApprovalAt ::= approval_at(Integer, Path, Shows) ; noapproval.
+YN    ::= y ; n.
+
+exported procedure miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
+miniapp_person(_, Role, ch(Ds, Gs?), S?) :-
+    script(Role?, Ss),
+    person(Ds?, Gs, ps(nosess, [], [], Ss?), S).
+
+procedure script(Constant?, Steps).
+script(alice, [req(known(bob)), wait(discover(bob)),
+               req(propose(befriend(alice, bob))),
+               after(commit, befriend(alice, bob)),
+               req(propose(message(alice, bob, speech(utterance(hello), alice)))),
+               after(commit, message(alice, bob, speech(utterance(hello), alice))),
+               req(propose(create(alice, speech(utterance(friends), alice)))),
+               after(propose, create(alice, speech(utterance(friends), alice))),
+               req(propose(join(alice, bob, speech(utterance(friends), alice))))]).
+script(bob, [req(known(alice)), wait(discover(alice)),
+             approval(befriend(alice, bob), yes),
+             approval(join(alice, bob, speech(utterance(friends), alice)), yes),
+             after(outcome, join(alice, bob, speech(utterance(friends), alice))),
+             req(propose(post(bob, alice, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))),
+             after(outcome, deliver(alice, bob, speech(utterance(hi_all), bob), speech(utterance(friends), alice))),
+             req(propose(leave(alice, bob, speech(utterance(friends), alice))))]).
+script(_, []) :- otherwise | true.
+
+%% The person.
+procedure person(PersonOut(Drawn)?, PersonIn(Drawn), PSt?, Stream(Seen)).
+person([draw(0, _, output(T)) | Ds], Gs?, ps(Se, Old, Cs, Ss), Log?) :-
+    ground(T?) |
+    log_new(Old?, T?, Log, Log1?),
+    advance(ps(Se?, T?, Cs?, Ss?), Gs, Gs1?, St1, Log1, Log2?),
+    person(Ds?, Gs1, St1?, Log2).
+person([draw(Id, _, menu_w(menu(Ks, input(P)))) | Ds], Gs?, ps(_, T, Cs, Ss), Log?) :-
+    ground(Id?), ground(P?), ground(Ks?) |
+    advance(ps(sess(Id?, P?, Ks?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?),
+    person(Ds?, Gs1, St1?, Log1).
+person([draw(Id, _, approval_w(approval(At, input(P)))) | Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :-
+    ground(Id?), ground(P?), ground(At?) |
+    advance(ps(Se?, T?, [shown(Id?, P?, At?) | Cs?], Ss?), Gs, Gs1?, St1, Log, Log1?),
+    person(Ds?, Gs1, St1?, Log1).
+person([withdraw(Id) | Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :-
+    ground(Id?) |
+    drop_shown(Id?, Cs?, Cs1),
+    person(Ds?, Gs, ps(Se?, T?, Cs1?, Ss?), Log).
+person([_ | Ds], Gs?, St, Log?) :-
+    otherwise | person(Ds?, Gs, St?, Log).
+
+%% advance(St, Gs, Gs1, St1, Log, Log1): the script's steps taken as far as they can be, the grants written on Gs, continuing at Gs1.
+procedure advance(PSt?, PersonIn(Drawn), PersonIn(Drawn)?, PSt, Stream(Seen), Stream(Seen)?).
+advance(ps(sess(Id, P, _), T, Cs, [req(R) | Ss]), [input(Id?, P?, R?) | Gs?], Gs1, St1?, Log?, Log1) :-
+    ground(Id?), ground(P?) |
+    advance(ps(nosess, T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
+advance(ps(nosess, T, Cs, [req(R) | Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [req(R?) | Ss?]), Log1?, Log1).
+advance(ps(sess(Id, P, Ks), T, Cs, [look | Ss]), Gs?, Gs1, St1?, [menu(Ks?) | Log?], Log1) :-
+    ground(Id?), ground(P?), ground(Ks?) |
+    advance(ps(sess(Id?, P?, Ks?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
+advance(ps(nosess, T, Cs, [look | Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [look | Ss?]), Log1?, Log1).
+advance(ps(Se, T, Cs, [wait(X) | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    ground(T?), ground(X?) |
+    among(X?, T?, B),
+    waited(B?, ps(Se?, T?, Cs?, [wait(X?) | Ss?]), Gs, Gs1?, St1, Log, Log1?).
+advance(ps(Se, T, Cs, [after(K, C) | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    ground(T?), ground(K?), ground(C?) |
+    among_class(K?, C?, T?, B),
+    waited(B?, ps(Se?, T?, Cs?, [after(K?, C?) | Ss?]), Gs, Gs1?, St1, Log, Log1?).
+advance(ps(Se, T, Cs, [approval(K, A) | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    ground(Cs?), ground(K?) |
+    find_approval(K?, Cs?, F),
+    approved(F?, ps(Se?, T?, Cs?, [approval(K?, A?) | Ss?]), Gs, Gs1?, St1, Log, Log1?).
+advance(ps(Se, T, Cs, []), Gs1?, Gs1, ps(Se?, T?, Cs?, []), Log1?, Log1).
+
+procedure waited(YN?, PSt?, PersonIn(Drawn), PersonIn(Drawn)?, PSt, Stream(Seen), Stream(Seen)?).
+waited(y, ps(Se, T, Cs, [_ | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    advance(ps(Se?, T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
+waited(n, St, Gs1?, Gs1, St?, Log1?, Log1).
+
+procedure approved(ApprovalAt?, PSt?, PersonIn(Drawn), PersonIn(Drawn)?, PSt, Stream(Seen), Stream(Seen)?).
+approved(approval_at(Id, P, Cs1), ps(Se, T, _, [approval(K, A) | Ss]),
+         [input(Id?, P?, A?) | Gs?], Gs1, St1?, [gave(K?, A?) | Log?], Log1) :-
+    ground(K?), ground(A?) |
+    advance(ps(Se?, T?, Cs1?, Ss?), Gs, Gs1?, St1, Log, Log1?).
+approved(noapproval, St, Gs1?, Gs1, St?, Log1?, Log1).
+
+%% The approval question of the attempt K, or of an attempt of the class K, the earliest drawn first.
+procedure find_approval(Asked?, Shows?, ApprovalAt).
+find_approval(K, Cs, F?) :- ground(Cs?) | rev_shown(Cs?, [], Rs), find_approval1(K?, Rs?, [], F).
+
+procedure find_approval1(Asked?, Shows?, Shows?, ApprovalAt).
+find_approval1(_, [], _, noapproval).
+find_approval1(K, [shown(Id, P, At) | Cs], Done, approval_at(Id?, P?, Rest?)) :-
+    ground(At?), ground(K?), K? =?= At? |
+    rev_shown(Done?, Cs?, Rest).
+find_approval1(K, [shown(Id, P, attempt(_, _, _, C)) | Cs], Done, approval_at(Id?, P?, Rest?)) :-
+    ground(C?), ground(K?), K? =?= C? |
+    rev_shown(Done?, Cs?, Rest).
+find_approval1(K, [S | Cs], Done, F?) :-
+    otherwise | find_approval1(K?, Cs?, [S? | Done?], F).
+
+procedure rev_shown(Shows?, Shows?, Shows).
+rev_shown([], Acc, Acc?).
+rev_shown([S | Ss], Acc, R?) :- rev_shown(Ss?, [S? | Acc?], R).
+
+procedure drop_shown(Integer?, Shows?, Shows).
+drop_shown(_, [], []).
+drop_shown(Id, [shown(J, _, _) | Cs], Cs?) :- Id? =:= J? | true.
+drop_shown(Id, [S | Cs], [S? | Cs1?]) :- otherwise | drop_shown(Id?, Cs?, Cs1).
+
+procedure among(Output?, List(Output)?, YN).
+among(_, [], n).
+among(X, [Y | _], y) :- X? =?= Y? | true.
+among(X, [_ | Ys], B?) :- otherwise | among(X?, Ys?, B).
+
+%% Whether the thread shows the transaction K on an attempt of the class C.
+procedure among_class(Constant?, Class?, List(Output)?, YN).
+among_class(_, _, [], n).
+among_class(K, C, [T | Ts], B?) :- ground(T?) | txn_of(T?, O), among_class1(K?, C?, O?, Ts?, B).
+
+procedure among_class1(Constant?, Class?, ClassOf?, List(Output)?, YN).
+among_class1(K, C, of(K1, C1), _, y) :- K? =?= K1?, C? =?= C1? | true.
+among_class1(K, C, _, Ts, B?) :- otherwise | among_class(K?, C?, Ts?, B).
+
+%% A transaction of the thread: its kind and the class of its attempt.
+procedure txn_of(Output?, ClassOf).
+txn_of(propose(attempt(_, _, _, C)), of(propose, C?)).
+txn_of(start(attempt(_, _, _, C)), of(start, C?)).
+txn_of(answer(attempt(_, _, _, C)), of(answer, C?)).
+txn_of(vote(attempt(_, _, _, C)), of(vote, C?)).
+txn_of(tally(attempt(_, _, _, C)), of(tally, C?)).
+txn_of(commit(attempt(_, _, _, C)), of(commit, C?)).
+txn_of(yield(attempt(_, _, _, C)), of(yield, C?)).
+txn_of(outcome(attempt(_, _, _, C)), of(outcome, C?)).
+txn_of(wound(_, _), noclass).
+txn_of(introduce_peers(_, _), noclass).
+txn_of(discover(_), noclass).
+
+%% The transactions of the thread not reported before: the thread is drawn whole each time it grows, so those past the old one's length are new.
+procedure log_new(List(Output)?, List(Output)?, Stream(Seen), Stream(Seen)?).
+log_new([_ | Os], [_ | Ns], Log?, Log1) :- log_new(Os?, Ns?, Log, Log1?).
+log_new([], Ns, Log?, Log1) :- put(Ns?, Log, Log1?).
+log_new([_ | _], [], Log1?, Log1).
+
+procedure put(List(Output)?, Stream(Seen), Stream(Seen)?).
+put([X | Xs], [X? | Log?], Log1) :- put(Xs?, Log, Log1?).
+put([], Log1?, Log1).

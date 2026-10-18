@@ -4,12 +4,13 @@ The app of GSG, the grassroots social graph, as a mini-app of the Grassroots Sup
 
 ## The contract
 
-GSG is GSC's contract by Udi's ruling of 2026-10-18 (Coordination Appendix C); its clauses are `programs/gsc/GSG.md` and its act schemas `programs/gsc/GSG.glp`:
+GSG is GSC's contract (Coordination Appendix C; GSC owns every contract that other contracts extend); its clauses are `programs/gsc/GSG.md`, as GAI's paper has them, and its act schemas `programs/gsc/GSG.glp`:
 
-1. *Friendship.*  Alice and Bob may jointly decide to become friends, if neither is the friend of the other.  Each is thereafter a friend of the other.
-2. *Ending a friendship.*  Alice may decide to end their friendship with Bob, and it then ends for both.
+1. *Identity.*  A person chooses their own key pair, identifies themselves with the public key, signs their acts with the private key, and is accountable for every act signed with it.
+2. *Friendship.*  Two persons who are not friends may jointly decide to become friends by an act of both, after which they are friends.
+3. *Ending a friendship.*  A person may end their friendship with another person by their own act, and then the friendship ends.
 
-GAI's paper (65a4669, Section 3, box GSG) puts *Identity* before them: a person chooses their own key pair, identifies themselves with the public key, signs their acts with the private key, and is accountable for every act signed with it.  GSG.glp has no schema for it.  In the app a person's identity is the key pair the super-app holds, which the super-app hands the mini-app as the `Key` of its entry `miniapp/4`, and which the platform's agent takes as its `Peer`: every act the agent takes names its person by that key.
+GSG:1 describes no act, and GSG.glp has no schema for it.  In the app a person's identity is the key pair the super-app holds, which the super-app hands the mini-app as the `Key` of its entry `miniapp/4`, and which the platform's agent takes as its `Peer`: every act the agent takes names its person by that key.  GSG:2 is the schema `befriend`, guarded by both, and GSG:3 the schema `unfriend`, guarded by either friend.
 
 ## The cascade
 
@@ -28,7 +29,7 @@ GAI's paper (65a4669, Section 3, box GSG) puts *Identity* before them: a person 
 | `plays.glp` | `play_friends/2` and `play_held/3`, the mini-app with no super-app |
 | `self.glp` | the platform's types written again, and the exports |
 | `../gsg_boot.glp` | the super-app hosting the app on two smartphones, under `:boot` |
-| `../compile.sh` | the check that `platform.vglp` is what the compiler prints |
+| `../compile.sh` | the check that each app's `platform.vglp` is what the compiler prints |
 
 ## How the mini-app runs
 
@@ -94,15 +95,9 @@ Had Bob tapped `no` in step 5, the else-branch of his answer is taken: his threa
 
 ## GSN's app
 
-GSN's app is the same host on GSN's platform: a directory `programs/apps/gsn` with
+GSN's app, `../gsn`, is this host on GSN's platform: its `miniapp.glp` is this one, the same file, and the suite's Section APPS holds the two equal.
 
-1. `platform.vglp`, printed from GSN's act schemas once GSC has written them, by a line for `gsn` in `../compile.sh`;
-2. `miniapp.glp`, copied unchanged: it names the platform's types `Net`, `Output`, `Question` and `Drawn` and no type of GSG's;
-3. `self.glp`, with GSN's platform's types written again in place of GSG's, until vGLP's compiler writes them into each importing module, and the router's types, `NetEvent`, `Route`, `Routes` and `Sending`, as here;
-4. `person.glp` and `plays.glp`, with GSN's scripts;
-5. a `gsn_boot.glp` beside `gsg_boot.glp`, installing `gsn.glpw`.
-
-The host carries a message only to a participant with whom the social graph has opened a conversation, at an invitation between friends (GSG paper, Section 2, "Activation and joining").  The platform's initiator knows each participant of its attempt, by a hello on their conversation, so every transaction of GSN's platform has to keep its participants among the initiator's friends in the super-app: a group message delivered to members who are not the sender's friends, for one, needs the warm call of the GSG paper, Section 4.4, "Contact between two participants", which this host does not make.  A request that carries content, as a message does, is drawn by a text field of the request's form, which the default widgets have.
+The host carries a message only to a participant with whom the social graph has opened a conversation, at an invitation between friends (GSG paper, Section 2, "Activation and joining").  The platform's initiator knows each participant of its attempt, by a hello on their conversation, so a platform's transactions run only among persons who are friends in the super-app; a participant beyond them needs the warm call of the GSG paper, Section 4.4, "Contact between two participants", which this host does not make.
 
 ## The types written again
 
