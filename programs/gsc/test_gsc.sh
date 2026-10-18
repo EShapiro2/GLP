@@ -519,7 +519,13 @@ check "a speech act carried from a name term of a required atom: cited keeps it"
 # and role 3 has no edge to one; relay_unguarded is relay with its seated role
 # unguarded.  Over the social graph, whose predicates keep in the language of
 # Appendix D the traceable provenance Section 3 gives them.
-out=$(run "check_variant(sg_relay, $SG, V)." "traceable_variant(sg_relay, $SG, E).")
+# The Appendix D variants take the social graph without the signed term, the
+# fixture sg_plain, since Appendix D's Definition Act schema admits none and
+# GSN carries one.
+SGP=$(run 'contract_named(sg_plain, C).' | sed -e 's/^\(GLP> \)*//' | grep -E '^C = ' | head -1 | sed -e 's/^C = //')
+check "the social graph without the signed term, sg_plain, is read" \
+      "[schema(befriend, [rs(guarded, [atom(friend, [role(2)])]" "$SGP"
+out=$(run "check_variant(sg_relay, $SGP, V)." "traceable_variant(sg_relay, $SGP, E).")
 check_not "a guarding role in every connected component meets volition" \
       "volition(relay," "$out"
 check "and a component holding none fails it" \
@@ -529,7 +535,7 @@ check "the social graph keeps its traceable provenance in Appendix D" \
 
 # sg_tri with tri written as a cschema, in the language of Appendix D: the
 # same verdict as in Section 3, volition being one condition in both.
-out=$(run "check_variant(sg_tri_cschema, $SG, V).")
+out=$(run "check_variant(sg_tri_cschema, $SGP, V).")
 check "tri as a cschema meets the conditions of Appendix D, as it does in Section 3" \
       "V = conditions_met" "$out"
 

@@ -20,6 +20,27 @@
 % role is named by its index, so role(1) is the schema's first role.
 % ---------------------------------------------------------------------------
 
+% --- the social graph with items of arity three, no signed term ------------
+% The social graph as Section 3.3 printed it before the signed term (GSC
+% 63b301f): item(x, a, f), the item x by a as received from f.  A fixture, the
+% base of the Appendix D variants below (sg_relay, sg_tri_cschema), since
+% Appendix D's Definition Act schema admits no signed term and the contract
+% GSN carries one (programs/gsc/GSN.glp); it certifies nothing of GSN.
+procedure sg_plain(Contract).
+sg_plain([schema(befriend,
+       [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
+        rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
+    schema(unfriend,
+       [rs(guarded,   [], [atom(friend, [role(2)])], [], []),
+        rs(unguarded, [], [atom(friend, [role(1)])], [], [])]),
+    schema(sign,
+       [rs(guarded, [atom(item, [svar(x), role(1), role(1)])], [], [], [])]),
+    schema(forward,
+       [rs(guarded,   [atom(sent, [svar(x), role(2)])], [],
+                      [atom(item, [svar(x), pvar(a), pvar(f)])], []),
+        rs(unguarded, [atom(item, [svar(x), pvar(a), role(1)])], [],
+                      [atom(friend, [role(1)])], [])])]).
+
 % --- negative: befriend guarded in one role only ---------------------------
 % Nothing is then an introductory act, and befriend fails volition too.
 procedure sg_unguarded(Contract).
@@ -400,6 +421,7 @@ cs18_schemas([schema(parent_child,
 % A fixture that stands alone, by name.  An unknown name is the empty
 % contract, which has no introductory act.
 exported procedure contract(Constant?, Declared).
+contract(sg_plain, C?) :- sg_plain(C).
 contract(sg_unguarded, C?) :- sg_unguarded(C).
 contract(cur_no_mint, C?) :- cur_no_mint(C).
 contract(cur_loose_mint, C?) :- cur_loose_mint(C).
