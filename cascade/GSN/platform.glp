@@ -52,6 +52,10 @@ Opener ::= opener(Peer) ; guarded_class.
 Info ::= ci(Class, Parts, Peers, PeerSets, Opener, Mates).
 Infos ::= [] ; [Info | Infos].
 ClassRes ::= cls(Info) ; nocls.
+CVal ::= cmp_val(Val) ; cmp_free(Var).
+CVals ::= [] ; [CVal | CVals].
+CAtom ::= cmp_atom(Constant, CVals).
+CAtoms ::= [] ; [CAtom | CAtoms].
 Lock ::= unlocked ; held(Attempt).
 Rec ::= asked(Attempt) ; answered(Attempt, YesNo) ; voted(Attempt, YesNo) ; got(Attempt, Peer, YesNo) ; closed(Attempt) ; wounded(Attempt) ; yielded(Attempt) ; introduced(Peer, Peer).
 Recs ::= [] ; [Rec | Recs].
@@ -827,13 +831,10 @@ answer_of(At, [answered(A, Y) | _], Y?) :- (At? =?= A?) | true.
 answer_of(At, [_ | Rs], Y?) :- otherwise | answer_of(At?, Rs?, Y).
 
 procedure of_class(Attempt?, Info?, YesNo).
-of_class(attempt(_, _, _, C), ci(_, Ps, _, _, _, _), B?) :- ground(C?), ground(Ps?) | class_parts(C?, Ps1), parts_eq(Ps?, Ps1?, B).
+of_class(attempt(_, _, _, C), ci(_, Ps, Q, _, _, Ms), B?) :- ground(C?) | binding_of(C?, Nm, Bn), schema_spec(Nm?, Rs), of_class1(Rs?, Bn?, Ps?, Q?, Ms?, B).
 
-procedure class_parts(Class?, Parts).
-class_parts(C, Ps?) :- ground(C?) | binding_of(C?, Nm, B), class_parts1(Nm?, B?, Ps).
-
-procedure class_parts1(Constant?, Binding?, Parts).
-class_parts1(Nm, B, Ps?) :- ground(Nm?) | schema_spec(Nm?, Rs), sig_of(Rs?, B?, Ps).
+procedure of_class1(RoleSpecs?, Binding?, Parts?, Peers?, Mates?, YesNo).
+of_class1(Rs, Bn, Ps, Q, Ms, B?) :- ground(Rs?), ground(Bn?) | sig_of(Rs?, Bn?, Ps1), in_class(Rs?, Bn?, Ps1?, Ps?, Q?, Ms?, B).
 
 procedure others_known(Info?, St?, Known).
 others_known(I, St, K?) :- ground(St?) | info_q(I?, Q), st_id(St?, Id), first_unknown(Q?, Id?, St?, K).
@@ -991,14 +992,14 @@ class_info2(Rs, B, C, Id, Ca, R?, Ca1?) :- ground(Rs?), ground(B?) | rule_ok(Rs?
 
 procedure class_info3(YesNo?, RoleSpecs?, Binding?, Class?, Peer?, Infos?, ClassRes, Infos).
 class_info3(no, _, _, _, _, Ca, nocls, Ca?).
-class_info3(yes, Rs, B, C, Id, Ca, R?, Ca1?) :- sig_of(Rs?, B?, Ps), class_info4(Ps?, C?, Id?, Ca?, R, Ca1).
+class_info3(yes, Rs, B, C, Id, Ca, R?, Ca1?) :- ground(Rs?), ground(B?) | sig_of(Rs?, B?, Ps), class_info4(Ps?, Rs?, B?, C?, Id?, Ca?, R, Ca1).
 
-procedure class_info4(Parts?, Class?, Peer?, Infos?, ClassRes, Infos).
-class_info4(Ps, C, Id, Ca, R?, Ca1?) :- ground(Ps?), ground(Id?) | parts_valid(Ps?, V1), parts_peers(Ps?, Q), mem(Id?, Q?, V2), and(V1?, V2?, V), class_info5(V?, Ps?, C?, Ca?, R, Ca1).
+procedure class_info4(Parts?, RoleSpecs?, Binding?, Class?, Peer?, Infos?, ClassRes, Infos).
+class_info4(Ps, Rs, B, C, Id, Ca, R?, Ca1?) :- ground(Ps?), ground(Id?), ground(Rs?), ground(B?) | parts_valid(Ps?, V1), parts_peers(Ps?, Q), mem(Id?, Q?, V2), parts_peers(Ps?, Q1), reflexive_preds(Rf), live_at(Q1?, Rs?, B?, Rf?, V3), and(V1?, V2?, V12), and(V12?, V3?, V), class_info5(V?, Ps?, Rs?, B?, C?, Ca?, R, Ca1).
 
-procedure class_info5(YesNo?, Parts?, Class?, Infos?, ClassRes, Infos).
-class_info5(no, _, _, Ca, nocls, Ca?).
-class_info5(yes, Ps, C, Ca, R?, Ca1?) :- ground(Ps?), ground(Ca?) | cache_find(Ps?, Ca?, F), class_info6(F?, Ps?, C?, Ca?, R, Ca1).
+procedure class_info5(YesNo?, Parts?, RoleSpecs?, Binding?, Class?, Infos?, ClassRes, Infos).
+class_info5(no, _, _, _, _, Ca, nocls, Ca?).
+class_info5(yes, Ps, Rs, B, C, Ca, R?, Ca1?) :- ground(Ps?), ground(Ca?) | cache_find(Rs?, B?, Ps?, Ca?, F), class_info6(F?, Ps?, C?, Ca?, R, Ca1).
 
 procedure class_info6(ClassRes?, Parts?, Class?, Infos?, ClassRes, Infos).
 class_info6(cls(I), _, _, Ca, cls(I?), Ca?).
@@ -1007,16 +1008,19 @@ class_info6(nocls, Ps, C, Ca, R?, Ca1?) :- new_info(C?, Ps?, I), add_info(I?, Ca
 procedure add_info(Info?, Infos?, ClassRes, Infos).
 add_info(I, Ca, cls(I?), Ca1?) :- ground(I?) | app(Ca?, [I?], Ca1).
 
-procedure cache_find(Parts?, Infos?, ClassRes).
-cache_find(_, [], nocls).
-cache_find(Ps, [ci(C, Ps1, Q, G, Op, Ms) | Is], R?) :- ground(Ps?), ground(Ps1?) | parts_eq(Ps?, Ps1?, E), cache_find1(E?, ci(C?, Ps1?, Q?, G?, Op?, Ms?), Ps?, Is?, R).
+procedure cache_find(RoleSpecs?, Binding?, Parts?, Infos?, ClassRes).
+cache_find(_, _, _, [], nocls).
+cache_find(Rs, B, Ps, [ci(C, Ps1, Q, G, Op, Ms) | Is], R?) :- ground(Rs?), ground(B?), ground(Ps?), ground(Ps1?), ground(Q?), ground(Ms?) | in_class(Rs?, B?, Ps?, Ps1?, Q?, Ms?, E), cache_find1(E?, ci(C?, Ps1?, Q?, G?, Op?, Ms?), Rs?, B?, Ps?, Is?, R).
 
-procedure cache_find1(YesNo?, Info?, Parts?, Infos?, ClassRes).
-cache_find1(yes, I, _, _, cls(I?)).
-cache_find1(no, _, Ps, Is, R?) :- cache_find(Ps?, Is?, R).
+procedure cache_find1(YesNo?, Info?, RoleSpecs?, Binding?, Parts?, Infos?, ClassRes).
+cache_find1(yes, I, _, _, _, _, cls(I?)).
+cache_find1(no, _, Rs, B, Ps, Is, R?) :- cache_find(Rs?, B?, Ps?, Is?, R).
 
 procedure new_info(Class?, Parts?, Info).
-new_info(C, Ps, I?) :- ground(Ps?) | contract_schemas(Ss), mates_of(Ss?, Ps?, Ms0), dedup_mates(Ms0?, Ms), new_info1(C?, Ps?, Ms?, I).
+new_info(C, Ps, I?) :- ground(Ps?) | contract_schemas(Ss), reflexive_preds(Rf), mates_of(Ss?, Ps?, Ms0), dedup_mates(Ms0?, Ms1), parts_peers(Ps?, Q), new_info0(C?, Ps?, Ms1?, Q?, Rf?, I).
+
+procedure new_info0(Class?, Parts?, Mates?, Peers?, Preds?, Info).
+new_info0(C, Ps, Ms1, Q, Rf, I?) :- ground(C?), ground(Q?), ground(Rf?) | live_mates(Ms1?, Q?, Rf?, Ms2), binding_of(C?, Nm, B), class_mates(Nm?, B?, Ms2?, Q?, Rf?, Ms), new_info1(C?, Ps?, Ms?, I).
 
 procedure new_info1(Class?, Parts?, Mates?, Info).
 new_info1(C, Ps, Ms, ci(C?, Ps?, Q?, G?, Op?, Ms?)) :- ground(Ps?), ground(Ms?) | parts_peers(Ps?, Q), mates_gsets(Ms?, G), mates_opener(Ms?, Op).
@@ -1275,6 +1279,126 @@ procedure unguarded_firsts(Mates?, Peers).
 unguarded_firsts([], []).
 unguarded_firsts([mate(_, _, [], F) | Ms], [F? | Fs?]) :- unguarded_firsts(Ms?, Fs).
 unguarded_firsts([mate(_, _, [_ | _], _) | Ms], Fs?) :- unguarded_firsts(Ms?, Fs).
+
+procedure in_class(RoleSpecs?, Binding?, Parts?, Parts?, Peers?, Mates?, YesNo).
+in_class(Rs, B, Ps, Ps1, Q, Ms, R?) :- parts_eq(Ps?, Ps1?, E), in_class1(E?, Rs?, B?, Q?, Ms?, R).
+
+procedure in_class1(YesNo?, RoleSpecs?, Binding?, Peers?, Mates?, YesNo).
+in_class1(no, _, _, _, _, no).
+in_class1(yes, Rs, B, Q, Ms, R?) :- reflexive_preds(Rf), linked_any(Ms?, Rs?, B?, Q?, Rf?, R).
+
+procedure linked_any(Mates?, RoleSpecs?, Binding?, Peers?, Preds?, YesNo).
+linked_any([], _, _, _, _, no).
+linked_any([mate(N, B2, _, _) | Ms], Rs, B, Q, Rf, L?) :- ground(Rs?), ground(B?), ground(Q?), ground(Rf?) | schema_spec(N?, Rs2), linked(Q?, Rs?, B?, Rs2?, B2?, Rf?, L1), linked_any1(L1?, Ms?, Rs?, B?, Q?, Rf?, L).
+
+procedure linked_any1(YesNo?, Mates?, RoleSpecs?, Binding?, Peers?, Preds?, YesNo).
+linked_any1(yes, _, _, _, _, _, yes).
+linked_any1(no, Ms, Rs, B, Q, Rf, L?) :- linked_any(Ms?, Rs?, B?, Q?, Rf?, L).
+
+procedure class_mates(Constant?, Binding?, Mates?, Peers?, Preds?, Mates).
+class_mates(Nm, B, Ms, Q, Rf, Cls?) :- ground(Nm?), ground(B?), ground(Ms?) | schema_spec(Nm?, Rs), mate_of(yes, B?, Nm?, Rs?, M0), grow(M0?, Ms?, Q?, Rf?, [], In), keep_mates(Ms?, In?, Cls).
+
+procedure grow(Mates?, Mates?, Peers?, Preds?, Mates?, Mates).
+grow([], _, _, _, Done, Done?).
+grow([mate(N, B, G, F) | Fs], Rest, Q, Rf, Done, Out?) :- ground(N?), ground(B?), ground(Rest?), ground(Q?), ground(Rf?) | schema_spec(N?, Rs), split_linked(Rest?, Rs?, B?, Q?, Rf?, New, Keep), app(Fs?, New?, Fs1), grow(Fs1?, Keep?, Q?, Rf?, [mate(N?, B?, G?, F?) | Done?], Out).
+
+procedure split_linked(Mates?, RoleSpecs?, Binding?, Peers?, Preds?, Mates, Mates).
+split_linked([], _, _, _, _, [], []).
+split_linked([mate(N2, B2, G2, F2) | Ms], Rs, B, Q, Rf, New?, Keep?) :- ground(N2?), ground(B2?), ground(Rs?), ground(B?), ground(Q?), ground(Rf?) | schema_spec(N2?, Rs2), linked(Q?, Rs?, B?, Rs2?, B2?, Rf?, L), split_linked(Ms?, Rs?, B?, Q?, Rf?, New1, Keep1), split_one(L?, mate(N2?, B2?, G2?, F2?), New1?, Keep1?, New, Keep).
+
+procedure split_one(YesNo?, Mate?, Mates?, Mates?, Mates, Mates).
+split_one(yes, M, New, Keep, [M? | New?], Keep?).
+split_one(no, M, New, Keep, New?, [M? | Keep?]).
+
+procedure keep_mates(Mates?, Mates?, Mates).
+keep_mates([], _, []).
+keep_mates([M | Ms], In, R?) :- ground(M?), ground(In?) | mem(M?, In?, B), keep_mates(Ms?, In?, R1), keep_mate(B?, M?, R1?, R).
+
+procedure keep_mate(YesNo?, Mate?, Mates?, Mates).
+keep_mate(yes, M, R, [M? | R?]).
+keep_mate(no, _, R, R?).
+
+procedure live_mates(Mates?, Peers?, Preds?, Mates).
+live_mates([], _, _, []).
+live_mates([mate(N, B, G, F) | Ms], Q, Rf, R?) :- ground(N?), ground(B?), ground(Q?), ground(Rf?) | schema_spec(N?, Rs), live_at(Q?, Rs?, B?, Rf?, L), live_mates(Ms?, Q?, Rf?, R1), keep_mate(L?, mate(N?, B?, G?, F?), R1?, R).
+
+procedure live_at(Peers?, RoleSpecs?, Binding?, Preds?, YesNo).
+live_at([], _, _, _, yes).
+live_at([P | Ps], Rs, B, Rf, Ok?) :- ground(P?), ground(Rs?), ground(B?), ground(Rf?) | reqs_at(Rs?, B?, P?, Rf?, R), forbs_at(Rs?, B?, P?, F), live_one(R?, F?, P?, Rf?, Ok1), live_at1(Ok1?, Ps?, Rs?, B?, Rf?, Ok).
+
+procedure live_at1(YesNo?, Peers?, RoleSpecs?, Binding?, Preds?, YesNo).
+live_at1(no, _, _, _, _, no).
+live_at1(yes, Ps, Rs, B, Rf, Ok?) :- live_at(Ps?, Rs?, B?, Rf?, Ok).
+
+procedure live_one(CAtoms?, CAtoms?, Peer?, Preds?, YesNo).
+live_one(R, F, P, Rf, Ok?) :- ground(F?) | ms_meets(R?, F?, M1), own_reflexive_in(F?, P?, Rf?, M2), or(M1?, M2?, M), neg(M?, Ok).
+
+procedure linked(Peers?, RoleSpecs?, Binding?, RoleSpecs?, Binding?, Preds?, YesNo).
+linked([], _, _, _, _, _, yes).
+linked([P | Ps], Rs1, B1, Rs2, B2, Rf, L?) :- ground(P?), ground(Rs1?), ground(B1?), ground(Rs2?), ground(B2?), ground(Rf?) | reqs_at(Rs1?, B1?, P?, Rf?, R1), reqs_at(Rs2?, B2?, P?, Rf?, R2), forbs_at(Rs1?, B1?, P?, F1), forbs_at(Rs2?, B2?, P?, F2), bound_cs(R1?, Rb1), bound_cs(R2?, Rb2), ms_meets(Rb1?, F2?, C1), ms_meets(Rb2?, F1?, C2), or(C1?, C2?, C), linked1(C?, Ps?, Rs1?, B1?, Rs2?, B2?, Rf?, L).
+
+procedure linked1(YesNo?, Peers?, RoleSpecs?, Binding?, RoleSpecs?, Binding?, Preds?, YesNo).
+linked1(yes, _, _, _, _, _, _, no).
+linked1(no, Ps, Rs1, B1, Rs2, B2, Rf, L?) :- linked(Ps?, Rs1?, B1?, Rs2?, B2?, Rf?, L).
+
+procedure reqs_at(RoleSpecs?, Binding?, Peer?, Preds?, CAtoms).
+reqs_at(Rs, B, P, Rf, R?) :- ground(B?), ground(P?) | specs_at(Rs?, 1, B?, P?, RsP), reqs_of(RsP?, Q), cimg_atoms(Q?, B?, R0), drop_own_reflexive(R0?, P?, Rf?, R).
+
+procedure forbs_at(RoleSpecs?, Binding?, Peer?, CAtoms).
+forbs_at(Rs, B, P, F?) :- ground(B?) | specs_at(Rs?, 1, B?, P?, RsP), forbs_of(RsP?, Fs), cimg_atoms(Fs?, B?, F).
+
+procedure forbs_of(RoleSpecs?, SAtoms).
+forbs_of([], []).
+forbs_of([R | Rs], F?) :- rs_forb(R?, F1), forbs_of(Rs?, F2), app(F1?, F2?, F).
+
+procedure drop_own_reflexive(CAtoms?, Peer?, Preds?, CAtoms).
+drop_own_reflexive([], _, _, []).
+drop_own_reflexive([A | As], P, Rf, R?) :- ground(A?), ground(P?), ground(Rf?) | own_atom(A?, P?, Rf?, Own), drop_own_reflexive(As?, P?, Rf?, R1), keep_c(Own?, A?, R1?, R).
+
+procedure own_reflexive_in(CAtoms?, Peer?, Preds?, YesNo).
+own_reflexive_in([], _, _, no).
+own_reflexive_in([A | As], P, Rf, B?) :- ground(P?), ground(Rf?) | own_atom(A?, P?, Rf?, B1), own_reflexive_in1(B1?, As?, P?, Rf?, B).
+
+procedure own_reflexive_in1(YesNo?, CAtoms?, Peer?, Preds?, YesNo).
+own_reflexive_in1(yes, _, _, _, yes).
+own_reflexive_in1(no, As, P, Rf, B?) :- own_reflexive_in(As?, P?, Rf?, B).
+
+procedure own_atom(CAtom?, Peer?, Preds?, YesNo).
+own_atom(cmp_atom(N, [cmp_val(p(Q))]), P, Rf, B?) :- (Q? =?= P?) | mem(N?, Rf?, B).
+own_atom(_, _, _, no) :- otherwise | true.
+
+procedure bound_cs(CAtoms?, CAtoms).
+bound_cs([], []).
+bound_cs([A | As], R?) :- ground(A?) | has_free(A?, Fr), bound_cs(As?, R1), keep_c(Fr?, A?, R1?, R).
+
+procedure has_free(CAtom?, YesNo).
+has_free(cmp_atom(_, Xs), B?) :- has_free1(Xs?, B).
+
+procedure has_free1(CVals?, YesNo).
+has_free1([], no).
+has_free1([cmp_free(_) | _], yes).
+has_free1([cmp_val(_) | Xs], B?) :- has_free1(Xs?, B).
+
+procedure keep_c(YesNo?, CAtom?, CAtoms?, CAtoms).
+keep_c(no, A, R, [A? | R?]).
+keep_c(yes, _, R, R?).
+
+procedure cimg_atoms(SAtoms?, Binding?, CAtoms).
+cimg_atoms([], _, []).
+cimg_atoms([atom(P, Vs) | As], B, [cmp_atom(P?, Xs?) | Cs?]) :- ground(B?) | cimg_args(Vs?, B?, Xs), cimg_atoms(As?, B?, Cs).
+
+procedure cimg_args(Vars?, Binding?, CVals).
+cimg_args([], _, []).
+cimg_args([sgn(Y, I) | Vs], B, [X? | Xs?]) :- ground(B?), ground(Y?), ground(I?) | lookup(svar(Y?), B?, F), role_person(I?, B?, P), cimg_sgn(F?, P?, sgn(Y?, I?), X), cimg_args(Vs?, B?, Xs).
+cimg_args([V | Vs], B, [X? | Xs?]) :- otherwise, ground(B?), ground(V?) | lookup(V?, B?, F), cimg_val(F?, V?, X), cimg_args(Vs?, B?, Xs).
+
+procedure cimg_val(Found?, Var?, CVal).
+cimg_val(found(X), _, cmp_val(X?)).
+cimg_val(free, V, cmp_free(V?)).
+
+procedure cimg_sgn(Found?, Peer?, Var?, CVal).
+cimg_sgn(found(s(S)), P, _, cmp_val(s(speech(S?, P?)))).
+cimg_sgn(_, _, V, cmp_free(V?)) :- otherwise | true.
 
 procedure schema_spec(Constant?, RoleSpecs).
 schema_spec(Nm, Rs?) :- contract_schemas(Ss), find_schema(Ss?, Nm?, Rs).
