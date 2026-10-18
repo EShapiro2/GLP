@@ -1,0 +1,24 @@
+# The screens of GSG's app
+
+Alice's and Bob's phones running GSG's app, as the bridge draws it (`../README.md`, "The screens"): the bridge draws each question by the default widget of its type (vGLP, Section 6.2, Definition "Default Widget"), and the agent's thread, construct 0, under the questions.  Each file is one phone's screen, 390 by 844 logical pixels at a device pixel ratio of 3, in the light theme, set in Roboto.
+
+They are written by `glp_multiagent/test/apps_screens_test.dart`, which loads this app, runs its entry `miniapp/4` for Alice and for Bob over one conversation, and takes each person's acts on these widgets, the acts of the plays' scripted persons (`../person.glp`).  From `glp_multiagent/`, after `bash tool/sync_glp_assets.sh`:
+
+```bash
+flutter test --update-goldens test/apps_screens_test.dart
+```
+
+A request question's field `List(Key)` shows the persons the agent knew when it asked the question.
+
+| File | What it shows |
+|---|---|
+| `gsg-01-alice-establish.png` | Alice's first request question, with nobody known, on which she has chosen `propose` and `establish` and typed her key, `alice`, to establish her identity (GSG:1). |
+| `gsg-02-alice-menu.png` | Her next request question, still with nobody known, on which she has chosen `known` and typed `bob`; her thread below shows her identity established. |
+| `gsg-03-alice-befriend.png` | Her open request question, on which she has chosen `propose` and `befriend` and typed `alice` and `bob` (GSG:2); her thread shows `discover` of Bob after their hellos. |
+| `gsg-04-alice-menu-bob.png` | Her next request question, which shows Bob known, and her thread, which shows her proposal, attempt 2 of the class `befriend(alice, bob)`. |
+| `gsg-05-bob-approval.png` | Bob's approval question, which shows Alice's attempt and the buttons `yes` and `no`. |
+| `gsg-06-bob-yes.png` | Bob's thread after he taps `yes`, which shows his `answer`, his `vote` and the `outcome` of the attempt; the question is withdrawn. |
+| `gsg-07-alice-friends.png` | Alice's thread, which shows the `tally` and the `commit` of the attempt, after which Alice and Bob are friends. |
+| `gsg-08-bob-unfriend.png` | Bob's request question, on which he has chosen `propose` and `unfriend` and typed `bob` and `alice` to end the friendship (GSG:3). |
+| `gsg-09-bob-unfriended.png` | Bob's thread, which shows his proposal, attempt 3 of the class `unfriend(bob, alice)`, its `tally` and its `commit`. |
+| `gsg-10-alice-unfriended.png` | Alice's thread, which shows the `start` and the `outcome` of Bob's attempt; the friendship has ended, and nobody asked her. |
