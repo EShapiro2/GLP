@@ -1,21 +1,21 @@
-# GSN --- the grassroots social network: the contract
+# GSN --- Grassroots Social Network: the contract
 
-GSN's contract (Coordination Appendix C), GSC's by Udi's ruling of 2026-10-18: GSG with authorship, forwarding and confidence, the five clauses of the paper's Section 2.1; its act schemas are `GSN.glp` beside it.  The paper, `/Users/udi/Grassroots/GSC/main.tex`, Sections 2.1 and 3.3, quotes it and certifies it in Section 7.1.  Written by GSC #1 Cowork, 2026-10-18.
+GSN's contract, GSC's: GSC owns every contract that other contracts extend (Udi, 2026-10-18; Coordination, to_all 2026-10-18 19:23 UTC); GSNP extends it.  GSN is the grassroots social network without provenance; the network with provenance, which this file held until GLP 4ce1da3a, is GSNP (`GSNP.md`).  GSN extends GSG, whose clauses it cites and does not restate: GSG:1 to GSG:3 (`GSG.md`).  Its act schemas are `GSN.glp` beside it.  GAI's paper, `/Users/udi/Grassroots/GAI/main_characterisation_ArXiv.tex`, Section "Grassroots Social Contracts", quotes it.  Written by GAI #2 Cowork at Udi's instruction (2026-10-18 20:25 local: "Write all contracts to disc, where they should be, according to the Coordination ruling"; "write act schemas only for GSG and GSN"), the text verbatim from GAI's paper at GAI e5e92fa.
 
-A *party* is a person, natural or legal, with the gender-neutral pronoun `they'; Alice and Bob are variables naming distinct parties.  The parties to this contract are the members of a social network.  Its first two clauses are GSG:1 and GSG:2, friendship and ending a friendship; its own are these.
+A *child* is a natural person not of age.  A *computational agent*, or *AI agent*, is a program that holds a key pair of its own and takes acts of the contract with it.  An *agent* is a person, a child or a computational (AI) agent.  Note that under the above, a *non-person agent* can only be a child or an AI agent.  A child also takes the pronoun 'they', and an AI agent 'it'; Alice and Bob are variables naming distinct agents.
 
-1. *Authorship.*  Alice may decide to sign an item of their own.
-2. *Forwarding.*  Alice may decide to forward an item they hold to their friend Bob, and warrants that they know personally the party they received the item from.
-3. *Confidence.*  Alice shall disclose an item they hold only by forwarding it.
-
-GSG:1, GSG:2, clause 1 and clause 2 describe acts and determine the contract's transactions.  The warranty in clause 2 describes no act of its own, and neither does clause 3; both bind the parties.  The warranty is attested, clause 3 undertaken, the rest enforced (GSC, Section 8).
+1. *Message.*  An agent may send a message to a friend, with content they created or received from another agent.
+2. *Group.*  An agent may create a group, and is then its leader and first member.
+3. *Joining.*  The leader of a group may add a friend to it, by an act of both.
+4. *Leaving.*  A member of a group may leave it by their own act; when the leader leaves, the group ends.
+5. *Group message.*  A member of a group may send a message to the group, with content they created or received from another agent, and the leader delivers it to every member.
 
 ## The schemas, and what they realise
 
-The schemas are in `GSN.glp`, in GSC's notation above each term: GSG's `befriend` and `unfriend`, and two over `item`, of arity one, and `sent`, of arity two.  `item(x)` in the state of Alice is a speech act Alice holds, signed by Alice if Alice is its author and by the friend it came from otherwise, the author and every earlier forwarder signed inside it; `sent(x, Bob)` says that its holder forwarded `x` to Bob.
+The schemas are in `GSN.glp`, in GSC's notation above each term: GSG's `befriend` and `unfriend`, and eight more over eight predicates more.  A group is named by its leader `a` and a name `n`, a speech-act variable; content `x` is a speech-act variable.  `member(a, n)` in the state of `q` says that `q` is a member of the group `n` led by `a`; `listed(q, n)` in the state of the leader `a` says that `q` is a member of `a`'s group `n`; `closed(n)` at `a` says that `a`'s group `n` has ended.  The groups follow those of CSSN's contract (`programs/cssn/CSSN.glp`), without children and without items.
 
-- Clause 1: `sign(Alice?; x)` --- at Alice, +`item(x)`; `x` is a speech act signed by Alice, the guarding role (GSC, Definition Binding, admissible).
-- Clause 2: `forward(Alice?, Bob; x)` --- at Alice, `item(x)`, +`sent(x, Bob)`; at Bob, `friend(Alice)`, +`item(sgn(x, Alice))`.  Alice guards; Bob receives what Alice held, signed by Alice, so the item carries its provenance inside (GSC, Section 3.1, the signed term).
-- Clause 3 and the warranty describe no act: the forward leaves `item(sgn(x, Alice))` in Bob's hands, signed by the party that passed the item on, which is the record of both.
-
-Befriend is an unobstructed introductory act, `{friend, item, sent}` has traceable provenance, and the contract satisfies volition (GSC, Section 7.1), so the contract is syntactically grassroots.
+- Clause 1: `message(p?, q ; x)` --- at `p`, +`sent(x, q)`; at `q`, `friend(p)`, +`received(x, p)`.
+- Clause 2: `create(a? ; n)` --- at `a`, not `member(a, n)`, not `closed(n)`, +`member(a, n)`, +`listed(a, n)`.
+- Clause 3: `join(a?, q? ; n)` --- at `a`, `member(a, n)`, `friend(q)`, +`listed(q, n)`; at `q`, `friend(a)`, not `member(a, n)`, +`member(a, n)`.
+- Clause 4: `leave(a, q? ; n)` --- at `a`, -`listed(q, n)`; at `q`, -`member(a, n)`; and, the leader leaving, `close(a? ; n)` --- at `a`, +`closed(n)`, -`member(a, n)`, -`listed(a, n)`, after which no member can post to the group and the leader delivers nothing in it.
+- Clause 5: `post_own(a? ; x, n)` --- the leader's own message: at `a`, `member(a, n)`, not `posted(x, n)`, +`posted(x, n)`; `post(p?, a ; x, n)` --- a member's message, sent to the leader: at `p`, `member(a, n)`, +`sent(x, a)`; at `a`, `member(a, n)`, `listed(p, n)`, not `posted(x, n)`, +`posted(x, n)`; and `deliver(a, q ; x, n)` --- the leader delivering it to every member: at `a`, `member(a, n)`, `posted(x, n)`, `listed(q, n)`, not `delivered(x, q, n)`, +`delivered(x, q, n)`; at `q`, `member(a, n)`, +`received_in(x, a, n)`.
