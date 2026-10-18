@@ -4,7 +4,8 @@
 
 Class ::= befriend(Peer, Peer) ; unfriend(Peer, Peer).
 Peer ::= Key.
-Speech ::= speech(String, Peer).
+Speech ::= speech(Utterance, Peer).
+Utterance ::= utterance(String) ; Speech.
 Request ::= propose(Class) ; known(Peer).
 YesNo ::= yes ; no.
 Decision ::= commit ; abort.
@@ -19,7 +20,7 @@ Menu ::= menu(List(Key), Request?).
 Close ::= close.
 Demand ::= more.
 Trigger ::= req(Request) ; net(Net) ; tick ; answered(Attempt, YesNo) ; recheck.
-Var ::= role(Integer) ; pvar(Constant) ; svar(Constant).
+Var ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; sgn(Constant, Integer).
 Vars ::= [] ; [Var | Vars].
 SAtom ::= atom(Constant, Vars).
 SAtoms ::= [] ; [SAtom | SAtoms].
@@ -38,6 +39,7 @@ Binding ::= [] ; [Bind | Binding].
 Bindings ::= [] ; [Binding | Bindings].
 Found ::= found(Val) ; free.
 Match ::= match(Binding) ; nomatch.
+SgnParts ::= signed(Val, Peer) ; unsigned.
 Peers ::= [] ; [Peer | Peers].
 PeerSets ::= [] ; [Peers | PeerSets].
 Nets ::= [] ; [Net | Nets].
@@ -1118,11 +1120,16 @@ role_names(rs(_, A, D, _, _), J, R?) :- integer(J?) | names_role(A?, J?, R1), na
 
 procedure names_role(SAtoms?, Integer?, YesNo).
 names_role([], _, no).
-names_role([atom(_, Vs) | As], J, R?) :- integer(J?) | mem(role(J?), Vs?, R1), names_role1(R1?, As?, J?, R).
+names_role([atom(_, Vs) | As], J, R?) :- integer(J?), ground(Vs?) | mem(role(J?), Vs?, R1), sgn_names(Vs?, J?, R2), or(R1?, R2?, R12), names_role1(R12?, As?, J?, R).
 
 procedure names_role1(YesNo?, SAtoms?, Integer?, YesNo).
 names_role1(yes, _, _, yes).
 names_role1(no, As, J, R?) :- names_role(As?, J?, R).
+
+procedure sgn_names(Vars?, Integer?, YesNo).
+sgn_names([], _, no).
+sgn_names([sgn(_, I) | _], J, yes) :- (I? =:= J?) | true.
+sgn_names([_ | Vs], J, R?) :- otherwise | sgn_names(Vs?, J?, R).
 
 procedure admissible(RoleSpecs?, Binding?, YesNo).
 admissible(Rs, B, R?) :- ground(Rs?), ground(B?) | adds_of(Rs?, Ad), reqs_of(Rs?, Rq), guard_roles(Rs?, 1, Gi), persons_of(Gi?, B?, Gp), atoms_vars(Ad?, Av), adm_each(Av?, Rq?, B?, Gp?, R).
@@ -1139,6 +1146,7 @@ procedure adm_var(Var?, SAtoms?, Binding?, Peers?, YesNo).
 adm_var(svar(X), Rq, B, Gp, R?) :- ground(X?), ground(B?) | atoms_vars(Rq?, Qv), mem(svar(X?), Qv?, InReq), lookup(svar(X?), B?, F), adm_var1(InReq?, F?, Gp?, R).
 adm_var(role(_), _, _, _, yes).
 adm_var(pvar(_), _, _, _, yes).
+adm_var(sgn(_, _), _, _, _, yes).
 
 procedure adm_var1(YesNo?, Found?, Peers?, YesNo).
 adm_var1(yes, _, _, yes).
@@ -1315,11 +1323,16 @@ img_atom(atom(P, Vs), B, g(P?, Xs?)) :- img_args(Vs?, B?, Xs).
 
 procedure img_args(Vars?, Binding?, Vals).
 img_args([], _, []).
-img_args([V | Vs], B, [X? | Xs?]) :- ground(B?) | lookup(V?, B?, F), img_val(F?, X), img_args(Vs?, B?, Xs).
+img_args([sgn(Y, I) | Vs], B, [X? | Xs?]) :- ground(B?), ground(Y?), ground(I?) | lookup(svar(Y?), B?, F), role_person(I?, B?, P), img_sgn(F?, P?, X), img_args(Vs?, B?, Xs).
+img_args([V | Vs], B, [X? | Xs?]) :- otherwise, ground(B?) | lookup(V?, B?, F), img_val(F?, X), img_args(Vs?, B?, Xs).
 
 procedure img_val(Found?, Val).
 img_val(found(X), X?).
 img_val(free, p(unbound)).
+
+procedure img_sgn(Found?, Peer?, Val).
+img_sgn(found(s(S)), P, s(speech(S?, P?))).
+img_sgn(_, _, p(unbound)) :- otherwise | true.
 
 procedure atom_bound(SAtom?, Binding?, YesNo).
 atom_bound(atom(_, Vs), B, R?) :- vars_bound(Vs?, B?, R).
@@ -1356,7 +1369,17 @@ procedure match_args(Vars?, Vals?, Binding?, Match).
 match_args([], [], B, match(B?)).
 match_args([], [_ | _], _, nomatch).
 match_args([_ | _], [], _, nomatch).
-match_args([V | Vs], [X | Xs], B, R?) :- ground(V?), ground(X?), ground(B?) | lookup(V?, B?, F), kind_ok(V?, X?, K), match_one(F?, K?, V?, X?, Vs?, Xs?, B?, R).
+match_args([sgn(Y, I) | Vs], [X | Xs], B, R?) :- ground(Y?), ground(I?), ground(X?), ground(B?) | sgn_parts(X?, Ps), match_sgn(Ps?, Y?, I?, Vs?, Xs?, B?, R).
+match_args([V | Vs], [X | Xs], B, R?) :- otherwise, ground(V?), ground(X?), ground(B?) | lookup(V?, B?, F), kind_ok(V?, X?, K), match_one(F?, K?, V?, X?, Vs?, Xs?, B?, R).
+
+procedure sgn_parts(Val?, SgnParts).
+sgn_parts(s(speech(speech(U, Q), P)), signed(s(speech(U?, Q?)), P?)).
+sgn_parts(s(speech(utterance(_), _)), unsigned).
+sgn_parts(p(_), unsigned).
+
+procedure match_sgn(SgnParts?, Constant?, Integer?, Vars?, Vals?, Binding?, Match).
+match_sgn(signed(S, P), Y, I, Vs, Xs, B, R?) :- match_args([svar(Y?), role(I?) | Vs?], [S?, p(P?) | Xs?], B?, R).
+match_sgn(unsigned, _, _, _, _, _, nomatch).
 
 procedure match_one(Found?, YesNo?, Var?, Val?, Vars?, Vals?, Binding?, Match).
 match_one(found(W), _, _, X, Vs, Xs, B, R?) :- (W? =?= X?) | match_args(Vs?, Xs?, B?, R).
@@ -1371,6 +1394,8 @@ kind_ok(pvar(_), p(_), yes).
 kind_ok(pvar(_), s(_), no).
 kind_ok(svar(_), p(_), no).
 kind_ok(svar(_), s(_), yes).
+kind_ok(sgn(_, _), p(_), no).
+kind_ok(sgn(_, _), s(_), no).
 
 procedure val_peer(Var?, Binding?, Peer?, Peer).
 val_peer(V, B, D, P?) :- lookup(V?, B?, F), val_peer1(F?, D?, P).
@@ -1385,8 +1410,8 @@ val_speech(V, B, D, S?) :- lookup(V?, B?, F), val_speech1(F?, D?, S).
 
 procedure val_speech1(Found?, Peer?, Speech).
 val_speech1(found(s(S)), _, S?).
-val_speech1(found(p(_)), D, speech(none, D?)).
-val_speech1(free, D, speech(none, D?)).
+val_speech1(found(p(_)), D, speech(utterance(none), D?)).
+val_speech1(free, D, speech(utterance(none), D?)).
 
 procedure st_id(St?, Peer).
 st_id(st(Id, _, _, _, _, _, _, _, _, _), Id?).
