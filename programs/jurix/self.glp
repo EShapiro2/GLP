@@ -99,7 +99,38 @@ Fault ::= no_introductory_act
         ; signed(Constant, Integer, Atom, SgnCause).
 Faults  ::= [] ; [Fault | Faults].
 
+% --- What an introduction with wards is made of (Appendix F) ---------------
+% guardianship(M, Iota, G, W) is the guardianship (m, iota, g, w) of
+% def:guardianship; a party of a relay act (def:relay) is a ward role,
+% ward(Role, Mark, GuardianRole), or a free role, free(Role); a relay act is
+% named with its two parties.  An introduction with wards
+% (def:introduction-wards) names the introductory act unobstructed but for
+% the marks, the set of marks, the guardianship of each and the relay acts
+% found: for each mark one with a free role, and for each pair of marks, in
+% the order of the set, one with a ward role of each.
+Guardianship  ::= guardianship(Constant, Constant, Constant, Constant).
+Guardianships ::= [] ; [Guardianship | Guardianships].
+Party  ::= ward(Integer, Constant, Integer) ; free(Integer).
+Parties ::= [] ; [Party | Parties].
+Relay  ::= relay(Constant, Party, Party).
+Relays ::= [] ; [Relay | Relays].
+Wards  ::= introduction_with_wards(Constant, Preds, Guardianships, Relays)
+         ; no_introduction_with_wards.
+
+% What the search of wards.glp carries: the sets of marks it tries, the
+% guardianship candidates of each mark of a set, the kind of each role of a
+% schema put to def:relay -- a ward role of a mark with its guardian role, a
+% free role, a guardian role, or none of these -- the kind of party sought,
+% and an introductory act unobstructed but for the marks with its predicate e.
+PredSets   ::= [] ; [Preds | PredSets].
+GuardLists ::= [] ; [Guardianships | GuardLists].
+RK   ::= rk_ward(Constant, Integer) ; rk_free ; rk_guard ; rk_other.
+RKs  ::= [] ; [RK | RKs].
+Kind ::= free_party ; ward_party(Constant).
+IntroE ::= intro(Constant, Constant) ; no_intro.
+
 Verdict ::= syntactically_grassroots ; not_grassroots(Faults)
+          ; grassroots_with_wards(Constant, Preds, Guardianships, Relays)
           ; conditions_met ; conditions_failed(Faults)
           ; malformed(Faults).
 
@@ -923,6 +954,24 @@ rooted_preds(D, E?) :- check # rooted_preds(D?, E).
 imported procedure check#rooted_variant(Constant?, Contract?, Preds).
 exported procedure rooted_variant(Constant?, Contract?, Preds).
 rooted_variant(Nm, B, E?) :- check # rooted_variant(Nm?, B?, E).
+
+% The introduction with wards of Appendix F, for inspection: what the search
+% found, or that there is none; and the guardianships for a set of marks.
+imported procedure check#wards_of(Constant?, Wards).
+exported procedure wards_of(Constant?, Wards).
+wards_of(Nm, W?) :- check # wards_of(Nm?, W).
+
+imported procedure check#wards(Declared?, Wards).
+exported procedure wards(Declared?, Wards).
+wards(D, W?) :- check # wards(D?, W).
+
+imported procedure check#wards_variant(Constant?, Contract?, Wards).
+exported procedure wards_variant(Constant?, Contract?, Wards).
+wards_variant(Nm, B, W?) :- check # wards_variant(Nm?, B?, W).
+
+imported procedure check#guardianships(Declared?, Preds?, Guardianships).
+exported procedure guardianships(Declared?, Preds?, Guardianships).
+guardianships(D, M, G?) :- check # guardianships(D?, M?, G).
 
 imported procedure contracts#contract(Constant?, Declared).
 exported procedure contract_named(Constant?, Declared).

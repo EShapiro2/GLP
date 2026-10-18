@@ -110,7 +110,8 @@ iab1(no, _, []).
 iab1(yes, Sc, R?) :- ground(Sc?) | intro_bindings(Sc?, R).
 
 % The introductions of a schema, empty unless it is an introductory act.
-procedure intro_act_bindings(Schema?, Substs).
+% Appendix F reads it too (wards.glp).
+exported procedure intro_act_bindings(Schema?, Substs).
 intro_act_bindings(Sc, R?) :- ground(Sc?) |
     is_two_guarded(Sc?, A),
     iab1(A?, Sc?, R).

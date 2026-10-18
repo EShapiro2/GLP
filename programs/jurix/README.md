@@ -7,7 +7,8 @@ printed as the LaTeX of Section 5.2.
 
 The specification is the paper — *Formal Grassroots Social Contracts*
 (`/Grassroots/Jurix`, `main.tex`), Section 3 for a contract whose roles are all
-party roles and the appendix on community roles, `sections/13-community-roles.tex`, for one with
+party roles, Appendix F, `sections/17-wards.tex`, for one with wards, and the
+appendix on community roles, `sections/13-community-roles.tex`, for one with
 community roles (Appendix D since the paper's restructuring of 2026-10-18;
 the code's comments still call it Section 8, its number until then).
 Nothing of any of them is restated here or in the code: every
@@ -19,11 +20,21 @@ predicates occurring in it has traceable provenance (`def:grounded`), and when
 it satisfies volition (`def:volition`), which rests on traceable provenance
 too.  Section 7 certifies the two contracts of Sections 3.3 and 3.4 by hand;
 the checker returns the same verdict for both, and the same sets of predicates
-of traceable provenance.  The compiler is Section 5: a schema compiles to the assignment,
+of traceable provenance.  A contract whose introductory act is obstructed may
+still be certified by Appendix F: when it has an introduction with wards
+(`def:introduction-wards`) --- a nonempty set of marks each with a
+guardianship (`def:guardianship`), an introductory act unobstructed but for
+the marks (`def:unobstructed-marks`), and for every pair of marks a relay act
+with a ward role and a free role and one with two ward roles (`def:relay`)
+--- and has traceable provenance and volition, it is grassroots with wards
+(`thm:grassroots-wards`), and the verdict names the introductory act, the
+marks, their guardianships and the relay acts the search found.  The
+compiler is Section 5: a schema compiles to the assignment,
 the proviso and the guard of `def:compile`, and Section 5.2 is the form
 printed.  Section 5 defines the compilation for syntactically grassroots
-contracts, so the compiler runs the checker first and compiles nothing for a
-contract that fails.
+contracts, and Appendix F takes the realisation of a contract grassroots with
+wards by the same definition, so the compiler runs the checker first and
+compiles nothing for a contract that fails either.
 
 A contract with community roles is decided by the three conditions on the
 text of Section 8, each of which it meets or fails: that the set of predicates
@@ -127,6 +138,9 @@ signature.  It loads and runs as before.
 | `check_named(Name, V)` | the verdict on a fixture of `contracts.glp` that stands alone |
 | `traceable_of(Name, E)`, `rooted_of(Name, E)`, `contract_named(Name, C)`, `compile_named(Name)`, `compile_schema(Name, Schema)` | the same of such a fixture |
 | `check_variant(Name, C, V)`, `traceable_variant(Name, C, E)`, `rooted_variant(Name, C, E)`, `variant(Name, C, D)`, `compile_variant(Name, C)`, `compile_schema_variant(Name, C, Schema)` | the same of a fixture that changes the contract `C` in one place |
+| `wards(C, W)` | its introduction with wards (Appendix F), searched for whatever the verdict: `introduction_with_wards(Act, Marks, Guardianships, Relays)` or `no_introduction_with_wards` |
+| `guardianships(C, M, G)` | every guardianship of every mark of the set `M`, for `M` |
+| `wards_of(Name, W)`, `wards_variant(Name, C, W)` | the same of a fixture, and of a variant |
 
 The contracts are their owners' (claude.md "Sessions", the cascade rule;
 Coordination Appendix C), read from the owners' files: `social_graph` and
@@ -161,7 +175,19 @@ variables, naming nobody; `sgn_not_added`, `sgn_not_guarding` and
 `sgn_not_required` each carry a signed term where `def:schema` forbids it,
 `sgn_community` one in a contract with community roles, and all four are
 refused; `sg_sgn_loose` carries a signed speech act from an untraceable
-record, and `item` loses traceable provenance.  `sg_reflexive` is the social graph with `friend`
+record, and `item` loses traceable provenance.  `wd` is a contract with wards
+in the schemas Appendix F describes, children and their parents, with friend
+reflexive: not syntactically grassroots and grassroots with wards; the
+fixtures `wd_iota_deleted`, `wd_no_iota`, `wd_no_g`, `wd_no_w`,
+`wd_sigma_marked` and `wd_del_half` each break one clause of
+`def:guardianship`, `wd_req_unsupplied`, `wd_forb_other`, `wd_asymmetric`
+and `wd_two_atoms` one of `def:unobstructed-marks`, `wd_no_adult_relay`,
+`wd_no_child_relay`, `wd_relay_extra_role`, `wd_relay_guard_names`,
+`wd_relay_req`, `wd_relay_forb` and `wd_relay_unguarded` one of `def:relay`
+or of `def:introduction-wards`, each named in its comment; `wd2` is `wd` with
+AI agents and their principals besides, two marks with the relay acts of
+every pair, and `wd_two_marks` is it with a schema adding both marks at one
+role.  `sg_reflexive` is the social graph with `friend`
 declared reflexive; `sg_refl_malformed` adds to it schemas adding and
 deleting `friend` of their own role, which a contract declaring `friend`
 reflexive may not have; `sg_self_required` and `sg_refl_required` are the
@@ -175,7 +201,8 @@ twenty-eight, `unfriend`, `child_unfriend`, `leave`, `child_leave` and
 named by it: `unfriend_p` is `unfriend` guarded at `p`.  Any other name is the
 empty contract.
 
-A verdict on a contract of Section 3 is `syntactically_grassroots` or
+A verdict on a contract of Section 3 is `syntactically_grassroots`,
+`grassroots_with_wards(Act, Marks, Guardianships, Relays)` or
 `not_grassroots(Faults)`, where each fault is one of
 
     no_introductory_act
@@ -197,7 +224,19 @@ both name what is missing and, through `traceable_of`, what has it.  A
 `volition` fault is raised only when the role graph is disconnected and some
 connected component of it holds no guarding role, and names two roles the
 role graph does not join — the first role and the first one it does not reach
-— so at arity two it names the pair that has no edge.
+— so at arity two it names the pair that has no edge.  When the first conjunct
+fails and the other two hold, Appendix F is tried, and a contract with an
+introduction with wards is `grassroots_with_wards(Act, Marks, Guardianships,
+Relays)`: `Act` the introductory act unobstructed but for the marks, `Marks`
+the set M, `Guardianships` a `guardianship(M, Iota, G, W)` per mark, the
+`(m, iota, g, w)` of `def:guardianship`, and `Relays` the relay acts found,
+each `relay(Schema, Party, Party)` with a party `ward(Role, Mark,
+GuardianRole)` or `free(Role)`: for each mark one with a free role, then for
+each pair of marks, in the order of the set, one with a ward role of each.
+The search is existential, as `def:introduction-wards` is: the first set of
+marks, guardianships and act that satisfy it are reported, and nothing is
+reported of a failed search, whose verdict is `not_grassroots(Faults)` as
+before; `wards` and `guardianships` are there to look.
 
 A verdict on a contract with community roles is `conditions_met` or
 `conditions_failed(Faults)`, where each fault is an `untraceable(Predicates)`,
@@ -311,7 +350,8 @@ contract that fails either as malformed.
 | `unobstructed.glp` | `def:introduction` and `def:unobstructed` |
 | `prov.glp` | `def:grounded`, as a greatest fixpoint |
 | `community.glp` | the three conditions of Section 8, and the rooted predicates; its volition is `def:volition` of Section 3 too |
-| `check.glp` | `def:syntactically-grassroots`, the two halves together, and the conditions of Section 8 for a contract with community roles; the refusal of a malformed contract, for a reflexive predicate or a signed term |
+| `wards.glp` | `def:guardianship`, `def:unobstructed-marks`, `def:relay` and `def:introduction-wards`, as a search over the marks and the predicates of arity one |
+| `check.glp` | `def:syntactically-grassroots`, the two halves together, Appendix F when its first conjunct fails, and the conditions of Section 8 for a contract with community roles; the refusal of a malformed contract, for a reflexive predicate or a signed term |
 | `compile.glp` | `def:compile`, printed as the LaTeX of Section 5.2, and `definition:compile`, printed as the worked box of Section 8 |
 | `contracts.glp` | the checker's fixtures: contracts that stand alone, by name, and variants of a contract, by name and the contract's term |
 
@@ -323,7 +363,13 @@ quantify over may be fixed, and a binding is then an assignment of the schema's
 party variables to the two of them.  Unobstructedness matches one atom against
 those the finitely many schemas add, volition is a connectivity check on the
 roles, and traceable provenance is a greatest fixpoint over finitely many
-predicates, reached by dropping and repeating.
+predicates, reached by dropping and repeating.  An introduction with wards is
+a search over what the contract supplies, all of it finite: the sets of its
+marks, its predicates of arity zero; for each mark the guardianships
+`(m, iota, g, w)` with `iota` a mark and `g` and `w` predicates of arity one of
+the contract; its introductory acts; and its schemas as relay acts, with
+their roles as the parties.  The conditions of `def:unobstructed-marks` and
+`def:relay` are on the text, up to renaming a role, and take no binding.
 
 ## One thing to know about the reading
 

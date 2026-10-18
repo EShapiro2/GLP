@@ -36,6 +36,13 @@
 % role, and that its speech-act variable occur in an atom some role requires
 % -- and a contract with community roles carrying a signed term at all, which
 % Appendix D's Definition Act schema admits in no atom.
+%
+% A contract of Section 3 whose first conjunct fails may still be grassroots
+% with wards (Appendix F): when it has an introduction with wards
+% (def:introduction-wards), traceable provenance and volition, the protocol
+% realising it is volitionally grassroots (thm:grassroots-wards), and its
+% verdict names the introductory act, the marks, their guardianships and the
+% relay acts the search found.  Otherwise the faults are reported as before.
 % ---------------------------------------------------------------------------
 
 imported procedure unobstructed#intro_result(Contract?, Preds?, Faults).
@@ -45,6 +52,8 @@ imported procedure community#volition_faults(Contract?, Preds?, Faults).
 imported procedure community#conditions(Contract?, Faults).
 imported procedure community#traceable(Contract?, Preds).
 imported procedure community#rooted(Contract?, Preds).
+imported procedure wards#wards(Contract?, Preds?, Wards).
+imported procedure wards#guardianships_for(Contract?, Preds?, Guardianships).
 imported procedure contracts#contract(Constant?, Declared).
 imported procedure contracts#variant(Constant?, Contract?, Declared).
 
@@ -72,8 +81,27 @@ section3_verdict(C, Rf, E, V?) :- ground(C?), ground(Rf?), ground(E?) |
     unobstructed # intro_result(C?, Rf?, F1),
     community # volition_faults(C?, E?, F2),
     faults_app(FT?, F2?, F23),
-    faults_app(F1?, F23?, F),
-    verdict(F?, V).
+    wards_verdict(F1?, F23?, C?, Rf?, V).
+
+% The first conjunct failing and the other two holding, Appendix F is tried:
+% a contract with an introduction with wards is grassroots with wards
+% (def:introduction-wards, thm:grassroots-wards); otherwise the faults of the
+% three conjuncts are reported as before, in their order.
+procedure wards_verdict(Faults?, Faults?, Contract?, Preds?, Verdict).
+wards_verdict([], F23, _, _, V?) :- ground(F23?) | verdict(F23?, V).
+wards_verdict([F|Fs], [], C, Rf, V?) :-
+    ground(F?), ground(Fs?), ground(C?), ground(Rf?) |
+    wards # wards(C?, Rf?, W),
+    wards_verdict1(W?, [F?|Fs?], V).
+wards_verdict([F|Fs], [G|Gs], _, _, V?) :-
+    ground(F?), ground(Fs?), ground(G?), ground(Gs?) |
+    faults_app([F?|Fs?], [G?|Gs?], FF),
+    verdict(FF?, V).
+
+procedure wards_verdict1(Wards?, Faults?, Verdict).
+wards_verdict1(introduction_with_wards(Nm, M, Gs, Rs), _,
+               grassroots_with_wards(Nm?, M?, Gs?, Rs?)).
+wards_verdict1(no_introduction_with_wards, F, not_grassroots(F?)).
 
 procedure community_verdict(Faults?, Verdict).
 community_verdict([], conditions_met).
@@ -312,6 +340,42 @@ exported procedure traceable_variant(Constant?, Contract?, Preds).
 traceable_variant(Nm, B, E?) :- ground(Nm?), ground(B?) |
     contracts # variant(Nm?, B?, D),
     traceable_preds(D?, E).
+
+% The introduction with wards of Appendix F, for inspection, searched for
+% whatever the verdict: what it found, or no_introduction_with_wards.  A
+% contract with community roles has none, Appendix F being written over the
+% schemas of Section 3.
+procedure wards1(Ans?, Contract?, Preds?, Wards).
+wards1(no, C, Rf, W?) :- ground(C?), ground(Rf?) | wards # wards(C?, Rf?, W).
+wards1(yes, _, _, no_introduction_with_wards).
+
+procedure wards_in(Contract?, Preds?, Wards).
+wards_in(C, Rf, W?) :- ground(C?), ground(Rf?) |
+    has_community(C?, A),
+    wards1(A?, C?, Rf?, W).
+
+exported procedure wards(Declared?, Wards).
+wards(D, W?) :- ground(D?) |
+    decl_schemas(D?, C),
+    decl_reflexive(D?, Rf),
+    wards_in(C?, Rf?, W).
+
+exported procedure wards_of(Constant?, Wards).
+wards_of(Nm, W?) :- ground(Nm?) |
+    contracts # contract(Nm?, D),
+    wards(D?, W).
+
+exported procedure wards_variant(Constant?, Contract?, Wards).
+wards_variant(Nm, B, W?) :- ground(Nm?), ground(B?) |
+    contracts # variant(Nm?, B?, D),
+    wards(D?, W).
+
+% The guardianships for a set of marks M (def:guardianship), every one of
+% each mark, for inspection.
+exported procedure guardianships(Declared?, Preds?, Guardianships).
+guardianships(D, M, G?) :- ground(D?), ground(M?) |
+    decl_schemas(D?, C),
+    wards # guardianships_for(C?, M?, G).
 
 % The predicates that are rooted (definition:rooted).  Rootedness is a notion
 % of Section 8; a contract of Section 3 is not asked about it.

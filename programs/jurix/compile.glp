@@ -541,8 +541,11 @@ latex_contract(K, [S|Ss], T, ['\\iffalse', Nm?, '\\fi'|R?]) :-
 % --- Entry points ----------------------------------------------------------
 % The checker first: a contract that is malformed, that is not syntactically
 % grassroots, or that fails the conditions on the text of Section 8, is not
-% compiled at all.  A contract's reflexive predicates are no part of its
-% compiled form, which is its schemas'.
+% compiled at all.  A contract grassroots with wards is compiled as a
+% syntactically grassroots one: the compilation of Section 5 uses nothing of
+% the introductory act, and its realisation is taken by def:realisation
+% (Appendix F, after def:introduction-wards).  A contract's reflexive
+% predicates are no part of its compiled form, which is its schemas'.
 
 procedure find_schema1(Constant?, Constant?, Schema?, Contract?, FoundS).
 find_schema1(Nm, Sn, S, _, found(S?)) :- Nm? =?= Sn? | true.
@@ -584,6 +587,9 @@ procedure compile_on(Verdict?, Constant?, Contract?).
 compile_on(syntactically_grassroots, _, C) :- ground(C?) |
     latex_contract(no, C?, [], L),
     send_to_user(L?).
+compile_on(grassroots_with_wards(_, _, _, _), _, C) :- ground(C?) |
+    latex_contract(no, C?, [], L),
+    send_to_user(L?).
 compile_on(not_grassroots(_), Nm, _) :- ground(Nm?) | not_compiled(Nm?).
 compile_on(conditions_met, _, C) :- ground(C?) |
     latex_contract(yes, C?, [], L),
@@ -616,6 +622,9 @@ compile_variant(Nm, B) :- ground(Nm?), ground(B?) |
 
 procedure compile_s_on(Verdict?, Constant?, Constant?, Contract?).
 compile_s_on(syntactically_grassroots, _, Sn, C) :- ground(Sn?), ground(C?) |
+    find_schema(C?, Sn?, S),
+    emit_schema(S?, no, Sn?).
+compile_s_on(grassroots_with_wards(_, _, _, _), _, Sn, C) :- ground(Sn?), ground(C?) |
     find_schema(C?, Sn?, S),
     emit_schema(S?, no, Sn?).
 compile_s_on(not_grassroots(_), Nm, _, _) :- ground(Nm?) | not_compiled(Nm?).
