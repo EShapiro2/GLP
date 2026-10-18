@@ -1,0 +1,5 @@
+%% not compiled(gsnp)
+%% it is not effective (vGLP, Section 5.4, the sentence after the paragraph on act schemas):
+%% an unguarded schema whose first role requires no atom naming some other role, or
+%% some variable of an atom it deletes or adds:
+%% the schema(deliver)
