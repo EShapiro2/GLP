@@ -7,13 +7,15 @@
 %% verdict and then runs the compiler on it.  The clauses are in CSSN.md
 %% beside this file; CSSN extends GSNP and Wards, GSC's, so the term holds
 %% GSNP's twelve schemas (programs/gsc/GSNP.glp), with child forbidden at both
-%% roles of befriend and at the joiner's role of join, and eleven schemas for
+%% roles of befriend and at the joiner's role of join, and thirteen schemas for
 %% children, which realise Wards (CSSN, Appendix B.2; the tables in Appendix
 %% C.2, sections/artefact-schemas.tex).  Written by CSSN #5 Cowork, 2026-10-18.
 %%
-%% Twenty-three schemas over thirteen predicates; friend is reflexive.  Every
+%% Twenty-five schemas over fourteen predicates; friend is reflexive.  Every
 %% role requires identity, except the role of establish, which adds it, and
-%% the child's role of enter and enter_2, which forbid it and add it.  A
+%% the child's role of enter and enter_2, which forbid it and add it; every
+%% guarding role, establish's included, forbids retired, so a retired child
+%% takes no act (Wards:4, as CSSN asked GSC, GSC_inbox 2026-10-18 22:04 UTC).  A
 %% parent's role in the children's schemas, and the sender's in forward and
 %% post, adds and deletes nothing: a guarding role may (GSC, Definition 2, at
 %% GSC bd0ebc4; GSNP.glp at GLP e0be1bc2).  Each schema is in GSC's notation above its term, at each
@@ -66,35 +68,36 @@ gsnp_schemas([
 %%   establish(p?) :
 %%       at p:  +identity
     schema(establish,
-      [rs(guarded, [atom(identity, [])], [], [], [])]),
+      [rs(guarded, [atom(identity, [])], [], [], [atom(retired, [])])]),
 %% GSG:2, Friendship.
 %%   befriend(p?, q?) :
 %%       at p:  identity, not child, not friend(q), +friend(q)
 %%       at q:  identity, not child, not friend(p), +friend(p)
     schema(befriend,
       [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, [])],
-                   [atom(child, []), atom(friend, [role(2)])]),
+                   [atom(child, []), atom(friend, [role(2)]), atom(retired, [])]),
        rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])],
-                   [atom(child, []), atom(friend, [role(1)])])]),
+                   [atom(child, []), atom(friend, [role(1)]), atom(retired, [])])]),
 %% GSG:3, Ending a friendship.
 %%   unfriend(p?, q) :
-%%       at p:  identity, -friend(q)
+%%       at p:  identity, not parent(q), not parenting(q), -friend(q)
 %%       at q:  identity, -friend(p)
     schema(unfriend,
-      [rs(guarded,   [], [atom(friend, [role(2)])], [atom(identity, [])], []),
+      [rs(guarded,   [], [atom(friend, [role(2)])], [atom(identity, [])],
+                     [atom(parent, [role(2)]), atom(parenting, [role(2)]), atom(retired, [])]),
        rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]),
 %% GSNP:1, Authorship.
 %%   sign(p? ; x) :
 %%       at p:  identity, +item(x)
     schema(sign,
-      [rs(guarded, [atom(item, [svar(x)])], [], [atom(identity, [])], [])]),
+      [rs(guarded, [atom(item, [svar(x)])], [], [atom(identity, [])], [atom(retired, [])])]),
 %% GSN:1, Message, with GSNP:2, Forwarding.
 %%   forward(p?, q ; x) :
 %%       at p:  identity, item(x)
 %%       at q:  identity, friend(p), +item(sgn(x, p))
     schema(forward,
       [rs(guarded,   [], [],
-                     [atom(identity, []), atom(item, [svar(x)])], []),
+                     [atom(identity, []), atom(item, [svar(x)])], [atom(retired, [])]),
        rs(unguarded, [atom(item, [sgn(x, 1)])], [],
                      [atom(identity, []), atom(friend, [role(1)])], [])]),
 %% GSN:2, Group.
@@ -103,43 +106,43 @@ gsnp_schemas([
     schema(create,
       [rs(guarded, [atom(member, [role(1), svar(n)]),
                     atom(listed, [role(1), svar(n)])], [], [atom(identity, [])],
-                   [atom(member, [role(1), svar(n)]), atom(closed, [svar(n)])])]),
+                   [atom(member, [role(1), svar(n)]), atom(closed, [svar(n)]), atom(retired, [])])]),
 %% GSN:3, Joining.
 %%   join(a?, q? ; n) :
 %%       at a:  identity, member(a, n), friend(q), +listed(q, n)
 %%       at q:  identity, not child, friend(a), not member(a, n), +member(a, n)
     schema(join,
       [rs(guarded, [atom(listed, [role(2), svar(n)])], [],
-                   [atom(identity, []), atom(member, [role(1), svar(n)]), atom(friend, [role(2)])], []),
+                   [atom(identity, []), atom(member, [role(1), svar(n)]), atom(friend, [role(2)])], [atom(retired, [])]),
        rs(guarded, [atom(member, [role(1), svar(n)])], [],
                    [atom(identity, []), atom(friend, [role(1)])],
-                   [atom(child, []), atom(member, [role(1), svar(n)])])]),
+                   [atom(child, []), atom(member, [role(1), svar(n)]), atom(retired, [])])]),
 %% GSN:4, Leaving: a member leaves; the leader leaving ends the group.
 %%   leave(a, q? ; n) :
 %%       at a:  identity, -listed(q, n)
 %%       at q:  identity, -member(a, n)
     schema(leave,
       [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], []),
-       rs(guarded,   [], [atom(member, [role(1), svar(n)])], [atom(identity, [])], [])]),
+       rs(guarded,   [], [atom(member, [role(1), svar(n)])], [atom(identity, [])], [atom(retired, [])])]),
 %%   close(a? ; n) :
 %%       at a:  identity, +closed(n), -member(a, n), -listed(a, n)
     schema(close,
       [rs(guarded, [atom(closed, [svar(n)])],
                    [atom(member, [role(1), svar(n)]),
-                    atom(listed, [role(1), svar(n)])], [atom(identity, [])], [])]),
+                    atom(listed, [role(1), svar(n)])], [atom(identity, [])], [atom(retired, [])])]),
 %% GSN:5, Group message, with GSNP:2.
 %%   post_own(a? ; x, n) :
 %%       at a:  identity, item(x), member(a, n), not posted(x, n), +posted(x, n)
     schema(post_own,
       [rs(guarded, [atom(posted, [svar(x), svar(n)])], [],
                    [atom(identity, []), atom(item, [svar(x)]), atom(member, [role(1), svar(n)])],
-                   [atom(posted, [svar(x), svar(n)])])]),
+                   [atom(posted, [svar(x), svar(n)]), atom(retired, [])])]),
 %%   post(p?, a ; x, n) :
 %%       at p:  identity, item(x), member(a, n)
 %%       at a:  identity, member(a, n), listed(p, n), +posted(sgn(x, p), n)
     schema(post,
       [rs(guarded,   [], [],
-                     [atom(identity, []), atom(item, [svar(x)]), atom(member, [role(2), svar(n)])], []),
+                     [atom(identity, []), atom(item, [svar(x)]), atom(member, [role(2), svar(n)])], [atom(retired, [])]),
        rs(unguarded, [atom(posted, [sgn(x, 1), svar(n)])], [],
                      [atom(identity, []), atom(member, [role(2), svar(n)]),
                       atom(listed, [role(1), svar(n)])], [])]),
@@ -164,10 +167,10 @@ children_schemas([
 %%       at r:  not identity, +identity, +parent(p), +child, +friend(p)
     schema(enter,
       [rs(guarded, [atom(parenting, [role(2)]), atom(friend, [role(2)])], [],
-                   [atom(identity, [])], [atom(child, [])]),
+                   [atom(identity, [])], [atom(child, []), atom(retired, [])]),
        rs(guarded, [atom(identity, []), atom(parent, [role(1)]), atom(child, []),
                     atom(friend, [role(1)])], [],
-                   [], [atom(identity, [])])]),
+                   [], [atom(identity, []), atom(retired, [])])]),
 %%   enter_2(p?, q?, r?) :
 %%       at p:  identity, not child, +parenting(r), +coparent(q), +friend(r)
 %%       at q:  identity, not child, +parenting(r), +coparent(p), +friend(r)
@@ -175,21 +178,21 @@ children_schemas([
     schema(enter_2,
       [rs(guarded, [atom(parenting, [role(3)]), atom(coparent, [role(2)]),
                     atom(friend, [role(3)])], [],
-                   [atom(identity, [])], [atom(child, [])]),
+                   [atom(identity, [])], [atom(child, []), atom(retired, [])]),
        rs(guarded, [atom(parenting, [role(3)]), atom(coparent, [role(1)]),
                     atom(friend, [role(3)])], [],
-                   [atom(identity, [])], [atom(child, [])]),
+                   [atom(identity, [])], [atom(child, []), atom(retired, [])]),
        rs(guarded, [atom(identity, []), atom(parent, [role(1)]),
                     atom(parent, [role(2)]), atom(child, []), atom(child, []),
                     atom(coparented, []), atom(friend, [role(1)]),
                     atom(friend, [role(2)])], [],
-                   [], [atom(identity, [])])]),
+                   [], [atom(identity, []), atom(retired, [])])]),
 %% CSSN:3, Coming of age, with Wards:4.
 %%   of_age(p?, r) :
 %%       at p:  identity, -parenting(r)
 %%       at r:  identity, not coparented, -parent(p), -child
     schema(of_age,
-      [rs(guarded, [], [atom(parenting, [role(2)])], [atom(identity, [])], []),
+      [rs(guarded, [], [atom(parenting, [role(2)])], [atom(identity, [])], [atom(retired, [])]),
        rs(unguarded, [], [atom(parent, [role(1)]), atom(child, [])],
                      [atom(identity, [])], [atom(coparented, [])])]),
 %%   of_age_2(p?, q, r) :
@@ -198,7 +201,7 @@ children_schemas([
 %%       at r:  identity, -parent(p), -parent(q), -child, -child, -coparented
     schema(of_age_2,
       [rs(guarded, [], [atom(parenting, [role(3)]), atom(coparent, [role(2)])],
-                   [atom(identity, [])], []),
+                   [atom(identity, [])], [atom(retired, [])]),
        rs(unguarded, [], [atom(parenting, [role(3)]), atom(coparent, [role(1)])],
                      [atom(identity, [])], []),
        rs(unguarded, [], [atom(parent, [role(1)]), atom(parent, [role(2)]),
@@ -213,16 +216,16 @@ children_schemas([
     schema(child_befriend,
       [rs(guarded, [atom(friend, [role(2)])], [],
                    [atom(identity, []), atom(child, []), atom(parent, [role(3)])],
-                   [atom(friend, [role(2)])]),
+                   [atom(friend, [role(2)]), atom(retired, [])]),
        rs(guarded, [atom(friend, [role(1)])], [],
                    [atom(identity, []), atom(child, []), atom(parent, [role(4)])],
-                   [atom(friend, [role(1)])]),
+                   [atom(friend, [role(1)]), atom(retired, [])]),
        rs(guarded, [], [],
                    [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(4)])],
-                   [atom(child, [])]),
+                   [atom(child, []), atom(retired, [])]),
        rs(guarded, [], [],
                    [atom(identity, []), atom(parenting, [role(2)]), atom(friend, [role(3)])],
-                   [atom(child, [])])]),
+                   [atom(child, []), atom(retired, [])])]),
 %%   child_adult_befriend(r?, a?, p?) :
 %%       at r:  identity, child, parent(p), not friend(a), +friend(a)
 %%       at a:  identity, not child, not friend(r), +friend(r)
@@ -230,24 +233,48 @@ children_schemas([
     schema(child_adult_befriend,
       [rs(guarded, [atom(friend, [role(2)])], [],
                    [atom(identity, []), atom(child, []), atom(parent, [role(3)])],
-                   [atom(friend, [role(2)])]),
+                   [atom(friend, [role(2)]), atom(retired, [])]),
        rs(guarded, [atom(friend, [role(1)])], [],
                    [atom(identity, [])],
-                   [atom(child, []), atom(friend, [role(1)])]),
+                   [atom(child, []), atom(friend, [role(1)]), atom(retired, [])]),
        rs(guarded, [], [],
                    [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(2)])],
-                   [atom(child, [])])]),
+                   [atom(child, []), atom(retired, [])])]),
 %% Wards:3, Ending a Relation, for a friendship.
 %%   child_unfriend(r, s, p?) :
 %%       at r:  identity, child, parent(p), -friend(s)
-%%       at s:  identity, -friend(r)
+%%       at s:  identity, not parenting(r), -friend(r)
 %%       at p:  identity, not child, parenting(r)
     schema(child_unfriend,
       [rs(unguarded, [], [atom(friend, [role(2)])],
                      [atom(identity, []), atom(child, []), atom(parent, [role(3)])], []),
-       rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], []),
+       rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])],
+                     [atom(parenting, [role(1)])]),
        rs(guarded, [], [],
-                   [atom(identity, []), atom(parenting, [role(1)])], [atom(child, [])])]),
+                   [atom(identity, []), atom(parenting, [role(1)])], [atom(child, []), atom(retired, [])])]),
+%% Wards:3 and Wards:4: a parent ends their friendship with their child, and
+%% with it their guardianship; a child left with no parent is retired.
+%%   parent_unfriend(p?, r) :
+%%       at p:  identity, -friend(r), -parenting(r)
+%%       at r:  identity, not coparented, -friend(p), -parent(p), -child, +retired
+    schema(parent_unfriend,
+      [rs(guarded, [], [atom(friend, [role(2)]), atom(parenting, [role(2)])],
+                   [atom(identity, [])], [atom(retired, [])]),
+       rs(unguarded, [atom(retired, [])],
+                     [atom(friend, [role(1)]), atom(parent, [role(1)]), atom(child, [])],
+                     [atom(identity, [])], [atom(coparented, [])])]),
+%%   parent_unfriend_2(p?, q, r) :
+%%       at p:  identity, -friend(r), -parenting(r), -coparent(q)
+%%       at q:  identity, -coparent(p)
+%%       at r:  identity, -friend(p), -parent(p), -child, -coparented
+    schema(parent_unfriend_2,
+      [rs(guarded, [], [atom(friend, [role(3)]), atom(parenting, [role(3)]),
+                        atom(coparent, [role(2)])],
+                   [atom(identity, [])], [atom(retired, [])]),
+       rs(unguarded, [], [atom(coparent, [role(1)])], [atom(identity, [])], []),
+       rs(unguarded, [], [atom(friend, [role(1)]), atom(parent, [role(1)]),
+                          atom(child, []), atom(coparented, [])],
+                     [atom(identity, [])], [])]),
 %% Wards:2, Relations, for a membership.
 %%   child_join(a?, s?, p? ; n) :
 %%       at a:  identity, not child, member(a, n), friend(s), +listed(s, n)
@@ -256,13 +283,13 @@ children_schemas([
     schema(child_join,
       [rs(guarded, [atom(listed, [role(2), svar(n)])], [],
                    [atom(identity, []), atom(member, [role(1), svar(n)]), atom(friend, [role(2)])],
-                   [atom(child, [])]),
+                   [atom(child, []), atom(retired, [])]),
        rs(guarded, [atom(member, [role(1), svar(n)])], [],
                    [atom(identity, []), atom(child, []), atom(parent, [role(3)]),
                     atom(friend, [role(1)])],
-                   [atom(member, [role(1), svar(n)])]),
+                   [atom(member, [role(1), svar(n)]), atom(retired, [])]),
        rs(guarded, [], [],
-                   [atom(identity, []), atom(parenting, [role(2)])], [atom(child, [])])]),
+                   [atom(identity, []), atom(parenting, [role(2)])], [atom(child, []), atom(retired, [])])]),
 %%   child_join_2(r?, s?, p?, q? ; n) :
 %%       at r:  identity, child, member(r, n), friend(s), parent(p), +listed(s, n)
 %%       at s:  identity, child, parent(q), friend(r), not member(r, n), +member(r, n)
@@ -271,15 +298,15 @@ children_schemas([
     schema(child_join_2,
       [rs(guarded, [atom(listed, [role(2), svar(n)])], [],
                    [atom(identity, []), atom(child, []), atom(member, [role(1), svar(n)]),
-                    atom(friend, [role(2)]), atom(parent, [role(3)])], []),
+                    atom(friend, [role(2)]), atom(parent, [role(3)])], [atom(retired, [])]),
        rs(guarded, [atom(member, [role(1), svar(n)])], [],
                    [atom(identity, []), atom(child, []), atom(parent, [role(4)]),
                     atom(friend, [role(1)])],
-                   [atom(member, [role(1), svar(n)])]),
+                   [atom(member, [role(1), svar(n)]), atom(retired, [])]),
        rs(guarded, [], [],
-                   [atom(identity, []), atom(parenting, [role(1)])], [atom(child, [])]),
+                   [atom(identity, []), atom(parenting, [role(1)])], [atom(child, []), atom(retired, [])]),
        rs(guarded, [], [],
-                   [atom(identity, []), atom(parenting, [role(2)])], [atom(child, [])])]),
+                   [atom(identity, []), atom(parenting, [role(2)])], [atom(child, []), atom(retired, [])])]),
 %% Wards:3, Ending a Relation, for a membership.
 %%   child_leave(a, s, p? ; n) :
 %%       at a:  identity, -listed(s, n)
@@ -291,7 +318,7 @@ children_schemas([
        rs(unguarded, [], [atom(member, [role(1), svar(n)])],
                      [atom(identity, []), atom(child, []), atom(parent, [role(3)])], []),
        rs(guarded, [], [],
-                   [atom(identity, []), atom(parenting, [role(2)])], [atom(child, [])])]),
+                   [atom(identity, []), atom(parenting, [role(2)])], [atom(child, []), atom(retired, [])])]),
 %%   child_close(r, p? ; n) :
 %%       at r:  identity, child, parent(p), -member(r, n), -listed(r, n), +closed(n)
 %%       at p:  identity, not child, parenting(r)
@@ -300,4 +327,4 @@ children_schemas([
                      [atom(member, [role(1), svar(n)]), atom(listed, [role(1), svar(n)])],
                      [atom(identity, []), atom(child, []), atom(parent, [role(2)])], []),
        rs(guarded, [], [],
-                   [atom(identity, []), atom(parenting, [role(1)])], [atom(child, [])])])]).
+                   [atom(identity, []), atom(parenting, [role(1)])], [atom(child, []), atom(retired, [])])])]).
