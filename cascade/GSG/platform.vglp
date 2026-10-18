@@ -84,10 +84,11 @@ val_peer(role(2), B?, D?, V2)
 %% agent goal on the fair merge of the answers to its request questions, the
 %% arriving messages and the answers of its responders.
 %% A request question is a goal of a volitional procedure whose question,
-%% Menu, shows the persons the agent knows and takes one request; the agent
-%% asks one when it starts and the agent goal the next when it reads the
-%% answer to the last.  The agent goal writes the thread on the program's
-%% output to its person, Output, construct 0 (vGLP ca78e11, Section 5.4).
+%% Menu, shows the agent's own key and the persons it knows and takes one
+%% request (vGLP 321127a, Section 5.4); the agent asks one when it starts and
+%% the agent goal the next when it reads the answer to the last.  The agent
+%% goal writes the thread on the program's output to its person, Output,
+%% construct 0 (vGLP ca78e11, Section 5.4).
 %% ===========================================================================
 
 %% An attempt (i, k, pi, [t]) (Definition "Attempt, Priority, Message, App
@@ -121,7 +122,7 @@ Txn       ::= propose(Attempt) ; start(Attempt) ; answer(Attempt) ; vote(Attempt
             ; introduce_peers(Peer, Peer) ; discover(Peer).
 Output    ::= Txn.
 Approval  ::= approval(Attempt, YesNo?).
-Menu      ::= menu(List(Key), Request?).
+Menu      ::= menu(Key, List(Key), Request?).
 Close     ::= close.
 Trigger   ::= req(Request) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own.
 
@@ -221,17 +222,18 @@ ApprovalRes ::= approval_for(Attempt) ; noapproval.
 
 exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output)).
 agent(Id, NetIn, Out?, Thr?) :- ground(Id?) |
-    request([], Rq),
+    request(Id?, [], Rq),
     tag_net(NetIn?, Nt),
     merge(Rq?, Nt?, M1),
     merge(M1?, Ans?, In),
     agent_goal([own], In?, Ans, Thr, Out, [],
         st(Id?, app([], 0, unlocked, []), 0, [], [], [], [], [], [], [])).
 
-%% A request question: the persons the agent knows, in the order of
-%% identifiers, and the person's one request, put up once it is made.
-procedure (Menu)*request(List(Key)?, Stream(Trigger)).
-(menu(Ks?, R))*request(Ks, Out?) :- ground(Ks?) |
+%% A request question: the agent's own key, its identifier, the persons the
+%% agent knows, in the order of identifiers, and the person's one request,
+%% put up once it is made.
+procedure (Menu)*request(Key?, List(Key)?, Stream(Trigger)).
+(menu(Id?, Ks?, R))*request(Id, Ks, Out?) :- ground(Id?), ground(Ks?) |
     await_request(R?, Out).
 procedure await_request(Request?, Stream(Trigger)).
 await_request(propose(C), [req(propose(C?))]).
@@ -241,8 +243,9 @@ await_request(known(Q), [req(known(Q?))]).
 %% answers joining the agent goal's input.
 procedure ask_next(St?, Stream(Trigger), Stream(Trigger)?).
 ask_next(St, Ans?, Ans1) :- ground(St?) |
+    st_id(St?, Id),
     st_known(St?, Ks),
-    request(Ks?, R),
+    request(Id?, Ks?, R),
     merge(R?, Ans1?, Ans).
 
 procedure tag_net(Stream(Net)?, Stream(Trigger)).

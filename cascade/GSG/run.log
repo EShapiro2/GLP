@@ -13,7 +13,7 @@ V2 = [propose(attempt(bob, 1, 1, establish(bob))), discover(alice), start(attemp
 V3 = [sent(alice, bob, start(attempt(alice, 2, 2, befriend(alice, bob)))), sent(bob, alice, vote(attempt(alice, 2, 2, befriend(alice, bob)), no)), sent(alice, bob, outcome(attempt(alice, 2, 2, befriend(alice, bob)), abort)), sent(alice, bob, start(attempt(alice, 3, 3, befriend(alice, bob)))), sent(bob, alice, vote(attempt(alice, 3, 3, befriend(alice, bob)), yes)), sent(alice, bob, outcome(attempt(alice, 3, 3, befriend(alice, bob)), commit)) | _]
 → suspended
 
-V1 = [menu([]), propose(attempt(alice, 1, 1, establish(alice))), discover(bob), propose(attempt(alice, 2, 2, befriend(alice, bob))), tally(attempt(alice, 2, 2, befriend(alice, bob))), commit(attempt(alice, 2, 2, befriend(alice, bob))), menu([bob]) | _]
+V1 = [menu(alice, []), propose(attempt(alice, 1, 1, establish(alice))), discover(bob), propose(attempt(alice, 2, 2, befriend(alice, bob))), tally(attempt(alice, 2, 2, befriend(alice, bob))), commit(attempt(alice, 2, 2, befriend(alice, bob))), menu(alice, [bob]) | _]
 V2 = [propose(attempt(bob, 1, 1, establish(bob))), discover(alice), start(attempt(alice, 2, 2, befriend(alice, bob))), gave(befriend(alice, bob), yes), answer(attempt(alice, 2, 2, befriend(alice, bob))), vote(attempt(alice, 2, 2, befriend(alice, bob))), outcome(attempt(alice, 2, 2, befriend(alice, bob))) | _]
 V3 = [sent(alice, bob, start(attempt(alice, 2, 2, befriend(alice, bob)))), sent(bob, alice, vote(attempt(alice, 2, 2, befriend(alice, bob)), yes)), sent(alice, bob, outcome(attempt(alice, 2, 2, befriend(alice, bob)), commit)) | _]
 → suspended
