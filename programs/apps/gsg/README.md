@@ -78,7 +78,7 @@ A `(...)` names the attempt named in full before it; the suite holds the lines w
 
 The app's agent runtime (`glp_multiagent/lib/ui_runtime`) reduces each event until quiescent with a cap, as the boot harness does, and the platform's agent reaches quiescence after each event, as the boot shows.  The asset step, `glp_multiagent/tool/sync_glp_assets.sh`, builds `gsg.glpw` and `gsn.glpw` into the bundle's `social/graph/core` with the other mini-apps' artefacts.  What is not there: the app's play, `superapp_ui/3` in `programs/social/graph/core/home_ui.glp`, scripts Bob to accept an invitation to `ping`, and Bob's acts for GSG's app, installing `gsg.glpw` and accepting the invitation to it, are not in it.
 
-Once these are done, Alice installs the app as she installs any: on the Apps panel she trusts the compiler's key, installs the mini-app by its name, `gsg`, and its program, `gsg.glpw`, connects to Bob, and, once he is her friend, invites him to `gsg`.
+Once Bob's acts are there, Alice installs the app as she installs any: on the Apps panel she trusts the compiler's key, installs the mini-app by its name, `gsg`, and its program, `gsg.glpw`, connects to Bob, and, once he is her friend, invites him to `gsg`.
 
 ## The screens
 
