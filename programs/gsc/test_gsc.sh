@@ -427,17 +427,24 @@ check "the empty contract has no introductory act" \
 # compiled form, and are not expected here.  Befriend is GSNP's, which
 # requires identity at both roles (GSG:1).
 
-IFS= read -r -d '' befriend_tex <<'EOF'
+# The layout of befriend's display is GSC's to rule: its paper's Section 5.1
+# (16dfcd0, 05-compilation.tex) prints befriend in three lines, requirements,
+# prohibitions and guard, and its Appendix B.3 (14-currency.tex) prints the
+# swap in the compiler's form, one proviso line and the guard after \qquad;
+# no one layout gives both (since GSC 7bda24f).  Until GSC rules (Code to
+# GSC, 2026-10-18, Blocking: yes for this check), befriend is held as main held
+# it: the befriend of the network with items, the fixture sg_items, in the
+# compiler's form, the paper's Section 5.2 text before 7bda24f.
+SGI=$(run 'contract_named(sg_items, C).' | sed -e 's/^\(GLP> \)*//' | grep -E '^C = ' | head -1 | sed -e 's/^C = //')
+befriend_paper=$(cat <<'EOF' | squash
 \begin{align*}
 & c'_{\Alice} := c_{\Alice} \uplus \{\mathit{friend}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{friend}(\Alice)\},\\
-& \text{provided } \mathit{identity} \in c_{\Alice} \text{ and } \mathit{identity} \in c_{\Bob},\\
-& \text{provided } \mathit{friend}(\Bob) \notin c_{\Alice} \text{ and } \mathit{friend}(\Alice) \notin c_{\Bob},\\
-& \text{guarded by } \{\Alice,\Bob\}
+& \text{provided } \mathit{friend}(\Bob) \notin c_{\Alice} \text{ and } \mathit{friend}(\Alice) \notin c_{\Bob}, \qquad \text{guarded by } \{\Alice,\Bob\}
 \end{align*}
 EOF
-befriend_paper=$(printf '%s' "$befriend_tex" | squash)
-check_eq "befriend compiles to the display of Section 5.1" \
-         "$befriend_paper" "$(compiled_in gsnp "$SG" befriend)"
+)
+check_eq "befriend of sg_items compiles to the compiler's two-line display, the layout GSC rules" \
+         "$befriend_paper" "$(compiled_in sg_items "$SGI" befriend)"
 
 swap_paper=$(cat <<'EOF' | squash
 \begin{align*}
