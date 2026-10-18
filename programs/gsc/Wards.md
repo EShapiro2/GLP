@@ -4,7 +4,7 @@ Wards, GSC's: GSC owns every contract that other contracts extend (Udi, 2026-10-
 
 Person is defined in `GSG.md`, and agent, child, non-person agent and group in `GSN.md`.  A *relation* is a friendship or the membership of a group.
 
-1. *Guardianship.*  A person may act to create a *ward*, to be operated by a non-person agent, and choose the ward's key pair, and the person is then the *guardian* of the ward as well as their friend.
+1. *Guardianship.*  A person may act to create a *ward*, to be operated by a non-person agent, and establish the ward's identity by choosing the ward's key pair, and the person is then the *guardian* of the ward as well as their friend.
 2. *Relations.*  A ward enters a relation with another agent by an act of both and of a guardian of each ward among them.
 3. *Ending a Relation.*  An agent in a relation of a ward, or a guardian of the ward, may act to end the relation, and then the relation ends.
 4. *Ending Guardianship.*  Guardianship ends by an act of a guardian.

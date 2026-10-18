@@ -8,7 +8,7 @@ GSNP's contract, GSC's: GSC owns every contract that other contracts extend (Udi
 
 ## The schemas, and what they realise
 
-The schemas are in `GSNP.glp`, in GSC's notation above each term: GSG's `befriend` and `unfriend`; `sign` and `forward`; and GSN's group schemas, with a group message carried as an item.  `item(x)` in the state of `p` is a speech act `x` that `p` holds, signed by `p` if `p` is its author and otherwise by the agent who forwarded it to `p`, its author and every earlier forwarder signed inside it; `sent(x, q)` says that its holder forwarded `x` to `q`.  A message (GSN:1) is a forward of an item, and a group's leader delivers a member's message (GSN:5) by forwarding it, signed by the leader (Udi, 2026-10-18).
+The schemas are in `GSNP.glp`, in GSC's notation above each term: GSG's `establish`, `befriend` and `unfriend`; `sign` and `forward`; and GSN's group schemas, with a group message carried as an item.  `item(x)` in the state of `p` is a speech act `x` that `p` holds, signed by `p` if `p` is its author and otherwise by the agent who forwarded it to `p`, its author and every earlier forwarder signed inside it; `sent(x, q)` says that its holder forwarded `x` to `q`.  A message (GSN:1) is a forward of an item, and a group's leader delivers a member's message (GSN:5) by forwarding it, signed by the leader (Udi, 2026-10-18).  Every role but establish's requires `identity`, and the list below leaves it out.
 
 - Clause 1: `sign(p? ; x)` --- at `p`, +`item(x)`.
 - Clause 2, and GSN:1: `forward(p?, q ; x)` --- at `p`, `item(x)`, +`sent(x, q)`; at `q`, `friend(p)`, +`item(sgn(x, p))`.  The warranty describes no act.
