@@ -1,18 +1,21 @@
 %% ---------------------------------------------------------------------------
-%% contract.glp --- the social graph with accountable AI agents, GAI's contract
-%% (Coordination Appendix C; the clauses in contract.md beside this file and
-%% in GAI's paper, section "A Social Graph with Accountable AI Agents"), in the
+%% contract.glp --- the social network with accountable AI agents and digital
+%% provenance, GAI's contract (Coordination Appendix C; the clauses in
+%% contract.md beside this file and in GAI's paper, sections "A Social Graph
+%% with Accountable AI Agents" and "A Social Network with Digital
+%% Provenance"), in the
 %% term form programs/jurix reads (its README, "Writing a contract").  Parts A
 %% and B of the clauses are shared word for word with CSSN's contract; the
 %% schemas are GAI's.
 %%
-%% Ten schemas over ten predicates.  unfriend carries no ? and stands for one
+%% Twelve schemas over twelve predicates.  unfriend carries no ? and stands for one
 %% schema per role, guarded at that role, unfriend_p and unfriend_q, as CSSN
 %% writes it.  Every role requires identity, except the role of establish,
 %% which adds it and requires and forbids nothing (Jurix, def:unobstructed,
 %% clause 1), and the AI agent's role of enter, which forbids it and adds it.
 %% A role is its index in the schema, in the order of the schema's parameters; p and q are
-%% persons, r and s AI agents, every role a party role.  A role is
+%% persons, r and s AI agents, every role a party role; a and f are party
+%% variables, pvar, and x, an item, a speech-act variable, svar.  A role is
 %% rs(Guard, Add, Del, Keep, Forb), its +(i), -(i), =(i) and not(i).
 %%
 %%   establish(p?)      :  +identity
@@ -39,6 +42,10 @@
 %%                         identity, principal_of(r), +withdrawal
 %%   retire(p?, r)      :  identity, principal_of(r), +retired_of(r)
 %%                         identity, agent, principal(p), not retired, +retired
+%%   sign(p?; x)        :  identity, not retired, +item(x, p, p)
+%%   send(p?, q; x, a, f) :
+%%                         identity, not retired, item(x, a, f), +sent(x, q)
+%%                         identity, friend(p), +item(x, a, p)
 %%
 %% The ? on an AI agent's role (r in enter, agent_befriend and agents_befriend,
 %% s in agents_befriend) is taken by the AI agent's program, in enter as the
@@ -151,4 +158,18 @@ contract_named(gai,
                     [atom(identity, []), atom(principal_of, [role(2)])], []),
         rs(unguarded, [atom(retired, [])], [],
                       [atom(identity, []), atom(agent, []), atom(principal, [role(1)])],
-                      [atom(retired, [])])])]).
+                      [atom(retired, [])])]),
+%%   sign(p? ; x) :
+%%       at p:  identity, not retired, +item(x, p, p)
+    schema(sign,
+       [rs(guarded, [atom(item, [svar(x), role(1), role(1)])], [],
+                    [atom(identity, [])], [atom(retired, [])])]),
+%%   send(p?, q ; x, a, f) :
+%%       at p:  identity, item(x, a, f), not retired, +sent(x, q)
+%%       at q:  identity, friend(p), +item(x, a, p)
+    schema(send,
+       [rs(guarded, [atom(sent, [svar(x), role(2)])], [],
+                    [atom(identity, []), atom(item, [svar(x), pvar(a), pvar(f)])],
+                    [atom(retired, [])]),
+        rs(unguarded, [atom(item, [svar(x), pvar(a), role(1)])], [],
+                      [atom(identity, []), atom(friend, [role(1)])], [])])]).
