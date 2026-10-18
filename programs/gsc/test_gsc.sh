@@ -12,12 +12,12 @@
 # predicate reflexive (the paragraph after def:binding); then the compilation
 # of Section 5, against the two displays of Section 5.2; then the contract of
 # a grassroots federation, /Grassroots/GFWC sections/schemas.tex, read from
-# programs/federation/GFWC.glp, against the three conditions of Section 8
+# programs/federation/GFWC.glp, against the three conditions of Appendix D
 # of /Grassroots/GSC, and five contracts changing it in one place each, four
 # against those and one against rootedness, which is none of them; then small
 # contracts on the speech-act variables of traceable provenance and on
-# volition by connected component, in the language of Section 8; then the
-# compilation of Section 8, against its worked box; then the signed
+# volition by connected component, in the language of Appendix D; then the
+# compilation of Appendix D, against its worked box; then the signed
 # speech-act term of Sections 3.1 to 3.3, on the social graph with items and
 # on contracts refused for a signed term where def:schema forbids it; then
 # contracts with wards, Appendix F, on a fixture of children and parents, on
@@ -170,7 +170,7 @@ out=$(run "check_variant(sg_chain_cut, $SG, V).")
 check "cutting an edge of the path fails volition" \
       "V = not_grassroots([volition(chain, 1, 3)])" "$out"
 
-# Volition is one condition in Sections 3 and 8 (GSC 7652554): tri(p?, q, r?)
+# Volition is one condition in Section 3 and Appendix D (GSC 7652554): tri(p?, q, r?)
 # is guarded neither in all its roles nor connected, its role graph falling
 # into {1,2} and {3}, each holding a guarding role, so it meets def:volition
 # as it meets definition:volition as a cschema (sg_tri_cschema, below).
@@ -419,14 +419,14 @@ check "a schema the contract does not hold is reported" \
       "% no schema named" "$(printf '%s' "$out" | tr '\n' ' ')"
 
 
-# --- the contract of a grassroots federation (Section 8) -------------------
+# --- the contract of a grassroots federation (Appendix D) -------------------
 # GFWC's five schemas over seat and child, /Grassroots/GFWC
 # sections/schemas.tex, every role of them a party role or a seated role,
-# certified in its Section 3.1 by hand against the conditions of Section 8 of
+# certified in its Section 3.1 by hand against the conditions of Appendix D of
 # /Grassroots/GSC; the checker returns the same.
 
 out=$(run "check($FED, V)." "rooted_preds($FED, E).")
-check "the federation contract meets the conditions of Section 8" \
+check "the federation contract meets the conditions of Appendix D" \
       "V = conditions_met" "$out"
 check "seat is rooted" "E = [seat]" "$out"
 
@@ -495,7 +495,7 @@ check "a signed speech act required nowhere: item has traceable provenance" \
 check "and the item take requires joins its role graph" \
       "V = conditions_met" "$out"
 
-# The case of sg_svar_loose in the language of Section 8: the same speech act
+# The case of sg_svar_loose in the language of Appendix D: the same speech act
 # carried from an untraceable record.  The verdict names item and tagged as
 # untraceable, as sg_svar_loose's names its own, before the volition fault.
 out=$(run 'check_named(sv_loose, V).' 'traceable_of(sv_loose, E).')
@@ -518,22 +518,22 @@ check "a speech act carried from a name term of a required atom: cited keeps it"
 # is the path 1-2-3 and its seated role alone, each holding a guarding role,
 # and role 3 has no edge to one; relay_unguarded is relay with its seated role
 # unguarded.  Over the social graph, whose predicates keep in the language of
-# Section 8 the traceable provenance Section 3 gives them.
+# Appendix D the traceable provenance Section 3 gives them.
 out=$(run "check_variant(sg_relay, $SG, V)." "traceable_variant(sg_relay, $SG, E).")
 check_not "a guarding role in every connected component meets volition" \
       "volition(relay," "$out"
 check "and a component holding none fails it" \
       "V = conditions_failed([volition(relay_unguarded, 1, 4)])" "$out"
-check "the social graph keeps its traceable provenance in Section 8" \
+check "the social graph keeps its traceable provenance in Appendix D" \
       "E = [friend, item, sent, chained, noted]" "$out"
 
-# sg_tri with tri written as a cschema, in the language of Section 8: the
+# sg_tri with tri written as a cschema, in the language of Appendix D: the
 # same verdict as in Section 3, volition being one condition in both.
 out=$(run "check_variant(sg_tri_cschema, $SG, V).")
-check "tri as a cschema meets the conditions of Section 8, as it does in Section 3" \
+check "tri as a cschema meets the conditions of Appendix D, as it does in Section 3" \
       "V = conditions_met" "$out"
 
-# Rootedness is a notion of Section 8; a contract of Section 3 is not asked
+# Rootedness is a notion of Appendix D; a contract of Section 3 is not asked
 # about it, and keeps the verdict of def:syntactically-grassroots.
 out=$(run "rooted_preds($SG, E)." "check($SG, V).")
 check "a contract of Section 3 is not asked which predicates are rooted" \
@@ -542,7 +542,7 @@ check "and keeps the verdict of Section 3" \
       "V = syntactically_grassroots" "$out"
 
 # The compiled form of a schema with community roles is Definition Compilation
-# of Section 8, which the compiler prints for a contract that meets the
+# of Appendix D, which the compiler prints for a contract that meets the
 # conditions on the text and for no other.
 out=$(run "compile_contract(gfwc, $FED).")
 check "a contract with community roles is compiled" \
@@ -551,12 +551,12 @@ check_not "and not refused" "not compiled" "$out"
 check_not "no role of the federation is a constituent role" '\ast}' "$out"
 
 out=$(run "compile_variant(gf_novolition, $FED).")
-check "a contract that fails the conditions of Section 8 is not compiled" \
+check "a contract that fails the conditions of Appendix D is not compiled" \
       "% not compiled: gf_novolition" "$(printf '%s' "$out" | tr '\n' ' ')"
 check_not "and no display is printed for it" "begin{align" "$out"
 
-# --- the compilation of Section 8 (definition:compile) ---------------------
-# The worked box of Section 8, transcribed from
+# --- the compilation of Appendix D (definition:compile) ---------------------
+# The worked box of Appendix D, transcribed from
 # /Grassroots/GSC/sections/13-community-roles.tex, is the display for
 # federate: the one assignment over the extent of its seated role, adding both
 # atoms, the line on freshness and the guard.  Compared with the whitespace
@@ -573,15 +573,15 @@ IFS= read -r -d '' federate_tex <<'EOF'
 \end{align*}
 EOF
 federate_box=$(printf '%s' "$federate_tex" | squash)
-check_eq "federate compiles to the worked box of Section 8" \
+check_eq "federate compiles to the worked box of Appendix D" \
          "$federate_box" "$(compiled_in gfwc "$FED" federate)"
 
-# The five schemas of the contract, in the one form of Section 8.
+# The five schemas of the contract, in the one form of Appendix D.
 out=$(run "compile_contract(gfwc, $FED).")
 check_eq "the federation compiles to five displays" "5" \
          "$(printf '%s' "$out" | grep -c 'begin{align')"
 
-# form: a party role in the form of Section 8, over its extent, with a proviso
+# form: a party role in the form of Appendix D, over its extent, with a proviso
 # line for the seat it forbids, guarded by a part of it larger than the
 # threshold 0; no name term sigma.y, so no line on freshness.
 form=$(compiled_in gfwc "$FED" form)
@@ -642,7 +642,7 @@ check_eq "forward compiles with the signed term" \
 
 # An introduction through the signed term alone: each role of exchange adds
 # an atom naming the other only as the role of its signed term (Section 3.1;
-# Section 8, "names"), so it is an introductory act; with plain speech-act
+# Appendix D, "names"), so it is an introductory act; with plain speech-act
 # variables in place of the signed terms nothing names the other party.
 out=$(run 'check_named(sgn_intro, V).' 'traceable_of(sgn_intro, E).')
 check "an act naming the other party by a signed term is an introductory act" \

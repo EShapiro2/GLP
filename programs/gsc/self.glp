@@ -364,7 +364,7 @@ roles_at([bind(_, _)|S], V, R?) :- otherwise | roles_at(S?, V?, R).
 
 % args_name_role(As, J, R): the arguments As name role J -- it is among them
 % or is the role of a signed term among them (Section 3.1, what an atom
-% names in a schema; Section 8, "names").
+% names in a schema; Appendix D, "names").
 procedure arg_names_role(Arg?, Integer?, Ans).
 arg_names_role(role(I), J, yes) :- I? =:= J? | true.
 arg_names_role(sgn(_, I), J, yes) :- I? =:= J? | true.

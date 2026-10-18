@@ -1,7 +1,7 @@
 % ---------------------------------------------------------------------------
 % The conditions on the text of a contract with community roles.
 %
-% Section 8 of /Grassroots/GSC, sections/13-community-roles.tex, is the
+% Appendix D of /Grassroots/GSC, sections/13-community-roles.tex, is the
 % specification and no definition of it is restated here; each procedure names
 % the definition it decides.  The three conditions are traceable provenance of
 % the set of predicates occurring in the contract (definition:provenance),
@@ -426,7 +426,7 @@ traceable(C, E?) :- ground(C?) |
 % base of the other.  cv1 asks the definition's first disjunct, that the role
 % graph is connected; first_unguarded asks the second, that every connected
 % component of it holds a guarding role.  For a contract whose roles are all
-% party roles this is def:volition of Section 3 (Section 8, after its
+% party roles this is def:volition of Section 3 (Appendix D, after its
 % Definition Volition), and check.glp decides Section 3's volition with
 % volition_faults too.
 

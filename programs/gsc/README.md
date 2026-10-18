@@ -9,8 +9,7 @@ The specification is the paper — *Formal Grassroots Social Contracts*
 (`/Grassroots/GSC`, `main.tex`), Section 3 for a contract whose roles are all
 party roles, Appendix F, `sections/17-wards.tex`, for one with wards, and the
 appendix on community roles, `sections/13-community-roles.tex`, for one with
-community roles (Appendix D since the paper's restructuring of 2026-10-18;
-the code's comments still call it Section 8, its number until then).
+community roles (Appendix D since the paper's restructuring of 2026-10-18, Section 8 before).
 Nothing of any of them is restated here or in the code: every
 procedure names the definition it decides, and the definition is read in the
 paper.  A contract is syntactically grassroots
@@ -37,7 +36,7 @@ wards by the same definition, so the compiler runs the checker first and
 compiles nothing for a contract that fails either.
 
 A contract with community roles is decided by the three conditions on the
-text of Section 8, each of which it meets or fails: that the set of predicates
+text of Appendix D, each of which it meets or fails: that the set of predicates
 occurring in it has traceable provenance (`definition:provenance`), volition
 (`definition:volition`) and cohesion (`definition:cohesive`).  The first rests
 on the largest set of predicates having traceable provenance, which
@@ -46,7 +45,7 @@ text; `rooted_of` gives the predicates that are rooted.  Openness and closure
 are proved of a contract in the paper, are not conditions on the text, and are
 neither decided nor claimed here.  The
 compiled form of a schema of such a contract is Definition Compilation of
-Section 8 (`definition:compile`), and its worked box, the display for
+Appendix D (`definition:compile`), and its worked box, the display for
 `federate`, is the form printed.
 
 ## Running it
@@ -104,14 +103,14 @@ that the contract is not compiled and nothing else, and `check_named` gives
 the faults.
 
 A contract with community roles compiles to the lines of Definition
-Compilation of Section 8, one form for the whole contract, its party roles
+Compilation of Appendix D, one form for the whole contract, its party roles
 included: an assignment line per role and, where the role requires or forbids
 an atom, a proviso line, each over the agents `p` of the role's extent
 `ext_c(pi_i)`; `provided Theta` where the schema carries reach conditions;
 for every name term `sigma . y` of the schema, that it is an argument of no
 atom of the configuration; and the guard, the union of a part of each guarding
 role's extent larger than its threshold of it, which for a party role is `0`.
-`compile_schema(federation, federate).` prints the worked box of Section 8
+`compile_schema(federation, federate).` prints the worked box of Appendix D
 token for token, and `test_gsc.sh` compares them.  A name variable and a
 threshold are named by a Greek letter, `zeta`, `xi`, `theta`, and printed as
 that letter's command; one guarding role is written `G`, several `G_{i}` by
@@ -119,7 +118,7 @@ role index; the conditions of `Theta`, and the parts of a guard, are joined by
 "and" as the conjuncts of a proviso are.  The atoms of a set are written apart
 by a comma and a control space, `,\ `, as the worked box writes the two atoms
 `federate` adds; Section 5.2 writes no set of two, and a display in its form
-keeps the comma alone.  A contract that fails the conditions of Section 8 is
+keeps the comma alone.  A contract that fails the conditions of Appendix D is
 not compiled, as one that is not syntactically grassroots is not.
 
 Printing reaches the person, so the module's certificate is refused on load
@@ -166,7 +165,7 @@ adds `seat(eta)`, failing cohesion alone.  `sv_signed`, `sv_loose`,
 speech-act variables of `definition:provenance`, `sg_relay` is the social
 graph with two schemas on volition by connected component, and
 `sg_tri_cschema` is `sg_tri` with `tri` written as a cschema, all in the
-language of Section 8.  `sg_items` is the social graph with items of Section
+language of Appendix D.  `sg_items` is the social graph with items of Section
 3.3 --- `item` of arity one, `forward` adding `item(sgn(x, Alice))` at Bob ---
 GSG's contract, the checker's fixture until GSG commits it to its file;
 `sgn_intro` is an exchange whose two roles name each other only as the role
@@ -248,7 +247,7 @@ naming the role and the added atom, in the order of the three conditions.
 `untraceable` names the predicates of the contract outside the largest set
 having traceable provenance, as for a contract of Section 3.  A `volition`
 fault there is the same as for a contract of Section 3, volition being one
-condition in Sections 3 and 8, and one procedure, `community.glp`'s, decides
+condition in Section 3 and Appendix D, and one procedure, `community.glp`'s, decides
 it for both.
 
 A contract that declares a predicate reflexive and has a schema adding or
@@ -349,10 +348,10 @@ contract that fails either as malformed.
 | `self.glp` | the representation of a contract, and the substitution, matching and transaction machinery |
 | `unobstructed.glp` | `def:introduction` and `def:unobstructed` |
 | `prov.glp` | `def:grounded`, as a greatest fixpoint |
-| `community.glp` | the three conditions of Section 8, and the rooted predicates; its volition is `def:volition` of Section 3 too |
+| `community.glp` | the three conditions of Appendix D, and the rooted predicates; its volition is `def:volition` of Section 3 too |
 | `wards.glp` | `def:guardianship`, `def:unobstructed-marks`, `def:relay` and `def:introduction-wards`, as a search over the marks and the predicates of arity one |
-| `check.glp` | `def:syntactically-grassroots`, the two halves together, Appendix F when its first conjunct fails, and the conditions of Section 8 for a contract with community roles; the refusal of a malformed contract, for a reflexive predicate or a signed term |
-| `compile.glp` | `def:compile`, printed as the LaTeX of Section 5.2, and `definition:compile`, printed as the worked box of Section 8 |
+| `check.glp` | `def:syntactically-grassroots`, the two halves together, Appendix F when its first conjunct fails, and the conditions of Appendix D for a contract with community roles; the refusal of a malformed contract, for a reflexive predicate or a signed term |
+| `compile.glp` | `def:compile`, printed as the LaTeX of Section 5.2, and `definition:compile`, printed as the worked box of Appendix D |
 | `contracts.glp` | the checker's fixtures: contracts that stand alone, by name, and variants of a contract, by name and the contract's term |
 
 ## Why it terminates

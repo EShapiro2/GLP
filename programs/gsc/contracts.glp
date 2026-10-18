@@ -9,7 +9,7 @@
 % Appendix C): the social graph's is programs/gsc/GSN.glp
 % (GSC, Section 3.3), the currency's programs/currencies/coins/GC.glp
 % (Section 3.4), the child-safe social network's programs/cssn/CSSN.glp
-% and the federation's programs/federation/GFWC.glp (Section 8).  Each
+% and the federation's programs/federation/GFWC.glp (Appendix D).  Each
 % prints its term by contract_named/2 in a REPL session on the file, and
 % test_gsc.sh passes the term to check/2, traceable_preds/2,
 % rooted_preds/2, compile_contract/2 and compile_schema_in/3.  A fixture that
@@ -96,13 +96,13 @@ sg_chain_cut(S, C?) :-
                         [atom(friend, [role(4)])], []),
           rs(unguarded, [atom(chained, [role(3)])], [], [], [])])], C).
 
-% --- volition by connected component, in Section 3 as in Section 8 ---------
+% --- volition by connected component, in Section 3 as in Appendix D ---------
 % tri(p?, q, r?) :  +chained(q)    friend(p), +chained(p)    +chained(p)
 % q requires friend(p), which joins roles 1 and 2, and nothing joins role 3,
 % so the role graph falls into {1,2} and {3}, each holding a guarding role:
 % tri is neither guarded in all its roles nor connected, and meets
 % def:volition.  sg_tri_cschema is the same contract with tri written as a
-% cschema, in the language of Section 8, where it meets definition:volition.
+% cschema, in the language of Appendix D, where it meets definition:volition.
 procedure tri_roles(RoleSpecs).
 tri_roles([rs(guarded,   [atom(chained, [role(2)])], [], [], []),
            rs(unguarded, [atom(chained, [role(1)])], [],
@@ -543,8 +543,8 @@ gf_novolition([F, D | _],
               [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], [],
               [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])])])]).
 
-% --- the speech-act variables of definition:provenance (Section 8) ---------
-% Four small contracts of party roles, put in the language of Section 8 by a
+% --- the speech-act variables of definition:provenance (Appendix D) ---------
+% Four small contracts of party roles, put in the language of Appendix D by a
 % cschema with no reach conditions.  The first clause of definition:provenance
 % asks after the arguments of an added atom outside Y, the second after every
 % speech-act variable that is an argument of it or occurs in a name term among
@@ -568,7 +568,7 @@ sv_signed(C?) :-
 
 % --- negative: the same speech act carried from an untraceable record ------
 % note(p?; x, u) : +tagged(x, u)      tag(p?; x, u) : tagged(x, u), +item(x, p)
-% The case of sg_svar_loose, in the language of Section 8.  u is named by no
+% The case of sg_svar_loose, in the language of Appendix D.  u is named by no
 % atom note requires, so tagged loses traceable provenance; the x of the item
 % tag adds occurs in tagged(x, u), which tag requires, and in no required atom
 % of traceable provenance, so the second clause drops item, and take loses the
@@ -610,7 +610,7 @@ sv_in_name_carried([cschema(found, [],
 % --- volition by connected component (definition:volition) ----------------
 % relay(p?, q, r, zeta^seat ?theta) :
 %     friend(q), +chained(q)    friend(r), +chained(r)    +chained(p)    +noted(zeta)
-% Over the social graph, put in the language of Section 8 by the seated role.
+% Over the social graph, put in the language of Appendix D by the seated role.
 % relay's role graph falls into the path p-q-r and the assembly of zeta, each
 % holding a guarding role, and r has no edge to a guarding role: relay meets
 % volition.  relay_unguarded is relay with the assembly unguarded, so that
@@ -666,7 +666,7 @@ sg_items([schema(befriend,
 % --- an introduction through the signed term alone -------------------------
 % exchange(Alice?, Bob?; x, y) :  item(x), +got(sgn(y, Bob))    item(y), +got(sgn(x, Alice))
 % over sign.  Each role adds an atom naming the other only as the role of its
-% signed term (Section 3.1, what an atom names; Section 8, "names"), so
+% signed term (Section 3.1, what an atom names; Appendix D, "names"), so
 % exchange is an introductory act (def:introduction); it is unobstructed, the
 % item each role requires being added by sign, of arity one, guarded,
 % requiring and forbidding nothing (clause 1 of def:unobstructed); got has

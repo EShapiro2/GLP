@@ -9,12 +9,12 @@
 % conjuncts are reported together, in that order.  The second conjunct is
 % decided from the largest set of predicates having traceable provenance,
 % which traceable_of gives: the fault names the predicates of the contract
-% outside it.  Volition is one condition in Sections 3 and 8, def:volition
+% outside it.  Volition is one condition in Section 3 and Appendix D, def:volition
 % being definition:volition for a contract whose roles are all party roles
-% (Section 8, after its Definition Volition), so the third conjunct is decided
-% by community.glp's volition_faults, as Section 8's volition is.
+% (Appendix D, after its Definition Volition), so the third conjunct is decided
+% by community.glp's volition_faults, as Appendix D's volition is.
 %
-% A contract with community roles is a contract of Section 8, and is decided
+% A contract with community roles is a contract of Appendix D, and is decided
 % by the three conditions on the text stated there: traceable provenance of
 % the set of predicates occurring in it (definition:provenance), volition
 % (definition:volition) and cohesion (definition:cohesive), each of which it
@@ -281,7 +281,7 @@ sgn_schemas([S|Ss], A, R?) :- ground(S?), ground(Ss?), ground(A?) |
     faults_app(F1?, F2?, R).
 
 % A malformed contract is refused; a contract that is not is decided by
-% Section 3 or by Section 8, according to its roles.
+% Section 3 or by Appendix D, according to its roles.
 procedure check_formed(Faults?, Ans?, Contract?, Preds?, Verdict).
 check_formed([], A, C, Rf, V?) :- ground(A?), ground(C?), ground(Rf?) |
     check1(A?, C?, Rf?, V).
@@ -378,7 +378,7 @@ guardianships(D, M, G?) :- ground(D?), ground(M?) |
     wards # guardianships_for(C?, M?, G).
 
 % The predicates that are rooted (definition:rooted).  Rootedness is a notion
-% of Section 8; a contract of Section 3 is not asked about it.
+% of Appendix D; a contract of Section 3 is not asked about it.
 procedure rooted1(Ans?, Contract?, Preds).
 rooted1(no, _, []).
 rooted1(yes, C, E?) :- ground(C?) | community # rooted(C?, E).
