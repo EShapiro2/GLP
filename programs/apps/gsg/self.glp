@@ -7,8 +7,8 @@
 %% ---------------------------------------------------------------------------
 
 Peer     ::= Key.
-Class    ::= befriend(Peer, Peer) ; unfriend(Peer, Peer).
-Proposal ::= befriend(Peer, Peer) ; unfriend(Peer, Peer).
+Class    ::= establish(Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer).
+Proposal ::= establish(Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer).
 Request  ::= propose(Proposal) ; known(Peer).
 YesNo    ::= yes ; no.
 Decision ::= commit ; abort.

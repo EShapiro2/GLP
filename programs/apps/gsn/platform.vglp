@@ -12,6 +12,8 @@
 %% ===========================================================================
 
 Class ::=
+establish(Peer)
+;
 befriend(Peer, Peer)
 ;
 unfriend(Peer, Peer)
@@ -34,6 +36,8 @@ deliver(Peer, Peer, Speech, Speech)
 .
 
 Proposal ::=
+establish(Peer)
+;
 befriend(Peer, Peer)
 ;
 unfriend(Peer, Peer)
@@ -56,7 +60,7 @@ post(Peer, Peer, Speech, Speech)
 Request ::= propose(Proposal) ; known(Peer).
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(befriend, [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]), schema(unfriend, [rs(guarded, [], [atom(friend, [role(2)])], [], []), rs(unguarded, [], [atom(friend, [role(1)])], [], [])]), schema(message, [rs(guarded, [atom(sent, [svar(x), role(2)])], [], [], []), rs(unguarded, [atom(received, [svar(x), role(1)])], [], [atom(friend, [role(1)])], [])]), schema(create, [rs(guarded, [atom(member, [role(1), svar(n)]), atom(listed, [role(1), svar(n)])], [], [], [atom(member, [role(1), svar(n)]), atom(closed, [svar(n)])])]), schema(join, [rs(guarded, [atom(listed, [role(2), svar(n)])], [], [atom(member, [role(1), svar(n)]), atom(friend, [role(2)])], []), rs(guarded, [atom(member, [role(1), svar(n)])], [], [atom(friend, [role(1)])], [atom(member, [role(1), svar(n)])])]), schema(leave, [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [], []), rs(guarded, [], [atom(member, [role(1), svar(n)])], [], [])]), schema(close, [rs(guarded, [atom(closed, [svar(n)])], [atom(member, [role(1), svar(n)]), atom(listed, [role(1), svar(n)])], [], [])]), schema(post_own, [rs(guarded, [atom(posted, [svar(x), svar(n)])], [], [atom(member, [role(1), svar(n)])], [atom(posted, [svar(x), svar(n)])])]), schema(post, [rs(guarded, [atom(sent, [svar(x), role(2)])], [], [atom(member, [role(2), svar(n)])], []), rs(unguarded, [atom(posted, [svar(x), svar(n)])], [], [atom(member, [role(2), svar(n)]), atom(listed, [role(1), svar(n)])], [atom(posted, [svar(x), svar(n)])])]), schema(deliver, [rs(unguarded, [atom(delivered, [svar(x), role(2), svar(n)])], [], [atom(member, [role(1), svar(n)]), atom(posted, [svar(x), svar(n)]), atom(listed, [role(2), svar(n)])], [atom(delivered, [svar(x), role(2), svar(n)])]), rs(unguarded, [atom(received_in, [svar(x), role(1), svar(n)])], [], [atom(member, [role(1), svar(n)])], [])])])
+contract_schemas([schema(establish, [rs(guarded, [atom(identity, [])], [], [], [])]), schema(befriend, [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, [])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(friend, [role(1)])])]), schema(unfriend, [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(message, [rs(guarded, [atom(sent, [svar(x), role(2)])], [], [atom(identity, [])], []), rs(unguarded, [atom(received, [svar(x), role(1)])], [], [atom(identity, []), atom(friend, [role(1)])], [])]), schema(create, [rs(guarded, [atom(member, [role(1), svar(n)]), atom(listed, [role(1), svar(n)])], [], [atom(identity, [])], [atom(member, [role(1), svar(n)]), atom(closed, [svar(n)])])]), schema(join, [rs(guarded, [atom(listed, [role(2), svar(n)])], [], [atom(identity, []), atom(member, [role(1), svar(n)]), atom(friend, [role(2)])], []), rs(guarded, [atom(member, [role(1), svar(n)])], [], [atom(identity, []), atom(friend, [role(1)])], [atom(member, [role(1), svar(n)])])]), schema(leave, [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], []), rs(guarded, [], [atom(member, [role(1), svar(n)])], [atom(identity, [])], [])]), schema(close, [rs(guarded, [atom(closed, [svar(n)])], [atom(member, [role(1), svar(n)]), atom(listed, [role(1), svar(n)])], [atom(identity, [])], [])]), schema(post_own, [rs(guarded, [atom(posted, [svar(x), svar(n)])], [], [atom(identity, []), atom(member, [role(1), svar(n)])], [atom(posted, [svar(x), svar(n)])])]), schema(post, [rs(guarded, [atom(sent, [svar(x), role(2)])], [], [atom(identity, []), atom(member, [role(2), svar(n)])], []), rs(unguarded, [atom(posted, [svar(x), svar(n)])], [], [atom(identity, []), atom(member, [role(2), svar(n)]), atom(listed, [role(1), svar(n)])], [atom(posted, [svar(x), svar(n)])])]), schema(deliver, [rs(unguarded, [atom(delivered, [svar(x), role(2), svar(n)])], [], [atom(identity, []), atom(member, [role(1), svar(n)]), atom(posted, [svar(x), svar(n)]), atom(listed, [role(2), svar(n)])], [atom(delivered, [svar(x), role(2), svar(n)])]), rs(unguarded, [atom(received_in, [svar(x), role(1), svar(n)])], [], [atom(identity, []), atom(member, [role(1), svar(n)])], [])])])
 .
 
 procedure reflexive_preds(Preds).
@@ -68,6 +72,8 @@ introduction_preds([])
 .
 
 procedure binding_of(Class?, Constant, Binding).
+binding_of(establish(V1), establish, [b(role(1), p(V1?))])
+.
 binding_of(befriend(V1, V2), befriend, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
 binding_of(unfriend(V1, V2), unfriend, [b(role(1), p(V1?)), b(role(2), p(V2?))])
@@ -90,6 +96,14 @@ binding_of(deliver(V1, V2, V3, V4), deliver, [b(role(1), p(V1?)), b(role(2), p(V
 .
 
 procedure class_of(Constant?, Binding?, Peer?, Class).
+class_of(establish, B, D, establish(V1?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+.
 class_of(befriend, B, D, befriend(V1?, V2?))
 :-
 ground(B?)

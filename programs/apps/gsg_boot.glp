@@ -2,15 +2,17 @@
 %%   :artefact programs/apps/gsg programs/social/graph/core
 %%   :boot programs/apps/gsg_boot.glp programs/social/graph/core
 %%
-%% Each person trusts the compiler's key, reads the certified artefact gsg.glpw from graph/core with load_file/2 and installs it, with one end of a person channel; alice connects to bob, they befriend in the super-app's social graph across the isolates, alice invites bob to the mini-app, bob consents, and the handshake opens a root channel between their two executions, each activated by run/3 with its grants.  Over that conversation the mini-app runs GSG's contract, compiled down the cascade: each person asks to know the other, alice offers bob friendship, bob is asked and answers yes, and then bob ends the friendship.  The other end of each person channel is the mini-app's own scripted person (programs/apps/gsg/person.glp), activated from the module value under its role, as the super-app's plays activate a mini-app's person (superapp_plays.glp, miniapp_person_run/5, written again here); its screen goes to the person, one line each, and so does what the super-app told the person of the friendship in its own social graph, sg(...). Expected, each person's lines in order:
-%%   [alice] sg(connected(bob)), menu([]), discover(bob), menu([bob]),
-%%     propose(attempt(alice, 1, 1, befriend(alice, bob))), tally(...),
-%%     commit(...), start(attempt(bob, 2, 2, unfriend(bob, alice))),
+%% Each person trusts the compiler's key, reads the certified artefact gsg.glpw from graph/core with load_file/2 and installs it, with one end of a person channel; alice connects to bob, they befriend in the super-app's social graph across the isolates, alice invites bob to the mini-app, bob consents, and the handshake opens a root channel between their two executions, each activated by run/3 with its grants.  Over that conversation the mini-app runs GSG's contract, compiled down the cascade: each person establishes their identity (GSG:1) and asks to know the other, alice offers bob friendship, bob is asked and answers yes, and then bob ends the friendship.  The other end of each person channel is the mini-app's own scripted person (programs/apps/gsg/person.glp), activated from the module value under its role, as the super-app's plays activate a mini-app's person (superapp_plays.glp, miniapp_person_run/5, written again here); its screen goes to the person, one line each, and so does what the super-app told the person of the friendship in its own social graph, sg(...). Expected, each person's lines in order:
+%%   [alice] sg(connected(bob)), menu([]),
+%%     propose(attempt(alice, 1, 1, establish(alice))), discover(bob),
+%%     menu([bob]), propose(attempt(alice, 2, 2, befriend(alice, bob))),
+%%     tally(...), commit(...), start(attempt(bob, 3, 3, unfriend(bob, alice))),
 %%     outcome(...);
-%%   [bob] sg(befriend(alice)), sg(connected(alice)), discover(alice),
-%%     start(attempt(alice, 1, 1, befriend(alice, bob))),
+%%   [bob] sg(befriend(alice)), sg(connected(alice)),
+%%     propose(attempt(bob, 1, 1, establish(bob))), discover(alice),
+%%     start(attempt(alice, 2, 2, befriend(alice, bob))),
 %%     gave(befriend(alice, bob), yes), answer(...), vote(...), outcome(...),
-%%     propose(attempt(bob, 2, 2, unfriend(bob, alice))), tally(...),
+%%     propose(attempt(bob, 3, 3, unfriend(bob, alice))), tally(...),
 %%     commit(...).
 %%
 %% The boot settles: the boot harness reduces each event until the program is quiescent, as the device runtime does (IGLP, Implementation Notes: "On each event the agent binds what the event delivers, reduces until quiescent"), and after each event the platform's agent takes its own transactions until none holds and then waits for the next (vGLP, Section 5.4, "Triggers").  Section APPS of the suite runs this file and holds each person's lines, in order.

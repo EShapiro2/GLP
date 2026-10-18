@@ -6,11 +6,11 @@ The app of GSG, the grassroots social graph, as a mini-app of the Grassroots Sup
 
 GSG is GSC's contract (Coordination Appendix C; GSC owns every contract that other contracts extend); its clauses are `programs/gsc/GSG.md`, as GAI's paper has them, and its act schemas `programs/gsc/GSG.glp`:
 
-1. *Identity.*  A person chooses their own key pair, identifies themselves with the public key, signs their acts with the private key, and is accountable for every act signed with it.
+1. *Identity.*  A person may act to establish their identity by choosing their own key pair.  They identify themselves with the public key, sign their acts with the private key, and are accountable for every act signed with it.
 2. *Friendship.*  Two persons who are not friends may jointly decide to become friends by an act of both, after which they are friends.
 3. *Ending a friendship.*  A person may end their friendship with another person by their own act, and then the friendship ends.
 
-GSG:1 describes no act, and GSG.glp has no schema for it.  In the app a person's identity is the key pair the super-app holds, which the super-app hands the mini-app as the `Key` of its entry `miniapp/4`, and which the platform's agent takes as its `Peer`: every act the agent takes names its person by that key.  GSG:2 is the schema `befriend`, guarded by both, and GSG:3 the schema `unfriend`, guarded by either friend.
+GSG:1 is the schema `establish`, guarded by the person, which adds `identity` at them, and every role of the other two schemas requires `identity`.  In the app the key pair is the one the super-app holds, which the super-app hands the mini-app as the `Key` of its entry `miniapp/4`, and which the platform's agent takes as its `Peer`: every act the agent takes names its person by that key.  The person establishes their identity by their first request, `propose(establish(P))`, `P` their key, a class of one participant, taken at once.  GSG:2 is the schema `befriend`, guarded by both, and GSG:3 the schema `unfriend`, guarded by either friend.
 
 ## The cascade
 
@@ -48,11 +48,11 @@ From `glp_runtime/`:
 printf '../programs/apps/gsg\nplay_held(In, ToBob, ToCarol).\n:limit 600000\nplay_friends(A, B).\n:quit\n' | bin/glpc
 ```
 
-`play_friends` runs two executions over one conversation, the play handing each its end of the root channel as the social graph does.  Alice asks to know Bob and offers him friendship; Bob is asked and answers yes; then Bob ends the friendship, and nobody is asked.  The run then suspends: each agent has taken its own transactions until none holds, and no trigger is left.  The persons' screens, held exactly by the suite's Section APPS:
+`play_friends` runs two executions over one conversation, the play handing each its end of the root channel as the social graph does.  Each person establishes their identity; Alice asks to know Bob and offers him friendship; Bob is asked and answers yes; then Bob ends the friendship, and nobody is asked.  The run then suspends: each agent has taken its own transactions until none holds, and no trigger is left.  The persons' screens, held exactly by the suite's Section APPS:
 
 ```
-A = [menu([]), discover(bob), menu([bob]), propose(attempt(alice, 1, 1, befriend(alice, bob))), tally(attempt(alice, 1, 1, befriend(alice, bob))), commit(attempt(alice, 1, 1, befriend(alice, bob))), start(attempt(bob, 2, 2, unfriend(bob, alice))), outcome(attempt(bob, 2, 2, unfriend(bob, alice))) | _]
-B = [discover(alice), start(attempt(alice, 1, 1, befriend(alice, bob))), gave(befriend(alice, bob), yes), answer(attempt(alice, 1, 1, befriend(alice, bob))), vote(attempt(alice, 1, 1, befriend(alice, bob))), outcome(attempt(alice, 1, 1, befriend(alice, bob))), propose(attempt(bob, 2, 2, unfriend(bob, alice))), tally(attempt(bob, 2, 2, unfriend(bob, alice))), commit(attempt(bob, 2, 2, unfriend(bob, alice))) | _]
+A = [menu([]), propose(attempt(alice, 1, 1, establish(alice))), discover(bob), menu([bob]), propose(attempt(alice, 2, 2, befriend(alice, bob))), tally(attempt(alice, 2, 2, befriend(alice, bob))), commit(attempt(alice, 2, 2, befriend(alice, bob))), start(attempt(bob, 3, 3, unfriend(bob, alice))), outcome(attempt(bob, 3, 3, unfriend(bob, alice))) | _]
+B = [propose(attempt(bob, 1, 1, establish(bob))), discover(alice), start(attempt(alice, 2, 2, befriend(alice, bob))), gave(befriend(alice, bob), yes), answer(attempt(alice, 2, 2, befriend(alice, bob))), vote(attempt(alice, 2, 2, befriend(alice, bob))), outcome(attempt(alice, 2, 2, befriend(alice, bob))), propose(attempt(bob, 3, 3, unfriend(bob, alice))), tally(attempt(bob, 3, 3, unfriend(bob, alice))), commit(attempt(bob, 3, 3, unfriend(bob, alice))) | _]
 ```
 
 `play_held` runs the router on a hello sent to Bob and one to Carol before any conversation is open, then Bob's conversation, a start to Bob, and Carol's conversation: each hello goes on its recipient's conversation once it opens.
@@ -66,10 +66,11 @@ G=$(cd .. && pwd); printf ':artefact %s/programs/apps/gsg %s/programs/social/gra
 Two isolates, each the super-app of `programs/social/graph/core` with its own key pair.  Each person trusts the compiler's key and installs `gsg.glpw`; Alice connects to Bob and they become friends in the super-app's social graph; Alice invites Bob to the mini-app and Bob accepts; the handshake opens their conversation; then the steps of `play_friends` run over it.  The boot harness reduces each event until the program is quiescent, as the device runtime does (IGLP, Implementation Notes: "On each event the agent binds what the event delivers, reduces until quiescent ... there is no clock and no polling"), and after each event the platform's agent takes its own transactions until none holds and then waits for the next (vGLP, Section 5.4, "Triggers"), so each event reduces to quiescence and the boot settles.  The two persons' lines interleave as the isolates run; each person's, in order, held exactly by the suite's Section APPS:
 
 ```
-[alice] sg(connected(bob)), menu([]), discover(bob), menu([bob]), propose(attempt(alice, 1, 1, befriend(alice, bob))), tally(...), commit(...),
-        start(attempt(bob, 2, 2, unfriend(bob, alice))), outcome(...)
-[bob]   sg(befriend(alice)), sg(connected(alice)), discover(alice), start(attempt(alice, 1, 1, befriend(alice, bob))), gave(befriend(alice, bob), yes),
-        answer(...), vote(...), outcome(...), propose(attempt(bob, 2, 2, unfriend(bob, alice))), tally(...), commit(...)
+[alice] sg(connected(bob)), menu([]), propose(attempt(alice, 1, 1, establish(alice))), discover(bob), menu([bob]),
+        propose(attempt(alice, 2, 2, befriend(alice, bob))), tally(...), commit(...), start(attempt(bob, 3, 3, unfriend(bob, alice))), outcome(...)
+[bob]   sg(befriend(alice)), sg(connected(alice)), propose(attempt(bob, 1, 1, establish(bob))), discover(alice),
+        start(attempt(alice, 2, 2, befriend(alice, bob))), gave(befriend(alice, bob), yes), answer(...), vote(...), outcome(...),
+        propose(attempt(bob, 3, 3, unfriend(bob, alice))), tally(...), commit(...)
 ```
 
 A `(...)` names the attempt named in full before it; the suite holds the lines whole.
@@ -88,13 +89,13 @@ The super-app, first: Alice and Bob each install the app; Alice connects to Bob,
 
 Then the app:
 
-1. **Alice's request question.**  A form headed `menu`, with two fields.  The first, `List(Key)`, shows the persons her agent knows: none.  The second, `Request`, is a menu of two forms: `propose`, whose one field `Proposal`, the classes a person proposes, is a menu of `befriend(Peer, Peer)` and `unfriend(Peer, Peer)`, each with two peer fields; and `known`, with one peer field, `Peer`.  She chooses `known`, types `bob` and submits.  Her next request question is drawn at once, showing none: it is asked when the agent reads her request, before Bob is known.
-2. **Bob's request question**, the same form.  He chooses `known`, types `alice` and submits.
+1. **Alice's request question.**  A form headed `menu`, with two fields.  The first, `List(Key)`, shows the persons her agent knows: none.  The second, `Request`, is a menu of two forms: `propose`, whose one field `Proposal`, the classes a person proposes, is a menu of `establish(Peer)`, with one peer field, and `befriend(Peer, Peer)` and `unfriend(Peer, Peer)`, each with two peer fields; and `known`, with one peer field, `Peer`.  She chooses `propose`, then `establish`, types `alice` and submits; her thread shows `propose(attempt(alice, 1, 1, establish(alice)))`, the attempt's initiator, its number, its rank and its class, taken at once, Alice its one participant.  On her next request question, still showing none, she chooses `known`, types `bob` and submits.  Her next request question is drawn at once, showing none: it is asked when the agent reads her request, before Bob is known.
+2. **Bob's request question**, the same form.  He establishes his identity likewise, his thread showing `propose(attempt(bob, 1, 1, establish(bob)))`; then he chooses `known`, types `alice` and submits.
 3. **The threads.**  Each agent sends the other a hello on their conversation; once each has sent and received one, Alice's thread shows `discover(bob)` and Bob's `discover(alice)`.
-4. **Alice offers friendship.**  On her open request question she chooses `propose`, then `befriend`, and types `alice` and `bob`.  Her next request question shows `bob`.  Her thread shows `propose(attempt(alice, 1, 1, befriend(alice, bob)))`: the attempt's initiator, its number, its rank and its class.
-5. **Bob is asked.**  His thread shows `start(attempt(alice, 1, 1, befriend(alice, bob)))`, and his approval question is drawn: a form headed `approval`, its field `Attempt` shown and not edited --- `attempt`, `alice`, `1`, `1`, `befriend(alice, bob)` --- and a row of two buttons, `yes` and `no`.  He taps `yes`; the question is withdrawn, and his thread shows `answer(...)` and then `vote(...)`.
+4. **Alice offers friendship.**  On her open request question she chooses `propose`, then `befriend`, and types `alice` and `bob`.  Her next request question shows `bob`.  Her thread shows `propose(attempt(alice, 2, 2, befriend(alice, bob)))`, her second attempt.
+5. **Bob is asked.**  His thread shows `start(attempt(alice, 2, 2, befriend(alice, bob)))`, and his approval question is drawn: a form headed `approval`, its field `Attempt` shown and not edited --- `attempt`, `alice`, `2`, `2`, `befriend(alice, bob)` --- and a row of two buttons, `yes` and `no`.  He taps `yes`; the question is withdrawn, and his thread shows `answer(...)` and then `vote(...)`.
 6. **They are friends.**  Alice's thread shows `tally(...)` and `commit(...)`; Bob's shows `outcome(...)`.
-7. **Bob ends the friendship.**  On his request question he chooses `propose`, then `unfriend`, and types `bob` and `alice`.  His thread shows `propose(attempt(bob, 2, 2, unfriend(bob, alice)))`, `tally(...)` and `commit(...)`.  Alice is not asked: her thread shows `start(attempt(bob, 2, 2, unfriend(bob, alice)))` and `outcome(...)`.
+7. **Bob ends the friendship.**  On his request question he chooses `propose`, then `unfriend`, and types `bob` and `alice`.  His thread shows `propose(attempt(bob, 3, 3, unfriend(bob, alice)))`, `tally(...)` and `commit(...)`.  Alice is not asked: her thread shows `start(attempt(bob, 3, 3, unfriend(bob, alice)))` and `outcome(...)`.
 
 Had Bob tapped `no` in step 5, the else-branch of his answer is taken: his thread shows `answer(...)`, `vote(...)` and `outcome(...)`, his vote no, and Alice's shows `tally(...)` and no commit, the attempt aborted at both (vGLP's `play_refused`, `programs/vglp/cva/social_graph`, shows the same on GSN's platform).
 
