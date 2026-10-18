@@ -1,23 +1,26 @@
 %% ---------------------------------------------------------------------------
-%% GSN.glp --- the grassroots social network's contract, GSG's (a
-%% contract is its platform's paper's; Coordination Appendix C), as GSC
-%% prints it (Section 3.3, the table there, which Section 7 certifies by
-%% hand), in the term form programs/gsc reads (its README, "Writing a
-%% contract").  The one copy: GSC's checker (programs/gsc/test_gsc.sh)
-%% and vGLP's compiler to the canonical CVA platform
-%% (programs/vglp/cva/compile.sh) read it from here, contract_named/2
-%% printing the term.  Each schema is in GSC's notation above its term,
-%% at each role in turn: what the role requires, what it forbids (not), what
-%% it adds (+) and what it deletes (-); a role marked ? is a guarding role.
+%% GSN.glp --- the grassroots social network's contract, GSC's (Coordination
+%% Appendix C; Udi, 2026-10-18): GSG's two schemas with authorship and
+%% forwarding, the contract of GSC's Section 2.1, as GSC prints it (Section
+%% 3.3, the table there, which Section 7.1 certifies by hand), in the term
+%% form programs/gsc reads (its README, "Writing a contract").  The clauses
+%% are in GSN.md beside this file.  The one copy: GSC's checker
+%% (programs/gsc/test_gsc.sh) and vGLP's compiler to the canonical CVA
+%% platform (programs/vglp/cva/compile.sh) read it from here, contract_named/2
+%% printing the term.  Each schema is in GSC's notation above its term, at
+%% each role in turn: what the role requires, what it forbids (not), what it
+%% adds (+) and what it deletes (-); a role marked ? is a guarding role.
 %%
 %% A role is rs(Guard, Add, Del, Keep, Forb), its +(i), -(i), =(i) and not(i),
-%% and is named by its index, role(1) the schema's first role; a and f are
-%% party variables, pvar, and x a speech-act variable, svar.
+%% and is named by its index, role(1) the schema's first role; x is a
+%% speech-act variable, svar, and sgn(x, 1) the signed term sgn(x, p), the
+%% speech act x signed by the party in role 1.
 %% ---------------------------------------------------------------------------
 
 NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
             ; ext(NameTerm, Constant).
-Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm).
+Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
+            ; sgn(Constant, Integer).
 Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args).
 Atoms     ::= [] ; [Atom | Atoms].
@@ -49,14 +52,14 @@ contract_named(gsn,
        [rs(guarded,   [], [atom(friend, [role(2)])], [], []),
         rs(unguarded, [], [atom(friend, [role(1)])], [], [])]),
 %%   sign(p? ; x) :
-%%       at p:  +item(x, p, p)
+%%       at p:  +item(x)
     schema(sign,
-       [rs(guarded, [atom(item, [svar(x), role(1), role(1)])], [], [], [])]),
-%%   forward(p?, q ; x, a, f) :
-%%       at p:  item(x, a, f), +sent(x, q)
-%%       at q:  friend(p), +item(x, a, p)
+       [rs(guarded, [atom(item, [svar(x)])], [], [], [])]),
+%%   forward(p?, q ; x) :
+%%       at p:  item(x), +sent(x, q)
+%%       at q:  friend(p), +item(sgn(x, p))
     schema(forward,
        [rs(guarded,   [atom(sent, [svar(x), role(2)])], [],
-                      [atom(item, [svar(x), pvar(a), pvar(f)])], []),
-        rs(unguarded, [atom(item, [svar(x), pvar(a), role(1)])], [],
+                      [atom(item, [svar(x)])], []),
+        rs(unguarded, [atom(item, [sgn(x, 1)])], [],
                       [atom(friend, [role(1)])], [])])]).
