@@ -4,14 +4,14 @@ GSG's contract, GSC's: GSC owns every contract that other contracts extend (Udi,
 
 A *person* is a legally culpable entity: a natural person of age, also referred to as an *adult*, or a legal person of good standing, such as a business.  A person takes the pronoun 'they'.
 
-1. *Identity.*  A person chooses their own key pair, identifies themselves with the public key, signs their acts with the private key, and is accountable for every act signed with it.
+1. *Identity.*  A person may act to establish their identity by choosing their own key pair.  They identify themselves with the public key, sign their acts with the private key, and are accountable for every act signed with it.
 2. *Friendship.*  Two persons who are not friends may jointly decide to become friends by an act of both, after which they are friends.
 3. *Ending a friendship.*  A person may end their friendship with another person by their own act, and then the friendship ends.
 
 ## The schemas, and what they realise
 
-The schemas are in `GSG.glp`, in GSC's notation above each term.  Two schemas over one predicate, `friend`, of arity one: `friend(q)` in the state of `p` says that `q` is a friend of `p`.
+The schemas are in `GSG.glp`, in GSC's notation above each term.  Three schemas over two predicates: `identity`, of arity zero, in the state of `p` says that `p` has established their identity; `friend`, of arity one: `friend(q)` in the state of `p` says that `q` is a friend of `p`.  Every role but establish's requires `identity`.
 
-- Clause 1 describes no act: a person's key pair is theirs before any act, and every act is signed with its private key.
-- Clause 2: `befriend(p?, q?)` --- at `p`, not `friend(q)`, +`friend(q)`; at `q`, not `friend(p)`, +`friend(p)`.  Both roles guard: "an act of both".
-- Clause 3: `unfriend(p?, q)` --- at `p`, -`friend(q)`; at `q`, -`friend(p)`.  `p` guards; at the binding that swaps the roles the same transaction is `q`'s, so either friend may end the friendship.
+- Clause 1: `establish(p?)` --- at `p`, +`identity`; it requires and forbids nothing.  Being accountable for every act signed with the key describes no act.
+- Clause 2: `befriend(p?, q?)` --- at `p`, `identity`, not `friend(q)`, +`friend(q)`; at `q`, `identity`, not `friend(p)`, +`friend(p)`.  Both roles guard: "an act of both".
+- Clause 3: `unfriend(p?, q)` --- at `p`, `identity`, -`friend(q)`; at `q`, `identity`, -`friend(p)`.  `p` guards; at the binding that swaps the roles the same transaction is `q`'s, so either friend may end the friendship.
