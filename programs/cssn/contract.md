@@ -4,7 +4,7 @@
 1. Friendship.  Two persons become friends by an act of both.  Each is thereafter a friend of the other.
 2. Ending a Friendship.  Either friend may end the friendship, and it then ends for both.
 
-## The social-network extension
+## The social network with provenance
 3. Groups.  A person may create a group they own, at their own volition, and is thereafter a member of it.
 4. Group Membership.  A person joins a group created by their friend by an act of both, and the creator enters them on the group's member list.
 5. Ending Group Membership.  The member or the creator may end the membership; ending the creator's membership closes the group.
