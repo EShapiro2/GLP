@@ -4,7 +4,8 @@
 % Appendix D for a contract with community roles.
 %
 % A schema of Section 3 compiles to the assignment, the proviso and the guard
-% of def:compile, and Section 5.2 is the form printed.  A schema of a contract
+% of def:compile, and the displays of Section 5.1 and Appendix B.3 are the
+% form printed.  A schema of a contract
 % with community roles compiles to the lines of definition:compile, and the
 % worked box of Appendix D is the form printed, for every schema of such a
 % contract, its party roles included.  The paper is the specification and
@@ -117,7 +118,7 @@ latex_atom(atom(P, [A|As]), T, R?) :-
     latex_pred(P?, ['('|R1?], R).
 
 % The atoms of a set are written apart by Sep, which the form of the display
-% supplies: a comma in the form of Section 5.2, whose displays write no set of
+% supplies: a comma in the form of Section 5.1 and Appendix B.3, whose displays write no set of
 % two atoms, and a comma and a control space in the form of Appendix D, as its
 % worked box writes the two atoms federate adds.  latex_update and all_conjs
 % supply the first, assign_lines and proviso_lines the second.
@@ -162,7 +163,7 @@ latex_over(RS, I, T, ['&& (p \\in '|R?]) :-
 
 % --- The assignment of one role (def:compile, definition:compile) ----------
 % c'_S := (c_S \ -(i)) u +(i), with an empty half left out; S is the
-% subscript, {\Alice} for a role of Section 5.2 and p, ranging over the
+% subscript, {\Alice} for a role of Section 5.1 and Appendix B.3 and p, ranging over the
 % extent, for a role of Appendix D.
 
 procedure update_body(Ans?, Ans?, Atoms?, Atoms?, Constant?, Chunks?, Chunks?,
@@ -198,7 +199,7 @@ update_rhs(Add, Del, Sep, S, T, R?) :-
     is_empty(Del?, DE),
     update_body(AE?, DE?, Add?, Del?, Sep?, S?, T?, R).
 
-% The subscript of a party role in Section 5.2: {\Alice}.
+% The subscript of a party role in Section 5.1 and Appendix B.3: {\Alice}.
 procedure latex_sub(Integer?, Chunks).
 latex_sub(I, ['{'|R?]) :- integer(I?) | latex_role(I?, ['}'], R).
 
@@ -220,7 +221,7 @@ latex_updates([RS, RS2|Rs], I, T, R?) :-
 % --- The proviso of one role (def:compile, definition:compile) -------------
 % =(i) u -(i) included in c_S and not(i) disjoint from it, one conjunct each
 % and left out when the multiset is empty; a singleton is written with \in and
-% \notin, as Section 5.2 writes it.
+% \notin, as Section 5.1 and Appendix B.3 write it.
 
 procedure req_conj(Atoms?, Constant?, Chunks?, ChunkLists?, ChunkLists).
 req_conj([], _, _, T, T?).
@@ -285,7 +286,7 @@ guard_roles1(no, Rs, I, T, R?) :- ground(Rs?), integer(I?), ground(T?) |
     I1 := I? + 1,
     guard_roles(Rs?, I1?, T?, R).
 
-% --- The guard of Section 5.2 (def:compile): the guarding roles ------------
+% --- The guard (def:compile): the guarding roles ---------------------------
 
 procedure latex_guard_list(Ints?, Chunks?, Chunks).
 latex_guard_list([], T, T?).
@@ -301,7 +302,7 @@ latex_guard([I|Is], T, ['\\text{guarded by } \\{'|R?]) :-
     integer(I?), ground(Is?), ground(T?) |
     latex_guard_list([I?|Is?], ['\\}'|T?], R).
 
-% --- The display of a schema of Section 3 (Section 5.2) --------------------
+% --- The display of a schema of Section 3 (Section 5.1, Appendix B.3) -----
 
 procedure latex_schema_s3(Schema?, Chunks?, Chunks).
 latex_schema_s3(Sc, T, ['\\begin{align*}', '&'|R?]) :-
@@ -521,7 +522,7 @@ latex_app_roles(Rs, Th, Es, T, R?) :- ground(Rs?), ground(Th?), ground(Es?), gro
     join_lines(Ls?, ['\\end{align*}'|T?], R).
 
 % --- The display of one schema, in the form of its contract ----------------
-% A contract has one form: Section 5.2's where its roles are all party roles
+% A contract has one form: that of Section 5.1 and Appendix B.3 where its roles are all party roles
 % and Appendix D's where it has community roles, its party roles included.
 
 procedure latex_schema(Ans?, Schema?, Chunks?, Chunks).
@@ -576,12 +577,40 @@ not_compiled_app(Nm) :- ground(Nm?) |
                   'fails the conditions on the text of Appendix D;',
                   'check_named gives the faults.']).
 
-procedure not_compiled_malformed(Constant?).
-not_compiled_malformed(Nm) :- ground(Nm?) |
-    send_to_user(['% not compiled:', Nm?,
-                  'is malformed, a schema adding or deleting at a role the atom',
-                  'of a reflexive predicate naming that role;',
-                  'check_named gives the faults.']).
+% A malformed contract is not compiled, and the message names each fault the
+% checker found, schema and role, in the paper's words: the paragraph after
+% def:binding for a reflexive predicate, def:schema for a signed term, and
+% Appendix D's Definition Act schema for a signed term in a contract with
+% community roles.
+procedure malformed_lines(Faults?, Chunks?, Chunks).
+malformed_lines([], T, T?).
+malformed_lines([reflexive(S, I, _)|Fs], T,
+                [S?, 'at role', I?,
+                 'adds or deletes the atom of a reflexive predicate naming that role;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([signed(S, I, _, not_added)|Fs], T,
+                [S?, 'at role', I?,
+                 'carries a signed term in an atom not marked +;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([signed(S, I, _, not_required)|Fs], T,
+                [S?, 'at role', I?,
+                 'carries a signed term whose speech-act variable occurs in no atom its role requires;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([signed(S, I, _, community)|Fs], T,
+                [S?, 'at role', I?,
+                 'carries a signed term, which a contract with community roles admits in no atom;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([_|Fs], T, R?) :- otherwise, ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+
+procedure not_compiled_malformed(Constant?, Faults?).
+not_compiled_malformed(Nm, Fs) :- ground(Nm?), ground(Fs?) |
+    malformed_lines(Fs?, ['check_named gives the faults.'], L),
+    send_to_user(['% not compiled:', Nm?, 'is malformed:'|L?]).
 
 procedure compile_on(Verdict?, Constant?, Contract?).
 compile_on(syntactically_grassroots, _, C) :- ground(C?) |
@@ -595,7 +624,7 @@ compile_on(conditions_met, _, C) :- ground(C?) |
     latex_contract(yes, C?, [], L),
     send_to_user(L?).
 compile_on(conditions_failed(_), Nm, _) :- ground(Nm?) | not_compiled_app(Nm?).
-compile_on(malformed(_), Nm, _) :- ground(Nm?) | not_compiled_malformed(Nm?).
+compile_on(malformed(Fs), Nm, _) :- ground(Nm?), ground(Fs?) | not_compiled_malformed(Nm?, Fs?).
 
 procedure compile_checked(Constant?, Declared?).
 compile_checked(Nm, D) :- ground(Nm?), ground(D?) |
@@ -632,7 +661,7 @@ compile_s_on(conditions_met, _, Sn, C) :- ground(Sn?), ground(C?) |
     find_schema(C?, Sn?, S),
     emit_schema(S?, yes, Sn?).
 compile_s_on(conditions_failed(_), Nm, _, _) :- ground(Nm?) | not_compiled_app(Nm?).
-compile_s_on(malformed(_), Nm, _, _) :- ground(Nm?) | not_compiled_malformed(Nm?).
+compile_s_on(malformed(Fs), Nm, _, _) :- ground(Nm?), ground(Fs?) | not_compiled_malformed(Nm?, Fs?).
 
 procedure compile_s_checked(Constant?, Constant?, Declared?).
 compile_s_checked(Nm, Sn, D) :- ground(Nm?), ground(Sn?), ground(D?) |

@@ -32,10 +32,10 @@
 % does is malformed: it is refused, its verdict malformed(Faults) naming each
 % such schema, role and atom, and no condition is decided for it.  So is a
 % contract with a schema whose signed term violates what def:schema requires
-% of it -- that it occur only in an atom marked +, that its role be a guarding
-% role, and that its speech-act variable occur in an atom some role requires
-% -- and a contract with community roles carrying a signed term at all, which
-% Appendix D's Definition Act schema admits in no atom.
+% of it -- that it occur only in an atom marked +, and that its speech-act
+% variable occur in an atom its role requires -- and a contract with community
+% roles carrying a signed term at all, which Appendix D's Definition Act
+% schema admits in no atom.
 %
 % A contract of Section 3 whose first conjunct fails may still be grassroots
 % with wards (Appendix F): when it has an introduction with wards
@@ -149,12 +149,13 @@ refl_schemas([S|Ss], Rf, R?) :- ground(S?), ground(Ss?), ground(Rf?) |
 
 % --- the signed terms of a schema (def:schema) ----------------------------
 % def:schema requires of a signed term sgn(y, pi) that it occur only in an
-% atom marked +, that pi be a guarding role of the schema, and that y occur
-% in an atom some role requires.  Each atom carrying a signed term that
-% violates one of the three is a fault signed(Schema, Role, Atom, Cause),
-% one per requirement it violates; in a contract with community roles each
-% atom carrying a signed term is a fault signed(Schema, Role, Atom,
-% community), Appendix D's Definition Act schema admitting none.
+% atom marked +, and that its speech-act variable y occur in an atom its role
+% pi requires.  Each atom carrying a signed term that violates one of the two
+% is a fault signed(Schema, Role, Atom, Cause), not_added for the first and
+% not_required for the second, one per requirement it violates; in a contract
+% with community roles each atom carrying a signed term is a fault
+% signed(Schema, Role, Atom, community), Appendix D's Definition Act schema
+% admitting none.
 
 % The signed terms among the arguments of an atom.
 procedure args_sgns(Args?, Args).
@@ -178,26 +179,14 @@ sgn_carrying1([_|_], A, Xs, Nm, I, W, T, [signed(Nm?, I?, A?, W?)|R?]) :-
     ground(A?), ground(Xs?), ground(Nm?), integer(I?), ground(W?), ground(T?) |
     sgn_carrying(Xs?, Nm?, I?, W?, T?, R).
 
-% One added atom: its role is a guarding role of the schema and its
-% speech-act variable occurs in an atom some role requires, for each signed
-% term it carries; a fault names the atom once per requirement it violates.
-procedure sgn_guarding(Args?, RoleSpecs?, Ans).
-sgn_guarding([], _, yes).
-sgn_guarding([sgn(_, J)|Ss], Rs, R?) :- integer(J?), ground(Ss?), ground(Rs?) |
-    nth_rs(Rs?, J?, RS),
-    is_guarding(RS?, A),
-    sgn_guarding1(A?, Ss?, Rs?, R).
-sgn_guarding([A|Ss], Rs, R?) :- otherwise, ground(A?), ground(Ss?), ground(Rs?) |
-    sgn_guarding(Ss?, Rs?, R).
-
-procedure sgn_guarding1(Ans?, Args?, RoleSpecs?, Ans).
-sgn_guarding1(no, _, _, no).
-sgn_guarding1(yes, Ss, Rs, R?) :- ground(Ss?), ground(Rs?) | sgn_guarding(Ss?, Rs?, R).
-
+% One added atom: for each signed term sgn(y, pi) it carries, the role pi
+% requires an atom with y among its arguments.
 procedure sgn_required(Args?, RoleSpecs?, Ans).
 sgn_required([], _, yes).
-sgn_required([sgn(Y, _)|Ss], Rs, R?) :- ground(Y?), ground(Ss?), ground(Rs?) |
-    any_req_occurs(Rs?, svar(Y?), A),
+sgn_required([sgn(Y, J)|Ss], Rs, R?) :-
+    ground(Y?), integer(J?), ground(Ss?), ground(Rs?) |
+    nth_rs(Rs?, J?, RS),
+    req_occurs(RS?, svar(Y?), A),
     sgn_required1(A?, Ss?, Rs?, R).
 sgn_required([A|Ss], Rs, R?) :- otherwise, ground(A?), ground(Ss?), ground(Rs?) |
     sgn_required(Ss?, Rs?, R).
@@ -213,10 +202,8 @@ sgn_fault(no, A, Nm, I, W, T, [signed(Nm?, I?, A?, W?)|T?]).
 procedure sgn_added1(Args?, Atom?, RoleSpecs?, Constant?, Integer?, Faults?, Faults).
 sgn_added1(Ss, A, Rs, Nm, I, T, R?) :-
     ground(Ss?), ground(A?), ground(Rs?), ground(Nm?), integer(I?), ground(T?) |
-    sgn_guarding(Ss?, Rs?, A1),
-    sgn_required(Ss?, Rs?, A2),
-    sgn_fault(A2?, A?, Nm?, I?, not_required, T?, R2),
-    sgn_fault(A1?, A?, Nm?, I?, not_guarding, R2?, R).
+    sgn_required(Ss?, Rs?, A1),
+    sgn_fault(A1?, A?, Nm?, I?, not_required, T?, R).
 
 procedure sgn_added(Atoms?, RoleSpecs?, Constant?, Integer?, Faults?, Faults).
 sgn_added([], _, _, _, T, T?).
@@ -226,7 +213,7 @@ sgn_added([atom(P, As)|Xs], Rs, Nm, I, T, R?) :-
     sgn_added(Xs?, Rs?, Nm?, I?, T?, R1),
     sgn_added1(Ss?, atom(P?, As?), Rs?, Nm?, I?, R1?, R).
 
-% The roles of a schema of Section 3: the three requirements at each.
+% The roles of a schema of Section 3: the two requirements at each.
 procedure sgn_roles(RoleSpecs?, Integer?, RoleSpecs?, Constant?, Faults).
 sgn_roles([], _, _, _, []).
 sgn_roles([RS|Rs], I, All, Nm, R?) :-
