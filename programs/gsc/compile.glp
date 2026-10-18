@@ -577,10 +577,40 @@ not_compiled_app(Nm) :- ground(Nm?) |
                   'fails the conditions on the text of Appendix D;',
                   'check_named gives the faults.']).
 
-procedure not_compiled_malformed(Constant?).
-not_compiled_malformed(Nm) :- ground(Nm?) |
-    send_to_user(['% not compiled:', Nm?,
-                  'is malformed; check_named gives the faults.']).
+% A malformed contract is not compiled, and the message names each fault the
+% checker found, schema and role, in the paper's words: the paragraph after
+% def:binding for a reflexive predicate, def:schema for a signed term, and
+% Appendix D's Definition Act schema for a signed term in a contract with
+% community roles.
+procedure malformed_lines(Faults?, Chunks?, Chunks).
+malformed_lines([], T, T?).
+malformed_lines([reflexive(S, I, _)|Fs], T,
+                [S?, 'at role', I?,
+                 'adds or deletes the atom of a reflexive predicate naming that role;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([signed(S, I, _, not_added)|Fs], T,
+                [S?, 'at role', I?,
+                 'carries a signed term in an atom not marked +;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([signed(S, I, _, not_required)|Fs], T,
+                [S?, 'at role', I?,
+                 'carries a signed term whose speech-act variable occurs in no atom its role requires;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([signed(S, I, _, community)|Fs], T,
+                [S?, 'at role', I?,
+                 'carries a signed term, which a contract with community roles admits in no atom;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([_|Fs], T, R?) :- otherwise, ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+
+procedure not_compiled_malformed(Constant?, Faults?).
+not_compiled_malformed(Nm, Fs) :- ground(Nm?), ground(Fs?) |
+    malformed_lines(Fs?, ['check_named gives the faults.'], L),
+    send_to_user(['% not compiled:', Nm?, 'is malformed:'|L?]).
 
 procedure compile_on(Verdict?, Constant?, Contract?).
 compile_on(syntactically_grassroots, _, C) :- ground(C?) |
@@ -594,7 +624,7 @@ compile_on(conditions_met, _, C) :- ground(C?) |
     latex_contract(yes, C?, [], L),
     send_to_user(L?).
 compile_on(conditions_failed(_), Nm, _) :- ground(Nm?) | not_compiled_app(Nm?).
-compile_on(malformed(_), Nm, _) :- ground(Nm?) | not_compiled_malformed(Nm?).
+compile_on(malformed(Fs), Nm, _) :- ground(Nm?), ground(Fs?) | not_compiled_malformed(Nm?, Fs?).
 
 procedure compile_checked(Constant?, Declared?).
 compile_checked(Nm, D) :- ground(Nm?), ground(D?) |
@@ -631,7 +661,7 @@ compile_s_on(conditions_met, _, Sn, C) :- ground(Sn?), ground(C?) |
     find_schema(C?, Sn?, S),
     emit_schema(S?, yes, Sn?).
 compile_s_on(conditions_failed(_), Nm, _, _) :- ground(Nm?) | not_compiled_app(Nm?).
-compile_s_on(malformed(_), Nm, _, _) :- ground(Nm?) | not_compiled_malformed(Nm?).
+compile_s_on(malformed(Fs), Nm, _, _) :- ground(Nm?), ground(Fs?) | not_compiled_malformed(Nm?, Fs?).
 
 procedure compile_s_checked(Constant?, Constant?, Declared?).
 compile_s_checked(Nm, Sn, D) :- ground(Nm?), ground(Sn?), ground(D?) |

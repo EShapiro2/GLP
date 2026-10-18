@@ -388,6 +388,9 @@ check "adding or deleting friend of its own role makes the contract malformed" \
 out=$(run "compile_variant(sg_refl_malformed, $SG).")
 check "a malformed contract is not compiled" \
       "% not compiled: sg_refl_malformed is malformed" "$(printf '%s' "$out" | tr '\n' ' ')"
+check "and the message names the fault, in the words of the paragraph after def:binding" \
+      "self_befriend at role 1 adds or deletes the atom of a reflexive predicate naming that role; self_unfriend at role 1 adds or deletes the atom of a reflexive predicate naming that role; check_named gives the faults." \
+      "$(printf '%s' "$out" | tr '\n' ' ')"
 check_not "and no display is printed for it" "begin{align" "$out"
 
 # Clause 1 of def:unobstructed skips a required atom of a reflexive predicate
@@ -755,6 +758,9 @@ check "a signed term of a role that requires its speech act and does not guard i
 out=$(run 'compile_named(sgn_not_required).')
 check "and a contract refused for its signed term is not compiled" \
       "% not compiled: sgn_not_required is malformed" "$(printf '%s' "$out" | tr '\n' ' ')"
+check "and the message names the fault, in the words of def:schema" \
+      "sign at role 1 carries a signed term whose speech-act variable occurs in no atom its role requires; check_named gives the faults." \
+      "$(printf '%s' "$out" | tr '\n' ' ')"
 
 # Appendix D's Definition Act schema admits no signed term: a contract with
 # community roles carrying one is refused.

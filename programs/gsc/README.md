@@ -102,7 +102,8 @@ in an `\iffalse ... \fi` before each display, which TeX skips.
 The compilation is defined for syntactically grassroots contracts (Section 5),
 so the compiler runs the checker first; `compile_named(sg_gossip).` prints
 that the contract is not compiled and nothing else, and `check_named` gives
-the faults.
+the faults.  A malformed contract is not compiled either, and the message
+names each fault the checker found, its schema and role, in the paper's words.
 
 A contract with community roles compiles to the lines of Definition
 Compilation of Appendix D, one form for the whole contract, its party roles
