@@ -66,10 +66,10 @@ contract_named(gsnp,
        [rs(guarded, [atom(item, [svar(x)])], [], [atom(identity, [])], [])]),
 %% GSN:1, Message, with GSNP:2, Forwarding.
 %%   forward(p?, q ; x) :
-%%       at p:  identity, item(x), +sent(x, q)
+%%       at p:  identity, item(x)
 %%       at q:  identity, friend(p), +item(sgn(x, p))
     schema(forward,
-       [rs(guarded,   [atom(sent, [svar(x), role(2)])], [],
+       [rs(guarded,   [], [],
                       [atom(identity, []), atom(item, [svar(x)])], []),
         rs(unguarded, [atom(item, [sgn(x, 1)])], [],
                       [atom(identity, []), atom(friend, [role(1)])], [])]),
@@ -112,10 +112,10 @@ contract_named(gsnp,
                     [atom(identity, []), atom(item, [svar(x)]), atom(member, [role(1), svar(n)])],
                     [atom(posted, [svar(x), svar(n)])])]),
 %%   post(p?, a ; x, n) :
-%%       at p:  identity, item(x), member(a, n), +sent(x, a)
+%%       at p:  identity, item(x), member(a, n)
 %%       at a:  identity, member(a, n), listed(p, n), +posted(sgn(x, p), n)
     schema(post,
-       [rs(guarded,   [atom(sent, [svar(x), role(2)])], [],
+       [rs(guarded,   [], [],
                       [atom(identity, []), atom(item, [svar(x)]), atom(member, [role(2), svar(n)])], []),
         rs(unguarded, [atom(posted, [sgn(x, 1), svar(n)])], [],
                       [atom(identity, []), atom(member, [role(2), svar(n)]),

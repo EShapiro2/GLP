@@ -59,10 +59,10 @@ contract_named(gsn,
         rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]),
 %% GSN:1, Message.
 %%   message(p?, q ; x) :
-%%       at p:  identity, +sent(x, q)
+%%       at p:  identity
 %%       at q:  identity, friend(p), +received(x, p)
     schema(message,
-       [rs(guarded,   [atom(sent, [svar(x), role(2)])], [], [atom(identity, [])], []),
+       [rs(guarded,   [], [], [atom(identity, [])], []),
         rs(unguarded, [atom(received, [svar(x), role(1)])], [],
                       [atom(identity, []), atom(friend, [role(1)])], [])]),
 %% GSN:2, Group.
@@ -104,10 +104,10 @@ contract_named(gsn,
                     [atom(identity, []), atom(member, [role(1), svar(n)])],
                     [atom(posted, [svar(x), svar(n)])])]),
 %%   post(p?, a ; x, n) :
-%%       at p:  identity, member(a, n), +sent(x, a)
+%%       at p:  identity, member(a, n)
 %%       at a:  identity, member(a, n), listed(p, n), not posted(x, n), +posted(x, n)
     schema(post,
-       [rs(guarded,   [atom(sent, [svar(x), role(2)])], [],
+       [rs(guarded,   [], [],
                       [atom(identity, []), atom(member, [role(2), svar(n)])], []),
         rs(unguarded, [atom(posted, [svar(x), svar(n)])], [],
                       [atom(identity, []), atom(member, [role(2), svar(n)]),
