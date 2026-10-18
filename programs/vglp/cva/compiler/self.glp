@@ -12,8 +12,8 @@
 %% which say when a contract of act schemas is a local specification and when
 %% it is effective.  GSC (/Grassroots/GSC), Sections 3 and 5:
 %% Definitions "Act schema", "Binding", "Compilation" and "Realisation of a
-%% contract".  The papers are the specification; each module names the
-%% definitions it decides.
+%% contract", and Appendix F, "Introduction with wards".  The papers are the
+%% specification; each module names the definitions it decides.
 %%
 %% compile(Name, Contract, Verdict) takes a contract in the term form
 %% programs/gsc reads, and the verdict its checker gives it, and prints the
@@ -24,10 +24,16 @@
 %% checker of programs/gsc and then this.
 %% ---------------------------------------------------------------------------
 
-%% The contract, as programs/gsc/self.glp writes it.
+%% The contract, as programs/gsc/self.glp writes it.  sgn(Y, I) is the signed
+%% term sgn(y, pi_I) of GSC's Definition "Act schema", the speech act y signed
+%% by the party in role I, which an atom a schema adds may carry; the compiler
+%% does not yet compile it (part B of vGLP's task of 2026-10-18 12:24 UTC,
+%% waiting on recursive interactive types) and refuses a contract carrying one
+%% (cvac.glp, signed_lines).
 NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
             ; ext(NameTerm, Constant).
-Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm).
+Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
+            ; sgn(Constant, Integer).
 Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args).
 Atoms     ::= [] ; [Atom | Atoms].
@@ -43,16 +49,39 @@ Contract  ::= [] ; [Schema | Contract].
 Preds     ::= [] ; [Constant | Preds].
 Declared  ::= Contract ; reflexive(Preds, Contract).
 
-%% Its checker's verdict.
+%% Its checker's verdict, as programs/gsc/self.glp writes it (GSC, Section 3,
+%% Definition "Syntactically grassroots"; Appendix F, Definition "Introduction
+%% with wards").
 Cause     ::= unobtainable ; blocked_by(Constant, Integer, Atom) ; reflexive.
+%% What GSC's Definition "Act schema" requires of a signed term, and the atom
+%% carrying one violates: it occurs in an atom not marked + (not_added), its
+%% role is not a guarding role (not_guarding), its speech-act variable occurs
+%% in no atom a role requires (not_required); or the contract has community
+%% roles, whose schemas admit no signed term (community).
+SgnCause  ::= not_added ; not_guarding ; not_required ; community.
 Fault     ::= no_introductory_act
             ; obstructed(Constant, Integer, Atom, Cause)
             ; untraceable(Preds)
             ; volition(Constant, Integer, Integer)
             ; cohesion(Constant, Integer, Atom)
-            ; reflexive(Constant, Integer, Atom).
+            ; reflexive(Constant, Integer, Atom)
+            ; signed(Constant, Integer, Atom, SgnCause).
 Faults    ::= [] ; [Fault | Faults].
+%% An introduction with wards (GSC, Appendix F): guardianship(M, Iota, G, W) is
+%% the guardianship (m, iota, g, w) of Definition "Guardianship"; a party of a
+%% relay act (Definition "Relay") is a ward role, ward(Role, Mark,
+%% GuardianRole), or a free role, free(Role); a relay act is named with its two
+%% parties.  grassroots_with_wards names the introductory act unobstructed but
+%% for the marks, the set of marks, the guardianship of each and the relay acts
+%% found.
+Guardianship  ::= guardianship(Constant, Constant, Constant, Constant).
+Guardianships ::= [] ; [Guardianship | Guardianships].
+Party     ::= ward(Integer, Constant, Integer) ; free(Integer).
+Parties   ::= [] ; [Party | Parties].
+Relay     ::= relay(Constant, Party, Party).
+Relays    ::= [] ; [Relay | Relays].
 Verdict   ::= syntactically_grassroots ; not_grassroots(Faults)
+            ; grassroots_with_wards(Constant, Preds, Guardianships, Relays)
             ; conditions_met ; conditions_failed(Faults) ; malformed(Faults).
 
 %% A contract's introduction predicate, where it names one (vGLP, Section 5.4,
@@ -131,12 +160,16 @@ pvars_of([pvar(X)|As], [pvar(X?)|R?]) :- pvars_of(As?, R).
 pvars_of([role(_)|As], R?) :- pvars_of(As?, R).
 pvars_of([svar(_)|As], R?) :- pvars_of(As?, R).
 pvars_of([nterm(_)|As], R?) :- pvars_of(As?, R).
+pvars_of([sgn(_, _)|As], R?) :- pvars_of(As?, R).
+%% A signed term's speech-act variable occurs in an atom some role requires
+%% (GSC, Definition "Act schema"), where it is collected.
 procedure svars_of(Args?, Args).
 svars_of([], []).
 svars_of([svar(X)|As], [svar(X?)|R?]) :- svars_of(As?, R).
 svars_of([role(_)|As], R?) :- svars_of(As?, R).
 svars_of([pvar(_)|As], R?) :- svars_of(As?, R).
 svars_of([nterm(_)|As], R?) :- svars_of(As?, R).
+svars_of([sgn(_, _)|As], R?) :- svars_of(As?, R).
 
 procedure and(YesNo?, YesNo?, YesNo).
 and(yes, B, B?).
