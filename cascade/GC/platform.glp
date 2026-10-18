@@ -17,7 +17,7 @@ Net ::= msg(Peer, Content).
 Txn ::= propose(Attempt) ; start(Attempt) ; answer(Attempt) ; vote(Attempt) ; tally(Attempt) ; commit(Attempt) ; yield(Attempt) ; wound(Attempt, Attempt) ; outcome(Attempt) ; introduce_peers(Peer, Peer) ; discover(Peer).
 Output ::= Txn.
 Approval ::= approval(Attempt, YesNo?).
-Menu ::= menu(List(Key), Request?).
+Menu ::= menu(Key, List(Key), Request?).
 Close ::= close.
 Trigger ::= req(Request) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own.
 Var ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; sgn(Constant, Integer).
@@ -111,20 +111,20 @@ class_of(pay, B, D, pay(V1?, V2?)) :- ground(B?), ground(D?) | val_peer(role(1),
 class_of(redeem, B, D, redeem(V1?, V2?, V3?)) :- ground(B?), ground(D?) | val_peer(role(1), B?, D?, V1), val_peer(role(2), B?, D?, V2), val_peer(pvar(r), B?, D?, V3).
 
 exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), Stream(Ask(Question))).
-agent(Id, NetIn, Out?, Thr?, D?) :- ground(Id?) | request([], Rq, D1), tag_net(NetIn?, Nt), merge(Rq?, Nt?, M1), merge(M1?, Ans?, In), agent_goal([own], In?, Ans, Thr, Out, [], st(Id?, app([], 0, unlocked, []), 0, [], [], [], [], [], [], []), D2), merge(D1?, D2?, D).
+agent(Id, NetIn, Out?, Thr?, D?) :- ground(Id?) | request(Id?, [], Rq, D1), tag_net(NetIn?, Nt), merge(Rq?, Nt?, M1), merge(M1?, Ans?, In), agent_goal([own], In?, Ans, Thr, Out, [], st(Id?, app([], 0, unlocked, []), 0, [], [], [], [], [], [], []), D2), merge(D1?, D2?, D).
 
-procedure request(List(Key)?, Stream(Trigger), Stream(Ask(Question))).
-request(S1, S2?, [ask('Menu', menu_w(X?)) | D?]) :- request1(S1?, S2, X, D).
+procedure request(Key?, List(Key)?, Stream(Trigger), Stream(Ask(Question))).
+request(S1, S2, S3?, [ask('Menu', menu_w(X?)) | D?]) :- request1(S1?, S2?, S3, X, D).
 
-procedure request1(List(Key)?, Stream(Trigger), Menu, Stream(Ask(Question))).
-request1(Ks, Out?, menu(Ks?, R), []) :- ground(Ks?) | await_request(R?, Out).
+procedure request1(Key?, List(Key)?, Stream(Trigger), Menu, Stream(Ask(Question))).
+request1(Id, Ks, Out?, menu(Id?, Ks?, R), []) :- ground(Id?), ground(Ks?) | await_request(R?, Out).
 
 procedure await_request(Request?, Stream(Trigger)).
 await_request(propose(C), [req(propose(C?))]).
 await_request(known(Q), [req(known(Q?))]).
 
 procedure ask_next(St?, Stream(Trigger), Stream(Trigger)?, Stream(Ask(Question))).
-ask_next(St, Ans?, Ans1, D?) :- ground(St?) | st_known(St?, Ks), request(Ks?, R, D), merge(R?, Ans1?, Ans).
+ask_next(St, Ans?, Ans1, D?) :- ground(St?) | st_id(St?, Id), st_known(St?, Ks), request(Id?, Ks?, R, D), merge(R?, Ans1?, Ans).
 
 procedure tag_net(Stream(Net)?, Stream(Trigger)).
 tag_net([M | Ms], [net(M?) | Ts?]) :- tag_net(Ms?, Ts).
@@ -1847,7 +1847,7 @@ constructs([spawn(Id, Q, Gs, Ds?) | Ss]) :- construct(Id?, Q?, Gs?, Ds), constru
 constructs([]).
 
 procedure construct(Integer?, Question?, Inputs(Drawn)?, Stream(Draw(Drawn))).
-construct(Id, menu_w(X), Gs, Ds?) :- present_menu([], X?, Gs?, _, Vs, Done), run_menu_w(Id?, form(menu, [field('List(Key)', thread), field('Request', menu([form(propose, [field('Proposal', menu([form(mint, [field('Peer', peer)]), form(swap, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('Peer', peer)]), form(pay, [field('Peer', peer), field('Peer', peer)]), form(redeem, [field('Peer', peer), field('Peer', peer), field('Peer', peer)])]))]), form(known, [field('Peer', peer)])]))]), Vs?, Done?, Ds).
+construct(Id, menu_w(X), Gs, Ds?) :- present_menu([], X?, Gs?, _, Vs, Done), run_menu_w(Id?, form(menu, [field('Key', shown), field('List(Key)', thread), field('Request', menu([form(propose, [field('Proposal', menu([form(mint, [field('Peer', peer)]), form(swap, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('Peer', peer)]), form(pay, [field('Peer', peer), field('Peer', peer)]), form(redeem, [field('Peer', peer), field('Peer', peer), field('Peer', peer)])]))]), form(known, [field('Peer', peer)])]))]), Vs?, Done?, Ds).
 construct(Id, approval_w(X), Gs, Ds?) :- present_approval([], X?, Gs?, _, Vs, Done), run_approval_w(Id?, form(approval, [field('Attempt', form(attempt, [field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Class', menu([form(mint, [field('Peer', shown)]), form(swap, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(pay, [field('Peer', shown), field('Peer', shown)]), form(redeem, [field('Peer', shown), field('Peer', shown), field('Peer', shown)])]))])), field('YesNo', buttons([yes, no]))]), Vs?, Done?, Ds).
 
 procedure output(_?, Stream(Output)?, Stream(Draw(Drawn))).
@@ -1914,21 +1914,23 @@ procedure take_request(Formed(Request)?, Path?, Request, Input(Drawn)?, Inputs(D
 take_request(formed(V), _, V?, _, Gs, Gs?, done).
 take_request(refused, P, X?, G, Gs, [G? | Gs1?], Done?) :- answer_request(P?, X, Gs?, Gs1, Done).
 
-procedure start_menu_menu_2(Stream(_)?, Stream(_)?, Stream(_)).
-start_menu_menu_2([V1 | S1], [V2 | S2], [menu(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_menu_menu_2(V1?, V2?, S1?, S2?, Vs).
-start_menu_menu_2([], _, []).
-start_menu_menu_2(_, [], []).
+procedure start_menu_menu_3(Stream(_)?, Stream(_)?, Stream(_)?, Stream(_)).
+start_menu_menu_3([V1 | S1], [V2 | S2], [V3 | S3], [menu(V1?, V2?, V3?) | Vs?]) :- ground(V1?), ground(V2?), ground(V3?) | comb_menu_menu_3(V1?, V2?, V3?, S1?, S2?, S3?, Vs).
+start_menu_menu_3([], _, _, []).
+start_menu_menu_3(_, [], _, []).
+start_menu_menu_3(_, _, [], []).
 
-procedure comb_menu_menu_2(_?, _?, Stream(_)?, Stream(_)?, Stream(_)).
-comb_menu_menu_2(_, V2, [V1 | S1], S2, [menu(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_menu_menu_2(V1?, V2?, S1?, S2?, Vs).
-comb_menu_menu_2(_, _, [], [], []).
+procedure comb_menu_menu_3(_?, _?, _?, Stream(_)?, Stream(_)?, Stream(_)?, Stream(_)).
+comb_menu_menu_3(_, V2, V3, [V1 | S1], S2, S3, [menu(V1?, V2?, V3?) | Vs?]) :- ground(V1?), ground(V2?), ground(V3?) | comb_menu_menu_3(V1?, V2?, V3?, S1?, S2?, S3?, Vs).
+comb_menu_menu_3(V1, _, V3, S1, [V2 | S2], S3, [menu(V1?, V2?, V3?) | Vs?]) :- ground(V1?), ground(V2?), ground(V3?) | comb_menu_menu_3(V1?, V2?, V3?, S1?, S2?, S3?, Vs).
+comb_menu_menu_3(_, _, _, [], [], [], []).
 
 procedure present_menu(Path?, Menu?, Inputs(Drawn)?, Inputs(Drawn), Stream(_), Done).
-present_menu(P, menu(H1, H2?), Gs, Gs1?, Vs?, D2?) :- ground(P?) | path(P?, 1, Q1), thread(Q1?, H1?, V1), path(P?, 2, M2), path(P?, 2, Q2), answer_request(Q2?, H2, Gs?, Gs1, D2), start_menu_menu_2(V1?, [input(M2?)], Vs).
+present_menu(P, menu(H1, H2, H3?), Gs, Gs1?, Vs?, D3?) :- ground(P?) | path(P?, 1, Q1), shown(Q1?, H1?, V1), path(P?, 2, Q2), thread(Q2?, H2?, V2), path(P?, 3, M3), path(P?, 3, Q3), answer_request(Q3?, H3, Gs?, Gs1, D3), start_menu_menu_3(V1?, V2?, [input(M3?)], Vs).
 present_menu(P, X, Gs, Gs1?, [pending(P?) | Vs?], Done?) :- ground(P?) | present_menu_wait(P?, X?, Gs?, Gs1, Vs, Done).
 
 procedure present_menu_wait(Path?, Menu?, Inputs(Drawn)?, Inputs(Drawn), Stream(_), Done).
-present_menu_wait(P, menu(H1, H2?), Gs, Gs1?, Vs?, Done?) :- present_menu(P?, menu(H1?, H2), Gs?, Gs1, Vs, Done).
+present_menu_wait(P, menu(H1, H2, H3?), Gs, Gs1?, Vs?, Done?) :- present_menu(P?, menu(H1?, H2?, H3), Gs?, Gs1, Vs, Done).
 present_menu_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, Done?) :- present_menu_wait(P?, X?, Gs?, Gs1, Vs, Done).
 
 procedure run_menu_w(Integer?, _?, Stream(_)?, Done?, Stream(Draw(Drawn))).
