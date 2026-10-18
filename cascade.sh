@@ -84,7 +84,10 @@ done
 WORK=$(mktemp -d)
 EMIT="$GLP_DIR/programs/tests/cascade_emit/$NAME"
 trap 'rm -rf "$WORK" "$EMIT"' EXIT
-if [ "$MODE" = "--check" ]; then OUT="$WORK/out"; else OUT="$REC"; fi
+# Every mode writes into the scratch directory; a run that gave every artefact
+# replaces the record whole at the end, so a run that fails leaves the record
+# as it was.
+OUT="$WORK/out"
 mkdir -p "$OUT" || exit 2
 
 repl() {   # repl <input file> <output file>; the REPL's lines, prompts stripped
@@ -277,8 +280,9 @@ if [ "$MODE" = "--check" ]; then
     exit $STATUS
 fi
 
-say "written to cascade/$NAME"
 [ "$STATUS" = 0 ] || exit 1
+rm -rf "$REC" && mkdir -p "$REC" && cp "$OUT"/* "$REC"/ || { say "the record could not be written"; exit 1; }
+say "written to cascade/$NAME"
 
 # --record: one commit, tagged.
 if [ "$MODE" = "--record" ]; then
