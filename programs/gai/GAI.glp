@@ -1,14 +1,15 @@
 %% ---------------------------------------------------------------------------
-%% GAI.glp --- the social network with accountable AI agents and digital
-%% provenance, GAI's contract (Coordination Appendix C; the clauses in
-%% GAI.md beside this file and in GAI's paper, sections "A Social Graph
-%% with Accountable AI Agents" and "A Social Network with Digital
-%% Provenance"), in the
-%% term form programs/gsc reads (its README, "Writing a contract").  Clauses
-%% GSG:1 and GSG:2 are GSG's, Wards:1 to 5 the wards core shared word for word
-%% with CSSN, GSNP:1 to 3 GSNP's, GAI:1 to 5 this contract's own (programs/gsc/GSG.glp, GSN.glp); the schemas are GAI's,
-%% sign and forward being GSNP's with identity required and retired forbidden
-%% at the acting role.
+%% GAI.glp --- GAI, Accountable AI Agents, GAI's contract (Coordination
+%% Appendix C; to_all 2026-10-18 19:23 UTC), its clauses in GAI.md beside this
+%% file, extending Wards (programs/gsc/Wards.md), with GSG (GSG.md, GSG.glp)
+%% and GSNP's signing and forwarding (GSNP.md) beneath it, in the term form
+%% programs/gsc reads (its README, "Writing a contract").  The term is the
+%% contract for friendship: GSG's schemas with identity required, the wards
+%% core's for an AI agent and its principal, GAI's retire, and GSNP's sign and
+%% forward with identity required and retired forbidden at the acting role.
+%% establish realises a person choosing their key pair (GSG:1); GAI:1, GAI:3
+%% and the principal knowing the developer (GAI:2) describe no act.  A ward's
+%% membership of a group (Wards:2 with GSN:3) is not in this term.
 %%
 %% Eleven schemas over twelve predicates.  unfriend carries no ? and stands for one
 %% schema per role, guarded at that role, unfriend_p and unfriend_q, as CSSN
@@ -51,9 +52,8 @@
 %%
 %% The ? on an AI agent's role (r in enter, agent_befriend and agents_befriend,
 %% s in agents_befriend) is taken by the AI agent's program, in enter as the
-%% program the principal set up, and after it under the principal's standing
-%% authorisation of GAI:2 (GAI.md, "The schemas, and what they
-%% realise").
+%% program the principal set up, and after it under the principal's will,
+%% given once, on creating it (GAI's paper, Section 4.1).
 %% ---------------------------------------------------------------------------
 
 %% The contract, as programs/gsc/self.glp writes it.
