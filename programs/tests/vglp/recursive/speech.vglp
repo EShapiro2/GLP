@@ -1,0 +1,55 @@
+%% speech.vglp --- recursive interactive types with no mode inversion (vGLP
+%% 092c9fe, sections/vglp.tex, Definition "Volitional Procedure, Interactive
+%% Type": "a named type in it is recursive only if it has no mode
+%% inversion", and the paragraph after it: "A speech act forwarded with its
+%% provenance is signed again at each forward, so its type is recursive, and
+%% a request to forward it carries it.  With no mode inversion, a recursive
+%% type is written whole by the program or whole by the person"; vGLP #14
+%% Cowork, 2026-10-18 11:50 UTC, Udi approved), for the construct processes
+%% (glp_runtime/test/vglp/elicitation_test.dart) and the Dart bridge
+%% (glp_multiagent/test/bridge_test.dart).  The module is compiled by the
+%% canonical compilation as the program loads, and self.glp runs it by the
+%% calls of the compiled module.
+%%
+%% A speech act is an utterance signed by a person, or a speech act signed
+%% again (GSC, Section 3): SpeechAct and Utterance are recursive through
+%% each other, and neither has a position marked ?.
+%%
+%%   SpeechAct?   a recursive type the person writes: formed whole from the
+%%                person's input, by recursion on the type's definition
+%%   Forward      a recursive type the program writes, beside the person's
+%%                yes or no: drawn whole, once written
+
+YesNo     ::= yes ; no.
+SpeechAct ::= speech(Utterance, Key).
+Utterance ::= text(String) ; SpeechAct.
+Forward   ::= forward(SpeechAct, YesNo?).
+
+%% ---------------------------------------------------------------------------
+%% The agents
+%% ---------------------------------------------------------------------------
+
+%% The person writes a speech act.
+exported procedure say(Channel(Stream(_), Stream(Output))?).
+say(ch(_, Out?)) :- said(Out).
+
+%% The program writes a speech act signed twice, and asks whether to forward
+%% it.
+exported procedure ask(Channel(Stream(_), Stream(Output))?).
+ask(ch(_, Out?)) :- forward(speech(speech(text("hi"), alice), bob), Out).
+
+%% ---------------------------------------------------------------------------
+%% The questions
+%% ---------------------------------------------------------------------------
+
+%% The person's whole speech act, written on the output once given.
+procedure (SpeechAct?)*said(Stream(Output)).
+(S)*said([said(S?)]) :- ground(S?) | true.
+
+%% The speech act the program shows, and the person's yes or no, written on
+%% the output once given.
+procedure (Forward)*forward(SpeechAct?, Stream(Output)).
+(forward(S?, A))*forward(S, Out?) :- forwarded(A?, Out).
+
+procedure forwarded(YesNo?, Stream(Output)).
+forwarded(A, [forwarded(A?)]) :- ground(A?) | true.

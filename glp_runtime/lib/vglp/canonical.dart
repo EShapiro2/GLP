@@ -1758,8 +1758,8 @@ void _checkNoAnonymousTerm(
 /// "A clause of a volitional procedure reads an argument at an input
 /// position, by a non-variable term at that position in its head or by a
 /// guard on it, only if every later clause of the procedure reads it too"
-/// (vGLP, Definition "Volitional Procedure, Interactive Type, Interactive
-/// Term, Ordinary Clause, vGLP Program").  The asking clause passes each
+/// (vGLP, Definition "Clause of a Volitional Procedure, Interactive Term").
+/// The asking clause passes each
 /// argument on through a pair of its own, so a later clause that does not
 /// read it could be taken where the source goal takes the earlier one
 /// (vGLP, the paragraph after Definition "Canonical Compilation").
@@ -1805,9 +1805,8 @@ void _checkLaterClausesRead(Module m,
               'clause of a volitional procedure reads an argument at an input '
               'position, by a non-variable term at that position in its head '
               'or by a guard on it, only if every later clause of the '
-              'procedure reads it too (vGLP, Definition "Volitional '
-              'Procedure, Interactive Type, Interactive Term, Ordinary Clause, '
-              'vGLP Program")',
+              'procedure reads it too (vGLP, Definition "Clause of a '
+              'Volitional Procedure, Interactive Term")',
               later.line, later.column, phase: 'analyzer');
         }
       }
@@ -1816,9 +1815,9 @@ void _checkLaterClausesRead(Module m,
 }
 
 /// "Every call of a volitional procedure, in a clause body or in the initial
-/// goal, holds a writer at each output position" (vGLP, Definition
-/// "Volitional Procedure, Interactive Type, Interactive Term, Ordinary
-/// Clause, vGLP Program"): "at an output position the asking clause's head
+/// goal, holds a writer at each output position" (vGLP, Definition "Clause
+/// of a Volitional Procedure, Interactive Term"): "at an output position the
+/// asking clause's head
 /// carries a reader, which a writer of the goal matches and a term of the
 /// goal that is not a writer does not" (the paragraph after Definition
 /// "Canonical Compilation").
@@ -1910,8 +1909,8 @@ class VolitionalCall {
 
 /// The rule of a call of a volitional procedure: "every call of a volitional
 /// procedure, in a clause body or in the initial goal, holds a writer at each
-/// output position" (vGLP, Definition "Volitional Procedure, Interactive Type,
-/// Interactive Term, Ordinary Clause, vGLP Program").  [call] is the call as
+/// output position" (vGLP, Definition "Clause of a Volitional Procedure,
+/// Interactive Term").  [call] is the call as
 /// written, printed in the refusal; [args] its arguments, the procedure's n
 /// first, an ask stream after them not read; [calledAs] the procedure as the
 /// call names it, `q` or `N#q`; [where] the clause or the goal the call is in,
@@ -1933,9 +1932,9 @@ void checkWritersAtOutputs(Goal call, List<Term> args, VolitionalCall v,
         '$calledAs/${v.arity}, $where, holds ${printer.printTerm(s)} at '
         'output position ${k + 1}, which is not a writer: every call of a '
         'volitional procedure, in a clause body or in the initial goal, '
-        'holds a writer at each output position (vGLP, Definition '
-        '"Volitional Procedure, Interactive Type, Interactive Term, Ordinary '
-        'Clause, vGLP Program"), the asking clause\'s head carrying a reader '
+        'holds a writer at each output position (vGLP, Definition "Clause '
+        'of a Volitional Procedure, Interactive Term"), the asking '
+        'clause\'s head carrying a reader '
         'there, which only a writer of the goal matches (vGLP, the paragraph '
         'after Definition "Canonical Compilation")',
         call.line, call.column, phase: 'analyzer');

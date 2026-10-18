@@ -32,8 +32,10 @@
 // (cards.vglp, a stream and a list the program writes whose elements hold
 // questions, and its plays; Task D) and programs/tests/vglp/pending
 // (pending.vglp, positions the program writes after the ask, drawn pending,
-// and its plays); the Real question and the card
-// of two questions are written under programs/tests/vglp/ for their runs.
+// and its plays) and programs/tests/vglp/recursive (speech.vglp, recursive
+// interactive types with no mode inversion, written whole by the person or
+// by the program, and its plays); the Real question and the card of two
+// questions are written under programs/tests/vglp/ for their runs.
 
 import 'dart:async';
 import 'dart:io';
@@ -1048,6 +1050,62 @@ nest_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       expect(r['Log'],
           '[pending(1, [1, 2, 1], [2]), whole(1, [2]), got(0, yes), '
           'withdrawn(1) | _]');
+    });
+  });
+
+  // vGLP 092c9fe, Definition "Volitional Procedure, Interactive Type": "a
+  // named type in it is recursive only if it has no mode inversion", and the
+  // paragraph after it: "A speech act forwarded with its provenance is signed
+  // again at each forward, so its type is recursive, and a request to
+  // forward it carries it.  With no mode inversion, a recursive type is
+  // written whole by the program or whole by the person" (vGLP #14 Cowork,
+  // 2026-10-18 11:50 UTC, Udi approved).  programs/tests/vglp/recursive:
+  // speech.vglp, SpeechAct ::= speech(Utterance, Key) and Utterance ::=
+  // text(String) ; SpeechAct, recursive through each other, and the plays of
+  // its self.glp.  The widget of a recursive type is finite by a reference
+  // back to itself, rec(T, W) binding T to W around the ref(T) in it.
+  group('recursive interactive types with no mode inversion', () {
+    const widget = 'rec(SpeechAct, form(speech, [field(Utterance, '
+        'rec(Utterance, menu([form(text, [field(String, text)]), '
+        'form(speech, [field(Utterance, ref(Utterance)), field(Key, '
+        'peer)])]))), field(Key, peer)]))';
+
+    test('a speech act the person writes, signed twice: formed whole from '
+        'one grant by recursion on the type\'s definition, received by the '
+        'program, and the construct withdrawn', () async {
+      final r = await _play('recursive', 'play_say(Log)');
+      expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
+      expect(
+          r['Log'],
+          '[drawn(1, $widget, input([])), '
+          'said(speech(speech(text(hi), alice), bob)), withdrawn(1) | _]');
+    });
+
+    test('a grant that forms no speech act answers nothing, and the next '
+        'one, a speech act, answers the question', () async {
+      final r = await _play('recursive', 'play_say_refused(Log)');
+      expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
+      expect(
+          r['Log'],
+          '[drawn(1, $widget, input([])), said(speech(text(hi), carol)), '
+          'withdrawn(1) | _]');
+    });
+
+    test('a speech act the program writes, signed twice: drawn whole beside '
+        'the person\'s yes or no, by its widget, a form whose field of the '
+        'recursive type is drawn by rec(T, W); answered, and the construct '
+        'withdrawn', () async {
+      final r = await _play('recursive', 'play_forward(Log)');
+      expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
+      expect(
+          r['Log'],
+          '[drawn(1, form(forward, [field(SpeechAct, rec(SpeechAct, '
+          'form(speech, [field(Utterance, rec(Utterance, menu([form(text, '
+          '[field(String, shown)]), form(speech, [field(Utterance, '
+          'ref(Utterance)), field(Key, shown)])]))), field(Key, shown)]))), '
+          'field(YesNo, buttons([yes, no]))]), '
+          'speech(speech(text(hi), alice), bob), input([2])), '
+          'forwarded(yes), withdrawn(1) | _]');
     });
   });
 }

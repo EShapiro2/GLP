@@ -3353,6 +3353,62 @@ check "One-clause: pick's one clause takes the person's choice" "D = \[picked(go
 echo ""
 
 # -----------------------------------------------------------------------------
+# Section VG, continued: recursive interactive types with no mode inversion
+# (programs/tests/vglp/recursive; vGLP 092c9fe, Definition "Volitional
+# Procedure, Interactive Type": "a named type in it is recursive only if it
+# has no mode inversion", and the paragraph after it: "With no mode
+# inversion, a recursive type is written whole by the program or whole by the
+# person"; vGLP #14 Cowork, 2026-10-18 11:50 UTC, Udi approved).  SpeechAct
+# ::= speech(Utterance, Key) and Utterance ::= text(String) ; SpeechAct are
+# recursive through each other: the person writes a speech act whole, formed
+# by recursion on the type's definition (play_say; a grant that forms none
+# answers nothing, play_say_refused), and the program writes one whole, drawn
+# once written (play_forward).  The widget of a recursive type is finite by a
+# reference back to itself, rec(T, W) binding T to W around the ref(T) in it.
+# -----------------------------------------------------------------------------
+echo "--- Recursive interactive types (recursive) ---"
+
+RECURSIVE="$GLP_DIR/programs/tests/vglp/recursive"
+VG_SAY="rec('SpeechAct', form(speech, \[field('Utterance', rec('Utterance', menu(\[form(text, \[field('String', text)\]), form(speech, \[field('Utterance', ref('Utterance')), field('Key', peer)\])\]))), field('Key', peer)\]))"
+VG_FORWARD="form(forward, \[field('SpeechAct', rec('SpeechAct', form(speech, \[field('Utterance', rec('Utterance', menu(\[form(text, \[field('String', shown)\]), form(speech, \[field('Utterance', ref('Utterance')), field('Key', shown)\])\]))), field('Key', shown)\]))), field('YesNo', buttons(\[yes, no\]))\])"
+
+vg_rec_load=$("$REPL_RUN" <<HEREDOC
+$RECURSIVE
+:quit
+HEREDOC
+2>&1)
+check "Recursive: the program loads, the .vglp compiled on load" "Loaded program" "$vg_rec_load"
+check_not "Recursive: no type errors" "Type checking failed" "$vg_rec_load"
+
+vg_say=$("$REPL_RUN" <<HEREDOC
+$RECURSIVE
+play_say(L).
+:quit
+HEREDOC
+2>&1)
+check_not "Recursive: say, no failed goal" "ERROR" "$vg_say"
+check "Recursive: the person's speech act, signed twice, is formed whole from one grant and reaches the program; its widget is finite by rec and ref, and the construct withdraws" "L = \[drawn(1, $VG_SAY, input(\[\])), said(speech(speech(text(hi), alice), bob)), withdrawn(1) |" "$vg_say"
+
+vg_say_refused=$("$REPL_RUN" <<HEREDOC
+$RECURSIVE
+play_say_refused(L).
+:quit
+HEREDOC
+2>&1)
+check_not "Recursive: refused grant, no failed goal" "ERROR" "$vg_say_refused"
+check "Recursive: a grant that forms no speech act answers nothing, and the next one answers" "L = \[drawn(1, $VG_SAY, input(\[\])), said(speech(text(hi), carol)), withdrawn(1) |" "$vg_say_refused"
+
+vg_forward=$("$REPL_RUN" <<HEREDOC
+$RECURSIVE
+play_forward(L).
+:quit
+HEREDOC
+2>&1)
+check_not "Recursive: forward, no failed goal" "ERROR" "$vg_forward"
+check "Recursive: the program's speech act, signed twice, is drawn whole beside the person's yes or no, and answered" "L = \[drawn(1, $VG_FORWARD, speech(speech(text(hi), alice), bob), input(\[2\])), forwarded(yes), withdrawn(1) |" "$vg_forward"
+echo ""
+
+# -----------------------------------------------------------------------------
 # Section VG, continued: the compiler from an act-schema contract to its
 # canonical CVA platform in vGLP (programs/vglp/cva; vGLP, Section 3.2,
 # Definition "Canonical CVA Platform", two-phase commit coordinated by the
