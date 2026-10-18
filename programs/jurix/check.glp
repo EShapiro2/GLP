@@ -30,7 +30,19 @@
 % schema of it adds or deletes, at a role, the atom of a reflexive predicate
 % naming that role (the paragraph after def:binding).  A contract in which one
 % does is malformed: it is refused, its verdict malformed(Faults) naming each
-% such schema, role and atom, and no condition is decided for it.
+% such schema, role and atom, and no condition is decided for it.  So is a
+% contract with a schema whose signed term violates what def:schema requires
+% of it -- that it occur only in an atom marked +, that its role be a guarding
+% role, and that its speech-act variable occur in an atom some role requires
+% -- and a contract with community roles carrying a signed term at all, which
+% Appendix D's Definition Act schema admits in no atom.
+%
+% A contract of Section 3 whose first conjunct fails may still be grassroots
+% with wards (Appendix F): when it has an introduction with wards
+% (def:introduction-wards), traceable provenance and volition, the protocol
+% realising it is volitionally grassroots (thm:grassroots-wards), and its
+% verdict names the introductory act, the marks, their guardianships and the
+% relay acts the search found.  Otherwise the faults are reported as before.
 % ---------------------------------------------------------------------------
 
 imported procedure unobstructed#intro_result(Contract?, Preds?, Faults).
@@ -40,6 +52,8 @@ imported procedure community#volition_faults(Contract?, Preds?, Faults).
 imported procedure community#conditions(Contract?, Faults).
 imported procedure community#traceable(Contract?, Preds).
 imported procedure community#rooted(Contract?, Preds).
+imported procedure wards#wards(Contract?, Preds?, Wards).
+imported procedure wards#guardianships_for(Contract?, Preds?, Guardianships).
 imported procedure contracts#contract(Constant?, Declared).
 imported procedure contracts#variant(Constant?, Contract?, Declared).
 
@@ -67,8 +81,27 @@ section3_verdict(C, Rf, E, V?) :- ground(C?), ground(Rf?), ground(E?) |
     unobstructed # intro_result(C?, Rf?, F1),
     community # volition_faults(C?, E?, F2),
     faults_app(FT?, F2?, F23),
-    faults_app(F1?, F23?, F),
-    verdict(F?, V).
+    wards_verdict(F1?, F23?, C?, Rf?, V).
+
+% The first conjunct failing and the other two holding, Appendix F is tried:
+% a contract with an introduction with wards is grassroots with wards
+% (def:introduction-wards, thm:grassroots-wards); otherwise the faults of the
+% three conjuncts are reported as before, in their order.
+procedure wards_verdict(Faults?, Faults?, Contract?, Preds?, Verdict).
+wards_verdict([], F23, _, _, V?) :- ground(F23?) | verdict(F23?, V).
+wards_verdict([F|Fs], [], C, Rf, V?) :-
+    ground(F?), ground(Fs?), ground(C?), ground(Rf?) |
+    wards # wards(C?, Rf?, W),
+    wards_verdict1(W?, [F?|Fs?], V).
+wards_verdict([F|Fs], [G|Gs], _, _, V?) :-
+    ground(F?), ground(Fs?), ground(G?), ground(Gs?) |
+    faults_app([F?|Fs?], [G?|Gs?], FF),
+    verdict(FF?, V).
+
+procedure wards_verdict1(Wards?, Faults?, Verdict).
+wards_verdict1(introduction_with_wards(Nm, M, Gs, Rs), _,
+               grassroots_with_wards(Nm?, M?, Gs?, Rs?)).
+wards_verdict1(no_introduction_with_wards, F, not_grassroots(F?)).
 
 procedure community_verdict(Faults?, Verdict).
 community_verdict([], conditions_met).
@@ -114,18 +147,153 @@ refl_schemas([S|Ss], Rf, R?) :- ground(S?), ground(Ss?), ground(Rf?) |
     refl_schemas(Ss?, Rf?, F2),
     faults_app(F1?, F2?, R).
 
+% --- the signed terms of a schema (def:schema) ----------------------------
+% def:schema requires of a signed term sgn(y, pi) that it occur only in an
+% atom marked +, that pi be a guarding role of the schema, and that y occur
+% in an atom some role requires.  Each atom carrying a signed term that
+% violates one of the three is a fault signed(Schema, Role, Atom, Cause),
+% one per requirement it violates; in a contract with community roles each
+% atom carrying a signed term is a fault signed(Schema, Role, Atom,
+% community), Appendix D's Definition Act schema admitting none.
+
+% The signed terms among the arguments of an atom.
+procedure args_sgns(Args?, Args).
+args_sgns([], []).
+args_sgns([sgn(Y, J)|As], [sgn(Y?, J?)|R?]) :- ground(As?) | args_sgns(As?, R).
+args_sgns([A|As], R?) :- otherwise, ground(A?), ground(As?) | args_sgns(As?, R).
+
+% The atoms of Phis carrying a signed term, each a fault with the cause W.
+procedure sgn_carrying(Atoms?, Constant?, Integer?, SgnCause?, Faults?, Faults).
+sgn_carrying([], _, _, _, T, T?).
+sgn_carrying([atom(P, As)|Xs], Nm, I, W, T, R?) :-
+    ground(P?), ground(As?), ground(Xs?), ground(Nm?), integer(I?), ground(W?), ground(T?) |
+    args_sgns(As?, Ss),
+    sgn_carrying1(Ss?, atom(P?, As?), Xs?, Nm?, I?, W?, T?, R).
+
+procedure sgn_carrying1(Args?, Atom?, Atoms?, Constant?, Integer?, SgnCause?, Faults?, Faults).
+sgn_carrying1([], _, Xs, Nm, I, W, T, R?) :-
+    ground(Xs?), ground(Nm?), integer(I?), ground(W?), ground(T?) |
+    sgn_carrying(Xs?, Nm?, I?, W?, T?, R).
+sgn_carrying1([_|_], A, Xs, Nm, I, W, T, [signed(Nm?, I?, A?, W?)|R?]) :-
+    ground(A?), ground(Xs?), ground(Nm?), integer(I?), ground(W?), ground(T?) |
+    sgn_carrying(Xs?, Nm?, I?, W?, T?, R).
+
+% One added atom: its role is a guarding role of the schema and its
+% speech-act variable occurs in an atom some role requires, for each signed
+% term it carries; a fault names the atom once per requirement it violates.
+procedure sgn_guarding(Args?, RoleSpecs?, Ans).
+sgn_guarding([], _, yes).
+sgn_guarding([sgn(_, J)|Ss], Rs, R?) :- integer(J?), ground(Ss?), ground(Rs?) |
+    nth_rs(Rs?, J?, RS),
+    is_guarding(RS?, A),
+    sgn_guarding1(A?, Ss?, Rs?, R).
+sgn_guarding([A|Ss], Rs, R?) :- otherwise, ground(A?), ground(Ss?), ground(Rs?) |
+    sgn_guarding(Ss?, Rs?, R).
+
+procedure sgn_guarding1(Ans?, Args?, RoleSpecs?, Ans).
+sgn_guarding1(no, _, _, no).
+sgn_guarding1(yes, Ss, Rs, R?) :- ground(Ss?), ground(Rs?) | sgn_guarding(Ss?, Rs?, R).
+
+procedure sgn_required(Args?, RoleSpecs?, Ans).
+sgn_required([], _, yes).
+sgn_required([sgn(Y, _)|Ss], Rs, R?) :- ground(Y?), ground(Ss?), ground(Rs?) |
+    any_req_occurs(Rs?, svar(Y?), A),
+    sgn_required1(A?, Ss?, Rs?, R).
+sgn_required([A|Ss], Rs, R?) :- otherwise, ground(A?), ground(Ss?), ground(Rs?) |
+    sgn_required(Ss?, Rs?, R).
+
+procedure sgn_required1(Ans?, Args?, RoleSpecs?, Ans).
+sgn_required1(no, _, _, no).
+sgn_required1(yes, Ss, Rs, R?) :- ground(Ss?), ground(Rs?) | sgn_required(Ss?, Rs?, R).
+
+procedure sgn_fault(Ans?, Atom?, Constant?, Integer?, SgnCause?, Faults?, Faults).
+sgn_fault(yes, _, _, _, _, T, T?).
+sgn_fault(no, A, Nm, I, W, T, [signed(Nm?, I?, A?, W?)|T?]).
+
+procedure sgn_added1(Args?, Atom?, RoleSpecs?, Constant?, Integer?, Faults?, Faults).
+sgn_added1(Ss, A, Rs, Nm, I, T, R?) :-
+    ground(Ss?), ground(A?), ground(Rs?), ground(Nm?), integer(I?), ground(T?) |
+    sgn_guarding(Ss?, Rs?, A1),
+    sgn_required(Ss?, Rs?, A2),
+    sgn_fault(A2?, A?, Nm?, I?, not_required, T?, R2),
+    sgn_fault(A1?, A?, Nm?, I?, not_guarding, R2?, R).
+
+procedure sgn_added(Atoms?, RoleSpecs?, Constant?, Integer?, Faults?, Faults).
+sgn_added([], _, _, _, T, T?).
+sgn_added([atom(P, As)|Xs], Rs, Nm, I, T, R?) :-
+    ground(P?), ground(As?), ground(Xs?), ground(Rs?), ground(Nm?), integer(I?), ground(T?) |
+    args_sgns(As?, Ss),
+    sgn_added(Xs?, Rs?, Nm?, I?, T?, R1),
+    sgn_added1(Ss?, atom(P?, As?), Rs?, Nm?, I?, R1?, R).
+
+% The roles of a schema of Section 3: the three requirements at each.
+procedure sgn_roles(RoleSpecs?, Integer?, RoleSpecs?, Constant?, Faults).
+sgn_roles([], _, _, _, []).
+sgn_roles([RS|Rs], I, All, Nm, R?) :-
+    ground(RS?), ground(Rs?), integer(I?), ground(All?), ground(Nm?) |
+    rs_add(RS?, P),
+    rs_del(RS?, M),
+    rs_keep(RS?, K),
+    rs_forb(RS?, N),
+    atoms_app(K?, N?, KN),
+    atoms_app(M?, KN?, MKN),
+    I1 := I? + 1,
+    sgn_roles(Rs?, I1?, All?, Nm?, R1),
+    sgn_carrying(MKN?, Nm?, I?, not_added, R1?, R2),
+    sgn_added(P?, All?, Nm?, I?, R2?, R).
+
+% The roles of a schema of a contract with community roles: every signed
+% term is outside the language.
+procedure sgn_roles_app(RoleSpecs?, Integer?, Constant?, Faults).
+sgn_roles_app([], _, _, []).
+sgn_roles_app([RS|Rs], I, Nm, R?) :-
+    ground(RS?), ground(Rs?), integer(I?), ground(Nm?) |
+    rs_add(RS?, P),
+    rs_del(RS?, M),
+    rs_keep(RS?, K),
+    rs_forb(RS?, N),
+    atoms_app(K?, N?, KN),
+    atoms_app(M?, KN?, MKN),
+    atoms_app(P?, MKN?, All),
+    I1 := I? + 1,
+    sgn_roles_app(Rs?, I1?, Nm?, R1),
+    sgn_carrying(All?, Nm?, I?, community, R1?, R).
+
+procedure sgn_schema1(RoleSpecs?, Constant?, Faults).
+sgn_schema1(Rs, Nm, R?) :- ground(Rs?), ground(Nm?) |
+    sgn_roles(Rs?, 1, Rs?, Nm?, R).
+
+procedure sgn_schema(Ans?, Schema?, Faults).
+sgn_schema(no, S, R?) :- ground(S?) |
+    sch_name(S?, Nm),
+    sch_roles(S?, Rs),
+    sgn_schema1(Rs?, Nm?, R).
+sgn_schema(yes, S, R?) :- ground(S?) |
+    sch_name(S?, Nm),
+    sch_roles(S?, Rs),
+    sgn_roles_app(Rs?, 1, Nm?, R).
+
+procedure sgn_schemas(Contract?, Ans?, Faults).
+sgn_schemas([], _, []).
+sgn_schemas([S|Ss], A, R?) :- ground(S?), ground(Ss?), ground(A?) |
+    sgn_schema(A?, S?, F1),
+    sgn_schemas(Ss?, A?, F2),
+    faults_app(F1?, F2?, R).
+
 % A malformed contract is refused; a contract that is not is decided by
 % Section 3 or by Section 8, according to its roles.
-procedure check_formed(Faults?, Contract?, Preds?, Verdict).
-check_formed([], C, Rf, V?) :- ground(C?), ground(Rf?) |
-    has_community(C?, A),
+procedure check_formed(Faults?, Ans?, Contract?, Preds?, Verdict).
+check_formed([], A, C, Rf, V?) :- ground(A?), ground(C?), ground(Rf?) |
     check1(A?, C?, Rf?, V).
-check_formed([F|Fs], _, _, malformed([F?|Fs?])).
+check_formed([F|Fs], _, _, _, malformed([F?|Fs?])).
 
 procedure check_decl(Contract?, Preds?, Verdict).
 check_decl(C, Rf, V?) :- ground(C?), ground(Rf?) |
-    refl_schemas(C?, Rf?, M),
-    check_formed(M?, C?, Rf?, V).
+    has_community(C?, A),
+    refl_schemas(C?, Rf?, M1),
+    sgn_schemas(C?, A?, M2),
+    faults_app(M1?, M2?, M),
+    check_formed(M?, A?, C?, Rf?, V).
 
 exported procedure check(Declared?, Verdict).
 check(D, V?) :- ground(D?) |
@@ -172,6 +340,42 @@ exported procedure traceable_variant(Constant?, Contract?, Preds).
 traceable_variant(Nm, B, E?) :- ground(Nm?), ground(B?) |
     contracts # variant(Nm?, B?, D),
     traceable_preds(D?, E).
+
+% The introduction with wards of Appendix F, for inspection, searched for
+% whatever the verdict: what it found, or no_introduction_with_wards.  A
+% contract with community roles has none, Appendix F being written over the
+% schemas of Section 3.
+procedure wards1(Ans?, Contract?, Preds?, Wards).
+wards1(no, C, Rf, W?) :- ground(C?), ground(Rf?) | wards # wards(C?, Rf?, W).
+wards1(yes, _, _, no_introduction_with_wards).
+
+procedure wards_in(Contract?, Preds?, Wards).
+wards_in(C, Rf, W?) :- ground(C?), ground(Rf?) |
+    has_community(C?, A),
+    wards1(A?, C?, Rf?, W).
+
+exported procedure wards(Declared?, Wards).
+wards(D, W?) :- ground(D?) |
+    decl_schemas(D?, C),
+    decl_reflexive(D?, Rf),
+    wards_in(C?, Rf?, W).
+
+exported procedure wards_of(Constant?, Wards).
+wards_of(Nm, W?) :- ground(Nm?) |
+    contracts # contract(Nm?, D),
+    wards(D?, W).
+
+exported procedure wards_variant(Constant?, Contract?, Wards).
+wards_variant(Nm, B, W?) :- ground(Nm?), ground(B?) |
+    contracts # variant(Nm?, B?, D),
+    wards(D?, W).
+
+% The guardianships for a set of marks M (def:guardianship), every one of
+% each mark, for inspection.
+exported procedure guardianships(Declared?, Preds?, Guardianships).
+guardianships(D, M, G?) :- ground(D?), ground(M?) |
+    decl_schemas(D?, C),
+    wards # guardianships_for(C?, M?, G).
 
 % The predicates that are rooted (definition:rooted).  Rootedness is a notion
 % of Section 8; a contract of Section 3 is not asked about it.

@@ -44,8 +44,10 @@ all_preds(C, R?) :- ground(C?) |
 % schema's own roles; a party variable needs a required atom of Phi_E naming
 % it, at some role of the same schema; and a speech-act variable is an
 % argument of such a required atom or occurs in no atom required at a role of
-% the schema, whatever its predicate.  A name term does not occur in a schema
-% of Section 3.
+% the schema, whatever its predicate.  A signed term sgn(y, pi) counts as the
+% two arguments y and pi: pi is a role of the schema and y is put to the
+% clause on speech-act variables (def:grounded).  A name term does not occur
+% in a schema of Section 3.
 
 procedure args_ok1(Ans?, Args?, RoleSpecs?, Preds?, Ans).
 args_ok1(no, _, _, _, no).
@@ -66,6 +68,9 @@ args_ok([], _, _, yes).
 args_ok([role(_)|As], All, E, R?) :- ground(As?), ground(All?), ground(E?) |
     args_ok(As?, All?, E?, R).
 args_ok([svar(X)|As], All, E, R?) :- ground(X?), ground(As?), ground(All?), ground(E?) |
+    svar_ok(All?, svar(X?), E?, A),
+    args_ok1(A?, As?, All?, E?, R).
+args_ok([sgn(X, _)|As], All, E, R?) :- ground(X?), ground(As?), ground(All?), ground(E?) |
     svar_ok(All?, svar(X?), E?, A),
     args_ok1(A?, As?, All?, E?, R).
 args_ok([nterm(_)|As], All, E, R?) :- ground(As?), ground(All?), ground(E?) |

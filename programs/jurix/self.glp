@@ -19,8 +19,11 @@ NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
 NameTerms ::= [] ; [NameTerm | NameTerms].
 
 % An argument is a role, named by its index in the schema, a party variable, a
-% speech-act variable or a name term.
-Arg   ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm).
+% speech-act variable, a name term or a signed term: sgn(Y, I) is the signed
+% term sgn(y, pi_I) of def:schema, the speech act y signed by the party in
+% role I.
+Arg   ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
+        ; sgn(Constant, Integer).
 Args  ::= [] ; [Arg | Args].
 Atom  ::= atom(Constant, Args).
 Atoms ::= [] ; [Atom | Atoms].
@@ -55,11 +58,13 @@ Contract  ::= [] ; [Schema | Contract].
 % one that does not is the list of its schemas.
 Declared  ::= Contract ; reflexive(Preds, Contract).
 
-% --- The image of a binding (def:schema) -----------------------------------
+% --- The image of a binding (def:schema, def:binding) ----------------------
 % People and speech acts are numbered; person(0) and person(1) are the two
-% the conditions quantify over.  undef marks a variable that a partial
-% substitution leaves unbound and occurs in no completed one.
-Val   ::= person(Integer) ; speech(Integer) ; undef.
+% the conditions quantify over.  signed(S, P) is the image of a signed term,
+% the pair of the speech act S and the person P in its role
+% (def:binding).  undef marks a variable that a partial substitution leaves
+% unbound and occurs in no completed one.
+Val   ::= person(Integer) ; speech(Integer) ; signed(Val, Val) ; undef.
 Vals  ::= [] ; [Val | Vals].
 GAtom ::= gatom(Constant, Vals).
 
@@ -78,14 +83,54 @@ Ans   ::= yes ; no.
 Ints  ::= [] ; [Integer | Ints].
 Preds ::= [] ; [Constant | Preds].
 Cause ::= unobtainable ; blocked_by(Constant, Integer, Atom) ; reflexive.
+% What def:schema requires of a signed term, and the atom carrying one
+% violates: it occurs in an atom not marked + (not_added), its role is not a
+% guarding role (not_guarding), its speech-act variable occurs in no atom a
+% role requires (not_required); or the contract has community roles, whose
+% schemas (Appendix D, Definition Act schema) admit no signed term
+% (community).
+SgnCause ::= not_added ; not_guarding ; not_required ; community.
 Fault ::= no_introductory_act
         ; obstructed(Constant, Integer, Atom, Cause)
         ; untraceable(Preds)
         ; volition(Constant, Integer, Integer)
         ; cohesion(Constant, Integer, Atom)
-        ; reflexive(Constant, Integer, Atom).
+        ; reflexive(Constant, Integer, Atom)
+        ; signed(Constant, Integer, Atom, SgnCause).
 Faults  ::= [] ; [Fault | Faults].
+
+% --- What an introduction with wards is made of (Appendix F) ---------------
+% guardianship(M, Iota, G, W) is the guardianship (m, iota, g, w) of
+% def:guardianship; a party of a relay act (def:relay) is a ward role,
+% ward(Role, Mark, GuardianRole), or a free role, free(Role); a relay act is
+% named with its two parties.  An introduction with wards
+% (def:introduction-wards) names the introductory act unobstructed but for
+% the marks, the set of marks, the guardianship of each and the relay acts
+% found: for each mark one with a free role, and for each pair of marks, in
+% the order of the set, one with a ward role of each.
+Guardianship  ::= guardianship(Constant, Constant, Constant, Constant).
+Guardianships ::= [] ; [Guardianship | Guardianships].
+Party  ::= ward(Integer, Constant, Integer) ; free(Integer).
+Parties ::= [] ; [Party | Parties].
+Relay  ::= relay(Constant, Party, Party).
+Relays ::= [] ; [Relay | Relays].
+Wards  ::= introduction_with_wards(Constant, Preds, Guardianships, Relays)
+         ; no_introduction_with_wards.
+
+% What the search of wards.glp carries: the sets of marks it tries, the
+% guardianship candidates of each mark of a set, the kind of each role of a
+% schema put to def:relay -- a ward role of a mark with its guardian role, a
+% free role, a guardian role, or none of these -- the kind of party sought,
+% and an introductory act unobstructed but for the marks with its predicate e.
+PredSets   ::= [] ; [Preds | PredSets].
+GuardLists ::= [] ; [Guardianships | GuardLists].
+RK   ::= rk_ward(Constant, Integer) ; rk_free ; rk_guard ; rk_other.
+RKs  ::= [] ; [RK | RKs].
+Kind ::= free_party ; ward_party(Constant).
+IntroE ::= intro(Constant, Constant) ; no_intro.
+
 Verdict ::= syntactically_grassroots ; not_grassroots(Faults)
+          ; grassroots_with_wards(Constant, Preds, Guardianships, Relays)
           ; conditions_met ; conditions_failed(Faults)
           ; malformed(Faults).
 
@@ -251,9 +296,13 @@ unwrap_val(free, undef).
 
 % apply_arg/apply_atom: the image under a binding, written beta(phi) in
 % Section 3.  A completed substitution binds every variable of the schema, so
-% undef never reaches an atom.
+% undef never reaches an atom.  The image of a signed term is the pair of the
+% speech act its variable maps to and the person in its role (def:binding).
 procedure apply_arg(Subst?, Arg?, Val).
-apply_arg(S, A, V?) :- ground(S?), ground(A?) |
+apply_arg(S, sgn(Y, J), signed(SV?, PV?)) :- ground(S?), ground(Y?), integer(J?) |
+    apply_arg(S?, svar(Y?), SV),
+    apply_arg(S?, role(J?), PV).
+apply_arg(S, A, V?) :- otherwise, ground(S?), ground(A?) |
     subst_lookup(S?, A?, F),
     unwrap_val(F?, V).
 
@@ -280,16 +329,25 @@ apply_atom(S, atom(P, As), gatom(P?, Vs?)) :- ground(S?), ground(P?), ground(As?
 procedure kind_ok(Arg?, Val?, Ans).
 kind_ok(role(_), person(_), yes).
 kind_ok(role(_), speech(_), no).
+kind_ok(role(_), signed(_, _), no).
 kind_ok(role(_), undef, no).
 kind_ok(pvar(_), person(_), yes).
 kind_ok(pvar(_), speech(_), no).
+kind_ok(pvar(_), signed(_, _), no).
 kind_ok(pvar(_), undef, no).
 kind_ok(svar(_), person(_), no).
 kind_ok(svar(_), speech(_), yes).
+kind_ok(svar(_), signed(_, _), yes).
 kind_ok(svar(_), undef, no).
 kind_ok(nterm(_), person(_), no).
 kind_ok(nterm(_), speech(_), no).
+kind_ok(nterm(_), signed(_, _), no).
 kind_ok(nterm(_), undef, no).
+% A signed term is matched by its two parts (match_sgn below), never here.
+kind_ok(sgn(_, _), person(_), no).
+kind_ok(sgn(_, _), speech(_), no).
+kind_ok(sgn(_, _), signed(_, _), yes).
+kind_ok(sgn(_, _), undef, no).
 
 % subst_role_at(S, V, R): S sends a role to V.  Clause 2 of def:unobstructed
 % asks it of the other party.
@@ -304,8 +362,25 @@ roles_at([], _, []).
 roles_at([bind(role(J), W)|S], V, [J?|R?]) :- W? =?= V? | roles_at(S?, V?, R).
 roles_at([bind(_, _)|S], V, R?) :- otherwise | roles_at(S?, V?, R).
 
-% names_role(Phis, J, R): role J is among the arguments of some atom of Phis,
-% which then names it.
+% args_name_role(As, J, R): the arguments As name role J -- it is among them
+% or is the role of a signed term among them (Section 3.1, what an atom
+% names in a schema; Section 8, "names").
+procedure arg_names_role(Arg?, Integer?, Ans).
+arg_names_role(role(I), J, yes) :- I? =:= J? | true.
+arg_names_role(sgn(_, I), J, yes) :- I? =:= J? | true.
+arg_names_role(A, _, no) :- otherwise, ground(A?) | true.
+
+procedure args_name_role1(Ans?, Args?, Integer?, Ans).
+args_name_role1(yes, _, _, yes).
+args_name_role1(no, As, J, R?) :- ground(As?), integer(J?) | args_name_role(As?, J?, R).
+
+procedure args_name_role(Args?, Integer?, Ans).
+args_name_role([], _, no).
+args_name_role([A|As], J, R?) :- ground(A?), ground(As?), integer(J?) |
+    arg_names_role(A?, J?, A1),
+    args_name_role1(A1?, As?, J?, R).
+
+% names_role(Phis, J, R): some atom of Phis names role J.
 procedure names_role1(Ans?, Atoms?, Integer?, Ans).
 names_role1(yes, _, _, yes).
 names_role1(no, Xs, J, R?) :- ground(Xs?), integer(J?) | names_role(Xs?, J?, R).
@@ -313,8 +388,14 @@ names_role1(no, Xs, J, R?) :- ground(Xs?), integer(J?) | names_role(Xs?, J?, R).
 procedure names_role(Atoms?, Integer?, Ans).
 names_role([], _, no).
 names_role([atom(_, As)|Xs], J, R?) :- ground(As?), ground(Xs?), integer(J?) |
-    args_member(As?, role(J?), A),
+    args_name_role(As?, J?, A),
     names_role1(A?, Xs?, J?, R).
+
+% atoms_member(Phis, Phi, R): Phi is one of Phis.
+procedure atoms_member(Atoms?, Atom?, Ans).
+atoms_member([], _, no).
+atoms_member([A|_], B, yes) :- A? =?= B? | true.
+atoms_member([_|As], B, R?) :- otherwise | atoms_member(As?, B?, R).
 
 % role_names(RS, J, R): the role adds or deletes an atom naming role J.
 procedure role_names(RoleSpec?, Integer?, Ans).
@@ -356,6 +437,8 @@ binding_ok(role(K), V, S, Rs, R?) :- integer(K?), ground(V?), ground(S?), ground
 binding_ok(pvar(_), _, _, _, yes).
 binding_ok(svar(_), _, _, _, yes).
 binding_ok(nterm(_), _, _, _, yes).
+% A signed term is no variable and is matched by its parts (match_sgn).
+binding_ok(sgn(_, _), _, _, _, no).
 
 procedure match_bind(Ans?, Arg?, Val?, Subst?, MatchRes).
 match_bind(yes, A, V, S, match([bind(A?, V?)|S?])).
@@ -374,8 +457,25 @@ match_one1(free, A, V, S, Rs, R?) :- ground(A?), ground(V?), ground(S?), ground(
 match_one1(bound(W), _, V, S, _, R?) :- ground(W?), ground(V?), ground(S?) |
     val_same(W?, V?, S?, R).
 
+% A signed term sgn(y, pi) matches a signed value by its two parts, the
+% speech-act variable against the speech act and the role against the person
+% (def:binding: beta(sgn(y, pi)) := (beta(y), beta(pi))), and matches no
+% person and no speech act: the speech acts of an introduction are taken
+% signed once (README, "One thing to know about the reading").
+procedure match_sgn(Constant?, Integer?, Val?, Subst?, RoleSpecs?, MatchRes).
+match_sgn(Y, J, signed(SV, PV), S, Rs, R?) :-
+    ground(Y?), integer(J?), ground(SV?), ground(PV?), ground(S?), ground(Rs?) |
+    match_one(svar(Y?), SV?, S?, Rs?, R1),
+    match_rest(R1?, [role(J?)], [PV?], Rs?, R).
+match_sgn(_, _, person(_), _, _, nomatch).
+match_sgn(_, _, speech(_), _, _, nomatch).
+match_sgn(_, _, undef, _, _, nomatch).
+
 procedure match_one(Arg?, Val?, Subst?, RoleSpecs?, MatchRes).
-match_one(A, V, S, Rs, R?) :- ground(A?), ground(V?), ground(S?), ground(Rs?) |
+match_one(sgn(Y, J), V, S, Rs, R?) :-
+    ground(Y?), integer(J?), ground(V?), ground(S?), ground(Rs?) |
+    match_sgn(Y?, J?, V?, S?, Rs?, R).
+match_one(A, V, S, Rs, R?) :- otherwise, ground(A?), ground(V?), ground(S?), ground(Rs?) |
     subst_lookup(S?, A?, F),
     match_one1(F?, A?, V?, S?, Rs?, R).
 
@@ -454,11 +554,14 @@ nt_svars(ext(S, Y), R?) :- ground(S?), ground(Y?) |
     nt_svars(S?, R1),
     args_app(R1?, [svar(Y?)], R).
 
+% A signed term sgn(y, pi) carries the speech-act variable y and no party
+% variable (def:schema).
 procedure filter_pvars(Args?, Args).
 filter_pvars([], []).
 filter_pvars([pvar(X)|As], [pvar(X?)|R?]) :- filter_pvars(As?, R).
 filter_pvars([role(_)|As], R?) :- filter_pvars(As?, R).
 filter_pvars([svar(_)|As], R?) :- filter_pvars(As?, R).
+filter_pvars([sgn(_, _)|As], R?) :- filter_pvars(As?, R).
 filter_pvars([nterm(S)|As], R?) :- ground(S?), ground(As?) |
     nt_pvars(S?, Ps),
     filter_pvars(As?, R1),
@@ -469,6 +572,7 @@ filter_svars([], []).
 filter_svars([svar(X)|As], [svar(X?)|R?]) :- filter_svars(As?, R).
 filter_svars([role(_)|As], R?) :- filter_svars(As?, R).
 filter_svars([pvar(_)|As], R?) :- filter_svars(As?, R).
+filter_svars([sgn(Y, _)|As], [svar(Y?)|R?]) :- filter_svars(As?, R).
 filter_svars([nterm(S)|As], R?) :- ground(S?), ground(As?) |
     nt_svars(S?, Ss),
     filter_svars(As?, R1),
@@ -519,6 +623,7 @@ fresh_val(role(_), N, person(N?)).
 fresh_val(pvar(_), N, person(N?)).
 fresh_val(svar(_), N, speech(N?)).
 fresh_val(nterm(_), _, undef).
+fresh_val(sgn(_, _), _, undef).
 
 procedure complete1(Found?, Arg?, Args?, Subst?, Integer?, Subst).
 complete1(bound(_), _, As, S, N, R?) :- ground(As?), ground(S?), integer(N?) |
@@ -744,6 +849,10 @@ arg_base(role(I), b_role(I?)).
 arg_base(pvar(X), b_pvar(X?)).
 arg_base(svar(X), b_svar(X?)).
 arg_base(nterm(S), B?) :- ground(S?) | nt_base(S?, B).
+% A signed term has no base in Appendix D, whose schemas admit none: a
+% contract with community roles carrying one is refused (check.glp) before
+% any base is taken, and the clause covers the alternative with its role's.
+arg_base(sgn(_, J), b_role(J?)).
 
 procedure role_base(RoleSpec?, Integer?, Base).
 role_base(rs(_, _, _, _, _), I, b_role(I?)).
@@ -845,6 +954,24 @@ rooted_preds(D, E?) :- check # rooted_preds(D?, E).
 imported procedure check#rooted_variant(Constant?, Contract?, Preds).
 exported procedure rooted_variant(Constant?, Contract?, Preds).
 rooted_variant(Nm, B, E?) :- check # rooted_variant(Nm?, B?, E).
+
+% The introduction with wards of Appendix F, for inspection: what the search
+% found, or that there is none; and the guardianships for a set of marks.
+imported procedure check#wards_of(Constant?, Wards).
+exported procedure wards_of(Constant?, Wards).
+wards_of(Nm, W?) :- check # wards_of(Nm?, W).
+
+imported procedure check#wards(Declared?, Wards).
+exported procedure wards(Declared?, Wards).
+wards(D, W?) :- check # wards(D?, W).
+
+imported procedure check#wards_variant(Constant?, Contract?, Wards).
+exported procedure wards_variant(Constant?, Contract?, Wards).
+wards_variant(Nm, B, W?) :- check # wards_variant(Nm?, B?, W).
+
+imported procedure check#guardianships(Declared?, Preds?, Guardianships).
+exported procedure guardianships(Declared?, Preds?, Guardianships).
+guardianships(D, M, G?) :- check # guardianships(D?, M?, G).
 
 imported procedure contracts#contract(Constant?, Declared).
 exported procedure contract_named(Constant?, Declared).
