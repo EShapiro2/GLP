@@ -26,11 +26,19 @@
 % proved of a contract in the paper, are not conditions on the text, and are
 % neither decided nor claimed here.
 %
+% A schema is an act schema only when it is formed as def:schema requires:
+% +(i) and -(i) disjoint at every role, and +(i) u -(i) nonempty at every
+% role that is not a guarding role and at some role, a guarding role being
+% one that may add and delete nothing (def:schema and the sentence after its
+% example).  Appendix D's Definition Act schema requires the first alone.  A
+% contract with a schema formed otherwise is malformed: it is refused, its
+% verdict malformed(Faults), and no condition is decided for it.
+%
 % A contract may declare predicates of arity one reflexive, and then no
 % schema of it adds or deletes, at a role, the atom of a reflexive predicate
 % naming that role (the paragraph after def:binding).  A contract in which one
-% does is malformed: it is refused, its verdict malformed(Faults) naming each
-% such schema, role and atom, and no condition is decided for it.  So is a
+% does is malformed too, the verdict naming each such schema, role and atom.
+% So is a
 % contract with a schema whose signed term violates what def:schema requires
 % of it -- that it occur only in an atom marked +, and that its speech-act
 % variable occur in an atom its role requires -- and a contract with community
@@ -115,6 +123,113 @@ check_appendix(C, V?) :- ground(C?) |
 procedure check1(Ans?, Contract?, Preds?, Verdict).
 check1(no, C, Rf, V?) :- ground(C?), ground(Rf?) | check_section3(C?, Rf?, V).
 check1(yes, C, _, V?) :- ground(C?) | check_appendix(C?, V).
+
+% --- the form of a schema (def:schema; Appendix D, Definition Act schema) --
+% def:schema requires that +(i) and -(i) be disjoint, and that +(i) u -(i) be
+% nonempty at every role that is not a guarding role and at some role.  Each
+% atom a role both adds and deletes is a fault
+% added_and_deleted(Schema, Role, Atom); each role that is not a guarding
+% role and adds and deletes nothing a fault changes_nothing(Schema, Role);
+% and a schema adding and deleting nothing at every role a fault
+% no_role_changes(Schema), one per requirement violated.  Appendix D's
+% Definition Act schema requires +(i) and -(i) disjoint and nothing of
+% +(i) u -(i), so a contract with community roles is put to the first alone.
+
+procedure atoms_nonempty(Atoms?, Ans).
+atoms_nonempty([], no).
+atoms_nonempty([_|_], yes).
+
+% The role adds or deletes an atom: +(i) u -(i) is nonempty.
+procedure role_changes(RoleSpec?, Ans).
+role_changes(RS, R?) :- ground(RS?) |
+    rs_add(RS?, P),
+    rs_del(RS?, M),
+    atoms_app(P?, M?, PM),
+    atoms_nonempty(PM?, R).
+
+procedure roles_change1(Ans?, RoleSpecs?, Ans).
+roles_change1(yes, _, yes).
+roles_change1(no, Rs, R?) :- ground(Rs?) | roles_change(Rs?, R).
+
+% Some role adds or deletes an atom.
+procedure roles_change(RoleSpecs?, Ans).
+roles_change([], no).
+roles_change([RS|Rs], R?) :- ground(RS?), ground(Rs?) |
+    role_changes(RS?, A),
+    roles_change1(A?, Rs?, R).
+
+% Each atom of Plus that Minus holds is added and deleted at the role.
+procedure overlap_fault(Ans?, Atom?, Constant?, Integer?, Faults?, Faults).
+overlap_fault(yes, A, Nm, I, T, [added_and_deleted(Nm?, I?, A?)|T?]).
+overlap_fault(no, _, _, _, T, T?).
+
+procedure overlap_faults(Atoms?, Atoms?, Constant?, Integer?, Faults?, Faults).
+overlap_faults([], _, _, _, T, T?).
+overlap_faults([A|As], M, Nm, I, T, R?) :-
+    ground(A?), ground(As?), ground(M?), ground(Nm?), integer(I?), ground(T?) |
+    atoms_member(M?, A?, In),
+    overlap_faults(As?, M?, Nm?, I?, T?, R1),
+    overlap_fault(In?, A?, Nm?, I?, R1?, R).
+
+% A role that is not guarding (first argument no) and adds and deletes
+% nothing (second argument no).
+procedure inert_fault(Ans?, Ans?, Constant?, Integer?, Faults?, Faults).
+inert_fault(no, no, Nm, I, T, [changes_nothing(Nm?, I?)|T?]).
+inert_fault(no, yes, _, _, T, T?).
+inert_fault(yes, _, _, _, T, T?).
+
+% The requirement on +(i) u -(i) at a role, for a schema of Section 3 (first
+% argument yes) and for none of Appendix D (no).
+procedure role_inert(Ans?, RoleSpec?, Constant?, Integer?, Faults?, Faults).
+role_inert(yes, RS, Nm, I, T, R?) :-
+    ground(RS?), ground(Nm?), integer(I?), ground(T?) |
+    is_guarding(RS?, G),
+    role_changes(RS?, C),
+    inert_fault(G?, C?, Nm?, I?, T?, R).
+role_inert(no, _, _, _, T, T?).
+
+procedure form_roles(RoleSpecs?, Integer?, Constant?, Ans?, Faults).
+form_roles([], _, _, _, []).
+form_roles([RS|Rs], I, Nm, S3, R?) :-
+    ground(RS?), ground(Rs?), integer(I?), ground(Nm?), ground(S3?) |
+    rs_add(RS?, P),
+    rs_del(RS?, M),
+    I1 := I? + 1,
+    form_roles(Rs?, I1?, Nm?, S3?, R1),
+    role_inert(S3?, RS?, Nm?, I?, R1?, R2),
+    overlap_faults(P?, M?, Nm?, I?, R2?, R).
+
+% Some role adds or deletes an atom, for a schema of Section 3.
+procedure schema_change_fault(Ans?, Ans?, Constant?, Faults).
+schema_change_fault(yes, no, Nm, [no_role_changes(Nm?)]).
+schema_change_fault(yes, yes, _, []).
+schema_change_fault(no, _, _, []).
+
+% A, from has_community, is yes for a contract with community roles.
+procedure form_schema(Ans?, Schema?, Faults).
+form_schema(A, S, R?) :- ground(A?), ground(S?) |
+    flip(A?, S3),
+    form_schema1(S3?, S?, R).
+
+procedure form_schema1(Ans?, Schema?, Faults).
+form_schema1(S3, S, R?) :- ground(S3?), ground(S?) |
+    sch_name(S?, Nm),
+    sch_roles(S?, Rs),
+    form_schema2(S3?, Nm?, Rs?, R).
+
+procedure form_schema2(Ans?, Constant?, RoleSpecs?, Faults).
+form_schema2(S3, Nm, Rs, R?) :- ground(S3?), ground(Nm?), ground(Rs?) |
+    form_roles(Rs?, 1, Nm?, S3?, F1),
+    roles_change(Rs?, Ch),
+    schema_change_fault(S3?, Ch?, Nm?, F2),
+    faults_app(F1?, F2?, R).
+
+procedure form_schemas(Contract?, Ans?, Faults).
+form_schemas([], _, []).
+form_schemas([S|Ss], A, R?) :- ground(S?), ground(Ss?), ground(A?) |
+    form_schema(A?, S?, F1),
+    form_schemas(Ss?, A?, F2),
+    faults_app(F1?, F2?, R).
 
 % --- a contract declaring predicates reflexive (after def:binding) ---------
 % Each atom a role adds or deletes that is the atom of a reflexive predicate
@@ -277,9 +392,11 @@ check_formed([F|Fs], _, _, _, malformed([F?|Fs?])).
 procedure check_decl(Contract?, Preds?, Verdict).
 check_decl(C, Rf, V?) :- ground(C?), ground(Rf?) |
     has_community(C?, A),
+    form_schemas(C?, A?, M0),
     refl_schemas(C?, Rf?, M1),
     sgn_schemas(C?, A?, M2),
-    faults_app(M1?, M2?, M),
+    faults_app(M1?, M2?, M12),
+    faults_app(M0?, M12?, M),
     check_formed(M?, A?, C?, Rf?, V).
 
 exported procedure check(Declared?, Verdict).
