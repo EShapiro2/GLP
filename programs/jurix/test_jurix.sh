@@ -17,10 +17,12 @@
 # against those and one against rootedness, which is none of them; then small
 # contracts on the speech-act variables of traceable provenance and on
 # volition by connected component, in the language of Section 8; then the
-# compilation of Section 8, against its worked box.  A contract is its owner's
-# and the checker reads its term (contracts.glp, the header): a fixture that
-# changes one is a variant, given by name and the owner's term.  Exits
-# non-zero if any check fails.
+# compilation of Section 8, against its worked box; then the signed
+# speech-act term of Sections 3.1 to 3.3, on the social graph with items and
+# on contracts refused for a signed term where def:schema forbids it.  A
+# contract is its owner's and the checker reads its term (contracts.glp, the
+# header): a fixture that changes one is a variant, given by name and the
+# owner's term.  Exits non-zero if any check fails.
 
 set -u
 GLP_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -599,6 +601,73 @@ check "leave_1 is guarded by a supermajority of the parent's assembly" \
 check "leave_2 is guarded by a supermajority of the child's assembly" \
       "\\text{guardedby}G,\\G\\subseteq\\mathrm{ext}_c(\\xi^{\\mathit{seat}})" \
       "$(compiled_in federation "$FED" leave_2)"
+
+# --- the signed speech-act term (Sections 3.1 to 3.3) ----------------------
+# The social graph with items of Section 3.3, item of arity one and forward
+# adding item(sgn(x, Alice)) at Bob: GSG's contract, the checker's fixture
+# sg_items until GSG commits it.  Section 7 certifies it, forward's signed
+# term counting as the two arguments x and Alice (def:grounded).
+out=$(run 'check_named(sg_items, V).' 'traceable_of(sg_items, E).')
+check "the social graph with items is syntactically grassroots" \
+      "V = syntactically_grassroots" "$out"
+check "friend, item and sent have traceable provenance there" \
+      "E = [friend, item, sent]" "$out"
+
+# forward compiles to the display of Section 5.2's form, the signed term
+# written \mathrm{sgn}(x,\Alice) as Section 3.3 writes it.
+forward_items=$(cat <<'TEX' | squash
+\begin{align*}
+& c'_{\Alice} := c_{\Alice} \uplus \{\mathit{sent}(x,\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{item}(\mathrm{sgn}(x,\Alice))\},\\
+& \text{provided } \mathit{item}(x) \in c_{\Alice} \text{ and } \mathit{friend}(\Alice) \in c_{\Bob}, \qquad \text{guarded by } \{\Alice\}
+\end{align*}
+TEX
+)
+check_eq "forward compiles with the signed term" \
+         "$forward_items" "$(compiled sg_items forward)"
+
+# An introduction through the signed term alone: each role of exchange adds
+# an atom naming the other only as the role of its signed term (Section 3.1;
+# Section 8, "names"), so it is an introductory act; with plain speech-act
+# variables in place of the signed terms nothing names the other party.
+out=$(run 'check_named(sgn_intro, V).' 'traceable_of(sgn_intro, E).')
+check "an act naming the other party by a signed term is an introductory act" \
+      "V = syntactically_grassroots" "$out"
+check "and the atom carrying the signed term has traceable provenance" \
+      "E = [item, got]" "$out"
+out=$(run 'check_named(sgn_intro_plain, V).')
+check "with plain speech-act variables it names nobody and there is no introductory act" \
+      "V = not_grassroots([no_introductory_act])" "$out"
+
+# def:schema: a signed term occurs only in an atom marked +, its role is a
+# guarding role, and its speech-act variable occurs in an atom some role
+# requires; a schema violating one is refused, the contract malformed.
+out=$(run 'check_named(sgn_not_added, V).')
+check "a signed term in an atom not marked + is refused" \
+      "V = malformed([signed(forward, 2, atom(item, [sgn(x, 1)]), not_added)])" "$out"
+out=$(run 'check_named(sgn_not_guarding, V).')
+check "a signed term of a role that does not guard is refused" \
+      "V = malformed([signed(forward, 2, atom(item, [sgn(x, 2)]), not_guarding)])" "$out"
+out=$(run 'check_named(sgn_not_required, V).')
+check "a signed term whose speech-act variable no role requires is refused" \
+      "V = malformed([signed(sign, 1, atom(item, [sgn(x, 1)]), not_required)])" "$out"
+out=$(run 'compile_named(sgn_not_required).')
+check "and a contract refused for its signed term is not compiled" \
+      "% not compiled: sgn_not_required is malformed" "$(printf '%s' "$out" | tr '\n' ' ')"
+
+# Appendix D's Definition Act schema admits no signed term: a contract with
+# community roles carrying one is refused.
+out=$(run 'check_named(sgn_community, V).')
+check "a signed term in a contract with community roles is refused" \
+      "V = malformed([signed(forward, 2, atom(item, [sgn(x, 1)]), community)])" "$out"
+
+# The speech-act variable of a signed term is put to the clause of
+# def:grounded on speech-act variables: carried from a required atom of no
+# traceable provenance, the item loses it, and sent after it.
+out=$(run 'check_named(sg_sgn_loose, V).' 'traceable_of(sg_sgn_loose, E).')
+check "a signed speech act from an untraceable record: only friend keeps provenance" \
+      "E = [friend]" "$out"
+check "and the verdict is the second conjunct alone" \
+      "V = not_grassroots([untraceable([item, sent, tagged])])" "$out"
 
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]

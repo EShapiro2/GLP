@@ -7,8 +7,10 @@ printed as the LaTeX of Section 5.2.
 
 The specification is the paper — *Formal Grassroots Social Contracts*
 (`/Grassroots/Jurix`, `main.tex`), Section 3 for a contract whose roles are all
-party roles and Section 8, `sections/13-community-roles.tex`, for one with
-community roles.  Nothing of either is restated here or in the code: every
+party roles and the appendix on community roles, `sections/13-community-roles.tex`, for one with
+community roles (Appendix D since the paper's restructuring of 2026-10-18;
+the code's comments still call it Section 8, its number until then).
+Nothing of any of them is restated here or in the code: every
 procedure names the definition it decides, and the definition is read in the
 paper.  A contract is syntactically grassroots
 (`def:syntactically-grassroots`) when it has an unobstructed
@@ -150,7 +152,16 @@ adds `seat(eta)`, failing cohesion alone.  `sv_signed`, `sv_loose`,
 speech-act variables of `definition:provenance`, `sg_relay` is the social
 graph with two schemas on volition by connected component, and
 `sg_tri_cschema` is `sg_tri` with `tri` written as a cschema, all in the
-language of Section 8.  `sg_reflexive` is the social graph with `friend`
+language of Section 8.  `sg_items` is the social graph with items of Section
+3.3 --- `item` of arity one, `forward` adding `item(sgn(x, Alice))` at Bob ---
+GSG's contract, the checker's fixture until GSG commits it to its file;
+`sgn_intro` is an exchange whose two roles name each other only as the role
+of a signed term, and `sgn_intro_plain` the same with plain speech-act
+variables, naming nobody; `sgn_not_added`, `sgn_not_guarding` and
+`sgn_not_required` each carry a signed term where `def:schema` forbids it,
+`sgn_community` one in a contract with community roles, and all four are
+refused; `sg_sgn_loose` carries a signed speech act from an untraceable
+record, and `item` loses traceable provenance.  `sg_reflexive` is the social graph with `friend`
 declared reflexive; `sg_refl_malformed` adds to it schemas adding and
 deleting `friend` of their own role, which a contract declaring `friend`
 reflexive may not have; `sg_self_required` and `sg_refl_required` are the
@@ -204,11 +215,23 @@ it for both.
 A contract that declares a predicate reflexive and has a schema adding or
 deleting, at a role, the atom of that predicate naming that role is
 malformed (the paragraph after `def:binding`), whichever section it is
-written in.  It is refused, its verdict `malformed(Faults)`, each fault a
+written in.  So is a contract with a schema whose signed term violates what
+`def:schema` requires of it.  It is refused, its verdict `malformed(Faults)`,
+each fault a
 
     reflexive(Schema, Role, Atom)
+    signed(Schema, Role, Atom, not_added)
+    signed(Schema, Role, Atom, not_guarding)
+    signed(Schema, Role, Atom, not_required)
+    signed(Schema, Role, Atom, community)
 
 naming the schema, the role and the atom, and no condition is decided for it.
+`not_added` is a signed term in an atom not marked `+`, `not_guarding` one
+whose role is not a guarding role of the schema, `not_required` one whose
+speech-act variable occurs in no atom a role requires, each a requirement of
+`def:schema`; and `community` is a signed term in a contract with community
+roles, whose schemas (Appendix D, Definition Act schema) are written over
+roles, variables and name terms and admit none.
 
 ## Writing a contract
 
@@ -223,7 +246,7 @@ holds only the checker's fixtures.
     NameTerm ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
                ; ext(NameTerm, Constant).
     Arg      ::= role(Integer) ; pvar(Constant) ; svar(Constant)
-               ; nterm(NameTerm).
+               ; nterm(NameTerm) ; sgn(Constant, Integer).
     Atom     ::= atom(Predicate, [Arg, ...]).
     Guard    ::= guarded ; unguarded ; guarded_at(Constant).
     RoleKind ::= seated(NameTerm, Predicate) ; constituent(NameTerm, Predicate).
@@ -236,7 +259,10 @@ holds only the checker's fixtures.
 
 A role is named by its index, so `role(1)` is the schema's first role and the
 roles of `schema(Name, Rs)` are `role(1)` to `role(K)` for `K` the length of
-`Rs`; `pvar` is a party variable and `svar` a speech-act variable.  `Guard` is
+`Rs`; `pvar` is a party variable and `svar` a speech-act variable; `sgn(Y, I)`
+is the signed term `sgn(y, pi_I)` of `def:schema`, the speech act `y` signed by
+the party in role `I`, which an atom a schema adds may carry where `y` is
+required at some role and `I` guards.  `Guard` is
 `guarded` or `unguarded`, recording the mark `?`, or `guarded_at(T)`, recording
 the mark `?_theta` with `T` naming the threshold; and `Add`, `Del`, `Keep`,
 `Forb` are the role's `+(i)`, `-(i)`, `=(i)` and `not(i)`.  A party role is
@@ -255,11 +281,27 @@ is
       [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
        rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])])
 
-The checker takes the contract as given and does not test it against the
+and the two schemas of Section 3.3 that carry the speech-act variable `x`,
+sign and forward, written in the paper
+
+    sign(Alice?; x) :   +item(x)
+    forward(Alice?, Bob; x) :   item(x), +sent(x, Bob)    friend(Alice), +item(sgn(x, Alice))
+
+are
+
+    schema(sign,
+      [rs(guarded, [atom(item, [svar(x)])], [], [], [])])
+    schema(forward,
+      [rs(guarded,   [atom(sent, [svar(x), role(2)])], [], [atom(item, [svar(x)])], []),
+       rs(unguarded, [atom(item, [sgn(x, 1)])], [], [atom(friend, [role(1)])], [])])
+
+the signed term naming Alice, the forwarder, by her index.  The checker
+takes the contract as given and does not test it against the
 well-formedness `def:schema` requires of a schema (`+(i)` and `-(i)` disjoint
-and not both empty).  It does test what the paragraph after `def:binding`
-requires of a contract declaring a predicate reflexive, and refuses one that
-fails it as malformed.
+and not both empty).  It does test what `def:schema` requires of a signed
+term, and what the paragraph after `def:binding`
+requires of a contract declaring a predicate reflexive, and refuses a
+contract that fails either as malformed.
 
 ## The files
 
@@ -269,7 +311,7 @@ fails it as malformed.
 | `unobstructed.glp` | `def:introduction` and `def:unobstructed` |
 | `prov.glp` | `def:grounded`, as a greatest fixpoint |
 | `community.glp` | the three conditions of Section 8, and the rooted predicates; its volition is `def:volition` of Section 3 too |
-| `check.glp` | `def:syntactically-grassroots`, the two halves together, and the conditions of Section 8 for a contract with community roles; the refusal of a malformed contract |
+| `check.glp` | `def:syntactically-grassroots`, the two halves together, and the conditions of Section 8 for a contract with community roles; the refusal of a malformed contract, for a reflexive predicate or a signed term |
 | `compile.glp` | `def:compile`, printed as the LaTeX of Section 5.2, and `definition:compile`, printed as the worked box of Section 8 |
 | `contracts.glp` | the checker's fixtures: contracts that stand alone, by name, and variants of a contract, by name and the contract's term |
 
@@ -294,3 +336,13 @@ against that completion.  That is the binding that settles it: the clause
 excuses a binding that sends a role to the other party, and a variable the match
 left free can be sent elsewhere, so if the completion is not excused then some
 binding obstructs.
+
+The speech acts an introduction binds its speech-act variables to are taken
+signed once, an utterance signed by one person, and a signed term matches
+none of them: `sgn(y, pi)` is `(beta(y), beta(pi))` with `beta(y)` a speech
+act, a speech act signed at least twice (`def:binding`, Section 3.1).  That
+is the choice that decides the clauses in the contract's favour, and
+`def:unobstructed` lets the introduction make it: clause 2 holds against an
+act adding a signed term whenever the forbidden atom's speech act is signed
+once, and clause 1 loses nothing, since the act of arity one it asks for
+requires nothing and so, by `def:schema`, adds no signed term.

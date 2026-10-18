@@ -83,11 +83,15 @@ latex_nt(nvar(Z), T, R?) :- ground(Z?), ground(T?) | latex_greek(Z?, T?, R).
 latex_nt(ext(S, Y), T, R?) :- ground(S?), ground(Y?), ground(T?) |
     latex_nt(S?, ['\\cdot', Y?|T?], R).
 
+% A signed term is written \mathrm{sgn}(x,\Alice), as Section 3.3 writes it.
 procedure latex_arg(Arg?, Chunks?, Chunks).
 latex_arg(role(I), T, R?) :- integer(I?), ground(T?) | latex_role(I?, T?, R).
 latex_arg(pvar(X), T, [X?|T?]).
 latex_arg(svar(X), T, [X?|T?]).
 latex_arg(nterm(S), T, R?) :- ground(S?), ground(T?) | latex_nt(S?, T?, R).
+latex_arg(sgn(X, J), T, ['\\mathrm{sgn}(', X?, ','|R?]) :-
+    ground(X?), integer(J?), ground(T?) |
+    latex_role(J?, [')'|T?], R).
 
 procedure latex_args(Args?, Chunks?, Chunks).
 latex_args([], T, T?).

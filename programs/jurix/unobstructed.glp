@@ -29,8 +29,27 @@ pvar_assignments([A|As], R?) :- ground(A?), ground(As?) |
     pvar_assignments(As?, Rs),
     extend_each(Rs?, A?, R).
 
+% gatom_has(G, V, R): the image G names V -- V is among its arguments or is
+% the person of a signed value among them (Section 3.1: an atom names what is
+% among its arguments or is the signer of one, the role of a signed term
+% included).
+procedure val_names(Val?, Val?, Ans).
+val_names(W, V, yes) :- W? =?= V? | true.
+val_names(signed(_, P), V, yes) :- P? =?= V? | true.
+val_names(_, _, no) :- otherwise | true.
+
+procedure vals_name1(Ans?, Vals?, Val?, Ans).
+vals_name1(yes, _, _, yes).
+vals_name1(no, Ws, V, R?) :- ground(Ws?), ground(V?) | vals_name(Ws?, V?, R).
+
+procedure vals_name(Vals?, Val?, Ans).
+vals_name([], _, no).
+vals_name([W|Ws], V, R?) :- ground(W?), ground(Ws?), ground(V?) |
+    val_names(W?, V?, A),
+    vals_name1(A?, Ws?, V?, R).
+
 procedure gatom_has(GAtom?, Val?, Ans).
-gatom_has(gatom(_, Vs), V, R?) :- ground(Vs?), ground(V?) | vals_member(Vs?, V?, R).
+gatom_has(gatom(_, Vs), V, R?) :- ground(Vs?), ground(V?) | vals_name(Vs?, V?, R).
 
 procedure atoms_name1(Ans?, Atoms?, Subst?, Val?, Ans).
 atoms_name1(yes, _, _, _, yes).

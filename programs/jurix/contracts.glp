@@ -408,6 +408,14 @@ contract(sv_signed, C?) :- sv_signed(C).
 contract(sv_loose, C?) :- sv_loose(C).
 contract(sv_in_name_loose, C?) :- sv_in_name_loose(C).
 contract(sv_in_name_carried, C?) :- sv_in_name_carried(C).
+contract(sg_items, C?) :- sg_items(C).
+contract(sgn_intro, C?) :- sgn_intro(C).
+contract(sgn_intro_plain, C?) :- sgn_intro_plain(C).
+contract(sgn_not_added, C?) :- sgn_not_added(C).
+contract(sgn_not_guarding, C?) :- sgn_not_guarding(C).
+contract(sgn_not_required, C?) :- sgn_not_required(C).
+contract(sgn_community, C?) :- sgn_community(C).
+contract(sg_sgn_loose, C?) :- sg_sgn_loose(C).
 contract(_, []) :- otherwise | true.
 
 % A fixture that is a contract changed in one place, by name and the contract
@@ -606,3 +614,113 @@ sg_relay(S, C?) :-
           rs(unguarded, [atom(chained, [role(1)])], [], [], []),
           crs(seated(nvar(zeta), seat), unguarded,
               [atom(noted, [nterm(nvar(zeta))])], [], [], [])])], C).
+
+% ===========================================================================
+% The signed speech-act term (Sections 3.1 to 3.3; the commit 63b301f)
+% ===========================================================================
+
+% --- the social graph with items (Section 3.3) -----------------------------
+% The contract Section 3.3 shows, with item of arity one: sign(Alice?; x)
+% adds item(x), and forward(Alice?, Bob; x) requires item(x) at Alice, adds
+% sent(x, Bob) there, and adds item(sgn(x, Alice)) at Bob, where friend(Alice)
+% is required.  It is GSG's, to go to programs/social/graph/contract.glp
+% (Coordination, 2026-10-18 08:30 UTC); the fixture here is the checker's,
+% for the signed term.  Section 7 certifies it: syntactically grassroots, with
+% {friend, item, sent} of traceable provenance, forward's signed term counting
+% as the two arguments x and Alice (def:grounded).
+procedure sg_items(Contract).
+sg_items([schema(befriend,
+       [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
+        rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
+    schema(unfriend,
+       [rs(guarded,   [], [atom(friend, [role(2)])], [], []),
+        rs(unguarded, [], [atom(friend, [role(1)])], [], [])]),
+    schema(sign,
+       [rs(guarded, [atom(item, [svar(x)])], [], [], [])]),
+    schema(forward,
+       [rs(guarded,   [atom(sent, [svar(x), role(2)])], [],
+                      [atom(item, [svar(x)])], []),
+        rs(unguarded, [atom(item, [sgn(x, 1)])], [],
+                      [atom(friend, [role(1)])], [])])]).
+
+% --- an introduction through the signed term alone -------------------------
+% exchange(Alice?, Bob?; x, y) :  item(x), +got(sgn(y, Bob))    item(y), +got(sgn(x, Alice))
+% over sign.  Each role adds an atom naming the other only as the role of its
+% signed term (Section 3.1, what an atom names; Section 8, "names"), so
+% exchange is an introductory act (def:introduction); it is unobstructed, the
+% item each role requires being added by sign, of arity one, guarded,
+% requiring and forbidding nothing (clause 1 of def:unobstructed); got has
+% traceable provenance, y being an argument of the item Bob requires
+% (def:grounded); and the contract is syntactically grassroots.
+% sgn_intro_plain is the same with got(y) and got(x) in place of the signed
+% terms: an added atom then names a speech-act variable and not the other
+% party, and the contract has no introductory act.
+procedure sgn_sign(Schema).
+sgn_sign(schema(sign, [rs(guarded, [atom(item, [svar(x)])], [], [], [])])).
+
+procedure sgn_intro(Contract).
+sgn_intro([S?,
+    schema(exchange,
+       [rs(guarded, [atom(got, [sgn(y, 2)])], [], [atom(item, [svar(x)])], []),
+        rs(guarded, [atom(got, [sgn(x, 1)])], [], [atom(item, [svar(y)])], [])])]) :-
+    sgn_sign(S).
+
+procedure sgn_intro_plain(Contract).
+sgn_intro_plain([S?,
+    schema(exchange,
+       [rs(guarded, [atom(got, [svar(y)])], [], [atom(item, [svar(x)])], []),
+        rs(guarded, [atom(got, [svar(x)])], [], [atom(item, [svar(y)])], [])])]) :-
+    sgn_sign(S).
+
+% --- negative: the signed term where def:schema forbids it -----------------
+% Three contracts of sign and forward, each with its signed term violating
+% one of the three requirements of def:schema, and refused as malformed
+% (check.glp, sgn_schemas): in sgn_not_added forward requires
+% item(sgn(x, Alice)) at Bob, an atom not marked +; in sgn_not_guarding it
+% adds item(sgn(x, Bob)) at Bob, who does not guard; in sgn_not_required sign
+% adds item(sgn(x, Alice)) with x required at no role.  sgn_community writes
+% sign as a cschema, so that the contract has community roles, whose schemas
+% admit no signed term (Appendix D, Definition Act schema), and forward's is
+% refused as outside the language.
+procedure sgn_not_added(Contract).
+sgn_not_added([S?,
+    schema(forward,
+       [rs(guarded,   [atom(sent, [svar(x), role(2)])], [], [atom(item, [svar(x)])], []),
+        rs(unguarded, [atom(got, [])], [], [atom(item, [sgn(x, 1)])], [])])]) :-
+    sgn_sign(S).
+
+procedure sgn_not_guarding(Contract).
+sgn_not_guarding([S?,
+    schema(forward,
+       [rs(guarded,   [atom(sent, [svar(x), role(2)])], [], [atom(item, [svar(x)])], []),
+        rs(unguarded, [atom(item, [sgn(x, 2)])], [], [atom(friend, [role(1)])], [])])]) :-
+    sgn_sign(S).
+
+procedure sgn_not_required(Contract).
+sgn_not_required([schema(sign,
+       [rs(guarded, [atom(item, [sgn(x, 1)])], [], [], [])])]).
+
+procedure sgn_community(Contract).
+sgn_community([cschema(sign, [], [rs(guarded, [atom(item, [svar(x)])], [], [], [])]),
+    schema(forward,
+       [rs(guarded,   [atom(sent, [svar(x), role(2)])], [], [atom(item, [svar(x)])], []),
+        rs(unguarded, [atom(item, [sgn(x, 1)])], [], [atom(friend, [role(1)])], [])])]).
+
+% --- negative: a signed speech act from an untraceable record --------------
+% note(p?; x, u) : +tagged(x, u)      tag(p?; x, u) : tagged(x, u), +item(sgn(x, p))
+% over the social graph with items.  The case of sg_svar_loose with the item
+% tag adds signed: u is named by no atom note requires, so tagged loses
+% traceable provenance; the x of tag's signed term occurs in a required atom,
+% tagged(x, u), but in none of traceable provenance, so item loses it under
+% the clause of def:grounded on speech-act variables, a signed term counting
+% as its two arguments, and sent after it.  Befriend stays unobstructed and
+% every schema satisfies volition.
+procedure sg_sgn_loose(Contract).
+sg_sgn_loose(C?) :-
+    sg_items(S),
+    contract_app(S?,
+      [schema(note,
+         [rs(guarded, [atom(tagged, [svar(x), pvar(u)])], [], [], [])]),
+       schema(tag,
+         [rs(guarded, [atom(item, [sgn(x, 1)])], [],
+                      [atom(tagged, [svar(x), pvar(u)])], [])])], C).
