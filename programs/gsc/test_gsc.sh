@@ -109,9 +109,9 @@ SG=$(term "$GLP_DIR/programs/gsc/GSNP.glp" gsnp)
 check "GSNP's contract, the network with provenance, is read from programs/gsc/GSNP.glp" \
       "$ESTABLISH" "$SG"
 GSGT=$(term "$GLP_DIR/programs/gsc/GSG.glp" gsg)
-check "GSG's contract is read from programs/gsc/GSG.glp" "$ESTABLISH" "$GSGT"
+check "GSG's contract is read from programs/gsc/GSG.glp, establish first" "$ESTABLISH" "$GSGT"
 GSNT=$(term "$GLP_DIR/programs/gsc/GSN.glp" gsn)
-check "GSN's contract, the network without provenance, is read from programs/gsc/GSN.glp" \
+check "GSN's contract, the network without provenance, is read from programs/gsc/GSN.glp, establish first" \
       "$ESTABLISH" "$GSNT"
 # GSG: befriend is unobstructed, identity being added by establish, of arity
 # one, guarded and requiring and forbidding nothing (def:unobstructed, clause

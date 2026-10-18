@@ -3,8 +3,8 @@
 %% The person reads what the dispatcher draws on the person channel (vGLP, "The construct process": draw(Id, W, V) and withdraw(Id); a grant input(Id, P, R)): the agent's request questions, each showing the persons the agent knows and taking one request (vGLP, Section 5.4); the thread, the program's output, construct 0, drawn whole as it grows; and the approval questions Start raises.  Its script is a list of steps: req(R) grants the request R on the request question open, once one is drawn; look reports menu(Ks), Ks the persons the request question open shows, once one is drawn; wait(T) waits until the transaction T is on the thread; after(K, C) waits until the thread shows a transaction K, as propose or commit, on an attempt of the class C, whatever its number; approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an attempt of the class K, once it is drawn.  It reports the thread, each transaction once, with gave(K, A) where it answers an approval question.
 %%
 %% The roles, by which the super-app's plays choose a script; the group is named friends by alice, its leader, and each content is a speech act of its author:
-%%   alice  asks to know bob; once she knows him, offers him friendship; once they are friends, sends him a message; then creates the group, and adds bob to it.
-%%   bob    asks to know alice; once he knows her, answers yes to her offer of friendship; answers yes to her adding him to the group; once he is a member, sends the group a message; once alice has delivered it to him, leaves the group.
+%%   alice  establishes her identity (GSG:1); asks to know bob; once she knows him, offers him friendship; once they are friends, sends him a message; then creates the group, and adds bob to it.
+%%   bob    establishes his identity; asks to know alice; once he knows her, answers yes to her offer of friendship; answers yes to her adding him to the group; once he is a member, sends the group a message; once alice has delivered it to him, leaves the group.
 %% Any other role has no script: its person reports the thread and acts on nothing.
 
 Step  ::= req(Request) ; look ; wait(Output) ; after(Constant, Class)
@@ -24,7 +24,7 @@ miniapp_person(_, Role, ch(Ds, Gs?), S?) :-
     person(Ds?, Gs, ps(nosess, [], [], Ss?), S).
 
 procedure script(Constant?, Steps).
-script(alice, [req(known(bob)), wait(discover(bob)),
+script(alice, [req(propose(establish(alice))), req(known(bob)), wait(discover(bob)),
                req(propose(befriend(alice, bob))),
                after(commit, befriend(alice, bob)),
                req(propose(message(alice, bob, speech(utterance(hello), alice)))),
@@ -32,7 +32,7 @@ script(alice, [req(known(bob)), wait(discover(bob)),
                req(propose(create(alice, speech(utterance(friends), alice)))),
                after(propose, create(alice, speech(utterance(friends), alice))),
                req(propose(join(alice, bob, speech(utterance(friends), alice))))]).
-script(bob, [req(known(alice)), wait(discover(alice)),
+script(bob, [req(propose(establish(bob))), req(known(alice)), wait(discover(alice)),
              approval(befriend(alice, bob), yes),
              approval(join(alice, bob, speech(utterance(friends), alice)), yes),
              after(outcome, join(alice, bob, speech(utterance(friends), alice))),

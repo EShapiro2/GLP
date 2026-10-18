@@ -269,6 +269,64 @@ procedure all_member1(YesNo?, Args?, Args?, YesNo).
 all_member1(no, _, _, no).
 all_member1(yes, As, Fa, B?) :- all_member(As?, Fa?, B).
 
+%% --- The request type -------------------------------------------------------
+%% The schemas whose terms name guarded classes: the request type has "the
+%% alternative propose([t]) for each guarded class [t]" (vGLP, Section 5.4,
+%% the compilation), so cvac.glp prints the alternatives of these schemas in
+%% it.  A schema is one of them where it marks a role and some binding of it,
+%% taken up to renaming as for locality, determines a transaction and is of a
+%% guarded class.  A class is unguarded where one of its schema-bindings has
+%% no marked role, so a schema marking no role names unguarded classes only,
+%% and a schema marking a role may, as gnudge's g, one class with its nudge.
+exported procedure proposable(Contract?, Preds?, Preds).
+proposable(C, Rf, Ns?) :- ground(C?), ground(Rf?) | proposable1(C?, C?, Rf?, Ns).
+procedure proposable1(Contract?, Contract?, Preds?, Preds).
+proposable1([], _, _, []).
+proposable1([schema(Nm, Rs)|Ss], C, Rf, Ns?) :-
+    ground(Nm?), ground(Rs?), ground(C?), ground(Rf?) |
+    guarded_any(Rs?, G),
+    proposable_schema(G?, Nm?, Rs?, C?, Rf?, P),
+    proposable1(Ss?, C?, Rf?, Ns1),
+    keep_name(P?, Nm?, Ns1?, Ns).
+proposable1([cschema(_, _, _)|Ss], C, Rf, Ns?) :- proposable1(Ss?, C?, Rf?, Ns).
+procedure proposable_schema(YesNo?, Constant?, RoleSpecs?, Contract?, Preds?, YesNo).
+proposable_schema(no, _, _, _, _, no).
+proposable_schema(yes, Nm, Rs, C, Rf, P?) :- ground(Rs?) |
+    canon_bindings(Rs?, Bs),
+    some_guarded(Bs?, Nm?, Rs?, C?, Rf?, P).
+procedure some_guarded(Bindings?, Constant?, RoleSpecs?, Contract?, Preds?, YesNo).
+some_guarded([], _, _, _, _, no).
+some_guarded([B|Bs], Nm, Rs, C, Rf, P?) :-
+    ground(B?), ground(Nm?), ground(Rs?), ground(C?), ground(Rf?) |
+    sig_of(Rs?, B?, Pt),
+    binding_guarded(Pt?, B?, Nm?, Rs?, C?, Rf?, G),
+    some_guarded1(G?, Bs?, Nm?, Rs?, C?, Rf?, P).
+procedure some_guarded1(YesNo?, Bindings?, Constant?, RoleSpecs?, Contract?, Preds?, YesNo).
+some_guarded1(yes, _, _, _, _, _, yes).
+some_guarded1(no, Bs, Nm, Rs, C, Rf, P?) :- some_guarded(Bs?, Nm?, Rs?, C?, Rf?, P).
+%% A schema-binding of a guarded class: it determines a transaction, as for
+%% locality (binding_pairs), and every schema-binding of its class marks a role.
+procedure binding_guarded(Parts?, Binding?, Constant?, RoleSpecs?, Contract?, Preds?, YesNo).
+binding_guarded(Pt, B, Nm, Rs, C, Rf, G?) :- ground(Pt?), ground(Rs?), ground(B?), ground(Rf?) |
+    parts_valid(Pt?, V1),
+    parts_people(Pt?, Q),
+    live_at(Q?, Rs?, B?, Rf?, V2),
+    and(V1?, V2?, V),
+    binding_guarded1(V?, Pt?, B?, Nm?, Rs?, C?, Rf?, G).
+procedure binding_guarded1(YesNo?, Parts?, Binding?, Constant?, RoleSpecs?, Contract?, Preds?,
+    YesNo).
+binding_guarded1(no, _, _, _, _, _, _, no).
+binding_guarded1(yes, Pt, B, Nm, Rs, C, Rf, G?) :- ground(Pt?), ground(Rf?) |
+    mates_of(C?, Pt?, Rf?, Ms),
+    parts_people(Pt?, Q),
+    class_mates(Ms?, Nm?, Rs?, B?, Q?, Rf?, Cls),
+    mates_guards(Cls?, Gs),
+    some_unguarded(Gs?, Ug),
+    neg(Ug?, G).
+procedure keep_name(YesNo?, Constant?, Preds?, Preds).
+keep_name(yes, Nm, Ns, [Nm?|Ns?]).
+keep_name(no, _, Ns, Ns?).
+
 %% --- Local -----------------------------------------------------------------
 procedure local_pairs(Contract?, Contract?, Preds?, Pairs).
 local_pairs([], _, _, []).

@@ -23,7 +23,9 @@
 
 Class    ::= befriend(Peer, Peer) ; enrol(Peer, Peer)
            ; cbefriend(Peer, Peer, Peer, Peer).
-Request  ::= propose(Class) ; known(Peer).
+Proposal ::= befriend(Peer, Peer) ; enrol(Peer, Peer)
+           ; cbefriend(Peer, Peer, Peer, Peer).
+Request  ::= propose(Proposal) ; known(Peer).
 YesNo    ::= yes ; no.
 Decision ::= commit ; abort.
 Attempt  ::= attempt(Peer, Integer, Integer, Class).

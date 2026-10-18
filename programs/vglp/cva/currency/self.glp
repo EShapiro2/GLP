@@ -24,7 +24,7 @@
 %%   alice holds the pay's start waiting, her lock set by her swap, which has
 %%   priority over the pay, so she wounds nothing and votes no on nothing for
 %%   contention (vGLP 49cd9f7, wound-wait); bob answers alice's approval question no, the
-%%   else-branch, his Vote votes no on his next tick, and her swap aborts;
+%%   else-branch, his Vote, an own transaction, votes no, and her swap aborts;
 %%   alice then takes the pay's start, her machine votes yes, and the pay
 %%   commits at its first attempt.
 %% play_declined: alice proposes a swap for a coin bob does not hold; bob, not
@@ -36,7 +36,9 @@
 
 Class    ::= mint(Peer) ; swap(Peer, Peer, Peer, Peer) ; pay(Peer, Peer)
            ; redeem(Peer, Peer, Peer).
-Request  ::= propose(Class) ; known(Peer).
+Proposal ::= mint(Peer) ; swap(Peer, Peer, Peer, Peer) ; pay(Peer, Peer)
+           ; redeem(Peer, Peer, Peer).
+Request  ::= propose(Proposal) ; known(Peer).
 YesNo    ::= yes ; no.
 Decision ::= commit ; abort.
 Attempt  ::= attempt(Peer, Integer, Integer, Class).

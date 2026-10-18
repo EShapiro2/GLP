@@ -11,9 +11,9 @@
 %% play_nudge: alice proposes befriending bob, bob is asked and answers yes,
 %%   and it commits.  Each is then the opener of the unguarded class of nudge
 %%   whose first role it is in (vGLP, Section 5.4, the paragraph on act
-%%   schemas), and its machine proposes it on a tick (Section 5.4, Definition
-%%   "Compilation of the Canonical Platform": Propose of an unguarded class, by
-%%   its opener, on a tick), the attempt asking nobody and the other's machine
+%%   schemas), and its machine proposes it as an own transaction (Section 5.4,
+%%   "Triggers": Propose of an unguarded class, by its opener, one of the agent's
+%%   own transactions), the attempt asking nobody and the other's machine
 %%   voting on its start.  Both propose at once, their attempts of one rank,
 %%   alice's with priority, she preceding bob in the order of identifiers
 %%   (vGLP 49cd9f7, Definition "Attempt, Priority, ..."): bob, holding his own
@@ -28,7 +28,8 @@
 %% ---------------------------------------------------------------------------
 
 Class    ::= befriend(Peer, Peer) ; nudge(Peer, Peer).
-Request  ::= propose(Class) ; known(Peer).
+Proposal ::= befriend(Peer, Peer).
+Request  ::= propose(Proposal) ; known(Peer).
 YesNo    ::= yes ; no.
 Decision ::= commit ; abort.
 Attempt  ::= attempt(Peer, Integer, Integer, Class).

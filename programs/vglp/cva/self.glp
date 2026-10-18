@@ -34,9 +34,11 @@
 %% (docs/typed-glp-manual.md, 18.3, the play of programs/tests/vglp/fragments
 %% likewise).  The network logs each cargo it carries, sent(From, To, Cargo),
 %% so a play shows what the thread does not name, the votes and the outcomes.
-%% The person channel never closes, so a run ends at the REPL's :limit, the
-%% clock of each agent ticking without end (vGLP #8, 2026-10-11 16:44 UTC,
-%% after the fact).
+%% The person channel never closes, so a run does not end: once each agent
+%% has taken its own transactions until none holds and no trigger is left to
+%% read, the run suspends, the logs' tails unbound (vGLP, Section 5.4,
+%% "Triggers": the agent takes its own transactions "when it starts and after
+%% each trigger, one at a time until none holds").
 %% ---------------------------------------------------------------------------
 
 Peer       ::= Key.

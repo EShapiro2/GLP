@@ -7,13 +7,18 @@
 Peer      ::= Key.
 Speech    ::= speech(Utterance, Peer).
 Utterance ::= utterance(String) ; Speech.
-Class     ::= befriend(Peer, Peer) ; unfriend(Peer, Peer)
+Class     ::= establish(Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
             ; message(Peer, Peer, Speech)
             ; create(Peer, Speech) ; join(Peer, Peer, Speech)
             ; leave(Peer, Peer, Speech) ; close(Peer, Speech)
             ; post_own(Peer, Speech, Speech) ; post(Peer, Peer, Speech, Speech)
             ; deliver(Peer, Peer, Speech, Speech).
-Request   ::= propose(Class) ; known(Peer).
+Proposal  ::= establish(Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
+            ; message(Peer, Peer, Speech)
+            ; create(Peer, Speech) ; join(Peer, Peer, Speech)
+            ; leave(Peer, Peer, Speech) ; close(Peer, Speech)
+            ; post_own(Peer, Speech, Speech) ; post(Peer, Peer, Speech, Speech).
+Request   ::= propose(Proposal) ; known(Peer).
 YesNo     ::= yes ; no.
 Decision  ::= commit ; abort.
 Attempt   ::= attempt(Peer, Integer, Integer, Class).

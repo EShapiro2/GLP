@@ -33,7 +33,8 @@
 %% ---------------------------------------------------------------------------
 
 Class    ::= befriend(Peer, Peer) ; link(Peer, Peer, Peer).
-Request  ::= propose(Class) ; known(Peer).
+Proposal ::= befriend(Peer, Peer) ; link(Peer, Peer, Peer).
+Request  ::= propose(Proposal) ; known(Peer).
 YesNo    ::= yes ; no.
 Decision ::= commit ; abort.
 Attempt  ::= attempt(Peer, Integer, Integer, Class).
