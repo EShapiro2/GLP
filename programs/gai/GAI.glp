@@ -1,17 +1,17 @@
 %% ---------------------------------------------------------------------------
-%% contract.glp --- the social network with accountable AI agents and digital
+%% GAI.glp --- the social network with accountable AI agents and digital
 %% provenance, GAI's contract (Coordination Appendix C; the clauses in
 %% contract.md beside this file and in GAI's paper, sections "A Social Graph
 %% with Accountable AI Agents" and "A Social Network with Digital
 %% Provenance"), in the
-%% term form programs/jurix reads (its README, "Writing a contract").  Parts A
+%% term form programs/gsc reads (its README, "Writing a contract").  Parts A
 %% and B of the clauses are shared word for word with CSSN's contract; the
 %% schemas are GAI's.
 %%
 %% Twelve schemas over twelve predicates.  unfriend carries no ? and stands for one
 %% schema per role, guarded at that role, unfriend_p and unfriend_q, as CSSN
 %% writes it.  Every role requires identity, except the role of establish,
-%% which adds it and requires and forbids nothing (Jurix, def:unobstructed,
+%% which adds it and requires and forbids nothing (GSC, def:unobstructed,
 %% clause 1), and the AI agent's role of enter, which forbids it and adds it.
 %% A role is its index in the schema, in the order of the schema's parameters; p and q are
 %% persons, r and s AI agents, every role a party role; a and f are party
@@ -54,7 +54,7 @@
 %% realise").
 %% ---------------------------------------------------------------------------
 
-%% The contract, as programs/jurix/self.glp writes it.
+%% The contract, as programs/gsc/self.glp writes it.
 NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
             ; ext(NameTerm, Constant).
 Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm).

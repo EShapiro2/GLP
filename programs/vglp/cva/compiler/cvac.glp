@@ -3,7 +3,7 @@
 %% Definition "Canonical CVA Platform"; Section 5.4, Definition "Compilation of
 %% the Canonical Platform" and the paragraph "Act schemas"; self.glp says more).
 %%
-%% A contract is compiled when programs/jurix finds it syntactically
+%% A contract is compiled when programs/gsc finds it syntactically
 %% grassroots or finds no fault in it but its introductory acts, so with
 %% traceable provenance and volition (verdict_lines below), every role a party
 %% role, and when it is a local and effective specification with simple
@@ -15,8 +15,8 @@
 %% The module is the contract's own part, printed here, and the text every
 %% contract shares, text.glp.  The contract's part is the type Class, one
 %% alternative per schema, the schema's name applied to the people in its roles,
-%% then its party variables, then its speech-act variables, in programs/jurix's
-%% order; the contract itself, as the term programs/jurix reads, from which the
+%% then its party variables, then its speech-act variables, in programs/gsc's
+%% order; the contract itself, as the term programs/gsc reads, from which the
 %% shared text computes the classes; its reflexive predicates; and per schema a
 %% clause taking a term of Class to the binding it names, binding_of, and one
 %% taking a binding back to the term, class_of.  GLP has no string
@@ -95,8 +95,8 @@ decl_reflexive(reflexive(Rf, _), Rf?).
 %% be a local and effective specification with simple guards, and nothing of
 %% its being grassroots; its schemas compile to transactions by the
 %% realisation, which CSSN (Appendix B.4) takes for a contract with traceable
-%% provenance that satisfies volition by the definition Jurix gives for a
-%% syntactically grassroots one.  So a contract is compiled where Jurix's
+%% provenance that satisfies volition by the definition GSC gives for a
+%% syntactically grassroots one.  So a contract is compiled where GSC's
 %% checker certifies it syntactically grassroots, or finds no fault in it but
 %% its introductory acts (vGLP 2026-10-16 13:53 UTC, C, as Code #9 gives it:
 %% "the compiler takes a contract with traceable provenance and volition"); a
@@ -107,7 +107,7 @@ verdict_lines(syntactically_grassroots, _, []).
 verdict_lines(not_grassroots(Fs), Nm, L?) :- ground(Fs?), ground(Nm?) |
     realisable(Fs?, B),
     realisable_lines(B?, Nm?, L).
-verdict_lines(malformed(_), Nm, [H?, '%% it is malformed; check_named in programs/jurix gives the faults.']) :-
+verdict_lines(malformed(_), Nm, [H?, '%% it is malformed; check_named in programs/gsc gives the faults.']) :-
     ground(Nm?) | H =.. ['%% not compiled', Nm?].
 verdict_lines(conditions_met, Nm, [H?, '%% it has community roles, which the canonical platform of vGLP Section 3.2 does not take.']) :-
     ground(Nm?) | H =.. ['%% not compiled', Nm?].
@@ -123,7 +123,7 @@ realisable([cohesion(_, _, _)|_], no).
 realisable([reflexive(_, _, _)|_], no).
 procedure realisable_lines(YesNo?, Constant?, Stream(_)).
 realisable_lines(yes, _, []).
-realisable_lines(no, Nm, [H?, '%% it lacks traceable provenance or volition, or is otherwise faulty; check_named in programs/jurix gives the faults.']) :-
+realisable_lines(no, Nm, [H?, '%% it lacks traceable provenance or volition, or is otherwise faulty; check_named in programs/gsc gives the faults.']) :-
     ground(Nm?) | H =.. ['%% not compiled', Nm?].
 
 procedure community_lines(Contract?, Constant?, Stream(_)).
@@ -194,7 +194,7 @@ module_lines(Nm, C, Rf, E, Ls?) :- ground(Nm?), ground(C?), ground(Rf?), ground(
         '',
         'procedure binding_of(Class?, Constant, Binding).'|L2x?], L1x),
     lapp(['%% Printed by programs/vglp/cva/compiler from the contract named below, in the',
-         '%% term form programs/jurix reads (Jurix, Sections 3 and 5): the canonical CVA',
+         '%% term form programs/gsc reads (GSC, Sections 3 and 5): the canonical CVA',
          '%% platform of the contract (vGLP, Section 3.2, Definition "Canonical CVA',
          '%% Platform"), two-phase commit coordinated by the initiating agent, compiled',
          '%% into vGLP by Definition "Compilation of the Canonical Platform" (Section',

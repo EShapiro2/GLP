@@ -6,7 +6,7 @@ schemas of a contract that is into their volition-guarded transactions,
 printed as the LaTeX of Section 5.2.
 
 The specification is the paper — *Formal Grassroots Social Contracts*
-(`/Grassroots/Jurix`, `main.tex`), Section 3 for a contract whose roles are all
+(`/Grassroots/GSC`, `main.tex`), Section 3 for a contract whose roles are all
 party roles, Appendix F, `sections/17-wards.tex`, for one with wards, and the
 appendix on community roles, `sections/13-community-roles.tex`, for one with
 community roles (Appendix D since the paper's restructuring of 2026-10-18;
@@ -54,22 +54,22 @@ Section 8 (`definition:compile`), and its worked box, the display for
 Needs the Dart SDK and this repository; nothing else.  A contract is its
 owner's and lives with the owner's code, one copy, in the term form of
 "Writing a contract" below: the social graph's is
-`programs/social/graph/contract.glp`, the currency's
-`programs/currencies/coins/contract.glp`, the child-safe social network's
-`programs/cssn/contract.glp` and the federation's
-`programs/federation/contract.glp`.  A REPL session on the file prints the
+`programs/gsc/GSN.glp`, the currency's
+`programs/currencies/coins/GC.glp`, the child-safe social network's
+`programs/cssn/CSSN.glp` and the federation's
+`programs/federation/GFWC.glp`.  A REPL session on the file prints the
 contract's term, and a session on this directory decides it.  From the
 repository root:
 
     cd glp_runtime
-    printf '/path/to/GLP/programs/social/graph/contract.glp\ncontract_named(social_graph, C).\n:quit\n' | bin/glpc
-    printf '/path/to/GLP/programs/jurix/\ncheck(<the term the first printed>, V).\n:quit\n' | bin/glpc
+    printf '/path/to/GLP/programs/gsc/GSN.glp\ncontract_named(social_graph, C).\n:quit\n' | bin/glpc
+    printf '/path/to/GLP/programs/gsc/\ncheck(<the term the first printed>, V).\n:quit\n' | bin/glpc
 
 or interactively, entering the directory path at the prompt to load the program
 and then a goal:
 
-    GLP> /path/to/GLP/programs/jurix/
-    ✓ Loaded program: /path/to/GLP/programs/jurix/
+    GLP> /path/to/GLP/programs/gsc/
+    ✓ Loaded program: /path/to/GLP/programs/gsc/
     GLP> check([schema(befriend, [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]), schema(unfriend, ...)], V).
     V = syntactically_grassroots
 
@@ -77,20 +77,20 @@ The REPL stops a goal at 10000 reductions unless told otherwise, and a contract
 of twenty-eight schemas takes more: enter `:limit 1000000` before the goal, as
 the test script does.
 
-The tests are `bash programs/jurix/test_jurix.sh` from the repository root; it
+The tests are `bash programs/gsc/test_gsc.sh` from the repository root; it
 reads each contract from its owner's file and passes the term in.
 
 ## The compiler
 
     cd glp_runtime
-    printf '/path/to/GLP/programs/jurix/\ncompile_named(social_graph).\n:quit\n' | bin/glpc
+    printf '/path/to/GLP/programs/gsc/\ncompile_named(social_graph).\n:quit\n' | bin/glpc
 
 prints the four displays of the social graph's contract, and
 `compile_schema(currency, swap).` prints one.  GLP has no string
 concatenation, so a display is printed one token to a line.  A newline is
 whitespace to LaTeX, so those lines are the display and are pasted into a
 paper as they stand; the two the paper writes by hand, in Section 5.2, come
-back token for token, and `test_jurix.sh` compares them with the whitespace
+back token for token, and `test_gsc.sh` compares them with the whitespace
 removed.  The closing comma and full stop of the paper's two displays belong
 to the sentences around them rather than to the compiled form, and are not
 printed.
@@ -112,7 +112,7 @@ for every name term `sigma . y` of the schema, that it is an argument of no
 atom of the configuration; and the guard, the union of a part of each guarding
 role's extent larger than its threshold of it, which for a party role is `0`.
 `compile_schema(federation, federate).` prints the worked box of Section 8
-token for token, and `test_jurix.sh` compares them.  A name variable and a
+token for token, and `test_gsc.sh` compares them.  A name variable and a
 threshold are named by a Greek letter, `zeta`, `xi`, `theta`, and printed as
 that letter's command; one guarding role is written `G`, several `G_{i}` by
 role index; the conditions of `Theta`, and the parts of a guard, are joined by
@@ -123,7 +123,7 @@ keeps the comma alone.  A contract that fails the conditions of Section 8 is
 not compiled, as one that is not syntactically grassroots is not.
 
 Printing reaches the person, so the module's certificate is refused on load
-(`[CERTIFICATE REFUSED] jurix ... calls send_to_user/1`) and it carries no
+(`[CERTIFICATE REFUSED] gsc ... calls send_to_user/1`) and it carries no
 signature.  It loads and runs as before.
 
 ## The entry points
@@ -277,7 +277,7 @@ roles, variables and name terms and admit none.
 A contract is a GLP term: the list of its act schemas (`def:schema`), or,
 where it declares predicates of arity one reflexive (the paragraph after
 `def:binding`), `reflexive(Predicates, Schemas)`.  Write it in a file of its
-own, in its owner's directory, as `programs/social/graph/contract.glp` is
+own, in its owner's directory, as `programs/gsc/GSN.glp` is
 written: the type declarations below, then `procedure contract_named(Constant?,
 Declared).` and a clause giving the contract under its name.  `contracts.glp`
 holds only the checker's fixtures.

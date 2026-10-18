@@ -1,7 +1,7 @@
 #!/bin/bash
 # The child-safe social contract compiled into its canonical CVA platform
 # (CSSN, Section 6.1, "The program"; Appendix C.5): the contract's act schemas,
-# contract.glp, in the term form programs/jurix reads; Jurix's checker,
+# CSSN.glp, in the term form programs/gsc reads; GSC's checker,
 # check/2, gives its verdict; and programs/vglp/cva/compiler, compile/3, prints
 # the platform from the two --- the steps programs/vglp/cva/compile.sh takes
 # for the contracts it names, which do not include this one.
@@ -38,7 +38,7 @@ fi
 mkdir -p "$OUT" || exit 2
 
 # The contract.
-printf '%s\ncontract_named(cssn, C).\n:quit\n' "$HERE/contract.glp" > "$WORK/c.in"
+printf '%s\ncontract_named(cssn, C).\n:quit\n' "$HERE/CSSN.glp" > "$WORK/c.in"
 (cd "$RT" && bin/glpc < "$WORK/c.in" > "$WORK/c.out" 2>&1)
 sed -e 's/^\(GLP> \)*//' "$WORK/c.out" | grep -E '^C = ' | head -1 | sed -e 's/^C = //' > "$WORK/c"
 if [ ! -s "$WORK/c" ]; then
@@ -50,7 +50,7 @@ CT=$(cat "$WORK/c")
 
 # Its verdict.  The REPL stops a goal at 10000 reductions unless told
 # otherwise; the checker takes more.
-printf '%s\n:limit 10000000\ncheck(%s, V).\n:quit\n' "$GLP_DIR/programs/jurix/" "$CT" > "$WORK/v.in"
+printf '%s\n:limit 10000000\ncheck(%s, V).\n:quit\n' "$GLP_DIR/programs/gsc/" "$CT" > "$WORK/v.in"
 (cd "$RT" && bin/glpc < "$WORK/v.in" > "$WORK/v.out" 2>&1)
 sed -e 's/^\(GLP> \)*//' "$WORK/v.out" | grep -E '^V = ' | head -1 | sed -e 's/^V = //' > "$WORK/v"
 if [ ! -s "$WORK/v" ]; then

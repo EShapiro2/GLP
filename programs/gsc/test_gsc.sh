@@ -1,19 +1,19 @@
 #!/bin/bash
 # Tests for the syntactically-grassroots checker and the compiler
-# (programs/jurix).
+# (programs/gsc).
 #
-#   bash programs/jurix/test_jurix.sh
+#   bash programs/gsc/test_gsc.sh
 #
-# The two contracts of /Grassroots/Jurix Sections 3.3 and 3.4, which Section 7
+# The two contracts of /Grassroots/GSC Sections 3.3 and 3.4, which Section 7
 # certifies by hand, read from their owners' files
-# (programs/social/graph/contract.glp, programs/currencies/coins/contract.glp),
+# (programs/gsc/GSN.glp, programs/currencies/coins/GC.glp),
 # and contracts broken in one place each, one per way of failing the three
 # conjuncts of def:syntactically-grassroots; then contracts declaring a
 # predicate reflexive (the paragraph after def:binding); then the compilation
 # of Section 5, against the two displays of Section 5.2; then the contract of
 # a grassroots federation, /Grassroots/GFWC sections/schemas.tex, read from
-# programs/federation/contract.glp, against the three conditions of Section 8
-# of /Grassroots/Jurix, and five contracts changing it in one place each, four
+# programs/federation/GFWC.glp, against the three conditions of Section 8
+# of /Grassroots/GSC, and five contracts changing it in one place each, four
 # against those and one against rootedness, which is none of them; then small
 # contracts on the speech-act variables of traceable provenance and on
 # volition by connected component, in the language of Section 8; then the
@@ -29,7 +29,7 @@
 
 set -u
 GLP_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
-JURIX="$GLP_DIR/programs/jurix/"
+GSC_DIR="$GLP_DIR/programs/gsc/"
 PASS=0
 FAIL=0
 
@@ -75,7 +75,7 @@ run() {     # run <goal> ... ; loads the program, then posts each goal
   # The REPL's default reduction limit is 10000, which cs18's twenty-eight
   # schemas exceed; :limit is the REPL's knob for it.
   (cd "$GLP_DIR/glp_runtime" \
-     && printf "%b" "$JURIX\n:limit 1000000\n$goals:quit\n" | bin/glpc 2>&1)
+     && printf "%b" "$GSC_DIR\n:limit 1000000\n$goals:quit\n" | bin/glpc 2>&1)
 }
 
 term() {    # term <owner's file> <name> ; the contract's term, as it prints it
@@ -94,24 +94,24 @@ compiled_in() { # compiled_in <name> <term> <schema> ; the display of a contract
     | sed 's/GLP>//' | squash
 }
 
-echo "=== jurix: the syntactically-grassroots checker ==="
+echo "=== gsc: the syntactically-grassroots checker ==="
 
-# The contracts, each read from its owner's file: one copy, which Jurix's
+# The contracts, each read from its owner's file: one copy, which GSC's
 # checker and vGLP's compiler load from there.
-SG=$(term "$GLP_DIR/programs/social/graph/contract.glp" social_graph)
-check "the social graph's contract is read from programs/social/graph/contract.glp" \
+SG=$(term "$GLP_DIR/programs/gsc/GSN.glp" gsn)
+check "the social graph's contract, GSN, is read from programs/gsc/GSN.glp" \
       "[schema(befriend, [rs(guarded, [atom(friend, [role(2)])]" "$SG"
-CUR=$(term "$GLP_DIR/programs/currencies/coins/contract.glp" currency)
-check "the currency's contract is read from programs/currencies/coins/contract.glp" \
+CUR=$(term "$GLP_DIR/programs/currencies/coins/GC.glp" gc)
+check "the currency's contract, GC, is read from programs/currencies/coins/GC.glp" \
       "[schema(mint, [rs(guarded, [atom(coin, [role(1)])]" "$CUR"
-CSSN=$(term "$GLP_DIR/programs/cssn/contract.glp" cssn)
-check "CSSN's contract is read from programs/cssn/contract.glp" \
+CSSN=$(term "$GLP_DIR/programs/cssn/CSSN.glp" cssn)
+check "CSSN's contract is read from programs/cssn/CSSN.glp" \
       "reflexive([friend], [schema(establish," "$CSSN"
-FED=$(term "$GLP_DIR/programs/federation/contract.glp" federation)
-check "the federation's contract is read from programs/federation/contract.glp" \
+FED=$(term "$GLP_DIR/programs/federation/GFWC.glp" gfwc)
+check "the federation's contract, GFWC, is read from programs/federation/GFWC.glp" \
       "[schema(form, [rs(guarded, [atom(seat, [nterm(own(1))])]" "$FED"
-GAI=$(term "$GLP_DIR/programs/gai/contract.glp" gai)
-check "GAI's contract is read from programs/gai/contract.glp" \
+GAI=$(term "$GLP_DIR/programs/gai/GAI.glp" gai)
+check "GAI's contract is read from programs/gai/GAI.glp" \
       "[schema(establish, [rs(guarded, [atom(identity, [])], [], [], [])])" "$GAI"
 
 # The two worked contracts, certified in Section 7.  One goal per run, so that
@@ -170,7 +170,7 @@ out=$(run "check_variant(sg_chain_cut, $SG, V).")
 check "cutting an edge of the path fails volition" \
       "V = not_grassroots([volition(chain, 1, 3)])" "$out"
 
-# Volition is one condition in Sections 3 and 8 (Jurix 7652554): tri(p?, q, r?)
+# Volition is one condition in Sections 3 and 8 (GSC 7652554): tri(p?, q, r?)
 # is guarded neither in all its roles nor connected, its role graph falling
 # into {1,2} and {3}, each holding a guarding role, so it meets def:volition
 # as it meets definition:volition as a cschema (sg_tri_cschema, below).
@@ -209,7 +209,7 @@ check "and the verdict is the second conjunct alone" \
 # cs18, the checker's fixture of eighteen schemas, twenty-eight expanded: a
 # child-safe social contract as CSSN drafted it in Legal's inbox on 2026-08-15
 # and 2026-08-16 and as it was brought to their paper on 2026-10-09, since
-# revised by CSSN (its contract is programs/cssn/contract.glp, below).  Its
+# revised by CSSN (its contract is programs/cssn/CSSN.glp, below).  Its
 # introductory act is parent_child; befriending is obstructed there by design.
 out=$(run 'check_named(cs18, V).' 'traceable_of(cs18, E).')
 check "cs18 is syntactically grassroots" \
@@ -302,11 +302,11 @@ expanded child_leave_2_s  s '\Bob'           "$child_leave_2_body"
 expanded child_leave_2_p  p '\mathit{Carol}' "$child_leave_2_body"
 expanded child_leave_2_q  q '\mathit{Dave}'  "$child_leave_2_body"
 
-# CSSN's contract, programs/cssn/contract.glp (CSSN, Appendix B.2): its
+# CSSN's contract, programs/cssn/CSSN.glp (CSSN, Appendix B.2): its
 # predicates have traceable provenance and it satisfies volition, and it has
 # no unobstructed introductory act (CSSN, Proposition "Provenance and
 # volition"), so it is not syntactically grassroots.  It has an introduction
-# with wards (Jurix, Appendix F, def:introduction-wards): the mark child, with
+# with wards (GSC, Appendix F, def:introduction-wards): the mark child, with
 # the guardianship (child, identity, parent, parenting) of def:guardianship;
 # befriend, unobstructed but for {child} (def:unobstructed-marks);
 # child_adult_befriend, the relay act of a ward role of child and a free role,
@@ -369,7 +369,7 @@ check "the empty contract has no introductory act" \
 
 # --- the compilation (Section 5) -------------------------------------------
 # The two displays of Section 5.2, transcribed from
-# /Grassroots/Jurix/sections/05-compilation.tex, compared with the whitespace
+# /Grassroots/GSC/sections/05-compilation.tex, compared with the whitespace
 # removed: the compiler emits a display one token to a line, GLP having no
 # string concatenation, and a newline is whitespace to LaTeX.  The comma and
 # the full stop that close the paper's two displays belong to the sentences
@@ -383,7 +383,7 @@ befriend_paper=$(cat <<'EOF' | squash
 EOF
 )
 check_eq "befriend compiles to the display of Section 5.2" \
-         "$befriend_paper" "$(compiled_in social_graph "$SG" befriend)"
+         "$befriend_paper" "$(compiled_in gsn "$SG" befriend)"
 
 swap_paper=$(cat <<'EOF' | squash
 \begin{align*}
@@ -393,13 +393,13 @@ swap_paper=$(cat <<'EOF' | squash
 EOF
 )
 check_eq "the swap compiles to the display of Section 5.2" \
-         "$swap_paper" "$(compiled_in currency "$CUR" swap)"
+         "$swap_paper" "$(compiled_in gc "$CUR" swap)"
 
 # A contract compiles schema by schema, and only after it is checked.
-out=$(run "compile_contract(social_graph, $SG).")
+out=$(run "compile_contract(gsn, $SG).")
 check_eq "the social graph compiles to four displays" "4" \
          "$(printf '%s' "$out" | grep -c 'begin{align')"
-out=$(run "compile_contract(currency, $CUR).")
+out=$(run "compile_contract(gc, $CUR).")
 check_eq "the currency compiles to four displays" "4" \
          "$(printf '%s' "$out" | grep -c 'begin{align')"
 
@@ -423,7 +423,7 @@ check "a schema the contract does not hold is reported" \
 # GFWC's five schemas over seat and child, /Grassroots/GFWC
 # sections/schemas.tex, every role of them a party role or a seated role,
 # certified in its Section 3.1 by hand against the conditions of Section 8 of
-# /Grassroots/Jurix; the checker returns the same.
+# /Grassroots/GSC; the checker returns the same.
 
 out=$(run "check($FED, V)." "rooted_preds($FED, E).")
 check "the federation contract meets the conditions of Section 8" \
@@ -544,7 +544,7 @@ check "and keeps the verdict of Section 3" \
 # The compiled form of a schema with community roles is Definition Compilation
 # of Section 8, which the compiler prints for a contract that meets the
 # conditions on the text and for no other.
-out=$(run "compile_contract(federation, $FED).")
+out=$(run "compile_contract(gfwc, $FED).")
 check "a contract with community roles is compiled" \
       "begin{align" "$out"
 check_not "and not refused" "not compiled" "$out"
@@ -557,7 +557,7 @@ check_not "and no display is printed for it" "begin{align" "$out"
 
 # --- the compilation of Section 8 (definition:compile) ---------------------
 # The worked box of Section 8, transcribed from
-# /Grassroots/Jurix/sections/13-community-roles.tex, is the display for
+# /Grassroots/GSC/sections/13-community-roles.tex, is the display for
 # federate: the one assignment over the extent of its seated role, adding both
 # atoms, the line on freshness and the guard.  Compared with the whitespace
 # removed, as the two displays of Section 5.2 are, and without the full stop
@@ -574,17 +574,17 @@ IFS= read -r -d '' federate_tex <<'EOF'
 EOF
 federate_box=$(printf '%s' "$federate_tex" | squash)
 check_eq "federate compiles to the worked box of Section 8" \
-         "$federate_box" "$(compiled_in federation "$FED" federate)"
+         "$federate_box" "$(compiled_in gfwc "$FED" federate)"
 
 # The five schemas of the contract, in the one form of Section 8.
-out=$(run "compile_contract(federation, $FED).")
+out=$(run "compile_contract(gfwc, $FED).")
 check_eq "the federation compiles to five displays" "5" \
          "$(printf '%s' "$out" | grep -c 'begin{align')"
 
 # form: a party role in the form of Section 8, over its extent, with a proviso
 # line for the seat it forbids, guarded by a part of it larger than the
 # threshold 0; no name term sigma.y, so no line on freshness.
-form=$(compiled_in federation "$FED" form)
+form=$(compiled_in gfwc "$FED" form)
 check "form ranges over the extent of its party role" \
       "(p\\in\\mathrm{ext}_c(\\Alice))" "$form"
 check "form forbids the seat it adds" \
@@ -598,7 +598,7 @@ check_not "form forms no name and prints no freshness line" \
 
 # join: an assignment line and a proviso line per role, the reach condition,
 # and a guard that is the union of two parts, each at its own threshold.
-join=$(compiled_in federation "$FED" join)
+join=$(compiled_in gfwc "$FED" join)
 check_eq "join prints an assignment line per role" "2" \
          "$(printf '%s' "$join" | grep -o "c'_p:=" | wc -l | tr -d ' ')"
 check_eq "join prints a proviso line per role" "2" \
@@ -612,10 +612,10 @@ check "join's guard is the union of two parts" \
 # leave_1 and leave_2 differ only in which assembly guards.
 check "leave_1 is guarded by a supermajority of the parent's assembly" \
       "\\text{guardedby}G,\\G\\subseteq\\mathrm{ext}_c(\\zeta^{\\mathit{seat}})" \
-      "$(compiled_in federation "$FED" leave_1)"
+      "$(compiled_in gfwc "$FED" leave_1)"
 check "leave_2 is guarded by a supermajority of the child's assembly" \
       "\\text{guardedby}G,\\G\\subseteq\\mathrm{ext}_c(\\xi^{\\mathit{seat}})" \
-      "$(compiled_in federation "$FED" leave_2)"
+      "$(compiled_in gfwc "$FED" leave_2)"
 
 # --- the signed speech-act term (Sections 3.1 to 3.3) ----------------------
 # The social graph with items of Section 3.3, item of arity one and forward
@@ -762,7 +762,7 @@ check "and child alone keeps one" \
 check "and there is no introduction with wards" \
       "W = no_introduction_with_wards" "$out"
 
-# GAI's contract, programs/gai/contract.glp: agent has the guardianship
+# GAI's contract, programs/gai/GAI.glp: agent has the guardianship
 # (agent, identity, principal, principal_of) and befriend is unobstructed but
 # for {agent}, and agent_befriend forbids retired at the agent's role, a mark
 # not in M, which clause 3 of def:relay does not allow: the contract is

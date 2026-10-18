@@ -10,21 +10,21 @@
 %% "Effective Local Specification" and "Compilation of the Canonical
 %% Platform", and the paragraph on act schemas with the sentence after it,
 %% which say when a contract of act schemas is a local specification and when
-%% it is effective.  Jurix (/Grassroots/Jurix), Sections 3 and 5:
+%% it is effective.  GSC (/Grassroots/GSC), Sections 3 and 5:
 %% Definitions "Act schema", "Binding", "Compilation" and "Realisation of a
 %% contract".  The papers are the specification; each module names the
 %% definitions it decides.
 %%
 %% compile(Name, Contract, Verdict) takes a contract in the term form
-%% programs/jurix reads, and the verdict its checker gives it, and prints the
+%% programs/gsc reads, and the verdict its checker gives it, and prints the
 %% .vglp module of the contract's canonical platform between the lines
 %% "%% compile begin" and "%% compile end", one line of source to a line, as
-%% programs/jurix/compile.glp prints its output; or, for a contract it does not
+%% programs/gsc/compile.glp prints its output; or, for a contract it does not
 %% compile, the lines saying why.  programs/vglp/cva/compile.sh runs the
-%% checker of programs/jurix and then this.
+%% checker of programs/gsc and then this.
 %% ---------------------------------------------------------------------------
 
-%% The contract, as programs/jurix/self.glp writes it.
+%% The contract, as programs/gsc/self.glp writes it.
 NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
             ; ext(NameTerm, Constant).
 Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm).
@@ -85,7 +85,7 @@ rs_guarded(crs(_, guarded, _, _, _, _), yes).
 rs_guarded(crs(_, guarded_at(_), _, _, _, _), yes).
 rs_guarded(crs(_, unguarded, _, _, _, _), no).
 
-%% The variables of a schema in the order programs/jurix gives them
+%% The variables of a schema in the order programs/gsc gives them
 %% (self.glp, schema_vars): its roles, then its party variables and then its
 %% speech-act variables, each in order of first occurrence, the atoms of each
 %% role read as +(i), -(i), =(i), not(i).

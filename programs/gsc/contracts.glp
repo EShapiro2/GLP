@@ -6,12 +6,12 @@
 %
 % The contracts the checker is for are their owners' and live with their
 % code, one copy each (claude.md "Sessions", the cascade rule; Coordination
-% Appendix C): the social graph's is programs/social/graph/contract.glp
-% (Jurix, Section 3.3), the currency's programs/currencies/coins/contract.glp
-% (Section 3.4), the child-safe social network's programs/cssn/contract.glp
-% and the federation's programs/federation/contract.glp (Section 8).  Each
+% Appendix C): the social graph's is programs/gsc/GSN.glp
+% (GSC, Section 3.3), the currency's programs/currencies/coins/GC.glp
+% (Section 3.4), the child-safe social network's programs/cssn/CSSN.glp
+% and the federation's programs/federation/GFWC.glp (Section 8).  Each
 % prints its term by contract_named/2 in a REPL session on the file, and
-% test_jurix.sh passes the term to check/2, traceable_preds/2,
+% test_gsc.sh passes the term to check/2, traceable_preds/2,
 % rooted_preds/2, compile_contract/2 and compile_schema_in/3.  A fixture that
 % changes one of them in one place is a variant: variant/3 takes the owner's
 % term and gives the fixture, so no copy of a contract is kept here.
@@ -242,7 +242,7 @@ sg_refl_forbidden(S, reflexive([friend], C?)) :-
 % drafted it in Legal's inbox on 2026-08-15 and 2026-08-16 and as it was
 % brought to their paper on 2026-10-09 (send, parent_child, friend reflexive,
 % the five expanded schemas); CSSN has since revised the contract, and the
-% contract is programs/cssn/contract.glp, CSSN's, which certifies this
+% contract is programs/cssn/CSSN.glp, CSSN's, which certifies this
 % fixture of nothing.
 %
 % unfriend, child_unfriend, leave, child_leave and child_leave_2 each stand
@@ -439,7 +439,7 @@ contract(wd2, C?) :- wd2(C).
 contract(_, []) :- otherwise | true.
 
 % A fixture that is a contract changed in one place, by name and the contract
-% it changes, which test_jurix.sh reads from the owner's file: the social
+% it changes, which test_gsc.sh reads from the owner's file: the social
 % graph's for sg_*, the federation's for gf_*.  An unknown name is the empty
 % contract.
 exported procedure variant(Constant?, Contract?, Declared).
@@ -643,7 +643,7 @@ sg_relay(S, C?) :-
 % The contract Section 3.3 shows, with item of arity one: sign(Alice?; x)
 % adds item(x), and forward(Alice?, Bob; x) requires item(x) at Alice, adds
 % sent(x, Bob) there, and adds item(sgn(x, Alice)) at Bob, where friend(Alice)
-% is required.  It is GSG's, to go to programs/social/graph/contract.glp
+% is required.  It is GSG's, to go to programs/gsc/GSN.glp
 % (Coordination, 2026-10-18 08:30 UTC); the fixture here is the checker's,
 % for the signed term.  Section 7 certifies it: syntactically grassroots, with
 % {friend, item, sent} of traceable provenance, forward's signed term counting

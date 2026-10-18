@@ -33,7 +33,7 @@ GLP/
     ├── currencies/           # the grassroots currencies: coins/, bonds/, sovereign/, secure/
     ├── cssn/                 # the child-safe social network
     ├── federation/           # the grassroots federation platform (GFWC)
-    ├── jurix/                # legal contracts
+    ├── gsc/                # legal contracts
     ├── vglp/                 # vGLP sources
     ├── sglp/                 # sGLP simulation (sGLP)
     └── tests/                # the suite's program fixtures (linkprobes/, multiagent/, vglp/, module/, …)

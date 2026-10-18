@@ -1,6 +1,6 @@
 % ---------------------------------------------------------------------------
 % The introductory act (def:introduction) and unobstructedness
-% (def:unobstructed) of /Grassroots/Jurix, Section 3.
+% (def:unobstructed) of /Grassroots/GSC, Section 3.
 %
 % Both definitions quantify over all distinct p and q.  The schemas name no
 % person (prop:anonymity), so one pair stands for every pair, and the bindings

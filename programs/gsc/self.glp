@@ -1,7 +1,7 @@
 % ---------------------------------------------------------------------------
-% Jurix: the syntactically-grassroots checker.
+% GSC: the syntactically-grassroots checker.
 %
-% Decides def:syntactically-grassroots of /Grassroots/Jurix, Section 3.  The
+% Decides def:syntactically-grassroots of /Grassroots/GSC, Section 3.  The
 % paper is the specification and no definition of it is restated here; each
 % procedure names the definition it decides.  README.md maps the two.
 %

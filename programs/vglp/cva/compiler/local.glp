@@ -23,7 +23,7 @@
 %% so that every transaction one determines the other does; otherwise the
 %% contract is refused, the two schema-bindings named.
 %% Two schema-bindings determining a common transaction delete and add the same
-%% atoms at each of the same participants (Jurix, Definition "Compilation"), and
+%% atoms at each of the same participants (GSC, Definition "Compilation"), and
 %% vGLP takes a class to be all the schema-bindings of those participants and
 %% those deleted and added atoms (vGLP #8, 2026-10-11 17:24 UTC, Q-A: "the class
 %% is then the product of the union at the one participant and the common
@@ -32,13 +32,13 @@
 %% the same participants requires and forbids the same atoms at all of them but
 %% one; otherwise it is refused, the two schema-bindings named.
 %%
-%% The schemas name no person (Jurix, Proposition "Anonymity"), so the bindings
+%% The schemas name no person (GSC, Proposition "Anonymity"), so the bindings
 %% of a schema are taken up to renaming: its roles and party variables sent to
 %% people person(0), person(1), ... in order of first use, every partition of
 %% them a binding; its speech-act variables to speech acts sp(U, S), U an
 %% utterance in order of first use and S the signer, one of those people or
 %% one person more, whom no other variable names.  For each such binding that
-%% is one (Jurix, Definition "Binding") and determines a transaction (Jurix,
+%% is one (GSC, Definition "Binding") and determines a transaction (GSC,
 %% Definition "Compilation": the added and the deleted atoms of each person
 %% disjoint), its schema-bindings of the same deleted and added atoms are found
 %% by sending every schema's roles onto its participants and matching the atoms
@@ -154,7 +154,7 @@ two_terms(N1, Rs1, B1, N2, Rs2, B2, T1?, T2?) :-
     T2 =.. ['%% and the schema-binding', S2?].
 
 %% A schema-binding as the schema's name applied to the values of its
-%% variables, in programs/jurix's order; free for a variable it leaves free.
+%% variables, in programs/gsc's order; free for a variable it leaves free.
 procedure sb_term(Constant?, RoleSpecs?, Binding?, _).
 sb_term(Nm, Rs, B, T?) :- ground(Nm?), ground(B?) |
     schema_vars(Rs?, Vs),
@@ -626,7 +626,7 @@ keep_binding(no, _, R, R?).
 
 %% --- Schema-bindings: signatures and mates, as the platform computes them --
 %% The participants and, for each, the join of the atoms its roles delete and
-%% add (Jurix, Definition "Compilation").
+%% add (GSC, Definition "Compilation").
 procedure sig_of(RoleSpecs?, Binding?, Parts).
 sig_of(Rs, B, Pt?) :- ground(Rs?), ground(B?) |
     role_people(Rs?, 1, B?, Ws),
@@ -716,7 +716,7 @@ procedure part_in1(YesNo?, Part?, Parts?, YesNo).
 part_in1(yes, _, _, yes).
 part_in1(no, X, Ps, E?) :- part_in(X?, Ps?, E).
 
-%% Jurix, Definition "Binding": two roles sent to one person only if neither
+%% GSC, Definition "Binding": two roles sent to one person only if neither
 %% adds or deletes an atom naming the other.
 procedure rule_ok(RoleSpecs?, Binding?, YesNo).
 rule_ok(Rs, B, R?) :- ground(Rs?) |
@@ -771,7 +771,7 @@ nth_spec([], _, rs(unguarded, [], [], [], [])).
 nth_spec([R|_], I, R?) :- I? =:= 1 | true.
 nth_spec([_|Rs], I, R?) :- I? > 1 | I1 := I? - 1, nth_spec(Rs?, I1?, R).
 
-%% Jurix, Definition "Binding", admissible.
+%% GSC, Definition "Binding", admissible.
 procedure admissible(RoleSpecs?, Binding?, YesNo).
 admissible(Rs, B, R?) :- ground(Rs?), ground(B?) |
     added_atoms(Rs?, Ad),

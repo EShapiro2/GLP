@@ -9,15 +9,16 @@
 #   bash programs/vglp/cva/compile.sh <dir>      print into <dir>/<contract>/platform.vglp
 #   bash programs/vglp/cva/compile.sh --check    print into a scratch directory and compare
 #
-# for <contract> social_graph and currency, Jurix's two (Jurix, Sections 3.3
-# and 3.4), each the one copy in its owner's file,
-# programs/social/graph/contract.glp and programs/currencies/coins/contract.glp
-# (claude.md "Sessions", the cascade rule), and nudge, introduce, gnudge,
+# for <contract> social_graph and currency, the directories of GSN (GSC's,
+# programs/gsc/GSN.glp, the checker's gsn; GSC, Section 3.3) and GC
+# (Currencies', programs/currencies/coins/GC.glp, the checker's gc; Section
+# 3.4), each the one copy in its owner's file (claude.md "Sessions", the
+# cascade rule; Coordination Appendix C), and nudge, introduce, gnudge,
 # childsafe, link and friends, vGLP's, which contracts.glp beside the compiler
 # holds, with the introduction predicate each names, introduction_named/2, or
-# none (Jurix's two name none).  A contract is checked before it is compiled
-# (Jurix, Section 5), so a REPL session on each owner's file and one on
-# contracts.glp print the contracts, contract_named/2; one on programs/jurix
+# none (GSC's two name none).  A contract is checked before it is compiled
+# (GSC, Section 5), so a REPL session on each owner's file and one on
+# contracts.glp print the contracts, contract_named/2; one on programs/gsc
 # prints the checker's verdict on each, check/2; and one on the compiler calls
 # compile(Name, Contract, Verdict, Intro) for each and writes what it prints
 # between its lines "%% compile begin" and "%% compile end" to the contract's
@@ -32,17 +33,25 @@ set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 GLP_DIR="$(cd "$HERE/../../.." && pwd)"
 RT="$GLP_DIR/glp_runtime"
-JURIX="social_graph currency"
+THEIRS="gsn gc"
 OURS="nudge introduce gnudge childsafe link friends"
-CONTRACTS="$JURIX $OURS"
+CONTRACTS="$THEIRS $OURS"
 
 contract_file() { # contract_file <contract> ; the file that holds it, its owner's
     case "$1" in
-        social_graph) echo "$GLP_DIR/programs/social/graph/contract.glp" ;;
-        currency)     echo "$GLP_DIR/programs/currencies/coins/contract.glp" ;;
-        *)            echo "$HERE/contracts.glp" ;;
+        gsn) echo "$GLP_DIR/programs/gsc/GSN.glp" ;;
+        gc)  echo "$GLP_DIR/programs/currencies/coins/GC.glp" ;;
+        *)   echo "$HERE/contracts.glp" ;;
     esac
 }
+dir_of() { # dir_of <contract> ; the directory of its platform and plays here
+    case "$1" in
+        gsn) echo social_graph ;;
+        gc)  echo currency ;;
+        *)   echo "$1" ;;
+    esac
+}
+DIRS=$(for c in $CONTRACTS; do dir_of "$c"; done | tr '\n' ' ')
 
 CHECK=0
 if [ $# -gt 1 ]; then
@@ -59,13 +68,13 @@ elif [ "$1" = "--check" ]; then
 else
     OUT="$1"
 fi
-for c in $CONTRACTS; do mkdir -p "$OUT/$c" || exit 2; done
+for d in $DIRS; do mkdir -p "$OUT/$d" || exit 2; done
 
 # Each contract's term, one line per contract in the order of CONTRACTS:
-# Jurix's two from their owners' files, one session each, and vGLP's from
+# GSN and GC from their owners' files, one session each, and vGLP's from
 # contracts.glp, one session, with their introduction predicates.
 : > "$WORK/terms_c"
-for c in $JURIX; do
+for c in $THEIRS; do
     printf '%s\ncontract_named(%s, C).\n:quit\n' "$(contract_file "$c")" "$c" > "$WORK/$c.in"
     (cd "$RT" && bin/glpc < "$WORK/$c.in" > "$WORK/$c.out" 2>&1)
     sed -e 's/^\(GLP> \)*//' "$WORK/$c.out" | grep -E '^C = ' | head -1 >> "$WORK/terms_c"
@@ -80,10 +89,10 @@ done
 sed -e 's/^\(GLP> \)*//' "$WORK/ours.out" | grep -E '^C = ' >> "$WORK/terms_c"
 sed -e 's/^\(GLP> \)*//' "$WORK/ours.out" | grep -E '^I = ' | sed -e 's/^I = //' > "$WORK/intros"
 
-# The checker's verdict on each, from programs/jurix.  The REPL stops a goal
+# The checker's verdict on each, from programs/gsc.  The REPL stops a goal
 # at 10000 reductions unless told otherwise; the checker takes more.
 {
-    echo "$GLP_DIR/programs/jurix/"
+    echo "$GLP_DIR/programs/gsc/"
     echo ':limit 10000000'
     n=0
     for c in $CONTRACTS; do
@@ -91,9 +100,9 @@ sed -e 's/^\(GLP> \)*//' "$WORK/ours.out" | grep -E '^I = ' | sed -e 's/^I = //'
         echo "check($(sed -n "${n}p" "$WORK/terms_c" | sed -e 's/^C = //'), V)."
     done
     echo ':quit'
-} > "$WORK/jurix.in"
-(cd "$RT" && bin/glpc < "$WORK/jurix.in" > "$WORK/jurix.out" 2>&1)
-sed -e 's/^\(GLP> \)*//' "$WORK/jurix.out" | grep -E '^V = ' > "$WORK/terms_v"
+} > "$WORK/gsc.in"
+(cd "$RT" && bin/glpc < "$WORK/gsc.in" > "$WORK/gsc.out" 2>&1)
+sed -e 's/^\(GLP> \)*//' "$WORK/gsc.out" | grep -E '^V = ' > "$WORK/terms_v"
 
 # Each contract's two lines, its C and its V, in the order of CONTRACTS, and
 # its introduction predicate.
@@ -105,7 +114,7 @@ for c in $CONTRACTS; do
     sed -n "${n}p" "$WORK/terms_v" >> "$WORK/terms"
 done
 {
-    for c in $JURIX; do echo no_introduction; done
+    for c in $THEIRS; do echo no_introduction; done
     cat "$WORK/intros"
 } > "$WORK/introductions"
 
@@ -125,7 +134,7 @@ done
 } > "$WORK/compile.in"
 (cd "$RT" && bin/glpc < "$WORK/compile.in" > "$WORK/compile.out" 2>&1)
 
-awk -v out="$OUT" -v names="$CONTRACTS" '
+awk -v out="$OUT" -v names="$DIRS" '
     BEGIN { n = split(names, p, " "); k = 0 }
     { sub(/^(GLP> )+/, "") }
     $0 == "%% compile begin" { k++; f = out "/" p[k] "/platform.vglp"; printf "" > f; on = 1; next }
@@ -140,14 +149,14 @@ if [ -s "$WORK/status" ]; then
     grep -E '^(GLP> )*(Error|✗)' "$WORK"/*.out | head -20
     OK=0
 fi
-for c in $CONTRACTS; do
-    f="$OUT/$c/platform.vglp"
+for d in $DIRS; do
+    f="$OUT/$d/platform.vglp"
     if [ "$CHECK" = 1 ]; then
-        if [ -f "$f" ] && cmp -s "$f" "$HERE/$c/platform.vglp"; then
-            echo "$c/platform.vglp: as printed"
+        if [ -f "$f" ] && cmp -s "$f" "$HERE/$d/platform.vglp"; then
+            echo "$d/platform.vglp: as printed"
         else
-            echo "$c/platform.vglp: NOT as printed"
-            [ -f "$f" ] && diff "$HERE/$c/platform.vglp" "$f" | head -20
+            echo "$d/platform.vglp: NOT as printed"
+            [ -f "$f" ] && diff "$HERE/$d/platform.vglp" "$f" | head -20
             OK=0
         fi
     elif [ -f "$f" ]; then

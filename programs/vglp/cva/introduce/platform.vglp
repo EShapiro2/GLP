@@ -1,5 +1,5 @@
 %% Printed by programs/vglp/cva/compiler from the contract named below, in the
-%% term form programs/jurix reads (Jurix, Sections 3 and 5): the canonical CVA
+%% term form programs/gsc reads (GSC, Sections 3 and 5): the canonical CVA
 %% platform of the contract (vGLP, Section 3.2, Definition "Canonical CVA
 %% Platform"), two-phase commit coordinated by the initiating agent, compiled
 %% into vGLP by Definition "Compilation of the Canonical Platform" (Section
@@ -100,7 +100,7 @@ Close     ::= close.
 Demand    ::= more.
 Trigger   ::= req(Request) ; net(Net) ; tick ; answered(Attempt, YesNo) ; recheck.
 
-%% The contract, as programs/jurix writes it: a schema's roles, each rs(Guard,
+%% The contract, as programs/gsc writes it: a schema's roles, each rs(Guard,
 %% Add, Del, Keep, Forb), a role named by its index.
 Var       ::= role(Integer) ; pvar(Constant) ; svar(Constant).
 Vars      ::= [] ; [Var | Vars].
@@ -1897,7 +1897,7 @@ procedure info_gsets(Info?, PeerSets).
 info_gsets(ci(_, _, _, G, _, _), G?).
 
 %% The participants of a class and the atoms each deletes and adds: the join
-%% of those of the roles sent to it (Jurix, Definition "Compilation").
+%% of those of the roles sent to it (GSC, Definition "Compilation").
 procedure sig_of(RoleSpecs?, Binding?, Parts).
 sig_of(Rs, B, Ps?) :- ground(Rs?), ground(B?) |
     role_persons(Rs?, 1, B?, Ws),

@@ -1,16 +1,16 @@
 %% ---------------------------------------------------------------------------
-%% contract.glp --- the child-safe social contract (CSSN, Section 2) as its act
+%% CSSN.glp --- the child-safe social contract (CSSN, Section 2) as its act
 %% schemas (Appendix B.2; their tables in Appendix C.2,
 %% sections/artefact-schemas.tex, at SGLP f3c4e88), in
-%% the term form programs/jurix reads (its README, "Writing a contract"), for
+%% the term form programs/gsc reads (its README, "Writing a contract"), for
 %% programs/vglp/cva/compiler to compile into its canonical CVA platform
 %% (CSSN, Section 6.1, "The program"; Appendix C.5).  compile.sh beside this
-%% file has Jurix's checker give its verdict and then runs the compiler on it.
+%% file has GSC's checker give its verdict and then runs the compiler on it.
 %%
 %% Twenty-three schemas over seventeen predicates.  unfriend and leave carry
 %% no ? and each stands for one schema per role, guarded at that role (CSSN,
 %% Appendix C.2), so the term holds twenty-five, unfriend_p, unfriend_q,
-%% leave_a and leave_q named by the role that carries the mark, as Jurix's
+%% leave_a and leave_q named by the role that carries the mark, as GSC's
 %% contract cssn names them.  friend is reflexive (Appendix B.2).  Every role
 %% requires identity, except the role of establish and the child's role of
 %% enter and enter_2, which forbid it and add it (Appendix B.2); the tables
@@ -21,7 +21,7 @@
 %% rs(Guard, Add, Del, Keep, Forb), its +(i), -(i), =(i) and not(i).
 %% ---------------------------------------------------------------------------
 
-%% The contract, as programs/jurix/self.glp writes it.
+%% The contract, as programs/gsc/self.glp writes it.
 NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
             ; ext(NameTerm, Constant).
 Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm).

@@ -9,7 +9,7 @@
 %% It reads an sGLP program in the term form of README.md, "The term form" ---
 %% one GLP term per declaration and clause, in GLP-Spec's term syntax
 %% (Definition "Logic Programs Syntax") --- and prints GLP source, as the
-%% compiler of grassroots social contracts does (programs/jurix/compile.glp).
+%% compiler of grassroots social contracts does (programs/gsc/compile.glp).
 %% transform(Program, Part) prints one module of the program's translation:
 %%
 %%   profiles    the profiles translated: each person procedure, and each

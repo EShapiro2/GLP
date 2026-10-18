@@ -4,35 +4,40 @@
 # clauses and act schemas in its owner's directory through every tool of the
 # cascade, each in this repository, to the canonical platform and its run.
 #
-#   bash cascade.sh <contract>            run, and write cascade/<contract>/
+#   bash cascade.sh <contract>            run, and write cascade/<NAME>/
 #   bash cascade.sh <contract> --check    run into a scratch directory and compare
-#                                         with cascade/<contract>/
+#                                         with cascade/<NAME>/
 #   bash cascade.sh <contract> --record   run, write, and commit the record as one
-#                                         commit tagged cascade/<contract>/<date>
+#                                         commit tagged cascade/<NAME>/<date>
 #                                         (a later run the same day: <date>-2, -3, ...)
 #
-# The contracts, each its owner's, two files in the owner's directory:
-# contract.md, the clauses, and contract.glp, the act schemas in the term form
-# programs/jurix reads, each in Jurix's notation above its term, printed by
-# contract_named(<contract>, C):
+# A contract's name and its owner are Udi's rulings, Coordination Appendix C,
+# never read off a directory's name (Udi, 2026-10-18): a letter acronym NAME,
+# which the checker takes in lower case, <contract>.  Each is two files the
+# owner writes in its directory, NAME.md, the clauses, and NAME.glp, the act
+# schemas in the term form programs/gsc reads, each in GSC's notation above
+# its term, printed by contract_named(<contract>, C); vGLP keeps the plays with
+# scripted persons for some, in directories that keep their names:
 #
-#   social_graph   GSG         programs/social/graph
-#   currency       Currencies  programs/currencies/coins
-#   cssn           CSSN        programs/cssn
-#   federation     GFWC        programs/federation
-#   gai            GAI         programs/gai
+#   <contract>  NAME  owner       files in                  plays in programs/vglp/cva/
+#   gsg         GSG   GSC         programs/gsc              ---
+#   gsn         GSN   GSC         programs/gsc              social_graph
+#   gc          GC    Currencies  programs/currencies/coins currency
+#   cssn        CSSN  CSSN        programs/cssn             ---
+#   gfwc        GFWC  GFWC        programs/federation       ---
+#   gai         GAI   GAI         programs/gai              ---
 #
-# The steps, and the six artefacts written to cascade/<contract>/ at the
+# The steps, and the six artefacts written to cascade/<NAME>/ at the
 # repository root --- outside programs/, since every .glp and .vglp under a
 # program's directory is a module of that program to the linker and to :emit,
 # and a record is not a program:
-#   1. contract.md and contract.glp, copied as they stand at the run.
-#   2. verdict.txt: the checker's verdict on the schemas, programs/jurix's
-#      check/2 (Jurix, def:syntactically-grassroots; Section 8's conditions
+#   1. NAME.md and NAME.glp, copied as they stand at the run.
+#   2. verdict.txt: the checker's verdict on the schemas, programs/gsc's
+#      check/2 (GSC, def:syntactically-grassroots; Section 8's conditions
 #      for a contract with community roles).
 #   3. vmat.tex: the VMAT form, the volition-guarded multiagent atomic
-#      transactions each schema compiles to, as programs/jurix's
-#      compile_contract/2 prints them (Jurix, Section 5.2; Section 8's worked
+#      transactions each schema compiles to, as programs/gsc's
+#      compile_contract/2 prints them (GSC, Section 5.2; Section 8's worked
 #      box), or its line saying why the contract is not compiled.
 #   4. platform.vglp: the canonical CVA platform, as programs/vglp/cva/compiler's
 #      compile/4 prints it (vGLP, Section 5.4, Definition "Compilation of the
@@ -40,7 +45,7 @@
 #   5. platform.glp: the platform compiled to GLP by the canonical compilation,
 #      as the REPL's :emit writes it (vGLP, Definition "Canonical Compilation").
 #   6. run.log: the run of the platform with vGLP's scripted persons, the plays
-#      of programs/vglp/cva/<contract>/, each play's logs as the REPL prints
+#      vGLP keeps for it, each play's logs as the REPL prints
 #      them; the plays run the platform.vglp committed there, which the run
 #      requires to be the one this script printed.
 # and manifest.md, naming the contract, its owner, the paper's repository and
@@ -52,7 +57,7 @@
 # records what the tools print and bypasses nothing.  Exits 0 when every step
 # ran and, with --check, every artefact in place is what the tools print now;
 # 1 otherwise, the differing file or the failed step named; 2 on a bad
-# argument or a contract with no contract.md or contract.glp.
+# argument or a contract with no NAME.md or NAME.glp.
 #
 # The suite's Section CAS runs --check on every recorded contract.
 
@@ -67,17 +72,18 @@ MODE="${2:-write}"
 case "$MODE" in write|--check|--record) ;; *) usage ;; esac
 
 case "$NAME" in
-    social_graph) OWNER="programs/social/graph";    PAPER="/Users/udi/Grassroots/GSG" ;;
-    currency)     OWNER="programs/currencies/coins"; PAPER="/Users/udi/Grassroots/GC" ;;
-    cssn)         OWNER="programs/cssn";             PAPER="/Users/udi/Grassroots/CSSN" ;;
-    federation)   OWNER="programs/federation";       PAPER="/Users/udi/Grassroots/GFWC" ;;
-    gai)          OWNER="programs/gai";              PAPER="/Users/udi/Grassroots/GAI" ;;
-    *) echo "cascade.sh: no contract named $NAME" >&2; exit 2 ;;
+    gsg)  FILE=GSG;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="" ;;
+    gsn)  FILE=GSN;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="social_graph" ;;
+    gc)   FILE=GC;   OWNER="programs/currencies/coins"; PAPER="/Users/udi/Grassroots/GC";   PLAYDIR="currency" ;;
+    cssn) FILE=CSSN; OWNER="programs/cssn";             PAPER="/Users/udi/Grassroots/CSSN"; PLAYDIR="" ;;
+    gfwc) FILE=GFWC; OWNER="programs/federation";       PAPER="/Users/udi/Grassroots/GFWC"; PLAYDIR="" ;;
+    gai)  FILE=GAI;  OWNER="programs/gai";              PAPER="/Users/udi/Grassroots/GAI";  PLAYDIR="" ;;
+    *) echo "cascade.sh: no contract named $NAME; the names are gsg gsn gc cssn gfwc gai" >&2; exit 2 ;;
 esac
 SRC="$GLP_DIR/$OWNER"
-REC="$GLP_DIR/cascade/$NAME"
-PLAYS="$GLP_DIR/programs/vglp/cva/$NAME"
-for f in contract.md contract.glp; do
+REC="$GLP_DIR/cascade/$FILE"
+PLAYS=""; [ -n "$PLAYDIR" ] && PLAYS="$GLP_DIR/programs/vglp/cva/$PLAYDIR"
+for f in "$FILE.md" "$FILE.glp"; do
     [ -f "$SRC/$f" ] || { echo "cascade.sh: $OWNER/$f is missing; the contract is its owner's two files" >&2; exit 2; }
 done
 
@@ -98,26 +104,26 @@ STATUS=0
 NOTE=()
 
 # 1. The contract, as it stands.
-cp "$SRC/contract.md" "$OUT/contract.md"
-cp "$SRC/contract.glp" "$OUT/contract.glp"
-printf '%s\ncontract_named(%s, C).\n:quit\n' "$SRC/contract.glp" "$NAME" > "$WORK/c.in"
+cp "$SRC/$FILE.md" "$OUT/$FILE.md"
+cp "$SRC/$FILE.glp" "$OUT/$FILE.glp"
+printf '%s\ncontract_named(%s, C).\n:quit\n' "$SRC/$FILE.glp" "$NAME" > "$WORK/c.in"
 repl "$WORK/c.in" "$WORK/c.out"
 CT=$(grep -E '^C = ' "$WORK/c.out" | head -1 | sed -e 's/^C = //')
 if [ -z "$CT" ]; then
-    say "contract.glp prints no contract_named($NAME, C)"
+    say "$FILE.glp prints no contract_named($NAME, C)"
     grep -E '(Error|error|✗)' "$WORK/c.out" | head -10
     exit 1
 fi
 INTRO=no_introduction
-if grep -q "^introduction_named($NAME," "$SRC/contract.glp"; then
-    printf '%s\nintroduction_named(%s, I).\n:quit\n' "$SRC/contract.glp" "$NAME" > "$WORK/i.in"
+if grep -q "^introduction_named($NAME," "$SRC/$FILE.glp"; then
+    printf '%s\nintroduction_named(%s, I).\n:quit\n' "$SRC/$FILE.glp" "$NAME" > "$WORK/i.in"
     repl "$WORK/i.in" "$WORK/i.out"
     IT=$(grep -E '^I = ' "$WORK/i.out" | head -1 | sed -e 's/^I = //')
     [ -n "$IT" ] && INTRO="$IT"
 fi
 
-# 2. The verdict, and 3. the VMAT form, from programs/jurix.
-printf '%s\n:limit 10000000\ncheck(%s, V).\n:quit\n' "$GLP_DIR/programs/jurix/" "$CT" > "$WORK/v.in"
+# 2. The verdict, and 3. the VMAT form, from programs/gsc.
+printf '%s\n:limit 10000000\ncheck(%s, V).\n:quit\n' "$GLP_DIR/programs/gsc/" "$CT" > "$WORK/v.in"
 repl "$WORK/v.in" "$WORK/v.out"
 VT=$(grep -E '^V = ' "$WORK/v.out" | head -1 | sed -e 's/^V = //')
 if [ -z "$VT" ]; then
@@ -128,7 +134,7 @@ fi
 printf '%s\n' "$VT" > "$OUT/verdict.txt"
 say "verdict: $VT"
 
-printf '%s\n:limit 10000000\ncompile_contract(%s, %s).\n:quit\n' "$GLP_DIR/programs/jurix/" "$NAME" "$CT" > "$WORK/m.in"
+printf '%s\n:limit 10000000\ncompile_contract(%s, %s).\n:quit\n' "$GLP_DIR/programs/gsc/" "$NAME" "$CT" > "$WORK/m.in"
 repl "$WORK/m.in" "$WORK/m.out"
 # What the compiler prints between the goal and its status line: the displays,
 # a token to a line, or the lines of its refusal.
@@ -185,8 +191,8 @@ if [ "$COMPILED" = 1 ]; then
     fi
     rm -rf "$EMIT" "$GLP_DIR/programs/tests/cascade_emit"
 
-    # 6. The run with scripted persons: the plays of programs/vglp/cva/<contract>.
-    if [ -d "$PLAYS" ] && [ -f "$PLAYS/self.glp" ]; then
+    # 6. The run with scripted persons: the plays vGLP keeps for the contract.
+    if [ -n "$PLAYS" ] && [ -d "$PLAYS" ] && [ -f "$PLAYS/self.glp" ]; then
         if ! cmp -s "$OUT/platform.vglp" "$PLAYS/platform.vglp"; then
             say "the plays' platform.vglp in $PLAYS is not the one printed now; run programs/vglp/cva/compile.sh first"
             exit 1
@@ -214,8 +220,8 @@ if [ "$COMPILED" = 1 ]; then
             if grep -qE '^(Error|✗)' "$OUT/run.log"; then say "run.log holds an error"; STATUS=1; fi
         fi
     else
-        NOTE+=("run: no plays in programs/vglp/cva/$NAME")
-        say "run: no plays for $NAME in programs/vglp/cva"
+        NOTE+=("run: vGLP keeps no plays for $NAME")
+        say "run: vGLP keeps no plays for $NAME"
     fi
 fi
 
@@ -228,17 +234,17 @@ else
     PAPER_URL="$PAPER (not on this machine)"; PAPER_COMMIT=unknown
 fi
 {
-    echo "# A run of the cascade on $NAME"
+    echo "# A run of the cascade on $FILE"
     echo ""
-    echo "- Contract: \`$NAME\`, its owner's two files \`$OWNER/contract.md\` and \`$OWNER/contract.glp\`, copied here as they stood."
+    echo "- Contract: \`$FILE\` (\`$NAME\` to the checker), its owner's two files \`$OWNER/$FILE.md\` and \`$OWNER/$FILE.glp\`, copied here as they stood."
     echo "- The paper: \`$PAPER_URL\` at \`$PAPER_COMMIT\`, for the paper's own record."
-    echo "- The tools: this repository at \`$GLP_COMMIT\` --- programs/jurix (the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/4), glp_runtime's :emit (the canonical compilation to GLP), programs/vglp/cva/$NAME (the plays with scripted persons)."
+    echo "- The tools: this repository at \`$GLP_COMMIT\` --- programs/gsc (the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/4), glp_runtime's :emit (the canonical compilation to GLP)${PLAYS:+, ${PLAYS#$GLP_DIR/} (the plays with scripted persons)}."
     echo "- Run on $(date -u '+%Y-%m-%d %H:%M UTC') by \`cascade.sh $NAME\`; the suite's Section CAS re-runs it and holds these files to what the tools print."
     echo ""
     echo "| Artefact | What it holds |"
     echo "|---|---|"
-    echo "| \`contract.md\` | the clauses |"
-    echo "| \`contract.glp\` | the act schemas, each in Jurix's notation above its term |"
+    echo "| \`$FILE.md\` | the clauses |"
+    echo "| \`$FILE.glp\` | the act schemas, each in GSC's notation above its term |"
     echo "| \`verdict.txt\` | the checker's verdict: \`$VT\` |"
     if grep -q '^% not compiled' "$OUT/vmat.tex"; then
         echo "| \`vmat.tex\` | the compiler to VMAT's refusal |"
@@ -265,8 +271,8 @@ fi
 
 # --check: each artefact in place is what the tools print now.
 if [ "$MODE" = "--check" ]; then
-    [ -d "$REC" ] || { say "no record in cascade/$NAME"; exit 1; }
-    for f in contract.md contract.glp verdict.txt vmat.tex platform.vglp platform.glp run.log; do
+    [ -d "$REC" ] || { say "no record in cascade/$FILE"; exit 1; }
+    for f in "$FILE.md" "$FILE.glp" verdict.txt vmat.tex platform.vglp platform.glp run.log; do
         if [ -f "$OUT/$f" ] || [ -f "$REC/$f" ]; then
             if [ -f "$OUT/$f" ] && [ -f "$REC/$f" ] && cmp -s "$OUT/$f" "$REC/$f"; then
                 echo "$f: as printed"
@@ -282,19 +288,19 @@ fi
 
 [ "$STATUS" = 0 ] || exit 1
 rm -rf "$REC" && mkdir -p "$REC" && cp "$OUT"/* "$REC"/ || { say "the record could not be written"; exit 1; }
-say "written to cascade/$NAME"
+say "written to cascade/$FILE"
 
 # --record: one commit, tagged.
 if [ "$MODE" = "--record" ]; then
-    # A second run on one day is tagged cascade/<contract>/<date>-2, and so on.
-    TAG="cascade/$NAME/$(date -u '+%Y-%m-%d')"
+    # A second run on one day is tagged cascade/<NAME>/<date>-2, and so on.
+    TAG="cascade/$FILE/$(date -u '+%Y-%m-%d')"
     n=1; T="$TAG"
     while git -C "$GLP_DIR" rev-parse -q --verify "refs/tags/$T" > /dev/null; do
         n=$((n + 1)); T="$TAG-$n"
     done
     TAG="$T"
-    git -C "$GLP_DIR" add "cascade/$NAME" \
-        && git -C "$GLP_DIR" commit -q -m "A run of the cascade on $NAME, recorded whole ($TAG): the contract, the verdict $VT, the VMAT form, the platform and its run, by cascade.sh at $GLP_COMMIT" -- "cascade/$NAME" \
+    git -C "$GLP_DIR" add "cascade/$FILE" \
+        && git -C "$GLP_DIR" commit -q -m "A run of the cascade on $FILE, recorded whole ($TAG): the contract, the verdict $VT, the VMAT form, the platform and its run, by cascade.sh at $GLP_COMMIT" -- "cascade/$FILE" \
         && git -C "$GLP_DIR" tag "$TAG" \
         && say "recorded as $(git -C "$GLP_DIR" rev-parse --short=8 HEAD), tagged $TAG" \
         || { say "the record was not committed"; exit 1; }

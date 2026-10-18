@@ -63,8 +63,8 @@ MODED="$GLP_DIR/programs/tests/moded_types"
 # red nor a rot, and Section Q's rot guard reads only the KNOWN_RED entries of
 # the half that ran.  Every section stands alone: the REPL build below is made
 # for every run, and the asset step is QF's own.
-ALL_SECTIONS="A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG GF JX CAS SGLP QD QF"
-FAST_SECTIONS="A B C D E G I K L M N2 N3 N4 O P J S X Y Z ZG RM SK MB SL MA RV SG GF JX"
+ALL_SECTIONS="A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG GF GSC CAS SGLP QD QF"
+FAST_SECTIONS="A B C D E G I K L M N2 N3 N4 O P J S X Y Z ZG RM SK MB SL MA RV SG GF GSC"
 GLP_SECTIONS="${GLP_SECTIONS:-all}"
 RUN_FAST=0
 RUN_WANTED=" "
@@ -2379,14 +2379,16 @@ HEREDOC
 check "CSSN program loads" "Loaded program" "$k_load"
 check_not "CSSN program no type errors" "Type checking failed" "$k_load"
 
-# The contract's act schemas (CSSN Appendix B.2), programs/cssn/contract.glp,
-# in the term form programs/jurix reads: Jurix's verdict on it is Proposition
-# "Provenance and volition" --- traceable provenance and volition, and no
-# unobstructed introductory act.
-echo "--- CSSN contract, Jurix's verdict ---"
+# The contract's act schemas (CSSN Appendix B.2), programs/cssn/CSSN.glp,
+# in the term form programs/gsc reads: GSC's verdict on it --- traceable
+# provenance and volition, and, since GSC's Appendix F (2f8338d2), an
+# introduction with wards in place of an unobstructed introductory act: the
+# verdict grassroots with wards, befriend the act, child the mark, parent and
+# parenting its guardianship (GSC, Appendix F, Definitions 78 to 82).
+echo "--- CSSN contract, GSC's verdict ---"
 k_contract=$(bash "$CSSN_V2/compile.sh" "$(mktemp -d)" 2>&1 || true)
-check "CSSN contract: Jurix gives a verdict" "verdict: " "$k_contract"
-check "CSSN contract: no unobstructed introductory act" "verdict: not_grassroots(\[obstructed(" "$k_contract"
+check "CSSN contract: GSC gives a verdict" "verdict: " "$k_contract"
+check "CSSN contract: grassroots with wards, befriend the act and child the mark" "verdict: grassroots_with_wards(befriend, \[child\], \[guardianship(child, identity, parent, parenting)\]" "$k_contract"
 check_not "CSSN contract: its predicates have traceable provenance" "untraceable(" "$k_contract"
 check_not "CSSN contract: it satisfies volition" "volition(" "$k_contract"
 check_not "CSSN contract: it is not malformed" "malformed(" "$k_contract"
@@ -3358,9 +3360,9 @@ echo ""
 # and the paragraph on act schemas; vGLP's Task C, reworked to the five
 # handlers of vGLP 8d56915 and the answers of 158ec9b; Answer recording the
 # person's answer and Vote voting on it on a tick, vGLP c3b2191; wound-wait,
-# Commit and Yield, attempts numbered and ranked, vGLP 49cd9f7).  Jurix's social graph
-# and currency (their owners', programs/social/graph/contract.glp and
-# programs/currencies/coins/contract.glp) and vGLP's nudge, introduce, gnudge, childsafe and link
+# Commit and Yield, attempts numbered and ranked, vGLP 49cd9f7).  GSC's social graph
+# and currency (their owners', programs/gsc/GSN.glp and
+# programs/currencies/coins/GC.glp) and vGLP's nudge, introduce, gnudge, childsafe and link
 # (programs/vglp/cva/contracts.glp) compiled, the committed modules held to
 # what the compiler prints; the contracts it refuses, not local, without
 # simple guards or not effective; and the plays of each platform, two agents
@@ -3378,11 +3380,11 @@ CVA="$GLP_DIR/programs/vglp/cva"
 cva_print=$(bash "$CVA/compile.sh" --check 2>&1)
 check "CVA compiler: the social graph's platform is what the compiler prints" "social_graph/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: the currency's platform, its classes guarded by their minimal guard sets, is what the compiler prints" "currency/platform.vglp: as printed" "$cva_print"
-check "CVA compiler: vGLP's nudge, certified by Jurix's check/2, compiled to the platform it prints" "nudge/platform.vglp: as printed" "$cva_print"
-check "CVA compiler: vGLP's introduce, certified by Jurix's check/2, compiled to the platform it prints" "introduce/platform.vglp: as printed" "$cva_print"
-check "CVA compiler: vGLP's gnudge, certified by Jurix's check/2, compiled to the platform it prints" "gnudge/platform.vglp: as printed" "$cva_print"
-check "CVA compiler: vGLP's childsafe, certified by Jurix's check/2, compiled to the platform it prints" "childsafe/platform.vglp: as printed" "$cva_print"
-check "CVA compiler: vGLP's link, certified by Jurix's check/2, compiled to the platform it prints" "link/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's nudge, certified by GSC's check/2, compiled to the platform it prints" "nudge/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's introduce, certified by GSC's check/2, compiled to the platform it prints" "introduce/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's gnudge, certified by GSC's check/2, compiled to the platform it prints" "gnudge/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's childsafe, certified by GSC's check/2, compiled to the platform it prints" "childsafe/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's link, certified by GSC's check/2, compiled to the platform it prints" "link/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's friends, its introduction predicate friend, compiled to the platform it prints" "friends/platform.vglp: as printed" "$cva_print"
 check_not "CVA compiler: no contract refused or missing" "^fault\|^missing\|NOT as printed" "$cva_print"
 
@@ -6220,60 +6222,60 @@ echo ""
 
 fi  # Section GF
 
-if _section JX; then
+if _section GSC; then
 # =============================================================================
-# Section JX: The Jurix checker and compiler (programs/jurix)
+# Section GSC: The GSC checker and compiler (programs/gsc)
 # =============================================================================
-# programs/jurix decides whether a contract is syntactically grassroots and
-# compiles the schemas of one that is, against /Grassroots/Jurix; a contract is
-# read from its owner's file (programs/social/graph/contract.glp,
-# programs/currencies/coins/contract.glp, programs/cssn/contract.glp,
-# programs/federation/contract.glp), one copy each, and the fixtures that
-# change one are programs/jurix/contracts.glp's variants of it.  Its checks
-# were written as programs/jurix/test_jurix.sh, which runs the same REPL binary
+# programs/gsc decides whether a contract is syntactically grassroots and
+# compiles the schemas of one that is, against /Grassroots/GSC; a contract is
+# read from its owner's file (programs/gsc/GSN.glp,
+# programs/currencies/coins/GC.glp, programs/cssn/CSSN.glp,
+# programs/federation/GFWC.glp), one copy each, and the fixtures that
+# change one are programs/gsc/contracts.glp's variants of it.  Its checks
+# were written as programs/gsc/test_gsc.sh, which runs the same REPL binary
 # this suite does and prints one summary line.  The script stays the one place
 # those checks are written --- the paper's owner reads and runs it on its own,
 # and a copy here would go stale against it --- so this section runs it and
 # folds its two counts into the suite's, adding nothing of its own.
-echo "=== Section JX: Jurix checker and compiler ==="
+echo "=== Section GSC: GSC checker and compiler ==="
 echo ""
 
 # `set -e` (line 25) and a non-zero exit from a red check would abort the run,
 # so the capture is guarded, as Section Q's are.
-JURIX_RESULT=$(bash "$GLP_DIR/programs/jurix/test_jurix.sh" 2>&1) && JURIX_STATUS=0 || JURIX_STATUS=$?
-JURIX_SUMMARY=$(printf '%s' "$JURIX_RESULT" | grep -oE '^=== [0-9]+ passed, [0-9]+ failed ===$' | tail -1) || true
+GSC_RESULT=$(bash "$GLP_DIR/programs/gsc/test_gsc.sh" 2>&1) && GSC_STATUS=0 || GSC_STATUS=$?
+GSC_SUMMARY=$(printf '%s' "$GSC_RESULT" | grep -oE '^=== [0-9]+ passed, [0-9]+ failed ===$' | tail -1) || true
 
 # No summary line means the script did not finish its checks --- a missing
 # file, a REPL that would not build, a syntax error --- and scoring it zero
 # would report a green suite over checks that never ran.  That is a failure of
 # the suite, not a skip.
-if [ -z "$JURIX_SUMMARY" ]; then
-    echo "  FAIL: programs/jurix/test_jurix.sh exited $JURIX_STATUS printing no summary, so its checks did not run"
-    printf '%s\n' "$JURIX_RESULT" | tail -5 | sed 's/^/        /'
+if [ -z "$GSC_SUMMARY" ]; then
+    echo "  FAIL: programs/gsc/test_gsc.sh exited $GSC_STATUS printing no summary, so its checks did not run"
+    printf '%s\n' "$GSC_RESULT" | tail -5 | sed 's/^/        /'
     FAIL=$((FAIL + 1))
 else
-    JURIX_PASSED=$(printf '%s' "$JURIX_SUMMARY" | awk '{print $2}')
-    JURIX_FAILED=$(printf '%s' "$JURIX_SUMMARY" | awk '{print $4}')
-    PASS=$((PASS + JURIX_PASSED))
-    FAIL=$((FAIL + JURIX_FAILED))
-    if [ "$JURIX_FAILED" -eq 0 ]; then
-        echo "  PASS: All $JURIX_PASSED jurix checks passed"
+    GSC_PASSED=$(printf '%s' "$GSC_SUMMARY" | awk '{print $2}')
+    GSC_FAILED=$(printf '%s' "$GSC_SUMMARY" | awk '{print $4}')
+    PASS=$((PASS + GSC_PASSED))
+    FAIL=$((FAIL + GSC_FAILED))
+    if [ "$GSC_FAILED" -eq 0 ]; then
+        echo "  PASS: All $GSC_PASSED gsc checks passed"
     else
-        printf '%s\n' "$JURIX_RESULT" | grep -E '^  FAIL|^        ' | sed 's/^/  /'
-        echo "  FAIL: $JURIX_FAILED of $((JURIX_PASSED + JURIX_FAILED)) jurix checks failed"
+        printf '%s\n' "$GSC_RESULT" | grep -E '^  FAIL|^        ' | sed 's/^/  /'
+        echo "  FAIL: $GSC_FAILED of $((GSC_PASSED + GSC_FAILED)) gsc checks failed"
     fi
 fi
 
 echo ""
 
-fi  # Section JX
+fi  # Section GSC
 
 if _section CAS; then
 # =============================================================================
 # Section CAS: The cascade, recorded whole (cascade.sh)
 # =============================================================================
-# A run of the cascade on a contract is recorded in cascade/<contract>/, at the
-# repository root, as one tagged commit (claude.md "Code"; Coordination 5.7): the contract's two
+# A run of the cascade on a contract is recorded in cascade/<NAME>/, at the
+# repository root, NAME the contract's name (Appendix C), as one tagged commit (claude.md "Code"; Coordination 5.7): the contract's two
 # files with the checker's verdict, the VMAT form, the canonical platform as
 # .vglp and as .glp, and its run with vGLP's scripted persons, with a manifest.
 # This section re-runs cascade.sh --check on every recorded contract and holds
@@ -6282,11 +6284,12 @@ if _section CAS; then
 echo "=== Section CAS: The cascade, recorded whole ==="
 echo ""
 
-for cas_c in social_graph currency cssn federation gai; do
-    cas_o="cascade/$cas_c"
+for cas_c in gsg gsn gc cssn gfwc gai; do
+    cas_n=$(printf '%s' "$cas_c" | tr a-z A-Z)
+    cas_o="cascade/$cas_n"
     [ -f "$GLP_DIR/$cas_o/manifest.md" ] || continue
     cas_out=$(bash "$GLP_DIR/cascade.sh" "$cas_c" --check 2>&1; echo "exit $?")
-    for cas_f in contract.md contract.glp verdict.txt vmat.tex platform.vglp platform.glp run.log; do
+    for cas_f in "$cas_n.md" "$cas_n.glp" verdict.txt vmat.tex platform.vglp platform.glp run.log; do
         [ -f "$GLP_DIR/$cas_o/$cas_f" ] || continue
         check "cascade $cas_c: $cas_f is what the tools print" "^$cas_f: as printed$" "$cas_out"
     done
@@ -6305,7 +6308,7 @@ if _section SGLP; then
 # over when_idle, the law of its releases, the social graph's runs, the
 # circulation's replay on a fixed log, coins among friends' runs --- against
 # sGLP's paper, and prints one summary line; this section runs it and folds its
-# two counts into the suite's, as Section JX does jurix's.  Its runs take some
+# two counts into the suite's, as Section GSC does gsc's.  Its runs take some
 # minutes.
 echo "=== Section SGLP: sGLP in GLP ==="
 echo ""

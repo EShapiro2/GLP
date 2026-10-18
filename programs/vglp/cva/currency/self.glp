@@ -1,6 +1,6 @@
 %% ---------------------------------------------------------------------------
-%% The plays of the canonical CVA platform of Jurix's currency
-%% (Currencies', programs/currencies/coins/contract.glp; Jurix, Section 3.4, the cent
+%% The plays of the canonical CVA platform of GSC's currency
+%% (Currencies', programs/currencies/coins/GC.glp; GSC, Section 3.4, the cent
 %% sign written coin), platform.vglp, which programs/vglp/cva/compile.sh prints
 %% from it: two-phase commit coordinated by the initiating agent (vGLP, Section
 %% 3.2, Definition "Canonical CVA Platform").  Each runs two agents, alice and

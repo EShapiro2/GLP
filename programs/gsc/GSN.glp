@@ -1,12 +1,12 @@
 %% ---------------------------------------------------------------------------
-%% contract.glp --- the grassroots social network's contract, GSG's (a
-%% contract is its platform's paper's; Coordination Appendix C), as Jurix
+%% GSN.glp --- the grassroots social network's contract, GSG's (a
+%% contract is its platform's paper's; Coordination Appendix C), as GSC
 %% prints it (Section 3.3, the table there, which Section 7 certifies by
-%% hand), in the term form programs/jurix reads (its README, "Writing a
-%% contract").  The one copy: Jurix's checker (programs/jurix/test_jurix.sh)
+%% hand), in the term form programs/gsc reads (its README, "Writing a
+%% contract").  The one copy: GSC's checker (programs/gsc/test_gsc.sh)
 %% and vGLP's compiler to the canonical CVA platform
 %% (programs/vglp/cva/compile.sh) read it from here, contract_named/2
-%% printing the term.  Each schema is in Jurix's notation above its term,
+%% printing the term.  Each schema is in GSC's notation above its term,
 %% at each role in turn: what the role requires, what it forbids (not), what
 %% it adds (+) and what it deletes (-); a role marked ? is a guarding role.
 %%
@@ -33,9 +33,9 @@ Contract  ::= [] ; [Schema | Contract].
 Preds     ::= [] ; [Constant | Preds].
 Declared  ::= Contract ; reflexive(Preds, Contract).
 
-%% contract_named(social_graph, C): the contract.
+%% contract_named(gsn, C): the contract, GSN (Coordination Appendix C).
 procedure contract_named(Constant?, Declared).
-contract_named(social_graph,
+contract_named(gsn,
 %%   befriend(p?, q?) :
 %%       at p:  not friend(q), +friend(q)
 %%       at q:  not friend(p), +friend(p)

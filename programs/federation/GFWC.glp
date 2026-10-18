@@ -1,11 +1,11 @@
 %% ---------------------------------------------------------------------------
-%% contract.glp --- the contract of a grassroots federation, GFWC's (a
+%% GFWC.glp --- the contract of a grassroots federation, GFWC's (a
 %% contract is its platform's paper's; Coordination Appendix C): its five act
 %% schemas, /Grassroots/GFWC sections/schemas.tex, the table of its Section
 %% 3, over the two predicates seat and child, written in the language of
-%% Section 8 of /Grassroots/Jurix, in the term form programs/jurix reads (its
-%% README, "Writing a contract").  The one copy: Jurix's checker
-%% (programs/jurix/test_jurix.sh) reads it from here, contract_named/2
+%% Section 8 of /Grassroots/GSC, in the term form programs/gsc reads (its
+%% README, "Writing a contract").  The one copy: GSC's checker
+%% (programs/gsc/test_gsc.sh) reads it from here, contract_named/2
 %% printing the term.
 %%
 %% The one role of form is a party role and every role of federate, join and
@@ -36,10 +36,10 @@ Contract  ::= [] ; [Schema | Contract].
 Preds     ::= [] ; [Constant | Preds].
 Declared  ::= Contract ; reflexive(Preds, Contract).
 
-%% contract_named(federation, C): the contract, form, federate, join, leave_1
+%% contract_named(gfwc, C): the contract, GFWC (Coordination Appendix C): form, federate, join, leave_1
 %% and leave_2 in that order.
 procedure contract_named(Constant?, Declared).
-contract_named(federation,
+contract_named(gfwc,
 %%   form(p?) :
 %%       at p:  not seat(<p>), +seat(<p>)
    [schema(form,

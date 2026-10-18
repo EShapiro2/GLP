@@ -1,5 +1,5 @@
 % ---------------------------------------------------------------------------
-% Traceable provenance (def:grounded of /Grassroots/Jurix, Section 3).
+% Traceable provenance (def:grounded of /Grassroots/GSC, Section 3).
 %
 % The largest set of predicates having it is a greatest fixpoint: start from
 % every predicate of the contract, drop those the definition rejects against
