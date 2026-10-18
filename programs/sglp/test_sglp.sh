@@ -48,25 +48,25 @@
 #       simulated month --- nine swaps proposed, seven accepted and two
 #       declined; nine pays, taking part of a holding, more than a holding, all
 #       of one and of coins not held; an answer at a month's end exactly; a pay
-#       answered while a card waits; coins arriving while a card waits; the
+#       answered while a proposal waits; coins arriving while a proposal waits; the
 #       clock --- it prints tests/circulation/four.expected, the twelve
 #       months and the totals computed by hand from the log.  The pay answered
-#       while a card waits: agent 4 pays 3 the ten of 3's coins it holds
+#       while a proposal waits: agent 4 pays 3 the ten of 3's coins it holds
 #       (6500000 s) and, its wallet empty, proposes 3 a swap of ten (6600000
-#       s), whose card waits at 3 showing Held 7, the seven of 4's coins 3
+#       s), whose proposal waits at 3 showing Held 7, the seven of 4's coins 3
 #       holds; 3's person answers pay(4, 9) while it waits (7800000 s, month 3)
-#       and the card yes in month 4 (8000000 s).  The pay is made when the card
-#       is answered, after the card's move: 3 holds 7 + 10 = 17 of 4's coins
+#       and the proposal yes in month 4 (8000000 s).  The pay is made when the proposal
+#       is answered, after the proposal's move: 3 holds 7 + 10 = 17 of 4's coins
 #       and pays 9, keeping 8, and 4 holds 10 of 3's; so month 3 ends at
 #       circulation 47, holdings 5, wallets 3, the pay not yet made, and
 #       8000000 s at 58, 6 and 4.  A pay made at its answer would take min(9,
 #       7) = 7 in month 3, leaving 40, 4 and 3 there, and 60 at 8000000
-#       s.  Coins arriving while a card waits (the task of 2026-10-03 09:22
+#       s.  Coins arriving while a proposal waits (the task of 2026-10-03 09:22
 #       UTC): 2 pays 1 the ten of 1's coins it holds (8200000 s) and, its
-#       wallet empty, proposes 1 a swap of ten (8300000 s), whose card waits
-#       at 1; 3 proposes 2 a swap of ten (8400000 s), whose card waits at 2; 1
+#       wallet empty, proposes 1 a swap of ten (8300000 s), whose proposal waits
+#       at 1; 3 proposes 2 a swap of ten (8400000 s), whose proposal waits at 2; 1
 #       answers yes (10000000 s, month 4), holding 20 of 2's coins, and sends
-#       2 ten of its own, which arrive while 2's card waits; 2 answers yes in
+#       2 ten of its own, which arrive while 2's proposal waits; 2 answers yes in
 #       month 5 (11000000 s), holding 10 of 3's and 3 10 of 2's, and then
 #       takes the ten of 1's coins.  So month 4 ends at circulation 58,
 #       holdings 5, wallets 3, 2's ten of 1's coins not yet held, and months 5
@@ -78,7 +78,7 @@
 #       from seed 20260927 write byte-identical logs and seed 1 a different
 #       one; the run ends with no error at its clock, within the week;
 #       circulation.awk reads its log whole, menus and offers and their
-#       answers in the order of time, each offer answered being the card
+#       answers in the order of time, each offer answered being the proposal
 #       waiting at its agent; and every menu and offer is as the agent's
 #       clauses and request/2 give it.  The population's draw (the task of
 #       2026-10-03 09:45 UTC): the .draw file beside each log is the counts
@@ -444,7 +444,7 @@ check "the run ends at its clock, within the week" $?
 grep -q '^unread 0$' "$WORK/ca.out" && grep -q '^unordered 0$' "$WORK/ca.out" &&
     grep -q '^unmatched 0$' "$WORK/ca.out" &&
     grep -q '^menu_answers [1-9]' "$WORK/ca.out" && grep -q '^offer_answers [1-9]' "$WORK/ca.out"
-check "the log is menus and offers and their answers, in the order of time, each offer the card waiting at its agent, read whole by circulation.awk" $?
+check "the log is menus and offers and their answers, in the order of time, each offer the proposal waiting at its agent, read whole by circulation.awk" $?
 E=$(coins_log_errors "$WORK/ca.log")
 [ "$E" -eq 0 ]
 check "every menu and offer of the log is as the agent's clauses and request/2 give it ($E not)" $?
