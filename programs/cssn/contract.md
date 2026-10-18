@@ -11,15 +11,15 @@
 6. Authorship.  A person may create an item of their own, at their own volition.
 7. Sending with Provenance.  A person may send an item they hold to a friend, or to a group they are a member of, and the item received carries its provenance.
 
-## The supervised-parties core
-8. Supervision.  A party with a recorded supervisor is a supervised party, and a party without is unsupervised; only an unsupervised party is a supervisor.  Every act requires its parties to have a genuine digital identity: an unsupervised party establishes its own, and a supervised party's is established by its supervisor, with which the supervised party enters the contract, its supervisor recorded.
-9. Volition.  A supervised party that is a person wills its own acts; the acts of a supervised party that is not a person are willed by its supervisor.
-10. Relations.  A supervised party enters a relation of the contract with another party by an act of both and of a supervisor of each supervised party among them.
-11. Ending a Relation.  Either party to a relation of a supervised party, or a supervisor of that party, may end it, and it then ends for both.
-12. Ending Supervision.  Supervision ends by an act of a supervisor and by no act of the supervised party; each extension says what the act is and what follows it.
+## The wards core
+8. Guardianship.  A party with a recorded guardian is a ward; only a party that is not a ward is a guardian.  Every act requires its parties to have a genuine digital identity: a party that is not a ward establishes its own, and a ward's is established by its guardian, with which the ward enters the contract, its guardian recorded.
+9. Volition.  A ward that is a person wills its own acts; the acts of a ward that is not a person are willed by its guardian.
+10. Relations.  A ward enters a relation of the contract with another party by an act of both and of a guardian of each ward among them.
+11. Ending a Relation.  Either party to a relation of a ward, or a guardian of that ward, may end it, and it then ends for both.
+12. Ending Guardianship.  Guardianship ends by an act of a guardian and by no act of the ward; each extension says what the act is and what follows it.
 
 ## The children extension
-Supervisors are parents and supervised parties their children; clauses 1 and 4 then read "two adults" and "an adult".
+Guardians are parents and wards their children; clauses 1 and 4 then read "two adults" and "an adult".
 13. Parenting, Child, Adult.  A person with a recorded parent is a child and without --- an adult; an adult with a recorded child is a parent.  Every act requires its parties to have a genuine digital identity: an adult establishes their own, and one or two parents establish their child's, with which the child enters the contract, its parents recorded and its first friends.  A person declares themselves a parent of a child only if they are the legal parent of that child.  A parent declares the child of age, which ends the parenting of every parent of the child; a parent shall do so when the child comes of age, and not before.
 14. Child-Child Friendship.  Two children become friends by an act of both and of a parent of each, the two parents being friends.
 15. Child-Adult Friendship.  A child and an adult become friends by an act of both and of a parent of the child, the adult being a friend of the parent.
