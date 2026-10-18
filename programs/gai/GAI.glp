@@ -5,8 +5,8 @@
 %% with Accountable AI Agents" and "A Social Network with Digital
 %% Provenance"), in the
 %% term form programs/gsc reads (its README, "Writing a contract").  Clauses
-%% 1 and 2 are GSG's, 3 to 7 the wards core shared word for word with CSSN,
-%% 13 to 15 GSNP's (programs/gsc/GSG.glp, GSN.glp); the schemas are GAI's,
+%% GSG:1 and GSG:2 are GSG's, Wards:1 to 5 the wards core shared word for word
+%% with CSSN, GSNP:1 to 3 GSNP's, GAI:1 to 5 this contract's own (programs/gsc/GSG.glp, GSN.glp); the schemas are GAI's,
 %% sign and forward being GSNP's with identity required and retired forbidden
 %% at the acting role.
 %%
@@ -52,7 +52,7 @@
 %% The ? on an AI agent's role (r in enter, agent_befriend and agents_befriend,
 %% s in agents_befriend) is taken by the AI agent's program, in enter as the
 %% program the principal set up, and after it under the principal's standing
-%% authorisation of clause 9 (GAI.md, "The schemas, and what they
+%% authorisation of GAI:2 (GAI.md, "The schemas, and what they
 %% realise").
 %% ---------------------------------------------------------------------------
 
