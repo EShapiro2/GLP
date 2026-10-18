@@ -70,7 +70,9 @@ fi
                                    ../programs/currencies/coins/currency \
                                    ../programs/cssn/childsafe \
                                    ../programs/currencies/sovereign/denominated \
-                                   ../programs/currencies/bonds/dated; do
+                                   ../programs/currencies/bonds/dated \
+                                   ../programs/apps/gsg \
+                                   ../programs/apps/gsn; do
     printf ':artefact %s %s\n:quit\n' \
       "$prog" "../glp_multiagent/$DST/social/graph/core" | bin/glpc
   done ) | grep -E '(✓ Wrote|Artefact failed|Error:)' || true
@@ -87,7 +89,7 @@ while read -r p; do
   printf '%s\t%s\n' "$name" "$p" >> "$OUT/manifest.txt"
 done < <(cd "$OUT" && find programs -type f | sort)
 
-for a in pingapp currency childsafe denominated dated; do
+for a in pingapp currency childsafe denominated dated gsg gsn; do
   test -s "$DST/social/graph/core/$a.glpw" \
     || { echo "sync_glp_assets: $a.glpw was not written" >&2; exit 1; }
 done
