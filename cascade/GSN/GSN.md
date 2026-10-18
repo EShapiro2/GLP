@@ -12,7 +12,7 @@ A *child* is a natural person not of age.  A *computational agent*, or *AI agent
 
 ## The schemas, and what they realise
 
-The schemas are in `GSN.glp`, in GSC's notation above each term: GSG's `befriend` and `unfriend`, and eight more over eight predicates more.  A group is named by its leader `a` and a name `n`, a speech-act variable; content `x` is a speech-act variable.  `member(a, n)` in the state of `q` says that `q` is a member of the group `n` led by `a`; `listed(q, n)` in the state of the leader `a` says that `q` is a member of `a`'s group `n`; `closed(n)` at `a` says that `a`'s group `n` has ended.  The groups follow those of CSSN's contract (`programs/cssn/CSSN.glp`), without children and without items.
+The schemas are in `GSN.glp`, in GSC's notation above each term: GSG's `establish`, `befriend` and `unfriend`, and eight more over eight predicates more; every role but establish's requires `identity`, and the lists below leave it out.  A group is named by its leader `a` and a name `n`, a speech-act variable; content `x` is a speech-act variable.  `member(a, n)` in the state of `q` says that `q` is a member of the group `n` led by `a`; `listed(q, n)` in the state of the leader `a` says that `q` is a member of `a`'s group `n`; `closed(n)` at `a` says that `a`'s group `n` has ended.  The groups follow those of CSSN's contract (`programs/cssn/CSSN.glp`), without children and without items.
 
 - Clause 1: `message(p?, q ; x)` --- at `p`, +`sent(x, q)`; at `q`, `friend(p)`, +`received(x, p)`.
 - Clause 2: `create(a? ; n)` --- at `a`, not `member(a, n)`, not `closed(n)`, +`member(a, n)`, +`listed(a, n)`.

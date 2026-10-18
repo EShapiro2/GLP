@@ -1,4 +1,30 @@
 \iffalse
+establish
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+identity
+}
+\}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
 befriend
 \fi
 \begin{align*}
@@ -44,6 +70,14 @@ friend
 &
 \text{provided } 
 \mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
 friend
 }
 (
@@ -52,6 +86,14 @@ friend
  \notin c_
 {
 \Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Bob
 }
  \text{ and } 
 \mathit{
@@ -116,24 +158,36 @@ friend
 ,\\
 &
 \text{provided } 
+\{
+\mathit{
+identity
+}
+,
 \mathit{
 friend
 }
 (
 \Bob
 )
- \in c_
+\}
+ \subseteq c_
 {
 \Alice
 }
  \text{ and } 
+\{
+\mathit{
+identity
+}
+,
 \mathit{
 friend
 }
 (
 \Alice
 )
- \in c_
+\}
+ \subseteq c_
 {
 \Bob
 }
@@ -192,12 +246,26 @@ x
 &
 \text{provided } 
 \mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
 friend
 }
 (
 \Alice
 )
- \in c_
+\}
+ \subseteq c_
 {
 \Bob
 }
@@ -243,6 +311,14 @@ n
 ,\\
 &
 \text{provided } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
 \{
 \mathit{
 member
@@ -321,6 +397,10 @@ n
 \text{provided } 
 \{
 \mathit{
+identity
+}
+,
+\mathit{
 member
 }
 (
@@ -341,13 +421,19 @@ friend
 \Alice
 }
  \text{ and } 
+\{
+\mathit{
+identity
+}
+,
 \mathit{
 friend
 }
 (
 \Alice
 )
- \in c_
+\}
+ \subseteq c_
 {
 \Bob
 }
@@ -420,6 +506,11 @@ n
 ,\\
 &
 \text{provided } 
+\{
+\mathit{
+identity
+}
+,
 \mathit{
 listed
 }
@@ -428,11 +519,17 @@ listed
 ,
 n
 )
- \in c_
+\}
+ \subseteq c_
 {
 \Alice
 }
  \text{ and } 
+\{
+\mathit{
+identity
+}
+,
 \mathit{
 member
 }
@@ -441,7 +538,8 @@ member
 ,
 n
 )
- \in c_
+\}
+ \subseteq c_
 {
 \Bob
 }
@@ -498,6 +596,10 @@ n
 \text{provided } 
 \{
 \mathit{
+identity
+}
+,
+\mathit{
 member
 }
 (
@@ -552,6 +654,11 @@ n
 ,\\
 &
 \text{provided } 
+\{
+\mathit{
+identity
+}
+,
 \mathit{
 member
 }
@@ -560,7 +667,8 @@ member
 ,
 n
 )
- \in c_
+\}
+ \subseteq c_
 {
 \Alice
 }
@@ -631,6 +739,11 @@ n
 ,\\
 &
 \text{provided } 
+\{
+\mathit{
+identity
+}
+,
 \mathit{
 member
 }
@@ -639,12 +752,17 @@ member
 ,
 n
 )
- \in c_
+\}
+ \subseteq c_
 {
 \Alice
 }
  \text{ and } 
 \{
+\mathit{
+identity
+}
+,
 \mathit{
 member
 }
@@ -740,6 +858,10 @@ n
 \text{provided } 
 \{
 \mathit{
+identity
+}
+,
+\mathit{
 member
 }
 (
@@ -786,6 +908,11 @@ n
 \Alice
 }
  \text{ and } 
+\{
+\mathit{
+identity
+}
+,
 \mathit{
 member
 }
@@ -794,7 +921,8 @@ member
 ,
 n
 )
- \in c_
+\}
+ \subseteq c_
 {
 \Bob
 }
