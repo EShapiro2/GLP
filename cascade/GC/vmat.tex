@@ -1,0 +1,237 @@
+\iffalse
+mint
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\text{\textcent}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+swap
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\text{\textcent}
+(
+u
+)
+\}
+) \uplus 
+\{
+\text{\textcent}
+(
+v
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\text{\textcent}
+(
+v
+)
+\}
+) \uplus 
+\{
+\text{\textcent}
+(
+u
+)
+\}
+,\\
+&
+\text{provided } 
+\text{\textcent}
+(
+u
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\text{\textcent}
+(
+v
+)
+ \in c_
+{
+\Bob
+}
+, \qquad 
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+pay
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\text{\textcent}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\text{\textcent}
+(
+\Bob
+)
+\}
+,\\
+&
+\text{provided } 
+\text{\textcent}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+, \qquad 
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+redeem
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\text{\textcent}
+(
+\Bob
+)
+\}
+) \uplus 
+\{
+\text{\textcent}
+(
+r
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\text{\textcent}
+(
+r
+)
+\}
+) \uplus 
+\{
+\text{\textcent}
+(
+\Bob
+)
+\}
+,\\
+&
+\text{provided } 
+\text{\textcent}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\text{\textcent}
+(
+r
+)
+ \in c_
+{
+\Bob
+}
+, \qquad 
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
