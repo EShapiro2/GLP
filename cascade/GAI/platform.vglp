@@ -1,0 +1,12 @@
+%% not compiled(gai)
+%% it is not a local specification (vGLP, Section 5.4, the paragraph on act schemas):
+%% two schema-bindings delete and add the same atoms at each participant and require
+%% or forbid different atoms at two participants, a variable free being sent anywhere:
+%% the schema-binding(unfriend_p(person(0), person(1)))
+%% and the schema-binding(unfriend_p(person(1), person(0)))
+%% it is not a local specification (vGLP, Section 5.4, the paragraph on act schemas,
+%% the third condition): two schema-bindings of one class mark different sets of people
+%% and require or forbid different atoms at a participant, so that two transactions of
+%% the class may be determined by schema-bindings marking different sets:
+%% the schema-binding(unfriend_p(person(0), person(1)))
+%% and the schema-binding(unfriend_p(person(1), person(0)))
