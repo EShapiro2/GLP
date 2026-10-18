@@ -3416,16 +3416,19 @@ echo ""
 # initiating agent, and Section 5.4, "The canonical platform is structured"
 # and the paragraph on act schemas; vGLP's Task C, reworked to the five
 # handlers of vGLP 8d56915 and the answers of 158ec9b; Answer recording the
-# person's answer and Vote voting on it on a tick, vGLP c3b2191; wound-wait,
-# Commit and Yield, attempts numbered and ranked, vGLP 49cd9f7).  GSC's social graph
-# and currency (their owners', programs/gsc/GSN.glp and
+# person's answer and Vote voting on it, vGLP c3b2191; wound-wait,
+# Commit and Yield, attempts numbered and ranked, vGLP 49cd9f7; no clock and
+# no tick, the agent taking its own transactions when it starts and after each
+# trigger, one at a time until none holds, vGLP efe7bbc).  GSC's social graph
+# and currency (their owners', programs/gsc/GSG.glp and
 # programs/currencies/coins/GC.glp) and vGLP's nudge, introduce, gnudge, childsafe, link, friends and waves
 # (programs/vglp/cva/contracts.glp) compiled, the committed modules held to
 # what the compiler prints; the contracts it refuses, not local, without
 # simple guards or not effective; and the plays of each platform, two agents
 # or three with scripted persons paced on their threads, each run on the
-# committed module through the canonical compilation and ended at the REPL's
-# :limit, the clocks ticking without end.  A play gives each person's log, its
+# committed module through the canonical compilation until it suspends, each
+# agent having taken its own transactions until none holds and no trigger
+# being left, the logs' tails unbound.  A play gives each person's log, its
 # thread, the app transactions its agent takes applied to their attempts and
 # discover(Q) for each peer it comes to know, with gave(K, A) where the person
 # answers an approval question; and the network's log of the cargoes it carries,
@@ -3556,6 +3559,31 @@ check "CVA plays: the person reads the thread from construct 0" "^person(\[draw(
 check_not "CVA plays: ... and no session" "session_w" "$cva_person"
 check "CVA plays: the person reads the request questions" "^person(\[draw(Id, _, menu_w(menu(Ks, input(P))))|Ds\]" "$cva_person"
 
+# The request type has the alternative propose([t]) for each guarded class [t]
+# and the alternative known(Q) (vGLP, Section 5.4, the compilation): Proposal,
+# the alternatives of the schemas some binding of which is of a guarded class
+# (compiler/local.glp, proposable).  nudge's nudge is unguarded, and gnudge's g
+# is guarded but one class with nudge, so unguarded too: neither is proposed.
+# A contract with no guarded class has the request type known(Peer) alone, and
+# no clause on the request propose([t]).
+cva_proposal() { # cva_proposal <platform.vglp>: the alternatives of Proposal, one line
+    awk '/^Proposal ::=$/{on=1;next} on&&/^\.$/{exit} on&&!/^;$/{printf "%s ", $0}' "$1"
+}
+check "CVA request type: the social graph's, propose(Proposal) and known(Peer)" "^Request ::= propose(Proposal) ; known(Peer)\.$" "$(cat "$CVA/social_graph/platform.vglp")"
+check "CVA request type: the social graph proposes befriend and unfriend" "^befriend(Peer, Peer) unfriend(Peer, Peer) $" "$(cva_proposal "$CVA/social_graph/platform.vglp")"
+check "CVA request type: nudge proposes befriend, not the unguarded nudge" "^befriend(Peer, Peer) $" "$(cva_proposal "$CVA/nudge/platform.vglp")"
+check "CVA request type: gnudge proposes befriend, not nudge and not g, guarded but one class with nudge" "^befriend(Peer, Peer) $" "$(cva_proposal "$CVA/gnudge/platform.vglp")"
+cva_ung=$("$REPL_RUN" <<HEREDOC
+$CVA/compiler/
+:limit 100000000
+compile(ung, [schema(u, [rs(unguarded, [atom(b, [])], [atom(a, [])], [], [])])], syntactically_grassroots).
+:quit
+HEREDOC
+2>&1)
+check "CVA request type: a contract with no guarded class, compiled" "%% the canonical CVA platform of the contract(ung)" "$cva_ung"
+check "CVA request type: ... its request type known(Peer) alone" "^Request ::= known(Peer)\.$" "$cva_ung"
+check_not "CVA request type: ... no Proposal, and no clause on the request propose([t])" "^Proposal ::=\|step(req(propose\|await_request(propose" "$cva_ung"
+
 cva_sg_menu=$("$REPL_RUN" <<HEREDOC
 $CVA/social_graph/
 :limit 600000
@@ -3581,8 +3609,8 @@ play_befriend(A, B, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA befriend: alice discovers bob, proposes the attempt, its number and rank 1, tallies bob's vote, and commits on a tick" "A = \[discover(bob), propose(attempt(alice, 1, 1, befriend(alice, bob))), tally(attempt(alice, 1, 1, befriend(alice, bob))), commit(attempt(alice, 1, 1, befriend(alice, bob)))" "$cva_sg_befriend"
-check "CVA befriend: bob, in its guard set, is asked on the start, answers yes on his approval question, votes on his next tick, and takes the outcome" "B = \[discover(alice), start(attempt(alice, 1, 1, befriend(alice, bob))), gave(befriend(alice, bob), yes), answer(attempt(alice, 1, 1, befriend(alice, bob))), vote(attempt(alice, 1, 1, befriend(alice, bob))), outcome(attempt(alice, 1, 1, befriend(alice, bob)))" "$cva_sg_befriend"
+check "CVA befriend: alice discovers bob, proposes the attempt, its number and rank 1, tallies bob's vote, and commits, an own transaction" "A = \[discover(bob), propose(attempt(alice, 1, 1, befriend(alice, bob))), tally(attempt(alice, 1, 1, befriend(alice, bob))), commit(attempt(alice, 1, 1, befriend(alice, bob)))" "$cva_sg_befriend"
+check "CVA befriend: bob, in its guard set, is asked on the start, answers yes on his approval question, votes, an own transaction, and takes the outcome" "B = \[discover(alice), start(attempt(alice, 1, 1, befriend(alice, bob))), gave(befriend(alice, bob), yes), answer(attempt(alice, 1, 1, befriend(alice, bob))), vote(attempt(alice, 1, 1, befriend(alice, bob))), outcome(attempt(alice, 1, 1, befriend(alice, bob)))" "$cva_sg_befriend"
 check "CVA befriend: the start to bob, his yes to alice, and the commit she tells him" "N = \[sent(alice, bob, start(attempt(alice, 1, 1, befriend(alice, bob)))), sent(bob, alice, vote(attempt(alice, 1, 1, befriend(alice, bob)), yes)), sent(alice, bob, outcome(attempt(alice, 1, 1, befriend(alice, bob)), commit))" "$cva_sg_befriend"
 
 cva_sg_unfriend=$("$REPL_RUN" <<HEREDOC
@@ -3606,7 +3634,7 @@ play_refused(A, B, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA refused: bob answers no, the else-branch records it, and Vote votes on his next tick" "B = \[.*gave(attempt(alice, 1, 1, befriend(alice, bob)), no), answer(attempt(alice, 1, 1, befriend(alice, bob))), vote(attempt(alice, 1, 1, befriend(alice, bob))), outcome(attempt(alice, 1, 1, befriend(alice, bob)))" "$cva_sg_refused"
+check "CVA refused: bob answers no, the else-branch records it, and Vote, an own transaction, votes" "B = \[.*gave(attempt(alice, 1, 1, befriend(alice, bob)), no), answer(attempt(alice, 1, 1, befriend(alice, bob))), vote(attempt(alice, 1, 1, befriend(alice, bob))), outcome(attempt(alice, 1, 1, befriend(alice, bob)))" "$cva_sg_refused"
 check "CVA refused: ... no, and alice tallies it and tells bob abort" "sent(bob, alice, vote(attempt(alice, 1, 1, befriend(alice, bob)), no)), sent(alice, bob, outcome(attempt(alice, 1, 1, befriend(alice, bob)), abort))" "$cva_sg_refused"
 check "CVA refused: aborted at both, alice proposes again and bob is asked again and answers yes" "B = \[.*outcome(attempt(alice, 1, 1, befriend(alice, bob))), start(attempt(alice, 2, 2, befriend(alice, bob))), gave(attempt(alice, 2, 2, befriend(alice, bob)), yes), answer(attempt(alice, 2, 2, befriend(alice, bob))), vote(attempt(alice, 2, 2, befriend(alice, bob))), outcome(attempt(alice, 2, 2, befriend(alice, bob)))" "$cva_sg_refused"
 check "CVA refused: ... and the second attempt commits" "sent(alice, bob, outcome(attempt(alice, 2, 2, befriend(alice, bob)), commit))" "$cva_sg_refused"
@@ -3627,7 +3655,7 @@ play_pay_swap(A, B, N).
 HEREDOC
 2>&1)
 check "CVA pay and swap: alice's mint, a class of one participant, applied at its Propose" "A = \[propose(attempt(alice, 1, 1, mint(alice))), discover(bob)" "$cva_cur_payswap"
-check "CVA pay and swap: alice proposes the swap, and bob is asked, answers yes and votes on his next tick" "B = \[.*start(attempt(alice, 2, 2, swap(alice, bob, bob, alice))), gave(swap(alice, bob, bob, alice), yes), answer(attempt(alice, 2, 2, swap(alice, bob, bob, alice))), vote(attempt(alice, 2, 2, swap(alice, bob, bob, alice))), outcome(attempt(alice, 2, 2, swap(alice, bob, bob, alice)))" "$cva_cur_payswap"
+check "CVA pay and swap: alice proposes the swap, and bob is asked, answers yes and votes" "B = \[.*start(attempt(alice, 2, 2, swap(alice, bob, bob, alice))), gave(swap(alice, bob, bob, alice), yes), answer(attempt(alice, 2, 2, swap(alice, bob, bob, alice))), vote(attempt(alice, 2, 2, swap(alice, bob, bob, alice))), outcome(attempt(alice, 2, 2, swap(alice, bob, bob, alice)))" "$cva_cur_payswap"
 check "CVA pay and swap: ... and the swap commits" "sent(alice, bob, outcome(attempt(alice, 2, 2, swap(alice, bob, bob, alice)), commit))" "$cva_cur_payswap"
 check "CVA pay and swap: alice pays bob, guarded by her alone, and bob's machine votes yes, unasked, and it commits" "sent(alice, bob, start(attempt(alice, 3, 3, pay(alice, bob)))), sent(bob, alice, vote(attempt(alice, 3, 3, pay(alice, bob)), yes)), sent(alice, bob, outcome(attempt(alice, 3, 3, pay(alice, bob)), commit))" "$cva_cur_payswap"
 check "CVA pay and swap: bob takes the pay's start and its outcome" "B = \[.*start(attempt(alice, 3, 3, pay(alice, bob))), outcome(attempt(alice, 3, 3, pay(alice, bob)))" "$cva_cur_payswap"
@@ -3674,7 +3702,7 @@ check_not "CVA declined: no approval question answered" "gave(" "$cva_cur_declin
 
 # vGLP's contract nudge (programs/vglp/cva/contracts.glp): befriend and an
 # unguarded nudge, the one contract here with an unguarded class.  Its opener,
-# the person in its first role, proposes it on a tick, the attempt asking
+# the person in its first role, proposes it as an own transaction, the attempt asking
 # nobody and the other participant voting by its machine (vGLP's 2026-10-11
 # 22:51 UTC, the nudge play redone on the five handlers).  Both openers propose
 # at once, their attempts of one rank, alice's first in the order of
@@ -3698,8 +3726,8 @@ play_nudge(A, B, N).
 HEREDOC
 2>&1)
 check "CVA nudge: alice and bob befriended, committed at both" "sent(alice, bob, outcome(attempt(alice, 1, 1, befriend(alice, bob)), commit))" "$cva_nudge"
-check "CVA nudge: alice, its opener, proposes nudge(alice, bob) on a tick once befriended" "A = \[discover(bob), propose(attempt(alice, 1, 1, befriend(alice, bob))), tally(attempt(alice, 1, 1, befriend(alice, bob))), commit(attempt(alice, 1, 1, befriend(alice, bob))), propose(attempt(alice, 2, 2, nudge(alice, bob)))" "$cva_nudge"
-check "CVA nudge: bob, its opener, proposes nudge(bob, alice) on a tick once befriended, of the same rank" "B = \[.*outcome(attempt(alice, 1, 1, befriend(alice, bob))), propose(attempt(bob, 2, 2, nudge(bob, alice)))" "$cva_nudge"
+check "CVA nudge: alice, its opener, proposes nudge(alice, bob), an own transaction, once befriended" "A = \[discover(bob), propose(attempt(alice, 1, 1, befriend(alice, bob))), tally(attempt(alice, 1, 1, befriend(alice, bob))), commit(attempt(alice, 1, 1, befriend(alice, bob))), propose(attempt(alice, 2, 2, nudge(alice, bob)))" "$cva_nudge"
+check "CVA nudge: bob, its opener, proposes nudge(bob, alice), an own transaction, once befriended, of the same rank" "B = \[.*outcome(attempt(alice, 1, 1, befriend(alice, bob))), propose(attempt(bob, 2, 2, nudge(bob, alice)))" "$cva_nudge"
 check "CVA nudge: bob, holding his attempt prepared, wounds it in favour of alice's, which has priority, and only then takes her start" "B = \[.*propose(attempt(bob, 2, 2, nudge(bob, alice))), wound(attempt(alice, 2, 2, nudge(alice, bob)), attempt(bob, 2, 2, nudge(bob, alice))), start(attempt(alice, 2, 2, nudge(alice, bob)))" "$cva_nudge"
 check "CVA nudge: ... his abort told before his vote on her start, yes" "sent(bob, alice, outcome(attempt(bob, 2, 2, nudge(bob, alice)), abort)), sent(bob, alice, vote(attempt(alice, 2, 2, nudge(alice, bob)), yes))" "$cva_nudge"
 check_not "CVA nudge: no person answers for the unguarded class" "answer(attempt([a-z]*, [0-9]*, [0-9]*, nudge" "$cva_nudge"
@@ -3742,9 +3770,9 @@ check "CVA introduce: ... and carol" "sent(alice, carol, outcome(attempt(alice, 
 # person in the first role of its unguarded schema-bindings (vGLP's 2026-10-12
 # 08:26 UTC, Q-B, Udi approved): alice preceding bob, bob opens the class of
 # nudge(bob, alice), which the least person in the first role of all its
-# schema-bindings, g(alice, bob)'s alice, would leave unopened, alice's tick
-# finding only the classes of the unguarded schemas with her in their first
-# role.
+# schema-bindings, g(alice, bob)'s alice, would leave unopened, alice's own
+# transactions holding only the classes of the unguarded schemas with her in
+# their first role.
 cva_gnudge_load=$("$REPL_RUN" <<HEREDOC
 $CVA/gnudge/
 :quit
@@ -3761,7 +3789,7 @@ play_gnudge(A, B, N).
 HEREDOC
 2>&1)
 check "CVA gnudge: alice and bob befriended, committed at both" "sent(alice, bob, outcome(attempt(alice, 1, 1, befriend(alice, bob)), commit))" "$cva_gnudge"
-check "CVA gnudge: bob, the least person in the first role of the unguarded schema-bindings of nudge(bob, alice), opens it on a tick once befriended, though alice precedes him" "B = \[.*outcome(attempt(alice, 1, 1, befriend(alice, bob))).*propose(attempt(bob, 2, 2, nudge(bob, alice)))" "$cva_gnudge"
+check "CVA gnudge: bob, the least person in the first role of the unguarded schema-bindings of nudge(bob, alice), opens it, an own transaction, once befriended, though alice precedes him" "B = \[.*outcome(attempt(alice, 1, 1, befriend(alice, bob))).*propose(attempt(bob, 2, 2, nudge(bob, alice)))" "$cva_gnudge"
 check "CVA gnudge: ... its start told to alice, whose machine votes on it, no person asked" "sent(alice, bob, vote(attempt(bob, 3, 2, nudge(bob, alice)), " "$cva_gnudge"
 check_not "CVA gnudge: alice, preceding bob, proposes nothing of the class of nudge(bob, alice)" "propose(attempt(alice, [0-9]*, [0-9]*, nudge(bob, alice)))\|propose(attempt(alice, [0-9]*, [0-9]*, g(" "$cva_gnudge"
 check_not "CVA gnudge: no person answers for the unguarded class" "answer(attempt([a-z]*, [0-9]*, [0-9]*, nudge\|answer(attempt([a-z]*, [0-9]*, [0-9]*, g(" "$cva_gnudge"
@@ -3860,7 +3888,7 @@ play_friends(A, B, C, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA introduce peers: alice, a friend of bob and of carol, takes Introduce peers {bob, carol} on a tick" "A = \[.*commit(attempt(alice, 2, 2, befriend(alice, carol))).*introduce_peers(bob, carol)" "$cva_friends"
+check "CVA introduce peers: alice, a friend of bob and of carol, takes Introduce peers {bob, carol}, an own transaction" "A = \[.*commit(attempt(alice, 2, 2, befriend(alice, carol))).*introduce_peers(bob, carol)" "$cva_friends"
 check "CVA introduce peers: ... sending bob intro(carol) and carol intro(bob)" "intro(alice, bob, carol), intro(alice, carol, bob)" "$cva_friends"
 check "CVA introduce peers: bob comes to know carol by the ihellos, never having requested her known, and his request question shows her" "B = \[.*outcome(attempt(alice, 1, 1, befriend(alice, bob))), discover(carol), menu(\[alice, carol\]), propose(attempt(bob, 2, 2, befriend(bob, carol)))" "$cva_friends"
 check "CVA introduce peers: carol comes to know bob, is asked, answers yes, and the friends of a friend are friends" "C = \[.*discover(bob), start(attempt(bob, 2, 2, befriend(bob, carol))), gave(befriend(bob, carol), yes), answer(attempt(bob, 2, 2, befriend(bob, carol))), vote(attempt(bob, 2, 2, befriend(bob, carol))), outcome(attempt(bob, 2, 2, befriend(bob, carol)))" "$cva_friends"
@@ -3891,6 +3919,17 @@ HEREDOC
 check "CVA run-time class: alice hails bob, attempt 1, befriends him, attempt 2, her second hail dropped, taking no number, and she waves, attempt 3, each committed" "A = \[discover(bob), propose(attempt(alice, 1, 1, hail(alice, bob))), tally(attempt(alice, 1, 1, hail(alice, bob))), commit(attempt(alice, 1, 1, hail(alice, bob))), propose(attempt(alice, 2, 2, befriend(alice, bob))), tally(attempt(alice, 2, 2, befriend(alice, bob))), commit(attempt(alice, 2, 2, befriend(alice, bob))), propose(attempt(alice, 3, 3, wave(alice, bob))), tally(attempt(alice, 3, 3, wave(alice, bob))), commit(attempt(alice, 3, 3, wave(alice, bob))) | " "$cva_waves"
 check "CVA run-time class: bob, in the guard set of the class of hail, is asked on its start and answers yes; asked again for befriend; and his machine votes on the wave unasked" "B = \[discover(alice), start(attempt(alice, 1, 1, hail(alice, bob))), gave(hail(alice, bob), yes), answer(attempt(alice, 1, 1, hail(alice, bob))), vote(attempt(alice, 1, 1, hail(alice, bob))), outcome(attempt(alice, 1, 1, hail(alice, bob))), start(attempt(alice, 2, 2, befriend(alice, bob))), gave(befriend(alice, bob), yes), answer(attempt(alice, 2, 2, befriend(alice, bob))), vote(attempt(alice, 2, 2, befriend(alice, bob))), outcome(attempt(alice, 2, 2, befriend(alice, bob))), start(attempt(alice, 3, 3, wave(alice, bob))), outcome(attempt(alice, 3, 3, wave(alice, bob))) | " "$cva_waves"
 check "CVA run-time class: the three starts, bob's three yeses and the three commits" "N = \[sent(alice, bob, start(attempt(alice, 1, 1, hail(alice, bob)))), sent(bob, alice, vote(attempt(alice, 1, 1, hail(alice, bob)), yes)), sent(alice, bob, outcome(attempt(alice, 1, 1, hail(alice, bob)), commit)), sent(alice, bob, start(attempt(alice, 2, 2, befriend(alice, bob)))), sent(bob, alice, vote(attempt(alice, 2, 2, befriend(alice, bob)), yes)), sent(alice, bob, outcome(attempt(alice, 2, 2, befriend(alice, bob)), commit)), sent(alice, bob, start(attempt(alice, 3, 3, wave(alice, bob)))), sent(bob, alice, vote(attempt(alice, 3, 3, wave(alice, bob)), yes)), sent(alice, bob, outcome(attempt(alice, 3, 3, wave(alice, bob)), commit)) | " "$cva_waves"
+
+# No clock and no tick (vGLP efe7bbc, Section 5.4, "Triggers": the agent takes
+# its own transactions "when it starts and after each trigger, one at a time
+# until none holds"; Udi's approval of 2026-10-18, reported by Code #10): each
+# play's run suspends once every agent has taken its own transactions until
+# none holds and no trigger is left to read, where until vGLP efe7bbc it ran to
+# the REPL's :limit, each agent's clock ticking without end.
+for v in cva_sg_menu cva_sg_befriend cva_sg_unfriend cva_sg_refused cva_cur_payswap cva_cur_redeem cva_cur_busy cva_cur_declined cva_nudge cva_intro cva_gnudge cva_cs cva_link cva_friends cva_waves; do
+    check "CVA quiescence: the run of $v suspends, no agent left with an own transaction or a trigger" "→ suspended" "${!v}"
+    check_not "CVA quiescence: ... the run of $v not stopped at the limit" "capped" "${!v}"
+done
 echo ""
 
 
@@ -5800,7 +5839,7 @@ fi  # Section SG
 
 if _section APPS; then
 # =============================================================================
-# Section APPS: the apps of the contracts (programs/apps), each a mini-app of the Grassroots Super-App compiled down the cascade from its contract's act schemas: the canonical CVA platform vGLP's compiler prints from them, compiled to GLP when the directory loads, under the root's entry template miniapp/4. GSG's app, programs/apps/gsg: its platform held to what the compiler prints from programs/gsc/GSG.glp (programs/apps/compile.sh --check); the program certified by :artefact; its router, which carries the platform's network over the conversations the social graph hands the mini-app, holding a message until the conversation with its recipient opens (play_held); and two executions over one conversation, alice offering bob friendship, bob asked and answering yes, and then bob ending it (play_friends), and GSN's app, programs/apps/gsn, the same host on GSN's platform (play_network), each person's screen held exactly, an unbound tail written _: the run ends at the REPL's limit, the clock of each agent ticking without end.  The super-app hosting the app on two smartphones, programs/apps/gsg_boot.glp and gsn_boot.glp, is not run here: the boot harness reduces each event to quiescence (IGLP, Implementation Notes, "event-driven ... reduces until quiescent"), and the platform's agent never quiesces, its clock goal writing ticks without end (vGLP, Section 5.4).
+# Section APPS: the apps of the contracts (programs/apps), each a mini-app of the Grassroots Super-App compiled down the cascade from its contract's act schemas: the canonical CVA platform vGLP's compiler prints from them, compiled to GLP when the directory loads, under the root's entry template miniapp/4. GSG's app, programs/apps/gsg: its platform held to what the compiler prints from programs/gsc/GSG.glp (programs/apps/compile.sh --check); the program certified by :artefact; its router, which carries the platform's network over the conversations the social graph hands the mini-app, holding a message until the conversation with its recipient opens (play_held); and two executions over one conversation, alice offering bob friendship, bob asked and answering yes, and then bob ending it (play_friends), and GSN's app, programs/apps/gsn, the same host on GSN's platform (play_network), each person's screen held exactly, an unbound tail written _: the run suspends, each agent having taken its own transactions until none holds and no trigger being left (vGLP, Section 5.4, "Triggers").  And the super-app hosting each app on two smartphones, programs/apps/gsg_boot.glp and gsn_boot.glp, under :boot: the boot harness reduces each event until the program is quiescent, as the device runtime does (IGLP, Implementation Notes, "On each event the agent binds what the event delivers, reduces until quiescent"), the platform's agent quiesces, and the boot settles, each person's lines held exactly, in order.
 # =============================================================================
 echo "=== Section APPS: the apps (programs/apps) ==="
 echo ""
@@ -5839,9 +5878,14 @@ apps_line "APPS gsg friends: alice's screen" "A = [menu([]), discover(bob), menu
 apps_line "APPS gsg friends: bob's screen" "B = [discover(alice), start(attempt(alice, 1, 1, befriend(alice, bob))), gave(befriend(alice, bob), yes), answer(attempt(alice, 1, 1, befriend(alice, bob))), vote(attempt(alice, 1, 1, befriend(alice, bob))), outcome(attempt(alice, 1, 1, befriend(alice, bob))), propose(attempt(bob, 2, 2, unfriend(bob, alice))), tally(attempt(bob, 2, 2, unfriend(bob, alice))), commit(attempt(bob, 2, 2, unfriend(bob, alice))) | _]" "$apps_gsg"
 check_not "APPS gsg: no failed play" "→ failed" "$apps_gsg"
 check_not "APPS gsg: no error" "Error" "$apps_gsg"
+check "APPS gsg friends: the run suspends, no agent left with an own transaction or a trigger" "→ suspended" "$apps_gsg"
+check_not "APPS gsg friends: ... and is not stopped at the limit" "capped" "$apps_gsg"
 
 # GSN's app, programs/apps/gsn: the same host on GSN's platform, its wrapper the same file as GSG's; two executions over one conversation (play_network): alice and bob become friends, alice sends bob a message, creates the group friends and adds bob to it, bob sends the group a message, which alice delivers to him, and bob leaves the group.
 check "APPS gsn: platform.vglp is what vGLP's compiler prints from GSN.glp" "^gsn/platform.vglp: as printed$" "$apps_print"
+# The request type proposes the guarded classes only (vGLP, Section 5.4, the compilation): GSN's nine schemas that mark a role, and not deliver, unguarded, which the creator's machine proposes as its opener.
+apps_gsn_proposal=$(awk '/^Proposal ::=$/{on=1;next} on&&/^\.$/{exit} on&&!/^;$/{printf "%s ", $0}' "$GLP_DIR/programs/apps/gsn/platform.vglp")
+check "APPS gsn: the request type proposes the guarded classes, not deliver" "^befriend(Peer, Peer) unfriend(Peer, Peer) message(Peer, Peer, Speech) create(Peer, Speech) join(Peer, Peer, Speech) leave(Peer, Peer, Speech) close(Peer, Speech) post_own(Peer, Speech, Speech) post(Peer, Peer, Speech, Speech) $" "$apps_gsn_proposal"
 if cmp -s "$GLP_DIR/programs/apps/gsg/miniapp.glp" "$GLP_DIR/programs/apps/gsn/miniapp.glp"; then
     _check_pass "APPS gsn: miniapp.glp is the same file as GSG's app's"
 else
@@ -5863,6 +5907,42 @@ apps_line "APPS gsn network: alice's screen" "A = [discover(bob), propose(attemp
 apps_line "APPS gsn network: bob's screen" "B = [discover(alice), start(attempt(alice, 1, 1, befriend(alice, bob))), gave(befriend(alice, bob), yes), answer(attempt(alice, 1, 1, befriend(alice, bob))), vote(attempt(alice, 1, 1, befriend(alice, bob))), outcome(attempt(alice, 1, 1, befriend(alice, bob))), start(attempt(alice, 2, 2, message(alice, bob, speech(utterance(hello), alice)))), outcome(attempt(alice, 2, 2, message(alice, bob, speech(utterance(hello), alice)))), start(attempt(alice, 4, 4, join(alice, bob, speech(utterance(friends), alice)))), gave(join(alice, bob, speech(utterance(friends), alice)), yes), answer(attempt(alice, 4, 4, join(alice, bob, speech(utterance(friends), alice)))), vote(attempt(alice, 4, 4, join(alice, bob, speech(utterance(friends), alice)))), outcome(attempt(alice, 4, 4, join(alice, bob, speech(utterance(friends), alice)))), propose(attempt(bob, 5, 5, post(bob, alice, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), tally(attempt(bob, 5, 5, post(bob, alice, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), commit(attempt(bob, 5, 5, post(bob, alice, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), start(attempt(alice, 6, 6, deliver(alice, bob, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), outcome(attempt(alice, 6, 6, deliver(alice, bob, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), propose(attempt(bob, 7, 7, leave(alice, bob, speech(utterance(friends), alice)))), tally(attempt(bob, 7, 7, leave(alice, bob, speech(utterance(friends), alice)))), commit(attempt(bob, 7, 7, leave(alice, bob, speech(utterance(friends), alice)))) | _]" "$apps_gsn"
 check_not "APPS gsn: no failed play" "→ failed" "$apps_gsn"
 check_not "APPS gsn: no error" "Error" "$apps_gsn"
+check "APPS gsn network: the run suspends, no agent left with an own transaction or a trigger" "→ suspended" "$apps_gsn"
+check_not "APPS gsn network: ... and is not stopped at the limit" "capped" "$apps_gsn"
+
+# Each app on two smartphones: the super-app of programs/social/graph/core on two isolates, each person with its own key pair, hosting the app from its certified artefact, gsg.glpw or gsn.glpw, which :artefact writes beside the super-app and load_file/2 reads there (programs/apps/gsg_boot.glp, gsn_boot.glp).  The two persons' lines interleave as the isolates run; each person's lines, their prefix stripped, are held exactly, in order: what the super-app told the person, sg(...), and the mini-app's screen, the steps of play_friends and play_network.
+apps_person() { # apps_person <person> <output>: the person's lines in order, as a list
+    echo "$2" | sed -e 's/^\(GLP> \)*//' | awk -v p="[$1] " 'index($0, p) == 1 { s = s (n++ ? ", " : "") substr($0, length(p) + 1) } END { print "[" s "]" }'
+}
+apps_same() { # apps_same <name> <expected> <actual>
+    if [ "$3" = "$2" ]; then _check_pass "$1"; else _check_fail "$1" "expected: $2; got: $3"; fi
+}
+APPS_CORE="$GLP_DIR/programs/social/graph/core"
+apps_gsg_boot=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/apps/gsg $APPS_CORE
+:boot $GLP_DIR/programs/apps/gsg_boot.glp $APPS_CORE
+:quit
+HEREDOC
+2>&1)
+rm -f "$APPS_CORE/gsg.glpw"
+check "APPS gsg on two smartphones: the mini-app's artefact is certified" "gsg.glpw --- certified under" "$apps_gsg_boot"
+check "APPS gsg on two smartphones: the boot settles" "Boot settled: 2 agents (alice, bob)" "$apps_gsg_boot"
+check_not "APPS gsg on two smartphones: no event stopped at the cap" "did not quiesce" "$apps_gsg_boot"
+apps_same "APPS gsg on two smartphones: alice's lines" "[sg(connected(bob)), menu([]), discover(bob), menu([bob]), propose(attempt(alice, 1, 1, befriend(alice, bob))), tally(attempt(alice, 1, 1, befriend(alice, bob))), commit(attempt(alice, 1, 1, befriend(alice, bob))), start(attempt(bob, 2, 2, unfriend(bob, alice))), outcome(attempt(bob, 2, 2, unfriend(bob, alice)))]" "$(apps_person alice "$apps_gsg_boot")"
+apps_same "APPS gsg on two smartphones: bob's lines" "[sg(befriend(alice)), sg(connected(alice)), discover(alice), start(attempt(alice, 1, 1, befriend(alice, bob))), gave(befriend(alice, bob), yes), answer(attempt(alice, 1, 1, befriend(alice, bob))), vote(attempt(alice, 1, 1, befriend(alice, bob))), outcome(attempt(alice, 1, 1, befriend(alice, bob))), propose(attempt(bob, 2, 2, unfriend(bob, alice))), tally(attempt(bob, 2, 2, unfriend(bob, alice))), commit(attempt(bob, 2, 2, unfriend(bob, alice)))]" "$(apps_person bob "$apps_gsg_boot")"
+
+apps_gsn_boot=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/apps/gsn $APPS_CORE
+:boot $GLP_DIR/programs/apps/gsn_boot.glp $APPS_CORE
+:quit
+HEREDOC
+2>&1)
+rm -f "$APPS_CORE/gsn.glpw"
+check "APPS gsn on two smartphones: the mini-app's artefact is certified" "gsn.glpw --- certified under" "$apps_gsn_boot"
+check "APPS gsn on two smartphones: the boot settles" "Boot settled: 2 agents (alice, bob)" "$apps_gsn_boot"
+check_not "APPS gsn on two smartphones: no event stopped at the cap" "did not quiesce" "$apps_gsn_boot"
+apps_same "APPS gsn on two smartphones: alice's lines" "[sg(connected(bob)), discover(bob), propose(attempt(alice, 1, 1, befriend(alice, bob))), tally(attempt(alice, 1, 1, befriend(alice, bob))), commit(attempt(alice, 1, 1, befriend(alice, bob))), propose(attempt(alice, 2, 2, message(alice, bob, speech(utterance(hello), alice)))), tally(attempt(alice, 2, 2, message(alice, bob, speech(utterance(hello), alice)))), commit(attempt(alice, 2, 2, message(alice, bob, speech(utterance(hello), alice)))), propose(attempt(alice, 3, 3, create(alice, speech(utterance(friends), alice)))), propose(attempt(alice, 4, 4, join(alice, bob, speech(utterance(friends), alice)))), tally(attempt(alice, 4, 4, join(alice, bob, speech(utterance(friends), alice)))), commit(attempt(alice, 4, 4, join(alice, bob, speech(utterance(friends), alice)))), start(attempt(bob, 5, 5, post(bob, alice, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), outcome(attempt(bob, 5, 5, post(bob, alice, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), propose(attempt(alice, 6, 6, deliver(alice, bob, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), tally(attempt(alice, 6, 6, deliver(alice, bob, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), commit(attempt(alice, 6, 6, deliver(alice, bob, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), start(attempt(bob, 7, 7, leave(alice, bob, speech(utterance(friends), alice)))), outcome(attempt(bob, 7, 7, leave(alice, bob, speech(utterance(friends), alice))))]" "$(apps_person alice "$apps_gsn_boot")"
+apps_same "APPS gsn on two smartphones: bob's lines" "[sg(befriend(alice)), sg(connected(alice)), discover(alice), start(attempt(alice, 1, 1, befriend(alice, bob))), gave(befriend(alice, bob), yes), answer(attempt(alice, 1, 1, befriend(alice, bob))), vote(attempt(alice, 1, 1, befriend(alice, bob))), outcome(attempt(alice, 1, 1, befriend(alice, bob))), start(attempt(alice, 2, 2, message(alice, bob, speech(utterance(hello), alice)))), outcome(attempt(alice, 2, 2, message(alice, bob, speech(utterance(hello), alice)))), start(attempt(alice, 4, 4, join(alice, bob, speech(utterance(friends), alice)))), gave(join(alice, bob, speech(utterance(friends), alice)), yes), answer(attempt(alice, 4, 4, join(alice, bob, speech(utterance(friends), alice)))), vote(attempt(alice, 4, 4, join(alice, bob, speech(utterance(friends), alice)))), outcome(attempt(alice, 4, 4, join(alice, bob, speech(utterance(friends), alice)))), propose(attempt(bob, 5, 5, post(bob, alice, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), tally(attempt(bob, 5, 5, post(bob, alice, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), commit(attempt(bob, 5, 5, post(bob, alice, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), start(attempt(alice, 6, 6, deliver(alice, bob, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), outcome(attempt(alice, 6, 6, deliver(alice, bob, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), propose(attempt(bob, 7, 7, leave(alice, bob, speech(utterance(friends), alice)))), tally(attempt(bob, 7, 7, leave(alice, bob, speech(utterance(friends), alice)))), commit(attempt(bob, 7, 7, leave(alice, bob, speech(utterance(friends), alice))))]" "$(apps_person bob "$apps_gsn_boot")"
 
 echo ""
 

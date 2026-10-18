@@ -38,7 +38,7 @@ The super-app grants the mini-app the person's key, the person channel, the chan
 - The agent runs with the person's key as its `Peer`.
 - Its dispatcher draws the agent's questions on the person channel: the request questions and the approval questions.  The agent's thread, the program's output to the person, is drawn as construct `0`.
 - Its network is the conversations the social graph hands the mini-app at each invitation, one per friend.  Each message `msg(Q, C)` the agent sends goes on the conversation with `Q`; each message arriving on a conversation joins the agent's input.  A message to a participant with whom no conversation is open yet is held, and goes on the conversation, in order, once the social graph opens it.
-- The calendar is not read: the platform's clock is the agent's own.
+- The calendar is not read: the platform has no clock.  The agent takes its own transactions when it starts and after each trigger, one at a time until none holds (vGLP, Section 5.4, "Triggers").
 
 ## Running it
 
@@ -48,7 +48,7 @@ From `glp_runtime/`:
 printf '../programs/apps/gsg\nplay_held(In, ToBob, ToCarol).\n:limit 600000\nplay_friends(A, B).\n:quit\n' | bin/glpc
 ```
 
-`play_friends` runs two executions over one conversation, the play handing each its end of the root channel as the social graph does.  Alice asks to know Bob and offers him friendship; Bob is asked and answers yes; then Bob ends the friendship, and nobody is asked.  The run ends at the limit, each agent's clock ticking without end.  The persons' screens, held exactly by the suite's Section APPS:
+`play_friends` runs two executions over one conversation, the play handing each its end of the root channel as the social graph does.  Alice asks to know Bob and offers him friendship; Bob is asked and answers yes; then Bob ends the friendship, and nobody is asked.  The run then suspends: each agent has taken its own transactions until none holds, and no trigger is left.  The persons' screens, held exactly by the suite's Section APPS:
 
 ```
 A = [menu([]), discover(bob), menu([bob]), propose(attempt(alice, 1, 1, befriend(alice, bob))), tally(attempt(alice, 1, 1, befriend(alice, bob))), commit(attempt(alice, 1, 1, befriend(alice, bob))), start(attempt(bob, 2, 2, unfriend(bob, alice))), outcome(attempt(bob, 2, 2, unfriend(bob, alice))) | _]
@@ -63,15 +63,20 @@ B = [discover(alice), start(attempt(alice, 1, 1, befriend(alice, bob))), gave(be
 G=$(cd .. && pwd); printf ':artefact %s/programs/apps/gsg %s/programs/social/graph/core\n:boot %s/programs/apps/gsg_boot.glp %s/programs/social/graph/core\n:quit\n' $G $G $G $G | bin/glpc
 ```
 
-Two isolates, each the super-app of `programs/social/graph/core` with its own key pair.  Each person trusts the compiler's key and installs `gsg.glpw`; Alice connects to Bob and they become friends in the super-app's social graph; Alice invites Bob to the mini-app and Bob accepts; the handshake opens their conversation; then the steps of `play_friends` run over it.  It does not run to its end: the boot harness reduces each event until the program is quiescent, as the device runtime does (IGLP, Implementation Notes: "On each event the agent binds what the event delivers, reduces until quiescent ... there is no clock and no polling"), and the platform's agent is never quiescent, its clock goal writing ticks without end (vGLP, Section 5.4).  The run reaches Bob's vote, each event stopped at the harness's cap of 1,000,000 goals, and the boot does not settle in its 30 seconds.  The suite does not run it while the platform's agent does not quiesce.
+Two isolates, each the super-app of `programs/social/graph/core` with its own key pair.  Each person trusts the compiler's key and installs `gsg.glpw`; Alice connects to Bob and they become friends in the super-app's social graph; Alice invites Bob to the mini-app and Bob accepts; the handshake opens their conversation; then the steps of `play_friends` run over it.  The boot harness reduces each event until the program is quiescent, as the device runtime does (IGLP, Implementation Notes: "On each event the agent binds what the event delivers, reduces until quiescent ... there is no clock and no polling"), and after each event the platform's agent takes its own transactions until none holds and then waits for the next (vGLP, Section 5.4, "Triggers"), so each event reduces to quiescence and the boot settles.  The two persons' lines interleave as the isolates run; each person's, in order, held exactly by the suite's Section APPS:
+
+```
+[alice] sg(connected(bob)), menu([]), discover(bob), menu([bob]), propose(attempt(alice, 1, 1, befriend(alice, bob))), tally(...), commit(...),
+        start(attempt(bob, 2, 2, unfriend(bob, alice))), outcome(...)
+[bob]   sg(befriend(alice)), sg(connected(alice)), discover(alice), start(attempt(alice, 1, 1, befriend(alice, bob))), gave(befriend(alice, bob), yes),
+        answer(...), vote(...), outcome(...), propose(attempt(bob, 2, 2, unfriend(bob, alice))), tally(...), commit(...)
+```
+
+A `(...)` names the attempt named in full before it; the suite holds the lines whole.
 
 ### In the Flutter super-app
 
-Not yet possible, for three reasons:
-
-1. The same quiescence: the app's agent runtime (`glp_multiagent/lib/ui_runtime`) reduces each event until quiescent with a cap, as the boot harness does.
-2. The asset step, `glp_multiagent/tool/sync_glp_assets.sh`, builds the artefacts of five named mini-apps into the bundle's `social/graph/core`; `gsg.glpw` needs `../programs/apps/gsg` in that list.
-3. The app's play, `superapp_ui/3` in `programs/social/graph/core/home_ui.glp`, scripts Bob to accept an invitation to `ping`; Bob's acts for GSG's app, installing `gsg.glpw` and accepting the invitation to it, are not there.
+The app's agent runtime (`glp_multiagent/lib/ui_runtime`) reduces each event until quiescent with a cap, as the boot harness does, and the platform's agent reaches quiescence after each event, as the boot shows.  The asset step, `glp_multiagent/tool/sync_glp_assets.sh`, builds `gsg.glpw` and `gsn.glpw` into the bundle's `social/graph/core` with the other mini-apps' artefacts.  What is not there: the app's play, `superapp_ui/3` in `programs/social/graph/core/home_ui.glp`, scripts Bob to accept an invitation to `ping`, and Bob's acts for GSG's app, installing `gsg.glpw` and accepting the invitation to it, are not in it.
 
 Once these are done, Alice installs the app as she installs any: on the Apps panel she trusts the compiler's key, installs the mini-app by its name, `gsg`, and its program, `gsg.glpw`, connects to Bob, and, once he is her friend, invites him to `gsg`.
 
@@ -83,7 +88,7 @@ The super-app, first: Alice and Bob each install the app; Alice connects to Bob,
 
 Then the app:
 
-1. **Alice's request question.**  A form headed `menu`, with two fields.  The first, `List(Key)`, shows the persons her agent knows: none.  The second, `Request`, is a menu of two forms: `propose`, whose one field `Class` is a menu of `befriend(Peer, Peer)` and `unfriend(Peer, Peer)`, each with two peer fields; and `known`, with one peer field, `Peer`.  She chooses `known`, types `bob` and submits.  Her next request question is drawn at once, showing none: it is asked when the agent reads her request, before Bob is known.
+1. **Alice's request question.**  A form headed `menu`, with two fields.  The first, `List(Key)`, shows the persons her agent knows: none.  The second, `Request`, is a menu of two forms: `propose`, whose one field `Proposal`, the classes a person proposes, is a menu of `befriend(Peer, Peer)` and `unfriend(Peer, Peer)`, each with two peer fields; and `known`, with one peer field, `Peer`.  She chooses `known`, types `bob` and submits.  Her next request question is drawn at once, showing none: it is asked when the agent reads her request, before Bob is known.
 2. **Bob's request question**, the same form.  He chooses `known`, types `alice` and submits.
 3. **The threads.**  Each agent sends the other a hello on their conversation; once each has sent and received one, Alice's thread shows `discover(bob)` and Bob's `discover(alice)`.
 4. **Alice offers friendship.**  On her open request question she chooses `propose`, then `befriend`, and types `alice` and `bob`.  Her next request question shows `bob`.  Her thread shows `propose(attempt(alice, 1, 1, befriend(alice, bob)))`: the attempt's initiator, its number, its rank and its class.
@@ -101,4 +106,4 @@ The host carries a message only to a participant with whom the social graph has 
 
 ## The types written again
 
-`self.glp` writes again the types of `platform.vglp` that the imported declarations of `platform#agent` and `platform#dispatch` carry: `Peer`, `Class`, `Request`, `YesNo`, `Decision`, `Attempt`, `Cargo`, `Content`, `Net`, `Txn` and `Output`, `Approval` and `Menu`; and the types the canonical compilation forms for them, `Question`, `Drawn` and `Ask(Q)`.  vGLP's Section 6.3 has the compilation write these into each module that imports a compiled procedure; once the compiler does, these copies go.
+`self.glp` writes again the types of `platform.vglp` that the imported declarations of `platform#agent` and `platform#dispatch` carry: `Peer`, `Class`, `Proposal`, `Request`, `YesNo`, `Decision`, `Attempt`, `Cargo`, `Content`, `Net`, `Txn` and `Output`, `Approval` and `Menu`; and the types the canonical compilation forms for them, `Question`, `Drawn` and `Ask(Q)`.  vGLP's Section 6.3 has the compilation write these into each module that imports a compiled procedure; once the compiler does, these copies go.

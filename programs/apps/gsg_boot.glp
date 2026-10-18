@@ -13,7 +13,7 @@
 %%     propose(attempt(bob, 2, 2, unfriend(bob, alice))), tally(...),
 %%     commit(...).
 %%
-%% The run reaches bob's vote and does not settle: the boot harness reduces each event until the program is quiescent, as the device runtime does (IGLP, Implementation Notes: "On each event the agent binds what the event delivers, reduces until quiescent"), and the platform's agent is never quiescent, its clock goal writing ticks without end (vGLP, Section 5.4), so each event stops at the harness's cap of 1,000,000 goals and the boot is not settled after its 30 seconds.  Section APPS of the suite does not run this file until the platform's clock and the device runtime agree.
+%% The boot settles: the boot harness reduces each event until the program is quiescent, as the device runtime does (IGLP, Implementation Notes: "On each event the agent binds what the event delivers, reduces until quiescent"), and after each event the platform's agent takes its own transactions until none holds and then waits for the next (vGLP, Section 5.4, "Triggers").  Section APPS of the suite runs this file and holds each person's lines, in order.
 
 procedure boot.
 boot :-
