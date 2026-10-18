@@ -1,6 +1,6 @@
 %% ---------------------------------------------------------------------------
 %% The plays of the canonical CVA platform of GSC's social graph
-%% (GSG's, programs/gsc/GSN.glp; GSC, Section 3.3),
+%% (GSC's, programs/gsc/GSG.glp, the social graph),
 %% platform.vglp, which programs/vglp/cva/compile.sh prints from it: two-phase
 %% commit coordinated by the initiating agent (vGLP, Section 3.2, Definition
 %% "Canonical CVA Platform").  Each runs two agents, alice and bob, their
@@ -31,8 +31,7 @@
 
 Speech   ::= speech(Utterance, Peer).
 Utterance ::= utterance(String) ; Speech.
-Class    ::= befriend(Peer, Peer) ; unfriend(Peer, Peer) ; sign(Peer, Speech)
-           ; forward(Peer, Peer, Speech).
+Class    ::= befriend(Peer, Peer) ; unfriend(Peer, Peer).
 Request  ::= propose(Class) ; known(Peer).
 YesNo    ::= yes ; no.
 Decision ::= commit ; abort.

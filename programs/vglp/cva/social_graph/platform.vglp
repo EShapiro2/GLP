@@ -5,7 +5,7 @@
 %% into vGLP by Definition "Compilation of the Canonical Platform" (Section
 %% 5.4).  Edit the contract or the compiler and run
 %% programs/vglp/cva/compile.sh, not this file.
-%% the canonical CVA platform of the contract(gsn)
+%% the canonical CVA platform of the contract(gsg)
 
 %% ===========================================================================
 %% The contract
@@ -15,14 +15,10 @@ Class ::=
 befriend(Peer, Peer)
 ;
 unfriend(Peer, Peer)
-;
-sign(Peer, Speech)
-;
-forward(Peer, Peer, Speech)
 .
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(befriend, [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]), schema(unfriend, [rs(guarded, [], [atom(friend, [role(2)])], [], []), rs(unguarded, [], [atom(friend, [role(1)])], [], [])]), schema(sign, [rs(guarded, [atom(item, [svar(x)])], [], [], [])]), schema(forward, [rs(guarded, [atom(sent, [svar(x), role(2)])], [], [atom(item, [svar(x)])], []), rs(unguarded, [atom(item, [sgn(x, 1)])], [], [atom(friend, [role(1)])], [])])])
+contract_schemas([schema(befriend, [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]), schema(unfriend, [rs(guarded, [], [atom(friend, [role(2)])], [], []), rs(unguarded, [], [atom(friend, [role(1)])], [], [])])])
 .
 
 procedure reflexive_preds(Preds).
@@ -37,10 +33,6 @@ procedure binding_of(Class?, Constant, Binding).
 binding_of(befriend(V1, V2), befriend, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
 binding_of(unfriend(V1, V2), unfriend, [b(role(1), p(V1?)), b(role(2), p(V2?))])
-.
-binding_of(sign(V1, V2), sign, [b(role(1), p(V1?)), b(svar(x), s(V2?))])
-.
-binding_of(forward(V1, V2, V3), forward, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(x), s(V3?))])
 .
 
 procedure class_of(Constant?, Binding?, Peer?, Class).
@@ -63,28 +55,6 @@ ground(D?)
 val_peer(role(1), B?, D?, V1)
 ,
 val_peer(role(2), B?, D?, V2)
-.
-class_of(sign, B, D, sign(V1?, V2?))
-:-
-ground(B?)
-,
-ground(D?)
-|
-val_peer(role(1), B?, D?, V1)
-,
-val_speech(svar(x), B?, D?, V2)
-.
-class_of(forward, B, D, forward(V1?, V2?, V3?))
-:-
-ground(B?)
-,
-ground(D?)
-|
-val_peer(role(1), B?, D?, V1)
-,
-val_peer(role(2), B?, D?, V2)
-,
-val_speech(svar(x), B?, D?, V3)
 .
 
 %% ===========================================================================

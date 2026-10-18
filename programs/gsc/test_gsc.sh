@@ -98,9 +98,24 @@ echo "=== gsc: the syntactically-grassroots checker ==="
 
 # The contracts, each read from its owner's file: one copy, which GSC's
 # checker and vGLP's compiler load from there.
-SG=$(term "$GLP_DIR/programs/gsc/GSN.glp" gsn)
-check "the social graph's contract, GSN, is read from programs/gsc/GSN.glp" \
+# The social graph with items of Section 3.3, the signed term in forward, is
+# the checker's fixture sg_items, which the checks below were written for: GSN
+# is now the network without provenance (GAI #2, 2026-10-18, at Udi's
+# instruction; programs/gsc/GSN.glp) and the network with provenance, GSNP,
+# has no schemas yet.
+SG=$(run 'contract_named(sg_items, C).' | sed -e 's/^\(GLP> \)*//' | grep -E '^C = ' | head -1 | sed -e 's/^C = //')
+check "Section 3.3's social graph with items is the fixture sg_items" \
       "[schema(befriend, [rs(guarded, [atom(friend, [role(2)])]" "$SG"
+GSGT=$(term "$GLP_DIR/programs/gsc/GSG.glp" gsg)
+check "GSG's contract is read from programs/gsc/GSG.glp" \
+      "[schema(befriend, [rs(guarded, [atom(friend, [role(2)])]" "$GSGT"
+GSNT=$(term "$GLP_DIR/programs/gsc/GSN.glp" gsn)
+check "GSN's contract, the network without provenance, is read from programs/gsc/GSN.glp" \
+      "[schema(befriend, [rs(guarded, [atom(friend, [role(2)])]" "$GSNT"
+out=$(run "check($GSGT, V).")
+check "GSG is syntactically grassroots" "V = syntactically_grassroots" "$out"
+out=$(run "check($GSNT, V).")
+check "GSN is syntactically grassroots" "V = syntactically_grassroots" "$out"
 CUR=$(term "$GLP_DIR/programs/currencies/coins/GC.glp" gc)
 check "the currency's contract, GC, is read from programs/currencies/coins/GC.glp" \
       "[schema(mint, [rs(guarded, [atom(coin, [role(1)])]" "$CUR"

@@ -9,8 +9,8 @@
 #   bash programs/vglp/cva/compile.sh <dir>      print into <dir>/<contract>/platform.vglp
 #   bash programs/vglp/cva/compile.sh --check    print into a scratch directory and compare
 #
-# for <contract> social_graph and currency, the directories of GSN (GSC's,
-# programs/gsc/GSN.glp, the checker's gsn; GSC, Section 3.3) and GC
+# for <contract> social_graph and currency, the directories of GSG (GSC's,
+# programs/gsc/GSG.glp, the checker's gsg, the social graph) and GC
 # (Currencies', programs/currencies/coins/GC.glp, the checker's gc; Section
 # 3.4), each the one copy in its owner's file (claude.md "Sessions", the
 # cascade rule; Coordination Appendix C), and nudge, introduce, gnudge,
@@ -33,20 +33,20 @@ set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 GLP_DIR="$(cd "$HERE/../../.." && pwd)"
 RT="$GLP_DIR/glp_runtime"
-THEIRS="gsn gc"
+THEIRS="gsg gc"
 OURS="nudge introduce gnudge childsafe link friends waves"
 CONTRACTS="$THEIRS $OURS"
 
 contract_file() { # contract_file <contract> ; the file that holds it, its owner's
     case "$1" in
-        gsn) echo "$GLP_DIR/programs/gsc/GSN.glp" ;;
+        gsg) echo "$GLP_DIR/programs/gsc/GSG.glp" ;;
         gc)  echo "$GLP_DIR/programs/currencies/coins/GC.glp" ;;
         *)   echo "$HERE/contracts.glp" ;;
     esac
 }
 dir_of() { # dir_of <contract> ; the directory of its platform and plays here
     case "$1" in
-        gsn) echo social_graph ;;
+        gsg) echo social_graph ;;
         gc)  echo currency ;;
         *)   echo "$1" ;;
     esac
@@ -71,7 +71,7 @@ fi
 for d in $DIRS; do mkdir -p "$OUT/$d" || exit 2; done
 
 # Each contract's term, one line per contract in the order of CONTRACTS:
-# GSN and GC from their owners' files, one session each, and vGLP's from
+# GSG and GC from their owners' files, one session each, and vGLP's from
 # contracts.glp, one session, with their introduction predicates.
 : > "$WORK/terms_c"
 for c in $THEIRS; do
