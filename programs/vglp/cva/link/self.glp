@@ -47,7 +47,7 @@ Txn      ::= propose(Attempt) ; start(Attempt) ; answer(Attempt) ; vote(Attempt)
            ; introduce_peers(Peer, Peer) ; discover(Peer).
 Output   ::= Txn.
 Approval ::= approval(Attempt, YesNo?).
-Menu     ::= menu(List(Key), Request?).
+Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).
 Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
 Ask(Q)   ::= ask(Constant, Q).
@@ -65,25 +65,25 @@ play_deadlock(LA?, LB?, LC?, LD?, N?) :-
              approval(befriend(dave, alice), yes),
              wait(outcome(attempt(carol, 1, 1, befriend(carol, alice)))),
              wait(outcome(attempt(dave, 1, 1, befriend(dave, alice)))),
-             req(propose(link(alice, carol, dave)))],
+             own([A1], propose(link(A1?, carol, dave)))],
             [req(known(carol)), req(known(dave)),
              approval(befriend(carol, bob), yes),
              approval(befriend(dave, bob), yes),
              wait(outcome(attempt(carol, 2, 2, befriend(carol, bob)))),
              wait(outcome(attempt(dave, 2, 2, befriend(dave, bob)))),
-             req(propose(link(bob, carol, dave))),
+             own([B1], propose(link(B1?, carol, dave))),
              wait(yield(attempt(bob, 3, 3, link(bob, carol, dave)))),
-             req(propose(link(bob, carol, dave)))],
+             own([B2], propose(link(B2?, carol, dave)))],
             [req(known(alice)), req(known(bob)), wait(discover(alice)),
-             req(propose(befriend(carol, alice))),
+             own([C1], propose(befriend(C1?, alice))),
              wait(commit(attempt(carol, 1, 1, befriend(carol, alice)))),
              wait(discover(bob)),
-             req(propose(befriend(carol, bob)))],
+             own([C2], propose(befriend(C2?, bob)))],
             [req(known(alice)), req(known(bob)), wait(discover(alice)),
-             req(propose(befriend(dave, alice))),
+             own([D1], propose(befriend(D1?, alice))),
              wait(commit(attempt(dave, 1, 1, befriend(dave, alice)))),
              wait(discover(bob)),
-             req(propose(befriend(dave, bob)))],
+             own([D2], propose(befriend(D2?, bob)))],
             LA, LB, LC, LD, N).
 
 %% alice, bob, carol and dave, each with its dispatcher and scripted person,

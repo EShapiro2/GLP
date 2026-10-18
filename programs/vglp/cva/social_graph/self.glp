@@ -9,7 +9,10 @@
 %% and the network's log of the cargoes it carries.  Each person's first request
 %% establishes their identity, establish(P) (GSG:1, Identity), a class of one
 %% participant guarded by them and applied at its Propose, every other role of
-%% the contract requiring identity.
+%% the contract requiring identity.  Where a person proposes a class that names
+%% their agent, the script holds a hole there and the person writes into it
+%% the agent's own key, which the request question shows (../self.glp,
+%% own(Ks, R)).
 %%
 %% play_befriend: alice proposes befriending bob; bob, in its guard set, is
 %%   asked on his approval question and answers yes, and his Vote, an own transaction, votes yes;
@@ -23,10 +26,11 @@
 %%   else-branch records his no, his Vote, an own transaction, votes no, and the
 %%   attempt aborts at both; alice proposes it
 %%   again, bob is asked again and answers yes, and it commits.
-%% play_menu: alice's request questions show the persons her agent knows
-%%   (vGLP ca78e11, Section 5.4): the first, asked when her agent starts,
-%%   none; she makes bob known and, once he is, proposes befriending him, and
-%%   the request question asked on reading that request shows bob.
+%% play_menu: alice's request questions show her agent's own key, alice, and
+%%   the persons it knows (vGLP 321127a, Section 5.4): the first, asked when
+%%   her agent starts, none; she makes bob known and, once he is, proposes
+%%   befriending him, and the request question asked on reading that request
+%%   shows bob.
 %%
 %% The types of platform.vglp, written again for the declarations of the
 %% procedures imported from its compiled module.
@@ -49,7 +53,7 @@ Txn      ::= propose(Attempt) ; start(Attempt) ; answer(Attempt) ; vote(Attempt)
            ; introduce_peers(Peer, Peer) ; discover(Peer).
 Output   ::= Txn.
 Approval ::= approval(Attempt, YesNo?).
-Menu     ::= menu(List(Key), Request?).
+Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).
 Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
 Ask(Q)   ::= ask(Constant, Q).
@@ -61,45 +65,45 @@ imported procedure platform#dispatch(Stream(Ask(Question))?,
 
 exported procedure play_befriend(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_befriend(LA?, LB?, N?) :-
-    pair([req(propose(establish(alice))), req(known(bob)), wait(discover(bob)),
-          req(propose(befriend(alice, bob)))],
-         [req(propose(establish(bob))), req(known(alice)), wait(discover(alice)),
+    pair([own([A1], propose(establish(A1?))), req(known(bob)), wait(discover(bob)),
+          own([A2], propose(befriend(A2?, bob)))],
+         [own([B1], propose(establish(B1?))), req(known(alice)), wait(discover(alice)),
           approval(befriend(alice, bob), yes)],
          LA, LB, N).
 
 exported procedure play_unfriend(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_unfriend(LA?, LB?, N?) :-
-    pair([req(propose(establish(alice))), req(known(bob)), wait(discover(bob)),
-          req(propose(befriend(alice, bob))),
+    pair([own([A1], propose(establish(A1?))), req(known(bob)), wait(discover(bob)),
+          own([A2], propose(befriend(A2?, bob))),
           wait(commit(attempt(alice, 2, 2, befriend(alice, bob)))),
           wait(outcome(attempt(bob, 3, 3, unfriend(bob, alice)))),
-          req(propose(befriend(alice, bob))),
+          own([A3], propose(befriend(A3?, bob))),
           wait(commit(attempt(alice, 4, 4, befriend(alice, bob)))),
-          req(propose(unfriend(alice, bob)))],
-         [req(propose(establish(bob))), req(known(alice)), wait(discover(alice)),
+          own([A4], propose(unfriend(A4?, bob)))],
+         [own([B1], propose(establish(B1?))), req(known(alice)), wait(discover(alice)),
           approval(attempt(alice, 2, 2, befriend(alice, bob)), yes),
           wait(outcome(attempt(alice, 2, 2, befriend(alice, bob)))),
-          req(propose(unfriend(bob, alice))),
+          own([B2], propose(unfriend(B2?, alice))),
           approval(attempt(alice, 4, 4, befriend(alice, bob)), yes)],
          LA, LB, N).
 
 exported procedure play_refused(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_refused(LA?, LB?, N?) :-
-    pair([req(propose(establish(alice))), req(known(bob)), wait(discover(bob)),
-          req(propose(befriend(alice, bob))),
+    pair([own([A1], propose(establish(A1?))), req(known(bob)), wait(discover(bob)),
+          own([A2], propose(befriend(A2?, bob))),
           wait(tally(attempt(alice, 2, 2, befriend(alice, bob)))),
-          req(propose(befriend(alice, bob)))],
-         [req(propose(establish(bob))), req(known(alice)), wait(discover(alice)),
+          own([A3], propose(befriend(A3?, bob)))],
+         [own([B1], propose(establish(B1?))), req(known(alice)), wait(discover(alice)),
           approval(attempt(alice, 2, 2, befriend(alice, bob)), no),
           approval(attempt(alice, 3, 3, befriend(alice, bob)), yes)],
          LA, LB, N).
 
 exported procedure play_menu(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_menu(LA?, LB?, N?) :-
-    pair([look, req(propose(establish(alice))), req(known(bob)), wait(discover(bob)),
-          req(propose(befriend(alice, bob))),
+    pair([look, own([A1], propose(establish(A1?))), req(known(bob)), wait(discover(bob)),
+          own([A2], propose(befriend(A2?, bob))),
           wait(commit(attempt(alice, 2, 2, befriend(alice, bob)))), look],
-         [req(propose(establish(bob))), req(known(alice)), wait(discover(alice)),
+         [own([B1], propose(establish(B1?))), req(known(alice)), wait(discover(alice)),
           approval(befriend(alice, bob), yes)],
          LA, LB, N).
 
