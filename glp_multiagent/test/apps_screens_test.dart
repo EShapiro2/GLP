@@ -121,8 +121,8 @@ class _Person {
     ui = UiRuntime(manifest: _manifest(app), onSend: unsent.add);
   }
 
-  /// The open request question: the form `menu`, the persons the agent knows
-  /// and the request it asks for.
+  /// The open request question: the form `menu`, the agent's own key, the
+  /// persons it knows and the request it asks for (vGLP 321127a, Section 5.4).
   OpenConstruct get request => _one('menu');
 
   /// The open approval question: the form `approval`, the attempt and the
@@ -145,8 +145,14 @@ class _Person {
   /// The agent's thread, construct 0.
   OpenConstruct get output => ui.bridge.construct(0)!;
 
+  /// The agent's own key, which the open request question shows: where the
+  /// person proposes a class that names their agent, they type it as it is
+  /// shown, as the plays' scripted persons write it into their proposals'
+  /// holes (`person.glp`, `own(Ks, R)`).
+  String get key => formatTerm(ctorArgs(request.view).$2[0]);
+
   /// The persons the open request question shows.
-  String get known => formatTerm(ctorArgs(request.view).$2[0]);
+  String get known => formatTerm(ctorArgs(request.view).$2[1]);
 
   /// The agent's thread, construct 0, each transaction as its term.
   List<String> get thread {
@@ -418,21 +424,21 @@ class _Run {
   Future<void> befriend() async {
     for (final (p, q) in [(alice, 'bob'), (bob, 'alice')]) {
       var c = p.request;
-      await choose(p, c, [2], 'propose');
-      await choose(p, c, [2, 1], 'establish');
-      await type(p, c, 'peer', [2, 1, 1], p.name);
-      await submit(p, c, [2]);
+      await choose(p, c, [3], 'propose');
+      await choose(p, c, [3, 1], 'establish');
+      await type(p, c, 'peer', [3, 1, 1], p.key);
+      await submit(p, c, [3]);
       c = p.request;
-      await choose(p, c, [2], 'known');
-      await type(p, c, 'peer', [2, 1], q);
-      await submit(p, c, [2]);
+      await choose(p, c, [3], 'known');
+      await type(p, c, 'peer', [3, 1], q);
+      await submit(p, c, [3]);
     }
     final c = alice.request;
-    await choose(alice, c, [2], 'propose');
-    await choose(alice, c, [2, 1], 'befriend');
-    await type(alice, c, 'peer', [2, 1, 1], 'alice');
-    await type(alice, c, 'peer', [2, 1, 2], 'bob');
-    await submit(alice, c, [2]);
+    await choose(alice, c, [3], 'propose');
+    await choose(alice, c, [3, 1], 'befriend');
+    await type(alice, c, 'peer', [3, 1, 1], alice.key);
+    await type(alice, c, 'peer', [3, 1, 2], 'bob');
+    await submit(alice, c, [3]);
     await press(bob, bob.approval, 'yes');
     expect(alice.thread, [
       'propose(attempt(alice, 1, 1, establish(alice)))',
@@ -495,39 +501,40 @@ void main() {
     final alice = run.alice;
     final bob = run.bob;
 
-    // 1. Alice's request question, nobody known: she establishes her
-    // identity (GSG:1), her first request, a class of one participant,
-    // taken at once.
+    // 1. Alice's request question, her agent's own key and nobody known:
+    // she establishes her identity (GSG:1) by the key it shows, her first
+    // request, a class of one participant, taken at once.
+    expect(alice.key, 'alice');
     expect(alice.known, '[]');
     var q = alice.request;
-    await run.choose(alice, q, [2], 'propose');
-    await run.choose(alice, q, [2, 1], 'establish');
-    await run.type(alice, q, 'peer', [2, 1, 1], 'alice');
+    await run.choose(alice, q, [3], 'propose');
+    await run.choose(alice, q, [3, 1], 'establish');
+    await run.type(alice, q, 'peer', [3, 1, 1], alice.key);
     await run.top(alice);
     await run.shoot(alice, 'gsg-01-alice-establish.png');
-    await run.submit(alice, q, [2]);
+    await run.submit(alice, q, [3]);
     expect(alice.thread, ['propose(attempt(alice, 1, 1, establish(alice)))']);
 
     // 2. Her next request question, still nobody known: she asks to know
     // Bob.
     q = alice.request;
     expect(alice.known, '[]');
-    await run.choose(alice, q, [2], 'known');
-    await run.type(alice, q, 'peer', [2, 1], 'bob');
+    await run.choose(alice, q, [3], 'known');
+    await run.type(alice, q, 'peer', [3, 1], 'bob');
     await run.top(alice);
     await run.shoot(alice, 'gsg-02-alice-menu.png');
-    await run.submit(alice, q, [2]);
+    await run.submit(alice, q, [3]);
 
     // Bob likewise: his identity, and to know Alice.
     q = bob.request;
-    await run.choose(bob, q, [2], 'propose');
-    await run.choose(bob, q, [2, 1], 'establish');
-    await run.type(bob, q, 'peer', [2, 1, 1], 'bob');
-    await run.submit(bob, q, [2]);
+    await run.choose(bob, q, [3], 'propose');
+    await run.choose(bob, q, [3, 1], 'establish');
+    await run.type(bob, q, 'peer', [3, 1, 1], bob.key);
+    await run.submit(bob, q, [3]);
     q = bob.request;
-    await run.choose(bob, q, [2], 'known');
-    await run.type(bob, q, 'peer', [2, 1], 'alice');
-    await run.submit(bob, q, [2]);
+    await run.choose(bob, q, [3], 'known');
+    await run.type(bob, q, 'peer', [3, 1], 'alice');
+    await run.submit(bob, q, [3]);
 
     // The hellos exchanged on their conversation, each knows the other.
     expect(alice.thread, [
@@ -542,13 +549,13 @@ void main() {
     // 3. Alice proposes to befriend Bob (GSG:2), on her open request
     // question, asked before Bob was known.
     q = alice.request;
-    await run.choose(alice, q, [2], 'propose');
-    await run.choose(alice, q, [2, 1], 'befriend');
-    await run.type(alice, q, 'peer', [2, 1, 1], 'alice');
-    await run.type(alice, q, 'peer', [2, 1, 2], 'bob');
+    await run.choose(alice, q, [3], 'propose');
+    await run.choose(alice, q, [3, 1], 'befriend');
+    await run.type(alice, q, 'peer', [3, 1, 1], alice.key);
+    await run.type(alice, q, 'peer', [3, 1, 2], 'bob');
     await run.top(alice);
     await run.shoot(alice, 'gsg-03-alice-befriend.png');
-    await run.submit(alice, q, [2]);
+    await run.submit(alice, q, [3]);
 
     // 4. Her next request question shows Bob known; her thread, her
     // proposal.
@@ -589,13 +596,13 @@ void main() {
 
     // 8. Bob ends the friendship (GSG:3), an act of his own.
     q = bob.request;
-    await run.choose(bob, q, [2], 'propose');
-    await run.choose(bob, q, [2, 1], 'unfriend');
-    await run.type(bob, q, 'peer', [2, 1, 1], 'bob');
-    await run.type(bob, q, 'peer', [2, 1, 2], 'alice');
+    await run.choose(bob, q, [3], 'propose');
+    await run.choose(bob, q, [3, 1], 'unfriend');
+    await run.type(bob, q, 'peer', [3, 1, 1], bob.key);
+    await run.type(bob, q, 'peer', [3, 1, 2], 'alice');
     await run.top(bob);
     await run.shoot(bob, 'gsg-08-bob-unfriend.png');
-    await run.submit(bob, q, [2]);
+    await run.submit(bob, q, [3]);
 
     // 9. Nobody else is asked: his thread shows his proposal, the tally and
     // the commit.
@@ -631,21 +638,21 @@ void main() {
     const friends = 'speech(utterance(friends), alice)';
     const create = 'create(alice, $friends)';
     const join = 'join(alice, bob, $friends)';
-    const post = 'post(bob, alice, speech(utterance(hi_all), bob), $friends)';
+    const post = 'post(bob, alice, $friends, speech(utterance(hi_all), bob))';
     const deliver =
         'deliver(alice, bob, speech(utterance(hi_all), bob), $friends)';
 
     // 1. A message to a friend (GSN:1): Alice proposes message, herself,
     // Bob, and the speech act hello, signed by her.
     var q = alice.request;
-    await run.choose(alice, q, [2], 'propose');
-    await run.choose(alice, q, [2, 1], 'message');
-    await run.type(alice, q, 'peer', [2, 1, 1], 'alice');
-    await run.type(alice, q, 'peer', [2, 1, 2], 'bob');
-    await run.say(alice, q, [2, 1, 3], 'hello', 'alice');
-    await run.show(alice, run.node(alice, q, 'form', [2]));
+    await run.choose(alice, q, [3], 'propose');
+    await run.choose(alice, q, [3, 1], 'message');
+    await run.type(alice, q, 'peer', [3, 1, 1], alice.key);
+    await run.type(alice, q, 'peer', [3, 1, 2], 'bob');
+    await run.say(alice, q, [3, 1, 3], 'hello', alice.key);
+    await run.show(alice, run.node(alice, q, 'form', [3]));
     await run.shoot(alice, 'gsn-01-alice-message.png');
-    await run.submit(alice, q, [2]);
+    await run.submit(alice, q, [3]);
     expect(alice.thread.sublist(alice.thread.length - 3), [
       'propose(attempt(alice, 3, 3, $hello))',
       'tally(attempt(alice, 3, 3, $hello))',
@@ -667,13 +674,13 @@ void main() {
     // signed by her: one participant, taken at once, and she is its leader
     // and first member.
     q = alice.request;
-    await run.choose(alice, q, [2], 'propose');
-    await run.choose(alice, q, [2, 1], 'create');
-    await run.type(alice, q, 'peer', [2, 1, 1], 'alice');
-    await run.say(alice, q, [2, 1, 2], 'friends', 'alice');
-    await run.show(alice, run.node(alice, q, 'form', [2]));
+    await run.choose(alice, q, [3], 'propose');
+    await run.choose(alice, q, [3, 1], 'create');
+    await run.type(alice, q, 'peer', [3, 1, 1], alice.key);
+    await run.say(alice, q, [3, 1, 2], 'friends', alice.key);
+    await run.show(alice, run.node(alice, q, 'form', [3]));
     await run.shoot(alice, 'gsn-03-alice-create.png');
-    await run.submit(alice, q, [2]);
+    await run.submit(alice, q, [3]);
     expect(alice.thread.last, 'propose(attempt(alice, 4, 4, $create))');
 
     // 4. Her thread shows the group created, its name opened.
@@ -683,14 +690,14 @@ void main() {
 
     // 5. She adds Bob to it (GSN:3), an act of both.
     q = alice.request;
-    await run.choose(alice, q, [2], 'propose');
-    await run.choose(alice, q, [2, 1], 'join');
-    await run.type(alice, q, 'peer', [2, 1, 1], 'alice');
-    await run.type(alice, q, 'peer', [2, 1, 2], 'bob');
-    await run.say(alice, q, [2, 1, 3], 'friends', 'alice');
-    await run.show(alice, run.node(alice, q, 'form', [2]));
+    await run.choose(alice, q, [3], 'propose');
+    await run.choose(alice, q, [3, 1], 'join');
+    await run.type(alice, q, 'peer', [3, 1, 1], alice.key);
+    await run.type(alice, q, 'peer', [3, 1, 2], 'bob');
+    await run.say(alice, q, [3, 1, 3], 'friends', alice.key);
+    await run.show(alice, run.node(alice, q, 'form', [3]));
     await run.shoot(alice, 'gsn-05-alice-join.png');
-    await run.submit(alice, q, [2]);
+    await run.submit(alice, q, [3]);
     expect(alice.thread.last, 'propose(attempt(alice, 5, 5, $join))');
 
     // 6. Bob's approval question: the attempt, the group's name opened, and
@@ -728,17 +735,18 @@ void main() {
     await run.shoot(alice, 'gsn-08-alice-group.png');
 
     // 9. A message to the group (GSN:5): Bob proposes post, himself, Alice
-    // the leader, the content hi_all signed by him, and the group's name.
+    // the leader, the group's name, and the content hi_all signed by him,
+    // in the order of the class the compiler prints from GSN.glp.
     q = bob.request;
-    await run.choose(bob, q, [2], 'propose');
-    await run.choose(bob, q, [2, 1], 'post');
-    await run.type(bob, q, 'peer', [2, 1, 1], 'bob');
-    await run.type(bob, q, 'peer', [2, 1, 2], 'alice');
-    await run.say(bob, q, [2, 1, 3], 'hi_all', 'bob');
-    await run.say(bob, q, [2, 1, 4], 'friends', 'alice');
-    await run.show(bob, run.node(bob, q, 'form', [2, 1]));
+    await run.choose(bob, q, [3], 'propose');
+    await run.choose(bob, q, [3, 1], 'post');
+    await run.type(bob, q, 'peer', [3, 1, 1], bob.key);
+    await run.type(bob, q, 'peer', [3, 1, 2], 'alice');
+    await run.say(bob, q, [3, 1, 3], 'friends', 'alice');
+    await run.say(bob, q, [3, 1, 4], 'hi_all', bob.key);
+    await run.show(bob, run.node(bob, q, 'form', [3, 1]));
     await run.shoot(bob, 'gsn-09-bob-post.png');
-    await run.submit(bob, q, [2]);
+    await run.submit(bob, q, [3]);
     expect(bob.thread.sublist(bob.thread.length - 5), [
       'propose(attempt(bob, 6, 6, $post))',
       'tally(attempt(bob, 6, 6, $post))',
