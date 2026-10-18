@@ -20,7 +20,10 @@
 %% contract shares, text.glp.  The contract's part is the type Class, one
 %% alternative per schema, the schema's name applied to the people in its roles,
 %% then its party variables, then its speech-act variables, in programs/gsc's
-%% order; the contract itself, as the term programs/gsc reads, from which the
+%% order; the request type, Request, with the alternative propose([t]) for each
+%% guarded class [t], a term of Proposal, the alternatives of the schemas whose
+%% terms name guarded classes, and the alternative known(Peer) (vGLP, Section
+%% 5.4, the compilation); the contract itself, as the term programs/gsc reads, from which the
 %% shared text computes the classes; its reflexive predicates; and per schema a
 %% clause taking a term of Class to the binding it names, binding_of, and one
 %% taking a binding back to the term, class_of.  GLP has no string
@@ -29,9 +32,11 @@
 %% programs/sglp/transform.glp prints a clause's head; a source variable is a
 %% constant whose name is the variable's, V1, V1?, from vname/3.
 
-Lines ::= [] ; [String | Lines].
+Line  ::= String ; guarded_only(String).
+Lines ::= [] ; [Line | Lines].
 imported procedure text#fixed_text(Lines).
 imported procedure local#faults(Contract?, Preds?, Stream(_)).
+imported procedure local#proposable(Contract?, Preds?, Preds).
 
 Found ::= named(Constant, Constant) ; unnamed.
 
@@ -179,16 +184,19 @@ procedure module_lines(Constant?, Contract?, Preds?, Preds?, Stream(_)).
 module_lines(Nm, C, Rf, E, Ls?) :- ground(Nm?), ground(C?), ground(Rf?), ground(E?) |
     H =.. ['%% the canonical CVA platform of the contract', Nm?],
     class_lines(C?, L1),
+    local # proposable(C?, Rf?, Ps),
+    text # fixed_text(Fx),
+    request_parts(C?, Ps?, Fx?, Lr, Fx1),
     T1 =.. [contract_schemas, C?],
     T2 =.. [reflexive_preds, Rf?],
     T3 =.. [introduction_preds, E?],
     binding_lines(C?, L2),
     class_of_lines(C?, L3),
-    text # fixed_text(Fx),
-    lapp(L3?, [''|Fx?], L3x),
+    lapp(L3?, [''|Fx1?], L3x),
     lapp(L2?, ['',
         'procedure class_of(Constant?, Binding?, Peer?, Class).'|L3x?], L2x),
-    lapp(L1?, ['',
+    lapp(L1?, Lr1?, L1x),
+    lapp(Lr?, ['',
         'procedure contract_schemas(Schemas).',
         T1?,
         '.',
@@ -201,7 +209,7 @@ module_lines(Nm, C, Rf, E, Ls?) :- ground(Nm?), ground(C?), ground(Rf?), ground(
         T3?,
         '.',
         '',
-        'procedure binding_of(Class?, Constant, Binding).'|L2x?], L1x),
+        'procedure binding_of(Class?, Constant, Binding).'|L2x?], Lr1),
     lapp(['%% Printed by programs/vglp/cva/compiler from the contract named below, in the',
          '%% term form programs/gsc reads (GSC, Sections 3 and 5): the canonical CVA',
          '%% platform of the contract (vGLP, Section 3.2, Definition "Canonical CVA',
@@ -238,6 +246,48 @@ var_types([nterm(_)|Vs], ['Peer'|Ts?]) :- var_types(Vs?, Ts).
 %% A signed term is no variable of a schema (schema_vars); the clause covers
 %% the type.
 var_types([sgn(_, _)|Vs], Ts?) :- var_types(Vs?, Ts).
+
+%% The request type: Proposal ::= the alternatives of the schemas whose terms
+%% name guarded classes (local.glp, proposable), separated by ;, and Request
+%% ::= propose(Proposal) ; known(Peer); where there are none, Request ::=
+%% known(Peer) alone, and the shared text's lines guarded_only(L), its clauses
+%% on the request propose([t]), are not printed.
+procedure request_parts(Contract?, Preds?, Lines?, Stream(_), Stream(_)).
+request_parts(C, Ps, Fx, Lr?, Fx1?) :- ground(C?), ground(Ps?) |
+    proposal_alts(C?, Ps?, As),
+    request_lines(As?, Lr),
+    any_name(Ps?, G),
+    shared_lines(Fx?, G?, Fx1).
+procedure proposal_alts(Contract?, Preds?, Stream(_)).
+proposal_alts([], _, []).
+proposal_alts([schema(S, Rs)|Ss], Ps, As?) :- ground(S?), ground(Rs?), ground(Ps?) |
+    mem(S?, Ps?, In),
+    schema_vars(Rs?, Vs),
+    var_types(Vs?, Ts),
+    A =.. [S?|Ts?],
+    proposal_alts(Ss?, Ps?, As1),
+    keep_alt(In?, A?, As1?, As).
+proposal_alts([cschema(_, _, _)|Ss], Ps, As?) :- proposal_alts(Ss?, Ps?, As).
+procedure keep_alt(YesNo?, _?, Stream(_)?, Stream(_)).
+keep_alt(yes, A, As, [A?|As?]).
+keep_alt(no, _, As, As?).
+procedure request_lines(Stream(_)?, Stream(_)).
+request_lines([], ['', 'Request ::= known(Peer).']).
+request_lines([A|As], ['', 'Proposal ::=', A?|L?]) :-
+    alts_rest(As?, ['', 'Request ::= propose(Proposal) ; known(Peer).'], L).
+procedure alts_rest(Stream(_)?, Stream(_)?, Stream(_)).
+alts_rest([], Tl, ['.'|Tl?]).
+alts_rest([A|As], Tl, [';', A?|L?]) :- alts_rest(As?, Tl?, L).
+procedure any_name(Preds?, YesNo).
+any_name([], no).
+any_name([_|_], yes).
+%% The shared text's lines, a line guarded_only(L) printed as L where the
+%% contract has a guarded class and left out where it has none.
+procedure shared_lines(Lines?, YesNo?, Stream(_)).
+shared_lines([], _, []).
+shared_lines([guarded_only(L)|Ls], yes, [L?|Ls1?]) :- shared_lines(Ls?, yes, Ls1).
+shared_lines([guarded_only(_)|Ls], no, Ls1?) :- shared_lines(Ls?, no, Ls1).
+shared_lines([L|Ls], G, [L?|Ls1?]) :- otherwise | shared_lines(Ls?, G?, Ls1).
 
 %% binding_of(s(V1, ..., Vn), s, [b(Var1, p(V1?)), ...]).
 procedure binding_lines(Contract?, Stream(_)).

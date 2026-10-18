@@ -9,7 +9,8 @@
 %% ---------------------------------------------------------------------------
 
 Class    ::= befriend(Peer, Peer) ; wave(Peer, Peer) ; hail(Peer, Peer).
-Request  ::= propose(Class) ; known(Peer).
+Proposal ::= befriend(Peer, Peer) ; wave(Peer, Peer) ; hail(Peer, Peer).
+Request  ::= propose(Proposal) ; known(Peer).
 YesNo    ::= yes ; no.
 Decision ::= commit ; abort.
 Attempt  ::= attempt(Peer, Integer, Integer, Class).

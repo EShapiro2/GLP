@@ -22,7 +22,7 @@
 %% atoms at every participant, so the contract is effective (vGLP, Section 5.4,
 %% the sentence after the paragraph on act schemas).  Its class at a binding is
 %% unguarded and its opener the person in its first role (Section 5.4, the
-%% paragraph on act schemas), whose machine proposes it on a tick, the attempt
+%% paragraph on act schemas), whose machine proposes it as an own transaction, the attempt
 %% asking nobody and the other participant voting by its machine (Section 5.4,
 %% Definition "Compilation of the Canonical Platform"; Definition "Canonical
 %% CVA Platform", Propose and Start).  nudge/self.glp plays it.
@@ -59,8 +59,9 @@
 %% same atoms at each participant, so the contract is effective.  Its opener is
 %% the least person in the first role of its unguarded schema-bindings, a alone
 %% (Q-B), and not the least of a and b, which the person in g's first role
-%% would make b where b precedes a: b's tick, which finds the classes of the
-%% unguarded schemas with b in their first role, would never find the class,
+%% would make b where b precedes a: b's agent, which finds among its own
+%% transactions the classes of the unguarded schemas with b in their first
+%% role, would never find the class,
 %% and no agent would open it.  gnudge/self.glp plays it.
 %%
 %% childsafe is a child-safe-like contract (vGLP, Appendix A, "An Example:

@@ -15,7 +15,7 @@
 %%   the unguarded schema-binding nudge(bob, alice) and the guarded g(alice,
 %%   bob), and its opener is bob, the least person in the first role of its
 %%   unguarded schema-bindings (vGLP 2026-10-12 08:26 UTC, Q-B), though alice
-%%   precedes him: bob's machine proposes it on a tick, the attempt asking
+%%   precedes him: bob's machine proposes it as an own transaction, the attempt asking
 %%   nobody and alice's machine voting on its start.  alice opens the class of
 %%   nudge(alice, bob) likewise, both at once, and as in the play of nudge bob,
 %%   holding his own attempt prepared, wounds it in favour of alice's, and
@@ -27,7 +27,8 @@
 %% ---------------------------------------------------------------------------
 
 Class    ::= befriend(Peer, Peer) ; nudge(Peer, Peer) ; g(Peer, Peer).
-Request  ::= propose(Class) ; known(Peer).
+Proposal ::= befriend(Peer, Peer).
+Request  ::= propose(Proposal) ; known(Peer).
 YesNo    ::= yes ; no.
 Decision ::= commit ; abort.
 Attempt  ::= attempt(Peer, Integer, Integer, Class).

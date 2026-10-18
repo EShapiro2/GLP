@@ -9,7 +9,7 @@
 %% and the network's log of the cargoes it carries.
 %%
 %% play_befriend: alice proposes befriending bob; bob, in its guard set, is
-%%   asked on his approval question and answers yes, and his Vote votes yes on his next tick;
+%%   asked on his approval question and answers yes, and his Vote, an own transaction, votes yes;
 %%   alice tallies his yes and commits, and bob's Outcome commits.
 %% play_unfriend: befriended, bob proposes unfriending alice; unfriend is one
 %%   class guarded by either party, its guard sets {alice} and {bob} (vGLP,
@@ -17,7 +17,7 @@
 %%   alice's machine votes yes; befriended again, alice proposes unfriending
 %%   bob, and bob's machine votes yes.
 %% play_refused: alice proposes befriending bob and bob answers no; the
-%%   else-branch records his no, his Vote votes no on his next tick, and the
+%%   else-branch records his no, his Vote, an own transaction, votes no, and the
 %%   attempt aborts at both; alice proposes it
 %%   again, bob is asked again and answers yes, and it commits.
 %% play_menu: alice's request questions show the persons her agent knows
@@ -32,7 +32,8 @@
 Speech   ::= speech(Utterance, Peer).
 Utterance ::= utterance(String) ; Speech.
 Class    ::= befriend(Peer, Peer) ; unfriend(Peer, Peer).
-Request  ::= propose(Class) ; known(Peer).
+Proposal ::= befriend(Peer, Peer) ; unfriend(Peer, Peer).
+Request  ::= propose(Proposal) ; known(Peer).
 YesNo    ::= yes ; no.
 Decision ::= commit ; abort.
 Attempt  ::= attempt(Peer, Integer, Integer, Class).

@@ -12,7 +12,7 @@
 %%
 %% play_friends: alice befriends bob and carol, each asked and answering yes.
 %%   The introduction rule then gives alice the pair {bob, carol}, both known
-%%   to her, and on a tick her agent takes Introduce peers {bob, carol},
+%%   to her, and her agent takes Introduce peers {bob, carol}, an own transaction,
 %%   sending bob intro(carol) and carol intro(bob).  Each, on reading it,
 %%   sends the other ihello, and on the second of the two each comes to know
 %%   the other, no person asked (Section 5.4).  bob, never having requested
@@ -30,7 +30,8 @@
 %% ---------------------------------------------------------------------------
 
 Class    ::= befriend(Peer, Peer) ; greet(Peer, Peer) ; cheer(Peer).
-Request  ::= propose(Class) ; known(Peer).
+Proposal ::= befriend(Peer, Peer) ; greet(Peer, Peer) ; cheer(Peer).
+Request  ::= propose(Proposal) ; known(Peer).
 YesNo    ::= yes ; no.
 Decision ::= commit ; abort.
 Attempt  ::= attempt(Peer, Integer, Integer, Class).
