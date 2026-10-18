@@ -278,7 +278,8 @@ check "cs18's predicates of traceable provenance" \
 send_cs18=$(cat <<'EOF' | squash
 \begin{align*}
 & c'_{\Alice} := c_{\Alice} \uplus \{\mathit{sent}(x,\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{item}(x,a,\Alice)\},\\
-& \text{provided } \mathit{item}(x,a,f) \in c_{\Alice} \text{ and } \mathit{friend}(\Alice) \in c_{\Bob}, \qquad \text{guarded by } \{\Alice\}
+& \text{provided } \mathit{item}(x,a,f) \in c_{\Alice} \text{ and } \mathit{friend}(\Alice) \in c_{\Bob},\\
+& \text{guarded by } \{\Alice\}
 \end{align*}
 EOF
 )
@@ -292,7 +293,8 @@ check "cs18 declares friend reflexive" \
 parent_child_cs18=$(cat <<'EOF' | squash
 \begin{align*}
 & c'_{\Alice} := c_{\Alice} \uplus \{\mathit{parenting}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{parent}(\Alice),\mathit{child}\},\\
-& \text{provided } \mathit{parent}(\Bob) \notin c_{\Alice} \text{ and } \mathit{parent}(\Alice) \notin c_{\Bob}, \qquad \text{guarded by } \{\Alice,\Bob\}
+& \text{provided } \mathit{parent}(\Bob) \notin c_{\Alice} \text{ and } \mathit{parent}(\Alice) \notin c_{\Bob},\\
+& \text{guarded by } \{\Alice,\Bob\}
 \end{align*}
 EOF
 )
@@ -314,27 +316,32 @@ check_eq "and deliver's is the one guarded by the empty set" "1" \
 IFS= read -r -d '' unfriend_body <<'EOF'
 \begin{align*}
 & c'_{\Alice} := c_{\Alice} \setminus \{\mathit{friend}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{friend}(\Alice)\},\\
-& \text{provided } \mathit{friend}(\Bob) \in c_{\Alice} \text{ and } \mathit{friend}(\Alice) \in c_{\Bob}, \qquad \text{guarded by }
+& \text{provided } \mathit{friend}(\Bob) \in c_{\Alice} \text{ and } \mathit{friend}(\Alice) \in c_{\Bob},\\
+& \text{guarded by }
 EOF
 IFS= read -r -d '' child_unfriend_body <<'EOF'
 \begin{align*}
 & c'_{\Alice} := c_{\Alice} \setminus \{\mathit{friend}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{friend}(\Alice)\}, \qquad c'_{\mathit{Carol}} := c_{\mathit{Carol}} \uplus \{\mathit{withdrawal}\}, \qquad c'_{\mathit{Dave}} := c_{\mathit{Dave}} \uplus \{\mathit{withdrawal}\},\\
-& \text{provided } \{\mathit{parent}(\mathit{Carol}),\mathit{friend}(\Bob)\} \subseteq c_{\Alice} \text{ and } \{\mathit{parent}(\mathit{Dave}),\mathit{friend}(\Alice)\} \subseteq c_{\Bob} \text{ and } \mathit{parenting}(\Alice) \in c_{\mathit{Carol}} \text{ and } \mathit{parenting}(\Bob) \in c_{\mathit{Dave}}, \qquad \text{guarded by }
+& \text{provided } \{\mathit{parent}(\mathit{Carol}),\mathit{friend}(\Bob)\} \subseteq c_{\Alice} \text{ and } \{\mathit{parent}(\mathit{Dave}),\mathit{friend}(\Alice)\} \subseteq c_{\Bob} \text{ and } \mathit{parenting}(\Alice) \in c_{\mathit{Carol}} \text{ and } \mathit{parenting}(\Bob) \in c_{\mathit{Dave}},\\
+& \text{guarded by }
 EOF
 IFS= read -r -d '' leave_body <<'EOF'
 \begin{align*}
 & c'_{\Alice} := c_{\Alice} \setminus \{\mathit{listed}(\Bob,n)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{member}(\Alice,n)\},\\
-& \text{provided } \mathit{listed}(\Bob,n) \in c_{\Alice} \text{ and } \mathit{member}(\Alice,n) \in c_{\Bob}, \qquad \text{guarded by }
+& \text{provided } \mathit{listed}(\Bob,n) \in c_{\Alice} \text{ and } \mathit{member}(\Alice,n) \in c_{\Bob},\\
+& \text{guarded by }
 EOF
 IFS= read -r -d '' child_leave_body <<'EOF'
 \begin{align*}
 & c'_{\Alice} := c_{\Alice} \setminus \{\mathit{listed}(\Bob,n)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{member}(\Alice,n)\}, \qquad c'_{\mathit{Carol}} := c_{\mathit{Carol}} \uplus \{\mathit{withdrawal}\},\\
-& \text{provided } \mathit{listed}(\Bob,n) \in c_{\Alice} \text{ and } \mathit{member}(\Alice,n) \in c_{\Bob} \text{ and } \mathit{parenting}(\Bob) \in c_{\mathit{Carol}}, \qquad \text{guarded by }
+& \text{provided } \mathit{listed}(\Bob,n) \in c_{\Alice} \text{ and } \mathit{member}(\Alice,n) \in c_{\Bob} \text{ and } \mathit{parenting}(\Bob) \in c_{\mathit{Carol}},\\
+& \text{guarded by }
 EOF
 IFS= read -r -d '' child_leave_2_body <<'EOF'
 \begin{align*}
 & c'_{\Alice} := c_{\Alice} \setminus \{\mathit{listed}(\Bob,n)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{member}(\Alice,n)\}, \qquad c'_{\mathit{Carol}} := c_{\mathit{Carol}} \uplus \{\mathit{withdrawal}\}, \qquad c'_{\mathit{Dave}} := c_{\mathit{Dave}} \uplus \{\mathit{withdrawal}\},\\
-& \text{provided } \mathit{listed}(\Bob,n) \in c_{\Alice} \text{ and } \mathit{member}(\Alice,n) \in c_{\Bob} \text{ and } \mathit{parenting}(\Alice) \in c_{\mathit{Carol}} \text{ and } \mathit{parenting}(\Bob) \in c_{\mathit{Dave}}, \qquad \text{guarded by }
+& \text{provided } \mathit{listed}(\Bob,n) \in c_{\Alice} \text{ and } \mathit{member}(\Alice,n) \in c_{\Bob} \text{ and } \mathit{parenting}(\Alice) \in c_{\mathit{Carol}} \text{ and } \mathit{parenting}(\Bob) \in c_{\mathit{Dave}},\\
+& \text{guarded by }
 EOF
 
 expanded() { # expanded <schema> <role as the table writes it> <role's person> <body>
@@ -460,37 +467,37 @@ check_not "and no display is printed for any of them" "begin{align" "$out"
 # --- the compilation (Section 5) -------------------------------------------
 # The two displays of the paper, befriend's in Section 5.1, after
 # def:compile, transcribed from /Grassroots/GSC/sections/05-compilation.tex
-# at GSC 16dfcd0, and the swap's in Appendix B.3, from
-# sections/14-currency.tex, compared with the whitespace removed: the compiler
-# emits a display one token to a line, GLP having no string concatenation, and
-# a newline is whitespace to LaTeX.  The comma and the full stop that close
-# the paper's two displays belong to the sentences around them, not to the
-# compiled form, and are not expected here.  Befriend is GSNP's, which
-# requires identity at both roles (GSG:1).
-
-# The layout of befriend's display is GSC's to rule: its paper's Section 5.1
-# (16dfcd0, 05-compilation.tex) prints befriend in three lines, requirements,
-# prohibitions and guard, and its Appendix B.3 (14-currency.tex) prints the
-# swap in the compiler's form, one proviso line and the guard after \qquad;
-# no one layout gives both (since GSC 7bda24f).  Until GSC rules (Code to
-# GSC, 2026-10-18, Blocking: yes for this check), befriend is held as main held
-# it: the befriend of the network with items, the fixture sg_items, in the
-# compiler's form, the paper's Section 5.2 text before 7bda24f.
-SGI=$(run 'contract_named(sg_items, C).' | sed -e 's/^\(GLP> \)*//' | grep -E '^C = ' | head -1 | sed -e 's/^C = //')
+# at GSC aca046b, and the swap's in Appendix B.3, from
+# sections/14-currency.tex at the same commit, compared with the whitespace
+# removed: the compiler emits a display one token to a line, GLP having no
+# string concatenation, and a newline is whitespace to LaTeX.  The comma and
+# the full stop that close the paper's two displays belong to the sentences
+# around them, not to the compiled form, and are not expected here.  The
+# layout is Udi's ruling (GSC #3 to Code, 2026-10-18 21:49 UTC), which both
+# displays print: the assignments, the required atoms on one proviso line and
+# the forbidden atoms on the next, each in role order, a line omitted when it
+# has no atom, and the guard on a line of its own.  Befriend is GSNP's, which
+# requires identity at both roles (GSG:1), and GSG's, which is the same
+# schema; the swap is GC's.
 befriend_paper=$(cat <<'EOF' | squash
 \begin{align*}
 & c'_{\Alice} := c_{\Alice} \uplus \{\mathit{friend}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{friend}(\Alice)\},\\
-& \text{provided } \mathit{friend}(\Bob) \notin c_{\Alice} \text{ and } \mathit{friend}(\Alice) \notin c_{\Bob}, \qquad \text{guarded by } \{\Alice,\Bob\}
+& \text{provided } \mathit{identity} \in c_{\Alice} \text{ and } \mathit{identity} \in c_{\Bob},\\
+& \text{provided } \mathit{friend}(\Bob) \notin c_{\Alice} \text{ and } \mathit{friend}(\Alice) \notin c_{\Bob},\\
+& \text{guarded by } \{\Alice,\Bob\}
 \end{align*}
 EOF
 )
-check_eq "befriend of sg_items compiles to the compiler's two-line display, the layout GSC rules" \
-         "$befriend_paper" "$(compiled_in sg_items "$SGI" befriend)"
+check_eq "GSNP's befriend compiles to the display of Section 5.1" \
+         "$befriend_paper" "$(compiled_in gsnp "$SG" befriend)"
+check_eq "and so does GSG's" \
+         "$befriend_paper" "$(compiled_in gsg "$GSGT" befriend)"
 
 swap_paper=$(cat <<'EOF' | squash
 \begin{align*}
 & c'_{\Alice} := (c_{\Alice} \setminus \{\text{\textcent}(u)\}) \uplus \{\text{\textcent}(v)\}, \qquad c'_{\Bob} := (c_{\Bob} \setminus \{\text{\textcent}(v)\}) \uplus \{\text{\textcent}(u)\},\\
-& \text{provided } \text{\textcent}(u) \in c_{\Alice} \text{ and } \text{\textcent}(v) \in c_{\Bob}, \qquad \text{guarded by } \{\Alice,\Bob\}
+& \text{provided } \text{\textcent}(u) \in c_{\Alice} \text{ and } \text{\textcent}(v) \in c_{\Bob},\\
+& \text{guarded by } \{\Alice,\Bob\}
 \end{align*}
 EOF
 )
@@ -731,9 +738,10 @@ check "leave_2 is guarded by a supermajority of the child's assembly" \
 # +(i) and -(i) disjoint, and nothing of +(i) u -(i).  gf_inert_seated's
 # confirm has a seated role, xi^seat, that adds and deletes nothing: the
 # contract is formed, meets the three conditions on the text, and compiles,
-# by definition:compile, to the assignment of each role over its extent; the
-# proviso c'_p \neq c_p over the extent of xi^seat, which is no guarding agent
-# role and whose state the other provisos do not change; each role's proviso;
+# by definition:compile at GSC aca046b, to the assignment of each role over
+# its extent; the required atoms of each role in role order, neither
+# forbidding any; the proviso c'_p \neq c_p over the extent of xi^seat, which
+# is no guarding agent role and whose state the other provisos do not change;
 # and the guard.  An atom added and deleted at a seated role is refused,
 # gf_added_deleted malformed.
 out=$(run "check_variant(gf_inert_seated, $FED, V).")
@@ -743,9 +751,9 @@ IFS= read -r -d '' confirm_tex <<'TEX'
 \begin{align*}
 & c'_p := c_p \uplus \{\mathit{confirmed}(\zeta,\xi)\} && (p\in\mathrm{ext}_c(\zeta^{\mathit{seat}})),\\
 & c'_p := c_p && (p\in\mathrm{ext}_c(\xi^{\mathit{seat}})),\\
-& \text{provided } c'_p \neq c_p && (p\in\mathrm{ext}_c(\xi^{\mathit{seat}})),\\
 & \text{provided } \mathit{child}(\zeta,\xi) \in c_p && (p\in\mathrm{ext}_c(\zeta^{\mathit{seat}})),\\
 & \text{provided } \mathit{child}(\zeta,\xi) \in c_p && (p\in\mathrm{ext}_c(\xi^{\mathit{seat}})),\\
+& \text{provided } c'_p \neq c_p && (p\in\mathrm{ext}_c(\xi^{\mathit{seat}})),\\
 & \text{guarded by } G,\ G\subseteq\mathrm{ext}_c(\zeta^{\mathit{seat}}) \text{ with } |G|>\theta|\mathrm{ext}_c(\zeta^{\mathit{seat}})|
 \end{align*}
 TEX
@@ -783,7 +791,8 @@ check "item, posted and delivered have traceable provenance there with the rest"
 forward_gsnp=$(cat <<'TEX' | squash
 \begin{align*}
 & c'_{\Alice} := c_{\Alice}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{item}(\mathrm{sgn}(x,\Alice))\},\\
-& \text{provided } \{\mathit{identity},\mathit{item}(x)\} \subseteq c_{\Alice} \text{ and } \{\mathit{identity},\mathit{friend}(\Alice)\} \subseteq c_{\Bob}, \qquad \text{guarded by } \{\Alice\}
+& \text{provided } \{\mathit{identity},\mathit{item}(x)\} \subseteq c_{\Alice} \text{ and } \{\mathit{identity},\mathit{friend}(\Alice)\} \subseteq c_{\Bob},\\
+& \text{guarded by } \{\Alice\}
 \end{align*}
 TEX
 )
@@ -799,7 +808,8 @@ check_eq "forward compiles with the signed term, its guarding role changing noth
 post_gsnp=$(cat <<'TEX' | squash
 \begin{align*}
 & c'_{\Alice} := c_{\Alice}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{posted}(\mathrm{sgn}(x,\Alice),n)\},\\
-& \text{provided } \{\mathit{identity},\mathit{item}(x),\mathit{member}(\Bob,n)\} \subseteq c_{\Alice} \text{ and } \{\mathit{identity},\mathit{member}(\Bob,n),\mathit{listed}(\Alice,n)\} \subseteq c_{\Bob}, \qquad \text{guarded by } \{\Alice\}
+& \text{provided } \{\mathit{identity},\mathit{item}(x),\mathit{member}(\Bob,n)\} \subseteq c_{\Alice} \text{ and } \{\mathit{identity},\mathit{member}(\Bob,n),\mathit{listed}(\Alice,n)\} \subseteq c_{\Bob},\\
+& \text{guarded by } \{\Alice\}
 \end{align*}
 TEX
 )
@@ -808,14 +818,16 @@ check_eq "post compiles with the signed term, its guarding role changing nothing
 
 # deliver, by def:compile: the leader Alice's assignment adds
 # delivered(y, Bob, n), the member Bob's the leader's signed term
-# item(sgn(y, Alice)), the proviso is what each role requires and Alice
-# forbids, and the guard is empty, no role of deliver guarding (Section 5.1,
-# after def:compile).  The signed term's role does not guard, and def:schema
+# item(sgn(y, Alice)), the proviso is what each role requires, on one line,
+# and what Alice forbids, on the next, and the guard is empty, no role of
+# deliver guarding (Section 5.1, after def:compile).  The signed term's role does not guard, and def:schema
 # admits it, Alice requiring posted(y, n).
 deliver_gsnp=$(cat <<'TEX' | squash
 \begin{align*}
 & c'_{\Alice} := c_{\Alice} \uplus \{\mathit{delivered}(y,\Bob,n)\}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{item}(\mathrm{sgn}(y,\Alice))\},\\
-& \text{provided } \{\mathit{identity},\mathit{member}(\Alice,n),\mathit{posted}(y,n),\mathit{listed}(\Bob,n)\} \subseteq c_{\Alice} \text{ and } \mathit{delivered}(y,\Bob,n) \notin c_{\Alice} \text{ and } \{\mathit{identity},\mathit{member}(\Alice,n)\} \subseteq c_{\Bob}, \qquad \text{guarded by } \emptyset
+& \text{provided } \{\mathit{identity},\mathit{member}(\Alice,n),\mathit{posted}(y,n),\mathit{listed}(\Bob,n)\} \subseteq c_{\Alice} \text{ and } \{\mathit{identity},\mathit{member}(\Alice,n)\} \subseteq c_{\Bob},\\
+& \text{provided } \mathit{delivered}(y,\Bob,n) \notin c_{\Alice},\\
+& \text{guarded by } \emptyset
 \end{align*}
 TEX
 )

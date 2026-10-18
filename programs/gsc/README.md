@@ -96,6 +96,18 @@ the compiler prints, the whitespace removed.  The closing comma and full stop
 of the paper's two displays belong to the sentences around them rather than
 to the compiled form, and are not printed.
 
+A display is laid out as Udi ruled (GSC #3 to Code, 2026-10-18 21:49 UTC)
+and both displays print: the assignments of the roles on one line; the
+required atoms on one proviso line and the forbidden atoms on the next, each
+in role order, a line omitted when it has no atom; and the guard on a line of
+its own.  A guarding role that adds and deletes nothing, which `def:schema`
+admits, is assigned `c'_{\Alice} := c_{\Alice}`, as `forward` and `post` of
+GSNP are at Alice.  The paper's displays leave out two lines of the compiled
+form of `def:compile` and the compiler leaves them out too: that what is
+added and what is deleted at an agent are disjoint, and that the state of an
+agent in a role that is not guarding changes, which holds under the other
+provisos at such a role, `def:schema` requiring it to add or delete an atom.
+
 A schema's name is no part of its compiled form, so `compile_named` puts it
 in an `\iffalse ... \fi` before each display, which TeX skips.
 
@@ -106,13 +118,20 @@ the faults.  A malformed contract is not compiled either, and the message
 names each fault the checker found, its schema and role, in the paper's words.
 
 A contract with community roles compiles to the lines of Definition
-Compilation of Appendix D, one form for the whole contract, its party roles
-included: an assignment line per role and, where the role requires or forbids
-an atom, a proviso line, each over the agents `p` of the role's extent
-`ext_c(pi_i)`; `provided Theta` where the schema carries reach conditions;
-for every name term `sigma . y` of the schema, that it is an argument of no
-atom of the configuration; and the guard, the union of a part of each guarding
-role's extent larger than its threshold of it, which for a party role is `0`.
+Compilation of Appendix D, in their order, one form for the whole contract,
+its party roles included: an assignment line per role; a line per role that
+requires an atom, for its required atoms, in role order, then a line per role
+that forbids an atom, for its forbidden atoms, in role order, as the ruling
+above lays out a display, a role's atoms ranging over its own extent; a line
+`c'_p \neq c_p` per role that adds and deletes nothing and is not a guarding
+agent role, which Appendix D's Definition Act schema admits and at which the
+other provisos do not give it (the worked box leaves the line out for
+`federate`, whose seated role adds two atoms); each over the agents `p` of
+the role's extent `ext_c(pi_i)`; `provided Theta` where the schema carries
+reach conditions; for every name term `sigma . y` of the schema, that it is
+an argument of no atom of the configuration; and the guard, the union of a
+part of each guarding role's extent larger than its threshold of it, which
+for a party role is `0`.
 `compile_schema_in(gfwc, <GFWC's term>, federate).` prints the worked box of Appendix D
 token for token, and `test_gsc.sh` compares them.  A name variable and a
 threshold are named by a Greek letter, `zeta`, `xi`, `theta`, and printed as
@@ -199,7 +218,14 @@ reflexive may not have; `sg_self_required` and `sg_refl_required` are the
 social graph with `befriend` requiring `friend` of each party at its own role,
 without and with `friend` declared reflexive, on clause 1 of
 `def:unobstructed`; and `sg_refl_forbidden` is it with `friend` reflexive and
-`befriend` forbidding those atoms, on clause 3.  `cssn` declares `friend`
+`befriend` forbidding those atoms, on clause 3.  `sg_inert_role`,
+`sg_inert_schema` and `sg_added_deleted` are GSNP with one schema more,
+formed otherwise than `def:schema` requires: a role that does not guard and
+adds and deletes nothing, a schema no role of which adds or deletes an atom,
+and an atom added and deleted at one role, each refused.  `gf_inert_seated`
+is the federation with a schema whose unguarded seated role adds and deletes
+nothing, which Appendix D admits, and `gf_added_deleted` the federation with
+one adding and deleting an atom at a seated role, refused.  `cssn` declares `friend`
 reflexive, as CSSN's paper does, and is its eighteen schemas expanded to
 twenty-eight, `unfriend`, `child_unfriend`, `leave`, `child_leave` and
 `child_leave_2` each written as one schema per role, guarded at that role and
@@ -256,19 +282,31 @@ fault there is the same as for a contract of Section 3, volition being one
 condition in Section 3 and Appendix D, and one procedure, `community.glp`'s, decides
 it for both.
 
-A contract that declares a predicate reflexive and has a schema adding or
-deleting, at a role, the atom of that predicate naming that role is
-malformed (the paragraph after `def:binding`), whichever section it is
+A contract with a schema not formed as `def:schema` requires is malformed:
+`+(i)` and `-(i)` are disjoint at every role, and `+(i) u -(i)` is nonempty
+at every role that is not a guarding role and at some role, a guarding role
+being one that may add and delete nothing; Appendix D's Definition Act schema
+requires the first alone, and a contract with community roles is put to it
+alone.  A contract that declares a predicate reflexive and has a schema
+adding or deleting, at a role, the atom of that predicate naming that role is
+malformed too (the paragraph after `def:binding`), whichever section it is
 written in.  So is a contract with a schema whose signed term violates what
 `def:schema` requires of it.  It is refused, its verdict `malformed(Faults)`,
 each fault a
 
+    added_and_deleted(Schema, Role, Atom)
+    changes_nothing(Schema, Role)
+    no_role_changes(Schema)
     reflexive(Schema, Role, Atom)
     signed(Schema, Role, Atom, not_added)
     signed(Schema, Role, Atom, not_required)
     signed(Schema, Role, Atom, community)
 
-naming the schema, the role and the atom, and no condition is decided for it.
+naming the schema and, where there is one, the role and the atom, and no
+condition is decided for it.  `added_and_deleted` is an atom both added and
+deleted at a role, `changes_nothing` a role that is not guarding and adds and
+deletes nothing, and `no_role_changes` a schema no role of which adds or
+deletes an atom.
 `not_added` is a signed term in an atom not marked `+`, and `not_required` one
 whose speech-act variable occurs in no atom its role requires, each a
 requirement of `def:schema`, which admits a signed term whether or not its
@@ -329,25 +367,25 @@ sign and forward, written in its table, which shows the `identity` every role
 but establish's requires only in establish,
 
     sign(Alice?; x) :   +item(x)
-    forward(Alice?, Bob; x) :   item(x), +sent(x, Bob)    friend(Alice), +item(sgn(x, Alice))
+    forward(Alice?, Bob; x) :   item(x)    friend(Alice), +item(sgn(x, Alice))
 
 are, `identity` written in as `GSNP.glp` writes it,
 
     schema(sign,
       [rs(guarded, [atom(item, [svar(x)])], [], [atom(identity, [])], [])])
     schema(forward,
-      [rs(guarded,   [atom(sent, [svar(x), role(2)])], [],
+      [rs(guarded,   [], [],
                      [atom(identity, []), atom(item, [svar(x)])], []),
        rs(unguarded, [atom(item, [sgn(x, 1)])], [],
                      [atom(identity, []), atom(friend, [role(1)])], [])])
 
-the signed term naming Alice, the forwarder, by her index.  The checker
-takes the contract as given and does not test it against the
-well-formedness `def:schema` requires of a schema (`+(i)` and `-(i)` disjoint
-and not both empty).  It does test what `def:schema` requires of a signed
-term, and what the paragraph after `def:binding`
-requires of a contract declaring a predicate reflexive, and refuses a
-contract that fails either as malformed.
+the signed term naming Alice, the forwarder, by her index, and Alice, who
+guards, adding and deleting nothing.  The checker tests a contract against
+what `def:schema` requires of the form of a schema (`+(i)` and `-(i)`
+disjoint at every role, and `+(i) u -(i)` nonempty at every role that is not
+a guarding role and at some role) and of a signed term, and what the
+paragraph after `def:binding` requires of a contract declaring a predicate
+reflexive, and refuses a contract that fails any of them as malformed.
 
 ## The files
 
@@ -358,7 +396,7 @@ contract that fails either as malformed.
 | `prov.glp` | `def:grounded`, as a greatest fixpoint |
 | `community.glp` | the three conditions of Appendix D, and the rooted predicates; its volition is `def:volition` of Section 3 too |
 | `wards.glp` | `def:guardianship`, `def:unobstructed-marks`, `def:relay` and `def:introduction-wards`, as a search over the marks and the predicates of arity one |
-| `check.glp` | `def:syntactically-grassroots`, the two halves together, Appendix F when its first conjunct fails, and the conditions of Appendix D for a contract with community roles; the refusal of a malformed contract, for a reflexive predicate or a signed term |
+| `check.glp` | `def:syntactically-grassroots`, the two halves together, Appendix F when its first conjunct fails, and the conditions of Appendix D for a contract with community roles; the refusal of a malformed contract, for the form of a schema, a reflexive predicate or a signed term |
 | `compile.glp` | `def:compile`, printed as the LaTeX of the displays of Section 5.1 and Appendix B.3, and `definition:compile`, printed as the worked box of Appendix D |
 | `contracts.glp` | the checker's fixtures: contracts that stand alone, by name, and variants of a contract, by name and the contract's term |
 
