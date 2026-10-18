@@ -735,6 +735,155 @@ void main() {
     expect(p.screen, hasLength(3));
   });
 
+  // vGLP 092c9fe, Definition "Volitional Procedure, Interactive Type": "a
+  // named type in it is recursive only if it has no mode inversion", so a
+  // recursive type is written whole by the program or whole by the person;
+  // Definition "Default Widget": "a field of a recursive type drawn when the
+  // person opens it" (vGLP #14 Cowork, 2026-10-18 11:50 UTC, Udi approved).
+  // The fixture is programs/tests/vglp/recursive: SpeechAct ::=
+  // speech(Utterance, Key) and Utterance ::= text(String) ; SpeechAct,
+  // recursive through each other.  The widget of a recursive type is finite
+  // by a reference back to itself, rec(T, W) and ref(T) (bridge.dart), and a
+  // form's field drawn by either is closed until the person opens it, in the
+  // person's form and in the program's alike, so that the widget unfolds only
+  // as far as the person goes and every finite answer is formed by finitely
+  // many acts.
+  group('a recursive interactive type: a field of a recursive type drawn when '
+      'the person opens it', () {
+    const utterance = "rec('Utterance', menu([form(text, [field('String', "
+        "text)]), form(speech, [field('Utterance', ref('Utterance')), "
+        "field('Key', peer)])]))";
+    const sayWidget = "rec('SpeechAct', form(speech, [field('Utterance', "
+        "$utterance), field('Key', peer)]))";
+    const shownUtterance = "rec('Utterance', menu([form(text, "
+        "[field('String', shown)]), form(speech, [field('Utterance', "
+        "ref('Utterance')), field('Key', shown)])]))";
+    const forwardWidget = "form(forward, [field('SpeechAct', "
+        "rec('SpeechAct', form(speech, [field('Utterance', $shownUtterance), "
+        "field('Key', shown)]))), field('YesNo', buttons([yes, no]))])";
+
+    /// The chip [label] of the menu at [at] of construct [c].
+    Finder chip(OpenConstruct c, List<int> at, String label) =>
+        find.descendant(
+            of: find.byKey(nodeKey(c.id, 'menu', at)),
+            matching: find.widgetWithText(ChoiceChip, label));
+
+    /// The text [t] shown at [at] of construct [c].
+    Finder shownText(OpenConstruct c, List<int> at, String t) =>
+        find.descendant(
+            of: find.byKey(nodeKey(c.id, 'shown', at)), matching: find.text(t));
+
+    testWidgets(
+        'the person writes a speech act signed twice: the root drawn at '
+        'once, each field of a recursive type closed until opened, the menu '
+        'choosing speech or text, and the whole term formed and granted',
+        (tester) async {
+      final p = await _Person.boot(tester, 'say_init', dir: 'recursive');
+      final c = p.the(sayWidget);
+      expect(formatTerm(c.view), 'input([])');
+
+      /// Open the field of a recursive type at [at].
+      Future<void> open(List<int> at) async {
+        expect(find.byKey(nodeKey(c.id, 'closed', at)), findsOneWidget);
+        await tester.tap(find.byKey(openKey(c.id, at)));
+        await tester.pump();
+        expect(find.byKey(nodeKey(c.id, 'closed', at)), findsNothing);
+      }
+
+      // The root, the form speech, drawn at once: its Utterance field of a
+      // recursive type closed, its Key a peer field; nothing to submit.
+      expect(find.byKey(nodeKey(c.id, 'form', [])), findsOneWidget);
+      expect(find.byKey(nodeKey(c.id, 'closed', [1])), findsOneWidget);
+      expect(find.byKey(nodeKey(c.id, 'menu', [1])), findsNothing);
+      expect(find.byKey(nodeKey(c.id, 'peer', [2])), findsOneWidget);
+      expect(p.submittable(c), isFalse);
+
+      // Opened: the menu of Utterance, text or speech; speech chosen, its
+      // form, whose Utterance field, ref('Utterance'), is closed again.
+      await open([1]);
+      expect(find.byKey(nodeKey(c.id, 'menu', [1])), findsOneWidget);
+      expect(chip(c, [1], 'text'), findsOneWidget);
+      expect(chip(c, [1], 'speech'), findsOneWidget);
+      await tester.tap(chip(c, [1], 'speech'));
+      await tester.pump();
+      expect(find.byKey(nodeKey(c.id, 'form', [1])), findsOneWidget);
+      expect(find.byKey(nodeKey(c.id, 'closed', [1, 1])), findsOneWidget);
+      expect(find.byKey(nodeKey(c.id, 'peer', [1, 2])), findsOneWidget);
+      expect(p.submittable(c), isFalse);
+
+      // Opened again, as far as the answer goes: text.
+      await open([1, 1]);
+      expect(find.byKey(nodeKey(c.id, 'menu', [1, 1])), findsOneWidget);
+      await tester.tap(chip(c, [1, 1], 'text'));
+      await tester.pump();
+      expect(find.byKey(nodeKey(c.id, 'text', [1, 1, 1])), findsOneWidget);
+      expect(find.byKey(nodeKey(c.id, 'closed', [1, 1, 1])), findsNothing);
+      expect(p.submittable(c), isFalse);
+
+      await p.type(c, 'text', [1, 1, 1], 'hi');
+      await p.type(c, 'peer', [1, 2], 'alice');
+      await p.type(c, 'peer', [2], 'bob');
+      expect(p.submittable(c), isTrue);
+      await p.submit(c);
+      expect(p.grants.last,
+          'input(${c.id}, [], speech(speech(text(hi), alice), bob))');
+      expect(p.screen, ['said(speech(speech(text(hi), alice), bob))']);
+      p.withdrawn(c);
+    });
+
+    testWidgets(
+        'the program writes a speech act signed twice, shown whole beside '
+        'the person\'s yes or no: each field of the recursive type opened in '
+        'turn, its signer shown beside it, and the answer granted',
+        (tester) async {
+      final p = await _Person.boot(tester, 'ask_init', dir: 'recursive');
+      final c = p.the(forwardWidget);
+      expect(formatTerm(c.view),
+          'forward(speech(speech(text(hi), alice), bob), input([2]))');
+
+      Future<void> open(List<int> at) async {
+        expect(find.byKey(nodeKey(c.id, 'closed', at)), findsOneWidget);
+        await tester.tap(find.byKey(openKey(c.id, at)));
+        await tester.pump();
+        expect(find.byKey(nodeKey(c.id, 'closed', at)), findsNothing);
+      }
+
+      // The form forward: its SpeechAct field closed, the buttons beside it.
+      expect(find.byKey(nodeKey(c.id, 'form', [])), findsOneWidget);
+      expect(find.byKey(nodeKey(c.id, 'closed', [1])), findsOneWidget);
+      expect(find.byKey(nodeKey(c.id, 'buttons', [2])), findsOneWidget);
+      expect(p.inside(c, find.text('bob')), findsNothing);
+
+      // Opened: the form speech over the value, its Utterance closed and its
+      // signer bob shown.
+      await open([1]);
+      expect(find.byKey(nodeKey(c.id, 'form', [1])), findsOneWidget);
+      expect(find.byKey(nodeKey(c.id, 'closed', [1, 1])), findsOneWidget);
+      expect(shownText(c, [1, 2], 'bob'), findsOneWidget);
+      expect(p.inside(c, find.text('alice')), findsNothing);
+
+      // Opened: the alternative speech of the menu, over the inner value,
+      // its Utterance closed and its signer alice shown.
+      await open([1, 1]);
+      expect(find.byKey(nodeKey(c.id, 'menu', [1, 1])), findsOneWidget);
+      expect(find.byKey(nodeKey(c.id, 'form', [1, 1])), findsOneWidget);
+      expect(find.byKey(nodeKey(c.id, 'closed', [1, 1, 1])), findsOneWidget);
+      expect(shownText(c, [1, 1, 2], 'alice'), findsOneWidget);
+      expect(p.inside(c, find.text('hi')), findsNothing);
+
+      // Opened: the text, hi.
+      await open([1, 1, 1]);
+      expect(find.byKey(nodeKey(c.id, 'form', [1, 1, 1])), findsOneWidget);
+      expect(shownText(c, [1, 1, 1, 1], 'hi'), findsOneWidget);
+
+      // Answered beside the whole.
+      await p.tap(p.inside(c, find.widgetWithText(ElevatedButton, 'yes')));
+      expect(p.grants.last, 'input(${c.id}, [2], yes)');
+      expect(p.screen, ['forwarded(yes)']);
+      p.withdrawn(c);
+    });
+  });
+
   group('the bridge on the person channel', () {
     late List<String> sent;
     late UiRuntime r;

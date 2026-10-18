@@ -91,8 +91,8 @@ Matcher _refusal(String call, String calledAs, String where, String term) =>
             'writer'),
         contains('every call of a volitional procedure, in a clause body or '
             'in the initial goal, holds a writer at each output position '
-            '(vGLP, Definition "Volitional Procedure, Interactive Type, '
-            'Interactive Term, Ordinary Clause, vGLP Program")'));
+            '(vGLP, Definition "Clause of a Volitional Procedure, '
+            'Interactive Term")'));
 
 void main() {
   group('a clause of the GLP module forming the initial goal, at link time',

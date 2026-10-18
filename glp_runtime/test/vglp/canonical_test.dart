@@ -886,9 +886,8 @@ procedure (YesNo?)*ask(Integer?, YesNo).
                         'input position 1, and the later clause $later, at '
                         'line $line, does not'),
                     contains('only if every later clause of the procedure '
-                        'reads it too (vGLP, Definition "Volitional '
-                        'Procedure, Interactive Type, Interactive Term, '
-                        'Ordinary Clause, vGLP Program")')))
+                        'reads it too (vGLP, Definition "Clause of a '
+                        'Volitional Procedure, Interactive Term")')))
             .having((e) => e.line, 'line', line));
 
     test('a first clause reading by a head term, a second not: refused', () {
@@ -955,9 +954,8 @@ procedure (Yes?)*q(Done).
                         '$term at output position 1, which is not a writer'),
                     contains('every call of a volitional procedure, in a '
                         'clause body or in the initial goal, holds a writer '
-                        'at each output position (vGLP, Definition '
-                        '"Volitional Procedure, Interactive Type, Interactive '
-                        'Term, Ordinary Clause, vGLP Program")')))
+                        'at each output position (vGLP, Definition "Clause '
+                        'of a Volitional Procedure, Interactive Term")')))
             .having((e) => e.line, 'line', line));
 
     test('(yes)*q(done). called as q(done) in a clause body: refused', () {

@@ -95,7 +95,8 @@
 // Cowork, 2026-10-11 14:31 UTC, item 2); the two are told apart by the name:
 // a list is ended by the grant of its end button, a stream never, and the
 // list's widget is input_list(W), the stream's input_box(W).  The end
-// button grants [end], a list cell, which no element of a flat type can be
+// button grants [end], a list cell, which no element of an interactive type
+// can be
 // (listEnd; 14:31 UTC, item 3).  A stream or a list inside a form the
 // person writes is a question of its own: the form is formed with [] there,
 // its answer carries a fresh variable there (open_N), answered at its own
@@ -104,23 +105,53 @@
 // every other field(L, W), L the name of the field's declared type.  A
 // position of type Key, or of a type defined as Key, is a peer field.
 //
-// FLAT TYPES (vGLP at 66b6500, Definition "Volitional Procedure,
-// Interactive Type, Interactive Term, Ordinary Clause, vGLP Program": "An
-// interactive type is flat: it is built from constants, String, Integer,
-// Real, Key, Constant, Module, named types so built, tuples and unions, and
-// Stream or List as the whole type or as an argument of a tuple, never under
-// another Stream or List; it has no other recursive type, and no type
-// parameter at a position the person writes").  Refused, each naming the
-// type, over the whole interactive type, a structure the program writes
-// included, one holding no question too (vGLP #7 Cowork, 2026-10-11 14:31
-// UTC, items 1 and 2; vGLP #8 Cowork, 2026-10-11 15:47 UTC, items 1 and 3;
-// _checkFlat): a stream or a list in an element of a stream or a list; a
-// list cell outside a Stream or a List, a tuple '.'(H, T) being one; a
-// recursive type other than a Stream or a List; a position the person
-// writes of a type parameter, which has no widget; and a position of the
-// type _, whoever writes it, none of the Definition's building blocks
-// (vGLP #8 Cowork, 2026-10-11 17:24 UTC, Q2).
-// So the compilation emits neither ref(T) nor form('.', ...).
+// THE INTERACTIVE TYPES (vGLP 092c9fe, Definition "Volitional Procedure,
+// Interactive Type": "An interactive type is built from constants, String,
+// Integer, Real, Key, Constant, Module, named types so built, tuples and
+// unions, and Stream or List as the whole type or as an argument of a tuple,
+// never under another Stream or List, and a Stream only at a position the
+// person writes; a named type in it is recursive only if it has no mode
+// inversion, and it has no type parameter at a position the person
+// writes").  Refused, each naming the type, over the whole interactive type,
+// a structure the program writes included, one holding no question too
+// (vGLP #7 Cowork, 2026-10-11 14:31 UTC, items 1 and 2; vGLP #8 Cowork,
+// 2026-10-11 15:47 UTC, items 1 and 3; _checkInteractive): a stream or a
+// list in an element of a stream or a list, reached through a recursive
+// type too; a list cell outside a Stream or a List, a tuple '.'(H, T) being
+// one; a recursive named type with a mode inversion in it, a position marked
+// ? (TGLP, well-typing.tex, Definition "Simple Prefix": "A mode inversion
+// point: any position whose type is marked with ?"), in its own definition
+// or in one it reaches; a position the person writes of a type parameter,
+// which has no widget; and a position of the type _, whoever writes it,
+// none of the Definition's building blocks (vGLP #8 Cowork, 2026-10-11
+// 17:24 UTC, Q2).  So the compilation emits no form('.', ...).  The
+// Definition's "a Stream only at a position the person writes" (vGLP
+// 56d898f) is not checked here: Code #9 routed it to the owners of the
+// programs it reaches (Code_inbox.md, 2026-10-16 13:57 UTC).
+//
+// RECURSIVE TYPES (vGLP 092c9fe, Definition "Volitional Procedure,
+// Interactive Type", "a named type in it is recursive only if it has no
+// mode inversion", and the paragraph after it: "A speech act forwarded with
+// its provenance is signed again at each forward, so its type is recursive,
+// and a request to forward it carries it.  With no mode inversion, a
+// recursive type is written whole by the program or whole by the person";
+// vGLP #14 Cowork, 2026-10-18 11:50 UTC, Udi approved).  A recursive named
+// type, mutual recursion included --- SpeechAct ::= speech(Utterance, Key),
+// Utterance ::= text(String) ; SpeechAct --- is admitted where no position
+// reachable from it is marked ? ([_Generator._recursive],
+// [_Generator._inversionIn]); Stream and List are not these named types,
+// the Definition admitting them by their own clause, a Stream(YesNo?) the
+// program writes among them (_presentSeq).  The person writes a recursive
+// type whole: its forming clauses form the answer from the raw input by
+// recursion on the type's definition, form_N calling form_N again where the
+// definition names the type again (_former).  The program writes it whole:
+// it holds no question, and is drawn once written whole (shown/3).  Its
+// widget is finite by a reference back to itself: rec(T, W) binds the name
+// T of a recursive type to its widget W, within which ref(T) is T again,
+// and a field of a form drawn by either is "a field of a recursive type
+// drawn when the person opens it" (Definition "Default Widget"), so every
+// finite answer is formed by finitely many acts (_widget; the bridge,
+// glp_multiagent/lib/ui_runtime/bridge.dart, recCtor and refCtor).
 //
 // A STREAM OR A LIST THE PROGRAM WRITES WHOSE ELEMENTS HOLD QUESTIONS (vGLP
 // #8 Cowork, 2026-10-11 15:47 UTC, item 2, Task D): each element presented
@@ -132,7 +163,7 @@
 // WHAT IS NOT BUILT, each a compile error naming the type: a position the
 // program writes inside one the person writes (the Answer transition leaves
 // it to the program, and the construct has no output to show for it yet,
-// _checkPersonWritable); a difference list or a mutual reference.
+// _checkPersonWritable); a difference list.
 // A position the person writes of type Real is built, formed by real/1 and
 // drawn as a number field (vGLP #5 Cowork, 2026-10-03 08:16 UTC, item 6;
 // Definition "Widget Declaration, Default Widget" at c2e8b57: "a number
@@ -143,18 +174,17 @@ import '../analysis/type_checker/type_ast.dart';
 import '../compiler/glp_printer.dart' show constantSource, functorNameSource;
 import 'mediator.dart' show typeSource;
 
-/// The Definition an interactive type is refused by where it is not flat.
-const _flatDefinition = 'vGLP, Definition "Volitional Procedure, Interactive '
-    'Type, Interactive Term, Ordinary Clause, vGLP Program"';
+/// The Definition an interactive type is refused by where it is not one.
+const _definition = 'vGLP, Definition "Volitional Procedure, Interactive Type"';
 
 /// The term the end button of a list the person writes grants, R in
 /// input(Id, P, R): "a list the person writes: the same, with a button that
 /// ends the list" (vGLP at 66b6500, Definition "Widget Declaration, Default
 /// Widget"), its grant "a term of its own that no element can be" (vGLP #7
 /// Cowork, 2026-10-11 14:31 UTC, item 3).  It is a list cell, and no element
-/// of a list the person writes is one: the element type is flat, a list
-/// cell occurring in it only as a Stream's or a List's, and a Stream or a
-/// List never under another ([_Generator._checkFlat]); `[]`, a constant
+/// of a list the person writes is one: a list cell occurs in an interactive
+/// type only as a Stream's or a List's, and a Stream or a List never under
+/// another ([_Generator._checkInteractive]); `[]`, a constant
 /// (GLP-Spec appendix-lp.tex: "a constant (numbers, strings, or the empty
 /// list [])"), may be an element.  The bridge's end button grants the same
 /// (glp_multiagent/lib/ui_runtime/bridge.dart, listEnd).
@@ -522,7 +552,7 @@ class _Generator {
     final drawnAlts = <String>[];
     for (final t in types) {
       final root = _Node(t.type, t.readerMode, t.params.toSet());
-      _checkFlat(t, root);
+      _checkInteractive(t, root);
       declared = t.widgets ?? sourceDeclared;
       final w = _typeWidget(t, root);
       widgets[t.written] = w;
@@ -813,7 +843,7 @@ class _Generator {
   /// The widget the program's output is drawn by: a thread whose elements
   /// are drawn by the widget of Output, `thread(W)`, or `thread` where W is
   /// `shown`.  Output is a value the program writes, refused where it is not
-  /// flat, as an interactive type is (_checkFlat), and refused, naming it,
+  /// an interactive type (_checkInteractive), and refused, naming it,
   /// where the person writes a position of it: the output is "outside a
   /// question" (vGLP, 2026-10-13 19:25 UTC, item 4).
   String _outputWidget(TypeDef output) {
@@ -821,7 +851,7 @@ class _Generator {
     final it = InteractiveType(t, false, 'output', const [], output.line,
         output.column);
     final root = _Node(t, false, const {});
-    _checkFlat(it, root);
+    _checkInteractive(it, root);
     if (_hasQuestion(root)) {
       throw CompileError(
           'The type $outputTypeName, the type of the program\'s output to its '
@@ -1102,25 +1132,37 @@ class _Generator {
     }
   }
 
-  /// Refuse the interactive type [it], whose root is [root], where it is not
-  /// flat: "An interactive type is flat: it is built from constants, String,
-  /// Integer, Real, Key, Constant, Module, named types so built, tuples and
-  /// unions, and Stream or List as the whole type or as an argument of a
-  /// tuple, never under another Stream or List; it has no other recursive
-  /// type, and no type parameter at a position the person writes" (vGLP at
-  /// 66b6500, Definition "Volitional Procedure, Interactive Type, ...").
-  /// Each is refused over the whole interactive type, a structure the
-  /// program writes included, one holding no question too (vGLP #7 Cowork,
-  /// 2026-10-11 14:31 UTC, items 1 and 2; vGLP #8 Cowork, 2026-10-11 15:47
-  /// UTC, item 1: "The flat refusals hold over the whole interactive type, a
-  /// program-written structure holding no question included"):
+  /// Refuse the interactive type [it], whose root is [root], where it is
+  /// not one by the Definition: "An interactive type is built from
+  /// constants, String, Integer, Real, Key, Constant, Module, named types so
+  /// built, tuples and unions, and Stream or List as the whole type or as an
+  /// argument of a tuple, never under another Stream or List, and a Stream
+  /// only at a position the person writes; a named type in it is recursive
+  /// only if it has no mode inversion, and it has no type parameter at a
+  /// position the person writes" (vGLP 092c9fe, Definition "Volitional
+  /// Procedure, Interactive Type").  Each is refused over the whole
+  /// interactive type, a structure the program writes included, one holding
+  /// no question too (vGLP #7 Cowork, 2026-10-11 14:31 UTC, items 1 and 2;
+  /// vGLP #8 Cowork, 2026-10-11 15:47 UTC, item 1: "The flat refusals hold
+  /// over the whole interactive type, a program-written structure holding
+  /// no question included"), each message quoting the Definition's clause:
   ///
   ///   - a stream or a list in an element of a stream or a list, whoever
-  ///     writes it, the element itself one or holding one;
+  ///     writes it, the element itself one or holding one, reached through
+  ///     a recursive type too (Forum ::= forum(String, List(Forum)));
   ///   - a list cell outside a Stream or a List: a list cell type, a tuple
   ///     '.'(H, T), or a Stream or a List as an alternative of a union, none
   ///     the whole type nor an argument of a tuple;
-  ///   - a recursive type other than a Stream or a List;
+  ///   - a recursive named type with a mode inversion: a position marked ?
+  ///     (TGLP, well-typing.tex, Definition "Simple Prefix": "A mode
+  ///     inversion point: any position whose type is marked with ?")
+  ///     reachable from it, in its own definition or in one of a type it
+  ///     names, since "with no mode inversion, a recursive type is written
+  ///     whole by the program or whole by the person" (vGLP 092c9fe, the
+  ///     paragraph after the Definition); one with none is admitted, mutual
+  ///     recursion included ([_recursive], [_inversionIn]).  Stream and List
+  ///     are not these named types: the Definition admits them by their own
+  ///     clause, a Stream(YesNo?) the program writes among them;
   ///   - a position the person writes of a type parameter, refused outright
   ///     (14:31 UTC, item 1);
   ///   - a position of the type `_`, whoever writes it, which is none of the
@@ -1130,29 +1172,34 @@ class _Generator {
   ///     2026-10-11 17:24 UTC, Q2: "the type _ refused everywhere in an
   ///     interactive type, the building blocks excluding it").
   ///
-  /// A stream the program writes whose elements hold questions is flat, and
-  /// is presented element by element ([_presentSeq]).
-  void _checkFlat(InteractiveType it, _Node root) {
-    // The clauses of the Definition's sentence each refusal quotes.
-    const builtFrom = 'built from constants, String, Integer, Real, Key, '
-        'Constant, Module, named types so built, tuples and unions, and '
-        'Stream or List';
-    const wholeOrTuple =
-        'Stream or List as the whole type or as an argument of a tuple';
-    const notUnder = 'never under another Stream or List';
-    const noRecursive = 'it has no other recursive type';
-    Never refuse(String what, String clause) => throw CompileError(
-        'The interactive type ${it.written} is not flat: $what, and an '
-        'interactive type is flat, "$clause" ($_flatDefinition)',
+  /// A stream the program writes whose elements hold questions is presented
+  /// element by element ([_presentSeq]).  Each position is walked once in
+  /// each of its two contexts, in an element of a stream or a list and not,
+  /// so a recursive type is walked once.
+  void _checkInteractive(InteractiveType it, _Node root) {
+    // The Definition's clauses, each as the refusal of it quotes it.
+    const builtFrom = 'an interactive type is "built from constants, String, '
+        'Integer, Real, Key, Constant, Module, named types so built, tuples '
+        'and unions, and Stream or List"';
+    const wholeOrTuple = 'an interactive type has "Stream or List as the '
+        'whole type or as an argument of a tuple"';
+    const notUnder = 'an interactive type has a Stream or a List "never '
+        'under another Stream or List"';
+    const noInversion = 'a named type in an interactive type "is recursive '
+        'only if it has no mode inversion"';
+    Never refuse(String what, String rule) => throw CompileError(
+        'The interactive type ${it.written} is refused: $what, and $rule '
+        '($_definition)',
         it.line, it.column, phase: 'analyzer');
     String who(_Node n) => n.person ? 'the person' : 'the program';
     String holds(_Node n) =>
         n.person || !_hasQuestion(n) ? '' : ', holding a question';
+    final visited = <String>{};
 
-    // [path] the types of the positions above [n], a Stream's or a List's
-    // left out, whose recursion is its tail's; [inSeq] the stream or the
-    // list that [n] is in an element of, with that element.
-    void walk(_Node n, List<String> path, (_Node, _Node)? inSeq) {
+    // [inSeq] the stream or the list that [n] is in an element of, with
+    // that element.
+    void walk(_Node n, (_Node, _Node)? inSeq) {
+      if (!visited.add('${n.key}|${inSeq != null}')) return;
       final seq = _seqOf(n);
       if (seq != null) {
         if (inSeq != null) {
@@ -1164,23 +1211,25 @@ class _Generator {
               notUnder);
         }
         final e = n.child(seq.elem);
-        walk(e, path, (n, e));
+        walk(e, (n, e));
         return;
       }
-      if (path.contains(n.typeKey)) {
-        refuse(
-            '${who(n)} writes ${n.typeKey}, a recursive type that is neither '
-            'a Stream nor a List${holds(n)}',
-            noRecursive);
+      if (_recursive(n)) {
+        final inversion = _inversionIn(n);
+        if (inversion != null) {
+          refuse(
+              '${who(n)} writes ${n.typeKey}, a recursive type with a mode '
+              'inversion, $inversion',
+              noInversion);
+        }
       }
-      final below = [...path, n.typeKey];
       for (final a in _nodeAlts(n)) {
         if (a is _LeafAlt && a.leaf == _Leaf.param && n.person) {
           throw CompileError(
               'The interactive type ${it.written} is refused: the person '
               'writes a position of type ${a.name}, a type parameter, and an '
               'interactive type has "no type parameter at a position the '
-              'person writes" ($_flatDefinition)',
+              'person writes" ($_definition)',
               it.line, it.column, phase: 'analyzer');
         }
         if (a is _LeafAlt && a.leaf == _Leaf.any) {
@@ -1190,13 +1239,6 @@ class _Generator {
               builtFrom);
         }
         if (a is _ConsAlt) {
-          final kids = _children(n, a);
-          if (kids.any((k) => below.contains(k.typeKey))) {
-            refuse(
-                '${who(n)} writes ${n.typeKey}, a recursive type that is '
-                'neither a Stream nor a List${holds(n)}',
-                noRecursive);
-          }
           if (a.from != null) {
             refuse(
                 '${who(n)} writes ${n.typeKey}, a union one of whose '
@@ -1210,12 +1252,126 @@ class _Generator {
               builtFrom);
         }
         for (final k in _children(n, a)) {
-          walk(k, below, inSeq);
+          walk(k, inSeq);
         }
       }
     }
 
-    walk(root, const [], null);
+    walk(root, null);
+  }
+
+  /// The alternatives of the named type [u] as its definition gives them,
+  /// its type arguments substituted for the definition's parameters; none
+  /// where it is not defined ([_flatten] refuses it then).
+  List<TypeExpr> _alternativesOf(TypeRef u) {
+    final def = resolve(u.name);
+    if (def == null) return const [];
+    final m = <String, TypeExpr>{
+      for (var i = 0; i < def.typeParams.length && i < u.typeArgs.length; i++)
+        def.typeParams[i]: u.typeArgs[i]
+    };
+    return [for (final a in def.alternatives) m.isEmpty ? a : _subst(a, m)];
+  }
+
+  /// The positions of [t] one step down, for what a type reaches: for a
+  /// named type, those of each alternative of its definition --- a tuple's
+  /// arguments, a list cell's head and tail, a difference list's content and
+  /// hole, and a named type that is an alternative, the union's member,
+  /// itself; for a tuple or a list cell written in place, its arguments;
+  /// none for a constant, a primitive, [] or a type parameter in [params].
+  List<TypeExpr> _positions(TypeExpr t, Set<String> params) {
+    if (t is StructAlt) return t.args;
+    if (t is ListConsAlt) return [t.head, t.tail];
+    if (t is DiffListAlt) return [t.content, t.hole];
+    if (t is! TypeRef) return const [];
+    final u = _unmoded(t) as TypeRef;
+    if (_leafOf(u.name, params) != null || u.name == 'MutualRef') {
+      return const [];
+    }
+    return [
+      for (final a in _alternativesOf(u))
+        if (a is TypeRef) a else ..._positions(a, params)
+    ];
+  }
+
+  final _recursiveMemo = <String, bool>{};
+  final _inversionMemo = <String, String?>{};
+
+  /// Whether [n] is of a recursive named type: its definition reaches the
+  /// type again, through the named types it uses, their type arguments and
+  /// the alternatives of the unions among them --- SpeechAct ::=
+  /// speech(Utterance, Key), Utterance ::= text(String) ; SpeechAct, each
+  /// recursive through the other.  Stream and List are not these: the
+  /// Definition admits them by their own clause, and the recursion of
+  /// `Stream(X) ::= [] ; [X | Stream(X)]` is the stream's own.
+  bool _recursive(_Node n) {
+    final t = n.type;
+    if (t is! TypeRef ||
+        _seqName(t.name) != null ||
+        _leafOf(t.name, n.params) != null) {
+      return false;
+    }
+    final target = n.typeKey;
+    return _recursiveMemo.putIfAbsent(target, () {
+      final seen = <String>{};
+      bool reaches(TypeExpr from) {
+        for (final c in _positions(from, n.params)) {
+          final u = _unmoded(c);
+          final key = typeSource(u);
+          if (u is TypeRef && key == target) return true;
+          if (!seen.add(key)) continue;
+          if (reaches(u)) return true;
+        }
+        return false;
+      }
+
+      return reaches(t);
+    });
+  }
+
+  /// The first mode inversion in the type of [n], a position marked `?`
+  /// reachable from it --- in its own definition or in that of a named type
+  /// it reaches, Stream and List and their type arguments included --- as
+  /// the refusal names it, `YesNo? in node(Tree, YesNo?)` or `YesNo? in
+  /// ask(YesNo?) of Utterance`; null where there is none.
+  String? _inversionIn(_Node n) {
+    final key = n.typeKey;
+    if (_inversionMemo.containsKey(key)) return _inversionMemo[key];
+    final seen = <String>{};
+    late final String? Function(TypeExpr t, String alt, String of) within;
+    // [c] at a position of the alternative [alt] of the named type [of].
+    String? at(TypeExpr c, String alt, String of) {
+      if (_isInput(c)) {
+        return '${typeSource(c)} in $alt${of == key ? '' : ' of $of'}';
+      }
+      return within(c, alt, of);
+    }
+
+    within = (TypeExpr t, String alt, String of) {
+      if (t is StructAlt || t is ListConsAlt || t is DiffListAlt) {
+        for (final c in _positions(t, n.params)) {
+          final r = at(c, alt, of);
+          if (r != null) return r;
+        }
+        return null;
+      }
+      if (t is! TypeRef) return null;
+      if (_leafOf(t.name, n.params) != null || t.name == 'MutualRef') {
+        return null;
+      }
+      final name = typeSource(t);
+      if (!seen.add(name)) return null;
+      for (final a in _alternativesOf(t)) {
+        // A union's member in the other mode is an inversion itself.
+        if (_isInput(a)) {
+          return '${typeSource(a)}, an alternative of $name';
+        }
+        final r = within(a, typeSource(a), name);
+        if (r != null) return r;
+      }
+      return null;
+    };
+    return _inversionMemo[key] = within(n.type, key, key);
   }
 
   /// A stream or a list the person writes: [n] written by the person, of a
@@ -1365,8 +1521,8 @@ class _Generator {
     final formed = gen.formedType;
     final gs = gen.inputsType;
     final pt = gen.pathType;
-    // An element holding a stream or a list is refused, the type not flat
-    // (_checkFlat).
+    // An element holding a stream or a list is refused, not an interactive
+    // type (_checkInteractive).
     final seq = _personSeq(n);
     final e = seq == null ? null : n.child(seq.elem);
     final nested = _holdsNested(n);
@@ -1507,13 +1663,13 @@ class _Generator {
     final leaf = _soleLeaf(n);
     if (leaf != null) {
       // The type _ and a type parameter where the person writes are refused
-      // before any position is formed (_checkFlat), so no construct calls a
+      // before any position is formed (_checkInteractive), so no construct calls a
       // former of either, and form_any is not emitted (vGLP #8 Cowork,
       // 2026-10-11 17:24 UTC, NOTED).
       final f = gen._leafFormers[leaf];
       if (f == null) {
         throw StateError('A position the person writes of type '
-            '${n.typeKey}, which _checkFlat refuses, is formed');
+            '${n.typeKey}, which _checkInteractive refuses, is formed');
       }
       return f;
     }
@@ -1635,10 +1791,11 @@ class _Generator {
       return name;
     }
     if (_streamElement(n) != null) {
-      // A recursive type of [] and [E | S] that is not a Stream or a List
-      // is refused before it is presented, the type not flat (_checkFlat).
-      throw StateError('present_N meets ${n.typeKey}, which _checkFlat '
-          'refuses');
+      // A type of [] and [E | S] that is not a Stream or a List is refused
+      // before it is presented, a list cell outside a Stream or a List
+      // (_checkInteractive).
+      throw StateError('present_N meets ${n.typeKey}, which '
+          '_checkInteractive refuses');
     }
     final t = n.typeKey;
     final p = _declParams(n);
@@ -1995,18 +2152,22 @@ class _Generator {
   /// The widget of node [n]: the one a declaration in scope names for its
   /// moded type, else its default (Definition "Widget Declaration, Default
   /// Widget"), as the term vGLP's Q3 names (2026-10-01 23:55 UTC, E).
+  ///
+  /// A recursive type's widget is finite by a reference back to itself
+  /// (RECURSIVE TYPES above): met again within its own widget, [n] is
+  /// `ref(T)`, T its type's name, and the widget of a recursive type is
+  /// `rec(T, W)`, binding T to its widget W around every `ref(T)` in it; so
+  /// a form's field of a recursive type is told by its widget, "drawn when
+  /// the person opens it" (Definition "Default Widget").
   String _widget(_Node n, Set<String> visiting) {
     final d = declared[n.moded];
     if (d != null) return constantSource(d);
-    if (!visiting.add(n.key)) {
-      // A recursive type other than a Stream or a List that holds a question
-      // is refused before its widget is drawn (_checkFlat), and one holding
-      // none is shown or a thread, not walked: no widget is ref(T).
-      throw StateError('The widget of ${n.moded} meets ${n.typeKey} again, '
-          'which _checkFlat refuses');
-    }
+    final name = constantSource(n.typeKey);
+    if (visiting.contains(n.key)) return 'ref($name)';
+    visiting.add(n.key);
     try {
-      return _defaultWidget(n, visiting);
+      final w = _defaultWidget(n, visiting);
+      return _recursive(n) ? 'rec($name, $w)' : w;
     } finally {
       visiting.remove(n.key);
     }
@@ -2087,11 +2248,10 @@ class _Generator {
     if (a is _NilAlt) return n.person ? 'button([])' : 'shown';
     if (a is _LeafAlt) return n.person ? _leafWidget(a.leaf) : 'shown';
     if (a is _ConsAlt) {
-      // A list cell holding a question outside a Stream or a List is
-      // refused, the type not flat (_checkFlat): no widget is form('.',
-      // ...).
+      // A list cell outside a Stream or a List is refused, not an
+      // interactive type (_checkInteractive): no widget is form('.', ...).
       throw StateError('The widget of ${n.moded} meets a list cell, which '
-          '_checkFlat refuses');
+          '_checkInteractive refuses');
     }
     final kids = _children(n, a);
     final ws = [
@@ -2119,15 +2279,16 @@ class _Generator {
       case _Leaf.any:
         // The type _ where the person writes is none of the types an
         // interactive type is built from: refused before its widget is
-        // drawn (_checkFlat; vGLP #8 Cowork, 2026-10-11 15:47 UTC, item 3).
+        // drawn (_checkInteractive; vGLP #8 Cowork, 2026-10-11 15:47 UTC,
+        // item 3).
         throw StateError('The type _ where the person writes, which '
-            '_checkFlat refuses');
+            '_checkInteractive refuses');
       case _Leaf.param:
-        // "no type parameter at a position the person writes" (vGLP at
-        // 66b6500, Definition "Volitional Procedure, Interactive Type,
-        // ..."): refused before its widget is drawn (_checkFlat).
+        // "no type parameter at a position the person writes" (vGLP,
+        // Definition "Volitional Procedure, Interactive Type"): refused
+        // before its widget is drawn (_checkInteractive).
         throw StateError('A type parameter where the person writes, which '
-            '_checkFlat refuses');
+            '_checkInteractive refuses');
     }
   }
 
