@@ -16,13 +16,25 @@ befriend(Peer, Peer)
 ;
 unfriend(Peer, Peer)
 ;
-sign(Peer, Speech)
+message(Peer, Peer, Speech)
 ;
-forward(Peer, Peer, Speech)
+create(Peer, Speech)
+;
+join(Peer, Peer, Speech)
+;
+leave(Peer, Peer, Speech)
+;
+close(Peer, Speech)
+;
+post_own(Peer, Speech, Speech)
+;
+post(Peer, Peer, Speech, Speech)
+;
+deliver(Peer, Peer, Speech, Speech)
 .
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(befriend, [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]), schema(unfriend, [rs(guarded, [], [atom(friend, [role(2)])], [], []), rs(unguarded, [], [atom(friend, [role(1)])], [], [])]), schema(sign, [rs(guarded, [atom(item, [svar(x)])], [], [], [])]), schema(forward, [rs(guarded, [atom(sent, [svar(x), role(2)])], [], [atom(item, [svar(x)])], []), rs(unguarded, [atom(item, [sgn(x, 1)])], [], [atom(friend, [role(1)])], [])])])
+contract_schemas([schema(befriend, [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]), schema(unfriend, [rs(guarded, [], [atom(friend, [role(2)])], [], []), rs(unguarded, [], [atom(friend, [role(1)])], [], [])]), schema(message, [rs(guarded, [atom(sent, [svar(x), role(2)])], [], [], []), rs(unguarded, [atom(received, [svar(x), role(1)])], [], [atom(friend, [role(1)])], [])]), schema(create, [rs(guarded, [atom(member, [role(1), svar(n)]), atom(listed, [role(1), svar(n)])], [], [], [atom(member, [role(1), svar(n)]), atom(closed, [svar(n)])])]), schema(join, [rs(guarded, [atom(listed, [role(2), svar(n)])], [], [atom(member, [role(1), svar(n)]), atom(friend, [role(2)])], []), rs(guarded, [atom(member, [role(1), svar(n)])], [], [atom(friend, [role(1)])], [atom(member, [role(1), svar(n)])])]), schema(leave, [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [], []), rs(guarded, [], [atom(member, [role(1), svar(n)])], [], [])]), schema(close, [rs(guarded, [atom(closed, [svar(n)])], [atom(member, [role(1), svar(n)]), atom(listed, [role(1), svar(n)])], [], [])]), schema(post_own, [rs(guarded, [atom(posted, [svar(x), svar(n)])], [], [atom(member, [role(1), svar(n)])], [atom(posted, [svar(x), svar(n)])])]), schema(post, [rs(guarded, [atom(sent, [svar(x), role(2)])], [], [atom(member, [role(2), svar(n)])], []), rs(unguarded, [atom(posted, [svar(x), svar(n)])], [], [atom(member, [role(2), svar(n)]), atom(listed, [role(1), svar(n)])], [atom(posted, [svar(x), svar(n)])])]), schema(deliver, [rs(unguarded, [atom(delivered, [svar(x), role(2), svar(n)])], [], [atom(member, [role(1), svar(n)]), atom(posted, [svar(x), svar(n)]), atom(listed, [role(2), svar(n)])], [atom(delivered, [svar(x), role(2), svar(n)])]), rs(unguarded, [atom(received_in, [svar(x), role(1), svar(n)])], [], [atom(member, [role(1), svar(n)])], [])])])
 .
 
 procedure reflexive_preds(Preds).
@@ -38,9 +50,21 @@ binding_of(befriend(V1, V2), befriend, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
 binding_of(unfriend(V1, V2), unfriend, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
-binding_of(sign(V1, V2), sign, [b(role(1), p(V1?)), b(svar(x), s(V2?))])
+binding_of(message(V1, V2, V3), message, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(x), s(V3?))])
 .
-binding_of(forward(V1, V2, V3), forward, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(x), s(V3?))])
+binding_of(create(V1, V2), create, [b(role(1), p(V1?)), b(svar(n), s(V2?))])
+.
+binding_of(join(V1, V2, V3), join, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(n), s(V3?))])
+.
+binding_of(leave(V1, V2, V3), leave, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(n), s(V3?))])
+.
+binding_of(close(V1, V2), close, [b(role(1), p(V1?)), b(svar(n), s(V2?))])
+.
+binding_of(post_own(V1, V2, V3), post_own, [b(role(1), p(V1?)), b(svar(x), s(V2?)), b(svar(n), s(V3?))])
+.
+binding_of(post(V1, V2, V3, V4), post, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(x), s(V3?)), b(svar(n), s(V4?))])
+.
+binding_of(deliver(V1, V2, V3, V4), deliver, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(x), s(V3?)), b(svar(n), s(V4?))])
 .
 
 procedure class_of(Constant?, Binding?, Peer?, Class).
@@ -64,17 +88,7 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_peer(role(2), B?, D?, V2)
 .
-class_of(sign, B, D, sign(V1?, V2?))
-:-
-ground(B?)
-,
-ground(D?)
-|
-val_peer(role(1), B?, D?, V1)
-,
-val_speech(svar(x), B?, D?, V2)
-.
-class_of(forward, B, D, forward(V1?, V2?, V3?))
+class_of(message, B, D, message(V1?, V2?, V3?))
 :-
 ground(B?)
 ,
@@ -85,6 +99,90 @@ val_peer(role(1), B?, D?, V1)
 val_peer(role(2), B?, D?, V2)
 ,
 val_speech(svar(x), B?, D?, V3)
+.
+class_of(create, B, D, create(V1?, V2?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_speech(svar(n), B?, D?, V2)
+.
+class_of(join, B, D, join(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_speech(svar(n), B?, D?, V3)
+.
+class_of(leave, B, D, leave(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_speech(svar(n), B?, D?, V3)
+.
+class_of(close, B, D, close(V1?, V2?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_speech(svar(n), B?, D?, V2)
+.
+class_of(post_own, B, D, post_own(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_speech(svar(x), B?, D?, V2)
+,
+val_speech(svar(n), B?, D?, V3)
+.
+class_of(post, B, D, post(V1?, V2?, V3?, V4?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_speech(svar(x), B?, D?, V3)
+,
+val_speech(svar(n), B?, D?, V4)
+.
+class_of(deliver, B, D, deliver(V1?, V2?, V3?, V4?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_speech(svar(x), B?, D?, V3)
+,
+val_speech(svar(n), B?, D?, V4)
 .
 
 %% ===========================================================================

@@ -143,36 +143,7 @@ friend
 \}
 \end{align*}
 \iffalse
-sign
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \uplus 
-\{
-\mathit{
-item
-}
-(
-x
-)
-\}
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
-forward
+message
 \fi
 \begin{align*}
 &
@@ -209,30 +180,17 @@ c_
  \uplus 
 \{
 \mathit{
-item
+received
 }
 (
-\mathrm{sgn}(
 x
 ,
 \Alice
-)
 )
 \}
 ,\\
 &
 \text{provided } 
-\mathit{
-item
-}
-(
-x
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
 \mathit{
 friend
 }
@@ -247,4 +205,599 @@ friend
 \text{guarded by } \{
 \Alice
 \}
+\end{align*}
+\iffalse
+create
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+member
+}
+(
+\Alice
+,
+n
+)
+,
+\mathit{
+listed
+}
+(
+\Alice
+,
+n
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+member
+}
+(
+\Alice
+,
+n
+)
+,
+\mathit{
+closed
+}
+(
+n
+)
+\}
+ \cap c_
+{
+\Alice
+}
+ = \emptyset
+, \qquad 
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+join
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+listed
+}
+(
+\Bob
+,
+n
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+member
+}
+(
+\Alice
+,
+n
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+member
+}
+(
+\Alice
+,
+n
+)
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+friend
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{
+member
+}
+(
+\Alice
+,
+n
+)
+ \notin c_
+{
+\Bob
+}
+, \qquad 
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+leave
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+listed
+}
+(
+\Bob
+,
+n
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+member
+}
+(
+\Alice
+,
+n
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+listed
+}
+(
+\Bob
+,
+n
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+member
+}
+(
+\Alice
+,
+n
+)
+ \in c_
+{
+\Bob
+}
+, \qquad 
+\text{guarded by } \{
+\Bob
+\}
+\end{align*}
+\iffalse
+close
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+member
+}
+(
+\Alice
+,
+n
+)
+,
+\mathit{
+listed
+}
+(
+\Alice
+,
+n
+)
+\}
+) \uplus 
+\{
+\mathit{
+closed
+}
+(
+n
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+member
+}
+(
+\Alice
+,
+n
+)
+,
+\mathit{
+listed
+}
+(
+\Alice
+,
+n
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+, \qquad 
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+post_own
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+posted
+}
+(
+x
+,
+n
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+member
+}
+(
+\Alice
+,
+n
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+posted
+}
+(
+x
+,
+n
+)
+ \notin c_
+{
+\Alice
+}
+, \qquad 
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+post
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+sent
+}
+(
+x
+,
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+posted
+}
+(
+x
+,
+n
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+member
+}
+(
+\Bob
+,
+n
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+member
+}
+(
+\Bob
+,
+n
+)
+,
+\mathit{
+listed
+}
+(
+\Alice
+,
+n
+)
+\}
+ \subseteq c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{
+posted
+}
+(
+x
+,
+n
+)
+ \notin c_
+{
+\Bob
+}
+, \qquad 
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+deliver
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+delivered
+}
+(
+x
+,
+\Bob
+,
+n
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+received_in
+}
+(
+x
+,
+\Alice
+,
+n
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+member
+}
+(
+\Alice
+,
+n
+)
+,
+\mathit{
+posted
+}
+(
+x
+,
+n
+)
+,
+\mathit{
+listed
+}
+(
+\Bob
+,
+n
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+delivered
+}
+(
+x
+,
+\Bob
+,
+n
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+member
+}
+(
+\Alice
+,
+n
+)
+ \in c_
+{
+\Bob
+}
+, \qquad 
+\text{guarded by } \emptyset
 \end{align*}
