@@ -60,10 +60,68 @@ const String pendingCtor = 'pending';
 /// that ends the list" (vGLP, Definition "Widget Declaration, Default
 /// Widget"), its grant a term of its own that no element can be (vGLP #7
 /// Cowork, 2026-10-11 14:31 UTC, item 3).  A list cell, which no element of
-/// a flat interactive type is, where `[]`, a constant, may be one; the
+/// an interactive type is --- a list cell occurs in one only as a Stream's
+/// or a List's, never under another (vGLP, Definition "Volitional
+/// Procedure, Interactive Type") --- where `[]`, a constant, may be one; the
 /// construct process's answer clause takes the same
 /// (`glp_runtime/lib/vglp/constructs.dart`, `listEnd`).
 const GTerm listEnd = GList([GAtom('end')]);
+
+/// The widget of a recursive type, finite by a reference back to itself:
+/// `rec(T, W)` binds the name `T` of the type to its widget `W`, within
+/// which `ref(T)` is `T` again.  "A named type in it is recursive only if it
+/// has no mode inversion" (vGLP 092c9fe, Definition "Volitional Procedure,
+/// Interactive Type"), so a recursive type is written whole by the program
+/// or whole by the person, and the widget of a form's field of one is "a
+/// field of a recursive type drawn when the person opens it" (Definition
+/// "Default Widget"): the construct family draws such a field closed, with
+/// the act that opens it, so that the widget unfolds only as far as the
+/// person's answer goes and every finite answer is formed by finitely many
+/// acts (construct_family.dart).  The compiler emits both
+/// (`glp_runtime/lib/vglp/constructs.dart`, `_widget`).
+const String recCtor = 'rec';
+const String refCtor = 'ref';
+
+/// Whether [w] is the widget of a recursive type, `rec(T, W)` or `ref(T)`:
+/// a field of a form drawn by it is drawn when the person opens it.
+bool recursiveWidget(GTerm w) {
+  final (k, ws) = ctorArgs(w);
+  return (k == recCtor && ws.length == 2) || (k == refCtor && ws.length == 1);
+}
+
+/// [w] with the bindings and references of recursive types resolved at its
+/// top: `rec(T, W)` is `W`, with `T` bound to `W` in the bindings returned,
+/// which hold within `W`; `ref(T)` is the widget [recs] binds `T` to; any
+/// other widget is itself, with [recs].  Null where a `ref(T)` names a type
+/// no `rec` around it binds, which the compilation does not emit.
+(GTerm, Map<String, GTerm>)? unfoldWidget(GTerm w, Map<String, GTerm> recs) {
+  var cur = w;
+  var env = recs;
+  // A binding is a default widget and never a reference at its top, so the
+  // resolution ends; the bound stops a term the compilation does not emit.
+  for (var step = 0; step < 64; step++) {
+    final (k, ws) = ctorArgs(cur);
+    if (k == recCtor && ws.length == 2) {
+      env = {...env, _recName(ws[0]): ws[1]};
+      cur = ws[1];
+    } else if (k == refCtor && ws.length == 1) {
+      final bound = env[_recName(ws[0])];
+      if (bound == null) return null;
+      cur = bound;
+    } else {
+      return (cur, env);
+    }
+  }
+  return null;
+}
+
+/// The name `T` of `rec(T, W)` and `ref(T)`, the constant the compiler
+/// writes the type's name as.
+String _recName(GTerm t) => switch (t) {
+      GAtom(:final name) => name,
+      GString(:final value) => value,
+      _ => formatTerm(t),
+    };
 
 /// A construct on screen: its identifier, the widget its latest draw names,
 /// and the view that draw carries.

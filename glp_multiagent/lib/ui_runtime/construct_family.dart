@@ -23,7 +23,7 @@
 ///     buttons, `buttons([C1, ..., Cn])`; a position of type `Constant` or
 ///     `Module`: a text field, `text` (an interactive type has "no type
 ///     parameter at a position the person writes", vGLP, Definition
-///     "Volitional Procedure, Interactive Type, ...");
+///     "Volitional Procedure, Interactive Type");
 ///   - `String`, a number (`Integer` or `Real`), `Date` and an agent
 ///     identifier: a text field, a number field, a date picker and a peer
 ///     field, `text`, `number`, `date` and `peer`;
@@ -50,7 +50,20 @@
 ///     a thread, `thread`, and one whose elements hold questions,
 ///     `thread(W)`, each element drawn as it arrives by `W`, the widget of
 ///     its type, each question in it by the field of its position (vGLP #8
-///     Cowork, 2026-10-11 15:47 UTC, item 2).
+///     Cowork, 2026-10-11 15:47 UTC, item 2);
+///   - a recursive type, "a named type in it is recursive only if it has no
+///     mode inversion" (vGLP 092c9fe, Definition "Volitional Procedure,
+///     Interactive Type"), so written whole by the program or whole by the
+///     person: its widget is finite by a reference back to itself, `rec(T,
+///     W)` binding the type's name `T` to its widget `W`, within which
+///     `ref(T)` is `T` again (bridge.dart, [recCtor], [refCtor],
+///     [unfoldWidget]); a form's field drawn by either is "a field of a
+///     recursive type drawn when the person opens it" (Definition "Default
+///     Widget"), drawn closed, with the button that opens it, in the
+///     person's form and in the program's alike, so that the widget unfolds
+///     only as far as the person goes and every finite answer is formed by
+///     finitely many acts; at the root of a question, or as the element of
+///     a stream or a list, `rec(T, W)` is drawn at once as `W`.
 ///
 /// A widget a declaration names (`T =::= W`) is a constant naming a Dart
 /// widget: "In the grassroots app, W names a Dart widget, a small
@@ -108,6 +121,11 @@ ValueKey<String> submitKey(int id, List<int> at) =>
 ValueKey<String> endKey(int id, List<int> at) =>
     ValueKey('$id:end:${pathText(at)}');
 
+/// The key of the button that opens the field of a recursive type at [at]
+/// of construct [id], drawn closed until the person opens it.
+ValueKey<String> openKey(int id, List<int> at) =>
+    ValueKey('$id:open:${pathText(at)}');
+
 /// A path as the boundary writes it, `[]`, `[2]`, `[1, 2]`.
 String pathText(List<int> at) => '[${at.join(', ')}]';
 
@@ -153,6 +171,10 @@ class _ConstructViewState extends State<ConstructView> {
   /// The local date each date picker is at, by position.
   final Map<String, int> _days = {};
 
+  /// The fields of a recursive type the person has opened, by position
+  /// (bridge.dart, [recursiveWidget]).
+  final Set<String> _opened = {};
+
   int get _id => widget.construct.id;
 
   @override
@@ -181,15 +203,22 @@ class _ConstructViewState extends State<ConstructView> {
   /// The widget [w] over the view [v] at position [at]: a question where the
   /// view marks one, `input(P)`; a position the program has not yet written
   /// whole where it marks one pending, `pending(P)`; and otherwise what the
-  /// program wrote.
-  Widget _node(GTerm w, GTerm v, List<int> at) {
+  /// program wrote.  [recs] binds the names of the recursive types whose
+  /// widgets [w] is within, `rec(T, W)` above it, for the `ref(T)` in it
+  /// (bridge.dart, [unfoldWidget]).
+  Widget _node(GTerm w, GTerm v, List<int> at,
+      [Map<String, GTerm> recs = const {}]) {
+    final u = unfoldWidget(w, recs);
+    if (u == null) return _undrawable(w, at);
+    final (w1, recs1) = u;
     final p = questionAt(v);
     if (p != null) {
-      return _question(w, p, [for (final i in p.items) (i as GInt).value]);
+      return _question(
+          w1, p, [for (final i in p.items) (i as GInt).value], recs1);
     }
     final q = pendingAt(v);
-    if (q != null) return _pending(w, q);
-    return _shown(w, v, at);
+    if (q != null) return _pending(w1, q);
+    return _shown(w1, v, at, recs1);
   }
 
   /// The widget position at `P` that the program has not yet written whole,
@@ -198,7 +227,9 @@ class _ConstructViewState extends State<ConstructView> {
   /// program writes the position.
   Widget _pending(GTerm w, GList p) {
     final at = [for (final i in p.items) (i as GInt).value];
-    final (kind, ws) = ctorArgs(w);
+    final (kind0, ws0) = ctorArgs(w);
+    final (kind, ws) =
+        kind0 == recCtor && ws0.length == 2 ? ctorArgs(ws0[1]) : (kind0, ws0);
     final form = kind == 'form' && _isForm(ws) ? _name(ws[0]) : null;
     return _keyed(
         'pending',
@@ -209,7 +240,12 @@ class _ConstructViewState extends State<ConstructView> {
   }
 
   /// A position the program writes, drawn by its widget.
-  Widget _shown(GTerm w, GTerm v, List<int> at) {
+  Widget _shown(GTerm w, GTerm v, List<int> at,
+      [Map<String, GTerm> recs = const {}]) {
+    final u = unfoldWidget(w, recs);
+    if (u == null) return _undrawable(w, at);
+    final (w1, recs1) = u;
+    w = w1;
     final (kind, ws) = ctorArgs(w);
     switch (kind) {
       case 'shown' when ws.isEmpty:
@@ -248,7 +284,7 @@ class _ConstructViewState extends State<ConstructView> {
                 for (var k = 0; k < v.items.length; k++)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 3),
-                    child: _node(ws[0], v.items[k], elementAt(at, k)),
+                    child: _node(ws[0], v.items[k], elementAt(at, k), recs1),
                   ),
               ],
             ));
@@ -262,10 +298,17 @@ class _ConstructViewState extends State<ConstructView> {
         // The form's fields, each labelled, and under them its questions of
         // their own, each drawn once the form's answer leaves it open.
         // A shown scalar sits beside its label, on one line; anything else
-        // under it.
+        // under it.  A field of a recursive type is drawn when the person
+        // opens it.
         Widget entry(int i) {
           final w = entries[i].widget;
-          final node = _node(w, vs[i], [...at, i + 1]);
+          final atI = [...at, i + 1];
+          if (recursiveWidget(w) && !_opened.contains(pathText(atI))) {
+            return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: _closed(entries[i].label, atI));
+          }
+          final node = _node(w, vs[i], atI, recs1);
           final scalar = w is GAtom && w.name == 'shown';
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 3),
@@ -323,7 +366,7 @@ class _ConstructViewState extends State<ConstructView> {
               _isForm(aws) &&
               _name(aws[0]) == vf &&
               _entries(aws).length == vs.length) {
-            return _keyed('menu', at, _shown(a, v, at));
+            return _keyed('menu', at, _shown(a, v, at, recs1));
           }
         }
         if (alts.any((a) => a is GAtom && a.name == 'shown')) {
@@ -383,7 +426,12 @@ class _ConstructViewState extends State<ConstructView> {
   // === A question ==========================================================
 
   /// The question at path [at], drawn by its widget [w].
-  Widget _question(GTerm w, GList p, List<int> at) {
+  Widget _question(GTerm w, GList p, List<int> at,
+      [Map<String, GTerm> recs = const {}]) {
+    final u = unfoldWidget(w, recs);
+    if (u == null) return _undrawable(w, at);
+    final (w1, recs1) = u;
+    w = w1;
     final (kind, ws) = ctorArgs(w);
     switch (kind) {
       case 'button' when ws.length == 1:
@@ -402,9 +450,10 @@ class _ConstructViewState extends State<ConstructView> {
         // the next.
         final (ek, _) = ctorArgs(ws[0]);
         if (ek == 'button' || ek == 'buttons') {
-          return _keyed('input_box', at, _question(ws[0], p, at));
+          return _keyed('input_box', at, _question(ws[0], p, at, recs1));
         }
-        return _keyed('input_box', at, _submitting(ws[0], p, at, keepOpen: true));
+        return _keyed('input_box', at,
+            _submitting(ws[0], p, at, keepOpen: true, recs: recs1));
       case 'input_list' when ws.length == 1:
         // The same, with a button that ends the list: it grants [end], the
         // list's end (listEnd), at the list's position.
@@ -416,9 +465,9 @@ class _ConstructViewState extends State<ConstructView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (ek == 'button' || ek == 'buttons')
-                  _question(ws[0], p, at)
+                  _question(ws[0], p, at, recs1)
                 else
-                  _submitting(ws[0], p, at, keepOpen: true),
+                  _submitting(ws[0], p, at, keepOpen: true, recs: recs1),
                 const SizedBox(height: 6),
                 Align(
                   alignment: Alignment.centerRight,
@@ -431,11 +480,11 @@ class _ConstructViewState extends State<ConstructView> {
               ],
             ));
       case 'text' || 'number' || 'date' || 'peer' when ws.isEmpty:
-        return _submitting(w, p, at, keepOpen: false);
+        return _submitting(w, p, at, keepOpen: false, recs: recs1);
       case 'form' when _isForm(ws):
-        return _submitting(w, p, at, keepOpen: false);
+        return _submitting(w, p, at, keepOpen: false, recs: recs1);
       case 'menu' when ws.length == 1 && ws[0] is GList:
-        return _submitting(w, p, at, keepOpen: false);
+        return _submitting(w, p, at, keepOpen: false, recs: recs1);
     }
     final named = _named(w, questionView(p), at);
     if (named != null) return named;
@@ -444,12 +493,13 @@ class _ConstructViewState extends State<ConstructView> {
 
   /// A question answered by a submission: its editor and a button granting
   /// what the editor holds, enabled once it holds an input of the widget.
-  Widget _submitting(GTerm w, GList p, List<int> at, {required bool keepOpen}) {
-    final value = _value(w, at);
+  Widget _submitting(GTerm w, GList p, List<int> at,
+      {required bool keepOpen, Map<String, GTerm> recs = const {}}) {
+    final value = _value(w, at, recs);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _editor(w, at, null),
+        _editor(w, at, null, recs),
         const SizedBox(height: 6),
         Align(
           alignment: Alignment.centerRight,
@@ -472,7 +522,12 @@ class _ConstructViewState extends State<ConstructView> {
 
   /// The editor of widget [w] at position [at], labelled [label] where it
   /// is a field of a form, by the name of the field's declared type.
-  Widget _editor(GTerm w, List<int> at, String? label) {
+  Widget _editor(GTerm w, List<int> at, String? label,
+      [Map<String, GTerm> recs = const {}]) {
+    final u = unfoldWidget(w, recs);
+    if (u == null) return _undrawable(w, at);
+    final (w1, recs1) = u;
+    w = w1;
     final (kind, ws) = ctorArgs(w);
     final k = pathText(at);
     switch (kind) {
@@ -527,7 +582,8 @@ class _ConstructViewState extends State<ConstructView> {
       case 'form' when _isForm(ws):
         // Its fields, each labelled by the name of its declared type; a
         // question of its own is no field, and is drawn under the form once
-        // the form's answer leaves it open.
+        // the form's answer leaves it open; a field of a recursive type is
+        // drawn when the person opens it.
         final entries = _entries(ws);
         return _keyed(
             'form',
@@ -542,8 +598,11 @@ class _ConstructViewState extends State<ConstructView> {
                       if (!entries[i].own)
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
-                          child: _editor(entries[i].widget, [...at, i + 1],
-                              entries[i].label),
+                          child: recursiveWidget(entries[i].widget) &&
+                                  !_opened.contains(pathText([...at, i + 1]))
+                              ? _closed(entries[i].label, [...at, i + 1])
+                              : _editor(entries[i].widget, [...at, i + 1],
+                                  entries[i].label, recs1),
                         ),
                   ],
                 )));
@@ -569,10 +628,12 @@ class _ConstructViewState extends State<ConstructView> {
                       }),
                     ),
                 ]),
-                if (chosen != null && ctorArgs(alts[chosen]).$1 == 'form')
+                if (chosen != null &&
+                    (ctorArgs(alts[chosen]).$1 == 'form' ||
+                        recursiveWidget(alts[chosen])))
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
-                    child: _editor(alts[chosen], at, label),
+                    child: _editor(alts[chosen], at, label, recs1),
                   ),
               ],
             ));
@@ -582,7 +643,11 @@ class _ConstructViewState extends State<ConstructView> {
 
   /// The input the editor of [w] at [at] holds, or null where it holds none
   /// that the widget forms.
-  GTerm? _value(GTerm w, List<int> at) {
+  GTerm? _value(GTerm w, List<int> at, [Map<String, GTerm> recs = const {}]) {
+    final u = unfoldWidget(w, recs);
+    if (u == null) return null;
+    final (w1, recs1) = u;
+    w = w1;
     final (kind, ws) = ctorArgs(w);
     final k = pathText(at);
     switch (kind) {
@@ -613,7 +678,13 @@ class _ConstructViewState extends State<ConstructView> {
             values.add(const GList([]));
             continue;
           }
-          final v = _value(entries[i].widget, [...at, i + 1]);
+          // A field of a recursive type the person has not opened holds no
+          // input.
+          if (recursiveWidget(entries[i].widget) &&
+              !_opened.contains(pathText([...at, i + 1]))) {
+            return null;
+          }
+          final v = _value(entries[i].widget, [...at, i + 1], recs1);
           if (v == null) return null;
           values.add(v);
         }
@@ -621,7 +692,7 @@ class _ConstructViewState extends State<ConstructView> {
       case 'menu' when ws.length == 1 && ws[0] is GList:
         final chosen = _alternative[k];
         if (chosen == null) return null;
-        return _value((ws[0] as GList).items[chosen], at);
+        return _value((ws[0] as GList).items[chosen], at, recs1);
     }
     return null;
   }
@@ -643,6 +714,9 @@ class _ConstructViewState extends State<ConstructView> {
     _chosen.removeWhere((k, _) => under(k));
     _alternative.removeWhere((k, _) => under(k));
     _days.removeWhere((k, _) => under(k));
+    // The fields of recursive types below [at] close again; one at [at]
+    // itself stays open, its menu choosing within it.
+    _opened.removeWhere((k) => k != own && under(k));
   }
 
   TextEditingController _text(String k) =>
@@ -654,6 +728,25 @@ class _ConstructViewState extends State<ConstructView> {
         onPressed: onPressed,
         child: Text(displayText(c)),
       );
+
+  /// A field of a recursive type the person has not opened, at [at]: its
+  /// label and the button that opens it, on which the field is drawn by its
+  /// widget --- "a field of a recursive type drawn when the person opens it"
+  /// (vGLP, Definition "Default Widget") --- so that the widget of a
+  /// recursive type, finite by its reference back to itself (bridge.dart,
+  /// [recCtor] and [refCtor]), unfolds only as far as the person goes.
+  Widget _closed(String? label, List<int> at) => _keyed(
+      'closed',
+      at,
+      Row(children: [
+        if (label != null) Text(label, style: const TextStyle(fontSize: 12)),
+        if (label != null) const SizedBox(width: 8),
+        OutlinedButton(
+          key: openKey(_id, at),
+          onPressed: () => setState(() => _opened.add(pathText(at))),
+          child: const Text('Open'),
+        ),
+      ]));
 
   /// A widget a declaration names, where the family has it.
   Widget? _named(GTerm w, GTerm v, List<int> at) {
@@ -722,11 +815,10 @@ class _ConstructViewState extends State<ConstructView> {
   /// them as the list cell `'.'(H, T)` it is: a draw naming `form('.', [Wh,
   /// Wt])` is drawn over the list the program wrote, which reaches the screen
   /// whole (isolate_protocol.dart, `screenTermOf`) and is a [GList] there
-  /// where it ends in [].  The compilation emits no such widget since the
-  /// interactive types are flat, a list cell holding a question outside a
-  /// Stream or a List refused (vGLP at 66b6500, Definition "Volitional
-  /// Procedure, Interactive Type, ..."; vGLP #7 Cowork, 2026-10-11 14:31 UTC,
-  /// item 2).
+  /// where it ends in [].  The compilation emits no such widget: a list cell
+  /// occurs in an interactive type only as a Stream's or a List's, one
+  /// outside them refused (vGLP, Definition "Volitional Procedure,
+  /// Interactive Type"; vGLP #7 Cowork, 2026-10-11 14:31 UTC, item 2).
   static (String, List<GTerm>) _viewArgs(GTerm v) =>
       v is GList && v.items.isNotEmpty
           ? ('.', [v.items.first, GList(v.items.sublist(1))])
@@ -747,6 +839,7 @@ class _ConstructViewState extends State<ConstructView> {
       return shared > 1 ? '$f/${_entries(ws).length}' : f;
     }
     if (k == 'button' && ws.length == 1) return displayText(ws[0]);
+    if (recursiveWidget(alts[i])) return displayText(ws[0]);
     return formatTerm(alts[i]);
   }
 }
