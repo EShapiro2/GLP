@@ -6,12 +6,13 @@
 %% programs/gsc reads (its README, "Writing a contract").  The term is the
 %% contract for friendship: GSG's schemas with identity required, the wards
 %% core's for an AI agent and its principal, GAI's retire, and GSNP's sign and
-%% forward with identity required and retired forbidden at the acting role.
+%% forward with identity required and retired forbidden at the acting role,
+%% the sender adding nothing, as in GSNP.glp (GLP e0be1bc2).
 %% establish realises a person choosing their key pair (GSG:1); GAI:1, GAI:3
 %% and the principal knowing the developer (GAI:2) describe no act.  A ward's
 %% membership of a group (Wards:2 with GSN:3) is not in this term.
 %%
-%% Eleven schemas over twelve predicates.  unfriend carries no ? and stands for one
+%% Eleven schemas over eleven predicates.  unfriend carries no ? and stands for one
 %% schema per role, guarded at that role, unfriend_p and unfriend_q, as CSSN
 %% writes it.  Every role requires identity, except the role of establish,
 %% which adds it and requires and forbids nothing (GSC, def:unobstructed,
@@ -47,7 +48,7 @@
 %%   retire(p?, r)      :  identity, principal_of(r), +retired_of(r)
 %%                         identity, agent, principal(p), not retired, +retired
 %%   sign(p?; x)        :  identity, not retired, +item(x)
-%%   forward(p?, q; x)  :  identity, item(x), not retired, +sent(x, q)
+%%   forward(p?, q; x)  :  identity, item(x), not retired
 %%                         identity, friend(p), +item(sgn(x, p))
 %%
 %% The ? on an AI agent's role (r in enter, agent_befriend and agents_befriend,
@@ -168,10 +169,10 @@ contract_named(gai,
        [rs(guarded, [atom(item, [svar(x)])], [],
                     [atom(identity, [])], [atom(retired, [])])]),
 %%   forward(p?, q ; x) :
-%%       at p:  identity, item(x), not retired, +sent(x, q)
+%%       at p:  identity, item(x), not retired
 %%       at q:  identity, friend(p), +item(sgn(x, p))
     schema(forward,
-       [rs(guarded, [atom(sent, [svar(x), role(2)])], [],
+       [rs(guarded, [], [],
                     [atom(identity, []), atom(item, [svar(x)])],
                     [atom(retired, [])]),
         rs(unguarded, [atom(item, [sgn(x, 1)])], [],
