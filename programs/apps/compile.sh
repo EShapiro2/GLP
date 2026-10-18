@@ -1,5 +1,5 @@
 #!/bin/bash
-# The platforms of the apps: for each app, the canonical CVA platform vGLP's compiler prints from the act schemas of its contract (vGLP, Section 3.2, Definition "Canonical CVA Platform"; Section 5.4, Definition "Compilation of the Canonical Platform"), read from the contract's owner's file, the one copy (claude.md "Sessions", the cascade rule; Coordination Appendix C).  The platform is committed in the app's directory, which loads it, and this script holds it to what the compiler prints, as programs/vglp/cva/compile.sh does for vGLP's plays and cascade.sh for the recorded runs of the cascade.
+# The platforms of the apps: for each app, the canonical CVA platform vGLP's compiler prints from the act schemas of its contract (vGLP, Section 3.2, Definition "Canonical CVA Platform"; Section 5.4, "The compilation"), read from the contract's owner's file, the one copy (claude.md "Sessions", the cascade rule; Coordination Appendix C).  The platform is committed in the app's directory, which loads it, and this script holds it to what the compiler prints, as programs/vglp/cva/compile.sh does for vGLP's plays and cascade.sh for the recorded runs of the cascade.
 #
 #   bash programs/apps/compile.sh            print into programs/apps/<app>/platform.vglp
 #   bash programs/apps/compile.sh --check    print into a scratch directory and compare

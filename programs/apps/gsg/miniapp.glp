@@ -2,7 +2,7 @@
 %%
 %% miniapp(Id, Ui, Sg, Cal) is the entry the super-app activates by run/3: the instance of the root's entry template miniapp/4 (programs/self.glp) at the mini-app's two types, Drawn, what its dispatcher draws for its person, and Net, the platform's network messages, which its root channels carry.  Its grants: Id, the person's key, which the super-app holds and which is the person's identity (GSG:1, Identity), the agent's Peer; Ui, the person channel (vGLP, Definition "Person Channel, Person Writer, GLP with Persons, Grant"); Sg, the channel to the social graph, down which the social graph hands the mini-app, at each invitation, one end of the root channel of a conversation with the execution of this program at a friend; and Cal, the calendar, which the platform ignores, having no clock (vGLP, Section 5.4, "Triggers": the agent takes its own transactions "when it starts and after each trigger, one at a time until none holds").  The mini-app holds nothing else, and calls nothing that reaches the network or the person, so the program is certified.
 %%
-%% It runs the platform's agent with the person's key as its Peer and the dispatcher on the agent's asks, as the canonical compilation runs a vGLP program (vGLP, Definition "Canonical Compilation"): the agent's questions, its request questions and approval questions, are drawn on the person channel, and its thread, the program's output to the person, is drawn as construct 0.  The agent's network is the conversations: each message msg(Q, C) the agent sends goes on the conversation with Q, and each message arriving on a conversation joins the agent's input.
+%% It runs the platform's agent with the person's key as its Peer and the dispatcher on the agent's asks, as the canonical compilation runs a vGLP program (vGLP, "The canonical compilation"): the agent's questions, its request questions and approval questions, are drawn on the person channel, and its thread, the program's output to the person, is drawn as construct 0.  The agent's network is the conversations: each message msg(Q, C) the agent sends goes on the conversation with Q, and each message arriving on a conversation joins the agent's input.
 
 imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), Stream(Ask(Question))).
 imported procedure platform#dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
@@ -18,7 +18,7 @@ miniapp(Id, Ui, ch(Down, Up?), _) :-
     merge(SgEvents?, AgentEvents?, Events),
     router(Events?, [], [], NetIn).
 
-%% The program's output to its person, the thread, on the dispatcher's channel to the program, which draws it as construct 0 (vGLP, Definition "Canonical Compilation").
+%% The program's output to its person, the thread, on the dispatcher's channel to the program, which draws it as construct 0 (vGLP, "The canonical compilation").
 procedure to_person(Channel(Stream(_), Stream(Output))?, Stream(Output)?).
 to_person(ch(_, O?), O).
 

@@ -3304,8 +3304,8 @@ if _section VG; then
 # Term, Ordinary Clause, vGLP Program").  The source compiles on load (no .glp
 # beside it), and each play runs it through the dispatcher and the construct
 # processes with a scripted person, who sees each draw and grants input(Id,
-# Q, R) at the position the view marks (Definition "Canonical Compilation" and
-# the paragraph before it); a play gives the decisions D and the person's
+# Q, R) at the position the view marks (vGLP, Section 6.3, "The canonical
+# compilation"); a play gives the decisions D and the person's
 # log L.  The person's answer reaches its clause; a refusal is an answer, no,
 # which the clause takes; a grant that forms no term of the question's type
 # answers nothing, and the next one answers it; greet's card is drawn before
@@ -3441,8 +3441,8 @@ echo ""
 # Section VG, continued: the compiler from an act-schema contract to its
 # canonical CVA platform in vGLP (programs/vglp/cva; vGLP, Section 3.2,
 # Definition "Canonical CVA Platform", two-phase commit coordinated by the
-# initiating agent, and Section 5.4, "The canonical platform is structured"
-# and the paragraph on act schemas; vGLP's Task C, reworked to the five
+# initiating agent, and Section 5.4, "The compilation" and the paragraph on
+# act schemas, a class the union of its parts, vGLP c0bea08; vGLP's Task C, reworked to the five
 # handlers of vGLP 8d56915 and the answers of 158ec9b; Answer recording the
 # person's answer and Vote voting on it, vGLP c3b2191; wound-wait,
 # Commit and Yield, attempts numbered and ranked, vGLP 49cd9f7; no clock and
@@ -3450,7 +3450,7 @@ echo ""
 # trigger, one at a time until none holds, vGLP efe7bbc).  GSC's social graph
 # and currency (their owners', programs/gsc/GSG.glp and
 # programs/currencies/coins/GC.glp) and vGLP's nudge, introduce, gnudge, childsafe, link, friends and waves
-# (programs/vglp/cva/contracts.glp) compiled, the committed modules held to
+# and parts (programs/vglp/cva/contracts.glp) compiled, the committed modules held to
 # what the compiler prints; the contracts it refuses, not local, without
 # simple guards or not effective; and the plays of each platform, two agents
 # or three with scripted persons paced on their threads, each run on the
@@ -3476,6 +3476,7 @@ check "CVA compiler: vGLP's childsafe, certified by GSC's check/2, compiled to t
 check "CVA compiler: vGLP's link, certified by GSC's check/2, compiled to the platform it prints" "link/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's friends, its introduction predicate friend, compiled to the platform it prints" "friends/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's waves, two classes of the same participants and atoms, compiled to the platform it prints" "waves/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's parts, a class of two parts, compiled to the platform it prints" "parts/platform.vglp: as printed" "$cva_print"
 check_not "CVA compiler: no contract refused or missing" "^fault\|^missing\|NOT as printed" "$cva_print"
 
 cva_refuse=$("$REPL_RUN" <<HEREDOC
@@ -3496,13 +3497,38 @@ compile(contra, [schema(s1, [rs(guarded, [atom(x, []), atom(x2, [])], [], [atom(
 compile(contra_live, [schema(s1, [rs(guarded, [atom(x, []), atom(x2, [])], [], [atom(w, [])], []), rs(guarded, [atom(y, [])], [], [atom(w, [])], [])]), schema(s2, [rs(guarded, [atom(x, [])], [], [], [atom(k, [role(2)])]), rs(guarded, [atom(y, [])], [], [], []), rs(guarded, [atom(x2, [])], [], [atom(k, [role(1)])], [])])], syntactically_grassroots).
 compile(marks, [schema(s1, [rs(guarded, [atom(x, [])], [], [atom(r1, [])], []), rs(unguarded, [atom(y, [])], [], [], [])]), schema(s2, [rs(unguarded, [atom(x, [])], [], [], []), rs(guarded, [atom(y, [])], [], [], [])])], syntactically_grassroots).
 compile(marks_same, [schema(s1, [rs(guarded, [atom(x, [])], [], [atom(r1, [])], []), rs(unguarded, [atom(y, [])], [], [], [])]), schema(s2, [rs(unguarded, [atom(x, [])], [], [atom(r1, [])], []), rs(guarded, [atom(y, [])], [], [], [])])], syntactically_grassroots).
+compile(refl_own_marks, reflexive([f], [schema(s1, [rs(guarded, [atom(x, [])], [], [atom(f, [role(1)])], []), rs(guarded, [atom(y, [])], [], [atom(f, [role(2)])], [])]), schema(s2, [rs(guarded, [atom(x, [])], [], [], []), rs(unguarded, [atom(y, [])], [], [], [])])]), syntactically_grassroots).
+compile(refl_not_marks, [schema(s1, [rs(guarded, [atom(x, [])], [], [atom(f, [role(1)])], []), rs(guarded, [atom(y, [])], [], [atom(f, [role(2)])], [])]), schema(s2, [rs(guarded, [atom(x, [])], [], [], []), rs(unguarded, [atom(y, [])], [], [], [])])], syntactically_grassroots).
+compile(contra_marks, [schema(s1, [rs(guarded, [atom(x, []), atom(x2, [])], [], [atom(w, [])], []), rs(guarded, [atom(y, [])], [], [atom(w, [])], [])]), schema(s2, [rs(guarded, [atom(x, [])], [], [], [atom(k, [role(3)])]), rs(unguarded, [atom(y, [])], [], [], []), rs(guarded, [atom(x2, [])], [], [atom(k, [role(1)])], [])])], syntactically_grassroots).
+compile(contra_live_marks, [schema(s1, [rs(guarded, [atom(x, []), atom(x2, [])], [], [atom(w, [])], []), rs(guarded, [atom(y, [])], [], [atom(w, [])], [])]), schema(s2, [rs(guarded, [atom(x, [])], [], [], [atom(k, [role(2)])]), rs(unguarded, [atom(y, [])], [], [], []), rs(guarded, [atom(x2, [])], [], [atom(k, [role(1)])], [])])], syntactically_grassroots).
+compile(cover, [schema(u, [rs(guarded, [], [atom(f, [role(2)])], [], []), rs(unguarded, [], [atom(f, [role(1)])], [], [])]), schema(v, [rs(guarded, [], [atom(f, [role(2)])], [atom(a, [role(2)])], []), rs(unguarded, [], [atom(f, [role(1)])], [], [])])], syntactically_grassroots).
+compile(sym, [schema(unf, [rs(guarded, [], [atom(f, [role(2)])], [], []), rs(unguarded, [], [atom(f, [role(1)])], [], [])])], syntactically_grassroots).
+compile(asym, [schema(unf, [rs(guarded, [], [atom(f, [role(2)])], [], [atom(r, [])]), rs(unguarded, [], [atom(f, [role(1)])], [], [])])], syntactically_grassroots).
+compile(sgnread, [schema(d, [rs(unguarded, [atom(done, [svar(y), role(2)])], [], [atom(posted, [svar(y)]), atom(listed, [role(2)])], [atom(done, [svar(y), role(2)])]), rs(unguarded, [atom(item, [sgn(y, 1)])], [], [], [])])], syntactically_grassroots).
+compile(sgnread_not, [schema(d, [rs(unguarded, [atom(done, [svar(y), role(2)])], [], [atom(listed, [role(2)])], [atom(done, [svar(y), role(2)])]), rs(unguarded, [atom(item, [sgn(y, 1)])], [], [], [])])], syntactically_grassroots).
 :quit
 HEREDOC
 2>&1)
-check "CVA compiler: two schemas of one class requiring different atoms at both participants, refused" "%% not compiled(two_reqs)" "$cva_refuse"
-check "CVA compiler: ... the two schema-bindings named" "%% the schema-binding(s1(person(0), person(1)))" "$cva_refuse"
-check "CVA compiler: a variable of no changed atom required at two participants, refused" "%% and the schema-binding(s(person(0), person(1), free))" "$cva_refuse"
+# Of the three locality conditions only one stays (vGLP c0bea08, Section 5.4,
+# "Act schemas as local specifications"): "the schema-bindings determining any
+# two transactions of one class mark the same sets of people"; the first two,
+# the same deleted and added atoms at each participant and the same required
+# and forbidden atoms at all but one, go, a class being the union of parts.
+check "CVA compiler: two schemas of one class requiring different atoms at both participants, marking the same people, compiled: the class has two parts" "%% the canonical CVA platform of the contract(two_reqs)" "$cva_refuse"
+check_not "CVA compiler: ... and not refused" "%% not compiled(two_reqs)" "$cva_refuse"
+# Effective (vGLP c0bea08, Section 5.4): every variable of a schema that occurs
+# in an atom it requires or forbids also occurs in an atom it deletes or adds,
+# a variable inside a signed term included; and the atoms each unguarded schema
+# requires at its first role name every other role and every variable of its
+# deleted and added atoms, y read through sgn(y, 1) (vGLP #14, Code_inbox.md,
+# 2026-10-18 21:47 UTC, answer 2).
+check "CVA compiler: a variable of atoms required at two participants and of no deleted or added atom, refused as not effective" "%% not compiled(free_x)" "$cva_refuse"
+check "CVA compiler: ... the schema and the variable named" "%% the schema and the variable(s, pvar(x))" "$cva_refuse"
 check "CVA compiler: an unguarded schema whose first role names no other role, refused as not effective" "%% the schema(u)" "$cva_refuse"
+check "CVA compiler: an unguarded schema whose first role requires an atom naming y, y in an added atom through the signed term sgn(y, 1), compiled (sgnread)" "%% the canonical CVA platform of the contract(sgnread)" "$cva_refuse"
+check_not "CVA compiler: ... and not refused" "%% not compiled(sgnread)" "$cva_refuse"
+check "CVA compiler: ... its first role requiring no atom naming y, refused as not effective (sgnread_not)" "%% not compiled(sgnread_not)" "$cva_refuse"
+check "CVA compiler: ... the schema named" "%% the schema(d)" "$cva_refuse"
 check "CVA compiler: a contract without traceable provenance is not compiled" "%% not compiled(gossip)" "$cva_refuse"
 check "CVA compiler: a contract whose one fault is that it has no unobstructed introductory act, traceable provenance and volition met, compiled (vGLP, Section 5.4, asks locality and effectiveness alone; CSSN, Appendix B.4)" "%% the canonical CVA platform of the contract(nointro)" "$cva_refuse"
 check "CVA compiler: a contract with community roles is not compiled" "%% not compiled(federated)" "$cva_refuse"
@@ -3510,38 +3536,57 @@ check "CVA compiler: requirements differing at one participant only, compiled" "
 check_not "CVA compiler: ... and not refused" "%% not compiled(one_req)" "$cva_refuse"
 check "CVA compiler: a class with two minimal guard sets not both of one person, refused as without simple guards" "%% not compiled(two_gsets)" "$cva_refuse"
 check "CVA compiler: ... the schema-bindings of the two guard sets named" "%% and the schema-binding(s2(person(0), person(1), person(2)))" "$cva_refuse"
-check "CVA compiler: an unguarded class whose schema-bindings require different atoms at one participant, refused as not effective" "%% not compiled(unguarded_reqs)" "$cva_refuse"
-check "CVA compiler: ... the two schema-bindings of the unguarded class named" "%% and the schema-binding(u2(person(1), person(0)))" "$cva_refuse"
-# Act schemas as local specifications (vGLP ca78e11, Section 5.4; vGLP
-# 2026-10-16 13:53 UTC, C.4): an atom of a reflexive predicate naming the
-# participant holds there and requires nothing; a schema-binding whose two
-# roles at one person require and forbid one atom there determines nothing and
-# is of no class; and the third condition, schema-bindings of one class
-# marking different people requiring and forbidding the same atoms at every
-# participant.
+check "CVA compiler: an unguarded class whose schema-bindings require different atoms at one participant, compiled, the old condition of equal requirements in an unguarded class gone" "%% the canonical CVA platform of the contract(unguarded_reqs)" "$cva_refuse"
+check_not "CVA compiler: ... and not refused" "%% not compiled(unguarded_reqs)" "$cva_refuse"
+# Act schemas as local specifications (vGLP c0bea08, Section 5.4): an atom of
+# a reflexive predicate naming the participant holds there and requires
+# nothing; a schema-binding whose two roles at one person require and forbid
+# one atom there determines nothing and is of no class; and the condition, read
+# per transaction: for two transactions of a class, the sets of people the
+# schema-bindings determining each mark, all of them together, are the same
+# (the sentence's "sets", and its example, unfriend guarded by either party;
+# compiler/local.glp's header).  The fixtures *_marks mark different people at
+# their two schemas, so that the domains decide the condition.
 check "CVA compiler: requirements differing at both participants only by the reflexive atom naming each, compiled" "%% the canonical CVA platform of the contract(refl_own)" "$cva_refuse"
 check_not "CVA compiler: ... and not refused" "%% not compiled(refl_own)" "$cva_refuse"
-check "CVA compiler: ... the same, f not declared reflexive, refused" "%% not compiled(refl_not)" "$cva_refuse"
+check "CVA compiler: ... the same, f not declared reflexive, marking the same people, compiled" "%% the canonical CVA platform of the contract(refl_not)" "$cva_refuse"
+check "CVA compiler: ... the two schemas marking different people, the reflexive atoms naming each holding there, every transaction of the class determined by both, compiled (refl_own_marks)" "%% the canonical CVA platform of the contract(refl_own_marks)" "$cva_refuse"
+check_not "CVA compiler: ... and not refused" "%% not compiled(refl_own_marks)" "$cva_refuse"
+check "CVA compiler: ... the same, f not declared reflexive, a transaction determined by one alone, refused (refl_not_marks)" "%% not compiled(refl_not_marks)" "$cva_refuse"
 check "CVA compiler: a schema-binding of two roles at one person requiring and forbidding one atom there is of no class, so the contract is local" "%% the canonical CVA platform of the contract(contra)" "$cva_refuse"
 check_not "CVA compiler: ... and not refused" "%% not compiled(contra)" "$cva_refuse"
-check "CVA compiler: ... its two roles at one person satisfiable there, the schema-binding of the class, which is refused" "%% and the schema-binding(s2(person(0), person(1), person(0)))" "$cva_refuse"
-check "CVA compiler: two schema-bindings of one class marking different people and requiring different atoms at a participant, refused by the third condition" "%% not compiled(marks)" "$cva_refuse"
-check "CVA compiler: ... the third condition named" "%% the third condition): two schema-bindings of one class mark different sets of people" "$cva_refuse"
+check "CVA compiler: ... its two roles at one person satisfiable there, the schema-binding of the class, marking the same people, compiled (contra_live)" "%% the canonical CVA platform of the contract(contra_live)" "$cva_refuse"
+check "CVA compiler: ... marking different people, the schema-binding of no class: compiled (contra_marks)" "%% the canonical CVA platform of the contract(contra_marks)" "$cva_refuse"
+check_not "CVA compiler: ... and not refused" "%% not compiled(contra_marks)" "$cva_refuse"
+check "CVA compiler: ... marking different people, the schema-binding of the class, refused (contra_live_marks)" "%% not compiled(contra_live_marks)" "$cva_refuse"
+check "CVA compiler: ... it named" "%% and the schema-binding(s2(person(0), person(1), person(0)))" "$cva_refuse"
+check "CVA compiler: two schema-bindings of one class marking different people, a transaction determined by one alone, refused by the condition" "%% not compiled(marks)" "$cva_refuse"
+check "CVA compiler: ... the condition named" "%% its condition): the schema-bindings determining two transactions of one class mark" "$cva_refuse"
 check "CVA compiler: ... marking different people and requiring the same atoms, compiled" "%% the canonical CVA platform of the contract(marks_same)" "$cva_refuse"
+check "CVA compiler: a class of four schema-bindings, two marking p and two marking q, some requiring an atom the others do not, each transaction determined by one marking p and one marking q, compiled (cover)" "%% the canonical CVA platform of the contract(cover)" "$cva_refuse"
+check_not "CVA compiler: ... and not refused" "%% not compiled(cover)" "$cva_refuse"
+check "CVA compiler: unfriending, one class guarded by either party, compiled (sym)" "%% the canonical CVA platform of the contract(sym)" "$cva_refuse"
+check "CVA compiler: unfriending whose first role forbids an atom, a transaction determined by the binding of one party first alone, refused (asym)" "%% not compiled(asym)" "$cva_refuse"
+check "CVA compiler: ... the two schema-bindings named" "%% the schema-binding(unf(person(0), person(1)))" "$cva_refuse"
 
 # The classes are the contract's equivalence, generated by relating two
 # transactions when one schema-binding determines both (vGLP 9c819f5, Section
 # 5.4; vGLP #14's task of 2026-10-18 12:24 UTC, C): two schema-bindings of the
 # same participants and the same deleted and added atoms are linked when no
 # atom one requires at a participant the other forbids there, and a class is
-# the closure.  Seven fixtures of the compiler's own: clash2 (two classes),
-# chain3 (a third binding joins them, refused), wards (a verdict grassroots
-# with wards compiles, A), signed (a signed term in an added atom, the speech
-# act bound to y signed by the person in role i, compiles, B), deadfree (a mate
-# requiring and forbidding one free atom is of no
-# class), sibling (CSSN's child role and adult role at one person, two
-# classes) and sibling_noclash (the adult role not forbidding child, one
-# class, refused).
+# the closure.  Eleven fixtures of the compiler's own: clash2 (two classes),
+# chain3 (a third binding joins them, all marking the same people, compiled),
+# clash2_marks and chain3_marks (the same, the two marking different people:
+# two classes, compiled, and one, refused by the condition, the class joined),
+# wards (a verdict grassroots with wards compiles, A), signed (a signed term in
+# an added atom, the speech act bound to y signed by the person in role i,
+# compiles, B), deadfree (a schema requiring and forbidding an atom of a
+# variable of no deleted or added atom, not effective, vGLP c0bea08), sibling
+# (CSSN's child role and adult role at one person, two classes),
+# sibling_noclash (the adult role not forbidding child, one class, all marking
+# the same people, compiled), and sibling_marks and sibling_noclash_marks (the
+# same, the parent of the adult role not marked: two classes, compiled, and
+# one, refused by the condition).
 cva_classes=$("$REPL_RUN" <<HEREDOC
 $CVA/compiler/
 :limit 100000000
@@ -3552,16 +3597,25 @@ compile(signed, [schema(fwd, [rs(guarded, [atom(sent, [svar(x), role(2)])], [], 
 compile(deadfree, [schema(s1, [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(guarded, [atom(w, [])], [], [atom(c, [])], [])]), schema(s2, [rs(guarded, [atom(z, [])], [], [atom(q, [pvar(x)])], [atom(q, [pvar(x)])]), rs(guarded, [atom(w, [])], [], [atom(d, [])], [])])], syntactically_grassroots).
 compile(sibling, reflexive([friend], [schema(csib, [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(1)])]), rs(guarded, [atom(approval, [])], [], [atom(identity, []), atom(parenting, [role(1)]), atom(parenting, [role(2)])], [atom(child, [])])]), schema(cab, [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(child, []), atom(friend, [role(1)])]), rs(guarded, [atom(approval, [])], [], [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(2)])], [atom(child, [])])])]), syntactically_grassroots).
 compile(sibling_noclash, reflexive([friend], [schema(csib, [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(1)])]), rs(guarded, [atom(approval, [])], [], [atom(identity, []), atom(parenting, [role(1)]), atom(parenting, [role(2)])], [atom(child, [])])]), schema(cab, [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(friend, [role(1)])]), rs(guarded, [atom(approval, [])], [], [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(2)])], [atom(child, [])])])]), syntactically_grassroots).
+compile(clash2_marks, [schema(s1, [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(unguarded, [atom(w, [])], [], [atom(c, [])], [])]), schema(s2, [rs(unguarded, [atom(z, [])], [], [], [atom(a, [])]), rs(guarded, [atom(w, [])], [], [atom(d, [])], [])])], syntactically_grassroots).
+compile(chain3_marks, [schema(s1, [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(unguarded, [atom(w, [])], [], [atom(c, [])], [])]), schema(s2, [rs(unguarded, [atom(z, [])], [], [], [atom(a, [])]), rs(guarded, [atom(w, [])], [], [atom(d, [])], [])]), schema(s3, [rs(guarded, [atom(z, [])], [], [], []), rs(guarded, [atom(w, [])], [], [], [])])], syntactically_grassroots).
+compile(sibling_marks, reflexive([friend], [schema(csib, [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(1)])]), rs(guarded, [atom(approval, [])], [], [atom(identity, []), atom(parenting, [role(1)]), atom(parenting, [role(2)])], [atom(child, [])])]), schema(cab, [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(child, []), atom(friend, [role(1)])]), rs(unguarded, [atom(approval, [])], [], [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(2)])], [atom(child, [])])])]), syntactically_grassroots).
+compile(sibling_noclash_marks, reflexive([friend], [schema(csib, [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(1)])]), rs(guarded, [atom(approval, [])], [], [atom(identity, []), atom(parenting, [role(1)]), atom(parenting, [role(2)])], [atom(child, [])])]), schema(cab, [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(friend, [role(1)])]), rs(unguarded, [atom(approval, [])], [], [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(2)])], [atom(child, [])])])]), syntactically_grassroots).
 :quit
 HEREDOC
 2>&1)
-check "CVA compiler: two schema-bindings of one parts, one requiring an atom the other forbids, are two classes (clash2)" "%% the canonical CVA platform of the contract(clash2)" "$cva_classes"
-check "CVA compiler: a third schema-binding linking them joins one class, refused not local (chain3)" "%% not compiled(chain3)" "$cva_classes"
+check "CVA compiler: two schema-bindings of the same participants and atoms, one requiring an atom the other forbids, are two classes (clash2)" "%% the canonical CVA platform of the contract(clash2)" "$cva_classes"
+check "CVA compiler: a third schema-binding linking them joins one class, all marking the same people, compiled (chain3)" "%% the canonical CVA platform of the contract(chain3)" "$cva_classes"
+check "CVA compiler: ... the two marking different people, two classes, compiled (clash2_marks)" "%% the canonical CVA platform of the contract(clash2_marks)" "$cva_classes"
+check "CVA compiler: ... and the third joining them, one class, refused by the condition (chain3_marks)" "%% not compiled(chain3_marks)" "$cva_classes"
 check "CVA compiler: a contract grassroots with wards is compiled (wards)" "%% the canonical CVA platform of the contract(wards)" "$cva_classes"
 check "CVA compiler: a signed term in an added atom, the speech act bound to y signed by the person in role i, compiles (signed)" "%% the canonical CVA platform of the contract(signed)" "$cva_classes"
-check "CVA compiler: a mate requiring and forbidding one free atom is of no class (deadfree)" "%% the canonical CVA platform of the contract(deadfree)" "$cva_classes"
+check "CVA compiler: a schema requiring and forbidding an atom of a variable of no deleted or added atom, refused as not effective (deadfree)" "%% not compiled(deadfree)" "$cva_classes"
+check "CVA compiler: ... the schema and the variable named" "%% the schema and the variable(s2, pvar(x))" "$cva_classes"
 check "CVA compiler: CSSN's sibling case, a child role and an adult role at one person, two classes (sibling)" "%% the canonical CVA platform of the contract(sibling)" "$cva_classes"
-check "CVA compiler: the adult role not forbidding child, one class, refused not local (sibling_noclash)" "%% not compiled(sibling_noclash)" "$cva_classes"
+check "CVA compiler: the adult role not forbidding child, one class, all marking the same people, compiled (sibling_noclash)" "%% the canonical CVA platform of the contract(sibling_noclash)" "$cva_classes"
+check "CVA compiler: the parent of the adult role not marked, two classes, compiled (sibling_marks)" "%% the canonical CVA platform of the contract(sibling_marks)" "$cva_classes"
+check "CVA compiler: ... and the adult role not forbidding child, one class, refused by the condition (sibling_noclash_marks)" "%% not compiled(sibling_noclash_marks)" "$cva_classes"
 
 
 # The compiled agent is no longer volitional: it asks for requests by request
@@ -3958,13 +4012,35 @@ check "CVA run-time class: alice hails bob, attempt 1, befriends him, attempt 2,
 check "CVA run-time class: bob, in the guard set of the class of hail, is asked on its start and answers yes; asked again for befriend; and his machine votes on the wave unasked" "B = \[discover(alice), start(attempt(alice, 1, 1, hail(alice, bob))), gave(hail(alice, bob), yes), answer(attempt(alice, 1, 1, hail(alice, bob))), vote(attempt(alice, 1, 1, hail(alice, bob))), outcome(attempt(alice, 1, 1, hail(alice, bob))), start(attempt(alice, 2, 2, befriend(alice, bob))), gave(befriend(alice, bob), yes), answer(attempt(alice, 2, 2, befriend(alice, bob))), vote(attempt(alice, 2, 2, befriend(alice, bob))), outcome(attempt(alice, 2, 2, befriend(alice, bob))), start(attempt(alice, 3, 3, wave(alice, bob))), outcome(attempt(alice, 3, 3, wave(alice, bob))) | " "$cva_waves"
 check "CVA run-time class: the three starts, bob's three yeses and the three commits" "N = \[sent(alice, bob, start(attempt(alice, 1, 1, hail(alice, bob)))), sent(bob, alice, vote(attempt(alice, 1, 1, hail(alice, bob)), yes)), sent(alice, bob, outcome(attempt(alice, 1, 1, hail(alice, bob)), commit)), sent(alice, bob, start(attempt(alice, 2, 2, befriend(alice, bob)))), sent(bob, alice, vote(attempt(alice, 2, 2, befriend(alice, bob)), yes)), sent(alice, bob, outcome(attempt(alice, 2, 2, befriend(alice, bob)), commit)), sent(alice, bob, start(attempt(alice, 3, 3, wave(alice, bob)))), sent(bob, alice, vote(attempt(alice, 3, 3, wave(alice, bob)), yes)), sent(alice, bob, outcome(attempt(alice, 3, 3, wave(alice, bob)), commit)) | " "$cva_waves"
 
+# A class is the union of its parts (vGLP c0bea08, Definition "Local Specification, Part, Opener"; Section 5.4, "Act schemas as local specifications": "the parts of a class are the sets of transactions its schema-bindings determine"; vGLP #14 Cowork, Code_inbox.md, 2026-10-18 21:47 UTC): an attempt names its part, each participant checks and applies that part's function, and on the request propose([t]_j), naming the class by a part, the agent proposes, among the parts of [t] it is ready for, the one it has proposed least recently (Section 5.4, "The compilation").  vGLP's contract parts (programs/vglp/cva/contracts.glp): tap(alice, bob) and pat(alice, bob), one class guarded by alice, of two parts, pat's requiring a coin at both.  alice, holding no coin, requests pat and proposes tap's part; holding one, she requests tap and proposes pat's, never proposed, and bob, holding no coin, votes no, outside the domain of his effect in pat's part though inside it in tap's; she requests tap again and proposes tap's, the less recent; and pat again and proposes pat's, the less recent then.  A program taking the domain over the class would name the part the request names, attempt 2 pat(alice, bob), and bob's machine would vote yes on attempt 4.
+cva_parts_load=$("$REPL_RUN" <<HEREDOC
+$CVA/parts/
+:quit
+HEREDOC
+2>&1)
+check "CVA parts: the platform and its play load, compiled by the canonical compilation" "Loaded program: .*cva/parts" "$cva_parts_load"
+check_not "CVA parts: no type errors" "Type checking failed" "$cva_parts_load"
+
+cva_parts=$("$REPL_RUN" <<HEREDOC
+$CVA/parts/
+:limit 1500000
+play_parts(A, B, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA parts: alice, holding no coin, requests pat and proposes tap's part, the one she is ready for, attempt 2, which commits" "A = \[discover(bob), propose(attempt(alice, 1, 1, befriend(alice, bob))), tally(attempt(alice, 1, 1, befriend(alice, bob))), commit(attempt(alice, 1, 1, befriend(alice, bob))), propose(attempt(alice, 2, 2, tap(alice, bob))), tally(attempt(alice, 2, 2, tap(alice, bob))), commit(attempt(alice, 2, 2, tap(alice, bob))), propose(attempt(alice, 3, 3, mint(alice)))" "$cva_parts"
+check "CVA parts: holding a coin, she requests tap and proposes pat's part, never proposed, attempt 4; then tap's, the less recent, attempt 5; then pat's, attempt 6" "propose(attempt(alice, 3, 3, mint(alice))), propose(attempt(alice, 4, 4, pat(alice, bob))), tally(attempt(alice, 4, 4, pat(alice, bob))), propose(attempt(alice, 5, 5, tap(alice, bob))), tally(attempt(alice, 5, 5, tap(alice, bob))), commit(attempt(alice, 5, 5, tap(alice, bob))), propose(attempt(alice, 6, 6, pat(alice, bob))), tally(attempt(alice, 6, 6, pat(alice, bob))) | " "$cva_parts"
+check "CVA parts: bob, holding no coin, votes no on pat's part, his precondition in it failing, and yes on tap's" "sent(alice, bob, start(attempt(alice, 4, 4, pat(alice, bob)))), sent(bob, alice, vote(attempt(alice, 4, 4, pat(alice, bob)), no)), sent(alice, bob, outcome(attempt(alice, 4, 4, pat(alice, bob)), abort)), sent(alice, bob, start(attempt(alice, 5, 5, tap(alice, bob)))), sent(bob, alice, vote(attempt(alice, 5, 5, tap(alice, bob)), yes)), sent(alice, bob, outcome(attempt(alice, 5, 5, tap(alice, bob)), commit))" "$cva_parts"
+check "CVA parts: ... and no on attempt 6, pat's" "sent(bob, alice, vote(attempt(alice, 6, 6, pat(alice, bob)), no)), sent(alice, bob, outcome(attempt(alice, 6, 6, pat(alice, bob)), abort)) | " "$cva_parts"
+check_not "CVA parts: bob asked nothing for the class, guarded by alice" "answer(attempt([a-z]*, [0-9]*, [0-9]*, \(tap\|pat\)" "$cva_parts"
+
 # No clock and no tick (vGLP efe7bbc, Section 5.4, "Triggers": the agent takes
 # its own transactions "when it starts and after each trigger, one at a time
 # until none holds"; Udi's approval of 2026-10-18, reported by Code #10): each
 # play's run suspends once every agent has taken its own transactions until
 # none holds and no trigger is left to read, where until vGLP efe7bbc it ran to
 # the REPL's :limit, each agent's clock ticking without end.
-for v in cva_sg_menu cva_sg_befriend cva_sg_unfriend cva_sg_refused cva_cur_payswap cva_cur_redeem cva_cur_busy cva_cur_declined cva_nudge cva_intro cva_gnudge cva_cs cva_link cva_friends cva_waves; do
+for v in cva_sg_menu cva_sg_befriend cva_sg_unfriend cva_sg_refused cva_cur_payswap cva_cur_redeem cva_cur_busy cva_cur_declined cva_nudge cva_intro cva_gnudge cva_cs cva_link cva_friends cva_waves cva_parts; do
     check "CVA quiescence: the run of $v suspends, no agent left with an own transaction or a trigger" "→ suspended" "${!v}"
     check_not "CVA quiescence: ... the run of $v not stopped at the limit" "capped" "${!v}"
 done

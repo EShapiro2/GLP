@@ -2,15 +2,16 @@
 %% The compiler from an act-schema contract to its canonical CVA platform in
 %% vGLP.
 %%
-%% vGLP (/Grassroots/vGLP), Section 3.2, sections/cva-2pc.tex: Definitions
-%% "Volition-Guarded Specification, Participants, Guard Sets, Simple Guards",
-%% "Local Specification, Opener", "Attempt, Message, App State, Question,
-%% Ready" and "Canonical CVA Platform", two-phase commit coordinated by the
-%% initiating agent; Section 5.4, sections/cva-implementation.tex, Definitions
-%% "Effective Local Specification" and "Compilation of the Canonical
-%% Platform", and the paragraph on act schemas with the sentence after it,
-%% which say when a contract of act schemas is a local specification and when
-%% it is effective.  GSC (/Grassroots/GSC), Sections 3 and 5:
+%% vGLP (/Grassroots/vGLP, c0bea08), Section 3.2, sections/cva-2pc.tex:
+%% Definitions "Volition-Guarded Specification", with the paragraph after it on
+%% guard sets and simple guards, "Local Specification, Part, Opener",
+%% "Attempt", "Cargo, App State, Question, Free, Ready", "Priority, Waiting,
+%% Blocked, Clear", "Proposing" to "Deciding" and "Canonical CVA Platform",
+%% two-phase commit coordinated by the initiating agent; Section 5.4,
+%% sections/cva-implementation.tex, Definition "Effective Local
+%% Specification", "The compilation" and the paragraph "Act schemas as local
+%% specifications", which says when a contract of act schemas is a local
+%% specification and when it is effective.  GSC (/Grassroots/GSC), Sections 3 and 5:
 %% Definitions "Act schema", "Binding", "Compilation" and "Realisation of a
 %% contract", and Appendix F, "Introduction with wards".  The papers are the
 %% specification; each module names the definitions it decides.
@@ -103,9 +104,9 @@ compile(Nm, D, V, I) :- cvac # compile(Nm?, D?, V?, I?).
 YesNo ::= yes ; no.
 Ints  ::= [] ; [Integer | Ints].
 
-procedure rs_parts(RoleSpec?, Atoms, Atoms, Atoms, Atoms).
-rs_parts(rs(_, P, M, K, N), P?, M?, K?, N?).
-rs_parts(crs(_, _, P, M, K, N), P?, M?, K?, N?).
+procedure rs_lists(RoleSpec?, Atoms, Atoms, Atoms, Atoms).
+rs_lists(rs(_, P, M, K, N), P?, M?, K?, N?).
+rs_lists(crs(_, _, P, M, K, N), P?, M?, K?, N?).
 
 procedure rs_guarded(RoleSpec?, YesNo).
 rs_guarded(rs(guarded, _, _, _, _), yes).
@@ -142,7 +143,7 @@ role_args(I, K, [role(I?)|R?]) :- I? =< K? | I1 := I? + 1, role_args(I1?, K?, R)
 procedure rs_args(RoleSpecs?, Args).
 rs_args([], []).
 rs_args([R|Rs], As?) :- ground(R?) |
-    rs_parts(R?, P, M, K, N),
+    rs_lists(R?, P, M, K, N),
     atoms_args(P?, A1),
     atoms_args(M?, A2),
     atoms_args(K?, A3),
