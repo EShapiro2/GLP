@@ -365,8 +365,10 @@ check "CSSN's contract is grassroots with wards" \
 check_not "CSSN's predicates have traceable provenance" "untraceable(" "$out"
 check_not "CSSN's contract satisfies volition" "volition(" "$out"
 check_not "CSSN's contract is not malformed" "malformed(" "$out"
+# One display per schema (def:compile): CSSN.glp's twenty-three, GSNP's twelve
+# and eleven for children (CSSN, GLP 87405524).
 out=$(run "compile_contract(cssn, $CSSN).")
-check_eq "and it compiles to twenty-five displays" "25" \
+check_eq "and it compiles to twenty-three displays" "23" \
          "$(printf '%s' "$out" | grep -c 'begin{align')"
 
 # --- reflexive predicates (the paragraph after def:binding) ----------------
