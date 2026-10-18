@@ -14,8 +14,8 @@
 %% Compilation"), its person scripted, and their networks joined by route/6,
 %% route3/8 or route4/10.  The person reads what its dispatcher draws (vGLP,
 %% the construct process, draw(Id, W, V) and withdraw(Id); a grant input(Id,
-%% P, R)): the agent's request questions, each showing the persons the agent
-%% knows and taking one request (vGLP ca78e11, Section 5.4); the thread, the
+%% P, R)): the agent's request questions, each showing the agent's own key and
+%% the persons it knows and taking one request (vGLP 321127a, Section 5.4); the thread, the
 %% program's output, construct 0, drawn element by element, which it logs;
 %% and the approval questions Start raises.  The plays pace the persons on
 %% the thread, on which the agent goal writes each app transaction it takes,
@@ -23,9 +23,16 @@
 %% 56d898f, Section 5.4).
 %%
 %% The person's script is a list of steps: req(R) grants the request R on the
-%% request question open, once one is drawn; look logs menu(Ks), Ks the
-%% persons the request question open shows, once one is drawn; wait(T) waits
-%% until the transaction T is on the
+%% request question open, once one is drawn; own(Ks, R) grants R likewise,
+%% once the person has written into each of the holes Ks the agent's own key,
+%% which the question shows, R reading the holes wherever it names the agent:
+%% a person proposing a class that names its agent names it by the key it
+%% reads off the question, as a person forms a request from what the question
+%% shows (vGLP 321127a, Section 5.4: the request question "shows the agent's
+%% own key"), and a script, one clause, holds a hole for each place its
+%% request names the agent, GLP's variables being single-reader; look logs
+%% menu(K, Ks), K the agent's own key and Ks the persons the request question
+%% open shows, once one is drawn; wait(T) waits until the transaction T is on the
 %% thread; approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an
 %% attempt of the class K, once it is drawn.  Its log is the thread, each
 %% transaction once, with gave(K, A) where it answers an approval question.  It reads what
@@ -45,9 +52,10 @@ Peer       ::= Key.
 Carried(X) ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, X).
 Msg(X)     ::= msg(Peer, Carried(X)).
 Sent(X)    ::= sent(Peer, Peer, X) ; intro(Peer, Peer, Peer).
-Step(T)    ::= req(T) ; look ; wait(_) ; approval(_, T).
+Step(T)    ::= req(T) ; own(Holes, T) ; look ; wait(_) ; approval(_, T).
+Holes      ::= [] ; [Peer? | Holes].
 Steps(T)   ::= [] ; [Step(T) | Steps(T)].
-Sess       ::= nosess ; sess(Integer, Path, List(Peer)).
+Sess       ::= nosess ; sess(Integer, Path, Peer, List(Peer)).
 Seen       ::= seen(Integer, Path, _).
 Seens      ::= [] ; [Seen | Seens].
 PSt(T)     ::= ps(Sess, Stream(_), Seens, Steps(T)).
@@ -133,9 +141,9 @@ person([draw(0, _, output(T))|Ds], Gs?, ps(Se, Old, Cs, Ss), Log?) :-
     list_of(T?, L),
     thread_seen(Se?, Old?, L?, Cs?, Ss?, Gs, Gs1?, St1, Log, Log1?),
     person(Ds?, Gs1, St1?, Log1).
-person([draw(Id, _, menu_w(menu(Ks, input(P))))|Ds], Gs?, ps(_, T, Cs, Ss), Log?) :-
-    ground(Id?), ground(P?), ground(Ks?) |
-    advance(ps(sess(Id?, P?, Ks?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?),
+person([draw(Id, _, menu_w(menu(Me, Ks, input(P))))|Ds], Gs?, ps(_, T, Cs, Ss), Log?) :-
+    ground(Id?), ground(P?), ground(Me?), ground(Ks?) |
+    advance(ps(sess(Id?, P?, Me?, Ks?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?),
     person(Ds?, Gs1, St1?, Log1).
 person([draw(Id, _, approval_w(approval(At, input(P))))|Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :-
     ground(Id?), ground(P?), ground(At?) |
@@ -156,13 +164,19 @@ thread_seen(Se, Old, L, Cs, Ss, Gs?, Gs1, St1?, Log?, Log1) :- ground(L?) |
 %% they can be taken, the grants written on Gs, continuing at Gs1.
 procedure(T) advance(PSt(T)?, PersonIn(T), PersonIn(T)?, PSt(T), Stream(_),
     Stream(_)?).
-advance(ps(sess(Id, P, _), T, Cs, [req(R)|Ss]), [input(Id?, P?, R?)|Gs?], Gs1, St1?, Log?, Log1) :-
+advance(ps(sess(Id, P, _, _), T, Cs, [req(R)|Ss]), [input(Id?, P?, R?)|Gs?], Gs1, St1?, Log?, Log1) :-
     ground(Id?), ground(P?) |
     advance(ps(nosess, T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
 advance(ps(nosess, T, Cs, [req(R)|Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [req(R?)|Ss?]), Log1?, Log1).
-advance(ps(sess(Id, P, Ks), T, Cs, [look|Ss]), Gs?, Gs1, St1?, [menu(Ks?)|Log?], Log1) :-
-    ground(Id?), ground(P?), ground(Ks?) |
-    advance(ps(sess(Id?, P?, Ks?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
+advance(ps(sess(Id, P, Me, _), T, Cs, [own(Ks, R)|Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    ground(Id?), ground(P?) |
+    fill(Me?, Ks?),
+    grant(Id?, P?, R?, Gs, Gs2?),
+    advance(ps(nosess, T?, Cs?, Ss?), Gs2, Gs1?, St1, Log, Log1?).
+advance(ps(nosess, T, Cs, [own(Ks, R)|Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [own(Ks?, R?)|Ss?]), Log1?, Log1).
+advance(ps(sess(Id, P, Me, Ks), T, Cs, [look|Ss]), Gs?, Gs1, St1?, [menu(Me?, Ks?)|Log?], Log1) :-
+    ground(Id?), ground(P?), ground(Me?), ground(Ks?) |
+    advance(ps(sess(Id?, P?, Me?, Ks?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
 advance(ps(nosess, T, Cs, [look|Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [look|Ss?]), Log1?, Log1).
 advance(ps(Se, T, Cs, [wait(X)|Ss]), Gs?, Gs1, St1?, Log?, Log1) :- ground(T?), ground(X?) |
     among(X?, T?, B),
@@ -171,6 +185,16 @@ advance(ps(Se, T, Cs, [approval(K, A)|Ss]), Gs?, Gs1, St1?, Log?, Log1) :- groun
     find_approval(K?, Cs?, F),
     approved(F?, ps(Se?, T?, Cs?, [approval(K?, A?)|Ss?]), Gs, Gs1?, St1, Log, Log1?).
 advance(ps(Se, T, Cs, []), Gs1?, Gs1, ps(Se?, T?, Cs?, []), Log1?, Log1).
+
+%% fill(Me, Ks): the agent's own key Me written into each hole of Ks.
+procedure fill(Peer?, Holes?).
+fill(Me, [Me?|Ks]) :- ground(Me?) | fill(Me?, Ks?).
+fill(_, []).
+
+%% grant(Id, P, R, Gs, Gs1): the grant of R on the question Id at P, once R,
+%% its holes filled, is ground.
+procedure(T) grant(Integer?, Path?, T?, PersonIn(T), PersonIn(T)?).
+grant(Id, P, R, [input(Id?, P?, R?)|Gs1?], Gs1) :- ground(R?) | true.
 
 procedure(T) waited(YN?, PSt(T)?, PersonIn(T), PersonIn(T)?, PSt(T), Stream(_),
     Stream(_)?).

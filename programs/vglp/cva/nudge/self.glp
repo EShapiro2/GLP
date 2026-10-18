@@ -42,7 +42,7 @@ Txn      ::= propose(Attempt) ; start(Attempt) ; answer(Attempt) ; vote(Attempt)
            ; introduce_peers(Peer, Peer) ; discover(Peer).
 Output   ::= Txn.
 Approval ::= approval(Attempt, YesNo?).
-Menu     ::= menu(List(Key), Request?).
+Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).
 Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
 Ask(Q)   ::= ask(Constant, Q).
@@ -55,7 +55,7 @@ imported procedure platform#dispatch(Stream(Ask(Question))?,
 exported procedure play_nudge(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_nudge(LA?, LB?, N?) :-
     pair([req(known(bob)), wait(discover(bob)),
-          req(propose(befriend(alice, bob)))],
+          own([A1], propose(befriend(A1?, bob)))],
          [req(known(alice)), wait(discover(alice)),
           approval(befriend(alice, bob), yes)],
          LA, LB, N).

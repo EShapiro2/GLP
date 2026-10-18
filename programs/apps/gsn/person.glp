@@ -1,17 +1,18 @@
 %% person.glp --- the GSN mini-app's scripted person: the instance of the root's second template miniapp_person/4 (programs/self.glp) at Drawn, what the mini-app's dispatcher draws, and at Seen, the screen the person reports (self.glp).  The super-app's plays activate it from the module value, as they activate the entry (../gsn_boot.glp); the plays of this directory call it beside the entry (plays.glp).  It is GSG's app's person (../gsg/person.glp), with one step more and GSN's scripts.
 %%
-%% The person reads what the dispatcher draws on the person channel (vGLP, "The construct process": draw(Id, W, V) and withdraw(Id); a grant input(Id, P, R)): the agent's request questions, each showing the persons the agent knows and taking one request (vGLP, Section 5.4); the thread, the program's output, construct 0, drawn whole as it grows; and the approval questions Start raises.  Its script is a list of steps: req(R) grants the request R on the request question open, once one is drawn; look reports menu(Ks), Ks the persons the request question open shows, once one is drawn; wait(T) waits until the transaction T is on the thread; after(K, C) waits until the thread shows a transaction K, as propose or commit, on an attempt of the class C, whatever its number; approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an attempt of the class K, once it is drawn.  It reports the thread, each transaction once, with gave(K, A) where it answers an approval question.
+%% The person reads what the dispatcher draws on the person channel (vGLP, "The construct process": draw(Id, W, V) and withdraw(Id); a grant input(Id, P, R)): the agent's request questions, each showing the agent's own key and the persons it knows and taking one request (vGLP 321127a, Section 5.4); the thread, the program's output, construct 0, drawn whole as it grows; and the approval questions Start raises.  Its script is a list of steps: req(R) grants the request R on the request question open, once one is drawn; own(Ks, R) grants R likewise, once the person has written into each of the holes Ks the agent's own key, which the question shows, R reading the holes wherever it names the agent, so that a person proposing a class that names their agent names it by the key they read off the question; look reports menu(K, Ks), K the agent's own key and Ks the persons the request question open shows, once one is drawn; wait(T) waits until the transaction T is on the thread; after(K, C) waits until the thread shows a transaction K, as propose or commit, on an attempt of the class C, whatever its number; approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an attempt of the class K, once it is drawn.  It reports the thread, each transaction once, with gave(K, A) where it answers an approval question.
 %%
 %% The roles, by which the super-app's plays choose a script; the group is named friends by alice, its leader, and each content is a speech act of its author:
 %%   alice  establishes her identity (GSG:1); asks to know bob; once she knows him, offers him friendship; once they are friends, sends him a message; then creates the group, and adds bob to it.
 %%   bob    establishes his identity; asks to know alice; once he knows her, answers yes to her offer of friendship; answers yes to her adding him to the group; once he is a member, sends the group a message; once alice has delivered it to him, leaves the group.
 %% Any other role has no script: its person reports the thread and acts on nothing.
 
-Step  ::= req(Request) ; look ; wait(Output) ; after(Constant, Class)
+Step  ::= req(Request) ; own(Holes, Request) ; look ; wait(Output) ; after(Constant, Class)
         ; approval(Asked, YesNo).
 ClassOf ::= of(Constant, Class) ; noclass.
 Steps ::= [] ; [Step | Steps].
-Sess  ::= nosess ; sess(Integer, Path, List(Key)).
+Holes ::= [] ; [Key? | Holes].
+Sess  ::= nosess ; sess(Integer, Path, Key, List(Key)).
 Shown ::= shown(Integer, Path, Attempt).
 Shows ::= [] ; [Shown | Shows].
 PSt   ::= ps(Sess, List(Output), Shows, Steps).
@@ -24,21 +25,21 @@ miniapp_person(_, Role, ch(Ds, Gs?), S?) :-
     person(Ds?, Gs, ps(nosess, [], [], Ss?), S).
 
 procedure script(Constant?, Steps).
-script(alice, [req(propose(establish(alice))), req(known(bob)), wait(discover(bob)),
-               req(propose(befriend(alice, bob))),
+script(alice, [own([A1], propose(establish(A1?))), req(known(bob)), wait(discover(bob)),
+               own([A2], propose(befriend(A2?, bob))),
                after(commit, befriend(alice, bob)),
-               req(propose(message(alice, bob, speech(utterance(hello), alice)))),
+               own([A3, A4], propose(message(A3?, bob, speech(utterance(hello), A4?)))),
                after(commit, message(alice, bob, speech(utterance(hello), alice))),
-               req(propose(create(alice, speech(utterance(friends), alice)))),
+               own([A5, A6], propose(create(A5?, speech(utterance(friends), A6?)))),
                after(propose, create(alice, speech(utterance(friends), alice))),
-               req(propose(join(alice, bob, speech(utterance(friends), alice))))]).
-script(bob, [req(propose(establish(bob))), req(known(alice)), wait(discover(alice)),
+               own([A7, A8], propose(join(A7?, bob, speech(utterance(friends), A8?))))]).
+script(bob, [own([B1], propose(establish(B1?))), req(known(alice)), wait(discover(alice)),
              approval(befriend(alice, bob), yes),
              approval(join(alice, bob, speech(utterance(friends), alice)), yes),
              after(outcome, join(alice, bob, speech(utterance(friends), alice))),
-             req(propose(post(bob, alice, speech(utterance(friends), alice), speech(utterance(hi_all), bob)))),
+             own([B2, B3], propose(post(B2?, alice, speech(utterance(friends), alice), speech(utterance(hi_all), B3?)))),
              after(outcome, deliver(alice, bob, speech(utterance(hi_all), bob), speech(utterance(friends), alice))),
-             req(propose(leave(alice, bob, speech(utterance(friends), alice))))]).
+             own([B4], propose(leave(alice, B4?, speech(utterance(friends), alice))))]).
 script(_, []) :- otherwise | true.
 
 %% The person.
@@ -48,9 +49,9 @@ person([draw(0, _, output(T)) | Ds], Gs?, ps(Se, Old, Cs, Ss), Log?) :-
     log_new(Old?, T?, Log, Log1?),
     advance(ps(Se?, T?, Cs?, Ss?), Gs, Gs1?, St1, Log1, Log2?),
     person(Ds?, Gs1, St1?, Log2).
-person([draw(Id, _, menu_w(menu(Ks, input(P)))) | Ds], Gs?, ps(_, T, Cs, Ss), Log?) :-
-    ground(Id?), ground(P?), ground(Ks?) |
-    advance(ps(sess(Id?, P?, Ks?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?),
+person([draw(Id, _, menu_w(menu(Me, Ks, input(P)))) | Ds], Gs?, ps(_, T, Cs, Ss), Log?) :-
+    ground(Id?), ground(P?), ground(Me?), ground(Ks?) |
+    advance(ps(sess(Id?, P?, Me?, Ks?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?),
     person(Ds?, Gs1, St1?, Log1).
 person([draw(Id, _, approval_w(approval(At, input(P)))) | Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :-
     ground(Id?), ground(P?), ground(At?) |
@@ -65,13 +66,19 @@ person([_ | Ds], Gs?, St, Log?) :-
 
 %% advance(St, Gs, Gs1, St1, Log, Log1): the script's steps taken as far as they can be, the grants written on Gs, continuing at Gs1.
 procedure advance(PSt?, PersonIn(Drawn), PersonIn(Drawn)?, PSt, Stream(Seen), Stream(Seen)?).
-advance(ps(sess(Id, P, _), T, Cs, [req(R) | Ss]), [input(Id?, P?, R?) | Gs?], Gs1, St1?, Log?, Log1) :-
+advance(ps(sess(Id, P, _, _), T, Cs, [req(R) | Ss]), [input(Id?, P?, R?) | Gs?], Gs1, St1?, Log?, Log1) :-
     ground(Id?), ground(P?) |
     advance(ps(nosess, T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
 advance(ps(nosess, T, Cs, [req(R) | Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [req(R?) | Ss?]), Log1?, Log1).
-advance(ps(sess(Id, P, Ks), T, Cs, [look | Ss]), Gs?, Gs1, St1?, [menu(Ks?) | Log?], Log1) :-
-    ground(Id?), ground(P?), ground(Ks?) |
-    advance(ps(sess(Id?, P?, Ks?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
+advance(ps(sess(Id, P, Me, _), T, Cs, [own(Ks, R) | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    ground(Id?), ground(P?) |
+    fill(Me?, Ks?),
+    grant(Id?, P?, R?, Gs, Gs2?),
+    advance(ps(nosess, T?, Cs?, Ss?), Gs2, Gs1?, St1, Log, Log1?).
+advance(ps(nosess, T, Cs, [own(Ks, R) | Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [own(Ks?, R?) | Ss?]), Log1?, Log1).
+advance(ps(sess(Id, P, Me, Ks), T, Cs, [look | Ss]), Gs?, Gs1, St1?, [menu(Me?, Ks?) | Log?], Log1) :-
+    ground(Id?), ground(P?), ground(Me?), ground(Ks?) |
+    advance(ps(sess(Id?, P?, Me?, Ks?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
 advance(ps(nosess, T, Cs, [look | Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [look | Ss?]), Log1?, Log1).
 advance(ps(Se, T, Cs, [wait(X) | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
     ground(T?), ground(X?) |
@@ -86,6 +93,15 @@ advance(ps(Se, T, Cs, [approval(K, A) | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
     find_approval(K?, Cs?, F),
     approved(F?, ps(Se?, T?, Cs?, [approval(K?, A?) | Ss?]), Gs, Gs1?, St1, Log, Log1?).
 advance(ps(Se, T, Cs, []), Gs1?, Gs1, ps(Se?, T?, Cs?, []), Log1?, Log1).
+
+%% fill(Me, Ks): the agent's own key Me written into each hole of Ks.
+procedure fill(Key?, Holes?).
+fill(Me, [Me? | Ks]) :- ground(Me?) | fill(Me?, Ks?).
+fill(_, []).
+
+%% grant(Id, P, R, Gs, Gs1): the grant of R on the question Id at P, once R, its holes filled, is ground.
+procedure grant(Integer?, Path?, Request?, PersonIn(Drawn), PersonIn(Drawn)?).
+grant(Id, P, R, [input(Id?, P?, R?) | Gs1?], Gs1) :- ground(R?) | true.
 
 procedure waited(YN?, PSt?, PersonIn(Drawn), PersonIn(Drawn)?, PSt, Stream(Seen), Stream(Seen)?).
 waited(y, ps(Se, T, Cs, [_ | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-

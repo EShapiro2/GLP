@@ -32,14 +32,14 @@ Txn       ::= propose(Attempt) ; start(Attempt) ; answer(Attempt) ; vote(Attempt
             ; introduce_peers(Peer, Peer) ; discover(Peer).
 Output    ::= Txn.
 Approval  ::= approval(Attempt, YesNo?).
-Menu      ::= menu(List(Key), Request?).
+Menu      ::= menu(Key, List(Key), Request?).
 Question  ::= menu_w(Menu) ; approval_w(Approval).
 Drawn     ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
 Ask(Q)    ::= ask(Constant, Q).
 
-%% What the mini-app's scripted person reports, its screen (person.glp): each transaction the thread shows, once; the persons a request question shows, where the script looks; and each answer it gives an approval question, of the attempt or of an attempt of the class its script names.
+%% What the mini-app's scripted person reports, its screen (person.glp): each transaction the thread shows, once; the agent's own key and the persons a request question shows, where the script looks; and each answer it gives an approval question, of the attempt or of an attempt of the class its script names.
 Asked     ::= Class ; Attempt.
-Seen      ::= Output ; menu(List(Key)) ; gave(Asked, YesNo).
+Seen      ::= Output ; menu(Key, List(Key)) ; gave(Asked, YesNo).
 
 %% The network of the platform over the conversations (miniapp.glp), as in ../gsg/self.glp.
 NetEvent  ::= opened(Key, RootChannel(Net)) ; sent(Net).

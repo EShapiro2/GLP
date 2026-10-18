@@ -3538,9 +3538,10 @@ check "CVA compiler: the adult role not forbidding child, one class, refused not
 
 # The compiled agent is no longer volitional: it asks for requests by request
 # questions, goals of a volitional procedure whose question, Menu ::=
-# menu(List(Key), Request?), shows the persons the agent knows, asked when the
-# agent starts and again when the agent goal reads each answer (vGLP ca78e11,
-# Section 5.4; vGLP 2026-10-16 13:53 UTC, C.1); and its agent goal writes the
+# menu(Key, List(Key), Request?), shows the agent's own key and the persons it
+# knows, asked when the agent starts and again when the agent goal reads each
+# answer (vGLP 321127a, Section 5.4; vGLP #14's task of 2026-10-18 21:22 UTC;
+# vGLP ca78e11; vGLP 2026-10-16 13:53 UTC, C.1); and its agent goal writes the
 # thread on the program's output to its person, Output, construct 0 (vGLP
 # 56d898f, Section 5.4; vGLP 2026-10-16 12:17 UTC, item 3): the plays'
 # persons read the thread from construct 0's draws, draw(0, W, output(T)),
@@ -3548,8 +3549,10 @@ check "CVA compiler: the adult role not forbidding child, one class, refused not
 for c in social_graph currency; do
     cva_agent=$(cat "$CVA/$c/platform.vglp")
     check "CVA $c: the agent is an ordinary procedure, no longer volitional" "^exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output))\.$" "$cva_agent"
-    check "CVA $c: the request question, Menu, shows the persons the agent knows and takes one request" "^Menu      ::= menu(List(Key), Request?)\.$" "$cva_agent"
-    check "CVA $c: ... asked by a volitional procedure" "^procedure (Menu)\*request(List(Key)?, Stream(Trigger))\.$" "$cva_agent"
+    check "CVA $c: the request question, Menu, shows the agent's own key and the persons it knows and takes one request" "^Menu      ::= menu(Key, List(Key), Request?)\.$" "$cva_agent"
+    check "CVA $c: ... asked by a volitional procedure" "^procedure (Menu)\*request(Key?, List(Key)?, Stream(Trigger))\.$" "$cva_agent"
+    check "CVA $c: ... the key the agent's own identifier, when the agent starts" "^    request(Id?, \[\], Rq),$" "$cva_agent"
+    check "CVA $c: ... and on reading each answer" "^    request(Id?, Ks?, R),$" "$cva_agent"
     check_not "CVA $c: no stream of requests as the agent's question" "(Stream(Request)?)\*agent" "$cva_agent"
     check "CVA $c: the thread is the program's output to its person, Output" "^Output    ::= Txn\.$" "$cva_agent"
     check_not "CVA $c: no session question" "Session" "$cva_agent"
@@ -3557,7 +3560,14 @@ done
 cva_person=$(cat "$CVA/self.glp")
 check "CVA plays: the person reads the thread from construct 0" "^person(\[draw(0, _, output(T))|Ds\]" "$cva_person"
 check_not "CVA plays: ... and no session" "session_w" "$cva_person"
-check "CVA plays: the person reads the request questions" "^person(\[draw(Id, _, menu_w(menu(Ks, input(P))))|Ds\]" "$cva_person"
+check "CVA plays: the person reads the request questions, the agent's own key and the persons it knows" "^person(\[draw(Id, _, menu_w(menu(Me, Ks, input(P))))|Ds\]" "$cva_person"
+# A scripted person proposing a class that names its agent names it by the
+# key the request question shows (vGLP 321127a, Section 5.4): its step own(Ks,
+# R) holds a hole for each place R names the agent, and the person writes the
+# key into each before it grants R.
+check "CVA plays: a proposal naming the agent is granted once the person has written the key the question shows into its holes" "^advance(ps(sess(Id, P, Me, _), T, Cs, \[own(Ks, R)|Ss\])" "$cva_person"
+check "CVA plays: ... each hole the agent's own key" "^fill(Me, \[Me?|Ks\]) :- ground(Me?) | fill(Me?, Ks?)\.$" "$cva_person"
+check "CVA plays: alice establishes her identity by the key her request question shows" "pair(\[look, own(\[A1\], propose(establish(A1?)))" "$(cat "$CVA/social_graph/self.glp")"
 
 # The request type has the alternative propose([t]) for each guarded class [t]
 # and the alternative known(Q) (vGLP, Section 5.4, the compilation): Proposal,
@@ -3591,8 +3601,8 @@ play_menu(A, B, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA request question: the first, asked when the agent starts, shows no person known" "A = \[menu(\[\]), propose(attempt(alice, 1, 1, establish(alice))), discover(bob)" "$cva_sg_menu"
-check "CVA request question: the one asked on reading the request to befriend bob, once bob is known, shows bob" "commit(attempt(alice, 2, 2, befriend(alice, bob))), menu(\[bob\])" "$cva_sg_menu"
+check "CVA request question: the first, asked when the agent starts, shows the agent's own key and no person known" "A = \[menu(alice, \[\]), propose(attempt(alice, 1, 1, establish(alice))), discover(bob)" "$cva_sg_menu"
+check "CVA request question: the one asked on reading the request to befriend bob, once bob is known, shows the key and bob" "commit(attempt(alice, 2, 2, befriend(alice, bob))), menu(alice, \[bob\])" "$cva_sg_menu"
 
 cva_sg_load=$("$REPL_RUN" <<HEREDOC
 $CVA/social_graph/
@@ -3890,7 +3900,7 @@ HEREDOC
 2>&1)
 check "CVA introduce peers: alice, a friend of bob and of carol, takes Introduce peers {bob, carol}, an own transaction" "A = \[.*commit(attempt(alice, 2, 2, befriend(alice, carol))).*introduce_peers(bob, carol)" "$cva_friends"
 check "CVA introduce peers: ... sending bob intro(carol) and carol intro(bob)" "intro(alice, bob, carol), intro(alice, carol, bob)" "$cva_friends"
-check "CVA introduce peers: bob comes to know carol by the ihellos, never having requested her known, and his request question shows her" "B = \[.*outcome(attempt(alice, 1, 1, befriend(alice, bob))), discover(carol), menu(\[alice, carol\]), propose(attempt(bob, 2, 2, befriend(bob, carol)))" "$cva_friends"
+check "CVA introduce peers: bob comes to know carol by the ihellos, never having requested her known, and his request question shows her" "B = \[.*outcome(attempt(alice, 1, 1, befriend(alice, bob))), discover(carol), menu(bob, \[alice, carol\]), propose(attempt(bob, 2, 2, befriend(bob, carol)))" "$cva_friends"
 check "CVA introduce peers: carol comes to know bob, is asked, answers yes, and the friends of a friend are friends" "C = \[.*discover(bob), start(attempt(bob, 2, 2, befriend(bob, carol))), gave(befriend(bob, carol), yes), answer(attempt(bob, 2, 2, befriend(bob, carol))), vote(attempt(bob, 2, 2, befriend(bob, carol))), outcome(attempt(bob, 2, 2, befriend(bob, carol)))" "$cva_friends"
 check "CVA introduce peers: ... it commits" "sent(bob, carol, outcome(attempt(bob, 2, 2, befriend(bob, carol)), commit))" "$cva_friends"
 check_not "CVA introduce peers: no pair introduced twice by one agent" "intro(alice, bob, carol), .*intro(alice, bob, carol)" "$cva_friends"
@@ -5874,8 +5884,11 @@ check "APPS gsg loads" "Loaded program: .*programs/apps/gsg$" "$apps_gsg"
 apps_line "APPS gsg router: bob's hello reaches the agent" "In = [msg(alice, hello(bob))]" "$apps_gsg"
 apps_line "APPS gsg router: the hello held for bob goes first on his conversation, then the start" "ToBob = [msg(bob, hello(alice)), msg(bob, cargo(alice, start(attempt(alice, 1, 1, befriend(alice, bob)))))]" "$apps_gsg"
 apps_line "APPS gsg router: the hello held for carol goes on hers" "ToCarol = [msg(carol, hello(alice))]" "$apps_gsg"
-apps_line "APPS gsg friends: alice's screen" "A = [menu([]), propose(attempt(alice, 1, 1, establish(alice))), discover(bob), menu([bob]), propose(attempt(alice, 2, 2, befriend(alice, bob))), tally(attempt(alice, 2, 2, befriend(alice, bob))), commit(attempt(alice, 2, 2, befriend(alice, bob))), start(attempt(bob, 3, 3, unfriend(bob, alice))), outcome(attempt(bob, 3, 3, unfriend(bob, alice))) | _]" "$apps_gsg"
+apps_line "APPS gsg friends: alice's screen" "A = [menu(alice, []), propose(attempt(alice, 1, 1, establish(alice))), discover(bob), menu(alice, [bob]), propose(attempt(alice, 2, 2, befriend(alice, bob))), tally(attempt(alice, 2, 2, befriend(alice, bob))), commit(attempt(alice, 2, 2, befriend(alice, bob))), start(attempt(bob, 3, 3, unfriend(bob, alice))), outcome(attempt(bob, 3, 3, unfriend(bob, alice))) | _]" "$apps_gsg"
 apps_line "APPS gsg friends: bob's screen" "B = [propose(attempt(bob, 1, 1, establish(bob))), discover(alice), start(attempt(alice, 2, 2, befriend(alice, bob))), gave(befriend(alice, bob), yes), answer(attempt(alice, 2, 2, befriend(alice, bob))), vote(attempt(alice, 2, 2, befriend(alice, bob))), outcome(attempt(alice, 2, 2, befriend(alice, bob))), propose(attempt(bob, 3, 3, unfriend(bob, alice))), tally(attempt(bob, 3, 3, unfriend(bob, alice))), commit(attempt(bob, 3, 3, unfriend(bob, alice))) | _]" "$apps_gsg"
+# The request question shows the agent's own key (vGLP 321127a, Section 5.4), and the scripted person, proposing a class that names their agent, writes the key it reads off the question into the holes of its step own(Ks, R) (person.glp).
+check "APPS gsg: alice establishes her identity by the key her request question shows" "^script(alice, \[look, own(\[A1\], propose(establish(A1?)))" "$(cat "$GLP_DIR/programs/apps/gsg/person.glp")"
+check "APPS gsg: ... the key written into each hole" "^fill(Me, \[Me? | Ks\]) :- ground(Me?) | fill(Me?, Ks?)\.$" "$(cat "$GLP_DIR/programs/apps/gsg/person.glp")"
 check_not "APPS gsg: no failed play" "→ failed" "$apps_gsg"
 check_not "APPS gsg: no error" "Error" "$apps_gsg"
 check "APPS gsg friends: the run suspends, no agent left with an own transaction or a trigger" "→ suspended" "$apps_gsg"
@@ -5905,6 +5918,7 @@ check "APPS gsn: the mini-app's artefact is certified" "gsn.glpw --- certified u
 check "APPS gsn loads" "Loaded program: .*programs/apps/gsn$" "$apps_gsn"
 apps_line "APPS gsn network: alice's screen" "A = [propose(attempt(alice, 1, 1, establish(alice))), discover(bob), propose(attempt(alice, 2, 2, befriend(alice, bob))), tally(attempt(alice, 2, 2, befriend(alice, bob))), commit(attempt(alice, 2, 2, befriend(alice, bob))), propose(attempt(alice, 3, 3, message(alice, bob, speech(utterance(hello), alice)))), tally(attempt(alice, 3, 3, message(alice, bob, speech(utterance(hello), alice)))), commit(attempt(alice, 3, 3, message(alice, bob, speech(utterance(hello), alice)))), propose(attempt(alice, 4, 4, create(alice, speech(utterance(friends), alice)))), propose(attempt(alice, 5, 5, join(alice, bob, speech(utterance(friends), alice)))), tally(attempt(alice, 5, 5, join(alice, bob, speech(utterance(friends), alice)))), commit(attempt(alice, 5, 5, join(alice, bob, speech(utterance(friends), alice)))), start(attempt(bob, 6, 6, post(bob, alice, speech(utterance(friends), alice), speech(utterance(hi_all), bob)))), outcome(attempt(bob, 6, 6, post(bob, alice, speech(utterance(friends), alice), speech(utterance(hi_all), bob)))), propose(attempt(alice, 7, 7, deliver(alice, bob, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), tally(attempt(alice, 7, 7, deliver(alice, bob, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), commit(attempt(alice, 7, 7, deliver(alice, bob, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), start(attempt(bob, 8, 8, leave(alice, bob, speech(utterance(friends), alice)))), outcome(attempt(bob, 8, 8, leave(alice, bob, speech(utterance(friends), alice)))) | _]" "$apps_gsn"
 apps_line "APPS gsn network: bob's screen" "B = [propose(attempt(bob, 1, 1, establish(bob))), discover(alice), start(attempt(alice, 2, 2, befriend(alice, bob))), gave(befriend(alice, bob), yes), answer(attempt(alice, 2, 2, befriend(alice, bob))), vote(attempt(alice, 2, 2, befriend(alice, bob))), outcome(attempt(alice, 2, 2, befriend(alice, bob))), start(attempt(alice, 3, 3, message(alice, bob, speech(utterance(hello), alice)))), outcome(attempt(alice, 3, 3, message(alice, bob, speech(utterance(hello), alice)))), start(attempt(alice, 5, 5, join(alice, bob, speech(utterance(friends), alice)))), gave(join(alice, bob, speech(utterance(friends), alice)), yes), answer(attempt(alice, 5, 5, join(alice, bob, speech(utterance(friends), alice)))), vote(attempt(alice, 5, 5, join(alice, bob, speech(utterance(friends), alice)))), outcome(attempt(alice, 5, 5, join(alice, bob, speech(utterance(friends), alice)))), propose(attempt(bob, 6, 6, post(bob, alice, speech(utterance(friends), alice), speech(utterance(hi_all), bob)))), tally(attempt(bob, 6, 6, post(bob, alice, speech(utterance(friends), alice), speech(utterance(hi_all), bob)))), commit(attempt(bob, 6, 6, post(bob, alice, speech(utterance(friends), alice), speech(utterance(hi_all), bob)))), start(attempt(alice, 7, 7, deliver(alice, bob, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), outcome(attempt(alice, 7, 7, deliver(alice, bob, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))), propose(attempt(bob, 8, 8, leave(alice, bob, speech(utterance(friends), alice)))), tally(attempt(bob, 8, 8, leave(alice, bob, speech(utterance(friends), alice)))), commit(attempt(bob, 8, 8, leave(alice, bob, speech(utterance(friends), alice)))) | _]" "$apps_gsn"
+check "APPS gsn: alice signs her message by the key her request question shows" "own(\[A3, A4\], propose(message(A3?, bob, speech(utterance(hello), A4?))))" "$(cat "$GLP_DIR/programs/apps/gsn/person.glp")"
 check_not "APPS gsn: no failed play" "→ failed" "$apps_gsn"
 check_not "APPS gsn: no error" "Error" "$apps_gsn"
 check "APPS gsn network: the run suspends, no agent left with an own transaction or a trigger" "→ suspended" "$apps_gsn"
@@ -5928,7 +5942,7 @@ rm -f "$APPS_CORE/gsg.glpw"
 check "APPS gsg on two smartphones: the mini-app's artefact is certified" "gsg.glpw --- certified under" "$apps_gsg_boot"
 check "APPS gsg on two smartphones: the boot settles" "Boot settled: 2 agents (alice, bob)" "$apps_gsg_boot"
 check_not "APPS gsg on two smartphones: no event stopped at the cap" "did not quiesce" "$apps_gsg_boot"
-apps_same "APPS gsg on two smartphones: alice's lines" "[sg(connected(bob)), menu([]), propose(attempt(alice, 1, 1, establish(alice))), discover(bob), menu([bob]), propose(attempt(alice, 2, 2, befriend(alice, bob))), tally(attempt(alice, 2, 2, befriend(alice, bob))), commit(attempt(alice, 2, 2, befriend(alice, bob))), start(attempt(bob, 3, 3, unfriend(bob, alice))), outcome(attempt(bob, 3, 3, unfriend(bob, alice)))]" "$(apps_person alice "$apps_gsg_boot")"
+apps_same "APPS gsg on two smartphones: alice's lines" "[sg(connected(bob)), menu(alice, []), propose(attempt(alice, 1, 1, establish(alice))), discover(bob), menu(alice, [bob]), propose(attempt(alice, 2, 2, befriend(alice, bob))), tally(attempt(alice, 2, 2, befriend(alice, bob))), commit(attempt(alice, 2, 2, befriend(alice, bob))), start(attempt(bob, 3, 3, unfriend(bob, alice))), outcome(attempt(bob, 3, 3, unfriend(bob, alice)))]" "$(apps_person alice "$apps_gsg_boot")"
 apps_same "APPS gsg on two smartphones: bob's lines" "[sg(befriend(alice)), sg(connected(alice)), propose(attempt(bob, 1, 1, establish(bob))), discover(alice), start(attempt(alice, 2, 2, befriend(alice, bob))), gave(befriend(alice, bob), yes), answer(attempt(alice, 2, 2, befriend(alice, bob))), vote(attempt(alice, 2, 2, befriend(alice, bob))), outcome(attempt(alice, 2, 2, befriend(alice, bob))), propose(attempt(bob, 3, 3, unfriend(bob, alice))), tally(attempt(bob, 3, 3, unfriend(bob, alice))), commit(attempt(bob, 3, 3, unfriend(bob, alice)))]" "$(apps_person bob "$apps_gsg_boot")"
 
 apps_gsn_boot=$("$REPL_RUN" <<HEREDOC
