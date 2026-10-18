@@ -11,12 +11,12 @@
 %% children, which realise Wards (CSSN, Appendix B.2; the tables in Appendix
 %% C.2, sections/artefact-schemas.tex).  Written by CSSN #5 Cowork, 2026-10-18.
 %%
-%% Twenty-three schemas over fourteen predicates; friend is reflexive.  Every
+%% Twenty-three schemas over thirteen predicates; friend is reflexive.  Every
 %% role requires identity, except the role of establish, which adds it, and
 %% the child's role of enter and enter_2, which forbid it and add it.  A
-%% parent's role in the children's schemas adds and deletes nothing: a guarding
-%% role may, by GSC's change requested by CSSN (GSC_inbox 2026-10-18 20:51 UTC,
-%% approved by Udi).  Each schema is in GSC's notation above its term, at each
+%% parent's role in the children's schemas, and the sender's in forward and
+%% post, adds and deletes nothing: a guarding role may (GSC, Definition 2, at
+%% GSC bd0ebc4; GSNP.glp at GLP e0be1bc2).  Each schema is in GSC's notation above its term, at each
 %% role in turn: what the role requires, what it forbids (not), what it adds
 %% (+) and what it deletes (-); a role marked ? is a guarding role.  A role is
 %% rs(Guard, Add, Del, Keep, Forb), its +(i), -(i), =(i) and not(i), and is
@@ -90,10 +90,10 @@ gsnp_schemas([
       [rs(guarded, [atom(item, [svar(x)])], [], [atom(identity, [])], [])]),
 %% GSN:1, Message, with GSNP:2, Forwarding.
 %%   forward(p?, q ; x) :
-%%       at p:  identity, item(x), +sent(x, q)
+%%       at p:  identity, item(x)
 %%       at q:  identity, friend(p), +item(sgn(x, p))
     schema(forward,
-      [rs(guarded,   [atom(sent, [svar(x), role(2)])], [],
+      [rs(guarded,   [], [],
                      [atom(identity, []), atom(item, [svar(x)])], []),
        rs(unguarded, [atom(item, [sgn(x, 1)])], [],
                      [atom(identity, []), atom(friend, [role(1)])], [])]),
@@ -135,10 +135,10 @@ gsnp_schemas([
                    [atom(identity, []), atom(item, [svar(x)]), atom(member, [role(1), svar(n)])],
                    [atom(posted, [svar(x), svar(n)])])]),
 %%   post(p?, a ; x, n) :
-%%       at p:  identity, item(x), member(a, n), +sent(x, a)
+%%       at p:  identity, item(x), member(a, n)
 %%       at a:  identity, member(a, n), listed(p, n), +posted(sgn(x, p), n)
     schema(post,
-      [rs(guarded,   [atom(sent, [svar(x), role(2)])], [],
+      [rs(guarded,   [], [],
                      [atom(identity, []), atom(item, [svar(x)]), atom(member, [role(2), svar(n)])], []),
        rs(unguarded, [atom(posted, [sgn(x, 1), svar(n)])], [],
                      [atom(identity, []), atom(member, [role(2), svar(n)]),
