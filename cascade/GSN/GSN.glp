@@ -1,0 +1,65 @@
+%% ---------------------------------------------------------------------------
+%% GSN.glp --- the grassroots social network's contract, GSC's (Coordination
+%% Appendix C; Udi, 2026-10-18): GSG's two schemas with authorship and
+%% forwarding, the contract of GSC's Section 2.1, as GSC prints it (Section
+%% 3.3, the table there, which Section 7.1 certifies by hand), in the term
+%% form programs/gsc reads (its README, "Writing a contract").  The clauses
+%% are in GSN.md beside this file.  The one copy: GSC's checker
+%% (programs/gsc/test_gsc.sh) and vGLP's compiler to the canonical CVA
+%% platform (programs/vglp/cva/compile.sh) read it from here, contract_named/2
+%% printing the term.  Each schema is in GSC's notation above its term, at
+%% each role in turn: what the role requires, what it forbids (not), what it
+%% adds (+) and what it deletes (-); a role marked ? is a guarding role.
+%%
+%% A role is rs(Guard, Add, Del, Keep, Forb), its +(i), -(i), =(i) and not(i),
+%% and is named by its index, role(1) the schema's first role; x is a
+%% speech-act variable, svar, and sgn(x, 1) the signed term sgn(x, p), the
+%% speech act x signed by the party in role 1.
+%% ---------------------------------------------------------------------------
+
+NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
+            ; ext(NameTerm, Constant).
+Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
+            ; sgn(Constant, Integer).
+Args      ::= [] ; [Arg | Args].
+Atom      ::= atom(Constant, Args).
+Atoms     ::= [] ; [Atom | Atoms].
+Guard     ::= guarded ; unguarded ; guarded_at(Constant).
+RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant).
+RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
+            ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
+RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
+Reach     ::= reach(NameTerm, Constant, NameTerm).
+Reaches   ::= [] ; [Reach | Reaches].
+Schema    ::= schema(Constant, RoleSpecs) ; cschema(Constant, Reaches, RoleSpecs).
+Contract  ::= [] ; [Schema | Contract].
+Preds     ::= [] ; [Constant | Preds].
+Declared  ::= Contract ; reflexive(Preds, Contract).
+
+%% contract_named(gsn, C): the contract, GSN (Coordination Appendix C).
+procedure contract_named(Constant?, Declared).
+contract_named(gsn,
+%%   befriend(p?, q?) :
+%%       at p:  not friend(q), +friend(q)
+%%       at q:  not friend(p), +friend(p)
+   [schema(befriend,
+       [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
+        rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
+%%   unfriend(p?, q) :
+%%       at p:  -friend(q)
+%%       at q:  -friend(p)
+    schema(unfriend,
+       [rs(guarded,   [], [atom(friend, [role(2)])], [], []),
+        rs(unguarded, [], [atom(friend, [role(1)])], [], [])]),
+%%   sign(p? ; x) :
+%%       at p:  +item(x)
+    schema(sign,
+       [rs(guarded, [atom(item, [svar(x)])], [], [], [])]),
+%%   forward(p?, q ; x) :
+%%       at p:  item(x), +sent(x, q)
+%%       at q:  friend(p), +item(sgn(x, p))
+    schema(forward,
+       [rs(guarded,   [atom(sent, [svar(x), role(2)])], [],
+                      [atom(item, [svar(x)])], []),
+        rs(unguarded, [atom(item, [sgn(x, 1)])], [],
+                      [atom(friend, [role(1)])], [])])]).
