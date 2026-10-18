@@ -107,11 +107,11 @@ SG=$(run 'contract_named(sg_items, C).' | sed -e 's/^\(GLP> \)*//' | grep -E '^C
 check "Section 3.3's social graph with items is the fixture sg_items" \
       "[schema(befriend, [rs(guarded, [atom(friend, [role(2)])]" "$SG"
 GSGT=$(term "$GLP_DIR/programs/gsc/GSG.glp" gsg)
-check "GSG's contract is read from programs/gsc/GSG.glp" \
-      "[schema(befriend, [rs(guarded, [atom(friend, [role(2)])]" "$GSGT"
+check "GSG's contract is read from programs/gsc/GSG.glp, establish first" \
+      "[schema(establish, [rs(guarded, [atom(identity, [])]" "$GSGT"
 GSNT=$(term "$GLP_DIR/programs/gsc/GSN.glp" gsn)
-check "GSN's contract, the network without provenance, is read from programs/gsc/GSN.glp" \
-      "[schema(befriend, [rs(guarded, [atom(friend, [role(2)])]" "$GSNT"
+check "GSN's contract, the network without provenance, is read from programs/gsc/GSN.glp, establish first" \
+      "[schema(establish, [rs(guarded, [atom(identity, [])]" "$GSNT"
 out=$(run "check($GSGT, V).")
 check "GSG is syntactically grassroots" "V = syntactically_grassroots" "$out"
 out=$(run "check($GSNT, V).")
