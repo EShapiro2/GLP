@@ -3503,8 +3503,9 @@ check "CVA compiler: ... marking different people and requiring the same atoms, 
 # atom one requires at a participant the other forbids there, and a class is
 # the closure.  Seven fixtures of the compiler's own: clash2 (two classes),
 # chain3 (a third binding joins them, refused), wards (a verdict grassroots
-# with wards compiles, A), signed (a signed term in an added atom waits on
-# part B), deadfree (a mate requiring and forbidding one free atom is of no
+# with wards compiles, A), signed (a signed term in an added atom, the speech
+# act bound to y signed by the person in role i, compiles, B), deadfree (a mate
+# requiring and forbidding one free atom is of no
 # class), sibling (CSSN's child role and adult role at one person, two
 # classes) and sibling_noclash (the adult role not forbidding child, one
 # class, refused).
@@ -3524,7 +3525,7 @@ HEREDOC
 check "CVA compiler: two schema-bindings of one parts, one requiring an atom the other forbids, are two classes (clash2)" "%% the canonical CVA platform of the contract(clash2)" "$cva_classes"
 check "CVA compiler: a third schema-binding linking them joins one class, refused not local (chain3)" "%% not compiled(chain3)" "$cva_classes"
 check "CVA compiler: a contract grassroots with wards is compiled (wards)" "%% the canonical CVA platform of the contract(wards)" "$cva_classes"
-check "CVA compiler: a signed term in an added atom waits on part B (signed)" "%% not compiled(signed)" "$cva_classes"
+check "CVA compiler: a signed term in an added atom, the speech act bound to y signed by the person in role i, compiles (signed)" "%% the canonical CVA platform of the contract(signed)" "$cva_classes"
 check "CVA compiler: a mate requiring and forbidding one free atom is of no class (deadfree)" "%% the canonical CVA platform of the contract(deadfree)" "$cva_classes"
 check "CVA compiler: CSSN's sibling case, a child role and an adult role at one person, two classes (sibling)" "%% the canonical CVA platform of the contract(sibling)" "$cva_classes"
 check "CVA compiler: the adult role not forbidding child, one class, refused not local (sibling_noclash)" "%% not compiled(sibling_noclash)" "$cva_classes"

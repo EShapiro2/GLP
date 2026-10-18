@@ -42,9 +42,17 @@
 %% The schemas name no person (GSC, Proposition "Anonymity"), so the bindings
 %% of a schema are taken up to renaming: its roles and party variables sent to
 %% people person(0), person(1), ... in order of first use, every partition of
-%% them a binding; its speech-act variables to speech acts sp(U, S), U an
-%% utterance in order of first use and S the signer, one of those people or
-%% one person more, whom no other variable names.  For each such binding that
+%% them a binding; its speech-act variables to speech acts sp(U, S), S the
+%% signer, one of those people or one person more, whom no other variable
+%% names, and U an utterance, utt(N), in order of first use --- "a speech act
+%% being an utterance or a speech act, signed; a signed term sgn(y, i) in an
+%% added atom is the speech act bound to y, signed by the person in role i"
+%% (vGLP 9c819f5, Section 5.4, "Act schemas as local specifications"; GSC
+%% 63b301f, Section 3, Definitions "Act schema" and "Binding", beta(sgn(y, pi))
+%% := (beta(y), beta(pi))), so the image of sgn(y, i) under a binding is
+%% sp(beta(y), beta(i)), a speech act whose utterance is a speech act, and
+%% sgn(y, i) matches such a speech act, y bound to the inner one and role i to
+%% its signer (match_sgn), and no other.  For each such binding that
 %% is one (GSC, Definition "Binding") and determines a transaction (GSC,
 %% Definition "Compilation": the added and the deleted atoms of each person
 %% disjoint), its mates, the schema-bindings of the same participants and the
@@ -80,7 +88,13 @@
 %% unguarded where one of its schema-bindings has no marked role, the empty set
 %% then its one minimal guard set.
 
-Val      ::= person(Integer) ; sp(Integer, Integer) ; free_var(Arg).
+%% A speech act sp(U, S): its utterance U, utt(N) or a speech act, and its
+%% signer S (GSC, Section 3: "A speech act is an utterance or a speech act,
+%% signed by a person").
+Utt      ::= utt(Integer) ; Sp.
+Sp       ::= sp(Utt, Integer).
+Val      ::= person(Integer) ; Sp ; free_var(Arg).
+SgnParts ::= signed(Val, Integer) ; unsigned.
 Vals     ::= [] ; [Val | Vals].
 Bnd      ::= bnd(Arg, Val).
 Binding  ::= [] ; [Bnd | Binding].
@@ -657,8 +671,8 @@ next_fresh(I, N, N1?) :- I? =:= N? | N1 := N? + 1.
 next_fresh(I, N, N?) :- I? < N? | true.
 
 %% with_speech(Bs, Sv, R): each binding of Bs extended to the speech-act
-%% variables, an utterance in order of first use and, for a new one, its signer
-%% one of the people the binding uses or one more.
+%% variables, an utterance utt(N) in order of first use and, for a new one, its
+%% signer one of the people the binding uses or one more.
 procedure with_speech(Bindings?, Args?, Bindings).
 with_speech([], _, []).
 with_speech([B|Bs], Sv, R?) :- ground(B?), ground(Sv?) |
@@ -685,7 +699,7 @@ procedure svs_old(Integer?, Integer?, Integer?, Arg?, Args?, Binding?, Bindings)
 svs_old(U, NU, _, _, _, _, []) :- U? >= NU? | true.
 svs_old(U, NU, NP, Y, Ys, B, R?) :- U? < NU?, ground(Y?), ground(Ys?), ground(B?) |
     signer_of(U?, B?, S),
-    svs(Ys?, NU?, NP?, [bnd(Y?, sp(U?, S?))|B?], R1),
+    svs(Ys?, NU?, NP?, [bnd(Y?, sp(utt(U?), S?))|B?], R1),
     U1 := U? + 1,
     svs_old(U1?, NU?, NP?, Y?, Ys?, B?, R2),
     app(R1?, R2?, R).
@@ -694,13 +708,13 @@ procedure svs_new(Integer?, Integer?, Integer?, Arg?, Args?, Binding?, Bindings)
 svs_new(S, _, NP, _, _, _, []) :- S? > NP? | true.
 svs_new(S, NU, NP, Y, Ys, B, R?) :- S? =< NP?, ground(Y?), ground(Ys?), ground(B?) |
     NU1 := NU? + 1,
-    svs(Ys?, NU1?, NP?, [bnd(Y?, sp(NU?, S?))|B?], R1),
+    svs(Ys?, NU1?, NP?, [bnd(Y?, sp(utt(NU?), S?))|B?], R1),
     S1 := S? + 1,
     svs_new(S1?, NU?, NP?, Y?, Ys?, B?, R2),
     app(R1?, R2?, R).
 procedure signer_of(Integer?, Binding?, Integer).
 signer_of(_, [], 0).
-signer_of(U, [bnd(_, sp(U1, S))|_], S?) :- U? =:= U1? | true.
+signer_of(U, [bnd(_, sp(utt(U1), S))|_], S?) :- U? =:= U1? | true.
 signer_of(U, [_|Bs], S?) :- otherwise | signer_of(U?, Bs?, S).
 
 procedure rule_filter(Bindings?, RoleSpecs?, Bindings).
@@ -853,11 +867,21 @@ role_names(R, J, B?) :- ground(R?), integer(J?) |
     names_role(P?, J?, B1),
     names_role(M?, J?, B2),
     or(B1?, B2?, B).
+%% An atom names a role among its arguments or the role of a signed term among
+%% them (GSC, Section 3: "An atom names what is among its arguments or is the
+%% signer of one: ... in a schema a role or a variable, the role of a signed
+%% term included").
 procedure names_role(Atoms?, Integer?, YesNo).
 names_role([], _, no).
-names_role([atom(_, As)|Xs], J, B?) :- integer(J?) |
+names_role([atom(_, As)|Xs], J, B?) :- integer(J?), ground(As?) |
     mem(role(J?), As?, B1),
-    names_role1(B1?, Xs?, J?, B).
+    sgn_names(As?, J?, B2),
+    or(B1?, B2?, B12),
+    names_role1(B12?, Xs?, J?, B).
+procedure sgn_names(Args?, Integer?, YesNo).
+sgn_names([], _, no).
+sgn_names([sgn(_, I)|_], J, yes) :- I? =:= J? | true.
+sgn_names([_|As], J, B?) :- otherwise | sgn_names(As?, J?, B).
 procedure names_role1(YesNo?, Atoms?, Integer?, YesNo).
 names_role1(yes, _, _, yes).
 names_role1(no, Xs, J, B?) :- names_role(Xs?, J?, B).
@@ -893,9 +917,8 @@ adm_var(pvar(_), _, _, _, yes).
 adm_var(nterm(_), _, _, _, yes).
 %% A signed term's speech-act variable occurs in an atom some role requires
 %% (GSC, Definition "Act schema"), so it asks nothing of the binding; its
-%% value, the speech act bound to y signed by the person in role i, is part B
-%% of vGLP's task of 2026-10-18 12:24 UTC, and cvac.glp refuses a contract
-%% carrying one until then.
+%% value is the speech act bound to y, signed by the person in role i
+%% (img_sgn).
 adm_var(sgn(_, _), _, _, _, yes).
 procedure adm_var1(YesNo?, Found?, Ints?, YesNo).
 adm_var1(yes, _, _, yes).
@@ -1034,10 +1057,24 @@ img_atoms([atom(P, As)|Xs], B, [ga(P?, Vs?)|Gs?]) :- ground(B?) |
     img_atoms(Xs?, B?, Gs).
 procedure img_args(Args?, Binding?, Vals).
 img_args([], _, []).
-img_args([A|As], B, [X?|Xs?]) :- ground(B?), ground(A?) |
+img_args([sgn(Y, I)|As], B, [X?|Xs?]) :- ground(B?), ground(Y?), ground(I?) |
+    lookup(svar(Y?), B?, F),
+    role_person(I?, B?, P),
+    img_sgn(F?, P?, sgn(Y?, I?), X),
+    img_args(As?, B?, Xs).
+img_args([A|As], B, [X?|Xs?]) :- otherwise, ground(B?), ground(A?) |
     lookup(A?, B?, F),
     val_or_free(F?, A?, X),
     img_args(As?, B?, Xs).
+%% The image of a signed term sgn(y, i): the speech act bound to y, signed by
+%% the person in role i (GSC, Definition "Binding": beta(sgn(y, pi)) :=
+%% (beta(y), beta(pi))).  A signed term occurs only in an added atom (GSC,
+%% Definition "Act schema"), whose matching binds y to a speech act, so the
+%% second clause, the term left free as a free variable is, covers the type and
+%% is never reached.
+procedure img_sgn(Found?, Integer?, Arg?, Val).
+img_sgn(found(sp(U, S)), P, _, sp(sp(U?, S?), P?)).
+img_sgn(_, _, A, free_var(A?)) :- otherwise | true.
 
 procedure match_all(Atoms?, GAs?, Binding?, Bindings).
 match_all([], _, B, [B?]).
@@ -1065,10 +1102,26 @@ procedure match_args(Args?, Vals?, Binding?, Match).
 match_args([], [], B, match(B?)).
 match_args([], [_|_], _, nomatch).
 match_args([_|_], [], _, nomatch).
-match_args([V|Vs], [X|Xs], B, R?) :- ground(V?), ground(X?), ground(B?) |
+%% A signed term sgn(y, i) matches a speech act whose utterance is a speech
+%% act, y matching that speech act and role i its signer (GSC, Definition
+%% "Binding": beta(sgn(y, pi)) := (beta(y), beta(pi))); an utterance signed
+%% once, a person or a free variable it does not match.
+match_args([sgn(Y, I)|Vs], [X|Xs], B, R?) :- ground(Y?), ground(I?), ground(X?), ground(B?) |
+    sgn_parts(X?, Ps),
+    match_sgn(Ps?, Y?, I?, Vs?, Xs?, B?, R).
+match_args([V|Vs], [X|Xs], B, R?) :- otherwise, ground(V?), ground(X?), ground(B?) |
     lookup(V?, B?, F),
     kind_ok(V?, X?, K),
     match_one(F?, K?, V?, X?, Vs?, Xs?, B?, R).
+procedure sgn_parts(Val?, SgnParts).
+sgn_parts(sp(sp(U, S), P), signed(sp(U?, S?), P?)).
+sgn_parts(sp(utt(_), _), unsigned).
+sgn_parts(person(_), unsigned).
+sgn_parts(free_var(_), unsigned).
+procedure match_sgn(SgnParts?, Constant?, Integer?, Args?, Vals?, Binding?, Match).
+match_sgn(signed(U, P), Y, I, Vs, Xs, B, R?) :-
+    match_args([svar(Y?), role(I?)|Vs?], [U?, person(P?)|Xs?], B?, R).
+match_sgn(unsigned, _, _, _, _, _, nomatch).
 procedure match_one(Found?, YesNo?, Arg?, Val?, Args?, Vals?, Binding?, Match).
 match_one(found(W), _, _, X, Vs, Xs, B, R?) :- W? =?= X? | match_args(Vs?, Xs?, B?, R).
 match_one(found(_), _, _, _, _, _, _, nomatch) :- otherwise | true.

@@ -6,13 +6,15 @@
 %% A contract is compiled when programs/gsc finds it syntactically
 %% grassroots, grassroots with wards, or finds no fault in it but its
 %% introductory acts, so with traceable provenance and volition
-%% (verdict_lines below), every role a party role, no atom carrying a signed
-%% term, which part B of vGLP's task of 2026-10-18 12:24 UTC compiles
-%% (signed_lines below), and when it is a local and effective specification
-%% with simple guards, by the paragraph on act schemas and the sentence after
-%% it and by Definition "Volition-Guarded Specification, Participants, Guard
-%% Sets, Simple Guards", which local.glp decides.  Otherwise it prints the
-%% lines saying why and nothing else.
+%% (verdict_lines below), every role a party role, and when it is a local and
+%% effective specification with simple guards, by the paragraph on act schemas
+%% and the sentence after it and by Definition "Volition-Guarded
+%% Specification, Participants, Guard Sets, Simple Guards", which local.glp
+%% decides.  Otherwise it prints the lines saying why and nothing else.  A
+%% signed term sgn(y, i) in an added atom is the speech act bound to y, signed
+%% by the person in role i (vGLP, Section 5.4, "Act schemas as local
+%% specifications"; GSC, Definition "Act schema"): local.glp decides the
+%% contract over it and the printed text, text.glp, computes it.
 %%
 %% The module is the contract's own part, printed here, and the text every
 %% contract shares, text.glp.  The contract's part is the type Class, one
@@ -55,9 +57,7 @@ procedure compile0(Constant?, Contract?, Preds?, Preds?, Verdict?).
 compile0(Nm, C, Rf, E, V) :- ground(Nm?), ground(C?) |
     verdict_lines(V?, Nm?, L1),
     community_lines(C?, Nm?, L2),
-    signed_lines(C?, Nm?, L3),
-    lapp(L2?, L3?, L23),
-    lapp(L1?, L23?, L),
+    lapp(L1?, L2?, L),
     compile1(L?, Nm?, C?, Rf?, E?).
 
 procedure compile1(Stream(_)?, Constant?, Contract?, Preds?, Preds?).
@@ -134,51 +134,6 @@ procedure realisable_lines(YesNo?, Constant?, Stream(_)).
 realisable_lines(yes, _, []).
 realisable_lines(no, Nm, [H?, '%% it lacks traceable provenance or volition, or is otherwise faulty; check_named in programs/gsc gives the faults.']) :-
     ground(Nm?) | H =.. ['%% not compiled', Nm?].
-
-%% A signed term sgn(y, i) in an added atom is the speech act bound to y,
-%% signed by the person in role i (vGLP, Section 5.4, the paragraph "Act
-%% schemas as local specifications"; GSC, Definition "Act schema").  The
-%% compiler does not yet compile it: part B of vGLP's task of 2026-10-18 12:24
-%% UTC, which waits on recursive interactive types.  A contract carrying one
-%% is refused, the line saying so, and not compiled with the term dropped.
-procedure signed_lines(Contract?, Constant?, Stream(_)).
-signed_lines(C, Nm, L?) :- ground(Nm?) |
-    has_sgn(C?, B),
-    signed_lines1(B?, Nm?, L).
-procedure signed_lines1(YesNo?, Constant?, Stream(_)).
-signed_lines1(no, _, []).
-signed_lines1(yes, Nm, [H?, '%% it carries a signed term, sgn(y, i), which the compiler does not yet compile: the signed term waits on part B of vGLP\'s task of 2026-10-18 12:24 UTC (vGLP, Section 5.4, the paragraph "Act schemas as local specifications").']) :-
-    ground(Nm?) | H =.. ['%% not compiled', Nm?].
-procedure has_sgn(Contract?, YesNo).
-has_sgn([], no).
-has_sgn([schema(_, Rs)|Ss], B?) :- roles_sgn(Rs?, B1), has_sgn1(B1?, Ss?, B).
-has_sgn([cschema(_, _, Rs)|Ss], B?) :- roles_sgn(Rs?, B1), has_sgn1(B1?, Ss?, B).
-procedure has_sgn1(YesNo?, Contract?, YesNo).
-has_sgn1(yes, _, yes).
-has_sgn1(no, Ss, B?) :- has_sgn(Ss?, B).
-procedure roles_sgn(RoleSpecs?, YesNo).
-roles_sgn([], no).
-roles_sgn([R|Rs], B?) :- ground(R?) |
-    rs_parts(R?, P, M, K, N),
-    atoms_args(P?, A1),
-    atoms_args(M?, A2),
-    atoms_args(K?, A3),
-    atoms_args(N?, A4),
-    app(A1?, A2?, A12),
-    app(A3?, A4?, A34),
-    app(A12?, A34?, As),
-    args_sgn(As?, B1),
-    roles_sgn1(B1?, Rs?, B).
-procedure roles_sgn1(YesNo?, RoleSpecs?, YesNo).
-roles_sgn1(yes, _, yes).
-roles_sgn1(no, Rs, B?) :- roles_sgn(Rs?, B).
-procedure args_sgn(Args?, YesNo).
-args_sgn([], no).
-args_sgn([sgn(_, _)|_], yes).
-args_sgn([role(_)|As], B?) :- args_sgn(As?, B).
-args_sgn([pvar(_)|As], B?) :- args_sgn(As?, B).
-args_sgn([svar(_)|As], B?) :- args_sgn(As?, B).
-args_sgn([nterm(_)|As], B?) :- args_sgn(As?, B).
 
 procedure community_lines(Contract?, Constant?, Stream(_)).
 community_lines(C, Nm, L?) :- ground(Nm?) |

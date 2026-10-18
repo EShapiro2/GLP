@@ -26,10 +26,11 @@
 
 %% The contract, as programs/gsc/self.glp writes it.  sgn(Y, I) is the signed
 %% term sgn(y, pi_I) of GSC's Definition "Act schema", the speech act y signed
-%% by the party in role I, which an atom a schema adds may carry; the compiler
-%% does not yet compile it (part B of vGLP's task of 2026-10-18 12:24 UTC,
-%% waiting on recursive interactive types) and refuses a contract carrying one
-%% (cvac.glp, signed_lines).
+%% by the party in role I, which an atom a schema adds may carry: under a
+%% binding it is the speech act bound to y, signed by the person in role I
+%% (GSC, Definition "Binding"; vGLP, Section 5.4, "Act schemas as local
+%% specifications"), a speech act being an utterance or a speech act, signed;
+%% local.glp decides the contract over it and the printed text computes it.
 NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
             ; ext(NameTerm, Constant).
 Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)

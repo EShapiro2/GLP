@@ -29,9 +29,10 @@
 %% procedures imported from its compiled module.
 %% ---------------------------------------------------------------------------
 
-Speech   ::= speech(String, Peer).
+Speech   ::= speech(Utterance, Peer).
+Utterance ::= utterance(String) ; Speech.
 Class    ::= befriend(Peer, Peer) ; unfriend(Peer, Peer) ; sign(Peer, Speech)
-           ; forward(Peer, Peer, Peer, Peer, Speech).
+           ; forward(Peer, Peer, Speech).
 Request  ::= propose(Class) ; known(Peer).
 YesNo    ::= yes ; no.
 Decision ::= commit ; abort.
