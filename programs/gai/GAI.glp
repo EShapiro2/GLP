@@ -1,7 +1,7 @@
 %% ---------------------------------------------------------------------------
 %% GAI.glp --- the social network with accountable AI agents and digital
 %% provenance, GAI's contract (Coordination Appendix C; the clauses in
-%% contract.md beside this file and in GAI's paper, sections "A Social Graph
+%% GAI.md beside this file and in GAI's paper, sections "A Social Graph
 %% with Accountable AI Agents" and "A Social Network with Digital
 %% Provenance"), in the
 %% term form programs/gsc reads (its README, "Writing a contract").  Parts A
@@ -50,7 +50,7 @@
 %% The ? on an AI agent's role (r in enter, agent_befriend and agents_befriend,
 %% s in agents_befriend) is taken by the AI agent's program, in enter as the
 %% program the principal set up, and after it under the principal's standing
-%% authorisation of clause 9 (contract.md, "The schemas, and what they
+%% authorisation of clause 9 (GAI.md, "The schemas, and what they
 %% realise").
 %% ---------------------------------------------------------------------------
 
