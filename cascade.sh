@@ -22,6 +22,7 @@
 #   <contract>  NAME  owner       files in                  plays in programs/vglp/cva/
 #   gsg         GSG   GSC         programs/gsc              social_graph
 #   gsn         GSN   GSC         programs/gsc              ---
+#   gsnp        GSNP  GSC         programs/gsc              ---
 #   gc          GC    Currencies  programs/currencies/coins currency
 #   cssn        CSSN  CSSN        programs/cssn             ---
 #   gfwc        GFWC  GFWC        programs/federation       ---
@@ -74,11 +75,12 @@ case "$MODE" in write|--check|--record) ;; *) usage ;; esac
 case "$NAME" in
     gsg)  FILE=GSG;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="social_graph" ;;
     gsn)  FILE=GSN;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="" ;;
+    gsnp) FILE=GSNP; OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="" ;;
     gc)   FILE=GC;   OWNER="programs/currencies/coins"; PAPER="/Users/udi/Grassroots/GC";   PLAYDIR="currency" ;;
     cssn) FILE=CSSN; OWNER="programs/cssn";             PAPER="/Users/udi/Grassroots/CSSN"; PLAYDIR="" ;;
     gfwc) FILE=GFWC; OWNER="programs/federation";       PAPER="/Users/udi/Grassroots/GFWC"; PLAYDIR="" ;;
     gai)  FILE=GAI;  OWNER="programs/gai";              PAPER="/Users/udi/Grassroots/GAI";  PLAYDIR="" ;;
-    *) echo "cascade.sh: no contract named $NAME; the names are gsg gsn gc cssn gfwc gai" >&2; exit 2 ;;
+    *) echo "cascade.sh: no contract named $NAME; the names are gsg gsn gsnp gc cssn gfwc gai" >&2; exit 2 ;;
 esac
 SRC="$GLP_DIR/$OWNER"
 REC="$GLP_DIR/cascade/$FILE"

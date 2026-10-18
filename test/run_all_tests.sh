@@ -6548,7 +6548,7 @@ if _section CAS; then
 echo "=== Section CAS: The cascade, recorded whole ==="
 echo ""
 
-for cas_c in gsg gsn gc cssn gfwc gai; do
+for cas_c in gsg gsn gsnp gc cssn gfwc gai; do
     cas_n=$(printf '%s' "$cas_c" | tr a-z A-Z)
     cas_o="cascade/$cas_n"
     [ -f "$GLP_DIR/$cas_o/manifest.md" ] || continue
