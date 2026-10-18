@@ -161,9 +161,9 @@ cur_no_mint([schema(swap,
 % u is named by no atom note requires, so tagged loses traceable provenance;
 % the x that tag adds in an item occurs in a required atom, tagged(x, u), but
 % in none of traceable provenance, so item loses it too under the clause of
-% def:grounded on speech-act variables; over GSNP, sent, posted and delivered
-% after it, each adding a speech act that the schema requires only in an
-% item, or in a posted atom.  Befriend stays unobstructed and every schema
+% def:grounded on speech-act variables; over GSNP, posted and delivered after
+% it, each adding a speech act that the schema requires only in an item, or
+% in a posted atom.  Befriend stays unobstructed and every schema
 % satisfies volition, so what rejects the contract is the second conjunct of
 % def:syntactically-grassroots alone.
 procedure sg_svar_loose(Contract?, Contract).
@@ -239,6 +239,41 @@ sg_refl_malformed(S, reflexive([friend], C?)) :-
          [rs(guarded, [atom(friend, [role(1)])], [], [], [])]),
        schema(self_unfriend,
          [rs(guarded, [], [atom(friend, [role(1)])], [], [])])], C).
+
+% --- negative: a role that does not guard and changes nothing --------------
+% poke(p?, q) :  identity, +poked(q)        identity, friend(p)
+% def:schema requires +(i) u -(i) nonempty at every role that is not a
+% guarding role; q's role does not guard and adds and deletes nothing, so the
+% contract is malformed, the schema and the role named.  GSNP's forward and
+% post, whose guarding role adds and deletes nothing, are admitted.
+procedure sg_inert_role(Contract?, Contract).
+sg_inert_role(S, C?) :-
+    contract_app(S?,
+      [schema(poke,
+         [rs(guarded,   [atom(poked, [role(2)])], [], [atom(identity, [])], []),
+          rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)])], [])])], C).
+
+% --- negative: a schema that changes nothing at any role ------------------
+% look(p?, q?) :  identity, friend(q)        identity, friend(p)
+% Both roles guard and each may add and delete nothing, but def:schema
+% requires +(i) u -(i) nonempty at some role, so the contract is malformed,
+% the schema named.
+procedure sg_inert_schema(Contract?, Contract).
+sg_inert_schema(S, C?) :-
+    contract_app(S?,
+      [schema(look,
+         [rs(guarded, [], [], [atom(identity, []), atom(friend, [role(2)])], []),
+          rs(guarded, [], [], [atom(identity, []), atom(friend, [role(1)])], [])])], C).
+
+% --- negative: an atom added and deleted at one role -----------------------
+% toggle(p?) :  identity, -flag, +flag
+% def:schema requires +(i) and -(i) disjoint, so the contract is malformed,
+% the schema, the role and the atom named.
+procedure sg_added_deleted(Contract?, Contract).
+sg_added_deleted(S, C?) :-
+    contract_app(S?,
+      [schema(toggle,
+         [rs(guarded, [atom(flag, [])], [atom(flag, [])], [atom(identity, [])], [])])], C).
 
 % --- befriend requiring friend of each agent at its own role ---------------
 % befriend(p?, q?) :  friend(p), identity, not friend(q), +friend(q)
@@ -482,6 +517,9 @@ variant(sg_tri_cschema, S, C?) :- sg_tri_cschema(S?, C).
 variant(sg_svar_loose, S, C?) :- sg_svar_loose(S?, C).
 variant(sg_reflexive, S, C?) :- sg_reflexive(S?, C).
 variant(sg_refl_malformed, S, C?) :- sg_refl_malformed(S?, C).
+variant(sg_inert_role, S, C?) :- sg_inert_role(S?, C).
+variant(sg_inert_schema, S, C?) :- sg_inert_schema(S?, C).
+variant(sg_added_deleted, S, C?) :- sg_added_deleted(S?, C).
 variant(sg_self_required, S, C?) :- sg_self_required(S?, C).
 variant(sg_refl_required, S, C?) :- sg_refl_required(S?, C).
 variant(sg_refl_forbidden, S, C?) :- sg_refl_forbidden(S?, C).
@@ -491,6 +529,8 @@ variant(gf_untraceable, F, C?) :- gf_untraceable(F?, C).
 variant(gf_uncohesive, F, C?) :- gf_uncohesive(F?, C).
 variant(gf_cohesion_only, F, C?) :- gf_cohesion_only(F?, C).
 variant(gf_novolition, F, C?) :- gf_novolition(F?, C).
+variant(gf_inert_seated, F, C?) :- gf_inert_seated(F?, C).
+variant(gf_added_deleted, F, C?) :- gf_added_deleted(F?, C).
 variant(_, _, []) :- otherwise | true.
 
 % --- negative: the new community named without the decision that formed it --
@@ -556,6 +596,43 @@ gf_cohesion_only(F, C?) :-
          [crs(seated(nvar(zeta), seat), guarded_at(theta),
               [atom(seat, [nterm(nvar(eta))])], [],
               [atom(child, [nterm(nvar(zeta)), nterm(nvar(eta))])], [])])], C).
+
+% --- a seated role that changes nothing --------------------------------------
+% The federation contract with one schema more,
+%     confirm(zeta^seat ?theta, xi^seat ; ; zeta, xi) :
+%         zeta^seat:  child(zeta, xi), +confirmed(zeta, xi)
+%         xi^seat:    child(zeta, xi),
+% the assembly of zeta confirming its child xi, whose assembly requires the
+% child atom and adds and deletes nothing.  Appendix D's Definition Act schema
+% requires +(i) and -(i) disjoint and nothing of +(i) u -(i), so the
+% contract is formed; confirmed's xi is the base of a role, child has
+% traceable provenance, and xi^seat requires child(zeta, xi), whose zeta is
+% the base of the other role, so the three conditions on the text hold.  Its
+% compiled form (definition:compile) carries c'_p \neq c_p over the extent of
+% xi^seat, a seated role adding and deleting nothing.
+procedure gf_inert_seated(Contract?, Contract).
+gf_inert_seated(F, C?) :-
+    contract_app(F?,
+      [cschema(confirm, [],
+         [crs(seated(nvar(zeta), seat), guarded_at(theta),
+              [atom(confirmed, [nterm(nvar(zeta)), nterm(nvar(xi))])], [],
+              [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], []),
+          crs(seated(nvar(xi), seat), unguarded,
+              [], [],
+              [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [])])], C).
+
+% --- negative: an atom added and deleted at a seated role ------------------
+% The federation contract with one schema more,
+%     reseat(zeta^seat ?theta ; ; zeta) :  zeta^seat:  -seat(zeta), +seat(zeta).
+% Appendix D's Definition Act schema requires +(i) and -(i) disjoint, so the
+% contract is malformed, the schema, the role and the atom named.
+procedure gf_added_deleted(Contract?, Contract).
+gf_added_deleted(F, C?) :-
+    contract_app(F?,
+      [cschema(reseat, [],
+         [crs(seated(nvar(zeta), seat), guarded_at(theta),
+              [atom(seat, [nterm(nvar(zeta))])],
+              [atom(seat, [nterm(nvar(zeta))])], [], [])])], C).
 
 % --- negative: a join no assembly decides ----------------------------------
 % The two roles of join are the assemblies of two communities, of different

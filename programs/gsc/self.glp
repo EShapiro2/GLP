@@ -89,13 +89,21 @@ Cause ::= unobtainable ; blocked_by(Constant, Integer, Atom) ; reflexive.
 % contract has community roles, whose schemas (Appendix D, Definition Act
 % schema) admit no signed term (community).
 SgnCause ::= not_added ; not_required ; community.
+% What def:schema requires of the form of a schema, and a schema formed
+% otherwise violates: an atom both added and deleted at a role
+% (added_and_deleted), a role that is not guarding and adds and deletes
+% nothing (changes_nothing), and no role adding or deleting an atom
+% (no_role_changes).
 Fault ::= no_introductory_act
         ; obstructed(Constant, Integer, Atom, Cause)
         ; untraceable(Preds)
         ; volition(Constant, Integer, Integer)
         ; cohesion(Constant, Integer, Atom)
         ; reflexive(Constant, Integer, Atom)
-        ; signed(Constant, Integer, Atom, SgnCause).
+        ; signed(Constant, Integer, Atom, SgnCause)
+        ; added_and_deleted(Constant, Integer, Atom)
+        ; changes_nothing(Constant, Integer)
+        ; no_role_changes(Constant).
 Faults  ::= [] ; [Fault | Faults].
 
 % --- What an introduction with wards is made of (Appendix F) ---------------
