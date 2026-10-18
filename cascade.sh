@@ -293,6 +293,10 @@ say "written to cascade/$FILE"
 # --record: one commit, tagged.
 if [ "$MODE" = "--record" ]; then
     # A second run on one day is tagged cascade/<NAME>/<date>-2, and so on.
+    # The refs are packed first: on a disc that ignores case a loose tag
+    # directory of another spelling, cascade/gai beside cascade/GAI, takes the
+    # new tag in under its own name.
+    git -C "$GLP_DIR" pack-refs --all
     TAG="cascade/$FILE/$(date -u '+%Y-%m-%d')"
     n=1; T="$TAG"
     while git -C "$GLP_DIR" rev-parse -q --verify "refs/tags/$T" > /dev/null; do
