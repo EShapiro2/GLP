@@ -3,7 +3,8 @@
 Decides whether a contract is **syntactically grassroots**, and when it is not,
 which condition failed, at which schema, role and atom; and compiles the
 schemas of a contract that is into their volition-guarded transactions,
-printed as the LaTeX of Section 5.2.
+printed as the LaTeX of the paper's displays, befriend's in Section 5.1 and
+the swap's in Appendix B.3.
 
 The specification is the paper — *Formal Grassroots Social Contracts*
 (`/Grassroots/GSC`, `main.tex`), Section 3 for a contract whose roles are all
@@ -17,9 +18,10 @@ paper.  A contract is syntactically grassroots
 (`def:unobstructed`) introductory act (`def:introduction`), when the set of
 predicates occurring in it has traceable provenance (`def:grounded`), and when
 it satisfies volition (`def:volition`), which rests on traceable provenance
-too.  Section 7 certifies the two contracts of Sections 3.3 and 3.4 by hand;
-the checker returns the same verdict for both, and the same sets of predicates
-of traceable provenance.  A contract whose introductory act is obstructed may
+too.  Section 7.1 certifies GSNP, the social network with provenance of
+Section 3.3, by hand, and Appendix B.4 the currency; the checker returns the
+same verdict for both, and the same sets of predicates of traceable
+provenance.  A contract whose introductory act is obstructed may
 still be certified by Appendix F: when it has an introduction with wards
 (`def:introduction-wards`) --- a nonempty set of marks each with a
 guardianship (`def:guardianship`), an introductory act unobstructed but for
@@ -29,8 +31,8 @@ with a ward role and a free role and one with two ward roles (`def:relay`)
 (`thm:grassroots-wards`), and the verdict names the introductory act, the
 marks, their guardianships and the relay acts the search found.  The
 compiler is Section 5: a schema compiles to the assignment,
-the proviso and the guard of `def:compile`, and Section 5.2 is the form
-printed.  Section 5 defines the compilation for syntactically grassroots
+the proviso and the guard of `def:compile`, printed in the form of the
+paper's displays.  Section 5 defines the compilation for syntactically grassroots
 contracts, and Appendix F takes the realisation of a contract grassroots with
 wards by the same definition, so the compiler runs the checker first and
 compiles nothing for a contract that fails either.
@@ -52,16 +54,16 @@ Appendix D (`definition:compile`), and its worked box, the display for
 
 Needs the Dart SDK and this repository; nothing else.  A contract is its
 owner's and lives with the owner's code, one copy, in the term form of
-"Writing a contract" below: the social graph's is
-`programs/gsc/GSN.glp`, the currency's
-`programs/currencies/coins/GC.glp`, the child-safe social network's
-`programs/cssn/CSSN.glp` and the federation's
+"Writing a contract" below: GSC's are `programs/gsc/GSG.glp`, the social
+graph, `GSN.glp`, the social network, and `GSNP.glp`, the social network with
+provenance; the currency's is `programs/currencies/coins/GC.glp`, the
+child-safe social network's `programs/cssn/CSSN.glp` and the federation's
 `programs/federation/GFWC.glp`.  A REPL session on the file prints the
 contract's term, and a session on this directory decides it.  From the
 repository root:
 
     cd glp_runtime
-    printf '/path/to/GLP/programs/gsc/GSN.glp\ncontract_named(social_graph, C).\n:quit\n' | bin/glpc
+    printf '/path/to/GLP/programs/gsc/GSNP.glp\ncontract_named(gsnp, C).\n:quit\n' | bin/glpc
     printf '/path/to/GLP/programs/gsc/\ncheck(<the term the first printed>, V).\n:quit\n' | bin/glpc
 
 or interactively, entering the directory path at the prompt to load the program
@@ -82,17 +84,17 @@ reads each contract from its owner's file and passes the term in.
 ## The compiler
 
     cd glp_runtime
-    printf '/path/to/GLP/programs/gsc/\ncompile_named(social_graph).\n:quit\n' | bin/glpc
+    printf '/path/to/GLP/programs/gsc/\ncompile_contract(gsnp, <GSNP's term>).\n:quit\n' | bin/glpc
 
-prints the four displays of the social graph's contract, and
-`compile_schema(currency, swap).` prints one.  GLP has no string
+prints the twelve displays of GSNP, and
+`compile_schema_in(gc, <GC's term>, swap).` prints one.  GLP has no string
 concatenation, so a display is printed one token to a line.  A newline is
 whitespace to LaTeX, so those lines are the display and are pasted into a
-paper as they stand; the two the paper writes by hand, in Section 5.2, come
-back token for token, and `test_gsc.sh` compares them with the whitespace
-removed.  The closing comma and full stop of the paper's two displays belong
-to the sentences around them rather than to the compiled form, and are not
-printed.
+paper as they stand; `test_gsc.sh` compares the two displays the paper writes
+by hand, befriend's in Section 5.1 and the swap's in Appendix B.3, with what
+the compiler prints, the whitespace removed.  The closing comma and full stop
+of the paper's two displays belong to the sentences around them rather than
+to the compiled form, and are not printed.
 
 A schema's name is no part of its compiled form, so `compile_named` puts it
 in an `\iffalse ... \fi` before each display, which TeX skips.
@@ -110,15 +112,15 @@ an atom, a proviso line, each over the agents `p` of the role's extent
 for every name term `sigma . y` of the schema, that it is an argument of no
 atom of the configuration; and the guard, the union of a part of each guarding
 role's extent larger than its threshold of it, which for a party role is `0`.
-`compile_schema(federation, federate).` prints the worked box of Appendix D
+`compile_schema_in(gfwc, <GFWC's term>, federate).` prints the worked box of Appendix D
 token for token, and `test_gsc.sh` compares them.  A name variable and a
 threshold are named by a Greek letter, `zeta`, `xi`, `theta`, and printed as
 that letter's command; one guarding role is written `G`, several `G_{i}` by
 role index; the conditions of `Theta`, and the parts of a guard, are joined by
 "and" as the conjuncts of a proviso are.  The atoms of a set are written apart
 by a comma and a control space, `,\ `, as the worked box writes the two atoms
-`federate` adds; Section 5.2 writes no set of two, and a display in its form
-keeps the comma alone.  A contract that fails the conditions of Appendix D is
+`federate` adds; the displays of Section 5.1 and Appendix B.3 write no set of
+two, and a display in their form keeps the comma alone.  A contract that fails the conditions of Appendix D is
 not compiled, as one that is not syntactically grassroots is not.
 
 Printing reaches the person, so the module's certificate is refused on load
@@ -142,8 +144,10 @@ signature.  It loads and runs as before.
 | `wards_of(Name, W)`, `wards_variant(Name, C, W)` | the same of a fixture, and of a variant |
 
 The contracts are their owners' (claude.md "Sessions", the cascade rule;
-Coordination Appendix C), read from the owners' files: `social_graph` and
-`currency`, the two the paper works through, `cssn` and `federation`.  The
+Coordination Appendix C), read from the owners' files, each named as its
+file's `contract_named` names it: `gsg`, `gsn` and `gsnp`, GSC's, GSNP the
+contract the paper works through; `gc`, the currency of Appendix B; `cssn`
+and `gfwc`.  The
 fixtures are the checker's own and certify nothing but it:
 `sg_chain`, which certifies and exercises volition above arity two; `sg_tri`,
 which certifies with a role graph that is not connected and a guarding role in
@@ -165,15 +169,16 @@ adds `seat(eta)`, failing cohesion alone.  `sv_signed`, `sv_loose`,
 speech-act variables of `definition:provenance`, `sg_relay` is the social
 graph with two schemas on volition by connected component, and
 `sg_tri_cschema` is `sg_tri` with `tri` written as a cschema, all in the
-language of Appendix D.  `sg_items` is the social graph with items of Section
-3.3 --- `item` of arity one, `forward` adding `item(sgn(x, Alice))` at Bob ---
-GSG's contract, the checker's fixture until GSG commits it to its file;
-`sgn_intro` is an exchange whose two roles name each other only as the role
-of a signed term, and `sgn_intro_plain` the same with plain speech-act
-variables, naming nobody; `sgn_not_added`, `sgn_not_guarding` and
-`sgn_not_required` each carry a signed term where `def:schema` forbids it,
-`sgn_community` one in a contract with community roles, and all four are
-refused; `sg_sgn_loose` carries a signed speech act from an untraceable
+language of Appendix D.  `sg_items` is the social graph with items of arity
+one, `forward` adding `item(sgn(x, Alice))` at Bob, without identity and
+groups, the base of `sg_sgn_loose`; `sgn_intro` is an exchange whose two roles
+name each other only as the role of a signed term, and `sgn_intro_plain` the
+same with plain speech-act variables, naming nobody; `sgn_not_added`,
+`sgn_other_role` and `sgn_not_required` each carry a signed term where
+`def:schema` forbids it, `sgn_community` one in a contract with community
+roles, and all four are refused; `sgn_unguarded_signer` carries one signed by
+a role that does not guard and requires the speech act, which `def:schema`
+admits; `sg_sgn_loose` carries a signed speech act from an untraceable
 record, and `item` loses traceable provenance.  `wd` is a contract with wards
 in the schemas Appendix F describes, children and their parents, with friend
 reflexive: not syntactically grassroots and grassroots with wards; the
@@ -259,15 +264,14 @@ each fault a
 
     reflexive(Schema, Role, Atom)
     signed(Schema, Role, Atom, not_added)
-    signed(Schema, Role, Atom, not_guarding)
     signed(Schema, Role, Atom, not_required)
     signed(Schema, Role, Atom, community)
 
 naming the schema, the role and the atom, and no condition is decided for it.
-`not_added` is a signed term in an atom not marked `+`, `not_guarding` one
-whose role is not a guarding role of the schema, `not_required` one whose
-speech-act variable occurs in no atom a role requires, each a requirement of
-`def:schema`; and `community` is a signed term in a contract with community
+`not_added` is a signed term in an atom not marked `+`, and `not_required` one
+whose speech-act variable occurs in no atom its role requires, each a
+requirement of `def:schema`, which admits a signed term whether or not its
+role is a guarding role; and `community` is a signed term in a contract with community
 roles, whose schemas (Appendix D, Definition Act schema) are written over
 roles, variables and name terms and admit none.
 
@@ -276,7 +280,7 @@ roles, variables and name terms and admit none.
 A contract is a GLP term: the list of its act schemas (`def:schema`), or,
 where it declares predicates of arity one reflexive (the paragraph after
 `def:binding`), `reflexive(Predicates, Schemas)`.  Write it in a file of its
-own, in its owner's directory, as `programs/gsc/GSN.glp` is
+own, in its owner's directory, as `programs/gsc/GSNP.glp` is
 written: the type declarations below, then `procedure contract_named(Constant?,
 Declared).` and a clause giving the contract under its name.  `contracts.glp`
 holds only the checker's fixtures.
@@ -299,8 +303,8 @@ A role is named by its index, so `role(1)` is the schema's first role and the
 roles of `schema(Name, Rs)` are `role(1)` to `role(K)` for `K` the length of
 `Rs`; `pvar` is a party variable and `svar` a speech-act variable; `sgn(Y, I)`
 is the signed term `sgn(y, pi_I)` of `def:schema`, the speech act `y` signed by
-the party in role `I`, which an atom a schema adds may carry where `y` is
-required at some role and `I` guards.  `Guard` is
+the agent in role `I`, which an atom a schema adds may carry where role `I`
+requires an atom with `y` among its arguments, guarded or not.  `Guard` is
 `guarded` or `unguarded`, recording the mark `?`, or `guarded_at(T)`, recording
 the mark `?_theta` with `T` naming the threshold; and `Add`, `Del`, `Keep`,
 `Forb` are the role's `+(i)`, `-(i)`, `=(i)` and `not(i)`.  A party role is
@@ -309,29 +313,32 @@ of the schema's `I`-th role, `own_var` that of a party variable, `nvar` a name
 variable and `ext` a name term extended by a speech-act variable.  A contract
 none of whose roles is a `crs` and none of whose schemas is a `cschema` is a
 contract of Section 3 and is decided as one.  Befriend, written in
-the paper
+the paper (Section 3.2)
 
-    befriend(p?, q?) :   not friend(q), +friend(q)    not friend(p), +friend(p)
+    befriend(Alice?, Bob?) :   identity, not friend(Bob), +friend(Bob)    identity, not friend(Alice), +friend(Alice)
 
 is
 
     schema(befriend,
-      [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
-       rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])])
+      [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, [])], [atom(friend, [role(2)])]),
+       rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(friend, [role(1)])])])
 
 and the two schemas of Section 3.3 that carry the speech-act variable `x`,
-sign and forward, written in the paper
+sign and forward, written in its table, which shows the `identity` every role
+but establish's requires only in establish,
 
     sign(Alice?; x) :   +item(x)
     forward(Alice?, Bob; x) :   item(x), +sent(x, Bob)    friend(Alice), +item(sgn(x, Alice))
 
-are
+are, `identity` written in as `GSNP.glp` writes it,
 
     schema(sign,
-      [rs(guarded, [atom(item, [svar(x)])], [], [], [])])
+      [rs(guarded, [atom(item, [svar(x)])], [], [atom(identity, [])], [])])
     schema(forward,
-      [rs(guarded,   [atom(sent, [svar(x), role(2)])], [], [atom(item, [svar(x)])], []),
-       rs(unguarded, [atom(item, [sgn(x, 1)])], [], [atom(friend, [role(1)])], [])])
+      [rs(guarded,   [atom(sent, [svar(x), role(2)])], [],
+                     [atom(identity, []), atom(item, [svar(x)])], []),
+       rs(unguarded, [atom(item, [sgn(x, 1)])], [],
+                     [atom(identity, []), atom(friend, [role(1)])], [])])
 
 the signed term naming Alice, the forwarder, by her index.  The checker
 takes the contract as given and does not test it against the
@@ -351,7 +358,7 @@ contract that fails either as malformed.
 | `community.glp` | the three conditions of Appendix D, and the rooted predicates; its volition is `def:volition` of Section 3 too |
 | `wards.glp` | `def:guardianship`, `def:unobstructed-marks`, `def:relay` and `def:introduction-wards`, as a search over the marks and the predicates of arity one |
 | `check.glp` | `def:syntactically-grassroots`, the two halves together, Appendix F when its first conjunct fails, and the conditions of Appendix D for a contract with community roles; the refusal of a malformed contract, for a reflexive predicate or a signed term |
-| `compile.glp` | `def:compile`, printed as the LaTeX of Section 5.2, and `definition:compile`, printed as the worked box of Appendix D |
+| `compile.glp` | `def:compile`, printed as the LaTeX of the displays of Section 5.1 and Appendix B.3, and `definition:compile`, printed as the worked box of Appendix D |
 | `contracts.glp` | the checker's fixtures: contracts that stand alone, by name, and variants of a contract, by name and the contract's term |
 
 ## Why it terminates

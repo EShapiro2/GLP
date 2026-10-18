@@ -20,7 +20,7 @@ NameTerms ::= [] ; [NameTerm | NameTerms].
 
 % An argument is a role, named by its index in the schema, a party variable, a
 % speech-act variable, a name term or a signed term: sgn(Y, I) is the signed
-% term sgn(y, pi_I) of def:schema, the speech act y signed by the party in
+% term sgn(y, pi_I) of def:schema, the speech act y signed by the agent in
 % role I.
 Arg   ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
         ; sgn(Constant, Integer).
@@ -84,12 +84,11 @@ Ints  ::= [] ; [Integer | Ints].
 Preds ::= [] ; [Constant | Preds].
 Cause ::= unobtainable ; blocked_by(Constant, Integer, Atom) ; reflexive.
 % What def:schema requires of a signed term, and the atom carrying one
-% violates: it occurs in an atom not marked + (not_added), its role is not a
-% guarding role (not_guarding), its speech-act variable occurs in no atom a
-% role requires (not_required); or the contract has community roles, whose
-% schemas (Appendix D, Definition Act schema) admit no signed term
-% (community).
-SgnCause ::= not_added ; not_guarding ; not_required ; community.
+% violates: it occurs in an atom not marked + (not_added), or its speech-act
+% variable occurs in no atom its role requires (not_required); or the
+% contract has community roles, whose schemas (Appendix D, Definition Act
+% schema) admit no signed term (community).
+SgnCause ::= not_added ; not_required ; community.
 Fault ::= no_introductory_act
         ; obstructed(Constant, Integer, Atom, Cause)
         ; untraceable(Preds)
@@ -144,7 +143,7 @@ Missing ::= missing(Integer) ; all_reached.
 % speech-act variables occurring in any atom it requires.
 PCtx ::= pctx(Bases, Bases, Args, Args).
 
-% --- The LaTeX of a compiled schema (def:compile, Section 5.2) -------------
+% --- The LaTeX of a compiled schema (def:compile) -------------------------
 % GLP has no string concatenation, so a display is carried as its tokens and
 % printed one to a line; a newline is whitespace to LaTeX, so the lines are
 % the display.  ChunkLists holds the conjuncts of the proviso, each a display

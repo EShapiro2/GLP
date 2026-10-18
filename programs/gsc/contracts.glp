@@ -6,10 +6,11 @@
 %
 % The contracts the checker is for are their owners' and live with their
 % code, one copy each (claude.md "Sessions", the cascade rule; Coordination
-% Appendix C): the social graph's is programs/gsc/GSN.glp
-% (GSC, Section 3.3), the currency's programs/currencies/coins/GC.glp
-% (Section 3.4), the child-safe social network's programs/cssn/CSSN.glp
-% and the federation's programs/federation/GFWC.glp (Appendix D).  Each
+% Appendix C): GSC's are programs/gsc/GSG.glp, GSN.glp and GSNP.glp, the
+% social network with provenance of GSC, Section 3.3, the currency's
+% programs/currencies/coins/GC.glp (Appendix B), the child-safe social
+% network's programs/cssn/CSSN.glp and the federation's
+% programs/federation/GFWC.glp (Appendix D).  Each
 % prints its term by contract_named/2 in a REPL session on the file, and
 % test_gsc.sh passes the term to check/2, traceable_preds/2,
 % rooted_preds/2, compile_contract/2 and compile_schema_in/3.  A fixture that
@@ -25,7 +26,7 @@
 % 63b301f): item(x, a, f), the item x by a as received from f.  A fixture, the
 % base of the Appendix D variants below (sg_relay, sg_tri_cschema), since
 % Appendix D's Definition Act schema admits no signed term and the contract
-% GSN carries one (programs/gsc/GSN.glp); it certifies nothing of GSN.
+% GSNP carries one (programs/gsc/GSNP.glp); it certifies nothing of GSNP.
 procedure sg_plain(Contract).
 sg_plain([schema(befriend,
        [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
@@ -156,20 +157,22 @@ cur_no_mint([schema(swap,
         rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar(r)])], [], [])])]).
 
 % --- negative: a speech act carried over from an untraceable record --------
-% note(p?; x, u) : +tagged(x, u)      tag(p?; x, u) : tagged(x, u), +item(x, p, p)
+% note(p?; x, u) : +tagged(x, u)      tag(p?; x, u) : tagged(x, u), +item(x)
 % u is named by no atom note requires, so tagged loses traceable provenance;
 % the x that tag adds in an item occurs in a required atom, tagged(x, u), but
 % in none of traceable provenance, so item loses it too under the clause of
-% def:grounded on speech-act variables, and sent after it.  Befriend stays
-% unobstructed and every schema satisfies volition, so what rejects the
-% contract is the second conjunct of def:syntactically-grassroots alone.
+% def:grounded on speech-act variables; over GSNP, sent, posted and delivered
+% after it, each adding a speech act that the schema requires only in an
+% item, or in a posted atom.  Befriend stays unobstructed and every schema
+% satisfies volition, so what rejects the contract is the second conjunct of
+% def:syntactically-grassroots alone.
 procedure sg_svar_loose(Contract?, Contract).
 sg_svar_loose(S, C?) :-
     contract_app(S?,
       [schema(note,
          [rs(guarded, [atom(tagged, [svar(x), pvar(u)])], [], [], [])]),
        schema(tag,
-         [rs(guarded, [atom(item, [svar(x), role(1), role(1)])], [],
+         [rs(guarded, [atom(item, [svar(x)])], [],
                       [atom(tagged, [svar(x), pvar(u)])], [])])], C).
 
 % --- negative: minting a coin of somebody else's issue ---------------------
@@ -195,13 +198,34 @@ cur_loose_mint([schema(mint,
 procedure sg_reflexive(Contract?, Declared).
 sg_reflexive(S, reflexive([friend], S?)).
 
-% The social graph less befriend, for the variants of befriend below.
-procedure contract_tail(Contract?, Contract).
-contract_tail([], []).
-contract_tail([_|T], T?).
+% The social graph with its befriend changed in one place, for the variants
+% of befriend below: at each role, friend of that role is added to what the
+% role requires (own_keep) or to what it forbids (own_forb), and every other
+% schema, and everything else befriend requires and forbids, is unchanged.
+procedure own_friend(Constant?, RoleSpecs?, Integer?, RoleSpecs).
+own_friend(_, [], _, []).
+own_friend(own_keep, [rs(G, P, M, K, N)|Rs], I,
+           [rs(G?, P?, M?, [atom(friend, [role(I?)])|K?], N?)|R?]) :-
+    integer(I?), ground(Rs?) |
+    I1 := I? + 1,
+    own_friend(own_keep, Rs?, I1?, R).
+own_friend(own_forb, [rs(G, P, M, K, N)|Rs], I,
+           [rs(G?, P?, M?, K?, [atom(friend, [role(I?)])|N?])|R?]) :-
+    integer(I?), ground(Rs?) |
+    I1 := I? + 1,
+    own_friend(own_forb, Rs?, I1?, R).
+own_friend(W, [RS|Rs], I, [RS?|R?]) :- otherwise, ground(W?), integer(I?), ground(Rs?) |
+    I1 := I? + 1,
+    own_friend(W?, Rs?, I1?, R).
 
-procedure sg_but_befriend(Contract?, Contract).
-sg_but_befriend(S, T?) :- contract_tail(S?, T).
+procedure befriend_own(Constant?, Contract?, Contract).
+befriend_own(_, [], []).
+befriend_own(W, [schema(befriend, Rs)|Ss], [schema(befriend, Rs1?)|R?]) :-
+    ground(W?), ground(Rs?), ground(Ss?) |
+    own_friend(W?, Rs?, 1, Rs1),
+    befriend_own(W?, Ss?, R).
+befriend_own(W, [S|Ss], [S?|R?]) :- otherwise, ground(W?), ground(Ss?) |
+    befriend_own(W?, Ss?, R).
 
 % --- negative: a schema adding or deleting friend of its own role ----------
 % self_befriend(p?) : +friend(p)        self_unfriend(p?) : -friend(p)
@@ -216,44 +240,27 @@ sg_refl_malformed(S, reflexive([friend], C?)) :-
        schema(self_unfriend,
          [rs(guarded, [], [atom(friend, [role(1)])], [], [])])], C).
 
-% --- befriend requiring friend of each party at its own role ---------------
-% befriend(p?, q?) :  friend(p), not friend(q), +friend(q)
-%                     friend(q), not friend(p), +friend(p)
+% --- befriend requiring friend of each agent at its own role ---------------
+% befriend(p?, q?) :  friend(p), identity, not friend(q), +friend(q)
+%                     friend(q), identity, not friend(p), +friend(p)
 % No act of arity one adds friend, so clause 1 of def:unobstructed fails at
 % both roles of sg_self_required; with friend declared reflexive the clause
 % skips those two atoms, and sg_refl_required certifies.
-procedure self_req_befriend(Contract).
-self_req_befriend([schema(befriend,
-       [rs(guarded, [atom(friend, [role(2)])], [], [atom(friend, [role(1)])],
-                    [atom(friend, [role(2)])]),
-        rs(guarded, [atom(friend, [role(1)])], [], [atom(friend, [role(2)])],
-                    [atom(friend, [role(1)])])])]).
-
 procedure sg_self_required(Contract?, Contract).
-sg_self_required(S, C?) :-
-    self_req_befriend(B),
-    sg_but_befriend(S?, T),
-    contract_app(B?, T?, C).
+sg_self_required(S, C?) :- befriend_own(own_keep, S?, C).
 
 procedure sg_refl_required(Contract?, Declared).
 sg_refl_required(S, reflexive([friend], C?)) :- sg_self_required(S?, C).
 
-% --- negative: befriend forbidding friend of each party at its own role ----
-% befriend(p?, q?) :  not friend(p), not friend(q), +friend(q)
-%                     not friend(q), not friend(p), +friend(p)
+% --- negative: befriend forbidding friend of each agent at its own role ----
+% befriend(p?, q?) :  identity, not friend(p), not friend(q), +friend(q)
+%                     identity, not friend(q), not friend(p), +friend(p)
 % With friend reflexive every state holds friend of its holder, so clause 3 of
-% def:unobstructed fails at both roles of befriend, the one introductory act;
-% no act adds at a party friend of that party, so clause 2 holds.
+% def:unobstructed fails at both roles of befriend; no act adds at an agent
+% friend of that agent, so clause 2 holds.  The verdict names befriend's
+% faults, befriend being the contract's first introductory act.
 procedure sg_refl_forbidden(Contract?, Declared).
-sg_refl_forbidden(S, reflexive([friend], C?)) :-
-    sg_but_befriend(S?, T),
-    contract_app(
-      [schema(befriend,
-         [rs(guarded, [atom(friend, [role(2)])], [], [],
-                      [atom(friend, [role(1)]), atom(friend, [role(2)])]),
-          rs(guarded, [atom(friend, [role(1)])], [], [],
-                      [atom(friend, [role(2)]), atom(friend, [role(1)])])])],
-      T?, C).
+sg_refl_forbidden(S, reflexive([friend], C?)) :- befriend_own(own_forb, S?, C).
 
 % --- cs18: a child-safe social contract of eighteen schemas ----------------
 % The checker's fixture for expanded schemas, four-party schemas, speech-act
@@ -434,7 +441,8 @@ contract(sg_items, C?) :- sg_items(C).
 contract(sgn_intro, C?) :- sgn_intro(C).
 contract(sgn_intro_plain, C?) :- sgn_intro_plain(C).
 contract(sgn_not_added, C?) :- sgn_not_added(C).
-contract(sgn_not_guarding, C?) :- sgn_not_guarding(C).
+contract(sgn_other_role, C?) :- sgn_other_role(C).
+contract(sgn_unguarded_signer, C?) :- sgn_unguarded_signer(C).
 contract(sgn_not_required, C?) :- sgn_not_required(C).
 contract(sgn_community, C?) :- sgn_community(C).
 contract(sg_sgn_loose, C?) :- sg_sgn_loose(C).
@@ -461,9 +469,9 @@ contract(wd2, C?) :- wd2(C).
 contract(_, []) :- otherwise | true.
 
 % A fixture that is a contract changed in one place, by name and the contract
-% it changes, which test_gsc.sh reads from the owner's file: the social
-% graph's for sg_*, the federation's for gf_*.  An unknown name is the empty
-% contract.
+% it changes, which test_gsc.sh reads from the owner's file: GSNP's for sg_*
+% (sg_plain's for sg_relay and sg_tri_cschema, Appendix D admitting no signed
+% term), the federation's for gf_*.  An unknown name is the empty contract.
 exported procedure variant(Constant?, Contract?, Declared).
 variant(sg_imposed, S, C?) :- sg_imposed(S?, C).
 variant(sg_gossip, S, C?) :- sg_gossip(S?, C).
@@ -661,15 +669,13 @@ sg_relay(S, C?) :-
 % The signed speech-act term (Sections 3.1 to 3.3; the commit 63b301f)
 % ===========================================================================
 
-% --- the social graph with items (Section 3.3) -----------------------------
-% The contract Section 3.3 shows, with item of arity one: sign(Alice?; x)
-% adds item(x), and forward(Alice?, Bob; x) requires item(x) at Alice, adds
-% sent(x, Bob) there, and adds item(sgn(x, Alice)) at Bob, where friend(Alice)
-% is required.  It is GSG's, to go to programs/gsc/GSN.glp
-% (Coordination, 2026-10-18 08:30 UTC); the fixture here is the checker's,
-% for the signed term.  Section 7 certifies it: syntactically grassroots, with
-% {friend, item, sent} of traceable provenance, forward's signed term counting
-% as the two arguments x and Alice (def:grounded).
+% --- the social graph with items --------------------------------------------
+% The social graph with items of arity one, without identity and groups:
+% sign(Alice?; x) adds item(x), and forward(Alice?, Bob; x) requires item(x)
+% at Alice, adds sent(x, Bob) there, and adds item(sgn(x, Alice)) at Bob,
+% where friend(Alice) is required.  The checker's fixture, the base of
+% sg_sgn_loose below; Section 3.3's network with provenance is GSNP, GSC's
+% contract, programs/gsc/GSNP.glp, which test_gsc.sh reads.
 procedure sg_items(Contract).
 sg_items([schema(befriend,
        [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
@@ -715,15 +721,16 @@ sgn_intro_plain([S?,
     sgn_sign(S).
 
 % --- negative: the signed term where def:schema forbids it -----------------
-% Three contracts of sign and forward, each with its signed term violating
-% one of the three requirements of def:schema, and refused as malformed
+% Contracts of sign and forward, each with its signed term violating one of
+% the two requirements def:schema makes of it, and refused as malformed
 % (check.glp, sgn_schemas): in sgn_not_added forward requires
-% item(sgn(x, Alice)) at Bob, an atom not marked +; in sgn_not_guarding it
-% adds item(sgn(x, Bob)) at Bob, who does not guard; in sgn_not_required sign
-% adds item(sgn(x, Alice)) with x required at no role.  sgn_community writes
-% sign as a cschema, so that the contract has community roles, whose schemas
-% admit no signed term (Appendix D, Definition Act schema), and forward's is
-% refused as outside the language.
+% item(sgn(x, Alice)) at Bob, an atom not marked +; in sgn_other_role it adds
+% item(sgn(x, Bob)) at Bob, and Bob requires no atom with x among its
+% arguments, Alice being the role that requires item(x); in sgn_not_required
+% sign adds item(sgn(x, Alice)) with x required at no role.  sgn_community
+% writes sign as a cschema, so that the contract has community roles, whose
+% schemas admit no signed term (Appendix D, Definition Act schema), and
+% forward's is refused as outside the language.
 procedure sgn_not_added(Contract).
 sgn_not_added([S?,
     schema(forward,
@@ -731,8 +738,8 @@ sgn_not_added([S?,
         rs(unguarded, [atom(got, [])], [], [atom(item, [sgn(x, 1)])], [])])]) :-
     sgn_sign(S).
 
-procedure sgn_not_guarding(Contract).
-sgn_not_guarding([S?,
+procedure sgn_other_role(Contract).
+sgn_other_role([S?,
     schema(forward,
        [rs(guarded,   [atom(sent, [svar(x), role(2)])], [], [atom(item, [svar(x)])], []),
         rs(unguarded, [atom(item, [sgn(x, 2)])], [], [atom(friend, [role(1)])], [])])]) :-
@@ -741,6 +748,20 @@ sgn_not_guarding([S?,
 procedure sgn_not_required(Contract).
 sgn_not_required([schema(sign,
        [rs(guarded, [atom(item, [sgn(x, 1)])], [], [], [])])]).
+
+% --- the signed term of a role that does not guard --------------------------
+% forward(Alice, Bob; x) :  item(x), +sent(x, Bob)    friend(Alice), +item(sgn(x, Alice))
+% over sign, with neither role guarding.  The signed term's role, Alice,
+% requires item(x), an atom with x among its arguments, so def:schema admits
+% it whether or not Alice guards; as GSNP's deliver, the leader's forward,
+% which no agent wills.  The contract is not malformed; it has no
+% introductory act.
+procedure sgn_unguarded_signer(Contract).
+sgn_unguarded_signer([S?,
+    schema(forward,
+       [rs(unguarded, [atom(sent, [svar(x), role(2)])], [], [atom(item, [svar(x)])], []),
+        rs(unguarded, [atom(item, [sgn(x, 1)])], [], [atom(friend, [role(1)])], [])])]) :-
+    sgn_sign(S).
 
 procedure sgn_community(Contract).
 sgn_community([cschema(sign, [], [rs(guarded, [atom(item, [svar(x)])], [], [], [])]),
