@@ -2331,7 +2331,11 @@ if _section K; then
 # sources, as a certified mini-app of the Grassroots Super-App, and its plays
 # --- the village of Section 6.3 and one play per further act or condition ---
 # each party a scripted person on the mini-app's person channel and a
-# stand-in for the super-app.
+# stand-in for the super-app.  Each act does what its schema in
+# programs/cssn/CSSN.glp says: items are signed by their author and again by
+# each forwarder, poster and delivering leader; a parent's state does not
+# change by its child's acts, so a parent's step that waits on a child's act
+# waits on the child's screen, the parent looking at the child's phone.
 # =============================================================================
 echo "=== Section K: CSSN, the child-safe social network ==="
 echo ""
@@ -2413,32 +2417,44 @@ check "CSSN village act 1: a child enters with its parent, at the parent" "tagge
 check "CSSN village act 1: and at the child" "tagged(carol, parent(alice))" "$k_v"
 check "CSSN village act 1: a parent of two" "tagged(bob, child(eve))" "$k_v"
 check "CSSN village act 2: adult friendship" "tagged(alice, connected(frank))" "$k_v"
-check "CSSN village act 2: a direct message" "tagged(bob, received(alice, Hello Bob))" "$k_v"
+check "CSSN village act 2: a message Alice signed and forwarded, signed again by her" "tagged(bob, received(sgn(sgn(Hello Bob, alice), alice)))" "$k_v"
 check "CSSN village act 3: child befriending" "tagged(carol, connected(dave))" "$k_v"
 check "CSSN village act 3: the sibling case" "tagged(dave, connected(eve))" "$k_v"
 check "CSSN village act 3: the third friendship" "tagged(eve, connected(carol))" "$k_v"
-check "CSSN village act 4: a child creator's group" "tagged(carol, member_joined(group_id(carol, kids_chat), eve))" "$k_v"
-check "CSSN village act 4: the children's messages, sent on by the creator" "tagged(dave, group_received(group_id(carol, kids_chat), eve, Hi from Eve))" "$k_v"
+check "CSSN village act 4: a child leader's group" "tagged(carol, member_joined(group_id(carol, kids_chat), eve))" "$k_v"
+check "CSSN village act 4: a member's post, delivered by the leader, signed by its author, the poster and the leader" "tagged(dave, group_received(group_id(carol, kids_chat), sgn(sgn(sgn(Hi from Eve, eve), eve), carol)))" "$k_v"
 check "CSSN village act 4: Eve leaves" "tagged(eve, group_left(group_id(carol, kids_chat)))" "$k_v"
-check "CSSN village act 5: an adult creator's group, a child joining through its parent" "tagged(frank, member_joined(group_id(frank, study), carol))" "$k_v"
-check "CSSN village act 5: a member joining late is owed what was posted before" "tagged(carol, group_received(group_id(frank, study), dave, Hi from Dave!))" "$k_v"
+check "CSSN village act 5: an adult leader's group, a child joining through its parent" "tagged(frank, member_joined(group_id(frank, study), carol))" "$k_v"
+check "CSSN village act 5: a member joining late is owed what was posted before" "tagged(carol, group_received(group_id(frank, study), sgn(sgn(sgn(Hi from Dave!, dave), dave), frank)))" "$k_v"
 check "CSSN village act 6: parent-initiated removal" "tagged(dave, group_left(group_id(frank, study)))" "$k_v"
 check "CSSN village act 6: child unfriending" "tagged(dave, unfriended(carol))" "$k_v"
 check "CSSN village act 7: declaring of age, at the parent" "tagged(bob, child_of_age(eve))" "$k_v"
 check "CSSN village act 7: and at the child, an adult" "tagged(eve, of_age)" "$k_v"
 check "CSSN village act 7: befriending with no parent among the guards" "tagged(eve, connected(frank))" "$k_v"
-check "CSSN village: Alice's approvals, one per act of her child" "tagged(alice, approvals(5))" "$k_v"
-check_not "CSSN village: and no more" "tagged(alice, approvals(6))" "$k_v"
-check "CSSN village: Bob's approvals, the sibling befriending counted once" "tagged(bob, approvals(6))" "$k_v"
-check_not "CSSN village: and no more" "tagged(bob, approvals(7))" "$k_v"
-check "CSSN village: Alice's withdrawals, Carol's unfriending and Eve's leaving her group" "tagged(alice, withdrawals(2))" "$k_v"
-check "CSSN village: Bob's withdrawals" "tagged(bob, withdrawals(3))" "$k_v"
-check_not "CSSN village: and no more" "tagged(bob, withdrawals(4))" "$k_v"
-k_v_n=$(echo "$k_v" | grep -c "tagged(" || true)
-if [ "$k_v_n" = "140" ]; then
-    _check_pass "CSSN village: the log is 140 lines"
+check_not "CSSN village: a parent's state does not change by its children's acts, and no count is shown" "approvals(\|withdrawals(" "$k_v"
+# The line number of the first log line holding a pattern, 0 if none.
+k_line() { echo "$2" | grep -n -F "$1" | head -1 | cut -d: -f1 | grep . || echo 0; }
+k_v_decl=$(k_line "tagged(bob, did(req(declare_of_age(eve))))" "$k_v")
+for k_v_seen in "tagged(eve, group_left(group_id(carol, kids_chat)))" "tagged(dave, group_left(group_id(frank, study)))" "tagged(dave, unfriended(carol))"; do
+    k_v_at=$(k_line "$k_v_seen" "$k_v")
+    if [ "$k_v_at" -gt 0 ] && [ "$k_v_decl" -gt "$k_v_at" ]; then
+        _check_pass "CSSN village act 7: Bob declares Eve of age once his child's phone shows $k_v_seen"
+    else
+        _check_fail "CSSN village act 7: Bob declares Eve of age once his child's phone shows $k_v_seen" "the declaration is at line $k_v_decl, the child's screen at line $k_v_at"
+    fi
+done
+k_v_left=$(k_line "tagged(dave, group_left(group_id(frank, study)))" "$k_v")
+k_v_after=$(echo "$k_v" | tail -n +"$((k_v_left + 1))" | grep -c -F "tagged(dave, group_received(group_id(frank, study)" || true)
+if [ "$k_v_left" -gt 0 ] && [ "$k_v_after" = "0" ]; then
+    _check_pass "CSSN village act 6: a member who has left holds no delivery of the group"
 else
-    _check_fail "CSSN village: the log is 140 lines" "the log is $k_v_n lines (expected 140)"
+    _check_fail "CSSN village act 6: a member who has left holds no delivery of the group" "Dave left at line $k_v_left and holds $k_v_after deliveries after it"
+fi
+k_v_n=$(echo "$k_v" | grep -c "tagged(" || true)
+if [ "$k_v_n" = "141" ]; then
+    _check_pass "CSSN village: the log is 141 lines"
+else
+    _check_fail "CSSN village: the log is 141 lines" "the log is $k_v_n lines (expected 141)"
 fi
 
 echo "--- CSSN entering with two parents, declaring of age ---"
@@ -2463,8 +2479,13 @@ if [ "$k_tw_c" = "1" ] && [ "$k_tw_d" = "1" ]; then
 else
     _check_fail "CSSN twice: two introductions establish one friend channel" "carol connected $k_tw_c times, dave $k_tw_d (expected 1 each)"
 fi
-check "CSSN twice: one approval at each parent" "tagged(bob, approvals(1))" "$k_tw"
-check_not "CSSN twice: and no second" "approvals(2)" "$k_tw"
+k_tw_b=$(echo "$k_tw" | grep -c -F "tagged(bob, did(answer(intro(alice, carol, dave), yes)))" || true)
+if [ "$k_tw_b" = "2" ]; then
+    _check_pass "CSSN twice: Bob approves both introductions"
+else
+    _check_fail "CSSN twice: Bob approves both introductions" "Bob approved $k_tw_b (expected 2)"
+fi
+check_not "CSSN twice: and the parents' screens show no count" "approvals(\|withdrawals(" "$k_tw"
 
 echo "--- CSSN two adults befriending each other at once ---"
 k_bw=$(k_play play_both_ways 2>&1)
@@ -2478,11 +2499,11 @@ fi
 
 echo "--- CSSN a late joiner is owed the earlier posts ---"
 k_lj=$(k_play play_late_join 2>&1)
-check "CSSN late join: the member on the list at the post receives it" "tagged(bob, group_received(group_id(alice, late_join), alice, Posted before Carol joined))" "$k_lj"
-check "CSSN late join: the late joiner is owed it too" "tagged(carol, group_received(group_id(alice, late_join), alice, Posted before Carol joined))" "$k_lj"
-check "CSSN late join: a member joining after two posts is owed the first" "tagged(dave, group_received(group_id(alice, late_join), alice, Posted before Carol joined))" "$k_lj"
-check "CSSN late join: and the second" "tagged(dave, group_received(group_id(alice, late_join), alice, Posted before Dave joined))" "$k_lj"
-k_lj_b=$(echo "$k_lj" | grep -c "tagged(bob, group_received(group_id(alice, late_join), alice, Posted before Carol joined))" || true)
+check "CSSN late join: the member on the list at the post receives it, signed by the leader" "tagged(bob, group_received(group_id(alice, late_join), sgn(sgn(Posted before Carol joined, alice), alice)))" "$k_lj"
+check "CSSN late join: the late joiner is owed it too" "tagged(carol, group_received(group_id(alice, late_join), sgn(sgn(Posted before Carol joined, alice), alice)))" "$k_lj"
+check "CSSN late join: a member joining after two posts is owed the first" "tagged(dave, group_received(group_id(alice, late_join), sgn(sgn(Posted before Carol joined, alice), alice)))" "$k_lj"
+check "CSSN late join: and the second" "tagged(dave, group_received(group_id(alice, late_join), sgn(sgn(Posted before Dave joined, alice), alice)))" "$k_lj"
+k_lj_b=$(echo "$k_lj" | grep -c -F "tagged(bob, group_received(group_id(alice, late_join), sgn(sgn(Posted before Carol joined, alice), alice)))" || true)
 if [ "$k_lj_b" = "1" ]; then
     _check_pass "CSSN late join: no member receives the post twice"
 else
@@ -2498,10 +2519,17 @@ esac
 
 echo "--- CSSN ending a child's membership of a child's group ---"
 k_cl=$(k_play play_child_leave 2>&1)
-check "CSSN child leave: the creator's role" "tagged(dave, group_removed(group_id(carol, kids_chat)))" "$k_cl"
-check "CSSN child leave: the creator's parent's role" "tagged(eve, group_removed(group_id(carol, kids_chat)))" "$k_cl"
-check "CSSN child leave: a withdrawal at each parent for each" "tagged(alice, withdrawals(2))" "$k_cl"
-check "CSSN child leave: and at the members' parent" "tagged(bob, withdrawals(2))" "$k_cl"
+check "CSSN child leave: the member's parent's role, at the member" "tagged(dave, group_left(group_id(carol, kids_chat)))" "$k_cl"
+check "CSSN child leave: and at the leader" "tagged(carol, member_left(group_id(carol, kids_chat), dave))" "$k_cl"
+check "CSSN child leave: the member's own leaving, at the member" "tagged(eve, group_left(group_id(carol, kids_chat)))" "$k_cl"
+check "CSSN child leave: and at the leader too" "tagged(carol, member_left(group_id(carol, kids_chat), eve))" "$k_cl"
+k_cl_req=$(echo "$k_cl" | grep -n -F "tagged(bob, did(req(leave_child(dave, group_id(carol, kids_chat)))))" | head -1 | cut -d: -f1)
+k_cl_seen=$(echo "$k_cl" | grep -n -F "tagged(dave, group_joined(group_id(carol, kids_chat)))" | head -1 | cut -d: -f1)
+if [ -n "$k_cl_req" ] && [ -n "$k_cl_seen" ] && [ "$k_cl_req" -gt "$k_cl_seen" ]; then
+    _check_pass "CSSN child leave: Bob ends Dave's membership once Dave's phone shows him joined"
+else
+    _check_fail "CSSN child leave: Bob ends Dave's membership once Dave's phone shows him joined" "the request at line $k_cl_req, the joining at line $k_cl_seen"
+fi
 
 echo ""
 

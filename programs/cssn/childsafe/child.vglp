@@ -1,18 +1,18 @@
 %% child.vglp --- the child agent of the child-safe social network, in vGLP.
 %%
 %% The program a party runs while it is a child: a party with a recorded
-%% parent (CSSN Section 6.1, "The module is the state").  A party starts here
-%% when it enters with one or two of its parents on record, at the setup of
-%% its phone (Appendix C.3, Enter), and a declaration of age by a parent hands
-%% it to the adult module.  A child is no parent: this module carries no
-%% parent's role.  Its compilation is child.glp beside this file (glpc :emit).
+%% parent.  A party starts here when it enters with one or two of its parents
+%% on record, at the setup of its phone (CSSN, Appendix C.3, Enter), and a
+%% declaration of age by a parent hands it to the adult module.  A child is no
+%% parent: this module carries no parent's role.  Its compilation is child.glp
+%% beside this file (glpc :emit).
 %%
 %% A child holds its parents, rho_r, the parent_output entries of its outputs
 %% and the list Parents beside them.  It cannot befriend directly --- a
 %% conversation the social graph opens with it is refused, and every
 %% friendship of a child is established by its parents' introduction --- and
-%% every act by which it gains or loses a friend or a group leaves an approval
-%% or a withdrawal at the parent the contract names.
+%% a parent's state does not change by its acts: a parent takes part in them
+%% by its will and its record.
 %%
 %% Its question is the person's requests, asked once by child_agent/7, its
 %% entry; the cards it answers are self.vglp's.  The types and the helpers are
@@ -41,54 +41,51 @@ exported procedure child(Stream(Request)?, Key?, Stream(Key)?, Stream(AgentIn)?,
 
 %% --- What its cards and awaits hand it ---
 
-%% Child befriend(r, s, p, q), committed at the child whose name sorts first
-%% (Section 6.4, step 5): on reading the other's consent it conveys the friend
-%% channel it mints, or the existing one where the two are already friends,
-%% and the approval goes to P, the parent whose introduction it was.
-child(Reqs, Id, Ps, [outcome(P, consented(Peer, C?))|AgentIn], NetIn, Convs, Outs, St) :-
-    ground(Peer?), ground(P?) |
+%% Child befriend(r, s, p, q), committed at the child whose name sorts first:
+%% on reading the other's consent it conveys the friend channel it mints, or
+%% the existing one where the two are already friends.
+child(Reqs, Id, Ps, [outcome(consented(Peer, C?))|AgentIn], NetIn, Convs, Outs, St) :-
+    ground(Peer?) |
     already_friend(Peer?, Outs?, Outs1, Known),
-    commit_proposer(Known?, P?, Peer?, C, Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?).
-
-%% ... and at the other child, on reading the conveyance.
-child(Reqs, Id, Ps, [outcome(P, adopt(Peer, Ch))|AgentIn], NetIn, Convs, Outs, St) :-
-    ground(Id?), ground(Peer?), ground(P?) |
-    adopt(Peer?, Ch?, Outs?, Outs1, NetIn?, NetIn1),
-    count_at(P?, Id?, approval, Outs1?, Outs2),
+    convey(Known?, Peer?, C, Outs1?, Outs2, NetIn?, NetIn1),
     child(Reqs?, Id?, Ps?, AgentIn?, NetIn1?, Convs?, Outs2?, St?).
 
+%% ... and at the other child, on reading the conveyance.
+child(Reqs, Id, Ps, [outcome(adopt(Peer, Ch))|AgentIn], NetIn, Convs, Outs, St) :-
+    ground(Peer?) |
+    adopt(Peer?, Ch?, Outs?, Outs1, NetIn?, NetIn1),
+    child(Reqs?, Id?, Ps?, AgentIn?, NetIn1?, Convs?, Outs1?, St?).
+
 %% The other child declined.
-child(Reqs, Id, Ps, [outcome(_, declined(Peer))|AgentIn], NetIn, Convs, Outs, St) :-
+child(Reqs, Id, Ps, [outcome(declined(Peer))|AgentIn], NetIn, Convs, Outs, St) :-
     ground(Peer?) |
     show(declined(Peer?), Outs?, Outs1),
     child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?).
 
-%% A group invitation of its own answered yes: the member joins, and where
-%% the invitation took a parent's consent, the approval goes to that parent.
-child(Reqs, Id, Ps, [group_reply(G, M, P, yes(X?))|AgentIn], NetIn, Convs, Outs, state(Al, Om, Gs, Sn)) :-
-    ground(Id?), ground(G?), ground(M?), ground(P?) |
-    setup_group_hub_side(G?, M?, Gs?, Gs1, Sn?, Sn1, Outs?, Outs1, NetIn?, NetIn1, X),
+%% A group invitation of its own answered yes: the member's stream opened, the
+%% posts it is owed delivered on it, and its end of the group channel written
+%% into the writer it handed over.
+child(Reqs, Id, Ps, [group_reply(G, M, yes(X?))|AgentIn], NetIn, Convs, Outs, St) :-
+    ground(G?), ground(M?) |
+    setup_group_hub_side(G?, M?, St?, St1, Outs?, Outs1, NetIn?, NetIn1, X),
     show(member_joined(G?, M?), Outs1?, Outs2),
-    count_at(P?, Id?, approval, Outs2?, Outs3),
-    child(Reqs?, Id?, Ps?, AgentIn?, NetIn1?, Convs?, Outs3?, state(Al?, Om?, Gs1?, Sn1?)).
-child(Reqs, Id, Ps, [group_reply(_, M, _, no)|AgentIn], NetIn, Convs, Outs, St) :-
+    child(Reqs?, Id?, Ps?, AgentIn?, NetIn1?, Convs?, Outs2?, St1?).
+child(Reqs, Id, Ps, [group_reply(_, M, no)|AgentIn], NetIn, Convs, Outs, St) :-
     ground(M?) |
     show(declined(M?), Outs?, Outs1),
     child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?).
 
-%% A group joined: the approval goes to the parent whose approval it took.
-child(Reqs, Id, Ps, [group_joined(G, P, Ch)|AgentIn], NetIn, Convs, Outs, St) :-
-    ground(Id?), ground(P?) |
+%% A group joined.
+child(Reqs, Id, Ps, [group_joined(G, Ch)|AgentIn], NetIn, Convs, Outs, St) :-
     join_commit(G?, Ch?, Outs?, Outs1, NetIn?, NetIn1),
-    count_at(P?, Id?, approval, Outs1?, Outs2),
-    child(Reqs?, Id?, Ps?, AgentIn?, NetIn1?, Convs?, Outs2?, St?).
+    child(Reqs?, Id?, Ps?, AgentIn?, NetIn1?, Convs?, Outs1?, St?).
 
-%% Join group (child creator)(g, s, p, q), at the creator r: its parent P
+%% Child join, child leader(g, s, p, q), at the leader r: its parent
 %% consented, and the invitation goes to the friend M.
-child(Reqs, Id, Ps, [invite_now(G, M, P)|AgentIn], NetIn, Convs, Outs, St) :-
-    ground(Id?), ground(G?), ground(M?), ground(P?) |
+child(Reqs, Id, Ps, [invite_now(G, M)|AgentIn], NetIn, Convs, Outs, St) :-
+    ground(Id?), ground(G?), ground(M?) |
     send_friend(M?, msg(Id?, M?, group_invite(G?, R)), Outs?, Outs1),
-    inject_group_reply(G?, M?, P?, R?, AgentIn?, AgentIn1),
+    inject_group_reply(G?, M?, R?, AgentIn?, AgentIn1),
     child(Reqs?, Id?, Ps?, AgentIn1?, NetIn?, Convs?, Outs1?, St?).
 
 %% --- A conversation the social graph opens: refused ---
@@ -104,92 +101,74 @@ child(Reqs, Id, Ps, AgentIn, NetIn, [conversation(Q, ch(_, []))|Convs], Outs, St
 
 %% --- What the parties it is in relation with send it ---
 
-child(Reqs, Id, Ps, AgentIn, [msg(From, To, text(T))|NetIn], Convs, Outs, St) :-
-    Id? =?= To?, ground(From?) |
-    show(received(From?, T?), Outs?, Outs1),
-    child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?).
+%% Forward(q, r, x), at r: an item from a friend.
+child(Reqs, Id, Ps, AgentIn, [msg(_, To, item(X))|NetIn], Convs, Outs, St) :-
+    Id? =?= To? |
+    receive_item(X?, St?, St1, Outs?, Outs1),
+    child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St1?).
 
-%% Child unfriend(r, s, p, q), willed by the other child: the withdrawal goes
-%% to a parent of this child, the first on its record.
-child(Reqs, Id, [P|Ps], AgentIn, [msg(From, To, unfriend)|NetIn], Convs, Outs, St) :-
-    Id? =?= To?, ground(From?), ground(P?) |
+%% Unfriend(s, r), willed by the other friend.
+child(Reqs, Id, Ps, AgentIn, [msg(From, To, unfriend)|NetIn], Convs, Outs, St) :-
+    Id? =?= To?, ground(From?) |
     close_friend(From?, Outs?, Outs1),
     show(unfriended(From?), Outs1?, Outs2),
-    count_at(P?, Id?, withdrawal, Outs2?, Outs3),
-    child(Reqs?, Id?, [P?|Ps?], AgentIn?, NetIn?, Convs?, Outs3?, St?).
+    child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs2?, St?).
 
-%% An introduction from a parent of this child is put to the person to accept
-%% (Section 6.4, steps 3 and 4); one from any other party is declined, a child
-%% being introduced only by its parents.
+%% An introduction from a parent of this child is put to the person to accept;
+%% one from any other party is declined, a child being introduced only by its
+%% parents.
 child(Reqs, Id, Ps, AgentIn, [msg(From, To, child_intro(I, Cs))|NetIn], Convs, Outs, St) :-
     Id? =?= To?, ground(From?), ground(I?), ground(Ps?) |
     member_of(From?, Ps?, FromParent),
-    on_intro(FromParent?, From?, I?, Cs?, Id?, Out),
+    on_intro(FromParent?, I?, Cs?, Id?, Out),
     merge(Out?, AgentIn?, AgentIn1),
     child(Reqs?, Id?, Ps?, AgentIn1?, NetIn?, Convs?, Outs?, St?).
 
-%% Child unfriend(r, s, p, q), willed by the parent P of this child.
-child(Reqs, Id, Ps, AgentIn, [msg(P, To, unfriend_child(F))|NetIn], Convs, Outs, St) :-
-    Id? =?= To?, ground(P?), ground(F?) |
+%% Child unfriend(r, s, p), willed by the parent P of this child.
+child(Reqs, Id, Ps, AgentIn, [msg(_, To, unfriend_child(F))|NetIn], Convs, Outs, St) :-
+    Id? =?= To?, ground(F?) |
     send_friend(F?, msg(Id?, F?, unfriend), Outs?, Outs1),
     close_friend(F?, Outs1?, Outs2),
     show(unfriended(F?), Outs2?, Outs3),
-    count_at(P?, Id?, withdrawal, Outs3?, Outs4),
-    child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs4?, St?).
+    child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs3?, St?).
 
-%% Leave group (child)(g, s, p), willed by the parent P of this child.
-child(Reqs, Id, Ps, AgentIn, [msg(P, To, leave_group(G))|NetIn], Convs, Outs, St) :-
-    Id? =?= To?, ground(P?), ground(G?) |
+%% Child leave(g, s, p), willed by the parent P of this child, the member s.
+child(Reqs, Id, Ps, AgentIn, [msg(_, To, leave_group(G))|NetIn], Convs, Outs, St) :-
+    Id? =?= To?, ground(G?) |
     leave_group_commit(Id?, G?, Outs?, Outs1),
-    count_at(P?, Id?, withdrawal, Outs1?, Outs2),
-    child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs2?, St?).
-
-%% Leave group (child creator)(g, s, p, q), willed by the parent P of this
-%% child, the creator, which holds the member list.
-child(Reqs, Id, Ps, AgentIn, [msg(P, To, remove_member(G, M))|NetIn], Convs, Outs, St) :-
-    Id? =?= To?, ground(P?), ground(G?), ground(M?) |
-    remove_member(Id?, G?, M?, Outs?, Outs1),
-    count_at(P?, Id?, withdrawal, Outs1?, Outs2),
-    child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs2?, St?).
+    child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?).
 
 %% A group invitation: from a parent of this child, which has approved it, it
-%% is put to the person; from a friend, a child creator, a parent's consent is
+%% is put to the person; from a friend, a child leader, a parent's consent is
 %% asked first, of the first on its record.
 child(Reqs, Id, [P|Ps], AgentIn, [msg(From, To, group_invite(G, R?))|NetIn], Convs, Outs, St) :-
     Id? =?= To?, ground(From?), ground(G?), ground(P?), ground(Ps?) |
     member_of(From?, [P?|Ps?], FromParent),
-    on_group_invite(FromParent?, From?, P?, G?, Id?, R, Out, Ask),
+    on_group_invite(FromParent?, G?, R, Out, Ask),
     send_consent_req(Ask?, P?, Id?, Outs?, Outs1),
     merge(Out?, AgentIn?, AgentIn1),
     child(Reqs?, Id?, [P?|Ps?], AgentIn1?, NetIn?, Convs?, Outs1?, St?).
 
-%% A post in a group.
-child(Reqs, Id, Ps, AgentIn, [msg(_, _, group_msg(G, A, T))|NetIn], Convs, Outs, state(Al, Om, Gs, Sn)) :-
-    ground(G?), ground(A?), ground(T?) |
-    add_post(post(G?, A?, T?), Gs?, Gs1),
-    distribute_group_msg(G?, msg(A?, A?, group_msg(G?, A?, T?)), Sn?, Sn1, Outs?, Outs1),
-    show(group_received(G?, A?, T?), Outs1?, Outs2),
-    child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs2?, state(Al?, Om?, Gs1?, Sn1?)).
+%% Post to group(g, p, x), at the leader r, this child: a member's post, held
+%% and delivered to the members on the list now.
+child(Reqs, Id, Ps, AgentIn, [msg(_, _, group_msg(group_id(L, N), Y))|NetIn], Convs, Outs, St) :-
+    L? =?= Id?, ground(L?), ground(N?) |
+    hold_post(group_id(L?, N?), Y?, St?, St1, Outs?, Outs1),
+    child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St1?).
 
-%% Leave group (child creator)(g, s, p, q), willed by the member s, at the
-%% creator r: the member is dropped from the list, and the withdrawal goes to
-%% a parent of the creator, the first on its record, as the member's goes to
-%% its own.
-child(Reqs, Id, [P|Ps], AgentIn, [msg(M, _, group_leave(G, M1))|NetIn], Convs, Outs, St) :-
-    ground(Id?), ground(G?), ground(M?), M? =?= M1?, ground(P?) |
+%% Deliver to member(g, q, y), at q, this child: the leader's delivery.
+child(Reqs, Id, Ps, AgentIn, [msg(_, _, group_msg(group_id(L, N), Z))|NetIn], Convs, Outs, St) :-
+    L? =?\= Id?, ground(L?), ground(N?) |
+    receive_delivery(group_id(L?, N?), Z?, St?, St1, Outs?, Outs1),
+    child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St1?).
+
+%% Leave group(g, q), or Child leave(g, q, p), at the leader r, this child:
+%% the member is dropped from the list.
+child(Reqs, Id, Ps, AgentIn, [msg(M, _, group_leave(G, M1))|NetIn], Convs, Outs, St) :-
+    ground(G?), ground(M?), M? =?= M1? |
     close_output(group_member(G?, M?), Outs?, Outs1),
     show(member_left(G?, M?), Outs1?, Outs2),
-    count_at(P?, Id?, withdrawal, Outs2?, Outs3),
-    child(Reqs?, Id?, [P?|Ps?], AgentIn?, NetIn?, Convs?, Outs3?, St?).
-
-%% Leave group (child), willed by the creator: the withdrawal goes to a parent
-%% of this child.
-child(Reqs, Id, [P|Ps], AgentIn, [msg(_, To, group_removed(G))|NetIn], Convs, Outs, St) :-
-    Id? =?= To?, ground(G?), ground(P?) |
-    close_output(group(G?), Outs?, Outs1),
-    show(group_removed(G?), Outs1?, Outs2),
-    count_at(P?, Id?, withdrawal, Outs2?, Outs3),
-    child(Reqs?, Id?, [P?|Ps?], AgentIn?, NetIn?, Convs?, Outs3?, St?).
+    child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs2?, St?).
 
 %% Declare of age(p, r), or with two parents(p, q, r), at r: the parent P
 %% declared this child of age.  rho_r is emptied: the other parent is told,
@@ -203,7 +182,7 @@ child(Reqs, Id, Ps, AgentIn, [msg(P, To, of_age)|NetIn], Convs, Outs, St) :-
 
 %% --- The person's requests, one clause per alternative of Request ---
 
-%% The acts of a parent: a child is no parent (Section 2, clause 8).
+%% The acts of a parent: a child is no parent (CSSN:1).
 child([introduce(R, _, _)|Reqs], Id, Ps, AgentIn, NetIn, Convs, Outs, St) :-
     ground(R?) |
     show(not_my_child(R?), Outs?, Outs1),
@@ -213,20 +192,25 @@ child([declare_of_age(R)|Reqs], Id, Ps, AgentIn, NetIn, Convs, Outs, St) :-
     show(not_my_child(R?), Outs?, Outs1),
     child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?).
 
-child([send(F, T)|Reqs], Id, Ps, AgentIn, NetIn, Convs, Outs, St) :-
-    ground(Id?), ground(F?) |
-    send_friend(F?, msg(Id?, F?, text(T?)), Outs?, Outs1),
-    child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?).
+%% Sign(r, x).
+child([sign(T)|Reqs], Id, Ps, AgentIn, NetIn, Convs, Outs, St) :-
+    ground(Id?) |
+    sign_item(Id?, T?, St?, St1, Outs?, Outs1),
+    child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St1?).
 
-%% Child unfriend(r, s, p, q), willed by r: the withdrawal goes to a parent of
-%% this child, the first on its record.
-child([unfriend(F)|Reqs], Id, [P|Ps], AgentIn, NetIn, Convs, Outs, St) :-
-    ground(Id?), ground(F?), ground(P?) |
+%% Forward(r, q, x).
+child([forward(F, X)|Reqs], Id, Ps, AgentIn, NetIn, Convs, Outs, St) :-
+    ground(Id?) |
+    forward_item(Id?, F?, X?, St?, St1, Outs?, Outs1),
+    child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St1?).
+
+%% Unfriend(r, s), willed by r.
+child([unfriend(F)|Reqs], Id, Ps, AgentIn, NetIn, Convs, Outs, St) :-
+    ground(Id?), ground(F?) |
     send_friend(F?, msg(Id?, F?, unfriend), Outs?, Outs1),
     close_friend(F?, Outs1?, Outs2),
     show(unfriended(F?), Outs2?, Outs3),
-    count_at(P?, Id?, withdrawal, Outs3?, Outs4),
-    child(Reqs?, Id?, [P?|Ps?], AgentIn?, NetIn?, Convs?, Outs4?, St?).
+    child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs3?, St?).
 
 child([unfriend_child(R, _)|Reqs], Id, Ps, AgentIn, NetIn, Convs, Outs, St) :-
     ground(R?) |
@@ -236,53 +220,40 @@ child([unfriend_child(R, _)|Reqs], Id, Ps, AgentIn, NetIn, Convs, Outs, St) :-
 %% Create group(g).
 child([create_group(N)|Reqs], Id, Ps, AgentIn, NetIn, Convs, Outs, St) :-
     ground(Id?), ground(N?) |
-    setup_group_creator(group_id(Id?, N?), Outs?, Outs1, NetIn?, NetIn1),
+    setup_group_leader(group_id(Id?, N?), Outs?, Outs1, NetIn?, NetIn1),
     show(group_joined(group_id(Id?, N?)), Outs1?, Outs2),
     child(Reqs?, Id?, Ps?, AgentIn?, NetIn1?, Convs?, Outs2?, St?).
 
-%% Join group (child creator)(g, s, p, q), proposed by the creator r: the
+%% Child join, child leader(g, s, p, q), proposed by the leader r: the
 %% consent of its parent p is asked first, of the first on its record.
 child([invite(N, F)|Reqs], Id, [P|Ps], AgentIn, NetIn, Convs, Outs, St) :-
     ground(Id?), ground(N?), ground(F?), ground(P?) |
     send_parent(P?, msg(Id?, P?, invite_consent_req(group_id(Id?, N?), F?, Consent)), Outs?, Outs1),
-    invite_after(Consent?, group_id(Id?, N?), F?, P?, Out),
+    invite_after(Consent?, group_id(Id?, N?), F?, Out),
     merge(Out?, AgentIn?, AgentIn1),
     child(Reqs?, Id?, [P?|Ps?], AgentIn1?, NetIn?, Convs?, Outs1?, St?).
 
-%% A child creator invites the child of a friend by way of the friend, its
-%% parent, as an adult creator does, its own parent's consent asked first.
+%% A child leader invites the child of a friend by way of the friend, its
+%% parent, as an adult leader does, its own parent's consent asked first.
 child([invite_child(N, C, Q)|Reqs], Id, [P|Ps], AgentIn, NetIn, Convs, Outs, St) :-
     ground(Id?), ground(N?), ground(C?), ground(Q?), ground(P?) |
     send_parent(P?, msg(Id?, P?, invite_consent_req(group_id(Id?, N?), C?, Consent)), Outs?, Outs1),
-    invite_child_after(Consent?, group_id(Id?, N?), C?, Q?, P?, Id?, Outs1?, Outs2, AgentIn?, AgentIn1),
+    invite_child_after(Consent?, group_id(Id?, N?), C?, Q?, Id?, Outs1?, Outs2, AgentIn?, AgentIn1),
     child(Reqs?, Id?, [P?|Ps?], AgentIn1?, NetIn?, Convs?, Outs2?, St?).
 
-child([post(G, T)|Reqs], Id, Ps, AgentIn, NetIn, Convs, Outs, St) :-
-    ground(Id?), ground(G?), ground(T?) |
-    lookup_send_group(group(G?), msg(Id?, Id?, group_msg(G?, Id?, T?)), Outs?, Outs1),
-    child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?).
+%% Post to own group(g, x), or Post to group(g, r, x).
+child([post(G, X)|Reqs], Id, Ps, AgentIn, NetIn, Convs, Outs, St) :-
+    ground(Id?) |
+    post_item(Id?, G?, X?, St?, St1, Outs?, Outs1),
+    child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St1?).
 
-%% Leave group (child), willed by the child: the withdrawal goes to a parent
-%% of it, the first on its record.
-child([leave(G)|Reqs], Id, [P|Ps], AgentIn, NetIn, Convs, Outs, St) :-
-    ground(Id?), ground(G?), ground(P?) |
+%% Leave group(g, r), willed by the member r, this child.
+child([leave(G)|Reqs], Id, Ps, AgentIn, NetIn, Convs, Outs, St) :-
+    ground(Id?), ground(G?) |
     leave_group_commit(Id?, G?, Outs?, Outs1),
-    count_at(P?, Id?, withdrawal, Outs1?, Outs2),
-    child(Reqs?, Id?, [P?|Ps?], AgentIn?, NetIn?, Convs?, Outs2?, St?).
-
-%% Leave group (child creator)(g, s, p, q), willed by the creator r.
-child([remove(N, M)|Reqs], Id, [P|Ps], AgentIn, NetIn, Convs, Outs, St) :-
-    ground(Id?), ground(N?), ground(M?), ground(P?) |
-    remove_member(Id?, group_id(Id?, N?), M?, Outs?, Outs1),
-    count_at(P?, Id?, withdrawal, Outs1?, Outs2),
-    child(Reqs?, Id?, [P?|Ps?], AgentIn?, NetIn?, Convs?, Outs2?, St?).
+    child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?).
 
 child([leave_child(R, _)|Reqs], Id, Ps, AgentIn, NetIn, Convs, Outs, St) :-
-    ground(R?) |
-    show(not_my_child(R?), Outs?, Outs1),
-    child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?).
-
-child([remove_child_member(R, _, _)|Reqs], Id, Ps, AgentIn, NetIn, Convs, Outs, St) :-
     ground(R?) |
     show(not_my_child(R?), Outs?, Outs1),
     child(Reqs?, Id?, Ps?, AgentIn?, NetIn?, Convs?, Outs1?, St?).
@@ -291,66 +262,33 @@ child([remove_child_member(R, _, _)|Reqs], Id, Ps, AgentIn, NetIn, Convs, Outs, 
 %% Helpers
 %% =============================================================================
 
-%% The approval or withdrawal at the parent P, naming nobody.
-%% P is the party itself where no parent is to count it: the second child of
-%% a sibling introduction, whose one parent the first child's approval counts
-%% (Section 6, "When p = q ... alpha_p grows by one").
-procedure count_at(Key?, Key?, FriendContent?, Stream(OutputEntry)?, Stream(OutputEntry)).
-count_at(P, Id, What, Outs, Outs1?) :-
-    ground(P?), ground(Id?), P? =?\= Id? |
-    send_parent(P?, msg(Id?, P?, What?), Outs?, Outs1).
-count_at(P, Id, _, Outs, Outs?) :-
-    P? =?= Id? | true.
-
-%% The proposer's commit: a new friendship counts at P; an existing one is
-%% conveyed and counts nothing, no transaction having been carried out.
-procedure commit_proposer(Decision?, Key?, Key?, Conveyance(FriendChannel), Stream(Request)?, Key?, Stream(Key)?, Stream(AgentIn)?, Stream(FriendMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, AgentState?).
-commit_proposer(no, P, Peer, C?, Reqs, Id, Ps, AgentIn, NetIn, Convs, Outs, St) :-
-    ground(Id?) |
-    convey(no, Peer?, C, Outs?, Outs1, NetIn?, NetIn1),
-    count_at(P?, Id?, approval, Outs1?, Outs2),
-    child(Reqs?, Id?, Ps?, AgentIn?, NetIn1?, Convs?, Outs2?, St?).
-commit_proposer(yes, _, Peer, C?, Reqs, Id, Ps, AgentIn, NetIn, Convs, Outs, St) :-
-    convey(yes, Peer?, C, Outs?, Outs1, NetIn?, NetIn1),
-    child(Reqs?, Id?, Ps?, AgentIn?, NetIn1?, Convs?, Outs1?, St?).
-
 %% An introduction from a parent is put to the person to accept; one from any
 %% other party is declined.
-procedure on_intro(Decision?, Key?, Intro?, Consents?, Key?, Stream(AgentIn)).
-on_intro(yes, P, intro(P0, R, S), Cs, Id, Out?) :-
+procedure on_intro(Decision?, Intro?, Consents?, Key?, Stream(AgentIn)).
+on_intro(yes, intro(P0, R, S), Cs, Id, Out?) :-
     ground(Id?), ground(R?), ground(S?), ground(P0?) |
     peer_of(Id?, R?, S?, Peer),
-    counted_parent(Id?, R?, P0?, P?, Counted),
     accept(intro(P0?, R?, S?), A),
-    accepted(A?, Peer?, Cs?, Counted?, Out).
-on_intro(no, _, _, Cs, _, Out?) :-
-    accepted(no, none, Cs?, none, Out).
-
-%% The parent at whom this child's approval of the befriending is counted: the
-%% introducing parent p at r; the parent q that forwarded it at s, except where
-%% q is p, whose one approval r's counts.
-procedure counted_parent(Key?, Key?, Key?, Key?, Key).
-counted_parent(Id, R, P0, _, P0?) :- Id? =?= R? | true.
-counted_parent(Id, R, P0, P, Id?) :- ground(Id?), Id? =?\= R?, P? =?= P0? | true.
-counted_parent(Id, R, P0, P, P?) :- Id? =?\= R?, P? =?\= P0? | true.
+    accepted(A?, Peer?, Cs?, Out).
+on_intro(no, _, Cs, _, Out?) :-
+    accepted(no, none, Cs?, Out).
 
 %% The other child of an introduction.
 procedure peer_of(Key?, Key?, Key?, Key).
 peer_of(Id, R, S, S?) :- Id? =?= R? | true.
 peer_of(Id, R, _, R?) :- Id? =?\= R? | true.
 
-%% A group invitation at a child: from a parent, the person answers it, the
-%% approval to that parent; from a friend, the parent P's consent is asked
-%% first (Ask carries the consent to the parent), and the person answers it
-%% once P consents.
-procedure on_group_invite(Decision?, Key?, Key?, GroupId?, Key?, GroupReply, Stream(AgentIn), ConsentAsk).
-on_group_invite(yes, From, _, G, _, R?, Out?, none) :-
+%% A group invitation at a child: from a parent, the person answers it; from a
+%% friend, the parent's consent is asked first (Ask carries the consent to the
+%% parent), and the person answers it once the parent consents.
+procedure on_group_invite(Decision?, GroupId?, GroupReply, Stream(AgentIn), ConsentAsk).
+on_group_invite(yes, G, R?, Out?, none) :-
     ground(G?) |
     join_group(group(G?), A),
-    joined(A?, G?, From?, R, Out).
-on_group_invite(no, _, P, G, _, R?, Out?, ask(G?, Consent)) :-
+    joined(A?, G?, R, Out).
+on_group_invite(no, G, R?, Out?, ask(G?, Consent)) :-
     ground(G?) |
-    consented_join(Consent?, G?, P?, R, Out).
+    consented_join(Consent?, G?, R, Out).
 
 %% The joining child's consent request, to its parent.
 procedure send_consent_req(ConsentAsk?, Key?, Key?, Stream(OutputEntry)?, Stream(OutputEntry)).
@@ -361,24 +299,24 @@ send_consent_req(ask(G, Consent?), P, Id, Outs, Outs1?) :-
 
 %% Once the parent consents, the person answers the invitation; on no it goes
 %% no further.
-procedure consented_join(YesNo?, GroupId?, Key?, GroupReply, Stream(AgentIn)).
-consented_join(yes, G, P, R?, Out?) :-
+procedure consented_join(YesNo?, GroupId?, GroupReply, Stream(AgentIn)).
+consented_join(yes, G, R?, Out?) :-
     ground(G?) |
     join_group(group(G?), A),
-    joined(A?, G?, P?, R, Out).
-consented_join(no, _, _, no, []).
+    joined(A?, G?, R, Out).
+consented_join(no, _, no, []).
 
-%% A child creator's invitation, once its parent consents.
-procedure invite_after(YesNo?, GroupId?, Key?, Key?, Stream(AgentIn)).
-invite_after(yes, G, M, P, [invite_now(G?, M?, P?)]).
-invite_after(no, _, _, _, []).
+%% A child leader's invitation, once its parent consents.
+procedure invite_after(YesNo?, GroupId?, Key?, Stream(AgentIn)).
+invite_after(yes, G, M, [invite_now(G?, M?)]).
+invite_after(no, _, _, []).
 
-procedure invite_child_after(YesNo?, GroupId?, Key?, Key?, Key?, Key?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(AgentIn)?, Stream(AgentIn)).
-invite_child_after(yes, G, C, Q, P, Id, Outs, Outs1?, AgentIn, AgentIn1?) :-
+procedure invite_child_after(YesNo?, GroupId?, Key?, Key?, Key?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(AgentIn)?, Stream(AgentIn)).
+invite_child_after(yes, G, C, Q, Id, Outs, Outs1?, AgentIn, AgentIn1?) :-
     ground(Q?), ground(Id?), ground(G?), ground(C?) |
     send_friend(Q?, msg(Id?, Q?, group_invite_child(G?, C?, R)), Outs?, Outs1),
-    inject_group_reply(G?, C?, P?, R?, AgentIn?, AgentIn1).
-invite_child_after(no, _, _, _, _, _, Outs, Outs?, AgentIn, AgentIn?).
+    inject_group_reply(G?, C?, R?, AgentIn?, AgentIn1).
+invite_child_after(no, _, _, _, _, Outs, Outs?, AgentIn, AgentIn?).
 
 %% Every parent's parent-child channel torn down, the parents other than the
 %% declaring one P told first.

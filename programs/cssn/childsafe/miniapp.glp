@@ -32,14 +32,14 @@ imported procedure adult#dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?,
 exported procedure cssn(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
 cssn(Id, Ui, Convs) :-
     ground(Id?) |
-    adult # agent(Id?, [], [], Convs?, [user_output(Screen)], state(0, 0, [], []), Asks),
+    adult # agent(Id?, [], [], Convs?, [user_output(Screen)], state([], [], []), Asks),
     adult # dispatch(Asks?, Ui?, MCh),
     show_screen(MCh?, Screen?).
 
 exported procedure cssn_child(Key?, ParentEnds?, PersonChannel(Drawn)?, Stream(Conversation)?).
 cssn_child(Id, Es, Ui, Convs) :-
     ground(Id?) |
-    child # child_agent(Id?, Es?, [], [], Convs?, [user_output(Screen)], state(0, 0, [], []), Asks),
+    child # child_agent(Id?, Es?, [], [], Convs?, [user_output(Screen)], state([], [], []), Asks),
     adult # dispatch(Asks?, Ui?, MCh),
     show_screen(MCh?, Screen?).
 

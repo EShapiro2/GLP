@@ -6,11 +6,13 @@
 %% construct 0 --- and what the super-app shows it, and takes the steps of its
 %% script in order: a request granted on the request form, input(Id, P, R)
 %% with the request at the position P the draw marks input; an answer granted
-%% on the card showing an offer; a wait until the screen shows a message; and,
-%% at the super-app, asking a party to befriend and accepting a party's offer.
-%% A step waits until what it needs is on screen.  It logs every screen
-%% message, tagged(Id, M), and every step it takes, tagged(Id, did(Step)).
-%% The person channel never closes, so the person reads it for good.
+%% on the card showing an offer; a wait until the screen shows a message; a
+%% wait until the screen of another party shows a message, a parent looking at
+%% its child's phone, which the play hands it as that party's log; and, at the
+%% super-app, asking a party to befriend and accepting a party's offer.  A
+%% step waits until what it needs is on screen.  It logs every screen message,
+%% tagged(Id, M), and every step it takes, tagged(Id, did(Step)).  The person
+%% channel never closes, so the person reads it for good.
 
 %% A construct on screen that the script may answer: its offer, its
 %% identifier and the position of its question.
@@ -21,85 +23,94 @@ SgOffer   ::= sg_offer(Key, ReqId).
 SgOffers  ::= [] ; [SgOffer | SgOffers].
 Choice    ::= grant(Integer, Path, Drawn) ; sg(SgCmd) ; next ; wait.
 
-%% person(Id, Draws, Grants, Notes, Cmds, Script, Log): the person's grants on
-%% the person channel, its commands to the super-app, and its log.
-exported procedure person(Key?, _?, PersonIn(Drawn), Stream(SgNotify)?, Stream(SgCmd), Script?, Stream(_)).
-person(Id, Ds, Gs?, Ns, Cs?, Script, Log?) :-
+%% person(Id, Draws, Grants, Notes, Cmds, Script, Watch, Log): the person's
+%% grants on the person channel, its commands to the super-app, what it sees
+%% of the screens of the parties it watches, and its log.
+exported procedure person(Key?, _?, PersonIn(Drawn), Stream(SgNotify)?, Stream(SgCmd), Script?, Stream(Watched)?, Stream(_)).
+person(Id, Ds, Gs?, Ns, Cs?, Script, Ws, Log?) :-
     ground(Id?) |
-    person(Id?, Ds?, Gs, Ns?, Cs, Script?, no_form, [], [], [], Log).
+    person(Id?, Ds?, Gs, Ns?, Cs, Script?, no_form, [], [], [], [], Ws?, Log).
 
-procedure person(Key?, _?, PersonIn(Drawn), Stream(SgNotify)?, Stream(SgCmd), Script?, Form?, OpenCards?, SgOffers?, Stream(_)?, Stream(_)).
+procedure person(Key?, _?, PersonIn(Drawn), Stream(SgNotify)?, Stream(SgCmd), Script?, Form?, OpenCards?, SgOffers?, Stream(_)?, Stream(Watched)?, Stream(Watched)?, Stream(_)).
 
 %% The screen: the thread of construct 0, drawn again with every message so
 %% far as messages arrive; those not drawn before are logged, and the whole is
 %% what the person has seen.
-person(Id, [draw(0, _, output(Ms))|Ds], Gs?, Ns, Cs?, Script, Form, Cards, Offers, Seen, Log?) :-
+person(Id, [draw(0, _, output(Ms))|Ds], Gs?, Ns, Cs?, Script, Form, Cards, Offers, Seen, Wd, Ws, Log?) :-
     ground(Id?), ground(Ms?), ground(Seen?) |
     newer(Seen?, Ms?, Log, Log1?),
-    step(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards?, Offers?, Ms?, Log1).
+    step(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards?, Offers?, Ms?, Wd?, Ws?, Log1).
 
 %% The request form: its question is the stream of requests, at position P.
-person(Id, [draw(C, _, stream_request_r(input(P)))|Ds], Gs?, Ns, Cs?, Script, _, Cards, Offers, Seen, Log?) :-
+person(Id, [draw(C, _, stream_request_r(input(P)))|Ds], Gs?, Ns, Cs?, Script, _, Cards, Offers, Seen, Wd, Ws, Log?) :-
     ground(C?), ground(P?), C? > 0 |
     path_of(P?, P1),
-    step(Id?, Ds?, Gs, Ns?, Cs, Script?, form(C?, P1?), Cards?, Offers?, Seen?, Log).
+    step(Id?, Ds?, Gs, Ns?, Cs, Script?, form(C?, P1?), Cards?, Offers?, Seen?, Wd?, Ws?, Log).
 
 %% A card, kept until the script answers it.
-person(Id, [draw(C, _, V)|Ds], Gs?, Ns, Cs?, Script, Form, Cards, Offers, Seen, Log?) :-
+person(Id, [draw(C, _, V)|Ds], Gs?, Ns, Cs?, Script, Form, Cards, Offers, Seen, Wd, Ws, Log?) :-
     ground(C?), ground(V?), C? > 0 |
     card_of(V?, Card),
     add_card(Card?, C?, Cards?, Cards1),
-    step(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards1?, Offers?, Seen?, Log).
+    step(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards1?, Offers?, Seen?, Wd?, Ws?, Log).
 
 %% A construct withdrawn.
-person(Id, [withdraw(C)|Ds], Gs?, Ns, Cs?, Script, Form, Cards, Offers, Seen, Log?) :-
+person(Id, [withdraw(C)|Ds], Gs?, Ns, Cs?, Script, Form, Cards, Offers, Seen, Wd, Ws, Log?) :-
     ground(C?) |
     drop_card(C?, Cards?, Cards1),
-    step(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards1?, Offers?, Seen?, Log).
+    step(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards1?, Offers?, Seen?, Wd?, Ws?, Log).
 
 %% A friend's offer, at the super-app.
-person(Id, Ds, Gs?, [befriend(Q, R)|Ns], Cs?, Script, Form, Cards, Offers, Seen, Log?) :-
+person(Id, Ds, Gs?, [befriend(Q, R)|Ns], Cs?, Script, Form, Cards, Offers, Seen, Wd, Ws, Log?) :-
     ground(Q?), ground(R?) |
-    step(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards?, [sg_offer(Q?, R?)|Offers?], Seen?, Log).
+    step(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards?, [sg_offer(Q?, R?)|Offers?], Seen?, Wd?, Ws?, Log).
 
 %% A friend declined an offer of the person's.
-person(Id, Ds, Gs?, [declined(Q)|Ns], Cs?, Script, Form, Cards, Offers, Seen, [declined(Q?)|Log?]) :-
+person(Id, Ds, Gs?, [declined(Q)|Ns], Cs?, Script, Form, Cards, Offers, Seen, Wd, Ws, [declined(Q?)|Log?]) :-
     ground(Q?) |
-    step(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards?, Offers?, Seen?, Log).
+    step(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards?, Offers?, Seen?, Wd?, Ws?, Log).
+
+%% A message on the screen of a party the person watches.
+person(Id, Ds, Gs?, Ns, Cs?, Script, Form, Cards, Offers, Seen, Wd, [W|Ws], Log?) :-
+    ground(W?) |
+    step(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards?, Offers?, Seen?, [W?|Wd?], Ws?, Log).
 
 %% Take the next step, if what it needs is on screen.
-procedure step(Key?, _?, PersonIn(Drawn), Stream(SgNotify)?, Stream(SgCmd), Script?, Form?, OpenCards?, SgOffers?, Stream(_)?, Stream(_)).
-step(Id, Ds, Gs?, Ns, Cs?, [], Form, Cards, Offers, Seen, Log?) :-
-    person(Id?, Ds?, Gs, Ns?, Cs, [], Form?, Cards?, Offers?, Seen?, Log).
-step(Id, Ds, Gs?, Ns, Cs?, [S|Script], Form, Cards, Offers, Seen, Log?) :-
-    ground(S?), ground(Form?), ground(Cards?), ground(Offers?), ground(Seen?) |
-    choose(S?, Form?, Cards?, Offers?, Seen?, Choice, Cards1, Offers1),
-    act(Choice?, Id?, Ds?, Gs, Ns?, Cs, [S?|Script?], Form?, Cards1?, Offers1?, Seen?, Log).
+procedure step(Key?, _?, PersonIn(Drawn), Stream(SgNotify)?, Stream(SgCmd), Script?, Form?, OpenCards?, SgOffers?, Stream(_)?, Stream(Watched)?, Stream(Watched)?, Stream(_)).
+step(Id, Ds, Gs?, Ns, Cs?, [], Form, Cards, Offers, Seen, Wd, Ws, Log?) :-
+    person(Id?, Ds?, Gs, Ns?, Cs, [], Form?, Cards?, Offers?, Seen?, Wd?, Ws?, Log).
+step(Id, Ds, Gs?, Ns, Cs?, [S|Script], Form, Cards, Offers, Seen, Wd, Ws, Log?) :-
+    ground(S?), ground(Form?), ground(Cards?), ground(Offers?), ground(Seen?), ground(Wd?) |
+    choose(S?, Form?, Cards?, Offers?, Seen?, Wd?, Choice, Cards1, Offers1),
+    act(Choice?, Id?, Ds?, Gs, Ns?, Cs, [S?|Script?], Form?, Cards1?, Offers1?, Seen?, Wd?, Ws?, Log).
 
 %% What the step can do now.
-procedure choose(Step?, Form?, OpenCards?, SgOffers?, Stream(_)?, Choice, OpenCards, SgOffers).
-choose(req(R), form(C, P), Cards, Offers, _, grant(C?, P?, R?), Cards?, Offers?).
-choose(answer(O, A), _, Cards, Offers, _, Ch?, Cards1?, Offers?) :-
+procedure choose(Step?, Form?, OpenCards?, SgOffers?, Stream(_)?, Stream(Watched)?, Choice, OpenCards, SgOffers).
+choose(req(R), form(C, P), Cards, Offers, _, _, grant(C?, P?, R?), Cards?, Offers?).
+choose(answer(O, A), _, Cards, Offers, _, _, Ch?, Cards1?, Offers?) :-
     ground(O?), ground(A?) |
     find_card(O?, A?, Cards?, Ch, Cards1).
-choose(await(M), _, Cards, Offers, Seen, Ch?, Cards?, Offers?) :-
+choose(await(M), _, Cards, Offers, Seen, _, Ch?, Cards?, Offers?) :-
     ground(M?) |
     seen(M?, Seen?, Ch).
-choose(befriend(Q), _, Cards, Offers, _, sg(connect(Q?)), Cards?, Offers?).
-choose(accept_friend(Q), _, Cards, Offers, _, Ch?, Cards?, Offers1?) :-
+choose(await_at(K, M), _, Cards, Offers, _, Wd, Ch?, Cards?, Offers?) :-
+    ground(K?), ground(M?) |
+    seen_at(K?, M?, Wd?, Ch).
+choose(befriend(Q), _, Cards, Offers, _, _, sg(connect(Q?)), Cards?, Offers?).
+choose(accept_friend(Q), _, Cards, Offers, _, _, Ch?, Cards?, Offers1?) :-
     ground(Q?) |
     find_offer(Q?, Offers?, Ch, Offers1).
-choose(_, _, Cards, Offers, _, wait, Cards?, Offers?) :- otherwise | true.
+choose(_, _, Cards, Offers, _, _, wait, Cards?, Offers?) :- otherwise | true.
 
-procedure act(Choice?, Key?, _?, PersonIn(Drawn), Stream(SgNotify)?, Stream(SgCmd), Script?, Form?, OpenCards?, SgOffers?, Stream(_)?, Stream(_)).
-act(grant(C, P, X), Id, Ds, [input(C?, P?, X?)|Gs?], Ns, Cs?, [S|Script], Form, Cards, Offers, Seen, [did(S?)|Log?]) :-
-    step(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards?, Offers?, Seen?, Log).
-act(sg(Cmd), Id, Ds, Gs?, Ns, [Cmd?|Cs?], [S|Script], Form, Cards, Offers, Seen, [did(S?)|Log?]) :-
-    step(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards?, Offers?, Seen?, Log).
-act(next, Id, Ds, Gs?, Ns, Cs?, [S|Script], Form, Cards, Offers, Seen, [did(S?)|Log?]) :-
-    step(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards?, Offers?, Seen?, Log).
-act(wait, Id, Ds, Gs?, Ns, Cs?, Script, Form, Cards, Offers, Seen, Log?) :-
-    person(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards?, Offers?, Seen?, Log).
+procedure act(Choice?, Key?, _?, PersonIn(Drawn), Stream(SgNotify)?, Stream(SgCmd), Script?, Form?, OpenCards?, SgOffers?, Stream(_)?, Stream(Watched)?, Stream(Watched)?, Stream(_)).
+act(grant(C, P, X), Id, Ds, [input(C?, P?, X?)|Gs?], Ns, Cs?, [S|Script], Form, Cards, Offers, Seen, Wd, Ws, [did(S?)|Log?]) :-
+    step(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards?, Offers?, Seen?, Wd?, Ws?, Log).
+act(sg(Cmd), Id, Ds, Gs?, Ns, [Cmd?|Cs?], [S|Script], Form, Cards, Offers, Seen, Wd, Ws, [did(S?)|Log?]) :-
+    step(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards?, Offers?, Seen?, Wd?, Ws?, Log).
+act(next, Id, Ds, Gs?, Ns, Cs?, [S|Script], Form, Cards, Offers, Seen, Wd, Ws, [did(S?)|Log?]) :-
+    step(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards?, Offers?, Seen?, Wd?, Ws?, Log).
+act(wait, Id, Ds, Gs?, Ns, Cs?, Script, Form, Cards, Offers, Seen, Wd, Ws, Log?) :-
+    person(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards?, Offers?, Seen?, Wd?, Ws?, Log).
 
 %% The messages of the screen past those drawn before, logged.
 procedure newer(_?, _?, Stream(_), Stream(_)?).
@@ -112,6 +123,12 @@ procedure seen(_?, _?, Choice).
 seen(M, [M1|_], next) :- M? =?= M1? | true.
 seen(M, [_|Ms], Ch?) :- otherwise | seen(M?, Ms?, Ch).
 seen(_, [], wait).
+
+%% Whether the screen of the party K has shown M.
+procedure seen_at(Key?, _?, Stream(Watched)?, Choice).
+seen_at(K, M, [watched(K1, M1)|_], next) :- K? =?= K1?, M? =?= M1? | true.
+seen_at(K, M, [_|Ws], Ch?) :- otherwise | seen_at(K?, M?, Ws?, Ch).
+seen_at(_, _, [], wait).
 
 %% A card's offer and the position of its answer, from what the dispatcher
 %% draws under the functor of its ask.

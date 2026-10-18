@@ -1,7 +1,7 @@
 %% adult.vglp --- the adult agent of the child-safe social network, in vGLP.
 %%
 %% The program a party runs while it is an adult and no parent: it holds no
-%% parent and no child (CSSN Section 6.1, "The module is the state").  The
+%% parent and no child.  The
 %% three agents, adult, parent and child, exclude one another: a party starts
 %% here, or in the child module when it enters with its parents; this module
 %% hands an adult to the parent module when a child enters with it; the parent
@@ -46,18 +46,18 @@ exported procedure adult(Stream(Request)?, Key?, Stream(AgentIn)?, Stream(Friend
 %% A group invitation of its own answered yes: the member's stream opened, the
 %% posts it is owed written on it, and its end of the group channel written
 %% into the writer it handed over.
-adult(Reqs, Id, [group_reply(G, M, _, yes(X?))|AgentIn], NetIn, Convs, Outs, state(Al, Om, Ps, Sn)) :-
+adult(Reqs, Id, [group_reply(G, M, yes(X?))|AgentIn], NetIn, Convs, Outs, St) :-
     ground(G?), ground(M?) |
-    setup_group_hub_side(G?, M?, Ps?, Ps1, Sn?, Sn1, Outs?, Outs1, NetIn?, NetIn1, X),
+    setup_group_hub_side(G?, M?, St?, St1, Outs?, Outs1, NetIn?, NetIn1, X),
     show(member_joined(G?, M?), Outs1?, Outs2),
-    adult(Reqs?, Id?, AgentIn?, NetIn1?, Convs?, Outs2?, state(Al?, Om?, Ps1?, Sn1?)).
-adult(Reqs, Id, [group_reply(_, M, _, no)|AgentIn], NetIn, Convs, Outs, St) :-
+    adult(Reqs?, Id?, AgentIn?, NetIn1?, Convs?, Outs2?, St1?).
+adult(Reqs, Id, [group_reply(_, M, no)|AgentIn], NetIn, Convs, Outs, St) :-
     ground(M?) |
     show(declined(M?), Outs?, Outs1),
     adult(Reqs?, Id?, AgentIn?, NetIn?, Convs?, Outs1?, St?).
 
 %% A group joined.
-adult(Reqs, Id, [group_joined(G, _, Ch)|AgentIn], NetIn, Convs, Outs, St) :-
+adult(Reqs, Id, [group_joined(G, Ch)|AgentIn], NetIn, Convs, Outs, St) :-
     join_commit(G?, Ch?, Outs?, Outs1, NetIn?, NetIn1),
     adult(Reqs?, Id?, AgentIn?, NetIn1?, Convs?, Outs1?, St?).
 
@@ -82,10 +82,11 @@ adult(Reqs, Id, AgentIn, NetIn, [entered(C, Ch, Co)|Convs], Outs, St) :-
 
 %% --- What the parties it is in relation with send it ---
 
-adult(Reqs, Id, AgentIn, [msg(From, To, text(T))|NetIn], Convs, Outs, St) :-
-    Id? =?= To?, ground(From?) |
-    show(received(From?, T?), Outs?, Outs1),
-    adult(Reqs?, Id?, AgentIn?, NetIn?, Convs?, Outs1?, St?).
+%% Forward(q, p, x), at p: an item from a friend.
+adult(Reqs, Id, AgentIn, [msg(_, To, item(X))|NetIn], Convs, Outs, St) :-
+    Id? =?= To? |
+    receive_item(X?, St?, St1, Outs?, Outs1),
+    adult(Reqs?, Id?, AgentIn?, NetIn?, Convs?, Outs1?, St1?).
 
 %% Unfriend(q, p), at p.
 adult(Reqs, Id, AgentIn, [msg(From, To, unfriend)|NetIn], Convs, Outs, St) :-
@@ -98,31 +99,28 @@ adult(Reqs, Id, AgentIn, [msg(From, To, unfriend)|NetIn], Convs, Outs, St) :-
 adult(Reqs, Id, AgentIn, [msg(_, To, group_invite(G, R?))|NetIn], Convs, Outs, St) :-
     Id? =?= To?, ground(G?) |
     join_group(group(G?), A),
-    joined(A?, G?, Id?, R, Out),
+    joined(A?, G?, R, Out),
     merge(Out?, AgentIn?, AgentIn1),
     adult(Reqs?, Id?, AgentIn1?, NetIn?, Convs?, Outs?, St?).
 
-%% A post in a group: held, sent on to the members on the list now where this
-%% party created the group, and shown.
-adult(Reqs, Id, AgentIn, [msg(_, _, group_msg(G, A, T))|NetIn], Convs, Outs, state(Al, Om, Ps, Sn)) :-
-    ground(G?), ground(A?), ground(T?) |
-    add_post(post(G?, A?, T?), Ps?, Ps1),
-    distribute_group_msg(G?, msg(A?, A?, group_msg(G?, A?, T?)), Sn?, Sn1, Outs?, Outs1),
-    show(group_received(G?, A?, T?), Outs1?, Outs2),
-    adult(Reqs?, Id?, AgentIn?, NetIn?, Convs?, Outs2?, state(Al?, Om?, Ps1?, Sn1?)).
+%% Post to group(g, p, x), at the leader a, this party: a member's post, held
+%% and delivered to the members on the list now.
+adult(Reqs, Id, AgentIn, [msg(_, _, group_msg(group_id(L, N), Y))|NetIn], Convs, Outs, St) :-
+    L? =?= Id?, ground(L?), ground(N?) |
+    hold_post(group_id(L?, N?), Y?, St?, St1, Outs?, Outs1),
+    adult(Reqs?, Id?, AgentIn?, NetIn?, Convs?, Outs1?, St1?).
 
-%% Leave group, at the creator: a member left.
+%% Deliver to member(g, q, y), at q, this party: the leader's delivery.
+adult(Reqs, Id, AgentIn, [msg(_, _, group_msg(group_id(L, N), Z))|NetIn], Convs, Outs, St) :-
+    L? =?\= Id?, ground(L?), ground(N?) |
+    receive_delivery(group_id(L?, N?), Z?, St?, St1, Outs?, Outs1),
+    adult(Reqs?, Id?, AgentIn?, NetIn?, Convs?, Outs1?, St1?).
+
+%% Leave group(g, q), at the leader: a member left.
 adult(Reqs, Id, AgentIn, [msg(M, _, group_leave(G, M1))|NetIn], Convs, Outs, St) :-
     ground(G?), ground(M?), M? =?= M1? |
     close_output(group_member(G?, M?), Outs?, Outs1),
     show(member_left(G?, M?), Outs1?, Outs2),
-    adult(Reqs?, Id?, AgentIn?, NetIn?, Convs?, Outs2?, St?).
-
-%% Leave group, at the member: the creator removed it.
-adult(Reqs, Id, AgentIn, [msg(_, To, group_removed(G))|NetIn], Convs, Outs, St) :-
-    Id? =?= To?, ground(G?) |
-    close_output(group(G?), Outs?, Outs1),
-    show(group_removed(G?), Outs1?, Outs2),
     adult(Reqs?, Id?, AgentIn?, NetIn?, Convs?, Outs2?, St?).
 
 %% --- The person's requests, one clause per alternative of Request ---
@@ -137,10 +135,17 @@ adult([declare_of_age(R)|Reqs], Id, AgentIn, NetIn, Convs, Outs, St) :-
     show(not_my_child(R?), Outs?, Outs1),
     adult(Reqs?, Id?, AgentIn?, NetIn?, Convs?, Outs1?, St?).
 
-adult([send(F, T)|Reqs], Id, AgentIn, NetIn, Convs, Outs, St) :-
-    ground(Id?), ground(F?) |
-    send_friend(F?, msg(Id?, F?, text(T?)), Outs?, Outs1),
-    adult(Reqs?, Id?, AgentIn?, NetIn?, Convs?, Outs1?, St?).
+%% Sign(p, x).
+adult([sign(T)|Reqs], Id, AgentIn, NetIn, Convs, Outs, St) :-
+    ground(Id?) |
+    sign_item(Id?, T?, St?, St1, Outs?, Outs1),
+    adult(Reqs?, Id?, AgentIn?, NetIn?, Convs?, Outs1?, St1?).
+
+%% Forward(p, q, x).
+adult([forward(F, X)|Reqs], Id, AgentIn, NetIn, Convs, Outs, St) :-
+    ground(Id?) |
+    forward_item(Id?, F?, X?, St?, St1, Outs?, Outs1),
+    adult(Reqs?, Id?, AgentIn?, NetIn?, Convs?, Outs1?, St1?).
 
 %% Unfriend(p, q), at p.
 adult([unfriend(F)|Reqs], Id, AgentIn, NetIn, Convs, Outs, St) :-
@@ -158,48 +163,38 @@ adult([unfriend_child(R, _)|Reqs], Id, AgentIn, NetIn, Convs, Outs, St) :-
 %% Create group(g).
 adult([create_group(N)|Reqs], Id, AgentIn, NetIn, Convs, Outs, St) :-
     ground(Id?), ground(N?) |
-    setup_group_creator(group_id(Id?, N?), Outs?, Outs1, NetIn?, NetIn1),
+    setup_group_leader(group_id(Id?, N?), Outs?, Outs1, NetIn?, NetIn1),
     show(group_joined(group_id(Id?, N?)), Outs1?, Outs2),
     adult(Reqs?, Id?, AgentIn?, NetIn1?, Convs?, Outs2?, St?).
 
-%% Join group(g, q), proposed by the creator.
+%% Join group(g, q), proposed by the leader.
 adult([invite(N, F)|Reqs], Id, AgentIn, NetIn, Convs, Outs, St) :-
     ground(Id?), ground(N?), ground(F?) |
     send_friend(F?, msg(Id?, F?, group_invite(group_id(Id?, N?), R)), Outs?, Outs1),
-    inject_group_reply(group_id(Id?, N?), F?, Id?, R?, AgentIn?, AgentIn1),
+    inject_group_reply(group_id(Id?, N?), F?, R?, AgentIn?, AgentIn1),
     adult(Reqs?, Id?, AgentIn1?, NetIn?, Convs?, Outs1?, St?).
 
-%% Join group (child, creator an adult)(g, s, p), proposed by the creator, by
-%% way of the child's parent P, its friend.
+%% Child join, adult leader(g, s, p), proposed by the leader, by way of the
+%% child's parent P, its friend.
 adult([invite_child(N, C, P)|Reqs], Id, AgentIn, NetIn, Convs, Outs, St) :-
     ground(Id?), ground(N?), ground(C?), ground(P?) |
     send_friend(P?, msg(Id?, P?, group_invite_child(group_id(Id?, N?), C?, R)), Outs?, Outs1),
-    inject_group_reply(group_id(Id?, N?), C?, Id?, R?, AgentIn?, AgentIn1),
+    inject_group_reply(group_id(Id?, N?), C?, R?, AgentIn?, AgentIn1),
     adult(Reqs?, Id?, AgentIn1?, NetIn?, Convs?, Outs1?, St?).
 
-%% Post(p, a), into the group's channel.
-adult([post(G, T)|Reqs], Id, AgentIn, NetIn, Convs, Outs, St) :-
-    ground(Id?), ground(G?), ground(T?) |
-    lookup_send_group(group(G?), msg(Id?, Id?, group_msg(G?, Id?, T?)), Outs?, Outs1),
-    adult(Reqs?, Id?, AgentIn?, NetIn?, Convs?, Outs1?, St?).
+%% Post to own group(g, x), or Post to group(g, p, x).
+adult([post(G, X)|Reqs], Id, AgentIn, NetIn, Convs, Outs, St) :-
+    ground(Id?) |
+    post_item(Id?, G?, X?, St?, St1, Outs?, Outs1),
+    adult(Reqs?, Id?, AgentIn?, NetIn?, Convs?, Outs1?, St1?).
 
-%% Leave group(g, q), willed by the member.
+%% Leave group(g, q), willed by the member q, this party.
 adult([leave(G)|Reqs], Id, AgentIn, NetIn, Convs, Outs, St) :-
     ground(Id?), ground(G?) |
     leave_group_commit(Id?, G?, Outs?, Outs1),
     adult(Reqs?, Id?, AgentIn?, NetIn?, Convs?, Outs1?, St?).
 
-%% Leave group(g, q), willed by the creator.
-adult([remove(N, M)|Reqs], Id, AgentIn, NetIn, Convs, Outs, St) :-
-    ground(Id?), ground(N?), ground(M?) |
-    remove_member(Id?, group_id(Id?, N?), M?, Outs?, Outs1),
-    adult(Reqs?, Id?, AgentIn?, NetIn?, Convs?, Outs1?, St?).
-
 adult([leave_child(R, _)|Reqs], Id, AgentIn, NetIn, Convs, Outs, St) :-
-    ground(R?) |
-    show(not_my_child(R?), Outs?, Outs1),
-    adult(Reqs?, Id?, AgentIn?, NetIn?, Convs?, Outs1?, St?).
-adult([remove_child_member(R, _, _)|Reqs], Id, AgentIn, NetIn, Convs, Outs, St) :-
     ground(R?) |
     show(not_my_child(R?), Outs?, Outs1),
     adult(Reqs?, Id?, AgentIn?, NetIn?, Convs?, Outs1?, St?).

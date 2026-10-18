@@ -12,15 +12,17 @@
 %% (superapp.glp) and the plays (plays.glp), the village of Section 6.3 among
 %% them.
 %%
-%% A party's records are its channels and its state (Section 8.1, "The module
-%% is the state"): the friend set c_p is the friend_output entries of its
-%% outputs, the parents rho_p the parent_output entries --- and the child
-%% agent's list of its parents --- and the children kappa_p the child_output
-%% entries, with the parent agent's list of them and their co-parents
-%% (gamma_p).  What no channel stands for is the state: alpha_p and omega_p, the
-%% approvals and withdrawals a parent's children's acts leave at it, and the
-%% posts a group's creator holds with its record of what it has sent to whom
-%% (pi_p^g and delta_p^g).
+%% A party's records, the components of its local state (CSSN, Section 3), are
+%% its channels and its state: the friend set c_p is the friend_output entries
+%% of its outputs, the parents rho_p the parent_output entries --- and the
+%% child agent's list of its parents --- and the children kappa_p the
+%% child_output entries, with the parent agent's list of them and their
+%% co-parents (gamma_p); the groups mu_p it is a member of are its group
+%% entries, and the member list lambda_p^g of a group it leads its group_member
+%% entries.  What no channel stands for is the state: the items h_p it holds,
+%% and, at the leader of a group, the posts pi_p^g it holds and its record
+%% delta_p^g of what it has delivered to whom.  A parent's state does not
+%% change by its child's acts.
 
 %% =============================================================================
 %% THE PERSON'S REQUESTS --- the agents' question, Stream(Request)? (Section 6.1)
@@ -35,31 +37,39 @@ Parent       ::= Key.
 Child        ::= Key.
 OtherChild   ::= Key.
 Member       ::= Key.
-Creator      ::= Key.
+Leader       ::= Key.
 Name         ::= Constant.
 Text         ::= Constant.
 
-%% A group is named by its creator and the name the creator gave it.
-GroupId ::= group_id(Creator, Name).
+%% A group is named by its leader and the name the leader gave it (GSN:2).
+GroupId ::= group_id(Leader, Name).
+
+%% An item is a speech act: content, an utterance or an item, signed by an
+%% agent (CSSN, Appendix B.1).  Its author signs it (sign), and every agent
+%% that forwards it, the member who posts it to a group and the leader who
+%% delivers it sign it again, the earlier signatures inside (forward, post,
+%% deliver).
+Item    ::= sgn(Content, Key).
+Content ::= Constant ; Item.
 
 %% One alternative per request clause of the agents: introducing a child of
 %% one's own to a child of a friend, or to another child of one's own when the
-%% friend named is oneself (Section 6.4); declaring a child of one's own of
-%% age, a parent's act alone; a message to a friend; ending a friendship, one's
-%% own or a child's; and the group acts.
+%% friend named is oneself; declaring a child of one's own of age, a parent's
+%% act alone; signing content of one's own, and forwarding an item one holds
+%% to a friend; ending a friendship, one's own or a child's; and the group
+%% acts, a post being of an item one holds.
 Request ::= introduce(MyChild, Friend, FriendsChild)
           ; declare_of_age(MyChild)
-          ; send(Friend, Text)
+          ; sign(Text)
+          ; forward(Friend, Item)
           ; unfriend(Friend)
           ; unfriend_child(MyChild, Friend)
           ; create_group(Name)
           ; invite(Name, Friend)
           ; invite_child(Name, FriendsChild, Friend)
-          ; post(GroupId, Text)
+          ; post(GroupId, Item)
           ; leave(GroupId)
-          ; remove(Name, Member)
-          ; leave_child(MyChild, GroupId)
-          ; remove_child_member(MyChild, Name, Member).
+          ; leave_child(MyChild, GroupId).
 
 %% =============================================================================
 %% THE CARDS (childsafe/self.vglp) --- each shows what the program writes and
@@ -82,8 +92,8 @@ GroupCard  ::= card(GroupOffer, YesNo?).
 JoinOffer ::= join(GroupId, Child).
 JoinCard  ::= card(JoinOffer, YesNo?).
 
-%% A parent's approval of a child of its own, the creator of a group,
-%% inviting a member into it.
+%% A parent's approval of a child of its own, the leader of a group, inviting
+%% a member into it.
 InviteOffer ::= invite(GroupId, Member).
 InviteCard  ::= card(InviteOffer, YesNo?).
 
@@ -102,41 +112,37 @@ ProposerConsent(F) ::= yes(Conveyance(F)) ; no.
 AcceptorConsent    ::= yes ; no.
 
 %% What a child holds of an introduction, by its role: its own consent, to
-%% write, and the other child's, to read (Section 8.4, step 1).
+%% write, and the other child's, to read.
 Consents ::= propose(ProposerConsent(FriendChannel)?, AcceptorConsent)
            ; accept(AcceptorConsent?, ProposerConsent(FriendChannel)).
 
 %% A group invitation is answered by the invitee's yes, carrying the writer of
-%% the member's end of the group channel, which the creator binds.
+%% the member's end of the group channel, which the leader binds.
 GroupReply ::= yes(GroupChannel?) ; no.
 
 %% A message on a friend channel, a conversation, a parent-child channel or a
-%% group's.
-FriendContent ::= text(Text)
+%% group's: an item forwarded, signed by its sender, and the rest.
+FriendContent ::= item(Item)
                 ; unfriend
                 ; child_intro(Intro, Consents)
                 ; of_age
                 ; of_age_notice
-                ; approval
-                ; withdrawal
                 ; unfriend_child(Friend)
                 ; group_invite(GroupId, GroupReply?)
                 ; group_invite_child(GroupId, Child, GroupReply?)
                 ; group_consent_req(GroupId, YesNo?)
                 ; invite_consent_req(GroupId, Member, YesNo?)
                 ; leave_group(GroupId)
-                ; remove_member(GroupId, Member)
-                ; group_msg(GroupId, Key, Text)
-                ; group_leave(GroupId, Key)
-                ; group_removed(GroupId).
+                ; group_msg(GroupId, Item)
+                ; group_leave(GroupId, Key).
 FriendMsg     ::= msg(Key, Key, FriendContent).
 FriendChannel ::= ch(Stream(FriendMsg), Stream(FriendMsg)?).
 
 %% A group's channel carries its own messages, which the agent reads with the
-%% rest of its input.
-GroupContent ::= group_msg(GroupId, Key, Text)
-               ; group_leave(GroupId, Key)
-               ; group_removed(GroupId).
+%% rest of its input: a member's post to the leader and the leader's delivery
+%% to a member, each an item signed by its sender, and a member's leaving.
+GroupContent ::= group_msg(GroupId, Item)
+               ; group_leave(GroupId, Key).
 GroupMsg     ::= msg(Key, Key, GroupContent).
 GroupChannel ::= ch(Stream(GroupMsg), Stream(GroupMsg)?).
 
@@ -167,25 +173,24 @@ BefriendOutcome ::= consented(Key, Conveyance(FriendChannel)?)
                   ; adopt(Key, FriendChannel)
                   ; declined(Key).
 
-%% What the agent's cards and awaits hand it: a child befriending's outcome,
-%% with the parent whose introduction it was; an introduction the person
-%% approved for a child of its own, to forward; a group invitation's reply, at
-%% the creator, with the parent whose consent it took; a group joined,
-%% with the parent whose approval it took (the party itself where none did);
-%% a group invitation a parent approved for its child, to forward; a parent's
-%% consent to a child creator's invitation, which the child then sends.
-AgentIn ::= outcome(Parent, BefriendOutcome)
+%% What the agent's cards and awaits hand it: a child befriending's outcome;
+%% an introduction the person approved for a child of its own, to forward; a
+%% group invitation's reply, at the leader; a group joined; a group invitation
+%% a parent approved for its child, to forward; a parent's consent to a child
+%% leader's invitation, which the child then sends.
+AgentIn ::= outcome(BefriendOutcome)
           ; forward_intro(Child, Intro, Consents)
-          ; group_reply(GroupId, Member, Parent, GroupReply)
-          ; group_joined(GroupId, Parent, GroupChannel)
+          ; group_reply(GroupId, Member, GroupReply)
+          ; group_joined(GroupId, GroupChannel)
           ; forward_group(Child, GroupId, GroupReply?)
-          ; invite_now(GroupId, Member, Parent).
+          ; invite_now(GroupId, Member).
 
-%% The posts a creator holds, and how many of a group's posts it has sent to
-%% each member.
-GroupPost  ::= post(GroupId, Key, Text).
-SentEntry  ::= sent(GroupId, Key, Integer).
-AgentState ::= state(Integer, Integer, Stream(GroupPost), Stream(SentEntry)).
+%% The agent's state: the items it holds, h_p; and, as the leader of a group,
+%% the posts it holds, pi_p^g, in the order they were posted, and its record
+%% of what it has delivered to whom, delta_p^g.
+GroupPost  ::= post(GroupId, Item).
+Delivery   ::= delivered(GroupId, Item, Key).
+AgentState ::= state(Stream(Item), Stream(GroupPost), Stream(Delivery)).
 
 %% =============================================================================
 %% THE SCREEN --- the program's output to its person, Output (vGLP, Definition
@@ -195,7 +200,9 @@ AgentState ::= state(Integer, Integer, Stream(GroupPost), Stream(SentEntry)).
 
 Screen ::= connected(Key)
          ; unfriended(Key)
-         ; received(Key, Text)
+         ; signed(Item)
+         ; received(Item)
+         ; not_held(Item)
          ; refused(Key)
          ; no_conversation(Key)
          ; declined(Key)
@@ -205,14 +212,11 @@ Screen ::= connected(Key)
          ; of_age
          ; child_of_age(Key)
          ; adult
-         ; approvals(Integer)
-         ; withdrawals(Integer)
          ; group_joined(GroupId)
          ; member_joined(GroupId, Key)
          ; group_left(GroupId)
          ; member_left(GroupId, Key)
-         ; group_removed(GroupId)
-         ; group_received(GroupId, Key, Text).
+         ; group_received(GroupId, Item).
 ScreenMsg ::= msg(Constant, Constant, Screen).
 Output ::= Screen.
 
@@ -254,18 +258,23 @@ Ask(Q) ::= ask(Constant, Q).
 %% =============================================================================
 
 %% A step of a person's script: a request on the request form; an answer on
-%% the card showing an offer; a wait for a screen message; and, at the
-%% super-app, asking a party to befriend and accepting a party's offer.
+%% the card showing an offer; a wait for a screen message; a wait for a
+%% message on the screen of another party, a parent looking at its child's
+%% phone; and, at the super-app, asking a party to befriend and accepting a
+%% party's offer.
 Offer ::= Intro ; GroupOffer ; JoinOffer ; InviteOffer.
 Step ::= req(Request)
        ; answer(Offer, YesNo)
        ; await(Screen)
+       ; await_at(Key, Screen)
        ; befriend(Key)
        ; accept_friend(Key).
 Script ::= [] ; [Step | Script].
 
-%% What the person logs: the screen, and each step as it takes it.
-Logged ::= Screen ; did(Step).
+%% What the person logs: the screen, and each step as it takes it; and a line
+%% of a party's log as another person sees it, tagged with the party.
+Logged  ::= Screen ; did(Step).
+Watched ::= watched(Key, _).
 
 %% The super-app stand-in's vocabulary (superapp.glp): the person's
 %% befriending commands and what the stand-in shows, and its own network.
@@ -362,9 +371,9 @@ close_parent(Name, [E|Rest], [E?|Rest1?]) :-
     otherwise |
     close_parent(Name?, Rest?, Rest1).
 
-%% The two introductions a parent sends for child befriending (Section 6.4,
-%% step 1): the two consent variables minted, the child whose name sorts first
-%% proposing.  R is the parent's own child, S the other.
+%% The two introductions a parent sends for child befriending: the two
+%% consent variables minted, the child whose name sorts first proposing.  R is
+%% the parent's own child, S the other.
 procedure mint_consents(Key?, Key?, Consents, Consents).
 mint_consents(R, S, propose(PC, AC?), accept(AC, PC?)) :- R? @< S? | true.
 mint_consents(_, _, accept(AC, PC?), propose(PC, AC?)) :- otherwise | true.
@@ -381,29 +390,84 @@ introduce(Id, R, Q, S, CR, CS, Outs, Outs2?) :-
     send_child(R?, msg(Id?, R?, child_intro(intro(Id?, R?, S?), CR?)), Outs?, Outs1),
     send_friend(Q?, msg(Id?, Q?, child_intro(intro(Id?, R?, S?), CS?)), Outs1?, Outs2).
 
-%% The parent's count, on the screen.
-procedure count(Screen?, Stream(OutputEntry)?, Stream(OutputEntry)).
-count(S, Outs, Outs1?) :- show(S?, Outs?, Outs1).
-
 %% =============================================================================
-%% GROUPS --- the creator's member list is its group_member entries; the
-%% posts it holds and its record of what it has sent are its state
+%% ITEMS --- the items the agent holds are its state (sign, forward)
 %% =============================================================================
 
-%% The joining member's stream is opened and every post of the group the
-%% creator holds that it has not yet sent to this member is written on it, in
-%% the order the posts were made: a member is owed a post while it is on the
-%% list and the creator has not already sent it that item.
-procedure setup_group_hub_side(GroupId?, Key?, Stream(GroupPost)?, Stream(GroupPost), Stream(SentEntry)?, Stream(SentEntry), Stream(OutputEntry)?, Stream(OutputEntry), Stream(FriendMsg)?, Stream(FriendMsg), GroupChannel).
-setup_group_hub_side(GroupId, Member, Posts, Posts2?, Sent, Sent1?, Outs, Outs2?, NetIn, NetIn1?,
+%% Whether the agent holds the item X.
+procedure holds(Item?, Stream(Item)?, Decision).
+holds(X, [Y|_], yes) :- X? =?= Y? | true.
+holds(X, [_|Ys], D?) :- otherwise | holds(X?, Ys?, D).
+holds(_, [], no).
+
+%% Sign(p, x): content of the agent's own, signed by it, held, and shown.
+procedure sign_item(Key?, Text?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
+sign_item(Id, T, state(Is, Ps, Ds), state([sgn(T?, Id?)|Is?], Ps?, Ds?), Outs, Outs1?) :-
+    ground(Id?), ground(T?) |
+    show(signed(sgn(T?, Id?)), Outs?, Outs1).
+
+%% Forward(p, q, x): an item the agent holds goes to the friend Q, signed by
+%% the agent; the agent's state does not change.  An item it does not hold is
+%% not forwarded, and the screen says so.
+procedure forward_item(Key?, Key?, Item?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
+forward_item(Id, Q, X, state(Is, Ps, Ds), state(Is?, Ps?, Ds?), Outs, Outs1?) :-
+    ground(Is?), ground(X?) |
+    holds(X?, Is?, Held),
+    forward_held(Held?, Id?, Q?, X?, Outs?, Outs1).
+
+procedure forward_held(Decision?, Key?, Key?, Item?, Stream(OutputEntry)?, Stream(OutputEntry)).
+forward_held(yes, Id, Q, X, Outs, Outs1?) :-
+    ground(Id?), ground(Q?) |
+    send_friend(Q?, msg(Id?, Q?, item(sgn(X?, Id?))), Outs?, Outs1).
+forward_held(no, _, _, X, Outs, Outs1?) :-
+    show(not_held(X?), Outs?, Outs1).
+
+%% Forward(q, p, x), at p: the item, signed by the friend who forwarded it,
+%% held, and shown.
+procedure receive_item(Item?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
+receive_item(X, state(Is, Ps, Ds), state([X?|Is?], Ps?, Ds?), Outs, Outs1?) :-
+    ground(X?) |
+    show(received(X?), Outs?, Outs1).
+
+%% =============================================================================
+%% GROUPS --- the leader's member list is its group_member entries; the posts
+%% it holds and its record of what it has delivered to whom are its state
+%% =============================================================================
+
+%% Join group, at the leader: the joining member's stream is opened, and every
+%% post of the group the leader holds that it has not delivered to this member
+%% is delivered on it, in the order the posts were made (Deliver to member: a
+%% member is owed a post while it is on the list and the leader has not
+%% delivered it that post).
+procedure setup_group_hub_side(GroupId?, Key?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry), Stream(FriendMsg)?, Stream(FriendMsg), GroupChannel).
+setup_group_hub_side(G, M, state(Is, Ps, Ds), state(Is?, Ps?, Ds1?), Outs, Outs2?, NetIn, NetIn1?,
     ch(HubToMember?, MemberToHub)) :-
-    ground(GroupId?), ground(Member?) |
-    add_group_output(group_member(GroupId?, Member?), HubToMember, Outs?, Outs1),
-    sent_count(GroupId?, Member?, Sent?, SentA, C),
-    send_from(GroupId?, Member?, C?, Posts?, Posts1, Outs1?, Outs2),
-    count_posts(GroupId?, Posts1?, Posts2, N),
-    set_sent(GroupId?, Member?, N?, SentA?, Sent1),
+    ground(G?), ground(M?), ground(Ps?) |
+    add_group_output(group_member(G?, M?), HubToMember, Outs?, Outs1),
+    catch_up(Ps?, G?, M?, Ds?, Ds1, Outs1?, Outs2),
     merge(NetIn?, MemberToHub?, NetIn1).
+
+%% This group's posts, each delivered to the member M unless it has been.
+procedure catch_up(Stream(GroupPost)?, GroupId?, Key?, Stream(Delivery)?, Stream(Delivery), Stream(OutputEntry)?, Stream(OutputEntry)).
+catch_up([post(G1, Y)|Ps], G, M, Ds, Ds2?, Outs, Outs2?) :-
+    G? =?= G1?, ground(G?), ground(Y?), ground(M?), ground(Ds?) |
+    delivered_already(G?, Y?, M?, Ds?, D),
+    deliver(D?, G?, Y?, M?, Ds?, Ds1, Outs?, Outs1),
+    catch_up(Ps?, G?, M?, Ds1?, Ds2, Outs1?, Outs2).
+catch_up([_|Ps], G, M, Ds, Ds1?, Outs, Outs1?) :-
+    otherwise |
+    catch_up(Ps?, G?, M?, Ds?, Ds1, Outs?, Outs1).
+catch_up([], _, _, Ds, Ds?, Outs, Outs?).
+
+%% A post the leader holds, at the end of its posts: delivered to every member
+%% on the list now that it has not been delivered to, and shown.
+procedure hold_post(GroupId?, Item?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
+hold_post(G, Y, state(Is, Ps, Ds), state(Is?, Ps1?, Ds1?), Outs, Outs3?) :-
+    ground(G?), ground(Y?) |
+    add_post(post(G?, Y?), Ps?, Ps1),
+    members_of(G?, Outs?, Outs1, Ms),
+    deliver_to(Ms?, G?, Y?, Ds?, Ds1, Outs1?, Outs2),
+    show(group_received(G?, Y?), Outs2?, Outs3).
 
 %% A post joins the holding at its end.
 procedure add_post(GroupPost?, Stream(GroupPost)?, Stream(GroupPost)).
@@ -411,59 +475,124 @@ add_post(P, [], [P?]).
 add_post(P, [Q|Rest], [Q?|Rest1?]) :-
     add_post(P?, Rest?, Rest1).
 
-procedure count_posts(GroupId?, Stream(GroupPost)?, Stream(GroupPost), Integer).
-count_posts(G, [post(G1, A, T)|Rest], [post(G1?, A?, T?)|Rest1?], N?) :-
-    G? =?= G1?, ground(G?) |
-    count_posts(G?, Rest?, Rest1, N1),
-    N := N1? + 1.
-count_posts(G, [P|Rest], [P?|Rest1?], N?) :-
+%% The members on the list of the group G now, the leader's group_member
+%% entries.
+procedure members_of(GroupId?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(Key)).
+members_of(G, [group_entry(group_member(G1, Q), Out?)|Rest], [group_entry(group_member(G1?, Q?), Out)|Rest1?], [Q?|Qs?]) :-
+    G? =?= G1?, ground(Q?) |
+    members_of(G?, Rest?, Rest1, Qs).
+members_of(G, [E|Rest], [E?|Rest1?], Qs?) :-
     otherwise |
-    count_posts(G?, Rest?, Rest1, N).
-count_posts(_, [], [], 0).
+    members_of(G?, Rest?, Rest1, Qs).
+members_of(_, [], [], []).
 
-%% This group's posts past the first Skip of them, onto the member's stream.
-procedure send_from(GroupId?, Key?, Integer?, Stream(GroupPost)?, Stream(GroupPost), Stream(OutputEntry)?, Stream(OutputEntry)).
-send_from(G, M, Skip, [post(G1, A, T)|Rest], [post(G1?, A?, T?)|Rest1?], Outs, Outs1?) :-
-    G? =?= G1?, ground(G?), ground(M?), Skip? > 0 |
-    Skip1 := Skip? - 1,
-    send_from(G?, M?, Skip1?, Rest?, Rest1, Outs?, Outs1).
-send_from(G, M, Skip, [post(G1, A, T)|Rest], [post(G1?, A?, T?)|Rest1?], Outs, Outs2?) :-
-    G? =?= G1?, ground(G?), ground(M?), Skip? < 1 |
-    lookup_send_group(group_member(G?, M?), msg(A?, A?, group_msg(G1?, A?, T?)), Outs?, Outs1),
-    send_from(G?, M?, 0, Rest?, Rest1, Outs1?, Outs2).
-send_from(G, M, Skip, [P|Rest], [P?|Rest1?], Outs, Outs1?) :-
+%% The post Y, delivered to each member unless it has been.
+procedure deliver_to(Stream(Key)?, GroupId?, Item?, Stream(Delivery)?, Stream(Delivery), Stream(OutputEntry)?, Stream(OutputEntry)).
+deliver_to([Q|Qs], G, Y, Ds, Ds2?, Outs, Outs2?) :-
+    ground(Q?), ground(G?), ground(Y?), ground(Ds?) |
+    delivered_already(G?, Y?, Q?, Ds?, D),
+    deliver(D?, G?, Y?, Q?, Ds?, Ds1, Outs?, Outs1),
+    deliver_to(Qs?, G?, Y?, Ds1?, Ds2, Outs1?, Outs2).
+deliver_to([], _, _, Ds, Ds?, Outs, Outs?).
+
+%% Whether the leader has delivered the post Y to the member Q in the group G.
+procedure delivered_already(GroupId?, Item?, Key?, Stream(Delivery)?, Decision).
+delivered_already(G, Y, Q, [delivered(G1, Y1, Q1)|_], yes) :-
+    G? =?= G1?, Y? =?= Y1?, Q? =?= Q1? | true.
+delivered_already(G, Y, Q, [_|Ds], D?) :-
     otherwise |
-    send_from(G?, M?, Skip?, Rest?, Rest1, Outs?, Outs1).
-send_from(_, _, _, [], [], Outs, Outs?).
+    delivered_already(G?, Y?, Q?, Ds?, D).
+delivered_already(_, _, _, [], no).
 
-procedure sent_count(GroupId?, Key?, Stream(SentEntry)?, Stream(SentEntry), Integer).
-sent_count(G, M, [sent(G1, M1, N)|Rest], [sent(G1?, M1?, N?)|Rest?], N?) :-
-    G? =?= G1?, M? =?= M1? | true.
-sent_count(G, M, [E|Rest], [E?|Rest1?], C?) :-
+%% Deliver to member(g, q, y): the post goes to the member on its stream,
+%% signed by the leader, and the delivery is recorded; a post delivered to the
+%% member before is not delivered again.
+procedure deliver(Decision?, GroupId?, Item?, Key?, Stream(Delivery)?, Stream(Delivery), Stream(OutputEntry)?, Stream(OutputEntry)).
+deliver(no, group_id(L, N), Y, Q, Ds, [delivered(group_id(L?, N?), Y?, Q?)|Ds?], Outs, Outs1?) :-
+    ground(L?), ground(N?), ground(Y?), ground(Q?) |
+    lookup_send_group(group_member(group_id(L?, N?), Q?), msg(L?, Q?, group_msg(group_id(L?, N?), sgn(Y?, L?))), Outs?, Outs1).
+deliver(yes, _, _, _, Ds, Ds?, Outs, Outs?).
+
+%% Deliver to member(g, q, y), at q: the post, signed by the leader, held
+%% and shown while q is a member of the group; a delivery the leader made
+%% before it learned that q had left is not held.
+procedure receive_delivery(GroupId?, Item?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
+receive_delivery(G, Z, St, St1?, Outs, Outs2?) :-
+    ground(G?) |
+    has_group(group(G?), Outs?, Outs1, Member),
+    hold_delivery(Member?, G?, Z?, St?, St1, Outs1?, Outs2).
+
+procedure hold_delivery(Decision?, GroupId?, Item?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
+hold_delivery(yes, G, Z, state(Is, Ps, Ds), state([Z?|Is?], Ps?, Ds?), Outs, Outs1?) :-
+    ground(Z?) |
+    show(group_received(G?, Z?), Outs?, Outs1).
+hold_delivery(no, _, _, St, St?, Outs, Outs?).
+
+%% A post of an item the agent holds to the group G: Post to own group(g, x)
+%% where the agent leads the group, and Post to group(g, p, x) where it is a
+%% member, the item sent to the leader signed by the agent, whose state does
+%% not change.  An item it does not hold is not posted, and the screen says
+%% so; to a group it is not a member of, nothing is posted.
+procedure post_item(Key?, GroupId?, Item?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
+post_item(Id, G, X, state(Is, Ps, Ds), St?, Outs, Outs1?) :-
+    ground(Is?), ground(X?) |
+    holds(X?, Is?, Held),
+    post_held(Held?, Id?, G?, X?, state(Is?, Ps?, Ds?), St, Outs?, Outs1).
+
+procedure post_held(Decision?, Key?, GroupId?, Item?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
+post_held(yes, Id, group_id(L, N), X, St, St1?, Outs, Outs2?) :-
+    L? =?= Id?, ground(L?), ground(N?), ground(X?) |
+    has_group(group(group_id(L?, N?)), Outs?, Outs1, Member),
+    post_own(Member?, group_id(L?, N?), X?, St?, St1, Outs1?, Outs2).
+post_held(yes, Id, group_id(L, N), X, St, St?, Outs, Outs2?) :-
+    L? =?\= Id?, ground(Id?), ground(L?), ground(N?), ground(X?) |
+    has_group(group(group_id(L?, N?)), Outs?, Outs1, Member),
+    post_to(Member?, Id?, group_id(L?, N?), X?, Outs1?, Outs2).
+post_held(no, _, _, X, St, St?, Outs, Outs1?) :-
+    show(not_held(X?), Outs?, Outs1).
+
+%% Post to own group(g, x): the post held, unless the group holds it already.
+procedure post_own(Decision?, GroupId?, Item?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
+post_own(yes, G, X, state(Is, Ps, Ds), St?, Outs, Outs1?) :-
+    ground(G?), ground(X?), ground(Ps?) |
+    posted_already(G?, X?, Ps?, Posted),
+    post_new(Posted?, G?, X?, state(Is?, Ps?, Ds?), St, Outs?, Outs1).
+post_own(no, _, _, St, St?, Outs, Outs?).
+
+procedure post_new(Decision?, GroupId?, Item?, AgentState?, AgentState, Stream(OutputEntry)?, Stream(OutputEntry)).
+post_new(no, G, X, St, St1?, Outs, Outs1?) :-
+    hold_post(G?, X?, St?, St1, Outs?, Outs1).
+post_new(yes, _, _, St, St?, Outs, Outs?).
+
+%% Whether the group G holds the post X.
+procedure posted_already(GroupId?, Item?, Stream(GroupPost)?, Decision).
+posted_already(G, X, [post(G1, X1)|_], yes) :-
+    G? =?= G1?, X? =?= X1? | true.
+posted_already(G, X, [_|Ps], D?) :-
     otherwise |
-    sent_count(G?, M?, Rest?, Rest1, C).
-sent_count(_, _, [], [], 0).
+    posted_already(G?, X?, Ps?, D).
+posted_already(_, _, [], no).
 
-procedure set_sent(GroupId?, Key?, Integer?, Stream(SentEntry)?, Stream(SentEntry)).
-set_sent(G, M, N, [sent(G1, M1, _)|Rest], [sent(G1?, M1?, N?)|Rest?]) :-
-    G? =?= G1?, M? =?= M1? | true.
-set_sent(G, M, N, [E|Rest], [E?|Rest1?]) :-
+%% Post to group(g, p, x), at p: the item, signed by the member, goes to the
+%% leader on the member's stream into the group.
+procedure post_to(Decision?, Key?, GroupId?, Item?, Stream(OutputEntry)?, Stream(OutputEntry)).
+post_to(yes, Id, group_id(L, N), X, Outs, Outs1?) :-
+    ground(Id?), ground(L?), ground(N?) |
+    lookup_send_group(group(group_id(L?, N?)), msg(Id?, L?, group_msg(group_id(L?, N?), sgn(X?, Id?))), Outs?, Outs1).
+post_to(no, _, _, _, Outs, Outs?).
+
+%% Whether the agent holds a stream into the group, as its leader or a member.
+procedure has_group(OutputKey?, Stream(OutputEntry)?, Stream(OutputEntry), Decision).
+has_group(Key, [group_entry(K, Out?)|Rest], [group_entry(K?, Out)|Rest?], yes) :-
+    Key? =?= K? | true.
+has_group(Key, [E|Rest], [E?|Rest1?], D?) :-
     otherwise |
-    set_sent(G?, M?, N?, Rest?, Rest1).
-set_sent(G, M, N, [], [sent(G?, M?, N?)]).
+    has_group(Key?, Rest?, Rest1, D).
+has_group(_, [], [], no).
 
-procedure bump_sent(GroupId?, Key?, Stream(SentEntry)?, Stream(SentEntry)).
-bump_sent(G, M, [sent(G1, M1, N)|Rest], [sent(G1?, M1?, N1?)|Rest?]) :-
-    G? =?= G1?, M? =?= M1? |
-    N1 := N? + 1.
-bump_sent(G, M, [E|Rest], [E?|Rest1?]) :-
-    otherwise |
-    bump_sent(G?, M?, Rest?, Rest1).
-bump_sent(G, M, [], [sent(G?, M?, 1)]).
-
-%% The creator's own stream into its group, read with the rest of its input.
-procedure setup_group_creator(GroupId?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(FriendMsg)?, Stream(FriendMsg)).
-setup_group_creator(GroupId, Outs, Outs1?, NetIn, NetIn1?) :-
+%% The leader's own stream into its group, read with the rest of its input.
+procedure setup_group_leader(GroupId?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(FriendMsg)?, Stream(FriendMsg)).
+setup_group_leader(GroupId, Outs, Outs1?, NetIn, NetIn1?) :-
     ground(GroupId?) |
     add_group_output(group(GroupId?), MemberToHub, Outs?, Outs1),
     merge(NetIn?, MemberToHub?, NetIn1).
@@ -481,30 +610,7 @@ lookup_send_group_step(Key, Msg, [E|Rest], [E?|Rest1?]) :-
     lookup_send_group_step(Key?, Msg?, Rest?, Rest1).
 lookup_send_group_step(_, _, [], []).
 
-%% The post onto the stream of every member on the list now, the creator's
-%% record of what it has sent each of them advancing.
-procedure distribute_group_msg(GroupId?, GroupMsg?, Stream(SentEntry)?, Stream(SentEntry), Stream(OutputEntry)?, Stream(OutputEntry)).
-distribute_group_msg(GroupId, Msg, Sent, Sent2?,
-    [group_entry(group_member(GId, M), [Msg?|Out1?])|Rest],
-    [group_entry(group_member(GId?, M?), Out1)|Rest1?]) :-
-    GroupId? =?= GId?, ground(GroupId?), ground(Msg?) |
-    bump_sent(GroupId?, M?, Sent?, Sent1),
-    distribute_group_msg(GroupId?, Msg?, Sent1?, Sent2, Rest?, Rest1).
-distribute_group_msg(GroupId, Msg, Sent, Sent1?, [E|Rest], [E?|Rest1?]) :-
-    otherwise |
-    distribute_group_msg(GroupId?, Msg?, Sent?, Sent1, Rest?, Rest1).
-distribute_group_msg(_, _, Sent, Sent?, [], []).
-
-%% The creator ends a member's membership: the member is told on its own
-%% stream and dropped from the list.
-procedure remove_member(Key?, GroupId?, Key?, Stream(OutputEntry)?, Stream(OutputEntry)).
-remove_member(Id, GroupId, Member, Outs, Outs3?) :-
-    ground(Id?), ground(GroupId?), ground(Member?) |
-    lookup_send_group(group_member(GroupId?, Member?), msg(Id?, Member?, group_removed(GroupId?)), Outs?, Outs1),
-    close_output(group_member(GroupId?, Member?), Outs1?, Outs2),
-    show(member_left(GroupId?, Member?), Outs2?, Outs3).
-
-%% A member leaves: its own stream to the group is told and closed.
+%% Leave group(g, q): the member's own stream to the group is told and closed.
 procedure leave_group_commit(Key?, GroupId?, Stream(OutputEntry)?, Stream(OutputEntry)).
 leave_group_commit(Id, GroupId, Outs, Outs3?) :-
     ground(Id?), ground(GroupId?) |
@@ -512,8 +618,8 @@ leave_group_commit(Id, GroupId, Outs, Outs3?) :-
     close_output(group(GroupId?), Outs1?, Outs2),
     show(group_left(GroupId?), Outs2?, Outs3).
 
-%% A member joins: its stream to the group is installed and its read end
-%% merged into its input.
+%% Join group, at the member: its stream to the group is installed and its
+%% read end merged into its input.
 procedure join_commit(GroupId?, GroupChannel?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(FriendMsg)?, Stream(FriendMsg)).
 join_commit(GroupId, ch(FromHub, ToHub?), Outs, Outs2?, NetIn, NetIn1?) :-
     ground(GroupId?) |
@@ -532,14 +638,12 @@ close_output(Key, [E|Rest], [E?|Rest1?]) :-
     otherwise |
     close_output(Key?, Rest?, Rest1).
 
-%% The reply to a group invitation, when it comes, at the creator.
-%% P is the creator's parent whose consent the invitation took, where the
-%% creator is a child, and the creator itself where it is an adult.
-procedure inject_group_reply(GroupId?, Key?, Key?, GroupReply?, Stream(AgentIn)?, Stream(AgentIn)).
-inject_group_reply(G, M, P, R, Ys, [group_reply(G?, M?, P?, R?)|Ys?]) :-
+%% The reply to a group invitation, when it comes, at the leader.
+procedure inject_group_reply(GroupId?, Key?, GroupReply?, Stream(AgentIn)?, Stream(AgentIn)).
+inject_group_reply(G, M, R, Ys, [group_reply(G?, M?, R?)|Ys?]) :-
     known(R?) | true.
-inject_group_reply(G, M, P, R, [Y|Ys], [Y?|Ys1?]) :-
-    inject_group_reply(G?, M?, P?, R?, Ys?, Ys1).
+inject_group_reply(G, M, R, [Y|Ys], [Y?|Ys1?]) :-
+    inject_group_reply(G?, M?, R?, Ys?, Ys1).
 
 %% =============================================================================
 %% THE PLAYS (plays.glp), by name
