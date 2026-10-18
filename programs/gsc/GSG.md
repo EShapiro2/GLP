@@ -1,17 +1,17 @@
-# GSG --- the grassroots social graph: the contract
+# GSG --- Grassroots Social Graph: the contract
 
-GSG's contract (Coordination Appendix C), GSC's by Udi's ruling of 2026-10-18; its act schemas are `GSG.glp` beside it.  The paper, `/Users/udi/Grassroots/GSC/main.tex`, Section 2.1, quotes it, and every other contract extends it.  Written by GSC #1 Cowork, 2026-10-18.
+GSG's contract, GSC's: GSC owns every contract that other contracts extend (Udi, 2026-10-18; Coordination, to_all 2026-10-18 19:23 UTC).  Its act schemas are `GSG.glp` beside it.  GAI's paper, `/Users/udi/Grassroots/GAI/main_characterisation_ArXiv.tex`, Section "Grassroots Social Contracts", quotes it.  Written by GAI #2 Cowork at Udi's instruction (2026-10-18 20:25 local: "Write all contracts to disc, where they should be, according to the Coordination ruling"; "write act schemas only for GSG and GSN"), the text verbatim from GAI's paper at GAI e5e92fa.
 
-A *party* is a person, natural or legal, with the gender-neutral pronoun `they'; Alice and Bob are variables naming distinct parties.
+A *person* is a legally culpable entity: a natural person of age, also referred to as an *adult*, or a legal person of good standing, such as a business.  A person takes the pronoun 'they'.
 
-1. *Friendship.*  Alice and Bob may jointly decide to become friends, if neither is the friend of the other.  Each is thereafter a friend of the other.
-2. *Ending a friendship.*  Alice may decide to end their friendship with Bob, and it then ends for both.
+1. *Identity.*  A person chooses their own key pair, identifies themselves with the public key, signs their acts with the private key, and is accountable for every act signed with it.
+2. *Friendship.*  Two persons who are not friends may jointly decide to become friends by an act of both, after which they are friends.
+3. *Ending a friendship.*  A person may end their friendship with another person by their own act, and then the friendship ends.
 
 ## The schemas, and what they realise
 
-The schemas are in `GSG.glp`, in GSC's notation above each term.  Two schemas over one predicate, `friend`, of arity one: `friend(Bob)` in the state of Alice says that Bob is a friend of Alice.
+The schemas are in `GSG.glp`, in GSC's notation above each term.  Two schemas over one predicate, `friend`, of arity one: `friend(q)` in the state of `p` says that `q` is a friend of `p`.
 
-- Clause 1: `befriend(Alice?, Bob?)` --- at Alice, not `friend(Bob)`, +`friend(Bob)`; at Bob, not `friend(Alice)`, +`friend(Alice)`.  Both roles guard: "jointly decide".
-- Clause 2: `unfriend(Alice?, Bob)` --- at Alice, -`friend(Bob)`; at Bob, -`friend(Alice)`.  Alice guards; at the binding that swaps the roles the same transaction is Bob's, so either friend may end it.
-
-Befriend is an unobstructed introductory act, `friend` has traceable provenance, and the contract satisfies volition (GSC, Section 7.1), so the contract is syntactically grassroots.
+- Clause 1 describes no act: a person's key pair is theirs before any act, and every act is signed with its private key.
+- Clause 2: `befriend(p?, q?)` --- at `p`, not `friend(q)`, +`friend(q)`; at `q`, not `friend(p)`, +`friend(p)`.  Both roles guard: "an act of both".
+- Clause 3: `unfriend(p?, q)` --- at `p`, -`friend(q)`; at `q`, -`friend(p)`.  `p` guards; at the binding that swaps the roles the same transaction is `q`'s, so either friend may end the friendship.
