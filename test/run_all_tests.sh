@@ -21,6 +21,7 @@
 #   O - Currencies Multi-Isolate Tests (dart test, one isolate per agent)
 #   P - Module Boundary Enforcement Tests (exported vs private procedures)
 #   GF - Grassroots federation records, transactions and platform (GFWC)
+#   APPS - The apps of the contracts (programs/apps), mini-apps compiled down the cascade: GSG's
 #
 # Every section runs unless GLP_SECTIONS names a subset ("Section selection"
 # below); test/run_fast.sh runs the fast tier.
@@ -63,8 +64,8 @@ MODED="$GLP_DIR/programs/tests/moded_types"
 # red nor a rot, and Section Q's rot guard reads only the KNOWN_RED entries of
 # the half that ran.  Every section stands alone: the REPL build below is made
 # for every run, and the asset step is QF's own.
-ALL_SECTIONS="A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG GF GSC CAS SGLP QD QF"
-FAST_SECTIONS="A B C D E G I K L M N2 N3 N4 O P J S X Y Z ZG RM SK MB SL MA RV SG GF GSC"
+ALL_SECTIONS="A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC CAS SGLP QD QF"
+FAST_SECTIONS="A B C D E G I K L M N2 N3 N4 O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC"
 GLP_SECTIONS="${GLP_SECTIONS:-all}"
 RUN_FAST=0
 RUN_WANTED=" "
@@ -5796,6 +5797,52 @@ check_not "SG budget no failed play" "→ failed" "$sg_budget"
 echo ""
 
 fi  # Section SG
+
+if _section APPS; then
+# =============================================================================
+# Section APPS: the apps of the contracts (programs/apps), each a mini-app of the Grassroots Super-App compiled down the cascade from its contract's act schemas: the canonical CVA platform vGLP's compiler prints from them, compiled to GLP when the directory loads, under the root's entry template miniapp/4. GSG's app, programs/apps/gsg: its platform held to what the compiler prints from programs/gsc/GSG.glp (programs/apps/compile.sh --check); the program certified by :artefact; its router, which carries the platform's network over the conversations the social graph hands the mini-app, holding a message until the conversation with its recipient opens (play_held); and two executions over one conversation, alice offering bob friendship, bob asked and answering yes, and then bob ending it (play_friends), each person's screen held exactly, an unbound tail written _: the run ends at the REPL's limit, the clock of each agent ticking without end.  The super-app hosting the app on two smartphones, programs/apps/gsg_boot.glp, is not run here: the boot harness reduces each event to quiescence (IGLP, Implementation Notes, "event-driven ... reduces until quiescent"), and the platform's agent never quiesces, its clock goal writing ticks without end (vGLP, Section 5.4).
+# =============================================================================
+echo "=== Section APPS: the apps (programs/apps) ==="
+echo ""
+
+# The line, exactly, among the REPL's lines, its prompt stripped and an unbound tail written _.
+apps_line() {
+    local name="$1" line="$2" out="$3"
+    if echo "$out" | sed -e 's/^\(GLP> \)*//' -e 's/| X[0-9]*\]$/| _]/' | grep -qFx -- "$line"; then
+        _check_pass "$name"
+    else
+        _check_fail "$name" "expected the line: $line"
+    fi
+}
+
+apps_print=$(bash "$GLP_DIR/programs/apps/compile.sh" --check 2>&1; echo "exit $?")
+check "APPS gsg: platform.vglp is what vGLP's compiler prints from GSG.glp" "^gsg/platform.vglp: as printed$" "$apps_print"
+check "APPS compile.sh --check exits 0" "^exit 0$" "$apps_print"
+
+APPS_ART=$(mktemp -d)
+apps_gsg=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/apps/gsg $APPS_ART
+$GLP_DIR/programs/apps/gsg
+play_held(In, ToBob, ToCarol).
+:limit 600000
+play_friends(A, B).
+:quit
+HEREDOC
+2>&1)
+rm -rf "$APPS_ART"
+check "APPS gsg: the mini-app's artefact is certified" "gsg.glpw --- certified under" "$apps_gsg"
+check "APPS gsg loads" "Loaded program: .*programs/apps/gsg$" "$apps_gsg"
+apps_line "APPS gsg router: bob's hello reaches the agent" "In = [msg(alice, hello(bob))]" "$apps_gsg"
+apps_line "APPS gsg router: the hello held for bob goes first on his conversation, then the start" "ToBob = [msg(bob, hello(alice)), msg(bob, cargo(alice, start(attempt(alice, 1, 1, befriend(alice, bob)))))]" "$apps_gsg"
+apps_line "APPS gsg router: the hello held for carol goes on hers" "ToCarol = [msg(carol, hello(alice))]" "$apps_gsg"
+apps_line "APPS gsg friends: alice's screen" "A = [menu([]), discover(bob), menu([bob]), propose(attempt(alice, 1, 1, befriend(alice, bob))), tally(attempt(alice, 1, 1, befriend(alice, bob))), commit(attempt(alice, 1, 1, befriend(alice, bob))), start(attempt(bob, 2, 2, unfriend(bob, alice))), outcome(attempt(bob, 2, 2, unfriend(bob, alice))) | _]" "$apps_gsg"
+apps_line "APPS gsg friends: bob's screen" "B = [discover(alice), start(attempt(alice, 1, 1, befriend(alice, bob))), gave(befriend(alice, bob), yes), answer(attempt(alice, 1, 1, befriend(alice, bob))), vote(attempt(alice, 1, 1, befriend(alice, bob))), outcome(attempt(alice, 1, 1, befriend(alice, bob))), propose(attempt(bob, 2, 2, unfriend(bob, alice))), tally(attempt(bob, 2, 2, unfriend(bob, alice))), commit(attempt(bob, 2, 2, unfriend(bob, alice))) | _]" "$apps_gsg"
+check_not "APPS gsg: no failed play" "→ failed" "$apps_gsg"
+check_not "APPS gsg: no error" "Error" "$apps_gsg"
+
+echo ""
+
+fi  # Section APPS
 
 if _section GF; then
 # =============================================================================
