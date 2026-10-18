@@ -4,13 +4,15 @@
 %% the Canonical Platform" and the paragraph "Act schemas"; self.glp says more).
 %%
 %% A contract is compiled when programs/gsc finds it syntactically
-%% grassroots or finds no fault in it but its introductory acts, so with
-%% traceable provenance and volition (verdict_lines below), every role a party
-%% role, and when it is a local and effective specification with simple
-%% guards, by the paragraph on act schemas and the sentence after it and by
-%% Definition "Volition-Guarded Specification, Participants, Guard Sets,
-%% Simple Guards", which local.glp decides.  Otherwise it prints the lines
-%% saying why and nothing else.
+%% grassroots, grassroots with wards, or finds no fault in it but its
+%% introductory acts, so with traceable provenance and volition
+%% (verdict_lines below), every role a party role, no atom carrying a signed
+%% term, which part B of vGLP's task of 2026-10-18 12:24 UTC compiles
+%% (signed_lines below), and when it is a local and effective specification
+%% with simple guards, by the paragraph on act schemas and the sentence after
+%% it and by Definition "Volition-Guarded Specification, Participants, Guard
+%% Sets, Simple Guards", which local.glp decides.  Otherwise it prints the
+%% lines saying why and nothing else.
 %%
 %% The module is the contract's own part, printed here, and the text every
 %% contract shares, text.glp.  The contract's part is the type Class, one
@@ -53,7 +55,9 @@ procedure compile0(Constant?, Contract?, Preds?, Preds?, Verdict?).
 compile0(Nm, C, Rf, E, V) :- ground(Nm?), ground(C?) |
     verdict_lines(V?, Nm?, L1),
     community_lines(C?, Nm?, L2),
-    lapp(L1?, L2?, L),
+    signed_lines(C?, Nm?, L3),
+    lapp(L2?, L3?, L23),
+    lapp(L1?, L23?, L),
     compile1(L?, Nm?, C?, Rf?, E?).
 
 procedure compile1(Stream(_)?, Constant?, Contract?, Preds?, Preds?).
@@ -97,13 +101,17 @@ decl_reflexive(reflexive(Rf, _), Rf?).
 %% realisation, which CSSN (Appendix B.4) takes for a contract with traceable
 %% provenance that satisfies volition by the definition GSC gives for a
 %% syntactically grassroots one.  So a contract is compiled where GSC's
-%% checker certifies it syntactically grassroots, or finds no fault in it but
-%% its introductory acts (vGLP 2026-10-16 13:53 UTC, C, as Code #9 gives it:
-%% "the compiler takes a contract with traceable provenance and volition"); a
-%% contract with community roles has no canonical platform here, its roles'
-%% extents being no participants of a binding.
+%% checker certifies it syntactically grassroots, or grassroots with wards
+%% (GSC, Appendix F: its introductory act unobstructed but for the marks, with
+%% their guardianships and relay acts; vGLP #14, 2026-10-18 12:24 UTC, A), or
+%% finds no fault in it but its introductory acts (vGLP 2026-10-16 13:53 UTC,
+%% C, as Code #9 gives it: "the compiler takes a contract with traceable
+%% provenance and volition"); a contract with community roles has no
+%% canonical platform here, its roles' extents being no participants of a
+%% binding.
 procedure verdict_lines(Verdict?, Constant?, Stream(_)).
 verdict_lines(syntactically_grassroots, _, []).
+verdict_lines(grassroots_with_wards(_, _, _, _), _, []).
 verdict_lines(not_grassroots(Fs), Nm, L?) :- ground(Fs?), ground(Nm?) |
     realisable(Fs?, B),
     realisable_lines(B?, Nm?, L).
@@ -121,10 +129,56 @@ realisable([untraceable(_)|_], no).
 realisable([volition(_, _, _)|_], no).
 realisable([cohesion(_, _, _)|_], no).
 realisable([reflexive(_, _, _)|_], no).
+realisable([signed(_, _, _, _)|_], no).
 procedure realisable_lines(YesNo?, Constant?, Stream(_)).
 realisable_lines(yes, _, []).
 realisable_lines(no, Nm, [H?, '%% it lacks traceable provenance or volition, or is otherwise faulty; check_named in programs/gsc gives the faults.']) :-
     ground(Nm?) | H =.. ['%% not compiled', Nm?].
+
+%% A signed term sgn(y, i) in an added atom is the speech act bound to y,
+%% signed by the person in role i (vGLP, Section 5.4, the paragraph "Act
+%% schemas as local specifications"; GSC, Definition "Act schema").  The
+%% compiler does not yet compile it: part B of vGLP's task of 2026-10-18 12:24
+%% UTC, which waits on recursive interactive types.  A contract carrying one
+%% is refused, the line saying so, and not compiled with the term dropped.
+procedure signed_lines(Contract?, Constant?, Stream(_)).
+signed_lines(C, Nm, L?) :- ground(Nm?) |
+    has_sgn(C?, B),
+    signed_lines1(B?, Nm?, L).
+procedure signed_lines1(YesNo?, Constant?, Stream(_)).
+signed_lines1(no, _, []).
+signed_lines1(yes, Nm, [H?, '%% it carries a signed term, sgn(y, i), which the compiler does not yet compile: the signed term waits on part B of vGLP\'s task of 2026-10-18 12:24 UTC (vGLP, Section 5.4, the paragraph "Act schemas as local specifications").']) :-
+    ground(Nm?) | H =.. ['%% not compiled', Nm?].
+procedure has_sgn(Contract?, YesNo).
+has_sgn([], no).
+has_sgn([schema(_, Rs)|Ss], B?) :- roles_sgn(Rs?, B1), has_sgn1(B1?, Ss?, B).
+has_sgn([cschema(_, _, Rs)|Ss], B?) :- roles_sgn(Rs?, B1), has_sgn1(B1?, Ss?, B).
+procedure has_sgn1(YesNo?, Contract?, YesNo).
+has_sgn1(yes, _, yes).
+has_sgn1(no, Ss, B?) :- has_sgn(Ss?, B).
+procedure roles_sgn(RoleSpecs?, YesNo).
+roles_sgn([], no).
+roles_sgn([R|Rs], B?) :- ground(R?) |
+    rs_parts(R?, P, M, K, N),
+    atoms_args(P?, A1),
+    atoms_args(M?, A2),
+    atoms_args(K?, A3),
+    atoms_args(N?, A4),
+    app(A1?, A2?, A12),
+    app(A3?, A4?, A34),
+    app(A12?, A34?, As),
+    args_sgn(As?, B1),
+    roles_sgn1(B1?, Rs?, B).
+procedure roles_sgn1(YesNo?, RoleSpecs?, YesNo).
+roles_sgn1(yes, _, yes).
+roles_sgn1(no, Rs, B?) :- roles_sgn(Rs?, B).
+procedure args_sgn(Args?, YesNo).
+args_sgn([], no).
+args_sgn([sgn(_, _)|_], yes).
+args_sgn([role(_)|As], B?) :- args_sgn(As?, B).
+args_sgn([pvar(_)|As], B?) :- args_sgn(As?, B).
+args_sgn([svar(_)|As], B?) :- args_sgn(As?, B).
+args_sgn([nterm(_)|As], B?) :- args_sgn(As?, B).
 
 procedure community_lines(Contract?, Constant?, Stream(_)).
 community_lines(C, Nm, L?) :- ground(Nm?) |
@@ -226,6 +280,9 @@ var_types([role(_)|Vs], ['Peer'|Ts?]) :- var_types(Vs?, Ts).
 var_types([pvar(_)|Vs], ['Peer'|Ts?]) :- var_types(Vs?, Ts).
 var_types([svar(_)|Vs], ['Speech'|Ts?]) :- var_types(Vs?, Ts).
 var_types([nterm(_)|Vs], ['Peer'|Ts?]) :- var_types(Vs?, Ts).
+%% A signed term is no variable of a schema (schema_vars); the clause covers
+%% the type.
+var_types([sgn(_, _)|Vs], Ts?) :- var_types(Vs?, Ts).
 
 %% binding_of(s(V1, ..., Vn), s, [b(Var1, p(V1?)), ...]).
 procedure binding_lines(Contract?, Stream(_)).
@@ -298,6 +355,9 @@ val_goal(svar(X), N, G?) :- ground(X?), ground(N?) | G =.. [val_speech, svar(X?)
 val_goal(role(I), N, G?) :- ground(N?) | G =.. [val_peer, role(I?), 'B?', 'D?', N?].
 val_goal(pvar(X), N, G?) :- ground(X?), ground(N?) | G =.. [val_peer, pvar(X?), 'B?', 'D?', N?].
 val_goal(nterm(_), N, G?) :- ground(N?) | G =.. [val_peer, unnamed, 'B?', 'D?', N?].
+%% A signed term is no variable of a schema (schema_vars); the clause covers
+%% the type.
+val_goal(sgn(_, _), N, G?) :- ground(N?) | G =.. [val_peer, unnamed, 'B?', 'D?', N?].
 
 procedure vname(Integer?, Found).
 vname(1, named('V1', 'V1?')).
