@@ -36,7 +36,7 @@ script(bob, [req(propose(establish(bob))), req(known(alice)), wait(discover(alic
              approval(befriend(alice, bob), yes),
              approval(join(alice, bob, speech(utterance(friends), alice)), yes),
              after(outcome, join(alice, bob, speech(utterance(friends), alice))),
-             req(propose(post(bob, alice, speech(utterance(hi_all), bob), speech(utterance(friends), alice)))),
+             req(propose(post(bob, alice, speech(utterance(friends), alice), speech(utterance(hi_all), bob)))),
              after(outcome, deliver(alice, bob, speech(utterance(hi_all), bob), speech(utterance(friends), alice))),
              req(propose(leave(alice, bob, speech(utterance(friends), alice))))]).
 script(_, []) :- otherwise | true.
