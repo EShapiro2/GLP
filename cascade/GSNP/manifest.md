@@ -1,9 +1,9 @@
 # A run of the cascade on GSNP
 
 - Contract: `GSNP` (`gsnp` to the checker), its owner's two files `programs/gsc/GSNP.md` and `programs/gsc/GSNP.glp`, copied here as they stood.
-- The paper: `git@github.com:EShapiro2/Jurix-Formal-Grassroots-Social-Contracts.git` at `99005ed6`, for the paper's own record.
-- The tools: this repository at `005e3f5b` --- programs/gsc (the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/4), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-10-19 16:45 UTC by `cascade.sh gsnp`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- The paper: `git@github.com:EShapiro2/Jurix-Formal-Grassroots-Social-Contracts.git` at `f3c4f43f`, for the paper's own record.
+- The tools: this repository at `7d414c3c` --- programs/gsc (the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/4), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-10-19 18:01 UTC by `cascade.sh gsnp`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
