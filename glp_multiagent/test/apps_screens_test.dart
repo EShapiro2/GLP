@@ -1,22 +1,14 @@
-/// The screens of GSC's three apps, GSG's, GSN's and GSNP's
-/// (`programs/apps/gsg`, `programs/apps/gsn`, `programs/apps/gsnp`), each
-/// person's as the bridge draws it on their phone, written to PNG files for
-/// GAI's paper (`programs/apps/<app>/screens/`).
+/// The screens of GSC's three apps, GSG's, GSN's and GSNP's (`programs/apps/gsg`, `programs/apps/gsn`, `programs/apps/gsnp`), each person's phone as the bridge draws it, written to PNG files for GAI's paper (`programs/apps/<app>/screens/`).
 ///
-/// Each app's directory is a certified program: the canonical CVA platform of its contract, `platform.vglp`, compiled to GLP when the directory loads (vGLP, Section 6.3, Definition "Canonical Compilation"), and the mini-app's entry `miniapp/4` (`miniapp.glp`), which runs the platform's agent with the person's key as its `Peer` and its dispatcher on the agent's asks, the dispatcher drawing the agent's request and approval questions and its thread on the person channel.  The engine loads the directory and posts the entry twice, alice's and bob's, over one conversation, the two ends of its root channel handed to them as the social graph hands them and as the plays of each directory do (`plays.glp`); for GSNP's app three times, alice's, bob's and carol's, over two conversations, alice's with bob and bob's with carol.  Each person's channel is `ch(Grants?, Draws)` (vGLP, Definition "Person Channel, Person Writer, GLP with Persons, Grant"): the host hands each person's bridge every term of `Draws` as it arrives (bridge.dart), and extends `Grants` with each grant the bridge returns, `input(Id, P, R)`.  The bridge draws each construct by the widget of its interactive type: the approval question by the widget the app's declaration names, `Approval =::= approval_sentence.` (`programs/apps/<app>/self.vglp`; vGLP, Section 6.2, Definition "Widget Declaration"), one sentence for the attempt's class and two buttons labelled for it (`lib/ui_runtime/named_widgets.dart`), and every other construct by the default widget of its type (Definition "Default Widget").  Every act of the two persons is a tap, a keystroke or a submission on those widgets: the acts the scripted persons of the plays take (`person.glp`).  No term is hand-fed to the bridge or to the program.
+/// Each app's directory is a certified program: the canonical CVA platform of its contract, `platform.vglp`, compiled to GLP when the directory loads (vGLP, Section 6.3), and the mini-app's entry `miniapp/4` (`miniapp.glp`), which runs the platform's agent with the person's key and its dispatcher on the agent's asks.  The engine loads the directory and posts the entry for alice and bob over one conversation, as the plays of each directory do (`plays.glp`); for GSNP's app for alice, bob and carol, over two conversations, alice's with bob and bob's with carol.  Each person's channel is `ch(Grants?, Draws)` (vGLP, Definition "Person Channel, Person Writer, GLP with Persons, Grant"): the host hands each person's bridge every term of `Draws` as it arrives (bridge.dart), and extends `Grants` with each grant the bridge returns, `input(Id, P, R)`.
 ///
-/// Each screen is the person's phone, 390 by 844 logical pixels, rendered by
-/// the widget itself (RepaintBoundary.toImage) at a device pixel ratio of 3,
-/// in the light theme.  The test font draws every glyph as a box, so the
-/// screens are set in Roboto, the Material font, with MaterialIcons, both
-/// loaded from the Flutter SDK's own copies
-/// (`bin/cache/artifacts/material_fonts`).  The PNG files are written only
-/// when the test runs with `--update-goldens`:
+/// The agent writes its view, `view(S, K)`, its machine state and the persons it knows, on construct 0 when it starts and whenever either changes (vGLP b7e3517, Section 5.4, "The compilation"), drawn by `last_state`, the widget the platform declares for `Stream(Output)`.  The app declares `Menu =::= social_menu.` and `Approval =::= approval_sentence.` (`programs/apps/<app>/self.vglp`): the request question is drawn with the last view on construct 0 (vGLP e924f73, Section 6.2) as the app's tabs, Friends and, where the request type offers `create`, Groups, and each approval question as one sentence and two buttons at the top of the tab it concerns (`lib/ui_runtime/named_widgets.dart`, `tab_screen.dart`), as GAI's task words them (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC, and its sentence for a join at 11:35 UTC).  Every act of a person is a tap or a keystroke on a control of the tabs, found by its key (`socialKey`, `tabKey`, `constructKey`): Join, Add, Befriend, Accept, End friendship, Send, Create, Add member and the rest.  No term is hand-fed to the bridge or to the program.
+///
+/// Each screen is the person's phone, 390 by 844 logical pixels, rendered by the widget itself (RepaintBoundary.toImage) at a device pixel ratio of 3, in the light theme.  The test font draws every glyph as a box, so the screens are set in Roboto, the Material font, with MaterialIcons, both loaded from the Flutter SDK's own copies (`bin/cache/artifacts/material_fonts`).  The PNG files are written only when the test runs with `--update-goldens`:
 ///
 ///     flutter test --update-goldens test/apps_screens_test.dart
 ///
-/// Without it the test runs every step and checks every screen, and writes
-/// nothing into the tree.
+/// Without it the test takes every act and checks every screen, and writes nothing into the tree.
 library;
 
 import 'dart:io';
@@ -34,6 +26,7 @@ import 'package:glp_multiagent/ui_runtime/construct_family.dart';
 import 'package:glp_multiagent/ui_runtime/manifest.dart';
 import 'package:glp_multiagent/ui_runtime/named_widgets.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
+import 'package:glp_multiagent/ui_runtime/tab_screen.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/runtime/external_io.dart' show InputInjector;
@@ -77,16 +70,39 @@ Future<void> _loadFonts() async {
   await icons.load();
 }
 
-/// The app's one panel, the compiled program's: the constructs the bridge
-/// holds open, the agent's thread among them as construct 0.
+/// The app's one panel, the compiled program's: the constructs the bridge holds open, the agent's output among them as construct 0.
 Manifest _manifest(String app) => Manifest(
       title: app,
       panels: [Panel(id: app, name: app.toUpperCase(), constructs: true)],
       activity: const [],
     );
 
-/// One person at their phone: their bridge, the writer of their grants, and
-/// the stream of draws their mini-app writes.
+/// What no screen shows: a term, a functor, a type name, an attempt number or a Submit button (GAI's task, its preamble).
+const List<String> _notShown = [
+  'Submit',
+  'propose',
+  'menu',
+  'Key',
+  'Request',
+  'Proposal',
+  'Peer',
+  'Speech',
+  'Utterance',
+  'utterance',
+  'speech(',
+  'attempt',
+  'rank',
+  'befriend(',
+  'friend(',
+  'identity',
+  'received',
+  'member(',
+  'listed',
+  'item(',
+  'view(',
+];
+
+/// One person at their phone: their bridge, the writer of their grants, and the stream of draws their mini-app writes.
 class _Person {
   final String name;
   final InputInjector grants;
@@ -105,11 +121,10 @@ class _Person {
     ui = UiRuntime(manifest: _manifest(app), onSend: unsent.add);
   }
 
-  /// The open request question: the form `menu`, the agent's own key, the
-  /// persons it knows and the request it asks for (vGLP 321127a, Section 5.4).
+  /// The open request question, `menu(Me, Known, Request?)`, drawn by `social_menu` (vGLP, Section 5.4): the agent asks the next one when it reads the answer to the last, so its construct changes with each request.
   OpenConstruct get request => _one('menu');
 
-  /// The open approval question, `approval(Attempt, input([2]))`: drawn by approval_sentence, one sentence for the attempt's class and two buttons labelled for it.
+  /// The open approval question, `approval(Attempt, YesNo?)`, drawn by `approval_sentence`.
   OpenConstruct get approval => _one('approval');
 
   List<OpenConstruct> questions(String functor) => [
@@ -125,28 +140,21 @@ class _Person {
     return cs.single;
   }
 
-  /// The agent's thread, construct 0.
-  OpenConstruct get output => ui.bridge.construct(0)!;
-
-  /// The agent's own key, which the open request question shows: where the
-  /// person proposes a class that names their agent, they type it as it is
-  /// shown, as the plays' scripted persons write it into their proposals'
-  /// holes (`person.glp`, `own(Ks, R)`).
-  String get key => formatTerm(ctorArgs(request.view).$2[0]);
-
-  /// The persons the open request question shows.
-  String get known => formatTerm(ctorArgs(request.view).$2[1]);
-
-  /// The agent's thread, construct 0, each transaction as its term.
-  List<String> get thread {
-    final v = ui.bridge.construct(0)?.view;
-    return [if (v is GList) for (final t in v.items) formatTerm(t)];
+  /// The last view the agent wrote on construct 0, `view(S, K)`.
+  SocialState get state {
+    final (ok, s) = SocialState.read(ui.bridge.construct(0)?.view);
+    expect(ok && s != null, isTrue, reason: '$name: no view on construct 0');
+    return s!;
   }
+
+  /// The atoms of the last view, each as its term.
+  List<String> get atoms => [for (final a in state.atoms) formatTerm(a)];
+
+  /// The persons the last view shows known, each as its term.
+  List<String> get known => [for (final k in state.known) formatTerm(k)];
 }
 
-/// Alice and Bob, each running the app's mini-app on their own phone, over
-/// one conversation; or Alice, Bob and Carol, over two, Alice's with Bob and
-/// Bob's with Carol.
+/// Alice and Bob, each running the app's mini-app on their own phone, over one conversation; or Alice, Bob and Carol, over two, Alice's with Bob and Bob's with Carol.
 class _Run {
   final WidgetTester tester;
   final String app;
@@ -163,8 +171,7 @@ class _Run {
   static Future<_Run> start(WidgetTester tester, String app,
       {bool carol = false}) async {
     await _loadFonts();
-    // Shadows drawn as shadows, not as the test's solid outlines; restored
-    // by [finish].
+    // Shadows drawn as shadows, not as the test's solid outlines; restored by [finish].
     debugDisableShadows = false;
     tester.view.physicalSize = Size(
         (carol ? 3 : 2) * (_phone.width + 2 * _gap), _phone.height + 2 * _gap);
@@ -175,11 +182,7 @@ class _Run {
     final engine = GlpEngine(rootSelfGlpPath: '$programs/self.glp');
     expect(engine.loadProgram('$programs/apps/$app'), isTrue,
         reason: 'programs/apps/$app does not load');
-    // The entry twice, as the plays activate it (plays.glp), with one
-    // conversation between the two executions; or three times, with a
-    // conversation between alice's and bob's and one between bob's and
-    // carol's (../gsnp/plays.glp); each person's grants the caller's to
-    // write, and each person's draws read off their stream.
+    // The entry twice, as the plays activate it (plays.glp), with one conversation between the two executions; or three times, with a conversation between alice's and bob's and one between bob's and carol's (../gsnp/plays.glp); each person's grants the caller's to write, and each person's draws read off their stream.
     final play = carol
         ? engine.postGoal(
             'miniapp(alice, ch(GA?, DA), '
@@ -209,9 +212,7 @@ class _Run {
     return run;
   }
 
-  /// The run reduced until quiescent, as each event of an agent is (IGLP,
-  /// Implementation Notes; vGLP, Section 5.4, "Triggers": the agent takes its
-  /// own transactions until none holds).
+  /// The run reduced until quiescent, as each event of an agent is (IGLP, Implementation Notes; vGLP, Section 5.4, "Triggers": the agent takes its own transactions until none holds).
   void _drain() {
     final r = play.scheduler.drainToQuiescence(maxCycles: 20000000);
     expect(r.status, isNot(ExecutionStatus.capped),
@@ -248,8 +249,7 @@ class _Run {
     }
   }
 
-  /// Put each grant the bridges returned on its person channel, run the
-  /// program on it, and draw what it draws.
+  /// Put each grant the bridges returned on its person channel, run the program on it, and draw what it draws.
   Future<void> settle() async {
     for (var more = true; more;) {
       more = false;
@@ -267,8 +267,7 @@ class _Run {
     await tester.pumpAndSettle();
   }
 
-  /// The phones side by side, each the person's agent surface on a screen
-  /// of its own.
+  /// The phones side by side, each the person's agent surface on a screen of its own.
   Widget _phones() => MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
@@ -306,14 +305,97 @@ class _Run {
         ),
       );
 
-  // === The persons' acts on their screens ===================================
+  // === The persons' acts on their tabs ======================================
 
   /// [f] within [p]'s phone.
   Finder on(_Person p, Finder f) =>
       find.descendant(of: find.byKey(p.shot), matching: f);
 
+  /// The control or row [what] of [p]'s open request question (`socialKey`).
+  Finder control(_Person p, String what) =>
+      on(p, find.byKey(socialKey(p.request.id, what)));
+
+  /// The name [text] on the row [what] of [p]'s open request question, which a person taps to open the row.
+  Finder name(_Person p, String what, String text) =>
+      find.descendant(of: control(p, what), matching: find.text(text));
+
+  /// The control of [p]'s open request question whose key begins [prefix] and ends [suffix], for a group's controls, whose keys carry the group's leader and name (`groupKey`).
+  Finder groupControl(_Person p, String prefix, [String suffix = '']) {
+    final head = '${p.request.id}:social:$prefix';
+    return on(
+        p,
+        find.byWidgetPredicate((w) =>
+            w.key is ValueKey<String> &&
+            (w.key as ValueKey<String>).value.startsWith(head) &&
+            (w.key as ValueKey<String>).value.endsWith(suffix)));
+  }
+
+  /// The list of the tab [p] has open.
+  Finder _list(_Person p) => on(
+      p,
+      find.byWidgetPredicate((w) =>
+          w is ListView &&
+          w.key is ValueKey<String> &&
+          (w.key as ValueKey<String>).value.startsWith('tab-view:')));
+
+  /// [p]'s open tab scrolled until [f] is built, the list building only what is near the screen.
+  Future<void> reveal(_Person p, Finder f) async {
+    if (f.evaluate().isNotEmpty) return;
+    await tester.scrollUntilVisible(f, 120,
+        scrollable:
+            find.descendant(of: _list(p), matching: find.byType(Scrollable)).first);
+    await tester.pumpAndSettle();
+  }
+
+  /// [p] taps [f]: the grant it makes, if any, put on their person channel, the program run on it, and the phones drawn again.
+  Future<void> tap(_Person p, Finder f) async {
+    await reveal(p, f);
+    expect(f, findsOneWidget);
+    await tester.ensureVisible(f);
+    await tester.pumpAndSettle();
+    await tester.tap(f);
+    await tester.pumpAndSettle();
+    await settle();
+  }
+
+  /// [p] types [text] into the field [f].
+  Future<void> type(_Person p, Finder f, String text) async {
+    await reveal(p, f);
+    expect(f, findsOneWidget);
+    await tester.enterText(f, text);
+    await tester.pumpAndSettle();
+  }
+
+  /// [p] opens the tab [t].
+  Future<void> tab(_Person p, ScreenTab t) =>
+      tap(p, on(p, find.byKey(tabKey(t))));
+
+  /// [p] taps the button [label] of their open approval question.
+  Future<void> answer(_Person p, String label) => tap(
+      p,
+      on(
+          p,
+          find.descendant(
+              of: find.byKey(constructKey(p.approval.id)),
+              matching: find.widgetWithText(ElevatedButton, label))));
+
+  /// [p] establishes their identity (GSG:1): Join.
+  Future<void> join(_Person p) => tap(p, control(p, 'join'));
+
+  /// [p] asks to know [q]: their key typed into Add a person by key, and Add.
+  Future<void> add(_Person p, String q) async {
+    await type(p, control(p, 'add-field'), q);
+    await tap(p, control(p, 'add'));
+  }
+
+  /// The texts on [p]'s phone, in order.
+  List<String> texts(_Person p) => [
+        for (final t in tester.widgetList<Text>(on(p, find.byType(Text))))
+          if (t.data != null) t.data!,
+      ];
+
   /// The texts construct [c] draws on [p]'s phone, in order.
-  List<String?> texts(_Person p, OpenConstruct c) => [
+  List<String?> textsOf(_Person p, OpenConstruct c) => [
         for (final t in tester.widgetList<Text>(on(
             p,
             find.descendant(
@@ -322,84 +404,21 @@ class _Run {
           t.data,
       ];
 
-  /// The node of kind [kind] at [at] of construct [c] on [p]'s phone.
-  Finder node(_Person p, OpenConstruct c, String kind, List<int> at) =>
-      on(p, find.byKey(nodeKey(c.id, kind, at)));
-
-  /// [p]'s screen scrolled to its top where [f] is not built, the list
-  /// building only what is near the screen: the questions stand at the top.
-  Future<void> _reveal(_Person p, Finder f) async {
-    if (f.evaluate().isEmpty) await top(p);
+  /// Nothing on [p]'s phone is a term, a functor, a type name, an attempt number or a Submit button.
+  void plain(_Person p) {
+    final all = texts(p).join('\n');
+    for (final w in _notShown) {
+      expect(all.contains(w), isFalse,
+          reason: '${p.name}: "$w" on the screen:\n$all');
+    }
   }
 
-  Future<void> _tap(Finder f) async {
-    expect(f, findsOneWidget);
-    await tester.ensureVisible(f);
-    await tester.pumpAndSettle();
-    await tester.tap(f);
-    await tester.pumpAndSettle();
-  }
-
-  /// Choose the alternative [label] of the menu at [at].
-  Future<void> choose(
-      _Person p, OpenConstruct c, List<int> at, String label) async {
-    final f = find.descendant(
-        of: node(p, c, 'menu', at),
-        matching: find.widgetWithText(ChoiceChip, label));
-    await _reveal(p, f);
-    await _tap(f.first);
-  }
-
-  /// Open the field of a recursive type at [at].
-  Future<void> open(_Person p, OpenConstruct c, List<int> at) async {
-    final f = on(p, find.byKey(openKey(c.id, at)));
-    await _reveal(p, f);
-    await _tap(f);
-  }
-
-  /// Type [text] into the field of kind [kind] at [at].
-  Future<void> type(_Person p, OpenConstruct c, String kind, List<int> at,
-      String text) async {
-    final f = find.descendant(
-        of: node(p, c, kind, at), matching: find.byType(TextField));
-    await _reveal(p, f);
-    expect(f, findsOneWidget, reason: '$kind field at $at');
-    await tester.enterText(f, text);
-    await tester.pumpAndSettle();
-  }
-
-  /// Submit the question at [at]: its grant, the run on it, and the draws.
-  Future<void> submit(_Person p, OpenConstruct c, List<int> at) async {
-    final f = on(p, find.byKey(submitKey(c.id, at)));
-    await _reveal(p, f);
-    expect(tester.widget<ElevatedButton>(f).onPressed, isNotNull,
-        reason: '${p.name}: nothing to submit at $at');
-    await _tap(f);
-    await settle();
-  }
-
-  /// Press the button [label] of construct [c].
-  Future<void> press(_Person p, OpenConstruct c, String label) async {
-    final f = on(
-        p,
-        find.descendant(
-            of: find.byKey(constructKey(c.id)),
-            matching: find.widgetWithText(ElevatedButton, label)));
-    await _reveal(p, f);
-    await _tap(f);
-    await settle();
-  }
-
-  /// [p]'s screen scrolled to its top, where the questions stand.
-  Future<void> top(_Person p) => _scroll(p, false);
-
-  /// [p]'s screen scrolled to its end, the latest of the thread.
-  Future<void> end(_Person p) => _scroll(p, true);
-
-  Future<void> _scroll(_Person p, bool toEnd) async {
+  /// [p]'s open tab scrolled to its top.
+  Future<void> top(_Person p) async {
     FocusManager.instance.primaryFocus?.unfocus();
-    final s = tester.state<ScrollableState>(on(p, find.byType(Scrollable)).first);
-    s.position.jumpTo(toEnd ? s.position.maxScrollExtent : 0);
+    final s = tester.state<ScrollableState>(
+        find.descendant(of: _list(p), matching: find.byType(Scrollable)).first);
+    s.position.jumpTo(0);
     await tester.pumpAndSettle();
   }
 
@@ -425,541 +444,222 @@ class _Run {
     }
   }
 
-  /// Alice and Bob establish their identities (GSG:1), ask to know each
-  /// other, and become friends (GSG:2): Alice proposes it and Bob answers
-  /// yes, each act on the widgets as the screens of GSG's app show them.
-  Future<void> befriend() async {
-    for (final (p, q) in [(alice, 'bob'), (bob, 'alice')]) {
-      var c = p.request;
-      await choose(p, c, [3], 'propose');
-      await choose(p, c, [3, 1], 'establish');
-      await type(p, c, 'peer', [3, 1, 1], p.key);
-      await submit(p, c, [3]);
-      c = p.request;
-      await choose(p, c, [3], 'known');
-      await type(p, c, 'peer', [3, 1], q);
-      await submit(p, c, [3]);
+  /// [p] and [q] establish their identities (GSG:1) and ask to know each other, each on their Friends tab: Join, then the other's key and Add.
+  Future<void> meet(_Person p, _Person q) async {
+    for (final x in [p, q]) {
+      if (!x.state.identity) await join(x);
+      expect(x.state.identity, isTrue, reason: '${x.name}: no identity');
     }
-    final c = alice.request;
-    await choose(alice, c, [3], 'propose');
-    await choose(alice, c, [3, 1], 'befriend');
-    await type(alice, c, 'peer', [3, 1, 1], alice.key);
-    await type(alice, c, 'peer', [3, 1, 2], 'bob');
-    await submit(alice, c, [3]);
-    await press(bob, bob.approval, 'Accept');
-    expect(alice.thread, [
-      'propose(attempt(alice, 1, 1, establish(alice)))',
-      'discover(bob)',
-      'propose(attempt(alice, 2, 2, befriend(alice, bob)))',
-      'tally(attempt(alice, 2, 2, befriend(alice, bob)))',
-      'commit(attempt(alice, 2, 2, befriend(alice, bob)))',
-    ]);
-    expect(bob.thread, [
-      'propose(attempt(bob, 1, 1, establish(bob)))',
-      'discover(alice)',
-      'start(attempt(alice, 2, 2, befriend(alice, bob)))',
-      'answer(attempt(alice, 2, 2, befriend(alice, bob)))',
-      'vote(attempt(alice, 2, 2, befriend(alice, bob)))',
-      'outcome(attempt(alice, 2, 2, befriend(alice, bob)))',
-    ]);
+    await add(p, q.name);
+    await add(q, p.name);
+    expect(p.known, contains(q.name));
+    expect(q.known, contains(p.name));
   }
 
-  /// Fill the field of the speech act at [at], a form of a recursive type
-  /// drawn closed until opened: opened, its utterance opened and chosen,
-  /// [text] typed, and its signer [signer].
-  Future<void> say(_Person p, OpenConstruct c, List<int> at, String text,
-      String signer) async {
-    await open(p, c, at);
-    await open(p, c, [...at, 1]);
-    await choose(p, c, [...at, 1], 'utterance');
-    await type(p, c, 'text', [...at, 1, 1], text);
-    await type(p, c, 'peer', [...at, 2], signer);
-  }
-
-  /// Fill the field of the speech act at [at] with a speech act signed again:
-  /// [text], signed by each of [signers] in turn, the first its author's
-  /// signature, innermost.  Each speech act is opened, its utterance opened
-  /// and, for all but the innermost, the alternative `speech` chosen, a
-  /// speech act signed again; the innermost's utterance `utterance`, [text]
-  /// typed; and each signer typed into its own speech act's field `Peer`.
-  Future<void> sayHeld(_Person p, OpenConstruct c, List<int> at, String text,
-      List<String> signers) async {
-    await open(p, c, at);
-    var u = [...at, 1];
-    await open(p, c, u);
-    for (var i = signers.length - 1; i > 0; i--) {
-      await choose(p, c, u, 'speech');
-      await open(p, c, [...u, 1]);
-      u = [...u, 1];
+  /// [p] offers [q] friendship (GSG:2): Befriend on [q]'s row; and [q], asked, taps Accept.
+  Future<void> befriend(_Person p, _Person q, {String? shot}) async {
+    await tap(p, control(p, 'befriend:${q.name}'));
+    final a = q.approval;
+    expect(formatTerm(a.view),
+        startsWith('approval(attempt(${p.name}, '));
+    expect(formatTerm(a.view),
+        endsWith(', befriend(${p.name}, ${q.name})), input([2]))'));
+    await top(q);
+    final asks = '${personName(GAtom(p.name))} asks to be your friend.';
+    expect(textsOf(q, a), [asks, 'Accept', 'Decline']);
+    // At the top of Friends, before the person's own name.
+    expect(tester.getTopLeft(on(q, find.text(asks))).dy,
+        lessThan(tester.getTopLeft(control(q, 'name')).dy));
+    if (shot != null) {
+      plain(q);
+      await shoot(q, shot);
     }
-    await choose(p, c, u, 'utterance');
-    await type(p, c, 'text', [...u, 1], text);
-    // The signers, innermost first: the speech act at [at] followed by
-    // [1] once for each signature inside it.
-    for (var i = 0; i < signers.length; i++) {
-      final s = [...at, for (var j = 0; j < signers.length - 1 - i; j++) 1];
-      await type(p, c, 'peer', [...s, 2], signers[i]);
-    }
-  }
-
-  /// Open, in the element [k] of [p]'s thread, the speech act at argument
-  /// [arg] of its attempt's class signed [depth] times, each speech act and
-  /// its utterance down to the text.
-  Future<void> openedHeld(_Person p, int k, List<int> arg, int depth) async {
-    var at = [...elementAt(const [], k), 1, 4, ...arg];
-    await open(p, p.output, at);
-    for (var i = 0; i < depth; i++) {
-      at = [...at, 1];
-      await open(p, p.output, at);
-    }
-  }
-
-  /// Open, in the element [k] of [p]'s thread, the speech act at argument
-  /// [arg] of its attempt's class, and its utterance: a field of a recursive
-  /// type is drawn closed until the person opens it.
-  Future<void> opened(_Person p, int k, List<int> arg) async {
-    final at = [...elementAt(const [], k), 1, 4, ...arg];
-    await open(p, p.output, at);
-    await open(p, p.output, [...at, 1]);
-  }
-
-  /// [p]'s screen scrolled to bring [f] to its top.
-  Future<void> show(_Person p, Finder f) async {
-    FocusManager.instance.primaryFocus?.unfocus();
-    await tester.pumpAndSettle();
-    await _reveal(p, f);
-    expect(f, findsOneWidget);
-    await Scrollable.ensureVisible(tester.element(f));
-    await tester.pumpAndSettle();
+    await answer(q, 'Accept');
+    expect(q.questions('approval'), isEmpty);
+    expect(p.atoms, contains('friend(${q.name})'));
+    expect(q.atoms, contains('friend(${p.name})'));
   }
 
   /// The test's painting settings restored, as the test framework requires.
   void finish() => debugDisableShadows = true;
-
 }
 
 void main() {
   testWidgets(
-      'GSG\'s app on two phones: identity, knowing each other, friendship '
-      'offered and approved, and ended', (tester) async {
+      'GSG\'s app on two phones: Bob asked to be Alice\'s friend; Alice\'s '
+      'Friends with Bob her friend; and after Bob ends the friendship',
+      (tester) async {
     final run = await _Run.start(tester, 'gsg');
     final alice = run.alice;
     final bob = run.bob;
 
-    // 1. Alice's request question, her agent's own key and nobody known:
-    // she establishes her identity (GSG:1) by the key it shows, her first
-    // request, a class of one participant, taken at once.
-    expect(alice.key, 'alice');
-    expect(alice.known, '[]');
-    var q = alice.request;
-    await run.choose(alice, q, [3], 'propose');
-    await run.choose(alice, q, [3, 1], 'establish');
-    await run.type(alice, q, 'peer', [3, 1, 1], alice.key);
+    // One tab, Friends: GSG offers no group.
+    expect(run.on(alice, find.byKey(tabKey(ScreenTab.friends))), findsOneWidget);
+    expect(run.on(alice, find.byKey(tabKey(ScreenTab.groups))), findsNothing);
+
+    // Before her identity is established, her name and Join, which proposes establish(alice).
+    expect(run.control(alice, 'name'), findsOneWidget);
+    expect(run.control(alice, 'join'), findsOneWidget);
+    expect(alice.atoms, isEmpty);
+
+    // Each joins (GSG:1) and adds the other by key; each then knows the other.
+    await run.meet(alice, bob);
+    expect(run.control(alice, 'join'), findsNothing);
+    expect(
+        find.descendant(
+            of: run.control(alice, 'person:bob'),
+            matching: find.widgetWithText(ElevatedButton, 'Befriend')),
+        findsOneWidget);
+
+    // (a) Alice taps Befriend on Bob's row (GSG:2): Bob's Friends tab, the question "Alice asks to be your friend." and Accept and Decline at its top.
+    await run.befriend(alice, bob, shot: 'gsg-a-bob-asked.png');
+
+    // (b) Alice's Friends tab after the befriend commits: Bob her friend, with End friendship.
     await run.top(alice);
-    await run.shoot(alice, 'gsg-01-alice-establish.png');
-    await run.submit(alice, q, [3]);
-    expect(alice.thread, ['propose(attempt(alice, 1, 1, establish(alice)))']);
+    expect(
+        find.descendant(
+            of: run.control(alice, 'person:bob'),
+            matching: find.widgetWithText(OutlinedButton, 'End friendship')),
+        findsOneWidget);
+    expect(run.control(alice, 'befriend:bob'), findsNothing);
+    expect(run.texts(alice), containsAllInOrder(['Alice', 'Bob', 'End friendship']));
+    run.plain(alice);
+    await run.shoot(alice, 'gsg-b-alice-friends.png');
 
-    // 2. Her next request question, still nobody known: she asks to know
-    // Bob.
-    q = alice.request;
-    expect(alice.known, '[]');
-    await run.choose(alice, q, [3], 'known');
-    await run.type(alice, q, 'peer', [3, 1], 'bob');
-    await run.top(alice);
-    await run.shoot(alice, 'gsg-02-alice-menu.png');
-    await run.submit(alice, q, [3]);
-
-    // Bob likewise: his identity, and to know Alice.
-    q = bob.request;
-    await run.choose(bob, q, [3], 'propose');
-    await run.choose(bob, q, [3, 1], 'establish');
-    await run.type(bob, q, 'peer', [3, 1, 1], bob.key);
-    await run.submit(bob, q, [3]);
-    q = bob.request;
-    await run.choose(bob, q, [3], 'known');
-    await run.type(bob, q, 'peer', [3, 1], 'alice');
-    await run.submit(bob, q, [3]);
-
-    // The hellos exchanged on their conversation, each knows the other.
-    expect(alice.thread, [
-      'propose(attempt(alice, 1, 1, establish(alice)))',
-      'discover(bob)',
-    ]);
-    expect(bob.thread, [
-      'propose(attempt(bob, 1, 1, establish(bob)))',
-      'discover(alice)',
-    ]);
-
-    // 3. Alice proposes to befriend Bob (GSG:2), on her open request
-    // question, asked before Bob was known.
-    q = alice.request;
-    await run.choose(alice, q, [3], 'propose');
-    await run.choose(alice, q, [3, 1], 'befriend');
-    await run.type(alice, q, 'peer', [3, 1, 1], alice.key);
-    await run.type(alice, q, 'peer', [3, 1, 2], 'bob');
-    await run.top(alice);
-    await run.shoot(alice, 'gsg-03-alice-befriend.png');
-    await run.submit(alice, q, [3]);
-
-    // 4. Her next request question shows Bob known; her thread, her
-    // proposal.
-    expect(alice.known, '[bob]');
-    expect(alice.thread.last,
-        'propose(attempt(alice, 2, 2, befriend(alice, bob)))');
-    await run.top(alice);
-    await run.shoot(alice, 'gsg-04-alice-menu-bob.png');
-
-    // 5. Bob is asked: his approval question, drawn by approval_sentence, "Alice asks to be your friend.", and the buttons Accept and Decline, and nothing else.
-    expect(bob.thread.last, 'start(attempt(alice, 2, 2, befriend(alice, bob)))');
-    final a = bob.approval;
-    expect(formatTerm(a.view),
-        'approval(attempt(alice, 2, 2, befriend(alice, bob)), input([2]))');
-    // named(approval_sentence, D), D the default widget of Approval (vGLP
-    // 92e6d3b, the construct process in the appendix of proofs).
-    expect(namedWidget(a.widget)?.$1, approvalSentenceName);
-    expect(formatTerm(namedWidget(a.widget)!.$2),
-        startsWith('form(approval, [field(\'Attempt\', form(attempt, '));
-    await run.top(bob);
-    expect(run.texts(bob, a),
-        ['Alice asks to be your friend.', 'Accept', 'Decline']);
-    await run.shoot(bob, 'gsg-05-bob-approval.png');
-
-    // 6. He taps Accept, granting yes: the question is withdrawn, and his thread shows his answer, his vote and the outcome.
-    await run.press(bob, a, 'Accept');
-    expect(bob.questions('approval'), isEmpty);
-    expect(bob.thread.sublist(bob.thread.length - 3), [
-      'answer(attempt(alice, 2, 2, befriend(alice, bob)))',
-      'vote(attempt(alice, 2, 2, befriend(alice, bob)))',
-      'outcome(attempt(alice, 2, 2, befriend(alice, bob)))',
-    ]);
-    await run.end(bob);
-    await run.shoot(bob, 'gsg-06-bob-yes.png');
-
-    // 7. They are friends: Alice's thread shows the tally and the commit.
-    expect(alice.thread.sublist(alice.thread.length - 2), [
-      'tally(attempt(alice, 2, 2, befriend(alice, bob)))',
-      'commit(attempt(alice, 2, 2, befriend(alice, bob)))',
-    ]);
-    await run.end(alice);
-    await run.shoot(alice, 'gsg-07-alice-friends.png');
-
-    // 8. Bob ends the friendship (GSG:3), an act of his own.
-    q = bob.request;
-    await run.choose(bob, q, [3], 'propose');
-    await run.choose(bob, q, [3, 1], 'unfriend');
-    await run.type(bob, q, 'peer', [3, 1, 1], bob.key);
-    await run.type(bob, q, 'peer', [3, 1, 2], 'alice');
-    await run.top(bob);
-    await run.shoot(bob, 'gsg-08-bob-unfriend.png');
-    await run.submit(bob, q, [3]);
-
-    // 9. Nobody else is asked: his thread shows his proposal, the tally and
-    // the commit.
-    expect(bob.thread.sublist(bob.thread.length - 3), [
-      'propose(attempt(bob, 3, 3, unfriend(bob, alice)))',
-      'tally(attempt(bob, 3, 3, unfriend(bob, alice)))',
-      'commit(attempt(bob, 3, 3, unfriend(bob, alice)))',
-    ]);
-    await run.end(bob);
-    await run.shoot(bob, 'gsg-09-bob-unfriended.png');
-
-    // 10. Alice is not asked: her thread shows the attempt and its outcome.
+    // Bob ends the friendship (GSG:3), his own act: End friendship on Alice's row.  Alice is not asked.
+    await run.tap(bob, run.control(bob, 'unfriend:alice'));
     expect(alice.questions('approval'), isEmpty);
-    expect(alice.thread.sublist(alice.thread.length - 2), [
-      'start(attempt(bob, 3, 3, unfriend(bob, alice)))',
-      'outcome(attempt(bob, 3, 3, unfriend(bob, alice)))',
-    ]);
-    await run.end(alice);
-    await run.shoot(alice, 'gsg-10-alice-unfriended.png');
+    expect(alice.atoms, ['identity']);
+    expect(bob.atoms, ['identity']);
+
+    // (c) Alice's Friends tab after Bob ends the friendship: Bob listed, with Befriend.
+    await run.top(alice);
+    expect(
+        find.descendant(
+            of: run.control(alice, 'person:bob'),
+            matching: find.widgetWithText(ElevatedButton, 'Befriend')),
+        findsOneWidget);
+    expect(run.control(alice, 'unfriend:bob'), findsNothing);
+    expect(run.texts(alice), containsAllInOrder(['Alice', 'Bob', 'Befriend']));
+    run.plain(alice);
+    await run.shoot(alice, 'gsg-c-alice-ended.png');
     run.finish();
   }, timeout: const Timeout(Duration(minutes: 20)));
 
   testWidgets(
-      'GSN\'s app on two phones: a message to a friend, a group with its '
-      'leader and members, and a message to the group', (tester) async {
+      'GSN\'s app on two phones: Bob\'s chat with Alice\'s message, and Bob '
+      'asked to join the group friends', (tester) async {
     final run = await _Run.start(tester, 'gsn');
     final alice = run.alice;
     final bob = run.bob;
 
-    // Identity, knowing each other and friendship, as on GSG's app.
-    await run.befriend();
-    const hello = 'message(alice, bob, speech(utterance(hello), alice))';
-    const friends = 'speech(utterance(friends), alice)';
-    const create = 'create(alice, $friends)';
-    const join = 'join(alice, bob, $friends)';
-    const post = 'post(bob, alice, $friends, speech(utterance(hi_all), bob))';
-    const deliver =
-        'deliver(alice, bob, speech(utterance(hi_all), bob), $friends)';
+    // Two tabs: GSN's request type offers create.
+    expect(run.on(alice, find.byKey(tabKey(ScreenTab.groups))), findsOneWidget);
 
-    // 1. A message to a friend (GSN:1): Alice proposes message, herself,
-    // Bob, and the speech act hello, signed by her.
-    var q = alice.request;
-    await run.choose(alice, q, [3], 'propose');
-    await run.choose(alice, q, [3, 1], 'message');
-    await run.type(alice, q, 'peer', [3, 1, 1], alice.key);
-    await run.type(alice, q, 'peer', [3, 1, 2], 'bob');
-    await run.say(alice, q, [3, 1, 3], 'hello', alice.key);
-    await run.show(alice, run.node(alice, q, 'form', [3]));
-    await run.shoot(alice, 'gsn-01-alice-message.png');
-    await run.submit(alice, q, [3]);
-    expect(alice.thread.sublist(alice.thread.length - 3), [
-      'propose(attempt(alice, 3, 3, $hello))',
-      'tally(attempt(alice, 3, 3, $hello))',
-      'commit(attempt(alice, 3, 3, $hello))',
-    ]);
+    // Identity, knowing each other and friendship, on the Friends tab as in GSG's app.
+    await run.meet(alice, bob);
+    await run.befriend(alice, bob);
 
-    // 2. Bob is not asked: his thread shows the attempt, and so the message,
-    // its speech act opened.
+    // A message to a friend (GSN:1): Alice taps Bob's row, which opens her chat with him, types Hi Bob, and taps Send.  Bob is not asked.
+    await run.tap(alice, run.name(alice, 'person:bob', 'Bob'));
+    expect(run.control(alice, 'chat:bob'), findsOneWidget);
+    await run.type(alice, run.control(alice, 'chat-field:bob'), 'Hi Bob');
+    await run.tap(alice, run.control(alice, 'send:bob'));
     expect(bob.questions('approval'), isEmpty);
-    expect(bob.thread.sublist(bob.thread.length - 2), [
-      'start(attempt(alice, 3, 3, $hello))',
-      'outcome(attempt(alice, 3, 3, $hello))',
-    ]);
-    await run.opened(bob, bob.thread.length - 1, [3]);
-    await run.end(bob);
-    await run.shoot(bob, 'gsn-02-bob-message.png');
+    expect(bob.atoms, contains("received(speech(utterance('Hi Bob'), alice), alice)"));
 
-    // 3. Alice creates the group friends (GSN:2), its name a speech act
-    // signed by her: one participant, taken at once, and she is its leader
-    // and first member.
-    q = alice.request;
-    await run.choose(alice, q, [3], 'propose');
-    await run.choose(alice, q, [3, 1], 'create');
-    await run.type(alice, q, 'peer', [3, 1, 1], alice.key);
-    await run.say(alice, q, [3, 1, 2], 'friends', alice.key);
-    await run.show(alice, run.node(alice, q, 'form', [3]));
-    await run.shoot(alice, 'gsn-03-alice-create.png');
-    await run.submit(alice, q, [3]);
-    expect(alice.thread.last, 'propose(attempt(alice, 4, 4, $create))');
+    // (a) Bob's chat with Alice: he taps her row; her message, Hi Bob, with her name under it.
+    await run.tap(bob, run.name(bob, 'person:alice', 'Alice'));
+    expect(run.control(bob, 'chat:alice'), findsOneWidget);
+    expect(run.texts(bob), containsAllInOrder(['Alice', 'Hi Bob', 'Alice']));
+    run.plain(bob);
+    await run.shoot(bob, 'gsn-a-bob-chat.png');
+    await run.tap(bob, run.control(bob, 'back'));
 
-    // 4. Her thread shows the group created, its name opened.
-    await run.opened(alice, alice.thread.length - 1, [2]);
-    await run.end(alice);
-    await run.shoot(alice, 'gsn-04-alice-group-created.png');
+    // A group (GSN:2): on her Groups tab Alice types friends into New group and taps Create; she is its leader and first member.
+    await run.tab(alice, ScreenTab.groups);
+    await run.type(alice, run.control(alice, 'group-field'), 'friends');
+    await run.tap(alice, run.control(alice, 'create'));
+    expect(alice.atoms,
+        containsAll(["member(alice, speech(utterance(friends), alice))", "listed(alice, speech(utterance(friends), alice))"]));
 
-    // 5. She adds Bob to it (GSN:3), an act of both.
-    q = alice.request;
-    await run.choose(alice, q, [3], 'propose');
-    await run.choose(alice, q, [3, 1], 'join');
-    await run.type(alice, q, 'peer', [3, 1, 1], alice.key);
-    await run.type(alice, q, 'peer', [3, 1, 2], 'bob');
-    await run.say(alice, q, [3, 1, 3], 'friends', alice.key);
-    await run.show(alice, run.node(alice, q, 'form', [3]));
-    await run.shoot(alice, 'gsn-05-alice-join.png');
-    await run.submit(alice, q, [3]);
-    expect(alice.thread.last, 'propose(attempt(alice, 5, 5, $join))');
+    // Joining (GSN:3): in the group, Add member offers her friends not in it; she taps Bob.
+    await run.tap(alice, run.groupControl(alice, 'join:', ':bob'));
 
-    // 6. Bob's approval question, drawn by approval_sentence: "Alice asks you to join the group friends.", and the buttons Join and Decline, and nothing else.
+    // (b) Bob's Groups tab, badged: the question "Alice asks you to join the group friends." and Join and Decline at its top.
     final a = bob.approval;
-    expect(formatTerm(a.view), 'approval(attempt(alice, 5, 5, $join), input([2]))');
-    await run.show(bob, run.on(bob, find.byKey(constructKey(a.id))));
-    expect(run.texts(bob, a),
-        ['Alice asks you to join the group friends.', 'Join', 'Decline']);
-    await run.shoot(bob, 'gsn-06-bob-join.png');
+    expect(formatTerm(a.view),
+        endsWith(', join(alice, bob, speech(utterance(friends), alice))), input([2]))'));
+    expect(
+        find.descendant(
+            of: run.on(bob, find.byKey(tabKey(ScreenTab.groups))),
+            matching: find.text('1')),
+        findsOneWidget);
+    await run.tab(bob, ScreenTab.groups);
+    await run.top(bob);
+    const asks = 'Alice asks you to join the group friends.';
+    expect(run.textsOf(bob, a), [asks, 'Join', 'Decline']);
+    expect(run.tester.getTopLeft(run.on(bob, find.text(asks))).dy,
+        lessThan(run.tester.getTopLeft(run.control(bob, 'group-field')).dy));
+    run.plain(bob);
+    await run.shoot(bob, 'gsn-b-bob-asked-to-join.png');
 
-    // 7. He taps Join: his answer, his vote and the outcome, the group's name opened.
-    await run.press(bob, a, 'Join');
+    // He taps Join: he is a member of the group, and Alice lists him in it.
+    await run.answer(bob, 'Join');
     expect(bob.questions('approval'), isEmpty);
-    expect(bob.thread.sublist(bob.thread.length - 3), [
-      'answer(attempt(alice, 5, 5, $join))',
-      'vote(attempt(alice, 5, 5, $join))',
-      'outcome(attempt(alice, 5, 5, $join))',
-    ]);
-    await run.opened(bob, bob.thread.length - 1, [3]);
-    await run.end(bob);
-    await run.shoot(bob, 'gsn-07-bob-joined.png');
+    expect(bob.atoms, contains('member(alice, speech(utterance(friends), alice))'));
+    expect(alice.atoms, contains('listed(bob, speech(utterance(friends), alice))'));
 
-    // 8. The group: Alice's thread shows its creation, her the leader, and
-    // Bob's joining committed, the group's name opened.
-    expect(alice.thread.sublist(alice.thread.length - 4), [
-      'propose(attempt(alice, 4, 4, $create))',
-      'propose(attempt(alice, 5, 5, $join))',
-      'tally(attempt(alice, 5, 5, $join))',
-      'commit(attempt(alice, 5, 5, $join))',
-    ]);
-    await run.opened(alice, alice.thread.length - 1, [3]);
-    await run.end(alice);
-    await run.shoot(alice, 'gsn-08-alice-group.png');
-
-    // 9. A message to the group (GSN:5): Bob proposes post, himself, Alice
-    // the leader, the group's name, and the content hi_all signed by him,
-    // in the order of the class the compiler prints from GSN.glp.
-    q = bob.request;
-    await run.choose(bob, q, [3], 'propose');
-    await run.choose(bob, q, [3, 1], 'post');
-    await run.type(bob, q, 'peer', [3, 1, 1], bob.key);
-    await run.type(bob, q, 'peer', [3, 1, 2], 'alice');
-    await run.say(bob, q, [3, 1, 3], 'friends', 'alice');
-    await run.say(bob, q, [3, 1, 4], 'hi_all', bob.key);
-    await run.show(bob, run.node(bob, q, 'form', [3, 1]));
-    await run.shoot(bob, 'gsn-09-bob-post.png');
-    await run.submit(bob, q, [3]);
-    expect(bob.thread.sublist(bob.thread.length - 5), [
-      'propose(attempt(bob, 6, 6, $post))',
-      'tally(attempt(bob, 6, 6, $post))',
-      'commit(attempt(bob, 6, 6, $post))',
-      'start(attempt(alice, 7, 7, $deliver))',
-      'outcome(attempt(alice, 7, 7, $deliver))',
-    ]);
-
-    // 10. Alice, the leader, is not asked: her thread shows Bob's message to
-    // the group, and her machine delivering it to Bob, nobody asked.
-    expect(alice.questions('approval'), isEmpty);
-    expect(alice.thread.sublist(alice.thread.length - 5), [
-      'start(attempt(bob, 6, 6, $post))',
-      'outcome(attempt(bob, 6, 6, $post))',
-      'propose(attempt(alice, 7, 7, $deliver))',
-      'tally(attempt(alice, 7, 7, $deliver))',
-      'commit(attempt(alice, 7, 7, $deliver))',
-    ]);
-    final k = alice.thread.length - 4;
-    await run.opened(alice, k, [3]);
-    await run.opened(alice, k, [4]);
-    await run.show(alice, run.node(alice, alice.output, 'form', elementAt(const [], k)));
-    await run.shoot(alice, 'gsn-10-alice-group-message.png');
-
-    // 11. Bob, a member, receives it: his thread shows the delivery, its
-    // content and the group's name opened.
-    await run.opened(bob, bob.thread.length - 1, [3]);
-    await run.opened(bob, bob.thread.length - 1, [4]);
-    await run.end(bob);
-    await run.shoot(bob, 'gsn-11-bob-group-message.png');
     run.finish();
   }, timeout: const Timeout(Duration(minutes: 20)));
 
   testWidgets(
-      'GSNP\'s app on three phones: an item signed by its author, forwarded '
-      'and signed again at each forward', (tester) async {
+      'GSNP\'s app on three phones: the friendships of the play on the tabs, '
+      'and a group with no Send', (tester) async {
     final run = await _Run.start(tester, 'gsnp', carol: true);
     final alice = run.alice;
     final bob = run.bob;
     final carol = run.carol;
 
-    // Identity, knowing each other and friendship, Alice and Bob, as on
-    // GSG's app.
-    await run.befriend();
-    const text = 'Flood on Main Street';
-    const item = "speech(utterance('$text'), alice)";
-    const sign = 'sign(alice, $item)';
-    const toBob = 'forward(alice, bob, $item)';
-    const toCarol = 'forward(bob, carol, speech($item, alice))';
-    const carolFriend = 'befriend(bob, carol)';
+    // Alice and Bob meet and become friends; Bob is asked.
+    await run.meet(alice, bob);
+    await run.befriend(alice, bob, shot: 'gsnp-1-bob-asked.png');
 
-    // Carol establishes her identity and asks to know Bob.
-    var q = carol.request;
-    await run.choose(carol, q, [3], 'propose');
-    await run.choose(carol, q, [3, 1], 'establish');
-    await run.type(carol, q, 'peer', [3, 1, 1], carol.key);
-    await run.submit(carol, q, [3]);
-    q = carol.request;
-    await run.choose(carol, q, [3], 'known');
-    await run.type(carol, q, 'peer', [3, 1], 'bob');
-    await run.submit(carol, q, [3]);
-    expect(carol.thread, ['propose(attempt(carol, 1, 1, establish(carol)))']);
+    // Bob and Carol meet and become friends; Carol is asked.
+    await run.meet(bob, carol);
+    await run.befriend(bob, carol, shot: 'gsnp-2-carol-asked.png');
 
-    // 1. Alice signs the item (GSNP:1, Authorship): she proposes sign,
-    // herself, and the speech act 'Flood on Main Street', signed by her.
-    // One participant: taken at once.
-    q = alice.request;
-    await run.choose(alice, q, [3], 'propose');
-    await run.choose(alice, q, [3, 1], 'sign');
-    await run.type(alice, q, 'peer', [3, 1, 1], alice.key);
-    await run.say(alice, q, [3, 1, 2], text, alice.key);
-    await run.show(alice, run.node(alice, q, 'form', [3]));
-    await run.shoot(alice, 'gsnp-01-alice-sign.png');
-    await run.submit(alice, q, [3]);
-    expect(alice.thread.last, 'propose(attempt(alice, 3, 3, $sign))');
+    // Bob's Friends tab: Alice and Carol his friends, each with End friendship.
+    await run.top(bob);
+    for (final q in ['alice', 'carol']) {
+      expect(
+          find.descendant(
+              of: run.control(bob, 'person:$q'),
+              matching: find.widgetWithText(OutlinedButton, 'End friendship')),
+          findsOneWidget);
+    }
+    run.plain(bob);
+    await run.shoot(bob, 'gsnp-3-bob-friends.png');
 
-    // 2. She forwards it to Bob (GSN:1, Message, and GSNP:2, Forwarding):
-    // forward, herself, Bob, and the item she holds.
-    q = alice.request;
-    await run.choose(alice, q, [3], 'propose');
-    await run.choose(alice, q, [3, 1], 'forward');
-    await run.type(alice, q, 'peer', [3, 1, 1], alice.key);
-    await run.type(alice, q, 'peer', [3, 1, 2], 'bob');
-    await run.say(alice, q, [3, 1, 3], text, alice.key);
-    await run.show(alice, run.node(alice, q, 'form', [3]));
-    await run.shoot(alice, 'gsnp-02-alice-forward.png');
-    await run.submit(alice, q, [3]);
-    expect(alice.thread.sublist(alice.thread.length - 3), [
-      'propose(attempt(alice, 4, 4, $toBob))',
-      'tally(attempt(alice, 4, 4, $toBob))',
-      'commit(attempt(alice, 4, 4, $toBob))',
-    ]);
-
-    // 3. Bob is not asked: the platform asks nobody on a forward.  His
-    // thread shows the attempt, Alice forwarding the item to him, its speech
-    // act opened: the text, signed by Alice.
-    expect(bob.questions('approval'), isEmpty);
-    expect(bob.thread.sublist(bob.thread.length - 2), [
-      'start(attempt(alice, 4, 4, $toBob))',
-      'outcome(attempt(alice, 4, 4, $toBob))',
-    ]);
-    await run.opened(bob, bob.thread.length - 1, [3]);
-    await run.end(bob);
-    await run.shoot(bob, 'gsnp-03-bob-item.png');
-
-    // 4. Bob asks to know Carol and offers her friendship (GSG:2): Carol's approval question, drawn by approval_sentence, "Bob asks to be your friend.", and the buttons Accept and Decline, and nothing else.
-    q = bob.request;
-    await run.choose(bob, q, [3], 'known');
-    await run.type(bob, q, 'peer', [3, 1], 'carol');
-    await run.submit(bob, q, [3]);
-    expect(bob.thread.last, 'discover(carol)');
-    q = bob.request;
-    await run.choose(bob, q, [3], 'propose');
-    await run.choose(bob, q, [3, 1], 'befriend');
-    await run.type(bob, q, 'peer', [3, 1, 1], bob.key);
-    await run.type(bob, q, 'peer', [3, 1, 2], 'carol');
-    await run.submit(bob, q, [3]);
-    final a = carol.approval;
-    expect(formatTerm(a.view),
-        'approval(attempt(bob, 5, 5, $carolFriend), input([2]))');
-    expect(namedWidget(a.widget)?.$1, approvalSentenceName);
-    await run.show(carol, run.on(carol, find.byKey(constructKey(a.id))));
-    expect(run.texts(carol, a),
-        ['Bob asks to be your friend.', 'Accept', 'Decline']);
-    await run.shoot(carol, 'gsnp-04-carol-approval.png');
-    await run.press(carol, a, 'Accept');
-    expect(bob.thread.sublist(bob.thread.length - 3), [
-      'propose(attempt(bob, 5, 5, $carolFriend))',
-      'tally(attempt(bob, 5, 5, $carolFriend))',
-      'commit(attempt(bob, 5, 5, $carolFriend))',
-    ]);
-
-    // 5. Bob forwards to Carol the item he holds: forward, himself, Carol,
-    // and the item, the text signed by Alice, its author, and signed again
-    // by Alice, who forwarded it to him, in the order of the class forward
-    // as vGLP's compiler prints it from GSNP.glp.
-    q = bob.request;
-    await run.choose(bob, q, [3], 'propose');
-    await run.choose(bob, q, [3, 1], 'forward');
-    await run.type(bob, q, 'peer', [3, 1, 1], bob.key);
-    await run.type(bob, q, 'peer', [3, 1, 2], 'carol');
-    await run.sayHeld(bob, q, [3, 1, 3], text, ['alice', 'alice']);
-    await run.show(bob, run.node(bob, q, 'form', [3, 1]));
-    await run.shoot(bob, 'gsnp-05-bob-forward.png');
-    await run.submit(bob, q, [3]);
-    expect(bob.thread.sublist(bob.thread.length - 3), [
-      'propose(attempt(bob, 6, 6, $toCarol))',
-      'tally(attempt(bob, 6, 6, $toCarol))',
-      'commit(attempt(bob, 6, 6, $toCarol))',
-    ]);
-
-    // 6. Carol is not asked.  Her thread shows Bob forwarding the item to
-    // her, opened down to its text: signed by Alice, again by Alice, and
-    // forwarded by Bob, so that she holds it signed by Alice and then by
-    // Bob.
-    expect(carol.questions('approval'), isEmpty);
-    expect(carol.thread.sublist(carol.thread.length - 2), [
-      'start(attempt(bob, 6, 6, $toCarol))',
-      'outcome(attempt(bob, 6, 6, $toCarol))',
-    ]);
-    final k = carol.thread.length - 1;
-    await run.openedHeld(carol, k, [3], 2);
-    await run.show(carol,
-        run.node(carol, carol.output, 'form', elementAt(const [], k)));
-    await run.shoot(carol, 'gsnp-06-carol-item.png');
+    // A group: Alice creates friends on her Groups tab and adds Bob, who taps Join.  In the group, no text field and no Send: a post carries an item its poster holds (GSNP:1; post_own requires item(x), post authored(x), programs/gsc/GSNP.glp), which the text typed is not.
+    await run.tab(alice, ScreenTab.groups);
+    await run.type(alice, run.control(alice, 'group-field'), 'friends');
+    await run.tap(alice, run.control(alice, 'create'));
+    await run.tap(alice, run.groupControl(alice, 'join:', ':bob'));
+    await run.tab(bob, ScreenTab.groups);
+    await run.answer(bob, 'Join');
+    expect(alice.atoms, contains('listed(bob, speech(utterance(friends), alice))'));
+    await run.top(alice);
+    final g = run.groupControl(alice, 'group:');
+    Finder inGroup(Finder x) => find.descendant(of: g, matching: x);
+    expect(inGroup(find.text('friends')), findsOneWidget);
+    expect(inGroup(find.text('Led by Alice')), findsOneWidget);
+    expect(inGroup(find.text('Members: Bob, Alice')), findsOneWidget);
+    expect(run.groupControl(alice, 'post-field:'), findsNothing);
+    expect(run.groupControl(alice, 'post:'), findsNothing);
+    expect(inGroup(find.text('Close group')), findsOneWidget);
+    run.plain(alice);
+    await run.shoot(alice, 'gsnp-4-alice-group.png');
     run.finish();
   }, timeout: const Timeout(Duration(minutes: 20)));
 }
