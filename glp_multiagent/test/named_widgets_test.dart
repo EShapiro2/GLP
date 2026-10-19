@@ -52,10 +52,10 @@ const _gsnMessage =
 const _gaiAgentBefriend = "form(agent_befriend, [field('Peer', shown), "
     "field('Peer', shown), field('Peer', shown), field('Speech', $_speech)])";
 
-/// The code of Alf, 'The code of Alf' signed by acme, its developer, signed
+/// The code of Alf, 'The code of Alf' signed by acme_ltd, its developer, signed
 /// by Alice; and Alf's attestation, the code signed over by Alice at enter
 /// (programs/apps/gai/person.glp).
-const _code = "speech(speech(utterance('The code of Alf'), acme), alice)";
+const _code = "speech(speech(utterance('The code of Alf'), acme_ltd), alice)";
 const _attestation = 'speech($_code, alice)';
 
 /// Alf, Alice's AI agent, asks to befriend Bob with its attestation.
@@ -288,7 +288,7 @@ void main() {
 
   testWidgets(
       'agent_befriend(R, Q, P, Y) at the other party: "Alf, an AI agent of '
-      'Alice, asks to befriend you.", "Developer: Acme", the first signer of '
+      'Alice, asks to befriend you.", "Developer: Acme Ltd", the first signer of '
       'the attestation, "Befriend Alf?", Yes and No, and nothing else',
       (tester) async {
     final s = _Screen(tester);
@@ -296,7 +296,7 @@ void main() {
         output: _bobOutput);
     expect(s.texts(), [
       'Alf, an AI agent of Alice, asks to befriend you.',
-      'Developer: Acme',
+      'Developer: Acme Ltd',
       'Befriend Alf?',
       'Yes',
       'No',
@@ -320,7 +320,7 @@ void main() {
         output: _bobOutput);
     expect(s.texts(), [
       'Alf, an AI agent of Alice, asks to befriend you.',
-      'Developer: Acme',
+      'Developer: Acme Ltd',
       'Befriend Alf?',
       'Yes',
     ]);
@@ -336,7 +336,7 @@ void main() {
     expect(s.texts(), [
       'Alf asks to agent befriend Bob, Alice.',
       'The code of Alf',
-      'by Acme, via Alice, via Alice',
+      'by Acme Ltd, via Alice, via Alice',
       'Yes',
       'No',
     ]);
@@ -344,32 +344,41 @@ void main() {
 
   test('the developer an attestation names is its first signer', () {
     expect(
-        formatTerm(SocialState.developerIn(fixtureTerm(_attestation))!), 'acme');
+        formatTerm(SocialState.developerIn(fixtureTerm(_attestation))!), 'acme_ltd');
     expect(SocialState.developerIn(const GAtom('alice')), isNull);
     final (_, s) = SocialState.read(fixtureTerm(
         '[view([agent_of(alf, alice, $_attestation), friend(alf)], [alf])]'));
-    expect(formatTerm(s!.developerOf(const GAtom('alf'))!), 'acme');
+    expect(formatTerm(s!.developerOf(const GAtom('alf'))!), 'acme_ltd');
     expect(s.developerOf(const GAtom('alice')), isNull);
     expect(formatTerm(s.attestationOf(const GAtom('alf'))!),
         formatTerm(fixtureTerm(_attestation)));
   });
 
-  test('a principal\'s AI agents, those retired, and the codes they hold', () {
+  test('a principal\'s AI agents, those retired, and the items held', () {
     final (_, s) = SocialState.read(fixtureTerm('[view([retired_of(alf), '
         'principal_of(alf), principal_of(ada), item($_code), '
-        "authored($_code), item(speech(utterance('Hi'), alice)), "
-        "authored(speech(utterance('Hi'), alice)), "
-        "item(speech(speech(utterance('Flood'), dan), eve)), identity], [])]"));
+        "authored($_code), agent_of(rex, carol, $_attestation), "
+        'identity], [])]'));
     expect(s!.aiAgents.map(formatTerm), ['alf', 'ada']);
     expect(s.isPrincipalOf(const GAtom('ada')), isTrue);
     expect(s.isPrincipalOf(const GAtom('bob')), isFalse);
     expect(s.hasRetired(const GAtom('alf')), isTrue);
     expect(s.hasRetired(const GAtom('ada')), isFalse);
     expect(s.isAgent, isFalse);
-    // Only an item she authored that another signed first is a code: not her
-    // own text, nor an item forwarded to her.
-    expect(s.codes(const GAtom('alice')).map(formatTerm),
-        [formatTerm(fixtureTerm(_code))]);
+    expect(s.holdsItem(fixtureTerm(_code)), isTrue);
+    expect(s.holdsItem(fixtureTerm(_attestation)), isFalse);
+    // A known AI agent: her own, or one she holds recorded.
+    expect(s.isKnownAgent(const GAtom('alf')), isTrue);
+    expect(s.isKnownAgent(const GAtom('rex')), isTrue);
+    expect(s.isKnownAgent(const GAtom('carol')), isFalse);
+  });
+
+  test('a person by name: the key, its underscores as spaces and each word '
+      'capitalised', () {
+    expect(personName(const GAtom('alice')), 'Alice');
+    expect(personName(const GAtom('alf')), 'Alf');
+    expect(personName(const GAtom('acme_ltd')), 'Acme Ltd');
+    expect(personName(const GAtom('acme')), 'Acme');
   });
 
   testWidgets(
