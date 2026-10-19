@@ -1,6 +1,7 @@
-/// The screens of GSC's two apps, GSG's and GSN's (`programs/apps/gsg`,
-/// `programs/apps/gsn`), each person's as the bridge draws it on their phone,
-/// written to PNG files for GAI's paper (`programs/apps/<app>/screens/`).
+/// The screens of GSC's three apps, GSG's, GSN's and GSNP's
+/// (`programs/apps/gsg`, `programs/apps/gsn`, `programs/apps/gsnp`), each
+/// person's as the bridge draws it on their phone, written to PNG files for
+/// GAI's paper (`programs/apps/<app>/screens/`).
 ///
 /// Each app's directory is a certified program: the canonical CVA platform of
 /// its contract, `platform.vglp`, compiled to GLP when the directory loads
@@ -11,7 +12,9 @@
 /// thread on the person channel.  The engine loads the directory and posts the
 /// entry twice, alice's and bob's, over one conversation, the two ends of its
 /// root channel handed to them as the social graph hands them and as the
-/// plays of each directory do (`plays.glp`).  Each person's channel is
+/// plays of each directory do (`plays.glp`); for GSNP's app three times,
+/// alice's, bob's and carol's, over two conversations, alice's with bob and
+/// bob's with carol.  Each person's channel is
 /// `ch(Grants?, Draws)` (vGLP, Definition "Person Channel, Person Writer, GLP
 /// with Persons, Grant"): the host hands each person's bridge every term of
 /// `Draws` as it arrives (bridge.dart), and extends `Grants` with each grant
@@ -167,26 +170,29 @@ class _Person {
 }
 
 /// Alice and Bob, each running the app's mini-app on their own phone, over
-/// one conversation.
+/// one conversation; or Alice, Bob and Carol, over two, Alice's with Bob and
+/// Bob's with Carol.
 class _Run {
   final WidgetTester tester;
   final String app;
   final GlpEngine engine;
   final PostedGoal play;
-  final _Person alice;
-  final _Person bob;
+  final List<_Person> persons;
 
-  _Run._(this.tester, this.app, this.engine, this.play, this.alice, this.bob);
+  _Run._(this.tester, this.app, this.engine, this.play, this.persons);
 
-  List<_Person> get persons => [alice, bob];
+  _Person get alice => persons[0];
+  _Person get bob => persons[1];
+  _Person get carol => persons[2];
 
-  static Future<_Run> start(WidgetTester tester, String app) async {
+  static Future<_Run> start(WidgetTester tester, String app,
+      {bool carol = false}) async {
     await _loadFonts();
     // Shadows drawn as shadows, not as the test's solid outlines; restored
     // by [finish].
     debugDisableShadows = false;
-    tester.view.physicalSize =
-        Size(2 * (_phone.width + 2 * _gap), _phone.height + 2 * _gap);
+    tester.view.physicalSize = Size(
+        (carol ? 3 : 2) * (_phone.width + 2 * _gap), _phone.height + 2 * _gap);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
@@ -195,21 +201,32 @@ class _Run {
     expect(engine.loadProgram('$programs/apps/$app'), isTrue,
         reason: 'programs/apps/$app does not load');
     // The entry twice, as the plays activate it (plays.glp), with one
-    // conversation between the two executions; each person's grants the
-    // caller's to write, and each person's draws read off their stream.
-    final play = engine.postGoal(
-        'miniapp(alice, ch(GA?, DA), '
-        'ch([conversation(bob, ch(BA?, AB))], UA), []), '
-        'miniapp(bob, ch(GB?, DB), '
-        'ch([conversation(alice, ch(AB?, BA))], UB), [])',
-        inputs: ['GA', 'GB']);
-    final run = _Run._(
-        tester,
-        app,
-        engine,
-        play,
-        _Person('alice', app, play.inputs['GA']!, play.variables['DA']!),
-        _Person('bob', app, play.inputs['GB']!, play.variables['DB']!));
+    // conversation between the two executions; or three times, with a
+    // conversation between alice's and bob's and one between bob's and
+    // carol's (../gsnp/plays.glp); each person's grants the caller's to
+    // write, and each person's draws read off their stream.
+    final play = carol
+        ? engine.postGoal(
+            'miniapp(alice, ch(GA?, DA), '
+            'ch([conversation(bob, ch(BA?, AB))], UA), []), '
+            'miniapp(bob, ch(GB?, DB), '
+            'ch([conversation(alice, ch(AB?, BA)), '
+            'conversation(carol, ch(CB?, BC))], UB), []), '
+            'miniapp(carol, ch(GC?, DC), '
+            'ch([conversation(bob, ch(BC?, CB))], UC), [])',
+            inputs: ['GA', 'GB', 'GC'])
+        : engine.postGoal(
+            'miniapp(alice, ch(GA?, DA), '
+            'ch([conversation(bob, ch(BA?, AB))], UA), []), '
+            'miniapp(bob, ch(GB?, DB), '
+            'ch([conversation(alice, ch(AB?, BA))], UB), [])',
+            inputs: ['GA', 'GB']);
+    final run = _Run._(tester, app, engine, play, [
+      _Person('alice', app, play.inputs['GA']!, play.variables['DA']!),
+      _Person('bob', app, play.inputs['GB']!, play.variables['DB']!),
+      if (carol)
+        _Person('carol', app, play.inputs['GC']!, play.variables['DC']!),
+    ]);
     run._drain();
     run._feed();
     await tester.pumpWidget(run._phones());
@@ -275,8 +292,8 @@ class _Run {
     await tester.pumpAndSettle();
   }
 
-  /// The two phones side by side, each the person's agent surface on a
-  /// screen of its own.
+  /// The phones side by side, each the person's agent surface on a screen
+  /// of its own.
   Widget _phones() => MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
@@ -472,6 +489,44 @@ class _Run {
     await choose(p, c, [...at, 1], 'utterance');
     await type(p, c, 'text', [...at, 1, 1], text);
     await type(p, c, 'peer', [...at, 2], signer);
+  }
+
+  /// Fill the field of the speech act at [at] with a speech act signed again:
+  /// [text], signed by each of [signers] in turn, the first its author's
+  /// signature, innermost.  Each speech act is opened, its utterance opened
+  /// and, for all but the innermost, the alternative `speech` chosen, a
+  /// speech act signed again; the innermost's utterance `utterance`, [text]
+  /// typed; and each signer typed into its own speech act's field `Peer`.
+  Future<void> sayHeld(_Person p, OpenConstruct c, List<int> at, String text,
+      List<String> signers) async {
+    await open(p, c, at);
+    var u = [...at, 1];
+    await open(p, c, u);
+    for (var i = signers.length - 1; i > 0; i--) {
+      await choose(p, c, u, 'speech');
+      await open(p, c, [...u, 1]);
+      u = [...u, 1];
+    }
+    await choose(p, c, u, 'utterance');
+    await type(p, c, 'text', [...u, 1], text);
+    // The signers, innermost first: the speech act at [at] followed by
+    // [1] once for each signature inside it.
+    for (var i = 0; i < signers.length; i++) {
+      final s = [...at, for (var j = 0; j < signers.length - 1 - i; j++) 1];
+      await type(p, c, 'peer', [...s, 2], signers[i]);
+    }
+  }
+
+  /// Open, in the element [k] of [p]'s thread, the speech act at argument
+  /// [arg] of its attempt's class signed [depth] times, each speech act and
+  /// its utterance down to the text.
+  Future<void> openedHeld(_Person p, int k, List<int> arg, int depth) async {
+    var at = [...elementAt(const [], k), 1, 4, ...arg];
+    await open(p, p.output, at);
+    for (var i = 0; i < depth; i++) {
+      at = [...at, 1];
+      await open(p, p.output, at);
+    }
   }
 
   /// Open, in the element [k] of [p]'s thread, the speech act at argument
@@ -796,6 +851,144 @@ void main() {
     await run.opened(bob, bob.thread.length - 1, [4]);
     await run.end(bob);
     await run.shoot(bob, 'gsn-11-bob-group-message.png');
+    run.finish();
+  }, timeout: const Timeout(Duration(minutes: 20)));
+
+  testWidgets(
+      'GSNP\'s app on three phones: an item signed by its author, forwarded '
+      'and signed again at each forward', (tester) async {
+    final run = await _Run.start(tester, 'gsnp', carol: true);
+    final alice = run.alice;
+    final bob = run.bob;
+    final carol = run.carol;
+
+    // Identity, knowing each other and friendship, Alice and Bob, as on
+    // GSG's app.
+    await run.befriend();
+    const text = 'Flood on Main Street';
+    const item = "speech(utterance('$text'), alice)";
+    const sign = 'sign(alice, $item)';
+    const toBob = 'forward(alice, bob, $item)';
+    const toCarol = 'forward(bob, carol, speech($item, alice))';
+    const carolFriend = 'befriend(bob, carol)';
+
+    // Carol establishes her identity and asks to know Bob.
+    var q = carol.request;
+    await run.choose(carol, q, [3], 'propose');
+    await run.choose(carol, q, [3, 1], 'establish');
+    await run.type(carol, q, 'peer', [3, 1, 1], carol.key);
+    await run.submit(carol, q, [3]);
+    q = carol.request;
+    await run.choose(carol, q, [3], 'known');
+    await run.type(carol, q, 'peer', [3, 1], 'bob');
+    await run.submit(carol, q, [3]);
+    expect(carol.thread, ['propose(attempt(carol, 1, 1, establish(carol)))']);
+
+    // 1. Alice signs the item (GSNP:1, Authorship): she proposes sign,
+    // herself, and the speech act 'Flood on Main Street', signed by her.
+    // One participant: taken at once.
+    q = alice.request;
+    await run.choose(alice, q, [3], 'propose');
+    await run.choose(alice, q, [3, 1], 'sign');
+    await run.type(alice, q, 'peer', [3, 1, 1], alice.key);
+    await run.say(alice, q, [3, 1, 2], text, alice.key);
+    await run.show(alice, run.node(alice, q, 'form', [3]));
+    await run.shoot(alice, 'gsnp-01-alice-sign.png');
+    await run.submit(alice, q, [3]);
+    expect(alice.thread.last, 'propose(attempt(alice, 3, 3, $sign))');
+
+    // 2. She forwards it to Bob (GSN:1, Message, and GSNP:2, Forwarding):
+    // forward, herself, Bob, and the item she holds.
+    q = alice.request;
+    await run.choose(alice, q, [3], 'propose');
+    await run.choose(alice, q, [3, 1], 'forward');
+    await run.type(alice, q, 'peer', [3, 1, 1], alice.key);
+    await run.type(alice, q, 'peer', [3, 1, 2], 'bob');
+    await run.say(alice, q, [3, 1, 3], text, alice.key);
+    await run.show(alice, run.node(alice, q, 'form', [3]));
+    await run.shoot(alice, 'gsnp-02-alice-forward.png');
+    await run.submit(alice, q, [3]);
+    expect(alice.thread.sublist(alice.thread.length - 3), [
+      'propose(attempt(alice, 4, 4, $toBob))',
+      'tally(attempt(alice, 4, 4, $toBob))',
+      'commit(attempt(alice, 4, 4, $toBob))',
+    ]);
+
+    // 3. Bob is not asked: the platform asks nobody on a forward.  His
+    // thread shows the attempt, Alice forwarding the item to him, its speech
+    // act opened: the text, signed by Alice.
+    expect(bob.questions('approval'), isEmpty);
+    expect(bob.thread.sublist(bob.thread.length - 2), [
+      'start(attempt(alice, 4, 4, $toBob))',
+      'outcome(attempt(alice, 4, 4, $toBob))',
+    ]);
+    await run.opened(bob, bob.thread.length - 1, [3]);
+    await run.end(bob);
+    await run.shoot(bob, 'gsnp-03-bob-item.png');
+
+    // 4. Bob asks to know Carol and offers her friendship (GSG:2): Carol's
+    // approval question, drawn by approval_sentence, "bob asks to befriend
+    // you.", and the buttons Yes and No.
+    q = bob.request;
+    await run.choose(bob, q, [3], 'known');
+    await run.type(bob, q, 'peer', [3, 1], 'carol');
+    await run.submit(bob, q, [3]);
+    expect(bob.thread.last, 'discover(carol)');
+    q = bob.request;
+    await run.choose(bob, q, [3], 'propose');
+    await run.choose(bob, q, [3, 1], 'befriend');
+    await run.type(bob, q, 'peer', [3, 1, 1], bob.key);
+    await run.type(bob, q, 'peer', [3, 1, 2], 'carol');
+    await run.submit(bob, q, [3]);
+    final a = carol.approval;
+    expect(formatTerm(a.view),
+        'approval(attempt(bob, 5, 5, $carolFriend), input([2]))');
+    expect(a.widget,
+        isA<GAtom>().having((w) => w.name, 'name', approvalSentenceName));
+    await run.show(carol, run.on(carol, find.byKey(constructKey(a.id))));
+    expect(run.on(carol, find.text('bob asks to befriend you.')),
+        findsOneWidget);
+    await run.shoot(carol, 'gsnp-04-carol-approval.png');
+    await run.press(carol, a, 'Yes');
+    expect(bob.thread.sublist(bob.thread.length - 3), [
+      'propose(attempt(bob, 5, 5, $carolFriend))',
+      'tally(attempt(bob, 5, 5, $carolFriend))',
+      'commit(attempt(bob, 5, 5, $carolFriend))',
+    ]);
+
+    // 5. Bob forwards to Carol the item he holds: forward, himself, Carol,
+    // and the item, the text signed by Alice, its author, and signed again
+    // by Alice, who forwarded it to him, in the order of the class forward
+    // as vGLP's compiler prints it from GSNP.glp.
+    q = bob.request;
+    await run.choose(bob, q, [3], 'propose');
+    await run.choose(bob, q, [3, 1], 'forward');
+    await run.type(bob, q, 'peer', [3, 1, 1], bob.key);
+    await run.type(bob, q, 'peer', [3, 1, 2], 'carol');
+    await run.sayHeld(bob, q, [3, 1, 3], text, ['alice', 'alice']);
+    await run.show(bob, run.node(bob, q, 'form', [3, 1]));
+    await run.shoot(bob, 'gsnp-05-bob-forward.png');
+    await run.submit(bob, q, [3]);
+    expect(bob.thread.sublist(bob.thread.length - 3), [
+      'propose(attempt(bob, 6, 6, $toCarol))',
+      'tally(attempt(bob, 6, 6, $toCarol))',
+      'commit(attempt(bob, 6, 6, $toCarol))',
+    ]);
+
+    // 6. Carol is not asked.  Her thread shows Bob forwarding the item to
+    // her, opened down to its text: signed by Alice, again by Alice, and
+    // forwarded by Bob, so that she holds it signed by Alice and then by
+    // Bob.
+    expect(carol.questions('approval'), isEmpty);
+    expect(carol.thread.sublist(carol.thread.length - 2), [
+      'start(attempt(bob, 6, 6, $toCarol))',
+      'outcome(attempt(bob, 6, 6, $toCarol))',
+    ]);
+    final k = carol.thread.length - 1;
+    await run.openedHeld(carol, k, [3], 2);
+    await run.show(carol,
+        run.node(carol, carol.output, 'form', elementAt(const [], k)));
+    await run.shoot(carol, 'gsnp-06-carol-item.png');
     run.finish();
   }, timeout: const Timeout(Duration(minutes: 20)));
 }
