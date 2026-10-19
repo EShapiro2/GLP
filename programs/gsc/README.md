@@ -26,10 +26,14 @@ still be certified by Appendix F: when it has an introduction with wards
 (`def:introduction-wards`) --- a nonempty set of marks each with a
 guardianship (`def:guardianship`), an introductory act unobstructed but for
 the marks (`def:unobstructed-marks`), and for every pair of marks a relay act
-with a ward role and a free role and one with two ward roles (`def:relay`)
---- and has traceable provenance and volition, it is grassroots with wards
-(`thm:grassroots-wards`), and the verdict names the introductory act, the
-marks, their guardianships and the relay acts the search found.  The
+with a ward role and a free role and one with two ward roles (`def:relay`),
+the act and the relay acts forbidding besides the leaving marks of the
+contract (`def:leaving`) --- and has traceable provenance and volition, it
+is grassroots with wards (`thm:grassroots-wards`), and the verdict names the
+introductory act, the marks, their guardianships, the relay acts the search
+found and the leaving marks.  The protocol realising it is volitionally
+grassroots; where the verdict names no leaving mark it is grassroots as well
+(Appendix F, its last paragraph).  The
 compiler is Section 5: a schema compiles to the assignment,
 the proviso and the guard of `def:compile`, printed in the form of the
 paper's displays.  Section 5 defines the compilation for syntactically grassroots
@@ -159,9 +163,10 @@ signature.  It loads and runs as before.
 | `check_named(Name, V)` | the verdict on a fixture of `contracts.glp` that stands alone |
 | `traceable_of(Name, E)`, `rooted_of(Name, E)`, `contract_named(Name, C)`, `compile_named(Name)`, `compile_schema(Name, Schema)` | the same of such a fixture |
 | `check_variant(Name, C, V)`, `traceable_variant(Name, C, E)`, `rooted_variant(Name, C, E)`, `variant(Name, C, D)`, `compile_variant(Name, C)`, `compile_schema_variant(Name, C, Schema)` | the same of a fixture that changes the contract `C` in one place |
-| `wards(C, W)` | its introduction with wards (Appendix F), searched for whatever the verdict: `introduction_with_wards(Act, Marks, Guardianships, Relays)` or `no_introduction_with_wards` |
+| `wards(C, W)` | its introduction with wards (Appendix F), searched for whatever the verdict: `introduction_with_wards(Act, Marks, Guardianships, Relays, Leaving)` or `no_introduction_with_wards` |
 | `guardianships(C, M, G)` | every guardianship of every mark of the set `M`, for `M` |
-| `wards_of(Name, W)`, `wards_variant(Name, C, W)` | the same of a fixture, and of a variant |
+| `leaving(C, M, L)` | the leaving marks of `C` for the set `M` (`def:leaving`), `M` having a guardianship for each of its marks |
+| `wards_of(Name, W)`, `wards_variant(Name, C, W)`, `leaving_of(Name, M, L)` | the same of a fixture, and of a variant |
 
 The contracts are their owners' (claude.md "Sessions", the cascade rule;
 Coordination Appendix C), read from the owners' files, each named as its
@@ -211,7 +216,13 @@ and `wd_two_atoms` one of `def:unobstructed-marks`, `wd_no_adult_relay`,
 or of `def:introduction-wards`, each named in its comment; `wd2` is `wd` with
 AI agents and their principals besides, two marks with the relay acts of
 every pair, and `wd_two_marks` is it with a schema adding both marks at one
-role.  `sg_reflexive` is the social graph with `friend`
+role.  `wd_leaving` is `wd` with retirement written with a leaving mark:
+`retired` forbidden at every guarding role, and `retire(p?, r)` ending the
+guardianship of `p` over `r` and adding `retired` at `r`, where `child` is
+required; it is grassroots with wards, the verdict naming `retired`.
+`wd_leave_unforbidden`, `wd_leave_deleted`, `wd_leave_unmarked` and
+`wd_leave_guardian` each fail one clause of `def:leaving`, named in its
+comment, and have no introduction with wards.  `sg_reflexive` is the social graph with `friend`
 declared reflexive; `sg_refl_malformed` adds to it schemas adding and
 deleting `friend` of their own role, which a contract declaring `friend`
 reflexive may not have; `sg_self_required` and `sg_refl_required` are the
@@ -233,7 +244,7 @@ named by it: `unfriend_p` is `unfriend` guarded at `p`.  Any other name is the
 empty contract.
 
 A verdict on a contract of Section 3 is `syntactically_grassroots`,
-`grassroots_with_wards(Act, Marks, Guardianships, Relays)` or
+`grassroots_with_wards(Act, Marks, Guardianships, Relays, Leaving)` or
 `not_grassroots(Faults)`, where each fault is one of
 
     no_introductory_act
@@ -258,12 +269,16 @@ role graph does not join — the first role and the first one it does not reach
 — so at arity two it names the pair that has no edge.  When the first conjunct
 fails and the other two hold, Appendix F is tried, and a contract with an
 introduction with wards is `grassroots_with_wards(Act, Marks, Guardianships,
-Relays)`: `Act` the introductory act unobstructed but for the marks, `Marks`
-the set M, `Guardianships` a `guardianship(M, Iota, G, W)` per mark, the
-`(m, iota, g, w)` of `def:guardianship`, and `Relays` the relay acts found,
+Relays, Leaving)`: `Act` the introductory act unobstructed but for the marks,
+`Marks` the set M, `Guardianships` a `guardianship(M, Iota, G, W)` per mark,
+the `(m, iota, g, w)` of `def:guardianship`, `Relays` the relay acts found,
 each `relay(Schema, Party, Party)` with a party `ward(Role, Mark,
 GuardianRole)` or `free(Role)`: for each mark one with a free role, then for
-each pair of marks, in the order of the set, one with a ward role of each.
+each pair of marks, in the order of the set, one with a ward role of each;
+and `Leaving` the leaving marks of the contract for M (`def:leaving`), in
+the order of its marks, `[]` where it has none.  Clause 3 of `def:leaving`
+names "an atom g(sigma) of a guardianship", and the checker reads g over
+every guardianship for M, those `guardianships` gives.
 The search is existential, as `def:introduction-wards` is: the first set of
 marks, guardianships and act that satisfy it are reported, and nothing is
 reported of a failed search, whose verdict is `not_grassroots(Faults)` as
@@ -395,7 +410,7 @@ reflexive, and refuses a contract that fails any of them as malformed.
 | `unobstructed.glp` | `def:introduction` and `def:unobstructed` |
 | `prov.glp` | `def:grounded`, as a greatest fixpoint |
 | `community.glp` | the three conditions of Appendix D, and the rooted predicates; its volition is `def:volition` of Section 3 too |
-| `wards.glp` | `def:guardianship`, `def:unobstructed-marks`, `def:relay` and `def:introduction-wards`, as a search over the marks and the predicates of arity one |
+| `wards.glp` | `def:guardianship`, `def:leaving`, `def:unobstructed-marks`, `def:relay` and `def:introduction-wards`, as a search over the marks and the predicates of arity one |
 | `check.glp` | `def:syntactically-grassroots`, the two halves together, Appendix F when its first conjunct fails, and the conditions of Appendix D for a contract with community roles; the refusal of a malformed contract, for the form of a schema, a reflexive predicate or a signed term |
 | `compile.glp` | `def:compile`, printed as the LaTeX of the displays of Section 5.1 and Appendix B.3, and `definition:compile`, printed as the worked box of Appendix D |
 | `contracts.glp` | the checker's fixtures: contracts that stand alone, by name, and variants of a contract, by name and the contract's term |
@@ -412,8 +427,8 @@ predicates, reached by dropping and repeating.  An introduction with wards is
 a search over what the contract supplies, all of it finite: the sets of its
 marks, its predicates of arity zero; for each mark the guardianships
 `(m, iota, g, w)` with `iota` a mark and `g` and `w` predicates of arity one of
-the contract; its introductory acts; and its schemas as relay acts, with
-their roles as the parties.  The conditions of `def:unobstructed-marks` and
+the contract; its leaving marks, among its marks; its introductory acts; and
+its schemas as relay acts, with their roles as the parties.  The conditions of `def:unobstructed-marks` and
 `def:relay` are on the text, up to renaming a role, and take no binding.
 
 ## One thing to know about the reading

@@ -49,8 +49,12 @@
 % with wards (Appendix F): when it has an introduction with wards
 % (def:introduction-wards), traceable provenance and volition, the protocol
 % realising it is volitionally grassroots (thm:grassroots-wards), and its
-% verdict names the introductory act, the marks, their guardianships and the
-% relay acts the search found.  Otherwise the faults are reported as before.
+% verdict names the introductory act, the marks, their guardianships, the
+% relay acts the search found and the leaving marks of the contract
+% (def:leaving): with none the realisation is open and the protocol is
+% grassroots as well (Appendix F, its last paragraph); with any, the paper
+% claims it volitionally grassroots and no more.  Otherwise the faults are
+% reported as before.
 % ---------------------------------------------------------------------------
 
 imported procedure unobstructed#intro_result(Contract?, Preds?, Faults).
@@ -62,6 +66,7 @@ imported procedure community#traceable(Contract?, Preds).
 imported procedure community#rooted(Contract?, Preds).
 imported procedure wards#wards(Contract?, Preds?, Wards).
 imported procedure wards#guardianships_for(Contract?, Preds?, Guardianships).
+imported procedure wards#leaving_for(Contract?, Preds?, Preds).
 imported procedure contracts#contract(Constant?, Declared).
 imported procedure contracts#variant(Constant?, Contract?, Declared).
 
@@ -107,8 +112,8 @@ wards_verdict([F|Fs], [G|Gs], _, _, V?) :-
     verdict(FF?, V).
 
 procedure wards_verdict1(Wards?, Faults?, Verdict).
-wards_verdict1(introduction_with_wards(Nm, M, Gs, Rs), _,
-               grassroots_with_wards(Nm?, M?, Gs?, Rs?)).
+wards_verdict1(introduction_with_wards(Nm, M, Gs, Rs, Lv), _,
+               grassroots_with_wards(Nm?, M?, Gs?, Rs?, Lv?)).
 wards_verdict1(no_introduction_with_wards, F, not_grassroots(F?)).
 
 procedure community_verdict(Faults?, Verdict).
@@ -480,6 +485,18 @@ exported procedure guardianships(Declared?, Preds?, Guardianships).
 guardianships(D, M, G?) :- ground(D?), ground(M?) |
     decl_schemas(D?, C),
     wards # guardianships_for(C?, M?, G).
+
+% The leaving marks of a contract for a set M of marks (def:leaving), for
+% inspection; def:leaving supposes a guardianship for every mark in M.
+exported procedure leaving(Declared?, Preds?, Preds).
+leaving(D, M, L?) :- ground(D?), ground(M?) |
+    decl_schemas(D?, C),
+    wards # leaving_for(C?, M?, L).
+
+exported procedure leaving_of(Constant?, Preds?, Preds).
+leaving_of(Nm, M, L?) :- ground(Nm?), ground(M?) |
+    contracts # contract(Nm?, D),
+    leaving(D?, M?, L).
 
 % The predicates that are rooted (definition:rooted).  Rootedness is a notion
 % of Appendix D; a contract of Section 3 is not asked about it.

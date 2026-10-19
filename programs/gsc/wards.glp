@@ -2,7 +2,7 @@
 % Contracts with wards: Appendix F of /Grassroots/GSC,
 % sections/17-wards.tex.  The paper is the specification and no definition of
 % it is restated here; each procedure names the definition it decides:
-% def:guardianship, def:unobstructed-marks, def:relay and
+% def:guardianship, def:leaving, def:unobstructed-marks, def:relay and
 % def:introduction-wards.
 %
 % def:introduction-wards is existential over finitely many things the
@@ -15,7 +15,11 @@
 % having candidates are then tried in turn, each mark's candidates held to
 % the set, and the first set with a guardianship for each mark, an
 % introductory act unobstructed but for it and the relay acts of every pair
-% is the answer.
+% is the answer.  The leaving marks of the contract (def:leaving) are taken
+% for each set, with the guardianships for it; clause 1 of
+% def:unobstructed-marks, and the clauses of def:unobstructed-marks and
+% def:relay on the atoms an act forbids, admit them besides, and the answer
+% names them.
 % ---------------------------------------------------------------------------
 
 imported procedure unobstructed#intro_act_bindings(Schema?, Substs).
@@ -184,12 +188,6 @@ rename_args([A|As], I, [B?|R?]) :- ground(A?), ground(As?), integer(I?) |
 procedure rename_atom(Atom?, Integer?, Atom).
 rename_atom(atom(P, As), I, atom(P?, Bs?)) :- ground(P?), ground(As?), integer(I?) |
     rename_args(As?, I?, Bs).
-
-% atoms_all_eq(Phis, Phi, R): every atom of Phis is Phi.
-procedure atoms_all_eq(Atoms?, Atom?, Ans).
-atoms_all_eq([], _, yes).
-atoms_all_eq([A|As], B, R?) :- A? =?= B?, ground(As?) | atoms_all_eq(As?, B?, R).
-atoms_all_eq([_|_], _, no) :- otherwise | true.
 
 % ---------------------------------------------------------------------------
 % Guardianship (def:guardianship)
@@ -498,58 +496,227 @@ guardianships_for(C, M, R?) :- ground(C?), ground(M?) |
     guardianships_for1(A?, C?, M?, R).
 
 % ---------------------------------------------------------------------------
+% Leaving mark (def:leaving)
+% ---------------------------------------------------------------------------
+% For a set M of marks of C with a guardianship for every mark in M: a mark
+% of C not in M meeting the three clauses.  Clause 3 names "an atom g(sigma)
+% of a guardianship", and g ranges over the g of every guardianship for M in
+% C (def:guardianship), not only those an introduction with wards chooses.
+
+% Clause 1, first part: every guarding role of every schema forbids the mark.
+procedure role_guard_forbids(Ans?, Atoms?, Constant?, Ans).
+role_guard_forbids(no, _, _, yes).
+role_guard_forbids(yes, N, L, R?) :- ground(N?), ground(L?) |
+    atoms_member(N?, atom(L?, []), R).
+
+procedure roles_guard_forbid(RoleSpecs?, Constant?, Ans).
+roles_guard_forbid([], _, yes).
+roles_guard_forbid([RS|Rs], L, R?) :- ground(RS?), ground(Rs?), ground(L?) |
+    is_guarding(RS?, G),
+    rs_forb(RS?, N),
+    role_guard_forbids(G?, N?, L?, A1),
+    roles_guard_forbid(Rs?, L?, A2),
+    both_yes(A1?, A2?, R).
+
+procedure guards_forbid(Contract?, Constant?, Ans).
+guards_forbid([], _, yes).
+guards_forbid([S|Ss], L, R?) :- ground(S?), ground(Ss?), ground(L?) |
+    sch_roles(S?, Rs),
+    roles_guard_forbid(Rs?, L?, A1),
+    guards_forbid(Ss?, L?, A2),
+    both_yes(A1?, A2?, R).
+
+% Clause 1, second part, is never_deleted above.
+
+% Clause 2: a schema that adds the mark at a role requires a mark in M there.
+procedure nonempty_preds(Preds?, Ans).
+nonempty_preds([], no).
+nonempty_preds([_|_], yes).
+
+procedure role_adds_req(Ans?, Atoms?, Preds?, Ans).
+role_adds_req(no, _, _, yes).
+role_adds_req(yes, Req, M, R?) :- ground(Req?), ground(M?) |
+    marks_in(Req?, M?, Ms),
+    nonempty_preds(Ms?, R).
+
+procedure roles_adds_req(RoleSpecs?, Constant?, Preds?, Ans).
+roles_adds_req([], _, _, yes).
+roles_adds_req([RS|Rs], L, M, R?) :- ground(RS?), ground(Rs?), ground(L?), ground(M?) |
+    rs_add(RS?, P),
+    rs_req(RS?, Req),
+    atoms_member(P?, atom(L?, []), A),
+    role_adds_req(A?, Req?, M?, A1),
+    roles_adds_req(Rs?, L?, M?, A2),
+    both_yes(A1?, A2?, R).
+
+procedure adds_req_mark(Contract?, Constant?, Preds?, Ans).
+adds_req_mark([], _, _, yes).
+adds_req_mark([S|Ss], L, M, R?) :- ground(S?), ground(Ss?), ground(L?), ground(M?) |
+    sch_roles(S?, Rs),
+    roles_adds_req(Rs?, L?, M?, A1),
+    adds_req_mark(Ss?, L?, M?, A2),
+    both_yes(A1?, A2?, R).
+
+% Clause 3: a schema that adds, at a role, an atom g(sigma) of a guardianship
+% forbids the mark at sigma.  An atom of g a schema adds names a role of it
+% (def:guardianship, clause 4); one that does not is answered no.
+procedure g_preds(Guardianships?, Preds).
+g_preds([], []).
+g_preds([guardianship(_, _, G, _)|Gs], [G?|R?]) :- g_preds(Gs?, R).
+
+procedure g_forb_atom(Ans?, Args?, RoleSpecs?, Constant?, Ans).
+g_forb_atom(no, _, _, _, yes).
+g_forb_atom(yes, [role(S)], All, L, R?) :- integer(S?), ground(All?), ground(L?) |
+    nth_rs(All?, S?, RS),
+    rs_forb(RS?, N),
+    atoms_member(N?, atom(L?, []), R).
+g_forb_atom(yes, _, _, _, no) :- otherwise | true.
+
+procedure g_forb_atoms(Atoms?, Preds?, RoleSpecs?, Constant?, Ans).
+g_forb_atoms([], _, _, _, yes).
+g_forb_atoms([atom(Q, As)|Xs], Gp, All, L, R?) :-
+    ground(Q?), ground(As?), ground(Xs?), ground(Gp?), ground(All?), ground(L?) |
+    pred_member(Q?, Gp?, A),
+    g_forb_atom(A?, As?, All?, L?, A1),
+    g_forb_atoms(Xs?, Gp?, All?, L?, A2),
+    both_yes(A1?, A2?, R).
+
+procedure roles_g_forb(RoleSpecs?, Preds?, RoleSpecs?, Constant?, Ans).
+roles_g_forb([], _, _, _, yes).
+roles_g_forb([RS|Rs], Gp, All, L, R?) :-
+    ground(RS?), ground(Rs?), ground(Gp?), ground(All?), ground(L?) |
+    rs_add(RS?, P),
+    g_forb_atoms(P?, Gp?, All?, L?, A1),
+    roles_g_forb(Rs?, Gp?, All?, L?, A2),
+    both_yes(A1?, A2?, R).
+
+procedure schema_g_forb(RoleSpecs?, Preds?, Constant?, Ans).
+schema_g_forb(Rs, Gp, L, R?) :- ground(Rs?), ground(Gp?), ground(L?) |
+    roles_g_forb(Rs?, Gp?, Rs?, L?, R).
+
+procedure g_forbid(Contract?, Preds?, Constant?, Ans).
+g_forbid([], _, _, yes).
+g_forbid([S|Ss], Gp, L, R?) :- ground(S?), ground(Ss?), ground(Gp?), ground(L?) |
+    sch_roles(S?, Rs),
+    schema_g_forb(Rs?, Gp?, L?, A1),
+    g_forbid(Ss?, Gp?, L?, A2),
+    both_yes(A1?, A2?, R).
+
+% leaving_mark(C, M, Gp, L, R): the mark L is a leaving mark of C, Gp being
+% the g of the guardianships for M.
+procedure leaving_mark(Contract?, Preds?, Preds?, Constant?, Ans).
+leaving_mark(C, M, Gp, L, R?) :- ground(C?), ground(M?), ground(Gp?), ground(L?) |
+    pred_member(L?, M?, InM),
+    flip(InM?, A0),
+    guards_forbid(C?, L?, A1),
+    never_deleted(C?, L?, A2),
+    adds_req_mark(C?, L?, M?, A3),
+    g_forbid(C?, Gp?, L?, A4),
+    both_yes(A0?, A1?, A01),
+    both_yes(A2?, A3?, A23),
+    both_yes(A01?, A23?, A0123),
+    both_yes(A0123?, A4?, R).
+
+procedure leaving_marks1(Ans?, Constant?, Preds?, Contract?, Preds?, Preds?, Preds).
+leaving_marks1(yes, L, Ls, C, M, Gp, [L?|R?]) :-
+    ground(Ls?), ground(C?), ground(M?), ground(Gp?) |
+    leaving_marks2(Ls?, C?, M?, Gp?, R).
+leaving_marks1(no, _, Ls, C, M, Gp, R?) :-
+    ground(Ls?), ground(C?), ground(M?), ground(Gp?) |
+    leaving_marks2(Ls?, C?, M?, Gp?, R).
+
+procedure leaving_marks2(Preds?, Contract?, Preds?, Preds?, Preds).
+leaving_marks2([], _, _, _, []).
+leaving_marks2([L|Ls], C, M, Gp, R?) :-
+    ground(L?), ground(Ls?), ground(C?), ground(M?), ground(Gp?) |
+    leaving_mark(C?, M?, Gp?, L?, A),
+    leaving_marks1(A?, L?, Ls?, C?, M?, Gp?, R).
+
+% leaving_marks(C, Marks, M, Gs, Ls): the leaving marks of C among its marks
+% Marks, in their order, for M and Gs the guardianships for M.
+procedure leaving_marks(Contract?, Preds?, Preds?, Guardianships?, Preds).
+leaving_marks(C, Marks, M, Gs, R?) :-
+    ground(C?), ground(Marks?), ground(M?), ground(Gs?) |
+    g_preds(Gs?, Gp),
+    leaving_marks2(Marks?, C?, M?, Gp?, R).
+
+% leaving_for(C, M, Ls): the leaving marks of C for M, for inspection; M is
+% to have a guardianship for each of its marks, as def:leaving supposes.
+exported procedure leaving_for(Contract?, Preds?, Preds).
+leaving_for(C, M, R?) :- ground(C?), ground(M?) |
+    guardianships_for(C?, M?, Gs),
+    preds_of_arity(C?, 0, Marks),
+    leaving_marks(C?, Marks?, M?, Gs?, R).
+
+% ---------------------------------------------------------------------------
 % Unobstructed but for marks (def:unobstructed-marks)
 % ---------------------------------------------------------------------------
 
-% Clause 1: unary_one(C, Phi, I, R): Phi, required at role I, is up to
+% Clause 1: unary_one(C, Lv, Phi, I, R): Phi, required at role I, is up to
 % renaming the role the one atom added by some schema of C of arity one that
-% is guarded in its role, requires nothing and forbids nothing but that atom.
-procedure unary_adds(Schema?, Atom?, Ans).
-unary_adds(schema(_, [rs(guarded, [Psi], [], [], Forb)]), Phi, R?) :-
-    Psi? =?= Phi?, ground(Forb?) |
-    atoms_all_eq(Forb?, Phi?, R).
-unary_adds(Sc, _, no) :- otherwise, ground(Sc?) | true.
+% is guarded in its role, requires nothing and forbids nothing but that atom
+% and the leaving marks Lv of C.
+procedure forb_atom_or_leaving(Atoms?, Atom?, Preds?, Ans).
+forb_atom_or_leaving([], _, _, yes).
+forb_atom_or_leaving([A|As], Phi, Lv, R?) :- ground(A?), ground(As?), ground(Phi?), ground(Lv?) |
+    same_atom(A?, Phi?, A1),
+    is_mark_of(A?, Lv?, A2),
+    or_yes(A1?, A2?, A12),
+    forb_atom_or_leaving(As?, Phi?, Lv?, A3),
+    both_yes(A12?, A3?, R).
 
-procedure unary_one1(Ans?, Contract?, Atom?, Ans).
-unary_one1(yes, _, _, yes).
-unary_one1(no, Ss, Psi, R?) :- ground(Ss?), ground(Psi?) | unary_one2(Ss?, Psi?, R).
+procedure unary_adds(Schema?, Preds?, Atom?, Ans).
+unary_adds(schema(_, [rs(guarded, [Psi], [], [], Forb)]), Lv, Phi, R?) :-
+    Psi? =?= Phi?, ground(Forb?), ground(Lv?) |
+    forb_atom_or_leaving(Forb?, Phi?, Lv?, R).
+unary_adds(Sc, _, _, no) :- otherwise, ground(Sc?) | true.
 
-procedure unary_one2(Contract?, Atom?, Ans).
-unary_one2([], _, no).
-unary_one2([S|Ss], Psi, R?) :- ground(S?), ground(Ss?), ground(Psi?) |
-    unary_adds(S?, Psi?, A),
-    unary_one1(A?, Ss?, Psi?, R).
+procedure unary_one1(Ans?, Contract?, Preds?, Atom?, Ans).
+unary_one1(yes, _, _, _, yes).
+unary_one1(no, Ss, Lv, Psi, R?) :- ground(Ss?), ground(Lv?), ground(Psi?) |
+    unary_one2(Ss?, Lv?, Psi?, R).
 
-procedure unary_one(Contract?, Atom?, Integer?, Ans).
-unary_one(C, Phi, I, R?) :- ground(C?), ground(Phi?), integer(I?) |
+procedure unary_one2(Contract?, Preds?, Atom?, Ans).
+unary_one2([], _, _, no).
+unary_one2([S|Ss], Lv, Psi, R?) :- ground(S?), ground(Ss?), ground(Lv?), ground(Psi?) |
+    unary_adds(S?, Lv?, Psi?, A),
+    unary_one1(A?, Ss?, Lv?, Psi?, R).
+
+procedure unary_one(Contract?, Preds?, Atom?, Integer?, Ans).
+unary_one(C, Lv, Phi, I, R?) :- ground(C?), ground(Lv?), ground(Phi?), integer(I?) |
     rename_atom(Phi?, I?, Psi),
-    unary_one2(C?, Psi?, R).
+    unary_one2(C?, Lv?, Psi?, R).
 
 % Every atom of Phis, required at role I, is supplied so; an atom of a
 % reflexive predicate naming the role is left out first.
-procedure req_supplied(Contract?, Atoms?, Integer?, Ans).
-req_supplied(_, [], _, yes).
-req_supplied(C, [A|As], I, R?) :- ground(C?), ground(A?), ground(As?), integer(I?) |
-    unary_one(C?, A?, I?, A1),
-    req_supplied(C?, As?, I?, A2),
+procedure req_supplied(Contract?, Preds?, Atoms?, Integer?, Ans).
+req_supplied(_, _, [], _, yes).
+req_supplied(C, Lv, [A|As], I, R?) :-
+    ground(C?), ground(Lv?), ground(A?), ground(As?), integer(I?) |
+    unary_one(C?, Lv?, A?, I?, A1),
+    req_supplied(C?, Lv?, As?, I?, A2),
     both_yes(A1?, A2?, R).
 
-procedure role_req_supplied(Contract?, Preds?, RoleSpec?, Integer?, Ans).
-role_req_supplied(C, Rf, RS, I, R?) :- ground(C?), ground(Rf?), ground(RS?), integer(I?) |
+procedure role_req_supplied(Contract?, Preds?, Preds?, RoleSpec?, Integer?, Ans).
+role_req_supplied(C, Rf, Lv, RS, I, R?) :-
+    ground(C?), ground(Rf?), ground(Lv?), ground(RS?), integer(I?) |
     rs_req(RS?, Req),
     refl_keep(Req?, I?, Rf?, no, Req1),
-    req_supplied(C?, Req1?, I?, R).
+    req_supplied(C?, Lv?, Req1?, I?, R).
 
-% Clause 2: every atom the act forbids at the role is a mark in M or the one
-% atom it adds there.
-procedure forb_marks_or_added(Atoms?, Preds?, Atom?, Ans).
-forb_marks_or_added([], _, _, yes).
-forb_marks_or_added([A|As], M, Added, R?) :- ground(A?), ground(As?), ground(M?), ground(Added?) |
+% Clause 2: every atom the act forbids at the role is a mark in M, a leaving
+% mark of C, or the one atom it adds there.
+procedure forb_marks_or_added(Atoms?, Preds?, Preds?, Atom?, Ans).
+forb_marks_or_added([], _, _, _, yes).
+forb_marks_or_added([A|As], M, Lv, Added, R?) :-
+    ground(A?), ground(As?), ground(M?), ground(Lv?), ground(Added?) |
     is_mark_of(A?, M?, A1),
-    same_atom(A?, Added?, A2),
+    is_mark_of(A?, Lv?, A2),
+    same_atom(A?, Added?, A3),
     or_yes(A1?, A2?, A12),
-    forb_marks_or_added(As?, M?, Added?, A3),
-    both_yes(A12?, A3?, R).
+    or_yes(A12?, A3?, A123),
+    forb_marks_or_added(As?, M?, Lv?, Added?, A4),
+    both_yes(A123?, A4?, R).
 
 % Clause 3: every atom of e a schema adds or deletes at a role is e(pi_j) for
 % a role pi_j of that schema, and the schema adds, or deletes, e(pi_i) at
@@ -625,21 +792,23 @@ procedure intro_marks3(Ans?, Constant?, Constant?, IntroE).
 intro_marks3(yes, Nm, E, intro(Nm?, E?)).
 intro_marks3(no, _, _, no_intro).
 
-procedure intro_marks2(Preds?, Ans?, Contract?, Preds?, Preds?, Constant?, RoleSpec?, RoleSpec?, IntroE).
-intro_marks2([], _, _, _, _, _, _, _, no_intro).
-intro_marks2([_|_], no, _, _, _, _, _, _, no_intro).
-intro_marks2([E], yes, C, Rf, M, Nm, RS1, RS2, R?) :-
-    ground(E?), ground(C?), ground(Rf?), ground(M?), ground(Nm?), ground(RS1?), ground(RS2?) |
-    role_req_supplied(C?, Rf?, RS1?, 1, A1),
-    role_req_supplied(C?, Rf?, RS2?, 2, A2),
+procedure intro_marks2(Preds?, Ans?, Contract?, Preds?, Preds?, Preds?, Constant?, RoleSpec?,
+                      RoleSpec?, IntroE).
+intro_marks2([], _, _, _, _, _, _, _, _, no_intro).
+intro_marks2([_|_], no, _, _, _, _, _, _, _, no_intro).
+intro_marks2([E], yes, C, Rf, M, Lv, Nm, RS1, RS2, R?) :-
+    ground(E?), ground(C?), ground(Rf?), ground(M?), ground(Lv?), ground(Nm?), ground(RS1?),
+    ground(RS2?) |
+    role_req_supplied(C?, Rf?, Lv?, RS1?, 1, A1),
+    role_req_supplied(C?, Rf?, Lv?, RS2?, 2, A2),
     rs_forb(RS1?, N1),
     rs_forb(RS2?, N2),
     rs_add(RS1?, P1s),
     rs_add(RS2?, P2s),
     added_one(P1s?, P1),
     added_one(P2s?, P2),
-    forb_marks_or_added(N1?, M?, P1?, A3),
-    forb_marks_or_added(N2?, M?, P2?, A4),
+    forb_marks_or_added(N1?, M?, Lv?, P1?, A3),
+    forb_marks_or_added(N2?, M?, Lv?, P2?, A4),
     e_symmetric(C?, E?, A5),
     both_yes(A1?, A2?, A12),
     both_yes(A3?, A4?, A34),
@@ -647,9 +816,9 @@ intro_marks2([E], yes, C, Rf, M, Nm, RS1, RS2, R?) :-
     both_yes(A1234?, A5?, A),
     intro_marks3(A?, Nm?, E?, R).
 
-procedure intro_marks(Contract?, Preds?, Preds?, Schema?, IntroE).
-intro_marks(C, Rf, M, schema(Nm, [RS1, RS2]), R?) :-
-    ground(C?), ground(Rf?), ground(M?), ground(Nm?), ground(RS1?), ground(RS2?) |
+procedure intro_marks(Contract?, Preds?, Preds?, Preds?, Schema?, IntroE).
+intro_marks(C, Rf, M, Lv, schema(Nm, [RS1, RS2]), R?) :-
+    ground(C?), ground(Rf?), ground(M?), ground(Lv?), ground(Nm?), ground(RS1?), ground(RS2?) |
     is_guarding(RS1?, G1),
     is_guarding(RS2?, G2),
     both_yes(G1?, G2?, G),
@@ -659,8 +828,8 @@ intro_marks(C, Rf, M, schema(Nm, [RS1, RS2]), R?) :-
     rs_add(RS1?, P1),
     rs_add(RS2?, P2),
     one_atom_e(P1?, P2?, Es),
-    intro_marks2(Es?, GB?, C?, Rf?, M?, Nm?, RS1?, RS2?, R).
-intro_marks(_, _, _, Sc, no_intro) :- otherwise, ground(Sc?) | true.
+    intro_marks2(Es?, GB?, C?, Rf?, M?, Lv?, Nm?, RS1?, RS2?, R).
+intro_marks(_, _, _, _, Sc, no_intro) :- otherwise, ground(Sc?) | true.
 
 % ---------------------------------------------------------------------------
 % Relay act (def:relay)
@@ -902,13 +1071,13 @@ req_e_ok(atom(Q, As), X, KX, E, Rf, RKs, R?) :-
     req_e_ok1(As?, X?, KX?, E?, Rf?, RKs?, R).
 req_e_ok(atom(_, _), _, _, _, _, _, no) :- otherwise | true.
 
-procedure req_atom_ok(Atom?, Integer?, RK?, Contract?, Preds?, Constant?, Guardianships?,
+procedure req_atom_ok(Atom?, Integer?, RK?, Contract?, Preds?, Preds?, Constant?, Guardianships?,
                       RKs?, Party?, Party?, Ans).
-req_atom_ok(Phi, X, KX, C, Rf, E, Gs, RKs, P1, P2, R?) :-
-    ground(Phi?), integer(X?), ground(KX?), ground(C?), ground(Rf?), ground(E?), ground(Gs?),
-    ground(RKs?), ground(P1?), ground(P2?) |
+req_atom_ok(Phi, X, KX, C, Rf, Lv, E, Gs, RKs, P1, P2, R?) :-
+    ground(Phi?), integer(X?), ground(KX?), ground(C?), ground(Rf?), ground(Lv?), ground(E?),
+    ground(Gs?), ground(RKs?), ground(P1?), ground(P2?) |
     own_reflexive(Phi?, X?, Rf?, A1),
-    unary_one(C?, Phi?, X?, A2),
+    unary_one(C?, Lv?, Phi?, X?, A2),
     req_ward_ok(KX?, Phi?, Gs?, A3),
     req_guard_ok(KX?, Phi?, X?, P1?, P2?, Gs?, A4),
     req_e_ok(Phi?, X?, KX?, E?, Rf?, RKs?, A5),
@@ -917,18 +1086,18 @@ req_atom_ok(Phi, X, KX, C, Rf, E, Gs, RKs, P1, P2, R?) :-
     or_yes(A12?, A34?, A1234),
     or_yes(A1234?, A5?, R).
 
-procedure req_atoms_ok(Atoms?, Integer?, RK?, Contract?, Preds?, Constant?, Guardianships?,
+procedure req_atoms_ok(Atoms?, Integer?, RK?, Contract?, Preds?, Preds?, Constant?, Guardianships?,
                        RKs?, Party?, Party?, Ans).
-req_atoms_ok([], _, _, _, _, _, _, _, _, _, yes).
-req_atoms_ok([Phi|Phis], X, KX, C, Rf, E, Gs, RKs, P1, P2, R?) :-
-    ground(Phi?), ground(Phis?), integer(X?), ground(KX?), ground(C?), ground(Rf?),
+req_atoms_ok([], _, _, _, _, _, _, _, _, _, _, yes).
+req_atoms_ok([Phi|Phis], X, KX, C, Rf, Lv, E, Gs, RKs, P1, P2, R?) :-
+    ground(Phi?), ground(Phis?), integer(X?), ground(KX?), ground(C?), ground(Rf?), ground(Lv?),
     ground(E?), ground(Gs?), ground(RKs?), ground(P1?), ground(P2?) |
-    req_atom_ok(Phi?, X?, KX?, C?, Rf?, E?, Gs?, RKs?, P1?, P2?, A1),
-    req_atoms_ok(Phis?, X?, KX?, C?, Rf?, E?, Gs?, RKs?, P1?, P2?, A2),
+    req_atom_ok(Phi?, X?, KX?, C?, Rf?, Lv?, E?, Gs?, RKs?, P1?, P2?, A1),
+    req_atoms_ok(Phis?, X?, KX?, C?, Rf?, Lv?, E?, Gs?, RKs?, P1?, P2?, A2),
     both_yes(A1?, A2?, R).
 
-% Clause 3: every atom the schema forbids at a role is a mark in M or, at a
-% party, the atom of e naming the other party.
+% Clause 3: every atom the schema forbids at a role is a mark in M, a leaving
+% mark of C, or, at a party, the atom of e naming the other party.
 procedure other_party(Integer?, Party?, Party?, Integer).
 other_party(X, P1, P2, R?) :- integer(X?), ground(P1?), ground(P2?) |
     party_role(P1?, I),
@@ -940,50 +1109,53 @@ other_party1(X, I, J, J?) :- X? =:= I? | true.
 other_party1(X, I, J, I?) :- X? =:= J? | true.
 other_party1(_, _, _, 0) :- otherwise | true.
 
-procedure forb_atom_ok(Atom?, Integer?, RK?, Preds?, Constant?, Party?, Party?, Ans).
-forb_atom_ok(Phi, X, KX, M, E, P1, P2, R?) :-
-    ground(Phi?), integer(X?), ground(KX?), ground(M?), ground(E?), ground(P1?), ground(P2?) |
+procedure forb_atom_ok(Atom?, Integer?, RK?, Preds?, Preds?, Constant?, Party?, Party?, Ans).
+forb_atom_ok(Phi, X, KX, M, Lv, E, P1, P2, R?) :-
+    ground(Phi?), integer(X?), ground(KX?), ground(M?), ground(Lv?), ground(E?), ground(P1?),
+    ground(P2?) |
     is_mark_of(Phi?, M?, A1),
+    is_mark_of(Phi?, Lv?, A2),
     rk_is_party(KX?, IsP),
     other_party(X?, P1?, P2?, O),
-    same_atom(Phi?, atom(E?, [role(O?)]), A2),
-    both_yes(IsP?, A2?, A3),
-    or_yes(A1?, A3?, R).
+    same_atom(Phi?, atom(E?, [role(O?)]), A3),
+    both_yes(IsP?, A3?, A4),
+    or_yes(A1?, A2?, A12),
+    or_yes(A12?, A4?, R).
 
-procedure forb_atoms_ok(Atoms?, Integer?, RK?, Preds?, Constant?, Party?, Party?, Ans).
-forb_atoms_ok([], _, _, _, _, _, _, yes).
-forb_atoms_ok([Phi|Phis], X, KX, M, E, P1, P2, R?) :-
-    ground(Phi?), ground(Phis?), integer(X?), ground(KX?), ground(M?), ground(E?),
+procedure forb_atoms_ok(Atoms?, Integer?, RK?, Preds?, Preds?, Constant?, Party?, Party?, Ans).
+forb_atoms_ok([], _, _, _, _, _, _, _, yes).
+forb_atoms_ok([Phi|Phis], X, KX, M, Lv, E, P1, P2, R?) :-
+    ground(Phi?), ground(Phis?), integer(X?), ground(KX?), ground(M?), ground(Lv?), ground(E?),
     ground(P1?), ground(P2?) |
-    forb_atom_ok(Phi?, X?, KX?, M?, E?, P1?, P2?, A1),
-    forb_atoms_ok(Phis?, X?, KX?, M?, E?, P1?, P2?, A2),
+    forb_atom_ok(Phi?, X?, KX?, M?, Lv?, E?, P1?, P2?, A1),
+    forb_atoms_ok(Phis?, X?, KX?, M?, Lv?, E?, P1?, P2?, A2),
     both_yes(A1?, A2?, R).
 
 % --- the three clauses at every role --------------------------------------
 
-procedure relay_roles(RoleSpecs?, Integer?, Integer?, RKs?, Contract?, Preds?, Preds?, Constant?,
-                      Guardianships?, Party?, Party?, Ans).
-relay_roles([], _, _, _, _, _, _, _, _, _, _, yes).
-relay_roles([RS|Rs], X, K, RKs, C, Rf, M, E, Gs, P1, P2, R?) :-
+procedure relay_roles(RoleSpecs?, Integer?, Integer?, RKs?, Contract?, Preds?, Preds?, Preds?,
+                      Constant?, Guardianships?, Party?, Party?, Ans).
+relay_roles([], _, _, _, _, _, _, _, _, _, _, _, yes).
+relay_roles([RS|Rs], X, K, RKs, C, Rf, M, Lv, E, Gs, P1, P2, R?) :-
     ground(RS?), ground(Rs?), integer(X?), integer(K?), ground(RKs?), ground(C?), ground(Rf?),
-    ground(M?), ground(E?), ground(Gs?), ground(P1?), ground(P2?) |
+    ground(M?), ground(Lv?), ground(E?), ground(Gs?), ground(P1?), ground(P2?) |
     nth_rk(RKs?, X?, KX),
-    relay_role(RS?, X?, K?, KX?, RKs?, C?, Rf?, M?, E?, Gs?, P1?, P2?, A123),
+    relay_role(RS?, X?, K?, KX?, RKs?, C?, Rf?, M?, Lv?, E?, Gs?, P1?, P2?, A123),
     X1 := X? + 1,
-    relay_roles(Rs?, X1?, K?, RKs?, C?, Rf?, M?, E?, Gs?, P1?, P2?, A4),
+    relay_roles(Rs?, X1?, K?, RKs?, C?, Rf?, M?, Lv?, E?, Gs?, P1?, P2?, A4),
     both_yes(A123?, A4?, R).
 
 % One role, of kind KX.
-procedure relay_role(RoleSpec?, Integer?, Integer?, RK?, RKs?, Contract?, Preds?, Preds?, Constant?,
-                     Guardianships?, Party?, Party?, Ans).
-relay_role(RS, X, K, KX, RKs, C, Rf, M, E, Gs, P1, P2, R?) :-
+procedure relay_role(RoleSpec?, Integer?, Integer?, RK?, RKs?, Contract?, Preds?, Preds?, Preds?,
+                     Constant?, Guardianships?, Party?, Party?, Ans).
+relay_role(RS, X, K, KX, RKs, C, Rf, M, Lv, E, Gs, P1, P2, R?) :-
     ground(RS?), integer(X?), integer(K?), ground(KX?), ground(RKs?), ground(C?), ground(Rf?),
-    ground(M?), ground(E?), ground(Gs?), ground(P1?), ground(P2?) |
+    ground(M?), ground(Lv?), ground(E?), ground(Gs?), ground(P1?), ground(P2?) |
     guard_adds_ok(KX?, RS?, X?, RKs?, K?, A1),
     rs_req(RS?, Req),
-    req_atoms_ok(Req?, X?, KX?, C?, Rf?, E?, Gs?, RKs?, P1?, P2?, A2),
+    req_atoms_ok(Req?, X?, KX?, C?, Rf?, Lv?, E?, Gs?, RKs?, P1?, P2?, A2),
     rs_forb(RS?, N),
-    forb_atoms_ok(N?, X?, KX?, M?, E?, P1?, P2?, A3),
+    forb_atoms_ok(N?, X?, KX?, M?, Lv?, E?, P1?, P2?, A3),
     both_yes(A1?, A2?, A12),
     both_yes(A12?, A3?, R).
 
@@ -1027,47 +1199,48 @@ parties_ok(Rs, E, P1, P2, R?) :- ground(Rs?), ground(E?), ground(P1?), ground(P2
 
 % relay_with(Sc, C, Rf, M, Gs, E, P1, P2, R): the schema is a relay act with
 % the parties P1 and P2.
-procedure relay_with1(Ans?, Schema?, Contract?, Preds?, Preds?, Guardianships?, Constant?,
+procedure relay_with1(Ans?, Schema?, Contract?, Preds?, Preds?, Preds?, Guardianships?, Constant?,
                       Party?, Party?, Ans).
-relay_with1(no, _, _, _, _, _, _, _, _, no).
-relay_with1(yes, Sc, C, Rf, M, Gs, E, P1, P2, R?) :-
-    ground(Sc?), ground(C?), ground(Rf?), ground(M?), ground(Gs?), ground(E?), ground(P1?),
-    ground(P2?) |
+relay_with1(no, _, _, _, _, _, _, _, _, _, no).
+relay_with1(yes, Sc, C, Rf, M, Lv, Gs, E, P1, P2, R?) :-
+    ground(Sc?), ground(C?), ground(Rf?), ground(M?), ground(Lv?), ground(Gs?), ground(E?),
+    ground(P1?), ground(P2?) |
     sch_roles(Sc?, Rs),
-    relay_with2(Rs?, C?, Rf?, M?, Gs?, E?, P1?, P2?, R).
+    relay_with2(Rs?, C?, Rf?, M?, Lv?, Gs?, E?, P1?, P2?, R).
 
-procedure relay_with2(RoleSpecs?, Contract?, Preds?, Preds?, Guardianships?, Constant?, Party?,
-                      Party?, Ans).
-relay_with2(Rs, C, Rf, M, Gs, E, P1, P2, R?) :-
-    ground(Rs?), ground(C?), ground(Rf?), ground(M?), ground(Gs?), ground(E?), ground(P1?),
-    ground(P2?) |
+procedure relay_with2(RoleSpecs?, Contract?, Preds?, Preds?, Preds?, Guardianships?, Constant?,
+                      Party?, Party?, Ans).
+relay_with2(Rs, C, Rf, M, Lv, Gs, E, P1, P2, R?) :-
+    ground(Rs?), ground(C?), ground(Rf?), ground(M?), ground(Lv?), ground(Gs?), ground(E?),
+    ground(P1?), ground(P2?) |
     roles_len(Rs?, K),
     party_sigma(P1?, S1),
     party_sigma(P2?, S2),
     ints_app(S1?, S2?, Sigmas),
     role_kinds(1, K?, P1?, P2?, Sigmas?, RKs),
-    relay_with3(RKs?, Rs?, K?, C?, Rf?, M?, Gs?, E?, P1?, P2?, R).
+    relay_with3(RKs?, Rs?, K?, C?, Rf?, M?, Lv?, Gs?, E?, P1?, P2?, R).
 
-procedure relay_with3(RKs?, RoleSpecs?, Integer?, Contract?, Preds?, Preds?, Guardianships?,
+procedure relay_with3(RKs?, RoleSpecs?, Integer?, Contract?, Preds?, Preds?, Preds?, Guardianships?,
                       Constant?, Party?, Party?, Ans).
-relay_with3(RKs, Rs, K, C, Rf, M, Gs, E, P1, P2, R?) :-
-    ground(RKs?), ground(Rs?), integer(K?), ground(C?), ground(Rf?), ground(M?), ground(Gs?),
-    ground(E?), ground(P1?), ground(P2?) |
+relay_with3(RKs, Rs, K, C, Rf, M, Lv, Gs, E, P1, P2, R?) :-
+    ground(RKs?), ground(Rs?), integer(K?), ground(C?), ground(Rf?), ground(M?), ground(Lv?),
+    ground(Gs?), ground(E?), ground(P1?), ground(P2?) |
     no_other(RKs?, A1),
-    relay_roles(Rs?, 1, K?, RKs?, C?, Rf?, M?, E?, Gs?, P1?, P2?, A2),
+    relay_roles(Rs?, 1, K?, RKs?, C?, Rf?, M?, Lv?, E?, Gs?, P1?, P2?, A2),
     both_yes(A1?, A2?, R).
 
 procedure ints_app(Ints?, Ints?, Ints).
 ints_app([], T, T?).
 ints_app([I|Is], T, [I?|R?]) :- ints_app(Is?, T?, R).
 
-procedure relay_with(Schema?, Contract?, Preds?, Preds?, Guardianships?, Constant?, Party?, Party?, Ans).
-relay_with(Sc, C, Rf, M, Gs, E, P1, P2, R?) :-
-    ground(Sc?), ground(C?), ground(Rf?), ground(M?), ground(Gs?), ground(E?), ground(P1?),
-    ground(P2?) |
+procedure relay_with(Schema?, Contract?, Preds?, Preds?, Preds?, Guardianships?, Constant?, Party?,
+                     Party?, Ans).
+relay_with(Sc, C, Rf, M, Lv, Gs, E, P1, P2, R?) :-
+    ground(Sc?), ground(C?), ground(Rf?), ground(M?), ground(Lv?), ground(Gs?), ground(E?),
+    ground(P1?), ground(P2?) |
     sch_roles(Sc?, Rs),
     parties_ok(Rs?, E?, P1?, P2?, A),
-    relay_with1(A?, Sc?, C?, Rf?, M?, Gs?, E?, P1?, P2?, R).
+    relay_with1(A?, Sc?, C?, Rf?, M?, Lv?, Gs?, E?, P1?, P2?, R).
 
 % --- the parties sought ----------------------------------------------------
 % The readings of the role at J as the second party: free when a free role
@@ -1090,120 +1263,120 @@ ward_party_at([], _, _, []).
 ward_party_at([S|_], J, Mk, [ward(J?, Mk?, S?)]).
 
 % Over the second party's readings at J, then over J, then over I.
-procedure try_p2s(Parties?, Schema?, Contract?, Preds?, Preds?, Guardianships?, Constant?, Party?,
-                  Relays).
-try_p2s([], _, _, _, _, _, _, _, []).
-try_p2s([P2|P2s], Sc, C, Rf, M, Gs, E, P1, R?) :-
-    ground(P2?), ground(P2s?), ground(Sc?), ground(C?), ground(Rf?), ground(M?), ground(Gs?),
-    ground(E?), ground(P1?) |
-    relay_with(Sc?, C?, Rf?, M?, Gs?, E?, P1?, P2?, A),
-    try_p2s1(A?, P2?, P2s?, Sc?, C?, Rf?, M?, Gs?, E?, P1?, R).
+procedure try_p2s(Parties?, Schema?, Contract?, Preds?, Preds?, Preds?, Guardianships?, Constant?,
+                  Party?, Relays).
+try_p2s([], _, _, _, _, _, _, _, _, []).
+try_p2s([P2|P2s], Sc, C, Rf, M, Lv, Gs, E, P1, R?) :-
+    ground(P2?), ground(P2s?), ground(Sc?), ground(C?), ground(Rf?), ground(M?), ground(Lv?),
+    ground(Gs?), ground(E?), ground(P1?) |
+    relay_with(Sc?, C?, Rf?, M?, Lv?, Gs?, E?, P1?, P2?, A),
+    try_p2s1(A?, P2?, P2s?, Sc?, C?, Rf?, M?, Lv?, Gs?, E?, P1?, R).
 
-procedure try_p2s1(Ans?, Party?, Parties?, Schema?, Contract?, Preds?, Preds?, Guardianships?,
-                   Constant?, Party?, Relays).
-try_p2s1(yes, P2, _, Sc, _, _, _, _, _, P1, [relay(Nm?, P1?, P2?)]) :- ground(Sc?) |
+procedure try_p2s1(Ans?, Party?, Parties?, Schema?, Contract?, Preds?, Preds?, Preds?,
+                   Guardianships?, Constant?, Party?, Relays).
+try_p2s1(yes, P2, _, Sc, _, _, _, _, _, _, P1, [relay(Nm?, P1?, P2?)]) :- ground(Sc?) |
     sch_name(Sc?, Nm).
-try_p2s1(no, _, P2s, Sc, C, Rf, M, Gs, E, P1, R?) :-
-    ground(P2s?), ground(Sc?), ground(C?), ground(Rf?), ground(M?), ground(Gs?), ground(E?),
-    ground(P1?) |
-    try_p2s(P2s?, Sc?, C?, Rf?, M?, Gs?, E?, P1?, R).
+try_p2s1(no, _, P2s, Sc, C, Rf, M, Lv, Gs, E, P1, R?) :-
+    ground(P2s?), ground(Sc?), ground(C?), ground(Rf?), ground(M?), ground(Lv?), ground(Gs?),
+    ground(E?), ground(P1?) |
+    try_p2s(P2s?, Sc?, C?, Rf?, M?, Lv?, Gs?, E?, P1?, R).
 
-procedure try_js(Integer?, Integer?, Schema?, Contract?, Preds?, Preds?, Guardianships?, Constant?,
-                 Party?, Kind?, Relays).
-try_js(J, K, _, _, _, _, _, _, _, _, []) :- J? > K? | true.
-try_js(J, K, Sc, C, Rf, M, Gs, E, P1, Kind, R?) :-
+procedure try_js(Integer?, Integer?, Schema?, Contract?, Preds?, Preds?, Preds?, Guardianships?,
+                 Constant?, Party?, Kind?, Relays).
+try_js(J, K, _, _, _, _, _, _, _, _, _, []) :- J? > K? | true.
+try_js(J, K, Sc, C, Rf, M, Lv, Gs, E, P1, Kind, R?) :-
     J? =< K?, integer(J?), integer(K?), ground(Sc?), ground(C?), ground(Rf?), ground(M?),
-    ground(Gs?), ground(E?), ground(P1?), ground(Kind?) |
+    ground(Lv?), ground(Gs?), ground(E?), ground(P1?), ground(Kind?) |
     party_role(P1?, I),
-    try_js1(I?, J?, K?, Sc?, C?, Rf?, M?, Gs?, E?, P1?, Kind?, R).
+    try_js1(I?, J?, K?, Sc?, C?, Rf?, M?, Lv?, Gs?, E?, P1?, Kind?, R).
 
-procedure try_js1(Integer?, Integer?, Integer?, Schema?, Contract?, Preds?, Preds?, Guardianships?,
-                  Constant?, Party?, Kind?, Relays).
-try_js1(I, J, K, Sc, C, Rf, M, Gs, E, P1, Kind, R?) :-
-    I? =:= J?, integer(K?), ground(Sc?), ground(C?), ground(Rf?), ground(M?), ground(Gs?),
-    ground(E?), ground(P1?), ground(Kind?) |
-    J1 := J? + 1,
-    try_js(J1?, K?, Sc?, C?, Rf?, M?, Gs?, E?, P1?, Kind?, R).
-try_js1(_, J, K, Sc, C, Rf, M, Gs, E, P1, Kind, R?) :-
-    otherwise, integer(J?), integer(K?), ground(Sc?), ground(C?), ground(Rf?), ground(M?),
+procedure try_js1(Integer?, Integer?, Integer?, Schema?, Contract?, Preds?, Preds?, Preds?,
+                  Guardianships?, Constant?, Party?, Kind?, Relays).
+try_js1(I, J, K, Sc, C, Rf, M, Lv, Gs, E, P1, Kind, R?) :-
+    I? =:= J?, integer(K?), ground(Sc?), ground(C?), ground(Rf?), ground(M?), ground(Lv?),
     ground(Gs?), ground(E?), ground(P1?), ground(Kind?) |
+    J1 := J? + 1,
+    try_js(J1?, K?, Sc?, C?, Rf?, M?, Lv?, Gs?, E?, P1?, Kind?, R).
+try_js1(_, J, K, Sc, C, Rf, M, Lv, Gs, E, P1, Kind, R?) :-
+    otherwise, integer(J?), integer(K?), ground(Sc?), ground(C?), ground(Rf?), ground(M?),
+    ground(Lv?), ground(Gs?), ground(E?), ground(P1?), ground(Kind?) |
     sch_roles(Sc?, Rs),
     nth_rs(Rs?, J?, RJ),
     second_parties(Kind?, RJ?, J?, M?, Gs?, P2s),
-    try_p2s(P2s?, Sc?, C?, Rf?, M?, Gs?, E?, P1?, R1),
-    try_js2(R1?, J?, K?, Sc?, C?, Rf?, M?, Gs?, E?, P1?, Kind?, R).
+    try_p2s(P2s?, Sc?, C?, Rf?, M?, Lv?, Gs?, E?, P1?, R1),
+    try_js2(R1?, J?, K?, Sc?, C?, Rf?, M?, Lv?, Gs?, E?, P1?, Kind?, R).
 
-procedure try_js2(Relays?, Integer?, Integer?, Schema?, Contract?, Preds?, Preds?, Guardianships?,
-                  Constant?, Party?, Kind?, Relays).
-try_js2([X|Xs], _, _, _, _, _, _, _, _, _, _, [X?|Xs?]).
-try_js2([], J, K, Sc, C, Rf, M, Gs, E, P1, Kind, R?) :-
-    integer(J?), integer(K?), ground(Sc?), ground(C?), ground(Rf?), ground(M?), ground(Gs?),
-    ground(E?), ground(P1?), ground(Kind?) |
+procedure try_js2(Relays?, Integer?, Integer?, Schema?, Contract?, Preds?, Preds?, Preds?,
+                  Guardianships?, Constant?, Party?, Kind?, Relays).
+try_js2([X|Xs], _, _, _, _, _, _, _, _, _, _, _, [X?|Xs?]).
+try_js2([], J, K, Sc, C, Rf, M, Lv, Gs, E, P1, Kind, R?) :-
+    integer(J?), integer(K?), ground(Sc?), ground(C?), ground(Rf?), ground(M?), ground(Lv?),
+    ground(Gs?), ground(E?), ground(P1?), ground(Kind?) |
     J1 := J? + 1,
-    try_js(J1?, K?, Sc?, C?, Rf?, M?, Gs?, E?, P1?, Kind?, R).
+    try_js(J1?, K?, Sc?, C?, Rf?, M?, Lv?, Gs?, E?, P1?, Kind?, R).
 
-procedure try_is(Integer?, Integer?, Schema?, Contract?, Preds?, Preds?, Guardianships?, Constant?,
-                 Constant?, Kind?, Relays).
-try_is(I, K, _, _, _, _, _, _, _, _, []) :- I? > K? | true.
-try_is(I, K, Sc, C, Rf, M, Gs, E, Mk, Kind, R?) :-
+procedure try_is(Integer?, Integer?, Schema?, Contract?, Preds?, Preds?, Preds?, Guardianships?,
+                 Constant?, Constant?, Kind?, Relays).
+try_is(I, K, _, _, _, _, _, _, _, _, _, []) :- I? > K? | true.
+try_is(I, K, Sc, C, Rf, M, Lv, Gs, E, Mk, Kind, R?) :-
     I? =< K?, integer(I?), integer(K?), ground(Sc?), ground(C?), ground(Rf?), ground(M?),
-    ground(Gs?), ground(E?), ground(Mk?), ground(Kind?) |
+    ground(Lv?), ground(Gs?), ground(E?), ground(Mk?), ground(Kind?) |
     sch_roles(Sc?, Rs),
     nth_rs(Rs?, I?, RI),
     ward_sigma(RI?, I?, Mk?, Gs?, Ss),
     ward_party_at(Ss?, I?, Mk?, P1s),
-    try_is1(P1s?, I?, K?, Sc?, C?, Rf?, M?, Gs?, E?, Mk?, Kind?, R).
+    try_is1(P1s?, I?, K?, Sc?, C?, Rf?, M?, Lv?, Gs?, E?, Mk?, Kind?, R).
 
-procedure try_is1(Parties?, Integer?, Integer?, Schema?, Contract?, Preds?, Preds?, Guardianships?,
-                  Constant?, Constant?, Kind?, Relays).
-try_is1([], I, K, Sc, C, Rf, M, Gs, E, Mk, Kind, R?) :-
-    integer(I?), integer(K?), ground(Sc?), ground(C?), ground(Rf?), ground(M?), ground(Gs?),
-    ground(E?), ground(Mk?), ground(Kind?) |
-    I1 := I? + 1,
-    try_is(I1?, K?, Sc?, C?, Rf?, M?, Gs?, E?, Mk?, Kind?, R).
-try_is1([P1|_], I, K, Sc, C, Rf, M, Gs, E, Mk, Kind, R?) :-
-    ground(P1?), integer(I?), integer(K?), ground(Sc?), ground(C?), ground(Rf?), ground(M?),
+procedure try_is1(Parties?, Integer?, Integer?, Schema?, Contract?, Preds?, Preds?, Preds?,
+                  Guardianships?, Constant?, Constant?, Kind?, Relays).
+try_is1([], I, K, Sc, C, Rf, M, Lv, Gs, E, Mk, Kind, R?) :-
+    integer(I?), integer(K?), ground(Sc?), ground(C?), ground(Rf?), ground(M?), ground(Lv?),
     ground(Gs?), ground(E?), ground(Mk?), ground(Kind?) |
-    try_js(1, K?, Sc?, C?, Rf?, M?, Gs?, E?, P1?, Kind?, R1),
-    try_is2(R1?, I?, K?, Sc?, C?, Rf?, M?, Gs?, E?, Mk?, Kind?, R).
-
-procedure try_is2(Relays?, Integer?, Integer?, Schema?, Contract?, Preds?, Preds?, Guardianships?,
-                  Constant?, Constant?, Kind?, Relays).
-try_is2([X|Xs], _, _, _, _, _, _, _, _, _, _, [X?|Xs?]).
-try_is2([], I, K, Sc, C, Rf, M, Gs, E, Mk, Kind, R?) :-
-    integer(I?), integer(K?), ground(Sc?), ground(C?), ground(Rf?), ground(M?), ground(Gs?),
-    ground(E?), ground(Mk?), ground(Kind?) |
     I1 := I? + 1,
-    try_is(I1?, K?, Sc?, C?, Rf?, M?, Gs?, E?, Mk?, Kind?, R).
+    try_is(I1?, K?, Sc?, C?, Rf?, M?, Lv?, Gs?, E?, Mk?, Kind?, R).
+try_is1([P1|_], I, K, Sc, C, Rf, M, Lv, Gs, E, Mk, Kind, R?) :-
+    ground(P1?), integer(I?), integer(K?), ground(Sc?), ground(C?), ground(Rf?), ground(M?),
+    ground(Lv?), ground(Gs?), ground(E?), ground(Mk?), ground(Kind?) |
+    try_js(1, K?, Sc?, C?, Rf?, M?, Lv?, Gs?, E?, P1?, Kind?, R1),
+    try_is2(R1?, I?, K?, Sc?, C?, Rf?, M?, Lv?, Gs?, E?, Mk?, Kind?, R).
+
+procedure try_is2(Relays?, Integer?, Integer?, Schema?, Contract?, Preds?, Preds?, Preds?,
+                  Guardianships?, Constant?, Constant?, Kind?, Relays).
+try_is2([X|Xs], _, _, _, _, _, _, _, _, _, _, _, [X?|Xs?]).
+try_is2([], I, K, Sc, C, Rf, M, Lv, Gs, E, Mk, Kind, R?) :-
+    integer(I?), integer(K?), ground(Sc?), ground(C?), ground(Rf?), ground(M?), ground(Lv?),
+    ground(Gs?), ground(E?), ground(Mk?), ground(Kind?) |
+    I1 := I? + 1,
+    try_is(I1?, K?, Sc?, C?, Rf?, M?, Lv?, Gs?, E?, Mk?, Kind?, R).
 
 % relay_in(Sc, ...): the schema as a relay act with a ward role of Mk as its
 % first party and a party of the kind sought as its second, if it is one.
-procedure relay_in(Schema?, Contract?, Preds?, Preds?, Guardianships?, Constant?, Constant?, Kind?,
-                   Relays).
-relay_in(Sc, C, Rf, M, Gs, E, Mk, Kind, R?) :-
-    ground(Sc?), ground(C?), ground(Rf?), ground(M?), ground(Gs?), ground(E?), ground(Mk?),
-    ground(Kind?) |
+procedure relay_in(Schema?, Contract?, Preds?, Preds?, Preds?, Guardianships?, Constant?, Constant?,
+                   Kind?, Relays).
+relay_in(Sc, C, Rf, M, Lv, Gs, E, Mk, Kind, R?) :-
+    ground(Sc?), ground(C?), ground(Rf?), ground(M?), ground(Lv?), ground(Gs?), ground(E?),
+    ground(Mk?), ground(Kind?) |
     sch_roles(Sc?, Rs),
     roles_len(Rs?, K),
-    try_is(1, K?, Sc?, C?, Rf?, M?, Gs?, E?, Mk?, Kind?, R).
+    try_is(1, K?, Sc?, C?, Rf?, M?, Lv?, Gs?, E?, Mk?, Kind?, R).
 
 % find_relay(Schemas, ...): the first schema of C that is such a relay act.
-procedure find_relay1(Relays?, Contract?, Contract?, Preds?, Preds?, Guardianships?, Constant?,
-                      Constant?, Kind?, Relays).
-find_relay1([X|Xs], _, _, _, _, _, _, _, _, [X?|Xs?]).
-find_relay1([], Ss, C, Rf, M, Gs, E, Mk, Kind, R?) :-
-    ground(Ss?), ground(C?), ground(Rf?), ground(M?), ground(Gs?), ground(E?), ground(Mk?),
-    ground(Kind?) |
-    find_relay(Ss?, C?, Rf?, M?, Gs?, E?, Mk?, Kind?, R).
-
-procedure find_relay(Contract?, Contract?, Preds?, Preds?, Guardianships?, Constant?, Constant?,
-                     Kind?, Relays).
-find_relay([], _, _, _, _, _, _, _, []).
-find_relay([S|Ss], C, Rf, M, Gs, E, Mk, Kind, R?) :-
-    ground(S?), ground(Ss?), ground(C?), ground(Rf?), ground(M?), ground(Gs?), ground(E?),
+procedure find_relay1(Relays?, Contract?, Contract?, Preds?, Preds?, Preds?, Guardianships?,
+                      Constant?, Constant?, Kind?, Relays).
+find_relay1([X|Xs], _, _, _, _, _, _, _, _, _, [X?|Xs?]).
+find_relay1([], Ss, C, Rf, M, Lv, Gs, E, Mk, Kind, R?) :-
+    ground(Ss?), ground(C?), ground(Rf?), ground(M?), ground(Lv?), ground(Gs?), ground(E?),
     ground(Mk?), ground(Kind?) |
-    relay_in(S?, C?, Rf?, M?, Gs?, E?, Mk?, Kind?, R1),
-    find_relay1(R1?, Ss?, C?, Rf?, M?, Gs?, E?, Mk?, Kind?, R).
+    find_relay(Ss?, C?, Rf?, M?, Lv?, Gs?, E?, Mk?, Kind?, R).
+
+procedure find_relay(Contract?, Contract?, Preds?, Preds?, Preds?, Guardianships?, Constant?,
+                     Constant?, Kind?, Relays).
+find_relay([], _, _, _, _, _, _, _, _, []).
+find_relay([S|Ss], C, Rf, M, Lv, Gs, E, Mk, Kind, R?) :-
+    ground(S?), ground(Ss?), ground(C?), ground(Rf?), ground(M?), ground(Lv?), ground(Gs?),
+    ground(E?), ground(Mk?), ground(Kind?) |
+    relay_in(S?, C?, Rf?, M?, Lv?, Gs?, E?, Mk?, Kind?, R1),
+    find_relay1(R1?, Ss?, C?, Rf?, M?, Lv?, Gs?, E?, Mk?, Kind?, R).
 
 % ---------------------------------------------------------------------------
 % Introduction with wards (def:introduction-wards)
@@ -1228,51 +1401,54 @@ relays_join(R1, R2, A2, R?, A?) :- ground(R1?), ground(R2?), ground(A2?) |
     relays_app(R1?, R2?, R),
     both_yes(A1?, A2?, A).
 
-procedure relays_pairs(Contract?, Preds?, Preds?, Guardianships?, Constant?, Constant?, Preds?,
-                       Relays, Ans).
-relays_pairs(_, _, _, _, _, _, [], [], yes).
-relays_pairs(C, Rf, M, Gs, E, Mk, [Mk2|Mks], R?, A?) :-
-    ground(C?), ground(Rf?), ground(M?), ground(Gs?), ground(E?), ground(Mk?), ground(Mk2?),
-    ground(Mks?) |
-    find_relay(C?, C?, Rf?, M?, Gs?, E?, Mk?, ward_party(Mk2?), R1),
-    relays_pairs(C?, Rf?, M?, Gs?, E?, Mk?, Mks?, R2, A2),
+procedure relays_pairs(Contract?, Preds?, Preds?, Preds?, Guardianships?, Constant?, Constant?,
+                       Preds?, Relays, Ans).
+relays_pairs(_, _, _, _, _, _, _, [], [], yes).
+relays_pairs(C, Rf, M, Lv, Gs, E, Mk, [Mk2|Mks], R?, A?) :-
+    ground(C?), ground(Rf?), ground(M?), ground(Lv?), ground(Gs?), ground(E?), ground(Mk?),
+    ground(Mk2?), ground(Mks?) |
+    find_relay(C?, C?, Rf?, M?, Lv?, Gs?, E?, Mk?, ward_party(Mk2?), R1),
+    relays_pairs(C?, Rf?, M?, Lv?, Gs?, E?, Mk?, Mks?, R2, A2),
     relays_join(R1?, R2?, A2?, R, A).
 
-procedure relays_for(Contract?, Preds?, Preds?, Guardianships?, Constant?, Preds?, Relays, Ans).
-relays_for(_, _, _, _, _, [], [], yes).
-relays_for(C, Rf, M, Gs, E, [Mk|Mks], R?, A?) :-
-    ground(C?), ground(Rf?), ground(M?), ground(Gs?), ground(E?), ground(Mk?), ground(Mks?) |
-    find_relay(C?, C?, Rf?, M?, Gs?, E?, Mk?, free_party, R1),
-    relays_pairs(C?, Rf?, M?, Gs?, E?, Mk?, [Mk?|Mks?], R2, A2),
-    relays_for(C?, Rf?, M?, Gs?, E?, Mks?, R3, A3),
+procedure relays_for(Contract?, Preds?, Preds?, Preds?, Guardianships?, Constant?, Preds?, Relays,
+                     Ans).
+relays_for(_, _, _, _, _, _, [], [], yes).
+relays_for(C, Rf, M, Lv, Gs, E, [Mk|Mks], R?, A?) :-
+    ground(C?), ground(Rf?), ground(M?), ground(Lv?), ground(Gs?), ground(E?), ground(Mk?),
+    ground(Mks?) |
+    find_relay(C?, C?, Rf?, M?, Lv?, Gs?, E?, Mk?, free_party, R1),
+    relays_pairs(C?, Rf?, M?, Lv?, Gs?, E?, Mk?, [Mk?|Mks?], R2, A2),
+    relays_for(C?, Rf?, M?, Lv?, Gs?, E?, Mks?, R3, A3),
     relays_app(R2?, R3?, R23),
     both_yes(A2?, A3?, A23),
     relays_join(R1?, R23?, A23?, R, A).
 
 % --- over the introductory acts ------------------------------------------
 
-procedure try_intros2(Ans?, Constant?, Preds?, Guardianships?, Relays?, Contract?, Contract?, Preds?,
-                      Wards).
-try_intros2(yes, Nm, M, Gs, Rs, _, _, _, introduction_with_wards(Nm?, M?, Gs?, Rs?)).
-try_intros2(no, _, M, Gs, _, Ss, C, Rf, W?) :-
-    ground(M?), ground(Gs?), ground(Ss?), ground(C?), ground(Rf?) |
-    try_intros(Ss?, C?, Rf?, M?, Gs?, W).
+procedure try_intros2(Ans?, Constant?, Preds?, Preds?, Guardianships?, Relays?, Contract?,
+                      Contract?, Preds?, Wards).
+try_intros2(yes, Nm, M, Lv, Gs, Rs, _, _, _, introduction_with_wards(Nm?, M?, Gs?, Rs?, Lv?)).
+try_intros2(no, _, M, Lv, Gs, _, Ss, C, Rf, W?) :-
+    ground(M?), ground(Lv?), ground(Gs?), ground(Ss?), ground(C?), ground(Rf?) |
+    try_intros(Ss?, C?, Rf?, M?, Lv?, Gs?, W).
 
-procedure try_intros1(IntroE?, Contract?, Contract?, Preds?, Preds?, Guardianships?, Wards).
-try_intros1(no_intro, Ss, C, Rf, M, Gs, W?) :-
-    ground(Ss?), ground(C?), ground(Rf?), ground(M?), ground(Gs?) |
-    try_intros(Ss?, C?, Rf?, M?, Gs?, W).
-try_intros1(intro(Nm, E), Ss, C, Rf, M, Gs, W?) :-
-    ground(Nm?), ground(E?), ground(Ss?), ground(C?), ground(Rf?), ground(M?), ground(Gs?) |
-    relays_for(C?, Rf?, M?, Gs?, E?, M?, Rs, A),
-    try_intros2(A?, Nm?, M?, Gs?, Rs?, Ss?, C?, Rf?, W).
+procedure try_intros1(IntroE?, Contract?, Contract?, Preds?, Preds?, Preds?, Guardianships?, Wards).
+try_intros1(no_intro, Ss, C, Rf, M, Lv, Gs, W?) :-
+    ground(Ss?), ground(C?), ground(Rf?), ground(M?), ground(Lv?), ground(Gs?) |
+    try_intros(Ss?, C?, Rf?, M?, Lv?, Gs?, W).
+try_intros1(intro(Nm, E), Ss, C, Rf, M, Lv, Gs, W?) :-
+    ground(Nm?), ground(E?), ground(Ss?), ground(C?), ground(Rf?), ground(M?), ground(Lv?),
+    ground(Gs?) |
+    relays_for(C?, Rf?, M?, Lv?, Gs?, E?, M?, Rs, A),
+    try_intros2(A?, Nm?, M?, Lv?, Gs?, Rs?, Ss?, C?, Rf?, W).
 
-procedure try_intros(Contract?, Contract?, Preds?, Preds?, Guardianships?, Wards).
-try_intros([], _, _, _, _, no_introduction_with_wards).
-try_intros([S|Ss], C, Rf, M, Gs, W?) :-
-    ground(S?), ground(Ss?), ground(C?), ground(Rf?), ground(M?), ground(Gs?) |
-    intro_marks(C?, Rf?, M?, S?, I),
-    try_intros1(I?, Ss?, C?, Rf?, M?, Gs?, W).
+procedure try_intros(Contract?, Contract?, Preds?, Preds?, Preds?, Guardianships?, Wards).
+try_intros([], _, _, _, _, _, no_introduction_with_wards).
+try_intros([S|Ss], C, Rf, M, Lv, Gs, W?) :-
+    ground(S?), ground(Ss?), ground(C?), ground(Rf?), ground(M?), ground(Lv?), ground(Gs?) |
+    intro_marks(C?, Rf?, M?, Lv?, S?, I),
+    try_intros1(I?, Ss?, C?, Rf?, M?, Lv?, Gs?, W).
 
 % --- over the guardianships chosen, one per mark --------------------------
 
@@ -1301,19 +1477,19 @@ combos([L|Ls], R?) :- ground(L?), ground(Ls?) |
     combos(Ls?, Cbs),
     prepend_all(L?, Cbs?, R).
 
-procedure try_combos1(Wards?, GuardLists?, Contract?, Preds?, Preds?, Wards).
-try_combos1(introduction_with_wards(Nm, M, Gs, Rs), _, _, _, _,
-            introduction_with_wards(Nm?, M?, Gs?, Rs?)).
-try_combos1(no_introduction_with_wards, Cbs, C, Rf, M, W?) :-
-    ground(Cbs?), ground(C?), ground(Rf?), ground(M?) |
-    try_combos(Cbs?, C?, Rf?, M?, W).
+procedure try_combos1(Wards?, GuardLists?, Contract?, Preds?, Preds?, Preds?, Wards).
+try_combos1(introduction_with_wards(Nm, M, Gs, Rs, Lv), _, _, _, _, _,
+            introduction_with_wards(Nm?, M?, Gs?, Rs?, Lv?)).
+try_combos1(no_introduction_with_wards, Cbs, C, Rf, M, Lv, W?) :-
+    ground(Cbs?), ground(C?), ground(Rf?), ground(M?), ground(Lv?) |
+    try_combos(Cbs?, C?, Rf?, M?, Lv?, W).
 
-procedure try_combos(GuardLists?, Contract?, Preds?, Preds?, Wards).
-try_combos([], _, _, _, no_introduction_with_wards).
-try_combos([Gs|Cbs], C, Rf, M, W?) :-
-    ground(Gs?), ground(Cbs?), ground(C?), ground(Rf?), ground(M?) |
-    try_intros(C?, C?, Rf?, M?, Gs?, W1),
-    try_combos1(W1?, Cbs?, C?, Rf?, M?, W).
+procedure try_combos(GuardLists?, Contract?, Preds?, Preds?, Preds?, Wards).
+try_combos([], _, _, _, _, no_introduction_with_wards).
+try_combos([Gs|Cbs], C, Rf, M, Lv, W?) :-
+    ground(Gs?), ground(Cbs?), ground(C?), ground(Rf?), ground(M?), ground(Lv?) |
+    try_intros(C?, C?, Rf?, M?, Lv?, Gs?, W1),
+    try_combos1(W1?, Cbs?, C?, Rf?, M?, Lv?, W).
 
 % --- over the sets of marks ----------------------------------------------
 
@@ -1324,13 +1500,27 @@ try_set1(no, _, Ms, C, Rf, Marks, Unary, W?) :-
 try_set1(yes, M, Ms, C, Rf, Marks, Unary, W?) :-
     ground(M?), ground(Ms?), ground(C?), ground(Rf?), ground(Marks?), ground(Unary?) |
     cands_lists(C?, Marks?, Unary?, M?, M?, Ls),
+    try_set3(Ls?, M?, Ms?, C?, Rf?, Marks?, Unary?, W).
+
+% The guardianships for M are those of the lists of candidates together; the
+% leaving marks are taken for M with them (def:leaving).
+procedure gl_flat(GuardLists?, Guardianships).
+gl_flat([], []).
+gl_flat([L|Ls], R?) :- gl_flat(Ls?, R1), gs_app(L?, R1?, R).
+
+procedure try_set3(GuardLists?, Preds?, PredSets?, Contract?, Preds?, Preds?, Preds?, Wards).
+try_set3(Ls, M, Ms, C, Rf, Marks, Unary, W?) :-
+    ground(Ls?), ground(M?), ground(Ms?), ground(C?), ground(Rf?), ground(Marks?),
+    ground(Unary?) |
+    gl_flat(Ls?, Gs),
+    leaving_marks(C?, Marks?, M?, Gs?, Lv),
     combos(Ls?, Cbs),
-    try_combos(Cbs?, C?, Rf?, M?, W1),
+    try_combos(Cbs?, C?, Rf?, M?, Lv?, W1),
     try_set2(W1?, Ms?, C?, Rf?, Marks?, Unary?, W).
 
 procedure try_set2(Wards?, PredSets?, Contract?, Preds?, Preds?, Preds?, Wards).
-try_set2(introduction_with_wards(Nm, M, Gs, Rs), _, _, _, _, _,
-         introduction_with_wards(Nm?, M?, Gs?, Rs?)).
+try_set2(introduction_with_wards(Nm, M, Gs, Rs, Lv), _, _, _, _, _,
+         introduction_with_wards(Nm?, M?, Gs?, Rs?, Lv?)).
 try_set2(no_introduction_with_wards, Ms, C, Rf, Marks, Unary, W?) :-
     ground(Ms?), ground(C?), ground(Rf?), ground(Marks?), ground(Unary?) |
     try_sets(Ms?, C?, Rf?, Marks?, Unary?, W).

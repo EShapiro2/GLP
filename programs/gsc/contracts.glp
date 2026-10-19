@@ -501,6 +501,11 @@ contract(wd_relay_req, C?) :- wd_relay_req(C).
 contract(wd_relay_forb, C?) :- wd_relay_forb(C).
 contract(wd_relay_unguarded, C?) :- wd_relay_unguarded(C).
 contract(wd2, C?) :- wd2(C).
+contract(wd_leaving, C?) :- wd_leaving(C).
+contract(wd_leave_unforbidden, C?) :- wd_leave_unforbidden(C).
+contract(wd_leave_deleted, C?) :- wd_leave_deleted(C).
+contract(wd_leave_unmarked, C?) :- wd_leave_unmarked(C).
+contract(wd_leave_guardian, C?) :- wd_leave_guardian(C).
 contract(_, []) :- otherwise | true.
 
 % A fixture that is a contract changed in one place, by name and the contract
@@ -1306,3 +1311,111 @@ wd_two_marks(C?) :-
         rs(guarded, [atom(identity, []), atom(parent, [role(1)]), atom(principal, [role(1)]),
                      atom(child, []), atom(agent, []), atom(friend, [role(1)])], [],
                     [], [atom(identity, [])])])], C).
+
+% --- leaving marks (def:leaving) -------------------------------------------
+% wd_leaving is wd with retirement written with a leaving mark, as Appendix F
+% writes Wards:4: every guarding role of every schema of wd forbids retired,
+% and retire(p?, r) ends the guardianship of p over r, deleting friend(r) and
+% parenting(r) at p and friend(p), parent(p) and child at r, and adding
+% retired at r.  No schema deletes retired; retire adds it at r, where child
+% is required; and enter, the one schema adding parent(p) at r, forbids it at
+% p.  So retired is a leaving mark of wd_leaving for {child}, and wd_leaving
+% has an introduction with wards naming it.  Each fixture after it changes
+% it in one place and fails one clause of def:leaving, so that retired is not
+% a leaving mark, befriend forbids an atom that is neither a mark in M, nor a
+% leaving mark, nor the atom it adds (def:unobstructed-marks, clause 2), and
+% there is no introduction with wards: wd_leave_unforbidden, clause 1,
+% retire's guarding role p does not forbid retired; wd_leave_deleted, clause
+% 1, revive(p?, r) deletes retired at r; wd_leave_unmarked, clause 2,
+% quit(p?) adds retired at p, whose role requires no mark in M; and
+% wd_leave_guardian, clause 3, adopt(p, r?) adds parent(p) at r and does not
+% forbid retired at p, a role that does not guard and so is not held to
+% clause 1.
+procedure forbid_at_roles(Atom?, RoleSpecs?, RoleSpecs).
+forbid_at_roles(_, [], []).
+forbid_at_roles(A, [rs(guarded, P, M, K, N)|Rs], [rs(guarded, P?, M?, K?, N1?)|R?]) :-
+    ground(A?), ground(N?), ground(Rs?) |
+    atoms_app(N?, [A?], N1),
+    forbid_at_roles(A?, Rs?, R).
+forbid_at_roles(A, [RS|Rs], [RS?|R?]) :- otherwise, ground(A?), ground(Rs?) |
+    forbid_at_roles(A?, Rs?, R).
+
+% forbid_at_guards(Phi, C, D): C with Phi forbidden at every guarding role of
+% every schema, the roles of C being party roles.
+procedure forbid_at_guards(Atom?, Contract?, Contract).
+forbid_at_guards(_, [], []).
+forbid_at_guards(A, [schema(Nm, Rs)|Ss], [schema(Nm?, Rs1?)|R?]) :-
+    ground(A?), ground(Ss?) |
+    forbid_at_roles(A?, Rs?, Rs1),
+    forbid_at_guards(A?, Ss?, R).
+forbid_at_guards(A, [cschema(Nm, Th, Rs)|Ss], [cschema(Nm?, Th?, Rs1?)|R?]) :-
+    ground(A?), ground(Ss?) |
+    forbid_at_roles(A?, Rs?, Rs1),
+    forbid_at_guards(A?, Ss?, R).
+
+procedure wd_retire(Schema).
+wd_retire(schema(retire,
+    [rs(guarded,   [], [atom(friend, [role(2)]), atom(parenting, [role(2)])],
+                   [atom(identity, [])], [atom(retired, [])]),
+     rs(unguarded, [atom(retired, [])],
+                   [atom(friend, [role(1)]), atom(parent, [role(1)]), atom(child, [])],
+                   [atom(identity, [])], [])])).
+
+% wd_leaving_with(Retire, Rest, C): wd with retired forbidden at every
+% guarding role, then Retire and the schemas Rest as they are given.
+procedure leaving_schemas(Contract?, Schema?, Contract?, Contract).
+leaving_schemas(Ss, Rt, Rest, C?) :- ground(Ss?), ground(Rt?), ground(Rest?) |
+    forbid_at_guards(atom(retired, []), Ss?, Ss1),
+    contract_app(Ss1?, [Rt?|Rest?], C).
+
+procedure wd_leaving1(Declared?, Schema?, Contract?, Declared).
+wd_leaving1(reflexive(Rf, Ss), Rt, Rest, reflexive(Rf?, C?)) :-
+    leaving_schemas(Ss?, Rt?, Rest?, C).
+wd_leaving1([], Rt, Rest, C?) :- leaving_schemas([], Rt?, Rest?, C).
+wd_leaving1([S|Ss], Rt, Rest, C?) :- leaving_schemas([S?|Ss?], Rt?, Rest?, C).
+
+procedure wd_leaving_with(Schema?, Contract?, Declared).
+wd_leaving_with(Rt, Rest, C?) :- ground(Rt?), ground(Rest?) |
+    wd(W),
+    wd_leaving1(W?, Rt?, Rest?, C).
+
+procedure wd_leaving(Declared).
+wd_leaving(C?) :- wd_retire(Rt), wd_leaving_with(Rt?, [], C).
+
+procedure wd_leave_unforbidden(Declared).
+wd_leave_unforbidden(C?) :-
+    wd_leaving_with(
+      schema(retire,
+        [rs(guarded,   [], [atom(friend, [role(2)]), atom(parenting, [role(2)])],
+                       [atom(identity, [])], []),
+         rs(unguarded, [atom(retired, [])],
+                       [atom(friend, [role(1)]), atom(parent, [role(1)]), atom(child, [])],
+                       [atom(identity, [])], [])]),
+      [], C).
+
+procedure wd_leave_deleted(Declared).
+wd_leave_deleted(C?) :-
+    wd_retire(Rt),
+    wd_leaving_with(Rt?,
+      [schema(revive,
+         [rs(guarded,   [], [], [atom(identity, []), atom(friend, [role(2)])],
+                        [atom(retired, [])]),
+          rs(unguarded, [], [atom(retired, [])], [atom(identity, [])], [])])], C).
+
+procedure wd_leave_unmarked(Declared).
+wd_leave_unmarked(C?) :-
+    wd_retire(Rt),
+    wd_leaving_with(Rt?,
+      [schema(quit,
+         [rs(guarded, [atom(retired, [])], [], [atom(identity, [])],
+                      [atom(retired, [])])])], C).
+
+procedure wd_leave_guardian(Declared).
+wd_leave_guardian(C?) :-
+    wd_retire(Rt),
+    wd_leaving_with(Rt?,
+      [schema(adopt,
+         [rs(unguarded, [atom(parenting, [role(2)])], [],
+                        [atom(identity, []), atom(friend, [role(2)])], [atom(child, [])]),
+          rs(guarded,   [atom(identity, []), atom(parent, [role(1)]), atom(child, [])], [],
+                        [], [atom(identity, []), atom(retired, [])])])], C).

@@ -713,7 +713,7 @@ procedure compile_on(Verdict?, Constant?, Contract?).
 compile_on(syntactically_grassroots, _, C) :- ground(C?) |
     latex_contract(no, C?, [], L),
     send_to_user(L?).
-compile_on(grassroots_with_wards(_, _, _, _), _, C) :- ground(C?) |
+compile_on(grassroots_with_wards(_, _, _, _, _), _, C) :- ground(C?) |
     latex_contract(no, C?, [], L),
     send_to_user(L?).
 compile_on(not_grassroots(_), Nm, _) :- ground(Nm?) | not_compiled(Nm?).
@@ -750,7 +750,7 @@ procedure compile_s_on(Verdict?, Constant?, Constant?, Contract?).
 compile_s_on(syntactically_grassroots, _, Sn, C) :- ground(Sn?), ground(C?) |
     find_schema(C?, Sn?, S),
     emit_schema(S?, no, Sn?).
-compile_s_on(grassroots_with_wards(_, _, _, _), _, Sn, C) :- ground(Sn?), ground(C?) |
+compile_s_on(grassroots_with_wards(_, _, _, _, _), _, Sn, C) :- ground(Sn?), ground(C?) |
     find_schema(C?, Sn?, S),
     emit_schema(S?, no, Sn?).
 compile_s_on(not_grassroots(_), Nm, _, _) :- ground(Nm?) | not_compiled(Nm?).
