@@ -1,6 +1,6 @@
 # GSNP's app
 
-The app of GSNP, the grassroots social network with provenance, as a mini-app of the Grassroots Super-App (GSG paper, Section 2, "The Grassroots Super-App"), compiled down the abstraction cascade from GSNP's act schemas.  It is GSN's app, `../gsn`, on GSNP's platform: the same entry and network (`miniapp.glp`, the same file), and the same scripted person with GSNP's scripts, for three persons.
+The app of GSNP, the grassroots social network with provenance, as a mini-app of the Grassroots Super-App (GSG paper, Section 2, "The Grassroots Super-App"), compiled down the abstraction cascade from GSNP's act schemas.  It is GSN's app, `../gsn`, on GSNP's platform: the same entry and network (`miniapp.glp`, the same file), and the same scripted person with GSNP's scripts, for the five persons of the play of GAI's GSNP figure.
 
 ## The contract
 
@@ -25,42 +25,44 @@ Sixteen schemas: GSG's `establish`, `befriend` and `unfriend`; `sign`, `message`
 |---|---|
 | `platform.vglp` | the canonical CVA platform of GSNP, as printed |
 | `miniapp.glp` | `miniapp/4`, the same file as `../gsg/miniapp.glp` and `../gsn/miniapp.glp` |
-| `person.glp` | `miniapp_person/4`: the scripted person, by role, `alice`, `bob` or `carol` |
-| `plays.glp` | `play_provenance/3`, the mini-app with no super-app |
+| `person.glp` | `miniapp_person/4`: the scripted person, by role, `dan`, `eve`, `carol`, `bob` or `fay` |
+| `plays.glp` | `play_provenance/5`, the mini-app with no super-app |
 | `self.glp` | the platform's types written again, the router's types, and the exports |
 | `self.vglp` | the app's widget declarations, `Approval =::= approval_sentence.` and `Menu =::= social_menu.` |
-| `screens/` | the persons' screens, as the construct family draws them, and their README |
-| `../gsnp_boot.glp` | the super-app hosting the app on three smartphones, under `:boot` |
+| `screens/` | the screens of GAI's figure of the app, and their README |
+| `../gsnp_boot.glp` | the super-app hosting the app on five smartphones, under `:boot` |
 
 ## Running it
 
 From `glp_runtime/`:
 
 ```bash
-printf '../programs/apps/gsnp\n:limit 4000000\nplay_provenance(A, B, C).\n:quit\n' | bin/glpc
+printf '../programs/apps/gsnp\n:limit 6000000\nplay_provenance(D, E, C, B, F).\n:quit\n' | bin/glpc
 ```
 
-`play_provenance` runs three executions over two conversations, Alice's with Bob and Bob's with Carol, the play handing each its ends of the root channels as the social graph does.  Each establishes their identity (GSG:1); Alice and Bob ask to know each other, Alice offers Bob friendship, and he is asked and answers yes (GSG:2); Alice signs the item `'Flood on Main Street'` (GSNP:1), which records her its author, and sends it to Bob in a message, which carries it as she signed it, and nobody is asked (GSN:1); Bob then asks to know Carol, who asked to know him, and offers her friendship, and she is asked and answers yes; and Bob forwards to Carol the item he holds, and nobody is asked (GSNP:2).  Carol then holds `speech(speech(utterance('Flood on Main Street'), alice), bob)`: the item signed by Alice and then by Bob.  The persons' screens, the views their agents write with the answers they give, held exactly by the suite's Section APPS:
+`play_provenance` runs the play of GAI's GSNP figure (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, item 4): five executions, Dan's, Eve's, Carol's, Bob's and Fay's, over four conversations, Dan's with Eve, Eve's with Carol, Carol's with Bob and Bob's with Fay, the play handing each its ends of the root channels as the social graph does.  Each establishes their identity (GSG:1); Dan and Eve, Eve and Carol, Carol and Bob, and Bob and Fay each ask to know each other, the first of each two offers the second friendship, and the second is asked and answers yes (GSG:2); Dan signs the item `'Flood on Main Street'` (GSNP:1), which records him its author, and sends it to Eve in a message, which carries it as he signed it, and nobody is asked (GSN:1); Eve forwards it to Carol, and Carol to Bob, and nobody is asked (GSNP:2).  Bob then holds `speech(speech(speech(utterance('Flood on Main Street'), dan), eve), carol)`: the item signed by Dan, then by Eve, then by Carol.  Each person who passes the item on offers their next friendship once the item has reached them, so that they propose nothing while an attempt that adds the item to their state is open: the agent drops a request whose condition does not hold when it reads it (vGLP, Section 5.4, "The compilation").  The persons' screens, the views their agents write with the answers they give, held exactly by the suite's Section APPS:
 
 ```
-A = [view([], []), view([identity], []), view([identity], [bob]), view([friend(bob), identity], [bob]), view([item(speech(utterance('Flood on Main Street'), alice)), authored(speech(utterance('Flood on Main Street'), alice)), friend(bob), identity], [bob]) | _]
-B = [view([], []), view([identity], []), view([identity], [alice]), gave(befriend(alice, bob), yes), view([friend(alice), identity], [alice]), view([item(speech(utterance('Flood on Main Street'), alice)), friend(alice), identity], [alice]), view([item(speech(utterance('Flood on Main Street'), alice)), friend(alice), identity], [alice, carol]), view([friend(carol), item(speech(utterance('Flood on Main Street'), alice)), friend(alice), identity], [alice, carol]) | _]
-C = [view([], []), view([identity], []), view([identity], [bob]), gave(befriend(bob, carol), yes), view([friend(bob), identity], [bob]), view([item(speech(speech(utterance('Flood on Main Street'), alice), bob)), friend(bob), identity], [bob]) | _]
+D = [view([], []), view([identity], []), view([identity], [eve]), view([friend(eve), identity], [eve]), view([item(speech(utterance('Flood on Main Street'), dan)), authored(speech(utterance('Flood on Main Street'), dan)), friend(eve), identity], [eve]) | _]
+E = [view([], []), view([identity], []), view([identity], [dan]), view([identity], [carol, dan]), gave(befriend(dan, eve), yes), view([friend(dan), identity], [carol, dan]), view([item(speech(utterance('Flood on Main Street'), dan)), friend(dan), identity], [carol, dan]), view([friend(carol), item(speech(utterance('Flood on Main Street'), dan)), friend(dan), identity], [carol, dan]) | _]
+C = [view([], []), view([identity], []), view([identity], [bob]), view([identity], [bob, eve]), gave(befriend(eve, carol), yes), view([friend(eve), identity], [bob, eve]), view([item(speech(speech(utterance('Flood on Main Street'), dan), eve)), friend(eve), identity], [bob, eve]), view([friend(bob), item(speech(speech(utterance('Flood on Main Street'), dan), eve)), friend(eve), identity], [bob, eve]) | _]
+B = [view([], []), view([identity], []), view([identity], [fay]), view([identity], [carol, fay]), gave(befriend(carol, bob), yes), view([friend(carol), identity], [carol, fay]), view([item(speech(speech(speech(utterance('Flood on Main Street'), dan), eve), carol)), friend(carol), identity], [carol, fay]), view([friend(fay), item(speech(speech(speech(utterance('Flood on Main Street'), dan), eve), carol)), friend(carol), identity], [carol, fay]) | _]
+F = [view([], []), view([identity], []), view([identity], [bob]), gave(befriend(bob, fay), yes), view([friend(bob), identity], [bob]) | _]
 ```
 
-### On three smartphones
+### On five smartphones
 
 ```bash
 G=$(cd .. && pwd); printf ':artefact %s/programs/apps/gsnp %s/programs/social/graph/core\n:boot %s/programs/apps/gsnp_boot.glp %s/programs/social/graph/core\n:quit\n' $G $G $G $G | bin/glpc
 ```
 
-As GSN's app's on two (`../gsn/README.md`, "On two smartphones"), on three isolates: Alice connects to Bob, and once they are connected Bob connects to Carol; each pair becomes friends in the super-app's social graph; Alice invites Bob to `gsnp` and Bob invites Carol; the two conversations open, and the steps of `play_provenance` run over them; each event reduces to quiescence and the boot settles.  Each person's lines are what the super-app told them, `sg(connected(bob))` for Alice, `sg(befriend(alice))`, `sg(connected(alice))` and `sg(connected(carol))` for Bob, and `sg(befriend(bob))` and `sg(connected(bob))` for Carol, and the views of `play_provenance` above.  Section APPS holds each person's super-app lines and their screen each exactly, in order: across three isolates the two are not ordered against each other, Bob's connection to Carol running beside Alice's invitation.
+As GSN's app's on two (`../gsn/README.md`, "On two smartphones"), on five isolates: Dan connects to Eve, and once connected Eve connects to Carol, Carol to Bob and Bob to Fay; each pair becomes friends in the super-app's social graph; once connected to the next, each invites them to `gsnp`; the four conversations open, and the steps of `play_provenance` run over them; each event reduces to quiescence and the boot settles.  Each person's lines are what the super-app told them, `sg(befriend(...))` and `sg(connected(...))`, and the views of `play_provenance` above.  Section APPS holds each person's super-app lines and their screen each exactly, in order: across the isolates the two are not ordered against each other.
 
 ## The screens
 
-What each person sees, as the construct family draws the app: the tabs Friends and Groups of GSN's app (`../gsn/README.md`, "The screens"), drawn from the last view the agent wrote, the approval questions at the top of the tab they concern.  The tabs carry no control that signs an item, sends an item in a message or forwards one: the chat a friend opens has a field with Send, proposing a message of the text typed, which the person has not signed, so its condition, `authored(x)` at the sender, does not hold and the agent drops it; a group has no field and no Send, a post carrying an item its poster holds; and the items the person holds are drawn under Messages at the foot of Friends.  The app's play signs, sends and forwards its item by the scripted persons (`person.glp`), and the screens show the friendships and a group.
+What each person sees, as the construct family draws the app: the tabs Friends and Groups of GSN's app (`../gsn/README.md`, "The screens"), drawn from the last view the agent wrote, the approval questions at the top of the tab they concern, with GSNP's items (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, items 1 to 3).  An item the person holds is drawn in the chat with the friend it came from, its last signer: its text, then "Author: Dan", its first signer, then, where it was forwarded, "via Eve, via Carol", the others who signed it, in order; under an item the person did not author, Forward, and under one they authored, nothing.  Forward opens a picker of the person's friends; picking Fay shows "Forward to Fay?  You warrant that you know Carol personally.", Carol being the friend the item came from, with Yes, which proposes `forward(Me, fay, x)`, and No, which closes it.  The chat's text field and Send sign the text and send it: `sign(Me, x)`, and, once the view holds `authored(x)`, `message(Me, Q, x)`.  A group has no text field and no Send, a post carrying an item its poster holds.
 
-`glp_multiagent/test/apps_screens_test.dart` runs the app for Alice, Bob and Carol over two conversations and takes each person's acts on the tabs' controls: Alice and Bob, then Bob and Carol, tap Join, add each other by key and become friends, Bob and then Carol asked and tapping Accept; Alice creates the group friends and adds Bob, who taps Join.  `screens/README.md` names each file.
+`glp_multiagent/test/apps_screens_test.dart` runs the play on five phones and takes each person's acts on the tabs' controls: each two of Dan and Eve, Eve and Carol, Carol and Bob, and Bob and Fay tap Join, add each other by key and become friends, the second asked and tapping Accept; Dan opens his chat with Eve, types Flood on Main Street and taps Send; Eve opens her chat with Dan, taps Forward under the item, picks Carol and taps Yes; Carol does the same in her chat with Eve, picking Bob; and Bob opens his chat with Carol and taps Forward and picks Fay.  `screens/README.md` names the screens it renders.
 
 ## The types written again
 
