@@ -1496,10 +1496,11 @@ try_intros2(no, _, M, Lv, Gs, _, Ss, C, Rf, W?) :-
     try_intros(Ss?, C?, Rf?, M?, Lv?, Gs?, W).
 
 % --- clause 2 of def:sg-wards ----------------------------------------------
-% No seated role of a schema of C adds or deletes a mark in M, a leaving
-% mark of C, an atom of the predicate e the introductory act adds, or an atom
-% of g or of w for the guardianship (m, iota, g, w) of a mark in M; Ps holds
-% those predicates.  A contract of Section 3 has no seated role.
+% No seated or listed role of a schema of C adds or deletes a mark in M, a
+% leaving mark of C, an atom of the predicate e the introductory act adds, or
+% an atom of g or of w for the guardianship (m, iota, g, w) of a mark in M
+% (GSC 8064cfb); Ps holds those predicates.  A contract of Section 3 has no
+% seated or listed role.
 
 procedure atoms_avoid1(Ans?, Atoms?, Preds?, Ans).
 atoms_avoid1(yes, _, _, no).

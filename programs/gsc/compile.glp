@@ -7,7 +7,7 @@
 % name term -- compiles to the assignment, the proviso and the guard of
 % def:compile, and the displays of Section 5.1 and Appendix B.3 are the form
 % printed, whatever the contract it is in: befriend of GSNP, a contract with
-% a seated role, compiles to Section 5.1's display, as Section 5.1 says.  Any
+% a listed role, compiles to Section 5.1's display, as Section 5.1 says.  Any
 % other schema compiles to the lines of definition:compile, and the worked
 % box of Appendix D is the form printed.  For a schema of Section 3 the two
 % definitions determine the same transactions.  The paper is the
@@ -140,8 +140,10 @@ latex_set(As, Sep, T, ['\\{'|R?]) :- ground(As?), ground(Sep?), ground(T?) |
     latex_atoms(As?, Sep?, ['\\}'|T?], R).
 
 % --- The roles as the paper writes them (definition:role, definition:extent)
-% A party role by its name, a seated role sigma^{mu} and a constituent role
-% sigma^{rho*}; ext_c(pi_i) is the extent of the role in c, and a line of
+% A party role by its name, a seated role sigma^{mu}, a constituent role
+% sigma^{rho*} and a listed role pi[rho(*, u_2, ..., u_r)], as Appendix D
+% writes it and Appendix G writes close's, \Alice[\mathit{listed}(\ast,n)]
+% (GSC 8064cfb); ext_c(pi_i) is the extent of the role in c, and a line of
 % Appendix D's display ranges over the agents p in it.
 
 procedure latex_role_term(RoleSpec?, Integer?, Chunks?, Chunks).
@@ -155,10 +157,21 @@ latex_role_term(crs(constituent(S, Rho), _, _, _, _, _), _, T, R?) :-
     ground(S?), ground(Rho?), ground(T?) |
     latex_pred(Rho?, ['\\ast}'|T?], R1),
     latex_nt_sup(S?, ['^{'|R1?], R).
+latex_role_term(crs(listed(I, Rho, As), _, _, _, _, _), _, T, R?) :-
+    integer(I?), ground(Rho?), ground(As?), ground(T?) |
+    latex_listed_args(As?, [')', ']'|T?], R1),
+    latex_pred(Rho?, ['(', '\\ast'|R1?], R2),
+    latex_role(I?, ['['|R2?], R).
+
+% The arguments u_2, ..., u_r of a listed role, each after a comma, following
+% the * of its first place.
+procedure latex_listed_args(Args?, Chunks?, Chunks).
+latex_listed_args([], T, T?).
+latex_listed_args([A|As], T, [','|R?]) :- ground(A?), ground(As?), ground(T?) |
+    latex_args([A?|As?], T?, R).
 
 % The name term under a superscript: sigma.y in parentheses, as the paper
-% writes the seated role of close, (<Alice>.n)^{member} (GSC, Appendix D.4
-% and Section 3.3).
+% writes the seated role (<Alice>.n)^{member} (GSC, Appendix D.4).
 procedure latex_nt_sup(NameTerm?, Chunks?, Chunks).
 latex_nt_sup(ext(S, Y), T, ['('|R?]) :- ground(S?), ground(Y?), ground(T?) |
     latex_nt(ext(S?, Y?), [')'|T?], R).
@@ -467,15 +480,18 @@ reach_line([X|Xs], T, [['\\text{provided } '|L?]|T?]) :-
     ground(X?), ground(Xs?), ground(T?) |
     latex_reaches([X?|Xs?], [], L).
 
-% The name terms sigma.y of a schema: those occurring in its roles, its atoms
-% and its reach conditions, with the name terms within them, that are of the
-% form sigma.y, each once and in order of first occurrence.
+% The name terms sigma.y of a schema: those occurring in its roles, the
+% arguments of a listed role among them, its atoms and its reach conditions,
+% with the name terms within them, that are of the form sigma.y, each once
+% and in order of first occurrence.
 procedure roles_nterms(RoleSpecs?, NameTerms?, NameTerms).
 roles_nterms([], T, T?).
 roles_nterms([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |
     rs_nterm(RS?, N),
+    rs_kind_args(RS?, KA),
     roles_nterms(Rs?, T?, R1),
-    nterms_app(N?, R1?, R).
+    args_nterms(KA?, R1?, R2),
+    nterms_app(N?, R2?, R).
 
 procedure args_nterms(Args?, NameTerms?, NameTerms).
 args_nterms([], T, T?).
@@ -777,6 +793,16 @@ malformed_lines([not_in_head(S, _)|Fs], T,
                 [S?, 'has a variable its head does not list;'|R?]) :-
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
+malformed_lines([listed_base(S, I)|Fs], T,
+                [S?, 'at role', I?,
+                 'has a listed role whose base is not an agent role of the schema;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([listed_signed(S, I)|Fs], T,
+                [S?, 'at role', I?,
+                 'has a listed role with a signed term among its arguments;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
 malformed_lines([_|Fs], T, R?) :- otherwise, ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
 
@@ -795,7 +821,7 @@ compile_on(grassroots_with_wards(_, _, _, _, _), _, C) :- ground(C?) |
 compile_on(syntactically_grassroots_with_wards(_, _, _, _, _), _, C) :- ground(C?) |
     latex_contract(yes, C?, [], L),
     send_to_user(L?).
-compile_on(syntactically_grassroots_with_seated_roles, _, C) :- ground(C?) |
+compile_on(syntactically_grassroots_with_seated_and_listed_roles, _, C) :- ground(C?) |
     latex_contract(yes, C?, [], L),
     send_to_user(L?).
 compile_on(not_grassroots(_), Nm, _) :- ground(Nm?) | not_compiled(Nm?).
@@ -839,7 +865,7 @@ compile_s_on(syntactically_grassroots_with_wards(_, _, _, _, _), _, Sn, C) :-
     ground(Sn?), ground(C?) |
     find_schema(C?, Sn?, S),
     emit_schema(S?, yes, Sn?).
-compile_s_on(syntactically_grassroots_with_seated_roles, _, Sn, C) :-
+compile_s_on(syntactically_grassroots_with_seated_and_listed_roles, _, Sn, C) :-
     ground(Sn?), ground(C?) |
     find_schema(C?, Sn?, S),
     emit_schema(S?, yes, Sn?).
