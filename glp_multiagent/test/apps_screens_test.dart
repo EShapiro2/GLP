@@ -772,40 +772,42 @@ void main() {
       'GAI\'s app, the example of GAI\'s paper: Bob\'s chat with Alf, Alice\'s '
       'AI agent, holding the item Alf wrote, its author named with its '
       'principal', (tester) async {
-    // Alice and Bob, persons, and Alf, Alice's AI agent, a conversation between each two (GAI's paper, Section 3.2, the example and Table "The components that change in the example").  Bob is at his phone; Alice and Alf are scripted (programs/apps/gai/person.glp), Alf's script the AI agent's program, which takes its acts: Alice establishes her identity and enters Alf, which answers yes (Wards:1, GAI:2), answers yes as its principal to Alf befriending Bob (Wards:2), answers yes to Bob's offer of friendship (GSG:2), and then retires Alf (GAI:4); Alf, once entered, proposes to befriend Bob, and once his friend signs the item "Today's summary of the news" (GSNP:1) and forwards it to him (GSNP:2).
+    // Alice and Bob, persons, and Alf, Alice's AI agent, a conversation between each two (GAI's paper, Section 3.2, the example and Table "The components that change in the example"), on GAI's contract at GLP 5744daec (programs/gai/GAI.glp).  Bob is at his phone; Alice and Alf are scripted (programs/apps/gai/person.glp), Alf's script the AI agent's program, which takes its acts: Alice establishes her identity, signs the code of Alf, signed by its developer acme (GSNP:1, GAI:1), and enters Alf with it, which answers yes (Wards:1, GAI:1, GAI:2), Alf holding its attestation, the code signed over by Alice; she answers yes as its principal to Alf befriending Bob with its attestation (Wards:2, GAI:2), answers yes to Bob's offer of friendship (GSG:2), and then retires Alf (GAI:4); Alf, once entered, proposes to befriend Bob, and once his friend signs the item "Today's summary of the news" (GSNP:1) and sends it to him by message (GSN:1).
     final run = await _Run.start(tester, 'gai',
         chain: const ['alice', 'alf', 'bob'],
         pairs: const [('alice', 'alf'), ('alf', 'bob'), ('bob', 'alice')],
         scripted: const {'alice', 'alf'});
     final bob = run.person('bob');
+    const code = "speech(speech(utterance('The code of Alf'), acme), alice)";
+    const attestation = 'speech($code, alice)';
+    const summary = r"speech(utterance('Today\'s summary of the news'), alf)";
 
     // One tab, Friends: GAI offers no group.
     expect(run.on(bob, find.byKey(tabKey(ScreenTab.friends))), findsOneWidget);
     expect(run.on(bob, find.byKey(tabKey(ScreenTab.groups))), findsNothing);
-    // Alice has entered Alf: she is its principal and its friend.
+    // Alice has signed the code and entered Alf with it: she is its principal and its friend, and Alf holds its attestation (enter(p?, r? ; x)).
     expect(run.scriptedAtoms('alice'),
-        containsAll(['identity', 'principal_of(alf)', 'friend(alf)']));
+        containsAll(['identity', 'item($code)', 'authored($code)', 'principal_of(alf)', 'friend(alf)']));
     expect(run.scriptedAtoms('alf'),
-        containsAll(['identity', 'agent', 'principal(alice)', 'friend(alice)']));
+        containsAll(['identity', 'agent', 'principal(alice)', 'friend(alice)', 'attestation($attestation)']));
 
-    // Bob joins (GSG:1) and adds Alf and Alice by key.  Once Bob and Alf know each other, Alf proposes to befriend him with Alice its principal (agent_befriend(r?, q?, p?), programs/gai/GAI.glp), and Bob is asked.
+    // Bob joins (GSG:1) and adds Alf and Alice by key.  Once Bob and Alf know each other, Alf proposes to befriend him with Alice its principal and its attestation (agent_befriend(r?, q?, p? ; y), programs/gai/GAI.glp), and Bob is asked.
     await run.join(bob);
     await run.add(bob, 'alf');
     await run.add(bob, 'alice');
     final a = bob.approval;
     expect(formatTerm(a.view), startsWith('approval(attempt(alf, '));
     expect(formatTerm(a.view),
-        endsWith(', agent_befriend(alf, bob, alice)), input([2]))'));
+        endsWith(', agent_befriend(alf, bob, alice, $attestation)), input([2]))'));
     await run.answer(bob, 'Yes');
     expect(bob.questions('approval'), isEmpty);
 
-    // Bob's friend Alf, recorded as Alice's AI agent (GAI:2), and the item Alf signed and forwarded to him, signed by Alf and signed again by Alf (forward(p?, q ; x) adds item(sgn(x, p)) at q).  Nobody was asked for the sign or the forward.
-    const summary = r"speech(utterance('Today\'s summary of the news'), alf)";
+    // Bob's friend Alf, recorded with Alice its principal and its attestation (GAI:2, agent_of(r, p, y)), and the item Alf signed and sent him by message, signed once, by Alf (message(p?, q ; x) adds item(x) at q).  Nobody was asked for the sign or the message.
     expect(bob.atoms,
-        containsAll(['friend(alf)', 'agent_of(alf, alice)', 'item(speech($summary, alf))']));
-    expect(run.scriptedAtoms('alf'), contains('item($summary)'));
+        containsAll(['friend(alf)', 'agent_of(alf, alice, $attestation)', 'item($summary)']));
+    expect(run.scriptedAtoms('alf'), containsAll(['item($summary)', 'authored($summary)']));
 
-    // (a) Bob's chat with Alf: he taps Alf's row; the item "Today's summary of the news", "Author: Alf, an AI agent of Alice", "via Alf", Alf having forwarded it, and Forward under it.
+    // (a) Bob's chat with Alf: he taps Alf's row; the item "Today's summary of the news", "Author: Alf, an AI agent of Alice", and Forward under it; under them the field Message and Send, as in GSNP's chat, GAI offering message.
     await run.tap(bob, run.name(bob, 'person:alf', 'Alf'));
     expect(run.control(bob, 'chat:alf'), findsOneWidget);
     await run.top(bob);
@@ -820,21 +822,30 @@ void main() {
         [
           "Today's summary of the news",
           'Author: Alf, an AI agent of Alice',
-          'via Alf',
           'Forward'
         ]);
-    expect(run.texts(bob).where((t) => t.startsWith('Message')), isEmpty);
+    expect(run.texts(bob).where((t) => t.startsWith('via')), isEmpty);
+    expect(run.control(bob, 'chat-field:alf'), findsOneWidget);
+    expect(run.control(bob, 'send:alf'), findsOneWidget);
     run.plain(bob);
     await run.shoot(bob, 'gai-a-bob-chat-alf.png');
     await run.tap(bob, run.control(bob, 'back'));
 
-    // Bob offers Alice friendship: Befriend on her row; Alice, scripted, answers yes (GSG:2); once they are friends she retires Alf (GAI:4), which ends her friendship with it, Alf asked nothing.  Bob's friendship with Alf and the item stay, as in the paper's table after Retire.
+    // Bob offers Alice friendship: Befriend on her row; Alice, scripted, answers yes (GSG:2); once they are friends she retires Alf (GAI:4), which ends her friendship with it, Alf asked nothing.  The paper's table after Retire.
     await run.tap(bob, run.control(bob, 'befriend:alice'));
-    expect(bob.atoms, containsAll(['friend(alice)', 'friend(alf)', 'agent_of(alf, alice)']));
+    expect(bob.atoms,
+        containsAll(['friend(alice)', 'friend(alf)', 'agent_of(alf, alice, $attestation)']));
     expect(run.scriptedAtoms('alice'),
-        unorderedEquals(['retired_of(alf)', 'friend(bob)', 'principal_of(alf)', 'identity']));
+        unorderedEquals(['retired_of(alf)', 'friend(bob)', 'principal_of(alf)', 'item($code)', 'authored($code)', 'identity']));
     expect(run.scriptedAtoms('alf'),
-        unorderedEquals(['retired', 'item($summary)', 'friend(bob)', 'identity', 'agent', 'principal(alice)']));
+        unorderedEquals(['retired', 'item($summary)', 'authored($summary)', 'friend(bob)', 'identity', 'agent', 'principal(alice)', 'attestation($attestation)']));
+
+    // Bob ends his friendship with Alf: End friendship on Alf's row, unfriend_p(bob, alf), which requires at Alf only identity, so Bob ends it though he does not know that Alf is retired (Code_inbox.md, GAI #4 Cowork, 2026-10-19 16:57 UTC, item 4).  The paper's table after Unfriend: Bob's record of Alf and the item stay with him, and Alf has no friend.
+    await run.tap(bob, run.control(bob, 'unfriend:alf'));
+    expect(bob.atoms,
+        unorderedEquals(['friend(alice)', 'item($summary)', 'agent_of(alf, alice, $attestation)', 'identity']));
+    expect(run.scriptedAtoms('alf'),
+        unorderedEquals(['retired', 'item($summary)', 'authored($summary)', 'identity', 'agent', 'principal(alice)', 'attestation($attestation)']));
     run.finish();
   }, timeout: const Timeout(Duration(minutes: 20)));
 }
