@@ -7,7 +7,7 @@
 %% verdict and then runs the compiler on it.  The clauses are in CSSN.md
 %% beside this file; CSSN extends GSNP and Wards, GSC's, so the term holds
 %% GSNP's twelve schemas (programs/gsc/GSNP.glp), with child forbidden at both
-%% roles of befriend and at the joiner's role of join, and thirteen schemas for
+%% roles of befriend and of join (the leader's by CSSN:5), and thirteen schemas for
 %% children, which realise Wards (CSSN, Appendix B.2; the tables in Appendix
 %% C.2, sections/artefact-schemas.tex).  Written by CSSN #5 Cowork, 2026-10-18.
 %%
@@ -61,7 +61,7 @@ app([], Ys, Ys?).
 app([X|Xs], Ys, [X?|Zs?]) :- app(Xs?, Ys?, Zs).
 
 %% GSNP's twelve schemas, as programs/gsc/GSNP.glp has them, with child
-%% forbidden at both roles of befriend and at the joiner's role of join.
+%% forbidden at both roles of befriend and of join, the leader's by CSSN:5.
 procedure gsnp_schemas(Contract).
 gsnp_schemas([
 %% GSG:1, Identity.
@@ -107,13 +107,13 @@ gsnp_schemas([
       [rs(guarded, [atom(member, [role(1), svar(n)]),
                     atom(listed, [role(1), svar(n)])], [], [atom(identity, [])],
                    [atom(member, [role(1), svar(n)]), atom(closed, [svar(n)]), atom(retired, [])])]),
-%% GSN:3, Joining.
+%% GSN:3, Joining, with CSSN:5, A child's group.
 %%   join(a?, q? ; n) :
-%%       at a:  identity, member(a, n), friend(q), +listed(q, n)
+%%       at a:  identity, not child, member(a, n), friend(q), +listed(q, n)
 %%       at q:  identity, not child, friend(a), not member(a, n), +member(a, n)
     schema(join,
       [rs(guarded, [atom(listed, [role(2), svar(n)])], [],
-                   [atom(identity, []), atom(member, [role(1), svar(n)]), atom(friend, [role(2)])], [atom(retired, [])]),
+                   [atom(identity, []), atom(member, [role(1), svar(n)]), atom(friend, [role(2)])], [atom(child, []), atom(retired, [])]),
        rs(guarded, [atom(member, [role(1), svar(n)])], [],
                    [atom(identity, []), atom(friend, [role(1)])],
                    [atom(child, []), atom(member, [role(1), svar(n)]), atom(retired, [])])]),
