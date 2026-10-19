@@ -6,7 +6,7 @@
 %% coordinated by the initiating agent (vGLP, Section 3.2, Definition
 %% "Canonical CVA Platform").  It runs two agents, alice and bob, alice
 %% preceding bob in the order of identifiers, their persons scripted and paced
-%% on their threads (../self.glp), and gives each person's log, the thread with
+%% on their screens (../self.glp), and gives each person's log, the views with
 %% gave(K, A) where the person answers an approval question, and the network's log of the
 %% cargoes it carries.
 %%
@@ -27,7 +27,7 @@ Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
 Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Atom     ::= friend(Peer) ; nudged(Peer) ; nudged_by(Peer).
-Output   ::= List(Atom).
+Output   ::= view(List(Atom), List(Key)).
 Approval ::= approval(Attempt, YesNo?).
 Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).
@@ -41,9 +41,9 @@ imported procedure platform#dispatch(Stream(Ask(Question))?,
 
 exported procedure play_gnudge(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_gnudge(LA?, LB?, N?) :-
-    pair([req(known(bob)), wait(discover(bob)),
+    pair([req(known(bob)), wait(known(bob)),
           own([A1], propose(befriend(A1?, bob)))],
-         [req(known(alice)), wait(discover(alice)),
+         [req(known(alice)), wait(known(alice)),
           approval(befriend(alice, bob), yes)],
          LA, LB, N).
 

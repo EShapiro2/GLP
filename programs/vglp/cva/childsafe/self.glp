@@ -5,8 +5,8 @@
 %% programs/vglp/cva/compile.sh prints from it: two-phase commit coordinated by
 %% the initiating agent (vGLP, Section 3.2, Definition "Canonical CVA
 %% Platform"), whose initiator knows every participant before it proposes.
-%% It runs its agents, their persons scripted and paced on their threads
-%% (../self.glp), and gives each person's log, the thread with gave(K, A)
+%% It runs its agents, their persons scripted and paced on their screens
+%% (../self.glp), and gives each person's log, the views with gave(K, A)
 %% where the person answers an approval question, and the network's log of the cargoes it
 %% carries.
 %%
@@ -34,7 +34,7 @@ Cargo    ::= start(Attempt) ; vote(Attempt, YesNo) ; outcome(Attempt, Decision)
 Content  ::= hello(Peer) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Atom     ::= friend(Peer) ; child(Peer) ; parent(Peer) ; approved(Peer, Peer).
-Output   ::= List(Atom).
+Output   ::= view(List(Atom), List(Key)).
 Approval ::= approval(Attempt, YesNo?).
 Menu     ::= menu(Key, List(Key), Request?).
 Question ::= menu_w(Menu) ; approval_w(Approval).
@@ -49,20 +49,20 @@ imported procedure platform#dispatch(Stream(Ask(Question))?,
 exported procedure play_childsafe(Stream(_), Stream(_), Stream(_), Stream(_),
     Stream(Sent(Cargo))).
 play_childsafe(LA?, LB?, LC?, LD?, N?) :-
-    quartet([req(known(carol)), wait(discover(carol)),
+    quartet([req(known(carol)), wait(known(carol)),
              own([A1], propose(enrol(A1?, carol))),
-             wait(commit(attempt(alice, 1, 1, enrol(alice, carol)))),
+             wait(holds(child(carol))),
              req(known(bob)),
              approval(befriend(bob, alice), yes),
-             wait(outcome(attempt(bob, 2, 2, befriend(bob, alice)))),
-             req(known(dave)), wait(discover(dave)),
+             wait(holds(friend(bob))),
+             req(known(dave)), wait(known(dave)),
              own([A2], propose(cbefriend(carol, dave, A2?, bob)))],
-            [req(known(dave)), wait(discover(dave)),
+            [req(known(dave)), wait(known(dave)),
              own([B1], propose(enrol(B1?, dave))),
-             wait(commit(attempt(bob, 1, 1, enrol(bob, dave)))),
-             req(known(alice)), wait(discover(alice)),
+             wait(holds(child(dave))),
+             req(known(alice)), wait(known(alice)),
              own([B2], propose(befriend(B2?, alice))),
-             wait(commit(attempt(bob, 2, 2, befriend(bob, alice)))),
+             wait(holds(friend(alice))),
              approval(cbefriend(carol, dave, alice, bob), yes)],
             [req(known(alice)),
              approval(enrol(alice, carol), yes),
